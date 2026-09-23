@@ -62,6 +62,11 @@ jobs:
           python-version: "3.11"
       - name: Install dependencies
         run: pip install -e ".[dev]"
+      # `UX-997`: a doc guard this diff selects can read `tests/ci_reference.json`
+      # (`test_the_process_documents_derive_their_figures.py`) - gitignored since
+      # T2, so it fetches before the lane runs one.
+      - name: Read the records branch a selected guard may read
+        run: python tools/dev_records.py fetch || true
       - name: Check no build artifacts are tracked
         run: make check-clean
       - name: Lint
@@ -110,6 +115,12 @@ jobs:
 
       - name: Install dependencies
         run: pip install -e ".[dev]"
+
+      # `UX-997`: `tests/ci_reference.json`/`touch_map.json`/`flake_ledger.json`
+      # and `docs/audits/mutation.md` are gitignored since T2 - every guard in
+      # this job that reads one needs it fetched before the first `pytest`.
+      - name: Read the records branch the suite reads
+        run: python tools/dev_records.py fetch || true
 
       - name: Check no build artifacts are tracked
         run: make check-clean

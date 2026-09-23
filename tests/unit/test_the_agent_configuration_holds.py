@@ -558,10 +558,6 @@ class TestTheSubagentsAreWellFormed:
     #: and widening that list would exempt them silently - which is what
     #: `UX-504`'s fifth mutation did while every clause stayed green.
     REPORTERS = {"architect", "researcher", "verifier"}
-    SHARED = ("docs/backlog/scenarios/README.md",
-              "docs/backlog/scenarios/closed.md",
-              "tests/tiers.py",
-              "tests/ci_reference.json")
 
     def test_a_reporting_agent_cannot_edit_the_tree(self):
         """A verifier that could fix what it found would be judging its
@@ -650,10 +646,13 @@ class TestTheSubagentsAreWellFormed:
         counts sentence to a number neither meant. The four are named in
         the body because an agent reads its body, not this file."""
         body = (AGENTS / "implementer.md").read_text(encoding="utf-8")
-        missing = [name for name in self.SHARED if name not in body]
-        assert missing == [], (
-            f"implementer.md does not tell the track to leave {missing} "
-            f"alone - the files every track collides on (UX-501, UX-503)")
+        # Four literal comparisons, not a loop over a shared tuple: each
+        # is the one shared file every track must leave alone
+        # (UX-501, UX-503), named here so `implementer.md` states it too.
+        assert "docs/backlog/scenarios/README.md" in body, "README.md unnamed"
+        assert "docs/backlog/scenarios/closed.md" in body, "closed.md unnamed"
+        assert "tests/tiers.py" in body, "tiers.py unnamed"
+        assert "tests/ci_reference.json" in body, "ci_reference.json unnamed"
 
     def test_the_implementer_is_told_to_check_the_base_it_got(self):
         """`UX-510`: all three of round 75's worktrees started nine

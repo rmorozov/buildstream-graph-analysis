@@ -37,31 +37,56 @@ def _ledger(*files):
         for i, name in enumerate(files)], "declared": {}})
 
 
-def _seed(work):
+def _seed(tmp_path_work):
     for rel in TREE:
-        dest = work / rel
+        dest = tmp_path_work / rel
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(REPO / rel, dest)
-    (work / "docs/backlog/scenarios").mkdir(parents=True)
-    (work / "docs/backlog/scenarios/.keep").write_text("", encoding="utf-8")
-    (work / "docs/audits").mkdir(parents=True)
-    (work / "docs/audits/mutation.md").write_text("# mutation\n", encoding="utf-8")
-    (work / "tests/ci_reference.json").write_text("{}", encoding="utf-8")
-    (work / "tests/touch_map.json").write_text("{}", encoding="utf-8")
-    (work / "tests/flake_ledger.json").write_text(_ledger(), encoding="utf-8")
+    (tmp_path_work / "docs/backlog/scenarios").mkdir(parents=True)
+    (tmp_path_work / "docs/backlog/scenarios/.keep").write_text("", encoding="utf-8")
+    (tmp_path_work / "docs/audits").mkdir(parents=True)
+    (tmp_path_work / "docs/audits/mutation.md").write_text("# mutation\n", encoding="utf-8")
+    (tmp_path_work / "tests/ci_reference.json").write_text("{}", encoding="utf-8")
+    (tmp_path_work / "tests/touch_map.json").write_text("{}", encoding="utf-8")
+    (tmp_path_work / "tests/flake_ledger.json").write_text(_ledger(), encoding="utf-8")
 
 
 def _repo(tmp_path):
-    """A work checkout with a bare `origin`, the tree `dev_records.py`
+    """A checkout with a bare `origin`, the tree `dev_records.py`
     needs, and one commit on `main`."""
-    work, remote = tmp_path / "work", tmp_path / "remote.git"
-    _seed(work)
-    _git(work, "init", "-q", "-b", "main")
-    _git(work, "add", ".")
-    _git(work, "commit", "-q", "-m", "base")
-    _git(tmp_path, "clone", "-q", "--bare", str(work), str(remote))
-    _git(work, "remote", "add", "origin", str(remote))
-    return work, remote
+    tmp_path_work, remote = tmp_path / "tmp_path_work", tmp_path / "remote.git"
+    _seed(tmp_path_work)
+    _git(tmp_path_work, "init", "-q", "-b", "main")
+    _git(tmp_path_work, "add", ".")
+    _git(tmp_path_work, "commit", "-q", "-m", "base")
+    _git(tmp_path, "clone", "-q", "--bare", str(tmp_path_work), str(remote))
+    _git(tmp_path_work, "remote", "add", "origin", str(remote))
+    return tmp_path_work, remote
+
+
+def _repo_migrated(tmp_path):
+    """`UX-997` T2's own shape: the four paths `git rm --cached` and
+    gitignored, none written yet - `_dirty` has no index entry to diff,
+    only the baseline `fetch` hashes."""
+    tmp_path_work, remote = tmp_path / "tmp_path_work", tmp_path / "remote.git"
+    for rel in TREE:
+        dest = tmp_path_work / rel
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(REPO / rel, dest)
+    (tmp_path_work / "docs/backlog/scenarios").mkdir(parents=True)
+    (tmp_path_work / "docs/backlog/scenarios/.keep").write_text("", encoding="utf-8")
+    (tmp_path_work / "docs/audits").mkdir(parents=True)
+    (tmp_path_work / ".gitignore").write_text(
+        "tests/ci_reference.json\ntests/touch_map.json\n"
+        "tests/flake_ledger.json\ndocs/audits/mutation.md\n"
+        "tests/.records-sha\ntests/.records-baseline.json\n",
+        encoding="utf-8")
+    _git(tmp_path_work, "init", "-q", "-b", "main")
+    _git(tmp_path_work, "add", ".")
+    _git(tmp_path_work, "commit", "-q", "-m", "base")
+    _git(tmp_path, "clone", "-q", "--bare", str(tmp_path_work), str(remote))
+    _git(tmp_path_work, "remote", "add", "origin", str(remote))
+    return tmp_path_work, remote
 
 
 def _parents(cwd, ref):
@@ -84,20 +109,20 @@ def _recorded_base(cwd):
     return got.stdout.strip() if got.returncode == 0 else None
 
 
-def _dev_records(work, *args):
+def _dev_records(tmp_path_work, *args):
     run_env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
     run_env["PATH"] = f"{pathlib.Path(sys.executable).parent}{os.pathsep}{run_env['PATH']}"
     return subprocess.run([sys.executable, "tools/dev_records.py", *args],
-                          cwd=work, env=run_env, capture_output=True, text=True)
+                          cwd=tmp_path_work, env=run_env, capture_output=True, text=True)
 
 
 class TestPublishSeedsThenBuilds:
 
     def test_the_first_publish_seeds_an_orphan_root(self, tmp_path):
-        work, remote = _repo(tmp_path)
-        (work / "tests/flake_ledger.json").write_text(_ledger("t.py", "t.py"),
+        tmp_path_work, remote = _repo(tmp_path)
+        (tmp_path_work / "tests/flake_ledger.json").write_text(_ledger("t.py", "t.py"),
                                                        encoding="utf-8")
-        done = _dev_records(work, "publish")
+        done = _dev_records(tmp_path_work, "publish")
         assert done.returncode == 0, done.stdout + done.stderr
         assert "records @ " in done.stdout, done.stdout
         assert _parents(remote, "refs/heads/records") == [], \
@@ -106,18 +131,18 @@ class TestPublishSeedsThenBuilds:
         assert shown == "{}"
 
     def test_a_second_publish_builds_on_the_tip(self, tmp_path):
-        work, remote = _repo(tmp_path)
-        (work / "tests/flake_ledger.json").write_text(_ledger("t.py", "t.py"),
+        tmp_path_work, remote = _repo(tmp_path)
+        (tmp_path_work / "tests/flake_ledger.json").write_text(_ledger("t.py", "t.py"),
                                                        encoding="utf-8")
-        first = _dev_records(work, "publish")
+        first = _dev_records(tmp_path_work, "publish")
         assert first.returncode == 0, first.stdout + first.stderr
         first_sha = first.stdout.strip().rsplit(" ", 1)[-1]
 
-        refetch = _dev_records(work, "fetch")
+        refetch = _dev_records(tmp_path_work, "fetch")
         assert refetch.returncode == 0, refetch.stdout + refetch.stderr
-        (work / "tests/flake_ledger.json").write_text(
+        (tmp_path_work / "tests/flake_ledger.json").write_text(
             _ledger("t.py", "t.py", "other.py"), encoding="utf-8")
-        second = _dev_records(work, "publish")
+        second = _dev_records(tmp_path_work, "publish")
         assert second.returncode == 0, second.stdout + second.stderr
         assert _parents(remote, "refs/heads/records") == [first_sha]
 
@@ -125,62 +150,62 @@ class TestPublishSeedsThenBuilds:
 class TestFetch:
 
     def test_the_tip_sha_is_printed_and_files_written(self, tmp_path):
-        work, remote = _repo(tmp_path)
-        (work / "tests/flake_ledger.json").write_text(_ledger("t.py"), encoding="utf-8")
-        published = _dev_records(work, "publish")
+        tmp_path_work, remote = _repo(tmp_path)
+        (tmp_path_work / "tests/flake_ledger.json").write_text(_ledger("t.py"), encoding="utf-8")
+        published = _dev_records(tmp_path_work, "publish")
         assert published.returncode == 0, published.stdout + published.stderr
         tip = published.stdout.strip().rsplit(" ", 1)[-1]
 
-        reader = tmp_path / "reader"
-        shutil.copytree(work, reader)
-        (reader / "tests/ci_reference.json").write_text("garbage", encoding="utf-8")
-        done = _dev_records(reader, "fetch")
+        tmp_path_reader = tmp_path / "tmp_path_reader"
+        shutil.copytree(tmp_path_work, tmp_path_reader)
+        (tmp_path_reader / "tests/ci_reference.json").write_text("garbage", encoding="utf-8")
+        done = _dev_records(tmp_path_reader, "fetch")
         assert done.returncode == 0, done.stdout + done.stderr
         assert done.stdout.strip() == f"records @ {tip}"
-        assert (reader / "tests/ci_reference.json").read_text() == "{}"
-        assert (reader / "tests/.records-sha").read_text().strip() == tip
+        assert (tmp_path_reader / "tests/ci_reference.json").read_text() == "{}"
+        assert (tmp_path_reader / "tests/.records-sha").read_text().strip() == tip
 
     def test_at_a_past_sha_is_honoured(self, tmp_path):
-        work, remote = _repo(tmp_path)
-        (work / "tests/flake_ledger.json").write_text(_ledger("t.py"), encoding="utf-8")
-        first = _dev_records(work, "publish")
+        tmp_path_work, remote = _repo(tmp_path)
+        (tmp_path_work / "tests/flake_ledger.json").write_text(_ledger("t.py"), encoding="utf-8")
+        first = _dev_records(tmp_path_work, "publish")
         assert first.returncode == 0, first.stdout + first.stderr
         first_sha = first.stdout.strip().rsplit(" ", 1)[-1]
 
-        refetch = _dev_records(work, "fetch")
+        refetch = _dev_records(tmp_path_work, "fetch")
         assert refetch.returncode == 0, refetch.stdout + refetch.stderr
-        (work / "tests/flake_ledger.json").write_text(_ledger("t.py", "t.py"),
+        (tmp_path_work / "tests/flake_ledger.json").write_text(_ledger("t.py", "t.py"),
                                                        encoding="utf-8")
-        second = _dev_records(work, "publish")
+        second = _dev_records(tmp_path_work, "publish")
         assert second.returncode == 0, second.stdout + second.stderr
 
-        reader = tmp_path / "reader"
-        shutil.copytree(work, reader)
-        done = _dev_records(reader, "fetch", "--at", first_sha)
+        tmp_path_reader = tmp_path / "tmp_path_reader"
+        shutil.copytree(tmp_path_work, tmp_path_reader)
+        done = _dev_records(tmp_path_reader, "fetch", "--at", first_sha)
         assert done.returncode == 0, done.stdout + done.stderr
         assert done.stdout.strip() == f"records @ {first_sha}"
-        assert (reader / "tests/flake_ledger.json").read_text() == _ledger("t.py")
+        assert (tmp_path_reader / "tests/flake_ledger.json").read_text() == _ledger("t.py")
 
     def test_offline_with_a_cached_copy_says_so(self, tmp_path):
-        work, remote = _repo(tmp_path)
-        (work / "tests/flake_ledger.json").write_text(_ledger("t.py"), encoding="utf-8")
-        published = _dev_records(work, "publish")
+        tmp_path_work, remote = _repo(tmp_path)
+        (tmp_path_work / "tests/flake_ledger.json").write_text(_ledger("t.py"), encoding="utf-8")
+        published = _dev_records(tmp_path_work, "publish")
         assert published.returncode == 0, published.stdout + published.stderr
         tip = published.stdout.strip().rsplit(" ", 1)[-1]
-        first = _dev_records(work, "fetch")
+        first = _dev_records(tmp_path_work, "fetch")
         assert first.stdout.strip() == f"records @ {tip}"
 
-        _git(work, "remote", "set-url", "origin",
+        _git(tmp_path_work, "remote", "set-url", "origin",
              str(tmp_path / "no-such-remote.git"), check=True)
-        offline = _dev_records(work, "fetch")
+        offline = _dev_records(tmp_path_work, "fetch")
         assert offline.returncode == 0, offline.stdout + offline.stderr
         assert offline.stdout.strip() == f"{tip} (cached)"
 
     def test_offline_with_no_cache_is_refused(self, tmp_path):
-        work, remote = _repo(tmp_path)
-        _git(work, "remote", "set-url", "origin",
+        tmp_path_work, remote = _repo(tmp_path)
+        _git(tmp_path_work, "remote", "set-url", "origin",
              str(tmp_path / "no-such-remote.git"), check=True)
-        done = _dev_records(work, "fetch")
+        done = _dev_records(tmp_path_work, "fetch")
         assert done.returncode != 0
         assert "::error::" in done.stdout + done.stderr
 
@@ -189,21 +214,21 @@ class TestPublishRefusesARejectedRecord:
 
     def test_a_ledger_its_guard_accepts_is_published(self, tmp_path):
         """The control: without it, the refusal below could be a broken fixture."""
-        work, remote = _repo(tmp_path)
+        tmp_path_work, remote = _repo(tmp_path)
         before = _git(remote, "rev-parse", "--verify", "refs/heads/records",
                       check=False)
-        (work / "tests/flake_ledger.json").write_text(_ledger("t.py", "t.py"),
+        (tmp_path_work / "tests/flake_ledger.json").write_text(_ledger("t.py", "t.py"),
                                                        encoding="utf-8")
-        done = _dev_records(work, "publish")
+        done = _dev_records(tmp_path_work, "publish")
         assert done.returncode == 0, done.stdout + done.stderr
         after = _git(remote, "rev-parse", "--verify", "refs/heads/records")
         assert before.returncode != 0 and after.returncode == 0
 
     def test_a_ledger_its_guard_rejects_is_refused_and_nothing_is_pushed(self, tmp_path):
-        work, remote = _repo(tmp_path)
-        (work / "tests/flake_ledger.json").write_text(
+        tmp_path_work, remote = _repo(tmp_path)
+        (tmp_path_work / "tests/flake_ledger.json").write_text(
             _ledger("t.py", "t.py", "t.py"), encoding="utf-8")
-        done = _dev_records(work, "publish")
+        done = _dev_records(tmp_path_work, "publish")
         assert done.returncode != 0, done.stdout + done.stderr
         assert "test_the_real_ledger_has_no_unfiled_repeat_excursion" in done.stdout, done.stdout
         refused = _git(remote, "rev-parse", "--verify", "refs/heads/records",
@@ -224,12 +249,12 @@ class TestPublishRefusesAStaleBase:
         # A second job fetches (the branch does not exist yet: a known,
         # empty base), then publishes "b" - the row a naive overlay
         # would later lose.
-        other = _clone_job(tmp_path, remote, "other")
-        refetch = _dev_records(other, "fetch")
+        tmp_path_other = _clone_job(tmp_path, remote, "tmp_path_other")
+        refetch = _dev_records(tmp_path_other, "fetch")
         assert refetch.returncode == 0, refetch.stdout + refetch.stderr
-        assert _recorded_base(other) == "none"
-        (other / "tests/flake_ledger.json").write_text(_ledger("b"), encoding="utf-8")
-        published_b = _dev_records(other, "publish")
+        assert _recorded_base(tmp_path_other) == "none"
+        (tmp_path_other / "tests/flake_ledger.json").write_text(_ledger("b"), encoding="utf-8")
+        published_b = _dev_records(tmp_path_other, "publish")
         assert published_b.returncode == 0, published_b.stdout + published_b.stderr
         tip_b = published_b.stdout.strip().rsplit(" ", 1)[-1]
         assert _git(remote, "show", f"{tip_b}:tests/flake_ledger.json").stdout \
@@ -237,19 +262,19 @@ class TestPublishRefusesAStaleBase:
 
         # The victim job: a fresh checkout - `main`'s own tracked copy,
         # never touched by either publish above - whose fetch fails.
-        victim = _clone_job(tmp_path, remote, "victim")
-        _git(victim, "remote", "set-url", "origin",
+        tmp_path_victim = _clone_job(tmp_path, remote, "tmp_path_victim")
+        _git(tmp_path_victim, "remote", "set-url", "origin",
              str(tmp_path / "no-such-remote.git"), check=True)
-        failed = _dev_records(victim, "fetch")
+        failed = _dev_records(tmp_path_victim, "fetch")
         assert failed.returncode != 0, failed.stdout + failed.stderr
-        assert _recorded_base(victim) is None, "a failed fetch recorded a base"
+        assert _recorded_base(tmp_path_victim) is None, "a failed fetch recorded a base"
 
         # Its own adopt tool appends "e" on top of the stale tree it has.
-        (victim / "tests/flake_ledger.json").write_text(_ledger("e"), encoding="utf-8")
+        (tmp_path_victim / "tests/flake_ledger.json").write_text(_ledger("e"), encoding="utf-8")
 
         # The remote answers again by the time `publish` runs.
-        _git(victim, "remote", "set-url", "origin", str(remote), check=True)
-        refused = _dev_records(victim, "publish")
+        _git(tmp_path_victim, "remote", "set-url", "origin", str(remote), check=True)
+        refused = _dev_records(tmp_path_victim, "publish")
         assert refused.returncode != 0, refused.stdout + refused.stderr
         assert "::error::" in refused.stdout, refused.stdout
         assert "none" in refused.stdout and tip_b in refused.stdout, refused.stdout
@@ -259,3 +284,37 @@ class TestPublishRefusesAStaleBase:
         assert after == tip_b
         assert _git(remote, "show", f"{tip_b}:tests/flake_ledger.json").stdout \
             == _ledger("b")
+
+
+class TestDirtyOnceTheFourPathsAreGitignored:
+    """`UX-997` T2: `git diff --quiet` reads nothing for a path outside
+    the index at all, so a checkout that `git rm --cached` and
+    `.gitignore`s the four - `_repo_migrated` - needs `_dirty` to hash
+    against `fetch`'s own baseline instead."""
+
+    def test_only_the_path_an_adopt_tool_wrote_is_published(self, tmp_path):
+        tmp_path_work, remote = _repo_migrated(tmp_path)
+        first = _dev_records(tmp_path_work, "fetch")
+        assert first.returncode == 0 and first.stdout.strip() == "records @ none"
+
+        (tmp_path_work / "tests/flake_ledger.json").write_text(_ledger("t.py", "t.py"),
+                                                       encoding="utf-8")
+        done = _dev_records(tmp_path_work, "publish")
+        assert done.returncode == 0, done.stdout + done.stderr
+        tmp_path_published = _git(remote, "ls-tree", "-r", "--name-only",
+                                   "refs/heads/records").stdout.split()
+        assert tmp_path_published == ["tests/flake_ledger.json"], \
+            "an untouched path was published too"
+
+    def test_a_second_run_with_nothing_new_publishes_nothing(self, tmp_path):
+        tmp_path_work, remote = _repo_migrated(tmp_path)
+        _dev_records(tmp_path_work, "fetch")
+        (tmp_path_work / "tests/flake_ledger.json").write_text(_ledger("t.py"),
+                                                       encoding="utf-8")
+        first = _dev_records(tmp_path_work, "publish")
+        assert first.returncode == 0, first.stdout + first.stderr
+
+        refetch = _dev_records(tmp_path_work, "fetch")
+        assert refetch.returncode == 0, refetch.stdout + refetch.stderr
+        again = _dev_records(tmp_path_work, "publish")
+        assert again.stdout.strip() == "nothing to publish - no record changed"

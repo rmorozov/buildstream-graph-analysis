@@ -1092,9 +1092,9 @@ def _against(times, path, args):
     # which would make it a guard that cannot fail (rot 4).
     if not (reference.get("files") or {}):
         print(f"{path} holds no recorded numbers yet, so nothing is being "
-              f"checked. Commit the document below - it is this run's own "
-              f"numbers, taken on this runner - and the next run compares "
-              f"against it (UX-420).", file=sys.stderr)
+              f"checked. The document below is this run's own numbers; "
+              f"the adopt job publishes it (UX-997), and the next run "
+              f"compares against it (UX-420).", file=sys.stderr)
         print(json.dumps(record(times, args.source), indent=2))
         return done(0, f"{path.name} holds no recorded numbers yet, so "
                        f"none of the {len(times)} file(s) this run "
@@ -1143,11 +1143,11 @@ def _against(times, path, args):
                    f"{IMAGE_BAND[0]}-{IMAGE_BAND[1]} band.")
         if agreed:
             print(f"{opening} So were the run(s) behind it ({readings_so_far}). "
-                  f"That is the whole runner moving, not one file "
-                  f"drifting - re-record with --record and commit it, "
-                  f"from this run's {CI_CANDIDATE_ARTIFACT} artifact or "
-                  f"its {CI_CANDIDATE_JOB} job's log, rather than "
-                  f"reading the per-file numbers.", file=sys.stderr)
+                  f"That is the whole runner moving, not one file drifting - "
+                  f"re-record and publish (`dev_records.py publish`, not a "
+                  f"local `--record`) from {CI_CANDIDATE_ARTIFACT} or its "
+                  f"{CI_CANDIDATE_JOB} job's log, not the per-file numbers.",
+                  file=sys.stderr)
             return done(1, f"{len(times)} file(s) measured against "
                            f"{path.name} ({where}), this run x{shift:.2f} "
                            f"- outside the band, and so were the run(s) "
@@ -1260,10 +1260,10 @@ def _against(times, path, args):
               file=sys.stderr)
         for row in recorded:
             print(f"  {row[0]}  {row[1]:.1f}s", file=sys.stderr)
-        print(f"Commit this run's {CI_CANDIDATE_ARTIFACT} artifact (or its "
-              f"{CI_CANDIDATE_JOB} job's log) to give them a reference "
-              f"entry; the run after that judges them for drift like "
-              f"every other file.", file=sys.stderr)
+        print(f"The adopt job publishes this run's {CI_CANDIDATE_ARTIFACT} "
+              f"artifact (or its {CI_CANDIDATE_JOB} job's log) to give "
+              f"them a reference entry; the run after that judges them "
+              f"for drift like every other file.", file=sys.stderr)
     if based:
         # `UX-803`. Not a failure: the base branch's own last run read
         # this file past the gates too, so the excursion is the base's
@@ -1287,10 +1287,10 @@ def _against(times, path, args):
               "CI restores and saves one; a local run has no series to "
               "read (UX-442).", file=sys.stderr)
     print(f"\nMake it faster, or - if it is meant to cost this - refresh "
-          f"the reference and commit it, which is how it stays true rather "
-          f"than becoming an alarm nobody reads. The document to commit is "
-          f"this run's {CI_CANDIDATE_ARTIFACT} artifact, its "
-          f"{CI_CANDIDATE_JOB} job's log, or this file's "
+          f"and publish the reference (`dev_records.py publish`, "
+          f"UX-997), which is how it stays true rather than becoming an "
+          f"alarm nobody reads, from this run's {CI_CANDIDATE_ARTIFACT} "
+          f"artifact, its {CI_CANDIDATE_JOB} job's log, or this file's "
           f"printed seconds divided by the shift above; `--record` on your "
           f"own machine writes the wrong clock (UX-418, UX-447).",
           file=sys.stderr)

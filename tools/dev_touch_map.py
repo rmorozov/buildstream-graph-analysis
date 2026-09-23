@@ -117,7 +117,7 @@ def retire(reference, names):
 
 
 def load():
-    """The committed map, or `{}` when there is none yet."""
+    """The fetched map (`dev_records.py fetch`, UX-997), or `{}` when none."""
     try:
         return json.loads(MAP.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):

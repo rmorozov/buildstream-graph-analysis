@@ -36,6 +36,9 @@ sys.path.insert(0, str(REPO))
 from tests import tiers
 from tools import dev_tier_drift as drift
 
+sys.path.insert(0, str(REPO / "tools"))
+import dev_records  # `dev_records` imports its sibling `tools/` modules bare
+
 
 #: `UX-783`: the same construction rule `test_the_tiers_are_a_partition.py`
 #: applies, read here so the two guards cannot disagree about one file.
@@ -84,8 +87,7 @@ def _a_small_file():
     listed = set(tiers.LARGE) | set(tiers.MEDIUM)
     # UX-709: "unlisted" read as "small" until a new 1 s file was first
     # in the alphabet; CI's own record of the file decides instead.
-    on_ci = json.loads((REPO / "tests/ci_reference.json").read_text(
-        encoding="utf-8"))["files"]
+    on_ci = json.loads(dev_records.load("tests/ci_reference.json"))["files"]
     for path in sorted((REPO / "tests/unit").glob("test_*.py")):
         name = str(path.relative_to(REPO))
         if name not in listed and on_ci.get(name, 99.0) < tiers.MEDIUM_FLOOR_S / 2:

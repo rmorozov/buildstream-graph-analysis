@@ -372,8 +372,9 @@ tools/bga_cross_check.py, gen_synthetic_scale_run.py, chrome_trace_to_bga_trace.
 tools/native_trace_to_chrome_trace.py, bst_log_to_chrome_trace.py,
 tools/bst_run_context.py, _run_context_common.py
 tools/dev_touching.py        the tests that name what your diff touched, plus the census
-                             they can never name (UX-336, UX-522)
-tools/_record_readers.py     its clause for a record a guard loads through a tool (UX-942)
+                             they can never name (UX-336, UX-522) - `UX-942`'s clause for a
+                             record loaded through a tool retired with T2: no diff on main
+                             can hold a record any more (UX-997 (open))
 tools/dev_docs_only.py, dev_docs_lane.py  whether a PR is docs only, and the doc
                              guards its one-Python CI lane runs (UX-956)
 tools/dev_touch_map.py       which test files executed which module, off CI's own
@@ -495,15 +496,20 @@ tests/ci_reference.json    one CI run's per-file seconds, so drift is CI against
                            refreshed from CI's ci-reference-candidate artifact, never from a
                            local --record - the `verify` skill's §3 has the four steps (UX-447).
                            A file it does not carry is adopted by the default branch's own run,
-                           not failed on - `--adopt`, and no commit of yours (UX-503)
+                           not failed on - `--adopt`, and no commit of yours (UX-503). Lives on
+                           `refs/heads/records`, not main - `make`'s `records` target fetches it
+                           (`tools/dev_records.py fetch`); the default branch's own run publishes
+                           it, never `git push`es main (UX-997 (open))
 tests/touch_map.json       module -> the test files CI measured executing it; adopted by
-                           the default branch's own run, never recorded locally (UX-524)
+                           the default branch's own run, never recorded locally (UX-524).
+                           `refs/heads/records`, fetched the same way (UX-997 (open))
 tests/quality_reference.json  the size ledger's three counts per file - longest
                            function, file lines, duplicate blocks; `dev_sizes.py
                            --check` reds a grown cell (UX-712)
 tests/flake_ledger.json    every unconfirmed excursion and confirmed drift the tier-drift
                            gate reported, one row each; appended by the default branch's
-                           own run - `--adopt-flake` - and read by dev_flake_census.py (UX-691)
+                           own run - `--adopt-flake` - and read by dev_flake_census.py (UX-691).
+                           `refs/heads/records`, fetched the same way (UX-997 (open))
 tests/quality_baseline.json  every finding the widened families report today, by
                            identity; reds a new one (UX-694, shape_ledger.json UX-690)
 tests/bst_claims.json      each BuildStream behaviour claim in bga/, where it is written and

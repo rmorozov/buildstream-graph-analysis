@@ -70,6 +70,11 @@ ROOTS = ("bga/", "tools/", "tests/", "docs/", "examples/", "schemas/")
 # fixture under `tmp_path` names paths that must *not* be tracked.
 WRITTEN_NOT_READ = re.compile(r"tmp_path|tmpdir|mkdtemp|TemporaryDirectory")
 
+# The one call a test may cite a record path beside: `dev_records.load`
+# fails loudly naming `fetch` when the record is absent (`UX-997` T2),
+# so a citation on its own line is not a read this guard need distrust.
+RECORD_LOAD = re.compile(r"dev_records\.load\(")
+
 # Build output, not data. Untracked and present on every machine that has
 # run the suite once, which would make it a permanent false positive.
 NOT_DATA = ("__pycache__", ".egg-info", ".pytest_cache")
@@ -311,7 +316,7 @@ def _cited_paths(path):
     text = path.read_text(encoding="utf-8")
     cited = set()
     for line in text.splitlines():
-        if WRITTEN_NOT_READ.search(line):
+        if WRITTEN_NOT_READ.search(line) or RECORD_LOAD.search(line):
             continue
         for match in PATH_LITERAL.finditer(line):
             cited.add(match.group(1).rstrip("/"))
@@ -537,6 +542,20 @@ class TestTheCheckItselfDiscriminates:
         target = REPO / "tests/unit/test_fine_grained_fixture.py"
         assert "examples/09-fine-grained-siblings/files/bulk" not in \
             _untracked_but_present(_cited_paths(target), _tracked())
+
+    def test_dev_records_load_is_not_a_citation(self):
+        """`UX-997` T2's one recognised route: a call to the shared,
+        loudly-failing loader beside the record path buys that line the
+        same exemption `tmp_path` does."""
+        source = 'X = dev_records.load("tests/ci_reference.json")\n'
+        assert "tests/ci_reference.json" not in _cited_paths_of(source)
+
+    def test_a_direct_read_beside_the_loader_still_counts(self):
+        """The escape is per line, not per file: the loader's presence
+        elsewhere must not launder a different line's direct read."""
+        source = ('X = dev_records.load("tests/ci_reference.json")\n'
+                  'Y = (REPO / "tests/ci_reference.json").read_text()\n')
+        assert "tests/ci_reference.json" in _cited_paths_of(source)
 
     def test_it_would_have_flagged_the_original(self):
         """The literal that shipped, checked against the tree."""

@@ -38,6 +38,7 @@ sys.path.insert(0, str(REPO))
 from bga import contracts, schemas
 
 sys.path.insert(0, str(REPO / "tools"))
+import dev_records  # `UX-997` T2: the fetched record, loudly if absent
 import dev_touching  # `UX-774`: the guide's size, derived by one tool
 
 RULES = REPO / "docs/contributing/rules.md"
@@ -479,8 +480,7 @@ class TestTheCountNoDecisionReadsIsGone:
     kept true by a test somebody has to edit each round."""
 
     def test_the_verify_skill_no_longer_counts_the_reference(self):
-        rows = len(json.loads(
-            (REPO / "tests/ci_reference.json").read_text())["files"])
+        rows = len(json.loads(dev_records.load("tests/ci_reference.json"))["files"])
         text = _without_task_ids(
             (REPO / ".claude/skills/verify/SKILL.md").read_text(
                 encoding="utf-8"))

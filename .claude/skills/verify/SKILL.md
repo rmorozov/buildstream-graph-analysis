@@ -127,7 +127,7 @@ check the file's mtime against the run before trusting the names.
 
 `UX-447`: the route, because `--record` on your own machine writes
 **your** seconds and `UX-418` established those cannot be compared to
-CI's in any form. The numbers to commit exist only in CI's own run:
+CI's in any form. The numbers exist only in CI's own run:
 
 1. Open the red `test (3.11)` job's summary on that run.
 2. Download its **`ci-reference-candidate`** artifact - one file,
@@ -139,10 +139,13 @@ CI's in any form. The numbers to commit exist only in CI's own run:
    **`tier-reference`** job's log on the same run instead. That job
    downloads this artifact and `cat`s it, and does nothing else, so
    its log *is* the document.
-3. Replace `tests/ci_reference.json` with it.
-4. Commit it in the same commit as the change that made the file
-   slower, with a line in the task file's Outcome saying which run it
-   came from and why the file now costs what it does.
+3. `tools/dev_records.py fetch`, then replace `tests/ci_reference.json`
+   with it - it is gitignored (UX-997 T2), so no commit of yours reaches
+   it; a maintainer runs `tools/dev_records.py publish` with the edit in
+   place. Prefer the automatic route below when you have no push access
+   to `origin`.
+4. Name which run it came from and why the file now costs what it does
+   in the task file's Outcome.
 
 Appending one row by hand is the other shape, and it is the one this
 repository has used more often - the gate prints `N.Ns` for the file it

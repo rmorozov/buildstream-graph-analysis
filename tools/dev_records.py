@@ -15,12 +15,16 @@ nothing) unless that still matches the tip current *now*, so a `fetch`
 that failed silently cannot make `publish` overlay this run's delta
 onto a tip it never actually read, dropping rows published since
 (`UX-997`). `publish` runs `dev_adopt_check` on whichever paths the
-tree carries dirty, builds one commit on the records tip (or seeds an
-orphan root from the tree's own copies, the first time), and pushes it
-there - never to main, and never force. T1 (`UX-997`): the four paths
-stay tracked on main too; T2 moves them off it.
+tree carries dirty against the baseline `fetch` last hashed, builds one
+commit on the records tip (or seeds an orphan root from the tree's own
+copies, the first time), and pushes it there - never to main, and never
+force. T2 (`UX-997`): the four paths are `git rm --cached` and
+gitignored, so `_dirty` hashes rather than trusting `git diff`, which
+reads nothing for a path outside the index at all.
 """
 import argparse
+import hashlib
+import json
 import os
 import pathlib
 import shutil
@@ -38,6 +42,9 @@ RECORDS_REF = "refs/heads/records"
 SHA_MARKER = REPO / "tests" / ".records-sha"
 RECORD_PATHS = ("tests/ci_reference.json", "tests/touch_map.json",
                 "tests/flake_ledger.json", "docs/audits/mutation.md")
+#: `fetch`'s own baseline for `_dirty`, once a path carries no tracked
+#: blob for `git diff` to compare against (`git rm --cached`, T2).
+BASELINE = REPO / "tests" / ".records-baseline.json"
 #: `git config --local`, scoped to this checkout: the tip `fetch` last
 #: confirmed the tree reflects, for `publish` to check itself against
 #: before it overlays onto whatever tip is current *now*.
@@ -83,18 +90,21 @@ def fetch(argv=None):
                     (REPO / path).parent.mkdir(parents=True, exist_ok=True)
                     (REPO / path).write_text(shown.stdout, encoding="utf-8")
                     written.append(path)
-            # Staged, not committed: `publish`'s dirty check then reads
-            # against *this* baseline rather than main's frozen commit,
-            # so a run that adopts nothing new sees nothing dirty.
-            if written:
-                _git("add", "--", *written)
+            # Hashed, not staged: the four paths carry no tracked blob
+            # post-T2 for `git add` to stage - `_dirty` reads this
+            # baseline instead, so a run that adopts nothing new sees
+            # nothing dirty.
+            _write_baseline(written)
             SHA_MARKER.write_text(sha + "\n", encoding="utf-8")
             _set_base(sha)
             print(f"records @ {sha}")
             return 0
     elif "couldn't find remote ref" in fetched.stderr:
         # Reached the remote; confirmed there is no branch yet - a
-        # known, not an unknown, base.
+        # known, not an unknown, base. Baselines whatever the tree
+        # carries *now* (normally nothing, this early in a job), so a
+        # path an adopt tool writes after this still reads as dirty.
+        _write_baseline(RECORD_PATHS)
         _set_base("none")
         print("records @ none")
         return 0
@@ -107,11 +117,50 @@ def fetch(argv=None):
     return 0
 
 
+def _tracked(path):
+    """Whether git's index still carries `path` - true for a checkout
+    that predates T2's `git rm --cached`, and for this tool's own test
+    fixture, which tracks its tree whole with no `.gitignore` of its
+    own; false on the real, migrated repository."""
+    return _git("ls-files", "--error-unmatch", "--", path).returncode == 0
+
+
+def _write_baseline(paths):
+    hashes = _read_baseline()
+    for path in paths:
+        full = REPO / path
+        if full.is_file():
+            hashes[path] = hashlib.sha256(full.read_bytes()).hexdigest()
+    BASELINE.write_text(json.dumps(hashes), encoding="utf-8")
+
+
+def _read_baseline():
+    return json.loads(BASELINE.read_text(encoding="utf-8")) if BASELINE.is_file() else {}
+
+
 def _dirty(path):
-    """Working tree against the index, not `HEAD` - `fetch` stages the
-    records baseline there, so a run that adopted nothing sees nothing
-    dirty even though `main`'s own committed copy is long stale."""
-    return _git("diff", "--quiet", "--", path).returncode != 0
+    """Working tree against the index when git still tracks `path`;
+    `git diff` reads nothing for a path outside the index at all, so
+    once `git rm --cached` lands (T2) this compares against the
+    content `fetch` last hashed instead - `None` (never fetched) counts
+    any file present as this run's own write, matching what `fetch`
+    always does ahead of `publish` in every real job."""
+    if _tracked(path):
+        return _git("diff", "--quiet", "--", path).returncode != 0
+    full = REPO / path
+    current = hashlib.sha256(full.read_bytes()).hexdigest() if full.is_file() else None
+    return current != _read_baseline().get(path)
+
+
+def load(rel_path):
+    """A fetched record's text, or a loud `FileNotFoundError` naming
+    `fetch` - the one call `test_a_guard_reads_only_what_a_clone_has.py`
+    recognises in place of a direct read of an untracked record path."""
+    full = REPO / rel_path
+    if not full.is_file():
+        raise FileNotFoundError(
+            f"{rel_path} is not fetched - run `python tools/dev_records.py fetch`")
+    return full.read_text(encoding="utf-8")
 
 
 def _records_tip():

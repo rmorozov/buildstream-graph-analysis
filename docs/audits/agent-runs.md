@@ -379,6 +379,29 @@ pairing for every merged row from round 103 on.
 | 139 | verifier | sonnet | UX-995 verifier | 108k | 47 | 13.9 m | HOLD, then merged | none reported |
 | 139 | implementer | sonnet | UX-997 T1 records branch (mechanical) | 601k | 231 | 103.8 m | merged after a hold | fetch-then-stage for publish; git's stderr wording tells absent from unreachable |
 | 139 | verifier | sonnet | UX-997 verifier | 86k | 52 | 12.8 m | HOLD, then merged | the dropped-row case needed a hand-built bare-remote repro |
+| 140 | architect | opus | architect: UX-992 push gate cwd | 27k | 6 | 1.1 m | complete | none reported |
+| 140 | architect | opus | architect: UX-999 weekly retro | 36k | 11 | 2 m | complete | none reported |
+| 140 | architect | opus | architect: UX-998 bookkeeping ledger | 66k | 19 | 4 m | complete | none reported |
+| 140 | architect | opus | architect: bookkeeping batch UX-979, UX-977, UX-945, UX-990 | 43k | 24 | 3.8 m | complete | none reported |
+| 140 | architect | opus | architect: UX-950 and UX-955 gates | 70k | 34 | 6.1 m | complete, both wait for round 141 | none reported |
+| 140 | implementer | sonnet | UX-992 the push gate reads the payload's cwd (mechanical) | 92k | 63 | 18.7 m | merged | the size row for the hook's growth never adopted; caught at the session's size check |
+| 140 | implementer | sonnet | UX-990 tools' BuildStream-version lines are claims (mechanical) | 268k | 120 | 35.5 m | merged | none reported |
+| 140 | verifier | sonnet | UX-990 verifier | 61k | 72 | 14.9 m | MERGE | none reported |
+| 140 | implementer | sonnet | UX-998 bookkeeping ledger (mechanical) | 207k | 173 | 40.3 m | merged after a hold | a hand-typed size row (219/34 against 233/35 measured) |
+| 140 | verifier | sonnet | UX-992 verifier | 132k | 54 | 31 m | MERGE | did not run dev_sizes.py --check, so the unadopted growth passed |
+| 140 | architect | opus | architect: UX-1000 area pages coverage | 50k | 20 | 4.5 m | complete | none reported |
+| 140 | implementer | sonnet | UX-979, UX-977, UX-945 bookkeeping batch (mechanical) | 719k | 176 | 48.3 m | merged after rework | its worktree began at origin/main, not the Decisions' commit |
+| 140 | verifier | sonnet | UX-998 verifier | 55k | 46 | 11 m | HOLD, then merged | dev_touching.py has no worker-count flag |
+| 140 | implementer | sonnet | UX-999 weekly retro (mechanical) | 556k | 261 | 54.8 m | merged after rework | a new forced baseline entry refused; git routed through dev_records._git |
+| 140 | verifier | sonnet | UX-979 UX-977 UX-945 verifier | 40k | 39 | 8.2 m | MERGE | make lint past the 120 s foreground timeout |
+| 140 | verifier | sonnet | UX-999 verifier | 52k | 46 | 8.5 m | MERGE | which skill guard the Decision meant |
+| 140 | verifier | sonnet | UX-1000 T1 verifier | 82k | 59 | 12.7 m | HOLD | guard_files read the register footer as a guard |
+| 140 | verifier | sonnet | UX-997 T2 verifier | 109k | 81 | 23 m | HOLD | only the full suite caught three regressions a hand-picked set missed |
+| 140 | verifier | sonnet | UX-1000 T1 verifier (second) | 71k | 52 | 11.2 m | HOLD | 8 of 12 uncovered rows named a guard; only a hand-judged sample finds it |
+| 140 | verifier | sonnet | UX-1000 T1 verifier (third) | 83k | 45 | 10.2 m | MERGE, split declared from inferred | no regex tells a proving citation from a limiting one |
+| 140 | implementer | sonnet | UX-997 T2 records off main (mechanical) | 1367k | 485 | 136 m | merged after two holds | git diff reads an untracked path clean; the fixture had no .gitignore |
+| 140 | implementer | sonnet | UX-1000 T1 area pages (mechanical) | 1066k | 472 | 132.4 m | merged after three holds | every pass over free prose found a new citation shape |
+| 140 | verifier | sonnet | UX-997 T2 verifier (second) | 226k | 65 | 31.6 m | HOLD on MD032, fixed at merge | a 16-minute full suite on two workers |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -391,7 +414,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the three hundred and sixty-two rows already say: a researcher that reads a document
+What the three hundred and eighty-five rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

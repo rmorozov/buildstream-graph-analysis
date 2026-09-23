@@ -41,6 +41,17 @@ guide is right and the skill is a bug.
 6. **Touching the web report? Run the conformance checklist before you commit** (`UX-305`, [`docs/design/styleguide.md`](../design/styleguide.md) §7). Three questions, and each has a rule behind it: **is the shape in the §1 table?** (a shape it does not cover is a design task — it lands in the guide with its control, then in the code); **is the sentence written?** (a drawing owes its reader one sentence and its `n`); **is the budget kept?** (one emphasized element per block, one accent, status tone never on text and never alone). A section that cannot answer all three either changes or amends the guide — and the guards in `test_the_mapping_is_law.py`, `test_the_palette_is_validated.py`, `test_the_shape_before_the_rows.py` and `test_emphasis_is_a_budget.py` will say which. Round 44 added four more questions and `UX-320` made each one a walk over the whole page: **is every drawing graded, at a box from the scale?** (§2a — `test_a_drawing_is_graded.py`); **is every control's explanation with the control, and the header identity only?** (§2b — `test_apparatus_in_its_place.py`); **does every fold say how deep it goes, and does nothing scroll inside a scrollbox?** (§3a — `test_the_fold_says_how_deep_it_goes.py`); **is every section's content two interactions from its rail entry?** (§3b — `test_the_chain_folds_and_clicks_are_counted.py`). `test_the_page_conforms_to_its_sections.py` runs all four over the booted page, which is what catches a surface none of the four items enumerated.
 6. Never delete, weaken, or skip an existing test to make your change pass. If an existing test's expectation was actually wrong per spec, fixing the test is in-scope only if the task file says so explicitly.
 
+## 2.5. A bookkeeping finding is a line, not a row
+
+A stale figure, a doc naming a retired flag - a drift you *notice*, not
+one you were sent to fix - is one line in `docs/backlog/bookkeeping.md`
+(`UX-998`): `tools/dev_bookkeeping.py --add PATH WHAT COMMAND --class
+CLASS --round N`. It is not a task file, and it is not fixed inline -
+that is still scope creep, the same rule §2 states for a bug. Once a
+round the `architect` runs `--sweep` and bundles what fits the `UX-994`
+cap into one batch track; a line unswept for three sweeps is promoted
+to a row or dropped with a reason, both through `--mark`.
+
 ## 3. Definition of Done — mandatory verification
 
 **A task may only be marked 🟢 Fixed & Verified if you have personally run its Acceptance Test in this session and it passed.** Self-assessment ("this looks correct now") is not sufficient — that is exactly how the scheduler-wait regression above happened.
@@ -370,6 +381,8 @@ tools/dev_touch_map.py       which test files executed which module, off CI's ow
 tools/dev_impact.py          what a change reaches - contracts, findings, guides,
                              guards, open filings - and where it routes (UX-687, UX-701)
 tools/dev_close_task.py, dev_shape_budget.py  closing a row and its shape budget (UX-336, UX-690) · _close_task_checks.py  its newer `--check` properties
+tools/dev_bookkeeping.py     a bookkeeping finding's ledger: --add,
+                             --sweep, --mark - one line each (UX-998 (open))
 tools/dev_refresh_analysis.py  the rule a committed analysis is written
                              under, and the command that rewrites one
                              from a fresh run (UX-486)
@@ -598,6 +611,9 @@ missed two, both caught by CI (`UX-763`). In order:
    time. CI on the pull request is the gate before merge, on the
    newest Python alone; push to main still runs all four (`UX-995`).
    Nothing merges red.
+8. Once a round: sweep `docs/backlog/bookkeeping.md` —
+   `dev_bookkeeping.py --sweep` — and bundle what fits the cap into
+   one batch track before the next round starts (`UX-998`).
 
 **Self-reference (`UX-744`):** a history-derived figure cannot name
 the commit that first states it. Step 2 counts rows, not commits

@@ -56,3 +56,6 @@ A row whose Files, Guard and Mutation you named is a track:
   where it is read, never committed beside what it counts (`UX-996`).
 - **Retire as you shape.** A guard the row makes redundant is named for
   removal in Files, with the mutation that shows the survivor covers it.
+- **Sweep bookkeeping first.** Before shaping a row, check
+  `docs/backlog/bookkeeping.md --sweep` (`dev_bookkeeping.py`) - a
+  one-line drift belongs there, not a task file (`UX-998`).

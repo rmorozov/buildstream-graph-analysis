@@ -17,6 +17,7 @@ trusted (`UX-505`). One exception: `CLAUDE.md`'s Register table's fourth row, th
 | Stay inside the declared scope; a bug you notice becomes a row | — |
 | Touching the page? Run the styleguide's seven questions | `test_the_page_conforms_to_its_sections.py` |
 | Never delete, weaken or skip a test to make a change pass | `.claude/hooks/keep-the-guards-able-to-fail.sh` |
+| A drift you notice is a line, anything else a row | `test_a_bookkeeping_finding_is_one_line.py` |
 
 ## Definition of Done — §3
 
@@ -76,5 +77,4 @@ The proxy rule is the one this repository breaks most — about thirty sightings
 | **review** | the diff since the last architecture-review row | every item answered with a measurement or a filing |
 | **release** | a contract that moved | the derivation guard is green |
 
-A stream's output is another stream's input; a session doing two is two
-sessions. §3 does not vary by stream.
+A stream's output is another stream's input; a session doing two is two sessions. §3 does not vary by stream.

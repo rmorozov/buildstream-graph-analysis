@@ -62,3 +62,40 @@ Class:     optimization - a finding stops costing its own track: bounded median 
 Split:     one bounded track, parallel with the others; a batch counts as one row on the cap
 Question:  none
 ```
+
+## Outcome (round 140) — 🟡 In Progress
+
+**Premise:** held — a bookkeeping finding today pays a full task-file
+track; the Route makes it one ledger line under a transactional guard.
+
+### The gap, measured
+
+```text
+$ python3 tools/dev_process_bands.py --runs 153
+shape        runs  median tokens  median wall  not merged
+bounded        34           228k       32.7 m           8
+mechanical     46           249k       38.9 m          23
+```
+
+A finding filed today pays this track's own median before the ledger
+line replaces it (`UX-994`'s cap is what the batch buys back).
+
+### The close, measured
+
+```text
+$ python3 -m pytest tests/unit/test_a_bookkeeping_finding_is_one_line.py -n 2 -q
+17 passed in 0.69s
+$ make lint          # exit 0, no `new:` findings
+$ python3 tools/dev_sizes.py --check
+sizes ok: 140 file(s) measured, none above the cell .../tests/quality_reference.json records
+```
+
+### Mutation table
+
+| mutation | reddened | count |
+|---|---|---|
+| `SWEEP_LIMIT 3 -> 4` | `TestSweepSurvival::test_no_open_line_past_three_sweeps`, `TestMark::test_it_refuses_leaving_an_aged_line_open` | 2 of 17 |
+| command pattern loosened to `(.+)$` | `TestMalformedLines::test_a_command_with_no_backticks_is_named`, `TestAdd::test_it_round_trips` | 2 of 17 |
+
+Both reverted from a saved copy of the pre-mutation file; 17 passed,
+ruff clean on the revert.

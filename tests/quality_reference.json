@@ -101,6 +101,7 @@
     "tools/dev_adopt_check.py": {"duplicate_blocks": 0, "file_lines": 65, "longest_function": 20},
     "tools/dev_audit_reports.py": {"duplicate_blocks": 0, "file_lines": 93, "longest_function": 10},
     "tools/dev_baseline.py": {"duplicate_blocks": 0, "file_lines": 542, "longest_function": 43},
+    "tools/dev_bookkeeping.py": {"duplicate_blocks": 0, "file_lines": 233, "longest_function": 35},
     "tools/dev_close_task.py": {"duplicate_blocks": 0, "file_lines": 1365, "longest_function": 124},
     "tools/dev_commit_bodies.py": {"duplicate_blocks": 0, "file_lines": 98, "longest_function": 23},
     "tools/dev_env_check.py": {"duplicate_blocks": 0, "file_lines": 165, "longest_function": 27},

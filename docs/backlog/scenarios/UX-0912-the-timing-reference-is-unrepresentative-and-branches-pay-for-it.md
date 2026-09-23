@@ -256,3 +256,81 @@ A guard holds that the refresh came from CI: a reference whose
 A mutation writing a developer machine's source must redden it.
 
 ## Outcome
+
+**Round 138, 2026-09-23**
+
+**Premise:** held — three of the four records were a quieter runner's
+reading, and the adopt route has replaced them; the fourth is below.
+
+### The gap, and the refresh: `git show <sha>:tests/ci_reference.json`
+
+`UX-924`'s code (`c8b2f781`) made each adopt bank the run's own
+reading; five adopts since (`c19560d6` `e5b8f3db` `c2fbf2b6`
+`461c9c6b` `0c166828`) moved 426/282/483/298/500 entries each.
+
+```text
+                 run 35552785970   c8b2f781       dcbe4615 files [samples]
+size_ledger      15.2 vs 7.4       7.38 [x5]      7.0   [14.83, 6.16*, 6.82, 7.0*, 11.28]
+styleguide        7.0 vs 0.1       0.14 [x5]      1.16  [1.23, 1.18*, 0.81, 1.16*, 1.12]
+drawing_graded   17.5 vs 6.5      13.86 [x5]     13.87  [13.86, 13.86, 14.23, 14.71, 13.87]
+invocations      17.7 vs 9.2       9.19 [x5]      9.64  [9.19, 9.19, 13.41, 9.64, 12.3]
+* a small-tier junit: runs 35762184541, 35788690618 skipped `Test (with a timing report)`
+```
+
+`styleguide` reads 0.81-1.23 on the runner after `UX-911`, and its
+record followed (x0.70-1.06). `drawing_graded` agrees (x1.00-1.06).
+`invocations` has three real readings, 9.64-13.41, and two carried
+copies the next two adopts replace; no ledger row in 6 gate runs
+since 35755437814 (`UX-929`'s Outcome). All four are CI readings: the
+adopt job reads only a CI run's candidate.
+
+**`size_ledger` still disagrees, and not for a cost growth.** Its
+full-suite readings are 6.82-14.83 (and the ledger's 12.3-12.7);
+the median 7.0 is held there by the two small-tier readings, a run
+with the medium and large tiers absent. The file itself did not grow
+since its 7.38 was taken on 603850ed — alternated, one container:
+
+```text
+python3 -m pytest -q tests/unit/test_the_size_ledger_only_shrinks.py
+603850ed copy (8 tests)    17.38s  14.42s  15.11s
+HEAD copy    (10 tests)    16.96s  13.60s  16.33s     load average 15 on 4 cores
+```
+
+So it is a reference to refresh, and its route admits readings from a
+run the gate does not read — `UX-943`'s defect, measured on one entry.
+
+### The carry arrives — Acceptance Test, clause 1
+
+```text
+$ GET /actions/runs/35798639535/jobs  (pull_request, 71eb9d5d)  test (3.11)
+12 What the last run of the default branch found   success 23:53:42
+16 Tiers match CI's own record of them             success
+$ GET /check-runs/106983666251/annotations
+notice | tier carry: the default branch's carry restored
+```
+
+The newest `tier-carry-refs/heads/main-*` save before 23:53:42 is run
+35797680418's (8d25211e), `Leave it for the next run` done 23:42:16;
+the log line naming the hit key is behind `curl: (56) CONNECT tunnel
+failed, response 403`, so the run is named from the timestamps.
+
+### Clause 2 and 3
+
+The gate step is green on 8 of 8 main runs since `c8b2f781` that ran
+it, and on PR runs 35798639535 and 35794009831. The provenance guard
+exists: `test_a_slow_file_says_which_file.py::TestCiIsReadAgainstItsOwnRecord::test_the_committed_reference_is_in_one_of_those_two_states`.
+
+### Mutations verified red and reverted (1)
+
+| # | mutation | reddened |
+|---|---|---|
+| A1 | `measured_on` rewritten to `a developer machine, -n auto` | that clause, 1 of 1; restored, 1 passed |
+
+### Deviation from the Required Fix
+
+No artifact adopted by hand: the adopt route is the refresh (403 on
+artifacts here; `UX-924` argues against a one-run `--record`). No
+run yet on a branch carrying only this change — this branch's PR
+run is the first. The preamble's `bst-examples` coupling is not in
+the Required Fix and had nothing to skip: no main run since
+`c8b2f781` was red on the gate alone.

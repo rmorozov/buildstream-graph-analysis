@@ -62,4 +62,55 @@ the row is filed rather than fixed. The measured part is the reading
 above: whichever of the two branches the candidate dumps support, with
 the `samples` pasted.
 
-## Outcome
+## Outcome (round 138, 2026-09-23)
+
+**Round 138, 2026-09-23.** **Premise:** held — the record was stale, and
+the flat series is the file's cost, not a bimodal file.
+
+### The gap, measured
+
+The three runs' candidate dumps answer 403 from this container, so the
+readings are `tests/ci_reference.json`'s `samples`, which carry CI's own
+seconds per run since `UX-924` (`c8b2f781`):
+
+```text
+$ python3 -c "import json; r=json.load(open('tests/ci_reference.json'));
+  k='tests/unit/test_the_fold_says_how_deep_it_goes.py'; print(r['files'][k], r['samples'][k])"
+14.5 [10.94, 10.94, 16.53, 15.0, 14.5]
+ledger x shift, on the 10.94 record adopted 2026-09-02 (0d288ebf):
+34778362447 16.83s  35059653023 16.54s  35605347763 17.32s  35735148844 17.67s
+```
+
+Three real readings 14.5-16.53 and four excursions 16.54-17.67: one band,
+14.5-17.7 s, with no reading near 10.94. The record was set once and
+could not move until `UX-924`. By run (`UX-936`), its four excursions
+had 1, 0, 1 and 2 other files beside them.
+
+### After
+
+`0c166828`, CI's third post-`UX-924` adopt, took the record 10.94 -> 14.5
+(`median_low` of the window). Each ledger reading against it:
+
+```text
+34778362447 x1.16  35059653023 x1.14  35605347763 x1.19  35735148844 x1.22
+over 1.5x and +5s: False for all four
+$ python3 -c "from tools import dev_flake_census as c; print(c.unaccounted(c.load()))"
+[]
+```
+
+Left to CI's adopt: no hand edit to `ci_reference.json` (`UX-912`), and
+the two remaining 10.94 copies leave the window in two more adopts.
+
+### Mutations verified red and reverted (2)
+
+| # | mutation | reddened |
+|---|---|---|
+| A1 | this task's `**Flake:**` field deleted | `test_the_real_ledger_has_no_unfiled_repeat_excursion`, 1 of 8 |
+| A2 | `**Flake:**` pointed at `test_tie_break.py`, which has no excursion | the same clause, 1 of 8 |
+
+### Deviation from the Required Fix
+
+The candidate dumps were unreachable: the artifact zip and the
+`tier-reference` job log of run 35735148844 both answer
+`CONNECT tunnel failed, response 403`. The reference's `samples`
+window is the same per-run reading, divided by each run's shift.

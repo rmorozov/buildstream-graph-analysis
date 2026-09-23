@@ -1,6 +1,6 @@
 # UX-990: the BuildStream behaviour claims in `tools/` are outside the register `UX-940` built for `bga/`
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-940 | **Blocks:** — | **Found by:** round 138 — enumerating `bga/`'s versioned claims for `UX-940` | **Serves:** whoever reads a BuildStream behaviour claim in the capture tools and has to decide whether it still holds on the pinned binary | **Topic:** guards | **Area:** tools | **Shape:** bounded
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-940 | **Blocks:** — | **Found by:** round 138 — enumerating `bga/`'s versioned claims for `UX-940` | **Serves:** whoever reads a BuildStream behaviour claim in the capture tools and has to decide whether it still holds on the pinned binary | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 
@@ -42,5 +42,23 @@ which records what a fixture was captured with and does not age.
 The completeness clause reddens on a new versioned line in `tools/` that
 is neither registered nor declared provenance, and every registered
 `tools/` claim carries a reading pasted with its command.
+
+## Decision
+
+The `architect`, round 140, at `398b4db9`.
+
+```text
+Route:     read each of the 14 tools/ lines in the downloaded 2.8.1 wheel; register the claims in
+           tests/bst_claims.json with provenance lines (path, anchor, reason) in the same
+           register, not source markers; widen completeness to bga/ and tools/, per line
+Rejected:  keep it in the bookkeeping batch - each line needs its own wheel reading, and a
+           wrong claim is a wrong capture: product work
+           a `# provenance` source marker - changes tools/ files under the sizes ratchet
+Files:     tests/bst_claims.json, tests/unit/test_a_behaviour_claim_names_the_bst_it_was_read_on.py
+Guard:     test_every_versioned_line_in_bga_and_tools_is_registered_or_provenance
+Mutation:  add a "BuildStream 2.8.1" line to the registered tools/bst_show_to_graph.py -> red,
+           which today's per-file check would not (measure bga/ per line first: 7 vs 16 anchors)
+Class:     product
+```
 
 ## Outcome

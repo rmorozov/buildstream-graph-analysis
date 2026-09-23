@@ -63,4 +63,20 @@ there) reddens a clause of
 `test_the_documents_keep_up_with_the_contracts.py`, and the clause is
 green on the fixed tree.
 
+## Decision
+
+The `architect`, round 140, at `398b4db9`.
+
+```text
+Route:     cli.md:1099 refers back ("against the surface above") and drops the unguarded
+           `514 distinct keys`; one clause: nothing after the bold `**{n} keys**` in
+           _coverage_section() is a figure (?<![\w-])\d{3,}(?![\w-])
+Rejected:  derive 514 in the guard - a second walk to pin a figure nobody acts on (UX-996)
+Files:     docs/guides/cli.md, tests/unit/test_the_documents_keep_up_with_the_contracts.py
+Guard:     test_the_documents_keep_up_with_the_contracts.py::test_the_section_states_the_surface_once
+           (measured: the figures after the bold one are [514, 562])
+Mutation:  restore "against the 562 above" -> red; "against the 563 above" -> red too
+Class:     bookkeeping (batch with UX-979, UX-945)
+```
+
 ## Outcome

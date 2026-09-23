@@ -1,6 +1,6 @@
 # UX-945: the context map's existence check reads five typed top-level names, so a §6 line under any other directory is never checked against the tree
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-937, UX-239 | **Blocks:** — | **Found by:** round 138 — `UX-937`'s second mutation, which its Acceptance Test expected this guard to catch | **Serves:** every row that declares an area, now that the area vocabulary is whatever top-level directory §6 names | **Topic:** guards | **Area:** tests/unit | **Shape:** judgement
+**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-937, UX-239 | **Blocks:** — | **Found by:** round 138 — `UX-937`'s second mutation, which its Acceptance Test expected this guard to catch | **Serves:** every row that declares an area, now that the area vocabulary is whatever top-level directory §6 names | **Topic:** guards | **Area:** tests/unit | **Shape:** mechanical
 
 ## Motivation
 
@@ -45,5 +45,23 @@ The other direction - a module on no row - which already walks git.
 A §6 line `nowhere/deep/` reddens `test_the_context_map_is_the_tree.py`
 naming it; removing the line greens it. A mutation that restores the
 alternation keeps it green and must redden the new clause.
+
+## Decision
+
+The `architect`, round 140, at `398b4db9`.
+
+```text
+Route:     test_the_map_names_nothing_that_does_not_exist reads paths from one helper returning
+           both the first word of each path-shaped map line under any top-level name, and
+           mid-line paths under top-level names taken from _tracked(), not the typed five
+Rejected:  widen the mid-line regex to any name/... - 16 false hits (push/PR, UX-694/697, ...)
+           declared_areas() drops a missing directory - hides a §6 typo; touches tools/
+Files:     tests/unit/test_the_context_map_is_the_tree.py
+Guard:     the existence clause, plus a self-test: the helper fed "nowhere/deep/   x" returns
+           nowhere/deep/ (measured: 159 mid-line paths as today, 0 stale)
+Mutation:  add a §6 line `nowhere/deep/` -> existence clause red; restore the five-name
+           alternation -> self-test red
+Class:     bookkeeping (batch with UX-979, UX-977)
+```
 
 ## Outcome

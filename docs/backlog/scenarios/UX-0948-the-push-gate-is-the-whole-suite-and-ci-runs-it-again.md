@@ -55,15 +55,7 @@ $ python3 tools/dev_touching.py --base "$(git merge-base HEAD origin/main)" --li
 
 `make push-check` = `lint` (PyMarkdown, ruff, `dev_baseline.py --check`)
 → `dev_touching.py --base <merge-base>` → `dev_sizes.py --check` →
-`dev_close_task.py --check` → `.gate-covered`. `make -n push-check`:
-
-```text
-python3 tools/dev_baseline.py --check
-base=$(git merge-base HEAD origin/main) && python tools/dev_touching.py --base "$base"
-python3 tools/dev_sizes.py --check
-python3 tools/dev_close_task.py --check
-git rev-parse HEAD > .gate-covered
-```
+`dev_close_task.py --check` → `.gate-covered`, as `make -n push-check` prints it.
 
 `TestThePushCheckWritesTheMarkerOnlyOnGreen` runs the real `Makefile`
 in a scratch repo whose `python`, `python3` and `ruff` are stubs failing
@@ -102,6 +94,17 @@ files — the local full suite rule 12 forbids. The guard files the diff
 names ran instead (below). A `Makefile`, `conftest.py` or `tiers.py`
 change makes `make push-check` a full suite; that is `EVERYTHING`'s
 design, left as it is.
+
+CI reddened the six `test_one_red_check_writes_no_marker` cases on all four Pythons (#281): the scratch `make` inherited the parent's `MAKELEVEL` and printed `Leaving directory` last. The guard drops the `MAKE*` variables and runs `make -j1 --no-print-directory`:
+
+```text
+$ make -j4 -f under.mk run   # pytest on this file under a parent make; before, after
+6 failed, 34 passed in 3.95s
+40 passed in 3.70s
+```
+
+Every mutation above was re-run under that parent make, with the same
+counts red, and the guard was green again after each revert.
 
 ```text
 $ make lint                              # exit 0

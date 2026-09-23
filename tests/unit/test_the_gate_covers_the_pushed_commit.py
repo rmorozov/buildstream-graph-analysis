@@ -147,6 +147,66 @@ class TestTheHeadIsCheckedAgainstTheMarker:
         assert code == 2, said
 
 
+class TestItJudgesThePayloadsTree:
+    """UX-992: the `PreToolUse` payload's own `cwd`, not the hook
+    process's inherited one (a worktree push has the main checkout's),
+    decides whose marker and `HEAD` are read."""
+
+    @pytest.fixture
+    def divergent(self, tmp_path):
+        """A main repo and a linked worktree, `HEAD`s diverged one commit each."""
+        main, wt = tmp_path / "main", tmp_path / "wt"
+
+        def run(cwd, *a):
+            subprocess.run(["git", "-C", str(cwd), *a], check=True,
+                           capture_output=True)
+        subprocess.run(["git", "init", "-q", str(main)], check=True)
+        run(main, "config", "user.email", "t@example.com")
+        run(main, "config", "user.name", "t")
+        (main / "a.txt").write_text("x")
+        run(main, "add", "a.txt")
+        run(main, "commit", "-q", "-m", "one")
+        run(main, "branch", "wt-branch")
+        run(main, "worktree", "add", str(wt), "wt-branch")
+        (main / "b.txt").write_text("y")
+        run(main, "add", "b.txt")
+        run(main, "commit", "-q", "-m", "main-two")
+        (wt / "c.txt").write_text("z")
+        run(wt, "add", "c.txt")
+        run(wt, "commit", "-q", "-m", "wt-two")
+        return main, wt
+
+    @staticmethod
+    def _fire(command, run_cwd, payload_cwd):
+        """Hook process spawned in `run_cwd`, payload naming `payload_cwd`."""
+        run_env = {k: v for k, v in os.environ.items()
+                   if k != "BGA_SKIP_PUSH_GATE"}
+        done = subprocess.run(
+            [str(HOOK)], input=json.dumps(
+                {"tool_input": {"command": command}, "cwd": str(payload_cwd)}),
+            cwd=run_cwd, capture_output=True, text=True, timeout=30, env=run_env)
+        return done.returncode, done.stderr
+
+    def test_a_worktree_covered_by_its_own_marker_is_allowed(self, divergent):
+        main, wt = divergent
+        (wt / ".gate-covered").write_text(_head(wt))
+        code, said = self._fire("git push", main, wt)
+        assert code == 0, said
+
+    def test_an_uncovered_worktree_is_refused_naming_its_own_sha(self, divergent):
+        main, wt = divergent
+        (main / ".gate-covered").write_text(_head(main))
+        code, said = self._fire("git push", main, wt)
+        assert code == 2, said
+        assert _head(wt) in said, said
+        assert _head(main) not in said, said
+
+    def test_a_payload_cwd_that_does_not_exist_falls_back(self, divergent):
+        main, _wt = divergent
+        code, said = self._fire("git push", main, main / "no-such-dir")
+        assert code == 2, said
+
+
 class TestTheEscapeHatch:
 
     def test_it_is_named_in_the_message(self):

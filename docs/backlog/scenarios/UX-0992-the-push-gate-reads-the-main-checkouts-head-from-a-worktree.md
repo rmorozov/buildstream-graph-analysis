@@ -125,3 +125,33 @@ The real main checkout's current `HEAD`, read from
 `1e40e4adac5d41af95775fa37847d715c70a5c5e` - a different commit from
 this worktree's, confirming the same divergence the scratch pair
 demonstrates is live on this exact box, not merely constructible.
+
+**Round 140, 2026-09-23**
+
+**Close measured.** `repo_root` reads `(payload or {}).get("cwd")`,
+pre-flights it with `os.stat` (falling back to the process cwd on
+`OSError`), and passes it as `cwd=` to the existing
+`subprocess.run(["git", "rev-parse", "--show-toplevel"], ...)` call;
+line 53's text is unchanged, `cwd=` lands on the continuation line.
+`TestItJudgesThePayloadsTree` (main repo + linked worktree, divergent
+`HEAD`s, hook run with process cwd = main):
+
+```text
+$ python3 -m pytest tests/unit/test_the_gate_covers_the_pushed_commit.py -k TestItJudgesThePayloadsTree -v
+test_a_worktree_covered_by_its_own_marker_is_allowed PASSED
+test_an_uncovered_worktree_is_refused_naming_its_own_sha PASSED
+test_a_payload_cwd_that_does_not_exist_falls_back PASSED
+3 passed
+```
+
+**Mutation table.**
+
+| mutation | reddened | count |
+|---|---|---|
+| drop `cwd=start` on the `subprocess.run` call | (a) `2 == 0`; (b) `0 == 2` | 2 failed, 1 passed |
+| drop the `try/except OSError` around `os.stat(start)` | (c) `FileNotFoundError`, exit 1 not 2 | 1 failed, 2 passed |
+
+Both reverted from a saved copy of the file (`diff` confirmed
+byte-identical to the fix before re-running); all three green again
+after each revert. `make lint` clean: `dev_baseline.py --check` still
+shows "2 still forced by UX-762" - line 53's identity untouched.

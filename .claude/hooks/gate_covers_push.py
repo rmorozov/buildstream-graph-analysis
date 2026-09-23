@@ -43,15 +43,24 @@ TASK_ID = re.compile(r"UX-\d+")
 NON_PUSH_FLAGS = {"--dry-run", "-n", "--delete", "-d", "--tags"}
 
 
-def repo_root():
+def repo_root(payload=None):
     """The checkout the push is being made in, not the hook's own.
 
     Same reason as `selector_before_commit.repo_root`: a worktree
     borrows `.claude/` from the shared checkout, so a hook reading its
     own path judges a tree the pusher is not in (round 80's track D).
+    A `PreToolUse` hook's own cwd is `CLAUDE_PROJECT_DIR` regardless of
+    which worktree the pending command runs in - the payload carries
+    the real one (UX-992).
     """
+    start = (payload or {}).get("cwd")
+    if start is not None:
+        try:
+            os.stat(start)
+        except OSError:
+            start = None
     done = subprocess.run(["git", "rev-parse", "--show-toplevel"],
-                          capture_output=True, text=True)
+                          capture_output=True, text=True, cwd=start)
     if done.returncode == 0 and done.stdout.strip():
         return pathlib.Path(done.stdout.strip())
     return pathlib.Path(__file__).resolve().parents[2]
@@ -133,7 +142,7 @@ def main():
     command = (payload.get("tool_input") or {}).get("command") or ""
     if not command or not is_real_push(command):
         return 0
-    root = repo_root()
+    root = repo_root(payload)
     head = head_sha(root)
     if head is None:
         return 0

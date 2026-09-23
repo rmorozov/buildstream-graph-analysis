@@ -1,7 +1,7 @@
 {
   "paths": [".claude/hooks", "bga", "tools"],
   "files": {
-    ".claude/hooks/gate_covers_push.py": {"duplicate_blocks": 2, "file_lines": 157, "longest_function": 28},
+    ".claude/hooks/gate_covers_push.py": {"duplicate_blocks": 2, "file_lines": 166, "longest_function": 28},
     ".claude/hooks/no_bulk_add.py": {"duplicate_blocks": 1, "file_lines": 152, "longest_function": 27},
     ".claude/hooks/selector_before_commit.py": {"duplicate_blocks": 1, "file_lines": 158, "longest_function": 20},
     "bga/__init__.py": {"duplicate_blocks": 1, "file_lines": 105, "longest_function": 0},

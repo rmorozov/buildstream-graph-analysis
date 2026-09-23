@@ -362,6 +362,7 @@ tools/native_trace_to_chrome_trace.py, bst_log_to_chrome_trace.py,
 tools/bst_run_context.py, _run_context_common.py
 tools/dev_touching.py        the tests that name what your diff touched, plus the census
                              they can never name (UX-336, UX-522)
+tools/_record_readers.py     its clause for a record a guard loads through a tool (UX-942)
 tools/dev_touch_map.py       which test files executed which module, off CI's own
                              coverage run - the import chain a grep cannot see (UX-524)
 tools/dev_impact.py          what a change reaches - contracts, findings, guides,

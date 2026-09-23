@@ -10,6 +10,7 @@ import sys
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "tools"))
 
+import _record_readers
 import dev_touching
 
 LEDGER_GUARD = "tests/unit/test_a_file_with_three_excursions_has_a_filed_task.py"
@@ -42,7 +43,7 @@ def _selects(body, record="tests/rec.json"):
 
 
 def record_readers_of(record, test):
-    found = dev_touching.record_readers(
+    found = _record_readers.record_readers(
         record, {"dev_rec": TOOL}, {"tests/unit/test_x.py": test})
     return found.get("tests/unit/test_x.py", [])
 

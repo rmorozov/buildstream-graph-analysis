@@ -83,7 +83,7 @@ tests/touch_map.json: 36 selected, 7 naming, 7 by the clause
   (every one through dev_touching.select() / main() / spread() / touch_map())
 ```
 
-**The narrow set, derived.** `record_readers` reads each `tools/*.py`
+**The narrow set, derived.** `tools/_record_readers.py` reads each `tools/*.py`
 naming the record's basename: a module constant whose `REPO / ...` chain
 spells the record's *path*, a function defaulting a parameter to it, a
 parameterless body spelling it, and, closed over the tool's own calls,
@@ -108,9 +108,9 @@ the 1678 paths: 95 ms before, 89 ms after (same run, noise).
 
 ### Mutations verified red, reverted from a snapshot, 11 passed (6)
 
-| # | mutation in `tools/dev_touching.py` | reddened |
+| # | mutation in `tools/_record_readers.py` | reddened |
 |---|---|---|
-| M1 | the clause reverted (`_through_a_tool` returns `{}`) | the ledger and reference cases, 2 |
+| M1 | the clause reverted (`choose` returns early; or its call deleted) | the ledger and reference cases, 2 |
 | M2 | `_on_default` always true | `..._on_its_own_path_does_not`, 1 |
 | M3 | no call closure (`grew = False`) | reference, `..._calling_the_loader_selects`, 2 |
 | M4 | constant access ignored | `..._constant_itself_selects`, `..._elsewhere...`, 2 |

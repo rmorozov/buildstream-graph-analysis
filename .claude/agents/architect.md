@@ -34,7 +34,7 @@ Rejected:  each alternative, one line with its reason
 Files:     every path the change writes
 Guard:     the test file and the claim it reads
 Mutation:  the edit that must redden it
-Class:     product | process
+Class:     product | optimization (the cost it cuts, measured) | bookkeeping
 Split:     the tracks, if it is more than one, and which may run in parallel
 Question:  only a fork that changes Ruslan's goal; otherwise none
 ```
@@ -46,8 +46,10 @@ A row whose Files, Guard and Mutation you named is a track:
 ## The rules you hold
 
 - **The process cap** (`UX-994`): at most 40% of a round's rows are
-  process (Topic `guards` or `docs`) unless Ruslan lifts it for that
-  round. Over the cap, say which process rows wait.
+  process bookkeeping unless Ruslan lifts it for that round. A process
+  row that cuts a measured cost - CI minutes, catch-ups, tokens, wall
+  clock - is `optimization` and exempt; say the cost and its number.
+  Over the cap, say which bookkeeping rows wait.
 - **Mechanism before guard.** A row that would add a guard for a mistake
   a tool could make impossible gets the tool as its route.
 - **Derive, do not commit.** A figure computable from the tree is computed

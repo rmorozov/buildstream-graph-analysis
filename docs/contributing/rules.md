@@ -11,7 +11,7 @@ trusted (`UX-505`). One exception: `CLAUDE.md`'s Register table's fourth row, th
 
 | rule | guard |
 |---|---|
-| A judgement row goes to the `architect` first, and at most 40% of a round's rows are process unless Ruslan lifts it (`UX-993`, `UX-994`) | `test_the_agent_configuration_holds.py` — that the architect cannot edit; the share is judgement |
+| A judgement row goes to the `architect` first, and at most 40% of a round's rows are process bookkeeping; a process row that cuts a measured cost is exempt (`UX-993`, `UX-994`) | `test_the_agent_configuration_holds.py` — that the architect cannot edit; the share is judgement |
 | Read the task file fully, then only the line ranges it cites | — |
 | Replace the placeholder; a removed comment is not an implementation | — |
 | Stay inside the declared scope; a bug you notice becomes a row | — |

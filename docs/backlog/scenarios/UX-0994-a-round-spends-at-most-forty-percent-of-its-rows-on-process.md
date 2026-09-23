@@ -14,8 +14,10 @@ owner set a cap on 2026-09-23 14:44.
 ## Required Fix
 
 The rule, stated once on the rules card and held by the `architect`:
-at most 40% of a round's rows are process unless the owner lifts it for
-that round; over the cap, the architect names which process rows wait.
+at most 40% of a round's rows are process bookkeeping unless the owner
+lifts it for that round; a process row that cuts a measured cost (CI
+minutes, catch-ups, tokens, wall clock) is `optimization` and exempt.
+Over the cap, the architect names which bookkeeping rows wait.
 
 ## Out of Scope
 
@@ -38,9 +40,9 @@ The rules card's §2 row names the cap and its holder; `architect.md`
 names it among the rules it holds and returns a `Class:` line. All three
 of this round's Decisions carry `Class: process`.
 
-Round 139 is over the cap by the owner's own direction: its five rows
-(UX-993..UX-997) are all process, and each is one of his four calls of
-2026-09-23 14:44. The next round is the first the cap binds.
+Round 139's five rows (UX-993..UX-997) are all process, and each is one of
+the owner's calls of 2026-09-23 14:44; under the amendment below they are
+optimization, not bookkeeping, so the round is inside the cap.
 
 ### Mutations
 
@@ -48,6 +50,12 @@ None: judgement. A share of a round's rows is decided when the round is
 planned, and nothing mechanical sees a plan.
 
 ### Deviation from the Required Fix
+
+Amended the same day: Ruslan, 2026-09-23 15:01, "it is completely ok to
+have exceptions for this cap ... especially if process means direct
+optimization, not only bookkeeping for bookkeeping". The architect's
+`Class:` is now product, optimization or bookkeeping; UX-995..UX-997 each
+cut a measured cost and would class optimization.
 
 The cap shares one rules-card row with UX-993, because the card is at its
 80-line cap (`test_the_card_stays_a_card`).

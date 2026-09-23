@@ -20,7 +20,7 @@ block is `UX-109`'s defect in a newer place: a gate written as though
 it holds.
 
 holds: rules.md#never-let-an-instrument-read-a-proxy-for-the-thing-it-names
-holds: rules.md#a-judgement-row-goes-to-the-architect-first-and-at-most-40-of-a-rounds-rows-are-process-unless-ruslan-lifts-it-ux-993-ux-994
+holds: rules.md#a-judgement-row-goes-to-the-architect-first-and-at-most-40-of-a-rounds-rows-are-process-bookkeeping-a-process-row-that-cuts-a-measured-cost-is-exempt-ux-993-ux-994
 """
 import contextlib
 import io

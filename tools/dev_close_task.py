@@ -455,7 +455,10 @@ def area_pages():
             for a, u in sorted(pages.items())}
 
 
-AREA_PAGES = REPO / "docs/backlog/areas"
+#: `UX-932`: the scenarios directory's sibling, so `--scenarios` moves the
+#: writes and the deletions with it; with no `--scenarios` it is the
+#: repository's `docs/backlog/areas`.
+AREA_PAGES = SCENARIOS.parent / "areas"
 DESIGN_AREA_PAGES = REPO / "docs/design/areas"
 
 
@@ -1307,10 +1310,11 @@ def main(argv=None) -> int:
     args = parser.parse_args(filtered)
 
     if args.scenarios:
-        global SCENARIOS, INDEX, CLOSED
+        global SCENARIOS, INDEX, CLOSED, AREA_PAGES
         SCENARIOS = pathlib.Path(args.scenarios).resolve()
         INDEX = SCENARIOS / "README.md"
         CLOSED = SCENARIOS / "closed.md"
+        AREA_PAGES = SCENARIOS.parent / "areas"
 
     if args.write and not (args.check or args.shape):
         parser.error("--write is what --check (or --shape) does instead of "

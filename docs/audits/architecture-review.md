@@ -97,6 +97,7 @@ would have caught it; a bound at it would only just have.
 | 23 | 2026-09-13 | 834 | three filings, two of them review 22's shape one turn further — a guard whose presence-check is satisfied by the sentence stating a delta, not the table it should hold equal to it: `UX-838` — `UX-829`'s `fan_in[uid].direct` ships in round 116 with no document naming it and no guard able to, because `additionalProperties`-shaped rows are invisible to both of `_row_keys`'s two cases; `UX-840` — §3e's two reference tables sit one to three deltas behind `UX-830`'s own guarded bound, and `test_the_style_guide_states_every_budget` is green throughout because the missing number is present anyway, inside the narrative paragraph beside the stale table. `UX-839` — the shape review 20 named: a bare figure with no guard at all, the README's clone-size claim flagged undated by reviews 21 and 22 and now measured roughly 2x-9x what it states |
 | 24 | 2026-09-15 | 862 | one finding in two facets, both `UX-858`'s own gap - `cli.md`'s jobserver flag list has no line for `--jobserver-seed N`, and `run_instance.jobserver`'s documented four keys are five in the schema hint (`seed` missing), invisible to the coverage guard because `run_instance` is typed as a bare `object` in the published schema: `UX-866`; the context map's `UX-846 (open)` label two rounds after the row closed: `UX-867`; and `UX-863`'s merged-edge selector fix that reddens no guard, named by its verifier: `UX-868` |
 | 25 | 2026-09-20 | 889 | one filing, and the shape is reviews 23 and 24's third turn: `UX-909` - round 132's five `lb_cpu_*` keys shipped under `floors` and no clause could go red, because `_consumer_surface()` walks top-level properties and rows and never a top-level object's own scalars (302 such keys, `certified_headroom` among them); `analyze/v6` stays at 62 properties across the round, which is why the count check sees nothing. The same row notes that `_named_in_the_documents()` excludes paths and not arguments, so a `**Status:** proposed` design document counts as a documented home - latent, 0 surface keys rest on one today. Three document gaps in the round's own uncommitted diff were closed in the round rather than filed, none having reached `main`: the §6 floors row, `architecture.md`'s floors line and `cli.md`'s missing `lb_cpu_*` section. Sound: the contract counts, the 309-key sentence, the viewer file count, the §6 tree's paths and `macro_micro`'s pasted capacity block all reproduce |
+| 26 | 2026-09-23 | 914 | five filings, and three of them are one shape: **a check that moved, and a document that described the old one.** `UX-910` replaced `11-serial-giant`'s `auto < off` step with a width check and its README still argues for the step: `UX-978`. `UX-925` emptied the stager's toolchain array and four sentences still install or copy a host toolchain: `UX-975`. `UX-744` renamed a guard class and §7a still sends a closing session to the old name, because the link guard resolves a citation's path and not what follows `::`: `UX-979`. Plus two figures: `cli.md`'s coverage section states the surface twice, the guard reads the bold one and `UX-899` moved only that one (563 against 562 fourteen lines down): `UX-977`; and the README's *37-path closure* is 35 paths by `nix_closure --plan`, the 37 being the staged tree with the two `make` pins: `UX-976`. Sound: the contract counts, the §6 map's nine new modules, the touching spread, the spec line figures, `ci-comment.md`'s 33 % and the exit codes `--help` prints |
 
 ### Review 11 — 2026-09-02
 
@@ -1555,6 +1556,52 @@ six named plus §1a were checked. The §6 module map's ~103 per-row
 descriptions were checked for the CI-workflow block only — `UX-780`
 came out of that block, which is a reason to think the rest is worth a
 pass. `UX-689` owns the map's structural half.
+
+## Review 26 — 2026-09-23, at 914 closed rows
+
+Run by one reader over what landed since review 25: rows `UX-890` to
+`UX-944` closed in rounds 133-137, and the documents they moved -
+`examples/README.md`'s toolchain section, the `11` and `12` example
+READMEs, `cli.md`'s new sections, `ci-comment.md`, the fixing guide's
+§6 and §7a, `ci.yml`'s comments and `architecture.md`. Five filings.
+
+**The shape** is a check that moved while its description stayed. Three
+rows changed what a gate or a stager does and left the prose that
+described the old one. `UX-910` replaced a wall ordering with a width
+check. `UX-925` replaced a host toolchain with a pin. `UX-744` renamed
+a guard class. Each row's own guard reads the file it changed
+(`ci.yml`, the stager, the test file), and none reads the document
+beside it. The two figure findings are review 19's shape, a sentence
+inside a guarded document and outside its guard's population:
+
+```text
+$ grep -n "562 above\|563 keys" docs/guides/cli.md
+1085:its own nine buckets are not. The surface is **563 keys** today, and
+1099:  walked, against the 562 above. `--schema` stays the complete list,
+$ python3 -m tools.nix_closure --plan --root <gcc> --root <binutils> --root <cmake> ... | tail -1
+#  35 paths  438654496 bytes unpacked
+```
+
+### The five checks
+
+| check | result |
+|---|---|
+| counts | `bga.contracts.ids()` 25, `superseded()` 10, `reads()` 3, `printable()` 9, `unprintable()` 16 - unchanged since review 25; `analyze/v6` 62 properties, `compare/v2` 21; `ls bga/viewer/*.js` 22; `_consumer_surface()` 563, which `cli.md:1085` states and `:1099` does not (`UX-977`); `dev_touching.py --spread` prints `31-163 of 582 test files`, as §3 says; `closed.md` 889 to 914 |
+| versions | `BST_VERSION` 2.8.1 and `BST_PLUGINS_VERSION` 2.8.0 in `ci.yml`, and 2.8.1 in `real-project-capture.yml` (`UX-939`); the pins `sysroot_manifest` declares were not re-staged here, so the README's table is not re-run |
+| paths exist | all nine modules added since review 25 (`bga/{artifact_weight,buildclass,cache_capacity}.py`, `tools/{dev_adopt_check,nix_closure,nix_store_fetch,nix_toolchain,sysroot_manifest,toolchain_params}.py`) are on the §6 map; seven `file.py::Name` citations in the reference documents were resolved and one dangles, §7a step 5's (`UX-979`) |
+| pasted output current | the README's closure count re-walked from `nix_toolchain.roots()` - 35, not 37 (`UX-976`); the spec's line 1690 and Part 32's 1515-1958 in §3.12 reproduce; `ci-comment.md`'s **33%** is `real-project.md:874`'s record |
+| a workflow or config | the stager copies `env sh uname sort cat` and an empty `TOOLCHAIN_BINARIES`, and `ci.yml:1104` and `:1240` still say it copies from the runner's `build-essential`/`cmake` (`UX-975`); `ci.yml`'s `bst-examples` step runs `check_jobserver_width.py`, and `examples/11-serial-giant/README.md:118-122` and `:143-144` still describe `auto < off` (`UX-978`) |
+| a Part or invariant held | the 27 rows in scope are 🟢 in `closed.md`; `compare/v2`'s two new keys (`build_class_comparison`, `baseline_band_sources`) are in `bga:always_written` and not `required`, as `architecture.md`'s row says |
+
+### One gap in this sweep
+
+The sysroot was not staged, so the README's two pasted tables
+(`sysroot_manifest --check`, `toolchain_params --check`) were checked
+against the task files that produced them, not re-run. The `514 distinct
+keys` beside `UX-977`'s figure was not re-derived. `architecture.md`'s
+`bga compare` row names neither `--blend` nor `--band-from-class`, and
+review 11 let a one-line-per-command table off for the same gap, so it
+is not filed.
 
 ## Review 25 — 2026-09-20, at 889 closed rows
 

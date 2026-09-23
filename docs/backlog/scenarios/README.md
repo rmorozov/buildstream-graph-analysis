@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-940 scenarios: **26 open**, 914 closed.
+945 scenarios: **31 open**, 914 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,8 +26,8 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 1 | 178 |
 | cli | 0 | 22 |
 | store | 1 | 17 |
-| docs | 1 | 146 |
-| guards | 17 | 264 |
+| docs | 4 | 149 |
+| guards | 19 | 266 |
 
 ## Open scenarios
 
@@ -62,6 +62,11 @@ task file, which is the only place it ever lived twice.
 | UX-942 | [the touching selector misses a guard that reads a record through a tool's constant](UX-0942-the-selector-misses-a-guard-that-reads-a-record-through-a-tool.md) | guards | Medium | every session whose inner loop is `make test-touching` on a change to a committed record | 🔴 Not Started |
 | UX-943 | [the adopt jobs write to the default branch from a run whose whole suite failed](UX-0943-the-adopt-jobs-run-on-a-run-whose-suite-failed.md) | guards | Medium | every branch that inherits a record the default branch adopted from a run nothing vouched for | 🔴 Not Started |
 | UX-944 | [the sysroot fixture clones 910 MB to read nine files, so its cost has two modes 30x apart and the reference entry is the median of both](UX-0944-the-sysroot-fixture-clones-910mb-to-read-nine-files.md) | guards | Medium | every run of the `test` job, which pays the dear mode whenever the runner's `/usr` and its temporary directory are on different filesystems | 🔴 Not Started |
+| UX-975 | [the examples still install a host toolchain the stager no longer reads, and two CI comments say it copies from one](UX-0975-the-examples-install-a-host-toolchain-the-stager-no-longer-reads.md) | docs | Medium | whoever stands the C++ examples up from `examples/README.md`, and the next reader of `ci.yml`'s staging steps | 🔴 Not Started |
+| UX-976 | [the toolchain closure is 35 store paths, and the examples README counts the two make pins into it](UX-0976-the-toolchain-closure-is-35-paths-and-the-readme-counts-the-make-pins-into-it.md) | docs | Low | whoever sizes the examples' download from the README | 🔴 Not Started |
+| UX-977 | [the coverage section states the surface twice, and the guard reads one of them](UX-0977-the-coverage-section-states-the-surface-twice-and-the-guard-reads-one.md) | guards | Low | whoever reads `cli.md`'s coverage section to learn how far the documentation guard reaches | 🔴 Not Started |
+| UX-978 | [the serial-giant README describes an `auto < off` assertion CI no longer makes](UX-0978-the-serial-giant-readme-describes-an-assertion-ci-no-longer-makes.md) | docs | Medium | whoever reads why `bst-examples` passes or fails on `11-serial-giant` | 🔴 Not Started |
+| UX-979 | [§7a cites a guard class a rename retired, and no guard resolves the part after `::`](UX-0979-a-guard-citation-names-a-class-a-rename-retired.md) | guards | Low | a session closing a round from §7a, which is sent to the guard by name | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

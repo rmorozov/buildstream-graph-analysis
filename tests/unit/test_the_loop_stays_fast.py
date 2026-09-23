@@ -185,8 +185,11 @@ class TestTheSelectorStillSelects:
     #: 45 because 4 of the 14 are now also census members, but `HANDFUL`
     #: keeps the stated formula's headroom rather than the tighter
     #: measured one.
-    HANDFUL = 45
-    CENSUS_FLOOR = 31
+    #:
+    #: `UX-940` moved it 31 -> 32 (its register guard walks `bga/`).
+    #: Same arithmetic: 45 -> 46; `WIDE` unchanged at 46.
+    HANDFUL = 46
+    CENSUS_FLOOR = 32
 
     # Wide because the module's name is how a test invokes it, not
     # because the selector is wrong. `UX-606` argued each one.
@@ -252,6 +255,10 @@ class TestTheSelectorStillSelects:
         # the same shape `edg`/`fan_in` already carry: the tree's own
         # growth, not a loose rule.
         "tools/native_trace/bwrap_shim.py",
+        # `UX-932`: 46 against 45, wide by **name** - every backlog guard
+        # imports the one tool that reads and derives the backlog, and
+        # `UX-935`'s and `UX-932`'s own guards are the 45th and 46th.
+        "tools/dev_close_task.py",
     }
 
     def test_a_one_module_change_selects_a_handful_not_the_suite(self):
@@ -954,6 +961,8 @@ class TestTheDerivedCountSeesAnUnstagedRow:
         import shutil
         scenarios = tmp_path / "scenarios"
         shutil.copytree(REPO / "docs/backlog/scenarios", scenarios)
+        # UX-932: the area pages are written beside the sandbox now.
+        shutil.copytree(REPO / "docs/backlog/areas", tmp_path / "areas")
         readme = scenarios / "README.md"
         readme.write_text(
             re.sub(r"^\d+ scenarios: \*\*\d+ open\*\*",

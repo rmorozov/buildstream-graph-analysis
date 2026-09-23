@@ -32,6 +32,9 @@ import subprocess
 import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO / "tools"))
+import _close_task_checks as checks
+
 SCENARIOS = REPO / "docs/backlog/scenarios"
 INDEX = SCENARIOS / "README.md"
 CLOSED = SCENARIOS / "closed.md"
@@ -405,14 +408,7 @@ _AREA_HEADER = re.compile(r"\*\*Area:\*\*\s*([a-z0-9_/]+)")
 
 def declared_areas():
     """The area vocabulary, read out of the fixing guide's §6 tree."""
-    try:
-        body = AREA_GUIDE.read_text(encoding="utf-8")
-    except OSError:
-        return set()
-    section = body.split("## 6.")[-1].split("\n## 7.")[0]
-    found = {m.rstrip("/") for m in re.findall(
-        r"^((?:bga|tools)/[a-z_]+/)", section, re.M)}
-    return found | {"bga", "tools", "bga/viewer", AREA_UNKNOWN}
+    return checks.declared_areas(AREA_GUIDE, AREA_UNKNOWN)
 
 
 def header_area(text):
@@ -455,7 +451,8 @@ def area_pages():
             for a, u in sorted(pages.items())}
 
 
-AREA_PAGES = REPO / "docs/backlog/areas"
+#: `UX-932`: beside the scenarios, so `--scenarios` moves writes and deletions.
+AREA_PAGES = SCENARIOS.parent / "areas"
 DESIGN_AREA_PAGES = REPO / "docs/design/areas"
 
 
@@ -699,12 +696,12 @@ def _backlog_counts():
 
 
 def _ls_files(*extra):
-    """`docs/backlog/<one>/` paths git lists, per directory."""
+    """`docs/backlog/<one>/` paths git lists, per directory; `"all"`, every line."""
     out = subprocess.run(["git", "ls-files", *extra], cwd=REPO, check=True,
                          capture_output=True, text=True).stdout.splitlines()
     # A wholly untracked subdirectory is one entry with a trailing
     # slash, not the files under it - so is a nested worktree.
-    return {one: [p for p in out if p.startswith(f"docs/backlog/{one}/")
+    return {"all": out} | {one: [p for p in out if p.startswith(f"docs/backlog/{one}/")
                   and not p.endswith("/")]
             for one in ("scenarios", "tasks")}
 
@@ -892,6 +889,8 @@ CHECKS = (
      lambda: area_problems()),
     ("every analysis/viewer/capture filing past UX-690 names its "
      "Decomposition", lambda: decomposition_problems()),
+    ("every id names one task file, and its heading names that id",
+     lambda: checks.id_problems(SCENARIOS, REPO)),
 )
 
 
@@ -1291,10 +1290,10 @@ def main(argv=None) -> int:
     args = parser.parse_args(filtered)
 
     if args.scenarios:
-        global SCENARIOS, INDEX, CLOSED
+        global SCENARIOS, INDEX, CLOSED, AREA_PAGES
         SCENARIOS = pathlib.Path(args.scenarios).resolve()
         INDEX = SCENARIOS / "README.md"
-        CLOSED = SCENARIOS / "closed.md"
+        CLOSED, AREA_PAGES = SCENARIOS / "closed.md", SCENARIOS.parent / "areas"
 
     if args.write and not (args.check or args.shape):
         parser.error("--write is what --check (or --shape) does instead of "
@@ -1303,7 +1302,7 @@ def main(argv=None) -> int:
         numbers = ([int(re.sub(r"[^0-9]", "", args.uid))] if args.uid
                    else open_uids())
         return report_shapes(numbers, args.write)
-    if args.check:
+    if args.check and checks.index_is_merged(_ls_files, _on_the_real_index()):
         wrote = []
         if args.write:
             wrote = [p for p in (write_index(), write_architecture()) if p]

@@ -165,6 +165,9 @@ CENSUS = (
     "tests/unit/test_the_round_history_names_every_audit.py",
     "tests/unit/test_the_styleguide_names_its_guards.py",
     "tests/unit/test_the_tiers_are_a_partition.py",
+    # `UX-940`: walks `bga/` for a versioned claim; a diff adding one
+    # names no module this file names.
+    "tests/unit/test_a_behaviour_claim_names_the_bst_it_was_read_on.py",
 )
 
 

@@ -50,6 +50,7 @@ task file, which is the only place it ever lived twice.
 | UX-997 | [a record CI measures lives outside main, and main carries only reviewed commits](UX-0997-a-record-ci-measures-lives-outside-main.md) | guards | High | every branch that inherits main, and every commit on main that should have CI | 🔴 Not Started |
 | UX-998 | [a bookkeeping finding is one line in a ledger, swept once a round](UX-0998-a-bookkeeping-finding-is-one-line-swept-once-a-round.md) | guards | High | every round, through the cost a bookkeeping row pays today | 🔴 Not Started |
 | UX-999 | [a weekly retro turns repeated bookkeeping into automation](UX-0999-a-weekly-retro-turns-repeated-bookkeeping-into-automation.md) | guards | High | every later round, through the bookkeeping it no longer files | 🔴 Not Started |
+| UX-1000 | [an area page names each scenario's guard, and CI publishes it where it can be read](UX-1000-an-area-page-names-each-scenarios-guard-and-ci-publishes-it.md) | guards | High | whoever assesses an area's test plan, and reads it on GitHub rather than from a checkout | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

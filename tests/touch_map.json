@@ -9026,7 +9026,8 @@
   "tests/unit/test_the_start_clock_says_where_it_came_from.py"
  ],
  "tools/dev_adopt_check.py": [
-  "tests/unit/test_an_adopt_job_reads_its_record_before_it_pushes.py"
+  "tests/unit/test_an_adopt_job_reads_its_record_before_it_pushes.py",
+  "tests/unit/test_the_context_map_is_the_tree.py"
  ],
  "tools/dev_audit_reports.py": [
   "tests/unit/test_a_release_records_a_contract_state.py",
@@ -9043,6 +9044,7 @@
  "tools/dev_close_task.py": [
   "tests/unit/test_a_batch_closes_in_one_move.py",
   "tests/unit/test_a_counted_figure_is_derived.py",
+  "tests/unit/test_a_derived_figure_is_printed_not_committed.py",
   "tests/unit/test_a_guard_reads_only_what_a_clone_has.py",
   "tests/unit/test_a_run_is_priced.py",
   "tests/unit/test_a_sandboxed_write_stays_in_the_sandbox.py",
@@ -9120,6 +9122,9 @@
   "tests/unit/test_the_premise_is_a_declared_field.py",
   "tests/unit/test_the_process_is_measured.py",
   "tests/unit/test_the_round_register_is_derived.py"
+ ],
+ "tools/dev_records.py": [
+  "tests/unit/test_the_context_map_is_the_tree.py"
  ],
  "tools/dev_refresh_analysis.py": [
   "tests/test_golden.py",

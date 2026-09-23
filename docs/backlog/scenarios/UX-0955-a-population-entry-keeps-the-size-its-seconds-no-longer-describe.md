@@ -1,6 +1,6 @@
 # UX-955: a population entry keeps the tree size its seconds no longer describe, so the gate scales the growth twice
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-716, UX-803, UX-924 | **Blocks:** — | **Found by:** round 138 — `UX-929`'s reading: `c2fbf2b6` restarted `test_docs_links_and_commands.py` at 34.03 and left its `population` at 737 | **Serves:** every branch that makes the backlog guard slower, which the gate should name | **Topic:** guards | **Area:** tools | **Shape:** judgement
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-716, UX-803, UX-924 | **Blocks:** — | **Found by:** round 138 — `UX-929`'s reading: `c2fbf2b6` restarted `test_docs_links_and_commands.py` at 34.03 and left its `population` at 737 | **Serves:** every branch that makes the backlog guard slower, which the gate should name | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 
@@ -56,5 +56,27 @@ On the committed reference, a `test_docs_links_and_commands.py`
 reading 1.6x its `files` on the current tree is reported by `against`;
 a mutation that drops the fix (population left at its recorded value
 while `files` moves) reddens a guard that says so.
+
+## Decision
+
+The `architect`, round 140, at `398b4db9`.
+
+```text
+Route:     `adopt` rewrites `population` for each POPULATION_CLASS name it samples, through one
+           helper shared with `record` (tools/dev_tier_drift.py:481-483), so `files` and
+           `population` describe trees at most one window apart (~3 rows, 0.35%, vs the 1.5x)
+Rejected:  normalise each reading to the recorded population - pins 737; linear scaling
+           compounds against cost per row growing 1.45x (UX-929)
+           a population beside each sample, or derived from its sha - a schema change through
+           every reader to win back 0.35%
+Files:     tools/dev_tier_drift.py; tests/unit/test_an_adopt_keeps_the_population_its_seconds_were_read_on.py;
+           tests/quality_reference.json; ci_reference.json is rewritten by the first adopt on records
+Guard:     the new file on a reference built by drift.record: population 737, size patched to
+           942; after adopt, docs_links at 1.6x files reads drift and 1.2x reads ok
+Mutation:  delete the population write in adopt -> 1.6x reads ok (1.6/1.28 = 1.25 < 1.5)
+Class:     bookkeeping - removes false greens (docs_links reads ok up to x1.94 today)
+Split:     one track; waits for round 141 under the UX-994 cap
+Question:  none
+```
 
 ## Outcome

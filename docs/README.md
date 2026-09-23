@@ -219,7 +219,7 @@ appended to instead of superseded:
 | [`audits/walk-seed-3.md`](audits/walk-seed-3.md) | `UX-685`'s third seeded walk — the process storm, spine on, cold then incremental, real Chrome |
 | [`audits/agent-runs.md`](audits/agent-runs.md) | what each subagent run cost — tokens, tool calls, wall clock — and its own friction line, one row per run, so a model and a report shape are chosen from numbers (`UX-666`) |
 | [`audits/mutation.md`](audits/mutation.md) | the weekly mutation run's survivors — a mutant the touched modules' own guards did not kill, one dated section per run. A survivor is a filing, not a failure (`UX-703`) |
-| [`audits/round-register.md`](audits/round-register.md) | which rounds happened and when, derived from the committed union — every round document plus the ledger's round column, never `git log` — dated by the document's own dateline; a round without a document yet is never in it (`UX-744`, `UX-782`) |
+| [`audits/round-register.md`](audits/round-register.md) | which rounds happened and when, derived from the committed union — every round document, the ledger's round column and every round a task file names, never `git log` — dated by the document's own dateline; only the one next round, still without its document, is held out of it (`UX-744`, `UX-782`, `UX-926`) |
 
 The rounds themselves:
 

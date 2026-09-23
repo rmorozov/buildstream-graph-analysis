@@ -1,6 +1,6 @@
 # UX-945: the context map's existence check reads five typed top-level names, so a §6 line under any other directory is never checked against the tree
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-937, UX-239 | **Blocks:** — | **Found by:** round 138 — `UX-937`'s second mutation, which its Acceptance Test expected this guard to catch | **Serves:** every row that declares an area, now that the area vocabulary is whatever top-level directory §6 names | **Topic:** guards | **Area:** tests/unit | **Shape:** mechanical
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-937, UX-239 | **Blocks:** — | **Found by:** round 138 — `UX-937`'s second mutation, which its Acceptance Test expected this guard to catch | **Serves:** every row that declares an area, now that the area vocabulary is whatever top-level directory §6 names | **Topic:** guards | **Area:** tests/unit | **Shape:** mechanical
 
 ## Motivation
 

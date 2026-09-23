@@ -54,7 +54,7 @@ pygments==2.21.0
     # via pytest
 pyjson5==2.0.1
     # via application-properties
-pylint==4.0.8
+pylint==4.0.9
     # via bga (pyproject.toml)
 pymarkdownlnt==0.9.40
     # via bga (pyproject.toml)
@@ -98,7 +98,7 @@ typing-extensions==4.16.0
     #   pymarkdownlnt
     #   pyright
     #   referencing
-wcwidth==0.8.5
+wcwidth==0.9.0
     # via columnar
 zstandard==0.25.0
     # via bga (pyproject.toml)

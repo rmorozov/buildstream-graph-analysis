@@ -9,6 +9,7 @@ run on a lane run.
 import io
 import pathlib
 import re
+import subprocess
 import sys
 
 import pytest
@@ -118,6 +119,36 @@ class TestTheLaneIsThatSetPlusTheCensus:
         dev_docs_lane.main(["--run"], stdin=io.StringIO("\n".join(self.DIFF)))
         assert {str(REPO / name) for name in dev_docs_lane.lane(self.DIFF)} <= set(seen["argv"])
 
+    def test_a_census_file_that_imports_another_test_module_collects(self):
+        """UX-991's real gap: `test_a_behaviour_claim_names_the_bst_it_was
+        _read_on.py` (in `tiers.CENSUS`, always in the lane) does `from
+        tests.unit.test_the_pinned_bst_is_the_documented_one import
+        pinned` - a package import only REPO on `sys.path[0]` resolves.
+        A `python -c` witness would not reproduce this: `-c`'s own
+        `sys.path[0]` is `''` (the process cwd), which this test's
+        `cwd=REPO` already satisfies regardless of the fix under test -
+        the same "guard whose setup already excludes" gap this repo
+        warns against. A same-directory sibling script run as a plain
+        file, the real script's own shape, has `sys.path[0]` at
+        `tools/` instead, same as `dev_docs_lane.py` itself. Runs
+        `run_pytest` for real (a genuine OS subprocess, not mocked, and
+        not this test's own nested-pytest recursion risk) under the
+        same `-n auto` it always passes, so a worker - not just this
+        call's own `sys.path` - has to resolve the import too."""
+        target = ("tests/unit/"
+                  "test_a_behaviour_claim_names_the_bst_it_was_read_on.py")
+        witness = REPO / "tools" / "_ux991_witness_scratch.py"
+        witness.write_text(
+            "import sys\nimport dev_docs_lane as d\n"
+            f"sys.exit(d.run_pytest([{target!r}], []))\n", encoding="utf-8")
+        try:
+            done = subprocess.run([sys.executable, str(witness)], cwd=REPO,
+                                  capture_output=True, text=True)
+        finally:
+            witness.unlink()
+        assert done.returncode == 0, done.stdout + done.stderr
+        assert "ModuleNotFoundError" not in done.stdout + done.stderr
+
     def test_the_workflow_runs_it_on_one_python(self, jobs):
         lane = jobs["docs-lane"]
         assert lane["if"] == RUNS and _needs(lane) == ["changes"]
@@ -157,6 +188,16 @@ class TestTheDetector:
         text = _steps(jobs["changes"])
         assert "git diff --name-only" in text
         assert "dev_docs_only.py --event \"${{ github.event_name }}\"" in text
+
+    def test_the_diff_base_is_the_merge_refs_first_parent_not_base_sha(self, jobs):
+        """UX-991: `base.sha` is the event's push-time snapshot, stale
+        the moment main moves before the run starts - `HEAD^1` is the
+        merge ref's own first parent, the base actually checked out."""
+        expr = "${{ github.event_name == 'pull_request' && 'HEAD^1' || 'HEAD' }}"
+        for name in ("changes", "docs-lane"):
+            text = _steps(jobs[name])
+            assert f'git diff --name-only "{expr}"' in text, name
+            assert "base.sha" not in text, name
 
 
 class TestTheHeavyJobsSkip:

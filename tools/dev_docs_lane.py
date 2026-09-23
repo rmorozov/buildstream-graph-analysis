@@ -18,6 +18,7 @@ the derivation to a textual witness and the workflow to both tools.
 import argparse
 import ast
 import functools
+import os
 import pathlib
 import sys
 
@@ -214,6 +215,25 @@ def lane(paths):
     return sorted(set(selected) | set(doc_readers()))
 
 
+def run_pytest(chosen, rest):
+    """`pytest.main()`, in-process - `-n auto`'s own workers, not this
+    call, do the actual collection. `sys.path[0]` for a script run as
+    `python3 tools/dev_docs_lane.py` is this script's own `tools/`, not
+    REPO, which a census file's own `from tests.unit.... import ...`
+    package import needs (UX-991 - `ModuleNotFoundError` without this).
+    xdist's workers are separate interpreters spawned from `os.environ`,
+    not this process's `sys.path`, so `PYTHONPATH` is set too, before
+    `import pytest` forks them."""
+    if str(REPO) not in sys.path:
+        sys.path.insert(0, str(REPO))
+    os.environ["PYTHONPATH"] = os.pathsep.join(
+        [str(REPO), *filter(None, os.environ.get("PYTHONPATH", "").split(os.pathsep))])
+    import pytest
+
+    return int(pytest.main([*(str(REPO / c) for c in chosen), "-q", "-n", "auto",
+                            *rest]))
+
+
 def main(argv=None, stdin=None) -> int:
     parser = argparse.ArgumentParser(description="the docs lane's test files")
     mode = parser.add_mutually_exclusive_group(required=True)
@@ -226,10 +246,7 @@ def main(argv=None, stdin=None) -> int:
         print("\n".join(chosen))
         return 0
     print(f"{len(chosen)} test file(s) in the docs lane", file=sys.stderr)
-    import pytest
-
-    return int(pytest.main([*(str(REPO / c) for c in chosen), "-q", "-n", "auto",
-                            *rest]))
+    return run_pytest(chosen, rest)
 
 
 if __name__ == "__main__":

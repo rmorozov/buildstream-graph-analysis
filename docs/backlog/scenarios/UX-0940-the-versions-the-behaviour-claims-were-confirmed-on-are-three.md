@@ -86,3 +86,78 @@ guard that reddens when a claim's recorded version is older than the
 binary the tier ran on, with a mutation that ages a claim reddening it.
 
 ## Outcome
+
+**Round 138, 2026-09-23**
+
+**The gap.** Seven lines in `bga/` and one test name a BuildStream
+version for a behaviour claim; none records when it was last checked.
+They read on three versions (2.7.0, 2.8.0, 2.8.1) against CI's pinned
+2.8.1.
+
+**The close.** `tests/bst_claims.json` holds ten claims at twelve sites:
+each with a one-line claim, a `path` and an `anchor` sentence,
+`confirmed_on`, and `read` (where that version's wheel says it).
+`tests/unit/test_a_behaviour_claim_names_the_bst_it_was_read_on.py`
+compares `confirmed_on` with `ci.yml`'s `BST_VERSION` through `UX-939`'s
+own `pinned()`, and a claim older than the pin is an
+`UnconfirmedBehaviourClaim` in pytest's warnings summary, naming its id
+and `path:line`. The register going stale against the tree is a red: a
+lost anchor, or a file in `bga/` that names a version with no site.
+
+**The reading**, in 2.8.1's own wheel
+(`pip download --no-deps "buildstream==2.8.1"`, sha256 `aa3412eb…9701`;
+extracted with `python3 -m zipfile -e`, then one `grep -n` per
+register row's `read` location; the middle column is that output):
+
+| claim | 2.8.1 source | verdict |
+|---|---|---|
+| `max-jobs` is protected | `element.py:3103,3112` refuses a redefinition | holds |
+| `max-jobs` never read from `public:` | public `bst` reads: integration-commands, overlap-whitelist, split-rules; 0 lines pair `max-jobs` with `public` | holds |
+| `notparallel` is the one control, sets 1 | `_variables.pyx:288-289` | holds |
+| `stack` key is constant, no artifact | `stack.py:110` `False`, `:140` `return 1` | holds |
+| no published artifact size | `cli.py` 17 format keys, 0 name a size; `widget.py:468-469` prints `files._get_digest().size_bytes`; `_casbaseddirectory.py:581` that digest is the root proto's `SerializeToString()` | holds |
+| artifact ref path | `_context.py:344`, `element.py:3464` | holds |
+| CAS object path | `_cas/cascache.py:326` | holds |
+| quota default and 1024-based sizes | `userconfig.yaml:39,42,45`; `utils.py:901-902` | holds |
+| `buildstream2.conf` then `buildstream.conf` | `_context.py:278` | holds |
+| `list-contents --long` lists every file | `widget.py:987` | holds |
+
+All ten hold on 2.8.1, so every `confirmed_on` is 2.8.1 and the guard
+warns nothing today.
+
+| # | mutation | result |
+|---|---|---|
+| M1 | `max-jobs-is-protected` aged to 2.7.0 | warns: `1 BuildStream claim(s) last read before ci.yml's 2.8.1 … max-jobs-is-protected (2.7.0) bga/structural/serialization_points.py:12`; same under `-n 2` |
+| M2 | `may not redefine` → `must not redefine` in `serialization_points.py` | red: the site clause names the lost anchor |
+| M3 | `BuildStream 2.7.0` added to `bga/blast.py`'s docstring | red: `add these claims to bst_claims.json: ['bga/blast.py']` |
+| M4 | `<` → `<=` in `unconfirmed()` | red: the self-test, which ages one copy of the register |
+| M5 | `BST_VERSION` → 2.9.0 | warns all ten, by id and line |
+
+Each was reverted from a snapshot and the file went green (5 passed).
+
+**Deviations.**
+
+1. The Acceptance Test says the guard *reddens*; the Required Fix says
+   a warning is enough and a red nobody can clear is what `UX-939` is
+   about. This warns. The suite had no warning channel
+   (`grep -rnE "warnings\.warn|pytest\.warns" tests/` → 0), so the
+   channel is pytest's own warnings summary, which survives `-n auto`.
+2. The completeness clause reads `bga/` only, per file. `tools/` carries
+   14 more versioned lines in 8 files, filed as `UX-990`.
+3. `artifact_weight.py` cites `element.py:3456`, 2.8.0's line; 2.8.1's
+   is 3458-3464. The claim holds and the text says 2.8.0, so it stays.
+4. "Never read from `public:`" was read in BuildStream's core, not in
+   `buildstream-plugins`.
+5. The fixing guide's §6 entry says `(UX-940 (open))`; the `(open)`
+   drops when the row moves.
+6. The guard walks `bga/`, and no module it names selects it, so CI
+   reddened `test_every_derived_census_guard_is_declared` on
+   `72716604`. It is census now (`tests/tiers.py`). The census went
+   31 -> 32, its bound and `CENSUS_FLOOR` moved with it, `HANDFUL`
+   went 45 -> 46 by its stated `census + 14` formula, `WIDE` is
+   unchanged, and the spread is 32-164. The 32 census files ran 1562
+   passed, 3 skipped in 34.79s at `-n auto`, load 3.40.
+
+`make test-touching`: 84 file(s) selected · 2420 passed, 4 skipped in
+234.49s. `make lint` clean. No local `make test`: CI's matrix is the
+gate this round (Ruslan, 2026-09-23 08:43).

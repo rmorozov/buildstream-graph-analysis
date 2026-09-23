@@ -1,0 +1,190 @@
+{
+ "measured": "2026-09-23",
+ "since": "2026-09-15",
+ "repo": "rmorozov/buildstream-graph-analysis",
+ "command": "python3 tools/dev_bst_examples_spread.py --fetch --since 2026-09-15 --limit 30",
+ "runs": [
+  {
+   "run_id": 35801932452,
+   "head_sha": "931d1875",
+   "started_at": "2026-09-23T00:50:38Z",
+   "completed_at": "2026-09-23T01:04:44Z",
+   "seconds": 846
+  },
+  {
+   "run_id": 35797680418,
+   "head_sha": "8d25211e",
+   "started_at": "2026-09-22T23:55:03Z",
+   "completed_at": "2026-09-23T00:08:51Z",
+   "seconds": 828
+  },
+  {
+   "run_id": 35793201794,
+   "head_sha": "f30770d3",
+   "started_at": "2026-09-22T23:01:08Z",
+   "completed_at": "2026-09-22T23:11:45Z",
+   "seconds": 637
+  },
+  {
+   "run_id": 35782031437,
+   "head_sha": "7b8da860",
+   "started_at": "2026-09-22T21:09:41Z",
+   "completed_at": "2026-09-22T21:23:20Z",
+   "seconds": 819
+  },
+  {
+   "run_id": 35773916368,
+   "head_sha": "d9bbaea1",
+   "started_at": "2026-09-22T19:53:01Z",
+   "completed_at": "2026-09-22T20:04:52Z",
+   "seconds": 711
+  },
+  {
+   "run_id": 35768405696,
+   "head_sha": "91126c14",
+   "started_at": "2026-09-22T19:01:31Z",
+   "completed_at": "2026-09-22T19:15:45Z",
+   "seconds": 854
+  },
+  {
+   "run_id": 35755437814,
+   "head_sha": "3fa407a0",
+   "started_at": "2026-09-22T17:03:46Z",
+   "completed_at": "2026-09-22T17:15:04Z",
+   "seconds": 678
+  },
+  {
+   "run_id": 35747066556,
+   "head_sha": "c8b2f781",
+   "started_at": "2026-09-22T15:49:47Z",
+   "completed_at": "2026-09-22T16:00:45Z",
+   "seconds": 658
+  },
+  {
+   "run_id": 35735148844,
+   "head_sha": "cbcdae85",
+   "started_at": "2026-09-22T14:06:02Z",
+   "completed_at": "2026-09-22T14:22:06Z",
+   "seconds": 964
+  },
+  {
+   "run_id": 35723802038,
+   "head_sha": "32bf9893",
+   "started_at": "2026-09-22T12:15:49Z",
+   "completed_at": "2026-09-22T12:29:23Z",
+   "seconds": 814
+  },
+  {
+   "run_id": 35719649861,
+   "head_sha": "326606a3",
+   "started_at": "2026-09-22T11:29:48Z",
+   "completed_at": "2026-09-22T11:42:14Z",
+   "seconds": 746
+  },
+  {
+   "run_id": 35714413676,
+   "head_sha": "8bdef467",
+   "started_at": "2026-09-22T10:34:40Z",
+   "completed_at": "2026-09-22T10:47:16Z",
+   "seconds": 756
+  },
+  {
+   "run_id": 35714379801,
+   "head_sha": "da2c787f",
+   "started_at": "2026-09-22T10:33:33Z",
+   "completed_at": "2026-09-22T10:47:54Z",
+   "seconds": 861
+  },
+  {
+   "run_id": 35682973458,
+   "head_sha": "68cd17ba",
+   "started_at": "2026-09-22T03:53:52Z",
+   "completed_at": "2026-09-22T04:06:24Z",
+   "seconds": 752
+  },
+  {
+   "run_id": 35673735587,
+   "head_sha": "7e788bcb",
+   "started_at": "2026-09-22T01:16:49Z",
+   "completed_at": "2026-09-22T01:30:39Z",
+   "seconds": 830
+  },
+  {
+   "run_id": 35669723178,
+   "head_sha": "2a7efc36",
+   "started_at": "2026-09-22T00:20:03Z",
+   "completed_at": "2026-09-22T00:33:38Z",
+   "seconds": 815
+  },
+  {
+   "run_id": 35664785880,
+   "head_sha": "5a10155e",
+   "started_at": "2026-09-21T23:13:55Z",
+   "completed_at": "2026-09-21T23:27:46Z",
+   "seconds": 831
+  },
+  {
+   "run_id": 35605347763,
+   "head_sha": "0df5bacd",
+   "started_at": "2026-09-21T13:44:59Z",
+   "completed_at": "2026-09-21T13:59:19Z",
+   "seconds": 860
+  },
+  {
+   "run_id": 35589595268,
+   "head_sha": "46e16112",
+   "started_at": "2026-09-21T11:00:09Z",
+   "completed_at": "2026-09-21T11:13:46Z",
+   "seconds": 817
+  },
+  {
+   "run_id": 35507451517,
+   "head_sha": "98967fc9",
+   "started_at": "2026-09-20T11:40:22Z",
+   "completed_at": "2026-09-20T11:54:04Z",
+   "seconds": 822
+  },
+  {
+   "run_id": 35246231520,
+   "head_sha": "01094122",
+   "started_at": "2026-09-17T16:44:06Z",
+   "completed_at": "2026-09-17T16:56:52Z",
+   "seconds": 766
+  },
+  {
+   "run_id": 35220190859,
+   "head_sha": "5b61f96f",
+   "started_at": "2026-09-17T12:37:06Z",
+   "completed_at": "2026-09-17T12:51:03Z",
+   "seconds": 837
+  },
+  {
+   "run_id": 35108874183,
+   "head_sha": "e9e46fce",
+   "started_at": "2026-09-16T14:49:11Z",
+   "completed_at": "2026-09-16T14:59:31Z",
+   "seconds": 620
+  },
+  {
+   "run_id": 35059653023,
+   "head_sha": "6fa34f47",
+   "started_at": "2026-09-16T05:49:20Z",
+   "completed_at": "2026-09-16T06:03:06Z",
+   "seconds": 826
+  },
+  {
+   "run_id": 35007017335,
+   "head_sha": "061cb5bf",
+   "started_at": "2026-09-15T18:42:03Z",
+   "completed_at": "2026-09-15T18:54:20Z",
+   "seconds": 737
+  },
+  {
+   "run_id": 34933450749,
+   "head_sha": "82b6249d",
+   "started_at": "2026-09-15T05:57:42Z",
+   "completed_at": "2026-09-15T06:10:14Z",
+   "seconds": 752
+  }
+ ]
+}

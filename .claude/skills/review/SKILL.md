@@ -1,6 +1,6 @@
 ---
 name: review
-description: Read a document group against the implementation and return only what drifted - the commands that check a count, a version, a named file, a pasted block or a Part against the tree, and the shape a finding takes. Use when the review cadence guard comes due, and use before trusting any sentence in docs/ that no guard reads.
+description: Read a document group against the implementation and return only what drifted - the commands that check a count, a version, a named file, a pasted block or a Part against the tree, and the shape a finding takes. Use when the review cadence guard comes due, use when `self-review` routes a skill, hook, spec or contract diff with no page in it here, and use before trusting any sentence in docs/ that no guard reads.
 ---
 
 # review
@@ -56,3 +56,22 @@ The review lands as a row in the architecture-review log (`| n | date
 | closed rows at review | findings |`) and a section answering the
 five checklist items — `test_the_review_has_a_cadence.py` reads the
 row. A review produces filings and no code.
+
+## A diff `self-review` routed here
+
+`dev_impact.route()` sends a diff that reaches a surface and touches
+no page here (`UX-928`); no page is served. The group is the diff's
+surface files, and §1 starts at the changed hunks
+(`git diff <base> -- <path>`), not at line 1. §2's checks run on each
+added sentence; then the question for the reader who is not the author:
+
+| surface | its reader | run |
+|---|---|---|
+| a skill | a session following it cold | every command in the hunk, as written; `ls`/`git grep -l` each path, row and guard it names; a rule it adds names its guard or says *judgement* |
+| a hook | every session, every matching call | pipe it the PreToolUse payload it refuses and one it passes, `echo $?`; the refusal says what to do next |
+| a contract | whoever reads the published key | `rules.md`'s two schema-bump rows against `git diff <base> -- bga/schemas.py` |
+| the spec | every session, as ground truth | the hunk is inside Part 32; each claim it adds has a guard or a row |
+
+The report opens `surface review  <paths> against <base>`, then
+`filed  UX-NNN, … — or none`; findings in §4's shape. No §5 log row: a
+routed run is not the cadence's review.

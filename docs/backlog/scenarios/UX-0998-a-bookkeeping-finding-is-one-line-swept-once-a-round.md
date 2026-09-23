@@ -1,6 +1,6 @@
 # UX-998: a bookkeeping finding is one line in a ledger, swept once a round
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-994, UX-996 | **Blocks:** UX-999 | **Found by:** round 139 — Ruslan in the project thread, 2026-09-23 15:03: "for bookkeeping we can invent some kind of batching to compress amount work" | **Serves:** every round, through the cost a bookkeeping row pays today | **Topic:** guards | **Area:** tools | **Shape:** mechanical
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-994, UX-996 | **Blocks:** UX-999 | **Found by:** round 139 — Ruslan in the project thread, 2026-09-23 15:03: "for bookkeeping we can invent some kind of batching to compress amount work" | **Serves:** every round, through the cost a bookkeeping row pays today | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 

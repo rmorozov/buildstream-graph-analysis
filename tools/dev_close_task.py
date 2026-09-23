@@ -443,52 +443,16 @@ def area_problems():
 
 
 def area_pages():
-    """`{area: [uid, …]}` - the hierarchy, derived from the headers."""
+    """`{area: [uid, …]}` - the hierarchy, derived from the headers.
+
+    Stays here (`dev_area_pages.py` takes the printing/writing that
+    reads it, `UX-1000`): `dev_scenario.py` imports this alone.
+    """
     pages = {}
     for uid, area in file_areas().items():
         pages.setdefault(area, []).append(uid)
     return {a: sorted(u, key=lambda i: int(i.split("-")[1]))
             for a, u in sorted(pages.items())}
-
-
-#: `UX-689`: a hand-written `docs/design/areas/<area>.md`, if one exists,
-#: gets one derived `Mechanism:` line in the printed page.
-DESIGN_AREA_PAGES = REPO / "docs/design/areas"
-
-
-def area_page_body(area, ids):
-    """`UX-688`/`UX-996`: one area's page, printed rather than committed -
-    a view, not a file, so it cannot drift from the headers it reads."""
-    listed = [uid for uid in ids if task_file(uid).exists()]
-    rows = "\n".join(
-        f"| [{uid}](../scenarios/{task_file(uid).name}) | "
-        f"{header_topic(task_file(uid).read_text(encoding='utf-8')) or ''} |"
-        for uid in listed)
-    name = area.replace("/", "-") + ".md"
-    mechanism = (f"Mechanism: [docs/design/areas/{name}]"
-                 f"(../../design/areas/{name})\n\n"
-                 if (DESIGN_AREA_PAGES / name).exists() else "")
-    return (f"# {area}\n\n"
-            f"Printed by `dev_close_task.py --areas` (`UX-688`) from each "
-            f"task's `**Area:**` header. {len(listed)} row(s); the module "
-            f"tree is the fixing guide's §6.\n\n"
-            f"{mechanism}| Task | Topic |\n|---|---|\n{rows}\n")
-
-
-def report_areas(name):
-    """Print one area's page, or every one, and exit 0 - or 1 naming the
-    unknown area (`--areas` never writes: `UX-996`)."""
-    pages = area_pages()
-    if name:
-        if name not in pages:
-            print(f"no such area: {name!r}. Known: {', '.join(sorted(pages))}",
-                 file=sys.stderr)
-            return 1
-        print(area_page_body(name, pages[name]))
-        return 0
-    for area, ids in pages.items():
-        print(area_page_body(area, ids))
-    return 0
 
 
 def row_ids(path):
@@ -1218,7 +1182,11 @@ def main(argv=None) -> int:
         print(table)
         return 0
     if args.areas is not None:
-        return report_areas(args.areas or None)
+        # UX-1000: the page (Guard column, covered N/M) moved out; this
+        # id stays the read-only entry point (--areas never writes).
+        sys.path.insert(0, str(REPO / "tools"))
+        import dev_area_pages
+        return dev_area_pages.report_areas(args.areas or None)
     if args.check and checks.index_is_merged(_ls_files, _on_the_real_index()):
         return run_checks()
     if args.figures:

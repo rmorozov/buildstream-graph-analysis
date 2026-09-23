@@ -64,3 +64,59 @@ Class:     product - Ruslan's test-plan coverage view (2026-09-23 17:34, both ha
 Split:     T1 parallel with UX-997 T2; T2 after both
 Question:  none
 ```
+
+## Outcome (round 140) — T1
+
+### The gap, measured
+
+Two columns, no guard, no covered count (`3a3b7d17`); the first cut
+over-read the whole `## Outcome`, sweeping in the register footer and
+the mutation table's own "reddened" column - covered 350/567.
+
+### The close, measured
+
+Two audits (seed 140, seed 141) found and fixed four false-negative
+shapes, and reported nine further ones left unfixed by design. A third
+audit (seed 142, 20 covered rows) found 2 false *positives*, both
+Outcome-sourced: `UX-219` cites `test_a_report_you_can_navigate.py` as
+the suite that caught an unrelated regression; `UX-826` cites two files
+as limitations ("does not discriminate ... alone"). A near-miss,
+`UX-397`, cites another row's guard as prior art. No regex tells "this
+file proves my claim" from "this file is named while explaining why
+it doesn't", so the page marks the *kind* of evidence instead of a
+fifth extraction rule: **declared** (Decision `Guard:`, else Acceptance
+Test) or
+**inferred** (Outcome, legacy headings included); a row with both
+counts declared, once. `python3 tools/dev_area_pages.py --areas` now
+ends `covered N / M (declared D, inferred I)`:
+
+```text
+bga: 73/108              bga/replay: 1/1          tools: 171/256
+bga/attribution: 2/3     bga/report: 3/3          tools/native_trace: 8/10
+bga/diagnostics: 2/3     bga/structural: 2/4      unassigned: 53/75
+bga/normalize: 1/1       bga/viewer: 48/102
+tests/unit: 1/1                          TOTAL: 365/567 (declared 120, inferred 245)
+```
+
+Seed-141's remaining false-negative classes (a bare test function name,
+never its file; an unrecognized heading; a filename split across
+lines or sitting unbackticked in a fenced block - UX-530, UX-175,
+UX-545 et al) are unchanged, still uncovered, still not chased.
+
+### Mutations verified red and reverted (10)
+
+| # | mutation | reddened |
+|---|---|---|
+| A1 | drop the existence check | `test_the_page_ends_covered_n_of_m` - "1/3" -> "2/3" |
+| A2 | `M` as `len(ids)+1` | same clause - "1/3" -> "1/4" |
+| A3 | `_outcome_guard_files` back to a whole-section scan | footer/mutation-table cases - "no guard named" -> shown, covered |
+| A4 | row-count `len(listed)` -> `+1` | `test_the_page_names_the_row_count` - "3 row(s)" -> "4 row(s)" |
+| B1 | `_MUTATIONS_SUBSECTION` back to `split(...)[0]` | `test_a_guard_cited_after_mutations_still_counts` - covered -> "no guard named" |
+| B2 | `_BACKTICKED_GUARD_FILE` back to no-prefix pattern | `test_a_path_prefixed_citation_still_counts` - covered -> "no guard named" |
+| B3 | `_outcome_sections` returns only `_section(text,"Outcome")` | `test_a_stub_then_real_outcome_reads_the_real_one` - covered -> "no guard named" |
+| B4 | drop `_LEGACY_OUTCOME_HEADINGS` fallback | `test_a_legacy_verification_log_still_counts` - covered -> "no guard named" |
+| C1 | swap the declared/inferred increment | 3 tests: "declared 1, inferred 0" -> "declared 0, inferred 1" and reverse |
+| C2 | drop the ` (inferred)` suffix | 5 tests: `` `test_present.py` (inferred) `` -> `` `test_present.py` `` |
+
+All ten reverted from a saved copy (`cp` before mutating, restored
+after); green again each time.

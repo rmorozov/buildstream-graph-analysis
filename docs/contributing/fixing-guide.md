@@ -383,6 +383,9 @@ tools/dev_impact.py          what a change reaches - contracts, findings, guides
 tools/dev_close_task.py, dev_shape_budget.py  closing a row and its shape budget (UX-336, UX-690) · _close_task_checks.py  its newer `--check` properties
 tools/dev_bookkeeping.py     a bookkeeping finding's ledger: --add,
                              --sweep, --mark - one line each (UX-998 (open))
+tools/dev_area_pages.py      an area page's Guard column and covered N/M count, printed
+                             by `--areas` or written by `--out DIR --link-base URL` for
+                             CI to publish (UX-1000 (open))
 tools/dev_refresh_analysis.py  the rule a committed analysis is written
                              under, and the command that rewrites one
                              from a fresh run (UX-486)

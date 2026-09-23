@@ -150,6 +150,13 @@ Each was reverted from a snapshot and the file went green (5 passed).
    `buildstream-plugins`.
 5. The fixing guide's §6 entry says `(UX-940 (open))`; the `(open)`
    drops when the row moves.
+6. The guard walks `bga/`, and no module it names selects it, so CI
+   reddened `test_every_derived_census_guard_is_declared` on
+   `72716604`. It is census now (`tests/tiers.py`). The census went
+   31 -> 32, its bound and `CENSUS_FLOOR` moved with it, `HANDFUL`
+   went 45 -> 46 by its stated `census + 14` formula, `WIDE` is
+   unchanged, and the spread is 32-164. The 32 census files ran 1562
+   passed, 3 skipped in 34.79s at `-n auto`, load 3.40.
 
 `make test-touching`: 84 file(s) selected · 2420 passed, 4 skipped in
 234.49s. `make lint` clean. No local `make test`: CI's matrix is the

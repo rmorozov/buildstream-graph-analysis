@@ -24,7 +24,7 @@ make test-touching   # the files that name the modules your diff touched
 
 Measured on a one-module diff: **4s**, 7 files, 123 tests (`UX-336`).
 A *selector*, not a gate - a grep-derived set can miss a test that
-exercises a module without naming it, which is why step 3 is unchanged.
+exercises a module without naming it, which is why CI's full matrix gates the merge (step 3).
 `make test-touching ARGS=--why` says what selected each file.
 
 Then the tier, when the change is wider than one module:
@@ -52,7 +52,18 @@ python3 -m pytest tests/unit/test_<file>.py -q
 python3 -m pytest tests/unit/test_<file>.py -q -k <substring>
 ```
 
-## 3. The whole suite, and lint
+## 3. The push gate, and the whole suite
+
+`UX-948` (Ruslan, round 138): **CI's full matrix is the gate before
+merge**, and nothing merges red. The gate before a push is the four
+fast checks, and they write the push hook's marker only when all pass:
+
+```bash
+make push-check  # lint, the touching selector against the merge-base,
+                 # dev_sizes.py --check, dev_close_task.py --check
+```
+
+The whole suite locally is optional, and slow beside other tracks:
 
 ```bash
 make test    # 3m45s-8m52s at -n auto across rounds 74-81 on the same
@@ -93,8 +104,8 @@ regression is named one run after it lands. That is the price of the
 three round-69 reds that no diff could have caused; the run that sees
 an excursion once still prints it, marked as unconfirmed.
 
-`make test` before you mark anything done. A tier run is not evidence
-about the suite.
+`make push-check` before you push, green CI before anything merges. A
+tier run is not evidence about the suite.
 
 ### When a CI job is red and the log is too long to read
 
@@ -213,7 +224,7 @@ will read it instead of the code:
   down than quietly fixed;
 - **Deviation from the Required Fix**, explicitly, even when it is
   "none";
-- the tier and full-suite lines with their real numbers.
+- the tier and gate lines (`make push-check`, CI's run) with their real numbers.
 
 ## 6. Before the commit
 
@@ -260,7 +271,7 @@ What follows from that:
    guard until it reddens, commit, push. Do not wait for the run.
 2. **Between items:** read the check runs — one call, and no log
    unless something is red.
-3. **At the end:** `make test` here, plus whatever CI has batched up.
+3. **At the end:** `make push-check` here, then CI's matrix on the PR (`UX-948`).
 
 **Batch what is cheap to fix late; never batch a design decision.**
 Lint, a docs link, an index count, an unrelated module you broke — all

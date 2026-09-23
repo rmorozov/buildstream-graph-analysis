@@ -374,7 +374,7 @@ tools/bst_run_context.py, _run_context_common.py
 tools/dev_touching.py        the tests that name what your diff touched, plus the census
                              they can never name (UX-336, UX-522) - `UX-942`'s clause for a
                              record loaded through a tool retired with T2: no diff on main
-                             can hold a record any more (UX-997 (open))
+                             can hold a record any more (UX-997)
 tools/dev_docs_only.py, dev_docs_lane.py  whether a PR is docs only, and the doc
                              guards its one-Python CI lane runs (UX-956)
 tools/dev_touch_map.py       which test files executed which module, off CI's own
@@ -383,10 +383,10 @@ tools/dev_impact.py          what a change reaches - contracts, findings, guides
                              guards, open filings - and where it routes (UX-687, UX-701)
 tools/dev_close_task.py, dev_shape_budget.py  closing a row and its shape budget (UX-336, UX-690) · _close_task_checks.py  its newer `--check` properties
 tools/dev_bookkeeping.py     a bookkeeping finding's ledger: --add,
-                             --sweep, --mark - one line each (UX-998 (open))
+                             --sweep, --mark - one line each (UX-998)
 tools/dev_area_pages.py      an area page's Guard column and covered N/M count, printed
                              by `--areas` or written by `--out DIR --link-base URL` for
-                             CI to publish (UX-1000 (open))
+                             CI to publish (UX-1000)
 tools/dev_refresh_analysis.py  the rule a committed analysis is written
                              under, and the command that rewrites one
                              from a fresh run (UX-486)
@@ -412,7 +412,7 @@ tools/dev_flake_census.py    which files the flake ledger says need a
 tools/dev_adopt_check.py     the guards an adopt job runs on the record it
                              wrote, before it pushes (UX-934)
 tools/dev_records.py         fetch/publish against refs/heads/records - CI's
-                             adopt jobs publish there, never to main (UX-997 (open))
+                             adopt jobs publish there, never to main (UX-997)
 tools/dev_junit_tail.py      which tests failed, from a red job's junit, when
                              the log tail lands on the wrong slice (UX-554)
 tools/dev_commit_bodies.py   which of a branch's commits spend more than
@@ -436,7 +436,7 @@ tools/dev_env_check.py       the pre-gate env check: `import bga` resolves
 tools/dev_trace_coverage.py  which captured field reaches the emitted
                              trace, and which Perfetto carriers it uses (UX-466)
 tools/dev_retro.py           a window's bookkeeping, grouped by the command
-                             that shows it, for the weekly `retro` skill (UX-999 (open))
+                             that shows it, for the weekly `retro` skill (UX-999)
 tools/dev_page_census.py     the page's structure and control classes, one
                              boot, printed as JSON for a walk to read (UX-665)
 tools/dev_scenario.py        a walk's scenario, drawn from a seed - the area
@@ -499,17 +499,17 @@ tests/ci_reference.json    one CI run's per-file seconds, so drift is CI against
                            not failed on - `--adopt`, and no commit of yours (UX-503). Lives on
                            `refs/heads/records`, not main - `make`'s `records` target fetches it
                            (`tools/dev_records.py fetch`); the default branch's own run publishes
-                           it, never `git push`es main (UX-997 (open))
+                           it, never `git push`es main (UX-997)
 tests/touch_map.json       module -> the test files CI measured executing it; adopted by
                            the default branch's own run, never recorded locally (UX-524).
-                           `refs/heads/records`, fetched the same way (UX-997 (open))
+                           `refs/heads/records`, fetched the same way (UX-997)
 tests/quality_reference.json  the size ledger's three counts per file - longest
                            function, file lines, duplicate blocks; `dev_sizes.py
                            --check` reds a grown cell (UX-712)
 tests/flake_ledger.json    every unconfirmed excursion and confirmed drift the tier-drift
                            gate reported, one row each; appended by the default branch's
                            own run - `--adopt-flake` - and read by dev_flake_census.py (UX-691).
-                           `refs/heads/records`, fetched the same way (UX-997 (open))
+                           `refs/heads/records`, fetched the same way (UX-997)
 tests/quality_baseline.json  every finding the widened families report today, by
                            identity; reds a new one (UX-694, shape_ledger.json UX-690)
 tests/bst_claims.json      each BuildStream behaviour claim in bga/, where it is written and

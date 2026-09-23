@@ -698,10 +698,16 @@ def _backlog_counts():
             for one in ("scenarios", "tasks")}
 
 
-def _ls_files(*extra):
-    """`docs/backlog/<one>/` paths git lists, per directory."""
+def _git_ls_files(*extra):
+    """The lines `git ls-files` prints, run in `REPO`."""
     out = subprocess.run(["git", "ls-files", *extra], cwd=REPO, check=True,
                          capture_output=True, text=True).stdout.splitlines()
+    return out
+
+
+def _ls_files(*extra):
+    """`docs/backlog/<one>/` paths git lists, per directory."""
+    out = _git_ls_files(*extra)
     # A wholly untracked subdirectory is one entry with a trailing
     # slash, not the files under it - so is a nested worktree.
     return {one: [p for p in out if p.startswith(f"docs/backlog/{one}/")
@@ -725,6 +731,16 @@ def _on_the_real_index():
     tree from a test's temp directory is what `test_the_loop_stays_fast`
     caught."""
     return SCENARIOS == REPO / "docs/backlog/scenarios"
+
+
+def unmerged_paths():
+    """The paths `git ls-files -u` holds at a merge stage, once each.
+
+    `UX-935`: an unmerged path is listed once per stage, so every count
+    read from `git ls-files` mid-merge is inflated by two per conflict.
+    """
+    return sorted({line.split("\t", 1)[1] for line in _git_ls_files("-u")
+                   if "\t" in line})
 
 
 def _architecture_is_derived():
@@ -1304,6 +1320,14 @@ def main(argv=None) -> int:
                    else open_uids())
         return report_shapes(numbers, args.write)
     if args.check:
+        # UX-935: a mid-merge index is not the tree the counts name.
+        unmerged = unmerged_paths() if _on_the_real_index() else []
+        if unmerged:
+            print(f"refused: the git index is unmerged ({len(unmerged)} "
+                  f"path(s) mid-merge: {', '.join(unmerged)}) - stage the "
+                  f"resolution with `git add`, then derive; nothing was "
+                  f"checked or written", file=sys.stderr)
+            return 2
         wrote = []
         if args.write:
             wrote = [p for p in (write_index(), write_architecture()) if p]

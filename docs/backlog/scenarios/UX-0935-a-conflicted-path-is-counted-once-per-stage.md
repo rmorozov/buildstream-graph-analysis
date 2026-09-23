@@ -112,3 +112,69 @@ drops the unmerged-index question reddens it, and so does one that
 de-duplicates the stages and derives anyway.
 
 ## Outcome
+
+**Round 138, 2026-09-23**
+
+**Premise:** held — the quiet case reproduces on a three-file fixture.
+
+### The gap, measured
+
+`tests/unit/test_an_unmerged_index_derives_nothing.py`'s fixture: one
+task file changed on both sides of a merge, then `git checkout --ours`.
+Run in-process with the refusal removed (the tool as it was):
+
+```text
+$ git ls-files -u | wc -l                        -> 3
+$ git ls-files docs/backlog/scenarios | wc -l    -> 5     (3 files)
+$ dev_close_task.main(["--check", "--write"])
+0 problem(s) over 10 propert(y/ies), 1 backlog row(s)
+--write changed 3 file(s) - stage them:
+    docs/backlog/scenarios/README.md
+    docs/design/architecture.md
+    docs/backlog/areas/tools.md
+exit 0
+architecture.md now: It counts 5 `docs/backlog/scenarios/` files ...
+```
+
+Clean report, and a count wrong by twice the one conflict, written.
+
+### After
+
+`--check` asks `unmerged_paths()` (`git ls-files -u`) first, on the real
+index only, and refuses before any derive or write:
+
+```text
+refused: the git index is unmerged (1 path(s) mid-merge:
+docs/backlog/scenarios/UX-0001-a-row.md) - stage the resolution with
+`git add`, then derive; nothing was checked or written        exit 2
+```
+
+One line on stderr; `architecture.md`, `README.md` and `areas/tools.md`
+are byte-identical. After `git add` the same fixture derives `1
+scenarios: **1 open**, 0 closed.`, keeps `architecture.md` at 3 and
+writes `areas/tools.md` - as before. On this tree `--check` still reads
+`0 problem(s) over 10 propert(y/ies), 940 backlog row(s)`.
+
+### Mutations verified red and reverted (2)
+
+| # | mutation | reddened |
+|---|---|---|
+| A1 | the unmerged question dropped (`unmerged = []`) | 1 of 3: `test_check_refuses_and_write_writes_nothing` - exit 0, 3 files written |
+| A2 | A1 plus `_ls_files` de-duplicating stages (`sorted(set(...))`) | 1 of 3: the same clause - `architecture.md` right at 3, but `README.md` and `areas/tools.md` written mid-merge, exit 0 |
+
+A2 is why the byte-identical clause covers the index and area pages and
+not only `architecture.md`: de-duplication fixes the one count and still
+writes the rest from rows the author has not finished resolving.
+
+### Deviation from the Required Fix
+
+A `--scenarios` sandbox run does not ask: it reads no `git ls-files`,
+and a suite run while the real checkout is mid-merge would otherwise red
+every sandboxed guard for a state they do not read.
+
+```text
+$ make test-touching     # before the spread figure was re-derived
+2 failed, 2035 passed, 4 skipped in 96.45s   # both the spread figure; --spread --write fixed it
+```
+
+`make test` runs once on the track's final HEAD (four rows, one box).

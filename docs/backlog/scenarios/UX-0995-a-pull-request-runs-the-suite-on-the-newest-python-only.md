@@ -1,6 +1,6 @@
 # UX-995: a pull request runs the suite on the newest Python only; main keeps the matrix
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-956 | **Blocks:** — | **Found by:** round 139 — Ruslan in the project thread, 2026-09-23 14:44, answering the workflow review ([doc](https://claude.ai/code/artifact/7f65768e-b4bb-405a-b3e1-90a672a249f5)) | **Serves:** every pull request waiting in the queue behind another's matrix | **Topic:** guards | **Area:** unassigned | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-956 | **Blocks:** — | **Found by:** round 139 — Ruslan in the project thread, 2026-09-23 14:44, answering the workflow review ([doc](https://claude.ai/code/artifact/7f65768e-b4bb-405a-b3e1-90a672a249f5)) | **Serves:** every pull request waiting in the queue behind another's matrix | **Topic:** guards | **Area:** unassigned | **Shape:** mechanical
 
 ## Motivation
 
@@ -116,3 +116,16 @@ and the legitimate case are indistinguishable there).
 
 All three reverted from the pre-mutation copy and confirmed green
 (`810 passed`) before commit.
+
+### The PR's own run, and the deviation
+
+```text
+#285 d5640f5c  test (3.12) success 17:23:55-17:46:04  (one cell; four before)
+               tier-reference success, bst-smoke/-tests/-examples success
+```
+
+Deviation: the Decision's track B (re-record `tests/ci_reference.json`
+from the PR's 3.12 candidate) is not taken here. The drift gate held on
+3.12 against the 3.11 figures, a session cannot download the candidate
+artifact (403 through the proxy), and from `UX-997` T1 the first push
+run on main publishes a 3.12 reference to `records` itself.

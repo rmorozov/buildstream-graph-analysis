@@ -6,10 +6,10 @@ review measured the process and Ruslan took all four of its calls at
 14:44; this round lands them.
 
 ```text
-closed   UX-993 UX-994 UX-996            (UX-991 closed by #284)
-open     UX-995 (the PR's own 3.12 reference is owed), UX-997 (T2 owed)
-filed    UX-998 UX-999 (Ruslan's 15:03 and 15:11 ideas)
-index    dev_close_task.py --counts: 960 scenarios, 24 open, 936 closed
+closed   UX-993 UX-994 UX-995 UX-996     (UX-991 closed by #284)
+open     UX-997 (T2 owed)
+filed    UX-998 UX-999 UX-1000 (Ruslan's 15:03, 15:11 and 17:34 asks)
+index    dev_close_task.py --counts: 961 scenarios, 24 open, 937 closed
 ```
 
 ## What the review measured

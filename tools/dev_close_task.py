@@ -1113,6 +1113,30 @@ def _split_move_batch(argv):
     return pairs, leftover_bare, filtered
 
 
+def run_checks() -> int:
+    """`--check`: every property, then the suite's shape (`UX-690`)."""
+    problems = []
+    for what, run in CHECKS:
+        found = run()
+        problems.extend(found)
+        print(f"  {'FAIL' if found else 'ok  '}  {what}"
+              + (f" - {len(found)} problem(s)" if found else ""))
+        for problem in found:
+            print(f"          {problem}")
+    rows = len(table_statuses())
+    print(f"{len(problems)} problem(s) over {len(CHECKS)} propert(y/ies), "
+          f"{rows} backlog row(s)")
+    # `UX-690`: the suite's shape, regenerated every run rather than
+    # typed into a round document by hand - `dev_flake_census.py`'s
+    # `top()` is the same convention, for the Standing section a
+    # round document writes.
+    sys.path.insert(0, str(REPO / "tools"))
+    import dev_shape_budget
+    print()
+    print(dev_shape_budget.table())
+    return 1 if problems else 0
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("uid", nargs="?", help="e.g. UX-329")
@@ -1196,26 +1220,7 @@ def main(argv=None) -> int:
     if args.areas is not None:
         return report_areas(args.areas or None)
     if args.check and checks.index_is_merged(_ls_files, _on_the_real_index()):
-        problems = []
-        for what, run in CHECKS:
-            found = run()
-            problems.extend(found)
-            print(f"  {'FAIL' if found else 'ok  '}  {what}"
-                  + (f" - {len(found)} problem(s)" if found else ""))
-            for problem in found:
-                print(f"          {problem}")
-        rows = len(table_statuses())
-        print(f"{len(problems)} problem(s) over {len(CHECKS)} propert(y/ies), "
-              f"{rows} backlog row(s)")
-        # `UX-690`: the suite's shape, regenerated every run rather than
-        # typed into a round document by hand - `dev_flake_census.py`'s
-        # `top()` is the same convention, for the Standing section a
-        # round document writes.
-        sys.path.insert(0, str(REPO / "tools"))
-        import dev_shape_budget
-        print()
-        print(dev_shape_budget.table())
-        return 1 if problems else 0
+        return run_checks()
     if args.figures:
         diff = (pathlib.Path(args.diff).read_text(encoding="utf-8")
                 if args.diff else working_diff())

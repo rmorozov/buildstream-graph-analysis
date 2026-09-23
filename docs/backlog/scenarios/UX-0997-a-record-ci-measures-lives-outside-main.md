@@ -64,3 +64,54 @@ Split:     T1 now, parallel with #284 (no overlapping hunk). T2 serial after T1 
            test_the_process_documents_derive_their_figures.py)
 Question:  none
 ```
+
+### T1
+
+**Gap measured:** `git show 49a29a29:.github/workflows/ci.yml | grep -c "git push"`
+→ 3; `git show 49a29a29:.github/workflows/mutation.yml | grep -c "git push"` → 1.
+4 literal `git push` lines across the two workflows, each landing a
+bookkeeping commit on `main`.
+
+**Close measured:** `grep -c "git push" .github/workflows/ci.yml
+.github/workflows/mutation.yml` → 0, 0. The three ci.yml adopt jobs and
+mutation.yml's ledger job now call `tools/dev_records.py publish`
+instead. `python3 -m pytest -q -n 4 $(grep -l -e ci.yml -e mutation.yml
+tests/unit/*.py)` → `812 passed`. `python3 -m pytest -q
+tests/unit/test_a_run_names_the_records_it_read.py
+tests/unit/test_no_workflow_pushes_to_the_default_branch.py
+tests/unit/test_an_adopt_job_reads_its_record_before_it_pushes.py` →
+`21 passed`. `make lint` clean (one new baseline entry, `tests/quality_baseline.json`,
+authorised `UX-997`: `ruff S603` on `dev_records.py`'s own
+`subprocess.run`). `python tools/dev_touching.py --base 49a29a29
+--loud` green.
+
+**Verifier fix (held T1 over one defect):** `fetch`'s failure was
+swallowed by ci.yml's `|| true`, and `publish`'s own second fetch
+(`_records_tip`) could then succeed - overlaying this run's delta onto
+a tip the working tree was never actually read against, dropping any
+row published since. `fetch` now records the tip it confirmed (`git
+config --local bga.records-base`, `"none"` when the branch does not
+yet exist); `publish` refuses - `::error::`, exit 1, nothing written or
+pushed - unless that still matches the tip it sees now.
+`test_a_run_names_the_records_it_read.py::TestPublishRefusesAStaleBase::test_a_swallowed_fetch_failure_refuses_rather_than_drops_a_row`
+reproduces the verifier's exact repro (two checkouts of one bare
+remote: one publishes a row, the victim's fetch fails, its own adopt
+tool appends a different row, `publish` must refuse rather than lose
+the first) → `9 passed` for the file, `21 passed` for the three files
+above, `812 passed` unchanged for the ci.yml/mutation.yml population,
+`make lint` clean.
+
+### T1 Mutations
+
+| mutation | reddened | count |
+|---|---|---|
+| restore `git push origin "HEAD:${{ github.ref }}"` in `tier-reference-adopt` | `test_no_workflow_pushes_to_the_default_branch.py` (2 of 3) | 2 failed, 1 passed |
+| restore `mutation.yml`'s bare `git push -q` | `test_no_workflow_pushes_to_the_default_branch.py` (2 of 3) | 2 failed, 1 passed |
+| drop `fetch`'s sha print | `test_a_run_names_the_records_it_read.py` (the 3 `TestFetch` cases whose stdout it asserted) | 3 failed, 5 passed |
+| `fetch` ignores `--at` | `test_a_run_names_the_records_it_read.py::TestFetch::test_at_a_past_sha_is_honoured` | 1 failed, 7 passed |
+| a corrupt `flake_ledger.json` row before `publish` | exercised directly (not mutated): `test_a_run_names_the_records_it_read.py::TestPublishRefusesARejectedRecord::test_a_ledger_its_guard_rejects_is_refused_and_nothing_is_pushed` asserts `dev_adopt_check` rejects it and nothing reaches the remote | passes green already; the guard *is* the falsification |
+| drop the base-vs-tip comparison in `publish` (verifier's fix) | `TestPublishRefusesAStaleBase::test_a_swallowed_fetch_failure_refuses_rather_than_drops_a_row` | 1 failed, 8 passed |
+
+Each mutation was reverted from the clean copy `falsify`'s step 1
+saved and re-confirmed green (`812 passed`; `9 passed` for
+`test_a_run_names_the_records_it_read.py`).

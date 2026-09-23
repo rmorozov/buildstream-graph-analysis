@@ -23,6 +23,9 @@ jobs:
     # with its own review convention.
     permissions:
       contents: write
+    # `UX-997`: the ledger's home is `refs/heads/records`, shared with
+    # the three CI adopt jobs that publish there too.
+    concurrency: records
     steps:
       - uses: actions/checkout@v7
         with:
@@ -37,14 +40,11 @@ jobs:
           pip install -e ".[dev]"
           pip install mutmut
 
+      - name: Read the records branch this run adopts onto
+        run: python tools/dev_records.py fetch || true
+
       - name: Weekly mutation run over the modules touched since last week
         run: python3 tools/dev_mutation.py --write --since "$(git rev-list -1 --before='7 days ago' HEAD)"
 
-      - name: Commit the ledger
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/audits/mutation.md
-          git diff --cached --quiet && exit 0
-          git commit -q -m "mutation: weekly survivor filing (${{ github.run_id }})"
-          git push -q
+      - name: Publish the ledger
+        run: python tools/dev_records.py publish

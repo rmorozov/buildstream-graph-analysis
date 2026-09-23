@@ -647,6 +647,10 @@ jobs:
   # `GITHUB_TOKEN` starts no workflow, so the commit would land with no
   # check at all; `dev_adopt_check.py` fails the job here, on the run
   # that is checked, and nothing is pushed.
+  # `UX-997`: `records` is a branch main never carries, so a push here
+  # races every other adopt job that could push it at the same time -
+  # the group below queues them rather than losing one to a non-fast-
+  # forward push, the way three jobs sharing `main` never had to.
   tier-reference-adopt:
     runs-on: ubuntu-latest
     needs: test
@@ -658,6 +662,7 @@ jobs:
                               github.event.repository.default_branch)
     permissions:
       contents: write
+    concurrency: records
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -670,20 +675,16 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: ci-reference-candidate
+      # `UX-997`: the cumulative record, not `main`'s frozen copy - a
+      # branch this checkout predates every time one of the other two
+      # jobs has published since. `|| true`: absent on the branch's own
+      # first run, when `main`'s copy is still the only one there is.
+      - name: Read the records branch this run adopts onto
+        run: python tools/dev_records.py fetch || true
       - name: Give the reference the rows it does not carry yet
         run: |
           python tools/dev_tier_drift.py --adopt ci_reference.candidate.json
-          if git diff --quiet -- tests/ci_reference.json; then
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email \
-            "41898282+github-actions[bot]@users.noreply.github.com"
-          git add tests/ci_reference.json
-          git commit -m "CI: adopt the tier rows this run measured (UX-503)"
-          python tools/dev_adopt_check.py tests/ci_reference.json
-          git push origin "HEAD:${{ github.ref }}" || \
-            echo "::warning::the branch refused the update; the rows printed above need a hand"
+          python tools/dev_records.py publish
 
   # `UX-524`: the touching map gives itself the rows this run measured.
   #
@@ -698,8 +699,8 @@ jobs:
   # `UX-662`: **after** `tier-reference-adopt`, never beside it. That job
   # adopts rows from a candidate `test (3.12)` measured with the map as
   # it was *before* this run, so a retire landing first would be undone
-  # by pre-map numbers arriving second. Sequenced, and the pull below
-  # puts this job's retire on top of whatever that one pushed.
+  # by pre-map numbers arriving second. Sequenced, and the fetch below
+  # puts this job's retire on top of whatever that one just published.
   touch-map-adopt:
     needs: [test, tier-reference-adopt]
     # `UX-943`: from a green run only - the drift step's red included.
@@ -711,6 +712,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    concurrency: records
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -723,16 +725,14 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: touch-map-candidate
+      - name: Read the records branch this run adopts onto
+        run: python tools/dev_records.py fetch || true
       - name: Merge it into tests/touch_map.json
         run: |
           test -f touch_map.candidate.json || {
             echo "no candidate on this run - test (3.11) did not reach it"
             exit 0
           }
-          # Before any edit, so the tree is clean to rebase and the
-          # retire below reads the reference `tier-reference-adopt`
-          # just pushed rather than the one this run checked out.
-          git pull --rebase origin "${{ github.ref }}"
           python tools/dev_touch_map.py --adopt touch_map.candidate.json
           if git diff --quiet -- tests/touch_map.json tests/ci_reference.json
           then
@@ -740,14 +740,7 @@ jobs:
             exit 0
           fi
           git diff --stat -- tests/touch_map.json tests/ci_reference.json
-          git config user.name "github-actions[bot]"
-          git config user.email \
-            "41898282+github-actions[bot]@users.noreply.github.com"
-          git add tests/touch_map.json tests/ci_reference.json
-          git commit -m "CI: adopt the touching map this run measured, and retire the drift entries its readers own (UX-524, UX-662)"
-          python tools/dev_adopt_check.py tests/touch_map.json tests/ci_reference.json
-          git push origin "HEAD:${{ github.ref }}" || \
-            echo "::warning::the branch refused the update; re-run to retry"
+          python tools/dev_records.py publish
 
   # `UX-691`: the drift gate's own memory, appended rather than merged -
   # a ledger row is an event this run reported, not a named slot the
@@ -770,6 +763,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    concurrency: records
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -782,26 +776,20 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: flake-ledger-candidate
+      - name: Read the records branch this run adopts onto
+        run: python tools/dev_records.py fetch || true
       - name: Append this run's excursions to the ledger
         run: |
           test -f flake_ledger.candidate.json || {
             echo "no candidate on this run - test (3.12) did not reach the ledger step"
             exit 0
           }
-          git pull --rebase origin "${{ github.ref }}"
           python tools/dev_tier_drift.py --adopt-flake flake_ledger.candidate.json
           if git diff --quiet -- tests/flake_ledger.json; then
             echo "the ledger already carries every excursion this run reported"
             exit 0
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email \
-            "41898282+github-actions[bot]@users.noreply.github.com"
-          git add tests/flake_ledger.json
-          git commit -m "CI: append this run's excursions to the flake ledger (UX-691)"
-          python tools/dev_adopt_check.py tests/flake_ledger.json
-          git push origin "HEAD:${{ github.ref }}" || \
-            echo "::warning::the branch refused the update; re-run to retry"
+          python tools/dev_records.py publish
 
   agent-config:
     # Watches: .claude/** , CLAUDE.md , REVIEW.md - the three that steer

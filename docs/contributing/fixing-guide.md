@@ -394,6 +394,8 @@ tools/dev_flake_census.py    which files the flake ledger says need a
                              filed task or a declared reason (UX-691)
 tools/dev_adopt_check.py     the guards an adopt job runs on the record it
                              wrote, before it pushes (UX-934)
+tools/dev_records.py         fetch/publish against refs/heads/records - CI's
+                             adopt jobs publish there, never to main (UX-997 (open))
 tools/dev_junit_tail.py      which tests failed, from a red job's junit, when
                              the log tail lands on the wrong slice (UX-554)
 tools/dev_commit_bodies.py   which of a branch's commits spend more than

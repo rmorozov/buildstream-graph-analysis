@@ -252,13 +252,17 @@ class TestTheAdoptedMapPaysForItsReaders:
         assert rows[0][2] is None, "and carried with no number to fail on"
 
     def test_the_adopting_commit_carries_the_reference_it_retired_from(self):
-        """One commit, or the retire is a change nobody pushed."""
+        """`UX-997`: `dev_records.py publish` builds one commit from every
+        record `git diff` finds dirty, so both paths land together or
+        neither does - the diff gate the job checks before it publishes
+        must name both, or the retire could be a change nobody pushed."""
         held = WORKFLOW.read_text(encoding="utf-8")
         job = held.split("touch-map-adopt:")[1].split("\n  agent-config:")[0]
-        add = [line for line in job.splitlines()
-               if line.strip().startswith("git add")][0]
-        assert "tests/ci_reference.json" in add, add
-        assert "tests/touch_map.json" in add, add
+        diffed = [line for line in job.splitlines()
+                 if "git diff --quiet" in line][0]
+        assert "tests/ci_reference.json" in diffed, diffed
+        assert "tests/touch_map.json" in diffed, diffed
+        assert "dev_records.py publish" in job, job
 
     def test_the_map_is_adopted_after_the_rows_measured_without_it(self):
         """`tier-reference-adopt` adopts from a candidate measured with

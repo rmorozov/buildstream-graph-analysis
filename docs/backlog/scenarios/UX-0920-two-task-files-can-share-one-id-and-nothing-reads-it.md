@@ -86,3 +86,72 @@ no duplicate — so the guard is proved by the mutation and not by the
 tree.
 
 ## Outcome
+
+**Round 138, 2026-09-23**
+
+**Premise:** held — a second full-header file under `UX-917` passes the
+tool as it was.
+
+### The gap, measured
+
+`UX-917`'s first 80 lines copied to
+`UX-0917-hidden-findings-keep-live-controls.md` (heading retitled), and
+`HEAD`'s tool pointed at this tree:
+
+```text
+$ python3 <HEAD's dev_close_task.py> --check --scenarios docs/backlog/scenarios
+0 problem(s) over 10 propert(y/ies), 940 backlog row(s)
+```
+
+Two files, one id, nothing asked; `task_file` answers with whichever
+sorts first.
+
+### After
+
+An eleventh `--check` property, `id_problems()`: each filename's id
+against every other file's, and each file's first `# ` heading against
+its own filename.
+
+```text
+$ python3 tools/dev_close_task.py --check        # the same second file
+  FAIL  every id names one task file, and its heading names that id - 1 problem(s)
+          UX-917 names 2 files: docs/backlog/scenarios/UX-0917-hidden-findings-keep-live-controls.md,
+          docs/backlog/scenarios/UX-0917-the-fold-depth-guard-has-three-unconfirmed-excursions.md
+$ rm docs/backlog/scenarios/UX-0917-hidden-findings-keep-live-controls.md
+$ python3 tools/dev_close_task.py --check
+0 problem(s) over 11 propert(y/ies), 940 backlog row(s)
+```
+
+The tree: 940 files, 940 ids, no duplicate, 940 headings agreeing.
+`UX-22`'s heading is its third line, under a supersession note, so the
+first `# ` line is read rather than line 1. A heading naming a taken id
+names both paths: `UX-0999-...md: heading says UX-917, filename says
+UX-999; UX-917 is docs/backlog/scenarios/UX-0917-the-fold-...md`.
+
+### Mutations verified red and reverted (3)
+
+| # | mutation | reddened |
+|---|---|---|
+| C1 | the duplicate clause's `len(paths) > 1` made `> 99` | 1 of 3: `test_a_second_file_under_an_existing_id_fails_naming_both` |
+| C2 | the heading comparison made `elif False:` | 1 of 3: `test_a_heading_that_names_another_id_fails_naming_both` |
+| C3 | the second file written into this tree | 2 of 3: `test_the_tree_is_silent`, and the heading clause (its copy now holds two problems) |
+
+### What the failure mode says about allocation
+
+The guard fires only on a tree holding both files - after a merge or a
+trial merge. A thread taking the next free number from its own checkout
+cannot see a sibling's filing, so this is a backstop, not an allocator.
+Round 138 gave each parallel track a **disjoint id range** in its brief
+(this track: `UX-945`..`UX-949`), which removes the collision at the
+source; that is the practice to name, and this guard catches a track
+that files outside its range.
+
+### Deviation from the Required Fix
+
+None. The duplicate prints as one line naming both paths, not the
+Acceptance Test's three-line block: `--check` prints a problem per line.
+
+```text
+$ make test-touching     # taken with UX-935's and UX-932's rows moved, since withdrawn
+1 failed, 2235 passed, 4 skipped in 303.45s   # the review cadence: 27 closes since review 25, bound 25
+```

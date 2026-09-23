@@ -590,6 +590,39 @@ DECOMPOSITION_GRANDFATHERED = frozenset({
 })
 
 
+_TITLE = re.compile(r"^# (.*)$", re.M)
+
+
+def id_problems():
+    """`UX-920`: an id that names two files, or a heading naming another id.
+
+    Two branches filing under one id merge clean - two new files - and
+    `task_file` then answers with the first, so the second is unreachable.
+    """
+    by_number, headings = {}, {}
+    for path in sorted(SCENARIOS.glob("UX-*.md")):
+        match = _FILE_ID.match(path.name)
+        if match:
+            number = int(match.group(1))
+            by_number.setdefault(number, []).append(path)
+            title = _TITLE.search(path.read_text(encoding="utf-8"))
+            said = re.match(r"UX-0*(\d+):", title.group(1)) if title else None
+            headings[path] = (number, int(said.group(1)) if said else None)
+    problems = [f"UX-{number} names {len(paths)} files: "
+                + ", ".join(_shown(p) for p in paths)
+                for number, paths in sorted(by_number.items())
+                if len(paths) > 1]
+    for path, (number, said) in headings.items():
+        if said is None:
+            problems.append(f"{_shown(path)}: no `# UX-NNN:` heading")
+        elif said != number:
+            other = ", ".join(_shown(p) for p in by_number.get(said, []))
+            problems.append(f"{_shown(path)}: heading says UX-{said}, "
+                            f"filename says UX-{number}"
+                            + (f"; UX-{said} is {other}" if other else ""))
+    return problems
+
+
 def decomposition_problems():
     """A `Topic: analysis|viewer|capture` filing past `DECOMPOSITION_FLOOR`
     with no `## Decomposition` block, naming its number.
@@ -911,6 +944,8 @@ CHECKS = (
      lambda: area_problems()),
     ("every analysis/viewer/capture filing past UX-690 names its "
      "Decomposition", lambda: decomposition_problems()),
+    ("every id names one task file, and its heading names that id",
+     lambda: id_problems()),
 )
 
 

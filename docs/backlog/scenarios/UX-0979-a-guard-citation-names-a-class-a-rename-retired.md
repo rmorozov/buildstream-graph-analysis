@@ -65,3 +65,42 @@ Class:     bookkeeping (batch with UX-977, UX-945)
 ```
 
 ## Outcome
+
+**Gap measured:** the stale citation reddened the new clause once step 5
+was reverted to the old name:
+
+```text
+$ python3 -m pytest tests/unit/test_docs_links_and_commands.py -q -n 2 -k backticked
+FAILED ...::test_every_backticked_markdown_name_resolves
+  docs/contributing/fixing-guide.md:592 -> `test_a_run_is_priced.py::TestEveryRoundDocumentPricesItsAgents`
+1 failed in 0.88s
+```
+
+**Close measured:** step 5 points at
+`TestEveryRegisteredRoundPricesItsAgents`; `_resolves` split into
+`_locate` (returns the path, not just a bool) plus a new
+`_TEST_CITATION`/`_member_exists` branch that resolves a
+`file.py::Name` code span to a `class`/`def` of that name:
+
+```text
+$ python3 -m pytest tests/unit/test_docs_links_and_commands.py -q -n 2 -k "backticked or code_span_sweep"
+2 passed in 1.32s
+```
+
+Kept `test_every_backticked_markdown_name_resolves`'s name rather than
+the Decision's `test_every_guard_citation_resolves_to_a_name` - it
+already reads every `test_*.py::Name` citation the Decision asks for,
+so renaming would be cosmetic. Added the Decision's floor: `citations
+>= 7` (measured: 7 read today).
+
+**Mutation table:**
+
+| mutation | reddened | count |
+|---|---|---|
+| restore step 5's stale name (`TestEveryRoundDocumentPricesItsAgents`) | `test_every_backticked_markdown_name_resolves` | 1 failed |
+| append `XXX` to `in-step-parallelism.md:422`'s method name (one of the other six citations) | same test | 1 failed |
+| `_member_exists` forced to `return True` | confirms the branch, not `_locate`, does the check (test passes trivially - not a red, a discrimination check) | 1 passed |
+| `_TEST_CITATION` mutated to match nothing (population -> 0) | the floor: `only 0 ... citation(s) read` | 1 failed |
+
+All mutations reverted from a saved copy in the scratchpad; guard green
+after each revert.

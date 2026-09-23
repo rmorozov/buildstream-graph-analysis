@@ -9,11 +9,16 @@ each file class actually came from, and red when the answer is outside
 the staged tree.
 
 The fixture is a miniature sysroot, hardlink-cloned off this host the
-way `stage_cpp_toolchain.sh` clones its own output - 65ms and no real
-disk where `/usr` and the temporary directory share a filesystem, a
-1.6s copy where they do not. Not symlinked: a symlinked include
-directory makes `--sysroot` skip it and `-H` report the host's path,
-so the fixture would answer a question the real sysroot never asks.
+way `stage_cpp_toolchain.sh` clones its own output - fast where `/usr`
+and the temporary directory share a filesystem, a plain copy where
+they do not. Not symlinked: a symlinked include directory makes
+`--sysroot` skip it and `-H` report the host's path, so the fixture
+would answer a question the real sysroot never asks. Pruned to what
+the seven classes it is asked about actually read (`UX-944`): the two
+directories the driver execs binaries out of, cloned whole; the
+multiarch libdir's start files and `libstdc++.so*`, copied by name;
+the two header classes' own `-H` closures, copied exactly - not the
+whole trees those live in.
 """
 import os
 import pathlib
@@ -68,10 +73,49 @@ def _clone(real: pathlib.Path, dest: pathlib.Path) -> None:
             return
     pytest.skip(NO_TOOLCHAIN)
 
+#: The multiarch libdir's start files and the dev symlink `libstdc++`
+#: travels as, out of the 715 MB tree they sit in (`UX-944`).
+CRT_GLOBS = ("crt*", "Scrt*", "libstdc++.so*")
+#: `(driver, language, header)` per header class `mini` is asked about.
+#: `stddef.h` is not here: it resolves inside `libgcc.parent`, already
+#: cloned whole, so no separate probe is owed for it.
+HEADER_ASKS = (("gcc", "c", "stdio.h"), ("g++", "c++", "vector"))
+
+
+def _header_closure(driver: str, language: str, name: str) -> list:
+    """Every path `-H` reports for `#include <name>`, not just the
+    header itself - `tp._header_path` reads only the first depth-1
+    line, and the pruned tree needs the whole transitive closure to
+    answer the same as the full one would. Only an absolute-path
+    payload counts: `tp._header_path` excludes a depth-1 `. .` line
+    the same way, for a reading neither function has seen on this
+    host but both refuse to read as a path regardless."""
+    result = subprocess.run([driver, "-fno-canonical-system-headers", "-E",
+                             "-H", "-x", language, "-", "-o", os.devnull],
+                            input=f"#include <{name}>\n", capture_output=True,
+                            text=True, timeout=60)
+    found = []
+    for line in result.stderr.splitlines():
+        match = re.match(r"^\.+ (/.*)$", line)
+        if match:
+            found.append(pathlib.Path(os.path.normpath(match.group(1).strip())))
+    return found
+
+
+def _copy_marked(src: pathlib.Path, dest: pathlib.Path) -> None:
+    """`src` copied into `dest` at its own absolute path - a real
+    sysroot mount, not a flattened one, so a header's own relative
+    neighbours still resolve the way it was compiled to find them."""
+    landed = dest / str(src).lstrip("/")
+    landed.parent.mkdir(parents=True, exist_ok=True)
+    if not landed.exists():
+        shutil.copy2(src, landed, follow_symlinks=False)
+
 
 @pytest.fixture(scope="module")
 def mini(tmp_path_factory):
-    """A sysroot shaped like the stager's."""
+    """A sysroot shaped like the stager's, pruned to what the seven
+    classes `mini` is asked about actually read (`UX-944`)."""
     cc1 = pathlib.Path(_ask_host("-print-prog-name=cc1"))
     libgcc = pathlib.Path(_ask_host("-print-file-name=libgcc.a"))
     crt1 = pathlib.Path(os.path.normpath(_ask_host("-print-file-name=crt1.o")))
@@ -84,13 +128,27 @@ def mini(tmp_path_factory):
         if found is None:
             pytest.skip(NO_TOOLCHAIN)
         shutil.copy2(os.path.realpath(found), dest / "usr/bin" / name)
-    for real in (cc1.parent, libgcc.parent, crt1.parent,
-                 HOST_HEADERS):
+    # The driver execs these, so they must be real (UX-944).
+    for real in (cc1.parent, libgcc.parent):
         _clone(real, dest / str(real).lstrip("/"))
-    # The clone is the fixture's one claim, so it is checked here
-    # rather than left to surface as seven unrelated-looking failures
-    # about a host that has a toolchain.
-    for marker in (cc1, libgcc, crt1):
+    for pattern in CRT_GLOBS:
+        for found in sorted(crt1.parent.glob(pattern)):
+            _copy_marked(found, dest)
+    headers = []
+    for driver, language, name in HEADER_ASKS:
+        closure = _header_closure(driver, language, name)
+        if not closure:
+            pytest.skip(NO_TOOLCHAIN)
+        for header in closure:
+            _copy_marked(header, dest)
+        headers.append(closure[0])
+    # The clone is the fixture's one claim, so every file a class can
+    # name is checked here rather than left to surface as seven
+    # unrelated-looking failures about a host that has a toolchain
+    # (UX-930's thesis; the nine-name list is UX-944's).
+    stddef = libgcc.parent / "include" / "stddef.h"
+    libstdcxx = libgcc.parent / "libstdc++.so"
+    for marker in (cc1, libgcc, stddef, crt1, libstdcxx, *headers):
         landed = dest / str(marker).lstrip("/")
         assert landed.exists(), f"the clone did not land {marker} at {landed}"
     return str(dest)

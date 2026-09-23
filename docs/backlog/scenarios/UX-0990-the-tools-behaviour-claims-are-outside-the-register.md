@@ -1,6 +1,6 @@
 # UX-990: the BuildStream behaviour claims in `tools/` are outside the register `UX-940` built for `bga/`
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-940 | **Blocks:** — | **Found by:** round 138 — enumerating `bga/`'s versioned claims for `UX-940` | **Serves:** whoever reads a BuildStream behaviour claim in the capture tools and has to decide whether it still holds on the pinned binary | **Topic:** guards | **Area:** tools | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-940 | **Blocks:** — | **Found by:** round 138 — enumerating `bga/`'s versioned claims for `UX-940` | **Serves:** whoever reads a BuildStream behaviour claim in the capture tools and has to decide whether it still holds on the pinned binary | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 

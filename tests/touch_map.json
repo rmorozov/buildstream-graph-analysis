@@ -8521,6 +8521,13 @@
   "tests/unit/test_every_task_names_its_area.py",
   "tests/unit/test_one_id_names_one_task_file.py"
  ],
+ "tools/_record_readers.py": [
+  "tests/unit/test_a_record_selects_the_guard_that_loads_it.py",
+  "tests/unit/test_a_slow_file_says_which_file.py",
+  "tests/unit/test_the_cost_row_is_derived_from_the_selector.py",
+  "tests/unit/test_the_loop_stays_fast.py",
+  "tests/unit/test_the_selector_carries_the_census.py"
+ ],
  "tools/_run_context_common.py": [
   "tests/unit/test_a_capture_says_when_it_was_requested.py",
   "tests/unit/test_a_comparison_class_is_the_host_and_the_build_type.py",
@@ -9140,6 +9147,7 @@
  ],
  "tools/dev_touching.py": [
   "tests/unit/test_a_guard_reads_only_what_a_clone_has.py",
+  "tests/unit/test_a_record_selects_the_guard_that_loads_it.py",
   "tests/unit/test_a_slow_file_says_which_file.py",
   "tests/unit/test_a_track_costs_what_it_reads.py",
   "tests/unit/test_the_cost_row_is_derived_from_the_selector.py",

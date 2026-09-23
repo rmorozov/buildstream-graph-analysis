@@ -23,6 +23,13 @@ env:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # `UX-943`: one key per cell, because a matrix job's outputs are
+    # last-writer-wins and the runner skips an empty one.
+    outputs:
+      clean_39: ${{ steps.verdict.outputs.clean_39 }}
+      clean_310: ${{ steps.verdict.outputs.clean_310 }}
+      clean_311: ${{ steps.verdict.outputs.clean_311 }}
+      clean_312: ${{ steps.verdict.outputs.clean_312 }}
     strategy:
       fail-fast: false
       matrix:
@@ -225,7 +232,11 @@ jobs:
       # excursions, one candidate row per file it names as waiting or
       # confirmed - the two steps below give it an artifact and adopt
       # it, the same shape as the reference's own candidate.
+      # `UX-943`: its red is raised again below the cell's verdict, so
+      # the verdict can tell a run red here from one red anywhere else.
       - name: Tiers match CI's own record of them
+        id: drift
+        continue-on-error: true
         run: |
           python tools/dev_tier_drift.py "${{ runner.temp }}/junit.xml" \
             --against --carry "${{ runner.temp }}/tier_carry.json" \
@@ -457,6 +468,22 @@ jobs:
       - name: Test (small tier, single process)
         run: PYTEST_XDIST= timeout 900 make test-small
 
+      # `UX-943`: what the adopt jobs read - every step of this cell
+      # passed, the drift gate's excepted. Written only when true.
+      - name: This cell passed, for the adopt jobs
+        id: verdict
+        env:
+          PY: ${{ matrix.python-version }}
+        run: echo "clean_${PY//./}=true" >> "$GITHUB_OUTPUT"
+
+      - name: The drift gate's red, raised
+        if: always() && steps.drift.outcome == 'failure'
+        run: |
+          cat "${{ runner.temp }}/tier_gate.txt" \
+            || echo "the gate step wrote no summary."
+          echo "red at 'Tiers match CI's own record of them' (UX-943)"
+          exit 1
+
       # `UX-554`: the junit steps ran only when the suite passed, so on
       # the run where it matters the record of *what* failed died with
       # the runner. This names the ids for a truncated log - `UX-491`'s
@@ -561,8 +588,10 @@ jobs:
   tier-reference-adopt:
     runs-on: ubuntu-latest
     needs: test
+    # `UX-943`: from a green run only - the drift step's red included.
     if: >-
-      always() && github.event_name == 'push'
+      !cancelled() && needs.test.result == 'success'
+      && github.event_name == 'push'
       && github.ref == format('refs/heads/{0}',
                               github.event.repository.default_branch)
     permissions:
@@ -611,8 +640,10 @@ jobs:
   # puts this job's retire on top of whatever that one pushed.
   touch-map-adopt:
     needs: [test, tier-reference-adopt]
+    # `UX-943`: from a green run only - the drift step's red included.
     if: >-
-      always() && github.event_name == 'push'
+      !cancelled() && needs.test.result == 'success'
+      && github.event_name == 'push'
       && github.ref == format('refs/heads/{0}',
                               github.event.repository.default_branch)
     runs-on: ubuntu-latest
@@ -664,8 +695,14 @@ jobs:
   # same reason as the two adopt jobs above - `UX-934`'s red included.
   flake-ledger-adopt:
     needs: test
+    # `UX-943`: from a run red at the drift step or nowhere - its rows
+    # are that step's excursions; a red anywhere else adopts nothing.
     if: >-
-      always() && github.event_name == 'push'
+      !cancelled() && needs.test.outputs.clean_39 == 'true'
+      && needs.test.outputs.clean_310 == 'true'
+      && needs.test.outputs.clean_311 == 'true'
+      && needs.test.outputs.clean_312 == 'true'
+      && github.event_name == 'push'
       && github.ref == format('refs/heads/{0}',
                               github.event.repository.default_branch)
     runs-on: ubuntu-latest

@@ -65,3 +65,32 @@ Class:     bookkeeping (batch with UX-979, UX-977)
 ```
 
 ## Outcome
+
+**Gap measured:** the Motivation's own repro, unchanged before the fix
+(48 passed, the injected line never read).
+
+**Close measured (revised per the architect's Decision):** the
+existence check now reads `_map_paths()` - `MAP_ENTRY_PATH`'s
+line-opening path under any top-level name, unioned with a mid-line
+path whose top-level name `_tracked()` actually has (not a typed
+alternation of five, and not "any name", which reads `push/PR` and an
+id like `UX-694/697` as paths). This restores the 3 mid-line entries
+the first draft dropped (`docs/audits/`,
+`docs/design/capture-workflow.md`, `tests/fixtures/`):
+
+```text
+$ python3 -c "...; print(len(t._map_paths(t._map_text())))"
+159   # 151 line-opening + 8 distinct mid-line, 0 stale
+$ python3 -m pytest tests/unit/test_the_context_map_is_the_tree.py -q -n 2
+36 passed in 1.21s-1.41s
+```
+
+**Mutation table:**
+
+| mutation | reddened | count |
+|---|---|---|
+| `nowhere/deep/` line inserted before `tests/unit/` | `test_the_map_names_nothing_that_does_not_exist` | 1 failed |
+| line removed (saved copy) | same | 36 passed (full file) |
+| `MAP_ENTRY_PATH` reverted to a 5-name-alternation, still line-anchored | `test_the_helper_reads_any_top_level_name`; the existence clause stayed green (nothing in today's guide falls outside the five) | 1 failed, 1 passed |
+| mid-line half widened to any name (not `_tracked()`'s roots) | `test_the_mid_line_half_is_not_widened_to_any_name` (`{'UX-694/697', 'push/PR'}`) | 1 failed |
+| each reverted (saved copy) | all green | 36 passed |

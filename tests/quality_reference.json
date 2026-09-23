@@ -78,6 +78,7 @@
     "bga/whatif.py": {"duplicate_blocks": 0, "file_lines": 182, "longest_function": 41},
     "tools/__init__.py": {"duplicate_blocks": 0, "file_lines": 0, "longest_function": 0},
     "tools/_close_task_checks.py": {"duplicate_blocks": 0, "file_lines": 97, "longest_function": 28},
+    "tools/_record_readers.py": {"duplicate_blocks": 0, "file_lines": 174, "longest_function": 26},
     "tools/_run_context_common.py": {"duplicate_blocks": 0, "file_lines": 500, "longest_function": 61},
     "tools/bga_cross_check.py": {"duplicate_blocks": 0, "file_lines": 235, "longest_function": 94},
     "tools/bga_doctor.py": {"duplicate_blocks": 0, "file_lines": 982, "longest_function": 139},

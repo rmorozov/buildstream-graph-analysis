@@ -352,6 +352,11 @@ tools/bga_view.py            the viewer's server and `--export`
 tools/bga_timeline.py        one trace, both planes
 tools/bst_baseline_set.py    assembling a baseline set from published refs
 tools/jobserver_arms.py      an off/auto Plane 2 pair read by width (UX-905 (open))
+tools/jobserver/__init__.py  the jobserver subtool's declared surface; only
+                         the tracer imports it (UX-901 (open))
+tools/jobserver/pool.py      the FIFO, the pool controller and the broker
+tools/jobserver/ledger.py    the ledger's rows, and `report_block()`
+tools/jobserver/_jsonl.py    the one tolerant JSON-lines read they share
 tools/nix_store_fetch.py     the examples' pinned make, fetched and
                          unpacked without Nix (UX-915)
 tools/nix_closure.py         a pin's whole closure, walked through the

@@ -92,7 +92,7 @@ report/       -> text/JSON rendering (presentation only, since UX-75)
 
 - `bga wrap` -> `tools/bst_run_wrapped.py` — Plane 1's capture
 - `bga extract` -> `tools/bst_extract_run.py` — a log plus a project becomes a run directory
-- `bga capture` -> `tools/bst_native_build_tracer.py` — Plane 2's tracer, over `tools/native_trace/bwrap_shim.py` (the shim ahead of the real `bwrap`), `tools/native_trace/hook.c` (the `LD_PRELOAD` hook), `tools/native_trace/spine.c` (the ptrace spine, for static binaries), `tools/native_trace/trackevent.py` (Perfetto's own TrackEvent writer) and `tools/native_trace/wrappers/` (UX-846's jobserver token-holding wrappers)
+- `bga capture` -> `tools/bst_native_build_tracer.py` — Plane 2's tracer, over `tools/native_trace/bwrap_shim.py` (the shim ahead of the real `bwrap`), `tools/native_trace/hook.c` (the `LD_PRELOAD` hook), `tools/native_trace/spine.c` (the ptrace spine, for static binaries), `tools/native_trace/trackevent.py` (Perfetto's own TrackEvent writer), `tools/native_trace/wrappers/` (UX-846's jobserver token-holding wrappers) and `tools/jobserver/` (`UX-901`: the token pool and its ledger, behind an import boundary — the tracer is its only caller; detail in `docs/design/areas/tools-native_trace.md`)
 - `bga cache-logs` -> `tools/bst_cache_logs.py` — Plane 3's reader
 - `bga snapshot` -> `tools/bga_snapshot.py` — the local loop as one command
 - `bga timeline` -> `tools/bga_timeline.py` — both planes on one clock

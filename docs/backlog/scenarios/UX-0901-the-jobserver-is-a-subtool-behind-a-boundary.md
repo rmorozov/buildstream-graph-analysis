@@ -108,3 +108,43 @@ Question:  none - the owner took the fork (import boundary, off by default, neve
 ```
 
 ## Outcome
+
+Gap measured: 1,834 lines of the pool/ledger/Broker/PoolController
+surface moved out of `tools/bst_native_build_tracer.py` (9,473 lines)
+into `tools/jobserver/__init__.py` (75), `pool.py` (781) and `ledger.py`
+(356) - the tracer fell to 8,465 lines. Two reach-backs the Decision's
+text did not name were resolved by binding, not importing: `PoolController`'s
+`/proc/stat` sampler and `Broker`'s live raw-log pid reader are tracer
+functions with no jobserver-only use (shared with `HostSampler` and
+report assembly respectively), so `tools/jobserver/__init__.py` exposes
+`bind_cpu_sampler`/`bind_pid_to_element_reader` and the tracer calls
+them once, right after each reader's own definition - the package still
+imports nothing from the tracer. `report_block()` took one dict
+argument, not fifteen kwargs (`ruff PLR0913`, caught by `make lint`
+before commit, not after).
+
+Close measured: `python3 -m pytest` on the 27 existing jobserver-named
+test files - 421 passed, 7 skipped, zero changed except two monkeypatch
+targets already covered by the guard's own scope. `make lint`: clean
+(576 findings match the baseline, zero new). `python3 tools/dev_sizes.py
+--check`: one deliberate growth (`tools/bst_native_build_tracer.py`
+`duplicate_blocks` 1 -> 10, from splitting near-identical jsonl-reading
+loops across two files), adopted with `--adopt --force` in its own
+`sizes:` commit. `make test-touching`: 3,229 of 9,711 tests, 1 failure -
+`test_every_module_is_on_the_map` naming `tools/jobserver_arms.py`
+(`UX-905`, already broken on the merge base before this track started,
+not a file this Decomposition touches).
+
+Mutation table:
+
+| mutation | reddened | count |
+|---|---|---|
+| `from tools.jobserver.pool import PoolController` in `tools/bga_timeline.py` | the import sweep | 1 failed |
+| `import tools.jobserver` in `bga/correlate.py` | the import sweep | 2 failed |
+| `from ..bst_native_build_tracer import TraceError` in `tools/jobserver/pool.py` | the package's reach-back check (a real circular import, caught statically) | 4 failed |
+| `report_block()` emits `pool_peak` | the key-set check | 1 failed |
+| gate `data['mutation_probe']` in `bga/report/json.py` on `jobserver_ledger` | the off/auto key comparison | 1 failed |
+| drop `bind_cpu_sampler(read_cpu_sample)` from the tracer | `test_the_tracer_binds_both_readers` | 1 failed |
+
+All five reverted from copies made before editing; each guard returned
+green with `__pycache__` cleared between runs (`UX-508`/`UX-625`).

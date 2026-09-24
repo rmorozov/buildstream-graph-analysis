@@ -1,0 +1,15 @@
+fdsdk_ref=953683fb96b82cdf6d7941c4ba9859378942f22b
+bga_ref=bec9d2362691b83f95aa9777dccb87d8412732a4
+bst_version=2.8.1
+runner_os=Linux runnervmlun5p 6.17.0-1022-azure #22-Ubuntu SMP Mon Jul 27 17:24:03 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux
+nproc=4
+builders=4
+max_jobs=4
+trace_opens=true
+trace_spine=false
+capture_mode=incremental
+jobserver=auto
+target=components/libxml2.bst
+mem_total_kb=16372428
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/root       145G   49G   96G  34% /

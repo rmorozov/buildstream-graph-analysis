@@ -43,8 +43,23 @@ file to read; no step prints a width curve, and the one reading
 
 Close: `calibrate_width.py` and a `bst-examples` step that runs the
 pinned `--builders 2` arm, `bga compare` against `auto`, and widths
-1 2 4 6 8, each line a `::notice::`. The runner's reading is owed by
-the first CI run of this step.
+1 2 4 6 8, each line a `::notice::`. First reading, `bst-examples` on
+`6a7f7e25` (job 107594040232, ubuntu-24.04, 2026-09-24):
+
+```text
+cpu: 4 logical, 2 cores, 1 socket(s)
+width 1: 281.96s  effective 1.00
+width 2: 229.57s  effective 1.23
+width 4: 227.30s  effective 1.24
+width 6: 226.31s  effective 1.25
+width 8: 228.38s  effective 1.24
+knee: width 2
+pinned --builders 2 x max-jobs 2 vs auto: 234.99s -> 232.54s (-1.0%)
+```
+
+The runner is two SMT cores worth 1.23 of one; every arm above width 2
+queues on the same two cores, so the 4-vCPU runner cannot show a
+jobserver gain on `giant.bst`, and `UX-895`'s 16-core host is the reading.
 
 | mutation | reddened | count |
 |---|---|---|

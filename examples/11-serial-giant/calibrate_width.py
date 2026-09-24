@@ -51,7 +51,7 @@ def build_at(project: str, width: int, run=subprocess.run) -> float:
 def render(walls: dict) -> list:
     eff = effective(walls)
     lines = [f"width {w}: {walls[w]:.2f}s  effective {eff[w]:.2f}" for w in sorted(walls)]
-    lines.append(f"knee: width {knee(walls)} (each wider step cut the wall by >= {GAIN:.0%})")
+    lines.append(f"knee: width {knee(walls)} (every step up to it cut the wall by >= {GAIN:.0%})")
     return lines
 
 

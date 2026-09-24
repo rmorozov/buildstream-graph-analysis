@@ -577,6 +577,7 @@ jobs:
             echo "bst_version=$(bst --version 2>/dev/null || echo unknown)"
             echo "runner_os=$(uname -a)"
             echo "nproc=$(nproc)"
+            python3 -c 'from tools.bga_snapshot import cpu_topology; print(cpu_topology())'
             echo "builders=$BUILDERS"
             echo "max_jobs=$MAX_JOBS"
             echo "trace_opens=$TRACE_OPENS"

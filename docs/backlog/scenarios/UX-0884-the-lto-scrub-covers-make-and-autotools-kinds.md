@@ -92,7 +92,22 @@ guard first.
 
 ## Outcome
 
-_Held open (round 129): the gap is characterized above — narrow (fd-style
-make < 4.4 + gcc ≥ 13 LTO), no field report, and the fix re-risks round
-126's minimal-sandbox breakage. Awaiting a field report before code;
-the shim-for-make with its regression guard is the fix when it bites._
+Measured 2026-09-24, not a fix: a make element's LTO links cannot hang or
+ICE on the raw auth, because make itself switches the inherited read end
+to non-blocking. Staged gcc 16.2.0 and host gcc 13.3, pool a FIFO the
+parent opened blocking on fds 3 and 9, make started as a client with
+`MAKEFLAGS='-j4 --jobserver-auth=3,9'`, 4 `-flto=4` links, 16 LTRANS
+partitions, `timeout 120`:
+
+```text
+make 4.3   0 tokens   plain / + recipe   exit 0, 26s / 95s
+make 4.3   3 tokens   plain / + recipe   exit 0, 33s / 33s
+make 4.4.1 0 tokens   plain / + recipe   exit 0, 31s / 30s
+make 4.4.1 3 tokens   plain / + recipe   exit 0, 32s / 33s
+make's fd 3 at 4s, all 8 runs: flags=02104002 (O_NONBLOCK set)
+```
+
+The same links with gcc as the direct client of the blocking pair hang
+(`UX-1006`), which is the only policy that handed gcc the pair; the
+ninja policies now get `fifo:`. No guard: the reading is the close, and
+the behaviour it rests on is make's, not this repository's.

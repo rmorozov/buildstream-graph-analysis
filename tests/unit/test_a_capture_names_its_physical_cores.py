@@ -22,7 +22,15 @@ def _sysfs(tmp_path, layout):
     ([(0, 0), (1, 0)], "cpu: 2 logical, 2 cores, 2 socket(s)"),
 ])
 def test_hyperthreads_and_sockets_are_told_apart(tmp_path, layout, line):
-    assert cpu_topology(_sysfs(tmp_path, layout)) == line
+    assert cpu_topology(_sysfs(tmp_path, layout), str(tmp_path / "no-cpuinfo")) == line
+
+
+def test_the_cpu_model_is_named(tmp_path):
+    info = tmp_path / "cpuinfo"
+    info.write_text("processor\t: 0\nmodel name\t: AMD EPYC 7763 64-Core Processor\n"
+                    "processor\t: 1\nmodel name\t: AMD EPYC 7763 64-Core Processor\n")
+    line = cpu_topology(_sysfs(tmp_path, [(0, 0), (0, 0)]), str(info))
+    assert line == "cpu: 2 logical, 1 cores, 1 socket(s), AMD EPYC 7763 64-Core Processor"
 
 
 def test_an_unreadable_topology_says_so(tmp_path):

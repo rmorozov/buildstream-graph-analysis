@@ -67,7 +67,7 @@ HOST_SAMPLES_NAME = run_store.HOST_SAMPLES_NAME
 CONTEXT_NAME = "capture-context.txt"
 
 
-def cpu_topology(sysfs: str = "/sys/devices/system/cpu") -> str:
+def cpu_topology(sysfs: str = "/sys/devices/system/cpu", cpuinfo: str = "/proc/cpuinfo") -> str:
     """UX-1002: logical CPUs, physical cores and sockets from sysfs - `nproc`
     counts hyperthreads, which do not double a compile's throughput."""
     cores, sockets, logical = set(), set(), 0
@@ -87,7 +87,17 @@ def cpu_topology(sysfs: str = "/sys/devices/system/cpu") -> str:
         cores.add((package, core))
     if not logical:
         return "cpu: unreadable"
-    return f"cpu: {logical} logical, {len(cores)} cores, {len(sockets)} socket(s)"
+    line = f"cpu: {logical} logical, {len(cores)} cores, {len(sockets)} socket(s)"
+    return line + "".join(f", {m}" for m in _cpu_model(cpuinfo)[:1])
+
+
+def _cpu_model(cpuinfo: str) -> list:
+    """The first `model name`: two same-shaped VMs can differ 25% in CPU per instruction."""
+    try:
+        with open(cpuinfo, encoding="utf-8", errors="replace") as f:
+            return [l.split(":", 1)[1].strip() for l in f if l.startswith("model name")]
+    except OSError:
+        return []
 
 
 def _capture_context(project: str, command: list[str], config: dict,

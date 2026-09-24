@@ -48,7 +48,7 @@ Close measured, this container:
 
 ```text
 $ python3 -c 'from tools.bga_snapshot import cpu_topology; print(cpu_topology())'
-cpu: 4 logical, 4 cores, 1 socket(s)
+cpu: 4 logical, 4 cores, 1 socket(s), Intel(R) Xeon(R) Processor @ 2.10GHz
 ```
 
 | mutation | reddened | count |
@@ -56,5 +56,8 @@ cpu: 4 logical, 4 cores, 1 socket(s)
 | a hyperthread counts as its own core | the 2-cores-2-threads case | 1 |
 | sockets read from `core_id` | all three layouts | 3 |
 | the context drops the line | `test_the_context_carries_the_line` | 1 |
+| the model name dropped | `test_the_cpu_model_is_named` | 1 |
 
-Deviation: none.
+Deviation: the model name was added after the fdsdk make-fix arm
+(run 35985510741) spent 11104 CPU seconds on the 127k processes the
+previous auto arm ran in 9048, on the same 4-logical, 2-core shape.

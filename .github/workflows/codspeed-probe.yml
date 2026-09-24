@@ -1,0 +1,77 @@
+# Can CodSpeed's bare-metal runners (Graviton arm64, Ryzen x86) host
+# UX-895/UX-905's off/auto pairs? One job per runner answers the three
+# unknowns: sudo and user namespaces for bwrap, BuildStream on the
+# architecture, and the core count a compile scales to.
+name: CodSpeed runner probe
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/project-thread-bim9mu]
+    paths: [.github/workflows/codspeed-probe.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner:
+          - codspeed-macro-arm64-graviton-ubuntu-22-04
+          - codspeed-macro-x64-ryzen-9950x-ubuntu-24-04
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Host
+        run: |
+          uname -a
+          lscpu
+          nproc
+          free -g
+          df -h / "$RUNNER_TEMP"
+          echo "::notice title=host::$(nproc) cpus, $(lscpu | awk -F: '/Thread\(s\) per core/{gsub(/ /,"",$2);print "threads/core "$2}'), $(lscpu | awk -F: '/Model name/{gsub(/^ +/,"",$2);print $2; exit}'), mem $(free -g | awk '/Mem:/{print $2}')G"
+
+      - name: Sandbox prerequisites
+        run: |
+          if sudo -n true 2>/dev/null; then echo "::notice title=sudo::yes"; else echo "::warning title=sudo::no"; fi
+          sysctl kernel.unprivileged_userns_clone kernel.apparmor_restrict_unprivileged_userns user.max_user_namespaces 2>&1 || true
+          sudo -n apt-get update -q && sudo -n apt-get install -yq bubblewrap lzip gcc make python3-venv
+          # Ubuntu 24.04 restricts unprivileged userns (real-project-capture.yml's same step).
+          sudo -n sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+          if bwrap --unshare-net --unshare-pid --ro-bind / / --dev /dev /bin/true; then
+            echo "::notice title=bwrap::--unshare-net works"
+          else
+            echo "::error title=bwrap::--unshare-net fails"
+          fi
+
+      - name: BuildStream
+        run: |
+          python3 --version
+          python3 -m venv "$RUNNER_TEMP/venv"
+          . "$RUNNER_TEMP/venv/bin/activate"
+          pip install -q --upgrade pip
+          pip install -q 'BuildStream==2.8.1' 'buildstream-plugins==2.8.0'
+          pip install -q -e .
+          echo "::notice title=bst::$(bst --version 2>&1 | tail -1); buildbox-casd $(command -v buildbox-casd || find "$RUNNER_TEMP/venv" -name 'buildbox-casd*' -type f | head -1)"
+          bga --help > /dev/null && echo "::notice title=bga::imports"
+
+      # giant.bst's shape at 1800 lines a unit (9800 took 2013s at -j1 on
+      # the Graviton), compiled
+      # outside any sandbox: the knee is the host's width, not bst's.
+      - name: Compile width
+        run: |
+          W="$RUNNER_TEMP/width"; mkdir -p "$W" && cd "$W"
+          sh "$GITHUB_WORKSPACE/examples/10-jobserver/files/gen/autotools/generate.sh" giant 256 1800
+          line=""
+          for j in 1 2 4 8 16 32; do
+            make -s clean
+            s=$(date +%s.%N); make -s -j"$j" giant > /dev/null; e=$(date +%s.%N)
+            t=$(python3 -c "print(f'{$e-$s:.1f}')")
+            echo "width $j ${t}s"
+            line="$line $j:${t}s"
+          done
+          echo "::notice title=width::$line"

@@ -492,6 +492,10 @@ A citation is closed or marked (open).
                                              cold (UX-96), no push
                                              trigger (UX-90);
                                              docs/design/capture-workflow.md
+.github/workflows/codspeed-probe.yml        dispatch - CodSpeed's bare-metal
+                                             Graviton runner: sudo, bwrap,
+                                             bst on aarch64, compile width
+                                             (UX-895 (open), UX-905 (open))
 ```
 
 **Tests and docs:**

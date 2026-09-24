@@ -405,6 +405,14 @@ pairing for every merged row from round 103 on.
 | 140 | implementer | sonnet | UX-1000 T2 CI publishes the area pages (mechanical) | 154k | 111 | 27.9 m | merged | a fourth publishing job broke two generic guards the Decision did not name |
 | 140 | verifier | sonnet | UX-1000 T2 verifier | 78k | 59 | 14 m | MERGE | the push hook blocked pushes to throwaway bare remotes |
 | 140 | general-purpose | sonnet | architecture review 27 (the cadence guard came due) | 194k | 120 | 10.3 m | complete, one finding | claimed directions.md lacks rows 138-139; both exist |
+| 141 | architect | opus | architect: shape UX-901 and UX-906 | 70k | 32 | 5.7 m | complete | two rows shaped; lint re-run after the report |
+| 141 | implementer | sonnet | UX-901 the jobserver behind an import boundary (bounded) | 379k | 294 | 62.7 m | merged | PoolController and Broker read tracer-owned modules; bind vs import left to the session |
+| 141 | implementer | sonnet | UX-906 the corner cases become a register (bounded) | 84k | 66 | 11.8 m | merged | the policy set derived from the shim's ast |
+| 141 | verifier | sonnet | UX-901 verifier, UX-906 verifier | 64k | 53 | 10.6 m | complete | full suite plus dev_sizes --check |
+| 141 | researcher | sonnet | BuildStream sandbox deadlines and bwrap count | 31k | 15 | 1.3 m | complete | claimed several bwrap per element; REAPI batching refutes it, 25 for 23 |
+| 141 | general-purpose | opus | reproduce the gcc 16 LTO jobserver deadlock | 227k | 40 | 42.3 m | complete | staging gcc 16.2 from the nix cache; the blocking fd pair, not tokens, is the cause |
+| 141 | architect | opus | architect: shape UX-1005 builders and pool | 55k | 22 | 2.6 m | complete | admission in the shim chosen over an upstream change |
+| 141 | researcher | sonnet | census of four BuildStream projects for jobserver corner cases | 65k | 24 | 3.4 m | complete | cloning four projects; MAXJOBS and GOMAXPROCS promises found |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -417,7 +425,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the three hundred and eighty-eight rows already say: a researcher that reads a document
+What the three hundred and ninety-six rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

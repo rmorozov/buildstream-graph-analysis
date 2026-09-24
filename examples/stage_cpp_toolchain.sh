@@ -125,7 +125,8 @@ done
 
 # The dynamic linker itself (ldd doesn't list it for the "interpreter"
 # line uniformly across all binaries, so stage it explicitly).
-for interp in /lib64/ld-linux-x86-64.so.2 /lib/ld-linux.so.2; do
+for interp in /lib64/ld-linux-x86-64.so.2 /lib/ld-linux-aarch64.so.1 \
+              /lib/ld-linux.so.2; do
   [ -e "$interp" ] && copy_symlink_chain "$interp"
 done
 
@@ -185,6 +186,7 @@ PINNED_MAKE="$(cd "$HERE/.." && python3 -m tools.nix_store_fetch "$DEST")"
 MAKE_STORE_PATH="$(printf '%s\n' "$PINNED_MAKE" | awk -F'\t' '$1 == "make-4.4" {print $2}')"
 PINNED_MAKE_VERSION="$(printf '%s\n' "$PINNED_MAKE" | awk -F'\t' '$1 == "make-4.4" {print $3}')"
 INTERPRETER_DIR="$(cd "$HERE/.." && python3 -m tools.nix_store_fetch --interpreter-dir "$DEST")"
+PINNED_LOADER="$(cd "$HERE/.." && python3 -m tools.nix_store_fetch --loader "$DEST")"
 # Relative, not absolute: an absolute /nix/store link dangles on the
 # staging host, so the verification below - and `-e` in the MISSING
 # check - could not follow it. Inside the sandbox both read the same.
@@ -203,7 +205,7 @@ ln -s "../..$MAKE_STORE_PATH/bin/make" "$DEST/usr/bin/make"
 # whose own RUNPATH is an absolute /nix/store that resolves only once
 # the sandbox mounts this tree at /.
 STORE_LIBS="$(cd "$HERE/.." && python3 -m tools.nix_toolchain --library-path "$DEST")"
-STAGED_MAKE_VERSION="$("$DEST$INTERPRETER_DIR/ld-linux-x86-64.so.2" \
+STAGED_MAKE_VERSION="$("$DEST$INTERPRETER_DIR/$PINNED_LOADER" \
   --library-path "$STORE_LIBS" "$DEST/usr/bin/make" --version 2>&1 | head -1)"
 if [ "$STAGED_MAKE_VERSION" != "$PINNED_MAKE_VERSION" ]; then
   echo "stage_cpp_toolchain.sh: the staged make reports" >&2
@@ -224,7 +226,7 @@ CMAKE_MODULES="$(echo "$DEST"/nix/store/*-cmake-*/share/cmake-*/Modules/CMakeCXX
 CXX_HEADERS="$(echo "$DEST"/nix/store/*-gcc-*/include/c++)"
 for f in "$DEST/usr/bin/gcc" "$DEST/usr/bin/g++" "$DEST/usr/bin/cmake" "$DEST/usr/bin/make" \
          "$DEST/usr/bin/ld" "$DEST/usr/bin/as" "$CMAKE_MODULES" \
-         "$DEST$INTERPRETER_DIR/ld-linux-x86-64.so.2" \
+         "$DEST$INTERPRETER_DIR/$PINNED_LOADER" \
          "$CXX_HEADERS"; do
   [ -e "$f" ] || MISSING+=("$f")
 done

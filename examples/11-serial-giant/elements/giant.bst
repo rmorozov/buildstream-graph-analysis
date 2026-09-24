@@ -21,7 +21,7 @@ variables:
   generator: Unix Makefiles
 config:
   configure-commands:
-  - sh generate.sh giant 256 9800
+  - sh generate.sh giant 256 %{giant_lines}
   - |
     %{cmake}
 

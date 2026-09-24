@@ -40,6 +40,7 @@ task file, which is the only place it ever lived twice.
 | UX-1005 | [bga recommends a builder count and a pool size from a capture, and the critical path gets the next token](UX-1005-bga-recommends-builders-and-pool-size-from-a-capture.md) | analysis | High | R5, R4 | 🔴 Not Started |
 | UX-1007 | [a width promised through MAXJOBS or MAX_JOBS reads unknown_kind](UX-1007-a-width-promised-through-maxjobs-reads-unknown-kind.md) | capture | High | R2, R5 | 🔴 Not Started |
 | UX-1008 | [a consumer with no width promise is named, not silently oversubscribing](UX-1008-a-consumer-with-no-width-promise-is-named.md) | analysis | Medium | R5 | 🔴 Not Started |
+| UX-1009 | [the examples cannot stage their toolchain on aarch64](UX-1009-the-examples-cannot-stage-their-toolchain-on-aarch64.md) | capture | High | R4, R5 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

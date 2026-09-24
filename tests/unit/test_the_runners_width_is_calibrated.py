@@ -46,6 +46,36 @@ def test_width_one_is_required():
     assert calibrate.main(["p", "2", "4"], run=lambda *a, **k: None) == 2
 
 
+class TestTheLinesOverride:
+    """UX-1009: `giant.bst`'s committed 9800 lines/unit is too slow to
+    calibrate at width 1 on a slow single core (2013s measured, raw, on
+    Graviton) - `CALIBRATE_GIANT_LINES` shrinks it for this script's own
+    builds only, never moving the element's own default."""
+
+    def test_unset_adds_no_option(self, monkeypatch):
+        monkeypatch.delenv("CALIBRATE_GIANT_LINES", raising=False)
+
+        assert calibrate.lines_option() == []
+
+    def test_set_overrides_giant_lines(self, monkeypatch):
+        monkeypatch.setenv("CALIBRATE_GIANT_LINES", "1800")
+
+        assert calibrate.lines_option() == ["--option", "giant_lines", "1800"]
+
+    def test_the_override_reaches_the_build_command(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("CALIBRATE_GIANT_LINES", "1800")
+        calls = []
+
+        def run(argv, **kwargs):
+            calls.append(argv)
+
+        calibrate.build_at(str(tmp_path), 1, run=run)
+
+        build_calls = [c for c in calls if "build" in c]
+        assert build_calls == [["bst", "--option", "giant_lines", "1800",
+                                "build", "giant.bst"]]
+
+
 def test_the_ci_step_calibrates_every_width_and_runs_the_pinned_arm():
     ci = (REPO / ".github/workflows/ci.yml").read_text()
     step = ci[ci.index("Calibrate the runner's width"):]

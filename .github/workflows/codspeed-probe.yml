@@ -1,7 +1,11 @@
-# Can CodSpeed's bare-metal runners (Graviton arm64, Ryzen x86) host
-# UX-895/UX-905's off/auto pairs? One job per runner answers the three
-# unknowns: sudo and user namespaces for bwrap, BuildStream on the
-# architecture, and the core count a compile scales to.
+# Can CodSpeed's bare-metal Graviton runner host UX-895/UX-905's
+# off/auto pairs? Answers the three unknowns (sudo and user namespaces
+# for bwrap, BuildStream on the architecture, the core count a compile
+# scales to), then stages this arch's toolchain and buildbox pins
+# (UX-1009) and runs the jobserver showcase for real: `bst build
+# all.bst` on `examples/11-serial-giant`, then `calibrate_width.py`.
+# The Ryzen leg never started on the free plan - dropped rather than
+# left red.
 name: CodSpeed runner probe
 
 on:
@@ -15,14 +19,8 @@ permissions:
 
 jobs:
   probe:
-    strategy:
-      fail-fast: false
-      matrix:
-        runner:
-          - codspeed-macro-arm64-graviton-ubuntu-22-04
-          - codspeed-macro-x64-ryzen-9950x-ubuntu-24-04
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: 40
+    runs-on: codspeed-macro-arm64-graviton-ubuntu-22-04
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v7
 
@@ -56,8 +54,28 @@ jobs:
           pip install -q --upgrade pip
           pip install -q 'BuildStream==2.8.1' 'buildstream-plugins==2.8.0'
           pip install -q -e .
-          echo "::notice title=bst::$(bst --version 2>&1 | tail -1); buildbox-casd $(command -v buildbox-casd || find "$RUNNER_TEMP/venv" -name 'buildbox-casd*' -type f | head -1)"
+          echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
+          echo "::notice title=bst::$(bst --version 2>&1 | tail -1)"
           bga --help > /dev/null && echo "::notice title=bga::imports"
+
+      # UX-1009: bst 2.8.1's aarch64 install has no buildbox-casd/
+      # buildbox-run - the wheel bundling both is x86_64-only, and the
+      # sdist aarch64 pip falls back to carries neither. Both are a bare
+      # PATH lookup (_get_host_tool_internal, read from the sdist), so
+      # staging the pinned closure's bin/ onto PATH is the whole fix.
+      - name: Stage buildbox
+        run: |
+          BIN="$(python3 -m tools.nix_buildbox "$RUNNER_TEMP/buildbox")"
+          echo "$BIN" >> "$GITHUB_PATH"
+          echo "::notice title=buildbox::$BIN"
+
+      # UX-1009: the same pinned toolchain 05-10 use, now with an
+      # aarch64 row - staged once, hardlink-cloned into every example
+      # including 11-serial-giant.
+      - name: Stage toolchain
+        run: |
+          command -v buildbox-casd
+          examples/stage_cpp_toolchain.sh
 
       # giant.bst's shape at 1800 lines a unit (9800 took 2013s at -j1 on
       # the Graviton), compiled
@@ -75,3 +93,22 @@ jobs:
             line="$line $j:${t}s"
           done
           echo "::notice title=width::$line"
+
+      # UX-1009: the jobserver showcase for real, on real cores -
+      # examples/README.md's own `11-serial-giant` invocation.
+      - name: Build examples/11-serial-giant
+        working-directory: examples/11-serial-giant
+        env:
+          XDG_CONFIG_HOME: ${{ github.workspace }}/examples/11-serial-giant/xdg_config_home
+        run: bst build all.bst
+
+      # `CALIBRATE_GIANT_LINES` keeps this inside the job's 90 minutes -
+      # `giant.bst`'s committed 9800 lines/unit is unmoved (the build
+      # above used it); only this script's own builds shrink.
+      - name: Calibrate the runner's width
+        env:
+          CALIBRATE_GIANT_LINES: "1800"
+        run: |
+          OUT="$(python3 examples/11-serial-giant/calibrate_width.py examples/11-serial-giant 1 2 4 8 16)"
+          echo "$OUT"
+          echo "::notice title=calibrate::$(echo "$OUT" | tr '\n' ' ')"

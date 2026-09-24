@@ -70,6 +70,42 @@ PINS = {
             },
         },
     },
+    # UX-1009: CodSpeed's Graviton runner is the only real-core host
+    # available, and it is aarch64. Fetched and verified the same way
+    # (`file_sha256`/`nar_sha256` from the pins' own narinfo, downloaded
+    # and checked 2026-09-24); both reference this arch's glibc, per the
+    # comment above `PINS`.
+    "aarch64": {
+        "loader": "ld-linux-aarch64.so.1",
+        "interpreter_dir": (
+            "/nix/store/jjjpj4p9bz505ac1c747f2j5z3xw170p-glibc-2.40-224/lib"),
+        "paths": {
+            "make-4.4": {
+                "version": "GNU Make 4.4.1",
+                "store_path": (
+                    "/nix/store/1kxihdh72rdyl170dh19zka2nmd179cc-gnumake-4.4.1"),
+                "url": ("https://cache.nixos.org/nar/1jkn9z1fizida3gd8adycy"
+                        "8ps3rf7hj7xrp3m6d51v8pjlflk2sh.nar.xz"),
+                "file_sha256": ("508b491d9517ed509aa9e3e67e243c2e"
+                                "0f7d9167be29d4de502dfee8c24f76ca"),
+                "nar_sha256": ("4c798e089b5963facc34bdbeaf536703"
+                               "ef24157306b96dfbe512ed14c2805b09"),
+                "nar_size": 1660160,
+            },
+            "make-4.2": {
+                "version": "GNU Make 4.2.1",
+                "store_path": (
+                    "/nix/store/rmk3m2f8ks0vrc1sjr9c7yzx7bf33wba-gnumake-4.2.1"),
+                "url": ("https://cache.nixos.org/nar/0fvv9ari1ghi9ynkvj0ag0c"
+                        "882ihr6sr16b2s764s0yl77affz4n.nar.xz"),
+                "file_sha256": ("967ce7d439d4034dccd1629990b5c930"
+                                "0a8418780ac83dad4f11be10b34a7b3b"),
+                "nar_sha256": ("425c6173c593dd0ca89bab8f04f20d71"
+                               "50bd90a18b44a5603fc15f1c53d0df76"),
+                "nar_size": 1223272,
+            },
+        },
+    },
 }
 
 
@@ -307,9 +343,14 @@ def main(argv=None) -> int:
     parser.add_argument("--cache-dir", default=None)
     parser.add_argument("--interpreter-dir", action="store_true",
                         help="print this arch's interpreter dir and stage nothing")
+    parser.add_argument("--loader", action="store_true",
+                        help="print this arch's loader name and stage nothing")
     args = parser.parse_args(argv)
     if args.interpreter_dir:
         print(host_arch(args.arch)["interpreter_dir"])
+        return 0
+    if args.loader:
+        print(host_arch(args.arch)["loader"])
         return 0
     for pin in stage(args.dest, args.names, args.arch, args.cache_dir):
         print(f"{pin['name']}\t{pin['store_path']}\t{pin['version']}")

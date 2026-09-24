@@ -129,6 +129,13 @@ KNOWN_SKIP_REASONS = {
         "the helper mutation needs a host cc1plus to read back", 0),
     "trace_processor_shell is not installed": (
         "Perfetto's shell is an optional local tool, not a dependency", 16),
+    # UX-1009: staging the pinned buildbox closure downloads ~70 MiB
+    # from cache.nixos.org, which the suite does not do by default.
+    # 1 here (opt-in via BGA_TEST_NIX_NETWORK=1) and on any runner that
+    # does not set it.
+    "downloads the pinned buildbox closure from cache.nixos.org - set "
+    "BGA_TEST_NIX_NETWORK=1": (
+        "a network fetch is not something this suite does by default", 1),
     # `UX-637`: the reachability clause refuses to answer from a
     # history that stops at a boundary. Measured on this session's own
     # checkout, which was shallow until `git fetch --unshallow`: 1.

@@ -872,7 +872,7 @@ def developer_tax(records: list[dict], dependencies: Optional[list[dict]] = None
             'causes': causes,
             'upstream_roots': sorted(
                 ({'element': name, 'downstream_us': cost} for name, cost in roots.items()),
-                key=lambda entry: (-int(entry['downstream_us']), str(entry['element'])),
+                key=lambda entry: (-entry['downstream_us'], entry['element']),
             ),
         })
     rows.sort(key=lambda row: (-row['total_us'], row['element']))

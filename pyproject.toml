@@ -173,6 +173,7 @@ packages = [
     "bga.utilisation",
     "bga.validation",
     "bga._tools",
+    "bga._tools.jobserver",
     "bga._tools.native_trace",
 ]
 

@@ -111,3 +111,4 @@ The same links with gcc as the direct client of the blocking pair hang
 (`UX-1006`), which is the only policy that handed gcc the pair; the
 ninja policies now get `fifo:`. No guard: the reading is the close, and
 the behaviour it rests on is make's, not this repository's.
+No mutation table: the diff changes no code, so there is nothing to mutate.

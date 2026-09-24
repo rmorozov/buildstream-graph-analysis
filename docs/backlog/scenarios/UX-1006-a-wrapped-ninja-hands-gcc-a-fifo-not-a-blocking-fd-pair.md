@@ -1,6 +1,6 @@
 # UX-1006: a wrapped ninja hands gcc a fifo path, not a blocking fd pair
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-846, UX-878, UX-1001 | **Found by:** the fdsdk hang's local reproduction (2026-09-24): gcc 16.2 and 13.3 `lto1` deadlock on a raw `--jobserver-auth=R,W` pair whose descriptors are blocking, and never on a `fifo:` path | **Serves:** R2 (an LTO element under an old ninja finishes) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-846, UX-878, UX-1001 | **Found by:** the fdsdk hang's local reproduction (2026-09-24): gcc 16.2 and 13.3 `lto1` deadlock on a raw `--jobserver-auth=R,W` pair whose descriptors are blocking, and never on a `fifo:` path | **Serves:** R2 (an LTO element under an old ninja finishes) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement
 
 ## Motivation
 

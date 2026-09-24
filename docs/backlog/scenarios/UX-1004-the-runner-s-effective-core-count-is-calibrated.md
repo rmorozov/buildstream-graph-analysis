@@ -1,6 +1,6 @@
 # UX-1004: the runner's effective core count is calibrated, not read from nproc
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-1002 | **Found by:** Ruslan on the jobserver batch thread (2026-09-24): the 4-core gain over the pinned configuration should be measurable where the executor shares the machine with the scheduler | **Serves:** R4, R5 (the gain is judged against the capacity behind the sandboxes) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-1002 | **Found by:** Ruslan on the jobserver batch thread (2026-09-24): the 4-core gain over the pinned configuration should be measurable where the executor shares the machine with the scheduler | **Serves:** R4, R5 (the gain is judged against the capacity behind the sandboxes) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement
 
 ## Motivation
 

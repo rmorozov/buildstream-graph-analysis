@@ -26,7 +26,6 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-884 | [the LTO scrub covers make/autotools kinds, not only cmake/meson/cargo](UX-0884-the-lto-scrub-covers-make-and-autotools-kinds.md) | capture | Medium | R2 | 🔴 Not Started |
 | UX-895 | [the capture's own overhead is unmeasured, so Plane 2 on every build is a guess](UX-0895-the-captures-own-overhead-is-unmeasured.md) | capture | High | R4, R5, R1 | 🔴 Not Started |
 | UX-900 | [a store is a directory, but CI will keep bundles in versioned directories](UX-0900-a-store-is-a-directory-but-ci-keeps-bundles.md) | store | Medium | R5, R7, R8 | 🔴 Not Started |
 | UX-902 | [a showcase case is two captures, and there is nowhere to put one](UX-0902-the-showcase-case-file-and-its-two-capture-rule.md) | docs | High | R1, R2, R8 | 🔴 Not Started |
@@ -38,12 +37,7 @@ task file, which is the only place it ever lived twice.
 | UX-955 | [a population entry keeps the tree size its seconds no longer describe, so the gate scales the growth twice](UX-0955-a-population-entry-keeps-the-size-its-seconds-no-longer-describe.md) | guards | Medium | every branch that makes the backlog guard slower, which the gate should name | 🔴 Not Started |
 | UX-975 | [the examples still install a host toolchain the stager no longer reads, and two CI comments say it copies from one](UX-0975-the-examples-install-a-host-toolchain-the-stager-no-longer-reads.md) | docs | Medium | whoever stands the C++ examples up from `examples/README.md`, and the next reader of `ci.yml`'s staging steps | 🔴 Not Started |
 | UX-976 | [the toolchain closure is 35 store paths, and the examples README counts the two make pins into it](UX-0976-the-toolchain-closure-is-35-paths-and-the-readme-counts-the-make-pins-into-it.md) | docs | Low | whoever sizes the examples' download from the README | 🔴 Not Started |
-| UX-1001 | [ninja 1.13's jobserver client is read by its version, not its help text](UX-1001-ninja-1-13s-client-is-read-by-its-version-not-its-help.md) | capture | High | R2, R5 | 🔴 Not Started |
-| UX-1002 | [a capture names its physical cores, not only its logical CPUs](UX-1002-a-capture-names-its-physical-cores.md) | capture | High | R4, R5 | 🔴 Not Started |
-| UX-1003 | [a shared build root hides the element's kind, so fdsdk's make elements never join](UX-1003-a-shared-build-root-hides-the-kind-so-make-elements-never-join.md) | capture | High | R2, R5 | 🔴 Not Started |
-| UX-1004 | [the runner's effective core count is calibrated, not read from nproc](UX-1004-the-runner-s-effective-core-count-is-calibrated.md) | capture | High | R4, R5 | 🔴 Not Started |
 | UX-1005 | [bga recommends a builder count and a pool size from a capture, and the critical path gets the next token](UX-1005-bga-recommends-builders-and-pool-size-from-a-capture.md) | analysis | High | R5, R4 | 🔴 Not Started |
-| UX-1006 | [a wrapped ninja hands gcc a fifo path, not a blocking fd pair](UX-1006-a-wrapped-ninja-hands-gcc-a-fifo-not-a-blocking-fd-pair.md) | capture | High | R2 | 🔴 Not Started |
 | UX-1007 | [a width promised through MAXJOBS or MAX_JOBS reads unknown_kind](UX-1007-a-width-promised-through-maxjobs-reads-unknown-kind.md) | capture | High | R2, R5 | 🔴 Not Started |
 | UX-1008 | [a consumer with no width promise is named, not silently oversubscribing](UX-1008-a-consumer-with-no-width-promise-is-named.md) | analysis | Medium | R5 | 🔴 Not Started |
 

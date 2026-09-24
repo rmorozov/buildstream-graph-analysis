@@ -1,6 +1,6 @@
 # UX-1001: ninja 1.13's jobserver client is read by its version, not its help text
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-843, UX-846, UX-878 | **Found by:** `UX-905`'s fdsdk auto arm (run 35965495279, 2026-09-24): `Found ninja-1.13.2 at /tmp/.bst-native-trace/wrappers/ninja`, then `lto-wrapper: warning: using serial compilation of 16 LTRANS jobs` on every git-minimal link, and a stall there | **Serves:** R2, R5 (a meson element on a current ninja joins the pool instead of starving it) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-843, UX-846, UX-878 | **Found by:** `UX-905`'s fdsdk auto arm (run 35965495279, 2026-09-24): `Found ninja-1.13.2 at /tmp/.bst-native-trace/wrappers/ninja`, then `lto-wrapper: warning: using serial compilation of 16 LTRANS jobs` on every git-minimal link, and a stall there | **Serves:** R2, R5 (a meson element on a current ninja joins the pool instead of starving it) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement
 
 ## Motivation
 

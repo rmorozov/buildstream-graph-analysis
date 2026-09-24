@@ -1,6 +1,6 @@
 # UX-1002: a capture names its physical cores, not only its logical CPUs
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-905 | **Found by:** Ruslan on the jobserver batch thread (2026-09-24): the 4-core gain should be measurable, and on `11-serial-giant` twice the busy cores bought `giant.bst` about 7% | **Serves:** R4, R5 (a host class is cores and threads per core, not `nproc`) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-905 | **Found by:** Ruslan on the jobserver batch thread (2026-09-24): the 4-core gain should be measurable, and on `11-serial-giant` twice the busy cores bought `giant.bst` about 7% | **Serves:** R4, R5 (a host class is cores and threads per core, not `nproc`) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement
 
 ## Motivation
 

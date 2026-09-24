@@ -465,6 +465,9 @@ jobs:
           if [ "$TRACE_SPINE" = "true" ]; then SPINE="--trace-spine"; fi
           JS=""
           if [ "$JOBSERVER" = "auto" ]; then JS="--jobserver $(nproc)"; fi
+          # UX-905: a hang leaves no report, so a quiet host is dumped as it happens.
+          python3 -m tools.hang_witness --out capture/hang-witness.log &
+          WITNESS=$!
           set +e
           python3 -m tools.bst_native_build_tracer run \
             --wrapped-log capture/build.log \
@@ -477,6 +480,7 @@ jobs:
                  build --ignore-project-artifact-remotes \
                        --ignore-project-source-remotes "$TARGET"
           traced_rc=$?
+          kill "$WITNESS" 2>/dev/null
           echo "traced build exit: $traced_rc"
           echo "traced_build_exit=$traced_rc" > capture/capture-outcome.txt
           final_rc=$traced_rc

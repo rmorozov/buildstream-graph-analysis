@@ -42,7 +42,7 @@ def _run_ref_template() -> str:
 def _example_ref() -> str:
     """One concrete name the workflow would really publish."""
     ref = _run_ref_template()
-    for name, value in (("SHORT_REF", "953683fb"), ("CAPTURE_MODE", "incremental"),
+    for name, value in (("SHORT_REF", "953683fb"), ("REF_MODE", "incremental"),
                         ("BUILDERS", "4"), ("MAX_JOBS", "4")):
         ref = ref.replace("${" + name + "}", value)
     ref = re.sub(r"\$\{\{.*?\}\}", "32223468993", ref)   # github.run_id

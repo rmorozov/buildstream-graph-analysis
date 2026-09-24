@@ -139,6 +139,14 @@ on:
         type: choice
         options: [incremental, cold]
         default: incremental
+      jobserver:
+        description: >-
+          UX-905. `auto` binds an nproc-token jobserver into every sandbox
+          (the tracer's --jobserver), so this capture is the mode's arm and
+          the scheduled `off` captures of the same ref are its baseline.
+        type: choice
+        options: ["off", "auto"]
+        default: "off"
   # UX-81: trend data cannot accumulate if a human has to click. Weekly
   # is enough at ~65 runner-minutes per capture, and three captures of one
   # pinned ref is what `bga compare --baseline-run ... --band-k` needs
@@ -176,7 +184,8 @@ on:
   # paths, which is what left this one with nothing to do.
 
 concurrency:
-  group: real-project-capture-${{ github.ref }}
+  # UX-905: the two jobserver arms of one ref publish to distinct refs.
+  group: real-project-capture-${{ github.ref }}-${{ github.event.inputs.jobserver || 'off' }}
   # Kept for dispatch: two dispatches of the same ref should not race for
   # the same publish refs. With the push trigger gone, this can no longer
   # cancel a capture that a push happened to overlap.
@@ -194,6 +203,10 @@ env:
   # A dispatch says what it wants; a schedule says which cron fired, and
   # the monthly one is the cold capture (UX-96).
   CAPTURE_MODE: ${{ github.event.inputs.capture_mode || (github.event.schedule == '0 4 1 * *' && 'cold') || 'incremental' }}
+  # UX-905: a schedule never sets it, so the baseline stays the mode off.
+  JOBSERVER: ${{ github.event.inputs.jobserver || 'off' }}
+  # The ref's mode segment: an `auto` arm must never join an `off` glob.
+  REF_MODE: ${{ github.event.inputs.capture_mode || (github.event.schedule == '0 4 1 * *' && 'cold') || 'incremental' }}${{ github.event.inputs.jobserver == 'auto' && '_jsauto' || '' }}
 
 jobs:
   capture:
@@ -450,13 +463,15 @@ jobs:
           if [ "$TRACE_OPENS" = "true" ]; then OPENS="--trace-opens"; fi
           SPINE=""
           if [ "$TRACE_SPINE" = "true" ]; then SPINE="--trace-spine"; fi
+          JS=""
+          if [ "$JOBSERVER" = "auto" ]; then JS="--jobserver $(nproc)"; fi
           set +e
           python3 -m tools.bst_native_build_tracer run \
             --wrapped-log capture/build.log \
             --raw-log capture/native-trace.log \
             --invocation-log capture/invocations.jsonl \
             --argv-log capture/bwrap-argv.jsonl \
-            $OPENS $SPINE \
+            $OPENS $SPINE $JS \
             fdsdk capture/native-report.json \
             -- bst --no-interactive --builders "$BUILDERS" --max-jobs "$MAX_JOBS" \
                  build --ignore-project-artifact-remotes \
@@ -572,6 +587,8 @@ jobs:
             # for*, so a cold capture that silently found a warm cache is
             # visible as a disagreement rather than as a fact.
             echo "capture_mode=$CAPTURE_MODE"
+            # UX-905: which arm of the jobserver pair this capture is.
+            echo "jobserver=$JOBSERVER"
             # UX-96: the target belongs here for the same reason the mode
             # does. Two captures of *different* targets are different
             # builds, and the ref name carries commit, mode, builders and
@@ -675,7 +692,7 @@ jobs:
           # `bga compare` refuses to compare them (UX-78) - so they must
           # not land in the same baseline set through a shared ref glob.
           SHORT_REF="$(echo "$FDSDK_REF" | cut -c1-8)"
-          RUN_REF="captures/fdsdk/${SHORT_REF}-${CAPTURE_MODE}-b${BUILDERS}j${MAX_JOBS}-${{ github.run_id }}"
+          RUN_REF="captures/fdsdk/${SHORT_REF}-${REF_MODE}-b${BUILDERS}j${MAX_JOBS}-${{ github.run_id }}"
           git push -q "$REMOTE" "HEAD:refs/heads/${RUN_REF}"
           echo "Published to branch ${RUN_REF}"
 
@@ -715,7 +732,8 @@ jobs:
           publish_decision() {
             if [ "${1:-0}" != "0" ]; then
               echo "failed-build"
-            elif [ "$TRACE_SPINE" != "false" ] || [ "$TRACE_OPENS" != "true" ]; then
+            elif [ "$TRACE_SPINE" != "false" ] || [ "$TRACE_OPENS" != "true" ] \
+                 || [ "$JOBSERVER" != "off" ]; then
               echo "non-default-instrumentation"
             else
               echo "move-latest"
@@ -729,7 +747,7 @@ jobs:
               echo "Moved ${LATEST_REF} to this capture"
               ;;
             non-default-instrumentation)
-              echo "trace_spine=${TRACE_SPINE} trace_opens=${TRACE_OPENS} is not the" \
+              echo "trace_spine=${TRACE_SPINE} trace_opens=${TRACE_OPENS} jobserver=${JOBSERVER} is not the" \
                    "scheduled default instrumentation: published as data at ${RUN_REF}," \
                    "leaving ${LATEST_REF} pointing at the last default-instrumentation capture"
               ;;
@@ -753,7 +771,7 @@ jobs:
         run: |
           set -o pipefail
           SHORT_REF="$(echo "$FDSDK_REF" | cut -c1-8)"
-          GLOB="captures/fdsdk/${SHORT_REF}-${CAPTURE_MODE}-b${BUILDERS}j${MAX_JOBS}-*"
+          GLOB="captures/fdsdk/${SHORT_REF}-${REF_MODE}-b${BUILDERS}j${MAX_JOBS}-*"
           if ! bga baseline --glob "$GLOB" -n 8 --workdir "$RUNNER_TEMP/trend" -f json \
                > "$RUNNER_TEMP/trend-set.json"; then
             echo "No comparable baseline set to trend against yet"

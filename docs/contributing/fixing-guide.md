@@ -351,6 +351,7 @@ tools/bga_doctor.py          can this machine capture at all
 tools/bga_view.py            the viewer's server and `--export`
 tools/bga_timeline.py        one trace, both planes
 tools/bst_baseline_set.py    assembling a baseline set from published refs
+tools/jobserver_arms.py      an off/auto Plane 2 pair read by width (UX-905 (open))
 tools/nix_store_fetch.py     the examples' pinned make, fetched and
                          unpacked without Nix (UX-915)
 tools/nix_closure.py         a pin's whole closure, walked through the

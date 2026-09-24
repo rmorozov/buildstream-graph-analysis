@@ -310,16 +310,34 @@ def kind_job_env(kind, auth_value, ninja_probe=None, wrappers_dir=None,
     argv set `JOBS` for this sandbox - a kind outside the table gets
     the cmake treatment under it (policy `jobs_env`) rather than
     `unknown_kind` when it carries one, since `JOBS` is the recipe's
-    own promise to spend it, whatever its kind."""
+    own promise to spend it, whatever its kind; UX-1003: `"MAKEFLAGS"`
+    (`recipe_promise`) reads as a make recipe."""
     if kind in _MAKE_LIKE_KINDS:
         return [("MAKEFLAGS", auth_value)], [], "make"
     if kind == "cargo":
         return [("MAKEFLAGS", auth_value)], ["CARGO_BUILD_JOBS"], "cargo"
     if kind in _NINJA_CAPABLE_KINDS:
         return _ninja_aware_env(ninja_probe, wrappers_dir, auth_value, "cmake_meson")
+    if jobs_present == "MAKEFLAGS":
+        return [("MAKEFLAGS", auth_value)], [], "make"
     if jobs_present:
         return _ninja_aware_env(ninja_probe, wrappers_dir, auth_value, "jobs_env")
     return [], [], JOBSERVER_UNKNOWN_KIND
+
+
+_MAKEFLAGS_JOBS_RE = re.compile(r"(?:^|\s)-j\s*\d")
+
+
+def recipe_promise(opts: list[str]):
+    """UX-1003: `"JOBS"`, `"MAKEFLAGS"` or `None` - which of BuildStream's own
+    `--setenv`s promises this sandbox spends a width, for a kind the shim cannot
+    name (a shared `build-root` hides it). `JOBS` wins; a `MAKEFLAGS` counts
+    only with a `-jN`."""
+    if _setenv_value(opts, "JOBS") is not None:
+        return "JOBS"
+    if _MAKEFLAGS_JOBS_RE.search(_setenv_value(opts, "MAKEFLAGS") or ""):
+        return "MAKEFLAGS"
+    return None
 
 
 def parse_ninja_help(text: str) -> bool:
@@ -771,7 +789,7 @@ def _jobserver_injection(opts: list[str], binds: tuple, decision: str,
     pairs, unsets, policy = kind_job_env(
         kind_context.get("element_kind"), auth_value,
         kind_context.get("ninja_probe"), kind_context.get("wrappers_dir"),
-        jobs_present=_setenv_value(opts, "JOBS") is not None)
+        jobs_present=recipe_promise(opts))
     ctx = {"bind_src": bind_src, "bind_dst": bind_dst, "pool": pool,
           "real_bwrap": kind_context.get("real_bwrap"),
           "element": kind_context.get("element")}
@@ -1118,7 +1136,7 @@ def record_jobserver_decision(log_path: Optional[str], opts: list[str],
             _pairs, _unsets, policy = kind_job_env(
                 element_kind, "--jobserver-auth=0,0",
                 kind_context.get("ninja_probe"), kind_context.get("wrappers_dir"),
-                jobs_present=_setenv_value(opts, "JOBS") is not None)
+                jobs_present=recipe_promise(opts))
         name, unresolved = element, False
         if name is None:
             unresolved = True

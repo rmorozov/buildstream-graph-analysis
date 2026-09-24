@@ -26,7 +26,7 @@ surfaces: `tools/native_trace/bwrap_shim.py`'s `kind_job_env` and the kind looku
 guards: a sandbox with `--dir buildstream-build` and `MAKEFLAGS=-jN` reads policy `make`; one with neither stays `unknown_kind`
 gap: a recipe-set `MAKEFLAGS=-jN` as a promise like `JOBS`, versus recovering the name another way (the invocation id, `UX-56`); the first is local, the second is the general fix
 track: session's own
-gate: `UX-884` first - joining a make element hands its LTO links the raw fd
+gate: `UX-884`, settled 2026-09-24 - a make client switches the inherited read fd to non-blocking, so its LTO links cannot deadlock on it
 
 ## Required Fix
 
@@ -45,4 +45,21 @@ autotools sandboxes, and the build completes.
 
 ## Outcome
 
-Not started.
+Gap measured: the fdsdk auto arm (run 35970752554) read
+`unknown_kind: 21, ninja_client: 4`; the seven autotools sandboxes
+carry `MAKEFLAGS=-j4` and no `JOBS`, under `--dir buildstream-build`.
+
+Close: `recipe_promise` reads BuildStream's own `--setenv`s - `JOBS`
+first, then a `MAKEFLAGS` with a `-jN` - and `kind_job_env` reads
+`"MAKEFLAGS"` as policy `make`, on both the injection and the recorded
+decision. The field reading is owed by the next fdsdk auto arm.
+
+| mutation | reddened | count |
+|---|---|---|
+| no `MAKEFLAGS` branch in `kind_job_env` | the direct case and the real gate | 2 |
+| any `MAKEFLAGS` counts, `-j` or not | the `-k` case | 1 |
+| `JOBS` no longer wins over `MAKEFLAGS` | the both-set case | 1 |
+| the recorded decision ignores `MAKEFLAGS` | the real gate | 1 |
+
+Deviation: the policy is `make`, not a new name, since the recipe is a
+make recipe; the register gains no row.

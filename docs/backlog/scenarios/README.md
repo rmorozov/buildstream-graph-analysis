@@ -40,6 +40,8 @@ task file, which is the only place it ever lived twice.
 | UX-976 | [the toolchain closure is 35 store paths, and the examples README counts the two make pins into it](UX-0976-the-toolchain-closure-is-35-paths-and-the-readme-counts-the-make-pins-into-it.md) | docs | Low | whoever sizes the examples' download from the README | 🔴 Not Started |
 | UX-1001 | [ninja 1.13's jobserver client is read by its version, not its help text](UX-1001-ninja-1-13s-client-is-read-by-its-version-not-its-help.md) | capture | High | R2, R5 | 🔴 Not Started |
 | UX-1002 | [a capture names its physical cores, not only its logical CPUs](UX-1002-a-capture-names-its-physical-cores.md) | capture | High | R4, R5 | 🔴 Not Started |
+| UX-1003 | [a shared build root hides the element's kind, so fdsdk's make elements never join](UX-1003-a-shared-build-root-hides-the-kind-so-make-elements-never-join.md) | capture | High | R2, R5 | 🔴 Not Started |
+| UX-1004 | [the runner's effective core count is calibrated, not read from nproc](UX-1004-the-runner-s-effective-core-count-is-calibrated.md) | capture | High | R4, R5 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

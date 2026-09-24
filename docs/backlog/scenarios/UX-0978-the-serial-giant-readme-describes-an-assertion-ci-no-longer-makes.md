@@ -63,4 +63,4 @@ $ grep -c check_jobserver_width examples/11-serial-giant/README.md
 2
 ```
 
-Both hits sit in sentences that name `UX-910` and the date; the paragraph now lists the four checks `check_jobserver_width.py` makes. Docs only: no guard added, as the Acceptance Test asks for two greps.
+Both hits sit in sentences that name `UX-910` and the date; the paragraph now lists the four checks `check_jobserver_width.py` makes. Docs only: no guard added and so no mutation table, as the Acceptance Test asks for two greps.

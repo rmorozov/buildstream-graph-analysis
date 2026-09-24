@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
+ROOT=$PWD
+START=$(date +%s)
+BUILD_DEADLINE=$((START + 50 * 60))
 export PYTHONPATH="$PWD"
 export PATH="$HOME/.local/bin:$PATH"
 mkdir -p capture
 finish() {
   rc=$?
   trap - EXIT
+  cd "$ROOT"
   set +e
   if [ -f capture/build.log ]; then
     python3 -m tools.bst_extract_run fdsdk capture/build.log capture/run --format wrapped --native-max-jobs "$MAX_JOBS"
@@ -36,12 +40,16 @@ finish() {
     echo "jobserver=$JOBSERVER"
     echo "target=$TARGET"
     echo "mem_total_kb=$(awk '/MemTotal/{print $2}' /proc/meminfo)"
+    echo "elapsed_seconds=$(($(date +%s) - START))"
+    echo "deadline_hit=${deadline_hit:-0}"
+    cat capture/phase-timings.txt 2>/dev/null || true
     df -h /
   } > capture/capture-context.txt
   # CircleCI stores capture/ even when the build fails. Preserve the build exit status.
   exit "$rc"
 }
 trap finish EXIT
+phase() { echo "phase=$1 elapsed_seconds=$(($(date +%s) - START))" | tee -a capture/phase-timings.txt; }
 : "${FDSDK_REF:?set FDSDK_REF in CircleCI pipeline parameters}"
 : "${TARGET:?set TARGET in CircleCI pipeline parameters}"
 : "${BUILDERS:?set BUILDERS in CircleCI pipeline parameters}"
@@ -103,7 +111,9 @@ mkdir -p capture
 python3 -m tools.bst_show_to_graph fdsdk "$TARGET" capture/graph-declared.json
 fi
 
+phase graph
 # Compute the rebuild set
+if [ "$CAPTURE_MODE" = incremental ]; then
 python3 -m tools.bst_rebuild_set capture/graph-declared.json \
   --cut components/_private/python3-flit-core.bst \
   --cut components/openssl.bst \
@@ -116,19 +126,23 @@ python3 -m tools.bst_rebuild_set capture/graph-declared.json \
   --cut "$TARGET" \
   | tee capture/rebuild-set.txt
 wc -l < capture/rebuild-set.txt
+fi
 
+phase warm
 # Warm the local cache from the project's remote cache
 if [ "$CAPTURE_MODE" = incremental ]; then
-cd fdsdk
+( cd fdsdk
 bst --no-interactive artifact pull --deps all "$TARGET"
 bst --no-interactive show --deps all --format '%{name}|%{state}' "$TARGET" \
   > ../capture/state-after-warm.txt
 echo "cached after warm: $(grep -c '|cached$' ../capture/state-after-warm.txt) / $(wc -l < ../capture/state-after-warm.txt)"
+)
 fi
 
+phase cut
 # Delete the rebuild set and pre-fetch its sources
 if [ "$CAPTURE_MODE" = incremental ]; then
-cd fdsdk
+( cd fdsdk
 xargs -a ../capture/rebuild-set.txt \
   bst --no-interactive artifact delete
 # Only the deleted elements need sources: everything else is
@@ -137,11 +151,13 @@ xargs -a ../capture/rebuild-set.txt \
   bst --no-interactive source fetch --deps none
 bst --no-interactive show --deps all --format '%{name}|%{state}' "$TARGET" \
   > ../capture/state-after-delete.txt
+)
 fi
 
+phase cold_prefetch
 # Pre-fetch every source in the closure (cold mode)
 if [ "$CAPTURE_MODE" = cold ]; then
-cd fdsdk
+( cd fdsdk
 bst --no-interactive source fetch --deps all "$TARGET"
 bst --no-interactive show --deps all --format '%{name}|%{state}' "$TARGET" \
   > ../capture/state-after-delete.txt
@@ -152,6 +168,7 @@ if [ "$cached" != "0" ]; then
   echo "a cold capture with cached elements is not a cold capture" >&2
   exit 1
 fi
+)
 fi
 
 # Verify the cut is exactly the rebuild set
@@ -186,6 +203,7 @@ if unexpected:
 EOF
 fi
 
+phase capture
 # Capture the build (both planes)
 OPENS=""
 if [ "$TRACE_OPENS" = "true" ]; then OPENS="--trace-opens"; fi
@@ -196,8 +214,13 @@ if [ "$JOBSERVER" = "auto" ]; then JS="--jobserver $(nproc)"; fi
 # UX-905: a hang leaves no report, so a quiet host is dumped as it happens.
 python3 -m tools.hang_witness --out capture/hang-witness.log &
 WITNESS=$!
+remaining=$((BUILD_DEADLINE - $(date +%s)))
+if [ "$remaining" -le 0 ]; then
+  echo "No time left for capture; saving preflight artifacts" >&2
+  exit 124
+fi
 set +e
-python3 -m tools.bst_native_build_tracer run \
+timeout --signal=INT --kill-after=120s "${remaining}s" python3 -m tools.bst_native_build_tracer run \
   --wrapped-log capture/build.log \
   --raw-log capture/native-trace.log \
   --invocation-log capture/invocations.jsonl \
@@ -212,17 +235,31 @@ kill "$WITNESS" 2>/dev/null
 echo "traced build exit: $traced_rc"
 echo "traced_build_exit=$traced_rc" > capture/capture-outcome.txt
 final_rc=$traced_rc
-if [ "$traced_rc" -ne 0 ]; then
+if [ "$traced_rc" -eq 124 ] || [ "$traced_rc" -eq 130 ]; then
+  deadline_hit=1
+  echo "deadline_hit=1" >> capture/capture-outcome.txt
+elif [ "$traced_rc" -ne 0 ]; then
   mv capture/build.log capture/build-traced.log
   # A failed build leaves a *failed* artifact cached, so the
   # retry needs --retry-failed or BuildStream skips straight
   # past the elements that just failed.
-  python3 -m tools.bst_run_wrapped fdsdk capture/build.log \
+  remaining=$((BUILD_DEADLINE - $(date +%s)))
+  if [ "$remaining" -le 0 ]; then
+    echo "No time left for plain-build retry" >&2
+    deadline_hit=1
+    echo "deadline_hit=1" >> capture/capture-outcome.txt
+    exit "$traced_rc"
+  fi
+  timeout --signal=INT --kill-after=120s "${remaining}s" python3 -m tools.bst_run_wrapped fdsdk capture/build.log \
     -- bst --no-interactive --builders "$BUILDERS" --max-jobs "$MAX_JOBS" \
          build --retry-failed \
                --ignore-project-artifact-remotes \
                --ignore-project-source-remotes "$TARGET"
   plain_rc=$?
+  if [ "$plain_rc" -eq 124 ] || [ "$plain_rc" -eq 130 ]; then
+    deadline_hit=1
+    echo "deadline_hit=1" >> capture/capture-outcome.txt
+  fi
   echo "plain build exit: $plain_rc"
   echo "plain_build_exit=$plain_rc" >> capture/capture-outcome.txt
   final_rc=$plain_rc

@@ -117,7 +117,7 @@ def ci_seconds():
     except (OSError, ValueError, KeyError) as exc:
         raise RuntimeError(
             f"{CI_REFERENCE.relative_to(REPO)} is missing or unreadable "
-            f"({exc}) - the shape budget cannot be measured") from exc
+            f"({exc}) - run `tools/dev_records.py fetch` (UX-997)") from exc
 
 
 def seconds_by_class(classes=None, ci=None):

@@ -98,6 +98,7 @@ would have caught it; a bound at it would only just have.
 | 24 | 2026-09-15 | 862 | one finding in two facets, both `UX-858`'s own gap - `cli.md`'s jobserver flag list has no line for `--jobserver-seed N`, and `run_instance.jobserver`'s documented four keys are five in the schema hint (`seed` missing), invisible to the coverage guard because `run_instance` is typed as a bare `object` in the published schema: `UX-866`; the context map's `UX-846 (open)` label two rounds after the row closed: `UX-867`; and `UX-863`'s merged-edge selector fix that reddens no guard, named by its verifier: `UX-868` |
 | 25 | 2026-09-20 | 889 | one filing, and the shape is reviews 23 and 24's third turn: `UX-909` - round 132's five `lb_cpu_*` keys shipped under `floors` and no clause could go red, because `_consumer_surface()` walks top-level properties and rows and never a top-level object's own scalars (302 such keys, `certified_headroom` among them); `analyze/v6` stays at 62 properties across the round, which is why the count check sees nothing. The same row notes that `_named_in_the_documents()` excludes paths and not arguments, so a `**Status:** proposed` design document counts as a documented home - latent, 0 surface keys rest on one today. Three document gaps in the round's own uncommitted diff were closed in the round rather than filed, none having reached `main`: the §6 floors row, `architecture.md`'s floors line and `cli.md`'s missing `lb_cpu_*` section. Sound: the contract counts, the 309-key sentence, the viewer file count, the §6 tree's paths and `macro_micro`'s pasted capacity block all reproduce |
 | 26 | 2026-09-23 | 914 | five filings, and three of them are one shape: **a check that moved, and a document that described the old one.** `UX-910` replaced `11-serial-giant`'s `auto < off` step with a width check and its README still argues for the step: `UX-978`. `UX-925` emptied the stager's toolchain array and four sentences still install or copy a host toolchain: `UX-975`. `UX-744` renamed a guard class and §7a still sends a closing session to the old name, because the link guard resolves a citation's path and not what follows `::`: `UX-979`. Plus two figures: `cli.md`'s coverage section states the surface twice, the guard reads the bold one and `UX-899` moved only that one (563 against 562 fourteen lines down): `UX-977`; and the README's *37-path closure* is 35 paths by `nix_closure --plan`, the 37 being the staged tree with the two `make` pins: `UX-976`. Sound: the contract counts, the §6 map's nine new modules, the touching spread, the spec line figures, `ci-comment.md`'s 33 % and the exit codes `--help` prints |
+| 27 | 2026-09-23 | 945 | one bookkeeping line filed, no task file — a skill's citation names the wrong section and the wrong document: `retro/SKILL.md:7` quotes "a drift you notice is a line" as fixing-guide.md §2, and the phrase is rules.md's row, with fixing-guide's own rule at §2.5 (the guard that reads a skill checks only that the guide's filename appears in it, not the section it names). Sound: `_consumer_surface()` still 563 and undoubled in `cli.md`, the contract counts, the §6 map's new tool and record rows all resolve, `dev_process_bands.py --runs` reproduces `CLAUDE.md`'s 73-of-160/318k-228k line exactly, `dev_bst_examples_spread.py` reproduces `ci.yml`'s pasted 26-run clock, `dev_records.py fetch`'s `records` branch carries `docs/audits/mutation.md` at the link `docs/README.md` now points to, and every push-gate/CI-matrix sentence in `CLAUDE.md`, `rules.md`, `verify` and `decompose` matches `Makefile`'s `push-check` target and `ci.yml`'s matrix condition; the §6 map's `(open)` labels on `UX-997`/`998`/`999`/`1000` are known and being fixed in this round's own close |
 
 ### Review 11 — 2026-09-02
 
@@ -1556,6 +1557,69 @@ six named plus §1a were checked. The §6 module map's ~103 per-row
 descriptions were checked for the CI-workflow block only — `UX-780`
 came out of that block, which is a reason to think the rest is worth a
 pass. `UX-689` owns the map's structural half.
+
+## Review 27 — 2026-09-23, at 945 closed rows
+
+Run by one reader over what landed since review 26: rows `UX-945` to
+`UX-1000`, the tail of round 138 plus rounds 139-140, and the
+documents they moved - `docs/contributing/fixing-guide.md` §6/§7a,
+`docs/contributing/rules.md`, `CLAUDE.md`, `.claude/agents/*.md`, the
+`retro`/`verify`/`decompose` skills, `docs/README.md`,
+`docs/backlog/bookkeeping.md`, `ci.yml`'s comments and
+`docs/guides/cli.md`. Review 26's own narrative already covers
+`UX-890`-`UX-944` (round 138's earlier tracks, described there before
+`closed.md`'s 914-row snapshot carried them). `UX-1000` is in scope for
+the documents it moved; its own status marker is still 🔴, so it is
+not one of the 15 `UX-945`+ rows closed here - the cadence's 31-row
+distance is `closed.md`'s literal delta (914 to 945) and includes the
+16 round-138 rows review 26 already read. One filing, as a
+bookkeeping line, no task file.
+
+**The shape** is review 17's: a sentence no guard reads, this time
+inside a brand-new skill rather than a stale one.
+`test_the_skills_point_at_the_guides.py` only asserts that a skill's
+body names the filename of the guide that owns its rule
+(`OWNERS[name].rsplit("/", 1)[-1] in _body(name)`); it never reads the
+section number or the quoted phrase that follows. `retro/SKILL.md`,
+new this round, opens by quoting "a drift you notice is a line" as
+`docs/contributing/fixing-guide.md`'s rule at §2 - the phrase is
+`rules.md`'s new row ("A drift you notice is a line, anything else a
+row"), and the rule it paraphrases is fixing-guide's §2.5, not §2:
+
+```text
+$ sed -n '5,8p' .claude/skills/retro/SKILL.md
+`docs/contributing/fixing-guide.md`'s rule (§2, "a drift you notice is
+a line") produces a steady trickle of one-line bookkeeping findings
+$ grep -n "a drift you notice is a line" docs/contributing/fixing-guide.md docs/contributing/rules.md
+docs/contributing/rules.md:16:| A drift you notice is a line, anything else a row | `test_a_bookkeeping_finding_is_one_line.py` |
+$ grep -n "^## 2" docs/contributing/fixing-guide.md
+docs/contributing/fixing-guide.md:34:## 2. Working a task
+docs/contributing/fixing-guide.md:44:## 2.5. A bookkeeping finding is a line, not a row
+```
+
+Filed as a bookkeeping line, not a task file: it is a one-line prose
+fix with no design decision behind it, the exact shape `UX-998`
+reserved the ledger for.
+
+### The five checks
+
+| check | result |
+|---|---|
+| counts | `bga.contracts.ids()` 25, `superseded()` 10, `reads()` 3, `printable()` 9, `unprintable()` 16 - unchanged since review 26; `_consumer_surface()` 563, matching `cli.md:1085` and stated once (`UX-977`'s fix holds); `ls bga/viewer/*.js` 22; `closed.md` 914 to 945 |
+| versions | `BST_VERSION` 2.8.1, `BST_PLUGINS_VERSION` 2.8.0 in `ci.yml`, matching `tests/bst_claims.json`'s registered claims (`test_a_behaviour_claim_names_the_bst_it_was_read_on.py` green, 6 passed) |
+| paths exist | every module the round's §6 additions name resolves: `tools/{dev_bookkeeping,dev_area_pages,dev_retro,dev_records,dev_docs_only,dev_docs_lane,dev_bst_examples_spread,_close_task_checks}.py`, `tests/{bst_claims,bst_examples_clock}.json`, `.claude/agents/architect.md`, `.claude/skills/retro/SKILL.md` |
+| pasted output current | `ci.yml`'s stager comment - `clock: 26 runs of main, median 816s, 620-964s, max/min 1.55` - reproduces verbatim from `python3 tools/dev_bst_examples_spread.py` reading the committed `tests/bst_examples_clock.json`; `CLAUDE.md`'s `73 of 160 runs` / `318k` / `228k` reproduces from `python3 tools/dev_process_bands.py --runs 999`; `docs/README.md`'s `records`-branch link for `docs/audits/mutation.md` resolves on `origin/records` (`git ls-tree -r origin/records --name-only \| grep mutation.md`) |
+| a workflow or config | `Makefile`'s `push-check` target runs exactly the four checks `CLAUDE.md`/`rules.md` name (`records lint`, `dev_touching.py --base <merge-base>`, `dev_sizes.py --check`, `dev_close_task.py --check`) and writes `.gate-covered` only after all four exit 0; `ci.yml`'s matrix is `["3.12"]` on `pull_request` and all four pushed versions otherwise, matching `CLAUDE.md`/`verify`/`decompose`'s "newest Python alone on the pull request" sentence; `ci.yml:834-837` runs `dev_area_pages.py --out … --link-base …` then `dev_records.py publish --pages`, matching the §6 row's description |
+| a Part or invariant held | the 15 rows `UX-945`-`UX-999` are 🟢 in `closed.md`; `UX-1000` is not (`**Status:** 🔴 Not Started`), consistent with it not counting toward the 31; `test_the_context_map_is_the_tree.py::TestTheMapNamesTheTree::test_every_open_label_names_a_row_that_is_still_open` is currently red on `UX-997`/`998`/`999` marked `(open)` in §6 while their own Status lines read Done - known and being fixed in this round's own close, so not filed here |
+
+### One gap in this sweep
+
+`docs/design/directions.md`'s round table has no row yet for rounds
+138 or 139 (`docs/audits/round-138.md` and `-139.md` both exist and
+`docs/README.md` links them); round 135's and 136's rows were written
+retroactively the same way, and `directions.md` is not one of the
+documents this round's diff moved, so it is left for the round that
+closes 138-140 rather than filed here.
 
 ## Review 26 — 2026-09-23, at 914 closed rows
 

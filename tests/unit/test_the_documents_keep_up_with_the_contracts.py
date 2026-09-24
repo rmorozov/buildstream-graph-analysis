@@ -744,6 +744,21 @@ class TestThePopulationIsKeysAndNotIds:
                 f"things that decide what counts as a row, and the depth "
                 f"they are looked for at, are what the statement is about")
 
+    def test_the_section_states_the_surface_once(self):
+        """`UX-977`'s Decision: a phrase-presence check ("refers back")
+        passes a stale figure typed anywhere else in the section, bold
+        count included - a 3+-digit figure appearing at all, after the
+        bold count, is the defect, wherever it lands and whatever value
+        it carries."""
+        body = _coverage_section()
+        surface = _consumer_surface()
+        marker = f"**{len(surface)} keys**"
+        after = body.split(marker, 1)[1]
+        figures = re.findall(r"(?<![\w-])\d{3,}(?![\w-])", after)
+        assert figures == [], (
+            f"the coverage section states a figure after the bold count "
+            f"a second time: {figures}")
+
     def test_the_input_contracts_are_outside_the_population_on_purpose(self):
         """And it is asserted rather than assumed, because it is the
         reason two of the five keys `UX-628` found can only ever be

@@ -35,7 +35,6 @@ import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 TESTS = REPO / "tests"
-RECORDS = __import__(f"{__package__}._record_readers" if __package__ else "_record_readers", fromlist=["choose"])
 
 # A change to one of these is a change to everything, and pretending
 # otherwise would make the selector quietly wrong on exactly the days it
@@ -250,7 +249,6 @@ def select(changed, census=True):
             if text is not None and pattern.search(text):
                 chosen[candidate] = True
                 why.setdefault(candidate, []).append(path)
-        RECORDS.choose(chosen, why, path, test_files, _candidate_text)
     return sorted(chosen), why
 
 

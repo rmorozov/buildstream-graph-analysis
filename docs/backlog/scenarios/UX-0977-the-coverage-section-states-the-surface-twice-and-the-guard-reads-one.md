@@ -1,6 +1,6 @@
 # UX-977: the coverage section states the surface twice, and the guard reads one of them
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-909 | **Blocks:** — | **Found by:** architecture review 26 (2026-09-23) — `UX-899` moved `cli.md:1085` from 562 to 563 because a guard made it, and `:1099` fourteen lines below still says 562 | **Serves:** whoever reads `cli.md`'s coverage section to learn how far the documentation guard reaches | **Topic:** guards | **Area:** unassigned | **Shape:** mechanical
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-909 | **Blocks:** — | **Found by:** architecture review 26 (2026-09-23) — `UX-899` moved `cli.md:1085` from 562 to 563 because a guard made it, and `:1099` fourteen lines below still says 562 | **Serves:** whoever reads `cli.md`'s coverage section to learn how far the documentation guard reaches | **Topic:** guards | **Area:** unassigned | **Shape:** mechanical
 
 ## Motivation
 
@@ -63,4 +63,50 @@ there) reddens a clause of
 `test_the_documents_keep_up_with_the_contracts.py`, and the clause is
 green on the fixed tree.
 
+## Decision
+
+The `architect`, round 140, at `398b4db9`.
+
+```text
+Route:     cli.md:1099 refers back ("against the surface above") and drops the unguarded
+           `514 distinct keys`; one clause: nothing after the bold `**{n} keys**` in
+           _coverage_section() is a figure (?<![\w-])\d{3,}(?![\w-])
+Rejected:  derive 514 in the guard - a second walk to pin a figure nobody acts on (UX-996)
+Files:     docs/guides/cli.md, tests/unit/test_the_documents_keep_up_with_the_contracts.py
+Guard:     test_the_documents_keep_up_with_the_contracts.py::test_the_section_states_the_surface_once
+           (measured: the figures after the bold one are [514, 562])
+Mutation:  restore "against the 562 above" -> red; "against the 563 above" -> red too
+Class:     bookkeeping (batch with UX-979, UX-945)
+```
+
 ## Outcome
+
+**Gap measured:**
+
+```text
+$ grep -c "562" docs/guides/cli.md   # before the fix
+1
+```
+
+**Close measured (revised per the architect's Decision):** the Decision
+found the phrase-presence check insufficient (a mutation could restate
+a figure - even the correct `563` - without removing the referring-back
+phrase), so it is replaced by `test_the_section_states_the_surface_once`:
+nothing after the bold `**{n} keys**` in `_coverage_section()` matches
+`(?<![\w-])\d{3,}(?![\w-])`. The unguarded `514 distinct keys` figure
+is also dropped from `:1097-99` ("the reader has `--schema`" instead):
+
+```text
+$ grep -c "562" docs/guides/cli.md
+0
+$ python3 -m pytest tests/unit/test_the_documents_keep_up_with_the_contracts.py -q -n 2
+30 passed in 1.91s
+```
+
+**Mutation table:**
+
+| mutation | reddened | count |
+|---|---|---|
+| restore `514 distinct keys ... against the 562 above` | `test_the_section_states_the_surface_once` (`['514', '562']`) | 1 failed |
+| `... against the 563 above` (the correct, non-stale value, restated) | same clause (`['563']`) - the case a phrase-presence check missed | 1 failed |
+| revert (saved copy) | same clause | 30 passed |

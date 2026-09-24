@@ -1,6 +1,6 @@
 # UX-997: a record CI measures lives outside main, and main carries only reviewed commits
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-503, UX-524, UX-691, UX-934, UX-943 | **Blocks:** — | **Found by:** round 139 — Ruslan in the project thread, 2026-09-23 14:44, answering the workflow review ([doc](https://claude.ai/code/artifact/7f65768e-b4bb-405a-b3e1-90a672a249f5)) | **Serves:** every branch that inherits main, and every commit on main that should have CI | **Topic:** guards | **Area:** tools | **Shape:** mechanical
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-503, UX-524, UX-691, UX-934, UX-943 | **Blocks:** — | **Found by:** round 139 — Ruslan in the project thread, 2026-09-23 14:44, answering the workflow review ([doc](https://claude.ai/code/artifact/7f65768e-b4bb-405a-b3e1-90a672a249f5)) | **Serves:** every branch that inherits main, and every commit on main that should have CI | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 
@@ -65,6 +65,8 @@ Split:     T1 now, parallel with #284 (no overlapping hunk). T2 serial after T1 
 Question:  none
 ```
 
+## Outcome
+
 ### T1
 
 **Gap measured:** `git show 49a29a29:.github/workflows/ci.yml | grep -c "git push"`
@@ -115,3 +117,31 @@ above, `812 passed` unchanged for the ci.yml/mutation.yml population,
 Each mutation was reverted from the clean copy `falsify`'s step 1
 saved and re-confirmed green (`812 passed`; `9 passed` for
 `test_a_run_names_the_records_it_read.py`).
+
+### T2
+
+**Gap measured:** `git diff --quiet` reads clean regardless of content
+once `git rm --cached` untracks a path; `_dirty` now hashes `fetch`'s
+own baseline instead.
+
+**Close measured:** full suite at the amended commit: `9464 passed,
+197 skipped, 1 warning in 789.98s (0:13:09)`. Same suite, the four
+records moved aside (a fresh, unfetched clone): `20 failed, 9289
+passed, 197 skipped, 1 warning, 2 errors in 750.90s (0:12:30)`.
+
+**Verifier round, three regressions and one deviation:**
+
+- five guards rested only on an untracked record - `dev_records.load()` + a `RECORD_LOAD` guard escape fixes all five
+- `dev_tier_drift.py`'s reworded advisory dropped its `--record` substring - restored
+- `docs/README.md`'s link text was an unresolvable code span - de-backticked, target is the records branch's URL
+- `tier-reference` CI job gets no fetch step - no checkout, no tracked record read
+
+### T2 Mutations
+
+| mutation | reddened | count |
+|---|---|---|
+| `_tracked` forced to always report a path git-tracked | `test_only_the_path_an_adopt_tool_wrote_is_published` | 1 failed, 10 passed |
+| drop the retired `_record_readers.py` citation fix in `fixing-guide.md` §6 | `test_the_map_names_nothing_that_does_not_exist` | 1 failed, 33 passed |
+| drop the `RECORD_LOAD` escape from `_cited_paths` | `test_dev_records_load_is_not_a_citation`, `test_no_test_rests_only_on_an_untracked_path` | 2 failed, 24 passed, 3 skipped |
+
+Reverted from `falsify`'s clean copy, re-confirmed green.

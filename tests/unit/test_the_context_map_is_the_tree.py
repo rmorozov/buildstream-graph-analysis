@@ -38,6 +38,27 @@ CLOSED = REPO / "docs/backlog/scenarios/closed.md"
 CITATION = re.compile(r"UX-\d+(?:\s*\(open\))?(?:/\d+(?:\s*\(open\))?)*")
 ID_IN_CITATION = re.compile(r"(\d+)(\s*\(open\))?")
 
+#: `UX-945`: a path-shaped entry a §6 line opens with, whatever its
+#: top-level name - the shape `declared_areas()` reads, generalized
+#: from the alternation of five `UX-937` left in the existence check.
+MAP_ENTRY_PATH = re.compile(r"^([a-z.][\w.-]*(?:/[\w.-]*)+)", re.M)
+
+
+def _map_paths(text, tracked=None):
+    """`UX-945`'s Decision: every line-opening path, whatever its
+    top-level name, plus a mid-line path under a name the tree
+    actually has (`_tracked()`) rather than a typed alternation -
+    widening the mid-line half to *any* name read `push/PR` and an id
+    like `UX-694/697` as paths (16 false hits, the Decision's own
+    measurement)."""
+    tracked = _tracked() if tracked is None else tracked
+    opening = set(MAP_ENTRY_PATH.findall(text))
+    roots = sorted({rel.split("/", 1)[0] for rel in tracked if "/" in rel})
+    alternation = "|".join(re.escape(root) for root in roots)
+    mid_line = set(re.findall(
+        rf"(?<![\w./-])((?:{alternation})/[\w./-]+)", text))
+    return opening | mid_line
+
 # Modules small enough or private enough that naming each one would make
 # the map longer without making it more useful. Each is *reachable* -
 # `bga/__init__.py` is not a place anyone needs directing to.
@@ -447,22 +468,38 @@ class TestTheMapNamesTheTree:
     def test_the_map_names_nothing_that_does_not_exist(self):
         """The other direction, and the one that actually bit: the map
         described `tests/test_e2e.py` as the only test file for the
-        whole life of the repository after that stopped being true."""
-        import re
+        whole life of the repository after that stopped being true.
 
+        `UX-945`: reads `_map_paths()` - a line-opening path under any
+        top-level name plus a mid-line path under one the tree
+        actually has - rather than the five top-level names `UX-937`
+        typed here."""
         text = _map_text()
-        # The lookbehind matters: `.bga/runs` is a directory a build
-        # creates, not a path in the tree, and `\b` alone matched the
-        # `bga/runs` inside it.
-        named = set(re.findall(
-            r"(?<![\w./-])((?:bga|tools|tests|docs|\.github)/[\w./-]+)",
-            text))
+        named = _map_paths(text)
         stale = sorted(
             path for path in named
             if not (REPO / path.rstrip("/")).exists()
             and not (REPO / path.rstrip("/")).is_dir())
         assert stale == [], (
             f"the context map names path(s) that do not exist: {stale}")
+
+    def test_the_helper_reads_any_top_level_name(self):
+        """`UX-945`'s own falsification: every entry in the guide today
+        happens to sit under one of the five names the old alternation
+        typed, so a revert to it would leave the clause above green
+        with nothing to catch it. Fed a name outside the five, `_map_
+        paths()` still reads it - only the line-opening half has to,
+        since that half carries no typed alternation to revert to."""
+        sample = "nowhere/deep/   a directory that does not exist\n"
+        assert "nowhere/deep/" in _map_paths(sample, tracked=())
+
+    def test_the_mid_line_half_is_not_widened_to_any_name(self):
+        """The Decision's rejected route: widening the mid-line match
+        to any name, not just one `_tracked()` has, reads `push/PR` and
+        an id slash-group like `UX-694/697` as paths - 16 false hits
+        measured over the map text today."""
+        sample = "a push/PR and an id like UX-694/697 are not paths"
+        assert _map_paths(sample) == set()
 
     def test_every_test_entry_is_on_the_map(self):
         """`UX-274`: the half the guard did not cover. The two harnesses

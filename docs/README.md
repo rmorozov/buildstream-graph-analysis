@@ -218,7 +218,7 @@ appended to instead of superseded:
 | [`audits/walk-seed-2.md`](audits/walk-seed-2.md) | `UX-685`'s second seeded walk — the empty-population class, hook-only Plane 2, the static export |
 | [`audits/walk-seed-3.md`](audits/walk-seed-3.md) | `UX-685`'s third seeded walk — the process storm, spine on, cold then incremental, real Chrome |
 | [`audits/agent-runs.md`](audits/agent-runs.md) | what each subagent run cost — tokens, tool calls, wall clock — and its own friction line, one row per run, so a model and a report shape are chosen from numbers (`UX-666`) |
-| [`audits/mutation.md`](audits/mutation.md) | the weekly mutation run's survivors — a mutant the touched modules' own guards did not kill, one dated section per run. A survivor is a filing, not a failure (`UX-703`) |
+| [audits/mutation.md](https://github.com/rmorozov/buildstream-graph-analysis/blob/records/docs/audits/mutation.md) | the weekly mutation run's survivors — a mutant the touched modules' own guards did not kill, one dated section per run. A survivor is a filing, not a failure (`UX-703`); gitignored since `UX-997` T2 — `tools/dev_records.py fetch` writes it locally, `refs/heads/records` carries it |
 | [`audits/round-register.md`](audits/round-register.md) | which rounds happened and when, derived from the committed union — every round document, the ledger's round column and every round a task file names, never `git log` — dated by the document's own dateline; only the one next round, still without its document, is held out of it (`UX-744`, `UX-782`, `UX-926`) |
 
 The rounds themselves:
@@ -316,6 +316,7 @@ The rounds themselves:
 [137](audits/round-137.md) ·
 [138](audits/round-138.md) ·
 [139](audits/round-139.md) ·
+[140](audits/round-140.md) ·
 [the guard census of round 64](audits/guard-census-round-64.md)
 
 ## Backlog

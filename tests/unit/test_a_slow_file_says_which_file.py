@@ -20,6 +20,7 @@ assert the failing case without a fifty-second file existing to produce
 it. The real run is in CI; what is checked here is that the rule reads
 the floors, names the file, and can fail.
 """
+import functools
 import json
 import pathlib
 import re
@@ -35,6 +36,9 @@ sys.path.insert(0, str(REPO))
 
 from tests import tiers
 from tools import dev_tier_drift as drift
+
+sys.path.insert(0, str(REPO / "tools"))
+import dev_records  # `dev_records` imports its sibling `tools/` modules bare
 
 
 #: `UX-783`: the same construction rule `test_the_tiers_are_a_partition.py`
@@ -72,6 +76,7 @@ def _pin_the_diff(monkeypatch, files):
     monkeypatch.setattr(dev_touching, "changed_files", lambda base: list(files))
 
 
+@functools.cache
 def _a_small_file():
     """A real file in neither tier list, chosen rather than written in.
 
@@ -84,8 +89,7 @@ def _a_small_file():
     listed = set(tiers.LARGE) | set(tiers.MEDIUM)
     # UX-709: "unlisted" read as "small" until a new 1 s file was first
     # in the alphabet; CI's own record of the file decides instead.
-    on_ci = json.loads((REPO / "tests/ci_reference.json").read_text(
-        encoding="utf-8"))["files"]
+    on_ci = json.loads(dev_records.load("tests/ci_reference.json"))["files"]
     for path in sorted((REPO / "tests/unit").glob("test_*.py")):
         name = str(path.relative_to(REPO))
         if name not in listed and on_ci.get(name, 99.0) < tiers.MEDIUM_FLOOR_S / 2:
@@ -93,8 +97,8 @@ def _a_small_file():
     raise AssertionError("no unit file is both unlisted and small on CI's record")
 
 
-#: A file in no tier list, so `listed_tier` says `small`.
-SMALL_FILE = _a_small_file()
+#: A file in no tier list, so `listed_tier` says `small`; read at run, not collection (UX-997).
+small_file = _a_small_file
 
 
 def _report(tmp_path, rows):
@@ -115,30 +119,30 @@ def _report(tmp_path, rows):
 class TestTheReportIsReadTheWayPytestWritesIt:
     def test_the_chosen_file_is_really_unlisted(self):
         """What every clause below stands on."""
-        assert drift.listed_tier(SMALL_FILE) == "small", SMALL_FILE
+        assert drift.listed_tier(small_file()) == "small", small_file()
 
     def test_a_classname_resolves_to_its_file(self):
-        dotted = SMALL_FILE[:-3].replace("/", ".")
-        assert drift.file_of(f"{dotted}.TestSomething") == SMALL_FILE
+        dotted = small_file()[:-3].replace("/", ".")
+        assert drift.file_of(f"{dotted}.TestSomething") == small_file()
 
     def test_a_module_level_classname_resolves_too(self):
         """pytest writes no class component for a bare function, and a
         rule that only handled the class form would silently drop every
         such file."""
-        assert drift.file_of(SMALL_FILE[:-3].replace("/", ".")) == SMALL_FILE
+        assert drift.file_of(small_file()[:-3].replace("/", ".")) == small_file()
 
     def test_a_classname_that_names_no_file_is_dropped(self):
         assert drift.file_of("not.a.module.TestThing") is None
 
     def test_every_case_of_a_file_is_summed(self, tmp_path):
         path = tmp_path / "junit.xml"
-        dotted = SMALL_FILE[:-3].replace("/", ".")
+        dotted = small_file()[:-3].replace("/", ".")
         path.write_text(
             "<testsuites><testsuite>"
             + "".join(f'<testcase classname="{dotted}.T" name="t{i}" '
                       f'time="0.5" />' for i in range(4))
             + "</testsuite></testsuites>", encoding="utf-8")
-        assert drift.measured(path) == pytest.approx({SMALL_FILE: 2.0})
+        assert drift.measured(path) == pytest.approx({small_file(): 2.0})
 
 
 class TestTheRuleReadsTheFloors:
@@ -214,9 +218,9 @@ class TestItFailsNamingTheFile:
     longer than the budget* - a number, not a file."""
 
     def test_an_unlisted_file_over_the_medium_floor_is_named(self, tmp_path):
-        report = _report(tmp_path, {SMALL_FILE: tiers.MEDIUM_FLOOR_S + 0.5})
+        report = _report(tmp_path, {small_file(): tiers.MEDIUM_FLOOR_S + 0.5})
         found = drift.drift(drift.measured(report))
-        assert [row[0] for row in found] == [SMALL_FILE], found
+        assert [row[0] for row in found] == [small_file()], found
         assert found[0][2:] == ("small", "medium"), found
 
     def test_the_message_carries_the_name_and_the_seconds(self, tmp_path,
@@ -234,10 +238,10 @@ class TestItFailsNamingTheFile:
         `tests/unit/test_a_candidate_is_confirmed_alone.py`, are where
         the confirmation itself is exercised.
         """
-        report = _report(tmp_path, {**tiers.recorded(), SMALL_FILE: 51.0})
+        report = _report(tmp_path, {**tiers.recorded(), small_file(): 51.0})
         assert drift.main([str(report), "--no-confirm"]) == 1
         said = capsys.readouterr().err
-        assert SMALL_FILE in said, said
+        assert small_file() in said, said
         assert "51.0s" in said, said
         assert "listed small, measured large" in said, said
 
@@ -247,15 +251,15 @@ class TestItFailsNamingTheFile:
         through the shipped path, comes back cleared and *said so* -
         exit 0, with the file named on stderr as over a floor in the
         parallel report and under it alone."""
-        report = _report(tmp_path, {**tiers.recorded(), SMALL_FILE: 51.0})
+        report = _report(tmp_path, {**tiers.recorded(), small_file(): 51.0})
         assert drift.main([str(report)]) == 0
         said = capsys.readouterr().err
-        assert SMALL_FILE in said, said
+        assert small_file() in said, said
         assert "51.0s under -n auto" in said, said
         assert "alone" in said, said
 
     def test_a_file_inside_its_tier_is_not_named(self, tmp_path):
-        report = _report(tmp_path, {SMALL_FILE: tiers.MEDIUM_FLOOR_S - 0.1})
+        report = _report(tmp_path, {small_file(): tiers.MEDIUM_FLOOR_S - 0.1})
         assert drift.drift(drift.measured(report)) == []
 
     def test_a_listed_file_at_its_own_size_is_not_named(self, tmp_path):
@@ -1360,7 +1364,7 @@ class TestANewFileRecordsItselfRatherThanFailing:
     #: cannot find - an invented name is not a new file to this tool, it
     #: is no file at all, and the first writing of the clause below
     #: passed on a report that named nothing.
-    NEW = SMALL_FILE
+    NEW = property(lambda self: small_file())
 
     def _reference(self, tmp_path):
         path = tmp_path / "ref.json"
@@ -1479,7 +1483,7 @@ class TestTheReferenceAdoptsWhatItDoesNotCarry:
 
     #: `adopt` reads two documents and never a report, so this one only
     #: has to be absent from `tiers.recorded()`.
-    NEW = SMALL_FILE
+    NEW = property(lambda self: small_file())
 
     def _pair(self, image=1.0, extra=None):
         """A reference, and a candidate taken `image` times its clock."""
@@ -1760,13 +1764,13 @@ class TestTheReadingAdoptedIsTheRunsOwn:
         it; on the real candidate they differ by 0.0001."""
         reference = drift.record(dict(tiers.recorded()))
         times = dict(tiers.recorded())
-        times[SMALL_FILE] = 40.0
+        times[small_file()] = 40.0
         candidate = drift.record(times, "a run at 1.0")
         candidate["samples"] = {name: [seconds * 2]
                                 for name, seconds in times.items()}
         _document, added = drift.adopt(reference, candidate)
-        assert added[SMALL_FILE] == pytest.approx(80.0, abs=0.05), (
-            f"the new row landed at {added[SMALL_FILE]}s, so the shift "
+        assert added[small_file()] == pytest.approx(80.0, abs=0.05), (
+            f"the new row landed at {added[small_file()]}s, so the shift "
             f"was estimated on the readings (2.0) and not on the "
             f"medians (1.0)")
 
@@ -2605,7 +2609,7 @@ class TestTheFailureNameIsTheLastThingInTheLog:
 
 class TestTheToolIsRunnable:
     def test_it_runs_as_a_module_and_says_what_it_checked(self, tmp_path):
-        report = _report(tmp_path, {**tiers.recorded(), SMALL_FILE: 0.2})
+        report = _report(tmp_path, {**tiers.recorded(), small_file(): 0.2})
         done = subprocess.run(
             [sys.executable, "tools/dev_tier_drift.py", str(report)],
             capture_output=True, text=True, cwd=REPO, timeout=60)

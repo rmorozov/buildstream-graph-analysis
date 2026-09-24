@@ -1,6 +1,6 @@
 # BuildStream Build Efficiency Analyzer - Makefile
 
-.PHONY: test push-check test-tiers test-small test-medium test-large test-fast test-touching test-e2e lint lint-docs sizes dev-run clean check-clean install dev help
+.PHONY: test push-check test-tiers test-small test-medium test-large test-fast test-touching test-e2e lint lint-docs sizes dev-run clean check-clean install dev help records
 
 # Default target
 help:
@@ -49,20 +49,27 @@ PYTEST_XDIST ?= -n auto
 # produced (`UX-418`) rather than running it twice.
 PYTEST_ARGS ?=
 
+# UX-997 T2: the four records live on `refs/heads/records`, not main -
+# a prerequisite of every target below that a guard could read one
+# through. `|| true`: offline, `dev_records.py` itself falls back to a
+# cached copy or fails loud; this target never blocks on that alone.
+records:
+	python3 tools/dev_records.py fetch || true
+
 # UX-762: the sha this run covered, written only when the suite exits 0 -
 # make aborts on any recipe line's failure, so a red suite never reaches
 # it. UX-885: `lint` is a prerequisite, so a lint-red tree (ruff, or the
 # markdown/baseline checks) never covers a sha either - the round-125 gap,
 # where a blob CI's pinned PyMarkdown reddened still pushed because the
 # gate ran `make test` alone. `.claude/hooks/gate-covers-push.sh` reads it.
-test: lint
+test: records lint
 	python -m pytest tests/ -q $(PYTEST_XDIST) $(PYTEST_ARGS)
 	@git rev-parse HEAD > .gate-covered
 
 # UX-948: the gate before a push; CI's full matrix is the gate before merge.
 # The selector diffs against the merge-base: HEAD's own diff is empty once
 # the change is committed. The marker line is last, so any red skips it.
-push-check: lint
+push-check: records lint
 	base=$$(git merge-base HEAD origin/main) && python tools/dev_touching.py --base "$$base"
 	python3 tools/dev_sizes.py --check
 	python3 tools/dev_close_task.py --check
@@ -73,7 +80,7 @@ push-check: lint
 # parse, not a second suite. Here and not in CI: the floors are seconds
 # measured on this kind of machine, and CI's runner differs from it per
 # file rather than by a factor (see tools/dev_tier_drift.py).
-test-tiers:
+test-tiers: records
 	@$(MAKE) test PYTEST_ARGS="--junitxml=$(CURDIR)/.tier-report.xml"
 	@python tools/dev_tier_drift.py "$(CURDIR)/.tier-report.xml"; \
 	  status=$$?; rm -f "$(CURDIR)/.tier-report.xml"; exit $$status
@@ -99,7 +106,7 @@ test-fast:
 #
 #   make test-touching            # what changed against HEAD
 #   make test-touching ARGS=--why # and what selected each file
-test-touching:
+test-touching: records
 	python tools/dev_touching.py $(ARGS)
 
 # Run end-to-end tests directly  

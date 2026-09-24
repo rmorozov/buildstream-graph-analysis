@@ -2,12 +2,13 @@
 
 A push made with `GITHUB_TOKEN` starts no workflow, so what an adopt job
 publishes is checked by nothing else. `UX-997` moved the add/commit/push
-into `tools/dev_records.py publish`, one call site shared by the three
-jobs - so the property this file reads off `ci.yml` narrows to: no job
-recomputes that sequence itself (the duplication `UX-934` was filed on),
-each fetches the branch it is about to adopt onto before its own tool
-runs, and `publish` runs last. `publish`'s own refusal of a record its
-guard rejects is `test_a_run_names_the_records_it_read.py`, against a
+into `tools/dev_records.py publish`, one call site shared by every
+publishing job (`UX-1000` T2 added a fourth) - so the property this
+file reads off `ci.yml` narrows to: no job recomputes that sequence
+itself (the duplication `UX-934` was filed on), each fetches the
+branch it is about to adopt onto before its own tool runs, and
+`publish` runs last. `publish`'s own refusal of a record its guard
+rejects is `test_a_run_names_the_records_it_read.py`, against a
 scratch remote.
 """
 import pathlib
@@ -39,7 +40,7 @@ def _publishing_jobs():
 
 def test_the_workflow_has_the_three_adopt_jobs():
     """A parse that found nothing would pass every check below."""
-    assert len(_publishing_jobs()) >= 3, sorted(_publishing_jobs())
+    assert len(_publishing_jobs()) >= 4, sorted(_publishing_jobs())
 
 
 @pytest.mark.parametrize("name", sorted(_publishing_jobs()))
@@ -65,7 +66,8 @@ def test_a_publishing_job_reads_the_branch_it_adopts_onto_first(name):
     fetch_at = next(i for i, s in enumerate(lines) if "dev_records.py fetch" in s)
     publish_at = next(i for i, s in enumerate(lines) if PUBLISH in s)
     tool_at = next(i for i, s in enumerate(lines)
-                   if re.search(r"dev_(tier_drift|touch_map)\.py --adopt", s))
+                   if re.search(r"dev_(tier_drift|touch_map)\.py --adopt"
+                                 r"|dev_area_pages\.py --out", s))
     assert fetch_at < tool_at < publish_at, (name, lines)
 
 

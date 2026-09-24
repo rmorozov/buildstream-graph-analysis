@@ -1,11 +1,12 @@
 {
-  "note": "UX-940: every BuildStream behaviour claim in bga/, where it is written, and the BuildStream version it was last read against. `read` is where that version's own wheel says it. tests/unit/test_a_behaviour_claim_names_the_bst_it_was_read_on.py warns, and does not fail, when `confirmed_on` is older than ci.yml's BST_VERSION: re-read the claim in the new wheel, then move `confirmed_on`.",
+  "note": "UX-940: every BuildStream behaviour claim in bga/ and tools/, where it is written, and the BuildStream version it was last read against. `read` is where that version's own wheel says it. tests/unit/test_a_behaviour_claim_names_the_bst_it_was_read_on.py warns, and does not fail, when `confirmed_on` is older than ci.yml's BST_VERSION: re-read the claim in the new wheel, then move `confirmed_on`. UX-990 widened this to tools/, per versioned line rather than per file, and added `provenance`: a line that names a version but is not a behaviour claim (a fixture's own capture version, an external project's convention), so it does not age.",
   "claims": [
     {
       "id": "max-jobs-is-protected",
       "claim": "`max-jobs` is a protected project-wide variable; an element that redefines it fails to load",
       "sites": [
-        {"path": "bga/structural/serialization_points.py", "anchor": "variable that an element may not redefine"}
+        {"path": "bga/structural/serialization_points.py", "anchor": "variable that an element may not redefine"},
+        {"path": "bga/structural/serialization_points.py", "anchor": "re-checked that against a real BuildStream 2.7.0 install and a"}
       ],
       "confirmed_on": "2.8.1",
       "confirmed_by": "UX-940",
@@ -25,7 +26,10 @@
       "id": "notparallel-clamps-to-one-job",
       "claim": "`variables: notparallel: True` is the one per-element parallelism control, and it sets that element's `max-jobs` to 1",
       "sites": [
-        {"path": "bga/structural/serialization_points.py", "anchor": "parallelism control that exists is `variables: notparallel: True`"}
+        {"path": "bga/structural/serialization_points.py", "anchor": "parallelism control that exists is `variables: notparallel: True`"},
+        {"path": "tools/bst_show_to_graph.py", "anchor": "per-element parallelism control BuildStream 2.7.0 has - `max-jobs`"},
+        {"path": "tools/bst_show_to_graph.py", "anchor": "against a real BuildStream 2.7.0 build of"},
+        {"path": "tools/bst_show_to_graph.py", "anchor": "BuildStream 2.7.0 build and found not to hold for the `notparallel`"}
       ],
       "confirmed_on": "2.8.1",
       "confirmed_by": "UX-940",
@@ -106,6 +110,108 @@
       "confirmed_on": "2.8.1",
       "confirmed_by": "UX-940",
       "read": "buildstream/_frontend/widget.py:987"
+    },
+    {
+      "id": "elapsed-prefix-is-per-activity",
+      "claim": "the console's per-line `[HH:MM:SS]` elapsed prefix is that one `timed_activity` call's own duration, not a session-wide wall clock",
+      "sites": [
+        {"path": "tools/bst_run_wrapped.py", "anchor": "task's own start (confirmed against BuildStream 2.7.0's"}
+      ],
+      "confirmed_on": "2.8.1",
+      "confirmed_by": "UX-990",
+      "read": "buildstream/_messenger.py:298-319 (timed_activity: elapsed = datetime.datetime.now() - timedata.start_time, at 312 and 317)"
+    },
+    {
+      "id": "no-buildbox-run-bubblewrap-binary",
+      "claim": "no `buildbox-run-bubblewrap` binary ships with BuildStream; only the single-layer `buildbox-run` does",
+      "sites": [
+        {"path": "tools/bst_native_build_tracer.py", "anchor": "BuildStream 2.7.0; the naive single-layer shadow already works)."}
+      ],
+      "confirmed_on": "2.8.1",
+      "confirmed_by": "UX-990",
+      "read": "wheel contains buildstream/subprojects/buildbox/{buildbox-casd,buildbox-fuse,buildbox-run}; no buildbox-run-bubblewrap (zipfile.namelist())"
+    },
+    {
+      "id": "cli-group-option-arities",
+      "claim": "in the `cli` click group, `-o`/`--option` is the only global option taking two values; the rest take exactly one value, or are bare flags",
+      "sites": [
+        {"path": "tools/bst_native_build_tracer.py", "anchor": "`buildstream/_frontend/cli.py` (BuildStream 2.8.0, this box), read off"}
+      ],
+      "confirmed_on": "2.8.1",
+      "confirmed_by": "UX-990",
+      "read": "buildstream/_frontend/cli.py:305-371 (--option/-o is the one click.Tuple([str, str]) at 351-358; the rest are single-value or is_flag)"
+    },
+    {
+      "id": "project-refs-keyed-by-element-source-index",
+      "claim": "`project.refs` stores a trackable element's resolved source ref centrally, keyed by (project, element, source_index)",
+      "sites": [
+        {"path": "tools/bst_extract_run.py", "anchor": "element's resolved source ref, confirmed against BuildStream 2.7.0 -"}
+      ],
+      "confirmed_on": "2.8.1",
+      "confirmed_by": "UX-990",
+      "read": "buildstream/_projectrefs.py:90-104 (ProjectRefs.lookup_ref(project, element, source_index))"
+    },
+    {
+      "id": "kind-variable-is-plugin-kind",
+      "claim": "`bst show`'s `%{kind}` format symbol expands to the element's plugin kind (e.g. \"import\", \"manual\", \"junction\", \"autotools\")",
+      "sites": [
+        {"path": "tools/bst_show_to_graph.py", "anchor": "against a real BuildStream 2.7.0 install: e.g. \"import\","}
+      ],
+      "confirmed_on": "2.8.1",
+      "confirmed_by": "UX-990",
+      "read": "buildstream/_frontend/widget.py:358 (p.fmt_subst(line, \"kind\", element.get_kind(), fg=\"cyan\"))"
+    },
+    {
+      "id": "checkout-pays-pipeline-overhead-per-invocation",
+      "claim": "`bst ... checkout` loads/queries the cache once per invocation for its one target; N separate checkouts pay that N times, one stack element's checkout pays it once",
+      "sites": [
+        {"path": "tools/bst_checkout_cost.py", "anchor": "Two real, confirmed-via-source (BuildStream 2.7.0 `_stream.py::checkout()`)"}
+      ],
+      "confirmed_on": "2.8.1",
+      "confirmed_by": "UX-990",
+      "read": "buildstream/_stream.py:685-738 (Stream.checkout(target): one _load()/query_cache() and one _prepare_sandbox/_export_artifact for that target's scope)"
+    },
+    {
+      "id": "message-text-is-path-or-phrase-not-description",
+      "claim": "a real BuildStream log's START/SUCCESS text is a log-file path (the outer per-task bracket) or a short internal-progress phrase (e.g. \"Staging sources\"), never a phase description",
+      "sites": [
+        {"path": "tools/chrome_trace_to_bga_trace.py", "anchor": "BuildStream 2.7.0 build (see docs/spec/ingestion-pipeline.md). This tool"}
+      ],
+      "confirmed_on": "2.8.1",
+      "confirmed_by": "UX-990",
+      "read": "buildstream/_scheduler/jobs/job.py:341 (message(START, self.action_name, logfile=filename)); element.py:1501 (timed_activity(\"Staging sources\"))"
+    },
+    {
+      "id": "elapsed-prefix-format",
+      "claim": "the console elapsed-time prefix is `HH:MM:SS` with optional `.ffffff`, or the literal `--:--:--`/`--:--:--.------` when elapsed is unknown",
+      "sites": [
+        {"path": "tools/bst_log_to_chrome_trace.py", "anchor": "real BuildStream 2.7.0 build (see docs/spec/ingestion-pipeline.md) - never"}
+      ],
+      "confirmed_on": "2.8.1",
+      "confirmed_by": "UX-990",
+      "read": "buildstream/_frontend/widget.py:131-146 (render_time)"
+    },
+    {
+      "id": "scheduler-defaults",
+      "claim": "BuildStream's bundled scheduler defaults are 10 fetchers, 4 builders, 4 pushers",
+      "sites": [
+        {"path": "tools/bst_log_to_chrome_trace.py", "anchor": "confirmed against a real BuildStream 2.7.0 install) - used only as a last"}
+      ],
+      "confirmed_on": "2.8.1",
+      "confirmed_by": "UX-990",
+      "read": "buildstream/data/userconfig.yaml:61,64,67 (fetchers: 10; builders: 4; pushers: 4)"
+    }
+  ],
+  "provenance": [
+    {
+      "path": "tools/bst_extract_run.py",
+      "anchor": "(confirmed real BuildStream 2.7.0 projects set it as a plain",
+      "reason": "an observation about real projects' project.conf conventions, not a BuildStream source behaviour a wheel confirms"
+    },
+    {
+      "path": "tools/bst_cache_logs.py",
+      "anchor": "`BuildStream 2.7.0 - Tuesday, 18-08-2026 at 11:53:22`) and",
+      "reason": "a real captured log's own header text, quoted as fixture provenance, not a claim about BuildStream's current behaviour"
     }
   ]
 }

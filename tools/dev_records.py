@@ -2,7 +2,7 @@
 """`UX-997`: CI's measured records live on `refs/heads/records`, not main.
 
     python tools/dev_records.py fetch [--at SHA]
-    python tools/dev_records.py publish
+    python tools/dev_records.py publish [--pages DIR]
 
 `fetch` writes the four record paths (`tests/ci_reference.json`,
 `tests/touch_map.json`, `tests/flake_ledger.json`,
@@ -15,12 +15,19 @@ nothing) unless that still matches the tip current *now*, so a `fetch`
 that failed silently cannot make `publish` overlay this run's delta
 onto a tip it never actually read, dropping rows published since
 (`UX-997`). `publish` runs `dev_adopt_check` on whichever paths the
-tree carries dirty, builds one commit on the records tip (or seeds an
-orphan root from the tree's own copies, the first time), and pushes it
-there - never to main, and never force. T1 (`UX-997`): the four paths
-stay tracked on main too; T2 moves them off it.
+tree carries dirty against the baseline `fetch` last hashed, builds one
+commit on the records tip (or seeds an orphan root from the tree's own
+copies, the first time), and pushes it there - never to main, and never
+force. T2 (`UX-997`): the four paths are `git rm --cached` and
+gitignored, so `_dirty` hashes rather than trusting `git diff`, which
+reads nothing for a path outside the index at all. `--pages DIR`
+(`UX-1000` T2) overlays `docs/backlog/areas/` from that directory's
+`.md` files onto the same commit, beside whichever of the four paths
+this run also changed.
 """
 import argparse
+import hashlib
+import json
 import os
 import pathlib
 import shutil
@@ -38,6 +45,9 @@ RECORDS_REF = "refs/heads/records"
 SHA_MARKER = REPO / "tests" / ".records-sha"
 RECORD_PATHS = ("tests/ci_reference.json", "tests/touch_map.json",
                 "tests/flake_ledger.json", "docs/audits/mutation.md")
+#: `fetch`'s own baseline for `_dirty`, once a path carries no tracked
+#: blob for `git diff` to compare against (`git rm --cached`, T2).
+BASELINE = REPO / "tests" / ".records-baseline.json"
 #: `git config --local`, scoped to this checkout: the tip `fetch` last
 #: confirmed the tree reflects, for `publish` to check itself against
 #: before it overlays onto whatever tip is current *now*.
@@ -83,18 +93,21 @@ def fetch(argv=None):
                     (REPO / path).parent.mkdir(parents=True, exist_ok=True)
                     (REPO / path).write_text(shown.stdout, encoding="utf-8")
                     written.append(path)
-            # Staged, not committed: `publish`'s dirty check then reads
-            # against *this* baseline rather than main's frozen commit,
-            # so a run that adopts nothing new sees nothing dirty.
-            if written:
-                _git("add", "--", *written)
+            # Hashed, not staged: the four paths carry no tracked blob
+            # post-T2 for `git add` to stage - `_dirty` reads this
+            # baseline instead, so a run that adopts nothing new sees
+            # nothing dirty.
+            _write_baseline(written)
             SHA_MARKER.write_text(sha + "\n", encoding="utf-8")
             _set_base(sha)
             print(f"records @ {sha}")
             return 0
     elif "couldn't find remote ref" in fetched.stderr:
         # Reached the remote; confirmed there is no branch yet - a
-        # known, not an unknown, base.
+        # known, not an unknown, base. Baselines whatever the tree
+        # carries *now* (normally nothing, this early in a job), so a
+        # path an adopt tool writes after this still reads as dirty.
+        _write_baseline(RECORD_PATHS)
         _set_base("none")
         print("records @ none")
         return 0
@@ -107,11 +120,50 @@ def fetch(argv=None):
     return 0
 
 
+def _tracked(path):
+    """Whether git's index still carries `path` - true for a checkout
+    that predates T2's `git rm --cached`, and for this tool's own test
+    fixture, which tracks its tree whole with no `.gitignore` of its
+    own; false on the real, migrated repository."""
+    return _git("ls-files", "--error-unmatch", "--", path).returncode == 0
+
+
+def _write_baseline(paths):
+    hashes = _read_baseline()
+    for path in paths:
+        full = REPO / path
+        if full.is_file():
+            hashes[path] = hashlib.sha256(full.read_bytes()).hexdigest()
+    BASELINE.write_text(json.dumps(hashes), encoding="utf-8")
+
+
+def _read_baseline():
+    return json.loads(BASELINE.read_text(encoding="utf-8")) if BASELINE.is_file() else {}
+
+
 def _dirty(path):
-    """Working tree against the index, not `HEAD` - `fetch` stages the
-    records baseline there, so a run that adopted nothing sees nothing
-    dirty even though `main`'s own committed copy is long stale."""
-    return _git("diff", "--quiet", "--", path).returncode != 0
+    """Working tree against the index when git still tracks `path`;
+    `git diff` reads nothing for a path outside the index at all, so
+    once `git rm --cached` lands (T2) this compares against the
+    content `fetch` last hashed instead - `None` (never fetched) counts
+    any file present as this run's own write, matching what `fetch`
+    always does ahead of `publish` in every real job."""
+    if _tracked(path):
+        return _git("diff", "--quiet", "--", path).returncode != 0
+    full = REPO / path
+    current = hashlib.sha256(full.read_bytes()).hexdigest() if full.is_file() else None
+    return current != _read_baseline().get(path)
+
+
+def load(rel_path):
+    """A fetched record's text, or a loud `FileNotFoundError` naming
+    `fetch` - the one call `test_a_guard_reads_only_what_a_clone_has.py`
+    recognises in place of a direct read of an untracked record path."""
+    full = REPO / rel_path
+    if not full.is_file():
+        raise FileNotFoundError(
+            f"{rel_path} is not fetched - run `python tools/dev_records.py fetch`")
+    return full.read_text(encoding="utf-8")
 
 
 def _records_tip():
@@ -119,12 +171,29 @@ def _records_tip():
             if _git("fetch", "--quiet", "origin", RECORDS_REF).returncode == 0 else None)
 
 
+def _pages_dirty(pages_dir, tip):
+    """Whether `pages_dir`'s `.md` files differ from `docs/backlog/areas/`
+    at `tip` - name set or content, either counts (`UX-1000` T2).
+    `tip is None` (nothing ever published) counts any local page as new,
+    same as `_dirty` reading `None` for the four record paths."""
+    local = sorted(pathlib.Path(pages_dir).glob("*.md"))
+    if tip is None:
+        return bool(local)
+    names = {p.name for p in local}
+    listed = _git("ls-tree", "--name-only", tip, "docs/backlog/areas/")
+    tip_names = {pathlib.Path(n).name for n in listed.stdout.split()}
+    if names != tip_names:
+        return True
+    return any(_git("show", f"{tip}:docs/backlog/areas/{p.name}").stdout
+               != p.read_text(encoding="utf-8") for p in local)
+
+
 def publish(argv=None):
-    argparse.ArgumentParser(description="push the records this run changed").parse_args(argv)
+    parser = argparse.ArgumentParser(description="push the records this run changed")
+    parser.add_argument("--pages", default=None, metavar="DIR",
+                        help="overlay docs/backlog/areas/ from DIR (UX-1000)")
+    args = parser.parse_args(argv)
     changed = [path for path in RECORD_PATHS if _dirty(path)]
-    if not changed:
-        print("nothing to publish - no record changed")
-        return 0
     # `changed` only means anything relative to the tip `fetch` last
     # confirmed: overlay it onto a *different*, newer tip and whatever
     # that tip gained since goes missing from the commit built here
@@ -143,6 +212,13 @@ def publish(argv=None):
               f"it (read {base or 'none'}, now {tip or 'none'}) - nothing "
               f"was published (UX-997)")
         return 1
+    # The pages check needs `tip`, so the early return waits for it too -
+    # ahead of it, a run that only changed pages would report nothing to
+    # publish and never reach the overlay below (`UX-1000` T2).
+    pages_changed = bool(args.pages) and _pages_dirty(args.pages, tip)
+    if not changed and not pages_changed:
+        print("nothing to publish - no record changed")
+        return 0
     guarded = [path for path in changed if path in dev_adopt_check.GUARDS]
     if guarded and (code := dev_adopt_check.main(guarded)):
         return code
@@ -156,13 +232,21 @@ def publish(argv=None):
             blob = _git("hash-object", "-w", "--", path, env=index_env, check=True).stdout.strip()
             _git("update-index", "--add", "--cacheinfo", f"100644,{blob},{path}",
                  env=index_env, check=True)
+        if args.pages:
+            for src in sorted(pathlib.Path(args.pages).glob("*.md")):
+                blob = _git("hash-object", "-w", "--", str(src), env=index_env,
+                            check=True).stdout.strip()
+                _git("update-index", "--add", "--cacheinfo",
+                     f"100644,{blob},docs/backlog/areas/{src.name}",
+                     env=index_env, check=True)
         tree = _git("write-tree", env=index_env, check=True).stdout.strip()
     finally:
         shutil.rmtree(scratch, ignore_errors=True)
     parents = [] if seeding else ["-p", tip]
     commit_env = {**os.environ, **BOT_ENV}
+    label = ", ".join(changed + (["docs/backlog/areas/"] if pages_changed else []))
     commit = _git("commit-tree", tree, *parents, "-m",
-                  f"records: {', '.join(changed)}", env=commit_env,
+                  f"records: {label}", env=commit_env,
                   check=True).stdout.strip()
     pushed = _git("push", "origin", f"{commit}:{RECORDS_REF}")
     if pushed.returncode:

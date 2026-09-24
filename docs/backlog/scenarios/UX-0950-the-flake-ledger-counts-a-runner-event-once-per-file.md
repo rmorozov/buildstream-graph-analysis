@@ -1,6 +1,6 @@
 # UX-950: the flake ledger's excursions cluster by run, and the census counts a runner event once per file
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-691, UX-936 | **Blocks:** — | **Found by:** round 138 — `UX-936`'s reading of `tests/flake_ledger.json` grouped by run id | **Serves:** the next round whose push gate reads a file the census names, and the reader of the round document's Standing | **Topic:** guards | **Area:** tools | **Shape:** judgement
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-691, UX-936 | **Blocks:** — | **Found by:** round 138 — `UX-936`'s reading of `tests/flake_ledger.json` grouped by run id | **Serves:** the next round whose push gate reads a file the census names, and the reader of the round document's Standing | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 
@@ -51,5 +51,31 @@ A unit test on a synthetic ledger with one run of six files and
 eighteen runs of one: the census names that run and not the others, and
 a mutation that drops the per-run reading reddens it. The real
 ledger's reading pasted with its command.
+
+## Decision
+
+The `architect`, round 140, at `398b4db9`.
+
+```text
+Route:     dev_flake_census.py gets an exact per-run reading: a Poisson-binomial tail of each
+           run's file count (rates count/N, by DP), printed beside Standing; a run whose tail
+           is < 0.05/N counts once as a run event, not once per file toward EXCURSION_FLOOR.
+           N = distinct run ids in a new ledger `runs` list ∪ entries, filled by a new
+           `dev_flake_census.py --record-run ${{ github.run_id }}` step in flake-ledger-adopt
+Rejected:  Monte Carlo - random; the exact tail is 44xN steps and repeatable
+           the Actions runs API for N - not readable offline
+           seeding the past run ids - only CI writes `records` (UX-997); a race
+           a fixed-size discount (>= 3 files) - ignores each file's own rate
+           --record-run inside dev_tier_drift._adopt_flake - UX-955's file and size cell
+Files:     tools/dev_flake_census.py; .github/workflows/ci.yml (one step);
+           tests/unit/test_a_run_that_moves_many_files_counts_once.py; tests/quality_reference.json
+Guard:     the new file: 19 run ids, one run of six files and eighteen of one; per_run names
+           that run alone (tail 1.26e-3 < 0.05/19), its six files count one fewer, and
+           --record-run twice with one id adds one
+Mutation:  per_run returns [] -> the run goes unnamed and the counts stay
+Class:     bookkeeping - on today's ledger it avoids 0 filings (UX-929 already filed the file)
+Split:     one track; waits for round 141 under the UX-994 cap
+Question:  none
+```
 
 ## Outcome

@@ -223,3 +223,13 @@ examples/12-junctioned/sub/files/toolchain/
 # UX-762: the sha `make test` last passed on - written only on green,
 # read by .claude/hooks/gate-covers-push.sh on `git push`.
 .gate-covered
+
+# UX-997 T2: these four live on `refs/heads/records`, not main -
+# `tools/dev_records.py fetch` writes them (a `make` prerequisite of
+# every target that reads them); the two marker files are its own.
+tests/ci_reference.json
+tests/touch_map.json
+tests/flake_ledger.json
+docs/audits/mutation.md
+tests/.records-sha
+tests/.records-baseline.json

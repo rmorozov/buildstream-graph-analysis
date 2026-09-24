@@ -1497,21 +1497,44 @@ def _reference_documents():
             and not one.startswith(("docs/backlog/", "docs/audits/"))]
 
 
-def _resolves(rel, name, tracked):
+def _locate(rel, name, tracked):
     """The three ways a reader resolves a backticked name, in order:
     beside the document, from the repository root, and as a basename no
     other tracked file shares - `cli.md` is `docs/guides/cli.md` only
-    because nothing else ends that way."""
+    because nothing else ends that way. Returns the tracked path, or
+    None."""
     beside = (REPO / rel).parent / name
     try:
-        if beside.resolve().relative_to(REPO).as_posix() in tracked:
-            return True
+        candidate = beside.resolve().relative_to(REPO).as_posix()
+        if candidate in tracked:
+            return candidate
     except ValueError:
         pass
     if name in tracked:
-        return True
-    return len([one for one in tracked
-                if one == name or one.endswith("/" + name)]) == 1
+        return name
+    matches = [one for one in tracked
+               if one == name or one.endswith("/" + name)]
+    return matches[0] if len(matches) == 1 else None
+
+
+def _resolves(rel, name, tracked):
+    """Whether `_locate` finds `name`."""
+    return _locate(rel, name, tracked) is not None
+
+
+#: `UX-979`: a `file.py::Name` citation in a reference document, e.g.
+#: `test_a_run_is_priced.py::TestEveryRegisteredRoundPricesItsAgents`.
+_TEST_CITATION = re.compile(r"^(?:tests/unit/)?test_[A-Za-z_]*\.py::[A-Za-z_]+$")
+
+#: A top-level `class` or `def` name, wherever it is indented.
+_DEF_NAME = re.compile(r"^\s*(?:class|def)\s+(\w+)", re.MULTILINE)
+
+
+def _member_exists(path, member):
+    """True if the tracked file `path` defines a `class` or `def` named
+    `member`."""
+    text = (REPO / path).read_text(encoding="utf-8")
+    return member in _DEF_NAME.findall(text)
 
 
 def test_every_backticked_markdown_name_resolves():
@@ -1520,21 +1543,39 @@ def test_every_backticked_markdown_name_resolves():
     because nothing read code spans."""
     tracked = set(_tracked_paths())
     dangling = []
+    citations = 0
     for rel in _reference_documents():
         text = (REPO / rel).read_text(encoding="utf-8")
         for number, line in enumerate(text.splitlines(), 1):
             for match in _CODE_SPAN.finditer(line):
                 name = match.group(1).strip()
+                if (rel, name) in _NOT_A_FILE:
+                    continue
                 is_name = _MD_NAME.match(name)
                 is_pseudo_path = (
                     not is_name and _SCENARIO_PSEUDO_PATH.match(name))
-                if not (is_name or is_pseudo_path) or (rel, name) in _NOT_A_FILE:
+                is_test_citation = (
+                    not is_name and not is_pseudo_path
+                    and _TEST_CITATION.match(name))
+                if is_test_citation:
+                    citations += 1
+                    file_part, _, member = name.partition("::")
+                    path = _locate(rel, file_part, tracked)
+                    if path is None or not _member_exists(path, member):
+                        dangling.append(f"{rel}:{number} -> `{name}`")
+                    continue
+                if not (is_name or is_pseudo_path):
                     continue
                 if not _resolves(rel, name, tracked):
                     dangling.append(f"{rel}:{number} -> `{name}`")
     assert dangling == [], (
         "backticked markdown name(s) that resolve to no file:\n  "
         + "\n  ".join(dangling))
+    #: `UX-979`'s Decision: a floor, so shrinking the population to
+    #: nothing (matching no citation) passes silently no longer.
+    assert citations >= 7, (
+        f"only {citations} `file.py::Name` citation(s) read - the "
+        f"population shrank; measured 7 on 398b4db9")
 
 
 def test_the_code_span_sweep_reads_a_population():

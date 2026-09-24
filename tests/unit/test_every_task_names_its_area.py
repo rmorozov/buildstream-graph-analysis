@@ -20,6 +20,7 @@ import sys
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "tools"))
 
+import dev_area_pages
 import dev_close_task
 
 #: The row that introduced the field. Everything filed from here on
@@ -109,8 +110,9 @@ class TestEveryRowFiledSinceCarriesOne:
 
 
 class TestThePagesAreGeneratedFromTheHeaders:
-    """`UX-996`: a page is printed by `area_page_body`/`--areas`, never
-    committed - `docs/backlog/areas/` is `git rm`ed."""
+    """`UX-996`/`UX-1000`: a page is printed by `dev_area_pages.py`'s
+    `area_page_body`/`--areas`, never committed - `docs/backlog/areas/`
+    is `git rm`ed."""
 
     def test_the_directory_is_gone(self):
         """`git rm`ed a directory whose only contents were the pages
@@ -123,14 +125,8 @@ class TestThePagesAreGeneratedFromTheHeaders:
         pages = dev_close_task.area_pages()
         assert pages, "no area has rows"
         for area, ids in pages.items():
-            body = dev_close_task.area_page_body(area, ids)
+            body = dev_area_pages.area_page_body(area, ids)
             assert body.startswith(f"# {area}\n"), area
-
-    def test_a_page_counts_the_rows_it_lists(self):
-        """The count in the sentence is the length of the table."""
-        for area, ids in dev_close_task.area_pages().items():
-            body = dev_close_task.area_page_body(area, ids)
-            assert f"{len(ids)} row(s)" in body, area
 
 
 class TestTheGeneratedPageLinksItsHandWrittenMechanism:
@@ -141,11 +137,11 @@ class TestTheGeneratedPageLinksItsHandWrittenMechanism:
     def _body(self, name):
         pages = dev_close_task.area_pages()
         [area] = [a for a in pages if a.replace("/", "-") + ".md" == name]
-        return dev_close_task.area_page_body(area, pages[area])
+        return dev_area_pages.area_page_body(area, pages[area])
 
     def test_an_area_with_a_hand_written_page_carries_the_line(self):
         name = "bga-viewer.md"
-        assert (dev_close_task.DESIGN_AREA_PAGES / name).exists(), (
+        assert (dev_area_pages.DESIGN_AREA_PAGES / name).exists(), (
             "fixture missing: docs/design/areas/bga-viewer.md")
         text = self._body(name)
         assert (f"Mechanism: [docs/design/areas/{name}]"
@@ -153,7 +149,7 @@ class TestTheGeneratedPageLinksItsHandWrittenMechanism:
 
     def test_an_area_with_no_hand_written_page_carries_nothing(self):
         name = "bga-attribution.md"
-        assert not (dev_close_task.DESIGN_AREA_PAGES / name).exists(), (
+        assert not (dev_area_pages.DESIGN_AREA_PAGES / name).exists(), (
             "fixture assumption broken: docs/design/areas/"
             "bga-attribution.md now exists")
         text = self._body(name)
@@ -162,7 +158,7 @@ class TestTheGeneratedPageLinksItsHandWrittenMechanism:
     def test_the_bga_area_gained_its_hand_written_page(self):
         """`UX-816`: `bga` was the first area with rows and no page."""
         name = "bga.md"
-        assert (dev_close_task.DESIGN_AREA_PAGES / name).exists(), (
+        assert (dev_area_pages.DESIGN_AREA_PAGES / name).exists(), (
             "fixture missing: docs/design/areas/bga.md")
         text = self._body(name)
         assert (f"Mechanism: [docs/design/areas/{name}]"

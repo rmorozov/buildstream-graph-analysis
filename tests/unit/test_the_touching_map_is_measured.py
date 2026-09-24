@@ -34,11 +34,15 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tools"))
 
+import dev_records
 import dev_touch_map
 import dev_touching
 
 WORKFLOW = REPO / ".github/workflows/ci.yml"
-MAP = REPO / "tests/touch_map.json"
+#: `dev_records.load` is the one call this file's own guard recognises
+#: in place of a direct read of an unfetched record (`UX-997` T2).
+MAP_PATH = next(p for p in dev_records.RECORD_PATHS if p.endswith("touch_map.json"))
+MAP = REPO / MAP_PATH
 
 
 def _database(path, rows):
@@ -143,7 +147,7 @@ class TestTheSelectorUnionsIt:
         assert not any("map" in sets for sets in why.values())
 
     def test_the_committed_map_parses(self):
-        assert isinstance(json.loads(MAP.read_text(encoding="utf-8")), dict)
+        assert isinstance(json.loads(dev_records.load(MAP_PATH)), dict)
 
     def test_a_map_that_will_not_parse_is_an_empty_map(self, monkeypatch,
                                                        tmp_path):

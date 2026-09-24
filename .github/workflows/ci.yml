@@ -62,6 +62,11 @@ jobs:
           python-version: "3.11"
       - name: Install dependencies
         run: pip install -e ".[dev]"
+      # `UX-997`: a doc guard this diff selects can read `tests/ci_reference.json`
+      # (`test_the_process_documents_derive_their_figures.py`) - gitignored since
+      # T2, so it fetches before the lane runs one.
+      - name: Read the records branch a selected guard may read
+        run: python tools/dev_records.py fetch || true
       - name: Check no build artifacts are tracked
         run: make check-clean
       - name: Lint
@@ -110,6 +115,12 @@ jobs:
 
       - name: Install dependencies
         run: pip install -e ".[dev]"
+
+      # `UX-997`: `tests/ci_reference.json`/`touch_map.json`/`flake_ledger.json`
+      # and `docs/audits/mutation.md` are gitignored since T2 - every guard in
+      # this job that reads one needs it fetched before the first `pytest`.
+      - name: Read the records branch the suite reads
+        run: python tools/dev_records.py fetch || true
 
       - name: Check no build artifacts are tracked
         run: make check-clean
@@ -790,6 +801,40 @@ jobs:
             exit 0
           fi
           python tools/dev_records.py publish
+
+  # `UX-1000` T2: publishes each area's coverage page - `dev_area_pages.py
+  # --areas` only prints (`UX-996`) - to `records`, so it reads on GitHub
+  # rather than from a checkout, and never lands on main. After both
+  # adopt jobs above, so this run's own `fetch` sees whatever either
+  # already pushed; `concurrency: records` (shared with every writer)
+  # serialises this push against theirs. `publish --pages` pushes only
+  # on a change, same as the two jobs it follows.
+  area-pages-publish:
+    needs: [touch-map-adopt, flake-ledger-adopt]
+    if: >-
+      !cancelled()
+      && github.event_name == 'push'
+      && github.ref == format('refs/heads/{0}',
+                              github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency: records
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      - name: Install what the tool imports (UX-821)
+        run: pip install -e ".[dev]"
+      - name: Read the records branch this run publishes onto
+        run: python tools/dev_records.py fetch || true
+      - name: Write each area's page, links pinned to this sha
+        run: |
+          python tools/dev_area_pages.py --out "$RUNNER_TEMP/areas" \
+            --link-base "https://github.com/${{ github.repository }}/blob/${{ github.sha }}/docs/backlog/scenarios"
+      - name: Publish the pages this run wrote
+        run: python tools/dev_records.py publish --pages "$RUNNER_TEMP/areas"
 
   agent-config:
     # Watches: .claude/** , CLAUDE.md , REVIEW.md - the three that steer

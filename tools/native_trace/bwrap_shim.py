@@ -455,8 +455,8 @@ _MAKE_CONSUMER_POLICIES = frozenset({"make", "cargo", "cmake_meson", "jobs_env"}
 # UX-878: of those, the policies whose MAKEFLAGS an *unwrapped* native
 # jobserver client (gcc-lto, cargo) reads directly - "make" excluded,
 # since its MAKEFLAGS consumer is make itself, a direct child, for which
-# a raw fd is valid. UX-1001: ninja_client too - ninja 1.13 reads only `fifo:`.
-_COMPILER_SAFE_POLICIES = frozenset({"cmake_meson", "jobs_env", "cargo", "ninja_client"})
+# a raw fd is valid. UX-1001/UX-1006: both ninja policies too - ninja 1.13 reads only `fifo:`, gcc's lto1 deadlocks on a blocking fd pair.
+_COMPILER_SAFE_POLICIES = frozenset({"cmake_meson", "jobs_env", "cargo", "ninja_client", "ninja_wrapper"})
 
 # UX-913: of those, the policies whose MAKEFLAGS consumer is `make`
 # itself - a direct child, for which a raw fd is valid - so the scrub

@@ -43,6 +43,7 @@ task file, which is the only place it ever lived twice.
 | UX-1003 | [a shared build root hides the element's kind, so fdsdk's make elements never join](UX-1003-a-shared-build-root-hides-the-kind-so-make-elements-never-join.md) | capture | High | R2, R5 | 🔴 Not Started |
 | UX-1004 | [the runner's effective core count is calibrated, not read from nproc](UX-1004-the-runner-s-effective-core-count-is-calibrated.md) | capture | High | R4, R5 | 🔴 Not Started |
 | UX-1005 | [bga recommends a builder count and a pool size from a capture, and the critical path gets the next token](UX-1005-bga-recommends-builders-and-pool-size-from-a-capture.md) | analysis | High | R5, R4 | 🔴 Not Started |
+| UX-1006 | [a wrapped ninja hands gcc a fifo path, not a blocking fd pair](UX-1006-a-wrapped-ninja-hands-gcc-a-fifo-not-a-blocking-fd-pair.md) | capture | High | R2 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

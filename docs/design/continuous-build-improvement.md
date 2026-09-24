@@ -205,7 +205,7 @@ the other two against it (`UX-906`).
 
 | corner case | why it bites | where it stands today | policy | state | evidence |
 |---|---|---|---|---|---|
-| **ninja** | speaks no GNU jobserver in the versions most projects have; its `-j` is decided at launch | `UX-888` gave the wrapper ownership of ninja's `-j`. The owner's own project is blocked here, so the field has already found this one | `ninja_wrapper` | guarded | `tests/unit/test_the_ninja_wrapper_owns_the_j_flag.py` |
+| **ninja** | speaks no GNU jobserver in the versions most projects have; its `-j` is decided at launch | `UX-888` gave the wrapper ownership of ninja's `-j`; `UX-1006` hands its compilers `fifo:`, since gcc's `lto1` deadlocks on a blocking fd pair. The owner's own project is blocked here, so the field has already found this one | `ninja_wrapper` | guarded | `tests/unit/test_the_ninja_wrapper_owns_the_j_flag.py` |
 | **multithreaded linkers** (`lld`, `gold -threads`) | a link step spawns threads the pool never handed a token to, and oversubscribes exactly when memory is tightest | Direction 20's fourth point names it; LLVM 22 speaks the protocol and older ones do not | - | unexamined | - |
 | **GCC LTO** | the link spawns `lto-wrapper`, a grandchild that reads `MAKEFLAGS` and ICEs on a raw fd | `UX-878` fixed it for cmake/meson; `UX-884` is held open for `make`/autotools, and its exclusion's safety is unproven under `make < 4.4` | - | known-unguarded | `UX-884` |
 | **a pinned `-j1`** | a pin is often a workaround for a defect in the recipe's own build system, so overriding it is a correctness bug, not a speed win | `UX-842`'s pin rule: `-j1` never joins | - | guarded | `tests/unit/test_bwrap_shim.py` |

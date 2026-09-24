@@ -78,6 +78,8 @@ After, recipe `ninja -v -j ${JOBS} -C .` with `JOBS=`:
 | the wrapper steps aside on an fd auth | the wrapper's `1.13.2`/`fd` case | 1 |
 | the client path keeps the dangling `-j` | the wrapper's `1.13.2`/`fifo` case | 1 |
 
-Deviation: the fixture passes `ninja_probe` from `probe_ninja` on the
+Deviation: the stall's cause was the raw fd pair reaching gcc's `lto1`
+blocking, not the held tokens alone (`UX-1006` reproduced both). The
+fixture passes `ninja_probe` from `probe_ninja` on the
 fake rather than letting `build_shim_argv` probe; without it the policy
 falls back to `cmake_meson` and the fifo case passed unfixed.

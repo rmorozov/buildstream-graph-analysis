@@ -1,6 +1,6 @@
 # UX-901: the jobserver is a subtool behind a boundary, not a mode woven through bga
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-841..UX-852 (the mode as it landed), UX-851 (the capture option) | **Found by:** the 2026-09-20 rollout brief ([`continuous-build-improvement.md`](../../design/continuous-build-improvement.md), section 3) — the owner's proposal: keep the jobserver integrated for before/after measurement, and build it so it can later move into a separate project of BuildStream helpers | **Serves:** R5 and R4 (the mode's value, measured), R2 (an element whose pin must survive), and every reader who needs bga to answer without it | **Topic:** capture | **Area:** tools-native_trace | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-841..UX-852 (the mode as it landed), UX-851 (the capture option) | **Found by:** the 2026-09-20 rollout brief ([`continuous-build-improvement.md`](../../design/continuous-build-improvement.md), section 3) — the owner's proposal: keep the jobserver integrated for before/after measurement, and build it so it can later move into a separate project of BuildStream helpers | **Serves:** R5 and R4 (the mode's value, measured), R2 (an element whose pin must survive), and every reader who needs bga to answer without it | **Topic:** capture | **Area:** tools-native_trace | **Shape:** mechanical
 
 ## Motivation
 

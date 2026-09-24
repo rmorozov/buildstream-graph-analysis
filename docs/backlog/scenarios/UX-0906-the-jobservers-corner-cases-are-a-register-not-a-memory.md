@@ -1,6 +1,6 @@
 # UX-906: the jobserver's corner cases live in twelve task files and no register
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-841..UX-852, UX-878, UX-884, UX-888 | **Found by:** the 2026-09-20 rollout thread — the owner asks which corner cases the integration has to survive, and answering it meant reading twelve closed task files | **Serves:** R2 (whose recipe is the corner case), R5 and R4 (who need to know what the mode does not cover before switching it on) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-841..UX-852, UX-878, UX-884, UX-888 | **Found by:** the 2026-09-20 rollout thread — the owner asks which corner cases the integration has to survive, and answering it meant reading twelve closed task files | **Serves:** R2 (whose recipe is the corner case), R5 and R4 (who need to know what the mode does not cover before switching it on) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** mechanical
 
 ## Motivation
 

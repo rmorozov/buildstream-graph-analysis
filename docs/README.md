@@ -317,6 +317,7 @@ The rounds themselves:
 [138](audits/round-138.md) ·
 [139](audits/round-139.md) ·
 [140](audits/round-140.md) ·
+[141](audits/round-141.md) ·
 [the guard census of round 64](audits/guard-census-round-64.md)
 
 ## Backlog

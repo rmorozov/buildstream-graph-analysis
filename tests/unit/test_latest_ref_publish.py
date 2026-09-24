@@ -41,13 +41,15 @@ def _decision_source() -> str:
     return "\n".join(lines)
 
 
-def decide(traced_exit="0", trace_spine="false", trace_opens="true") -> str:
+def decide(traced_exit="0", trace_spine="false", trace_opens="true",
+           jobserver="off") -> str:
     """The workflow's own decision, run under a real shell."""
     script = f'{_decision_source()}\npublish_decision "{traced_exit}"\n'
     result = subprocess.run(
         ["bash", "-c", script],
         capture_output=True, text=True,
-        env={"TRACE_SPINE": trace_spine, "TRACE_OPENS": trace_opens, "PATH": "/usr/bin:/bin"},
+        env={"TRACE_SPINE": trace_spine, "TRACE_OPENS": trace_opens,
+             "JOBSERVER": jobserver, "PATH": "/usr/bin:/bin"},
     )
     assert result.returncode == 0, result.stderr
     return result.stdout.strip()
@@ -68,6 +70,12 @@ class TestWhatMovesThePointer:
         """`trace_opens` is the other half of the instrumentation, and it
         is off-by-request the same way the spine is on-by-request."""
         assert decide(trace_opens="false") == "non-default-instrumentation"
+
+    @pytest.mark.parametrize("jobserver", ["auto", ""])
+    def test_a_jobserver_arm_does_not(self, jobserver):
+        """UX-905: the `auto` arm is an intervention's reading, never the
+        project's current state; an unset mode is not the default either."""
+        assert decide(jobserver=jobserver) == "non-default-instrumentation"
 
     def test_a_failed_build_still_does_not(self):
         """UX-81's rule, unchanged - checked here because this is the

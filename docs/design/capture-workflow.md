@@ -332,6 +332,7 @@ finds this table and goes looking for `native-report.json` inside a
 | `bst-element-logs.tar.gz` | BuildStream's own per-element logs, `_casd/` excluded |
 | `doctor.txt` | `bga doctor` against the real project, run before the build |
 | `capture-outcome.txt` | `traced_build_exit`, and `plain_build_exit` plus `planes_describe_different_builds` when there was a retry |
+| `hang-witness.log` | `tools/hang_witness.py`'s dumps - every process's wait channel, its FIFOs and the pool's unread tokens - once the host stays quiet ten minutes; absent when it never did (UX-905) |
 | `capture-context.txt` | commit hashes, `bst` version, core count, memory, disk |
 
 Some rows are conditional. A capture whose traced build succeeded has

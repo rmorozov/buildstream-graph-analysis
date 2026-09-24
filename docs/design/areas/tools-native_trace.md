@@ -26,3 +26,30 @@ Measured on a real capture, in order: **0.6% → 14.9% → 86.1%** of processes 
 `compute_binary_cost` (`UX-69`) reports, per element, where the CPU actually went — binaries ranked by measured CPU rather than by invocation count, with the single-process case called out separately. On a real capture `cc1plus` is **81.3% of the CPU** of the element that is 43.5% of the build, and `dwz` is **one process holding 138.6s**, a serialization point no job count can help. Ranked by count neither is visible: `as` runs twice as often as `cc1plus` for a tenth of the cost.
 
 `compute_per_element_parallelism` (`UX-32`) reports, per element, the parallelism its native build system *actually achieved* against the `-jN` it asked for - splitting real work processes (compilers, assemblers, linkers) from orchestration that spends its life waiting on children, and emitting two findings: `pinned_to_one_job` (this element asked for `-j1` while its siblings asked for more - the `notparallel` case, invisible to any achieved-vs-requested ratio, since a pinned element gets exactly what it asked for) and `underachieved_requested_jobs`. `detect_redundant_operations` (`UX-23`, rescored by `UX-37`) flags real operations repeated independently across multiple elements' own sandboxes, ranked by *recoverable wall-clock* rather than by process time summed across elements that ran concurrently, and excluding both each element's own build driver (identical across elements by construction, entirely different work in each — `UX-37`) and its own top-level command block, which bwrap's PID namespace identifies structurally rather than by string matching (`UX-73`). `tools/native_trace_to_chrome_trace.py` (`UX-24`) exports Plane 2 traces as Chrome Trace JSON, standalone or combined with Plane 1's own real export for the same run — `bst_native_build_tracer.py run --wrapped-log PATH` captures both planes from one single real `bst build` invocation.
+
+### The jobserver: a subtool behind an import boundary (`UX-901`)
+
+`UX-841`..`UX-852` gave the tracer a second, opt-in mechanism: a token
+pool it injects into sandboxes, so several elements' native build
+systems (`make`/`ninja` and their wrapped tools) can share the host's
+real core count rather than each assuming it owns it. Acting on a
+sandbox is a different risk class from reading it - round 126's
+minimal-sandbox breakage and `UX-878`'s GCC LTO ICE are both on the
+record - so `UX-901` moved it behind an import boundary rather than
+distributing it through the capture path: `tools/jobserver/` owns the
+pool (`open_jobserver`/`close_jobserver`, `PoolController`, `Broker`,
+`create_jobserver_proxies`, the plan/PSI/meminfo readers) and the
+ledger (the raw-row reader, the per-element/summary reductions,
+`jobserver_auth_style`), and `tools/bst_native_build_tracer.py` is its
+only caller. `report_block()` is the one function that crosses back:
+every `jobserver*` key `analyze/v6` publishes, built from inputs the
+tracer already had to read (the wrapper-policy probe reaches
+`bga.progress`; the raw log's pid/tool maps need the tracer's own
+stream parser) rather than re-read inside the package. The package
+imports stdlib and `tools/native_trace/bwrap_shim.py` only - never the
+tracer, never `bga` - so a capture with `--jobserver off` publishes
+every key one with the mode on does, minus the ledger the mode itself
+writes, and the code can leave for a separate project of BuildStream
+helpers without a call-site hunt. Not a plugin system: nothing here is
+discovered or loaded dynamically, and `bga` gains no second one for
+anything else this way.

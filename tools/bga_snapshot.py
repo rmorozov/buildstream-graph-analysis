@@ -67,6 +67,39 @@ HOST_SAMPLES_NAME = run_store.HOST_SAMPLES_NAME
 CONTEXT_NAME = "capture-context.txt"
 
 
+def cpu_topology(sysfs: str = "/sys/devices/system/cpu", cpuinfo: str = "/proc/cpuinfo") -> str:
+    """UX-1002: logical CPUs, physical cores and sockets from sysfs - `nproc`
+    counts hyperthreads, which do not double a compile's throughput."""
+    cores, sockets, logical = set(), set(), 0
+    for name in sorted(os.listdir(sysfs)) if os.path.isdir(sysfs) else []:
+        topo = os.path.join(sysfs, name, "topology")
+        if not (name.startswith("cpu") and name[3:].isdigit() and os.path.isdir(topo)):
+            continue
+        try:
+            with open(os.path.join(topo, "physical_package_id"), encoding="ascii") as f:
+                package = f.read().strip()
+            with open(os.path.join(topo, "core_id"), encoding="ascii") as f:
+                core = f.read().strip()
+        except OSError:
+            return "cpu: unreadable"
+        logical += 1
+        sockets.add(package)
+        cores.add((package, core))
+    if not logical:
+        return "cpu: unreadable"
+    line = f"cpu: {logical} logical, {len(cores)} cores, {len(sockets)} socket(s)"
+    return line + "".join(f", {m}" for m in _cpu_model(cpuinfo)[:1])
+
+
+def _cpu_model(cpuinfo: str) -> list:
+    """The first `model name`: two same-shaped VMs can differ 25% in CPU per instruction."""
+    try:
+        with open(cpuinfo, encoding="utf-8", errors="replace") as f:
+            return [l.split(":", 1)[1].strip() for l in f if l.startswith("model name")]
+    except OSError:
+        return []
+
+
 def _capture_context(project: str, command: list[str], config: dict,
                      jobserver: tuple = ("off", None, None),
                      plan: Optional[str] = None) -> str:
@@ -90,6 +123,7 @@ def _capture_context(project: str, command: list[str], config: dict,
         f"trace_spine={config.get('trace_spine', 'auto')}",
         f"runner_os={platform.platform()}",
         f"nproc={os.cpu_count()}",
+        cpu_topology(),
         f"jobserver: {mode} {ceiling if ceiling is not None else '-'}{seed_text}",
         f"plan: {plan or '-'}",
     ]) + "\n"

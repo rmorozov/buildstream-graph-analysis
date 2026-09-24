@@ -193,21 +193,36 @@ implies; it is a **brainstorm, not a measurement**, which is why
 `UX-906` exists to give each row a state — guarded, known and unguarded,
 or unexamined — rather than letting this table read as a claim.
 
-| corner case | why it bites | where it stands today |
-|---|---|---|
-| **ninja** | speaks no GNU jobserver in the versions most projects have; its `-j` is decided at launch | `UX-888` gave the wrapper ownership of ninja's `-j`. The owner's own project is blocked here, so the field has already found this one |
-| **multithreaded linkers** (`lld`, `gold -threads`) | a link step spawns threads the pool never handed a token to, and oversubscribes exactly when memory is tightest | Direction 20's fourth point names it; LLVM 22 speaks the protocol and older ones do not |
-| **GCC LTO** | the link spawns `lto-wrapper`, a grandchild that reads `MAKEFLAGS` and ICEs on a raw fd | `UX-878` fixed it for cmake/meson; `UX-884` is held open for `make`/autotools |
-| **a pinned `-j1`** | a pin is often a workaround for a defect in the recipe's own build system, so overriding it is a correctness bug, not a speed win | `UX-842`'s pin rule: `-j1` never joins |
-| **recursive make** | sub-makes re-derive their own `-j` and can multiply the pool | the policy table's `make` branch; no example covers a deep recursion |
-| **cargo, and rustc's own threads** | cargo is a jobserver client already, and codegen units add a second layer under it | `cargo` is one of the shim's policies |
-| **compiler caches and distributors** (`ccache`, `distcc`, `icecc`) | parallelism that lives outside the machine the pool is counting | unexamined |
-| **sanitizer and coverage variants** | memory per job rises sharply, so a token count that fits a release build overcommits an ASan one | `UX-850` makes memory a second resource; the variant axis is `UX-903` |
-| **cross-compilation toolchains** | deeper process trees, `binfmt`/qemu hops, and statically linked stages the hook cannot see | the ptrace spine covers the blindness; the combination is unexamined |
-| **tests inside the build** (`make check -j`) | a second parallel phase with a different memory profile, after the compile the pool was sized for | unexamined |
-| **long-lived daemons** (gradle, `sccache`, a language server) | a process that holds a token across elements, or never exits | `UX-852`'s leak audit refills tokens against live processes |
-| **minimal sandboxes** | a shim that needs `dirname` breaks a sandbox without coreutils | round 126's incident, why the flto shim sits behind an explicit override |
-| **project-level `max-jobs`** | pinned in `project.conf` rather than per element, so the pin rule has to read both | the shim reads BuildStream's argv; the project-level case is unexamined |
+This is now a register, not a list: `policy` names the shim policy the
+row covers (`-` when the case cuts across policies or names none),
+`state` is exactly one of `guarded` (a test or example fails when the
+mode breaks this case — named), `known-unguarded` (a task file names it,
+nothing fails yet) or `unexamined` (written down from reasoning, no
+capture has met it), and `evidence` is that test/example path, that
+`UX-NNN`, or `-`. `tests/unit/test_every_jobserver_policy_has_a_register_row.py`
+derives the policy column's full set from the shim's own code and checks
+the other two against it (`UX-906`).
+
+| corner case | why it bites | where it stands today | policy | state | evidence |
+|---|---|---|---|---|---|
+| **ninja** | speaks no GNU jobserver in the versions most projects have; its `-j` is decided at launch | `UX-888` gave the wrapper ownership of ninja's `-j`; `UX-1006` hands its compilers `fifo:`, since gcc's `lto1` deadlocks on a blocking fd pair. The owner's own project is blocked here, so the field has already found this one | `ninja_wrapper` | guarded | `tests/unit/test_the_ninja_wrapper_owns_the_j_flag.py` |
+| **multithreaded linkers** (`lld`, `gold -threads`) | a link step spawns threads the pool never handed a token to, and oversubscribes exactly when memory is tightest | Direction 20's fourth point names it; LLVM 22 speaks the protocol and older ones do not | - | unexamined | - |
+| **GCC LTO** | the link spawns `lto-wrapper`, a grandchild that reads `MAKEFLAGS` and ICEs on a raw fd | `UX-878` fixed it for cmake/meson; `UX-884` measured `make`/autotools safe (a make client switches the pool fd non-blocking, 4.3 and 4.4.1), with no guard | - | known-unguarded | `UX-884` |
+| **a pinned `-j1`** | a pin is often a workaround for a defect in the recipe's own build system, so overriding it is a correctness bug, not a speed win | `UX-842`'s pin rule: `-j1` never joins | - | guarded | `tests/unit/test_bwrap_shim.py` |
+| **recursive make** | sub-makes re-derive their own `-j` and can multiply the pool | the policy table's `make` branch; no task file names the recursive case and no example covers a deep recursion | `make` | unexamined | - |
+| **cargo, and rustc's own threads** | cargo is a jobserver client already, and codegen units add a second layer under it | `cargo` is one of the shim's policies | `cargo` | guarded | `tests/unit/test_bwrap_shim.py` |
+| **compiler caches and distributors** (`ccache`, `distcc`, `icecc`) | parallelism that lives outside the machine the pool is counting | unexamined | - | unexamined | - |
+| **sanitizer and coverage variants** | memory per job rises sharply, so a token count that fits a release build overcommits an ASan one | `UX-850` makes memory a second resource and `UX-903` the variant axis, but neither meets this case; unexamined - `UX-905`'s fdsdk arm is the project meant to meet it | - | unexamined | - |
+| **cross-compilation toolchains** | deeper process trees, `binfmt`/qemu hops, and statically linked stages the hook cannot see | the ptrace spine covers the blindness; the combination is unexamined | - | unexamined | - |
+| **tests inside the build** (`make check -j`) | a second parallel phase with a different memory profile, after the compile the pool was sized for | unexamined | - | unexamined | - |
+| **long-lived daemons** (gradle, `sccache`, a language server) | a process that holds a token across elements, or never exits | `UX-852`'s leak audit refills tokens against live processes | - | guarded | `tests/unit/test_a_leaked_token_is_refilled.py` |
+| **minimal sandboxes** | a shim that needs `dirname` breaks a sandbox without coreutils | round 126's incident, why the flto shim sits behind an explicit override | - | guarded | `tests/unit/test_a_wrapper_runs_where_coreutils_do_not.py` |
+| **project-level `max-jobs`** | pinned in `project.conf` rather than per element, so the pin rule has to read both | the shim reads BuildStream's argv; the project-level case is unexamined | - | unexamined | - |
+| **a cmake/meson generator** | its `MAKEFLAGS`/`JOBS` handling is table-driven, distinct from the table-less kinds below it | `UX-843` widened the ninja-aware gate to this branch | `cmake_meson` | guarded | `tests/unit/test_bwrap_shim.py` |
+| **a table-less kind that still sets `JOBS`** | a kind outside the table but carrying BuildStream's own `JOBS` promise gets ninja-aware treatment rather than being dropped | `UX-859` widened the gate again | `jobs_env` | guarded | `tests/unit/test_bwrap_shim.py` |
+| **a table-less kind whose sandbox ninja already holds a client** | the probe finds a ninja that already speaks the protocol; injecting `MAKEFLAGS` again would double the pool | the shim's `ninja_client` branch; `UX-1001` reads 1.13+ by its version, since its help never names the client | `ninja_client` | guarded | `tests/unit/test_a_ninja_client_is_read_by_version.py` |
+| **ninja present with no client and no wrapper dir** | emptying `JOBS` here would run ninja at cores+2, worse than leaving BuildStream's own `-jN` alone | the shim's `ninja_static` branch | `ninja_static` | guarded | `tests/unit/test_bwrap_shim.py` |
+| **a kind outside the table with no `JOBS` at all** | nothing in the sandbox promises to spend a token, so no injection is the safe default | the shim's `unknown_kind` fallback | `unknown_kind` | guarded | `tests/unit/test_bwrap_shim.py` |
 
 Two of these are worth more than the rest for the rollout, because the
 owner has met them: **ninja**, which is what blocks the LLVM case today,

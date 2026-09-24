@@ -260,6 +260,10 @@ def test_the_packaging_config_keeps_tools_out_of_the_top_level():
     assert top_level == {"bga"}, f"the wheel would ship top-level {sorted(top_level)}"
     assert "bga._tools" in packages and "bga._tools.native_trace" in packages
     assert "bga._tools.native_trace" in setuptools["package-data"]
+    # UX-901: a new `tools/` package is invisible to the wheel until listed.
+    subpackages = {"bga._tools." + p.parent.relative_to(REPO / "tools").as_posix().replace("/", ".")
+                   for p in (REPO / "tools").glob("*/__init__.py")}
+    assert subpackages <= set(packages), f"unlisted: {sorted(subpackages - set(packages))}"
 
 
 # --- UX-98: table rows GitHub will render as written ------------------

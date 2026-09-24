@@ -310,16 +310,34 @@ def kind_job_env(kind, auth_value, ninja_probe=None, wrappers_dir=None,
     argv set `JOBS` for this sandbox - a kind outside the table gets
     the cmake treatment under it (policy `jobs_env`) rather than
     `unknown_kind` when it carries one, since `JOBS` is the recipe's
-    own promise to spend it, whatever its kind."""
+    own promise to spend it, whatever its kind; UX-1003: `"MAKEFLAGS"`
+    (`recipe_promise`) reads as a make recipe."""
     if kind in _MAKE_LIKE_KINDS:
         return [("MAKEFLAGS", auth_value)], [], "make"
     if kind == "cargo":
         return [("MAKEFLAGS", auth_value)], ["CARGO_BUILD_JOBS"], "cargo"
     if kind in _NINJA_CAPABLE_KINDS:
         return _ninja_aware_env(ninja_probe, wrappers_dir, auth_value, "cmake_meson")
+    if jobs_present == "MAKEFLAGS":
+        return [("MAKEFLAGS", auth_value)], [], "make"
     if jobs_present:
         return _ninja_aware_env(ninja_probe, wrappers_dir, auth_value, "jobs_env")
     return [], [], JOBSERVER_UNKNOWN_KIND
+
+
+_MAKEFLAGS_JOBS_RE = re.compile(r"(?:^|\s)-j\s*\d")
+
+
+def recipe_promise(opts: list[str]):
+    """UX-1003: `"JOBS"`, `"MAKEFLAGS"` or `None` - which of BuildStream's own
+    `--setenv`s promises this sandbox spends a width, for a kind the shim cannot
+    name (a shared `build-root` hides it). `JOBS` wins; a `MAKEFLAGS` counts
+    only with a `-jN`."""
+    if _setenv_value(opts, "JOBS") is not None:
+        return "JOBS"
+    if _MAKEFLAGS_JOBS_RE.search(_setenv_value(opts, "MAKEFLAGS") or ""):
+        return "MAKEFLAGS"
+    return None
 
 
 def parse_ninja_help(text: str) -> bool:
@@ -327,6 +345,20 @@ def parse_ninja_help(text: str) -> bool:
     on this box does not (pasted in the task file's Outcome); a ninja
     that speaks the protocol names it in its own help text."""
     return "jobserver" in text.lower()
+
+
+_NINJA_VERSION_RE = re.compile(r"^(\d+)\.(\d+)")
+# UX-1001: 1.13's client never names itself in `--help` - read the version too.
+_NINJA_CLIENT_MIN_VERSION = (1, 13)
+
+
+def ninja_is_client(version: Optional[str], helptext: str) -> bool:
+    """UX-843/UX-1001: a help text naming the jobserver, or a version at or
+    past the first release that ships the client (1.13.0)."""
+    match = _NINJA_VERSION_RE.match((version or "").strip())
+    by_version = bool(match) and \
+        (int(match.group(1)), int(match.group(2))) >= _NINJA_CLIENT_MIN_VERSION
+    return by_version or parse_ninja_help(helptext)
 
 
 def _probe_tool_version(real_bwrap: str, opts: list[str], tool: str,
@@ -360,8 +392,8 @@ def probe_ninja(real_bwrap: str, opts: list[str], cache_path: Optional[str],
             helptext = subprocess.run(
                 [real_bwrap, *opts, "ninja", "--help"],
                 capture_output=True, text=True, timeout=timeout, check=False)
-            result["jobserver_client"] = parse_ninja_help(
-                helptext.stdout + helptext.stderr)
+            result["jobserver_client"] = ninja_is_client(
+                result["version"], helptext.stdout + helptext.stderr)
     except (OSError, subprocess.TimeoutExpired):
         pass
     if cache_path:
@@ -441,8 +473,8 @@ _MAKE_CONSUMER_POLICIES = frozenset({"make", "cargo", "cmake_meson", "jobs_env"}
 # UX-878: of those, the policies whose MAKEFLAGS an *unwrapped* native
 # jobserver client (gcc-lto, cargo) reads directly - "make" excluded,
 # since its MAKEFLAGS consumer is make itself, a direct child, for which
-# a raw fd is valid.
-_COMPILER_SAFE_POLICIES = frozenset({"cmake_meson", "jobs_env", "cargo"})
+# a raw fd is valid. UX-1001/UX-1006: both ninja policies too - ninja 1.13 reads only `fifo:`, gcc's lto1 deadlocks on a blocking fd pair.
+_COMPILER_SAFE_POLICIES = frozenset({"cmake_meson", "jobs_env", "cargo", "ninja_client", "ninja_wrapper"})
 
 # UX-913: of those, the policies whose MAKEFLAGS consumer is `make`
 # itself - a direct child, for which a raw fd is valid - so the scrub
@@ -757,7 +789,7 @@ def _jobserver_injection(opts: list[str], binds: tuple, decision: str,
     pairs, unsets, policy = kind_job_env(
         kind_context.get("element_kind"), auth_value,
         kind_context.get("ninja_probe"), kind_context.get("wrappers_dir"),
-        jobs_present=_setenv_value(opts, "JOBS") is not None)
+        jobs_present=recipe_promise(opts))
     ctx = {"bind_src": bind_src, "bind_dst": bind_dst, "pool": pool,
           "real_bwrap": kind_context.get("real_bwrap"),
           "element": kind_context.get("element")}
@@ -1104,7 +1136,7 @@ def record_jobserver_decision(log_path: Optional[str], opts: list[str],
             _pairs, _unsets, policy = kind_job_env(
                 element_kind, "--jobserver-auth=0,0",
                 kind_context.get("ninja_probe"), kind_context.get("wrappers_dir"),
-                jobs_present=_setenv_value(opts, "JOBS") is not None)
+                jobs_present=recipe_promise(opts))
         name, unresolved = element, False
         if name is None:
             unresolved = True

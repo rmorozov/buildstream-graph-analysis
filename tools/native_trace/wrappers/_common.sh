@@ -137,6 +137,66 @@ bga_run_flto() {
     exec "$real" "$@"
 }
 
+bga_hold() {
+    # A redirection failure here is fatal to a POSIX `exec` (no command)
+    # rather than something `||` can catch - accepted, since a jobserver
+    # auth string this wrapper cannot open is already a broken build.
+    #
+    # `/dev/fd/$r`, not `exec 9<&"$r"`: dash's IO-number lexer only
+    # recognises a *single*-digit fd immediately before `<&`/`>&` -
+    # `exec 9<&"$r"` with a real two-digit inherited fd (11, common
+    # once bwrap and the trace hook have their own open) fails outright
+    # with "Bad fd number", silently discarding the whole pool. A path
+    # under `/dev/fd/` is an ordinary filename argument to the parser,
+    # so the digit-count limit never applies (measured: `exec
+    # 15<>/dev/null` fails the same way `dash` here; `exec
+    # 9<>/dev/fd/15` does not).
+    case "$1" in
+        fifo:*)
+            fifo_path=${1#fifo:}
+            exec 9<>"$fifo_path"
+            bga_wfd=9
+            ;;
+        *)
+            r=${1%%,*}
+            w=${1#*,}
+            exec 9<>/dev/fd/"$r"
+            if [ "$w" != "$r" ]; then
+                exec 8>/dev/fd/"$w"
+                bga_wfd=8
+            else
+                bga_wfd=9
+            fi
+            ;;
+    esac
+
+    cap=${BST_TRACE_WRAPPER_CAP:-$(nproc 2>/dev/null || echo 1)}
+    # One `dd`, not one fork per token: `count=$cap` non-blocking
+    # single-byte reads in dd's own loop, bounded by `timeout` rather
+    # than a shell loop polling `date` - measured, the per-fork shell
+    # loop this replaced needed 2-3 extra forks per token and missed
+    # its own 50ms budget under a loaded machine. `dd` still exits
+    # non-zero on a short read (EAGAIN before `count` is reached) -
+    # expected, not an error, so `|| :` under `set -e`.
+    #
+    # `BGA_WRAPPER_ACQUIRE_MS` (default 50): the budget is production's
+    # own choice, not a test's - a guard asserting an exact token count
+    # must not also be a scheduling bet under `make test`'s own xdist
+    # contention. `timeout` takes seconds; `ms / 1000` and `ms % 1000`,
+    # zero-padded to 3 digits, is exact for any integer millisecond
+    # count (no float parsing, no locale-dependent decimal point).
+    acquire_ms=${BGA_WRAPPER_ACQUIRE_MS:-50}
+    acquire_budget=$(printf '%d.%03d' "$((acquire_ms / 1000))" "$((acquire_ms % 1000))")
+    if command -v timeout >/dev/null 2>&1; then
+        out=$(timeout "$acquire_budget" dd bs=1 count="$cap" iflag=nonblock 2>/dev/null <&9) || :
+    else
+        out=$(dd bs=1 count="$cap" iflag=nonblock 2>/dev/null <&9) || :
+    fi
+    bga_held=${#out}
+    bga_ledger acquire
+    trap bga_release EXIT INT TERM HUP
+}
+
 # `flag_style` is `threads` (--threads=N), `dashj` (-j N) or `flto`
 # (UX-880 - not a token-holder at all, see `bga_run_flto` above).
 bga_run_wrapped() {
@@ -181,64 +241,18 @@ bga_run_wrapped() {
     if "$real" --help 2>&1 | grep -qi jobserver; then
         exec "$real" "$@"
     fi
-
-    # A redirection failure here is fatal to a POSIX `exec` (no command)
-    # rather than something `||` can catch - accepted, since a jobserver
-    # auth string this wrapper cannot open is already a broken build.
-    #
-    # `/dev/fd/$r`, not `exec 9<&"$r"`: dash's IO-number lexer only
-    # recognises a *single*-digit fd immediately before `<&`/`>&` -
-    # `exec 9<&"$r"` with a real two-digit inherited fd (11, common
-    # once bwrap and the trace hook have their own open) fails outright
-    # with "Bad fd number", silently discarding the whole pool. A path
-    # under `/dev/fd/` is an ordinary filename argument to the parser,
-    # so the digit-count limit never applies (measured: `exec
-    # 15<>/dev/null` fails the same way `dash` here; `exec
-    # 9<>/dev/fd/15` does not).
-    case "$auth" in
-        fifo:*)
-            fifo_path=${auth#fifo:}
-            exec 9<>"$fifo_path"
-            bga_wfd=9
-            ;;
-        *)
-            r=${auth%%,*}
-            w=${auth#*,}
-            exec 9<>/dev/fd/"$r"
-            if [ "$w" != "$r" ]; then
-                exec 8>/dev/fd/"$w"
-                bga_wfd=8
-            else
-                bga_wfd=9
-            fi
-            ;;
-    esac
-
-    cap=${BST_TRACE_WRAPPER_CAP:-$(nproc 2>/dev/null || echo 1)}
-    # One `dd`, not one fork per token: `count=$cap` non-blocking
-    # single-byte reads in dd's own loop, bounded by `timeout` rather
-    # than a shell loop polling `date` - measured, the per-fork shell
-    # loop this replaced needed 2-3 extra forks per token and missed
-    # its own 50ms budget under a loaded machine. `dd` still exits
-    # non-zero on a short read (EAGAIN before `count` is reached) -
-    # expected, not an error, so `|| :` under `set -e`.
-    #
-    # `BGA_WRAPPER_ACQUIRE_MS` (default 50): the budget is production's
-    # own choice, not a test's - a guard asserting an exact token count
-    # must not also be a scheduling bet under `make test`'s own xdist
-    # contention. `timeout` takes seconds; `ms / 1000` and `ms % 1000`,
-    # zero-padded to 3 digits, is exact for any integer millisecond
-    # count (no float parsing, no locale-dependent decimal point).
-    acquire_ms=${BGA_WRAPPER_ACQUIRE_MS:-50}
-    acquire_budget=$(printf '%d.%03d' "$((acquire_ms / 1000))" "$((acquire_ms % 1000))")
-    if command -v timeout >/dev/null 2>&1; then
-        out=$(timeout "$acquire_budget" dd bs=1 count="$cap" iflag=nonblock 2>/dev/null <&9) || :
-    else
-        out=$(dd bs=1 count="$cap" iflag=nonblock 2>/dev/null <&9) || :
+    # UX-1001: ninja 1.13+ is a client whose `--help` never says so - it
+    # holds no tokens, but still loses the recipe's -j, which turns the client off.
+    bga_client=0
+    if [ "$bga_tool" = ninja ]; then
+        case $("$real" --version 2>/dev/null) in
+            1.1[3-9]* | 1.[2-9][0-9]* | [2-9]*) bga_client=1 ;;
+        esac
+        case $auth in fifo:*) ;; *) bga_client=0 ;; esac
     fi
-    bga_held=${#out}
-    bga_ledger acquire
-    trap bga_release EXIT INT TERM HUP
+    if [ "$bga_client" = 0 ]; then
+        bga_hold "$auth"
+    fi
 
     width=$((bga_held + 1))
     # UX-888: the wrapper owns ninja's -j. Strip the recipe's own
@@ -267,6 +281,9 @@ bga_run_wrapped() {
             esac
             set -- "$@" "$arg"
         done
+    fi
+    if [ "$bga_client" = 1 ]; then
+        exec "$real" "$@"
     fi
     case "$flag_style" in
         dashj) "$real" -j "$width" "$@" ;;

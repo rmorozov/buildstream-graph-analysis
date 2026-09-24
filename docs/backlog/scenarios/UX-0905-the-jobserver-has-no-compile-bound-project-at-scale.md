@@ -43,6 +43,7 @@ guards: the CI job that runs the chosen arms, and the guard that the mode's stat
 gap: no public BuildStream project that builds LLVM is known to this repository — finding one is step 0, and its absence is what makes the choice judgement
 track: session's own
 gate: after `UX-895`, whose overhead number the arms have to be read against
+quiet box: not GitHub's runners - one fdsdk recipe, three auto arms and two off, spent 8383 to 11592 CPU seconds on the same work, and the concurrent pair landed on an EPYC 7763 (off, 11592) and a 9V74 (auto, 8383) (runs 35994560797, 35994562807, round 141)
 
 ## Out of Scope
 

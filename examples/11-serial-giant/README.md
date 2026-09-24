@@ -115,11 +115,17 @@ its compile span 76.66s -> 39.08s, the pool 0 -> 3 over three adds. Wall: compil
 run-auto`, above) - slower than both `off`'s 147.16s and the 115.8s
 expectation, not faster.
 
-**Risk in the CI step's own assertion.** This box read `auto` over
-`off` twice at `/proc/loadavg` 7-13 (above); the step's hard `auto <
-off` check stands on the CI runner's own quiet reading, not this one -
-if it reds there too, that is the finding, and the assertion should
-drop in favour of the two printed walls, not be tuned to pass.
+**Risk in the CI step's own assertion, as predicted 2026-09-15.** This
+box read `auto` over `off` twice at `/proc/loadavg` 7-13 (above), so the
+step's then-hard `auto < off` check stood on the CI runner's own quiet
+reading. It redded there: eight off/auto pairs read -1.4%..+2.2%
+against a 1% same-sha spread, and `UX-910` (2026-09-21) dropped the
+wall assertion. What the step asserts today is
+`check_jobserver_width.py`, over the `off` and `auto` Plane 2 reports
+and the `auto` capture's log: no scrubbed auth, `off` within its
+resolved width, `auto` never narrower than `off`, and the two
+`switch-*` arms crossing the make version switch both ways. The walls
+are printed, never asserted.
 
 **Quiet-box pair, measured at the round's close** (same box, `/proc/
 loadavg` 1.58 at the start of `off`, 2.83 at the end of `auto`, no
@@ -141,7 +147,8 @@ all.bst` with no `bga` in the same environment took 276.3s (`giant.bst`
 (`sh generate.sh giant 256 9800` 8.75s, `cmake` 0.28s, `make -j2`
 67.06s), and the capture itself 281.30s - the hook's share is ~10s,
 BuildStream's own staging under `buildbox-run` the rest. The CI step's
-`auto < off` assertion stands on this reading.
+`auto < off` assertion stood on this reading until `UX-910` replaced it
+with `check_jobserver_width.py` (above).
 
 2026-09-15, `UX-869`: the same shape with `--jobserver-auth fd` then
 `fifo` (`--jobserver auto --diagnose`, `--builders 4`, cold caches, a

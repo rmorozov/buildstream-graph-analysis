@@ -1,0 +1,61 @@
+version: 2.1
+
+# Trigger explicitly with run_capture=true. Ordinary pushes have no jobs.
+parameters:
+  run_capture:
+    type: boolean
+    default: false
+  fdsdk_ref:
+    type: string
+    default: "953683fb96b82cdf6d7941c4ba9859378942f22b"
+  target:
+    type: string
+    default: "components/libxml2.bst"
+  builders:
+    type: string
+    default: "4"
+  max_jobs:
+    type: string
+    default: "4"
+  trace_opens:
+    type: boolean
+    default: true
+  trace_spine:
+    type: boolean
+    default: false
+  capture_mode:
+    type: string
+    default: incremental
+  jobserver:
+    type: string
+    default: "off"
+
+jobs:
+  real_project_capture:
+    machine:
+      image: ubuntu-2404:current
+    resource_class: large
+    environment:
+      FDSDK_REF: << pipeline.parameters.fdsdk_ref >>
+      TARGET: << pipeline.parameters.target >>
+      BUILDERS: << pipeline.parameters.builders >>
+      MAX_JOBS: << pipeline.parameters.max_jobs >>
+      TRACE_OPENS: << pipeline.parameters.trace_opens >>
+      TRACE_SPINE: << pipeline.parameters.trace_spine >>
+      CAPTURE_MODE: << pipeline.parameters.capture_mode >>
+      JOBSERVER: << pipeline.parameters.jobserver >>
+    steps:
+      - checkout
+      - run:
+          name: Capture freedesktop-sdk
+          command: bash .circleci/real-project-capture.sh
+          no_output_timeout: 30m
+      - store_artifacts:
+          path: capture
+          destination: fdsdk-capture
+
+workflows:
+  manual_capture:
+    when: << pipeline.parameters.run_capture >>
+    jobs:
+      - real_project_capture

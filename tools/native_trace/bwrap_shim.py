@@ -329,6 +329,20 @@ def parse_ninja_help(text: str) -> bool:
     return "jobserver" in text.lower()
 
 
+_NINJA_VERSION_RE = re.compile(r"^(\d+)\.(\d+)")
+# UX-1001: 1.13's client never names itself in `--help` - read the version too.
+_NINJA_CLIENT_MIN_VERSION = (1, 13)
+
+
+def ninja_is_client(version: Optional[str], helptext: str) -> bool:
+    """UX-843/UX-1001: a help text naming the jobserver, or a version at or
+    past the first release that ships the client (1.13.0)."""
+    match = _NINJA_VERSION_RE.match((version or "").strip())
+    by_version = bool(match) and \
+        (int(match.group(1)), int(match.group(2))) >= _NINJA_CLIENT_MIN_VERSION
+    return by_version or parse_ninja_help(helptext)
+
+
 def _probe_tool_version(real_bwrap: str, opts: list[str], tool: str,
                         timeout: float) -> subprocess.CompletedProcess:
     """The one `<tool> --version` subprocess call site `probe_ninja` and
@@ -360,8 +374,8 @@ def probe_ninja(real_bwrap: str, opts: list[str], cache_path: Optional[str],
             helptext = subprocess.run(
                 [real_bwrap, *opts, "ninja", "--help"],
                 capture_output=True, text=True, timeout=timeout, check=False)
-            result["jobserver_client"] = parse_ninja_help(
-                helptext.stdout + helptext.stderr)
+            result["jobserver_client"] = ninja_is_client(
+                result["version"], helptext.stdout + helptext.stderr)
     except (OSError, subprocess.TimeoutExpired):
         pass
     if cache_path:
@@ -441,8 +455,8 @@ _MAKE_CONSUMER_POLICIES = frozenset({"make", "cargo", "cmake_meson", "jobs_env"}
 # UX-878: of those, the policies whose MAKEFLAGS an *unwrapped* native
 # jobserver client (gcc-lto, cargo) reads directly - "make" excluded,
 # since its MAKEFLAGS consumer is make itself, a direct child, for which
-# a raw fd is valid.
-_COMPILER_SAFE_POLICIES = frozenset({"cmake_meson", "jobs_env", "cargo"})
+# a raw fd is valid. UX-1001: ninja_client too - ninja 1.13 reads only `fifo:`.
+_COMPILER_SAFE_POLICIES = frozenset({"cmake_meson", "jobs_env", "cargo", "ninja_client"})
 
 # UX-913: of those, the policies whose MAKEFLAGS consumer is `make`
 # itself - a direct child, for which a raw fd is valid - so the scrub

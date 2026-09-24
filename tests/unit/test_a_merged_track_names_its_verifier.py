@@ -58,7 +58,8 @@ def _verifier_ids_by_round(runs):
     for run in runs:
         if run["agent"] != "verifier":
             continue
-        by_round.setdefault(run["round"], set()).add(_task_id(run["task"]))
+        # one verifier run can read several tracks; each id it names is paired
+        by_round.setdefault(run["round"], set()).update(TASK_ID.findall(run["task"]))
     return by_round
 
 

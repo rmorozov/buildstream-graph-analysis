@@ -1805,6 +1805,21 @@ jobs:
             "$OUT/plane2-off.json" "$OUT/plane2-auto.json" \
             giant.bst "$OUT/capture-auto.txt"
 
+      - name: Calibrate the runner's width and run the pinned 2x2 arm (UX-1004)
+        run: |
+          set -euo pipefail
+          PROJ=examples/11-serial-giant
+          OUT=artifacts/11-serial-giant
+          export XDG_CONFIG_HOME="$GITHUB_WORKSPACE/$PROJ/xdg_config_home"
+          echo "::notice::calibration: $(python3 -c 'from tools.bga_snapshot import cpu_topology; print(cpu_topology())')"
+          rm -rf ~/.cache/buildstream ~/.local/share/buildstream
+          bga capture run --run-dir "$OUT/run-pinned" --jobserver off \
+            "$PROJ" "$OUT/plane2-pinned.json" -- bst --builders 2 build all.bst \
+            2>&1 | tee "$OUT/capture-pinned.txt"
+          bga compare "$OUT/run-pinned" "$OUT/run-auto" | tee "$OUT/compare-pinned-vs-auto.txt"
+          python3 "$PROJ/calibrate_width.py" "$PROJ" 1 2 4 6 8 | tee "$OUT/calibration.txt"
+          while read -r line; do echo "::notice::calibration: $line"; done < "$OUT/calibration.txt"
+
       - name: Build + capture 12-junctioned (UX-872)
         # UX-869/UX-871 were real first-day defects on the user's own
         # junctioned project, and no example had a junction, so neither

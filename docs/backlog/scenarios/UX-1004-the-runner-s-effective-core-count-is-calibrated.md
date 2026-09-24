@@ -20,8 +20,10 @@ gate: its own
 
 ## Required Fix
 
-Build `giant.bst` alone at widths 1, 2 and 4 on the runner and print
-`effective cores = t(1) / t(w)` for each, then run the pinned
+Build `giant.bst` alone at widths 1, 2, 4, 6 and 8 on the runner and print
+`effective cores = t(1) / t(w)` for each, and the knee past which a wider
+`w` stops shortening the wall (Ruslan, 2026-09-24: the pool's ceiling is
+the effective capacity plus the oversubscription that still pays), then run the pinned
 `--builders 2`, `max-jobs: 2` arm beside `off` and `auto` in the same
 job, so all three configurations share one machine.
 
@@ -31,8 +33,25 @@ The 16-core reading (`UX-895`).
 
 ## Acceptance Test
 
-One CI job prints three effective-core figures and three walls.
+One CI job prints five effective-core figures, the knee, and three walls.
 
 ## Outcome
 
-Not started.
+Gap measured: `grep -c "effective" artifacts/11-serial-giant/*` has no
+file to read; no step prints a width curve, and the one reading
+(1.86 to 3.69 busy cores for 7%) has no denominator.
+
+Close: `calibrate_width.py` and a `bst-examples` step that runs the
+pinned `--builders 2` arm, `bga compare` against `auto`, and widths
+1 2 4 6 8, each line a `::notice::`. The runner's reading is owed by
+the first CI run of this step.
+
+| mutation | reddened | count |
+|---|---|---|
+| the knee keeps going past a flat step | the pays-again case | 1 |
+| effective inverted | `test_the_effective_count_is_t1_over_tw` | 1 |
+| giant not rebuilt per width | the fake-bst case | 1 |
+| every width builds at 2 | the fake-bst case | 1 |
+| width 1 not required | `test_width_one_is_required` | 1 |
+
+Deviation: the knee's `GAIN` is 5%, above the example's 2% run spread.

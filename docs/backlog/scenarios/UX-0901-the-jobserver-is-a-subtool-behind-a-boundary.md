@@ -1,6 +1,6 @@
 # UX-901: the jobserver is a subtool behind a boundary, not a mode woven through bga
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-841..UX-852 (the mode as it landed), UX-851 (the capture option) | **Found by:** the 2026-09-20 rollout brief ([`continuous-build-improvement.md`](../../design/continuous-build-improvement.md), section 3) — the owner's proposal: keep the jobserver integrated for before/after measurement, and build it so it can later move into a separate project of BuildStream helpers | **Serves:** R5 and R4 (the mode's value, measured), R2 (an element whose pin must survive), and every reader who needs bga to answer without it | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-841..UX-852 (the mode as it landed), UX-851 (the capture option) | **Found by:** the 2026-09-20 rollout brief ([`continuous-build-improvement.md`](../../design/continuous-build-improvement.md), section 3) — the owner's proposal: keep the jobserver integrated for before/after measurement, and build it so it can later move into a separate project of BuildStream helpers | **Serves:** R5 and R4 (the mode's value, measured), R2 (an element whose pin must survive), and every reader who needs bga to answer without it | **Topic:** capture | **Area:** tools-native_trace | **Shape:** mechanical
 
 ## Motivation
 
@@ -53,5 +53,58 @@ capture with `--jobserver off` and one with `auto` produce key sets
 differing only by the jobserver block. Mutations: import the pool from
 an unlisted module (red), drop one key from the off-capture (the set
 comparison names it).
+
+## Decision
+
+The `architect`, round 141, at `ad27b616`.
+
+```text
+Route:     import boundary: new package tools/jobserver/ takes the pool (open/close_jobserver,
+           PoolController, Broker, create_jobserver_proxies, the plan/meminfo readers,
+           tracer:1244-2505) and the ledger (read/summarize_jobserver_*, tokens_by_element,
+           read_jobserver_decisions, jobserver_auth_style), plus a new report_block() that
+           returns the tracer:9272-9374 `jobserver*` keys (cache_key_set and project_max_jobs stay), so one report.update() is all
+           that crosses back; __init__.__all__ is the declared surface, and
+           tools/bst_native_build_tracer.py is its only caller; the tracer imports the
+           surface names by name, so `monkeypatch.setattr(tracer, ...)` targets keep working.
+           The shim's policy half (kind_job_env, _*_POLICIES, tracer:99-106's imports) stays
+           in tools/native_trace/bwrap_shim.py, a declared member: write_bwrap_shim copies
+           that one file alone (tracer:198-218) and it imports stdlib only (shim:30-40), so
+           it cannot import a package. tools/jobserver/ imports stdlib and the shim, never
+           the tracer or bga. architecture.md names the set, the surface, what crosses (the
+           `jobserver*` Plane 2 keys, UX-847's ledger among them), and "not a plugin system"
+Rejected:  process boundary - the FIFO's host fd must live as long as the capture (UX-679)
+           and the Broker ticks in-process; a spawn adds a lifecycle and IPC and no
+           number argues for it. No measured reason against the import boundary was found
+           gate "after UX-895" - deviation: UX-895 needs the owner's 16-core host; the move
+           changes no call path, so its overhead number is a follow-up that may reopen
+           the process fork, not a precondition
+           moving kind_job_env into tools/jobserver/ - breaks the single-file shim copy
+Files:     tools/jobserver/__init__.py; tools/jobserver/pool.py; tools/jobserver/ledger.py;
+           tools/bst_native_build_tracer.py; tests/unit/test_only_the_tracer_reaches_the_jobserver.py;
+           tests/unit/test_a_capture_without_the_jobserver_loses_only_its_ledger.py;
+           existing tests/unit/test_*.py whose monkeypatch targets a moved helper's
+           internal call (retarget to tools.jobserver.pool, nothing else);
+           docs/design/architecture.md ("Real package structure" and Plane 2 map);
+           docs/design/areas/tools-native_trace.md; tests/quality_reference.json (--adopt).
+           Not docs/design/continuous-build-improvement.md (UX-906 owns section 7a)
+Guard:     test_only_the_tracer_reaches_the_jobserver.py (ast over bga/** and tools/**): only
+           the tracer imports tools.jobserver; nobody outside the package imports a
+           submodule or a name not in __all__; bga/** imports nothing from it; the package
+           imports neither the tracer nor bga; the shim names the tracer may import are a
+           declared list. test_a_capture_without_the_jobserver_loses_only_its_ledger.py:
+           report_block() on a fixture ledger returns only `jobserver*` keys, and
+           `bga analyze --format json` over tests/fixtures/macro_micro/run with and without
+           those keys in plane2.json differs only by `jobserver*` keys, compared recursively
+Mutation:  `from tools.jobserver.pool import PoolController` in tools/bga_timeline.py (red,
+           names the module); `import tools.jobserver` in bga/correlate.py (red);
+           `from ..bst_native_build_tracer import TraceError` in tools/jobserver/pool.py
+           (red); report_block() emits `pool_peak` (red, names it); gate a non-jobserver
+           key in bga/report/json.py on `native_report.get("jobserver_ledger")` (the set
+           comparison names the key)
+Class:     product - non-dependence and extractability for R5/R4; no process surface
+Split:     one track; parallel with UX-906 (disjoint files; neither edits bwrap_shim.py)
+Question:  none - the owner took the fork (import boundary, off by default, never required)
+```
 
 ## Outcome

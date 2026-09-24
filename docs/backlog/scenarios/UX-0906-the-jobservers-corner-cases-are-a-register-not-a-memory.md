@@ -91,3 +91,27 @@ Question:  none
 ```
 
 ## Outcome
+
+Gap measured: before, section 7a's table had 3 columns, 13 rows, no
+`policy`/`state`/`evidence` and 0/8 of the shim's own `kind_job_env`/
+`_ninja_aware_env` policies named anywhere. After: 18 rows (5 added for
+the missing policies), 8/8 policies named, 10 `guarded`, 1
+`known-unguarded` (`UX-884`), 7 `unexamined`.
+
+Close measured (`python3 -m pytest tests/unit/test_every_jobserver_policy_has_a_register_row.py -q`):
+`5 passed in 0.09s`. `make test-touching`: `1 failed, 1625 passed, 3
+skipped` — the one failure (`test_every_module_is_on_the_map` wanting
+`tools/jobserver_arms.py` on the context map) predates this track,
+from `UX-901`'s merge at `68305095`, and neither file it names is one
+this task touches.
+
+Mutation table:
+
+| mutation | reddened | count |
+|---|---|---|
+| add `if kind == "go": return [], [], "go"` to `kind_job_env` | `test_every_derived_policy_appears_in_some_row` | 1 failed, 4 passed |
+| point the ninja row's evidence at `test_no_such_guard.py` | `test_every_guarded_rows_evidence_path_exists` | 1 failed, 4 passed |
+| change the cargo row's state to `partial` | `test_every_state_cell_is_one_of_the_three_words` | 1 failed, 4 passed |
+| give the GCC LTO row `UX-99999` | `test_every_known_unguarded_rows_ux_id_has_a_task_file` | 1 failed, 4 passed |
+
+Each reverted; `5 passed in 0.09s` restored after every one.

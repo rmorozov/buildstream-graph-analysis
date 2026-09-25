@@ -1,0 +1,97 @@
+# UX-895/UX-905 on CodSpeed's bare-metal Graviton (16 Cortex-A72):
+# stages this arch's toolchain and buildbox pins (UX-1009), then one
+# leg per matrix entry of `examples/11-serial-giant/graviton_arms.sh` -
+# `pairs` (calibration, off/auto x3) and `overhead` (none/capture/trace
+# x3). Host, width and the sandbox were probed in earlier runs of this
+# file; the Ryzen leg never started on the free plan.
+name: CodSpeed runner probe
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/project-thread-bim9mu]
+    paths: [.github/workflows/codspeed-probe.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: codspeed-macro-arm64-graviton-ubuntu-22-04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        leg: [pairs, overhead]
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Host
+        run: |
+          uname -a
+          lscpu
+          nproc
+          free -g
+          df -h / "$RUNNER_TEMP"
+          echo "::notice title=host::$(nproc) cpus, $(lscpu | awk -F: '/Thread\(s\) per core/{gsub(/ /,"",$2);print "threads/core "$2}'), $(lscpu | awk -F: '/Model name/{gsub(/^ +/,"",$2);print $2; exit}'), mem $(free -g | awk '/Mem:/{print $2}')G"
+
+      - name: Sandbox prerequisites
+        run: |
+          if sudo -n true 2>/dev/null; then echo "::notice title=sudo::yes"; else echo "::warning title=sudo::no"; fi
+          sysctl kernel.unprivileged_userns_clone kernel.apparmor_restrict_unprivileged_userns user.max_user_namespaces 2>&1 || true
+          sudo -n apt-get update -q && sudo -n apt-get install -yq bubblewrap lzip gcc make python3-venv time
+          # Ubuntu 24.04 restricts unprivileged userns (real-project-capture.yml's same step).
+          sudo -n sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+          if bwrap --unshare-net --unshare-pid --ro-bind / / --dev /dev /bin/true; then
+            echo "::notice title=bwrap::--unshare-net works"
+          else
+            echo "::error title=bwrap::--unshare-net fails"
+          fi
+
+      - name: BuildStream
+        run: |
+          python3 --version
+          python3 -m venv "$RUNNER_TEMP/venv"
+          . "$RUNNER_TEMP/venv/bin/activate"
+          pip install -q --upgrade pip
+          pip install -q 'BuildStream==2.8.1' 'buildstream-plugins==2.8.0'
+          pip install -q -e .
+          echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
+          echo "::notice title=bst::$(bst --version 2>&1 | tail -1)"
+          bga --help > /dev/null && echo "::notice title=bga::imports"
+
+      # UX-1009: bst 2.8.1's aarch64 install has no buildbox-casd/
+      # buildbox-run - the wheel bundling both is x86_64-only, and the
+      # sdist aarch64 pip falls back to carries neither. Both are a bare
+      # PATH lookup (_get_host_tool_internal, read from the sdist), so
+      # staging the pinned closure's bin/ onto PATH is the whole fix.
+      # At `/` itself: ELF interpreter and makeCWrapper paths are absolute
+      # `/nix/store`, so under a prefix exec reports ENOENT on a file that exists.
+      - name: Stage buildbox
+        run: |
+          sudo -n mkdir -p /nix && sudo -n chown "$(id -u):$(id -g)" /nix
+          BIN="$(python3 -m tools.nix_buildbox /)"  # unwrapped: nix's wrapper shadows bga's bwrap shim
+          rc=0; "$BIN/buildbox-run" --help > /dev/null 2>&1 || rc=$?
+          [ "$rc" -lt 126 ] || { echo "::error title=buildbox::exec failed ($rc)"; exit 1; }
+          echo "$BIN" >> "$GITHUB_PATH"
+          echo "::notice title=buildbox::$BIN runs"
+
+      # UX-1009: the same pinned toolchain 05-10 use, now with an
+      # aarch64 row - staged once, hardlink-cloned into every example
+      # including 11-serial-giant.
+      - name: Stage toolchain
+        run: |
+          command -v buildbox-casd
+          examples/stage_cpp_toolchain.sh
+
+      - name: Calibrate the runner's width
+        if: matrix.leg == 'pairs'
+        env:
+          CALIBRATE_GIANT_LINES: "1800"
+        run: |
+          OUT="$(python3 examples/11-serial-giant/calibrate_width.py examples/11-serial-giant 1 2 4 8 16)"
+          echo "$OUT"
+          echo "::notice title=calibrate::$(echo "$OUT" | tr '\n' ' ')"
+
+      - name: Arms
+        run: OUT="$RUNNER_TEMP/arms" examples/11-serial-giant/graviton_arms.sh ${{ matrix.leg }}

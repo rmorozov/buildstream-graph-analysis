@@ -1,6 +1,6 @@
 # UX-905: the jobserver has no compile-bound project at the scale it is meant for
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-848 (the compile-bound example), UX-857 (`11-serial-giant`) | **Found by:** the 2026-09-20 rollout thread — the owner's own LLVM element is the target case and is blocked behind a ninja integration problem on their project, so the evaluation needs a project this repository can run | **Serves:** R5 and R4 (the mode's value, measured at a scale that can show it), R2 | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement
+**Priority:** High | **Status:** 🟡 In Progress | **Depends on:** UX-848 (the compile-bound example), UX-857 (`11-serial-giant`) | **Found by:** the 2026-09-20 rollout thread — the owner's own LLVM element is the target case and is blocked behind a ninja integration problem on their project, so the evaluation needs a project this repository can run | **Serves:** R5 and R4 (the mode's value, measured at a scale that can show it), R2 | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement
 
 ## Motivation
 
@@ -59,3 +59,32 @@ stages was running. A second run of the same recipe reproduces the
 arms — not the numbers, which are a machine's, but the procedure.
 
 ## Outcome
+
+Partial. Chose `examples/11-serial-giant` (UX-1009's aarch64 staging),
+run on CodSpeed's Graviton macro runner (16 real Cortex-A72 cores, 31 GB,
+Ubuntu 22.04, `bst` 2.8.1, 2026-09-25) rather than `freedesktop-sdk` — a
+real-core host reachable now, at the project this repository already
+stages. Recorded in Direction 20's own status block
+(`docs/design/directions.md`), beside the three prior readings:
+
+```text
+pairs off  | wall 139.91s cpu 752s giant-peak 8;  139.20s 752s 8;  138.71s 749s 8
+pairs auto | wall 113.28s cpu 845s giant-peak 16; 112.19s 841s 16; 112.20s 840s 16
+```
+
+(`bst`'s own `max-jobs` default = min(cpus, 8) = 8; 3 interleaved
+repeats; CPU = host-wide `/proc/stat` busy-seconds delta; peak = the
+capture's Plane 2 `peak_work_concurrency`; run 36086044196.) `off`
+averaged 139.27 s wall (spread 0.9 %), `auto` 112.56 s (spread 1.0 %):
+`auto` IMPROVED -19.2 %, explained by the giant's peak concurrency
+moving 8 to 16 against the calibrated effective-core curve (`UX-1009`'s
+calibration: width 8 → 29.30 s, width 16 → 22.24 s, effective 5.98 of
+16); host CPU seconds +12 % (751 to 842), the expected cost of running
+more concurrently on a CPU-bound compile.
+
+Not met: the Acceptance Test also asks for peak memory per arm, which
+this capture never measured, and "the guard that the mode's status
+block cites a reading whose capture exists" (Decomposition) does not
+exist yet — no test asserts the status block's readings against a real
+capture ref, so this reading is prose only, unguarded. Status stays In
+Progress rather than closing.

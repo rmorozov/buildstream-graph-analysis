@@ -68,6 +68,32 @@ TOOLCHAIN_PINS = {
                                  "-cmake-4.1.2"),
                   "binaries": ("/usr/bin/cmake",)},
     },
+    # UX-1009: CodSpeed's Graviton runner (the only real-core host
+    # available) is aarch64. Roots only - `stage_closure` reads each
+    # narinfo's own `NarHash` at fetch time, so no NAR digest is pinned
+    # here. Identified by `References` the same way as the x86_64 row:
+    # all three reach `jjjpj4p9bz505ac1c747f2j5z3xw170p-glibc-2.40-224`.
+    "aarch64": {
+        "gcc": {"version": "14.3.0", "axis": "toolchain",
+                "store_path": ("/nix/store/8ybmj60hvhl7g6kl6zhwq3zyyg4hfz5g"
+                               "-gcc-14.3.0"),
+                "binaries": ("/usr/bin/gcc", "/usr/bin/g++", "/usr/bin/cc",
+                             "/usr/bin/c++"),
+                "helpers": {"cc1": ("-nostdinc -version", "stderr"),
+                            "cc1plus": ("-nostdinc -version", "stderr"),
+                            "collect2": ("--version", "stderr")}},
+        "binutils": {"version": "2.44", "axis": "toolchain",
+                     "store_path": ("/nix/store/m02hdx6a5zqqk7v8qli96jzp6r12"
+                                    "ngwv-binutils-2.44"),
+                     "binaries": ("/usr/bin/ld", "/usr/bin/ld.bfd",
+                                  "/usr/bin/as", "/usr/bin/ar",
+                                  "/usr/bin/ranlib", "/usr/bin/nm",
+                                  "/usr/bin/strip")},
+        "cmake": {"version": "4.1.2", "axis": "toolchain",
+                  "store_path": ("/nix/store/44fsdxj6326i871bgsdcp05c4rbnl9"
+                                 "yc-cmake-4.1.2"),
+                  "binaries": ("/usr/bin/cmake",)},
+    },
 }
 
 #: The drivers delivered as a shim rather than a symlink, and which of

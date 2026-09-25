@@ -8,6 +8,11 @@ one still cut the wall by `GAIN`. The pool's ceiling is judged against
 that, not `nproc`.
 
     python3 calibrate_width.py <project> 1 2 4 6 8
+
+UX-1009: a slow single core makes width 1 at `giant.bst`'s committed
+9800 lines/unit expensive (2013s measured at -j1, raw, on Graviton) -
+`CALIBRATE_GIANT_LINES` overrides `giant_lines` (`--option`) for every
+build here without moving that committed default.
 """
 import os
 import subprocess
@@ -35,6 +40,13 @@ def knee(walls: dict, gain: float = GAIN) -> int:
     return best
 
 
+def lines_option() -> list:
+    """`--option giant_lines <value>` from `CALIBRATE_GIANT_LINES`, or
+    `[]` - `giant.bst`'s own committed 9800 then decides, unmoved."""
+    lines = os.environ.get("CALIBRATE_GIANT_LINES")
+    return ["--option", "giant_lines", lines] if lines else []
+
+
 def build_at(project: str, width: int, run=subprocess.run) -> float:
     """Seconds for `bst build giant.bst` at `max-jobs: width`, giant rebuilt."""
     with tempfile.TemporaryDirectory() as xdg:
@@ -42,9 +54,10 @@ def build_at(project: str, width: int, run=subprocess.run) -> float:
             conf.write(f"cache:\n  quota: 3G\n  reserved-disk-space: 500M\n"
                        f"build:\n  max-jobs: {width}\n")
         env = dict(os.environ, XDG_CONFIG_HOME=xdg)
-        run(["bst", "artifact", "delete", "giant.bst"], cwd=project, env=env, check=False)
+        run(["bst"] + lines_option() + ["artifact", "delete", "giant.bst"], cwd=project, env=env, check=False)
         start = time.monotonic()
-        run(["bst", "build", "giant.bst"], cwd=project, env=env, check=True)
+        run(["bst"] + lines_option() + ["build", "giant.bst"],
+            cwd=project, env=env, check=True)
         return time.monotonic() - start
 
 

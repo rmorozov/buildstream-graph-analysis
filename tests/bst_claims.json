@@ -200,6 +200,16 @@
       "confirmed_on": "2.8.1",
       "confirmed_by": "UX-990",
       "read": "buildstream/data/userconfig.yaml:61,64,67 (fetchers: 10; builders: 4; pushers: 4)"
+    },
+    {
+      "id": "buildbox-is-a-path-lookup",
+      "claim": "BuildStream locates buildbox-casd and buildbox-run by a bare PATH lookup (_get_host_tool_internal), with no sysroot/prefix argument to point at a staged closure",
+      "sites": [
+        {"path": "tools/nix_buildbox.py", "anchor": "for a host BuildStream 2.8.1"}
+      ],
+      "confirmed_on": "2.8.1",
+      "confirmed_by": "UX-1009",
+      "read": "buildstream/_cas/casdprocessmanager.py:180 (__buildbox_casd), buildstream/sandbox/_sandboxbuildboxrun.py:60 (__buildbox_run)"
     }
   ],
   "provenance": [

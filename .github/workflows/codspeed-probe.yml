@@ -2,7 +2,7 @@
 # stages this arch's toolchain and buildbox pins (UX-1009), then one
 # leg per matrix entry of `examples/11-serial-giant/graviton_arms.sh` -
 # `pairs` (calibration, off/auto x3), `cap3` (the same at max-jobs 3)
-# and `overhead` (none/capture/trace/spine x3). Host, width and the sandbox were probed in earlier runs of this
+# and `overhead` (none/capture/trace/spine/all x3). Host, width and the sandbox were probed in earlier runs of this
 # file; the Ryzen leg never started on the free plan.
 name: CodSpeed runner probe
 

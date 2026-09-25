@@ -38,6 +38,19 @@ class TestThePinIsDeclared:
 
         assert path == str(tmp_path) + nix_buildbox.pin("aarch64")["store_path"] + "/bin"
 
+    def test_buildbox_run_skips_the_wrapper_that_shadows_the_bwrap_shim(self, tmp_path):
+        store_bin = nix_buildbox.bin_dir(str(tmp_path), "aarch64")
+        os.makedirs(store_bin)
+        for name in ("buildbox-casd", "buildbox-run", "buildbox-run-bubblewrap"):
+            open(os.path.join(store_bin, name), "w").close()
+
+        out = nix_buildbox.link(str(tmp_path), "aarch64")
+
+        assert os.path.realpath(os.path.join(out, "buildbox-run")) == \
+            os.path.join(store_bin, "buildbox-run-bubblewrap")
+        assert os.path.realpath(os.path.join(out, "buildbox-casd")) == \
+            os.path.join(store_bin, "buildbox-casd")
+
 
 @pytest.mark.skipif(not os.environ.get("BGA_TEST_NIX_NETWORK"),
                     reason="downloads the pinned buildbox closure from "
@@ -47,4 +60,5 @@ class TestTheStagedClosure:
         path = nix_buildbox.stage(str(tmp_path), "aarch64")
 
         assert os.path.isfile(os.path.join(path, "buildbox-casd"))
-        assert os.path.isfile(os.path.join(path, "buildbox-run"))
+        assert os.path.realpath(os.path.join(path, "buildbox-run")).endswith(
+            "/bin/buildbox-run-bubblewrap")

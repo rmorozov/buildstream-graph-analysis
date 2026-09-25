@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        leg: [diag]
+        leg: [pairs, overhead]
     steps:
       - uses: actions/checkout@v7
 
@@ -70,7 +70,7 @@ jobs:
       - name: Stage buildbox
         run: |
           sudo -n mkdir -p /nix && sudo -n chown "$(id -u):$(id -g)" /nix
-          BIN="$(python3 -m tools.nix_buildbox /)"
+          BIN="$(python3 -m tools.nix_buildbox /)"  # unwrapped: nix's wrapper shadows bga's bwrap shim
           rc=0; "$BIN/buildbox-run" --help > /dev/null 2>&1 || rc=$?
           [ "$rc" -lt 126 ] || { echo "::error title=buildbox::exec failed ($rc)"; exit 1; }
           echo "$BIN" >> "$GITHUB_PATH"

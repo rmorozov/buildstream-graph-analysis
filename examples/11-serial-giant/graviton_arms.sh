@@ -19,6 +19,10 @@ summary() {
 }
 trap summary EXIT
 
+traced() {  # a capture whose hook never ran is not an arm (bwrap shim shadowed)
+    python3 -c 'import json, sys; sys.exit(not json.load(open(sys.argv[1])).get("process_count"))' "$1"
+}
+
 peak() {
     python3 -c 'import json, sys
 r = json.load(open(sys.argv[1]))
@@ -38,6 +42,7 @@ build() {  # build <arm> <repeat> <plane2 path or -> -- <command...>
         || { tail -40 "$OUT/$arm-$i.log"; exit 1; }
     b1=$(busy); read -r wall < "$OUT/time"
     [ "$plane2" = - ] || plane2=$(ls $plane2 2>/dev/null | tail -1)
+    [ "$plane2" = - ] || traced "$plane2" || { echo "::error title=$arm::Plane 2 traced 0 processes"; exit 1; }
     p=$([ "$plane2" = - ] && echo - || peak "$plane2")
     cpu=$(python3 -c "print(f'{$b1 - $b0:.0f}')")
     echo "$arm wall ${wall}s cpu ${cpu}s giant-peak $p" | tee -a "$OUT/builds.txt"

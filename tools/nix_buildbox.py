@@ -53,12 +53,28 @@ def bin_dir(dest: str, arch=None) -> str:
     return dest.rstrip("/") + pin(arch)["store_path"] + "/bin"
 
 
+#: What bst looks up -> the unwrapped binary: nix's `buildbox-run` wrapper
+#: prefixes its own bwrap onto PATH, shadowing the capture's bwrap shim.
+LINKS = {"buildbox-casd": "buildbox-casd", "buildbox-run": "buildbox-run-bubblewrap"}
+
+
+def link(dest: str, arch=None) -> str:
+    """`LINKS` in `<dest>/nix/bga-buildbox/bin`, for `PATH`. Returns it."""
+    out = dest.rstrip("/") + "/nix/bga-buildbox/bin"
+    os.makedirs(out, exist_ok=True)
+    for name, target in LINKS.items():
+        if os.path.lexists(os.path.join(out, name)):
+            os.unlink(os.path.join(out, name))
+        os.symlink(os.path.join(bin_dir(dest, arch), target), os.path.join(out, name))
+    return out
+
+
 def stage(dest: str, arch=None, cache_dir=None) -> str:
     """The pinned closure under `dest`; only `/` runs (absolute interp)."""
     nix_closure.stage_closure(
         dest, [pin(arch)["store_path"]],
         cache_dir or nix_closure.default_cache_dir())
-    return bin_dir(dest, arch)
+    return link(dest, arch)
 
 
 def main(argv=None) -> int:

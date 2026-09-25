@@ -60,41 +60,41 @@ builder count and a pool size, each with the reading it came from.
 
 ## Outcome
 
-Tracks A and B landed; C remains.
+Tracks A, B and C landed.
 
 Gap: `bga analyze` printed no builder count or pool size
-(`grep -c "Builders (ready-set"` is 0), and no token gated `bwrap`'s
-start (`grep -n ADMISSION_POOL tools/native_trace/bwrap_shim.py`
-matched nothing). Graviton, `13-mixed-graph`, 16 cores: 4 -> 32
-builders took the wall 143s -> 208s at equal host CPU (1160s, 1180s),
-the giant's `Running commands` to 198s.
+(`grep -c "Builders (ready-set"` is 0), no token gated `bwrap`'s start
+(`grep -n ADMISSION_POOL tools/native_trace/bwrap_shim.py` matched
+nothing), nothing created the admission pool, and `subtract_admission_
+wait` was not wired into `normalize_trace`. Graviton, `13-mixed-graph`,
+16 cores: 4 -> 32 builders took the wall 143s -> 208s at equal host CPU
+(1160s, 1180s), the giant's `Running commands` to 198s.
 
-Close, track A (`tests/fixtures/wide_and_narrow/run`, giant 8-wide,
-24 single-core siblings, host_cpu_count 16):
+Close, track A: as before (`tests/fixtures/wide_and_narrow/run`).
+Close, track B: as before (9 tests, `test_admission_*`).
 
-```text
-$ bga analyze tests/fixtures/wide_and_narrow/run
-Builders (ready-set width): 25, from the replay's ready-set width - right only with admission in place (UX-1005 tracks B/C)
-  Safe cap without admission: 8 builder(s) - the host's cores leave free once the critical path's own max-jobs=8 is subtracted
-Pool size: 16, from host_cpu_count (16) - no calibrated knee supplied via $BGA_CALIBRATED_CORES, so this is uncalibrated
-$ BGA_CALIBRATED_CORES=2 bga analyze tests/fixtures/wide_and_narrow/run
-Pool size: 2, from UX-1004's calibrated knee (2 effective core(s))
-```
-
-Close, track B:
+Close, track C:
 
 ```text
-$ python3 -m pytest tests/unit/test_admission_serializes_a_pool_of_one.py \
-    tests/unit/test_admission_wait_by_element_sums_the_ledger.py \
-    tests/unit/test_admission_wait_leaves_the_build_span.py -q
-9 passed in 1.01s
+$ python3 -m pytest tests/unit/test_the_admission_broker_ranks_by_slack.py \
+    tests/unit/test_admission_falls_back_when_the_broker_is_gone.py \
+    tests/unit/test_the_tracer_creates_the_admission_pool.py \
+    tests/unit/test_admission_wait_feeds_normalize.py \
+    tests/unit/test_cli_resolves_admission_wait_for_normalize.py \
+    tests/unit/test_analyze_leaves_admission_wait_out_of_the_build_span.py -q
+18 passed in 0.78s
 ```
 
-`run_admitted` reads one token before fork+exec of `bwrap` and
-releases it after `waitpid`, logging an `admission_wait` row; off
-`--jobserver`, `open_jobserver_fd()` is `(None, None)` and admission
-never engages. `subtract_admission_wait` moves the BUILD start later
-by the wait, finish fixed, clamped.
+`open_admission_pool` creates the pool under `--jobserver`, sized
+`min(host cores, this recipe pool's ceiling)`, reported as
+`jobserver_admission_pool: {pool_size, wait_total_us, ranked_grants}`.
+`AdmissionBroker` (`--plan` only) ranks waiting shims by slack, least
+first, ties/`None` by arrival - the shim (`_admitted_via_broker`) asks
+its own grant FIFO first, falling back to the raw pool FIFO after a
+5s timeout, so an absent broker cannot deadlock a build. `_resolve_
+admission_wait`/`analyzed()` (`bga/cli.py`) read the Plane 2 report's
+`jobserver_ledger` before `normalize()`, so `subtract_admission_wait`
+now runs inside `normalize_trace` on every real `bga analyze`.
 
 | mutation | reddened | count |
 |---|---|---|
@@ -102,10 +102,13 @@ by the wait, finish fixed, clamped.
 | A: pool from `host_cpu_count` | `TestPoolFromTheCalibratedKnee` | 3 |
 | B: drop the release | `test_a_pool_of_one_serializes_the_second_shim_behind_the_first` | 1 |
 | B: keep the wait in the span | `test_the_wait_leaves_the_build_span`, `..._clamps_rather_than_inverting` | 2 |
+| C: rank by arrival, not slack | `test_a_later_arrival_with_less_slack_is_admitted_first` | 1 |
+| C: broker-open failure admits | `test_no_fifo_for_the_element_falls_back_immediately` | 1 |
+| C: `min(cores, ceiling)` -> `ceiling` | `test_the_admission_status_file_reports_pool_size_and_wait` | 1 |
+| C: drop the `normalize()` pre-call | `test_a_recorded_admission_wait_shortens_the_reported_build_span` | 1 |
 
-Not re-measured: `11-serial-giant` max-jobs 3 (261s -> 112s) has no
-committed capture, and its critical path is one element deep, so the
-ready-set predictor has nothing to say there.
+Not re-measured: `11-serial-giant` (see track A/B); the Graviton reading
+above is the session's own, after this track.
 
 ### Deviation
 
@@ -113,6 +116,10 @@ ready-set predictor has nothing to say there.
   `--calibrated-cores` flag grew `bga analyze --help` past its 45-line
   guard. The recommendation prints in `--format text` only; the JSON
   schema and the page are `bga/report/json.py`'s.
-- B: nothing creates `BST_TRACE_ADMISSION_POOL` yet, and
-  `subtract_admission_wait` is not wired into `normalize_trace`; both
-  ride track C. One token per sandbox, not `n-1`.
+- B: one token per sandbox, not `n-1` (unchanged).
+- C: the admission pool is seeded to its *full* size, not `n-1` like the
+  recipe jobserver - no implicit slot to reserve one of for. `bga/cli.py`
+  reads the Plane 2 report twice (once for the admission wait, once in
+  `_attach_plane2_capacity`) rather than hoisting the whole attach
+  earlier - out of this track's own surface (`pool.py`). The broker-dir
+  fallback timeout is a fixed 5s, not configurable.

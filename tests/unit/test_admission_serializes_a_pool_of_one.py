@@ -19,7 +19,7 @@ import sys
 sys.path.insert(0, {srcdir!r})
 from tools.native_trace.bwrap_shim import run_admitted
 status = run_admitted(sys.argv[1], [sys.argv[1]], (None, None),
-                      sys.argv[2], (sys.argv[3], sys.argv[4]))
+                      (sys.argv[2], None), (sys.argv[3], sys.argv[4]))
 sys.exit(status)
 """
 

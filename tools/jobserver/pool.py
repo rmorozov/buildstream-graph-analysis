@@ -104,6 +104,29 @@ def open_jobserver(n: int, scratch: str, seed: Optional[int] = None) -> tuple[st
     return path, fd, tokens
 
 
+def open_admission_pool(size: int, scratch: str) -> tuple[str, int]:
+    """UX-1005 track C: the admission pool's own FIFO - `open_jobserver`'s
+    sibling, seeded to its *full* `size` rather than `n - 1`, since an
+    admission token carries no implicit per-sandbox slot to reserve one
+    of for (that reservation is the recipe jobserver's own concern, a
+    separate pool entirely). `close_jobserver` is its own pair - both
+    just a FIFO plus a host-side fd. Named `admission` under `scratch`
+    so the two pools can coexist without a path collision."""
+    path = os.path.join(scratch, "admission")
+    os.mkfifo(path)
+    fd = os.open(path, os.O_RDWR)
+    os.write(fd, b"+" * size)
+    readable = array.array("i", [0])
+    fcntl.ioctl(fd, termios.FIONREAD, readable, True)
+    if readable[0] != size:
+        os.close(fd)
+        os.remove(path)
+        raise RuntimeError(
+            f"admission pool FIFO {path} holds {readable[0]} readable "
+            f"bytes after seeding {size}")
+    return path, fd
+
+
 def close_jobserver(path: Optional[str], fd: Optional[int]) -> None:
     """UX-841: `open_jobserver`'s pair - close the fd, then remove the FIFO."""
     if fd is not None:
@@ -759,6 +782,135 @@ class Broker:
     def _run(self) -> None:
         while not self._stop.is_set():
             self.poll()
+            self._stop.wait(self.interval_s)
+
+    def start(self) -> None:
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread.start()
+
+    def stop(self) -> None:
+        self._stop.set()
+        if self._thread is not None:
+            self._thread.join(timeout=self.interval_s + 1.0)
+            if self._thread.is_alive():
+                self._thread.join(timeout=2.0)
+            self.stopped = not self._thread.is_alive()
+
+
+class AdmissionBroker:
+    """UX-1005 track C, the Decision's own mechanism: ranks the shims
+    *waiting to start* by slack, least first, rather than letting the
+    kernel wake admission-pool FIFO readers in no order at all. `Broker`'s
+    sibling - same slack/median/tie-by-arrival shape - but over waiting
+    requests instead of running elements' token draw.
+
+    A waiting shim (`bwrap_shim._admitted_via_broker`) appends its own
+    `{element, pid, t}` row to `requests_path` and blocks on its own
+    per-element FIFO (`proxy_fds`, `create_jobserver_proxies`'s same
+    shape); `tick()` reads whatever is new there, ranks every request
+    still pending by `(slack_for(element), t)` - `t` is arrival order,
+    the fallback for an element `plan` never named - and grants one
+    admission-pool token per ranked request until the pool (drained from
+    `global_fd`) runs out, returning the rest to it unspent. A request
+    naming an element with no FIFO (no `--plan`, or a kind table miss)
+    is left pending forever here - harmless, because the shim itself
+    times out and falls back to the raw global FIFO on its own.
+    """
+
+    def __init__(self, global_fd: int, proxy_fds: dict, plan: dict,
+                 requests_path: str, ledger_path: Optional[str] = None):
+        self.global_fd = global_fd
+        self.proxy_fds = dict(proxy_fds)
+        self.plan = dict(plan)
+        self.median_slack = statistics.median(self.plan.values()) if self.plan else 0
+        self.requests_path = requests_path
+        self.ledger_path = ledger_path
+        self._requests_read = 0
+        self._pending: list[dict] = []
+        self.grants = 0
+        self.interval_s = JOBSERVER_BROKER_INTERVAL_S
+        self._stop = threading.Event()
+        self._thread = None
+        self.stopped = True
+        os.set_blocking(global_fd, False)
+
+    def slack_for(self, element: str):
+        return self.plan.get(element, self.median_slack)
+
+    def _log(self, row: dict) -> None:
+        if self.ledger_path:
+            with open(self.ledger_path, "a", encoding="utf-8") as handle:
+                handle.write(json.dumps(row, separators=(",", ":")) + "\n")
+
+    def _scan_requests(self) -> None:
+        try:
+            with open(self.requests_path, encoding="utf-8") as handle:
+                lines = handle.readlines()
+        except OSError:
+            return
+        for line in lines[self._requests_read:]:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                row = json.loads(line)
+            except ValueError:
+                continue
+            element, pid = row.get("element"), row.get("pid")
+            if element is None or pid is None:
+                continue
+            self._pending.append({"element": element, "pid": pid,
+                                  "t": row.get("t", 0.0)})
+        self._requests_read = len(lines)
+
+    def _drain_global(self) -> int:
+        moved = 0
+        while True:
+            try:
+                if not os.read(self.global_fd, 1):
+                    break
+            except BlockingIOError:
+                break
+            moved += 1
+        return moved
+
+    def tick(self) -> None:
+        """One control step: rank everything still pending by slack (ties,
+        and anything `plan` never named, by arrival - `t`), then hand out
+        whatever the global pool has to the front of that order. The
+        mutation this guards against is exactly "sort by arrival" alone -
+        a later, least-slack arrival would then never overtake an
+        earlier, high-slack one."""
+        self._scan_requests()
+        if not self._pending:
+            return
+        remaining = self._drain_global()
+        if remaining <= 0:
+            return
+        order = sorted(self._pending,
+                       key=lambda request: (self.slack_for(request["element"]),
+                                            request["t"]))
+        granted = []
+        for request in order:
+            if remaining <= 0:
+                break
+            fd = self.proxy_fds.get(request["element"])
+            if fd is None:
+                continue
+            os.write(fd, b"+")
+            remaining -= 1
+            self.grants += 1
+            granted.append(request)
+            self._log({"event": "admission_grant", "element": request["element"],
+                       "pid": request["pid"], "t": time.time()})
+        for request in granted:
+            self._pending.remove(request)
+        if remaining > 0:
+            os.write(self.global_fd, b"+" * remaining)
+
+    def _run(self) -> None:
+        while not self._stop.is_set():
+            self.tick()
             self._stop.wait(self.interval_s)
 
     def start(self) -> None:

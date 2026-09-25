@@ -1378,6 +1378,62 @@ def run_and_mark_done(real_bwrap: str, argv: list[str], done_path: str) -> int:
 #: "no admission pool" - the same as `--jobserver off` today.
 ADMISSION_POOL_ENV = "BST_TRACE_ADMISSION_POOL"
 
+#: UX-1005 track C: the directory an `AdmissionBroker` writes this
+#: element's own grant FIFO into (`create_jobserver_proxies`'s shape) and
+#: reads `requests.jsonl` from - unset (no `--plan`, or the tracer's own
+#: kind-table miss) means "no broker to rank through", the raw FIFO in
+#: `ADMISSION_POOL_ENV` alone, same as before this landed.
+ADMISSION_BROKER_DIR_ENV = "BST_TRACE_ADMISSION_BROKER_DIR"
+
+#: How long a waiting shim gives a ranked grant before it gives up and
+#: falls back to the raw global FIFO - generous next to `AdmissionBroker`'s
+#: own 100ms tick (`JOBSERVER_BROKER_INTERVAL_S`), so a live broker never
+#: trips it, and short enough that a dead one costs a bounded delay
+#: rather than a hang.
+_ADMISSION_BROKER_TIMEOUT_S = 5.0
+
+
+def _admitted_via_broker(broker_dir: Optional[str], element: Optional[str],
+                         pid: int, timeout_s: float = _ADMISSION_BROKER_TIMEOUT_S) -> bool:
+    """UX-1005 track C: ask the `AdmissionBroker` for a ranked grant
+    through this element's own FIFO, rather than reading the raw global
+    pool directly - `False` (never blocking past `timeout_s`) when there
+    is no broker directory, no element, no FIFO for this element (no
+    `--plan`, or a kind-table miss), or nothing granted in time, so
+    `run_admitted`'s own fallback (a blocking read on the global FIFO)
+    is the only way admission can ever wait forever."""
+    if not broker_dir or not element:
+        return False
+    proxy_path = os.path.join(broker_dir, f"{element}.fifo")
+    try:
+        fd = os.open(proxy_path, os.O_RDONLY | os.O_NONBLOCK)
+    except OSError:
+        return False
+    try:
+        requests_path = os.path.join(broker_dir, "requests.jsonl")
+        with contextlib.suppress(OSError), \
+                open(requests_path, "a", encoding="utf-8") as handle:
+            handle.write(json.dumps(
+                {"element": element, "pid": pid, "t": time.time()}) + "\n")
+        deadline = time.time() + timeout_s
+        while True:
+            remaining = deadline - time.time()
+            if remaining <= 0:
+                return False
+            try:
+                readable, _, _ = select.select([fd], [], [], remaining)
+            except OSError:
+                return False
+            if not readable:
+                return False
+            try:
+                if os.read(fd, 1):
+                    return True
+            except OSError:
+                return False
+    finally:
+        os.close(fd)
+
 
 def _record_admission_wait(ledger_path: Optional[str], element: Optional[str],
                            wait_us: int) -> None:
@@ -1399,25 +1455,35 @@ def _record_admission_wait(ledger_path: Optional[str], element: Optional[str],
 
 def run_admitted(real_bwrap: str, argv: list[str],
                  exec_args: tuple[Optional[str], Optional[str]],
-                 pool_path: str, ledger: tuple[Optional[str], Optional[str]]) -> int:
-    """UX-1005 track B: a real token, read from `pool_path`, gates this
-    sandbox before it starts - so the pool's own size, not `--builders`,
-    bounds how many `bwrap`s run at once. Acquired here, before `fork`;
-    released only after `waitpid` returns, so the token counts this
+                 pool: tuple[str, Optional[str]],
+                 ledger: tuple[Optional[str], Optional[str]]) -> int:
+    """UX-1005 track B/C: a real token gates this sandbox before it
+    starts - so the pool's own size, not `--builders`, bounds how many
+    `bwrap`s run at once. `pool` is `(pool_path, broker_dir)`: a
+    `broker_dir` (track C) tries a ranked grant through
+    `_admitted_via_broker` first, falling back to a blocking read on the
+    raw global FIFO (`pool_path`) on any timeout or absence - `None` (no
+    `--plan`) skips straight to that same blocking read, track B's own
+    behaviour, unchanged. `pool_path` is opened either way, since the
+    eventual release always returns the token to the *global* pool,
+    never to the per-element grant FIFO a ranked admission came through.
+    Released only after `waitpid` returns, so the token counts this
     sandbox's whole lifetime, not just its own exec. The fork/`waitpid`
     shape is `run_and_mark_done`'s (`:1353-1372`) one level up: the
     child runs `_exec_or_run` unchanged (teed/proxy/plain, `exec_args`
     its `(stderr_path, proxy_done_path)`), so admission adds one process
     layer rather than a second dispatch to keep in step with it. No
-    second token: the one read here is this sandbox's own implicit
+    second token: the one acquired here is this sandbox's own implicit
     slot, so nothing here ever asks for another (no deadlock). `ledger`
     is `(ledger_path, element)`, for the one `admission_wait` row."""
     stderr_path, proxy_done_path = exec_args
+    pool_path, broker_dir = pool
     ledger_path, element = ledger
     fd = os.open(pool_path, os.O_RDWR)
     wait_start = time.time()
     try:
-        os.read(fd, 1)
+        if not _admitted_via_broker(broker_dir, element, os.getpid()):
+            os.read(fd, 1)
     except OSError:
         os.close(fd)
         raise
@@ -1445,13 +1511,16 @@ def _dispatch(real_bwrap: str, argv: list[str],
     unchanged from today) - `_exec_or_run` otherwise, byte for byte.
     `admission_ctx` is `(bind_src, element)` - the ledger lives beside
     the trace bind, no bind of its own, the same place
-    `BST_TRACE_JOBSERVER_LEDGER` names inside it."""
+    `BST_TRACE_JOBSERVER_LEDGER` names inside it. `ADMISSION_BROKER_DIR_ENV`
+    (track C) rides beside `ADMISSION_POOL_ENV`, unset unless `--plan`
+    gave the tracer a broker to point it at."""
     stderr_path, proxy_done_path = exec_args
     admission_pool = os.environ.get(ADMISSION_POOL_ENV)
     if admission_pool and jobserver_active:
         bind_src, element = admission_ctx
         ledger_path = os.path.join(bind_src, "jobserver_ledger.jsonl")
-        return run_admitted(real_bwrap, argv, exec_args, admission_pool,
+        return run_admitted(real_bwrap, argv, exec_args,
+                            (admission_pool, os.environ.get(ADMISSION_BROKER_DIR_ENV)),
                             (ledger_path, element))
     return _exec_or_run(real_bwrap, argv, stderr_path, proxy_done_path)
 

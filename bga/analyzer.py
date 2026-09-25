@@ -506,25 +506,32 @@ class BuildEfficiencyAnalyzer:
         self.graph = graph
         self.trace = trace
     
-    def normalize(self) -> None:
+    def normalize(self, admission_wait_by_element: Optional[dict] = None) -> None:
         """
         Normalize the trace data.
-        
+
         Performs:
         - Timestamp quantization to epsilon grid (Part 3.2)
         - Ready time computation (Part 7)
         - Ordering validation (Part 3.3)
         - Start time clamping (Part 3.4)
+
+        `admission_wait_by_element` (UX-1005 track C): `{element:
+        wait_us}` read from a Plane 2 capture's admission ledger, so it
+        can leave the BUILD span before quantization rather than never
+        reach it; `None` when no capture named one, unchanged from
+        before this landed.
         """
         if self.trace is None or self.graph is None:
             raise ValueError("Must load data before normalizing")
-        
+
         epsilon_us = self.run_context.trace_epsilon_us if self.run_context else 50000
-        
+
         self.normalized_tasks, self.violations = normalize_trace(
             self.trace,
             self.graph,
             epsilon_us,
+            admission_wait_by_element=admission_wait_by_element,
         )
 
         # UX-54: a build that failed is still a build `bga` will happily

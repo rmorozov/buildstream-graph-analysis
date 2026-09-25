@@ -96,15 +96,19 @@ from .bst_show_to_graph import FIELD_SEP, RECORD_SEP, _parse_yaml_mapping
 from .jobserver import (
     JOBSERVER_POOL_INTERVAL_S,
     JOBSERVER_SERIES_CAP,
+    AdmissionBroker,
     Broker,
     PoolController,
+    admission_wait_by_element,
     bind_cpu_sampler,
     bind_pid_to_element_reader,
     close_jobserver,
     create_jobserver_proxies,
     jobserver_auth_style,
+    open_admission_pool,
     open_jobserver,
     read_jobserver_decisions,
+    read_jobserver_ledger,
     read_plan_peak_rss,
     read_plan_slack,
     report_block,
@@ -1975,7 +1979,8 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                      kinds_read_diagnostic: Optional[dict] = None,
                      element_auth_map: Optional[dict] = None,
                      plan_path: Optional[str] = None,
-                     broker_status_path: Optional[str] = None) -> int:
+                     broker_status_path: Optional[str] = None,
+                     admission_status_path: Optional[str] = None) -> int:
     """Run cmd (a real `bst` invocation) with the bwrap shim + LD_PRELOAD
     hook active, writing raw START/END lines to raw_log_path. Returns
     cmd's own real exit code - a trace is captured best-effort and must
@@ -2192,6 +2197,14 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
         pool_controller = None
         broker = None
         proxy_fds: dict = {}
+        # UX-1005 track C: the admission pool - separate from the recipe
+        # jobserver above, and from its own proxy fan-out - and the
+        # broker that ranks waiting shims through it.
+        admission_pool_path = None
+        admission_pool_fd = None
+        admission_broker = None
+        admission_proxy_fds: dict = {}
+        admission_pool_size = None
         captured_jobserver_ledger = os.path.join(bind_dir, "jobserver_ledger.jsonl")
         # UX-842: one JSON line per sandbox - `{element, max_jobs,
         # decision}` - written by the shim beside the FIFO, so it shares
@@ -2202,6 +2215,16 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                 jobserver, bind_dir, seed=jobserver_seed)
             env["BST_TRACE_JOBSERVER"] = jobserver_fifo
             env["BST_TRACE_JOBSERVER_AUTH"] = jobserver_auth or "fd"
+            # UX-1005 track C: the admission pool - min(host cores, this
+            # recipe pool's own ceiling), so admission never exceeds
+            # either what the machine has or what the recipe pool would
+            # allow anyway. Always created under `--jobserver`, since
+            # admission in the shim (not `--builders`) is what bounds
+            # concurrent sandboxes now (UX-1005's Decision).
+            admission_pool_size = min(os.cpu_count() or jobserver, jobserver)
+            admission_pool_path, admission_pool_fd = open_admission_pool(
+                admission_pool_size, bind_dir)
+            env["BST_TRACE_ADMISSION_POOL"] = admission_pool_path
             # UX-879: `bga`'s own `--jobserver-auth-override` already
             # resolved to this one var in `bga/cli.py`'s process env - no
             # decision here, just carried into the sandbox the same way
@@ -2309,8 +2332,25 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                             # gets a copy after the build (`copy_out`).
                             "raw_log_path": os.path.join(bind_dir, "trace.log")})
                 broker.start()
+                # UX-1005 track C: an `AdmissionBroker` too, ranking the
+                # shims *waiting to start* by the same slack plan -
+                # gated on `--plan` exactly like `Broker` above, since
+                # ranking needs the same slack numbers. No `--plan`
+                # leaves `BST_TRACE_ADMISSION_BROKER_DIR` unset, and the
+                # shim's own fallback (the raw admission FIFO, track B)
+                # is unchanged.
+                admission_proxies_dir = os.path.join(bind_dir, "admission_proxies")
+                admission_proxy_fds = create_jobserver_proxies(
+                    admission_proxies_dir, element_kinds)
+                env["BST_TRACE_ADMISSION_BROKER_DIR"] = admission_proxies_dir
+                admission_broker = AdmissionBroker(
+                    admission_pool_fd, admission_proxy_fds, read_plan_slack(plan_path),
+                    os.path.join(admission_proxies_dir, "requests.jsonl"),
+                    ledger_path=captured_jobserver_ledger)
+                admission_broker.start()
             else:
                 env.pop("BST_TRACE_PROXY_DIR", None)
+                env.pop("BST_TRACE_ADMISSION_BROKER_DIR", None)
         else:
             env.pop("BST_TRACE_JOBSERVER", None)
             env.pop("BST_TRACE_JOBSERVER_AUTH", None)
@@ -2324,6 +2364,8 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
             env.pop("BST_TRACE_LTO_CAP", None)
             env.pop("BST_TRACE_WRAPPER_DIR_OVERRIDE", None)
             env.pop("BST_TRACE_WRAPPER_MODE", None)
+            env.pop("BST_TRACE_ADMISSION_POOL", None)
+            env.pop("BST_TRACE_ADMISSION_BROKER_DIR", None)
             env.pop("BST_TRACE_PROXY_DIR", None)
 
         def copy_out():
@@ -2431,7 +2473,27 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                             "leaks": broker.leaks,
                             "tokens_refilled": broker.tokens_refilled,
                         }, handle)
+            # UX-1005 track C: stopped for the same reason `broker` is -
+            # before `copy_out`/`close_jobserver` reach what it still
+            # holds open. `admission_status_path` carries the pool's own
+            # size and the ranked-grant count out, the same shape
+            # `broker_status_path` already uses.
+            if admission_broker is not None:
+                admission_broker.stop()
+            if admission_status_path is not None and admission_pool_size is not None:
+                wait_total_us = sum(admission_wait_by_element(
+                    read_jobserver_ledger(captured_jobserver_ledger)).values())
+                with open(admission_status_path, "w", encoding="utf-8") as handle:
+                    json.dump({
+                        "pool_size": admission_pool_size,
+                        "wait_total_us": wait_total_us,
+                        "ranked_grants": (admission_broker.grants
+                                         if admission_broker is not None else 0),
+                    }, handle)
             for fd in proxy_fds.values():
+                with contextlib.suppress(OSError):
+                    os.close(fd)
+            for fd in admission_proxy_fds.values():
                 with contextlib.suppress(OSError):
                     os.close(fd)
             copy_out()
@@ -2442,6 +2504,7 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                     read_jobserver_decisions(captured_decisions), jobserver_fifo):
                 print(line, file=sys.stderr)
             close_jobserver(jobserver_fifo, jobserver_fd)
+            close_jobserver(admission_pool_path, admission_pool_fd)
         return returncode
 
 
@@ -8312,6 +8375,12 @@ def main(argv: Optional[list[str]] = None) -> int:
         # for `PoolController.stopped`.
         broker_status_path = (f"{args.output}.jobserver_broker_status.json"
                               if (args.jobserver and args.plan) else None)
+        # UX-1005 track C: the admission pool's own size and wait total,
+        # read back the same way - always under `--jobserver`, since the
+        # pool itself is created regardless of `--plan` (only the ranked
+        # broker needs one).
+        admission_status_path = (f"{args.output}.admission_status.json"
+                                 if args.jobserver else None)
         # UX-844: the key set before the build starts, so a later capture
         # (with or without the mode) is comparable against it. Never an
         # abort - a project `bst show` cannot resolve is still traced.
@@ -8357,7 +8426,8 @@ def main(argv: Optional[list[str]] = None) -> int:
                                           kinds_read_diagnostic=kinds_read_diagnostic,
                                           element_auth_map=element_auth_map,
                                           plan_path=args.plan,
-                                          broker_status_path=broker_status_path)
+                                          broker_status_path=broker_status_path,
+                                          admission_status_path=admission_status_path)
         except CaptureInterrupted:
             # UX-157: everything below this point is salvage, and it is
             # the same salvage a failed build already got. The trace was
@@ -8439,6 +8509,7 @@ def main(argv: Optional[list[str]] = None) -> int:
                 "jobserver_status_path": jobserver_status_path,
                 "plan_path": args.plan,
                 "broker_status_path": broker_status_path,
+                "admission_status_path": admission_status_path,
                 "element_kinds_present": element_kinds is not None,
                 "jobserver_decisions_path": jobserver_decisions_path,
                 # UX-846: the pass-through table, probed once - `None`

@@ -15,6 +15,7 @@ tracer imports these names directly, by name.
 from . import pool as _pool
 from .ledger import (
     JOBSERVER_SERIES_CAP,
+    admission_wait_by_element,
     jobserver_auth_style,
     read_jobserver_decisions,
     read_jobserver_ledger,
@@ -26,10 +27,12 @@ from .ledger import (
 )
 from .pool import (
     JOBSERVER_POOL_INTERVAL_S,
+    AdmissionBroker,
     Broker,
     PoolController,
     close_jobserver,
     create_jobserver_proxies,
+    open_admission_pool,
     open_jobserver,
     read_mem_available_bytes,
     read_plan_peak_rss,
@@ -52,15 +55,18 @@ def bind_pid_to_element_reader(reader) -> None:
 
 
 __all__ = [
+    "AdmissionBroker",
     "Broker",
     "JOBSERVER_POOL_INTERVAL_S",
     "JOBSERVER_SERIES_CAP",
     "PoolController",
+    "admission_wait_by_element",
     "bind_cpu_sampler",
     "bind_pid_to_element_reader",
     "close_jobserver",
     "create_jobserver_proxies",
     "jobserver_auth_style",
+    "open_admission_pool",
     "open_jobserver",
     "read_jobserver_decisions",
     "read_jobserver_ledger",

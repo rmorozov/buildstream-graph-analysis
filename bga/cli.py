@@ -626,6 +626,34 @@ def _attach_remote_execution_whatif(analyzer, result) -> None:
     result.remote_execution_whatif = whatif
 
 
+def _resolve_admission_wait(args: argparse.Namespace) -> dict:
+    """UX-1005 track C: `{element: wait_us}` off the same Plane 2 report
+    `_attach_plane2_capacity` reads, resolved here because it has to
+    reach `normalize()` before that call runs. A second read of the
+    report rather than a shared one - hoisting the whole Plane 2 attach
+    ahead of `analyze()` is outside this track's own surface (`pool.py`,
+    Decomposition) - `{}` for a run with no report, no `--plane2`, or a
+    malformed one, matching `_attach_plane2_capacity`'s own tolerance.
+    """
+    if getattr(args, 'no_plane2', False):
+        return {}
+    path = getattr(args, 'plane2', None)
+    if not path:
+        directory = getattr(args, 'directory', None)
+        if not directory:
+            return {}
+        path, _refusal = plane2_shape.attachable(str(directory))
+    if not path:
+        return {}
+    try:
+        with open(path, encoding='utf-8') as handle:
+            native_report = json.load(handle)
+    except (OSError, json.JSONDecodeError):
+        return {}
+    from .normalize.timestamps import admission_wait_by_element_from_ledger
+    return admission_wait_by_element_from_ledger(native_report.get('jobserver_ledger') or [])
+
+
 def analyzed(args: argparse.Namespace, section: Optional[str] = None):
     """The analysis pipeline, once, without rendering it.
 
@@ -640,7 +668,16 @@ def analyzed(args: argparse.Namespace, section: Optional[str] = None):
     # UX-47: tell the pipeline which section is going to be rendered so
     # it can skip stages this section does not consume. `analyze` passes
     # None and is unaffected.
-    result = analyzer.analyze(run_dir, section=section)
+    admission_wait = _resolve_admission_wait(args)
+    if admission_wait:
+        # UX-1005 track C: normalize before `analyze()` so the wait
+        # leaves the BUILD span; `analyze()`'s own guards then skip
+        # re-loading and re-normalizing what is already in hand.
+        analyzer.load(run_dir)
+        analyzer.normalize(admission_wait_by_element=admission_wait)
+        result = analyzer.analyze(section=section)
+    else:
+        result = analyzer.analyze(run_dir, section=section)
     _attach_plane2_capacity(args, analyzer, result)
     _attach_resource_blast(run_dir, analyzer, result)
     # UX-680: after Plane 2 is attached, so the compiler-offload half

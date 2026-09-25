@@ -41,5 +41,5 @@ def test_no_jobserver_reads_nothing(tmp_path, monkeypatch):
     result = read_jobserver_metadata_for_build(
         str(tmp_path), [script, "build", "t.bst"], jobserver=None)
 
-    assert result == (None, None, None, {})
+    assert result == (None, None, None, {}, {}, {})
     assert not argv_file.exists()

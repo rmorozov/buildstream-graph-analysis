@@ -104,29 +104,6 @@ def open_jobserver(n: int, scratch: str, seed: Optional[int] = None) -> tuple[st
     return path, fd, tokens
 
 
-def open_admission_pool(size: int, scratch: str) -> tuple[str, int]:
-    """UX-1005 track C: the admission pool's own FIFO - `open_jobserver`'s
-    sibling, seeded to its *full* `size` rather than `n - 1`, since an
-    admission token carries no implicit per-sandbox slot to reserve one
-    of for (that reservation is the recipe jobserver's own concern, a
-    separate pool entirely). `close_jobserver` is its own pair - both
-    just a FIFO plus a host-side fd. Named `admission` under `scratch`
-    so the two pools can coexist without a path collision."""
-    path = os.path.join(scratch, "admission")
-    os.mkfifo(path)
-    fd = os.open(path, os.O_RDWR)
-    os.write(fd, b"+" * size)
-    readable = array.array("i", [0])
-    fcntl.ioctl(fd, termios.FIONREAD, readable, True)
-    if readable[0] != size:
-        os.close(fd)
-        os.remove(path)
-        raise RuntimeError(
-            f"admission pool FIFO {path} holds {readable[0]} readable "
-            f"bytes after seeding {size}")
-    return path, fd
-
-
 def close_jobserver(path: Optional[str], fd: Optional[int]) -> None:
     """UX-841: `open_jobserver`'s pair - close the fd, then remove the FIFO."""
     if fd is not None:

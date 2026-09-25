@@ -207,13 +207,18 @@ class TestTheDefaultPathStillExecs:
 
         UX-849 split this dispatch out of `main` into `_exec_or_run` (to
         keep `main`'s own branching under the baseline's complexity cap)
-        - `main` still calls it, and the tee/exec contract this guards
-        now lives in that one function's source instead."""
+        - `main` still reaches it, and the tee/exec contract this guards
+        now lives in that one function's source instead. UX-1005 track B
+        added one more hop, `_dispatch` (admission's own gate, same
+        reason), between them - `main` calls `_dispatch`, which calls
+        `_exec_or_run` on every path that is not admitted."""
         import inspect
 
         from tools.native_trace import bwrap_shim
         main_source = inspect.getsource(bwrap_shim.main)
-        assert "_exec_or_run(" in main_source, "main must still reach the dispatch"
+        assert "_dispatch(" in main_source, "main must still reach the dispatch"
+        dispatch_source = inspect.getsource(bwrap_shim._dispatch)
+        assert "_exec_or_run(" in dispatch_source, "the dispatch must still reach it"
         source = inspect.getsource(bwrap_shim._exec_or_run)
         tee_line = [ln for ln in source.splitlines() if "run_teed" in ln]
         assert tee_line, "the tee must be reachable"

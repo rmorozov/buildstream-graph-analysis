@@ -58,57 +58,61 @@ Remote execution with separate executor hosts.
 `bga analyze` on `11-serial-giant` and on the fdsdk pair prints a
 builder count and a pool size, each with the reading it came from.
 
-## Outcome (track A only - B and C remain)
+## Outcome
 
-Gap measured: `bga analyze` printed no builder count or pool size at
-all - `grep -c "Builders (ready-set"` against any prior report is 0.
-`compute_capacity_recommendation` (`UX-116`) answers a different
-question (the CPU/memory-bound `--builders`, from the sweep's own
-scheduling knee), not the ready-set width or `UX-1004`'s host knee.
+Tracks A and B landed; C remains.
 
-Close, on a synthetic `13-mixed-graph`-shaped fixture (giant.bst 8-wide,
-24 single-core siblings, `tests/fixtures/wide_and_narrow/run`,
-host_cpu_count 16):
+Gap: `bga analyze` printed no builder count or pool size
+(`grep -c "Builders (ready-set"` is 0), and no token gated `bwrap`'s
+start (`grep -n ADMISSION_POOL tools/native_trace/bwrap_shim.py`
+matched nothing). Graviton, `13-mixed-graph`, 16 cores: 4 -> 32
+builders took the wall 143s -> 208s at equal host CPU (1160s, 1180s),
+the giant's `Running commands` to 198s.
+
+Close, track A (`tests/fixtures/wide_and_narrow/run`, giant 8-wide,
+24 single-core siblings, host_cpu_count 16):
 
 ```text
 $ bga analyze tests/fixtures/wide_and_narrow/run
-Critical Path Length: 1 elements
-  Path: giant.bst
-
 Builders (ready-set width): 25, from the replay's ready-set width - right only with admission in place (UX-1005 tracks B/C)
   Safe cap without admission: 8 builder(s) - the host's cores leave free once the critical path's own max-jobs=8 is subtracted
 Pool size: 16, from host_cpu_count (16) - no calibrated knee supplied via $BGA_CALIBRATED_CORES, so this is uncalibrated
-
 $ BGA_CALIBRATED_CORES=2 bga analyze tests/fixtures/wide_and_narrow/run
 Pool size: 2, from UX-1004's calibrated knee (2 effective core(s))
 ```
 
-Builders: `compute_ready_set_width` replays with `PROCESS` capacity set
-to the task count (nothing queues), then counts peak concurrency - a
-delta-per-instant sum, `finish_us` exclusive. Pool: `UX-1004`'s knee has
-no per-capture field (a schema decision this bounded track does not
-take - see Deviation), so it travels as `$BGA_CALIBRATED_CORES`,
-falling back to `host_cpu_count` labelled uncalibrated.
+Close, track B:
 
-Predictor check, `examples/11-serial-giant`: no fixture capture exists
-for it (`grep -rl giant tests/fixtures` returns none; `graviton_arms.sh`
-runs real hardware, per `test_the_real_core_reading_cites_a_reproducible_run.py`'s
-own docstring), so the given reading (max-jobs 3 on 16 cores, 261s vs
-auto 112s, -57%) could not be re-run here. Structurally it is orthogonal
-to this track: `11-serial-giant`'s critical path is one element deep
-(`giant.bst` alone, three small leaves waiting on it), so this
-predictor's ready-set width there is small and the reading is about
-native `max-jobs` (a UX-677 question), not builders/pool sizing.
+```text
+$ python3 -m pytest tests/unit/test_admission_serializes_a_pool_of_one.py \
+    tests/unit/test_admission_wait_by_element_sums_the_ledger.py \
+    tests/unit/test_admission_wait_leaves_the_build_span.py -q
+9 passed in 1.01s
+```
+
+`run_admitted` reads one token before fork+exec of `bwrap` and
+releases it after `waitpid`, logging an `admission_wait` row; off
+`--jobserver`, `open_jobserver_fd()` is `(None, None)` and admission
+never engages. `subtract_admission_wait` moves the BUILD start later
+by the wait, finish fixed, clamped.
 
 | mutation | reddened | count |
 |---|---|---|
-| builders from `max_jobs` | `TestReadySetWidth` (3 of 3 cases) | 3 |
-| pool from `host_cpu_count` | `TestPoolFromTheCalibratedKnee` (3 of 3 cases) | 3 |
+| A: builders from `max_jobs` | `TestReadySetWidth` | 3 |
+| A: pool from `host_cpu_count` | `TestPoolFromTheCalibratedKnee` | 3 |
+| B: drop the release | `test_a_pool_of_one_serializes_the_second_shim_behind_the_first` | 1 |
+| B: keep the wait in the span | `test_the_wait_leaves_the_build_span`, `..._clamps_rather_than_inverting` | 2 |
 
-### Deviation (track A)
+Not re-measured: `11-serial-giant` max-jobs 3 (261s -> 112s) has no
+committed capture, and its critical path is one element deep, so the
+ready-set predictor has nothing to say there.
 
-UX-1004's knee travels as `$BGA_CALIBRATED_CORES`, not a run-context
-field: a `--calibrated-cores` flag grew `bga analyze --help` past its
-45-line guard. The recommendation prints in `--format text` only;
-`analyze/v9`'s JSON schema and the page are `bga/report/json.py`'s,
-left for a later track.
+### Deviation
+
+- A: UX-1004's knee travels as `$BGA_CALIBRATED_CORES`; a
+  `--calibrated-cores` flag grew `bga analyze --help` past its 45-line
+  guard. The recommendation prints in `--format text` only; the JSON
+  schema and the page are `bga/report/json.py`'s.
+- B: nothing creates `BST_TRACE_ADMISSION_POOL` yet, and
+  `subtract_admission_wait` is not wired into `normalize_trace`; both
+  ride track C. One token per sandbox, not `n-1`.

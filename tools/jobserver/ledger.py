@@ -73,6 +73,25 @@ def tokens_by_element(ledger_rows: list, pid_to_element: dict) -> tuple:
     return per_element, unmapped
 
 
+def admission_wait_by_element(ledger_rows: list) -> dict:
+    """UX-1005 track B: `{element: wait_us}`, summed across every
+    `admission_wait` row - the shim's own record of time blocked on a
+    real token before `bwrap` started (`bwrap_shim.run_admitted`). Keyed
+    by `element` directly - unlike `tokens_by_element`'s wrapper rows,
+    the shim always knows which element it is admitting, so no pid map
+    is needed. A malformed row is skipped, the same posture every other
+    ledger reader here takes."""
+    totals: dict = {}
+    for row in ledger_rows or []:
+        if not isinstance(row, dict) or row.get("event") != "admission_wait":
+            continue
+        element, wait_us = row.get("element"), row.get("wait_us")
+        if element is None or wait_us is None:
+            continue
+        totals[element] = totals.get(element, 0) + int(wait_us)
+    return totals
+
+
 def _width_series(events: list, end_us: Optional[int] = None) -> tuple:
     """`UX-892`: one element's held-token width over time, and how many
     intervals never closed.

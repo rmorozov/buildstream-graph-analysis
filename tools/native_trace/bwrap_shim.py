@@ -1372,6 +1372,90 @@ def run_and_mark_done(real_bwrap: str, argv: list[str], done_path: str) -> int:
     return exit_like(status)
 
 
+#: UX-1005 track B: the admission pool's own FIFO path, host-side and
+#: never bound into the sandbox - distinct from `BST_TRACE_JOBSERVER`
+#: (the recipe's own `-jN` tokens), which stays untouched. Unset means
+#: "no admission pool" - the same as `--jobserver off` today.
+ADMISSION_POOL_ENV = "BST_TRACE_ADMISSION_POOL"
+
+
+def _record_admission_wait(ledger_path: Optional[str], element: Optional[str],
+                           wait_us: int) -> None:
+    """One `admission_wait` row per sandbox - keyed by `element` directly
+    (the shim always knows its own), unlike a wrapper's `acquire`/
+    `release` rows which need a pid map. `ledger.py`'s
+    `admission_wait_by_element` is the reader; a write failure never
+    fails the build, the same posture every other ledger append takes."""
+    if not ledger_path:
+        return
+    row = {"event": "admission_wait", "element": element,
+          "pid": os.getpid(), "wait_us": wait_us, "t": time.time()}
+    try:
+        with open(ledger_path, "a", encoding="utf-8") as handle:
+            handle.write(json.dumps(row) + "\n")
+    except OSError:
+        pass
+
+
+def run_admitted(real_bwrap: str, argv: list[str],
+                 exec_args: tuple[Optional[str], Optional[str]],
+                 pool_path: str, ledger: tuple[Optional[str], Optional[str]]) -> int:
+    """UX-1005 track B: a real token, read from `pool_path`, gates this
+    sandbox before it starts - so the pool's own size, not `--builders`,
+    bounds how many `bwrap`s run at once. Acquired here, before `fork`;
+    released only after `waitpid` returns, so the token counts this
+    sandbox's whole lifetime, not just its own exec. The fork/`waitpid`
+    shape is `run_and_mark_done`'s (`:1353-1372`) one level up: the
+    child runs `_exec_or_run` unchanged (teed/proxy/plain, `exec_args`
+    its `(stderr_path, proxy_done_path)`), so admission adds one process
+    layer rather than a second dispatch to keep in step with it. No
+    second token: the one read here is this sandbox's own implicit
+    slot, so nothing here ever asks for another (no deadlock). `ledger`
+    is `(ledger_path, element)`, for the one `admission_wait` row."""
+    stderr_path, proxy_done_path = exec_args
+    ledger_path, element = ledger
+    fd = os.open(pool_path, os.O_RDWR)
+    wait_start = time.time()
+    try:
+        os.read(fd, 1)
+    except OSError:
+        os.close(fd)
+        raise
+    wait_us = int((time.time() - wait_start) * 1_000_000)
+    pid = os.fork()
+    if pid == 0:  # pragma: no cover - the child never returns
+        os.close(fd)
+        os._exit(_exec_or_run(real_bwrap, argv, stderr_path, proxy_done_path))
+    _, status = os.waitpid(pid, 0)
+    with contextlib.suppress(OSError):
+        os.write(fd, b"+")
+    os.close(fd)
+    _record_admission_wait(ledger_path, element, wait_us)
+    return exit_like(status)
+
+
+def _dispatch(real_bwrap: str, argv: list[str],
+             exec_args: tuple[Optional[str], Optional[str]],
+             jobserver_active: bool,
+             admission_ctx: tuple[str, Optional[str]]) -> int:
+    """`main`'s own exec dispatch, split out (with `_exec_or_run`) to
+    keep its statement count under the baseline's cap: admission
+    (`run_admitted`) only when `BST_TRACE_ADMISSION_POOL` is set *and*
+    the jobserver is active (`--jobserver off` leaves the latter false,
+    unchanged from today) - `_exec_or_run` otherwise, byte for byte.
+    `admission_ctx` is `(bind_src, element)` - the ledger lives beside
+    the trace bind, no bind of its own, the same place
+    `BST_TRACE_JOBSERVER_LEDGER` names inside it."""
+    stderr_path, proxy_done_path = exec_args
+    admission_pool = os.environ.get(ADMISSION_POOL_ENV)
+    if admission_pool and jobserver_active:
+        bind_src, element = admission_ctx
+        ledger_path = os.path.join(bind_src, "jobserver_ledger.jsonl")
+        return run_admitted(real_bwrap, argv, exec_args, admission_pool,
+                            (ledger_path, element))
+    return _exec_or_run(real_bwrap, argv, stderr_path, proxy_done_path)
+
+
 def _open_inheritable_rdwr(path: str) -> int:
     """The one way this module opens a jobserver FIFO for `fd` style -
     read-write so the open cannot block on a second end, inheritable so
@@ -1734,7 +1818,10 @@ def main() -> int:
                        jobserver_fifo_host=fifo_host,
                        jobserver_fifo_sandbox=fifo_sandbox)
 
-    return _exec_or_run(real_bwrap, argv, stderr_path, proxy_done_path)
+    # UX-1005 track B: admission only when the jobserver is active.
+    return _dispatch(real_bwrap, argv, (stderr_path, proxy_done_path),
+                     jobserver_fd is not None or jobserver_fifo is not None,
+                     (bind_src, element))
 
 
 def _exec_or_run(real_bwrap: str, argv: list[str], stderr_path: Optional[str],

@@ -1,6 +1,6 @@
 # UX-1010: a second fixture for the jobserver's breadth win - one giant, many single-core elements
 
-**Priority:** Medium | **Status:** 🟡 In Progress | **Depends on:** UX-1009 | **Found by:** Ruslan on the jobserver batch thread (2026-09-24): "a single giant element and several elements that consume only one make job ... with 2x buildstream builders we potentially can spawn enough non-parallel elements and have a win" | **Serves:** R4, R5 (the fixture UX-1005 needs and does not have) | **Topic:** capture | **Area:** tools | **Shape:** bounded
+**Priority:** Medium | **Status:** 🟡 In Progress | **Depends on:** UX-1009 | **Found by:** Ruslan on the jobserver batch thread (2026-09-24): "a single giant element and several elements that consume only one make job ... with 2x buildstream builders we potentially can spawn enough non-parallel elements and have a win" | **Serves:** R4, R5 (the fixture UX-1005 needs and does not have) | **Topic:** capture | **Area:** tools | **Shape:** judgement
 
 ## Motivation
 

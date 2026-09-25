@@ -93,7 +93,7 @@ build() {  # build <arm> <repeat> <plane2 path or -> -- <command...>
     p=$([ "$plane2" = - ] && echo - || peak "$plane2")
     cpu=$(python3 -c "print(f'{$b1 - $b0:.0f}')")
     js=$([ "$plane2" = - ] && echo - || (cd "$OLDPWD_REPO" && shares "$plane2"; binaries "$plane2"
-        [ "$MODE" != noharm ] || elements "$plane2") | paste -sd' ' -)
+        { [ "$MODE" != noharm ] && [ "$MODE" != mixed ] || elements "$plane2"; }) | paste -sd' ' -)
     echo "$arm wall ${wall}s cpu ${cpu}s mem ${mem}M giant-peak $p $js" | tee -a "$OUT/builds.txt"
 }
 

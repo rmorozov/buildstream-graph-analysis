@@ -1,6 +1,6 @@
 # UX-1009: the examples cannot stage their toolchain on aarch64
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-915, UX-925, UX-927 | **Found by:** CodSpeed's bare-metal Graviton runner (16 real Cortex-A72 cores, measured 1:161.3s 2:80.7s 4:40.6s 8:23.0s 16:15.1s 32:14.6s compile width, sudo and `bwrap --unshare-net` work) is the only real-core host available for UX-905/UX-895, and it is aarch64. Owner decision (Ruslan, 2026-09-24): the jobserver showcase uses `examples/11-serial-giant` on real cores rather than freedesktop-sdk | **Serves:** R4, R5 (UX-905/UX-895 need a real-core host, and the only one available is aarch64) | **Topic:** capture | **Area:** tools | **Shape:** judgement
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-915, UX-925, UX-927 | **Found by:** CodSpeed's bare-metal Graviton runner (16 real Cortex-A72 cores, measured 1:161.3s 2:80.7s 4:40.6s 8:23.0s 16:15.1s 32:14.6s compile width, sudo and `bwrap --unshare-net` work) is the only real-core host available for UX-905/UX-895, and it is aarch64. Owner decision (Ruslan, 2026-09-24): the jobserver showcase uses `examples/11-serial-giant` on real cores rather than freedesktop-sdk | **Serves:** R4, R5 (UX-905/UX-895 need a real-core host, and the only one available is aarch64) | **Topic:** capture | **Area:** tools | **Shape:** judgement
 
 ## Motivation
 
@@ -113,3 +113,19 @@ unset default stays `9800`.
 | `nix_buildbox`'s pinned key flipped from `aarch64` to `x86_64` | `test_x86_64_is_refused_rather_than_pinned`, `test_aarch64_names_a_real_store_path`, `test_bin_dir_is_under_the_pinned_store_path` | 3 |
 | `calibrate_width.py`'s `lines_option()` call dropped from the build command | `test_the_override_reaches_the_build_command` | 1 |
 | `giant_lines` default changed to `1800` / `giant.bst` reverted to the `9800` literal | `test_the_committed_default_is_still_9800`, `test_giant_bst_reads_the_variable_not_a_literal` (both clauses) | 2 |
+| `lines_option()` dropped from the `artifact delete` call only | `test_the_override_reaches_the_delete_command` | 1 |
+| `LINKS["buildbox-run"]` mapped back to the wrapper (`buildbox-run` instead of `buildbox-run-bubblewrap`) | `test_buildbox_run_skips_the_wrapper_that_shadows_the_bwrap_shim` | 1 |
+
+Deviation: three departures from the Decomposition surfaced staging the
+pin for real. `nix_buildbox` is staged at `/` in CI, not a sysroot, since
+BuildStream's `PATH` lookup is host-wide and there is no sysroot to stage
+under (`.github/workflows/codspeed-probe.yml`'s `Stage buildbox` step).
+`LINKS` maps `buildbox-run` to nix's unwrapped
+`buildbox-run-bubblewrap`, not `buildbox-run` itself - nix's own
+`buildbox-run` wrapper prepends its own bwrap onto `PATH`, shadowing
+`bga`'s capture shim, so bst must exec the unwrapped binary directly.
+`calibrate_width.py`'s `artifact delete` call also carries
+`lines_option()`, not just its `build` call - deleting under the
+unqualified cache key would leave the 9800-line artifact cached under a
+key `CALIBRATE_GIANT_LINES` never touches, and the calibration build
+would silently reuse it.

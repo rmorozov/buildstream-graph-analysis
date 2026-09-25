@@ -57,6 +57,14 @@ top = max(rows, key=lambda v: v["measured_cpu_us"], default=None)
 print("bin " + ",".join("%s:%.0fs" % (b["binary"], b["cpu_us"] / 1e6) for b in top["by_cpu"][:3]) if top else "bin ?")' "$1"
 }
 
+elements() {  # per element: work span s / peak / mean width, and the traced wall span
+    python3 -c 'import json, sys
+r = json.load(open(sys.argv[1]))
+print("span %.1fs " % (r.get("wall_span_s") or 0) + ",".join("%s:%.1f/%s/%.1f" % (
+    e["element"].replace(".bst", ""), e.get("work_span_s") or 0, e.get("peak_work_concurrency"),
+    e.get("mean_work_concurrency") or 0) for e in r.get("per_element_parallelism") or []))' "$1"
+}
+
 used_mb() {
     awk '/^MemTotal:/{t=$2} /^MemAvailable:/{a=$2} END{print int((t-a)/1024)}' /proc/meminfo
 }
@@ -79,7 +87,8 @@ build() {  # build <arm> <repeat> <plane2 path or -> -- <command...>
     case $arm in spine|all) spined "$plane2" || { echo "::error title=$arm::no process outcomes"; exit 1; } ;; esac
     p=$([ "$plane2" = - ] && echo - || peak "$plane2")
     cpu=$(python3 -c "print(f'{$b1 - $b0:.0f}')")
-    js=$([ "$plane2" = - ] && echo - || (cd "$OLDPWD_REPO" && shares "$plane2"; binaries "$plane2") | paste -sd' ' -)
+    js=$([ "$plane2" = - ] && echo - || (cd "$OLDPWD_REPO" && shares "$plane2"; binaries "$plane2"
+        [ "$MODE" != noharm ] || elements "$plane2") | paste -sd' ' -)
     echo "$arm wall ${wall}s cpu ${cpu}s mem ${mem}M giant-peak $p $js" | tee -a "$OUT/builds.txt"
 }
 

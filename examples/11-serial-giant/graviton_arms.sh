@@ -51,7 +51,9 @@ from bga.correlate import compute_jobserver_shares
 r = json.load(open(sys.argv[1])); pool = r.get("jobserver_pool") or {}
 if not r.get("jobserver"): print("jobserver -"); sys.exit()
 i, s = compute_jobserver_shares(r.get("jobserver_ledger") or [], pool.get("capacity"))
-print("pool %s idle %.2f starved %.2f" % (pool.get("mode"), i, s))' "$1"
+adm = r.get("jobserver_admission_pool") or {}
+print("pool %s idle %.2f starved %.2f admit %s wait %.1fs rank %s" % (pool.get("mode"), i, s,
+      adm.get("pool_size"), (adm.get("wait_total_us") or 0) / 1e6, adm.get("ranking_source")))' "$1"
 }
 
 binaries() {  # the heaviest element's top binaries by kernel-measured CPU (UX-69)

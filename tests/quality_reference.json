@@ -144,7 +144,7 @@
     "tools/native_trace/bwrap_shim.py": {"duplicate_blocks": 0, "file_lines": 1784, "longest_function": 156},
     "tools/native_trace/trackevent.py": {"duplicate_blocks": 0, "file_lines": 576, "longest_function": 31},
     "tools/native_trace_to_chrome_trace.py": {"duplicate_blocks": 0, "file_lines": 303, "longest_function": 80},
-    "tools/nix_buildbox.py": {"duplicate_blocks": 0, "file_lines": 78, "longest_function": 11},
+    "tools/nix_buildbox.py": {"duplicate_blocks": 0, "file_lines": 94, "longest_function": 11},
     "tools/nix_closure.py": {"duplicate_blocks": 0, "file_lines": 355, "longest_function": 40},
     "tools/nix_store_fetch.py": {"duplicate_blocks": 0, "file_lines": 361, "longest_function": 40},
     "tools/nix_toolchain.py": {"duplicate_blocks": 0, "file_lines": 343, "longest_function": 36},

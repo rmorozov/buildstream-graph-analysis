@@ -1,6 +1,6 @@
 # UX-1011: `--jobserver auto` pays three `bst show` calls before the build
 
-**Priority:** High | **Status:** 🟡 In Progress | **Depends on:** UX-842, UX-843, UX-882 | **Found by:** Graviton run 36123209379 (`bst-perf-tools/bga-bench` job 108033307761), `10-jobserver`, cold cache, 3 repeats | **Serves:** R4 | **Topic:** capture | **Area:** tools | **Shape:** bounded
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-842, UX-843, UX-882 | **Found by:** Graviton run 36123209379 (`bst-perf-tools/bga-bench` job 108033307761), `10-jobserver`, cold cache, 3 repeats | **Serves:** R4 | **Topic:** capture | **Area:** tools | **Shape:** bounded
 
 ## Motivation
 
@@ -64,7 +64,7 @@ at all when `jobserver` is falsy. Every existing reader test
 `test_a_public_annotation_sets_the_auth_style.py`, the `_parse_*` tests
 in `test_native_build_tracer.py`) stays green.
 
-## Outcome (round pending) — 🟡 In Progress
+## Outcome
 
 ### The gap, measured
 
@@ -80,7 +80,7 @@ The traced element spans are the same or shorter under `auto` (8.8s
 against 8.9s) - the whole ~6-7s penalty is three extra `bst show`
 subprocesses paid before the build starts.
 
-### The close, measured (local; the Graviton re-run is the session's job)
+### The close, measured
 
 ```text
 $ python3 -m pytest tests/unit/test_jobserver_reads_pay_one_bst_show_call.py \
@@ -94,6 +94,16 @@ $ make lint
 All checks passed!
 ```
 
+Graviton run 36129369038 (head `edd36330`), same fixture and arms:
+
+```text
+off   wall 25.88/22.59/21.07s  head 4.1/3.7/3.7s  cpu 150/159/149s
+auto  wall 23.95/23.65/23.55s  head 6.0/6.0/6.0s  cpu 156/156/155s
+```
+
+auto's head 10.0s -> 6.0s and its wall 27.7s -> 23.6s median; the
+2.3s left over off is the one remaining `bst show`.
+
 ### Mutations verified red and reverted (1)
 
 | # | mutation | reddened | count |
@@ -102,5 +112,4 @@ All checks passed!
 
 ### Deviation from the Required Fix
 
-None known; the Graviton wall-clock confirmation is left to the
-session per Out of Scope.
+None.

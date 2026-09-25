@@ -24,7 +24,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        leg: [mixed]
+        leg: [noharm]
     steps:
       - uses: actions/checkout@v7
 

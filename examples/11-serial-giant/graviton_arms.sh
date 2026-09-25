@@ -70,6 +70,17 @@ print("span %.1fs " % (r.get("wall_span_s") or 0) + ",".join("%s:%.1f/%s/%.1f" %
     e.get("mean_work_concurrency") or 0) for e in r.get("per_element_parallelism") or []))' "$1"
 }
 
+stamp() {  # each output line prefixed with seconds since the build started
+    python3 -uc 'import sys, time
+t0 = time.monotonic()
+for line in sys.stdin:
+    sys.stdout.write("%.1f %s" % (time.monotonic() - t0, line))'
+}
+
+tail_s() {  # wall before bst's first START and after its closing summary: the capture's own
+    awk -v w="$2" '/ START / && !h {h=$1} /Pipeline Summary/ && !t {t=$1} END{printf "head %.1fs tail %.1fs", h ? h : -1, t ? w - t : -1}' "$1"
+}
+
 used_mb() {
     awk '/^MemTotal:/{t=$2} /^MemAvailable:/{a=$2} END{print int((t-a)/1024)}' /proc/meminfo
 }
@@ -83,8 +94,8 @@ build() {  # build <arm> <repeat> <plane2 path or -> -- <command...>
     rm -rf ~/.cache/buildstream ~/.local/share/buildstream .bga
     m0=$(used_mb); b0=$(busy)
     (while :; do used_mb; sleep 1; done) > "$OUT/mem" & sampler=$!
-    /usr/bin/time -f '%e' -o "$OUT/time" "$@" > "$OUT/$arm-$i.log" 2>&1 \
-        || { kill $sampler; tail -40 "$OUT/$arm-$i.log"; exit 1; }
+    { /usr/bin/time -f '%e' -o "$OUT/time" "$@" 2>&1 || echo "BGA-ARM-FAILED"; } | stamp > "$OUT/$arm-$i.log"
+    ! grep -q '^[0-9.]* BGA-ARM-FAILED$' "$OUT/$arm-$i.log" || { kill $sampler; tail -40 "$OUT/$arm-$i.log"; exit 1; }
     b1=$(busy); kill $sampler; read -r wall < "$OUT/time"
     mem=$(( $(sort -n "$OUT/mem" | tail -1) - m0 ))
     [ "$plane2" = - ] || plane2=$(ls $plane2 2>/dev/null | tail -1)
@@ -94,7 +105,7 @@ build() {  # build <arm> <repeat> <plane2 path or -> -- <command...>
     cpu=$(python3 -c "print(f'{$b1 - $b0:.0f}')")
     js=$([ "$plane2" = - ] && echo - || (cd "$OLDPWD_REPO" && shares "$plane2"; binaries "$plane2"
         { [ "$MODE" != noharm ] && [ "$MODE" != mixed ] || elements "$plane2"; }) | paste -sd' ' -)
-    echo "$arm wall ${wall}s cpu ${cpu}s mem ${mem}M giant-peak $p $js" | tee -a "$OUT/builds.txt"
+    echo "$arm wall ${wall}s $(tail_s "$OUT/$arm-$i.log" "$wall") cpu ${cpu}s mem ${mem}M giant-peak $p $js" | tee -a "$OUT/builds.txt"
 }
 
 for i in 1 2 3; do

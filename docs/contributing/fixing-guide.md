@@ -497,7 +497,7 @@ A citation is closed or marked (open).
 .github/workflows/codspeed-probe.yml        dispatch - CodSpeed's bare-metal
                                              Graviton runner: sudo, bwrap,
                                              bst on aarch64, compile width
-                                             (UX-895 (open), UX-905 (open))
+                                             (UX-895, UX-905 (open))
 ```
 
 **Tests and docs:**

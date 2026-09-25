@@ -82,9 +82,17 @@ calibration: width 8 → 29.30 s, width 16 → 22.24 s, effective 5.98 of
 16); host CPU seconds +12 % (751 to 842), the expected cost of running
 more concurrently on a CPU-bound compile.
 
-Not met: the Acceptance Test also asks for peak memory per arm, which
-this capture never measured, and "the guard that the mode's status
-block cites a reading whose capture exists" (Decomposition) does not
-exist yet — no test asserts the status block's readings against a real
-capture ref, so this reading is prose only, unguarded. Status stays In
-Progress rather than closing.
+A second pair pinned `max-jobs: 3` (the 8-of-40 server shape on 16
+cores, run 36095261434): `off` averaged 261.4 s wall (263.10/260.75/
+260.34), `auto` 112.3 s (112.85/111.90/112.13) - `auto` IMPROVED -57.0 %,
+width 3 to 16, host CPU seconds 729 to 841 (+15 %), host used-memory
+peak 448 M to 1611 M (`/proc/meminfo`, 1/s). Peak memory per arm is now
+read, but host-level, not `host-samples/v1`'s per-element figure the
+Acceptance Test names - a deviation, not the gap it names.
+
+Not met: "the jobserver block's two shares" (tokens-idle, tokens-starved,
+`directions.md:1941`) are unread for either pair - this capture never
+ran `bga analyze` against a Plane 2 report to produce them, only the
+raw wall/CPU/memory readings. "The guard that the mode's status block
+cites a reading whose capture exists" (Decomposition) also does not
+exist yet. Status stays In Progress rather than closing.

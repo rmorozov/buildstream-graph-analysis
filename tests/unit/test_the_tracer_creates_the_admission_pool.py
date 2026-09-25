@@ -15,6 +15,10 @@ import pytest
 from tools import bst_native_build_tracer as tracer
 
 
+@pytest.fixture(autouse=True)
+def _admission_on(monkeypatch):
+    monkeypatch.setenv("BGA_ADMISSION", "1")
+
 def _stub_shim(monkeypatch):
     monkeypatch.setattr(tracer, "compile_hook", lambda d: None)
     monkeypatch.setattr(tracer, "install_bwrap_shim", lambda d: "/usr/bin/bwrap")
@@ -180,3 +184,22 @@ def test_a_build_that_raises_still_removes_the_admission_fifo(tmp_path, monkeypa
 
     assert "path" in seen
     assert not os.path.exists(seen["path"])
+
+
+def test_admission_is_off_unless_asked_for(tmp_path, monkeypatch):
+    project = tmp_path / "proj"
+    project.mkdir()
+    _stub_shim(monkeypatch)
+    monkeypatch.delenv("BGA_ADMISSION")
+    seen = {}
+
+    def fake_popen(cmd, cwd=None, env=None, **kw):
+        seen["env"] = dict(env)
+        return type("P", (), {"wait": lambda self: 0})()
+
+    monkeypatch.setattr(tracer.subprocess, "Popen", fake_popen)
+    tracer.run_traced_build(str(project), ["bst", "build", "x.bst"],
+                            str(tmp_path / "trace.log"), jobserver=32)
+    assert "BST_TRACE_JOBSERVER" in seen["env"]
+    assert "BST_TRACE_ADMISSION_POOL" not in seen["env"]
+    assert "BST_TRACE_ADMISSION_BROKER_DIR" not in seen["env"]

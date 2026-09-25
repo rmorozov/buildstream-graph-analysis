@@ -20,6 +20,8 @@ import sys
 import threading
 import time
 
+import pytest
+
 from tools import bst_native_build_tracer as tracer
 
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -49,6 +51,11 @@ def _fake_bwrap(path, sleep_s):
     path.chmod(path.stat().st_mode | stat.S_IEXEC)
     return str(path)
 
+
+
+@pytest.fixture(autouse=True)
+def _admission_on(monkeypatch):
+    monkeypatch.setenv("BGA_ADMISSION", "1")
 
 def _stub_shim(monkeypatch):
     monkeypatch.setattr(tracer, "compile_hook", lambda d: None)

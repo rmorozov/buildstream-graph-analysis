@@ -1504,6 +1504,11 @@ JOBSERVER_WRAPPERS_DIR = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "native_trace", "wrappers")
 
 
+def admission_enabled() -> bool:
+    """UX-1005: sandbox admission is opt-in via `BGA_ADMISSION=1`."""
+    return os.environ.get("BGA_ADMISSION") == "1"
+
+
 def probe_jobserver_wrapper_policy(
         tools: tuple[str, ...] = JOBSERVER_WRAPPED_TOOLS) -> list[dict]:
     """UX-846: one row per wrapped tool name, `{tool, version, policy}`.
@@ -2310,8 +2315,13 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
             # this one pool's `jobserver` ceiling. Always engaged under
             # `--jobserver`, since admission in the shim (not
             # `--builders`) is what bounds concurrent sandboxes now.
-            admission_pool_size = jobserver
-            env["BST_TRACE_ADMISSION_POOL"] = jobserver_fifo
+            # Opt-in: the first Graviton reading (run 36153575373) had
+            # admission slower than none on 13-mixed-graph (UX-1005).
+            if admission_enabled():
+                admission_pool_size = jobserver
+                env["BST_TRACE_ADMISSION_POOL"] = jobserver_fifo
+            else:
+                env.pop("BST_TRACE_ADMISSION_POOL", None)
             # UX-879: `bga`'s own `--jobserver-auth-override` already
             # resolved to this one var in `bga/cli.py`'s process env - no
             # decision here, just carried into the sandbox the same way
@@ -2410,7 +2420,7 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
             # report's own record of which one ran.
             if plan_path:
                 slack_plan, ranking_source = read_plan_slack(plan_path), "plan"
-            elif element_kinds and element_deps:
+            elif admission_enabled() and element_kinds and element_deps:
                 slack_plan = structural_ranking(
                     element_kinds, element_deps, element_notparallel or {})
                 ranking_source = "structural"
@@ -2442,16 +2452,17 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                 # `BST_TRACE_ADMISSION_BROKER_DIR` unset, and the shim's
                 # own fallback (the raw admission FIFO, track B) is
                 # unchanged.
-                admission_proxies_dir = os.path.join(bind_dir, "admission_proxies")
-                admission_proxy_fds = create_jobserver_proxies(
-                    admission_proxies_dir, element_kinds)
-                env["BST_TRACE_ADMISSION_BROKER_DIR"] = admission_proxies_dir
-                admission_broker = AdmissionBroker(
-                    jobserver_fd, admission_proxy_fds, slack_plan,
-                    os.path.join(admission_proxies_dir, "requests.jsonl"),
-                    ledger_path=captured_jobserver_ledger)
-                admission_broker.start()
-                admission_ranking_source = ranking_source
+                if admission_pool_size is not None:
+                    admission_proxies_dir = os.path.join(bind_dir, "admission_proxies")
+                    admission_proxy_fds = create_jobserver_proxies(
+                        admission_proxies_dir, element_kinds)
+                    env["BST_TRACE_ADMISSION_BROKER_DIR"] = admission_proxies_dir
+                    admission_broker = AdmissionBroker(
+                        jobserver_fd, admission_proxy_fds, slack_plan,
+                        os.path.join(admission_proxies_dir, "requests.jsonl"),
+                        ledger_path=captured_jobserver_ledger)
+                    admission_broker.start()
+                    admission_ranking_source = ranking_source
             else:
                 env.pop("BST_TRACE_PROXY_DIR", None)
                 env.pop("BST_TRACE_ADMISSION_BROKER_DIR", None)

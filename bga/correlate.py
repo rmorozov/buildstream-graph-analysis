@@ -37,12 +37,14 @@ your critical path is not compute-bound, so fix how it is built, not what
 it builds"**.
 """
 
+import collections
 import math
 from dataclasses import dataclass, field
 from typing import Optional
 
 from . import schemas
 from .findings import SEVERITY_HIGH, SEVERITY_INFO, SEVERITY_MEDIUM
+from .floors.capacity import compute_default_capacities
 from .units import GIB, MIB, US_PER_S, kb_to_bytes, mb_to_bytes, s_to_us
 
 # An element is "not compute-bound" below this many cores busy. One core
@@ -1201,6 +1203,92 @@ def compute_capacity_recommendation(
             "and does not model contention, and cores-busy is an average "
             "over the whole run rather than over the contended window. One capture "
             "in, one recommendation out - no configuration was tried."
+        ),
+    }
+
+
+def compute_ready_set_width(replay_scheduler) -> Optional[int]:
+    """UX-1005 track A: the graph's own ready-set width - the most tasks
+    ever simultaneously ready to run, from a replay given effectively
+    unlimited `PROCESS` capacity (the task count) so nothing queues on
+    capacity and the peak concurrency is purely the dependency graph's
+    shape and durations - both real Plane 1 evidence, unlike `max_jobs`/
+    `native_max_jobs`, which say what BuildStream or a recipe was told,
+    not what the graph offers. `None` with no tasks to replay.
+    """
+    tasks = getattr(replay_scheduler, 'tasks', None)
+    if not tasks:
+        return None
+    capacities = dict(compute_default_capacities(replay_scheduler.run_context))
+    capacities['PROCESS'] = len(tasks)
+    result = replay_scheduler.replay(capacities=capacities)
+    # A delta-per-instant count, not a sorted event list: a start and a
+    # finish landing on the same microsecond net to zero before either
+    # is counted, which is `finish_us` exclusive without a tie-break sort.
+    delta = collections.Counter()
+    for task in result.scheduled_tasks:
+        delta[task.start_us] += 1
+        delta[task.finish_us] -= 1
+    running = peak = 0
+    for instant in sorted(delta):
+        running += delta[instant]
+        peak = max(peak, running)
+    return peak or None
+
+
+def compute_builder_pool_recommendation(
+    ready_set_width: Optional[int],
+    host_cpu_count: Optional[int],
+    critical_path_max_jobs: Optional[int],
+    calibrated_cores: Optional[int] = None,
+) -> dict:
+    """UX-1005 track A: a builder count and a pool size, each with the
+    reading it came from.
+
+    **Builders.** The ready-set width is the naive answer and is only
+    right once admission exists (tracks B/C: a token per shim, granted
+    least-slack-first) - until then it can starve the critical path, as
+    measured on a Graviton `13-mixed-graph` (giant.bst 8 wide, 24 single-
+    core siblings, 3 repeats, cold cache): 4 builders wall ~143s/host CPU
+    1160s; 32 builders wall ~208s/host CPU 1180s (giant's own "Running
+    commands" stretched to 198s); 32 + auto 182s/1275s (giant 161s) -
+    wider builders drew more host CPU for a *slower* wall, because 33
+    jobs contended 16 cores. So a safe cap travels beside the ready-set
+    figure: no more builders than the cores the critical path's own
+    `max-jobs` element leaves free.
+
+    **Pool.** `UX-1004`'s recorded knee (`$BGA_CALIBRATED_CORES`, the width
+    calibration's "knee: width N" reading for this host) when supplied;
+    otherwise `host_cpu_count`, labelled uncalibrated rather than
+    presented as the same reading.
+
+    `{}` with no ready-set width or host core count - a recommendation
+    needs both.
+    """
+    if not ready_set_width or not host_cpu_count:
+        return {}
+    safe_cap = (max(1, host_cpu_count - critical_path_max_jobs)
+                if critical_path_max_jobs else None)
+    if calibrated_cores:
+        pool_size = min(calibrated_cores, host_cpu_count)
+        pool_reading = f"UX-1004's calibrated knee ({calibrated_cores} effective core(s))"
+    else:
+        pool_size = host_cpu_count
+        pool_reading = (
+            f"host_cpu_count ({host_cpu_count}) - no calibrated knee supplied "
+            "via $BGA_CALIBRATED_CORES, so this is uncalibrated"
+        )
+    return {
+        'ready_set_width': ready_set_width,
+        'ready_set_reading': "the replay's ready-set width",
+        'safe_builder_cap': safe_cap,
+        'critical_path_max_jobs': critical_path_max_jobs,
+        'pool_size': pool_size,
+        'pool_reading': pool_reading,
+        'caveat': (
+            "Wide builders pay off only with admission in place (UX-1005 "
+            "tracks B/C); until then, the safe cap is the cores the "
+            "critical-path element's own max-jobs leaves free."
         ),
     }
 

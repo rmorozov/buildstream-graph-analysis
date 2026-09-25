@@ -75,6 +75,15 @@ class TestTheLinesOverride:
         assert build_calls == [["bst", "--option", "giant_lines", "1800",
                                 "build", "giant.bst"]]
 
+    def test_the_override_reaches_the_delete_command(self, monkeypatch, tmp_path):
+        # Unoptioned, it deletes another cache key's artifact: widths 2-16 read 2.14s.
+        monkeypatch.setenv("CALIBRATE_GIANT_LINES", "1800")
+        calls = []
+        calibrate.build_at(str(tmp_path), 1, run=lambda argv, **k: calls.append(argv))
+
+        assert calls[0] == ["bst", "--option", "giant_lines", "1800",
+                            "artifact", "delete", "giant.bst"]
+
 
 def test_the_ci_step_calibrates_every_width_and_runs_the_pinned_arm():
     ci = (REPO / ".github/workflows/ci.yml").read_text()

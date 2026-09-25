@@ -54,7 +54,7 @@ def build_at(project: str, width: int, run=subprocess.run) -> float:
             conf.write(f"cache:\n  quota: 3G\n  reserved-disk-space: 500M\n"
                        f"build:\n  max-jobs: {width}\n")
         env = dict(os.environ, XDG_CONFIG_HOME=xdg)
-        run(["bst", "artifact", "delete", "giant.bst"], cwd=project, env=env, check=False)
+        run(["bst"] + lines_option() + ["artifact", "delete", "giant.bst"], cwd=project, env=env, check=False)
         start = time.monotonic()
         run(["bst"] + lines_option() + ["build", "giant.bst"],
             cwd=project, env=env, check=True)

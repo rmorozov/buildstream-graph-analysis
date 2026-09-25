@@ -17,6 +17,8 @@ permissions:
 
 jobs:
   probe:
+    # Macro runners register only on organizations: elsewhere this job would queue forever.
+    if: github.repository_owner == 'bst-perf-tools'
     runs-on: codspeed-macro-arm64-graviton-ubuntu-22-04
     timeout-minutes: 90
     strategy:

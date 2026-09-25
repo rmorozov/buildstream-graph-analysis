@@ -56,7 +56,7 @@ build() {  # build <arm> <repeat> <plane2 path or -> -- <command...>
     mem=$(( $(sort -n "$OUT/mem" | tail -1) - m0 ))
     [ "$plane2" = - ] || plane2=$(ls $plane2 2>/dev/null | tail -1)
     [ "$plane2" = - ] || traced "$plane2" || { echo "::error title=$arm::Plane 2 traced 0 processes"; exit 1; }
-    case $arm in spine|all) ;; *) false ;; esac || spined "$plane2" || { echo "::error title=spine::no process outcomes"; exit 1; }
+    case $arm in spine|all) spined "$plane2" || { echo "::error title=$arm::no process outcomes"; exit 1; } ;; esac
     p=$([ "$plane2" = - ] && echo - || peak "$plane2")
     cpu=$(python3 -c "print(f'{$b1 - $b0:.0f}')")
     echo "$arm wall ${wall}s cpu ${cpu}s mem ${mem}M giant-peak $p" | tee -a "$OUT/builds.txt"

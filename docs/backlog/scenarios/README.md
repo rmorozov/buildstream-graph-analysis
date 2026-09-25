@@ -26,7 +26,6 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-895 | [the capture's own overhead is unmeasured, so Plane 2 on every build is a guess](UX-0895-the-captures-own-overhead-is-unmeasured.md) | capture | High | R4, R5, R1 | 🔴 Not Started |
 | UX-900 | [a store is a directory, but CI will keep bundles in versioned directories](UX-0900-a-store-is-a-directory-but-ci-keeps-bundles.md) | store | Medium | R5, R7, R8 | 🔴 Not Started |
 | UX-902 | [a showcase case is two captures, and there is nowhere to put one](UX-0902-the-showcase-case-file-and-its-two-capture-rule.md) | docs | High | R1, R2, R8 | 🔴 Not Started |
 | UX-904 | [nothing prices N separate CI builds against one junctioned invocation](UX-0904-separate-invocations-or-one-junctioned-build.md) | analysis | High | R5, R3, R4, R6 | 🔴 Not Started |

@@ -13,6 +13,7 @@ mkdir -p "$OUT/xdg"
 export XDG_CONFIG_HOME="$OUT/xdg"
 printf 'cache:\n  quota: 20G\n  reserved-disk-space: 2G\n' > "$XDG_CONFIG_HOME/buildstream2.conf"
 [ "$MODE" != cap3 ] || printf 'build:\n  max-jobs: 3\n' >> "$XDG_CONFIG_HOME/buildstream2.conf"
+OLDPWD_REPO=$(cd "$PROJ/../.." && pwd)
 cd "$PROJ"
 
 summary() {
@@ -37,6 +38,15 @@ busy() {  # host-wide busy CPU seconds: the sandbox's work is not bst's rusage
     awk '/^cpu /{print ($2+$3+$4+$7+$8)/100}' /proc/stat
 }
 
+shares() {  # UX-847's two shares and the pool mode, off the Plane 2 ledger
+    python3 -c 'import json, sys
+from bga.correlate import compute_jobserver_shares
+r = json.load(open(sys.argv[1])); pool = r.get("jobserver_pool") or {}
+if not r.get("jobserver"): print("jobserver -"); sys.exit()
+i, s = compute_jobserver_shares(r.get("jobserver_ledger") or [], pool.get("capacity"))
+print("pool %s idle %.2f starved %.2f" % (pool.get("mode"), i, s))' "$1"
+}
+
 used_mb() {
     awk '/^MemTotal:/{t=$2} /^MemAvailable:/{a=$2} END{print int((t-a)/1024)}' /proc/meminfo
 }
@@ -59,7 +69,8 @@ build() {  # build <arm> <repeat> <plane2 path or -> -- <command...>
     case $arm in spine|all) spined "$plane2" || { echo "::error title=$arm::no process outcomes"; exit 1; } ;; esac
     p=$([ "$plane2" = - ] && echo - || peak "$plane2")
     cpu=$(python3 -c "print(f'{$b1 - $b0:.0f}')")
-    echo "$arm wall ${wall}s cpu ${cpu}s mem ${mem}M giant-peak $p" | tee -a "$OUT/builds.txt"
+    js=$([ "$plane2" = - ] && echo - || (cd "$OLDPWD_REPO" && shares "$plane2"))
+    echo "$arm wall ${wall}s cpu ${cpu}s mem ${mem}M giant-peak $p $js" | tee -a "$OUT/builds.txt"
 }
 
 for i in 1 2 3; do

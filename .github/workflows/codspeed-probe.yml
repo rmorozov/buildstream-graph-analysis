@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        leg: [overhead]
+        leg: [pairs, cap3]
     steps:
       - uses: actions/checkout@v7
 

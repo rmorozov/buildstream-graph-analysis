@@ -50,11 +50,11 @@ def pin(arch=None) -> dict:
 def bin_dir(dest: str, arch=None) -> str:
     """Where the pin's own `buildbox-casd`/`buildbox-run` land under
     `dest`, for the caller to prepend to `PATH`."""
-    return dest + pin(arch)["store_path"] + "/bin"
+    return dest.rstrip("/") + pin(arch)["store_path"] + "/bin"
 
 
 def stage(dest: str, arch=None, cache_dir=None) -> str:
-    """The pinned closure, staged under `dest`. Returns `bin_dir`."""
+    """The pinned closure under `dest`; only `/` runs (absolute interp)."""
     nix_closure.stage_closure(
         dest, [pin(arch)["store_path"]],
         cache_dir or nix_closure.default_cache_dir())

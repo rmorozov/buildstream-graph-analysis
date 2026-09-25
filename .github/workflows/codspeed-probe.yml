@@ -63,11 +63,16 @@ jobs:
       # sdist aarch64 pip falls back to carries neither. Both are a bare
       # PATH lookup (_get_host_tool_internal, read from the sdist), so
       # staging the pinned closure's bin/ onto PATH is the whole fix.
+      # At `/` itself: ELF interpreter and makeCWrapper paths are absolute
+      # `/nix/store`, so under a prefix exec reports ENOENT on a file that exists.
       - name: Stage buildbox
         run: |
-          BIN="$(python3 -m tools.nix_buildbox "$RUNNER_TEMP/buildbox")"
+          sudo -n mkdir -p /nix && sudo -n chown "$(id -u):$(id -g)" /nix
+          BIN="$(python3 -m tools.nix_buildbox /)"
+          rc=0; "$BIN/buildbox-run" --help > /dev/null 2>&1 || rc=$?
+          [ "$rc" -lt 126 ] || { echo "::error title=buildbox::exec failed ($rc)"; exit 1; }
           echo "$BIN" >> "$GITHUB_PATH"
-          echo "::notice title=buildbox::$BIN"
+          echo "::notice title=buildbox::$BIN runs"
 
       # UX-1009: the same pinned toolchain 05-10 use, now with an
       # aarch64 row - staged once, hardlink-cloned into every example

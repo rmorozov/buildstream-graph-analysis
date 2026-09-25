@@ -1,5 +1,6 @@
 #!/bin/sh
-# UX-905 (`pairs`: off/auto; `cap3`: the same at max-jobs 3, 8-of-40 scaled)
+# UX-905 (`pairs`: off/auto; `cap3`: the same at max-jobs 3, 8-of-40 scaled;
+# `noharm`: off/auto on 10-jobserver, whose four elements already fill the cores)
 # and UX-895 (`overhead`: none/capture/trace/spine/all) on one quiet host: three
 # interleaved repeats, cold caches every build, bst's own `max-jobs` default
 # (min(cpus, 8)) unless `cap3`. `mem` is host used-memory peak over the
@@ -14,6 +15,7 @@ export XDG_CONFIG_HOME="$OUT/xdg"
 printf 'cache:\n  quota: 20G\n  reserved-disk-space: 2G\n' > "$XDG_CONFIG_HOME/buildstream2.conf"
 [ "$MODE" != cap3 ] || printf 'build:\n  max-jobs: 3\n' >> "$XDG_CONFIG_HOME/buildstream2.conf"
 OLDPWD_REPO=$(cd "$PROJ/../.." && pwd)
+[ "$MODE" != noharm ] || PROJ=$(cd "$PROJ/../10-jobserver" && pwd)  # four parallel elements: a graph that already fills the cores
 cd "$PROJ"
 
 summary() {
@@ -47,6 +49,14 @@ i, s = compute_jobserver_shares(r.get("jobserver_ledger") or [], pool.get("capac
 print("pool %s idle %.2f starved %.2f" % (pool.get("mode"), i, s))' "$1"
 }
 
+binaries() {  # the heaviest element's top binaries by kernel-measured CPU (UX-69)
+    python3 -c 'import json, sys
+bc = json.load(open(sys.argv[1])).get("binary_cost") or {}
+rows = [v for v in bc.values() if v.get("available")]
+top = max(rows, key=lambda v: v["measured_cpu_us"], default=None)
+print("bin " + ",".join("%s:%.0fs" % (b["binary"], b["cpu_us"] / 1e6) for b in top["by_cpu"][:3]) if top else "bin ?")' "$1"
+}
+
 used_mb() {
     awk '/^MemTotal:/{t=$2} /^MemAvailable:/{a=$2} END{print int((t-a)/1024)}' /proc/meminfo
 }
@@ -69,13 +79,13 @@ build() {  # build <arm> <repeat> <plane2 path or -> -- <command...>
     case $arm in spine|all) spined "$plane2" || { echo "::error title=$arm::no process outcomes"; exit 1; } ;; esac
     p=$([ "$plane2" = - ] && echo - || peak "$plane2")
     cpu=$(python3 -c "print(f'{$b1 - $b0:.0f}')")
-    js=$([ "$plane2" = - ] && echo - || (cd "$OLDPWD_REPO" && shares "$plane2"))
+    js=$([ "$plane2" = - ] && echo - || (cd "$OLDPWD_REPO" && shares "$plane2"; binaries "$plane2") | paste -sd' ' -)
     echo "$arm wall ${wall}s cpu ${cpu}s mem ${mem}M giant-peak $p $js" | tee -a "$OUT/builds.txt"
 }
 
 for i in 1 2 3; do
     case $MODE in
-    pairs|cap3)
+    pairs|cap3|noharm)
         for m in off auto; do
             build "$m" "$i" "$OUT/$m-$i.json" -- bga capture run --run-dir "$OUT/run-$m-$i" \
                 --jobserver "$m" . "$OUT/$m-$i.json" -- bst build all.bst
@@ -97,6 +107,6 @@ for k in ("per_element_parallelism", "jobserver_decisions", "jobserver_pool"):
     print(k, json.dumps(r.get(k))[:1500])' "$OUT/diag.json"
         find "$OUT/run-diag" -maxdepth 2 | head -40
         exit 0 ;;
-    *) echo "usage: $0 pairs|cap3|overhead|diag" >&2; exit 2 ;;
+    *) echo "usage: $0 pairs|cap3|noharm|overhead|diag" >&2; exit 2 ;;
     esac
 done

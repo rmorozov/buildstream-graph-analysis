@@ -1,6 +1,6 @@
 # UX-1005: bga recommends a builder count and a pool size from a capture, and the critical path gets the next token
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-1004, UX-1003 | **Found by:** Ruslan on the jobserver batch thread (2026-09-24): whether to oversubscribe BuildStream's builders or native `max-jobs` depends on graph shape and the machine, and there is no rule for it | **Serves:** R5, R4 (a single-machine deployment sized from its own readings) | **Topic:** analysis | **Area:** unassigned | **Shape:** judgement
+**Priority:** High | **Status:** 🟡 In Progress | **Depends on:** UX-1004, UX-1003 | **Found by:** Ruslan on the jobserver batch thread (2026-09-24): whether to oversubscribe BuildStream's builders or native `max-jobs` depends on graph shape and the machine, and there is no rule for it | **Serves:** R5, R4 (a single-machine deployment sized from its own readings) | **Topic:** analysis | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 
@@ -104,3 +104,11 @@ native `max-jobs` (a UX-677 question), not builders/pool sizing.
 |---|---|---|
 | builders from `max_jobs` | `TestReadySetWidth` (3 of 3 cases) | 3 |
 | pool from `host_cpu_count` | `TestPoolFromTheCalibratedKnee` (3 of 3 cases) | 3 |
+
+### Deviation (track A)
+
+UX-1004's knee travels as `$BGA_CALIBRATED_CORES`, not a run-context
+field: a `--calibrated-cores` flag grew `bga analyze --help` past its
+45-line guard. The recommendation prints in `--format text` only;
+`analyze/v9`'s JSON schema and the page are `bga/report/json.py`'s,
+left for a later track.

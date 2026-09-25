@@ -6,6 +6,10 @@
 # (min(cpus, 8)) unless `cap3`. `mem` is host used-memory peak over the
 # build's start, sampled 1/s from /proc/meminfo. One `::notice::` per arm
 # at exit - GitHub keeps ten per step, a line per build would not fit.
+# UX-1010: `mixed` runs three arms (`off4` unmodified builders, `off32`
+# and `auto32` at `--builders 32`) x3 on 13-mixed-graph - the second win
+# shape (breadth: more builders pack narrow elements around the giant),
+# not width (`--jobserver auto` on one recipe), which `pairs`/`cap3` cover.
 set -eu
 MODE=$1
 PROJ=$(cd "$(dirname "$0")" && pwd)
@@ -16,6 +20,7 @@ printf 'cache:\n  quota: 20G\n  reserved-disk-space: 2G\n' > "$XDG_CONFIG_HOME/b
 [ "$MODE" != cap3 ] || printf 'build:\n  max-jobs: 3\n' >> "$XDG_CONFIG_HOME/buildstream2.conf"
 OLDPWD_REPO=$(cd "$PROJ/../.." && pwd)
 [ "$MODE" != noharm ] || PROJ=$(cd "$PROJ/../10-jobserver" && pwd)  # four parallel elements: a graph that already fills the cores
+[ "$MODE" != mixed ] || PROJ=$(cd "$PROJ/../13-mixed-graph" && pwd)  # the giant plus 24 single-core elements, all ready at once
 cd "$PROJ"
 
 summary() {
@@ -99,6 +104,13 @@ for i in 1 2 3; do
             build "$m" "$i" "$OUT/$m-$i.json" -- bga capture run --run-dir "$OUT/run-$m-$i" \
                 --jobserver "$m" . "$OUT/$m-$i.json" -- bst build all.bst
         done ;;
+    mixed)
+        build off4 "$i" "$OUT/off4-$i.json" -- bga capture run --run-dir "$OUT/run-off4-$i" \
+            --jobserver off . "$OUT/off4-$i.json" -- bst build all.bst
+        build off32 "$i" "$OUT/off32-$i.json" -- bga capture run --run-dir "$OUT/run-off32-$i" \
+            --jobserver off . "$OUT/off32-$i.json" -- bst --builders 32 build all.bst
+        build auto32 "$i" "$OUT/auto32-$i.json" -- bga capture run --run-dir "$OUT/run-auto32-$i" \
+            --jobserver auto . "$OUT/auto32-$i.json" -- bst --builders 32 build all.bst ;;
     overhead)
         build none "$i" - -- bst build all.bst
         build capture "$i" ".bga/runs/*/plane2.json" -- bga snapshot --no-trace-opens -- bst build all.bst
@@ -116,6 +128,6 @@ for k in ("per_element_parallelism", "jobserver_decisions", "jobserver_pool"):
     print(k, json.dumps(r.get(k))[:1500])' "$OUT/diag.json"
         find "$OUT/run-diag" -maxdepth 2 | head -40
         exit 0 ;;
-    *) echo "usage: $0 pairs|cap3|noharm|overhead|diag" >&2; exit 2 ;;
+    *) echo "usage: $0 pairs|cap3|noharm|mixed|overhead|diag" >&2; exit 2 ;;
     esac
 done

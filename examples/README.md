@@ -359,6 +359,21 @@ subproject is a real, separate project). Full detail, the real
 `bga snapshot --jobserver auto` reading and `kinds_read.json`'s own
 diagnostic in that project's own [`README.md`](12-junctioned/README.md).
 
+## 13-mixed-graph
+
+The jobserver's second win shape (Ruslan, 2026-09-24): one `giant.bst`
+(the same element as `11-serial-giant`'s own) plus 24 `narrow-*.bst`
+elements, each a real single-core compile (`variables: notparallel:
+True`, forcing `make -j1` - the same mechanism `06-macro-micro-
+optimization`'s `core.bst` uses). All 25 are ready at once (none
+depends on the giant), so `bst --builders` decides how many of the
+narrow elements run alongside the giant instead of queuing behind it -
+the shape `11`'s build-order leaves cannot show. Related, open: `UX-1005`
+(bga recommends builders from ready-set width) names this as the case
+it lacks a fixture for; not implemented here. Same staged sysroot as
+`05`-`12`; the generator is `10`'s own script, hardlink-cloned in. Full
+detail in that project's own [`README.md`](13-mixed-graph/README.md).
+
 ## Shared setup
 
 `01-resource-contention`, `02-deep-chain-mixed-kinds`, and

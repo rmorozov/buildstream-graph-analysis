@@ -664,6 +664,13 @@ class AnalysisResult:
     # Populated only alongside `plane2_capacity`, on the same bar UX-83
     # uses: a recommendation without a measured `cores_busy` is a guess.
     capacity_recommendation: dict = field(default_factory=dict)
+    # UX-1005 track A: a builder count and a pool size, each with the
+    # reading it came from - builders from the replay's ready-set
+    # width, the pool from UX-1004's recorded knee. Set by
+    # `cli._builder_pool_recommendation`, read only by `cli.py`'s own
+    # text renderer - never published in `--format json`, which is
+    # `analyze/v9`'s own schema surface, not this bounded track's.
+    builder_pool_recommendation: dict = field(default_factory=dict)
     # UX-171: the resource blast table, set by `cli._attach_resource_blast`
     # only when a source inventory is in hand. `None` - not `{}` - when
     # it was never attempted, same "not looked for" reason `run_instance`

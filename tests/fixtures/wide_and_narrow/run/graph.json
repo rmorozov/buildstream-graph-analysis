@@ -1,0 +1,180 @@
+{
+  "elements": [
+    {
+      "uid": "giant.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual",
+      "max_jobs": 8
+    },
+    {
+      "uid": "narrow-01.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual",
+      "max_jobs": 1
+    },
+    {
+      "uid": "narrow-02.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual",
+      "max_jobs": 1
+    },
+    {
+      "uid": "narrow-03.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual",
+      "max_jobs": 1
+    },
+    {
+      "uid": "narrow-04.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual",
+      "max_jobs": 1
+    },
+    {
+      "uid": "narrow-05.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual",
+      "max_jobs": 1
+    },
+    {
+      "uid": "narrow-06.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual",
+      "max_jobs": 1
+    },
+    {
+      "uid": "narrow-07.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual",
+      "max_jobs": 1
+    },
+    {
+      "uid": "narrow-08.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual",
+      "max_jobs": 1
+    },
+    {
+      "uid": "narrow-09.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual",
+      "max_jobs": 1
+    },
+    {
+      "uid": "narrow-10.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual",
+      "max_jobs": 1
+    },
+    {
+      "uid": "narrow-11.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual",
+      "max_jobs": 1
+    },
+    {
+      "uid": "narrow-12.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual",
+      "max_jobs": 1
+    },
+    {
+      "uid": "narrow-13.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual",
+      "max_jobs": 1
+    },
+    {
+      "uid": "narrow-14.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual",
+      "max_jobs": 1
+    },
+    {
+      "uid": "narrow-15.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual",
+      "max_jobs": 1
+    },
+    {
+      "uid": "narrow-16.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual",
+      "max_jobs": 1
+    },
+    {
+      "uid": "narrow-17.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual",
+      "max_jobs": 1
+    },
+    {
+      "uid": "narrow-18.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual",
+      "max_jobs": 1
+    },
+    {
+      "uid": "narrow-19.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual",
+      "max_jobs": 1
+    },
+    {
+      "uid": "narrow-20.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual",
+      "max_jobs": 1
+    },
+    {
+      "uid": "narrow-21.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual",
+      "max_jobs": 1
+    },
+    {
+      "uid": "narrow-22.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual",
+      "max_jobs": 1
+    },
+    {
+      "uid": "narrow-23.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual",
+      "max_jobs": 1
+    },
+    {
+      "uid": "narrow-24.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual",
+      "max_jobs": 1
+    }
+  ],
+  "dependencies": []
+}

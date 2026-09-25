@@ -24,7 +24,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        leg: [pairs, cap3]
+        leg: [mixed8]
     steps:
       - uses: actions/checkout@v7
 

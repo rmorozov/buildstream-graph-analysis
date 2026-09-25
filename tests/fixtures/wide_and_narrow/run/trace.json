@@ -1,0 +1,229 @@
+{
+  "spans": [
+    {
+      "task_key": "giant.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 8000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "narrow-01.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 1000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "narrow-02.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 1000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "narrow-03.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 1000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "narrow-04.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 1000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "narrow-05.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 1000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "narrow-06.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 1000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "narrow-07.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 1000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "narrow-08.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 1000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "narrow-09.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 1000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "narrow-10.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 1000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "narrow-11.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 1000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "narrow-12.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 1000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "narrow-13.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 1000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "narrow-14.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 1000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "narrow-15.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 1000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "narrow-16.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 1000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "narrow-17.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 1000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "narrow-18.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 1000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "narrow-19.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 1000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "narrow-20.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 1000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "narrow-21.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 1000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "narrow-22.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 1000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "narrow-23.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 1000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "narrow-24.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 1000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    }
+  ]
+}

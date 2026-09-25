@@ -1,10 +1,15 @@
 #!/bin/sh
-# UX-905 (`pairs`: off/auto; `cap3`: the same at max-jobs 3, 8-of-40 scaled)
+# UX-905 (`pairs`: off/auto; `cap3`: the same at max-jobs 3, 8-of-40 scaled;
+# `noharm`: off/auto on 10-jobserver, whose four elements already fill the cores)
 # and UX-895 (`overhead`: none/capture/trace/spine/all) on one quiet host: three
 # interleaved repeats, cold caches every build, bst's own `max-jobs` default
 # (min(cpus, 8)) unless `cap3`. `mem` is host used-memory peak over the
 # build's start, sampled 1/s from /proc/meminfo. One `::notice::` per arm
 # at exit - GitHub keeps ten per step, a line per build would not fit.
+# UX-1010: `mixed` runs three arms (`off4` unmodified builders, `off32`
+# and `auto32` at `--builders 32`) x3 on 13-mixed-graph - the second win
+# shape (breadth: more builders pack narrow elements around the giant),
+# not width (`--jobserver auto` on one recipe), which `pairs`/`cap3` cover.
 set -eu
 MODE=$1
 PROJ=$(cd "$(dirname "$0")" && pwd)
@@ -14,6 +19,8 @@ export XDG_CONFIG_HOME="$OUT/xdg"
 printf 'cache:\n  quota: 20G\n  reserved-disk-space: 2G\n' > "$XDG_CONFIG_HOME/buildstream2.conf"
 [ "$MODE" != cap3 ] || printf 'build:\n  max-jobs: 3\n' >> "$XDG_CONFIG_HOME/buildstream2.conf"
 OLDPWD_REPO=$(cd "$PROJ/../.." && pwd)
+[ "$MODE" != noharm ] || PROJ=$(cd "$PROJ/../10-jobserver" && pwd)  # four parallel elements: a graph that already fills the cores
+{ [ "$MODE" = mixed ] || [ "$MODE" = mixed8 ]; } && PROJ=$(cd "$PROJ/../13-mixed-graph" && pwd)  # the giant plus 24 single-core elements, all ready at once
 cd "$PROJ"
 
 summary() {
@@ -44,7 +51,36 @@ from bga.correlate import compute_jobserver_shares
 r = json.load(open(sys.argv[1])); pool = r.get("jobserver_pool") or {}
 if not r.get("jobserver"): print("jobserver -"); sys.exit()
 i, s = compute_jobserver_shares(r.get("jobserver_ledger") or [], pool.get("capacity"))
-print("pool %s idle %.2f starved %.2f" % (pool.get("mode"), i, s))' "$1"
+adm = r.get("jobserver_admission_pool") or {}
+print("pool %s idle %.2f starved %.2f admit %s wait %.1fs rank %s" % (pool.get("mode"), i, s,
+      adm.get("pool_size"), (adm.get("wait_total_us") or 0) / 1e6, adm.get("ranking_source")))' "$1"
+}
+
+binaries() {  # the heaviest element's top binaries by kernel-measured CPU (UX-69)
+    python3 -c 'import json, sys
+bc = json.load(open(sys.argv[1])).get("binary_cost") or {}
+rows = [v for v in bc.values() if v.get("available")]
+top = max(rows, key=lambda v: v["measured_cpu_us"], default=None)
+print("bin " + ",".join("%s:%.0fs" % (b["binary"], b["cpu_us"] / 1e6) for b in top["by_cpu"][:3]) if top else "bin ?")' "$1"
+}
+
+elements() {  # per element: work span s / peak / mean width, and the traced wall span
+    python3 -c 'import json, sys
+r = json.load(open(sys.argv[1]))
+print("span %.1fs " % (r.get("wall_span_s") or 0) + ",".join("%s:%.1f/%s/%.1f" % (
+    e["element"].replace(".bst", ""), e.get("work_span_s") or 0, e.get("peak_work_concurrency"),
+    e.get("mean_work_concurrency") or 0) for e in r.get("per_element_parallelism") or []))' "$1"
+}
+
+stamp() {  # each output line prefixed with seconds since the build started
+    python3 -uc 'import sys, time
+t0 = time.monotonic()
+for line in sys.stdin:
+    sys.stdout.write("%.1f %s" % (time.monotonic() - t0, line))'
+}
+
+tail_s() {  # wall before bst's first START and after its closing summary: the capture's own
+    awk -v w="$2" '/ START / && !h {h=$1} /Pipeline Summary/ && !t {t=$1} END{printf "head %.1fs tail %.1fs", h ? h : -1, t ? w - t : -1}' "$1"
 }
 
 used_mb() {
@@ -60,26 +96,41 @@ build() {  # build <arm> <repeat> <plane2 path or -> -- <command...>
     rm -rf ~/.cache/buildstream ~/.local/share/buildstream .bga
     m0=$(used_mb); b0=$(busy)
     (while :; do used_mb; sleep 1; done) > "$OUT/mem" & sampler=$!
-    /usr/bin/time -f '%e' -o "$OUT/time" "$@" > "$OUT/$arm-$i.log" 2>&1 \
-        || { kill $sampler; tail -40 "$OUT/$arm-$i.log"; exit 1; }
+    { /usr/bin/time -f '%e' -o "$OUT/time" "$@" 2>&1 || echo "BGA-ARM-FAILED"; } | stamp > "$OUT/$arm-$i.log"
+    ! grep -q '^[0-9.]* BGA-ARM-FAILED$' "$OUT/$arm-$i.log" || { kill $sampler; tail -40 "$OUT/$arm-$i.log"; exit 1; }
     b1=$(busy); kill $sampler; read -r wall < "$OUT/time"
+    [ "$MODE" != noharm ] || [ "$i" != 1 ] || { echo "== $arm head"; sed -n '1,/ START /p' "$OUT/$arm-$i.log" | cut -c1-200; }
+    [ "$MODE" != mixed ] || [ "$i" != 1 ] || { echo "== $arm bst lines"; grep -E ' (START|SUCCESS|FAILURE) |Pipeline Summary' "$OUT/$arm-$i.log" | cut -c1-160; }
     mem=$(( $(sort -n "$OUT/mem" | tail -1) - m0 ))
     [ "$plane2" = - ] || plane2=$(ls $plane2 2>/dev/null | tail -1)
     [ "$plane2" = - ] || traced "$plane2" || { echo "::error title=$arm::Plane 2 traced 0 processes"; exit 1; }
     case $arm in spine|all) spined "$plane2" || { echo "::error title=$arm::no process outcomes"; exit 1; } ;; esac
     p=$([ "$plane2" = - ] && echo - || peak "$plane2")
     cpu=$(python3 -c "print(f'{$b1 - $b0:.0f}')")
-    js=$([ "$plane2" = - ] && echo - || (cd "$OLDPWD_REPO" && shares "$plane2"))
-    echo "$arm wall ${wall}s cpu ${cpu}s mem ${mem}M giant-peak $p $js" | tee -a "$OUT/builds.txt"
+    js=$([ "$plane2" = - ] && echo - || (cd "$OLDPWD_REPO" && shares "$plane2"; binaries "$plane2"
+        { [ "$MODE" != noharm ] && [ "$MODE" != mixed ] && [ "$MODE" != mixed8 ] || elements "$plane2"; }) | paste -sd' ' -)
+    echo "$arm wall ${wall}s $(tail_s "$OUT/$arm-$i.log" "$wall") cpu ${cpu}s mem ${mem}M giant-peak $p $js" | tee -a "$OUT/builds.txt"
 }
 
 for i in 1 2 3; do
     case $MODE in
-    pairs|cap3)
+    pairs|cap3|noharm)
         for m in off auto; do
             build "$m" "$i" "$OUT/$m-$i.json" -- bga capture run --run-dir "$OUT/run-$m-$i" \
                 --jobserver "$m" . "$OUT/$m-$i.json" -- bst build all.bst
         done ;;
+    mixed)
+        build off4 "$i" "$OUT/off4-$i.json" -- bga capture run --run-dir "$OUT/run-off4-$i" \
+            --jobserver off . "$OUT/off4-$i.json" -- bst build all.bst
+        build off32 "$i" "$OUT/off32-$i.json" -- bga capture run --run-dir "$OUT/run-off32-$i" \
+            --jobserver off . "$OUT/off32-$i.json" -- bst --builders 32 build all.bst
+        build auto32 "$i" "$OUT/auto32-$i.json" -- bga capture run --run-dir "$OUT/run-auto32-$i" \
+            --jobserver auto . "$OUT/auto32-$i.json" -- bst --builders 32 build all.bst ;;
+    mixed8)  # bga's safe cap: 16 cores less the giant's 8
+        build off8 "$i" "$OUT/off8-$i.json" -- bga capture run --run-dir "$OUT/run-off8-$i" \
+            --jobserver off . "$OUT/off8-$i.json" -- bst --builders 8 build all.bst
+        build auto8 "$i" "$OUT/auto8-$i.json" -- bga capture run --run-dir "$OUT/run-auto8-$i" \
+            --jobserver auto . "$OUT/auto8-$i.json" -- bst --builders 8 build all.bst ;;
     overhead)
         build none "$i" - -- bst build all.bst
         build capture "$i" ".bga/runs/*/plane2.json" -- bga snapshot --no-trace-opens -- bst build all.bst
@@ -97,6 +148,6 @@ for k in ("per_element_parallelism", "jobserver_decisions", "jobserver_pool"):
     print(k, json.dumps(r.get(k))[:1500])' "$OUT/diag.json"
         find "$OUT/run-diag" -maxdepth 2 | head -40
         exit 0 ;;
-    *) echo "usage: $0 pairs|cap3|overhead|diag" >&2; exit 2 ;;
+    *) echo "usage: $0 pairs|cap3|noharm|mixed|mixed8|overhead|diag" >&2; exit 2 ;;
     esac
 done

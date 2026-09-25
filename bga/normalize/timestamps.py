@@ -9,7 +9,9 @@ Key principles:
 - Finish times are immutable; duration absorbs corrections
 """
 
+import dataclasses
 import logging
+from typing import Optional
 
 from ..ingest.models import (
     DependencyEdge,
@@ -160,6 +162,35 @@ def spans_below_resolution(spans, epsilon_us: int = 50000) -> list[str]:
                 quantize_timestamp(span.finish_us, epsilon_us):
             erased.append(str(span.task_key))
     return erased
+
+
+def subtract_admission_wait(
+    spans: list[TaskSpan],
+    wait_us_by_element: Optional[dict],
+) -> list[TaskSpan]:
+    """UX-1005 track B: an admitted sandbox's shim blocks on a real
+    token before `bwrap` starts (`tools/native_trace/bwrap_shim.
+    run_admitted`, ledger event `admission_wait`, read by `tools.
+    jobserver.ledger.admission_wait_by_element`) - time BuildStream's
+    own BUILD span includes at its front. Finish stays fixed (this
+    module's own contract, see the docstring above); the wait moves the
+    start later and duration absorbs it, clamped to the span's own
+    duration so a late or partial ledger read can never invert it.
+    """
+    if not wait_us_by_element:
+        return spans
+    adjusted = []
+    for span in spans:
+        wait_us = 0
+        if span.task_key.task_kind == TaskKind.BUILD:
+            wait_us = wait_us_by_element.get(span.task_key.element_uid, 0)
+        if not wait_us:
+            adjusted.append(span)
+            continue
+        wait_us = min(wait_us, span.dur_us)
+        adjusted.append(dataclasses.replace(
+            span, ts_us=span.ts_us + wait_us, dur_us=span.dur_us - wait_us))
+    return adjusted
 
 
 def normalize_timestamps(
@@ -476,23 +507,48 @@ def clamp_task_starts(
     return result, violations
 
 
-def normalize_trace(trace: Trace, graph: Graph, epsilon_us: int = 50000) -> tuple[list[NormalizedTask], list[dict]]:
+def admission_wait_by_element_from_ledger(ledger_rows: list) -> dict:
+    """UX-1005 track C: `tools.jobserver.ledger.admission_wait_by_element`'s
+    own reduction, duplicated rather than imported - `bga` never imports
+    `tools` (the boundary `bga/correlate.py::compute_jobserver_shares`
+    already draws for this same ledger)."""
+    totals: dict = {}
+    for row in ledger_rows or []:
+        if not isinstance(row, dict) or row.get("event") != "admission_wait":
+            continue
+        element, wait_us = row.get("element"), row.get("wait_us")
+        if element is None or wait_us is None:
+            continue
+        totals[element] = totals.get(element, 0) + int(wait_us)
+    return totals
+
+
+def normalize_trace(trace: Trace, graph: Graph, epsilon_us: int = 50000,
+                    admission_wait_by_element: Optional[dict] = None
+                    ) -> tuple[list[NormalizedTask], list[dict]]:
     """
     Full trace normalization pipeline (Part 3).
-    
+
     Combines timestamp quantization, ready time computation,
     ordering validation, and start clamping.
-    
+
     Args:
         trace: Input trace
         graph: Dependency graph
         epsilon_us: Quantization epsilon in microseconds
-        
+        admission_wait_by_element: UX-1005 track C - `{element: wait_us}`
+            from a Plane 2 capture's `admission_wait` ledger rows, or
+            `None`/`{}` for a capture with no admission pool (byte
+            identical to before this landed). Applied to the raw spans
+            before quantization, so the wait leaves the BUILD span
+            rather than being read back into it by clamping.
+
     Returns:
         Tuple of (normalized_tasks, violations)
     """
+    spans = subtract_admission_wait(trace.spans, admission_wait_by_element)
     # Step 1: Quantize timestamps
-    normalized_spans = normalize_timestamps(trace.spans, epsilon_us)
+    normalized_spans = normalize_timestamps(spans, epsilon_us)
     
     # Step 2: Compute ready times
     ready_times = compute_ready_times(normalized_spans, graph.dependencies)

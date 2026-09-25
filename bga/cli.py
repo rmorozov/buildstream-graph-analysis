@@ -461,6 +461,54 @@ def _capacity_recommendation(analyzer, result, context,
     return recommendation
 
 
+#: UX-1005 track A: `UX-1004`'s recorded knee has no per-capture field
+#: (adding one is a `analyze/v9` schema decision, not this track's to
+#: take) and a new CLI flag reddens `test_help_output_is_unchanged`'s
+#: tight 45-line cap on `bga analyze --help` - so it travels as an
+#: environment variable instead, the way an operator pastes in a reading
+#: measured once per host, not once per run.
+_CALIBRATED_CORES_ENV = 'BGA_CALIBRATED_CORES'
+
+
+def _builder_pool_recommendation(analyzer, result) -> dict:
+    """UX-1005 track A: builders from the replay's ready-set width, the
+    pool from UX-1004's recorded knee (`$BGA_CALIBRATED_CORES`), `{}`
+    with no scheduler or no host core count to size the pool against.
+
+    Not stored on `AnalysisResult` and not published in `--format json`:
+    a declared field there is `analyze/v9`'s own schema surface (Part
+    32.4's census, unit and population guards all fire on one), which
+    this bounded track does not own.
+    """
+    from bga.correlate import compute_builder_pool_recommendation, compute_ready_set_width
+
+    scheduler = getattr(analyzer, 'replay_scheduler', None)
+    context = getattr(analyzer, 'run_context', None)
+    host_cpu_count = getattr(context, 'host_cpu_count', None) or getattr(context, 'cpu_budget', None)
+    if scheduler is None or not host_cpu_count:
+        return {}
+    ready_set_width = compute_ready_set_width(scheduler)
+    if not ready_set_width:
+        return {}
+    # UX-1005: the critical path's own widest `max-jobs` - `element.
+    # max_jobs`, the real per-element override (UX-22), falling back to
+    # the run's single global `native_max_jobs` for an element that
+    # doesn't set one.
+    graph = getattr(analyzer, 'graph', None)
+    max_jobs_by_uid = {e.uid: e.max_jobs for e in graph.elements} if graph else {}
+    native_max_jobs = getattr(context, 'native_max_jobs', None)
+    critical_path = schemas.critical_path_uids(getattr(result, 'signals', None) or {})
+    critical_path_max_jobs = max(
+        (max_jobs_by_uid.get(uid) or native_max_jobs or 1 for uid in critical_path),
+        default=None,
+    )
+    calibrated_cores = os.environ.get(_CALIBRATED_CORES_ENV)
+    return compute_builder_pool_recommendation(
+        ready_set_width, host_cpu_count, critical_path_max_jobs,
+        calibrated_cores=int(calibrated_cores) if calibrated_cores else None,
+    )
+
+
 #: UX-680: compiler/linker binaries a compiler-level RE service
 #: (recc/reclient/goma) would move out of the sandbox - Plane 2's own
 #: `by_binary`/`binary_cost` vocabulary, not a new taxonomy.
@@ -578,6 +626,34 @@ def _attach_remote_execution_whatif(analyzer, result) -> None:
     result.remote_execution_whatif = whatif
 
 
+def _resolve_admission_wait(args: argparse.Namespace) -> dict:
+    """UX-1005 track C: `{element: wait_us}` off the same Plane 2 report
+    `_attach_plane2_capacity` reads, resolved here because it has to
+    reach `normalize()` before that call runs. A second read of the
+    report rather than a shared one - hoisting the whole Plane 2 attach
+    ahead of `analyze()` is outside this track's own surface (`pool.py`,
+    Decomposition) - `{}` for a run with no report, no `--plane2`, or a
+    malformed one, matching `_attach_plane2_capacity`'s own tolerance.
+    """
+    if getattr(args, 'no_plane2', False):
+        return {}
+    path = getattr(args, 'plane2', None)
+    if not path:
+        directory = getattr(args, 'directory', None)
+        if not directory:
+            return {}
+        path, _refusal = plane2_shape.attachable(str(directory))
+    if not path:
+        return {}
+    try:
+        with open(path, encoding='utf-8') as handle:
+            native_report = json.load(handle)
+    except (OSError, json.JSONDecodeError):
+        return {}
+    from .normalize.timestamps import admission_wait_by_element_from_ledger
+    return admission_wait_by_element_from_ledger(native_report.get('jobserver_ledger') or [])
+
+
 def analyzed(args: argparse.Namespace, section: Optional[str] = None):
     """The analysis pipeline, once, without rendering it.
 
@@ -592,12 +668,24 @@ def analyzed(args: argparse.Namespace, section: Optional[str] = None):
     # UX-47: tell the pipeline which section is going to be rendered so
     # it can skip stages this section does not consume. `analyze` passes
     # None and is unaffected.
-    result = analyzer.analyze(run_dir, section=section)
+    admission_wait = _resolve_admission_wait(args)
+    if admission_wait:
+        # UX-1005 track C: normalize before `analyze()` so the wait
+        # leaves the BUILD span; `analyze()`'s own guards then skip
+        # re-loading and re-normalizing what is already in hand.
+        analyzer.load(run_dir)
+        analyzer.normalize(admission_wait_by_element=admission_wait)
+        result = analyzer.analyze(section=section)
+    else:
+        result = analyzer.analyze(run_dir, section=section)
     _attach_plane2_capacity(args, analyzer, result)
     _attach_resource_blast(run_dir, analyzer, result)
     # UX-680: after Plane 2 is attached, so the compiler-offload half
     # can read `result.plane2_report` when there is one.
     _attach_remote_execution_whatif(analyzer, result)
+    # UX-1005 track A: after `signals` (critical path) exists, since the
+    # safe builder cap reads the critical path's own widest max-jobs.
+    result.builder_pool_recommendation = _builder_pool_recommendation(analyzer, result)
     return result
 
 
@@ -623,9 +711,61 @@ def _produce_analysis_output(args: argparse.Namespace, section: Optional[str]) -
         return format_json(result, section=section, by_kind=by_kind)
     elif args.format == 'csv':
         return format_csv(result)
-    return format_text(result, section=section, by_kind=by_kind,
+    text = format_text(result, section=section, by_kind=by_kind,
                        full_sections=_full_sections(args),
                        explain=getattr(args, 'explain', False))
+    return _with_builder_pool_text(text, result)
+
+
+def _with_builder_pool_text(text: str, result) -> str:
+    """UX-1005 track A: appended beside the critical path section
+    (`report/text.py`'s own section registry is not a track A surface),
+    so this finds `Critical Path Length:` in the rendered text and
+    inserts after its trailing blank line - or appends at the end when
+    that section did not print (a restricted `--format` section, or no
+    critical path). Text only - `--format json`'s section registry
+    (`bga/report/json.py`) is not a track A surface either, and every
+    number it publishes owes `analyze/v9`'s census, unit and population
+    guards a home this track does not have.
+    """
+    recommendation = getattr(result, 'builder_pool_recommendation', None)
+    if not recommendation:
+        return text
+    lines = text.split("\n")
+    block = _builder_pool_text_lines(recommendation)
+    anchor = "Critical Path Length:"
+    for index, line in enumerate(lines):
+        if line.startswith(anchor):
+            insert_at = index + 1
+            while insert_at < len(lines) and lines[insert_at] != "":
+                insert_at += 1
+            insert_at += 1
+            lines[insert_at:insert_at] = block
+            return "\n".join(lines)
+    return text + "\n" + "\n".join(block)
+
+
+def _builder_pool_text_lines(recommendation: dict) -> list[str]:
+    """The builder and pool lines, each with the reading it came from;
+    the default is the safe cap under `--jobserver auto` (UX-1005)."""
+    safe_cap = recommendation.get('safe_builder_cap')
+    wide = (f"{recommendation['ready_set_width']}, from "
+            f"{recommendation['ready_set_reading']}")
+    if safe_cap is None:
+        lines = [f"Builders (ready-set width): {wide}"]
+    else:
+        lines = [
+            f"Builders: {safe_cap} with --jobserver auto - the host's cores less "
+            f"the critical path's own max-jobs={recommendation['critical_path_max_jobs']}, "
+            "so it can widen into the rest (13-mixed-graph, 16 cores: 143.6s -> 118.3s)",
+            f"  Ready-set width: {wide} - wider than the safe cap only with "
+            "admission (BGA_ADMISSION=1), not yet measured faster",
+        ]
+    lines.append(
+        f"Pool size: {recommendation['pool_size']}, from {recommendation['pool_reading']}"
+    )
+    lines.append("")
+    return lines
 
 
 # UX-187: which long sections a `--full-*` flag un-caps, by the name the

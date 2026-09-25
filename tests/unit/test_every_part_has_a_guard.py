@@ -68,6 +68,9 @@ ANALYSIS_ADDITIONS = {
     # declared field until the type ratchet's `bga/report` sweep needed
     # one to type against.
     "resource_blast", "plane2_coverage",
+    # `UX-1005` track A: read only by `cli.py`'s own text renderer,
+    # never published in `--format json` - see the field's own comment.
+    "builder_pool_recommendation",
 }
 
 # Likewise for 32.1's six against what `load_run_context` reads.

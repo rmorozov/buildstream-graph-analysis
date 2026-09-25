@@ -279,22 +279,26 @@ for clone in \
     "$HERE/09-fine-grained-siblings/merged/files/toolchain" \
     "$HERE/10-jobserver/files/toolchain" \
     "$HERE/11-serial-giant/files/toolchain" \
-    "$HERE/12-junctioned/sub/files/toolchain"; do
+    "$HERE/12-junctioned/sub/files/toolchain" \
+    "$HERE/13-mixed-graph/files/toolchain"; do
   rm -rf "$clone"
   mkdir -p "$(dirname "$clone")"
   cp -al "$DEST" "$clone"
   echo "Cloned toolchain to $clone"
 done
 
-# UX-857: examples/11-serial-giant's cmake elements reuse 10-jobserver's
-# own files/gen/cmake/generate.sh (a real, committed script - not a
-# generated sysroot) rather than a second copy someone has to keep in
-# sync - hardlink-cloned the same way the toolchain above is, so it is
-# still a real file in 11's own project directory (BuildStream's local
-# source refuses a path outside it) at ~0 extra disk.
+# UX-857/UX-1010: examples/11-serial-giant's and 13-mixed-graph's cmake
+# elements reuse 10-jobserver's own files/gen/cmake/generate.sh (a real,
+# committed script - not a generated sysroot) rather than a second copy
+# someone has to keep in sync - hardlink-cloned the same way the
+# toolchain above is, so it is still a real file in each project's own
+# directory (BuildStream's local source refuses a path outside it) at
+# ~0 extra disk.
 GEN_SRC="$HERE/10-jobserver/files/gen/cmake"
-GEN_DEST="$HERE/11-serial-giant/files/gen/cmake"
-rm -rf "$GEN_DEST"
-mkdir -p "$(dirname "$GEN_DEST")"
-cp -al "$GEN_SRC" "$GEN_DEST"
-echo "Cloned generator to $GEN_DEST"
+for GEN_DEST in "$HERE/11-serial-giant/files/gen/cmake" \
+                "$HERE/13-mixed-graph/files/gen/cmake"; do
+  rm -rf "$GEN_DEST"
+  mkdir -p "$(dirname "$GEN_DEST")"
+  cp -al "$GEN_SRC" "$GEN_DEST"
+  echo "Cloned generator to $GEN_DEST"
+done

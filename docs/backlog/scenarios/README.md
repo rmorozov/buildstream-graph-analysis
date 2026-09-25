@@ -35,9 +35,13 @@ task file, which is the only place it ever lived twice.
 | UX-955 | [a population entry keeps the tree size its seconds no longer describe, so the gate scales the growth twice](UX-0955-a-population-entry-keeps-the-size-its-seconds-no-longer-describe.md) | guards | Medium | every branch that makes the backlog guard slower, which the gate should name | 🔴 Not Started |
 | UX-975 | [the examples still install a host toolchain the stager no longer reads, and two CI comments say it copies from one](UX-0975-the-examples-install-a-host-toolchain-the-stager-no-longer-reads.md) | docs | Medium | whoever stands the C++ examples up from `examples/README.md`, and the next reader of `ci.yml`'s staging steps | 🔴 Not Started |
 | UX-976 | [the toolchain closure is 35 store paths, and the examples README counts the two make pins into it](UX-0976-the-toolchain-closure-is-35-paths-and-the-readme-counts-the-make-pins-into-it.md) | docs | Low | whoever sizes the examples' download from the README | 🔴 Not Started |
-| UX-1005 | [bga recommends a builder count and a pool size from a capture, and the critical path gets the next token](UX-1005-bga-recommends-builders-and-pool-size-from-a-capture.md) | analysis | High | R5, R4 | 🔴 Not Started |
+| UX-1005 | [bga recommends a builder count and a pool size from a capture, and the critical path gets the next token](UX-1005-bga-recommends-builders-and-pool-size-from-a-capture.md) | analysis | High | R5, R4 | 🟡 In Progress |
 | UX-1007 | [a width promised through MAXJOBS or MAX_JOBS reads unknown_kind](UX-1007-a-width-promised-through-maxjobs-reads-unknown-kind.md) | capture | High | R2, R5 | 🔴 Not Started |
 | UX-1008 | [a consumer with no width promise is named, not silently oversubscribing](UX-1008-a-consumer-with-no-width-promise-is-named.md) | analysis | Medium | R5 | 🔴 Not Started |
+| UX-1010 | [a second fixture for the jobserver's breadth win - one giant, many single-core elements](UX-1010-a-second-fixture-for-the-jobservers-breadth-win.md) | capture | Medium | R4, R5 | 🟡 In Progress |
+| UX-1012 | [the report says which elements drew from the jobserver, not only which were offered it](UX-1012-the-report-says-which-elements-drew-from-the-jobserver.md) | analysis | High | R4, R5 | 🔴 Not Started |
+| UX-1013 | [admission ranks from BuildStream's own cached build logs when bga never captured the project](UX-1013-admission-ranks-from-buildstreams-own-cached-build-logs.md) | capture | Medium | R4, R5 | 🔴 Not Started |
+| UX-1014 | [the "safe cap plus auto" default is measured on more shapes and hosts before it is anyone's default](UX-1014-the-builders-and-auto-default-is-measured-on-more-shapes-and-hosts.md) | capture | High | R4, R5 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

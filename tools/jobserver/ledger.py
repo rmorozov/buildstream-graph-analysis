@@ -73,6 +73,25 @@ def tokens_by_element(ledger_rows: list, pid_to_element: dict) -> tuple:
     return per_element, unmapped
 
 
+def admission_wait_by_element(ledger_rows: list) -> dict:
+    """UX-1005 track B: `{element: wait_us}`, summed across every
+    `admission_wait` row - the shim's own record of time blocked on a
+    real token before `bwrap` started (`bwrap_shim.run_admitted`). Keyed
+    by `element` directly - unlike `tokens_by_element`'s wrapper rows,
+    the shim always knows which element it is admitting, so no pid map
+    is needed. A malformed row is skipped, the same posture every other
+    ledger reader here takes."""
+    totals: dict = {}
+    for row in ledger_rows or []:
+        if not isinstance(row, dict) or row.get("event") != "admission_wait":
+            continue
+        element, wait_us = row.get("element"), row.get("wait_us")
+        if element is None or wait_us is None:
+            continue
+        totals[element] = totals.get(element, 0) + int(wait_us)
+    return totals
+
+
 def _width_series(events: list, end_us: Optional[int] = None) -> tuple:
     """`UX-892`: one element's held-token width over time, and how many
     intervals never closed.
@@ -222,6 +241,68 @@ def summarize_jobserver_leaks(path: str) -> tuple[int, int]:
     return leaks, tokens_refilled
 
 
+def _admission_pool_block(admission_status_path: Optional[str]) -> Optional[dict]:
+    """UX-1005 track C: the admission pool's own size and the total wait
+    it produced - `None` when the pool was never created (`--jobserver
+    off`, `admission_status_path` unwritten). Split out of `report_block`
+    (`PLR0913`'s statement-count sibling, `PLR0915`) rather than inlined."""
+    if not admission_status_path or not os.path.exists(admission_status_path):
+        return None
+    with open(admission_status_path, encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+def _jobserver_pool_block(capture: dict) -> Optional[dict]:
+    """`report_block`'s own `jobserver_pool` value, split out for the
+    same `PLR0915` reason `_admission_pool_block` is - `None` when the
+    mode itself is off."""
+    jobserver = capture["jobserver"]
+    if not jobserver:
+        return None
+    jobserver_seed = capture["jobserver_seed"]
+    jobserver_ledger_path = capture["jobserver_ledger_path"]
+    jobserver_status_path = capture["jobserver_status_path"]
+    plan_path = capture["plan_path"]
+    broker_status_path = capture["broker_status_path"]
+    psi_withdraw_counter = capture.get("psi_withdraw_counter")
+    controller_stopped = True
+    leaks, tokens_refilled = 0, 0
+    psi_memory_withdraws, memory_withheld = 0, 0
+    if capture["jobserver_pool_mode"] == "dynamic" and jobserver_ledger_path:
+        moves, pool_min, pool_max = summarize_jobserver_ledger(
+            jobserver_ledger_path, jobserver)
+        if os.path.exists(jobserver_ledger_path):
+            leaks, tokens_refilled = summarize_jobserver_leaks(jobserver_ledger_path)
+        if psi_withdraw_counter:
+            psi_memory_withdraws = psi_withdraw_counter(jobserver_ledger_path)
+        if jobserver_status_path and os.path.exists(jobserver_status_path):
+            with open(jobserver_status_path, encoding="utf-8") as handle:
+                controller_stopped = json.load(handle)["controller_stopped"]
+        else:
+            controller_stopped = False
+    else:
+        moves, pool_min, pool_max = 0, jobserver_seed, jobserver_seed
+    pool = {
+        "mode": capture["jobserver_pool_mode"], "ceiling": jobserver,
+        "seed": jobserver_seed, "capacity": capture["capacity"], "moves": moves,
+        "pool_min": pool_min, "pool_max": pool_max,
+        "psi_present": os.path.exists(_PSI_CPU_PATH),
+        "controller_stopped": controller_stopped,
+        "leaks": leaks, "tokens_refilled": tokens_refilled,
+    }
+    if plan_path and broker_status_path and os.path.exists(broker_status_path):
+        with open(broker_status_path, encoding="utf-8") as handle:
+            broker_status = json.load(handle)
+        memory_withheld = broker_status.get("memory_withheld", 0)
+        pool["broker"] = {"plan": plan_path, **broker_status}
+    pool["memory"] = {
+        "withheld": memory_withheld,
+        "psi_memory_present": os.path.exists(_PSI_MEMORY_PATH),
+        "psi_memory_withdraws": psi_memory_withdraws,
+    }
+    return pool
+
+
 def report_block(capture: dict) -> dict:
     """UX-901: the tracer's own `jobserver*` report keys (`analyze/v6`),
     formerly nine bare `report[...] =` lines at the capture's call site -
@@ -232,80 +313,30 @@ def report_block(capture: dict) -> dict:
     `jobserver_ledger_path`, `jobserver_status_path`, `plan_path`,
     `broker_status_path`, `element_kinds_present`,
     `jobserver_decisions_path`, `jobserver_wrappers`, `pid_to_element`,
-    `tool_pids`, `element_ends`, `psi_withdraw_counter` - the last four
-    optional. Everything this module cannot read itself (the wrapper
-    probe, the raw log's pid/tool maps, the memory-PSI withdraw count)
-    is passed in already read, since this module never reaches the
-    tracer or `bga` for them."""
+    `tool_pids`, `element_ends`, `psi_withdraw_counter`,
+    `admission_status_path` - the last five optional. Everything this
+    module cannot read itself (the wrapper probe, the raw log's pid/tool
+    maps, the memory-PSI withdraw count) is passed in already read,
+    since this module never reaches the tracer or `bga` for them."""
     jobserver = capture["jobserver"]
-    jobserver_seed = capture["jobserver_seed"]
-    jobserver_pool_mode = capture["jobserver_pool_mode"]
-    capacity = capture["capacity"]
     jobserver_ledger_path = capture["jobserver_ledger_path"]
-    jobserver_status_path = capture["jobserver_status_path"]
-    plan_path = capture["plan_path"]
-    broker_status_path = capture["broker_status_path"]
-    jobserver_decisions_path = capture["jobserver_decisions_path"]
-    pid_to_element = capture.get("pid_to_element")
-    tool_pids = capture.get("tool_pids")
-    element_ends = capture.get("element_ends")
-    psi_withdraw_counter = capture.get("psi_withdraw_counter")
     block = {
         "jobserver": jobserver,
-        "jobserver_seed": jobserver_seed,
+        "jobserver_seed": capture["jobserver_seed"],
         "jobserver_auth": capture["jobserver_auth"],
+        "jobserver_pool": _jobserver_pool_block(capture),
+        "jobserver_admission_pool": _admission_pool_block(capture.get("admission_status_path")),
+        "jobserver_kinds_read": (
+            capture["element_kinds_present"] if jobserver else None),
+        "jobserver_decisions": read_jobserver_decisions(capture["jobserver_decisions_path"]),
+        "jobserver_wrappers": capture["jobserver_wrappers"],
     }
-    if jobserver:
-        controller_stopped = True
-        leaks, tokens_refilled = 0, 0
-        psi_memory_withdraws, memory_withheld = 0, 0
-        if jobserver_pool_mode == "dynamic" and jobserver_ledger_path:
-            moves, pool_min, pool_max = summarize_jobserver_ledger(
-                jobserver_ledger_path, jobserver)
-            if os.path.exists(jobserver_ledger_path):
-                leaks, tokens_refilled = summarize_jobserver_leaks(
-                    jobserver_ledger_path)
-            if psi_withdraw_counter:
-                psi_memory_withdraws = psi_withdraw_counter(jobserver_ledger_path)
-            if jobserver_status_path and os.path.exists(jobserver_status_path):
-                with open(jobserver_status_path, encoding="utf-8") as handle:
-                    controller_stopped = json.load(handle)["controller_stopped"]
-            else:
-                controller_stopped = False
-        else:
-            moves, pool_min, pool_max = 0, jobserver_seed, jobserver_seed
-        block["jobserver_pool"] = {
-            "mode": jobserver_pool_mode, "ceiling": jobserver,
-            "seed": jobserver_seed,
-            "capacity": capacity, "moves": moves,
-            "pool_min": pool_min, "pool_max": pool_max,
-            "psi_present": os.path.exists(_PSI_CPU_PATH),
-            "controller_stopped": controller_stopped,
-            "leaks": leaks, "tokens_refilled": tokens_refilled,
-        }
-        if plan_path and broker_status_path and os.path.exists(broker_status_path):
-            with open(broker_status_path, encoding="utf-8") as handle:
-                broker_status = json.load(handle)
-            memory_withheld = broker_status.get("memory_withheld", 0)
-            block["jobserver_pool"]["broker"] = {
-                "plan": plan_path, **broker_status,
-            }
-        block["jobserver_pool"]["memory"] = {
-            "withheld": memory_withheld,
-            "psi_memory_present": os.path.exists(_PSI_MEMORY_PATH),
-            "psi_memory_withdraws": psi_memory_withdraws,
-        }
-    else:
-        block["jobserver_pool"] = None
-    block["jobserver_kinds_read"] = (
-        capture["element_kinds_present"] if jobserver else None)
-    block["jobserver_decisions"] = read_jobserver_decisions(jobserver_decisions_path)
-    block["jobserver_wrappers"] = capture["jobserver_wrappers"]
     if jobserver and jobserver_ledger_path:
         ledger_rows = read_jobserver_ledger(jobserver_ledger_path)
         block["jobserver_ledger"] = ledger_rows
         by_element, unmapped = summarize_jobserver_tokens_by_element(
-            ledger_rows, pid_to_element or {}, tool_pids, element_ends)
+            ledger_rows, capture.get("pid_to_element") or {},
+            capture.get("tool_pids"), capture.get("element_ends"))
         block["jobserver_tokens_by_element"] = by_element
         block["jobserver_tokens_unmapped"] = unmapped
     return block

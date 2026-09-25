@@ -154,7 +154,14 @@ class TestTheSelectorStillSelects:
     #
     # Round 138's chain, with `UX-956`'s lane guard naming the docs:
     # measured median 37, p90 57, max 165 over 590 files. Max 164 -> 167.
-    CEILING = {"median": 38, "p90": 60, "max": 167}
+    #
+    # `UX-1005` track C added six test files, two of which name
+    # `bga.cli` (`analyzed`/`_resolve_admission_wait`): measured median
+    # 38, p90 59, max 169 over 623 files. Max 167 -> 169, +0 headroom -
+    # the measurement is already at the prior ceiling plus the +2 two
+    # rounds ago spent; median and p90 unmoved.
+    # `UX-1005`'s default-line guard names `bga.cli` too: max 170 over 625.
+    CEILING = {"median": 38, "p90": 60, "max": 170}
     POPULATION_FLOOR = 60
     #: `UX-645`: **13 census + 14 of your own**. The census floor is
     #: inside this bound because those files run - the figure is what

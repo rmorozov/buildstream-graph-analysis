@@ -96,8 +96,10 @@ from .bst_show_to_graph import FIELD_SEP, RECORD_SEP, _parse_yaml_mapping
 from .jobserver import (
     JOBSERVER_POOL_INTERVAL_S,
     JOBSERVER_SERIES_CAP,
+    AdmissionBroker,
     Broker,
     PoolController,
+    admission_wait_by_element,
     bind_cpu_sampler,
     bind_pid_to_element_reader,
     close_jobserver,
@@ -105,6 +107,7 @@ from .jobserver import (
     jobserver_auth_style,
     open_jobserver,
     read_jobserver_decisions,
+    read_jobserver_ledger,
     read_plan_peak_rss,
     read_plan_slack,
     report_block,
@@ -1501,6 +1504,11 @@ JOBSERVER_WRAPPERS_DIR = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "native_trace", "wrappers")
 
 
+def admission_enabled() -> bool:
+    """UX-1005: sandbox admission is opt-in via `BGA_ADMISSION=1`."""
+    return os.environ.get("BGA_ADMISSION") == "1"
+
+
 def probe_jobserver_wrapper_policy(
         tools: tuple[str, ...] = JOBSERVER_WRAPPED_TOOLS) -> list[dict]:
     """UX-846: one row per wrapped tool name, `{tool, version, policy}`.
@@ -1845,6 +1853,190 @@ def read_element_auth_map_for_jobserver(project_dir: str,
     return auth_map
 
 
+def _parse_dep_list(raw: str) -> list[str]:
+    """UX-1005 track C: `%{build-deps}`/`%{runtime-deps}`'s own
+    rendering - `"[]"` for none, else one `"- name"` line per dependency
+    (`bst_show_to_graph._parse_dep_list`'s same shape, duplicated here
+    rather than imported: this module never imports another `tools/`
+    script, only `.jobserver`)."""
+    raw = raw.strip()
+    if not raw or raw == "[]":
+        return []
+    return [line.strip()[2:].strip() for line in raw.splitlines()
+            if line.strip().startswith("- ")]
+
+
+def _parse_jobserver_show_records(stdout: str) -> tuple[str, str, dict, dict, dict]:
+    """UX-1011/UX-1005 track C: `read_jobserver_bst_show`'s stdout
+    parse, split out to keep that function's own branching under the
+    mccabe baseline - one `%{name}<US>%{kind}<US>%{vars}<US>%{public}
+    <US>%{build-deps}<US>%{runtime-deps}<RS>` record per element.
+    Returns `(kinds_text, vars_text, auth_map, element_deps,
+    element_notparallel)`: `kinds_text` is the `"name kind"`-per-line
+    text `_parse_element_kinds` already parses, `vars_text` the same
+    concatenation of `%{vars}` blocks the old single-field `%{vars}`
+    call produced, `auth_map` `_public_auth_style` resolved per
+    element, `element_deps` each element's own direct dependencies
+    (build+runtime, deduplicated) for the structural ranking fallback,
+    `element_notparallel` each element's own `variables: notparallel:`
+    (absent when unset)."""
+    kinds_lines = []
+    vars_blocks = []
+    auth_map = {}
+    element_deps = {}
+    element_notparallel = {}
+    for record in stdout.split(RECORD_SEP):
+        if not record.strip():
+            continue
+        parts = record.split(FIELD_SEP, 5)
+        if len(parts) != 6:
+            continue
+        name, kind, vars_raw, public_raw, build_deps_raw, runtime_deps_raw = parts
+        name, kind = name.strip(), kind.strip()
+        if name and kind:
+            kinds_lines.append(f"{name} {kind}")
+        vars_blocks.append(vars_raw)
+        style = _public_auth_style(public_raw)
+        if name and style is not None:
+            auth_map[name] = style
+        if name:
+            deps = list(dict.fromkeys(
+                _parse_dep_list(build_deps_raw) + _parse_dep_list(runtime_deps_raw)))
+            element_deps[name] = deps
+            try:
+                notparallel = _parse_yaml_mapping(vars_raw).get("notparallel")
+            except RuntimeError:  # no PyYAML - a ranking nicety, not a build need
+                notparallel = None
+            if notparallel is not None:
+                element_notparallel[name] = bool(notparallel) if isinstance(
+                    notparallel, bool) else str(notparallel).strip().lower() not in (
+                        "", "false", "no", "0")
+    return ("\n".join(kinds_lines), "".join(vars_blocks), auth_map,
+            element_deps, element_notparallel)
+
+
+def read_jobserver_bst_show(project_dir: str, cmd: list[str]) -> tuple[
+        Optional[int], Optional[dict], dict, dict, dict, dict]:
+    """UX-1011: one `bst show` call in place of the three separate ones
+    (`read_project_max_jobs`/`read_element_kinds_for_jobserver`/
+    `read_element_auth_map_for_jobserver` above) `main`'s `--jobserver`
+    path used to pay for separately - each ~2s of BuildStream startup
+    and project load on a Cortex-A72 (Graviton run 36123209379). One
+    `%{name}<US>%{kind}<US>%{vars}<US>%{public}<RS>` call, the RS/US
+    scheme `read_element_auth_map_for_jobserver` already used because
+    `%{vars}`/`%{public}` are multi-line YAML; the three named readers
+    stay as thin parsers over the same fields (`_parse_element_kinds`,
+    `_parse_max_jobs_from_vars`, `_public_auth_style`) and are kept for
+    any importer, but this is what `main` calls now.
+
+    Returns `(project_max_jobs, element_kinds, kinds_read_diagnostic,
+    element_auth_map, element_deps, element_notparallel)` - the same
+    shapes and the same failure modes the three separate calls gave:
+    `kinds_read_diagnostic["reason"]` one of `no-target`/`timeout`/
+    `oserror`/`exit`/`no-lines`, `element_auth_map` `{}` (never `None`)
+    on any failure, `project_max_jobs` `None` on any failure or when
+    `cmd` names no target. `element_deps`/`element_notparallel`
+    (UX-1005 track C): `{}` on any failure too - the structural ranking
+    fallback they feed is a nicety, never a build requirement.
+    """
+    global_opts, has_subcommand = _bst_global_options(cmd)
+    if not has_subcommand:
+        return None, None, {"argv": None, "returncode": None,
+                            "stderr_tail": "", "reason": "no-target"}, {}, {}, {}
+    target = _cmd_target(cmd)
+    fmt = FIELD_SEP.join(["%{name}", "%{kind}", "%{vars}", "%{public}",
+                          "%{build-deps}", "%{runtime-deps}"]) + RECORD_SEP
+    argv = [cmd[0], *global_opts, "show", "--format", fmt]
+    if target is not None:
+        argv.append(target)
+    try:
+        proc = subprocess.run(
+            argv, cwd=project_dir, capture_output=True, text=True,
+            check=False, timeout=120,
+        )
+    except subprocess.TimeoutExpired:
+        return None, None, {"argv": argv, "returncode": None,
+                            "stderr_tail": "", "reason": "timeout"}, {}, {}, {}
+    except OSError as exc:
+        return None, None, {"argv": argv, "returncode": None,
+                            "stderr_tail": str(exc)[-2000:],
+                            "reason": "oserror"}, {}, {}, {}
+    if proc.returncode != 0:
+        return None, None, {"argv": argv, "returncode": proc.returncode,
+                            "stderr_tail": proc.stderr[-2000:],
+                            "reason": "exit"}, {}, {}, {}
+    kinds_text, vars_text, auth_map, element_deps, element_notparallel = (
+        _parse_jobserver_show_records(proc.stdout))
+    kinds = _parse_element_kinds(kinds_text)
+    if not kinds:
+        return None, None, {"argv": argv, "returncode": proc.returncode,
+                            "stderr_tail": proc.stderr[-2000:],
+                            "reason": "no-lines"}, {}, {}, {}
+    project_max_jobs = (
+        _parse_max_jobs_from_vars(vars_text) if target is not None else None)
+    diagnostic = {"argv": argv, "count": len(kinds),
+                 "junctions": kinds.junctions, "collisions": kinds.collisions}
+    return (project_max_jobs, kinds, diagnostic, auth_map,
+            element_deps, element_notparallel)
+
+
+def read_jobserver_metadata_for_build(project_dir: str, cmd: list[str],
+                                      jobserver: Optional[int]) -> tuple[
+        Optional[int], Optional[dict], Optional[dict], dict, dict, dict]:
+    """UX-1011: `main`'s own `--jobserver` site - the one call
+    (`read_jobserver_bst_show`) it pays before the build, and the one
+    place a regression back to the three separate calls would show up.
+    `(None, None, None, {}, {}, {})` when `jobserver` is falsy - no
+    read at all."""
+    if not jobserver:
+        return None, None, None, {}, {}, {}
+    return read_jobserver_bst_show(project_dir, cmd)
+
+
+def structural_ranking(element_kinds: dict, element_deps: dict,
+                       element_notparallel: dict) -> dict[str, float]:
+    """UX-1005 track C (Ruslan's follow-up): the admission/recipe
+    ranking `AdmissionBroker`/`Broker` fall back to when no `--plan`
+    was given - a synthetic slack, least-first, from graph structure
+    `bst show` already returned instead of a real capture's measured
+    numbers.
+
+    Priority = the element's level from the bottom: the longest chain
+    of *dependents* between it and a target, in hops (a leaf everything
+    else waits on ranks highest; a target itself is 0). Elements never
+    named a dependency of anything here (a target or an orphan) are 0.
+    Ties at the same level are broken by declared width: an element
+    marked `notparallel` can only ever hold its one implicit slot, so
+    it yields to a wider sibling that can put a freed token to work
+    immediately (`13-mixed-graph`'s giant vs. its 24 narrow siblings,
+    all four levels apart from nothing - deps alone never separates
+    them).
+
+    Returned as `{element: synthetic_slack}`, the same shape
+    `read_plan_slack` gives a real plan - lower sorts first, so
+    `-level` (deeper = more negative = first), plus 0.5 for a
+    `notparallel` element to yield within its own level.
+    """
+    dependents: dict[str, list[str]] = {}
+    for element, deps in element_deps.items():
+        for dep in deps:
+            dependents.setdefault(dep, []).append(element)
+    memo: dict[str, int] = {}
+
+    def level(element: str, path: frozenset) -> int:
+        if element in memo:
+            return memo[element]
+        if element in path:
+            return 0  # a dependency cycle bst itself would reject; never trust it
+        ups = dependents.get(element, [])
+        result = 1 + max((level(up, path | {element}) for up in ups), default=-1)
+        memo[element] = result
+        return result
+
+    return {name: -float(level(name, frozenset())) + (0.5 if element_notparallel.get(name) else 0.0)
+            for name in element_kinds}
+
+
 def _write_kinds_read(bind_dir: str, jobserver: Optional[int],
                       element_kinds: Optional[dict],
                       diagnostic: dict) -> Optional[str]:
@@ -1875,7 +2067,10 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                      kinds_read_diagnostic: Optional[dict] = None,
                      element_auth_map: Optional[dict] = None,
                      plan_path: Optional[str] = None,
-                     broker_status_path: Optional[str] = None) -> int:
+                     element_deps: Optional[dict] = None,
+                     element_notparallel: Optional[dict] = None,
+                     broker_status_path: Optional[str] = None,
+                     admission_status_path: Optional[str] = None) -> int:
     """Run cmd (a real `bst` invocation) with the bwrap shim + LD_PRELOAD
     hook active, writing raw START/END lines to raw_log_path. Returns
     cmd's own real exit code - a trace is captured best-effort and must
@@ -2092,6 +2287,16 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
         pool_controller = None
         broker = None
         proxy_fds: dict = {}
+        # UX-1005 track C, verifier fix: admission has no pool of its
+        # own - it draws from the *same* recipe jobserver FIFO below, so
+        # an admitted sandbox's own token and its recipe's extra `-jK`
+        # draws share the one real supply the machine's cores bound.
+        # Only the ranking fan-out (`admission_proxy_fds`/`admission_
+        # broker`) is admission's own.
+        admission_broker = None
+        admission_proxy_fds: dict = {}
+        admission_pool_size = None
+        admission_ranking_source = None
         captured_jobserver_ledger = os.path.join(bind_dir, "jobserver_ledger.jsonl")
         # UX-842: one JSON line per sandbox - `{element, max_jobs,
         # decision}` - written by the shim beside the FIFO, so it shares
@@ -2102,6 +2307,21 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                 jobserver, bind_dir, seed=jobserver_seed)
             env["BST_TRACE_JOBSERVER"] = jobserver_fifo
             env["BST_TRACE_JOBSERVER_AUTH"] = jobserver_auth or "fd"
+            # UX-1005 track C, verifier fix: admission draws its one
+            # token from *this* FIFO, not a second pool of its own - the
+            # Decision's "the admission token is its implicit slot" only
+            # holds when it is the same currency a recipe's own extra
+            # `-jK` draws spend, so the two can never together exceed
+            # this one pool's `jobserver` ceiling. Always engaged under
+            # `--jobserver`, since admission in the shim (not
+            # `--builders`) is what bounds concurrent sandboxes now.
+            # Opt-in: the first Graviton reading (run 36153575373) had
+            # admission slower than none on 13-mixed-graph (UX-1005).
+            if admission_enabled():
+                admission_pool_size = jobserver
+                env["BST_TRACE_ADMISSION_POOL"] = jobserver_fifo
+            else:
+                env.pop("BST_TRACE_ADMISSION_POOL", None)
             # UX-879: `bga`'s own `--jobserver-auth-override` already
             # resolved to this one var in `bga/cli.py`'s process env - no
             # decision here, just carried into the sandbox the same way
@@ -2150,7 +2370,8 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                 pool_controller = PoolController(
                     jobserver_fd, jobserver, capacity=jobserver_capacity,
                     ledger_path=captured_jobserver_ledger,
-                    psi_paths={"broker_owns_audit": bool(plan_path and element_kinds),
+                    psi_paths={"broker_owns_audit": bool(
+                                  element_kinds and (plan_path or element_deps)),
                               "seed": jobserver_seed})
                 pool_controller.start()
             env["BST_TRACE_JOBSERVER_DECISIONS"] = captured_decisions
@@ -2189,28 +2410,62 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                     bind_dir, jobserver, element_kinds, kinds_read_diagnostic)
                 if kinds_warning:
                     print(kinds_warning, file=sys.stderr)
-            # UX-849: a proxy per element named in the kinds map, and a
-            # `Broker` thread to move tokens into them by slack - only
-            # when a plan was actually given, so a capture with no
-            # `--plan` keeps this whole block inert and the argv/report
-            # byte for byte with before this item.
+            # UX-849/UX-1005 track C (Ruslan): a proxy per element named
+            # in the kinds map, and a `Broker` thread to move tokens
+            # into them by slack. A real `--plan` wins when given; with
+            # none, `structural_ranking` derives one from the same
+            # `bst show` deps read above, so ranking still runs rather
+            # than falling all the way back to unordered FIFO wakeups.
+            # `ranking_source` (`"plan"`/`"structural"`/`None`) is the
+            # report's own record of which one ran.
+            if plan_path:
+                slack_plan, ranking_source = read_plan_slack(plan_path), "plan"
+            elif admission_enabled() and element_kinds and element_deps:
+                slack_plan = structural_ranking(
+                    element_kinds, element_deps, element_notparallel or {})
+                ranking_source = "structural"
+            else:
+                slack_plan, ranking_source = None, None
             proxies_dir = os.path.join(bind_dir, "proxies")
-            if plan_path and element_kinds:
+            if element_kinds and slack_plan is not None:
                 proxy_fds = create_jobserver_proxies(proxies_dir, element_kinds)
                 env["BST_TRACE_PROXY_DIR"] = proxies_dir
                 broker = Broker(
-                    jobserver_fd, proxy_fds, read_plan_slack(plan_path),
+                    jobserver_fd, proxy_fds, slack_plan,
                     ledger_path=captured_jobserver_ledger,
                     scratch={"decisions": captured_decisions,
                             "proxies_dir": proxies_dir,
-                            "peak_rss": read_plan_peak_rss(plan_path),
+                            "peak_rss": (read_plan_peak_rss(plan_path)
+                                        if plan_path else {}),
                             # UX-854: the *live* host-side log the hook
                             # is still writing to - `raw_log_path` only
                             # gets a copy after the build (`copy_out`).
                             "raw_log_path": os.path.join(bind_dir, "trace.log")})
                 broker.start()
+                # UX-1005 track C: an `AdmissionBroker` too, ranking the
+                # shims *waiting to start* by the same slack plan -
+                # gated on `--plan` exactly like `Broker` above, since
+                # ranking needs the same slack numbers. It drains the
+                # *same* `jobserver_fd` `Broker` does (a FIFO tolerates
+                # more than one reader), since admission and recipe
+                # draws now share one supply. No `--plan` leaves
+                # `BST_TRACE_ADMISSION_BROKER_DIR` unset, and the shim's
+                # own fallback (the raw admission FIFO, track B) is
+                # unchanged.
+                if admission_pool_size is not None:
+                    admission_proxies_dir = os.path.join(bind_dir, "admission_proxies")
+                    admission_proxy_fds = create_jobserver_proxies(
+                        admission_proxies_dir, element_kinds)
+                    env["BST_TRACE_ADMISSION_BROKER_DIR"] = admission_proxies_dir
+                    admission_broker = AdmissionBroker(
+                        jobserver_fd, admission_proxy_fds, slack_plan,
+                        os.path.join(admission_proxies_dir, "requests.jsonl"),
+                        ledger_path=captured_jobserver_ledger)
+                    admission_broker.start()
+                    admission_ranking_source = ranking_source
             else:
                 env.pop("BST_TRACE_PROXY_DIR", None)
+                env.pop("BST_TRACE_ADMISSION_BROKER_DIR", None)
         else:
             env.pop("BST_TRACE_JOBSERVER", None)
             env.pop("BST_TRACE_JOBSERVER_AUTH", None)
@@ -2224,6 +2479,8 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
             env.pop("BST_TRACE_LTO_CAP", None)
             env.pop("BST_TRACE_WRAPPER_DIR_OVERRIDE", None)
             env.pop("BST_TRACE_WRAPPER_MODE", None)
+            env.pop("BST_TRACE_ADMISSION_POOL", None)
+            env.pop("BST_TRACE_ADMISSION_BROKER_DIR", None)
             env.pop("BST_TRACE_PROXY_DIR", None)
 
         def copy_out():
@@ -2331,7 +2588,28 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                             "leaks": broker.leaks,
                             "tokens_refilled": broker.tokens_refilled,
                         }, handle)
+            # UX-1005 track C: stopped for the same reason `broker` is -
+            # before `copy_out`/`close_jobserver` reach what it still
+            # holds open. `admission_status_path` carries the pool's own
+            # size and the ranked-grant count out, the same shape
+            # `broker_status_path` already uses.
+            if admission_broker is not None:
+                admission_broker.stop()
+            if admission_status_path is not None and admission_pool_size is not None:
+                wait_total_us = sum(admission_wait_by_element(
+                    read_jobserver_ledger(captured_jobserver_ledger)).values())
+                with open(admission_status_path, "w", encoding="utf-8") as handle:
+                    json.dump({
+                        "pool_size": admission_pool_size,
+                        "wait_total_us": wait_total_us,
+                        "ranked_grants": (admission_broker.grants
+                                         if admission_broker is not None else 0),
+                        "ranking_source": admission_ranking_source,
+                    }, handle)
             for fd in proxy_fds.values():
+                with contextlib.suppress(OSError):
+                    os.close(fd)
+            for fd in admission_proxy_fds.values():
                 with contextlib.suppress(OSError):
                     os.close(fd)
             copy_out()
@@ -8189,26 +8467,20 @@ def main(argv: Optional[list[str]] = None) -> int:
         jobserver_seed = (
             args.jobserver_seed if args.jobserver_seed is not None
             else (args.jobserver - 1 if args.jobserver else None))
-        # UX-842: read once, before the build, from `bst show` - a pin
-        # (`-j1`) vs. an element-level cap can only be told apart from
-        # what the project's own `max-jobs` is.
-        project_max_jobs = (read_project_max_jobs(args.project_dir, cmd)
-                            if args.jobserver else None)
-        # UX-843: the same shape, one call, before the build - the
-        # per-kind table's input. UX-870: the diagnostic (argv, reason)
-        # is printed and written to `kinds_read.json` once `bind_dir`
-        # exists, inside `run_traced_build`, not here.
-        element_kinds, kinds_read_diagnostic = (
-            read_element_kinds_for_jobserver(args.project_dir, cmd)
-            if args.jobserver else (None, None))
-        # UX-882: a second, separate `bst show` call for `%{public}` -
-        # never folded into the kinds read above, whose `line.split()`
-        # parse breaks on `%{public}`'s multi-line YAML. `{}` (never
-        # `None`) on any failure - an annotation read gone wrong must
-        # not change what the build does.
-        element_auth_map = (
-            read_element_auth_map_for_jobserver(args.project_dir, cmd)
-            if args.jobserver else {})
+        # UX-842/UX-843/UX-882/UX-1011: one `bst show` call, before the
+        # build, for the project's own `max-jobs` (`-j1` vs. an
+        # element-level cap), the per-kind table and the `%{public}`
+        # auth map - folded into `read_jobserver_bst_show` so the
+        # `--jobserver` path pays BuildStream's startup once, not three
+        # times. UX-870: the diagnostic (argv, reason) is printed and
+        # written to `kinds_read.json` once `bind_dir` exists, inside
+        # `run_traced_build`, not here. `element_auth_map` is `{}`
+        # (never `None`) on any failure - an annotation read gone wrong
+        # must not change what the build does.
+        (project_max_jobs, element_kinds, kinds_read_diagnostic,
+         element_auth_map, element_deps,
+         element_notparallel) = read_jobserver_metadata_for_build(
+            args.project_dir, cmd, args.jobserver)
         jobserver_decisions_path = (
             os.path.join(scratch_mkdtemp(args.project_dir, "jobserver-"),
                         "jobserver_decisions.jsonl")
@@ -8219,6 +8491,12 @@ def main(argv: Optional[list[str]] = None) -> int:
         # for `PoolController.stopped`.
         broker_status_path = (f"{args.output}.jobserver_broker_status.json"
                               if (args.jobserver and args.plan) else None)
+        # UX-1005 track C: the admission pool's own size and wait total,
+        # read back the same way - always under `--jobserver`, since the
+        # pool itself is created regardless of `--plan` (only the ranked
+        # broker needs one).
+        admission_status_path = (f"{args.output}.admission_status.json"
+                                 if args.jobserver else None)
         # UX-844: the key set before the build starts, so a later capture
         # (with or without the mode) is comparable against it. Never an
         # abort - a project `bst show` cannot resolve is still traced.
@@ -8264,7 +8542,10 @@ def main(argv: Optional[list[str]] = None) -> int:
                                           kinds_read_diagnostic=kinds_read_diagnostic,
                                           element_auth_map=element_auth_map,
                                           plan_path=args.plan,
-                                          broker_status_path=broker_status_path)
+                                          element_deps=element_deps,
+                                          element_notparallel=element_notparallel,
+                                          broker_status_path=broker_status_path,
+                                          admission_status_path=admission_status_path)
         except CaptureInterrupted:
             # UX-157: everything below this point is salvage, and it is
             # the same salvage a failed build already got. The trace was
@@ -8346,6 +8627,7 @@ def main(argv: Optional[list[str]] = None) -> int:
                 "jobserver_status_path": jobserver_status_path,
                 "plan_path": args.plan,
                 "broker_status_path": broker_status_path,
+                "admission_status_path": admission_status_path,
                 "element_kinds_present": element_kinds is not None,
                 "jobserver_decisions_path": jobserver_decisions_path,
                 # UX-846: the pass-through table, probed once - `None`

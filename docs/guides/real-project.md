@@ -343,20 +343,25 @@ can conclude:
   a hot path. Capture it deliberately, not by default. Measured on
   CodSpeed's macro Graviton runner (16 real Cortex-A72 cores, 31 GB,
   Ubuntu 22.04), `examples/11-serial-giant` (9800 lines/unit, cold cache
-  every build), 2026-09-25, n=3 per arm, wall clock and host-wide CPU
-  seconds (`/proc/stat` busy delta); peak RSS was not measured, the
-  remaining gap against this row's Acceptance Test:
+  every build), 2026-09-25, n=3 per arm, wall clock, host-wide CPU
+  seconds (`/proc/stat` busy delta) and host used-memory peak sampled
+  1/s from `/proc/meminfo` over the build's start — host-level, not
+  `host-samples/v1`'s per-process peak RSS (the deviation this row's
+  Required Fix did not anticipate):
 
-  | arm | wall (s) | avg wall | vs none | CPU (s) | avg CPU |
+  | arm | avg wall | vs none | avg CPU | vs none | peak mem |
   |---|---|---|---|---|---|
-  | none (`bst build all.bst`) | 131.88, 131.63, 131.43 | 131.65 | — | 740, 734, 729 | 734.3 |
-  | capture (`bga snapshot --no-trace-opens`) | 141.00, 140.68, 140.59 | 140.76 | +6.9% | 751, 752, 750 | 751.0 |
-  | trace (`bga snapshot --trace-opens`) | 143.96, 143.47, 143.25 | 143.56 | +9.0% | 757, 760, 759 | 758.7 |
+  | none (`bst build all.bst`) | 131.6s | — | 738.3s | — | 840-891M |
+  | capture (`bga snapshot --no-trace-opens`) | 140.9s | +7.1% | 752.0s | +1.9% | 890-909M |
+  | spine (`--no-trace-opens --trace-spine on`) | 140.9s | +7.1% | 752.0s | +1.9% | 876-909M |
+  | trace (`bga snapshot --trace-opens`) | 143.3s | +8.9% | 759.7s | +2.9% | 875-906M |
+  | all (`--trace-opens --trace-spine on`) | 143.8s | +9.3% | 761.7s | +3.2% | 874-895M |
 
-  Both arms fit the 15-25% budget: `--no-trace-opens` at +6.9%,
-  `--trace-opens` at +9.0% — the smallest gap between the two arms
-  measured yet, on a compile-bound project where `--trace-opens`'s hot
-  path is barely exercised.
+  All five arms fit the 15-25% budget, `all` (every Plane 2 feature on
+  at once) at the top, +9.3%. The memory column differences between
+  arms (under 50 MB) sit inside the `none` arm's own 840-891M spread —
+  the memory overhead is below this sampling method's resolution, not a
+  number this reading can state.
 
 ---
 

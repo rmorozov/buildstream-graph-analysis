@@ -1,6 +1,6 @@
 # UX-895: the capture's own overhead is unmeasured, so Plane 2 on every build is a guess
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the 2026-09-20 rollout brief ([`continuous-build-improvement.md`](../../design/continuous-build-improvement.md), section 6) — the owner's budget for capture is 15-25% of time and resources, and the repository publishes no overhead figure at all | **Serves:** R4 and R5 (whether Plane 2 can run on every review build), R1 (what a local `bga snapshot` costs) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the 2026-09-20 rollout brief ([`continuous-build-improvement.md`](../../design/continuous-build-improvement.md), section 6) — the owner's budget for capture is 15-25% of time and resources, and the repository publishes no overhead figure at all | **Serves:** R4 and R5 (whether Plane 2 can run on every review build), R1 (what a local `bga snapshot` costs) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement
 
 ## Motivation
 
@@ -63,3 +63,15 @@ fit 25%. `grep -c "overhead" docs/guides/real-project.md` finds the
 paragraph, and the guard reddens when the number is removed.
 
 ## Outcome
+
+Gap measured: `grep -rEn "[0-9]+(\.[0-9]+)?\s*%.{0,40}(overhead|slower|hook|tracer)" docs/guides/*.md docs/design/*.md` found one unrelated hit before this row - no wall/CPU/memory number for Plane 2 anywhere.
+
+Close: two CodSpeed Graviton runs (16 Cortex-A72, 31 GB, Ubuntu 22.04, `examples/11-serial-giant`, 2026-09-25, n=3 per arm) replaced the prose in `docs/guides/real-project.md`'s "Plane 2 costs real overhead" paragraph with a five-arm table (`none`/`capture`/`spine`/`trace`/`all`): wall +7.1% to +9.3%, CPU +1.9% to +3.2%, all five inside the 15-25% budget. Memory sampled 1/s from `/proc/meminfo` (host used-memory peak, not `host-samples/v1`'s per-process RSS - deviation from the Required Fix, which named the latter and did not anticipate a host-level reading being the one reachable): the <50 MB spread between arms sits inside the `none` arm's own spread, so the guide states the memory overhead as below this method's resolution rather than a number.
+
+`grep -c "overhead" docs/guides/real-project.md` still finds the paragraph; `tests/unit/test_the_overhead_paragraph_names_its_measurement.py` is the Decomposition's docs guard (a percentage, a host class, a date, a budget verdict).
+
+| mutation | reddened | count |
+|---|---|---|
+| every `%` figure in the overhead paragraph replaced with `N` | `test_it_names_a_percentage` | 1 |
+
+Deviation: peak memory is host-level (`/proc/meminfo`), not `host-samples/v1`'s per-process peak RSS the Required Fix named - the only per-process-RSS-capable agent for this row was the Graviton runner, and its own capture tooling reads host memory, not `host-samples/v1`, for this project.

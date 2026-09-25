@@ -1,8 +1,8 @@
 # UX-895/UX-905 on CodSpeed's bare-metal Graviton (16 Cortex-A72):
 # stages this arch's toolchain and buildbox pins (UX-1009), then one
 # leg per matrix entry of `examples/11-serial-giant/graviton_arms.sh` -
-# `pairs` (calibration, off/auto x3) and `overhead` (none/capture/trace
-# x3). Host, width and the sandbox were probed in earlier runs of this
+# `pairs` (calibration, off/auto x3), `cap3` (the same at max-jobs 3)
+# and `overhead` (none/capture/trace/spine/all x3). Host, width and the sandbox were probed in earlier runs of this
 # file; the Ryzen leg never started on the free plan.
 name: CodSpeed runner probe
 
@@ -17,12 +17,14 @@ permissions:
 
 jobs:
   probe:
+    # Macro runners register only on organizations: elsewhere this job would queue forever.
+    if: github.repository_owner == 'bst-perf-tools'
     runs-on: codspeed-macro-arm64-graviton-ubuntu-22-04
     timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
-        leg: [pairs, overhead]
+        leg: [pairs, cap3]
     steps:
       - uses: actions/checkout@v7
 

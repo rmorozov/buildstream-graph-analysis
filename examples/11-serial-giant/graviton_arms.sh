@@ -98,6 +98,7 @@ build() {  # build <arm> <repeat> <plane2 path or -> -- <command...>
     ! grep -q '^[0-9.]* BGA-ARM-FAILED$' "$OUT/$arm-$i.log" || { kill $sampler; tail -40 "$OUT/$arm-$i.log"; exit 1; }
     b1=$(busy); kill $sampler; read -r wall < "$OUT/time"
     [ "$MODE" != noharm ] || [ "$i" != 1 ] || { echo "== $arm head"; sed -n '1,/ START /p' "$OUT/$arm-$i.log" | cut -c1-200; }
+    [ "$MODE" != mixed ] || [ "$i" != 1 ] || { echo "== $arm bst lines"; grep -E ' (START|SUCCESS|FAILURE) |Pipeline Summary' "$OUT/$arm-$i.log" | cut -c1-160; }
     mem=$(( $(sort -n "$OUT/mem" | tail -1) - m0 ))
     [ "$plane2" = - ] || plane2=$(ls $plane2 2>/dev/null | tail -1)
     [ "$plane2" = - ] || traced "$plane2" || { echo "::error title=$arm::Plane 2 traced 0 processes"; exit 1; }

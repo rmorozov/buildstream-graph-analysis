@@ -340,7 +340,23 @@ can conclude:
   at all; on a busybox one it is all of them. It is what `bga snapshot`
   uses by default.
 - **Plane 2 costs real overhead.** `--trace-opens` in particular runs on
-  a hot path. Capture it deliberately, not by default.
+  a hot path. Capture it deliberately, not by default. Measured on
+  CodSpeed's macro Graviton runner (16 real Cortex-A72 cores, 31 GB,
+  Ubuntu 22.04), `examples/11-serial-giant` (9800 lines/unit, cold cache
+  every build), 2026-09-25, n=3 per arm, wall clock and host-wide CPU
+  seconds (`/proc/stat` busy delta); peak RSS was not measured, the
+  remaining gap against this row's Acceptance Test:
+
+  | arm | wall (s) | avg wall | vs none | CPU (s) | avg CPU |
+  |---|---|---|---|---|---|
+  | none (`bst build all.bst`) | 131.88, 131.63, 131.43 | 131.65 | — | 740, 734, 729 | 734.3 |
+  | capture (`bga snapshot --no-trace-opens`) | 141.00, 140.68, 140.59 | 140.76 | +6.9% | 751, 752, 750 | 751.0 |
+  | trace (`bga snapshot --trace-opens`) | 143.96, 143.47, 143.25 | 143.56 | +9.0% | 757, 760, 759 | 758.7 |
+
+  Both arms fit the 15-25% budget: `--no-trace-opens` at +6.9%,
+  `--trace-opens` at +9.0% — the smallest gap between the two arms
+  measured yet, on a compile-bound project where `--trace-opens`'s hot
+  path is barely exercised.
 
 ---
 

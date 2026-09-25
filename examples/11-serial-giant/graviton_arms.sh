@@ -20,7 +20,7 @@ printf 'cache:\n  quota: 20G\n  reserved-disk-space: 2G\n' > "$XDG_CONFIG_HOME/b
 [ "$MODE" != cap3 ] || printf 'build:\n  max-jobs: 3\n' >> "$XDG_CONFIG_HOME/buildstream2.conf"
 OLDPWD_REPO=$(cd "$PROJ/../.." && pwd)
 [ "$MODE" != noharm ] || PROJ=$(cd "$PROJ/../10-jobserver" && pwd)  # four parallel elements: a graph that already fills the cores
-[ "$MODE" != mixed ] || PROJ=$(cd "$PROJ/../13-mixed-graph" && pwd)  # the giant plus 24 single-core elements, all ready at once
+{ [ "$MODE" = mixed ] || [ "$MODE" = mixed8 ]; } && PROJ=$(cd "$PROJ/../13-mixed-graph" && pwd)  # the giant plus 24 single-core elements, all ready at once
 cd "$PROJ"
 
 summary() {
@@ -108,7 +108,7 @@ build() {  # build <arm> <repeat> <plane2 path or -> -- <command...>
     p=$([ "$plane2" = - ] && echo - || peak "$plane2")
     cpu=$(python3 -c "print(f'{$b1 - $b0:.0f}')")
     js=$([ "$plane2" = - ] && echo - || (cd "$OLDPWD_REPO" && shares "$plane2"; binaries "$plane2"
-        { [ "$MODE" != noharm ] && [ "$MODE" != mixed ] || elements "$plane2"; }) | paste -sd' ' -)
+        { [ "$MODE" != noharm ] && [ "$MODE" != mixed ] && [ "$MODE" != mixed8 ] || elements "$plane2"; }) | paste -sd' ' -)
     echo "$arm wall ${wall}s $(tail_s "$OUT/$arm-$i.log" "$wall") cpu ${cpu}s mem ${mem}M giant-peak $p $js" | tee -a "$OUT/builds.txt"
 }
 
@@ -126,6 +126,11 @@ for i in 1 2 3; do
             --jobserver off . "$OUT/off32-$i.json" -- bst --builders 32 build all.bst
         build auto32 "$i" "$OUT/auto32-$i.json" -- bga capture run --run-dir "$OUT/run-auto32-$i" \
             --jobserver auto . "$OUT/auto32-$i.json" -- bst --builders 32 build all.bst ;;
+    mixed8)  # bga's safe cap: 16 cores less the giant's 8
+        build off8 "$i" "$OUT/off8-$i.json" -- bga capture run --run-dir "$OUT/run-off8-$i" \
+            --jobserver off . "$OUT/off8-$i.json" -- bst --builders 8 build all.bst
+        build auto8 "$i" "$OUT/auto8-$i.json" -- bga capture run --run-dir "$OUT/run-auto8-$i" \
+            --jobserver auto . "$OUT/auto8-$i.json" -- bst --builders 8 build all.bst ;;
     overhead)
         build none "$i" - -- bst build all.bst
         build capture "$i" ".bga/runs/*/plane2.json" -- bga snapshot --no-trace-opens -- bst build all.bst
@@ -143,6 +148,6 @@ for k in ("per_element_parallelism", "jobserver_decisions", "jobserver_pool"):
     print(k, json.dumps(r.get(k))[:1500])' "$OUT/diag.json"
         find "$OUT/run-diag" -maxdepth 2 | head -40
         exit 0 ;;
-    *) echo "usage: $0 pairs|cap3|noharm|mixed|overhead|diag" >&2; exit 2 ;;
+    *) echo "usage: $0 pairs|cap3|noharm|mixed|mixed8|overhead|diag" >&2; exit 2 ;;
     esac
 done

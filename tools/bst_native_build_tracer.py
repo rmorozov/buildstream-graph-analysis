@@ -1845,6 +1845,106 @@ def read_element_auth_map_for_jobserver(project_dir: str,
     return auth_map
 
 
+def _parse_jobserver_show_records(stdout: str) -> tuple[str, str, dict]:
+    """UX-1011: `read_jobserver_bst_show`'s stdout parse, split out to
+    keep that function's own branching under the mccabe baseline - one
+    `%{name}<US>%{kind}<US>%{vars}<US>%{public}<RS>` record per element.
+    Returns `(kinds_text, vars_text, auth_map)`: `kinds_text` is the
+    `"name kind"`-per-line text `_parse_element_kinds` already parses,
+    `vars_text` the same concatenation of `%{vars}` blocks the old
+    single-field `%{vars}` call produced, `auth_map` `_public_auth_style`
+    resolved per element."""
+    kinds_lines = []
+    vars_blocks = []
+    auth_map = {}
+    for record in stdout.split(RECORD_SEP):
+        if not record.strip():
+            continue
+        parts = record.split(FIELD_SEP, 3)
+        if len(parts) != 4:
+            continue
+        name, kind, vars_raw, public_raw = parts
+        name, kind = name.strip(), kind.strip()
+        if name and kind:
+            kinds_lines.append(f"{name} {kind}")
+        vars_blocks.append(vars_raw)
+        style = _public_auth_style(public_raw)
+        if name and style is not None:
+            auth_map[name] = style
+    return "\n".join(kinds_lines), "".join(vars_blocks), auth_map
+
+
+def read_jobserver_bst_show(project_dir: str, cmd: list[str]) -> tuple[
+        Optional[int], Optional[dict], dict, dict]:
+    """UX-1011: one `bst show` call in place of the three separate ones
+    (`read_project_max_jobs`/`read_element_kinds_for_jobserver`/
+    `read_element_auth_map_for_jobserver` above) `main`'s `--jobserver`
+    path used to pay for separately - each ~2s of BuildStream startup
+    and project load on a Cortex-A72 (Graviton run 36123209379). One
+    `%{name}<US>%{kind}<US>%{vars}<US>%{public}<RS>` call, the RS/US
+    scheme `read_element_auth_map_for_jobserver` already used because
+    `%{vars}`/`%{public}` are multi-line YAML; the three named readers
+    stay as thin parsers over the same fields (`_parse_element_kinds`,
+    `_parse_max_jobs_from_vars`, `_public_auth_style`) and are kept for
+    any importer, but this is what `main` calls now.
+
+    Returns `(project_max_jobs, element_kinds, kinds_read_diagnostic,
+    element_auth_map)` - the same shapes and the same failure modes the
+    three separate calls gave: `kinds_read_diagnostic["reason"]` one of
+    `no-target`/`timeout`/`oserror`/`exit`/`no-lines`, `element_auth_map`
+    `{}` (never `None`) on any failure, `project_max_jobs` `None` on any
+    failure or when `cmd` names no target.
+    """
+    global_opts, has_subcommand = _bst_global_options(cmd)
+    if not has_subcommand:
+        return None, None, {"argv": None, "returncode": None,
+                            "stderr_tail": "", "reason": "no-target"}, {}
+    target = _cmd_target(cmd)
+    fmt = FIELD_SEP.join(["%{name}", "%{kind}", "%{vars}", "%{public}"]) + RECORD_SEP
+    argv = [cmd[0], *global_opts, "show", "--format", fmt]
+    if target is not None:
+        argv.append(target)
+    try:
+        proc = subprocess.run(
+            argv, cwd=project_dir, capture_output=True, text=True,
+            check=False, timeout=120,
+        )
+    except subprocess.TimeoutExpired:
+        return None, None, {"argv": argv, "returncode": None,
+                            "stderr_tail": "", "reason": "timeout"}, {}
+    except OSError as exc:
+        return None, None, {"argv": argv, "returncode": None,
+                            "stderr_tail": str(exc)[-2000:],
+                            "reason": "oserror"}, {}
+    if proc.returncode != 0:
+        return None, None, {"argv": argv, "returncode": proc.returncode,
+                            "stderr_tail": proc.stderr[-2000:],
+                            "reason": "exit"}, {}
+    kinds_text, vars_text, auth_map = _parse_jobserver_show_records(proc.stdout)
+    kinds = _parse_element_kinds(kinds_text)
+    if not kinds:
+        return None, None, {"argv": argv, "returncode": proc.returncode,
+                            "stderr_tail": proc.stderr[-2000:],
+                            "reason": "no-lines"}, {}
+    project_max_jobs = (
+        _parse_max_jobs_from_vars(vars_text) if target is not None else None)
+    diagnostic = {"argv": argv, "count": len(kinds),
+                 "junctions": kinds.junctions, "collisions": kinds.collisions}
+    return project_max_jobs, kinds, diagnostic, auth_map
+
+
+def read_jobserver_metadata_for_build(project_dir: str, cmd: list[str],
+                                      jobserver: Optional[int]) -> tuple[
+        Optional[int], Optional[dict], Optional[dict], dict]:
+    """UX-1011: `main`'s own `--jobserver` site - the one call
+    (`read_jobserver_bst_show`) it pays before the build, and the one
+    place a regression back to the three separate calls would show up.
+    `(None, None, None, {})` when `jobserver` is falsy - no read at all."""
+    if not jobserver:
+        return None, None, None, {}
+    return read_jobserver_bst_show(project_dir, cmd)
+
+
 def _write_kinds_read(bind_dir: str, jobserver: Optional[int],
                       element_kinds: Optional[dict],
                       diagnostic: dict) -> Optional[str]:
@@ -8189,26 +8289,19 @@ def main(argv: Optional[list[str]] = None) -> int:
         jobserver_seed = (
             args.jobserver_seed if args.jobserver_seed is not None
             else (args.jobserver - 1 if args.jobserver else None))
-        # UX-842: read once, before the build, from `bst show` - a pin
-        # (`-j1`) vs. an element-level cap can only be told apart from
-        # what the project's own `max-jobs` is.
-        project_max_jobs = (read_project_max_jobs(args.project_dir, cmd)
-                            if args.jobserver else None)
-        # UX-843: the same shape, one call, before the build - the
-        # per-kind table's input. UX-870: the diagnostic (argv, reason)
-        # is printed and written to `kinds_read.json` once `bind_dir`
-        # exists, inside `run_traced_build`, not here.
-        element_kinds, kinds_read_diagnostic = (
-            read_element_kinds_for_jobserver(args.project_dir, cmd)
-            if args.jobserver else (None, None))
-        # UX-882: a second, separate `bst show` call for `%{public}` -
-        # never folded into the kinds read above, whose `line.split()`
-        # parse breaks on `%{public}`'s multi-line YAML. `{}` (never
-        # `None`) on any failure - an annotation read gone wrong must
-        # not change what the build does.
-        element_auth_map = (
-            read_element_auth_map_for_jobserver(args.project_dir, cmd)
-            if args.jobserver else {})
+        # UX-842/UX-843/UX-882/UX-1011: one `bst show` call, before the
+        # build, for the project's own `max-jobs` (`-j1` vs. an
+        # element-level cap), the per-kind table and the `%{public}`
+        # auth map - folded into `read_jobserver_bst_show` so the
+        # `--jobserver` path pays BuildStream's startup once, not three
+        # times. UX-870: the diagnostic (argv, reason) is printed and
+        # written to `kinds_read.json` once `bind_dir` exists, inside
+        # `run_traced_build`, not here. `element_auth_map` is `{}`
+        # (never `None`) on any failure - an annotation read gone wrong
+        # must not change what the build does.
+        (project_max_jobs, element_kinds, kinds_read_diagnostic,
+         element_auth_map) = read_jobserver_metadata_for_build(
+            args.project_dir, cmd, args.jobserver)
         jobserver_decisions_path = (
             os.path.join(scratch_mkdtemp(args.project_dir, "jobserver-"),
                         "jobserver_decisions.jsonl")

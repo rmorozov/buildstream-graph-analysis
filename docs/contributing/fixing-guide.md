@@ -368,7 +368,7 @@ tools/nix_toolchain.py       the toolchain axis's own pins - gcc, binutils
                          and cmake as whole closures, and the prefixes
                          and loader derived from what is staged (UX-925)
 tools/nix_buildbox.py        buildbox-casd/-run for aarch64, where the
-                         BuildStream wheel bundles none (UX-1009 (open))
+                         BuildStream wheel bundles none (UX-1009)
 tools/sysroot_manifest.py    what the examples' sysroot is - one row per
                          package, its axis (runtime or toolchain), whether
                          it is pinned or this host's, and the version its

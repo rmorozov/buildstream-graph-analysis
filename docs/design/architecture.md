@@ -487,6 +487,7 @@ artifact.
 - **`docs/audits/case-study-06-macro-micro.md`** — the harder companion: a real macro-then-micro cycle on `examples/06-macro-micro-optimization`, written up as the case where the tool does *not* guide you, with every command and output pasted.
 - **`docs/design/directions.md`** — where the tool should go next, argued separately for its two real usage scenarios (local optimization helper, and CI analytics/gate). Reading order: `architecture.md` (what it is) → `optimization-walkthrough.md` (what that felt like) → `directions.md` (what to do about it).
 - **`docs/contributing/fixing-guide.md`** — mandatory session-start discipline (verification rules) for either backlog.
+- **`docs/guides/jobserver.md`** — when `--jobserver auto` pays: the measured extremes, its cost, and the builder count to pair it with.
 - **`docs/guides/cli.md`** — CLI reference/usage examples.
 
 ## Verification Log

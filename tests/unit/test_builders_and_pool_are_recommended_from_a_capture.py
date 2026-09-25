@@ -97,3 +97,21 @@ class TestTheSafeCapIsHonestAboutAdmission:
     def test_no_recommendation_without_a_ready_set_width_or_host_cores(self):
         assert compute_builder_pool_recommendation(None, 16, 8) == {}
         assert compute_builder_pool_recommendation(25, None, 8) == {}
+
+
+class TestTheDefaultIsTheSafeCapUnderAuto:
+    """Graviton run 36163582462: 8 builders + auto 118.3s against 143.6s."""
+
+    RECOMMENDATION = {"ready_set_width": 25, "ready_set_reading": "the replay",
+                      "safe_builder_cap": 8, "critical_path_max_jobs": 8,
+                      "pool_size": 16, "pool_reading": "host_cpu_count (16)"}
+
+    def test_the_first_line_recommends_the_safe_cap_with_auto(self):
+        from bga.cli import _builder_pool_text_lines
+        first = _builder_pool_text_lines(self.RECOMMENDATION)[0]
+        assert first.startswith("Builders: 8 with --jobserver auto")
+
+    def test_the_ready_set_width_is_named_as_admission_only(self):
+        from bga.cli import _builder_pool_text_lines
+        lines = _builder_pool_text_lines(self.RECOMMENDATION)
+        assert any("25" in line and "BGA_ADMISSION=1" in line for line in lines)

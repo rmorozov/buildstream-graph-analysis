@@ -119,6 +119,11 @@ to a wider sibling). A real `--plan` still wins;
 Not re-measured: `11-serial-giant`, `13-mixed-graph` (the Graviton
 spend was withheld pending this fix - run next, ranked + shared-pool).
 
+Graviton, `13-mixed-graph`, 3 repeats (runs 36153575373, 36163582462):
+admission 202/217/203s against 182s without; 8 builders off 143.6s,
+8 builders + auto 118.3s. The printed default is now the safe cap
+with `--jobserver auto`; admission is opt-in (`BGA_ADMISSION=1`).
+
 ### Deviation
 
 - A: UX-1004's knee travels as `$BGA_CALIBRATED_CORES`; a

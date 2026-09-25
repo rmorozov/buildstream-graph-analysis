@@ -160,7 +160,8 @@ class TestTheSelectorStillSelects:
     # 38, p90 59, max 169 over 623 files. Max 167 -> 169, +0 headroom -
     # the measurement is already at the prior ceiling plus the +2 two
     # rounds ago spent; median and p90 unmoved.
-    CEILING = {"median": 38, "p90": 60, "max": 169}
+    # `UX-1005`'s default-line guard names `bga.cli` too: max 170 over 625.
+    CEILING = {"median": 38, "p90": 60, "max": 170}
     POPULATION_FLOOR = 60
     #: `UX-645`: **13 census + 14 of your own**. The census floor is
     #: inside this bound because those files run - the figure is what

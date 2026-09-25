@@ -746,21 +746,21 @@ def _with_builder_pool_text(text: str, result) -> str:
 
 
 def _builder_pool_text_lines(recommendation: dict) -> list[str]:
-    """The two printed lines the Acceptance Test asks for, each with
-    the reading it came from - and the honest safe-cap caveat (UX-1005:
-    wide builders starved a Graviton critical path 33 jobs on 16 cores)."""
-    lines = [
-        f"Builders (ready-set width): {recommendation['ready_set_width']}, from "
-        f"{recommendation['ready_set_reading']} - right only with admission in "
-        "place (UX-1005 tracks B/C)",
-    ]
+    """The builder and pool lines, each with the reading it came from;
+    the default is the safe cap under `--jobserver auto` (UX-1005)."""
     safe_cap = recommendation.get('safe_builder_cap')
-    if safe_cap is not None:
-        lines.append(
-            f"  Safe cap without admission: {safe_cap} builder(s) - the host's "
-            f"cores leave free once the critical path's own max-jobs="
-            f"{recommendation['critical_path_max_jobs']} is subtracted"
-        )
+    wide = (f"{recommendation['ready_set_width']}, from "
+            f"{recommendation['ready_set_reading']}")
+    if safe_cap is None:
+        lines = [f"Builders (ready-set width): {wide}"]
+    else:
+        lines = [
+            f"Builders: {safe_cap} with --jobserver auto - the host's cores less "
+            f"the critical path's own max-jobs={recommendation['critical_path_max_jobs']}, "
+            "so it can widen into the rest (13-mixed-graph, 16 cores: 143.6s -> 118.3s)",
+            f"  Ready-set width: {wide} - wider than the safe cap only with "
+            "admission (BGA_ADMISSION=1), not yet measured faster",
+        ]
     lines.append(
         f"Pool size: {recommendation['pool_size']}, from {recommendation['pool_reading']}"
     )

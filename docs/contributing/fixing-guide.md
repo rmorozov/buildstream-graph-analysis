@@ -351,9 +351,9 @@ tools/bga_doctor.py          can this machine capture at all
 tools/bga_view.py            the viewer's server and `--export`
 tools/bga_timeline.py        one trace, both planes
 tools/bst_baseline_set.py    assembling a baseline set from published refs
-tools/jobserver_arms.py      an off/auto Plane 2 pair read by width (UX-905 (open))
+tools/jobserver_arms.py      an off/auto Plane 2 pair read by width (UX-905)
 tools/hang_witness.py        what a quiet build waits on: processes, FIFOs,
-                         the pool's unread tokens (UX-905 (open))
+                         the pool's unread tokens (UX-905)
 tools/jobserver/__init__.py  the jobserver subtool's declared surface; only
                          the tracer imports it (UX-901)
 tools/jobserver/pool.py      the FIFO, the pool controller and the broker
@@ -497,7 +497,7 @@ A citation is closed or marked (open).
 .github/workflows/codspeed-probe.yml        dispatch - CodSpeed's bare-metal
                                              Graviton runner: sudo, bwrap,
                                              bst on aarch64, compile width
-                                             (UX-895, UX-905 (open))
+                                             (UX-895, UX-905)
 ```
 
 **Tests and docs:**

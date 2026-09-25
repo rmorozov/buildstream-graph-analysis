@@ -1,6 +1,6 @@
 # UX-905: the jobserver has no compile-bound project at the scale it is meant for
 
-**Priority:** High | **Status:** 🟡 In Progress | **Depends on:** UX-848 (the compile-bound example), UX-857 (`11-serial-giant`) | **Found by:** the 2026-09-20 rollout thread — the owner's own LLVM element is the target case and is blocked behind a ninja integration problem on their project, so the evaluation needs a project this repository can run | **Serves:** R5 and R4 (the mode's value, measured at a scale that can show it), R2 | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-848 (the compile-bound example), UX-857 (`11-serial-giant`) | **Found by:** the 2026-09-20 rollout thread — the owner's own LLVM element is the target case and is blocked behind a ninja integration problem on their project, so the evaluation needs a project this repository can run | **Serves:** R5 and R4 (the mode's value, measured at a scale that can show it), R2 | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement
 
 ## Motivation
 
@@ -86,13 +86,25 @@ A second pair pinned `max-jobs: 3` (the 8-of-40 server shape on 16
 cores, run 36095261434): `off` averaged 261.4 s wall (263.10/260.75/
 260.34), `auto` 112.3 s (112.85/111.90/112.13) - `auto` IMPROVED -57.0 %,
 width 3 to 16, host CPU seconds 729 to 841 (+15 %), host used-memory
-peak 448 M to 1611 M (`/proc/meminfo`, 1/s). Peak memory per arm is now
-read, but host-level, not `host-samples/v1`'s per-element figure the
-Acceptance Test names - a deviation, not the gap it names.
+peak 448 M to 1611 M (`/proc/meminfo`, 1/s) - host-level, not
+`host-samples/v1`'s per-element figure the Acceptance Test names, a
+deviation.
 
-Not met: "the jobserver block's two shares" (tokens-idle, tokens-starved,
-`directions.md:1941`) are unread for either pair - this capture never
-ran `bga analyze` against a Plane 2 report to produce them, only the
-raw wall/CPU/memory readings. "The guard that the mode's status block
-cites a reading whose capture exists" (Decomposition) also does not
-exist yet. Status stays In Progress rather than closing.
+Close: a second run of the same recipe (run 36103304381) reproduced
+both legs - `pairs` -19.5 % against the first run's -19.2 %, `cap3`
+-57.0 % against -57.0 %, agreeing within 0.5 % - the procedure
+reproduces, not the numbers, as the Acceptance Test asks. That run also
+printed the jobserver block's two shares off the Plane 2 ledger
+(`compute_jobserver_shares`, `graviton_arms.sh`'s new `shares()`):
+`auto` arms read tokens-idle 0.56, tokens-starved 0.00 on every repeat
+of both legs - the pool never ran dry while cores idled (inference: the
+56 % of idle-with-tokens ticks are the build's serial phases). Direction
+20's stage 2 was running (pool `dynamic`, no `--plan`). All landed in
+`docs/design/directions.md`'s status block, which now names the run id
+and the two files (`graviton_arms.sh`, `codspeed-probe.yml`) that
+reproduce it.
+
+| mutation | reddened | count |
+|---|---|---|
+| the cited run id deleted from the status block | `test_it_names_a_run_id` | 1 |
+| `graviton_arms.sh`'s `cap3` case arm renamed | `test_every_leg_it_cites_is_one_the_script_still_handles` | 1 |

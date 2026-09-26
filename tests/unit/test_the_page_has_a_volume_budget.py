@@ -350,7 +350,10 @@ BUDGETS = (
     # words, 5,770 nodes; xl 35,669 px, 9,456 words, 5,785 nodes;
     # scale 32,893 px, 9,321 words, 5,456 nodes - 457/31/2,130 and
     # 831/144/215 of headroom.
-    (50, 38_200, 12_800, 800, 7_900),
+    # `UX-1031`: words 12,800 -> 13,200 on the 50 class. `bga:grows`'s
+    # new descriptions reach the page wherever the run carries the
+    # container they describe; measured 13,024, 176 of headroom.
+    (50, 38_200, 13_200, 800, 7_900),
     (4_100, 36_500, 9_600, 900, 6_000),
 )
 

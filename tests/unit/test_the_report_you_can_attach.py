@@ -949,7 +949,11 @@ COMMITTED_EXPORTS = [
     # over that merge; the bound holds unmoved.
     # The UI batch (`UX-921`, `UX-1015`..`UX-1036`) moved this one
     # 7,226 B, all source. 487,832 B measured; 490,000 keeps headroom.
-    ("golden", GOLDEN, 490_000),                       #  487,832 B
+    # `UX-1031` moved this one 13,745 B, all **contract** - `bga:grows`
+    # and the containers it now declares across the schema; golden
+    # carries none of it as data. 501,577 B measured; 505,000 keeps
+    # headroom.
+    ("golden", GOLDEN, 505_000),                       #  501,577 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -1137,7 +1141,10 @@ COMMITTED_EXPORTS = [
     # merge; the bound holds unmoved.
     # The UI batch (`UX-921`, `UX-1015`..`UX-1036`) moved this one
     # 7,226 B, all source. 548,185 B measured; 550,000 keeps headroom.
-    ("macro_micro", MACRO_MICRO, 550_000),             #  548,185 B
+    # `UX-1031` moved this one 13,745 B, the same contract as golden's
+    # note above - `bga:grows` travels whether or not the run has
+    # Plane 2 data. 561,930 B measured; 565,000 keeps headroom.
+    ("macro_micro", MACRO_MICRO, 565_000),             #  561,930 B
 ]
 
 

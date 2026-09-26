@@ -325,6 +325,15 @@ SERIES_MIN_POINTS = 3
 # `UX-288` had just finished removing from the payload.
 PRESETS = "bga:presets"
 
+#: `UX-1031`: every list and data-keyed map says whether it grows with
+#: the run. A string names what it grows with (`"elements"`,
+#: `"findings"`, a subset's own population...); `False` says it does
+#: not, and the node must then carry `maxItems` - a container found
+#: undeclared, or growing with no bound, is exactly the defect the
+#: styleguide audit measured (91 containers walked, 41 undeclared, 19
+#: growing with the run of which 4 undeclared).
+GROWS = "bga:grows"
+
 KEYED_BY = "bga:keyed_by"          # what the map's own keys are
 
 #: The one value `KEYED_BY` takes today. A task uid is
@@ -430,6 +439,23 @@ VERDICT_KINDS = (
 DIRECTIONS = ("lower_is_better", "higher_is_better", "neutral")
 
 
+def _check_grows(document: str, key: str, hint: dict) -> None:
+    """`UX-1031`: a container's own growth claim. A string says what it
+    grows with; `False` says it does not, and then only `maxItems`
+    makes that a claim rather than an omission."""
+    grows = hint.get(GROWS)
+    if grows is None:
+        return
+    if grows is not False and not (isinstance(grows, str) and grows.strip()):
+        raise ValueError(
+            f"{document}.{key}: {GROWS}={grows!r} must be a non-empty "
+            f"string naming what it grows with, or False")
+    if grows is False and not isinstance(hint.get("maxItems"), int):
+        raise ValueError(
+            f"{document}.{key}: {GROWS} is False with no maxItems - a "
+            f"fixed container states its bound")
+
+
 def _check_hint(document: str, key: str, hint: dict) -> None:
     """Reject a hint a renderer could not act on.
 
@@ -440,8 +466,7 @@ def _check_hint(document: str, key: str, hint: dict) -> None:
     # UX-209: the rail a section belongs to, closed so the TOC can be
     # complete against it - an unknown rail would silently drop a
     # section out of every group.
-    rail = hint.get(RAIL)
-    if rail is not None and rail not in RAILS:
+    if (rail := hint.get(RAIL)) is not None and rail not in RAILS:
         raise ValueError(
             f"{document}.{key}: {RAIL}={rail!r} is not one of "
             f"{', '.join(RAILS)}")
@@ -560,6 +585,7 @@ def _check_hint(document: str, key: str, hint: dict) -> None:
         if len(set(names)) != len(names):
             raise ValueError(
                 f"{document}.{key}: two presets share a name: {names}")
+    _check_grows(document, key, hint)
     quantity = hint.get(QUANTITY)
     if quantity is not None and quantity not in QUANTITIES:
         raise ValueError(
@@ -894,6 +920,7 @@ _PROVENANCE = {
                                     "run's chain, whose paths resolve "
                                     "against that run's `analyze/v1`."},
         "evidence": {
+            GROWS: False, "maxItems": 12,
             "description": "Each field this claim was read from, as a "
                            "path into this document and the value found "
                            "there. A quotation, not a second publication: "
@@ -965,7 +992,12 @@ _PROVENANCE = {
                                    "publishes."},
                 "threshold": {"description": "That constant's value, read "
                                              "live: change the constant and "
-                                             "this changes with it."},
+                                             "this changes with it. A "
+                                             "two-element `[low, high]` "
+                                             "list where `comparison` is "
+                                             "`banded`, a scalar otherwise.",
+                             GROWS: False, "maxItems": 2,
+                             "items": {}},
                 "comparison": {"description": "How the observed value was "
                                               "compared: `>=`, `<`, `>`, "
                                               "`banded`, or `present` for a "
@@ -991,11 +1023,15 @@ _PROVENANCE = {
         # field beside it spelled twice.
         "trace_queries": {
             "type": "array",
+            GROWS: False, "maxItems": 4,
+            "items": {"type": "string"},
             "description": "Every query that deepens this claim, best "
                            "first, when there is more than one. "
                            "`trace_query` is its first entry. Absent "
                            "where the claim offers a single grain."},
         "unpublished_inputs": {
+            GROWS: False, "maxItems": 8,
+            "items": {"type": "string"},
             "description": "Fields this claim was genuinely drawn from "
                            "that this document does not carry. Named "
                            "rather than omitted: silence would read as "
@@ -1599,6 +1635,30 @@ _JOIN_ITEM_PROPERTIES = {
                 QUANTITY: "duration_us",
                 "description": "The longest single occurrence of the repeated "
                                "work."},
+            # `UX-1031`: not in `_ANALYZE_OPTIONAL`/declared before -
+            # the styleguide audit's naive walker treated a join row's
+            # ~28 own fields as a data-keyed map (its `datakeys()`
+            # heuristic fires past 20 keys) and mis-attributed this to
+            # a phantom `element_join[]{}.elements` path. The real
+            # field is here.
+            "elements": {
+                GROWS: "elements that repeated the same command as "
+                       "this element's worst redundancy (subset, no "
+                       "cap)",
+                "items": {"type": "string", "description": "element uid"},
+                "description": "Every element the repeated command ran "
+                               "under, not only the worst one."},
+            "example_cmd": {
+                "description": "One example of the repeated command "
+                               "line."},
+            "signature": {
+                "description": "The normalised command the repeats "
+                               "share, redacted of run-specific "
+                               "tokens."},
+            "worst_element": {
+                "description": "The element this redundancy is "
+                               "attributed to - the one with the "
+                               "longest single occurrence."},
         }},
     "declared": {
         "type": "boolean",
@@ -1718,8 +1778,17 @@ _JOIN_ITEM_PROPERTIES = {
                        "oversubscription, which is how an element "
                        "slowed by its siblings is told from one slowed "
                        "by its own work."},
-    "native_findings": {"type": ["array", "null"]},
-    "unused_dependencies": {"type": ["array", "null"]},
+    "native_findings": {
+        "type": ["array", "null"],
+        GROWS: "finding ids attributed to this element (subset of "
+               "findings, no cap)",
+        "items": {"type": "string"}},
+    "unused_dependencies": {
+        "type": ["array", "null"],
+        GROWS: "this element's own declared edges Plane 2 read "
+               "nothing from (bounded by that element's own "
+               "dependency count, not the full run, no cap seen)",
+        "items": {"type": "string", "description": "element uid"}},
     "assessed_dependencies": {
         QUANTITY: "count",
         "description": "The dependencies Plane 2 could judge for this "
@@ -1736,7 +1805,18 @@ _JOIN_ITEM_PROPERTIES = {
                        "Absent where Plane 2 assessed nothing - "
                        "\"every edge was read\" and \"nobody looked\" "
                        "are different claims."},
-    "recommendations": {"type": ["array", "null"]},
+    "aggregating_dependencies": {
+        "type": ["array", "null"],
+        GROWS: "dependencies whose measurement this element's own "
+               "reading includes (subset, no cap seen)",
+        "items": {"type": "string", "description": "element uid"},
+        "description": "Dependencies this element's own reading "
+                       "aggregates rather than reads independently."},
+    "recommendations": {
+        "type": ["array", "null"],
+        GROWS: "recommendation steps for this element (small, no cap "
+               "seen)",
+        "items": {"type": "object"}},
 }
 
 # UX-217: every unit a finding's `evidence` can be in, declared rather
@@ -2027,7 +2107,9 @@ EVIDENCE_QUANTITIES.update({
     "fan_in_distribution": _distribution(
         "count", "fan-in in this graph",
         "The population this finding's ranking is placed in."),
-    "constraints": {"items": {"properties": {
+    "constraints": {
+        GROWS: False, "maxItems": 3,
+        "items": {"properties": {
         "allows": {
             QUANTITY: "count",
             "description": "How many builders this particular ceiling permits."},
@@ -2036,7 +2118,9 @@ EVIDENCE_QUANTITIES.update({
             "description": "`UX-861`: the CPU figure before it was capped "
                            "to `host_cpu_count` - present only when it was."},
     }}},
-    "rows": {"items": {"properties": {
+    "rows": {
+        GROWS: False, "maxItems": 4,  # `TIME_CONCENTRATION_SHOWN_MAX`
+        "items": {"properties": {
         "duration_us": {
             QUANTITY: "duration_us",
             "description": "How long this row's element took in this run."},
@@ -2048,7 +2132,9 @@ EVIDENCE_QUANTITIES.update({
             QUANTITY: "share",
             "description": "How much of the chain this row's element accounts for."},
     }}},
-    "steps": {"items": {"properties": {
+    "steps": {
+        GROWS: False, "maxItems": 3,  # `HORIZON_STEPS_SHOWN`
+        "items": {"properties": {
         "saving_us": {
             QUANTITY: "duration_us",
             "description": "What taking this step alone is worth, before the ones after it."},
@@ -2058,12 +2144,29 @@ EVIDENCE_QUANTITIES.update({
         "cumulative_saving_us": {
             QUANTITY: "duration_us",
             "description": "Everything saved up to and including it."},
+        "entering": {
+            GROWS: "elements entering the critical path at that step "
+                   "(subset of elements, no cap within the step)",
+            "items": {"type": "string", "description": "element uid"},
+            "description": "Elements not on the previous step's critical "
+                           "path and on this one."},
     }}},
-    "latent_heavies": {"items": {"properties": {
+    "latent_heavies": {
+        GROWS: False, "maxItems": 2,  # `LATENT_HEAVIES_SHOWN`
+        "items": {"properties": {
         "duration_us": {
             QUANTITY: "duration_us",
             "description": "This element's duration, off the chain today."},
     }}},
+    # `UX-1031`: this key's *evidence* value is a map (element -> share),
+    # capped at `CRITICALITY_SHOWN` - not the scalar `_EVIDENCE_FIELDS`
+    # entry of the same name, which describes a different, genuinely
+    # scalar reading elsewhere. The override below wins (`dict.update`).
+    "criticality_probability": {
+        GROWS: False, "maxItems": 3,  # `CRITICALITY_SHOWN`
+        "additionalProperties": {QUANTITY: "share"},
+        "description": "The top elements by observed criticality, "
+                       "keyed by uid."},
     # `UX-680`: the two `remote-execution-whatif` projections. A nested
     # object each, not a row - there is exactly one of each per finding
     # - so `properties` rather than `items`, the shape `evidence` itself
@@ -2281,6 +2384,13 @@ _STRUCTURAL_TABLES = {
                 QUANTITY: "duration_us",
                 "description": "Work that could be moved out of this "
                                "build without anything waiting for it."},
+            "recommended_deferrals": {
+                GROWS: "low-risk deferrable leaves (subset of "
+                       "elements, no cap)",
+                "items": {"type": "string", "description": "element uid"},
+                "description": "The leaves recommended for deferral - "
+                               "a subset chosen by risk, not the whole "
+                               "deferrable population."},
         }},
     # UX-303: the graph's width, level by level - an ordered
     # numeric array whose order *is* the axis, which is what
@@ -2305,6 +2415,8 @@ _STRUCTURAL_TABLES = {
             # `[0,-2,0,0,0,0,0,0,+1,0,0,0,+1,0]` on the 1,202-element
             # synthetic run.
             "levels": {
+                GROWS: "graph depth (levels), each level's own "
+                       "membership grows with elements",
                 "description": "One row per level of the graph, from "
                                "the roots down: how wide it is and "
                                "which elements sit on it.",
@@ -2320,11 +2432,22 @@ _STRUCTURAL_TABLES = {
                     # No `role: "element"`: this cell is a *list* of
                     # uids, and `elementColumn` would anchor one
                     # Inspect link at the whole JSON string.
+                    #
+                    # `UX-655`/`UX-1031`: this row is declared by its
+                    # `bga:columns` alone (`test_a_row_can_be_declared_
+                    # by_its_columns_alone` forbids giving `levels` an
+                    # `items`), so this column's own growth claim lives
+                    # on the column spec itself, not on a row `items`
+                    # this table may not carry.
                     {"key": "elements", "title": "Which elements",
+                     GROWS: "elements at that level (subset of "
+                            "elements, no cap - drawn by bespoke code, "
+                            "not the row cap or fold machinery)",
                      "description": "The elements on this level - what "
                                     "could run at once, once "
                                     "everything above it is built."},
-                ]},
+                ],
+            },
             "min_width": {
                 QUANTITY: "count",
                 "description": "The narrowest level of the graph - "
@@ -2340,6 +2463,8 @@ _STRUCTURAL_TABLES = {
                 "description": "How evenly the width is spread. Low "
                                "means the graph pinches somewhere."},
             "width_at_level": {
+                GROWS: "graph depth (levels), 1:1 with "
+                       "parallelism.levels",
                 # `UX-343`: the series declared its axis and not
                 # the values on it.
                 "items": {
@@ -2363,11 +2488,19 @@ _STRUCTURAL_TABLES = {
                 QUANTITY: "count",
                 "description": "The longest run of elements that must "
                                "go one after another."},
+            "longest_serial_chain": {
+                GROWS: "elements on the longest chain (subset of "
+                       "elements, no cap)",
+                "items": {"type": "string", "description": "element uid"},
+                "description": "The chain itself, in walk order - the "
+                               "one exhibit `serial_chain_length` "
+                               "counts."},
             # UX-830: `longest_serial_chain` keeps one exhibit; a
             # second chain a second shorter than the first moves the
             # critical path there the moment the first is split, and
             # this is where a reader finds it before the next capture.
             "serial_chains": {
+                GROWS: False, "maxItems": 40,  # `SERIAL_CHAINS_MAX`
                 "description": "Every maximal non-branching run of "
                                "elements, ranked by how much of the "
                                "build's duration it accounts for - "
@@ -2394,13 +2527,41 @@ _STRUCTURAL_TABLES = {
                     {"key": "members", "title": "Members",
                      "sortable": False,
                      "description": "The chain, in walk order."},
-                ]},
+                ],
+                "items": {
+                    # `_descend`'s row-level fallback reads the row
+                    # node's own `bga:columns` - duplicated here so
+                    # `rank`/`length`/`weighted_duration_us`/`wall_share`
+                    # still resolve now that `members` needs `properties`.
+                    COLUMNS: [
+                        {"key": "rank", "title": "Rank",
+                         "quantity": "count", "sortable": True},
+                        {"key": "length", "title": "Length",
+                         "quantity": "count", "sortable": True},
+                        {"key": "weighted_duration_us", "title": "Duration",
+                         "quantity": "duration_us", "sortable": True},
+                        {"key": "wall_share", "title": "Of longest path",
+                         "quantity": "share", "sortable": True},
+                    ],
+                    "properties": {
+                        "members": {
+                            GROWS: "elements in that chain (subset, no "
+                                   "cap)",
+                            "items": {"type": "string",
+                                      "description": "element uid"},
+                            "description": "The chain, in walk order."},
+                    },
+                },
+            },
             # UX-283: the choke points are an element table like
             # any other, so they earn the Inspect route and the
             # sort every other element table has. Before this
             # the whole `structural` section carried **zero**
             # links out of it, measured on the 1,202-element run.
             "choke_points": {
+                GROWS: "elements (nodes where downstream+ancestor "
+                       "count == n-1, bounded on the page by "
+                       "structured.js's table cap, not in the payload)",
                 "description": "Elements every other element is "
                                "either upstream or downstream of - "
                                "the graph's waists, ranked by how "
@@ -2415,7 +2576,8 @@ _STRUCTURAL_TABLES = {
                                     "downstream of this one, and "
                                     "so cannot start until it "
                                     "finishes."},
-                ]},
+                ],
+                },
             # UX-290: a tuple is described by naming its members
             # in order. `bga:columns` already says what an array
             # of *objects* holds; for an array of pairs, entry
@@ -2427,6 +2589,7 @@ _STRUCTURAL_TABLES = {
             # in-edge is a dependency and an out-edge a dependent -
             # the two blocks had each other's sentence.
             "high_fanin_elements": {
+                GROWS: False, "maxItems": 5,
                 "description": "Elements that depend on many "
                                "others directly, with how many.",
                 COLUMNS: [
@@ -2437,8 +2600,10 @@ _STRUCTURAL_TABLES = {
                      "description": "Dependencies this element "
                                     "names - an in-degree, not a "
                                     "transitive count."},
-                ]},
+                ],
+                },
             "high_fanout_elements": {
+                GROWS: False, "maxItems": 5,
                 "description": "Elements many others depend on "
                                "directly, with how many.",
                 COLUMNS: [
@@ -2449,7 +2614,8 @@ _STRUCTURAL_TABLES = {
                      "description": "Elements naming this one as "
                                     "a dependency - an out-degree, "
                                     "not a transitive count."},
-                ]},
+                ],
+                },
         }},
     "sensitivity": {
         "properties": {
@@ -2468,6 +2634,7 @@ _STRUCTURAL_TABLES = {
                                "replay would be. A ceiling, not a "
                                "plan."},
             "top_opportunities": {
+                GROWS: False, "maxItems": 10,
                 "description": "Elements whose duration the "
                                "makespan is most sensitive to.",
                 COLUMNS: [
@@ -2483,9 +2650,27 @@ _STRUCTURAL_TABLES = {
                      "description": "What the makespan would drop "
                                     "by, in seconds, if this "
                                     "element cost nothing."},
-                ]},
+                ],
+                },
+            "omitted_structural_opportunities": {
+                GROWS: False, "maxItems": 10,
+                "items": {"type": "object", "properties": {
+                    "element": {"type": "string",
+                                "description": "element uid"},
+                    "element_kind": {"type": "string"},
+                }},
+                "description": "Structural-kind candidates filtered "
+                               "out of `top_opportunities` - a "
+                               "toolchain sitting on the critical path "
+                               "scores sensitivity 1.00 by the metric's "
+                               "own definition, and is not a fix. Drawn "
+                               "from the same capped ten candidates, "
+                               "never larger."},
         }},
     "serialization_point_risks": {
+        GROWS: "detected large serialization points (real grower, no "
+               "explicit cap in the payload; structured.js's table "
+               "bound applies on the page)",
         "items": {"properties": {
             # `UX-343`: the record's own scalars, beside the
             # nested element table that was already declared.
@@ -2506,6 +2691,8 @@ _STRUCTURAL_TABLES = {
                 QUANTITY: "count",
                 "description": "Elements downstream of this one."},
             "pinned_elements": {
+                GROWS: "elements pinned at -j1 for that risk (subset "
+                       "of elements, no cap)",
                 "description": "The elements pinned at this "
                                "serialization point, and what each "
                                "one was pinned to.",
@@ -2519,31 +2706,74 @@ _STRUCTURAL_TABLES = {
                                     "was allowed."},
                     {"key": "duration_us", "title": "Duration",
                      "quantity": "duration_us", "sortable": True},
-                ]},
+                ],
+                },
         }}},
     "batch_opportunities": {
         "properties": {
+            # `UX-1031`: all three are partitions/pairs over the same
+            # capped candidate pool (`realizable[:5]` in
+            # `bga/analyzer.py`) - at most 5 candidates, so at most 5
+            # groups and `C(5,2)=10` pairs, never run-scaled.
+            "groups": {
+                GROWS: False, "maxItems": 5,
+                "items": {"type": "object", "properties": {
+                    "elements": {
+                        GROWS: False, "maxItems": 5,
+                        "items": {"type": "string",
+                                  "description": "element uid"}},
+                }},
+                "description": "Candidate groups whose members could be "
+                               "fixed together for a real, simulated "
+                               "saving."},
+            "omitted_zero_savings_groups": {
+                GROWS: False, "maxItems": 5,
+                "items": {"type": "object", "properties": {
+                    "elements": {
+                        GROWS: False, "maxItems": 5,
+                        "items": {"type": "string",
+                                  "description": "element uid"}},
+                }},
+                "description": "Candidate groups simulated at zero "
+                               "combined saving - a real result, kept "
+                               "visible rather than dropped."},
             "serialized_pairs": {
+                GROWS: False, "maxItems": 10,
                 "description": SERIALIZED_PAIRS_MEANING,
                 COLUMNS: [
                     {"key": "first", "title": "Ran first",
                      "role": "element", "sortable": True},
                     {"key": "then", "title": "Ran after it",
                      "role": "element", "sortable": True},
-                ]},
+                ],
+                "items": {"type": "array", GROWS: False, "maxItems": 2,
+                         "items": {"type": "string"}}},
         }},
     # `UX-344`: the one table `structural` carried with no declaration
     # at all. A lifted table with no rail lands in "Everything else",
     # which a guard reddens on - so the lift is what made this a gap
     # rather than a silence.
     "consolidation_candidates": {
+        GROWS: "element groups sharing consumers (real grower, no cap "
+               "in the payload; structured.js's table bound applies on "
+               "the page)",
         "description": "Elements that are always consumed together and "
                        "could be one element. Structural: read from the "
                        "graph's own edges, never from a timing estimate.",
         COLUMNS: [
             {"key": "elements", "title": "Could be one element"},
             {"key": "shared_consumers", "title": "Always consumed by"},
-        ]},
+        ],
+        "items": {"type": "object", "properties": {
+            "elements": {
+                GROWS: "a group's own member elements (subset, no cap)",
+                "items": {"type": "string", "description": "element uid"}},
+            "shared_consumers": {
+                GROWS: "the group's own shared consumer elements "
+                       "(subset, no cap)",
+                "items": {"type": "string", "description": "element uid"}},
+        }},
+    },
 }
 
 _SIGNALS_TABLES = {
@@ -2563,6 +2793,9 @@ _SIGNALS_TABLES = {
         "this graph. \"753 downstream\" is p99.9 in a "
         "1,202-element run and unremarkable in 40,000."),
     "critical_path_detail": {
+        GROWS: "critical path length (subset of elements, no cap in "
+               "the payload; structured.js's table bound applies on "
+               "the page)",
         "description": "The chain itself, element by element. "
                        "The longest path through the graph as "
                        "this run recorded it - a cached element "
@@ -2584,6 +2817,7 @@ _SIGNALS_TABLES = {
         ],
     },
     "optimization_horizon": {
+        GROWS: False, "maxItems": 5,  # `OPTIMIZATION_HORIZON_STEPS`
         "description": "What fixing the top elements in turn is "
                        "worth, in order. The savings stop adding "
                        "up because each fix lets other elements "
@@ -2605,8 +2839,39 @@ _SIGNALS_TABLES = {
             {"key": "cumulative_saving_us", "title": "Cumulative",
              "quantity": "duration_us", "sortable": True},
         ],
+        "items": {
+            # `_descend`'s row-level fallback reads the row node's own
+            # `bga:columns`, not the outer table's - duplicated here so
+            # `saving_us`/`makespan_after_us`/`cumulative_saving_us`
+            # still resolve now that `entering` needs `properties`.
+            COLUMNS: [
+                {"key": "element_uid", "title": "Element",
+                 "role": "element", "sortable": True},
+                {"key": "saving_us", "title": "Saving",
+                 "quantity": "duration_us", "sortable": True},
+                {"key": "makespan_after_us", "title": "Makespan after",
+                 "quantity": "duration_us", "sortable": True},
+                {"key": "cumulative_saving_us", "title": "Cumulative",
+                 "quantity": "duration_us", "sortable": True},
+            ],
+            "properties": {
+                "entering": {
+                    GROWS: "elements newly binding at that step "
+                           "(subset of elements, no cap)",
+                    "items": {"type": "string",
+                              "description": "element uid"},
+                    "description": "Elements not on the previous "
+                                   "step's critical path and on this "
+                                   "one - the latent heavies, worth "
+                                   "nothing today."},
+            },
+        },
     },
     "latent_heavies": {
+        # `bga/graph/edg.py`'s `LATENT_HEAVIES_SHOWN` (=5), not
+        # `findings.py`'s own constant of the same name (=2) - that one
+        # caps a *finding's* further-trimmed slice of this list, below.
+        GROWS: False, "maxItems": 5,
         "description": "Heavy elements not on the path today. "
                        "They cost nothing now and become the "
                        "constraint once what is above them is "
@@ -2626,6 +2891,7 @@ _SIGNALS_TABLES = {
     # leaves reaching the reader with no unit at all.
     "element_durations": {
         QUANTITY: "duration_us",
+        GROWS: "elements",
         "additionalProperties": {
             QUANTITY: "duration_us",
             "description": "How long this element took in this run, restore or build."},
@@ -2634,6 +2900,7 @@ _SIGNALS_TABLES = {
                        "restore, not its build."},
     "slack": {
         QUANTITY: "duration_us",
+        GROWS: "elements",
         "additionalProperties": {
             QUANTITY: "duration_us",
             "description": "How long this element could have been "
@@ -2643,6 +2910,7 @@ _SIGNALS_TABLES = {
                        "Zero is on the chain."},
     "downstream_count": {
         QUANTITY: "count",
+        GROWS: "elements",
         "additionalProperties": {
             QUANTITY: "count",
             "description": "Elements downstream of this one."},
@@ -2650,6 +2918,7 @@ _SIGNALS_TABLES = {
                        "each - what a change to it rebuilds."},
     "unweighted_depth": {
         QUANTITY: "count",
+        GROWS: "elements",
         "additionalProperties": {
             QUANTITY: "count",
             "description": "Edges from this element to the root."},
@@ -2663,6 +2932,7 @@ _SIGNALS_TABLES = {
         # rather than sniffed - the page cannot tell `a.bst|BUILD|BUILD|0`
         # from a binary called that without being told.
         KEYED_BY: KEYED_BY_TASK_UID,
+        GROWS: "tasks",
         "additionalProperties": {
             QUANTITY: "duration_us",
             "description": "The wall-clock this task alone is "
@@ -2675,6 +2945,7 @@ _SIGNALS_TABLES = {
                        "because one element can run more than one "
                        "task."},
     "criticality_probability": {
+        GROWS: "elements",
         "additionalProperties": {
             "properties": {
                 "probability": {
@@ -2736,6 +3007,7 @@ _SIGNALS_TABLES = {
                        "this store's earlier runs on the same "
                        "machine."},
     "blast_radius": {
+        GROWS: "elements",
         "additionalProperties": {
             "properties": {
                 "downstream_count": {
@@ -2762,6 +3034,7 @@ _SIGNALS_TABLES = {
         "description": "What one element's change rebuilds, and "
                        "what that costs."},
     "fan_in": {
+        GROWS: "elements",
         "additionalProperties": {
             "properties": {
                 "direct_count": {
@@ -2777,6 +3050,8 @@ _SIGNALS_TABLES = {
                 # in the elements table (styleguide §3c: forty names
                 # is a cell no row survives).
                 "direct": {
+                    GROWS: False, "maxItems": 40,
+                    "items": {"type": "string", "description": "element uid"},
                     "description": "This element's direct dependencies "
                                    "by name, sorted, capped at 40. "
                                    "`direct_count` is the count "
@@ -2995,6 +3270,10 @@ _SIGNALS_TABLES = {
                     # key the emitter can produce rather than the one
                     # key that warned.
                     "targets": {
+                        GROWS: "requested targets (subset of elements, "
+                               "run-specific, no cap)",
+                        "items": {"type": "string",
+                                  "description": "element uid"},
                         "description": "The elements this run was "
                                        "asked for, whose closure the "
                                        "numbers below are restricted "
@@ -3053,6 +3332,11 @@ _SIGNALS_TABLES = {
                                "phases covered together."}}},
     "joint_saving": {
         "properties": {
+            "elements": {
+                GROWS: False, "maxItems": 3,  # `JOINT_SAVING_SET_SIZE`
+                "items": {"type": "string", "description": "element uid"},
+                "description": "The candidates this simulation fixed "
+                               "together."},
             "joint_saving_us": {
                 QUANTITY: "duration_us",
                 "description": "What fixing the candidates together is "
@@ -3082,6 +3366,9 @@ _SIGNALS_TABLES = {
             # nothing about its values - found by the clause this item
             # added, not by reading the schema.
             "leaves_detail": {
+                GROWS: "leaves (subset of elements, no cap in the "
+                       "payload; structured.js's table/map bound "
+                       "applies on the page)",
                 "description": "Each leaf, keyed by its element uid.",
                 "additionalProperties": {
                     "properties": {
@@ -3131,12 +3418,18 @@ _RESTRUCTURING_ITEM_PROPERTIES = {
     "severity": {"type": "string", "enum": list(SEVERITIES)},
     "elements": {
         "type": "array",
+        GROWS: "a group's own member elements (subset, no cap)",
+        "items": {"type": "string", "description": "element uid"},
         "description": "The elements the unread edges chain together. "
                        "Fanning them out is what the projection below "
                        "replays."},
     "edges": {
         "type": "array",
+        GROWS: "the group's own unread edges (subset, no cap)",
         COLUMNS: _RESTRUCTURING_EDGE_COLUMNS,
+        "items": {"type": "array", GROWS: False, "maxItems": 2,
+                  "items": {"type": "string"},
+                  "description": "[from, to] - the never-read edge."},
         "description": "Each declared build edge Plane 2 measured "
                        "never-read: the second element opened no file "
                        "the first staged. Evidence, not a verdict - a "
@@ -3164,6 +3457,7 @@ _RESTRUCTURING_ITEM_PROPERTIES = {
                 # `UPLOAD`), so the unit is declared once for the map
                 # rather than per key - `UX-343`'s rule for a map keyed
                 # by data.
+                GROWS: False, "maxItems": 6,
                 "additionalProperties": {
                     QUANTITY: "count",
                     "description": "Concurrent slots of this resource."},
@@ -3178,6 +3472,7 @@ _RESTRUCTURING_ITEM_PROPERTIES = {
 _RESTRUCTURING_HINT = {
     QUESTION: 'Which dependency edges are never read?',
     RAIL: "act",
+    GROWS: "connected unread-edge groups (real grower, no explicit cap)",
     # `elements` is published and **not** drawn: it is the union of the
     # edge endpoints (`bga/correlate.py` builds it as exactly that), so
     # a column for it is the same population as the edge table beside
@@ -3265,6 +3560,23 @@ _RUN_INSTANCE_HINT = {
                                "max-jobs, from `bst show`; null when "
                                "bst was unavailable."},
         }},
+        "targets": {
+            GROWS: "targets",
+            "items": {"type": "string", "description": "element uid"},
+            "description": "The elements this run was asked to build - "
+                           "the requested targets, not their closure."},
+        "producer": {
+            "properties": {
+                "contracts": {
+                    GROWS: False, "maxItems": 64,
+                    "items": {"type": "string"},
+                    "description": "Every document shape this build "
+                                   "of bga can read or write, sorted. "
+                                   "Fixed by the tool's own release, not "
+                                   "by this run."}},
+            "description": "What produced the run-context this run "
+                           "read, if it was captured by a `bga` that "
+                           "stamped itself."},
     }}
 
 
@@ -3306,13 +3618,28 @@ _ANALYZE_HINTS = {
                 QUANTITY: "count",
                 "description": "Tasks the sandbox measured as shorter than "
                                "BuildStream did."},
+            "shorter_than_bst": {
+                GROWS: "tasks Plane 2 measured shorter than "
+                       "BuildStream's own span (subset of tasks, no "
+                       "cap)",
+                "items": {"type": "object"},
+                "description": "Those tasks themselves, worst first - "
+                               "what `tasks_shorter_than_bst` counts."},
             "tasks_where_material": {
                 QUANTITY: "count",
                 "description": "Tasks where the disagreement is large enough "
                                "to matter."},
         }},
     "run_instance": _RUN_INSTANCE_HINT,
-    "producer": {QUESTION: 'Which build of bga measured this?', RAIL: 'raw'},
+    "producer": {QUESTION: 'Which build of bga measured this?', RAIL: 'raw',
+        "properties": {
+            "contracts": {
+                GROWS: False, "maxItems": 64,
+                "items": {"type": "string"},
+                "description": "Every document shape this build of "
+                               "bga can read or write, sorted. Fixed by "
+                               "the tool's own release that wrote this "
+                               "page, not by this run."}}},
     "resource_blast": {QUESTION: 'What does one shared resource rebuild?', RAIL: 'investigate',
         "properties": {
             # UX-833: additive - both empty for a project with no
@@ -3324,11 +3651,35 @@ _ANALYZE_HINTS = {
                                "kind onto the known kind whose keying "
                                "it inherits."},
             "unmapped_source_kinds": {
+                GROWS: False, "maxItems": 32,
                 "type": "array", "items": {"type": "string"},
                 "description": "Kinds this run saw with no keying, "
                                "sorted - an unmapped custom plugin, "
                                "named rather than folded silently "
                                "into an unestimated blast."},
+            "rows": {
+                GROWS: "resources shared by two or more elements (real "
+                       "grower, no cap in the payload; "
+                       "structured.js's table bound applies on the "
+                       "page)",
+                "items": {"type": "object", "properties": {
+                    "direct_elements": {
+                        GROWS: "elements directly sourcing that "
+                               "resource (subset, no cap)",
+                        "items": {"type": "string",
+                                  "description": "element uid"}},
+                    "blast_elements": {
+                        GROWS: "elements reached transitively "
+                               "(subset, no cap)",
+                        "items": {"type": "string",
+                                  "description": "element uid"}},
+                    "staged_at": {
+                        GROWS: "distinct staging paths for that "
+                               "resource (small, no cap)",
+                        "items": {"type": "string"}},
+                }},
+                "description": "One row per resource more than one "
+                               "element sources."},
         }},
     "utilization_envelope": {
         QUESTION: 'Were the cores the binding resource?',
@@ -3465,6 +3816,8 @@ _ANALYZE_HINTS = {
                                "clamped to them (`UX-861`; see "
                                "`clamped_from`)."},
             "constraints": {
+                GROWS: False, "maxItems": 3,
+                "items": {"type": "object"},
                 "description": "One record per ceiling that could be "
                                "measured. A constraint with no measurement "
                                "behind it is absent rather than infinite.",
@@ -3506,6 +3859,9 @@ _ANALYZE_HINTS = {
                                "`findings[].evidence.change` is a share and "
                                "one name may not mean two things."},
             "pinned_elements": {
+                GROWS: "elements pinned to -j1 (subset of elements, no "
+                       "cap)",
+                "items": {"type": "object"},
                 "description": "Elements whose own build pinned itself to "
                                "one core, from Plane 2. Free capacity these "
                                "leave is capacity no builder count can "
@@ -3613,6 +3969,8 @@ _ANALYZE_HINTS = {
                                "present. When false the two verdicts above "
                                "are silent, not negative."},
             "skipped_inputs": {
+                GROWS: False, "maxItems": 3,
+                "items": {"type": "string"},
                 "description": "The missing inputs, named - so a reader can "
                                "supply them rather than guess why the check "
                                "said nothing."},
@@ -3634,12 +3992,18 @@ _ANALYZE_HINTS = {
                 "description": "How many elements, not how many tasks: the "
                                "reader acts on elements."},
             "elements": {
+                GROWS: "elements with a below-epsilon span (subset of "
+                       "elements, no cap)",
+                "items": {"type": "string", "description": "element uid"},
                 "description": "Which ones, so a figure resting on one is "
                                "visible."},
             "tasks": {
                 # `UX-826`: published verbatim for the join; shown to a
                 # reader as `taskUid`'s split (§4g item 3).
                 KEYED_BY: KEYED_BY_TASK_UID,
+                GROWS: "task uids below resolution (subset of tasks, no "
+                       "cap)",
+                "items": {"type": "string"},
                 "description": "The task keys behind them, for a consumer "
                                "joining on the trace."},
             "note": {
@@ -3647,11 +4011,16 @@ _ANALYZE_HINTS = {
                                "renders nothing else."},
         },
     },
-    "violations": {QUESTION: 'What did not add up?', RAIL: 'prove'},
+    "violations": {QUESTION: 'What did not add up?', RAIL: 'prove',
+        GROWS: "ordering/clamp violations, one per offending dependency "
+               "edge or resource check (no cap observed)",
+        "items": {"type": "object"}},
     # `UX-344`: every claim's chain, once, beside the claims.
     "provenance": {
         QUESTION: 'Why does bga believe this?',
         RAIL: 'prove',
+        GROWS: "findings (one record per finding, plus one for the "
+               "headline diagnosis)",
         "description": "One record per claim this report makes: the "
                        "published fields it was read from, the rule that "
                        "fired, and the trace query that deepens it. "
@@ -3734,6 +4103,7 @@ _ANALYZE_HINTS = {
             "resource_occupancy": {
                 # `UX-343`: keyed by resource kind, which is data.
                 QUANTITY: "ratio",
+                GROWS: False, "maxItems": 6,
                 "additionalProperties": {
                     QUANTITY: "ratio",
                     "description": "How occupied this resource kind was, "
@@ -3743,6 +4113,7 @@ _ANALYZE_HINTS = {
                                "idle builders."},
             "peak_resource_occupancy": {
                 QUANTITY: "count",
+                GROWS: False, "maxItems": 6,
                 "additionalProperties": {
                     QUANTITY: "count",
                     "description": "The most of this resource kind in "
@@ -3969,6 +4340,20 @@ _ANALYZE_HINTS = {
              "quantity": "duration_us", "sortable": True},
         ],
         "properties": {
+            "phases": {
+                GROWS: False, "maxItems": 8,
+                "items": {"type": "object", "properties": {
+                    "phase": {"type": "string",
+                              "description": "The phase's own name."},
+                    "elapsed_us": {
+                        QUANTITY: "duration_us",
+                        "description": "Wall time this phase took."},
+                }},
+                "description": "BuildStream's own named pipeline "
+                               "phases (query cache, resolving "
+                               "elements, ...) - a closed vocabulary "
+                               "BuildStream itself declares, not "
+                               "run-scaled."},
             "total_us": {
                 QUANTITY: "duration_us",
                 "description": "Time BuildStream spent outside any element - "
@@ -3995,6 +4380,7 @@ _ANALYZE_HINTS = {
     "readers": {
         QUESTION: 'Who does this run have something to say to?',
         RAIL: 'decide',
+        GROWS: False, "maxItems": len(READERS),
         COLUMNS: [
             {"key": "label", "title": "Reader", "sortable": False},
             {"key": "question", "title": "Their question",
@@ -4030,6 +4416,8 @@ _ANALYZE_HINTS = {
                                               "run: highest severity, "
                                               "then published order."},
                 "findings": {"type": "array",
+                             GROWS: "findings",
+                             "items": {"type": "string"},
                              "description": "Every finding id serving "
                                             "this reader, in published "
                                             "order. `leads_with` is one "
@@ -4042,6 +4430,7 @@ _ANALYZE_HINTS = {
         QUESTION: 'What did this run conclude?',
         RAIL: 'decide',
         SEVERITY: "severity",
+        GROWS: "findings",
         COLUMNS: ["severity", "title", "detail", "elements"],
         # The item shape, so the semantic renderer reads a declared
         # contract instead of five hardcoded names.
@@ -4051,8 +4440,21 @@ _ANALYZE_HINTS = {
                 "id": {"type": "string"},
                 "severity": {"type": "string", "enum": list(SEVERITIES)},
                 "title": {"type": "string"},
-                "detail": {"type": ["array", "string", "null"]},
-                "elements": {"type": ["array", "null"]},
+                "detail": {"type": ["array", "string", "null"],
+                           GROWS: "detail sentences this finding's own "
+                                  "template writes (fixed per finding "
+                                  "kind, not run-scaled)",
+                           "items": {"type": "string"}},
+                "elements": {"type": ["array", "null"],
+                             GROWS: "elements this finding names (each "
+                                    "finding kind caps its own slice, e.g. "
+                                    "TOP_ACTIONS_SHOWN, "
+                                    "TIME_CONCENTRATION_SHOWN_MAX, "
+                                    "HORIZON_STEPS_SHOWN, "
+                                    "LATENT_HEAVIES_SHOWN - not run-size, "
+                                    "but no single cap across every kind)",
+                             "items": {"type": "string",
+                                       "description": "element uid"}},
                 # UX-217: the numbers a finding was drawn from, and
                 # what unit each is in. `renderFindings` read the
                 # conclusion and dropped these on the floor - in a tool
@@ -4120,6 +4522,7 @@ _ANALYZE_HINTS = {
                 # provenance record's copy of this key gives.
                 "trace_queries": {
                     "type": "array",
+                    GROWS: False, "maxItems": 4,
                     "items": {"type": "string"},
                     "description": "Every query that shows this "
                                    "finding in the timeline, best "
@@ -4198,6 +4601,14 @@ _ANALYZE_HINTS = {
                 QUANTITY: "share",
                 "description": "The share of the chain whose elements carry a "
                                "measured duration."},
+            "critical_path_cached": {
+                GROWS: "critical-path elements BuildStream reported "
+                       "cached (subset of the critical path, no cap)",
+                "items": {"type": "string", "description": "element uid"},
+                "description": "Which critical-path elements this "
+                               "incremental run restored rather than "
+                               "built - what `critical_path_coverage` "
+                               "excludes."},
             "dominator_coverage": {
                 QUANTITY: "share",
                 "description": "The share of the graph the dominator analysis "
@@ -4251,6 +4662,9 @@ _ANALYZE_HINTS = {
     "element_join": {
         QUESTION: 'What does each element look like from both planes?',
         RAIL: "investigate",
+        GROWS: "elements (one row per joined element, real grower, no "
+               "cap in the payload; structured.js's table bound "
+               "applies on the page)",
         COLUMNS: _JOIN_COLUMNS,
         "description": "Plane 1's place in the graph beside Plane 2's "
                        "measurement inside the sandbox, per element. "
@@ -4284,12 +4698,26 @@ _ANALYZE_HINTS = {
                 QUANTITY: "count",
                 "description": "Elements the process capture saw inside. "
                                "Fewer whenever a capture was partial."},
+            "plane1_only_with_impact": {
+                GROWS: "elements (subset of Plane 1 only, no cap)",
+                "items": {"type": "string", "description": "element uid"},
+                "description": "Plane-1-only elements whose absence "
+                               "from Plane 2 changes a published "
+                               "figure - named so the gap is checkable."},
+            "undeclared_plane2_elements": {
+                GROWS: "elements Plane 2 named that the declared "
+                       "graph does not contain (no cap)",
+                "items": {"type": "string", "description": "element uid"},
+                "description": "Names Plane 2 produced that look like "
+                               "elements and are not - `UX-66`'s "
+                               "unreliable-name case."},
         },
     },
     "next_steps": {
         QUESTION: 'What should I run next?',
         RAIL: "decide",
         RUNBOOK: True,
+        GROWS: False, "maxItems": 8,
         "description": "The next commands, chosen by what this run "
                        "measured. Decided in the pipeline rather than "
                        "by a consumer, so the terminal, CI and the "
@@ -4314,6 +4742,8 @@ _ANALYZE_HINTS = {
                 # never guessed: an array is argv because a schema said
                 # so, the same rule `bga:series` follows.
                 "argv": {"type": "array", COMMAND: "shell",
+                         GROWS: False, "maxItems": 8,
+                         "items": {"type": "string"},
                          "description": "The command, with the run and "
                                         "the element already "
                                         "substituted. Executable as "
@@ -4373,6 +4803,7 @@ _ANALYZE_HINTS = {
                                "Published rather than left as a "
                                "subtraction for a consumer to perform."},
             "top_actions": {
+                GROWS: False, "maxItems": 3,
                 COLUMNS: [
                     {"key": "element_uid", "title": "Element", "role": "element",
                      "sortable": True},
@@ -4418,6 +4849,9 @@ _ANALYZE_HINTS = {
         QUESTION: 'What did this build actually run, and how often?',
         RAIL: 'act',
         QUANTITY: "count",
+        GROWS: "distinct binaries Plane 2 saw exec (real grower, no "
+               "cap in the payload; structured.js's table/map bound "
+               "applies on the page)",
         "description": "Every binary Plane 2 saw exec, and how many "
                        "times the whole run ran it. The frequency half "
                        "of the question; `binary_cost` is the time "
@@ -4427,6 +4861,9 @@ _ANALYZE_HINTS = {
     "binary_cost": {
         QUESTION: 'Which binaries cost this build its time?',
         RAIL: 'act',
+        GROWS: "elements (one row per element Plane 2 measured, no cap "
+               "in the payload; structured.js's table bound applies on "
+               "the page)",
         COLUMNS: ["element", "binary", "calls", "cpu_us", "cpu_share"],
         "description": "One row per element and binary Plane 2 saw it "
                        "run: how many calls, and what they cost. Two "
@@ -4597,11 +5034,18 @@ _ANALYZE_HINTS = {
                                "here weakens every per-process figure."},
             "by_coverage": {
                 QUANTITY: "count",
+                GROWS: False, "maxItems": 8,
                 "additionalProperties": {
                     QUANTITY: "count",
                     "description": "Processes in this coverage class."},
                 "description": "How many processes each coverage class "
                                "accounts for, keyed by the class."},
+            "cpu_disagreements": {
+                GROWS: False, "maxItems": 8,
+                "items": {"type": "object"},
+                "description": "The worst processes where the hook and "
+                               "the spine costed CPU differently, "
+                               "worst first."},
             "processes": {
                 QUANTITY: "count",
                 "description": "Processes Plane 2 saw across both record "
@@ -4671,9 +5115,23 @@ _ANALYZE_HINTS = {
                                "sources before anything runs.",
                 "properties": {
                     "elements_at_risk": {
+                        GROWS: "elements (subset flagged by the static "
+                               "census, no cap observed)",
+                        "items": {"type": "string",
+                                  "description": "element uid"},
                         "description": "Elements whose local sources "
                                        "carry an ELF executable with no "
                                        "PT_INTERP."},
+                    "static_executables": {
+                        GROWS: "static executables found under the "
+                               "project's sources (no cap observed, "
+                               "correlates with elements_at_risk)",
+                        "items": {"type": "string",
+                                  "description": "a discovered static "
+                                                 "binary's path"},
+                        "description": "Every statically-linked "
+                                       "executable the census found, "
+                                       "across every element."},
                 },
             },
             "open_records_note": {
@@ -4962,6 +5420,8 @@ _ELEMENTS = {
         # this list ranks `P` above `Q` and `optimization_horizon`
         # ranks `Q` above `P`.
         "top_blast_radius": {
+            GROWS: False, "maxItems": 5,
+            "items": {"type": "string", "description": "element uid"},
             "description": "The elements whose change rebuilds the most, "
                            "in that order. A ranking over the population "
                            "below, so the order is the information - the "
@@ -4978,6 +5438,13 @@ _ELEMENTS = {
                            "`measured-rebuild-time` weights each "
                            "dependent by how long it took in this run, "
                            "`downstream-count` counts them."},
+        "top_fan_in": {
+            GROWS: False, "maxItems": 5,
+            "items": {"type": "string", "description": "element uid"},
+            "description": "The widest fan-in, ranked by closure. "
+                           "Structural kinds are excluded from the "
+                           "ranking and never from `fan_in` - a stack "
+                           "depends on everything on purpose."},
     },
 }
 

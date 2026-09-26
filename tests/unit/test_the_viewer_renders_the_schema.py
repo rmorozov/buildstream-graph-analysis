@@ -247,8 +247,12 @@ class TestThePageRendersFromTheSchema:
     asserted is the shipped renderer rather than a description of it."""
 
     def _render(self, payload, schema):
+        # `UX-1031`: the embedded schema grew past this OS's argv limit
+        # for `-e SCRIPT` (`OSError: Argument list too long`) - stdin
+        # has no such ceiling, and `-` reads the script from it.
         script = _RENDER_HARNESS % (json.dumps(payload), json.dumps(schema))
-        result = subprocess.run([node, "--input-type=module", "-e", script],
+        result = subprocess.run([node, "--input-type=module", "-"],
+                                input=script,
                                 capture_output=True, text=True,
                                 cwd=os.getcwd(), timeout=60)
         assert result.returncode == 0, result.stderr

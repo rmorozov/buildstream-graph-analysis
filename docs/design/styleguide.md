@@ -136,7 +136,7 @@ per-section "view as JSON" toggle's `data-raw-json`;
 
 ## 1a. The hint vocabulary
 
-Twenty hints, and this table is the one place they are all written
+Twenty-one hints, and this table is the one place they are all written
 down (`UX-306`). Each names what a schema *declares* about a value;
 §1 above is what the page does with it — except the last row, which
 declares something about the *contract* and is read by a consumer
@@ -168,6 +168,7 @@ sets equal in both directions.
 | `bga:command` | that a scalar array is one command line rather than a list of values — the shell it is spelled for | `classify`, which returns §1's command control for it (`UX-429`) |
 | `bga:runbook` | that an ordered array of `{reason, command, citation}` is a runbook and not a population — three steps a reader runs, not rows to compare (`UX-669`) | `renderSection`, which draws the link to the decision panel and no table |
 | `bga:always_written` | that a key is **not** `required` and yet written on every document — the third state `UX-629` needed, because entering `required` under a live id breaks documents already written | a consumer asking *may be here* or *is always here*; the emitter guarantee is held by `test_a_required_set_grew_under_an_unchanged_id.py`, not by the page |
+| `bga:grows` | whether a container's population grows with the run, and with what — a string names it, `False` pairs with `maxItems` for one that does not | `test_every_payload_sequence_is_declared.py`'s walk, and a reader asking whether a table's row count is bounded by the schema or only by the page (`UX-1031`) |
 
 Two properties this table is here to keep. **A hint is a declaration,
 never a guess**: the page reads what the schema says a value is and

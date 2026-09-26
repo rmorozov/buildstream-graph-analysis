@@ -40,7 +40,7 @@ nodeenv==1.10.0
     # via pyright
 packaging==26.3
     # via pytest
-platformdirs==4.11.14
+platformdirs==4.11.15
     # via pylint
 pluggy==1.6.0
     # via

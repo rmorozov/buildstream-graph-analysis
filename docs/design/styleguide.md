@@ -2093,7 +2093,7 @@ headings, so a renumber there moves it.
 | §6b | `test_one_factory_builds_every_table.py`, `test_the_handoff_rides_the_rail.py` | |
 | §6c | `test_the_browser_is_the_library.py`, `test_the_report_you_can_attach.py` | |
 | §6d | `test_every_control_has_a_resting_appearance.py` | |
-| §6e | | proposed rules; each names the guard its row will add once accepted |
+| §6e | `test_the_heading_outline_has_three_levels.py`, `test_spacing_comes_from_a_scale.py`, `test_controls_meet_the_target_size.py` | rules land one row at a time; not every rule has landed a guard yet |
 | §7 | `test_emphasis_is_a_budget.py`, `test_the_styleguide_names_its_guards.py` | named |
 
 What the rows with no guard were written from, rounds 58 and 69, kept

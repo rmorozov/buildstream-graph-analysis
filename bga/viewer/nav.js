@@ -150,7 +150,10 @@ export function label(key) {
  * this item's guard is a browser guard.
  */
 export function headingLabel(section) {
-  const head = section?.querySelector?.("h2");
+  // UX-1018: a section's own heading is `h3` after `chapters()`
+  // promotes it - a selector list reads either, so this runs the same before
+  // or after that pass.
+  const head = section?.querySelector?.("h2, h3");
   if (!head || (head.parentElement ?? head.parentNode) !== section) return null;
   const own = [...(head.childNodes ?? [])]
     .filter((node) => node.nodeType === 3)
@@ -234,7 +237,7 @@ export function collapsible(root, { document: doc, storage,
 
   for (const section of sections(root)) {
     const key = section.getAttribute("data-section");
-    const heading = section.querySelector?.("h2");
+    const heading = section.querySelector?.("h2, h3");  // UX-1018
     if (!heading) continue;
 
     const button = doc.createElement("button");

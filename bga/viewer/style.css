@@ -291,11 +291,15 @@ body[data-has-toc] > header {
 body[data-has-toc] { --head: 3.25rem; }
 body[data-has-toc] > nav.toc { top: var(--head); max-height: calc(100vh - var(--head)); }
 body[data-has-toc] main > section, body[data-has-toc] [id] { scroll-margin-top: calc(var(--head) + var(--space-2)); }
-h2 { font-size: var(--font-h2); margin: var(--space-8) 0 var(--space-2); }
-/* UX-674 (styleguide §4f): `h3` is body weight 600, not its own step -
+/* UX-1018 (styleguide §6e.1): a chapter (`h2`) outranks its section
+   (`h3`), which outranks its block (`h4`) - three levels, not one
+   flat `h2` a chapter and its own first section wore alike. */
+h2 { font-size: var(--font-h1); margin: var(--space-8) 0 var(--space-2); }
+h3 { font-size: var(--font-h2); margin: var(--space-8) 0 var(--space-2); }
+/* UX-674 (styleguide §4f): `h4` is body weight 600, not its own step -
    the unstyled UA default (1.17em of the body) computed 17.55px,
-   above every h2 on the page (16.8px) it was supposed to nest under. */
-h3 { font-size: var(--font-body); font-weight: 600; margin: var(--space-4) 0 var(--space-1); }
+   above every h3 on the page (16.8px) it was supposed to nest under. */
+h4 { font-size: var(--font-body); font-weight: 600; margin: var(--space-4) 0 var(--space-1); }
 .muted { color: var(--muted); }
 code, .num { font-family: var(--font-mono); }
 a { color: var(--accent); }
@@ -320,7 +324,7 @@ a:not(p a) { display: inline-flex; align-items: center; justify-content: center;
 .verdict.refused { border-left-color: var(--bad); }
 .verdict.warn { border-left-color: var(--warn); }
 .verdict.good { border-left-color: var(--good); }
-.verdict h2 { margin: 0 0 var(--space-1); }
+.verdict h3 { margin: 0 0 var(--space-1); }
 
 .finding {
   border-left: 3px solid var(--line); padding: var(--space-2) var(--space-3); margin: var(--space-2) 0;
@@ -502,7 +506,7 @@ button.collapse:hover { color: var(--fg); }
 section.chapter { margin: var(--space-5) 0 0; }
 section.chapter:first-of-type { margin-top: 0; }
 h2.chapter-title {
-  font-size: var(--font-h2); margin: 0; padding-top: var(--space-2);
+  margin: 0; padding-top: var(--space-2);
   border-top: 2px solid var(--line);
 }
 /* Inside a chapter the sections need less air between them than they
@@ -510,7 +514,7 @@ h2.chapter-title {
    separation now. Measured: this pays for the seven chapter headings
    and leaves the document shorter than it was, which is the acceptance
    test's third clause. */
-section.chapter > section > h2 { margin-top: var(--space-4); }
+section.chapter > section > h3 { margin-top: var(--space-4); }
 
 /* UX-347 (styleguide §3c): **a folded chapter is its question, its
    answer and its count.** The document was 22.7 screens with every
@@ -566,7 +570,7 @@ button.chapter-open:hover, button.chapter-open[aria-expanded="true"] {
 /* Collapsed sections keep their heading; everything below it goes.
    Scoped to a section that names itself, so a chapter - which is also a
    `section` - never hides the sections inside it. */
-section[data-section][data-collapsed="true"] > *:not(h2) { display: none; }
+section[data-section][data-collapsed="true"] > *:not(h3) { display: none; }
 section[data-jumped="true"], [data-jumped="true"] {
   outline: 2px solid var(--accent); outline-offset: 3px;
 }
@@ -708,7 +712,7 @@ th .th-filter.unparsed { border-color: var(--bad); border-style: dashed; }
 .decision { border: 1px solid var(--accent); border-radius: 4px;
             padding: var(--space-3) var(--space-4); margin-bottom: var(--space-4);
             background: var(--panel); }
-.decision h2 { margin-top: 0; }
+.decision h3 { margin-top: 0; }
 .decision .diagnosis { font-size: var(--font-body); margin: var(--space-1) 0 var(--space-2); }
 .decision .opportunity { margin: var(--space-1) 0 var(--space-2); }
 .decision .actions { margin: 0; padding-left: var(--space-5); }
@@ -838,8 +842,8 @@ ol.horizon { list-style: none; margin: 0; padding: 0; }
    what they are not looking at, and the document underneath stays
    byte-identical so Ctrl-F and the export remain honest. */
 [data-dimmed="true"] { opacity: 0.32; }
-section[data-section][data-unfocused="true"] > *:not(h2) { display: none; }
-section[data-section][data-unfocused="true"] > h2 { opacity: 0.32; }
+section[data-section][data-unfocused="true"] > *:not(h3) { display: none; }
+section[data-section][data-unfocused="true"] > h3 { opacity: 0.32; }
 .focus-bar, .mark-summary {
   margin: 0 0 var(--space-2);
   padding: var(--space-1) var(--space-2);

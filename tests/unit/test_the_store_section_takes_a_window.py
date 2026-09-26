@@ -64,7 +64,7 @@ _LOOK = r"""
       nodes: trend ? trend.querySelectorAll("*").length : 0,
       text: trend ? (trend.textContent || "").length : 0,
       marks: trend ? trend.querySelectorAll("svg *").length : 0,
-      heading: trend ? (trend.querySelector("h2")?.textContent ?? "") : "",
+      heading: trend ? (trend.querySelector("h2, h3")?.textContent ?? "") : "",
       window: trend
         ? (trend.querySelector('[data-role="store-window"]')?.textContent ?? "")
         : "",

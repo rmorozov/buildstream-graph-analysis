@@ -52,7 +52,7 @@ export function declareReaders(section, roles) {
   tag.className = "reader-tag";
   tag.setAttribute("data-reader-tag", "");
   tag.setAttribute("data-readers", roles.join(" "));
-  (section.querySelector?.("h2") ?? section).append(tag);
+  (section.querySelector?.("h2, h3") ?? section).append(tag);  // UX-1018
   return section;
 }
 

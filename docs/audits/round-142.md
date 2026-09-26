@@ -61,6 +61,14 @@ more tracks met (`UX-1023`, the header guard).
 | implementer | sonnet | UX-1031 growth declared in the schema (judgement) | 590k | 659 | 88.7 m | a guard requiring items fought the COLUMNS-only convention |
 | general-purpose | opus | the merged tree's gate reds | 486k | 107 | 35.9 m | structured.js crossed the viewer ceiling |
 | general-purpose | opus | UX-1031 split schemas.py under its size cell | 291k | 38 | 38.2 m | moving _check_hint re-keyed 3 lint-baseline findings |
+| verifier | sonnet | verify UX-1026 UX-1035 UX-1033 UX-1022 UX-1018 UX-1027 | 71k | 70 | 12.8 m | shared checkout: other verifiers' mutations appeared and vanished mid-run |
+| verifier | sonnet | verify UX-1016 UX-1015 UX-1017 | 60k | 61 | 9.8 m | two verifiers' mutations raced in style.css |
+| verifier | sonnet | verify UX-1032 UX-1028 UX-1029 UX-1030 | 58k | 52 | 19.3 m | the whole round's touching sweep cannot finish on the shared box |
+| verifier | sonnet | verify UX-1019 UX-1034 UX-1024 UX-1025 UX-1021 | 71k | 64 | 6.5 m | restoring a whole-file snapshot can erase a sibling verifier's edit |
+| verifier | sonnet | verify UX-1036 UX-921 | 35k | 30 | 6.1 m | whole-tree git status noisy under seven concurrent verifiers |
+| verifier | sonnet | verify UX-1020 | 46k | 40 | 7.1 m | a shared scratchpad backup name collided across verifiers |
+| verifier | sonnet | verify UX-1031 UX-1023 | 74k | 78 | 21.6 m | load 23.7 on 4 cores made a browser budget flake once |
 
-No `verifier` ran this round: nine tracks merged unread, which
-`test_a_merged_track_names_its_verifier.py` names.
+Seven verifiers read the nine tracks after the close, in one shared
+checkout: 22 rows passed; `UX-1018`'s named mutation left its outline
+guard green, and the guard now reads the section head's role (`41ded5ef`).

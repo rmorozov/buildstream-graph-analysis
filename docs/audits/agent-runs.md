@@ -426,6 +426,13 @@ pairing for every merged row from round 103 on.
 | 142 | implementer | sonnet | UX-1031 every growing sequence declared in the schema (judgement) | 590k | 659 | 88.7 m | merged | a guard requiring items fought the COLUMNS-only convention (UX-655) |
 | 142 | general-purpose | opus | the merged tree's gate reds | 486k | 107 | 35.9 m | complete | structured.js crossed the viewer ceiling; split into pairs.js |
 | 142 | general-purpose | opus | UX-1031 split schemas.py under its size cell | 291k | 38 | 38.2 m | complete | moving _check_hint re-keyed 3 lint-baseline findings |
+| 142 | verifier | sonnet | verify UX-1026 UX-1035 UX-1033 UX-1022 UX-1018 UX-1027 | 71k | 70 | 12.8 m | 5 PASS, HOLD UX-1018: the named mutation left the outline guard green; guard fixed in 41ded5ef | shared checkout: other verifiers' mutations appeared and vanished mid-run |
+| 142 | verifier | sonnet | verify UX-1016 UX-1015 UX-1017 | 60k | 61 | 9.8 m | 3 PASS, each mutation reddens the clauses its Outcome names | two verifiers' mutations raced in style.css |
+| 142 | verifier | sonnet | verify UX-1032 UX-1028 UX-1029 UX-1030 | 58k | 52 | 19.3 m | 4 PASS | the whole round's touching sweep cannot finish on the shared box |
+| 142 | verifier | sonnet | verify UX-1019 UX-1034 UX-1024 UX-1025 UX-1021 | 71k | 64 | 6.5 m | 5 PASS; the a.why mutation is caught only by the control-class registry | restoring a whole-file snapshot can erase a sibling verifier's edit |
+| 142 | verifier | sonnet | verify UX-1036 UX-921 | 35k | 30 | 6.1 m | 2 PASS | whole-tree git status noisy under seven concurrent verifiers |
+| 142 | verifier | sonnet | verify UX-1020 | 46k | 40 | 7.1 m | PASS; 2 of 4 mutations live, 2 code-reasoned | a shared scratchpad backup name collided across verifiers |
+| 142 | verifier | sonnet | verify UX-1031 UX-1023 | 74k | 78 | 21.6 m | 2 PASS; the 40-60rem band for .wf-row is unexercised | load 23.7 on 4 cores made a browser budget flake once |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -438,7 +445,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the four hundred and nine rows already say: a researcher that reads a document
+What the four hundred and sixteen rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

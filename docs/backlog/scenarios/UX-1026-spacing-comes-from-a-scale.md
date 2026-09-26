@@ -1,6 +1,6 @@
 # UX-1026: spacing comes from a 4px scale of tokens
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §6e.6 | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §6e.6 | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
 
 ## Motivation
 
@@ -40,3 +40,5 @@ Mutation table:
 
 `make lint`: clean (baseline-forced findings unrelated to this change only).
 `python3 tools/dev_sizes.py --check`: sizes ok, 148 files measured.
+
+Deviation: none from the Required Fix.

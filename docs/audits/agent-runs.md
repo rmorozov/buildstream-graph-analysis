@@ -413,6 +413,19 @@ pairing for every merged row from round 103 on.
 | 141 | general-purpose | opus | reproduce the gcc 16 LTO jobserver deadlock | 227k | 40 | 42.3 m | complete | staging gcc 16.2 from the nix cache; the blocking fd pair, not tokens, is the cause |
 | 141 | architect | opus | architect: shape UX-1005 builders and pool | 55k | 22 | 2.6 m | complete | admission in the shim chosen over an upstream change |
 | 141 | researcher | sonnet | census of four BuildStream projects for jobserver corner cases | 65k | 24 | 3.4 m | complete | cloning four projects; MAXJOBS and GOMAXPROCS promises found |
+| 142 | researcher | sonnet | map the round's UI rows to their surfaces and guards | 56k | 22 | 2.5 m | complete | UX-1027's task file cited the wrong test (an ELF classifier); cross-checking every "extends test X" claim cost most |
+| 142 | implementer | sonnet | UX-1036 the export's double period, then UX-1031 (mechanical) | 72k | 90 | 11.5 m | merged; UX-1031 stopped as judgement | shared Python had no deps, installed requirements.lock; UX-1031 stopped at 91 containers |
+| 142 | researcher | sonnet | UX-1031 classify 91 payload containers' growth | 143k | 80 | 9.1 m | complete | growth constants are scattered one per module; no registry of *_SHOWN/_MAX constants |
+| 142 | implementer | sonnet | UX-921 hidden findings keep a shell (judgement) | 217k | 199 | 30.7 m | merged | PAGE_BUDGET_B had 604 B headroom against 132 KB documented; comments do not count |
+| 142 | implementer | sonnet | UX-1019 UX-1034 UX-1024 UX-1025 UX-1021 reader-facing strings (bounded) | 351k | 412 | 56.8 m | merged | the volume budget caught words late; touching ran per track, not per row |
+| 142 | implementer | sonnet | UX-1016 UX-1015 UX-1017 keyboard and accessibility (mechanical) | 458k | 337 | 63.1 m | merged | hidden=until-found broke 5 guards that open chapters by data-open alone |
+| 142 | implementer | sonnet | UX-1032 UX-1028 UX-1029 UX-1030 bounded populations (bounded) | 409k | 337 | 77.1 m | merged | the census had to read head/tail token deltas, not a class name, to discriminate |
+| 142 | implementer | sonnet | UX-1026 UX-1035 UX-1033 UX-1022 UX-1018 UX-1027 CSS foundations (mechanical) | 328k | 385 | 81.4 m | merged | UX-1018 broke tests/dom_shim.mjs (.attributes); UX-1027 cited the wrong test |
+| 142 | implementer | sonnet | UX-1020 sentence case from a rendered-string inventory (mechanical) | 321k | 473 | 62.9 m | merged | 4-core box saturated; test-touching timed out twice |
+| 142 | implementer | sonnet | UX-1023 a compact size class (mechanical) | 151k | 144 | 39.9 m | merged | textContent/querySelector read through hidden; innerText plus offsetParent needed |
+| 142 | implementer | sonnet | UX-1031 every growing sequence declared in the schema (judgement) | 590k | 659 | 88.7 m | merged | a guard requiring items fought the COLUMNS-only convention (UX-655) |
+| 142 | general-purpose | opus | the merged tree's gate reds | 486k | 107 | 35.9 m | complete | structured.js crossed the viewer ceiling; split into pairs.js |
+| 142 | general-purpose | opus | UX-1031 split schemas.py under its size cell | 291k | 38 | 38.2 m | complete | moving _check_hint re-keyed 3 lint-baseline findings |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -425,7 +438,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the three hundred and ninety-six rows already say: a researcher that reads a document
+What the four hundred and nine rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

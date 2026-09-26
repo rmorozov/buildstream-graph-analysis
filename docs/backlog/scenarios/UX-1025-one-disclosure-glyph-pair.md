@@ -1,6 +1,6 @@
 # UX-1025: one disclosure glyph pair, and a fold's label names its content
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §6e.13 | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §6e.13 | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
 
 ## Motivation
 
@@ -57,3 +57,5 @@ Mutation table:
 `tests/unit/test_why_bga_believes_what_it_believes.py`'s text
 allowlist gained the new "The rule · " prefix (its own contract,
 not this guard's).
+
+Deviation: none from the Required Fix; the unlabeled fold's default reads "The rule".

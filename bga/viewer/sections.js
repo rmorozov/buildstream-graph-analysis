@@ -28,7 +28,7 @@ import { resolvePath } from "./element.js";
 import { COLUMNS, DECOMPOSITION, DISTRIBUTION, INLINE, INTERVAL, KEYED_BY, KEYED_BY_TASK_UID, QUANTITY, RUNBOOK, SERIES, SEVERITY, bytes, childNode, cssId, describedTerm, el, guessQuantity, heading, hintsOf, keyAsShown, quantity, quantityFor, sectionHead, title } from "./format.js";
 import { matches } from "./nav.js";
 import { handOff } from "./perfetto.js";
-import { served } from "./primitives.js";
+import { findingAnchor, served } from "./primitives.js";
 import { byId, copyButton } from "./questions.js";
 import { recordSource } from "./rawjson.js";
 import { CONTROLS, classify } from "./shapes.js";
@@ -110,46 +110,58 @@ export function renderFindings(findings, investigate = null, node = undefined) {
   const section = el("section", { "data-section": "findings" },
     el("h2", {}, `Findings (${findings.length})`));
   const evidenceNode = childNode(node?.items, "evidence");
-  for (const finding of findings) {
+  const bound = TABLE_OPENS_BOUNDED_ABOVE;
+  findings.forEach((finding, index) => {
     const severity = String(finding.severity ?? "info").toLowerCase();
     const detail = Array.isArray(finding.detail)
       ? finding.detail : (finding.detail ? [finding.detail] : []);
-    section.append(el("article",
-      { class: "finding", "data-severity": severity,
+    const article = el("article",
+      { class: "finding", id: findingAnchor(finding.id), "data-severity": severity,
         "data-finding-id": finding.id ?? "" },
       el("p", { class: "title" },
         el("span", { class: "badge" }, severity),
-        finding.title ?? finding.id ?? ""),
-      ...detail.map((line) => el("p", { class: "detail muted" }, line)),
-      // UX-216: a finding names elements; each is a link to that
-      // element's own section, and carries `data-element` so the
-      // cross-reference finds this finding from the other direction.
-      finding.elements && finding.elements.length
-        ? el("p", { class: "muted" },
-            ...finding.elements.flatMap((uid, index) => [
-              index ? ", " : "",
-              el("a", { href: `#${cssId(uid)}`, "data-element": uid },
-                 el("code", {}, uid)),
-            ]))
-        : null,
-      renderFindingEvidence(finding.evidence, evidenceNode),
-      // UX-229: the chain behind this finding, from the published
-      // record. `views.js` draws it, so the decision panel and every
-      // finding show one shape.
-      renderProvenance(finding.provenance),
-      investigate ? investigateButton(finding, investigate) : null,
-      // UX-224: the finding as something you can paste. The text is
-      // `findings[].copy_text`, rendered in the pipeline - this button
-      // copies a published string and does not word anything, which is
-      // the only way one renderer can serve both a Python CI comment
-      // and a JavaScript page. Absent, not empty, on a payload that
-      // does not carry it.
-      finding.copy_text
-        ? copyButton(el, finding.copy_text, {}, "finding")
-        : null));
-  }
+        finding.title ?? finding.id ?? ""));
+    // UX-921: `_hydrate` appends the rest once; a second call no-ops.
+    article._hydrate = () => {
+      article.append(
+        ...detail.map((line) => el("p", { class: "detail muted" }, line)),
+        // UX-216: a finding names elements; each is a link to that
+        // element's own section, and carries `data-element` so the
+        // cross-reference finds this finding from the other direction.
+        finding.elements && finding.elements.length
+          ? el("p", { class: "muted" },
+              ...finding.elements.flatMap((uid, i) => [
+                i ? ", " : "",
+                el("a", { href: `#${cssId(uid)}`, "data-element": uid },
+                   el("code", {}, uid)),
+              ]))
+          : null,
+        renderFindingEvidence(finding.evidence, evidenceNode),
+        // UX-229: the chain behind this finding, from the published
+        // record. `views.js` draws it, so the decision panel and every
+        // finding show one shape.
+        renderProvenance(finding.provenance),
+        investigate ? investigateButton(finding, investigate) : null,
+        // UX-224: the finding as something you can paste. The text is
+        // `findings[].copy_text`, rendered in the pipeline - this button
+        // copies a published string and does not word anything, which
+        // is the only way one renderer can serve both a Python CI
+        // comment and a JavaScript page. Absent, not empty, on a
+        // payload that does not carry it.
+        finding.copy_text
+          ? copyButton(el, finding.copy_text, {}, "finding")
+          : null);
+      article._hydrate = null;
+    };
+    if (index < bound) article._hydrate();
+    section.append(article);
+  });
   //: `UX-413`: cards are bounded like rows - see `boundCards`.
-  boundCards(section, "article.finding", TABLE_OPENS_BOUNDED_ABOVE, "finding");
+  const control = boundCards(section, "article.finding", bound, "finding");
+  // UX-921: Show all hydrates every shell too - already-hydrated cards
+  // no-op, `_hydrate` having cleared itself.
+  control?.querySelector("button")?.addEventListener("click",
+    () => section.querySelectorAll("article.finding").forEach((a) => a._hydrate?.()));
   return section;
 }
 

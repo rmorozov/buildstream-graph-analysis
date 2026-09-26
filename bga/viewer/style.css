@@ -357,7 +357,13 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .pairs dt { color: var(--muted); min-width: 0; }
 .pairs dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
 details { margin: .3rem 0; }
-summary { cursor: pointer; color: var(--muted); }
+/* `UX-1025` (styleguide §6e.13): one disclosure glyph pair, ▸ closed
+   and ▾ open - the same pair the boxed fold buttons already use
+   (`nav.js`) - in place of the UA's own `▶`/`▼` marker. */
+summary { cursor: pointer; color: var(--muted); list-style: none; }
+summary::-webkit-details-marker { display: none; }
+summary::before { content: "\25b8\00a0"; }
+details[open] > summary::before { content: "\25be\00a0"; }
 footer { margin-top: 3rem; border-top: 1px solid var(--line); padding-top: .8rem; font-size: var(--font-small); }
 
 /* UX-196: the band strip and the store trend. Two SVGs, no library. */

@@ -89,8 +89,9 @@ export function renderProvenance(provenance, options = {}) {
   details.setAttribute("data-rows", String(evidence.length));
   const summary = document.createElement("summary");
   // Named by the claim where the caller has twelve of these in one
-  // section and "Why" twelve times names nothing.
-  const named = options.label ? `${options.label} · ` : "";
+  // section and "Why" twelve times names nothing; `UX-1025`: never
+  // depth and count alone, so an unlabeled fold names its content too.
+  const named = `${options.label || "The rule"} · `;
   summary.textContent =
     `${named}1 level, ${evidence.length} `
     + `row${evidence.length === 1 ? "" : "s"}`;

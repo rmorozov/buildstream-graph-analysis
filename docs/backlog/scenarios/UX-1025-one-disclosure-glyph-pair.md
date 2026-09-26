@@ -29,4 +29,31 @@ The rail's current-chapter mark, which is not a disclosure and takes another sig
 
 ## Outcome
 
-Not started.
+Gap: `summary` had no marker of its own, so `<details>` drew the
+browser's native `▶`/`▼` beside `nav.js`'s own `▸`/`▾` fold button -
+two glyph pairs. `renderProvenance` (`decision.js`) drew "1 level, N
+rows" alone whenever its caller passed no `label`.
+
+Close: `style.css` hides the UA marker (`list-style: none`,
+`::-webkit-details-marker`) and draws `▸`/`▾` on `summary::before`,
+matching `[open]`. `renderProvenance`'s default label is now "The
+rule" rather than empty, so an unlabeled fold reads "The rule · 1
+level, N rows". New `tests/unit/test_one_disclosure_glyph_pair.py`
+boots both fixtures, toggles every `<details>` once and reads its
+`::before` content each way:
+
+```text
+$ PYTEST_XDIST= python3 -m pytest tests/unit/test_one_disclosure_glyph_pair.py -q
+4 passed in 1.63s
+```
+
+Mutation table:
+
+| mutation | reddened | count |
+|---|---|---|
+| `▸` → UA's `▶` on `summary::before` | `test_every_disclosure_starts_with_the_matching_glyph[golden]`, `[macro_micro]` | 2 failed |
+| restore the bare `"1 level, N rows"` default | `test_no_label_is_depth_and_count_alone[golden]`, `[macro_micro]` | 2 failed |
+
+`tests/unit/test_why_bga_believes_what_it_believes.py`'s text
+allowlist gained the new "The rule · " prefix (its own contract,
+not this guard's).

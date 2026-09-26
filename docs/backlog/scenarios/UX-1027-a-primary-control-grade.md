@@ -1,6 +1,6 @@
 # UX-1027: one control per view wears a primary grade
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §6e.5 | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §6e.5 | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
 
 ## Motivation
 
@@ -55,3 +55,5 @@ file - other tracks landing a `§6e` guard in the same round will need
 reconciling at merge).
 
 `make lint`: clean. `dev_sizes.py --check`: ok, 148 files.
+
+Deviation: the Acceptance Test cited `tests/unit/test_static_census.py`, an ELF classifier; §6d's census is `test_every_control_has_a_resting_appearance.py`, and that is the guard extended.

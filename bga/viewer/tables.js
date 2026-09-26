@@ -237,7 +237,11 @@ export function applyFilters(table, { text = "", thresholds = {},
       };
       kept.sort((a, b) => value(b) - value(a));
     }
-    shown = kept.slice(0, Number(top.n));
+    // `UX-1028`: an optional window past the first `n`, for the paging
+    // step - the same slice, offset rather than always from zero, so
+    // paging and Top-N share one mechanism and one bound.
+    const offset = Number.isFinite(Number(top.offset)) ? Number(top.offset) : 0;
+    shown = kept.slice(offset, offset + Number(top.n));
   }
   // `UX-526`: one place decides which rows exist, so the count the badge
   // shows and the rows the document holds cannot disagree.
@@ -267,6 +271,16 @@ export function applyFilters(table, { text = "", thresholds = {},
  * which `UX-413`'s Out of Scope keeps as the emitter's decision rather
  * than reopening it here.
  */
+/**
+ * `UX-1028` (styleguide §3k): the ceiling under which "All rows" may be
+ * offered at all - past it the reader gets the paging step instead,
+ * never the whole population in one mount. `UX-1032`'s census reads
+ * "no table ever mounts more than `MOUNTED_ROWS_MAX` rows" as one bound
+ * over the whole page, so this ceiling has to sit under that number
+ * too, not only under `TABLE_OPENS_BOUNDED_ABOVE`.
+ */
+export const ALL_ROWS_CEILING = 200;
+
 export function openingBound(presets, total, bound) {
   if (total <= bound) return null;
   const [column] = presets;

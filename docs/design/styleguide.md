@@ -49,7 +49,7 @@ history, and §7 names its guard. *Binding* is law the page is held to;
 | | §3a | depth is announced; deeper than one level opens in table focus | binding |
 | | §3d | table tools appear at the row cap; a one-value column is a sentence | binding |
 | | §3j | a fold bounds its hidden controls, not only its visible rows | binding; guard not filed |
-| | §3k | every population opens at a named bound, and the step past it is bounded too | binding; 3 open violations |
+| | §3k | every population opens at a named bound, and the step past it is bounded too | binding |
 | **Navigation** | §3b | any section is at most two interactions from the rail | binding |
 | | §3c | the landed page is at most 10 screens; chapters fold | binding |
 | | §3h | the rail shows every chapter and only the current chapter's sections | binding |
@@ -1971,19 +1971,19 @@ the census runs at the largest class.
 
 | population | bound at rest | the step past it | named in |
 |---|---|---|---|
-| table rows (§1: array of objects, array of arrays) | opens bounded above `TABLE_OPENS_BOUNDED_ABOVE` rows | filter, preset, Top-N, table focus; **"All rows" is unbounded** | `structured.js`, `tables.js` |
+| table rows (§1: array of objects, array of arrays) | opens bounded above `TABLE_OPENS_BOUNDED_ABOVE` rows | filter, preset, Top-N, table focus; "All rows" under `ALL_ROWS_CEILING`, the paging step past it (`UX-1028`) | `structured.js`, `tables.js` |
 | nested cell | `CELL_NEST_LIMIT` levels inline | table focus (§3a) | `structured.js` |
 | cell text | `CELL_TEXT_CAP` characters | the labeled fold | `structured.js` |
 | long scalar array | count + folded list | not measured here | `shapes.js` |
 | map (`dl`), one key per element | bounded pairs (`UX-419`) | the rest leave the document (`UX-526`) | §3e |
-| chain and element lists | `PATH_HEAD` + `PATH_TAIL` | **"+N more" reveals every name** | `views.js` |
+| chain and element lists | `PATH_HEAD` + `PATH_TAIL` | "+N more" pages `REVEAL_STEP` names at a time (`UX-1029`) | `views.js`, `structured.js` |
 | findings | 40 cards, the rest as fragment targets | "Show all" hydrates once (§3j) | §3j |
 | a list inside a sentence (finding text, a chapter's answer) | the top few by name, the rest as a count | the section or table the sentence cites | the analyzer's sentences |
 | evidence, culprits, overview | `EVIDENCE_SHOWN`, `CULPRITS_SHOWN`, `OVERVIEW_SHOWN` | not measured here | `sections.js`, `element.js`, `primitives.js` |
 | history series | `HISTORY_POINTS_MAX` points | none: the window is the answer | `element.js` |
 | rail | the current chapter's sections (§3h) | the next chapter | §3h |
 | Perfetto element picker | `PICKER_SHOWN` hits | the search box | `questions.js` |
-| labeled fold, "view as JSON" | closed | **the whole value, unbounded** | §1 |
+| labeled fold, "view as JSON" | closed | a `JSON_DOOR_CHAR_CAP`-character prefix, the rest as a copy (`UX-1030`) | §1, `rawjson.js` |
 
 **The rule.** Every population the page draws — rows, items, pairs,
 points, names, and characters of text — opens at a bound held by a
@@ -2043,14 +2043,14 @@ pressed: the longest finding card is 581 characters at 4,002 elements
 and 1,105 on `macro_micro`, and the longest text block of any kind 267
 and 217. The large run's sentences are shorter, not longer.
 
-The three bold cells are the open violations, filed as `UX-1028`,
-`UX-1029` and `UX-1030`:
-"All rows" on a table past its ceiling, a reveal that draws every
-name, and a JSON door that draws a whole section. The guard is a census
-at the largest size class (§3f) that presses every step control, not
-only one that reads the page at rest — at rest, all three pass. It
-holds what is mounted to ceilings written in the guard itself, never to
-the constants it audits, so raising `TABLE_OPENS_BOUNDED_ABOVE` reds it,
+The three violations above were filed as `UX-1028`, `UX-1029` and
+`UX-1030`, and closed against the census below: "All rows" on a table
+past its ceiling, a reveal that drew every name, and a JSON door that
+drew a whole section. The guard is a census at the largest size class
+(§3f) that presses every step control, not only one that reads the
+page at rest — at rest, all three passed regardless. It holds what is
+mounted to ceilings written in the guard itself, never to the
+constants it audits, so raising `TABLE_OPENS_BOUNDED_ABOVE` reds it,
 and it presses each paging step repeatedly, not once. The census is
 `UX-1032`, and declaring every sequence in the schema `UX-1031`.
 
@@ -2112,7 +2112,7 @@ headings, so a renumber there moves it.
 | §3h | `test_the_rail_is_a_source_list.py` | |
 | §3i | `test_the_header_keeps_its_budget.py` | |
 | §3j | `test_a_fold_bounds_its_interactive_descendants.py` | `UX-921` |
-| §3k | | three open violations, listed in the section; the census guard is filed with them |
+| §3k | `test_every_step_past_a_bound_is_bounded.py` | `UX-1032`'s census, at the 4,002-element run; `UX-1028`/`UX-1029`/`UX-1030` closed the three violations it found |
 | §4 | `test_emphasis_is_a_budget.py`, `test_the_palette_is_validated.py`, `test_a_drawing_is_graded.py`, `test_apparatus_in_its_place.py`, `test_the_browser_is_the_library.py` | named |
 | §4a | | named; `UX-346`'s `test_a_sentence_lives_on_its_door.py` holds it and cites no section |
 | §4b | `test_a_runbook_is_not_a_table.py` | `UX-351`'s `test_the_label_is_for_the_reader.py` holds it and cites no section; `UX-669`'s clause holds the half that says a citation is a question, never a key |

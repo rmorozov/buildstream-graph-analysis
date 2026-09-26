@@ -539,10 +539,9 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 # The two land together in round 120: 329,000 leaves the same order
 # of headroom over their summed 327,231 B.
 #
-# The round-115 reader-facing string track (`UX-1019`, `UX-1021`,
-# `UX-1024`, `UX-1025`, `UX-1034`) moved this one by ~660 B, all
-# source: measured 329,489 B. 330,200 keeps the same order of headroom.
-PAGE_BUDGET_B = 330_200
+# The UI batch (`UX-921`, `UX-1015`..`UX-1036`) moved this by
+# 7,238 B, all source: measured 335,634 B. 337,000 keeps the same order of headroom.
+PAGE_BUDGET_B = 337_000
 
 #: `UX-444`: the claim, stated once. **The run's data is at least twice
 #: the page a reader is permitted to download.**
@@ -948,7 +947,9 @@ COMMITTED_EXPORTS = [
     # contract - the `build_class` block's schema nodes, which golden
     # does not declare and so carries only as prose. 480,606 B measured
     # over that merge; the bound holds unmoved.
-    ("golden", GOLDEN, 482_000),                       #  480,606 B
+    # The UI batch (`UX-921`, `UX-1015`..`UX-1036`) moved this one
+    # 7,226 B, all source. 487,832 B measured; 490,000 keeps headroom.
+    ("golden", GOLDEN, 490_000),                       #  487,832 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -1134,11 +1135,9 @@ COMMITTED_EXPORTS = [
     # contract golden's note carries - this run declares no build class
     # either, so none of it is payload. 540,959 B measured over that
     # merge; the bound holds unmoved.
-    # The round-115 reader-facing string track (`UX-1019`, `UX-1021`,
-    # `UX-1024`, `UX-1025`, `UX-1034`) moved this one by 1,123 B, all
-    # source: `attachBlockDoor`, the reader-word map and the separator
-    # fix are new lines, not new payload. 542,200 keeps headroom.
-    ("macro_micro", MACRO_MICRO, 542_200),             #  542,082 B
+    # The UI batch (`UX-921`, `UX-1015`..`UX-1036`) moved this one
+    # 7,226 B, all source. 548,185 B measured; 550,000 keeps headroom.
+    ("macro_micro", MACRO_MICRO, 550_000),             #  548,185 B
 ]
 
 

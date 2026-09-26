@@ -31,4 +31,22 @@ The §3k census (UX-1032): each reveal pressed 10 times mounts at most the bound
 
 ## Outcome
 
-Not started.
+**Gap measured.** The reveal this row is about is `boundedList` in
+`bga/viewer/structured.js` (not `views.js` - `views.js` only exports
+the `PATH_HEAD`/`PATH_TAIL` constants `boundedList` reads). Before the
+fix, one press of `+N more` set `first.textContent = items.join(", ")`,
+every middle name in one span. `REVEAL_STEP = 60` added; the button
+now pages `middle.slice(offset, offset + REVEAL_STEP)` into a
+`.list-middle` span, **replacing** it each press, and hides once
+exhausted.
+
+**Close measured.**
+`pytest tests/unit/test_every_step_past_a_bound_is_bounded.py -q` (this
+row's clauses): `10 passed`.
+
+**Mutation table:**
+
+| mutation | reddened | count |
+|---|---|---|
+| `chunk = middle` (whole list, one press) instead of `middle.slice(offset, offset + REVEAL_STEP)` | `TestEveryRevealStaysBounded::test_no_reveal_ever_mounts_past_the_bound` | 1 of 10 |
+| `shownMiddle.textContent += …` (append) instead of `=` (replace) | same clause, mounted count grows 60 -> 120 -> 180 -> 198 over presses | 1 of 10 |

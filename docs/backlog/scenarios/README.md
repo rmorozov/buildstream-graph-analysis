@@ -41,7 +41,6 @@ task file, which is the only place it ever lived twice.
 | UX-1012 | [the report says which elements drew from the jobserver, not only which were offered it](UX-1012-the-report-says-which-elements-drew-from-the-jobserver.md) | analysis | High | R4, R5 | 🔴 Not Started |
 | UX-1013 | [admission ranks from BuildStream's own cached build logs when bga never captured the project](UX-1013-admission-ranks-from-buildstreams-own-cached-build-logs.md) | capture | Medium | R4, R5 | 🔴 Not Started |
 | UX-1014 | [the "safe cap plus auto" default is measured on more shapes and hosts before it is anyone's default](UX-1014-the-builders-and-auto-default-is-measured-on-more-shapes-and-hosts.md) | capture | High | R4, R5 | 🔴 Not Started |
-| UX-1032 | [the §3k census presses every step control at the largest size class](UX-1032-the-bound-census-presses-every-step.md) | viewer | Medium | R1, R4 | 🔴 Not Started |
 | UX-1033 | [form controls take the type scale, not the browser's 13.333px](UX-1033-form-controls-take-the-type-scale.md) | viewer | Low | R1 | 🔴 Not Started |
 | UX-1034 | [reader chips print R1 to R5 inside section headings](UX-1034-reader-chips-print-internal-keys.md) | viewer | Low | R1 | 🔴 Not Started |
 | UX-1035 | [fonts compute to the two declared stacks, not Arial or bare monospace](UX-1035-fonts-compute-to-the-two-stacks.md) | viewer | Low | R1 | 🔴 Not Started |

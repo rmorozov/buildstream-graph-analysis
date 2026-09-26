@@ -1,6 +1,6 @@
 # UX-1032: the §3k census presses every step control at the largest size class
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §3k | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** bounded
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §3k | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** bounded
 
 ## Motivation
 
@@ -53,3 +53,5 @@ skill):
 Both this file's own two mutations reproduce the census's design intent
 (the ceiling is a literal, never imported); UX-1028/1029/1030 reproduce
 their own three mutations against the same file (see those files).
+
+Deviation: none from the Required Fix; the guard was tiered medium at 14.7s on the merge (`f71a4831`).

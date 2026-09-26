@@ -197,8 +197,9 @@ p, li > p, dd { max-width: 72ch; }
    No transition and no shadow: §6a refuses motion and ornament on the
    export constraint, and this item leaves that refusal standing. A
    control that looks like the page it is in needs neither. */
-/* UX-1035: family only - UX-1033 takes the rest of `font` (size, line-height). */
-input, select, textarea { font-family: inherit; }
+/* UX-1033 (styleguide §4f): §4f's walk never saw a form control - the
+   UA default (13.333px) sat outside the four-step scale uncounted. */
+input, select, textarea { font: inherit; }
 button {
   font: inherit; font-size: var(--font-small); line-height: 1.35; cursor: pointer;
   color: var(--fg); background: var(--muted-bg);

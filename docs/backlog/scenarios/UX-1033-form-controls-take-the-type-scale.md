@@ -31,4 +31,22 @@ New type tokens.
 
 ## Outcome
 
-Not started.
+Gap measured: `PYTHONPATH=$PWD pytest tests/unit/test_the_type_scale_is_four_steps.py -q`,
+`_SIZE_SCAN` extended to count `input`/`select`/`textarea`/`button` on
+sight (they carry no text node, so the old text-node filter hid them):
+5 distinct sizes before the fix - `13.3333px` (UA default on
+`input.copy-markdown` and the what-if inputs) added to the four scale
+steps.
+
+Close measured: `PYTHONPATH=$PWD pytest tests/unit/test_the_type_scale_is_four_steps.py -q`
+— 8 passed. `input, select, textarea { font: inherit; }` added to
+`bga/viewer/style.css` (`button` already had it); four sizes again on
+both fixtures.
+
+Mutation table:
+
+| guard | mutation | result |
+|---|---|---|
+| `test_the_type_scale_is_four_steps.py::TestTheScaleHasFourSteps::test_distinct_computed_sizes_at_most_four` | `input, select, textarea { }` | red: 5 sizes, `['21px', '13px', '17px', '15px', '13.3333px']`, both fixtures |
+
+`make lint`: clean (baseline-forced findings unrelated). `dev_sizes.py --check`: ok, 148 files.

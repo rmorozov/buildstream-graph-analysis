@@ -490,8 +490,13 @@ section.chapter > section > h2 { margin-top: .9rem; }
    section permanently expanded, so §3b's click budget was met by
    converting navigation into scroll. A chapter other than the first
    holds its sections behind one interaction; the heading, the answer
-   line and the control stay. */
-section.chapter[data-open="false"] > section[data-section] { display: none; }
+   line and the control stay.
+
+   `UX-1015` (styleguide §6e.11): the fold used to be this `display:
+   none` rule. It also hid the text from find-in-page, which a `display`
+   rule always does and `hidden="until-found"` (set by `chapters.js`'s
+   `setOpen`, the one place that attribute is written) does not - the
+   attribute alone is the fold now, and this selector is gone. */
 
 /* UX-399 (styleguide §6c): **the browser is the library.** An open
    chapter's sections are laid out only when they are near the viewport.
@@ -513,10 +518,16 @@ section.chapter[data-open="false"] > section[data-section] { display: none; }
    about content, not about paint (`tests/pages.py`).
 
    Applied to the sections *inside* a chapter rather than to the chapter
-   itself: a folded chapter is already `display: none` above, so the
-   chapter level had nothing to skip, and the placeholder there doubled
-   the reported height of an 11-element page for no layout win. */
-section.chapter > section[data-section] {
+   itself: a folded chapter is already hidden above, so the chapter
+   level had nothing to skip, and the placeholder there doubled the
+   reported height of an 11-element page for no layout win.
+
+   `:not([hidden])`: `UX-1015`'s `hidden="until-found"` already sets the
+   browser's own `content-visibility: hidden` on a folded section, and
+   this rule would override that back to `auto` (visible, just deferred)
+   if it matched a hidden one too - the one case §6c's own rule must
+   step around rather than compete with. */
+section.chapter > section[data-section]:not([hidden]) {
   content-visibility: auto;
   contain-intrinsic-size: auto 600px;
 }
@@ -530,9 +541,12 @@ button.chapter-open:hover, button.chapter-open[aria-expanded="true"] {
 }
 /* Paper has no interaction at all, so a folded chapter would print as
    a heading over nothing. Everything opens for print - the fold is a
-   navigation device, and paper does not navigate. */
+   navigation device, and paper does not navigate.
+   `UX-1015`: the fold is `hidden="until-found"` now, not `display`, so
+   print overrides the attribute directly rather than a `display` rule
+   that no longer exists. */
 @media print {
-  section.chapter[data-open="false"] > section[data-section] { display: block; }
+  [hidden="until-found"] { display: block !important; }
   button.chapter-open { display: none; }
 }
 

@@ -30,4 +30,33 @@ The page's own "Jump to..." box; browsers without `until-found` keep the fold as
 
 ## Outcome
 
-Not started.
+**Gap measured.** Before this item, `style.css` folded a chapter with
+`section.chapter[data-open="false"] > section[data-section] { display:
+none; }` — a `display` rule, which hides text from `Ctrl+F` regardless
+of any `aria-*` state. On the un-mutated tree this repository's own
+audit found 5 of 6 chapters folded at rest on `macro_micro`.
+
+**Close measured.** `python3 -m pytest
+tests/unit/test_find_in_page_reaches_folded_chapters.py -q`:
+
+```text
+9 passed in 1.35-1.68s
+```
+
+`setOpen` is now the one writer of `data-open`, `hidden="until-found"`
+and `aria-expanded`; a dispatched `beforematch` opens the whole chapter;
+a section that arrives after its chapter is shut joins it shut; booted
+in a real browser, a folded section computes `contentVisibility:
+"hidden"` and `display` other than `"none"`.
+
+**Mutation table.**
+
+| guard | mutation | reddened | count |
+|---|---|---|---|
+| `TestTheMechanismIsThreePlaces::test_the_display_none_fold_rule_is_gone` | restore `section.chapter[data-open="false"] > section[data-section] { display: none; }` | the static source check | 1 |
+| `TestAFoldedSectionIsHiddenUntilFoundOnScreen::test_a_folded_section_computes_hidden_but_not_display_none` | same mutation | `display` reads `"none"` again | 1 |
+
+2 of 9 clauses reddened by the Acceptance Test's own mutation; the
+remaining 7 (the shim-level `setOpen`/`beforematch`/late-arrival logic,
+and the print/content-visibility static checks) are unaffected by
+restoring the old `display` rule alone, as expected.

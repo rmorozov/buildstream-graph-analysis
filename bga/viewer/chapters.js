@@ -369,13 +369,16 @@ export function chapters(root, doc, payload) {
     }
     for (const node of members) {
       node.setAttribute("data-chapter", chapter.id);
+      attachBeforematch(node);
       box.append(node);
     }
     // UX-347: the control counts what the chapter holds, and it holds
     // nothing until the loop above - a box labelled at construction
     // said "Show 0 sections" on every chapter, measured on both
     // fixtures before this line existed.
-    labelFold(box);
+    // `UX-1015`: also the point a newly-arrived section picks up the
+    // chapter's own fold state, through the one setter.
+    setOpen(box, isOpen(box));
     root.append(box);
     made.push(box);
   }
@@ -470,12 +473,41 @@ export function isOpen(box) {
 }
 
 /**
- * Open or shut one chapter, and say on its control how many sections
- * are behind it (`§3a.1`: a fold names its count before it is opened).
+ * `UX-1015` (styleguide §6e.11): every section this module has already
+ * placed in a chapter gets exactly one `beforematch` listener, ever - a
+ * `WeakSet` rather than a data attribute, so it costs nothing a guard
+ * or the export's diff would see.
+ */
+const HAS_BEFOREMATCH = new WeakSet();
+
+/**
+ * Reveal `node`'s chapter when the browser's own find matches inside a
+ * folded (`hidden="until-found"`) section - the mechanism `hidden`
+ * fires this event for, and the one path (with the rail's and the
+ * jump box's controls) that opens a chapter.
+ */
+function attachBeforematch(node) {
+  if (!node?.addEventListener || HAS_BEFOREMATCH.has(node)) return;
+  HAS_BEFOREMATCH.add(node);
+  node.addEventListener("beforematch", () => revealChapter(node));
+}
+
+/**
+ * Open or shut one chapter: `data-open`, `hidden="until-found"` on its
+ * direct sections and `aria-expanded` on its controls (via `labelFold`)
+ * all move together - the one setter `UX-1015` names, so find, a
+ * fragment and the fold control can never disagree about which state
+ * the chapter is in.
  */
 export function setOpen(box, open) {
   if (!box) return box;
-  box.setAttribute("data-open", String(Boolean(open)));
+  const wasOpen = Boolean(open);
+  box.setAttribute("data-open", String(wasOpen));
+  for (const node of box.children ?? []) {
+    if (!node.getAttribute?.("data-section")) continue;
+    if (wasOpen) node.removeAttribute?.("hidden");
+    else node.setAttribute?.("hidden", "until-found");
+  }
   labelFold(box);
   return box;
 }
@@ -747,7 +779,11 @@ export function fileInChapter(root, node, doc) {
   }
   if (box) {
     node.setAttribute("data-chapter", id);
+    attachBeforematch(node);
     box.append(node);
+    // `UX-1015`: a section that arrives after the chapter was already
+    // folded joins it folded, not visible underneath a shut control.
+    if (!isOpen(box)) node.setAttribute("hidden", "until-found");
     // UX-347: the control counts what the chapter holds, and this is
     // the one path that changes that after boot.
     labelFold(box);

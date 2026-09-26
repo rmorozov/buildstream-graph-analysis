@@ -277,8 +277,12 @@ class TestTheAcknowledgementGoesBackToWhatItSays:
 #: of this drive reported "not in the viewport" against a working fix.
 _FOCUS = """
 (() => {
+  // `UX-1015`: a chapter's sections hide behind their own
+  // `hidden="until-found"` now, not only the box's `data-open`.
   for (const box of document.querySelectorAll("section.chapter")) {
     box.setAttribute("data-open", "true");
+    for (const section of box.querySelectorAll(":scope > section[data-section]"))
+      section.removeAttribute("hidden");
   }
   const deepest = [...document.querySelectorAll("button.focus-this")]
     .map((b) => ({ b, y: b.getBoundingClientRect().top + window.scrollY }))

@@ -61,9 +61,17 @@ REPO = pathlib.Path(__file__).resolve().parents[1]
 #: the shim census (`UX-264`) reads that call as a node harness which
 #: should be importing the shared shim, and this runs in a browser where
 #: there is no shim.
+#: `UX-1015`: `:not([hidden])` - a folded chapter's sections are hidden
+#: by `content-visibility: hidden` now (`hidden="until-found"`), the
+#: same property this override forces to `visible` for an *open*
+#: section's placeholder. Without the exclusion this line un-hides a
+#: folded chapter for layout too, which is exactly the state a landed
+#: reader is not in - measured on `macro_micro`, the "landed" height
+#: this file's own guards compare against a budget went from ~7,000 px
+#: to 35,996 px before this exclusion existed.
 FULL_LAYOUT_JS = (
     'document.head.insertAdjacentHTML("beforeend",'
-    ' "<style>section.chapter > section[data-section]'
+    ' "<style>section.chapter > section[data-section]:not([hidden])'
     '{ content-visibility: visible !important; }</style>");'
 )
 

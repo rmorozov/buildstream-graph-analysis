@@ -82,11 +82,13 @@ class TestTheStylesheetCarriesIt:
             "off before measuring, so nothing else would notice this "
             "being deleted")
         rule = re.search(
-            r"section\.chapter > section\[data-section\]\s*\{[^}]*\}", css)
+            r"section\.chapter > section\[data-section\](?::not\(\[hidden\]\))?"
+            r"\s*\{[^}]*\}", css)
         assert rule and "content-visibility: auto" in rule.group(0), (
             "the optimisation belongs on the sections *inside* a chapter: "
-            "a folded chapter is already display:none, so the chapter "
-            "level has nothing to skip")
+            "a folded chapter is hidden by its own hidden=\"until-found\" "
+            "attribute now (`UX-1015`), so the chapter level still has "
+            "nothing to skip")
 
     def test_the_placeholder_size_is_declared_and_remembers(self):
         """`auto` is the load-bearing word.

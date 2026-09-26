@@ -459,6 +459,13 @@ _LOOK = r"""
   const landed = state();
   for (const box of document.querySelectorAll("section.chapter")) {
     box.setAttribute("data-open", "true");
+    // `UX-1015`: the fold is `hidden="until-found"` on the chapter's
+    // own sections now, not only `data-open` on the box - `setOpen`
+    // clears both together, and this measurement drove the box
+    // attribute directly rather than importing it.
+    for (const section of box.querySelectorAll(":scope > section[data-section]")) {
+      section.removeAttribute("hidden");
+    }
   }
   // `UX-371` counts repetition over everything a reader can reach, so
   // the folds come open too - after the height measurements above,

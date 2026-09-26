@@ -271,6 +271,10 @@ class TestTheSelectorStillSelects:
         # imports the one tool that reads and derives the backlog, and
         # `UX-935`'s and `UX-932`'s own guards are the 45th and 46th.
         "tools/dev_close_task.py",
+        # `UX-1036`: 48 = 33 census + 15 named, one over 47. Wide by
+        # **name**: the export's `omitted` sentence is `plane2.py`'s, and
+        # `test_the_export_message_is_punctuated.py` is the fifteenth.
+        "bga/plane2.py",
     }
 
     def test_a_one_module_change_selects_a_handful_not_the_suite(self):

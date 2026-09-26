@@ -119,7 +119,14 @@
   --space-6: 1.5rem;
   --space-7: 1.75rem;
   --space-8: 2rem;
+
+  /* UX-1035: the two stacks every element computes to - `html` (UA
+     serif default) and unstyled form controls (UA "Arial") were the
+     other two computed values before this. */
+  --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
 }
+html { font-family: var(--font-sans); }
 
 /* The override. `prefers-color-scheme: light` also matches a reader
  * who has expressed no preference, so an unset browser gets exactly
@@ -159,7 +166,7 @@
 body {
   margin: 0 auto; padding: var(--space-6); max-width: 62rem;
   font-size: var(--font-body); line-height: 1.55;
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--font-sans);
   color: var(--fg); background: var(--bg);
 }
 
@@ -190,6 +197,8 @@ p, li > p, dd { max-width: 72ch; }
    No transition and no shadow: §6a refuses motion and ornament on the
    export constraint, and this item leaves that refusal standing. A
    control that looks like the page it is in needs neither. */
+/* UX-1035: family only - UX-1033 takes the rest of `font` (size, line-height). */
+input, select, textarea { font-family: inherit; }
 button {
   font: inherit; font-size: var(--font-small); line-height: 1.35; cursor: pointer;
   color: var(--fg); background: var(--muted-bg);
@@ -287,7 +296,7 @@ h2 { font-size: var(--font-h2); margin: var(--space-8) 0 var(--space-2); }
    above every h2 on the page (16.8px) it was supposed to nest under. */
 h3 { font-size: var(--font-body); font-weight: 600; margin: var(--space-4) 0 var(--space-1); }
 .muted { color: var(--muted); }
-code, .num { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+code, .num { font-family: var(--font-mono); }
 a { color: var(--accent); }
 
 .verdict {

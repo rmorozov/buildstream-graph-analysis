@@ -16,10 +16,8 @@
 // cycle - and the alternative was a second copy of the scale, which is
 // the defect §2a exists to end (`viewBox: "0 0 100 20"` was written out
 // by hand in this file).
-import {
-  SCALE, GRADE_ANNOTATION, GRADE_EXHIBIT, exhibitAxis, exhibitTwin,
-  nameDrawing,
-} from "./drawings.js";
+import { SCALE, GRADE_ANNOTATION, GRADE_EXHIBIT, exhibitAxis, exhibitTwin,
+  nameDrawing } from "./drawings.js";
 // UX-334: `name`/`id` on every control, and a `<label>` that points at
 // one. `controls.js` imports nothing, which is why this module may use
 // it where it may not use `app.js` - see the note below.

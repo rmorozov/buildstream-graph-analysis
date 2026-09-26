@@ -1329,7 +1329,7 @@ text. A row with no measured drift keeps its one word for completeness.
 | concept | word | rejected synonym | measured on |
 |---|---|---|---|
 | the whole thing analyzed | run | build, capture | this report's headings/banners; 49 schema descriptions still say "build"/"capture" - not swept this round, `UX-1019` |
-| a BuildStream recipe | element | — | this report; `element|KIND|KIND|n` is register (§4g item 3), not this row - a scheduler task (one fetch or build attempt on an element) is a different, kept concept, not a synonym for the element it acts on |
+| a BuildStream recipe | element | — | this report; `element\|KIND\|KIND\|n` is register (§4g item 3), not this row - a scheduler task (one fetch or build attempt on an element) is a different, kept concept, not a synonym for the element it acts on |
 | the longest dependency path | critical path | — | most prose already says "critical path" (`element.js`, `questions.js`, 20+ schema descriptions); four `decision.js`/`views.js` labels still say "chain", found but not fixed - renaming them costs 6 words, over §3e's `macro_micro` volume budget by 6 (`test_the_page_has_a_volume_budget.py`), so the guard does not yet enforce this row rather than trading one guard's red for another's |
 | an answer the page ranks | finding | — | this report |
 | the runbook step a reader takes | next step | — | this report |
@@ -2128,7 +2128,7 @@ headings, so a renumber there moves it.
 | §6b | `test_one_factory_builds_every_table.py`, `test_the_handoff_rides_the_rail.py` | |
 | §6c | `test_the_browser_is_the_library.py`, `test_the_report_you_can_attach.py` | |
 | §6d | `test_every_control_has_a_resting_appearance.py` | |
-| §6e | `test_a_reader_never_sees_the_register.py` | proposed rules; each names the guard its row will add once accepted; `UX-1019`'s terminology-matrix check is filed here rather than waiting for the row to close |
+| §6e | `test_a_reader_never_sees_the_register.py`, `test_an_absence_is_one_sentence.py`, `test_one_disclosure_glyph_pair.py`, `test_one_door_per_block.py` | proposed rules; each names the guard its row will add once accepted; `UX-1019`'s terminology-matrix check is filed here rather than waiting for the row to close |
 | §7 | `test_emphasis_is_a_budget.py`, `test_the_styleguide_names_its_guards.py` | named |
 
 What the rows with no guard were written from, rounds 58 and 69, kept

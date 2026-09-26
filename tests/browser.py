@@ -341,6 +341,17 @@ class Browser:
         """
         return self._drive(url, expression, width, height)
 
+    def journey(self, url, steps, width=1440, height=900):
+        """`UX-1016`: real `Tab`/`Enter`/`Escape` key events, one
+        navigated session for the whole sequence. `steps` is
+        `[{"key": "Tab"}, {"read": "<js>"}, ...]`; returns the list of
+        `read` results, in order - `cdp.mjs --journey` is what presses
+        the keys, since only CDP's Input domain can move focus the way
+        a keyboard does.
+        """
+        return self._drive(url, json.dumps(steps), width, height,
+                           ("--journey",))
+
     def observe(self, url, expression="null", width=1440, height=900):
         """The same load, plus everything the console and the CSP said.
 

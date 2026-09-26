@@ -35,10 +35,43 @@ const targets = new Map();
 /** `UX-638`: where the reader was before focus hid the document. */
 let cameFrom = null;
 
+/** `UX-1016`: the control that opened table focus, so Escape gives the
+ *  keyboard back to it rather than to wherever focus lands by default. */
+let opener = null;
+
+/**
+ * `UX-1016`: `root`/`onLeave` while table focus is entered, and the one
+ * document that has ever received the Escape listener below.
+ *
+ * The listener lives on the document rather than on the focused
+ * section: the control that opened focus (a table's own "Expand", still
+ * focused after the click that opened it) is a **sibling** of the
+ * section this module builds, not a descendant of it, so a section-
+ * scoped listener never sees the keydown a reader who has not tabbed
+ * anywhere since sends.
+ */
+let activeRoot = null;
+let activeOnLeave = null;
+let escapeDoc = null;
+
+function installEscape(doc) {
+  if (!doc?.addEventListener || escapeDoc === doc) return;
+  escapeDoc = doc;
+  doc.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || !activeRoot) return;
+    const onLeave = activeOnLeave;
+    leaveTableFocus(activeRoot);
+    onLeave?.();
+  });
+}
+
 /** Forget every target. For a guard that renders more than one page. */
 export function forgetFocusTargets() {
   targets.clear();
   cameFrom = null;
+  opener = null;
+  activeRoot = null;
+  activeOnLeave = null;
 }
 
 /** The scrolling view, or `null` under a harness that has no layout. */
@@ -132,6 +165,11 @@ export function enterTableFocus(root, path, { onLeave } = {}) {
   // `UX-638`: read after the leave above, which restores its own, and
   // before anything is hidden - the collapse clamps the offset.
   cameFrom = view()?.scrollY ?? null;
+  // `UX-1016`: the control that just received the click or the `Enter`
+  // keypress that opened this - `document.activeElement` at this point,
+  // before this function moves anything.
+  opener = (typeof document === "undefined" ? null : document.activeElement)
+    || null;
 
   // Where it came back to. A marker rather than a remembered index: the
   // page can rebuild rows underneath (a preset view replaces a table)
@@ -169,6 +207,15 @@ export function enterTableFocus(root, path, { onLeave } = {}) {
   const heading = document.createElement("h2");
   heading.textContent = target.label;
   section.append(crumb, heading, target.node);
+  // `UX-1016` (styleguide §6e.8): Escape is the way out the keyboard
+  // journey names - the same exit the back button gives, so there is
+  // one leave path rather than two that could disagree. Tracked on the
+  // module, not on `section`: the control that opened this is still
+  // focused and is a sibling of `section`, not inside it.
+  activeRoot = root;
+  activeOnLeave = onLeave;
+  installEscape(root.ownerDocument
+    ?? (typeof document === "undefined" ? null : document));
 
   root.append(section);
   root.setAttribute("data-table-focused", String(path));
@@ -216,6 +263,12 @@ export function leaveTableFocus(root) {
   // be its full height again before the offset means anything.
   if (cameFrom !== null) view()?.scrollTo?.(0, cameFrom);
   cameFrom = null;
+  // `UX-1016`: give the keyboard back to what opened this, rather than
+  // to wherever the browser sends it once the node it was on is gone.
+  opener?.focus?.();
+  opener = null;
+  activeRoot = null;
+  activeOnLeave = null;
   return null;
 }
 

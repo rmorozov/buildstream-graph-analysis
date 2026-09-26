@@ -540,8 +540,8 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 # of headroom over their summed 327,231 B.
 #
 # The UI batch (`UX-921`, `UX-1015`..`UX-1036`) moved this by
-# 7,238 B, all source: measured 335,634 B. 337,000 keeps the same order of headroom.
-PAGE_BUDGET_B = 337_000
+# 10,841 B, all source: measured 339,237 B. 341,000 keeps the same order of headroom.
+PAGE_BUDGET_B = 341_000
 
 #: `UX-444`: the claim, stated once. **The run's data is at least twice
 #: the page a reader is permitted to download.**
@@ -948,8 +948,8 @@ COMMITTED_EXPORTS = [
     # does not declare and so carries only as prose. 480,606 B measured
     # over that merge; the bound holds unmoved.
     # The UI batch (`UX-921`, `UX-1015`..`UX-1036`) moved this one
-    # 7,226 B, all source. 487,832 B measured; 490,000 keeps headroom.
-    ("golden", GOLDEN, 490_000),                       #  487,832 B
+    # 10,829 B, all source. 491,435 B measured; 493,000 keeps headroom.
+    ("golden", GOLDEN, 493_000),                       #  491,435 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -1136,8 +1136,8 @@ COMMITTED_EXPORTS = [
     # either, so none of it is payload. 540,959 B measured over that
     # merge; the bound holds unmoved.
     # The UI batch (`UX-921`, `UX-1015`..`UX-1036`) moved this one
-    # 7,226 B, all source. 548,185 B measured; 550,000 keeps headroom.
-    ("macro_micro", MACRO_MICRO, 550_000),             #  548,185 B
+    # 10,829 B, all source. 551,788 B measured; 553,500 keeps headroom.
+    ("macro_micro", MACRO_MICRO, 553_500),             #  551,788 B
 ]
 
 

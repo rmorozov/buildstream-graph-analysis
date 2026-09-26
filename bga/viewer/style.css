@@ -316,7 +316,7 @@ h3 { font-size: var(--font-h2); margin: var(--space-8) 0 var(--space-2); }
    above every h3 on the page (16.8px) it was supposed to nest under. */
 h4 { font-size: var(--font-body); font-weight: 600; margin: var(--space-4) 0 var(--space-1); }
 .muted { color: var(--muted); }
-code, .num { font-family: var(--font-mono); }
+code, pre, .num { font-family: var(--font-mono); }
 a { color: var(--accent); }
 
 /* UX-1022 (styleguide §6e.7): a hit area, not a bigger glyph - min-*

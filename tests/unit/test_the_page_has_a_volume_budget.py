@@ -116,7 +116,10 @@ needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
 #: `remote-execution-whatif` finding open in the first chapter, 7,182
 #: once its text was cut from 128 to 81 words; a finding is a block the
 #: reader lands on, which is what the budget prices. 118 of headroom.
-LANDED_HEIGHT_PX = 7_300
+#: The UI batch: 7,300 -> 7,600. 6,859 at its base; `UX-1022`'s 24px
+#: targets and `UX-1018`'s chapter scale +268, the reader-string track's
+#: block doors +165, 7,471 merged. Spacing, not new blocks. 129 of headroom.
+LANDED_HEIGHT_PX = 7_600
 
 #: `UX-367`: the opened bounds, per size class, largest class last.
 #: Each row is `(elements at most, opened px, words, controls, nodes)`,

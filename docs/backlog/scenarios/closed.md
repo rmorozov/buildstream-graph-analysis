@@ -990,6 +990,7 @@ is open, on what topic, for whom — is the other file's.
 | UX-1030 | [a "view as JSON" door draws a whole section as one node](UX-1030-a-json-door-draws-a-whole-section.md) | High | R1, R5 | 🟢 Done — a JSON door draws at most 20,000 characters and copies the whole value; `elements` drew 3,591,520 | [UX-1030](UX-1030-a-json-door-draws-a-whole-section.md) |
 | UX-1031 | [every list and data-keyed map in the payload is declared, with whether it grows](UX-1031-every-growing-sequence-is-declared-in-the-schema.md) | Medium | R1, R5 | 🟢 Done — every payload list and data-keyed map declares `bga:grows`; 41 were undeclared, and 26 growers with no bound are carried to UX-1037 | [UX-1031](UX-1031-every-growing-sequence-is-declared-in-the-schema.md) |
 | UX-1032 | [the §3k census presses every step control at the largest size class](UX-1032-the-bound-census-presses-every-step.md) | Medium | R1, R4 | 🟢 Done — the §3k census presses every step 10 times on the 4,002-element run; tables mounted 4,002 rows before | [UX-1032](UX-1032-the-bound-census-presses-every-step.md) |
+| UX-1033 | [form controls take the type scale, not the browser's 13.333px](UX-1033-form-controls-take-the-type-scale.md) | Low | R1 | 🟢 Done — `input`, `select` and `textarea` inherit the font; five computed sizes were four again | [UX-1033](UX-1033-form-controls-take-the-type-scale.md) |
 
 ## UX-207..UX-212: the twenty-third audit round — the report learns to answer first (2026-08-22)
 

@@ -1,6 +1,6 @@
 # UX-1033: form controls take the type scale, not the browser's 13.333px
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §4f | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** bounded
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §4f | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** bounded
 
 ## Motivation
 
@@ -50,3 +50,5 @@ Mutation table:
 | `test_the_type_scale_is_four_steps.py::TestTheScaleHasFourSteps::test_distinct_computed_sizes_at_most_four` | `input, select, textarea { }` | red: 5 sizes, `['21px', '13px', '17px', '15px', '13.3333px']`, both fixtures |
 
 `make lint`: clean (baseline-forced findings unrelated). `dev_sizes.py --check`: ok, 148 files.
+
+Deviation: none from the Required Fix.

@@ -56,7 +56,7 @@ needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 # clauses are about what the viewer declares, not about which file
 # declares it, so they read all three; pointing them at `app.js` alone
 # would have quietly stopped seeing the constants they defend.
-APP_MODULES = ("app.js", "format.js", "structured.js")
+APP_MODULES = ("app.js", "format.js", "structured.js", "pairs.js")
 APP = "\n".join((REPO / "bga/viewer" / _name).read_text(encoding="utf-8")
                 for _name in APP_MODULES)
 

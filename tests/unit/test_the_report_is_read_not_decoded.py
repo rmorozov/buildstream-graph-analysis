@@ -38,7 +38,7 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 # would have quietly stopped seeing the constants they defend.
 # `UX-450` added a fourth: the section walk left `app.js` for
 # `sections.js`, and `liftedCriticalPath`'s caller went with it.
-APP_MODULES = ("app.js", "sections.js", "format.js", "structured.js")
+APP_MODULES = ("app.js", "sections.js", "format.js", "structured.js", "pairs.js")
 APP = "\n".join((REPO / "bga/viewer" / _name).read_text(encoding="utf-8")
                 for _name in APP_MODULES)
 NAV = (REPO / "bga/viewer/nav.js").read_text(encoding="utf-8")

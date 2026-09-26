@@ -329,6 +329,8 @@ bga/viewer/element.js    the element object - one element, everything known
 bga/viewer/decision.js   the decision panel, UX-207's first screen (UX-337)
 bga/viewer/structured.js a value becomes a table, and the table becomes
                          interrogable: filters, sort, Top-N, folds (UX-337)
+bga/viewer/pairs.js      a map as a pair list, and the element signals as one
+                         table with presets; split from structured.js (UX-268)
 bga/viewer/tablefocus.js table focus, and the depth a fold announces (UX-318)
 bga/viewer/sections.js   the section walk - payload plus schema to DOM, split
                          from app.js, which boots and wires (UX-450)

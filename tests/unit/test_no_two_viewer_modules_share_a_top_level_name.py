@@ -44,10 +44,10 @@ class TestNoTwoModulesShareATopLevelName:
     """The property: `_module_order` can return any module as an entry
     point, and every bundle it can build must be flattenable."""
 
-    def test_the_tree_is_twenty_two_modules(self):
+    def test_the_tree_is_twenty_three_modules(self):
         """The population, asserted where the collision count is read -
         an empty walk would pass the clause below for the wrong reason."""
-        assert len(_modules()) == 22
+        assert len(_modules()) == 23
 
     def test_no_name_has_two_owners(self):
         owners = _owners()

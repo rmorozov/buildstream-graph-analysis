@@ -46,7 +46,7 @@ CSS = (REPO / "bga/viewer/style.css").read_text(encoding="utf-8")
 # The rule deciding what a long table opens at moved there, and this
 # list is where a move that outruns its guards is caught - so the move
 # and the list change together rather than the clauses going quiet.
-APP_MODULES = ("app.js", "format.js", "structured.js", "tables.js")
+APP_MODULES = ("app.js", "format.js", "structured.js", "pairs.js", "tables.js")
 APP = "\n".join((REPO / "bga/viewer" / _name).read_text(encoding="utf-8")
                 for _name in APP_MODULES)
 NAV = (REPO / "bga/viewer/nav.js").read_text(encoding="utf-8")

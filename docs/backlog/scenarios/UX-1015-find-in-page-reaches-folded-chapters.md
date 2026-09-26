@@ -1,6 +1,6 @@
 # UX-1015: find-in-page reaches text inside a folded chapter
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §6e.11 | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §6e.11 | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
 
 ## Motivation
 
@@ -60,3 +60,5 @@ in a real browser, a folded section computes `contentVisibility:
 remaining 7 (the shim-level `setOpen`/`beforematch`/late-arrival logic,
 and the print/content-visibility static checks) are unaffected by
 restoring the old `display` rule alone, as expected.
+
+Deviation: `hidden="until-found"` meant five existing guards that force a chapter open had to clear `hidden` too, and `test_the_header_keeps_its_budget.py` reads `textContent` past the fold (`0de51abb`).

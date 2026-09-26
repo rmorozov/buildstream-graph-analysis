@@ -972,6 +972,7 @@ is open, on what topic, for whom — is the other file's.
 | UX-1011 | [`--jobserver auto` pays three `bst show` calls before the build](UX-1011-jobserver-auto-pays-three-bst-show-calls-before-the-build.md) | High | R4 | 🟢 Done — auto pays one bst show before the build, not three: head 10.0s -> 6.0s on the Graviton, wall 27.7s -> 23.6s | [UX-1011](UX-1011-jobserver-auto-pays-three-bst-show-calls-before-the-build.md) |
 | UX-1036 | [`bga view --export` prints a double period before its timeline hint](UX-1036-the-export-message-prints-a-double-period.md) | Low | R1 | 🟢 Done — the export message strips `omitted`'s trailing period before its timeline hint | [UX-1036](UX-1036-the-export-message-prints-a-double-period.md) |
 | UX-921 | [hidden findings keep live controls](UX-0921-hidden-findings-keep-live-controls.md) | Medium | R1, R4 and assistive-technology users reading a report with many findings | 🟢 Done — hidden findings are shells: 40/120 controls/findings, was 120/120; a shell hydrates on its fragment or on Show all | [UX-921](UX-0921-hidden-findings-keep-live-controls.md) |
+| UX-1015 | [find-in-page reaches text inside a folded chapter](UX-1015-find-in-page-reaches-folded-chapters.md) | High | R1, R4 | 🟢 Done — a folded chapter's sections are `hidden="until-found"`, not `display: none`, and find-in-page opens them through `beforematch` | [UX-1015](UX-1015-find-in-page-reaches-folded-chapters.md) |
 
 ## UX-207..UX-212: the twenty-third audit round — the report learns to answer first (2026-08-22)
 

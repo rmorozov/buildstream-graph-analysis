@@ -41,7 +41,6 @@ task file, which is the only place it ever lived twice.
 | UX-1012 | [the report says which elements drew from the jobserver, not only which were offered it](UX-1012-the-report-says-which-elements-drew-from-the-jobserver.md) | analysis | High | R4, R5 | 🔴 Not Started |
 | UX-1013 | [admission ranks from BuildStream's own cached build logs when bga never captured the project](UX-1013-admission-ranks-from-buildstreams-own-cached-build-logs.md) | capture | Medium | R4, R5 | 🔴 Not Started |
 | UX-1014 | [the "safe cap plus auto" default is measured on more shapes and hosts before it is anyone's default](UX-1014-the-builders-and-auto-default-is-measured-on-more-shapes-and-hosts.md) | capture | High | R4, R5 | 🔴 Not Started |
-| UX-1015 | [find-in-page reaches text inside a folded chapter](UX-1015-find-in-page-reaches-folded-chapters.md) | viewer | High | R1, R4 | 🔴 Not Started |
 | UX-1016 | [every focusable control wears one focus ring, and a keyboard journey reaches every chapter](UX-1016-one-focus-ring-and-a-keyboard-journey.md) | viewer | High | R1, R4 | 🔴 Not Started |
 | UX-1017 | [every drawing has an accessible name and a route to its numbers](UX-1017-every-drawing-has-a-name-and-a-data-route.md) | viewer | High | R1, R4 | 🔴 Not Started |
 | UX-1018 | [a chapter title outranks its section titles in the heading outline](UX-1018-a-chapter-title-outranks-its-section-titles.md) | viewer | Medium | R1, R4 | 🔴 Not Started |

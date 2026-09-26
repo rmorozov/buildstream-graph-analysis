@@ -47,6 +47,10 @@ of uids on a card or a `<dd>`, with nothing capping it at all - a
 40,000-element run can put every one of an element's dependents in one
 cell.
 
+## Decomposition
+
+Input classes: each of the 26 paths at the 4,002-element run, drawn and not drawn. The journey extends reading a section into reaching the end of its longest list.
+
 ## Required Fix
 
 Each path above is drawn only by a §1 control whose bound §3k names -

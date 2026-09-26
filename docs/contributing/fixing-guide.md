@@ -403,6 +403,8 @@ tools/dev_area_pages.py      an area page's Guard column and covered N/M count, 
 tools/dev_refresh_analysis.py  the rule a committed analysis is written
                              under, and the command that rewrites one
                              from a fresh run (UX-486)
+tools/dev_rendered_strings.py  every label the page renders, and whether it is
+                             sentence case (UX-1020)
 tools/dev_process_bands.py  what the process did to itself, from the committed Outcomes
 tools/dev_round_register.py  which rounds happened, derived from the
                              committed union, never git log (UX-744, UX-782)

@@ -64,6 +64,7 @@ task file, which is the only place it ever lived twice.
 | UX-1034 | [reader chips print R1 to R5 inside section headings](UX-1034-reader-chips-print-internal-keys.md) | viewer | Low | R1 | 🔴 Not Started |
 | UX-1035 | [fonts compute to the two declared stacks, not Arial or bare monospace](UX-1035-fonts-compute-to-the-two-stacks.md) | viewer | Low | R1 | 🔴 Not Started |
 | UX-1036 | [`bga view --export` prints a double period before its timeline hint](UX-1036-the-export-message-prints-a-double-period.md) | cli | Low | R1 | 🔴 Not Started |
+| UX-1037 | [26 payload containers grow with the run and no §1 control bounds them](UX-1037-a-growing-container-with-no-bounding-control.md) | viewer | Medium | R1, R5 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

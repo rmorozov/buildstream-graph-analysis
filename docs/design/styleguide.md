@@ -1104,7 +1104,7 @@ paragraph below had aged by one module before anything read it.
 
 ```text
 $ git ls-files -- 'bga/viewer/*.js' | wc -l
-22                                  viewer modules
+23                                  viewer modules
 $ git grep -l 'el("table"' -- 'bga/viewer/*.js' | wc -l
 1                                   modules that construct a table
 ```

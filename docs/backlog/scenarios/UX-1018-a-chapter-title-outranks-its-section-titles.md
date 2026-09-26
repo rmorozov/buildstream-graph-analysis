@@ -53,7 +53,9 @@ Mutation table:
 
 | guard | mutation | result |
 |---|---|---|
-| `test_the_heading_outline_has_three_levels.py::test_no_level_is_skipped` + `::test_chapter_titles_are_strictly_larger_than_section_titles` | `chapters.js`'s `h2`->`h3` promotion loop disabled (section titles render as `h2`) | red: level skip `(2, 4)` x3, and no `h3`s left to compare |
+| `test_the_heading_outline_has_three_levels.py::test_no_section_title_wears_the_chapter_level` | `promoteHeadingLevels(node, doc)` commented out (`chapters.js:373`) | red: section heads `['H2', 'H3']`, 1 failed / 4 |
+
+The verifier found the first reading false: with the call disabled the three tag-census clauses stayed green, because the outline read only the open chapter once `UX-1015` folded with `hidden`. The walk now clears `hidden`, and a role clause reads each section head's tag.
 
 Full heading/nav/fold/rail regression sweep (214 + 174 tests across
 every file that queries a section heading by tag): all green after the

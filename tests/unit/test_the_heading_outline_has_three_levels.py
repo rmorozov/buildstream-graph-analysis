@@ -34,10 +34,15 @@ _OUTLINE = """
     (n) => n.setAttribute('data-open', 'true'));
   document.querySelectorAll('section[data-section][data-collapsed]').forEach(
     (n) => n.removeAttribute('data-collapsed'));
+  // `UX-1015`: a folded section is `hidden="until-found"`, not `data-open`.
+  document.querySelectorAll('section[data-chapter] > section[hidden]').forEach(
+    (n) => n.removeAttribute('hidden'));
   return [...document.querySelectorAll('h1, h2, h3, h4')]
     .filter((n) => n.getBoundingClientRect().width > 0)
     .map((n) => ({tag: n.tagName,
-                   size: parseFloat(getComputedStyle(n).fontSize)}));
+                   size: parseFloat(getComputedStyle(n).fontSize),
+                   section: n.parentElement?.matches('section[data-section]')
+                     && n.parentElement.parentElement?.matches('section[data-chapter]')}));
 })()
 """
 
@@ -84,3 +89,11 @@ def test_chapter_titles_are_strictly_larger_than_section_titles(browser, golden)
     assert min(chapters) > max(sections), (
         f"a chapter title ({min(chapters)}px) is not larger than every "
         f"section title ({max(sections)}px)")
+
+
+@needs_browser
+def test_no_section_title_wears_the_chapter_level(browser, golden):
+    """The role, not the tag census: a chapter's section heads are `h3`."""
+    outline = browser.measure(golden, _OUTLINE)
+    heads = [n["tag"] for n in outline if n["section"]]
+    assert heads and "H2" not in heads, f"section heads: {sorted(set(heads))}"

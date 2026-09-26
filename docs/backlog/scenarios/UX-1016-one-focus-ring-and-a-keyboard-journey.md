@@ -1,6 +1,6 @@
 # UX-1016: every focusable control wears one focus ring, and a keyboard journey reaches every chapter
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §6e.8 | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §6e.8 | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
 
 ## Motivation
 
@@ -62,3 +62,5 @@ control that opened it (`data-expand` unchanged across the round trip).
 other 5 (chapter order, Enter, Escape/table-focus) are unaffected by a
 CSS-only mutation, as expected — they guard the DOM/JS mechanism, not
 the ring.
+
+Deviation: none from the Required Fix; the new browser guard was tiered medium on the merge (`f71a4831`).

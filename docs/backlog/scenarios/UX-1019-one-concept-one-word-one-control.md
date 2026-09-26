@@ -1,6 +1,6 @@
 # UX-1019: one concept is one word and one control on every bga surface
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §6e.2 | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** bounded
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §6e.2 | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** bounded
 
 ## Motivation
 
@@ -62,3 +62,5 @@ survives in four `decision.js`/`views.js` labels - renaming them adds
 6 words, over §3e's `macro_micro` volume cap
 (`test_the_page_has_a_volume_budget.py`). Both named in the matrix's
 "measured on" column rather than swept.
+
+Deviation: where the matrix forked, the CLI and schema word ("run") was taken. The chain/critical-path drift in 4 labels and ~49 schema descriptions is named in the matrix, not fixed.

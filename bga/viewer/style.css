@@ -126,6 +126,9 @@
   --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
 }
+/* UX-1023 (styleguide §6e.10): two size classes - regular (>= 60rem)
+   and compact. Every layout `@media` in this file keys off 60rem, one
+   breakpoint for both; `.wf-row` used to key off its own 40rem. */
 html { font-family: var(--font-sans); }
 
 /* The override. `prefers-color-scheme: light` also matches a reader
@@ -632,7 +635,7 @@ section[data-jumped="true"], [data-jumped="true"] {
            opacity: .55; }
 .wf-value { text-align: right; font-size: var(--font-small); }
 section[data-section="evidence"] .verdict { margin: var(--space-2) 0 var(--space-3); }
-@media (max-width: 40rem) {
+@media (max-width: 60rem) {
   .wf-row { grid-template-columns: 1fr 4.5rem; }
   .wf-track { display: none; }
 }
@@ -950,6 +953,11 @@ main .map-table { display: block; }
    the save-the-trace sentence was breaking from inside the header. */
 .actions-group { margin: 0 0 var(--space-2); }
 .actions-group > p { margin: var(--space-1) 0; }
+/* UX-1023: an export with no live handoff never unhides `#actions`,
+   and the group's own border/padding (below, in the rail) still drew -
+   an empty band, no text or control in it. Hidden whole rather than
+   zeroed, so nothing here has to track its own children's chrome. */
+.actions-group:has(> #actions[hidden]) { display: none; }
 
 /* UX-451: the hand-off's refusal, at a measure it can be read at.
    `max-width` in `ch` rather than a pixel figure - the constraint is

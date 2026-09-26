@@ -121,6 +121,13 @@ needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
 #: block doors +165, 7,471 merged. Spacing, not new blocks. 129 of headroom.
 LANDED_HEIGHT_PX = 7_600
 
+#: UX-1023 (styleguide §6e.10): the compact size class (< 60rem),
+#: measured at 390x844 with `pages.export_uri`. `LANDED_HEIGHT_PX` above
+#: is the regular class's own bound and was never asked at this width.
+#: Measured: `golden` 8,308 px, `macro_micro` 11,193 px - headroom kept
+#: under 200 px each, the convention above.
+COMPACT_LANDED_HEIGHT_PX = {"golden": 8_500, "macro_micro": 11_400}
+
 #: `UX-367`: the opened bounds, per size class, largest class last.
 #: Each row is `(elements at most, opened px, words, controls, nodes)`,
 #: and a run is measured against the first row it fits. A page that is
@@ -616,6 +623,55 @@ class TestBothBudgetsAreBound:
                 f"the {name} budget for runs up to {klass} elements is "
                 f"{bound} and {label} measures {measured}; a bound with "
                 f"that much slack is a number nobody will ever meet")
+
+
+#: The rail's own emptiness check (UX-1023): a child of `nav.toc` that
+#: takes vertical space must show text or a control - `offsetParent`
+#: rather than `querySelector` alone, so a hidden button inside an
+#: empty band does not count as one.
+_RAIL_CHILDREN_ARE_NEVER_EMPTY = r"""
+(() => {
+  const rail = document.querySelector("nav.toc");
+  const bad = [];
+  for (const child of rail.children) {
+    const rect = child.getBoundingClientRect();
+    if (rect.height === 0) continue;
+    const text = (child.innerText || "").trim();
+    const control = [...child.querySelectorAll("button, a, input, select")]
+      .some((c) => c.offsetParent !== null);
+    if (!text && !control) {
+      bad.push({tag: child.tagName, id: child.id, height: rect.height});
+    }
+  }
+  return bad;
+})()
+"""
+
+
+@needs_browser
+@pytest.mark.medium
+class TestTheCompactSizeClassIsBoundToo:
+    """UX-1023 (styleguide §6e.10): the volume budget was measured at
+    1440x900 only. The compact class (< 60rem) gets its own landed
+    bound and its own emptiness check - `#actions-group` used to draw
+    an 11px border/padding band under "Sections" with nothing behind
+    it, on an export with no live handoff."""
+
+    @pytest.mark.parametrize("label", sorted(pages.FIXTURES))
+    def test_the_landed_page_is_short_at_compact(self, browser, booted, label):
+        out = browser.measure(booted[label], _LOOK, 390, 844)
+        bound = COMPACT_LANDED_HEIGHT_PX[label]
+        assert out["landed"]["height"] <= bound, (
+            f"{label} at 390x844: the page a reader lands on is "
+            f"{out['landed']['height']} px, over the {bound} px budget")
+
+    @pytest.mark.parametrize("label", sorted(pages.FIXTURES))
+    def test_no_rail_child_is_empty_chrome(self, browser, booted, label):
+        bad = browser.measure(
+            booted[label], _RAIL_CHILDREN_ARE_NEVER_EMPTY, 390, 844)
+        assert bad == [], (
+            f"{label} at 390x844: {bad} in nav.toc renders neither text "
+            f"nor a control")
 
 
 class TestEverySizeClassIsActuallyMeasured:

@@ -35,7 +35,7 @@ Dev tools under `tools/dev_*`; docstrings and comments.
 ## Acceptance Test
 
 A guard reads the reader-facing CLI modules' string literals and finds
-no `[a-z](s)`. Mutation: restore `element(s)` in `bga/analyzer.py`, and
+no parenthesised `(s)` plural. Mutation: restore `element(s)` in `bga/analyzer.py`, and
 it reds.
 
 ## Outcome

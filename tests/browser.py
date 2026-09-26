@@ -333,13 +333,16 @@ class Browser:
             raise RuntimeError(done.stderr)
         return json.loads(done.stdout)
 
-    def measure(self, url, expression, width=1440, height=900):
+    def measure(self, url, expression, width=1440, height=900, coarse=False):
         """Load `url` at `width`x`height` and return `expression`'s value.
 
         The evaluation happens in node rather than here because the CDP
         client is a WebSocket and Python's standard library has none.
+        `coarse` (`UX-1022`) emulates a touch pointer, so `@media
+        (pointer: coarse)` matches.
         """
-        return self._drive(url, expression, width, height)
+        extra = ("--coarse",) if coarse else ()
+        return self._drive(url, expression, width, height, extra)
 
     def observe(self, url, expression="null", width=1440, height=900):
         """The same load, plus everything the console and the CSP said.

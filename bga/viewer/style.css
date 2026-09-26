@@ -300,6 +300,19 @@ h3 { font-size: var(--font-body); font-weight: 600; margin: var(--space-4) 0 var
 code, .num { font-family: var(--font-mono); }
 a { color: var(--accent); }
 
+/* UX-1022 (styleguide §6e.7): a hit area, not a bigger glyph - min-*
+   clamps the used size up regardless of a more specific rule's own
+   width/height (the door's 1.1em, the toc row's line height), so
+   nothing here fights a class rule on the same selector. 44px under a
+   coarse pointer. The one exempt case is WCAG 2.5.8's own: a link
+   inline in a sentence, `p a`. */
+:root { --hit-min: 24px; }
+@media (pointer: coarse) { :root { --hit-min: 44px; } }
+button, summary, input, select, textarea, a:not(p a) {
+  min-height: var(--hit-min); min-width: var(--hit-min);
+}
+a:not(p a) { display: inline-flex; align-items: center; justify-content: center; }
+
 .verdict {
   border-left: 4px solid var(--line); background: var(--panel);
   padding: var(--space-3) var(--space-4); margin: var(--space-4) 0; border-radius: 3px;

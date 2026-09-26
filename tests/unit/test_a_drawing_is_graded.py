@@ -423,7 +423,7 @@ console.log(JSON.stringify({
 }));
 """)
         assert out["drawn"] == "4,1,9,3,7"
-        assert out["head"] == ["level", "value"]
+        assert out["head"] == ["Level", "Value"]
         assert out["rows"] == [["1", "4u"], ["2", "1u"], ["3", "9u"],
                                ["4", "3u"], ["5", "7u"]]
 
@@ -454,8 +454,8 @@ button.click(); seen.push([table.hidden, text(button)]);
 button.click(); seen.push([table.hidden, text(button)]);
 console.log(JSON.stringify(seen));
 """)
-        assert out == [[True, "as table"], [False, "as drawing"],
-                       [True, "as table"]]
+        assert out == [[True, "As table"], [False, "As drawing"],
+                       [True, "As table"]]
 
     def test_the_twin_survives_print_without_the_toggle(self):
         """§2b's rule that hover is never the only door, applied to a

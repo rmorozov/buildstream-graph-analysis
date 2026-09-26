@@ -29,7 +29,7 @@
         {
             "id": "time-concentration",
             "severity": "high",
-            "title": "Where the time is: 4 element(s) are 71.9% of the 43.2s critical path - this build is chain-bound, not scheduler-bound",
+            "title": "Where the time is: 4 elements are 71.9% of the 43.2s critical path - this build is chain-bound, not scheduler-bound",
             "detail": [
                 "    core.bst       19.1s (44.1% of path)  -> fixing it saves 12.1s (26.1% of the build)",
                 "    lib-b.bst       4.0s ( 9.3% of path)  -> fixing it saves 4.0s (8.7% of the build)",
@@ -74,7 +74,7 @@
                 ]
             },
             "reader": "local-optimizer",
-            "copy_text": "BGA finding: Where the time is: 4 element(s) are 71.9% of the 43.2s critical path - this build is chain-bound, not scheduler-bound\n      core.bst       19.1s (44.1% of path)  -> fixing it saves 12.1s (26.1% of the build)\n      lib-b.bst       4.0s ( 9.3% of path)  -> fixing it saves 4.0s (8.7% of the build)\n      lib-d.bst       4.0s ( 9.3% of path)  -> fixing it saves 4.0s (8.7% of the build)\n      lib-f.bst       4.0s ( 9.3% of path)  -> fixing it saves 4.0s (8.7% of the build)\n  path_us 43.2s\n  share_of_path 72%\n  chain_bound True\n  Elements: core.bst, lib-b.bst, lib-d.bst, lib-f.bst\n  Next: bga blast core.bst <fixture>/run\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "copy_text": "BGA finding: Where the time is: 4 elements are 71.9% of the 43.2s critical path - this build is chain-bound, not scheduler-bound\n      core.bst       19.1s (44.1% of path)  -> fixing it saves 12.1s (26.1% of the build)\n      lib-b.bst       4.0s ( 9.3% of path)  -> fixing it saves 4.0s (8.7% of the build)\n      lib-d.bst       4.0s ( 9.3% of path)  -> fixing it saves 4.0s (8.7% of the build)\n      lib-f.bst       4.0s ( 9.3% of path)  -> fixing it saves 4.0s (8.7% of the build)\n  path_us 43.2s\n  share_of_path 72%\n  chain_bound True\n  Elements: core.bst, lib-b.bst, lib-d.bst, lib-f.bst\n  Next: bga blast core.bst <fixture>/run\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
             "trace_query": "cost-by-executable"
         },
         {
@@ -280,7 +280,7 @@
         {
             "id": "cache-hit-ratio",
             "severity": "info",
-            "title": "Caches off: all 11 element(s) built from source, none reused - this is the nightly scenario, so a 0% hit ratio is the intent rather than a finding",
+            "title": "Caches off: all 11 elements built from source, none reused - this is the nightly scenario, so a 0% hit ratio is the intent rather than a finding",
             "detail": [
                 "    -> for all.bst's own closure it is 0% (0 of 11 elements cached)"
             ],
@@ -292,7 +292,7 @@
                 "run_mode": "full"
             },
             "reader": "ci-gatekeeper",
-            "copy_text": "BGA finding: Caches off: all 11 element(s) built from source, none reused - this is the nightly scenario, so a 0% hit ratio is the intent rather than a finding\n      -> for all.bst's own closure it is 0% (0 of 11 elements cached)\n  hit_share 0%\n  built_elements 11\n  cached_elements 0\n  run_mode full\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "copy_text": "BGA finding: Caches off: all 11 elements built from source, none reused - this is the nightly scenario, so a 0% hit ratio is the intent rather than a finding\n      -> for all.bst's own closure it is 0% (0 of 11 elements cached)\n  hit_share 0%\n  built_elements 11\n  cached_elements 0\n  run_mode full\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
             "trace_query": null
         },
         {
@@ -1665,7 +1665,7 @@
             "notparallel": true,
             "typical_max_jobs": 4,
             "downstream_count": 8,
-            "hint": "core.bst runs its own build system at 1 job(s) - `variables: notparallel: True` - while the rest of this build runs at 4, and it is the longest kind of task here (19.1s) with 8 element(s) waiting behind it. If its sources can handle parallelism, removing the pin is a single-line change; if they genuinely cannot, it is a real synchronization point worth splitting up"
+            "hint": "core.bst runs its own build system at 1 job - `variables: notparallel: True` - while the rest of this build runs at 4, and it is the longest kind of task here (19.1s) with 8 elements waiting behind it. If its sources can handle parallelism, removing the pin is a single-line change; if they genuinely cannot, it is a real synchronization point worth splitting up"
         }
     ],
     "deferrability": {

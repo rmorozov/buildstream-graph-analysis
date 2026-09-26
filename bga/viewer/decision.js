@@ -21,7 +21,7 @@ import {
 // to take this import unaliased - the export concatenates the modules
 // into one scope and drops the `import` line, so an alias resolves to
 // a name nothing declares.
-import { childNode, heading, hintsOf } from "./format.js";
+import { childNode, heading, hintsOf, title } from "./format.js";
 import {
   resolvePath, elementFacts, elementHistory, renderElementHistory,
 } from "./element.js";
@@ -29,6 +29,7 @@ import {
 // already collects. The role decides what is promoted; `chapters.js`
 // owns how a thing folds and this module does not learn a second way.
 import { applyRole } from "./chapters.js";
+import { plural } from "./tables.js";
 
 // ------------------------------------------------- UX-207: the decision
 
@@ -253,7 +254,8 @@ export function renderProvenanceRecords(payload, root) {
   const records = Array.isArray(payload?.provenance) ? payload.provenance : [];
   let drawn = 0;
   for (const record of records) {
-    const block = renderProvenance(record, { label: record.claim ?? "" });
+    const block = renderProvenance(record,
+      { label: record.claim ? title(record.claim) : "" });
     if (!block) continue;
     section.append(block);
     drawn += 1;
@@ -482,7 +484,7 @@ function investigationEvidence(payload, uid, options) {
     const { series, sawASliceAtAll } = elementHistory(options.store, uid);
     rows.push({
       label: "Store history",
-      text: series.length ? `${series.length} snapshot(s)`
+      text: series.length ? plural(series.length, "snapshot")
         : sawASliceAtAll ? "not watched in these runs"
                          : "captured before history existed",
     });
@@ -521,7 +523,7 @@ function investigationRelations(payload, uid) {
   if (typeof downstream === "number") {
     rows.push({ label: "Rebuilds if changed",
                 path: `elements.blast_radius[${uid}].downstream_count`,
-                raw: downstream, text: `${downstream} element(s)` });
+                raw: downstream, text: plural(downstream, "element") });
   }
   return rows;
 }

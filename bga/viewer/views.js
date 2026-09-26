@@ -23,6 +23,7 @@ import {
 // one. `controls.js` imports nothing, which is why this module may use
 // it where it may not use `app.js` - see the note below.
 import { commandLine, identify, labelFor } from "./controls.js";
+import { plural } from "./tables.js";
 // `UX-337`: the primitives the chapters share. Extracted because the
 // chapters were *not* acyclic without them - see `primitives.js`.
 import {
@@ -178,7 +179,7 @@ export function renderBand(compare) {
   // UX-316 (§2a): the band's twin. Every row is a published edge of
   // `compare/v1` - the geometry object holds the values beside the
   // positions, so the table and the drawing cannot disagree.
-  wrapper.append(exhibitTwin(document, ["mark", "value"], [
+  wrapper.append(exhibitTwin(document, ["Mark", "Value"], [
     ["candidate", String(geometry.candidate.value)],
     ["band low", String(geometry.band.low)],
     ["band high", String(geometry.band.high)],
@@ -437,7 +438,7 @@ export function renderTrend(store, schema = undefined,
     row.incomplete_reason ? row.incomplete_reason
       : (row.verdict_kind ?? "—").replace(/_/g, " "),
   ]);
-  const columns = ["snapshot", "duration", "verdict"];
+  const columns = ["Snapshot", "Duration", "Verdict"];
   let twin = exhibitTwin(document, columns, twinRows(rows));
   wrapper.append(twin);
   // §3a.1: a window says how deep it goes and where the rest are. The
@@ -532,7 +533,7 @@ export function distributionNote(aggregate) {
   const shape = trendDistribution(aggregate);
   if (shape) {
     return `Median ${seconds(shape.median)} \u00b7 p95 ${seconds(shape.p95)}`
-      + ` over ${shape.samples} finished run(s)`;
+      + ` over ${plural(shape.samples, "finished run")}`;
   }
   return aggregate.refusal?.sentence ?? null;
 }
@@ -676,7 +677,7 @@ export function renderBlastAnswer(result) {
     ["…and assemble", result.assembling_count],
     ["Measured", result.measured
       ? `${seconds(result.measured_us)} `
-        + `over ${result.measured_elements} element(s)`
+        + `over ${plural(result.measured_elements, "element")}`
       : "not measured (--no-cost, or no run)"],
   ];
   for (const [name, value] of rows) {

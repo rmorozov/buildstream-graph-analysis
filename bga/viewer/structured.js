@@ -161,7 +161,7 @@ export function mapTable(key, rows, hint, node, nested, depth = 0, path = key) {
     const measure = hintsOf(node)[QUANTITY] ?? guessQuantity(key)
       ?? (record ? null : "count");
     declared = { ...hint, [COLUMNS]: [
-      { key: "key", title: "name" },
+      { key: "key", title: "Name" },
       { key: "value", title: title(key, measure), quantity: measure }] };
   }
   const { table, tools } = buildTable(path, rows, declared, node, depth);
@@ -1211,7 +1211,7 @@ export function elementSignalTable(elements, node, join = null,
   const columns = [...new Set(rows.flatMap(Object.keys))]
     .filter((name) => name !== "element");
   const hint = {
-    [COLUMNS]: [{ key: "element", title: "element" },
+    [COLUMNS]: [{ key: "element", title: "Element" },
                 ...columns.map((name) => {
                   // `UX-835`: no blanket "count" here - `mapTable`'s
                   // record branch above already learned this default

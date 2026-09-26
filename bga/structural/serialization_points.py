@@ -83,12 +83,11 @@ def _build_hint(
         if notparallel else f"a resolved max-jobs of {max_jobs}"
     )
     return (
-        f"{element} runs its own build system at {max_jobs} job(s) - {cause} - while "
-        f"the rest of this build runs at {typical_max_jobs}, and it is the longest "
-        f"kind of task here ({duration_us / 1e6:.1f}s) with {downstream_count} "
-        f"element(s) waiting behind it. If its sources can handle parallelism, "
-        f"removing the pin is a single-line change; if they genuinely cannot, it is "
-        f"a real synchronization point worth splitting up"
+        f"{element} runs its own build system at {max_jobs} {'job' if max_jobs == 1 else 'jobs'} - {cause} - while "
+        f"the rest of this build runs at {typical_max_jobs}, and it is the longest kind of task here "
+        f"({duration_us / 1e6:.1f}s) with {downstream_count} {'element' if downstream_count == 1 else 'elements'} "
+        f"waiting behind it. If its sources can handle parallelism, removing the pin is a single-line change; "
+        f"if they genuinely cannot, it is a real synchronization point worth splitting up"
     )
 
 

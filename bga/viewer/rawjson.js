@@ -42,14 +42,14 @@ export function recordSource(section, value) {
   return section;
 }
 
-export const SHOW = "view as JSON";
-export const HIDE = "hide JSON";
+export const SHOW = "View as JSON";
+export const HIDE = "Hide JSON";
 
 // `UX-825`: the payload key, carried on the toggle rather than the
 // heading - `title` and `aria-label` both, since it is what a hover
 // and a screen reader each read for this control.
-const SHOWN_TITLE = (key) => `view as JSON — ${key}`;
-const HIDDEN_TITLE = (key) => `hide JSON — ${key}`;
+const SHOWN_TITLE = (key) => `View as JSON — ${key}`;
+const HIDDEN_TITLE = (key) => `Hide JSON — ${key}`;
 
 /** Two-space indent: this is read and pasted, not transmitted. */
 export function sectionJson(value) {

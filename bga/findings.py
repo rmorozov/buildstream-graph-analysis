@@ -442,7 +442,7 @@ def _cache_findings(result: AnalysisResult) -> list[dict]:
     if (result.confidence or {}).get('run_mode') == 'full':
         return [_finding(
             'cache-hit-ratio', SEVERITY_INFO,
-            f"Caches off: all {built} element(s) built from source, none reused - "
+            f"Caches off: all {built} element{'' if built == 1 else 's'} built from source, none reused - "
             f"this is the nightly scenario, so a 0% hit ratio is the intent "
             f"rather than a finding",
             detail=detail,
@@ -830,8 +830,8 @@ def _time_concentration_findings(
 
     findings = [_finding(
         'time-concentration', SEVERITY_HIGH,
-        f"Where the time is: {len(top)} element(s) are {share * 100:.1f}% of the "
-        f"{path_us / 1e6:.1f}s critical path{verdict}",
+        f"Where the time is: {len(top)} element{'' if len(top) == 1 else 's'} are "
+        f"{share * 100:.1f}% of the {path_us / 1e6:.1f}s critical path{verdict}",
         detail=detail,
         elements=[d['element_uid'] for d in top],
         evidence={'path_us': path_us, 'share_of_path': share,
@@ -1242,7 +1242,7 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
 
     return [_finding(
         'capacity-recommendation', severity,
-        f"Capacity: {setting} on {recommendation['host_cpu_count']} core(s): {verdict}",
+        f"Capacity: {setting} on {(n := recommendation['host_cpu_count'])} core{'' if n == 1 else 's'}: {verdict}",
         detail=detail,
         elements=pinned,
         evidence={

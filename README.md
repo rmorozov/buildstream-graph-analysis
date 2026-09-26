@@ -41,7 +41,7 @@ Key Findings:
   This build is chain-bound, not scheduler-bound: the critical path is 100% of the time tasks were running, at or above the 90% chain-bound line, so the way to a shorter build is a shorter chain.
   Biggest wait category: 12.5% of wall-clock time is UNTRACKED TAIL (0.00s)
     -> real time after the last tracked task finished - outside per-task tracking, not a scheduling issue
-  Where the time is: 3 element(s) are 100.0% of the 0.0s critical path - this build is chain-bound, not scheduler-bound
+  Where the time is: 3 elements are 100.0% of the 0.0s critical path - this build is chain-bound, not scheduler-bound
 
 [... elided: the three ranked elements, the mesh note, the joint saving, the work order and the latent heavies ...]
 

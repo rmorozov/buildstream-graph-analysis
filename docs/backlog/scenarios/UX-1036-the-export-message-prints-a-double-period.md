@@ -1,6 +1,6 @@
 # UX-1036: `bga view --export` prints a double period before its timeline hint
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §4g | **Serves:** R1 | **Topic:** cli | **Area:** tools | **Shape:** mechanical
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §4g | **Serves:** R1 | **Topic:** cli | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 
@@ -35,3 +35,5 @@ Mutation table:
 | mutation | reddened | count |
 |---|---|---|
 | restore `f"...{written['omitted']}. ..."` (drop the `.rstrip(".")`) | `test_no_double_period_before_the_timeline_hint` | 1 failed / 1 |
+
+Deviation: none from the Required Fix; the guard names `bga/plane2.py`, so `test_the_loop_stays_fast.py` lists it among the wide modules (`c50bfc59`).

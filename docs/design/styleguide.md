@@ -23,6 +23,56 @@ rendered), and **everything must survive the export** — a print, a
 needs a server or a hover to mean anything is a served-mode
 enhancement, never the meaning itself.
 
+## Rules at a glance
+
+The sections below are numbered in the order they were written, and
+tests cite those numbers, so they stay. This is the reading order: one
+line per section, the rule only; the section holds its measurement.
+
+| topic | § | the rule |
+|---|---|---|
+| **What a value renders as** | §1 | a control is chosen by the value's declared shape; raw JSON only in the labeled fold and the JSON toggle |
+| | §1a | every schema hint is listed once, here, and nowhere else |
+| | §1b | every published field reaches a reader, or the page names the ones that do not |
+| | §1d | a command is one monospace line with a copy control, never a list of its words |
+| | §1e | an ordered `{reason, command}` array is a runbook, rendered once, never a table |
+| **Drawings** | §2 | a series is a sparkline, a distribution a density strip, each with one sentence and its `n` |
+| | §2a | two grades only: annotation beside something, exhibit as the answer, sizes from tokens |
+| | §2c | every published distribution draws its strip |
+| | §2d | a drawing answers a question; four instruments, and a fifth only where none can |
+| | §2e | a ranked map is a sortable table, not a drawing |
+| | §2f | a distribution's table twin has one row per published mark |
+| | §6 | a drawing carries its sentence, then the drawing, then its `n` |
+| **Tables and folds** | §3 | tables open bounded, numbers right, one tool row, folds labeled with a count |
+| | §3a | depth is announced; deeper than one level opens in table focus |
+| | §3d | table tools appear at the row cap; a one-value column is a sentence |
+| | §3j | a fold bounds its hidden controls, not only its visible rows |
+| **Navigation** | §3b | any section is at most two interactions from the rail |
+| | §3c | the landed page is at most 10 screens; chapters fold |
+| | §3h | the rail shows every chapter and only the current chapter's sections |
+| **Budgets** | §3e | landed distance and opened volume are both bounded, per size class |
+| | §3f | a bound is enforced at the largest size and in the mode people use |
+| | §3g | a budget counts the unit its consumer spends |
+| | §5a | repeated text is bounded; distinct blocks may not fall |
+| **Header** | §2b | a control's explanation lives with the control; a described value shows its `?` |
+| | §3i | the header is at most 72 px: wordmark, run alias and instant, reader picker |
+| | §5b | what the header's picker already lists is not drawn again |
+| **Colour, type, emphasis** | §4 | no categorical hues; one accent; status tone never alone; one emphasis per block |
+| | §4f | four type sizes; prose lines at most 72 characters |
+| | §5 | dark is the design surface; light and print carry the same tokens |
+| **Controls** | §4c | a control acts on the scope its label names, and acknowledges the press |
+| | §6d | every control is one of four resting grades |
+| **Words** | §1c | a superlative is a measurement |
+| | §4a | a description sits behind its `?`; only a declared name or caveat stays inline |
+| | §4b | a label drops the payload's unit suffix |
+| | §4g | no task id, payload key or producer word in anything a reader sees |
+| **Handoffs** | §4d | a handed-over query or command carries this run's values |
+| | §4e | a handoff states what it could not carry |
+| **Dependencies** | §6b | a library is admitted only on a measured cost |
+| | §6c | the browser's primitives come first |
+| **Borrowed from Apple** | §6a | the borrowings, what each costs, and what is refused |
+| **Enforcement** | §7 | every section names its guard, or says why it has none |
+
 ## 1. The mapping: published shape → control
 
 The user's rule, adopted whole: **raw JSON on the page is a defect
@@ -47,6 +97,8 @@ side is the only control that may render it.
 | small keyed object | definition list | the `pairs` pattern |
 | ordered numeric series (`bga:series`) | **sparkline + one sentence** | §2; the hint's value names the unit of one step, so the sentence can say it (`UX-303`) |
 | percentile/distribution object (`bga:distribution`) | **density strip + stated n** | §2; the hint's value names the key holding the sample count (`UX-303`) |
+| published total and its parts (`bga:decomposition`) | **decomposition bar + one sentence** | §2d; each part named by its path |
+| published values on one axis (`bga:interval`) | **interval + one sentence** | §2d; each value named by its path |
 | signed delta + `bga:direction` | signed value, tone by direction | existing, kept |
 | severity list (`bga:severity`) | findings blocks | existing, kept |
 | verdict + `verdict_kind` | banner, tone from enum | existing, kept |
@@ -203,9 +255,9 @@ Three placement rules the field pass earned:
    save-the-trace sentence belongs inside the Perfetto action
    group, not in the header two blocks above it. Nothing explains
    a control from under a different heading.
-2. **The header carries identity only** — run name, stamp, verdict
-   state — within a stated vertical budget (measured in lines, in
-   the guard). Actions and their apparatus live in the actions
+2. **The header carries identity only**, and §3i says which: the
+   run's alias and start instant, within a stated vertical budget.
+   The verdict is the decision chapter's. Actions and their apparatus live in the actions
    group; prose lives in sections. One exception: `UX-668`'s reader
    selector is a *whole-page* control, not apparatus for a block below
    it, and stays on the identity line it names who is reading.
@@ -268,7 +320,7 @@ scroll does not work inside a scrolling parent. Three rules:
 
 Navigation cost is measured, not felt: from a chapter's rail entry,
 any section's content is reachable in **at most two interactions**
-(open chapter, open section), and the walk that measures the worst
+(disclose the chapter's rail row, follow the section's link — §3h), and the walk that measures the worst
 path is a guard, not an aspiration. A structure change that pushes
 a third click into the common path reddens before a reader meets
 it. Folds inside content (the labeled fold, the chain's middle) do
@@ -290,16 +342,16 @@ the measurements:
    magnitude is length, state is status tone. A drawing that wants
    multi-hue series must amend this guide first (and will be asked
    what a legend would say that direct labels cannot).
-2. **One accent.** Interaction, links, the current focus, the band
-   — one hue does all of it. A second accent is a defect.
+2. **One accent.** Interaction, links, the current focus, the
+   promoted reader's border (rule 7) — one hue does all of it. A second accent is a defect.
 3. **Status tones are reserved and never alone.** good/warn/bad
    carry a shape, marker or label in the same element, always —
    `UX-212`'s rule, promoted from the trend dots to the whole page.
    The measured CVD numbers are *why*: adjacent status hues are
    indistinguishable to some readers by construction.
-4. **Text wears ink, never status tone.** Three ink levels — `--fg`
-   for content, `--muted` for apparatus, one strong level for the
-   current answer. Values stay ink-colored; the tone lives in the
+4. **Text wears ink, never status tone.** Two ink tokens — `--fg`
+   for content, `--muted` for apparatus — and weight, not a third
+   colour, for the current answer. Values stay ink-colored; the tone lives in the
    badge/border/marker beside them.
 5. **Two token grades.** Text-grade tokens (contrast against
    surface for reading) and mark-grade tokens (inside the mark
@@ -315,9 +367,9 @@ the measurements:
    already spent on interaction, the current focus and the band — a
    fifth hue for "which role am I" would be a second accent and the
    CVD numbers §5 validates against were never budgeted for it. A
-   promoted section wears the accent it already has, on a channel §4.3
-   reserves for exactly this: a border, not a fill, plus the existing
-   muted chip. "Anyone" wears every declared role's chip, muted — a
+   promoted section wears rule 2's accent on a border, not a fill —
+   so rule 3's status tones keep every fill — plus the existing muted
+   chip. "Anyone" wears every declared role's chip, muted — a
    reader sees what each role would promote before choosing one.
 
 ## 5. Dark first
@@ -580,6 +632,15 @@ The rule is not "draw more". It is:
   shape that selects it, so a schema addition of that shape draws with
   no viewer edit — `UX-193`'s property, applied to drawings.
 
+**How the two draw** (`UX-361`). A **decomposition** is one bar at the
+exhibit strip height, its parts left to right in declared order, every
+part labelled directly. §4.1 still holds: the first part — the one the
+claim is about — carries the accent and the rest are `--line`, so the
+bar has one emphasis and no categorical hues; a published bound is a
+rule across it. An **interval** is one axis with a mark per published
+value, all one weight, and a threshold as a dashed rule: which value is
+low is the reading, so no mark gets a colour of its own.
+
 ## 3e. Volume is a budget, not only distance (round 55)
 
 `UX-347` bought the distance budget with chapters that fold, and it
@@ -826,11 +887,18 @@ that discloses**. A chapter heading reads "Where did the time go? **Show
 which is the rule `UX-318`'s depth budget was filed for and the model
 the `?` door should be rebuilt on.
 
+Two rows above were written as costs and never decided: *Deference*'s
+one door per block, and *one primary action per view*. Until one is,
+§2b.3's door per value and §6d's four grades are the rule.
+
 Two Apple rules are deliberately **not** borrowed. *Consistency across
-an ecosystem* is a rule for a platform vendor and this is one page.
-*Delight* — motion, easing, ornament — is refused outright by the
-export constraint at the top of this document: a pattern that needs a
-server or a hover to mean anything is never the meaning.
+a platform* is a rule for a platform vendor; consistency across bga's
+own surfaces — this page, its Perfetto and SQL pages, the CLI's
+`describe()` — is not refused, since they print the same sentences
+(§4e). *Delight* — motion, easing, ornament — is refused because the
+page is printed and exported, and §6d asserts zero transitions; the
+export constraint forbids motion *as meaning*, which is a narrower
+refusal than this one.
 
 ## 3f. A budget is measured at the size the page is used at (round 58)
 
@@ -1077,7 +1145,7 @@ first.
 | `content-visibility: auto` + `contain-intrinsic-size` | virtual scrolling — offscreen sections stop costing layout | **used** (`style.css`, sections inside a chapter) |
 | `IntersectionObserver` | a scroll handler that reads layout every frame; scrollspy | **used** (`nav.js scrollspy`) |
 | `scroll-margin-top` | anchors landing behind sticky chrome | **used** since `UX-317` |
-| `popover` / `<dialog>` | overlay plumbing for the `?` apparatus and table focus | not used — §2b's mechanism is hand-rolled and works; a rewrite needs its own filing |
+| `popover` / `<dialog>` | overlay plumbing for the `?` apparatus (table focus is in-flow by §3a.2, never an overlay) | not used — §2b's mechanism is hand-rolled and works; a rewrite needs its own filing |
 | `@container` | resize listeners for density adaptation | not used — §2a's grades are viewport-wide today |
 | `:target` | selecting the jumped-to section without JS | not used |
 
@@ -1612,7 +1680,7 @@ on the left, the run's alias and start instant in the middle beside
 the picker, and nothing else.** The path lives in `run_instance` and
 on the title's `title` attribute; the version line is the footer's.
 Run navigation and the Perfetto handoff stay in the rail, as
-disclosures whose resting state is closed (§6d).
+disclosures whose resting state is closed (§3h).
 
 `UX-828` is the item.
 

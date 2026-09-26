@@ -35,6 +35,7 @@ tables mounted past MOUNTED_ROWS_MAX (200)   wall_clock_share_us, elements -> 4,
 reveals past NAMES_MAX (60)                  up to 207 names mounted at once
 json doors past TEXT_CHARS_MAX (20,000)      elements -> 3,591,520 characters
 ```
+
 5 of 10 clauses failed (`pytest -q`), matching the three filed violations.
 
 **Close measured.** With UX-1028/UX-1029/UX-1030 landed in the same

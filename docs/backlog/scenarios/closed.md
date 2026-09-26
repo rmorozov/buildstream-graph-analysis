@@ -988,6 +988,7 @@ is open, on what topic, for whom — is the other file's.
 | UX-1028 | ["All rows" draws the whole table past any ceiling](UX-1028-all-rows-draws-past-a-ceiling.md) | High | R1, R4 | 🟢 Done — "All rows" is offered under a 200-row ceiling; past it a pager replaces the 40-row window, never appends | [UX-1028](UX-1028-all-rows-draws-past-a-ceiling.md) |
 | UX-1029 | [the "+N more" reveal draws every name in one run of text](UX-1029-the-more-reveal-draws-every-name.md) | High | R1, R4 | 🟢 Done — the `+N more` reveal pages 60 names at a time, replacing the shown ones; one press drew up to 207 | [UX-1029](UX-1029-the-more-reveal-draws-every-name.md) |
 | UX-1030 | [a "view as JSON" door draws a whole section as one node](UX-1030-a-json-door-draws-a-whole-section.md) | High | R1, R5 | 🟢 Done — a JSON door draws at most 20,000 characters and copies the whole value; `elements` drew 3,591,520 | [UX-1030](UX-1030-a-json-door-draws-a-whole-section.md) |
+| UX-1031 | [every list and data-keyed map in the payload is declared, with whether it grows](UX-1031-every-growing-sequence-is-declared-in-the-schema.md) | Medium | R1, R5 | 🟢 Done — every payload list and data-keyed map declares `bga:grows`; 41 were undeclared, and 26 growers with no bound are carried to UX-1037 | [UX-1031](UX-1031-every-growing-sequence-is-declared-in-the-schema.md) |
 
 ## UX-207..UX-212: the twenty-third audit round — the report learns to answer first (2026-08-22)
 

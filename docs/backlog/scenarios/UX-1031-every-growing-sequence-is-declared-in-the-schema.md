@@ -1,6 +1,6 @@
 # UX-1031: every list and data-keyed map in the payload is declared, with whether it grows
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §3k | **Serves:** R1, R5 | **Topic:** contracts | **Area:** bga | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §3k | **Serves:** R1, R5 | **Topic:** contracts | **Area:** bga | **Shape:** judgement
 
 ## Motivation
 
@@ -80,3 +80,5 @@ baseline after the extraction; `file_lines` grew 6428 -> 6895 from the
 declarations above and refuses without `--force`, which this track's
 sandbox permissions could not run - left for the merge to decide
 (adopt the growth, or split the module).
+
+Deviation: 26 growers are carried in `KNOWN_UNBOUNDED_GROWERS`, filed as `UX-1037`. `schemas.py`'s view-hint vocabulary was split into `bga/schema_hints.py` to hold its size cell, and 3 lint-baseline entries were re-keyed with `--reason UX-1031` (net zero).

@@ -115,6 +115,11 @@ export const ARRAY_INLINE_ITEMS = 6;
 // which is what `renderText` already does for a long string.
 export const CELL_NEST_LIMIT = 2;
 
+// `UX-1029` (styleguide §3k): `boundedList`'s paging step - a reveal
+// mounts at most this many names besides the head and tail it keeps,
+// whatever number of times it is pressed.
+export const REVEAL_STEP = 60;
+
 /** `{k: v}` as one line - no click, because there is nothing to hide. */
 function inlineObject(value, node) {
   const parts = [];
@@ -181,28 +186,49 @@ export function mapTable(key, rows, hint, node, nested, depth = 0, path = key) {
  *
  * `PATH_HEAD` items, the control, `PATH_TAIL` items - the control
  * where the middle begins, because DOM order is reading order.
+ *
+ * `UX-1029` (styleguide §3k): the control used to reveal the whole
+ * middle in one press - 3,625 names, one 72,703-character run, on the
+ * 4,002-element run's `resource_blast` populations. It now pages
+ * `REVEAL_STEP` names at a time, **replacing** what the last press
+ * showed rather than appending to it, so no number of presses mounts
+ * more than `REVEAL_STEP` names besides the head and tail it keeps.
  */
 function boundedList(value, noun) {
   const items = value.map(String);
   const head = items.slice(0, PATH_HEAD);
   const tail = items.slice(items.length - PATH_TAIL);
-  const behind = items.length - head.length - tail.length;
+  const middle = items.slice(head.length, items.length - tail.length);
   const first = el("span", { class: "list-head" }, head.join(", "));
+  const shownMiddle = el("span", { class: "list-middle" }, "");
   const last = el("span", { class: "list-tail" }, `, ${tail.join(", ")}`);
   const more = el("button", {
-    type: "button", class: "fold-more", "data-folded": String(behind),
-    title: `Show the ${behind} ${noun} between the first ${head.length} `
-           + `and the last ${tail.length}`,
-  }, `+${behind} more ${noun} (${items.length} in all)`);
-  more.addEventListener?.("click", () => {
-    first.textContent = items.join(", ");
-    last.textContent = "";
-    more.hidden = true;
-  });
+    type: "button", class: "fold-more", "data-folded": String(middle.length),
+    title: `Show the first ${Math.min(REVEAL_STEP, middle.length)} of the `
+      + `${middle.length} ${noun} between the first ${head.length} and the `
+      + `last ${tail.length}`,
+  }, `+${middle.length} more ${noun} (${items.length} in all)`);
+  let offset = 0;
+  const step = () => {
+    const chunk = middle.slice(offset, offset + REVEAL_STEP);
+    shownMiddle.textContent = chunk.length ? `, ${chunk.join(", ")}` : "";
+    offset += chunk.length;
+    const remaining = middle.length - offset;
+    more.setAttribute("data-folded", String(remaining));
+    if (remaining > 0) {
+      more.title = `Show the next ${Math.min(REVEAL_STEP, remaining)} `
+        + `${noun} of the ${remaining} still between the first `
+        + `${head.length} and the last ${tail.length}`;
+      more.textContent = `+${remaining} more ${noun} (${items.length} in all)`;
+    } else {
+      more.hidden = true;
+    }
+  };
+  more.addEventListener?.("click", step);
   return el("div", { class: "bounded-list", "data-bounded": "list",
                      "data-items": String(items.length),
                      "data-shown": String(head.length + tail.length) },
-            first, more, last);
+            first, shownMiddle, more, last);
 }
 
 /**

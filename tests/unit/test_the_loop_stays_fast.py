@@ -161,7 +161,8 @@ class TestTheSelectorStillSelects:
     # the measurement is already at the prior ceiling plus the +2 two
     # rounds ago spent; median and p90 unmoved.
     # `UX-1005`'s default-line guard names `bga.cli` too: max 170 over 625.
-    CEILING = {"median": 38, "p90": 60, "max": 170}
+    # `UX-1031`'s declaration guard names it too: max 171 over 640.
+    CEILING = {"median": 38, "p90": 60, "max": 171}
     POPULATION_FLOOR = 60
     #: `UX-645`: **13 census + 14 of your own**. The census floor is
     #: inside this bound because those files run - the figure is what

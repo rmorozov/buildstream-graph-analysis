@@ -32,7 +32,7 @@ needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
 #: `selector -> (label pattern, the styleguide section or item that
 #: owns it)`. Measured with
 #: `python3 tools/dev_page_census.py <export.html>` on `golden` and
-#: `macro_micro` - 26 classes, one union, document-wide (the rail's
+#: `macro_micro` - 25 classes, one union, document-wide (the rail's
 #: stepper and jump box are not inside `main`, and the first draft's
 #: `main`-scoped census missed both - the falsify mutation below is
 #: what found it). A pattern rather than a literal label:
@@ -45,7 +45,9 @@ REGISTRY = {
     "a.inspect": (r"^⌕$", "§1a"),               # bga:role's generic Inspect link
     "a.path-box": (r".+", "§3c"),              # the critical chain, folded
     "a.runbook-link": (r"^\d+ steps?, in the decision panel$", "§1e"),
-    "a.why": (r"^why$", "UX-207"),             # links a top action to its finding
+    # `a.why` (UX-207) retired by `UX-1019`: one "why" control per top
+    # action, and `renderWhyRanked`'s disclosure is the one both
+    # fixtures' actions always have something to say in.
     "button": (r".+", "§4d"),                  # the Perfetto handoff button
     "button.chapter-open": (r"^Show \d+ sections?$", "§3c"),
     "button.collapse": (r"^[▾▸]$", "§3c"),

@@ -851,7 +851,7 @@ export function renderEvidence(payload) {
   section.setAttribute("data-section", "evidence");
   section.setAttribute("id", "evidence");
   const heading = document.createElement("h2");
-  heading.textContent = "What this capture supports";
+  heading.textContent = "What this run supports";
   section.append(heading);
   // `UX-650`: R4 - "is this number trustworthy" is R4's question and
   // this section is that question asked before any number is read. Its

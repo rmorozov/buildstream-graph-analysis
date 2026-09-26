@@ -538,7 +538,11 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 #
 # The two land together in round 120: 329,000 leaves the same order
 # of headroom over their summed 327,231 B.
-PAGE_BUDGET_B = 329_000
+#
+# The round-115 reader-facing string track (`UX-1019`, `UX-1021`,
+# `UX-1024`, `UX-1025`, `UX-1034`) moved this one by ~660 B, all
+# source: measured 329,489 B. 330,200 keeps the same order of headroom.
+PAGE_BUDGET_B = 330_200
 
 #: `UX-444`: the claim, stated once. **The run's data is at least twice
 #: the page a reader is permitted to download.**
@@ -1130,7 +1134,11 @@ COMMITTED_EXPORTS = [
     # contract golden's note carries - this run declares no build class
     # either, so none of it is payload. 540,959 B measured over that
     # merge; the bound holds unmoved.
-    ("macro_micro", MACRO_MICRO, 542_000),             #  540,959 B
+    # The round-115 reader-facing string track (`UX-1019`, `UX-1021`,
+    # `UX-1024`, `UX-1025`, `UX-1034`) moved this one by 1,123 B, all
+    # source: `attachBlockDoor`, the reader-word map and the separator
+    # fix are new lines, not new payload. 542,200 keeps headroom.
+    ("macro_micro", MACRO_MICRO, 542_200),             #  542,082 B
 ]
 
 

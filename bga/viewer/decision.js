@@ -89,8 +89,9 @@ export function renderProvenance(provenance, options = {}) {
   details.setAttribute("data-rows", String(evidence.length));
   const summary = document.createElement("summary");
   // Named by the claim where the caller has twelve of these in one
-  // section and "Why" twelve times names nothing.
-  const named = options.label ? `${options.label} · ` : "";
+  // section and "Why" twelve times names nothing; `UX-1025`: never
+  // depth and count alone, so an unlabeled fold names its content too.
+  const named = `${options.label || "The rule"} · `;
   summary.textContent =
     `${named}1 level, ${evidence.length} `
     + `row${evidence.length === 1 ? "" : "s"}`;
@@ -621,15 +622,26 @@ function wireReaderControl(payload, slot) {
   const question = document.createElement("span");
   question.className = "muted";
   question.setAttribute("data-role", "reader-question");
+  // `UX-1024`: a separator beside an empty node is a mark with nothing
+  // to mark - "anyone" (the landed choice) has no question, so the
+  // dash hides with it rather than standing alone before an empty span.
+  const sep = document.createElement("span");
+  sep.textContent = " — ";
   const questionFor = (value) => readers.find((e) => e.id === value)
     ?.question ?? "";
+  const setQuestion = (value) => {
+    const text = questionFor(value);
+    question.textContent = text;
+    sep.hidden = !text;
+  };
   select.addEventListener?.("change", () => {
     applyReader(payload, slot, select.value);
-    question.textContent = questionFor(select.value);
+    setQuestion(select.value);
   });
+  setQuestion(select.value);
   const wrap = document.createElement("span");
   wrap.className = "reader-picker";
-  wrap.append(label, select, " — ", question);
+  wrap.append(label, select, sep, question);
   host.append(" ", wrap);
   // `UX-828`: `host` starts `hidden` now that it holds only the picker
   // - the producer stamp that used to unhide it moved to the footer.
@@ -861,13 +873,17 @@ function actionRow(action, investigate, whyBlock = null) {
     row.append(reach);
   }
 
-  // The reasoning is a section away, not restated here - `finding_id`
-  // is a reference for exactly this.
-  const why = document.createElement("a");
-  why.className = "why";
-  why.setAttribute("href", "#findings");
-  why.textContent = "why";
-  row.append(why);
+  // `UX-1019`: **one "why" control.** `whyBlock` (`renderWhyRanked`)
+  // already answers "why this one" in place; the plain link to
+  // `#findings` is the fallback for the row it has nothing to say for
+  // (`UX-194`'s dead-control rule) - never both.
+  if (!whyBlock) {
+    const why = document.createElement("a");
+    why.className = "why";
+    why.setAttribute("href", "#findings");
+    why.textContent = "why";
+    row.append(why);
+  }
 
   // UX-204's transport, where there is a timeline behind it.
   if (investigate) {

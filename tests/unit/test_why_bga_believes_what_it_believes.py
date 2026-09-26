@@ -409,7 +409,9 @@ class TestThePageDrawsTheObject:
         # written down here.
         layout = {"Why", " in ", "Paths resolve against ",
                   "No named threshold; computed in ",
-                  f"1 level, {len(record['evidence'])} "
+                  # `UX-1025`: an unlabeled fold names its content
+                  # first ("The rule") - never depth and count alone.
+                  f"The rule · 1 level, {len(record['evidence'])} "
                   f"row{'' if len(record['evidence']) == 1 else 's'}"}
 
         def accounted(text):

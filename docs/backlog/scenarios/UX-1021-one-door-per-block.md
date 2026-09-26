@@ -29,4 +29,31 @@ The descriptions' wording.
 
 ## Outcome
 
-Not started.
+Gap: `describedTerm` (`format.js`) built one `?` marker per described
+value - 191 doors in 39 blocks on `macro_micro`, 127 in 29 on `golden`.
+
+Close: `describedTerm` no longer builds a marker; `attachBlockDoor`
+does, once per block, from every `describe` node its three call sites
+(`sections.js` x2, `structured.js`) now collect while building the
+block and hand it after the loop. One click opens every non-inline
+sentence in the block together. New
+`tests/unit/test_one_door_per_block.py` groups `button.describe` by
+the styleguide's own block selector (`dl, table, section[data-section],
+ul, ol`, nearest ancestor):
+
+```text
+$ PYTEST_XDIST= python3 -m pytest tests/unit/test_one_door_per_block.py tests/unit/test_a_sentence_lives_on_its_door.py tests/unit/test_apparatus_in_its_place.py -q
+40 passed
+```
+
+Mutation table:
+
+| mutation | reddened | count |
+|---|---|---|
+| restore a marker per value in `describedTerm` | `test_at_most_one_door_per_block[golden]`, `[macro_micro]` | 2 failed |
+
+`test_a_sentence_lives_on_its_door.py` (UX-346) and
+`test_apparatus_in_its_place.py` (UX-317) both assumed one marker per
+`<dt>`; both walked forward to the block-door shape (door count now
+29/39, was 74/128; `markers == blocksDescribed` replaces `markers ==
+described - inlined`) rather than narrowed.

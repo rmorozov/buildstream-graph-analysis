@@ -25,7 +25,7 @@ import { chapters } from "./chapters.js";
 import { renderProvenance } from "./decision.js";
 import { GRADE_EXHIBIT, decomposition, interval, strip } from "./drawings.js";
 import { resolvePath } from "./element.js";
-import { COLUMNS, DECOMPOSITION, DISTRIBUTION, INLINE, INTERVAL, KEYED_BY, KEYED_BY_TASK_UID, QUANTITY, RUNBOOK, SERIES, SEVERITY, bytes, childNode, cssId, describedTerm, el, guessQuantity, heading, hintsOf, keyAsShown, quantity, quantityFor, sectionHead, title } from "./format.js";
+import { COLUMNS, DECOMPOSITION, DISTRIBUTION, INLINE, INTERVAL, KEYED_BY, KEYED_BY_TASK_UID, QUANTITY, RUNBOOK, SERIES, SEVERITY, attachBlockDoor, bytes, childNode, cssId, describedTerm, el, guessQuantity, heading, hintsOf, keyAsShown, quantity, quantityFor, sectionHead, title } from "./format.js";
 import { matches } from "./nav.js";
 import { handOff } from "./perfetto.js";
 import { findingAnchor, served } from "./primitives.js";
@@ -71,6 +71,7 @@ export function renderFindingEvidence(evidence, node = undefined) {
   if (!scalars.length) return null;
 
   const list = el("dl", { class: "pairs evidence" });
+  const doors = [];
   for (const [key, value] of scalars) {
     const kind = quantityFor(childNode(node, key), key);
     // UX-317 (§2b.3): the same marker here. The mechanism is generic -
@@ -79,6 +80,7 @@ export function renderFindingEvidence(evidence, node = undefined) {
     const { term, describe } = describedTerm(
       key, hintsOf(childNode(node, key)).description, {},
       hintsOf(childNode(node, key))[INLINE], kind);
+    doors.push(describe);
     list.append(
       term,
       el("dd", { class: typeof value === "number" ? "num" : null,
@@ -88,6 +90,7 @@ export function renderFindingEvidence(evidence, node = undefined) {
            : value === null ? "—" : String(value),
          describe));
   }
+  attachBlockDoor(list, doors);
   if (scalars.length <= EVIDENCE_SHOWN) return list;
   // UX-209's fold, for the same reason: the evidence is the point, and
   // eight rows of it above the next finding is a wall.
@@ -630,10 +633,12 @@ export function renderSummary(payload, hints) {
     ([, value]) => value === null || typeof value !== "object");
   if (!scalars.length) return null;
   const list = el("dl", { class: "pairs" });
+  const doors = [];
   for (const [key, value] of scalars) {
     const kind = hints[key]?.[QUANTITY] ?? guessQuantity(key);
     const { term, describe } = describedTerm(key, hints[key]?.description, {},
                                              hints[key]?.[INLINE], kind);
+    doors.push(describe);
     list.append(
       term,
       el("dd", {}, el("span", {
@@ -642,6 +647,7 @@ export function renderSummary(payload, hints) {
       }, typeof value === "number" ? quantity(value, kind)
          : value === null ? "—" : String(value)), describe));
   }
+  attachBlockDoor(list, doors);
   return el("section", { "data-section": "summary" },
             el("h2", {}, "Run"), list);
 }

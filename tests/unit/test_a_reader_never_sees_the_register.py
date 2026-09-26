@@ -70,6 +70,35 @@ _REGISTER_WORD = re.compile(r"\b(payload|contract|schema)\b|Part \d", re.IGNOREC
 #: a reader's word for themselves.
 _READER_ID = re.compile(r"\bR[1-9]\b")
 
+#: UX-1019 (§6e.2): one word per reader concept - read off the matrix
+#: table itself, so a new synonym added there reddens without a second
+#: copy of the list here.
+_STYLEGUIDE = (REPO / "docs" / "design" / "styleguide.md").read_text(encoding="utf-8")
+
+
+def _rejected_synonyms(guide):
+    section = guide.split("### 6e.2. The terminology matrix", 1)[1]
+    section = section.split("\n#", 1)[0]  # up to the next heading, either level
+    lines = [line for line in section.splitlines() if line.startswith("|")]
+    rows = lines[2:]  # past the header row and its `---` separator
+    out = []
+    for row in rows:
+        cells = [c.strip() for c in row.strip("|").split("|")]
+        for synonym in cells[2].split(","):
+            synonym = synonym.strip()
+            if synonym and synonym != "—":
+                out.append(synonym)
+    return out
+
+
+_REJECTED_SYNONYM = re.compile(
+    r"\b(" + "|".join(re.escape(w) for w in _rejected_synonyms(_STYLEGUIDE)) + r")\b",
+    re.IGNORECASE)
+
+#: The one heading where "build" names the analyzer's own software
+#: build, not the run - the matrix's own exception, §6e.2.
+_NOT_THE_RUN_CONCEPT = re.compile(r"Which build of bga measured this")
+
 
 def _run(into, label):
     if label == "golden":
@@ -128,3 +157,12 @@ class TestAReaderNeverSeesTheRegister:
         a reader's word for themselves."""
         ids = _READER_ID.findall(measured["innerText"])
         assert ids == [], (measured["label"], ids)
+
+    def test_no_rejected_synonym_in_a_heading(self, measured):
+        """`UX-1019` (§6e.2): a heading uses the matrix's one word, not
+        a rejected synonym for the same concept."""
+        headings = measured["headings"]
+        assert headings, measured["label"]
+        bad = [h for h in headings if _REJECTED_SYNONYM.search(h)
+              and not _NOT_THE_RUN_CONCEPT.search(h)]
+        assert bad == [], (measured["label"], bad)

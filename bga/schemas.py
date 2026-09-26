@@ -3208,7 +3208,7 @@ _RESTRUCTURING_HINT = {
 # unit census only ever walked the analyze payload, which is why the
 # gap could sit there.
 _RUN_INSTANCE_HINT = {
-    QUESTION: 'Which capture is this?', RAIL: 'raw',
+    QUESTION: 'Which run is this?', RAIL: 'raw',
     "properties": {
         "started_at_us": {
             INLINE: "name",
@@ -3590,7 +3590,7 @@ _ANALYZE_HINTS = {
         },
     },
     "capacity_verdict": {
-        QUESTION: 'Was the capacity right for this build?',
+        QUESTION: 'Was the capacity right for this run?',
         RAIL: 'prove',
         "description": "Whether this run's capacities suited its work - "
                        "and whether the checks could run at all. A check "
@@ -3619,7 +3619,7 @@ _ANALYZE_HINTS = {
         },
     },
     "duration_resolution": {
-        QUESTION: 'Which durations could this capture not express?',
+        QUESTION: 'Which durations could this run not express?',
         RAIL: 'prove',
         "description": "Elements whose span the epsilon grid rounded to "
                        "zero width. Their durations and shares publish as "
@@ -3830,7 +3830,7 @@ _ANALYZE_HINTS = {
     # is not, and what it rests on - and the text report reads these same
     # sentences back out of the schema rather than keeping its own.
     "floors": {
-        QUESTION: 'How much faster could this build possibly be?',
+        QUESTION: 'How much faster could this run possibly be?',
         RAIL: 'prove',
         # `UX-361`: the tool's central claim, drawn. Both parts and the
         # total are published fields and they sum to it exactly -

@@ -861,13 +861,17 @@ function actionRow(action, investigate, whyBlock = null) {
     row.append(reach);
   }
 
-  // The reasoning is a section away, not restated here - `finding_id`
-  // is a reference for exactly this.
-  const why = document.createElement("a");
-  why.className = "why";
-  why.setAttribute("href", "#findings");
-  why.textContent = "why";
-  row.append(why);
+  // `UX-1019`: **one "why" control.** `whyBlock` (`renderWhyRanked`)
+  // already answers "why this one" in place; the plain link to
+  // `#findings` is the fallback for the row it has nothing to say for
+  // (`UX-194`'s dead-control rule) - never both.
+  if (!whyBlock) {
+    const why = document.createElement("a");
+    why.className = "why";
+    why.setAttribute("href", "#findings");
+    why.textContent = "why";
+    row.append(why);
+  }
 
   // UX-204's transport, where there is a timeline behind it.
   if (investigate) {

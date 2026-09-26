@@ -1148,6 +1148,7 @@ first.
 | primitive | what it replaces | state here |
 |---|---|---|
 | `content-visibility: auto` + `contain-intrinsic-size` | virtual scrolling — offscreen sections stop costing layout | **used** (`style.css`, sections inside a chapter) |
+| `hidden="until-found"` | a fold reachable by find-in-page, without a `display` rule that also hides its text from `Ctrl+F` | **used** since `UX-1015` (`chapters.js` `setOpen`, the fold's one state setter) |
 | `IntersectionObserver` | a scroll handler that reads layout every frame; scrollspy | **used** (`nav.js scrollspy`) |
 | `scroll-margin-top` | anchors landing behind sticky chrome | **used** since `UX-317` |
 | `popover` / `<dialog>` | overlay plumbing for the `?` apparatus (table focus is in-flow by §3a.2, never an overlay) | not used — §2b's mechanism is hand-rolled and works; a rewrite needs its own filing |

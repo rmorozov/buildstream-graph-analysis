@@ -356,8 +356,12 @@ class TestTheDocumentEndsWithItsIdentity:
       // chapter draws nothing - so this opens every chapter before
       // measuring where things sit. Folded, the identity group is at
       // 0 px and so is everything else, which is not an order at all.
+      // `UX-1015`: the fold is `hidden="until-found"` on the chapter's
+      // own sections now, not only `data-open` on the box.
       for (const box of document.querySelectorAll("section.chapter")) {
         box.setAttribute("data-open", "true");
+        for (const section of box.querySelectorAll(":scope > section[data-section]"))
+          section.removeAttribute("hidden");
       }
       const vh = window.innerHeight;
       const total = document.documentElement.scrollHeight;
@@ -553,9 +557,12 @@ class TestChaptersCostNoHeight:
       // all (a chapter with no drawn sections pads nothing, and a
       // zero-height section makes any spread look enormous). So the
       // document is opened first, deliberately and here rather than
-      // in the page.
+      // in the page. `UX-1015`: `data-open` alone no longer shows a
+      // section - each carries its own `hidden="until-found"`.
       for (const box of document.querySelectorAll("section.chapter")) {
         box.setAttribute("data-open", "true");
+        for (const section of box.querySelectorAll(":scope > section[data-section]"))
+          section.removeAttribute("hidden");
       }
       const vh = window.innerHeight;
       const total = document.documentElement.scrollHeight;
@@ -661,6 +668,8 @@ class TestChaptersCostNoHeight:
         (go) => requestAnimationFrame(() => requestAnimationFrame(go)));
       for (const box of document.querySelectorAll("section.chapter")) {
         box.setAttribute("data-open", "true");
+        for (const section of box.querySelectorAll(":scope > section[data-section]"))
+          section.removeAttribute("hidden");
       }
       for (let y = 0; y < document.documentElement.scrollHeight;
            y += window.innerHeight) {

@@ -40,4 +40,35 @@ Sonification.
 
 ## Outcome
 
-Not started.
+**Gap measured.** Styleguide §6e.9's own measurement, restated: 20 of 23
+`svg[role=img]` on `macro_micro` and 8 of 11 on `golden` carried neither
+`aria-label` nor a `<title>`, before this item.
+
+**Close measured.** `python3 -m pytest
+tests/unit/test_every_drawing_has_a_name_and_a_data_route.py -q`:
+
+```text
+14 passed in 7.5-8.2s
+```
+
+Every one of `drawings.js`'s five builders (sparkline, strip,
+columnStrip, decomposition, interval), both grades, plus
+`element.js`'s inline sparkline and `views.js`'s `renderBand`/
+`renderTrend`, now carries `aria-label` equal to its own sentence and
+`aria-details` resolving to a node — the table twin where §2a draws one
+(exhibit grade), the sentence span itself otherwise; the two composed
+figures always carry a twin. Booted on both fixtures: every
+`svg[role=img]` in the export has a non-empty name and a resolvable
+route.
+
+**Mutation table.**
+
+| guard | mutation | reddened | count |
+|---|---|---|---|
+| `TestEveryDrawingsBuilderNamesAndRoutesIt` (`strip`, both grades) | drop the `nameDrawing(...)` call from `strip()` | `label` is empty | 2 of 9 parametrised cases |
+| `TestEveryDrawingOnTheRealPagesIsNamedAndRouted` (both clauses) | same mutation | every density strip on `macro_micro` (3) has no name, no route | 2 |
+
+4 of 14 clauses reddened by the Acceptance Test's own mutation ("drop
+the name from the density strip"); the remaining 10 (sparkline,
+decomposition, interval, the two composed figures, the `golden`
+fixture) are unaffected by a `strip()`-only mutation, as expected.

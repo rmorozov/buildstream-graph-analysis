@@ -18,6 +18,7 @@
 // by hand in this file).
 import {
   SCALE, GRADE_ANNOTATION, GRADE_EXHIBIT, exhibitAxis, exhibitTwin,
+  nameDrawing,
 } from "./drawings.js";
 // UX-334: `name`/`id` on every control, and a `<label>` that points at
 // one. `controls.js` imports nothing, which is why this module may use
@@ -178,14 +179,18 @@ export function renderBand(compare) {
   // UX-316 (§2a): the band's twin. Every row is a published edge of
   // `compare/v1` - the geometry object holds the values beside the
   // positions, so the table and the drawing cannot disagree.
-  wrapper.append(exhibitTwin(document, ["mark", "value"], [
+  const twin = exhibitTwin(document, ["mark", "value"], [
     ["candidate", String(geometry.candidate.value)],
     ["band low", String(geometry.band.low)],
     ["band high", String(geometry.band.high)],
     ["observed low", String(geometry.observed.low)],
     ["observed high", String(geometry.observed.high)],
     ...geometry.runs.map((run, i) => [`baseline ${i + 1}`, String(run.value)]),
-  ]));
+  ]);
+  wrapper.append(twin);
+  // `UX-1017` (styleguide §6e.9): the caption is this drawing's own
+  // sentence, and the twin above is where every value it names lives.
+  nameDrawing(figure, caption.textContent, twin);
   if (geometry.disputed) {
     const why = document.createElement("details");
     why.className = "muted";
@@ -506,6 +511,9 @@ export function renderTrend(store, schema = undefined,
     why.append(summary, body);
     wrapper.append(why);
   }
+  // `UX-1017` (styleguide §6e.9): the caption is this drawing's own
+  // sentence, and the twin is where every value it names lives.
+  nameDrawing(figure, caption.textContent, twin);
   return wrapper;
 }
 

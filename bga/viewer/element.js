@@ -19,6 +19,7 @@ import {
 } from "./primitives.js";
 import {
   SCALE, GRADE_ANNOTATION, GRADE_EXHIBIT, exhibitAxis, exhibitTwin,
+  nameDrawing,
 } from "./drawings.js";
 // The three the derivation named, and the whole of what this chapter
 // takes from the one above it. `UX-650` adds the fourth: the tag a
@@ -1248,6 +1249,9 @@ export function renderElementHistory(store, uid, schema = null) {
   block.setAttribute("data-history", "present");
   const values = series.map((point) => point.duration_us)
                        .filter((v) => typeof v === "number");
+  // `UX-1017`: declared outside the block below so the name/route wired
+  // in after the sentence exists can still reach it.
+  let line = null;
   if (values.length) {
     const high = Math.max(...values, 1);
     // UX-316: **annotation** grade - this sparkline sits beside an
@@ -1258,7 +1262,7 @@ export function renderElementHistory(store, uid, schema = null) {
     // to the scale instead of to a grep.
     const size = SCALE[GRADE_ANNOTATION];
     const inset = size.spark / 10;
-    const line = svg("svg", {
+    line = svg("svg", {
       viewBox: `0 0 ${size.width} ${size.spark}`, class: "sparkline",
       preserveAspectRatio: "none",
       role: "img", "data-role": "sparkline", "data-grade": GRADE_ANNOTATION,
@@ -1312,5 +1316,10 @@ export function renderElementHistory(store, uid, schema = null) {
     sentence.textContent += ` Off the critical path since ${left.stamp}.`;
   }
   block.append(sentence);
+  // `UX-1017` (styleguide §6e.9): the sentence is this sparkline's name
+  // and its route - "the values it sits beside", the same sentence a
+  // sighted reader already gets, since this annotation-grade sparkline
+  // draws no twin. `line` is `null` when there were no numeric values.
+  if (line) nameDrawing(line, sentence.textContent, sentence);
   return block;
 }

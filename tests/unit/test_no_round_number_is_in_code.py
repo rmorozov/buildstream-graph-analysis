@@ -40,7 +40,7 @@ ROUNDS_IN_CODE = {
     "bga/provenance.py": 1,
     "bga/report/ci_comment.py": 1,
     "bga/report/json.py": 1,
-    "bga/schemas.py": 3,
+    "bga/schemas.py": 2,
     "bga/suspend.py": 1,
     "tools/bga_snapshot.py": 3,
     "tools/bga_timeline.py": 2,

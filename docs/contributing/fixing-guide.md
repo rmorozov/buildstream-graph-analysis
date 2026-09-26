@@ -225,6 +225,7 @@ bga/analyzer.py        orchestrator - wires every stage together, BuildEfficienc
 bga/findings.py        every conclusion the report draws, as data with stable ids
 bga/provenance.py      why each claim is made: evidence refs, rule, trace query (UX-229)
 bga/schemas.py         every published contract + view-hints; `--schema` prints from here
+bga/schema_hints.py    the `bga:*` view-hint vocabulary and its checker; re-exported by schemas.py
 bga/contracts.py       the derived inventory of every contract, printable or not (UX-248)
 bga/producer.py        which build wrote an artifact, and the contract set it had (UX-249)
 bga/report/            text.py, json.py, ci_comment.py - renderers · _shared.py the section names they share · rate.py converts build seconds into the reader's unit (UX-596)

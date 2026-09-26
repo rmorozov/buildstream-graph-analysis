@@ -621,15 +621,26 @@ function wireReaderControl(payload, slot) {
   const question = document.createElement("span");
   question.className = "muted";
   question.setAttribute("data-role", "reader-question");
+  // `UX-1024`: a separator beside an empty node is a mark with nothing
+  // to mark - "anyone" (the landed choice) has no question, so the
+  // dash hides with it rather than standing alone before an empty span.
+  const sep = document.createElement("span");
+  sep.textContent = " — ";
   const questionFor = (value) => readers.find((e) => e.id === value)
     ?.question ?? "";
+  const setQuestion = (value) => {
+    const text = questionFor(value);
+    question.textContent = text;
+    sep.hidden = !text;
+  };
   select.addEventListener?.("change", () => {
     applyReader(payload, slot, select.value);
-    question.textContent = questionFor(select.value);
+    setQuestion(select.value);
   });
+  setQuestion(select.value);
   const wrap = document.createElement("span");
   wrap.className = "reader-picker";
-  wrap.append(label, select, " — ", question);
+  wrap.append(label, select, sep, question);
   host.append(" ", wrap);
   // `UX-828`: `host` starts `hidden` now that it holds only the picker
   // - the producer stamp that used to unhide it moved to the footer.

@@ -981,6 +981,7 @@ is open, on what topic, for whom — is the other file's.
 | UX-1021 | [one `?` door per block opens every description in it](UX-1021-one-door-per-block.md) | Medium | R1 | 🟢 Done — one `?` door per block opens every description in it: 39 doors on `macro_micro`, was 191 | [UX-1021](UX-1021-one-door-per-block.md) |
 | UX-1022 | [every control is at least 24x24 CSS px, 44 under a coarse pointer](UX-1022-controls-meet-the-target-size.md) | Medium | R1, R4 | 🟢 Done — every control is at least 24x24 px, 44x44 under a coarse pointer; 93 of 98 on `golden` were under 24 | [UX-1022](UX-1022-controls-meet-the-target-size.md) |
 | UX-1023 | [the page has a compact size class, and compact draws no empty chrome](UX-1023-a-compact-size-class.md) | Medium | R1 | 🟢 Done — one 60rem breakpoint is the compact size class, and `#actions-group` draws nothing when `#actions` is hidden | [UX-1023](UX-1023-a-compact-size-class.md) |
+| UX-1024 | [an absence is one sentence, and no separator stands beside an empty value](UX-1024-an-absence-is-one-sentence.md) | Medium | R1 | 🟢 Done — the reader picker hides its dash with its empty question; "I am anyone — " no longer ends on a dash | [UX-1024](UX-1024-an-absence-is-one-sentence.md) |
 
 ## UX-207..UX-212: the twenty-third audit round — the report learns to answer first (2026-08-22)
 

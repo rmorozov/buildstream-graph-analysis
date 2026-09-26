@@ -1,6 +1,6 @@
 # UX-1024: an absence is one sentence, and no separator stands beside an empty value
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §6e.12 | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §6e.12 | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
 
 ## Motivation
 
@@ -54,3 +54,5 @@ now treats any child's `—` as shown unless an element wrapping it is
 hidden. Other empty-state sentences in `bga/viewer/` (the finding
 fold, `Show all`, empty `dl`s) were read by hand and already state
 what is missing and why; not re-swept here.
+
+Deviation: none from the Required Fix.

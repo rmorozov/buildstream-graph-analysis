@@ -1,6 +1,6 @@
 # UX-1030: a "view as JSON" door draws a whole section as one node
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §3k | **Serves:** R1, R5 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** bounded
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §3k | **Serves:** R1, R5 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** bounded
 
 ## Motivation
 
@@ -51,3 +51,5 @@ row's clauses): `10 passed`. The largest door on the 4,002-element run
 `data-raw-json` box's `textContent`, which now includes the caption and
 copy button past the cap - fixed to read the `<pre>` alone and to judge
 a capped prefix against the published value rather than `JSON.parse`.
+
+Deviation: the door is `rawjson.js`'s `jsonToggles`, not `structured.js`'s fold. `test_the_mapping_is_law.py` now reads the `<pre>` alone.

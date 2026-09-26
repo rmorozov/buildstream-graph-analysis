@@ -42,6 +42,28 @@ task file, which is the only place it ever lived twice.
 | UX-1012 | [the report says which elements drew from the jobserver, not only which were offered it](UX-1012-the-report-says-which-elements-drew-from-the-jobserver.md) | analysis | High | R4, R5 | 🔴 Not Started |
 | UX-1013 | [admission ranks from BuildStream's own cached build logs when bga never captured the project](UX-1013-admission-ranks-from-buildstreams-own-cached-build-logs.md) | capture | Medium | R4, R5 | 🔴 Not Started |
 | UX-1014 | [the "safe cap plus auto" default is measured on more shapes and hosts before it is anyone's default](UX-1014-the-builders-and-auto-default-is-measured-on-more-shapes-and-hosts.md) | capture | High | R4, R5 | 🔴 Not Started |
+| UX-1015 | [find-in-page reaches text inside a folded chapter](UX-1015-find-in-page-reaches-folded-chapters.md) | viewer | High | R1, R4 | 🔴 Not Started |
+| UX-1016 | [every focusable control wears one focus ring, and a keyboard journey reaches every chapter](UX-1016-one-focus-ring-and-a-keyboard-journey.md) | viewer | High | R1, R4 | 🔴 Not Started |
+| UX-1017 | [every drawing has an accessible name and a route to its numbers](UX-1017-every-drawing-has-a-name-and-a-data-route.md) | viewer | High | R1, R4 | 🔴 Not Started |
+| UX-1018 | [a chapter title outranks its section titles in the heading outline](UX-1018-a-chapter-title-outranks-its-section-titles.md) | viewer | Medium | R1, R4 | 🔴 Not Started |
+| UX-1019 | [one concept is one word and one control on every bga surface](UX-1019-one-concept-one-word-one-control.md) | viewer | Medium | R1, R4 | 🔴 Not Started |
+| UX-1020 | [every rendered label is sentence case, and a plural follows its count](UX-1020-sentence-case-from-a-rendered-string-inventory.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1021 | [one `?` door per block opens every description in it](UX-1021-one-door-per-block.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1022 | [every control is at least 24x24 CSS px, 44 under a coarse pointer](UX-1022-controls-meet-the-target-size.md) | viewer | Medium | R1, R4 | 🔴 Not Started |
+| UX-1023 | [the page has a compact size class, and compact draws no empty chrome](UX-1023-a-compact-size-class.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1024 | [an absence is one sentence, and no separator stands beside an empty value](UX-1024-an-absence-is-one-sentence.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1025 | [one disclosure glyph pair, and a fold's label names its content](UX-1025-one-disclosure-glyph-pair.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1026 | [spacing comes from a 4px scale of tokens](UX-1026-spacing-comes-from-a-scale.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1027 | [one control per view wears a primary grade](UX-1027-a-primary-control-grade.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1028 | ["All rows" draws the whole table past any ceiling](UX-1028-all-rows-draws-past-a-ceiling.md) | viewer | High | R1, R4 | 🔴 Not Started |
+| UX-1029 | [the "+N more" reveal draws every name in one run of text](UX-1029-the-more-reveal-draws-every-name.md) | viewer | High | R1, R4 | 🔴 Not Started |
+| UX-1030 | [a "view as JSON" door draws a whole section as one node](UX-1030-a-json-door-draws-a-whole-section.md) | viewer | High | R1, R5 | 🔴 Not Started |
+| UX-1031 | [every list and data-keyed map in the payload is declared, with whether it grows](UX-1031-every-growing-sequence-is-declared-in-the-schema.md) | contracts | Medium | R1, R5 | 🔴 Not Started |
+| UX-1032 | [the §3k census presses every step control at the largest size class](UX-1032-the-bound-census-presses-every-step.md) | viewer | Medium | R1, R4 | 🔴 Not Started |
+| UX-1033 | [form controls take the type scale, not the browser's 13.333px](UX-1033-form-controls-take-the-type-scale.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1034 | [reader chips print R1 to R5 inside section headings](UX-1034-reader-chips-print-internal-keys.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1035 | [fonts compute to the two declared stacks, not Arial or bare monospace](UX-1035-fonts-compute-to-the-two-stacks.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1036 | [`bga view --export` prints a double period before its timeline hint](UX-1036-the-export-message-prints-a-double-period.md) | cli | Low | R1 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

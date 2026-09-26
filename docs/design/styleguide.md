@@ -1236,7 +1236,10 @@ entirely un-emphasised and still not be the browser's.
 HIG's foundations — hierarchy, harmony, consistency, clarity,
 deference, accessibility — into rules for this page, each with the gap
 it closes. **Every rule here is proposed**: none is law until it is
-accepted and its row is filed with the guard named beside it.
+accepted, and its row is closed with the guard named beside it. The
+rows are filed: rule 11 is `UX-1015`, 8 `UX-1016`, 9 `UX-1017`, 1
+`UX-1018`, 2 `UX-1019`, 3 `UX-1020`, 4 `UX-1021`, 7 `UX-1022`, 10
+`UX-1023`, 12 `UX-1024`, 13 `UX-1025`, 6 `UX-1026` and 5 `UX-1027`.
 **Priority** orders the filing by how visibly a reader fails without the
 rule: find-in-page (11), the keyboard journey (8) and chart access (9)
 first; the spacing scale (6) and the primary grade (5) last.
@@ -1999,11 +2002,13 @@ pressed: the longest finding card is 581 characters at 4,002 elements
 and 1,105 on `macro_micro`, and the longest text block of any kind 267
 and 217. The large run's sentences are shorter, not longer.
 
-The three bold cells are the open violations, each a row to file:
+The three bold cells are the open violations, filed as `UX-1028`,
+`UX-1029` and `UX-1030`:
 "All rows" on a table past its ceiling, a reveal that draws every
 name, and a JSON door that draws a whole section. The guard is a census
 at the largest size class (§3f) that presses every step control, not
-only one that reads the page at rest — at rest, all three pass.
+only one that reads the page at rest — at rest, all three pass. The census
+is `UX-1032`, and declaring every sequence in the schema `UX-1031`.
 
 ## 7. Enforcement
 

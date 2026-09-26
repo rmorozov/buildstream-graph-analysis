@@ -34,8 +34,8 @@ The §3k census (UX-1032): each reveal pressed 10 times mounts at most the bound
 **Gap measured.** The reveal this row is about is `boundedList` in
 `bga/viewer/structured.js` (not `views.js` - `views.js` only exports
 the `PATH_HEAD`/`PATH_TAIL` constants `boundedList` reads). Before the
-fix, one press of `+N more` set `first.textContent = items.join(", ")`
-- every middle name in one span. `REVEAL_STEP = 60` added; the button
+fix, one press of `+N more` set `first.textContent = items.join(", ")`,
+every middle name in one span. `REVEAL_STEP = 60` added; the button
 now pages `middle.slice(offset, offset + REVEAL_STEP)` into a
 `.list-middle` span, **replacing** it each press, and hides once
 exhausted.

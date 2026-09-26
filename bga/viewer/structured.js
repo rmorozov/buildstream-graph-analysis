@@ -16,7 +16,7 @@
 import { served } from "./primitives.js";
 import { COPY_FORMAT_MIRROR, readCopyFormat, writeCopyFormat } from "./viewstate.js";
 import { COMMAND, QUANTITY, COLUMNS, DIRECTION, SERIES, DISTRIBUTION, QUESTION,
-         PRESETS, INLINE, bytes, childNode, cssId, dataKeyed,
+         PRESETS, INLINE, attachBlockDoor, bytes, childNode, cssId, dataKeyed,
          describedTerm, el, elementColumn, guessQuantity, heading, hintsOf,
          adviceFor, itemsAsShown, keyAsShown, quantity, quantityFor,
          sectionHead, title } from "./format.js";
@@ -1334,6 +1334,7 @@ export function renderPairs(key, object, hint = {}, node = undefined,
                             payload = undefined, root = undefined) {
   const direction = hint[DIRECTION];
   const list = el("dl", { class: "pairs" });
+  const doors = [];
   // UX-268: the element-keyed signals leave the pair list and become
   // one table, so they are drawn once rather than six times.
   const joined = key === "elements"
@@ -1416,6 +1417,7 @@ export function renderPairs(key, object, hint = {}, node = undefined,
     const { term, describe } = describedTerm(
       shown ? shown.element : name, described, {}, hintsOf(child)[INLINE],
       kind, shown ? true : dataKeyed(node, name));
+    doors.push(describe);
     if (shown) {
       term.setAttribute?.("data-key", name);
       if (shown.qualifier) term.append(
@@ -1428,6 +1430,7 @@ export function renderPairs(key, object, hint = {}, node = undefined,
                          advice ? el("p", { class: "run-advice" }, advice)
                                 : null));
   }
+  attachBlockDoor(list, doors);
   const parts = [sectionHead(key, hint)];
   if (joined) {
     // One row per element, before the scalars - it is the thing a

@@ -442,19 +442,40 @@ export function describedTerm(name, description, attrs = {}, inline = null,
                                 "data-describes": name, hidden: "" },
                       description);
   sentence.hidden = true;
+  // `UX-1021` (styleguide §2b.3, §4a): the marker moved off the term -
+  // one block, not one value, owns the door. `attachBlockDoor` builds
+  // it once the block's whole population of `sentence`s is known.
+  return { term, describe: sentence };
+}
+
+/**
+ * `UX-1021`: **one `?` door per block.** `describedTerm` no longer
+ * builds a marker; this does, once, for every hidden `.description`
+ * node the caller collected while building one block (a `dl`, `table`,
+ * `ul` or `ol` - the nearest ancestor the styleguide's census already
+ * walks to). Appended as the block's first child, so it is inside the
+ * block for that same walk. A block that described nothing gets no
+ * door - `UX-194`'s dead-control rule.
+ */
+export function attachBlockDoor(block, descriptions) {
+  // `bga:inline` sentences (`describedTerm`'s other branch) draw no
+  // door of their own - already on screen, `UX-346` - and stay out of
+  // this one's population rather than being hidden behind it.
+  const sentences = descriptions.filter(
+    (node) => node && !node.getAttribute("data-inline"));
+  if (!sentences.length) return null;
   const marker = el("button", {
-    type: "button", class: "describe", "data-describe": name,
+    type: "button", class: "describe", "data-describe": "block",
     "aria-expanded": "false",
-    // `UX-279`: the control says what it does before it is pressed.
-    title: `What ${title(name, kind, published)} means`,
+    title: "What these mean",
   }, "?");
   marker.addEventListener?.("click", () => {
     const open = marker.getAttribute("aria-expanded") === "true";
     marker.setAttribute("aria-expanded", open ? "false" : "true");
-    sentence.hidden = open;
+    for (const sentence of sentences) sentence.hidden = open;
   });
-  term.append(marker);
-  return { term, describe: sentence };
+  block.prepend(marker);
+  return marker;
 }
 
 export function elementColumn(specs = []) {

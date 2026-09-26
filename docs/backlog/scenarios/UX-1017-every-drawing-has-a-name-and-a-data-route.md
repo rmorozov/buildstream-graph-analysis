@@ -1,6 +1,6 @@
 # UX-1017: every drawing has an accessible name and a route to its numbers
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §6e.9 | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §6e.9 | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
 
 ## Motivation
 
@@ -72,3 +72,5 @@ route.
 the name from the density strip"); the remaining 10 (sparkline,
 decomposition, interval, the two composed figures, the `golden`
 fixture) are unaffected by a `strip()`-only mutation, as expected.
+
+Deviation: none from the Required Fix; on the merge `views.js`'s drawings import went back to three lines so the thin-views guard can read its source (`83029c5f`).

@@ -974,6 +974,7 @@ is open, on what topic, for whom — is the other file's.
 | UX-921 | [hidden findings keep live controls](UX-0921-hidden-findings-keep-live-controls.md) | Medium | R1, R4 and assistive-technology users reading a report with many findings | 🟢 Done — hidden findings are shells: 40/120 controls/findings, was 120/120; a shell hydrates on its fragment or on Show all | [UX-921](UX-0921-hidden-findings-keep-live-controls.md) |
 | UX-1015 | [find-in-page reaches text inside a folded chapter](UX-1015-find-in-page-reaches-folded-chapters.md) | High | R1, R4 | 🟢 Done — a folded chapter's sections are `hidden="until-found"`, not `display: none`, and find-in-page opens them through `beforematch` | [UX-1015](UX-1015-find-in-page-reaches-folded-chapters.md) |
 | UX-1016 | [every focusable control wears one focus ring, and a keyboard journey reaches every chapter](UX-1016-one-focus-ring-and-a-keyboard-journey.md) | High | R1, R4 | 🟢 Done — one `:focus-visible` ring covers every focusable class, was `button` alone, and a keyboard journey reaches every chapter | [UX-1016](UX-1016-one-focus-ring-and-a-keyboard-journey.md) |
+| UX-1017 | [every drawing has an accessible name and a route to its numbers](UX-1017-every-drawing-has-a-name-and-a-data-route.md) | High | R1, R4 | 🟢 Done — every drawing carries a name and a route to its numbers; 20 of 23 on `macro_micro` and 8 of 11 on `golden` had neither | [UX-1017](UX-1017-every-drawing-has-a-name-and-a-data-route.md) |
 
 ## UX-207..UX-212: the twenty-third audit round — the report learns to answer first (2026-08-22)
 

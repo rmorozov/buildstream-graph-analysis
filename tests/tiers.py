@@ -998,4 +998,18 @@ MEDIUM = (
     # reddened that guard - the two rules disagree here and the class
     # one is the explicit one (UX-783).
     "tests/unit/test_a_killed_browser_does_not_outlive_the_worker.py",  #  0.6s
+    # The UI batch, tiered on the merged tree: six browser guards, three
+    # single-process runs alone each (setup+call+teardown).
+    # `UX-1032`: 14.63 / 14.67 / 15.49s - one step control from large.
+    "tests/unit/test_every_step_past_a_bound_is_bounded.py",           # 14.7s
+    # `UX-1016`: 7.62 / 8.99 / 8.29s.
+    "tests/unit/test_a_keyboard_journey_reaches_every_chapter.py",     #  8.3s
+    # `UX-1018`: 1.89 / 1.67 / 1.76s.
+    "tests/unit/test_the_heading_outline_has_three_levels.py",         #  1.8s
+    # `UX-1022`: 1.41 / 1.47 / 1.33s.
+    "tests/unit/test_controls_meet_the_target_size.py",                #  1.4s
+    # `UX-1015`: 1.30 / 1.28 / 1.50s.
+    "tests/unit/test_find_in_page_reaches_folded_chapters.py",         #  1.3s
+    # `UX-1035`: 1.01 / 1.01 / 1.05s.
+    "tests/unit/test_fonts_compute_to_two_stacks.py",                  #  1.0s
 )

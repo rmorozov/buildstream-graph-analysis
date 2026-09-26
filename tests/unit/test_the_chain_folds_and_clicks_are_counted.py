@@ -363,7 +363,11 @@ DOCUMENT_SCREENS = 10.0
 #: `UX-680`: 8.0 -> 8.5. `macro_micro`'s last four questions read 8.1
 #: to 8.4 with the `remote-execution-whatif` finding open in the first
 #: chapter; the reach grows with the open chapter, not the fold.
-CHAPTER_HEADING_SCREENS = 8.5
+#: The UI batch: 8.5 -> 9.0. `macro_micro`'s last question 7.9 at
+#: babba3e5, 8.6 merged; the open chapter 7.4 -> 8.1 (`UX-1022`'s
+#: targets, `UX-1018`'s chapter scale), the same spacing that moved
+#: the landed bound 7,300 -> 7,600. Golden 6.3 -> 6.8.
+CHAPTER_HEADING_SCREENS = 9.0
 
 #: And inside a chapter, its first section under its own heading.
 #: Measured 0.1 on every chapter of both fixtures: the heading, the

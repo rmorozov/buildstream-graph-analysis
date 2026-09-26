@@ -980,6 +980,7 @@ is open, on what topic, for whom — is the other file's.
 | UX-1020 | [every rendered label is sentence case, and a plural follows its count](UX-1020-sentence-case-from-a-rendered-string-inventory.md) | Medium | R1 | 🟢 Done — a rendered-string inventory for `golden` and `macro_micro`, sentence case throughout, no `text-transform`, and 9 page `(s)` plurals chosen by count | [UX-1020](UX-1020-sentence-case-from-a-rendered-string-inventory.md) |
 | UX-1021 | [one `?` door per block opens every description in it](UX-1021-one-door-per-block.md) | Medium | R1 | 🟢 Done — one `?` door per block opens every description in it: 39 doors on `macro_micro`, was 191 | [UX-1021](UX-1021-one-door-per-block.md) |
 | UX-1022 | [every control is at least 24x24 CSS px, 44 under a coarse pointer](UX-1022-controls-meet-the-target-size.md) | Medium | R1, R4 | 🟢 Done — every control is at least 24x24 px, 44x44 under a coarse pointer; 93 of 98 on `golden` were under 24 | [UX-1022](UX-1022-controls-meet-the-target-size.md) |
+| UX-1023 | [the page has a compact size class, and compact draws no empty chrome](UX-1023-a-compact-size-class.md) | Medium | R1 | 🟢 Done — one 60rem breakpoint is the compact size class, and `#actions-group` draws nothing when `#actions` is hidden | [UX-1023](UX-1023-a-compact-size-class.md) |
 
 ## UX-207..UX-212: the twenty-third audit round — the report learns to answer first (2026-08-22)
 

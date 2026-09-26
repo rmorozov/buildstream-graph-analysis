@@ -105,8 +105,8 @@ ASSETS = ("index.html", "app.js", "style.css", "views.js", "focus.js",
           # boots - which is what `test_everything_inlined_is_also_
           # served` caught when this list was missed.
           "sections.js",
-          # UX-205: the filters, thresholds and copy helpers.
-          "tables.js",
+          # UX-205: the filters, thresholds and copy helpers; UX-268's pairs.
+          "tables.js", "pairs.js",
           # UX-211: the view state that travels in the fragment.
           "viewstate.js",
           # UX-286: the chapters the document is grouped into. Left out

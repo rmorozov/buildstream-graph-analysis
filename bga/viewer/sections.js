@@ -32,7 +32,8 @@ import { findingAnchor, served } from "./primitives.js";
 import { byId, copyButton } from "./questions.js";
 import { recordSource } from "./rawjson.js";
 import { CONTROLS, classify } from "./shapes.js";
-import { ARRAY_INLINE_ITEMS, CELL_NEST_LIMIT, LIFTED_SECTION, OBJECT_INLINE_FIELDS, TABLE_OPENS_BOUNDED_ABOVE, liftedCriticalPath, mapTable, renderPairs, renderStructured, renderTable } from "./structured.js";
+import { ARRAY_INLINE_ITEMS, CELL_NEST_LIMIT, LIFTED_SECTION, OBJECT_INLINE_FIELDS, TABLE_OPENS_BOUNDED_ABOVE, liftedCriticalPath, mapTable, renderStructured, renderTable } from "./structured.js";
+import { renderPairs } from "./pairs.js";
 import { boundCards, columnCells } from "./tables.js";
 import { investigationsFor } from "./trace_context.js";
 import { INCOMPLETE, PLANE2_NOT_CAPTURED, renderEvidence }

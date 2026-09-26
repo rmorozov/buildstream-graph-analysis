@@ -52,6 +52,7 @@ REGISTRY = {
     "button.copy-rows": (r"^Copy \d+ rows?$", "§3d"),
     "button.copy-sql": (r"^Copy ", "§4c"),
     "button.copy-step": (r"^Copy command$", "§4c"),
+    "button.copy-step.primary": (r"^Copy command$", "§6e.5"),  # UX-1027
     "button.copy-view": (r"^Copy ", "§4c"),
     "button.describe": (r"^\?$", "§2b"),       # the described-value affordance
     "button.focus-this": (r"^Focus", "§4c"),

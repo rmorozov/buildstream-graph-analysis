@@ -228,6 +228,14 @@ button.focus-back, button.expand-table, button.chapter-open,
   background: transparent; color: var(--muted);
 }
 
+/* UX-1027 (styleguide §6e.5): the fifth grade, accent fill - worn by
+   at most one control per chapter, the first published next step's
+   copy control. A chapter with no runnable next step wears none. */
+button.primary {
+  background: var(--accent-mark); color: var(--bg); border-color: var(--accent-mark);
+}
+button.primary:hover { border-color: var(--accent); }
+
 /* UX-254: two panes once there is room for two.
    `.toc` used to be a sticky block *inside* the reading column, which
    cost 573px twice over - once pushing every section down, and again

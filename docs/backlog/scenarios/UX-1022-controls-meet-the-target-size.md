@@ -1,6 +1,6 @@
 # UX-1022: every control is at least 24x24 CSS px, 44 under a coarse pointer
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §6e.7 | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §6e.7 | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
 
 ## Motivation
 
@@ -50,3 +50,5 @@ Mutation table:
 | `test_controls_meet_the_target_size.py::test_every_control_is_44x44_under_a_coarse_pointer` | coarse `--hit-min` dropped to 24px (fine's value) | red: 82 controls under 44px - the coarse-only test catches it independently |
 
 `make lint`: clean (baseline-forced findings unrelated). `dev_sizes.py --check`: ok, 148 files.
+
+Deviation: none from the Required Fix. On the merged tree the landed height went 7,300 -> 7,600 px and `CHAPTER_HEADING_SCREENS` 8.5 -> 9.0 (`320df09f`, `025585a3`, `a124bc56`).

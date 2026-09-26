@@ -1,6 +1,6 @@
 # UX-1018: a chapter title outranks its section titles in the heading outline
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §6e.1 | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §6e.1 | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
 
 ## Motivation
 
@@ -70,3 +70,5 @@ by tag (`"h2"`), and three existing test files carry the same
 instrument. `docs/design/styleguide.md`'s §7 guard table also gained
 this row's three guard names (shared row - `UX-1027`'s primary-grade
 guard lands in it too, later in this same track).
+
+Deviation: `nav.js`, `rawjson.js` and `views.js` changed beyond the named files (above). On the merged tree the landed height went 7,300 -> 7,600 px and `CHAPTER_HEADING_SCREENS` 8.5 -> 9.0 (`320df09f`, `a124bc56`).

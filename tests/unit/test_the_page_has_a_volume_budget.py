@@ -360,7 +360,10 @@ BUDGETS = (
     # words, 5,770 nodes; xl 35,669 px, 9,456 words, 5,785 nodes;
     # scale 32,893 px, 9,321 words, 5,456 nodes - 457/31/2,130 and
     # 831/144/215 of headroom.
-    (50, 38_200, 12_800, 800, 7_900),
+    # The UI batch: words 12,800 -> 12,900. macro_micro reads 12,807;
+    # `UX-1034`'s reader words and `UX-1021`'s block doors are words
+    # and nothing else. 93 of headroom.
+    (50, 38_200, 12_900, 800, 7_900),
     (4_100, 36_500, 9_600, 900, 6_000),
 )
 

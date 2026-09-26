@@ -110,7 +110,11 @@ import skip_reasons
 #: guard, `test_the_max_jobs_advice_is_one_level.py`, same form again.
 #: `UX-1032` argues **one** more, to 73: the fifty-third browser
 #: guard, `test_every_step_past_a_bound_is_bounded.py`, same form again.
-UNRESOLVABLE = 73
+#: `UX-1035`, `UX-1022` and `UX-1018` argue **three** more, to 76: three
+#: new browser guards (`test_fonts_compute_to_two_stacks.py`,
+#: `test_controls_meet_the_target_size.py`,
+#: `test_the_heading_outline_has_three_levels.py`), same form again.
+UNRESOLVABLE = 76
 
 
 def test_every_declared_skip_reason_is_known():

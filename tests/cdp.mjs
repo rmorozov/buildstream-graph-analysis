@@ -2,7 +2,12 @@
 // fetch, and nothing else - that is the argument for driving a browser
 // directly rather than adding Playwright.
 //
-//   node cdp.mjs <port> <url> <width> <height> [--observe]  < expression
+//   node cdp.mjs <port> <url> <width> <height> [--observe] [--coarse]  < expression
+//
+// `--coarse` (`UX-1022`): touch emulation plus `Emulation.setEmulatedMedia`
+// forcing `pointer: coarse`/`hover: none`, so `@media (pointer: coarse)`
+// matches the way it would on a touch device - the media query a fine
+// pointer's boot never exercises.
 //
 // Prints the JSON value the expression evaluated to. With `--observe`,
 // prints `{value, console, csp, issues}` instead: everything the
@@ -31,6 +36,7 @@ const observing = process.argv.includes("--observe");
 // whole sequence, because focus is exactly the state a fresh load per
 // step would lose.
 const journeying = process.argv.includes("--journey");
+const coarse = process.argv.includes("--coarse");
 
 let expression = "";
 for await (const chunk of process.stdin) expression += chunk;
@@ -141,6 +147,13 @@ await send("Emulation.setDeviceMetricsOverride", {
 // rather than by an extra "click the page first" step, which would
 // itself move focus onto whatever sits under the click.
 if (journeying) await send("Emulation.setFocusEmulationEnabled", { enabled: true });
+if (coarse) {
+  await send("Emulation.setTouchEmulationEnabled", { enabled: true });
+  await send("Emulation.setEmulatedMedia", {
+    features: [{ name: "pointer", value: "coarse" },
+               { name: "hover", value: "none" }],
+  });
+}
 // The replay drains here, discarded, and the gate opens on the
 // navigation this run is about.
 if (observing) await new Promise((resolve) => setTimeout(resolve, 300));

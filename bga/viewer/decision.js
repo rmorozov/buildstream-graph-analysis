@@ -782,8 +782,10 @@ export function renderDecision(payload, investigate = null, copy = null,
     section.append(head);
     const list = document.createElement("ol");
     list.className = "next-steps";
-    for (const step of steps)
-      list.append(nextStepRow(step, copy, payload, options.reportSchema));
+    steps.forEach((step, index) => {
+      list.append(nextStepRow(step, copy, payload, options.reportSchema,
+                               index === 0));
+    });
     section.append(list);
   }
   return section;
@@ -795,8 +797,15 @@ export function renderDecision(payload, investigate = null, copy = null,
  * `copy` is passed in rather than imported so this file keeps having
  * no dependency on `tables.js` - and so a harness can drive the button
  * without a clipboard.
+ *
+ * UX-1027 (styleguide §6e.5): `primary` for `isFirst`'s own copy
+ * control, never a class `commandLine` itself hands out - the other
+ * two callers (a table row, a worked example) are not this chapter's
+ * one runnable next step. A step with no command (`copy` absent, or
+ * `argv` empty) renders no button at all, so `isFirst` with nothing to
+ * mark is simply a no-op, not a promoted lesser control.
  */
-function nextStepRow(step, copy, payload, reportSchema) {
+function nextStepRow(step, copy, payload, reportSchema, isFirst = false) {
   const row = document.createElement("li");
   row.className = "next-step";
   row.setAttribute("data-step", step.id ?? "");
@@ -810,7 +819,12 @@ function nextStepRow(step, copy, payload, reportSchema) {
   // `UX-429`: through the shared control. `UX-279`'s "Copy command"
   // wording lives there now, with the join and the monospace line, so
   // this site and the two others cannot drift apart again.
-  row.append(...commandLine(step.argv, { copy }));
+  const nodes = commandLine(step.argv, { copy });
+  if (isFirst) {
+    const button = nodes.find((node) => node.className === "copy-step");
+    if (button) button.className = "copy-step primary";
+  }
+  row.append(...nodes);
   const from = followsFrom(step.follows_from, payload, reportSchema);
   if (from) row.append(from);
   return row;

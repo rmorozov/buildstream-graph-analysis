@@ -108,7 +108,25 @@
   --font-h2: 17px;
   --font-body: 15px;
   --font-small: 13px;
+
+  /* UX-1026: a 4px scale. Every margin/padding/gap resolves to one of
+     these, or 0 - never a bare length. */
+  --space-1: .25rem;
+  --space-2: .5rem;
+  --space-3: .75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-7: 1.75rem;
+  --space-8: 2rem;
+
+  /* UX-1035: the two stacks every element computes to - `html` (UA
+     serif default) and unstyled form controls (UA "Arial") were the
+     other two computed values before this. */
+  --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
 }
+html { font-family: var(--font-sans); }
 
 /* The override. `prefers-color-scheme: light` also matches a reader
  * who has expressed no preference, so an unset browser gets exactly
@@ -146,9 +164,9 @@
 }
 * { box-sizing: border-box; }
 body {
-  margin: 0 auto; padding: 1.5rem; max-width: 62rem;
+  margin: 0 auto; padding: var(--space-6); max-width: 62rem;
   font-size: var(--font-body); line-height: 1.55;
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--font-sans);
   color: var(--fg); background: var(--bg);
 }
 
@@ -179,11 +197,14 @@ p, li > p, dd { max-width: 72ch; }
    No transition and no shadow: §6a refuses motion and ornament on the
    export constraint, and this item leaves that refusal standing. A
    control that looks like the page it is in needs neither. */
+/* UX-1033 (styleguide §4f): §4f's walk never saw a form control - the
+   UA default (13.333px) sat outside the four-step scale uncounted. */
+input, select, textarea { font: inherit; }
 button {
   font: inherit; font-size: var(--font-small); line-height: 1.35; cursor: pointer;
   color: var(--fg); background: var(--muted-bg);
   border: 1px solid var(--line); border-radius: 3px;
-  padding: .1rem .45rem;
+  padding: 0 var(--space-2);
 }
 button:hover { border-color: var(--accent); }
 /* `UX-257`'s focus states stay visible: the ring is the one place a
@@ -214,6 +235,14 @@ button.focus-back, button.expand-table, button.chapter-open,
   background: transparent; color: var(--muted);
 }
 
+/* UX-1027 (styleguide §6e.5): the fifth grade, accent fill - worn by
+   at most one control per chapter, the first published next step's
+   copy control. A chapter with no runnable next step wears none. */
+button.primary {
+  background: var(--accent-mark); color: var(--bg); border-color: var(--accent-mark);
+}
+button.primary:hover { border-color: var(--accent); }
+
 /* UX-254: two panes once there is room for two.
    `.toc` used to be a sticky block *inside* the reading column, which
    cost 573px twice over - once pushing every section down, and again
@@ -231,7 +260,7 @@ body[data-has-toc] {
   grid-template-areas:
     "head head" "acts acts" "warn warn" "rail main" "rail foot";
   align-items: start;
-  column-gap: 2rem;
+  column-gap: var(--space-8);
 }
 body[data-has-toc] > header { grid-area: head; }
 /* UX-317: its own band under the identity, spanning both panes - the
@@ -253,14 +282,14 @@ h1 { font-size: var(--font-h1); margin: 0; }
 body[data-has-toc] > header {
   position: sticky; top: 0; z-index: 6; background: var(--bg);
   border-bottom: 1px solid var(--line);
-  padding: .2rem 0 .5rem; margin: 0 0 1rem;
+  padding: var(--space-1) 0 var(--space-2); margin: 0 0 var(--space-4);
 }
 /* `UX-828` (styleguide §3i): the wordmark and the identity line sit on
    one row where there is width for it - the header's whole budget is
    72px, and three stacked blocks at the h1 size alone spend more.
    `header` itself stays `display: block` (one column of identity,
    above) - only its own children go inline. */
-#wordmark { display: inline-block; margin-right: .75rem; vertical-align: middle; }
+#wordmark { display: inline-block; margin-right: var(--space-3); vertical-align: middle; }
 #run-identity, #run-producer {
   display: inline-block; vertical-align: middle;
   margin: 0; font-size: var(--font-small);
@@ -276,27 +305,44 @@ body[data-has-toc] > header {
    is no longer 92-134px tall. */
 body[data-has-toc] { --head: 3.25rem; }
 body[data-has-toc] > nav.toc { top: var(--head); max-height: calc(100vh - var(--head)); }
-body[data-has-toc] main > section, body[data-has-toc] [id] { scroll-margin-top: calc(var(--head) + .5rem); }
-h2 { font-size: var(--font-h2); margin: 2rem 0 .5rem; }
-/* UX-674 (styleguide §4f): `h3` is body weight 600, not its own step -
+body[data-has-toc] main > section, body[data-has-toc] [id] { scroll-margin-top: calc(var(--head) + var(--space-2)); }
+/* UX-1018 (styleguide §6e.1): a chapter (`h2`) outranks its section
+   (`h3`), which outranks its block (`h4`) - three levels, not one
+   flat `h2` a chapter and its own first section wore alike. */
+h2 { font-size: var(--font-h1); margin: var(--space-8) 0 var(--space-2); }
+h3 { font-size: var(--font-h2); margin: var(--space-8) 0 var(--space-2); }
+/* UX-674 (styleguide §4f): `h4` is body weight 600, not its own step -
    the unstyled UA default (1.17em of the body) computed 17.55px,
-   above every h2 on the page (16.8px) it was supposed to nest under. */
-h3 { font-size: var(--font-body); font-weight: 600; margin: 1rem 0 .3rem; }
+   above every h3 on the page (16.8px) it was supposed to nest under. */
+h4 { font-size: var(--font-body); font-weight: 600; margin: var(--space-4) 0 var(--space-1); }
 .muted { color: var(--muted); }
-code, .num { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+code, .num { font-family: var(--font-mono); }
 a { color: var(--accent); }
+
+/* UX-1022 (styleguide §6e.7): a hit area, not a bigger glyph - min-*
+   clamps the used size up regardless of a more specific rule's own
+   width/height (the door's 1.1em, the toc row's line height), so
+   nothing here fights a class rule on the same selector. 44px under a
+   coarse pointer. The one exempt case is WCAG 2.5.8's own: a link
+   inline in a sentence, `p a`. */
+:root { --hit-min: 24px; }
+@media (pointer: coarse) { :root { --hit-min: 44px; } }
+button, summary, input, select, textarea, a:not(p a) {
+  min-height: var(--hit-min); min-width: var(--hit-min);
+}
+a:not(p a) { display: inline-flex; align-items: center; justify-content: center; }
 
 .verdict {
   border-left: 4px solid var(--line); background: var(--panel);
-  padding: .7rem 1rem; margin: 1rem 0; border-radius: 3px;
+  padding: var(--space-3) var(--space-4); margin: var(--space-4) 0; border-radius: 3px;
 }
 .verdict.refused { border-left-color: var(--bad); }
 .verdict.warn { border-left-color: var(--warn); }
 .verdict.good { border-left-color: var(--good); }
-.verdict h2 { margin: 0 0 .2rem; }
+.verdict h3 { margin: 0 0 var(--space-1); }
 
 .finding {
-  border-left: 3px solid var(--line); padding: .4rem .8rem; margin: .5rem 0;
+  border-left: 3px solid var(--line); padding: var(--space-2) var(--space-3); margin: var(--space-2) 0;
 }
 .finding[data-severity="critical"], .finding[data-severity="high"] {
   border-left-color: var(--bad);
@@ -311,7 +357,7 @@ a { color: var(--accent); }
    that is what it is - a written recommendation with a severity. Tone
    on the rule, never on the words (§4.4). */
 .advice {
-  border-left: 3px solid var(--line); padding: .4rem .8rem; margin: .5rem 0;
+  border-left: 3px solid var(--line); padding: var(--space-2) var(--space-3); margin: var(--space-2) 0;
 }
 .advice[data-severity="critical"], .advice[data-severity="high"] {
   border-left-color: var(--bad);
@@ -322,19 +368,19 @@ a { color: var(--accent); }
 .advice[data-severity="info"], .advice[data-severity="low"] {
   border-left-color: var(--accent);
 }
-.join-evidence { margin: .5rem 0; }
-.join-evidence > p { margin: .5rem 0 .2rem; }
+.join-evidence { margin: var(--space-2) 0; }
+.join-evidence > p { margin: var(--space-2) 0 var(--space-1); }
 
 .finding .title { font-weight: 600; }
-.finding .detail { margin: .2rem 0 0; }
+.finding .detail { margin: var(--space-1) 0 0; }
 .badge {
   font-size: var(--font-small); text-transform: uppercase; letter-spacing: .04em;
-  color: var(--muted); margin-right: .5rem;
+  color: var(--muted); margin-right: var(--space-2);
 }
 
-table { border-collapse: collapse; width: 100%; margin: .4rem 0 1rem; }
+table { border-collapse: collapse; width: 100%; margin: var(--space-2) 0 var(--space-4); }
 th, td {
-  text-align: left; padding: .3rem .6rem; border-bottom: 1px solid var(--line);
+  text-align: left; padding: var(--space-1) var(--space-2); border-bottom: 1px solid var(--line);
   vertical-align: top;
 }
 th { cursor: pointer; user-select: none; white-space: nowrap; }
@@ -348,7 +394,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
    of what not to do - so the number stays ink and the tone moves to
    the marker beside it, which is also §4.3's non-colour channel and
    `UX-212`'s vocabulary. */
-.delta-mark { margin-right: .2rem; font-variant-numeric: normal; }
+.delta-mark { margin-right: var(--space-1); font-variant-numeric: normal; }
 .delta-mark[data-direction="better"] { color: var(--good); }
 .delta-mark[data-direction="worse"] { color: var(--bad); }
 
@@ -359,11 +405,11 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
    390px viewport, i.e. a horizontally scrolling report. */
 .pairs {
   display: grid; grid-template-columns: minmax(0, auto) minmax(0, 1fr);
-  gap: .15rem .9rem;
+  gap: var(--space-1) var(--space-4);
 }
 .pairs dt { color: var(--muted); min-width: 0; }
 .pairs dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
-details { margin: .3rem 0; }
+details { margin: var(--space-1) 0; }
 /* `UX-1025` (styleguide §6e.13): one disclosure glyph pair, ▸ closed
    and ▾ open - the same pair the boxed fold buttons already use
    (`nav.js`) - in place of the UA's own `▶`/`▼` marker. */
@@ -371,7 +417,7 @@ summary { cursor: pointer; color: var(--muted); list-style: none; }
 summary::-webkit-details-marker { display: none; }
 summary::before { content: "\25b8\00a0"; }
 details[open] > summary::before { content: "\25be\00a0"; }
-footer { margin-top: 3rem; border-top: 1px solid var(--line); padding-top: .8rem; font-size: var(--font-small); }
+footer { margin-top: calc(var(--space-8) + var(--space-4)); border-top: 1px solid var(--line); padding-top: var(--space-3); font-size: var(--font-small); }
 
 /* UX-196: the band strip and the store trend. Two SVGs, no library. */
 /* UX-316: both are exhibit grade - the section's whole answer - so
@@ -379,7 +425,7 @@ footer { margin-top: 3rem; border-top: 1px solid var(--line); padding-top: .8rem
    band is the composed figure (three lanes); the store diagram is a
    line over an order. At 5rem the field pass read the store diagram as
    "unreadable because everything is very small". */
-.band, .trend { width: 100%; display: block; margin: .4rem 0; }
+.band, .trend { width: 100%; display: block; margin: var(--space-2) 0; }
 .trend { height: var(--draw-exhibit-h); }
 .band { height: var(--draw-exhibit-figure-h); }
 /* UX-212: the outline is the channel that survives grayscale; the
@@ -397,8 +443,8 @@ footer { margin-top: 3rem; border-top: 1px solid var(--line); padding-top: .8rem
 .trend-point { fill: var(--accent-mark); stroke: var(--fg); }
 .trend-point.aliased { fill: var(--good-mark); }
 .trend-point.incomplete { fill: var(--bad-mark); }
-[data-role="blast-form"] { display: flex; gap: .5rem; margin: .5rem 0; }
-[data-role="blast-form"] input { flex: 1 1 auto; padding: .3rem .5rem;
+[data-role="blast-form"] { display: flex; gap: var(--space-2); margin: var(--space-2) 0; }
+[data-role="blast-form"] input { flex: 1 1 auto; padding: var(--space-1) var(--space-2);
   border: 1px solid var(--line); border-radius: 3px;
   background: var(--bg); color: var(--fg); }
 
@@ -406,26 +452,26 @@ footer { margin-top: 3rem; border-top: 1px solid var(--line); padding-top: .8rem
    nothing changes a number or hides a finding. */
 .toc {
   position: sticky; top: 0; z-index: 5; background: var(--panel);
-  border-bottom: 1px solid var(--line); padding: .6rem 0 .8rem;
-  margin: 0 0 1rem;
+  border-bottom: 1px solid var(--line); padding: var(--space-2) 0 var(--space-3);
+  margin: 0 0 var(--space-4);
 }
 /* In the rail, the chrome stops being a band across the top: it is a
    column that scrolls on its own axis, so a run with four thousand
    elements makes the rail scroll rather than the report start lower. */
 body[data-has-toc] > .toc {
   border-bottom: none; border-right: 1px solid var(--line);
-  padding: .2rem 1rem .8rem 0; margin: 0;
+  padding: var(--space-1) var(--space-4) var(--space-3) 0; margin: 0;
   max-height: 100vh; overflow-y: auto; overscroll-behavior: contain;
 }
-.toc-title { margin: 0 0 .3rem; font-weight: 600; font-size: var(--font-small); }
+.toc-title { margin: 0 0 var(--space-1); font-weight: 600; font-size: var(--font-small); }
 .toc ul {
   list-style: none; margin: 0; padding: 0;
-  display: flex; flex-wrap: wrap; gap: .2rem .9rem;
+  display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4);
 }
 /* One link per line in the rail. Wrapped links read as a paragraph of
    element names, which is what made the contents look like content. */
 body[data-has-toc] > .toc ul { display: block; }
-body[data-has-toc] > .toc li { margin: .05rem 0; }
+body[data-has-toc] > .toc li { margin: 0 0; }
 body[data-has-toc] > .toc a {
   display: block; overflow: hidden; text-overflow: ellipsis;
   white-space: nowrap;
@@ -448,7 +494,7 @@ body[data-has-toc] > .toc a {
    compute it", which is the whole item. No tone: §4's emphasis budget
    is for findings, and an empty section is the absence of one. */
 .toc a[data-empty]::after { content: " \2014 none"; color: var(--muted); }
-p.empty-population { margin: .35rem 0 0; color: var(--muted); max-width: 62ch; }
+p.empty-population { margin: var(--space-1) 0 0; color: var(--muted); max-width: 62ch; }
 
 /* UX-399: where the reader is. Weight and a marker rather than a tone -
    §4's emphasis budget is spent on findings, and "you are here" is
@@ -456,20 +502,20 @@ p.empty-population { margin: .35rem 0 0; color: var(--muted); max-width: 62ch; }
    is unavailable (print, forced-colors, a monochrome screen). */
 .toc a[data-current] { font-weight: 600; color: var(--fg); }
 .toc a[data-current]::before { content: "\25b8\00a0"; }
-.toc-controls { margin: .5rem 0 0; display: flex; gap: .5rem; }
+.toc-controls { margin: var(--space-2) 0 0; display: flex; gap: var(--space-2); }
 .toc-controls button { background: transparent; color: var(--muted); }
 /* `UX-436`: it had `border: none`, which is the same "no resting
    appearance" this item is about, one scale down - a control inside a
    heading is still a control. */
-button.collapse { margin-right: .4rem; }
+button.collapse { margin-right: var(--space-2); }
 button.collapse:hover { color: var(--fg); }
 
-#jump { font: inherit; font-size: var(--font-small); margin-top: .5rem;
-        padding: .25rem .5rem; width: min(22rem, 100%);
+#jump { font: inherit; font-size: var(--font-small); margin-top: var(--space-2);
+        padding: var(--space-1) var(--space-2); width: min(22rem, 100%);
         border: 1px solid var(--line); border-radius: 3px;
         background: var(--bg); color: var(--fg); }
-.jump-hits { list-style: none; margin: .3rem 0 0; padding: 0;
-             display: flex; flex-wrap: wrap; gap: .3rem; }
+.jump-hits { list-style: none; margin: var(--space-1) 0 0; padding: 0;
+             display: flex; flex-wrap: wrap; gap: var(--space-1); }
 .jump-hits button {
 }
 
@@ -478,10 +524,10 @@ button.collapse:hover { color: var(--fg); }
    height: `.chapter` adds one heading per chapter and no padding, which
    is the whole argument Direction 13 makes against a fixed-height
    grid. */
-section.chapter { margin: 1.35rem 0 0; }
+section.chapter { margin: var(--space-5) 0 0; }
 section.chapter:first-of-type { margin-top: 0; }
 h2.chapter-title {
-  font-size: var(--font-h2); margin: 0; padding-top: .5rem;
+  margin: 0; padding-top: var(--space-2);
   border-top: 2px solid var(--line);
 }
 /* Inside a chapter the sections need less air between them than they
@@ -489,7 +535,7 @@ h2.chapter-title {
    separation now. Measured: this pays for the seven chapter headings
    and leaves the document shorter than it was, which is the acceptance
    test's third clause. */
-section.chapter > section > h2 { margin-top: .9rem; }
+section.chapter > section > h3 { margin-top: var(--space-4); }
 
 /* UX-347 (styleguide §3c): **a folded chapter is its question, its
    answer and its count.** The document was 22.7 screens with every
@@ -538,10 +584,10 @@ section.chapter > section[data-section]:not([hidden]) {
   contain-intrinsic-size: auto 600px;
 }
 p.chapter-answer {
-  margin: .35rem 0 0; color: var(--muted); font-size: var(--font-body);
+  margin: var(--space-1) 0 0; color: var(--muted); font-size: var(--font-body);
   max-width: 62ch;
 }
-button.chapter-open { margin-left: .6rem; vertical-align: middle; }
+button.chapter-open { margin-left: var(--space-2); vertical-align: middle; }
 button.chapter-open:hover, button.chapter-open[aria-expanded="true"] {
   color: var(--fg); border-color: var(--fg);
 }
@@ -559,7 +605,7 @@ button.chapter-open:hover, button.chapter-open[aria-expanded="true"] {
 /* Collapsed sections keep their heading; everything below it goes.
    Scoped to a section that names itself, so a chapter - which is also a
    `section` - never hides the sections inside it. */
-section[data-section][data-collapsed="true"] > *:not(h2) { display: none; }
+section[data-section][data-collapsed="true"] > *:not(h3) { display: none; }
 section[data-jumped="true"], [data-jumped="true"] {
   outline: 2px solid var(--accent); outline-offset: 3px;
 }
@@ -578,14 +624,14 @@ section[data-jumped="true"], [data-jumped="true"] {
 /* UX-202: the overview waterfall. Bars are a reading of published
    numbers - the printed value beside each is the field itself. */
 .wf-row { display: grid; grid-template-columns: 13rem 1fr 6rem;
-          align-items: center; gap: .6rem; margin: .18rem 0; }
+          align-items: center; gap: var(--space-2); margin: var(--space-1) 0; }
 .wf-label { font-size: var(--font-small); }
 .wf-track { background: var(--panel); border: 1px solid var(--line);
             border-radius: 2px; height: .85rem; overflow: hidden; }
 .wf-fill { display: block; height: 100%; background: var(--accent-mark);
            opacity: .55; }
 .wf-value { text-align: right; font-size: var(--font-small); }
-section[data-section="evidence"] .verdict { margin: .4rem 0 .8rem; }
+section[data-section="evidence"] .verdict { margin: var(--space-2) 0 var(--space-3); }
 @media (max-width: 40rem) {
   .wf-row { grid-template-columns: 1fr 4.5rem; }
   .wf-track { display: none; }
@@ -619,7 +665,7 @@ input.table-filter { max-width: 100%; }
   }
   body[data-has-toc] > .toc {
     border-right: none; border-bottom: 1px solid var(--line);
-    padding: .6rem 0 .8rem; margin: 0 0 1rem;
+    padding: var(--space-2) 0 var(--space-3); margin: 0 0 var(--space-4);
     max-height: 60vh;
   }
   body[data-has-toc] > .toc ul { display: flex; }
@@ -639,20 +685,20 @@ input.table-filter { max-width: 100%; }
 }
 
 /* UX-204: the investigate button and the paste it leaves behind. */
-.investigate { margin: .5rem 0 .2rem; }
+.investigate { margin: var(--space-2) 0 var(--space-1); }
 /* `UX-436`: standing grade, from the base rule. What was here was the
    base rule written out by hand, at a different size. */
 .investigate button { }
 .investigate button:hover { border-color: var(--accent); }
-.investigate .handoff { margin-left: .6rem; font-size: var(--font-small); }
-.investigate .query { margin: .4rem 0 0; font-size: var(--font-small); }
+.investigate .handoff { margin-left: var(--space-2); font-size: var(--font-small); }
+.investigate .query { margin: var(--space-2) 0 0; font-size: var(--font-small); }
 h3.category { text-transform: capitalize; letter-spacing: .04em;
-              color: var(--muted); font-size: var(--font-small); margin-top: 1.2rem; }
+              color: var(--muted); font-size: var(--font-small); margin-top: var(--space-5); }
 
 /* UX-205: the tools above each table. */
-.table-tools { display: flex; align-items: center; gap: .6rem;
-               margin: .4rem 0 .3rem; flex-wrap: wrap; }
-.table-filter { font: inherit; font-size: var(--font-small); padding: .15rem .4rem;
+.table-tools { display: flex; align-items: center; gap: var(--space-2);
+               margin: var(--space-2) 0 var(--space-1); flex-wrap: wrap; }
+.table-filter { font: inherit; font-size: var(--font-small); padding: var(--space-1) var(--space-2);
                 background: var(--panel); color: inherit;
                 border: 1px solid var(--line); border-radius: 3px;
                 /* `min-width: 12rem` flat was 192px that would not shrink,
@@ -664,9 +710,9 @@ h3.category { text-transform: capitalize; letter-spacing: .04em;
                 min-width: min(12rem, 100%); max-width: 100%; }
 .table-tools .badge { font-size: var(--font-small); color: var(--muted); }
 .copy-rows { }
-th .th-filter { display: block; width: 100%; margin-top: .2rem;
+th .th-filter { display: block; width: 100%; margin-top: var(--space-1);
                 font: inherit; font-size: var(--font-small); font-weight: normal;
-                padding: .05rem .25rem; background: var(--bg); color: inherit;
+                padding: 0 var(--space-1); background: var(--bg); color: inherit;
                 border: 1px solid var(--line); border-radius: 2px; }
 /* UX-304: the tone is not the signal - `border-style` is the shape
    that carries it without color (styleguide §4.3), and `aria-invalid`
@@ -675,12 +721,12 @@ th .th-filter.unparsed { border-color: var(--bad); border-style: dashed; }
 
 /* UX-206: the chain, drawn. A list with widths - flex-grow carries the
    published share, so nothing here is a layout algorithm. */
-.path-strip { display: flex; gap: .25rem; align-items: stretch;
-              margin: .5rem 0; flex-wrap: wrap; }
-.path-box { flex-basis: 0; min-width: 6.5rem; padding: .35rem .5rem;
+.path-strip { display: flex; gap: var(--space-1); align-items: stretch;
+              margin: var(--space-2) 0; flex-wrap: wrap; }
+.path-box { flex-basis: 0; min-width: 6.5rem; padding: var(--space-1) var(--space-2);
             background: var(--panel); border: 1px solid var(--line);
             border-radius: 3px; text-decoration: none; color: inherit;
-            display: flex; flex-direction: column; gap: .1rem; }
+            display: flex; flex-direction: column; gap: 0; }
 .path-box:hover { border-color: var(--accent); }
 .path-name { font-size: var(--font-small); overflow-wrap: anywhere; }
 .path-time { font-size: var(--font-small); color: var(--muted); }
@@ -688,24 +734,24 @@ th .th-filter.unparsed { border-color: var(--bad); border-style: dashed; }
 
 /* And the blast answer as an indented hierarchy - padding is the
    published depth. */
-.blast-tree { margin: .4rem 0; }
-.blast-row { display: flex; align-items: baseline; gap: .5rem;
-             padding-top: .1rem; padding-bottom: .1rem; font-size: var(--font-small); }
+.blast-tree { margin: var(--space-2) 0; }
+.blast-row { display: flex; align-items: baseline; gap: var(--space-2);
+             padding-top: 0; padding-bottom: 0; font-size: var(--font-small); }
 .blast-name { overflow-wrap: anywhere; }
 .blast-cost { margin-left: auto; color: var(--muted); font-size: var(--font-small); }
-.kind { font-size: var(--font-small); padding: 0 .3rem; border-radius: 2px;
+.kind { font-size: var(--font-small); padding: 0 var(--space-1); border-radius: 2px;
         background: var(--panel); border: 1px solid var(--line);
         color: var(--muted); }
 
 /* UX-207: the decision, above everything that justifies it. */
 .decision { border: 1px solid var(--accent); border-radius: 4px;
-            padding: .7rem .9rem; margin-bottom: 1rem;
+            padding: var(--space-3) var(--space-4); margin-bottom: var(--space-4);
             background: var(--panel); }
-.decision h2 { margin-top: 0; }
-.decision .diagnosis { font-size: var(--font-body); margin: .2rem 0 .6rem; }
-.decision .opportunity { margin: .3rem 0 .6rem; }
-.decision .actions { margin: 0; padding-left: 1.3rem; }
-.decision .action { margin: .2rem 0; display: flex; gap: .6rem;
+.decision h3 { margin-top: 0; }
+.decision .diagnosis { font-size: var(--font-body); margin: var(--space-1) 0 var(--space-2); }
+.decision .opportunity { margin: var(--space-1) 0 var(--space-2); }
+.decision .actions { margin: 0; padding-left: var(--space-5); }
+.decision .action { margin: var(--space-1) 0; display: flex; gap: var(--space-2);
                     align-items: baseline; flex-wrap: wrap; }
 .decision .action .worth { color: var(--muted); font-size: var(--font-small); }
 .decision .action .why { font-size: var(--font-small); }
@@ -713,50 +759,50 @@ th .th-filter.unparsed { border-color: var(--bad); border-style: dashed; }
    why, the command, where it came from - so the command keeps its own
    line however long it is, and the citation does not trail the Copy
    button. */
-.next-steps { margin: 0; padding-left: 1.3rem; }
-.next-step { margin: .35rem 0; }
-.next-step .why { margin: 0 0 .15rem; font-size: var(--font-small); }
-.next-step .from { display: block; font-size: var(--font-small); margin-top: .1rem; }
+.next-steps { margin: 0; padding-left: var(--space-5); }
+.next-step { margin: var(--space-1) 0; }
+.next-step .why { margin: 0 0 var(--space-1); font-size: var(--font-small); }
+.next-step .from { display: block; font-size: var(--font-small); margin-top: 0; }
 /* UX-372: the reader says who they are, and gets their own lever.
    UX-668: the control moved into the header's identity line, so this
    is inline now rather than a block above the panel. */
-.reader-picker { font-size: var(--font-small); margin-left: .4rem; }
-.reader-lead { border-left: 2px solid var(--accent); padding-left: .6rem;
-               margin: 0 0 .6rem; }
-.reader-lead p { margin: .15rem 0; }
+.reader-picker { font-size: var(--font-small); margin-left: var(--space-2); }
+.reader-lead { border-left: 2px solid var(--accent); padding-left: var(--space-2);
+               margin: 0 0 var(--space-2); }
+.reader-lead p { margin: var(--space-1) 0; }
 /* UX-643: the tag a promoted section wears. Empty until a role is
    chosen, and `:empty` is what keeps UX-305's budget - the mark is on
    the sections one reader owns, never on all of them. Ink and a border,
    not a fill: five categories is past what colour carries alone. */
 .reader-tag:empty { display: none; }
 .reader-tag {
-  margin-left: .5rem; font-size: var(--font-small); font-weight: normal;
+  margin-left: var(--space-2); font-size: var(--font-small); font-weight: normal;
   letter-spacing: .04em; color: var(--muted);
-  border: 1px solid var(--line); border-radius: .2rem; padding: 0 .25rem;
+  border: 1px solid var(--line); border-radius: .2rem; padding: 0 var(--space-1);
   vertical-align: middle;
 }
 /* UX-668 (styleguide §4 rule 7): a reader is a shape, not a hue - the
    accent already spent on interaction and the band marks promotion
    too, on the one non-colour channel §4.3 reserves for it. */
 section[data-promoted] { border-left: 3px solid var(--accent); }
-.status-line { margin: .2rem 0 .4rem; font-size: var(--font-small); }
+.status-line { margin: var(--space-1) 0 var(--space-2); font-size: var(--font-small); }
 .evidence-detail > summary { cursor: pointer; font-size: var(--font-small);
                              color: var(--muted); }
 .overview-tail > summary { cursor: pointer; font-size: var(--font-small);
-                           color: var(--muted); margin-top: .3rem; }
+                           color: var(--muted); margin-top: var(--space-1); }
 
 /* UX-208 / UX-209: investigation affordances, and the rail. */
-.section-key { margin-left: .5rem; font-size: var(--font-small); font-weight: normal; }
-.inspect { margin-left: .35rem; text-decoration: none; opacity: .55; }
+.section-key { margin-left: var(--space-2); font-size: var(--font-small); font-weight: normal; }
+.inspect { margin-left: var(--space-1); text-decoration: none; opacity: .55; }
 .inspect:hover { opacity: 1; }
-.copy-sql { margin-top: .25rem; }
+.copy-sql { margin-top: var(--space-1); }
 /* UX-369: the query builder's one substitution. Inline with its label
    so it reads as a sentence the reader completes, not as a form. The
    select itself is a `.top-n`: the same control, drawn the same way. */
-.query-element { margin: .4rem 0 .6rem; display: flex; gap: .4rem;
+.query-element { margin: var(--space-2) 0 var(--space-2); display: flex; gap: var(--space-2);
                  align-items: baseline; flex-wrap: wrap; }
 .query-element > label { font-size: var(--font-small); color: var(--muted); }
-.query-element > p { flex-basis: 100%; margin: .15rem 0 0; }
+.query-element > p { flex-basis: 100%; margin: var(--space-1) 0 0; }
 .top-n { font: inherit; font-size: var(--font-small); background: var(--panel);
          color: inherit; border: 1px solid var(--line); border-radius: 3px;
          max-width: 100%; }
@@ -764,13 +810,13 @@ section[data-promoted] { border-left: 3px solid var(--accent); }
    Chromium's own menu size (13.3333px) rather than inheriting - the
    type-scale guard is what found it, not a visual read. */
 .preset-view, .preset-view option { font-size: var(--font-small); }
-.blast-chips { margin: .3rem 0; display: flex; gap: .35rem;
+.blast-chips { margin: var(--space-1) 0; display: flex; gap: var(--space-1);
                align-items: baseline; flex-wrap: wrap; }
-.chip { font: inherit; font-size: var(--font-small); padding: .1rem .5rem;
+.chip { font: inherit; font-size: var(--font-small); padding: 0 var(--space-2);
         background: var(--panel); color: inherit; border: 1px solid var(--line);
         border-radius: 10px; cursor: pointer; }
 .chip:hover { border-color: var(--accent); }
-.toc-rail { margin: .6rem 0 .1rem; font-size: var(--font-small); letter-spacing: .06em;
+.toc-rail { margin: var(--space-2) 0 0; font-size: var(--font-small); letter-spacing: .06em;
             text-transform: uppercase; color: var(--muted); }
 
 /* `UX-667` (styleguide §3h): a source list - every chapter, and only
@@ -781,7 +827,7 @@ section[data-promoted] { border-left: 3px solid var(--accent); }
    third clause is that folding, not a scrollbox, is what bounds the
    rail now. */
 .toc .chapters { list-style: none; margin: 0; padding: 0; }
-.toc .chapters > li { margin: .5rem 0 0; }
+.toc .chapters > li { margin: var(--space-2) 0 0; }
 .toc .chapters > li[data-open="false"] > .sections { display: none; }
 /* §6d's "quiet" grade (transparent, solid, 3px) - the same full
    appearance `button.chapter-open` already draws (`test_every_control_
@@ -798,7 +844,7 @@ button.toc-chapter-open:hover,
 button.toc-chapter-open[aria-expanded="true"] { color: var(--fg); }
 .question-group > summary { cursor: pointer; text-transform: capitalize;
                             color: var(--muted); font-size: var(--font-small);
-                            margin-top: .6rem; }
+                            margin-top: var(--space-2); }
 
 /* UX-219: the horizon as a bar sequence. The width is the only thing
    the drawing computes, and it is one division of two published
@@ -807,9 +853,9 @@ ol.horizon { list-style: none; margin: 0; padding: 0; }
 .horizon-step {
   display: grid;
   grid-template-columns: minmax(9rem, 14rem) 1fr auto;
-  gap: 0.5rem;
+  gap: var(--space-2);
   align-items: center;
-  padding: 0.15rem 0;
+  padding: var(--space-1) 0;
 }
 .horizon-bar {
   display: block;
@@ -825,21 +871,21 @@ ol.horizon { list-style: none; margin: 0; padding: 0; }
 }
 .horizon-value { font-variant-numeric: tabular-nums; }
 .horizon-entering { grid-column: 2 / -1; font-size: var(--font-small); }
-.horizon-total { font-weight: 600; margin-top: 0.4rem; }
+.horizon-total { font-weight: 600; margin-top: var(--space-2); }
 
 /* UX-222: focus dims, never removes. The reader has to be able to see
    what they are not looking at, and the document underneath stays
    byte-identical so Ctrl-F and the export remain honest. */
 [data-dimmed="true"] { opacity: 0.32; }
-section[data-section][data-unfocused="true"] > *:not(h2) { display: none; }
-section[data-section][data-unfocused="true"] > h2 { opacity: 0.32; }
+section[data-section][data-unfocused="true"] > *:not(h3) { display: none; }
+section[data-section][data-unfocused="true"] > h3 { opacity: 0.32; }
 .focus-bar, .mark-summary {
-  margin: 0 0 0.5rem;
-  padding: 0.3rem 0.6rem;
+  margin: 0 0 var(--space-2);
+  padding: var(--space-1) var(--space-2);
   border-left: 3px solid var(--accent);
   background: var(--muted-bg);
 }
-.element-controls { display: flex; gap: 0.35rem; margin: 0.2rem 0 0.6rem; }
+.element-controls { display: flex; gap: var(--space-1); margin: var(--space-1) 0 var(--space-2); }
 /* `UX-436`: was `0.85em`, which resolved differently per parent. */
 .element-controls button { }
 
@@ -862,16 +908,16 @@ section[data-section][data-unfocused="true"] > h2 { opacity: 0.32; }
    rule nobody can predict; the geometry and the fill live once, with
    §2's drawings, and this keeps only what is about the *history*
    block. */
-.element-history { display: flex; align-items: center; gap: 0.5rem; }
+.element-history { display: flex; align-items: center; gap: var(--space-2); }
 .spark-point[data-on-path="false"] { fill-opacity: 0.45; }
 .history-sentence { font-size: var(--font-small); }
 
 /* UX-223: the palette's groups and its keyboard cursor. */
 .palette-group {
   font-size: var(--font-small); letter-spacing: 0.08em; opacity: 0.6;
-  padding: 0.3rem 0.2rem 0.1rem; list-style: none;
+  padding: var(--space-1) var(--space-1) 0; list-style: none;
 }
-.palette-facts { opacity: 0.7; font-size: var(--font-small); margin-left: 0.4rem; }
+.palette-facts { opacity: 0.7; font-size: var(--font-small); margin-left: var(--space-2); }
 .jump-hits li[data-active="true"] > button { outline: 2px solid var(--accent); }
 
 /* UX-267: a small object reads as one line of `name value` pairs, so
@@ -902,8 +948,8 @@ main .map-table { display: block; }
    trace open - and each control's own explanation with it. Nothing in
    it explains something under a different heading, which is the rule
    the save-the-trace sentence was breaking from inside the header. */
-.actions-group { margin: 0 0 .6rem; }
-.actions-group > p { margin: .25rem 0; }
+.actions-group { margin: 0 0 var(--space-2); }
+.actions-group > p { margin: var(--space-1) 0; }
 
 /* UX-451: the hand-off's refusal, at a measure it can be read at.
    `max-width` in `ch` rather than a pixel figure - the constraint is
@@ -911,15 +957,15 @@ main .map-table { display: block; }
    reading measure. It is a sibling of `.actions-group`, so the rail
    never gets it: `app.js` moves the group and leaves this behind. */
 .handoff-refusal {
-  max-width: 68ch; margin: .3rem 0 .8rem;
-  border-left: 3px solid var(--warn); padding: .4rem .8rem;
+  max-width: 68ch; margin: var(--space-1) 0 var(--space-3);
+  border-left: 3px solid var(--warn); padding: var(--space-2) var(--space-3);
   background: var(--panel); color: var(--muted); border-radius: 3px;
 }
 
 /* UX-319 (styleguide §3a.1 + UX-187): the chain's middle, folded and
    counted. One row, spanning the table, holding one control that says
    how many and out of how many. */
-tr.fold-row td { text-align: center; padding: .3rem 0; }
+tr.fold-row td { text-align: center; padding: var(--space-1) 0; }
 /* `UX-436`: the **reveal** grade. Dashed rather than solid, because
    these two show more of what is already on the page rather than
    acting on it - and there are exactly two, so it is a grade rather
@@ -939,17 +985,17 @@ button.describe {
   font: inherit; font-size: var(--font-small); line-height: 1; cursor: help;
   background: transparent; color: var(--muted);
   border: 1px solid var(--line); border-radius: 50%;
-  width: 1.1em; height: 1.1em; padding: 0; margin-left: .35rem;
+  width: 1.1em; height: 1.1em; padding: 0; margin-left: var(--space-1);
   vertical-align: super;
 }
 button.describe:hover, button.describe[aria-expanded="true"] { color: var(--fg); }
 .description {
   font-size: var(--font-small); color: var(--muted);
-  display: block; margin-top: .2rem;
+  display: block; margin-top: var(--space-1);
 }
 @media (min-width: 60rem) {
   /* Room: the sentence sits to the right of the value on the same line. */
-  .description { display: inline; margin: 0 0 0 .6rem; }
+  .description { display: inline; margin: 0 0 0 var(--space-2); }
 }
 /* UX-346: **and the door has to close.** Both rules above set
    `display`, which beats the `hidden` attribute's UA `display: none` -
@@ -978,19 +1024,19 @@ button.describe:hover, button.describe[aria-expanded="true"] { color: var(--fg);
 .table-focus { display: block; width: 100%; margin: 0; }
 /* UX-638: entering focus scrolls this section to the top, and the top
    is under the sticky header without the same margin every anchor has. */
-body[data-has-toc] .table-focus { scroll-margin-top: calc(var(--head) + .5rem); }
-.table-focus > h2 { margin-top: .2rem; }
+body[data-has-toc] .table-focus { scroll-margin-top: calc(var(--head) + var(--space-2)); }
+.table-focus > h2 { margin-top: var(--space-1); }
 /* UX-638: the second press is a collapse, so the control shows it is
    already pressed rather than offering the same thing again. */
 button.expand-table[aria-pressed="true"] {
   color: var(--fg); border-color: var(--fg);
 }
-.focus-crumb { margin: 0 0 .3rem; }
+.focus-crumb { margin: 0 0 var(--space-1); }
 button.focus-back, button.expand-table {
   font: inherit; font-size: var(--font-small); cursor: pointer;
   background: transparent; color: var(--muted);
   border: 1px solid var(--line); border-radius: 3px;
-  padding: .1rem .45rem;
+  padding: 0 var(--space-2);
 }
 button.focus-back:hover, button.expand-table:hover { color: var(--fg); }
 /* Behind, not gone. `display: none` rather than a visual dimming: a
@@ -1011,14 +1057,14 @@ nav.toc[data-focus-inert="true"] {
 /* UX-269: a truncated cell shows that it is truncated, and the whole
    value stays selectable once opened. */
 details.long-text > summary { cursor: pointer; }
-details.long-text .full-text { white-space: pre-wrap; margin: 0.4rem 0 0; }
+details.long-text .full-text { white-space: pre-wrap; margin: var(--space-2) 0 0; }
 
 /* UX-271: the rail nests one level. Indented, quieter than its parent,
    and collapsed to nothing when the section it belongs to is not the
    one being read - so 30+ sections do not become 200 rail entries. */
 .toc .toc-sub {
   list-style: none;
-  margin: 0.15rem 0 0.3rem 0.8rem;
+  margin: var(--space-1) 0 var(--space-1) var(--space-3);
   padding: 0;
   font-size: var(--font-small);
 }
@@ -1054,7 +1100,7 @@ body[data-has-toc] > header { display: block; }
    is navigation, not the page's subject - and above the heading, so it
    is the first thing in reading order for a reader who wants out. */
 header > .home {
-  margin: 0 0 .25rem;
+  margin: 0 0 var(--space-1);
   font-size: var(--font-small);
 }
 header > .home a { text-decoration: none; }
@@ -1070,13 +1116,13 @@ header > .home a:hover { text-decoration: underline; }
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: baseline;
-  column-gap: 1rem;
+  column-gap: var(--space-4);
 }
 .handoff > .handoff-go { grid-area: 1 / 1; margin: 0; }
 .handoff > .handoff-fallback { grid-area: 1 / 2; margin: 0; }
 @media (max-width: 60rem) {
   .handoff { display: block; }
-  .handoff > .handoff-fallback { margin: .4rem 0 0; }
+  .handoff > .handoff-fallback { margin: var(--space-2) 0 0; }
 }
 
 /* UX-284: while a table is the thing on screen, its tools stay on
@@ -1095,7 +1141,7 @@ header > .home a:hover { text-decoration: underline; }
   z-index: 2;
   background: var(--bg);
   margin-top: 0;
-  padding: .3rem 0;
+  padding: var(--space-1) 0;
 }
 /* A section's tools sit under the sticky header rather than at the top
    of the viewport, where the header would cover them (`UX-255` made the
@@ -1106,14 +1152,14 @@ section > .table-tools { top: var(--head, 5.5rem); }
    site, and the only one the reader opens on purpose. Quiet in the
    heading (it is a debugging affordance, not a finding) and monospace
    when open, because what it shows is meant to be pasted. */
-button.json-toggle { margin-left: .5rem; vertical-align: middle; }
+button.json-toggle { margin-left: var(--space-2); vertical-align: middle; }
 button.json-toggle:hover { color: var(--fg); }
 .section-json pre {
-  margin: .5rem 0 0;
+  margin: var(--space-2) 0 0;
   max-height: 24rem; overflow: auto;
   font-size: var(--font-small); line-height: 1.4;
   background: var(--panel);
-  border: 1px solid var(--line); border-radius: 3px; padding: .5rem;
+  border: 1px solid var(--line); border-radius: 3px; padding: var(--space-2);
   white-space: pre-wrap; word-break: break-word;
 }
 
@@ -1123,8 +1169,8 @@ button.json-toggle:hover { color: var(--fg); }
    free to be small. Mark-grade tokens throughout (§4.5): these are
    fills and strokes, not text. */
 .series, .density {
-  display: flex; align-items: center; gap: .5rem;
-  flex-wrap: wrap; margin: .3rem 0;
+  display: flex; align-items: center; gap: var(--space-2);
+  flex-wrap: wrap; margin: var(--space-1) 0;
 }
 .series-label, .density-label {
   font-size: var(--font-small); color: var(--muted);
@@ -1165,7 +1211,7 @@ button.json-toggle:hover { color: var(--fg); }
    drawing never hoards values a reader wants as rows. No grid and no
    legend still: §2's ban on apparatus is about *furniture*, and the
    ends of the scale are the reading. */
-.series.exhibit, .density.exhibit { display: block; margin: .6rem 0 1rem; }
+.series.exhibit, .density.exhibit { display: block; margin: var(--space-2) 0 var(--space-4); }
 .series.exhibit .sparkline,
 .density.exhibit .density-strip {
   width: 100%; flex: auto; display: block;
@@ -1173,7 +1219,7 @@ button.json-toggle:hover { color: var(--fg); }
 .series.exhibit .sparkline { height: var(--draw-exhibit-h); }
 .density.exhibit .density-strip { height: var(--draw-exhibit-strip-h); }
 .series.exhibit .series-label, .density.exhibit .density-label {
-  display: block; margin-bottom: .2rem;
+  display: block; margin-bottom: var(--space-1);
 }
 
 /* UX-361 (§2d): the two shapes the vocabulary did not have.
@@ -1189,12 +1235,12 @@ button.json-toggle:hover { color: var(--fg); }
    all one weight: which of them is low is the reading, and giving the
    headline score its own colour would answer the question for the
    reader. */
-.decomposition, .interval { display: block; margin: .6rem 0 1rem; }
+.decomposition, .interval { display: block; margin: var(--space-2) 0 var(--space-4); }
 .decomposition-bar, .interval-axis {
   width: 100%; display: block; height: var(--draw-exhibit-strip-h);
 }
 .decomposition .density-label, .interval .density-label {
-  display: block; margin-bottom: .2rem;
+  display: block; margin-bottom: var(--space-1);
 }
 .decomposition-part { fill: var(--line); }
 .decomposition-part:first-of-type { fill: var(--accent-mark); }
@@ -1208,7 +1254,7 @@ button.json-toggle:hover { color: var(--fg); }
    pull back inside the box - a label centred on 100% would hang off the
    page - and that is a rendering rule, not a value. */
 .draw-axis {
-  position: relative; height: 1.1rem; margin-top: .15rem;
+  position: relative; height: 1.1rem; margin-top: var(--space-1);
   font-size: var(--draw-tick); color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
@@ -1242,10 +1288,10 @@ button.json-toggle:hover { color: var(--fg); }
 /* The twin. Closed by default - the drawing is the answer and the
    table is the same answer as rows - and it survives the export,
    because a toggle is DOM and needs no server (`UX-195`). */
-.draw-twin { margin: .3rem 0 0; }
+.draw-twin { margin: var(--space-1) 0 0; }
 button.twin-toggle { }
 button.twin-toggle:hover { color: var(--fg); }
-table.twin-table { margin-top: .3rem; font-size: var(--font-small); }
+table.twin-table { margin-top: var(--space-1); font-size: var(--font-small); }
 table.twin-table td { font-variant-numeric: tabular-nums; }
 
 /* Paper has no toggles: an exhibit's twin prints open, so the values
@@ -1261,7 +1307,7 @@ table.twin-table td { font-variant-numeric: tabular-nums; }
    row a reader is scanning for numbers, so it must not compete with
    the number it explains (styleguide §4.4). */
 p.run-advice {
-  margin: .25rem 0 0;
+  margin: var(--space-1) 0 0;
   color: var(--muted);
   max-width: 62ch;
 }
@@ -1271,8 +1317,8 @@ p.run-advice {
    sticky bar costs it on every screen. */
 .toc-steps {
   display: flex;
-  gap: .25rem;
-  margin: .35rem 0 .6rem;
+  gap: var(--space-1);
+  margin: var(--space-1) 0 var(--space-2);
 }
 /* `UX-667`: one row of three, not the wrap the default button font
    gave three in a 208px column ("41px two-line buttons", round 90's
@@ -1293,20 +1339,20 @@ p.run-advice {
    row that scrolls away unused. Narrow, so it wraps rather than
    widening the rail (`UX-254`'s reading width). */
 .toc .actions-group {
-  margin: .75rem 0 0;
+  margin: var(--space-3) 0 0;
   border-top: 1px solid var(--line);
-  padding-top: .6rem;
+  padding-top: var(--space-2);
 }
-.toc .actions-group p { margin: .3rem 0; }
+.toc .actions-group p { margin: var(--space-1) 0; }
 .toc .actions-group button { width: 100%; }
 
 /* `UX-394`: which run this report is of, and the store's others one
    choice away. In the rail beside the handoff, so the two controls
    that leave this page sit together. */
-.run-picker { margin: .4rem 0 .6rem; }
+.run-picker { margin: var(--space-2) 0 var(--space-2); }
 /* UX-674: an unstyled `<option>` computes its own UA menu size
    (13.3333px in Chromium) rather than inheriting - a fifth value the
    type-scale guard would otherwise never see coming from CSS at all. */
 .run-picker select, .run-picker option { font-size: var(--font-small); }
-.run-picker select { width: 100%; margin-top: .15rem; }
-.run-picker button { margin-top: .25rem; margin-right: .25rem; }
+.run-picker select { width: 100%; margin-top: var(--space-1); }
+.run-picker button { margin-top: var(--space-1); margin-right: var(--space-1); }

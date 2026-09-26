@@ -80,7 +80,7 @@ export function jsonToggles(root, { document: doc } = {}) {
     const key = section.getAttribute("data-section");
     const value = SECTION_SOURCES.get(section);
     if (value === undefined) continue;
-    const heading = section.querySelector?.("h2");
+    const heading = section.querySelector?.("h2, h3");  // UX-1018
     if (!heading) continue;
 
     const button = doc.createElement("button");

@@ -75,6 +75,12 @@ GRADES = {
     "quiet": ("rgba(0, 0, 0, 0)", "solid", "3px"),
     "reveal": ("rgba(0, 0, 0, 0)", "dashed", "3px"),
     "door": ("rgba(0, 0, 0, 0)", "solid", "50%"),
+    # UX-1027 (styleguide §6e.5): accent fill, at most one per chapter -
+    # `--accent-mark`'s light-theme value (a fill takes the mark grade,
+    # not the text grade `test_the_palette_is_validated.py` holds it to;
+    # this is its computed color, read the same way every other grade
+    # here is).
+    "primary": ("rgb(43, 87, 151)", "solid", "3px"),
 }
 
 #: What a control drawn by nobody looks like: the UA button.
@@ -91,6 +97,28 @@ LOOKS = """
 
 def _looks(uri, opened):
     return [tuple(one) for one in json.loads(opened.observe(uri, LOOKS)["value"])]
+
+
+#: UX-1027: every chapter a `button.primary` lands in, forced open
+#: first - a chapter other than the first is folded by default and a
+#: query over a folded page would undercount.
+PRIMARY_PER_CHAPTER = """
+(() => {
+  document.querySelectorAll("section.chapter").forEach(
+    (c) => c.setAttribute("data-open", "true"));
+  const counts = {};
+  document.querySelectorAll("button.primary").forEach((b) => {
+    const chapter = b.closest("section[data-chapter]");
+    const key = chapter ? chapter.getAttribute("data-chapter") : "(none)";
+    counts[key] = (counts[key] ?? 0) + 1;
+  });
+  return JSON.stringify(counts);
+})()
+"""
+
+
+def _primary_per_chapter(uri, opened):
+    return json.loads(opened.observe(uri, PRIMARY_PER_CHAPTER)["value"])
 
 
 @pytest.fixture(scope="module")
@@ -158,6 +186,19 @@ class TestNoControlIsTheBrowsers:
             moving = [one for one in looks
                       if one[6] not in ("0s", "0s, 0s", "") or one[7] != "none"]
             assert moving == [], (name, moving[:2])
+
+    def test_at_most_one_primary_control_per_chapter(self, tmp_path_factory):
+        """UX-1027 (styleguide §6e.5): §6a's row, never decided until
+        this - a chapter with no runnable next step wears no primary
+        rather than a promoted lesser control."""
+        scale = scale_run(tmp_path_factory.mktemp("primary-scale"))
+        pages = {"macro_micro": export_uri(MACRO, tmp_path_factory.mktemp("primary-macro")),
+                 "scale": export_uri(scale, tmp_path_factory.mktemp("primary-page"))}
+        with Browser(chrome) as opened:
+            for name, uri in pages.items():
+                counts = _primary_per_chapter(uri, opened)
+                over = {k: v for k, v in counts.items() if v > 1}
+                assert over == {}, (name, over)
 
 
 #: `UX-834`: the disclosure buttons this repository already gives

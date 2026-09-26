@@ -370,6 +370,7 @@ export function chapters(root, doc, payload) {
     for (const node of members) {
       node.setAttribute("data-chapter", chapter.id);
       attachBeforematch(node);
+      promoteHeadingLevels(node, doc);
       box.append(node);
     }
     // UX-347: the control counts what the chapter holds, and it holds
@@ -383,6 +384,49 @@ export function chapters(root, doc, payload) {
     made.push(box);
   }
   return made;
+}
+
+/**
+ * UX-1018 (styleguide §6e.1): the section head every renderer built as
+ * `h2` is one level below the chapter now holding it, and any nested
+ * block heading (`h3`) is one below that - promoted here, in the one
+ * place every section passes through regardless of which module built
+ * it, rather than at each of the dozen call sites that build one.
+ * `data-heading-promoted` guards against a second pass finding an
+ * already-promoted node if `chapters()` is ever called twice.
+ */
+function promoteHeadingLevels(node, doc) {
+  if (node.hasAttribute?.("data-heading-promoted")) return;
+  node.setAttribute?.("data-heading-promoted", "true");
+  const retag = (old, tag) => {
+    const replacement = doc.createElement(tag);
+    // `old.attributes` (a live `NamedNodeMap`) in a real DOM;
+    // `tests/dom_shim.mjs` keeps a plain `attrs` object instead and has
+    // no `.attributes` at all (`UX-264`'s shim, not a browser).
+    const attrs = old.attributes
+      ? [...old.attributes].map((a) => [a.name, a.value])
+      : Object.entries(old.attrs ?? {});
+    for (const [name, value] of attrs) replacement.setAttribute(name, value);
+    // `old.childNodes` in a real DOM interleaves text and elements in
+    // order; the shim has no `childNodes`, only `.children` (elements)
+    // and a separately-concatenated `._text` - `append` on either
+    // target reassembles the right shape.
+    const kids = old.childNodes
+      ? [...old.childNodes] : [old._text ?? "", ...(old.children ?? [])];
+    replacement.append(...kids);
+    // Neither target has `replaceWith` - `insertBefore` then `remove`
+    // is the one swap both do support.
+    (old.parentElement ?? old.parentNode)?.insertBefore?.(replacement, old);
+    old.remove?.();
+  };
+  // `h3` first, into a snapshot: promoting `h2` below would otherwise
+  // create new `h3` nodes this same pass would catch a second time.
+  for (const old of [...(node.querySelectorAll?.("h3") ?? [])]) {
+    retag(old, "h4");
+  }
+  for (const old of [...(node.querySelectorAll?.("h2") ?? [])]) {
+    retag(old, "h3");
+  }
 }
 
 /**
@@ -409,11 +453,11 @@ function makeBox(chapter, doc, payload, first) {
   box.className = "chapter";
   box.setAttribute("data-chapter", chapter.id);
   box.setAttribute("id", `chapter-${chapter.id}`);
-  // A landmark rather than a heading level: the section headings below
-  // are `h2` and stay `h2` - twenty-four of them, plus the collapse and
-  // focus rules that select `> h2` - so a screen reader gets the
-  // chapter as a named region it can jump to, instead of a heading
-  // hierarchy that would lie about its depth.
+  // UX-1018 (styleguide §6e.1): a landmark *and* a heading level now -
+  // `h2` is the chapter's own, so every section it holds is promoted
+  // one level (`promoteHeadingLevels`, in the members loop below)
+  // before it lands here, and the outline reads three deep rather than
+  // one flat `h2` repeated.
   box.setAttribute("role", "region");
   box.setAttribute("aria-label", chapter.title);
   const title = doc.createElement("h2");

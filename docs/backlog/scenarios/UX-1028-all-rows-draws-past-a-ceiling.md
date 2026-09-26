@@ -1,6 +1,6 @@
 # UX-1028: "All rows" draws the whole table past any ceiling
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §3k | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** bounded
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §3k | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** bounded
 
 ## Motivation
 
@@ -51,3 +51,5 @@ row's clauses): `10 passed`. The pre-existing `test_all_rows_means_all_rows.py`
 |---|---|---|
 | gate `if (total <= ALL_ROWS_CEILING)` -> `if (true)` (offer unconditionally) | `TestEveryTableStaysBounded::test_no_table_ever_mounts_past_the_bound`, `test_all_rows_is_not_offered_past_the_ceiling` | 2 of 10 |
 | pager's `state.top.n` set to `offset + TABLE_OPENS_BOUNDED_ABOVE` (append) instead of a fixed window | `test_no_table_ever_mounts_past_the_bound`, at the 5th press (200 -> 240) | 1 of 10 |
+
+Deviation: on the merge `structured.js` crossed the viewer line ceiling; `elementSignalTable`, `presetTable` and `renderPairs` moved to `bga/viewer/pairs.js` (`4f84b16e`).

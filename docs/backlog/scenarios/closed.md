@@ -985,6 +985,7 @@ is open, on what topic, for whom — is the other file's.
 | UX-1025 | [one disclosure glyph pair, and a fold's label names its content](UX-1025-one-disclosure-glyph-pair.md) | Medium | R1 | 🟢 Done — `summary` draws `▸`/`▾` and the UA marker is hidden, one glyph pair, and an unlabeled fold reads "The rule" | [UX-1025](UX-1025-one-disclosure-glyph-pair.md) |
 | UX-1026 | [spacing comes from a 4px scale of tokens](UX-1026-spacing-comes-from-a-scale.md) | Low | R1 | 🟢 Done — every margin, padding and gap is a `--space-*` token on a 4px scale, `0` or `auto`; 98 distinct lengths before | [UX-1026](UX-1026-spacing-comes-from-a-scale.md) |
 | UX-1027 | [one control per view wears a primary grade](UX-1027-a-primary-control-grade.md) | Low | R1 | 🟢 Done — a fifth grade, `primary`, worn by the first next step's copy control, in §6d's census | [UX-1027](UX-1027-a-primary-control-grade.md) |
+| UX-1028 | ["All rows" draws the whole table past any ceiling](UX-1028-all-rows-draws-past-a-ceiling.md) | High | R1, R4 | 🟢 Done — "All rows" is offered under a 200-row ceiling; past it a pager replaces the 40-row window, never appends | [UX-1028](UX-1028-all-rows-draws-past-a-ceiling.md) |
 
 ## UX-207..UX-212: the twenty-third audit round — the report learns to answer first (2026-08-22)
 

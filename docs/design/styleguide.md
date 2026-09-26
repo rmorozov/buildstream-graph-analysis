@@ -47,6 +47,7 @@ line per section, the rule only; the section holds its measurement.
 | | §3a | depth is announced; deeper than one level opens in table focus |
 | | §3d | table tools appear at the row cap; a one-value column is a sentence |
 | | §3j | a fold bounds its hidden controls, not only its visible rows |
+| | §3k | every population opens at a named bound, and the step past it is bounded too |
 | **Navigation** | §3b | any section is at most two interactions from the rail |
 | | §3c | the landed page is at most 10 screens; chapters fold |
 | | §3h | the rail shows every chapter and only the current chapter's sections |
@@ -1863,6 +1864,63 @@ explicit Show all path hydrates the population once and in source order.
 
 `UX-921` is the item; its DOM census will own this row.
 
+## 3k. Every population has a bound, and so does the step past it
+
+The bound rules are spread over six sections — the row cap (§3), the
+nesting cap and cell text (§3a), maps (`UX-419`, in §3e's prose), the
+rail (§3h), the finding fold (§3j), the picker (§3e) — and each was
+written for the shape that broke that round. This section is the one
+list. Measured on the 4,002-element run
+(`bga gen-synthetic --seed 1 --layers 20 --width 200 --store --runs 30`,
+exported, 1440x900, every chapter open, then every step control pressed):
+
+```text
+                                   at rest                  every step control pressed
+DOM elements, 4,002 elements         7,072                  62,995 (8.9x)
+DOM elements, macro_micro            5,863                   6,327 (both planes, 11 elements)
+largest table                    40 rows (cap)              4,002 rows ("All rows", elements)
+largest reveal ("+N more")       6 + 3 names                3,625 names, one 72,703-character run
+largest JSON door                closed                     3,592,666 characters (elements);
+                                                            21,967 on macro_micro (findings)
+```
+
+`macro_micro` is the fixture with both planes, and at eleven elements
+every step stays small — the Plane 2 tables included (`binary_cost`, 71
+rows). The violations below are a function of population, which is why
+the census runs at the largest class.
+
+| population | bound at rest | the step past it | named in |
+|---|---|---|---|
+| table rows (§1: array of objects, array of arrays) | opens bounded above `TABLE_OPENS_BOUNDED_ABOVE` rows | filter, preset, Top-N, table focus; **"All rows" is unbounded** | `structured.js`, `tables.js` |
+| nested cell | `CELL_NEST_LIMIT` levels inline | table focus (§3a) | `structured.js` |
+| cell text | `CELL_TEXT_CAP` characters | the labeled fold | `structured.js` |
+| long scalar array | count + folded list | not measured here | `shapes.js` |
+| map (`dl`), one key per element | bounded pairs (`UX-419`) | the rest leave the document (`UX-526`) | §3e |
+| chain and element lists | `PATH_HEAD` + `PATH_TAIL` | **"+N more" reveals every name** | `views.js` |
+| findings | 40 cards, the rest as fragment targets | "Show all" hydrates once (§3j) | §3j |
+| evidence, culprits, overview | `EVIDENCE_SHOWN`, `CULPRITS_SHOWN`, `OVERVIEW_SHOWN` | not measured here | `sections.js`, `element.js`, `primitives.js` |
+| history series | `HISTORY_POINTS_MAX` points | none: the window is the answer | `element.js` |
+| rail | the current chapter's sections (§3h) | the next chapter | §3h |
+| Perfetto element picker | `PICKER_SHOWN` hits | the search box | `questions.js` |
+| labeled fold, "view as JSON" | closed | **the whole value, unbounded** | §1 |
+
+**The rule.** Every population the page draws — rows, items, pairs,
+points, names, and characters of text — opens at a bound held by a
+named constant, and its label states what lies beyond it (§3a.1). **The
+step past a bound is bounded too:** it advances by the same bound with
+the position shown ("rows 41-80 of 4,002"), opens table focus, or
+narrows (filter, preset, Top-N); no control draws a population whose
+size grows with the run in one step. "All" is offered only where the
+whole population is under a ceiling the table states. Text is a
+population: a JSON door or a text reveal draws at most a stated number
+of characters, and past it offers the whole as a copy, not as a node.
+
+The three bold cells are the open violations, each a row to file:
+"All rows" on a table past its ceiling, a reveal that draws every
+name, and a JSON door that draws a whole section. The guard is a census
+at the largest size class (§3f) that presses every step control, not
+only one that reads the page at rest — at rest, all three pass.
+
 ## 7. Enforcement
 
 What keeps this true after the commit that lands it: the booted
@@ -1921,6 +1979,7 @@ headings, so a renumber there moves it.
 | §3h | `test_the_rail_is_a_source_list.py` | |
 | §3i | `test_the_header_keeps_its_budget.py` | |
 | §3j | | `UX-921` will add the hidden-control population guard; open finding |
+| §3k | | three open violations, listed in the section; the census guard is filed with them |
 | §4 | `test_emphasis_is_a_budget.py`, `test_the_palette_is_validated.py`, `test_a_drawing_is_graded.py`, `test_apparatus_in_its_place.py`, `test_the_browser_is_the_library.py` | named |
 | §4a | | named; `UX-346`'s `test_a_sentence_lives_on_its_door.py` holds it and cites no section |
 | §4b | `test_a_runbook_is_not_a_table.py` | `UX-351`'s `test_the_label_is_for_the_reader.py` holds it and cites no section; `UX-669`'s clause holds the half that says a citation is a question, never a key |

@@ -986,6 +986,7 @@ is open, on what topic, for whom — is the other file's.
 | UX-1026 | [spacing comes from a 4px scale of tokens](UX-1026-spacing-comes-from-a-scale.md) | Low | R1 | 🟢 Done — every margin, padding and gap is a `--space-*` token on a 4px scale, `0` or `auto`; 98 distinct lengths before | [UX-1026](UX-1026-spacing-comes-from-a-scale.md) |
 | UX-1027 | [one control per view wears a primary grade](UX-1027-a-primary-control-grade.md) | Low | R1 | 🟢 Done — a fifth grade, `primary`, worn by the first next step's copy control, in §6d's census | [UX-1027](UX-1027-a-primary-control-grade.md) |
 | UX-1028 | ["All rows" draws the whole table past any ceiling](UX-1028-all-rows-draws-past-a-ceiling.md) | High | R1, R4 | 🟢 Done — "All rows" is offered under a 200-row ceiling; past it a pager replaces the 40-row window, never appends | [UX-1028](UX-1028-all-rows-draws-past-a-ceiling.md) |
+| UX-1029 | [the "+N more" reveal draws every name in one run of text](UX-1029-the-more-reveal-draws-every-name.md) | High | R1, R4 | 🟢 Done — the `+N more` reveal pages 60 names at a time, replacing the shown ones; one press drew up to 207 | [UX-1029](UX-1029-the-more-reveal-draws-every-name.md) |
 
 ## UX-207..UX-212: the twenty-third audit round — the report learns to answer first (2026-08-22)
 

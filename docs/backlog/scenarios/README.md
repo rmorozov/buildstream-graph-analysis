@@ -41,7 +41,6 @@ task file, which is the only place it ever lived twice.
 | UX-1012 | [the report says which elements drew from the jobserver, not only which were offered it](UX-1012-the-report-says-which-elements-drew-from-the-jobserver.md) | analysis | High | R4, R5 | 🔴 Not Started |
 | UX-1013 | [admission ranks from BuildStream's own cached build logs when bga never captured the project](UX-1013-admission-ranks-from-buildstreams-own-cached-build-logs.md) | capture | Medium | R4, R5 | 🔴 Not Started |
 | UX-1014 | [the "safe cap plus auto" default is measured on more shapes and hosts before it is anyone's default](UX-1014-the-builders-and-auto-default-is-measured-on-more-shapes-and-hosts.md) | capture | High | R4, R5 | 🔴 Not Started |
-| UX-1029 | [the "+N more" reveal draws every name in one run of text](UX-1029-the-more-reveal-draws-every-name.md) | viewer | High | R1, R4 | 🔴 Not Started |
 | UX-1030 | [a "view as JSON" door draws a whole section as one node](UX-1030-a-json-door-draws-a-whole-section.md) | viewer | High | R1, R5 | 🔴 Not Started |
 | UX-1031 | [every list and data-keyed map in the payload is declared, with whether it grows](UX-1031-every-growing-sequence-is-declared-in-the-schema.md) | contracts | Medium | R1, R5 | 🔴 Not Started |
 | UX-1032 | [the §3k census presses every step control at the largest size class](UX-1032-the-bound-census-presses-every-step.md) | viewer | Medium | R1, R4 | 🔴 Not Started |

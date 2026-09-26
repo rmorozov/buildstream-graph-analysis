@@ -1,6 +1,6 @@
 # UX-1029: the "+N more" reveal draws every name in one run of text
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §3k | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** bounded
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §3k | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** bounded
 
 ## Motivation
 
@@ -50,3 +50,5 @@ row's clauses): `10 passed`.
 |---|---|---|
 | `chunk = middle` (whole list, one press) instead of `middle.slice(offset, offset + REVEAL_STEP)` | `TestEveryRevealStaysBounded::test_no_reveal_ever_mounts_past_the_bound` | 1 of 10 |
 | `shownMiddle.textContent += …` (append) instead of `=` (replace) | same clause, mounted count grows 60 -> 120 -> 180 -> 198 over presses | 1 of 10 |
+
+Deviation: the reveal is `structured.js`'s `boundedList`, not `views.js`'s. On the merge `structured.js` crossed the viewer line ceiling, and the pair list moved to `bga/viewer/pairs.js` (`4f84b16e`).

@@ -14,6 +14,8 @@
  * `ReferenceError` in `boot()` and rendered empty for several rounds.
  */
 import { identify, labelFor } from "./controls.js";
+import { plural } from "./tables.js";
+import { title } from "./format.js";
 import {
   SVG, svg, seconds, mib, bar, OVERVIEW_SHOWN, elementAnchor,
 } from "./primitives.js";
@@ -665,7 +667,7 @@ function elementSection(record, places, investigate, format) {
     line.setAttribute("data-path", advice.path);
     const badge = document.createElement("span");
     badge.className = "badge";
-    badge.textContent = advice.severity;
+    badge.textContent = title(advice.severity);
     line.append(badge, document.createTextNode(` ${advice.text}`));
     section.append(line);
   }
@@ -974,7 +976,7 @@ export function renderWhatIf(payload, ask = null, options = {}) {
       answer.setAttribute("data-makespan-us", String(published));
       answer.textContent =
         `The build drops to ${seconds(published)} — published, the first `
-        + `${selected.length} step(s) of the plan.`;
+        + `${plural(selected.length, "step")} of the plan.`;
       return;
     }
     if (!ask) {

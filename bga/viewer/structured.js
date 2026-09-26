@@ -165,7 +165,7 @@ export function mapTable(key, rows, hint, node, nested, depth = 0, path = key) {
     const measure = hintsOf(node)[QUANTITY] ?? guessQuantity(key)
       ?? (record ? null : "count");
     declared = { ...hint, [COLUMNS]: [
-      { key: "key", title: "name" },
+      { key: "key", title: "Name" },
       { key: "value", title: title(key, measure), quantity: measure }] };
   }
   const { table, tools } = buildTable(path, rows, declared, node, depth);

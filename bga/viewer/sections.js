@@ -105,7 +105,7 @@ export function renderFindingEvidence(evidence, node = undefined) {
   return el("details", { class: "evidence-fold", "data-fold": "evidence",
                          "data-levels": "1", "data-rows": String(rows) },
             el("summary", {},
-               `${rows} measurements · 1 level, `
+               `Evidence · 1 level, `
                + `${rows} row${rows === 1 ? "" : "s"}`),
             list);
 }
@@ -123,7 +123,7 @@ export function renderFindings(findings, investigate = null, node = undefined) {
       { class: "finding", id: findingAnchor(finding.id), "data-severity": severity,
         "data-finding-id": finding.id ?? "" },
       el("p", { class: "title" },
-        el("span", { class: "badge" }, severity),
+        el("span", { class: "badge" }, title(severity)),
         finding.title ?? finding.id ?? ""));
     // UX-921: `_hydrate` appends the rest once; a second call no-ops.
     article._hydrate = () => {
@@ -436,7 +436,7 @@ function mapSectionLabels(box, key, hint, node) {
     const record = Boolean(node?.properties);
     const measure = hintsOf(node)[QUANTITY] ?? guessQuantity(key)
       ?? (record ? null : "count");
-    relabelHead(valueHead, measure ? title(measure, measure) : "value");
+    relabelHead(valueHead, measure ? title(measure, measure) : "Value");
   }
   for (const cell of columnCells(table, "key")) {
     const raw = cell.getAttribute("data-raw");

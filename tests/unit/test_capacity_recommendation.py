@@ -94,7 +94,7 @@ class TestWhichConstraintBinds:
         # 0.5 cores per element, 8 cores -> 16, clamped to the 8 the host has.
         assert cpu['allows'] == 8
         assert cpu['clamped_from'] == 16
-        assert "0.50 core(s) per concurrent element" in cpu['reason']
+        assert "0.50 cores per concurrent element" in cpu['reason']
 
     def test_a_cpu_figure_under_the_cores_is_not_clamped(self):
         """The clamp only fires when the raw figure exceeds the host's
@@ -198,7 +198,7 @@ class TestTheFinding:
         finding = _capacity_recommendation_finding(self._result(recommendation))[0]
 
         assert finding['id'] == 'capacity-recommendation'
-        assert "builders 4 x max-jobs 4 on 4 core(s)" in finding['title']
+        assert "builders 4 x max-jobs 4 on 4 cores" in finding['title']
         assert "CPU binds at exactly 4" in finding['title']
 
     def test_an_unrecorded_max_jobs_is_named_rather_than_dropped(self):

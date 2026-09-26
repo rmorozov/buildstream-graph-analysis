@@ -1,0 +1,1767 @@
+[
+  {
+    "exception": "command name",
+    "role": "heading",
+    "text": "bga"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "What should I do?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "What to fix first"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "How these were ranked"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "Next"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "What this run supports"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "Where the time went"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "And the floors underneath it"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "Findings (#)"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "What should I fix first, and what is it worth?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "What should I run next?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "What if I change this?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "Blast radius"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "Choose the fixes"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "Questions worth asking in Perfetto"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "Where did the time actually go, per element?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "Where are the longest stalls?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "Which scheduler queue was the run waiting in?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "How many processes were running at once, over time?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "Were the cores busy, or just the machine loaded?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "Whose run is this, and did it finish?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "What did one element actually execute?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "Which programs is one element made of?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "Which kinds of element cost the most?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "What failed, and what ran it?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "What ran at each level of the dependency graph?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "What was this element waiting for?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "What did this element wait for, by the graph?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "Which elements ran the most processes?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "What is the sandbox tax here?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "Which programs is this run made of?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "Which elements are waiting rather than computing?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "Which single process wanted the most memory?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "Where did the time go?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "Where did the wall-clock go?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "Which elements are on the chain that binds?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "The chain, drawn"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "What if I fix these"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "What is fixing each element in turn worth?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "What is big and off the chain?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "What is fixing these together worth?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "Did fetching wait for building?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "How much of the run did each task hold?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "Was the machine used well?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "Were the builders busy?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "What did the machine cost to run this?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "How much faster could this run possibly be?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "Was the capacity right for this run?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "How much work was waiting to start?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "Were the cores the binding resource?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "Which elements, and how do they connect?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "Which element should I look at?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "What shape is this graph, in one line?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "What shape is this dependency graph?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "What does everything wait on?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "How wide can this graph run?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "How much faster could this graph go?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "What could be built later, or not at all?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "What could be built together?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "What could be merged?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "What forces this run to serialize?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "Which elements does nothing wait on?"
+  },
+  {
+    "exception": "product name",
+    "role": "heading",
+    "text": "base.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "heading",
+    "text": "lib.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "heading",
+    "text": "app.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "heading",
+    "text": "extra.bst"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "How much of this can I believe?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "How much of this can be believed?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "What did not add up?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "Why does bga believe this?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "Which run is this?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "Run"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "Which build of bga measured this?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "How deep is this document?"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "\u2191 Top"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "\u2190 Prev"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Next \u2192"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Open timeline in Perfetto"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "What if I change this? \u00b7 #"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Where did the time go? \u00b7 #"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Was the machine used well? \u00b7 #"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Which elements, and how do they connect? \u00b7 #"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "How much of this can I believe? \u00b7 #"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Which run is this? \u00b7 #"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Collapse all"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Expand all"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Copy link to this view"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "\u25be"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Copy command"
+  },
+  {
+    "exception": "acronym",
+    "role": "button",
+    "text": "View as JSON"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "?"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Copy finding"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Copy # rows"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Show # sections"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Copy query"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "As table"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Copy # row"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Focus"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Working"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Done"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Set aside"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Why ##"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "The rule \u00b7 # level, # rows"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "The numbers behind that \u00b7 # level, # rows"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Scheduling (#)"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Execution (#)"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Dependencies (#)"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Resources (#)"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Buckets \u00b7 # level, # rows"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Serialized pairs \u00b7 # levels, # rows"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Leaves detail \u00b7 # levels, # rows"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Hard gates \u00b7 # level, # rows"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Diagnosis \u00b7 # level, # rows"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Wait category \u00b7 # level, # rows"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Time concentration \u00b7 # level, # rows"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Chain graph \u00b7 # level, # row"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Blast radius reach \u00b7 # level, # rows"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Fan in ranking \u00b7 # level, # rows"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Graph width \u00b7 # level, # rows"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Joint saving \u00b7 # level, # rows"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Optimization horizon \u00b7 # level, # rows"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Latent heavies \u00b7 # level, # row"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Confidence \u00b7 # level, # rows"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Remote execution whatif \u00b7 # level, # rows"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Efficiency score \u00b7 # level, # rows"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Contracts \u00b7 # level, # rows"
+  },
+  {
+    "exception": null,
+    "role": "rail-chapter",
+    "text": "What should I do? \u00b7 #"
+  },
+  {
+    "exception": null,
+    "role": "rail-chapter",
+    "text": "What if I change this? \u00b7 #"
+  },
+  {
+    "exception": null,
+    "role": "rail-chapter",
+    "text": "Where did the time go? \u00b7 #"
+  },
+  {
+    "exception": null,
+    "role": "rail-chapter",
+    "text": "Was the machine used well? \u00b7 #"
+  },
+  {
+    "exception": null,
+    "role": "rail-chapter",
+    "text": "Which elements, and how do they connect? \u00b7 #"
+  },
+  {
+    "exception": null,
+    "role": "rail-chapter",
+    "text": "How much of this can I believe? \u00b7 #"
+  },
+  {
+    "exception": null,
+    "role": "rail-chapter",
+    "text": "Which run is this? \u00b7 #"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "What to fix first"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "What this run supports"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "Where the time went"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "Findings (#)"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "What should I fix first, and what is it worth?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "What should I run next?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "Blast radius"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "Choose the fixes"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "Questions worth asking in Perfetto"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "Where did the wall-clock go?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "Which elements are on the chain that binds?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "The chain, drawn"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "What if I fix these"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "What is fixing each element in turn worth?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "What is big and off the chain?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "What is fixing these together worth?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "Did fetching wait for building?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "How much of the run did each task hold?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "Were the builders busy?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "What did the machine cost to run this?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "How much faster could this run possibly be?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "Was the capacity right for this run?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "How much work was waiting to start?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "Were the cores the binding resource?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "Which element should I look at?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "What shape is this graph, in one line?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "What shape is this dependency graph?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "What does everything wait on?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "How wide can this graph run?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "How much faster could this graph go?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "What could be built later, or not at all?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "What could be built together?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "What could be merged?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "What forces this run to serialize?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "Which elements does nothing wait on?"
+  },
+  {
+    "exception": "product name",
+    "role": "rail-entry",
+    "text": "base.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "rail-entry",
+    "text": "lib.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "rail-entry",
+    "text": "app.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "rail-entry",
+    "text": "extra.bst"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "How much of this can be believed?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "What did not add up?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "Why does bga believe this?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "Run"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "Which run is this?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "Which build of bga measured this?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "How deep is this document?"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Element"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Worth"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Reasoning in"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Part"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Value"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Kind"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Duration"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Share of path"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Realizable"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Saving"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Makespan after"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Cumulative"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Name"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Buckets"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Element durations"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Downstream count"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Is leaf"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Observed critical"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Rank"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Split this first"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Length"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Of longest path"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Members"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Level"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Elements here"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Which elements"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Sensitivity"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Worth fixing"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Ran first"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Ran after it"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Key"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Element kind"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Is structural kind"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Is potentially deferrable"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Deferral risk"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Measure"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Claim"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Published as"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Contracts"
+  },
+  {
+    "exception": "sentence continuation",
+    "role": "option",
+    "text": "anyone"
+  },
+  {
+    "exception": null,
+    "role": "option",
+    "text": "I can change these elements"
+  },
+  {
+    "exception": null,
+    "role": "option",
+    "text": "I own one element's recipe"
+  },
+  {
+    "exception": null,
+    "role": "option",
+    "text": "I own the dependency graph"
+  },
+  {
+    "exception": null,
+    "role": "option",
+    "text": "I decide whether this build passes"
+  },
+  {
+    "exception": "product name",
+    "role": "option",
+    "text": "app.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "option",
+    "text": "base.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "option",
+    "text": "extra.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "option",
+    "text": "lib.bst"
+  },
+  {
+    "exception": null,
+    "role": "option",
+    "text": "All elements (#)"
+  },
+  {
+    "exception": null,
+    "role": "option",
+    "text": "Critical path (#)"
+  },
+  {
+    "exception": null,
+    "role": "option",
+    "text": "Leaves (#)"
+  },
+  {
+    "exception": null,
+    "role": "option",
+    "text": "Latent heavies (#)"
+  },
+  {
+    "exception": null,
+    "role": "option",
+    "text": "What does my element wait on (#)"
+  },
+  {
+    "exception": null,
+    "role": "option",
+    "text": "All rows"
+  },
+  {
+    "exception": null,
+    "role": "option",
+    "text": "Top # by value"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "Which dependency edges are never read?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "How much of this run came from the cache?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "Which binaries cost this build its time?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "How are this run's element durations spread?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "What did BuildStream spend outside the elements?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "What did this build actually run, and how often?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "What does configuring cost, before anything is built?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "What should the capacity be, and what decides it?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "How are blast radii spread across this graph?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "How are fan-ins spread across this graph?"
+  },
+  {
+    "exception": "product name",
+    "role": "heading",
+    "text": "core.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "heading",
+    "text": "lib-b.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "heading",
+    "text": "lib-d.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "heading",
+    "text": "toolchain.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "heading",
+    "text": "lib-a.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "heading",
+    "text": "lib-c.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "heading",
+    "text": "lib-e.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "heading",
+    "text": "lib-f.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "heading",
+    "text": "all.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "heading",
+    "text": "codegen.bst"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "Do the two planes agree about the clock?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "How much did Plane # see?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "How much of the build did the two planes agree on?"
+  },
+  {
+    "exception": "acronym",
+    "role": "heading",
+    "text": "What did the whole build cost in CPU?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "What does a peak-memory figure here mean?"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Evidence \u00b7 # level, # rows"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Half of this graph's # elements reach # others or fewer; the top tenth reach # others or more, up to #. Reach is spread across many elements - there is no\u2026 # chars"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Edges \u00b7 # levels, # rows"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Projection \u00b7 # levels, # rows"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Target closure \u00b7 # levels, # rows"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Derived from this run's shape: the sweep replays observed durations and does not model contention, and cores-busy is an average over the whole run rather than\u2026 # chars"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Pinned elements \u00b7 # levels, # row"
+  },
+  {
+    "exception": "product name",
+    "role": "summary",
+    "text": "core.bst runs its own build system at # job - `variables: notparallel: True` - while the rest of this build runs at # and it is the longest kind of task here\u2026 # chars"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Leaves detail \u00b7 # levels, # row"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "What Plane # saw \u00b7 # level, # rows"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Blast radius foundation \u00b7 # level, # row"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Fan in structural \u00b7 # level, # row"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Cache hit ratio \u00b7 # level, # rows"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Memory envelope \u00b7 # level, # rows"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Capacity recommendation \u00b7 # level, # rows"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Static census \u00b7 # levels, # rows"
+  },
+  {
+    "exception": "acronym",
+    "role": "summary",
+    "text": "Read from the project's own `local` sources before anything runs: an ELF executable with no PT_INTERP never invokes the dynamic linker, so LD_PRELOAD never\u2026 # chars"
+  },
+  {
+    "exception": "acronym",
+    "role": "summary",
+    "text": "LD_PRELOAD only affects dynamically-linked executables. Any statically-linked process invoked inside the sandbox (e.g. a musl-based toolchain, busybox, some\u2026 # chars"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Host manifest \u00b7 # levels, # rows"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "Which dependency edges are never read?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "How much of this run came from the cache?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "Which binaries cost this build its time?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "How are this run's element durations spread?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "What did BuildStream spend outside the elements?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "What did this build actually run, and how often?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "What does configuring cost, before anything is built?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "What should the capacity be, and what decides it?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "How are blast radii spread across this graph?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "How are fan-ins spread across this graph?"
+  },
+  {
+    "exception": "product name",
+    "role": "rail-entry",
+    "text": "core.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "rail-entry",
+    "text": "lib-b.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "rail-entry",
+    "text": "lib-d.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "rail-entry",
+    "text": "toolchain.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "rail-entry",
+    "text": "lib-a.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "rail-entry",
+    "text": "lib-c.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "rail-entry",
+    "text": "lib-e.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "rail-entry",
+    "text": "lib-f.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "rail-entry",
+    "text": "all.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "rail-entry",
+    "text": "codegen.bst"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "Do the two planes agree about the clock?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "How much did Plane # see?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "How much of the build did the two planes agree on?"
+  },
+  {
+    "exception": "acronym",
+    "role": "rail-entry",
+    "text": "What did the whole build cost in CPU?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "What does a peak-memory figure here mean?"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Severity"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Unread edges"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Replayed without them"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Staged by"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Never read by"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Projection"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Target closure"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Task"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Binary"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Calls"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Cpu"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Mark"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Phase"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Elapsed"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Count"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Constraint"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Builders it allows"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Why"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Before clamping"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Waiting on it"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Direct dependencies"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Direct dependents"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Pinned elements"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Builders"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Governing cores"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Notparallel"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Typical max jobs"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Hint"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Native jobs"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Static census"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Host manifest"
+  },
+  {
+    "exception": null,
+    "role": "option",
+    "text": "I own the machines it runs on"
+  },
+  {
+    "exception": "product name",
+    "role": "option",
+    "text": "all.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "option",
+    "text": "codegen.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "option",
+    "text": "core.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "option",
+    "text": "lib-a.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "option",
+    "text": "lib-b.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "option",
+    "text": "lib-c.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "option",
+    "text": "lib-d.bst"
+  },
+  {
+    "exception": null,
+    "role": "option",
+    "text": "Top # by calls"
+  },
+  {
+    "exception": "code",
+    "role": "option",
+    "text": "Top # by cpu_us"
+  },
+  {
+    "exception": "code",
+    "role": "option",
+    "text": "Top # by cpu_share"
+  },
+  {
+    "exception": null,
+    "role": "option",
+    "text": "Choke points (#)"
+  },
+  {
+    "exception": null,
+    "role": "option",
+    "text": "Plane # (sandbox) (#)"
+  },
+  {
+    "exception": "code",
+    "role": "option",
+    "text": "Top # by element_durations"
+  },
+  {
+    "exception": "code",
+    "role": "option",
+    "text": "Top # by downstream_count"
+  },
+  {
+    "exception": null,
+    "role": "option",
+    "text": "Top # by rank"
+  },
+  {
+    "exception": null,
+    "role": "option",
+    "text": "Top # by length"
+  },
+  {
+    "exception": "code",
+    "role": "option",
+    "text": "Top # by weighted_duration_us"
+  },
+  {
+    "exception": "code",
+    "role": "option",
+    "text": "Top # by wall_share"
+  }
+]

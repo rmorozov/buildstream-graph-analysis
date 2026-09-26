@@ -308,7 +308,9 @@ export function title(key, kind = null, published = false) {
   // Never trim a key down to nothing: `_us` alone is not a label.
   const trimmed = suffix ? key.replace(suffix, "") : key;
   const named = trimmed || key;
-  return named.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
+  // `UX-1020`: a claim id (`wait-category`) is kebab-case, not a
+  // published name - the same word-join `_` already gets.
+  return named.replace(/[_-]/g, " ").replace(/^./, (c) => c.toUpperCase());
 }
 
 /**

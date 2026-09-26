@@ -374,7 +374,7 @@ a:not(p a) { display: inline-flex; align-items: center; justify-content: center;
 .finding .title { font-weight: 600; }
 .finding .detail { margin: var(--space-1) 0 0; }
 .badge {
-  font-size: var(--font-small); text-transform: uppercase; letter-spacing: .04em;
+  font-size: var(--font-small); letter-spacing: .04em;
   color: var(--muted); margin-right: var(--space-2);
 }
 
@@ -692,7 +692,7 @@ input.table-filter { max-width: 100%; }
 .investigate button:hover { border-color: var(--accent); }
 .investigate .handoff { margin-left: var(--space-2); font-size: var(--font-small); }
 .investigate .query { margin: var(--space-2) 0 0; font-size: var(--font-small); }
-h3.category { text-transform: capitalize; letter-spacing: .04em;
+h3.category { letter-spacing: .04em;
               color: var(--muted); font-size: var(--font-small); margin-top: var(--space-5); }
 
 /* UX-205: the tools above each table. */
@@ -817,7 +817,7 @@ section[data-promoted] { border-left: 3px solid var(--accent); }
         border-radius: 10px; cursor: pointer; }
 .chip:hover { border-color: var(--accent); }
 .toc-rail { margin: var(--space-2) 0 0; font-size: var(--font-small); letter-spacing: .06em;
-            text-transform: uppercase; color: var(--muted); }
+            color: var(--muted); }
 
 /* `UX-667` (styleguide §3h): a source list - every chapter, and only
    the open one's sections. `li[data-chapter]` is the row; `data-open`
@@ -833,16 +833,16 @@ section[data-promoted] { border-left: 3px solid var(--accent); }
    appearance `button.chapter-open` already draws (`test_every_control_
    has_a_resting_appearance.py` counts the whole look, not only the
    three fields the grade is keyed on, so `font-size` and `padding`
-   stay the base button's). Only layout and case are this rule's own -
-   neither is a measured field. */
+   stay the base button's). Only layout is this rule's own - it is not
+   a measured field. */
 button.toc-chapter-open {
   display: block; width: 100%; text-align: left;
   background: transparent; color: var(--muted);
-  letter-spacing: .06em; text-transform: uppercase;
+  letter-spacing: .06em;
 }
 button.toc-chapter-open:hover,
 button.toc-chapter-open[aria-expanded="true"] { color: var(--fg); }
-.question-group > summary { cursor: pointer; text-transform: capitalize;
+.question-group > summary { cursor: pointer;
                             color: var(--muted); font-size: var(--font-small);
                             margin-top: var(--space-2); }
 

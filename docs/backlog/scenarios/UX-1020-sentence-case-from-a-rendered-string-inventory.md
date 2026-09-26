@@ -30,4 +30,28 @@ Proper nouns and command names, which keep their case.
 
 ## Outcome
 
-Not started.
+Gap measured (`grep -n text-transform bga/viewer/style.css`, before): 5 rules
+(`.badge`, `h3.category`, `.toc-rail`, `button.toc-chapter-open`,
+`.question-group > summary`). Live `(s)` sweep of `golden`/`macro_micro`'s
+`document.body.innerText` (before): 9 occurrences across
+`bga/viewer/{decision,element,views}.js` and
+`bga/{correlate,findings,structural/serialization_points}.py`. Lowercase
+`<th>`/header defects found the same way: 4 (`name`, `element`, `value`,
+`mark`/`Value` pairs in `exhibitTwin` callers).
+
+Close measured: `python3 -m pytest tests/unit/test_labels_are_sentence_case.py -q`
+→ 5 passed. `grep -c text-transform bga/viewer/style.css` → 0. Live `(s)` sweep
+(after) → 0 occurrences on either fixture. `tools/dev_rendered_strings.py --write`
+→ 353 inventory rows, 0 uncased with `exception: null`.
+
+Mutation table:
+
+| mutation | reddened | test |
+|---|---|---|
+| restore `text-transform: uppercase` on `.toc-rail` | `test_no_text_transform_on_words` | 1 failed, 4 passed |
+| add unlisted button `"Collapse All"` | `test_every_rendered_label_is_listed_and_cased` (both fixtures) | 2 failed, 3 passed |
+| delete the `"Collapse all"` inventory row | `test_every_rendered_label_is_listed_and_cased` (both fixtures) | 2 failed, 3 passed |
+| restore `builder(s)` in `correlate.py`'s knee sentence | `test_no_parenthesised_plural_reaches_the_page` | 1 failed, 4 passed |
+
+Each reverted from a copy; `test_labels_are_sentence_case.py` returned to
+5 passed after every mutation.

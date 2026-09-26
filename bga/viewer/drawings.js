@@ -300,12 +300,12 @@ export function exhibitTwin(doc, headers, rows) {
     // `UX-279`'s rule: a control says what it does before it is
     // pressed, and it says it in a title a reader can reach.
     title: "Show the values this drawing was made from, as a table",
-  }, "as table");
+  }, "As table");
   button.addEventListener("click", () => {
     const open = button.getAttribute("data-drawing-twin") === "open";
     button.setAttribute("data-drawing-twin", open ? "closed" : "open");
     button.setAttribute("aria-expanded", open ? "false" : "true");
-    button.textContent = open ? "as table" : "as drawing";
+    button.textContent = open ? "As table" : "As drawing";
     table.hidden = open;
   });
   wrap.append(button);
@@ -420,7 +420,7 @@ export function sparkline(values, {
   // twin where §2a draws one (exhibit grade), the sentence otherwise.
   let twin = null;
   if (grade === GRADE_EXHIBIT) {
-    twin = exhibitTwin(doc, [unit, "value"],
+    twin = exhibitTwin(doc, [unit.charAt(0).toUpperCase() + unit.slice(1), "Value"],
                        points.map((v, i) => [i + 1, format(v)]));
     wrap.append(twin);
   }
@@ -618,7 +618,7 @@ export function strip(distribution, {
   // drawn, the sentence itself otherwise - both name every mark.
   let twin = null;
   if (grade === GRADE_EXHIBIT) {
-    twin = exhibitTwin(doc, ["mark", "value"], twinRows(marks, format));
+    twin = exhibitTwin(doc, ["Mark", "Value"], twinRows(marks, format));
     wrap.append(twin);
   }
   nameDrawing(drawn, sentenceText, twin ?? sentence);

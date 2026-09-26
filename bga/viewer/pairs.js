@@ -120,7 +120,7 @@ export function elementSignalTable(elements, node, join = null,
   const columns = [...new Set(rows.flatMap(Object.keys))]
     .filter((name) => name !== "element");
   const hint = {
-    [COLUMNS]: [{ key: "element", title: "element" },
+    [COLUMNS]: [{ key: "element", title: "Element" },
                 ...columns.map((name) => {
                   // `UX-835`: no blanket "count" here - `mapTable`'s
                   // record branch above already learned this default

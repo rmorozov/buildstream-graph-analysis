@@ -21,6 +21,7 @@
 // on that one fixture by coincidence rather than by compilation.
 
 import { identify, labelFor } from "./controls.js";
+import { title } from "./format.js";
 
 // `UX-210`: **every query says which plane it is asking.**
 //
@@ -847,7 +848,7 @@ export function renderQuestions(make, options = {}) {
                                    // had open" travels in the link.
                                    "data-fold": `questions-${category}` });
     const label = make("summary", { class: "category" });
-    label.textContent = `${category} (${entries.length})`;
+    label.textContent = `${title(category)} (${entries.length})`;
     fold.append(label);
     section.append(fold);
     for (const question of entries) {

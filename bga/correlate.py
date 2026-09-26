@@ -1147,7 +1147,7 @@ def compute_capacity_recommendation(
             'name': 'graph',
             'allows': knee,
             'reason': (
-                f"the sweep's knee is at {knee} builder(s)"
+                f"the sweep's knee is at {knee} builder{'' if knee == 1 else 's'}"
                 + (", the top of the range swept, so the graph may want more"
                    if knee_range_top and knee >= knee_range_top else "")
             ),
@@ -1164,9 +1164,9 @@ def compute_capacity_recommendation(
             'name': 'CPU',
             'allows': cpu_allows,
             'reason': (
-                f"{cores_busy:.2f} of {host_cores} core(s) busy at builders="
-                f"{builders}, i.e. {cores_busy / builders:.2f} core(s) per "
-                f"concurrent element"
+                f"{cores_busy:.2f} of {host_cores} core{'' if host_cores == 1 else 's'} "
+                f"busy at builders={builders}, i.e. {cores_busy / builders:.2f} cores "
+                f"per concurrent element"
             ),
         }
         if clamped_from:
@@ -1320,8 +1320,8 @@ def _memory_allows(memory_envelope: dict) -> Optional[dict]:
         'reason': (
             f"the {largest}-builder envelope fits in "
             f"{envelope['host_memory_bytes'] / GIB:.1f} GB"
-            + (f" (measured over {measured} element peak(s), so it says nothing "
-               f"above {measured})" if measured and largest >= measured else "")
+            + (f" (measured over {measured} element peak{'' if measured == 1 else 's'}, "
+               f"so it says nothing above {measured})" if measured and largest >= measured else "")
         ),
     }
 
@@ -1670,8 +1670,8 @@ def price_max_jobs_advice(advice, tasks, run_context, binary_cost) -> dict:
             continue
         if recommended > current:
             row['price_refusal'] = (
-                f"this run measured {uid} at {current} job(s) and has no "
-                f"evidence of how it scales up")
+                f"this run measured {uid} at {current} job{'' if current == 1 else 's'} "
+                f"and has no evidence of how it scales up")
             continue
         # recommended < current: needs the element's whole measured CPU
         # work to build the floor.

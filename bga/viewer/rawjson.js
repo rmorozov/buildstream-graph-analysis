@@ -44,8 +44,8 @@ export function recordSource(section, value) {
   return section;
 }
 
-export const SHOW = "view as JSON";
-export const HIDE = "hide JSON";
+export const SHOW = "View as JSON";
+export const HIDE = "Hide JSON";
 
 // `UX-1030` (styleguide §3k): the door drew a whole section as one
 // node - 3,592,666 characters on `elements`, at 4,002 elements. Past
@@ -56,8 +56,8 @@ export const JSON_DOOR_CHAR_CAP = 20_000;
 // `UX-825`: the payload key, carried on the toggle rather than the
 // heading - `title` and `aria-label` both, since it is what a hover
 // and a screen reader each read for this control.
-const SHOWN_TITLE = (key) => `view as JSON — ${key}`;
-const HIDDEN_TITLE = (key) => `hide JSON — ${key}`;
+const SHOWN_TITLE = (key) => `View as JSON — ${key}`;
+const HIDDEN_TITLE = (key) => `Hide JSON — ${key}`;
 
 /** Two-space indent: this is read and pasted, not transmitted. */
 export function sectionJson(value) {

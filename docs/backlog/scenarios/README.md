@@ -41,7 +41,6 @@ task file, which is the only place it ever lived twice.
 | UX-1012 | [the report says which elements drew from the jobserver, not only which were offered it](UX-1012-the-report-says-which-elements-drew-from-the-jobserver.md) | analysis | High | R4, R5 | 🔴 Not Started |
 | UX-1013 | [admission ranks from BuildStream's own cached build logs when bga never captured the project](UX-1013-admission-ranks-from-buildstreams-own-cached-build-logs.md) | capture | Medium | R4, R5 | 🔴 Not Started |
 | UX-1014 | [the "safe cap plus auto" default is measured on more shapes and hosts before it is anyone's default](UX-1014-the-builders-and-auto-default-is-measured-on-more-shapes-and-hosts.md) | capture | High | R4, R5 | 🔴 Not Started |
-| UX-1035 | [fonts compute to the two declared stacks, not Arial or bare monospace](UX-1035-fonts-compute-to-the-two-stacks.md) | viewer | Low | R1 | 🔴 Not Started |
 | UX-1037 | [26 payload containers grow with the run and no §1 control bounds them](UX-1037-a-growing-container-with-no-bounding-control.md) | viewer | Medium | R1, R5 | 🔴 Not Started |
 | UX-1038 | [CLI output prints `(s)` plurals where the count is known](UX-1038-cli-output-prints-parenthesised-plurals.md) | cli | Low | R1 | 🔴 Not Started |
 

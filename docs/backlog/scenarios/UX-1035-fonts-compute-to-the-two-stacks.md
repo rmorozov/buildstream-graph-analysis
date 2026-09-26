@@ -1,6 +1,6 @@
 # UX-1035: fonts compute to the two declared stacks, not Arial or bare monospace
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §4.5 | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §4.5 | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
 
 ## Motivation
 
@@ -45,3 +45,5 @@ Mutation table:
 | `test_fonts_compute_to_two_stacks.py::test_every_rendered_element_computes_to_one_of_two_stacks` | `button { font-family: Arial; }` | red: 3 families, `['...sans-serif', 'Arial', '...monospace']` |
 
 `make lint`: clean (baseline-forced findings unrelated). `dev_sizes.py --check`: ok, 148 files.
+
+Deviation: none from the Required Fix; on the merge `pre` inherited the UA monospace, so the rule names it too (`320df09f`).

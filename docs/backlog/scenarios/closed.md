@@ -992,6 +992,7 @@ is open, on what topic, for whom — is the other file's.
 | UX-1032 | [the §3k census presses every step control at the largest size class](UX-1032-the-bound-census-presses-every-step.md) | Medium | R1, R4 | 🟢 Done — the §3k census presses every step 10 times on the 4,002-element run; tables mounted 4,002 rows before | [UX-1032](UX-1032-the-bound-census-presses-every-step.md) |
 | UX-1033 | [form controls take the type scale, not the browser's 13.333px](UX-1033-form-controls-take-the-type-scale.md) | Low | R1 | 🟢 Done — `input`, `select` and `textarea` inherit the font; five computed sizes were four again | [UX-1033](UX-1033-form-controls-take-the-type-scale.md) |
 | UX-1034 | [reader chips print R1 to R5 inside section headings](UX-1034-reader-chips-print-internal-keys.md) | Low | R1 | 🟢 Done — reader chips print the reader's words, `R3` -> "graph owner", never the R-id | [UX-1034](UX-1034-reader-chips-print-internal-keys.md) |
+| UX-1035 | [fonts compute to the two declared stacks, not Arial or bare monospace](UX-1035-fonts-compute-to-the-two-stacks.md) | Low | R1 | 🟢 Done — every rendered element computes to the sans or mono stack; Times New Roman and Arial were two of four | [UX-1035](UX-1035-fonts-compute-to-the-two-stacks.md) |
 
 ## UX-207..UX-212: the twenty-third audit round — the report learns to answer first (2026-08-22)
 

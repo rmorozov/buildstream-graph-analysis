@@ -27,53 +27,55 @@ enhancement, never the meaning itself.
 
 The sections below are numbered in the order they were written, and
 tests cite those numbers, so they stay. This is the reading order: one
-line per section, the rule only; the section holds its measurement.
+line per section, the rule only; the section holds its measurement and
+history, and §7 names its guard. *Binding* is law the page is held to;
+*proposed* is not law until accepted and its row filed.
 
-| topic | § | the rule |
-|---|---|---|
-| **What a value renders as** | §1 | a control is chosen by the value's declared shape; raw JSON only in the labeled fold and the JSON toggle |
-| | §1a | every schema hint is listed once, here, and nowhere else |
-| | §1b | every published field reaches a reader, or the page names the ones that do not |
-| | §1d | a command is one monospace line with a copy control, never a list of its words |
-| | §1e | an ordered `{reason, command}` array is a runbook, rendered once, never a table |
-| **Drawings** | §2 | a series is a sparkline, a distribution a density strip, each with one sentence and its `n` |
-| | §2a | two grades only: annotation beside something, exhibit as the answer, sizes from tokens |
-| | §2c | every published distribution draws its strip |
-| | §2d | a drawing answers a question; four instruments, and a fifth only where none can |
-| | §2e | a ranked map is a sortable table, not a drawing |
-| | §2f | a distribution's table twin has one row per published mark |
-| | §6 | a drawing carries its sentence, then the drawing, then its `n` |
-| **Tables and folds** | §3 | tables open bounded, numbers right, one tool row, folds labeled with a count |
-| | §3a | depth is announced; deeper than one level opens in table focus |
-| | §3d | table tools appear at the row cap; a one-value column is a sentence |
-| | §3j | a fold bounds its hidden controls, not only its visible rows |
-| | §3k | every population opens at a named bound, and the step past it is bounded too |
-| **Navigation** | §3b | any section is at most two interactions from the rail |
-| | §3c | the landed page is at most 10 screens; chapters fold |
-| | §3h | the rail shows every chapter and only the current chapter's sections |
-| **Budgets** | §3e | landed distance and opened volume are both bounded, per size class |
-| | §3f | a bound is enforced at the largest size and in the mode people use |
-| | §3g | a budget counts the unit its consumer spends |
-| | §5a | repeated text is bounded; distinct blocks may not fall |
-| **Header** | §2b | a control's explanation lives with the control; a described value shows its `?` |
-| | §3i | the header is at most 72 px: wordmark, run alias and instant, reader picker |
-| | §5b | what the header's picker already lists is not drawn again |
-| **Colour, type, emphasis** | §4 | no categorical hues; one accent; status tone never alone; one emphasis per block |
-| | §4f | four type sizes; prose lines at most 72 characters |
-| | §5 | dark is the design surface; light and print carry the same tokens |
-| **Controls** | §4c | a control acts on the scope its label names, and acknowledges the press |
-| | §6d | every control is one of four resting grades |
-| **Words** | §1c | a superlative is a measurement |
-| | §4a | a description sits behind its `?`; only a declared name or caveat stays inline |
-| | §4b | a label drops the payload's unit suffix |
-| | §4g | no task id, payload key or producer word in anything a reader sees |
-| **Handoffs** | §4d | a handed-over query or command carries this run's values |
-| | §4e | a handoff states what it could not carry |
-| **Dependencies** | §6b | a library is admitted only on a measured cost |
-| | §6c | the browser's primitives come first |
-| **Borrowed from Apple** | §6a | the borrowings, what each costs, and what is refused |
-| | §6e | *proposed*: hierarchy, sentence case, spacing and target scales, focus, size classes, find-in-page |
-| **Enforcement** | §7 | every section names its guard, or says why it has none |
+| topic | § | the rule | status |
+|---|---|---|---|
+| **What a value renders as** | §1 | a control is chosen by the value's declared shape; raw JSON only in the labeled fold and the JSON toggle | binding |
+| | §1a | every schema hint is listed once, here, and nowhere else | binding |
+| | §1b | every published field reaches a reader, or the page names the ones that do not | binding |
+| | §1d | a command is one monospace line with a copy control, never a list of its words | binding |
+| | §1e | an ordered `{reason, command}` array is a runbook, rendered once, never a table | binding |
+| **Drawings** | §2 | a series is a sparkline, a distribution a density strip, each with one sentence and its `n` | binding |
+| | §2a | two grades only: annotation beside something, exhibit as the answer, sizes from tokens | binding |
+| | §2c | every published distribution draws its strip | binding |
+| | §2d | a drawing answers a question; four instruments, and a fifth only where none can | binding |
+| | §2e | a ranked map is a sortable table, not a drawing | binding |
+| | §2f | a distribution's table twin has one row per published mark | binding |
+| | §6 | a drawing carries its sentence, then the drawing, then its `n` | binding |
+| **Tables and folds** | §3 | tables open bounded, numbers right, one tool row, folds labeled with a count | binding |
+| | §3a | depth is announced; deeper than one level opens in table focus | binding |
+| | §3d | table tools appear at the row cap; a one-value column is a sentence | binding |
+| | §3j | a fold bounds its hidden controls, not only its visible rows | binding; guard not filed |
+| | §3k | every population opens at a named bound, and the step past it is bounded too | binding; 3 open violations |
+| **Navigation** | §3b | any section is at most two interactions from the rail | binding |
+| | §3c | the landed page is at most 10 screens; chapters fold | binding |
+| | §3h | the rail shows every chapter and only the current chapter's sections | binding |
+| **Budgets** | §3e | landed distance and opened volume are both bounded, per size class | binding |
+| | §3f | a bound is enforced at the largest size and in the mode people use | binding |
+| | §3g | a budget counts the unit its consumer spends | binding |
+| | §5a | repeated text is bounded; distinct blocks may not fall | binding |
+| **Header** | §2b | a control's explanation lives with the control; a described value shows its `?` | binding |
+| | §3i | the header is at most 72 px: wordmark, run alias and instant, reader picker | binding |
+| | §5b | what the header's picker already lists is not drawn again | binding |
+| **Colour, type, emphasis** | §4 | no categorical hues; one accent; status tone never alone; one emphasis per block | binding |
+| | §4f | four type sizes; prose lines at most 72 characters | binding |
+| | §5 | dark is the design surface; light and print carry the same tokens | binding |
+| **Controls** | §4c | a control acts on the scope its label names, and acknowledges the press | binding |
+| | §6d | every control is one of four resting grades | binding |
+| **Words** | §1c | a superlative is a measurement | binding |
+| | §4a | a description sits behind its `?`; only a declared name or caveat stays inline | binding |
+| | §4b | a label drops the payload's unit suffix | binding |
+| | §4g | no task id, payload key or producer word in anything a reader sees | binding |
+| **Handoffs** | §4d | a handed-over query or command carries this run's values | binding |
+| | §4e | a handoff states what it could not carry | binding |
+| **Dependencies** | §6b | a library is admitted only on a measured cost | binding |
+| | §6c | the browser's primitives come first | binding |
+| **Borrowed from Apple** | §6a | the borrowings, what each costs, and what is refused | binding; 2 rows open (§6e) |
+| | §6e | *proposed*: hierarchy, sentence case, spacing and target scales, focus, size classes, find-in-page | proposed |
+| **Enforcement** | §7 | every section names its guard, or says why it has none | binding |
 
 ## 1. The mapping: published shape → control
 
@@ -1235,37 +1237,56 @@ HIG's foundations — hierarchy, harmony, consistency, clarity,
 deference, accessibility — into rules for this page, each with the gap
 it closes. **Every rule here is proposed**: none is law until it is
 accepted and its row is filed with the guard named beside it.
+**Priority** orders the filing by how visibly a reader fails without the
+rule: find-in-page (11), the keyboard journey (8) and chart access (9)
+first; the spacing scale (6) and the primary grade (5) last.
 
-Measured on `main` at `98ab850`: `python3 -m tools.bga_view <run>
---export` on `macro_micro` and `golden`, booted in Chromium at 1440x900
-and 390x844, light scheme; style counts are greps of `style.css`.
+Measured on `main` at `98ab850`, on the landed page (no fold opened):
+
+- **fixtures and export**: `python3 -m tools.bga_view <copy of
+  tests/fixtures/macro_micro/run> --export mm.html` and the same for
+  `tests/fixtures/golden/mixed_task_kinds`;
+- **browser**: Chromium 1194 (`/opt/pw-browsers/chromium-1194`) through
+  Playwright, `file://`, 1440x900 and 390x844, the light scheme, 800 ms
+  after load;
+- **counting**: *rendered* is an element whose `getBoundingClientRect()`
+  has a non-zero width and height — on the landed page, not only the
+  first screen; font sizes and families are `getComputedStyle` over every
+  rendered element; doors are `button.describe`, their block the nearest
+  `dl, table, section[data-section], ul, ol`; drawings are
+  `svg[role=img]` with neither `aria-label` nor a `<title>` child;
+- **style counts**: every `margin`, `padding` and `gap` length in
+  `bga/viewer/style.css`, deduplicated after dropping a leading `0`.
+
+The guard a rule files replaces its row here with the guard's own
+reading, so these figures are the baseline it is compared against.
 
 ```text
                                         macro_micro    golden
 computed font sizes (§4f allows 4)                5         5    13.333px: UA default on <input>
 chapter title vs section title               h2 17px/700 both    h1 is the wordmark
 `?` doors / blocks holding them              191 / 39  127 / 29  43% of all buttons
-visible buttons under 24px in a dimension    73 of 77  54 of 58  door 14x14px
+rendered buttons under 24px in a dimension   73 of 77  54 of 58  of 446 / 294 in the DOM
 drawings with role=img and no name           20 of 23   8 of 11
 capitalisation conventions                          4          4  sentence, lower, UPPER, Capitalised
 distinct margin/padding/gap lengths                23 in style.css
 ```
 
-| # | HIG principle | the rule | closes | guard it would take |
-|---|---|---|---|---|
-| 1 | **Hierarchy** | one outline: one `h1` (the run), `h2` a chapter at `--font-h1`, `h3` a section at `--font-h2`, `h4` a block at body weight 600, no level skipped; a reader tells a chapter from its section without reading either | chapter and section both `h2` 17px | the outline, below |
-| 2 | **Consistency** | one concept, one word, one control, one place, on every bga surface — this page, its Perfetto and SQL pages, `describe()`; the reader's nouns (run, element, task, chain) are listed once, in this guide | two "why" controls per top action; three disclosure glyphs | a glossary the reader-strings guard (§4g) reads |
-| 3 | **Writing** | sentence case for every heading, label, button and rail entry — no `text-transform` on words; a plural follows its count, never `(s)` | four conventions; `element(s)`, `core(s)` | a rendered-string inventory first, below |
-| 4 | **Deference** | one `?` door per block, opening every description in it as one list | 191 doors in 39 blocks | booted: doors per block ≤ 1 |
-| 5 | **One primary action** | a fifth control grade, `primary` (accent fill), worn by at most one control **per chapter**; a chapter with no runnable next step has none | §6a's row, never decided | the scope, below |
-| 6 | **Harmony** | spacing comes from a scale on a 4px grid (`--space-1` 4px to `--space-8` 32px); no bare length in `margin`, `padding` or `gap` | 23 distinct lengths | source: every spacing value is a token |
-| 7 | **Accessibility: targets** | every control's hit area is at least 24x24 CSS px with a fine pointer and 44x44 with a coarse one — stricter than WCAG 2.2 AA, below; a small glyph takes padding, not a bigger glyph | door 14x14px | both pointers, links included, below |
-| 8 | **Accessibility: keyboard** | one focus ring, 2px accent, on every focusable element; Tab follows reading order; Escape leaves table focus | a designed ring on `button` only | booted: `:focus-visible` outline on `a`, `input`, `select`, `summary` |
-| 9 | **Charts** | a drawing's accessible name is its sentence (§6), and every drawing shape has an accessible route to its labelled values | 20 of 23 unnamed | the name and the route, below |
-| 10 | **Adaptivity** | two size classes, regular (≥ 60rem) and compact; the budgets (§3c, §3e) are measured in both, and compact draws no empty chrome | budgets at 1440x900 only; an empty band under "Sections" at 390px | the volume guard gains a compact column |
-| 11 | **Search** | find-in-page reaches folded content: a folded chapter's sections are `hidden="until-found"`, and the reveal goes through the same state setter as the chapter's control | 5 of 6 chapters are `display: none` to Ctrl+F | find, fragments, controls and print, below |
-| 12 | **Clarity** | an absence is one sentence: what is missing, why, and the command that fills it; no punctuation around an empty value | the header's orphan "—" with the reader "anyone" | booted: no separator beside an empty node |
-| 13 | **Progressive disclosure** | one glyph pair, ▸ closed and ▾ open, at the start of the label; the label names the content and its count, never the structure | "1 level, 2 rows" | booted: one glyph pair; §3a's depth guard reads the label |
+| # | HIG principle | the rule | closes | priority | guard it would take |
+|---|---|---|---|---|---|
+| 1 | **Hierarchy** | one outline: one `h1` (the run), `h2` a chapter at `--font-h1`, `h3` a section at `--font-h2`, `h4` a block at body weight 600, no level skipped; a reader tells a chapter from its section without reading either | chapter and section both `h2` 17px | 2 | the outline, below |
+| 2 | **Consistency** | one concept, one word, one control, one place, on every bga surface — this page, its Perfetto and SQL pages, `describe()`; the reader's nouns (run, element, task, chain) are listed once, in this guide | two "why" controls per top action; three disclosure glyphs | 2 | the terminology matrix, below |
+| 3 | **Writing** | sentence case for every heading, label, button and rail entry — no `text-transform` on words; a plural follows its count, never `(s)` | four conventions; `element(s)`, `core(s)` | 2 | a rendered-string inventory first, below |
+| 4 | **Deference** | one `?` door per block, opening every description in it as one list | 191 doors in 39 blocks | 2 | booted: doors per block ≤ 1 |
+| 5 | **One primary action** | a fifth control grade, `primary` (accent fill), worn by at most one control **per chapter**; a chapter with no runnable next step has none | §6a's row, never decided | 3 | the scope, below |
+| 6 | **Harmony** | spacing comes from a scale on a 4px grid (`--space-1` 4px to `--space-8` 32px); no bare length in `margin`, `padding` or `gap` | 23 distinct lengths | 3 | source: every spacing value is a token |
+| 7 | **Accessibility: targets** | every control's hit area is at least 24x24 CSS px with a fine pointer and 44x44 with a coarse one — stricter than WCAG 2.2 AA, below; a small glyph takes padding, not a bigger glyph | door 14x14px | 2 | both pointers, links included, below |
+| 8 | **Accessibility: keyboard** | one focus ring, 2px accent, on every focusable element; Tab follows reading order; Escape leaves table focus | a designed ring on `button` only | 1 | the keyboard journey, below |
+| 9 | **Charts** | a drawing's accessible name is its sentence (§6), and every drawing shape has an accessible route to its labelled values | 20 of 23 unnamed | 1 | the name and the route, below |
+| 10 | **Adaptivity** | two size classes, regular (≥ 60rem) and compact; the budgets (§3c, §3e) are measured in both, and compact draws no empty chrome | budgets at 1440x900 only; an empty band under "Sections" at 390px | 2 | the volume guard gains a compact column |
+| 11 | **Search** | find-in-page reaches folded content: a folded chapter's sections are `hidden="until-found"`, and the reveal goes through the same state setter as the chapter's control | 5 of 6 chapters are `display: none` to Ctrl+F | 1 | find, fragments, controls and print, below |
+| 12 | **Clarity** | an absence is one sentence: what is missing, why, and the command that fills it; no punctuation around an empty value | the header's orphan "—" with the reader "anyone" | 2 | booted: no separator beside an empty node |
+| 13 | **Progressive disclosure** | one glyph pair, ▸ closed and ▾ open, at the start of the label; the label names the content and its count, never the structure | "1 level, 2 rows" | 2 | booted: one glyph pair; §3a's depth guard reads the label |
 
 **Rule 1, the outline.** `chapters.js` makes both the chapter title and
 the section title an `h2` today, and the viewer's CSS and JS select on
@@ -1275,6 +1296,24 @@ implements this re-derives every selector that names a heading level.
 Its guard walks the rendered outline: exactly one `h1`, no level more
 than one below the heading before it, every rail link landing on a
 heading of its entry's level, and sizes strictly decreasing by level.
+
+**Rule 2, the terminology matrix.** "One word, one control, one place"
+cannot be applied literally across four surfaces with different jobs,
+so the rule is a matrix: one row per reader concept (run, element,
+task, critical path, chain, capture, finding, next step), one column
+per surface (this report, the Perfetto page, the SQL page,
+`describe()`), each cell the word that surface prints. Words must agree
+across a row; controls and placement may differ, and a differing cell
+records why. The guard reads the rendered strings of each surface
+against the matrix, so a new word for an old concept reddens.
+
+**Rule 8, the keyboard journey.** A computed `:focus-visible` outline
+shows a ring exists, not that the page is operable. The guard drives
+one journey with the keyboard alone and asserts each landing: Tab to
+the rail, open a chapter from its rail row, Tab into that chapter's
+first table's tools, enter table focus, Escape out of it, and find focus
+returned to the control that entered it. Every stop shows the ring, and
+Tab order never leaves the reading order.
 
 **Rule 3, the inventory comes first.** A source check for
 `text-transform` and a grep for `(s)` pass most generated labels

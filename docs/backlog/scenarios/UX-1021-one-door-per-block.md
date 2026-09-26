@@ -1,6 +1,6 @@
 # UX-1021: one `?` door per block opens every description in it
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §6e.4 | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §6e.4 | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
 
 ## Motivation
 
@@ -57,3 +57,5 @@ Mutation table:
 `<dt>`; both walked forward to the block-door shape (door count now
 29/39, was 74/128; `markers == blocksDescribed` replaces `markers ==
 described - inlined`) rather than narrowed.
+
+Deviation: none from the Required Fix; on the merged tree `macro_micro` read 12,807 words, and the 50-element words bound moved 12,800 -> 12,900 (`af5adb3d`).

@@ -36,7 +36,7 @@ mypy-extensions==1.1.0
     # via isort
 networkx==3.6.1
     # via bga (pyproject.toml)
-nodeenv==1.10.0
+nodeenv==1.11.0
     # via pyright
 packaging==26.3
     # via pytest

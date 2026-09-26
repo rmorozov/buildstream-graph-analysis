@@ -1252,19 +1252,91 @@ distinct margin/padding/gap lengths                23 in style.css
 
 | # | HIG principle | the rule | closes | guard it would take |
 |---|---|---|---|---|
-| 1 | **Hierarchy** | one title per level: `h1` the run, `h2` a chapter at `--font-h1`, `h3` a section at `--font-h2`, `h4` a block at body weight 600; a reader tells a chapter from its section without reading either | chapter and section both `h2` 17px | booted: every chapter title strictly larger than every section title |
+| 1 | **Hierarchy** | one outline: one `h1` (the run), `h2` a chapter at `--font-h1`, `h3` a section at `--font-h2`, `h4` a block at body weight 600, no level skipped; a reader tells a chapter from its section without reading either | chapter and section both `h2` 17px | the outline, below |
 | 2 | **Consistency** | one concept, one word, one control, one place, on every bga surface — this page, its Perfetto and SQL pages, `describe()`; the reader's nouns (run, element, task, chain) are listed once, in this guide | two "why" controls per top action; three disclosure glyphs | a glossary the reader-strings guard (§4g) reads |
-| 3 | **Writing** | sentence case for every heading, label, button and rail entry — no `text-transform` on words; a plural follows its count, never `(s)` | four conventions; `element(s)`, `core(s)` | source: no `text-transform: uppercase\|capitalize`; booted: no `(s)` in `innerText` |
+| 3 | **Writing** | sentence case for every heading, label, button and rail entry — no `text-transform` on words; a plural follows its count, never `(s)` | four conventions; `element(s)`, `core(s)` | a rendered-string inventory first, below |
 | 4 | **Deference** | one `?` door per block, opening every description in it as one list | 191 doors in 39 blocks | booted: doors per block ≤ 1 |
-| 5 | **One primary action** | a fifth control grade, `primary` (accent fill), worn by at most one control per view — the first command's copy in "What should I run next?" | §6a's row, never decided | §6d's census gains the grade and a count ≤ 1 per chapter |
+| 5 | **One primary action** | a fifth control grade, `primary` (accent fill), worn by at most one control **per chapter**; a chapter with no runnable next step has none | §6a's row, never decided | the scope, below |
 | 6 | **Harmony** | spacing comes from a scale on a 4px grid (`--space-1` 4px to `--space-8` 32px); no bare length in `margin`, `padding` or `gap` | 23 distinct lengths | source: every spacing value is a token |
-| 7 | **Accessibility: targets** | every control's hit area is at least 24x24 CSS px (WCAG 2.2 AA; Apple asks 28pt with a pointer, 44pt by touch); a small glyph takes padding, not a bigger glyph | door 14x14px | booted: no visible control under 24x24 |
+| 7 | **Accessibility: targets** | every control's hit area is at least 24x24 CSS px with a fine pointer and 44x44 with a coarse one — stricter than WCAG 2.2 AA, below; a small glyph takes padding, not a bigger glyph | door 14x14px | both pointers, links included, below |
 | 8 | **Accessibility: keyboard** | one focus ring, 2px accent, on every focusable element; Tab follows reading order; Escape leaves table focus | a designed ring on `button` only | booted: `:focus-visible` outline on `a`, `input`, `select`, `summary` |
-| 9 | **Charts** | a drawing's accessible name is its sentence (§6) | 20 of 23 unnamed | booted: every `svg[role=img]` has a name |
+| 9 | **Charts** | a drawing's accessible name is its sentence (§6), and every drawing shape has an accessible route to its labelled values | 20 of 23 unnamed | the name and the route, below |
 | 10 | **Adaptivity** | two size classes, regular (≥ 60rem) and compact; the budgets (§3c, §3e) are measured in both, and compact draws no empty chrome | budgets at 1440x900 only; an empty band under "Sections" at 390px | the volume guard gains a compact column |
-| 11 | **Search** | find-in-page reaches folded content: a folded chapter is `hidden="until-found"`, so the browser's find opens it (§6c's list gains the row) | 5 of 6 chapters are `display: none` to Ctrl+F | booted: `find` on a folded section's text opens its chapter |
+| 11 | **Search** | find-in-page reaches folded content: a folded chapter's sections are `hidden="until-found"`, and the reveal goes through the same state setter as the chapter's control | 5 of 6 chapters are `display: none` to Ctrl+F | find, fragments, controls and print, below |
 | 12 | **Clarity** | an absence is one sentence: what is missing, why, and the command that fills it; no punctuation around an empty value | the header's orphan "—" with the reader "anyone" | booted: no separator beside an empty node |
 | 13 | **Progressive disclosure** | one glyph pair, ▸ closed and ▾ open, at the start of the label; the label names the content and its count, never the structure | "1 level, 2 rows" | booted: one glyph pair; §3a's depth guard reads the label |
+
+**Rule 1, the outline.** `chapters.js` makes both the chapter title and
+the section title an `h2` today, and the viewer's CSS and JS select on
+that level (`section[data-section][data-collapsed="true"] > *:not(h2)`
+would hide a section's own heading once it is an `h3`). The row that
+implements this re-derives every selector that names a heading level.
+Its guard walks the rendered outline: exactly one `h1`, no level more
+than one below the heading before it, every rail link landing on a
+heading of its entry's level, and sizes strictly decreasing by level.
+
+**Rule 3, the inventory comes first.** A source check for
+`text-transform` and a grep for `(s)` pass most generated labels
+unread. The row first collects every heading, button, `summary`, rail
+entry, `th` and `option` rendered on `golden`, `macro_micro`, the
+1,202-element run, and the served page with its Perfetto and SQL
+pages. The case rule and its exceptions (code, units, product names,
+acronyms) are then written from that inventory, and the guard reads it.
+
+**Rule 5, the scope.** A chapter is the unit a reader opens, and several
+can be open at once, so the budget is per chapter. The decision
+chapter's primary is the first next step's copy control; a chapter whose
+next step is not a runnable command has no primary rather than a
+promoted lesser control. The guard counts `primary` controls per
+chapter with every chapter open.
+
+**Rule 7, the standard and this project's choice.** WCAG 2.2's 2.5.8
+(AA) asks for 24x24 CSS px but excepts a smaller target with enough
+spacing around it, an inline target in a sentence, an equivalent
+control, and a few others (<https://www.w3.org/TR/WCAG22/#target-size-minimum>).
+bga keeps only the inline exception — a link inside running prose — and
+drops the spacing one, because a table cell's controls sit closer than
+the spacing rule assumes. The guard measures every visible `button`,
+`a`, `input`, `select` and `summary` outside running prose, once with a
+fine pointer and once under touch emulation (`hasTouch`,
+`pointer: coarse`).
+
+**Rule 9, the name and the route.** A sentence names the image; it does
+not make its marks, values or threshold readable. Each drawing shape
+names its route: the density strip, decomposition and interval draw
+their table twin (§2a, §2f) behind a control in the same figure, and an
+annotation-grade drawing points at the table or values it sits beside
+with `aria-details`. The guard asserts, per `svg[role=img]`, a non-empty
+name and a route that resolves to a node carrying every published mark
+with its label.
+
+**Rule 11, the mechanism.** A `hidden="until-found"` element that CSS
+also gives `display: none` is not revealed by find
+(<https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes/hidden>),
+so the change is in three places:
+
+- `style.css`: the rule
+  `section.chapter[data-open="false"] > section[data-section] { display: none; }`
+  goes; the fold is the attribute alone. The `content-visibility: auto`
+  rule on `section.chapter > section[data-section]` (§6c) must exclude
+  `[hidden]`, or it overrides the browser's `content-visibility: hidden`
+  and shows the folded section. Print keeps opening everything, by a
+  print rule on `[hidden="until-found"]`.
+- `chapters.js`: `setOpen(box, open)` stays the one state setter — it
+  writes `data-open`, adds or removes `hidden="until-found"` on the
+  chapter's sections, and `labelFold` updates `aria-expanded` on the
+  chapter control and the rail row. Each folded section listens for
+  `beforematch` and calls `revealChapter`, so find, fragment navigation
+  (which also fires `beforematch`) and the controls take one path.
+- A browser without `until-found` treats the attribute as `hidden`, so
+  find misses the fold exactly as it does today.
+
+The guard, booted: a folded section computes `content-visibility:
+hidden` and a `display` other than `none`; a dispatched `beforematch`
+opens its chapter and sets `aria-expanded` on both controls; navigating
+to a folded section's fragment does the same; the chapter control and
+"Expand all" still round-trip; and print media shows every section.
+Find itself is not scriptable, so these are its preconditions.
 
 **What stays refused** (§6a): motion, translucency and shadow. Depth
 marks only what floats, and nothing on this page floats.

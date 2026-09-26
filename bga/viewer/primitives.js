@@ -67,6 +67,11 @@ export function elementAnchor(uid) {
   return `element-${String(uid).replace(/[^\w-]+/g, "-")}`;
 }
 
+/** `UX-921`: the same spelling, for a finding's own id. */
+export function findingAnchor(id) {
+  return `finding-${String(id).replace(/[^\w-]+/g, "-")}`;
+}
+
 export function bar(label, value, total, extra = {}) {
   const row = document.createElement("div");
   row.className = "wf-row";

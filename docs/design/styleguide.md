@@ -2075,7 +2075,7 @@ headings, so a renumber there moves it.
 | §3g | `test_the_ceilings_reach_a_reader.py` | |
 | §3h | `test_the_rail_is_a_source_list.py` | |
 | §3i | `test_the_header_keeps_its_budget.py` | |
-| §3j | | `UX-921` will add the hidden-control population guard; open finding |
+| §3j | `test_a_fold_bounds_its_interactive_descendants.py` | `UX-921` |
 | §3k | | three open violations, listed in the section; the census guard is filed with them |
 | §4 | `test_emphasis_is_a_budget.py`, `test_the_palette_is_validated.py`, `test_a_drawing_is_graded.py`, `test_apparatus_in_its_place.py`, `test_the_browser_is_the_library.py` | named |
 | §4a | | named; `UX-346`'s `test_a_sentence_lives_on_its_door.py` holds it and cites no section |

@@ -1081,6 +1081,7 @@ async function boot() {
       if (!id) return null;
       const node = document.getElementById(id)
         ?? root.querySelector?.(`[data-section="${id}"]`);
+      node?._hydrate?.(); // UX-921: a shell's fragment materialises it.
       // `UX-670`: and land again after the fold's real height is in.
       // The browser's own anchor scroll has already run against
       // `content-visibility`'s estimate by the time this fires.

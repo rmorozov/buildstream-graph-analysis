@@ -1937,6 +1937,7 @@ the census runs at the largest class.
 | map (`dl`), one key per element | bounded pairs (`UX-419`) | the rest leave the document (`UX-526`) | §3e |
 | chain and element lists | `PATH_HEAD` + `PATH_TAIL` | **"+N more" reveals every name** | `views.js` |
 | findings | 40 cards, the rest as fragment targets | "Show all" hydrates once (§3j) | §3j |
+| a list inside a sentence (finding text, a chapter's answer) | the top few by name, the rest as a count | the section or table the sentence cites | the analyzer's sentences |
 | evidence, culprits, overview | `EVIDENCE_SHOWN`, `CULPRITS_SHOWN`, `OVERVIEW_SHOWN` | not measured here | `sections.js`, `element.js`, `primitives.js` |
 | history series | `HISTORY_POINTS_MAX` points | none: the window is the answer | `element.js` |
 | rail | the current chapter's sections (§3h) | the next chapter | §3h |
@@ -1953,6 +1954,50 @@ size grows with the run in one step. "All" is offered only where the
 whole population is under a ceiling the table states. Text is a
 population: a JSON door or a text reveal draws at most a stated number
 of characters, and past it offers the whole as a copy, not as a node.
+
+**Checked from the schema.** The page's census finds a violation only
+after it is drawn; the schema can name every sequence before anything
+is. Walking every list and data-keyed map in two `analyze/v6` payloads
+— `macro_micro` (both planes, 11 elements) and the 4,002-element run —
+and resolving each path in `schemas.schema("analyze/v6")`:
+
+```text
+containers in the two payloads                  91
+  declared as an array or a map                 38
+  a bga: hint but no array/map declaration      12
+  no declaration at all                          41 (32 absent, 9 untyped)
+growing with the run (4,002 >= 2x 11, > 20)     19
+  of those, not declared                          4
+```
+
+| path (not declared) | 11 elements | 4,002 elements | drawn as |
+|---|---|---|---|
+| `resource_blast.rows[].blast_elements` | 0 | 3,634 | the "+N more" reveal above |
+| `resource_blast.rows[].direct_elements` | 0 | 572 | the same reveal |
+| `parallelism.levels[].elements` | 2 | 208 | a "+N more" reveal per level |
+| `optimization_horizon[].entering` | 1 | 20 | not measured here |
+
+The four undeclared growing sequences are the ones drawn by bespoke
+code rather than §1's dispatch, and the unbounded reveal is theirs: the
+row cap, focus and fold machinery key off a declaration they do not
+have. So the rule is one level up from the page:
+
+- **Every list and data-keyed map a payload publishes is declared** —
+  `items` or `additionalProperties` — so the schema, not the page, is
+  the inventory of sequences.
+- **A declaration says whether it grows with the run**, and what with
+  (elements, tasks, edges), or states `maxItems`; a growing one is
+  drawn only by a §1 control whose bound is named above.
+- The guard walks the schema against payloads of every size class and
+  both planes, and fails on an undeclared container or a growing one
+  with no bound.
+
+**Prose is held to the same rule.** A sentence that enumerates names
+the first few and counts the rest ("and 3,997 more"), so its length does
+not grow with the run. Measured with every fold opened and "Show all"
+pressed: the longest finding card is 581 characters at 4,002 elements
+and 1,105 on `macro_micro`, and the longest text block of any kind 267
+and 217. The large run's sentences are shorter, not longer.
 
 The three bold cells are the open violations, each a row to file:
 "All rows" on a table past its ceiling, a reveal that draws every

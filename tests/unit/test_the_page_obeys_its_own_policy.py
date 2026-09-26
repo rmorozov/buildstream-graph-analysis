@@ -121,7 +121,8 @@ class TestNoPageRunsAnInlineScript:
         offenders = {}
         for path in sorted(VIEWER.glob("*.html")):
             html = path.read_text(encoding="utf-8")
-            for match in re.finditer(r"<script(?![^>]*\ssrc=)[^>]*>", html):
+            for match in re.finditer(
+                    r"<script(?![^>]*\ssrc=)[^>]*>", html, flags=re.IGNORECASE):
                 offenders.setdefault(path.name, []).append(match.group(0))
         assert offenders == {}, (
             f"inline <script> in {offenders}. The server sends "

@@ -1,6 +1,6 @@
 # UX-921: hidden findings keep live controls
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-413 (card populations open bounded) | **Found by:** round 130 design review | **Serves:** R1, R4 and assistive-technology users reading a report with many findings | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-413 (card populations open bounded) | **Found by:** round 130 design review | **Serves:** R1, R4 and assistive-technology users reading a report with many findings | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement
 
 ## Motivation
 
@@ -63,3 +63,5 @@ suites: `test_every_population_at_zero_one_and_many.py`,
 | mutation | reddened | how |
 |---|---|---|
 | `if (index < bound) article._hydrate();` -> `article._hydrate();` (every card hydrates on render, `UX-413`'s old shape) | yes | `test_a_fold_bounds_its_interactive_descendants.py`: all 4 clauses error/red - `_hydrate` is cleared on first call, so a fragment or Show all follow throws rather than silently double-rendering |
+
+Deviation: none from the Required Fix. The shell carries `id` and the title only (with `data-finding-id` and `data-severity`); it hydrates on a fragment follow and on Show all.

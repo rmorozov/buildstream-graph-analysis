@@ -1923,9 +1923,9 @@ def main(argv: Optional[list[str]] = None) -> int:
               f"a browser - it needs no server and no network.",
               file=sys.stderr)
         if written["omitted"]:
-            print(f"  No Perfetto timeline in it: {written['omitted']}. "
-                  f"`bga timeline` renders one beside the snapshot.",
-                  file=sys.stderr)
+            print(f"  No Perfetto timeline in it: "
+                  f"{written['omitted'].rstrip('.')}. `bga timeline` "
+                  f"renders one beside the snapshot.", file=sys.stderr)
         if written["over_budget"]:
             # Said, not enforced: a report that large is still the
             # user's report, and refusing to write it would help nobody.

@@ -20,4 +20,18 @@ The absence sentences' wording.
 
 ## Outcome
 
-Not started.
+Gap measured: `written["omitted"]` (from `bga/plane2.py`, e.g.
+`CAPTURED_NO_RAW_LOG`) already ends in a period; `tools/bga_view.py:1926`
+appended `. \`bga timeline\` renders one...` unconditionally, printing
+`"...goes missing.. \`bga timeline\`..."`.
+
+Close measured: `written["omitted"].rstrip(".")` before the format
+string. `tests/unit/test_the_export_message_is_punctuated.py` (new,
+Plane 2 captured, no raw log, real `bga_view.main(["--export", ...])`):
+`1 passed in 0.43s`; `".." not in captured.err` holds.
+
+Mutation table:
+
+| mutation | reddened | count |
+|---|---|---|
+| restore `f"...{written['omitted']}. ..."` (drop the `.rstrip(".")`) | `test_no_double_period_before_the_timeline_hint` | 1 failed / 1 |

@@ -30,4 +30,24 @@ The §3k census (UX-1032) presses every step at 4,002 elements, each paging step
 
 ## Outcome
 
-Not started.
+**Gap measured.** `ALL_ROWS_CEILING = 200` added to `tables.js`;
+`structured.js`'s `interrogable` offers "All rows" only when
+`total <= ALL_ROWS_CEILING`, and past it appends a `.table-pager`
+(Prev/Next) that replaces `state.top` with `{n: TABLE_OPENS_BOUNDED_ABOVE,
+column: null, offset}` - never appended - and shows the position
+("rows 1-40 of 4,002"). `applyFilters` (`tables.js`) grew an `offset`
+on the existing slice.
+
+**Close measured.**
+`pytest tests/unit/test_every_step_past_a_bound_is_bounded.py -q` (this
+row's clauses): `10 passed`. The pre-existing `test_all_rows_means_all_rows.py`
+(1,202-row fixture, under the new ceiling) rewritten to prove
+"reachable by whichever mechanism the size earns" rather than assume
+"All rows" always exists: `12 passed`.
+
+**Mutation table:**
+
+| mutation | reddened | count |
+|---|---|---|
+| gate `if (total <= ALL_ROWS_CEILING)` -> `if (true)` (offer unconditionally) | `TestEveryTableStaysBounded::test_no_table_ever_mounts_past_the_bound`, `test_all_rows_is_not_offered_past_the_ceiling` | 2 of 10 |
+| pager's `state.top.n` set to `offset + TABLE_OPENS_BOUNDED_ABOVE` (append) instead of a fixed window | `test_no_table_ever_mounts_past_the_bound`, at the 5th press (200 -> 240) | 1 of 10 |

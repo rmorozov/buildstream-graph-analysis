@@ -41,6 +41,16 @@ can go stale.
 `test_the_page_has_a_volume_budget.py` gained a fifth measure over
 this: the change put 1,177 rows in the DOM and height, words and
 controls were all nearly blind to it.
+
+**`UX-1028` amended the destination.** "All rows" mounting the whole
+1,202-row population in one step is itself the shape the styleguide
+refuses past `ALL_ROWS_CEILING` - so past that ceiling the reader
+reaches the rest through the paging step instead, one bound-sized
+window at a time, and never as a single unbounded mount. This file's
+claim is now "every population is *reachable*", by whichever of the
+two mechanisms its size earns it - the ceiling stands at 200, so this
+run's 1,202-row `All elements` reaches through paging and anything at
+or under it may still reach through "All rows" in one step.
 """
 import collections
 import pathlib
@@ -86,12 +96,31 @@ _DRIVE = r"""
                         : null;
     const atRest = { label: option.textContent, visible: visible(),
                      caption: caption(), badge: badge(), limit: chose };
-    if (limit) {
-      limit.value = "";                     // "All rows"
+    // `UX-1028`: "All rows" past its ceiling is gone; the paging step
+    // is the only way to reach the rest, one bound-sized window at a
+    // time - so lifting the bound means driving whichever of the two
+    // this population's table offers.
+    const hasAllRows = Boolean(limit && limit.querySelector('option[value=""]'));
+    let reachedEnd = null;
+    let pressed = 0;
+    if (hasAllRows) {
+      limit.value = "";
       limit.dispatchEvent(new Event("change"));
+    } else {
+      const next = body().querySelector(".page-next");
+      let guard = 0;
+      while (next && !next.disabled && guard < 500) {
+        next.click();
+        pressed += 1;
+        guard += 1;
+      }
+      const position = body().querySelector(".page-position");
+      const match = /of ([\d,]+)$/.exec(position ? position.textContent : "");
+      reachedEnd = match ? Number(match[1].replace(/,/g, "")) : null;
     }
     views[option.value] = { ...atRest, allRows: visible(),
-                            captionAfter: caption() };
+                            captionAfter: caption(), hasAllRows, reachedEnd,
+                            pressed };
   }
   return { views, population: [...population.options].map((o) => o.textContent) };
 })()
@@ -143,23 +172,43 @@ class TestAllRowsMeansAllRows:
     def test_the_population_that_names_the_run_can_be_seen_whole(
             self, driven, total):
         """The defect, as a clause: choose the population that names
-        every element, then the limit that says all rows."""
+        every element, then reach the end of it.
+
+        `UX-1028`: 1,202 is over `ALL_ROWS_CEILING`, so there is no
+        "All rows" here any more - the paging step is how the reader
+        gets there, and this is the same claim its predecessor made,
+        proven by a different control.
+        """
         view = driven["views"]["All elements"]
-        assert view["allRows"] == total, (
-            f"'All elements' with the limit on 'All rows' shows "
-            f"{view['allRows']} of {total}")
+        assert not view["hasAllRows"], (
+            "'All elements' still offers 'All rows' at 1,202 rows - "
+            "this clause is proving nothing about the paging step")
+        assert view["reachedEnd"] == total, (
+            f"'All elements' paged to the end reads 'of {view['reachedEnd']}' "
+            f"rather than the run's {total}")
+        assert view["pressed"] > 0, "no paging step was pressed at all"
 
     def test_every_population_can_be_seen_whole(self, driven):
         """Not only the one this was filed about. A cap that is right
-        for `All elements` is right for `Leaves`, and the reverse."""
+        for `All elements` is right for `Leaves`, and the reverse -
+        every population is reachable, by whichever of the two
+        mechanisms its size earns it."""
         for name, view in driven["views"].items():
-            assert view["allRows"] >= view["visible"], (name, view)
+            if view["limit"] is None:
+                # `UX-673`: a population no preset can bound gets no
+                # control at all - the rows are already all there.
+                continue
+            if view["hasAllRows"]:
+                assert view["allRows"] >= view["visible"], (name, view)
+            else:
+                assert view["reachedEnd"] is not None, (
+                    f"{name}: no paging step and no 'All rows' - "
+                    f"unreachable past the bound")
         leaves = driven["views"].get("Leaves")
-        if leaves:
-            assert leaves["allRows"] > leaves["visible"], (
-                f"Leaves shows {leaves['visible']} at rest and "
-                f"{leaves['allRows']} on 'All rows' - the limit did "
-                f"nothing")
+        if leaves and not leaves["hasAllRows"]:
+            assert leaves["pressed"] > 0, (
+                f"Leaves shows {leaves['visible']} at rest and offers "
+                f"paging that was never exercised")
 
     def test_a_long_table_still_opens_bounded(self, driven):
         """The other direction, so the fix is not "render everything".
@@ -216,14 +265,21 @@ class TestAllRowsMeansAllRows:
     def test_the_three_statements_agree(self, driven):
         """`UX-366`'s acceptance, stated as one clause: the population
         label, the limit label and the badge cannot contradict each
-        other. Two of the three were wrong when this was filed."""
+        other. Two of the three were wrong when this was filed.
+
+        `UX-1028`: over `ALL_ROWS_CEILING` "reachable" is read off the
+        paging step's own position rather than off a single mount, so
+        the reached-count is `reachedEnd` there and `allRows` where
+        "All rows" still applies.
+        """
         for name, view in driven["views"].items():
             stated = name.split("(")[-1].rstrip(")") if "(" in name else None
             if not (stated or "").isdigit():
                 continue
-            assert view["allRows"] == int(stated), (
-                f"the population is labelled {name!r} and 'All rows' "
-                f"shows {view['allRows']}")
+            reached = view["allRows"] if view["hasAllRows"] else view["reachedEnd"]
+            assert reached == int(stated), (
+                f"the population is labelled {name!r} and reaches "
+                f"{reached} of it")
             if view["limit"] == "All rows":
                 assert view["visible"] == view["allRows"], (
                     f"{name}: the limit reads 'All rows' and shows "

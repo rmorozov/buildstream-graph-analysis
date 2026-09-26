@@ -37,7 +37,7 @@ import { enterTableFocus, focusedTable, leaveTableFocus, registerFocusTarget }
 import { parseThreshold, applyFilters, badgeText, rowJson, cellText,
          copy, presetColumns, applyPreset, openingBound, plural,
          boundPairs, sortable, ownRows, ownBody, showAlso, columnCells,
-         rowsMarkdown } from "./tables.js";
+         rowsMarkdown, ALL_ROWS_CEILING } from "./tables.js";
 import { PATH_HEAD, PATH_TAIL } from "./views.js";
 
 /**
@@ -864,10 +864,19 @@ export function interrogable(table, specs, total, depth = 0) {
   // UX-673: a preset that cannot shrink the table is apparatus without
   // effect - skip any `n >= total`, and offer no control at all once
   // even the smallest preset fails that test.
+  // `UX-1028`: the step past the "All rows" ceiling - built once, set
+  // here, appended into `tools` below.
+  let pager = null;
   if ((presets.length && total > 10) || opening) {
     const preset = el("select", { class: "top-n", "aria-label": "Rows shown" });
     identify(preset, `top-${key}`);
-    preset.append(el("option", { value: "" }, "All rows"));
+    // `UX-1028` (styleguide §3k): "All rows" mounts the whole table in
+    // one step, so it is offered only under a ceiling the table
+    // states - past it the paging step below is the only way to reach
+    // the rest.
+    if (total <= ALL_ROWS_CEILING) {
+      preset.append(el("option", { value: "" }, "All rows"));
+    }
     for (const column of presets) {
       for (const n of [10, 25]) {
         if (n >= total) continue;
@@ -883,7 +892,14 @@ export function interrogable(table, specs, total, depth = 0) {
     // the filter left rather than replacing it.
     preset.addEventListener("change", () => {
       const [n, column] = preset.value ? preset.value.split(":") : [];
-      state.top = preset.value ? { n: Number(n), column: column || null } : null;
+      // `UX-1028`: an empty *value* reads as "All rows" only when a
+      // real `<option value="">` was chosen (`selectedIndex !== -1`).
+      // Forced to `""` with no such option present - which is what a
+      // stray external write does, not what a reader's own choice ever
+      // produces - `selectedIndex` is `-1`, and that must not read as
+      // "unbounded" the way `state.top = null` would.
+      state.top = preset.value ? { n: Number(n), column: column || null }
+        : preset.selectedIndex === -1 ? (opening?.top ?? null) : null;
       refresh();
     });
     // UX-262: a table longer than this opens bounded. Measured at
@@ -898,6 +914,55 @@ export function interrogable(table, specs, total, depth = 0) {
       refresh();
     }
     state.preset = preset;
+
+    // `UX-1028` (styleguide §3k): past `ALL_ROWS_CEILING` the reader
+    // has no "All rows" - this is the only way to reach the rest, one
+    // bound-sized window at a time. **Replaces the mounted window; it
+    // never appends** - the position shown is the badge's own claim,
+    // `${start}-${end} of ${total}`.
+    if (total > ALL_ROWS_CEILING) {
+      let offset = 0;
+      const position = el("span", { class: "page-position" }, "");
+      const prev = el("button", { type: "button", class: "page-prev",
+                                  "aria-label": "previous rows" }, "‹ Prev");
+      const next = el("button", { type: "button", class: "page-next",
+                                  "aria-label": "next rows" }, "Next ›");
+      const step = () => {
+        // Not `preset.value = ""`: past `ALL_ROWS_CEILING` there is no
+        // option holding that value, and forcing it leaves the select
+        // with `selectedIndex -1` - a real defect this once was. The
+        // preset stays showing whatever it last read; the position
+        // below is the paging step's own claim about what is mounted.
+        state.top = { n: TABLE_OPENS_BOUNDED_ABOVE, column: null, offset };
+        refresh();
+        const end = Math.min(offset + TABLE_OPENS_BOUNDED_ABOVE, total);
+        position.textContent =
+          `rows ${offset + 1}-${end} of ${total.toLocaleString("en-US")}`;
+        prev.disabled = offset <= 0;
+        next.disabled = end >= total;
+      };
+      prev.addEventListener("click", () => {
+        offset = Math.max(0, offset - TABLE_OPENS_BOUNDED_ABOVE);
+        step();
+      });
+      next.addEventListener("click", () => {
+        offset = Math.min(offset + TABLE_OPENS_BOUNDED_ABOVE,
+                          Math.max(0, total - TABLE_OPENS_BOUNDED_ABOVE));
+        step();
+      });
+      preset.addEventListener("change", () => {
+        // Choosing any preset (Top N, a different rank) starts paging
+        // over from the front rather than mid-window.
+        offset = 0;
+        position.textContent = "";
+      });
+      // Not `step()` here: at rest the table opens on `opening`'s own
+      // bound (Top 25, or the first `TABLE_OPENS_BOUNDED_ABOVE`), and
+      // the paging step only takes over once pressed - calling `step`
+      // at build time clobbered that default straight back to 40.
+      prev.disabled = true;
+      pager = el("span", { class: "table-pager" }, prev, position, next);
+    }
   }
 
   // UX-279: the noun, not the verb, and the count rather than a
@@ -1015,7 +1080,7 @@ export function interrogable(table, specs, total, depth = 0) {
   const expand = served() && (nested || total > TABLE_OPENS_BOUNDED_ABOVE)
     ? expandTableControl(table, depth) : null;
   const tools = el("div", { class: "table-tools" }, box, badge,
-                            state.preset ?? null, copyRows, asMarkdown,
+                            state.preset ?? null, pager, copyRows, asMarkdown,
                             expand, shape);
   // The badge and the count are the same claim; refresh both together.
   tools.addEventListener?.("input", label);

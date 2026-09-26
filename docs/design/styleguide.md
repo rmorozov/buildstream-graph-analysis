@@ -1935,7 +1935,7 @@ the census runs at the largest class.
 
 | population | bound at rest | the step past it | named in |
 |---|---|---|---|
-| table rows (§1: array of objects, array of arrays) | opens bounded above `TABLE_OPENS_BOUNDED_ABOVE` rows | filter, preset, Top-N, table focus; **"All rows" is unbounded** | `structured.js`, `tables.js` |
+| table rows (§1: array of objects, array of arrays) | opens bounded above `TABLE_OPENS_BOUNDED_ABOVE` rows | filter, preset, Top-N, table focus; "All rows" under `ALL_ROWS_CEILING`, the paging step past it (`UX-1028`) | `structured.js`, `tables.js` |
 | nested cell | `CELL_NEST_LIMIT` levels inline | table focus (§3a) | `structured.js` |
 | cell text | `CELL_TEXT_CAP` characters | the labeled fold | `structured.js` |
 | long scalar array | count + folded list | not measured here | `shapes.js` |

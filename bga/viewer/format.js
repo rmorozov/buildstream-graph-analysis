@@ -3,7 +3,7 @@
  *
  * `app.js`'s own first seam was called `format`, and this is that
  * chapter lifted out whole: the 18 `bga:` hint keys this module
- * declares (of the 20 `bga/schemas.py` emits), the readers that pull
+ * declares (of the 21 `bga/schemas.py` emits), the readers that pull
  * them off a schema node (`hintsOf`, `childNode`, `quantityFor`), the
  * formatters that turn a number into a printed value under them, and
  * `el` - the one node constructor everything above builds with.

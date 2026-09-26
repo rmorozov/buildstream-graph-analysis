@@ -1,6 +1,6 @@
 # UX-1020: every rendered label is sentence case, and a plural follows its count
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §6e.3 | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §6e.3 | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
 
 ## Motivation
 
@@ -55,3 +55,5 @@ Mutation table:
 
 Each reverted from a copy; `test_labels_are_sentence_case.py` returned to
 5 passed after every mutation.
+
+Deviation: the inventory covers `golden` and `macro_micro`, not the 1,202-element run or the Perfetto and SQL pages the Required Fix names (a bookkeeping line). The `(s)` plurals in CLI output outside the viewer are untouched, filed as `UX-1038`.

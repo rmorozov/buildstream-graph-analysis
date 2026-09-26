@@ -41,7 +41,6 @@ task file, which is the only place it ever lived twice.
 | UX-1012 | [the report says which elements drew from the jobserver, not only which were offered it](UX-1012-the-report-says-which-elements-drew-from-the-jobserver.md) | analysis | High | R4, R5 | 🔴 Not Started |
 | UX-1013 | [admission ranks from BuildStream's own cached build logs when bga never captured the project](UX-1013-admission-ranks-from-buildstreams-own-cached-build-logs.md) | capture | Medium | R4, R5 | 🔴 Not Started |
 | UX-1014 | [the "safe cap plus auto" default is measured on more shapes and hosts before it is anyone's default](UX-1014-the-builders-and-auto-default-is-measured-on-more-shapes-and-hosts.md) | capture | High | R4, R5 | 🔴 Not Started |
-| UX-1020 | [every rendered label is sentence case, and a plural follows its count](UX-1020-sentence-case-from-a-rendered-string-inventory.md) | viewer | Medium | R1 | 🔴 Not Started |
 | UX-1021 | [one `?` door per block opens every description in it](UX-1021-one-door-per-block.md) | viewer | Medium | R1 | 🔴 Not Started |
 | UX-1022 | [every control is at least 24x24 CSS px, 44 under a coarse pointer](UX-1022-controls-meet-the-target-size.md) | viewer | Medium | R1, R4 | 🔴 Not Started |
 | UX-1023 | [the page has a compact size class, and compact draws no empty chrome](UX-1023-a-compact-size-class.md) | viewer | Medium | R1 | 🔴 Not Started |

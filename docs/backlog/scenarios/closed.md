@@ -977,6 +977,7 @@ is open, on what topic, for whom — is the other file's.
 | UX-1017 | [every drawing has an accessible name and a route to its numbers](UX-1017-every-drawing-has-a-name-and-a-data-route.md) | High | R1, R4 | 🟢 Done — every drawing carries a name and a route to its numbers; 20 of 23 on `macro_micro` and 8 of 11 on `golden` had neither | [UX-1017](UX-1017-every-drawing-has-a-name-and-a-data-route.md) |
 | UX-1018 | [a chapter title outranks its section titles in the heading outline](UX-1018-a-chapter-title-outranks-its-section-titles.md) | Medium | R1, R4 | 🟢 Done — section headings are retagged one level below their chapter's, three outline levels where there was one | [UX-1018](UX-1018-a-chapter-title-outranks-its-section-titles.md) |
 | UX-1019 | [one concept is one word and one control on every bga surface](UX-1019-one-concept-one-word-one-control.md) | Medium | R1, R4 | 🟢 Done — a terminology matrix in styleguide §6e.2, "run" where the matrix forked, and one why control per action, was two | [UX-1019](UX-1019-one-concept-one-word-one-control.md) |
+| UX-1020 | [every rendered label is sentence case, and a plural follows its count](UX-1020-sentence-case-from-a-rendered-string-inventory.md) | Medium | R1 | 🟢 Done — a rendered-string inventory for `golden` and `macro_micro`, sentence case throughout, no `text-transform`, and 9 page `(s)` plurals chosen by count | [UX-1020](UX-1020-sentence-case-from-a-rendered-string-inventory.md) |
 
 ## UX-207..UX-212: the twenty-third audit round — the report learns to answer first (2026-08-22)
 

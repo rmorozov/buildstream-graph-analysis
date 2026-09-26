@@ -24,6 +24,8 @@
 //     what the boot guard allowlists. Raw JSON that arrives any other
 //     way is a defect, and stays one.
 
+import { copy } from "./tables.js";
+
 /**
  * Which published value produced which section.
  *
@@ -44,6 +46,12 @@ export function recordSource(section, value) {
 
 export const SHOW = "view as JSON";
 export const HIDE = "hide JSON";
+
+// `UX-1030` (styleguide §3k): the door drew a whole section as one
+// node - 3,592,666 characters on `elements`, at 4,002 elements. Past
+// this many characters the node holds a prefix and the whole value
+// is offered as a copy, never as a second node to search or fold.
+export const JSON_DOOR_CHAR_CAP = 20_000;
 
 // `UX-825`: the payload key, carried on the toggle rather than the
 // heading - `title` and `aria-label` both, since it is what a hover
@@ -105,8 +113,30 @@ export function jsonToggles(root, { document: doc } = {}) {
       // section that reopened the wall.
       box.setAttribute("data-raw-json", key);
       const pre = doc.createElement("pre");
-      pre.textContent = sectionJson(value);
-      box.append(pre);
+      const json = sectionJson(value);
+      // `UX-1030` (styleguide §3k): the whole value, unbounded, was
+      // the third open violation - 3,592,666 characters on one door.
+      // Past the cap the node holds a prefix; the whole value is a
+      // copy control, never a second node.
+      if (json.length > JSON_DOOR_CHAR_CAP) {
+        pre.textContent = json.slice(0, JSON_DOOR_CHAR_CAP);
+        const note = doc.createElement("p");
+        note.className = "muted json-truncated";
+        note.textContent = `Showing the first `
+          + `${JSON_DOOR_CHAR_CAP.toLocaleString("en-US")} of `
+          + `${json.length.toLocaleString("en-US")} characters. `;
+        const copyAll = doc.createElement("button");
+        copyAll.type = "button";
+        copyAll.className = "copy-json-whole";
+        copyAll.textContent =
+          `Copy all ${json.length.toLocaleString("en-US")} characters`;
+        copyAll.addEventListener("click", () => copy(json));
+        note.append(copyAll);
+        box.append(pre, note);
+      } else {
+        pre.textContent = json;
+        box.append(pre);
+      }
       section.append(box);
       shown = box;
       button.setAttribute("aria-expanded", "true");

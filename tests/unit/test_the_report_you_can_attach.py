@@ -538,7 +538,11 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 #
 # The two land together in round 120: 329,000 leaves the same order
 # of headroom over their summed 327,231 B.
-PAGE_BUDGET_B = 329_000
+# `UX-1028`/`UX-1029`/`UX-1030` moved this by 3,248 B, all source - the
+# table paging step, the reveal's paged chunking and the JSON door's
+# char cap and copy-whole control. 331,433 B measured over the merge;
+# 334,000 keeps headroom of the same order.
+PAGE_BUDGET_B = 334_000
 
 #: `UX-444`: the claim, stated once. **The run's data is at least twice
 #: the page a reader is permitted to download.**
@@ -944,7 +948,12 @@ COMMITTED_EXPORTS = [
     # contract - the `build_class` block's schema nodes, which golden
     # does not declare and so carries only as prose. 480,606 B measured
     # over that merge; the bound holds unmoved.
-    ("golden", GOLDEN, 482_000),                       #  480,606 B
+    # `UX-1028`/`UX-1029`/`UX-1030` moved this one by 3,248 B, all of it
+    # **source**: the table paging step, the reveal's `REVEAL_STEP`
+    # chunking and the JSON door's char cap and copy-whole control -
+    # three closed style-guide violations. 483,854 B measured over
+    # the merge; 486,000 keeps headroom of the same order.
+    ("golden", GOLDEN, 486_000),                       #  483,854 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -1130,7 +1139,10 @@ COMMITTED_EXPORTS = [
     # contract golden's note carries - this run declares no build class
     # either, so none of it is payload. 540,959 B measured over that
     # merge; the bound holds unmoved.
-    ("macro_micro", MACRO_MICRO, 542_000),             #  540,959 B
+    # `UX-1028`/`UX-1029`/`UX-1030` moved this one the same 3,248 B, all
+    # source - see golden's note above. 544,207 B measured over the
+    # merge; 546,000 keeps headroom of the same order.
+    ("macro_micro", MACRO_MICRO, 546_000),             #  544,207 B
 ]
 
 

@@ -49,7 +49,7 @@ history, and §7 names its guard. *Binding* is law the page is held to;
 | | §3a | depth is announced; deeper than one level opens in table focus | binding |
 | | §3d | table tools appear at the row cap; a one-value column is a sentence | binding |
 | | §3j | a fold bounds its hidden controls, not only its visible rows | binding; guard not filed |
-| | §3k | every population opens at a named bound, and the step past it is bounded too | binding; 3 open violations |
+| | §3k | every population opens at a named bound, and the step past it is bounded too | binding |
 | **Navigation** | §3b | any section is at most two interactions from the rail | binding |
 | | §3c | the landed page is at most 10 screens; chapters fold | binding |
 | | §3h | the rail shows every chapter and only the current chapter's sections | binding |
@@ -1947,7 +1947,7 @@ the census runs at the largest class.
 | history series | `HISTORY_POINTS_MAX` points | none: the window is the answer | `element.js` |
 | rail | the current chapter's sections (§3h) | the next chapter | §3h |
 | Perfetto element picker | `PICKER_SHOWN` hits | the search box | `questions.js` |
-| labeled fold, "view as JSON" | closed | **the whole value, unbounded** | §1 |
+| labeled fold, "view as JSON" | closed | a `JSON_DOOR_CHAR_CAP`-character prefix, the rest as a copy (`UX-1030`) | §1, `rawjson.js` |
 
 **The rule.** Every population the page draws — rows, items, pairs,
 points, names, and characters of text — opens at a bound held by a
@@ -2007,14 +2007,14 @@ pressed: the longest finding card is 581 characters at 4,002 elements
 and 1,105 on `macro_micro`, and the longest text block of any kind 267
 and 217. The large run's sentences are shorter, not longer.
 
-The three bold cells are the open violations, filed as `UX-1028`,
-`UX-1029` and `UX-1030`:
-"All rows" on a table past its ceiling, a reveal that draws every
-name, and a JSON door that draws a whole section. The guard is a census
-at the largest size class (§3f) that presses every step control, not
-only one that reads the page at rest — at rest, all three pass. It
-holds what is mounted to ceilings written in the guard itself, never to
-the constants it audits, so raising `TABLE_OPENS_BOUNDED_ABOVE` reds it,
+The three violations above were filed as `UX-1028`, `UX-1029` and
+`UX-1030`, and closed against the census below: "All rows" on a table
+past its ceiling, a reveal that drew every name, and a JSON door that
+drew a whole section. The guard is a census at the largest size class
+(§3f) that presses every step control, not only one that reads the
+page at rest — at rest, all three passed regardless. It holds what is
+mounted to ceilings written in the guard itself, never to the
+constants it audits, so raising `TABLE_OPENS_BOUNDED_ABOVE` reds it,
 and it presses each paging step repeatedly, not once. The census is
 `UX-1032`, and declaring every sequence in the schema `UX-1031`.
 

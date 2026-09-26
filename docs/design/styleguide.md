@@ -71,6 +71,7 @@ line per section, the rule only; the section holds its measurement.
 | **Dependencies** | §6b | a library is admitted only on a measured cost |
 | | §6c | the browser's primitives come first |
 | **Borrowed from Apple** | §6a | the borrowings, what each costs, and what is refused |
+| | §6e | *proposed*: hierarchy, sentence case, spacing and target scales, focus, size classes, find-in-page |
 | **Enforcement** | §7 | every section names its guard, or says why it has none |
 
 ## 1. The mapping: published shape → control
@@ -888,8 +889,9 @@ which is the rule `UX-318`'s depth budget was filed for and the model
 the `?` door should be rebuilt on.
 
 Two rows above were written as costs and never decided: *Deference*'s
-one door per block, and *one primary action per view*. Until one is,
-§2b.3's door per value and §6d's four grades are the rule.
+one door per block, and *one primary action per view*. §6e proposes
+both (rules 4 and 5); until one is accepted, §2b.3's door per value and
+§6d's four grades are the rule.
 
 Two Apple rules are deliberately **not** borrowed. *Consistency across
 a platform* is a rule for a platform vendor; consistency across bga's
@@ -1224,6 +1226,48 @@ stands — zero transitions, zero shadows, both asserted. And it is not
 §4's emphasis budget, which bounds *tone* per block and says nothing
 about whether a control has a resting appearance at all; a button can be
 entirely un-emphasised and still not be the browser's.
+
+## 6e. Rules from Apple's Human Interface Guidelines (proposed)
+
+§6a borrowed five principles and priced them. This section turns the
+HIG's foundations — hierarchy, harmony, consistency, clarity,
+deference, accessibility — into rules for this page, each with the gap
+it closes. **Every rule here is proposed**: none is law until it is
+accepted and its row is filed with the guard named beside it.
+
+Measured on `main` at `98ab850`: `python3 -m tools.bga_view <run>
+--export` on `macro_micro` and `golden`, booted in Chromium at 1440x900
+and 390x844, light scheme; style counts are greps of `style.css`.
+
+```text
+                                        macro_micro    golden
+computed font sizes (§4f allows 4)                5         5    13.333px: UA default on <input>
+chapter title vs section title               h2 17px/700 both    h1 is the wordmark
+`?` doors / blocks holding them              191 / 39  127 / 29  43% of all buttons
+visible buttons under 24px in a dimension    73 of 77  54 of 58  door 14x14px
+drawings with role=img and no name           20 of 23   8 of 11
+capitalisation conventions                          4          4  sentence, lower, UPPER, Capitalised
+distinct margin/padding/gap lengths                23 in style.css
+```
+
+| # | HIG principle | the rule | closes | guard it would take |
+|---|---|---|---|---|
+| 1 | **Hierarchy** | one title per level: `h1` the run, `h2` a chapter at `--font-h1`, `h3` a section at `--font-h2`, `h4` a block at body weight 600; a reader tells a chapter from its section without reading either | chapter and section both `h2` 17px | booted: every chapter title strictly larger than every section title |
+| 2 | **Consistency** | one concept, one word, one control, one place, on every bga surface — this page, its Perfetto and SQL pages, `describe()`; the reader's nouns (run, element, task, chain) are listed once, in this guide | two "why" controls per top action; three disclosure glyphs | a glossary the reader-strings guard (§4g) reads |
+| 3 | **Writing** | sentence case for every heading, label, button and rail entry — no `text-transform` on words; a plural follows its count, never `(s)` | four conventions; `element(s)`, `core(s)` | source: no `text-transform: uppercase\|capitalize`; booted: no `(s)` in `innerText` |
+| 4 | **Deference** | one `?` door per block, opening every description in it as one list | 191 doors in 39 blocks | booted: doors per block ≤ 1 |
+| 5 | **One primary action** | a fifth control grade, `primary` (accent fill), worn by at most one control per view — the first command's copy in "What should I run next?" | §6a's row, never decided | §6d's census gains the grade and a count ≤ 1 per chapter |
+| 6 | **Harmony** | spacing comes from a scale on a 4px grid (`--space-1` 4px to `--space-8` 32px); no bare length in `margin`, `padding` or `gap` | 23 distinct lengths | source: every spacing value is a token |
+| 7 | **Accessibility: targets** | every control's hit area is at least 24x24 CSS px (WCAG 2.2 AA; Apple asks 28pt with a pointer, 44pt by touch); a small glyph takes padding, not a bigger glyph | door 14x14px | booted: no visible control under 24x24 |
+| 8 | **Accessibility: keyboard** | one focus ring, 2px accent, on every focusable element; Tab follows reading order; Escape leaves table focus | a designed ring on `button` only | booted: `:focus-visible` outline on `a`, `input`, `select`, `summary` |
+| 9 | **Charts** | a drawing's accessible name is its sentence (§6) | 20 of 23 unnamed | booted: every `svg[role=img]` has a name |
+| 10 | **Adaptivity** | two size classes, regular (≥ 60rem) and compact; the budgets (§3c, §3e) are measured in both, and compact draws no empty chrome | budgets at 1440x900 only; an empty band under "Sections" at 390px | the volume guard gains a compact column |
+| 11 | **Search** | find-in-page reaches folded content: a folded chapter is `hidden="until-found"`, so the browser's find opens it (§6c's list gains the row) | 5 of 6 chapters are `display: none` to Ctrl+F | booted: `find` on a folded section's text opens its chapter |
+| 12 | **Clarity** | an absence is one sentence: what is missing, why, and the command that fills it; no punctuation around an empty value | the header's orphan "—" with the reader "anyone" | booted: no separator beside an empty node |
+| 13 | **Progressive disclosure** | one glyph pair, ▸ closed and ▾ open, at the start of the label; the label names the content and its count, never the structure | "1 level, 2 rows" | booted: one glyph pair; §3a's depth guard reads the label |
+
+**What stays refused** (§6a): motion, translucency and shadow. Depth
+marks only what floats, and nothing on this page floats.
 
 ## 2e. A ranked map is a table's question, not a fifth shape (round 65)
 
@@ -1821,6 +1865,7 @@ headings, so a renumber there moves it.
 | §6b | `test_one_factory_builds_every_table.py`, `test_the_handoff_rides_the_rail.py` | |
 | §6c | `test_the_browser_is_the_library.py`, `test_the_report_you_can_attach.py` | |
 | §6d | `test_every_control_has_a_resting_appearance.py` | |
+| §6e | | proposed rules; each names the guard its row will add once accepted |
 | §7 | `test_emphasis_is_a_budget.py`, `test_the_styleguide_names_its_guards.py` | named |
 
 What the rows with no guard were written from, rounds 58 and 69, kept

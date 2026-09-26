@@ -1873,9 +1873,11 @@ underutilized_intervals From      "497003.7 h" — a monotonic base rendered as 
    an offset says "+12.4 s", never a raw clock.
 6. A superlative is a measurement (§1c) and a label is its effect
    (§4c).
+7. No `R1`-`R5` — the author's index for a finding's reader, never the
+   reader's own word for themselves.
 
 `UX-824` holds it with one guard over both exports; `UX-825` and
-`UX-826` are the sentences it found.
+`UX-826` are the sentences it found. `UX-1034` adds item 7.
 
 ## 5b. What the header already says is not said again (round 115)
 

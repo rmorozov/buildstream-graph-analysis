@@ -570,6 +570,19 @@ export function readersOf(section) {
     .filter(Boolean);
 }
 
+// `UX-1034` (styleguide §4g.3): the chip prints for a reader, not for
+// the author's own `R1`-`R5` index - words off `findings.READERS`'
+// uid, the same roster `data-readers` already joins to.
+const READER_WORDS = {
+  R1: "local optimizer", R2: "recipe author",
+  R3: "graph owner", R4: "CI gatekeeper",
+  R5: "capacity operator",
+};
+
+function readerWords(id) {
+  return READER_WORDS[id] ?? id;
+}
+
 // The section's own collapse control, pressed rather than reimplemented:
 // `collapsible` owns the caret, the `aria-expanded` and the remembered
 // state, and a second writer of `data-collapsed` is the second folding
@@ -600,8 +613,9 @@ export function applyRole(root, role) {
     // sees what each one would promote before choosing. A chosen role
     // still marks only what it owns (`UX-305`'s budget).
     if (tag) {
-      tag.textContent = owns ? chosen
-        : (!chosen && readers.length ? readers.join(" ") : "");
+      tag.textContent = owns ? readerWords(chosen)
+        : (!chosen && readers.length
+           ? readers.map(readerWords).join(", ") : "");
     }
     // `UX-668`: the decision panel is never folded - it held the
     // picker before this item moved the control to the header, and it

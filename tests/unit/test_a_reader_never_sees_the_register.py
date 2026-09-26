@@ -66,6 +66,9 @@ _TASK_ID = re.compile(r"\bUX-\d+\b")
 _SNAKE_HEADING = re.compile(r"^[a-z][a-z0-9]*(_[a-z0-9]+)+$")
 _PIPE_KEY = re.compile(r"\|(FETCH|BUILD|PULL|PUSH|TRACK)\|")
 _REGISTER_WORD = re.compile(r"\b(payload|contract|schema)\b|Part \d", re.IGNORECASE)
+#: UX-1034 (styleguide §4g.3): the author's own `R1`-`R5` index, never
+#: a reader's word for themselves.
+_READER_ID = re.compile(r"\bR[1-9]\b")
 
 
 def _run(into, label):
@@ -119,3 +122,9 @@ class TestAReaderNeverSeesTheRegister:
               if _REGISTER_WORD.search(c["text"])
               and not (c["tag"] == "DT" and c["key"] == "schema")]
         assert bad == [], (measured["label"], bad)
+
+    def test_no_reader_id_in_rendered_text(self, measured):
+        """`UX-1034` (§4g item 7): the author's `R1`-`R5` index is not
+        a reader's word for themselves."""
+        ids = _READER_ID.findall(measured["innerText"])
+        assert ids == [], (measured["label"], ids)

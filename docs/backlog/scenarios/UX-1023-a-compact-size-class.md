@@ -24,7 +24,7 @@ A phone-specific layout beyond the compact class.
 
 ## Acceptance Test
 
-`tests/unit/test_the_page_has_a_volume_budget.py` gains a compact column at 390x844, and a booted check that no rendered element in compact is empty chrome (zero text, zero children, non-zero box). Mutation: restore the band, and the check reds.
+`tests/unit/test_the_page_has_a_volume_budget.py` gains a compact column at 390x844, and a booted check on the rail at 390x844: every rendered child of `nav.toc` shows text or a control. The band is `nav.toc > div.actions-group` (top 150px, 11px high, `macro_micro`), whose children are all hidden at compact. Mutation: restore the band, and the check reds.
 
 ## Outcome
 

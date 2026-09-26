@@ -12,7 +12,7 @@ Input classes: both fixtures and the 4,002-element run; every step control press
 
 ## Required Fix
 
-A booted census at the largest size class (§3f) in `tests/unit/test_every_step_past_a_bound_is_bounded.py`: open every chapter, press every step control, and read rows per table, characters per text run and per JSON door against the constants §3k names.
+A booted census at the largest size class (§3f) in `tests/unit/test_every_step_past_a_bound_is_bounded.py`: open every chapter, press every step control, and read rows mounted per table, names per reveal and characters per text run and per JSON door. The ceilings are literals in the guard (`MOUNTED_ROWS_MAX = 200`, `NAMES_MAX = 60`, `TEXT_CHARS_MAX = 20_000`), never imported from the constants it audits; each paging step is pressed 10 times, not once.
 
 ## Out of Scope
 
@@ -20,7 +20,7 @@ Fixing the three violations (UX-1028, UX-1029, UX-1030), which land their own mu
 
 ## Acceptance Test
 
-The census reds today on the three violations, and each fix row greens its part. Mutation: raise `TABLE_OPENS_BOUNDED_ABOVE` to 10,000, and the census reds.
+The census reds today on the three violations, and each fix row greens its part. Mutations: raise `TABLE_OPENS_BOUNDED_ABOVE` to 10,000, and the at-rest table mounts 4,002 rows past `MOUNTED_ROWS_MAX`; make the page step append instead of replace, and the tenth press reds.
 
 ## Outcome
 

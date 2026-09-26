@@ -1289,7 +1289,7 @@ distinct margin/padding/gap lengths                23 in style.css
 | 10 | **Adaptivity** | two size classes, regular (≥ 60rem) and compact; the budgets (§3c, §3e) are measured in both, and compact draws no empty chrome | budgets at 1440x900 only; an empty band under "Sections" at 390px | 2 | the volume guard gains a compact column |
 | 11 | **Search** | find-in-page reaches folded content: a folded chapter's sections are `hidden="until-found"`, and the reveal goes through the same state setter as the chapter's control | 5 of 6 chapters are `display: none` to Ctrl+F | 1 | find, fragments, controls and print, below |
 | 12 | **Clarity** | an absence is one sentence: what is missing, why, and the command that fills it; no punctuation around an empty value | the header's orphan "—" with the reader "anyone" | 2 | booted: no separator beside an empty node |
-| 13 | **Progressive disclosure** | one glyph pair, ▸ closed and ▾ open, at the start of the label; the label names the content and its count, never the structure | "1 level, 2 rows" | 2 | booted: one glyph pair; §3a's depth guard reads the label |
+| 13 | **Progressive disclosure** | one glyph pair, ▸ closed and ▾ open, at the start of the label; the label names the content and its count first; a nested fold then adds §3a.1's depth after it ("inputs: 2 rows, 1 level"), never the depth alone | "1 level, 2 rows" | 2 | booted: one glyph pair; no label is depth and count alone |
 
 **Rule 1, the outline.** `chapters.js` makes both the chapter title and
 the section title an `h2` today, and the viewer's CSS and JS select on
@@ -1349,9 +1349,11 @@ not make its marks, values or threshold readable. Each drawing shape
 names its route: the density strip, decomposition and interval draw
 their table twin (§2a, §2f) behind a control in the same figure, and an
 annotation-grade drawing points at the table or values it sits beside
-with `aria-details`. The guard asserts, per `svg[role=img]`, a non-empty
-name and a route that resolves to a node carrying every published mark
-with its label.
+with `aria-details`. The two exhibit drawings in `views.js`, the
+comparison band and the store trend, have no twin named here, so the
+row that lands this rule draws one for each. The guard asserts, per
+`svg[role=img]`, a non-empty name and a route that resolves to a node
+carrying every published mark with its label.
 
 **Rule 11, the mechanism.** A `hidden="until-found"` element that CSS
 also gives `display: none` is not revealed by find
@@ -1953,7 +1955,10 @@ named constant, and its label states what lies beyond it (§3a.1). **The
 step past a bound is bounded too:** it advances by the same bound with
 the position shown ("rows 41-80 of 4,002"), opens table focus, or
 narrows (filter, preset, Top-N); no control draws a population whose
-size grows with the run in one step. "All" is offered only where the
+size grows with the run in one step. **Paging replaces the mounted
+window; it never appends**: after any number of presses a table mounts
+at most its bound of rows, and a reveal at most its bound of names
+besides the head and tail it keeps. "All" is offered only where the
 whole population is under a ceiling the table states. Text is a
 population: a JSON door or a text reveal draws at most a stated number
 of characters, and past it offers the whole as a copy, not as a node.
@@ -2007,8 +2012,11 @@ The three bold cells are the open violations, filed as `UX-1028`,
 "All rows" on a table past its ceiling, a reveal that draws every
 name, and a JSON door that draws a whole section. The guard is a census
 at the largest size class (§3f) that presses every step control, not
-only one that reads the page at rest — at rest, all three pass. The census
-is `UX-1032`, and declaring every sequence in the schema `UX-1031`.
+only one that reads the page at rest — at rest, all three pass. It
+holds what is mounted to ceilings written in the guard itself, never to
+the constants it audits, so raising `TABLE_OPENS_BOUNDED_ABOVE` reds it,
+and it presses each paging step repeatedly, not once. The census is
+`UX-1032`, and declaring every sequence in the schema `UX-1031`.
 
 ## 7. Enforcement
 

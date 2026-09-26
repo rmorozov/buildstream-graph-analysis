@@ -18,11 +18,21 @@ Input classes: every drawing kind (density strip, sparkline, decomposition, inte
 
 ## Required Fix
 
-Every `svg[role=img]` drawn by `bga/viewer/` carries its §6 sentence as its name, and either `aria-details` pointing at the table it draws or a named twin route (the section's table) one control away.
+Every `svg[role=img]` drawn by `bga/viewer/` carries its §6 sentence as its name, and a route to its values, by kind:
+
+| kind | drawn in | route |
+|---|---|---|
+| density strip | `drawings.js` | its §2f table twin in the same figure |
+| decomposition, interval | `drawings.js` | their table twin in the same figure |
+| sparkline | `drawings.js`, `element.js` | `aria-details` on the values it sits beside |
+| comparison band | `views.js` `renderBand` | none today: this row draws its twin |
+| store trend | `views.js` | none today: this row draws its twin |
+
+A kind found during the work with no route gets its twin here too.
 
 ## Out of Scope
 
-Sonification; a new table for a drawing whose data no table holds (file it).
+Sonification.
 
 ## Acceptance Test
 

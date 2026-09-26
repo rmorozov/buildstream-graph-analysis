@@ -19,7 +19,7 @@ Input classes: chain and element lists at 0, 9, 208 and 3,634 names. The journey
 
 ## Required Fix
 
-The reveal in `bga/viewer/views.js` advances by a bound with the position shown, or opens the names as a table under table focus.
+The reveal in `bga/viewer/views.js` replaces the shown names with the next bound of them, the position shown, or opens the names as a table under table focus. It never appends.
 
 ## Out of Scope
 
@@ -27,7 +27,7 @@ The at-rest head and tail.
 
 ## Acceptance Test
 
-The §3k census (UX-1032): no text run over `CELL_TEXT_CAP` x the bound after pressing every reveal. Mutation: reveal the whole list, and the census reds.
+The §3k census (UX-1032): each reveal pressed 10 times mounts at most the bound of names besides the head and tail. Mutations: reveal the whole list, or append each step, and the census reds.
 
 ## Outcome
 

@@ -17,7 +17,7 @@ Input classes: section folds, `details`, rail disclosures, nested-table folds. T
 
 ## Required Fix
 
-▸ closed, ▾ open, at the start of every disclosure's label in `bga/viewer/`; a label names the content and its count, never the structure.
+▸ closed, ▾ open, at the start of every disclosure's label in `bga/viewer/`; a label names the content and its count first; a nested fold keeps §3a.1's depth after it ("inputs: 2 rows, 1 level").
 
 ## Out of Scope
 
@@ -25,7 +25,7 @@ The rail's current-chapter mark, which is not a disclosure and takes another sig
 
 ## Acceptance Test
 
-`tests/unit/test_one_disclosure_glyph_pair.py`, booted: every disclosure starts with ▸ or ▾ matching its state, and no label matches `\d+ levels?,`. Mutation: restore ▶ on `details`, and the guard reds.
+`tests/unit/test_one_disclosure_glyph_pair.py`, booted: every disclosure starts with ▸ or ▾ matching its state, and no label is depth and count alone (`^\d+ levels?, \d+ rows?$`), while §3a.1's depth guard still finds the depth. Mutation: restore ▶ on `details`, and the guard reds.
 
 ## Outcome
 

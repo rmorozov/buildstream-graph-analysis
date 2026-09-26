@@ -18,7 +18,7 @@ Input classes: tables at 11, 40, 41 and 4,002 rows. The journey extends reading 
 
 ## Required Fix
 
-"All rows" in `bga/viewer/tables.js` is offered only under a ceiling the table states; past it the step advances by the bound with the position shown ("rows 41-80 of 4,002") or opens table focus.
+"All rows" in `bga/viewer/tables.js` is offered only under a ceiling the table states; past it the step replaces the mounted window with the next bound of rows, the position shown ("rows 41-80 of 4,002"), or opens table focus. It never appends.
 
 ## Out of Scope
 
@@ -26,7 +26,7 @@ Virtual scrolling.
 
 ## Acceptance Test
 
-The §3k census (UX-1032) presses every step at 4,002 elements: no table over the ceiling. Mutation: offer "All rows" unconditionally, and the census reds.
+The §3k census (UX-1032) presses every step at 4,002 elements, each paging step 10 times: mounted rows stay at the bound after every press. Mutations: offer "All rows" unconditionally, or append the next page, and the census reds.
 
 ## Outcome
 

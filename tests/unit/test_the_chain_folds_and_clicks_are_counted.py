@@ -530,7 +530,7 @@ class TestTheStyleguideDerivesTheChapterFigures:
         for label, value in (("1440x900", CHAPTER_HEADING_SCREENS),
                               ("390x844", COMPACT_CHAPTER_HEADING_SCREENS)):
             number = f"{value:g}"
-            assert re.search(rf"{re.escape(number)} screens at {label}",
+            assert re.search(rf"\b{re.escape(number)} screens at {label}",
                               section), (
                 f"§3c does not state {number} screens at {label}")
 

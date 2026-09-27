@@ -43,6 +43,16 @@ task file, which is the only place it ever lived twice.
 | UX-1014 | [the "safe cap plus auto" default is measured on more shapes and hosts before it is anyone's default](UX-1014-the-builders-and-auto-default-is-measured-on-more-shapes-and-hosts.md) | capture | High | R4, R5 | 🔴 Not Started |
 | UX-1040 | [a paired reading decides whether implementers move to opus at low effort](UX-1040-a-paired-reading-decides-the-implementers-model.md) | guards | Medium | every round's implementer spend | 🔴 Not Started |
 | UX-1041 | [an agent cannot repoint the shared install or start the touching sweep](UX-1041-an-agent-cannot-repoint-the-shared-install-or-run-the-sweep.md) | guards | Medium | every parallel round's verifiers and the push gate after them | 🔴 Not Started |
+| UX-1042 | [pointer travel is a budget, measured per journey](UX-1042-pointer-travel-is-a-budget.md) | viewer | High | R1, R4 | 🔴 Not Started |
+| UX-1043 | [a section's fold, door and JSON toggle sit together, at one place](UX-1043-a-sections-controls-sit-together.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1044 | [a chapter's fold sits at one place and says the same thing in the rail and the document](UX-1044-a-chapter-fold-has-one-place-and-one-label.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1045 | [a table's tools are one row, as §3 says](UX-1045-a-tables-tools-are-one-row.md) | viewer | Medium | R1, R4 | 🔴 Not Started |
+| UX-1046 | [the rail shows the current chapter's sections, or every open chapter's — one rule](UX-1046-the-rail-shows-the-current-chapter-or-every-open-one.md) | viewer | High | R1, R4 | 🔴 Not Started |
+| UX-1047 | [the page's one `h1` is the run, or §6e.1 says it is the wordmark](UX-1047-the-page-h1-names-the-run.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1048 | [§4 lists every job the accent does, and the fills it takes](UX-1048-the-accent-lists-every-job-it-does.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1049 | [the landed page has one bound per size class, written once](UX-1049-one-landed-height-bound-per-size-class.md) | viewer | Medium | R1, R4 | 🔴 Not Started |
+| UX-1050 | [the volume budgets are measured on a two-plane page at scale](UX-1050-the-budgets-are-measured-with-both-planes-at-scale.md) | viewer | High | R1, R4 | 🔴 Not Started |
+| UX-1051 | [every `select` and `input` wears a declared resting appearance](UX-1051-every-select-wears-a-resting-grade.md) | viewer | Medium | R1 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

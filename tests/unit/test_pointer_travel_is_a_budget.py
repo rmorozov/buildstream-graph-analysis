@@ -36,8 +36,9 @@ _BUILD = {
 }
 
 #: The classes held to one place; each block is `blockOf`'s, below.
-#: `copy-rows`/`top-n` joined on UX-1055 (`order`, pinned first/last in
-#: `.table-tools`, so their own edge never trails a variable sibling).
+#: `copy-rows`/`top-n` joined on UX-1055 (`structured.js` builds
+#: `copy-rows` first, `top-n` last in `.table-tools`'s own DOM, so
+#: Tab order matches - CSS `order` alone would not).
 PLACEMENT = ("button.collapse", "button.describe", "button.json-toggle",
              "button.chapter-open", "button.copy-rows", "select.top-n")
 #: A class dropped from here *and* PLACEMENT reds nothing on its own -
@@ -174,6 +175,32 @@ _DOCUMENT = "(async () => {" + _PRELUDE + r"""
     }
   }
   out.census = [...census].sort();
+  // `UX-1055`: CSS `order` can move a control on screen without moving
+  // it in the Tab sequence (WCAG 2.4.3/1.3.2) - none of these controls
+  // carry `tabindex`, so DOM order *is* Tab order, and this reads each
+  // `.table-tools` row's controls in that order against their own
+  // (top, left) reading order (rows first, left to right within a
+  // wrapped row's own line).
+  // A wrapped line's own items land within a few px of each other
+  // (`align-items: center` staggers each by its own height); a real
+  // line break is a whole row height away - 20px sits between them on
+  // every measured table.
+  const LINE = 20;
+  out.tabOrder = [...document.querySelectorAll(".table-tools")].map((tt) => {
+    const kids = [...tt.querySelectorAll("button, select, input")].filter(vis);
+    const rects = kids.map((n) => n.getBoundingClientRect());
+    const byTop = kids.map((_, i) => i).sort((a, b) => rects[a].top - rects[b].top);
+    const lines = [];
+    for (const i of byTop) {
+      const line = lines.at(-1);
+      if (line && rects[i].top - rects[line[0]].top < LINE) line.push(i);
+      else lines.push([i]);
+    }
+    const visual = lines.flatMap(
+      (line) => line.sort((a, b) => rects[a].left - rects[b].left));
+    return { table: tt.parentNode.querySelector("table")?.getAttribute("data-table"),
+             dom: kids.map((_, i) => i), visual };
+  }).filter((row) => row.dom.length > 1);
   let table = null;
   out.J4 = await journey(async () => {
     // The longest table offering the full tool row (`viewstate.js`'s lookup).
@@ -319,6 +346,23 @@ def test_every_control_class_a_head_or_row_holds_is_placed(walked, label, size):
         f"{label} at {_page(size)}: {unplaced} sit in a section head, "
         f"chapter head or table row but are not in PLACEMENT (styleguide "
         f"§3l)")
+
+
+@needs_browser
+@pytest.mark.parametrize("label", LABELS)
+@pytest.mark.parametrize("size", VIEWPORTS, ids=_page)
+def test_a_table_tools_row_tabs_in_its_own_reading_order(walked, label, size):
+    """WCAG 2.4.3/1.3.2: Tab order must match visual order. CSS `order`
+    can hold `copy-rows`/`top-n` at one place on screen while leaving
+    them where they always were in the DOM - this reds that, not just
+    the dx bound `test_a_control_class_sits_at_one_place` reads."""
+    rows = walked[label, size]["tabOrder"]
+    assert rows, f"{label} at {_page(size)}: no multi-control table row"
+    offenders = [r["table"] for r in rows if r["dom"] != r["visual"]]
+    assert not offenders, (
+        f"{label} at {_page(size)}: tables {offenders} - Tab order does "
+        f"not match reading order in their tool row (styleguide §3l, "
+        f"WCAG 2.4.3/1.3.2)")
 
 
 @needs_browser

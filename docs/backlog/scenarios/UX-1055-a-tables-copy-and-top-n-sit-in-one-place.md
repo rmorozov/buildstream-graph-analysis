@@ -53,28 +53,40 @@ copy-rows` dx 213.8-932.8px, `select.top-n` dx 70.7-806.6px across
 `macro_micro`/`both_scale` at both viewports — both over the 24px bound
 and read as `UNPLACED`.
 
-**Close measured** (same guard, after): `copy-rows` and `top-n` given a
-fixed slot in `.table-tools` via CSS `order` (`copy-rows` first, `top-n`
-last with an auto left margin) rather than a `structured.js` DOM
-reorder — the mirror pairing (`top-n` first, `copy-rows` last) passed
-the same dx bound but pushed `copy-rows` past `.copy-as`/`.expand-
-table`/`.density`, adding a wrapped line on 17 of 30 `.table-tools`
-instances and costing `macro_micro` 61px against
-`test_the_page_has_a_volume_budget.py`'s 38,200px bound; the pairing
-kept wraps to 4 of 30. dx is 0.0px on every measured instance, both
-classes, both viewports, `macro_micro` and `both_scale`
-(`python3 -m pytest tests/unit/test_pointer_travel_is_a_budget.py`: 44
-passed). `dy` is out of scope for these two classes only (`DX_ONLY`):
-their block (`.table-tools`) genuinely wraps to more lines for a
-narrower, nested table, moving their vertical position with it — a
-property of the row's own width, not of where they sit in it; every
-other `PLACEMENT` class keeps the `dy` check. J4 (table tools) lengthens
-per the Decomposition (12.77→14.8 bits at 1440x900, both pages); J1-J3
-are unchanged or within their existing +0.5 bit headroom.
+**Close measured** (same guard, after): `structured.js` builds `copyRows`
+first and `state.preset` (`top-n`) last in `.table-tools`'s own DOM
+(`style.css`'s auto left margin on `top-n` still carries "nothing
+shares its trailing space") — DOM order, not CSS `order`, so Tab order
+matches reading order (WCAG 2.4.3/1.3.2). The mirror pairing (`top-n`
+first, `copy-rows` last) passed the same dx bound but pushed
+`copy-rows` past `.copy-as`/`.expand-table`/`.density`, adding a
+wrapped line on 17 of 30 `.table-tools` instances and costing
+`macro_micro` 61px against `test_the_page_has_a_volume_budget.py`'s
+38,200px bound; the landed pairing costs 4 of 30. A second finding: the
+caller's `tools.prepend?.(uniform)` (a uniform-column note) put that
+note ahead of `copyRows` regardless of DOM order chosen inside
+`interrogable` — moved to `after(copyRows)`. dx is 0.0px on every
+measured instance, both classes, both viewports, both pages
+(`test_pointer_travel_is_a_budget.py`: 48 passed). `dy` stays out of
+scope for these two only (`DX_ONLY`): their block (`.table-tools`)
+genuinely wraps to more lines for a narrower, nested table.
 
 **Mutation table**
 
 | mutation | reddened | count |
 |---|---|---|
-| CSS `order`/margin removed from `.table-tools button.copy-rows`/`select.top-n` (restores today's visual order) | `test_a_control_class_sits_at_one_place[button.copy-rows-*]`, `[select.top-n-*]` | 8 of 8 (both classes, both viewports, both pages) |
+| `align-self`/margin removed from `.table-tools button.copy-rows`/`select.top-n` (restores today's visual order) | `test_a_control_class_sits_at_one_place[button.copy-rows-*]`, `[select.top-n-*]` | 8 of 8 (both classes, both viewports, both pages) |
 | `select.top-n` dropped from `PLACEMENT` (kept out of `UNPLACED` too, the UX-1042 gap) | `test_every_control_class_a_head_or_row_holds_is_placed` | 4 of 4 (both viewports, both pages) |
+| `select.top-n` given `order: -1` (moves it on screen without moving it in the DOM) | `test_a_table_tools_row_tabs_in_its_own_reading_order` | 4 of 4 (both viewports, both pages) |
+
+**Deviation**: J4 (table tools) grew, `MEASURED` moved with it -
+`macro_micro` 12.77→14.8 bits (1440x900), 9.99→9.99 (390x844, unchanged,
+`top-n`'s hop already sat off to the side); `both_scale` 12.77→14.78
+(1440x900), 10.02→10.63 (390x844). The hop lengthens because `top-n`,
+consistently last in the row, now sits one full row-width from the
+table filter hop before it, on every table rather than only some - the
+walk `MEASURED` bounds is the price of the placement §3l asks for, not
+noise. Also undeclared: `docs/design/styleguide.md`'s §3l binding
+paragraph and ledger note, which named `copy-rows`/`top-n` "read, not
+held" - updated to record that they hold, since the sentence was
+inaccurate once this task's guard landed.

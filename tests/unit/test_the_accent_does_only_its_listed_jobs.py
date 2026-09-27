@@ -19,8 +19,8 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tests"))
 
-from browser import NO_BROWSER, Browser, find_chrome
-from pages import FIXTURES, export_uri
+from tests.browser import NO_BROWSER, Browser, find_chrome
+from tests.pages import FIXTURES, export_uri
 
 CSS = (REPO / "bga/viewer/style.css").read_text()
 GUIDE = (REPO / "docs/design/styleguide.md").read_text()
@@ -118,14 +118,11 @@ BOOTED = r"""
     for (const rule of sheet.cssRules)
       if (rule.media && /prefers-color-scheme:\s*light/.test(rule.media.mediaText))
         rule.media.mediaText = "not all";
-  const probe = document.createElement("div");
-  document.body.appendChild(probe);
-  const tokens = {};
-  for (const t of ["accent", "accent-mark"]) {
-    probe.style.color = `var(--${t})`;
-    tokens[t] = getComputedStyle(probe).color;
-  }
-  probe.remove();
+  // One sentinel per grade: light and print give both grades one value.
+  const tokens = {accent: "rgb(1, 2, 3)", "accent-mark": "rgb(4, 5, 6)"};
+  const sheets = document.styleSheets;
+  sheets[sheets.length - 1].insertRule(":root { " + Object.entries(tokens)
+    .map(([t, c]) => `--${t}: ${c} !important;`).join(" ") + " }");
   const sides = ["Top", "Right", "Bottom", "Left"];
   const inherited = new Set(["color", "fill", "stroke"]);
   const strays = new Set(), jobs = new Set();

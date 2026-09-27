@@ -39,6 +39,18 @@ drawing bands), and §4.6 says whether the primary control spends the
 block's emphasis. A guard reads every computed accent use against the
 list.
 
+## Decision
+
+Architect, 2026-09-27, at `71d3dcda`.
+
+- **Route**: §4.2 rule 2 becomes a table, one job per row with its grade, channel and selectors. Eight jobs: accent (1) links `a`/color; (2) hover `button`, `button.primary`, `.investigate button`, `.path-box`, `.chip`/border; (3) toggle on `button[aria-pressed="true"]`/border, box-shadow; (4) current focus: the `:focus-visible` set, `[data-jumped]`, `.jump-hits li[data-active] > button`/outline, `.focus-bar`, `.mark-summary`/border-left; (5) decision and promotion `.decision`, `.reader-lead`, `section[data-promoted]`/border; (6) info/low severity `.finding`, `.advice`/border-left. accent-mark: (7) primary control `button.primary`/background, border; (8) drawing marks `.band-strip`, `.trend-band`, `.trend-point`, `.spark-point`, `.decomposition-part:first-of-type`, `.interval-mark`/fill; `.spark-line`, `.density-tick`, `.trend-median`/stroke; `.wf-fill`, `.horizon-bar`/background.
+- §4.7 rule 7: "A promoted section wears rule 2's accent on a border, not a fill; fills belong to rule 3's status tones, the one primary control (§6e.5) and the drawings' marks (accent-mark)"; its "already spent on interaction, the current focus and the band" is fixed too. §4.6 gains: "A `primary` control spends none of the block's emphasis: §4.6 budgets type per block, §6e.5 affordance per chapter."
+- **Rejected**: a hand-typed selector list in the test (UX-996); deriving the allowed set from `style.css` alone (a new rule would declare itself); extending `test_emphasis_is_a_budget.py` (another claim); counting primary as emphasis (no measured defect).
+- **Files**: `docs/design/styleguide.md` (§4.2, §4.6, §4.7); `tests/unit/test_the_accent_does_only_its_listed_jobs.py` (new); `bga/viewer/style.css` 795-797 (stale comment only).
+- **Guard**: static - the (selector, channel) pairs parsed from `style.css`'s `var(--accent(-mark)?)` declarations equal those parsed from §4.2's table, both ways. Booted - golden and `macro_micro`, 1440x900, dark, light and print: every element whose computed color, border colour, background-color, outline-color, box-shadow, fill or stroke is the accent or accent-mark `matches()` a §4.2 selector for that channel; at least one hit per at-rest job (1, 5, 7, 8).
+- **Mutations**: (a) `.investigate button { background: var(--accent-mark) }` reds both halves; (b) `.density-end { stroke: var(--accent-mark) }` reds both (confirm `.density-end` renders on golden first); (c) delete `.wf-fill` from §4.2's table, the static half reds.
+- **Class**: product. One track, implementer with `model: opus`.
+
 ## Out of Scope
 
 The accent's value and the palette bands (§5).

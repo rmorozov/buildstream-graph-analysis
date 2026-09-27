@@ -1,6 +1,6 @@
 # UX-1063: analysis commutes with anonymization
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-1062 | **Found by:** the 2026-09-27 brainstorm with the owner ([`anonymized-bundle.md`](../../design/anonymized-bundle.md)), section 6.4 | **Serves:** anyone sharing a private capture with an outside reader | **Topic:** guards | **Area:** bga | **Shape:** judgement
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-1062 | **Found by:** the 2026-09-27 brainstorm with the owner ([`anonymized-bundle.md`](../../design/anonymized-bundle.md)), sections 6.4 and 6.10; the owner's review on #298, finding 5 | **Serves:** anyone sharing a private capture with an outside reader | **Topic:** guards | **Area:** bga | **Shape:** judgement
 
 ## Motivation
 
@@ -10,9 +10,12 @@ output sorted or tie-broken by name reorders under HMAC pseudonyms.
 
 ## Required Fix
 
-`analyze(anon(capture)) == anon(analyze(capture))` on the golden
-fixtures; the name-dependent tie-breaks it finds in `bga/` are replaced
-by name-independent ones.
+On the golden fixtures, `analyze(anon(capture))` and
+`anon(analyze(capture))` agree on every invariant measurement exactly;
+where a choice is tied, they agree on the set of equally valid choices,
+not the representative; display order is not compared. Name-dependent
+tie-breaks found in `bga/` are replaced where a name-independent order
+exists; findings with no such order are listed by name in the guard.
 
 ## Out of Scope
 

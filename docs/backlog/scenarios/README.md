@@ -43,13 +43,14 @@ task file, which is the only place it ever lived twice.
 | UX-1014 | [the "safe cap plus auto" default is measured on more shapes and hosts before it is anyone's default](UX-1014-the-builders-and-auto-default-is-measured-on-more-shapes-and-hosts.md) | capture | High | R4, R5 | 🔴 Not Started |
 | UX-1040 | [a paired reading decides whether implementers move to opus at low effort](UX-1040-a-paired-reading-decides-the-implementers-model.md) | guards | Medium | every round's implementer spend | 🔴 Not Started |
 | UX-1041 | [an agent cannot repoint the shared install or start the touching sweep](UX-1041-an-agent-cannot-repoint-the-shared-install-or-run-the-sweep.md) | guards | Medium | every parallel round's verifiers and the push gate after them | 🔴 Not Started |
-| UX-1060 | [every schema leaf declares what it discloses](UX-1060-every-schema-leaf-declares-what-it-discloses.md) | contracts | High | anyone sharing a private capture with an outside reader | 🔴 Not Started |
+| UX-1060 | [every exported value path declares what it discloses](UX-1060-every-exported-value-path-declares-what-it-discloses.md) | contracts | High | anyone sharing a private capture with an outside reader | 🔴 Not Started |
 | UX-1061 | [a pseudonym is keyed, stable, and keeps the name's shape](UX-1061-a-pseudonym-is-keyed-stable-and-keeps-the-names-shape.md) | store | High | anyone sharing a private capture with an outside reader | 🔴 Not Started |
 | UX-1062 | [a bundle exports anonymized, and refuses a leftover name](UX-1062-a-bundle-exports-anonymized-and-refuses-a-leftover-name.md) | store | High | anyone sharing a private capture with an outside reader | 🔴 Not Started |
 | UX-1063 | [analysis commutes with anonymization](UX-1063-analysis-commutes-with-anonymization.md) | guards | Medium | anyone sharing a private capture with an outside reader | 🔴 Not Started |
 | UX-1064 | [a pseudonym in any text resolves back to the real name](UX-1064-a-pseudonym-in-any-text-resolves-back-to-the-real-name.md) | cli | High | anyone sharing a private capture with an outside reader | 🔴 Not Started |
 | UX-1065 | [a declared public junction keeps its public names](UX-1065-a-declared-public-junction-keeps-its-public-names.md) | store | Medium | anyone sharing a private capture with an outside reader | 🔴 Not Started |
 | UX-1066 | [raw logs travel tokenized](UX-1066-raw-logs-travel-tokenized.md) | store | Low | anyone sharing a private capture with an outside reader | 🔴 Not Started |
+| UX-1067 | [the archive and its manifest carry no original metadata](UX-1067-the-archive-and-its-manifest-carry-no-original-metadata.md) | store | High | anyone sharing a private capture with an outside reader | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

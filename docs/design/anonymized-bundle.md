@@ -11,8 +11,9 @@ real elements without doing it by hand.
 reader outside it; R1-R8 reach that reader only through this.
 
 **Status:** decided. The owner answered the six questions in section 8
-"yes" on 2026-09-27. No code changed; section 9 lists the rows filed
-with it.
+"yes" on 2026-09-27, and his design review on #298 the same day revised
+sections 3, 6 and 7 (section 8 lists the five findings). No code
+changed; section 9 lists the rows filed with it.
 
 ## 1. The seam already exists
 
@@ -61,9 +62,21 @@ unit is the **value class**:
 | H. time | absolute `ts_us`, wall-clock stamps, the snapshot stamp | shifted to epoch 0, every delta exact |
 
 An allowlist, never a denylist: a denylist fails open on the next field
-anyone adds. The class lives **in the schema**, a `disclosure` word on
-each leaf of `bga/schemas.py` (the word `sensitivity` is already an
-`analyze` section), and a guard reds when a leaf has none.
+anyone adds. The class does **not** live in `bga/schemas.py`: that module
+pins the top-level keys of the *output* documents and sets
+`additionalProperties` true, and it is not the schema of `graph.json`,
+`trace.json`, `run-context.json` or any other captured input. A guard over
+it could pass beside an unclassified private field.
+
+So the class lives in a **disclosure policy per exported member**,
+versioned by that member's contract (`graph/v9`, `trace/v9`,
+`run-context/v9`, `plane2/v3`, `sources/v1`, `host-samples/v1`, and the
+uncontracted members by name). The policy names every value path,
+including map keys that are data (every `per_element` key of
+`plane2.json` is class A, whatever its value) and array items. The
+export walks each member and **refuses on any path the policy does not
+name**, so an unknown field fails the export instead of travelling. A
+contract version the policy has no entry for refuses the whole member.
 
 ## 4. Reversibility
 
@@ -121,17 +134,26 @@ cite position (file, line, field), not content.
 
 **6.2 Names inside other strings.** Paths, `-D` values, CMake target
 names (`LIBFOO`), log lines and finding prose carry element names.
-A dictionary pass, longest match first, over every string, with
-normalized variants (case-folded, `-`, `_`, `.` stripped). Then a
-**residue scan**: the export fails if any original token of four or more
-characters still appears anywhere in the bundle.
+Free text is **never scanned and forwarded**: a field of class F is
+either rebuilt from a constrained grammar (a command line becomes an
+allowlisted `argv[0]` plus flag names, every value slot a pseudonym) or
+dropped. A dictionary pass, longest match first, with normalized
+variants (case-folded, `-`, `_`, `.` stripped), then covers what the
+grammar keeps.
+
+The **residue scan** is a tripwire, not a proof: the export fails if any
+dictionary token of four or more characters still appears anywhere in
+the decoded archive. It cannot find a codename, address, URL, credential
+or short identifier the dictionary never held, so a clean scan is never
+described as "no original name or secret"; what closes that gap is the
+policy's allowlist and the owner's review (6.8).
 
 **6.3 Short names collide with vocabulary.** `core.bst` must not rewrite
 "core activity" or "cores": replace at word boundaries, outside
 allowlisted phrases, and count substitutions per class in the manifest.
 
-**6.4 Analysis must commute with anonymization.**
-`analyze(anon(capture)) == anon(analyze(capture))`. It breaks wherever
+**6.4 Analysis must commute with anonymization**, up to ties (6.10):
+`analyze(anon(capture)) ≈ anon(analyze(capture))`. It breaks wherever
 an output is sorted or tie-broken by name. Stable cross-run pseudonyms
 want HMAC order; order-preserving pseudonyms want per-run ranks, which
 break when an element is added. Resolution: keep HMAC and remove
@@ -149,24 +171,56 @@ and private tool names (`b-`).
 **6.7 The map is the secret.** Mode 0600, never bundled, never listed by
 the store's listing.
 
-**6.8 A one-screen review before writing.** Substitutions per class,
-free-text tokens kept because the allowlist matched, anything the
-residue scan found suspicious. The owner approves, then the archive is
-written: a dictionary cannot know a codename in a comment.
+**6.8 An explicit owner review before writing.** Substitutions per
+class, every string kept verbatim because the allowlist matched, anything
+the residue scan found suspicious. Nothing is written until the owner
+approves: a dictionary cannot know a codename in a comment.
+
+**6.9 The archive's own metadata.** `bundle.export()` calls
+`tarfile.add()` on the source files, so each header carries the file's
+mtime, uid, gid, user and group name; `bundle.json` carries the
+snapshot's `stamp` and `packed_at`; the default file name is
+`<stamp>.bga-bundle.tar.gz`. The anonymized export builds every tar
+header explicitly (mtime 0, uid and gid 0, empty user and group names,
+normalized mode), writes a transformed manifest (the stamp pseudonymized,
+`packed_at` dropped), names the file without the stamp, and runs the
+residue scan over the **decoded final archive**, headers and manifest
+included, before it is published.
+
+**6.10 Ties have no name-independent order.** Symmetric nodes can tie
+with no order that survives renaming, so exact equality in 6.4 is
+stronger than the property wanted. The commutation guard compares
+invariant measurements exactly and, where a choice is tied, the *set* of
+equally valid choices rather than the representative, and treats display
+order as out of scope. Findings whose single representative cannot be
+preserved are listed by name in the guard.
 
 ## 7. Staging
 
-1. The `disclosure` class on every schema leaf.
+1. The disclosure policy per exported member, exhaustive and versioned.
 2. The pseudonym core and the local map.
-3. The anonymized export over the structured members (`graph.json`,
-   `trace.json`, `run-context.json`, `sources.json`, `plane2.json`,
-   `analyze.json`, `host-samples.jsonl`), with the residue scan and the
-   review screen; `plane2.log.gz`, `build.log` and `capture-context.txt`
-   dropped.
-4. The commutation guard.
-5. Resolve, and the viewer taking a map.
-6. Public-junction passthrough.
-7. Tokenized raw logs, only when a real diagnosis needs them.
+3. Neutral archive and manifest metadata (6.9). Stages 1 and 3 gate the
+   first anonymized export.
+4. The anonymized export, with the residue scan and the owner review.
+   Every `CAPTURE_LAYOUT` row states its treatment, and a row added
+   without one refuses the export:
+
+   | Row | Treatment |
+   |---|---|
+   | `.bga/.gitignore`, `.bga/config`, `.bga/tmp/` | drop |
+   | `.bga/runs/<stamp>/` | renamed by a pseudonymized stamp |
+   | `run/graph.json`, `run/trace.json`, `run/run-context.json`, `run/sources.json` | transform |
+   | `run/chrome_trace.json` | drop (derived) |
+   | `plane2.json`, `plane2-resource.json`, `host-samples.jsonl` | transform |
+   | `element-slice.json` | transform: its target names are class A |
+   | `analyze.json` | drop: its prose is free text, and the far side re-derives it |
+   | `plane2.log.gz`, `build.log`, `capture-context.txt` | drop |
+   | `.size` | drop (derived) |
+
+5. The commutation guard.
+6. Resolve, and the viewer taking a map.
+7. Public-junction passthrough.
+8. Tokenized raw logs, only when a real diagnosis needs them.
 
 ## 8. Decisions, 2026-09-27
 
@@ -179,14 +233,23 @@ written: a dictionary cannot know a codename in a comment.
 | Shift timestamps to epoch 0 | yes |
 | File the stages as backlog rows | yes |
 
+The owner's design review on #298 (head `2672784c`) added five findings,
+all taken: the classification moves from `bga/schemas.py` to a policy per
+exported member (blocker); archive and manifest metadata are anonymized
+and scanned (blocker, UX-1067); the residue scan is a tripwire and free
+text is rebuilt from a grammar or dropped (high); every layout row is
+enumerated in stage 4 (medium); commutation compares ties as sets
+(medium).
+
 ## 9. Rows filed
 
 | Stage | Row |
 |---|---|
-| 1 | [UX-1060](../backlog/scenarios/UX-1060-every-schema-leaf-declares-what-it-discloses.md) |
+| 1 | [UX-1060](../backlog/scenarios/UX-1060-every-exported-value-path-declares-what-it-discloses.md) |
 | 2 | [UX-1061](../backlog/scenarios/UX-1061-a-pseudonym-is-keyed-stable-and-keeps-the-names-shape.md) |
-| 3 | [UX-1062](../backlog/scenarios/UX-1062-a-bundle-exports-anonymized-and-refuses-a-leftover-name.md) |
-| 4 | [UX-1063](../backlog/scenarios/UX-1063-analysis-commutes-with-anonymization.md) |
-| 5 | [UX-1064](../backlog/scenarios/UX-1064-a-pseudonym-in-any-text-resolves-back-to-the-real-name.md) |
-| 6 | [UX-1065](../backlog/scenarios/UX-1065-a-declared-public-junction-keeps-its-public-names.md) |
-| 7 | [UX-1066](../backlog/scenarios/UX-1066-raw-logs-travel-tokenized.md) |
+| 3 | [UX-1067](../backlog/scenarios/UX-1067-the-archive-and-its-manifest-carry-no-original-metadata.md) |
+| 4 | [UX-1062](../backlog/scenarios/UX-1062-a-bundle-exports-anonymized-and-refuses-a-leftover-name.md) |
+| 5 | [UX-1063](../backlog/scenarios/UX-1063-analysis-commutes-with-anonymization.md) |
+| 6 | [UX-1064](../backlog/scenarios/UX-1064-a-pseudonym-in-any-text-resolves-back-to-the-real-name.md) |
+| 7 | [UX-1065](../backlog/scenarios/UX-1065-a-declared-public-junction-keeps-its-public-names.md) |
+| 8 | [UX-1066](../backlog/scenarios/UX-1066-raw-logs-travel-tokenized.md) |

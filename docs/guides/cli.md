@@ -2495,10 +2495,10 @@ bga analyze tests/fixtures/macro_micro/run \
 
 
 ```text
-  Capacity: builders 4 x max-jobs unrecorded on 4 core(s): graph binds at 2, below the 4 configured - more builders contend rather than overlap here
-    graph allows 2: the sweep's knee is at 2 builder(s)
-    CPU allows 4: 1.60 of 4 core(s) busy at builders=4, i.e. 0.40 core(s) per concurrent element
-    memory allows 9: the 9-builder envelope fits in 15.7 GB (measured over 9 element peak(s), so it says nothing above 9)
+  Capacity: builders 4 x max-jobs unrecorded on 4 cores: graph binds at 2, below the 4 configured - more builders contend rather than overlap here
+    graph allows 2: the sweep's knee is at 2 builders
+    CPU allows 4: 1.60 of 4 cores busy at builders=4, i.e. 0.40 cores per concurrent element
+    memory allows 9: the 9-builder envelope fits in 15.7 GB (measured over 9 element peaks, so it says nothing above 9)
     Free capacity you already have: core.bst asked its native build for -j1 - a builder slot drawing one core. Fix that before raising anything, then re-measure.
 ```
 

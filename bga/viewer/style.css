@@ -299,7 +299,15 @@ body[data-has-toc] > header {
   display: inline-block; margin-right: var(--space-3); vertical-align: middle;
   font-size: var(--font-small);
 }
-#run-name { display: inline-block; margin: 0 var(--space-3) 0 0; vertical-align: middle; }
+/* `UX-1047`: the run's name is data, unbounded in length - a long one
+   must not wrap the h1 onto its own row (measured 93px at 390x844 on
+   a run whose displayed name was 9 characters wider than "run" alone,
+   before the display-name fix; this is the row's own defence,
+   independent of it). One line, truncated, rather than a second. */
+#run-name {
+  display: inline-block; margin: 0 var(--space-3) 0 0; vertical-align: middle;
+  max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 #run-identity, #run-producer {
   display: inline-block; vertical-align: middle;
   margin: 0; font-size: var(--font-small);

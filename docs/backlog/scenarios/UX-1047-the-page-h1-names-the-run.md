@@ -61,45 +61,44 @@ Mutation: put `h1` back on the wordmark, and the guard reds.
 ## Outcome
 
 Gap measured (before, `git show HEAD:...`, golden export, 390x844):
-header 70px; `docs/design/rendered-strings.json` carried `{"exception":
-"command name", "role": "heading", "text": "bga"}` from `#wordmark`.
+header 70px; `rendered-strings.json` carried `{"exception": "command
+name", "role": "heading", "text": "bga"}` from `#wordmark`.
 
-Close measured (after, same fixture and width):
-header 70px (no regression, ≤72px §3i); the `"bga"`/`command name` row
-dropped from `rendered-strings.json` (`--write`, 381 rows, -5 lines,
-verified `git diff` shows only that deletion); the h1's text equals
-`golden-run` (`test_the_h1_is_the_run_not_the_wordmark`), 21px
-(`--font-h1`), tying `h2` rather than falling under it
-(`test_the_h1_ties_the_chapter_size_rather_than_falling_under_it`);
-`#wordmark` carries no heading role
-(`test_the_wordmark_is_not_a_heading`); after `?run=20260101T000000Z`
-the served h1 reads that stamp
-(`test_the_other_run_s_payload_is_what_comes_back`). 83 tests passed:
-`test_the_heading_outline_has_three_levels.py`,
-`test_the_header_keeps_its_budget.py`,
-`test_the_page_moves_between_runs.py`,
-`test_the_report_is_read_not_decoded.py`,
-`test_the_report_you_can_attach.py`, `test_labels_are_sentence_case.py`.
-`make lint` and `dev_sizes.py --check` both clean.
+Close measured (after, same fixture/width): header 70px (≤72px §3i);
+that row dropped from `rendered-strings.json` (`--write`, 381 rows,
+-5); h1 text is `run` (`test_the_h1_is_the_run_not_the_wordmark`,
+21px, ties `h2` rather than falling under it); `#wordmark` carries no
+heading role; after `?run=20260101T000000Z` the served h1 reads that
+stamp. Round two: `runDisplayName` climbed a segment whenever
+`run.name==="run"`, so macro_micro via `export_uri` read h1 "snapshot"
+(header 93px at 390x844, over budget - the h1 wrapped to its own
+line). Fixed to climb only when the parent matches the store's stamp
+(`bga/run_store.py`'s `_STAMP`, `%Y%m%dT%H%M%SZ`); otherwise shows
+`run.name`. Also gave `#run-name` `max-width`/`ellipsis` so an
+unbounded name never grows the header regardless: a synthetic 62-char
+name still measures 70px at 390x844 (158px without it). 1142 tests
+passed (heading outline, header budget, page-moves-between-runs,
+report-is-read, report-you-can-attach, sentence-case, register,
+skip-reasons, dom-shim). `make lint` and `dev_sizes.py --check` clean.
 
 Mutation table:
 
 | mutation | reddened | count |
 |---|---|---|
-| `<h1 id="wordmark">` back, `#run-name` a plain span | `test_the_h1_is_the_run_not_the_wordmark`, `test_the_wordmark_is_not_a_heading` | 2 failed / 7 |
-| `h1{font-size:var(--font-h2)}` | `test_the_h1_ties_the_chapter_size_rather_than_falling_under_it` (17px vs 21px) | 1 failed / 7 |
-| `stampIdentity` heading set from `run?.name` directly (dropping the stamp fallback) | `test_the_other_run_s_payload_is_what_comes_back` (`heading` stayed `"run"` across the switch) | 1 failed / 1 |
+| `<h1 id="wordmark">` back, `#run-name` a plain span | `test_the_h1_is_the_run_not_the_wordmark`, `test_the_h1_ties_the_chapter_size_rather_than_falling_under_it`, `test_the_wordmark_is_not_a_heading` | 3 failed / 10 |
+| `h1{font-size:var(--font-h2)}` | `test_the_h1_ties_...` (17px vs 21px) | 1 failed / 10 |
+| `stampIdentity` heading from `run?.name` directly (drops stamp fallback) | `test_the_other_run_s_payload_is_what_comes_back` | 1 failed / 1 |
+| `runDisplayName` back to the unconditional climb | `test_the_h1_is_the_run_not_the_wordmark`, `test_a_bare_run_dir_reads_run`, `test_macro_micro_via_export_uri_does_not_read_snapshot` | 3 failed / 10 |
+| `#run-name`'s `max-width`/ellipsis removed | `test_a_long_run_name_still_fits_the_budget_on_a_phone` (158px) | 1 failed / 9 |
 
-All three reverted from the saved pre-mutation copy and reconfirmed
+All five reverted from the saved pre-mutation copy and reconfirmed
 green.
 
 Deviation: the switcher mutation is not literally "stamping only on
 first boot" - the switcher navigates by `location.assign`, a full
-reload, so a boot-once flag cannot survive across the two independent
-`browser.measure` calls the guard drives. The mutation used instead
-(dropping `runDisplayName`'s stamp fallback) exercises the same guard
-clause through the code path that actually runs. Styleguide line
-"1304" (the HIG table's header row) needed no edit - rule 1 at line
-1306 already stated route (a) exactly; only §6e.1's short row (70),
-the outline-to-scale mapping (1784-1788), the guard description
-(1321-1325) and §3i's prose (1897-1900) changed.
+reload, so a boot-once flag cannot survive across two independent
+`browser.measure` calls. Used dropping the stamp fallback instead,
+through the code path that actually runs. Styleguide line 1304 (the
+HIG table's header row) needed no edit - rule 1 at 1306 already stated
+route (a); only §6e.1's row (70), the scale mapping (1784-1788), the
+guard description (1321-1325) and §3i's prose (1897-1900) changed.

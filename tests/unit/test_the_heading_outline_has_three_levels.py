@@ -69,10 +69,7 @@ def browser():
 def golden(tmp_path_factory):
     from tools.bga_view import export
 
-    # `UX-1047`: not named "run" - that basename is the stored-run
-    # heuristic's trigger (`app.js`'s `runDisplayName`), which is a
-    # different item's concern than this outline.
-    run = tmp_path_factory.mktemp("outline-golden") / "golden-run"
+    run = tmp_path_factory.mktemp("outline-golden") / "run"
     shutil.copytree(GOLDEN, run)
     (run / "expected_output.json").unlink(missing_ok=True)
     page = tmp_path_factory.mktemp("outline-golden-page") / "report.html"
@@ -121,7 +118,10 @@ def test_the_h1_is_the_run_not_the_wordmark(browser, golden):
     ones = [n for n in outline if n["tag"] == "H1"]
     assert len(ones) == 1, f"{len(ones)} h1s: {outline[:5]}"
     assert ones[0]["id"] == "run-name", ones[0]
-    assert ones[0]["text"].strip() == "golden-run", ones[0]
+    # `UX-1047`: this fixture is a bare `run` dir with no store above
+    # it (no `<stamp>/run`), so the h1 reads the literal name, "run" -
+    # the tests below cover the climb-to-a-stamp branch and its guard.
+    assert ones[0]["text"].strip() == "run", ones[0]
 
 
 @needs_browser
@@ -148,3 +148,51 @@ def test_the_wordmark_is_not_a_heading(browser, golden):
     assert wordmark, "no #wordmark on the page"
     assert wordmark["tag"] not in {"H1", "H2", "H3", "H4", "H5", "H6"}, wordmark
     assert wordmark["role"] != "heading", wordmark
+
+
+#: The h1's text alone - `run.name`'s "run" case climbs a directory
+#: only when what it climbs to is a stamp (`app.js`'s `runDisplayName`,
+#: `bga/run_store.py`'s `_STAMP`), never merely a run's parent.
+_HEADING_TEXT = "document.getElementById('run-name')?.textContent ?? null"
+
+
+@needs_browser
+def test_a_stamped_run_reads_the_stamp(browser, tmp_path_factory):
+    """`<store>/<stamp>/run`: the h1 climbs to the stamp."""
+    from tools.bga_view import export
+
+    stamp = "20260105T000000Z"
+    run = tmp_path_factory.mktemp("stamped") / stamp / "run"
+    shutil.copytree(GOLDEN, run)
+    (run / "expected_output.json").unlink(missing_ok=True)
+    page = tmp_path_factory.mktemp("stamped-page") / "report.html"
+    export(str(run), str(page))
+    heading = browser.measure(page.as_uri(), _HEADING_TEXT)
+    assert heading.strip() == stamp, heading
+
+
+@needs_browser
+def test_a_bare_run_dir_reads_run(browser, tmp_path_factory):
+    """No store above it: `run.name` is shown as-is, "run"."""
+    from tools.bga_view import export
+
+    run = tmp_path_factory.mktemp("case-bare-run") / "run"
+    shutil.copytree(GOLDEN, run)
+    (run / "expected_output.json").unlink(missing_ok=True)
+    page = tmp_path_factory.mktemp("case-bare-run-page") / "report.html"
+    export(str(run), str(page))
+    heading = browser.measure(page.as_uri(), _HEADING_TEXT)
+    assert heading.strip() == "run", heading
+
+
+@needs_browser
+def test_macro_micro_via_export_uri_does_not_read_snapshot(browser, tmp_path_factory):
+    """`tests/pages.py:export_uri` copies into `<into>/snapshot/run` -
+    "snapshot" is that copy's own directory name, never a stamp."""
+    sys.path.insert(0, str(REPO / "tests"))
+    import pages
+
+    uri = pages.export_uri(pages.FIXTURES["macro_micro"],
+                            tmp_path_factory.mktemp("macro-micro"))
+    heading = browser.measure(uri, _HEADING_TEXT)
+    assert heading.strip() != "snapshot", heading

@@ -74,15 +74,23 @@ const bounded = (key, items) => (items.length > TABLE_OPENS_BOUNDED_ABOVE
  */
 /**
  * `UX-394`/`UX-1047`: what a run is called. `run.json`'s own `name` is
- * the served directory's basename, which is `"run"` for every stored
- * snapshot (`<store>/<stamp>/run`) - so that case reads the stamp one
- * path segment up instead. Shared by the h1 and the run picker's
- * `current`, which used to compute this on its own.
+ * the served directory's basename, which is `"run"` both for a stored
+ * snapshot (`<store>/<stamp>/run`, where the stamp is what a reader
+ * wants) and for a bare `run` dir with no store above it (an export's
+ * `into/snapshot/run`, where "snapshot" is only the export's own copy
+ * directory) - so that case reads one path segment up only when it is
+ * actually a stamp, never on the strength of the basename alone.
+ * Shared by the h1 and the run picker's `current`, which used to
+ * compute this on its own.
  */
+//: `bga/run_store.py`'s `_STAMP` ("%Y%m%dT%H%M%SZ"), the only pattern
+//: the store writes a snapshot directory by.
+const _STAMP_RE = /^\d{8}T\d{6}Z$/;
+
 export function runDisplayName(run) {
-  return run?.name === "run"
-    ? String(run?.run ?? "").split("/").filter(Boolean).slice(-2, -1)[0]
-    : run?.name;
+  if (run?.name !== "run") return run?.name;
+  const parent = String(run?.run ?? "").split("/").filter(Boolean).slice(-2, -1)[0];
+  return _STAMP_RE.test(parent ?? "") ? parent : run.name;
 }
 
 /**

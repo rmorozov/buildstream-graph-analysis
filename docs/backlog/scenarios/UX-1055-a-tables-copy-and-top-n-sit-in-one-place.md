@@ -1,6 +1,6 @@
 # UX-1055: a table's Copy rows and top-N controls sit in one place in its tool row
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-1042 | **Found by:** UX-1042's guard (round 143), styleguide §3l | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** bounded
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-1042 | **Found by:** UX-1042's guard (round 143), styleguide §3l | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** bounded
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-1049: the landed page has one bound per size class, written once
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the second styleguide audit (2026-09-27), styleguide §3c, §3e, §6e.10 | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the second styleguide audit (2026-09-27), styleguide §3c, §3e, §6e.10 | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement
 
 ## Motivation
 
@@ -103,7 +103,7 @@ sections and the census checks the table names every citing file.
 | # | mutation | reddened | run |
 |---|---|---|---|
 | 1 | `CHAPTER_HEADING_SCREENS` 9.0→9.5 | `test_3c_states_both_screen_figures` | 1 failed |
-| 2 | `COMPACT_CHAPTER_HEADING_SCREENS` 13.5→14.0 | `test_3c_states_both_screen_figures` | 1 failed |
+| 2 | `COMPACT_CHAPTER_HEADING_SCREENS` 13.0→13.5 (the tree's landed value) | `test_3c_states_both_screen_figures` | 1 failed |
 | 3 | §3c landed bullet restated "at most 10 screens" | `test_3c_states_no_landed_height_number` | 1 failed |
 | 4 | `COMPACT_LANDED_HEIGHT_PX["golden"]` 8,500→8,600 | `test_the_style_guide_states_every_budget` | 1 failed |
 | 5 | deleted `test_the_landed_page_is_short`'s assert | chapter clauses stayed green (independence confirmed) | 6 passed |
@@ -119,3 +119,7 @@ headroom choice; integration set it to 13.0 by the regular bound's
 convention; the §7 table rows are an addition the Decision's file list did
 not enumerate, forced by an existing guard. Both are flagged for
 review rather than assumed correct.
+
+`test_3c_states_both_screen_figures`'s regex took a left word
+boundary (`\b`) at `e2435ba2`, so `13` no longer matches inside `113`
+or similar; that fix landed before this row closed.

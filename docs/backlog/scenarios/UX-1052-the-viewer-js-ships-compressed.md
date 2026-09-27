@@ -1,6 +1,6 @@
 # UX-1052: the export carries its viewer JS gzipped, and a guard bounds its bytes
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the second styleguide audit (2026-09-27), Ruslan's question on #297 | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the second styleguide audit (2026-09-27), Ruslan's question on #297 | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
 
 ## Motivation
 
@@ -107,3 +107,7 @@ regex, 3 grepped the export for module identifiers, the attach
 harness inflates in node, `docs/guides/ci-comment.md`'s 488 -> 356 KiB,
 and `tests/quality_reference.json` (`bga_view.py` 1,997 -> 2,064 lines,
 longest function 164 -> 166).
+
+The node loader test boots via `tests/dom_shim.mjs`'s `installDocument`,
+not a browser. Verified fix (resolvable skip reason, base `6c43a11d`):
+`e6bbe261`.

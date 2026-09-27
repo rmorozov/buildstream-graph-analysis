@@ -1,6 +1,6 @@
 # UX-1047: the page's one `h1` is the run, or §6e.1 says it is the wordmark
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the second styleguide audit (2026-09-27), styleguide §6e.1, §3i, §4f | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the second styleguide audit (2026-09-27), styleguide §6e.1, §3i, §4f | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement
 
 ## Motivation
 

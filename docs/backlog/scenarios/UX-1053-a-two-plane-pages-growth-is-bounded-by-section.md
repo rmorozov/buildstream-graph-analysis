@@ -1,6 +1,6 @@
 # UX-1053: a two-plane page's growth with the run is bounded by the section that grows
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** UX-1050's architect (2026-09-27), styleguide §3e, §3k | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** UX-1050's architect (2026-09-27), styleguide §3e, §3k | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement
 
 ## Motivation
 

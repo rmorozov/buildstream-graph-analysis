@@ -1,6 +1,6 @@
 # UX-1050: the volume budgets are measured on a two-plane page at scale
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-1053 | **Found by:** the second styleguide audit (2026-09-27), styleguide §3e, §3f | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** bounded
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-1053 | **Found by:** the second styleguide audit (2026-09-27), styleguide §3e, §3f | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** bounded
 
 ## Motivation
 

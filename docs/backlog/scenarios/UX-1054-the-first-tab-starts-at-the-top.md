@@ -1,6 +1,6 @@
 # UX-1054: the first Tab from a fresh load starts at the top of the page
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** UX-1046's verifier (round 143) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** UX-1046's verifier (round 143) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
 
 ## Motivation
 
@@ -80,10 +80,15 @@ scratch rerun of its `_WALK` script at 390x844 measured
 fix (checked against the pre-fix `nav.js` via `git stash`) - a
 pre-existing, unrelated defect at that width, not moved by this change.
 Additional Decomposition classes checked by hand (`Browser.measure`,
-`macro_micro`, 1440x900): a fragment load (`#evidence`) leaves the
-document-order first focusable as `SELECT.top-n`, unchanged; focusing
-`select.top-n` and then forcing the mark to move to `evidence` left
-`document.activeElement` on the select throughout.
+`macro_micro`, 1440x900): a real fragment load (`#evidence`, the
+browser's own fragment navigation, not a forced mark) lands a Tab on
+the target section's first control (`BUTTON.collapse`), not on document
+order's first focusable - the intended deep-link behaviour, since the
+browser sets the starting point itself. A separate check (focusing
+`select.top-n` by hand and then forcing the mark to move to `evidence`
+without a real navigation) left `document.activeElement` on the select
+throughout; that is the mark-only case this row fixes, not the
+fragment-load case above.
 
 Mutation table:
 

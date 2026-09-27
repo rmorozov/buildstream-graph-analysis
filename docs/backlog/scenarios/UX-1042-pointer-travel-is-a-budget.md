@@ -1,6 +1,6 @@
 # UX-1042: pointer travel is a budget, measured per journey
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-1050 | **Found by:** the second styleguide audit (2026-09-27), styleguide §3l | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-1050 | **Found by:** the second styleguide audit (2026-09-27), styleguide §3l | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement
 
 ## Motivation
 

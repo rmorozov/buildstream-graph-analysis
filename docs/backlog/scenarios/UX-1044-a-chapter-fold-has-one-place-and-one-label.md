@@ -1,6 +1,6 @@
 # UX-1044: a chapter's fold sits at one place and says the same thing in the rail and the document
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the second styleguide audit (2026-09-27), styleguide §3l, §6e.2, §6e.13 | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** bounded
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the second styleguide audit (2026-09-27), styleguide §3l, §6e.2, §6e.13 | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** bounded
 
 ## Motivation
 

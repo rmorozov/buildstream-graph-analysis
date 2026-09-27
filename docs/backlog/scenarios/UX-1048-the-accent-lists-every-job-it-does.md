@@ -1,6 +1,6 @@
 # UX-1048: §4 lists every job the accent does, and the fills it takes
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the second styleguide audit (2026-09-27), styleguide §4.2, §4.7, §6e.5, §2d | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the second styleguide audit (2026-09-27), styleguide §4.2, §4.7, §6e.5, §2d | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement
 
 ## Motivation
 

@@ -53,7 +53,7 @@ listed under its topic as `§6e.N`; since round 142 every one is binding.
 | | §3j | a fold bounds its hidden controls, not only its visible rows | binding |
 | | §3k | every population opens at a named bound, and the step past it is bounded too | binding |
 | **Navigation** | §3b | any section is at most two interactions from the rail | binding |
-| | §3c | the landed page is at most 10 screens; chapters fold | binding |
+| | §3c | every chapter question is within reach of the top; chapters fold; total height is §3e's bound | binding |
 | | §3h | the rail shows every chapter and only the current chapter's sections | binding |
 | | §3l | *proposed*: pointer travel is a budget — a control class sits at one place, a journey's travel is bounded | proposed |
 | | §6e.11 | find-in-page reaches folded content | binding |
@@ -480,17 +480,21 @@ change may spend one currency to buy the other, and the guard has to
 see both or it will keep buying the invisible one.
 
 The rule, with the numbers `UX-347` set against the page as it stands
-after §4a's note removal:
+after §4a's note removal. Total landed height is a **volume** bound and
+lives once, at §3e; the two below are **distance** and stay here, in
+screens, per size class (§6e.10; `UX-1049`):
 
-- the document a reader lands on is at most **10 screens at 1440x900**;
-- every chapter's question sits within **8 screens** of the top;
+- the document a reader lands on: see §3e's landed-height budget - one
+  bound, in px, and not restated here;
+- every chapter's question sits within **9 screens at 1440x900** and
+  **13.5 screens at 390x844** of the top;
 - and a chapter's first section begins within **half a screen** of its
   own heading.
 
-All three are asserted in the same guard that holds the click budget,
-so a trade shows up on the side it was paid from, and the guard's
-failure message publishes the walk to all eight destinations in *both*
-currencies.
+Both distance clauses are asserted in the same guard that holds the
+click budget, so a trade shows up on the side it was paid from, and the
+guard's failure message publishes the walk to all eight destinations
+in *both* currencies.
 
 **The lever is folding by chapter.** Every chapter but the first opens
 to its question, one line answering it from published fields, and a
@@ -861,6 +865,12 @@ The UI batch (`UX-1022`, `UX-1018`) moved the one landed bound 7,300 ->
 7,600: `macro_micro` 6,859 at babba3e5, 7,471 merged - `UX-1022`'s
 24 px targets and `UX-1018`'s chapter scale +268, `UX-1021`'s doors +165.
 Spacing, not new blocks; 129 of headroom.
+
+`UX-1023` (§6e.10) split the landed bound itself by size class: at
+390x844 the compact class measures 8,308 px (`golden`) and 11,193
+(`macro_micro`), bounded at 8,500 and 11,400 - the same
+fifth-of-headroom convention, per class rather than shared, because a
+narrow viewport does not fold the same content into the same pixels.
 
 `tests/unit/test_the_page_has_a_volume_budget.py` asserts both budgets
 in **one** guard, so a change trading one for the other has to say so.
@@ -2244,9 +2254,9 @@ headings, so a renumber there moves it.
 | §3 | `test_the_tools_scale_with_the_table.py`, `test_one_click_from_investigation.py` | named |
 | §3a | `test_a_level_names_who_is_in_it.py`, `test_a_value_shows_what_it_is.py`, `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_fold_says_how_deep_it_goes.py`, `test_the_max_jobs_advice_is_one_level.py`, `test_the_merge_carries_every_field.py`, `test_the_page_conforms_to_its_sections.py`, `test_the_provenance_names_its_rule.py`, `test_the_report_you_can_attach.py`, `test_the_serial_chains_are_ranked.py`, `test_the_store_section_takes_a_window.py`, `test_why_bga_believes_what_it_believes.py` | |
 | §3b | `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_page_conforms_to_its_sections.py` | |
-| §3c | `test_a_new_control_class_lands_declared.py`, `test_the_merge_carries_every_field.py` | `UX-665`'s registry names the § each control class belongs to, so the census cites this one for the rail's; §3e's volume budget is still the measured half |
+| §3c | `test_a_new_control_class_lands_declared.py`, `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_merge_carries_every_field.py` | `UX-665`'s registry names the § each control class belongs to, so the census cites this one for the rail's; §3e's volume budget is still the measured half |
 | §3d | `test_a_capped_table_filters_what_it_sorts.py`, `test_a_new_control_class_lands_declared.py`, `test_the_max_jobs_advice_is_one_level.py`, `test_the_merge_carries_every_field.py` | `UX-349`'s `test_the_tools_scale_with_the_table.py` also holds it and cites §3 |
-| §3e | `test_the_page_has_a_volume_budget.py` | |
+| §3e | `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_page_has_a_volume_budget.py` | |
 | §3f | `test_the_handoff_box_is_measured_served.py` | |
 | §3g | `test_the_ceilings_reach_a_reader.py` | |
 | §3h | `test_the_rail_is_a_source_list.py` | |
@@ -2270,7 +2280,7 @@ headings, so a renumber there moves it.
 | §6b | `test_one_factory_builds_every_table.py`, `test_the_handoff_rides_the_rail.py` | |
 | §6c | `test_the_browser_is_the_library.py`, `test_the_report_you_can_attach.py`, `test_find_in_page_reaches_folded_chapters.py` | |
 | §6d | `test_every_control_has_a_resting_appearance.py` | |
-| §6e | `test_a_reader_never_sees_the_register.py`, `test_an_absence_is_one_sentence.py`, `test_one_disclosure_glyph_pair.py`, `test_one_door_per_block.py`, `test_the_heading_outline_has_three_levels.py`, `test_spacing_comes_from_a_scale.py`, `test_controls_meet_the_target_size.py`, `test_every_control_has_a_resting_appearance.py`, `test_a_new_control_class_lands_declared.py`, `test_a_keyboard_journey_reaches_every_chapter.py`, `test_every_drawing_has_a_name_and_a_data_route.py`, `test_find_in_page_reaches_folded_chapters.py`, `test_the_page_has_a_volume_budget.py` | binding since round 142; each rule's guard is the one its row (`UX-1015`-`UX-1027`) closed with |
+| §6e | `test_a_reader_never_sees_the_register.py`, `test_an_absence_is_one_sentence.py`, `test_one_disclosure_glyph_pair.py`, `test_one_door_per_block.py`, `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_heading_outline_has_three_levels.py`, `test_spacing_comes_from_a_scale.py`, `test_controls_meet_the_target_size.py`, `test_every_control_has_a_resting_appearance.py`, `test_a_new_control_class_lands_declared.py`, `test_a_keyboard_journey_reaches_every_chapter.py`, `test_every_drawing_has_a_name_and_a_data_route.py`, `test_find_in_page_reaches_folded_chapters.py`, `test_the_page_has_a_volume_budget.py` | binding since round 142; each rule's guard is the one its row (`UX-1015`-`UX-1027`) closed with |
 | §7 | `test_emphasis_is_a_budget.py`, `test_the_styleguide_names_its_guards.py` | named |
 
 What the rows with no guard were written from, rounds 58 and 69, kept

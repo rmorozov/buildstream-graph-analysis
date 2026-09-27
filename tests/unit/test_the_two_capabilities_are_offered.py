@@ -36,15 +36,12 @@ sys.path.insert(0, str(REPO / "tests"))
 from browser import NO_BROWSER, Browser, find_chrome
 from pages import snapshot_copy
 
+from tests.unit.test_the_page_has_a_volume_budget import LANDED_HEIGHT_PX
+
 GOLDEN = REPO / "tests/fixtures/golden/mixed_task_kinds"
 MACRO = REPO / "tests/fixtures/macro_micro/run"
 chrome = find_chrome()
 needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
-
-#: `UX-347`'s document bound, which is what "within the first N screens"
-#: means here: the section a reader is told about must be inside the
-#: page they land on, not past it.
-DOCUMENT_SCREENS = 10.0
 
 _LOOK = """
 (() => {
@@ -67,7 +64,7 @@ _LOOK = """
   return {
     document: document.documentElement.scrollHeight / vh,
     perfetto: perfetto === null ? null : {
-      top: (perfetto.getBoundingClientRect().top + window.scrollY) / vh,
+      top: Math.round(perfetto.getBoundingClientRect().top + window.scrollY),
       px: Math.round(perfetto.getBoundingClientRect().height),
       order,
       folds: perfetto.querySelectorAll("details").length,
@@ -187,10 +184,10 @@ class TestTheTimelineIsPitchedBeforeItIsCatalogued:
     def test_the_section_is_inside_the_document_a_reader_lands_on(
             self, browser, pages, label):
         out = browser.measure(pages[label]["url"], _LOOK, 1440, 900)
-        assert out["perfetto"]["top"] <= DOCUMENT_SCREENS, (
+        assert out["perfetto"]["top"] <= LANDED_HEIGHT_PX, (
             f"{label}: the Perfetto section starts "
-            f"{out['perfetto']['top']:.1f} screens down, against "
-            f"{DOCUMENT_SCREENS}")
+            f"{out['perfetto']['top']:,} px down, against the landed "
+            f"budget of {LANDED_HEIGHT_PX:,}")
 
 
 @needs_browser

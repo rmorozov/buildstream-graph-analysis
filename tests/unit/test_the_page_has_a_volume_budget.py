@@ -804,7 +804,7 @@ class TestTheBudgetIsWrittenWhereItIsRead:
         would have left half of them stated nowhere while it passed."""
         text = (REPO / "docs/design/styleguide.md").read_text(encoding="utf-8")
         section = text.split("## 3e.", 1)[1].split("\n## ", 1)[0]
-        numbers = [LANDED_HEIGHT_PX]
+        numbers = [LANDED_HEIGHT_PX, *COMPACT_LANDED_HEIGHT_PX.values()]
         for row in BUDGETS:
             numbers.extend(row)
         for number in numbers:

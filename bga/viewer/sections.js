@@ -32,7 +32,7 @@ import { findingAnchor, served } from "./primitives.js";
 import { byId, copyButton } from "./questions.js";
 import { recordSource } from "./rawjson.js";
 import { CONTROLS, classify } from "./shapes.js";
-import { ARRAY_INLINE_ITEMS, CELL_NEST_LIMIT, LIFTED_SECTION, OBJECT_INLINE_FIELDS, TABLE_OPENS_BOUNDED_ABOVE, liftedCriticalPath, mapTable, renderStructured, renderTable } from "./structured.js";
+import { ARRAY_INLINE_ITEMS, CELL_NEST_LIMIT, LIFTED_SECTION, OBJECT_INLINE_FIELDS, TABLE_OPENS_BOUNDED_ABOVE, foldedList, liftedCriticalPath, mapTable, renderStructured, renderTable } from "./structured.js";
 import { renderPairs } from "./pairs.js";
 import { boundCards, columnCells } from "./tables.js";
 import { investigationsFor } from "./trace_context.js";
@@ -110,6 +110,10 @@ export function renderFindingEvidence(evidence, node = undefined) {
             list);
 }
 
+// `UX-216`: a finding's element links to its section; `data-element` feeds the cross-reference.
+const elementLink = (uid) => el("a", { href: `#${cssId(uid)}`, "data-element": uid },
+                                el("code", {}, uid));
+
 export function renderFindings(findings, investigate = null, node = undefined) {
   const section = el("section", { "data-section": "findings" },
     el("h2", {}, `Findings (${findings.length})`));
@@ -133,15 +137,13 @@ export function renderFindings(findings, investigate = null, node = undefined) {
         // element's own section, and carries `data-element` so the
         // cross-reference finds this finding from the other direction.
         // `UX-1053` (§3k, element list): past the table bound, §1's list.
+        // Review (#297): the bounded list keeps each shown name a link.
         finding.elements?.length > bound
-          ? renderStructured("elements", finding.elements)
+          ? foldedList("elements", finding.elements, elementLink)
           : finding.elements && finding.elements.length
           ? el("p", { class: "muted" },
               ...finding.elements.flatMap((uid, i) => [
-                i ? ", " : "",
-                el("a", { href: `#${cssId(uid)}`, "data-element": uid },
-                   el("code", {}, uid)),
-              ]))
+                i ? ", " : "", elementLink(uid)]))
           : null,
         renderFindingEvidence(finding.evidence, evidenceNode),
         // UX-229: the chain behind this finding, from the published

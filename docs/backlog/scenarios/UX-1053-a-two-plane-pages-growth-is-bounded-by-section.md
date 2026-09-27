@@ -95,10 +95,20 @@ $ pytest -q tests/unit/test_a_findings_element_list_is_bounded.py
 | cap at 0 (never links) | `test_under_the_bound_every_element_is_a_link` | 1 of 3 |
 | cap lifted, volume guard on `scale_both`/`xl_both` | UX-1050's mutation table, row (d) | - |
 
-Deviation: past 40 names the card's elements are text in §1's reveal, not
-`data-element` links, so the element sections' cross-reference and focus
-no longer see this finding for them - the trade `UX-1037` made for the
-horizon. Undeclared surface: §3k's element-list cell in the styleguide now
+Review (#297): the reveal first drew its names as text, so a 572-name
+finding linked to no element section. `boundedList` now takes an `item`
+renderer (`foldedList` in `structured.js`); the card passes the same link
+as the list under the bound, so the head, the tail and each revealed page
+are `data-element` links. `test_a_findings_element_list_is_bounded.py`: 5 passed.
+
+| mutation (review) | reddens | count |
+|---|---|---|
+| card passes no `item` | head/tail links, middle page links | 2 of 5 |
+| a revealed page drawn as text | `test_a_revealed_middle_page_is_links` | 1 of 5 |
+| `href` the raw uid, not `cssId` | head/tail links, middle page links | 2 of 5 |
+
+Deviation: names still folded in the middle are not links until revealed,
+so the cross-reference sees a finding through its shown names. Undeclared surface: §3k's element-list cell in the styleguide now
 names the card. The tables above were read from snapshot copies, which
 drop the store chapter; exported in place (as `UX-1050`'s `booted` now
 does, under a pinned root) the totals read 7,490/712, 8,570/1,053,

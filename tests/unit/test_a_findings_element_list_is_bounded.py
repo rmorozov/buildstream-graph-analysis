@@ -32,6 +32,7 @@ globalThis._makeNode = (await import(process.env.BGA_DOM_SHIM)).makeNode;
 const { installDocument } = await import(process.env.BGA_DOM_SHIM);
 const document = installDocument();
 const sections = await import(process.env.BGA_REPO + "/bga/viewer/sections.js");
+const { cssId } = await import(process.env.BGA_REPO + "/bga/viewer/format.js");
 
 const walk = (n, keep, out = []) => {
   if (keep(n)) out.push(n);
@@ -47,12 +48,20 @@ for (const n of JSON.parse(process.env.SIZES)) {
   document.body.append(section);
   const card = walk(section, (x) => x.tagName === "article")[0];
   const bounded = walk(card, (x) => x.getAttribute?.("data-bounded") === "list");
+  // Each shown link's element against the `href` it jumps to: [uid, target].
+  const targets = () => walk(card, (x) => x.tagName === "a"
+    && x.getAttribute("data-element")).map((a) => [a.getAttribute("data-element"),
+      a.getAttribute("href") === `#${cssId(a.getAttribute("data-element"))}`]);
   out[n] = {
+    rest: targets(),
     controls: walk(card, (x) => CONTROLS.has(x.tagName)).length,
     links: walk(card, (x) => x.tagName === "a"
                 && x.getAttribute("data-element")).length,
     items: bounded.length ? Number(bounded[0].getAttribute("data-items")) : null,
   };
+  walk(card, (x) => x.tagName === "button"
+       && String(x.className || "").includes("fold-more"))[0]?.click();
+  out[n].revealed = targets();
 }
 process.stdout.write(JSON.stringify(out) + "\n");
 """
@@ -79,6 +88,24 @@ class TestAFindingsElementListIsBounded:
         at = {n: measured[str(n)]["controls"] for n in (41, 572, 4002)}
         assert len(set(at.values())) == 1, at
         assert at[4002] <= CARD_CONTROLS_CEILING, at
+
+    def test_past_the_bound_the_head_and_tail_are_links(self, measured):
+        """Review (#297): the bounded list's shown names jump to their sections."""
+        for n in (41, 572, 4002):
+            rest = measured[str(n)]["rest"]
+            uids = [uid for uid, _ in rest]
+            assert rest and all(ok for _, ok in rest), (n, rest)
+            assert uids[0] == "layer/mod0.bst", (n, uids)
+            assert uids[-1] == f"layer/mod{n - 1}.bst", (n, uids)
+
+    def test_a_revealed_middle_page_is_links(self, measured):
+        for n in (572, 4002):
+            rest = {uid for uid, _ in measured[str(n)]["rest"]}
+            revealed = measured[str(n)]["revealed"]
+            middle = [uid for uid, _ in revealed if uid not in rest]
+            assert all(ok for _, ok in revealed), (n, revealed)
+            # The first page after the head: `PATH_HEAD` 6 names in, `REVEAL_STEP` 60 long.
+            assert middle == [f"layer/mod{i}.bst" for i in range(6, 66)], (n, middle)
 
     def test_past_the_bound_no_name_is_dropped(self, measured):
         for n in (41, 572, 4002):

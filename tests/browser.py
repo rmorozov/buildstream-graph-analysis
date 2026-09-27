@@ -333,15 +333,20 @@ class Browser:
             raise RuntimeError(done.stderr)
         return json.loads(done.stdout)
 
-    def measure(self, url, expression, width=1440, height=900, coarse=False):
+    def measure(self, url, expression, width=1440, height=900, coarse=False,
+                media=None):
         """Load `url` at `width`x`height` and return `expression`'s value.
 
         The evaluation happens in node rather than here because the CDP
         client is a WebSocket and Python's standard library has none.
         `coarse` (`UX-1022`) emulates a touch pointer, so `@media
-        (pointer: coarse)` matches.
+        (pointer: coarse)` matches. `media` (`UX-1015`), e.g. `"print"`,
+        sets `Emulation.setEmulatedMedia`'s actual media type, so a print
+        rule is exercised the way a browser's own print preview would.
         """
-        extra = ("--coarse",) if coarse else ()
+        extra = list(("--coarse",) if coarse else ())
+        if media:
+            extra.append(f"--media={media}")
         return self._drive(url, expression, width, height, extra)
 
     def journey(self, url, steps, width=1440, height=900):

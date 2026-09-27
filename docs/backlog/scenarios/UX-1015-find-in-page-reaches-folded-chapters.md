@@ -62,3 +62,19 @@ and the print/content-visibility static checks) are unaffected by
 restoring the old `display` rule alone, as expected.
 
 Deviation: `hidden="until-found"` meant five existing guards that force a chapter open had to clear `hidden` too, and `test_the_header_keeps_its_budget.py` reads `textContent` past the fold (`0de51abb`).
+
+**Review (#295):** the print rule set `display: block !important` on
+`[hidden="until-found"]` but never touched `content-visibility`, which
+the platform itself sets to `hidden` on that state (HTML Standard
+#hidden-elements) - so a folded section printed at zero rendered size
+regardless of `display`. `style.css`'s print rule now also sets
+`content-visibility: visible !important`.
+`TestAFoldedChapterPrintsItsText` (new, in the same guard file) drives
+`Emulation.setEmulatedMedia({media: "print"})` for real over CDP
+(`tests/cdp.mjs --media=print`, `Browser.measure(..., media="print")`)
+and asserts the folded section's `getBoundingClientRect().height` and
+`scrollHeight` are non-zero. Mutation: drop the added
+`content-visibility` line - `python3 -m pytest
+tests/unit/test_find_in_page_reaches_folded_chapters.py -q -n 1 -k
+print`: 1 passed, 1 failed (`contentVisibility` reads `"hidden"`,
+`height`/`scrollHeight` read `0`); restored, both pass again.

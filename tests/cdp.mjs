@@ -2,12 +2,16 @@
 // fetch, and nothing else - that is the argument for driving a browser
 // directly rather than adding Playwright.
 //
-//   node cdp.mjs <port> <url> <width> <height> [--observe] [--coarse]  < expression
+//   node cdp.mjs <port> <url> <width> <height> [--observe] [--coarse] [--media=print]  < expression
 //
 // `--coarse` (`UX-1022`): touch emulation plus `Emulation.setEmulatedMedia`
 // forcing `pointer: coarse`/`hover: none`, so `@media (pointer: coarse)`
 // matches the way it would on a touch device - the media query a fine
 // pointer's boot never exercises.
+//
+// `--media=<name>` (`UX-1015`): `Emulation.setEmulatedMedia({media: name})`,
+// the actual media-type switch a browser makes for a real print preview
+// - not a proxy read of `@media print` in the stylesheet text.
 //
 // Prints the JSON value the expression evaluated to. With `--observe`,
 // prints `{value, console, csp, issues}` instead: everything the
@@ -37,6 +41,8 @@ const observing = process.argv.includes("--observe");
 // step would lose.
 const journeying = process.argv.includes("--journey");
 const coarse = process.argv.includes("--coarse");
+const mediaArg = process.argv.find((a) => a.startsWith("--media="));
+const media = mediaArg ? mediaArg.slice("--media=".length) : null;
 
 let expression = "";
 for await (const chunk of process.stdin) expression += chunk;
@@ -154,6 +160,7 @@ if (coarse) {
                { name: "hover", value: "none" }],
   });
 }
+if (media) await send("Emulation.setEmulatedMedia", { media });
 // The replay drains here, discarded, and the gate opens on the
 // navigation this run is about.
 if (observing) await new Promise((resolve) => setTimeout(resolve, 300));

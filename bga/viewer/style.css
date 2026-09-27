@@ -599,9 +599,17 @@ button.chapter-open:hover, button.chapter-open[aria-expanded="true"] {
    navigation device, and paper does not navigate.
    `UX-1015`: the fold is `hidden="until-found"` now, not `display`, so
    print overrides the attribute directly rather than a `display` rule
-   that no longer exists. */
+   that no longer exists.
+   The `display: block` alone left a folded section printing blank: a
+   `hidden="until-found"` element also carries the browser's own
+   `content-visibility: hidden` (HTML Standard, #hidden-elements), which
+   `display` does not touch and which alone still empties the box the
+   engine lays it out into. */
 @media print {
-  [hidden="until-found"] { display: block !important; }
+  [hidden="until-found"] {
+    display: block !important;
+    content-visibility: visible !important;
+  }
   button.chapter-open { display: none; }
 }
 

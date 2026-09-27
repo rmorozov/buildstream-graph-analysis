@@ -204,3 +204,58 @@ class TestAFoldedSectionIsHiddenUntilFoundOnScreen:
         assert out["hiddenAttr"] == "until-found", out
         assert out["display"] != "none", out
         assert out["contentVisibility"] == "hidden", out
+
+
+# --------------------------------------------------------------------------
+# 4. Print media, emulated for real (`Emulation.setEmulatedMedia`, not a
+#    read of the `@media print` block's text): a folded chapter's text
+#    must actually occupy space in the printed layout, not just carry a
+#    `display` other than `none`. `display: block` alone still computes
+#    `content-visibility: hidden` on a `hidden="until-found"` element (the
+#    print rule the previous class reads does not touch that property),
+#    and a hidden `content-visibility` box lays out at zero size - the gap
+#    a `display`-only assertion cannot see.
+# --------------------------------------------------------------------------
+
+_PRINT_LAYOUT = r"""
+(() => {
+  const box = document.querySelector('section.chapter[data-open="false"]');
+  if (!box) return null;
+  const section = box.querySelector('section[data-section]');
+  if (!section) return null;
+  const heading = section.querySelector("h3");
+  const rect = section.getBoundingClientRect();
+  return {
+    hiddenAttr: section.getAttribute("hidden"),
+    contentVisibility: getComputedStyle(section).contentVisibility,
+    height: rect.height,
+    scrollHeight: section.scrollHeight,
+    headingRectHeight: heading ? heading.getBoundingClientRect().height : 0,
+  };
+})()
+"""
+
+
+@needs_browser
+class TestAFoldedChapterPrintsItsText:
+    def test_a_folded_sections_text_has_non_zero_rendered_size_in_print(self):
+        """Emulates `media=print` on the actual page (CDP
+        `Emulation.setEmulatedMedia`), not a static read of the
+        stylesheet - the finding the previous class's `display`-only
+        check missed."""
+        into = pathlib.Path(tempfile.mkdtemp())
+        uri = pages.export_uri(MACRO, into)
+        with Browser(chrome) as browser:
+            out = browser.measure(uri, _PRINT_LAYOUT, 1440, 900,
+                                   media="print")
+        assert out, "no folded chapter with a section found on this fixture"
+        assert out["hiddenAttr"] == "until-found", out
+        assert out["contentVisibility"] == "visible", (
+            "content-visibility is still hidden under print media - the "
+            "section's text has no rendered size even though display "
+            f"is not none: {out}")
+        assert out["height"] > 0, (
+            f"a folded section renders at zero height in print: {out}")
+        assert out["scrollHeight"] > 0, out
+        assert out["headingRectHeight"] > 0, (
+            f"the folded section's own heading has zero rendered size: {out}")

@@ -447,6 +447,7 @@ pairing for every merged row from round 103 on.
 | 142 | verifier | sonnet | verify UX-1037 | 92k | 72 | 15.3 m | census mutation reddens; DRAWN_ELSEWHERE drift confirmed | repointed the shared bga install at its worktree |
 | 142 | verifier | sonnet | verify review #295 drawing route (UX-1017) | 68k | 47 | 5.5 m | mutation reddens 3 of 20; columnStrip's exclusion is documented, not guarded | judged on the guard's payloads; no browser found on PATH |
 | 142 | verifier | sonnet | verify UX-1038 | 60k | 56 | 13.3 m | guard reddens on a literal; misses a concatenated (s); output unchanged by 27cc34dc | ran dev_touching against its brief |
+| 143 | researcher | sonnet | escapes across 999 task files, by class and catcher | 120k | 40 | 4.9 m | complete, 23 escapes, ~15 ambiguous | escape language is unstandardised; three keyword passes before reads separated escapes from noise |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -459,7 +460,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the four hundred and thirty rows already say: a researcher that reads a document
+What the four hundred and thirty-one rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

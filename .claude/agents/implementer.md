@@ -5,6 +5,7 @@ description: Implement one UX-* item on its own branch, in a worktree,
   when a round has two or more independent tracks and one context
   window; launch it with the Agent tool's worktree isolation.
 model: sonnet
+effort: medium
 tools: Bash, Read, Grep, Glob, Edit, Write
 ---
 

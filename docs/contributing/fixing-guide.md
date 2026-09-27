@@ -29,7 +29,7 @@ guide is right and the skill is a bug.
 2. Open `docs/backlog/scenarios/README.md` for active work (or `docs/backlog/progress-tracker.md` if you're specifically re-verifying the closed spec-compliance backlog). Both are compact tables, not documents to read cover-to-cover.
 3. Find the highest-priority row with status 🔴 (Not Started) or 🟡 (In Progress) whose **Depends on** column is empty or all 🟢.
 4. Open **only** that task's file. Each task file is self-contained: it tells you the exact spec/background to read, the exact source lines to open, what to change, what NOT to touch, and how to prove you're done.
-5. One task, one commit — per **track**. A session is a batch of tracks (`decompose` skill §5): mechanical and bounded shapes run as `implementer` tracks on `sonnet` in worktrees, a judgement shape is the session's own, and the session opens a second judgement task only when the first is committed and verified. The context budget that matters is the orchestrator's live context at each rebuild, not the number of tracks.
+5. One task, one commit — per **track**. A session is a batch of tracks (`decompose` skill §5): mechanical and bounded shapes run as `implementer` tracks on `sonnet` in worktrees (on `opus` when architect-shaped from judgement or over 150 lines of code, `UX-1039`), a judgement shape is the session's own, and the session opens a second judgement task only when the first is committed and verified. The context budget that matters is the orchestrator's live context at each rebuild, not the number of tracks.
 
 ## 2. Working a task
 
@@ -651,4 +651,4 @@ the commit that first states it. Step 2 counts rows, not commits
 (`UX-501`); a register counting *rounds* is one round behind by
 construction, caught up next round.
 
-Each step names the guard it already has, and replaces none.
+Each step names the guard it already has, and replaces none. Steps 1-6 are the `closer` agent's recipe (`UX-1039`).

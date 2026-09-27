@@ -4,6 +4,7 @@ description: Check a finished change against the task file that asked for
   it, in a fresh context window, before the session reports done. Use
   after implementing a UX-* item and before writing its Outcome.
 model: sonnet
+effort: high
 tools: Bash, Read, Grep, Glob
 ---
 

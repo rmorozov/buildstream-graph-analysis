@@ -26,7 +26,9 @@ mutation; either names a contract or process surface. **mechanical**
 tracks for the `implementer` on `sonnet`; **judgement** (no file, or a
 contract or process surface) goes to the `architect` first (`UX-993`):
 its `## Decision` names the file, the guard and the mutation, so the
-re-derived shape is bounded. Unshaped, it is the session's own work. Measured on
+re-derived shape is bounded. A track the architect shaped from judgement, or
+whose Decision writes over 150 lines of code, launches with `model:
+opus` (`UX-1039`). Unshaped, it is the session's own work. Measured on
 the open backlog the day it landed: 8 bounded, 35 judgement, 0
 mechanical — a filing that wants to be a track names its surface in
 the Required Fix and its guard in the Acceptance Test.

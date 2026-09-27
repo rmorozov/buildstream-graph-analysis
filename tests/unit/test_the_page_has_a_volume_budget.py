@@ -37,10 +37,15 @@ The bounds are set with headroom against the measurement below rather
 than at it: a budget that reddens on the commit that lands it teaches
 the next person to raise it rather than to think.
 """
+import base64
 import collections
 import functools
+import gzip
+import json
+import os
 import pathlib
 import re
+import shutil
 import sys
 
 import pytest
@@ -525,32 +530,57 @@ _GENERATED = {
 }
 
 
+def _report_in(page):
+    """The analysis inlined in an exported page, packed or not."""
+    text = pathlib.Path(page).read_text(encoding="utf-8")
+    packed = re.search(r'id="bga-report-gz">([^<]*)</script>', text)
+    if packed:
+        return json.loads(gzip.decompress(base64.b64decode(packed.group(1))))
+    body = re.search(r'id="bga-report">(.*?)</script>', text, re.S).group(1)
+    return json.loads(body.replace("<\\/", "</"))
+
+
 @pytest.fixture(scope="module")
-def booted(tmp_path_factory):
-    made = pages.pages(tmp_path_factory, "volume")
+def built():
+    """`{label: (run, page)}`, each run built and analysed once.
+
+    `UX-1050`: under a root whose path length does not depend on where
+    pytest keeps its tree - the page prints the run's path, and a longer
+    one wraps the landed page taller.
+    """
+    root = pathlib.Path(f"/tmp/bga-volume-{os.getpid():010d}")
+    shutil.rmtree(root, ignore_errors=True)
+    made = {}
+    for label, fixture in pages.FIXTURES.items():
+        into = root / label
+        made[label] = (pages.snapshot_copy(fixture, into),
+                       pages.export_page(fixture, into, f"{label}.html"))
     for label, build in _GENERATED.items():
-        into = tmp_path_factory.mktemp(f"volume-{label}")
+        into = root / label
         run = build(into)
-        # `UX-1050`: a store's history is read in place; a copy drops it.
-        made[label] = (pages.in_place_uri(run, into, f"{label}.html")
-                       if run_store.project_root(str(run))
-                       else pages.export_uri(run, into, name=f"{label}.html"))
-    return made
+        page = into / f"{label}.html"
+        if run_store.project_root(str(run)):
+            # A store's history is read in place; a copy drops it.
+            pages.in_place_uri(run, into, page.name)
+        else:
+            pages.export_page(run, into, page.name)
+        made[label] = (run, page)
+    yield made
+    shutil.rmtree(root, ignore_errors=True)
 
 
 @pytest.fixture(scope="module")
-def sizes(tmp_path_factory):
+def booted(built):
+    return {label: page.as_uri() for label, (_run, page) in built.items()}
+
+
+@pytest.fixture(scope="module")
+def sizes(built):
     """`{label: element count}`, read from the payload each page was
     exported from - so the class a page is measured against is a fact
     about the run rather than a constant beside the label."""
-    from tools.bga_view import payloads
-
-    runs = dict(pages.FIXTURES)
-    for label, build in _GENERATED.items():
-        runs[label] = build(tmp_path_factory.mktemp(f"volume-{label}-count"))
-    return {label: len(payloads(str(run))["report.json"]
-                       ["elements"]["element_durations"])
-            for label, run in runs.items()}
+    return {label: len(_report_in(page)["elements"]["element_durations"])
+            for label, (_run, page) in built.items()}
 
 
 @pytest.fixture(scope="module")
@@ -697,14 +727,11 @@ class TestTheCompactSizeClassIsBoundToo:
 
 
 @pytest.fixture(scope="module")
-def two_plane(tmp_path_factory):
+def two_plane(built):
     """`{label: whether its run has Plane 2's report beside it}`, read
     off the tree `sibling_plane2` reads (`UX-1050`)."""
-    runs = dict(pages.FIXTURES)
-    for label, build in _GENERATED.items():
-        runs[label] = build(tmp_path_factory.mktemp(f"volume-{label}-p2"))
     return {label: run_store.sibling_plane2(str(run)) is not None
-            for label, run in runs.items()}
+            for label, (run, _page) in built.items()}
 
 
 class TestEverySizeClassIsActuallyMeasured:

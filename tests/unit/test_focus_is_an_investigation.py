@@ -145,7 +145,7 @@ class TestTheExportStaysAPlainDocument:
         view.export(GOLDEN, str(out))
         html = out.read_text(encoding="utf-8")
         assert 'data-role="focus-investigation"' not in html
-        assert "renderInvestigation" in html, (
+        assert "renderInvestigation" in view.inflated_module(html), (
             "the renderer itself should still ship - the served page "
             "needs it, and the export is one file")
 

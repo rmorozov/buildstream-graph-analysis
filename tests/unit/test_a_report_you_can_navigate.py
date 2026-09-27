@@ -53,7 +53,9 @@ def exported(run, tmp_path):
 
 
 def _inline(page):
-    return re.search(r'<script type="module">(.*?)</script>', page, re.S).group(1)
+    from tools.bga_view import inflated_module
+
+    return inflated_module(page)
 
 
 def _boot(page, tmp_path, protocol="file:"):

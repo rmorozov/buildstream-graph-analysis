@@ -38,7 +38,6 @@ means the guard never touches the developer's artifacts.
 import json
 import os
 import pathlib
-import re
 import shutil
 import subprocess
 import sys
@@ -290,7 +289,7 @@ def exported(walked, tmp_path_factory):
     view.export(walked["warm_run"], str(page))
     html = page.read_text(encoding="utf-8")
     (into / "inline.mjs").write_text(
-        re.search(r'<script type="module">(.*?)</script>', html, re.S).group(1),
+        view.inflated_module(html),
         encoding="utf-8")
     probe = (REPO / "tests/unit/test_a_report_you_can_navigate.py").read_text(
         encoding="utf-8").split('_PROBE = r"""', 1)[1].rsplit('"""', 1)[0]

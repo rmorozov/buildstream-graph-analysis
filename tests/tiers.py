@@ -1020,4 +1020,6 @@ MEDIUM = (
     "tests/unit/test_the_accent_does_only_its_listed_jobs.py",         #  3.6s
     # `UX-1052`: 1.54 / 1.53 / 1.62s.
     "tests/unit/test_the_viewer_js_ships_compressed.py",               #  1.5s
+    # `UX-1044`: 2.91 / 2.80 / 2.85s.
+    "tests/unit/test_a_chapter_fold_has_one_place_and_one_label.py",   #  2.9s
 )

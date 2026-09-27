@@ -551,22 +551,25 @@ def built():
     root = pathlib.Path(f"/tmp/bga-volume-{os.getpid():010d}")
     shutil.rmtree(root, ignore_errors=True)
     made = {}
-    for label, fixture in pages.FIXTURES.items():
-        into = root / label
-        made[label] = (pages.snapshot_copy(fixture, into),
-                       pages.export_page(fixture, into, f"{label}.html"))
-    for label, build in _GENERATED.items():
-        into = root / label
-        run = build(into)
-        page = into / f"{label}.html"
-        if run_store.project_root(str(run)):
-            # A store's history is read in place; a copy drops it.
-            pages.in_place_uri(run, into, page.name)
-        else:
-            pages.export_page(run, into, page.name)
-        made[label] = (run, page)
-    yield made
-    shutil.rmtree(root, ignore_errors=True)
+    try:
+        for label, fixture in pages.FIXTURES.items():
+            into = root / label
+            made[label] = (pages.snapshot_copy(fixture, into),
+                           pages.export_page(fixture, into, f"{label}.html"))
+        for label, build in _GENERATED.items():
+            into = root / label
+            run = build(into)
+            page = into / f"{label}.html"
+            if run_store.project_root(str(run)):
+                # A store's history is read in place; a copy drops it.
+                pages.in_place_uri(run, into, page.name)
+            else:
+                pages.export_page(run, into, page.name)
+            made[label] = (run, page)
+        yield made
+    finally:
+        # Removed on a setup failure too, not only after the module.
+        shutil.rmtree(root, ignore_errors=True)
 
 
 @pytest.fixture(scope="module")

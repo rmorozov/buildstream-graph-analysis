@@ -74,3 +74,18 @@ decomposition, interval, the two composed figures, the `golden`
 fixture) are unaffected by a `strip()`-only mutation, as expected.
 
 Deviation: none from the Required Fix; on the merge `views.js`'s drawings import went back to three lines so the thin-views guard can read its source (`83029c5f`).
+
+**Review (#295):** `sparkline`, `strip` (annotation grade) and
+`element.js`'s inline sparkline routed to their sentence, which names
+only the edges/extremum/labelled subset — `strip`'s own `stripTicks`
+drops labels a nine-decile payload still ticks. Fixed by a new
+`drawings.js:valueRoute`: a hidden node whose full mark list lives in
+`aria-label`, an attribute, so it adds no words to
+`test_the_page_has_a_volume_budget.py`'s `main.textContent` count
+(measured: 30 passed, budget unchanged). `columnStrip` is left alone —
+its p50/p95 ticks are the "no derived number" boundary its own doc
+already states, and naming them would print what it refuses to print.
+`TestEveryPlottedValueReachesTheRoute` (new) asserts every drawn
+`data-value`/`data-raw` mark appears in its route; mutated back to
+`route = sentence` for `sparkline`, `strip`, `renderElementHistory` in
+turn, each reddened the new guard, each restored to 20/20 passed.

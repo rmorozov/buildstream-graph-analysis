@@ -154,6 +154,22 @@ export function nameDrawing(drawing, sentence, routeNode) {
   return drawing;
 }
 
+/**
+ * Review #295 (`UX-1017`): an annotation grade draws no twin, and its
+ * sentence names only the edges and the extremum - `drawings.js:412-427`
+ * routed a five-point sparkline's `aria-details` there, so the other
+ * points had no route at all. This is the route for that case: every
+ * mark, in `aria-label` rather than a child text node, so
+ * `test_the_page_has_a_volume_budget.py`'s `main.textContent` word
+ * count (`UX-360`) never sees it - a table twin's cells would have.
+ */
+export function valueRoute(doc, allMarksText) {
+  const node = box(doc, "span", { "data-role": "drawing-values" });
+  node.hidden = true;
+  node.setAttribute("aria-label", allMarksText);
+  return node;
+}
+
 // UX-316: an exhibit's tick labels, and its table twin.
 //
 // Both are HTML rather than SVG, and both are exhibit-only. §2 forbids
@@ -417,14 +433,22 @@ export function sparkline(values, {
                        sentenceText);
   wrap.append(sentence);
   // `UX-1017`: aria-details on the values a sparkline sits beside - the
-  // twin where §2a draws one (exhibit grade), the sentence otherwise.
+  // twin where §2a draws one (exhibit grade), every point otherwise
+  // (review #295: the sentence alone names only first/last/peak, and a
+  // five-point series has two the sentence never reaches).
   let twin = null;
+  let route = sentence;
   if (grade === GRADE_EXHIBIT) {
     twin = exhibitTwin(doc, [unit.charAt(0).toUpperCase() + unit.slice(1), "Value"],
                        points.map((v, i) => [i + 1, format(v)]));
     wrap.append(twin);
+    route = twin;
+  } else {
+    route = valueRoute(doc, points.map((v, i) => `${unit} ${i + 1} ${format(v)}`)
+                                  .join(", ") + ".");
+    wrap.append(route);
   }
-  nameDrawing(line, sentenceText, twin ?? sentence);
+  nameDrawing(line, sentenceText, route);
   return wrap;
 }
 
@@ -615,13 +639,21 @@ export function strip(distribution, {
   wrap.append(sentence);
   // `UX-1017` (styleguide §6e.9, Rule 9): the strip's name is this
   // sentence, and its route is the table twin beside it where one is
-  // drawn, the sentence itself otherwise - both name every mark.
+  // drawn (review #295: every mark the twin lists, not the labelled
+  // subset the sentence keeps to avoid axis collisions - `stripTicks`
+  // drops labels `strip()` still ticks).
+  const rows = twinRows(marks, format);
   let twin = null;
+  let route = sentence;
   if (grade === GRADE_EXHIBIT) {
-    twin = exhibitTwin(doc, ["Mark", "Value"], twinRows(marks, format));
+    twin = exhibitTwin(doc, ["Mark", "Value"], rows);
     wrap.append(twin);
+    route = twin;
+  } else {
+    route = valueRoute(doc, rows.map(([k, v]) => `${k} ${v}`).join(", ") + ".");
+    wrap.append(route);
   }
-  nameDrawing(drawn, sentenceText, twin ?? sentence);
+  nameDrawing(drawn, sentenceText, route);
   return wrap;
 }
 
@@ -951,6 +983,10 @@ export function columnStrip(values, { format = String, doc = document,
                        sentenceText);
   wrap.append(sentence);
   // `UX-1017`: never exhibit grade, so its route is always the sentence.
+  // Review #295 left this one alone on purpose: its p50/p95 ticks are
+  // the "geometry only, no derived number" boundary above, so widening
+  // the route to name them would print the derived number this
+  // function's whole reason for existing refuses to print.
   nameDrawing(drawn, sentenceText, sentence);
   return wrap;
 }

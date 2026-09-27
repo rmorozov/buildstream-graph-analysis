@@ -40,9 +40,21 @@ _OUTLINE = """
   return [...document.querySelectorAll('h1, h2, h3, h4')]
     .filter((n) => n.getBoundingClientRect().width > 0)
     .map((n) => ({tag: n.tagName,
+                   id: n.id,
+                   text: n.textContent,
                    size: parseFloat(getComputedStyle(n).fontSize),
                    section: n.parentElement?.matches('section[data-section]')
                      && n.parentElement.parentElement?.matches('section[data-chapter]')}));
+})()
+"""
+
+#: `UX-1047`: `#wordmark` is text, not a heading - the census above
+#: only walks `h1`-`h4`, so this checks the element the outline is not
+#: allowed to include.
+_WORDMARK = """
+(() => {
+  const w = document.getElementById('wordmark');
+  return w && {tag: w.tagName, role: w.getAttribute('role')};
 })()
 """
 
@@ -57,7 +69,10 @@ def browser():
 def golden(tmp_path_factory):
     from tools.bga_view import export
 
-    run = tmp_path_factory.mktemp("outline-golden") / "run"
+    # `UX-1047`: not named "run" - that basename is the stored-run
+    # heuristic's trigger (`app.js`'s `runDisplayName`), which is a
+    # different item's concern than this outline.
+    run = tmp_path_factory.mktemp("outline-golden") / "golden-run"
     shutil.copytree(GOLDEN, run)
     (run / "expected_output.json").unlink(missing_ok=True)
     page = tmp_path_factory.mktemp("outline-golden-page") / "report.html"
@@ -97,3 +112,39 @@ def test_no_section_title_wears_the_chapter_level(browser, golden):
     outline = browser.measure(golden, _OUTLINE)
     heads = [n["tag"] for n in outline if n["section"]]
     assert heads and "H2" not in heads, f"section heads: {sorted(set(heads))}"
+
+
+@needs_browser
+def test_the_h1_is_the_run_not_the_wordmark(browser, golden):
+    """UX-1047 (styleguide §6e.1): the outline's `h1` names the run."""
+    outline = browser.measure(golden, _OUTLINE)
+    ones = [n for n in outline if n["tag"] == "H1"]
+    assert len(ones) == 1, f"{len(ones)} h1s: {outline[:5]}"
+    assert ones[0]["id"] == "run-name", ones[0]
+    assert ones[0]["text"].strip() == "golden-run", ones[0]
+
+
+@needs_browser
+def test_the_h1_ties_the_chapter_size_rather_than_falling_under_it(browser, golden):
+    """§6e.1's one allowed tie: `h1` and `h2` share `--font-h1`."""
+    outline = browser.measure(golden, _OUTLINE)
+    font_h1 = browser.measure(
+        golden,
+        "getComputedStyle(document.documentElement)"
+        ".getPropertyValue('--font-h1').trim()")
+    ones = [n["size"] for n in outline if n["tag"] == "H1"]
+    chapters = [n["size"] for n in outline if n["tag"] == "H2"]
+    assert ones and chapters, f"need both to compare: {outline[:5]}"
+    assert ones[0] >= max(chapters), (
+        f"the h1 ({ones[0]}px) is smaller than a chapter ({max(chapters)}px)")
+    assert ones[0] == pytest.approx(float(font_h1.removesuffix("px"))), (
+        ones[0], font_h1)
+
+
+@needs_browser
+def test_the_wordmark_is_not_a_heading(browser, golden):
+    """§6e.1: the outline's `h1` is the run - the wordmark is text."""
+    wordmark = browser.measure(golden, _WORDMARK)
+    assert wordmark, "no #wordmark on the page"
+    assert wordmark["tag"] not in {"H1", "H2", "H3", "H4", "H5", "H6"}, wordmark
+    assert wordmark["role"] != "heading", wordmark

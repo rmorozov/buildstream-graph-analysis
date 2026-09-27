@@ -10,10 +10,11 @@ header    128.5 px    14.3% of 900
 line 2    the run's absolute path, 149 chars, wrapping to two lines
 ```
 
-The path moved to `run_instance` (`UX-285`) and onto the wordmark's
-`title`; the version line joined the footer. This is what keeps it
-there: a header over budget, or a path back in its text, reddens here
-rather than at the next design review.
+The path moved to `run_instance` (`UX-285`) and onto the h1's `title`
+(`UX-1047` moved the title from `#wordmark` once the h1 became the
+run rather than the wordmark); the version line joined the footer.
+This is what keeps it there: a header over budget, or a path back in
+its text, reddens here rather than at the next design review.
 """
 import os
 import pathlib
@@ -40,13 +41,14 @@ _MEASURE = """
   window.scrollTo(0, 2000);
   const header = document.querySelector("header");
   const box = header.getBoundingClientRect();
-  const wordmark = document.getElementById("wordmark");
+  // `UX-1047`: the `title` moved from `#wordmark` to the h1 (`#run-name`).
+  const heading = document.getElementById("run-name");
   const sec = document.querySelector('[data-section="run_instance"]');
   return {
     header_px: Math.round(box.height),
     sticky: getComputedStyle(header).position,
     headerText: header.innerText,
-    wordmarkTitle: wordmark ? wordmark.getAttribute("title") : null,
+    headingTitle: heading ? heading.getAttribute("title") : null,
     // `UX-1015`: a folded section is `hidden="until-found"`, whose innerText is "".
     runInstanceText: sec ? sec.textContent : null,
   };
@@ -94,11 +96,11 @@ class TestTheHeaderKeepsItsBudget:
             f"the run's absolute path is back in the header's text: "
             f"{leaked}")
 
-    def test_the_path_is_in_run_instance_and_the_wordmark_title(
+    def test_the_path_is_in_run_instance_and_the_heading_title(
             self, measured):
         out, run_path = measured
         for width, row in out.items():
-            assert row["wordmarkTitle"] == run_path, (width, row)
+            assert row["headingTitle"] == run_path, (width, row)
             assert row["runInstanceText"] is not None, (
                 f"no run_instance section at {width}")
             assert run_path in row["runInstanceText"], (width, row)

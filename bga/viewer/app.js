@@ -73,25 +73,41 @@ const bounded = (key, items) => (items.length > TABLE_OPENS_BOUNDED_ABOVE
  * must not look alike.
  */
 /**
+ * `UX-394`/`UX-1047`: what a run is called. `run.json`'s own `name` is
+ * the served directory's basename, which is `"run"` for every stored
+ * snapshot (`<store>/<stamp>/run`) - so that case reads the stamp one
+ * path segment up instead. Shared by the h1 and the run picker's
+ * `current`, which used to compute this on its own.
+ */
+export function runDisplayName(run) {
+  return run?.name === "run"
+    ? String(run?.run ?? "").split("/").filter(Boolean).slice(-2, -1)[0]
+    : run?.name;
+}
+
+/**
  * `UX-828` (styleguide §3i): the header's middle line - the run's
  * alias and, when the capture recorded one, its start instant. The
  * path this used to hold moves to `run_instance` (`UX-285`, already
- * generic-rendered from `payload.run_instance.run_dir`) and onto
- * `#wordmark`'s `title`, so a reader who wants it still has it.
+ * generic-rendered from `payload.run_instance.run_dir`) and onto the
+ * h1's `title`, so a reader who wants it still has it.
+ *
+ * `UX-1047` (styleguide §6e.1): the page's one `h1` is the run, not
+ * the wordmark - `#run-name` is now the h1 itself, and an absent
+ * `run.json` says so rather than showing nothing.
  */
 export function stampIdentity(doc, payload, run) {
-  const name = doc.getElementById("run-name");
-  if (name) name.textContent = run?.name ?? "bga";
+  const heading = doc.getElementById("run-name");
+  if (heading) heading.textContent = runDisplayName(run) || "unnamed run";
   const instant = doc.getElementById("run-instant");
   const started = payload?.run_instance?.started_at;
   if (instant) instant.textContent = started ? ` — ${started}` : "";
   const path = run?.run ?? "";
   const pathSlot = doc.getElementById("run-path");
   if (pathSlot) pathSlot.textContent = path;
-  const wordmark = doc.getElementById("wordmark");
-  if (wordmark) {
-    if (path) wordmark.setAttribute("title", path);
-    else wordmark.removeAttribute("title");
+  if (heading) {
+    if (path) heading.setAttribute("title", path);
+    else heading.removeAttribute("title");
   }
 }
 
@@ -997,9 +1013,7 @@ async function boot() {
       // has - so an export renders no selector rather than a control
       // that cannot reach what it offers.
       runSelector(contents, store, {
-        current: (run?.name === "run"
-          ? String(run?.run ?? "").split("/").filter(Boolean).slice(-2, -1)[0]
-          : run?.name) ?? null,
+        current: runDisplayName(run) ?? null,
       });
       // `UX-397`: **the handoff moves into the sticky rail.**
       //

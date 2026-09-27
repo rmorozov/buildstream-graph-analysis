@@ -25,7 +25,9 @@ if str(REPO) not in sys.path:
 INVENTORY = REPO / "docs/design/rendered-strings.json"
 
 ROLES = {
-    "heading": "h1,h2,h3,h4,h5,h6",
+    # `UX-1047`: `#run-name` (the h1) is the run's name, data rather
+    # than a label this inventory normalises.
+    "heading": "h1:not(#run-name),h2,h3,h4,h5,h6",
     "button": "button",
     "summary": "summary",
     "rail-chapter": ".toc-rail, .toc-chapter-open",

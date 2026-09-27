@@ -28,9 +28,12 @@ size classes, the decision chapter (no control).
 
 ## Required Fix
 
-One label for the fold in both views — glyph, then the count ("▸ 14
-sections" / "▾ 14 sections") — and the document control at one place in
-every chapter head, in `bga/viewer/chapters.js`, `bga/viewer/nav.js`
+Both controls share the glyph, the count and the state ("▸ 14
+sections" folded, "▾ 14 sections" open) and each keeps the chapter's
+title in its accessible name - the rail row keeps it visible, as
+`chapters.js`'s `labelFold` writes it today, since two chapters can hold
+the same count - and the document control sits at one place in every
+chapter head, in `bga/viewer/chapters.js`, `bga/viewer/nav.js`
 and `bga/viewer/style.css`.
 
 ## Out of Scope
@@ -40,10 +43,12 @@ rail already avoid it.
 
 ## Acceptance Test
 
-`UX-1042`'s spread clause for `button.chapter-open`, and a booted
-clause that the rail row and the document control carry the same count
-and glyph in both states. Mutation: set the open label back to "Hide",
-and the clause reds.
+`UX-1042`'s placement clause for `button.chapter-open`, and a booted
+clause that the rail row and the document control carry the same glyph,
+count and `aria-expanded` in both states, and that each control's
+accessible name contains its chapter's title. Mutations: set the open
+label back to "Hide", and the glyph clause reds; drop the title from the
+rail row, and the name clause reds.
 
 ## Outcome
 

@@ -1,6 +1,6 @@
 # UX-1042: pointer travel is a budget, measured per journey
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the second styleguide audit (2026-09-27), styleguide §3l | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-1050 | **Found by:** the second styleguide audit (2026-09-27), styleguide §3l | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement
 
 ## Motivation
 
@@ -23,7 +23,7 @@ Every hop is `element.click()`, after `scrollIntoView({block:
 
 §3b counts clicks and §3c screens; nothing counts how far the pointer
 moves between controls used together, so a control can wander across
-the column (`UX-1043`-`UX-1045`) with every guard green. At 390x844
+the column (`UX-1043`, `UX-1044`) with every guard green. At 390x844
 the rail is behind "Sections", so the rail journey did not run there.
 
 ## Decomposition
@@ -36,23 +36,30 @@ reader then uses.
 ## Required Fix
 
 A booted guard that drives the four journeys, records per hop the
-distance, the target size and the wheel pixels, and holds (a) the
-x-centre spread of each control class (`button.collapse`,
-`button.describe`, `button.json-toggle`, `button.chapter-open`,
-`button.copy-rows`, `select.top-n`) to at most 24 px, and (b) each
-journey's Fitts bits to a bound set from the measurement after
-`UX-1043`-`UX-1045` land. §3l moves from proposed to binding.
+distance, the target size and the wheel pixels, and holds two things
+as separate clauses. (a) **Placement**: for each control class
+(`button.collapse`, `button.describe`, `button.json-toggle`,
+`button.chapter-open`, `button.copy-rows`, `select.top-n`), the
+control's offset within its own block (the section head, chapter head
+or table it acts on) varies by at most 24 px across the page, read
+separately at each viewport; page x-centres are not the measure,
+because block widths, nesting and layout move a consistently placed
+control. (b) **Travel**: each journey's Fitts bits and wheel pixels,
+bounded from the measurement after `UX-1043` and `UX-1044` land, on
+`UX-1050`'s two-plane page per size class as well as the committed
+fixtures. §3l moves from proposed to binding.
 
 ## Out of Scope
 
-Moving any control (`UX-1043`-`UX-1045`); keyboard travel (§6e.8).
+Moving any control (`UX-1043`, `UX-1044`); keyboard travel (§6e.8).
 
 ## Acceptance Test
 
-The guard, green on both fixtures at both sizes. Mutation: give
-`button.json-toggle` `margin-left: auto` back after `UX-1043`,
-and the spread clause reds; add a hop's worth of margin to the Copy
-control and the journey clause reds.
+The guard, green on every page at both sizes. Mutation: restore
+the JSON toggle after the heading text once `UX-1043` has moved it, and
+the placement clause reds; add a hop's worth of margin before the
+first next step's Copy, and the travel clause reds while placement
+stays green.
 
 ## Outcome
 

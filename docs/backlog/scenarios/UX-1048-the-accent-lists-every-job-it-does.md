@@ -45,9 +45,12 @@ The accent's value and the palette bands (§5).
 
 ## Acceptance Test
 
-A booted guard: every element whose computed colour, border or fill is
-the accent or accent-mark is of a class §4.2 lists. Mutation: give a
-quiet button an accent fill, and the guard reds.
+A booted guard: every element whose computed `color`, border colour,
+`background-color`, `outline-color`, SVG `fill` or SVG `stroke` is the
+accent or accent-mark is of a class §4.2 lists - stroke included, since
+`.spark-line`, `.density-tick` and `.trend-median` wear it there.
+Mutations: give a quiet button an accent fill, and the guard reds; give
+an undeclared SVG line an accent-mark stroke, and it reds.
 
 ## Outcome
 

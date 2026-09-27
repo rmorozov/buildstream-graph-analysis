@@ -2161,13 +2161,15 @@ from the document pushes each next control below everything the last
 one opened: 50-61 thousand pixels of wheel at 390x844.
 
 **Proposed.** A control class sits at one place relative to the block
-it acts on — the spread of its x-centre across the page is at most one
-target (24 px) — and the controls one block offers sit together. Travel
+it acts on — its offset within that block varies by at most one
+target (24 px) across the page, at each viewport — and the controls one
+block offers sit together. Travel
 is stated per journey in Fitts bits and wheel pixels, in both size
 classes (§6e.10) and on a page with both planes, with the journeys above
 as the census; a change that moves a control reports the journeys it
-lengthened. `UX-1042` is the rule and its guard; `UX-1043`-`UX-1045`
-are the three placements it found.
+lengthened. `UX-1042` is the rule and its guard, after `UX-1050` gives
+it a two-plane page at scale; `UX-1043` and `UX-1044` are the two
+placements it found.
 
 ## 7. Enforcement
 

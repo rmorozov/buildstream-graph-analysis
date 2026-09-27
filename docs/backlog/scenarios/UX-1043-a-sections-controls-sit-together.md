@@ -35,9 +35,10 @@ The toggle's label and grade (§6d quiet).
 
 ## Acceptance Test
 
-`UX-1042`'s spread clause for `button.json-toggle`, at most 24 px on
-both fixtures. Mutation: restore the toggle after the title text, and
-the clause reds.
+`UX-1042`'s placement clause for `button.json-toggle`: its offset
+within its section head varies by at most 24 px, at each viewport.
+Mutation: restore the toggle after the title text, and the clause
+reds.
 
 ## Outcome
 

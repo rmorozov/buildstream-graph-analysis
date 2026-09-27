@@ -28,10 +28,14 @@ size classes.
 
 ## Required Fix
 
-One landed bound per size class, in one currency, held by one guard;
-§3c's prose derives its figures from the guard's constants
-(`test_the_styleguide_names_its_guards.py`'s derived-count pattern)
-rather than restating them.
+The landed document's total height and each chapter question's
+distance from the top constrain different things and stay two metrics.
+Each metric gets one authoritative bound per size class, in one
+currency, held by one guard: total height today lives twice (§3c's 10
+screens and §3e's 7,600 px) and loses one copy; the chapter-question
+bound stays independent of total height. §3c's prose derives its
+figures from the guards' constants (`test_the_styleguide_names_its_guards.py`'s
+derived-count pattern) rather than restating them.
 
 ## Out of Scope
 
@@ -39,8 +43,10 @@ Moving any bound's value.
 
 ## Acceptance Test
 
-Changing `CHAPTER_HEADING_SCREENS` without §3c reds a guard.
-Mutation: set it to 9.5, and the derived clause reds.
+Changing `CHAPTER_HEADING_SCREENS` or the total-height bound without
+§3c reds a guard. Mutations: set the first to 9.5, and the derived
+clause reds; remove the total-height assertion, and the chapter clause
+stays green, showing the two are independent.
 
 ## Outcome
 

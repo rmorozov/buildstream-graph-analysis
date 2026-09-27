@@ -1,48 +1,40 @@
-# UX-1045: a table's tools are one row, as §3 says
+# UX-1045: §3's tool row names the column thresholds §3d attaches to their headers
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the second styleguide audit (2026-09-27), styleguide §3, §3d, §3l | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement
+**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the second styleguide audit (2026-09-27), styleguide §3, §3d | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement
 
 ## Motivation
 
-Measured on `main` at `814a2db8` on three pages with **both planes**: `macro_micro` (11 elements), and `bga gen-synthetic <d> --store --seed 1` (`--layers 6 --width 12`, 74 elements; `--layers 20 --width 60`, 1,202) with `bga capture report --json <snapshot>/plane2.log --project-dir <d> > <snapshot>/plane2.json`, each exported by `python3 -m tools.bga_view <snapshot>/run --export` and booted through `tests/browser.py` at 1440x900 and 390x844. The element table on `macro_micro`, 1440x900:
-
-```text
-control              x-centre  y (page)
-input.table-filter        433     8,632   tool row
-select.top-n              688     8,632   tool row
-button.copy-rows          827     8,632   tool row
-input.th-filter           613     8,740   header row, one per column
-th (sort)                 391     8,727   header row
-journey filter -> top-N -> column filter -> sort -> copy: 5 hops, 1,057 px, 12.8 bits
-```
-
 §3 says "one tool row per table: filter, presets, top-N, copy"; §3d
-puts a threshold filter under each quantity column. Both are binding
-and the page follows both, so a reader filtering a table crosses
-between two rows and back. `select.preset-view` rendered on no
-`macro_micro` table at rest.
+puts a threshold filter under each quantity column, in that column's
+`th`. The two coexist - a threshold belongs to its column, not to a
+second toolbar - but §3's sentence lists "filter" without saying which,
+and the audit read it as a contradiction. Measured on `main` at
+`814a2db8`, the element table on `macro_micro` at 1440x900: the tool
+row holds `input.table-filter`, `select.top-n` and `button.copy-rows`
+at page y 8,632; the thresholds sit in the header at 8,740.
 
 ## Decomposition
 
-Input classes: a table under the row cap (no filters, §3d), over it,
-with presets, in table focus (§3a).
+Input classes: a table under the row cap (no thresholds, §3d), over it,
+in table focus (§3a).
 
 ## Required Fix
 
-Decide which rule wins and amend the other: either the column
-thresholds join the tool row (one control naming its column), or §3
-names the header row as the second tool row and Copy moves to the end
-the reader finishes at. Default, if no decision: the second.
+§3's sentence names the text filter as the tool row's and the
+thresholds as §3d's, attached to their own `th` cells. No control
+moves: a placement change needs its own measured reader benefit, which
+this row does not have.
 
 ## Out of Scope
 
-The filter's parsing (`parseThreshold`).
+Moving Copy or the thresholds; the filter's parsing
+(`parseThreshold`).
 
 ## Acceptance Test
 
-`UX-1042`'s table journey at or under the bound it sets; §3 and §3d
-read the same. Mutation: move Copy back to the far end of the tool row,
-and the journey clause reds.
+§3 and §3d read as one rule; `test_the_tools_scale_with_the_table.py`
+stays green. Mutation: none - a wording row with no page change has no
+new guard, and says so here.
 
 ## Outcome
 

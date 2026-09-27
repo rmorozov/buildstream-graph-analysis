@@ -734,6 +734,23 @@ h3.category { letter-spacing: .04em;
                    report stops scrolling sideways. */
                 min-width: min(12rem, 100%); max-width: 100%; }
 .table-tools .badge { font-size: var(--font-small); color: var(--muted); }
+/* UX-1055 (styleguide §3l): `top-n` and `copy-rows` follow a variable
+   run of siblings (the badge, the preset, the pager - `structured.js`)
+   whose presence and text length depend on the table, so their offset
+   against the tool row used to spread past 24px. `copy-rows` first
+   unconditionally (`order` -1, no sibling lower) so its left edge is
+   always the row's own edge; `top-n` last with nothing sharing its
+   remaining space (`order` 1 plus an auto left margin) so its right
+   edge is always the row's own edge the same way - both hold wrapped
+   or not, measured 0px dx on every table on `macro_micro` and the
+   two-plane page, both viewports (`test_pointer_travel_is_a_budget.
+   py`). The reverse pairing (`top-n` first, `copy-rows` last) passed
+   the same dx bound but pushed `copy-rows` past `.copy-as`/`.expand-
+   table`/`.density`, adding a wrapped line on most tables and 61px to
+   `macro_micro`'s volume budget (`test_the_page_has_a_volume_budget.
+   py`) - this pairing costs one line on four tables, not most. */
+.table-tools button.copy-rows { order: -1; align-self: flex-start; }
+.table-tools select.top-n { order: 1; margin-left: auto; align-self: flex-start; }
 .copy-rows { }
 th .th-filter { display: block; width: 100%; margin-top: var(--space-1);
                 font: inherit; font-size: var(--font-small); font-weight: normal;

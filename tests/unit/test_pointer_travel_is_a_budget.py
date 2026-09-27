@@ -36,23 +36,34 @@ _BUILD = {
 }
 
 #: The classes held to one place; each block is `blockOf`'s, below.
+#: `copy-rows`/`top-n` joined on UX-1055 (`order`, pinned first/last in
+#: `.table-tools`, so their own edge never trails a variable sibling).
 PLACEMENT = ("button.collapse", "button.describe", "button.json-toggle",
-             "button.chapter-open")
-#: Measured past 24 px on a2a7dded (dx 204-874) - a placement row to
-#: file, never a wider bound; read, not held.
-UNPLACED = ("button.copy-rows", "select.top-n")
+             "button.chapter-open", "button.copy-rows", "select.top-n")
+#: A class dropped from here *and* PLACEMENT reds nothing on its own -
+#: the census below (`test_every_control_class_a_head_or_row_holds_is_placed`)
+#: catches that gap, so this stays empty until the next unplaced find.
+UNPLACED = ()
+#: `top-n`/`copy-rows`'s block (`.table-tools`) wraps to more lines for
+#: a nested table's narrower width, which moves their *top* with it - a
+#: property of the row's own width, not of where these two sit in it.
+#: The Motivation and Acceptance Test for `UX-1055` are dx only; dy
+#: stays checked for every other class, whose block is a single line.
+DX_ONLY = ("button.copy-rows", "select.top-n")
 
-#: `(label, width): {journey: (bits, wheel px)}`, the median of 3 runs
-#: on a2a7dded (spread 0 on every value); J2 is its worst chapter.
+#: `(label, width): {journey: (bits, wheel px)}`, 3 runs (spread 0 on
+#: every value) after `UX-1055`'s reorder; J2 is its worst chapter. J4
+#: (table tools) is the journey `UX-1055`'s own Decomposition names as
+#: extended.
 MEASURED = {
-    ("macro_micro", 1440): {"J1": (4.52, 0), "J2": (18.39, 0),
-                            "J3": (15.66, 38444), "J4": (12.77, 11760)},
+    ("macro_micro", 1440): {"J1": (4.53, 0), "J2": (18.5, 0),
+                            "J3": (15.67, 38172), "J4": (14.8, 11761)},
     ("macro_micro", 390): {"J1": (2.09, 424), "J2": (17.58, 0),
-                           "J3": (18.54, 50754), "J4": (9.99, 17694)},
-    ("both_scale", 1440): {"J1": (4.48, 0), "J2": (19.60, 0),
-                           "J3": (12.48, 45892), "J4": (12.77, 12536)},
+                           "J3": (18.51, 50777), "J4": (9.99, 17717)},
+    ("both_scale", 1440): {"J1": (4.48, 0), "J2": (19.67, 0),
+                           "J3": (12.49, 45945), "J4": (14.78, 12568)},
     ("both_scale", 390): {"J1": (1.68, 771), "J2": (18.94, 0),
-                          "J3": (20.37, 57357), "J4": (10.02, 22213)},
+                          "J3": (20.34, 57400), "J4": (10.63, 22257)},
 }
 HEADROOM_BITS = 0.5
 HEADROOM_WHEEL = 1.10
@@ -126,8 +137,12 @@ _DOCUMENT = "(async () => {" + _PRELUDE + r"""
     // `attachBlockDoor` prepends the door to the block it describes.
     "button.describe": (n) => head(n) || n.closest("h2, h3, h4") || n.parentNode,
     "button.chapter-open": (n) => n.closest("h2.chapter-title"),
-    "button.copy-rows": (n) => n.closest(".table-tools")?.parentNode,
-    "select.top-n": (n) => n.closest(".table-tools")?.parentNode,
+    // `UX-1055`: the block is the tool row itself, not the whole table
+    // - the Motivation's own claim is that both follow a variable run
+    // of *siblings inside `.table-tools`* (the badge, preset, pager),
+    // never the table's height, so the row is what "one place" means.
+    "button.copy-rows": (n) => n.closest(".table-tools"),
+    "select.top-n": (n) => n.closest(".table-tools"),
   };
   const placement = {};
   for (const [cls, find] of Object.entries(blockOf)) {
@@ -141,6 +156,24 @@ _DOCUMENT = "(async () => {" + _PRELUDE + r"""
     }
   }
   out.placement = {shut, classes: placement};
+  // `UX-1055`: the census a dropped class used to escape. Every
+  // `button`/`select` sitting *directly* in a section head, a chapter
+  // head or a tool row - read off the page itself, never off
+  // `blockOf`'s own keys, so a class removed from both PLACEMENT and
+  // UNPLACED still shows up here. Direct children only: `button.describe`
+  // owns its block, not a head (`attachBlockDoor` prepends it into the
+  // `dl`/`table`/`ul`, per `format.js`), so it is out of this census on
+  // purpose; a nested one (`button.page-prev`/`-next`, inside
+  // `.table-pager`) is `.table-tools`'s own row and not this one's.
+  const containers = document.querySelectorAll(
+    "section[data-section] h2, section[data-section] h3, h2.chapter-title, .table-tools");
+  const census = new Set();
+  for (const root of containers) {
+    for (const n of root.querySelectorAll(":scope > button, :scope > select")) {
+      census.add(`${n.tagName.toLowerCase()}.${n.className.split(" ")[0]}`);
+    }
+  }
+  out.census = [...census].sort();
   let table = null;
   out.J4 = await journey(async () => {
     // The longest table offering the full tool row (`viewstate.js`'s lookup).
@@ -264,10 +297,28 @@ def test_a_control_class_sits_at_one_place(walked, label, size, cls):
     dx = min(spread([r["left"] for r in rows]),
              spread([r["right"] for r in rows]))
     dy = spread([r["top"] for r in rows])
-    assert dx <= SPREAD and dy <= SPREAD, (
+    assert dx <= SPREAD, (
         f"{label} at {_page(size)}: {len(rows)} {cls}, offset in its block "
-        f"spreads dx {dx:.1f}px (the nearer edge), dy {dy:.1f}px > {SPREAD}px "
-        f"(styleguide §3l)")
+        f"spreads dx {dx:.1f}px > {SPREAD}px (styleguide §3l)")
+    if cls not in DX_ONLY:
+        assert dy <= SPREAD, (
+            f"{label} at {_page(size)}: {len(rows)} {cls}, offset in its "
+            f"block spreads dy {dy:.1f}px > {SPREAD}px (styleguide §3l)")
+
+
+@needs_browser
+@pytest.mark.parametrize("label", LABELS)
+@pytest.mark.parametrize("size", VIEWPORTS, ids=_page)
+def test_every_control_class_a_head_or_row_holds_is_placed(walked, label, size):
+    """The gap UX-1042's verifier found: PLACEMENT and UNPLACED losing
+    a class together reds nothing on their own - this reads the page's
+    own heads and tool rows instead, so a dropped class still shows."""
+    census = walked[label, size]["census"]
+    unplaced = sorted(set(census) - set(PLACEMENT))
+    assert not unplaced, (
+        f"{label} at {_page(size)}: {unplaced} sit in a section head, "
+        f"chapter head or table row but are not in PLACEMENT (styleguide "
+        f"§3l)")
 
 
 @needs_browser

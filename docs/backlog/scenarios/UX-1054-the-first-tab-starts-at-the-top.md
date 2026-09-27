@@ -56,4 +56,36 @@ clause reds.
 
 ## Outcome
 
-Not started.
+Gap measured: pre-fix, a fresh load's first `Tab` landed on `A.data-toc
+"evidence"`, not the first focusable in document order (`SELECT.top-n`);
+a forward walk's rail stops were `['change', 'time', 'machine',
+'elements', 'believe', 'run']` against the rail's own order `['decide',
+'change', 'time', 'machine', 'elements', 'believe', 'run']` -
+`decide`'s own stop was skipped entirely. `nav.js`'s `mark()` now sets
+`nav.scrollTop` directly (`scrollRailTo`), clamped the way `block:
+"nearest"` would, instead of calling `link.scrollIntoView`.
+
+Close measured, `PYTHONPATH=$PWD python3 -m pytest -q -n 1
+tests/unit/test_a_keyboard_journey_reaches_every_chapter.py`, three
+runs: `9 passed in 10.83s`, `9 passed in 11.22s`, `9 passed in 10.72s`.
+`tests/unit/test_the_rail_is_a_source_list.py`'s mark-stays-in-view
+clause: `6 passed in 13.88s` at 1440x900 (its own fixture width); a
+scratch rerun of its `_WALK` script at 390x844 measured
+`markTop/markBottom == 0` for every stop, both before and after this
+fix (checked against the pre-fix `nav.js` via `git stash`) - a
+pre-existing, unrelated defect at that width, not moved by this change.
+Additional Decomposition classes checked by hand (`Browser.measure`,
+`macro_micro`, 1440x900): a fragment load (`#evidence`) leaves the
+document-order first focusable as `SELECT.top-n`, unchanged; focusing
+`select.top-n` and then forcing the mark to move to `evidence` left
+`document.activeElement` on the select throughout.
+
+Mutation table:
+
+| mutation | reddened | count |
+|---|---|---|
+| restore `link.scrollIntoView({block: "nearest"})` in `mark()` | `TestTheFirstTabFromAFreshLoadStartsAtTheTop` (both clauses) | `2 failed in 2.42s` |
+
+Reverted from the pre-mutation copy; green again:
+`tests/unit/test_a_keyboard_journey_reaches_every_chapter.py
+tests/unit/test_the_rail_is_a_source_list.py` -> `15 passed in 22.52s`.

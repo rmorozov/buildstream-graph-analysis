@@ -57,9 +57,10 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tests"))
 
-from browser import NO_BROWSER, Browser, find_chrome
 from pages import export_uri, scale_run
 from pages import pages as fixture_pages
+
+from tests.browser import NO_BROWSER, Browser, find_chrome
 
 chrome = find_chrome()
 needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)

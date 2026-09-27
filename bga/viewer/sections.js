@@ -132,7 +132,10 @@ export function renderFindings(findings, investigate = null, node = undefined) {
         // UX-216: a finding names elements; each is a link to that
         // element's own section, and carries `data-element` so the
         // cross-reference finds this finding from the other direction.
-        finding.elements && finding.elements.length
+        // `UX-1053` (§3k, element list): past the table bound, §1's list.
+        finding.elements?.length > bound
+          ? renderStructured("elements", finding.elements)
+          : finding.elements && finding.elements.length
           ? el("p", { class: "muted" },
               ...finding.elements.flatMap((uid, i) => [
                 i ? ", " : "",

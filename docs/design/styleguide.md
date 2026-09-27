@@ -2002,7 +2002,7 @@ the census runs at the largest class.
 | cell text | `CELL_TEXT_CAP` characters | the labeled fold | `structured.js` |
 | long scalar array | count + folded list | not measured here | `shapes.js` |
 | map (`dl`), one key per element | bounded pairs (`UX-419`) | the rest leave the document (`UX-526`) | §3e |
-| chain and element lists | `PATH_HEAD` + `PATH_TAIL` | "+N more" pages `REVEAL_STEP` names at a time (`UX-1029`) | `views.js`, `structured.js`; `element.js` through `app.js`'s `bounded` (`UX-1037`) |
+| chain and element lists | `PATH_HEAD` + `PATH_TAIL` | "+N more" pages `REVEAL_STEP` names at a time (`UX-1029`) | `views.js`, `structured.js`; `element.js` through `app.js`'s `bounded` (`UX-1037`); a finding's `elements` in `sections.js` (`UX-1053`) |
 | findings | 40 cards, the rest as fragment targets | "Show all" hydrates once (§3j) | §3j |
 | a list inside a sentence (finding text, a chapter's answer) | the top few by name, the rest as a count | the section or table the sentence cites | the analyzer's sentences |
 | evidence, culprits, overview | `EVIDENCE_SHOWN`, `CULPRITS_SHOWN`, `OVERVIEW_SHOWN` | not measured here | `sections.js`, `element.js`, `primitives.js` |

@@ -181,9 +181,17 @@ export function columnCells(table, key) {
 /**
  * Apply the text box and the per-column thresholds to a rendered table.
  * Returns how many rows survived, which is what the badge shows.
+ *
+ * Review (#295), `UX-1028`: also writes `options.filtered` - the
+ * text/threshold population, before `top`'s slice - back onto the
+ * caller's own state object. A paging step's position and bounds have
+ * to be measured against that population, not the table's unfiltered
+ * row count, which disagrees with the page the moment a filter narrows
+ * it; a second field on the state already passed in, not a second
+ * return shape every caller has to unpack.
  */
-export function applyFilters(table, { text = "", thresholds = {},
-                                     top = null } = {}) {
+export function applyFilters(table, options = {}) {
+  const { text = "", thresholds = {}, top = null } = options;
   const needle = String(text).trim().toLowerCase();
   const body = ownBody(table);
   const rows = everyRow(body);
@@ -246,6 +254,7 @@ export function applyFilters(table, { text = "", thresholds = {},
   // `UX-526`: one place decides which rows exist, so the count the badge
   // shows and the rows the document holds cannot disagree.
   showOnly(body, rows, shown);
+  options.filtered = kept.length;
   return shown.length;
 }
 

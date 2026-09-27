@@ -21,7 +21,7 @@ export const RAILS = ["decide", "act", "prove", "investigate", "raw"];
 // UX-286: and the chapters the rail lists, which are the document's
 // grouping rather than a second one written here.
 // UX-1046: the rail row goes to its chapter; the fold is the document's.
-import { CHAPTERS, UNCHAPTERED, chapterFor, chapterBox,
+import { CHAPTERS, UNCHAPTERED, chapterFor, chapterBox, labelFold,
          revealAndLand } from "./chapters.js";
 
 /** The sections the page actually rendered, in document order. */
@@ -370,11 +370,13 @@ export function toc(root, { document: doc, controls } = {}) {
       if (box) box.__railToggle = toggle;
       // Navigation, not a fold: opens the chapter, never shuts it.
       toggle.addEventListener("click", () => {
-        currentChapter(row);
+        currentChapter(row, root);
         const target = chapterBox(root, chapter.id);
         if (target) revealAndLand(target);
       });
       row.append(toggle);
+      if (row.getAttribute("data-current")) toggle.setAttribute("aria-current", "true");
+      labelFold(box);
     }
 
     for (const key of members) {
@@ -429,15 +431,22 @@ export function toc(root, { document: doc, controls } = {}) {
   return nav;
 }
 
-/** Move the rail's chapter mark (`data-current`) to `row`. */
-export function currentChapter(row) {
+/** Move the rail's chapter mark (`data-current`) to `row`; `labelFold`
+ *  repaints the glyph of each row it touched. */
+export function currentChapter(row, root) {
   if (!row || row.getAttribute?.("data-current")) return;
+  const touched = [row];
   for (const other of row.parentElement?.children ?? []) {
-    other.removeAttribute?.("data-current");
+    if (!other.getAttribute?.("data-current")) continue;
+    other.removeAttribute("data-current");
     other.querySelector?.("[data-toc-chapter]")?.removeAttribute("aria-current");
+    touched.push(other);
   }
   row.setAttribute("data-current", "true");
   row.querySelector?.("[data-toc-chapter]")?.setAttribute("aria-current", "true");
+  for (const one of touched) {
+    labelFold(chapterBox(root, one.getAttribute("data-chapter")));
+  }
 }
 
 /**
@@ -783,7 +792,7 @@ export function scrollspy(root, nav, { observer } = {}) {
     if (link) {
       link.setAttribute("data-current", "true");
       link.setAttribute("aria-current", "location");
-      currentChapter(link.closest?.("li[data-chapter]"));
+      currentChapter(link.closest?.("li[data-chapter]"), root);
       // `UX-667`: the mark moves with the reader; the rail's own scroll
       // follows it rather than leaving "you are here" to scroll off a
       // rail the document has already carried past. `"nearest"` is a

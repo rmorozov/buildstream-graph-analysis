@@ -529,9 +529,11 @@ button.collapse:hover { color: var(--fg); }
    grid. */
 section.chapter { margin: var(--space-5) 0 0; }
 section.chapter:first-of-type { margin-top: 0; }
+/* `UX-1044`: the fold control sits at the head's right edge, first line. */
 h2.chapter-title {
   margin: 0; padding-top: var(--space-2);
   border-top: 2px solid var(--line);
+  display: flex; align-items: baseline; gap: var(--space-2);
 }
 /* Inside a chapter the sections need less air between them than they
    did when nothing grouped them - the chapter boundary carries that
@@ -590,7 +592,7 @@ p.chapter-answer {
   margin: var(--space-1) 0 0; color: var(--muted); font-size: var(--font-body);
   max-width: 62ch;
 }
-button.chapter-open { margin-left: var(--space-2); vertical-align: middle; }
+button.chapter-open { margin-left: auto; flex: none; white-space: nowrap; }
 button.chapter-open:hover, button.chapter-open[aria-expanded="true"] {
   color: var(--fg); border-color: var(--fg);
 }

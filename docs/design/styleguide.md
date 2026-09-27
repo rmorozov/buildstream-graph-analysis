@@ -1693,7 +1693,7 @@ the reader is in; the rail row goes to its chapter, and the fold is the
 document's.** `data-current` on one `li[data-chapter]` follows the
 scrollspy mark; a row press moves it, opens the chapter and lands on
 its head, and never shuts anything (`UX-1046`). `nav.toc > ul.chapters >
-li[data-chapter][data-current] > button[aria-current] "<title> · <n>" >
+li[data-chapter][data-current] > button[aria-current] "▾ <title> · <n>" >
 ul.sections > li > a[aria-current]`. The scrollspy mark calls
 `scrollIntoView({block: "nearest"})` on every update, so the current
 entry is always inside the rail's own viewport rather than merely

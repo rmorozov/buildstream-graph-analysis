@@ -583,26 +583,34 @@ export function setAllOpen(root, open) {
 /**
  * The one label painter for a chapter's two controls: the document's fold
  * (`data-open`) and the rail row (`box.__railToggle`, a plain reference
- * because `nav.js` sets it while the rail is still detached). The rail
- * row is navigation (`UX-1046`): it carries the count, never the fold.
+ * because `nav.js` sets it while the rail is still detached). Both say
+ * glyph, count and title (`UX-1044`); each glyph follows its own control's
+ * disclosure - the fold's `data-open`, the rail row's `data-current`.
  */
 export function labelFold(box) {
   const toggle = box?.querySelector?.("[data-chapter-open]");
   const rail = box?.__railToggle ?? null;
   if (!toggle && !rail) return;
   const held = box.querySelectorAll?.("[data-section]")?.length ?? 0;
+  const title = box.getAttribute("aria-label");
+  const count = `${held} section${held === 1 ? "" : "s"}`;
   const open = isOpen(box);
   if (toggle) {
     toggle.setAttribute("aria-expanded", String(open));
-    toggle.textContent = open ? "Hide"
-      : `Show ${held} section${held === 1 ? "" : "s"}`;
+    toggle.textContent = `${glyph(open)} ${count}`;
+    toggle.setAttribute("aria-label", `${count}: ${title}`);
     toggle.setAttribute("title", open
-      ? `Fold "${box.getAttribute("aria-label")}" back to its answer`
-      : `Open "${box.getAttribute("aria-label")}"`);
+      ? `Fold "${title}" back to its answer` : `Open "${title}"`);
   }
   if (rail) {
-    rail.textContent = `${box.getAttribute("aria-label")} · ${held}`;
+    const current = rail.closest?.("li[data-chapter]")?.getAttribute?.("data-current");
+    rail.textContent = `${glyph(Boolean(current))} ${title} · ${held}`;
   }
+}
+
+/** §6e.13's one disclosure pair. */
+function glyph(open) {
+  return open ? "▾" : "▸";
 }
 
 /** The chapter box a rail row's toggle should share state with - the

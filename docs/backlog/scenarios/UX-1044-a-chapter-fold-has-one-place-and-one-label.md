@@ -56,4 +56,55 @@ rail row, and the name clause reds.
 
 ## Outcome
 
-Not started.
+**Gap measured.** The Motivation's table (`814a2db8`): the document
+control's x-centre ran 624-932 px at 1440, open label "Hide", no glyph.
+Reproduced by mutation D below: offset in `h2.chapter-title` spread
+303 px (from the left edge) / 312 px (right) at 1440x900.
+
+**Close measured.** `place.py` (scratchpad): every `button.chapter-open`
+clicked open, offset read against its `h2.chapter-title`, px spread
+(max-min); pages as in `UX-1046`'s Outcome:
+
+```text
+                      dx left  dx right  dy   x-centre     h2 height
+macro_micro 1440x900     10       0       0   1304-1309        43
+macro_micro  390x844     10       0       0    295-299     43-108
+74 elements 1440x900     17       0       0   1304-1313        43
+74 elements  390x844     17       0       0    295-303     43-108
+1,202       1440x900     17       0       0   1304-1313        43
+1,202        390x844     17       0       0    295-303     43-108
+```
+
+Labels, macro_micro, folded -> opened (document) and landed (rail):
+
+```text
+document  "▸ 14 sections" -> "▾ 14 sections"   aria-label "14 sections: Where did the time go?"
+rail      "▸ Where did the time go? · 14"     ("▾ ..." on the row holding data-current)
+```
+
+`test_a_chapter_fold_has_one_place_and_one_label.py`: 8 passed.
+Adapted readers of the old label: `test_a_new_control_class_lands_declared.py`
+(`^[▸▾] \d+ sections?$`), `test_one_click_from_investigation.py` (strips
+the glyph before comparing titles).
+`pytest -n 2` on every file matching `grep -lE "nav\.js|chapters\.js|
+toc-chapter|data-chapter-open|scrollspy|data-toc|chapter-open"` plus the
+styleguide, conformance and register guards: 1648 passed, 2 skipped.
+
+**Mutation table** (the new file, both viewports):
+
+| mutation | reddened | run |
+|---|---|---|
+| A: open label back to `"Hide"` | glyph clause (and count clause: "Hide" has no count) | 4 failed, 4 passed |
+| B: document label drops the count (`▸ sections`) | count clause only | 2 failed, 6 passed |
+| C: rail row drops the title (`▸ · 14`) | name clause only | 2 failed, 6 passed |
+| D: `margin-left: var(--space-2)` for `auto` (control trails the title) | placement, 1440x900 (390 wraps every title to the edge, stays green) | 1 failed, 7 passed |
+| E: rail glyph from `isOpen(box)` instead of `data-current` | glyph clause only | 2 failed, 6 passed |
+
+Reverted from the scratchpad copy: 8 passed.
+
+**Deviation.** The Acceptance Test's "same `aria-expanded` on both
+controls" is struck, per the Decision: the rail row has no
+`aria-expanded` after `UX-1046`, and each glyph follows its own control.
+The document control's accessible name is its `aria-label`
+(`"<n> sections: <title>"`, holding the visible count); the guard reads
+`aria-label` or `textContent`, not the browser's computed name.

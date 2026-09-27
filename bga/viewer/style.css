@@ -829,8 +829,6 @@ section[data-promoted] { border-left: 3px solid var(--accent); }
         background: var(--panel); color: inherit; border: 1px solid var(--line);
         border-radius: 10px; cursor: pointer; }
 .chip:hover { border-color: var(--accent); }
-.toc-rail { margin: var(--space-2) 0 0; font-size: var(--font-small); letter-spacing: .06em;
-            color: var(--muted); }
 
 /* Styleguide §3h: every chapter, and only the sections of the chapter the
    reader is in (`data-current`, moved by `nav.js`'s scrollspy and row
@@ -849,8 +847,9 @@ button.toc-chapter-open {
   background: transparent; color: var(--muted);
   letter-spacing: .06em;
 }
-button.toc-chapter-open:hover,
-button.toc-chapter-open[aria-current="true"] { color: var(--fg); }
+button.toc-chapter-open:hover { color: var(--fg); }
+/* The current row is weight and its ▾, not a sixth resting grade (§6d). */
+button.toc-chapter-open[aria-current="true"] { font-weight: 600; }
 .question-group > summary { cursor: pointer;
                             color: var(--muted); font-size: var(--font-small);
                             margin-top: var(--space-2); }

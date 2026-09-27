@@ -348,36 +348,27 @@ export function toc(root, { document: doc, controls } = {}) {
     // one entry per focused element) without JS truncating anything.
     list.setAttribute("data-rail", rail);
 
-    // `UX-347`: the first chapter is the decision; its row is a caption.
     const box = chapterBox(root, chapter.id);
     if (!marked) row.setAttribute("data-current", "true");
     marked = true;
-    if (chapter === order[0]) {
-      const label = doc.createElement("p");
-      label.className = "toc-rail";
-      label.setAttribute("data-rail", chapter.id);
-      label.setAttribute("data-chapter", chapter.id);
-      label.textContent = `${chapter.title} · ${members.length}`;
-      row.append(label);
-    } else {
-      const toggle = doc.createElement("button");
-      toggle.className = "toc-chapter-open";
-      toggle.setAttribute("type", "button");
-      toggle.setAttribute("data-toc-chapter", chapter.id);
-      toggle.textContent = `${chapter.title} · ${members.length}`;
-      // A plain reference: the rail is still detached here, so `labelFold`
-      // could not find this button by query.
-      if (box) box.__railToggle = toggle;
-      // Navigation, not a fold: opens the chapter, never shuts it.
-      toggle.addEventListener("click", () => {
-        currentChapter(row, root);
-        const target = chapterBox(root, chapter.id);
-        if (target) revealAndLand(target);
-      });
-      row.append(toggle);
-      if (row.getAttribute("data-current")) toggle.setAttribute("aria-current", "true");
-      labelFold(box);
-    }
+    // Every row, the decision's included, is a press to its chapter (§3b).
+    const toggle = doc.createElement("button");
+    toggle.className = "toc-chapter-open";
+    toggle.setAttribute("type", "button");
+    toggle.setAttribute("data-toc-chapter", chapter.id);
+    toggle.textContent = `${chapter.title} · ${members.length}`;
+    // A plain reference: the rail is still detached here, so `labelFold`
+    // could not find this button by query.
+    if (box) box.__railToggle = toggle;
+    // Navigation, not a fold: opens the chapter, never shuts it.
+    toggle.addEventListener("click", () => {
+      currentChapter(row, root);
+      const target = chapterBox(root, chapter.id);
+      if (target) revealAndLand(target);
+    });
+    row.append(toggle);
+    if (row.getAttribute("data-current")) toggle.setAttribute("aria-current", "true");
+    labelFold(box);
 
     for (const key of members) {
       const item = doc.createElement("li");

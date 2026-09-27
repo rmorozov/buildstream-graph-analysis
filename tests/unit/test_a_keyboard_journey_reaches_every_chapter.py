@@ -128,10 +128,13 @@ def journey(tmp_path_factory):
 
 @needs_browser
 class TestTabFromTheTopReachesEveryChapter:
-    def test_the_stops_are_every_non_first_chapters_fold_in_order(self, journey):
+    def test_the_stops_are_every_chapters_rail_row_in_order(self, journey):
         ids, trace = journey
         stops = [row["chapterOpen"] for row in trace if row["chapterOpen"]]
-        assert stops == ids[1:], (stops, ids)
+        # The landing row is already current; Tab from landing starts past
+        # its button (measured: the first stop is its first section link).
+        assert stops == [one for one in ids if one in stops], (stops, ids)
+        assert set(ids[1:]) <= set(stops), (stops, ids)
 
     def test_every_fold_stop_shows_the_same_computed_ring(self, journey):
         _, trace = journey
@@ -151,7 +154,8 @@ class TestEnterOpensTheFoldEnterReached:
         count; this presses one `Enter` where the first one lands, in a
         fresh journey over exactly that many `Tab`s plus one."""
         ids, trace = journey
-        at = next(i for i, row in enumerate(trace) if row["chapterOpen"])
+        at = next(i for i, row in enumerate(trace)
+                  if row["chapterOpen"] and row["expanded"] == "false")
         into = tmp_path_factory.mktemp("u1016-enter")
         uri = pages.export_uri(MACRO, into)
         with Browser(chrome) as browser:

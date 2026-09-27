@@ -2222,7 +2222,7 @@ headings, so a renumber there moves it.
 | §2f | `test_a_distribution_twin_draws_every_mark.py` | |
 | §3 | `test_the_tools_scale_with_the_table.py`, `test_one_click_from_investigation.py` | named |
 | §3a | `test_a_level_names_who_is_in_it.py`, `test_a_value_shows_what_it_is.py`, `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_fold_says_how_deep_it_goes.py`, `test_the_max_jobs_advice_is_one_level.py`, `test_the_merge_carries_every_field.py`, `test_the_page_conforms_to_its_sections.py`, `test_the_provenance_names_its_rule.py`, `test_the_report_you_can_attach.py`, `test_the_serial_chains_are_ranked.py`, `test_the_store_section_takes_a_window.py`, `test_why_bga_believes_what_it_believes.py` | |
-| §3b | `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_page_conforms_to_its_sections.py` | |
+| §3b | `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_page_conforms_to_its_sections.py`, `test_the_rail_is_a_source_list.py` | |
 | §3c | `test_a_new_control_class_lands_declared.py`, `test_the_merge_carries_every_field.py` | `UX-665`'s registry names the § each control class belongs to, so the census cites this one for the rail's; §3e's volume budget is still the measured half |
 | §3d | `test_a_capped_table_filters_what_it_sorts.py`, `test_a_new_control_class_lands_declared.py`, `test_the_max_jobs_advice_is_one_level.py`, `test_the_merge_carries_every_field.py` | `UX-349`'s `test_the_tools_scale_with_the_table.py` also holds it and cites §3 |
 | §3e | `test_the_page_has_a_volume_budget.py` | |

@@ -50,7 +50,15 @@ _RAIL = """(async () => {
   const look = () => {
     const box = nav.getBoundingClientRect();
     const links = [...nav.querySelectorAll("[data-toc]")];
-    let reachable = 0, onScreen = 0, targets = 0, outOfFocus = 0;
+    let reachable = 0, onScreen = 0, targets = 0, outOfFocus = 0, here = 0;
+    // `UX-1046`: the rail shows the chapter holding scrollspy's mark (the
+    // last one marked while focus hides every section), so the floor is
+    // that chapter's link count, read off the rail.
+    const mark = nav.querySelector('[data-toc][aria-current="location"]');
+    const markRow = mark?.closest("li[data-chapter]")
+      ?? (mark ? null : nav.querySelector("li[data-current]"));
+    const floor = Math.min(10,
+      markRow?.querySelectorAll("[data-toc]").length ?? 10);
     const focus = document.querySelector("section[data-table-focus]");
     for (const link of links) {
       const target = document.getElementById(
@@ -71,10 +79,12 @@ _RAIL = """(async () => {
         continue;
       }
       onScreen += 1;
+      if (markRow && markRow.contains(link)) here += 1;
       const hit = document.elementFromPoint(x, y);
       if (hit && (hit === link || link.contains(hit))) reachable += 1;
     }
     return { links: links.length, onScreen, reachable, targets, outOfFocus,
+             here, floor, chapter: markRow?.getAttribute("data-chapter") ?? null,
              inert: nav.getAttribute("data-focus-inert") };
   };
 
@@ -92,11 +102,6 @@ _RAIL = """(async () => {
   await settle();
   return { before, during, after: look() };
 })()"""
-
-
-#: Not vacuous: `UX-1046`'s rail discloses the reader's chapter only, so
-#: "Expand all" no longer fills it (measured 6 / 3 / 3 on macro_micro).
-ON_SCREEN = 3
 
 
 @pytest.fixture(scope="module")
@@ -126,7 +131,7 @@ class TestTheRailIsLiveWhenThereIsNoFocus:
     def test_the_rail_is_worth_hit_testing(self, rail):
         """Not vacuous: a rail with no link on screen would make every
         clause below true for free."""
-        assert rail["before"]["onScreen"] >= ON_SCREEN, rail["before"]
+        assert rail["before"]["here"] >= rail["before"]["floor"] > 0, rail["before"]
 
     def test_every_rail_link_on_screen_is_clickable(self, rail):
         assert rail["before"]["reachable"] == rail["before"]["onScreen"], (
@@ -154,7 +159,7 @@ class TestFocusMakesTheRailInert:
         """
         assert rail["during"]["links"] == rail["before"]["links"], (
             rail["before"], rail["during"])
-        assert rail["during"]["onScreen"] >= ON_SCREEN, rail["during"]
+        assert rail["during"]["here"] >= rail["during"]["floor"] > 0, rail["during"]
 
     def test_no_rail_link_leads_out_of_the_focused_table(self, rail):
         """The measurement this item was filed on: 80 of 87 links point
@@ -171,7 +176,7 @@ class TestLeavingFocusGivesTheRailBack:
         assert rail["after"]["inert"] is None, rail["after"]
 
     def test_every_link_is_clickable_again(self, rail):
-        assert rail["after"]["onScreen"] >= ON_SCREEN, rail["after"]
+        assert rail["after"]["here"] >= rail["after"]["floor"] > 0, rail["after"]
         assert rail["after"]["reachable"] == rail["after"]["onScreen"], (
             rail["after"])
         assert rail["after"]["targets"] == rail["before"]["targets"], (

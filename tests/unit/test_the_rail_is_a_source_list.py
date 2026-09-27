@@ -182,8 +182,43 @@ _PRESS_A_ROW = r"""
 """
 
 
+#: From a later chapter, one press on the decision's row brings its
+#: sections back (§3b: two rail interactions from anywhere).
+_BACK_TO_THE_DECISION = r"""
+(async () => {
+  const settle = (n) => new Promise((r) => {
+    let i = 0;
+    const step = () => (++i >= n ? r() : requestAnimationFrame(step));
+    requestAnimationFrame(step);
+  });
+  const nav = document.querySelector("nav.toc");
+  const rows = [...nav.querySelectorAll("li[data-chapter]")];
+  const first = rows[0];
+  rows[rows.length - 1].querySelector("[data-toc-chapter]").click();
+  await settle(30);
+  const away = !first.hasAttribute("data-current");
+  first.querySelector("[data-toc-chapter]")?.click();
+  await settle(30);
+  const laid = [...first.querySelectorAll("a[data-toc]")].filter((a) => {
+    const r = a.getBoundingClientRect();
+    return r.width > 0 && r.height > 0;
+  });
+  return { id: first.getAttribute("data-chapter"), away,
+           current: first.hasAttribute("data-current"),
+           laid: laid.length, links: first.querySelectorAll("a[data-toc]").length };
+})()
+"""
+
+
 @needs_browser
 class TestTheRailFollowsTheReaderNotTheFold:
+    def test_the_decision_row_brings_its_sections_back_from_anywhere(
+            self, browser, uri):
+        out = browser.measure(uri, _BACK_TO_THE_DECISION, 1440, 900)
+        assert out["id"] == "decide" and out["away"], out
+        assert out["current"] and out["laid"] == out["links"] > 0, (
+            f"the decision's sections did not come back with one press: {out}")
+
     def test_expand_all_leaves_the_rail_as_it_was(self, browser, uri):
         out = browser.measure(uri, _EXPAND_ALL, 1440, 900)
         assert out["opened"] > 1, out

@@ -80,8 +80,11 @@ modules (38 selected by `grep -lE "nav\.js|chapters\.js|toc-chapter|
 data-chapter-open|scrollspy|data-toc"` plus three reading the fold
 controls): 568 passed, 2 skipped, 3 failed - the three
 `test_the_rail_says_it_is_not_the_way_out.py` non-vacuity floors (`>= 10`
-links on screen, which "Expand all" used to supply); floor now the
-measured one-chapter minimum, `ON_SCREEN = 3` (6 / 3 / 3): 8 passed.
+links on screen, which "Expand all" used to supply); the floor is now
+read off the page: min(10, links in the row holding scrollspy's mark, or
+the `data-current` row while focus hides every section) - served
+macro_micro, before / during / after: here 6 >= 6 (decide), 3 >= 3
+(change), 3 >= 3 (change): 8 passed.
 `test_the_rail_is_a_source_list.py` 5 passed; keyboard journey + chain
 folds 26 passed; styleguide guards 36 passed.
 
@@ -92,8 +95,10 @@ folds 26 passed; styleguide guards 36 passed.
 | `labelFold` toggles the row's `data-current` from `isOpen(box)` | `test_expand_all_leaves_the_rail_as_it_was` ("530 to 2239 px") | 1 failed, 1 passed |
 | row click without `revealAndLand(target)` | `test_a_row_press_opens_and_discloses_its_chapter` ("stayed shut") | 1 failed, 1 passed |
 | scrollspy's ended-above-the-line step disabled | same test ("pressed row is not current": the mark fell back to the previous chapter's last section) | 1 failed, 1 passed |
+| decision row back to a `p.toc-rail` caption | `test_the_decision_row_brings_its_sections_back_from_anywhere` ("current: False, laid: 0, links: 6") | 1 failed, 5 passed |
+| scrollspy marks the *next* row (`?.nextElementSibling`) | `test_the_rail_says_it_is_not_the_way_out.py`: `..._worth_hit_testing`, `..._clickable_again` (here < floor) | 2 failed, 6 passed |
 
-Reverted from the scratchpad copy: 5 passed.
+Reverted from the scratchpad copy: 6 passed, and 8 passed.
 
 **Deviation.** The largest chapter disclosed alone (`elements`) overflows
 the 848 px box on all three pages (1,151-1,741 px), so the guard holds
@@ -102,5 +107,9 @@ Decision. Outside the Decision's file list: `scrollspy`'s `here()`
 skips a section that ended above the reading line (without it a row
 press landed on the chapter head and the mark returned to the previous
 chapter), and `test_the_rail_says_it_is_not_the_way_out.py`'s floor.
-The decision row stays a caption, so its sections show only while the
-reader is in it.
+The decision row is a press like the rest (was a caption), so its
+sections come back from anywhere (§3b); Tab from landing starts past its
+button, so the keyboard journey holds rail order and every later row.
+Its `aria-current` row is marked by `font-weight`, not color: color made
+a sixth resting appearance (`test_the_grades_stay_four`, red, then green).
+The styleguide's §7 `§3b` row now names `test_the_rail_is_a_source_list.py`.

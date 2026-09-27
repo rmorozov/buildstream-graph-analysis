@@ -305,6 +305,15 @@ body[data-has-toc] > header {
    `UX-1047`: `#wordmark` is text, not the heading - it drops to
    `--font-small`, and `#run-name` (the h1) takes the row's `--space-3`
    gap instead. */
+/* `UX-1047`: `#run-identity` (a `div`, not a `p` - it now holds a
+   heading, which a `p` cannot) is the header's one child for the
+   wordmark, the h1 and the instant, so the block count they cost is
+   one rather than three - `test_the_header_is_identity_and_fits`
+   counts `header.children`, and a fourth reddened it. */
+#run-identity, #run-producer {
+  display: inline-block; vertical-align: middle;
+  margin: 0; font-size: var(--font-small);
+}
 #wordmark {
   display: inline-block; margin-right: var(--space-3); vertical-align: middle;
   font-size: var(--font-small);
@@ -317,10 +326,6 @@ body[data-has-toc] > header {
 #run-name {
   display: inline-block; margin: 0 var(--space-3) 0 0; vertical-align: middle;
   max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-#run-identity, #run-producer {
-  display: inline-block; vertical-align: middle;
-  margin: 0; font-size: var(--font-small);
 }
 /* The height the sticky heading occupies, named once so the rail's
    offset and every anchor's landing clear it by the same amount. A

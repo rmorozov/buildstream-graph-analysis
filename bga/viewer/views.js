@@ -1021,7 +1021,7 @@ export function renderCriticalPath(payload) {
     more.className = "path-more";
     more.setAttribute("type", "button");
     more.setAttribute("data-folded", String(middle.length));
-    more.textContent = `+${middle.length} more`;
+    more.textContent = `+${middle.length} More`;
     // In place: the fold opens between the two ends rather than
     // scrolling the reader somewhere else.
     more.addEventListener("click", () => {

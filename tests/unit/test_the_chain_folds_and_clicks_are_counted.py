@@ -159,7 +159,7 @@ console.log(JSON.stringify({
         reader who cannot see the total cannot tell a fold from a short
         chain."""
         out = self._chain(20)
-        assert out["label"] == "+11 more elements (20 in all)", out["label"]
+        assert out["label"] == "+11 More elements (20 in all)", out["label"]
         assert out["title"] == (
             "Show the 11 elements between the first 6 and the last 3")
 

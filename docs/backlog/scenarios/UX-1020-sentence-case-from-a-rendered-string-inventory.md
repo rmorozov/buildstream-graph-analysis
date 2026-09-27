@@ -57,3 +57,12 @@ Each reverted from a copy; `test_labels_are_sentence_case.py` returned to
 5 passed after every mutation.
 
 Deviation: the inventory covers `golden` and `macro_micro`, not the 1,202-element run or the Perfetto and SQL pages the Required Fix names (a bookkeeping line). The `(s)` plurals in CLI output outside the viewer are untouched, filed as `UX-1038`.
+
+Follow-up (#295): `tools/dev_rendered_strings.py` and
+`test_labels_are_sentence_case.py` now also walk `scale_run` (the
+1,202-element run, built once per module) and the served
+`perfetto.html`/`sql.html`. `--write` → 382 rows (was 353). Found and
+fixed: three `+N more <noun> (...)` viewer controls
+(`nav.js`, `structured.js` x2, `views.js`) not sentence case, only
+reachable at this scale; two pinned tests updated to match. Bookkeeping
+line `bf5e42b` marked `swept r142 UX-1020`.

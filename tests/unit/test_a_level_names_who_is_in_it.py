@@ -338,7 +338,7 @@ class TestTheCellIsBounded:
         """§3a.1: the count is visible before the click, and it names
         what is behind it."""
         [cell] = _cells(self._members(102))
-        assert cell["control"] == "+93 more elements (102 in all)", cell
+        assert cell["control"] == "+93 More elements (102 in all)", cell
 
     def test_a_level_the_fixtures_size_is_not_folded_at_all(self):
         """1-2 uids inline, no fold, no nested table - the shape both

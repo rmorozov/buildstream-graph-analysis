@@ -125,7 +125,7 @@ export function subsections(section, doc) {
     more.className = "toc-more muted";
     // `UX-208`'s rule: a reader who cannot see the denominator cannot
     // tell a bounded list from a short one.
-    more.textContent = `+${folds.length - SUBSECTIONS_SHOWN} more`;
+    more.textContent = `+${folds.length - SUBSECTIONS_SHOWN} More`;
     list.append(more);
   }
   return list;

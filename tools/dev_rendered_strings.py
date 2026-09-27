@@ -2,11 +2,12 @@
 """UX-1020: every rendered label read as one voice - sentence case,
 and a plural chosen by its count, not spelled `(s)`.
 
-Walks `golden` and `macro_micro`'s headings, buttons, `summary`,
-rail entries, `th` and `option` text and normalises each (counts to
-`#`) into `docs/design/rendered-strings.json` - one row per distinct
-shape, with the exception class it needs (`code`, `unit`, `product
-name`, `acronym`) where sentence case does not hold. `--check` is the
+Walks `golden`, `macro_micro`, the 1,202-element synthetic run and the
+served Perfetto/SQL pages' headings, buttons, `summary`, rail entries,
+`th` and `option` text and normalises each (counts to `#`) into
+`docs/design/rendered-strings.json` - one row per distinct shape, with
+the exception class it needs (`code`, `unit`, `product name`,
+`acronym`) where sentence case does not hold. `--check` is the
 generator run read-only, for the test that walks the live page against
 the committed file.
 """
@@ -120,6 +121,20 @@ def rows_for(browser, label, uri):
     return rows
 
 
+#: `served_uris`: the two pages `bga view --perfetto` and its retired
+#: `sql.html` redirect actually serve - CSP refuses the inline script
+#: `perfetto.html` needs, so `file://` never runs `questions.js` and a
+#: walk of the exported page would miss every rendered question.
+def served_uris(run):
+    import threading
+
+    from tools.bga_view import serve
+
+    httpd, url = serve(str(run))
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    return httpd, {"perfetto": url + "perfetto.html", "sql": url + "sql.html"}
+
+
 def generate():
     import tempfile
 
@@ -130,14 +145,31 @@ def generate():
         tdp = pathlib.Path(td)
         rows = []
         seen = set()
-        for label in ("golden", "macro_micro"):
-            uri = pages.export_uri(pages.FIXTURES[label], tdp / label)
+
+        def add(label, uri):
             for row in rows_for(browser, label, uri):
                 key = (row["role"], row["text"])
                 if key in seen:
                     continue
                 seen.add(key)
                 rows.append(row)
+
+        for label in ("golden", "macro_micro"):
+            add(label, pages.export_uri(pages.FIXTURES[label], tdp / label))
+
+        #: `UX-1020`'s bookkeeping gap: `scale_run` is the 1,202-element
+        #: run the Required Fix names, generated rather than committed
+        #: (`UX-189`).
+        scale = pages.scale_run(tdp)
+        add("scale", pages.export_uri(scale, tdp / "scale-page"))
+
+        httpd, uris = served_uris(pages.WITH_TIMELINE)
+        try:
+            for label, uri in uris.items():
+                add(label, uri)
+        finally:
+            httpd.shutdown()
+            httpd.server_close()
         return rows
 
 

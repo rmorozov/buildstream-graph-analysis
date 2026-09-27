@@ -206,7 +206,7 @@ function boundedList(value, noun) {
     title: `Show the first ${Math.min(REVEAL_STEP, middle.length)} of the `
       + `${middle.length} ${noun} between the first ${head.length} and the `
       + `last ${tail.length}`,
-  }, `+${middle.length} more ${noun} (${items.length} in all)`);
+  }, `+${middle.length} More ${noun} (${items.length} in all)`);
   let offset = 0;
   const step = () => {
     const chunk = middle.slice(offset, offset + REVEAL_STEP);
@@ -218,7 +218,7 @@ function boundedList(value, noun) {
       more.title = `Show the next ${Math.min(REVEAL_STEP, remaining)} `
         + `${noun} of the ${remaining} still between the first `
         + `${head.length} and the last ${tail.length}`;
-      more.textContent = `+${remaining} more ${noun} (${items.length} in all)`;
+      more.textContent = `+${remaining} More ${noun} (${items.length} in all)`;
     } else {
       more.hidden = true;
     }
@@ -755,7 +755,7 @@ function foldTheMiddle(table, total, { head, tail, noun = "rows" }) {
     // is behind it rather than promising "more".
     title: `Show the ${middle.length} ${noun} between the first ${head} `
            + `and the last ${tail}`,
-  }, `+${middle.length} more ${noun} (${total} in all)`);
+  }, `+${middle.length} More ${noun} (${total} in all)`);
   const row = el("tr", { class: "fold-row", "data-fold-rows": String(middle.length) },
                  el("td", { colspan: String(cells) }, more));
   more.addEventListener?.("click", () => {

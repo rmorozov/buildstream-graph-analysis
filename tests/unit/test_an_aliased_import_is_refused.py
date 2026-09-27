@@ -7,6 +7,7 @@ and renamed three locals to get out of it. The refusal is what tells
 the next round it must.
 """
 import pathlib
+import re
 import subprocess
 import sys
 
@@ -89,7 +90,9 @@ class TestTheRefusalReachesTheCaller:
         for module in _module_order("app.js"):
             source = (REPO / "bga/viewer" / module).read_text(encoding="utf-8")
             if module == "decision.js":
-                source = source.replace(PLAIN.rstrip("\n"), ALIASED.rstrip("\n"), 1)
+                # the planter reads the live import, so a name added to it does not unplant it
+                source = re.sub(r"(import \{[^}]*\bheading)\b(?! as)([^}]*\} from \"\./format\.js\")",
+                                r"\1 as headingOf\2", source, count=1)
                 assert "headingOf" in source, "the alias was not planted"
             (viewer / module).write_text(source, encoding="utf-8")
         script = (f"import sys; sys.path.insert(0, {str(REPO)!r});\n"

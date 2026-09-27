@@ -1012,4 +1012,12 @@ MEDIUM = (
     "tests/unit/test_find_in_page_reaches_folded_chapters.py",         #  1.3s
     # `UX-1035`: 1.01 / 1.01 / 1.05s.
     "tests/unit/test_fonts_compute_to_two_stacks.py",                  #  1.0s
+    # Round 143, tiered on the merged tree: three single-process runs
+    # alone each (setup+call+teardown).
+    # `UX-1043`: 5.69 / 5.82 / 5.82s.
+    "tests/unit/test_a_sections_controls_sit_together.py",             #  5.8s
+    # `UX-1048`: 3.48 / 3.60 / 3.79s.
+    "tests/unit/test_the_accent_does_only_its_listed_jobs.py",         #  3.6s
+    # `UX-1052`: 1.54 / 1.53 / 1.62s.
+    "tests/unit/test_the_viewer_js_ships_compressed.py",               #  1.5s
 )

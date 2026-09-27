@@ -1982,7 +1982,7 @@ the census runs at the largest class.
 | cell text | `CELL_TEXT_CAP` characters | the labeled fold | `structured.js` |
 | long scalar array | count + folded list | not measured here | `shapes.js` |
 | map (`dl`), one key per element | bounded pairs (`UX-419`) | the rest leave the document (`UX-526`) | §3e |
-| chain and element lists | `PATH_HEAD` + `PATH_TAIL` | "+N more" pages `REVEAL_STEP` names at a time (`UX-1029`) | `views.js`, `structured.js` |
+| chain and element lists | `PATH_HEAD` + `PATH_TAIL` | "+N more" pages `REVEAL_STEP` names at a time (`UX-1029`) | `views.js`, `structured.js`; `element.js` through `app.js`'s `bounded` (`UX-1037`) |
 | findings | 40 cards, the rest as fragment targets | "Show all" hydrates once (§3j) | §3j |
 | a list inside a sentence (finding text, a chapter's answer) | the top few by name, the rest as a count | the section or table the sentence cites | the analyzer's sentences |
 | evidence, culprits, overview | `EVIDENCE_SHOWN`, `CULPRITS_SHOWN`, `OVERVIEW_SHOWN` | not measured here | `sections.js`, `element.js`, `primitives.js` |
@@ -2041,6 +2041,55 @@ have. So the rule is one level up from the page:
 - The guard walks the schema against payloads of every size class and
   both planes, and fails on an undeclared container or a growing one
   with no bound.
+
+**Every growing path the declaration pass left unbounded is named here
+(`UX-1037`).** Read off the page: the 4,002-element store snapshot with
+`macro_micro`'s Plane 2 containers grafted on, each path below filled
+to 300 names in every instance, every fold open, every step pressed ten
+times. *Drawn as* is where its names land; the census reads this table
+and holds each path to it, both ways.
+
+- **§1 list** — `ARRAY_INLINE_ITEMS` inline, a folded table to
+  `TABLE_OPENS_BOUNDED_ABOVE`, then the reveal above: `PATH_HEAD` +
+  `PATH_TAIL`, `REVEAL_STEP` per press.
+- **§1 table** — a nested table, `TABLE_OPENS_BOUNDED_ABOVE` rows.
+- **element list** — the element section's and the horizon's own
+  names up to `TABLE_OPENS_BOUNDED_ABOVE`, past it the §1 list or table
+  (`app.js`'s `bounded`). Before it: 300 names in one paragraph, 1,500
+  links in `horizon`.
+- **JSON door** — its section draws no column for it; only the door,
+  `JSON_DOOR_CHAR_CAP` characters.
+- **not drawn** — `element_join` has no section and no door, and the
+  element section draws neither list: bounded by construction.
+
+| path | drawn as | bound |
+|---|---|---|
+| `bottleneck.longest_serial_chain` | reveal | §1 list |
+| `bottleneck.serial_chains[].members` | reveal | §1 list, per row |
+| `cache.target_closure.targets` | reveal | §1 list |
+| `capacity_recommendation.pinned_elements` | reveal | §1 list |
+| `confidence.critical_path_cached` | reveal | §1 list |
+| `deferrability.recommended_deferrals` | reveal | §1 list |
+| `duration_resolution.elements` | reveal | §1 list |
+| `duration_resolution.tasks` | reveal | §1 list |
+| `element_join_coverage.plane1_only_with_impact` | reveal | §1 list |
+| `element_join_coverage.undeclared_plane2_elements` | reveal | §1 list |
+| `parallelism.levels[].elements` | reveal | §1 list, per row |
+| `plane2_coverage.static_census.elements_at_risk` | reveal | §1 list |
+| `plane2_coverage.static_census.static_executables` | reveal | §1 list |
+| `resource_blast.rows[].blast_elements` | reveal | §1 list, per row |
+| `resource_blast.rows[].direct_elements` | reveal | §1 list, per row |
+| `resource_blast.rows[].staged_at` | reveal | §1 list, per row |
+| `timestamp_agreement.shorter_than_bst` | reveal | §1 list |
+| `serialization_point_risks[].pinned_elements` | table | §1 table, per row |
+| `element_join[].native_findings` | reveal | element list |
+| `element_join[].unused_dependencies` | reveal | element list |
+| `optimization_horizon[].entering` | reveal | element list, per step |
+| `element_join[].recommendations` | table | element list |
+| `findings[].evidence.steps[].entering` | JSON door | `findings`' door |
+| `restructuring[].elements` | JSON door | `restructuring`'s door |
+| `element_join[].aggregating_dependencies` | not drawn | by construction |
+| `element_join[].worst_redundancy.elements` | not drawn | by construction |
 
 **Prose is held to the same rule.** A sentence that enumerates names
 the first few and counts the rest ("and 3,997 more"), so its length does

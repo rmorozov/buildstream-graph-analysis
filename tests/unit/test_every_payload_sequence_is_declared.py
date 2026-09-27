@@ -13,12 +13,10 @@ This file walks real payloads against the schema (`_ANALYZE_HINTS` via
 `_descend`/`quantity_for_path` use, and reds on a container the schema
 does not declare, or a fixed one whose payload instance exceeds its own
 `maxItems` - which is what "growing with no bound" means for a
-container the schema claims is fixed. The ~21 real growers the
-styleguide audit found with no bounding control at all (drawn by
-bespoke code the row cap and fold machinery never see) are `UX-1037`'s
-own finding, not a defect in this schema's declarations; they are
-carried below as a named, shrink-only list, checked against the schema
-directly rather than re-derived from a payload walk.
+container the schema claims is fixed. The real growers the
+styleguide audit found with no bounding control at all were `UX-1037`'s
+own finding; its shrink-only list is empty since, each path's bound
+named in the styleguide.
 """
 import json
 import pathlib
@@ -44,47 +42,15 @@ def _looks_data_keyed(mapping: dict) -> bool:
                for k in mapping if isinstance(k, str))
 
 
-#: `UX-1037`: the growing containers the audit found with no bounding
-#: control - drawn by bespoke code the row cap and fold machinery never
-#: see. Shrink-only: a path leaves this list only once a real bound
-#: (a page control or a `maxItems`) is added for it, never silently.
-KNOWN_UNBOUNDED_GROWERS = frozenset({
-    "capacity_recommendation.pinned_elements",
-    "plane2_coverage.static_census.elements_at_risk",
-    "plane2_coverage.static_census.static_executables",
-    "findings[].evidence.steps[].entering",
-    "optimization_horizon[].entering",
-    "cache.target_closure.targets",
-    "bottleneck.longest_serial_chain",
-    "bottleneck.serial_chains[].members",
-    "parallelism.levels[].elements",
-    "serialization_point_risks[].pinned_elements",
-    "deferrability.recommended_deferrals",
-    "confidence.critical_path_cached",
-    "timestamp_agreement.shorter_than_bst",
-    "element_join[].worst_redundancy.elements",
-    "element_join_coverage.plane1_only_with_impact",
-    "element_join_coverage.undeclared_plane2_elements",
-    "resource_blast.rows[].direct_elements",
-    "resource_blast.rows[].blast_elements",
-    "resource_blast.rows[].staged_at",
-    "duration_resolution.elements",
-    "duration_resolution.tasks",
-    "restructuring[].elements",
-    # Found walking the payload for this item, not by the audit script -
-    # the same `element_join[]{}.elements` false positive (a >20-key
-    # join row read as a data-keyed map) had swallowed these four
-    # per-row scalar arrays into one phantom path instead of four real
-    # ones.
-    "element_join[].native_findings",
-    "element_join[].unused_dependencies",
-    "element_join[].recommendations",
-    "element_join[].aggregating_dependencies",
-})
+#: `UX-1037`: growing containers with no bounding control. Shrink-only:
+#: a path leaves once a real bound holds it - a page control the styleguide's bound table
+#: names (`test_every_step_past_a_bound_is_bounded.py` reads it) or a
+#: `maxItems` - never silently. `UX-1037` bounded all 26.
+KNOWN_UNBOUNDED_GROWERS = frozenset()
 
-#: Recorded when this item closed - `KNOWN_UNBOUNDED_GROWERS` may only
-#: shrink from here, never grow, without a person deciding so.
-_UNBOUNDED_GROWERS_AT_CLOSE = 26
+#: The ratchet: `KNOWN_UNBOUNDED_GROWERS` may only shrink from here,
+#: never grow, without a person deciding so.
+_UNBOUNDED_GROWERS_AT_CLOSE = 0
 
 
 def _analyze(run) -> dict:

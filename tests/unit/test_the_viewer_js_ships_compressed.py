@@ -25,9 +25,9 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tests"))
 
-from browser import NO_BROWSER, Browser, find_chrome
 from pages import FIXTURES, snapshot_copy
 
+from tests.browser import NO_BROWSER, Browser, find_chrome
 from tools import bga_view as view
 
 chrome = find_chrome()
@@ -111,13 +111,18 @@ def test_a_browser_without_decompression_says_so(tmp_path):
     harness = tmp_path / "loader.mjs"
     harness.write_text(
         'delete globalThis.DecompressionStream;\n'
-        'const report = { textContent: "Loading", attrs: { "aria-busy": "true" },\n'
-        '  removeAttribute(name) { delete this.attrs[name]; } };\n'
-        'globalThis.document = { getElementById: (id) =>\n'
-        '  id === "report" ? report : { textContent: "" } };\n'
+        'const { installDocument, makeNode } =\n'
+        '  await import(process.env.BGA_DOM_SHIM);\n'
+        'const report = makeNode("main");\n'
+        'report.textContent = "Loading";\n'
+        'report.setAttribute("aria-busy", "true");\n'
+        'installDocument({ getElementById: (id) =>\n'
+        '  id === "report" ? report : makeNode("script") });\n'
         'await import("data:text/javascript;base64," +\n'
         f'  Buffer.from({json.dumps(loader)}).toString("base64"));\n'
-        'console.log(JSON.stringify(report));\n', encoding="utf-8")
+        'console.log(JSON.stringify({ textContent: report.textContent,\n'
+        '                              attrs: report.attrs }));\n',
+        encoding="utf-8")
     done = subprocess.run([node, str(harness)], capture_output=True, text=True,
                           timeout=60)
     assert done.returncode == 0, done.stderr

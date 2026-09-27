@@ -55,7 +55,7 @@ DX_ONLY = ("button.copy-rows", "select.top-n")
 #: `(label, width): {journey: (bits, wheel px)}`, 3 runs (spread 0 on
 #: every value) after `UX-1055`'s reorder; J2 is its worst chapter. J4
 #: (table tools) is the journey `UX-1055`'s own Decomposition names as
-#: extended.
+#: extended; `UX-1044`'s fold label lengthens both_scale 390 J3.
 MEASURED = {
     ("macro_micro", 1440): {"J1": (4.53, 0), "J2": (18.5, 0),
                             "J3": (15.67, 38172), "J4": (14.8, 11761)},
@@ -64,7 +64,7 @@ MEASURED = {
     ("both_scale", 1440): {"J1": (4.48, 0), "J2": (19.67, 0),
                            "J3": (12.49, 45945), "J4": (14.78, 12568)},
     ("both_scale", 390): {"J1": (1.68, 771), "J2": (18.94, 0),
-                          "J3": (20.34, 57400), "J4": (10.63, 22257)},
+                          "J3": (21.01, 57550), "J4": (10.63, 22257)},
 }
 HEADROOM_BITS = 0.5
 HEADROOM_WHEEL = 1.10

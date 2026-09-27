@@ -119,3 +119,6 @@ The document control's accessible name is its `aria-label`
 "▸ 14 sections": `test_labels_are_sentence_case.py` rejected the lowercase first letter on
 golden, macro_micro and scale (3 failed); it now mirrors the rail row's "▸ <title> · 14".
 The `aria-label` keeps "14 sections: <title>". Mutation: the old template back, 3 failed.
+The wider label (115-124 px against 96-113) wraps two h2s at 390 px and lengthens
+`UX-1042`'s J3 on both_scale 390 from 20.34 to 21.01 bits (wheel 57,400 to 57,550); per
+§3l the lengthened journey is reported and `MEASURED` re-based, the headroom unchanged.

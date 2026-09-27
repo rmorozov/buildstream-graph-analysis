@@ -365,9 +365,9 @@ CHAPTER_HEADING_SCREENS = 9.0
 #: `UX-1049`: the same distance, at the compact size class (390x844,
 #: §6e.10) - new, not moved, since the regular bound is a distinct
 #: currency (screens at 1440x900). Measured 9.7 (golden) and 12.9
-#: (macro_micro); the bound is the worst plus the regular bound's own
-#: headroom convention, rounded to the next half screen.
-COMPACT_CHAPTER_HEADING_SCREENS = 13.5
+#: (macro_micro) on the merged round-143 tree; the bound is the next
+#: half screen strictly above the worst, the regular bound's convention.
+COMPACT_CHAPTER_HEADING_SCREENS = 13.0
 
 #: And inside a chapter, its first section under its own heading.
 #: Measured 0.1 on every chapter of both fixtures: the heading, the

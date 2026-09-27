@@ -67,8 +67,10 @@ divided by a hardcoded 900, so it could not run at 390x844 at all.
 
 **Close measured.** `DOCUMENT_SCREENS` and `test_the_document_fits_the_budget`
 removed from the chain file; `_DISTANCE` now divides by
-`window.innerHeight`. New `COMPACT_CHAPTER_HEADING_SCREENS = 13.5`,
-measured at 390x844:
+`window.innerHeight`. New `COMPACT_CHAPTER_HEADING_SCREENS`, first
+13.5, set to **13.0** after the rail tracks merged (`2fb1524e`), the
+next half screen strictly above the worst, as the regular bound's
+9.0 sits above 8.6. Measured at 390x844 on both trees alike:
 
 ```text
               golden   macro_micro
@@ -76,9 +78,16 @@ maxHeadingScr    9.7          12.9
 documentScr     10.1          13.3
 ```
 
-(worst 12.9, +0.6 to the next half-screen, the regular bound's own
-convention). §3c's landed bullet now points at §3e with no number; its
-chapter bullet states 9 and 13.5 screens, parsed against the constants
+Re-read on the merged tree (`_DISTANCE` via the chain file's `exports`
+fixture, two runs, identical):
+
+```text
+golden 390x844: worst 9.7 :: change 8.8, time 9, machine 9.2, elements 9.3, believe 9.5, run 9.7
+macro_micro 390x844: worst 12.9 :: change 12, time 12.2, machine 12.4, elements 12.5, believe 12.8, run 12.9
+```
+
+§3c's landed bullet now points at §3e with no number; its
+chapter bullet states 9 and 13 screens, parsed against the constants
 by two new tests. `test_the_two_capabilities_are_offered.py` imports
 `LANDED_HEIGHT_PX` and compares the Perfetto top in px (5,778 golden,
 7,397 macro_micro — both under 7,600). Volume file: only `numbers` at
@@ -105,8 +114,8 @@ All six reverted from the pristine copy and reconfirmed green
 `test_the_two_capabilities_are_offered.py` 21 passed;
 `test_the_page_has_a_volume_budget.py` 30 passed, 2 skipped).
 
-**Deviation.** `13.5` for `COMPACT_CHAPTER_HEADING_SCREENS` is this
-track's headroom choice (worst 12.9 + 0.6), not a value the task file
-named; the §7 table rows are an addition the Decision's file list did
+**Deviation.** The track's `13.5` (worst 12.9 + 0.6) was its own
+headroom choice; integration set it to 13.0 by the regular bound's
+convention; the §7 table rows are an addition the Decision's file list did
 not enumerate, forced by an existing guard. Both are flagged for
 review rather than assumed correct.

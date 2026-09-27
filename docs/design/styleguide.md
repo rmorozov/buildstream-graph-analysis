@@ -487,7 +487,7 @@ screens, per size class (§6e.10; `UX-1049`):
 - the document a reader lands on: see §3e's landed-height budget - one
   bound, in px, and not restated here;
 - every chapter's question sits within **9 screens at 1440x900** and
-  **13.5 screens at 390x844** of the top;
+  **13 screens at 390x844** of the top;
 - and a chapter's first section begins within **half a screen** of its
   own heading.
 

@@ -2,7 +2,16 @@
 // fetch, and nothing else - that is the argument for driving a browser
 // directly rather than adding Playwright.
 //
-//   node cdp.mjs <port> <url> <width> <height> [--observe]  < expression
+//   node cdp.mjs <port> <url> <width> <height> [--observe] [--coarse] [--media=print]  < expression
+//
+// `--coarse` (`UX-1022`): touch emulation plus `Emulation.setEmulatedMedia`
+// forcing `pointer: coarse`/`hover: none`, so `@media (pointer: coarse)`
+// matches the way it would on a touch device - the media query a fine
+// pointer's boot never exercises.
+//
+// `--media=<name>` (`UX-1015`): `Emulation.setEmulatedMedia({media: name})`,
+// the actual media-type switch a browser makes for a real print preview
+// - not a proxy read of `@media print` in the stylesheet text.
 //
 // Prints the JSON value the expression evaluated to. With `--observe`,
 // prints `{value, console, csp, issues}` instead: everything the
@@ -21,6 +30,19 @@
 // needs, and `Log`'s rendering of the same event is a sentence.
 const [, , port, url, width, height] = process.argv;
 const observing = process.argv.includes("--observe");
+// `UX-1016`: real `Tab`/`Enter`/`Escape`, dispatched through CDP's Input
+// domain rather than a synthetic DOM event - the only way a script can
+// move focus the way a keyboard does, since a browser ignores a
+// `KeyboardEvent` it did not itself produce for navigation. With
+// `--journey`, stdin is JSON steps rather than an expression string:
+// `{"key": "Tab"}` presses a key, `{"read": "<js>"}` evaluates and
+// records it, `{"wait": ms}` pauses - one navigated session for the
+// whole sequence, because focus is exactly the state a fresh load per
+// step would lose.
+const journeying = process.argv.includes("--journey");
+const coarse = process.argv.includes("--coarse");
+const mediaArg = process.argv.find((a) => a.startsWith("--media="));
+const media = mediaArg ? mediaArg.slice("--media=".length) : null;
 
 let expression = "";
 for await (const chunk of process.stdin) expression += chunk;
@@ -125,6 +147,20 @@ await send("Emulation.setDeviceMetricsOverride", {
   width: Number(width), height: Number(height),
   deviceScaleFactor: 1, mobile: false,
 });
+// `UX-1016`: a headless target this process never clicked into has no
+// real window focus, so `document.hasFocus()` is `false` and neither
+// `Tab` nor `Enter`/`Escape` move or act on anything - emulated here
+// rather than by an extra "click the page first" step, which would
+// itself move focus onto whatever sits under the click.
+if (journeying) await send("Emulation.setFocusEmulationEnabled", { enabled: true });
+if (coarse) {
+  await send("Emulation.setTouchEmulationEnabled", { enabled: true });
+  await send("Emulation.setEmulatedMedia", {
+    features: [{ name: "pointer", value: "coarse" },
+               { name: "hover", value: "none" }],
+  });
+}
+if (media) await send("Emulation.setEmulatedMedia", { media });
 // The replay drains here, discarded, and the gate opens on the
 // navigation this run is about.
 if (observing) await new Promise((resolve) => setTimeout(resolve, 300));
@@ -201,21 +237,64 @@ const SETTLE_CEILING_MS = 20000;
   }
 }
 
-const result = await send("Runtime.evaluate", {
-  expression, returnByValue: true, awaitPromise: true,
-});
-if (result.exceptionDetails) {
-  process.stderr.write(JSON.stringify(result.exceptionDetails, null, 1));
-  process.exit(1);
+// `UX-1016`: `key`/`code`/`windowsVirtualKeyCode` per name CDP wants -
+// only the three this project's keyboard journey ever presses.
+const KEYS = {
+  Tab: { key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 },
+  Enter: { key: "Enter", code: "Enter", windowsVirtualKeyCode: 13,
+           nativeVirtualKeyCode: 13, text: "\r", unmodifiedText: "\r" },
+  Escape: { key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 },
+};
+
+async function press(name, shift) {
+  const spec = KEYS[name];
+  if (!spec) throw new Error(`cdp.mjs --journey: unknown key "${name}"`);
+  const modifiers = shift ? 8 : 0;                    // Input's Shift bit
+  // `keyDown` rather than `rawKeyDown`: a button's native "Enter
+  // activates the focused control" behaviour is one of the follow-up
+  // effects `rawKeyDown` deliberately omits (it exists for a shortcut
+  // like Ctrl+C, which must not also type a character) - measured empty
+  // without this, on this Chromium.
+  await send("Input.dispatchKeyEvent", { type: "keyDown", modifiers, ...spec });
+  await send("Input.dispatchKeyEvent", { type: "keyUp", modifiers, ...spec });
 }
-const value = result.result.value ?? null;
-let out = value;
-if (observing) {
-  const violations = await send("Runtime.evaluate", {
-    expression: "window.__bgaCsp ?? []", returnByValue: true,
+
+let out;
+if (journeying) {
+  const steps = JSON.parse(expression);
+  const trace = [];
+  for (const step of steps) {
+    if (step.key) await press(step.key, Boolean(step.shift));
+    if (step.wait) await new Promise((resolve) => setTimeout(resolve, step.wait));
+    if (step.read) {
+      const got = await send("Runtime.evaluate", {
+        expression: step.read, returnByValue: true,
+      });
+      if (got.exceptionDetails) {
+        process.stderr.write(JSON.stringify(got.exceptionDetails, null, 1));
+        process.exit(1);
+      }
+      trace.push(got.result?.value ?? null);
+    }
+  }
+  out = trace;
+} else {
+  const result = await send("Runtime.evaluate", {
+    expression, returnByValue: true, awaitPromise: true,
   });
-  out = { value, console: consoled, csp: violations.result?.value ?? [],
-          issues };
+  if (result.exceptionDetails) {
+    process.stderr.write(JSON.stringify(result.exceptionDetails, null, 1));
+    process.exit(1);
+  }
+  const value = result.result.value ?? null;
+  out = value;
+  if (observing) {
+    const violations = await send("Runtime.evaluate", {
+      expression: "window.__bgaCsp ?? []", returnByValue: true,
+    });
+    out = { value, console: consoled, csp: violations.result?.value ?? [],
+            issues };
+  }
 }
 // `process.exit` is deliberately not called: stdout to a pipe is
 // asynchronous, and exiting truncates a long report. Closing the

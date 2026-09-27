@@ -26,14 +26,12 @@ predecessor was a caches-off build reports no churn verdict at all
 rather than a fabricated one, and a rebuild both runs made is a
 retention question rather than waste.
 
-**What this cannot see today.** Bytes moved. Plane 1 records transfer
-*seconds*, not artifact sizes, so "the remote slowed down" is measurable
-here only as time per artifact - which conflates a slower remote with
-larger artifacts. Seconds first, sizes as the follow-on, the same
-posture `UX-100` takes to its own size axis. On captures taken with
-remotes ignored (which is every published freedesktop-sdk capture, by
-design) there is no transfer at all, and the trend says so rather than
-reporting zero.
+**What this cannot see today.** Bytes moved. Plane 1 records transfer *seconds*, not
+artifact sizes, so "the remote slowed down" is measurable here only as time per artifact -
+which conflates a slower remote with larger artifacts. Seconds first, sizes as the
+follow-on, the same posture `UX-100` takes to its own size axis. On captures taken with
+remotes ignored (which is every published freedesktop-sdk capture, by design) there is no
+transfer at all, and the trend says so rather than reporting zero.
 """
 import os
 from pathlib import Path
@@ -41,6 +39,7 @@ from typing import Optional
 
 from .cache_effectiveness import compute_cache_accounting, compute_cache_churn
 from .compare import _SIGNIFICANCE_PCT, MIN_BASELINE_RUNS, compute_band
+from .plural import plural
 from .units import human_bytes
 
 # A metric whose newest reading sits outside the trailing window's band
@@ -232,7 +231,7 @@ def _band_findings(rows: list[dict]) -> list[dict]:
                 if ratio else f"{label} left the trailing band"
             ) + (
                 f" ({_render(key, current)} against {_render(key, median)} over "
-                f"{band['n']} run(s), band {_render(key, band['low_us'])}.."
+                f"{plural(band['n'], 'run')}, band {_render(key, band['low_us'])}.."
                 f"{_render(key, band['high_us'])}"
                 + (', widened to the fixed rule' if band['widened_to_fixed_pct'] else '')
                 + f") - {consequence}"
@@ -301,7 +300,7 @@ def build_trend(rows: list[dict]) -> dict:
                 'supplied': len(rows),
                 'required': MIN_BASELINE_RUNS + 1,
                 'message': (
-                    f"{len(rows)} run(s) supplied; a band needs {MIN_BASELINE_RUNS} "
+                    f"{plural(len(rows), 'run')} supplied; a band needs {MIN_BASELINE_RUNS} "
                     f"trailing runs plus the one being judged, so {MIN_BASELINE_RUNS + 1}. "
                     f"The rows above are real readings with no verdict attached."
                 ),

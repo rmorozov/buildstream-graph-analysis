@@ -48,8 +48,8 @@ history, and §7 names its guard. *Binding* is law the page is held to;
 | **Tables and folds** | §3 | tables open bounded, numbers right, one tool row, folds labeled with a count | binding |
 | | §3a | depth is announced; deeper than one level opens in table focus | binding |
 | | §3d | table tools appear at the row cap; a one-value column is a sentence | binding |
-| | §3j | a fold bounds its hidden controls, not only its visible rows | binding; guard not filed |
-| | §3k | every population opens at a named bound, and the step past it is bounded too | binding; 3 open violations |
+| | §3j | a fold bounds its hidden controls, not only its visible rows | binding |
+| | §3k | every population opens at a named bound, and the step past it is bounded too | binding |
 | **Navigation** | §3b | any section is at most two interactions from the rail | binding |
 | | §3c | the landed page is at most 10 screens; chapters fold | binding |
 | | §3h | the rail shows every chapter and only the current chapter's sections | binding |
@@ -136,7 +136,7 @@ per-section "view as JSON" toggle's `data-raw-json`;
 
 ## 1a. The hint vocabulary
 
-Twenty hints, and this table is the one place they are all written
+Twenty-one hints, and this table is the one place they are all written
 down (`UX-306`). Each names what a schema *declares* about a value;
 §1 above is what the page does with it — except the last row, which
 declares something about the *contract* and is read by a consumer
@@ -168,6 +168,7 @@ sets equal in both directions.
 | `bga:command` | that a scalar array is one command line rather than a list of values — the shell it is spelled for | `classify`, which returns §1's command control for it (`UX-429`) |
 | `bga:runbook` | that an ordered array of `{reason, command, citation}` is a runbook and not a population — three steps a reader runs, not rows to compare (`UX-669`) | `renderSection`, which draws the link to the decision panel and no table |
 | `bga:always_written` | that a key is **not** `required` and yet written on every document — the third state `UX-629` needed, because entering `required` under a live id breaks documents already written | a consumer asking *may be here* or *is always here*; the emitter guarantee is held by `test_a_required_set_grew_under_an_unchanged_id.py`, not by the page |
+| `bga:grows` | whether a container's population grows with the run, and with what — a string names it, `False` pairs with `maxItems` for one that does not | `test_every_payload_sequence_is_declared.py`'s walk, and a reader asking whether a table's row count is bounded by the schema or only by the page (`UX-1031`) |
 
 Two properties this table is here to keep. **A hint is a declaration,
 never a guess**: the page reads what the schema says a value is and
@@ -674,7 +675,7 @@ column re-read in round 73:
                  elements   landed   opened    words   controls    nodes
 golden                  4    3,800   15,618    7,144        427    2,498
 macro_micro            11    5,965   31,804   12,002        750    5,686
-budget, to 50 elts             7,300   38,200   12,800        800    7,900
+budget, to 50 elts             7,600   38,200   13,200        800    7,900
 
 scale               1,202    4,763   26,242   36,542      1,941   24,294
 budget, to 4,000 elts          7,000   32,000   41,000      2,300   27,500
@@ -701,7 +702,7 @@ in it hidden, and the class is bounded at both ends:
                  elements   landed   opened    words   controls    nodes
 scale               1,202    5,007   26,584    8,259        787    4,732
 xl                  4,002    4,937   27,230    8,275        812    4,960
-budget, to 4,100 elts          7,300   36,500    9,600        900    6,000
+budget, to 4,100 elts          7,600   36,500    9,600        900    6,000
 ```
 
 Height does not move at all — a bounded row costs no pixels, which is
@@ -816,6 +817,11 @@ caused it.
 Re-measured on the round's merged tree: macro_micro 37,743 px and
 12,769 words, xl 35,669 px, 9,456 words and 5,785 nodes - 457, 31 and
 831, 144, 215 of headroom.
+
+The UI batch (`UX-1022`, `UX-1018`) moved the one landed bound 7,300 ->
+7,600: `macro_micro` 6,859 at babba3e5, 7,471 merged - `UX-1022`'s
+24 px targets and `UX-1018`'s chapter scale +268, `UX-1021`'s doors +165.
+Spacing, not new blocks; 129 of headroom.
 
 `tests/unit/test_the_page_has_a_volume_budget.py` asserts both budgets
 in **one** guard, so a change trading one for the other has to say so.
@@ -1099,7 +1105,7 @@ paragraph below had aged by one module before anything read it.
 
 ```text
 $ git ls-files -- 'bga/viewer/*.js' | wc -l
-22                                  viewer modules
+23                                  viewer modules
 $ git grep -l 'el("table"' -- 'bga/viewer/*.js' | wc -l
 1                                   modules that construct a table
 ```
@@ -1148,6 +1154,7 @@ first.
 | primitive | what it replaces | state here |
 |---|---|---|
 | `content-visibility: auto` + `contain-intrinsic-size` | virtual scrolling — offscreen sections stop costing layout | **used** (`style.css`, sections inside a chapter) |
+| `hidden="until-found"` | a fold reachable by find-in-page, without a `display` rule that also hides its text from `Ctrl+F` | **used** since `UX-1015` (`chapters.js` `setOpen`, the fold's one state setter) |
 | `IntersectionObserver` | a scroll handler that reads layout every frame; scrollspy | **used** (`nav.js scrollspy`) |
 | `scroll-margin-top` | anchors landing behind sticky chrome | **used** since `UX-317` |
 | `popover` / `<dialog>` | overlay plumbing for the `?` apparatus (table focus is in-flow by §3a.2, never an overlay) | not used — §2b's mechanism is hand-rolled and works; a rewrite needs its own filing |
@@ -1309,6 +1316,39 @@ per surface (this report, the Perfetto page, the SQL page,
 across a row; controls and placement may differ, and a differing cell
 records why. The guard reads the rendered strings of each surface
 against the matrix, so a new word for an old concept reddens.
+
+### 6e.2. The terminology matrix
+
+Measured on `main` at `98ab850`, booted on `golden`/`macro_micro`: two
+"why" affordances on every top action (a plain `a.why` link to
+`#findings` and `renderWhyRanked`'s disclosure); `bga/viewer/views.js`'s
+"What this **capture** supports" heading against "Could not load this
+**run**", "This **run** names this element..." elsewhere on the same
+page; `bga/schemas.py` (651 `"description"` fields feeding the `?`
+door) says "the **build**"/"this **capture**" 49 times where the
+subject is the run as a whole.
+
+One row per reader concept the page, `perfetto.html`, `sql.html` and
+the schema's own `description` fields (the `?` door's "describe()")
+name; the word that wins, and the rejected synonym found in rendered
+text. A row with no measured drift keeps its one word for completeness.
+
+| concept | word | rejected synonym | measured on |
+|---|---|---|---|
+| the whole thing analyzed | run | build, capture | this report's headings/banners; 49 schema descriptions still say "build"/"capture" - not swept this round, `UX-1019` |
+| a BuildStream recipe | element | — | this report; `element\|KIND\|KIND\|n` is register (§4g item 3), not this row - a scheduler task (one fetch or build attempt on an element) is a different, kept concept, not a synonym for the element it acts on |
+| the longest dependency path | critical path | — | most prose already says "critical path" (`element.js`, `questions.js`, 20+ schema descriptions); four `decision.js`/`views.js` labels still say "chain", found but not fixed - renaming them costs 6 words, over §3e's `macro_micro` volume budget by 6 (`test_the_page_has_a_volume_budget.py`), so the guard does not yet enforce this row rather than trading one guard's red for another's |
+| an answer the page ranks | finding | — | this report |
+| the runbook step a reader takes | next step | — | this report |
+
+The guard reads this table's `word`/`rejected synonym` columns and
+reds on a rejected synonym inside a rendered `h2`/`h3` — the surface
+the one measured defect above was on; the schema-description surface
+is named, not swept, and is `UX-1019`'s one open deviation. One
+heading keeps "build" outside this row's meaning - "Which build of
+bga measured this?" names the analyzer's own software build, never
+the run - and the guard excepts that one string rather than widen
+the rule to a sense it does not name.
 
 **Rule 8, the keyboard journey.** A computed `:focus-visible` outline
 shows a ring exists, not that the page is operable. The guard drives
@@ -1873,9 +1913,11 @@ underutilized_intervals From      "497003.7 h" — a monotonic base rendered as 
    an offset says "+12.4 s", never a raw clock.
 6. A superlative is a measurement (§1c) and a label is its effect
    (§4c).
+7. No `R1`-`R5` — the author's index for a finding's reader, never the
+   reader's own word for themselves.
 
 `UX-824` holds it with one guard over both exports; `UX-825` and
-`UX-826` are the sentences it found.
+`UX-826` are the sentences it found. `UX-1034` adds item 7.
 
 ## 5b. What the header already says is not said again (round 115)
 
@@ -1935,19 +1977,19 @@ the census runs at the largest class.
 
 | population | bound at rest | the step past it | named in |
 |---|---|---|---|
-| table rows (§1: array of objects, array of arrays) | opens bounded above `TABLE_OPENS_BOUNDED_ABOVE` rows | filter, preset, Top-N, table focus; **"All rows" is unbounded** | `structured.js`, `tables.js` |
+| table rows (§1: array of objects, array of arrays) | opens bounded above `TABLE_OPENS_BOUNDED_ABOVE` rows | filter, preset, Top-N, table focus; "All rows" under `ALL_ROWS_CEILING`, the paging step past it (`UX-1028`) | `structured.js`, `tables.js` |
 | nested cell | `CELL_NEST_LIMIT` levels inline | table focus (§3a) | `structured.js` |
 | cell text | `CELL_TEXT_CAP` characters | the labeled fold | `structured.js` |
 | long scalar array | count + folded list | not measured here | `shapes.js` |
 | map (`dl`), one key per element | bounded pairs (`UX-419`) | the rest leave the document (`UX-526`) | §3e |
-| chain and element lists | `PATH_HEAD` + `PATH_TAIL` | **"+N more" reveals every name** | `views.js` |
+| chain and element lists | `PATH_HEAD` + `PATH_TAIL` | "+N more" pages `REVEAL_STEP` names at a time (`UX-1029`) | `views.js`, `structured.js`; `element.js` through `app.js`'s `bounded` (`UX-1037`) |
 | findings | 40 cards, the rest as fragment targets | "Show all" hydrates once (§3j) | §3j |
 | a list inside a sentence (finding text, a chapter's answer) | the top few by name, the rest as a count | the section or table the sentence cites | the analyzer's sentences |
 | evidence, culprits, overview | `EVIDENCE_SHOWN`, `CULPRITS_SHOWN`, `OVERVIEW_SHOWN` | not measured here | `sections.js`, `element.js`, `primitives.js` |
 | history series | `HISTORY_POINTS_MAX` points | none: the window is the answer | `element.js` |
 | rail | the current chapter's sections (§3h) | the next chapter | §3h |
 | Perfetto element picker | `PICKER_SHOWN` hits | the search box | `questions.js` |
-| labeled fold, "view as JSON" | closed | **the whole value, unbounded** | §1 |
+| labeled fold, "view as JSON" | closed | a `JSON_DOOR_CHAR_CAP`-character prefix, the rest as a copy (`UX-1030`) | §1, `rawjson.js` |
 
 **The rule.** Every population the page draws — rows, items, pairs,
 points, names, and characters of text — opens at a bound held by a
@@ -2000,6 +2042,55 @@ have. So the rule is one level up from the page:
   both planes, and fails on an undeclared container or a growing one
   with no bound.
 
+**Every growing path the declaration pass left unbounded is named here
+(`UX-1037`).** Read off the page: the 4,002-element store snapshot with
+`macro_micro`'s Plane 2 containers grafted on, each path below filled
+to 300 names in every instance, every fold open, every step pressed ten
+times. *Drawn as* is where its names land; the census reads this table
+and holds each path to it, both ways.
+
+- **§1 list** — `ARRAY_INLINE_ITEMS` inline, a folded table to
+  `TABLE_OPENS_BOUNDED_ABOVE`, then the reveal above: `PATH_HEAD` +
+  `PATH_TAIL`, `REVEAL_STEP` per press.
+- **§1 table** — a nested table, `TABLE_OPENS_BOUNDED_ABOVE` rows.
+- **element list** — the element section's and the horizon's own
+  names up to `TABLE_OPENS_BOUNDED_ABOVE`, past it the §1 list or table
+  (`app.js`'s `bounded`). Before it: 300 names in one paragraph, 1,500
+  links in `horizon`.
+- **JSON door** — its section draws no column for it; only the door,
+  `JSON_DOOR_CHAR_CAP` characters.
+- **not drawn** — `element_join` has no section and no door, and the
+  element section draws neither list: bounded by construction.
+
+| path | drawn as | bound |
+|---|---|---|
+| `bottleneck.longest_serial_chain` | reveal | §1 list |
+| `bottleneck.serial_chains[].members` | reveal | §1 list, per row |
+| `cache.target_closure.targets` | reveal | §1 list |
+| `capacity_recommendation.pinned_elements` | reveal | §1 list |
+| `confidence.critical_path_cached` | reveal | §1 list |
+| `deferrability.recommended_deferrals` | reveal | §1 list |
+| `duration_resolution.elements` | reveal | §1 list |
+| `duration_resolution.tasks` | reveal | §1 list |
+| `element_join_coverage.plane1_only_with_impact` | reveal | §1 list |
+| `element_join_coverage.undeclared_plane2_elements` | reveal | §1 list |
+| `parallelism.levels[].elements` | reveal | §1 list, per row |
+| `plane2_coverage.static_census.elements_at_risk` | reveal | §1 list |
+| `plane2_coverage.static_census.static_executables` | reveal | §1 list |
+| `resource_blast.rows[].blast_elements` | reveal | §1 list, per row |
+| `resource_blast.rows[].direct_elements` | reveal | §1 list, per row |
+| `resource_blast.rows[].staged_at` | reveal | §1 list, per row |
+| `timestamp_agreement.shorter_than_bst` | reveal | §1 list |
+| `serialization_point_risks[].pinned_elements` | table | §1 table, per row |
+| `element_join[].native_findings` | reveal | element list |
+| `element_join[].unused_dependencies` | reveal | element list |
+| `optimization_horizon[].entering` | reveal | element list, per step |
+| `element_join[].recommendations` | table | element list |
+| `findings[].evidence.steps[].entering` | JSON door | `findings`' door |
+| `restructuring[].elements` | JSON door | `restructuring`'s door |
+| `element_join[].aggregating_dependencies` | not drawn | by construction |
+| `element_join[].worst_redundancy.elements` | not drawn | by construction |
+
 **Prose is held to the same rule.** A sentence that enumerates names
 the first few and counts the rest ("and 3,997 more"), so its length does
 not grow with the run. Measured with every fold opened and "Show all"
@@ -2007,14 +2098,14 @@ pressed: the longest finding card is 581 characters at 4,002 elements
 and 1,105 on `macro_micro`, and the longest text block of any kind 267
 and 217. The large run's sentences are shorter, not longer.
 
-The three bold cells are the open violations, filed as `UX-1028`,
-`UX-1029` and `UX-1030`:
-"All rows" on a table past its ceiling, a reveal that draws every
-name, and a JSON door that draws a whole section. The guard is a census
-at the largest size class (§3f) that presses every step control, not
-only one that reads the page at rest — at rest, all three pass. It
-holds what is mounted to ceilings written in the guard itself, never to
-the constants it audits, so raising `TABLE_OPENS_BOUNDED_ABOVE` reds it,
+The three violations above were filed as `UX-1028`, `UX-1029` and
+`UX-1030`, and closed against the census below: "All rows" on a table
+past its ceiling, a reveal that drew every name, and a JSON door that
+drew a whole section. The guard is a census at the largest size class
+(§3f) that presses every step control, not only one that reads the
+page at rest — at rest, all three passed regardless. It holds what is
+mounted to ceilings written in the guard itself, never to the
+constants it audits, so raising `TABLE_OPENS_BOUNDED_ABOVE` reds it,
 and it presses each paging step repeatedly, not once. The census is
 `UX-1032`, and declaring every sequence in the schema `UX-1031`.
 
@@ -2075,8 +2166,8 @@ headings, so a renumber there moves it.
 | §3g | `test_the_ceilings_reach_a_reader.py` | |
 | §3h | `test_the_rail_is_a_source_list.py` | |
 | §3i | `test_the_header_keeps_its_budget.py` | |
-| §3j | | `UX-921` will add the hidden-control population guard; open finding |
-| §3k | | three open violations, listed in the section; the census guard is filed with them |
+| §3j | `test_a_fold_bounds_its_interactive_descendants.py` | `UX-921` |
+| §3k | `test_every_step_past_a_bound_is_bounded.py` | `UX-1032`'s census, at the 4,002-element run; `UX-1028`/`UX-1029`/`UX-1030` closed the three violations it found |
 | §4 | `test_emphasis_is_a_budget.py`, `test_the_palette_is_validated.py`, `test_a_drawing_is_graded.py`, `test_apparatus_in_its_place.py`, `test_the_browser_is_the_library.py` | named |
 | §4a | | named; `UX-346`'s `test_a_sentence_lives_on_its_door.py` holds it and cites no section |
 | §4b | `test_a_runbook_is_not_a_table.py` | `UX-351`'s `test_the_label_is_for_the_reader.py` holds it and cites no section; `UX-669`'s clause holds the half that says a citation is a question, never a key |
@@ -2091,9 +2182,9 @@ headings, so a renumber there moves it.
 | §6 | | named; `test_the_numbers_have_a_sentence.py` and `test_the_shape_before_the_rows.py` hold the sentence and the `n`; neither cites §6 |
 | §6a | `test_every_control_has_a_resting_appearance.py` | named; §6a's refusal, not a fifth copy of four rules |
 | §6b | `test_one_factory_builds_every_table.py`, `test_the_handoff_rides_the_rail.py` | |
-| §6c | `test_the_browser_is_the_library.py`, `test_the_report_you_can_attach.py` | |
+| §6c | `test_the_browser_is_the_library.py`, `test_the_report_you_can_attach.py`, `test_find_in_page_reaches_folded_chapters.py` | |
 | §6d | `test_every_control_has_a_resting_appearance.py` | |
-| §6e | | proposed rules; each names the guard its row will add once accepted |
+| §6e | `test_a_reader_never_sees_the_register.py`, `test_an_absence_is_one_sentence.py`, `test_one_disclosure_glyph_pair.py`, `test_one_door_per_block.py`, `test_the_heading_outline_has_three_levels.py`, `test_spacing_comes_from_a_scale.py`, `test_controls_meet_the_target_size.py`, `test_every_control_has_a_resting_appearance.py`, `test_a_new_control_class_lands_declared.py`, `test_a_keyboard_journey_reaches_every_chapter.py`, `test_every_drawing_has_a_name_and_a_data_route.py`, `test_find_in_page_reaches_folded_chapters.py`, `test_the_page_has_a_volume_budget.py` | rules land one row at a time; not every rule has landed a guard yet |
 | §7 | `test_emphasis_is_a_budget.py`, `test_the_styleguide_names_its_guards.py` | named |
 
 What the rows with no guard were written from, rounds 58 and 69, kept

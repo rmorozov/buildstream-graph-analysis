@@ -5,12 +5,10 @@ paths, with the project repeated in two of them — and then the loop's
 whole point, *did my change help?*, needs the user to have parked the
 previous run somewhere and to type both paths into `bga compare`.
 
-Nothing there is hard. Everything there is clerical, and the clerical
-part is exactly what a user gets wrong at 6pm: `/tmp/run` against
-`/tmp/run2`, yesterday's `plane2.json` joined to today's run — mistakes
-the refusals catch *after* a thirty-minute build. Three audit rounds ran
-this loop dozens of times and every path in every invocation was
-invented by the operator.
+Nothing there is hard. Everything there is clerical, and the clerical part is exactly what a
+user gets wrong at 6pm: `/tmp/run` against `/tmp/run2`, yesterday's `plane2.json` joined to
+today's run — mistakes the refusals catch *after* a thirty-minute build. Three audit rounds ran
+this loop dozens of times and every path in every invocation was invented by the operator.
 
 So: `.bga/runs/<UTC-stamp>-<short-id>/` under the project, holding the
 same shape the published capture refs already use, and `@last` / `@prev`
@@ -27,6 +25,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from . import progress
+from .plural import plural
 
 # `UX-896`: `human_bytes` lives in `units` now; re-exported here so
 # every existing `run_store.human_bytes` caller keeps working.
@@ -401,7 +400,7 @@ def resolve_snapshot(token: str, start: Optional[str] = None) -> str:
                   if os.path.basename(s).startswith(name)]
         if debris:
             raise StoreError(
-                f"{name!r} names {len(debris)} snapshot(s) in {project} with "
+                f"{name!r} names {plural(len(debris), 'snapshot')} in {project} with "
                 f"no run directory ({', '.join(debris[-4:])}). "
                 f"`bga snapshot --list` shows them and says why; an alias "
                 f"resolves only to a capture that produced a run. "

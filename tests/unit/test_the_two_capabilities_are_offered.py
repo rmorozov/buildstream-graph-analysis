@@ -83,7 +83,7 @@ _LOOK = """
       top: (blast.getBoundingClientRect().top + window.scrollY) / vh,
       // UX-668: every section wears its reader chip inside the h2; the
       // heading under test is the text without it.
-      heading: [...(blast.querySelector("h2")?.childNodes ?? [])]
+      heading: [...(blast.querySelector("h2, h3")?.childNodes ?? [])]
         .filter((n) => !(n.matches?.("[data-reader-tag]")))
         .map((n) => n.textContent).join("") ?? "",
       command: blast.querySelector("code")?.textContent ?? "",

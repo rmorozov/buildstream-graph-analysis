@@ -105,8 +105,8 @@ ASSETS = ("index.html", "app.js", "style.css", "views.js", "focus.js",
           # boots - which is what `test_everything_inlined_is_also_
           # served` caught when this list was missed.
           "sections.js",
-          # UX-205: the filters, thresholds and copy helpers.
-          "tables.js",
+          # UX-205: the filters, thresholds and copy helpers; UX-268's pairs.
+          "tables.js", "pairs.js",
           # UX-211: the view state that travels in the fragment.
           "viewstate.js",
           # UX-286: the chapters the document is grouped into. Left out
@@ -1923,9 +1923,9 @@ def main(argv: Optional[list[str]] = None) -> int:
               f"a browser - it needs no server and no network.",
               file=sys.stderr)
         if written["omitted"]:
-            print(f"  No Perfetto timeline in it: {written['omitted']}. "
-                  f"`bga timeline` renders one beside the snapshot.",
-                  file=sys.stderr)
+            print(f"  No Perfetto timeline in it: "
+                  f"{written['omitted'].rstrip('.')}. `bga timeline` "
+                  f"renders one beside the snapshot.", file=sys.stderr)
         if written["over_budget"]:
             # Said, not enforced: a report that large is still the
             # user's report, and refusing to write it would help nobody.

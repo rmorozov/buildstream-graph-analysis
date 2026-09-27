@@ -55,7 +55,11 @@ import { copy } from "./tables.js";
 import { strip } from "./drawings.js";
 import { decisionInvestigation, investigate, investigateButton, render,
          renderVerdict, traceUrl } from "./sections.js";
+import { renderStructured, TABLE_OPENS_BOUNDED_ABOVE } from "./structured.js";
 
+// `UX-1037` (§3k): a bespoke element list past the table bound is §1's own.
+const bounded = (key, items) => (items.length > TABLE_OPENS_BOUNDED_ABOVE
+  ? renderStructured(key, items) : null);
 
 /** Type-ahead over section names and element uids. Scrolls; never filters. */
 /**
@@ -735,7 +739,7 @@ async function boot() {
     // Placed with the chain, because "what is the path" and "what does
     // fixing it buy" are the same question one step apart.
     const horizon = contained(document, "horizon", "report.json",
-                              () => renderHorizon(payload));
+                              () => renderHorizon(payload, bounded));
     if (horizon) root.append(horizon);
 
     // UX-230: and the same plan with checkboxes. A prefix of the
@@ -810,7 +814,7 @@ async function boot() {
     // cross-reference is read off the rendered document, so a section
     // added later joins it with no edit here.
     for (const node of renderElementSections(payload, root, {
-      quantity,
+      quantity, bounded,
       investigate: run.has_timeline
         ? (uid) => investigateButton({ title: `bga: ${uid}`, element: uid },
                                      investigate)
@@ -1048,7 +1052,7 @@ async function boot() {
     // Inspect anchor inside the report, and a pasted `#element-…` on a
     // fresh load or a `hashchange`.
     const elementOptions = {
-      quantity,
+      quantity, bounded,
       investigate: run.has_timeline
         ? (uid) => investigateButton({ title: `bga: ${uid}`, element: uid },
                                      investigate)
@@ -1081,6 +1085,7 @@ async function boot() {
       if (!id) return null;
       const node = document.getElementById(id)
         ?? root.querySelector?.(`[data-section="${id}"]`);
+      node?._hydrate?.(); // UX-921: a shell's fragment materialises it.
       // `UX-670`: and land again after the fold's real height is in.
       // The browser's own anchor scroll has already run against
       // `content-visibility`'s estimate by the time this fires.

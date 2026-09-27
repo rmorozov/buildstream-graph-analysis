@@ -130,6 +130,46 @@ function box(doc, tag, attrs = {}, ...children) {
 
 const numeric = (v) => typeof v === "number" && Number.isFinite(v);
 
+// `UX-1017` (styleguide §6e.9): an id counter, so two drawings' route
+// targets on one page never collide - a run with several density
+// strips gives each its own.
+let ROUTE_SEQ = 0;
+
+/**
+ * A drawing's accessible name is its own sentence, and its route is the
+ * node that carries every mark that sentence names - `aria-details`,
+ * because "beside it" is a sighted-only direction. `routeNode` is the
+ * table twin where one is drawn, and the sentence span itself where it
+ * is not: either already carries every published mark with its label.
+ */
+export function nameDrawing(drawing, sentence, routeNode) {
+  if (!drawing?.setAttribute) return drawing;
+  if (sentence) drawing.setAttribute("aria-label", sentence);
+  if (routeNode?.setAttribute) {
+    if (!routeNode.getAttribute?.("id")) {
+      routeNode.setAttribute("id", `drawing-route-${ROUTE_SEQ++}`);
+    }
+    drawing.setAttribute("aria-details", routeNode.getAttribute("id"));
+  }
+  return drawing;
+}
+
+/**
+ * Review #295 (`UX-1017`): an annotation grade draws no twin, and its
+ * sentence names only the edges and the extremum - `drawings.js:412-427`
+ * routed a five-point sparkline's `aria-details` there, so the other
+ * points had no route at all. This is the route for that case: every
+ * mark, in `aria-label` rather than a child text node, so
+ * `test_the_page_has_a_volume_budget.py`'s `main.textContent` word
+ * count (`UX-360`) never sees it - a table twin's cells would have.
+ */
+export function valueRoute(doc, allMarksText) {
+  const node = box(doc, "span", { "data-role": "drawing-values" });
+  node.hidden = true;
+  node.setAttribute("aria-label", allMarksText);
+  return node;
+}
+
 // UX-316: an exhibit's tick labels, and its table twin.
 //
 // Both are HTML rather than SVG, and both are exhibit-only. §2 forbids
@@ -276,12 +316,12 @@ export function exhibitTwin(doc, headers, rows) {
     // `UX-279`'s rule: a control says what it does before it is
     // pressed, and it says it in a title a reader can reach.
     title: "Show the values this drawing was made from, as a table",
-  }, "as table");
+  }, "As table");
   button.addEventListener("click", () => {
     const open = button.getAttribute("data-drawing-twin") === "open";
     button.setAttribute("data-drawing-twin", open ? "closed" : "open");
     button.setAttribute("aria-expanded", open ? "false" : "true");
-    button.textContent = open ? "as table" : "as drawing";
+    button.textContent = open ? "As table" : "As drawing";
     table.hidden = open;
   });
   wrap.append(button);
@@ -385,15 +425,30 @@ export function sparkline(values, {
       { name: "last", at: 100, label: `${unit} ${points.length}` },
     ]));
   }
-  wrap.append(box(doc, "span", { class: "series-sentence",
-                                 "data-role": "series-sentence" },
-                  `${points.length} ${unit}s, ${format(points[0])} → `
-                  + `${format(points[points.length - 1])}`
-                  + `, peak ${format(high)} at ${unit} ${peak + 1}.`));
+  const sentenceText = `${points.length} ${unit}s, ${format(points[0])} → `
+    + `${format(points[points.length - 1])}`
+    + `, peak ${format(high)} at ${unit} ${peak + 1}.`;
+  const sentence = box(doc, "span", { class: "series-sentence",
+                                      "data-role": "series-sentence" },
+                       sentenceText);
+  wrap.append(sentence);
+  // `UX-1017`: aria-details on the values a sparkline sits beside - the
+  // twin where §2a draws one (exhibit grade), every point otherwise
+  // (review #295: the sentence alone names only first/last/peak, and a
+  // five-point series has two the sentence never reaches).
+  let twin = null;
+  let route = sentence;
   if (grade === GRADE_EXHIBIT) {
-    wrap.append(exhibitTwin(doc, [unit, "value"],
-                     points.map((v, i) => [i + 1, format(v)])));
+    twin = exhibitTwin(doc, [unit.charAt(0).toUpperCase() + unit.slice(1), "Value"],
+                       points.map((v, i) => [i + 1, format(v)]));
+    wrap.append(twin);
+    route = twin;
+  } else {
+    route = valueRoute(doc, points.map((v, i) => `${unit} ${i + 1} ${format(v)}`)
+                                  .join(", ") + ".");
+    wrap.append(route);
   }
+  nameDrawing(line, sentenceText, route);
   return wrap;
 }
 
@@ -563,7 +618,8 @@ export function strip(distribution, {
   }
   wrap.setAttribute("data-drawn", "true");
   wrap.setAttribute("data-n", marks.n === null ? "" : String(marks.n));
-  wrap.append(stripSvg(doc, marks, { printed: "published", size }));
+  const drawn = stripSvg(doc, marks, { printed: "published", size });
+  wrap.append(drawn);
   // UX-863: which names `stripTicks` kept a label for - derived, not
   // restated, so the sentence can never name a mark the axis dropped
   // to avoid a collision (`STRIP_LABEL_GAP_PCT_PER_CHAR`, above).
@@ -575,13 +631,29 @@ export function strip(distribution, {
   if (labelled.has("p90")) parts.push(`p90 ${format(decileValue(marks, 90))}`);
   if (labelled.has("p99")) parts.push(`p99 ${format(marks.p99)}`);
   if (grade === GRADE_EXHIBIT) wrap.append(exhibitAxis(doc, axisTicks));
-  wrap.append(box(doc, "span", { class: "density-sentence",
-                                 "data-role": "density-sentence" },
-                  `${parts.join(", ")}`
-                  + (marks.n === null ? "." : ` — n=${marks.n}.`)));
+  const sentenceText = `${parts.join(", ")}`
+    + (marks.n === null ? "." : ` — n=${marks.n}.`);
+  const sentence = box(doc, "span", { class: "density-sentence",
+                                      "data-role": "density-sentence" },
+                       sentenceText);
+  wrap.append(sentence);
+  // `UX-1017` (styleguide §6e.9, Rule 9): the strip's name is this
+  // sentence, and its route is the table twin beside it where one is
+  // drawn (review #295: every mark the twin lists, not the labelled
+  // subset the sentence keeps to avoid axis collisions - `stripTicks`
+  // drops labels `strip()` still ticks).
+  const rows = twinRows(marks, format);
+  let twin = null;
+  let route = sentence;
   if (grade === GRADE_EXHIBIT) {
-    wrap.append(exhibitTwin(doc, ["mark", "value"], twinRows(marks, format)));
+    twin = exhibitTwin(doc, ["Mark", "Value"], rows);
+    wrap.append(twin);
+    route = twin;
+  } else {
+    route = valueRoute(doc, rows.map(([k, v]) => `${k} ${v}`).join(", ") + ".");
+    wrap.append(route);
   }
+  nameDrawing(drawn, sentenceText, route);
   return wrap;
 }
 
@@ -703,8 +775,7 @@ export function decomposition(parts, {
   const drawing = make(doc, "svg", {
     viewBox: `0 0 ${size.width} ${size.strip}`,
     preserveAspectRatio: "none", class: "draw decomposition-bar",
-    role: "img", "aria-label": `${format(whole)} split into `
-      + named.map((part) => part.label).join(", "),
+    role: "img",
   });
   let at = 0;
   for (const part of named) {
@@ -749,18 +820,22 @@ export function decomposition(parts, {
       (sum, before) => sum + Number(before.value), 0) / whole) * 100,
   })).filter((tick) => tick.share >= AXIS_TICK_MIN_SHARE);
   wrap.append(exhibitAxis(doc, ticks));
-  wrap.append(box(doc, "span", { class: "density-sentence",
-                                 "data-role": "density-sentence" },
-                  `${format(whole)} in total: `
-                  + named.map((part) => `${format(part.value)} ${part.label}`)
-                    .join(", ")
-                  + (mark ? `. ${mark.label} ${format(mark.value)}.` : ".")));
+  const sentenceText = `${format(whole)} in total: `
+    + named.map((part) => `${format(part.value)} ${part.label}`).join(", ")
+    + (mark ? `. ${mark.label} ${format(mark.value)}.` : ".");
+  const sentence = box(doc, "span", { class: "density-sentence",
+                                      "data-role": "density-sentence" },
+                       sentenceText);
+  wrap.append(sentence);
   // §2a: the exhibit never hoards data a reader wants as rows.
+  let twin = null;
   if (grade === GRADE_EXHIBIT) {
-    wrap.append(exhibitTwin(doc, ["Part", "Value"],
-                            named.map((part) => [part.label,
-                                                 format(part.value)])));
+    twin = exhibitTwin(doc, ["Part", "Value"],
+                       named.map((part) => [part.label, format(part.value)]));
+    wrap.append(twin);
   }
+  // `UX-1017`: name and route, from the same sentence and the same twin.
+  nameDrawing(drawing, sentenceText, twin ?? sentence);
   return wrap;
 }
 
@@ -813,8 +888,7 @@ export function interval(marks, {
   const drawing = make(doc, "svg", {
     viewBox: `0 0 ${size.width} ${size.strip}`,
     preserveAspectRatio: "none", class: "draw interval-axis",
-    role: "img", "aria-label": named.map(
-      (one) => `${one.label} ${format(one.value)}`).join(", "),
+    role: "img",
   });
   drawing.append(make(doc, "line", {
     x1: "0", x2: String(size.width),
@@ -849,18 +923,23 @@ export function interval(marks, {
     drawing.append(mark);
   }
   wrap.append(drawing);
-  wrap.append(box(doc, "span", { class: "density-sentence",
-                                 "data-role": "density-sentence" },
-                  named.map((one) => `${one.label} ${format(one.value)}`)
-                    .join(", ")
-                  + (threshold !== null && Number.isFinite(Number(threshold))
-                     ? `, against ${thresholdLabel} ${format(threshold)}.`
-                     : ".")));
+  const sentenceText = named.map((one) => `${one.label} ${format(one.value)}`)
+    .join(", ")
+    + (threshold !== null && Number.isFinite(Number(threshold))
+       ? `, against ${thresholdLabel} ${format(threshold)}.`
+       : ".");
+  const sentence = box(doc, "span", { class: "density-sentence",
+                                      "data-role": "density-sentence" },
+                       sentenceText);
+  wrap.append(sentence);
+  let twin = null;
   if (grade === GRADE_EXHIBIT) {
-    wrap.append(exhibitTwin(doc, ["Measure", "Value"],
-                            named.map((one) => [one.label,
-                                                format(one.value)])));
+    twin = exhibitTwin(doc, ["Measure", "Value"],
+                       named.map((one) => [one.label, format(one.value)]));
+    wrap.append(twin);
   }
+  // `UX-1017`: name and route, from the same sentence and the same twin.
+  nameDrawing(drawing, sentenceText, twin ?? sentence);
   return wrap;
 }
 
@@ -894,11 +973,20 @@ export function columnStrip(values, { format = String, doc = document,
   };
   wrap.setAttribute("data-drawn", "true");
   wrap.setAttribute("data-n", String(marks.n));
-  wrap.append(stripSvg(doc, marks, { printed: "rows", size }));
+  const drawn = stripSvg(doc, marks, { printed: "rows", size });
+  wrap.append(drawn);
   // Actual row values and a count. Nothing derived is spelled out.
-  wrap.append(box(doc, "span", { class: "density-sentence",
-                                 "data-role": "density-sentence" },
-                  `${format(marks.min)} → ${format(marks.max)} across `
-                  + `${marks.n} rows.`));
+  const sentenceText = `${format(marks.min)} → ${format(marks.max)} across `
+    + `${marks.n} rows.`;
+  const sentence = box(doc, "span", { class: "density-sentence",
+                                      "data-role": "density-sentence" },
+                       sentenceText);
+  wrap.append(sentence);
+  // `UX-1017`: never exhibit grade, so its route is always the sentence.
+  // Review #295 left this one alone on purpose: its p50/p95 ticks are
+  // the "geometry only, no derived number" boundary above, so widening
+  // the route to name them would print the derived number this
+  // function's whole reason for existing refuses to print.
+  nameDrawing(drawn, sentenceText, sentence);
   return wrap;
 }

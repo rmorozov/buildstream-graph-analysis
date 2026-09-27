@@ -225,6 +225,7 @@ bga/analyzer.py        orchestrator - wires every stage together, BuildEfficienc
 bga/findings.py        every conclusion the report draws, as data with stable ids
 bga/provenance.py      why each claim is made: evidence refs, rule, trace query (UX-229)
 bga/schemas.py         every published contract + view-hints; `--schema` prints from here
+bga/schema_hints.py    the `bga:*` view-hint vocabulary and its checker; re-exported by schemas.py
 bga/contracts.py       the derived inventory of every contract, printable or not (UX-248)
 bga/producer.py        which build wrote an artifact, and the contract set it had (UX-249)
 bga/report/            text.py, json.py, ci_comment.py - renderers · _shared.py the section names they share · rate.py converts build seconds into the reader's unit (UX-596)
@@ -255,6 +256,7 @@ bga/buildclass.py      the declared build type and variant; the
                        mixed-class refusal (UX-898, UX-903)
 bga/units.py           the payload's units, and the two input
                        boundaries that convert into them (UX-341)
+bga/plural.py          a count and its noun, chosen by the count (UX-1038)
 bga/suspend.py         did this capture sleep
 bga/cli.py             argparse CLI and dispatch
 bga/tools_dispatch.py  the `tools/` aliases `bga` exposes as subcommands
@@ -329,6 +331,8 @@ bga/viewer/element.js    the element object - one element, everything known
 bga/viewer/decision.js   the decision panel, UX-207's first screen (UX-337)
 bga/viewer/structured.js a value becomes a table, and the table becomes
                          interrogable: filters, sort, Top-N, folds (UX-337)
+bga/viewer/pairs.js      a map as a pair list, and the element signals as one
+                         table with presets (UX-268); split from structured.js (UX-1028)
 bga/viewer/tablefocus.js table focus, and the depth a fold announces (UX-318)
 bga/viewer/sections.js   the section walk - payload plus schema to DOM, split
                          from app.js, which boots and wires (UX-450)
@@ -400,6 +404,8 @@ tools/dev_area_pages.py      an area page's Guard column and covered N/M count, 
 tools/dev_refresh_analysis.py  the rule a committed analysis is written
                              under, and the command that rewrites one
                              from a fresh run (UX-486)
+tools/dev_rendered_strings.py  every label the page renders, and whether it is
+                             sentence case (UX-1020)
 tools/dev_process_bands.py  what the process did to itself, from the committed Outcomes
 tools/dev_round_register.py  which rounds happened, derived from the
                              committed union, never git log (UX-744, UX-782)

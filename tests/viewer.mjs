@@ -32,6 +32,7 @@ export * from "../bga/viewer/tablefocus.js";
 export * from "../bga/viewer/tables.js";
 export * from "../bga/viewer/views.js";
 export * from "../bga/viewer/structured.js";
+export * from "../bga/viewer/pairs.js";
 export * from "../bga/viewer/perfetto.js";
 export * from "../bga/viewer/element.js";
 export * from "../bga/viewer/decision.js";

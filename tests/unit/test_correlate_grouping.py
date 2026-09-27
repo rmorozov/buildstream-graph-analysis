@@ -269,4 +269,4 @@ def test_the_overflow_line_counts_elements_not_groups():
         _entry(f"solo-{i}.bst", [f"finding-{i}"]) for i in range(12)
     ]
     text = format_correlation(_result(entries))
-    assert "(+4 more element(s) with findings, see --format json)" in text
+    assert "(+4 more elements with findings, see --format json)" in text

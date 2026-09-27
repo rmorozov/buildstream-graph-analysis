@@ -20,6 +20,7 @@ from . import buildclass, hostinfo, producer, schemas
 from .analyzer import BuildEfficiencyAnalyzer
 from .cache_effectiveness import compute_cache_churn
 from .ingest.models import AnalysisResult, Element
+from .plural import plural
 from .report.text import _CONFIDENCE_HIGH
 
 logger = logging.getLogger(__name__)
@@ -656,11 +657,9 @@ def compute_marginal_efficiency(element_diff: dict) -> Optional[dict]:
 
 
 def _check_comparability(baseline_elements: list[Element], candidate_elements: list[Element]) -> Optional[str]:
-    """Flag (don't block) when the two runs' graphs look like they might
-    not even be the same project - less than half the element UIDs
-    shared between them. An empty element list on either side means
-    there's nothing to compare structurally, so it's silently skipped
-    rather than warned about (a different, already-obvious problem)."""
+    """Flag (don't block) when the two runs' graphs look like they might not even be the same project - less than half
+    the element UIDs shared between them. An empty element list on either side means there's nothing to compare
+    structurally, so it's silently skipped rather than warned about (a different, already-obvious problem)."""
     baseline_uids = {e.uid for e in baseline_elements}
     candidate_uids = {e.uid for e in candidate_elements}
     if not baseline_uids or not candidate_uids:
@@ -669,8 +668,8 @@ def _check_comparability(baseline_elements: list[Element], candidate_elements: l
     overlap_frac = len(overlap) / max(len(baseline_uids), len(candidate_uids))
     if overlap_frac < 0.5:
         return (
-            f"baseline has {len(baseline_uids)} element(s), candidate has "
-            f"{len(candidate_uids)} - only {len(overlap)} shared element UID(s) "
+            f"baseline has {plural(len(baseline_uids), 'element')}, "
+            f"candidate has {len(candidate_uids)} - only shared {plural(len(overlap), 'element UID')} "
             "(less than half) - these runs may not be the same project"
         )
     return None
@@ -878,7 +877,7 @@ def _verdict_rule(kind: str, document: dict) -> dict:
         counts = (document.get('element_deltas') or {}).get('counts') or {}
         moved = counts.get(_CROSSING_COUNT.get(kind, ''), 0)
         crossers = (
-            f"{moved} element(s) present in both runs "
+            f"{plural(moved, 'element')} present in both runs "
             f"{_CROSSING_COUNT.get(kind, 'moved')}, and the "
             f"{min(moved, VERDICT_CULPRITS_CITED)} largest are cited"
             if moved else

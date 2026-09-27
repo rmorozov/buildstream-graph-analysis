@@ -10,10 +10,9 @@ Duration source hierarchy per task (Part 15.2), in priority order:
    falls through in practice given today's input data.
 5. unavailable
 
-Publication gate (Part 15.3): if the resulting cold critical path
-touches any element whose duration came back unavailable, T-infinity,cold
-reports as unavailable unless allow_partial_cold is set, in which case
-it publishes with partial=true/confidence=low.
+Publication gate (Part 15.3): if the resulting cold critical path touches any element
+whose duration came back unavailable, T-infinity,cold reports as unavailable unless
+allow_partial_cold is set, in which case it publishes with partial=true/confidence=low.
 
 Fully independent of LB/certified_headroom/primary confidence/measured
 attribution (I12) - reads only the graph/tasks/historical_runs passed
@@ -26,6 +25,7 @@ from typing import Optional
 
 from ..graph.edg import compute_critical_path
 from ..ingest.models import Graph, NormalizedTask
+from ..plural import plural
 
 logger = logging.getLogger(__name__)
 
@@ -173,9 +173,9 @@ def compute_cold_floor(
 
     if path_has_unavailable and not allow_partial_cold:
         logger.info(
-            "Cold floor unavailable: %d element(s) on cold critical path lack a "
+            "Cold floor unavailable: %s on cold critical path lack a "
             "resolvable duration (pass allow_partial_cold to publish anyway)",
-            sum(1 for uid in cold_path if uid in unavailable_elements),
+            plural(sum(1 for uid in cold_path if uid in unavailable_elements), "element"),
         )
         return {
             't_infinity_cold': None, 'cold_partial': False, 'cold_confidence': None,

@@ -60,6 +60,7 @@ from .exceptions import (
 from .help_format import CompactHelp
 from .ingest.loader import load_historical_runs
 from .logging_config import configure_logging
+from .plural import plural
 from .replay.scheduler import build_contention_calibration
 from .report import (
     SWEEP_CAPACITY_MODEL_CAVEAT,
@@ -74,12 +75,8 @@ from .run_store import (
     StoreError,
     sibling_plane2,
 )
-from .run_store import (
-    resolve as resolve_run_alias,
-)
-from .run_store import (
-    resolve_plane2 as resolve_plane2_alias,
-)
+from .run_store import resolve as resolve_run_alias
+from .run_store import resolve_plane2 as resolve_plane2_alias
 from .units import kb_to_bytes, mb_to_bytes
 
 logger = logging.getLogger(__name__)
@@ -93,7 +90,7 @@ def _make_analyzer(args: argparse.Namespace) -> BuildEfficiencyAnalyzer:
     historical_runs = []
     if getattr(args, 'cold', False) and getattr(args, 'history_dir', None):
         historical_runs = load_historical_runs([Path(p) for p in args.history_dir])
-        logger.info("Loaded %d historical run(s) for cold-floor analysis", len(historical_runs))
+        logger.info("Loaded historical %s for cold-floor analysis", plural(len(historical_runs), "run"))
 
     return BuildEfficiencyAnalyzer(
         capacity=args.capacity,
@@ -800,7 +797,7 @@ def _produce_sweep_output(args: argparse.Namespace) -> str:
     calibration_capacities: list[int] = []
     if getattr(args, 'calibration_dir', None):
         calibration_runs = load_historical_runs([Path(p) for p in args.calibration_dir])
-        logger.info("Loaded %d calibration run(s) for UX-14 tier 2 contention modeling", len(calibration_runs))
+        logger.info("Loaded calibration %s for UX-14 tier 2 contention modeling", plural(len(calibration_runs), "run"))
         contention_calibration = build_contention_calibration(calibration_runs, args.resource)
         raw_capacities = [
             (hist_context.resource_capacities or {}).get(args.resource)
@@ -1028,7 +1025,7 @@ def _print_missing_input_hint(run_dir: Path) -> None:
 
     print(
         "Hint: this looks like a partially-populated run directory from a real "
-        "BuildStream project. To produce the missing file(s) from a real "
+        f"BuildStream project. To produce the missing {plural(len(missing), 'file')} from a real "
         "BuildStream invocation's project directory and log, see:",
         file=sys.stderr,
     )
@@ -1217,7 +1214,7 @@ def _resolve_band_from_class(args: argparse.Namespace) -> Optional[int]:
         print(
             f"Band gate REFUSED: the candidate declares "
             f"{class_label(declared) or 'no build class'} "
-            f"and this store holds {len(selected)} other run(s) of that class "
+            f"and this store holds other {plural(len(selected), 'run')} of that class "
             f"within the last {window}, below the {MIN_BASELINE_RUNS} a measured "
             f"band needs. This is a refusal to judge, not a verdict about the "
             f"build: falling back to the fixed 1% rule is exactly the "
@@ -1470,7 +1467,7 @@ def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
         threshold_desc = (
             # UX-899: the band the gate was actually judged against, not
             # a percentage it did not read.
-            f"the band from {comparison.baseline_band['n']} run(s) of its class"
+            f"the band from {plural(comparison.baseline_band['n'], 'run')} of its class"
             if against_band and comparison.baseline_band
             else f"{args.regression_threshold}%" if args.regression_threshold is not None
             else "the default significance threshold"
@@ -1895,7 +1892,7 @@ def _bundle_export(args: argparse.Namespace, bundle_mod) -> int:
         snapshot, args.output, include_plane2=not args.no_plane2)
     counts = bundle_mod.describe(manifest)
     print(f"Wrote {path}")
-    print(f"  snapshot {manifest['stamp']}: {counts['members']} member(s), "
+    print(f"  snapshot {manifest['stamp']}: {plural(counts['members'], 'member')}, "
           f"{run_store.human_bytes(counts['bytes'])} before compression")
     if manifest["excluded"]:
         # The switch says what it left out, and the manifest records it,
@@ -1917,7 +1914,7 @@ def _bundle_load(args: argparse.Namespace, bundle_mod) -> int:
     target, manifest = bundle_mod.load(args.load, project)
     counts = bundle_mod.describe(manifest)
     print(f"Loaded snapshot {manifest['stamp']} into {target}")
-    print(f"  {counts['members']} member(s), packed by bga "
+    print(f"  {plural(counts['members'], 'member')}, packed by bga "
           f"{manifest.get('bga_version', 'unknown')}")
     # `.get`, not `[]`: this manifest came off someone else's machine.
     if manifest.get("excluded"):

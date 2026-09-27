@@ -413,6 +413,40 @@ pairing for every merged row from round 103 on.
 | 141 | general-purpose | opus | reproduce the gcc 16 LTO jobserver deadlock | 227k | 40 | 42.3 m | complete | staging gcc 16.2 from the nix cache; the blocking fd pair, not tokens, is the cause |
 | 141 | architect | opus | architect: shape UX-1005 builders and pool | 55k | 22 | 2.6 m | complete | admission in the shim chosen over an upstream change |
 | 141 | researcher | sonnet | census of four BuildStream projects for jobserver corner cases | 65k | 24 | 3.4 m | complete | cloning four projects; MAXJOBS and GOMAXPROCS promises found |
+| 142 | researcher | sonnet | map the round's UI rows to their surfaces and guards | 56k | 22 | 2.5 m | complete | UX-1027's task file cited the wrong test (an ELF classifier); cross-checking every "extends test X" claim cost most |
+| 142 | implementer | sonnet | UX-1036 the export's double period, then UX-1031 (mechanical) | 72k | 90 | 11.5 m | merged; UX-1031 stopped as judgement | shared Python had no deps, installed requirements.lock; UX-1031 stopped at 91 containers |
+| 142 | researcher | sonnet | UX-1031 classify 91 payload containers' growth | 143k | 80 | 9.1 m | complete | growth constants are scattered one per module; no registry of *_SHOWN/_MAX constants |
+| 142 | implementer | sonnet | UX-921 hidden findings keep a shell (judgement) | 217k | 199 | 30.7 m | merged | PAGE_BUDGET_B had 604 B headroom against 132 KB documented; comments do not count |
+| 142 | implementer | sonnet | UX-1019 UX-1034 UX-1024 UX-1025 UX-1021 reader-facing strings (bounded) | 351k | 412 | 56.8 m | merged | the volume budget caught words late; touching ran per track, not per row |
+| 142 | implementer | sonnet | UX-1016 UX-1015 UX-1017 keyboard and accessibility (mechanical) | 458k | 337 | 63.1 m | merged | hidden=until-found broke 5 guards that open chapters by data-open alone |
+| 142 | implementer | sonnet | UX-1032 UX-1028 UX-1029 UX-1030 bounded populations (bounded) | 409k | 337 | 77.1 m | merged | the census had to read head/tail token deltas, not a class name, to discriminate |
+| 142 | implementer | sonnet | UX-1026 UX-1035 UX-1033 UX-1022 UX-1018 UX-1027 CSS foundations (mechanical) | 328k | 385 | 81.4 m | merged | UX-1018 broke tests/dom_shim.mjs (.attributes); UX-1027 cited the wrong test |
+| 142 | implementer | sonnet | UX-1020 sentence case from a rendered-string inventory (mechanical) | 321k | 473 | 62.9 m | merged | 4-core box saturated; test-touching timed out twice |
+| 142 | implementer | sonnet | UX-1023 a compact size class (mechanical) | 151k | 144 | 39.9 m | merged | textContent/querySelector read through hidden; innerText plus offsetParent needed |
+| 142 | implementer | sonnet | UX-1031 every growing sequence declared in the schema (judgement) | 590k | 659 | 88.7 m | merged | a guard requiring items fought the COLUMNS-only convention (UX-655) |
+| 142 | general-purpose | opus | the merged tree's gate reds | 486k | 107 | 35.9 m | complete | structured.js crossed the viewer ceiling; split into pairs.js |
+| 142 | general-purpose | opus | UX-1031 split schemas.py under its size cell | 291k | 38 | 38.2 m | complete | moving _check_hint re-keyed 3 lint-baseline findings |
+| 142 | verifier | sonnet | verify UX-1026 UX-1035 UX-1033 UX-1022 UX-1018 UX-1027 | 71k | 70 | 12.8 m | 5 PASS, HOLD UX-1018: the named mutation left the outline guard green; guard fixed in 12afba7a | shared checkout: other verifiers' mutations appeared and vanished mid-run |
+| 142 | verifier | sonnet | verify UX-1016 UX-1015 UX-1017 | 60k | 61 | 9.8 m | 3 PASS, each mutation reddens the clauses its Outcome names | two verifiers' mutations raced in style.css |
+| 142 | verifier | sonnet | verify UX-1032 UX-1028 UX-1029 UX-1030 | 58k | 52 | 19.3 m | 4 PASS | the whole round's touching sweep cannot finish on the shared box |
+| 142 | verifier | sonnet | verify UX-1019 UX-1034 UX-1024 UX-1025 UX-1021 | 71k | 64 | 6.5 m | 5 PASS; the a.why mutation is caught only by the control-class registry | restoring a whole-file snapshot can erase a sibling verifier's edit |
+| 142 | verifier | sonnet | verify UX-1036 UX-921 | 35k | 30 | 6.1 m | 2 PASS | whole-tree git status noisy under seven concurrent verifiers |
+| 142 | verifier | sonnet | verify UX-1020 | 46k | 40 | 7.1 m | PASS; 2 of 4 mutations live, 2 code-reasoned | a shared scratchpad backup name collided across verifiers |
+| 142 | verifier | sonnet | verify UX-1031 UX-1023 | 74k | 78 | 21.6 m | 2 PASS; the 40-60rem band for .wf-row is unexercised | load 23.7 on 4 cores made a browser budget flake once |
+| 142 | general-purpose | opus | close round 142: 23 row moves, ledger, round document | 130k | 73 | 11.5 m | closed; UX-1038 and a coverage line filed | the selector max and the unpaired verifier rule were red before it started |
+| 142 | general-purpose | opus | the final gate's three reds | 92k | 37 | 18.8 m | fixed in a93db0cd 50f775db 2e71479c | an alias planter matched decision.js's import line word for word |
+| 142 | general-purpose | opus | review 28 over round 142's documents | 79k | 34 | 9.2 m | 5 mismatches fixed, 2 coverage lines filed | a rebased commit's old hash stayed cited in two records |
+| 142 | implementer | sonnet | review #295: print reveals folded chapters | 70k | 42 | 7.8 m | fixed in b6c4cb10 | none |
+| 142 | implementer | sonnet | review #295: every plotted value in aria-details (UX-1017) | 113k | 71 | 15.3 m | merged 9ce8fd07; columnStrip left out (no derived number) | none |
+| 142 | implementer | sonnet | UX-1020 coverage: the inventory reaches every page | 118k | 118 | 18 m | merged 7d99c933; 353 -> 382 rows | none |
+| 142 | general-purpose | opus | UX-1037 bound the 26 growers (judgement) | 230k | 135 | 30.8 m | merged 4e1a0833; page 339,335 -> 340,188 B | 812 B of page budget left for the pager track |
+| 142 | implementer | sonnet | review #295: reveal Prev and filtered pager (UX-1029, UX-1028) | 223k | 212 | 36.1 m | 1edb471f fb98a658; structured.js conflict with UX-1020's More | dev_env_check misreads a worktree as a repointed install |
+| 142 | implementer | sonnet | UX-1038 CLI plurals by count (mechanical) | 266k | 423 | 35.4 m | 5022de3d; 17 size cells grew | a broad git stash raced its own test-touching run |
+| 142 | implementer | sonnet | UX-1038: hold the size cells | 257k | 347 | 40.8 m | 27cc34dc; plural() moved to bga/plural.py | ruff isort rejects an aliased import joined to a plain one |
+| 142 | verifier | sonnet | verify review #295 pagers (UX-1029, UX-1028) | 57k | 29 | 3.6 m | both mutations redden; boundaries hand-judged | none |
+| 142 | verifier | sonnet | verify UX-1037 | 92k | 72 | 15.3 m | census mutation reddens; DRAWN_ELSEWHERE drift confirmed | repointed the shared bga install at its worktree |
+| 142 | verifier | sonnet | verify review #295 drawing route (UX-1017) | 68k | 47 | 5.5 m | mutation reddens 3 of 20; columnStrip's exclusion is documented, not guarded | judged on the guard's payloads; no browser found on PATH |
+| 142 | verifier | sonnet | verify UX-1038 | 60k | 56 | 13.3 m | guard reddens on a literal; misses a concatenated (s); output unchanged by 27cc34dc | ran dev_touching against its brief |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -425,7 +459,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the three hundred and ninety-six rows already say: a researcher that reads a document
+What the four hundred and thirty rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

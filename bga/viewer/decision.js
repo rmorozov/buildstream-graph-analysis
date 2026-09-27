@@ -21,7 +21,7 @@ import {
 // to take this import unaliased - the export concatenates the modules
 // into one scope and drops the `import` line, so an alias resolves to
 // a name nothing declares.
-import { childNode, heading, hintsOf } from "./format.js";
+import { childNode, heading, hintsOf, title } from "./format.js";
 import {
   resolvePath, elementFacts, elementHistory, renderElementHistory,
 } from "./element.js";
@@ -29,6 +29,7 @@ import {
 // already collects. The role decides what is promoted; `chapters.js`
 // owns how a thing folds and this module does not learn a second way.
 import { applyRole } from "./chapters.js";
+import { plural } from "./tables.js";
 
 // ------------------------------------------------- UX-207: the decision
 
@@ -89,8 +90,9 @@ export function renderProvenance(provenance, options = {}) {
   details.setAttribute("data-rows", String(evidence.length));
   const summary = document.createElement("summary");
   // Named by the claim where the caller has twelve of these in one
-  // section and "Why" twelve times names nothing.
-  const named = options.label ? `${options.label} · ` : "";
+  // section and "Why" twelve times names nothing; `UX-1025`: never
+  // depth and count alone, so an unlabeled fold names its content too.
+  const named = `${options.label || "The rule"} · `;
   summary.textContent =
     `${named}1 level, ${evidence.length} `
     + `row${evidence.length === 1 ? "" : "s"}`;
@@ -252,7 +254,8 @@ export function renderProvenanceRecords(payload, root) {
   const records = Array.isArray(payload?.provenance) ? payload.provenance : [];
   let drawn = 0;
   for (const record of records) {
-    const block = renderProvenance(record, { label: record.claim ?? "" });
+    const block = renderProvenance(record,
+      { label: record.claim ? title(record.claim) : "" });
     if (!block) continue;
     section.append(block);
     drawn += 1;
@@ -481,7 +484,7 @@ function investigationEvidence(payload, uid, options) {
     const { series, sawASliceAtAll } = elementHistory(options.store, uid);
     rows.push({
       label: "Store history",
-      text: series.length ? `${series.length} snapshot(s)`
+      text: series.length ? plural(series.length, "snapshot")
         : sawASliceAtAll ? "not watched in these runs"
                          : "captured before history existed",
     });
@@ -520,7 +523,7 @@ function investigationRelations(payload, uid) {
   if (typeof downstream === "number") {
     rows.push({ label: "Rebuilds if changed",
                 path: `elements.blast_radius[${uid}].downstream_count`,
-                raw: downstream, text: `${downstream} element(s)` });
+                raw: downstream, text: plural(downstream, "element") });
   }
   return rows;
 }
@@ -621,15 +624,26 @@ function wireReaderControl(payload, slot) {
   const question = document.createElement("span");
   question.className = "muted";
   question.setAttribute("data-role", "reader-question");
+  // `UX-1024`: a separator beside an empty node is a mark with nothing
+  // to mark - "anyone" (the landed choice) has no question, so the
+  // dash hides with it rather than standing alone before an empty span.
+  const sep = document.createElement("span");
+  sep.textContent = " — ";
   const questionFor = (value) => readers.find((e) => e.id === value)
     ?.question ?? "";
+  const setQuestion = (value) => {
+    const text = questionFor(value);
+    question.textContent = text;
+    sep.hidden = !text;
+  };
   select.addEventListener?.("change", () => {
     applyReader(payload, slot, select.value);
-    question.textContent = questionFor(select.value);
+    setQuestion(select.value);
   });
+  setQuestion(select.value);
   const wrap = document.createElement("span");
   wrap.className = "reader-picker";
-  wrap.append(label, select, " — ", question);
+  wrap.append(label, select, sep, question);
   host.append(" ", wrap);
   // `UX-828`: `host` starts `hidden` now that it holds only the picker
   // - the producer stamp that used to unhide it moved to the footer.
@@ -770,8 +784,10 @@ export function renderDecision(payload, investigate = null, copy = null,
     section.append(head);
     const list = document.createElement("ol");
     list.className = "next-steps";
-    for (const step of steps)
-      list.append(nextStepRow(step, copy, payload, options.reportSchema));
+    steps.forEach((step, index) => {
+      list.append(nextStepRow(step, copy, payload, options.reportSchema,
+                               index === 0));
+    });
     section.append(list);
   }
   return section;
@@ -783,8 +799,15 @@ export function renderDecision(payload, investigate = null, copy = null,
  * `copy` is passed in rather than imported so this file keeps having
  * no dependency on `tables.js` - and so a harness can drive the button
  * without a clipboard.
+ *
+ * UX-1027 (styleguide §6e.5): `primary` for `isFirst`'s own copy
+ * control, never a class `commandLine` itself hands out - the other
+ * two callers (a table row, a worked example) are not this chapter's
+ * one runnable next step. A step with no command (`copy` absent, or
+ * `argv` empty) renders no button at all, so `isFirst` with nothing to
+ * mark is simply a no-op, not a promoted lesser control.
  */
-function nextStepRow(step, copy, payload, reportSchema) {
+function nextStepRow(step, copy, payload, reportSchema, isFirst = false) {
   const row = document.createElement("li");
   row.className = "next-step";
   row.setAttribute("data-step", step.id ?? "");
@@ -798,7 +821,12 @@ function nextStepRow(step, copy, payload, reportSchema) {
   // `UX-429`: through the shared control. `UX-279`'s "Copy command"
   // wording lives there now, with the join and the monospace line, so
   // this site and the two others cannot drift apart again.
-  row.append(...commandLine(step.argv, { copy }));
+  const nodes = commandLine(step.argv, { copy });
+  if (isFirst) {
+    const button = nodes.find((node) => node.className === "copy-step");
+    if (button) button.className = "copy-step primary";
+  }
+  row.append(...nodes);
   const from = followsFrom(step.follows_from, payload, reportSchema);
   if (from) row.append(from);
   return row;
@@ -861,13 +889,17 @@ function actionRow(action, investigate, whyBlock = null) {
     row.append(reach);
   }
 
-  // The reasoning is a section away, not restated here - `finding_id`
-  // is a reference for exactly this.
-  const why = document.createElement("a");
-  why.className = "why";
-  why.setAttribute("href", "#findings");
-  why.textContent = "why";
-  row.append(why);
+  // `UX-1019`: **one "why" control.** `whyBlock` (`renderWhyRanked`)
+  // already answers "why this one" in place; the plain link to
+  // `#findings` is the fallback for the row it has nothing to say for
+  // (`UX-194`'s dead-control rule) - never both.
+  if (!whyBlock) {
+    const why = document.createElement("a");
+    why.className = "why";
+    why.setAttribute("href", "#findings");
+    why.textContent = "why";
+    row.append(why);
+  }
 
   // UX-204's transport, where there is a timeline behind it.
   if (investigate) {

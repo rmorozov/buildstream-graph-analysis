@@ -68,17 +68,23 @@ def macro_micro(tmp_path_factory):
 #: Every element that actually carries a text node, in the three
 #: landmarks a reader's eye crosses - not just `main`, or the rail and
 #: the sticky heading hide a fifth size from the count they are part
-#: of the same page.
+#: of the same page. `input`/`select`/`textarea`/`button` carry no text
+#: *node* (their value is an attribute, a UA render, or an option), so
+#: they are counted on sight rather than by the text-node check -
+#: UX-1033: a form control's own size is the claim, and the text-node
+#: filter is exactly what let it hide.
 _SIZE_SCAN = """
 (() => {
   const sizes = new Set();
+  const isControl = (n) => ["INPUT", "SELECT", "TEXTAREA", "BUTTON"]
+    .includes(n.tagName);
   document.querySelectorAll("main *, header *, footer *, nav *")
     .forEach((n) => {
       const style = getComputedStyle(n);
       if (style.display === "none") return;
       const hasText = [...n.childNodes].some(
         (c) => c.nodeType === 3 && c.textContent.trim());
-      if (hasText) sizes.add(style.fontSize);
+      if (hasText || isControl(n)) sizes.add(style.fontSize);
     });
   return [...sizes];
 })()

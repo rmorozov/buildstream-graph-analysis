@@ -369,17 +369,64 @@ export function chapters(root, doc, payload) {
     }
     for (const node of members) {
       node.setAttribute("data-chapter", chapter.id);
+      attachBeforematch(node);
+      promoteHeadingLevels(node, doc);
       box.append(node);
     }
     // UX-347: the control counts what the chapter holds, and it holds
     // nothing until the loop above - a box labelled at construction
     // said "Show 0 sections" on every chapter, measured on both
     // fixtures before this line existed.
-    labelFold(box);
+    // `UX-1015`: also the point a newly-arrived section picks up the
+    // chapter's own fold state, through the one setter.
+    setOpen(box, isOpen(box));
     root.append(box);
     made.push(box);
   }
   return made;
+}
+
+/**
+ * UX-1018 (styleguide §6e.1): the section head every renderer built as
+ * `h2` is one level below the chapter now holding it, and any nested
+ * block heading (`h3`) is one below that - promoted here, in the one
+ * place every section passes through regardless of which module built
+ * it, rather than at each of the dozen call sites that build one.
+ * `data-heading-promoted` guards against a second pass finding an
+ * already-promoted node if `chapters()` is ever called twice.
+ */
+function promoteHeadingLevels(node, doc) {
+  if (node.hasAttribute?.("data-heading-promoted")) return;
+  node.setAttribute?.("data-heading-promoted", "true");
+  const retag = (old, tag) => {
+    const replacement = doc.createElement(tag);
+    // `old.attributes` (a live `NamedNodeMap`) in a real DOM;
+    // `tests/dom_shim.mjs` keeps a plain `attrs` object instead and has
+    // no `.attributes` at all (`UX-264`'s shim, not a browser).
+    const attrs = old.attributes
+      ? [...old.attributes].map((a) => [a.name, a.value])
+      : Object.entries(old.attrs ?? {});
+    for (const [name, value] of attrs) replacement.setAttribute(name, value);
+    // `old.childNodes` in a real DOM interleaves text and elements in
+    // order; the shim has no `childNodes`, only `.children` (elements)
+    // and a separately-concatenated `._text` - `append` on either
+    // target reassembles the right shape.
+    const kids = old.childNodes
+      ? [...old.childNodes] : [old._text ?? "", ...(old.children ?? [])];
+    replacement.append(...kids);
+    // Neither target has `replaceWith` - `insertBefore` then `remove`
+    // is the one swap both do support.
+    (old.parentElement ?? old.parentNode)?.insertBefore?.(replacement, old);
+    old.remove?.();
+  };
+  // `h3` first, into a snapshot: promoting `h2` below would otherwise
+  // create new `h3` nodes this same pass would catch a second time.
+  for (const old of [...(node.querySelectorAll?.("h3") ?? [])]) {
+    retag(old, "h4");
+  }
+  for (const old of [...(node.querySelectorAll?.("h2") ?? [])]) {
+    retag(old, "h3");
+  }
 }
 
 /**
@@ -406,11 +453,11 @@ function makeBox(chapter, doc, payload, first) {
   box.className = "chapter";
   box.setAttribute("data-chapter", chapter.id);
   box.setAttribute("id", `chapter-${chapter.id}`);
-  // A landmark rather than a heading level: the section headings below
-  // are `h2` and stay `h2` - twenty-four of them, plus the collapse and
-  // focus rules that select `> h2` - so a screen reader gets the
-  // chapter as a named region it can jump to, instead of a heading
-  // hierarchy that would lie about its depth.
+  // UX-1018 (styleguide §6e.1): a landmark *and* a heading level now -
+  // `h2` is the chapter's own, so every section it holds is promoted
+  // one level (`promoteHeadingLevels`, in the members loop below)
+  // before it lands here, and the outline reads three deep rather than
+  // one flat `h2` repeated.
   box.setAttribute("role", "region");
   box.setAttribute("aria-label", chapter.title);
   const title = doc.createElement("h2");
@@ -470,12 +517,41 @@ export function isOpen(box) {
 }
 
 /**
- * Open or shut one chapter, and say on its control how many sections
- * are behind it (`§3a.1`: a fold names its count before it is opened).
+ * `UX-1015` (styleguide §6e.11): every section this module has already
+ * placed in a chapter gets exactly one `beforematch` listener, ever - a
+ * `WeakSet` rather than a data attribute, so it costs nothing a guard
+ * or the export's diff would see.
+ */
+const HAS_BEFOREMATCH = new WeakSet();
+
+/**
+ * Reveal `node`'s chapter when the browser's own find matches inside a
+ * folded (`hidden="until-found"`) section - the mechanism `hidden`
+ * fires this event for, and the one path (with the rail's and the
+ * jump box's controls) that opens a chapter.
+ */
+function attachBeforematch(node) {
+  if (!node?.addEventListener || HAS_BEFOREMATCH.has(node)) return;
+  HAS_BEFOREMATCH.add(node);
+  node.addEventListener("beforematch", () => revealChapter(node));
+}
+
+/**
+ * Open or shut one chapter: `data-open`, `hidden="until-found"` on its
+ * direct sections and `aria-expanded` on its controls (via `labelFold`)
+ * all move together - the one setter `UX-1015` names, so find, a
+ * fragment and the fold control can never disagree about which state
+ * the chapter is in.
  */
 export function setOpen(box, open) {
   if (!box) return box;
-  box.setAttribute("data-open", String(Boolean(open)));
+  const wasOpen = Boolean(open);
+  box.setAttribute("data-open", String(wasOpen));
+  for (const node of box.children ?? []) {
+    if (!node.getAttribute?.("data-section")) continue;
+    if (wasOpen) node.removeAttribute?.("hidden");
+    else node.setAttribute?.("hidden", "until-found");
+  }
   labelFold(box);
   return box;
 }
@@ -570,6 +646,19 @@ export function readersOf(section) {
     .filter(Boolean);
 }
 
+// `UX-1034` (styleguide §4g.3): the chip prints for a reader, not for
+// the author's own `R1`-`R5` index - words off `findings.READERS`'
+// uid, the same roster `data-readers` already joins to.
+const READER_WORDS = {
+  R1: "local optimizer", R2: "recipe author",
+  R3: "graph owner", R4: "CI gatekeeper",
+  R5: "capacity operator",
+};
+
+function readerWords(id) {
+  return READER_WORDS[id] ?? id;
+}
+
 // The section's own collapse control, pressed rather than reimplemented:
 // `collapsible` owns the caret, the `aria-expanded` and the remembered
 // state, and a second writer of `data-collapsed` is the second folding
@@ -600,8 +689,9 @@ export function applyRole(root, role) {
     // sees what each one would promote before choosing. A chosen role
     // still marks only what it owns (`UX-305`'s budget).
     if (tag) {
-      tag.textContent = owns ? chosen
-        : (!chosen && readers.length ? readers.join(" ") : "");
+      tag.textContent = owns ? readerWords(chosen)
+        : (!chosen && readers.length
+           ? readers.map(readerWords).join(", ") : "");
     }
     // `UX-668`: the decision panel is never folded - it held the
     // picker before this item moved the control to the header, and it
@@ -747,7 +837,11 @@ export function fileInChapter(root, node, doc) {
   }
   if (box) {
     node.setAttribute("data-chapter", id);
+    attachBeforematch(node);
     box.append(node);
+    // `UX-1015`: a section that arrives after the chapter was already
+    // folded joins it folded, not visible underneath a shut control.
+    if (!isOpen(box)) node.setAttribute("hidden", "until-found");
     // UX-347: the control counts what the chapter holds, and this is
     // the one path that changes that after boot.
     labelFold(box);

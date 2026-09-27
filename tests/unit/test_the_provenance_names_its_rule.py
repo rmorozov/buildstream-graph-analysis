@@ -285,7 +285,11 @@ class TestTheBlockAnnouncesItsDepth:
             assert block["levels"] == "1", block
             assert int(block["rows"]) == rows, block
             assert f"{rows} row" in block["summary"], block
-            assert record.get("claim", "") in block["summary"], block
+            # `UX-1020`: the label reads sentence case, not the raw
+            # kebab-case claim id (`format.js`'s `title`).
+            claim = record.get("claim", "")
+            label_text = claim.replace("-", " ").replace("_", " ").capitalize()
+            assert label_text in block["summary"], block
 
 
 if __name__ == "__main__":  # pragma: no cover

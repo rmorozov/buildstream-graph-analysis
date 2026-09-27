@@ -45,6 +45,7 @@ from typing import Optional
 from . import schemas
 from .findings import SEVERITY_HIGH, SEVERITY_INFO, SEVERITY_MEDIUM
 from .floors.capacity import compute_default_capacities
+from .plural import plural as _count
 from .units import GIB, MIB, US_PER_S, kb_to_bytes, mb_to_bytes, s_to_us
 
 # An element is "not compute-bound" below this many cores busy. One core
@@ -1147,7 +1148,7 @@ def compute_capacity_recommendation(
             'name': 'graph',
             'allows': knee,
             'reason': (
-                f"the sweep's knee is at {knee} builder(s)"
+                f"the sweep's knee is at {knee} builder{'' if knee == 1 else 's'}"
                 + (", the top of the range swept, so the graph may want more"
                    if knee_range_top and knee >= knee_range_top else "")
             ),
@@ -1164,9 +1165,9 @@ def compute_capacity_recommendation(
             'name': 'CPU',
             'allows': cpu_allows,
             'reason': (
-                f"{cores_busy:.2f} of {host_cores} core(s) busy at builders="
-                f"{builders}, i.e. {cores_busy / builders:.2f} core(s) per "
-                f"concurrent element"
+                f"{cores_busy:.2f} of {host_cores} core{'' if host_cores == 1 else 's'} "
+                f"busy at builders={builders}, i.e. {cores_busy / builders:.2f} cores "
+                f"per concurrent element"
             ),
         }
         if clamped_from:
@@ -1271,7 +1272,7 @@ def compute_builder_pool_recommendation(
                 if critical_path_max_jobs else None)
     if calibrated_cores:
         pool_size = min(calibrated_cores, host_cpu_count)
-        pool_reading = f"UX-1004's calibrated knee ({calibrated_cores} effective core(s))"
+        pool_reading = f"UX-1004's calibrated knee ({_count(calibrated_cores, 'effective core')})"
     else:
         pool_size = host_cpu_count
         pool_reading = (
@@ -1320,8 +1321,8 @@ def _memory_allows(memory_envelope: dict) -> Optional[dict]:
         'reason': (
             f"the {largest}-builder envelope fits in "
             f"{envelope['host_memory_bytes'] / GIB:.1f} GB"
-            + (f" (measured over {measured} element peak(s), so it says nothing "
-               f"above {measured})" if measured and largest >= measured else "")
+            + (f" (measured over {measured} element peak{'' if measured == 1 else 's'}, "
+               f"so it says nothing above {measured})" if measured and largest >= measured else "")
         ),
     }
 
@@ -1414,7 +1415,7 @@ def compute_max_jobs_advice(
             continue
         if len(span) < MIN_HOST_SAMPLES_IN_SPAN:
             row["refusal"] = (
-                f"only {len(span)} host CPU sample interval(s) fall "
+                f"only {_count(len(span), 'host CPU sample interval')} fall "
                 f"inside this element's BUILD span - "
                 f"{MIN_HOST_SAMPLES_IN_SPAN} needed")
             row["recommended_max_jobs"] = None
@@ -1670,8 +1671,8 @@ def price_max_jobs_advice(advice, tasks, run_context, binary_cost) -> dict:
             continue
         if recommended > current:
             row['price_refusal'] = (
-                f"this run measured {uid} at {current} job(s) and has no "
-                f"evidence of how it scales up")
+                f"this run measured {uid} at {current} job{'' if current == 1 else 's'} "
+                f"and has no evidence of how it scales up")
             continue
         # recommended < current: needs the element's whole measured CPU
         # work to build the floor.
@@ -1875,9 +1876,9 @@ def _merge_candidates(dependencies, cache_logs, tasks, run_context) -> list[dict
             'projection': projection,
             'projection_is_a_floor': bool(projection),
             'title': (
-                f"{len(over)} sibling element(s) spend at least half their time on "
+                f"{_count(len(over), 'sibling element')} spend at least half their time on "
                 f"sandbox tax rather than on building: {', '.join(over[:4])}. "
-                f"Merging them would delete {len(deleted)} staging(s), "
+                f"Merging them would delete {_count(len(deleted), 'staging')}, "
                 f"{sum(deleted) / 1e6:.1f}s of sandbox tax"
                 + (
                     f" and at least a replayed {projection['saving_us'] / 1e6:.1f}s "
@@ -1902,7 +1903,7 @@ def _merge_candidates(dependencies, cache_logs, tasks, run_context) -> list[dict
         'elements': [],
         'title': (
             f"No element pays more sandbox tax than it spends building. Across "
-            f"{len(measured)} measured element(s) the largest tax share is "
+            f"{_count(len(measured), 'measured element')} the largest tax share is "
             f"{worst['toll_share'] * 100:.0f}% ({worst['element']}, "
             f"{worst['toll_us'] / 1e6:.1f}s of {worst['total_us'] / 1e6:.1f}s), "
             f"against the {MERGE_TOLL_AT_LEAST_WORK * 100:.0f}% that would make a "
@@ -2332,7 +2333,7 @@ def _cached_shape_sentence(cheap_share, cheap_changes, total_changes, dominant) 
     tallest = ", also the tallest" if top['height_rank'] == 1 == top['weight_rank'] else ""
     return (f"{lead}. {top['element']} dominates the expected cost at "
             f"{top['share_of_expected_cost']:.0%}{tag}{tallest}: "
-            f"{top['height']} element(s) below it, "
+            f"{_count(top['height'], 'element')} below it, "
             f"{top['weight_us'] / 1e6:.1f}s of its own weight; {top['advice']}.")
 
 
@@ -2640,13 +2641,6 @@ def _chain_order(finding: dict) -> list[str]:
     return chain if len(chain) == len(finding['elements']) else list(finding['elements'])
 
 
-def _count(n: int, noun: str) -> str:
-    """`1 element` / `2 elements`, rather than `1 element(s)`. The
-    parenthesised plural is honest when a count is unknown at authoring
-    time and simply wrong once it is known to be one."""
-    return f"{n} {noun}" if n == 1 else f"{n} {noun}s"
-
-
 def format_correlation(result: dict) -> str:
     """Human-readable join, leading with what to do next."""
     lines = ["=" * 60, "Two-Plane Correlation (Plane 1 x Plane 2)", "=" * 60]
@@ -2680,7 +2674,7 @@ def format_correlation(result: dict) -> str:
         lines.append("")
     coverage = result["coverage"]
     lines.append(
-        f"Joined {coverage['joined_elements']} element(s) on element UID "
+        f"Joined {_count(coverage['joined_elements'], 'element')} on element UID "
         f"({coverage['plane1_elements']} in Plane 1, "
         f"{coverage['plane2_elements']} traced in Plane 2)"
     )
@@ -2699,14 +2693,14 @@ def format_correlation(result: dict) -> str:
     if coverage.get("undeclared_plane2_elements"):
         names = coverage["undeclared_plane2_elements"]
         lines.append(
-            f"  {len(names)} Plane 2 name(s) are not declared elements and are "
+            f"  {_count(len(names), 'Plane 2 name')} are not declared elements and are "
             f"excluded from the rows below: {', '.join(names[:5])}"
             + (f" (+{len(names) - 5} more)" if len(names) > 5 else "")
         )
     if coverage.get("aggregating_dependency_pairs"):
         lines.append(
-            f"  {coverage['aggregating_dependency_pairs']} further dependency "
-            f"pair(s) set aside as aggregating - they stage almost nothing of "
+            f"  {_count(coverage['aggregating_dependency_pairs'], 'further dependency pair')} "
+            f"set aside as aggregating - they stage almost nothing of "
             f"their own, so 'nobody opened it' says nothing about them; "
             f"see --format json for the list"
         )
@@ -2762,8 +2756,9 @@ def format_correlation(result: dict) -> str:
     # outranks the individual measurements it is drawn from.
     for finding in result.get("restructuring") or []:
         lines.append(
-            f"Restructuring opportunity: {len(finding['edges'])} declared build "
-            f"edge(s) among {len(finding['elements'])} element(s) were measured "
+            f"Restructuring opportunity: declared build "
+            f"{_count(len(finding['edges']), 'edge')} among "
+            f"{_count(len(finding['elements']), 'element')} were measured "
             f"never-read, and they chain those elements along the critical path:"
         )
         lines.append("    " + " -> ".join(_chain_order(finding)))
@@ -2837,7 +2832,7 @@ def format_correlation(result: dict) -> str:
                 lines.append(f"    ({span} of {scope} processes were measured)")
         if elements_shown < len(actionable):
             lines.append(
-                f"  (+{len(actionable) - elements_shown} more element(s) with findings, "
+                f"  (+{_count(len(actionable) - elements_shown, 'more element')} with findings, "
                 f"see --format json)"
             )
     lines.append("")

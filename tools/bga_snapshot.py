@@ -12,10 +12,9 @@ What that replaces is three commands and five invented paths:
     bga extract --format wrapped /path/to/project /tmp/plane1.log /tmp/run
     bga analyze /tmp/run --plane2 /tmp/plane2.json
 
-`bga capture run` already holds everything the second and third commands
-need — the project path, the wrapped log it just wrote, the Plane 2
-report path. The split exists because the pieces shipped in different
-rounds, not because a user benefits from it.
+`bga capture run` already holds everything the second and third commands need — the project path,
+the wrapped log it just wrote, the Plane 2 report path. The split exists because the pieces shipped
+in different rounds, not because a user benefits from it.
 
 This *composes* those commands rather than reimplementing them: it calls
 `bga capture run --run-dir`, then `bga analyze`, then `bga compare`,
@@ -45,6 +44,7 @@ import time
 from typing import Optional
 
 from bga import run_store
+from bga.plural import plural
 
 # What a snapshot is made of. Deliberately the layout the published
 # capture refs already use (UX-81/UX-96), so nothing downstream learns a
@@ -87,7 +87,7 @@ def cpu_topology(sysfs: str = "/sys/devices/system/cpu", cpuinfo: str = "/proc/c
         cores.add((package, core))
     if not logical:
         return "cpu: unreadable"
-    line = f"cpu: {logical} logical, {len(cores)} cores, {len(sockets)} socket(s)"
+    line = f"cpu: {logical} logical, {len(cores)} cores, {plural(len(sockets), 'socket')}"
     return line + "".join(f", {m}" for m in _cpu_model(cpuinfo)[:1])
 
 
@@ -1426,7 +1426,7 @@ def _list(project: str, as_json: bool = False) -> int:
         print(f"No snapshots in {project}. "
               f"`bga snapshot -- bst build TARGET` takes one.")
         return 0
-    print(f"{listing['count']} snapshot(s) in {project}:")
+    print(f"{plural(listing['count'], 'snapshot')} in {project}:")
     for row in listing["snapshots"]:
         if not row["has_run"] and row["started"] is False:
             # UX-324: the build was never launched. Saying "produced no
@@ -1575,7 +1575,7 @@ def _prune(project: str, keep: Optional[int], older_than: Optional[float],
 
     skipped = [s for s in snapshots if s in protected]
     if not doomed:
-        print(f"Nothing to prune: {len(snapshots)} snapshot(s), "
+        print(f"Nothing to prune: {plural(len(snapshots), 'snapshot')}, "
               f"{len(skipped)} of them still referred to by @last/@prev.")
         if max_store is not None:
             held = run_store.store_size_bytes(project)
@@ -1651,7 +1651,7 @@ def _say_what_it_weighs(snapshot: str, project: str) -> None:
         return
     print(f"\nThis snapshot: {run_store.human_bytes(size)}. "
           f"{run_store.runs_dir(project)}: "
-          f"{run_store.human_bytes(total)} over {count} snapshot(s).",
+          f"{run_store.human_bytes(total)} over {plural(count, 'snapshot')}.",
           file=sys.stderr)
     raw = os.path.join(snapshot, RAW_LOG_NAME)
     if os.path.isfile(raw) and size:

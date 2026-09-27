@@ -1086,7 +1086,7 @@ the blocks a reader meets first, and `certified_headroom`, the number
 Key Findings leads with, had never been in the population at all. It was
 302 such keys when that was filed and 305 when it landed. One level and
 no further: `blast_radius_distribution.deciles` is in the population and
-its own nine buckets are not. The surface is **563 keys** today, and
+its own nine buckets are not. The surface is **580 keys** today, and
 that figure is derived from the walk rather than typed here.
 
 So the statement of coverage, which is now a statement and not a
@@ -1196,6 +1196,15 @@ can look one up.
 | `clamped_from` | In the CPU row of `capacity_recommendation.constraints`, the raw builder count before it was capped to `host_cpu_count` (`UX-861`) - present only when `allows` was clamped down to the host's own cores. |
 | `realizable_saving_us` | What removing this element entirely takes off the **makespan** — not off the path. In a `critical_path_detail` row and in a finding's `evidence.rows`, where the two differ whenever something else is ready to take the freed time. |
 | `elided`, `resolved` | In a `provenance` (or `compare/v2` `verdict_provenance`) evidence row: the shape a path held where the value was a container — `object[1202]`, `array[15]` — published instead of copying that population in twice, and `false` where the path did not resolve at all, so a broken reference is visible rather than missing. |
+| `groups`, `omitted_zero_savings_groups` | In `batch_opportunities`, beside `serialized_pairs`: candidate groups the same capped pool simulated a real combined saving for, and those it simulated at zero, kept visible rather than dropped (`UX-1031`). |
+| `phases` | In `pipeline_overhead`, BuildStream's own named stages (query cache, resolving elements, …) — a closed vocabulary BuildStream declares, not run-scaled. |
+| `cpu_disagreements` | In `plane2_coverage`, elements where the two planes' own CPU readings disagreed past the tolerance — capped at eight. |
+| `critical_path_cached` | In `confidence`, the critical-path elements BuildStream itself reported cached — a subset of the path, no run-scaled cap. |
+| `shorter_than_bst` | In `timestamp_agreement`, tasks Plane 2 measured shorter than BuildStream's own span for the same task — a subset, no cap. |
+| `plane1_only_with_impact`, `undeclared_plane2_elements` | In `element_join_coverage`, elements only one plane saw that still carry a published finding, and elements Plane 2 measured that BuildStream's own manifest never declared. |
+| `aggregating_dependencies` | The Plane 2 half of an `element_join` row (`correlate/v2`'s `ElementJoin`): dependencies this element's own redundancy folded together. |
+| `recommended_deferrals` | In `deferrability`, elements a later build could safely postpone — a subset of elements, no cap. |
+| `staged_at` | In a `resource_blast.rows` entry, the elements the shared resource was staged at, beside `direct_elements` and `blast_elements` — no run-scaled cap. |
 
 `compare/v2`:
 
@@ -2486,10 +2495,10 @@ bga analyze tests/fixtures/macro_micro/run \
 
 
 ```text
-  Capacity: builders 4 x max-jobs unrecorded on 4 core(s): graph binds at 2, below the 4 configured - more builders contend rather than overlap here
-    graph allows 2: the sweep's knee is at 2 builder(s)
-    CPU allows 4: 1.60 of 4 core(s) busy at builders=4, i.e. 0.40 core(s) per concurrent element
-    memory allows 9: the 9-builder envelope fits in 15.7 GB (measured over 9 element peak(s), so it says nothing above 9)
+  Capacity: builders 4 x max-jobs unrecorded on 4 cores: graph binds at 2, below the 4 configured - more builders contend rather than overlap here
+    graph allows 2: the sweep's knee is at 2 builders
+    CPU allows 4: 1.60 of 4 cores busy at builders=4, i.e. 0.40 cores per concurrent element
+    memory allows 9: the 9-builder envelope fits in 15.7 GB (measured over 9 element peaks, so it says nothing above 9)
     Free capacity you already have: core.bst asked its native build for -j1 - a builder slot drawing one core. Fix that before raising anything, then re-measure.
 ```
 

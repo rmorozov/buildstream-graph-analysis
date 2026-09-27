@@ -99,6 +99,7 @@ would have caught it; a bound at it would only just have.
 | 25 | 2026-09-20 | 889 | one filing, and the shape is reviews 23 and 24's third turn: `UX-909` - round 132's five `lb_cpu_*` keys shipped under `floors` and no clause could go red, because `_consumer_surface()` walks top-level properties and rows and never a top-level object's own scalars (302 such keys, `certified_headroom` among them); `analyze/v6` stays at 62 properties across the round, which is why the count check sees nothing. The same row notes that `_named_in_the_documents()` excludes paths and not arguments, so a `**Status:** proposed` design document counts as a documented home - latent, 0 surface keys rest on one today. Three document gaps in the round's own uncommitted diff were closed in the round rather than filed, none having reached `main`: the §6 floors row, `architecture.md`'s floors line and `cli.md`'s missing `lb_cpu_*` section. Sound: the contract counts, the 309-key sentence, the viewer file count, the §6 tree's paths and `macro_micro`'s pasted capacity block all reproduce |
 | 26 | 2026-09-23 | 914 | five filings, and three of them are one shape: **a check that moved, and a document that described the old one.** `UX-910` replaced `11-serial-giant`'s `auto < off` step with a width check and its README still argues for the step: `UX-978`. `UX-925` emptied the stager's toolchain array and four sentences still install or copy a host toolchain: `UX-975`. `UX-744` renamed a guard class and §7a still sends a closing session to the old name, because the link guard resolves a citation's path and not what follows `::`: `UX-979`. Plus two figures: `cli.md`'s coverage section states the surface twice, the guard reads the bold one and `UX-899` moved only that one (563 against 562 fourteen lines down): `UX-977`; and the README's *37-path closure* is 35 paths by `nix_closure --plan`, the 37 being the staged tree with the two `make` pins: `UX-976`. Sound: the contract counts, the §6 map's nine new modules, the touching spread, the spec line figures, `ci-comment.md`'s 33 % and the exit codes `--help` prints |
 | 27 | 2026-09-23 | 945 | one bookkeeping line filed, no task file — a skill's citation names the wrong section and the wrong document: `retro/SKILL.md:7` quotes "a drift you notice is a line" as fixing-guide.md §2, and the phrase is rules.md's row, with fixing-guide's own rule at §2.5 (the guard that reads a skill checks only that the guide's filename appears in it, not the section it names). Sound: `_consumer_surface()` still 563 and undoubled in `cli.md`, the contract counts, the §6 map's new tool and record rows all resolve, `dev_process_bands.py --runs` reproduces `CLAUDE.md`'s 73-of-160/318k-228k line exactly, `dev_bst_examples_spread.py` reproduces `ci.yml`'s pasted 26-run clock, `dev_records.py fetch`'s `records` branch carries `docs/audits/mutation.md` at the link `docs/README.md` now points to, and every push-gate/CI-matrix sentence in `CLAUDE.md`, `rules.md`, `verify` and `decompose` matches `Makefile`'s `push-check` target and `ci.yml`'s matrix condition; the §6 map's `(open)` labels on `UX-997`/`998`/`999`/`1000` are known and being fixed in this round's own close |
+| 28 | 2026-09-27 | 982 | two bookkeeping lines filed, no task file, and five plain mismatches fixed in place - all review 20's shape, a record no guard reads beside the tree that shows it: the `UX-1018` guard commit `round-142.md` and `agent-runs.md` cite is not reachable from `HEAD`, a rebase having landed it under another hash; `directions.md`'s round-142 row says *no verifier ran* against the round document's seven; `architecture.md`'s `format.js` row says *nine* `bga:` keys against 18, the copy `UX-654` did not reach; §6 credits `pairs.js`'s split to `UX-268`, not `UX-1028`; the styleguide's rule index says §3j's guard is not filed while its §7 names it. Sound: the contract counts, `_consumer_surface()` 580, 23 viewer modules, 21 hints, the §3e budgets, round 142's counts and spread |
 
 ### Review 11 — 2026-09-02
 
@@ -1557,6 +1558,61 @@ six named plus §1a were checked. The §6 module map's ~103 per-row
 descriptions were checked for the CI-workflow block only — `UX-780`
 came out of that block, which is a reason to think the rest is worth a
 pass. `UX-689` owns the map's structural half.
+
+## Review 28 — 2026-09-27, at 982 closed rows
+
+Run by one reader over round 142, the UI batch: rows `UX-921` and
+`UX-1015`-`UX-1036` (23 closed; `closed.md` 945 to 982 is 37, the
+other 14 being rounds 141's and the tail of 140's rows), and the
+documents `git diff --stat babba3e5..HEAD -- docs` lists -
+`styleguide.md`, `fixing-guide.md` §6, `architecture.md`'s viewer
+table, `cli.md`, `directions.md`, `round-142.md`, `agent-runs.md`,
+`bookkeeping.md`. Five plain mismatches fixed in place, two
+bookkeeping lines filed, no task file.
+
+**The shape** is review 20's: a record no guard reads, beside the tree
+that shows it.
+
+```text
+$ git merge-base --is-ancestor 41ded5ef HEAD || echo unreachable
+unreachable                        # round-142.md:74, agent-runs.md:429; the landed commit is 12afba7a
+$ grep -n "Seven verifiers" docs/audits/round-142.md
+72:Seven verifiers read the nine tracks after the close, in one shared
+                                   # directions.md's round-142 row: "no verifier ran"
+$ grep -c '= "bga:' bga/viewer/format.js
+18                                 # architecture.md's format.js row: "the nine `bga:` hint keys" (UX-654 fixed the docstring, not this copy)
+$ git log --diff-filter=A --format='%h %s' -- bga/viewer/pairs.js
+4f84b16e UX-1028: split the pair list out of structured.js at the ceiling
+                                   # fixing-guide.md §6: "split from structured.js (UX-268)"
+$ ls tests/unit/test_a_fold_bounds_its_interactive_descendants.py
+                                   # styleguide.md's rule index, §3j: "binding; guard not filed"; its own §7 names the guard
+```
+
+Fixed: the two hashes to `12afba7a`; the round-142 row's verifier
+clause from `round-142.md`; the `format.js` row points at the
+docstring `UX-654` guards instead of carrying a count; `pairs.js`
+credits `UX-268` for the content and `UX-1028` for the split in both
+maps; §3j reads `binding`. Filed: two `coverage` lines - nothing reads
+a round document's hashes against `HEAD`'s ancestry, and nothing reads
+a round-table row against its round document.
+
+### The five checks
+
+| check | result |
+|---|---|
+| counts | `bga.contracts.ids()` 25, `superseded()` 10, `reads()` 3, `printable()` 9, `unprintable()` 16 - unchanged; `_consumer_surface()` 580, matching `cli.md`'s bold figure; `ls bga/viewer/*.js` 23, matching styleguide.md's pasted `git ls-files` block; 21 `bga:` rows in §1a against *Twenty-one hints*; `dev_close_task.py --counts` 999 / 17 open / 982, and `dev_touching.py --spread` 33-171 of 640, both as `round-142.md` states |
+| versions | no contract id moved in the window (`git diff babba3e5..HEAD -- bga/schemas.py` adds no `/v`); `bga:grows` is a hint, not a version |
+| paths exist | `bga/schema_hints.py`, `bga/viewer/pairs.js`, `tools/dev_rendered_strings.py` (the §6 additions); every guard §7's §3j/§3k/§6c/§6e rows name; `ALL_ROWS_CEILING` in `structured.js`/`tables.js`, `REVEAL_STEP` in `structured.js`, `JSON_DOOR_CHAR_CAP` in `rawjson.js`, `setOpen` in `chapters.js` - each where §3k's table and §6c's row put it; the r142 bookkeeping line's `for label in` resolves at `dev_rendered_strings.py:133` |
+| pasted output current | §3e's `7,600` and `13,200` are `LANDED_HEIGHT_PX` and the 50-element words cell in `test_the_page_has_a_volume_budget.py`; `7,600 - 7,471 = 129` of headroom as stated; `98ab850` (§6e.2) is reachable |
+| a Part or invariant held | the 23 rows round 142 closes are 🟢 in `closed.md`; `UX-1037`/`UX-1038` are open and filed, not closed |
+
+### One gap in this sweep
+
+`architecture.md`'s dated verification-log entries say *22 modules*
+ten times against 23 on disk; each is a record with its command beside
+it, so left. The `structured.js` row still lists *presets*, whose
+table moved to `pairs.js`; the preset step itself (`applyPreset`) is
+still wired through `interrogable`, so not called drift here.
 
 ## Review 27 — 2026-09-23, at 945 closed rows
 

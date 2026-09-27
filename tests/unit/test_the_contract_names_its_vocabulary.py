@@ -31,6 +31,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 SCHEMAS = REPO / "bga" / "schemas.py"
+HINTS = REPO / "bga" / "schema_hints.py"
 VISUAL = REPO / "docs" / "design" / "styleguide.md"
 DOCS = REPO / "docs" / "contributing" / "style-guide.md"
 FIXING = REPO / "docs" / "contributing" / "fixing-guide.md"
@@ -39,8 +40,9 @@ FORMAT = REPO / "bga" / "viewer" / "format.js"
 
 
 def _emitted():
-    """Every `bga:` hint the schema module names."""
-    return set(re.findall(r'"(bga:[\w-]+)"', SCHEMAS.read_text(encoding="utf-8")))
+    """Every `bga:` hint the schema modules name."""
+    return {hint for path in (SCHEMAS, HINTS)
+            for hint in re.findall(r'"(bga:[\w-]+)"', path.read_text(encoding="utf-8"))}
 
 
 def _documented():

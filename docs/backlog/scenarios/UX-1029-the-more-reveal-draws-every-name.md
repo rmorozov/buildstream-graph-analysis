@@ -1,6 +1,6 @@
 # UX-1029: the "+N more" reveal draws every name in one run of text
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §3k | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** bounded
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §3k | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** bounded
 
 ## Motivation
 
@@ -31,4 +31,32 @@ The §3k census (UX-1032): each reveal pressed 10 times mounts at most the bound
 
 ## Outcome
 
-Not started.
+**Gap measured.** The reveal this row is about is `boundedList` in
+`bga/viewer/structured.js` (not `views.js` - `views.js` only exports
+the `PATH_HEAD`/`PATH_TAIL` constants `boundedList` reads). Before the
+fix, one press of `+N more` set `first.textContent = items.join(", ")`,
+every middle name in one span. `REVEAL_STEP = 60` added; the button
+now pages `middle.slice(offset, offset + REVEAL_STEP)` into a
+`.list-middle` span, **replacing** it each press, and hides once
+exhausted.
+
+**Close measured.**
+`pytest tests/unit/test_every_step_past_a_bound_is_bounded.py -q` (this
+row's clauses): `10 passed`.
+
+**Mutation table:**
+
+| mutation | reddened | count |
+|---|---|---|
+| `chunk = middle` (whole list, one press) instead of `middle.slice(offset, offset + REVEAL_STEP)` | `TestEveryRevealStaysBounded::test_no_reveal_ever_mounts_past_the_bound` | 1 of 10 |
+| `shownMiddle.textContent += …` (append) instead of `=` (replace) | same clause, mounted count grows 60 -> 120 -> 180 -> 198 over presses | 1 of 10 |
+
+Deviation: the reveal is `structured.js`'s `boundedList`, not `views.js`'s. On the merge `structured.js` crossed the viewer line ceiling, and the pair list moved to `bga/viewer/pairs.js` (`4f84b16e`).
+
+**Review (#295):** no way back after a press. Added `list-prev` +
+`.list-position`, reusing the table-pager shape; a fixed `page` index
+(`-1` at rest) so `prev` lands on the same window `more` built, short
+last remainder included. `TestARevealCanBePagedBackward` (3 clauses, by
+text not only count): `pytest tests/unit/test_every_step_past_a_bound_is_bounded.py -q`:
+`13 passed`. Mutation: `prev`'s handler emptied - reddened
+`test_prev_returns_to_the_first_chunk`.

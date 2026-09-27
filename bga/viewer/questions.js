@@ -21,6 +21,7 @@
 // on that one fixture by coincidence rather than by compilation.
 
 import { identify, labelFor } from "./controls.js";
+import { title } from "./format.js";
 
 // `UX-210`: **every query says which plane it is asking.**
 //
@@ -228,7 +229,7 @@ limit 20;`,
     id: "resource-queues",
     category: "scheduling",
     plane: "Plane 1",
-    title: "Which scheduler queue was the build waiting in?",
+    title: "Which scheduler queue was the run waiting in?",
     returns: [
       ["resource", "the queue the tasks held: PROCESS for a build slot, "
                    + "DOWNLOAD for a fetch or pull, UPLOAD for a push, "
@@ -296,7 +297,7 @@ limit 40;`,
     id: "cost-by-executable",
     category: "resources",
     plane: "Plane 2",
-    title: "Which programs is this build made of?",
+    title: "Which programs is this run made of?",
     returns: [
       ["exe", "the program, argv stripped - the path as it was exec'd"],
       ["runs", "how many times it ran"],
@@ -569,7 +570,7 @@ limit 25;`,
     id: "which-run-is-this",
     category: "scheduling",
     plane: "run",
-    title: "Whose build is this, and did it finish?",
+    title: "Whose run is this, and did it finish?",
     why:
       "`UX-311` puts the run's identity on its own track, so a trace " +
       "that left the machine still says which project, which host " +
@@ -847,7 +848,7 @@ export function renderQuestions(make, options = {}) {
                                    // had open" travels in the link.
                                    "data-fold": `questions-${category}` });
     const label = make("summary", { class: "category" });
-    label.textContent = `${category} (${entries.length})`;
+    label.textContent = `${title(category)} (${entries.length})`;
     fold.append(label);
     section.append(fold);
     for (const question of entries) {

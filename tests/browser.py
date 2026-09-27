@@ -333,13 +333,32 @@ class Browser:
             raise RuntimeError(done.stderr)
         return json.loads(done.stdout)
 
-    def measure(self, url, expression, width=1440, height=900):
+    def measure(self, url, expression, width=1440, height=900, coarse=False,
+                media=None):
         """Load `url` at `width`x`height` and return `expression`'s value.
 
         The evaluation happens in node rather than here because the CDP
         client is a WebSocket and Python's standard library has none.
+        `coarse` (`UX-1022`) emulates a touch pointer, so `@media
+        (pointer: coarse)` matches. `media` (`UX-1015`), e.g. `"print"`,
+        sets `Emulation.setEmulatedMedia`'s actual media type, so a print
+        rule is exercised the way a browser's own print preview would.
         """
-        return self._drive(url, expression, width, height)
+        extra = list(("--coarse",) if coarse else ())
+        if media:
+            extra.append(f"--media={media}")
+        return self._drive(url, expression, width, height, extra)
+
+    def journey(self, url, steps, width=1440, height=900):
+        """`UX-1016`: real `Tab`/`Enter`/`Escape` key events, one
+        navigated session for the whole sequence. `steps` is
+        `[{"key": "Tab"}, {"read": "<js>"}, ...]`; returns the list of
+        `read` results, in order - `cdp.mjs --journey` is what presses
+        the keys, since only CDP's Input domain can move focus the way
+        a keyboard does.
+        """
+        return self._drive(url, json.dumps(steps), width, height,
+                           ("--journey",))
 
     def observe(self, url, expression="null", width=1440, height=900):
         """The same load, plus everything the console and the CSP said.

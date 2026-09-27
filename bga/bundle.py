@@ -1,10 +1,9 @@
 """UX-520: the whole capture in one file, and what the far side refuses.
 
-`run/` is not the capture. `UX-381` made the layout a contract, and half
-of what a reader needs sits *beside* `run/` — the Plane 2 report, the raw
-trace, the host samples, the published analysis. A user who tars `run/`,
-which is the directory every command's help names, carries Plane 1 and
-leaves Plane 2 behind.
+`run/` is not the capture. `UX-381` made the layout a contract, and half of what a reader
+needs sits *beside* `run/` — the Plane 2 report, the raw trace, the host samples, the
+published analysis. A user who tars `run/`, which is the directory every command's help
+names, carries Plane 1 and leaves Plane 2 behind.
 
 So the member list is **derived from `CAPTURE_LAYOUT`**, never restated
 here: a member added to the contract is bundled by existing. `DERIVED`
@@ -33,6 +32,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from . import __version__, contracts, run_store
+from .plural import plural
 
 SCHEMA = "bundle-manifest/v1"
 
@@ -213,7 +213,7 @@ def check_readable(manifest: dict) -> None:
     })
     if unknown:
         raise BundleError(
-            f"this bundle carries contract(s) this bga does not read: "
+            f"this bundle carries {plural(len(unknown), 'contract')} this bga does not read: "
             f"{', '.join(unknown)}. It was packed by bga "
             f"{manifest.get('bga_version', 'unknown')}; upgrade to read it. "
             f"Nothing was written.")
@@ -247,7 +247,7 @@ def _safe_members(archive: tarfile.TarFile, manifest: dict
     missing = sorted(declared - set(found))
     if missing:
         raise BundleError(
-            f"the manifest names {len(missing)} member(s) the archive does "
+            f"the manifest names {plural(len(missing), 'member')} the archive does "
             f"not hold ({', '.join(missing[:4])}); refusing to half-load it")
     return [found[path] for path in sorted(found)]
 
@@ -293,7 +293,7 @@ def load(bundle: str, project: str) -> tuple[str, dict]:
             if changed:
                 raise BundleError(
                     f"{project} already holds snapshot {stamp} and "
-                    f"{len(changed)} member(s) differ "
+                    f"{plural(len(changed), 'member')} differ "
                     f"({', '.join(changed[:4])}). Two different captures "
                     f"cannot share one identity; move or delete the existing "
                     f"one. Nothing was written.")

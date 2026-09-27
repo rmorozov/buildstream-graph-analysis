@@ -1,6 +1,6 @@
 # UX-1018: a chapter title outranks its section titles in the heading outline
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §6e.1 | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §6e.1 | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
 
 ## Motivation
 
@@ -32,4 +32,45 @@ Renaming the wordmark.
 
 ## Outcome
 
-Not started.
+Gap measured: booted `golden`, every rendered heading: `h1` "bga" 21px,
+`h2.chapter-title` 17px/700 and `h2` (section) 17px/700 - one outline
+level for two roles, a reader cannot tell a chapter from its own first
+section without reading either.
+
+Close measured: `PYTHONPATH=$PWD pytest tests/unit/test_the_heading_outline_has_three_levels.py -q`
+— 3 passed. `chapters.js`'s `promoteHeadingLevels` retags every section
+it collects (`h2`->`h3`, `h3`->`h4`) once, in the single place every
+section passes through regardless of which of a dozen renderer modules
+built it - `sectionHead`, `sections.js`, `decision.js`, `element.js`,
+`views.js`, `questions.js` all still emit `h2`/`h3` and are none the
+wiser. `style.css`: `h2`=`--font-h1` (chapter), `h3`=`--font-h2`
+(section), `h4`=body weight 600 (block); five selectors that read a
+section's own heading by tag (`nav.js`x2, `rawjson.js`, `views.js`,
+three test files' own instruments) widened to `"h2, h3"` so they work
+whether they run before or after the promotion pass.
+
+Mutation table:
+
+| guard | mutation | result |
+|---|---|---|
+| `test_the_heading_outline_has_three_levels.py::test_no_section_title_wears_the_chapter_level` | `promoteHeadingLevels(node, doc)` commented out (`chapters.js:373`) | red: section heads `['H2', 'H3']`, 1 failed / 4 |
+
+The verifier found the first reading false: with the call disabled the three tag-census clauses stayed green, because the outline read only the open chapter once `UX-1015` folded with `hidden`. The walk now clears `hidden`, and a role clause reads each section head's tag.
+
+Full heading/nav/fold/rail regression sweep (214 + 174 tests across
+every file that queries a section heading by tag): all green after the
+fix; the fix was red on this same sweep once (`old.attributes is not
+iterable` - `tests/dom_shim.mjs` has no `.attributes`, only `.attrs` -
+`retag()` now reads either).
+
+`make lint`: clean. `dev_sizes.py --check`: ok, 148 files.
+
+**Surfaces beyond the declared two** (`chapters.js`, `style.css`): the
+Required Fix's own file list could not be satisfied without them -
+`nav.js`, `rawjson.js`, `views.js` each select a section's own heading
+by tag (`"h2"`), and three existing test files carry the same
+instrument. `docs/design/styleguide.md`'s §7 guard table also gained
+this row's three guard names (shared row - `UX-1027`'s primary-grade
+guard lands in it too, later in this same track).
+
+Deviation: `nav.js`, `rawjson.js` and `views.js` changed beyond the named files (above). On the merged tree the landed height went 7,300 -> 7,600 px and `CHAPTER_HEADING_SCREENS` 8.5 -> 9.0 (`320df09f`, `a124bc56`).

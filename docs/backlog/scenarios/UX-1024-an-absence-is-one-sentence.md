@@ -1,6 +1,6 @@
 # UX-1024: an absence is one sentence, and no separator stands beside an empty value
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §6e.12 | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §6e.12 | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
 
 ## Motivation
 
@@ -26,4 +26,33 @@ The CLI's absence sentences, which already hold.
 
 ## Outcome
 
-Not started.
+Gap: `wireReaderControl` (`decision.js`) always appended `" — "`
+between the reader `select` and its question span. "anyone" (the
+landed choice) has no question, so the header read "I am anyone — "
+with nothing after the dash.
+
+Close: the dash is now its own `span`, hidden together with the
+question whenever there is none, set both at build and on `change`.
+New `tests/unit/test_an_absence_is_one_sentence.py` drives every
+option the picker offers and asserts no separator is visible beside
+an empty question:
+
+```text
+$ PYTEST_XDIST= python3 -m pytest tests/unit/test_an_absence_is_one_sentence.py -q
+2 passed in 1.24s
+```
+
+Mutation table:
+
+| mutation | reddened | count |
+|---|---|---|
+| restore the unconditional `" — "` text node | `test_no_separator_beside_an_empty_question` | 1 failed |
+
+The guard's first draft only checked element children for a visible
+dash and missed the mutation (a bare text node has no `hidden`); it
+now treats any child's `—` as shown unless an element wrapping it is
+hidden. Other empty-state sentences in `bga/viewer/` (the finding
+fold, `Show all`, empty `dl`s) were read by hand and already state
+what is missing and why; not re-swept here.
+
+Deviation: none from the Required Fix.

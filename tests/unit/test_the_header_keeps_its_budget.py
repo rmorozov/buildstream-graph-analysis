@@ -47,7 +47,8 @@ _MEASURE = """
     sticky: getComputedStyle(header).position,
     headerText: header.innerText,
     wordmarkTitle: wordmark ? wordmark.getAttribute("title") : null,
-    runInstanceText: sec ? sec.innerText : null,
+    // `UX-1015`: a folded section is `hidden="until-found"`, whose innerText is "".
+    runInstanceText: sec ? sec.textContent : null,
   };
 })()
 """

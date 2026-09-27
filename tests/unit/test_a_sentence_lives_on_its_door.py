@@ -150,10 +150,14 @@ _PAGE = r"""
     inlineKeys: all.filter((el) => el.getAttribute("data-inline"))
                    .map((el) => el.getAttribute("data-describes")),
     describedKeys: all.map((el) => el.getAttribute("data-describes")),
-    // A door for every sentence that has one, and none for the rest.
+    // `UX-1021`: one door per block now, never one per sentence - so
+    // "no door on an inline value" reads as "no door whose block has
+    // only inline sentences", the shape `attachBlockDoor` refuses to
+    // build (`UX-194`'s dead-control rule) rather than a per-`dt` scan.
     doors: document.querySelectorAll("button.describe").length,
     doorsOnInline: [...document.querySelectorAll("button.describe")].filter(
-      (b) => b.closest("dt")?.getAttribute("data-inline")).length,
+      (b) => ![...b.parentElement.querySelectorAll('[data-role="description"]')]
+        .some((s) => !s.hasAttribute("data-inline"))).length,
   };
 })()
 """
@@ -180,16 +184,19 @@ _EVERY_DOOR = r"""
   for (const box of document.querySelectorAll("section.chapter")) {
     box.setAttribute("data-open", "true");
   }
+  // `UX-1021`: the marker is the block's first child now, not a
+  // `<dt>`'s own - so "its sentence" is every non-inline `.description`
+  // the block holds, and the click opens all of them together.
   const shut = [], stuck = [], missing = [];
   for (const marker of document.querySelectorAll("button.describe")) {
-    const term = marker.closest("dt");
-    const sentence = term?.nextElementSibling?.querySelector(
-      '[data-role="description"]');
-    if (!sentence) { missing.push(marker.getAttribute("data-describe")); continue; }
-    const box = () => sentence.getBoundingClientRect().height;
+    const sentences = [...marker.parentElement.querySelectorAll(
+      '[data-role="description"]')].filter((s) => !s.hasAttribute("data-inline"));
+    if (!sentences.length) { missing.push(marker.getAttribute("data-describe")); continue; }
+    const box = () => sentences.reduce((n, s) => n + s.getBoundingClientRect().height, 0);
     if (box() !== 0) shut.push(marker.getAttribute("data-describe"));
     marker.click();
-    if (box() === 0 || getComputedStyle(sentence).display === "none") {
+    if (box() === 0 || sentences.some(
+        (s) => getComputedStyle(s).display === "none")) {
       stuck.push(marker.getAttribute("data-describe"));
     }
     marker.click();
@@ -203,8 +210,8 @@ _DOOR = r"""
 (() => {
   const marker = document.querySelector("button.describe");
   if (!marker) return { none: true };
-  const sentence = marker.closest("dt").nextElementSibling
-                         .querySelector('[data-role="description"]');
+  const sentence = marker.parentElement.querySelector(
+    '[data-role="description"]:not([data-inline])');
   const state = () => ({ display: getComputedStyle(sentence).display,
                          height: Math.round(
                            sentence.getBoundingClientRect().height),
@@ -268,22 +275,20 @@ class TestThePageIsThisRunsNumbers:
         Beside one that is, it is the duplication this item removed."""
         out = browser.measure(pages[label], _PAGE, width=1440, height=900)
         assert out["doorsOnInline"] == 0, (label, out["doorsOnInline"])
-        # `UX-344`: counted per *render*, not per key. `UX-346` could
-        # use the set because no declared key was drawn twice; lifting
-        # `joint_saving` out of `signals` made `sum_of_individual_us` a
-        # row of a section as well as a finding's evidence, and the two
-        # renders are two doors that are not there.
-        assert out["doors"] == out["described"] - len(out["inlineKeys"]), (
-            label, out["doors"], out["described"], sorted(out["inlineKeys"]))
+        # `UX-1021`: one door per *block*, not per sentence - the
+        # per-key count `UX-344`/`UX-346` held is `test_one_door_per_block
+        # .py`'s now; this clause only holds a door existing at all.
+        assert out["doors"] > 0, (label, out["doors"])
 
     def test_every_door_on_the_page_opens_its_own_sentence(
             self, browser, pages, label):
         """The acceptance test's own phrasing: every sentence taken
-        from beside a value is reachable from that value's door. Walked,
-        not sampled - 74 doors on one page and 128 on the other, each
-        clicked open and shut again."""
+        from beside a value is reachable from its block's one door.
+        Walked, not sampled - 29 doors on one page and 39 on the
+        other (`UX-1021` shrank both from one door per sentence),
+        each clicked open and shut again."""
         out = browser.measure(pages[label], _EVERY_DOOR, width=1440, height=900)
-        assert out["doors"] > 50, (label, out["doors"])
+        assert out["doors"] > 20, (label, out["doors"])
         assert out["noSentence"] == [], (label, out["noSentence"][:8])
         assert out["openBeforeClick"] == [], (
             f"{label}: a closed door already showing its sentence: "

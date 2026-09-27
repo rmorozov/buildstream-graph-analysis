@@ -32,7 +32,7 @@ needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
 #: `selector -> (label pattern, the styleguide section or item that
 #: owns it)`. Measured with
 #: `python3 tools/dev_page_census.py <export.html>` on `golden` and
-#: `macro_micro` - 26 classes, one union, document-wide (the rail's
+#: `macro_micro` - 25 classes, one union, document-wide (the rail's
 #: stepper and jump box are not inside `main`, and the first draft's
 #: `main`-scoped census missed both - the falsify mutation below is
 #: what found it). A pattern rather than a literal label:
@@ -45,19 +45,22 @@ REGISTRY = {
     "a.inspect": (r"^⌕$", "§1a"),               # bga:role's generic Inspect link
     "a.path-box": (r".+", "§3c"),              # the critical chain, folded
     "a.runbook-link": (r"^\d+ steps?, in the decision panel$", "§1e"),
-    "a.why": (r"^why$", "UX-207"),             # links a top action to its finding
+    # `a.why` (UX-207) retired by `UX-1019`: one "why" control per top
+    # action, and `renderWhyRanked`'s disclosure is the one both
+    # fixtures' actions always have something to say in.
     "button": (r".+", "§4d"),                  # the Perfetto handoff button
     "button.chapter-open": (r"^Show \d+ sections?$", "§3c"),
     "button.collapse": (r"^[▾▸]$", "§3c"),
     "button.copy-rows": (r"^Copy \d+ rows?$", "§3d"),
     "button.copy-sql": (r"^Copy ", "§4c"),
     "button.copy-step": (r"^Copy command$", "§4c"),
+    "button.copy-step.primary": (r"^Copy command$", "§6e.5"),  # UX-1027
     "button.copy-view": (r"^Copy ", "§4c"),
     "button.describe": (r"^\?$", "§2b"),       # the described-value affordance
     "button.focus-this": (r"^Focus", "§4c"),
-    "button.json-toggle": (r"view as JSON", "§1"),
+    "button.json-toggle": (r"View as JSON", "§1"),
     "button.mark-this": (r".+", "§4c"),
-    "button.twin-toggle": (r"^as (table|drawing)$", "§2a"),
+    "button.twin-toggle": (r"^As (table|drawing)$", "§2a"),
     "button[data-all]": (r".+", "§3c"),        # Collapse all / Expand all
     "button[data-step]": (r".+", "§3c"),       # the Top/Prev/Next stepper
     "input.copy-markdown": (r".*", "§4c"),

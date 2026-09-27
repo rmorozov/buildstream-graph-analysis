@@ -1,6 +1,6 @@
 # UX-1015: find-in-page reaches text inside a folded chapter
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §6e.11 | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §6e.11 | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
 
 ## Motivation
 
@@ -30,4 +30,51 @@ The page's own "Jump to..." box; browsers without `until-found` keep the fold as
 
 ## Outcome
 
-Not started.
+**Gap measured.** Before this item, `style.css` folded a chapter with
+`section.chapter[data-open="false"] > section[data-section] { display:
+none; }` — a `display` rule, which hides text from `Ctrl+F` regardless
+of any `aria-*` state. On the un-mutated tree this repository's own
+audit found 5 of 6 chapters folded at rest on `macro_micro`.
+
+**Close measured.** `python3 -m pytest
+tests/unit/test_find_in_page_reaches_folded_chapters.py -q`:
+
+```text
+9 passed in 1.35-1.68s
+```
+
+`setOpen` is now the one writer of `data-open`, `hidden="until-found"`
+and `aria-expanded`; a dispatched `beforematch` opens the whole chapter;
+a section that arrives after its chapter is shut joins it shut; booted
+in a real browser, a folded section computes `contentVisibility:
+"hidden"` and `display` other than `"none"`.
+
+**Mutation table.**
+
+| guard | mutation | reddened | count |
+|---|---|---|---|
+| `TestTheMechanismIsThreePlaces::test_the_display_none_fold_rule_is_gone` | restore `section.chapter[data-open="false"] > section[data-section] { display: none; }` | the static source check | 1 |
+| `TestAFoldedSectionIsHiddenUntilFoundOnScreen::test_a_folded_section_computes_hidden_but_not_display_none` | same mutation | `display` reads `"none"` again | 1 |
+
+2 of 9 clauses reddened by the Acceptance Test's own mutation; the
+remaining 7 (the shim-level `setOpen`/`beforematch`/late-arrival logic,
+and the print/content-visibility static checks) are unaffected by
+restoring the old `display` rule alone, as expected.
+
+Deviation: `hidden="until-found"` meant five existing guards that force a chapter open had to clear `hidden` too, and `test_the_header_keeps_its_budget.py` reads `textContent` past the fold (`0de51abb`).
+
+**Review (#295):** the print rule set `display: block !important` on
+`[hidden="until-found"]` but never touched `content-visibility`, which
+the platform itself sets to `hidden` on that state (HTML Standard,
+`#hidden-elements`) - so a folded section printed at zero rendered size
+regardless of `display`. `style.css`'s print rule now also sets
+`content-visibility: visible !important`.
+`TestAFoldedChapterPrintsItsText` (new, in the same guard file) drives
+`Emulation.setEmulatedMedia({media: "print"})` for real over CDP
+(`tests/cdp.mjs --media=print`, `Browser.measure(..., media="print")`)
+and asserts the folded section's `getBoundingClientRect().height` and
+`scrollHeight` are non-zero. Mutation: drop the added
+`content-visibility` line - `python3 -m pytest
+tests/unit/test_find_in_page_reaches_folded_chapters.py -q -n 1 -k
+print`: 1 passed, 1 failed (`contentVisibility` reads `"hidden"`,
+`height`/`scrollHeight` read `0`); restored, both pass again.

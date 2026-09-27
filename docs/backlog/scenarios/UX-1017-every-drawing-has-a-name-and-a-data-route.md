@@ -1,6 +1,6 @@
 # UX-1017: every drawing has an accessible name and a route to its numbers
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §6e.9 | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §6e.9 | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
 
 ## Motivation
 
@@ -40,4 +40,52 @@ Sonification.
 
 ## Outcome
 
-Not started.
+**Gap measured.** Styleguide §6e.9's own measurement, restated: 20 of 23
+`svg[role=img]` on `macro_micro` and 8 of 11 on `golden` carried neither
+`aria-label` nor a `<title>`, before this item.
+
+**Close measured.** `python3 -m pytest
+tests/unit/test_every_drawing_has_a_name_and_a_data_route.py -q`:
+
+```text
+14 passed in 7.5-8.2s
+```
+
+Every one of `drawings.js`'s five builders (sparkline, strip,
+columnStrip, decomposition, interval), both grades, plus
+`element.js`'s inline sparkline and `views.js`'s `renderBand`/
+`renderTrend`, now carries `aria-label` equal to its own sentence and
+`aria-details` resolving to a node — the table twin where §2a draws one
+(exhibit grade), the sentence span itself otherwise; the two composed
+figures always carry a twin. Booted on both fixtures: every
+`svg[role=img]` in the export has a non-empty name and a resolvable
+route.
+
+**Mutation table.**
+
+| guard | mutation | reddened | count |
+|---|---|---|---|
+| `TestEveryDrawingsBuilderNamesAndRoutesIt` (`strip`, both grades) | drop the `nameDrawing(...)` call from `strip()` | `label` is empty | 2 of 9 parametrised cases |
+| `TestEveryDrawingOnTheRealPagesIsNamedAndRouted` (both clauses) | same mutation | every density strip on `macro_micro` (3) has no name, no route | 2 |
+
+4 of 14 clauses reddened by the Acceptance Test's own mutation ("drop
+the name from the density strip"); the remaining 10 (sparkline,
+decomposition, interval, the two composed figures, the `golden`
+fixture) are unaffected by a `strip()`-only mutation, as expected.
+
+Deviation: none from the Required Fix; on the merge `views.js`'s drawings import went back to three lines so the thin-views guard can read its source (`83029c5f`).
+
+**Review (#295):** `sparkline`, `strip` (annotation grade) and
+`element.js`'s inline sparkline routed to their sentence, which names
+only the edges/extremum/labelled subset — `strip`'s own `stripTicks`
+drops labels a nine-decile payload still ticks. Fixed by a new
+`drawings.js:valueRoute`: a hidden node whose full mark list lives in
+`aria-label`, an attribute, so it adds no words to
+`test_the_page_has_a_volume_budget.py`'s `main.textContent` count
+(measured: 30 passed, budget unchanged). `columnStrip` is left alone —
+its p50/p95 ticks are the "no derived number" boundary its own doc
+already states, and naming them would print what it refuses to print.
+`TestEveryPlottedValueReachesTheRoute` (new) asserts every drawn
+`data-value`/`data-raw` mark appears in its route; mutated back to
+`route = sentence` for `sparkline`, `strip`, `renderElementHistory` in
+turn, each reddened the new guard, each restored to 20/20 passed.

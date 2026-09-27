@@ -47,6 +47,11 @@ below now reads `markers == described - inlined`: a `bga:inline` value keeps
 its sentence and has no door, and everything else is behind one.
 `tests/unit/test_a_sentence_lives_on_its_door.py` measures the closing
 in a browser, where computed style is a fact rather than an attribute.
+
+**`UX-1021` moved the marker again**, off the value and onto its
+block: 191 doors in 39 blocks on `macro_micro` was one door per value,
+not per block, so the clause below now reads `markers ==
+blocksDescribed` instead.
 """
 import json
 import os
@@ -233,6 +238,20 @@ const inlined = all(root, (n) => n.attrs?.["data-inline"]
 // Each sentence beside its value, not under its term: the `<dd>` is
 // where the number is.
 const parents = [...new Set(sentences.map((n) => n._parent?.tagName))];
+// `UX-1021`: the marker moved to the block, so "one marker per
+// sentence" became "one marker per block that has a non-inline
+// sentence" - the same nearest-ancestor walk the styleguide's own
+// census uses (`dl, table, section, ul, ol`).
+const blockOf = (n) => {
+  let at = n._parent;
+  while (at && !["dl", "table", "section", "ul", "ol"].includes(
+      String(at.tagName).toLowerCase())) {
+    at = at._parent;
+  }
+  return at;
+};
+const blocksDescribed = new Set(
+  sentences.filter((n) => !n.attrs?.["data-inline"]).map(blockOf));
 // The marker's own claim, before and after a click, and back.
 const first = markers[0] ?? null;
 const shown = sentences[0] ?? null;
@@ -247,6 +266,7 @@ const titled = described.filter((n) => (n.attrs.title ?? "").length > 0).length;
 console.log(JSON.stringify({
   described: described.length, markers: markers.length,
   sentences: sentences.length, inlined: inlined.length, parents, trip, titled,
+  blocksDescribed: blocksDescribed.size,
   sample: shown ? text(shown) : null,
   error: failure }));
 """
@@ -291,17 +311,18 @@ def booted(tmp_path_factory):
 class TestEveryDescribedValueShowsItsAffordance:
     def test_the_marker_count_equals_the_described_count(self, booted):
         """§2b.3, and the acceptance's own phrasing. Not "there are
-        markers" - one per described value, so a renderer that grew a
-        fourth `<dt>` site and forgot the marker reddens.
+        markers" - one per *block* that describes something
+        (`UX-1021`), so a renderer that grew a fourth `<dt>` site in an
+        already-doored block adds no marker, and one that grows a new
+        block with nothing else describing it does.
 
         `UX-346` subtracts the declared exceptions: a `bga:inline`
         value's sentence is beside it already, so it has no door and
-        must not have one. Measured on the golden export: 86 described,
-        12 inline, 74 markers."""
+        must not have one."""
         for page, out in booted.items():
             assert out["described"] > 0, f"{page} describes nothing at all"
             assert out["sentences"] == out["described"], (page, out)
-            assert out["markers"] == out["described"] - out["inlined"], (page, out)
+            assert out["markers"] == out["blocksDescribed"], (page, out)
             assert 0 < out["inlined"] < out["described"], (page, out)
 
     def test_the_sentence_opens_beside_the_value(self, booted):
@@ -437,9 +458,12 @@ class TestTheRoomRuleHoldsAtBothViewports:
   const marker = document.querySelector("button.describe");
   if (!marker) return { none: true };
   marker.click();
-  const term = marker.closest("dt");
-  const value = term.nextElementSibling;
-  const sentence = value.querySelector(".description");
+  // `UX-1021`: the marker is the block's own first child now, not a
+  // `<dt>`'s - the value beside the first non-inline sentence is
+  // that sentence's own parent `<dd>`, wherever the marker sits.
+  const sentence = marker.parentElement.querySelector(
+    '.description:not([data-inline])');
+  const value = sentence.parentElement;
   const v = value.getBoundingClientRect();
   const s = sentence.getBoundingClientRect();
   return {

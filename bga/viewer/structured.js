@@ -15,12 +15,11 @@
  */
 import { served } from "./primitives.js";
 import { COPY_FORMAT_MIRROR, readCopyFormat, writeCopyFormat } from "./viewstate.js";
-import { COMMAND, QUANTITY, COLUMNS, DIRECTION, SERIES, DISTRIBUTION, QUESTION,
-         PRESETS, INLINE, bytes, childNode, cssId, dataKeyed,
-         describedTerm, el, elementColumn, guessQuantity, heading, hintsOf,
-         adviceFor, itemsAsShown, keyAsShown, quantity, quantityFor,
-         sectionHead, title } from "./format.js";
-import { commandLine, identify, labelFor } from "./controls.js";
+import { COMMAND, QUANTITY, COLUMNS, SERIES, DISTRIBUTION, bytes, childNode,
+         cssId, dataKeyed, el, elementColumn, guessQuantity, heading, hintsOf,
+         itemsAsShown, keyAsShown, quantity, quantityFor, sectionHead,
+         title } from "./format.js";
+import { commandLine, identify } from "./controls.js";
 // UX-303: §2's two drawings. They import nothing and take their
 // formatter, so the quantity table stays here and the geometry stays
 // there.
@@ -35,9 +34,9 @@ import { CONTROLS, UNMAPPED, classify, noteUnmapped, depthSentence,
 import { enterTableFocus, focusedTable, leaveTableFocus, registerFocusTarget }
   from "./tablefocus.js";
 import { parseThreshold, applyFilters, badgeText, rowJson, cellText,
-         copy, presetColumns, applyPreset, openingBound, plural,
-         boundPairs, sortable, ownRows, ownBody, showAlso, columnCells,
-         rowsMarkdown } from "./tables.js";
+         copy, presetColumns, openingBound, plural, sortable, ownRows,
+         ownBody, showAlso, columnCells, rowsMarkdown, ALL_ROWS_CEILING }
+  from "./tables.js";
 import { PATH_HEAD, PATH_TAIL } from "./views.js";
 
 /**
@@ -115,6 +114,11 @@ export const ARRAY_INLINE_ITEMS = 6;
 // which is what `renderText` already does for a long string.
 export const CELL_NEST_LIMIT = 2;
 
+// `UX-1029` (styleguide §3k): `boundedList`'s paging step - a reveal
+// mounts at most this many names besides the head and tail it keeps,
+// whatever number of times it is pressed.
+export const REVEAL_STEP = 60;
+
 /** `{k: v}` as one line - no click, because there is nothing to hide. */
 function inlineObject(value, node) {
   const parts = [];
@@ -161,7 +165,7 @@ export function mapTable(key, rows, hint, node, nested, depth = 0, path = key) {
     const measure = hintsOf(node)[QUANTITY] ?? guessQuantity(key)
       ?? (record ? null : "count");
     declared = { ...hint, [COLUMNS]: [
-      { key: "key", title: "name" },
+      { key: "key", title: "Name" },
       { key: "value", title: title(key, measure), quantity: measure }] };
   }
   const { table, tools } = buildTable(path, rows, declared, node, depth);
@@ -181,28 +185,63 @@ export function mapTable(key, rows, hint, node, nested, depth = 0, path = key) {
  *
  * `PATH_HEAD` items, the control, `PATH_TAIL` items - the control
  * where the middle begins, because DOM order is reading order.
+ *
+ * `UX-1029` (styleguide §3k): the control used to reveal the whole
+ * middle in one press - 3,625 names, one 72,703-character run, on the
+ * 4,002-element run's `resource_blast` populations. It now pages
+ * `REVEAL_STEP` names at a time, **replacing** what the last press
+ * showed rather than appending to it, so no number of presses mounts
+ * more than `REVEAL_STEP` names besides the head and tail it keeps.
+ *
+ * Review (#295): a press had no way back. `prev` reuses `interrogable`'s
+ * "‹ Prev"/position shape - `page` is a fixed `REVEAL_STEP`-wide window
+ * index into `middle` (`-1` at rest), so backward always lands on the
+ * same window forward built, even where the last one is a short remainder.
  */
 function boundedList(value, noun) {
   const items = value.map(String);
   const head = items.slice(0, PATH_HEAD);
   const tail = items.slice(items.length - PATH_TAIL);
-  const behind = items.length - head.length - tail.length;
+  const middle = items.slice(head.length, items.length - tail.length);
+  const pages = Math.ceil(middle.length / REVEAL_STEP);
   const first = el("span", { class: "list-head" }, head.join(", "));
+  const shownMiddle = el("span", { class: "list-middle" }, "");
   const last = el("span", { class: "list-tail" }, `, ${tail.join(", ")}`);
-  const more = el("button", {
-    type: "button", class: "fold-more", "data-folded": String(behind),
-    title: `Show the ${behind} ${noun} between the first ${head.length} `
-           + `and the last ${tail.length}`,
-  }, `+${behind} more ${noun} (${items.length} in all)`);
+  const position = el("span", { class: "list-position" }, "");
+  const prev = el("button", { type: "button", class: "list-prev",
+                              "aria-label": `previous ${noun}` }, "‹ Prev");
+  const more = el("button", { type: "button", class: "fold-more" });
+  let page = -1;
+  const render = () => {
+    const start = Math.max(0, page) * REVEAL_STEP;
+    const chunk = page < 0 ? [] : middle.slice(start, start + REVEAL_STEP);
+    shownMiddle.textContent = chunk.length ? `, ${chunk.join(", ")}` : "";
+    const remaining = middle.length - start - chunk.length;
+    prev.hidden = page <= 0;
+    more.hidden = remaining <= 0;
+    more.setAttribute("data-folded", String(remaining));
+    more.title = `Show the next ${Math.min(REVEAL_STEP, remaining)} ${noun} `
+      + `of the ${remaining} still between the first ${head.length} and `
+      + `the last ${tail.length}`;
+    more.textContent = `+${remaining} More ${noun} (${items.length} in all)`;
+    position.textContent = page < 0 ? "" : `${noun} ${start + 1}-`
+      + `${start + chunk.length} of ${middle.length} (page ${page + 1} of `
+      + `${pages})`;
+  };
   more.addEventListener?.("click", () => {
-    first.textContent = items.join(", ");
-    last.textContent = "";
-    more.hidden = true;
+    page = Math.min(page + 1, pages - 1);
+    render();
   });
+  prev.addEventListener?.("click", () => {
+    page = Math.max(page - 1, -1);
+    render();
+  });
+  render();
   return el("div", { class: "bounded-list", "data-bounded": "list",
                      "data-items": String(items.length),
                      "data-shown": String(head.length + tail.length) },
-            first, more, last);
+            first, shownMiddle, el("span", { class: "list-pager" },
+                                   prev, position, more), last);
 }
 
 /**
@@ -730,7 +769,7 @@ function foldTheMiddle(table, total, { head, tail, noun = "rows" }) {
     // is behind it rather than promising "more".
     title: `Show the ${middle.length} ${noun} between the first ${head} `
            + `and the last ${tail}`,
-  }, `+${middle.length} more ${noun} (${total} in all)`);
+  }, `+${middle.length} More ${noun} (${total} in all)`);
   const row = el("tr", { class: "fold-row", "data-fold-rows": String(middle.length) },
                  el("td", { colspan: String(cells) }, more));
   more.addEventListener?.("click", () => {
@@ -774,8 +813,16 @@ export function interrogable(table, specs, total, depth = 0) {
   // control's `name` and its bookmarked parameter say the same word.
   const key = table.getAttribute?.("data-table") ?? "table";
   const badge = el("span", { class: "badge" }, badgeText(total, total));
+  // Review (#295), `UX-1028`: `filtered` - the text/threshold
+  // population, before `top`'s slice - is what the paging step below
+  // measures its position and bounds against, not `total`, which
+  // disagrees with the page the moment a filter narrows it.
+  let pagerRefresh = null;
   const refresh = () => {
+    // `applyFilters` also writes `state.filtered` - the pre-`top`
+    // population - back onto `state` itself.
     badge.textContent = badgeText(applyFilters(table, state), total);
+    pagerRefresh?.();
   };
 
   // `UX-349`: **filters appear when the table is long enough to need
@@ -864,10 +911,19 @@ export function interrogable(table, specs, total, depth = 0) {
   // UX-673: a preset that cannot shrink the table is apparatus without
   // effect - skip any `n >= total`, and offer no control at all once
   // even the smallest preset fails that test.
+  // `UX-1028`: the step past the "All rows" ceiling - built once, set
+  // here, appended into `tools` below.
+  let pager = null;
   if ((presets.length && total > 10) || opening) {
     const preset = el("select", { class: "top-n", "aria-label": "Rows shown" });
     identify(preset, `top-${key}`);
-    preset.append(el("option", { value: "" }, "All rows"));
+    // `UX-1028` (styleguide §3k): "All rows" mounts the whole table in
+    // one step, so it is offered only under a ceiling the table
+    // states - past it the paging step below is the only way to reach
+    // the rest.
+    if (total <= ALL_ROWS_CEILING) {
+      preset.append(el("option", { value: "" }, "All rows"));
+    }
     for (const column of presets) {
       for (const n of [10, 25]) {
         if (n >= total) continue;
@@ -879,11 +935,86 @@ export function interrogable(table, specs, total, depth = 0) {
       preset.append(el("option", { value: `${TABLE_OPENS_BOUNDED_ABOVE}:` },
                        `First ${TABLE_OPENS_BOUNDED_ABOVE} rows`));
     }
+    // `UX-1028` (styleguide §3k): past `ALL_ROWS_CEILING` the reader
+    // has no "All rows" - the paging step below is the only way to
+    // reach the rest, one bound-sized window at a time. `offset` and
+    // `paging` are declared here, ahead of the preset's own `change`
+    // handler, so choosing a preset can hand the window back in the
+    // *same* listener rather than a second one racing the first's
+    // `refresh` (Review #295: that race is what left "Top 25 by …"
+    // selected while paging showed a plain offset window).
+    let offset = 0;
+    let paging = false;
+    const canPage = total > ALL_ROWS_CEILING;
+    const position = canPage ? el("span", { class: "page-position" }, "") : null;
+    const prev = canPage ? el("button", { type: "button", class: "page-prev",
+                              "aria-label": "previous rows" }, "‹ Prev") : null;
+    const next = canPage ? el("button", { type: "button", class: "page-next",
+                              "aria-label": "next rows" }, "Next ›") : null;
+    // Runs from `refresh` itself, so a filter or threshold narrowing
+    // the population while paging keeps the position and the buttons'
+    // bounds measured against `state.filtered` - the text/threshold
+    // population `applyFilters` just computed - never a stale reading
+    // of the unfiltered `total` (Review #295, `UX-1028`).
+    if (canPage) {
+      pagerRefresh = () => {
+        if (!paging) { position.textContent = ""; return; }
+        const denom = state.filtered ?? total;
+        const lastStart = denom === 0 ? 0
+          : Math.floor((denom - 1) / TABLE_OPENS_BOUNDED_ABOVE)
+            * TABLE_OPENS_BOUNDED_ABOVE;
+        // The filtered population can shrink under the current window
+        // (typing a filter mid-page) - clamp back onto its last real
+        // page rather than claim a range past what is now filtered.
+        if (offset > lastStart) {
+          offset = lastStart;
+          state.top = { n: TABLE_OPENS_BOUNDED_ABOVE, column: null, offset };
+          badge.textContent = badgeText(applyFilters(table, state), total);
+        }
+        const end = Math.min(offset + TABLE_OPENS_BOUNDED_ABOVE, denom);
+        position.textContent = denom === 0 ? "no rows match"
+          : `rows ${offset + 1}-${end} of ${denom.toLocaleString("en-US")}`;
+        prev.disabled = offset <= 0;
+        next.disabled = end >= denom;
+      };
+      const step = () => {
+        paging = true;
+        state.top = { n: TABLE_OPENS_BOUNDED_ABOVE, column: null, offset };
+        // The preset no longer describes what is on the page - paging
+        // replaces its claim rather than leaving it beside a window it
+        // did not choose (Review #295).
+        preset.selectedIndex = -1;
+        refresh();
+      };
+      prev.addEventListener("click", () => {
+        offset = Math.max(0, offset - TABLE_OPENS_BOUNDED_ABOVE);
+        step();
+      });
+      next.addEventListener("click", () => {
+        const denom = state.filtered ?? total;
+        offset = Math.min(offset + TABLE_OPENS_BOUNDED_ABOVE,
+                          Math.max(0, denom - TABLE_OPENS_BOUNDED_ABOVE));
+        step();
+      });
+    }
+
     // `UX-392`: through the same `refresh`, so the preset narrows what
-    // the filter left rather than replacing it.
+    // the filter left rather than replacing it. Choosing any preset
+    // also ends paging and starts back at the front, in this same
+    // pass (Review #295) - so the label and the rows agree the
+    // instant the reader chooses, not one `refresh` later.
     preset.addEventListener("change", () => {
       const [n, column] = preset.value ? preset.value.split(":") : [];
-      state.top = preset.value ? { n: Number(n), column: column || null } : null;
+      // `UX-1028`: an empty *value* reads as "All rows" only when a
+      // real `<option value="">` was chosen (`selectedIndex !== -1`).
+      // Forced to `""` with no such option present - which is what a
+      // stray external write does, not what a reader's own choice ever
+      // produces - `selectedIndex` is `-1`, and that must not read as
+      // "unbounded" the way `state.top = null` would.
+      state.top = preset.value ? { n: Number(n), column: column || null }
+        : preset.selectedIndex === -1 ? (opening?.top ?? null) : null;
+      offset = 0;
+      paging = false;
       refresh();
     });
     // UX-262: a table longer than this opens bounded. Measured at
@@ -898,6 +1029,14 @@ export function interrogable(table, specs, total, depth = 0) {
       refresh();
     }
     state.preset = preset;
+
+    if (canPage) {
+      // Not paged at build time: at rest the table opens on `opening`'s
+      // own bound (Top 25, or the first `TABLE_OPENS_BOUNDED_ABOVE`),
+      // and the paging step only takes over once pressed.
+      prev.disabled = true;
+      pager = el("span", { class: "table-pager" }, prev, position, next);
+    }
   }
 
   // UX-279: the noun, not the verb, and the count rather than a
@@ -1015,7 +1154,7 @@ export function interrogable(table, specs, total, depth = 0) {
   const expand = served() && (nested || total > TABLE_OPENS_BOUNDED_ABOVE)
     ? expandTableControl(table, depth) : null;
   const tools = el("div", { class: "table-tools" }, box, badge,
-                            state.preset ?? null, copyRows, asMarkdown,
+                            state.preset ?? null, pager, copyRows, asMarkdown,
                             expand, shape);
   // The badge and the count are the same claim; refresh both together.
   tools.addEventListener?.("input", label);
@@ -1104,370 +1243,6 @@ export function renderText(name, value) {
                el("span", { class: "muted" }, ` ${text.length} chars`)),
             el("p", { class: "full-text" }, text));
 }
-
-// UX-268: the element-keyed signals are one table, not six.
-//
-// `signals` carries seven maps that scale with the run. Six are the
-// *same element list* seen through different fields - measured on a
-// 44-element run, all six carry the identical 44 keys - and the page
-// rendered them as six separate folds, so a reader wanting "the
-// slowest element with the widest blast radius" had to open two and
-// join them by hand.
-//
-// The seventh is not the same population at all. `wall_clock_share_us` is
-// keyed by **task**:
-//
-//   element-keyed     app.bst
-//   wall_clock_share_us  app.bst|BUILD|BUILD|0
-//   union 88 keys, intersection 0
-//
-// It shares no keys with the other six, and nothing on the page said
-// so. It stays its own table and says what its key is.
-//
-// `UX-344`: **the document says which six.** This file kept its own
-// list of the element-keyed signals - and a note arguing the seventh
-// out of it - because `signals` mixed the element population with
-// tables that were not it. `elements` *is* that population: every map
-// in it is keyed by element uid, and `wall_clock_share_us` is a key of
-// the document beside it, drawn as its own section, saying in its own
-// description that its keys are tasks. `top_blast_radius` is a ranking
-// over the same population, so it is a member and an array - which is
-// why the filter asks for a plain object rather than for an object.
-/**
- * One row per element, one column per element-keyed signal.
- *
- * Returns `null` when the run carries none of them, so a payload
- * without the signals renders exactly as it did.
- */
-export function elementSignalTable(elements, node, join = null,
-                                   joinNode = undefined) {
-  const present = Object.keys(elements ?? {}).filter(
-    (name) => elements[name] && typeof elements[name] === "object"
-              && !Array.isArray(elements[name]));
-  if (present.length < 2) return null;
-  const byElement = new Map();
-  // UX-343: a merged column's unit is declared where the field came
-  // *from*, not under `signals` - `weighted_duration_us` is declared on
-  // `elements.blast_radius`'s value schema and `slack_us` on
-  // `element_join`'s item. Resolving every column against the signals
-  // node alone found neither, so three columns of the report's central
-  // table were rendered from `guessQuantity`'s name-sniff. Found by the
-  // console reader, on a real boot, not by reading the payload.
-  const origin = new Map();
-  for (const name of present) {
-    const signalNode = childNode(node, name);
-    for (const [uid, value] of Object.entries(elements[name])) {
-      const row = byElement.get(uid) ?? { element: uid };
-      // A record-valued signal (`blast_radius`) contributes its own
-      // fields; a scalar one contributes itself under its name.
-      if (value && typeof value === "object" && !Array.isArray(value)) {
-        for (const [field, member] of Object.entries(value)) {
-          if (member === null || typeof member !== "object") {
-            row[field] = member;
-            if (!origin.has(field)) {
-              origin.set(field, childNode(childNode(signalNode, uid), field));
-            }
-          }
-        }
-      } else {
-        row[name] = value;
-        if (!origin.has(name)) origin.set(name, signalNode);
-      }
-      byElement.set(uid, row);
-    }
-  }
-  // UX-338: `element_join` is the same population under a second
-  // heading. `UX-215` published the two-plane join keyed by `element`,
-  // and the page drew it as a table of its own - so every viewer of a
-  // two-plane snapshot has seen all eleven elements twice since then.
-  // `UX-289` had already settled the rule ("one element table, many
-  // presets"); this applies it to the columns `UX-215` added, by
-  // merging them into the row that element already has.
-  //
-  // Only onto rows Plane 1 put in play: the join "never introduces an
-  // element" is `views.js`'s own statement of what it is, and a join
-  // row for an element the schedule does not carry would be a
-  // population this table does not claim to be.
-  const joinedIn = [];
-  for (const row of Array.isArray(join) ? join : []) {
-    const uid = row?.element;
-    const existing = uid && byElement.get(uid);
-    if (!existing) continue;
-    for (const [field, value] of Object.entries(row)) {
-      if (field === "element" || value === null
-          || typeof value === "object") continue;
-      // Plane 1 wins a name collision: this table's other columns are
-      // its own, and a join field that shadowed one would change what
-      // a column means without changing its heading.
-      if (field in existing) continue;
-      existing[field] = value;
-      if (!origin.has(field)) origin.set(field, childNode(joinNode, field));
-      if (!joinedIn.includes(field)) joinedIn.push(field);
-    }
-  }
-
-  const rows = [...byElement.values()];
-  if (!rows.length) return null;
-  const columns = [...new Set(rows.flatMap(Object.keys))]
-    .filter((name) => name !== "element");
-  const hint = {
-    [COLUMNS]: [{ key: "element", title: "element" },
-                ...columns.map((name) => {
-                  // `UX-835`: no blanket "count" here - `mapTable`'s
-                  // record branch above already learned this default
-                  // invents a unit a boolean or categorical join column
-                  // never declared, which is what left it unfiltered
-                  // and unflagged as exempt.
-                  const measure = quantityFor(origin.get(name)
-                                              ?? childNode(node, name), name)
-                    ?? guessQuantity(name);
-                  return { key: name, title: title(name, measure),
-                           quantity: measure };
-                })],
-    [QUESTION]: "Which element should I look at?",
-  };
-  return { rows, hint, merged: present, joined: joinedIn };
-}
-
-/**
- * UX-289: one element table, drawn as the view a reader asked for.
- *
- * The page had bounds and filters and **zero named presets** - measured
- * on the 1,202-element run, no element carried a preset role. So a
- * reader wanting "the critical path" got it as a separate table the
- * payload published separately, and the one table every element is
- * already in had to carry 13 columns because it served every question
- * at once.
- *
- * Each view names its own columns, so the width is a property of the
- * question rather than of the union of all of them. The selector is a
- * `<select>` for the reason `UX-262`'s Top-N is: it is the control the
- * page already teaches, and it round-trips through `UX-211`'s fragment
- * with no new vocabulary.
- *
- * A preset this run cannot support is **not offered** rather than
- * offered empty: "there are no choke points" and "this run does not
- * carry choke points" are different claims, and a view that draws zero
- * rows makes them look alike.
- *
- * `UX-338` extends that from rows to **columns**. `Plane 2 (sandbox)`
- * asks a question only a two-plane run can answer, and on a run with
- * no Plane 2 report every column it names but `element` is absent - so
- * the view rendered as two columns under a heading promising five.
- * Measured on `macro_micro` served without its `plane2.json`, which is
- * how this was found: a control that is present and answers nothing is
- * the dead-button defect `UX-194` removed everywhere else.
- *
- * The preset declares its subject (`requires`), because "which of my
- * columns make me this view" is a question only its author can
- * answer. Inferring it was tried and is wrong: `Plane 2 (sandbox)`
- * also names `element_durations`, which every run carries, so any
- * "some column is present" rule keeps offering it.
- */
-export function presetTable(key, rows, presets, hint, node, payload) {
-  const carried = new Set(rows.flatMap(Object.keys));
-  // Every column the preset declares as its subject, or it is not
-  // offered. A preset with no `requires` is unaffected, which is all of
-  // them but one.
-  const answerable = (preset) =>
-    (preset?.requires ?? []).every((name) => carried.has(name));
-  const usable = (presets ?? [])
-    .filter(answerable)
-    .map((preset) => ({ preset, view: applyPreset(preset, rows, payload) }))
-    .filter((entry) => entry.view);
-  if (usable.length < 2) return null;
-
-  const slot = el("div", { class: "preset-table", "data-presets":
-                           usable.map((e) => e.preset.name).join("|") });
-  const select = el("select", { class: "preset-view",
-                                "data-table": key,
-                                "aria-label": "View" });
-  identify(select, `view-${key}`);
-  for (const { preset, view } of usable) {
-    select.append(el("option", { value: preset.name, title: preset.question ?? null },
-                     `${preset.name} (${view.total})`));
-  }
-  const body = el("div", { class: "preset-body" });
-
-  const draw = (name) => {
-    const entry = usable.find((e) => e.preset.name === name) ?? usable[0];
-    const { preset, view } = entry;
-    // The columns this view shows, in the order it names them - and
-    // only the ones the run actually carries, so a preset naming a
-    // column an older payload lacks degrades to the columns it has
-    // rather than to a wall of empty cells.
-    const present = new Set(rows.flatMap(Object.keys));
-    const columns = preset.columns.filter((column) => present.has(column));
-    const viewHint = {
-      ...hint,
-      [COLUMNS]: (hint[COLUMNS] ?? []).filter(
-        (spec) => columns.includes(typeof spec === "string" ? spec : spec.key)),
-      [QUESTION]: preset.question ?? hint[QUESTION],
-    };
-    const built = buildTable("elements", view.shown, viewHint, node);
-    built.table.setAttribute("data-preset", preset.name);
-    // `UX-366`: **the caption says how big this view is; the badge
-    // says how much of it is shown** - one fact each, and the only
-    // pair that cannot go stale, because the limit moves the
-    // shown-count and this is drawn once. See
-    // `test_all_rows_means_all_rows.py`.
-    body.replaceChildren(
-      el("p", { class: "muted" },
-         preset.question ? `${preset.question} ` : "",
-         view.total >= rows.length
-           ? `all ${rows.length} elements`
-           : `${view.total} of ${rows.length} elements`),
-      built.tools, built.table);
-  };
-  select.addEventListener("change", () => draw(select.value));
-  draw(usable[0].preset.name);
-  // UX-334: the label points at the select rather than floating beside
-  // it - `<label>` with neither `for` nor a nested control is the
-  // second complaint the Issues panel raised on this page.
-  const presetLabel = el("label", { class: "preset-label" }, "View: ");
-  labelFor(presetLabel, select, `view-${key}`);
-  slot.append(el("div", { class: "preset-bar" }, presetLabel, select), body);
-  return { node: slot, select, draw, presets: usable.map((e) => e.preset) };
-}
-
-export function renderPairs(key, object, hint = {}, node = undefined,
-                            payload = undefined, root = undefined) {
-  const direction = hint[DIRECTION];
-  const list = el("dl", { class: "pairs" });
-  // UX-268: the element-keyed signals leave the pair list and become
-  // one table, so they are drawn once rather than six times.
-  const joined = key === "elements"
-    ? elementSignalTable(object, node, payload?.element_join,
-                         childNode(root, "element_join"))
-    : null;
-  const merged = new Set(joined?.merged ?? []);
-  for (const [name, value] of Object.entries(object)) {
-    if (merged.has(name)) continue;
-    // UX-270: the critical path is its own section, not a row inside
-    // this one. It is also the one member that rendered a whole
-    // `<section>` into a `<dd>` - the nesting UX-267 removed
-    // everywhere else.
-    // UX-201: each member resolved against *its own* schema node, not
-    // guessed from its name. `deltas` was hinted at the top level and
-    // still name-sniffed every member inside it.
-    const child = childNode(node, name);
-    // UX-343: asked only of a number. `quantityFor` complains under
-    // `BGA_STRICT_HINTS` when it had to name-sniff, and asking it about
-    // `attribution_hints.idle_us` - a *sentence*, keyed by the metric
-    // it explains - produced eight complaints per boot about units no
-    // number here needs. A guess nothing renders from is noise in the
-    // one channel that is supposed to name real gaps.
-    const kind = typeof value === "number" ? quantityFor(child, name) : null;
-    const described = hintsOf(child).description;
-    let cell;
-    // UX-208: a nested array of objects is a *table*, not a JSON dump.
-    // `critical_path_detail` rendered as a `<pre>` of raw JSON, so
-    // nothing in it was sortable, filterable or one click from
-    // investigation. Same renderer, same declarations, one level down.
-    if (Array.isArray(value) && value.length
-        && value.every((item) => item && typeof item === "object"
-                                 && !Array.isArray(item))) {
-      // `buildTable`, not `renderTable`: a cell must not contain a
-      // `<section>`. This was the last of them (`UX-267`) - measured,
-      // three sections still lived inside `<dd>` after the rest moved.
-      {
-        const built = buildTable(name, value, hintsOf(child), child);
-        cell = el("div", { class: "map-table", "data-bounded": "map" },
-                  built.tools, built.table);
-      }
-    } else if (value !== null && typeof value === "object") {
-      cell = renderStructured(name, value, hintsOf(child), child, 0,
-                              `${key}.${name}`);
-    } else if (typeof value === "number" && direction) {
-      // A signed change, coloured by what the schema says "better" is,
-      // without this file knowing which metric it is looking at.
-      const better = direction === "lower_is_better" ? value < 0 : value > 0;
-      const way = value === 0 ? "" : better ? "better" : "worse";
-      // `UX-305` (styleguide §4.4): the *value* stays ink and the tone
-      // moves to a marker beside it. Colouring the number was the
-      // rule's own example of what not to do, and the marker is also
-      // §4.3's non-colour channel - `UX-212`'s triangles, which is the
-      // vocabulary the trend and the history already use.
-      cell = el("span", {
-        class: `num delta ${way}`, "data-raw": String(value),
-      }, way ? el("span", { class: "delta-mark", "data-direction": way,
-                            "aria-hidden": "true" },
-                  better ? "\u25be" : "\u25b4") : null,
-         `${value > 0 ? "+" : ""}${quantity(value, kind)}`);
-    } else if (typeof value === "number") {
-      cell = el("span", { class: "num", "data-raw": String(value) },
-                quantity(value, kind));
-    } else if (typeof value === "string") {
-      cell = renderText(name, value);
-    } else {
-      cell = el("span", { "data-raw": value === null ? "" : String(value) },
-                value === null ? "—" : String(value));
-    }
-    // UX-201: the schema's own `description` is the sentence - the "why
-    // does this number matter" answer sourced from the contract, and
-    // thence the spec, rather than from prose written beside the
-    // renderer where it would drift.
-    //
-    // UX-317 (§2b.3): and it has a door a reader can see.
-    // `UX-391`: a task uid is an identity, not a label - the map says
-    // which it is, `data-key` keeps the composite, and the reader sees
-    // the element with a muted qualifier.
-    const shown = keyAsShown(name, hint);
-    const { term, describe } = describedTerm(
-      shown ? shown.element : name, described, {}, hintsOf(child)[INLINE],
-      kind, shown ? true : dataKeyed(node, name));
-    if (shown) {
-      term.setAttribute?.("data-key", name);
-      if (shown.qualifier) term.append(
-        el("span", { class: "task-qualifier muted" }, ` ${shown.qualifier}`));
-    }
-    // `UX-390`: and the run's own advice for this bucket, on its row,
-    // beside the schema's sentence rather than instead of it.
-    const advice = adviceFor(payload, hint, name);
-    list.append(term, el("dd", {}, cell, describe,
-                         advice ? el("p", { class: "run-advice" }, advice)
-                                : null));
-  }
-  const parts = [sectionHead(key, hint)];
-  if (joined) {
-    // One row per element, before the scalars - it is the thing a
-    // reader came for, and `UX-261` put the same argument to the
-    // decision block.
-    //
-    // UX-289: as the *view* the reader asked for, where the schema
-    // declares views over it. The unfiltered union is still one of
-    // them ("All elements"), so nothing became unreachable - it stopped
-    // being the only thing on offer.
-    const views = presetTable("elements", joined.rows, hint[PRESETS],
-                              joined.hint, node, payload);
-    // `UX-829` (styleguide §1b): `fan_in[uid].direct` is a joined field
-    // this table deliberately does not draw a column for - a capped
-    // name list is a card fact, not a cell (§3c) - so the lead names
-    // where it went, the same clause `DRAWN_ELSEWHERE` states for a
-    // whole section.
-    const leadText = `One row per element, joined from `
-      + `${joined.merged.length} signals. Each element's direct `
-      + `dependencies are listed on its own card, not here.`;
-    if (views) {
-      parts.push(el("div", { class: "map-table", "data-bounded": "map",
-                             "data-joined": joined.merged.join(",") },
-                    el("p", { class: "muted" }, leadText),
-                    views.node));
-    } else {
-      const { table, tools } = buildTable("elements", joined.rows,
-                                          joined.hint, node);
-      parts.push(el("div", { class: "map-table", "data-bounded": "map",
-                             "data-joined": joined.merged.join(",") },
-                    el("p", { class: "muted" }, leadText),
-                    tools, table));
-    }
-  }
-  // `UX-419`: a map grows with the payload too, and had no bound at all.
-  parts.push(list, boundPairs(list, TABLE_OPENS_BOUNDED_ABOVE));
-  return el("section", { "data-section": key, "data-rail": heading(key, hint).rail },
-                        ...parts);
-}
-
 
 // UX-262: above this many rows a table opens on its top 25 rather than
 // on everything. 40 is chosen against the shapes that occur: the

@@ -538,7 +538,12 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 #
 # The two land together in round 120: 329,000 leaves the same order
 # of headroom over their summed 327,231 B.
-PAGE_BUDGET_B = 329_000
+#
+# The UI batch (`UX-921`, `UX-1015`..`UX-1036`) moved this by
+# 10,841 B, all source: measured 339,237 B. Its review (#295) and
+# `UX-1037` added 3,006 B, all source: measured 342,243 B. 344,000
+# keeps the same order of headroom.
+PAGE_BUDGET_B = 344_000
 
 #: `UX-444`: the claim, stated once. **The run's data is at least twice
 #: the page a reader is permitted to download.**
@@ -944,7 +949,12 @@ COMMITTED_EXPORTS = [
     # contract - the `build_class` block's schema nodes, which golden
     # does not declare and so carries only as prose. 480,606 B measured
     # over that merge; the bound holds unmoved.
-    ("golden", GOLDEN, 482_000),                       #  480,606 B
+    # The UI batch (`UX-921`, `UX-1015`..`UX-1036`) moved this one
+    # 10,829 B, all source. `UX-1031` added 13,745 B of **contract** -
+    # `bga:grows` and the containers it declares; golden carries none of
+    # it as data. 505,154 B measured. Review (#295) and `UX-1037`: +2,919
+    # B, all source. 508,073 B measured; 510,000 keeps headroom.
+    ("golden", GOLDEN, 510_000),                       #  508,073 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -1130,7 +1140,11 @@ COMMITTED_EXPORTS = [
     # contract golden's note carries - this run declares no build class
     # either, so none of it is payload. 540,959 B measured over that
     # merge; the bound holds unmoved.
-    ("macro_micro", MACRO_MICRO, 542_000),             #  540,959 B
+    # The UI batch (`UX-921`, `UX-1015`..`UX-1036`) moved this one
+    # 10,829 B, all source; `UX-1031`'s 13,745 B of contract as golden's
+    # note above. 565,462 B measured. Review (#295) and `UX-1037`:
+    # +2,919 B, all source. 568,381 B measured; 570,500 keeps headroom.
+    ("macro_micro", MACRO_MICRO, 570_500),             #  568,381 B
 ]
 
 

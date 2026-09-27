@@ -43,6 +43,7 @@ from typing import Optional
 
 from . import buildclass, hostinfo, run_store, schemas
 from .compare import MIN_BASELINE_RUNS
+from .plural import plural
 
 # The class a run belongs to when its capture predates `UX-186`'s
 # manifest. Named rather than dropped: "we do not know which machine"
@@ -260,7 +261,7 @@ def _class_aggregate(label: str, manifest: Optional[dict],
             "have": len(rows),
             "need": MIN_BASELINE_RUNS,
             "sentence": (
-                f"{len(rows)} finished run(s) on {label}: "
+                f"{plural(len(rows), 'finished run')} on {label}: "
                 f"{MIN_BASELINE_RUNS} are needed before a distribution "
                 f"means anything, so none is published for this class."),
         }
@@ -521,8 +522,7 @@ def render(document: dict) -> list[str]:
     from .run_store import human_bytes
 
     lines = [f"Store: {document.get('project')}",
-             f"  {document['measured']} measured run(s) of "
-             f"{document['snapshots']} snapshot(s)"]
+             f"  {plural(document['measured'], 'measured run')} of {plural(document['snapshots'], 'snapshot')}"]
     # UX-300: what it weighs, on the second line, because a store that
     # has quietly reached tens of gigabytes is a fact about the machine
     # before it is a fact about any build.
@@ -536,7 +536,7 @@ def render(document: dict) -> list[str]:
             lines.append(f"    {count} x {reason}")
     for entry in document.get("host_classes") or []:
         lines.append("")
-        lines.append(f"  {entry['host_class']} - {entry['runs']} run(s)")
+        lines.append(f"  {entry['host_class']} - {plural(entry['runs'], 'run')}")
         if entry.get("shortfall"):
             lines.append(f"    {entry['shortfall']['sentence']}")
             continue

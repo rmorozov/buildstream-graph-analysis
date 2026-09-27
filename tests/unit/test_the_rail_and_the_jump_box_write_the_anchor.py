@@ -75,7 +75,7 @@ _JUMP = _WAIT + """(async () => {
   const search = async (mode) => {
     location.hash = "";
     window.scrollTo(0, 0);
-    setter.call(box, "e");
+    setter.call(box, "supports");  // UX-1019: "What this run supports" has no "e"
     box.dispatchEvent(new Event("input", { bubbles: true }));
     await waitFor(() => document.querySelector(
       '.jump-hits button[data-jump="evidence"]'));

@@ -37,6 +37,7 @@ from .ingest.loader import load_all
 from .ingest.models import STRUCTURAL_ELEMENT_KINDS, AnalysisResult, Graph, RunContext, TaskKind, Trace
 from .normalize.timestamps import normalize_trace, spans_below_resolution
 from .occupancy.sweep import compute_occupancy_stats, compute_task_horizon
+from .plural import plural
 from .replay.scheduler import ReplayScheduler
 from .structural import StructuralAnalyzer
 from .structural.models import deferral_risk_for
@@ -1353,10 +1354,9 @@ class BuildEfficiencyAnalyzer:
             "elements": elements,
             "tasks": sorted(erased),
             "note": (
-                f"{len(elements)} element(s) ran for less than half this "
-                f"capture's {epsilon_us} us resolution, so every duration and "
-                f"share computed for them is published as zero. They are "
-                f"unmeasurable at this epsilon, not instantaneous."
+                f"{plural(len(elements), 'element')} ran for less than half this capture's "
+                f"{epsilon_us} us resolution, so every duration and share computed for them "
+                f"is published as zero. They are unmeasurable at this epsilon, not instantaneous."
             ),
         }
 

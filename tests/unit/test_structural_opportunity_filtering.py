@@ -133,6 +133,6 @@ def test_report_states_what_was_omitted_and_why():
         }
 
     out = format_text(_Result(), section="graph")
-    assert "1 structural element(s) omitted" in out
+    assert "structural 1 element omitted" in out
     assert "all.bst [stack]" in out
     assert "no build commands to speed up" in out

@@ -16,7 +16,8 @@ entries for sections headed "How much of the run did each task hold?",
 "What did the whole build cost in CPU?" and "How much of this run came
 from the second plane?".
 
-The rail reads the destination's own `h2` now, so there is one label
+The rail reads the destination's own heading now (`h2` for a chapter,
+`h3` for a section - UX-1018 promoted it), so there is one label
 authority and a question added to a heading reaches the rail without
 anyone remembering to. This file is what holds them together.
 
@@ -59,7 +60,7 @@ needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
 #: it points at calls itself.
 #:
 #: The heading's **own** text. `sectionHead` writes `heading().label`
-#: into the `h2` as text and everything else in there is an element -
+#: into the section's own heading as text and everything else in there is an element -
 #: the collapse control, the JSON toggle (`UX-825` moved the payload
 #: key off the heading and onto the toggle's `title`) - so the text
 #: nodes are the label and nothing else is.
@@ -71,7 +72,7 @@ _LABELS = """
   return [...document.querySelectorAll("nav.toc [data-toc]")].map((link) => {
     const key = link.getAttribute("data-toc");
     const section = document.querySelector(`[data-section="${key}"]`);
-    const head = section && section.querySelector("h2");
+    const head = section && section.querySelector("h2, h3");
     return {
       key,
       rail: (link.textContent || "").trim(),
@@ -156,7 +157,7 @@ _PALETTE = """
   const out = [];
   for (const section of document.querySelectorAll("section[data-section]")) {
     const key = section.getAttribute("data-section");
-    const head = section.querySelector("h2");
+    const head = section.querySelector("h2, h3");
     const heading = head && head.parentElement === section ? own(head) : null;
     if (!heading) { out.push({ key, heading: null, palette: null }); continue; }
     box.value = heading;

@@ -39,6 +39,7 @@ from .cache_effectiveness import (
     TRANSFER_SHARE_NOTABLE,
 )
 from .ingest.models import AnalysisResult
+from .plural import plural
 from .units import GIB, US_PER_S, human_bytes
 
 # Severity is about what it means for the reader, not about size:
@@ -442,7 +443,7 @@ def _cache_findings(result: AnalysisResult) -> list[dict]:
     if (result.confidence or {}).get('run_mode') == 'full':
         return [_finding(
             'cache-hit-ratio', SEVERITY_INFO,
-            f"Caches off: all {built} element(s) built from source, none reused - "
+            f"Caches off: all {built} element{'' if built == 1 else 's'} built from source, none reused - "
             f"this is the nightly scenario, so a 0% hit ratio is the intent "
             f"rather than a finding",
             detail=detail,
@@ -674,7 +675,7 @@ def _run_blocking_findings(result: AnalysisResult) -> list[dict]:
         suspended = build_failed.get('suspended')
         if failed:
             headline = (
-                f"THIS BUILD FAILED: {build_failed.get('failed_count')} element(s) "
+                f"THIS BUILD FAILED: {plural(build_failed.get('failed_count'), 'element')} "
                 f"ended in FAILURE ({shown}) - every figure below describes a build "
                 f"that did not complete, and the elements that failed contributed "
                 f"only the time they ran before failing")
@@ -709,7 +710,7 @@ def _run_blocking_findings(result: AnalysisResult) -> list[dict]:
         failed_count = confidence.get('failed_task_count') or 0
         findings.append(_finding(
             'failed-task-time', SEVERITY_HIGH,
-            f"{failed_count} failed task attempt(s) contributed "
+            f"failed {plural(failed_count, 'task attempt')} contributed "
             f"{failed_us / 1e6:.2f}s of EXECUTION_ON_CHAIN - real time the build "
             "spent producing nothing. Counted as execution, not as waste, because "
             "reclassifying it would move the attribution identity (I4)",
@@ -749,9 +750,7 @@ def _run_context_findings(result: AnalysisResult) -> list[dict]:
     if primary is not None:
         band = confidence_band(primary)
         violations = result.violations or []
-        suffix = (
-            f" - see {len(violations)} violation(s) below" if violations else ""
-        )
+        suffix = f" - see {plural(len(violations), 'violation')} below" if violations else ""
         findings.append(_finding(
             'confidence', SEVERITY_INFO if band == 'high' else SEVERITY_MEDIUM,
             f"Confidence: {primary:.2f} ({band}){suffix}",
@@ -830,8 +829,8 @@ def _time_concentration_findings(
 
     findings = [_finding(
         'time-concentration', SEVERITY_HIGH,
-        f"Where the time is: {len(top)} element(s) are {share * 100:.1f}% of the "
-        f"{path_us / 1e6:.1f}s critical path{verdict}",
+        f"Where the time is: {len(top)} element{'' if len(top) == 1 else 's'} are "
+        f"{share * 100:.1f}% of the {path_us / 1e6:.1f}s critical path{verdict}",
         detail=detail,
         elements=[d['element_uid'] for d in top],
         evidence={'path_us': path_us, 'share_of_path': share,
@@ -1187,8 +1186,8 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
         # caveat removed.
         verdict = (
             f"{binding} binds first, at {recommended}{clamp_note} - nothing "
-            f"measured here rules out {recommended - builders} more "
-            f"builder(s), which is a hypothesis to time rather than a "
+            f"measured here rules out {plural(recommended - builders, 'more builder')}, "
+            f"which is a hypothesis to time rather than a "
             f"setting to apply"
         )
         severity = SEVERITY_MEDIUM
@@ -1242,7 +1241,7 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
 
     return [_finding(
         'capacity-recommendation', severity,
-        f"Capacity: {setting} on {recommendation['host_cpu_count']} core(s): {verdict}",
+        f"Capacity: {setting} on {(n := recommendation['host_cpu_count'])} core{'' if n == 1 else 's'}: {verdict}",
         detail=detail,
         elements=pinned,
         evidence={
@@ -1289,7 +1288,7 @@ def _swap_observed_finding(result: AnalysisResult) -> list[dict]:
     building = f", while building {', '.join(elements)}" if elements else ""
     return [_finding(
         'swap-observed', SEVERITY_HIGH,
-        f"Swap: {len(rows)} window(s) wrote {total_pages} page(s) to "
+        f"Swap: {plural(len(rows), 'window')} wrote {plural(total_pages, 'page')} to "
         f"swap, {start / 1e6:.1f}s-{end / 1e6:.1f}s into the build"
         f"{building}",
         elements=elements,

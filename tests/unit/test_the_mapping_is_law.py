@@ -168,17 +168,34 @@ if (toggles.length) {
            restored: before === after,
            grew: opened.length > before.length,
            parses: (() => {
+             // `UX-1030`: past its own char cap the
+             // door holds a *prefix*, not the whole value, so "parses"
+             // is read off the `<pre>` alone (not the caption beside
+             // it) and a capped prefix is judged against the published
+             // value rather than against `JSON.parse`.
              button.click();
-             const shown = (function findPre(n) {
+             const jbox = (function findBox(n) {
                for (const c of n.children ?? []) {
-                 if (c.attrs?.["data-raw-json"]) return c.textContent;
-                 const hit = findPre(c);
+                 if (c.attrs?.["data-raw-json"]) return c;
+                 const hit = findBox(c);
                  if (hit) return hit;
                }
                return null;
              })(section);
+             const pre = (jbox?.children ?? []).find(
+               (c) => c.tagName === "pre");
+             const shown = pre ? pre.textContent : null;
+             const cap = 20_000;
              let ok = false;
-             try { JSON.parse(shown); ok = true; } catch (e) { ok = false; }
+             if (shown && shown.length < cap) {
+               try { JSON.parse(shown); ok = true; } catch (e) { ok = false; }
+             } else if (shown && shown.length === cap) {
+               try {
+                 const value = JSON.parse(
+                   blocks.report)[button.attrs["data-json-toggle"]];
+                 ok = JSON.stringify(value, null, 2).startsWith(shown);
+               } catch (e) { ok = false; }
+             }
              button.click();
              return ok;
            })(),
@@ -331,7 +348,9 @@ class TestTheToggleRoundTrips:
     @pytest.mark.parametrize("page", ["golden", "macro_micro"])
     def test_what_it_shows_parses(self, booted, page):
         """It is the issue-pasting affordance: what it shows must be
-        JSON that parses, not a rendering of one."""
+        JSON that parses, not a rendering of one - or, past `UX-1030`'s
+        char cap, a prefix of the published value rather than a
+        corrupted one."""
         assert booted[page]["trip"]["parses"]
 
 

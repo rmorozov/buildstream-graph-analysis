@@ -531,8 +531,8 @@ class TestTheRealPagesDrawThem:
                 view.export(str(target), str(page))
                 html = page.read_text(encoding="utf-8")
                 module = tmp / "inline.mjs"
-                module.write_text(re.search(
-                    r'<script type="module">(.*?)</script>', html, re.S).group(1),
+                module.write_text(
+                    view.inflated_module(html),
                     encoding="utf-8")
                 probe = tmp / "probe.mjs"
                 probe.write_text(

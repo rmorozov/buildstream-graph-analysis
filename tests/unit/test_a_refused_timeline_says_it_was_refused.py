@@ -88,11 +88,13 @@ def _probe_source():
 
 def _boot(page):
     """Boot the exported page and return its questions lead."""
+    from tools import bga_view as view
+
     tmp = pathlib.Path(tempfile.mkdtemp())
     html = pathlib.Path(page).read_text(encoding="utf-8")
     module = tmp / "inline.mjs"
     module.write_text(
-        re.search(r'<script type="module">(.*?)</script>', html, re.S).group(1),
+        view.inflated_module(html),
         encoding="utf-8")
     probe = tmp / "probe.mjs"
     probe.write_text(_probe_source(), encoding="utf-8")

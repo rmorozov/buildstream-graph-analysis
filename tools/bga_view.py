@@ -724,6 +724,11 @@ def _declared_schemas(documents: dict[str, dict], known) -> set:
 # ceiling on the *file*, not an aspiration: past it a mail client
 # starts refusing the attachment, which is the whole use.
 EXPORT_BUDGET_B = 8 * 1024 * 1024
+#: `UX-1052`: the page half of an export - the file less its data blocks,
+#: so the stylesheet, `index.html`, the gzipped viewer module and its
+#: loader. The procedure and every earlier value are
+#: `test_the_report_you_can_attach.py`'s note on this name.
+PAGE_BUDGET_B = 150_000
 # The trace is the one part that can be dropped without losing the
 # report, so it is the one part with its own ceiling.
 #
@@ -879,6 +884,10 @@ CEILINGS = (
      "`--only-element` narrow what is drawn rather than what is "
      "carried, and `--only-element` is the one an export cannot pick "
      "for you"),
+    ("PAGE_BUDGET_B", "bytes",
+     "nothing - it bounds the viewer this tool writes, never your run. "
+     "`bga view --export` prints the page and data halves apart, and a "
+     "release is held to it before it ships"),
 )
 
 
@@ -971,6 +980,60 @@ def _inline_module(name: str) -> str:
     return "\n".join(
         re.sub(r"^export\s+(?=(function|const|let|class|async)\b)", "", line)
         for line in _uncommented(text))
+
+
+#: `UX-1052`: the export's viewer module travels gzipped, like a large
+#: payload, and this inflates it and imports it from a `blob:` URL - so
+#: the code the browser runs is `_viewer_module()` byte for byte, and a
+#: stack trace's line is that text's line.
+MODULE_BLOCK_ID = "bga-module-gz"
+_MODULE_LOADER = """\
+const report = document.getElementById("report");
+if (typeof DecompressionStream !== "function") {
+  report.textContent = "This report needs a browser that can inflate gzip " +
+    "(DecompressionStream) to start its viewer, and this one cannot.";
+  report.removeAttribute("aria-busy");
+} else {
+  const packed = document.getElementById("@ID@").textContent;
+  const bytes = Uint8Array.from(atob(packed), (c) => c.charCodeAt(0));
+  const code = await new Response(new Response(bytes).body
+    .pipeThrough(new DecompressionStream("gzip"))).text();
+  const url = URL.createObjectURL(new Blob([code], { type: "text/javascript" }));
+  try {
+    await import(url);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}""".replace("@ID@", MODULE_BLOCK_ID)
+
+
+def _viewer_module() -> str:
+    """Every viewer module, inlined and concatenated in import order."""
+    return "\n".join(_inline_module(name) for name in _module_order())
+
+
+def _module_blocks(script: str) -> str:
+    """The gzipped module and the loader that runs it.
+
+    `application/gzip`, not the data blocks' `application/octet-stream`:
+    the module is page, and every page/data split reads that type.
+    `mtime=0` so one tree exports one page.
+    """
+    packed = base64.b64encode(gzip.compress(
+        script.encode("utf-8"), 9, mtime=0)).decode()
+    return (f'<script type="application/gzip" id="{MODULE_BLOCK_ID}">'
+            f'{packed}</script>\n'
+            f'<script type="module">\n{_MODULE_LOADER}\n</script>')
+
+
+def inflated_module(page: str) -> str:
+    """The viewer module an exported `page` runs, inflated - its source."""
+    found = re.search(
+        rf'<script type="application/gzip" id="{MODULE_BLOCK_ID}">'
+        r'([^<]*)</script>', page)
+    if found is None:
+        raise ValueError(f"no {MODULE_BLOCK_ID} block: not an export's page")
+    return gzip.decompress(base64.b64decode(found.group(1))).decode("utf-8")
 
 
 def _uncommented(text: str):
@@ -1324,7 +1387,7 @@ def export(run: str, path: str, with_trace: bool = True,
         page = handle.read()
     with open(os.path.join(ASSET_DIR, "style.css"), encoding="utf-8") as handle:
         style = _uncommented_css(handle.read())
-    script = "\n".join(_inline_module(name) for name in _module_order())
+    script = _viewer_module()
 
     blocks = []
     for name, document in documents.items():
@@ -1351,8 +1414,7 @@ def export(run: str, path: str, with_trace: bool = True,
     page = page.replace('<link rel="stylesheet" href="style.css">',
                         f"<style>\n{style}\n</style>")
     page = page.replace('<script type="module" src="app.js"></script>',
-                        "\n".join(blocks) +
-                        f'\n<script type="module">\n{script}\n</script>')
+                        "\n".join(blocks) + "\n" + _module_blocks(script))
     # Nothing may remain that would reach the network from a file:// page.
     page = page.replace('<a href="report.json">report.json</a> ·\n     '
                         '<a href="schemas.json">schemas.json</a>',
@@ -1364,7 +1426,10 @@ def export(run: str, path: str, with_trace: bool = True,
         handle.write(page)
 
     size = os.path.getsize(path)
+    # `UX-1052`: the two halves apart - the page is bounded, the data scales.
+    data = sum(len(block.encode("utf-8")) for block in blocks)
     return {"path": os.path.abspath(path), "bytes": size,
+            "page_bytes": size - data, "data_bytes": data,
             "has_timeline": trace is not None, "omitted": omitted,
             "over_budget": size > EXPORT_BUDGET_B}
 
@@ -1919,7 +1984,9 @@ def main(argv: Optional[list[str]] = None) -> int:
             print(f"Error: {error}", file=sys.stderr)
             return 2
         size = written["bytes"]
-        print(f"Wrote {written['path']} ({size / 1024:.0f} KiB). Open it with "
+        print(f"Wrote {written['path']} ({size / 1024:.0f} KiB: page "
+              f"{written['page_bytes'] / 1024:.0f} KiB, data "
+              f"{written['data_bytes'] / 1024:.0f} KiB). Open it with "
               f"a browser - it needs no server and no network.",
               file=sys.stderr)
         if written["omitted"]:

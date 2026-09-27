@@ -173,7 +173,7 @@ def _boot(run_dir, tmp):
     html = page.read_text(encoding="utf-8")
     module = tmp / "inline.mjs"
     module.write_text(
-        re.search(r'<script type="module">(.*?)</script>', html, re.S).group(1),
+        view.inflated_module(html),
         encoding="utf-8")
     probe = tmp / "probe.mjs"
     probe.write_text(_probe_source().split("const report =", 1)[0] + _TAIL,

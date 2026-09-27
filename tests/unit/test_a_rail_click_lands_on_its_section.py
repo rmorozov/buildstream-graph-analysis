@@ -254,15 +254,17 @@ class TestARailClickLandsUnderTheHeader:
 
     def test_the_split_is_the_one_measured(self, landings):
         """Pasted, so the escape cannot quietly grow. 61 folded section
-        links on `macro_micro`: 55 land under the header, and the 6 in
+        links on `macro_micro`: 56 land under the header, and the 5 in
         the identity block at the foot of the page are where the
-        document ends."""
+        document ends. `UX-1031` described `targets` and `contracts`,
+        and the `?` door each drew made the foot 51px taller: 55/6 ->
+        56/5, `run_instance` landing at 60 with 30px left below it."""
         under = [row for row in landings if row["fromEnd"] != 0]
         at_end = [row for row in landings if row["fromEnd"] == 0]
-        assert (len(landings), len(under), len(at_end)) == (61, 55, 6)
+        assert (len(landings), len(under), len(at_end)) == (61, 56, 5)
         assert sorted(row["id"] for row in at_end) == [
             "cpu_time", "document_shape", "peak_memory", "producer",
-            "run_instance", "utilization_envelope"]
+            "utilization_envelope"]
 
     #: `scroll-margin-top` is `--head + .5rem`. `UX-828` shrank the
     #: header (the path and the version line left it) and `--head` with

@@ -2,7 +2,7 @@
 // fetch, and nothing else - that is the argument for driving a browser
 // directly rather than adding Playwright.
 //
-//   node cdp.mjs <port> <url> <width> <height> [--observe] [--coarse] [--media=print]  < expression
+//   node cdp.mjs <port> <url> <width> <height> [--observe] [--coarse] [--media=print] [--scheme=dark]  < expression
 //
 // `--coarse` (`UX-1022`): touch emulation plus `Emulation.setEmulatedMedia`
 // forcing `pointer: coarse`/`hover: none`, so `@media (pointer: coarse)`
@@ -12,6 +12,10 @@
 // `--media=<name>` (`UX-1015`): `Emulation.setEmulatedMedia({media: name})`,
 // the actual media-type switch a browser makes for a real print preview
 // - not a proxy read of `@media print` in the stylesheet text.
+//
+// `--scheme=<light|dark>` (`UX-1051`): the same call's `features`, forcing
+// `prefers-color-scheme` the way a real OS setting would - not a proxy
+// read of the `:root` override in the stylesheet text.
 //
 // Prints the JSON value the expression evaluated to. With `--observe`,
 // prints `{value, console, csp, issues}` instead: everything the
@@ -43,6 +47,8 @@ const journeying = process.argv.includes("--journey");
 const coarse = process.argv.includes("--coarse");
 const mediaArg = process.argv.find((a) => a.startsWith("--media="));
 const media = mediaArg ? mediaArg.slice("--media=".length) : null;
+const schemeArg = process.argv.find((a) => a.startsWith("--scheme="));
+const scheme = schemeArg ? schemeArg.slice("--scheme=".length) : null;
 
 let expression = "";
 for await (const chunk of process.stdin) expression += chunk;
@@ -153,14 +159,18 @@ await send("Emulation.setDeviceMetricsOverride", {
 // rather than by an extra "click the page first" step, which would
 // itself move focus onto whatever sits under the click.
 if (journeying) await send("Emulation.setFocusEmulationEnabled", { enabled: true });
-if (coarse) {
-  await send("Emulation.setTouchEmulationEnabled", { enabled: true });
-  await send("Emulation.setEmulatedMedia", {
-    features: [{ name: "pointer", value: "coarse" },
-               { name: "hover", value: "none" }],
-  });
+if (coarse) await send("Emulation.setTouchEmulationEnabled", { enabled: true });
+// One call: CDP replaces the whole `features`/`media` state each time,
+// so `--coarse` and `--scheme=` sent separately would each discard the
+// other's emulation instead of combining.
+const features = [];
+if (coarse) features.push({ name: "pointer", value: "coarse" },
+                           { name: "hover", value: "none" });
+if (scheme) features.push({ name: "prefers-color-scheme", value: scheme });
+if (features.length || media) {
+  await send("Emulation.setEmulatedMedia",
+             { ...(media ? { media } : {}), features });
 }
-if (media) await send("Emulation.setEmulatedMedia", { media });
 // The replay drains here, discarded, and the gate opens on the
 // navigation this run is about.
 if (observing) await new Promise((resolve) => setTimeout(resolve, 300));

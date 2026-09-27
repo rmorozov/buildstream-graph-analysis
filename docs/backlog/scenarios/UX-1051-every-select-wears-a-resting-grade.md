@@ -43,4 +43,21 @@ the new rule, and `select.preset-view` reds.
 
 ## Outcome
 
-Not started.
+**Gap measured** (this file's Motivation, `select.preset-view` on the
+mutated tree, `BGA_CHROME=... PYTHONPATH=$PWD python3 -m pytest -q
+tests/unit/test_every_control_has_a_resting_appearance.py`, `golden`
+export, light scheme): `('rgb(239, 239, 239)', 'solid', '0px')` - the
+UA combo box, not `.top-n`'s `('rgb(250, 250, 250)', 'solid', '3px')`.
+
+**Close measured** (same command, on the fix): 14 passed, light and
+dark, `golden` and `macro_micro`; `select.preset-view` and
+`select.top-n#bga-reader` both read `('rgb(250, 250, 250)', 'solid',
+'3px')` light, `('rgb(30, 30, 30)', 'solid', '3px')` dark.
+
+**Mutation table**
+
+| mutation | reddened | count |
+|---|---|---|
+| removed the new `select, input[type="text"], input[type="search"]` rule | `test_every_control_is_one_of_the_declared_looks`, `test_the_preset_view_wears_the_form_control_look`, `test_the_reader_and_view_selects_match` | 3 of 14, `select.preset-view` at `('rgb(239, 239, 239)', 'solid', '0px')` |
+
+Reverted from the pre-mutation copy; the same 14 tests pass again.

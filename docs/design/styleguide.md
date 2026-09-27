@@ -1229,7 +1229,7 @@ default. Counted over the booted export at 1440x900:
 that otherwise runs on a declared token palette. That is not a matter of
 taste: it is a control no rule in this repository has ever described.
 
-**The five grades**, keyed on the part of the appearance that carries
+**The six grades**, keyed on the part of the appearance that carries
 them — background, border style, radius. A control is one of these or
 it is a defect, and
 `tests/unit/test_every_control_has_a_resting_appearance.py` reads them
@@ -1242,6 +1242,7 @@ out of a real browser rather than out of this file.
 | **reveal** | transparent, **dashed**, 3px | shows more of what is already here rather than acting: `fold-more`, `path-more` |
 | **door** | transparent, solid, **50%** | `UX-317`'s circular `?` |
 | **primary** | `--accent-mark`, solid, 3px | at most one per chapter: the first runnable next step's copy (§6e.5, `UX-1027`) |
+| **form-control** | `--panel`, solid, 3px | every `select` and text `input` at rest — the query builder, the view picker, the run picker (`UX-1051`) |
 
 `UX-436` asked for three. There were four, because **reveal** is a real
 distinction with exactly two members that now match each other, and

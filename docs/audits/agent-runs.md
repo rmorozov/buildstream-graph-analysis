@@ -433,6 +433,9 @@ pairing for every merged row from round 103 on.
 | 142 | verifier | sonnet | verify UX-1036 UX-921 | 35k | 30 | 6.1 m | 2 PASS | whole-tree git status noisy under seven concurrent verifiers |
 | 142 | verifier | sonnet | verify UX-1020 | 46k | 40 | 7.1 m | PASS; 2 of 4 mutations live, 2 code-reasoned | a shared scratchpad backup name collided across verifiers |
 | 142 | verifier | sonnet | verify UX-1031 UX-1023 | 74k | 78 | 21.6 m | 2 PASS; the 40-60rem band for .wf-row is unexercised | load 23.7 on 4 cores made a browser budget flake once |
+| 142 | general-purpose | opus | close round 142: 23 row moves, ledger, round document | 130k | 73 | 11.5 m | closed; UX-1038 and a coverage line filed | the selector max and the unpaired verifier rule were red before it started |
+| 142 | general-purpose | opus | the final gate's three reds | 92k | 37 | 18.8 m | fixed in a93db0cd 50f775db 2e71479c | an alias planter matched decision.js's import line word for word |
+| 142 | general-purpose | opus | review 28 over round 142's documents | 79k | 34 | 9.2 m | 5 mismatches fixed, 2 coverage lines filed | a rebased commit's old hash stayed cited in two records |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -445,7 +448,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the four hundred and sixteen rows already say: a researcher that reads a document
+What the four hundred and nineteen rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

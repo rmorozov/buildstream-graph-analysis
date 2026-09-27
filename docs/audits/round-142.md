@@ -68,6 +68,9 @@ more tracks met (`UX-1023`, the header guard).
 | verifier | sonnet | verify UX-1036 UX-921 | 35k | 30 | 6.1 m | whole-tree git status noisy under seven concurrent verifiers |
 | verifier | sonnet | verify UX-1020 | 46k | 40 | 7.1 m | a shared scratchpad backup name collided across verifiers |
 | verifier | sonnet | verify UX-1031 UX-1023 | 74k | 78 | 21.6 m | load 23.7 on 4 cores made a browser budget flake once |
+| general-purpose | opus | close round 142: 23 row moves, ledger, round document | 130k | 73 | 11.5 m | the selector max and the unpaired verifier rule were red before it started |
+| general-purpose | opus | the final gate's three reds | 92k | 37 | 18.8 m | an alias planter matched decision.js's import line word for word |
+| general-purpose | opus | review 28 over round 142's documents | 79k | 34 | 9.2 m | a rebased commit's old hash stayed cited in two records |
 
 Seven verifiers read the nine tracks after the close, in one shared
 checkout: 22 rows passed; `UX-1018`'s named mutation left its outline

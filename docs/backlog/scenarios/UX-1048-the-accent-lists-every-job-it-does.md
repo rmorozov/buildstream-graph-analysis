@@ -66,4 +66,43 @@ an undeclared SVG line an accent-mark stroke, and it reds.
 
 ## Outcome
 
-Not started.
+**The gap measured** - the guard's own parsers over `5f967f09`'s
+files and over this commit's (scratch `gap.py`, `css_uses()` against
+`table_uses()`):
+
+```text
+5f967f09: style.css triples 39, §4.2 table triples 0, undeclared 39, unused 0, jobs []
+WORKTREE: style.css triples 39, §4.2 table triples 39, undeclared 0, unused 0, jobs [1, 2, 3, 4, 5, 6, 7, 8]
+```
+
+**The close measured** - `python3 -m pytest -q --durations=0
+tests/unit/test_the_accent_does_only_its_listed_jobs.py`, golden and
+`macro_micro` at 1440x900, dark (the light `@media` rule switched off
+through the CSSOM), light and print (`media="print"`); each grade is
+read as its own sentinel (`--accent: rgb(1, 2, 3)`, `--accent-mark:
+rgb(4, 5, 6)`, `!important` at `:root`), since light and print give
+both one value:
+
+```text
+6.94s setup    ...::TestTheBootedPageSpendsTheAccentOnlyOnListedJobs::test_no_element_wears_an_unlisted_accent
+============================== 5 passed in 7.18s ===============================
+```
+
+Every page: strays `[]`, jobs seen `[1, 5, 6, 7, 8]`.
+
+**The mutation table** (scratch `mutate.py`: copy, replace, run, restore
+from the copy; every revert 5 passed):
+
+| mutation | reddened | run |
+|---|---|---|
+| (a) `.investigate button { }` given `background: var(--accent-mark)` | static `test_every_accent_declaration_is_a_listed_job` only | 1 failed, 4 passed |
+| (a2) the quiet-grade rule (`button.collapse, ... button.chapter-open, .control-quiet`) `background: transparent` to `var(--accent-mark)` | static; booted: `button.chapter-open`, `.collapse`, `.json-toggle`, `.twin-toggle` background, all six pages | 2 failed, 3 passed |
+| (b) `.density-end { stroke: var(--accent-mark)` | static; booted: `line.density-end stroke accent-mark`, all six pages | 2 failed, 3 passed |
+| (c) `.wf-fill` deleted from §4.2's table | static; booted: `span.wf-fill background accent-mark`, all six pages | 2 failed, 3 passed |
+| (d) `a { color: var(--fg); }` | `test_every_listed_job_is_declared`, `test_every_at_rest_job_is_seen` (`golden dark: [5, 6, 7, 8]`) | 2 failed, 3 passed |
+| (e) row 6 renumbered 5 | `test_the_table_has_eight_jobs` | 1 failed, 4 passed |
+| (f) `a code { color: var(--accent-mark); }` added | static; booted: `code color accent-mark` on all six pages - dark only before the sentinels | 2 failed, 3 passed |
+
+(a) cannot redden the booted half: `.investigate` buttons render only when
+`run.has_timeline` (`app.js:692`), and neither golden nor `macro_micro`
+has a timeline; (a2) is the Acceptance Test's "quiet button" instead.

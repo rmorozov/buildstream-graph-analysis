@@ -365,8 +365,25 @@ the measurements:
    magnitude is length, state is status tone. A drawing that wants
    multi-hue series must amend this guide first (and will be asked
    what a legend would say that direct labels cannot).
-2. **One accent.** Interaction, links, the current focus, the
-   promoted reader's border (rule 7) — one hue does all of it. A second accent is a defect.
+2. **One accent, eight jobs.** One hue does every job below, in rule
+   5's two grades: `--accent` for text-grade jobs, `--accent-mark` for
+   fills. A job not in this table is a defect, and so is a second accent;
+   `test_the_accent_does_only_its_listed_jobs.py` reads `style.css` and
+   the booted page against it.
+
+   | job | grade | channel | selectors |
+   |---|---|---|---|
+   | 1 links | accent | color | `a` |
+   | 2 hover | accent | border | `button:hover` `button.primary:hover` `.investigate button:hover` `.path-box:hover` `.chip:hover` |
+   | 3 a toggle that is on | accent | border, box-shadow | `button[aria-pressed="true"]` |
+   | 4 the current focus (§6e.8) | accent | outline | `a:focus-visible` `button:focus-visible` `input:focus-visible` `select:focus-visible` `summary:focus-visible` `[tabindex]:focus-visible` `section[data-jumped="true"]` `[data-jumped="true"]` `.jump-hits li[data-active="true"] > button` |
+   | 4 the current focus | accent | border | `.focus-bar` `.mark-summary` |
+   | 5 decision and promotion (rule 7) | accent | border | `.decision` `.reader-lead` `section[data-promoted]` |
+   | 6 info and low severity | accent | border | `.finding[data-severity="info"]` `.finding[data-severity="low"]` `.advice[data-severity="info"]` `.advice[data-severity="low"]` |
+   | 7 the primary control (§6e.5) | accent-mark | background, border | `button.primary` |
+   | 8 drawing marks | accent-mark | fill | `.band-strip` `.trend-band` `.trend-point` `.spark-point` `.decomposition-part:first-of-type` `.interval-mark` |
+   | 8 drawing marks | accent-mark | stroke | `.spark-line` `.density-tick` `.trend-median` |
+   | 8 drawing marks | accent-mark | background | `.wf-fill` `.horizon-bar` |
 3. **Status tones are reserved and never alone.** good/warn/bad
    carry a shape, marker or label in the same element, always —
    `UX-212`'s rule, promoted from the trend dots to the whole page.
@@ -384,14 +401,17 @@ the measurements:
 6. **Emphasis is budgeted: one emphasized element per block.** The
    headline number is large once; a finding bolds its subject once;
    everything else is regular or muted. If two things in one block
-   demand emphasis, the block is two blocks.
+   demand emphasis, the block is two blocks. A `primary` control
+   spends none of the block's emphasis: §4.6 budgets type per block,
+   §6e.5 affordance per chapter.
 7. **A reader is a shape, not a hue** (`UX-668`). Five roles are past
    what §4.1 lets a drawing carry as a series and §4.2's one accent is
-   already spent on interaction, the current focus and the band — a
+   already spent on rule 2's eight jobs — a
    fifth hue for "which role am I" would be a second accent and the
    CVD numbers §5 validates against were never budgeted for it. A
-   promoted section wears rule 2's accent on a border, not a fill —
-   so rule 3's status tones keep every fill — plus the existing muted
+   promoted section wears rule 2's accent on a border, not a fill;
+   fills belong to rule 3's status tones, the one primary control
+   (§6e.5) and the drawings' marks (accent-mark) — plus the existing muted
    chip. "Anyone" wears every declared role's chip, muted — a
    reader sees what each role would promote before choosing one.
 

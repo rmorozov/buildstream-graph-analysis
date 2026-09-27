@@ -801,6 +801,10 @@ th .th-filter.unparsed { border-color: var(--bad); border-style: dashed; }
   letter-spacing: .04em; color: var(--muted);
   border: 1px solid var(--line); border-radius: .2rem; padding: 0 var(--space-1);
   vertical-align: middle;
+  /* `UX-1043`: always a flex item of the head that also carries the
+     JSON toggle - shrinks past its own longest word so a promoted
+     section's tag never pushes the toggle past the head's edge. */
+  min-width: 0; overflow-wrap: anywhere;
 }
 /* UX-668 (styleguide §4 rule 7): a reader is a shape, not a hue - §4.2's
    accent marks promotion on a border, the one channel §4.3 reserves. */
@@ -1177,7 +1181,38 @@ section > .table-tools { top: var(--head, 5.5rem); }
    site, and the only one the reader opens on purpose. Quiet in the
    heading (it is a debugging affordance, not a finding) and monospace
    when open, because what it shows is meant to be pasted. */
-button.json-toggle { margin-left: var(--space-2); vertical-align: middle; }
+/* UX-1043 (styleguide §3l): pinned to the head's right edge rather
+   than trailing the title text, whose varying length is what made the
+   toggle land "somewhere else in every section". The fold and door
+   already own the left edge (`nav.js` prepends the fold,
+   `attachBlockDoor` prepends the door into the first block); the right
+   edge is the one side nothing else on the head claims. A flex row
+   rather than a measured `padding-right`: a pixel reservation (first
+   cut: a guessed rem; second cut: `getBoundingClientRect().width` read
+   once in JS) is a number that can go stale - a root font-size change
+   resizes the button and leaves the frozen reservation behind it, which
+   is what the re-verification measured. The browser lays out flex
+   children itself, every reflow, so the toggle's own box is always
+   what is reserved. The title text is an anonymous flex item here
+   (`el("h2", {}, info.label)` gives the head a bare text child) and
+   shrinks to wrap around the fixed-width sibling on its own. */
+h2:has(> button.json-toggle), h3:has(> button.json-toggle) {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  /* A promoted section's title text is an anonymous flex item here
+     (there is no element to put `min-width: 0` on), so its automatic
+     minimum falls back to the longest unbroken word - `anywhere` lets
+     it shrink past that, the one gap `min-width: 0` alone leaves, and
+     is what keeps a long title plus a promoted `.reader-tag` from
+     outrunning a 390px head (measured: `confidence` on `golden`
+     overflowed the toggle past the head's right edge without it). */
+  overflow-wrap: anywhere;
+}
+button.json-toggle {
+  margin-left: auto;
+  flex: none;
+}
 button.json-toggle:hover { color: var(--fg); }
 .section-json pre {
   margin: var(--space-2) 0 0;

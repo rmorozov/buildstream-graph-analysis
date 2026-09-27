@@ -42,4 +42,55 @@ reds.
 
 ## Outcome
 
-Not started.
+**Gap measured**, own probe at `71d3dcda`, both `pages.FIXTURES`
+fixtures, every chapter open, offset = `headRect.right - toggleRect.right`:
+spread 0 on all four (2 fixtures x 2 viewports).
+
+**First close**: pinned `button.json-toggle` to the head's **right
+edge** (fold and door already own the left edge, unmoved) via
+`position: absolute; right: 0` and a guessed `padding-right: 6.5rem`
+on the head. `test_a_sections_controls_sit_together.py`'s offset
+clause: 4/4 passed. Mutation (`position: static`, restored after the
+title): all 4 reddened, spread 203.7-736.3px (bound 24px).
+
+**Verifier held it** (`ed13508f`): the guessed `padding-right` (104px)
+against a 114.8px rendered button overlapped a wrapped title's last
+line on the toggle at 390x844 - invisible to the offset clause, which
+only reads `.right`. Own eyeballed estimate at the time said 8/34
+golden, 16/48 macro_micro; the re-verifier's own `Range.getClientRects`
+scan against `ed13508f`'s files (the method the new clause below
+actually runs) reproduced **6/34 golden, 11/48 macro_micro** - the
+lower, correct count, since the eyeball pass was not the guard's own
+instrument.
+
+**Second close**: `syncToggleGutter` read the button's rendered width
+once per text change (`getBoundingClientRect().width`) instead of
+guessing the rem. New clause `test_no_title_line_overlaps_the_toggle`
+(`Range.getClientRects` over the head's text nodes against the
+toggle's rect): 8/8 passed. Mutation (reservation cut to `width * 0.4`):
+reddened at 390x844 only, golden 28/34 and macro_micro 40/48 overlap.
+
+**Re-verification held it again**: a once-read px freezes - a root
+`font-size` bump to 40px after boot left the old reservation behind
+the now-larger button, overlapping 3-31 sections per case. **Third
+close**: pure CSS - the head is now `display: flex` with the toggle
+`margin-left: auto; flex: none`, so the browser reserves the button's
+box on every reflow, never a JS-read number. The title text (an
+anonymous flex item) and `.reader-tag` both carry `overflow-wrap:
+anywhere` so a long title plus a promoted tag still shrink to fit a
+390px head rather than push the toggle off it (measured: `confidence`
+on `golden` overflowed without it). New clause parametrised with a
+`zoom40` case (`documentElement.style.fontSize = "40px"` after boot):
+12/12 passed (offset 4 + overlap 8, normal and zoomed).
+
+| mutation | reddened | count |
+|---|---|---|
+| toggle restored after the title (position:static) | offset clause, all 4 | spread 203.7-736.3px (bound 24px) |
+| `syncToggleGutter` cut to `width * 0.4` | overlap clause, 390x844 only | golden 28/34, macro_micro 40/48 overlap |
+| JS gutter restored over the flex fix (frozen reservation) | overlap clause, `zoom40` only, all 4 (both viewports, both fixtures) | golden 1440 3/34, macro_micro 1440 5/48, golden 390 22/34, macro_micro 390 31/48; `normal` cases and the offset clause stayed green |
+
+Reverted from each pre-mutation copy; green again every time.
+`test_the_page_has_a_volume_budget.py`: 30 passed, 2 skipped (large
+class needs `bga gen-synthetic`, not run here) - height unmoved.
+`@media print` at 1440x900, both fixtures: offset spread 0, toggle
+still `display: block` - no print rule touches this control.

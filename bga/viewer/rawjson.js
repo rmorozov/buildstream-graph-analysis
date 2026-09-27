@@ -145,6 +145,10 @@ export function jsonToggles(root, { document: doc } = {}) {
       button.setAttribute("aria-label", HIDDEN_TITLE(key));
     });
 
+    // `UX-1043` (styleguide §3l): appended last, same as before - the
+    // stylesheet's flex row pins it to the head's right edge
+    // (`margin-left: auto`) regardless of DOM order, title length or
+    // wrapping, and reserves its width itself on every reflow.
     heading.append(button);
     given.push(key);
   }

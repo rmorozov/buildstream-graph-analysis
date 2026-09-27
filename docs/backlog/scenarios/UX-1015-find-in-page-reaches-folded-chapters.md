@@ -65,8 +65,8 @@ Deviation: `hidden="until-found"` meant five existing guards that force a chapte
 
 **Review (#295):** the print rule set `display: block !important` on
 `[hidden="until-found"]` but never touched `content-visibility`, which
-the platform itself sets to `hidden` on that state (HTML Standard
-#hidden-elements) - so a folded section printed at zero rendered size
+the platform itself sets to `hidden` on that state (HTML Standard,
+`#hidden-elements`) - so a folded section printed at zero rendered size
 regardless of `display`. `style.css`'s print rule now also sets
 `content-visibility: visible !important`.
 `TestAFoldedChapterPrintsItsText` (new, in the same guard file) drives

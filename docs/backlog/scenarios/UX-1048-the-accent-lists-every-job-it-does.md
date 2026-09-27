@@ -66,4 +66,40 @@ an undeclared SVG line an accent-mark stroke, and it reds.
 
 ## Outcome
 
-Not started.
+**The gap measured** - the guard's own parsers over `5f967f09`'s
+files and over this commit's (scratch `gap.py`, `css_uses()` against
+`table_uses()`):
+
+```text
+5f967f09: style.css triples 39, §4.2 table triples 0, undeclared 39, unused 0, jobs []
+WORKTREE: style.css triples 39, §4.2 table triples 39, undeclared 0, unused 0, jobs [1, 2, 3, 4, 5, 6, 7, 8]
+```
+
+**The close measured** - `python3 -m pytest -q --durations=0
+tests/unit/test_the_accent_does_only_its_listed_jobs.py`, golden and
+`macro_micro` at 1440x900, dark (the light `@media` rule switched off
+through the CSSOM), light and print (`media="print"`):
+
+```text
+tests/unit/test_the_accent_does_only_its_listed_jobs.py .....            [100%]
+3.85s setup    ...::TestTheBootedPageSpendsTheAccentOnlyOnListedJobs::test_no_element_wears_an_unlisted_accent
+============================== 5 passed in 3.99s ===============================
+```
+
+Every page: strays `[]`, jobs seen `[1, 5, 6, 7, 8]`.
+
+**The mutation table** (scratch `mutate.py`: copy, replace, run, restore
+from the copy; every revert 5 passed):
+
+| mutation | reddened | run |
+|---|---|---|
+| (a) `.investigate button { background: var(--accent-mark); }` | static `test_every_accent_declaration_is_a_listed_job` only | 1 failed, 4 passed |
+| (a2) `.control-quiet { background: var(--accent-mark); ...` | static, and booted `test_no_element_wears_an_unlisted_accent` | 2 failed, 3 passed |
+| (b) `.density-end { stroke: var(--accent-mark); ...` | static, and booted (`golden dark: line.density-end stroke accent-mark`) | 2 failed, 3 passed |
+| (c) `.wf-fill` deleted from §4.2's table | static, and booted (the booted half reads the same table) | 2 failed, 3 passed |
+| (d) `a { color: var(--fg); }` | `test_every_listed_job_is_declared`, `test_every_at_rest_job_is_seen` | 2 failed, 3 passed |
+| (e) row 6 renumbered 5 | `test_the_table_has_eight_jobs` | 1 failed, 4 passed |
+
+(a) cannot redden the booted half: `.investigate` buttons render only when
+`run.has_timeline` (`app.js:692`), and neither golden nor `macro_micro`
+has a timeline; (a2) is the Acceptance Test's "quiet button" instead.

@@ -792,9 +792,8 @@ th .th-filter.unparsed { border-color: var(--bad); border-style: dashed; }
   border: 1px solid var(--line); border-radius: .2rem; padding: 0 var(--space-1);
   vertical-align: middle;
 }
-/* UX-668 (styleguide §4 rule 7): a reader is a shape, not a hue - the
-   accent already spent on interaction and the band marks promotion
-   too, on the one non-colour channel §4.3 reserves for it. */
+/* UX-668 (styleguide §4 rule 7): a reader is a shape, not a hue - §4.2's
+   accent marks promotion on a border, the one channel §4.3 reserves. */
 section[data-promoted] { border-left: 3px solid var(--accent); }
 .status-line { margin: var(--space-1) 0 var(--space-2); font-size: var(--font-small); }
 .evidence-detail > summary { cursor: pointer; font-size: var(--font-small);

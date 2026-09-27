@@ -721,7 +721,7 @@ in it hidden, and the class is bounded at both ends:
                  elements   landed   opened    words   controls    nodes
 scale               1,202    5,007   26,584    8,259        787    4,732
 xl                  4,002    4,937   27,230    8,275        812    4,960
-budget, to 4,100 elts          7,600   36,500    9,600        900    6,000
+budget, to 4,100 elts          7,600   43,500   13,200        900    7,500
 ```
 
 Height does not move at all — a bounded row costs no pixels, which is
@@ -837,6 +837,12 @@ Re-measured on the round's merged tree: macro_micro 37,743 px and
 12,769 words, xl 35,669 px, 9,456 words and 5,785 nodes - 457, 31 and
 831, 144, 215 of headroom.
 
+`UX-1050` moved the 4,100 class's height 36,500 -> 43,500, words 9,600
+-> 13,200 and nodes 6,000 -> 7,500: `xl_both`, the 4,002-element run
+with Plane 2 and a store, reads 42,982 px, 12,872 words, 7,209 nodes,
+and Plane 2's cost is flat (12,633 words at 74 elements). Landed and
+controls do not move; `UX-1053` bounded the finding list that grew them.
+
 The UI batch (`UX-1022`, `UX-1018`) moved the one landed bound 7,300 ->
 7,600: `macro_micro` 6,859 at babba3e5, 7,471 merged - `UX-1022`'s
 24 px targets and `UX-1018`'s chapter scale +268, `UX-1021`'s doors +165.
@@ -948,7 +954,9 @@ budget needs is one level up from the numbers:
 
 **A bound is stated together with the size it was measured at, and it is
 enforced at the largest size the tool tells people to use.** A budget
-measured only where the page is small has never met the page.
+measured only where the page is small has never met the page. And in
+the mode people use it in: `UX-1050` measures the 4,100 class with both
+planes and a store (`xl_both`), which no guard met past 11 elements.
 
 This is `UX-363`'s lesson about the tier budget, in the other document:
 there, one measurement was compared against the number that made it look

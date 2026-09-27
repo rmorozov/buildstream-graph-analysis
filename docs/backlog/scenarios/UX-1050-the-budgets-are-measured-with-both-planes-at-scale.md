@@ -64,4 +64,50 @@ green. Mutation: drop the new labels, and `TestEverySizeClassIsActuallyMeasured`
 
 ## Outcome
 
-Not started.
+**Gap measured.** On `UX-1053`'s tree, `pages.two_plane_run` pages
+exported in place (the store stays in), the guard's own `_LOOK`, 1440x900:
+
+```text
+                        landed   opened   words  controls  nodes
+74, both planes          7,444   38,931  12,633       712  6,346
+1,202, both (scale_both) 7,584   42,484  12,822       883  7,116
+4,002, both (xl_both)    7,584   42,982  12,872       868  7,209
+bound, 51-4,100          7,600   36,500   9,600       900  6,000
+```
+
+Opened, words and nodes are over on every two-plane page and flat from
+74 to 4,002 (+4,051 px, +239 words, +863 nodes): Plane 2 and the store's
+fixed cost. Landed and controls are under once `UX-1053` bounded the card.
+
+**Close measured.** `LABELS` gains `xl_both` (`_GENERATED`: `two_plane_run`,
+`--layers 20 --width 200`); `booted` exports a run inside a store in place
+(`pages.in_place_uri`), since `snapshot_copy` leaves the store and its
+history behind; the 4,100 row moves to 43,500 px, 13,200 words, 7,500
+nodes (518/328/291 of headroom); §3e's row and paragraph, a §3f line.
+`--durations`, `-p no:xdist`, load average 12-19 on 4 cores throughout:
+
+```text
+before (base)                     30 passed, 2 skipped in 77.82s
+scale_both + xl_both, old bounds  2 failed (nodes 7,116 / 7,209 > 6,000), 35 passed in 244.65s
+xl_both only, new bounds          34 passed, 3 skipped in 274.52s
+  setup: booted 141.96s, sizes 123.62s, two_plane 2.70s
+```
+
+The two pages cost +167 s (more than 30 s), so `scale_both` is dropped
+per the Decision. `xl_both` alone still costs well over 30 s: its export
+runs `analyze` three times (`compare` against the store's first snapshot
+is 100 of 167 s profiled), and `sizes` analyses it a second time.
+
+**Mutation table** (each restored from a scratch copy):
+
+| mutation | reddened | count |
+|---|---|---|
+| (a) `xl_both` out of `LABELS` and `_GENERATED` | `test_every_class_is_measured_with_both_planes` (`[4100]`) | 1 of 4 |
+| (b) `two_plane_run` skips writing `plane2.json` | the same clause, `'xl_both': False` | 1 of 4 |
+| (c) 4,100 words bound back to 9,600 | `test_the_whole_page_is_bounded_too[xl_both]` (12,872 words) | 1 of 17 |
+| (d) `UX-1053`'s cap lifted (`> Infinity`) | `test_the_landed_page_is_short[xl_both]` (10,829 px), `test_the_whole_page_is_bounded_too[xl_both]` (8,343 nodes) | 2 of 17 |
+
+Deviation: `booted` changed (outside `BUDGETS`/`LABELS`/`_GENERATED`)
+because the copy dropped the store; `scale_both` dropped for cost;
+`xl_both` alone is still over the 30 s budget, which the Decision does not
+settle.

@@ -190,6 +190,7 @@ Why it is this way. Arguments and structure, not instructions.
 | [`design/directions.md`](design/directions.md) | `bga` as a local helper vs `bga` as a CI gate |
 | [`design/continuous-build-improvement.md`](design/continuous-build-improvement.md) | what changes when four modelled roles become a real team — the rollout's four constraints, instrument versus intervention, and the four guidelines the filings are held to |
 | [`design/in-step-parallelism.md`](design/in-step-parallelism.md) | why the certified floors read builder slots and not cores, what the capture already measures about parallelism inside an element, and the one increment to file first |
+| [`design/anonymized-bundle.md`](design/anonymized-bundle.md) | sharing a private capture with an outside reader - what a pseudonymized bundle keeps, how each value is classed, and how the owner resolves a pseudonym back to the real element |
 | [`design/roles.md`](design/roles.md) | the role model — eight roles, their contradictions, and the gap analysis |
 | [`design/styleguide.md`](design/styleguide.md) | the web report's visual contract — shape→control mapping, drawings, color and emphasis budget, dark first |
 

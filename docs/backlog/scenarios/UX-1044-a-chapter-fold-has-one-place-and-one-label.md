@@ -114,3 +114,8 @@ controls" is struck, per the Decision: the rail row has no
 The document control's accessible name is its `aria-label`
 (`"<n> sections: <title>"`, holding the visible count); the guard reads
 `aria-label` or `textContent`, not the browser's computed name.
+
+**Integration (round 143):** the fold's rendered label is "▸ Sections · 14", not
+"▸ 14 sections": `test_labels_are_sentence_case.py` rejected the lowercase first letter on
+golden, macro_micro and scale (3 failed); it now mirrors the rail row's "▸ <title> · 14".
+The `aria-label` keeps "14 sections: <title>". Mutation: the old template back, 3 failed.

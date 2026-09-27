@@ -597,7 +597,7 @@ export function labelFold(box) {
   const open = isOpen(box);
   if (toggle) {
     toggle.setAttribute("aria-expanded", String(open));
-    toggle.textContent = `${glyph(open)} ${count}`;
+    toggle.textContent = `${glyph(open)} Sections · ${held}`;
     toggle.setAttribute("aria-label", `${count}: ${title}`);
     toggle.setAttribute("title", open
       ? `Fold "${title}" back to its answer` : `Open "${title}"`);

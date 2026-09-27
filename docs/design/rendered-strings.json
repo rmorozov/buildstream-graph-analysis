@@ -387,32 +387,37 @@
   {
     "exception": null,
     "role": "button",
-    "text": "What if I change this? \u00b7 #"
+    "text": "\u25be What should I do? \u00b7 #"
   },
   {
     "exception": null,
     "role": "button",
-    "text": "Where did the time go? \u00b7 #"
+    "text": "\u25b8 What if I change this? \u00b7 #"
   },
   {
     "exception": null,
     "role": "button",
-    "text": "Was the machine used well? \u00b7 #"
+    "text": "\u25b8 Where did the time go? \u00b7 #"
   },
   {
     "exception": null,
     "role": "button",
-    "text": "Which elements, and how do they connect? \u00b7 #"
+    "text": "\u25b8 Was the machine used well? \u00b7 #"
   },
   {
     "exception": null,
     "role": "button",
-    "text": "How much of this can I believe? \u00b7 #"
+    "text": "\u25b8 Which elements, and how do they connect? \u00b7 #"
   },
   {
     "exception": null,
     "role": "button",
-    "text": "Which run is this? \u00b7 #"
+    "text": "\u25b8 How much of this can I believe? \u00b7 #"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "\u25b8 Which run is this? \u00b7 #"
   },
   {
     "exception": null,
@@ -462,7 +467,7 @@
   {
     "exception": null,
     "role": "button",
-    "text": "Show # sections"
+    "text": "\u25b8 # sections"
   },
   {
     "exception": null,
@@ -627,37 +632,37 @@
   {
     "exception": null,
     "role": "rail-chapter",
-    "text": "What should I do? \u00b7 #"
+    "text": "\u25be What should I do? \u00b7 #"
   },
   {
     "exception": null,
     "role": "rail-chapter",
-    "text": "What if I change this? \u00b7 #"
+    "text": "\u25b8 What if I change this? \u00b7 #"
   },
   {
     "exception": null,
     "role": "rail-chapter",
-    "text": "Where did the time go? \u00b7 #"
+    "text": "\u25b8 Where did the time go? \u00b7 #"
   },
   {
     "exception": null,
     "role": "rail-chapter",
-    "text": "Was the machine used well? \u00b7 #"
+    "text": "\u25b8 Was the machine used well? \u00b7 #"
   },
   {
     "exception": null,
     "role": "rail-chapter",
-    "text": "Which elements, and how do they connect? \u00b7 #"
+    "text": "\u25b8 Which elements, and how do they connect? \u00b7 #"
   },
   {
     "exception": null,
     "role": "rail-chapter",
-    "text": "How much of this can I believe? \u00b7 #"
+    "text": "\u25b8 How much of this can I believe? \u00b7 #"
   },
   {
     "exception": null,
     "role": "rail-chapter",
-    "text": "Which run is this? \u00b7 #"
+    "text": "\u25b8 Which run is this? \u00b7 #"
   },
   {
     "exception": null,

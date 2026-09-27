@@ -21,22 +21,25 @@
      control it explains, and it "occupies precious vertical height"
      before the reader has seen a single number.
      UX-828 (styleguide §3i): at most 72px. The wordmark is the brand,
-     never overwritten; the alias and start instant are the run's
-     identity, beside the reader picker `UX-668` wires into
-     `#run-producer`. The absolute path left for `run_instance`
-     (`UX-285`) and `#wordmark`'s `title`; the version line left for
-     the footer. -->
+     never overwritten, and never the page's heading; the alias and
+     start instant are the run's identity, beside the reader picker
+     `UX-668` wires into `#run-producer`. The absolute path left for
+     `run_instance` (`UX-285`) and the h1's `title`; the version line
+     left for the footer.
+     UX-1047 (styleguide §6e.1): the outline's one `h1` is the run,
+     not the product - `#wordmark` is text, not a heading. -->
 <header>
-  <h1 id="wordmark">bga</h1>
+  <span id="wordmark">bga</span>
+  <h1 id="run-name"></h1>
   <p id="run-identity" class="muted">
-    <span id="run-name"></span><span id="run-instant"></span>
+    <span id="run-instant"></span>
   </p>
   <!-- UX-668 (styleguide §4 rule 7): the reader picker's home. Hidden
        until `decision.js` has two readers to offer - `UX-194`'s
        dead-control rule. -->
   <p id="run-producer" class="muted" hidden></p>
 </header>
-<!-- UX-828: the path is data for `#wordmark`'s `title`, never shown -
+<!-- UX-828: the path is data for the h1's `title`, never shown -
      `run_instance.run_dir` (styleguide §3i) is where a reader reads it. -->
 <p id="run-path" hidden></p>
 <!-- UX-317 (styleguide §2b.1): **a control's explanation lives with the

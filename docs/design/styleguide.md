@@ -67,7 +67,7 @@ listed under its topic as `§6e.N`; since round 142 every one is binding.
 | | §5b | what the header's picker already lists is not drawn again | binding |
 | **Colour, type, emphasis** | §4 | no categorical hues; one accent; status tone never alone; one emphasis per block | binding |
 | | §4f | four type sizes; prose lines at most 72 characters | binding |
-| | §6e.1 | one outline: `h2` chapter, `h3` section, `h4` block, no level skipped | binding |
+| | §6e.1 | one outline: one `h1` the run, `h2` chapter at `--font-h1` (the one allowed tie), `h3` section, `h4` block, no level skipped | binding |
 | | §6e.6 | spacing comes from a 4px scale of tokens | binding |
 | | §5 | dark is the design surface; light and print carry the same tokens | binding |
 | **Controls** | §4c | a control acts on the scope its label names, and acknowledges the press | binding |
@@ -1369,7 +1369,9 @@ would hide a section's own heading once it is an `h3`). The row that
 implements this re-derives every selector that names a heading level.
 Its guard walks the rendered outline: exactly one `h1`, no level more
 than one below the heading before it, every rail link landing on a
-heading of its entry's level, and sizes strictly decreasing by level.
+heading of its entry's level, and sizes strictly decreasing by level
+below `h2` - `h1` ties `h2` at `--font-h1` (`UX-1047`), the outline's
+one allowed exception, and never falls under it.
 
 **Rule 2, the terminology matrix.** "One word, one control, one place"
 cannot be applied literally across four surfaces with different jobs,
@@ -1826,12 +1828,13 @@ reader was never meant to tell apart.
 --font-small: 13px
 ```
 
-The outline maps onto the steps (§6e.1, `UX-1018`): `h2` a chapter at
-`--font-h1`, `h3` a section at `--font-h2`, `h4` a block at `--font-body`
-weight 600 - so no level is a fifth size a reader has to learn, and each
-is mechanically smaller than the one above it rather than smaller by
-convention. `p, li > p, dd { max-width: 72ch }` bounds the line
-regardless of the viewport underneath it.
+The outline maps onto the steps (§6e.1, `UX-1018`, `UX-1047`): `h1` the
+run at `--font-h1`, `h2` a chapter at `--font-h1` too - the one allowed
+tie - `h3` a section at `--font-h2`, `h4` a block at `--font-body`
+weight 600 - so no level below `h2` is a fifth size a reader has to
+learn, and each is mechanically smaller than the one above it rather
+than smaller by convention. `p, li > p, dd { max-width: 72ch }` bounds
+the line regardless of the viewport underneath it.
 
 **§4b extended to sentences: a task id or a payload key is never bare
 in prose a reader sees.** §4b already said a *citation* is a question,
@@ -1942,9 +1945,12 @@ The picker is the one control the header holds that a reader uses
 (§4 rule 7); the path is `run_instance`'s fact (`UX-285`: identity is
 reference, and reference goes last), drawn first and largest on every
 load. **The header is at most 72 px and sticky. It holds a wordmark
-on the left, the run's alias and start instant in the middle beside
-the picker, and nothing else.** The path lives in `run_instance` and
-on the title's `title` attribute; the version line is the footer's.
+on the left - text, not a heading - the run's name as the page's one
+`h1`, and its start instant in the middle beside the picker, and
+nothing else.** (`UX-1047`: route (a) of §6e.1, above - the run is the
+outline's `h1`, and the wordmark drops out of it.) The path lives in
+`run_instance` and on the h1's `title` attribute; the version line is
+the footer's.
 Run navigation and the Perfetto handoff stay in the rail, as
 disclosures whose resting state is closed (§3h).
 

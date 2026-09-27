@@ -1,10 +1,5 @@
 [
   {
-    "exception": "command name",
-    "role": "heading",
-    "text": "bga"
-  },
-  {
     "exception": null,
     "role": "heading",
     "text": "What should I do?"

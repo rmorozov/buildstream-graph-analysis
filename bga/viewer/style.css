@@ -297,12 +297,27 @@ body[data-has-toc] > header {
   border-bottom: 1px solid var(--line);
   padding: var(--space-1) 0 var(--space-2); margin: 0 0 var(--space-4);
 }
-/* `UX-828` (styleguide §3i): the wordmark and the identity line sit on
-   one row where there is width for it - the header's whole budget is
-   72px, and three stacked blocks at the h1 size alone spend more.
-   `header` itself stays `display: block` (one column of identity,
-   above) - only its own children go inline. */
-#wordmark { display: inline-block; margin-right: var(--space-3); vertical-align: middle; }
+/* `UX-828` (styleguide §3i): the wordmark, the h1 and the identity
+   line sit on one row where there is width for it - the header's whole
+   budget is 72px, and three stacked blocks at the h1 size alone spend
+   more. `header` itself stays `display: block` (one column of
+   identity, above) - only its own children go inline.
+   `UX-1047`: `#wordmark` is text, not the heading - it drops to
+   `--font-small`, and `#run-name` (the h1) takes the row's `--space-3`
+   gap instead. */
+#wordmark {
+  display: inline-block; margin-right: var(--space-3); vertical-align: middle;
+  font-size: var(--font-small);
+}
+/* `UX-1047`: the run's name is data, unbounded in length - a long one
+   must not wrap the h1 onto its own row (measured 93px at 390x844 on
+   a run whose displayed name was 9 characters wider than "run" alone,
+   before the display-name fix; this is the row's own defence,
+   independent of it). One line, truncated, rather than a second. */
+#run-name {
+  display: inline-block; margin: 0 var(--space-3) 0 0; vertical-align: middle;
+  max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 #run-identity, #run-producer {
   display: inline-block; vertical-align: middle;
   margin: 0; font-size: var(--font-small);

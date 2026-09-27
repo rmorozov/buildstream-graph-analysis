@@ -60,4 +60,51 @@ Mutation: put `h1` back on the wordmark, and the guard reds.
 
 ## Outcome
 
-Not started.
+Gap measured (before, `git show HEAD:...`, golden export, 390x844):
+header 70px; `rendered-strings.json` carried `{"exception": "command
+name", "role": "heading", "text": "bga"}` from `#wordmark`.
+
+Close measured (after, same fixture/width): header 70px (≤72px §3i);
+that row dropped from `rendered-strings.json` (`--write`, 381 rows,
+-5); h1 text is `run` (`test_the_h1_is_the_run_not_the_wordmark`,
+21px, ties `h2` rather than falling under it); `#wordmark` carries no
+heading role; after `?run=20260101T000000Z` the served h1 reads that
+stamp. Round two: `runDisplayName` climbed a segment whenever
+`run.name==="run"`, so macro_micro via `export_uri` read h1 "snapshot"
+(header 93px at 390x844, over budget - the h1 wrapped to its own
+line). Fixed to climb only when the parent matches the store's stamp
+(`bga/run_store.py`'s `_STAMP`, `%Y%m%dT%H%M%SZ`); otherwise shows
+`run.name`. Also gave `#run-name` `max-width`/`ellipsis` so an
+unbounded name never grows the header regardless: a synthetic 62-char
+name still measures 70px at 390x844 (158px without it). Round three:
+`_STAMP_RE` missed `new_snapshot_dir`'s own `<stamp>-NN` disambiguator
+for two snapshots inside one second (`bga/run_store.py:432-433`), so
+that run's h1 fell back to "run" too - extended to
+`/^\d{8}T\d{6}Z(-\d{2})?$/`. 1169 tests passed (heading outline,
+header budget, page-moves-between-runs, report-is-read,
+report-you-can-attach, sentence-case, register, skip-reasons,
+dom-shim). Four tree-wide guards clean: `ruff`, `lint-docs`
+(pymarkdown), `dev_baseline.py --check`, `dev_sizes.py --check`.
+
+Mutation table:
+
+| mutation | reddened | count |
+|---|---|---|
+| `<h1 id="wordmark">` back, `#run-name` a plain span | `test_the_h1_is_the_run_not_the_wordmark`, `test_the_h1_ties_the_chapter_size_rather_than_falling_under_it`, `test_the_wordmark_is_not_a_heading` | 3 failed / 11 |
+| `h1{font-size:var(--font-h2)}` | `test_the_h1_ties_...` (17px vs 21px) | 1 failed / 11 |
+| `stampIdentity` heading from `run?.name` directly (drops stamp fallback) | `test_the_other_run_s_payload_is_what_comes_back` | 1 failed / 1 |
+| `runDisplayName` back to the unconditional climb | `test_the_h1_is_the_run_not_the_wordmark`, `test_a_bare_run_dir_reads_run`, `test_macro_micro_via_export_uri_does_not_read_snapshot` | 3 failed / 11 |
+| `#run-name`'s `max-width`/ellipsis removed | `test_a_long_run_name_still_fits_the_budget_on_a_phone` (158px) | 1 failed / 9 |
+| `_STAMP_RE` back to `/^\d{8}T\d{6}Z$/` (no `-NN`) | `test_a_same_second_snapshot_s_disambiguator_still_reads_the_stamp` (h1 read "run") | 1 failed / 11 |
+
+All six reverted from the saved pre-mutation copy and reconfirmed
+green.
+
+Deviation: the switcher mutation is not literally "stamping only on
+first boot" - the switcher navigates by `location.assign`, a full
+reload, so a boot-once flag cannot survive across two independent
+`browser.measure` calls. Used dropping the stamp fallback instead,
+through the code path that actually runs. Styleguide line 1304 (the
+HIG table's header row) needed no edit - rule 1 at 1306 already stated
+route (a); only §6e.1's row (70), the scale mapping (1784-1788), the
+guard description (1321-1325) and §3i's prose (1897-1900) changed.

@@ -1,13 +1,18 @@
 """UX-1020: every rendered label reads sentence case, and a plural
 follows its count.
 
-Booted on `golden` and `macro_micro`: every heading, button, `summary`,
-rail entry, `th` and `option` is normalised (`tools.dev_rendered_strings`)
+Booted on `golden`, `macro_micro`, the 1,202-element synthetic run and
+the served Perfetto/SQL pages: every heading, button, `summary`, rail
+entry, `th` and `option` is normalised (`tools.dev_rendered_strings`)
 and held against `docs/design/rendered-strings.json` - present, and
 either sentence case or a listed exception (`product name`, `code`,
 `acronym`, `command name`, `sentence continuation`). `no (s) in
 innerText` is checked over the whole document, not just these six
 roles - a plural is chosen by its count everywhere on the page.
+
+The scale run and the served pages are built once per module
+(`page_uris`), not once per test: `scale_run` alone costs ~3.5s
+(`tests/pages.py`).
 """
 import json
 import pathlib
@@ -29,6 +34,8 @@ INVENTORY = json.loads(strings.INVENTORY.read_text())
 _KNOWN = {(row["role"], row["text"]) for row in INVENTORY}
 _EXCEPTION = {(row["role"], row["text"]): row["exception"] for row in INVENTORY}
 
+LABELS = ("golden", "macro_micro", "scale", "perfetto", "sql")
+
 
 @pytest.fixture(scope="module")
 def browser():
@@ -36,15 +43,29 @@ def browser():
         yield opened
 
 
+@pytest.fixture(scope="module")
+def page_uris(tmp_path_factory):
+    """`{label: uri}` for every page the inventory covers, built once."""
+    uris = {label: pages.export_uri(fixture,
+                                     tmp_path_factory.mktemp(f"labels-{label}"))
+            for label, fixture in pages.FIXTURES.items()}
+    scale = pages.scale_run(tmp_path_factory.mktemp("labels-scale"))
+    uris["scale"] = pages.export_uri(
+        scale, tmp_path_factory.mktemp("labels-scale-page"))
+    httpd, served = strings.served_uris(pages.WITH_TIMELINE)
+    uris.update(served)
+    yield uris
+    httpd.shutdown()
+    httpd.server_close()
+
+
 @needs_browser
 class TestEveryLabelIsSentenceCase:
 
-    @pytest.mark.parametrize("label", ["golden", "macro_micro"])
+    @pytest.mark.parametrize("label", LABELS)
     def test_every_rendered_label_is_listed_and_cased(
-            self, tmp_path_factory, browser, label):
-        uri = pages.export_uri(pages.FIXTURES[label],
-                                tmp_path_factory.mktemp(f"labels-{label}"))
-        rows = strings.rows_for(browser, label, uri)
+            self, browser, page_uris, label):
+        rows = strings.rows_for(browser, label, page_uris[label])
         missing = [r for r in rows if (r["role"], r["text"]) not in _KNOWN]
         assert not missing, (
             f"{label} renders a label the inventory does not carry: "
@@ -55,12 +76,11 @@ class TestEveryLabelIsSentenceCase:
                    and not strings.is_sentence_case(r["text"])]
         assert not uncased, f"{label} renders not-sentence-case: {uncased}"
 
-    @pytest.mark.parametrize("label", ["golden", "macro_micro"])
+    @pytest.mark.parametrize("label", LABELS)
     def test_no_parenthesised_plural_reaches_the_page(
-            self, tmp_path_factory, browser, label):
-        uri = pages.export_uri(pages.FIXTURES[label],
-                                tmp_path_factory.mktemp(f"plural-{label}"))
-        body = browser.measure(uri, '(() => document.body.innerText)()')
+            self, browser, page_uris, label):
+        body = browser.measure(page_uris[label],
+                                '(() => document.body.innerText)()')
         assert "(s)" not in body, (
             f"{label} still spells a plural `(s)` rather than choosing it "
             f"by count")

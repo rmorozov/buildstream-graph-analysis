@@ -1763,5 +1763,150 @@
     "exception": "code",
     "role": "option",
     "text": "Top # by wall_share"
+  },
+  {
+    "exception": "product name",
+    "role": "heading",
+    "text": "layer#/mod#.bst"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "Which durations could this run not express?"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "+# More elements (# in all)"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "+# More"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "\u2039 Prev"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Next \u203a"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "The rule \u00b7 # level, # row"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Half of this graph's # elements reach # others or fewer; the top tenth reach # others or more, up to #. Reach is spread across many elements - there\u2026 # chars"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Elements \u00b7 # level, # rows"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Blast radius ranking \u00b7 # level, # row"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Blast radius structural \u00b7 # level, # row"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Foundation candidates \u00b7 # level, # rows"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Criticality \u00b7 # level, # row"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Certified headroom \u00b7 # level, # rows"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Producer \u00b7 # levels, # rows"
+  },
+  {
+    "exception": "product name",
+    "role": "rail-entry",
+    "text": "layer#/mod#.bst"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "Which durations could this run not express?"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Could be one element"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Always consumed by"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Producer"
+  },
+  {
+    "exception": "product name",
+    "role": "option",
+    "text": "layer#/mod#.bst"
+  },
+  {
+    "exception": "code",
+    "role": "option",
+    "text": "Top # by duration_us"
+  },
+  {
+    "exception": "code",
+    "role": "option",
+    "text": "Top # by share_of_path"
+  },
+  {
+    "exception": "code",
+    "role": "option",
+    "text": "Top # by realizable_saving_us"
+  },
+  {
+    "exception": null,
+    "role": "option",
+    "text": "Top # by level"
+  },
+  {
+    "exception": null,
+    "role": "option",
+    "text": "Top # by width"
+  },
+  {
+    "exception": null,
+    "role": "option",
+    "text": "First # rows"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "Hand the timeline to Perfetto"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Open in Perfetto"
   }
 ]

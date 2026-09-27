@@ -44,6 +44,26 @@ five guards that opened chapters by `data-open` alone went red on it;
 `textContent` and `innerText` now disagree across the fold, which two
 more tracks met (`UX-1023`, the header guard).
 
+## Review #295, and the two filed rows taken in
+
+Ruslan's review found four runtime gaps the guards missed: print left
+folded chapters blank (`content-visibility`), the reveal had no way
+back, the table pager counted the unfiltered total, and drawings'
+`aria-details` dropped plotted values. Each fix carries a mutation
+that reddens its guard; the task files' `Review (#295):` paragraphs
+hold them. `UX-1037` and `UX-1038` closed on the same pull request.
+
+```text
+page (golden)       339,237 -> 342,243 B   PAGE_BUDGET_B 341,000 -> 344,000
+export golden       505,154 -> 508,073 B   bound 507,000 -> 510,000
+export macro_micro  565,462 -> 568,381 B   bound 567,500 -> 570,500
+index               dev_close_task.py --counts: 999 scenarios, 15 open, 984 closed
+```
+
+`columnStrip` stays out of the value route: its figures would be a
+derived number, which §2 keeps off the page. A verifier's `pip
+install -e` repointed the shared `bga` install at its worktree mid-run.
+
 ## Agents
 
 | agent | model | task | tokens | calls | wall | friction |

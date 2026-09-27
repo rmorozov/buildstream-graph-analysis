@@ -1,6 +1,6 @@
 # UX-1038: CLI output prints `(s)` plurals where the count is known
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-1020 | **Found by:** UX-1020's own sweep | **Serves:** R1 | **Topic:** cli | **Area:** tools | **Shape:** bounded
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-1020 | **Found by:** UX-1020's own sweep | **Serves:** R1 | **Topic:** cli | **Area:** tools | **Shape:** bounded
 
 ## Motivation
 

@@ -436,6 +436,15 @@ pairing for every merged row from round 103 on.
 | 142 | general-purpose | opus | close round 142: 23 row moves, ledger, round document | 130k | 73 | 11.5 m | closed; UX-1038 and a coverage line filed | the selector max and the unpaired verifier rule were red before it started |
 | 142 | general-purpose | opus | the final gate's three reds | 92k | 37 | 18.8 m | fixed in a93db0cd 50f775db 2e71479c | an alias planter matched decision.js's import line word for word |
 | 142 | general-purpose | opus | review 28 over round 142's documents | 79k | 34 | 9.2 m | 5 mismatches fixed, 2 coverage lines filed | a rebased commit's old hash stayed cited in two records |
+| 142 | implementer | sonnet | review #295: print reveals folded chapters | 70k | 42 | 7.8 m | fixed in b6c4cb10 | none |
+| 142 | implementer | sonnet | review #295: every plotted value in aria-details | 113k | 71 | 15.3 m | merged 9ce8fd07; columnStrip left out (no derived number) | none |
+| 142 | implementer | sonnet | UX-1020 coverage: the inventory reaches every page | 118k | 118 | 18 m | merged 7d99c933; 353 -> 382 rows | none |
+| 142 | general-purpose | opus | UX-1037 bound the 26 growers (judgement) | 230k | 135 | 30.8 m | merged 4e1a0833; page 339,335 -> 340,188 B | 812 B of page budget left for the pager track |
+| 142 | implementer | sonnet | review #295: reveal Prev and filtered pager (UX-1029, UX-1028) | 223k | 212 | 36.1 m | 1edb471f fb98a658; structured.js conflict with UX-1020's More | dev_env_check misreads a worktree as a repointed install |
+| 142 | implementer | sonnet | UX-1038 CLI plurals by count (mechanical) | 266k | 423 | 35.4 m | 5022de3d; 17 size cells grew | a broad git stash raced its own test-touching run |
+| 142 | implementer | sonnet | UX-1038: hold the size cells | 257k | 347 | 40.8 m | 27cc34dc; plural() moved to bga/plural.py | ruff isort rejects an aliased import joined to a plain one |
+| 142 | verifier | sonnet | verify review #295 pagers | 57k | 29 | 3.6 m | both mutations redden; boundaries hand-judged | none |
+| 142 | verifier | sonnet | verify UX-1037 | 92k | 72 | 15.3 m | census mutation reddens; DRAWN_ELSEWHERE drift confirmed | repointed the shared bga install at its worktree |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -448,7 +457,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the four hundred and nineteen rows already say: a researcher that reads a document
+What the four hundred and twenty-eight rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

@@ -993,6 +993,8 @@ is open, on what topic, for whom — is the other file's.
 | UX-1033 | [form controls take the type scale, not the browser's 13.333px](UX-1033-form-controls-take-the-type-scale.md) | Low | R1 | 🟢 Done — `input`, `select` and `textarea` inherit the font; five computed sizes were four again | [UX-1033](UX-1033-form-controls-take-the-type-scale.md) |
 | UX-1034 | [reader chips print R1 to R5 inside section headings](UX-1034-reader-chips-print-internal-keys.md) | Low | R1 | 🟢 Done — reader chips print the reader's words, `R3` -> "graph owner", never the R-id | [UX-1034](UX-1034-reader-chips-print-internal-keys.md) |
 | UX-1035 | [fonts compute to the two declared stacks, not Arial or bare monospace](UX-1035-fonts-compute-to-the-two-stacks.md) | Low | R1 | 🟢 Done — every rendered element computes to the sans or mono stack; Times New Roman and Arial were two of four | [UX-1035](UX-1035-fonts-compute-to-the-two-stacks.md) |
+| UX-1037 | [26 payload containers grow with the run and no §1 control bounds them](UX-1037-a-growing-container-with-no-bounding-control.md) | Medium | R1, R5 | 🟢 Done — all 26 growing payload containers now land in a bounded control, per the §3k table; the census holds `KNOWN_UNBOUNDED_GROWERS` empty | [UX-1037](UX-1037-a-growing-container-with-no-bounding-control.md) |
+| UX-1038 | [CLI output prints `(s)` plurals where the count is known](UX-1038-cli-output-prints-parenthesised-plurals.md) | Low | R1 | 🟢 Done — the CLI chooses singular or plural by count through `bga/plural.py`, and a guard refuses a `(s)` literal in reader-facing modules | [UX-1038](UX-1038-cli-output-prints-parenthesised-plurals.md) |
 
 ## UX-207..UX-212: the twenty-third audit round — the report learns to answer first (2026-08-22)
 

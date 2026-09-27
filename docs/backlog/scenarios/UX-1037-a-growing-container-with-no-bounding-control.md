@@ -1,6 +1,6 @@
 # UX-1037: 26 payload containers grow with the run and no §1 control bounds them
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-1031 | **Found by:** UX-1031's own declaration pass | **Serves:** R1, R5 | **Topic:** viewer | **Area:** bga | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-1031 | **Found by:** UX-1031's own declaration pass | **Serves:** R1, R5 | **Topic:** viewer | **Area:** bga | **Shape:** judgement
 
 ## Motivation
 

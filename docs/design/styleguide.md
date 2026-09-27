@@ -71,7 +71,7 @@ listed under its topic as `§6e.N`; since round 142 every one is binding.
 | | §6e.6 | spacing comes from a 4px scale of tokens | binding |
 | | §5 | dark is the design surface; light and print carry the same tokens | binding |
 | **Controls** | §4c | a control acts on the scope its label names, and acknowledges the press | binding |
-| | §6d | every control is one of five resting grades | binding |
+| | §6d | every control is one of six resting grades | binding |
 | | §6e.4 | one `?` door per block, opening every description in it | binding |
 | | §6e.5 | at most one `primary` control per chapter | binding |
 | | §6e.7 | a hit area is at least 24x24 px, 44x44 under a coarse pointer | binding |

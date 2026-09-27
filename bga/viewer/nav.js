@@ -725,6 +725,23 @@ export function stepper(root, nav, { document: doc, window: win } = {}) {
   return { node: bar, next, previous, top };
 }
 
+/** `block: "nearest"` on `nav.scrollTop` alone (`UX-1054`): scroll the
+ * rail just far enough to bring `link` inside its own box, never past
+ * it, and never through `Element.scrollIntoView` - which would move
+ * the document's sequential focus starting point along with it. A
+ * link already inside the box is left exactly where it is. */
+function scrollRailTo(nav, link) {
+  if (!nav || typeof nav.scrollTop !== "number"
+      || typeof nav.getBoundingClientRect !== "function"
+      || typeof link?.getBoundingClientRect !== "function") return;
+  const navRect = nav.getBoundingClientRect();
+  const linkRect = link.getBoundingClientRect();
+  if (linkRect.top < navRect.top) nav.scrollTop -= navRect.top - linkRect.top;
+  else if (linkRect.bottom > navRect.bottom) {
+    nav.scrollTop += linkRect.bottom - navRect.bottom;
+  }
+}
+
 export function scrollspy(root, nav, { observer } = {}) {
   const Observer = observer
     ?? (typeof IntersectionObserver === "function" ? IntersectionObserver
@@ -786,10 +803,12 @@ export function scrollspy(root, nav, { observer } = {}) {
       currentChapter(link.closest?.("li[data-chapter]"), root);
       // `UX-667`: the mark moves with the reader; the rail's own scroll
       // follows it rather than leaving "you are here" to scroll off a
-      // rail the document has already carried past. `"nearest"` is a
-      // no-op once the mark is already in view, so a rail short enough
-      // to show it all costs nothing here.
-      link.scrollIntoView?.({ block: "nearest" });
+      // rail the document has already carried past. `UX-1054`:
+      // `Element.scrollIntoView` moves Chrome's sequential focus
+      // starting point to the scrolled element, so the rail's own
+      // `scrollTop` is set instead, clamped the way `block: "nearest"`
+      // would be - a no-op once the link is already in view.
+      scrollRailTo(nav, link);
     }
   };
 

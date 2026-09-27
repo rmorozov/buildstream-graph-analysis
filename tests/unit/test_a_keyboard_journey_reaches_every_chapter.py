@@ -152,6 +152,78 @@ class TestTabFromTheTopReachesEveryChapter:
             assert row["outlineWidth"] == "2px", row
 
 
+# --------------------------------------------------------------------------
+# 2b. `UX-1054`: no `_START_AT_THE_TOP` reset - a fresh load's own first
+#    `Tab`, unassisted. `scrollspy`'s landing mark used to move Chrome's
+#    focus starting point to the rail; this is what a real reader's
+#    first keypress does without a body-focus workaround.
+# --------------------------------------------------------------------------
+
+#: The first laid-out focusable in document order, read before any key is
+#: pressed - independent of what `activeElement` happens to be (`BODY`,
+#: on a fresh load, tells a reader nothing about where `Tab` will land).
+_FIRST_FOCUSABLE = r"""
+(() => {
+  const laid = (el) => {
+    const r = el.getBoundingClientRect();
+    return r.width > 0 && r.height > 0;
+  };
+  const first = [...document.querySelectorAll(
+      'a[href], button, input, select, textarea, summary, [tabindex]')]
+    .filter((el) => !el.disabled && el.getAttribute('tabindex') !== '-1'
+                    && laid(el))[0];
+  if (!first) return null;
+  return { tag: first.tagName, cls: first.className,
+           dataToc: first.getAttribute('data-toc') };
+})()
+"""
+
+_READ_ACTIVE_STOP = r"""
+(() => {
+  const a = document.activeElement;
+  if (!a) return null;
+  return { tag: a.tagName, cls: a.className,
+           dataToc: a.getAttribute("data-toc"),
+           chapterOpen: a.getAttribute("data-toc-chapter") };
+})()
+"""
+
+
+@pytest.fixture(scope="module")
+def fresh_journey(tmp_path_factory):
+    """No `_START_AT_THE_TOP`: whatever a fresh load's own first `Tab`
+    reaches, unassisted."""
+    into = tmp_path_factory.mktemp("u1054")
+    uri = pages.export_uri(MACRO, into)
+    with Browser(chrome) as browser:
+        ids = browser.measure(uri, _RAIL_ORDER, 1440, 900)
+        steps = [{"wait": 100}, {"read": _FIRST_FOCUSABLE}]
+        for _ in range(TAB_CAP):
+            steps.append({"key": "Tab"})
+            steps.append({"read": _READ_ACTIVE_STOP})
+        trace = browser.journey(uri, steps, 1440, 900)
+        return ids, trace[0], trace[1:]
+
+
+@needs_browser
+class TestTheFirstTabFromAFreshLoadStartsAtTheTop:
+    def test_the_first_tab_lands_on_the_first_focusable_in_document_order(
+            self, fresh_journey):
+        ids, first_focusable, trace = fresh_journey
+        assert ids, "no chapters on the rail - nothing to walk"
+        first_stop = {k: trace[0][k] for k in ("tag", "cls", "dataToc")}
+        assert first_stop == first_focusable, (
+            f"the first Tab landed on {first_stop}, not the first "
+            f"focusable in document order, {first_focusable}")
+
+    def test_a_forward_walk_reaches_every_chapter_decide_first(
+            self, fresh_journey):
+        ids, _, trace = fresh_journey
+        stops = [row["chapterOpen"] for row in trace if row["chapterOpen"]]
+        assert stops == ids, (stops, ids)
+        assert stops[0] == "decide", stops
+
+
 @needs_browser
 class TestEnterOpensTheFoldEnterReached:
     def test_enter_on_a_reached_fold_opens_its_chapter(self, journey,

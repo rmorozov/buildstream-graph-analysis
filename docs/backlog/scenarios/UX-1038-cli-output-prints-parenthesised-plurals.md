@@ -87,3 +87,7 @@ propert(y/ies), 999 backlog row(s)`.
 | Guard | Mutation | Result |
 |---|---|---|
 | `dev_sizes.py --check` | append a blank line to `bga/units.py` (81->82) | reds: `grew: bga/units.py file_lines 81 -> 82` |
+
+Deviation (verifier): the guard reads one `ast.Constant` at a time, so
+`"element" + "(s)"` passes it (`1 passed` under that mutation); no such
+concatenation exists in scope today.

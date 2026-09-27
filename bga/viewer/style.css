@@ -1175,10 +1175,15 @@ section > .table-tools { top: var(--head, 5.5rem); }
    `attachBlockDoor` prepends the door into the first block); the right
    edge is the one side nothing else on the head claims, and it holds
    regardless of whether the title wraps or the section has no door at
-   all. */
+   all. `padding-right` here is a pre-JS fallback only - `rawjson.js`'s
+   `syncToggleGutter` overwrites it with the button's real rendered
+   width the moment the button joins the document, because a guessed
+   rem and the button's actual box drift (114.8px rendered against a
+   104px guess overlapped 8/34 golden and 16/48 macro_micro wrapped
+   titles at 390x844). */
 h2:has(> button.json-toggle), h3:has(> button.json-toggle) {
   position: relative;
-  padding-right: 6.5rem;
+  padding-right: 7.5rem;
 }
 button.json-toggle {
   position: absolute; top: 0; right: 0;

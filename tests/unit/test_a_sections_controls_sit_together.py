@@ -13,6 +13,15 @@ fixing it costs no move to either.
 
 Offset here is `headRect.right - toggleRect.right` - zero and constant
 if the button is truly pinned, not merely closer together than before.
+
+The verifier held the first cut: `padding-right: 6.5rem` was a guessed
+104px reservation against a 114.8px rendered button, so a wrapped
+title's last line overlapped the toggle on 8/34 golden and 16/48
+macro_micro sections at 390x844 while the offset clause above stayed
+green (it reads `.right`, blind to what the padding leaves room for).
+`rawjson.js`'s `syncToggleGutter` now reads the button's own box after
+every text change; `test_no_title_line_overlaps_the_toggle` is the
+clause that would have caught the miss.
 """
 import pathlib
 import sys
@@ -59,6 +68,51 @@ _SCAN = r"""
 """
 
 
+#: Every text-node client rect the head's wrapped title drew, tested
+#: against the toggle's own rect - a rect that intersects it is a title
+#: line the button sits on top of. The toggle's own text nodes are
+#: excluded since it is inside the head.
+_OVERLAP_SCAN = r"""
+(() => {
+  for (const box of document.querySelectorAll("section.chapter")) {
+    box.setAttribute("data-open", "true");
+    for (const section of
+         box.querySelectorAll(":scope > section[data-section]")) {
+      section.removeAttribute("hidden");
+    }
+  }
+  const out = [];
+  document.querySelectorAll("section[data-section]").forEach((s) => {
+    const heading = s.querySelector("h2, h3");
+    const toggle = s.querySelector("button.json-toggle");
+    if (!heading || !toggle) return;
+    const tr = toggle.getBoundingClientRect();
+    const walker = document.createTreeWalker(heading, NodeFilter.SHOW_TEXT);
+    let node;
+    let hit = null;
+    while (!hit && (node = walker.nextNode())) {
+      if (toggle.contains(node)) continue;
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      for (const r of range.getClientRects()) {
+        if (r.width === 0 || r.height === 0) continue;
+        const overlap = !(r.right <= tr.left || r.left >= tr.right ||
+                          r.bottom <= tr.top || r.top >= tr.bottom);
+        if (overlap) {
+          hit = {key: s.getAttribute("data-section"),
+                 text: {left: r.left, right: r.right, top: r.top, bottom: r.bottom},
+                 toggle: {left: tr.left, right: tr.right, top: tr.top, bottom: tr.bottom}};
+          break;
+        }
+      }
+    }
+    if (hit) out.push(hit);
+  });
+  return out;
+})()
+"""
+
+
 @pytest.fixture(scope="module")
 def browser():
     with Browser(chrome) as opened:
@@ -86,3 +140,15 @@ def test_the_json_toggle_offset_is_stable(browser, booted, label, width,
         f"(spread {spread:.1f}px > {OFFSET_SPREAD_PX}px, styleguide §3l): "
         f"{sorted(out, key=lambda r: r['offset'])[:3]} .. "
         f"{sorted(out, key=lambda r: r['offset'])[-3:]}")
+
+
+@needs_browser
+@pytest.mark.medium
+@pytest.mark.parametrize("label", LABELS)
+@pytest.mark.parametrize("width,height", [(1440, 900), (390, 844)])
+def test_no_title_line_overlaps_the_toggle(browser, booted, label, width,
+                                           height):
+    hits = browser.measure(booted[label], _OVERLAP_SCAN, width, height)
+    assert hits == [], (
+        f"{label} at {width}x{height}: {len(hits)} section(s) whose "
+        f"wrapped title overlaps the toggle (styleguide §3l): {hits[:3]}")

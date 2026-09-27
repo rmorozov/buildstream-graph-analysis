@@ -83,3 +83,28 @@ Reverted from the pre-mutation copy; green again (4 passed in 3.58s).
 `test_the_page_has_a_volume_budget.py`: 30 passed, 2 skipped (large-
 class rows need `bga gen-synthetic`, not run here) - landed/opened
 height unmoved, since absolute positioning adds no box height.
+
+**Verifier held the first cut** (commit `ed13508f`): `padding-right:
+6.5rem` (104px) was a guessed reservation against a 114.8px rendered
+button - the offset clause above is blind to it (`.right` stays 0
+regardless of the guess), but a wrapped title's last line overlapped
+the toggle on 8/34 golden and 16/48 macro_micro sections at 390x844.
+
+**Second close**: `rawjson.js`'s `syncToggleGutter` now sets
+`heading.style.paddingRight` from `button.getBoundingClientRect().width`
+after every text change, so the reservation is the button's own box,
+not a second number to keep in sync with the first. New guard clause
+`test_no_title_line_overlaps_the_toggle` (`Range.getClientRects` over
+the head's own text nodes against the toggle's rect): 8/8 passed (2
+fixtures x 2 viewports), plus the original 4/4 offset cases still
+green (8/8 total).
+
+| mutation | reddened | count |
+|---|---|---|
+| `syncToggleGutter` reserves `width * 0.4` instead of `width + 8` (cut to a fraction) | `test_no_title_line_overlaps_the_toggle`, 390x844 only | golden 28/34 sections overlap, macro_micro 40/48 overlap; 1440x900 unaffected (titles don't wrap there) |
+
+Reverted from the pre-mutation copy; 8/8 green again.
+
+`@media print` at 1440x900, both fixtures: offset spread 0, toggle
+still visible (`display: block`) - no print rule touches this
+control's position, so the fix and the gutter sync hold under it too.

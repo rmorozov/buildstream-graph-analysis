@@ -6,6 +6,7 @@ description: Answer a question about this codebase or its records by
   reading a large log — so the reading does not land in the main
   session's context.
 model: sonnet
+effort: low
 tools: Read, Grep, Glob, Bash
 ---
 

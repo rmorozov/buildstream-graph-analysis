@@ -5,6 +5,7 @@ description: Shape a filed UX-* row before a round schedules it - take the
   mutation, and class it product or process against the round's cap. Use
   when a round is planned, and on any row whose shape derives judgement.
 model: opus
+effort: high
 tools: Read, Grep, Glob, Bash
 ---
 

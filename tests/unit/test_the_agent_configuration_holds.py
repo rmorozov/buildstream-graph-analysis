@@ -531,13 +531,24 @@ class TestTheSubagentsAreWellFormed:
     def test_there_are_some(self):
         assert self._files(), ".claude/agents/ is empty"
 
-    @pytest.mark.parametrize("field", ("name", "description", "tools"))
+    @pytest.mark.parametrize(
+        "field", ("name", "description", "tools", "model", "effort"))
     def test_each_declares_the_field(self, field):
         for path in self._files():
             head = _FRONTMATTER.match(path.read_text(encoding="utf-8"))
             assert head, f"{path.name} has no frontmatter"
             assert re.search(rf"^{field}:", head.group(1), re.M), (
                 f"{path.name} declares no {field}")
+
+    #: `UX-1039`: an agent with no `effort:` ran at whatever it inherited,
+    #: which no round chose.
+    EFFORTS = {"low", "medium", "high", "xhigh", "max"}
+
+    def test_each_effort_is_a_named_level(self):
+        for path in self._files():
+            head = _FRONTMATTER.match(path.read_text(encoding="utf-8")).group(1)
+            level = re.search(r"^effort:\s*(\S+)", head, re.M).group(1)
+            assert level in self.EFFORTS, (path.name, level)
 
     def test_the_name_matches_the_filename(self):
         """Two names for one helper is the drift this repository has
@@ -551,13 +562,13 @@ class TestTheSubagentsAreWellFormed:
     #: track writes. Named here rather than "everything except the
     #: implementer", so adding a third editing agent is a decision
     #: somebody makes in this list.
-    MAY_EDIT = {"implementer"}
+    MAY_EDIT = {"implementer", "integrator", "closer"}
 
     #: The agents whose whole job is to read and report, named. Without
     #: this the clause below reads "whoever is not on the editing list",
     #: and widening that list would exempt them silently - which is what
     #: `UX-504`'s fifth mutation did while every clause stayed green.
-    REPORTERS = {"architect", "researcher", "verifier"}
+    REPORTERS = {"architect", "researcher", "verifier", "walker"}
 
     def test_a_reporting_agent_cannot_edit_the_tree(self):
         """A verifier that could fix what it found would be judging its

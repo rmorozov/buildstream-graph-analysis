@@ -203,6 +203,16 @@ p, li > p, dd { max-width: 72ch; }
 /* UX-1033 (styleguide §4f): §4f's walk never saw a form control - the
    UA default (13.333px) sat outside the four-step scale uncounted. */
 input, select, textarea { font: inherit; }
+/* UX-1051 (styleguide §6d): a resting look for every `select` and text
+   `input`, the tokens `.top-n` already draws with - `select.preset-view`
+   and `.run-picker select` had only a font size and rendered the UA
+   control otherwise. A class with its own surface (`.table-filter`,
+   `#jump`) wins on specificity and is unaffected. */
+select, input[type="text"], input[type="search"] {
+  font: inherit; font-size: var(--font-small); background: var(--panel);
+  color: inherit; border: 1px solid var(--line); border-radius: 3px;
+  max-width: 100%;
+}
 button {
   font: inherit; font-size: var(--font-small); line-height: 1.35; cursor: pointer;
   color: var(--fg); background: var(--muted-bg);

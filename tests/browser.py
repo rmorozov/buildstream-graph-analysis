@@ -360,7 +360,8 @@ class Browser:
         return self._drive(url, json.dumps(steps), width, height,
                            ("--journey",))
 
-    def observe(self, url, expression="null", width=1440, height=900):
+    def observe(self, url, expression="null", width=1440, height=900,
+                scheme=None):
         """The same load, plus everything the console and the CSP said.
 
         `UX-334`: `{"value", "console", "csp"}`. `console` is one entry
@@ -371,5 +372,10 @@ class Browser:
         refused it: a page can violate its own policy silently as far
         as `console.error` is concerned, so the two channels are
         collected separately and neither substitutes for the other.
+
+        `scheme` (`UX-1051`), `"light"` or `"dark"`: `Emulation.
+        setEmulatedMedia`'s `prefers-color-scheme` feature, the real
+        switch rather than a read of the stylesheet's override text.
         """
-        return self._drive(url, expression, width, height, ("--observe",))
+        extra = ["--observe"] + ([f"--scheme={scheme}"] if scheme else [])
+        return self._drive(url, expression, width, height, extra)

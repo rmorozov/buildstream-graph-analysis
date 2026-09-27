@@ -2239,7 +2239,7 @@ headings, so a renumber there moves it.
 | §3h | `test_the_rail_is_a_source_list.py` | |
 | §3i | `test_the_header_keeps_its_budget.py` | |
 | §3j | `test_a_fold_bounds_its_interactive_descendants.py` | `UX-921` |
-| §3k | `test_every_step_past_a_bound_is_bounded.py` | `UX-1032`'s census, at the 4,002-element run; `UX-1028`/`UX-1029`/`UX-1030` closed the three violations it found |
+| §3k | `test_a_findings_element_list_is_bounded.py`, `test_every_step_past_a_bound_is_bounded.py` | `UX-1032`'s census, at the 4,002-element run; `UX-1028`/`UX-1029`/`UX-1030` closed the three violations it found |
 | §3l | | proposed; `UX-1042` files its guard |
 | §4 | `test_emphasis_is_a_budget.py`, `test_the_palette_is_validated.py`, `test_a_drawing_is_graded.py`, `test_apparatus_in_its_place.py`, `test_the_browser_is_the_library.py` | named |
 | §4a | | named; `UX-346`'s `test_a_sentence_lives_on_its_door.py` holds it and cites no section |

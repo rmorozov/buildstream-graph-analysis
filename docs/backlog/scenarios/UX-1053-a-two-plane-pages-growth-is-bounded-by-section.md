@@ -98,4 +98,8 @@ $ pytest -q tests/unit/test_a_findings_element_list_is_bounded.py
 Deviation: past 40 names the card's elements are text in §1's reveal, not
 `data-element` links, so the element sections' cross-reference and focus
 no longer see this finding for them - the trade `UX-1037` made for the
-horizon. §3k's element-list row now names the card (styleguide, one cell).
+horizon. Undeclared surface: §3k's element-list cell in the styleguide now
+names the card. The tables above were read from snapshot copies, which
+drop the store chapter; exported in place (as `UX-1050`'s `booted` now
+does, under a pinned root) the totals read 7,490/712, 8,570/1,053,
+10,895/1,439 before and 7,444/712, 7,584/883, 7,584/868 after.

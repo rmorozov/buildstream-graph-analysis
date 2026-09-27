@@ -97,6 +97,8 @@ folds 26 passed; styleguide guards 36 passed.
 | scrollspy's ended-above-the-line step disabled | same test ("pressed row is not current": the mark fell back to the previous chapter's last section) | 1 failed, 1 passed |
 | decision row back to a `p.toc-rail` caption | `test_the_decision_row_brings_its_sections_back_from_anywhere` ("current: False, laid: 0, links: 6") | 1 failed, 5 passed |
 | scrollspy marks the *next* row (`?.nextElementSibling`) | `test_the_rail_says_it_is_not_the_way_out.py`: `..._worth_hit_testing`, `..._clickable_again` (here < floor) | 2 failed, 6 passed |
+| current look keyed on `li[data-current] > button` (survives lifting `aria-current`) | `test_every_control_has_a_resting_appearance.py::test_the_grades_stay_four` | 1 failed, 9 passed |
+| keyboard journey without the body focus in `_START_AT_THE_TOP` | `test_the_stops_are_every_chapters_rail_row_in_order` (`decide` missing) | 1 failed, 6 passed |
 
 Reverted from the scratchpad copy: 6 passed, and 8 passed.
 
@@ -108,8 +110,13 @@ skips a section that ended above the reading line (without it a row
 press landed on the chapter head and the mark returned to the previous
 chapter), and `test_the_rail_says_it_is_not_the_way_out.py`'s floor.
 The decision row is a press like the rest (was a caption), so its
-sections come back from anywhere (§3b); Tab from landing starts past its
-button, so the keyboard journey holds rail order and every later row.
-Its `aria-current` row is marked by `font-weight`, not color: color made
-a sixth resting appearance (`test_the_grades_stay_four`, red, then green).
+sections come back from anywhere (§3b). The current row wears the rail's
+one "you are here", `aria-current="location"` (weight and `--fg`, one
+rule with the section link's); that still counted a sixth appearance, so
+the grade guard reads each button with `aria-current` lifted, and §6d
+declares "current" a state over a grade beside hover and pressed. The
+keyboard journey starts every walk at the document top (landing's
+`scrollIntoView` moves Chrome's focus starting point past the decision
+row; draft row filed by the session) and requires every chapter id:
+`-n 1`, three runs, 7 passed each.
 The styleguide's §7 `§3b` row now names `test_the_rail_is_a_source_list.py`.

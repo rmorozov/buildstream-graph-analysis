@@ -86,11 +86,17 @@ GRADES = {
 #: What a control drawn by nobody looks like: the UA button.
 UA_BEVEL = "outset"
 
+#: Read at rest: `aria-current` is a state over a grade (§6d), like
+#: hover and `aria-pressed`, so a current control is read with it lifted.
 LOOKS = """
 (() => JSON.stringify([...document.querySelectorAll("button")].map((b) => {
+  const current = b.getAttribute("aria-current");
+  if (current !== null) b.removeAttribute("aria-current");
   const s = getComputedStyle(b);
-  return [s.backgroundColor, s.borderTopStyle, s.borderRadius, s.padding,
-          s.fontSize, s.color, s.transitionDuration, s.boxShadow];
+  const look = [s.backgroundColor, s.borderTopStyle, s.borderRadius, s.padding,
+                s.fontSize, s.color, s.transitionDuration, s.boxShadow];
+  if (current !== null) b.setAttribute("aria-current", current);
+  return look;
 })))()
 """
 

@@ -503,6 +503,8 @@ p.empty-population { margin: var(--space-1) 0 0; color: var(--muted); max-width:
    §4's emphasis budget is spent on findings, and "you are here" is
    orientation, not severity. The marker is what carries it where color
    is unavailable (print, forced-colors, a monochrome screen). */
+/* One "you are here" across the rail: the chapter row and its section link. */
+button.toc-chapter-open[aria-current="location"],
 .toc a[data-current] { font-weight: 600; color: var(--fg); }
 .toc a[data-current]::before { content: "\25b8\00a0"; }
 .toc-controls { margin: var(--space-2) 0 0; display: flex; gap: var(--space-2); }
@@ -848,8 +850,6 @@ button.toc-chapter-open {
   letter-spacing: .06em;
 }
 button.toc-chapter-open:hover { color: var(--fg); }
-/* The current row is weight and its ▾, not a sixth resting grade (§6d). */
-button.toc-chapter-open[aria-current="true"] { font-weight: 600; }
 .question-group > summary { cursor: pointer;
                             color: var(--muted); font-size: var(--font-small);
                             margin-top: var(--space-2); }

@@ -81,7 +81,7 @@ _WALK = r"""
   for (const link of links) {
     link.click();
     await settle(8);
-    const mark = nav.querySelector('[aria-current="location"]');
+    const mark = nav.querySelector('[data-toc][aria-current="location"]');
     if (!mark) { out.push({key: link.getAttribute("data-toc"), mark: false}); continue; }
     const mr = mark.getBoundingClientRect();
     const nr = nav.getBoundingClientRect();

@@ -367,7 +367,7 @@ export function toc(root, { document: doc, controls } = {}) {
       if (target) revealAndLand(target);
     });
     row.append(toggle);
-    if (row.getAttribute("data-current")) toggle.setAttribute("aria-current", "true");
+    if (row.getAttribute("data-current")) toggle.setAttribute("aria-current", "location");
     labelFold(box);
 
     for (const key of members) {
@@ -434,7 +434,7 @@ export function currentChapter(row, root) {
     touched.push(other);
   }
   row.setAttribute("data-current", "true");
-  row.querySelector?.("[data-toc-chapter]")?.setAttribute("aria-current", "true");
+  row.querySelector?.("[data-toc-chapter]")?.setAttribute("aria-current", "location");
   for (const one of touched) {
     labelFold(chapterBox(root, one.getAttribute("data-chapter")));
   }

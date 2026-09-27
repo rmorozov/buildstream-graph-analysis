@@ -1245,6 +1245,12 @@ out of a real browser rather than out of this file.
 | **door** | transparent, solid, **50%** | `UX-317`'s circular `?` |
 | **primary** | `--accent-mark`, solid, 3px | at most one per chapter: the first runnable next step's copy (§6e.5, `UX-1027`) |
 
+A grade is the look **at rest**. Hover, `aria-pressed="true"`,
+`aria-expanded="true"` and `aria-current` are states drawn over a grade,
+not grades: the rail's "you are here" (`aria-current="location"`, weight
+and `--fg`, on the current chapter row and its section link alike) is
+one such state, and the guard reads each button with it lifted.
+
 `UX-436` asked for three. There were four, because **reveal** is a real
 distinction with exactly two members that now match each other, and
 deleting it to reach a number would be the number driving the design;
@@ -1693,7 +1699,7 @@ the reader is in; the rail row goes to its chapter, and the fold is the
 document's.** `data-current` on one `li[data-chapter]` follows the
 scrollspy mark; a row press moves it, opens the chapter and lands on
 its head, and never shuts anything (`UX-1046`). `nav.toc > ul.chapters >
-li[data-chapter][data-current] > button[aria-current] "▾ <title> · <n>" >
+li[data-chapter][data-current] > button[aria-current="location"] "▾ <title> · <n>" >
 ul.sections > li > a[aria-current]`. The scrollspy mark calls
 `scrollIntoView({block: "nearest"})` on every update, so the current
 entry is always inside the rail's own viewport rather than merely

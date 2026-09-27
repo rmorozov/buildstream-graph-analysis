@@ -2224,8 +2224,9 @@ lengthened. Held on `macro_micro` and the two-plane 1,202-element page
 at 1440x900 and 390x844: fold, door, JSON toggle and chapter fold at one
 place; four journeys at their measured Fitts bits plus 0.5 and wheel
 plus 10%. `button.copy-rows` and `select.top-n` join them at `UX-1055`
-(`order`, unconditional dx 0px against `.table-tools` on every table
-measured); `UX-1043` and `UX-1044` are the two placements before it.
+(DOM order in `structured.js`, no CSS `order`: dx 0px against
+`.table-tools` on every table measured); `UX-1043` and `UX-1044` are
+the two placements before it.
 
 ## 7. Enforcement
 

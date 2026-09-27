@@ -12,9 +12,8 @@ change this, what does it cost?* Three shapes of "this", one answer.
 - An **element name** is the closure the tool has always been able to
   compute, printed in the same shape so the three views read alike.
 
-This is a question, not a gate: it exits 0 on an answer of zero, the
-same as on an answer of two hundred. A gate belongs in `bga compare`,
-where the refusal grammar already lives.
+This is a question, not a gate: it exits 0 on an answer of zero, the same as on an answer
+of two hundred. A gate belongs in `bga compare`, where the refusal grammar already lives.
 """
 import contextlib
 import json
@@ -26,7 +25,8 @@ from . import schemas
 from . import sources as sources_mod
 from .graph.edg import build_element_graph, compute_element_durations, compute_reachability
 from .ingest.loader import load_all
-from .units import US_PER_S, plural
+from .plural import plural
+from .units import US_PER_S
 
 # The order a target is resolved in, applied top to bottom and stated in
 # the output whenever more than one shape could have matched.

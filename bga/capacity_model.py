@@ -26,7 +26,7 @@ from typing import Optional
 
 from . import schemas, store_aggregate
 from .compare import MIN_BASELINE_RUNS
-from .units import plural
+from .plural import plural
 
 MICROSECONDS_PER_DAY = 86_400_000_000
 
@@ -265,8 +265,7 @@ def _used(document: dict) -> list[str]:
 
 
 _UNITS = {
-    "utilization": ("Utilization", lambda v: f"{v * 100:.1f}% of "
-                                             f"{{builders}}"),
+    "utilization": ("Utilization", lambda v: f"{v * 100:.1f}% of {{builders}}"),
     "wait_us": ("Wait before a build starts", lambda v: f"{v / 1e6:.1f}s"),
     "queue_length": ("Builds waiting", lambda v: f"{v:.2f}"),
 }
@@ -287,10 +286,9 @@ def render(document: dict) -> list[str]:
     it - eleven sentences repeated under three numbers is a printout
     nobody reads, and an assumption nobody reads is not published.
     """
-    arrivals = document['arrivals_per_day']
     lines = [f"Store: {document.get('project')}",
              f"  {plural(document['builders'], 'builder')}, "
-             f"{plural(arrivals, 'build', shown=f'{arrivals:g}')}/day"]
+             f"{plural(document['arrivals_per_day'], 'build', shown=format(document['arrivals_per_day'], 'g'))}/day"]
     if document.get("excluded_runs"):
         lines.append(f"  {plural(document['excluded_runs'], 'run')} excluded: "
                      f"not a finished build, so not a service time")
@@ -306,8 +304,7 @@ def render(document: dict) -> list[str]:
             f"CV^2 {service['cv2']:.2f}, n={service['samples']}")
         for answer in entry["answers"]:
             label, form = _UNITS[answer["name"]]
-            shown = form(answer["value"]).format(
-                builders=plural(document["builders"], "builder"))
+            shown = form(answer["value"]).format(builders=plural(document["builders"], "builder"))
             lines.append(f"    {label}: {shown}")
             lines += _wrapped("      assumes ", ", ".join(answer["assumes"]),
                               "              ")

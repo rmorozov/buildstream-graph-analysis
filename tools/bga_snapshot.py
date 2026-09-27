@@ -12,10 +12,9 @@ What that replaces is three commands and five invented paths:
     bga extract --format wrapped /path/to/project /tmp/plane1.log /tmp/run
     bga analyze /tmp/run --plane2 /tmp/plane2.json
 
-`bga capture run` already holds everything the second and third commands
-need — the project path, the wrapped log it just wrote, the Plane 2
-report path. The split exists because the pieces shipped in different
-rounds, not because a user benefits from it.
+`bga capture run` already holds everything the second and third commands need — the project path,
+the wrapped log it just wrote, the Plane 2 report path. The split exists because the pieces shipped
+in different rounds, not because a user benefits from it.
 
 This *composes* those commands rather than reimplementing them: it calls
 `bga capture run --run-dir`, then `bga analyze`, then `bga compare`,
@@ -45,7 +44,7 @@ import time
 from typing import Optional
 
 from bga import run_store
-from bga.units import plural
+from bga.plural import plural
 
 # What a snapshot is made of. Deliberately the layout the published
 # capture refs already use (UX-81/UX-96), so nothing downstream learns a

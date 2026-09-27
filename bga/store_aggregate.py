@@ -43,7 +43,7 @@ from typing import Optional
 
 from . import buildclass, hostinfo, run_store, schemas
 from .compare import MIN_BASELINE_RUNS
-from .units import plural
+from .plural import plural
 
 # The class a run belongs to when its capture predates `UX-186`'s
 # manifest. Named rather than dropped: "we do not know which machine"
@@ -522,8 +522,7 @@ def render(document: dict) -> list[str]:
     from .run_store import human_bytes
 
     lines = [f"Store: {document.get('project')}",
-             f"  {plural(document['measured'], 'measured run')} of "
-             f"{plural(document['snapshots'], 'snapshot')}"]
+             f"  {plural(document['measured'], 'measured run')} of {plural(document['snapshots'], 'snapshot')}"]
     # UX-300: what it weighs, on the second line, because a store that
     # has quietly reached tens of gigabytes is a fact about the machine
     # before it is a fact about any build.

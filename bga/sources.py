@@ -1,9 +1,8 @@
 """UX-171: which repository feeds which elements, and what a commit to it costs.
 
-Every blast question this tool could answer started at an element:
-"change `core.bst`, and 84 things rebuild". The question a monorepo
-actually raises starts one level lower - *"this repo was touched: how
-many recipes rebuild?"* - and nothing answered it.
+Every blast question this tool could answer started at an element: "change `core.bst`, and 84
+things rebuild". The question a monorepo actually raises starts one level lower - *"this repo was
+touched: how many recipes rebuild?"* - and nothing answered it.
 
 The mechanism, which is why this is worth computing rather than
 guessing:
@@ -31,7 +30,8 @@ import os
 from collections.abc import Iterable
 from typing import Optional
 
-from .units import US_PER_S, plural
+from .plural import plural
+from .units import US_PER_S
 
 SCHEMA = "sources/v1"
 

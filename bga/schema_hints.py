@@ -4,7 +4,7 @@ Split out of `bga/schemas.py` (`UX-1031`) to hold that file's size cell;
 `bga.schemas` re-exports every name here.
 """
 from .findings import READERS
-from .units import plural
+from .plural import plural
 
 # ---------------------------------------------------------------------
 # View-hints v1 (`UX-193`)

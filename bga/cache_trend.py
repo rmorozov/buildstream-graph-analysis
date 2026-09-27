@@ -26,14 +26,12 @@ predecessor was a caches-off build reports no churn verdict at all
 rather than a fabricated one, and a rebuild both runs made is a
 retention question rather than waste.
 
-**What this cannot see today.** Bytes moved. Plane 1 records transfer
-*seconds*, not artifact sizes, so "the remote slowed down" is measurable
-here only as time per artifact - which conflates a slower remote with
-larger artifacts. Seconds first, sizes as the follow-on, the same
-posture `UX-100` takes to its own size axis. On captures taken with
-remotes ignored (which is every published freedesktop-sdk capture, by
-design) there is no transfer at all, and the trend says so rather than
-reporting zero.
+**What this cannot see today.** Bytes moved. Plane 1 records transfer *seconds*, not
+artifact sizes, so "the remote slowed down" is measurable here only as time per artifact -
+which conflates a slower remote with larger artifacts. Seconds first, sizes as the
+follow-on, the same posture `UX-100` takes to its own size axis. On captures taken with
+remotes ignored (which is every published freedesktop-sdk capture, by design) there is no
+transfer at all, and the trend says so rather than reporting zero.
 """
 import os
 from pathlib import Path
@@ -41,7 +39,8 @@ from typing import Optional
 
 from .cache_effectiveness import compute_cache_accounting, compute_cache_churn
 from .compare import _SIGNIFICANCE_PCT, MIN_BASELINE_RUNS, compute_band
-from .units import human_bytes, plural
+from .plural import plural
+from .units import human_bytes
 
 # A metric whose newest reading sits outside the trailing window's band
 # is worth a finding. Each entry is `(key, label, direction)`, where

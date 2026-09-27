@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
 """UX-125: the setup half-day, checked in a minute.
 
-Every capture-capable environment this project has ever stood up - three
-times in one audit alone - was assembled by failure. `pluginbase` breaks
-under a distro-patched setuptools until a venv is used;
-`buildstream-plugins` turns out to be missing at the first `cmake`-kind
-element ("No element plugin registered"); `bwrap` is present but cannot
-bring up loopback until a sysctl is applied; there is no C compiler for
-the hook and spine; runtimes and toolchains are not staged, so the
-sandbox has no shell.
+Every capture-capable environment this project has ever stood up - three times in one audit
+alone - was assembled by failure. `pluginbase` breaks under a distro-patched setuptools until a
+venv is used; `buildstream-plugins` turns out to be missing at the first `cmake`-kind element
+("No element plugin registered"); `bwrap` is present but cannot bring up loopback until a
+sysctl is applied; there is no C compiler for the hook and spine; runtimes and toolchains are
+not staged, so the sandbox has no shell.
 
 Every one of those answers is already written down somewhere in this
 repository - in `ci.yml`'s step comments, in `stage_*.sh` headers, in the
@@ -36,7 +34,7 @@ import sys
 import tempfile
 from typing import Optional
 
-from bga.units import plural
+from bga.plural import plural
 
 # Findings-style ids (UX-75), so a script can key on the check rather
 # than on its prose.

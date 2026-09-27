@@ -13,11 +13,10 @@ The distinction this module is built on: **a gate that fails with a wall
 of JSON gets its threshold loosened; a gate that fails by naming the
 element gets the element fixed.**
 
-Render-only, and strictly so. Every number here is read from a
-`ComparisonResult` that was already computed, and every verdict is taken
-from the same predicate `bga compare`'s exit code calls — never
-recomputed from a threshold spelled out a second time. If this file and
-the exit code ever disagree, that is a bug in this file.
+Render-only, and strictly so. Every number here is read from a `ComparisonResult`
+that was already computed, and every verdict is taken from the same predicate `bga
+compare`'s exit code calls — never recomputed from a threshold spelled out a second
+time. If this file and the exit code ever disagree, that is a bug in this file.
 """
 from typing import Optional
 
@@ -27,7 +26,7 @@ from ..compare import (
     efficiency_regression_exceeds_threshold,
     regression_gate_failed,
 )
-from ..units import plural
+from ..plural import plural
 
 # The handle a CI job greps for to decide between editing its existing
 # comment and posting a new one. Stable across versions by contract: a
@@ -171,12 +170,10 @@ def _band_reason(comparison) -> str:
                     f"{shortfall['required']} required for a measured band")
         return "judged against the fixed 1% rule (no baseline set supplied)"
     if band.get('widened_to_fixed_pct'):
-        return (f"band from baseline {plural(band['n'], 'run')}, "
-                f"widened to the fixed 1% "
+        return (f"band from baseline {plural(band['n'], 'run')}, widened to the fixed 1% "
                 f"rule: {_s(band['low_us'])} .. {_s(band['high_us'])}"
                 + _band_members(comparison))
-    return (f"band from baseline {plural(band['n'], 'run')}: "
-            f"{_s(band['low_us'])} .. "
+    return (f"band from baseline {plural(band['n'], 'run')}: {_s(band['low_us'])} .. "
             f"{_s(band['high_us'])} (median ±{band['k']:g}× scaled MAD)"
             + _band_members(comparison))
 

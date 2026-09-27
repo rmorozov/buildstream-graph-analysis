@@ -45,8 +45,8 @@ from typing import Optional
 from . import schemas
 from .findings import SEVERITY_HIGH, SEVERITY_INFO, SEVERITY_MEDIUM
 from .floors.capacity import compute_default_capacities
+from .plural import plural as _count
 from .units import GIB, MIB, US_PER_S, kb_to_bytes, mb_to_bytes, s_to_us
-from .units import plural as _count
 
 # An element is "not compute-bound" below this many cores busy. One core
 # means a build that never overlapped any work with anything - the

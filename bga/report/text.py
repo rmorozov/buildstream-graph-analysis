@@ -6,7 +6,8 @@ from .. import provenance, schemas, sources
 from ..findings import compute_findings, compute_headline, compute_next_steps, render_findings
 from ..floors.cpu import ASSUMPTIONS as cpu_floor_assumptions
 from ..ingest.models import AnalysisResult
-from ..units import GIB, US_PER_S, plural
+from ..plural import plural
+from ..units import GIB, US_PER_S
 from . import rate
 from ._shared import EMPTY_POPULATION_SENTENCE, GRAPH_SIGNAL_KEYS, SWEEP_CAPACITY_MODEL_CAVEAT
 
@@ -418,11 +419,10 @@ def _format_timestamp_resolution(result: AnalysisResult) -> list[str]:
         f"{plural(agreement['tasks_compared'], 'task')} were compared",
     ]
     if material:
-        measured = agreement.get('tasks_measured', material)
         lines.append(
             f"    that is more than {share:.0f}% of the duration for "
-            f"{material} of {plural(measured, 'measured task')} - the shortest is "
-            f"{agreement['shortest_task_us'] / US_PER_S:.2f}s"
+            f"{material} of {plural(agreement.get('tasks_measured', material), 'measured task')} - "
+            f"the shortest is {agreement['shortest_task_us'] / US_PER_S:.2f}s"
         )
     if provably_short:
         worst = (agreement.get('shorter_than_bst') or [{}])[0]
@@ -664,9 +664,7 @@ def _render_header_section(result: AnalysisResult, section, by_kind, full_sectio
             what = "it was interrupted before it finished"
         else:
             named = ", ".join(violation.get('failed_elements') or []) or "unnamed element"
-            failed_count = violation.get('failed_count')
-            what = (f"{plural(failed_count, 'element')} ended in "
-                    f"FAILURE ({named})")
+            what = f"{plural(violation.get('failed_count'), 'element')} ended in FAILURE ({named})"
         lines.append(
             f"THIS BUILD DID NOT FINISH: {what}{counts}. Every figure below "
             f"describes a partial build."
@@ -1441,10 +1439,9 @@ def _sweep_recommendation_line(binding: dict) -> str:
     entry, so the wording a reader sees and the value a JSON consumer
     reads cannot disagree about which constraint bound first.
     """
-    builders = plural(binding['builders'], 'builder')
     if binding.get('name') == 'memory':
-        return f"Recommendation: memory-bound at {builders}"
-    return f"Recommendation: builder-bound at {builders}"
+        return f"Recommendation: memory-bound at {plural(binding['builders'], 'builder')}"
+    return f"Recommendation: builder-bound at {plural(binding['builders'], 'builder')}"
 
 
 def _plane2_knee_caveat(plane2_capacity: Optional[dict], knee) -> list[str]:
@@ -1717,8 +1714,7 @@ def format_compare_text(comparison) -> str:
             f"{band['k']:g}x{_fmt_us(band['scaled_mad_us'])} (scaled MAD)"
         )
         lines.append(
-            f"  Judged against a noise band from baseline "
-            f"{plural(band['n'], 'run')}: "
+            f"  Judged against a noise band from baseline {plural(band['n'], 'run')}: "
             f"{_fmt_us(band['low_us'])} .. {_fmt_us(band['high_us'])} - {width}"
         )
     # UX-593: and why that verdict, before the elements it is about.
@@ -1769,8 +1765,7 @@ def format_compare_text(comparison) -> str:
                 if churn['rebuilt_in_both_count'] > 4 else ""
             )
             lines.append(
-                f"  Cache retention: "
-                f"{plural(churn['rebuilt_in_both_count'], 'element')} "
+                f"  Cache retention: {plural(churn['rebuilt_in_both_count'], 'element')} "
                 f"rebuilt in BOTH runs with the same cache key, costing "
                 f"{churn['rebuilt_in_both_us'] / 1e6:.1f}s here - {named}{more}. The "
                 f"artifact is not surviving between runs (deliberate cut, eviction, "
@@ -1784,8 +1779,7 @@ def format_compare_text(comparison) -> str:
                 if churn['churned_count'] > 4 else ""
             )
             lines.append(
-                f"  Cache churn: "
-                f"{plural(churn['churned_count'], 'element')} rebuilt with an "
+                f"  Cache churn: {plural(churn['churned_count'], 'element')} rebuilt with an "
                 f"unchanged cache key, costing "
                 f"{churn['wasted_rebuild_us'] / 1e6:.1f}s - {named}{more}. Nothing "
                 f"they depend on changed, so that time bought nothing"
@@ -1794,8 +1788,7 @@ def format_compare_text(comparison) -> str:
         extra = len(churn.get('invalidation_roots') or []) - _INVALIDATION_ROOTS_SHOWN
         if extra > 0:
             lines.append(
-                f"    (+{plural(extra, 'more independent invalidation root')}, "
-                f"see --format json)"
+                f"    (+{plural(extra, 'more independent invalidation root')}, see --format json)"
             )
 
     # UX-104: did this change make the build need more memory? Placed
@@ -1820,8 +1813,7 @@ def format_compare_text(comparison) -> str:
     shortfall = getattr(comparison, 'baseline_band_shortfall', None)
     if shortfall:
         lines.append(
-            f"  No noise band: baseline "
-            f"{plural(shortfall['supplied'], 'run')} supplied, "
+            f"  No noise band: baseline {plural(shortfall['supplied'], 'run')} supplied, "
             f"{shortfall['required']} required - "
             f"{shortfall['required'] - shortfall['supplied']} more of the same shape "
             f"would replace the fixed 1% significance rule used here"

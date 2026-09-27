@@ -69,3 +69,21 @@ to the count-driven wording (e.g. `test_blast_query_and_kinds.py`,
 (and two `longest_function`) grew by 1-13 lines each (the helper's
 extra import line plus a rewrapped f-string per call site) -
 `tests/quality_reference.json` left untouched, held for the close.
+
+**Ratchet fix measured.** `plural()` moved out of `bga/units.py` into a
+new `bga/plural.py` (18 lines, first row unconditional); every one of
+the 17 grown cells' importers switched from `from .units import ...,
+plural` to a `from .plural import plural` line, and the freed line
+recovered per file by rejoining an import or rewrapping a docstring/
+f-string within ruff's 120-column limit - no output text changed.
+`python3 tools/dev_sizes.py --check`: `sizes ok: 151 file(s) measured,
+none above the cell tests/quality_reference.json records`.
+`ruff check bga/ tools/ tests/ .claude/hooks/`: `All checks passed!`.
+`python3 tools/dev_baseline.py --check`: `clean: 577 finding(s) match
+tests/quality_baseline.json` (unchanged forced-finding counts).
+`python3 tools/dev_close_task.py --check`: exit 0, `0 problem(s) over 8
+propert(y/ies), 999 backlog row(s)`.
+
+| Guard | Mutation | Result |
+|---|---|---|
+| `dev_sizes.py --check` | append a blank line to `bga/units.py` (81->82) | reds: `grew: bga/units.py file_lines 81 -> 82` |

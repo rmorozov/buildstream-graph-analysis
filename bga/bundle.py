@@ -1,10 +1,9 @@
 """UX-520: the whole capture in one file, and what the far side refuses.
 
-`run/` is not the capture. `UX-381` made the layout a contract, and half
-of what a reader needs sits *beside* `run/` — the Plane 2 report, the raw
-trace, the host samples, the published analysis. A user who tars `run/`,
-which is the directory every command's help names, carries Plane 1 and
-leaves Plane 2 behind.
+`run/` is not the capture. `UX-381` made the layout a contract, and half of what a reader
+needs sits *beside* `run/` — the Plane 2 report, the raw trace, the host samples, the
+published analysis. A user who tars `run/`, which is the directory every command's help
+names, carries Plane 1 and leaves Plane 2 behind.
 
 So the member list is **derived from `CAPTURE_LAYOUT`**, never restated
 here: a member added to the contract is bundled by existing. `DERIVED`
@@ -33,7 +32,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from . import __version__, contracts, run_store
-from .units import plural
+from .plural import plural
 
 SCHEMA = "bundle-manifest/v1"
 

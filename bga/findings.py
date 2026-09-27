@@ -39,7 +39,8 @@ from .cache_effectiveness import (
     TRANSFER_SHARE_NOTABLE,
 )
 from .ingest.models import AnalysisResult
-from .units import GIB, US_PER_S, human_bytes, plural
+from .plural import plural
+from .units import GIB, US_PER_S, human_bytes
 
 # Severity is about what it means for the reader, not about size:
 #   critical - the run itself is not what it appears to be
@@ -673,9 +674,8 @@ def _run_blocking_findings(result: AnalysisResult) -> list[dict]:
         # wording in the report and this second site kept it.
         suspended = build_failed.get('suspended')
         if failed:
-            failed_count = build_failed.get('failed_count')
             headline = (
-                f"THIS BUILD FAILED: {plural(failed_count, 'element')} "
+                f"THIS BUILD FAILED: {plural(build_failed.get('failed_count'), 'element')} "
                 f"ended in FAILURE ({shown}) - every figure below describes a build "
                 f"that did not complete, and the elements that failed contributed "
                 f"only the time they ran before failing")
@@ -750,10 +750,7 @@ def _run_context_findings(result: AnalysisResult) -> list[dict]:
     if primary is not None:
         band = confidence_band(primary)
         violations = result.violations or []
-        suffix = (
-            f" - see {plural(len(violations), 'violation')} below"
-            if violations else ""
-        )
+        suffix = f" - see {plural(len(violations), 'violation')} below" if violations else ""
         findings.append(_finding(
             'confidence', SEVERITY_INFO if band == 'high' else SEVERITY_MEDIUM,
             f"Confidence: {primary:.2f} ({band}){suffix}",
@@ -1291,8 +1288,7 @@ def _swap_observed_finding(result: AnalysisResult) -> list[dict]:
     building = f", while building {', '.join(elements)}" if elements else ""
     return [_finding(
         'swap-observed', SEVERITY_HIGH,
-        f"Swap: {plural(len(rows), 'window')} wrote "
-        f"{plural(total_pages, 'page')} to "
+        f"Swap: {plural(len(rows), 'window')} wrote {plural(total_pages, 'page')} to "
         f"swap, {start / 1e6:.1f}s-{end / 1e6:.1f}s into the build"
         f"{building}",
         elements=elements,

@@ -60,6 +60,7 @@ from .exceptions import (
 from .help_format import CompactHelp
 from .ingest.loader import load_historical_runs
 from .logging_config import configure_logging
+from .plural import plural
 from .replay.scheduler import build_contention_calibration
 from .report import (
     SWEEP_CAPACITY_MODEL_CAVEAT,
@@ -74,13 +75,9 @@ from .run_store import (
     StoreError,
     sibling_plane2,
 )
-from .run_store import (
-    resolve as resolve_run_alias,
-)
-from .run_store import (
-    resolve_plane2 as resolve_plane2_alias,
-)
-from .units import kb_to_bytes, mb_to_bytes, plural
+from .run_store import resolve as resolve_run_alias
+from .run_store import resolve_plane2 as resolve_plane2_alias
+from .units import kb_to_bytes, mb_to_bytes
 
 logger = logging.getLogger(__name__)
 
@@ -1028,8 +1025,7 @@ def _print_missing_input_hint(run_dir: Path) -> None:
 
     print(
         "Hint: this looks like a partially-populated run directory from a real "
-        "BuildStream project. To produce the missing "
-        f"{plural(len(missing), 'file')} from a real "
+        f"BuildStream project. To produce the missing {plural(len(missing), 'file')} from a real "
         "BuildStream invocation's project directory and log, see:",
         file=sys.stderr,
     )

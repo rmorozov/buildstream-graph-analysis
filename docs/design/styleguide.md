@@ -54,7 +54,7 @@ listed under its topic as `§6e.N`; since round 142 every one is binding.
 | | §3k | every population opens at a named bound, and the step past it is bounded too | binding |
 | **Navigation** | §3b | any section is at most two interactions from the rail | binding |
 | | §3c | every chapter question is within reach of the top; chapters fold; total height is §3e's bound | binding |
-| | §3h | the rail shows every chapter and only the current chapter's sections | binding |
+| | §3h | the rail shows every chapter, and only the sections of the chapter the reader is in | binding |
 | | §3l | *proposed*: pointer travel is a budget — a control class sits at one place, a journey's travel is bounded | proposed |
 | | §6e.11 | find-in-page reaches folded content | binding |
 | | §6e.10 | two size classes, regular (≥ 60rem) and compact; budgets measured in both | binding |
@@ -343,7 +343,7 @@ scroll does not work inside a scrolling parent. Three rules:
 
 Navigation cost is measured, not felt: from a chapter's rail entry,
 any section's content is reachable in **at most two interactions**
-(disclose the chapter's rail row, follow the section's link — §3h), and the walk that measures the worst
+(press the chapter's rail row, follow the section's link — §3h), and the walk that measures the worst
 path is a guard, not an aspiration. A structure change that pushes
 a third click into the common path reddens before a reader meets
 it. Folds inside content (the labeled fold, the chain's middle) do
@@ -1284,6 +1284,12 @@ out of a real browser rather than out of this file.
 | **primary** | `--accent-mark`, solid, 3px | at most one per chapter: the first runnable next step's copy (§6e.5, `UX-1027`) |
 | **form-control** | `--panel`, solid, 3px | every `select` and text `input` at rest — the query builder, the view picker, the run picker (`UX-1051`) |
 
+A grade is the look **at rest**. Hover, `aria-pressed="true"`,
+`aria-expanded="true"` and `aria-current` are states drawn over a grade,
+not grades: the rail's "you are here" (`aria-current="location"`, weight
+and `--fg`, on the current chapter row and its section link alike) is
+one such state, and the guard reads each button with it lifted.
+
 `UX-436` asked for three. There were four, because **reveal** is a real
 distinction with exactly two members that now match each other, and
 deleting it to reach a number would be the number driving the design;
@@ -1468,7 +1474,7 @@ so the change is in three places:
 - `chapters.js`: `setOpen(box, open)` stays the one state setter — it
   writes `data-open`, adds or removes `hidden="until-found"` on the
   chapter's sections, and `labelFold` updates `aria-expanded` on the
-  chapter control and the rail row. Each folded section listens for
+  chapter control and the count on the rail row. Each folded section listens for
   `beforematch` and calls `revealChapter`, so find, fragment navigation
   (which also fires `beforematch`) and the controls take one path.
 - A browser without `until-found` treats the attribute as `hidden`, so
@@ -1727,13 +1733,13 @@ reader's own distance budget on itself, and "you are here" never comes
 into view. A source list is grouped, discloses, and has one selection -
 this rail had the groups and the mark and no disclosure.
 
-**The rail shows every chapter and only the current chapter's
-sections.** A chapter row discloses, and its disclosure *is* the
-document's chapter fold (§4a's grouping, `chapters.js`'s `data-open`) -
-one state, two views (§4c), not a second fold the rail keeps of its
-own. `nav.toc > ul.chapters > li[data-chapter] >
-button[aria-expanded] "<title> · <n>" > ul.sections > li >
-a[aria-current]`. The scrollspy mark calls
+**The rail shows every chapter, and only the sections of the chapter
+the reader is in; the rail row goes to its chapter, and the fold is the
+document's.** `data-current` on one `li[data-chapter]` follows the
+scrollspy mark; a row press moves it, opens the chapter and lands on
+its head, and never shuts anything (`UX-1046`). `nav.toc > ul.chapters >
+li[data-chapter][data-current] > button[aria-current="location"] "▾ <title> · <n>" >
+ul.sections > li > a[aria-current]`. The scrollspy mark calls
 `scrollIntoView({block: "nearest"})` on every update, so the current
 entry is always inside the rail's own viewport rather than merely
 marked off-screen. `investigate`'s per-element list, previously the one
@@ -2046,7 +2052,7 @@ the census runs at the largest class.
 | a list inside a sentence (finding text, a chapter's answer) | the top few by name, the rest as a count | the section or table the sentence cites | the analyzer's sentences |
 | evidence, culprits, overview | `EVIDENCE_SHOWN`, `CULPRITS_SHOWN`, `OVERVIEW_SHOWN` | not measured here | `sections.js`, `element.js`, `primitives.js` |
 | history series | `HISTORY_POINTS_MAX` points | none: the window is the answer | `element.js` |
-| rail | the current chapter's sections (§3h) | the next chapter | §3h |
+| rail | the sections of the chapter the reader is in (§3h) | the next chapter | §3h |
 | Perfetto element picker | `PICKER_SHOWN` hits | the search box | `questions.js` |
 | labeled fold, "view as JSON" | closed | a `JSON_DOOR_CHAR_CAP`-character prefix, the rest as a copy (`UX-1030`) | §1, `rawjson.js` |
 
@@ -2261,7 +2267,7 @@ headings, so a renumber there moves it.
 | §2f | `test_a_distribution_twin_draws_every_mark.py` | |
 | §3 | `test_the_tools_scale_with_the_table.py`, `test_one_click_from_investigation.py` | named |
 | §3a | `test_a_level_names_who_is_in_it.py`, `test_a_value_shows_what_it_is.py`, `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_fold_says_how_deep_it_goes.py`, `test_the_max_jobs_advice_is_one_level.py`, `test_the_merge_carries_every_field.py`, `test_the_page_conforms_to_its_sections.py`, `test_the_provenance_names_its_rule.py`, `test_the_report_you_can_attach.py`, `test_the_serial_chains_are_ranked.py`, `test_the_store_section_takes_a_window.py`, `test_why_bga_believes_what_it_believes.py` | |
-| §3b | `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_page_conforms_to_its_sections.py` | |
+| §3b | `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_page_conforms_to_its_sections.py`, `test_the_rail_is_a_source_list.py` | |
 | §3c | `test_a_new_control_class_lands_declared.py`, `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_merge_carries_every_field.py` | `UX-665`'s registry names the § each control class belongs to, so the census cites this one for the rail's; §3e's volume budget is still the measured half |
 | §3d | `test_a_capped_table_filters_what_it_sorts.py`, `test_a_new_control_class_lands_declared.py`, `test_the_max_jobs_advice_is_one_level.py`, `test_the_merge_carries_every_field.py` | `UX-349`'s `test_the_tools_scale_with_the_table.py` also holds it and cites §3 |
 | §3e | `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_page_has_a_volume_budget.py` | |
@@ -2271,7 +2277,7 @@ headings, so a renumber there moves it.
 | §3i | `test_the_header_keeps_its_budget.py` | |
 | §3j | `test_a_fold_bounds_its_interactive_descendants.py` | `UX-921` |
 | §3k | `test_a_findings_element_list_is_bounded.py`, `test_every_step_past_a_bound_is_bounded.py` | `UX-1032`'s census, at the 4,002-element run; `UX-1028`/`UX-1029`/`UX-1030` closed the three violations it found |
-| §3l | `test_a_sections_controls_sit_together.py` | proposed; `UX-1042` files its travel guard |
+| §3l | `test_a_chapter_fold_has_one_place_and_one_label.py`, `test_a_sections_controls_sit_together.py` | proposed; `UX-1042` files its travel guard |
 | §4 | `test_emphasis_is_a_budget.py`, `test_the_palette_is_validated.py`, `test_a_drawing_is_graded.py`, `test_apparatus_in_its_place.py`, `test_the_browser_is_the_library.py` | named |
 | §4a | | named; `UX-346`'s `test_a_sentence_lives_on_its_door.py` holds it and cites no section |
 | §4b | `test_a_runbook_is_not_a_table.py` | `UX-351`'s `test_the_label_is_for_the_reader.py` holds it and cites no section; `UX-669`'s clause holds the half that says a citation is a question, never a key |
@@ -2288,7 +2294,7 @@ headings, so a renumber there moves it.
 | §6b | `test_one_factory_builds_every_table.py`, `test_the_handoff_rides_the_rail.py` | |
 | §6c | `test_the_browser_is_the_library.py`, `test_the_report_you_can_attach.py`, `test_find_in_page_reaches_folded_chapters.py` | |
 | §6d | `test_every_control_has_a_resting_appearance.py` | |
-| §6e | `test_a_reader_never_sees_the_register.py`, `test_an_absence_is_one_sentence.py`, `test_one_disclosure_glyph_pair.py`, `test_one_door_per_block.py`, `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_heading_outline_has_three_levels.py`, `test_spacing_comes_from_a_scale.py`, `test_controls_meet_the_target_size.py`, `test_every_control_has_a_resting_appearance.py`, `test_a_new_control_class_lands_declared.py`, `test_a_keyboard_journey_reaches_every_chapter.py`, `test_every_drawing_has_a_name_and_a_data_route.py`, `test_find_in_page_reaches_folded_chapters.py`, `test_the_page_has_a_volume_budget.py` | binding since round 142; each rule's guard is the one its row (`UX-1015`-`UX-1027`) closed with |
+| §6e | `test_a_reader_never_sees_the_register.py`, `test_an_absence_is_one_sentence.py`, `test_one_disclosure_glyph_pair.py`, `test_one_door_per_block.py`, `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_heading_outline_has_three_levels.py`, `test_spacing_comes_from_a_scale.py`, `test_controls_meet_the_target_size.py`, `test_every_control_has_a_resting_appearance.py`, `test_a_new_control_class_lands_declared.py`, `test_a_keyboard_journey_reaches_every_chapter.py`, `test_every_drawing_has_a_name_and_a_data_route.py`, `test_find_in_page_reaches_folded_chapters.py`, `test_the_page_has_a_volume_budget.py`, `test_a_chapter_fold_has_one_place_and_one_label.py` | binding since round 142; each rule's guard is the one its row (`UX-1015`-`UX-1027`) closed with |
 | §7 | `test_emphasis_is_a_budget.py`, `test_the_styleguide_names_its_guards.py` | named |
 
 What the rows with no guard were written from, rounds 58 and 69, kept

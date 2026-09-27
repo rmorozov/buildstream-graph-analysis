@@ -49,7 +49,7 @@ REGISTRY = {
     # action, and `renderWhyRanked`'s disclosure is the one both
     # fixtures' actions always have something to say in.
     "button": (r".+", "§4d"),                  # the Perfetto handoff button
-    "button.chapter-open": (r"^Show \d+ sections?$", "§3c"),
+    "button.chapter-open": (r"^[▸▾] \d+ sections?$", "§3c"),  # UX-1044
     "button.collapse": (r"^[▾▸]$", "§3c"),
     "button.copy-rows": (r"^Copy \d+ rows?$", "§3d"),
     "button.copy-sql": (r"^Copy ", "§4c"),

@@ -92,12 +92,23 @@ _READ_ACTIVE = r"""
   const a = document.activeElement;
   if (!a) return null;
   const cs = getComputedStyle(a);
-  return { tag: a.tagName, chapterOpen: a.getAttribute("data-chapter-open"),
-           expanded: a.getAttribute("aria-expanded"),
+  const id = a.getAttribute("data-toc-chapter");
+  const box = id && document.querySelector(`section.chapter[data-chapter="${id}"]`);
+  return { tag: a.tagName, chapterOpen: id,
+           expanded: box ? box.getAttribute("data-open") : null,
            outlineStyle: cs.outlineStyle, outlineWidth: cs.outlineWidth,
            visible: a.matches(":focus-visible") };
 })()
 """
+
+
+#: Every walk starts at the document's top: `scrollspy`'s landing
+#: `scrollIntoView` moves Chrome's sequential-focus starting point to the
+#: marked link, so an unanchored first `Tab` skips what sits above it.
+_START_AT_THE_TOP = [{"wait": 100}, {"read": (
+    '(() => { const b = document.body; b.setAttribute("tabindex", "-1"); '
+    'b.focus({preventScroll: true}); b.removeAttribute("tabindex"); '
+    'return null; })()')}]
 
 
 #: A generous, named cap on how many `Tab`s from the top it takes to
@@ -117,19 +128,19 @@ def journey(tmp_path_factory):
     uri = pages.export_uri(MACRO, into)
     with Browser(chrome) as browser:
         ids = browser.measure(uri, _RAIL_ORDER, 1440, 900)
-        steps = []
+        steps = list(_START_AT_THE_TOP)
         for _ in range(TAB_CAP):
             steps.append({"key": "Tab"})
             steps.append({"read": _READ_ACTIVE})
-        return ids, browser.journey(uri, steps, 1440, 900)
+        return ids, browser.journey(uri, steps, 1440, 900)[1:]
 
 
 @needs_browser
 class TestTabFromTheTopReachesEveryChapter:
-    def test_the_stops_are_every_non_first_chapters_fold_in_order(self, journey):
+    def test_the_stops_are_every_chapters_rail_row_in_order(self, journey):
         ids, trace = journey
         stops = [row["chapterOpen"] for row in trace if row["chapterOpen"]]
-        assert stops == ids[1:], (stops, ids)
+        assert stops == ids, (stops, ids)
 
     def test_every_fold_stop_shows_the_same_computed_ring(self, journey):
         _, trace = journey
@@ -149,17 +160,18 @@ class TestEnterOpensTheFoldEnterReached:
         count; this presses one `Enter` where the first one lands, in a
         fresh journey over exactly that many `Tab`s plus one."""
         ids, trace = journey
-        at = next(i for i, row in enumerate(trace) if row["chapterOpen"])
+        at = next(i for i, row in enumerate(trace)
+                  if row["chapterOpen"] and row["expanded"] == "false")
         into = tmp_path_factory.mktemp("u1016-enter")
         uri = pages.export_uri(MACRO, into)
         with Browser(chrome) as browser:
-            steps = []
+            steps = list(_START_AT_THE_TOP)
             for _ in range(at + 1):
                 steps.append({"key": "Tab"})
             steps.append({"read": _READ_ACTIVE})
             steps.append({"key": "Enter"})
             steps.append({"read": _READ_ACTIVE})
-            before, after = browser.journey(uri, steps, 1440, 900)
+            before, after = browser.journey(uri, steps, 1440, 900)[1:]
         assert len(ids) > 1, ids
         assert before["chapterOpen"] == trace[at]["chapterOpen"], before
         assert before["expanded"] == "false", before
@@ -185,12 +197,12 @@ class TestEveryFocusableClassShowsTheRingForReal:
     def test_a_button_input_select_and_summary_all_ring(self, tmp_path_factory):
         into = tmp_path_factory.mktemp("u1016-ring")
         uri = pages.export_uri(MACRO, into)
-        steps = []
+        steps = list(_START_AT_THE_TOP)
         for _ in range(self.CAP):
             steps.append({"key": "Tab"})
             steps.append({"read": _READ_ACTIVE})
         with Browser(chrome) as browser:
-            trace = browser.journey(uri, steps, 1440, 900)
+            trace = browser.journey(uri, steps, 1440, 900)[1:]
         by_tag = {}
         for row in trace:
             if row and row["visible"]:
@@ -252,18 +264,18 @@ class TestEscapeLeavesTableFocusAndReturnsFocus:
 
     def test_escape_leaves_and_returns_focus_to_the_opener(self, served_url):
         with Browser(chrome) as browser:
-            steps = [{"read": _OPEN_EVERY_CHAPTER}]
+            steps = [{"read": _OPEN_EVERY_CHAPTER}, *_START_AT_THE_TOP]
             for _ in range(self.CAP):
                 steps.append({"key": "Tab"})
                 steps.append({"read": _READ_EXPAND})
-            trace = browser.journey(served_url, steps, 1440, 900)[1:]
+            trace = browser.journey(served_url, steps, 1440, 900)[2:]
         at = next((i for i, row in enumerate(trace) if row["expand"]), None)
         assert at is not None, "no data-expand control reached in " \
             f"{self.CAP} tabs with every chapter open"
         opener_path = trace[at]["expand"]
 
         with Browser(chrome) as browser:
-            steps = [{"read": _OPEN_EVERY_CHAPTER}]
+            steps = [{"read": _OPEN_EVERY_CHAPTER}, *_START_AT_THE_TOP]
             for _ in range(at + 1):
                 steps.append({"key": "Tab"})
             steps.append({"read": _READ_EXPAND})
@@ -272,7 +284,7 @@ class TestEscapeLeavesTableFocusAndReturnsFocus:
             steps.append({"key": "Escape"})
             steps.append({"read": _READ_EXPAND})
             before, entered, after = browser.journey(
-                served_url, steps, 1440, 900)[1:]
+                served_url, steps, 1440, 900)[2:]
         assert before["expand"] == opener_path, before
         assert entered["tf"] == opener_path, entered
         assert after["tf"] is None, after

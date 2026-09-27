@@ -513,6 +513,8 @@ p.empty-population { margin: var(--space-1) 0 0; color: var(--muted); max-width:
    §4's emphasis budget is spent on findings, and "you are here" is
    orientation, not severity. The marker is what carries it where color
    is unavailable (print, forced-colors, a monochrome screen). */
+/* One "you are here" across the rail: the chapter row and its section link. */
+button.toc-chapter-open[aria-current="location"],
 .toc a[data-current] { font-weight: 600; color: var(--fg); }
 .toc a[data-current]::before { content: "\25b8\00a0"; }
 .toc-controls { margin: var(--space-2) 0 0; display: flex; gap: var(--space-2); }
@@ -539,9 +541,11 @@ button.collapse:hover { color: var(--fg); }
    grid. */
 section.chapter { margin: var(--space-5) 0 0; }
 section.chapter:first-of-type { margin-top: 0; }
+/* `UX-1044`: the fold control sits at the head's right edge, first line. */
 h2.chapter-title {
   margin: 0; padding-top: var(--space-2);
   border-top: 2px solid var(--line);
+  display: flex; align-items: baseline; gap: var(--space-2);
 }
 /* Inside a chapter the sections need less air between them than they
    did when nothing grouped them - the chapter boundary carries that
@@ -600,7 +604,7 @@ p.chapter-answer {
   margin: var(--space-1) 0 0; color: var(--muted); font-size: var(--font-body);
   max-width: 62ch;
 }
-button.chapter-open { margin-left: var(--space-2); vertical-align: middle; }
+button.chapter-open { margin-left: auto; flex: none; white-space: nowrap; }
 button.chapter-open:hover, button.chapter-open[aria-expanded="true"] {
   color: var(--fg); border-color: var(--fg);
 }
@@ -840,19 +844,13 @@ section[data-promoted] { border-left: 3px solid var(--accent); }
         background: var(--panel); color: inherit; border: 1px solid var(--line);
         border-radius: 10px; cursor: pointer; }
 .chip:hover { border-color: var(--accent); }
-.toc-rail { margin: var(--space-2) 0 0; font-size: var(--font-small); letter-spacing: .06em;
-            color: var(--muted); }
 
-/* `UX-667` (styleguide §3h): a source list - every chapter, and only
-   the open one's sections. `li[data-chapter]` is the row; `data-open`
-   is mirrored onto it from the same `section.chapter` box the document
-   folds (`chapters.js`'s `labelFold`), so the two views cannot drift.
-   No `overflow-y` here or on `.sections` below: the acceptance test's
-   third clause is that folding, not a scrollbox, is what bounds the
-   rail now. */
+/* Styleguide §3h: every chapter, and only the sections of the chapter the
+   reader is in (`data-current`, moved by `nav.js`'s scrollspy and row
+   press). No `overflow-y` here: disclosure, not a scrollbox, bounds it. */
 .toc .chapters { list-style: none; margin: 0; padding: 0; }
 .toc .chapters > li { margin: var(--space-2) 0 0; }
-.toc .chapters > li[data-open="false"] > .sections { display: none; }
+.toc .chapters > li:not([data-current]) > .sections { display: none; }
 /* §6d's "quiet" grade (transparent, solid, 3px) - the same full
    appearance `button.chapter-open` already draws (`test_every_control_
    has_a_resting_appearance.py` counts the whole look, not only the
@@ -864,8 +862,7 @@ button.toc-chapter-open {
   background: transparent; color: var(--muted);
   letter-spacing: .06em;
 }
-button.toc-chapter-open:hover,
-button.toc-chapter-open[aria-expanded="true"] { color: var(--fg); }
+button.toc-chapter-open:hover { color: var(--fg); }
 .question-group > summary { cursor: pointer;
                             color: var(--muted); font-size: var(--font-small);
                             margin-top: var(--space-2); }

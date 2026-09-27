@@ -178,8 +178,9 @@ class TestTheRailGroupsTheContents:
         the list and the document cannot describe different reports."""
         out = _render(_report())
         # `UX-667`: a row now names its chapter's count too ("<title> ·
-        # <n>"), so the title is a prefix rather than the whole string.
-        rails = [re.split(r" · \d+$", one)[0] for one in out["toc_rails"]]
+        # <n>"), and `UX-1044` its glyph ("▸ <title> · <n>").
+        rails = [re.sub(r"^[▸▾] ", "", re.split(r" · \d+$", one)[0])
+                 for one in out["toc_rails"]]
         assert rails, "the contents has no groups"
         titles = _chapter_titles()
         order = [title for title in titles if title in rails]

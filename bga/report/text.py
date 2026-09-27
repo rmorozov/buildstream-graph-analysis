@@ -6,7 +6,7 @@ from .. import provenance, schemas, sources
 from ..findings import compute_findings, compute_headline, compute_next_steps, render_findings
 from ..floors.cpu import ASSUMPTIONS as cpu_floor_assumptions
 from ..ingest.models import AnalysisResult
-from ..units import GIB, US_PER_S
+from ..units import GIB, US_PER_S, plural
 from . import rate
 from ._shared import EMPTY_POPULATION_SENTENCE, GRAPH_SIGNAL_KEYS, SWEEP_CAPACITY_MODEL_CAVEAT
 
@@ -50,8 +50,8 @@ _PATH_TAIL = 8
 _SHARED_SOURCE_ROWS = 10
 
 
-def _elision(hidden: int, flag: str, what: str = "element(s)") -> str:
-    return f"    ... {hidden} more {what} ({flag} to print all)"
+def _elision(hidden: int, flag: str, what: str = "element") -> str:
+    return f"    ... {plural(hidden, f'more {what}')} ({flag} to print all)"
 
 
 def _head_and_tail(items, head: int, tail: int, full: bool = False):
@@ -415,19 +415,19 @@ def _format_timestamp_resolution(result: AnalysisResult) -> list[str]:
         f"  Duration resolution: ±{resolution / US_PER_S:.2f}s, measured - each task's length "
         f"is in this capture twice (the wrapped log's own timestamps, stamped when "
         f"the wrapper read each line, against BuildStream's own elapsed) and "
-        f"{agreement['tasks_compared']} task(s) were compared",
+        f"{plural(agreement['tasks_compared'], 'task')} were compared",
     ]
     if material:
+        measured = agreement.get('tasks_measured', material)
         lines.append(
             f"    that is more than {share:.0f}% of the duration for "
-            f"{material} of {agreement.get('tasks_measured', material)} measured "
-            f"task(s) - the shortest is "
+            f"{material} of {plural(measured, 'measured task')} - the shortest is "
             f"{agreement['shortest_task_us'] / US_PER_S:.2f}s"
         )
     if provably_short:
         worst = (agreement.get('shorter_than_bst') or [{}])[0]
         lines.append(
-            f"    {provably_short} task(s) are reported SHORTER than BuildStream's "
+            f"    {plural(provably_short, 'task')} are reported SHORTER than BuildStream's "
             f"own timing of them"
             + (f" - {worst.get('element')} at {worst['span_s']:.3f}s against "
                f"{worst['bst_elapsed_s']:.0f}s" if worst.get('span_s') is not None
@@ -562,13 +562,13 @@ def _format_resource_blast(result, full_sections=frozenset()) -> list[str]:
         # UX-187: named, not silent. The rows are ranked widest-first,
         # so what folds is the tail - but a reader still has to be told
         # it exists.
-        lines.append(_elision(hidden_rows, "--full-sources", "resource(s)"))
+        lines.append(_elision(hidden_rows, "--full-sources", "resource"))
     unreadable = blast.get('unreadable') or {}
     if unreadable:
         # UX-160's lesson: a reader that silently drops what it cannot
         # parse reports zero and looks like an answer.
-        lines.append(f"  ({len(unreadable)} element(s) whose sources could not be "
-                     f"read are not counted above)")
+        lines.append(f"  ({plural(len(unreadable), 'element')} whose "
+                     f"sources could not be read are not counted above)")
     lines += [
         "",
         "  Work is the sum of the named elements' own durations, not wall clock:",
@@ -664,7 +664,8 @@ def _render_header_section(result: AnalysisResult, section, by_kind, full_sectio
             what = "it was interrupted before it finished"
         else:
             named = ", ".join(violation.get('failed_elements') or []) or "unnamed element"
-            what = (f"{violation.get('failed_count')} element(s) ended in "
+            failed_count = violation.get('failed_count')
+            what = (f"{plural(failed_count, 'element')} ended in "
                     f"FAILURE ({named})")
         lines.append(
             f"THIS BUILD DID NOT FINISH: {what}{counts}. Every figure below "
@@ -1049,8 +1050,8 @@ def _render_structural_consolidation(consolidation_candidates: list) -> list[str
     lines = []
     if consolidation_candidates:
         lines.append(
-            f"  Stack-Consolidation Candidates: {len(consolidation_candidates)} "
-            f"group(s) of elements always consumed together with no `stack` "
+            f"  Stack-Consolidation Candidates: "
+            f"{plural(len(consolidation_candidates), 'group')} of elements always consumed together with no `stack` "
             f"grouping them (P4-15, structural signal only - not a timing "
             f"estimate; see `bga checkout-cost` for real measurement):"
         )
@@ -1125,8 +1126,8 @@ def _render_structural_sensitivity(sensitivity: dict) -> list[str]:
     omitted_structural = sensitivity.get('omitted_structural_opportunities') or []
     if omitted_structural:
         lines.append(
-            "  ({} structural element(s) omitted - no build commands to speed up: {})".format(
-                len(omitted_structural),
+            "  (structural {} omitted - no build commands to speed up: {})".format(
+                plural(len(omitted_structural), "element"),
                 ", ".join(
                     f"{o['element']} [{o['element_kind']}]" for o in omitted_structural[:5]
                 ),
@@ -1169,7 +1170,7 @@ def _render_structural_batch_opportunities(batch_opportunities: dict) -> list[st
     omitted_zero_savings_groups = batch_opportunities.get('omitted_zero_savings_groups') or []
     if omitted_zero_savings_groups:
         lines.append(
-            f"  ({len(omitted_zero_savings_groups)} further group(s) had no "
+            f"  ({plural(len(omitted_zero_savings_groups), 'further group')} had no "
             f"measurable combined effect, omitted)"
         )
     serialized_pairs = batch_opportunities.get('serialized_pairs') or []
@@ -1416,7 +1417,7 @@ def _memory_knee_caveat(memory_envelope: Optional[dict], knee) -> list[str]:
         # has nothing to say rather than an extrapolation to offer.
         return [
             f"  Memory: no envelope at capacity {capacity} - only "
-            f"{envelope['elements_measured']} element(s) have a measured peak, so "
+            f"{plural(envelope['elements_measured'], 'element')} have a measured peak, so "
             f"this cannot say whether {host_gb:.1f} GB is enough there."
         ]
     if at_knee['fits']:
@@ -1440,9 +1441,10 @@ def _sweep_recommendation_line(binding: dict) -> str:
     entry, so the wording a reader sees and the value a JSON consumer
     reads cannot disagree about which constraint bound first.
     """
+    builders = plural(binding['builders'], 'builder')
     if binding.get('name') == 'memory':
-        return f"Recommendation: memory-bound at {binding['builders']} builder(s)"
-    return f"Recommendation: builder-bound at {binding['builders']} builder(s)"
+        return f"Recommendation: memory-bound at {builders}"
+    return f"Recommendation: builder-bound at {builders}"
 
 
 def _plane2_knee_caveat(plane2_capacity: Optional[dict], knee) -> list[str]:
@@ -1715,7 +1717,8 @@ def format_compare_text(comparison) -> str:
             f"{band['k']:g}x{_fmt_us(band['scaled_mad_us'])} (scaled MAD)"
         )
         lines.append(
-            f"  Judged against a noise band from {band['n']} baseline run(s): "
+            f"  Judged against a noise band from baseline "
+            f"{plural(band['n'], 'run')}: "
             f"{_fmt_us(band['low_us'])} .. {_fmt_us(band['high_us'])} - {width}"
         )
     # UX-593: and why that verdict, before the elements it is about.
@@ -1766,7 +1769,8 @@ def format_compare_text(comparison) -> str:
                 if churn['rebuilt_in_both_count'] > 4 else ""
             )
             lines.append(
-                f"  Cache retention: {churn['rebuilt_in_both_count']} element(s) "
+                f"  Cache retention: "
+                f"{plural(churn['rebuilt_in_both_count'], 'element')} "
                 f"rebuilt in BOTH runs with the same cache key, costing "
                 f"{churn['rebuilt_in_both_us'] / 1e6:.1f}s here - {named}{more}. The "
                 f"artifact is not surviving between runs (deliberate cut, eviction, "
@@ -1780,7 +1784,8 @@ def format_compare_text(comparison) -> str:
                 if churn['churned_count'] > 4 else ""
             )
             lines.append(
-                f"  Cache churn: {churn['churned_count']} element(s) rebuilt with an "
+                f"  Cache churn: "
+                f"{plural(churn['churned_count'], 'element')} rebuilt with an "
                 f"unchanged cache key, costing "
                 f"{churn['wasted_rebuild_us'] / 1e6:.1f}s - {named}{more}. Nothing "
                 f"they depend on changed, so that time bought nothing"
@@ -1789,7 +1794,8 @@ def format_compare_text(comparison) -> str:
         extra = len(churn.get('invalidation_roots') or []) - _INVALIDATION_ROOTS_SHOWN
         if extra > 0:
             lines.append(
-                f"    (+{extra} more independent invalidation root(s), see --format json)"
+                f"    (+{plural(extra, 'more independent invalidation root')}, "
+                f"see --format json)"
             )
 
     # UX-104: did this change make the build need more memory? Placed
@@ -1814,7 +1820,8 @@ def format_compare_text(comparison) -> str:
     shortfall = getattr(comparison, 'baseline_band_shortfall', None)
     if shortfall:
         lines.append(
-            f"  No noise band: {shortfall['supplied']} baseline run(s) supplied, "
+            f"  No noise band: baseline "
+            f"{plural(shortfall['supplied'], 'run')} supplied, "
             f"{shortfall['required']} required - "
             f"{shortfall['required'] - shortfall['supplied']} more of the same shape "
             f"would replace the fixed 1% significance rule used here"

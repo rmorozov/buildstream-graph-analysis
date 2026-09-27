@@ -64,6 +64,19 @@ def s_to_us(value) -> Optional[int]:
     return None if value is None else int(round(float(value) * US_PER_S))
 
 
+def plural(count, noun: str, plural_noun: Optional[str] = None,
+           shown: Optional[str] = None) -> str:
+    """`1 element` / `2 elements` - the count and its noun in one call,
+    chosen by the count rather than spelled `(s)`. `shown` overrides how
+    the count itself renders (e.g. a `:g`-formatted rate), for a caller
+    whose count is not the plain integer to print. UX-1038: reused from
+    `bga/correlate.py`'s own `_count` (kept as an alias there) and named
+    for `bga/viewer/tables.js`'s `plural`, the same idiom already in
+    the codebase."""
+    word = noun if count == 1 else (plural_noun or f"{noun}s")
+    return f"{count if shown is None else shown} {word}"
+
+
 def human_bytes(size) -> str:
     """`du -h`-style, because that is what the user will compare against.
 

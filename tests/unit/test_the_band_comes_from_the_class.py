@@ -121,7 +121,7 @@ class TestTheBandIsTheCandidatesOwnClass:
 
         assert code == EXIT_OK, output
         assert "+1.0s" in output
-        assert "— within the band from 5 baseline run(s)" in output
+        assert "— within the band from baseline 5 runs" in output
 
     def test_the_band_decides_the_gate_where_the_fixed_rule_would_not(self, tmp_path):
         """`UX-180`'s open seam, closed for this flag. +3s on 100s is a
@@ -147,7 +147,7 @@ class TestTheBandIsTheCandidatesOwnClass:
 
         assert code == EXIT_REGRESSION, output
         assert "+30.0s" in output
-        assert "— outside the band from 5 baseline run(s)" in output
+        assert "— outside the band from baseline 5 runs" in output
 
     def test_the_comment_says_which_runs_formed_the_band(self, tmp_path):
         project, baseline, candidate = _store(
@@ -158,7 +158,7 @@ class TestTheBandIsTheCandidatesOwnClass:
 
         assert code == EXIT_OK, output
         # The count, so a reviewer can weigh the claim at all.
-        assert "band from 5 baseline run(s)" in output
+        assert "band from baseline 5 runs" in output
         # And which five, so a window that reached across a toolchain
         # bump is visible rather than hidden inside the number.
         for index in range(1, 6):
@@ -177,7 +177,7 @@ class TestTheBandIsTheCandidatesOwnClass:
         assert code == EXIT_BAND_UNAVAILABLE, output
         assert "Band gate REFUSED" in output
         assert "review · arch=x86_64 · sanitizer=address" in output
-        assert "holds 2 other run(s) of that class" in output
+        assert "holds other 2 runs of that class" in output
         # A refusal is not a verdict: no comparison may be printed beside it.
         assert "Verdict:" not in output
 
@@ -191,7 +191,7 @@ class TestTheBandIsTheCandidatesOwnClass:
                                 "--fail-on-regression")
 
         assert code == EXIT_BAND_UNAVAILABLE, output
-        assert "holds 0 other run(s) of that class" in output
+        assert "holds other 0 runs of that class" in output
 
     def test_a_variant_alone_separates_two_populations(self, tmp_path):
         """A review build under a sanitizer is not a review build: the
@@ -220,7 +220,7 @@ class TestTheFlagSaysWhatItSelected:
                                 "--format", "ci-comment")
 
         assert code == EXIT_OK, output
-        assert "band from 4 baseline run(s)" in output
+        assert "band from baseline 4 runs" in output
 
     def test_a_window_below_the_minimum_is_refused_as_an_argument(self, tmp_path):
         project, baseline, candidate = _store(

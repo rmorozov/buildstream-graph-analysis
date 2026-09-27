@@ -180,7 +180,7 @@ def test_too_few_baseline_runs_names_what_is_missing(tmp_path):
     ])
 
     assert result.returncode == EXIT_OK
-    assert "No noise band: 2 baseline run(s) supplied, 3 required" in result.stdout
+    assert "No noise band: baseline 2 runs supplied, 3 required" in result.stdout
     assert "1 more of the same shape" in result.stdout
 
 

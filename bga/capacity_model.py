@@ -26,6 +26,7 @@ from typing import Optional
 
 from . import schemas, store_aggregate
 from .compare import MIN_BASELINE_RUNS
+from .units import plural
 
 MICROSECONDS_PER_DAY = 86_400_000_000
 
@@ -140,7 +141,7 @@ def _class_model(label: str, samples: list[float], builders: int,
         entry["shortfall"] = {
             "have": len(samples), "need": MIN_BASELINE_RUNS,
             "sentence": (
-                f"{len(samples)} finished run(s) on {label}: "
+                f"{len(samples)} finished {plural(len(samples), 'run')} on {label}: "
                 f"{MIN_BASELINE_RUNS} are needed before a service time "
                 f"means anything, so this class is not modelled."),
         }
@@ -169,9 +170,9 @@ def _class_model(label: str, samples: list[float], builders: int,
         entry["refusal"] = {
             "check": "unstable_queue",
             "sentence": (
-                f"{arrivals_per_day:g} build(s)/day of "
+                f"{plural(arrivals_per_day, 'build', shown=f'{arrivals_per_day:g}')}/day of "
                 f"{service['mean_us'] / 1e6:.1f}s each need "
-                f"{load:.2f} builder(s) and there are {builders}: the "
+                f"{load:.2f} builders and there are {builders}: the "
                 f"queue grows without bound, so no wait is published. "
                 f"A finite one would be a number about a system that "
                 f"does not reach equilibrium."),
@@ -265,7 +266,7 @@ def _used(document: dict) -> list[str]:
 
 _UNITS = {
     "utilization": ("Utilization", lambda v: f"{v * 100:.1f}% of "
-                                             f"{{builders}} builder(s)"),
+                                             f"{{builders}}"),
     "wait_us": ("Wait before a build starts", lambda v: f"{v / 1e6:.1f}s"),
     "queue_length": ("Builds waiting", lambda v: f"{v:.2f}"),
 }
@@ -286,14 +287,15 @@ def render(document: dict) -> list[str]:
     it - eleven sentences repeated under three numbers is a printout
     nobody reads, and an assumption nobody reads is not published.
     """
+    arrivals = document['arrivals_per_day']
     lines = [f"Store: {document.get('project')}",
-             f"  {document['builders']} builder(s), "
-             f"{document['arrivals_per_day']:g} build(s)/day"]
+             f"  {plural(document['builders'], 'builder')}, "
+             f"{plural(arrivals, 'build', shown=f'{arrivals:g}')}/day"]
     if document.get("excluded_runs"):
-        lines.append(f"  {document['excluded_runs']} run(s) excluded: "
+        lines.append(f"  {plural(document['excluded_runs'], 'run')} excluded: "
                      f"not a finished build, so not a service time")
     for entry in document.get("host_classes") or []:
-        lines += ["", f"  {entry['host_class']} - {entry['runs']} run(s)"]
+        lines += ["", f"  {entry['host_class']} - {plural(entry['runs'], 'run')}"]
         if entry.get("shortfall"):
             lines += _wrapped("    ", entry["shortfall"]["sentence"], "    ")
             continue
@@ -304,7 +306,8 @@ def render(document: dict) -> list[str]:
             f"CV^2 {service['cv2']:.2f}, n={service['samples']}")
         for answer in entry["answers"]:
             label, form = _UNITS[answer["name"]]
-            shown = form(answer["value"]).format(builders=document["builders"])
+            shown = form(answer["value"]).format(
+                builders=plural(document["builders"], "builder"))
             lines.append(f"    {label}: {shown}")
             lines += _wrapped("      assumes ", ", ".join(answer["assumes"]),
                               "              ")

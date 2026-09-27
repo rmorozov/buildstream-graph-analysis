@@ -113,7 +113,7 @@ def test_text_report_omits_zero_savings_group_and_names_the_count():
 
     assert "lib-a.bst" not in output
     assert "lib-b.bst" not in output
-    assert "1 further group(s) had no measurable combined effect, omitted" in output
+    assert "1 further group had no measurable combined effect, omitted" in output
 
 
 def test_text_report_still_shows_a_genuine_savings_group():
@@ -134,4 +134,4 @@ def test_text_report_still_shows_a_genuine_savings_group():
     assert "Independently workable together" in output
     assert "app.bst" in output and "extra.bst" in output
     assert "saves 4.00s combined" in output
-    assert "further group(s)" not in output
+    assert "further group" not in output

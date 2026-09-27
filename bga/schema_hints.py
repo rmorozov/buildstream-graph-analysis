@@ -4,6 +4,7 @@ Split out of `bga/schemas.py` (`UX-1031`) to hold that file's size cell;
 `bga.schemas` re-exports every name here.
 """
 from .findings import READERS
+from .units import plural
 
 # ---------------------------------------------------------------------
 # View-hints v1 (`UX-193`)
@@ -354,7 +355,8 @@ def _check_hint(document: str, key: str, hint: dict) -> None:
                if shape not in MARKER_SHAPES]
         if bad:
             raise ValueError(
-                f"{document}.{key}: {MARKERS} shape(s) {sorted(bad)} not one "
+                f"{document}.{key}: {MARKERS} {plural(len(bad), 'shape')} "
+                f"{sorted(bad)} not one "
                 f"of {', '.join(MARKER_SHAPES)}")
         if len(set(markers.values())) != len(markers):
             raise ValueError(

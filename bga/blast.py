@@ -26,7 +26,7 @@ from . import schemas
 from . import sources as sources_mod
 from .graph.edg import build_element_graph, compute_element_durations, compute_reachability
 from .ingest.loader import load_all
-from .units import US_PER_S
+from .units import US_PER_S, plural
 
 # The order a target is resolved in, applied top to bottom and stated in
 # the output whenever more than one shape could have matched.
@@ -420,7 +420,7 @@ def format_blast_text(answer: dict) -> str:
             else f" (+{len(answer['direct_elements']) - 6} more)")
     lines += [
         "",
-        f"  Sourced directly by {answer['direct_count']} element(s): {named}{more}",
+        f"  Sourced directly by {plural(answer['direct_count'], 'element')}: {named}{more}",
         f"  Rebuilds {sources_mod.format_kind_split(answer['building_count'], answer['assembling_count'])}"
         f" of {answer['element_count']} in this build",
     ]

@@ -21,6 +21,7 @@ from .analyzer import BuildEfficiencyAnalyzer
 from .cache_effectiveness import compute_cache_churn
 from .ingest.models import AnalysisResult, Element
 from .report.text import _CONFIDENCE_HIGH
+from .units import plural
 
 logger = logging.getLogger(__name__)
 
@@ -669,8 +670,9 @@ def _check_comparability(baseline_elements: list[Element], candidate_elements: l
     overlap_frac = len(overlap) / max(len(baseline_uids), len(candidate_uids))
     if overlap_frac < 0.5:
         return (
-            f"baseline has {len(baseline_uids)} element(s), candidate has "
-            f"{len(candidate_uids)} - only {len(overlap)} shared element UID(s) "
+            f"baseline has {plural(len(baseline_uids), 'element')}, "
+            f"candidate has {len(candidate_uids)} - only shared "
+            f"{plural(len(overlap), 'element UID')} "
             "(less than half) - these runs may not be the same project"
         )
     return None
@@ -878,7 +880,7 @@ def _verdict_rule(kind: str, document: dict) -> dict:
         counts = (document.get('element_deltas') or {}).get('counts') or {}
         moved = counts.get(_CROSSING_COUNT.get(kind, ''), 0)
         crossers = (
-            f"{moved} element(s) present in both runs "
+            f"{plural(moved, 'element')} present in both runs "
             f"{_CROSSING_COUNT.get(kind, 'moved')}, and the "
             f"{min(moved, VERDICT_CULPRITS_CITED)} largest are cited"
             if moved else

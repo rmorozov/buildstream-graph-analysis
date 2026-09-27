@@ -86,7 +86,7 @@ class TestTheCriticalPathIsFolded:
 
     def test_the_elision_names_its_count_and_its_flag(self, deep_run):
         rendered = _bga(["analyze", deep_run, "--diagnostics"]).stdout
-        match = re.search(r"\.\.\. (\d+) more element\(s\) \(--full-path to print all\)",
+        match = re.search(r"\.\.\. (\d+) more elements? \(--full-path to print all\)",
                           rendered)
         assert match, "the fold is silent"
         assert int(match.group(1)) > 300, (

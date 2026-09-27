@@ -106,7 +106,7 @@ def test_sweep_text_names_memory_as_the_bound():
         peak_rss_bytes=peak_rss, host_memory_bytes=int(6.5 * GIB),
     )
     text = format_sweep_text("PROCESS", result)
-    assert "Recommendation: memory-bound at 3 builder(s)" in text
+    assert "Recommendation: memory-bound at 3 builders" in text
 
 
 def test_sweep_text_names_builders_as_the_bound():
@@ -116,7 +116,7 @@ def test_sweep_text_names_builders_as_the_bound():
         peak_rss_bytes=peak_rss, host_memory_bytes=32 * GIB,
     )
     text = format_sweep_text("PROCESS", result)
-    assert "Recommendation: builder-bound at 8 builder(s)" in text
+    assert "Recommendation: builder-bound at 8 builders" in text
 
 
 def test_peak_rss_and_host_memory_needs_both_halves():

@@ -337,7 +337,7 @@ class TestTheCommandIsWired:
         out = str(tmp_path / "carry.tar.gz")
         monkeypatch.chdir(project)
         assert main(["bundle", "--export", "@" + STAMP, "-o", out]) == 0
-        assert "member(s)" in capsys.readouterr().out
+        assert "member" in capsys.readouterr().out
         monkeypatch.chdir(far)
         assert main(["bundle", "--load", out]) == 0
         printed = capsys.readouterr().out

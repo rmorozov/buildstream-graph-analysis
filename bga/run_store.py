@@ -31,6 +31,7 @@ from . import progress
 # `UX-896`: `human_bytes` lives in `units` now; re-exported here so
 # every existing `run_store.human_bytes` caller keeps working.
 from .units import human_bytes as human_bytes
+from .units import plural
 
 STORE_DIRNAME = ".bga"
 RUNS_DIRNAME = "runs"
@@ -401,7 +402,8 @@ def resolve_snapshot(token: str, start: Optional[str] = None) -> str:
                   if os.path.basename(s).startswith(name)]
         if debris:
             raise StoreError(
-                f"{name!r} names {len(debris)} snapshot(s) in {project} with "
+                f"{name!r} names {plural(len(debris), 'snapshot')} "
+                f"in {project} with "
                 f"no run directory ({', '.join(debris[-4:])}). "
                 f"`bga snapshot --list` shows them and says why; an alias "
                 f"resolves only to a capture that produced a run. "

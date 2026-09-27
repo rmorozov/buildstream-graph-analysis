@@ -131,5 +131,5 @@ def test_consolidation_candidates_shown_in_text_report(tmp_path):
     result = analyzer.analyze()
 
     output = format_text(result, section="graph")
-    assert "Stack-Consolidation Candidates: 1 group(s)" in output
+    assert "Stack-Consolidation Candidates: 1 group" in output
     assert "x.bst, y.bst" in output

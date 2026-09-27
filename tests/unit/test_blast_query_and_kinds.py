@@ -170,9 +170,9 @@ class TestBlastCountsKnowWhatAnElementIs:
         assert sources.split_by_kind(kinds, kinds) == (1, 0)
 
     def test_the_split_is_silent_when_everything_builds(self):
-        assert sources.format_kind_split(7, 0) == "7 element(s)"
+        assert sources.format_kind_split(7, 0) == "7 elements"
         assert sources.format_kind_split(3, 4) == \
-            "7 element(s) (3 that build, 4 that assemble)"
+            "7 elements (3 that build, 4 that assemble)"
 
     def test_the_blast_answer_carries_the_split(self, tmp_path):
         answer = blast(_run_with(tmp_path), "base.bst")
@@ -254,7 +254,7 @@ class TestTheInvalidationNoteAdoptsTheSplit:
             }],
         }
         text = "\n".join(_format_invalidation_roots(churn))
-        assert "7 element(s) (3 that build, 4 that assemble)" in text
+        assert "7 elements (3 that build, 4 that assemble)" in text
 
 
 if __name__ == "__main__":  # pragma: no cover

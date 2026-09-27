@@ -27,6 +27,7 @@ from ..compare import (
     efficiency_regression_exceeds_threshold,
     regression_gate_failed,
 )
+from ..units import plural
 
 # The handle a CI job greps for to decide between editing its existing
 # comment and posting a new one. Stable across versions by contract: a
@@ -157,7 +158,7 @@ def _band_name(comparison) -> str:
     band = comparison.baseline_band
     if not band or band.get('widened_to_fixed_pct'):
         return "the fixed 1% rule"
-    return f"the band from {band['n']} baseline run(s)"
+    return f"the band from baseline {plural(band['n'], 'run')}"
 
 
 def _band_reason(comparison) -> str:
@@ -166,14 +167,16 @@ def _band_reason(comparison) -> str:
         shortfall = getattr(comparison, 'baseline_band_shortfall', None)
         if shortfall:
             return (f"judged against the fixed 1% rule — "
-                    f"{shortfall['supplied']} baseline run(s) supplied, "
+                    f"baseline {plural(shortfall['supplied'], 'run')} supplied, "
                     f"{shortfall['required']} required for a measured band")
         return "judged against the fixed 1% rule (no baseline set supplied)"
     if band.get('widened_to_fixed_pct'):
-        return (f"band from {band['n']} baseline run(s), widened to the fixed 1% "
+        return (f"band from baseline {plural(band['n'], 'run')}, "
+                f"widened to the fixed 1% "
                 f"rule: {_s(band['low_us'])} .. {_s(band['high_us'])}"
                 + _band_members(comparison))
-    return (f"band from {band['n']} baseline run(s): {_s(band['low_us'])} .. "
+    return (f"band from baseline {plural(band['n'], 'run')}: "
+            f"{_s(band['low_us'])} .. "
             f"{_s(band['high_us'])} (median ±{band['k']:g}× scaled MAD)"
             + _band_members(comparison))
 
@@ -354,7 +357,7 @@ def _cache_line(comparison) -> list[str]:
     if churned:
         wasted = churn.get('wasted_rebuild_us')
         return [
-            f"**Cache** — {churned} element(s) changed cache key between the two "
+            f"**Cache** — {plural(churned, 'element')} changed cache key between the two "
             f"runs" + (f", {_s(wasted)} of rebuild attributable to the change" if wasted else "")
             + f"; {rebuilt} rebuilt in both runs regardless.",
         ]

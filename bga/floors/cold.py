@@ -26,6 +26,7 @@ from typing import Optional
 
 from ..graph.edg import compute_critical_path
 from ..ingest.models import Graph, NormalizedTask
+from ..units import plural
 
 logger = logging.getLogger(__name__)
 
@@ -172,10 +173,11 @@ def compute_cold_floor(
     cold_critical_path_duration_sources = dict(cold_critical_path_duration_sources)
 
     if path_has_unavailable and not allow_partial_cold:
+        unavailable_on_path = sum(1 for uid in cold_path if uid in unavailable_elements)
         logger.info(
-            "Cold floor unavailable: %d element(s) on cold critical path lack a "
+            "Cold floor unavailable: %s on cold critical path lack a "
             "resolvable duration (pass allow_partial_cold to publish anyway)",
-            sum(1 for uid in cold_path if uid in unavailable_elements),
+            plural(unavailable_on_path, "element"),
         )
         return {
             't_infinity_cold': None, 'cold_partial': False, 'cold_confidence': None,

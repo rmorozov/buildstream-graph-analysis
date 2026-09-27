@@ -692,7 +692,14 @@ export function buildTable(key, rows, hint = {}, node = undefined,
   if (options.fold) foldTheMiddle(table, rows.length, options.fold);
   const uniform = statedOnce(table, specs, rows.length);
   const tools = interrogable(table, specs, rows.length, depth);
-  if (uniform) tools.prepend?.(uniform);
+  // `UX-1055`: after `copy-rows`, not before it - a plain `prepend`
+  // put this note ahead of `copy-rows`, undoing its guaranteed first
+  // place in the row (styleguide §3l).
+  if (uniform) {
+    const after = tools.querySelector?.(".copy-rows");
+    if (after) after.after(uniform);
+    else tools.prepend?.(uniform);
+  }
   return { table, tools };
 }
 
@@ -1153,9 +1160,14 @@ export function interrogable(table, specs, total, depth = 0) {
   const nested = depth > 0;
   const expand = served() && (nested || total > TABLE_OPENS_BOUNDED_ABOVE)
     ? expandTableControl(table, depth) : null;
-  const tools = el("div", { class: "table-tools" }, box, badge,
-                            state.preset ?? null, pager, copyRows, asMarkdown,
-                            expand, shape);
+  // `UX-1055` (styleguide §3l): `copyRows` first and `state.preset`
+  // (`top-n`) last in the DOM too, not just visually via CSS `order` -
+  // a reader tabbing through matches what a sighted reader sees
+  // (WCAG 2.4.3/1.3.2); `style.css`'s `margin-left: auto` on `top-n`
+  // still carries the "nothing shares its trailing space" guarantee.
+  const tools = el("div", { class: "table-tools" }, copyRows, box, badge,
+                            pager, asMarkdown, expand, shape,
+                            state.preset ?? null);
   // The badge and the count are the same claim; refresh both together.
   tools.addEventListener?.("input", label);
   tools.addEventListener?.("change", label);

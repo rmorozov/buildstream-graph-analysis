@@ -414,7 +414,8 @@ export function ensureElementSection(payload, root, uid, options = {}) {
   const existing = root.querySelector?.(`[data-section="${id}"]`)
     ?? root.querySelector?.(`#${id}`);
   if (existing) return existing;
-  const { investigate = null, quantity: format = (v) => String(v) } = options;
+  const { investigate = null, quantity: format = (v) => String(v),
+          bounded = null } = options;
   const record = elementFactsFor(payload, uid);
   const places = new Set();
   for (const node of root.querySelectorAll?.("[data-element]") ?? []) {
@@ -426,7 +427,7 @@ export function ensureElementSection(payload, root, uid, options = {}) {
     const key = owner?.getAttribute?.("data-section");
     if (key && !key.startsWith("element-")) places.add(key);
   }
-  const section = elementSection(record, places, investigate, format);
+  const section = elementSection(record, places, investigate, format, bounded);
   section.setAttribute("data-on-demand", "true");
   if (!record.rows.length && !record.findings.length) {
     // UX-278 item 2: an anchor that resolves to a block saying the run
@@ -547,7 +548,8 @@ const JOIN_EVIDENCE = [
  * here - the property `UX-193` bought for the sections themselves.
  */
 export function renderElementSections(payload, root, options = {}) {
-  const { investigate = null, quantity: format = (v) => String(v) } = options;
+  const { investigate = null, quantity: format = (v) => String(v),
+          bounded = null } = options;
   const facts = elementFacts(payload);
   if (!facts.size) return [];
 
@@ -569,7 +571,7 @@ export function renderElementSections(payload, root, options = {}) {
   const all = [...facts.values()];
   for (const record of all.slice(0, ELEMENTS_SHOWN)) {
     sections.push(elementSection(record, places.get(record.element),
-                                 investigate, format));
+                                 investigate, format, bounded));
   }
   if (all.length > ELEMENTS_SHOWN) {
     // UX-187: an elision names its count and never pretends to be the
@@ -585,7 +587,9 @@ export function renderElementSections(payload, root, options = {}) {
   return sections;
 }
 
-function elementSection(record, places, investigate, format) {
+// `bounded(key, items)` (UX-1037): §1's folded list or table past the
+// table bound, else null - injected, so this chapter imports no `structured.js`.
+function elementSection(record, places, investigate, format, bounded = null) {
   const uid = record.element;
   const section = document.createElement("section");
   // `UX-199`'s invariant is that a section's id *is* its key, and this
@@ -659,7 +663,10 @@ function elementSection(record, places, investigate, format) {
   // above the evidence it rests on and above the findings that name
   // the element. It is the finished advice, so it reads at the grade
   // `headline.top_actions` does rather than behind a fold.
-  for (const advice of record.advice ?? []) {
+  const advised = bounded?.("recommendations", (record.advice ?? []).map(
+    ({ severity, text }) => ({ severity, text })));
+  if (advised) section.append(advised);
+  for (const advice of advised ? [] : record.advice ?? []) {
     const line = document.createElement("p");
     line.className = "advice";
     line.setAttribute("data-severity", advice.severity);
@@ -719,6 +726,11 @@ function elementSection(record, places, investigate, format) {
     line.className = "muted";
     line.setAttribute("data-list", named.key);
     line.append(document.createTextNode(`${named.label}: `));
+    const folded = bounded?.(named.key, named.items);
+    if (folded) {
+      section.append(line, folded);
+      continue;
+    }
     named.items.forEach((item, index) => {
       const code = document.createElement("code");
       code.textContent = item;
@@ -734,9 +746,12 @@ function elementSection(record, places, investigate, format) {
     const enters = document.createElement("p");
     enters.className = "muted";
     enters.setAttribute("data-entering", record.entering.join(","));
-    enters.textContent =
-      `Fixing this puts ${record.entering.join(", ")} on the critical path.`;
+    const folded = bounded?.("entering", record.entering);
+    enters.textContent = `Fixing this puts ${folded
+      ? plural(record.entering.length, "element")
+      : record.entering.join(", ")} on the critical path.`;
     section.append(enters);
+    if (folded) section.append(folded);
   }
 
   for (const finding of record.findings) {
@@ -1048,7 +1063,7 @@ export function whatIfCommand(run, selected) {
     + selected.map((uid) => `--element ${uid}`).join(" ");
 }
 
-export function renderHorizon(payload) {
+export function renderHorizon(payload, bounded = null) {
   const steps = payload?.optimization_horizon ?? [];
   const total = payload?.total_duration_us;
   if (!steps.length || !total) return null;
@@ -1085,7 +1100,7 @@ export function renderHorizon(payload) {
       element: step.element_uid,
       saving: step.saving_us,
       entering: step.entering ?? [],
-    }));
+    }, bounded));
   }
   section.append(list);
 
@@ -1109,7 +1124,8 @@ export function renderHorizon(payload) {
   return section;
 }
 
-function horizonRow({ label, makespanUs, total, element, saving, entering }) {
+function horizonRow({ label, makespanUs, total, element, saving, entering },
+                    bounded = null) {
   const row = document.createElement("li");
   row.className = "horizon-step";
   // The published value, on the element, so a guard can check the
@@ -1155,7 +1171,9 @@ function horizonRow({ label, makespanUs, total, element, saving, entering }) {
     note.className = "horizon-entering muted";
     note.setAttribute("data-role", "entering");
     note.append(document.createTextNode("→ "));
-    entering.forEach((uid, i) => {
+    const folded = bounded?.("entering", entering);
+    if (folded) note.append(folded);
+    else entering.forEach((uid, i) => {
       if (i) note.append(document.createTextNode(", "));
       const link = document.createElement("a");
       link.className = "element";

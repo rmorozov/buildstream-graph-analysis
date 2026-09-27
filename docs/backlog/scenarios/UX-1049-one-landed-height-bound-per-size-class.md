@@ -60,4 +60,53 @@ stays green, showing the two are independent.
 
 ## Outcome
 
-Not started.
+**Gap measured.** At `5f967f09`, total landed height was bound twice
+(§3c's 10 screens, §3e's 7,600 px) and the chapter-question distance
+had no compact copy despite §6e.10's claim. `_DISTANCE`'s `scr()`
+divided by a hardcoded 900, so it could not run at 390x844 at all.
+
+**Close measured.** `DOCUMENT_SCREENS` and `test_the_document_fits_the_budget`
+removed from the chain file; `_DISTANCE` now divides by
+`window.innerHeight`. New `COMPACT_CHAPTER_HEADING_SCREENS = 13.5`,
+measured at 390x844:
+
+```text
+              golden   macro_micro
+maxHeadingScr    9.7          12.9
+documentScr     10.1          13.3
+```
+
+(worst 12.9, +0.6 to the next half-screen, the regular bound's own
+convention). §3c's landed bullet now points at §3e with no number; its
+chapter bullet states 9 and 13.5 screens, parsed against the constants
+by two new tests. `test_the_two_capabilities_are_offered.py` imports
+`LANDED_HEIGHT_PX` and compares the Perfetto top in px (5,778 golden,
+7,397 macro_micro — both under 7,600). Volume file: only `numbers` at
+l.807 touched, adding `COMPACT_LANDED_HEIGHT_PX.values()`.
+
+Beyond the Decision's file list: §7's guard table (`test_the_styleguide_names_its_guards.py`)
+required `test_the_chain_folds_and_clicks_are_counted.py` added to the
+§3c, §3e and §6e rows, since the new guards' own text cites those
+sections and the census checks the table names every citing file.
+
+**Mutation table.**
+
+| # | mutation | reddened | run |
+|---|---|---|---|
+| 1 | `CHAPTER_HEADING_SCREENS` 9.0→9.5 | `test_3c_states_both_screen_figures` | 1 failed |
+| 2 | `COMPACT_CHAPTER_HEADING_SCREENS` 13.5→14.0 | `test_3c_states_both_screen_figures` | 1 failed |
+| 3 | §3c landed bullet restated "at most 10 screens" | `test_3c_states_no_landed_height_number` | 1 failed |
+| 4 | `COMPACT_LANDED_HEIGHT_PX["golden"]` 8,500→8,600 | `test_the_style_guide_states_every_budget` | 1 failed |
+| 5 | deleted `test_the_landed_page_is_short`'s assert | chapter clauses stayed green (independence confirmed) | 6 passed |
+| 6 | `LANDED_HEIGHT_PX` 7,600→1,000 | `test_the_section_is_inside_the_document_a_reader_lands_on` (both fixtures) | 2 failed |
+
+All six reverted from the pristine copy and reconfirmed green
+(`test_the_chain_folds_and_clicks_are_counted.py` 21 passed;
+`test_the_two_capabilities_are_offered.py` 21 passed;
+`test_the_page_has_a_volume_budget.py` 30 passed, 2 skipped).
+
+**Deviation.** `13.5` for `COMPACT_CHAPTER_HEADING_SCREENS` is this
+track's headroom choice (worst 12.9 + 0.6), not a value the task file
+named; the §7 table rows are an addition the Decision's file list did
+not enumerate, forced by an existing guard. Both are flagged for
+review rather than assumed correct.

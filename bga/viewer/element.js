@@ -21,7 +21,7 @@ import {
 } from "./primitives.js";
 import {
   SCALE, GRADE_ANNOTATION, GRADE_EXHIBIT, exhibitAxis, exhibitTwin,
-  nameDrawing,
+  nameDrawing, valueRoute,
 } from "./drawings.js";
 // The three the derivation named, and the whole of what this chapter
 // takes from the one above it. `UX-650` adds the fourth: the tag a
@@ -1318,10 +1318,18 @@ export function renderElementHistory(store, uid, schema = null) {
     sentence.textContent += ` Off the critical path since ${left.stamp}.`;
   }
   block.append(sentence);
-  // `UX-1017` (styleguide §6e.9): the sentence is this sparkline's name
-  // and its route - "the values it sits beside", the same sentence a
-  // sighted reader already gets, since this annotation-grade sparkline
-  // draws no twin. `line` is `null` when there were no numeric values.
-  if (line) nameDrawing(line, sentence.textContent, sentence);
+  // `UX-1017` (styleguide §6e.9): the sentence is this sparkline's name.
+  // Review #295: its route is every recorded point, not the sentence -
+  // the sentence names only the first and last run, and a history of
+  // more than two runs has points between them the sentence never
+  // reaches. `line` is `null` when there were no numeric values.
+  if (line) {
+    const route = valueRoute(document,
+      series.filter((point) => typeof point.duration_us === "number")
+        .map((point) => `${point.stamp} ${seconds(point.duration_us)}`)
+        .join(", ") + ".");
+    block.append(route);
+    nameDrawing(line, sentence.textContent, route);
+  }
   return block;
 }

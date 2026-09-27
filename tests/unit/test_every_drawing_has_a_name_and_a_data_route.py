@@ -119,19 +119,90 @@ const block = mod.{call.replace("GRADE", grade)};
         assert out["routeIsTwin"] == (grade == "exhibit"), (call, grade, out)
 
 
+#: Review #295: an ID resolving is not every plotted value being
+#: reachable through it. `svg`'s own `data-value`/`data-values`
+#: attributes are the drawn marks (`UX-213`'s rule: a guard reads what
+#: was drawn, never a second computation of it); every one of them must
+#: turn up in the route's accessible text - `aria-label` where the
+#: route carries one (never counted words, `UX-360`), its rendered text
+#: otherwise (a table twin).
+_READ_VALUE_COVERAGE = r"""
+const svg = all(block, (n) => n.attrs.role === "img")[0];
+const route = all(block, (n) => n.attrs.id === svg.attrs["aria-details"])[0];
+const routeText = (route.attrs["aria-label"] ?? "") + " " + text(route);
+const values = new Set();
+if (svg.attrs["data-values"]) {
+  for (const v of svg.attrs["data-values"].split(",")) values.add(v);
+}
+for (const n of all(svg, () => true)) {
+  if (n.attrs && n.attrs["data-value"] !== undefined) values.add(n.attrs["data-value"]);
+  if (n.attrs && n.attrs["data-raw"] !== undefined) values.add(n.attrs["data-raw"]);
+}
+console.log(JSON.stringify({
+  values: [...values],
+  missing: [...values].filter((v) => !routeText.includes(v)),
+  routeText,
+}));
+"""
+
+
+@needs_node
+class TestEveryPlottedValueReachesTheRoute:
+    """Review #295's finding, generalised past the sparkline it named:
+    `sparkline` and `strip` both draw more marks than their sentence
+    keeps (`stripTicks` drops labels that would collide), so the route
+    has to carry the full set even where the sentence does not."""
+
+    @pytest.mark.parametrize("call,grade", [
+        ('sparkline([4, 1, 9, 3, 7], { unit: "level", grade: "GRADE" })',
+         "annotation"),
+        ('sparkline([4, 1, 9, 3, 7], { unit: "level", grade: "GRADE" })',
+         "exhibit"),
+        # A payload with nine deciles present: `stripTicks` keeps only
+        # the labels that fit, so the sentence (built from `labelled`)
+        # drops several of them even though `stripSvg` still ticks them.
+        ('strip({ n: 11, min: 0, max: 100, '
+         'deciles: { p10: 5, p20: 12, p30: 18, p40: 22, p50: 25, p60: 40, '
+         'p70: 55, p80: 70, p90: 85 }, p95: 90, p99: 97 }, '
+         '{ grade: "GRADE" })', "annotation"),
+        ('strip({ n: 11, min: 0, max: 100, '
+         'deciles: { p10: 5, p20: 12, p30: 18, p40: 22, p50: 25, p60: 40, '
+         'p70: 55, p80: 70, p90: 85 }, p95: 90, p99: 97 }, '
+         '{ grade: "GRADE" })', "exhibit"),
+        ('decomposition([{ key: "a", label: "a", value: 3 }, '
+         '{ key: "b", label: "b", value: 1 }], '
+         '{ total: 4, grade: "GRADE" })', "annotation"),
+        ('interval([{ key: "a", label: "a", value: 0.3 }, '
+         '{ key: "b", label: "b", value: 0.8 }], { grade: "GRADE" })',
+         "annotation"),
+    ])
+    def test_every_drawn_mark_is_in_the_route(self, call, grade):
+        out = _ok(f"""
+const mod = await import("./bga/viewer/drawings.js");
+const block = mod.{call.replace("GRADE", grade)};
+{_READ_VALUE_COVERAGE}
+""")
+        assert out["values"], (call, grade, out)
+        assert not out["missing"], (call, grade, out)
+
+
 @needs_node
 class TestElementHistorysSparklineNamesAndRoutesItself:
     """`element.js`'s own inline sparkline - annotation grade only, so
-    its route is always the sentence, never a twin (`UX-1017`'s table:
-    "aria-details on the values it sits beside")."""
+    it draws no twin. Review #295: its route used to be the sentence,
+    which names only the first and last run; the route is now a hidden
+    node naming every run, so a middle point stays reachable."""
 
-    def test_a_history_with_points_is_named_and_routed(self):
+    def test_a_history_with_points_is_named_and_routed_to_every_run(self):
         store = {"schema": "store/v1", "snapshots": [
             {"stamp": "a", "verdict_kind": None,
-             "elements": [{"element_uid": "elt", "duration_us": 1000,
+             "elements": [{"element_uid": "elt", "duration_us": 1_000_000,
                           "on_critical_path": True}]},
-            {"stamp": "b", "verdict_kind": "regressed",
-             "elements": [{"element_uid": "elt", "duration_us": 2000,
+            {"stamp": "b", "verdict_kind": None,
+             "elements": [{"element_uid": "elt", "duration_us": 5_000_000,
+                          "on_critical_path": True}]},
+            {"stamp": "c", "verdict_kind": "regressed",
+             "elements": [{"element_uid": "elt", "duration_us": 2_000_000,
                           "on_critical_path": False}]},
         ]}
         out = _ok(f"""
@@ -144,11 +215,18 @@ console.log(JSON.stringify({{
   label: svg.attrs["aria-label"] ?? null,
   sentenceText: sentence ? text(sentence) : null,
   routeIsSentence: route === sentence,
+  routeLabel: route ? route.attrs["aria-label"] ?? null : null,
+  routeHidden: Boolean(route && route.hidden),
 }}));
 """)
         assert out["label"], out
         assert out["label"] == out["sentenceText"], out
-        assert out["routeIsSentence"], out
+        assert not out["routeIsSentence"], out
+        assert out["routeHidden"], out
+        # The middle run (5,000 µs, stamp "b") is not in the sentence -
+        # only its first/last are - but it must be in the route.
+        assert "b" in out["routeLabel"] and "5.0 s" in out["routeLabel"], out
+        assert "b" not in out["sentenceText"], out
 
 
 @needs_node

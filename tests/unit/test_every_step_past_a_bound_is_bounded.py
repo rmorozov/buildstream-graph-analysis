@@ -108,16 +108,41 @@ _CENSUS = r"""
     const restHead = tokens(headEl?.textContent);
     const restTail = tokens(tailEl?.textContent);
     const more = list.querySelector("button.fold-more");
+    const prev = list.querySelector("button.list-prev");
+    const position = list.querySelector(".list-position");
     const mountedMiddle = () => Math.max(0,
       (tokens(headEl?.textContent) - restHead) + tokens(middleEl?.textContent)
       + Math.max(0, restTail - tokens(tailEl?.textContent)));
+    // The *names*, not only their count - a mutation that never moves
+    // (`prev` a no-op) would otherwise still read the same count on
+    // every uniform `REVEAL_STEP`-sized chunk and pass regardless.
+    const middleText = () => middleEl?.textContent ?? "";
     const readings = [mountedMiddle()];
+    let firstChunkText = null;
     for (let i = 0; i < 10 && more && !more.hidden; i += 1) {
       more.click();
       readings.push(mountedMiddle());
+      if (i === 0) firstChunkText = middleText();
+    }
+    // `UX-1029` review: a reader who pressed "+N more" twice had no way
+    // back. `prev` must return to the same first chunk's own names,
+    // without ever mounting past the bound on the way - so it is
+    // pressed the same ten times, back toward the head.
+    const firstChunkReading = readings[1] ?? readings[0];
+    const positionsBack = [];
+    const backReadings = [];
+    const backTexts = [];
+    for (let i = 0; i < 10 && prev && !prev.hidden; i += 1) {
+      prev.click();
+      readings.push(mountedMiddle());
+      backReadings.push(mountedMiddle());
+      backTexts.push(middleText());
+      positionsBack.push(position ? position.textContent : null);
     }
     reveals.push({ items: Number(list.getAttribute("data-items")),
-                  readings, max: Math.max(...readings) });
+                  readings, max: Math.max(...readings),
+                  firstChunkReading, firstChunkText,
+                  backReadings, backTexts, positionsBack });
   }
 
   const doors = [];
@@ -213,6 +238,51 @@ class TestEveryRevealStaysBounded:
         assert not over, (
             f"reveal(s) mounted more than {NAMES_MAX} names between the "
             f"head and tail at some step: {over}")
+
+
+@needs_browser
+@pytest.mark.large
+class TestARevealCanBePagedBackward:
+    """Review (#295): a reveal used to have no way back.
+
+    Pressed forward, then `prev` pressed back the same number of times
+    must reach the first chunk again - proving the "no reload" claim -
+    and not mount past the bound on the way there either.
+    """
+
+    def test_prev_is_offered_on_a_reveal_that_pages_forward(self, census):
+        offered = [r for r in census["reveals"] if len(r["readings"]) > 1]
+        assert offered, "no reveal pressed 'more' at all - nothing to page back"
+        assert any(r["positionsBack"] for r in offered), (
+            "no reveal offered 'prev' after being paged forward")
+
+    def test_prev_returns_to_the_first_chunk(self, census):
+        """Reachable, not necessarily the last backward reading: pressed
+        the same ten times as forward, `prev` may walk one chunk further
+        back, past the first, into the at-rest state - the claim is only
+        that the first chunk's own names were mounted again on the way.
+
+        By text, not only by count: a mutation that never moves `prev`
+        at all still reads the same count on every uniform
+        `REVEAL_STEP`-sized chunk, so a count-only check passes it.
+        """
+        for r in census["reveals"]:
+            if not r["backReadings"]:
+                continue
+            assert r["firstChunkText"] in r["backTexts"], (
+                f"{r['items']}-item reveal never showed the first chunk's "
+                f"own names again while paging back: {r['backTexts']}")
+            assert r["firstChunkReading"] in r["backReadings"], (
+                f"{r['items']}-item reveal never showed the first chunk's "
+                f"{r['firstChunkReading']} names again while paging back: "
+                f"{r['backReadings']}")
+
+    def test_prev_never_mounts_past_the_bound_either(self, census):
+        over = [(r["items"], r["readings"]) for r in census["reveals"]
+                if r["max"] > NAMES_MAX]
+        assert not over, (
+            f"reveal(s) mounted more than {NAMES_MAX} names while paging "
+            f"backward: {over}")
 
 
 @needs_browser

@@ -52,3 +52,11 @@ row's clauses): `10 passed`.
 | `shownMiddle.textContent += …` (append) instead of `=` (replace) | same clause, mounted count grows 60 -> 120 -> 180 -> 198 over presses | 1 of 10 |
 
 Deviation: the reveal is `structured.js`'s `boundedList`, not `views.js`'s. On the merge `structured.js` crossed the viewer line ceiling, and the pair list moved to `bga/viewer/pairs.js` (`4f84b16e`).
+
+**Review (#295):** no way back after a press. Added `list-prev` +
+`.list-position`, reusing the table-pager shape; a fixed `page` index
+(`-1` at rest) so `prev` lands on the same window `more` built, short
+last remainder included. `TestARevealCanBePagedBackward` (3 clauses, by
+text not only count): `pytest tests/unit/test_every_step_past_a_bound_is_bounded.py -q`:
+`13 passed`. Mutation: `prev`'s handler emptied - reddened
+`test_prev_returns_to_the_first_chunk`.

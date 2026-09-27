@@ -192,42 +192,56 @@ export function mapTable(key, rows, hint, node, nested, depth = 0, path = key) {
  * `REVEAL_STEP` names at a time, **replacing** what the last press
  * showed rather than appending to it, so no number of presses mounts
  * more than `REVEAL_STEP` names besides the head and tail it keeps.
+ *
+ * Review (#295): a press had no way back. `prev` reuses `interrogable`'s
+ * "‹ Prev"/position shape - `page` is a fixed `REVEAL_STEP`-wide window
+ * index into `middle` (`-1` at rest), so backward always lands on the
+ * same window forward built, even where the last one is a short remainder.
  */
 function boundedList(value, noun) {
   const items = value.map(String);
   const head = items.slice(0, PATH_HEAD);
   const tail = items.slice(items.length - PATH_TAIL);
   const middle = items.slice(head.length, items.length - tail.length);
+  const pages = Math.ceil(middle.length / REVEAL_STEP);
   const first = el("span", { class: "list-head" }, head.join(", "));
   const shownMiddle = el("span", { class: "list-middle" }, "");
   const last = el("span", { class: "list-tail" }, `, ${tail.join(", ")}`);
-  const more = el("button", {
-    type: "button", class: "fold-more", "data-folded": String(middle.length),
-    title: `Show the first ${Math.min(REVEAL_STEP, middle.length)} of the `
-      + `${middle.length} ${noun} between the first ${head.length} and the `
-      + `last ${tail.length}`,
-  }, `+${middle.length} more ${noun} (${items.length} in all)`);
-  let offset = 0;
-  const step = () => {
-    const chunk = middle.slice(offset, offset + REVEAL_STEP);
+  const position = el("span", { class: "list-position" }, "");
+  const prev = el("button", { type: "button", class: "list-prev",
+                              "aria-label": `previous ${noun}` }, "‹ Prev");
+  const more = el("button", { type: "button", class: "fold-more" });
+  let page = -1;
+  const render = () => {
+    const start = Math.max(0, page) * REVEAL_STEP;
+    const chunk = page < 0 ? [] : middle.slice(start, start + REVEAL_STEP);
     shownMiddle.textContent = chunk.length ? `, ${chunk.join(", ")}` : "";
-    offset += chunk.length;
-    const remaining = middle.length - offset;
+    const remaining = middle.length - start - chunk.length;
+    prev.hidden = page <= 0;
+    more.hidden = remaining <= 0;
     more.setAttribute("data-folded", String(remaining));
-    if (remaining > 0) {
-      more.title = `Show the next ${Math.min(REVEAL_STEP, remaining)} `
-        + `${noun} of the ${remaining} still between the first `
-        + `${head.length} and the last ${tail.length}`;
-      more.textContent = `+${remaining} more ${noun} (${items.length} in all)`;
-    } else {
-      more.hidden = true;
-    }
+    more.title = `Show the next ${Math.min(REVEAL_STEP, remaining)} ${noun} `
+      + `of the ${remaining} still between the first ${head.length} and `
+      + `the last ${tail.length}`;
+    more.textContent = `+${remaining} more ${noun} (${items.length} in all)`;
+    position.textContent = page < 0 ? "" : `${noun} ${start + 1}-`
+      + `${start + chunk.length} of ${middle.length} (page ${page + 1} of `
+      + `${pages})`;
   };
-  more.addEventListener?.("click", step);
+  more.addEventListener?.("click", () => {
+    page = Math.min(page + 1, pages - 1);
+    render();
+  });
+  prev.addEventListener?.("click", () => {
+    page = Math.max(page - 1, -1);
+    render();
+  });
+  render();
   return el("div", { class: "bounded-list", "data-bounded": "list",
                      "data-items": String(items.length),
                      "data-shown": String(head.length + tail.length) },
-            first, shownMiddle, more, last);
+            first, shownMiddle, el("span", { class: "list-pager" },
+                                   prev, position, more), last);
 }
 
 /**

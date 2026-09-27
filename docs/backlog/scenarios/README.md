@@ -43,20 +43,10 @@ task file, which is the only place it ever lived twice.
 | UX-1014 | [the "safe cap plus auto" default is measured on more shapes and hosts before it is anyone's default](UX-1014-the-builders-and-auto-default-is-measured-on-more-shapes-and-hosts.md) | capture | High | R4, R5 | 🔴 Not Started |
 | UX-1040 | [a paired reading decides whether implementers move to opus at low effort](UX-1040-a-paired-reading-decides-the-implementers-model.md) | guards | Medium | every round's implementer spend | 🔴 Not Started |
 | UX-1041 | [an agent cannot repoint the shared install or start the touching sweep](UX-1041-an-agent-cannot-repoint-the-shared-install-or-run-the-sweep.md) | guards | Medium | every parallel round's verifiers and the push gate after them | 🔴 Not Started |
-| UX-1042 | [pointer travel is a budget, measured per journey](UX-1042-pointer-travel-is-a-budget.md) | viewer | Medium | R1, R4 | 🔴 Not Started |
-| UX-1043 | [a section's fold, door and JSON toggle sit together, at one place](UX-1043-a-sections-controls-sit-together.md) | viewer | Medium | R1 | 🔴 Not Started |
-| UX-1044 | [a chapter's fold sits at one place and says the same thing in the rail and the document](UX-1044-a-chapter-fold-has-one-place-and-one-label.md) | viewer | Medium | R1 | 🔴 Not Started |
 | UX-1045 | [§3's tool row names the column thresholds §3d attaches to their headers](UX-1045-a-tables-tools-are-one-row.md) | viewer | Low | R1 | 🔴 Not Started |
-| UX-1046 | [the rail shows the current chapter's sections, or every open chapter's — one rule](UX-1046-the-rail-shows-the-current-chapter-or-every-open-one.md) | viewer | High | R1, R4 | 🔴 Not Started |
-| UX-1047 | [the page's one `h1` is the run, or §6e.1 says it is the wordmark](UX-1047-the-page-h1-names-the-run.md) | viewer | Medium | R1 | 🔴 Not Started |
-| UX-1048 | [§4 lists every job the accent does, and the fills it takes](UX-1048-the-accent-lists-every-job-it-does.md) | viewer | Medium | R1 | 🔴 Not Started |
-| UX-1049 | [the landed page has one bound per size class, written once](UX-1049-one-landed-height-bound-per-size-class.md) | viewer | Medium | R1, R4 | 🔴 Not Started |
-| UX-1050 | [the volume budgets are measured on a two-plane page at scale](UX-1050-the-budgets-are-measured-with-both-planes-at-scale.md) | viewer | High | R1, R4 | 🔴 Not Started |
-| UX-1051 | [every `select` and `input` wears a declared resting appearance](UX-1051-every-select-wears-a-resting-grade.md) | viewer | Medium | R1 | 🔴 Not Started |
-| UX-1052 | [the export carries its viewer JS gzipped, and a guard bounds its bytes](UX-1052-the-viewer-js-ships-compressed.md) | viewer | Low | R1 | 🔴 Not Started |
-| UX-1053 | [a two-plane page's growth with the run is bounded by the section that grows](UX-1053-a-two-plane-pages-growth-is-bounded-by-section.md) | viewer | High | R1, R4 | 🔴 Not Started |
-| UX-1054 | [the first Tab from a fresh load starts at the top of the page](UX-1054-the-first-tab-starts-at-the-top.md) | viewer | Medium | R1 | 🔴 Not Started |
-| UX-1055 | [a table's Copy rows and top-N controls sit in one place in its tool row](UX-1055-a-tables-copy-and-top-n-sit-in-one-place.md) | viewer | Medium | R1, R4 | 🔴 Not Started |
+| UX-1056 | [navigating back after an in-page reveal does not re-fold the chapter](UX-1056-back-after-a-reveal-does-not-re-fold.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1057 | [the decomposition bar's aria-details twin table drops the certified lower-bound mark](UX-1057-the-drawing-routes-twin-table-drops-the-lower-bound-mark.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1058 | [the narrow-rail fold toggle is a click-only `<p>`, unreachable by keyboard](UX-1058-the-narrow-rail-toggle-is-unreachable-by-keyboard.md) | viewer | Medium | R1 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

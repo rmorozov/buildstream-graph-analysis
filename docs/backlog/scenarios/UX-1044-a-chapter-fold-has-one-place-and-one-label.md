@@ -97,10 +97,16 @@ styleguide, conformance and register guards: 1648 passed, 2 skipped.
 | A: open label back to `"Hide"` | glyph clause (and count clause: "Hide" has no count) | 4 failed, 4 passed |
 | B: document label drops the count (`▸ sections`) | count clause only | 2 failed, 6 passed |
 | C: rail row drops the title (`▸ · 14`) | name clause only | 2 failed, 6 passed |
-| D: `margin-left: var(--space-2)` for `auto` (control trails the title) | placement, 1440x900 (390 wraps every title to the edge, stays green) | 1 failed, 7 passed |
+| D: `margin-left: var(--space-2)` for `auto` (control trails the title) | spread and right-edge clauses, 1440x900 | 2 failed, 8 passed |
+| D2: `h2.chapter-title` loses `display: flex` | spread and right-edge clauses, 1440x900 and 390x844 | 4 failed, 6 passed |
 | E: rail glyph from `isOpen(box)` instead of `data-current` | glyph clause only | 2 failed, 6 passed |
 
-Reverted from the scratchpad copy: 8 passed.
+Reverted from the scratchpad copy: 8 passed, then 10 with the right-edge
+clause (control's right edge within `EDGE = 2` px of its head's). D cannot
+red at 390x844: it leaves that layout unchanged (`place.py` with D
+applied, 390x844: dx right spread 0, dy spread 0, the edge clause green - each title
+wraps and fills the flex line), so D2 is the mutation that reaches 390.
+§7's `§3l` and `§6e` rows name the new file.
 
 **Deviation.** The Acceptance Test's "same `aria-expanded` on both
 controls" is struck, per the Decision: the rail row has no

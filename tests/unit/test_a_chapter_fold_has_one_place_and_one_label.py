@@ -23,6 +23,8 @@ needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
 
 #: `UX-1042`'s placement tolerance, px.
 SPREAD = 24
+#: How far the control's right edge may sit from its head's, px.
+EDGE = 2
 VIEWPORTS = [(1440, 900), (390, 844)]
 
 _READ = r"""
@@ -112,6 +114,15 @@ class TestTheDocumentFoldSitsAtOnePlace:
         assert min(spread("dxl"), spread("dxr")) <= SPREAD, [
             (row["id"], round(row["dxl"]), round(row["dxr"])) for row in rows]
         assert spread("dy") <= SPREAD, [(row["id"], round(row["dy"])) for row in rows]
+
+    def test_the_control_ends_at_the_chapter_heads_right_edge(self, measured):
+        """At every width: 390 wraps each title, so a spread alone could
+        pass a control that merely trails a long title."""
+        rows = measured["folded"] + measured["opened"]
+        assert rows, measured
+        off = [(row["id"], round(row["dxr"], 1)) for row in rows
+               if abs(row["dxr"]) > EDGE]
+        assert off == [], off
 
 
 if __name__ == "__main__":  # pragma: no cover

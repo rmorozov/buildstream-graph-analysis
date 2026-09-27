@@ -1168,7 +1168,21 @@ section > .table-tools { top: var(--head, 5.5rem); }
    site, and the only one the reader opens on purpose. Quiet in the
    heading (it is a debugging affordance, not a finding) and monospace
    when open, because what it shows is meant to be pasted. */
-button.json-toggle { margin-left: var(--space-2); vertical-align: middle; }
+/* UX-1043 (styleguide §3l): pinned to the head's right edge rather
+   than trailing the title text, whose varying length is what made the
+   toggle land "somewhere else in every section". The fold and door
+   already own the left edge (`nav.js` prepends the fold,
+   `attachBlockDoor` prepends the door into the first block); the right
+   edge is the one side nothing else on the head claims, and it holds
+   regardless of whether the title wraps or the section has no door at
+   all. */
+h2:has(> button.json-toggle), h3:has(> button.json-toggle) {
+  position: relative;
+  padding-right: 6.5rem;
+}
+button.json-toggle {
+  position: absolute; top: 0; right: 0;
+}
 button.json-toggle:hover { color: var(--fg); }
 .section-json pre {
   margin: var(--space-2) 0 0;

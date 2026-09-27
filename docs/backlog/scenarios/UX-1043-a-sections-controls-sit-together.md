@@ -42,4 +42,44 @@ reds.
 
 ## Outcome
 
-Not started.
+**Gap measured**, own probe against `PYTHONPATH=$PWD` at `71d3dcda`,
+both `pages.FIXTURES` fixtures, every chapter open, offset =
+`headRect.right - toggleRect.right`:
+
+```text
+golden       1440x900  n=34  min 0  max 0  spread 0
+golden        390x844  n=34  min 0  max 0  spread 0
+macro_micro  1440x900  n=48  min 0  max 0  spread 0
+macro_micro   390x844  n=48  min 0  max 0  spread 0
+```
+
+Pinned `button.json-toggle` to the head's **right edge**: fold
+(`nav.js` prepend) and door (`attachBlockDoor`, into the first block)
+already own the left edge, and the right edge is the one side neither
+claims, so no move to either was needed. `h2:has(> button.json-toggle),
+h3:has(> button.json-toggle) { position: relative; padding-right:
+6.5rem }` plus `button.json-toggle { position: absolute; top: 0; right:
+0 }` - offset is then always exactly `0`, by construction, whether the
+title wraps or the section has no door. `rawjson.js`'s
+`heading.append(button)` is unchanged; only the stylesheet moved it.
+
+**Close measured**: `tests/unit/test_a_sections_controls_sit_together.py`,
+new file, 4 cases (2 fixtures x 2 viewports):
+
+```text
+$ PYTHONPATH=$PWD python3 -m pytest -q -n 2 tests/unit/test_a_sections_controls_sit_together.py
+....                                                                     [100%]
+4 passed in 3.58s
+```
+
+**Mutation table**:
+
+| mutation | reddened | count |
+|---|---|---|
+| `button.json-toggle { position: static; margin-left: var(--space-2) }`, `padding-right: 0rem` (the toggle restored after the title text) | all 4 cases | golden 1440x900 spread 714.0px, golden 390x844 spread 203.7px, macro_micro 1440x900 spread 736.3px, macro_micro 390x844 spread 203.7px (bound 24px) |
+
+Reverted from the pre-mutation copy; green again (4 passed in 3.58s).
+
+`test_the_page_has_a_volume_budget.py`: 30 passed, 2 skipped (large-
+class rows need `bga gen-synthetic`, not run here) - landed/opened
+height unmoved, since absolute positioning adds no box height.

@@ -39,4 +39,67 @@ volume guard's landed or controls clause reds on `scale_both`.
 
 ## Outcome
 
-Not started.
+**Gap measured.** Three pages built by `pages.two_plane_run` (`gen-synthetic
+--seed 1 --store --runs 2`, `capture report --json` of the newest
+snapshot's `plane2.log.gz` as `plane2.json`, exported), the volume guard's
+landed state (`FULL_LAYOUT_JS`, `scrollHeight`, `button, input, select, a`)
+per `section[data-section]` at 1440x900, base `5f967f09`. Landed px /
+controls; every section not listed is 0 px and flat in controls:
+
+```text
+                               74 elts    1,202 elts   4,002 elts
+decide  findings              4,370/59     5,397/220    7,722/620
+decide  (five other sections) 1,884/27     1,884/27     1,884/27
+change  (store, history)         93/40        93/39        93/39
+time    horizon                   0/22         0/92         0/74
+time    critical_path(+drawn)     0/21         0/52         0/52
+time    binary_cost (Plane 2)      0/6          0/8          0/8
+elements parallelism              0/24         0/47         0/47
+elements element-* sections      0/146        0/193        0/194
+believe plane2_coverage, element_join_coverage, cpu_time, peak_memory: 0/3 each, all three
+outside chapters                389/103      443/114      443/114
+TOTAL                          7,209/695  8,290/1,038 10,615/1,425   bounds 7,600/900
+```
+
+Store/history and Plane 2's sections are flat. The landed growth (+1,027,
++3,352 px) is all in `findings`, and inside it one card:
+`shared-source-blast` 339 -> 1,269 -> 3,594 px, 14 -> 175 -> 575
+controls, because `renderFindings` drew `finding.elements` as one link
+per element (11, 172, 572). The card count is 14 on all three (`boundCards`
+held). Controls also grow in `horizon`/`critical_path`/`parallelism`
+(+~120), already bounded (§3k) and under 900 once the card is.
+
+**Close measured.** `renderFindings` hands an `elements` list past
+`TABLE_OPENS_BOUNDED_ABOVE` to `renderStructured` - §3k's element-list row,
+the `bounded` `app.js` already applies (`UX-1037`); 40 or fewer stay links.
+Same census on fresh stores after:
+
+```text
+decide  findings              4,370/59     4,411/50     4,411/50
+TOTAL                          7,209/695    7,303/868    7,303/854   bounds 7,600/900
+```
+
+```text
+$ pytest -q -n 2 <16 files naming sections.js/renderFindings> \
+    tests/unit/test_every_step_past_a_bound_is_bounded.py
+278 passed, 6 skipped in 502.41s
+$ pytest -q tests/unit/test_a_findings_element_list_is_bounded.py
+3 passed in 0.40s   (controls 11/40/2/2/2 links 11/40/0/0/0 at 11/40/41/572/4,002)
+```
+
+**Mutation table** (each restored from a scratch copy of `sections.js`):
+
+| mutation | reddened | count |
+|---|---|---|
+| cap lifted (`> Infinity`) | `test_the_card_does_not_grow_with_the_run`, `test_past_the_bound_no_name_is_dropped` | 2 of 3 |
+| cap at 0 (never links) | `test_under_the_bound_every_element_is_a_link` | 1 of 3 |
+| cap lifted, volume guard on `scale_both`/`xl_both` | UX-1050's mutation table, row (d) | - |
+
+Deviation: past 40 names the card's elements are text in §1's reveal, not
+`data-element` links, so the element sections' cross-reference and focus
+no longer see this finding for them - the trade `UX-1037` made for the
+horizon. Undeclared surface: §3k's element-list cell in the styleguide now
+names the card. The tables above were read from snapshot copies, which
+drop the store chapter; exported in place (as `UX-1050`'s `booted` now
+does, under a pinned root) the totals read 7,490/712, 8,570/1,053,
+10,895/1,439 before and 7,444/712, 7,584/883, 7,584/868 after.

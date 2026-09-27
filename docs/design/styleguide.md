@@ -745,7 +745,7 @@ in it hidden, and the class is bounded at both ends:
                  elements   landed   opened    words   controls    nodes
 scale               1,202    5,007   26,584    8,259        787    4,732
 xl                  4,002    4,937   27,230    8,275        812    4,960
-budget, to 4,100 elts          7,600   36,500    9,600        900    6,000
+budget, to 4,100 elts          7,600   43,500   13,200        900    7,500
 ```
 
 Height does not move at all — a bounded row costs no pixels, which is
@@ -860,6 +860,12 @@ caused it.
 Re-measured on the round's merged tree: macro_micro 37,743 px and
 12,769 words, xl 35,669 px, 9,456 words and 5,785 nodes - 457, 31 and
 831, 144, 215 of headroom.
+
+`UX-1050` moved the 4,100 class's height 36,500 -> 43,500, words 9,600
+-> 13,200 and nodes 6,000 -> 7,500: `xl_both`, the 4,002-element run
+with Plane 2 and a store, reads 42,982 px, 12,872 words, 7,209 nodes,
+and Plane 2's cost is flat (12,633 words at 74 elements). Landed and
+controls do not move; `UX-1053` bounded the finding list that grew them.
 
 The UI batch (`UX-1022`, `UX-1018`) moved the one landed bound 7,300 ->
 7,600: `macro_micro` 6,859 at babba3e5, 7,471 merged - `UX-1022`'s
@@ -978,7 +984,9 @@ budget needs is one level up from the numbers:
 
 **A bound is stated together with the size it was measured at, and it is
 enforced at the largest size the tool tells people to use.** A budget
-measured only where the page is small has never met the page.
+measured only where the page is small has never met the page. And in
+the mode people use it in: `UX-1050` measures the 4,100 class with both
+planes and a store (`xl_both`), which no guard met past 11 elements.
 
 This is `UX-363`'s lesson about the tier budget, in the other document:
 there, one measurement was compared against the number that made it look
@@ -2033,7 +2041,7 @@ the census runs at the largest class.
 | cell text | `CELL_TEXT_CAP` characters | the labeled fold | `structured.js` |
 | long scalar array | count + folded list | not measured here | `shapes.js` |
 | map (`dl`), one key per element | bounded pairs (`UX-419`) | the rest leave the document (`UX-526`) | §3e |
-| chain and element lists | `PATH_HEAD` + `PATH_TAIL` | "+N more" pages `REVEAL_STEP` names at a time (`UX-1029`) | `views.js`, `structured.js`; `element.js` through `app.js`'s `bounded` (`UX-1037`) |
+| chain and element lists | `PATH_HEAD` + `PATH_TAIL` | "+N more" pages `REVEAL_STEP` names at a time (`UX-1029`) | `views.js`, `structured.js`; `element.js` through `app.js`'s `bounded` (`UX-1037`); a finding's `elements` in `sections.js` (`UX-1053`) |
 | findings | 40 cards, the rest as fragment targets | "Show all" hydrates once (§3j) | §3j |
 | a list inside a sentence (finding text, a chapter's answer) | the top few by name, the rest as a count | the section or table the sentence cites | the analyzer's sentences |
 | evidence, culprits, overview | `EVIDENCE_SHOWN`, `CULPRITS_SHOWN`, `OVERVIEW_SHOWN` | not measured here | `sections.js`, `element.js`, `primitives.js` |
@@ -2257,12 +2265,12 @@ headings, so a renumber there moves it.
 | §3c | `test_a_new_control_class_lands_declared.py`, `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_merge_carries_every_field.py` | `UX-665`'s registry names the § each control class belongs to, so the census cites this one for the rail's; §3e's volume budget is still the measured half |
 | §3d | `test_a_capped_table_filters_what_it_sorts.py`, `test_a_new_control_class_lands_declared.py`, `test_the_max_jobs_advice_is_one_level.py`, `test_the_merge_carries_every_field.py` | `UX-349`'s `test_the_tools_scale_with_the_table.py` also holds it and cites §3 |
 | §3e | `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_page_has_a_volume_budget.py` | |
-| §3f | `test_the_handoff_box_is_measured_served.py` | |
+| §3f | `test_the_handoff_box_is_measured_served.py`, `test_the_page_has_a_volume_budget.py` | `UX-1050`: the 4,100 class with both planes |
 | §3g | `test_the_ceilings_reach_a_reader.py` | |
 | §3h | `test_the_rail_is_a_source_list.py` | |
 | §3i | `test_the_header_keeps_its_budget.py` | |
 | §3j | `test_a_fold_bounds_its_interactive_descendants.py` | `UX-921` |
-| §3k | `test_every_step_past_a_bound_is_bounded.py` | `UX-1032`'s census, at the 4,002-element run; `UX-1028`/`UX-1029`/`UX-1030` closed the three violations it found |
+| §3k | `test_a_findings_element_list_is_bounded.py`, `test_every_step_past_a_bound_is_bounded.py` | `UX-1032`'s census, at the 4,002-element run; `UX-1028`/`UX-1029`/`UX-1030` closed the three violations it found |
 | §3l | `test_a_sections_controls_sit_together.py` | proposed; `UX-1042` files its travel guard |
 | §4 | `test_emphasis_is_a_budget.py`, `test_the_palette_is_validated.py`, `test_a_drawing_is_graded.py`, `test_apparatus_in_its_place.py`, `test_the_browser_is_the_library.py` | named |
 | §4a | | named; `UX-346`'s `test_a_sentence_lives_on_its_door.py` holds it and cites no section |

@@ -37,9 +37,15 @@ The bounds are set with headroom against the measurement below rather
 than at it: a budget that reddens on the commit that lands it teaches
 the next person to raise it rather than to think.
 """
+import base64
 import collections
+import functools
+import gzip
+import json
+import os
 import pathlib
 import re
+import shutil
 import sys
 
 import pytest
@@ -50,6 +56,8 @@ sys.path.insert(0, str(REPO / "tests"))
 
 import pages
 from browser import NO_BROWSER, Browser, find_chrome
+
+from bga import run_store
 
 chrome = find_chrome()
 needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
@@ -364,7 +372,12 @@ BUDGETS = (
     # `UX-1034`'s reader words, `UX-1021`'s block doors and `UX-1031`'s
     # `bga:grows` descriptions are words and nothing else. 154 of headroom.
     (50, 38_200, 13_200, 800, 7_900),
-    (4_100, 36_500, 9_600, 900, 6_000),
+    # `UX-1050`: px 36,500 -> 43,500, words 9,600 -> 13,200, nodes
+    # 6,000 -> 7,500 on the 4,100 class: `xl_both` (Plane 2 and a store)
+    # reads 42,982 px, 12,872 words, 7,209 nodes; Plane 2's cost is flat
+    # (12,633 words at 74 elements). Controls and landed do not move
+    # (UX-1053). 518/328/291 of headroom.
+    (4_100, 43_500, 13_200, 900, 7_500),
 )
 
 
@@ -503,35 +516,74 @@ def browser():
 #: `UX-526` added the fourth: `scale` is the large class's bottom and
 #: `xl` its top, and a class measured only at its bottom was the same
 #: defect `UX-367` closed one size down.
-LABELS = sorted(pages.FIXTURES) + ["scale", "xl"]
+#: `UX-1050`: `xl_both` is `xl`'s shape with a store and Plane 2's report
+#: beside it (`pages.two_plane_run`), the mode the tool recommends; the
+#: top of the class only (§3f), `scale_both` cost +167 s with it.
+LABELS = sorted(pages.FIXTURES) + ["scale", "xl", "xl_both"]
 
 #: The generated members, and what builds each.
-_GENERATED = {"scale": pages.scale_run, "xl": pages.xl_run}
+_GENERATED = {
+    "scale": pages.scale_run, "xl": pages.xl_run,
+    "xl_both": functools.partial(
+        pages.two_plane_run, shape=("--layers", "20", "--width", "200"),
+        name="xl_both"),
+}
+
+
+def _report_in(page):
+    """The analysis inlined in an exported page, packed or not."""
+    text = pathlib.Path(page).read_text(encoding="utf-8")
+    packed = re.search(r'id="bga-report-gz">([^<]*)</script>', text)
+    if packed:
+        return json.loads(gzip.decompress(base64.b64decode(packed.group(1))))
+    body = re.search(r'id="bga-report">(.*?)</script>', text, re.S).group(1)
+    return json.loads(body.replace("<\\/", "</"))
 
 
 @pytest.fixture(scope="module")
-def booted(tmp_path_factory):
-    made = pages.pages(tmp_path_factory, "volume")
-    for label, build in _GENERATED.items():
-        into = tmp_path_factory.mktemp(f"volume-{label}")
-        made[label] = pages.export_uri(build(into), into,
-                                       name=f"{label}.html")
-    return made
+def built():
+    """`{label: (run, page)}`, each run built and analysed once.
+
+    `UX-1050`: under a root whose path length does not depend on where
+    pytest keeps its tree - the page prints the run's path, and a longer
+    one wraps the landed page taller.
+    """
+    root = pathlib.Path(f"/tmp/bga-volume-{os.getpid():010d}")
+    shutil.rmtree(root, ignore_errors=True)
+    made = {}
+    try:
+        for label, fixture in pages.FIXTURES.items():
+            into = root / label
+            made[label] = (pages.snapshot_copy(fixture, into),
+                           pages.export_page(fixture, into, f"{label}.html"))
+        for label, build in _GENERATED.items():
+            into = root / label
+            run = build(into)
+            page = into / f"{label}.html"
+            if run_store.project_root(str(run)):
+                # A store's history is read in place; a copy drops it.
+                pages.in_place_uri(run, into, page.name)
+            else:
+                pages.export_page(run, into, page.name)
+            made[label] = (run, page)
+        yield made
+    finally:
+        # Removed on a setup failure too, not only after the module.
+        shutil.rmtree(root, ignore_errors=True)
 
 
 @pytest.fixture(scope="module")
-def sizes(tmp_path_factory):
+def booted(built):
+    return {label: page.as_uri() for label, (_run, page) in built.items()}
+
+
+@pytest.fixture(scope="module")
+def sizes(built):
     """`{label: element count}`, read from the payload each page was
     exported from - so the class a page is measured against is a fact
     about the run rather than a constant beside the label."""
-    from tools.bga_view import payloads
-
-    runs = dict(pages.FIXTURES)
-    for label, build in _GENERATED.items():
-        runs[label] = build(tmp_path_factory.mktemp(f"volume-{label}-count"))
-    return {label: len(payloads(str(run))["report.json"]
-                       ["elements"]["element_durations"])
-            for label, run in runs.items()}
+    return {label: len(_report_in(page)["elements"]["element_durations"])
+            for label, (_run, page) in built.items()}
 
 
 @pytest.fixture(scope="module")
@@ -677,6 +729,14 @@ class TestTheCompactSizeClassIsBoundToo:
             f"nor a control")
 
 
+@pytest.fixture(scope="module")
+def two_plane(built):
+    """`{label: whether its run has Plane 2's report beside it}`, read
+    off the tree `sibling_plane2` reads (`UX-1050`)."""
+    return {label: run_store.sibling_plane2(str(run)) is not None
+            for label, (run, _page) in built.items()}
+
+
 class TestEverySizeClassIsActuallyMeasured:
     """`UX-367`'s own defect, as a clause.
 
@@ -697,6 +757,17 @@ class TestEverySizeClassIsActuallyMeasured:
             f"no run in the population falls in the class(es) bounded at "
             f"{missing} elements - those bounds govern nothing. The "
             f"population is {sizes}")
+
+    def test_every_class_is_measured_with_both_planes(self, sizes,
+                                                      two_plane):
+        """`UX-1050` (§3f): a class met only by Plane 1 alone was never
+        measured in the mode the tool recommends."""
+        covered = {budget_for(sizes[label])[0] for label in LABELS
+                   if two_plane[label]}
+        missing = [row[0] for row in BUDGETS if row[0] not in covered]
+        assert not missing, (
+            f"no two-plane run falls in the class(es) bounded at {missing} "
+            f"elements; Plane 2 beside each run: {two_plane}")
 
     def test_a_run_past_every_class_is_refused_and_not_clamped(self):
         """The other half of the population claim, and the second one

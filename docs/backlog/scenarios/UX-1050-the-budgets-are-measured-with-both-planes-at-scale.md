@@ -64,4 +64,63 @@ green. Mutation: drop the new labels, and `TestEverySizeClassIsActuallyMeasured`
 
 ## Outcome
 
-Not started.
+**Gap measured.** On `UX-1053`'s tree, `pages.two_plane_run` pages
+exported in place (the store stays in), the guard's own `_LOOK`, 1440x900:
+
+```text
+                        landed   opened   words  controls  nodes
+74, both planes          7,444   38,931  12,633       712  6,346
+1,202, both (scale_both) 7,584   42,484  12,822       883  7,116
+4,002, both (xl_both)    7,584   42,982  12,872       868  7,209
+bound, 51-4,100          7,600   36,500   9,600       900  6,000
+```
+
+Opened, words and nodes are over on every two-plane page and flat from
+74 to 4,002 (+4,051 px, +239 words, +863 nodes): Plane 2 and the store's
+fixed cost. Landed and controls are under once `UX-1053` bounded the card.
+
+**Close measured.** `LABELS` gains `xl_both` (`_GENERATED`: `two_plane_run`,
+`--layers 20 --width 200`). One module fixture, `built`, builds and
+exports every page once under `/tmp/bga-volume-<pid, 10 digits>`;
+`booted`, `sizes` (element count read back from the page's inlined
+report) and `two_plane` read it. A run inside a store is exported in
+place, since `snapshot_copy` leaves the store and its history behind. The
+4,100 row moves to 43,500 px, 13,200 words, 7,500 nodes (518/328/291 of
+headroom); §3e's row and paragraph, a §3f line. `--durations`, `-p no:xdist`:
+
+```text
+before (base, load ~12)            30 passed, 2 skipped in 77.82s
+scale_both + xl_both, old bounds   2 failed (nodes 7,116 / 7,209 > 6,000), 35 passed in 244.65s
+xl_both, per-fixture builds        34 passed, 3 skipped in 274.52s (load 12-19)
+xl_both, one shared build          34 passed, 3 skipped in 71.48s (load 4.9)
+  setup: built 66.85s
+```
+
+`scale_both` was dropped for cost (+167 s with both). `xl_both` stays: §3f
+wants the top of the class, and the shared build pays for it.
+
+The page prints the run's path, so landed height depended on where the
+tree lived. `xl_both`, built three times under the pinned root and once
+under a 128-character one, landed px / controls:
+
+```text
+/tmp/bga-volume-0000028660   7,447 / 868
+/tmp/bga-volume-0000030668   7,447 / 868
+/tmp/bga-volume-0000031902   7,447 / 868      spread 0; 153 px (2.0%), 32 (3.6%) under
+.../scratchpad/<track>/a-much-longer-root-like-a-ci-runner-home   7,653 / 868
+```
+
+**Mutation table** (each restored from a scratch copy):
+
+| mutation | reddened | count |
+|---|---|---|
+| (a) `xl_both` out of `LABELS` and `_GENERATED` | `test_every_class_is_measured_with_both_planes` (`[4100]`) | 1 of 4 |
+| (b) `two_plane_run` skips writing `plane2.json` | the same clause, `'xl_both': False` | 1 of 4 |
+| (c) 4,100 words bound back to 9,600 | `test_the_whole_page_is_bounded_too[xl_both]` (12,872 words) | 1 of 17 |
+| (d) `UX-1053`'s cap lifted (`> Infinity`) | `test_the_landed_page_is_short[xl_both]` (10,829 px), `test_the_whole_page_is_bounded_too[xl_both]` (8,343 nodes) | 2 of 17 |
+| (e) `built`'s root set to the 128-character path above | `test_the_landed_page_is_short[xl_both]` (7,653 px) | 1 of 17 |
+
+Deviation: `booted` and `sizes` changed (outside `BUDGETS`/`LABELS`/
+`_GENERATED`): one shared build under a pinned root, in-place export for a
+store. `scale_both` dropped for cost. §3k's element-list cell names the
+finding card (`UX-1053`'s commit).

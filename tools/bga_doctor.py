@@ -36,6 +36,8 @@ import sys
 import tempfile
 from typing import Optional
 
+from bga.units import plural
+
 # Findings-style ids (UX-75), so a script can key on the check rather
 # than on its prose.
 OK = "ok"
@@ -230,7 +232,7 @@ def check_root_spanning_sources(project_dir: Optional[str] = None) -> dict:
         shown += f", +{len(offenders) - 3} more"
     return _check(
         "sources-scoped", WARN,
-        f"{len(offenders)} element(s) stage the project root: {shown}",
+        f"{plural(len(offenders), 'element')} stage the project root: {shown}",
         remedy=("that stages `.bga/` - including a capture's live scratch - "
                 "into the element's cache key and sandbox, so every capture "
                 "churns the key. BuildStream has no ignore mechanism for it: "
@@ -430,14 +432,14 @@ def check_plane3(project_name: Optional[str] = None) -> dict:
         if match:
             return _check(
                 "plane3-logs", OK,
-                f"{match['logs']} log(s) for {project_name} in {root}")
+                f"{plural(match['logs'], 'log')} for {project_name} in {root}")
         return _check(
             "plane3-logs", WARN,
             f"{root} has logs, but none for {project_name}",
             remedy=f"build this project once; the tree holds "
                    f"{', '.join(p['project'] for p in projects[:4])}")
     return _check("plane3-logs", OK,
-                  f"{len(projects)} project(s) with logs in {root}")
+                  f"{plural(len(projects), 'project')} with logs in {root}")
 
 
 def check_project_loads(project_dir: str) -> list[dict]:
@@ -605,14 +607,14 @@ def check_staged_sources(project_dir: str) -> list[dict]:
                    "must be run once per checkout."))
     else:
         findings.append(_check("staged-sources", OK,
-                               f"{executables} executable(s) staged by this "
+                               f"{plural(executables, 'executable')} staged by this "
                                f"project's own sources"))
 
     at_risk = census.get("elements_at_risk") or []
     if at_risk:
         findings.append(_check(
             "static-blind-spot", WARN,
-            f"{len(at_risk)} element(s) stage a statically-linked executable, "
+            f"{plural(len(at_risk), 'element')} stage a statically-linked executable, "
             f"which the LD_PRELOAD hook structurally cannot see",
             remedy="capture with `--trace-spine=auto` - it pays the ptrace cost "
                    "only for the elements the census says the hook is blind for "
@@ -662,13 +664,13 @@ def format_text(checks: list[dict], project_dir: Optional[str]) -> str:
     failed = [c for c in checks if c["status"] == FAIL]
     lines.append("")
     if failed:
-        lines.append(f"  {len(failed)} check(s) failed. Each line above carries the "
+        lines.append(f"  {plural(len(failed), 'check')} failed. Each line above carries the "
                      f"remedy that actually fixed it.")
     else:
         warned = [c for c in checks if c["status"] == WARN]
         lines.append(
             "  Everything a capture needs is here."
-            + (f" {len(warned)} warning(s) worth reading first." if warned else ""))
+            + (f" {plural(len(warned), 'warning')} worth reading first." if warned else ""))
     if not project_dir:
         lines.append("  Pass a project directory to also check that it loads, that "
                      "its plugins are installed, and what it stages.")
@@ -823,7 +825,7 @@ def check_capture_chain(project_dir: Optional[str] = None) -> list[dict]:
                 detail=detail))
             return findings
         findings.append(_check("chain-build", OK,
-                               f"bst ran {tasks} sandboxed task(s)"))
+                               f"bst ran {plural(tasks, 'sandboxed task')}"))
 
         # 3. did buildbox-run reach the shim?
         records = read_capture_diagnostics(diagnostics)
@@ -841,7 +843,7 @@ def check_capture_chain(project_dir: Optional[str] = None) -> list[dict]:
             return findings
         findings.append(_check(
             "chain-shim-reached", OK,
-            f"buildbox-run reached the shim {len(records)} time(s) through $PATH"))
+            f"buildbox-run reached the shim {plural(len(records), 'time')} through $PATH"))
 
         # 4. did anything record a process from inside the sandbox?
         report = load_and_summarize(raw, project_dir=project)

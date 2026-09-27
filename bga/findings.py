@@ -39,7 +39,7 @@ from .cache_effectiveness import (
     TRANSFER_SHARE_NOTABLE,
 )
 from .ingest.models import AnalysisResult
-from .units import GIB, US_PER_S, human_bytes
+from .units import GIB, US_PER_S, human_bytes, plural
 
 # Severity is about what it means for the reader, not about size:
 #   critical - the run itself is not what it appears to be
@@ -673,8 +673,9 @@ def _run_blocking_findings(result: AnalysisResult) -> list[dict]:
         # wording in the report and this second site kept it.
         suspended = build_failed.get('suspended')
         if failed:
+            failed_count = build_failed.get('failed_count')
             headline = (
-                f"THIS BUILD FAILED: {build_failed.get('failed_count')} element(s) "
+                f"THIS BUILD FAILED: {plural(failed_count, 'element')} "
                 f"ended in FAILURE ({shown}) - every figure below describes a build "
                 f"that did not complete, and the elements that failed contributed "
                 f"only the time they ran before failing")
@@ -709,7 +710,7 @@ def _run_blocking_findings(result: AnalysisResult) -> list[dict]:
         failed_count = confidence.get('failed_task_count') or 0
         findings.append(_finding(
             'failed-task-time', SEVERITY_HIGH,
-            f"{failed_count} failed task attempt(s) contributed "
+            f"failed {plural(failed_count, 'task attempt')} contributed "
             f"{failed_us / 1e6:.2f}s of EXECUTION_ON_CHAIN - real time the build "
             "spent producing nothing. Counted as execution, not as waste, because "
             "reclassifying it would move the attribution identity (I4)",
@@ -750,7 +751,8 @@ def _run_context_findings(result: AnalysisResult) -> list[dict]:
         band = confidence_band(primary)
         violations = result.violations or []
         suffix = (
-            f" - see {len(violations)} violation(s) below" if violations else ""
+            f" - see {plural(len(violations), 'violation')} below"
+            if violations else ""
         )
         findings.append(_finding(
             'confidence', SEVERITY_INFO if band == 'high' else SEVERITY_MEDIUM,
@@ -1187,8 +1189,8 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
         # caveat removed.
         verdict = (
             f"{binding} binds first, at {recommended}{clamp_note} - nothing "
-            f"measured here rules out {recommended - builders} more "
-            f"builder(s), which is a hypothesis to time rather than a "
+            f"measured here rules out {plural(recommended - builders, 'more builder')}, "
+            f"which is a hypothesis to time rather than a "
             f"setting to apply"
         )
         severity = SEVERITY_MEDIUM
@@ -1289,7 +1291,8 @@ def _swap_observed_finding(result: AnalysisResult) -> list[dict]:
     building = f", while building {', '.join(elements)}" if elements else ""
     return [_finding(
         'swap-observed', SEVERITY_HIGH,
-        f"Swap: {len(rows)} window(s) wrote {total_pages} page(s) to "
+        f"Swap: {plural(len(rows), 'window')} wrote "
+        f"{plural(total_pages, 'page')} to "
         f"swap, {start / 1e6:.1f}s-{end / 1e6:.1f}s into the build"
         f"{building}",
         elements=elements,

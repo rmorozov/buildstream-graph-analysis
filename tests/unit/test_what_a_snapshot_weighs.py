@@ -187,7 +187,7 @@ class TestTheCaptureSaysWhatItJustWrote:
         _say_what_it_weighs(str(snapshot), str(project))
         said = capsys.readouterr().err
         assert "This snapshot:" in said, said
-        assert "2 snapshot(s)" in said, said
+        assert "2 snapshots" in said, said
         assert str(runs) in said, said
 
     def test_it_names_the_raw_log_when_that_is_what_the_snapshot_is(

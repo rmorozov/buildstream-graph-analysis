@@ -40,6 +40,7 @@ from .occupancy.sweep import compute_occupancy_stats, compute_task_horizon
 from .replay.scheduler import ReplayScheduler
 from .structural import StructuralAnalyzer
 from .structural.models import deferral_risk_for
+from .units import plural
 from .units import s_to_us as _s_to_us
 from .utilisation import (
     CPUAccounting,
@@ -1353,7 +1354,7 @@ class BuildEfficiencyAnalyzer:
             "elements": elements,
             "tasks": sorted(erased),
             "note": (
-                f"{len(elements)} element(s) ran for less than half this "
+                f"{plural(len(elements), 'element')} ran for less than half this "
                 f"capture's {epsilon_us} us resolution, so every duration and "
                 f"share computed for them is published as zero. They are "
                 f"unmeasurable at this epsilon, not instantaneous."

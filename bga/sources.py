@@ -31,7 +31,7 @@ import os
 from collections.abc import Iterable
 from typing import Optional
 
-from .units import US_PER_S
+from .units import US_PER_S, plural
 
 SCHEMA = "sources/v1"
 
@@ -111,10 +111,10 @@ def format_kind_split(building: int, assembling: int) -> str:
     the number's meaning.
     """
     total = building + assembling
+    elements = plural(total, "element")
     if not assembling:
-        return f"{total} element(s)"
-    return (f"{total} element(s) ({building} that build, "
-            f"{assembling} that assemble)")
+        return elements
+    return f"{elements} ({building} that build, {assembling} that assemble)"
 
 def keying_of(kind: str, kind_map: Optional[dict] = None) -> str:
     # UX-833: a custom kind declared in `kind_map` inherits the keying

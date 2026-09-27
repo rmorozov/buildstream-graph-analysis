@@ -41,7 +41,7 @@ from typing import Optional
 
 from .cache_effectiveness import compute_cache_accounting, compute_cache_churn
 from .compare import _SIGNIFICANCE_PCT, MIN_BASELINE_RUNS, compute_band
-from .units import human_bytes
+from .units import human_bytes, plural
 
 # A metric whose newest reading sits outside the trailing window's band
 # is worth a finding. Each entry is `(key, label, direction)`, where
@@ -232,7 +232,7 @@ def _band_findings(rows: list[dict]) -> list[dict]:
                 if ratio else f"{label} left the trailing band"
             ) + (
                 f" ({_render(key, current)} against {_render(key, median)} over "
-                f"{band['n']} run(s), band {_render(key, band['low_us'])}.."
+                f"{plural(band['n'], 'run')}, band {_render(key, band['low_us'])}.."
                 f"{_render(key, band['high_us'])}"
                 + (', widened to the fixed rule' if band['widened_to_fixed_pct'] else '')
                 + f") - {consequence}"
@@ -301,7 +301,7 @@ def build_trend(rows: list[dict]) -> dict:
                 'supplied': len(rows),
                 'required': MIN_BASELINE_RUNS + 1,
                 'message': (
-                    f"{len(rows)} run(s) supplied; a band needs {MIN_BASELINE_RUNS} "
+                    f"{plural(len(rows), 'run')} supplied; a band needs {MIN_BASELINE_RUNS} "
                     f"trailing runs plus the one being judged, so {MIN_BASELINE_RUNS + 1}. "
                     f"The rows above are real readings with no verdict attached."
                 ),

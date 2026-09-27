@@ -111,7 +111,7 @@ def test_readme_sequence_joins_by_uid_when_build_root_is_overridden(tmp_path):
     # And the user-facing join names the element, which is the thing the
     # guide promises and the thing a collapse cannot produce.
     assert "worker.bst" in correlate.stdout
-    assert "Joined 1 element(s) on element UID" in correlate.stdout
+    assert "Joined 1 element on element UID" in correlate.stdout
 
 
 @pytest.mark.bst

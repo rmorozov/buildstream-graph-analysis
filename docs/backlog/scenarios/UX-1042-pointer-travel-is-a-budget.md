@@ -77,4 +77,57 @@ stays green.
 
 ## Outcome
 
-Not started.
+**Gap measured** on `a2a7dded` (UX-1043, UX-1044, UX-1046, UX-1050 in),
+`macro_micro` and `two_plane_run(--layers 20 --width 60)` (1,202
+elements, both planes), every chapter opened by its own control;
+spreads of each class's offset in its block, px, identical in 3 runs:
+
+```text
+class                 n   1440x900 dx-left/right  dy   390x844 dx-left/right  dy   (macro_micro | 1,202)
+button.collapse      67|80   0 / 34.0             0      0 / 34.5             0
+button.describe      41|39   0 / 27               0      0 / 27               0
+button.json-toggle   48|47   0 / 0                0      0 / 0                0
+button.chapter-open   6|7    9.0|16.8 / 0         0      9.0|16.8 / 0         0
+button.copy-rows     30|24   481.7|638.6 / 873.4|859.8  1,193|5,968   203.7|203.7 / 209.7|219.7
+select.top-n          6|9    203.3|584.4 / 806.6|708.6  942|5,936     70.7|82.8 / 150.3|187.7
+```
+
+**Placement row to file:** `button.copy-rows` and `select.top-n` spread
+dx 70.7-873.4 px from their `.table-tools` parentNode at both viewports
+(they follow the badge, preset and pager), so their clause is stopped,
+not widened: the guard reads them (`UNPLACED`) and holds the other four.
+
+**Close measured.** `tests/unit/test_pointer_travel_is_a_budget.py`,
+`probe.py` 3 runs of the guard's own `walk()`; spread 0 on every value:
+
+```text
+page@viewport          J1 bits/wheel   J2 worst bits/wheel   J3 bits/wheel    J4 bits/wheel (table)
+macro_micro@1440x900   4.52 / 0        18.39 / 0             15.66 / 38,444   12.77 / 11,760 (binary_cost)
+macro_micro@390x844    2.09 / 424      17.58 / 0             18.54 / 50,754    9.99 / 17,694
+1,202@1440x900         4.48 / 0        19.60 / 0             12.48 / 45,892   12.77 / 12,536 (wall_clock_share_us)
+1,202@390x844          1.68 / 771      18.94 / 0             20.37 / 57,357   10.02 / 22,213
+```
+
+Bounds are these + 0.5 bit and x1.10 wheel; the run-to-run spread (0)
+sits under both. `$ pytest -q tests/unit/test_pointer_travel_is_a_budget.py`
+→ `32 passed in 37.63s` (setup 37.51 s: two builds, 4 page-viewports,
+1 + 7-8 loads each); serial, one module fixture.
+
+| mutation (bga/viewer/style.css) | reddened | run |
+|---|---|---|
+| `button.json-toggle` `margin-left: auto` → `0` (toggle back after the heading text) | placement `json-toggle` on both pages x both viewports; "dx 744.3px" at macro_micro@1440 | 4 failed, 28 passed |
+| `.next-step:first-child { margin-top: 320px; }` | travel J1 wheel on all four (0 → 467 px at macro_micro@1440); placement green | 4 failed, 28 passed |
+| `.next-step:first-child { margin-left: 600px; }` | travel J1 bits at 390x844 (2.09 → 3.91; 1.68 → 3.90), J4 wheel at 390x844; placement green | 4 failed, 28 passed |
+
+Each reverted from its kept copy; green again: 32 passed.
+
+**Deviations from the Decision, the track's.** `button.describe` has no
+head and no `h2-h4` ancestor on either page (all 41|39 sit in the block
+`attachBlockDoor` prepends them to), so its block is that parentNode. J2
+walks each chapter's first section offering ?, JSON and fold; `change`
+(macro_micro) and `compare` (1,202) offer none and are pinned as
+`UNOFFERED`. J4 takes the longest table with a filter and column
+filters. The 320 px mutation reddens J1 on wheel, not bits (the Copy
+goes off screen and is centred); the margin-left row reddens bits.
+`select.top-n` was stopped alongside copy-rows on the same measurement.
+UX-1043's placement is CSS (`margin-left: auto`), not `rawjson.js`.

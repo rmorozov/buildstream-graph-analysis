@@ -55,7 +55,7 @@ listed under its topic as `§6e.N`; since round 142 every one is binding.
 | **Navigation** | §3b | any section is at most two interactions from the rail | binding |
 | | §3c | every chapter question is within reach of the top; chapters fold; total height is §3e's bound | binding |
 | | §3h | the rail shows every chapter, and only the sections of the chapter the reader is in | binding |
-| | §3l | *proposed*: pointer travel is a budget — a control class sits at one place, a journey's travel is bounded | proposed |
+| | §3l | pointer travel is a budget — a control class sits at one place, a journey's travel is bounded | binding |
 | | §6e.11 | find-in-page reaches folded content | binding |
 | | §6e.10 | two size classes, regular (≥ 60rem) and compact; budgets measured in both | binding |
 | **Budgets** | §3e | landed distance and opened volume are both bounded, per size class | binding |
@@ -2180,7 +2180,7 @@ constants it audits, so raising `TABLE_OPENS_BOUNDED_ABOVE` reds it,
 and it presses each paging step repeatedly, not once. The census is
 `UX-1032`, and declaring every sequence in the schema `UX-1031`.
 
-## 3l. Pointer travel is a budget (proposed)
+## 3l. Pointer travel is a budget
 
 §3b counts clicks and §3c screens of scroll; neither sees how far the
 pointer moves between the controls a reader uses together. Measured on
@@ -2213,16 +2213,19 @@ and the toggle is somewhere else in every section. Opening chapters
 from the document pushes each next control below everything the last
 one opened: 50-61 thousand pixels of wheel at 390x844.
 
-**Proposed.** A control class sits at one place relative to the block
+**Binding** (`UX-1042`). A control class sits at one place relative to the block
 it acts on — its offset within that block varies by at most one
 target (24 px) across the page, at each viewport — and the controls one
 block offers sit together. Travel
 is stated per journey in Fitts bits and wheel pixels, in both size
 classes (§6e.10) and on a page with both planes, with the journeys above
 as the census; a change that moves a control reports the journeys it
-lengthened. `UX-1042` is the rule and its guard, after `UX-1050` gives
-it a two-plane page at scale; `UX-1043` and `UX-1044` are the two
-placements it found.
+lengthened. Held on `macro_micro` and the two-plane 1,202-element page
+at 1440x900 and 390x844: fold, door, JSON toggle and chapter fold at one
+place; four journeys at their measured Fitts bits plus 0.5 and wheel
+plus 10%. `button.copy-rows` and `select.top-n` follow the table's badge
+(dx spreads 204-874 px) and are read, not held, until their placement
+row closes; `UX-1043` and `UX-1044` are the two placements it found.
 
 ## 7. Enforcement
 
@@ -2283,7 +2286,7 @@ headings, so a renumber there moves it.
 | §3i | `test_the_header_keeps_its_budget.py` | |
 | §3j | `test_a_fold_bounds_its_interactive_descendants.py` | `UX-921` |
 | §3k | `test_a_findings_element_list_is_bounded.py`, `test_every_step_past_a_bound_is_bounded.py` | `UX-1032`'s census, at the 4,002-element run; `UX-1028`/`UX-1029`/`UX-1030` closed the three violations it found |
-| §3l | `test_a_chapter_fold_has_one_place_and_one_label.py`, `test_a_sections_controls_sit_together.py` | proposed; `UX-1042` files its travel guard |
+| §3l | `test_a_chapter_fold_has_one_place_and_one_label.py`, `test_a_sections_controls_sit_together.py`, `test_pointer_travel_is_a_budget.py` | `UX-1042`: placement per class and travel per journey; copy-rows and top-n are read, not held |
 | §4 | `test_emphasis_is_a_budget.py`, `test_the_palette_is_validated.py`, `test_a_drawing_is_graded.py`, `test_apparatus_in_its_place.py`, `test_the_browser_is_the_library.py` | named |
 | §4a | | named; `UX-346`'s `test_a_sentence_lives_on_its_door.py` holds it and cites no section |
 | §4b | `test_a_runbook_is_not_a_table.py` | `UX-351`'s `test_the_label_is_for_the_reader.py` holds it and cites no section; `UX-669`'s clause holds the half that says a citation is a question, never a key |

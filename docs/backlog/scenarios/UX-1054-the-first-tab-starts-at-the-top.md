@@ -45,6 +45,11 @@ rail itself (`nav.scrollTop` from the link's offset, clamped the way
 `bga/viewer/nav.js` `scrollspy()`. `test_the_rail_is_a_source_list.py`'s
 "mark stays in view" clause holds unchanged.
 
+## Out of Scope
+
+A skip link or any other change to the page's tab order; the compact
+rail's fold (`nav.toc` at 390x844).
+
 ## Acceptance Test
 
 A keyboard journey with **no** explicit start (unlike

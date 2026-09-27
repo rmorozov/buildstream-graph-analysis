@@ -36,6 +36,17 @@ open chapter's sections" and the rail is bounded some other way.
 Default, if no decision: (a), since it is the reading §3h was filed to
 buy. Amend §3h and the glance line to one sentence.
 
+## Decision
+
+Route (a), Ruslan's default: the rail's disclosure follows the scrollspy mark, not the document's fold. `nav.js` `toc()` sets `data-current` on one `li[data-chapter]` at build (the first chapter); `scrollspy()`'s `mark()` moves it to the row holding the marked link. The hide rule becomes `.toc .chapters > li:not([data-current]) > .sections{display:none}`. The rail row button is navigation, not a fold: its click calls `chapters.js` `revealAndLand(chapterBox(root,id))` (opens the document chapter, never shuts it, lands on its head) and sets `data-current` on its own row in the same step. §3b holds at two interactions.
+
+- aria: the rail button drops `aria-expanded`, `aria-controls` and `data-chapter-open`, keeps `data-toc-chapter` (read by `test_the_chain_folds_and_clicks_are_counted.py:230`); the current row's button carries `aria-current="true"`. `button.chapter-open` is the only control with `aria-expanded`. `labelFold`'s rail branch loses its `aria-expanded` and `data-open` writes and keeps only the label repaint via `box.__railToggle` (`fileInChapter` changes the count).
+- Rejected: (b) (Ruslan left (a)); `aria-expanded` on a row whose press never shuts anything (a lie to AT); the row as `<a href>` (leaves §6d's quiet grade for no reader gain).
+- Files: `bga/viewer/nav.js`, `chapters.js` (labelFold rail branch), `style.css` (§3h rule and comment), styleguide (§3h to one sentence: "every chapter, and only the sections of the chapter the reader is in; the rail row goes to its chapter, and the fold is the document's"; the line-57 glance row; line 2008; §3b "disclose the chapter's rail row" becomes "press"), `tests/unit/test_the_rail_is_a_source_list.py`, `tests/unit/test_a_keyboard_journey_reaches_every_chapter.py` (stops read `data-toc-chapter`; Enter reads the chapter box's `data-open` false→true).
+- Guard: the rail file's landing clause reads `data-current`, not `data-open`. New class on macro_micro at 1440x900: (1) press "Expand all" and settle; `nav.scrollHeight` is unchanged and ≤ `clientHeight`+1, and every laid-out section link sits in the one row holding `aria-current`. (2) Press a non-current rail row: its box has `data-open="true"`, its row `data-current`, and one of its links is laid out. If the largest chapter disclosed alone overflows 848 px, measure it first: the unchanged-by-Expand-all clause stands and the ≤ box clause is a recorded deviation.
+- Mutations: `labelFold` writes `data-current` from `isOpen(box)`, or the CSS keyed on `data-open` again: (1) reddens (reading back to 2,239 px). Drop `revealAndLand` from the row click: (2) reddens.
+- Class product. One sequential track with UX-1044 on top (opus: architect-shaped judgement).
+
 ## Out of Scope
 
 The rail's entries and labels (`UX-1044`).

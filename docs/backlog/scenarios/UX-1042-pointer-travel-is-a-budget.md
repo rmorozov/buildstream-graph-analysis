@@ -49,6 +49,20 @@ bounded from the measurement after `UX-1043` and `UX-1044` land, on
 `UX-1050`'s two-plane page per size class as well as the committed
 fixtures. §3l moves from proposed to binding.
 
+## Decision
+
+A new guard, `tests/unit/test_pointer_travel_is_a_budget.py` (cites §3l), with two clauses.
+
+- (a) Placement: open every chapter, read each class's (dx, dy) from its block. collapse, describe and json-toggle use the section head, `section[data-section]`'s first `h2, h3` (the query `nav.js:239` and `rawjson.js:83` use); describe outside a head uses `closest("h2,h3,h4")`; chapter-open uses `h2.chapter-title`; copy-rows and top-n use the table wrapper, the `.table-tools` parentNode (`viewstate.js:99`); the reader's `select.top-n` in `decision.js` belongs to no table and is left out. dx is read from the left and the right edge and passes if either spread (max-min) is ≤ 24 px; dy spread ≤ 24 px; each viewport separately; every class n > 0.
+- (b) Travel: journeys J1 (verdict to first Copy), J2 (the rail walk, bounded by its worst chapter), J3 (open every chapter), J4 (table tools), from the scratch `journeys2.py`; fixed 250 ms sleeps become double-rAF waits; a missing hop fails the clause.
+- Pages: macro_micro and UX-1050's two-plane scale page, as a module fixture; 1440x900 and 390x844. At compact, click `nav.toc .toc-title` first and assert `data-folded="false"` before J2.
+- Bounds: one constant per page x viewport x journey from the median of 3 runs on the branch after UX-1043, UX-1044 and UX-1050 merge; headroom +0.5 bit, wheel +10%. The Outcome pastes the run-to-run spread under that headroom.
+- Rejected: x-centres on the page (block width and nesting move a consistent control; §3l's 126-136 px stdev); the 74-element page (within 0.1 bit of the 1,202 one on J1 and J3); real mouse events (travel is geometry).
+- Mutations: (1) the json-toggle back after the heading text in `rawjson.js`: placement reds; (2) `margin-top:320px` on the first next step: D 466→~786 px, J1 reds while placement stays green (`button.primary` is not a placement class).
+- Files: the guard; styleguide §3l loses "(proposed)" and §7 gets its ledger row (`test_the_styleguide_names_its_guards.py`); the task file. The session records the tier.
+- Risk: copy-rows follows the badge, preset and pager in `.table-tools` (`structured.js:1156`), so its dx may spread past 24 px. If so, file a placement row like UX-1043; never widen 24 px.
+- Class product; one track after UX-1043, UX-1044 and UX-1050 merge; opus (UX-1039).
+
 ## Out of Scope
 
 Moving any control (`UX-1043`, `UX-1044`); keyboard travel (§6e.8).

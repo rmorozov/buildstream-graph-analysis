@@ -54,6 +54,7 @@ task file, which is the only place it ever lived twice.
 | UX-1050 | [the volume budgets are measured on a two-plane page at scale](UX-1050-the-budgets-are-measured-with-both-planes-at-scale.md) | viewer | High | R1, R4 | 🔴 Not Started |
 | UX-1051 | [every `select` and `input` wears a declared resting appearance](UX-1051-every-select-wears-a-resting-grade.md) | viewer | Medium | R1 | 🔴 Not Started |
 | UX-1052 | [the export carries its viewer JS gzipped, and a guard bounds its bytes](UX-1052-the-viewer-js-ships-compressed.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1053 | [a two-plane page's growth with the run is bounded by the section that grows](UX-1053-a-two-plane-pages-growth-is-bounded-by-section.md) | viewer | High | R1, R4 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

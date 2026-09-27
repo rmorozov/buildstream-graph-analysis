@@ -36,6 +36,10 @@ the same count - and the document control sits at one place in every
 chapter head, in `bga/viewer/chapters.js`, `bga/viewer/nav.js`
 and `bga/viewer/style.css`.
 
+## Decision
+
+Shaped with UX-1046 (its Decision): runs on top of it in the same track. The "same `aria-expanded` on both controls" clause is struck: it reads the coupling UX-1046 removes. Each control's ▸/▾ glyph follows its own disclosure (rail row: `data-current`; document control: `data-open`); both carry the count and the chapter title; `labelFold` stays the one label painter for both and reads the row's `data-current` for the rail glyph.
+
 ## Out of Scope
 
 The wheel cost of opening chapters in sequence; "Expand all" and the

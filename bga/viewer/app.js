@@ -84,8 +84,9 @@ const bounded = (key, items) => (items.length > TABLE_OPENS_BOUNDED_ABOVE
  * compute this on its own.
  */
 //: `bga/run_store.py`'s `_STAMP` ("%Y%m%dT%H%M%SZ"), the only pattern
-//: the store writes a snapshot directory by.
-const _STAMP_RE = /^\d{8}T\d{6}Z$/;
+//: the store writes a snapshot directory by - plus `new_snapshot_dir`'s
+//: own `-NN` disambiguator for two snapshots inside one second.
+const _STAMP_RE = /^\d{8}T\d{6}Z(-\d{2})?$/;
 
 export function runDisplayName(run) {
   if (run?.name !== "run") return run?.name;

@@ -172,6 +172,23 @@ def test_a_stamped_run_reads_the_stamp(browser, tmp_path_factory):
 
 
 @needs_browser
+def test_a_same_second_snapshot_s_disambiguator_still_reads_the_stamp(
+        browser, tmp_path_factory):
+    """`bga/run_store.py:new_snapshot_dir`'s `<stamp>-01` for a second
+    snapshot inside one second - still a stamp, not a bare basename."""
+    from tools.bga_view import export
+
+    stamp = "20260105T000000Z-01"
+    run = tmp_path_factory.mktemp("stamped-dup") / stamp / "run"
+    shutil.copytree(GOLDEN, run)
+    (run / "expected_output.json").unlink(missing_ok=True)
+    page = tmp_path_factory.mktemp("stamped-dup-page") / "report.html"
+    export(str(run), str(page))
+    heading = browser.measure(page.as_uri(), _HEADING_TEXT)
+    assert heading.strip() == stamp, heading
+
+
+@needs_browser
 def test_a_bare_run_dir_reads_run(browser, tmp_path_factory):
     """No store above it: `run.name` is shown as-is, "run"."""
     from tools.bga_view import export

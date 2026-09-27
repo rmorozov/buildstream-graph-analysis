@@ -71,8 +71,13 @@ _SCAN = r"""
 #: Every text-node client rect the head's wrapped title drew, tested
 #: against the toggle's own rect - a rect that intersects it is a title
 #: line the button sits on top of. The toggle's own text nodes are
-#: excluded since it is inside the head.
-_OVERLAP_SCAN = r"""
+#: excluded since it is inside the head. `__ZOOM__` is replaced (never
+#: `.format()`, so the JS's own braces stay literal) with a root
+#: font-size bump or nothing - the re-verification's own miss: a
+#: reservation measured once (`getBoundingClientRect().width`, read on
+#: append) is a frozen px that a later zoom leaves behind the button's
+#: real, now-larger box. A CSS-only reservation has no "once" to freeze.
+_OVERLAP_SCAN_TEMPLATE = r"""
 (() => {
   for (const box of document.querySelectorAll("section.chapter")) {
     box.setAttribute("data-open", "true");
@@ -81,6 +86,7 @@ _OVERLAP_SCAN = r"""
       section.removeAttribute("hidden");
     }
   }
+  __ZOOM__
   const out = [];
   document.querySelectorAll("section[data-section]").forEach((s) => {
     const heading = s.querySelector("h2, h3");
@@ -111,6 +117,10 @@ _OVERLAP_SCAN = r"""
   return out;
 })()
 """
+
+#: `document.documentElement.style.fontSize` at 40px - `--font-small`
+#: and every `rem` token scale with it, including the button's own box.
+_ZOOM_JS = "document.documentElement.style.fontSize = '40px';"
 
 
 @pytest.fixture(scope="module")
@@ -146,9 +156,13 @@ def test_the_json_toggle_offset_is_stable(browser, booted, label, width,
 @pytest.mark.medium
 @pytest.mark.parametrize("label", LABELS)
 @pytest.mark.parametrize("width,height", [(1440, 900), (390, 844)])
+@pytest.mark.parametrize("zoom", [False, True], ids=["normal", "zoom40"])
 def test_no_title_line_overlaps_the_toggle(browser, booted, label, width,
-                                           height):
-    hits = browser.measure(booted[label], _OVERLAP_SCAN, width, height)
+                                           height, zoom):
+    script = _OVERLAP_SCAN_TEMPLATE.replace(
+        "__ZOOM__", _ZOOM_JS if zoom else "")
+    hits = browser.measure(booted[label], script, width, height)
     assert hits == [], (
-        f"{label} at {width}x{height}: {len(hits)} section(s) whose "
-        f"wrapped title overlaps the toggle (styleguide §3l): {hits[:3]}")
+        f"{label} at {width}x{height}{' zoomed to 40px root' if zoom else ''}"
+        f": {len(hits)} section(s) whose wrapped title overlaps the toggle "
+        f"(styleguide §3l): {hits[:3]}")

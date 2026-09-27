@@ -47,22 +47,6 @@ export function recordSource(section, value) {
 export const SHOW = "View as JSON";
 export const HIDE = "Hide JSON";
 
-// `UX-1043` (styleguide §3l): the stylesheet's `padding-right` on the
-// head is a guessed rem, and a guess and the button's real rendered
-// width drift - measured on `main`: 6.5rem (104px) against a 114.8px
-// button, 8/34 golden and 16/48 macro_micro titles' wrapped last line
-// overlapping the toggle at 390x844. Read the button's own box after
-// each text change instead, so the reservation is never a second
-// number to keep in sync with the first. `--space-2` (8px at the
-// default 16px root) is the visual gap the stylesheet already uses
-// beside this control elsewhere.
-const TOGGLE_GUTTER_GAP_PX = 8;
-
-function syncToggleGutter(heading, button) {
-  const width = button.getBoundingClientRect?.().width;
-  if (width) heading.style.paddingRight = `${width + TOGGLE_GUTTER_GAP_PX}px`;
-}
-
 // `UX-1030` (styleguide §3k): the door drew a whole section as one
 // node - 3,592,666 characters on `elements`, at 4,002 elements. Past
 // this many characters the node holds a prefix and the whole value
@@ -119,7 +103,6 @@ export function jsonToggles(root, { document: doc } = {}) {
         button.textContent = SHOW;
         button.title = SHOWN_TITLE(key);
         button.setAttribute("aria-label", SHOWN_TITLE(key));
-        syncToggleGutter(heading, button);
         return;
       }
       const box = doc.createElement("div");
@@ -160,15 +143,13 @@ export function jsonToggles(root, { document: doc } = {}) {
       button.textContent = HIDE;
       button.title = HIDDEN_TITLE(key);
       button.setAttribute("aria-label", HIDDEN_TITLE(key));
-      syncToggleGutter(heading, button);
     });
 
     // `UX-1043` (styleguide §3l): appended last, same as before - the
-    // stylesheet pins it to the head's right edge (`position: absolute`)
-    // regardless of DOM order, title length or wrapping. Measured only
-    // after it joins the document, so the box it reads is real.
+    // stylesheet's flex row pins it to the head's right edge
+    // (`margin-left: auto`) regardless of DOM order, title length or
+    // wrapping, and reserves its width itself on every reflow.
     heading.append(button);
-    syncToggleGutter(heading, button);
     given.push(key);
   }
   return given;

@@ -42,69 +42,55 @@ reds.
 
 ## Outcome
 
-**Gap measured**, own probe against `PYTHONPATH=$PWD` at `71d3dcda`,
-both `pages.FIXTURES` fixtures, every chapter open, offset =
-`headRect.right - toggleRect.right`:
+**Gap measured**, own probe at `71d3dcda`, both `pages.FIXTURES`
+fixtures, every chapter open, offset = `headRect.right - toggleRect.right`:
+spread 0 on all four (2 fixtures x 2 viewports).
 
-```text
-golden       1440x900  n=34  min 0  max 0  spread 0
-golden        390x844  n=34  min 0  max 0  spread 0
-macro_micro  1440x900  n=48  min 0  max 0  spread 0
-macro_micro   390x844  n=48  min 0  max 0  spread 0
-```
+**First close**: pinned `button.json-toggle` to the head's **right
+edge** (fold and door already own the left edge, unmoved) via
+`position: absolute; right: 0` and a guessed `padding-right: 6.5rem`
+on the head. `test_a_sections_controls_sit_together.py`'s offset
+clause: 4/4 passed. Mutation (`position: static`, restored after the
+title): all 4 reddened, spread 203.7-736.3px (bound 24px).
 
-Pinned `button.json-toggle` to the head's **right edge**: fold
-(`nav.js` prepend) and door (`attachBlockDoor`, into the first block)
-already own the left edge, and the right edge is the one side neither
-claims, so no move to either was needed. `h2:has(> button.json-toggle),
-h3:has(> button.json-toggle) { position: relative; padding-right:
-6.5rem }` plus `button.json-toggle { position: absolute; top: 0; right:
-0 }` - offset is then always exactly `0`, by construction, whether the
-title wraps or the section has no door. `rawjson.js`'s
-`heading.append(button)` is unchanged; only the stylesheet moved it.
+**Verifier held it** (`ed13508f`): the guessed `padding-right` (104px)
+against a 114.8px rendered button overlapped a wrapped title's last
+line on the toggle at 390x844 - invisible to the offset clause, which
+only reads `.right`. Own eyeballed estimate at the time said 8/34
+golden, 16/48 macro_micro; the re-verifier's own `Range.getClientRects`
+scan against `ed13508f`'s files (the method the new clause below
+actually runs) reproduced **6/34 golden, 11/48 macro_micro** - the
+lower, correct count, since the eyeball pass was not the guard's own
+instrument.
 
-**Close measured**: `tests/unit/test_a_sections_controls_sit_together.py`,
-new file, 4 cases (2 fixtures x 2 viewports):
+**Second close**: `syncToggleGutter` read the button's rendered width
+once per text change (`getBoundingClientRect().width`) instead of
+guessing the rem. New clause `test_no_title_line_overlaps_the_toggle`
+(`Range.getClientRects` over the head's text nodes against the
+toggle's rect): 8/8 passed. Mutation (reservation cut to `width * 0.4`):
+reddened at 390x844 only, golden 28/34 and macro_micro 40/48 overlap.
 
-```text
-$ PYTHONPATH=$PWD python3 -m pytest -q -n 2 tests/unit/test_a_sections_controls_sit_together.py
-....                                                                     [100%]
-4 passed in 3.58s
-```
-
-**Mutation table**:
-
-| mutation | reddened | count |
-|---|---|---|
-| `button.json-toggle { position: static; margin-left: var(--space-2) }`, `padding-right: 0rem` (the toggle restored after the title text) | all 4 cases | golden 1440x900 spread 714.0px, golden 390x844 spread 203.7px, macro_micro 1440x900 spread 736.3px, macro_micro 390x844 spread 203.7px (bound 24px) |
-
-Reverted from the pre-mutation copy; green again (4 passed in 3.58s).
-
-`test_the_page_has_a_volume_budget.py`: 30 passed, 2 skipped (large-
-class rows need `bga gen-synthetic`, not run here) - landed/opened
-height unmoved, since absolute positioning adds no box height.
-
-**Verifier held the first cut** (commit `ed13508f`): `padding-right:
-6.5rem` (104px) was a guessed reservation against a 114.8px rendered
-button - the offset clause above is blind to it (`.right` stays 0
-regardless of the guess), but a wrapped title's last line overlapped
-the toggle on 8/34 golden and 16/48 macro_micro sections at 390x844.
-
-**Second close**: `rawjson.js`'s `syncToggleGutter` now sets
-`heading.style.paddingRight` from `button.getBoundingClientRect().width`
-after every text change, so the reservation is the button's own box,
-not a second number to keep in sync with the first. New guard clause
-`test_no_title_line_overlaps_the_toggle` (`Range.getClientRects` over
-the head's own text nodes against the toggle's rect): 8/8 passed (2
-fixtures x 2 viewports), plus the original 4/4 offset cases still
-green (8/8 total).
+**Re-verification held it again**: a once-read px freezes - a root
+`font-size` bump to 40px after boot left the old reservation behind
+the now-larger button, overlapping 3-31 sections per case. **Third
+close**: pure CSS - the head is now `display: flex` with the toggle
+`margin-left: auto; flex: none`, so the browser reserves the button's
+box on every reflow, never a JS-read number. The title text (an
+anonymous flex item) and `.reader-tag` both carry `overflow-wrap:
+anywhere` so a long title plus a promoted tag still shrink to fit a
+390px head rather than push the toggle off it (measured: `confidence`
+on `golden` overflowed without it). New clause parametrised with a
+`zoom40` case (`documentElement.style.fontSize = "40px"` after boot):
+12/12 passed (offset 4 + overlap 8, normal and zoomed).
 
 | mutation | reddened | count |
 |---|---|---|
-| `syncToggleGutter` reserves `width * 0.4` instead of `width + 8` (cut to a fraction) | `test_no_title_line_overlaps_the_toggle`, 390x844 only | golden 28/34 sections overlap, macro_micro 40/48 overlap; 1440x900 unaffected (titles don't wrap there) |
+| toggle restored after the title (position:static) | offset clause, all 4 | spread 203.7-736.3px (bound 24px) |
+| `syncToggleGutter` cut to `width * 0.4` | overlap clause, 390x844 only | golden 28/34, macro_micro 40/48 overlap |
+| JS gutter restored over the flex fix (frozen reservation) | overlap clause, `zoom40` only, all 4 (both viewports, both fixtures) | golden 1440 3/34, macro_micro 1440 5/48, golden 390 22/34, macro_micro 390 31/48; `normal` cases and the offset clause stayed green |
 
-Reverted from the pre-mutation copy; 8/8 green again.
-
+Reverted from each pre-mutation copy; green again every time.
+`test_the_page_has_a_volume_budget.py`: 30 passed, 2 skipped (large
+class needs `bga gen-synthetic`, not run here) - height unmoved.
 `@media print` at 1440x900, both fixtures: offset spread 0, toggle
-still visible (`display: block`) - no print rule touches this
-control's position, so the fix and the gutter sync hold under it too.
+still `display: block` - no print rule touches this control.

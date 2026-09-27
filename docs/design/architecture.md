@@ -358,8 +358,8 @@ description, and this table's job is only to say which one to open.
 | `element.js` | the element object — one element's facts, history, culprits, horizon and what-if, and the sections built per element (`UX-216`, `UX-337`) |
 | `decision.js` | the first screen: the decision panel, the provenance block and the investigation context (`UX-207`, `UX-337`) |
 | `structured.js` | a value becomes a table and the table becomes interrogable — columns, filters, sort, Top-N, presets, folds, the copy control (`UX-201`, `UX-289`, `UX-337`) |
-| `pairs.js` | a map drawn as a pair list, and the element-keyed signals lifted out of it into one table with its presets (`UX-268`) |
-| `format.js` | the nine `bga:` hint keys, the readers that pull them off a schema node, the formatters they select, and `el` — the one node constructor (`UX-201`, `UX-337`) |
+| `pairs.js` | a map drawn as a pair list, and the element-keyed signals lifted out of it into one table with its presets (`UX-268`); split from `structured.js` by `UX-1028` |
+| `format.js` | the `bga:` hint keys the page reads (its docstring carries the count, `UX-654`), the readers that pull them off a schema node, the formatters they select, and `el` — the one node constructor (`UX-201`, `UX-337`) |
 | `primitives.js` | what everything may use and that uses nothing: the SVG namespace, the bar row, the anchor spelling, and whether this page is served (`UX-337`) |
 | `shapes.js` | the styleguide's §1 dispatch table as code: value shape + hint → the one control that draws it (`UX-302`) |
 | `tables.js` | the element table, its columns, sorting and the preset filters `bga:presets` declares |

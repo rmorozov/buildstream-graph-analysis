@@ -48,7 +48,7 @@ history, and §7 names its guard. *Binding* is law the page is held to;
 | **Tables and folds** | §3 | tables open bounded, numbers right, one tool row, folds labeled with a count | binding |
 | | §3a | depth is announced; deeper than one level opens in table focus | binding |
 | | §3d | table tools appear at the row cap; a one-value column is a sentence | binding |
-| | §3j | a fold bounds its hidden controls, not only its visible rows | binding; guard not filed |
+| | §3j | a fold bounds its hidden controls, not only its visible rows | binding |
 | | §3k | every population opens at a named bound, and the step past it is bounded too | binding |
 | **Navigation** | §3b | any section is at most two interactions from the rail | binding |
 | | §3c | the landed page is at most 10 screens; chapters fold | binding |

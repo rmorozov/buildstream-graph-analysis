@@ -71,4 +71,4 @@ more tracks met (`UX-1023`, the header guard).
 
 Seven verifiers read the nine tracks after the close, in one shared
 checkout: 22 rows passed; `UX-1018`'s named mutation left its outline
-guard green, and the guard now reads the section head's role (`41ded5ef`).
+guard green, and the guard now reads the section head's role (`12afba7a`).

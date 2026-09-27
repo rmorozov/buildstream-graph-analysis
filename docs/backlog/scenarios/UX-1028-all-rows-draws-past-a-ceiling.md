@@ -53,3 +53,10 @@ row's clauses): `10 passed`. The pre-existing `test_all_rows_means_all_rows.py`
 | pager's `state.top.n` set to `offset + TABLE_OPENS_BOUNDED_ABOVE` (append) instead of a fixed window | `test_no_table_ever_mounts_past_the_bound`, at the 5th press (200 -> 240) | 1 of 10 |
 
 Deviation: on the merge `structured.js` crossed the viewer line ceiling; `elementSignalTable`, `presetTable` and `renderPairs` moved to `bga/viewer/pairs.js` (`4f84b16e`).
+
+**Review (#295):** pager measured position/bounds from unfiltered
+`total`, left the preset reading "Top 25 by …" after paging replaced
+it. `applyFilters` writes `options.filtered` (pre-`top`) onto `state`;
+the pager clamps its offset and deselects the preset once paging takes
+over. New 3-clause class, `pytest test_a_filter_is_a_property_of_a_table.py -q`:
+`11 passed`. Mutations `denom = total`, dropping the deselect - one clause each.

@@ -813,8 +813,16 @@ export function interrogable(table, specs, total, depth = 0) {
   // control's `name` and its bookmarked parameter say the same word.
   const key = table.getAttribute?.("data-table") ?? "table";
   const badge = el("span", { class: "badge" }, badgeText(total, total));
+  // Review (#295), `UX-1028`: `filtered` - the text/threshold
+  // population, before `top`'s slice - is what the paging step below
+  // measures its position and bounds against, not `total`, which
+  // disagrees with the page the moment a filter narrows it.
+  let pagerRefresh = null;
   const refresh = () => {
+    // `applyFilters` also writes `state.filtered` - the pre-`top`
+    // population - back onto `state` itself.
     badge.textContent = badgeText(applyFilters(table, state), total);
+    pagerRefresh?.();
   };
 
   // `UX-349`: **filters appear when the table is long enough to need
@@ -927,8 +935,74 @@ export function interrogable(table, specs, total, depth = 0) {
       preset.append(el("option", { value: `${TABLE_OPENS_BOUNDED_ABOVE}:` },
                        `First ${TABLE_OPENS_BOUNDED_ABOVE} rows`));
     }
+    // `UX-1028` (styleguide §3k): past `ALL_ROWS_CEILING` the reader
+    // has no "All rows" - the paging step below is the only way to
+    // reach the rest, one bound-sized window at a time. `offset` and
+    // `paging` are declared here, ahead of the preset's own `change`
+    // handler, so choosing a preset can hand the window back in the
+    // *same* listener rather than a second one racing the first's
+    // `refresh` (Review #295: that race is what left "Top 25 by …"
+    // selected while paging showed a plain offset window).
+    let offset = 0;
+    let paging = false;
+    const canPage = total > ALL_ROWS_CEILING;
+    const position = canPage ? el("span", { class: "page-position" }, "") : null;
+    const prev = canPage ? el("button", { type: "button", class: "page-prev",
+                              "aria-label": "previous rows" }, "‹ Prev") : null;
+    const next = canPage ? el("button", { type: "button", class: "page-next",
+                              "aria-label": "next rows" }, "Next ›") : null;
+    // Runs from `refresh` itself, so a filter or threshold narrowing
+    // the population while paging keeps the position and the buttons'
+    // bounds measured against `state.filtered` - the text/threshold
+    // population `applyFilters` just computed - never a stale reading
+    // of the unfiltered `total` (Review #295, `UX-1028`).
+    if (canPage) {
+      pagerRefresh = () => {
+        if (!paging) { position.textContent = ""; return; }
+        const denom = state.filtered ?? total;
+        const lastStart = denom === 0 ? 0
+          : Math.floor((denom - 1) / TABLE_OPENS_BOUNDED_ABOVE)
+            * TABLE_OPENS_BOUNDED_ABOVE;
+        // The filtered population can shrink under the current window
+        // (typing a filter mid-page) - clamp back onto its last real
+        // page rather than claim a range past what is now filtered.
+        if (offset > lastStart) {
+          offset = lastStart;
+          state.top = { n: TABLE_OPENS_BOUNDED_ABOVE, column: null, offset };
+          badge.textContent = badgeText(applyFilters(table, state), total);
+        }
+        const end = Math.min(offset + TABLE_OPENS_BOUNDED_ABOVE, denom);
+        position.textContent = denom === 0 ? "no rows match"
+          : `rows ${offset + 1}-${end} of ${denom.toLocaleString("en-US")}`;
+        prev.disabled = offset <= 0;
+        next.disabled = end >= denom;
+      };
+      const step = () => {
+        paging = true;
+        state.top = { n: TABLE_OPENS_BOUNDED_ABOVE, column: null, offset };
+        // The preset no longer describes what is on the page - paging
+        // replaces its claim rather than leaving it beside a window it
+        // did not choose (Review #295).
+        preset.selectedIndex = -1;
+        refresh();
+      };
+      prev.addEventListener("click", () => {
+        offset = Math.max(0, offset - TABLE_OPENS_BOUNDED_ABOVE);
+        step();
+      });
+      next.addEventListener("click", () => {
+        const denom = state.filtered ?? total;
+        offset = Math.min(offset + TABLE_OPENS_BOUNDED_ABOVE,
+                          Math.max(0, denom - TABLE_OPENS_BOUNDED_ABOVE));
+        step();
+      });
+    }
+
     // `UX-392`: through the same `refresh`, so the preset narrows what
-    // the filter left rather than replacing it.
+    // the filter left rather than replacing it. Choosing any preset
+    // also ends paging and starts back at the front, in this same
+    // pass (Review #295) - so the label and the rows agree the
+    // instant the reader chooses, not one `refresh` later.
     preset.addEventListener("change", () => {
       const [n, column] = preset.value ? preset.value.split(":") : [];
       // `UX-1028`: an empty *value* reads as "All rows" only when a
@@ -939,6 +1013,8 @@ export function interrogable(table, specs, total, depth = 0) {
       // "unbounded" the way `state.top = null` would.
       state.top = preset.value ? { n: Number(n), column: column || null }
         : preset.selectedIndex === -1 ? (opening?.top ?? null) : null;
+      offset = 0;
+      paging = false;
       refresh();
     });
     // UX-262: a table longer than this opens bounded. Measured at
@@ -954,51 +1030,10 @@ export function interrogable(table, specs, total, depth = 0) {
     }
     state.preset = preset;
 
-    // `UX-1028` (styleguide §3k): past `ALL_ROWS_CEILING` the reader
-    // has no "All rows" - this is the only way to reach the rest, one
-    // bound-sized window at a time. **Replaces the mounted window; it
-    // never appends** - the position shown is the badge's own claim,
-    // `${start}-${end} of ${total}`.
-    if (total > ALL_ROWS_CEILING) {
-      let offset = 0;
-      const position = el("span", { class: "page-position" }, "");
-      const prev = el("button", { type: "button", class: "page-prev",
-                                  "aria-label": "previous rows" }, "‹ Prev");
-      const next = el("button", { type: "button", class: "page-next",
-                                  "aria-label": "next rows" }, "Next ›");
-      const step = () => {
-        // Not `preset.value = ""`: past `ALL_ROWS_CEILING` there is no
-        // option holding that value, and forcing it leaves the select
-        // with `selectedIndex -1` - a real defect this once was. The
-        // preset stays showing whatever it last read; the position
-        // below is the paging step's own claim about what is mounted.
-        state.top = { n: TABLE_OPENS_BOUNDED_ABOVE, column: null, offset };
-        refresh();
-        const end = Math.min(offset + TABLE_OPENS_BOUNDED_ABOVE, total);
-        position.textContent =
-          `rows ${offset + 1}-${end} of ${total.toLocaleString("en-US")}`;
-        prev.disabled = offset <= 0;
-        next.disabled = end >= total;
-      };
-      prev.addEventListener("click", () => {
-        offset = Math.max(0, offset - TABLE_OPENS_BOUNDED_ABOVE);
-        step();
-      });
-      next.addEventListener("click", () => {
-        offset = Math.min(offset + TABLE_OPENS_BOUNDED_ABOVE,
-                          Math.max(0, total - TABLE_OPENS_BOUNDED_ABOVE));
-        step();
-      });
-      preset.addEventListener("change", () => {
-        // Choosing any preset (Top N, a different rank) starts paging
-        // over from the front rather than mid-window.
-        offset = 0;
-        position.textContent = "";
-      });
-      // Not `step()` here: at rest the table opens on `opening`'s own
-      // bound (Top 25, or the first `TABLE_OPENS_BOUNDED_ABOVE`), and
-      // the paging step only takes over once pressed - calling `step`
-      // at build time clobbered that default straight back to 40.
+    if (canPage) {
+      // Not paged at build time: at rest the table opens on `opening`'s
+      // own bound (Top 25, or the first `TABLE_OPENS_BOUNDED_ABOVE`),
+      // and the paging step only takes over once pressed.
       prev.disabled = true;
       pager = el("span", { class: "table-pager" }, prev, position, next);
     }

@@ -111,6 +111,42 @@ _COMPOSES = """(() => {
   return out;
 })()"""
 
+#: Review (#295), `UX-1028`: the pager's position and bounds used to be
+#: measured against the unfiltered `total`, not the population a filter
+#: just left - so a reader who paged forward, then filtered to a
+#: population smaller than the current window, saw a position claiming
+#: rows the filter had emptied. `toolchain` matches exactly one element
+#: uid (`toolchain.bst`), at the front of the run - well inside the
+#: first page, and nowhere near the second the pager is parked on.
+_PAGED_FILTER = """(() => {
+  const t = document.querySelector('table[data-table="elements"]');
+  const section = t.closest("section");
+  const box = section.querySelector("input.table-filter");
+  const preset = section.querySelector("select.top-n");
+  const pager = section.querySelector(".table-pager");
+  const next = pager.querySelector(".page-next");
+  const prev = pager.querySelector(".page-prev");
+  const position = pager.querySelector(".page-position");
+  const badge = section.querySelector("span.badge");
+  const shown = () => [...t.querySelectorAll("tbody tr")].filter((r) => !r.hidden);
+  const out = {};
+  const top10 = [...preset.options].find((o) => o.textContent.startsWith("Top 10"));
+  preset.value = top10.value;
+  preset.dispatchEvent(new Event("change", { bubbles: true }));
+  out.presetSelectedBeforePaging = preset.selectedIndex !== -1;
+  next.click();
+  out.positionAfterOnePage = position.textContent;
+  out.presetSelectedAfterPaging = preset.selectedIndex !== -1;
+  box.value = "toolchain";
+  box.dispatchEvent(new Event("input", { bubbles: true }));
+  out.shownAfterFilter = shown().length;
+  out.positionAfterFilter = position.textContent;
+  out.badgeAfterFilter = badge.textContent;
+  out.nextDisabledAfterFilter = next.disabled;
+  out.prevDisabledAfterFilter = prev.disabled;
+  return out;
+})()"""
+
 
 @pytest.fixture(scope="module")
 def at_scale(tmp_path_factory):
@@ -142,6 +178,12 @@ def survey(at_scale):
 def composed(at_scale):
     with Browser(find_chrome()) as browser:
         return browser.measure(at_scale, _COMPOSES, 1440, 900)
+
+
+@pytest.fixture(scope="module")
+def paged_filter(at_scale):
+    with Browser(find_chrome()) as browser:
+        return browser.measure(at_scale, _PAGED_FILTER, 1440, 900)
 
 
 @pytest.mark.skipif(find_chrome() is None, reason=NO_BROWSER)
@@ -231,6 +273,35 @@ class TestTheTwoControlsCompose:
         above.
         """
         assert composed["afterClearing"] == 10, composed
+
+
+@pytest.mark.skipif(find_chrome() is None, reason=NO_BROWSER)
+class TestThePagerAgreesWithTheFilteredPopulation:
+    """Review (#295), `UX-1028`: the paging step past `ALL_ROWS_CEILING`
+    used to measure its position and its buttons' bounds from the
+    unfiltered `total`, so a filter narrowing the population while
+    paged left the position naming rows the filter had just hidden.
+    """
+
+    def test_paging_replaces_the_preset_it_no_longer_describes(
+            self, paged_filter):
+        assert paged_filter["presetSelectedBeforePaging"]
+        assert not paged_filter["presetSelectedAfterPaging"], (
+            "the preset still reads 'Top 10 by …' after paging took over "
+            "the window - the label no longer describes what is shown")
+
+    def test_the_position_matches_what_is_actually_on_the_page(
+            self, paged_filter):
+        assert paged_filter["positionAfterOnePage"].startswith("rows 41-80")
+        shown = paged_filter["shownAfterFilter"]
+        assert shown == 1, paged_filter
+        assert paged_filter["positionAfterFilter"] == f"rows 1-{shown} of {shown}", (
+            paged_filter)
+
+    def test_the_buttons_bound_themselves_to_the_filtered_population(
+            self, paged_filter):
+        assert paged_filter["nextDisabledAfterFilter"]
+        assert paged_filter["prevDisabledAfterFilter"]
 
 
 @pytest.mark.skipif(find_chrome() is None, reason=NO_BROWSER)

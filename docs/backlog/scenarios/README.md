@@ -46,7 +46,7 @@ task file, which is the only place it ever lived twice.
 | UX-1060 | [every exported value path declares what it discloses](UX-1060-every-exported-value-path-declares-what-it-discloses.md) | contracts | High | anyone sharing a private capture with an outside reader | 🔴 Not Started |
 | UX-1061 | [a pseudonym is keyed, stable, and keeps the name's shape](UX-1061-a-pseudonym-is-keyed-stable-and-keeps-the-names-shape.md) | store | High | anyone sharing a private capture with an outside reader | 🔴 Not Started |
 | UX-1062 | [a bundle exports anonymized, and refuses a leftover name](UX-1062-a-bundle-exports-anonymized-and-refuses-a-leftover-name.md) | store | High | anyone sharing a private capture with an outside reader | 🔴 Not Started |
-| UX-1063 | [analysis commutes with anonymization](UX-1063-analysis-commutes-with-anonymization.md) | guards | Medium | anyone sharing a private capture with an outside reader | 🔴 Not Started |
+| UX-1063 | [analysis commutes with anonymization](UX-1063-analysis-commutes-with-anonymization.md) | guards | High | anyone sharing a private capture with an outside reader | 🔴 Not Started |
 | UX-1064 | [a pseudonym in any text resolves back to the real name](UX-1064-a-pseudonym-in-any-text-resolves-back-to-the-real-name.md) | cli | High | anyone sharing a private capture with an outside reader | 🔴 Not Started |
 | UX-1065 | [a declared public junction keeps its public names](UX-1065-a-declared-public-junction-keeps-its-public-names.md) | store | Medium | anyone sharing a private capture with an outside reader | 🔴 Not Started |
 | UX-1066 | [raw logs travel tokenized](UX-1066-raw-logs-travel-tokenized.md) | store | Low | anyone sharing a private capture with an outside reader | 🔴 Not Started |

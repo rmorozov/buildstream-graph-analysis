@@ -1,6 +1,6 @@
 # UX-1060: every exported value path declares what it discloses
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the 2026-09-27 brainstorm with the owner ([`anonymized-bundle.md`](../../design/anonymized-bundle.md)), section 3; the owner's review on #298, finding 1 | **Serves:** anyone sharing a private capture with an outside reader | **Topic:** contracts | **Area:** bga | **Shape:** mechanical
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the 2026-09-27 brainstorm with the owner ([`anonymized-bundle.md`](../../design/anonymized-bundle.md)), section 3; the owner's review on #298, finding 1, and its follow-up at `8c3bead1`, finding 1 | **Serves:** anyone sharing a private capture with an outside reader | **Topic:** contracts | **Area:** bga | **Shape:** mechanical
 
 ## Motivation
 
@@ -18,7 +18,9 @@ the member's contract version (`graph/v9`, `trace/v9`,
 for an uncontracted member, its layout path. Each policy names every
 value path with one of the eight classes of the design's section 3,
 including map keys that are data (`per_element.<key>` is class A) and
-array items. A walker returns the paths a document holds that the policy
+array items. Each class B path also carries a value allowlist and its
+fallback (a `b-` pseudonym for a binary name or a toolchain's tool name,
+else refuse), because a public path can hold a private value. A walker returns the paths a document holds that the policy
 does not name; an unknown contract version returns the whole member.
 
 ## Out of Scope
@@ -30,7 +32,9 @@ Transforming values - that is UX-1062.
 `tests/unit/test_every_exported_value_path_declares_what_it_discloses.py`
 walks every member of every fixture under `tests/fixtures/` and reds on
 any unnamed path. Mutations: add a key to a fixture's `run-context.json`,
-and it reds naming the path; bump a member's contract version, and the
+and it reds naming the path; set a class B path's value to one not on
+its allowlist where the path has no fallback, and it reds naming the
+value; bump a member's contract version, and the
 whole member is reported.
 
 ## Outcome

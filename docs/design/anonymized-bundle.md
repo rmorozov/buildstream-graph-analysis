@@ -53,7 +53,7 @@ unit is the **value class**:
 | Class | Where it lives in a capture | Treatment |
 |---|---|---|
 | A. project identifiers | element uids (`graph.json`, every `per_element` key of `plane2.json`, `trace.json` `task_key`), junction and project names, `sources.json` `identity` and `declared`, opened-file paths, URLs, refs | pseudonym: keyed, structure-preserving |
-| B. public vocabulary | binary basenames (`cmake`, `cc1plus`, `ld`), `element_kind`, task names, resource names, schema keys, `bga`'s own sentence templates, toolchain versions | kept, from an **allowlist** |
+| B. public vocabulary | binary basenames (`cmake`, `cc1plus`, `ld`), `element_kind`, task names, resource names, schema keys, `bga`'s own sentence templates, toolchain versions | kept only when the **value** is on the path's allowlist (6.11) |
 | C. measurements | `cpu_us`, `dur_us`, counts, `max_concurrency`, `peak_memory`, `max_jobs` | kept |
 | D. host facts | `run-context.json` `host`; the `host/v2` manifest's `cpu_model`, `cpu_count`, `memory_bytes`, `kernel_release`, `distro_id`, toolchain | hostname pseudonymized; the rest kept |
 | E. content hashes | `cache_key`, `manifest_hash`, `run_identity_hash`, source refs | re-keyed by HMAC: equal stays equal, unlinkable to the owner's artifact server |
@@ -195,12 +195,21 @@ equally valid choices rather than the representative, and treats display
 order as out of scope. Findings whose single representative cannot be
 preserved are listed by name in the guard.
 
+**6.11 A public path does not make a public value.** Classing a path
+B says what the field is for, not that every value in it is public:
+`by_binary` or a toolchain string can name a private tool. So each class
+B path carries a **value allowlist** and a fallback. A binary basename
+not on the list becomes a `b-` pseudonym; a toolchain string must parse
+as an allowlisted tool plus a version, else the tool name is
+pseudonymized the same way; a class B path with no pseudonym class
+refuses the export on an unknown value. The same rule holds for every
+other kept string whose contents vary by project.
+
 ## 7. Staging
 
 1. The disclosure policy per exported member, exhaustive and versioned.
 2. The pseudonym core and the local map.
-3. Neutral archive and manifest metadata (6.9). Stages 1 and 3 gate the
-   first anonymized export.
+3. Neutral archive and manifest metadata (6.9).
 4. The anonymized export, with the residue scan and the owner review.
    Every `CAPTURE_LAYOUT` row states its treatment, and a row added
    without one refuses the export:
@@ -222,6 +231,13 @@ preserved are listed by name in the guard.
 7. Public-junction passthrough.
 8. Tokenized raw logs, only when a real diagnosis needs them.
 
+Stages 1, 3 and 5 are **release criteria** for the first anonymized
+export, though each is its own task: stage 4 drops `analyze.json` and
+the receiving side re-derives it, so until stage 5's equivalence guard
+is green a change in diagnosis would travel undetected. Stage 4 may land
+first, but its export stays unreleased (no documented or enabled switch)
+until then.
+
 ## 8. Decisions, 2026-09-27
 
 | Question | Decided |
@@ -239,7 +255,10 @@ exported member (blocker); archive and manifest metadata are anonymized
 and scanned (blocker, UX-1067); the residue scan is a tripwire and free
 text is rebuilt from a grammar or dropped (high); every layout row is
 enumerated in stage 4 (medium); commutation compares ties as sets
-(medium).
+(medium). The follow-up review at `8c3bead1` added two, both taken:
+class B is checked by value, not only by path (6.11), and the
+equivalence guard is a release criterion for the first export (stage
+list, section 7).
 
 ## 9. Rows filed
 

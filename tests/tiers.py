@@ -625,6 +625,10 @@ LARGE = (
     # 17s of them; no browser. Measured alone in one process, twice:
     # 44.74 / 40.87s.
     "tests/unit/test_the_exports_data_half_has_a_budget.py",         #   40.9s
+    # `UX-1042`, `UX-1055`: one shared setup - two pages at two
+    # viewports, every journey on one load each and J2 per chapter.
+    # Measured alone in one process: 37.28 / 37.64 / 37.12s.
+    "tests/unit/test_pointer_travel_is_a_budget.py",                 #   37.3s
 )
 
 MEDIUM = (

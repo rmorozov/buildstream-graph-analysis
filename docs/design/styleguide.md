@@ -308,8 +308,10 @@ nesting cap) is kept and this guide adds the reading rules:
   of the whole is visible before the fold.
 - Numbers right-aligned, text left, units per cell (magnitude
   varies too much per column for header units), `data-raw` always.
-- One tool row per table: filter, presets, top-N, copy — no
-  per-table inventions; a new tool enters the guide first.
+- One tool row per table: the text filter, presets, top-N, copy — no
+  per-table inventions; a new tool enters the guide first. A column's
+  threshold (§3d) is not a second row: it belongs to its column and
+  sits in that column's `th`.
 - Folding inside cells follows the nesting cap and is always
   labeled with a count — the `UX-277` rule, restated as law.
 

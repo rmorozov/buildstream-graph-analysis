@@ -38,4 +38,15 @@ new guard, and says so here.
 
 ## Outcome
 
-Not started.
+Gap: §3 listed "filter" in the tool row without saying which, so §3d's
+per-column thresholds read as a second row. Close: §3 names the text
+filter as the row's and the thresholds as §3d's, in their `th`
+(`docs/design/styleguide.md` §3). No control moved.
+
+```text
+$ PYTHONPATH=$PWD python3 -m pytest -q tests/unit/test_the_tools_scale_with_the_table.py tests/unit/test_the_styleguide_names_its_guards.py
+28 passed in 8.07s
+```
+
+Mutation: none - a wording row with no page change adds no guard, as
+the Acceptance Test says.

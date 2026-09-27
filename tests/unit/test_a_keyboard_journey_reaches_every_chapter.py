@@ -92,8 +92,10 @@ _READ_ACTIVE = r"""
   const a = document.activeElement;
   if (!a) return null;
   const cs = getComputedStyle(a);
-  return { tag: a.tagName, chapterOpen: a.getAttribute("data-chapter-open"),
-           expanded: a.getAttribute("aria-expanded"),
+  const id = a.getAttribute("data-toc-chapter");
+  const box = id && document.querySelector(`section.chapter[data-chapter="${id}"]`);
+  return { tag: a.tagName, chapterOpen: id,
+           expanded: box ? box.getAttribute("data-open") : null,
            outlineStyle: cs.outlineStyle, outlineWidth: cs.outlineWidth,
            visible: a.matches(":focus-visible") };
 })()

@@ -830,16 +830,12 @@ section[data-promoted] { border-left: 3px solid var(--accent); }
 .toc-rail { margin: var(--space-2) 0 0; font-size: var(--font-small); letter-spacing: .06em;
             color: var(--muted); }
 
-/* `UX-667` (styleguide §3h): a source list - every chapter, and only
-   the open one's sections. `li[data-chapter]` is the row; `data-open`
-   is mirrored onto it from the same `section.chapter` box the document
-   folds (`chapters.js`'s `labelFold`), so the two views cannot drift.
-   No `overflow-y` here or on `.sections` below: the acceptance test's
-   third clause is that folding, not a scrollbox, is what bounds the
-   rail now. */
+/* Styleguide §3h: every chapter, and only the sections of the chapter the
+   reader is in (`data-current`, moved by `nav.js`'s scrollspy and row
+   press). No `overflow-y` here: disclosure, not a scrollbox, bounds it. */
 .toc .chapters { list-style: none; margin: 0; padding: 0; }
 .toc .chapters > li { margin: var(--space-2) 0 0; }
-.toc .chapters > li[data-open="false"] > .sections { display: none; }
+.toc .chapters > li:not([data-current]) > .sections { display: none; }
 /* §6d's "quiet" grade (transparent, solid, 3px) - the same full
    appearance `button.chapter-open` already draws (`test_every_control_
    has_a_resting_appearance.py` counts the whole look, not only the
@@ -852,7 +848,7 @@ button.toc-chapter-open {
   letter-spacing: .06em;
 }
 button.toc-chapter-open:hover,
-button.toc-chapter-open[aria-expanded="true"] { color: var(--fg); }
+button.toc-chapter-open[aria-current="true"] { color: var(--fg); }
 .question-group > summary { cursor: pointer;
                             color: var(--muted); font-size: var(--font-small);
                             margin-top: var(--space-2); }

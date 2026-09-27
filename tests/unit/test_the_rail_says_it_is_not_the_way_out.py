@@ -94,6 +94,11 @@ _RAIL = """(async () => {
 })()"""
 
 
+#: Not vacuous: `UX-1046`'s rail discloses the reader's chapter only, so
+#: "Expand all" no longer fills it (measured 6 / 3 / 3 on macro_micro).
+ON_SCREEN = 3
+
+
 @pytest.fixture(scope="module")
 def can_drive_a_page():
     if find_chrome() is None or shutil.which("node") is None:  # pragma: no cover
@@ -121,7 +126,7 @@ class TestTheRailIsLiveWhenThereIsNoFocus:
     def test_the_rail_is_worth_hit_testing(self, rail):
         """Not vacuous: a rail with no link on screen would make every
         clause below true for free."""
-        assert rail["before"]["onScreen"] >= 10, rail["before"]
+        assert rail["before"]["onScreen"] >= ON_SCREEN, rail["before"]
 
     def test_every_rail_link_on_screen_is_clickable(self, rail):
         assert rail["before"]["reachable"] == rail["before"]["onScreen"], (
@@ -149,7 +154,7 @@ class TestFocusMakesTheRailInert:
         """
         assert rail["during"]["links"] == rail["before"]["links"], (
             rail["before"], rail["during"])
-        assert rail["during"]["onScreen"] >= 10, rail["during"]
+        assert rail["during"]["onScreen"] >= ON_SCREEN, rail["during"]
 
     def test_no_rail_link_leads_out_of_the_focused_table(self, rail):
         """The measurement this item was filed on: 80 of 87 links point
@@ -166,7 +171,7 @@ class TestLeavingFocusGivesTheRailBack:
         assert rail["after"]["inert"] is None, rail["after"]
 
     def test_every_link_is_clickable_again(self, rail):
-        assert rail["after"]["onScreen"] >= 10, rail["after"]
+        assert rail["after"]["onScreen"] >= ON_SCREEN, rail["after"]
         assert rail["after"]["reachable"] == rail["after"]["onScreen"], (
             rail["after"])
         assert rail["after"]["targets"] == rail["before"]["targets"], (

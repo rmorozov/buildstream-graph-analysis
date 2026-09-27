@@ -581,15 +581,10 @@ export function setAllOpen(root, open) {
 }
 
 /**
- * `UX-667`: the box's own document-side control and the rail's row for
- * the same chapter are two views of this one `data-open` attribute.
- * `box.__railToggle` is a plain JS reference, not a selector - `nav.js`
- * sets it once, while the rail is still a detached tree the DOM has no
- * way to search (`labelFold` used to run, from `chapters()`, *before*
- * `box` itself was appended to `root`; a document-wide query at that
- * point finds nothing, silently). `data-open` is mirrored onto the
- * rail row (`li[data-chapter]`) too, which is the hook the stylesheet
- * hides a closed chapter's `ul.sections` with.
+ * The one label painter for a chapter's two controls: the document's fold
+ * (`data-open`) and the rail row (`box.__railToggle`, a plain reference
+ * because `nav.js` sets it while the rail is still detached). The rail
+ * row is navigation (`UX-1046`): it carries the count, never the fold.
  */
 export function labelFold(box) {
   const toggle = box?.querySelector?.("[data-chapter-open]");
@@ -606,10 +601,7 @@ export function labelFold(box) {
       : `Open "${box.getAttribute("aria-label")}"`);
   }
   if (rail) {
-    rail.setAttribute("aria-expanded", String(open));
     rail.textContent = `${box.getAttribute("aria-label")} · ${held}`;
-    rail.closest?.("li[data-chapter]")?.setAttribute(
-      "data-open", String(open));
   }
 }
 

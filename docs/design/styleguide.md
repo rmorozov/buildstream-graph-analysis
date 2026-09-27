@@ -54,7 +54,7 @@ listed under its topic as `§6e.N`; since round 142 every one is binding.
 | | §3k | every population opens at a named bound, and the step past it is bounded too | binding |
 | **Navigation** | §3b | any section is at most two interactions from the rail | binding |
 | | §3c | the landed page is at most 10 screens; chapters fold | binding |
-| | §3h | the rail shows every chapter and only the current chapter's sections | binding |
+| | §3h | the rail shows every chapter, and only the sections of the chapter the reader is in | binding |
 | | §3l | *proposed*: pointer travel is a budget — a control class sits at one place, a journey's travel is bounded | proposed |
 | | §6e.11 | find-in-page reaches folded content | binding |
 | | §6e.10 | two size classes, regular (≥ 60rem) and compact; budgets measured in both | binding |
@@ -343,7 +343,7 @@ scroll does not work inside a scrolling parent. Three rules:
 
 Navigation cost is measured, not felt: from a chapter's rail entry,
 any section's content is reachable in **at most two interactions**
-(disclose the chapter's rail row, follow the section's link — §3h), and the walk that measures the worst
+(press the chapter's rail row, follow the section's link — §3h), and the walk that measures the worst
 path is a guard, not an aspiration. A structure change that pushes
 a third click into the common path reddens before a reader meets
 it. Folds inside content (the labeled fold, the chain's middle) do
@@ -1429,7 +1429,7 @@ so the change is in three places:
 - `chapters.js`: `setOpen(box, open)` stays the one state setter — it
   writes `data-open`, adds or removes `hidden="until-found"` on the
   chapter's sections, and `labelFold` updates `aria-expanded` on the
-  chapter control and the rail row. Each folded section listens for
+  chapter control and the count on the rail row. Each folded section listens for
   `beforematch` and calls `revealChapter`, so find, fragment navigation
   (which also fires `beforematch`) and the controls take one path.
 - A browser without `until-found` treats the attribute as `hidden`, so
@@ -1688,13 +1688,13 @@ reader's own distance budget on itself, and "you are here" never comes
 into view. A source list is grouped, discloses, and has one selection -
 this rail had the groups and the mark and no disclosure.
 
-**The rail shows every chapter and only the current chapter's
-sections.** A chapter row discloses, and its disclosure *is* the
-document's chapter fold (§4a's grouping, `chapters.js`'s `data-open`) -
-one state, two views (§4c), not a second fold the rail keeps of its
-own. `nav.toc > ul.chapters > li[data-chapter] >
-button[aria-expanded] "<title> · <n>" > ul.sections > li >
-a[aria-current]`. The scrollspy mark calls
+**The rail shows every chapter, and only the sections of the chapter
+the reader is in; the rail row goes to its chapter, and the fold is the
+document's.** `data-current` on one `li[data-chapter]` follows the
+scrollspy mark; a row press moves it, opens the chapter and lands on
+its head, and never shuts anything (`UX-1046`). `nav.toc > ul.chapters >
+li[data-chapter][data-current] > button[aria-current] "<title> · <n>" >
+ul.sections > li > a[aria-current]`. The scrollspy mark calls
 `scrollIntoView({block: "nearest"})` on every update, so the current
 entry is always inside the rail's own viewport rather than merely
 marked off-screen. `investigate`'s per-element list, previously the one
@@ -2007,7 +2007,7 @@ the census runs at the largest class.
 | a list inside a sentence (finding text, a chapter's answer) | the top few by name, the rest as a count | the section or table the sentence cites | the analyzer's sentences |
 | evidence, culprits, overview | `EVIDENCE_SHOWN`, `CULPRITS_SHOWN`, `OVERVIEW_SHOWN` | not measured here | `sections.js`, `element.js`, `primitives.js` |
 | history series | `HISTORY_POINTS_MAX` points | none: the window is the answer | `element.js` |
-| rail | the current chapter's sections (§3h) | the next chapter | §3h |
+| rail | the sections of the chapter the reader is in (§3h) | the next chapter | §3h |
 | Perfetto element picker | `PICKER_SHOWN` hits | the search box | `questions.js` |
 | labeled fold, "view as JSON" | closed | a `JSON_DOOR_CHAR_CAP`-character prefix, the rest as a copy (`UX-1030`) | §1, `rawjson.js` |
 

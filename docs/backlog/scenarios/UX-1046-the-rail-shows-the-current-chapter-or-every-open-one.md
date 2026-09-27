@@ -59,4 +59,48 @@ Mutation: restore the coupling, and the clause reds.
 
 ## Outcome
 
-Not started.
+**Gap measured.** The Motivation's table (`814a2db8`); reproduced by
+mutation 1 below, which puts the fold coupling back: "Expand all grew
+the rail from 530 to 2239 px", 67 links laid out outside the current row.
+
+**Close measured.** `probe.py` (scratchpad): each page exported by
+`tools.bga_view.export`, booted at 1440x900; "Expand all", then every
+rail row pressed in turn. `nav.scrollHeight` / `clientHeight`, px:
+
+```text
+                 landed    Expand all   largest row alone (elements)   rows holding data-current after press
+macro_micro     530/530      530/530         1,151/848  (24 links)      6 of 6
+74 elements     612/612      612/612         1,457/848  (28 links)      7 of 7
+1,202           612/612      612/612         1,741/848  (37 links)      7 of 7
+```
+
+Every pressed row's box read `data-open="true"` and its button
+`aria-current="true"`. `pytest -n 2` on the files reading the changed
+modules (38 selected by `grep -lE "nav\.js|chapters\.js|toc-chapter|
+data-chapter-open|scrollspy|data-toc"` plus three reading the fold
+controls): 568 passed, 2 skipped, 3 failed - the three
+`test_the_rail_says_it_is_not_the_way_out.py` non-vacuity floors (`>= 10`
+links on screen, which "Expand all" used to supply); floor now the
+measured one-chapter minimum, `ON_SCREEN = 3` (6 / 3 / 3): 8 passed.
+`test_the_rail_is_a_source_list.py` 5 passed; keyboard journey + chain
+folds 26 passed; styleguide guards 36 passed.
+
+**Mutation table** (`tests/unit/test_the_rail_is_a_source_list.py`):
+
+| mutation | reddened | run |
+|---|---|---|
+| `labelFold` toggles the row's `data-current` from `isOpen(box)` | `test_expand_all_leaves_the_rail_as_it_was` ("530 to 2239 px") | 1 failed, 1 passed |
+| row click without `revealAndLand(target)` | `test_a_row_press_opens_and_discloses_its_chapter` ("stayed shut") | 1 failed, 1 passed |
+| scrollspy's ended-above-the-line step disabled | same test ("pressed row is not current": the mark fell back to the previous chapter's last section) | 1 failed, 1 passed |
+
+Reverted from the scratchpad copy: 5 passed.
+
+**Deviation.** The largest chapter disclosed alone (`elements`) overflows
+the 848 px box on all three pages (1,151-1,741 px), so the guard holds
+"unchanged by Expand all" and the "<= box" clause is dropped, per the
+Decision. Outside the Decision's file list: `scrollspy`'s `here()`
+skips a section that ended above the reading line (without it a row
+press landed on the chapter head and the mark returned to the previous
+chapter), and `test_the_rail_says_it_is_not_the_way_out.py`'s floor.
+The decision row stays a caption, so its sections show only while the
+reader is in it.

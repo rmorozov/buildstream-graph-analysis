@@ -443,7 +443,7 @@ pairing for every merged row from round 103 on.
 | 142 | implementer | sonnet | review #295: reveal Prev and filtered pager (UX-1029, UX-1028) | 223k | 212 | 36.1 m | 1edb471f fb98a658; structured.js conflict with UX-1020's More | dev_env_check misreads a worktree as a repointed install |
 | 142 | implementer | sonnet | UX-1038 CLI plurals by count (mechanical) | 266k | 423 | 35.4 m | 5022de3d; 17 size cells grew | a broad git stash raced its own test-touching run |
 | 142 | implementer | sonnet | UX-1038: hold the size cells | 257k | 347 | 40.8 m | 27cc34dc; plural() moved to bga/plural.py | ruff isort rejects an aliased import joined to a plain one |
-| 142 | verifier | sonnet | verify review #295 pagers | 57k | 29 | 3.6 m | both mutations redden; boundaries hand-judged | none |
+| 142 | verifier | sonnet | verify review #295 pagers (UX-1029, UX-1028) | 57k | 29 | 3.6 m | both mutations redden; boundaries hand-judged | none |
 | 142 | verifier | sonnet | verify UX-1037 | 92k | 72 | 15.3 m | census mutation reddens; DRAWN_ELSEWHERE drift confirmed | repointed the shared bga install at its worktree |
 
 Round 101's four tracks are **not** here: this session could not

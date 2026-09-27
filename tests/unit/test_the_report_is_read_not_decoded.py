@@ -196,7 +196,8 @@ class TestTheRailNestsRatherThanGrowingAColumn:
         cannot tell a bounded list from a short one."""
         assert "export const SUBSECTIONS_SHOWN" in NAV
         block = NAV.split("export function subsections", 1)[1].split("\n}\n", 1)[0]
-        assert "more`" in block or "more\"" in block, block[-400:]
+        # UX-1020 capitalises the first word after `+N`, so match either case.
+        assert "more`" in block.lower() or "more\"" in block.lower(), block[-400:]
 
     def test_the_third_column_stays_declined_with_its_argument(self):
         """`UX-271` declined a third navigation column. The argument

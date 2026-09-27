@@ -256,6 +256,7 @@ bga/buildclass.py      the declared build type and variant; the
                        mixed-class refusal (UX-898, UX-903)
 bga/units.py           the payload's units, and the two input
                        boundaries that convert into them (UX-341)
+bga/plural.py          a count and its noun, chosen by the count (UX-1038)
 bga/suspend.py         did this capture sleep
 bga/cli.py             argparse CLI and dispatch
 bga/tools_dispatch.py  the `tools/` aliases `bga` exposes as subcommands

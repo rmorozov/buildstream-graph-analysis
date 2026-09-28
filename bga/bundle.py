@@ -252,6 +252,10 @@ _TIME_AXES = {
 #: 6.2: a dictionary token shorter than this is never scanned for.
 RESIDUE_MIN = 4
 
+#: Where each clock's earliest instant lands, in µs: the wall clock at
+#: 2000-01-01T00:00:00Z, since the analyzer reads a 0 start as no start.
+CANONICAL_ORIGIN_US = {"wall": 946684800 * 10**6, "monotonic": 0}
+
 
 class _Recording(anonymize.PseudonymMap):
     """`pmap`, noting every original that reaches it: the residue scan's dictionary."""
@@ -333,6 +337,7 @@ class _Anonymizer:
     def rewrite(self, policy: str, trie: dict, document):
         if not self.origins:
             self.origins = {clock: min(t).to_integral_value(decimal.ROUND_FLOOR)
+                            - CANONICAL_ORIGIN_US.get(clock, 0)
                             for clock, t in self.times.items()}
         self.policy = policy
         return _rewrite(trie, document, "", self._leaf, self._rename)

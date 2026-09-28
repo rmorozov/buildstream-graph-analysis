@@ -22,6 +22,7 @@ STAMP = "20260902T101112Z"
 KEY = bytes(range(32))
 RUN_FILES = ("graph.json", "trace.json", "run-context.json", "sources.json")
 BESIDE_FILES = ("plane2.json", "host-samples.jsonl")
+CANONICAL_S = 946684800  # 2000-01-01T00:00:00Z
 
 
 def _captures() -> list[str]:
@@ -185,7 +186,7 @@ def test_documents_are_rewritten_in_place_and_times_shift_to_zero(tmp_path):
     assert [s["dur_us"] for s in trace["spans"]] == [s["dur_us"] for s in source["spans"]]
     context = json.loads(decoded["capture/run/run-context.json"])
     wall = [context["wall_clock"]["start_us"], *(s["ts_us"] for s in trace["spans"])]
-    assert min(wall) == 0
+    assert min(wall) == bundle.CANONICAL_ORIGIN_US["wall"]
     real = json.loads(_source("macro_micro", "run-context.json").read_text(encoding="utf-8"))
     assert (context["wall_clock"]["end_us"] - context["wall_clock"]["start_us"]
             == real["wall_clock"]["end_us"] - real["wall_clock"]["start_us"])
@@ -198,9 +199,18 @@ def test_host_samples_shift_on_their_own_clock_and_keep_every_delta(tmp_path):
     real = [json.loads(line) for line in
             _source("host_cpu", "host-samples.jsonl").read_text(encoding="utf-8").splitlines()]
     header, first = shifted[0], shifted[1]
-    assert 0 <= header["wall_at_start"] < 1 and 0 <= header["monotonic_at_start"] < 1
+    assert 0 <= header["wall_at_start"] - CANONICAL_S < 1 and 0 <= header["monotonic_at_start"] < 1
     assert first["t"] - header["monotonic_at_start"] == pytest.approx(
         real[1]["t"] - real[0]["monotonic_at_start"], abs=1e-9)
+
+
+def test_an_anonymized_analysis_still_has_a_start_at_the_canonical_origin(tmp_path):
+    from bga.analyzer import analyze_run
+    path, _manifest, _pmap = _export(tmp_path, "macro_micro")
+    target, _loaded = bundle.load(path, str(tmp_path / "far"))
+    instance = analyze_run(pathlib.Path(target) / "run").run_instance
+    assert instance.get("started_at_us") == CANONICAL_S * 10**6
+    assert instance.get("started_at") == "2000-01-01 00:00:00 UTC"
 
 
 def _private_flags(document):

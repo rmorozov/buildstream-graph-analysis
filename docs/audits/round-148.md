@@ -29,9 +29,8 @@ spread   dev_touching.py --spread: 33-173 of 663 test files
 
 ## Verification
 
-No separate verifier ran; the session probed both leaks itself at
-`1a498516` (live `bga.anonymize` calls, not the acceptance suite
-alone), recorded in each task's Outcome.
+A verifier ran on `1a498516` and found one leak: a single-dash flag
+glued to `=` (`-j=123456`) bypassed both paths, fixed in `05fe2c74`.
 
 ## Suite
 

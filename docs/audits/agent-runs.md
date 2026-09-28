@@ -500,6 +500,7 @@ pairing for every merged row from round 103 on.
 | 147 | closer | sonnet | close: row moves, ledger, round document | unknown | — | — | — | — |
 | 148 | implementer | sonnet | UX-1088+UX-1089, the #298 review's two remaining numeric-leak findings (filed and fixed, one track) | 144356 | — | — | merged 1a498516 | — |
 | 148 | closer | sonnet | close: row moves, ledger, round document | unknown | — | — | — | — |
+| 148 | verifier | sonnet | verify UX-1088, UX-1089 | 68368 | — | — | DEFECTS: -j=N hybrid leak, fixed in 05fe2c74 | — |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -512,7 +513,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the four hundred and eighty-three rows already say: a researcher that reads a document
+What the four hundred and eighty-four rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

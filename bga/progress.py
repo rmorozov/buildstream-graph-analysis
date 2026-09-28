@@ -197,12 +197,31 @@ def ticker(label: str, total: Optional[int] = None, stream=None) -> Ticker:
 _LEDGER: dict = {"build_wall_us": None, "phases": []}
 _ON_ROW = None
 
+# UX-1080: subprocess calls (`bst --version`, `bst show`, `bst artifact
+# list-contents`) landed by `timed_call`, before the phase they belong to
+# has a row of its own - `timed`'s `finally` only appends that row once
+# the `with` block exits, so a call made inside it cannot index into
+# `_LEDGER["phases"]` yet. Buffered here instead and sliced off by the
+# enclosing `timed()` when it closes; a call made outside any phase (the
+# doctor's `bst --version`, before `bga snapshot` has one) rides along
+# with whichever phase closes first.
+_CURRENT_CALLS: list = []
+
 
 def reset_ledger(on_row=None) -> None:
     """Empty the ledger; `on_row()` is called after every row lands."""
     global _ON_ROW
     _LEDGER["build_wall_us"] = None
     _LEDGER["phases"] = []
+    _CURRENT_CALLS.clear()
+    _ON_ROW = on_row
+
+
+def set_on_row(on_row) -> None:
+    """Attach (or replace) the write-back callback without discarding
+    rows already recorded - UX-1080's doctor call can land before the
+    snapshot directory `on_row` writes into even exists."""
+    global _ON_ROW
     _ON_ROW = on_row
 
 
@@ -260,14 +279,36 @@ def timed(name: str, say: Optional[str] = None, stream=None):
         yield
     finally:
         wall = round((time.monotonic() - start) * 1e6)
+        # UX-1080: every call buffered since the previous phase closed -
+        # including one made before any phase existed at all, like the
+        # doctor's `bst --version` ahead of the first snapshot phase.
+        calls = list(_CURRENT_CALLS)
+        _CURRENT_CALLS.clear()
         _LEDGER["phases"].append({
             "name": name, "wall_us": wall,
             "peak_rss_bytes": _peak_rss_bytes() if measured else None,
-            "calls": []})
+            "calls": calls})
         if loud:
             _say(f"  {name}: {wall / 1e6:.1f}s", stream)
         if _ON_ROW is not None:
             _ON_ROW()
+
+
+@contextmanager
+def timed_call(argv):
+    """One BuildStream subprocess call, recorded as a `calls` row under
+    the phase it ran inside of (UX-1080). Yields a mutable row the
+    caller sets `exit` on before the block ends; a call that raised (or
+    timed out) keeps `exit: null`, which is the honest reading of "never
+    returned" rather than a made-up code.
+    """
+    start = time.monotonic()
+    row = {"verb": " ".join(argv), "wall_us": None, "exit": None}
+    try:
+        yield row
+    finally:
+        row["wall_us"] = round((time.monotonic() - start) * 1e6)
+        _CURRENT_CALLS.append(row)
 
 
 @contextmanager

@@ -16,8 +16,9 @@ REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 GOLDEN = os.path.join(REPO, "tests", "fixtures", "golden", "mixed_task_kinds")
 
 #: The phases a second snapshot runs, in order.
-TAIL_PHASES = ["Plane 2 report", "run directory", "raw log gzip", "analyze",
-               "element slice", "compare", "store size"]
+TAIL_PHASES = ["before the build", "Plane 2 report", "run directory",
+               "raw log gzip", "analyze", "element slice", "compare",
+               "store size"]
 ELAPSED = re.compile(r"^  (.+): \d+\.\ds$")
 TOTAL = re.compile(r"^bga's own time after the build: \d+\.\ds")
 RAW_LOG = (

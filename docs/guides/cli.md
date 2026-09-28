@@ -292,8 +292,9 @@ compare` on the far machine caps confidence and refuses exactly as it
 would have at the other end.
 
 **It refuses rather than half-loads.** Every member carries its contract
-version in the bundle's manifest, so a bundle packed by a newer `bga` is
-recognised and declined with nothing written:
+version in the bundle's manifest (`bundle-manifest/v1`, inside
+`bundle.json`), so a bundle packed by a newer `bga` is recognised and
+declined with nothing written:
 
 ```console
 $ bga bundle --load newer.tar.gz
@@ -329,6 +330,22 @@ small.tar.gz` line the command prints after the `left out` line, and the
 `left out` list carries **every** `plane2*` member the capture had —
 `plane2.json, plane2.log.gz, plane2-resource.json` on a capture holding
 all three.
+
+**`--resolve` rewrites pseudonyms back to real names, on this machine
+only** (`UX-1064`) — a fourth mode of the same mutually-exclusive group,
+for reading a reply that quotes an anonymized bundle's element names:
+
+```console
+$ echo "rebase j-xlqb.bst:d-tbec/d-ozlr/e-gap6.bst plus e-abcdef" | \
+    bga bundle --resolve --key-fingerprint <fp>
+rebase base.bst:components/gtk/gtk3.bst plus e-abcdef
+Unresolved pseudonym-shaped tokens (1 token): e-abcdef
+```
+
+*Kept, not current* — the task file's own manual repro (`UX-1064`), not
+re-run here. `--key-fingerprint` must match the project's local map or
+the command refuses (`Error: map key fingerprint … does not match the
+bundle's …`, exit 2) before it touches stdin. Cuts: none.
 
 For the CI direction — publishing to a git ref rather than one file —
 see `bga baseline` and the capture-ref scheme below.

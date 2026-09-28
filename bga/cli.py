@@ -1859,7 +1859,8 @@ def cmd_diagnostics(args: argparse.Namespace) -> int:
 
 
 def cmd_bundle(args: argparse.Namespace) -> int:
-    """Execute `bga bundle --export STAMP` / `--load FILE` (`UX-520`).
+    """Execute `bga bundle --export STAMP` / `--load FILE` / `--resolve`
+    (`UX-520`, `UX-1064`).
 
     The capture, not `run/`: the members come from `UX-381`'s layout
     contract, so a member added there travels by existing.
@@ -1867,6 +1868,8 @@ def cmd_bundle(args: argparse.Namespace) -> int:
     from . import bundle as bundle_mod
 
     try:
+        if args.resolve:
+            return _bundle_resolve(args)
         if args.load:
             return _bundle_load(args, bundle_mod)
         return _bundle_export(args, bundle_mod)
@@ -1921,6 +1924,36 @@ def _bundle_load(args: argparse.Namespace, bundle_mod) -> int:
         print(f"  packed without: {', '.join(manifest['excluded'])} - "
               f"sections reading those will say they are absent")
     print("  read it with: bga analyze @last")
+    return 0
+
+
+def _bundle_resolve(args: argparse.Namespace) -> int:
+    """`bga bundle --resolve` (UX-1064): rewrite pseudonyms read from
+    stdin back to their real names, entirely on this machine."""
+    from . import anonymize, run_store
+
+    if not args.key_fingerprint:
+        print("Error: --resolve requires --key-fingerprint (the bundle's, "
+              "from its manifest).", file=sys.stderr)
+        return 2
+    project = run_store.project_root()
+    if project is None:
+        print("Error: no BuildStream project here to resolve against (no "
+              "project.conf in this directory or any parent).",
+              file=sys.stderr)
+        return 2
+    key = anonymize.load_or_create_key(project)
+    try:
+        anonymize.check_fingerprint(key, args.key_fingerprint)
+    except anonymize.FingerprintMismatch as error:
+        print(f"Error: {error}", file=sys.stderr)
+        return 2
+    pmap = anonymize.PseudonymMap.for_project(project)
+    resolved, unknown = anonymize.resolve_text(sys.stdin.read(), pmap)
+    print(resolved, end="")
+    if unknown:
+        print(f"\nUnresolved pseudonym-shaped tokens ({plural(len(unknown), 'token')}): "
+              f"{', '.join(unknown)}", file=sys.stderr)
     return 0
 
 
@@ -2564,16 +2597,21 @@ def _add_compare_subcommand(subparsers) -> None:
 def _add_bundle_subcommand(subparsers) -> None:
     # UX-520: the capture as one file. Not `run/` - half of what a
     # reader needs sits beside it, and `UX-381`'s layout says which half.
+    # UX-1064: `--resolve` is a fourth mode, not a new command - it
+    # never carries anything off this machine, so it stays beside the
+    # switches that already read and write a project's own store.
     bundle_parser = subparsers.add_parser(
         'bundle',
-        usage='bga bundle --export STAMP [-o FILE] | --load FILE',
-        help='Pack a capture into one file, or load one.',
+        usage='bga bundle --export STAMP [-o FILE] | --load FILE | '
+              '--resolve --key-fingerprint FP',
+        help='Pack a capture into one file, load one, or resolve pseudonyms.',
         description='Pack one snapshot\'s whole capture - the run directory and the '
                     'Plane 2 report, raw trace, host samples and analysis beside it - '
                     'into a single archive to carry to another machine, and load one '
                     'back into this project\'s store under its own stamp. Each member '
                     'carries its contract version, so a bundle from a newer bga is '
-                    'refused rather than half-read.',
+                    'refused rather than half-read. --resolve rewrites pseudonyms read '
+                    'from stdin back to real names, entirely on this machine.',
     )
     bundle_group = bundle_parser.add_mutually_exclusive_group(required=True)
     bundle_group.add_argument(
@@ -2582,6 +2620,9 @@ def _add_bundle_subcommand(subparsers) -> None:
     bundle_group.add_argument(
         '--load', metavar='FILE',
         help='Bundle to unpack into this project\'s store.')
+    bundle_group.add_argument(
+        '--resolve', action='store_true',
+        help='Rewrite pseudonyms read from stdin back to real names.')
     bundle_parser.add_argument(
         '-o', '--output', metavar='FILE', default=None,
         help='Where to write the bundle. Default: <stamp>.bga-bundle.tar.gz.')
@@ -2589,6 +2630,10 @@ def _add_bundle_subcommand(subparsers) -> None:
         '--no-plane2', action='store_true',
         help='Leave the Plane 2 capture out. Says what it omitted, and\n'
              'the manifest records it so --load says so too.')
+    bundle_parser.add_argument(
+        '--key-fingerprint', metavar='FP', default=None,
+        help='With --resolve: the bundle\'s key fingerprint (from its\n'
+             'manifest); refused on mismatch.')
     bundle_parser.set_defaults(func=cmd_bundle)
 
 

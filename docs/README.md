@@ -28,7 +28,9 @@ Both are in [`guides/cli.md`](guides/cli.md#bga-snapshot--the-local-loop-ux-126)
 `bga view` (`UX-193`) opens the same report in a browser, and
 `bga view --export` writes it as one file you can attach. `bga bundle`
 carries a whole capture to another machine in one file — `run/` is
-only half of it (`UX-520`). Three more
+only half of it (`UX-520`); `bga bundle --resolve` rewrites a pseudonym
+in a reply back to its real name, entirely on this machine (`UX-1064`).
+Three more
 answer questions the analysis alone does not: `bga whatif` prices a
 chosen set of fixes (`UX-230`), `bga analyze --explain` shows the
 evidence behind every claim (`UX-229`), and `bga snapshot --aggregate`

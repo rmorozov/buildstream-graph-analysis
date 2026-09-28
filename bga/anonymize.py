@@ -8,6 +8,7 @@ guard catches. One key per project lives under `.bga/anon/key`, the
 `pseudonym -> original` map beside it at `.bga/anon/map.json`, both
 0600. UX-1062 walks a capture with this; UX-1064 resolves free text.
 """
+
 import hashlib
 import hmac
 import json
@@ -201,3 +202,51 @@ def pseudonymize_element_path(value, key, pmap):
         j_token = pseudonymize(j_stem, "junction", key, pmap) + j_ext
         return f"{j_token}{_JUNCTION_SEP}{out}"
     return out
+
+
+class FingerprintMismatch(Exception):
+    """A map's key does not match the fingerprint the bundle carries
+    (`anonymized-bundle.md` §4): resolving through it would print the
+    wrong project's names, so UX-1064 refuses rather than guessing."""
+
+
+def check_fingerprint(key, expected_fingerprint):
+    actual = key_fingerprint(key)
+    if actual != expected_fingerprint:
+        raise FingerprintMismatch(
+            f"map key fingerprint {actual} does not match the bundle's "
+            f"{expected_fingerprint}; this map belongs to a different project")
+
+
+#: Any prefix a pseudonym-shaped token can start with, longest run of its
+#: own alphabet kept greedily - free text has no other delimiter to lean on.
+_TOKEN_RE = re.compile(
+    "(?<![A-Za-z0-9_])(?:"
+    + "|".join(re.escape(p) for p in CLASS_PREFIXES.values())
+    + ")[A-Za-z0-9_-]+"
+)
+
+
+def resolve_text(text, pmap):
+    """Rewrite every pseudonym in `text` back to its original.
+
+    Returns `(resolved, unknown)`; `unknown` lists, in first-seen order,
+    every pseudonym-shaped token `pmap` has no entry for - UX-1064 must
+    never drop one silently.
+    """
+    unknown = []
+    seen = set()
+
+    def _replace(match):
+        token = match.group(0)
+        tagged = pmap.resolve(token)
+        if tagged is None:
+            if token not in seen:
+                seen.add(token)
+                unknown.append(token)
+            return token
+        _, _, original = tagged.partition("\0")
+        return original
+
+    resolved = _TOKEN_RE.sub(_replace, text)
+    return resolved, unknown

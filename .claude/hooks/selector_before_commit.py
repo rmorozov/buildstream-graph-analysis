@@ -34,7 +34,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from no_bulk_add import SEPARATORS, tokens_of, without_heredocs
 
 
-def repo_root():
+def repo_root(payload=None):
     """The checkout the commit is being made in, not the hook's own.
 
     `parents[2]` of this file is the **shared** checkout: a worktree
@@ -42,13 +42,17 @@ def repo_root():
     judges a tree the committer is not in. Round 80's track D measured
     it - 8 changed files and 404 test files reported into a worktree
     that had 2 and a green selector - and worked around it with the
-    escape hatch, which is the wrong end.
+    escape hatch, which is the wrong end. The payload's `cwd` is the
+    real one (UX-992); in no repository, None - nothing to commit.
     """
+    start = (payload or {}).get("cwd")
+    if start is not None and not os.path.isdir(start):
+        return None
     done = subprocess.run(["git", "rev-parse", "--show-toplevel"],
-                          capture_output=True, text=True)
+                          capture_output=True, text=True, cwd=start)
     if done.returncode == 0 and done.stdout.strip():
         return pathlib.Path(done.stdout.strip())
-    return pathlib.Path(__file__).resolve().parents[2]
+    return None if start is not None else pathlib.Path(__file__).resolve().parents[2]
 
 #: The escape hatch, and it is a real one: a commit whose *content* is
 #: the fix to a red guard cannot make that guard green before it lands.
@@ -87,9 +91,8 @@ WIDE = 120
 TIMEOUT_S = 240
 
 
-def selection():
-    """`(files, why)` for what is staged, through the selector itself."""
-    repo = repo_root()
+def selection(repo):
+    """`(files, why)` for what is staged in `repo`, through the selector."""
     sys.path.insert(0, str(repo / "tools"))
     import dev_touching
 
@@ -103,13 +106,13 @@ def selection():
     return dev_touching.select(changed)
 
 
-def selector_is_green(files):
+def selector_is_green(files, repo):
     """`(ok, report)` from running exactly `files`."""
     try:
         done = subprocess.run(
             [sys.executable, "-m", "pytest", *files, "-q", "-x", "-n", "auto",
              "--no-header"],
-            cwd=repo_root(), capture_output=True, text=True, timeout=TIMEOUT_S,
+            cwd=repo, capture_output=True, text=True, timeout=TIMEOUT_S,
             env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1",
                  "BGA_TIER_ANY": "1"})
     except subprocess.TimeoutExpired:
@@ -144,10 +147,10 @@ def main():
     command = (payload.get("tool_input") or {}).get("command") or ""
     if not command or not is_git_commit(command):
         return 0
-    files, _ = selection()
+    files = selection(repo)[0] if (repo := repo_root(payload)) else []
     if not files or len(files) > WIDE:
         return 0
-    ok, report = selector_is_green(files)
+    ok, report = selector_is_green(files, repo)
     if ok:
         return 0
     sys.stderr.write(MESSAGE.format(report=report, skip=SKIP))

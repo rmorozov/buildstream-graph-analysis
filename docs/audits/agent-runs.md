@@ -478,13 +478,13 @@ pairing for every merged row from round 103 on.
 | 145 | verifier | sonnet | verify UX-1065 | 85405 | — | — | VERIFIED | — |
 | 145 | integrator | sonnet | merge the seven anonymized-bundle tracks | 196172 over two passes | — | — | merged to fd0bbd9c | — |
 | 145 | closer | opus | close: row moves, ledger, round document | unknown | — | — | — | — |
-| 146 | implementer | sonnet | UX-1068 a credential in a command line is dropped, not kept | unknown, one rework after verify | — | — | VERIFIED dd90b4df | prefix, spaced-flag and mixed-case leaks came from verification |
+| 146 | implementer | sonnet | UX-1068 a credential in a command line is dropped, not kept | 194027 including one rework after verify | — | — | VERIFIED dd90b4df | prefix, spaced-flag and mixed-case leaks came from verification |
 | 146 | verifier | sonnet | verify UX-1068 | unknown | — | — | four leaks found | — |
 | 146 | implementer | opus | UX-1069 the anonymized export runs in bounded memory | unknown | — | — | VERIFIED dd90b4df | the archive mutation row was overstated, corrected at close |
 | 146 | verifier | sonnet | verify UX-1069 | unknown | — | — | VERIFIED | — |
-| 146 | implementer | sonnet | UX-1070 the disclosure policy names what the producer writes | unknown, one fix pass after verify | — | — | VERIFIED dd90b4df | build_class A and the C-key check came from verification |
+| 146 | implementer | sonnet | UX-1070 the disclosure policy names what the producer writes | 240153 including one fix pass after verify | — | — | VERIFIED dd90b4df | build_class A and the C-key check came from verification |
 | 146 | verifier | sonnet | verify UX-1070 | unknown | — | — | two defects found | — |
-| 146 | implementer | sonnet | UX-1071 the residue scan reads a large member in linear time | unknown, one rework | — | — | VERIFIED dd90b4df | flaky N/4N timing test replaced by a start==0 guard test |
+| 146 | implementer | sonnet | UX-1071 the residue scan reads a large member in linear time | 200411 including one rework | — | — | VERIFIED dd90b4df | flaky N/4N timing test replaced by a start==0 guard test |
 | 146 | verifier | sonnet | verify UX-1071 | unknown | — | — | VERIFIED | — |
 | 146 | integrator | sonnet | merge the four #298 review tracks | 88216 | — | — | merged to dd90b4df | conflicts in bga/disclosure.py and tests/quality_reference.json |
 | 146 | closer | opus | close: row moves, ledger, round document | unknown | — | — | — | — |

@@ -49,13 +49,13 @@ to push - see report.
 
 | agent | model | task | tokens | calls | wall | friction |
 |---|---|---|---|---|---|---|
-| implementer | sonnet | UX-1068 a credential in a command line is dropped, not kept | unknown, one rework after verify | — | — | prefix, spaced-flag and mixed-case leaks came from verification |
+| implementer | sonnet | UX-1068 a credential in a command line is dropped, not kept | 194027 including one rework after verify | — | — | prefix, spaced-flag and mixed-case leaks came from verification |
 | verifier | sonnet | verify UX-1068 | unknown | — | — | four leaks found |
 | implementer | opus | UX-1069 the anonymized export runs in bounded memory | unknown | — | — | the archive mutation row was overstated, corrected at close |
 | verifier | sonnet | verify UX-1069 | unknown | — | — | — |
-| implementer | sonnet | UX-1070 the disclosure policy names what the producer writes | unknown, one fix pass after verify | — | — | build_class A and the C-key check came from verification |
+| implementer | sonnet | UX-1070 the disclosure policy names what the producer writes | 240153 including one fix pass after verify | — | — | build_class A and the C-key check came from verification |
 | verifier | sonnet | verify UX-1070 | unknown | — | — | two defects found |
-| implementer | sonnet | UX-1071 the residue scan reads a large member in linear time | unknown, one rework | — | — | flaky N/4N timing test replaced by a start==0 guard test |
+| implementer | sonnet | UX-1071 the residue scan reads a large member in linear time | 200411 including one rework | — | — | flaky N/4N timing test replaced by a start==0 guard test |
 | verifier | sonnet | verify UX-1071 | unknown | — | — | — |
 | integrator | sonnet | merge the four #298 review tracks | 88216 | — | — | — |
 | closer | opus | close: row moves, ledger, round document | unknown | — | — | — |

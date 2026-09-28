@@ -50,6 +50,8 @@ task file, which is the only place it ever lived twice.
 | UX-1066 | [raw logs travel tokenized](UX-1066-raw-logs-travel-tokenized.md) | store | Low | anyone sharing a private capture with an outside reader | 🔴 Not Started |
 | UX-1100 | [cut release 0.5.0 once the next features are in](UX-1100-cut-release-0-5-0.md) | contracts | Medium | R8 | 🔴 Not Started |
 | UX-1102 | [the architecture review is due once #298 and #300 have both landed](UX-1102-review-the-architecture-after-298-and-300.md) | guards | High | R8 | 🔴 Not Started |
+| UX-1106 | [blast radius decodes every element's downstream set to sum durations over it](UX-1106-blast-radius-sums-durations-off-the-bitset.md) | analysis | High | anyone opening a run of a few thousand elements | 🔴 Not Started |
+| UX-1107 | [the export's anchor breaks a tie by set order](UX-1107-the-exports-anchor-breaks-a-tie-by-set-order.md) | viewer | Medium | R1 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

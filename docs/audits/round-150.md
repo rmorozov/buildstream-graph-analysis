@@ -4,14 +4,15 @@ Run on 2026-09-28 off main at `aa0198f6` (the snapshot and view
 performance audit, `docs/audits/perf-snapshot-view-2026-09-28.md`),
 which filed `UX-1072`-`UX-1083`. All twelve close this round, plus two
 bookkeeping rows the integrator seams left behind (`UX-1101`, `UX-1103`). `UX-1100`
-(cut 0.5.0) and `UX-1102` (the architecture review) stay open.
+(cut 0.5.0) and `UX-1102` (the architecture review) stay open; `UX-1106`
+(the profile below) and `UX-1107` (the export's anchor) are filed open.
 
 ```text
 closed   UX-1072 UX-1073 UX-1074 UX-1075 UX-1076 UX-1077 UX-1078
          UX-1079 UX-1080 UX-1081 UX-1082 UX-1083 UX-1101 UX-1103
-filed    UX-1100 UX-1101 UX-1102 UX-1103
-open     UX-1100 (cut 0.5.0) UX-1102 (architecture review)
-index    dev_close_task.py --counts: 1054 scenarios, 24 open, 1030 closed
+filed    UX-1100 UX-1101 UX-1102 UX-1103 UX-1106 UX-1107
+open     UX-1100 (cut 0.5.0) UX-1102 (architecture review) UX-1106 UX-1107
+index    dev_close_task.py --counts: 1056 scenarios, 26 open, 1030 closed
 spread   dev_touching.py --spread: 33-174 of 677 test files
 ```
 
@@ -57,6 +58,8 @@ spread   dev_touching.py --spread: 33-174 of 677 test files
   `tail.json` travels anonymized, its call argv rebuilt by the grammar.
 
 ## In progress
+
+Post-fix `bga analyze` profile, for Ruslan's #300 review: [perf-analyze-profile-2026-09-28.md](perf-analyze-profile-2026-09-28.md).
 
 `UX-1100` (cut 0.5.0) stays open — `tail/v1` is a new contract, filed
 under an Unreleased row rather than cutting this round.

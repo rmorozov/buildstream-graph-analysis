@@ -42,7 +42,8 @@ def _repo(tmp_path):
     return repo
 
 
-def _bk_line(path, what, command, status="open", filed=1, cls="misc"):
+def _bk_line(path, what, command, status="open", filed=1, cls=None):
+    cls = cls or path
     return f"- r{filed} · {status} · {cls} · `{path}` · {what} · `{command}`\n"
 
 
@@ -74,47 +75,6 @@ class TestPreWindowLinesAreUncounted:
         assert "tools/dev_after.py" in out, out
 
 
-class TestOneClassAcrossTwoSources:
-
-    def test_a_list_item_and_a_table_row_are_one_class(self, tmp_path):
-        repo = _repo(tmp_path)
-        since = (TODAY - datetime.timedelta(days=10)).isoformat()
-        in_window = (TODAY - datetime.timedelta(days=3)).isoformat()
-        _commit_bookkeeping(
-            repo, [_bk_line("bga/report.py", "a shared drift",
-                            "tools/dev_probe.py --check")], in_window)
-        ledger = repo / "docs/audits/agent-runs.md"
-        ledger.write_text(
-            "| round | agent | model | task | tokens | tool calls | wall "
-            "| outcome | friction |\n|---|---|---|---|---|---|---|---|---|\n",
-            encoding="utf-8")
-        _git(repo, "add", "docs/audits/agent-runs.md")
-        _git(repo, "commit", "-qm", "ledger header", date=in_window)
-        with ledger.open("a", encoding="utf-8") as fh:
-            fh.write("| 1 | implementer | sonnet | UX-1 | 10k | 5 | 1 m | "
-                     "merged | tools/dev_probe.py drifted again |\n")
-        _git(repo, "add", "docs/audits/agent-runs.md")
-        _git(repo, "commit", "-qm", "ledger row", date=in_window)
-
-        out = retro.report(repo, since)
-        assert out.count("tools/dev_probe.py") == 1, out
-        line = [l for l in out.splitlines() if "tools/dev_probe.py" in l][0]
-        assert line.strip().endswith("2"), out
-
-
-class TestNoTokenIsUnclassed:
-
-    def test_a_line_with_no_token_is_unclassed(self, tmp_path):
-        repo = _repo(tmp_path)
-        since = (TODAY - datetime.timedelta(days=10)).isoformat()
-        in_window = (TODAY - datetime.timedelta(days=3)).isoformat()
-        _commit_bookkeeping(
-            repo, [_bk_line("docs/x.md", "a stale number", "eyeball the diff")],
-            in_window)
-        out = retro.report(repo, since)
-        assert "unclassed: 1 of 1" in out, out
-
-
 class TestALineMovedIsNotFiledTwice:
 
     def test_a_status_change_is_one_finding_and_an_unrelated_removal_is_none(
@@ -133,16 +93,19 @@ class TestALineMovedIsNotFiledTwice:
         # In-window: the moved line, filed open ...
         _commit_bookkeeping(
             repo, [_bk_line("bga/report.py", "a moved finding",
-                            "tools/dev_moved.py --check", status="open")],
+                            "tools/dev_moved.py --check", status="open",
+                            cls="tools/dev_moved.py")],
             first, mode="a")
         # ... and, in the same window, its status changes (same path/what)
         # while the pre-window line above is dropped with no replacement.
         text = (repo / "docs/backlog/bookkeeping.md").read_text(encoding="utf-8")
         text = text.replace(
             _bk_line("bga/report.py", "a moved finding",
-                    "tools/dev_moved.py --check", status="open"),
+                    "tools/dev_moved.py --check", status="open",
+                    cls="tools/dev_moved.py"),
             _bk_line("bga/report.py", "a moved finding",
-                    "tools/dev_moved.py --check", status="swept r2 UX-1"))
+                    "tools/dev_moved.py --check", status="swept r2 UX-1",
+                    cls="tools/dev_moved.py"))
         text = text.replace(
             _bk_line("tools/dev_stale.py", "a retired flag",
                     "tools/dev_stale.py --check"), "")

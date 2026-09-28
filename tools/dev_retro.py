@@ -13,12 +13,15 @@ friction cell of every new `docs/audits/agent-runs.md` row, and the
 in the window. `--since` defaults to the newest `docs/audits/retro-*.md`
 date, else 7 days back.
 
-Each finding's class is the first `tools/dev_*.py`, `tests/unit/
-test_*.py` or `` `make <target>` `` token in its text; none of the
-three is `unclassed`. A bookkeeping line edited in place (a status
-change) carries the same `path`/`what` pair and is one finding, not
-two. It prints; it proposes nothing and commits nothing - the `retro`
-skill reads this and writes the proposal.
+A bookkeeping line keys by its own `class` field. A ledger friction
+cell reporting nothing (`none reported`, `-`, `—`, ...) is no finding;
+one naming a `tools/dev_*.py`, `tests/unit/test_*.py` or `` `make
+<target>` `` token keys as `<agent> · <token>`; one with neither is
+"friction without a command", outside the classed/unclassed count. A
+bookkeeping line edited in place (a status change) carries the same
+`path`/`what` pair and is one finding, not two. It prints; it proposes
+nothing and commits nothing - the `retro` skill reads this and writes
+the proposal.
 """
 import argparse
 import collections
@@ -35,12 +38,13 @@ SCENARIOS = "docs/backlog/scenarios"
 
 RETRO_DATE = re.compile(r"^retro-(\d{4}-\d{2}-\d{2})\.md$")
 BOOKKEEPING_LINE = re.compile(
-    r"^- r\d+ · [^·]+ · [^·]+ · `(?P<path>[^`]+)` · "
+    r"^- r\d+ · [^·]+ · (?P<class>[^·]+) · `(?P<path>[^`]+)` · "
     r"(?P<what>[^·]+) · `[^`]+`\s*$")
 TOKEN = re.compile(r"tools/dev_[\w]+\.py|tests/unit/test_[\w]+\.py|`make ([a-z][\w-]*)`")
 STATUS_GREEN = re.compile(r"\*\*Status:\*\*\s*\U0001f7e2")
 LABELS = ("Route", "Rejected", "Files", "Guard", "Mutation", "Class", "Split", "Question")
 LABEL_LINE = re.compile(rf"^({'|'.join(LABELS)}):", re.M)
+NO_FINDING = {"none reported", "none", "-", "—", ""}
 
 
 def default_since(repo, today=None):
@@ -83,10 +87,11 @@ def class_key(text):
 
 def bookkeeping_findings(added):
     """`(findings, weeks)` from `added_lines(repo, BOOKKEEPING, since)`:
-    `findings` is `[(class_key_or_None, text)]`, one per distinct
-    `path`/`what` pair - a status change re-adds the same pair and is
-    not filed twice. `weeks` counts one distinct pair per ISO week of
-    its first sighting."""
+    `findings` is `[(class_or_None, text)]`, keyed by the line's own
+    `class` field (a bookkeeping line always states one), one per
+    distinct `path`/`what` pair - a status change re-adds the same pair
+    and is not filed twice. `weeks` counts one distinct pair per ISO
+    week of its first sighting."""
     seen, findings, weeks = set(), [], collections.Counter()
     for date, line in added:
         match = BOOKKEEPING_LINE.match(line)
@@ -96,7 +101,8 @@ def bookkeeping_findings(added):
         if key in seen:
             continue
         seen.add(key)
-        findings.append((class_key(line), line))
+        cls = match.group("class").strip()
+        findings.append((cls or None, line))
         if date:
             iso = datetime.date.fromisoformat(date).isocalendar()
             weeks[f"{iso[0]}-W{iso[1]:02d}"] += 1
@@ -104,16 +110,28 @@ def bookkeeping_findings(added):
 
 
 def ledger_findings(repo, since):
+    """`(findings, no_command)` from `added_lines(repo, LEDGER, since)`:
+    a friction cell reporting nothing (`NO_FINDING`) is not a finding at
+    all; a cell naming a token keys as `<agent> · <token>`; a cell with
+    neither is counted in `no_command`, outside the classed/unclassed
+    total - its class is unknowable, not missing."""
     added = added_lines(repo, LEDGER, since)
     if added is None:
-        return []
-    out = []
+        return [], 0
+    out, no_command = [], 0
     for _date, line in added:
         cells = [c.strip() for c in line.split("|")[1:-1]]
         if len(cells) != 9 or not cells[0].isdigit():
             continue
-        out.append((class_key(cells[-1]), cells[-1]))
-    return out
+        friction = cells[-1]
+        if friction.lower() in NO_FINDING:
+            continue
+        token = class_key(friction)
+        if token is None:
+            no_command += 1
+            continue
+        out.append((f"{cells[1]} · {token}", friction))
+    return out, no_command
 
 
 def decision_fields(text):
@@ -148,7 +166,8 @@ def report(repo, since):
     ledger_added = added_lines(repo, BOOKKEEPING, since)
     bookkeeping, weeks = ((None, {}) if ledger_added is None
                           else bookkeeping_findings(ledger_added))
-    findings = list(bookkeeping or []) + ledger_findings(repo, since) + closed_findings(repo, since)
+    ledger, no_command = ledger_findings(repo, since)
+    findings = list(bookkeeping or []) + ledger + closed_findings(repo, since)
     counts = collections.Counter(k for k, _t in findings if k)
     unclassed = sum(1 for k, _t in findings if k is None)
     lines = [f"since {since}: {len(findings)} finding(s)", "", "classes by count:"]
@@ -159,8 +178,10 @@ def report(repo, since):
         lines.append("  (none)")
     total = len(findings)
     share = unclassed / total if total else 0.0
-    lines += ["", f"unclassed: {unclassed} of {total} ({share:.1%})", "",
-             "bookkeeping lines per ISO week:"]
+    lines += ["", f"unclassed: {unclassed} of {total} ({share:.1%})"]
+    if no_command:
+        lines.append(f"friction without a command: {no_command}")
+    lines += ["", "bookkeeping lines per ISO week:"]
     if ledger_added is None:
         lines.append("  no ledger yet")
     elif not weeks:

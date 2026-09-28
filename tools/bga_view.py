@@ -268,6 +268,14 @@ def published_analysis(run: str) -> Optional[dict]:
     return document if isinstance(document, dict) else None
 
 
+def _timed_capture(name: str, argv: list[str]) -> dict:
+    """`_capture`, announced and timed through `bga.progress` (UX-1077)."""
+    from bga import progress
+
+    with progress.timed(name, say=f"bga view: running bga {name}"):
+        return _capture(argv)
+
+
 def _analyze_now(run: str) -> dict:
     """Analyze a run whose capture published nothing - the older case.
 
@@ -289,7 +297,7 @@ def _analyze_now(run: str) -> dict:
         argv += ["--plane2", path]
     elif refusal:
         print(refusal, file=sys.stderr)
-    return _capture(argv)
+    return _timed_capture("analyze", argv)
 
 
 #: `UX-533`: the two answers to "whose analysis is this page showing".
@@ -408,7 +416,7 @@ def payloads(run: str, baseline: Optional[str] = None,
         for path in earlier:
             argv += ["--baseline-run", path]
         try:
-            documents["compare.json"] = _capture(argv)
+            documents["compare.json"] = _timed_capture("compare", argv)
         except (RuntimeError, json.JSONDecodeError, OSError) as error:
             # A predecessor that cannot be compared is not an error
             # here - the report still renders, minus one view. An
@@ -593,12 +601,15 @@ def trace_render(run: str, destination: str,
     Plane 2, while `bga timeline` reads the raw log regardless and the
     lanes *are* there. Only the render knows, so the render is asked.
     """
+    from bga import progress
+
     from .bga_timeline import PLANES_BOTH, render
 
     snapshot = os.path.dirname(os.path.abspath(run))
     try:
-        result = render(snapshot, destination, quiet=True,
-                        planes=planes or PLANES_BOTH)
+        with progress.timed("timeline", say="bga view: rendering the timeline"):
+            result = render(snapshot, destination, quiet=True,
+                            planes=planes or PLANES_BOTH)
     except (FileNotFoundError, RuntimeError, OSError):
         return None
     return dict(result or {}, path=destination)

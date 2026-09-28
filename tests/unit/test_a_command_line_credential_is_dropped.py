@@ -136,10 +136,13 @@ def test_a_long_digit_only_value_is_pseudonymized_not_kept(tmp_path):
     assert "<dropped>" not in rebuilt
 
 
-def test_a_short_digit_only_value_still_stays(tmp_path):
+def test_a_short_digit_only_value_off_the_safe_list_pseudonymizes(tmp_path):
+    """UX-1084: a numeric value pseudonymizes by default now; only a
+    named safe option (like `JOBS` above) keeps it."""
     pmap = _pmap(tmp_path)
     rebuilt = anon.rebuild_command("cmake -DPORT=8080", KEY, pmap, frozenset())
-    assert rebuilt.endswith("=8080")
+    assert "8080" not in rebuilt
+    assert "<dropped>" not in rebuilt
 
 
 def test_the_signing_name_alone_drops_a_value_too_short_to_be_shaped(tmp_path):

@@ -36,3 +36,31 @@ values. Mutation: drop the default-pseudonymize numeric check, and
 `123456`/`1234` travel verbatim.
 
 ## Outcome
+
+Gap measured: before the fix, `pytest tests/unit/test_a_short_numeric_credential_pseudonymizes.py`
+failed 2/7 (`--otp=123456`, `--pin=1234` kept their value verbatim);
+`_value`'s cap (`len(value) <= 6`) had no option context at all. A
+first close keyed safety on flag name alone; the verifier found
+`gcc -l1234` (a linker library) and `curl -O 12345` (an output
+filename, via positional inheritance) both still kept verbatim -
+`-l`/`-O` mean different things off `make`/`gcc`.
+
+Close measured: `pytest tests/unit/test_a_short_numeric_credential_pseudonymizes.py
+tests/unit/test_a_command_line_credential_is_dropped.py` - 25 passed.
+`--otp=123456`/`--pin=1234` pseudonymize (absent from the rebuilt
+command; present in the map's originals, since pseudonymizing is
+reversible by design, unlike the credential-shaped drop path).
+`-j8`, `--jobs=4`, `-DCMAKE_BUILD_PARALLEL_LEVEL=8`, space-form
+`-j 8`/`-l 4` keep their value only when argv[0] is a make-like
+binary (`_MAKE_LIKE_BINARIES`/`_MAKE_SAFE_FLAGS`); `-O2` keeps its
+value only glued and only on a compiler driver (`_COMPILER_BINARIES`,
+`_OPT_LEVEL`) - `gcc -l1234` and `curl -O 12345` now pseudonymize.
+`python tools/dev_touching.py --base e5075375`: 44 files selected,
+1877 passed, 3 skipped.
+
+Mutation table:
+
+| Guard | Mutation | Reddened | Count |
+|---|---|---|---|
+| `_value`'s default-pseudonymize check | `_value` keeps every digit value unconditionally | both test files | 4 failed / 25 |
+| `_flag_argument`'s binary key | drop `binary in _MAKE_LIKE_BINARIES` from `flag_safe`/`glued_safe` | `test_a_compilers_glued_library_count_is_not_a_load_average` | 1 failed / 10 |

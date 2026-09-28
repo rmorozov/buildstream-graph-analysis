@@ -215,10 +215,12 @@ def test_an_anonymized_analysis_still_has_a_start_at_the_canonical_origin(tmp_pa
 
 def _private_flags(document):
     for operation, argv0 in zip(document["redundant_operations"], ("/usr/bin/cc1plus", "acme-codegen")):
-        operation["example_cmd"] = operation["signature"] = f"{argv0} --acme-license-server=foo -O2"
+        operation["example_cmd"] = operation["signature"] = f"{argv0} --acme-license-server=foo -c"
 
 
 def test_a_private_long_flag_travels_as_a_pseudonym_on_any_binary(tmp_path):
+    """`-c` (compile-only, `_KEPT_FLAG`) is binary-independent, unlike
+    `-O<n>` (UX-1084: only a compiler driver keeps that one)."""
     path, _manifest, pmap = _export(tmp_path, "macro_micro", {"plane2.json": _private_flags})
     decoded = _decoded(path)
     assert "acme" not in "\n".join(decoded.values()).lower()
@@ -227,7 +229,7 @@ def test_a_private_long_flag_travels_as_a_pseudonym_on_any_binary(tmp_path):
     assert public[0] == "cc1plus" and private[0].startswith("b-")
     for words in (public, private):
         flag = words[1].split("=")[0]
-        assert flag.startswith("--m-") and words[2] == "-O2"
+        assert flag.startswith("--m-") and words[2] == "-c"
         assert pmap.resolve(flag[2:]) == "macro\0acme-license-server"
 
 

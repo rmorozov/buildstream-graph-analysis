@@ -282,7 +282,10 @@ def pseudonymize_toolchain(value, key, pmap):
 _PUBLIC_MACRO = re.compile(r"CMAKE_[A-Z0-9_]+|BUILD_SHARED_LIBS|BUILD_TESTING|NDEBUG|_GNU_SOURCE|_FORTIFY_SOURCE")
 _CMAKE_TYPES = frozenset({"PATH", "FILEPATH", "STRING", "BOOL", "INTERNAL"})
 _PUBLIC_VALUES = frozenset({"ON", "OFF", "TRUE", "FALSE", "YES", "NO", "Release", "Debug", "RelWithDebInfo", "MinSizeRel"})
-_KEPT_FLAG = re.compile(r"-(?:O[0-3sgz]?|Ofast|g[0-3]?|j\d*|[cESvwsP]|shared|static|pipe|pthread|rdynamic)")
+_KEPT_FLAG = re.compile(r"-(?:g[0-3]?|j\d*|[cESvwsP]|shared|static|pipe|pthread|rdynamic)")
+#: `-O<n>` is its own check (below): only a compiler driver keeps it, and
+#: only glued - `wget -O2`'s `2` is a filename, not an optimization level.
+_OPT_LEVEL = re.compile(r"-O[0-3sgz]?|-Ofast")
 #: `-lfoo`, `-ofoo` carry a value glued to the letter; any other lowercase word is a flag name.
 _NAMED_FLAG = re.compile(r"(--|-[fmW]|-std|-(?=[a-km-np-z][a-z0-9-]{2}))([a-z][a-z0-9+-]*)?(=.*)?", re.S)
 _MACRO = re.compile(r"([A-Za-z_][A-Za-z0-9_]*)(?::([A-Z]+))?(=.*)?", re.S)
@@ -294,7 +297,17 @@ _LEADING_ENV = re.compile(r"[A-Z_][A-Z0-9_]*=.*", re.S)
 _CREDENTIAL_NAME = re.compile(
     r"token|secret|password|passwd|key|auth|credential|cookie|session"
     r"|pat|bearer|apikey|private_key|signing", re.I)
-_DIGIT_CAP = 6
+#: A numeric value pseudonymizes by default (UX-1084: a six-digit OTP is
+#: not a jobs count). Two things can keep one: a `-D`/env name on
+#: `_MACRO_SAFE_NAMES` (any binary), or a flag on `_MAKE_SAFE_FLAGS`
+#: *and* argv[0] a make-like binary - `gcc -l1234` is a linker library,
+#: not a load average, and `curl -O 12345` an output filename, not a
+#: level (UX-1084 verifier).
+_MACRO_SAFE_NAMES = frozenset({"JOBS", "CMAKE_BUILD_PARALLEL_LEVEL"})
+_MAKE_SAFE_FLAGS = frozenset({"-j", "--jobs", "-l", "--load-average"})
+_MAKE_LIKE_BINARIES = frozenset({"make", "gmake", "ninja", "samu", "bst"})
+#: `ld` is deliberately absent: `-l`/`-O` there name libraries/output, never counts.
+_COMPILER_BINARIES = frozenset({"cc", "c++", "gcc", "g++", "clang", "clang++", "cc1", "cc1plus"})
 #: A value shaped like a credential regardless of its name: a known
 #: token prefix, an auth scheme with its value on the next word, or a
 #: long run mixing letters and digits (1068 verifier findings).
@@ -362,10 +375,12 @@ def rebuild_command(cmd, key, pmap, public_binaries, counts=None):
     lead = 0
     while lead < len(words) - 1 and _LEADING_ENV.fullmatch(words[lead]):
         lead += 1
-    out = [_argument(word, key, pmap, counts) for word in words[:lead]]
     binary = words[lead].rsplit(_PATH_SEP, 1)[-1]
+    ctx = (counts, binary)
+    out = [_argument(word, key, pmap, ctx) for word in words[:lead]]
     out.append(binary if binary in public_binaries else pseudonymize(binary, "binary", key, pmap))
     i = lead + 1
+    pending_safe = False
     while i < len(words):
         word, following = words[i], words[i + 1] if i + 1 < len(words) else None
         if _space_credential(word, following):
@@ -373,15 +388,18 @@ def rebuild_command(cmd, key, pmap, public_binaries, counts=None):
             out.append(_DROPPED)
             if counts is not None:
                 counts["F credential"] += 1
+            pending_safe = False
             i += 2
             continue
-        out.append(_argument(word, key, pmap, counts))
+        out.append(_argument(word, key, pmap, ctx, pending_safe if not word.startswith("-") else False))
         if following is not None and not following.startswith("-") and _continues_scheme(word):
             out.append(_DROPPED)
             if counts is not None:
                 counts["F credential"] += 1
+            pending_safe = False
             i += 2
             continue
+        pending_safe = binary in _MAKE_LIKE_BINARIES and word in _MAKE_SAFE_FLAGS
         i += 1
     return " ".join(out)
 
@@ -408,36 +426,63 @@ def _continues_scheme(word):
     return bool(assigned) and bool(_AUTH_SCHEME.fullmatch(assigned))
 
 
-def _argument(word, key, pmap, counts=None):
+_CREDENTIAL_MODE = "credential"
+
+
+def _argument(word, key, pmap, ctx, safe=False):
+    """`ctx` is `(counts, binary)` - argv[0]'s basename, needed to key a
+    safe numeric flag (UX-1084 verifier: `-l`/`-O` mean different things
+    on `make` than on `gcc` or `curl`). `safe` is a digit value's safety
+    already resolved by the caller (a preceding flag's classification)."""
+    counts, binary = ctx
     if not word.startswith("-") or word == "-":
-        env = _ENV_ASSIGNMENT.fullmatch(word)
-        if env and (_CREDENTIAL_NAME.search(env.group(1)) or _credential_shaped(env.group(2))):
-            return _drop(env.group(1), key, pmap, counts)
-        return _value(word, key, pmap, counts)
+        return _positional(word, key, pmap, counts, safe)
+    if binary in _COMPILER_BINARIES and _OPT_LEVEL.fullmatch(word):
+        return word
     if _KEPT_FLAG.fullmatch(word):
         return word
     if word.startswith("-D") and not word.startswith("--"):
-        macro = _MACRO.fullmatch(word[2:])
-        if macro is None:
-            return "-D" + _value(word[2:], key, pmap, counts)
-        name, kind, assigned = macro.groups()
-        credential = bool(_CREDENTIAL_NAME.search(name))
-        name = name if _PUBLIC_MACRO.fullmatch(name) else pseudonymize(name, "macro", key, pmap)
-        if kind is not None:
-            kind = kind if kind in _CMAKE_TYPES else pseudonymize(kind, "macro", key, pmap)
-        return f"-D{name}{'' if kind is None else ':' + kind}{_assigned(assigned, key, pmap, counts, credential)}"
+        return _dash_d_argument(word, key, pmap, counts)
+    return _flag_argument(word, key, pmap, counts, binary)
+
+
+def _positional(word, key, pmap, counts, safe):
+    env = _ENV_ASSIGNMENT.fullmatch(word)
+    if env and (_CREDENTIAL_NAME.search(env.group(1)) or _credential_shaped(env.group(2))):
+        return _drop(env.group(1), key, pmap, counts)
+    return _value(word, key, pmap, counts, safe)
+
+
+def _dash_d_argument(word, key, pmap, counts):
+    macro = _MACRO.fullmatch(word[2:])
+    if macro is None:
+        return "-D" + _value(word[2:], key, pmap, counts)
+    name, kind, assigned = macro.groups()
+    credential = bool(_CREDENTIAL_NAME.search(name))
+    macro_safe = name in _MACRO_SAFE_NAMES
+    name = name if _PUBLIC_MACRO.fullmatch(name) else pseudonymize(name, "macro", key, pmap)
+    if kind is not None:
+        kind = kind if kind in _CMAKE_TYPES else pseudonymize(kind, "macro", key, pmap)
+    mode = _CREDENTIAL_MODE if credential else macro_safe
+    return (f"-D{name}{'' if kind is None else ':' + kind}"
+            f"{_assigned(assigned, key, pmap, counts, mode)}")
+
+
+def _flag_argument(word, key, pmap, counts, binary):
     flag, equals, assigned = word.partition("=")
     credential = bool(_CREDENTIAL_NAME.search(flag))
+    flag_safe = binary in _MAKE_LIKE_BINARIES and flag in _MAKE_SAFE_FLAGS
     if flag in PUBLIC_FLAGS and not credential:
-        return flag + _assigned(equals + assigned, key, pmap, counts, False)
+        return flag + _assigned(equals + assigned, key, pmap, counts, flag_safe)
     if credential:
         rendered = flag if flag in PUBLIC_FLAGS else _pseudonymize_flag(flag, key, pmap)
-        return rendered + _assigned(equals + assigned, key, pmap, counts, True)
+        return rendered + _assigned(equals + assigned, key, pmap, counts, _CREDENTIAL_MODE)
     named = _NAMED_FLAG.fullmatch(word)
     if named and named.group(2):
         return (named.group(1) + pseudonymize(named.group(2), "macro", key, pmap)
-                + _assigned(named.group(3), key, pmap, counts, False))
-    return word[:2] + _value(word[2:], key, pmap, counts)
+                + _assigned(named.group(3), key, pmap, counts))
+    glued_safe = binary in _MAKE_LIKE_BINARIES and word[:2] in _MAKE_SAFE_FLAGS
+    return word[:2] + _value(word[2:], key, pmap, counts, glued_safe)
 
 
 def _drop(name, key, pmap, counts):
@@ -447,21 +492,24 @@ def _drop(name, key, pmap, counts):
     return f"{pseudonymize(name, 'macro', key, pmap)}={_DROPPED}"
 
 
-def _assigned(assigned, key, pmap, counts=None, credential=False):
+def _assigned(assigned, key, pmap, counts=None, mode=None):
+    """`mode` is `_CREDENTIAL_MODE` for a credential drop, `True`/`False`
+    for a numeric value's safety already resolved by the caller, or
+    `None` for the ordinary pseudonymize path (a non-numeric value)."""
     if not assigned:
         return ""
-    if credential:
+    if mode == _CREDENTIAL_MODE:
         if counts is not None:
             counts["F credential"] += 1
         return f"={_DROPPED}"
-    return "=" + _value(assigned[1:], key, pmap, counts)
+    return "=" + _value(assigned[1:], key, pmap, counts, bool(mode))
 
 
-def _value(value, key, pmap, counts=None):
+def _value(value, key, pmap, counts=None, safe=False):
     if not value or value in _PUBLIC_VALUES:
         return value
     if value.isdigit():
-        return value if len(value) <= _DIGIT_CAP else pseudonymize_identifier(value, key, pmap)
+        return value if safe else pseudonymize_identifier(value, key, pmap)
     if _credential_shaped(value):
         if counts is not None:
             counts["F credential"] += 1

@@ -223,6 +223,10 @@ def _class_aggregate(label: str, manifest: Optional[dict],
         # names the run worth looking at.
         "snapshot_bytes": distribution(
             [row["bytes"] for row in rows if row.get("bytes")]),
+        # UX-1078: bga's own tail after each build, from `tail.json`.
+        "bga_tail_us": distribution(
+            [row["bga_tail_us"] for row in rows
+             if row.get("bga_tail_us") is not None]),
         "total_bytes": sum(row.get("bytes") or 0 for row in rows),
         # `UX-528`: capped. This is one entry per run per host class,
         # and nothing reads it as a list - the trend plots `store/v1`'s
@@ -486,7 +490,7 @@ def aggregate(listing: dict, blend: bool = False) -> dict:
         document["blended"] = dict(
             {k: classes[0][k] for k in
              ("duration_us", "cache_hit_rate", "cores_busy", "peak_rss_bytes",
-              "snapshot_bytes", "total_bytes")},
+              "snapshot_bytes", "bga_tail_us", "total_bytes")},
             runs=classes[0]["runs"], mixes=1)
     return schemas.stamp(document, schemas.STORE_AGGREGATE)
 
@@ -512,6 +516,9 @@ def _blended(by_class: dict[str, list[dict]]) -> dict:
         # "what does this store weigh" has one answer whatever built it.
         "snapshot_bytes": distribution(
             [row["bytes"] for row in every if row.get("bytes")]),
+        "bga_tail_us": distribution(
+            [row["bga_tail_us"] for row in every
+             if row.get("bga_tail_us") is not None]),
         "total_bytes": sum(row.get("bytes") or 0 for row in every),
     }
 
@@ -561,6 +568,7 @@ _FIGURES = (
     # question "which capture is the big one" is answered by a p95
     # against a median and not by a total.
     ("snapshot_bytes", "Snapshot size", 1024 ** 2, " MiB"),
+    ("bga_tail_us", "bga after the build", 1e6, "s"),
 )
 
 

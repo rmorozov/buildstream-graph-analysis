@@ -28,6 +28,11 @@ RAW_LOG = (
 
 @pytest.fixture
 def project(tmp_path, monkeypatch):
+    return tailed_project(tmp_path, monkeypatch)
+
+
+def tailed_project(tmp_path, monkeypatch):
+    """A project whose snapshots run the real tail on the golden run."""
     root = tmp_path / "proj"
     root.mkdir()
     (root / "project.conf").write_text("name: p\nmin-version: 2.0\n")

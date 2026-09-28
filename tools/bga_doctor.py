@@ -34,6 +34,7 @@ import sys
 import tempfile
 from typing import Optional
 
+from bga import progress
 from bga.plural import plural
 
 # Findings-style ids (UX-75), so a script can key on the check rather
@@ -80,12 +81,15 @@ def check_bst() -> dict:
             remedy="pip install 'bga[bst]' (in a virtualenv - a distro-patched "
                    "setuptools breaks pluginbase, which is how three separate "
                    "environments for this project failed to install)")
+    argv = [path, "--version"]
     try:
-        version = subprocess.run([path, "--version"], capture_output=True,
-                                 text=True, timeout=60).stdout.strip()
+        with progress.timed_call(argv) as call:
+            result = subprocess.run(argv, capture_output=True, text=True, timeout=60)
+            call["exit"] = result.returncode
     except (OSError, subprocess.SubprocessError) as error:
         return _check("bst-present", FAIL, f"bst is on PATH but would not run: {error}",
                       remedy="reinstall BuildStream, ideally into a fresh virtualenv")
+    version = result.stdout.strip()
     if not version.startswith(SUPPORTED_BST):
         return _check(
             "bst-present", WARN,

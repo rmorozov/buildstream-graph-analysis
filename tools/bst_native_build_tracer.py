@@ -4995,10 +4995,10 @@ def _list_contents(project_dir: str,
     """
     if not group:
         return {}
-    result = subprocess.run(
-        ["bst", "artifact", "list-contents", *group],
-        cwd=project_dir, capture_output=True, text=True,
-    )
+    argv = ["bst", "artifact", "list-contents", *group]
+    with progress.timed_call(argv) as call:
+        result = subprocess.run(argv, cwd=project_dir, capture_output=True, text=True)
+        call["exit"] = result.returncode
     if result.returncode != 0:
         return None
     wanted = set(group)

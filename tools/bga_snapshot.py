@@ -334,7 +334,7 @@ def take_snapshot(project: str, command: list[str], config: dict,
 
     snapshot = snapshot or run_store.new_snapshot_dir(project)
     stamp = _producer_stamp()
-    progress.reset_ledger(on_row=lambda: _write_tail(snapshot, stamp))
+    progress.set_on_row(lambda: _write_tail(snapshot, stamp))
     mode, ceiling, seed = resolve_jobserver_ceiling(jobserver, command, cpu_count=cpu_count)
     set_jobserver_mode_env(mode)
     _set_baseline_run_dir_env(project)
@@ -687,10 +687,26 @@ def main(argv: Optional[list[str]] = None) -> int:
               file=sys.stderr)
         return 2
 
+    # UX-1080: the ledger starts here, not in `take_snapshot` below - the
+    # doctor's `bst --version` inside `why_the_build_cannot_start` runs
+    # before any snapshot directory exists to write `tail.json` into, so
+    # its `timed_call` row would otherwise land in a ledger nothing reads.
+    # `set_on_row` in `take_snapshot` attaches the writer without
+    # discarding it.
+    progress.reset_ledger()
+
     # UX-324: before the sticky config, before the snapshot directory,
     # before the store's .gitignore - all three are writes, and this
     # path is the one that must leave nothing.
-    refusal = why_the_build_cannot_start(command)
+    #
+    # UX-1080: its own named phase, timed like every other one - not
+    # left to `timed_call`'s drain-on-close fallback, which would credit
+    # the doctor's `bst --version` to whichever real phase happened to
+    # close next (`Plane 2 report`, on a real capture). That fallback
+    # still exists for a call genuinely made with no phase open at all;
+    # this one now always has one.
+    with progress.timed("before the build", say="Checking bst is ready..."):
+        refusal = why_the_build_cannot_start(command)
     if refusal is not None:
         print(refusal, file=sys.stderr)
         return 2

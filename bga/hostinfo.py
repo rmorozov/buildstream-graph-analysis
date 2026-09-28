@@ -93,14 +93,25 @@ def _distro_id() -> Optional[str]:
     return f"{name} {version}" if version else name
 
 
-def _version_line(argv: list[str]) -> Optional[str]:
+def _version_line(argv: list[str], timed: bool = False) -> Optional[str]:
     """The first line of a `--version`, or None.
 
     Same shape as `UX-151`'s fingerprint probe, including reading
     stderr: several of these tools print their version there.
+
+    `timed` (UX-1080): only `bst`'s own call is a BuildStream restart
+    worth a `calls` row in the tail's ledger - `bwrap`/`buildbox-run`/`cc`
+    are not.
     """
+    from bga import progress
+
     try:
-        result = subprocess.run(argv, capture_output=True, text=True, timeout=30)
+        if timed:
+            with progress.timed_call(argv) as call:
+                result = subprocess.run(argv, capture_output=True, text=True, timeout=30)
+                call["exit"] = result.returncode
+        else:
+            result = subprocess.run(argv, capture_output=True, text=True, timeout=30)
     except (OSError, subprocess.SubprocessError):
         return None
     text = (result.stdout or result.stderr or "").strip()
@@ -123,7 +134,8 @@ def _toolchain() -> dict[str, Optional[str]]:
     }
     found = {}
     for name, argv in probes.items():
-        found[name] = _version_line(argv) if shutil.which(argv[0]) else None
+        found[name] = (_version_line(argv, timed=(name == "bst"))
+                       if shutil.which(argv[0]) else None)
     return found
 
 

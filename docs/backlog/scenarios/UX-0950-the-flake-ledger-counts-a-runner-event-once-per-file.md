@@ -79,3 +79,25 @@ Question:  none
 ```
 
 ## Outcome
+
+Gap: before this task, `counts()` summed every ledger row per file, so
+a run that moved six files together (Motivation's run `35755437814`)
+read as six independent excursions instead of one shared event.
+
+Close: `per_run()` added - an exact Poisson-binomial tail (DP, not
+Monte Carlo) of each run's file count against every file's own rate
+`count/N`, flagged below `FLAG_ALPHA/N`; `counts()` now drops a
+flagged run's rows so its files each read one fewer. `--record-run`
+added so N counts a run even when it writes no row; one new step in
+`flake-ledger-adopt` calls it with `${{ github.run_id }}`. On today's
+committed ledger (N=26, from entries' own run ids - no run has called
+`--record-run` yet): `per_run` names nothing, `top` and `unaccounted`
+unchanged -
+`python3 -c "from tools import dev_flake_census as c; d=c.load(); print(c.per_run(d))"`
+prints `[]`.
+
+Mutation table:
+
+| mutation | reddened | count |
+|---|---|---|
+| `per_run` returns `[]` unconditionally | `test_per_run_names_the_multi_file_run_alone`, `test_the_multi_run_files_count_one_fewer` | 2 of 5 in `test_a_run_that_moves_many_files_counts_once.py` |

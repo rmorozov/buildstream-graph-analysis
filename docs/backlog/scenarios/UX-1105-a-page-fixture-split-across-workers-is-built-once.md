@@ -1,6 +1,6 @@
 # UX-1105: a page fixture split across workers is built once
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-320 | **Found by:** PR #298's CI tier gate at `0f36aca0` - `test_the_page_conforms_to_its_sections.py` read 14.5s and 16.4s against 7.4s recorded | **Serves:** every branch whose CI tier gate reads this file | **Topic:** guards | **Area:** bga/viewer | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-320 | **Found by:** PR #298's CI tier gate at `0f36aca0` - `test_the_page_conforms_to_its_sections.py` read 14.5s and 16.4s against 7.4s recorded | **Serves:** every branch whose CI tier gate reads this file | **Topic:** guards | **Area:** bga/viewer | **Shape:** mechanical
 
 ## Motivation
 

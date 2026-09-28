@@ -501,6 +501,9 @@ pairing for every merged row from round 103 on.
 | 148 | implementer | sonnet | UX-1088+UX-1089, the #298 review's two remaining numeric-leak findings (filed and fixed, one track) | 144356 | — | — | merged 1a498516 | — |
 | 148 | closer | sonnet | close: row moves, ledger, round document | unknown | — | — | — | — |
 | 148 | verifier | sonnet | verify UX-1088, UX-1089 | 68368 | — | — | DEFECTS: -j=N hybrid leak, fixed in 05fe2c74 | — |
+| 148 | implementer | opus | root-cause the tier-gate red on #298 (researcher-style) | 77892 | — | — | --dist load splits test_the_page_conforms_to_its_sections.py; its module fixture rebuilds per worker | — |
+| 148 | implementer | sonnet | measure --dist loadgroup for UX-1105 (rejected) | 82500 | — | — | file 25.8s -> 6.7s, full suite 515s -> 774s: rejected | — |
+| 148 | implementer | opus | UX-1105, the sections page built once across workers | unknown | — | — | file alone 27.9s -> 14.7-17.2s junit sum at -n 4 --dist load | the lock alone moved nothing: a waiting worker is charged its wait |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -513,7 +516,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the four hundred and eighty-four rows already say: a researcher that reads a document
+What the four hundred and eighty-seven rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

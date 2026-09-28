@@ -5,8 +5,8 @@ Run on 2026-09-28 in answer to the owner's third #298 review at
 and landed as `1a498516`, linear on the pushed round 147 head.
 
 ```text
-closed   UX-1088 UX-1089
-index    dev_close_task.py --counts: 1037 scenarios, 22 open, 1015 closed
+closed   UX-1088 UX-1089 UX-1105
+index    dev_close_task.py --counts: 1038 scenarios, 22 open, 1016 closed
 spread   dev_touching.py --spread: 33-173 of 663 test files
 ```
 
@@ -26,6 +26,11 @@ spread   dev_touching.py --spread: 33-173 of 663 test files
   space-separated and assigned forms; off one it falls to UX-1088's
   default-drop path. `-O\d` and `-l` were audited and already keyed;
   `g[0-3]?` is a bounded enum needing no key.
+
+## The tier gate
+
+- #298's CI tier gate went red on `test_the_page_conforms_to_its_sections.py` (14.5s, 16.4s against 7.4s): `--dist load` split it, rebuilding its page fixture per worker.
+- UX-1105 builds it once per session under an `fcntl` lock with its two probes overlapped (file alone 27.9s -> 14.7-17.2s); `--dist loadgroup` was rejected at 515s -> 774s full suite.
 
 ## Verification
 

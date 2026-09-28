@@ -67,6 +67,22 @@ def _rules(text):
         pos = end
 
 
+COLOUR = re.compile(r"#[0-9a-fA-F]{3,8}\b|rgba?\([^)]*\)")
+ACCENT_VALUE = re.compile(
+    r"--accent(?:-mark)?\s*:\s*(#[0-9a-fA-F]{3,8}\b|rgba?\([^)]*\))")
+
+
+def _rgb(literal):
+    """`(r, g, b)` of a hex or `rgb()`/`rgba()` literal."""
+    if literal.startswith("#"):
+        digits = literal[1:]
+        if len(digits) in (3, 4):
+            digits = "".join(c * 2 for c in digits)
+        return tuple(int(digits[i:i + 2], 16) for i in (0, 2, 4))
+    parts = re.split(r"[\s,/]+", literal[literal.index("(") + 1:-1].strip())
+    return tuple(round(float(p)) for p in parts[:3])
+
+
 def css_uses():
     uses = set()
     for prelude, body in _rules(CSS):
@@ -107,6 +123,18 @@ class TestTheStylesheetSpendsTheAccentOnlyOnListedJobs:
 
     def test_every_listed_job_is_declared(self):
         assert sorted(table_uses() - css_uses()) == []
+
+    def test_no_literal_spells_an_accent(self):
+        """The token half reads `var()`; an accent written as its value
+        is a job no token names."""
+        accents, literals = set(), []
+        for prelude, body in _rules(CSS):
+            if prelude == ":root":
+                accents |= {_rgb(v) for v in ACCENT_VALUE.findall(body)}
+            else:
+                literals += [(prelude, lit) for lit in COLOUR.findall(body)]
+        assert accents
+        assert [(p, lit) for p, lit in literals if _rgb(lit) in accents] == []
 
 
 #: Every element's accent uses, checked against the table's rows in the

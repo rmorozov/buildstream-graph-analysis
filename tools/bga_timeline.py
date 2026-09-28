@@ -30,6 +30,7 @@ capture actually traced - the one whose span is least sensitive to a
 small alignment error.
 """
 import argparse
+import contextlib
 import gzip
 import json
 import os
@@ -1268,20 +1269,76 @@ def element_spans(raw_log: str) -> dict:
 
     spans = {}
     with _open_raw(raw_log) as handle:
-        for record in stream_records(stream_trace_events(handle)):
-            element = record.get("element")
-            if not element or element == "unknown":
-                continue
-            start, end = record.get("start_ts"), record.get("end_ts")
-            if start is None or end is None:
-                continue
+        for _record in _folding_spans(
+                stream_records(stream_trace_events(handle)), spans):
+            pass
+    return spans
+
+
+def _folding_spans(records, spans: dict):
+    """`records`, unchanged, folding `element_spans`' entry into `spans`."""
+    for record in records:
+        element = record.get("element")
+        start, end = record.get("start_ts"), record.get("end_ts")
+        if (element and element != "unknown" and start is not None
+                and end is not None):
             entry = spans.get(element)
             if entry is None:
                 spans[element] = {"longest": end - start, "earliest": start}
             else:
                 entry["longest"] = max(entry["longest"], end - start)
                 entry["earliest"] = min(entry["earliest"], start)
-    return spans
+        yield record
+
+
+def _plane2_pass(raw_log: str):
+    """`(element_spans, records)` from **one** read of the raw log.
+
+    `records` are merged (`UX-107`) and ordered by start - see
+    `_write_trackevent` for why the sort stays. `UX-1081`'s review: the
+    spans and the records were two reads of the same log per render.
+    """
+    from .bst_native_build_tracer import merge_record_streams, stream_records, stream_trace_events
+
+    spans = {}
+    with _open_raw(raw_log) as handle:
+        ordered = sorted(
+            _folding_spans(stream_records(stream_trace_events(handle)), spans),
+            key=lambda record: record["start_ts"])
+    return spans, merge_record_streams(ordered)
+
+
+#: `UX-1081`'s review: inside `shared_inputs()`, what `render` derives
+#: from a snapshot that no `planes` step changes, by key.
+_SHARED: Optional[dict] = None
+
+
+@contextlib.contextmanager
+def shared_inputs():
+    """`render` prepares each snapshot's step-independent inputs once.
+
+    `bga view --export` counts a step's tracks and then renders it; both
+    read the same Plane 1 conversion and Plane 2 record list. Nothing is
+    kept after the block.
+    """
+    global _SHARED
+    if _SHARED is not None:
+        yield
+        return
+    _SHARED = {}
+    try:
+        yield
+    finally:
+        _SHARED = None
+
+
+def _shared(key, compute):
+    """`compute()`, once per key inside `shared_inputs()`."""
+    if _SHARED is None:
+        return compute()
+    if key not in _SHARED:
+        _SHARED[key] = compute()
+    return _SHARED[key]
 
 
 def plane1_elements(plane1_events) -> set:
@@ -1350,7 +1407,8 @@ def _plane1_offset_us(plane1_events, spans, anchor_element) -> float:
 
 def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
                       kinds=None, edges=(), snapshot=None, structure=None,
-                      only_element=None, resources=None, tracks_only=False):
+                      only_element=None, resources=None, tracks_only=False,
+                      records=None):
     """The trace, packet by packet - nothing accumulates but the rows.
 
     Plane 1 is a handful of tasks and goes in first from the list the
@@ -1368,9 +1426,8 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
     instant and counter point - the record population, not the track
     population, is what those cost. `export`'s degradation ladder reads
     a step's track count this way before committing to the render that
-    writes it.
+    writes it. `records` is `_plane2_pass`'s, when the caller has it.
     """
-    from .bst_native_build_tracer import merge_record_streams, stream_records, stream_trace_events
     from .native_trace.trackevent import TrackEventWriter
 
     offset_us = (_plane1_offset_us(plane1_events, spans, anchor_element)
@@ -1521,137 +1578,140 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
         element_pid = {element: index + 2
                        for index, element in enumerate(sorted(spans))}
         lanes = {}
-        with _open_raw(raw_log) as handle:
-            # `UX-297`: the events stream; the records are still sorted
-            # by start before they are drawn, and that is deliberate.
-            # Slices are emitted per *track*, and a track here is
-            # `(element, pid)` - which a dual-stream process shares with
-            # itself. The spine sees the exec first and the kernel exit
-            # last; the hook's constructor runs after the exec and its
-            # `atexit` before the exit, so the pass yields the hook's
-            # record first and the spine's second while their starts run
-            # the other way. Measured on the four-line case: streamed
-            # `[hook 100.001, spine 100.000]` against sorted
-            # `[spine 100.000, hook 100.001]`. Emitting that order into
-            # the trace would reorder two slices on one track under a
-            # change about memory, so the sort stays and the floor here
-            # is O(processes) - the events, which are twice as many, are
-            # the ones that no longer pile up.
-            # `UX-406`: **the same join the report uses.** With the
-            # spine on, a dynamically-linked process is recorded twice -
-            # once by the hook and once by the spine - and this path
-            # emitted both, so the trace carried 813 `debug.src=hook`
-            # slices beside 813 `debug.src=spine` ones for 813
-            # processes. `merge_record_streams` is `UX-107`'s join and
-            # was already what stops the *report* double-counting; the
-            # timeline simply never called it.
+        # `UX-297`: the events stream; the records are still sorted
+        # by start before they are drawn, and that is deliberate.
+        # Slices are emitted per *track*, and a track here is
+        # `(element, pid)` - which a dual-stream process shares with
+        # itself. The spine sees the exec first and the kernel exit
+        # last; the hook's constructor runs after the exec and its
+        # `atexit` before the exit, so the pass yields the hook's
+        # record first and the spine's second while their starts run
+        # the other way. Measured on the four-line case: streamed
+        # `[hook 100.001, spine 100.000]` against sorted
+        # `[spine 100.000, hook 100.001]`. Emitting that order into
+        # the trace would reorder two slices on one track under a
+        # change about memory, so the sort stays and the floor here
+        # is O(processes) - the events, which are twice as many, are
+        # the ones that no longer pile up.
+        # `UX-406`: **the same join the report uses.** With the
+        # spine on, a dynamically-linked process is recorded twice -
+        # once by the hook and once by the spine - and this path
+        # emitted both, so the trace carried 813 `debug.src=hook`
+        # slices beside 813 `debug.src=spine` ones for 813
+        # processes. `merge_record_streams` is `UX-107`'s join and
+        # was already what stops the *report* double-counting; the
+        # timeline simply never called it.
+        #
+        # Everything below derives from this list - the slices, the
+        # exec-chain flows, the concurrency counter - so joining
+        # here fixes all three at once, and the counter's peak
+        # equals the report's `max_concurrency` again, which is the
+        # equality `docs/spec/trace-dictionary.md` publishes and
+        # `UX-310` was closed on. `UX-572`: that equality is this
+        # call's consequence, so both sentences name it.
+        if records is None:
+            records = _plane2_pass(raw_log)[1]
+        # `UX-309`: the exec chain needs each record's parent, which
+        # is a lookup over the list the sort already materialized -
+        # no second read of the log, and no second copy of it.
+        # `UX-430`: the narrowing, applied to the record list every
+        # other Plane 2 number is derived from - the lanes, the exec
+        # flows and the concurrency counter all fold from `records`,
+        # so filtering here keeps them consistent with each other
+        # rather than showing one element's lanes under the whole
+        # build's counter.
+        source = records
+        if only_element is not None:
+            records = [record for record in records
+                       if record.get("element") == only_element]
+        # `UX-1081`'s review: the same records give the same flows and
+        # series; `source` rides in the value so its `id` stays its own.
+        _source, plane2_flows, next_flow, series = _shared(
+            ("plane2-derived", id(source), only_element, next_flow),
+            lambda: (source, *_plane2_flows(records, next_flow),
+                     concurrency_series(records)))
+        flow_count = next_flow - 1
+        # `UX-310`: the series, folded from the records already in
+        # hand and hung off the Plane 1 lane so it graphs above the
+        # build rather than inside one element's group.
+        counter_track = None
+        if series:
+            counter_track = trace.counter_track(
+                CONCURRENCY_COUNTER, parent=plane1_track,
+                unit_name=CONCURRENCY_UNIT)
+            if not tracks_only:
+                for timestamp, value in series:
+                    trace.counter(
+                        int(round(timestamp * 1e6 * NS_PER_US
+                                  + offset_us * NS_PER_US)),
+                        counter_track, value)
+        for record in records:
+            element = record.get("element") or "unknown"
+            pid = element_pid.get(element)
+            if pid is None:
+                pid = element_pid[element] = len(element_pid) + 2
+            lane = lanes.get(element)
+            if lane is None:
+                # `UX-311`: the kind in the label, so a lane says
+                # what sort of element it is without a lookup.
+                kind = kinds.get(element)
+                label = (f"native: {element} ({kind})" if kind
+                         else f"native: {element}")
+                lane = lanes[element] = {
+                    "track": trace.process_track(
+                        label, pid=pid,
+                        rank=element_rank.get(element, len(element_rank) + 2)),
+                    "threads": {},
+                }
+            thread = lane["threads"].get(record["pid"])
+            if thread is None:
+                thread = lane["threads"][record["pid"]] = trace.thread_track(
+                    f"pid {record['pid']}", parent=lane["track"],
+                    pid=pid, tid=record["pid"])
+            if tracks_only:
+                continue
+            start_ns = int(round(record["start_ts"] * 1e6 * NS_PER_US
+                                 + offset_us * NS_PER_US))
+            # `UX-333`: the whole command, and nothing beside it.
             #
-            # Everything below derives from this list - the slices, the
-            # exec-chain flows, the concurrency counter - so joining
-            # here fixes all three at once, and the counter's peak
-            # equals the report's `max_concurrency` again, which is the
-            # equality `docs/spec/trace-dictionary.md` publishes and
-            # `UX-310` was closed on. `UX-572`: that equality is this
-            # call's consequence, so both sentences name it.
-            records = merge_record_streams(
-                sorted(stream_records(stream_trace_events(handle)),
-                       key=lambda record: record["start_ts"]))
-            # `UX-309`: the exec chain needs each record's parent, which
-            # is a lookup over the list the sort already materialized -
-            # no second read of the log, and no second copy of it.
-            # `UX-430`: the narrowing, applied to the record list every
-            # other Plane 2 number is derived from - the lanes, the exec
-            # flows and the concurrency counter all fold from `records`,
-            # so filtering here keeps them consistent with each other
-            # rather than showing one element's lanes under the whole
-            # build's counter.
-            if only_element is not None:
-                records = [record for record in records
-                           if record.get("element") == only_element]
-            plane2_flows, next_flow = _plane2_flows(records, next_flow)
-            flow_count = next_flow - 1
-            # `UX-310`: the series, folded from the records already in
-            # hand and hung off the Plane 1 lane so it graphs above the
-            # build rather than inside one element's group.
-            series = concurrency_series(records)
-            counter_track = None
-            if series:
-                counter_track = trace.counter_track(
-                    CONCURRENCY_COUNTER, parent=plane1_track,
-                    unit_name=CONCURRENCY_UNIT)
-                if not tracks_only:
-                    for timestamp, value in series:
-                        trace.counter(
-                            int(round(timestamp * 1e6 * NS_PER_US
-                                      + offset_us * NS_PER_US)),
-                            counter_track, value)
-            for record in records:
-                element = record.get("element") or "unknown"
-                pid = element_pid.get(element)
-                if pid is None:
-                    pid = element_pid[element] = len(element_pid) + 2
-                lane = lanes.get(element)
-                if lane is None:
-                    # `UX-311`: the kind in the label, so a lane says
-                    # what sort of element it is without a lookup.
-                    kind = kinds.get(element)
-                    label = (f"native: {element} ({kind})" if kind
-                             else f"native: {element}")
-                    lane = lanes[element] = {
-                        "track": trace.process_track(
-                            label, pid=pid,
-                            rank=element_rank.get(element, len(element_rank) + 2)),
-                        "threads": {},
-                    }
-                thread = lane["threads"].get(record["pid"])
-                if thread is None:
-                    thread = lane["threads"][record["pid"]] = trace.thread_track(
-                        f"pid {record['pid']}", parent=lane["track"],
-                        pid=pid, tid=record["pid"])
-                if tracks_only:
-                    continue
-                start_ns = int(round(record["start_ts"] * 1e6 * NS_PER_US
-                                     + offset_us * NS_PER_US))
-                # `UX-333`: the whole command, and nothing beside it.
-                #
-                # `UX-308` trimmed this to 120 characters and put the
-                # full argv in `debug.cmd`, reasoning that a lane is
-                # read at a glance and length belongs in an annotation.
-                # The field report says the click is the wrong trade,
-                # and measuring it says worse: a compiler argv's
-                # distinguishing part is the **file at the end**, and
-                # its first 120 characters are the flags every
-                # invocation shares. Three thousand distinct compiles
-                # interned to **one** name - the whole workload drawn
-                # as one repeated label. The trim did not hide detail;
-                # it destroyed identity.
-                #
-                # Dropping `debug.cmd` with it is what makes this
-                # nearly free: the string is interned once as a name
-                # instead of twice (+0.6% raw against +75.1% for
-                # keeping both). Near-unique names mean interning saves
-                # little, and that is the point - the bytes moved from
-                # the annotation to the name table rather than doubled.
-                name = record.get("cmd") or "process"
-                annotations = _plane2_annotations(record)
-                categories = _plane2_categories(record)
-                sources, sinks = plane2_flows.get(id(record), ((), ()))
-                if record["open"] or record["end_ts"] is None:
-                    # No observed exit. An instant, never a zero-width
-                    # bar and never a fabricated end (`UX-188`).
-                    trace.instant(start_ns, thread,
-                                  f"{name} (no observed exit)",
-                                  annotations=annotations,
-                                  categories=categories,
-                                  flows=sources, terminating_flows=sinks)
-                    continue
-                end_ns = int(round(record["end_ts"] * 1e6 * NS_PER_US
-                                   + offset_us * NS_PER_US))
-                trace.slice_begin(start_ns, thread, name,
-                                  annotations=annotations,
-                                  categories=categories,
-                                  flows=sources, terminating_flows=sinks)
-                trace.slice_end(max(end_ns, start_ns), thread)
+            # `UX-308` trimmed this to 120 characters and put the
+            # full argv in `debug.cmd`, reasoning that a lane is
+            # read at a glance and length belongs in an annotation.
+            # The field report says the click is the wrong trade,
+            # and measuring it says worse: a compiler argv's
+            # distinguishing part is the **file at the end**, and
+            # its first 120 characters are the flags every
+            # invocation shares. Three thousand distinct compiles
+            # interned to **one** name - the whole workload drawn
+            # as one repeated label. The trim did not hide detail;
+            # it destroyed identity.
+            #
+            # Dropping `debug.cmd` with it is what makes this
+            # nearly free: the string is interned once as a name
+            # instead of twice (+0.6% raw against +75.1% for
+            # keeping both). Near-unique names mean interning saves
+            # little, and that is the point - the bytes moved from
+            # the annotation to the name table rather than doubled.
+            name = record.get("cmd") or "process"
+            annotations = _plane2_annotations(record)
+            categories = _plane2_categories(record)
+            sources, sinks = plane2_flows.get(id(record), ((), ()))
+            if record["open"] or record["end_ts"] is None:
+                # No observed exit. An instant, never a zero-width
+                # bar and never a fabricated end (`UX-188`).
+                trace.instant(start_ns, thread,
+                              f"{name} (no observed exit)",
+                              annotations=annotations,
+                              categories=categories,
+                              flows=sources, terminating_flows=sinks)
+                continue
+            end_ns = int(round(record["end_ts"] * 1e6 * NS_PER_US
+                               + offset_us * NS_PER_US))
+            trace.slice_begin(start_ns, thread, name,
+                              annotations=annotations,
+                              categories=categories,
+                              flows=sources, terminating_flows=sinks)
+            trace.slice_end(max(end_ns, start_ns), thread)
         return {"packets": trace.packets, "slices": trace.slices,
                 "tracks": trace.tracks, "flows": flow_count,
                 "flow_losses": accounting, "incomplete_reason": reason,
@@ -1687,6 +1747,29 @@ PLANE1_ONLY = "1"
 PLANE_CHOICES = (PLANES_BOTH, PLANE1_ONLY)
 
 
+def _plane1_events(wrapped: str, plane1: str) -> list:
+    """Plane 1's events, converted into `plane1` and read back."""
+    from .bst_log_to_chrome_trace import main as plane1_main
+
+    # The existing converters, called rather than reimplemented, so this
+    # command cannot drift from the three-command form it replaces.
+    code = plane1_main([wrapped, plane1], quiet=True)
+    if code:
+        raise RuntimeError(f"rendering Plane 1 failed (exit {code})")
+    with open(plane1, encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+def _spans_and_records(raw: Optional[str], fmt: str):
+    """`(spans, records)`: trackevent's in one shared read of the raw log;
+    chrome's merge reads the log itself, so it gets the spans alone."""
+    if not raw:
+        return {}, None
+    if fmt == FORMAT_TRACKEVENT:
+        return _shared(("plane2", raw), lambda: _plane2_pass(raw))
+    return element_spans(raw), None
+
+
 def render(snapshot: str, output: Optional[str],
            anchor_element: Optional[str] = None, quiet: bool = False,
            fmt: str = FORMAT_TRACKEVENT, planes: str = PLANES_BOTH,
@@ -1709,7 +1792,6 @@ def render(snapshot: str, output: Optional[str],
     `None`; nothing is written, and `result["tracks"]` is the number a
     full render of the same run and `planes` would open.
     """
-    from .bst_log_to_chrome_trace import main as plane1_main
     from .native_trace_to_chrome_trace import main as merge_main
 
     if fmt not in FORMATS:
@@ -1723,12 +1805,11 @@ def render(snapshot: str, output: Optional[str],
     scratch = tempfile.mkdtemp(prefix="bga-timeline-")
     try:
         plane1 = os.path.join(scratch, "plane1.json")
-        # The existing converters, called rather than reimplemented, so
-        # this command cannot drift from the three-command form it
-        # replaces.
-        code = plane1_main([wrapped, plane1], quiet=True)
-        if code:
-            raise RuntimeError(f"rendering Plane 1 failed (exit {code})")
+        # `UX-1081`'s review: trackevent reads the events, never the
+        # file, so a shared block converts Plane 1 once.
+        plane1_events = (
+            _shared(("plane1", wrapped), lambda: _plane1_events(wrapped, plane1))
+            if fmt == FORMAT_TRACKEVENT else _plane1_events(wrapped, plane1))
 
         raw = _raw_log(snapshot)
         # `UX-430`: asked for Plane 1 alone, the raw log is simply not
@@ -1741,19 +1822,23 @@ def render(snapshot: str, output: Optional[str],
                         "with; this run's raw log is still beside the "
                         "snapshot")
             raw = None
-        with open(plane1, encoding="utf-8") as handle:
-            plane1_events = json.load(handle)
-        spans = element_spans(raw) if raw else {}
+        spans, records = _spans_and_records(raw, fmt)
         anchor = anchor_element or choose_anchor(spans, plane1_events)
 
         if fmt == FORMAT_TRACKEVENT:
             written = _write_trackevent(
                 plane1_events, raw if anchor else None, spans, anchor, output,
-                kinds=element_kinds(snapshot),
-                edges=dependency_edges(snapshot), snapshot=snapshot,
-                structure=element_structure(snapshot),
-                resources=task_resources(snapshot),
-                only_element=only_element, tracks_only=tracks_only)
+                kinds=_shared(("kinds", snapshot),
+                              lambda: element_kinds(snapshot)),
+                edges=_shared(("edges", snapshot),
+                              lambda: dependency_edges(snapshot)),
+                snapshot=snapshot,
+                structure=_shared(("structure", snapshot),
+                                  lambda: element_structure(snapshot)),
+                resources=_shared(("resources", snapshot),
+                                  lambda: task_resources(snapshot)),
+                only_element=only_element, tracks_only=tracks_only,
+                records=records)
             result = {"planes": ["1", "2"] if (raw and anchor) else ["1"],
                       "anchor": anchor, "raw_log": raw, "format": fmt}
             result.update(written)

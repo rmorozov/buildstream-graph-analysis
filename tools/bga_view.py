@@ -628,7 +628,9 @@ def predicted_tracks(run: str, planes: Optional[str] = None) -> Optional[int]:
     exact, not a curve fit) but skips every slice, instant and counter
     point - the record population, which is what the render actually
     spends its time on. `None` on any refusal a real render would also
-    give, so the caller falls back to rendering and finding out.
+    give, so the caller falls back to rendering and finding out. Inside
+    `bga_timeline.shared_inputs()` the render after it reuses its Plane 1
+    conversion and Plane 2 record pass.
     """
     from .bga_timeline import PLANES_BOTH, render
 
@@ -1350,6 +1352,8 @@ def export(run: str, path: str, with_trace: bool = True,
         # into a band (`UX-55`).
         documents["run"]["comparison_unavailable"] = notes["comparison_unavailable"]
 
+    from .bga_timeline import shared_inputs
+
     trace = trace_planes = flow_losses = trace_tracks = None
     omitted = degraded = None
     ceiling_refused = False
@@ -1357,32 +1361,35 @@ def export(run: str, path: str, with_trace: bool = True,
         # `UX-530`: the recipe below already named the flag that would
         # have fitted, and the export refused without trying it.
         refusals, tried, fitted = [], [], False
-        for step, narrowing in _degradation_steps():
-            # `UX-1081`: known from the run's own counts, before paying
-            # to render this step at all - a step already over the track
-            # ceiling is never rendered to find that out. The byte
-            # ceiling has no such shortcut: it is only knowable once the
-            # bytes exist.
-            counted = predicted_tracks(run, planes=step)
-            precheck = _over_track_ceiling(counted)
-            if precheck is not None:
-                refusals.append(precheck)
+        # `UX-1081`'s review: a step's track count and its render
+        # share one Plane 1 conversion and one Plane 2 record pass.
+        with shared_inputs():
+            for step, narrowing in _degradation_steps():
+                # `UX-1081`: known from the run's own counts, before paying
+                # to render this step at all - a step already over the track
+                # ceiling is never rendered to find that out. The byte
+                # ceiling has no such shortcut: it is only knowable once the
+                # bytes exist.
+                counted = predicted_tracks(run, planes=step)
+                precheck = _over_track_ceiling(counted)
+                if precheck is not None:
+                    refusals.append(precheck)
+                    tried.append(narrowing or "the whole timeline")
+                    continue
+                trace, trace_planes, flow_losses, trace_tracks = trace_with_planes(
+                    run, planes=step)
+                if trace is None:
+                    break
+                refusal = _over_a_ceiling(trace, trace_tracks)
+                if refusal is None:
+                    fitted = True
+                    if refusals:
+                        degraded = (f"The whole timeline did not fit - "
+                                    f"{refusals[0]} - so this file carries "
+                                    f"{narrowing}: {trace_tracks:,} tracks.")
+                    break
+                refusals.append(refusal)
                 tried.append(narrowing or "the whole timeline")
-                continue
-            trace, trace_planes, flow_losses, trace_tracks = trace_with_planes(
-                run, planes=step)
-            if trace is None:
-                break
-            refusal = _over_a_ceiling(trace, trace_tracks)
-            if refusal is None:
-                fitted = True
-                if refusals:
-                    degraded = (f"The whole timeline did not fit - "
-                                f"{refusals[0]} - so this file carries "
-                                f"{narrowing}: {trace_tracks:,} tracks.")
-                break
-            refusals.append(refusal)
-            tried.append(narrowing or "the whole timeline")
         if refusals and not fitted:
             # Every step tried and none fitted. The reader is owed each
             # number, not only the last: a refusal naming one narrowing

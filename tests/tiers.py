@@ -1037,4 +1037,10 @@ MEDIUM = (
     "tests/unit/test_the_key_set_reads_the_builds_options.py",         #  2.5s
     # `UX-1081`: 1.56 / 1.79 / 1.89s.
     "tests/unit/test_the_export_renders_one_timeline.py",              #  1.8s
+    # Round 150, tiered on the merged tree: three single-process runs
+    # alone each (setup+call+teardown).
+    # `UX-1073`: 1.50 / 1.53 / 1.50s.
+    "tests/unit/test_compare_reads_published_analyses.py",             #  1.5s
+    # `UX-1078`: 1.08 / 1.03 / 1.03s.
+    "tests/unit/test_the_tail_says_what_it_is_doing.py",               #  1.0s
 )

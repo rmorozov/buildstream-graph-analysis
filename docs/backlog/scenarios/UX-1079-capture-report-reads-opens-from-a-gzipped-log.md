@@ -36,3 +36,22 @@ The capture itself, which reads the uncompressed log.
 `tests/unit/test_opens_from_a_gzipped_log.py`: `capture report` on a gzipped copy of a log with `OPENS` blocks
 returns the same `opens_captured` as on the plain file. Mutation:
 restore the plain `open`, and it reds.
+
+## Outcome
+
+Gap: `load_and_summarize`'s opens pass re-opened
+`raw_log_path` with plain `open`, after the process pass had already
+gone through `_open_maybe_gzipped` (`UX-330`) two lines above it - the
+audit's `m_p10.log.gz` read `opens_captured: {}` against the plain
+file's 1,202 elements.
+
+Close: the opens pass now opens through `_open_maybe_gzipped` too, one
+`with` clause changed at `tools/bst_native_build_tracer.py:6764`.
+`python3 -m pytest tests/unit/test_opens_from_a_gzipped_log.py -q`:
+`1 passed in 0.49s`.
+
+Mutation table:
+
+| mutation | reddened | count |
+|---|---|---|
+| restore the plain `open` on the opens pass | `test_opens_captured_is_the_same_plain_or_gzipped` | 1 failed (gz `opens_captured` `{}` vs plain's `{'a.bst': ...}`) |

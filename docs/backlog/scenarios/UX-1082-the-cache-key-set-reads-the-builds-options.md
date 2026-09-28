@@ -65,3 +65,28 @@ differ. Unmarked: a snapshot issues no `bst show` before the build
 block yields an unread key set, not an empty one. Mutation: read the
 keys from an option-less `bst show`, and the two-variant case reds;
 restore the pre-build call, and the argv count reds.
+
+## Outcome
+
+**Gap measured** (real capture, `bstshim`, `examples/06`): the pre-build
+`bst show --format '%{name} %{full-key}'` cost 1.16s cold / 1.18s warm
+of a 40.2s/5.1s snapshot, dropped `_bst_global_options(cmd)`, and used
+`shutil.which("bst")` rather than `cmd[0]` - a project built with `bst
+-o arch aarch64 build all.bst` recorded the default options' keys.
+
+**Close measured**: the pre-build `bst show` subprocess call is gone;
+`cache_key_set` is now read from the build's own Plane 1 log's
+`Pipeline` block (`%{state} %{full-key} %{name}`) after the build
+finishes, so it reflects the options that build actually ran with.
+`tests/unit/test_the_key_set_reads_the_builds_options.py`: 9 passed,
+1 real-bst-marked (two variants of `tests/fixtures/bst_option_project`
+under `-o variant a`/`-o variant b`, each read key set equal to an
+option-aware `bst show -o ...` for that variant, and the two differ:
+`8a6d1423...` vs `eef433f4...`).
+
+**Mutation table**
+
+| mutation | reddened | count |
+|---|---|---|
+| `cache_key_set` read via an option-less hash (`hash_cache_key_lines("")`) instead of the log | `test_the_report_carries_the_key_set_read_from_the_log`, `test_a_report_without_a_pipeline_block_carries_an_unread_key_set` | 2 of 2 |
+| the pre-build `bst show` call restored (`subprocess.run([cmd[0], "show"], ...)` before `run_traced_build`) | `test_the_snapshot_issues_no_bst_show_before_the_build` | 1 of 1 |

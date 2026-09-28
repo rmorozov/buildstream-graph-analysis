@@ -302,6 +302,38 @@ def _graph_fingerprint(cache_key_set: Optional[dict], targets: Sequence[str],
     }
 
 
+# BuildStream 2.8's `cli` group options that change what `show` resolves;
+# `--max-jobs` is replayed from the log instead, the rest leave the graph alone.
+_GRAPH_OPTIONS_TWO_VALUES = frozenset({"-o", "--option"})
+_GRAPH_OPTIONS_ONE_VALUE = frozenset({"-c", "--config", "-C", "--directory"})
+_GRAPH_OPTIONS_FLAGS = frozenset({"--strict", "--no-strict"})
+
+
+def _graph_affecting_options(bst_global_options: Optional[Sequence[str]]) -> list:
+    """UX-1083: the build's own `-o`/`--config`/`--directory`/`--strict`
+    tokens, in order, from the arity-parsed list the tracer hands over."""
+    from .bst_native_build_tracer import _BST_GLOBAL_OPTIONS_ONE_VALUE
+    opts = list(bst_global_options or [])
+    kept: list = []
+    i = 0
+    while i < len(opts):
+        tok = opts[i]
+        if tok in _GRAPH_OPTIONS_TWO_VALUES:
+            kept.extend(opts[i:i + 3])
+            i += 3
+        elif tok in _GRAPH_OPTIONS_ONE_VALUE:
+            kept.extend(opts[i:i + 2])
+            i += 2
+        elif tok in _GRAPH_OPTIONS_FLAGS or tok.split("=", 1)[0] in _GRAPH_OPTIONS_ONE_VALUE:
+            kept.append(tok)
+            i += 1
+        elif tok in _BST_GLOBAL_OPTIONS_ONE_VALUE:
+            i += 2
+        else:
+            i += 1
+    return kept
+
+
 def _reused_graph_from_baseline(baseline_run_dir: Optional[str],
                                 fingerprint: dict) -> Optional[dict]:
     """UX-1083: `None` unless `baseline_run_dir/graph.json` carries an
@@ -618,8 +650,8 @@ def extract_run(
         graph = reused
     else:
         try:
-            graph = extract_graph(project_dir, targets, bst_bin=bst_bin,
-                                  bst_options=replayed)
+            graph = extract_graph(project_dir, targets, bst_bin=bst_bin, bst_options=[
+                *_graph_affecting_options(bst_global_options), *replayed])
         except RuntimeError as e:
             raise RuntimeError(f"graph extraction failed: {e}") from e
 

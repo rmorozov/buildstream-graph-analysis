@@ -1043,4 +1043,6 @@ MEDIUM = (
     "tests/unit/test_compare_reads_published_analyses.py",             #  1.5s
     # `UX-1078`: 1.08 / 1.03 / 1.03s.
     "tests/unit/test_the_tail_says_what_it_is_doing.py",               #  1.0s
+    # `UX-1083` review (PR #300): 7.58 / 7.40 / 7.39s, its bst arm included.
+    "tests/unit/test_the_graph_reads_the_builds_options.py",           #  7.5s
 )

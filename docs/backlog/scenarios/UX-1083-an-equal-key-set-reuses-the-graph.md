@@ -43,6 +43,13 @@ configuration, and the `bga-foundation` tier. `requested_target`,
 from this build rather than copied. Any difference or unread term runs
 `bst show` as today. The snapshot records which happened and why.
 
+Review finding (Ruslan, PR #300): a fresh extraction replays the
+build's graph-affecting global options (`-o/--option`, `-c/--config`,
+`-C/--directory`, `--strict/--no-strict` - read off BuildStream 2.8.1's
+own `cli` group) before `show`, `--max-jobs` once from the log. Without
+them `bst -o variant b build` wrote variant A's `graph.json` under a
+B fingerprint, and a later B capture reused it.
+
 ## Out of Scope
 
 Reusing the analysis itself (`UX-1073`).
@@ -103,3 +110,27 @@ new flag adds at least three lines. `tests/unit/test_the_snapshot_passes_its_bas
 `take_snapshot`/`tracer.main`/`extract_run` path, `run_traced_build`
 faked. `docs/guides/cli.md`'s environment inventory gained the row
 (`test_the_environment_surface_is_an_inventory.py`).
+
+**Review finding (Ruslan, PR #300)**: a fresh `extract_graph` got
+only `--max-jobs`. Gap, measured through the fix's own test with the
+options dropped: the `-o variant b` capture's `graph.json` was
+`{'app.bst': '8a6d1423'}`, no edges, against `bst -o variant b show`'s
+`{'base-b.bst': '6aa1e8b2', 'app.bst': '798170dc'}` and
+`base-b.bst -> app.bst`. Close: `_graph_affecting_options` keeps
+`-o`/`-c`/`-C`/`--strict` in order, drops every other global option by
+its arity, and `extract_graph` gets them ahead of the replayed
+`--max-jobs`. `bst_option_project`'s `app.bst` depends on `base-b.bst`
+under `variant == "b"`. `tests/unit/test_the_graph_reads_the_builds_options.py`:
+3 passed - real builds A, B, B-after-B (reused) and B-after-A (fresh)
+each equal an option-aware `bst show --deps all`.
+
+| mutation | reddened | count |
+|---|---|---|
+| `extract_graph(..., bst_options=replayed)` (options dropped) | the options-in-order-to-`show` test, the real two-variant test | 2 of 3 |
+| `-o` branch dropped from `_graph_affecting_options` | all three | 3 of 3 |
+| other valued options' values not skipped | the options-kept-in-order test | 1 of 3 |
+| unfiltered global options passed (`--max-jobs` twice) | the one-`--max-jobs` test | 1 of 3 |
+
+The new bst-gated file moved three pins: `ci.yml`'s bst tier 52 -> 53,
+`test_a_generated_project_builds.py`'s gated population 19 -> 20 (18
+CAS-writing), `test_the_loop_stays_fast.py`'s selector p90 61 -> 62.

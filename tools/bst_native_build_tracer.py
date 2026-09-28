@@ -1442,11 +1442,6 @@ def read_jobserver_tool_pids(raw_log_path: str) -> tuple:
     return tool_pids, ends
 
 
-#: UX-844: `bst show`'s own timeout for the pre-build cache key set -
-#: generous because a cold project can still be resolving sources.
-CACHE_KEY_SET_TIMEOUT_S = 300
-
-
 def count_memory_psi_withdraws(path: str) -> int:
     """UX-850: `withdraw` rows the memory-PSI bound caused, in the same
     ledger `summarize_jobserver_ledger` reads - distinguished only by
@@ -1485,11 +1480,45 @@ def hash_cache_key_lines(text: str) -> dict:
     return {"sha256": digest, "elements": len(lines)}
 
 
-def bst_command_targets(cmd: list[str]) -> list[str]:
-    """Element names named on a `bst` command line - anything that is
-    not an option and ends `.bst`, the shape every target BuildStream
-    accepts takes."""
-    return [arg for arg in cmd if arg.endswith(".bst") and not arg.startswith("-")]
+#: UX-1082: one `Pipeline` block element line is
+#: `%{state: >12} %{full-key} %{name} %{workspace-dirs}` - the key is
+#: 64 hex chars, or 64 `?` while a source is not yet resolved.
+_PIPELINE_ELEMENT_RE = re.compile(r"([0-9a-f]{64}|\?{64})\s+(\S+)\s*$")
+
+
+def read_cache_key_set_from_plane1_log(plane1_log_path: Optional[str]) -> Optional[dict]:
+    """UX-1082: the pre-build key set, read from the build's own Plane 1
+    `Pipeline` block instead of a second, option-blind `bst show` - the
+    block already reflects the options this build ran with. `None`
+    ("unread") when the block is absent, empty, or any key has not
+    resolved yet, rather than hashing a guessed subset.
+    """
+    if not plane1_log_path or not os.path.exists(plane1_log_path):
+        return None
+    lines = []
+    in_block = False
+    try:
+        with open(plane1_log_path, encoding="utf-8", errors="replace") as handle:
+            for raw in handle:
+                stripped = raw.rstrip("\n")
+                if not in_block:
+                    if stripped.endswith("Pipeline"):
+                        in_block = True
+                    continue
+                if "=" * 20 in stripped:
+                    break
+                match = _PIPELINE_ELEMENT_RE.search(stripped)
+                if not match:
+                    continue
+                key, name = match.group(1), match.group(2)
+                if key.startswith("?"):
+                    return None
+                lines.append(f"{name} {key}")
+    except OSError:
+        return None
+    if not lines:
+        return None
+    return hash_cache_key_lines("\n".join(lines))
 
 
 #: UX-846: the tools this *held-token* wrapper covers - none of them
@@ -8505,25 +8534,10 @@ def main(argv: Optional[list[str]] = None) -> int:
         # broker needs one).
         admission_status_path = (f"{args.output}.admission_status.json"
                                  if args.jobserver else None)
-        # UX-844: the key set before the build starts, so a later capture
-        # (with or without the mode) is comparable against it. Never an
-        # abort - a project `bst show` cannot resolve is still traced.
+        # UX-1082: no separate pre-build `bst show` - the key set is
+        # read after the build, from its own Plane 1 log's `Pipeline`
+        # block, so it reflects the options this build ran with.
         cache_key_set = None
-        cache_key_targets = bst_command_targets(cmd)
-        bst_path = shutil.which("bst") if cache_key_targets else None
-        if cache_key_targets and bst_path:
-            try:
-                key_result = subprocess.run(
-                    [bst_path, "show", "--format", "%{name} %{full-key}",
-                     *cache_key_targets],
-                    cwd=args.project_dir, capture_output=True, text=True,
-                    timeout=CACHE_KEY_SET_TIMEOUT_S, check=True,
-                )
-            except (subprocess.SubprocessError, OSError) as exc:
-                print(f"Warning: could not read the cache key set ({exc})",
-                      file=sys.stderr)
-            else:
-                cache_key_set = hash_cache_key_lines(key_result.stdout)
         try:
             returncode = run_traced_build(args.project_dir, cmd, raw_log_path,
                                           wrapped_log_path=wrapped_log_path,
@@ -8580,6 +8594,10 @@ def main(argv: Optional[list[str]] = None) -> int:
             print(f"Error: {e}", file=sys.stderr)
             return 1
 
+        # UX-1082: the build's own `Pipeline` block, not a second
+        # `bst show` - reflects the options this run actually used.
+        cache_key_set = read_cache_key_set_from_plane1_log(wrapped_log_path)
+
         if diagnostics_path:
             # UX-147: how many element tasks actually ran, so a zero can
             # be told apart from a cache-hit build. Read from the Plane 1
@@ -8610,10 +8628,10 @@ def main(argv: Optional[list[str]] = None) -> int:
                                         plane1_log_path=wrapped_log_path,
                                         cpu_samples_path=cpu_samples_path)
             report["wrapped_command_exit_code"] = returncode
-            # UX-844: `{"sha256": ..., "elements": N}` from `bst show`
-            # before the build, or `None` when it could not be read -
-            # comparable against another capture's own field. Not a
-            # `jobserver*` key - stays here rather than in `report_block`.
+            # UX-1082: `{"sha256": ..., "elements": N}` from the build's
+            # own `Pipeline` block, or `None` ("unread") - comparable
+            # against another capture's own field. Not a `jobserver*`
+            # key - stays here rather than in `report_block`.
             report["cache_key_set"] = cache_key_set
             # UX-901: everything else the mode publishes, behind the
             # import boundary - `report_block` reads none of these
@@ -8674,9 +8692,19 @@ def main(argv: Optional[list[str]] = None) -> int:
                 from .bst_extract_run import extract_run
                 print("Extracting run data (bst show)...", file=sys.stderr)
                 try:
+                    # UX-1083: `BGA_BASELINE_RUN_DIR`, the same shape
+                    # `BGA_JOBSERVER_MODE` (UX-856) already uses - `bga
+                    # snapshot` sets it beside the mode it resolves, so
+                    # this needs no CLI flag of its own to know which
+                    # baseline to compare this build's own fingerprint
+                    # against. Absent for a direct-tracer invocation,
+                    # same as the jobserver mode above.
                     extract_run(args.project_dir, wrapped_log_path, args.run_dir,
                                 log_format="wrapped", interrupted=interrupted,
-                                jobserver=_jobserver_block(report))
+                                jobserver=_jobserver_block(report),
+                                cache_key_set=cache_key_set,
+                                bst_global_options=_bst_global_options(cmd)[0],
+                                baseline_run_dir=os.environ.get("BGA_BASELINE_RUN_DIR"))
                 except Exception as exc:
                     print(f"Warning: could not extract a run directory into "
                           f"{args.run_dir}: {exc}", file=sys.stderr)

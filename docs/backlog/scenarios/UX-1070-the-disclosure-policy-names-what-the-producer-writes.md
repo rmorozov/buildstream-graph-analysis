@@ -15,7 +15,7 @@ capture refuses the anonymized export. The policy guard walks
 ## Required Fix
 
 Name every path the current producers write in `bga/disclosure.py`,
-classed per `docs/design/anonymized-bundle.md` §3: plane2's `schema`,
+classed per `docs/design/anonymized-bundle.md` section 3: plane2's `schema`,
 `resource_pressure`, `process_outcomes`, `commands_not_observed`,
 `opens_captured.{A}.relative`/`dirfd`, `per_element_parallelism[]
 .resolved_jobs`/`jobs_denominator`, `redundant_operations_coverage`'s

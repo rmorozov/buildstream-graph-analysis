@@ -2036,11 +2036,12 @@ class TestTheSpreadIsTheShiftTheGateUses:
     #: on it the two populations are the same set and the two medians
     #: are the same number - a fixture that cannot tell them apart. A
     #: real suite is 42% sub-floor files (`SHIFT_FLOOR_S`'s own
-    #: measurement), and those are added here so it can.
+    #: measurement), and those are added here so it can - one more than
+    #: the listed files, so a longer list cannot re-merge the medians.
     def _mixed(self):
         times = dict(tiers.recorded())
         times.update({f"tests/unit/test_tiny_{i}.py": 0.05
-                      for i in range(200)})
+                      for i in range(len(times) + 1)})
         return times
 
     def test_the_recorded_shift_is_the_gates_own(self):

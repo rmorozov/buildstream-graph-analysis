@@ -23,6 +23,7 @@ The host manifest travels inside `run-context.json` untouched, so
 `UX-186`'s cross-host refusal arrives on the far machine intact. A format
 that rewrote it would turn that refusal off by accident.
 """
+import codecs
 import collections
 import decimal
 import functools
@@ -31,12 +32,14 @@ import io
 import json
 import os
 import re
+import shutil
 import tarfile
+import tempfile
 from collections.abc import Callable
 from datetime import datetime, timezone
 from typing import Optional
 
-from . import __version__, anonymize, contracts, disclosure, public_names, run_store
+from . import __version__, anonymize, contracts, disclosure, jsonstream, public_names, run_store
 from .plural import plural
 
 SCHEMA = "bundle-manifest/v1"
@@ -256,6 +259,9 @@ _TIME_AXES = {
 #: 6.2: a dictionary token shorter than this is never scanned for.
 RESIDUE_MIN = 4
 
+#: Bytes of a member the residue scan reads at once.
+RESIDUE_CHUNK = 1 << 20
+
 #: Where each clock's earliest instant lands, in µs: the wall clock at
 #: 2000-01-01T00:00:00Z, since the analyzer reads a 0 start as no start.
 CANONICAL_ORIGIN_US = {"wall": 946684800 * 10**6, "monotonic": 0}
@@ -323,7 +329,7 @@ class _Anonymizer:
         self.public_junctions = public_junctions
         self.counts: collections.Counter = collections.Counter()
         self.kept: set = set()
-        self.times: dict = collections.defaultdict(list)
+        self.times: dict = {}                    # clock -> earliest instant, in µs
         self.origins: dict = {}
         self.policy = ""
 
@@ -338,23 +344,25 @@ class _Anonymizer:
             raise BundleError(f"{self.policy} {pattern}: a time that is not a number")
         return decimal.Decimal(repr(value))
 
-    def collect(self, policy: str, trie: dict, document) -> None:
-        """The first pass: every instant on each clock, so one origin shifts them all."""
+    def collect(self, policy: str, node: dict, value, pattern: str = "") -> None:
+        """The first pass: the earliest instant on each clock, so one origin shifts them all."""
         def leaf(klass, pattern, value):
             if klass == "H":
                 clock, per_unit = self._axis(pattern)
-                self.times[clock].append(self._instant(pattern, value) * per_unit)
+                instant = self._instant(pattern, value) * per_unit
+                if clock not in self.times or instant < self.times[clock]:
+                    self.times[clock] = instant
             return value
         self.policy = policy
-        _rewrite(trie, document, "", leaf, lambda _klass, name: name)
+        _rewrite(node, value, pattern, leaf, lambda _klass, name: name)
 
-    def rewrite(self, policy: str, trie: dict, document):
+    def rewrite(self, policy: str, node: dict, value, pattern: str = ""):
         if not self.origins:
-            self.origins = {clock: min(t).to_integral_value(decimal.ROUND_FLOOR)
+            self.origins = {clock: t.to_integral_value(decimal.ROUND_FLOOR)
                             - CANONICAL_ORIGIN_US.get(clock, 0)
                             for clock, t in self.times.items()}
         self.policy = policy
-        return _rewrite(trie, document, "", self._leaf, self._rename)
+        return _rewrite(node, value, pattern, self._leaf, self._rename)
 
     def _rename(self, klass: str, name: str):
         """A map key's own class. `_leaf` returns `None` only for a
@@ -439,20 +447,71 @@ class _Anonymizer:
         return anonymize.pseudonymize(value, cls, self.key, self.pmap)
 
 
-def _read_documents(source: str) -> list:
-    with open(source, encoding="utf-8") as handle:
-        text = handle.read()
+def _events(source: str, trie: dict):
+    """`jsonstream.events` over `source`, a non-JSON member refused by name."""
     try:
-        if source.endswith(".jsonl"):
-            return [json.loads(line) for line in text.splitlines() if line.strip()]
-        return [json.loads(text)]
+        with open(source, encoding="utf-8") as handle:
+            yield from jsonstream.events(handle, trie, source.endswith(".jsonl"))
     except ValueError as error:
         raise BundleError(f"{os.path.basename(source)} is not JSON ({error}); refusing it") from None
 
 
-def _write_documents(documents: list) -> bytes:
-    lines = [json.dumps(d, ensure_ascii=False) for d in documents]
-    return ("\n".join(lines) + "\n").encode("utf-8")
+def _scan(source: str, policy: str, trie: dict, walk: "_Anonymizer") -> tuple[list, list]:
+    """The first pass over one member: `(gaps, errors)`, the instants
+    collected from every record that has no gap."""
+    gaps: dict = {}
+    errors = []
+    for event in _events(source, trie):
+        if event[0] == "gap":
+            gaps[event[1]] = None
+        elif event[0] == "record":
+            _kind, node, pattern, path, value = event
+            found = list(disclosure.walk(node, value, path))
+            gaps.update(dict.fromkeys(found))
+            try:
+                if not found:
+                    walk.collect(policy, node, value, pattern)
+            except BundleError as error:
+                errors.append(error)
+    return list(gaps), errors
+
+
+def _stream(source: str, policy: str, trie: dict, walk: "_Anonymizer", target: str) -> None:
+    """The second pass: the bytes `json.dumps` writes of the rewritten tree,
+    one document a line, written record by record to a new 0600 `target`."""
+    dumps = functools.partial(json.dumps, ensure_ascii=False)
+    stack: list = []  # per open container: [closer, children written]
+    with open(os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600),
+              "w", encoding="utf-8", newline="") as out:
+        def item():
+            if stack and stack[-1][0] == "]":
+                out.write(", " if stack[-1][1] else "")
+                stack[-1][1] += 1
+        documents = 0
+        for event in _events(source, trie):
+            kind = event[0]
+            if kind == "open":
+                item()
+                out.write(event[1])
+                stack.append(["}" if event[1] == "{" else "]", 0])
+            elif kind == "close":
+                out.write(stack.pop()[0])
+            elif kind == "key":
+                out.write(", " if stack[-1][1] else "")
+                stack[-1][1] += 1
+                name = event[1] if event[2] is None else walk._rename(event[2], event[1])
+                out.write(dumps(name) + ": ")
+            elif kind == "record":
+                item()
+                _kind, node, pattern, _path, value = event
+                out.write(dumps(walk.rewrite(policy, node, value, pattern)))
+            elif kind == "end":
+                out.write("\n")
+                documents += 1
+            else:
+                raise BundleError(f"{policy} {event[1]}: a gap after the first pass")
+        if not documents:
+            out.write("\n")
 
 
 @functools.cache
@@ -498,35 +557,52 @@ def _residue_pattern(dictionary) -> tuple[Optional[re.Pattern], dict]:
     return re.compile(rf"(?<![a-z0-9])(?:{alternation})(?![a-z0-9])"), variants
 
 
-def residue(archive: bytes, dictionary) -> list[str]:
-    """6.2's tripwire over the decoded archive, headers and manifest included:
-    `member: token` for every dictionary token still found in it."""
+def residue(archive: str, dictionary) -> list[str]:
+    """6.2's tripwire over the decoded archive at `archive`, headers and
+    manifest included: `member: token` for every dictionary token still in it.
+    Read `RESIDUE_CHUNK` at a time, the longest variant plus one carried over."""
     pattern, variants = _residue_pattern(dictionary)
     hits: list[str] = []
     if pattern is None:
         return hits
-    with tarfile.open(fileobj=io.BytesIO(archive), mode="r:gz") as tar:
-        for info in tar.getmembers():
+    reach = max(map(len, variants)) + 1
+    # gzip.open, not "r|gz": tarfile inflates a whole 10 KiB block at once, however compressible
+    with gzip.open(archive, "rb") as raw, tarfile.open(fileobj=raw, mode="r|") as tar:
+        for info in tar:
             fields = [info.name, info.uname, info.gname, info.linkname,
                       *map(str, info.pax_headers.values())]
             handle = tar.extractfile(info)
-            if handle is not None:
-                fields.append(handle.read().decode("utf-8", "replace"))
-            found = {variants[m] for m in pattern.findall("\n".join(fields).lower())}
+            decoder = codecs.getincrementaldecoder("utf-8")("replace")
+            text, found = "\n" + "\n".join(fields).lower() + "\n", set()
+            while True:
+                block = handle.read(RESIDUE_CHUNK) if handle is not None else b""
+                text += decoder.decode(block, final=not block).lower()
+                # a match touching the window's end waits: the next block may extend it
+                found.update(variants[m.group()] for m in pattern.finditer(text)
+                             if m.start() and (not block or m.end() < len(text)))
+                if not block:
+                    break
+                text = text[-reach:]
             hits.extend(f"{info.name}: {token}" for token in sorted(found))
     return hits
 
 
-def _pack(manifest: dict, payloads: dict) -> bytes:
-    raw = io.BytesIO()
+def _pack(manifest: dict, sources: dict, scratch: str) -> str:
+    """The archive, new and 0600 in `scratch`, each member copied from its
+    file; a member file in `scratch` is removed once packed."""
+    target = os.path.join(scratch, "bundle.tar.gz")
     body = json.dumps(manifest, indent=2, sort_keys=True).encode("utf-8")
-    with gzip.GzipFile(filename="", fileobj=raw, mode="wb", mtime=0) as compressed, \
+    with open(os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "wb") as raw, \
+            gzip.GzipFile(filename="", fileobj=raw, mode="wb", mtime=0) as compressed, \
             tarfile.open(fileobj=compressed, mode="w", format=tarfile.USTAR_FORMAT) as archive:
         archive.addfile(neutral_tarinfo(MANIFEST_NAME, len(body)), io.BytesIO(body))
-        for relative, payload in payloads.items():
-            archive.addfile(neutral_tarinfo(MEMBER_PREFIX + relative, len(payload)),
-                            io.BytesIO(payload))
-    return raw.getvalue()
+        for relative, source in sources.items():
+            with open(source, "rb") as handle:
+                archive.addfile(neutral_tarinfo(MEMBER_PREFIX + relative,
+                                                os.fstat(handle.fileno()).st_size), handle)
+            if os.path.dirname(source) == scratch:
+                os.remove(source)
+    return target
 
 
 def review_screen(destination: str, manifest: dict, dropped: list,
@@ -552,11 +628,13 @@ def _untreated() -> list[str]:
             if relative not in disclosure.TREATMENTS]
 
 
-def _anonymized_members(snapshot: str, packed: list, walk: _Anonymizer
+def _anonymized_members(snapshot: str, packed: list, walk: _Anonymizer, scratch: str
                         ) -> tuple[list, dict, list]:
-    """Every packed member by its treatment: `(shipped, payloads, dropped)`;
-    refuses the whole export on one disclosure gap."""
-    shipped, payloads, dropped, documents, refused = [], {}, [], {}, []
+    """Every packed member by its treatment: `(shipped, sources, dropped)`,
+    each transformed one rewritten into `scratch`. Every gap and instant
+    first, so one gap refuses the whole export and one origin per clock
+    shifts every instant."""
+    shipped, sources, dropped, refused, errors, tries = [], {}, [], [], [], {}
     for member in packed:
         relative, source = member["path"], os.path.join(snapshot, member["path"])
         treatment = disclosure.TREATMENTS[relative]
@@ -564,36 +642,40 @@ def _anonymized_members(snapshot: str, packed: list, walk: _Anonymizer
             dropped.append(relative)
             continue
         shipped.append(dict(member))
+        sources[relative] = source
         if treatment == disclosure.KEEP:
-            with open(source, "rb") as handle:
-                payloads[relative] = handle.read()
             continue
-        documents[relative] = _read_documents(source)
-        refused.extend(f"{relative}: {gap}" for gap in disclosure.gaps(
-            relative, member["contract"], documents[relative]))
+        policy = disclosure.policy_key(relative, member["contract"])
+        if policy not in disclosure.POLICIES:
+            refused.append(f"{relative}: {disclosure.Gap('', f'{policy!r} has no disclosure policy')}")
+            continue
+        tries[relative] = policy, disclosure.compile_policy(disclosure.POLICIES[policy])
+        gaps, failed = _scan(source, policy, tries[relative][1], walk)
+        refused.extend(f"{relative}: {gap}" for gap in gaps)
+        errors.extend(failed)
     if refused:
         raise BundleError(
             f"{plural(len(refused), 'value path')} the disclosure policy does not "
             f"clear, so nothing was written:\n  " + "\n  ".join(refused))
-    payloads.update(_transformed(shipped, documents, walk))
+    if errors:
+        raise errors[0]
+    for index, (relative, (policy, trie)) in enumerate(tries.items()):
+        sources[relative] = os.path.join(scratch, f"member-{index}")
+        _stream(os.path.join(snapshot, relative), policy, trie, walk, sources[relative])
     for member in shipped:
-        member["bytes"] = len(payloads[member["path"]])
-    return shipped, {m["path"]: payloads[m["path"]] for m in shipped}, dropped
+        member["bytes"] = os.path.getsize(sources[member["path"]])
+    return shipped, sources, dropped
 
 
-def _transformed(shipped: list, documents: dict, walk: _Anonymizer) -> dict:
-    """Two passes: every instant first, so one origin per clock shifts them all."""
-    tries = {}
-    for member in shipped:
-        if member["path"] in documents:
-            policy = disclosure.policy_key(member["path"], member["contract"])
-            tries[member["path"]] = policy, disclosure.compile_policy(disclosure.POLICIES[policy])
-    for relative, (policy, trie) in tries.items():
-        for document in documents[relative]:
-            walk.collect(policy, trie, document)
-    return {relative: _write_documents([walk.rewrite(policy, trie, document)
-                                        for document in documents[relative]])
-            for relative, (policy, trie) in tries.items()}
+def _approved(archive: str, walk: _Anonymizer, review: Callable[[set], bool]) -> None:
+    """Refuses on a residue hit, then unless `review` of the dictionary approves."""
+    dictionary = residue_dictionary(walk.pmap.originals)
+    hits = residue(archive, dictionary)
+    if hits:
+        raise BundleError("the residue scan found original names in the decoded "
+                          "archive, so nothing was written:\n  " + "\n  ".join(hits))
+    if not review(dictionary):
+        raise BundleError("the owner did not approve the review; nothing was written")
 
 
 def export_anonymized(snapshot: str, key: bytes, pmap: "anonymize.PseudonymMap",
@@ -625,19 +707,19 @@ def export_anonymized(snapshot: str, key: bytes, pmap: "anonymize.PseudonymMap",
     except public_names.PublicNamesError as error:
         raise BundleError(str(error)) from error
     walk = _Anonymizer(key, pmap, public, frozenset(declared))
-    shipped, payloads, dropped = _anonymized_members(snapshot, manifest["members"], walk)
-    anon_manifest = anonymized_manifest(dict(manifest, members=shipped), key, walk.pmap, tuple(junctions))
     destination = output or anonymized_output()
-    archive = _pack(anon_manifest, payloads)
-    dictionary = residue_dictionary(walk.pmap.originals)
-    hits = residue(archive, dictionary)
-    if hits:
-        raise BundleError("the residue scan found original names in the decoded "
-                          "archive, so nothing was written:\n  " + "\n  ".join(hits))
-    if not approve(review_screen(destination, anon_manifest, dropped, walk, dictionary)):
-        raise BundleError("the owner did not approve the review; nothing was written")
-    with open(destination, "wb") as handle:
-        handle.write(archive)
+    # beside the destination, so publishing is one rename on one file system
+    scratch = tempfile.mkdtemp(prefix=".bga-bundle-",
+                               dir=os.path.dirname(os.path.abspath(destination)))
+    try:
+        shipped, sources, dropped = _anonymized_members(snapshot, manifest["members"], walk, scratch)
+        anon_manifest = anonymized_manifest(dict(manifest, members=shipped), key, walk.pmap, tuple(junctions))
+        archive = _pack(anon_manifest, sources, scratch)
+        _approved(archive, walk, lambda dictionary: approve(review_screen(
+            destination, anon_manifest, dropped, walk, dictionary)))
+        os.replace(archive, destination)
+    finally:
+        shutil.rmtree(scratch, ignore_errors=True)
     os.makedirs(os.path.dirname(pmap.path) or ".", exist_ok=True)
     pmap.save()
     return destination, anon_manifest

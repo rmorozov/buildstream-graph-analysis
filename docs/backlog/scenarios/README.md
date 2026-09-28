@@ -48,6 +48,8 @@ task file, which is the only place it ever lived twice.
 | UX-1057 | [the decomposition bar's aria-details twin table drops the certified lower-bound mark](UX-1057-the-drawing-routes-twin-table-drops-the-lower-bound-mark.md) | viewer | Medium | R1 | 🔴 Not Started |
 | UX-1058 | [the narrow-rail fold toggle is a click-only `<p>`, unreachable by keyboard](UX-1058-the-narrow-rail-toggle-is-unreachable-by-keyboard.md) | viewer | Medium | R1 | 🔴 Not Started |
 | UX-1066 | [raw logs travel tokenized](UX-1066-raw-logs-travel-tokenized.md) | store | Low | anyone sharing a private capture with an outside reader | 🔴 Not Started |
+| UX-1068 | [a credential in a command line is dropped, not kept](UX-1068-a-credential-in-a-command-line-is-dropped-not-kept.md) | store | High | anyone sharing a private capture with an outside reader | 🔴 Not Started |
+| UX-1069 | [the anonymized export runs in bounded memory](UX-1069-the-anonymized-export-runs-in-bounded-memory.md) | store | High | anyone sharing a large private capture | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

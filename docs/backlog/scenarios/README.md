@@ -55,8 +55,9 @@ task file, which is the only place it ever lived twice.
 | UX-1077 | [the snapshot tail and bga view run minutes of work with no progress and no timing](UX-1077-the-tail-and-the-view-say-what-they-are-doing.md) | cli | High | R1, R5 | 🔴 Not Started |
 | UX-1078 | [a snapshot does not record what bga itself cost the build](UX-1078-the-snapshot-records-bgas-own-cost.md) | capture | Medium | R5, R8 | 🔴 Not Started |
 | UX-1079 | [`bga capture report` on a gzipped raw log drops every opened path, silently](UX-1079-capture-report-reads-opens-from-a-gzipped-log.md) | capture | High | R1, R5 | 🔴 Not Started |
-| UX-1080 | [the snapshot tail's BuildStream calls have never been timed](UX-1080-the-tails-buildstream-calls-are-measured.md) | capture | Medium | R5 | 🔴 Not Started |
+| UX-1080 | [the BuildStream calls bga makes around the build have never been timed](UX-1080-the-tails-buildstream-calls-are-measured.md) | capture | Medium | R5 | 🔴 Not Started |
 | UX-1081 | [`bga view --export` renders a whole timeline before refusing it and rendering a narrower one](UX-1081-the-export-predicts-the-timeline-it-can-carry.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1082 | [the cache key set is read without the build's own options, and silently](UX-1082-the-cache-key-set-reads-the-builds-options.md) | capture | High | R5, R1 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

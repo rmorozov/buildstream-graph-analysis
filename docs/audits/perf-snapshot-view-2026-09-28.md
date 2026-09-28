@@ -1,7 +1,7 @@
 # bga's own cost on the snapshot → view path (2026-09-28)
 
 Measured on `39d89d4`, a 4-core / 15 GB container, Python 3.11, no
-`bst` installed. Rows filed: `UX-1072`..`UX-1081`. Related, not
+`bst` installed. Rows filed: `UX-1072`..`UX-1082`. Related, not
 re-filed: `UX-1069` (the anonymized export's whole-file loads) and
 `UX-1071` (its residue scan at ~0.4 MB/s).
 
@@ -110,6 +110,32 @@ store   DOMContentLoaded   DOM settled   DOM nodes
 
 The fold works: nodes stay flat. Boot time grows about linearly.
 
+## Before the build: entry to `bst build`
+
+`pre.py` below times each step `bga snapshot` runs before the build,
+on generated BuildStream projects (`genproj.py`: 10 local files per
+element, 3 build-depends each):
+
+```text
+step                                 1,201 el   5,001 el
+import bga_snapshot + tracer           0.17s      0.15s
+project check, list_runs, context      0.00s      0.01s
+detect_stale_casd                      0.00s      0.00s
+compile_hook (cc -O2)                  0.17s      0.13s
+compile_spine (cc -static)             0.23s      0.21s
+census for spine=auto (ticker)         0.19s      0.82s   (12,010 / 50,010 files)
+```
+
+bga's own work before the build is under 1.5 s at 5,001 elements, and
+the one step that grows (the census) already draws a ticker. What this
+container cannot time is BuildStream: before the build, bga starts it
+up to three times (`bst --version`, the key-set `bst show`, and one
+more `bst show` under `--jobserver`), about 2 s each for startup alone
+on the Graviton host (2026-09-25) plus project load (`UX-1080`). The
+key-set `bst show` is also silent for up to 300 s and drops the build's
+own `-o`/`--option` flags, so two variants record one key set
+(`UX-1082`).
+
 ## Findings, ranked by what the tail costs
 
 | Rank | Row | Finding | At 5,002 el / 192k proc |
@@ -121,9 +147,10 @@ The fold works: nodes stay flat. Boot time grows about linearly.
 | 5 | `UX-1079` | a gzipped log drops every opened path (correctness) | declared-vs-used absent |
 | 6 | `UX-1075` | gzip level 9 on the raw log | 16.0 s → 3.1 s |
 | 7 | `UX-1076` | opened paths held uninterned | 552 → 261 MB |
-| 8 | `UX-1080` | the tail's `bst` calls are unmeasured | no reading |
+| 8 | `UX-1080` | the `bst` calls around the build are unmeasured | no reading |
 | 9 | `UX-1078` | the snapshot does not record bga's own cost | — |
 | 10 | `UX-1081` | the export renders a timeline it then refuses | 7.2 s |
+| 11 | `UX-1082` | the pre-build key set drops the build's options (correctness), silently | up to 300 s |
 
 Rows 1-3 remove about 70 of the 104 s tail at 5,002 elements before
 the analyzer itself gets faster; row 2 then cuts the rest's memory.
@@ -240,4 +267,60 @@ with contextlib.redirect_stdout(io.StringIO()):
         s.store_listing(store)
 rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss // 1024
 print(f"{step}\t{time.monotonic() - t:.2f}s\tpeakRSS={rss}MB")
+```
+
+`genproj.py` (args: output, layers, width, files per element):
+
+```python
+import os, random, shutil, sys
+out, L, W, F = sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4])
+rnd = random.Random(1)
+os.makedirs(f"{out}/elements", exist_ok=True)
+open(f"{out}/project.conf", "w").write("name: perf\nmin-version: 2.0\nelement-path: elements\n")
+names = []
+for l in range(L):
+    layer = []
+    for w in range(W):
+        n = f"l{l:02d}/e{w:03d}.bst"
+        os.makedirs(f"{out}/elements/l{l:02d}", exist_ok=True)
+        src = f"files/l{l:02d}/e{w:03d}"; os.makedirs(f"{out}/{src}", exist_ok=True)
+        for k in range(F):
+            p = f"{out}/{src}/f{k}.c"
+            if k == 0: shutil.copy("/bin/true", f"{out}/{src}/tool")
+            else: open(p, "w").write("int x;\n" * 20)
+        deps = rnd.sample(names[-1], min(3, len(names[-1]))) if names else []
+        body = "kind: manual\n"
+        if deps: body += "build-depends:\n" + "".join(f"- {d}\n" for d in deps)
+        body += f"sources:\n- kind: local\n  path: {src}\n"
+        open(f"{out}/elements/{n}", "w").write(body)
+        layer.append(n)
+    names.append(layer)
+top = [n for layer in names for n in layer]
+open(f"{out}/elements/all.bst", "w").write("kind: stack\ndepends:\n" + "".join(f"- {n}\n" for n in names[-1]))
+print(len(top) + 1, "elements")
+```
+
+`pre.py` (args: project):
+
+```python
+import os, sys, time, resource, tempfile, io, contextlib
+sys.path.insert(0, os.getcwd())
+t0 = time.monotonic()
+import tools.bga_snapshot as s
+import tools.bst_native_build_tracer as t
+print(f"import bga_snapshot+tracer\t{time.monotonic()-t0:.2f}s")
+proj = sys.argv[1]
+def step(name, fn):
+    t1 = time.monotonic()
+    with contextlib.redirect_stderr(io.StringIO()): r = fn()
+    print(f"{name}\t{time.monotonic()-t1:.2f}s\trss={resource.getrusage(resource.RUSAGE_SELF).ru_maxrss//1024}MB", flush=True); return r
+step("why_the_project_is_not_one", lambda: s.why_the_project_is_not_one(proj))
+step("list_runs", lambda: s.run_store.list_runs(proj))
+step("capture_context", lambda: s._capture_context(proj, ["bst","build","all.bst"], {}, jobserver=("off",None,None), plan=None))
+step("detect_stale_casd", lambda: t.detect_stale_casd())
+d = tempfile.mkdtemp()
+step("compile_hook", lambda: t.compile_hook(d))
+step("compile_spine", lambda: t.compile_spine(d))
+step("discover_element_names", lambda: t.discover_element_names(proj))
+step("census_spine_verdicts (spine=auto)", lambda: t.census_spine_verdicts(proj))
 ```

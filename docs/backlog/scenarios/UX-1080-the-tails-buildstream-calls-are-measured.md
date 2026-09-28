@@ -1,10 +1,15 @@
-# UX-1080: the snapshot tail's BuildStream calls have never been timed
+# UX-1080: the BuildStream calls bga makes around the build have never been timed
 
 **Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the snapshot and view performance audit on `39d89d4` (2026-09-28) | **Serves:** R5 | **Topic:** capture | **Area:** tools | **Shape:** bounded
 
 ## Motivation
 
-After the build the tail starts BuildStream again: `bst artifact
+Before the build, `bga snapshot` starts BuildStream up to three times
+beside the build itself: `bst --version` (`bga_doctor.check_bst`, from
+`why_the_build_cannot_start`), `bst show` for the cache key set
+(`tools/bst_native_build_tracer.py:8508`, silent, 300 s timeout), and
+with `--jobserver` one more `bst show` (`UX-1011`). After the build the
+tail starts BuildStream again: `bst artifact
 list-contents` once per 200 needed dependencies
 (`tools/bst_native_build_tracer.py:4907-4940`, retried one element at
 a time when a chunk fails), and `bst show --deps all` for the run

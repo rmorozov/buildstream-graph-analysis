@@ -80,3 +80,35 @@ Question:  none
 ```
 
 ## Outcome
+
+Gap: `population_for(times)` factored out of `record` (was inline at
+`tools/dev_tier_drift.py:481-483`, `UX-955`'s own reading) and called
+from `adopt` too, merged over the reference's existing map so a name
+`adopt` did not sample keeps its old entry. `adopt`'s own `UX-803` step
+check (`_next_sample`, `over_gate` on raw `known[name]`) is unchanged -
+the Decision's Route does not touch it, and it answers a different
+question (has this file's own reading stepped) from the one `against`'s
+population scaling answers (has the tree it runs against grown); it is
+not itself population-scaled, so a tree-growth-only jump can still read
+as a step there - out of scope per the Decision, named rather than
+silently left.
+
+Close: `tests/unit/test_an_adopt_keeps_the_population_its_seconds_were_read_on.py`,
+5 cases - `python3 -m pytest tests/unit/test_an_adopt_keeps_the_population_its_seconds_were_read_on.py -q`:
+`5 passed in 0.68s`. `make lint`: `clean: 577 finding(s) match
+tests/quality_baseline.json; ...` (all `still forced`), `LINT_EXIT:0`.
+`python3 tools/dev_sizes.py --check`: `sizes ok: 151 file(s) measured`
+(after `--adopt --force`, `tools/dev_tier_drift.py file_lines 1518 ->
+1535`, 14 cell(s) written to `tests/quality_reference.json`).
+`python3 tools/dev_close_task.py --check`: `0 problem(s) over 8
+propert(y/ies), 1023 backlog row(s)`. `python3 tools/dev_touching.py`:
+46 file(s), `2030 passed, 3 skipped` (one flake,
+`test_the_same_report_confirmed_clears_it`, reread alone on this diff
+before and after: `1 passed in 5.26s` both times - machine load on a
+shared host, not this change).
+
+Mutation table:
+
+| mutation | reddened | count |
+|---|---|---|
+| delete the population write in `adopt` (`document["population"] = {**...}` in `adopt`) | `test_adopt_rewrites_the_name_it_sampled`, `test_1_6x_reads_drift_once_population_is_current` | 2 of 5 |

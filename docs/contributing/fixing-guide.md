@@ -249,6 +249,8 @@ bga/capacity_model.py  Allen-Cunneen M/G/c over that distribution, each
 bga/run_store.py       .bga/runs, the @last/@prev aliases, prune
 bga/bundle.py          a capture packed to carry, and what the far
                        side refuses to half-read (UX-520)
+bga/disclosure.py      what each bundle member's value paths disclose,
+                       class A-H per path
 bga/sources.py         the source inventory and resource identity
 bga/plane2.py          what a Plane 2 report is, and which shape one is
 bga/hostinfo.py        the host manifest; the cross-host refusal

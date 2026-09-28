@@ -131,3 +131,4 @@ Derived by `tools/dev_round_register.py --write` from the committed union: every
 | 142 | 2026-09-26 |
 | 143 | 2026-09-27 |
 | 144 | 2026-09-27 |
+| 145 | 2026-09-28 |

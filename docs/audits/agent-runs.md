@@ -462,6 +462,22 @@ pairing for every merged row from round 103 on.
 | 144 | verifier | sonnet | verify UX-1043 UX-1051 | — | — | — | flagged unreadable skip reasons, 79 vs 78 bound | new browser test files need a tiers.py row |
 | 144 | general-purpose | opus | integrate: merge tracks, tiers rows, re-measure budgets, push-check | — | — | — | pushed 10cde1d2, push-check rc 0; J3 re-based at 390 per §3l | github-advanced-security red on #297 and #298 alike (Copilot scanner, not this round's) |
 | 144 | general-purpose | opus | walk 10cde1d2: macro_micro + 1,202 two-plane, 1440/390 | — | — | — | every round row held; 3 pre-existing findings filed UX-1056-1058 | — |
+| 145 | implementer | opus | UX-1060 every exported value path declares its class | 155524 | — | — | VERIFIED fd0bbd9c | — |
+| 145 | implementer | sonnet | UX-1061 a pseudonym is keyed, stable, shape-preserving | 68491, rework to 115534 | — | — | VERIFIED fd0bbd9c | length-band fix came from verification |
+| 145 | implementer | sonnet | UX-1067 the archive and gzip header carry no original metadata | 102367, rework to 123309 cumulative | — | — | VERIFIED fd0bbd9c | gzip FNAME fix came from verification |
+| 145 | implementer | sonnet | UX-1064 a pseudonym in any text resolves back | 172443, rework to 245951 cumulative | — | — | VERIFIED fd0bbd9c | ships as `bga bundle --resolve`, not a new top-level command |
+| 145 | implementer | opus | UX-1062 a bundle exports anonymized, refuses a leftover name | 194304, three follow-ups to 230888 cumulative | — | — | VERIFIED fd0bbd9c | flag allowlist and wall origin came from verification and UX-1063's guard |
+| 145 | implementer | opus | UX-1063 analysis commutes with anonymization | 193246 | — | — | VERIFIED fd0bbd9c | five re-keyed tie-breaks undiscriminated by any capture here |
+| 145 | implementer | sonnet | UX-1065 a declared public junction keeps its public names | 166431 | — | — | VERIFIED fd0bbd9c | — |
+| 145 | verifier | sonnet | verify UX-1061 | 67467 | — | — | length-band fix found | — |
+| 145 | verifier | sonnet | verify UX-1060 | 203746 | — | — | VERIFIED | — |
+| 145 | verifier | sonnet | verify UX-1067 | 91512 | — | — | gzip FNAME leak found | — |
+| 145 | verifier | sonnet | verify UX-1062 | 133369 | — | — | flag-name leak and epoch-0 start found | — |
+| 145 | verifier | sonnet | verify UX-1064 | 62723 | — | — | VERIFIED | — |
+| 145 | verifier | sonnet | verify UX-1063 | 88665 | — | — | VERIFIED | — |
+| 145 | verifier | sonnet | verify UX-1065 | 85405 | — | — | VERIFIED | — |
+| 145 | integrator | sonnet | merge the seven anonymized-bundle tracks | 196172 over two passes | — | — | merged to fd0bbd9c | — |
+| 145 | closer | opus | close: row moves, ledger, round document | unknown | — | — | — | — |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and

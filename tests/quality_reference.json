@@ -6,7 +6,7 @@
     ".claude/hooks/selector_before_commit.py": {"duplicate_blocks": 0, "file_lines": 158, "longest_function": 20},
     "bga/__init__.py": {"duplicate_blocks": 1, "file_lines": 105, "longest_function": 0},
     "bga/analyzer.py": {"duplicate_blocks": 0, "file_lines": 2814, "longest_function": 339},
-    "bga/anonymize.py": {"duplicate_blocks": 0, "file_lines": 603, "longest_function": 48},
+    "bga/anonymize.py": {"duplicate_blocks": 0, "file_lines": 609, "longest_function": 48},
     "bga/artifact_weight.py": {"duplicate_blocks": 0, "file_lines": 232, "longest_function": 50},
     "bga/attribution/__init__.py": {"duplicate_blocks": 0, "file_lines": 19, "longest_function": 0},
     "bga/attribution/blame_chain.py": {"duplicate_blocks": 0, "file_lines": 1641, "longest_function": 164},

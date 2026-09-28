@@ -59,8 +59,16 @@ Mutation table:
 | Guard | Mutation | Reddened | Count |
 |---|---|---|---|
 | glued `-j`'s make-like binary check | drop `binary in _MAKE_LIKE_BINARIES`, always `True` | `test_a_glued_j_keeps_its_digits_only_on_a_make_like_tool.py` | 2 failed / 6 |
+| `_flag_argument`'s `if equals:` split | drop the branch, fall through to the plain-glued fallback | `test_a_single_dash_flag_glued_to_equals_goes_through_the_numeric_rule.py` | 2 failed / 4 |
 
 Live probe at `1a498516`: `curl -j123456` and `acme-gen -j123456` ->
 `-j<dropped>`; `make -j8`, `ninja -j12`, `make -j 8`, `make -l 4`,
 `gcc -O2`, `gcc -g3` keep their values; `curl -O2` -> `-O<dropped>`
 (curl is not a compiler driver).
+
+Deviation: verifier on `1a498516` found a fourth glued form the audit
+missed - `-X=value` (`-j=123456`), too narrow for `_NAMED_FLAG`'s
+lookahead, fell to the plain-glued fallback whose `_value` call got
+the literal `=value` and mapped it unsplit. `_flag_argument` now
+splits at the first `=` for any short flag before that fallback,
+closing UX-1089's audit gap here.

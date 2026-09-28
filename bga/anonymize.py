@@ -515,6 +515,12 @@ def _flag_argument(word, key, pmap, counts, binary):
     if named and named.group(2):
         return (named.group(1) + pseudonymize(named.group(2), "macro", key, pmap)
                 + _assigned(named.group(3), key, pmap, counts))
+    if equals:
+        # A short flag (`-j`, `-l`, `-O`) too narrow for `_NAMED_FLAG`'s
+        # lookahead to catch glued with `=` (UX-1089 verifier: it fell
+        # to the plain-glued branch below, whose `_value` call got the
+        # literal `=value` and pseudonymized it, unsplit, into the map).
+        return flag + _assigned(equals + assigned, key, pmap, counts, flag_safe)
     glued_safe = binary in _MAKE_LIKE_BINARIES and word[:2] in _MAKE_SAFE_FLAGS
     return word[:2] + _value(word[2:], key, pmap, counts, glued_safe)
 

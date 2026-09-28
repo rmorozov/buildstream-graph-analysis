@@ -1,6 +1,6 @@
 # UX-1091: the records writers queue instead of cancelling each other
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-997, UX-1000 | **Blocks:** — | **Found by:** round 149 — the first weekly retro, `docs/audits/retro-2026-09-28.md`, proposal 2 | **Serves:** every record CI measures, and the reader of main's run history | **Topic:** guards | **Area:** tools | **Shape:** judgement
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-997, UX-1000 | **Blocks:** — | **Found by:** round 149 — the first weekly retro, `docs/audits/retro-2026-09-28.md`, proposal 2 | **Serves:** every record CI measures, and the reader of main's run history | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 
@@ -30,5 +30,30 @@ What each record holds; the PR-side jobs.
 A guard reads `ci.yml` and fails when two jobs that run
 `dev_records.py publish` could be pending in one concurrency group at
 once. Mutation: restore the four independent jobs, and it reds.
+
+## Decision
+
+The `architect`, round 149, at `c324f250`.
+
+```text
+Route:     chain the writers in ci.yml: tier-reference-adopt -> touch-map-adopt ->
+           flake-ledger-adopt -> area-pages-publish; the one edit is flake-ledger-adopt
+           `needs: test` -> `needs: [test, touch-map-adopt]`, whose `!cancelled()` already runs
+           it past a skipped touch-map-adopt; area-pages-publish already needs both
+Rejected:  one job publishing every record - merges two if-conditions and three candidate steps
+           `cancel-in-progress: false` - the default already; GitHub still replaces a pending job
+           a group per job - four writers would race on the records branch
+Files:     .github/workflows/ci.yml; tests/unit/test_the_records_writers_are_one_chain.py (new);
+           tests/unit/test_ci_publishes_the_area_pages.py (retire test_it_shares_the_records_concurrency_group)
+Guard:     the new file: every job running `dev_records.py publish` is totally ordered by the
+           transitive `needs` closure, each writer needing a writer carries `!cancelled()` or
+           `always()`, and each is in `concurrency: records`
+Mutation:  flake-ledger-adopt `needs: test` -> ordering reds; drop its `!cancelled()` -> skip
+           reds; area-pages-publish `concurrency: other` -> group reds
+Class:     optimization - 1 of 11 main runs since ad27b616 read cancelled, each dropping a flake-ledger update
+Split:     one track, parallel with UX-1090. Limit for the Outcome: two pushes close together can
+           still replace a pending writer across runs
+Question:  none
+```
 
 ## Outcome

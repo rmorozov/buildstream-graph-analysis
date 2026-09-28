@@ -660,6 +660,16 @@ def analyzed(args: argparse.Namespace, section: Optional[str] = None):
     that is a second 30-second, 4.3 GB pass over the same Plane 2
     document. One analysis, two renderings.
     """
+    return analyzed_with_analyzer(args, section)[1]
+
+
+def analyzed_with_analyzer(args: argparse.Namespace, section: Optional[str] = None):
+    """`(analyzer, result)` - `analyzed`, with the graph `compare` also reads."""
+    from . import fingerprint
+
+    # UX-1073: taken before the analysis reads its inputs; a section
+    # report is not a document `compare` can reuse.
+    stamp = fingerprint.of(args) if section is None else None
     run_dir = Path(args.directory)
     analyzer = _make_analyzer(args)
     # UX-47: tell the pipeline which section is going to be rendered so
@@ -683,7 +693,8 @@ def analyzed(args: argparse.Namespace, section: Optional[str] = None):
     # UX-1005 track A: after `signals` (critical path) exists, since the
     # safe builder cap reads the critical path's own widest max-jobs.
     result.builder_pool_recommendation = _builder_pool_recommendation(analyzer, result)
-    return result
+    result.fingerprint = stamp
+    return analyzer, result
 
 
 def _produce_analysis_output(args: argparse.Namespace, section: Optional[str]) -> str:
@@ -938,6 +949,9 @@ def _produce_compare_output(args: argparse.Namespace):
         Path(args.baseline), Path(args.candidate),
         baseline_runs=[Path(p) for p in (getattr(args, 'baseline_run', None) or [])],
         band_k=getattr(args, 'band_k', None) or DEFAULT_BAND_K,
+        baseline_plane2=getattr(args, 'baseline_plane2', None),
+        candidate_plane2=getattr(args, 'candidate_plane2', None),
+        reanalyse=getattr(args, 'reanalyse', False),
         capacity=args.capacity, verbose=args.verbose,
     )
     # UX-87: stamped before serialization so `--format json` carries it -
@@ -2548,6 +2562,10 @@ def _add_compare_subcommand(subparsers) -> None:
     compare_parser.add_argument(
         '--candidate-plane2', default=None, metavar='PATH',
         help='UX-104: the candidate run\'s Plane 2 report. See --baseline-plane2.',
+    )
+    compare_parser.add_argument(
+        '--reanalyse', action='store_true',
+        help='Analyze both runs, never reading a published analyze.json.'
     )
     compare_parser.add_argument(
         '--fail-on-low-confidence', action='store_true',

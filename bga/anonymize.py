@@ -74,6 +74,30 @@ def _write_0600(path, data):
     os.chmod(path, 0o600)
 
 
+def _write_0600_atomic(path, data):
+    """Temp file beside `path`, fsynced and renamed over it, then the
+    directory fsynced - so a failure never leaves `path` truncated (UX-1086)."""
+    directory = os.path.dirname(path) or "."
+    tmp_path = f"{path}.tmp-{os.getpid()}"
+    fd = os.open(tmp_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_EXCL, 0o600)
+    try:
+        try:
+            os.write(fd, data)
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+        os.replace(tmp_path, path)
+    except Exception:
+        if os.path.exists(tmp_path):
+            os.unlink(tmp_path)
+        raise
+    dir_fd = os.open(directory, os.O_RDONLY)
+    try:
+        os.fsync(dir_fd)
+    finally:
+        os.close(dir_fd)
+
+
 def load_or_create_key(project_root):
     """The project's HMAC key at `.bga/anon/key`, created 0600 on first use."""
     anon_dir = _anon_dir(project_root)
@@ -113,7 +137,7 @@ class PseudonymMap:
 
     def save(self):
         data = json.dumps(self._forward, indent=2, sort_keys=True).encode("utf-8")
-        _write_0600(self.path, data)
+        _write_0600_atomic(self.path, data)
 
     @classmethod
     def for_project(cls, project_root):

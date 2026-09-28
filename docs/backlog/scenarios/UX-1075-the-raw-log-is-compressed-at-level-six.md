@@ -37,3 +37,20 @@ Another codec (zstd is in `requirements.lock` since `UX-927`; a separate call).
 middle levels), and a round-trip reads the compressed log back
 byte-identical to the original. Mutation: drop the level or pass 9,
 and the spy reds.
+
+## Outcome
+
+**Gap measured:** the audit's `step.py` on the 417 MB synthetic raw
+log (192,320 processes, 9.6M open paths): level 9 (default) 16.0 s /
+30 MB, level 6 3.1 s / 31 MB.
+
+**Close measured:** `tools/bga_snapshot.py:367` now passes
+`compresslevel=RAW_LOG_COMPRESSLEVEL` (= 6) to `gzip.open`.
+`python3 -m pytest tests/unit/test_the_raw_log_compression_level.py -q`
+→ `2 passed in 0.35s`.
+
+**Mutation table:**
+
+| mutation | reddened | count |
+|---|---|---|
+| `compresslevel=RAW_LOG_COMPRESSLEVEL` → `compresslevel=9` | `test_compress_raw_log_passes_level_six` | 1 failed, 1 passed |

@@ -364,6 +364,9 @@ def take_snapshot(project: str, command: list[str], config: dict,
     return snapshot, exit_code
 
 
+RAW_LOG_COMPRESSLEVEL = 6  # UX-1075: 3.1s vs 16.0s at level 9, 31MB vs 30MB
+
+
 def _compress_raw_log(snapshot: str) -> None:
     """gzip the raw Plane 2 log in place, best effort.
 
@@ -376,7 +379,8 @@ def _compress_raw_log(snapshot: str) -> None:
         return
     try:
         with open(plain, "rb") as source, gzip.open(
-                os.path.join(snapshot, RAW_LOG_NAME), "wb") as target:
+                os.path.join(snapshot, RAW_LOG_NAME), "wb",
+                compresslevel=RAW_LOG_COMPRESSLEVEL) as target:
             shutil.copyfileobj(source, target, length=1024 * 1024)
         os.remove(plain)
     except OSError as error:

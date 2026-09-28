@@ -70,6 +70,9 @@ VOCABULARIES = {
         {"PROCESS", "DOWNLOAD", "UPLOAD", "CACHE", "OTHER"}), None),
     "action": Vocabulary(frozenset(
         {"build", "fetch", "pull", "push", "track", "source-push"}), None),
+    "tail_phase": Vocabulary(frozenset(
+        {"before the build", "run directory", "Plane 2 report", "raw log gzip",
+         "analyze", "element slice", "compare", "store size", "timeline"}), None),
     "phase": Vocabulary(frozenset(
         {"cache_cleanup", "Loading elements", "Resolving elements",
          "Initializing remote caches", "Query cache"}), None),
@@ -383,6 +386,21 @@ POLICIES = {
         "cores_busy": "C",
         "peak_rss_bytes": "C",
     },
+    "tail/v1": {
+        "schema": "B:schema",
+        "producer.tool": "B:producer",
+        "producer.version": "B:version",
+        "producer.contracts[]": "B:schema",
+        "build_wall_us": "C",
+        "complete": "C",
+        "phases[].name": "B:tail_phase",
+        "phases[].wall_us": "C",
+        "phases[].peak_rss_bytes": "C",
+        # A call's argv names elements and paths: rebuilt by 6.2's command grammar.
+        "phases[].calls[].verb": "F",
+        "phases[].calls[].wall_us": "C",
+        "phases[].calls[].exit": "C",
+    },
     "element-slice.json": {
         "elements[].element_uid": "A",
         "elements[].duration_us": "C",
@@ -404,6 +422,7 @@ TREATMENTS = {
     "plane2-resource.json": TRANSFORM,
     "host-samples.jsonl": TRANSFORM,
     "element-slice.json": TRANSFORM,
+    "tail.json": TRANSFORM,
     "analyze.json": DROP,
     "plane2.log.gz": DROP,
     "build.log": DROP,

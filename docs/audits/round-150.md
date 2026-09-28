@@ -53,7 +53,8 @@ spread   dev_touching.py --spread: 33-174 of 677 test files
   change.
 - `UX-1103` — at the #298 merge, the Verification Log re-grounds past
   `UX-1064`'s `--resolve` row (63 properties, 26 emitted ids), and the
-  selector ceiling takes the merged reading: p90 61, max 174 over 677.
+  selector ceiling takes the merged reading: p90 61, max 174 over 677;
+  `tail.json` travels anonymized, its call argv rebuilt by the grammar.
 
 ## In progress
 

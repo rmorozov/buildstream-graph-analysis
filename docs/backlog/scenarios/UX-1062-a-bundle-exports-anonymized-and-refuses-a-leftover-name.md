@@ -86,6 +86,12 @@ reverted from the copy, 23 green after (24 after the flag fix):
 | commands kept raw | residue scan trips on `core.bst` in a cmd | 5 failed, 18 passed |
 
 | any `--word` flag kept (verifier's leak) | `test_a_private_long_flag_travels_as_a_pseudonym_on_any_binary` | 1 failed, 23 passed |
+| wall origin back to 0 | `test_an_anonymized_analysis_still_has_a_start_at_the_canonical_origin`, host-samples test | 2 failed, 23 passed |
+
+UX-1063's guard found a 0 wall start read as no start (`analyzer._run_instance`
+drops `started_at`); the wall clock's earliest instant now lands on
+`bundle.CANONICAL_ORIGIN_US["wall"]`, 2000-01-01T00:00:00Z. The monotonic
+clock stays at 0: its one reader, `utilisation/envelope.py:57`, tests `is None`.
 
 The verifier found `--word` flag names kept verbatim on any `argv[0]`
 (`cc1plus --acme-license-server=foo`); now a named flag (`--x`, `-word`,

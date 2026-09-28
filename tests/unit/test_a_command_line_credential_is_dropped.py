@@ -2,8 +2,9 @@
 
 `-D`, `--flag=`/`-flag=` and environment-style `NAME=value` assignments
 whose name reads as a credential lose their value to a fixed marker,
-never the pseudonym map; a non-credential numeric assignment is
-unaffected. A verifier pass on the first close (7eb7e817) found three
+never the pseudonym map; a safe-listed numeric assignment (`JOBS`
+below) is unaffected, an unsafe one drops too (UX-1088). A verifier
+pass on the first close (7eb7e817) found three
 further leaks and one regression, closed here: an unlisted name
 (`pat`) with a shaped value (`ghp_...`), a space-separated flag+value,
 a mixed-case flag name, and a lowercase `a=b` wrongly eaten as an env
@@ -127,22 +128,24 @@ def test_over_dropping_a_non_credential_named_value_is_accepted(tmp_path):
     assert rebuilt.endswith("=<dropped>")
 
 
-def test_a_long_digit_only_value_is_pseudonymized_not_kept(tmp_path):
-    """Only up to 6 digits stay verbatim; a longer digit run (a card
-    number's shape) is pseudonymized like any other identifier."""
+def test_a_long_digit_only_value_is_dropped_not_kept(tmp_path):
+    """A digit run (a card number's shape) drops like any other
+    unsafe numeric value (UX-1088), never entering the map."""
     pmap = _pmap(tmp_path)
     rebuilt = anon.rebuild_command("cmake -DBUILD=123456789", KEY, pmap, frozenset())
     assert "123456789" not in rebuilt
-    assert "<dropped>" not in rebuilt
+    assert "<dropped>" in rebuilt
+    assert "123456789" not in _values(pmap)
 
 
-def test_a_short_digit_only_value_off_the_safe_list_pseudonymizes(tmp_path):
-    """UX-1084: a numeric value pseudonymizes by default now; only a
-    named safe option (like `JOBS` above) keeps it."""
+def test_a_short_digit_only_value_off_the_safe_list_is_dropped(tmp_path):
+    """UX-1088: a numeric value not on a named safe pair (like `JOBS`
+    above) drops rather than pseudonymizes - never reversible in the map."""
     pmap = _pmap(tmp_path)
     rebuilt = anon.rebuild_command("cmake -DPORT=8080", KEY, pmap, frozenset())
     assert "8080" not in rebuilt
-    assert "<dropped>" not in rebuilt
+    assert "<dropped>" in rebuilt
+    assert "8080" not in _values(pmap)
 
 
 def test_the_signing_name_alone_drops_a_value_too_short_to_be_shaped(tmp_path):

@@ -41,3 +41,27 @@ Mutation: restore `_value`'s digit branch to unconditional
 
 ## Outcome
 
+Gap measured: reverting `_value`'s digit branch to unconditional
+`pseudonymize_identifier` (the pre-fix shape) and dropping
+`otp`/`pin`/`passcode`/`mfa`/`totp` from `_CREDENTIAL_NAME` -
+`pytest tests/unit/test_an_otp_or_pin_value_is_dropped_not_mapped.py
+tests/unit/test_a_command_line_credential_is_dropped.py` failed 4/25:
+`--otp=123456`, `--pin=1234`, `gcc -l1234`, `curl -O 12345` and
+`-DPORT=8080`/`-DBUILD=123456789` all pseudonymized into
+`PseudonymMap` instead of dropping.
+
+Close measured: `pytest
+tests/unit/test_an_otp_or_pin_value_is_dropped_not_mapped.py
+tests/unit/test_a_command_line_credential_is_dropped.py` - 25 passed.
+`otp`/`pin` join `_CREDENTIAL_NAME`; `_value`'s digit branch drops
+to `<dropped>` (counted in `counts["F credential"]`) unless `safe` is
+true, keeping the (binary, option) safe set from UX-1084 unchanged.
+`python tools/dev_touching.py --base 76f2179e`: 83 files selected,
+2424 passed, 3 skipped.
+
+Mutation table:
+
+| Guard | Mutation | Reddened | Count |
+|---|---|---|---|
+| `_value`'s default-drop numeric check | restore unconditional `pseudonymize_identifier` | both test files | 4 failed / 25 |
+| `_CREDENTIAL_NAME`'s `otp`\|`pin`\|... addition | drop the new names from the regex | `test_a_non_numeric_otp_value_drops_on_its_name_not_its_shape` (a non-digit, non-high-entropy OTP the digit rule cannot catch) | 1 failed / 11 |

@@ -320,13 +320,14 @@ _LEADING_ENV = re.compile(r"[A-Z_][A-Z0-9_]*=.*", re.S)
 #: A name that reads as a credential, any case, any separator (1068, class G).
 _CREDENTIAL_NAME = re.compile(
     r"token|secret|password|passwd|key|auth|credential|cookie|session"
-    r"|pat|bearer|apikey|private_key|signing", re.I)
-#: A numeric value pseudonymizes by default (UX-1084: a six-digit OTP is
-#: not a jobs count). Two things can keep one: a `-D`/env name on
-#: `_MACRO_SAFE_NAMES` (any binary), or a flag on `_MAKE_SAFE_FLAGS`
-#: *and* argv[0] a make-like binary - `gcc -l1234` is a linker library,
-#: not a load average, and `curl -O 12345` an output filename, not a
-#: level (UX-1084 verifier).
+    r"|pat|bearer|apikey|private_key|signing"
+    r"|otp|pin|passcode|mfa|totp", re.I)
+#: A numeric value drops by default (UX-1088: pseudonymizing an
+#: unrecognized secret still puts it in the map). Two things can keep
+#: one: a `-D`/env name on `_MACRO_SAFE_NAMES` (any binary), or a flag
+#: on `_MAKE_SAFE_FLAGS` *and* argv[0] a make-like binary - `gcc
+#: -l1234` is a linker library, not a load average, and `curl -O
+#: 12345` an output filename, not a level (UX-1084 verifier).
 _MACRO_SAFE_NAMES = frozenset({"JOBS", "CMAKE_BUILD_PARALLEL_LEVEL"})
 _MAKE_SAFE_FLAGS = frozenset({"-j", "--jobs", "-l", "--load-average"})
 _MAKE_LIKE_BINARIES = frozenset({"make", "gmake", "ninja", "samu", "bst"})
@@ -533,7 +534,11 @@ def _value(value, key, pmap, counts=None, safe=False):
     if not value or value in _PUBLIC_VALUES:
         return value
     if value.isdigit():
-        return value if safe else pseudonymize_identifier(value, key, pmap)
+        if safe:
+            return value
+        if counts is not None:
+            counts["F credential"] += 1
+        return _DROPPED
     if _credential_shaped(value):
         if counts is not None:
             counts["F credential"] += 1

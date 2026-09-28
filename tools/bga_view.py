@@ -604,6 +604,30 @@ def trace_render(run: str, destination: str,
     return dict(result or {}, path=destination)
 
 
+def predicted_tracks(run: str, planes: Optional[str] = None) -> Optional[int]:
+    """How many tracks this step would open, without rendering it.
+
+    `UX-1081`: the export's degradation ladder used to render a step to
+    find out it was over `TRACE_TRACK_BUDGET`, then rendered the next
+    one anyway - two full renders, 7.2s at 5,002 elements, when the
+    first was never going to be shown. `render(..., tracks_only=True)`
+    still opens every track this run's data would (so the count is
+    exact, not a curve fit) but skips every slice, instant and counter
+    point - the record population, which is what the render actually
+    spends its time on. `None` on any refusal a real render would also
+    give, so the caller falls back to rendering and finding out.
+    """
+    from .bga_timeline import PLANES_BOTH, render
+
+    snapshot = os.path.dirname(os.path.abspath(run))
+    try:
+        result = render(snapshot, None, quiet=True,
+                        planes=planes or PLANES_BOTH, tracks_only=True)
+    except (FileNotFoundError, RuntimeError, OSError):
+        return None
+    return (result or {}).get("tracks")
+
+
 def trace_bytes(run: str) -> Optional[bytes]:
     """The timeline as bytes - for `--export`, which inlines it.
 
@@ -1243,27 +1267,39 @@ def _degradation_steps():
                           "lanes out"))
 
 
-def _over_a_ceiling(trace: bytes, tracks: Optional[int]) -> Optional[str]:
-    """Which ceiling this rendering hits, or `None`. Two units, two
-    sentences: a refusal reading "4 MiB" when the problem is the rows
-    sends the reader to compress something that is not the cost.
+def _over_track_ceiling(tracks: Optional[int],
+                        trace: Optional[bytes] = None) -> Optional[str]:
+    """The track-ceiling refusal, or `None`. `trace`, when a render has
+    already happened, adds the byte size so the reader can see the two
+    ceilings disagree; `UX-1081`'s pre-render check has no bytes yet and
+    says so with the count alone.
 
     `UX-530`: the track count is what `_write_trackevent` opens - one
     process track per element and one thread track per traced *pid*,
     after `merge_record_streams` - so it counts **processes**, never the
     two slices the spine and the hook record for one of them.
     """
+    if (tracks or 0) <= TRACE_TRACK_BUDGET:
+        return None
+    sentence = (f"the timeline draws {tracks:,} tracks, over this export's "
+                f"{TRACE_TRACK_BUDGET:,}-track ceiling - Perfetto draws a "
+                f"row per track")
+    if trace is not None:
+        sentence += (f", and the byte size ({len(trace) / 1048576:.1f} MiB) "
+                    f"is well inside its own ceiling")
+    return sentence
+
+
+def _over_a_ceiling(trace: bytes, tracks: Optional[int]) -> Optional[str]:
+    """Which ceiling this rendering hits, or `None`. Two units, two
+    sentences: a refusal reading "4 MiB" when the problem is the rows
+    sends the reader to compress something that is not the cost.
+    """
     if len(trace) * 4 / 3 > TRACE_BUDGET_B:
         return (f"the timeline is {len(trace) / 1048576:.1f} MiB "
                 f"compressed, over this export's "
                 f"{TRACE_BUDGET_B / 1048576:.0f} MiB ceiling for it")
-    if (tracks or 0) > TRACE_TRACK_BUDGET:
-        return (f"the timeline draws {tracks:,} tracks, over this export's "
-                f"{TRACE_TRACK_BUDGET:,}-track ceiling - Perfetto draws a "
-                f"row per track, and the byte size "
-                f"({len(trace) / 1048576:.1f} MiB) is well inside its own "
-                f"ceiling")
-    return None
+    return _over_track_ceiling(tracks, trace)
 
 
 def export(run: str, path: str, with_trace: bool = True,
@@ -1303,11 +1339,23 @@ def export(run: str, path: str, with_trace: bool = True,
 
     trace = trace_planes = flow_losses = trace_tracks = None
     omitted = degraded = None
+    ceiling_refused = False
     if with_trace:
         # `UX-530`: the recipe below already named the flag that would
         # have fitted, and the export refused without trying it.
         refusals, tried, fitted = [], [], False
         for step, narrowing in _degradation_steps():
+            # `UX-1081`: known from the run's own counts, before paying
+            # to render this step at all - a step already over the track
+            # ceiling is never rendered to find that out. The byte
+            # ceiling has no such shortcut: it is only knowable once the
+            # bytes exist.
+            counted = predicted_tracks(run, planes=step)
+            precheck = _over_track_ceiling(counted)
+            if precheck is not None:
+                refusals.append(precheck)
+                tried.append(narrowing or "the whole timeline")
+                continue
             trace, trace_planes, flow_losses, trace_tracks = trace_with_planes(
                 run, planes=step)
             if trace is None:
@@ -1328,6 +1376,7 @@ def export(run: str, path: str, with_trace: bool = True,
             # it never tried is what this item was filed on.
             omitted = "; ".join(f"{what} - {why}"
                                 for what, why in zip(tried, refusals))
+            ceiling_refused = True
     if trace is None and omitted is None:
         # UX-329: which absence, from `bga.plane2` - the same sentence
         # the terminal prints and the JSON publishes. The one this
@@ -1338,7 +1387,7 @@ def export(run: str, path: str, with_trace: bool = True,
 
         # `UX-555`: the caller's own flag is not an absence of Plane 2.
         omitted = TIMELINE_NOT_ASKED_FOR if not with_trace else plane2_shape.absence(run) or TIMELINE_DID_NOT_RENDER
-    if omitted and trace is not None:
+    if omitted and (trace is not None or ceiling_refused):
         # UX-299: and what to do instead, because "the timeline is not
         # in this file" is a dead end without it. The blast box's
         # honesty pattern: name the command that produces what the page

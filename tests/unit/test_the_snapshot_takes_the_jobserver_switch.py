@@ -131,7 +131,7 @@ class TestPlanResolvesAtPrev:
             if publish_to:
                 with open(publish_to, "w", encoding="utf-8") as handle:
                     handle.write(json.dumps({"run_instance": {}}))
-            return 0
+            return 0, None
 
         monkeypatch.setattr(bga_snapshot, "_analyze", fake_analyze)
         monkeypatch.setattr(bga_snapshot, "_compare", lambda *a: 0)

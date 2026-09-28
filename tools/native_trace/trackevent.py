@@ -76,6 +76,7 @@ that the numbers above are still the numbers upstream means.
 """
 import gzip
 import struct
+from typing import Optional
 
 # --- wire types (protobuf encoding, not Perfetto's) ---------------------
 WIRE_VARINT = 0
@@ -261,8 +262,14 @@ class TrackEventWriter:
     ```
     """
 
-    def __init__(self, path: str, sequence_id: int = 1, compress: bool = True):
-        self._handle = (gzip.open(path, "wb", compresslevel=6) if compress
+    def __init__(self, path: Optional[str], sequence_id: int = 1,
+                compress: bool = True):
+        # `UX-1081`: `path=None` opens nothing and every packet is
+        # discarded - a caller that only wants `self.tracks` (`export`'s
+        # degradation ladder, before committing to a render) pays for no
+        # file at all.
+        self._handle = (None if path is None else
+                        gzip.open(path, "wb", compresslevel=6) if compress
                         else open(path, "wb"))
         self._sequence_id = sequence_id
         # UX-308: three interning tables, each with its own iid space
@@ -297,7 +304,8 @@ class TrackEventWriter:
 
     # -- packets ----------------------------------------------------------
     def _write_packet(self, body: bytes) -> None:
-        self._handle.write(bytes_field(TRACE_PACKET, body))
+        if self._handle is not None:
+            self._handle.write(bytes_field(TRACE_PACKET, body))
         self.packets += 1
 
     def _sequence_prefix(self) -> bytes:

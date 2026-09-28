@@ -364,6 +364,9 @@ def take_snapshot(project: str, command: list[str], config: dict,
     return snapshot, exit_code
 
 
+RAW_LOG_COMPRESSLEVEL = 6  # UX-1075: 3.1s vs 16.0s at level 9, 31MB vs 30MB
+
+
 def _compress_raw_log(snapshot: str) -> None:
     """gzip the raw Plane 2 log in place, best effort.
 
@@ -376,7 +379,8 @@ def _compress_raw_log(snapshot: str) -> None:
         return
     try:
         with open(plain, "rb") as source, gzip.open(
-                os.path.join(snapshot, RAW_LOG_NAME), "wb") as target:
+                os.path.join(snapshot, RAW_LOG_NAME), "wb",
+                compresslevel=RAW_LOG_COMPRESSLEVEL) as target:
             shutil.copyfileobj(source, target, length=1024 * 1024)
         os.remove(plain)
     except OSError as error:
@@ -698,12 +702,15 @@ def main(argv: Optional[list[str]] = None) -> int:
         return build_exit or 1
 
     print()
-    _analyze(run_dir, os.path.join(snapshot, PLANE2_NAME),
-             publish_to=os.path.join(snapshot, run_store.ANALYSIS_NAME),
-             build_exit=build_exit)
+    _, analyzed_result = _analyze(
+        run_dir, os.path.join(snapshot, PLANE2_NAME),
+        publish_to=os.path.join(snapshot, run_store.ANALYSIS_NAME),
+        build_exit=build_exit)
     # UX-226: the small slice this snapshot contributes to the store's
     # per-element history. Never fatal - see `write_element_slice`.
-    write_element_slice(snapshot, run_dir)
+    # UX-1072: reuse the analysis `_analyze` already ran instead of a
+    # second pass over the same run.
+    write_element_slice(snapshot, run_dir, analysis_result=analyzed_result)
 
     if not args.no_compare and previous:
         print()
@@ -813,8 +820,8 @@ def _exit_summary_line(build_exit: int, wrapped_log_path: str) -> str:
 
 
 def _analyze(run_dir: str, plane2: str, publish_to: Optional[str] = None,
-            build_exit: int = 0) -> int:
-    """Print the report, and publish the same analysis as JSON.
+            build_exit: int = 0) -> tuple[int, Optional[object]]:
+    """Print the report, publish the same analysis as JSON, and return it.
 
     `UX-296`: **capture computes, view serves.** `bga view` used to
     re-run this analysis on every page load, which re-parsed the Plane 2
@@ -835,6 +842,10 @@ def _analyze(run_dir: str, plane2: str, publish_to: Optional[str] = None,
     refuses to verdict for a failed element. A legitimate fully-cached
     build also has zero chain execution, which is why the exit code is
     the other half of the conjunction: `build_exit == 0` always prints.
+
+    `UX-1072`: the returned analysis (or `None`, on the plain CLI
+    fallback) is what `write_element_slice` reuses instead of a second
+    full pass over the same run.
     """
     argv = ["analyze", run_dir]
     if os.path.isfile(plane2):
@@ -842,7 +853,7 @@ def _analyze(run_dir: str, plane2: str, publish_to: Optional[str] = None,
 
     if publish_to is None:
         from bga.cli import main as cli_main
-        return cli_main(argv)
+        return cli_main(argv), None
 
     from bga.cli import analyzed, create_parser
     from bga.report.json import format_json
@@ -855,7 +866,7 @@ def _analyze(run_dir: str, plane2: str, publish_to: Optional[str] = None,
         raise
     except Exception:
         from bga.cli import main as cli_main
-        return cli_main(argv)
+        return cli_main(argv), None
 
     executed_us = (result.attribution or {}).get('execution_on_chain_us') or 0
     if build_exit and not executed_us:
@@ -874,7 +885,7 @@ def _analyze(run_dir: str, plane2: str, publish_to: Optional[str] = None,
         # A published payload is a convenience on top of a capture that
         # already succeeded, the rule `write_element_slice` follows.
         pass
-    return 0
+    return 0, result
 
 
 # UX-226: how many elements one snapshot may remember. This is a
@@ -886,7 +897,9 @@ SLICE_ELEMENTS_MAX = 24
 SLICE_NAME = "element-slice.json"
 
 
-def write_element_slice(snapshot: str, run_dir: str) -> Optional[dict]:
+def write_element_slice(snapshot: str, run_dir: str,
+                         analysis_result: Optional[object] = None
+                         ) -> Optional[dict]:
     """Persist a bounded per-element slice beside the snapshot.
 
     Written at capture time rather than derived at read time, and the
@@ -894,6 +907,12 @@ def write_element_slice(snapshot: str, run_dir: str) -> Optional[dict]:
     every snapshot, so a row that needed an analysis would put N full
     analyses in front of a page load. The analysis has already happened
     here - `_analyze` ran a line above - so this costs one small file.
+
+    `UX-1072`: `analysis_result`, when given, is the analysis `_analyze`
+    already ran (section=None is a superset of `section='graph'`'s
+    signals) - measured 18.62s at 5,002 elements as a second full pass.
+    `None` falls back to running the analyzer here, for any caller (or
+    test) that has not published one.
 
     Returns the slice, or `None` when the run could not be analyzed. A
     snapshot with no slice is the ordinary case for anything captured
@@ -904,16 +923,18 @@ def write_element_slice(snapshot: str, run_dir: str) -> Optional[dict]:
 
     from bga.analyzer import BuildEfficiencyAnalyzer
 
-    try:
-        # `graph` is the narrowest section that still produces the
-        # signals this slice reads, so the second analysis is the
-        # cheapest one that can answer the question.
-        result = BuildEfficiencyAnalyzer().analyze(Path(run_dir),
-                                                   section='graph')
-    except Exception:
-        # A slice is a convenience on top of a capture that already
-        # succeeded. It must never be the thing that fails a snapshot.
-        return None
+    result = analysis_result
+    if result is None:
+        try:
+            # `graph` is the narrowest section that still produces the
+            # signals this slice reads, so the second analysis is the
+            # cheapest one that can answer the question.
+            result = BuildEfficiencyAnalyzer().analyze(Path(run_dir),
+                                                       section='graph')
+        except Exception:
+            # A slice is a convenience on top of a capture that already
+            # succeeded. It must never be the thing that fails a snapshot.
+            return None
     if result is None:
         return None
 

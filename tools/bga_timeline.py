@@ -1350,7 +1350,7 @@ def _plane1_offset_us(plane1_events, spans, anchor_element) -> float:
 
 def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
                       kinds=None, edges=(), snapshot=None, structure=None,
-                      only_element=None, resources=None):
+                      only_element=None, resources=None, tracks_only=False):
     """The trace, packet by packet - nothing accumulates but the rows.
 
     Plane 1 is a handful of tasks and goes in first from the list the
@@ -1362,6 +1362,13 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
     lane - the same cardinality the Chrome converter's `tid` had, named
     here rather than left to be discovered - and one record per
     process, which is what a per-process timeline is.
+
+    `UX-1081`: `tracks_only` still opens every track this would (so
+    `trace.tracks` comes out exactly the same), but skips every slice,
+    instant and counter point - the record population, not the track
+    population, is what those cost. `export`'s degradation ladder reads
+    a step's track count this way before committing to the render that
+    writes it.
     """
     from .bst_native_build_tracer import merge_record_streams, stream_records, stream_trace_events
     from .native_trace.trackevent import TrackEventWriter
@@ -1396,10 +1403,11 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
             reason = dict(identity).get("incomplete_reason")
             identity_track = trace.process_track(
                 identity_track_name(reason), pid=IDENTITY_TRACK_PID, rank=0)
-            start_us = _plane1_start_us(plane1_events)
-            trace.instant(int(round(start_us * NS_PER_US)), identity_track,
-                          identity_track_name(reason), annotations=identity,
-                          categories=(CATEGORY_RUN,))
+            if not tracks_only:
+                start_us = _plane1_start_us(plane1_events)
+                trace.instant(int(round(start_us * NS_PER_US)), identity_track,
+                              identity_track_name(reason), annotations=identity,
+                              categories=(CATEGORY_RUN,))
 
         # Plane 1: one lane, one thread track per task tid, which is
         # the convention `bst_log_to_chrome_trace` already writes.
@@ -1430,8 +1438,9 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
                 if track is None:
                     track = host_tracks[label] = trace.counter_track(
                         label, parent=plane1_track, unit_name=unit)
-                trace.counter(int(round(at_us * NS_PER_US)),
-                              track, int(round(value * scale)))
+                if not tracks_only:
+                    trace.counter(int(round(at_us * NS_PER_US)),
+                                  track, int(round(value * scale)))
                 host_points += 1
 
         # UX-847: the dynamic pool's own record, drawn the same way -
@@ -1442,7 +1451,8 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
             if track is None:
                 track = host_tracks["jobserver pool"] = trace.counter_track(
                     "jobserver pool", parent=plane1_track, unit_name="tokens")
-            trace.counter(int(round(t_us * NS_PER_US)), track, int(pool))
+            if not tracks_only:
+                trace.counter(int(round(t_us * NS_PER_US)), track, int(pool))
             host_points += 1
 
         # `UX-892`: and one track per element beside it. The pool track
@@ -1455,7 +1465,8 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
                 track = host_tracks[label] = trace.counter_track(
                     label, parent=plane1_track, unit_name="tokens")
             for t_us, tokens in points:
-                trace.counter(int(round(t_us * NS_PER_US)), track, int(tokens))
+                if not tracks_only:
+                    trace.counter(int(round(t_us * NS_PER_US)), track, int(tokens))
                 host_points += 1
 
         threads = {}
@@ -1472,6 +1483,8 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
                 track = threads[tid] = trace.thread_track(
                     names.get(tid) or f"tid {tid}", parent=plane1_track,
                     pid=1, tid=tid)
+            if tracks_only:
+                continue
             timestamp = int(round(event["ts"] * NS_PER_US))
             if phase == "B":
                 sources, sinks = plane1_flows.get(id(event), ((), ()))
@@ -1566,11 +1579,12 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
                 counter_track = trace.counter_track(
                     CONCURRENCY_COUNTER, parent=plane1_track,
                     unit_name=CONCURRENCY_UNIT)
-                for timestamp, value in series:
-                    trace.counter(
-                        int(round(timestamp * 1e6 * NS_PER_US
-                                  + offset_us * NS_PER_US)),
-                        counter_track, value)
+                if not tracks_only:
+                    for timestamp, value in series:
+                        trace.counter(
+                            int(round(timestamp * 1e6 * NS_PER_US
+                                      + offset_us * NS_PER_US)),
+                            counter_track, value)
             for record in records:
                 element = record.get("element") or "unknown"
                 pid = element_pid.get(element)
@@ -1594,6 +1608,8 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
                     thread = lane["threads"][record["pid"]] = trace.thread_track(
                         f"pid {record['pid']}", parent=lane["track"],
                         pid=pid, tid=record["pid"])
+                if tracks_only:
+                    continue
                 start_ns = int(round(record["start_ts"] * 1e6 * NS_PER_US
                                      + offset_us * NS_PER_US))
                 # `UX-333`: the whole command, and nothing beside it.
@@ -1671,10 +1687,11 @@ PLANE1_ONLY = "1"
 PLANE_CHOICES = (PLANES_BOTH, PLANE1_ONLY)
 
 
-def render(snapshot: str, output: str,
+def render(snapshot: str, output: Optional[str],
            anchor_element: Optional[str] = None, quiet: bool = False,
            fmt: str = FORMAT_TRACKEVENT, planes: str = PLANES_BOTH,
-           only_element: Optional[str] = None) -> dict:
+           only_element: Optional[str] = None,
+           tracks_only: bool = False) -> dict:
     """Write the timeline. Returns what went into it, for the caller to say.
 
     `quiet` for a caller rendering into a scratch path it will delete -
@@ -1687,6 +1704,10 @@ def render(snapshot: str, output: str,
     converters have always produced. Both read the same two logs and
     align on the same anchor, so the choice is a matter of what will
     open the file, not of what is in it.
+
+    `tracks_only` (`UX-1081`, `trackevent` only): `output` may be
+    `None`; nothing is written, and `result["tracks"]` is the number a
+    full render of the same run and `planes` would open.
     """
     from .bst_log_to_chrome_trace import main as plane1_main
     from .native_trace_to_chrome_trace import main as merge_main
@@ -1732,7 +1753,7 @@ def render(snapshot: str, output: str,
                 edges=dependency_edges(snapshot), snapshot=snapshot,
                 structure=element_structure(snapshot),
                 resources=task_resources(snapshot),
-                only_element=only_element)
+                only_element=only_element, tracks_only=tracks_only)
             result = {"planes": ["1", "2"] if (raw and anchor) else ["1"],
                       "anchor": anchor, "raw_log": raw, "format": fmt}
             result.update(written)
@@ -1745,6 +1766,12 @@ def render(snapshot: str, output: str,
                     "the Plane 2 capture attributes no span to an element, so "
                     "there is nothing to align the two planes on")
             return result
+
+        if output is None:
+            # `tracks_only` (`UX-1081`) is `trackevent`-only, which has
+            # already returned above; the chrome path below always
+            # writes a real file.
+            raise ValueError("output is required for the chrome format")
 
         if raw is None:
             shutil.copyfile(plane1, output)

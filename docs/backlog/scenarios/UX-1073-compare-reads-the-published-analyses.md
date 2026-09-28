@@ -1,6 +1,6 @@
 # UX-1073: compare reads each side's published analysis instead of analyzing both runs again
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the snapshot and view performance audit on `39d89d4` (2026-09-28) | **Serves:** R5, R1 | **Topic:** analysis | **Area:** bga | **Shape:** judgement
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the snapshot and view performance audit on `39d89d4` (2026-09-28) | **Serves:** R5, R1 | **Topic:** analysis | **Area:** bga | **Shape:** judgement
 
 ## Motivation
 

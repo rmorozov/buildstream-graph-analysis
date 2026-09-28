@@ -1,6 +1,6 @@
 # UX-1077: the snapshot tail and bga view run minutes of work with no progress and no timing
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the snapshot and view performance audit on `39d89d4` (2026-09-28) | **Serves:** R1, R5 | **Topic:** cli | **Area:** tools | **Shape:** mechanical
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the snapshot and view performance audit on `39d89d4` (2026-09-28) | **Serves:** R1, R5 | **Topic:** cli | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 

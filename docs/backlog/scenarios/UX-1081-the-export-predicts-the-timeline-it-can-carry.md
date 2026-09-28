@@ -1,6 +1,6 @@
 # UX-1081: `bga view --export` renders a whole timeline before refusing it and rendering a narrower one
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the snapshot and view performance audit on `39d89d4` (2026-09-28) | **Serves:** R1 | **Topic:** viewer | **Area:** tools | **Shape:** mechanical
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the snapshot and view performance audit on `39d89d4` (2026-09-28) | **Serves:** R1 | **Topic:** viewer | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 

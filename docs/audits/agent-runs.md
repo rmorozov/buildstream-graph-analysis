@@ -488,6 +488,16 @@ pairing for every merged row from round 103 on.
 | 146 | verifier | sonnet | verify UX-1071 | unknown | — | — | VERIFIED | — |
 | 146 | integrator | sonnet | merge the four #298 review tracks | 88216 | — | — | merged to dd90b4df | conflicts in bga/disclosure.py and tests/quality_reference.json |
 | 146 | closer | opus | close: row moves, ledger, round document | unknown | — | — | — | — |
+| 147 | implementer | sonnet | file backlog rows UX-1084..1087 from the owner's #298 re-review | 93015 | — | — | filed | — |
+| 147 | implementer | sonnet | UX-1084 a short numeric credential still exports verbatim | 183780 | — | — | VERIFIED 3107b31b | one rework after verify |
+| 147 | verifier | sonnet | verify UX-1084 | 47139 | — | — | DEFECTS | gcc -l1234, curl -O 12345 kept verbatim |
+| 147 | implementer | sonnet | UX-1085 the residue scan misses non-ASCII identifiers | 98535 | — | — | VERIFIED 3107b31b | one rework |
+| 147 | verifier | sonnet | verify UX-1085 | 67440 | — | — | VERIFIED | one leak found |
+| 147 | implementer | sonnet | UX-1086 the archive publishes before the map is saved | 77512 | — | — | VERIFIED 3107b31b | one fix pass |
+| 147 | verifier | sonnet | verify UX-1086 | 37470 | — | — | DEFECTS | temp-file leak and existing-destination case found |
+| 147 | implementer | sonnet | UX-1087 the bounded-memory measurement holds identifiers constant | 150165 | — | — | VERIFIED 3107b31b | — |
+| 147 | integrator | sonnet | merge UX-1086, UX-1084, UX-1085, UX-1087 | 80091 | — | — | merged to 3107b31b | conflicts only in tests/quality_reference.json |
+| 147 | closer | sonnet | close: row moves, ledger, round document | unknown | — | — | — | — |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -500,7 +510,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the four hundred and seventy-one rows already say: a researcher that reads a document
+What the four hundred and eighty-one rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

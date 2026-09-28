@@ -1,6 +1,6 @@
 # UX-1084: a short numeric credential still exports verbatim
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-1068 | **Found by:** the owner's #298 re-review at 156d7436, finding 1 | **Serves:** anyone sharing a private capture with an outside reader | **Topic:** store | **Area:** bga | **Shape:** mechanical
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-1068 | **Found by:** the owner's #298 re-review at 156d7436, finding 1 | **Serves:** anyone sharing a private capture with an outside reader | **Topic:** store | **Area:** bga | **Shape:** mechanical
 
 ## Motivation
 
@@ -55,6 +55,11 @@ reversible by design, unlike the credential-shaped drop path).
 binary (`_MAKE_LIKE_BINARIES`/`_MAKE_SAFE_FLAGS`); `-O2` keeps its
 value only glued and only on a compiler driver (`_COMPILER_BINARIES`,
 `_OPT_LEVEL`) - `gcc -l1234` and `curl -O 12345` now pseudonymize.
+The safe set is re-keyed on (binary, option): make/gmake/ninja keep
+`-j`/`--jobs`/`-l`/`--load-average`; a compiler driver keeps only a
+glued `-O<digit>`; `JOBS`/`CMAKE_BUILD_PARALLEL_LEVEL` keep regardless
+of binary. Verifier's leaks `gcc -l1234` and `curl -O 12345`/`wget -O
+12345` pseudonymize (checked: `gcc -lf-9346`, `curl -O f-15243729`).
 `python tools/dev_touching.py --base e5075375`: 44 files selected,
 1877 passed, 3 skipped.
 

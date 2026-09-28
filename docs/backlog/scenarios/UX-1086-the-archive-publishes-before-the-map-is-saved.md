@@ -1,6 +1,6 @@
 # UX-1086: the archive publishes before the map is saved
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-1069 | **Found by:** the owner's #298 re-review at 156d7436, finding 3 | **Serves:** anyone sharing a private capture with an outside reader | **Topic:** store | **Area:** bga | **Shape:** mechanical
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-1069 | **Found by:** the owner's #298 re-review at 156d7436, finding 3 | **Serves:** anyone sharing a private capture with an outside reader | **Topic:** store | **Area:** bga | **Shape:** mechanical
 
 ## Motivation
 

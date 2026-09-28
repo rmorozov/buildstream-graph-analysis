@@ -1,6 +1,6 @@
 # UX-1085: the residue scan misses non-ASCII identifiers
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-1069 | **Found by:** the owner's #298 re-review at 156d7436, finding 2 | **Serves:** anyone sharing a private capture with an outside reader | **Topic:** store | **Area:** bga | **Shape:** mechanical
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-1069 | **Found by:** the owner's #298 re-review at 156d7436, finding 2 | **Serves:** anyone sharing a private capture with an outside reader | **Topic:** store | **Area:** bga | **Shape:** mechanical
 
 ## Motivation
 

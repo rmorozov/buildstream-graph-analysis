@@ -448,6 +448,20 @@ pairing for every merged row from round 103 on.
 | 142 | verifier | sonnet | verify review #295 drawing route (UX-1017) | 68k | 47 | 5.5 m | mutation reddens 3 of 20; columnStrip's exclusion is documented, not guarded | judged on the guard's payloads; no browser found on PATH |
 | 142 | verifier | sonnet | verify UX-1038 | 60k | 56 | 13.3 m | guard reddens on a literal; misses a concatenated (s); output unchanged by 27cc34dc | ran dev_touching against its brief |
 | 143 | researcher | sonnet | escapes across 999 task files, by class and catcher | 120k | 40 | 4.9 m | complete, 23 escapes, ~15 ambiguous | escape language is unstandardised; three keyword passes before reads separated escapes from noise |
+| 144 | implementer | sonnet | UX-1051 one resting rule for select/text | — | — | — | VERIFIED 9c3c2262 | — |
+| 144 | implementer | sonnet | UX-1043 toggle gutter reserved with flex | — | — | — | VERIFIED 482bca69, 3 sendbacks (overlap, skip reasons, root-font zoom) | tests/browser.py file needed a tiers.py row before it did |
+| 144 | implementer | sonnet | UX-1048 accent guard reads each grade's sentinel | — | — | — | VERIFIED 3b251817, 2 sendbacks (skip reasons, dom-shim createElement, accent-mark override) | hard-coded hex equal to an accent still passes by value |
+| 144 | implementer | sonnet | UX-1047 the page's one h1 names the run | — | — | — | VERIFIED, fix cherry-picked as 7d3175dd | runDisplayName climbs on any literal "run" |
+| 144 | implementer | sonnet | UX-1052 viewer JS ships gzipped under PAGE_BUDGET_B | — | — | — | VERIFIED e6bbe261 (dom_shim installDocument) | — |
+| 144 | implementer | sonnet | UX-1046 UX-1044 rail discloses current chapter; one fold | — | — | — | VERIFIED da38799d, 2 sendbacks (font-weight dodge, first-Tab skip) | grade guard LOOKS omits font-weight |
+| 144 | implementer | sonnet | UX-1049 one landed-height bound per size class | — | — | — | VERIFIED 441c0a03 | compact bound re-measured at integration, 13.5 -> 13.0 |
+| 144 | implementer | sonnet | UX-1053 UX-1050 two-plane volume at scale | — | — | — | VERIFIED, tip 93da2190 | — |
+| 144 | implementer | sonnet | UX-1042 pointer travel is a budget | — | — | — | VERIFIED 38c73bee | — |
+| 144 | implementer | sonnet | UX-1054 the first Tab starts at the top | — | — | — | VERIFIED 443abd18 | nav.js mark() scrollIntoView moved the focus start |
+| 144 | implementer | sonnet | UX-1055 copy-rows/top-n one place, DOM order | — | — | — | VERIFIED 34077808 after one sendback (CSS order, not DOM) | — |
+| 144 | verifier | sonnet | verify UX-1043 UX-1051 | — | — | — | flagged unreadable skip reasons, 79 vs 78 bound | new browser test files need a tiers.py row |
+| 144 | general-purpose | opus | integrate: merge tracks, tiers rows, re-measure budgets, push-check | — | — | — | pushed 10cde1d2, push-check rc 0; J3 re-based at 390 per §3l | github-advanced-security red on #297 and #298 alike (Copilot scanner, not this round's) |
+| 144 | general-purpose | opus | walk 10cde1d2: macro_micro + 1,202 two-plane, 1440/390 | — | — | — | every round row held; 3 pre-existing findings filed UX-1056-1058 | — |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -460,7 +474,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the four hundred and thirty-one rows already say: a researcher that reads a document
+What the four hundred and forty-five rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

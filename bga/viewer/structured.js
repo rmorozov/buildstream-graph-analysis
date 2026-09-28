@@ -198,15 +198,19 @@ export function mapTable(key, rows, hint, node, nested, depth = 0, path = key) {
  * index into `middle` (`-1` at rest), so backward always lands on the
  * same window forward built, even where the last one is a short remainder.
  */
-function boundedList(value, noun) {
+function boundedList(value, noun, item = null) {
   const items = value.map(String);
   const head = items.slice(0, PATH_HEAD);
   const tail = items.slice(items.length - PATH_TAIL);
   const middle = items.slice(head.length, items.length - tail.length);
   const pages = Math.ceil(middle.length / REVEAL_STEP);
-  const first = el("span", { class: "list-head" }, head.join(", "));
+  // `item` draws each shown name as a node (a finding's element link); text otherwise.
+  const run = (names, lead) => (item
+    ? names.flatMap((name, i) => [i || lead ? ", " : "", item(name)])
+    : [names.length ? `${lead ? ", " : ""}${names.join(", ")}` : ""]);
+  const first = el("span", { class: "list-head" }, ...run(head, false));
   const shownMiddle = el("span", { class: "list-middle" }, "");
-  const last = el("span", { class: "list-tail" }, `, ${tail.join(", ")}`);
+  const last = el("span", { class: "list-tail" }, ...run(tail, true));
   const position = el("span", { class: "list-position" }, "");
   const prev = el("button", { type: "button", class: "list-prev",
                               "aria-label": `previous ${noun}` }, "‹ Prev");
@@ -215,7 +219,7 @@ function boundedList(value, noun) {
   const render = () => {
     const start = Math.max(0, page) * REVEAL_STEP;
     const chunk = page < 0 ? [] : middle.slice(start, start + REVEAL_STEP);
-    shownMiddle.textContent = chunk.length ? `, ${chunk.join(", ")}` : "";
+    shownMiddle.replaceChildren(...run(chunk, true));
     const remaining = middle.length - start - chunk.length;
     prev.hidden = page <= 0;
     more.hidden = remaining <= 0;
@@ -242,6 +246,12 @@ function boundedList(value, noun) {
                      "data-shown": String(head.length + tail.length) },
             first, shownMiddle, el("span", { class: "list-pager" },
                                    prev, position, more), last);
+}
+
+/** `UX-1053` (review): a list past the bound whose shown names are `item`'s nodes. */
+export function foldedList(key, value, item) {
+  return folded(title(key), value,
+                boundedList(value, title(key).toLowerCase(), item), key);
 }
 
 /**
@@ -692,7 +702,14 @@ export function buildTable(key, rows, hint = {}, node = undefined,
   if (options.fold) foldTheMiddle(table, rows.length, options.fold);
   const uniform = statedOnce(table, specs, rows.length);
   const tools = interrogable(table, specs, rows.length, depth);
-  if (uniform) tools.prepend?.(uniform);
+  // `UX-1055`: after `copy-rows`, not before it - a plain `prepend`
+  // put this note ahead of `copy-rows`, undoing its guaranteed first
+  // place in the row (styleguide §3l).
+  if (uniform) {
+    const after = tools.querySelector?.(".copy-rows");
+    if (after) after.after(uniform);
+    else tools.prepend?.(uniform);
+  }
   return { table, tools };
 }
 
@@ -1153,9 +1170,14 @@ export function interrogable(table, specs, total, depth = 0) {
   const nested = depth > 0;
   const expand = served() && (nested || total > TABLE_OPENS_BOUNDED_ABOVE)
     ? expandTableControl(table, depth) : null;
-  const tools = el("div", { class: "table-tools" }, box, badge,
-                            state.preset ?? null, pager, copyRows, asMarkdown,
-                            expand, shape);
+  // `UX-1055` (styleguide §3l): `copyRows` first and `state.preset`
+  // (`top-n`) last in the DOM too, not just visually via CSS `order` -
+  // a reader tabbing through matches what a sighted reader sees
+  // (WCAG 2.4.3/1.3.2); `style.css`'s `margin-left: auto` on `top-n`
+  // still carries the "nothing shares its trailing space" guarantee.
+  const tools = el("div", { class: "table-tools" }, copyRows, box, badge,
+                            pager, asMarkdown, expand, shape,
+                            state.preset ?? null);
   // The badge and the count are the same claim; refresh both together.
   tools.addEventListener?.("input", label);
   tools.addEventListener?.("change", label);

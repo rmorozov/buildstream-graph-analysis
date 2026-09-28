@@ -73,25 +73,50 @@ const bounded = (key, items) => (items.length > TABLE_OPENS_BOUNDED_ABOVE
  * must not look alike.
  */
 /**
+ * `UX-394`/`UX-1047`: what a run is called. `run.json`'s own `name` is
+ * the served directory's basename, which is `"run"` both for a stored
+ * snapshot (`<store>/<stamp>/run`, where the stamp is what a reader
+ * wants) and for a bare `run` dir with no store above it (an export's
+ * `into/snapshot/run`, where "snapshot" is only the export's own copy
+ * directory) - so that case reads one path segment up only when it is
+ * actually a stamp, never on the strength of the basename alone.
+ * Shared by the h1 and the run picker's `current`, which used to
+ * compute this on its own.
+ */
+//: `bga/run_store.py`'s `_STAMP` ("%Y%m%dT%H%M%SZ"), the only pattern
+//: the store writes a snapshot directory by - plus `new_snapshot_dir`'s
+//: own `-NN` disambiguator for two snapshots inside one second.
+const _STAMP_RE = /^\d{8}T\d{6}Z(-\d{2})?$/;
+
+export function runDisplayName(run) {
+  if (run?.name !== "run") return run?.name;
+  const parent = String(run?.run ?? "").split("/").filter(Boolean).slice(-2, -1)[0];
+  return _STAMP_RE.test(parent ?? "") ? parent : run.name;
+}
+
+/**
  * `UX-828` (styleguide §3i): the header's middle line - the run's
  * alias and, when the capture recorded one, its start instant. The
  * path this used to hold moves to `run_instance` (`UX-285`, already
- * generic-rendered from `payload.run_instance.run_dir`) and onto
- * `#wordmark`'s `title`, so a reader who wants it still has it.
+ * generic-rendered from `payload.run_instance.run_dir`) and onto the
+ * h1's `title`, so a reader who wants it still has it.
+ *
+ * `UX-1047` (styleguide §6e.1): the page's one `h1` is the run, not
+ * the wordmark - `#run-name` is now the h1 itself, and an absent
+ * `run.json` says so rather than showing nothing.
  */
 export function stampIdentity(doc, payload, run) {
-  const name = doc.getElementById("run-name");
-  if (name) name.textContent = run?.name ?? "bga";
+  const heading = doc.getElementById("run-name");
+  if (heading) heading.textContent = runDisplayName(run) || "unnamed run";
   const instant = doc.getElementById("run-instant");
   const started = payload?.run_instance?.started_at;
   if (instant) instant.textContent = started ? ` — ${started}` : "";
   const path = run?.run ?? "";
   const pathSlot = doc.getElementById("run-path");
   if (pathSlot) pathSlot.textContent = path;
-  const wordmark = doc.getElementById("wordmark");
-  if (wordmark) {
-    if (path) wordmark.setAttribute("title", path);
-    else wordmark.removeAttribute("title");
+  if (heading) {
+    if (path) heading.setAttribute("title", path);
+    else heading.removeAttribute("title");
   }
 }
 
@@ -997,9 +1022,7 @@ async function boot() {
       // has - so an export renders no selector rather than a control
       // that cannot reach what it offers.
       runSelector(contents, store, {
-        current: (run?.name === "run"
-          ? String(run?.run ?? "").split("/").filter(Boolean).slice(-2, -1)[0]
-          : run?.name) ?? null,
+        current: runDisplayName(run) ?? null,
       });
       // `UX-397`: **the handoff moves into the sticky rail.**
       //

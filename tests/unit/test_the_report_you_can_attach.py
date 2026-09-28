@@ -543,7 +543,11 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 # 10,841 B, all source: measured 339,237 B. Its review (#295) and
 # `UX-1037` added 3,006 B, all source: measured 342,243 B. 344,000
 # keeps the same order of headroom.
-PAGE_BUDGET_B = 344_000
+#
+# `UX-1052`: the viewer module ships gzipped, and the page measured
+# 342,017 -> 138,531 B on golden and macro_micro alike. The bound is
+# `CEILINGS`' now, at 150,000, so cli.md's table is checked against it.
+from tools.bga_view import PAGE_BUDGET_B
 
 #: `UX-444`: the claim, stated once. **The run's data is at least twice
 #: the page a reader is permitted to download.**
@@ -1187,7 +1191,11 @@ class TestItNeedsNothingButItself:
         """An export opens from a download folder, a CI artifact viewer,
         or an email attachment. Anything it would have to fetch is
         simply not there."""
+        import tools.bga_view as view
+
+        # `UX-1052`: and the gzipped module's own text, inflated.
         text = exported[0].read_text()
+        text += view.inflated_module(text)
         for url in re.findall(r'(?:src|href)="([^"]+)"', text):
             assert url.startswith(("#", "data:", "mailto:")) or \
                 url.startswith("https://ui.perfetto.dev"), (
@@ -1196,7 +1204,9 @@ class TestItNeedsNothingButItself:
     def test_no_relative_module_import_survives(self, exported):
         """A browser refuses a relative `import` over `file://`, so the
         two modules are concatenated into one inline block."""
-        text = exported[0].read_text()
+        import tools.bga_view as view
+
+        text = view.inflated_module(exported[0].read_text())
         assert not re.search(r"""import\s.*from\s+["']\./""", text)
         assert "openInPerfetto" in text, "perfetto.js was not inlined"
         assert "renderFindings" in text, "app.js was not inlined"
@@ -1880,8 +1890,8 @@ class TestTheSizeDiscipline:
         html = open(exported[0], encoding="utf-8").read()
         page = re.sub(r"<script[^>]*type=\"application/(json|octet-stream)\"[^>]*>"
                       r".*?</script>", "", html, flags=re.S)
-        accounted = sum(len(view._inline_module(name))
-                        for name in view._module_order())
+        # `UX-1052`: the modules as the page carries them - gzipped.
+        accounted = len(view._module_blocks(view._viewer_module()))
         accounted += len(view._uncommented_css(
             open(os.path.join(view.ASSET_DIR, "style.css"),
                  encoding="utf-8").read()))
@@ -2091,6 +2101,7 @@ function collect(root) {
 # its own inline JSON blocks, no filesystem beyond the one file.
 _EXPORT_HARNESS = _COMMON_SHIM + """
 import { readFileSync } from "node:fs";
+import { gunzipSync } from "node:zlib";
 const html = readFileSync(%s, "utf-8");
 
 const blocks = {};
@@ -2111,8 +2122,10 @@ globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).install
 _installDocument({ getElementById: (id) => nodes[id] ?? makeNode("div") });
 globalThis.fetch = () => { throw new Error("the export fetched something"); };
 
-const source = html.match(
-  /<script type="module">([\\s\\S]*?)<\\/script>/)[1];
+// `UX-1052`: the module travels gzipped; the loader inflates it the same way.
+const source = gunzipSync(Buffer.from(html.match(
+  /<script type="application\\/gzip" id="bga-module-gz">([^<]*)<\\/script>/)[1],
+  "base64")).toString("utf-8");
 const mod = await import(
   "data:text/javascript;base64," + Buffer.from(
     source + "\\nexport { render, inlined, load };").toString("base64"));

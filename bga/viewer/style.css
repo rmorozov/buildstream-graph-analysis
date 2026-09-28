@@ -203,6 +203,16 @@ p, li > p, dd { max-width: 72ch; }
 /* UX-1033 (styleguide §4f): §4f's walk never saw a form control - the
    UA default (13.333px) sat outside the four-step scale uncounted. */
 input, select, textarea { font: inherit; }
+/* UX-1051 (styleguide §6d): a resting look for every `select` and text
+   `input`, the tokens `.top-n` already draws with - `select.preset-view`
+   and `.run-picker select` had only a font size and rendered the UA
+   control otherwise. A class with its own surface (`.table-filter`,
+   `#jump`) wins on specificity and is unaffected. */
+select, input[type="text"], input[type="search"] {
+  font: inherit; font-size: var(--font-small); background: var(--panel);
+  color: inherit; border: 1px solid var(--line); border-radius: 3px;
+  max-width: 100%;
+}
 button {
   font: inherit; font-size: var(--font-small); line-height: 1.35; cursor: pointer;
   color: var(--fg); background: var(--muted-bg);
@@ -287,15 +297,35 @@ body[data-has-toc] > header {
   border-bottom: 1px solid var(--line);
   padding: var(--space-1) 0 var(--space-2); margin: 0 0 var(--space-4);
 }
-/* `UX-828` (styleguide §3i): the wordmark and the identity line sit on
-   one row where there is width for it - the header's whole budget is
-   72px, and three stacked blocks at the h1 size alone spend more.
-   `header` itself stays `display: block` (one column of identity,
-   above) - only its own children go inline. */
-#wordmark { display: inline-block; margin-right: var(--space-3); vertical-align: middle; }
+/* `UX-828` (styleguide §3i): the wordmark, the h1 and the identity
+   line sit on one row where there is width for it - the header's whole
+   budget is 72px, and three stacked blocks at the h1 size alone spend
+   more. `header` itself stays `display: block` (one column of
+   identity, above) - only its own children go inline.
+   `UX-1047`: `#wordmark` is text, not the heading - it drops to
+   `--font-small`, and `#run-name` (the h1) takes the row's `--space-3`
+   gap instead. */
+/* `UX-1047`: `#run-identity` (a `div`, not a `p` - it now holds a
+   heading, which a `p` cannot) is the header's one child for the
+   wordmark, the h1 and the instant, so the block count they cost is
+   one rather than three - `test_the_header_is_identity_and_fits`
+   counts `header.children`, and a fourth reddened it. */
 #run-identity, #run-producer {
   display: inline-block; vertical-align: middle;
   margin: 0; font-size: var(--font-small);
+}
+#wordmark {
+  display: inline-block; margin-right: var(--space-3); vertical-align: middle;
+  font-size: var(--font-small);
+}
+/* `UX-1047`: the run's name is data, unbounded in length - a long one
+   must not wrap the h1 onto its own row (measured 93px at 390x844 on
+   a run whose displayed name was 9 characters wider than "run" alone,
+   before the display-name fix; this is the row's own defence,
+   independent of it). One line, truncated, rather than a second. */
+#run-name {
+  display: inline-block; margin: 0 var(--space-3) 0 0; vertical-align: middle;
+  max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 /* The height the sticky heading occupies, named once so the rail's
    offset and every anchor's landing clear it by the same amount. A
@@ -503,6 +533,8 @@ p.empty-population { margin: var(--space-1) 0 0; color: var(--muted); max-width:
    §4's emphasis budget is spent on findings, and "you are here" is
    orientation, not severity. The marker is what carries it where color
    is unavailable (print, forced-colors, a monochrome screen). */
+/* One "you are here" across the rail: the chapter row and its section link. */
+button.toc-chapter-open[aria-current="location"],
 .toc a[data-current] { font-weight: 600; color: var(--fg); }
 .toc a[data-current]::before { content: "\25b8\00a0"; }
 .toc-controls { margin: var(--space-2) 0 0; display: flex; gap: var(--space-2); }
@@ -529,9 +561,11 @@ button.collapse:hover { color: var(--fg); }
    grid. */
 section.chapter { margin: var(--space-5) 0 0; }
 section.chapter:first-of-type { margin-top: 0; }
+/* `UX-1044`: the fold control sits at the head's right edge, first line. */
 h2.chapter-title {
   margin: 0; padding-top: var(--space-2);
   border-top: 2px solid var(--line);
+  display: flex; align-items: baseline; gap: var(--space-2);
 }
 /* Inside a chapter the sections need less air between them than they
    did when nothing grouped them - the chapter boundary carries that
@@ -590,7 +624,7 @@ p.chapter-answer {
   margin: var(--space-1) 0 0; color: var(--muted); font-size: var(--font-body);
   max-width: 62ch;
 }
-button.chapter-open { margin-left: var(--space-2); vertical-align: middle; }
+button.chapter-open { margin-left: auto; flex: none; white-space: nowrap; }
 button.chapter-open:hover, button.chapter-open[aria-expanded="true"] {
   color: var(--fg); border-color: var(--fg);
 }
@@ -720,6 +754,25 @@ h3.category { letter-spacing: .04em;
                    report stops scrolling sideways. */
                 min-width: min(12rem, 100%); max-width: 100%; }
 .table-tools .badge { font-size: var(--font-small); color: var(--muted); }
+/* UX-1055 (styleguide §3l): `top-n` and `copy-rows` follow a variable
+   run of siblings (the badge, the preset, the pager - `structured.js`)
+   whose presence and text length depend on the table, so their offset
+   against the tool row used to spread past 24px. `structured.js` now
+   builds `copyRows` first and `state.preset` (`top-n`) last in the DOM
+   - not CSS `order`, which moves a control on screen without moving
+   its place in Tab order (WCAG 2.4.3/1.3.2) - so `copy-rows`'s left
+   edge is always the row's own edge, and `top-n`'s auto left margin
+   below still carries "nothing shares its trailing space", giving its
+   right edge the same guarantee, wrapped or not: measured 0px dx on
+   every table on `macro_micro` and the two-plane page, both viewports
+   (`test_pointer_travel_is_a_budget.py`). The reverse pairing
+   (`top-n` first, `copy-rows` last) passed the same dx bound but
+   pushed `copy-rows` past `.copy-as`/`.expand-table`/`.density`,
+   adding a wrapped line on most tables and 61px to `macro_micro`'s
+   volume budget (`test_the_page_has_a_volume_budget.py`) - this
+   pairing costs one line on four tables, not most. */
+.table-tools button.copy-rows { align-self: flex-start; }
+.table-tools select.top-n { margin-left: auto; align-self: flex-start; }
 .copy-rows { }
 th .th-filter { display: block; width: 100%; margin-top: var(--space-1);
                 font: inherit; font-size: var(--font-small); font-weight: normal;
@@ -791,10 +844,13 @@ th .th-filter.unparsed { border-color: var(--bad); border-style: dashed; }
   letter-spacing: .04em; color: var(--muted);
   border: 1px solid var(--line); border-radius: .2rem; padding: 0 var(--space-1);
   vertical-align: middle;
+  /* `UX-1043`: always a flex item of the head that also carries the
+     JSON toggle - shrinks past its own longest word so a promoted
+     section's tag never pushes the toggle past the head's edge. */
+  min-width: 0; overflow-wrap: anywhere;
 }
-/* UX-668 (styleguide §4 rule 7): a reader is a shape, not a hue - the
-   accent already spent on interaction and the band marks promotion
-   too, on the one non-colour channel §4.3 reserves for it. */
+/* UX-668 (styleguide §4 rule 7): a reader is a shape, not a hue - §4.2's
+   accent marks promotion on a border, the one channel §4.3 reserves. */
 section[data-promoted] { border-left: 3px solid var(--accent); }
 .status-line { margin: var(--space-1) 0 var(--space-2); font-size: var(--font-small); }
 .evidence-detail > summary { cursor: pointer; font-size: var(--font-small);
@@ -827,19 +883,13 @@ section[data-promoted] { border-left: 3px solid var(--accent); }
         background: var(--panel); color: inherit; border: 1px solid var(--line);
         border-radius: 10px; cursor: pointer; }
 .chip:hover { border-color: var(--accent); }
-.toc-rail { margin: var(--space-2) 0 0; font-size: var(--font-small); letter-spacing: .06em;
-            color: var(--muted); }
 
-/* `UX-667` (styleguide §3h): a source list - every chapter, and only
-   the open one's sections. `li[data-chapter]` is the row; `data-open`
-   is mirrored onto it from the same `section.chapter` box the document
-   folds (`chapters.js`'s `labelFold`), so the two views cannot drift.
-   No `overflow-y` here or on `.sections` below: the acceptance test's
-   third clause is that folding, not a scrollbox, is what bounds the
-   rail now. */
+/* Styleguide §3h: every chapter, and only the sections of the chapter the
+   reader is in (`data-current`, moved by `nav.js`'s scrollspy and row
+   press). No `overflow-y` here: disclosure, not a scrollbox, bounds it. */
 .toc .chapters { list-style: none; margin: 0; padding: 0; }
 .toc .chapters > li { margin: var(--space-2) 0 0; }
-.toc .chapters > li[data-open="false"] > .sections { display: none; }
+.toc .chapters > li:not([data-current]) > .sections { display: none; }
 /* §6d's "quiet" grade (transparent, solid, 3px) - the same full
    appearance `button.chapter-open` already draws (`test_every_control_
    has_a_resting_appearance.py` counts the whole look, not only the
@@ -851,8 +901,7 @@ button.toc-chapter-open {
   background: transparent; color: var(--muted);
   letter-spacing: .06em;
 }
-button.toc-chapter-open:hover,
-button.toc-chapter-open[aria-expanded="true"] { color: var(--fg); }
+button.toc-chapter-open:hover { color: var(--fg); }
 .question-group > summary { cursor: pointer;
                             color: var(--muted); font-size: var(--font-small);
                             margin-top: var(--space-2); }
@@ -1168,7 +1217,38 @@ section > .table-tools { top: var(--head, 5.5rem); }
    site, and the only one the reader opens on purpose. Quiet in the
    heading (it is a debugging affordance, not a finding) and monospace
    when open, because what it shows is meant to be pasted. */
-button.json-toggle { margin-left: var(--space-2); vertical-align: middle; }
+/* UX-1043 (styleguide §3l): pinned to the head's right edge rather
+   than trailing the title text, whose varying length is what made the
+   toggle land "somewhere else in every section". The fold and door
+   already own the left edge (`nav.js` prepends the fold,
+   `attachBlockDoor` prepends the door into the first block); the right
+   edge is the one side nothing else on the head claims. A flex row
+   rather than a measured `padding-right`: a pixel reservation (first
+   cut: a guessed rem; second cut: `getBoundingClientRect().width` read
+   once in JS) is a number that can go stale - a root font-size change
+   resizes the button and leaves the frozen reservation behind it, which
+   is what the re-verification measured. The browser lays out flex
+   children itself, every reflow, so the toggle's own box is always
+   what is reserved. The title text is an anonymous flex item here
+   (`el("h2", {}, info.label)` gives the head a bare text child) and
+   shrinks to wrap around the fixed-width sibling on its own. */
+h2:has(> button.json-toggle), h3:has(> button.json-toggle) {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  /* A promoted section's title text is an anonymous flex item here
+     (there is no element to put `min-width: 0` on), so its automatic
+     minimum falls back to the longest unbroken word - `anywhere` lets
+     it shrink past that, the one gap `min-width: 0` alone leaves, and
+     is what keeps a long title plus a promoted `.reader-tag` from
+     outrunning a 390px head (measured: `confidence` on `golden`
+     overflowed the toggle past the head's right edge without it). */
+  overflow-wrap: anywhere;
+}
+button.json-toggle {
+  margin-left: auto;
+  flex: none;
+}
 button.json-toggle:hover { color: var(--fg); }
 .section-json pre {
   margin: var(--space-2) 0 0;

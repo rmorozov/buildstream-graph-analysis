@@ -1,6 +1,6 @@
 # UX-1065: a declared public junction keeps its public names
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-1062 | **Found by:** the 2026-09-27 brainstorm with the owner ([`anonymized-bundle.md`](../../design/anonymized-bundle.md)), section 5 | **Serves:** anyone sharing a private capture with an outside reader | **Topic:** store | **Area:** bga | **Shape:** judgement
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-1062 | **Found by:** the 2026-09-27 brainstorm with the owner ([`anonymized-bundle.md`](../../design/anonymized-bundle.md)), section 5 | **Serves:** anyone sharing a private capture with an outside reader | **Topic:** store | **Area:** bga | **Shape:** mechanical
 
 ## Motivation
 
@@ -25,5 +25,17 @@ Guessing publicness from a source URL.
 fixture with a declared junction and one element added "in a fork" -
 the public element keeps its name, the added one is pseudonymized.
 Mutation: drop the list intersection, and the fork's element leaks.
+
+## Decision
+
+Route:     `.bga/config` (JSON, run_store.read_config bga/run_store.py:461; tools/bga_snapshot.py:735 _sticky_config keeps unknown keys) gains `"public_junctions": {"<junction>.bst": {"checkout": "<dir>", "tag": "<tag>"}}`.
+Route:     new bga/public_names.py builds the list offline: `git -C <checkout> rev-parse <tag>^{commit}` (refuse if absent); element-path from `git show <tag>:project.conf` by read_scalar_key's rule (tools/bst_native_build_tracer.py:484, via tools_dispatch._import_tool), default `elements`; `git ls-tree -r --name-only <tag> -- <element-path>`, `*.bst`, prefixed `<junction>:`. The tag's tree, never the working tree.
+Route:     anonymize passes a class-A element name through only when it carries a declared junction's prefix and is in that list; kept out of the map and residue dictionary; paths, URLs, refs under it still pseudonymized; manifest lists {junction, tag, names_passed}.
+Rejected:  guessing from the source URL; reading the working tree; a YAML parser for project.conf; a CLI flag (config is hand-edited; a later row).
+Files:     bga/public_names.py · bga/run_store.py (`public_junctions(project)`) · bga/anonymize.py · bga/bundle.py · tests/unit/test_a_public_junction_keeps_only_public_names.py
+Guard:     tests/unit/test_a_public_junction_keeps_only_public_names.py: git init + tag a copy of tests/fixtures/bst_show_project/subproj in tmp_path, add forked.bst to the working tree and a later commit; capture holds subproj-junction.bst:libfoo.bst and :forked.bst; libfoo keeps its name, forked gets e-, nothing declared pseudonymizes both, manifest names junction and tag.
+Mutation:  drop the list intersection, forked leaks; list the working tree instead of ls-tree <tag>, it leaks.
+Class:     product
+Split:     one track after UX-1061 and UX-1062.
 
 ## Outcome

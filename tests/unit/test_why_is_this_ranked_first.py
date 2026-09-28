@@ -231,9 +231,11 @@ class TestTheExportCarriesIt:
         out = tmp_path / "r.html"
         view.export(str(run), str(out))
         html = out.read_text(encoding="utf-8")
-        assert "renderWhyRanked" in html, (
+        # `UX-1052`: the module travels gzipped; read what it inflates to.
+        source = view.inflated_module(html)
+        assert "renderWhyRanked" in source, (
             "the export dropped the module that renders the explanation")
-        assert "why-ranked" in html
+        assert "why-ranked" in source
 
 
 _HARNESS = """

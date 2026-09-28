@@ -198,7 +198,7 @@ def _boot_chapters_uncached(inventory=None, source=GOLDEN):
     html = page.read_text(encoding="utf-8")
     module = tmp / "inline.mjs"
     module.write_text(
-        re.search(r'<script type="module">(.*?)</script>', html, re.S).group(1),
+        view.inflated_module(html),
         encoding="utf-8")
     probe = tmp / "probe.mjs"
     source = (REPO / "tests/unit/test_a_report_you_can_navigate.py").read_text()

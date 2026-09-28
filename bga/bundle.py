@@ -285,6 +285,11 @@ def _join(pattern: str, step: str) -> str:
     return f"{pattern}.{step}" if pattern else step
 
 
+#: `rename` returns this to mean "drop the whole entry, key and value" -
+#: a class-F/G map key carries nothing an export can keep as a key.
+_DROP_ENTRY = object()
+
+
 def _rewrite(node: dict, value, pattern: str, leaf, rename):
     """`value` rebuilt in place under the policy trie: key and list order kept."""
     if value is None:
@@ -298,7 +303,10 @@ def _rewrite(node: dict, value, pattern: str, leaf, rename):
             elif placeholder is None:
                 raise BundleError(f"{pattern}.{name}: not named by the policy")
             else:
-                out[rename(placeholder[1:-1], name)] = _rewrite(
+                renamed = rename(placeholder[1:-1], name)
+                if renamed is _DROP_ENTRY:
+                    continue
+                out[renamed] = _rewrite(
                     node[placeholder], item, _join(pattern, placeholder), leaf, rename)
         return out
     if isinstance(value, list):
@@ -348,8 +356,14 @@ class _Anonymizer:
         self.policy = policy
         return _rewrite(trie, document, "", self._leaf, self._rename)
 
-    def _rename(self, klass: str, name: str) -> str:
-        return name if klass == "C" else str(self._leaf(klass, "", name))
+    def _rename(self, klass: str, name: str):
+        """A map key's own class. `_leaf` returns `None` only for a
+        class-F/G value - dropped, not stringified into the literal key
+        `"None"` - so `_rewrite` drops the whole entry on that sentinel."""
+        if klass == "C":
+            return name
+        renamed = self._leaf(klass, "", name)
+        return _DROP_ENTRY if renamed is None else str(renamed)
 
     def _leaf(self, klass: str, pattern: str, value):
         head, key, pmap = klass[0], self.key, self.pmap

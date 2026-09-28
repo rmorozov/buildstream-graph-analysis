@@ -9,13 +9,19 @@ Implements Part 5: Static Dependency Graph including:
 
 import logging
 from collections import defaultdict, deque
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Optional
 
 from ..exceptions import AnalysisError
 from ..ingest.models import Graph, NormalizedTask
 
 logger = logging.getLogger(__name__)
+
+#: `UX-539` used `int.bit_count()`, which is **3.10+**, and
+#: `requires-python` is `>=3.9` - bound once at import so the fast path
+#: stays a method call on the interpreters that have it.
+_popcount = getattr(int, "bit_count", None) or (
+    lambda value: bin(value).count("1"))
 
 
 def build_element_graph(
@@ -216,86 +222,153 @@ def compute_weighted_depth(
     return earliest_finish
 
 
-def compute_reachability(graph: Graph) -> tuple[dict[str, set[str]], dict[str, set[str]]]:
+class ReachabilitySets(Mapping):
+    """One direction of the shared bitset closure, decoded per key on
+    first access (UX-1074) rather than all N sets up front - a caller
+    that reads a handful of uids (`blast`, `cli`'s resource-blast
+    section) pays to decode only those. Public (not `_`-prefixed) so a
+    reader (`fan_in.py`, `serialization_points.py`) can type its
+    `.count()` call against this rather than a bare `dict`.
     """
-    Compute reachability sets for all elements (Part 5.3).
-    
-    For each element:
-        - reachable_downstream: all elements that can be reached from it
-        - reachable_upstream: all elements that can reach it
-    
-    Uses reverse traversal with memoization for efficiency.
-    
-    Args:
-        graph: Input graph
-        
-    Returns:
-        Tuple of (reachable_downstream, reachable_upstream) dictionaries
+
+    def __init__(self, iter_order: list[str], order: list[str], index: dict, bits: list[int]):
+        # `iter_order`: the old set-building loop's own insertion order
+        # (its direction's topo pass, then disconnected/cycle members in
+        # `graph.elements` order) - kept so a dict built from this
+        # mapping's iteration is byte-identical to what it replaces.
+        self._iter_order = iter_order
+        self._order = order
+        self._index = index
+        self._bits = bits
+        self._cache: dict[str, frozenset] = {}
+
+    def __getitem__(self, uid):
+        cached = self._cache.get(uid)
+        if cached is not None:
+            return cached
+        i = self._index.get(uid)
+        if i is None:
+            decoded = frozenset()
+        else:
+            mask = self._bits[i]
+            decoded = frozenset(u for j, u in enumerate(self._order) if mask & (1 << j))
+        self._cache[uid] = decoded
+        return decoded
+
+    def __iter__(self):
+        return iter(self._iter_order)
+
+    def __len__(self):
+        return len(self._iter_order)
+
+    def count(self, uid: str) -> int:
+        """The size of `self[uid]` without decoding it (UX-1074)."""
+        i = self._index.get(uid)
+        return 0 if i is None else _popcount(self._bits[i])
+
+
+def _reachability_closure(graph: Graph) -> tuple[ReachabilitySets, ReachabilitySets]:
+    """The one bitset closure per graph (UX-1074), cached on `graph` so
+    every caller in one analysis shares it instead of each rebuilding
+    its own O(V*(V+E)) set-per-element closure - `UX-539`'s bitset in
+    `bga/structural/analyzer.py:231` is the same trick, scoped there to
+    one `StructuralAnalyzer` instance.
+    """
+    cached = graph.reachability_closure_cache
+    if cached is not None:
+        return cached
+    result = _build_reachability_closure(graph)
+    graph.reachability_closure_cache = result
+    return result
+
+
+def _build_reachability_closure(graph: Graph) -> tuple[ReachabilitySets, ReachabilitySets]:
+    """The actual O(V*E/64) bitset build `_reachability_closure` caches -
+    split out so a test can count real builds, not cache hits (UX-1074).
+
+    Bitset over the topological order: O(V*E/64) time, O(V^2/64)
+    memory for the closure itself, versus O(V^2) python-set entries.
     """
     _, successors = build_element_graph(graph)
     predecessors, _ = build_element_graph(graph)
-    
-    # Compute downstream reachability using reverse topological order
-    reachable_downstream: dict[str, set[str]] = {}
-    reachable_upstream: dict[str, set[str]] = {}
-    
-    # Get topological order
+
     in_degree, _ = compute_in_out_degree(graph)
     topo_order = []
     queue = deque([uid for uid, deg in in_degree.items() if deg == 0])
     temp_in_degree = dict(in_degree)
-    
     while queue:
         current = queue.popleft()
         topo_order.append(current)
-        
         for succ in successors.get(current, []):
             temp_in_degree[succ] -= 1
             if temp_in_degree[succ] == 0:
                 queue.append(succ)
-    
-    # Process in reverse topological order for downstream
-    for elem_uid in reversed(topo_order):
-        reachable = set()
-        for succ in successors.get(elem_uid, []):
-            reachable.add(succ)
-            reachable.update(reachable_downstream.get(succ, set()))
-        reachable_downstream[elem_uid] = reachable
-    
-    # Process in topological order for upstream
-    for elem_uid in topo_order:
-        reachable = set()
-        for pred in predecessors.get(elem_uid, []):
-            reachable.add(pred)
-            reachable.update(reachable_upstream.get(pred, set()))
-        reachable_upstream[elem_uid] = reachable
-    
-    # Handle elements not in topological order (disconnected or cycles)
-    for elem in graph.elements:
-        if elem.uid not in reachable_downstream:
-            reachable_downstream[elem.uid] = set()
-        if elem.uid not in reachable_upstream:
-            reachable_upstream[elem.uid] = set()
-    
-    return reachable_downstream, reachable_upstream
+
+    index = {uid: i for i, uid in enumerate(topo_order)}
+    bit = [1 << i for i in range(len(topo_order))]
+
+    # Reverse topological order for downstream: every successor of
+    # `uid` is already resolved by the time `uid` is processed.
+    descendants = [0] * len(topo_order)
+    for uid in reversed(topo_order):
+        mask = 0
+        for succ in successors.get(uid, []):
+            j = index.get(succ)
+            if j is not None:
+                mask |= descendants[j] | bit[j]
+        descendants[index[uid]] = mask
+
+    ancestors = [0] * len(topo_order)
+    for uid in topo_order:
+        mask = 0
+        for pred in predecessors.get(uid, []):
+            j = index.get(pred)
+            if j is not None:
+                mask |= ancestors[j] | bit[j]
+        ancestors[index[uid]] = mask
+
+    leftover = [elem.uid for elem in graph.elements if elem.uid not in index]
+    return (
+        ReachabilitySets(list(reversed(topo_order)) + leftover, topo_order, index, descendants),
+        ReachabilitySets(topo_order + leftover, topo_order, index, ancestors),
+    )
+
+
+def compute_reachability(graph: Graph) -> tuple[ReachabilitySets, ReachabilitySets]:
+    """
+    Compute reachability sets for all elements (Part 5.3).
+
+    For each element:
+        - reachable_downstream: all elements that can be reached from it
+        - reachable_upstream: all elements that can reach it
+
+    `UX-1074`: both are views over one bitset closure per graph
+    (`_reachability_closure`), shared by every caller instead of each
+    recomputing it - and each entry decodes to a real `set` lazily, on
+    the first read.
+
+    Args:
+        graph: Input graph
+
+    Returns:
+        Tuple of (reachable_downstream, reachable_upstream) mappings
+    """
+    return _reachability_closure(graph)
 
 
 def compute_downstream_count(graph: Graph) -> dict[str, int]:
     """
     Compute downstream count (blast radius) for all elements (Part 25).
-    
+
     Args:
         graph: Input graph
-        
+
     Returns:
         Dict mapping element uid to count of reachable downstream elements
     """
-    reachable_downstream, _ = compute_reachability(graph)
-    
-    return {
-        uid: len(reachable)
-        for uid, reachable in reachable_downstream.items()
-    }
+    reachable_downstream, _ = _reachability_closure(graph)
+
+    return {uid: reachable_downstream.count(uid) for uid in reachable_downstream}
 
 
 def find_terminal_elements(graph: Graph) -> set[str]:
@@ -957,8 +1030,12 @@ def analyze_graph(
         'out_degree': out_degree,
         'unweighted_depth': unweighted_depth,
         'weighted_depth': weighted_depth,
-        'reachable_downstream': {k: list(v) for k, v in reachable_downstream.items()},
-        'reachable_upstream': {k: list(v) for k, v in reachable_upstream.items()},
+        # UX-1074: the two lazy views themselves, not `{k: list(v) ...}`
+        # for every element - `reachable_upstream` has no reader at all,
+        # and `reachable_downstream` (`compute_blast_radius`) decodes
+        # only the uids it actually iterates.
+        'reachable_downstream': reachable_downstream,
+        'reachable_upstream': reachable_upstream,
         'downstream_count': downstream_count,
         'terminal_elements': list(terminals),
         'requested_targets': list(requested_targets),

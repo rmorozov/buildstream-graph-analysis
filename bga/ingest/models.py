@@ -7,7 +7,7 @@ All timestamps and durations use int64 microseconds.
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
+from typing import Any, Optional
 
 # BuildStream plugin kinds (Element.element_kind, P4-08) that are
 # typically thin structural/aggregation elements - no real compilation of
@@ -494,6 +494,11 @@ class Graph:
     # RunContext.run_identity's docstring for what it covers. None for
     # older/hand-built run directories without one.
     run_identity_hash: Optional[str] = None
+    # UX-1074: the shared bitset reachability closure, built once and
+    # cached here so `compute_reachability`'s five call sites share it -
+    # never serialized (excluded from repr/eq).
+    reachability_closure_cache: Optional[Any] = field(
+        default=None, repr=False, compare=False)
 
 
 @dataclass

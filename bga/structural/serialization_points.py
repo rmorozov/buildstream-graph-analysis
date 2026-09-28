@@ -149,7 +149,8 @@ def detect_large_serialization_points(
         task = tasks.get(element.uid)
         if task is None or task.dur_us < long_duration_threshold_us:
             continue
-        downstream_count = len(reachable_downstream.get(element.uid, set()))
+        # UX-1074: a popcount on the shared bitset, not a decode.
+        downstream_count = reachable_downstream.count(element.uid)
         if downstream_count == 0:
             # Nothing waits on it, so its serialization costs the build
             # only its own slot - not a synchronization point.

@@ -50,6 +50,8 @@ task file, which is the only place it ever lived twice.
 | UX-1066 | [raw logs travel tokenized](UX-1066-raw-logs-travel-tokenized.md) | store | Low | anyone sharing a private capture with an outside reader | 🔴 Not Started |
 | UX-1068 | [a credential in a command line is dropped, not kept](UX-1068-a-credential-in-a-command-line-is-dropped-not-kept.md) | store | High | anyone sharing a private capture with an outside reader | 🔴 Not Started |
 | UX-1069 | [the anonymized export runs in bounded memory](UX-1069-the-anonymized-export-runs-in-bounded-memory.md) | store | High | anyone sharing a large private capture | 🔴 Not Started |
+| UX-1070 | [the disclosure policy names what the producer writes](UX-1070-the-disclosure-policy-names-what-the-producer-writes.md) | contracts | High | anyone sharing a private capture with an outside reader | 🔴 Not Started |
+| UX-1071 | [the residue scan reads a large member in linear time](UX-1071-the-residue-scan-reads-a-large-member-in-linear-time.md) | store | Medium | anyone sharing a large private capture | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

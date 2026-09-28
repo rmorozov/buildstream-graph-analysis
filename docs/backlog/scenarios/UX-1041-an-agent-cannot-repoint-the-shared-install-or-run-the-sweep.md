@@ -59,3 +59,42 @@ Question:  none
 ```
 
 ## Outcome
+
+**Gap measured.** The new clauses against the base `e9273164`: its
+selector hook, and an empty `agent_worktree_limits.py` for the hook it
+did not have - every Bash payload from a linked worktree was allowed.
+
+```text
+$ python3 scratchpad/gap.py   # -k "Worktree or PayloadsCwd"
+15 failed, 24 passed in 4.50s
+```
+
+The 12 banned payloads unrefused from the linked tree, the declared
+`.sh` entry, and both selector clauses: the base `repo_root()` took no
+payload, so a worktree commit judged the process cwd's checkout.
+
+**Close measured.**
+
+```text
+$ python3 -m pytest tests/unit/test_the_agent_configuration_holds.py -q -n 2
+170 passed in 10.80s
+$ echo '{"cwd": "<this worktree>", "tool_input": {"command": "pip install -e ."}}' \
+    | .claude/hooks/agent-worktree-limits.sh
+Blocked from a linked worktree (...): `pip install -e` repoints the one shared `bga` install (UX-1041).
+exit=2
+$ # the same payload, cwd the main checkout
+exit=0
+```
+
+**Mutation table.** Each applied from a copy, the file's selection run
+(`-k "Worktree or PayloadsCwd or Selector"`), the copy restored.
+
+| Mutation | Reddened | Count |
+|---|---|---|
+| `is_linked_worktree` always True | `test_the_main_checkout_is_not` x12, `test_a_cwd_in_no_repository_is_allowed` | 13 failed, 41 passed |
+| the hook resolves `repo_root(None)`, the process cwd | `test_a_linked_worktree_is_refused` x12 | 12 failed, 42 passed |
+| selector `repo_root` ignores the payload (`start = None`) | `test_it_resolves_the_payloads_repository`, `test_a_payload_cwd_in_no_repository_allows` | 2 failed, 52 passed |
+
+`test_the_declared_entry_blocks` stays green under the second: the real
+hook's fallback, `parents[2]`, is itself a linked worktree when the suite
+runs in one. The copied-hook clauses carry that mutation.

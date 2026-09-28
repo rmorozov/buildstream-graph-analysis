@@ -2711,6 +2711,11 @@ def parse_open_lines(lines, open_element_overrides: Optional[dict[str, str]] = N
                 continue
             remaining -= 1
             if line.startswith("/"):
+                # UX-1076: interned - the same sysroot headers repeat
+                # across every element, and interning collapses the
+                # duplicate `str` objects a fresh line would otherwise
+                # allocate.
+                line = sys.intern(line)
                 entry["paths"].add(line)
             continue
         pid, element, invocation, unique, dropped, _part, relative, dirfd = match.groups()

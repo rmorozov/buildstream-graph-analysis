@@ -38,6 +38,11 @@ KINDS = ("initial", "breaking", "extending", "patch")
 _ROW = re.compile(
     r"^\|\s*\[?(\d+\.\d+\.\d+)\]?[^|]*\|\s*([\d-]+)\s*\|\s*(\d+)\s*\|"
     r"\s*(\w+)\s*\|")
+#: `UX-1078`'s precondition: the one row above the releases that has no
+#: version, no date and no marker, and whose kind is what the next cut is.
+UNRELEASED = "Unreleased"
+_UNRELEASED_ROW = re.compile(
+    r"^\|\s*\[?Unreleased\]?[^|]*\|[^|]*\|[^|]*\|\s*(\w+)\s*\|", re.M)
 _STATE = re.compile(r"```text state\n(.*?)```", re.S)
 #: `UX-820`: the generated block's body, to check what its last line is -
 #: the marker pair itself, not the range or its content.
@@ -45,9 +50,10 @@ _GENERATED = re.compile(
     r"<!-- generated: UX-252 \d+→\d+ -->\n(.*?)<!-- /generated -->", re.S)
 
 
-def _rows():
+def _rows(text=None):
     rows = []
-    for line in CHANGELOG.read_text(encoding="utf-8").splitlines():
+    text = CHANGELOG.read_text(encoding="utf-8") if text is None else text
+    for line in text.splitlines():
         match = _ROW.match(line)
         if match:
             rows.append({"version": match.group(1), "date": match.group(2),
@@ -68,12 +74,13 @@ def state_digest(recorded):
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:12]
 
 
-def _states():
-    """`{version: {"contracts": [...], "commands": [...]}}`."""
-    text = CHANGELOG.read_text(encoding="utf-8")
+def _states(text=None):
+    """`{version: {"contracts": [...], "commands": [...]}}` - the
+    Unreleased section, when there is one, under `UNRELEASED`."""
+    text = CHANGELOG.read_text(encoding="utf-8") if text is None else text
     states = {}
     for section in text.split("\n## ")[1:]:
-        version = section.split(" ", 1)[0].strip()
+        version = section.split(None, 1)[0]
         block = _STATE.search(section)
         if not block:
             continue
@@ -84,6 +91,33 @@ def _states():
                 recorded[key.strip()] = sorted(rest.split())
         states[version] = recorded
     return states
+
+
+def _unreleased_kind(text=None):
+    """The kind the Unreleased table row records, or None without one."""
+    text = CHANGELOG.read_text(encoding="utf-8") if text is None else text
+    match = _UNRELEASED_ROW.search(text)
+    return match.group(1) if match else None
+
+
+def answering(text=None):
+    """`(label, state)` the tree answers for: Unreleased when it exists,
+    else the newest versioned row (`UX-1078`)."""
+    states = _states(text)
+    if UNRELEASED in states:
+        return UNRELEASED, states[UNRELEASED]
+    newest = _rows(text)[0]["version"]
+    return newest, states[newest]
+
+
+def _tree_state():
+    from bga import cli, contracts, tools_dispatch
+
+    commands = set(tools_dispatch.TOOL_ALIASES)
+    for action in cli.create_parser()._subparsers._group_actions:
+        if getattr(action, "choices", None):
+            commands |= set(action.choices)
+    return {"contracts": contracts.ids(), "commands": sorted(commands)}
 
 
 def _version_tuple(version):
@@ -163,20 +197,16 @@ class TestTheLedgerIsWellFormed:
         assert len(set(versions)) == len(versions), "a version is reused"
 
     def test_the_recorded_state_is_the_real_one_for_the_newest_release(self):
-        """The row is a claim about this tree, and this tree can answer."""
-        from bga import cli, contracts, tools_dispatch
-
-        newest = _rows()[0]
-        state = _states()[newest["version"]]
-        assert state["contracts"] == contracts.ids(), (
-            f"release {newest['version']} records a contract set that is "
+        """The row is a claim about this tree, and this tree can answer.
+        `UX-1078`: the Unreleased row when there is one, since a versioned
+        row is what shipped and the tree may have moved past it."""
+        label, state = answering()
+        tree = _tree_state()
+        assert state["contracts"] == tree["contracts"], (
+            f"{label} records a contract set that is "
             f"not this tree's:\n  recorded {state['contracts']}\n  real     "
-            f"{contracts.ids()}")
-        commands = set(tools_dispatch.TOOL_ALIASES)
-        for action in cli.create_parser()._subparsers._group_actions:
-            if getattr(action, "choices", None):
-                commands |= set(action.choices)
-        assert state["commands"] == sorted(commands)
+            f"{tree['contracts']}")
+        assert state["commands"] == tree["commands"]
 
     def test_a_superseded_release_is_frozen_by_a_digest(self):
         """`UX-550`: the newest row is checked against the tree, which
@@ -244,6 +274,73 @@ class TestTheLedgerIsWellFormed:
         pyproject = (REPO / "pyproject.toml").read_text(encoding="utf-8")
         assert f'version = "{newest}"' in pyproject, (
             f"pyproject.toml does not declare {newest}")
+
+
+_SYNTHETIC = """| release | date | closed rows | kind |
+|---|---|---|---|
+| [Unreleased](#unreleased) | — | — | extending |
+| [0.2.0](#020) | 2026-01-02 | 20 | patch |
+| [0.1.0](#010) | 2026-01-01 | 10 | initial |
+
+## Unreleased
+
+```text state
+contracts: a/v1 b/v1
+commands: analyze
+```
+
+## 0.2.0 — two
+
+```text state
+contracts: a/v1
+commands: analyze
+```
+
+## 0.1.0 — one
+
+```text state
+digest: 000000000000
+contracts: a/v1
+commands: analyze
+```
+"""
+
+
+class TestAnUnreleasedRowAnswersForTheTree:
+    """`UX-1078`: features land between releases; the Unreleased row is
+    where their state accumulates, above a versioned row that stays as
+    it shipped."""
+
+    def test_the_unreleased_row_is_what_the_tree_answers_for(self):
+        assert answering(_SYNTHETIC) == (
+            UNRELEASED, {"contracts": ["a/v1", "b/v1"], "commands": ["analyze"]})
+
+    def test_without_one_the_newest_versioned_row_answers(self):
+        text = re.sub(r"## Unreleased\n.*?(?=## 0\.2\.0)", "", _SYNTHETIC,
+                      flags=re.S)
+        assert UNRELEASED not in _states(text)
+        assert answering(text)[0] == "0.2.0"
+
+    def test_it_is_not_a_versioned_row(self):
+        assert [row["version"] for row in _rows(_SYNTHETIC)] == ["0.2.0", "0.1.0"]
+
+    def test_its_kind_is_what_the_next_cut_would_be(self):
+        """So the rename at the cut is already derived, not chosen then."""
+        text = CHANGELOG.read_text(encoding="utf-8")
+        if UNRELEASED not in _states(text):
+            assert _unreleased_kind(text) is None, "a kind with no Unreleased state"
+            return
+        newest = _rows(text)[0]["version"]
+        expected = derive(_states(text)[newest], _states(text)[UNRELEASED])
+        assert _unreleased_kind(text) == expected, (
+            f"the Unreleased row records {_unreleased_kind(text)}; its state "
+            f"against {newest} derives {expected}")
+
+    def test_it_carries_no_digest(self):
+        states = _states()
+        assert "digest" not in states.get(UNRELEASED, {}), (
+            "the Unreleased row is the one the tree answers for; a digest "
+            "would give that check a second way to be satisfied")
 
 
 class TestTheVersionIsDerived:

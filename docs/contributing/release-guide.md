@@ -80,6 +80,16 @@ kind from the two rows' recorded states and fails if the version
 increment disagrees. A version somebody picked by feel is a number with
 no meaning, and this repository has spent thirty rounds refusing those.
 
+## Between releases
+
+A contract that lands between cuts is recorded in the **Unreleased**
+row at the top of `CHANGELOG.md` (`UX-1078`): its own fenced `state`
+block, no version, no date, no digest, and in the table the kind the
+next cut would be, derived against the newest versioned row. When that
+row exists it is what the tree answers for, and the newest versioned
+row stays as it shipped. Cutting renames Unreleased to the derived
+version and freezes the row below it with its digest (step 3).
+
 ## Cutting one
 
 1. **Confirm the review and the walk.** `docs/audits/architecture-review.md`

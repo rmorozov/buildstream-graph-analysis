@@ -169,7 +169,7 @@ $ python3 tools/dev_close_task.py --check
 
 `reading_problems()` is the ninth property. Every open row at UX-938 or
 later got a `**Reading:**` header field (22 rows; `UX-1010`/`UX-1014`
-`owner:CodSpeed Graviton`, `UX-975`/`UX-1013` `runner:bst-examples`,
+`owner:CodSpeed Graviton` (`UX-1014`: and an x86 16-core host), `UX-975`/`UX-1013` `runner:bst-examples`,
 the rest `container`). The retrieval half was already paid by
 `UX-941`'s `if: always()` notice step - no `ci.yml` change here.
 

@@ -529,7 +529,16 @@ def residue_dictionary(originals) -> set:
             and not o.isdigit() and o.lower() not in public}
 
 
-def _residue_pattern(dictionary) -> tuple[Optional[re.Pattern], dict]:
+#: A residue token or word-boundary span, lowercased ASCII only.
+_WORD = re.compile(r"[a-z0-9]+")
+
+
+def _residue_index(dictionary) -> tuple[dict, dict, int]:
+    """The same normalized forms `_residue_pattern` used to alternate over,
+    split for token lookup: `variants` maps every form (case-folded, and
+    `-`/`_`/`.` stripped or swapped) to its original; `single` is the subset
+    with no separator, matched against one token; the int is the most
+    tokens any separator-holding form spans, for the n-gram join below."""
     variants, public = {}, _public_words()
     for token in dictionary:
         low = token.lower()
@@ -537,19 +546,52 @@ def _residue_pattern(dictionary) -> tuple[Optional[re.Pattern], dict]:
                      *(re.sub(r"[-_.]", sep, low) for sep in "-_.")}:
             if form == low or (len(form) >= RESIDUE_MIN and form not in public):
                 variants.setdefault(form, token)
-    if not variants:
-        return None, variants
-    alternation = "|".join(map(re.escape, sorted(variants, key=len, reverse=True)))
-    return re.compile(rf"(?<![a-z0-9])(?:{alternation})(?![a-z0-9])"), variants
+    single = {f: t for f, t in variants.items() if not re.search(r"[-_.]", f)}
+    spans = [len(_WORD.findall(f)) for f in variants if re.search(r"[-_.]", f)]
+    return variants, single, max(spans, default=1)
+
+
+def _residue_hits(text: str, variants: dict, single: dict, span: int, wait: bool) -> set:
+    """Every original in `text`: each word against `single`, and each run of
+    up to `span` adjacent words, with whatever lies between them in `text`,
+    against `variants` — so `acme-codegen` is still found split across the
+    hyphen. Longest match wins at a start, as the old alternation did, and a
+    match then skips past it. `wait` excludes a match still touching the
+    end: the next chunk may extend it."""
+    tokens = [(m.start(), m.end()) for m in _WORD.finditer(text)]
+    found: set = set()
+    consumed = 0
+    for i, (start, end) in enumerate(tokens):
+        if start == 0 or start < consumed:
+            continue
+        # the longest candidate claims the position, as the sorted alternation
+        # did, whether or not it is trusted enough below to be recorded
+        winner = None
+        for k in range(min(span, len(tokens) - i), 1, -1):
+            stop = tokens[i + k - 1][1]
+            token = variants.get(text[start:stop])
+            if token is not None:
+                winner = (stop, token)
+                break
+        if winner is None:
+            token = single.get(text[start:end])
+            if token is not None:
+                winner = (end, token)
+        if winner is not None:
+            stop, token = winner
+            consumed = stop
+            if not (wait and stop == len(text)):
+                found.add(token)
+    return found
 
 
 def residue(archive: str, dictionary) -> list[str]:
     """6.2's tripwire over the decoded archive at `archive`, headers and
     manifest included: `member: token` for every dictionary token still in it.
     Read `RESIDUE_CHUNK` at a time, the longest variant plus one carried over."""
-    pattern, variants = _residue_pattern(dictionary)
+    variants, single, span = _residue_index(dictionary)
     hits: list[str] = []
-    if pattern is None:
+    if not variants:
         return hits
     reach = max(map(len, variants)) + 1
     # gzip.open, not "r|gz": tarfile inflates a whole 10 KiB block at once, however compressible
@@ -563,9 +605,7 @@ def residue(archive: str, dictionary) -> list[str]:
             while True:
                 block = handle.read(RESIDUE_CHUNK) if handle is not None else b""
                 text += decoder.decode(block, final=not block).lower()
-                # a match touching the window's end waits: the next block may extend it
-                found.update(variants[m.group()] for m in pattern.finditer(text)
-                             if m.start() and (not block or m.end() < len(text)))
+                found.update(_residue_hits(text, variants, single, span, wait=bool(block)))
                 if not block:
                     break
                 text = text[-reach:]

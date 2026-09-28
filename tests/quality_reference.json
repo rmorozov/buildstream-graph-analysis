@@ -12,7 +12,7 @@
     "bga/attribution/blame_chain.py": {"duplicate_blocks": 0, "file_lines": 1641, "longest_function": 164},
     "bga/blast.py": {"duplicate_blocks": 0, "file_lines": 452, "longest_function": 108},
     "bga/buildclass.py": {"duplicate_blocks": 1, "file_lines": 235, "longest_function": 26},
-    "bga/bundle.py": {"duplicate_blocks": 0, "file_lines": 858, "longest_function": 45},
+    "bga/bundle.py": {"duplicate_blocks": 0, "file_lines": 898, "longest_function": 45},
     "bga/cache_capacity.py": {"duplicate_blocks": 0, "file_lines": 254, "longest_function": 44},
     "bga/cache_effectiveness.py": {"duplicate_blocks": 0, "file_lines": 555, "longest_function": 164},
     "bga/cache_trend.py": {"duplicate_blocks": 0, "file_lines": 422, "longest_function": 69},

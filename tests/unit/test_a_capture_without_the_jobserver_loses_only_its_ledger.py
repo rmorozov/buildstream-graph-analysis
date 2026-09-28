@@ -73,7 +73,8 @@ def _analyze_json(run_dir: pathlib.Path) -> dict:
 #: rather than read as a defect (`measure`'s "reads a proxy" trap): the
 #: clause under test is "no other *fact* changed", and a leaf count is
 #: not a fact about the build.
-_EXPECTED_DRIFT = {"document_shape"}
+#: `fingerprint` (`UX-1073`) digests the Plane 2 report the mode rewrites.
+_EXPECTED_DRIFT = {"document_shape", "fingerprint"}
 
 
 def test_bga_analyze_differs_only_by_jobserver_keys_with_the_mode_on(tmp_path):

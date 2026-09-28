@@ -228,6 +228,7 @@ bga/schemas.py         every published contract + view-hints; `--schema` prints 
 bga/schema_hints.py    the `bga:*` view-hint vocabulary and its checker; re-exported by schemas.py
 bga/contracts.py       the derived inventory of every contract, printable or not (UX-248)
 bga/producer.py        which build wrote an artifact, and the contract set it had (UX-249)
+bga/fingerprint.py     what one analysis was computed from; compare reuses it on equal
 bga/report/            text.py, json.py, ci_comment.py - renderers · _shared.py the section names they share · rate.py converts build seconds into the reader's unit (UX-596)
 --format               text, json, csv, ci-comment - what a run can be asked for
 ```

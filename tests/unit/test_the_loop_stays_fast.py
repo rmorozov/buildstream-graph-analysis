@@ -163,7 +163,8 @@ class TestTheSelectorStillSelects:
     # `UX-1005`'s default-line guard names `bga.cli` too: max 170 over 625.
     # `UX-1031`'s declaration guard names it too: max 171 over 640.
     # `UX-1037`'s bound guard runs `-m bga.cli` now: median 38, p90 59, max 172 over 641.
-    CEILING = {"median": 38, "p90": 60, "max": 172}
+    # `UX-1073`'s reuse guard names `bga.cli`: median 38, p90 59, max 173 over 648.
+    CEILING = {"median": 38, "p90": 60, "max": 173}
     POPULATION_FLOOR = 60
     #: `UX-645`: **13 census + 14 of your own**. The census floor is
     #: inside this bound because those files run - the figure is what

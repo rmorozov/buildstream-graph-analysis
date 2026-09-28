@@ -397,6 +397,8 @@ def payloads(run: str, baseline: Optional[str] = None,
     against = baseline if baseline is not None else (earlier[-1] if earlier else None)
     if against:
         argv = ["compare", against, run, "--format", "json"]
+        if reanalyse:
+            argv.append("--reanalyse")
         # Every earlier run in this store becomes a band sample, so the
         # band is derived from the history the user actually has.
         #

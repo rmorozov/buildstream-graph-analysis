@@ -71,6 +71,8 @@ ANALYSIS_ADDITIONS = {
     # `UX-1005` track A: read only by `cli.py`'s own text renderer,
     # never published in `--format json` - see the field's own comment.
     "builder_pool_recommendation",
+    # `UX-1073`: what the analysis was computed from, for `compare`'s reuse.
+    "fingerprint",
 }
 
 # Likewise for 32.1's six against what `load_run_context` reads.

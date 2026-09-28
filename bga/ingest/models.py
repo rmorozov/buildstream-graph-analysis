@@ -671,6 +671,8 @@ class AnalysisResult:
     # text renderer - never published in `--format json`, which is
     # `analyze/v9`'s own schema surface, not this bounded track's.
     builder_pool_recommendation: dict = field(default_factory=dict)
+    # `UX-1073`: what this analysis was computed from (`bga/fingerprint.py`).
+    fingerprint: Optional[dict] = None
     # UX-171: the resource blast table, set by `cli._attach_resource_blast`
     # only when a source inventory is in hand. `None` - not `{}` - when
     # it was never attempted, same "not looked for" reason `run_instance`

@@ -8,13 +8,14 @@ Two fixtures hold an analysis and are compared against a fresh run.
 Regenerating one is not `bga analyze > file`: parts of what `analyze`
 prints are properties of the **machine that ran it**, and committing
 those makes the fixture fail on the first release rather than on the
-first regression. Three are neutralised and everything else compared
+first regression. Four are neutralised and everything else compared
 exactly:
 
 - **`run_instance`** (`UX-95`) - which capture: a stamp and an absolute
   path. Dropped.
 - **`producer`** (`UX-249`) - which build of bga. Dropped; still
   asserted by `test_an_artifact_says_what_wrote_it.py`.
+- **`fingerprint`** (`UX-1073`) - the producer and input digests. Dropped.
 - **the fixture's own path**, which `UX-218`'s next-step commands must
   name to be runnable. Replaced with one fixed token.
 
@@ -34,7 +35,7 @@ REPO = pathlib.Path(__file__).resolve().parents[1]
 #: The keys that name the machine rather than the analysis. Named here
 #: rather than in each caller, because "which keys are the fixture" is
 #: the question a contributor regenerating one actually has.
-MACHINE_KEYS = ("run_instance", "producer")
+MACHINE_KEYS = ("run_instance", "producer", "fingerprint")
 
 
 class Fixture:

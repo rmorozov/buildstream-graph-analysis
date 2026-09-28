@@ -363,6 +363,9 @@ _ANALYZE_OPTIONAL = {
     # validation, which is the opposite of what recording provenance is
     # for.
     "producer": "object",
+    # `UX-1073`: what the analysis was computed from; `compare` reuses a
+    # published one only when it matches. An addition, so no bump.
+    "fingerprint": "object",
     "resource_blast": "object",
     # UX-193 found these two by serving a *real* capture: both are
     # present on every run with Plane 1 wrapper data, and absent from
@@ -923,6 +926,8 @@ ANALYZE_FULL_KEYS = (
     "leaf_analysis", "graph_metrics", "graph_summary", "deferrability",
     "parallelism", "bottleneck", "sensitivity", "batch_opportunities",
     "provenance", "document_shape",
+    # `UX-1073`: what `compare` matches a published analysis on.
+    "fingerprint",
     "utilisation", "confidence", "violations",
     # `UX-676`: the same axis in cores. Here rather than in the
     # conditional list because it is present on every full report - a
@@ -3156,6 +3161,11 @@ _ANALYZE_HINTS = {
                                "to matter."},
         }},
     "run_instance": _RUN_INSTANCE_HINT,
+    "fingerprint": {QUESTION: 'What was this analysis computed from?', RAIL: 'raw',
+        "description": "The producer stamp, a sha256 of every input file "
+                       "and of the Plane 2 report attached, and each "
+                       "result-affecting option. `bga compare` reuses "
+                       "this analysis only when its own is equal."},
     "producer": {QUESTION: 'Which build of bga measured this?', RAIL: 'raw',
         "properties": {
             "contracts": {

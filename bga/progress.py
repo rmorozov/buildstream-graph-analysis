@@ -33,6 +33,7 @@ requirement.
 import os
 import sys
 import time
+from contextlib import contextmanager, suppress
 from typing import Optional
 
 # How often the line may be redrawn. A build phase can iterate hundreds
@@ -185,3 +186,103 @@ def phase(message: str, stream=None) -> None:
 
 def ticker(label: str, total: Optional[int] = None, stream=None) -> Ticker:
     return Ticker(label, total=total, stream=stream)
+
+
+# -- UX-1077/UX-1078: one recorder for the tail's phases -----------------
+#
+# `timed` announces a phase, prints its elapsed seconds and appends a row
+# to this ledger; `bga snapshot` writes the ledger as `tail.json`, so the
+# printed timings and the stored ones are one list, not two that drift.
+
+_LEDGER: dict = {"build_wall_s": None, "phases": []}
+_ON_ROW = None
+
+
+def reset_ledger(on_row=None) -> None:
+    """Empty the ledger; `on_row()` is called after every row lands."""
+    global _ON_ROW
+    _LEDGER["build_wall_s"] = None
+    _LEDGER["phases"] = []
+    _ON_ROW = on_row
+
+
+def ledger() -> dict:
+    """A copy of the ledger: `build_wall_s` and one row per phase."""
+    return {"build_wall_s": _LEDGER["build_wall_s"],
+            "phases": [dict(row) for row in _LEDGER["phases"]]}
+
+
+def tail_seconds(phases) -> float:
+    """What the phases cost together - derived, never stored (UX-996)."""
+    return round(sum(row.get("wall_s") or 0.0 for row in phases or ()), 3)
+
+
+def _reset_peak_rss() -> bool:
+    # VmHWM per phase; `ru_maxrss` is the whole process's high-water mark.
+    try:
+        with open("/proc/self/clear_refs", "w") as handle:
+            handle.write("5")
+        return True
+    except OSError:
+        return False
+
+
+def _peak_rss_kb() -> Optional[int]:
+    try:
+        with open("/proc/self/status", encoding="ascii") as handle:
+            for line in handle:
+                if line.startswith("VmHWM:"):
+                    return int(line.split()[1])
+    except (OSError, ValueError, IndexError):
+        return None
+    return None
+
+
+def _say(text: str, stream) -> None:
+    with suppress(OSError, ValueError):
+        print(text, file=sys.stderr if stream is None else stream, flush=True)
+
+
+@contextmanager
+def timed(name: str, say: Optional[str] = None, stream=None):
+    """One phase: announced, timed, and recorded - also when it raises.
+
+    A TTY (or `BGA_FORCE_PROGRESS`) gets the announcement and an elapsed
+    line; a pipe keeps the one announcement line; `BGA_NO_PROGRESS`
+    prints neither. The row lands whichever was chosen.
+    """
+    loud = enabled(stream)
+    if not os.environ.get("BGA_NO_PROGRESS"):
+        _say(say or f"{name}...", stream)
+    measured = _reset_peak_rss()
+    start = time.monotonic()
+    try:
+        yield
+    finally:
+        wall = round(time.monotonic() - start, 3)
+        _LEDGER["phases"].append({
+            "name": name, "wall_s": wall,
+            "peak_rss_kb": _peak_rss_kb() if measured else None,
+            "calls": []})
+        if loud:
+            _say(f"  {name}: {wall:.1f}s", stream)
+        if _ON_ROW is not None:
+            _ON_ROW()
+
+
+@contextmanager
+def timed_build():
+    """The build's own wall, around its subprocess - no line printed."""
+    start = time.monotonic()
+    try:
+        yield
+    finally:
+        _LEDGER["build_wall_s"] = round(time.monotonic() - start, 3)
+
+
+def total_line(stream=None) -> None:
+    """The tail's last line, printed whatever the progress setting."""
+    line = f"bga's own time after the build: {tail_seconds(_LEDGER['phases']):.1f}s"
+    if _LEDGER["build_wall_s"] is not None:
+        line += f" (the build: {_LEDGER['build_wall_s']:.1f}s)"
+    _say(line, stream)

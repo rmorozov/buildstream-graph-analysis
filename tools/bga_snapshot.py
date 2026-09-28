@@ -43,7 +43,7 @@ import sys
 import time
 from typing import Optional
 
-from bga import run_store
+from bga import progress, run_store
 from bga.plural import plural
 
 # What a snapshot is made of. Deliberately the layout the published
@@ -377,8 +377,9 @@ def take_snapshot(project: str, command: list[str], config: dict,
 
     print(f"Capturing into {snapshot}", file=sys.stderr)
     exit_code = capture_main(argv)
-    if keep_raw:
-        _compress_raw_log(snapshot)
+    if keep_raw and os.path.exists(os.path.join(snapshot, RAW_LOG_NAME[:-3])):
+        with progress.timed("raw log gzip", say="Compressing the raw Plane 2 log..."):
+            _compress_raw_log(snapshot)
     return snapshot, exit_code
 
 
@@ -675,6 +676,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     # against, and offering it as `@prev` produces an error about a
     # path the user never typed.
     previous = run_store.list_runs(project)
+    progress.reset_ledger()
     snapshot, build_exit = take_snapshot(project, command, config,
                                          diagnose=args.diagnose,
                                          no_inject=args.no_inject,
@@ -693,6 +695,7 @@ def main(argv: Optional[list[str]] = None) -> int:
               f"build exited {build_exit}.\n"
               f"Diagnostics: {os.path.join(snapshot, PLANE2_NAME)}"
               f".diagnostics.jsonl", file=sys.stderr)
+        progress.total_line()
         return build_exit
 
     run_dir = os.path.join(snapshot, RUN_SUBDIR)
@@ -717,18 +720,21 @@ def main(argv: Optional[list[str]] = None) -> int:
             print("Re-run with --diagnose to record what the bwrap shim "
                   "received and exec'd; --no-inject then says whether the "
                   "rewrite is what breaks it.", file=sys.stderr)
+        progress.total_line()
         return build_exit or 1
 
     print()
-    _, analyzed_result = _analyze(
-        run_dir, os.path.join(snapshot, PLANE2_NAME),
-        publish_to=os.path.join(snapshot, run_store.ANALYSIS_NAME),
-        build_exit=build_exit)
+    with progress.timed("analyze", say="Analyzing the run..."):
+        _, analyzed_result = _analyze(
+            run_dir, os.path.join(snapshot, PLANE2_NAME),
+            publish_to=os.path.join(snapshot, run_store.ANALYSIS_NAME),
+            build_exit=build_exit)
     # UX-226: the small slice this snapshot contributes to the store's
     # per-element history. Never fatal - see `write_element_slice`.
     # UX-1072: reuse the analysis `_analyze` already ran instead of a
     # second pass over the same run.
-    write_element_slice(snapshot, run_dir, analysis_result=analyzed_result)
+    with progress.timed("element slice", say="Writing the element slice..."):
+        write_element_slice(snapshot, run_dir, analysis_result=analyzed_result)
 
     if not args.no_compare and previous:
         print()
@@ -736,14 +742,17 @@ def main(argv: Optional[list[str]] = None) -> int:
         if skipped:
             print(_walkback_notice(baseline, skipped))
         if baseline is not None:
-            _compare(baseline, snapshot)
+            with progress.timed("compare", say="Comparing against the baseline..."):
+                _compare(baseline, snapshot)
     elif not args.no_compare:
         print("\nThis is the first snapshot of this project - make your change "
               "and run the same command again, and the comparison against it "
               "is automatic.")
 
-    _say_what_it_weighs(snapshot, project)
-    _warn_if_large(project)
+    with progress.timed("store size", say="Weighing the store..."):
+        _say_what_it_weighs(snapshot, project)
+        _warn_if_large(project)
+    progress.total_line()
     # UX-738: round 100's gate read a complete-looking report next to
     # `assert 255 == 0` with nothing in either stream saying why. This is
     # the last thing printed, so a reader who only sees the tail still

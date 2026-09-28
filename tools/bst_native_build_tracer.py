@@ -2571,7 +2571,7 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                               os.path.join(bind_dir, "trace.log"))
             if cpu_samples_path else contextlib.nullcontext())
         try:
-            with sampler, cpu_sampler:
+            with sampler, cpu_sampler, progress.timed_build():
                 if wrapped_log_path is not None:
                     with open(wrapped_log_path, "w", encoding="utf-8") as out_f:
                         returncode = run_wrapped(project_dir, cmd, out_f,
@@ -8622,105 +8622,107 @@ def main(argv: Optional[list[str]] = None) -> int:
         # *because* they take minutes, so they are exactly where a user
         # who has already waited three hours presses Ctrl-C.
         try:
-            print("Analyzing the captured trace...", file=sys.stderr)
-            report = load_and_summarize(raw_log_path, project_dir=args.project_dir,
-                                        invocation_log_path=invocation_log_path,
-                                        plane1_log_path=wrapped_log_path,
-                                        cpu_samples_path=cpu_samples_path)
-            report["wrapped_command_exit_code"] = returncode
-            # UX-1082: `{"sha256": ..., "elements": N}` from the build's
-            # own `Pipeline` block, or `None` ("unread") - comparable
-            # against another capture's own field. Not a `jobserver*`
-            # key - stays here rather than in `report_block`.
-            report["cache_key_set"] = cache_key_set
-            # UX-901: everything else the mode publishes, behind the
-            # import boundary - `report_block` reads none of these
-            # itself, since it never reaches the tracer or `bga`.
-            pid_to_element = tool_pids = element_ends = None
-            if args.jobserver and jobserver_ledger_path:
-                # UX-847/UX-892: the raw ledger's own pid map and each
-                # element's wrapped-tool pids/end times - read once, here,
-                # for `summarize_jobserver_tokens_by_element` below.
-                tool_pids, element_ends = read_jobserver_tool_pids(raw_log_path)
-                pid_to_element = read_pid_to_element(raw_log_path)
-            report.update(report_block({
-                "jobserver": args.jobserver,
-                "jobserver_seed": jobserver_seed,
-                "jobserver_auth": jobserver_auth,
-                "jobserver_pool_mode": args.jobserver_pool,
-                "capacity": args.jobserver_capacity or os.cpu_count() or 1,
-                "jobserver_ledger_path": jobserver_ledger_path,
-                "jobserver_status_path": jobserver_status_path,
-                "plan_path": args.plan,
-                "broker_status_path": broker_status_path,
-                "admission_status_path": admission_status_path,
-                "element_kinds_present": element_kinds is not None,
-                "jobserver_decisions_path": jobserver_decisions_path,
-                # UX-846: the pass-through table, probed once - `None`
-                # when the mode itself is off, since nothing was wrapped.
-                # `probe_jobserver_wrapper_policy` reaches `bga.progress`,
-                # so it is called here, not inside `report_block`.
-                "jobserver_wrappers": (
-                    probe_jobserver_wrapper_policy() if args.jobserver else None),
-                "pid_to_element": pid_to_element,
-                "tool_pids": tool_pids,
-                "element_ends": element_ends,
-                "psi_withdraw_counter": count_memory_psi_withdraws,
-            }))
-            # UX-842: the project's own `max-jobs`, and each sandbox's
-            # pinned/joined/capped_pending decision against it - both
-            # `None`/`[]` when the jobserver itself is off. Not a
-            # `jobserver*` key - stays here rather than in `report_block`.
-            report["project_max_jobs"] = project_max_jobs
-            with open(args.output, "w", encoding="utf-8") as f:
-                json.dump(report, f, indent=2)
-            # UX-296: and the two capacity scalars the store's aggregate
-            # needs, beside it. Written here because here is the one
-            # moment the report is already in memory - every reader that
-            # wanted them used to parse the whole document again, once
-            # per snapshot, on every page load.
-            from bga.run_store import RESOURCE_NAME, write_resource_profile
-            write_resource_profile(
-                os.path.join(os.path.dirname(os.path.abspath(args.output)),
-                             RESOURCE_NAME),
-                report)
+            with progress.timed("Plane 2 report",
+                                say="Analyzing the captured trace..."):
+                report = load_and_summarize(raw_log_path, project_dir=args.project_dir,
+                                            invocation_log_path=invocation_log_path,
+                                            plane1_log_path=wrapped_log_path,
+                                            cpu_samples_path=cpu_samples_path)
+                report["wrapped_command_exit_code"] = returncode
+                # UX-1082: `{"sha256": ..., "elements": N}` from the build's
+                # own `Pipeline` block, or `None` ("unread") - comparable
+                # against another capture's own field. Not a `jobserver*`
+                # key - stays here rather than in `report_block`.
+                report["cache_key_set"] = cache_key_set
+                # UX-901: everything else the mode publishes, behind the
+                # import boundary - `report_block` reads none of these
+                # itself, since it never reaches the tracer or `bga`.
+                pid_to_element = tool_pids = element_ends = None
+                if args.jobserver and jobserver_ledger_path:
+                    # UX-847/UX-892: the raw ledger's own pid map and each
+                    # element's wrapped-tool pids/end times - read once, here,
+                    # for `summarize_jobserver_tokens_by_element` below.
+                    tool_pids, element_ends = read_jobserver_tool_pids(raw_log_path)
+                    pid_to_element = read_pid_to_element(raw_log_path)
+                report.update(report_block({
+                    "jobserver": args.jobserver,
+                    "jobserver_seed": jobserver_seed,
+                    "jobserver_auth": jobserver_auth,
+                    "jobserver_pool_mode": args.jobserver_pool,
+                    "capacity": args.jobserver_capacity or os.cpu_count() or 1,
+                    "jobserver_ledger_path": jobserver_ledger_path,
+                    "jobserver_status_path": jobserver_status_path,
+                    "plan_path": args.plan,
+                    "broker_status_path": broker_status_path,
+                    "admission_status_path": admission_status_path,
+                    "element_kinds_present": element_kinds is not None,
+                    "jobserver_decisions_path": jobserver_decisions_path,
+                    # UX-846: the pass-through table, probed once - `None`
+                    # when the mode itself is off, since nothing was wrapped.
+                    # `probe_jobserver_wrapper_policy` reaches `bga.progress`,
+                    # so it is called here, not inside `report_block`.
+                    "jobserver_wrappers": (
+                        probe_jobserver_wrapper_policy() if args.jobserver else None),
+                    "pid_to_element": pid_to_element,
+                    "tool_pids": tool_pids,
+                    "element_ends": element_ends,
+                    "psi_withdraw_counter": count_memory_psi_withdraws,
+                }))
+                # UX-842: the project's own `max-jobs`, and each sandbox's
+                # pinned/joined/capped_pending decision against it - both
+                # `None`/`[]` when the jobserver itself is off. Not a
+                # `jobserver*` key - stays here rather than in `report_block`.
+                report["project_max_jobs"] = project_max_jobs
+                with open(args.output, "w", encoding="utf-8") as f:
+                    json.dump(report, f, indent=2)
+                # UX-296: and the two capacity scalars the store's aggregate
+                # needs, beside it. Written here because here is the one
+                # moment the report is already in memory - every reader that
+                # wanted them used to parse the whole document again, once
+                # per snapshot, on every page load.
+                from bga.run_store import RESOURCE_NAME, write_resource_profile
+                write_resource_profile(
+                    os.path.join(os.path.dirname(os.path.abspath(args.output)),
+                                 RESOURCE_NAME),
+                    report)
             if args.run_dir:
                 # Best-effort, and after the report is on disk: a build that
                 # failed early produces a log with no `Targets:` line, and
                 # losing the Plane 2 capture over that would throw away the
                 # expensive half of what just ran.
                 from .bst_extract_run import extract_run
-                print("Extracting run data (bst show)...", file=sys.stderr)
-                try:
-                    # UX-1083: `BGA_BASELINE_RUN_DIR`, the same shape
-                    # `BGA_JOBSERVER_MODE` (UX-856) already uses - `bga
-                    # snapshot` sets it beside the mode it resolves, so
-                    # this needs no CLI flag of its own to know which
-                    # baseline to compare this build's own fingerprint
-                    # against. Absent for a direct-tracer invocation,
-                    # same as the jobserver mode above.
-                    extract_run(args.project_dir, wrapped_log_path, args.run_dir,
-                                log_format="wrapped", interrupted=interrupted,
-                                jobserver=_jobserver_block(report),
-                                cache_key_set=cache_key_set,
-                                bst_global_options=_bst_global_options(cmd)[0],
-                                baseline_run_dir=os.environ.get("BGA_BASELINE_RUN_DIR"))
-                except Exception as exc:
-                    print(f"Warning: could not extract a run directory into "
-                          f"{args.run_dir}: {exc}", file=sys.stderr)
-                else:
-                    print(f"Run directory: {args.run_dir}", file=sys.stderr)
-                    # `UX-894`: `graph.json` exists only now, and it
-                    # carries the width every element actually resolved
-                    # to. Rewritten rather than left for a reader: the
-                    # capture is the one moment both documents are in
-                    # hand on the machine that produced them.
-                    from bga.plane2 import apply_resolved_widths, resolved_widths
+                with progress.timed("run directory",
+                                    say="Extracting run data (bst show)..."):
+                    try:
+                        # UX-1083: `BGA_BASELINE_RUN_DIR`, the same shape
+                        # `BGA_JOBSERVER_MODE` (UX-856) already uses - `bga
+                        # snapshot` sets it beside the mode it resolves, so
+                        # this needs no CLI flag of its own to know which
+                        # baseline to compare this build's own fingerprint
+                        # against. Absent for a direct-tracer invocation,
+                        # same as the jobserver mode above.
+                        extract_run(args.project_dir, wrapped_log_path, args.run_dir,
+                                    log_format="wrapped", interrupted=interrupted,
+                                    jobserver=_jobserver_block(report),
+                                    cache_key_set=cache_key_set,
+                                    bst_global_options=_bst_global_options(cmd)[0],
+                                    baseline_run_dir=os.environ.get("BGA_BASELINE_RUN_DIR"))
+                    except Exception as exc:
+                        print(f"Warning: could not extract a run directory into "
+                              f"{args.run_dir}: {exc}", file=sys.stderr)
+                    else:
+                        print(f"Run directory: {args.run_dir}", file=sys.stderr)
+                        # `UX-894`: `graph.json` exists only now, and it
+                        # carries the width every element actually resolved
+                        # to. Rewritten rather than left for a reader: the
+                        # capture is the one moment both documents are in
+                        # hand on the machine that produced them.
+                        from bga.plane2 import apply_resolved_widths, resolved_widths
 
-                    if apply_resolved_widths(report, resolved_widths(
-                            os.path.join(args.run_dir, "graph.json"))):
-                        with open(args.output, "w") as f:
-                            json.dump(report, f, indent=2)
+                        if apply_resolved_widths(report, resolved_widths(
+                                os.path.join(args.run_dir, "graph.json"))):
+                            with open(args.output, "w") as f:
+                                json.dump(report, f, indent=2)
             if args.json:
                 print(json.dumps(report, indent=2))
             else:

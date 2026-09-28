@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-320 | **Found by:** PR #298's CI tier gate at `0f36aca0` - `test_the_page_conforms_to_its_sections.py` read 14.5s and 16.4s against 7.4s recorded | **Serves:** every branch whose CI tier gate reads this file | **Topic:** guards | **Area:** bga/viewer | **Shape:** mechanical
 
+**Guard:** test_the_page_conforms_to_its_sections.py
+
 ## Motivation
 
 PR #298 was red on the tier gate: `pytest-xdist`'s default `--dist

@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the 2026-09-27 brainstorm with the owner ([`anonymized-bundle.md`](../../design/anonymized-bundle.md)), section 4 | **Serves:** anyone sharing a private capture with an outside reader | **Topic:** store | **Area:** bga | **Shape:** mechanical
 
+**Guard:** test_a_pseudonym_is_keyed_stable_and_shaped.py
+
 ## Motivation
 
 The owner must resolve what an outside reader says back to real

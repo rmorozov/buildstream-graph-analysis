@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-1062 | **Found by:** the owner's implementation review on #298 (2026-09-28), finding 2 | **Serves:** anyone sharing a large private capture | **Topic:** store | **Area:** bga | **Shape:** mechanical
 
+**Guard:** test_the_anonymized_export_runs_in_bounded_memory.py
+
 ## Motivation
 
 `_read_documents()` parses each whole JSON member, the rewrite and

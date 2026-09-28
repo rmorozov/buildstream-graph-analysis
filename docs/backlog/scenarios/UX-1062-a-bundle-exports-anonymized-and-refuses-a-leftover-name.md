@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-1060, UX-1061, UX-1067 | **Found by:** the 2026-09-27 brainstorm with the owner ([`anonymized-bundle.md`](../../design/anonymized-bundle.md)), sections 1, 6 and 7; the owner's review on #298, findings 3 and 4, and its follow-up at `8c3bead1`, findings 1 and 2 | **Serves:** anyone sharing a private capture with an outside reader | **Topic:** store | **Area:** bga | **Shape:** mechanical
 
+**Guard:** test_an_anonymized_bundle_trips_on_a_leftover_name.py
+
 ## Motivation
 
 A capture of a private project cannot leave the company today: every

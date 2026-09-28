@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-1069 | **Found by:** the owner's #298 re-review at 156d7436, finding 4 | **Serves:** anyone sharing a large private capture | **Topic:** store | **Area:** bga | **Shape:** mechanical
 
+**Guard:** test_the_bounded_memory_measurement_varies_identifiers.py
+
 ## Motivation
 
 `test_the_anonymized_export_runs_in_bounded_memory.py` uses

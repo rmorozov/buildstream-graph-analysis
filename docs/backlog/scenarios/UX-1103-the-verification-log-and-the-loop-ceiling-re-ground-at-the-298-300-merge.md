@@ -39,7 +39,7 @@ failed, "{'median': 38, 'p90': 61, 'max': 174} against {'median': 38,
 Close measured: one entry added, dated 2026-09-28, credited to
 `UX-1103`: `analyze/v6` **63 top-level properties** (`bga analyze
 --schema`), **26 emitted ids** (`bga.contracts.ids()`); unchanged by
-#298, which added no contract. `CEILING` = median 38, p90 61, max 174,
+PR #298, which added no contract. `CEILING` = median 38, p90 61, max 174,
 the merged reading over 677 files. Both files pass.
 
 Mutation table:

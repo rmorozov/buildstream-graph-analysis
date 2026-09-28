@@ -12,7 +12,7 @@ it read:
 29 scenarios have closed since review 28 (2026-09-27), against a bound of 25.
 ```
 
-#298 is writing its own review for the same bound. Ruslan's call
+PR #298 is writing its own review for the same bound. Ruslan's call
 (2026-09-28): merge #298 first, push #300 for review now, and run the
 review once both have landed, so one review covers both rounds rather
 than two colliding on the review log.

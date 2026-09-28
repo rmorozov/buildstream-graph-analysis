@@ -760,7 +760,7 @@ jobs:
   # `push` to the default branch, and every refusal exits 0, for the
   # same reason as the two adopt jobs above - `UX-934`'s red included.
   flake-ledger-adopt:
-    needs: test
+    needs: [test, touch-map-adopt]
     # `UX-943`: from a run red at the drift step or nowhere - its rows
     # are that step's excursions; a red anywhere else adopts nothing.
     if: >-

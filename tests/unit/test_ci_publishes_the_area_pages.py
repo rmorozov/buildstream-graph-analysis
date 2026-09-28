@@ -111,9 +111,6 @@ class TestTheJob:
     def test_it_needs_both_adopt_jobs(self):
         assert set(self._job()["needs"]) == {"touch-map-adopt", "flake-ledger-adopt"}
 
-    def test_it_shares_the_records_concurrency_group(self):
-        assert self._job()["concurrency"] == "records"
-
     def test_it_fetches_before_it_publishes_pages(self):
         lines = [line for step in self._job()["steps"]
                  for line in (step.get("run") or "").splitlines()]

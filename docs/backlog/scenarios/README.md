@@ -48,6 +48,10 @@ task file, which is the only place it ever lived twice.
 | UX-1057 | [the decomposition bar's aria-details twin table drops the certified lower-bound mark](UX-1057-the-drawing-routes-twin-table-drops-the-lower-bound-mark.md) | viewer | Medium | R1 | 🔴 Not Started |
 | UX-1058 | [the narrow-rail fold toggle is a click-only `<p>`, unreachable by keyboard](UX-1058-the-narrow-rail-toggle-is-unreachable-by-keyboard.md) | viewer | Medium | R1 | 🔴 Not Started |
 | UX-1066 | [raw logs travel tokenized](UX-1066-raw-logs-travel-tokenized.md) | store | Low | anyone sharing a private capture with an outside reader | 🔴 Not Started |
+| UX-1084 | [a short numeric credential still exports verbatim](UX-1084-a-short-numeric-credential-still-exports-verbatim.md) | store | High | anyone sharing a private capture with an outside reader | 🔴 Not Started |
+| UX-1085 | [the residue scan misses non-ASCII identifiers](UX-1085-the-residue-scan-misses-non-ascii-identifiers.md) | store | High | anyone sharing a private capture with an outside reader | 🔴 Not Started |
+| UX-1086 | [the archive publishes before the map is saved](UX-1086-the-archive-publishes-before-the-map-is-saved.md) | store | High | anyone sharing a private capture with an outside reader | 🔴 Not Started |
+| UX-1087 | [the bounded-memory measurement holds identifiers constant](UX-1087-the-bounded-memory-measurement-holds-identifiers-constant.md) | store | Medium | anyone sharing a large private capture | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

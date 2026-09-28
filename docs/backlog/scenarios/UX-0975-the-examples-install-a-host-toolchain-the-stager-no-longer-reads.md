@@ -1,6 +1,6 @@
 # UX-975: the examples still install a host toolchain the stager no longer reads, and two CI comments say it copies from one
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-925 | **Blocks:** — | **Found by:** architecture review 26 (2026-09-23) — `UX-925` emptied the stager's toolchain array and the four sentences that told a reader to install one stayed | **Serves:** whoever stands the C++ examples up from `examples/README.md`, and the next reader of `ci.yml`'s staging steps | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-925 | **Blocks:** — | **Found by:** architecture review 26 (2026-09-23) — `UX-925` emptied the stager's toolchain array and the four sentences that told a reader to install one stayed | **Serves:** whoever stands the C++ examples up from `examples/README.md`, and the next reader of `ci.yml`'s staging steps | **Topic:** docs | **Area:** unassigned | **Shape:** judgement | **Reading:** runner:bst-examples
 
 ## Motivation
 

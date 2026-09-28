@@ -1,6 +1,6 @@
 # UX-1041: an agent cannot repoint the shared install or start the touching sweep
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** round 143 — the workflow review of rounds 140 and 142 | **Serves:** every parallel round's verifiers and the push gate after them | **Topic:** guards | **Area:** unassigned | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** round 143 — the workflow review of rounds 140 and 142 | **Serves:** every parallel round's verifiers and the push gate after them | **Topic:** guards | **Area:** unassigned | **Shape:** mechanical | **Reading:** container
 
 ## Motivation
 

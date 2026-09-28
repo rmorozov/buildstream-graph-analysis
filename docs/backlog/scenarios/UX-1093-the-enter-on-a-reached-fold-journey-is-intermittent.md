@@ -1,6 +1,6 @@
 # UX-1093: the Enter-on-a-reached-fold journey fails intermittently on the older Pythons
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Blocks:** — | **Found by:** round 149 — the first weekly retro, `docs/audits/retro-2026-09-28.md`, main's run on `d7e74b1c` (#295) | **Serves:** every main run's matrix, and whoever reads a red one | **Topic:** guards | **Area:** bga/viewer | **Shape:** judgement
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Blocks:** — | **Found by:** round 149 — the first weekly retro, `docs/audits/retro-2026-09-28.md`, main's run on `d7e74b1c` (#295) | **Serves:** every main run's matrix, and whoever reads a red one | **Topic:** guards | **Area:** bga/viewer | **Shape:** judgement | **Reading:** container
 
 ## Motivation
 

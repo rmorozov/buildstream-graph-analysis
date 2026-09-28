@@ -705,7 +705,8 @@ def main(argv: Optional[list[str]] = None) -> int:
     # close next (`Plane 2 report`, on a real capture). That fallback
     # still exists for a call genuinely made with no phase open at all;
     # this one now always has one.
-    with progress.timed("before the build", say="Checking bst is ready..."):
+    with progress.timed("before the build", say="Checking bst is ready...",
+                        before_build=True):
         refusal = why_the_build_cannot_start(command)
     if refusal is not None:
         print(refusal, file=sys.stderr)

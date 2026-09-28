@@ -7,7 +7,9 @@ Harness: `test_the_tail_says_what_it_is_doing.project` (the tracer's
 import json
 import os
 import pathlib
+import re
 import shutil
+import stat
 import subprocess
 
 import jsonschema
@@ -16,6 +18,7 @@ import pytest
 from tests.unit.test_the_tail_says_what_it_is_doing import (
     ELAPSED,
     TAIL_PHASES,
+    TOTAL,
     tailed_project,
 )
 
@@ -63,10 +66,40 @@ def test_the_listing_carries_the_sum(project, capsys):
     assert main(["--list", "--format", "json"]) == 0
     listing = json.loads(capsys.readouterr().out)
     for row, tail in zip(listing["snapshots"], _tails(project)):
-        assert row["bga_tail_us"] == sum(p["wall_us"] for p in tail["phases"])
+        assert row["bga_tail_us"] == sum(
+            p["wall_us"] for p in tail["phases"] if p.get("stage") != "before")
     assert main(["--list"]) == 0
     text = capsys.readouterr().out
     assert text.count("  bga ") == 2, text
+
+
+def test_a_nonzero_pre_build_duration_stays_out_of_the_post_build_sum(
+        tmp_path, capsys, monkeypatch):
+    """review, pull request 300: `before the build` is measured and kept in
+    `tail.json`, but a nonzero readiness check must not land in
+    `bga_tail_us` (the store's aggregate) or the total line."""
+    root = tailed_project(tmp_path, monkeypatch)
+    stub = tmp_path / "path" / "bst"  # tailed_project's stub
+    stub.write_text("#!/bin/sh\nsleep 0.2\necho 'BuildStream 2.0.0+stub'\n")
+    stub.chmod(stub.stat().st_mode | stat.S_IEXEC)
+
+    err = _snapshot(capsys).err.splitlines()
+    total_line = next(line for line in err if TOTAL.match(line))
+    tail = _tails(root)[-1]
+    before = next(p for p in tail["phases"] if p["name"] == "before the build")
+    assert before["wall_us"] >= 150_000, "the sleep did not land in the phase"
+    after_sum = sum(p["wall_us"] for p in tail["phases"]
+                    if p["name"] != "before the build")
+    full_sum = sum(p["wall_us"] for p in tail["phases"])
+    printed_s = float(re.match(r"^bga's own time after the build: (\d+\.\d)s", total_line).group(1))
+    assert abs(printed_s - after_sum / 1e6) < 0.1, total_line
+    assert printed_s < full_sum / 1e6, "the before-phase leaked into the total"
+
+    from tools.bga_snapshot import main
+
+    assert main(["--list", "--format", "json"]) == 0
+    listing = json.loads(capsys.readouterr().out)
+    assert listing["snapshots"][-1]["bga_tail_us"] == after_sum
 
 
 def test_no_compare_has_no_compare_row(project, capsys):

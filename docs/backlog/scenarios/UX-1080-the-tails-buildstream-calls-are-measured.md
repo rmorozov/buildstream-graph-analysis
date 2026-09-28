@@ -59,50 +59,42 @@ decision names its guard.
 
 ## Outcome
 
-**Bench host:** the Graviton host is not reachable from this
-container; every reading below is local (bst 2.8.1, bubblewrap 0.9.0,
-this container) - the same numbers already pasted into the
-Motivation from [the audit](../../audits/perf-snapshot-view-2026-09-28.md)'s `bstshim` run of `examples/06` and
-`genproj.py` at 1,201/5,001 elements (`bga snapshot` on a cache-busted
-copy; `bst show --deps all --format ...`).
+**Bench host:** the Graviton host is unreachable from this container;
+every reading below is local (bst 2.8.1, bubblewrap 0.9.0) - the same
+numbers already in the Motivation from [the audit](../../audits/perf-snapshot-view-2026-09-28.md)'s `bstshim` run of
+`examples/06` and `genproj.py` at 1,201/5,001 elements.
 
-**Route:** `progress.timed_call(argv)` (`bga/progress.py`), a context
-manager yielding `{verb, wall_us, exit}`. Buffered in `_CURRENT_CALLS`
-because a call inside `with timed(name):` runs before that phase's own
-row exists; the enclosing `timed()`'s `finally` drains the whole buffer
-into the row it is about to append. `bga_snapshot.main` wraps the
-doctor/preflight window itself in `progress.timed("before the build")`,
-a named, announced phase like every other one - rather than leaning
-on drain-on-close, which a verifier run on a real capture caught
-crediting the doctor's `bst --version` to `Plane 2 report` (the first
-phase `take_snapshot` actually opens). Drain-on-close stays as the
-general fallback for a call made with nothing open at all (still
-guarded, `test_a_call_with_no_phase_open_rides_the_next_one_that_closes`).
-`take_snapshot` calls the new `progress.set_on_row` instead of
-`reset_ledger`, so the writer attaches without discarding the phase
-already recorded. Wired at all four sites: `bga_doctor.check_bst`,
+**Route:** `progress.timed_call(argv)` (`bga/progress.py`) yields
+`{verb, wall_us, exit}`, buffered in `_CURRENT_CALLS` because a call
+inside `with timed(name):` runs before that phase's own row exists;
+`timed()`'s `finally` drains the buffer into the row it appends.
+`bga_snapshot.main` wraps the doctor/preflight window in
+`progress.timed("before the build")`, a named phase - not left to
+drain-on-close, which a verifier run on a real capture caught crediting
+the doctor's `bst --version` to `Plane 2 report` instead. Drain-on-close
+stays as the fallback for a call with nothing open at all (guarded,
+`test_a_call_with_no_phase_open_rides_the_next_one_that_closes`).
+`take_snapshot` calls `progress.set_on_row` instead of `reset_ledger`,
+so the writer attaches without discarding the phase already recorded.
+Wired at all four sites: `bga_doctor.check_bst`,
 `bst_native_build_tracer._list_contents`, `bst_show_to_graph.run_bst_show`,
-`hostinfo._version_line` (only for `name == "bst"` - `bwrap`/`buildbox-run`/`cc`
-are not BuildStream restarts). `TAIL_PHASES` (UX-1077/1078's pinned
-list) gains `"before the build"` at the front.
+`hostinfo._version_line` (only `name == "bst"`). `TAIL_PHASES` gains
+`"before the build"` at the front.
 
 **Timeout:** `run_bst_show` had none. `BST_SHOW_TIMEOUT_S = 300`
 (`tools/bst_show_to_graph.py`) - the pre-build key-set `bst show`'s own
 bound (`UX-842`/`UX-1011`), 7x the largest reading here (42.28s at
-5,001 elements). The poll loop kills the process and `run_bst_show`
-raises `RuntimeError("bst show timed out after ...")` rather than
-hanging; the call row still lands with `exit` set to the killed
-process's return code.
+5,001 elements). The poll loop kills the process; `run_bst_show` raises
+`RuntimeError("bst show timed out after ...")` rather than hanging, and
+the call row still lands with `exit` set to the killed process's code.
 
-**Declared-vs-used recommendation (not implemented):** `read_artifact_contents`
-already runs inside the "Plane 2 report" phase (`load_and_summarize`,
-`tools/bst_native_build_tracer.py:6826`), which is on the hot path
-already - moving it off would need `bga analyze`/`view` to read
-`declared_vs_used` from a file the capture never wrote, and nothing
-asked for that store shape. Leave it where it is: `list-contents`
-measured 1.29s cold on `examples/06` (11 elements) and needs built
-artifacts, so its cost at scale is still unread - the number this
-recommendation would need does not exist yet.
+**Declared-vs-used recommendation (not implemented):**
+`read_artifact_contents` already runs inside the hot-path "Plane 2
+report" phase (`tools/bst_native_build_tracer.py:6826`); moving it off
+would need `bga analyze`/`view` to read a `declared_vs_used` file
+nothing writes. `list-contents` measured 1.29s cold on `examples/06`
+(11 elements) and needs built artifacts, so its cost at scale is
+unread.
 
 **Gap measured:** the guard against the base tree (`963e4f25`, `git
 archive`): `timed_call` and `set_on_row` do not exist, `run_bst_show`
@@ -133,3 +125,15 @@ landing under `Plane 2 report` via drain-on-close alone - fixed by
 giving it its own `"before the build"` phase (above); everything else
 matches `wall_us`/`verb`/`exit`, the row shape UX-1078's Decision named
 for `calls`.
+
+### Review finding (Ruslan, PR #300)
+
+`before the build` summed into every post-build aggregate. Fixed:
+`stage: "before"|"after"` per phase (`timed(before_build=True)`);
+`tail_us` sums `after` only - `bga_tail_us`, the store aggregate and
+the total line all derive from it (`disclosure.py`/`schemas.py` gained
+the field; `views.js` reads the stored field, untouched).
+
+**Close measured:** `python3 -m pytest tests/unit/test_the_tails_buildstream_calls_are_measured.py tests/unit/test_the_tail_says_what_it_is_doing.py tests/unit/test_the_snapshot_records_its_tail.py tests/unit/test_the_tail_travels_anonymized.py` -> `22 passed`.
+
+**Mutation table:** drop the `stage` filter in `tail_us` -> `test_the_listing_carries_the_sum` and `test_a_nonzero_pre_build_duration_stays_out_of_the_post_build_sum` redden, `2 failed, 5 passed`; reverted from the scratchpad's copy, clean (`7 passed`).

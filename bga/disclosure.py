@@ -73,6 +73,7 @@ VOCABULARIES = {
     "tail_phase": Vocabulary(frozenset(
         {"before the build", "run directory", "Plane 2 report", "raw log gzip",
          "analyze", "element slice", "compare", "store size", "timeline"}), None),
+    "tail_stage": Vocabulary(frozenset({"before", "after"}), None),
     "phase": Vocabulary(frozenset(
         {"cache_cleanup", "Loading elements", "Resolving elements",
          "Initializing remote caches", "Query cache"}), None),
@@ -396,6 +397,7 @@ POLICIES = {
         "phases[].name": "B:tail_phase",
         "phases[].wall_us": "C",
         "phases[].peak_rss_bytes": "C",
+        "phases[].stage": "B:tail_stage",
         # A call's argv names elements and paths: rebuilt by 6.2's command grammar.
         "phases[].calls[].verb": "F",
         "phases[].calls[].wall_us": "C",

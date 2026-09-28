@@ -1677,7 +1677,7 @@ key:
 | `bga snapshot --capacity N,RATE --format json` | `capacity-model/v1` | as above |
 | `bga whatif --format json` | `whatif/v1` | as above |
 | `bga sweep --format json` | `sweep/v1` | as above |
-| `tail.json` beside a snapshot, written by `bga snapshot`: each post-build phase's wall and peak RSS, and the build's own wall (`UX-1078`) | `tail/v1` | as above |
+| `tail.json` beside a snapshot, written by `bga snapshot`: each phase's wall and peak RSS, staged `before`/`after` the build, and the build's own wall (`UX-1078`) | `tail/v1` | as above |
 | the host manifest inside `run-context.json` | `host/v2` | `bga.hostinfo.collect` |
 | the source inventory at `sources.json` in a run directory | `sources/v1` | `bga.sources.build_inventory` |
 | the Plane 2 report at `plane2.json` beside a run | `plane2/v3` | `bga.plane2` |
@@ -1794,7 +1794,7 @@ cannot tell a broken capture from a cheap one:
 | `.bga/runs/<stamp>/plane2-resource.json` | conditional | — | the two capacity scalars, beside the report so the aggregator never opens the big file for them (`UX-296`). Absent where the report is. |
 | `.bga/runs/<stamp>/host-samples.jsonl` | conditional | `host-samples/v1` | the host's memory, swap and CPU while the build ran, one JSON per line (`UX-378`). Absent on a capture taken before that item or with sampling unavailable. |
 | `.bga/runs/<stamp>/analyze.json` | conditional | `analyze/v6` | the analysis this capture published, so `bga view` renders rather than re-deriving (`UX-296`). Absent means the viewer parses the run itself, and the trace carries no graph structure (`UX-380`). |
-| `.bga/runs/<stamp>/tail.json` | conditional | `tail/v1` | wall and peak RSS of each phase bga ran after the build, and the build's own wall (`UX-1078`). `complete: false` is a tail that was interrupted; a phase that did not run has no row. |
+| `.bga/runs/<stamp>/tail.json` | conditional | `tail/v1` | wall and peak RSS of each phase bga ran around the build, staged `before`/`after` it, and the build's own wall (`UX-1078`). `complete: false` is a tail that was interrupted; a phase that did not run has no row. Every aggregate sums `after` rows only. |
 | `.bga/runs/<stamp>/build.log` | conditional | — | the wrapped BuildStream log, kept because its first line records the real invocation (`UX-29`). `bga timeline` needs it and refuses without it. |
 | `.bga/runs/<stamp>/element-slice.json` | conditional | — | which elements the capture was asked for, where it was asked for a slice rather than the whole project. |
 | `.bga/runs/<stamp>/capture-context.txt` | conditional | — | what the capture did and why, in prose - the diagnostics `UX-146` writes. Never parsed. |

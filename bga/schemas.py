@@ -6174,11 +6174,16 @@ _TAIL_HINTS = {
             {"key": "peak_rss_bytes", "title": "Peak RSS",
              "quantity": "bytes"},
         ],
-        "description": "One row per phase bga ran after the build, in "
+        "description": "One row per phase bga ran around the build, in "
                        "order: its `name`, its `wall_us`, its "
                        "`peak_rss_bytes` - the process's VmHWM reset at "
-                       "the phase's start, `null` off Linux - and the "
-                       "`calls` it made to other programs."},
+                       "the phase's start, `null` off Linux - the "
+                       "`calls` it made to other programs, and its "
+                       "`stage` (`\"before\"` or `\"after\"` the build). "
+                       "Every aggregate (`bga_tail_us`, the total line) "
+                       "sums `\"after\"` rows only; `\"before\"` is "
+                       "measured and kept but excluded (review, "
+                       "pull request 300)."},
     "complete": {
         "description": "Whether the tail ran to its end. `false` is a "
                        "tail interrupted after the rows it holds."},

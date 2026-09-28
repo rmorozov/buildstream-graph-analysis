@@ -232,8 +232,12 @@ def ledger() -> dict:
 
 
 def tail_us(phases) -> int:
-    """What the phases cost together - derived, never stored (UX-996)."""
-    return sum(row.get("wall_us") or 0 for row in phases or ())
+    """What the *post-build* phases cost together - derived, never
+    stored (UX-996). `stage: "before"` phases (the readiness check
+    ahead of the build) are timed but excluded: they are not part of
+    "bga's own time after the build" (review, pull request 300)."""
+    return sum(row.get("wall_us") or 0 for row in phases or ()
+               if row.get("stage") != "before")
 
 
 def _reset_peak_rss() -> bool:
@@ -263,12 +267,18 @@ def _say(text: str, stream) -> None:
 
 
 @contextmanager
-def timed(name: str, say: Optional[str] = None, stream=None):
+def timed(name: str, say: Optional[str] = None, stream=None,
+          before_build: bool = False):
     """One phase: announced, timed, and recorded - also when it raises.
 
     A TTY (or `BGA_FORCE_PROGRESS`) gets the announcement and an elapsed
     line; a pipe keeps the one announcement line; `BGA_NO_PROGRESS`
     prints neither. The row lands whichever was chosen.
+
+    `before_build=True` marks the row `stage: "before"` - recorded like
+    any other phase, but excluded from `tail_us` and everything built
+    on it: the readiness check ahead of the build is not part of "bga's
+    own time after the build" (review, pull request 300).
     """
     loud = enabled(stream)
     if not os.environ.get("BGA_NO_PROGRESS"):
@@ -287,7 +297,8 @@ def timed(name: str, say: Optional[str] = None, stream=None):
         _LEDGER["phases"].append({
             "name": name, "wall_us": wall,
             "peak_rss_bytes": _peak_rss_bytes() if measured else None,
-            "calls": calls})
+            "calls": calls,
+            "stage": "before" if before_build else "after"})
         if loud:
             _say(f"  {name}: {wall / 1e6:.1f}s", stream)
         if _ON_ROW is not None:

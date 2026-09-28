@@ -1,6 +1,6 @@
 # UX-938: an acceptance clause can name a reading that no environment in this project ever takes, and nothing says so until the round that owes it
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-762 | **Blocks:** — | **Found by:** round 137 — `UX-925`'s clause asked for every example figure to be re-derived, and the container that closed it has neither `bst` nor `bwrap`, so the clause could not have been paid by the session it was written for | **Serves:** every clause that asks for a reading, and every round that reports one unpaid | **Topic:** guards | **Area:** tools | **Shape:** judgement
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-762 | **Blocks:** — | **Found by:** round 137 — `UX-925`'s clause asked for every example figure to be re-derived, and the container that closed it has neither `bst` nor `bwrap`, so the clause could not have been paid by the session it was written for | **Serves:** every clause that asks for a reading, and every round that reports one unpaid | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 
@@ -114,5 +114,32 @@ Three mutations, each applied, reddened, reverted:
 The first mutation is the one that discriminates against the cheap
 fix: a convention written only in `CLAUDE.md`, with no property
 reading it, passes every sentence above and changes nothing.
+
+## Decision
+
+The `architect`, round 149, at `c324f250`.
+
+```text
+Route:     the convention half: a header field `**Reading:** container | runner:<ci job> |
+           owner:<machine> | unpayable:<reason>` and a ninth --check property, reading_problems():
+           an open row at UX-938 or later with no field, a `runner:<job>` not under ci.yml `jobs:`,
+           or `unpayable:` with no reason reds. The retrieval half is paid already: bst-examples'
+           "UX-941 structural figures as notices" step runs `if: always()`; no ci.yml change
+Rejected:  the convention in prose only - nothing reads it, the row's own mutation
+           scanning Acceptance text for bst/bwrap/runner - a plausibility proxy
+           a new ::notice:: step - duplicates UX-941's
+           a grandfather set - a committed list; backfill the headers instead
+Files:     tools/dev_close_task.py; docs/contributing/rules.md (one row); the header of each open
+           row at UX-938 or later; tests/unit/test_a_clause_names_where_its_reading_is_taken.py (new)
+Guard:     the new file on a tmp --scenarios copy: a planted open row with no Reading reds naming
+           its id; runner:no-such-job reds; unpayable: with no reason reds; a row below UX-938
+           passes; the real tree reports 0
+Mutation:  reading_problems returns [] -> planted row reds; drop the jobs lookup -> no-such-job
+           reds. Mutations 2 and 3 (empty notice, always() removed) redden
+           test_the_examples_clock_is_a_spread.py::TestTheNoticeStep; apply once, paste the red
+Class:     bookkeeping (cap lifted for r149)
+Split:     one track, parallel with UX-1041
+Question:  none
+```
 
 ## Outcome

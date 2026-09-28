@@ -4,8 +4,7 @@ Every rule this repository holds a session to, one line each, with the
 guard that catches it and the [fixing guide](fixing-guide.md) section
 that argues it. **Read the guide's paragraph for the rule you are about
 to break, not the whole guide** — it is ~60 KB because every rule carries
-the incident that produced it, and the incidents are why the rules are
-trusted (`UX-505`). One exception: `CLAUDE.md`'s Register table's fourth row, the code-comment cap, is a convention rather than a guarded rule here — a comment's length is not its register (`UX-764`).
+the incident that produced it, and the incidents are why the rules are trusted (`UX-505`). One exception: `CLAUDE.md`'s Register table's fourth row, the code-comment cap, is a convention rather than a guarded rule here — a comment's length is not its register (`UX-764`).
 
 ## Working a task — §2
 
@@ -30,6 +29,7 @@ trusted (`UX-505`). One exception: `CLAUDE.md`'s Register table's fourth row, th
 | `make test-touching` while you work; the tier when it is wider | `test_the_loop_stays_fast.py` — the selector, not that you ran it |
 | `make push-check` before a push, CI on the pull request before a merge - the newest Python alone (`UX-995`). A tier is a selector | `.claude/hooks/gate-covers-push.sh` — covers the commit you push, not the branch you ran it on (`UX-762`); `make push-check` writes its marker only on green (`UX-948`) |
 | Both status markers, same commit; the counts are derived | `test_docs_links_and_commands.py` |
+| A task file carries one `**Guard:**` line under its header: its test file(s), or `none — <reason>` (`UX-1092`) | `test_every_task_declares_its_guard.py` |
 | A number or mechanism you moved: annotate the file asserting it | `tools/dev_close_task.py --figures`, held by `test_the_loop_stays_fast.py` |
 | A renamed or removed published key bumps its schema version | `test_output_schemas.py` |
 | A key entering `required` under a live id bumps it too | `test_a_required_set_grew_under_an_unchanged_id.py` |

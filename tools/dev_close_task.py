@@ -36,6 +36,7 @@ sys.path.insert(0, str(REPO / "tools"))
 import _close_task_checks as checks
 
 SCENARIOS = REPO / "docs/backlog/scenarios"
+TESTS_ROOT = REPO / "tests"
 INDEX = SCENARIOS / "README.md"
 CLOSED = SCENARIOS / "closed.md"
 
@@ -744,6 +745,8 @@ CHECKS = (
      "Decomposition", lambda: decomposition_problems()),
     ("every id names one task file, and its heading names that id",
      lambda: checks.id_problems(SCENARIOS, REPO)),
+    ("every task file names its guard, and the guard exists (UX-1092)",
+     lambda: checks.guard_problems(SCENARIOS, TESTS_ROOT)),
 )
 
 

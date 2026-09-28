@@ -306,7 +306,13 @@ def pseudonymize_toolchain(value, key, pmap):
 _PUBLIC_MACRO = re.compile(r"CMAKE_[A-Z0-9_]+|BUILD_SHARED_LIBS|BUILD_TESTING|NDEBUG|_GNU_SOURCE|_FORTIFY_SOURCE")
 _CMAKE_TYPES = frozenset({"PATH", "FILEPATH", "STRING", "BOOL", "INTERNAL"})
 _PUBLIC_VALUES = frozenset({"ON", "OFF", "TRUE", "FALSE", "YES", "NO", "Release", "Debug", "RelWithDebInfo", "MinSizeRel"})
-_KEPT_FLAG = re.compile(r"-(?:g[0-3]?|j\d*|[cESvwsP]|shared|static|pipe|pthread|rdynamic)")
+#: `g[0-3]?` is a bounded 4-way enum, not a captured value - no tool key needed.
+#: Bare `-j` carries no digits either; `-j<digits>` is its own check below,
+#: keyed to argv[0] (UX-1089: it bypassed that key on every binary).
+_KEPT_FLAG = re.compile(r"-(?:g[0-3]?|j|[cESvwsP]|shared|static|pipe|pthread|rdynamic)")
+#: Glued `-j<digits>` keeps its digits only on a make-like binary
+#: (UX-1089); off one, it falls to `_value`'s default-drop rule.
+_GLUED_JOBS = re.compile(r"-j(\d+)")
 #: `-O<n>` is its own check (below): only a compiler driver keeps it, and
 #: only glued - `wget -O2`'s `2` is a filename, not an optimization level.
 _OPT_LEVEL = re.compile(r"-O[0-3sgz]?|-Ofast")
@@ -466,6 +472,9 @@ def _argument(word, key, pmap, ctx, safe=False):
         return word
     if _KEPT_FLAG.fullmatch(word):
         return word
+    glued_jobs = _GLUED_JOBS.fullmatch(word)
+    if glued_jobs:
+        return "-j" + _value(glued_jobs.group(1), key, pmap, counts, binary in _MAKE_LIKE_BINARIES)
     if word.startswith("-D") and not word.startswith("--"):
         return _dash_d_argument(word, key, pmap, counts)
     return _flag_argument(word, key, pmap, counts, binary)

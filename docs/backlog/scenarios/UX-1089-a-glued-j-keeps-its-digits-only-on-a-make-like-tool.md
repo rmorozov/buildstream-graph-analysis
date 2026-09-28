@@ -37,3 +37,25 @@ the glued `-j` branch, and `curl -j123456` keeps `123456` again.
 
 ## Outcome
 
+Gap measured: reverting the glued `-j` branch's safety argument from
+`binary in _MAKE_LIKE_BINARIES` to unconditionally `True` (the pre-fix
+shape, matching `_KEPT_FLAG`'s old unconditional `j\d*`) -
+`pytest tests/unit/test_a_glued_j_keeps_its_digits_only_on_a_make_like_tool.py`
+failed 2/6: `curl -j123456` and `acme-gen -j123456` both kept
+`123456` verbatim.
+
+Close measured: same file - 6 passed. `_KEPT_FLAG` no longer matches a
+digit-carrying `-j`; `_GLUED_JOBS` routes it through `_value` keyed on
+`binary in _MAKE_LIKE_BINARIES`, same as the space-separated and
+assigned forms. Audited `-O\d` (already keyed to `_COMPILER_BINARIES`,
+UX-1084) and `-l` (already keyed to `_MAKE_LIKE_BINARIES` via
+`_flag_argument`'s `glued_safe`); `g[0-3]?` stays unkeyed - a bounded
+4-way enum, not a captured value. `curl -O2` drops (not a compiler),
+`gcc -O2` stays kept. `python tools/dev_touching.py --base 76f2179e`:
+83 files selected, 2424 passed, 3 skipped.
+
+Mutation table:
+
+| Guard | Mutation | Reddened | Count |
+|---|---|---|---|
+| glued `-j`'s make-like binary check | drop `binary in _MAKE_LIKE_BINARIES`, always `True` | `test_a_glued_j_keeps_its_digits_only_on_a_make_like_tool.py` | 2 failed / 6 |

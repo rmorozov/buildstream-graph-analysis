@@ -102,7 +102,7 @@
     "tools/bst_show_to_graph.py": {"duplicate_blocks": 0, "file_lines": 401, "longest_function": 61},
     "tools/chrome_trace_to_bga_trace.py": {"duplicate_blocks": 0, "file_lines": 203, "longest_function": 86},
     "tools/dev_adopt_check.py": {"duplicate_blocks": 0, "file_lines": 65, "longest_function": 20},
-    "tools/dev_area_pages.py": {"duplicate_blocks": 0, "file_lines": 141, "longest_function": 29},
+    "tools/dev_area_pages.py": {"duplicate_blocks": 0, "file_lines": 153, "longest_function": 31},
     "tools/dev_audit_reports.py": {"duplicate_blocks": 0, "file_lines": 93, "longest_function": 10},
     "tools/dev_baseline.py": {"duplicate_blocks": 0, "file_lines": 542, "longest_function": 43},
     "tools/dev_bookkeeping.py": {"duplicate_blocks": 0, "file_lines": 233, "longest_function": 35},

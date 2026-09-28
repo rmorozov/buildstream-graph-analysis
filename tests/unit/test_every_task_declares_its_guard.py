@@ -6,6 +6,7 @@ file with no line, `none` with no reason, or a name absent under
 holds: rules.md#a-task-file-carries-one-guard-line-under-its-header-its-test-file-s-or-none-reason-ux-1092
 """
 import pathlib
+import re
 import sys
 
 import pytest
@@ -18,6 +19,33 @@ import dev_close_task as tasks
 
 HEADER = ("# UX-{n}: x\n\n**Priority:** Low | **Status:** \N{LARGE RED CIRCLE}"
           " Not Started | **Topic:** guards | **Area:** tools\n\n")
+
+
+#: The highest id r149's backfill wrote; a later line is its author's.
+BACKFILLED_THROUGH = 1093
+MARK = " · inferred r149"
+
+
+def unmarked_inferences(scenarios):
+    """Backfilled files whose plain `**Guard:**` line names a file its
+    `## Decision` and `## Acceptance Test` never do - prose, unmarked."""
+    found = []
+    for path in sorted(scenarios.glob("UX-*.md")):
+        number = re.match(r"UX-0*(\d+)-", path.name)
+        if not number or int(number.group(1)) > BACKFILLED_THROUGH:
+            continue
+        text = path.read_text(encoding="utf-8")
+        line = re.search(r"^\*\*Guard:\*\*(.*)$",
+                         text.split("\n## ", 1)[0], re.M)
+        if not line or line.group(1).rstrip().endswith(MARK.strip()):
+            continue
+        names, _reason = tasks.checks.header_guard(text)
+        stated = "".join(
+            part.split("\n## ", 1)[0] for part in re.split(
+                r"\n## (?=Decision|Acceptance Test)", text)[1:])
+        found += [f"{path.name}: {name}" for name in names
+                  if name not in stated]
+    return found
 
 
 def _guard_check():
@@ -71,6 +99,25 @@ class TestTheCheckRefuses:
         assert _guard_check()() == []
 
 
+class TestAnInferenceIsMarked:
+
+    def test_a_plain_line_from_the_outcome_is_found(self, tmp_path):
+        (tmp_path / "UX-0009-x.md").write_text(
+            HEADER.format(n=9) + "**Guard:** test_present.py\n\n"
+            "## Outcome\n\n`test_present.py` holds it.\n")
+        assert unmarked_inferences(tmp_path) == [
+            "UX-0009-x.md: test_present.py"]
+
+    def test_the_mark_or_a_stated_name_is_not(self, tmp_path):
+        (tmp_path / "UX-0009-x.md").write_text(
+            HEADER.format(n=9) + "**Guard:** test_present.py" + MARK
+            + "\n\n## Outcome\n\n`test_present.py` holds it.\n")
+        (tmp_path / "UX-0010-x.md").write_text(
+            HEADER.format(n=10) + "**Guard:** test_present.py\n\n"
+            "## Acceptance Test\n\n`test_present.py` reds.\n")
+        assert unmarked_inferences(tmp_path) == []
+
+
 class TestTheRealTree:
     """Green once the one-shot backfill has run (`UX-1092`'s step B)."""
 
@@ -78,6 +125,10 @@ class TestTheRealTree:
         problems = tasks.checks.guard_problems(tasks.SCENARIOS,
                                                tasks.TESTS_ROOT)
         assert problems == [], f"{len(problems)} problem(s): {problems[:5]}"
+
+    def test_no_inference_is_unmarked(self):
+        found = unmarked_inferences(tasks.SCENARIOS)
+        assert found == [], f"{len(found)} unmarked: {found[:5]}"
 
     def test_no_area_page_reads_a_row_without_its_line(self):
         for area, ids in tasks.area_pages().items():

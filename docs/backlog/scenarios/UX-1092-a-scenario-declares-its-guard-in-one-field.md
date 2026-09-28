@@ -108,3 +108,28 @@ integrator re-runs the script on the merged tip (step B).
 Restored: 17 passed. Run from copies (`mutate.py`, `PYTHONDONTWRITEBYTECODE=1`).
 `TestTheRealTree` is red on step A's commit alone (1023 problems) and
 green once step B lands.
+
+### Step B (integrator, merged tip) and the deviation
+
+```text
+$ python3 <scratchpad>/ux1092_backfill.py .      # UX-0245 hand-written first
+backfilled 1021 file(s): {'named': 175, 'inferred': 455, 'none-absent': 2, 'none-closed': 373, 'none-open': 16}
+$ python3 <scratchpad>/ux1092_backfill.py .      # again: git diff byte-identical
+backfilled 0 file(s): {'named': 0, 'inferred': 0, 'none-absent': 0, 'none-closed': 0, 'none-open': 0}
+$ python3 tools/dev_close_task.py --check
+0 problem(s) over 10 propert(y/ies), 1023 backlog row(s)
+$ python3 tools/dev_area_pages.py --areas, footers summed
+covered 419 / 629 (none 210, inferred r149 267, no line 0)
+```
+
+**Deviation.** The verifier sampled 8 `named` backfills and found 1 wrong:
+UX-0245 named `test_the_front_door_is_current.py`, which its own Deviation
+disclaims, so Outcome-prose inference is ~7/8 right, not exact. A name
+from a Decision `Guard:` field or the Acceptance Test is written plain; one
+from Outcome prose ends ` · inferred r149` (456 files, UX-0245 among them,
+hand-fixed to `test_the_architecture_names_the_commands.py`).
+`dev_area_pages` counts the mark in the footer and the cell. The real-tree
+half, `test_no_inference_is_unmarked`, finds a plain line in files up to
+UX-1093 naming a file its Decision or Acceptance Test never does. Stripping
+UX-0245's mark reddens it (1 failed); the dev_area_pages mark ignored or
+read off the whole file, or the detector passing every line, each red a clause.

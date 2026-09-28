@@ -68,7 +68,7 @@ class TestTheGuardColumn:
     def test_the_page_ends_covered_n_of_m(self, sandbox):
         """Only the row naming an existing file is covered, of four -
         not 2 (a missing guard), and not the Outcome-only row."""
-        assert "covered 1 / 4 (none 1, no line 1)" in _page()
+        assert "covered 1 / 4 (none 1, inferred r149 0, no line 1)" in _page()
 
     def test_the_page_names_the_row_count(self, sandbox):
         assert "4 row(s)" in _page()
@@ -81,7 +81,7 @@ class TestNothingIsInferredFromProse:
     def test_an_outcome_only_row_is_not_covered(self, sandbox):
         body = _page(["UX-4"])
         assert "test_present.py" not in body
-        assert "covered 0 / 1 (none 0, no line 1)" in body
+        assert "covered 0 / 1 (none 0, inferred r149 0, no line 1)" in body
 
     def test_the_line_wins_over_every_section(self, sandbox):
         _task(sandbox, 5, "test_present.py", (
@@ -96,6 +96,25 @@ class TestNothingIsInferredFromProse:
         """`UX-648` carries a `**Guard:**` paragraph in its body."""
         _task(sandbox, 6, None, "## Outcome\n\n**Guard:** `test_present.py`\n")
         assert "| no `Guard:` line |" in _page(["UX-6"])
+
+
+class TestAnInferredGuardIsCountedApart:
+    """`UX-1092` step B: a line r149's backfill took from Outcome prose
+    carries ` · inferred r149`, and the page says so."""
+
+    def test_the_cell_carries_the_mark(self, sandbox):
+        _task(sandbox, 7, "test_present.py · inferred r149")
+        assert "| `test_present.py` · inferred r149 |" in _page(["UX-7"])
+
+    def test_the_footer_counts_it(self, sandbox):
+        _task(sandbox, 7, "test_present.py · inferred r149")
+        assert ("covered 2 / 5 (none 1, inferred r149 1, no line 1)"
+                in _page(["UX-1", "UX-2", "UX-3", "UX-4", "UX-7"]))
+
+    def test_the_mark_off_the_line_is_not_it(self, sandbox):
+        _task(sandbox, 8, "test_present.py",
+              "## Outcome\n\n**Guard:** test_present.py · inferred r149\n")
+        assert "(none 0, inferred r149 0, no line 0)" in _page(["UX-8"])
 
 
 class TestReportAreasStillOnlyPrints:

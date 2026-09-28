@@ -8,9 +8,10 @@ Takes `area_page_body`/`report_areas` out of `dev_close_task.py`
 (`area_pages()` stays there - `dev_scenario.py` imports it) and adds a
 Guard column read from the task's one `**Guard:**` line (`UX-1092`) -
 each named `test_*.py` marked present or missing under `tests/`, a
-`none — <reason>` shown as written, a file with no line said so;
-nothing is inferred from prose. A page ends `covered N / M (none K, no
-line F)`: N rows naming >= 1 existing file, of M listed.
+`none — <reason>` shown as written, a file with no line said so. A
+line r149's backfill took from Outcome prose ends ` · inferred r149`
+and is counted apart. A page ends `covered N / M (none K, inferred r149
+I, no line F)`: N rows naming >= 1 existing file, of M listed.
 
 `--areas` only prints (`UX-996`); `--out DIR --link-base URL` is the
 only writer, for CI to publish to `refs/heads/records` (`UX-997`) -
@@ -20,6 +21,7 @@ published alone.
 """
 import argparse
 import pathlib
+import re
 import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
@@ -29,17 +31,24 @@ import dev_close_task as tasks
 #: `UX-689`: a hand-written `docs/design/areas/<area>.md`, if one
 #: exists, gets one derived `Mechanism:` line in the printed page.
 DESIGN_AREA_PAGES = REPO / "docs/design/areas"
+#: `UX-1092` step B: a guard the backfill read from prose, not a field.
+INFERRED = "inferred r149"
+_INFERRED_LINE = re.compile(r"^\*\*Guard:\*\*.*· " + INFERRED + r"[ \t]*$",
+                            re.M)
 
 
 def guard_files(text):
     """`(names, kind)` from the task's `**Guard:**` line alone
-    (`UX-1092`): `"named"`, `"none"` (names empty, the reason in
-    place of them) or `None` for a file with no line."""
+    (`UX-1092`): `"named"`, `"inferred"` (named, with the r149 mark),
+    `"none"` (the reason in place of names) or `None` for no line."""
     guard = tasks.checks.header_guard(text)
     if guard is None:
         return [], None
     names, reason = guard
-    return (names, "named") if names else ([reason], "none")
+    if not names:
+        return [reason], "none"
+    marked = _INFERRED_LINE.search(text.split("\n## ", 1)[0])
+    return names, "inferred" if marked else "named"
 
 
 def _guard_cell(names, kind, present):
@@ -47,8 +56,9 @@ def _guard_cell(names, kind, present):
         return "no `Guard:` line"
     if kind == "none":
         return "none — " + names[0].replace("|", "\\|")
-    return ", ".join(f"`{name}`" if name in present
+    cell = ", ".join(f"`{name}`" if name in present
                      else f"`{name}` (missing)" for name in names)
+    return cell + (f" · {INFERRED}" if kind == "inferred" else "")
 
 
 def area_page_body(area, ids, link_base=None):
@@ -56,7 +66,7 @@ def area_page_body(area, ids, link_base=None):
     file, so it cannot drift from the headers and guards it reads."""
     listed = [uid for uid in ids if tasks.task_file(uid).exists()]
     present = tasks.checks.present_guards(tasks.TESTS_ROOT)
-    counts = {"named": 0, "none": 0, None: 0}
+    counts = {"named": 0, "inferred": 0, "none": 0, None: 0}
     covered, lines = 0, []
     for uid in listed:
         path = tasks.task_file(uid)
@@ -65,7 +75,8 @@ def area_page_body(area, ids, link_base=None):
                 else f"../scenarios/{path.name}")
         names, kind = guard_files(text)
         counts[kind] += 1
-        covered += kind == "named" and any(n in present for n in names)
+        covered += (kind in ("named", "inferred")
+                    and any(n in present for n in names))
         lines.append(f"| [{uid}]({link}) | {tasks.header_topic(text) or ''}"
                      f" | {_guard_cell(names, kind, present)} |")
     rows = "\n".join(lines)
@@ -79,7 +90,8 @@ def area_page_body(area, ids, link_base=None):
             f"the module tree is the fixing guide's §6.\n\n"
             f"{mechanism}| Task | Topic | Guard |\n|---|---|---|\n{rows}\n\n"
             f"covered {covered} / {len(listed)} "
-            f"(none {counts['none']}, no line {counts[None]})\n")
+            f"(none {counts['none']}, {INFERRED} {counts['inferred']}, "
+            f"no line {counts[None]})\n")
 
 
 def report_areas(name):

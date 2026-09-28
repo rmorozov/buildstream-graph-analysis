@@ -2711,6 +2711,11 @@ def parse_open_lines(lines, open_element_overrides: Optional[dict[str, str]] = N
                 continue
             remaining -= 1
             if line.startswith("/"):
+                # UX-1076: interned - the same sysroot headers repeat
+                # across every element, and interning collapses the
+                # duplicate `str` objects a fresh line would otherwise
+                # allocate.
+                line = sys.intern(line)
                 entry["paths"].add(line)
             continue
         pid, element, invocation, unique, dropped, _part, relative, dirfd = match.groups()
@@ -6761,7 +6766,10 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
     # UX-169: and the handle goes in, not `handle.read()`. The comment
     # above said "streaming" while the call built exactly the whole-file
     # string it was written to avoid.
-    with open(raw_log_path, encoding="utf-8", errors="ignore") as handle:
+    # UX-1079: through `_open_maybe_gzipped` too - a plain `open` on the
+    # `plane2.log.gz` every snapshot stores read deflate bytes and found
+    # no OPENS lines, silently.
+    with _open_maybe_gzipped(raw_log_path) as handle:
         opens_by_element = parse_open_lines(
             handle,
             open_element_overrides=(correlation or {}).get('resolved'))

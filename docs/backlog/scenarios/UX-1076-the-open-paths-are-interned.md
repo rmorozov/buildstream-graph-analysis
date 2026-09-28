@@ -34,3 +34,23 @@ Folding the two passes over the log into one (a judgement call on the second pas
 `tests/unit/test_the_open_paths_are_interned.py`: On a scaled log (the audit's `genlog.py`, 1,202 x 160 x 50), the
 opens pass peaks under 60% of today's RSS and the report is identical.
 Mutation: drop the interning, and the bound reds.
+
+## Outcome
+
+Gap: `parse_open_lines` added each opened path as the fresh `str` the
+file iterator handed it - a fixture at the audit's own scale (1,202 x
+160 x 50, subprocess-measured on this machine) peaked at 559,916 KB
+uninterned.
+
+Close: `sys.intern(line)` at the one `.add()` call
+(`tools/bst_native_build_tracer.py:2714`).
+`python3 -m pytest tests/unit/test_the_open_paths_are_interned.py -q`:
+`1 passed in 18.04s` - interned peak 261,260 KB, uninterned 560,168 KB,
+ratio 0.466 (well under the 0.6 bound), report byte-identical
+(3,710,425 entries, same 1,202 elements either way).
+
+Mutation table:
+
+| mutation | reddened | count |
+|---|---|---|
+| drop `sys.intern(...)`, `.add(line)` | `test_the_opens_pass_peaks_under_60_percent_of_the_uninterned_rss` | 1 failed (560,504 KB interned vs 559,916 KB uninterned, no longer under 60%) |

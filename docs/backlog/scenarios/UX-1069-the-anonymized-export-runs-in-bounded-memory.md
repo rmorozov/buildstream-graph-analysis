@@ -76,8 +76,11 @@ N=40000: bytes 3708306 -> 14823952 (+11115646); peak 4001869 -> 4335931 (+334062
 chunks 4 KiB, N=1000: peak 362792 -> 383864 (+21072); ratio 0.08; legacy -1120, ratio -0.00
 ```
 
-The ceiling is about 4 MB, set by the 1 MiB residue block (as bytes,
-text and its lowercase); the guard shrinks both chunks to 4 KiB so N
+The bound is one record plus the distinct identifiers' map, originals
+and residue index, not a fixed byte figure: about 4 MB *here*, at
+`ELEMENTS = 8` and the 1 MiB residue block (as bytes, text and its
+lowercase) - UX-1087 measures identifiers scaling separately at
+~1300 B/identifier. The guard shrinks both chunks to 4 KiB so N
 stays in the unit tier. **The published archive is now mode 0600**
 (`os.open(..., 0o600)` then `os.replace`), where it was the umask's.
 **Disk:** every rewritten member exists uncompressed before packing,

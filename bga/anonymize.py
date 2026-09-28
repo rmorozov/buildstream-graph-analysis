@@ -201,3 +201,132 @@ def pseudonymize_element_path(value, key, pmap):
         j_token = pseudonymize(j_stem, "junction", key, pmap) + j_ext
         return f"{j_token}{_JUNCTION_SEP}{out}"
     return out
+
+
+_TASK_WORD = re.compile(r"[A-Z_]+|\d+")
+_URL = re.compile(r"([A-Za-z][A-Za-z0-9+.-]*)://(?:[^@/]*@)?([^/]*)(.*)", re.S)
+_SCP_USER = re.compile(r"^[^@/:\s]+@(?=[^/]*:)")
+_PUBLIC_SCHEMES = frozenset({"http", "https", "git", "ssh", "file", "ftp", "git+ssh", "git+https"})
+_EXTENSION = re.compile(r"(.+?)(\.[A-Za-z0-9]{1,5})")
+
+
+def pseudonymize_identifier(value, key, pmap):
+    """The one place a class A value's pseudonym is decided.
+
+    A task key `uid|ACTION|...|n` keeps its public words; a `.bst` name
+    keeps its junction and depth; anything else is a path or URL, whose
+    userinfo (class G) is dropped before a segment reaches the map.
+    """
+    if not isinstance(value, str) or not value:
+        return value
+    if "|" in value:
+        head, *rest = value.split("|")
+        return "|".join([pseudonymize_identifier(head, key, pmap)] + [
+            part if _TASK_WORD.fullmatch(part) else pseudonymize_identifier(part, key, pmap)
+            for part in rest])
+    if value.endswith(_BST_SUFFIX) or f"{_BST_SUFFIX}{_JUNCTION_SEP}" in value:
+        return pseudonymize_element_path(value, key, pmap)
+    url = _URL.fullmatch(value)
+    if url:
+        scheme, host, rest = url.groups()
+        if scheme.lower() not in _PUBLIC_SCHEMES:
+            scheme = pseudonymize(scheme, "source", key, pmap)
+        host = pseudonymize(host, "source", key, pmap) if host else host
+        return f"{scheme}://{host}{_path(rest, key, pmap)}"
+    return _path(_SCP_USER.sub("", value), key, pmap)
+
+
+def _path(value, key, pmap):
+    segments = value.split(_PATH_SEP)
+    last = len(segments) - 1
+    return _PATH_SEP.join(_segment(seg, "file" if i == last else "directory", key, pmap)
+                          for i, seg in enumerate(segments))
+
+
+def _segment(segment, cls, key, pmap):
+    lead = "." if segment.startswith(".") else ""
+    stem, ext = segment[len(lead):], ""
+    shaped = _EXTENSION.fullmatch(stem) if cls == "file" else None
+    if shaped:
+        stem, ext = shaped.groups()
+    if not stem or stem == ".":
+        return segment
+    return lead + pseudonymize(stem, cls, key, pmap) + ext
+
+
+def rekey_hash(value, key, pmap):
+    """A class E hash re-keyed by HMAC: equal stays equal, same length, hex."""
+    if not isinstance(value, str) or not value:
+        return value
+    out, extend = "", 0
+    while len(out) < len(value):
+        out += _digest(key, "hash", value, extend).hex()
+        extend += 1
+    out = out[:len(value)]
+    pmap.add(out, f"hash\0{value}")
+    return out
+
+
+def pseudonymize_toolchain(value, key, pmap):
+    """A toolchain string off its allowlist: the tool pseudonymized, the version kept."""
+    shaped = re.fullmatch(r"(.+?) (\d[\w.~+-]*)", value)
+    if shaped is None:
+        return pseudonymize(value, "binary", key, pmap)
+    return f"{pseudonymize(shaped.group(1), 'binary', key, pmap)} {shaped.group(2)}"
+
+
+_PUBLIC_MACRO = re.compile(r"CMAKE_[A-Z0-9_]+|BUILD_SHARED_LIBS|BUILD_TESTING|NDEBUG|_GNU_SOURCE|_FORTIFY_SOURCE")
+_CMAKE_TYPES = frozenset({"PATH", "FILEPATH", "STRING", "BOOL", "INTERNAL"})
+_PUBLIC_VALUES = frozenset({"ON", "OFF", "TRUE", "FALSE", "YES", "NO", "Release", "Debug", "RelWithDebInfo", "MinSizeRel"})
+_KEPT_FLAG = re.compile(r"-(?:O[0-3sgz]?|Ofast|g[0-3]?|j\d*|[cESvwsP]|shared|static|pipe|pthread|rdynamic)")
+#: `-lfoo`, `-ofoo` carry a value glued to the letter; any other lowercase word is a flag name.
+_NAMED_FLAG = re.compile(r"(--|-[fmW]|-std|-(?=[a-km-np-z][a-z0-9-]{2}))([a-z][a-z0-9+-]*)?(=.*)?", re.S)
+_MACRO = re.compile(r"([A-Za-z_][A-Za-z0-9_]*)(?::([A-Z]+))?(=.*)?", re.S)
+
+
+def rebuild_command(cmd, key, pmap, public_binaries):
+    """A class F command line rebuilt from its grammar (`anonymized-bundle.md` 6.6).
+
+    `argv[0]`'s basename is kept when public, else a `b-` pseudonym; a
+    flag keeps its name; every value slot, argument and private macro
+    is a pseudonym. Nothing of the original survives outside that.
+    """
+    if not isinstance(cmd, str):
+        return cmd
+    words = cmd.split()
+    if not words:
+        return ""
+    binary = words[0].rsplit(_PATH_SEP, 1)[-1]
+    out = [binary if binary in public_binaries else pseudonymize(binary, "binary", key, pmap)]
+    out.extend(_argument(word, key, pmap) for word in words[1:])
+    return " ".join(out)
+
+
+def _argument(word, key, pmap):
+    if not word.startswith("-") or word == "-":
+        return _value(word, key, pmap)
+    if _KEPT_FLAG.fullmatch(word):
+        return word
+    if word.startswith("-D") and not word.startswith("--"):
+        macro = _MACRO.fullmatch(word[2:])
+        if macro is None:
+            return "-D" + _value(word[2:], key, pmap)
+        name, kind, assigned = macro.groups()
+        name = name if _PUBLIC_MACRO.fullmatch(name) else pseudonymize(name, "macro", key, pmap)
+        if kind is not None:
+            kind = kind if kind in _CMAKE_TYPES else pseudonymize(kind, "macro", key, pmap)
+        return f"-D{name}{'' if kind is None else ':' + kind}{_assigned(assigned, key, pmap)}"
+    named = _NAMED_FLAG.fullmatch(word)
+    if named and (named.group(2) or named.group(1) == "-std"):
+        return named.group(1) + (named.group(2) or "") + _assigned(named.group(3), key, pmap)
+    return word[:2] + _value(word[2:], key, pmap)
+
+
+def _assigned(assigned, key, pmap):
+    return "" if not assigned else "=" + _value(assigned[1:], key, pmap)
+
+
+def _value(value, key, pmap):
+    if not value or value in _PUBLIC_VALUES or value.isdigit():
+        return value
+    return pseudonymize_identifier(value, key, pmap)

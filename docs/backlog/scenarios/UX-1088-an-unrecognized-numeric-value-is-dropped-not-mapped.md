@@ -1,6 +1,6 @@
 # UX-1088: an unrecognized numeric value is dropped, not mapped
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-1084 | **Found by:** the owner's #298 re-review at 76f2179e, finding 1 | **Serves:** anyone sharing a private capture with an outside reader | **Topic:** store | **Area:** bga | **Shape:** mechanical
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-1084 | **Found by:** the owner's #298 re-review at 76f2179e, finding 1 | **Serves:** anyone sharing a private capture with an outside reader | **Topic:** store | **Area:** bga | **Shape:** mechanical
 
 ## Motivation
 
@@ -65,3 +65,10 @@ Mutation table:
 |---|---|---|---|
 | `_value`'s default-drop numeric check | restore unconditional `pseudonymize_identifier` | both test files | 4 failed / 25 |
 | `_CREDENTIAL_NAME`'s `otp`\|`pin`\|... addition | drop the new names from the regex | `test_a_non_numeric_otp_value_drops_on_its_name_not_its_shape` (a non-digit, non-high-entropy OTP the digit rule cannot catch) | 1 failed / 11 |
+
+Live probe at `1a498516`: `curl --otp=123456` -> `--m-slbw=<dropped>`,
+`x --pin=1234` -> `=<dropped>`, `cmake -DPORT=8080` -> `=<dropped>`,
+`tool 42` -> `<dropped>`. After these four (plus the acceptance run
+above), `PseudonymMap`'s originals are empty and its forward keys are
+names only: `m-slbw`, `b-tn`, `m-wqlt`, `m-j_pc`, `b-qchp` - no dropped
+value ever reaches the map.

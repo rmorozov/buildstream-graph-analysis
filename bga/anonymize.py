@@ -286,6 +286,27 @@ _KEPT_FLAG = re.compile(r"-(?:O[0-3sgz]?|Ofast|g[0-3]?|j\d*|[cESvwsP]|shared|sta
 #: `-lfoo`, `-ofoo` carry a value glued to the letter; any other lowercase word is a flag name.
 _NAMED_FLAG = re.compile(r"(--|-[fmW]|-std|-(?=[a-km-np-z][a-z0-9-]{2}))([a-z][a-z0-9+-]*)?(=.*)?", re.S)
 _MACRO = re.compile(r"([A-Za-z_][A-Za-z0-9_]*)(?::([A-Z]+))?(=.*)?", re.S)
+_ENV_ASSIGNMENT = re.compile(r"([A-Za-z_][A-Za-z0-9_]*)=(.*)", re.S)
+#: Only an all-caps word is an env-var prefix ahead of `argv[0]`; a
+#: lowercase `a=b` is the binary itself (the UX-1068 verifier regression).
+_LEADING_ENV = re.compile(r"[A-Z_][A-Z0-9_]*=.*", re.S)
+#: A name that reads as a credential, any case, any separator (1068, class G).
+_CREDENTIAL_NAME = re.compile(
+    r"token|secret|password|passwd|key|auth|credential|cookie|session"
+    r"|pat|bearer|apikey|private_key|signing", re.I)
+_DIGIT_CAP = 6
+#: A value shaped like a credential regardless of its name: a known
+#: token prefix, an auth scheme with its value on the next word, or a
+#: long run mixing letters and digits (1068 verifier findings).
+_TOKEN_PREFIX = re.compile(r"^(?:ghp_|gho_|ghu_|ghs_|ghr_|github_pat_|glpat-|xox[abp]-|AKIA|sk-)")
+_AUTH_SCHEME = re.compile(r"^(?:bearer|basic)$", re.I)
+_HIGH_ENTROPY = re.compile(r"^(?=.*[A-Za-z])(?=.*[0-9])[A-Za-z0-9_+/=-]{20,}$")
+_DROPPED = "<dropped>"
+
+
+def _credential_shaped(value):
+    return bool(value) and bool(
+        _TOKEN_PREFIX.match(value) or _AUTH_SCHEME.fullmatch(value) or _HIGH_ENTROPY.fullmatch(value))
 
 #: The only flag names a rebuilt command keeps verbatim, on any `argv[0]`;
 #: any other name becomes an `m-` pseudonym behind its dashes (6.6, 6.11).
@@ -320,55 +341,131 @@ PUBLIC_FLAGS = frozenset([
 ])
 
 
-def rebuild_command(cmd, key, pmap, public_binaries):
+def rebuild_command(cmd, key, pmap, public_binaries, counts=None):
     """A class F command line rebuilt from its grammar (`anonymized-bundle.md` 6.6).
 
-    `argv[0]`'s basename is kept when public, else a `b-` pseudonym; a
-    flag keeps its name only from `PUBLIC_FLAGS`; every value slot,
-    argument, private flag and private macro is a pseudonym.
+    A leading run of `NAME=value` env words (uppercase name, never the
+    last word) sits ahead of `argv[0]`; `argv[0]`'s basename is kept
+    when public, else a `b-` pseudonym; a flag keeps its name only from
+    `PUBLIC_FLAGS`; every value slot, argument, private flag and
+    private macro is a pseudonym. A credential-named or credential-
+    shaped assignment (1068) is classified before that grammar: its
+    value is dropped, never pseudonymized, never mapped; a bare
+    credential flag or an auth-scheme value also drops the argv word
+    that carries it. `counts`, when given, is incremented once per drop.
     """
     if not isinstance(cmd, str):
         return cmd
     words = cmd.split()
     if not words:
         return ""
-    binary = words[0].rsplit(_PATH_SEP, 1)[-1]
-    out = [binary if binary in public_binaries else pseudonymize(binary, "binary", key, pmap)]
-    out.extend(_argument(word, key, pmap) for word in words[1:])
+    lead = 0
+    while lead < len(words) - 1 and _LEADING_ENV.fullmatch(words[lead]):
+        lead += 1
+    out = [_argument(word, key, pmap, counts) for word in words[:lead]]
+    binary = words[lead].rsplit(_PATH_SEP, 1)[-1]
+    out.append(binary if binary in public_binaries else pseudonymize(binary, "binary", key, pmap))
+    i = lead + 1
+    while i < len(words):
+        word, following = words[i], words[i + 1] if i + 1 < len(words) else None
+        if _space_credential(word, following):
+            out.append(word if word in PUBLIC_FLAGS else _pseudonymize_flag(word, key, pmap))
+            out.append(_DROPPED)
+            if counts is not None:
+                counts["F credential"] += 1
+            i += 2
+            continue
+        out.append(_argument(word, key, pmap, counts))
+        if following is not None and not following.startswith("-") and _continues_scheme(word):
+            out.append(_DROPPED)
+            if counts is not None:
+                counts["F credential"] += 1
+            i += 2
+            continue
+        i += 1
     return " ".join(out)
 
 
-def _argument(word, key, pmap):
+def _pseudonymize_flag(flag, key, pmap):
+    dashes = "--" if flag.startswith("--") else "-"
+    return dashes + pseudonymize(flag[len(dashes):], "macro", key, pmap)
+
+
+def _space_credential(word, following):
+    """A bare (no `=`) credential flag, its value the next argv word."""
+    if following is None or following.startswith("-"):
+        return False
+    if not word.startswith("-") or word == "-" or "=" in word or word.startswith("-D"):
+        return False
+    if _KEPT_FLAG.fullmatch(word):
+        return False
+    return bool(_CREDENTIAL_NAME.search(word))
+
+
+def _continues_scheme(word):
+    """An `Authorization=Bearer`-shaped word: the token is the next word."""
+    _, _, assigned = word.partition("=")
+    return bool(assigned) and bool(_AUTH_SCHEME.fullmatch(assigned))
+
+
+def _argument(word, key, pmap, counts=None):
     if not word.startswith("-") or word == "-":
-        return _value(word, key, pmap)
+        env = _ENV_ASSIGNMENT.fullmatch(word)
+        if env and (_CREDENTIAL_NAME.search(env.group(1)) or _credential_shaped(env.group(2))):
+            return _drop(env.group(1), key, pmap, counts)
+        return _value(word, key, pmap, counts)
     if _KEPT_FLAG.fullmatch(word):
         return word
     if word.startswith("-D") and not word.startswith("--"):
         macro = _MACRO.fullmatch(word[2:])
         if macro is None:
-            return "-D" + _value(word[2:], key, pmap)
+            return "-D" + _value(word[2:], key, pmap, counts)
         name, kind, assigned = macro.groups()
+        credential = bool(_CREDENTIAL_NAME.search(name))
         name = name if _PUBLIC_MACRO.fullmatch(name) else pseudonymize(name, "macro", key, pmap)
         if kind is not None:
             kind = kind if kind in _CMAKE_TYPES else pseudonymize(kind, "macro", key, pmap)
-        return f"-D{name}{'' if kind is None else ':' + kind}{_assigned(assigned, key, pmap)}"
+        return f"-D{name}{'' if kind is None else ':' + kind}{_assigned(assigned, key, pmap, counts, credential)}"
     flag, equals, assigned = word.partition("=")
-    if flag in PUBLIC_FLAGS:
-        return flag + _assigned(equals + assigned, key, pmap)
+    credential = bool(_CREDENTIAL_NAME.search(flag))
+    if flag in PUBLIC_FLAGS and not credential:
+        return flag + _assigned(equals + assigned, key, pmap, counts, False)
+    if credential:
+        rendered = flag if flag in PUBLIC_FLAGS else _pseudonymize_flag(flag, key, pmap)
+        return rendered + _assigned(equals + assigned, key, pmap, counts, True)
     named = _NAMED_FLAG.fullmatch(word)
     if named and named.group(2):
         return (named.group(1) + pseudonymize(named.group(2), "macro", key, pmap)
-                + _assigned(named.group(3), key, pmap))
-    return word[:2] + _value(word[2:], key, pmap)
+                + _assigned(named.group(3), key, pmap, counts, False))
+    return word[:2] + _value(word[2:], key, pmap, counts)
 
 
-def _assigned(assigned, key, pmap):
-    return "" if not assigned else "=" + _value(assigned[1:], key, pmap)
+def _drop(name, key, pmap, counts):
+    """A credential name pseudonymized, its value replaced, never mapped."""
+    if counts is not None:
+        counts["F credential"] += 1
+    return f"{pseudonymize(name, 'macro', key, pmap)}={_DROPPED}"
 
 
-def _value(value, key, pmap):
-    if not value or value in _PUBLIC_VALUES or value.isdigit():
+def _assigned(assigned, key, pmap, counts=None, credential=False):
+    if not assigned:
+        return ""
+    if credential:
+        if counts is not None:
+            counts["F credential"] += 1
+        return f"={_DROPPED}"
+    return "=" + _value(assigned[1:], key, pmap, counts)
+
+
+def _value(value, key, pmap, counts=None):
+    if not value or value in _PUBLIC_VALUES:
         return value
+    if value.isdigit():
+        return value if len(value) <= _DIGIT_CAP else pseudonymize_identifier(value, key, pmap)
+    if _credential_shaped(value):
+        if counts is not None:
+            counts["F credential"] += 1
+        return _DROPPED
     return pseudonymize_identifier(value, key, pmap)
 
 

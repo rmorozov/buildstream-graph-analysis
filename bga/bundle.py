@@ -419,7 +419,7 @@ class _Anonymizer:
         """Rebuilt through the bare map: an argument is not a known name, so
         it joins no dictionary; the words kept verbatim join the review."""
         rebuilt = anonymize.rebuild_command(
-            value, self.key, self.pmap.pmap, disclosure.VOCABULARIES["binary"].allowed)
+            value, self.key, self.pmap.pmap, disclosure.VOCABULARIES["binary"].allowed, self.counts)
         if isinstance(value, str) and isinstance(rebuilt, str):
             words = {w.split("=")[0] for w in value.split()}
             self.kept.update(w.split("=")[0] for w in rebuilt.split() if w.split("=")[0] in words)

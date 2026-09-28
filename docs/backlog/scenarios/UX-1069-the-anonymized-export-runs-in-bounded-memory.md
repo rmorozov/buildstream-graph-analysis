@@ -42,3 +42,73 @@ Class:     product
 Split:     one track, opus (about 300 lines of code plus 150 of test, UX-1039).
 
 ## Outcome
+
+**Gap measured** at `ade24f32`, the acceptance test's own capture
+(`_capture`: 8 elements, `binary_cost.{A}.by_cpu[]` plus host-samples
+lines) exported under `tracemalloc` at N and 4N records
+(`/tmp/<track>/measure.py`, run against that base's `bga/`):
+
+```text
+N=1000:  bytes 90477 -> 362292 (+271815); peak 1093878 -> 4129569 (+3035691); ratio 11.17
+N=10000: bytes 906154 -> 3708306 (+2802152); peak 9712977 -> 32628761 (+22915784); ratio 8.18
+legacy processes[], N=1000: peak 463115 -> 1863612 (+1400497); ratio 5.25 (refused)
+```
+
+**Close measured.** New `bga/jsonstream.py` walks a member under its
+policy trie, token by token through literal keys, and decodes whole only
+a value whose subtrie repeats nowhere below (a `[]` item, a `{A}` entry
+is itself walked when it holds a list); an unnamed value is skipped one
+child at a time. `disclosure.step(node, key, path)` is shared by
+`_walk_map` and the reader. Pass 1 (`bundle._scan`) runs `disclosure.walk`
+and `collect` per record; `_Anonymizer.times` is a running minimum per
+clock. Pass 2 (`bundle._stream`) writes `json.dumps`'s bytes record by
+record into 0600 files in `mkdtemp(dir=dirname(abspath(destination)))`;
+`_pack` builds the tar.gz there from file handles, removing each member
+file once packed; `residue()` reads it back through `gzip.open` + `r|`
+in `RESIDUE_CHUNK` (1 MiB) blocks, the longest variant plus one carried;
+`os.replace` publishes after approval, a `finally` removes the scratch
+directory. Same script, this branch, default chunks:
+
+```text
+N=1000:  peak 1419324 -> 1546725 (+127401); ratio 0.47   (1 MiB residue block not yet full at N)
+N=10000: peak 2234794 -> 3843040 (+1608246); ratio 0.57  (the same fill, 0.9 -> 3.7 MB)
+N=40000: bytes 3708306 -> 14823952 (+11115646); peak 4001869 -> 4335931 (+334062); ratio 0.03
+chunks 4 KiB, N=1000: peak 362792 -> 383864 (+21072); ratio 0.08; legacy -1120, ratio -0.00
+```
+
+The ceiling is about 4 MB, set by the 1 MiB residue block (as bytes,
+text and its lowercase); the guard shrinks both chunks to 4 KiB so N
+stays in the unit tier. **The published archive is now mode 0600**
+(`os.open(..., 0o600)` then `os.replace`), where it was the umask's.
+**Disk:** every rewritten member exists uncompressed before packing,
+then goes as it is packed: 4N=160000 records, capture 14823952 B,
+members 14680830 B (largest 7411028 B), archive 1061939 B - about the
+transformed capture once over plus the archive, 14x the output here.
+
+Byte identity: the 14 fixture captures `test_an_anonymized_bundle_trips_on_a_leftover_name.py`
+walks, exported by base and branch (`/tmp/<track>/compare.py`): 14 of
+14 archive sha256 equal.
+`pytest tests/unit/test_the_anonymized_export_runs_in_bounded_memory.py`
+plus the four named files: `61 passed in 4.77s`.
+
+**Mutations**, each on a copy-backed file (`/tmp/<track>/mutate.py`,
+`PYTHONDONTWRITEBYTECODE=1`), restored from the copy, 18 green after:
+
+| mutation | reddened | count |
+|---|---|---|
+| `_fill` reads the handle whole (`json.loads(handle.read())`) | (1) both | 2 failed, 16 passed |
+| `_repeats` -> False: each document decoded whole | (1) both | 2 failed, 16 passed |
+| `times` kept as a list, `min()` at rewrite | (1) by_cpu | 1 failed, 17 passed |
+| `_skip` decodes an unnamed value whole | (1)/(2) legacy_processes | 1 failed, 17 passed |
+| archive read into memory, written after approval | (3), (1) by_cpu | 4 failed, 14 passed |
+| any decode accepted where it ends | (4) plane2, run-context at chunk 1 and 7 | 4 failed, 14 passed |
+| `residue()` reads a member whole | (1) by_cpu | 1 failed, 17 passed |
+| `residue()` through `tarfile` `r\|gz` | (1) by_cpu | 1 failed, 17 passed |
+| the Decision's wait-only-at-the-buffer's-end rule | (4) plane2 at chunk 1 and 7 | 2 failed, 16 passed |
+
+The Decision's accept rule is not enough: `raw_decode` of `1.` or `1e`
+stops before the buffer's end, so a decode now waits unless the next
+character is a delimiter (whitespace, `,:]}`) or the handle is spent.
+`tarfile`'s own `r|gz` inflates a whole 10 KiB compressed block at once,
+growing with compressibility: 512435 -> 576272 B for the N and 4N archives
+against 119972 -> 122867 through `gzip.open`.

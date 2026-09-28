@@ -410,25 +410,39 @@ def _refused(klass: str, value: Any) -> bool:
             and not vocab.admits(value))
 
 
-def _walk_map(node: dict, value: dict, path: str) -> Iterator[Gap]:
-    literal = {k: v for k, v in node.items() if not k.startswith(("{", "[", "."))}
+class Step(NamedTuple):
+    node: Optional[dict]         # None: the policy does not name the key
+    path: str
+    name: str                    # the literal key, or its `{...}` placeholder
+    gaps: list
+
+
+def step(node: dict, key: str, path: str) -> Step:
+    """Where `key` of a map at `node` leads, and the gaps the key alone makes."""
+    where = f"{path}.{key}" if path else str(key)
+    if key in node and not key.startswith(("{", "[", ".")):
+        return Step(node[key], where, key, [])
     placeholder = next((k for k in node if k.startswith("{")), None)
-    if not literal and placeholder is None:
+    if placeholder is None:
+        return Step(None, where, key, [Gap(where, "not named by the policy")])
+    refused = _refused(placeholder[1:-1], key)
+    return Step(node[placeholder], where, placeholder,
+                [Gap(where, f"key {key!r} is not on its allowlist")] if refused else [])
+
+
+def _walk_map(node: dict, value: dict, path: str) -> Iterator[Gap]:
+    if not any(not k.startswith(("[", ".")) for k in node):
         yield Gap(path, "a map where the policy names none")
         return
     for key, item in value.items():
-        where = f"{path}.{key}" if path else str(key)
-        if key in literal:
-            yield from _walk(literal[key], item, where)
-        elif placeholder is not None:
-            if _refused(placeholder[1:-1], key):
-                yield Gap(where, f"key {key!r} is not on its allowlist")
-            yield from _walk(node[placeholder], item, where)
-        else:
-            yield Gap(where, "not named by the policy")
+        where = step(node, key, path)
+        yield from where.gaps
+        if where.node is not None:
+            yield from walk(where.node, item, where.path)
 
 
-def _walk(node: dict, value: Any, path: str) -> Iterator[Gap]:
+def walk(node: dict, value: Any, path: str) -> Iterator[Gap]:
+    """Every gap in `value`, read at `node` of a compiled policy."""
     if value is None:
         return  # an absent value discloses nothing, at a leaf or a block
     if isinstance(value, dict):
@@ -438,7 +452,7 @@ def _walk(node: dict, value: Any, path: str) -> Iterator[Gap]:
             yield Gap(path, "an array where the policy names none")
             return
         for item in value:
-            yield from _walk(node["[]"], item, path + "[]")
+            yield from walk(node["[]"], item, path + "[]")
     elif "." not in node:
         yield Gap(path, "a value where the policy names none")
     elif _refused(node["."], value):
@@ -454,7 +468,7 @@ def gaps(member: str, contract: Optional[str], documents: list) -> list[Gap]:
     trie = compile_policy(policy)
     found: list[Gap] = []
     for document in documents:
-        for gap in _walk(trie, document, ""):
+        for gap in walk(trie, document, ""):
             if gap not in found:
                 found.append(gap)
     return found

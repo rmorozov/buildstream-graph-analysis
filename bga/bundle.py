@@ -595,8 +595,8 @@ def export_anonymized(snapshot: str, key: bytes, pmap: "anonymize.PseudonymMap",
         raise BundleError(f"{snapshot} is not a snapshot directory")
     untreated = _untreated()
     if untreated:
-        raise BundleError(f"capture-layout row(s) with no anonymized treatment: "
-                          f"{', '.join(untreated)}; nothing was written")
+        raise BundleError(f"{plural(len(untreated), 'capture-layout row')} with no "
+                          f"anonymized treatment: {', '.join(untreated)}; nothing was written")
     manifest = manifest_for(snapshot)
     if not manifest["members"]:
         raise BundleError(

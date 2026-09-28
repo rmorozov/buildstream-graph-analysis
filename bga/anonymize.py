@@ -146,17 +146,20 @@ def _token(key, cls, value, alphabet, length):
 def pseudonymize(value, cls, key, pmap):
     """A shape-preserving pseudonym for one atomic token (no path structure).
 
-    Character class and length band of `value` are kept; `cls` picks the
-    prefix and salts the HMAC so the same string in two classes never
-    shares a token. `k` (the token length) grows on collision until the
-    result is injective in `pmap`.
+    Character class and length band of `value` are kept - the token
+    (prefix excluded) starts at the band's own width, not a fixed
+    floor, so a 90-char name does not collapse to the same length as a
+    9-char one. `cls` picks the prefix and salts the HMAC so the same
+    string in two classes never shares a token. `k` (the token length)
+    grows past the band on collision until the result is injective in
+    `pmap`.
     """
     if cls not in CLASS_PREFIXES:
         raise ValueError(f"unknown pseudonym class: {cls!r}")
     prefix = CLASS_PREFIXES[cls]
     _, alphabet = _charset_for(value)
     band = _length_band(len(value))
-    k = min(band, 4)
+    k = band
     while True:
         token = _token(key, cls, value, alphabet, k)
         candidate = f"{prefix}{token}"

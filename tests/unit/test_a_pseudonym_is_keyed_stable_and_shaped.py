@@ -32,21 +32,41 @@ def test_a_forced_collision_grows_k(tmp_path, monkeypatch):
 
     real_token = anon._token
 
-    # Force every token request to the same 4-char value so the second
-    # distinct input must grow past k=4 to stay injective.
+    # Same-band values ("alpha", "delta": both length 5, band 8) so both
+    # start at the same k; force every request up to the band's width to
+    # the same value, so the second distinct input must grow past the
+    # band to stay injective.
     def collide(key, cls, value, alphabet, length):
-        base = real_token(key, cls, "forced-collision", alphabet, 4)
-        if length <= 4:
-            return base[:length]
-        return (base + real_token(key, cls, value, alphabet, length - 4))[:length]
+        band = anon._length_band(len(value))
+        base = real_token(key, cls, "forced-collision", alphabet, min(length, band))
+        if length <= band:
+            return base
+        return (base + real_token(key, cls, value, alphabet, length - band))[:length]
 
     monkeypatch.setattr(anon, "_token", collide)
 
     first = anon.pseudonymize("alpha", "element", key, pmap)
-    second = anon.pseudonymize("beta", "element", key, pmap)
+    second = anon.pseudonymize("delta", "element", key, pmap)
 
     assert first != second
     assert len(second) > len(first)
+
+
+def test_the_token_keeps_the_original_length_band(tmp_path):
+    """Guard: a `min(band, 4)` regression caps every first-attempt token
+    at 4 chars, so a 2-char name and a 90-char one produce the same
+    length and the band is not kept (design §6.1)."""
+    key = anon.load_or_create_key(str(tmp_path))
+    pmap = anon.PseudonymMap.for_project(str(tmp_path))
+    prefix_len = len(anon.CLASS_PREFIXES["element"])
+
+    short_token = anon.pseudonymize("ab", "element", key, pmap)
+    long_value = "a" * 40
+    long_token = anon.pseudonymize(long_value, "element", key, pmap)
+
+    assert len(short_token) - prefix_len == anon._length_band(len("ab"))
+    assert len(long_token) - prefix_len == anon._length_band(len(long_value))
+    assert len(long_token) > len(short_token)
 
 
 def test_the_map_round_trips(tmp_path):

@@ -31,7 +31,7 @@ import tarfile
 from datetime import datetime, timezone
 from typing import Optional
 
-from . import __version__, contracts, run_store
+from . import __version__, anonymize, contracts, run_store
 from .plural import plural
 
 SCHEMA = "bundle-manifest/v1"
@@ -138,6 +138,54 @@ def default_output(stamp: str) -> str:
     return f"{stamp}.bga-bundle.tar.gz"
 
 
+#: `anonymized-bundle.md` 6.9: a mode every reader sees the same way,
+#: regardless of what the source file's own permissions happened to be.
+_NEUTRAL_MODE = 0o644
+
+
+def neutral_tarinfo(arcname: str, size: int) -> tarfile.TarInfo:
+    """A `TarInfo` carrying no fact about the machine that made it.
+
+    `tarfile.add()` copies the source's mtime, uid, gid, uname and gname
+    into the header (`anonymized-bundle.md` 6.9); this builds one from
+    scratch instead, so the only fields that vary are name and size.
+    """
+    info = tarfile.TarInfo(arcname)
+    info.size = size
+    info.mtime = 0
+    info.uid = 0
+    info.gid = 0
+    info.uname = ""
+    info.gname = ""
+    info.mode = _NEUTRAL_MODE
+    return info
+
+
+def anonymized_manifest(manifest: dict, key: bytes, pmap: "anonymize.PseudonymMap"
+                        ) -> dict:
+    """`manifest`, with the fields 6.9 names as identifying dropped or
+    pseudonymized: `stamp` through `anonymize.pseudonymize` (the stamp is
+    a directory name, `.bga/runs/<stamp>/`), `packed_at` removed outright
+    since a wall-clock time is not reconstructable from anything else in
+    the bundle. The key never travels; only its fingerprint does, so a
+    receiver can tell two anonymized bundles were keyed alike without
+    holding the secret.
+    """
+    transformed = dict(manifest)
+    transformed["stamp"] = anonymize.pseudonymize(
+        manifest["stamp"], "directory", key, pmap)
+    transformed.pop("packed_at", None)
+    transformed["key_fingerprint"] = anonymize.key_fingerprint(key)
+    return transformed
+
+
+def anonymized_output() -> str:
+    """The anonymized bundle's file name, which never carries the stamp
+    (6.9): unlike `default_output`, nothing here varies by capture.
+    """
+    return "bga-bundle.tar.gz"
+
+
 def export(snapshot: str, output: Optional[str] = None,
            include_plane2: bool = True,
            now: Optional[datetime] = None) -> tuple[str, dict]:
@@ -170,6 +218,45 @@ def export(snapshot: str, output: Optional[str] = None,
                 recursive=False,
             )
     return destination, manifest
+
+
+def export_anonymized(snapshot: str, key: bytes, pmap: "anonymize.PseudonymMap",
+                      output: Optional[str] = None,
+                      include_plane2: bool = True) -> tuple[str, dict]:
+    """`export()`, but with no member's header or the manifest carrying a
+    fact about this machine or this capture's identity (6.9).
+
+    No `now`: `packed_at` is dropped from the manifest here (6.9), so the
+    wall-clock time `manifest_for` would stamp it with never surfaces.
+
+    Member *contents* are untouched here — walking them for names is
+    `UX-1062`'s job; this is the metadata `UX-1062` builds on, so every
+    header it writes and every manifest field it fills already carries
+    nothing to scrub twice.
+    """
+    if not os.path.isdir(snapshot):
+        raise BundleError(f"{snapshot} is not a snapshot directory")
+    manifest = manifest_for(snapshot, include_plane2)
+    if not manifest["members"]:
+        raise BundleError(
+            f"{snapshot} holds none of the files the capture-layout "
+            f"contract names, so there is nothing to carry")
+    anon_manifest = anonymized_manifest(manifest, key, pmap)
+    destination = output or anonymized_output()
+
+    payload = json.dumps(anon_manifest, indent=2, sort_keys=True).encode("utf-8")
+    with open(destination, "wb") as raw, \
+            gzip.GzipFile(fileobj=raw, mode="wb", mtime=0) as compressed, \
+            tarfile.open(fileobj=compressed, mode="w") as archive:
+        payload_info = neutral_tarinfo(MANIFEST_NAME, len(payload))
+        archive.addfile(payload_info, io.BytesIO(payload))
+        for member in manifest["members"]:
+            source = os.path.join(snapshot, member["path"])
+            info = neutral_tarinfo(MEMBER_PREFIX + member["path"],
+                                    os.path.getsize(source))
+            with open(source, "rb") as handle:
+                archive.addfile(info, handle)
+    return destination, anon_manifest
 
 
 def read_manifest(bundle: str) -> dict:

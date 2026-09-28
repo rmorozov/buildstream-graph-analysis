@@ -30,3 +30,25 @@ manifest back: no original mtime, id, name or stamp. Mutation: switch
 one member back to `archive.add()`, and it reds on that member's header.
 
 ## Outcome
+
+**Gap measured:** `bundle.export()` calls `archive.add()` per member, so
+each header carries the source's real mtime/uid/gid/uname/gname; the
+manifest keeps `stamp` and `packed_at`; the default name is
+`<stamp>.bga-bundle.tar.gz` - none of the six facts are neutral.
+
+**Close measured:** added `bundle.neutral_tarinfo`,
+`bundle.anonymized_manifest`, `bundle.anonymized_output` and
+`bundle.export_anonymized` (metadata only; member content untouched,
+`UX-1062`'s job). `pytest
+tests/unit/test_an_anonymized_archive_carries_no_original_metadata.py -q`:
+`2 passed in 0.29s` - every header's mtime/uid/gid/uname/gname is neutral,
+the manifest's `stamp` differs from the real one and carries no
+`packed_at`, and the output name carries no stamp.
+
+**Mutation table:**
+
+| Mutation | Reddened | Count |
+|---|---|---|
+| One member's `neutral_tarinfo`+`addfile` swapped for `archive.add()` | `test_the_anonymized_archive_and_manifest_carry_no_original_metadata`: `info.mtime == 0` fails (`1700000000 == 0`) | 1 failed, 1 passed |
+
+Reverted from the copy `falsify` saved before mutating (`/tmp/agent-a784443b19b2b3120/bundle.py.orig`), not `git checkout --`, since the mutation and this task's uncommitted work share the file.

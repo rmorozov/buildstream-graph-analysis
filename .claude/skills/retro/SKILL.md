@@ -5,11 +5,13 @@ description: The weekly retro - reads a window's bookkeeping ledger, run ledger 
 
 # retro
 
-`docs/contributing/fixing-guide.md`'s rule (§2, "a drift you notice is
-a line") produces a steady trickle of one-line bookkeeping findings
-(`UX-998`). Left alone, the same class of finding recurs indefinitely;
-this is the step that turns a repeated class into a proposal to remove
-it, rather than reading it again next week.
+`docs/contributing/rules.md`'s row ("A drift you notice is a line,
+anything else a row") and `docs/contributing/fixing-guide.md`'s own
+rule (§2.5, "A bookkeeping finding is a line, not a row") produce a
+steady trickle of one-line bookkeeping findings (`UX-998`). Left
+alone, the same class of finding recurs indefinitely; this is the
+step that turns a repeated class into a proposal to remove it, rather
+than reading it again next week.
 
 ## Run it
 
@@ -44,10 +46,12 @@ counted twice - it is the same finding the tool already read.
 Write `docs/audits/retro-<date>.md`: the class-count table `dev_retro.py`
 printed, the command that produced it, and up to three proposals for
 the top classes, each marked `optimization` (`UX-994`'s cap does not
-apply to them). Then:
+apply to them). Add its `docs/README.md` audit-table row -
+`test_every_named_audit_document_has_a_readme_table_row` reddens
+without one. Then:
 
 ```bash
-git add docs/audits/retro-<date>.md
+git add docs/audits/retro-<date>.md docs/README.md
 git commit -m "retro: <date>"
 gh pr create --title "retro: <date>" --body "the table and the command"
 ```

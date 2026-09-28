@@ -730,6 +730,29 @@ class TestTheSubagentsAreWellFormed:
             "a verifier for this repository that never asks whether a new "
             "guard can fail is checking the wrong thing")
 
+    def test_the_verifier_runs_dev_sizes_check(self):
+        """`r140` bookkeeping: a hand-typed size row passed the verifier
+        once and was held once this round because nothing ran the
+        guard that would have caught it."""
+        body = (AGENTS / "verifier.md").read_text(encoding="utf-8")
+        assert "dev_sizes.py --check" in body, (
+            "verifier.md does not name dev_sizes.py --check, so a "
+            "hand-typed size row passes it")
+
+    def test_the_implementer_runs_the_whole_suite_at_n2(self):
+        """`r140` bookkeeping: `dev_touching.py` selecting the whole
+        suite is a signal to run it, not a licence to hand-pick a
+        subset - two tracks missed three regressions that way."""
+        body = " ".join(
+            (AGENTS / "implementer.md").read_text(encoding="utf-8").split())
+        assert "run the whole suite at" in body and "-n 2" in body, (
+            "implementer.md does not say to run the whole suite at -n 2 "
+            "when dev_touching.py selects it, so a hand-picked subset "
+            "is still an option")
+        assert "never a hand-picked subset" in body, (
+            "implementer.md drops the prohibition on a hand-picked "
+            "subset when dev_touching.py selects everything")
+
     def test_the_researcher_is_told_to_name_what_it_could_not_find(self):
         """Silence reading as "there is none" is how a false premise
         reaches a task file."""

@@ -10,13 +10,15 @@ header    128.5 px    14.3% of 900
 line 2    the run's absolute path, 149 chars, wrapping to two lines
 ```
 
-The path moved to `run_instance` (`UX-285`) and onto the wordmark's
-`title`; the version line joined the footer. This is what keeps it
-there: a header over budget, or a path back in its text, reddens here
-rather than at the next design review.
+The path moved to `run_instance` (`UX-285`) and onto the h1's `title`
+(`UX-1047` moved the title from `#wordmark` once the h1 became the
+run rather than the wordmark); the version line joined the footer.
+This is what keeps it there: a header over budget, or a path back in
+its text, reddens here rather than at the next design review.
 """
 import os
 import pathlib
+import shutil
 import sys
 
 import pytest
@@ -32,21 +34,25 @@ needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
 #: §3i's own number.
 HEADER_BUDGET_PX = 72
 
-#: The widths the Acceptance Test names.
-WIDTHS = ((1440, 900), (1024, 768))
+#: The widths the Acceptance Test names, plus the compact phone width
+#: `UX-1047` measured the run's name wrapping the h1 onto its own row
+#: at (390x844, the identity line's own wrap already priced into the
+#: 72px budget - a second one from the h1 is not).
+WIDTHS = ((1440, 900), (1024, 768), (390, 844))
 
 _MEASURE = """
 (() => {
   window.scrollTo(0, 2000);
   const header = document.querySelector("header");
   const box = header.getBoundingClientRect();
-  const wordmark = document.getElementById("wordmark");
+  // `UX-1047`: the `title` moved from `#wordmark` to the h1 (`#run-name`).
+  const heading = document.getElementById("run-name");
   const sec = document.querySelector('[data-section="run_instance"]');
   return {
     header_px: Math.round(box.height),
     sticky: getComputedStyle(header).position,
     headerText: header.innerText,
-    wordmarkTitle: wordmark ? wordmark.getAttribute("title") : null,
+    headingTitle: heading ? heading.getAttribute("title") : null,
     // `UX-1015`: a folded section is `hidden="until-found"`, whose innerText is "".
     runInstanceText: sec ? sec.textContent : null,
   };
@@ -94,11 +100,29 @@ class TestTheHeaderKeepsItsBudget:
             f"the run's absolute path is back in the header's text: "
             f"{leaked}")
 
-    def test_the_path_is_in_run_instance_and_the_wordmark_title(
+    def test_the_path_is_in_run_instance_and_the_heading_title(
             self, measured):
         out, run_path = measured
         for width, row in out.items():
-            assert row["wordmarkTitle"] == run_path, (width, row)
+            assert row["headingTitle"] == run_path, (width, row)
             assert row["runInstanceText"] is not None, (
                 f"no run_instance section at {width}")
             assert run_path in row["runInstanceText"], (width, row)
+
+
+@needs_browser
+def test_a_long_run_name_still_fits_the_budget_on_a_phone(
+        browser, tmp_path_factory):
+    """`UX-1047`: neither committed fixture's name is wide enough to
+    force the h1 onto its own row - this one's is, deliberately, so a
+    regression that drops `#run-name`'s truncation reds here."""
+    from tools.bga_view import export
+
+    long_name = "a-very-long-project-directory-name-that-is-quite-wide-indeed"
+    run = tmp_path_factory.mktemp("u1047-long") / long_name
+    shutil.copytree(pages.FIXTURES["golden"], run)
+    (run / "expected_output.json").unlink(missing_ok=True)
+    page = tmp_path_factory.mktemp("u1047-long-page") / "report.html"
+    export(str(run), str(page))
+    out = browser.measure(page.as_uri(), _MEASURE, width=390, height=844)
+    assert out["header_px"] <= HEADER_BUDGET_PX, out

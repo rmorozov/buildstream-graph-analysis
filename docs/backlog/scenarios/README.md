@@ -43,6 +43,10 @@ task file, which is the only place it ever lived twice.
 | UX-1014 | [the "safe cap plus auto" default is measured on more shapes and hosts before it is anyone's default](UX-1014-the-builders-and-auto-default-is-measured-on-more-shapes-and-hosts.md) | capture | High | R4, R5 | 🔴 Not Started |
 | UX-1040 | [a paired reading decides whether implementers move to opus at low effort](UX-1040-a-paired-reading-decides-the-implementers-model.md) | guards | Medium | every round's implementer spend | 🔴 Not Started |
 | UX-1041 | [an agent cannot repoint the shared install or start the touching sweep](UX-1041-an-agent-cannot-repoint-the-shared-install-or-run-the-sweep.md) | guards | Medium | every parallel round's verifiers and the push gate after them | 🔴 Not Started |
+| UX-1045 | [§3's tool row names the column thresholds §3d attaches to their headers](UX-1045-a-tables-tools-are-one-row.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1056 | [navigating back after an in-page reveal does not re-fold the chapter](UX-1056-back-after-a-reveal-does-not-re-fold.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1057 | [the decomposition bar's aria-details twin table drops the certified lower-bound mark](UX-1057-the-drawing-routes-twin-table-drops-the-lower-bound-mark.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1058 | [the narrow-rail fold toggle is a click-only `<p>`, unreachable by keyboard](UX-1058-the-narrow-rail-toggle-is-unreachable-by-keyboard.md) | viewer | Medium | R1 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

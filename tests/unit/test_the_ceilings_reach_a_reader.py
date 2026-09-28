@@ -59,7 +59,7 @@ def _table_rows():
     direction.
     """
     text = CLI.read_text(encoding="utf-8")
-    body = text.split("Three ceilings", 1)[1].split("\n\n", 3)[1]
+    body = text.split("Four ceilings", 1)[1].split("\n\n", 3)[1]
     return {match.group(1): match.group(0)
             for match in re.finditer(r"^\| `(\w+)` \|.*$", body, re.M)}
 

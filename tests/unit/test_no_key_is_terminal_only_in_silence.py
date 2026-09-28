@@ -112,7 +112,7 @@ def booted(tmp_path_factory):
     view.export(str(RUN), str(page))
     html = page.read_text(encoding="utf-8")
     (into / "inline.mjs").write_text(
-        re.search(r'<script type="module">(.*?)</script>', html, re.S).group(1),
+        view.inflated_module(html),
         encoding="utf-8")
     # The same boot every navigation guard uses, so this census reads
     # the document a reader gets rather than one assembled here.

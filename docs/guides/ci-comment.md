@@ -344,7 +344,7 @@ One self-contained page — the run's JSON inlined, the Perfetto timeline
 inlined as a `data:` URL, no port and no network. A reviewer downloads
 it from the run's artifacts and opens it; nothing has to be deployed for
 a viewer to exist. Measured on `tests/fixtures/macro_micro/run`, the
-fixture a guard can re-run: **488 KiB** (a real 46 s capture with both
+fixture a guard can re-run: **356 KiB** (a real 46 s capture with both
 planes read **82 KiB** on 2026-08-21, `UX-195`; that capture is not in
 the tree).
 

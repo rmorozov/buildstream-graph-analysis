@@ -214,6 +214,7 @@ class TestSwitchingReachesTheOtherRun:
         browser, url, _ = served
         look = """(() => ({
           run: (document.querySelector("#run-path")?.textContent ?? ""),
+          heading: (document.getElementById("run-name")?.textContent ?? ""),
           selected: document.querySelector(
             "nav.toc .run-picker select")?.value ?? null,
         }))()"""
@@ -222,6 +223,9 @@ class TestSwitchingReachesTheOtherRun:
         assert here["run"] != there["run"], (here, there)
         assert "20260101T000000Z" in there["run"], there["run"]
         assert there["selected"] == "20260101T000000Z", there
+        # `UX-1047`: the h1 follows the switcher too, not only `#run-path`.
+        assert here["heading"] != there["heading"], (here, there)
+        assert there["heading"] == "20260101T000000Z", there["heading"]
 
     def test_an_unknown_stamp_falls_back_rather_than_refusing(self, served):
         """The selector only offers stamps from this store, so an

@@ -261,7 +261,7 @@ def _boot(run_dir, tmp, narrow):
     html = page.read_text(encoding="utf-8")
     module = tmp / "inline.mjs"
     module.write_text(
-        re.search(r'<script type="module">(.*?)</script>', html, re.S).group(1),
+        view.inflated_module(html),
         encoding="utf-8")
     head = _probe_source().split("const report =", 1)[0]
     # The window the rail asks about its width. Inserted into the probe
@@ -350,13 +350,6 @@ class TestTheClicksAreCounted:
 # is not allowed to pretend it models layout (`UX-257`). The walk above
 # stays where it is: it counts structure, which the shim can see.
 
-#: The document a reader lands on, at 1440x900, in screens. Measured
-#: after chapters fold: 4.1 (golden) and 6.6 (macro_micro), against
-#: 11.6 and 22.7 before. The bound is 10 - one and a half times the
-#: worst measured, which admits a run with more findings in the open
-#: first chapter and reddens on a page that stops folding at all.
-DOCUMENT_SCREENS = 10.0
-
 #: How far the *last* chapter's question sits from the top. Measured
 #: 3.8 and 6.3; a reader scanning the chapter list should not have to
 #: scroll a screenful per chapter to read the next question.
@@ -369,6 +362,13 @@ DOCUMENT_SCREENS = 10.0
 #: the landed bound 7,300 -> 7,600. Golden 6.3 -> 6.8.
 CHAPTER_HEADING_SCREENS = 9.0
 
+#: `UX-1049`: the same distance, at the compact size class (390x844,
+#: §6e.10) - new, not moved, since the regular bound is a distinct
+#: currency (screens at 1440x900). Measured 9.7 (golden) and 12.9
+#: (macro_micro) on the merged round-143 tree; the bound is the next
+#: half screen strictly above the worst, the regular bound's convention.
+COMPACT_CHAPTER_HEADING_SCREENS = 13.0
+
 #: And inside a chapter, its first section under its own heading.
 #: Measured 0.1 on every chapter of both fixtures: the heading, the
 #: chapter's one-line answer, the control, the section.
@@ -376,7 +376,7 @@ CHAPTER_FIRST_SECTION_SCREENS = 0.5
 
 _DISTANCE = r"""
 (() => {
-  const scr = (px) => Math.round(px / 900 * 10) / 10;
+  const scr = (px) => Math.round(px / window.innerHeight * 10) / 10;
   // The eight destinations the round-52 census walked, by the
   // selectors it used - published in the failure message in both
   // currencies, which is the acceptance test's own clause.
@@ -456,14 +456,6 @@ _RAIL_OPENS = r"""
 @needs_browser
 @pytest.mark.medium
 class TestTheDistanceIsBudgetedToo:
-    def test_the_document_fits_the_budget(self, browser, exports):
-        for page, url in exports.items():
-            out = browser.measure(url, _DISTANCE, width=1440, height=900)
-            assert out["documentScr"] <= DOCUMENT_SCREENS, (
-                f"{page}: the document is {out['documentScr']} screens at "
-                f"1440x900, against a budget of {DOCUMENT_SCREENS}. "
-                f"{_walk(out)}")
-
     def test_every_chapter_question_is_within_reach(self, browser, exports):
         for page, url in exports.items():
             out = browser.measure(url, _DISTANCE, width=1440, height=900)
@@ -472,6 +464,20 @@ class TestTheDistanceIsBudgetedToo:
             assert far == [], (
                 f"{page}: a chapter's question is more than "
                 f"{CHAPTER_HEADING_SCREENS} screens down: {far}. {_walk(out)}")
+
+    def test_every_chapter_question_is_within_reach_when_compact(
+            self, browser, exports):
+        """`UX-1049`: the same distance clause, at 390x844 - total
+        height moved to §3e's own guard, but this is a distance and
+        stays independent of it (Ruslan's review)."""
+        for page, url in exports.items():
+            out = browser.measure(url, _DISTANCE, width=390, height=844)
+            far = [(c["id"], c["headingScr"]) for c in out["chapters"]
+                   if c["headingScr"] > COMPACT_CHAPTER_HEADING_SCREENS]
+            assert far == [], (
+                f"{page}: at 390x844 a chapter's question is more than "
+                f"{COMPACT_CHAPTER_HEADING_SCREENS} screens down: {far}. "
+                f"{_walk(out)}")
 
     def test_a_chapters_first_section_is_under_its_own_heading(
             self, browser, exports):
@@ -512,6 +518,33 @@ class TestTheDistanceIsBudgetedToo:
         for page, url in exports.items():
             broken = browser.measure(url, _RAIL_OPENS, width=1440, height=900)
             assert broken == [], (page, broken[:8])
+
+
+class TestTheStyleguideDerivesTheChapterFigures:
+    def test_3c_states_both_screen_figures(self):
+        """`UX-1049`: §3c's chapter bullet names both bounds this file
+        holds, so a constant that moves without the prose is caught
+        here rather than restated as a number the guard cannot check."""
+        text = (REPO / "docs/design/styleguide.md").read_text(encoding="utf-8")
+        section = text.split("## 3c.", 1)[1].split("\n## ", 1)[0]
+        for label, value in (("1440x900", CHAPTER_HEADING_SCREENS),
+                              ("390x844", COMPACT_CHAPTER_HEADING_SCREENS)):
+            number = f"{value:g}"
+            assert re.search(rf"\b{re.escape(number)} screens at {label}",
+                              section), (
+                f"§3c does not state {number} screens at {label}")
+
+    def test_3c_states_no_landed_height_number(self):
+        """The Decision: §3c's landed bullet points at §3e rather than
+        restating a number - the mutation that puts one back reds."""
+        text = (REPO / "docs/design/styleguide.md").read_text(encoding="utf-8")
+        section = text.split("## 3c.", 1)[1].split("\n## ", 1)[0]
+        match = re.search(r"- the document a reader lands on:.*?(?=\n- |\n\n)",
+                           section, re.S)
+        assert match, "§3c's landed bullet is missing or reworded"
+        stripped = re.sub(r"§[0-9]+[a-z]?", "", match.group(0))
+        assert not re.search(r"\d", stripped), (
+            f"§3c's landed bullet restates a number: {match.group(0)!r}")
 
 
 def _walk(out):

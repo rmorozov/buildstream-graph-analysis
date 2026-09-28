@@ -47,6 +47,7 @@ requires no animation.
 import collections
 import json
 import pathlib
+import re
 import shutil
 import sys
 
@@ -56,8 +57,10 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tests"))
 
-from browser import NO_BROWSER, Browser, find_chrome
 from pages import export_uri, scale_run
+from pages import pages as fixture_pages
+
+from tests.browser import NO_BROWSER, Browser, find_chrome
 
 chrome = find_chrome()
 needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
@@ -86,11 +89,17 @@ GRADES = {
 #: What a control drawn by nobody looks like: the UA button.
 UA_BEVEL = "outset"
 
+#: Read at rest: `aria-current` is a state over a grade (§6d), like
+#: hover and `aria-pressed`, so a current control is read with it lifted.
 LOOKS = """
 (() => JSON.stringify([...document.querySelectorAll("button")].map((b) => {
+  const current = b.getAttribute("aria-current");
+  if (current !== null) b.removeAttribute("aria-current");
   const s = getComputedStyle(b);
-  return [s.backgroundColor, s.borderTopStyle, s.borderRadius, s.padding,
-          s.fontSize, s.color, s.transitionDuration, s.boxShadow];
+  const look = [s.backgroundColor, s.borderTopStyle, s.borderRadius, s.padding,
+                s.fontSize, s.color, s.transitionDuration, s.boxShadow];
+  if (current !== null) b.setAttribute("aria-current", current);
+  return look;
 })))()
 """
 
@@ -277,3 +286,130 @@ class TestDisclosuresAndLinksAreLegible:
             assert label, name
             parts = [part.strip() for part in label.split(",")]
             assert len(parts) >= 2 and all(parts), (name, label)
+
+
+#: UX-1051 (styleguide §6d's sixth grade, **form-control**): the tokens
+#: `.top-n` already draws with, read per scheme from `style.css`'s two
+#: `:root` blocks (`--panel`, `--line`) rather than hardcoded, so a
+#: token edit moves the expectation with it instead of silently
+#: reddening for the wrong reason.
+_ROOT = REPO / "bga/viewer/style.css"
+
+
+def _root_tokens(css, marker=None):
+    head, _, _ = css.partition("* { box-sizing")
+    block = head if marker is None else head.split(marker, 1)[1]
+    body = block.split(":root {", 1)[1].split("}", 1)[0]
+    return dict(re.findall(r"--([\w-]+)\s*:\s*(#[0-9a-fA-F]{3,6})\s*;", body))
+
+
+def _rgb(hexvalue):
+    hexvalue = hexvalue.lstrip("#")
+    if len(hexvalue) == 3:
+        hexvalue = "".join(c * 2 for c in hexvalue)
+    r, g, b = (int(hexvalue[i:i + 2], 16) for i in (0, 2, 4))
+    return f"rgb({r}, {g}, {b})"
+
+
+_CSS = _ROOT.read_text(encoding="utf-8")
+_TOKENS = {"dark": _root_tokens(_CSS),
+           "light": _root_tokens(_CSS, "@media (prefers-color-scheme: light)")}
+
+#: The three looks a `select` or text `input` renders in today, keyed
+#: on (background, border-style, border-radius) - border color is
+#: `--line` in every one of them, so it is not part of the key.
+#: `form-control` is this item's base rule (`.top-n`'s tokens); the
+#: other two predate it (`#jump`/`.table-filter` on `--panel`,
+#: `.th-filter`/`[data-role=blast-form] input` on `--bg`, the latter
+#: one radius step down).
+FORM_LOOKS = {
+    scheme: {
+        "form-control": (_rgb(tok["panel"]), "solid", "3px"),
+        "on-surface": (_rgb(tok["bg"]), "solid", "3px"),
+        "on-surface-thin": (_rgb(tok["bg"]), "solid", "2px"),
+    }
+    for scheme, tok in _TOKENS.items()
+}
+
+FORM_JS = """
+(() => JSON.stringify([...document.querySelectorAll("select, input")]
+  .filter((el) => el.tagName === "SELECT" || el.type === "text"
+                || el.type === "search")
+  .map((el) => {
+    const s = getComputedStyle(el);
+    const name = el.tagName.toLowerCase()
+      + (el.className ? "." + el.className.trim().split(/\\s+/).join(".") : "")
+      + (el.id ? "#" + el.id : "");
+    return [name, s.backgroundColor, s.borderTopStyle, s.borderRadius];
+  })))()
+"""
+
+
+@pytest.fixture(scope="module")
+def forms(tmp_path_factory):
+    """`{scheme: {page: [(name, background, border-style, radius), ...]}}`
+    - `golden` and `macro_micro`, light and dark, one browser."""
+    if chrome is None or shutil.which("node") is None:    # pragma: no cover
+        pytest.skip(NO_BROWSER)
+    uris = fixture_pages(tmp_path_factory, prefix="forms")
+    out = {}
+    with Browser(chrome) as opened:
+        for scheme in ("light", "dark"):
+            out[scheme] = {
+                name: [tuple(row) for row in json.loads(
+                    opened.observe(uri, FORM_JS, scheme=scheme)["value"])]
+                for name, uri in uris.items()
+            }
+    return out
+
+
+@needs_browser
+@needs_node
+class TestEverySelectAndTextInputRests:
+    """UX-1051. `style.css:824` gave `.preset-view` only a font size and
+    `.run-picker select` (`style.css:1372`) only a font size and a
+    width - both fell through to the browser's own control beside
+    `.top-n`, drawn from tokens, in the same tool row. One base rule on
+    `select, input[type="text"], input[type="search"]` closes both."""
+
+    def test_the_pages_really_have_form_controls(self, forms):
+        for scheme, pages_ in forms.items():
+            for page, rows in pages_.items():
+                assert len(rows) >= 3, (scheme, page, len(rows))
+
+    def test_every_control_is_one_of_the_declared_looks(self, forms):
+        """Not a count: a bound alone lets one grade drift into
+        another's look and still pass (mirrors the button guard
+        above)."""
+        for scheme, pages_ in forms.items():
+            named = set(FORM_LOOKS[scheme].values())
+            for page, rows in pages_.items():
+                stray = sorted((name, bg, style, radius)
+                                for name, bg, style, radius in rows
+                                if (bg, style, radius) not in named)
+                assert stray == [], (scheme, page, stray)
+
+    def test_the_preset_view_wears_the_form_control_look(self, forms):
+        """The item's named defect: two dropdowns, one tool row, one
+        look now."""
+        for scheme, pages_ in forms.items():
+            wanted = FORM_LOOKS[scheme]["form-control"]
+            for page, rows in pages_.items():
+                found = {name: (bg, style, radius)
+                         for name, bg, style, radius in rows}
+                preset = [name for name in found if "preset-view" in name]
+                assert preset, (scheme, page, sorted(found))
+                for name in preset:
+                    assert found[name] == wanted, (scheme, page, name, found[name])
+
+    def test_the_reader_and_view_selects_match(self, forms):
+        """`select.top-n` and `select.preset-view` are one tool row -
+        `UX-369`'s own claim, checked rather than assumed."""
+        for scheme, pages_ in forms.items():
+            for page, rows in pages_.items():
+                found = {name: (bg, style, radius)
+                         for name, bg, style, radius in rows}
+                top_n = [v for k, v in found.items() if "top-n" in k]
+                preset = [v for k, v in found.items() if "preset-view" in k]
+                if top_n and preset:
+                    assert set(top_n) == set(preset), (scheme, page, found)

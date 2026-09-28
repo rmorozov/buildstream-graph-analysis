@@ -187,6 +187,34 @@ def xl_run(into) -> pathlib.Path:
     return scale_run(into, "xl", ("--layers", "20", "--width", "200"))
 
 
+#: `UX-1050`: both planes at scale - the mode the tool recommends. The
+#: store's newest snapshot, with `capture report --json` of its own
+#: `plane2.log.gz` written beside `run/` where `sibling_plane2` finds it.
+def two_plane_run(into, shape=(), name="both") -> pathlib.Path:
+    """`gen-synthetic --seed 1 --store --runs 2 <shape>`, plus Plane 2's
+    report. The newest snapshot's run directory."""
+    import gzip
+    import subprocess
+    import sys
+
+    from bga import run_store
+
+    project = pathlib.Path(into) / name
+    subprocess.run([sys.executable, "-m", "bga.cli", "gen-synthetic",
+                    str(project), "--seed", "1", "--store", "--runs", "2",
+                    *shape], check=True, capture_output=True, cwd=str(REPO))
+    snapshot = pathlib.Path(run_store.list_runs(str(project))[-1])
+    raw = pathlib.Path(into) / f"{name}-plane2.log"
+    with gzip.open(snapshot / run_store.RAW_LOG_NAME, "rb") as packed:
+        raw.write_bytes(packed.read())
+    report = subprocess.run(
+        [sys.executable, "-m", "bga.cli", "capture", "report", "--json",
+         "--project-dir", str(project), str(raw)],
+        check=True, capture_output=True, cwd=str(REPO))
+    (snapshot / run_store.PLANE2_NAME).write_bytes(report.stdout)
+    return snapshot / run_store.RUN_SUBDIR
+
+
 def scale_two_plane_snapshot(into, per_element=12,
                              programs=("cc",)) -> pathlib.Path:
     """`UX-430`: the scale run, wrapped as a two-plane **snapshot**.

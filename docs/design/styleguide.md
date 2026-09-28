@@ -29,7 +29,8 @@ The sections below are numbered in the order they were written, and
 tests cite those numbers, so they stay. This is the reading order: one
 line per section, the rule only; the section holds its measurement and
 history, and §7 names its guard. *Binding* is law the page is held to;
-*proposed* is not law until accepted and its row filed.
+*proposed* is not law until accepted and its row filed. A §6e rule is
+listed under its topic as `§6e.N`; since round 142 every one is binding.
 
 | topic | § | the rule | status |
 |---|---|---|---|
@@ -45,14 +46,18 @@ history, and §7 names its guard. *Binding* is law the page is held to;
 | | §2e | a ranked map is a sortable table, not a drawing | binding |
 | | §2f | a distribution's table twin has one row per published mark | binding |
 | | §6 | a drawing carries its sentence, then the drawing, then its `n` | binding |
+| | §6e.9 | a drawing's accessible name is its sentence, with a route to its values | binding |
 | **Tables and folds** | §3 | tables open bounded, numbers right, one tool row, folds labeled with a count | binding |
 | | §3a | depth is announced; deeper than one level opens in table focus | binding |
 | | §3d | table tools appear at the row cap; a one-value column is a sentence | binding |
 | | §3j | a fold bounds its hidden controls, not only its visible rows | binding |
 | | §3k | every population opens at a named bound, and the step past it is bounded too | binding |
 | **Navigation** | §3b | any section is at most two interactions from the rail | binding |
-| | §3c | the landed page is at most 10 screens; chapters fold | binding |
-| | §3h | the rail shows every chapter and only the current chapter's sections | binding |
+| | §3c | every chapter question is within reach of the top; chapters fold; total height is §3e's bound | binding |
+| | §3h | the rail shows every chapter, and only the sections of the chapter the reader is in | binding |
+| | §3l | pointer travel is a budget — a control class sits at one place, a journey's travel is bounded | binding |
+| | §6e.11 | find-in-page reaches folded content | binding |
+| | §6e.10 | two size classes, regular (≥ 60rem) and compact; budgets measured in both | binding |
 | **Budgets** | §3e | landed distance and opened volume are both bounded, per size class | binding |
 | | §3f | a bound is enforced at the largest size and in the mode people use | binding |
 | | §3g | a budget counts the unit its consumer spends | binding |
@@ -62,19 +67,29 @@ history, and §7 names its guard. *Binding* is law the page is held to;
 | | §5b | what the header's picker already lists is not drawn again | binding |
 | **Colour, type, emphasis** | §4 | no categorical hues; one accent; status tone never alone; one emphasis per block | binding |
 | | §4f | four type sizes; prose lines at most 72 characters | binding |
+| | §6e.1 | one outline: one `h1` the run, `h2` chapter at `--font-h1` (the one allowed tie), `h3` section, `h4` block, no level skipped | binding |
+| | §6e.6 | spacing comes from a 4px scale of tokens | binding |
 | | §5 | dark is the design surface; light and print carry the same tokens | binding |
 | **Controls** | §4c | a control acts on the scope its label names, and acknowledges the press | binding |
-| | §6d | every control is one of four resting grades | binding |
+| | §6d | every control is one of six resting grades | binding |
+| | §6e.4 | one `?` door per block, opening every description in it | binding |
+| | §6e.5 | at most one `primary` control per chapter | binding |
+| | §6e.7 | a hit area is at least 24x24 px, 44x44 under a coarse pointer | binding |
+| | §6e.8 | one focus ring on every focusable element; Tab follows reading order | binding |
+| | §6e.13 | one disclosure glyph pair; a fold's label names its content and count | binding |
 | **Words** | §1c | a superlative is a measurement | binding |
 | | §4a | a description sits behind its `?`; only a declared name or caveat stays inline | binding |
 | | §4b | a label drops the payload's unit suffix | binding |
 | | §4g | no task id, payload key or producer word in anything a reader sees | binding |
+| | §6e.2 | one concept, one word, on every bga surface (the terminology matrix) | binding |
+| | §6e.3 | sentence case everywhere; a plural follows its count | binding |
+| | §6e.12 | an absence is one sentence; no separator beside an empty value | binding |
 | **Handoffs** | §4d | a handed-over query or command carries this run's values | binding |
 | | §4e | a handoff states what it could not carry | binding |
 | **Dependencies** | §6b | a library is admitted only on a measured cost | binding |
 | | §6c | the browser's primitives come first | binding |
-| **Borrowed from Apple** | §6a | the borrowings, what each costs, and what is refused | binding; 2 rows open (§6e) |
-| | §6e | *proposed*: hierarchy, sentence case, spacing and target scales, focus, size classes, find-in-page | proposed |
+| **Borrowed from Apple** | §6a | the borrowings, what each costs, and what is refused | binding |
+| | §6e | the HIG's foundations as thirteen rules, each listed under its topic above | binding |
 | **Enforcement** | §7 | every section names its guard, or says why it has none | binding |
 
 ## 1. The mapping: published shape → control
@@ -90,7 +105,7 @@ side is the only control that may render it.
 | scalar + `bga:quantity` | formatted value with `data-raw` | unit per the quantity table; never a bare number |
 | scalar enum (declared) | badge | text + tone; tone never alone (§4) |
 | boolean / nullable presence | a sentence | "not captured" ≠ "zero" — absence is stated, never drawn |
-| scalar + `description` | value + popover | the schema's sentence, on demand |
+| scalar + `description` | value, and its block's `?` door | the schema's sentence, on demand, beside the value (§2b.3, §6e.4) |
 | array of objects | table (§3) | declared columns; distribution strip when §2 applies |
 | array of objects + `bga:runbook` | **a runbook** — `ol` of *why, command, citation* | `UX-669` (§1e); rendered once, in the decision panel, and the section is a link to it |
 | array of arrays | table of positional columns | `UX-290`; declared `bga:columns` name them, otherwise `#1`/`#2` |
@@ -267,9 +282,10 @@ Three placement rules the field pass earned:
    selector is a *whole-page* control, not apparatus for a block below
    it, and stays on the identity line it names who is reading.
 3. **A described value shows its affordance.** §1 gave described
-   values a popover; discovery was hover archaeology. A value whose
-   schema carries a `description` renders a visible marker (the
-   `?`), and the description opens *beside the value* — to its
+   values a popover; discovery was hover archaeology. A block holding
+   a value whose schema carries a `description` renders one visible
+   marker (the `?`, §6e.4 — one per block, not one per value), and
+   each description opens *beside its value* — to its
    right where the row has room, below it where it does not. In
    print and export the marker survives and the description renders
    inline-on-open state only; hover is never the only door (§4.3's
@@ -282,7 +298,7 @@ unit-aware thresholds, presets, top-N, copy, per-row Inspect,
 nesting cap) is kept and this guide adds the reading rules:
 
 - **Row cap by default.** A table renders its first N rows with
-  "N of 1,202 — show all" — the page never silently renders four
+  "N of 1,202" and the step past them §3k bounds — the page never silently renders four
   thousand rows again, and never silently hides any either. The
   threshold a table has to pass to open bounded is
   `TABLE_OPENS_BOUNDED_ABOVE` in `bga/viewer/structured.js` and the
@@ -292,8 +308,10 @@ nesting cap) is kept and this guide adds the reading rules:
   of the whole is visible before the fold.
 - Numbers right-aligned, text left, units per cell (magnitude
   varies too much per column for header units), `data-raw` always.
-- One tool row per table: filter, presets, top-N, copy — no
-  per-table inventions; a new tool enters the guide first.
+- One tool row per table: the text filter, presets, top-N, copy — no
+  per-table inventions; a new tool enters the guide first. A column's
+  threshold (§3d) is not a second row: it belongs to its column and
+  sits in that column's `th`.
 - Folding inside cells follows the nesting cap and is always
   labeled with a count — the `UX-277` rule, restated as law.
 
@@ -325,7 +343,7 @@ scroll does not work inside a scrolling parent. Three rules:
 
 Navigation cost is measured, not felt: from a chapter's rail entry,
 any section's content is reachable in **at most two interactions**
-(disclose the chapter's rail row, follow the section's link — §3h), and the walk that measures the worst
+(press the chapter's rail row, follow the section's link — §3h), and the walk that measures the worst
 path is a guard, not an aspiration. A structure change that pushes
 a third click into the common path reddens before a reader meets
 it. Folds inside content (the labeled fold, the chain's middle) do
@@ -347,8 +365,25 @@ the measurements:
    magnitude is length, state is status tone. A drawing that wants
    multi-hue series must amend this guide first (and will be asked
    what a legend would say that direct labels cannot).
-2. **One accent.** Interaction, links, the current focus, the
-   promoted reader's border (rule 7) — one hue does all of it. A second accent is a defect.
+2. **One accent, eight jobs.** One hue does every job below, in rule
+   5's two grades: `--accent` for text-grade jobs, `--accent-mark` for
+   fills. A job not in this table is a defect, and so is a second accent;
+   `test_the_accent_does_only_its_listed_jobs.py` reads `style.css` and
+   the booted page against it.
+
+   | job | grade | channel | selectors |
+   |---|---|---|---|
+   | 1 links | accent | color | `a` |
+   | 2 hover | accent | border | `button:hover` `button.primary:hover` `.investigate button:hover` `.path-box:hover` `.chip:hover` |
+   | 3 a toggle that is on | accent | border, box-shadow | `button[aria-pressed="true"]` |
+   | 4 the current focus (§6e.8) | accent | outline | `a:focus-visible` `button:focus-visible` `input:focus-visible` `select:focus-visible` `summary:focus-visible` `[tabindex]:focus-visible` `section[data-jumped="true"]` `[data-jumped="true"]` `.jump-hits li[data-active="true"] > button` |
+   | 4 the current focus | accent | border | `.focus-bar` `.mark-summary` |
+   | 5 decision and promotion (rule 7) | accent | border | `.decision` `.reader-lead` `section[data-promoted]` |
+   | 6 info and low severity | accent | border | `.finding[data-severity="info"]` `.finding[data-severity="low"]` `.advice[data-severity="info"]` `.advice[data-severity="low"]` |
+   | 7 the primary control (§6e.5) | accent-mark | background, border | `button.primary` |
+   | 8 drawing marks | accent-mark | fill | `.band-strip` `.trend-band` `.trend-point` `.spark-point` `.decomposition-part:first-of-type` `.interval-mark` |
+   | 8 drawing marks | accent-mark | stroke | `.spark-line` `.density-tick` `.trend-median` |
+   | 8 drawing marks | accent-mark | background | `.wf-fill` `.horizon-bar` |
 3. **Status tones are reserved and never alone.** good/warn/bad
    carry a shape, marker or label in the same element, always —
    `UX-212`'s rule, promoted from the trend dots to the whole page.
@@ -366,14 +401,17 @@ the measurements:
 6. **Emphasis is budgeted: one emphasized element per block.** The
    headline number is large once; a finding bolds its subject once;
    everything else is regular or muted. If two things in one block
-   demand emphasis, the block is two blocks.
+   demand emphasis, the block is two blocks. A `primary` control
+   spends none of the block's emphasis: §4.6 budgets type per block,
+   §6e.5 affordance per chapter.
 7. **A reader is a shape, not a hue** (`UX-668`). Five roles are past
    what §4.1 lets a drawing carry as a series and §4.2's one accent is
-   already spent on interaction, the current focus and the band — a
+   already spent on rule 2's eight jobs — a
    fifth hue for "which role am I" would be a second accent and the
    CVD numbers §5 validates against were never budgeted for it. A
-   promoted section wears rule 2's accent on a border, not a fill —
-   so rule 3's status tones keep every fill — plus the existing muted
+   promoted section wears rule 2's accent on a border, not a fill;
+   fills belong to rule 3's status tones, the one primary control
+   (§6e.5) and the drawings' marks (accent-mark) — plus the existing muted
    chip. "Anyone" wears every declared role's chip, muted — a
    reader sees what each role would promote before choosing one.
 
@@ -442,17 +480,21 @@ change may spend one currency to buy the other, and the guard has to
 see both or it will keep buying the invisible one.
 
 The rule, with the numbers `UX-347` set against the page as it stands
-after §4a's note removal:
+after §4a's note removal. Total landed height is a **volume** bound and
+lives once, at §3e; the two below are **distance** and stay here, in
+screens, per size class (§6e.10; `UX-1049`):
 
-- the document a reader lands on is at most **10 screens at 1440x900**;
-- every chapter's question sits within **8 screens** of the top;
+- the document a reader lands on: see §3e's landed-height budget - one
+  bound, in px, and not restated here;
+- every chapter's question sits within **9 screens at 1440x900** and
+  **13 screens at 390x844** of the top;
 - and a chapter's first section begins within **half a screen** of its
   own heading.
 
-All three are asserted in the same guard that holds the click budget,
-so a trade shows up on the side it was paid from, and the guard's
-failure message publishes the walk to all eight destinations in *both*
-currencies.
+Both distance clauses are asserted in the same guard that holds the
+click budget, so a trade shows up on the side it was paid from, and the
+guard's failure message publishes the walk to all eight destinations
+in *both* currencies.
 
 **The lever is folding by chapter.** Every chapter but the first opens
 to its question, one line answering it from published fields, and a
@@ -509,8 +551,9 @@ Two exceptions stay inline, declared in the contract as `bga:inline`
 
 The test for which one you have: a description answers *what is this?*
 and a caveat answers *what may I not conclude from it?* A value with a
-declared exception carries **no** `?` — a door beside a sentence
-already on screen is the duplication this rule removes.
+declared exception is left out of its block's `?` door (§6e.4) — a
+door opening a sentence already on screen is the duplication this rule
+removes.
 
 Measured after: 11% and 9% of the two pages' words, 12 and 18 inline
 sentences of 86 and 146 described values.
@@ -702,7 +745,7 @@ in it hidden, and the class is bounded at both ends:
                  elements   landed   opened    words   controls    nodes
 scale               1,202    5,007   26,584    8,259        787    4,732
 xl                  4,002    4,937   27,230    8,275        812    4,960
-budget, to 4,100 elts          7,600   36,500    9,600        900    6,000
+budget, to 4,100 elts          7,600   43,500   13,200        900    7,500
 ```
 
 Height does not move at all — a bounded row costs no pixels, which is
@@ -818,10 +861,22 @@ Re-measured on the round's merged tree: macro_micro 37,743 px and
 12,769 words, xl 35,669 px, 9,456 words and 5,785 nodes - 457, 31 and
 831, 144, 215 of headroom.
 
+`UX-1050` moved the 4,100 class's height 36,500 -> 43,500, words 9,600
+-> 13,200 and nodes 6,000 -> 7,500: `xl_both`, the 4,002-element run
+with Plane 2 and a store, reads 42,982 px, 12,872 words, 7,209 nodes,
+and Plane 2's cost is flat (12,633 words at 74 elements). Landed and
+controls do not move; `UX-1053` bounded the finding list that grew them.
+
 The UI batch (`UX-1022`, `UX-1018`) moved the one landed bound 7,300 ->
 7,600: `macro_micro` 6,859 at babba3e5, 7,471 merged - `UX-1022`'s
 24 px targets and `UX-1018`'s chapter scale +268, `UX-1021`'s doors +165.
 Spacing, not new blocks; 129 of headroom.
+
+`UX-1023` (§6e.10) split the landed bound itself by size class: at
+390x844 the compact class measures 8,308 px (`golden`) and 11,193
+(`macro_micro`), bounded at 8,500 and 11,400 - the same
+fifth-of-headroom convention, per class rather than shared, because a
+narrow viewport does not fold the same content into the same pixels.
 
 `tests/unit/test_the_page_has_a_volume_budget.py` asserts both budgets
 in **one** guard, so a change trading one for the other has to say so.
@@ -897,10 +952,9 @@ that discloses**. A chapter heading reads "Where did the time go? **Show
 which is the rule `UX-318`'s depth budget was filed for and the model
 the `?` door should be rebuilt on.
 
-Two rows above were written as costs and never decided: *Deference*'s
-one door per block, and *one primary action per view*. §6e proposes
-both (rules 4 and 5); until one is accepted, §2b.3's door per value and
-§6d's four grades are the rule.
+Two rows above were written as costs and decided in round 142:
+*Deference*'s one door per block is §6e.4 (`UX-1021`), and *one primary
+action* is §6e.5's fifth control grade, one per chapter (`UX-1027`).
 
 Two Apple rules are deliberately **not** borrowed. *Consistency across
 a platform* is a rule for a platform vendor; consistency across bga's
@@ -930,7 +984,9 @@ budget needs is one level up from the numbers:
 
 **A bound is stated together with the size it was measured at, and it is
 enforced at the largest size the tool tells people to use.** A budget
-measured only where the page is small has never met the page.
+measured only where the page is small has never met the page. And in
+the mode people use it in: `UX-1050` measures the 4,100 class with both
+planes and a store (`xl_both`), which no guard met past 11 elements.
 
 This is `UX-363`'s lesson about the tier budget, in the other document:
 there, one measurement was compared against the number that made it look
@@ -1213,7 +1269,7 @@ default. Counted over the booted export at 1440x900:
 that otherwise runs on a declared token palette. That is not a matter of
 taste: it is a control no rule in this repository has ever described.
 
-**The four grades**, keyed on the part of the appearance that carries
+**The six grades**, keyed on the part of the appearance that carries
 them — background, border style, radius. A control is one of these or
 it is a defect, and
 `tests/unit/test_every_control_has_a_resting_appearance.py` reads them
@@ -1225,10 +1281,19 @@ out of a real browser rather than out of this file.
 | **quiet** | transparent, solid, 3px | an inline toggle beside something it must not compete with — a fold, a chapter, a JSON door |
 | **reveal** | transparent, **dashed**, 3px | shows more of what is already here rather than acting: `fold-more`, `path-more` |
 | **door** | transparent, solid, **50%** | `UX-317`'s circular `?` |
+| **primary** | `--accent-mark`, solid, 3px | at most one per chapter: the first runnable next step's copy (§6e.5, `UX-1027`) |
+| **form-control** | `--panel`, solid, 3px | every `select` and text `input` at rest — the query builder, the view picker, the run picker (`UX-1051`) |
 
-`UX-436` asked for three. There are four, because **reveal** is a real
+A grade is the look **at rest**. Hover, `aria-pressed="true"`,
+`aria-expanded="true"` and `aria-current` are states drawn over a grade,
+not grades: the rail's "you are here" (`aria-current="location"`, weight
+and `--fg`, on the current chapter row and its section link alike) is
+one such state, and the guard reads each button with it lifted.
+
+`UX-436` asked for three. There were four, because **reveal** is a real
 distinction with exactly two members that now match each other, and
-deleting it to reach a number would be the number driving the design.
+deleting it to reach a number would be the number driving the design;
+§6e.5 added the fifth.
 
 Two things this section does **not** do. It spends nothing on motion or
 ornament: §6a refuses those on the export constraint and that refusal
@@ -1237,19 +1302,18 @@ stands — zero transitions, zero shadows, both asserted. And it is not
 about whether a control has a resting appearance at all; a button can be
 entirely un-emphasised and still not be the browser's.
 
-## 6e. Rules from Apple's Human Interface Guidelines (proposed)
+## 6e. Rules from Apple's Human Interface Guidelines (round 142)
 
 §6a borrowed five principles and priced them. This section turns the
 HIG's foundations — hierarchy, harmony, consistency, clarity,
 deference, accessibility — into rules for this page, each with the gap
-it closes. **Every rule here is proposed**: none is law until it is
-accepted, and its row is closed with the guard named beside it. The
-rows are filed: rule 11 is `UX-1015`, 8 `UX-1016`, 9 `UX-1017`, 1
+it closes. **Every rule here is binding** since round 142: each was
+proposed in round 141, accepted, and closed with the guard §7 names. The
+rows: rule 11 is `UX-1015`, 8 `UX-1016`, 9 `UX-1017`, 1
 `UX-1018`, 2 `UX-1019`, 3 `UX-1020`, 4 `UX-1021`, 7 `UX-1022`, 10
 `UX-1023`, 12 `UX-1024`, 13 `UX-1025`, 6 `UX-1026` and 5 `UX-1027`.
-**Priority** orders the filing by how visibly a reader fails without the
-rule: find-in-page (11), the keyboard journey (8) and chart access (9)
-first; the spacing scale (6) and the primary grade (5) last.
+**Priority** was the filing's order, by how visibly a reader fails
+without the rule.
 
 Measured on `main` at `98ab850`, on the landed page (no fold opened):
 
@@ -1268,8 +1332,8 @@ Measured on `main` at `98ab850`, on the landed page (no fold opened):
 - **style counts**: every `margin`, `padding` and `gap` length in
   `bga/viewer/style.css`, deduplicated after dropping a leading `0`.
 
-The guard a rule files replaces its row here with the guard's own
-reading, so these figures are the baseline it is compared against.
+These are the figures before round 142, kept as the baseline each
+guard was falsified against; the guards hold today's readings.
 
 ```text
                                         macro_micro    golden
@@ -1305,7 +1369,9 @@ would hide a section's own heading once it is an `h3`). The row that
 implements this re-derives every selector that names a heading level.
 Its guard walks the rendered outline: exactly one `h1`, no level more
 than one below the heading before it, every rail link landing on a
-heading of its entry's level, and sizes strictly decreasing by level.
+heading of its entry's level, and sizes strictly decreasing by level
+below `h2` - `h1` ties `h2` at `--font-h1` (`UX-1047`), the outline's
+one allowed exception, and never falls under it.
 
 **Rule 2, the terminology matrix.** "One word, one control, one place"
 cannot be applied literally across four surfaces with different jobs,
@@ -1410,7 +1476,7 @@ so the change is in three places:
 - `chapters.js`: `setOpen(box, open)` stays the one state setter — it
   writes `data-open`, adds or removes `hidden="until-found"` on the
   chapter's sections, and `labelFold` updates `aria-expanded` on the
-  chapter control and the rail row. Each folded section listens for
+  chapter control and the count on the rail row. Each folded section listens for
   `beforematch` and calls `revealChapter`, so find, fragment navigation
   (which also fires `beforematch`) and the controls take one path.
 - A browser without `until-found` treats the attribute as `hidden`, so
@@ -1669,13 +1735,13 @@ reader's own distance budget on itself, and "you are here" never comes
 into view. A source list is grouped, discloses, and has one selection -
 this rail had the groups and the mark and no disclosure.
 
-**The rail shows every chapter and only the current chapter's
-sections.** A chapter row discloses, and its disclosure *is* the
-document's chapter fold (§4a's grouping, `chapters.js`'s `data-open`) -
-one state, two views (§4c), not a second fold the rail keeps of its
-own. `nav.toc > ul.chapters > li[data-chapter] >
-button[aria-expanded] "<title> · <n>" > ul.sections > li >
-a[aria-current]`. The scrollspy mark calls
+**The rail shows every chapter, and only the sections of the chapter
+the reader is in; the rail row goes to its chapter, and the fold is the
+document's.** `data-current` on one `li[data-chapter]` follows the
+scrollspy mark; a row press moves it, opens the chapter and lands on
+its head, and never shuts anything (`UX-1046`). `nav.toc > ul.chapters >
+li[data-chapter][data-current] > button[aria-current="location"] "▾ <title> · <n>" >
+ul.sections > li > a[aria-current]`. The scrollspy mark calls
 `scrollIntoView({block: "nearest"})` on every update, so the current
 entry is always inside the rail's own viewport rather than merely
 marked off-screen. `investigate`'s per-element list, previously the one
@@ -1762,11 +1828,13 @@ reader was never meant to tell apart.
 --font-small: 13px
 ```
 
-`h3` is not a fifth step - `h3 { font-size: var(--font-body); font-weight:
-600; }` - so it can never be *the* size a reader has to learn, and it is
-mechanically smaller than `--font-h2` (17px) rather than smaller by
-convention. `p, li > p, dd { max-width: 72ch }` bounds the line
-regardless of the viewport underneath it.
+The outline maps onto the steps (§6e.1, `UX-1018`, `UX-1047`): `h1` the
+run at `--font-h1`, `h2` a chapter at `--font-h1` too - the one allowed
+tie - `h3` a section at `--font-h2`, `h4` a block at `--font-body`
+weight 600 - so no level below `h2` is a fifth size a reader has to
+learn, and each is mechanically smaller than the one above it rather
+than smaller by convention. `p, li > p, dd { max-width: 72ch }` bounds
+the line regardless of the viewport underneath it.
 
 **§4b extended to sentences: a task id or a payload key is never bare
 in prose a reader sees.** §4b already said a *citation* is a question,
@@ -1877,9 +1945,12 @@ The picker is the one control the header holds that a reader uses
 (§4 rule 7); the path is `run_instance`'s fact (`UX-285`: identity is
 reference, and reference goes last), drawn first and largest on every
 load. **The header is at most 72 px and sticky. It holds a wordmark
-on the left, the run's alias and start instant in the middle beside
-the picker, and nothing else.** The path lives in `run_instance` and
-on the title's `title` attribute; the version line is the footer's.
+on the left - text, not a heading - the run's name as the page's one
+`h1`, and its start instant in the middle beside the picker, and
+nothing else.** (`UX-1047`: route (a) of §6e.1, above - the run is the
+outline's `h1`, and the wordmark drops out of it.) The path lives in
+`run_instance` and on the h1's `title` attribute; the version line is
+the footer's.
 Run navigation and the Perfetto handoff stay in the rail, as
 disclosures whose resting state is closed (§3h).
 
@@ -1982,12 +2053,12 @@ the census runs at the largest class.
 | cell text | `CELL_TEXT_CAP` characters | the labeled fold | `structured.js` |
 | long scalar array | count + folded list | not measured here | `shapes.js` |
 | map (`dl`), one key per element | bounded pairs (`UX-419`) | the rest leave the document (`UX-526`) | §3e |
-| chain and element lists | `PATH_HEAD` + `PATH_TAIL` | "+N more" pages `REVEAL_STEP` names at a time (`UX-1029`) | `views.js`, `structured.js`; `element.js` through `app.js`'s `bounded` (`UX-1037`) |
+| chain and element lists | `PATH_HEAD` + `PATH_TAIL` | "+N more" pages `REVEAL_STEP` names at a time (`UX-1029`) | `views.js`, `structured.js`; `element.js` through `app.js`'s `bounded` (`UX-1037`); a finding's `elements` in `sections.js` (`UX-1053`) |
 | findings | 40 cards, the rest as fragment targets | "Show all" hydrates once (§3j) | §3j |
 | a list inside a sentence (finding text, a chapter's answer) | the top few by name, the rest as a count | the section or table the sentence cites | the analyzer's sentences |
 | evidence, culprits, overview | `EVIDENCE_SHOWN`, `CULPRITS_SHOWN`, `OVERVIEW_SHOWN` | not measured here | `sections.js`, `element.js`, `primitives.js` |
 | history series | `HISTORY_POINTS_MAX` points | none: the window is the answer | `element.js` |
-| rail | the current chapter's sections (§3h) | the next chapter | §3h |
+| rail | the sections of the chapter the reader is in (§3h) | the next chapter | §3h |
 | Perfetto element picker | `PICKER_SHOWN` hits | the search box | `questions.js` |
 | labeled fold, "view as JSON" | closed | a `JSON_DOOR_CHAR_CAP`-character prefix, the rest as a copy (`UX-1030`) | §1, `rawjson.js` |
 
@@ -2109,6 +2180,54 @@ constants it audits, so raising `TABLE_OPENS_BOUNDED_ABOVE` reds it,
 and it presses each paging step repeatedly, not once. The census is
 `UX-1032`, and declaring every sequence in the schema `UX-1031`.
 
+## 3l. Pointer travel is a budget
+
+§3b counts clicks and §3c screens of scroll; neither sees how far the
+pointer moves between the controls a reader uses together. Measured on
+`main` at `814a2db8` on three pages carrying **both planes**:
+`macro_micro` (11 elements, committed) and two made by
+`bga gen-synthetic --store --seed 1` with `bga capture report --json`
+writing `plane2.json` beside the run (74 and 1,202 elements), exported
+and booted at 1440x900. Every hop runs from one control's centre to the
+next; Fitts' index is `log2(D/W + 1)` per hop, `W` the target's smaller
+side; wheel is the scroll a hop needed:
+
+```text
+journey                                    11 elements        74             1,202
+verdict -> first next step's Copy          466 px  4.4 b      534 px  4.5 b  522 px  4.5 b
+rail row -> section -> ? -> JSON -> fold   1,041-2,712 px     1,117-3,002    1,117-3,284
+                                           13.5-19.8 b        13.9-17.5 b    13.3-17.7 b
+open every chapter from the document       684 px  12.8 b     829 px  16.1 b 829 px  16.1 b
+  wheel, 1440x900 / 390x844                8,067 / 49,946     8,538 / 50,467 9,521 / 61,039
+
+control x-centre, every chapter open       n    min    max  stdev (the same on all three)
+section fold  button.collapse          67-80    337    354    2 px
+section door  button.describe             33    341    356    3 px
+JSON toggle   button.json-toggle       47-48    414  1,151  126-136 px
+chapter fold  button.chapter-open        6-7    556    859  after the title text
+```
+
+A section's fold and door sit at its left edge; its JSON toggle trails
+the heading text, so the same section's three controls span up to 640 px
+and the toggle is somewhere else in every section. Opening chapters
+from the document pushes each next control below everything the last
+one opened: 50-61 thousand pixels of wheel at 390x844.
+
+**Binding** (`UX-1042`). A control class sits at one place relative to the block
+it acts on — its offset within that block varies by at most one
+target (24 px) across the page, at each viewport — and the controls one
+block offers sit together. Travel
+is stated per journey in Fitts bits and wheel pixels, in both size
+classes (§6e.10) and on a page with both planes, with the journeys above
+as the census; a change that moves a control reports the journeys it
+lengthened. Held on `macro_micro` and the two-plane 1,202-element page
+at 1440x900 and 390x844: fold, door, JSON toggle and chapter fold at one
+place; four journeys at their measured Fitts bits plus 0.5 and wheel
+plus 10%. `button.copy-rows` and `select.top-n` join them at `UX-1055`
+(DOM order in `structured.js`, no CSS `order`: dx 0px against
+`.table-tools` on every table measured); `UX-1043` and `UX-1044` are
+the two placements before it.
+
 ## 7. Enforcement
 
 What keeps this true after the commit that lands it: the booted
@@ -2158,16 +2277,17 @@ headings, so a renumber there moves it.
 | §2f | `test_a_distribution_twin_draws_every_mark.py` | |
 | §3 | `test_the_tools_scale_with_the_table.py`, `test_one_click_from_investigation.py` | named |
 | §3a | `test_a_level_names_who_is_in_it.py`, `test_a_value_shows_what_it_is.py`, `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_fold_says_how_deep_it_goes.py`, `test_the_max_jobs_advice_is_one_level.py`, `test_the_merge_carries_every_field.py`, `test_the_page_conforms_to_its_sections.py`, `test_the_provenance_names_its_rule.py`, `test_the_report_you_can_attach.py`, `test_the_serial_chains_are_ranked.py`, `test_the_store_section_takes_a_window.py`, `test_why_bga_believes_what_it_believes.py` | |
-| §3b | `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_page_conforms_to_its_sections.py` | |
-| §3c | `test_a_new_control_class_lands_declared.py`, `test_the_merge_carries_every_field.py` | `UX-665`'s registry names the § each control class belongs to, so the census cites this one for the rail's; §3e's volume budget is still the measured half |
+| §3b | `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_page_conforms_to_its_sections.py`, `test_the_rail_is_a_source_list.py` | |
+| §3c | `test_a_new_control_class_lands_declared.py`, `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_merge_carries_every_field.py` | `UX-665`'s registry names the § each control class belongs to, so the census cites this one for the rail's; §3e's volume budget is still the measured half |
 | §3d | `test_a_capped_table_filters_what_it_sorts.py`, `test_a_new_control_class_lands_declared.py`, `test_the_max_jobs_advice_is_one_level.py`, `test_the_merge_carries_every_field.py` | `UX-349`'s `test_the_tools_scale_with_the_table.py` also holds it and cites §3 |
-| §3e | `test_the_page_has_a_volume_budget.py` | |
-| §3f | `test_the_handoff_box_is_measured_served.py` | |
+| §3e | `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_page_has_a_volume_budget.py` | |
+| §3f | `test_the_handoff_box_is_measured_served.py`, `test_the_page_has_a_volume_budget.py` | `UX-1050`: the 4,100 class with both planes |
 | §3g | `test_the_ceilings_reach_a_reader.py` | |
 | §3h | `test_the_rail_is_a_source_list.py` | |
 | §3i | `test_the_header_keeps_its_budget.py` | |
 | §3j | `test_a_fold_bounds_its_interactive_descendants.py` | `UX-921` |
-| §3k | `test_every_step_past_a_bound_is_bounded.py` | `UX-1032`'s census, at the 4,002-element run; `UX-1028`/`UX-1029`/`UX-1030` closed the three violations it found |
+| §3k | `test_a_findings_element_list_is_bounded.py`, `test_every_step_past_a_bound_is_bounded.py` | `UX-1032`'s census, at the 4,002-element run; `UX-1028`/`UX-1029`/`UX-1030` closed the three violations it found |
+| §3l | `test_a_chapter_fold_has_one_place_and_one_label.py`, `test_a_sections_controls_sit_together.py`, `test_pointer_travel_is_a_budget.py` | `UX-1042`: placement per class and travel per journey; `UX-1055` places copy-rows and top-n, and closes the placement-census gap |
 | §4 | `test_emphasis_is_a_budget.py`, `test_the_palette_is_validated.py`, `test_a_drawing_is_graded.py`, `test_apparatus_in_its_place.py`, `test_the_browser_is_the_library.py` | named |
 | §4a | | named; `UX-346`'s `test_a_sentence_lives_on_its_door.py` holds it and cites no section |
 | §4b | `test_a_runbook_is_not_a_table.py` | `UX-351`'s `test_the_label_is_for_the_reader.py` holds it and cites no section; `UX-669`'s clause holds the half that says a citation is a question, never a key |
@@ -2177,14 +2297,14 @@ headings, so a renumber there moves it.
 | §4f | `test_the_type_scale_is_four_steps.py` | |
 | §4g | `test_the_json_toggle_carries_the_key.py`, `test_a_reader_never_sees_the_register.py` | item 2; items 1-4 in the second file (`UX-824`); item 5 is `UX-823`'s, item 6 is §1c/§4c's |
 | §5 | | named; `test_the_palette_is_validated.py`, named in §5's own prose, cites §4.3 and §4.5 only |
-| §5a | | no guard cites it; the easy one passes forever, below |
+| §5a | | no guard cites it; `test_the_page_has_a_volume_budget.py`'s `REPEATED_SHARE_MAX` holds it by blocks, the measurement below asks for |
 | §5b | `test_the_readers_are_drawn_once.py` | |
 | §6 | | named; `test_the_numbers_have_a_sentence.py` and `test_the_shape_before_the_rows.py` hold the sentence and the `n`; neither cites §6 |
 | §6a | `test_every_control_has_a_resting_appearance.py` | named; §6a's refusal, not a fifth copy of four rules |
 | §6b | `test_one_factory_builds_every_table.py`, `test_the_handoff_rides_the_rail.py` | |
 | §6c | `test_the_browser_is_the_library.py`, `test_the_report_you_can_attach.py`, `test_find_in_page_reaches_folded_chapters.py` | |
 | §6d | `test_every_control_has_a_resting_appearance.py` | |
-| §6e | `test_a_reader_never_sees_the_register.py`, `test_an_absence_is_one_sentence.py`, `test_one_disclosure_glyph_pair.py`, `test_one_door_per_block.py`, `test_the_heading_outline_has_three_levels.py`, `test_spacing_comes_from_a_scale.py`, `test_controls_meet_the_target_size.py`, `test_every_control_has_a_resting_appearance.py`, `test_a_new_control_class_lands_declared.py`, `test_a_keyboard_journey_reaches_every_chapter.py`, `test_every_drawing_has_a_name_and_a_data_route.py`, `test_find_in_page_reaches_folded_chapters.py`, `test_the_page_has_a_volume_budget.py` | rules land one row at a time; not every rule has landed a guard yet |
+| §6e | `test_a_reader_never_sees_the_register.py`, `test_an_absence_is_one_sentence.py`, `test_one_disclosure_glyph_pair.py`, `test_one_door_per_block.py`, `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_heading_outline_has_three_levels.py`, `test_spacing_comes_from_a_scale.py`, `test_controls_meet_the_target_size.py`, `test_every_control_has_a_resting_appearance.py`, `test_a_new_control_class_lands_declared.py`, `test_a_keyboard_journey_reaches_every_chapter.py`, `test_every_drawing_has_a_name_and_a_data_route.py`, `test_find_in_page_reaches_folded_chapters.py`, `test_the_page_has_a_volume_budget.py`, `test_a_chapter_fold_has_one_place_and_one_label.py` | binding since round 142; each rule's guard is the one its row (`UX-1015`-`UX-1027`) closed with |
 | §7 | `test_emphasis_is_a_budget.py`, `test_the_styleguide_names_its_guards.py` | named |
 
 What the rows with no guard were written from, rounds 58 and 69, kept

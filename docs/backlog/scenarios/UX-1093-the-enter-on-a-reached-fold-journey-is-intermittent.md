@@ -1,6 +1,6 @@
 # UX-1093: the Enter-on-a-reached-fold journey fails intermittently on the older Pythons
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Blocks:** — | **Found by:** round 149 — the first weekly retro, `docs/audits/retro-2026-09-28.md`, main's run on `d7e74b1c` (#295) | **Serves:** every main run's matrix, and whoever reads a red one | **Topic:** guards | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Blocks:** — | **Found by:** round 149 — the first weekly retro, `docs/audits/retro-2026-09-28.md`, main's run on `d7e74b1c` (#295) | **Serves:** every main run's matrix, and whoever reads a red one | **Topic:** guards | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
 **Guard:** test_a_keyboard_journey_reaches_every_chapter.py · inferred r149
 

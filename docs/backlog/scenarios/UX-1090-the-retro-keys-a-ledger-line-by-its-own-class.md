@@ -1,6 +1,6 @@
 # UX-1090: the retro keys a ledger line by its own class, and "none reported" is no finding
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-999 | **Blocks:** — | **Found by:** round 149 — the first weekly retro, `docs/audits/retro-2026-09-28.md`, proposal 1 | **Serves:** every weekly retro, whose top class is its whole output | **Topic:** guards | **Area:** tools | **Shape:** mechanical | **Reading:** container
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-999 | **Blocks:** — | **Found by:** round 149 — the first weekly retro, `docs/audits/retro-2026-09-28.md`, proposal 1 | **Serves:** every weekly retro, whose top class is its whole output | **Topic:** guards | **Area:** tools | **Shape:** mechanical | **Reading:** container
 
 **Guard:** none — open, no guard named yet
 
@@ -107,3 +107,9 @@ Mutation table:
 |---|---|---|
 | (a) key bookkeeping by `class_key(line)` again | `TestABookkeepingLineWithNoTokenKeysByItsClass` | 1 failed, 3 passed |
 | (b) drop the `NO_FINDING` filter before counting | `TestNoFindingFrictionCellsAddNothing` | 1 failed, 3 passed |
+
+**Deviation (integration, r149).** `dev_sizes.py --check` read red after
+the merge: `tools/dev_retro.py` grew past its reference cell (24 -> 27
+functions, 186 -> 207 lines) from this change's own new helpers.
+`--adopt` refused upward; the integrator re-ran `--adopt --force`,
+writing the 2 grown cells (both `dev_retro.py`) - nothing else moved.

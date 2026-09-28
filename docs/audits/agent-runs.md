@@ -462,6 +462,26 @@ pairing for every merged row from round 103 on.
 | 144 | verifier | sonnet | verify UX-1043 UX-1051 | — | — | — | flagged unreadable skip reasons, 79 vs 78 bound | new browser test files need a tiers.py row |
 | 144 | general-purpose | opus | integrate: merge tracks, tiers rows, re-measure budgets, push-check | — | — | — | pushed 10cde1d2, push-check rc 0; J3 re-based at 390 per §3l | github-advanced-security red on #297 and #298 alike (Copilot scanner, not this round's) |
 | 144 | general-purpose | opus | walk 10cde1d2: macro_micro + 1,202 two-plane, 1440/390 | — | — | — | every round row held; 3 pre-existing findings filed UX-1056-1058 | — |
+| 149 | architect | opus | UX-1090 UX-1091 | 33k | 8 | 1 m | shaped | none reported |
+| 149 | architect | opus | UX-1092 | 27k | 9 | 1 m | shaped | none reported |
+| 149 | architect | opus | UX-938 UX-1041 | 50k | 19 | 2 m | shaped | none reported |
+| 149 | architect | opus | UX-1093 | 53k | 21 | 7 m | shaped; race not reproduced in 28 runs | none reported |
+| 149 | architect | opus | sweep r149 | 23k | 5 | 1 m | 3 tracks, 2 lines dropped | none reported |
+| 149 | implementer | sonnet | sweep A | 172k | 347 | 44 m | merged | load avg 50-63 from 11 parallel tracks |
+| 149 | implementer | sonnet | UX-955 | 116k | 90 | 44 m | merged | make lint past 120s under load |
+| 149 | implementer | sonnet | UX-1090 | 132k | 165 | 43 m | held (unadopted size cells), merged after fix-up a | dev_records fetch refused in worktree; 7 failures reported that did not reproduce |
+| 149 | implementer | sonnet | sweep C | 159k | 141 | 44 m | merged; 5 files needed tiers rows | load avg 55-62 |
+| 149 | implementer | sonnet | UX-1091 | 243k | 541 | 47 m | merged | make lint timed out at 120/500/900s under load |
+| 149 | implementer | sonnet | UX-950 | 181k | 282 | 69 m | merged | full suite unfinished in-session under load |
+| 149 | implementer | opus | UX-1092 | 132k | 93 | 52 m | merged | selector 27 min under load; worktree refused compound git |
+| 149 | implementer | opus | UX-1041 | 102k | 92 | 52 m | merged | classifier refused heredoc/pipe/make lint forms ~8 times |
+| 149 | implementer | opus | UX-1093 | 80k | 69 | 52 m | merged | pkill -f matched own shell |
+| 149 | implementer | opus | sweep B | 85k | 52 | 60 m | merged; font-weight half narrowed | worktree refused compound commands |
+| 149 | implementer | sonnet | UX-938 | 194k | 179 | 67 m | merged | rules.md at 80-line cap with zero slack |
+| 149 | verifier | sonnet | UX-955 UX-1090 UX-1091 sweep A sweep C | 121k | 97 | 24 m | 4 MERGE, 1 HOLD (UX-1090 sizes) | concurrent checkout raced a background run |
+| 149 | verifier | sonnet | UX-950 UX-1041 UX-1092 UX-1093 sweep B | 111k | 88 | 21 m | 5 MERGE; 1 of 8 backfill samples wrong | make lint pyright past 180s |
+| 149 | verifier | sonnet | UX-938 | 74k | 54 | 9 m | MERGE; UX-1014 Reading wrong | pyright shadow gave a false new finding |
+| 149 | integrator | opus | round 149 | 161k | 116 | 57 m | 11 merges, 5 fix-ups, suite 10088 passed 2 expected red | merge=union reopened 12 swept bookkeeping lines |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -474,7 +494,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the four hundred and forty-five rows already say: a researcher that reads a document
+What the four hundred and sixty-five rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

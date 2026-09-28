@@ -1,6 +1,6 @@
 # UX-938: an acceptance clause can name a reading that no environment in this project ever takes, and nothing says so until the round that owes it
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-762 | **Blocks:** — | **Found by:** round 137 — `UX-925`'s clause asked for every example figure to be re-derived, and the container that closed it has neither `bst` nor `bwrap`, so the clause could not have been paid by the session it was written for | **Serves:** every clause that asks for a reading, and every round that reports one unpaid | **Topic:** guards | **Area:** tools | **Shape:** mechanical | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-762 | **Blocks:** — | **Found by:** round 137 — `UX-925`'s clause asked for every example figure to be re-derived, and the container that closed it has neither `bst` nor `bwrap`, so the clause could not have been paid by the session it was written for | **Serves:** every clause that asks for a reading, and every round that reports one unpaid | **Topic:** guards | **Area:** tools | **Shape:** mechanical | **Reading:** container
 
 **Guard:** test_a_derived_figure_is_printed_not_committed.py · inferred r149
 

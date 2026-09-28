@@ -1,6 +1,6 @@
 # UX-1092: a scenario declares its guard in one field, backfilled from the inferred column
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-1000 | **Blocks:** — | **Found by:** round 149 — the first weekly retro, `docs/audits/retro-2026-09-28.md`, proposal 3; promotes the r140 `coverage` line on `tools/dev_area_pages.py` | **Serves:** whoever assesses an area's coverage, and every filing the `coverage` class comes from | **Topic:** guards | **Area:** tools | **Shape:** mechanical | **Reading:** container
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-1000 | **Blocks:** — | **Found by:** round 149 — the first weekly retro, `docs/audits/retro-2026-09-28.md`, proposal 3; promotes the r140 `coverage` line on `tools/dev_area_pages.py` | **Serves:** whoever assesses an area's coverage, and every filing the `coverage` class comes from | **Topic:** guards | **Area:** tools | **Shape:** mechanical | **Reading:** container
 
 **Guard:** test_every_task_declares_its_guard.py, test_an_area_page_names_each_guard.py
 

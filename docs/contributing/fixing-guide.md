@@ -251,6 +251,7 @@ bga/bundle.py          a capture packed to carry, and what the far
                        side refuses to half-read (UX-520)
 bga/disclosure.py      what each bundle member's value paths disclose,
                        class A-H per path
+bga/anonymize.py       keyed, shape-keeping pseudonyms and the local map
 bga/sources.py         the source inventory and resource identity
 bga/plane2.py          what a Plane 2 report is, and which shape one is
 bga/hostinfo.py        the host manifest; the cross-host refusal

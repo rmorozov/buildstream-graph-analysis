@@ -5,7 +5,8 @@ into every header, and `bundle.export()`'s manifest carries the
 snapshot's `stamp` and `packed_at` (`anonymized-bundle.md` 6.9).
 `export_anonymized()` builds each header from scratch and pseudonymizes
 or drops the manifest fields that name a machine or a capture. Member
-*contents* are untouched here — walking them is `UX-1062`'s job.
+contents are `UX-1062`'s guard; the members here are the least that
+clears its disclosure policy.
 """
 import os
 import tarfile
@@ -35,13 +36,16 @@ def project(tmp_path):
 @pytest.fixture
 def snapshot(project):
     path = os.path.join(run_store.runs_dir(project), STAMP)
-    _write(path, "run/graph.json", '{"schema": "graph/v9"}')
-    _write(path, "run/trace.json", '{"schema": "trace/v9"}')
-    _write(path, "run/run-context.json",
-           '{"schema": "run-context/v9", "host": {"id": "runner-7"}}')
-    _write(path, "run/sources.json", '{"schema": "sources/v1"}')
-    _write(path, "plane2.json", '{"schema": "plane2/v3"}')
+    _write(path, "run/graph.json", '{"elements": [{"uid": "app.bst"}]}')
+    _write(path, "run/trace.json", '{"spans": []}')
+    _write(path, "run/run-context.json", '{"host": "runner-7"}')
+    _write(path, "run/sources.json", '{"schema": "sources/v1", "elements": {}}')
+    _write(path, "plane2.json", '{"process_count": 1}')
     return path
+
+
+def _yes(_screen):
+    return True
 
 
 @pytest.fixture
@@ -69,7 +73,7 @@ def test_the_anonymized_archive_and_manifest_carry_no_original_metadata(
     monkeypatch.setattr(tarfile.TarFile, "gettarinfo", poisoned_gettarinfo)
 
     destination = str(tmp_path / "anon.tar.gz")
-    path, manifest = bundle.export_anonymized(snapshot, key, pmap, destination)
+    path, manifest = bundle.export_anonymized(snapshot, key, pmap, destination, approve=_yes)
 
     assert path == destination
     assert manifest["stamp"] != STAMP
@@ -90,7 +94,7 @@ def test_the_default_anonymized_name_carries_no_stamp(
         snapshot, key_and_map, tmp_path, monkeypatch):
     key, pmap = key_and_map
     monkeypatch.chdir(tmp_path)
-    path, _manifest = bundle.export_anonymized(snapshot, key, pmap)
+    path, _manifest = bundle.export_anonymized(snapshot, key, pmap, approve=_yes)
     assert STAMP not in os.path.basename(path)
     assert os.path.basename(path) == bundle.anonymized_output()
 
@@ -107,7 +111,7 @@ def test_the_gzip_header_carries_no_file_name(snapshot, key_and_map, tmp_path):
     key, pmap = key_and_map
     private_name = "acme-corp-alice-laptop-capture.tar.gz"
     destination = str(tmp_path / private_name)
-    path, _manifest = bundle.export_anonymized(snapshot, key, pmap, destination)
+    path, _manifest = bundle.export_anonymized(snapshot, key, pmap, destination, approve=_yes)
 
     with open(path, "rb") as handle:
         header = handle.read(10)

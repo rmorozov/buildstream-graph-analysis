@@ -38,6 +38,7 @@ trusted (`UX-505`). One exception: `CLAUDE.md`'s Register table's fourth row, th
 | Architecture or spec made wrong? Same commit | `test_the_documents_keep_up_with_the_contracts.py` |
 | Documentation you are not writing now: file the row first | `test_documentation_debt_has_a_door.py` |
 | Acceptance test still failing? 🟡 with what is blocking, and stop | — |
+| An Acceptance Test names where its reading is taken, or files unpayable with a reason (from `UX-938`) | `tools/dev_close_task.py --check`'s `reading_problems()`, held by `test_a_clause_names_where_its_reading_is_taken.py` |
 
 ## Committing — §4, §4a
 
@@ -61,8 +62,6 @@ trusted (`UX-505`). One exception: `CLAUDE.md`'s Register table's fourth row, th
 | Never touch `docs/spec/specification.md` outside Part 32's registry | `test_the_spec_outside_part_32_is_read_only.py` |
 | **Never let an instrument read a proxy for the thing it names** | `test_the_agent_configuration_holds.py` — the `measure` skill states the three questions; asking them is judgement |
 | Exact integer arithmetic for anything invariant-related | — |
-
-The proxy rule is the one this repository breaks most — about thirty sightings across twenty-six items, in four shapes. §5 names all four with a worked example each; read it before writing a guard.
 
 ## Which kind of session is this? — §6a
 

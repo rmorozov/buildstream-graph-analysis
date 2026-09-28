@@ -107,7 +107,7 @@
     "tools/dev_baseline.py": {"duplicate_blocks": 0, "file_lines": 542, "longest_function": 43},
     "tools/dev_bookkeeping.py": {"duplicate_blocks": 0, "file_lines": 233, "longest_function": 35},
     "tools/dev_bst_examples_spread.py": {"duplicate_blocks": 0, "file_lines": 215, "longest_function": 36},
-    "tools/dev_close_task.py": {"duplicate_blocks": 0, "file_lines": 1222, "longest_function": 115},
+    "tools/dev_close_task.py": {"duplicate_blocks": 0, "file_lines": 1299, "longest_function": 115},
     "tools/dev_commit_bodies.py": {"duplicate_blocks": 0, "file_lines": 98, "longest_function": 23},
     "tools/dev_docs_lane.py": {"duplicate_blocks": 0, "file_lines": 253, "longest_function": 27},
     "tools/dev_docs_only.py": {"duplicate_blocks": 0, "file_lines": 40, "longest_function": 7},

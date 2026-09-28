@@ -1,6 +1,6 @@
 # UX-1045: §3's tool row names the column thresholds §3d attaches to their headers
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the second styleguide audit (2026-09-27), styleguide §3, §3d | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement
+**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the second styleguide audit (2026-09-27), styleguide §3, §3d | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement | **Reading:** container
 
 ## Motivation
 

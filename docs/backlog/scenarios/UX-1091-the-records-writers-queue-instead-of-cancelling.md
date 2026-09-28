@@ -1,6 +1,6 @@
 # UX-1091: the records writers queue instead of cancelling each other
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-997, UX-1000 | **Blocks:** — | **Found by:** round 149 — the first weekly retro, `docs/audits/retro-2026-09-28.md`, proposal 2 | **Serves:** every record CI measures, and the reader of main's run history | **Topic:** guards | **Area:** tools | **Shape:** mechanical
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-997, UX-1000 | **Blocks:** — | **Found by:** round 149 — the first weekly retro, `docs/audits/retro-2026-09-28.md`, proposal 2 | **Serves:** every record CI measures, and the reader of main's run history | **Topic:** guards | **Area:** tools | **Shape:** mechanical | **Reading:** container
 
 ## Motivation
 

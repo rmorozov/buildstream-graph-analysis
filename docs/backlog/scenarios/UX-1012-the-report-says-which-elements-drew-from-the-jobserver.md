@@ -1,6 +1,6 @@
 # UX-1012: the report says which elements drew from the jobserver, not only which were offered it
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-1005 | **Found by:** Ruslan on the Graviton thread (2026-09-25): "does bga show in report which elements actually used jobserver and which are not?" | **Serves:** R4, R5 | **Topic:** analysis | **Area:** bga | **Shape:** judgement
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-1005 | **Found by:** Ruslan on the Graviton thread (2026-09-25): "does bga show in report which elements actually used jobserver and which are not?" | **Serves:** R4, R5 | **Topic:** analysis | **Area:** bga | **Shape:** judgement | **Reading:** container
 
 ## Motivation
 

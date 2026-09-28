@@ -1,6 +1,6 @@
 # UX-1090: the retro keys a ledger line by its own class, and "none reported" is no finding
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-999 | **Blocks:** — | **Found by:** round 149 — the first weekly retro, `docs/audits/retro-2026-09-28.md`, proposal 1 | **Serves:** every weekly retro, whose top class is its whole output | **Topic:** guards | **Area:** tools | **Shape:** mechanical
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-999 | **Blocks:** — | **Found by:** round 149 — the first weekly retro, `docs/audits/retro-2026-09-28.md`, proposal 1 | **Serves:** every weekly retro, whose top class is its whole output | **Topic:** guards | **Area:** tools | **Shape:** mechanical | **Reading:** container
 
 ## Motivation
 

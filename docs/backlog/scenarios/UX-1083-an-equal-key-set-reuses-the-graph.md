@@ -87,3 +87,19 @@ same keys under different targets, changed foundation, changed
 | `bst_global_options` term dropped | `test_different_bst_global_options_with_equal_keys_runs_bst_show_again` | 1 of 1 |
 | `resolved_max_jobs` term dropped | `test_a_changed_max_jobs_runs_bst_show_again` | 1 of 1 |
 | `bga_foundation` term dropped | `test_a_changed_foundation_runs_bst_show_again` | 1 of 1 |
+| `BGA_BASELINE_RUN_DIR` env set dropped (`bga_snapshot.py`) | `test_a_baseline_snapshot_pair_issues_one_bst_show_through_the_snapshot_path` | 1 of 1 |
+
+**Deviation**: `extract_run`'s new `baseline_run_dir` param is not
+reached through a CLI flag. `bga_snapshot.take_snapshot` sets
+`BGA_BASELINE_RUN_DIR` in the environment (the previous healthy
+snapshot's own `run/`, the same `_healthy_baseline` the compare step
+already picks) and `tools/bst_native_build_tracer.py`'s `run` reads it
+straight from `os.environ`, following the existing `BGA_JOBSERVER_MODE`
+precedent (UX-856) - a `--baseline-run-dir` flag was tried first and
+reverted: `bga capture run --help` was already at its 66-line cap with
+zero headroom (`test_the_nested_capture_run_help_fits_too`), and any
+new flag adds at least three lines. `tests/unit/test_the_snapshot_passes_its_baseline_to_the_graph_reuse.py`
+(new file, 1 test) proves the wiring end to end through the real
+`take_snapshot`/`tracer.main`/`extract_run` path, `run_traced_build`
+faked. `docs/guides/cli.md`'s environment inventory gained the row
+(`test_the_environment_surface_is_an_inventory.py`).

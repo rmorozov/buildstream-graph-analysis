@@ -288,6 +288,18 @@ def build_ever_started(snapshot: str):
     return "bga-clocks start" not in lines[-1]
 
 
+def _set_baseline_run_dir_env(project: str) -> None:
+    """UX-1083: `BGA_BASELINE_RUN_DIR` - the most recent *healthy*
+    snapshot's own `run/`, the same one `_healthy_baseline` picks for
+    the compare - or unset, so `extract_run`'s graph reuse never fires
+    on a first capture."""
+    baseline_snapshot, _skipped = _healthy_baseline(run_store.list_runs(project))
+    if baseline_snapshot:
+        os.environ["BGA_BASELINE_RUN_DIR"] = os.path.join(baseline_snapshot, RUN_SUBDIR)
+    else:
+        os.environ.pop("BGA_BASELINE_RUN_DIR", None)
+
+
 def take_snapshot(project: str, command: list[str], config: dict,
                   snapshot: Optional[str] = None, diagnose: bool = False,
                   no_inject: bool = False, inhibit: bool = False,
@@ -309,6 +321,11 @@ def take_snapshot(project: str, command: list[str], config: dict,
     `jobserver_auth` (UX-875): forwarded to the tracer's own
     `--jobserver-auth` unchanged - the tracer resolves it
     (`jobserver_auth_style`), this only carries it through.
+
+    `BGA_BASELINE_RUN_DIR` (UX-1083): set by `_set_baseline_run_dir_env`,
+    the same `BGA_JOBSERVER_MODE` shape (UX-856) - the tracer's `run`
+    reads it straight from the environment, no CLI flag, so `--help`
+    never grows.
     """
     from bga.cli import resolve_jobserver_ceiling, set_jobserver_mode_env
 
@@ -317,6 +334,7 @@ def take_snapshot(project: str, command: list[str], config: dict,
     snapshot = snapshot or run_store.new_snapshot_dir(project)
     mode, ceiling, seed = resolve_jobserver_ceiling(jobserver, command, cpu_count=cpu_count)
     set_jobserver_mode_env(mode)
+    _set_baseline_run_dir_env(project)
     with open(os.path.join(snapshot, CONTEXT_NAME), "w", encoding="utf-8") as handle:
         handle.write(_capture_context(project, command, config,
                                       jobserver=(mode or "off", ceiling, seed),

@@ -8684,9 +8684,19 @@ def main(argv: Optional[list[str]] = None) -> int:
                 from .bst_extract_run import extract_run
                 print("Extracting run data (bst show)...", file=sys.stderr)
                 try:
+                    # UX-1083: `BGA_BASELINE_RUN_DIR`, the same shape
+                    # `BGA_JOBSERVER_MODE` (UX-856) already uses - `bga
+                    # snapshot` sets it beside the mode it resolves, so
+                    # this needs no CLI flag of its own to know which
+                    # baseline to compare this build's own fingerprint
+                    # against. Absent for a direct-tracer invocation,
+                    # same as the jobserver mode above.
                     extract_run(args.project_dir, wrapped_log_path, args.run_dir,
                                 log_format="wrapped", interrupted=interrupted,
-                                jobserver=_jobserver_block(report))
+                                jobserver=_jobserver_block(report),
+                                cache_key_set=cache_key_set,
+                                bst_global_options=_bst_global_options(cmd)[0],
+                                baseline_run_dir=os.environ.get("BGA_BASELINE_RUN_DIR"))
                 except Exception as exc:
                     print(f"Warning: could not extract a run directory into "
                           f"{args.run_dir}: {exc}", file=sys.stderr)

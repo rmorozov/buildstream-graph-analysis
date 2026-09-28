@@ -462,6 +462,48 @@ pairing for every merged row from round 103 on.
 | 144 | verifier | sonnet | verify UX-1043 UX-1051 | — | — | — | flagged unreadable skip reasons, 79 vs 78 bound | new browser test files need a tiers.py row |
 | 144 | general-purpose | opus | integrate: merge tracks, tiers rows, re-measure budgets, push-check | — | — | — | pushed 10cde1d2, push-check rc 0; J3 re-based at 390 per §3l | github-advanced-security red on #297 and #298 alike (Copilot scanner, not this round's) |
 | 144 | general-purpose | opus | walk 10cde1d2: macro_micro + 1,202 two-plane, 1440/390 | — | — | — | every round row held; 3 pre-existing findings filed UX-1056-1058 | — |
+| 145 | implementer | opus | UX-1060 every exported value path declares its class | 155524 | — | — | VERIFIED fd0bbd9c | — |
+| 145 | implementer | sonnet | UX-1061 a pseudonym is keyed, stable, shape-preserving | 68491, rework to 115534 | — | — | VERIFIED fd0bbd9c | length-band fix came from verification |
+| 145 | implementer | sonnet | UX-1067 the archive and gzip header carry no original metadata | 102367, rework to 123309 cumulative | — | — | VERIFIED fd0bbd9c | gzip FNAME fix came from verification |
+| 145 | implementer | sonnet | UX-1064 a pseudonym in any text resolves back | 172443, rework to 245951 cumulative | — | — | VERIFIED fd0bbd9c | ships as `bga bundle --resolve`, not a new top-level command |
+| 145 | implementer | opus | UX-1062 a bundle exports anonymized, refuses a leftover name | 194304, three follow-ups to 230888 cumulative | — | — | VERIFIED fd0bbd9c | flag allowlist and wall origin came from verification and UX-1063's guard |
+| 145 | implementer | opus | UX-1063 analysis commutes with anonymization | 193246 | — | — | VERIFIED fd0bbd9c | five re-keyed tie-breaks undiscriminated by any capture here |
+| 145 | implementer | sonnet | UX-1065 a declared public junction keeps its public names | 166431 | — | — | VERIFIED fd0bbd9c | — |
+| 145 | verifier | sonnet | verify UX-1061 | 67467 | — | — | length-band fix found | — |
+| 145 | verifier | sonnet | verify UX-1060 | 203746 | — | — | VERIFIED | — |
+| 145 | verifier | sonnet | verify UX-1067 | 91512 | — | — | gzip FNAME leak found | — |
+| 145 | verifier | sonnet | verify UX-1062 | 133369 | — | — | flag-name leak and epoch-0 start found | — |
+| 145 | verifier | sonnet | verify UX-1064 | 62723 | — | — | VERIFIED | — |
+| 145 | verifier | sonnet | verify UX-1063 | 88665 | — | — | VERIFIED | — |
+| 145 | verifier | sonnet | verify UX-1065 | 85405 | — | — | VERIFIED | — |
+| 145 | integrator | sonnet | merge the seven anonymized-bundle tracks | 196172 over two passes | — | — | merged to fd0bbd9c | — |
+| 145 | closer | opus | close: row moves, ledger, round document | unknown | — | — | — | — |
+| 146 | implementer | sonnet | UX-1068 a credential in a command line is dropped, not kept | 194027 including one rework after verify | — | — | VERIFIED dd90b4df | prefix, spaced-flag and mixed-case leaks came from verification |
+| 146 | verifier | sonnet | verify UX-1068 | unknown | — | — | four leaks found | — |
+| 146 | implementer | opus | UX-1069 the anonymized export runs in bounded memory | unknown | — | — | VERIFIED dd90b4df | the archive mutation row was overstated, corrected at close |
+| 146 | verifier | sonnet | verify UX-1069 | unknown | — | — | VERIFIED | — |
+| 146 | implementer | sonnet | UX-1070 the disclosure policy names what the producer writes | 240153 including one fix pass after verify | — | — | VERIFIED dd90b4df | build_class A and the C-key check came from verification |
+| 146 | verifier | sonnet | verify UX-1070 | unknown | — | — | two defects found | — |
+| 146 | implementer | sonnet | UX-1071 the residue scan reads a large member in linear time | 200411 including one rework | — | — | VERIFIED dd90b4df | flaky N/4N timing test replaced by a start==0 guard test |
+| 146 | verifier | sonnet | verify UX-1071 | unknown | — | — | VERIFIED | — |
+| 146 | integrator | sonnet | merge the four #298 review tracks | 88216 | — | — | merged to dd90b4df | conflicts in bga/disclosure.py and tests/quality_reference.json |
+| 146 | closer | opus | close: row moves, ledger, round document | unknown | — | — | — | — |
+| 147 | implementer | sonnet | file backlog rows UX-1084..1087 from the owner's #298 re-review | 93015 | — | — | filed | — |
+| 147 | implementer | sonnet | UX-1084 a short numeric credential still exports verbatim | 183780 | — | — | VERIFIED 3107b31b | one rework after verify |
+| 147 | verifier | sonnet | verify UX-1084 | 47139 | — | — | DEFECTS | gcc -l1234, curl -O 12345 kept verbatim |
+| 147 | implementer | sonnet | UX-1085 the residue scan misses non-ASCII identifiers | 98535 | — | — | VERIFIED 3107b31b | one rework |
+| 147 | verifier | sonnet | verify UX-1085 | 67440 | — | — | VERIFIED | one leak found |
+| 147 | implementer | sonnet | UX-1086 the archive publishes before the map is saved | 77512 | — | — | VERIFIED 3107b31b | one fix pass |
+| 147 | verifier | sonnet | verify UX-1086 | 37470 | — | — | DEFECTS | temp-file leak and existing-destination case found |
+| 147 | implementer | sonnet | UX-1087 the bounded-memory measurement holds identifiers constant | 150165 | — | — | VERIFIED 3107b31b | — |
+| 147 | integrator | sonnet | merge UX-1086, UX-1084, UX-1085, UX-1087 | 80091 | — | — | merged to 3107b31b | conflicts only in tests/quality_reference.json |
+| 147 | closer | sonnet | close: row moves, ledger, round document | unknown | — | — | — | — |
+| 148 | implementer | sonnet | UX-1088+UX-1089, the #298 review's two remaining numeric-leak findings (filed and fixed, one track) | 144356 | — | — | merged 1a498516 | — |
+| 148 | closer | sonnet | close: row moves, ledger, round document | unknown | — | — | — | — |
+| 148 | verifier | sonnet | verify UX-1088, UX-1089 | 68368 | — | — | DEFECTS: -j=N hybrid leak, fixed in 05fe2c74 | — |
+| 148 | implementer | opus | root-cause the tier-gate red on #298 (researcher-style) | 77892 | — | — | --dist load splits test_the_page_conforms_to_its_sections.py; its module fixture rebuilds per worker | — |
+| 148 | implementer | sonnet | measure --dist loadgroup for UX-1105 (rejected) | 82500 | — | — | file 25.8s -> 6.7s, full suite 515s -> 774s: rejected | — |
+| 148 | implementer | opus | UX-1105, the sections page built once across workers | unknown | — | — | file alone 27.9s -> 14.7-17.2s junit sum at -n 4 --dist load | the lock alone moved nothing: a waiting worker is charged its wait |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -474,7 +516,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the four hundred and forty-five rows already say: a researcher that reads a document
+What the four hundred and eighty-seven rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

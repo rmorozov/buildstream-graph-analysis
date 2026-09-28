@@ -669,36 +669,16 @@
             }
         },
         "fan_in": {
-            "all.bst": {
-                "direct_count": 1,
-                "direct": [
-                    "app.bst"
-                ],
-                "transitive_count": 10,
-                "immediate_dominator": "app.bst",
-                "element_kind": "stack",
+            "toolchain.bst": {
+                "direct_count": 0,
+                "direct": [],
+                "transitive_count": 0,
+                "immediate_dominator": null,
+                "element_kind": "import",
                 "is_structural_kind": true,
                 "is_foundation": false
             },
-            "app.bst": {
-                "direct_count": 8,
-                "direct": [
-                    "core.bst",
-                    "lib-a.bst",
-                    "lib-b.bst",
-                    "lib-c.bst",
-                    "lib-d.bst",
-                    "lib-e.bst",
-                    "lib-f.bst",
-                    "toolchain.bst"
-                ],
-                "transitive_count": 9,
-                "immediate_dominator": "toolchain.bst",
-                "element_kind": "cmake",
-                "is_structural_kind": false,
-                "is_foundation": false
-            },
-            "codegen.bst": {
+            "core.bst": {
                 "direct_count": 1,
                 "direct": [
                     "toolchain.bst"
@@ -709,7 +689,7 @@
                 "is_structural_kind": false,
                 "is_foundation": false
             },
-            "core.bst": {
+            "codegen.bst": {
                 "direct_count": 1,
                 "direct": [
                     "toolchain.bst"
@@ -803,12 +783,32 @@
                 "is_structural_kind": false,
                 "is_foundation": false
             },
-            "toolchain.bst": {
-                "direct_count": 0,
-                "direct": [],
-                "transitive_count": 0,
-                "immediate_dominator": null,
-                "element_kind": "import",
+            "app.bst": {
+                "direct_count": 8,
+                "direct": [
+                    "core.bst",
+                    "lib-a.bst",
+                    "lib-b.bst",
+                    "lib-c.bst",
+                    "lib-d.bst",
+                    "lib-e.bst",
+                    "lib-f.bst",
+                    "toolchain.bst"
+                ],
+                "transitive_count": 9,
+                "immediate_dominator": "toolchain.bst",
+                "element_kind": "cmake",
+                "is_structural_kind": false,
+                "is_foundation": false
+            },
+            "all.bst": {
+                "direct_count": 1,
+                "direct": [
+                    "app.bst"
+                ],
+                "transitive_count": 10,
+                "immediate_dominator": "app.bst",
+                "element_kind": "stack",
                 "is_structural_kind": true,
                 "is_foundation": false
             }
@@ -1259,6 +1259,17 @@
             {
                 "rank": 5,
                 "members": [
+                    "toolchain.bst",
+                    "codegen.bst"
+                ],
+                "length": 2,
+                "weighted_duration_us": 7000000,
+                "wall_share": 0.16203703703703703,
+                "best_split": "codegen.bst"
+            },
+            {
+                "rank": 6,
+                "members": [
                     "lib-a.bst",
                     "lib-b.bst"
                 ],
@@ -1268,7 +1279,7 @@
                 "best_split": "lib-b.bst"
             },
             {
-                "rank": 6,
+                "rank": 7,
                 "members": [
                     "lib-b.bst",
                     "lib-c.bst"
@@ -1279,7 +1290,7 @@
                 "best_split": "lib-b.bst"
             },
             {
-                "rank": 7,
+                "rank": 8,
                 "members": [
                     "lib-c.bst",
                     "lib-d.bst"
@@ -1290,7 +1301,7 @@
                 "best_split": "lib-d.bst"
             },
             {
-                "rank": 8,
+                "rank": 9,
                 "members": [
                     "lib-d.bst",
                     "lib-e.bst"
@@ -1301,7 +1312,7 @@
                 "best_split": "lib-d.bst"
             },
             {
-                "rank": 9,
+                "rank": 10,
                 "members": [
                     "lib-e.bst",
                     "lib-f.bst"
@@ -1310,17 +1321,6 @@
                 "weighted_duration_us": 7000000,
                 "wall_share": 0.16203703703703703,
                 "best_split": "lib-f.bst"
-            },
-            {
-                "rank": 10,
-                "members": [
-                    "toolchain.bst",
-                    "codegen.bst"
-                ],
-                "length": 2,
-                "weighted_duration_us": 7000000,
-                "wall_share": 0.16203703703703703,
-                "best_split": "codegen.bst"
             },
             {
                 "rank": 11,
@@ -1391,8 +1391,8 @@
             {
                 "rank": 17,
                 "members": [
-                    "app.bst",
-                    "all.bst"
+                    "toolchain.bst",
+                    "app.bst"
                 ],
                 "length": 2,
                 "weighted_duration_us": 3150000,
@@ -1402,8 +1402,8 @@
             {
                 "rank": 18,
                 "members": [
-                    "toolchain.bst",
-                    "app.bst"
+                    "app.bst",
+                    "all.bst"
                 ],
                 "length": 2,
                 "weighted_duration_us": 3150000,

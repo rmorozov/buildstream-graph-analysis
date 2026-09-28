@@ -37,12 +37,15 @@ of them enumerated is still held to the rule.
 
 holds: rules.md#touching-the-page-run-the-styleguides-seven-questions
 """
+import fcntl
 import json
+import multiprocessing
 import os
 import re
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -58,6 +61,7 @@ VIEWER = REPO / "bga" / "viewer"
 SHIM = str(REPO / "tests" / "dom_shim.mjs")
 GOLDEN = REPO / "tests" / "fixtures" / "golden" / "mixed_task_kinds"
 MACRO = REPO / "tests" / "fixtures" / "macro_micro" / "run"
+PAGES = (("golden", GOLDEN), ("macro_micro", MACRO))
 
 #: §3a.1's subject is "a cell that folds deeper content". These fold
 #: something else, and each says what instead - declared, so a fold that
@@ -163,7 +167,9 @@ console.log(JSON.stringify({
 """
 
 
-def _boot(run_dir, tmp):
+def _start(run_dir, tmp):
+    """Export in-process (its capture is not thread-safe), then start the
+    node probe without waiting for it."""
     run = snapshot_copy(run_dir, tmp)
 
     import tools.bga_view as view
@@ -178,37 +184,73 @@ def _boot(run_dir, tmp):
     probe = tmp / "probe.mjs"
     probe.write_text(_probe_source().split("const report =", 1)[0] + _TAIL,
                      encoding="utf-8")
-    result = subprocess.run(
-        [node, str(probe)], capture_output=True, text=True, cwd=REPO,
-        timeout=180,
+    return subprocess.Popen(
+        [node, str(probe)], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        text=True, cwd=REPO,
         env=dict(os.environ, PAGE=str(page), MOD=str(module),
                  PROTOCOL="file:", BGA_DOM_SHIM=SHIM))
-    assert result.returncode == 0, result.stderr[-4000:]
-    out = json.loads(result.stdout)
+
+
+def _finish(proc):
+    stdout, stderr = proc.communicate(timeout=180)
+    assert proc.returncode == 0, stderr[-4000:]
+    out = json.loads(stdout)
     assert out["error"] is None, out["error"]
     return out
 
 
+def _session_root(tmp_path_factory):
+    """One directory per session, seen by every xdist worker."""
+    base = tmp_path_factory.getbasetemp()
+    return base.parent if os.environ.get("PYTEST_XDIST_WORKER") else base
+
+
+def _built_once(root, key, build):
+    """`build(dir)` once per session across workers; the marker is last."""
+    out = root / key
+    done = out / ".done"
+    root.mkdir(parents=True, exist_ok=True)
+    with open(root / f"{key}.lock", "w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        if not done.exists():
+            shutil.rmtree(out, ignore_errors=True)
+            out.mkdir()
+            build(out)
+            done.write_text("", encoding="utf-8")
+    return out
+
+
+def _boot_both(out):
+    # the two node probes overlap, so the build costs the slower one
+    probes = {name: _start(run, out / name) for name, run in PAGES}
+    (out / "probes.json").write_text(json.dumps(
+        {name: _finish(proc) for name, proc in probes.items()}),
+        encoding="utf-8")
+
+
+def _export_into(source):
+    def build(out):
+        import tools.bga_view as view
+
+        view.export(str(snapshot_copy(source, out)), str(out / "report.html"))
+    return build
+
+
 @pytest.fixture(scope="module")
 def pages(tmp_path_factory):
-    return {name: _boot(run, tmp_path_factory.mktemp(name))
-            for name, run in (("golden", GOLDEN), ("macro_micro", MACRO))}
+    out = _built_once(_session_root(tmp_path_factory), "sections-pages",
+                      _boot_both)
+    return json.loads((out / "probes.json").read_text(encoding="utf-8"))
 
 
 @pytest.fixture(scope="module")
 def exports(tmp_path_factory):
     """The exported files themselves, for the claims that are about
     markup rather than about a booted document."""
-    import tools.bga_view as view
-
-    out = {}
-    for name, source in (("golden", GOLDEN), ("macro_micro", MACRO)):
-        tmp = tmp_path_factory.mktemp(f"{name}-export")
-        run = snapshot_copy(source, tmp)
-        page = tmp / "report.html"
-        view.export(str(run), str(page))
-        out[name] = page
-    return out
+    root = _session_root(tmp_path_factory)
+    return {name: _built_once(root, f"sections-{name}-export",
+                              _export_into(source)) / "report.html"
+            for name, source in PAGES}
 
 
 @needs_node
@@ -420,3 +462,42 @@ class TestTheChecklistNamesTheNewSections:
         assert guard in self._checklist(), (
             f"{guard} is not named, so a reader who fails the check does not "
             f"know which guard will say so")
+
+
+def _count_and_build(out):
+    with open(out.parent / "builds.log", "a", encoding="utf-8") as log:
+        log.write(f"{os.getpid()}\n")
+    time.sleep(0.3)
+    (out / "page").write_text("built", encoding="utf-8")
+
+
+def _race(root, go):
+    go.wait()
+    _built_once(root, "raced", _count_and_build)
+
+
+class TestThePagesAreBuiltOncePerSession:
+    """UX-1105: `--dist load` splits this file across workers; the
+    fixtures above must still build each page once, not once per worker."""
+
+    def test_racing_workers_build_once(self, tmp_path):
+        fork = multiprocessing.get_context("fork")
+        go = fork.Event()
+        racers = [fork.Process(target=_race, args=(tmp_path, go))
+                  for _ in range(4)]
+        for racer in racers:
+            racer.start()
+        go.set()
+        for racer in racers:
+            racer.join(30)
+        assert [r.exitcode for r in racers] == [0] * 4
+        builds = (tmp_path / "builds.log").read_text().split()
+        assert len(builds) == 1, f"built {len(builds)} times: {builds}"
+        assert (tmp_path / "raced" / "page").read_text() == "built"
+
+    def test_an_unfinished_build_is_redone(self, tmp_path):
+        (tmp_path / "raced").mkdir()
+        (tmp_path / "raced" / "page").write_text("half", encoding="utf-8")
+        _built_once(tmp_path, "raced", _count_and_build)
+        assert (tmp_path / "raced" / "page").read_text() == "built"
+        assert (tmp_path / "raced" / ".done").exists()

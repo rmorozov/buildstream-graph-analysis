@@ -19,8 +19,8 @@ from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from typing import Optional
 
-from bga.graph.edg import build_element_graph, compute_in_out_degree
-from bga.ingest.models import NormalizedTask, TaskKind
+from bga.graph.edg import build_element_graph, compute_in_out_degree, element_order
+from bga.ingest.models import Graph, NormalizedTask, TaskKind
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +81,8 @@ class BlastRadiusResult:
 
 
 def order_blast_radius(results: list["BlastRadiusResult"],
-                       element_durations: dict[str, int]) -> None:
+                       element_durations: dict[str, int],
+                       order: Optional[dict[str, int]] = None) -> None:
     """Rank blast-radius results in place, with a **total** order.
 
     `UX-173` chose the key: what a change to each element would cost,
@@ -103,8 +104,9 @@ def order_blast_radius(results: list["BlastRadiusResult"],
     `risk_score` is the discriminator the data already carries -
     `downstream_count` on the critical path and 0 off it - so it
     separates the element the build actually waits for from the one it
-    merely declares. Then the element's own duration, then the uid, so
-    no pair is ever ordered by chance.
+    merely declares. Then the element's own duration, then its
+    graph.json position in `order` (`UX-1063`: a pseudonym cannot move
+    it), then the uid, so no pair is ever ordered by chance.
 
     Negated keys and an ascending sort rather than `reverse=True`, which
     would also reverse the uid and make the last key descending for no
@@ -114,15 +116,18 @@ def order_blast_radius(results: list["BlastRadiusResult"],
     that restates the key is a second copy that drifts: written that
     way first, two of its four mutations did not redden.
     """
+    position = order or {}
     if any(r.downstream_weighted_duration_us for r in results):
         results.sort(key=lambda x: (-x.downstream_weighted_duration_us,
                                     -x.downstream_count,
                                     -x.risk_score,
                                     -element_durations.get(x.element_uid, 0),
+                                    position.get(x.element_uid, len(position)),
                                     x.element_uid))
     else:
         results.sort(key=lambda x: (-x.downstream_count,
                                     -x.risk_score,
+                                    position.get(x.element_uid, len(position)),
                                     x.element_uid))
 
 
@@ -704,13 +709,14 @@ class DiagnosticsAnalyzer:
         # `downstream_count` when the element is on the critical path
         # and 0 when it is not - so it separates the element the build
         # actually waits for from the one it merely declares. Then the
-        # element's own duration, then the uid, so no pair is ever
+        # element's own duration, its graph position, the uid, so no pair is ever
         # ordered by chance.
         #
         # Negated keys and an ascending sort rather than `reverse=True`,
         # because `reverse` would also reverse the uid and make the last
         # key descending for no reason.
-        order_blast_radius(results, element_durations)
+        order_blast_radius(results, element_durations,
+                           element_order(self.graph) if isinstance(self.graph, Graph) else None)
         
         return results
     

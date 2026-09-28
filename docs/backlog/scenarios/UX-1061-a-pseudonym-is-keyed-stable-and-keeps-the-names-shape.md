@@ -29,3 +29,32 @@ Mutation: drop the class from the HMAC input, and an element and a
 directory of the same name collide.
 
 ## Outcome
+
+**Gap measured.** No `bga/anonymize.py` existed; nothing mapped a value
+to a stable, class-salted, shape-preserving pseudonym.
+
+**Close measured.** New `bga/anonymize.py`: `load_or_create_key`,
+`key_fingerprint`, `PseudonymMap` (`resolve`/`has`/`add`/`save`/
+`for_project`), `pseudonymize(value, cls, key, pmap)` (atomic token,
+character class + length band kept, `k` grown on collision) and
+`pseudonymize_element_path(value, key, pmap)` (junction `:`, `.bst`,
+directory depth kept, per-segment class). `tests/unit/
+test_a_pseudonym_is_keyed_stable_and_shaped.py`, 7 cases:
+`python -m pytest tests/unit/test_a_pseudonym_is_keyed_stable_and_shaped.py -q`
+→ `7 passed in 0.28s`. `make test-touching` →
+`34 file(s) selected (33 census + 1 naming the change) · 1752 passed,
+3 skipped in 40.50s`. `python tools/dev_sizes.py --check` →
+`sizes ok: 152 file(s) measured, none above the cell`.
+`python tools/dev_close_task.py --check` → `0 problem(s) over 8
+propert(y/ies), 1027 backlog row(s)`.
+
+**Mutation table.**
+
+| Mutation | What reddened | Count |
+|---|---|---|
+| `_digest`: drop `cls` from the HMAC message (`msg = value.encode(...)` only) | `test_the_class_salts_the_hmac_so_an_element_and_a_directory_differ`, `test_digest_input_includes_the_class` | 2 of 7 tests failed; 5 passed |
+
+Reverted from the pre-mutation copy; all 7 pass again
+(`7 passed in 0.28s`).
+
+**Deviation.**

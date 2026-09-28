@@ -757,11 +757,13 @@ def export_anonymized(snapshot: str, key: bytes, pmap: "anonymize.PseudonymMap",
         archive = _pack(anon_manifest, sources, scratch)
         _approved(archive, walk, lambda dictionary: approve(review_screen(
             destination, anon_manifest, dropped, walk, dictionary)))
+        # UX-1086: the map published atomically before the archive, so a
+        # failed map write never leaves an unresolvable bundle behind.
+        os.makedirs(os.path.dirname(pmap.path) or ".", exist_ok=True)
+        pmap.save()
         os.replace(archive, destination)
     finally:
         shutil.rmtree(scratch, ignore_errors=True)
-    os.makedirs(os.path.dirname(pmap.path) or ".", exist_ok=True)
-    pmap.save()
     return destination, anon_manifest
 
 

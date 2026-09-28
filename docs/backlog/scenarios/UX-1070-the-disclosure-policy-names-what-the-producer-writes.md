@@ -1,6 +1,6 @@
 # UX-1070: the disclosure policy names what the producer writes
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-1060 | **Found by:** a researcher checking #298's review findings (2026-09-28) | **Serves:** anyone sharing a private capture with an outside reader | **Topic:** contracts | **Area:** bga | **Shape:** mechanical
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-1060 | **Found by:** a researcher checking #298's review findings (2026-09-28) | **Serves:** anyone sharing a private capture with an outside reader | **Topic:** contracts | **Area:** bga | **Shape:** mechanical
 
 ## Motivation
 
@@ -88,3 +88,7 @@ now returns a sentinel dropping the whole entry on any F/G-classed key.
 `B:artifact_weight_source` (`cas_walk`/`ref_absent`/`incomplete`/
 `budget_exceeded`); `project_refs_provenance.sha256` classed E,
 `.path` classed A; `build_outcome.suspended.suspended_seconds` classed C.
+
+**At close:** `jobserver.auth` classed B `{fd, fifo}`; `build_class`
+type/variant A; an F/G map key drops the entry; a C map key must be
+integer-like or the gap check refuses; policy gap 10 before, 0 after.

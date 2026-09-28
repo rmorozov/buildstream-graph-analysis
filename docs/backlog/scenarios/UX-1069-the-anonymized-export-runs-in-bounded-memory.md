@@ -1,6 +1,6 @@
 # UX-1069: the anonymized export runs in bounded memory
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-1062 | **Found by:** the owner's implementation review on #298 (2026-09-28), finding 2 | **Serves:** anyone sharing a large private capture | **Topic:** store | **Area:** bga | **Shape:** mechanical
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-1062 | **Found by:** the owner's implementation review on #298 (2026-09-28), finding 2 | **Serves:** anyone sharing a large private capture | **Topic:** store | **Area:** bga | **Shape:** mechanical
 
 ## Motivation
 
@@ -100,7 +100,7 @@ plus the four named files: `61 passed in 4.77s`.
 | `_repeats` -> False: each document decoded whole | (1) both | 2 failed, 16 passed |
 | `times` kept as a list, `min()` at rewrite | (1) by_cpu | 1 failed, 17 passed |
 | `_skip` decodes an unnamed value whole | (1)/(2) legacy_processes | 1 failed, 17 passed |
-| archive read into memory, written after approval | (3), (1) by_cpu | 4 failed, 14 passed |
+| archive write delayed past approval (corrected at close: packing in memory alone reddens nothing) | (3) the timing test only | 1 failed, 17 passed |
 | any decode accepted where it ends | (4) plane2, run-context at chunk 1 and 7 | 4 failed, 14 passed |
 | `residue()` reads a member whole | (1) by_cpu | 1 failed, 17 passed |
 | `residue()` through `tarfile` `r\|gz` | (1) by_cpu | 1 failed, 17 passed |
@@ -112,3 +112,7 @@ character is a delimiter (whitespace, `,:]}`) or the handle is spent.
 `tarfile`'s own `r|gz` inflates a whole 10 KiB compressed block at once,
 growing with compressibility: 512435 -> 576272 B for the N and 4N archives
 against 119972 -> 122867 through `gzip.open`.
+
+**State at close:** the published archive is mode 0600; scratch disk is
+about the uncompressed members plus the archive; concurrent exports to
+one path are last-`os.replace`-wins, as the spec states.

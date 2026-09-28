@@ -1,6 +1,6 @@
 # UX-1071: the residue scan reads a large member in linear time
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-1069 | **Found by:** the architect shaping UX-1069 (2026-09-28) | **Serves:** anyone sharing a large private capture | **Topic:** store | **Area:** bga | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-1069 | **Found by:** the architect shaping UX-1069 (2026-09-28) | **Serves:** anyone sharing a large private capture | **Topic:** store | **Area:** bga | **Shape:** judgement
 
 ## Motivation
 
@@ -68,3 +68,6 @@ Mutation table:
 
 All three mutations were reverted from the pre-mutation copy and
 reconfirmed green.
+
+**Deviation:** the flaky N/4N timing test was replaced after verification
+by the `start == 0` guard test above; scan 0.22 -> 4.04 MB/s.

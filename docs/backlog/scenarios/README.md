@@ -47,6 +47,10 @@ task file, which is the only place it ever lived twice.
 | UX-1056 | [navigating back after an in-page reveal does not re-fold the chapter](UX-1056-back-after-a-reveal-does-not-re-fold.md) | viewer | Medium | R1 | 🔴 Not Started |
 | UX-1057 | [the decomposition bar's aria-details twin table drops the certified lower-bound mark](UX-1057-the-drawing-routes-twin-table-drops-the-lower-bound-mark.md) | viewer | Medium | R1 | 🔴 Not Started |
 | UX-1058 | [the narrow-rail fold toggle is a click-only `<p>`, unreachable by keyboard](UX-1058-the-narrow-rail-toggle-is-unreachable-by-keyboard.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1090 | [the retro keys a ledger line by its own class, and "none reported" is no finding](UX-1090-the-retro-keys-a-ledger-line-by-its-own-class.md) | guards | High | every weekly retro, whose top class is its whole output | 🔴 Not Started |
+| UX-1091 | [the records writers queue instead of cancelling each other](UX-1091-the-records-writers-queue-instead-of-cancelling.md) | guards | High | every record CI measures, and the reader of main's run history | 🔴 Not Started |
+| UX-1092 | [a scenario declares its guard in one field, backfilled from the inferred column](UX-1092-a-scenario-declares-its-guard-in-one-field.md) | guards | High | whoever assesses an area's coverage, and every filing the `coverage` class comes from | 🔴 Not Started |
+| UX-1093 | [the Enter-on-a-reached-fold journey fails intermittently on the older Pythons](UX-1093-the-enter-on-a-reached-fold-journey-is-intermittent.md) | guards | Medium | every main run's matrix, and whoever reads a red one | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

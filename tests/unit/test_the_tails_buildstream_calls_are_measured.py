@@ -8,8 +8,6 @@ guard is that `tail.json`'s (or the ledger's) `calls` equal that log.
 """
 import json
 import os
-import pathlib
-import shutil
 import stat
 import time
 
@@ -173,8 +171,8 @@ def test_the_doctor_call_sits_under_before_the_build(tmp_path, monkeypatch):
     # this replaces it with one that also logs, so the call can be told
     # apart from the ones a real build/extraction would also make.
     log = tmp_path / "doctor_calls.jsonl"
-    stub_path = shutil.which("bst")
-    stub = pathlib.Path(stub_path)
+    stub = tmp_path / "path" / "bst"  # tailed_project's stub, never a real bst
+    assert stub.is_file()
     stub.write_text(
         "#!/bin/sh\n"
         f"python3 -c \"import json,sys; open({str(log)!r}, 'a').write("

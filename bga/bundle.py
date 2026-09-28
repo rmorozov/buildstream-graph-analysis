@@ -35,6 +35,7 @@ import re
 import shutil
 import tarfile
 import tempfile
+import unicodedata
 from collections.abc import Callable
 from datetime import datetime, timezone
 from typing import Optional
@@ -543,8 +544,15 @@ def residue_dictionary(originals) -> set:
             and not o.isdigit() and o.lower() not in public}
 
 
-#: A residue token or word-boundary span, lowercased ASCII only.
-_WORD = re.compile(r"[a-z0-9]+")
+#: A residue token or word-boundary span, case-folded, any Unicode script
+#: (excludes `_` so it stays a separator alongside `-`/`.`).
+_WORD = re.compile(r"[^\W_]+", re.UNICODE)
+
+
+def _fold(text: str) -> str:
+    """Case-fold then NFC-normalize, so an NFD original (e + combining
+    acute) and its NFC form (é) compare equal on both sides of a match."""
+    return unicodedata.normalize("NFC", text.casefold())
 
 
 def _residue_index(dictionary) -> tuple[dict, dict, int]:
@@ -555,7 +563,7 @@ def _residue_index(dictionary) -> tuple[dict, dict, int]:
     tokens any separator-holding form spans, for the n-gram join below."""
     variants, public = {}, _public_words()
     for token in dictionary:
-        low = token.lower()
+        low = _fold(token)
         for form in {low, re.sub(r"[-_.]", "", low),
                      *(re.sub(r"[-_.]", sep, low) for sep in "-_.")}:
             if form == low or (len(form) >= RESIDUE_MIN and form not in public):
@@ -615,10 +623,13 @@ def residue(archive: str, dictionary) -> list[str]:
                       *map(str, info.pax_headers.values())]
             handle = tar.extractfile(info)
             decoder = codecs.getincrementaldecoder("utf-8")("replace")
-            text, found = "\n" + "\n".join(fields).lower() + "\n", set()
+            text, found = _fold("\n" + "\n".join(fields) + "\n"), set()
             while True:
                 block = handle.read(RESIDUE_CHUNK) if handle is not None else b""
-                text += decoder.decode(block, final=not block).lower()
+                # normalize the carry together with the new text: a base character
+                # held from the prior chunk composes here with a combining mark
+                # that starts this one, not separately in either chunk alone
+                text = _fold(text + decoder.decode(block, final=not block))
                 found.update(_residue_hits(text, variants, single, span, wait=bool(block)))
                 if not block:
                     break

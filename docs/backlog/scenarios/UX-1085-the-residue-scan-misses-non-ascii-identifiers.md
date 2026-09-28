@@ -32,3 +32,34 @@ one residue chunk and (2) split across a chunk boundary each trip
 cases pass through clean.
 
 ## Outcome
+
+Gap measured: `_WORD = re.compile(r"[a-z0-9]+")` cannot match `café`
+or `иванов`; `test_the_residue_scan_matches_non_ascii_identifiers.py`
+reddened all four non-ASCII cases against the pre-fix code.
+
+Close measured: `_WORD` now `re.compile(r"[^\W_]+", re.UNICODE)`
+(word chars, `_` excluded so it stays a separator alongside `-`/`.`);
+`_residue_index` and `residue()` fold through a shared `_fold()`
+(`casefold` then `unicodedata.normalize("NFC", ...)`), applied to the
+carry joined with the new decoded text before each `_residue_hits`
+call, so a base character held from one chunk composes with a
+combining mark starting the next; `reach` is measured on the already-
+normalized `variants` keys. All 9 new cases pass, plus
+`test_the_residue_scan_is_linear.py` (6 cases) and
+`test_an_anonymized_bundle_trips_on_a_leftover_name.py`/
+`test_the_anonymized_export_runs_in_bounded_memory.py` (43 cases)
+unaffected. `dev_touching.py --base e5075375`: 1925 passed, 3 skipped.
+
+Mutation table:
+
+| mutation | reddened | count |
+|---|---|---|
+| `_WORD` reverted to `[a-z0-9]+` | 4 non-ASCII cases (café/иванов, whole-chunk and split) | 4 failed / 9 |
+| carry made byte-counted (`block.decode(...)` per chunk, no incremental decoder) | both split-boundary cases (café, иванов) | 2 failed / 9 |
+| `_fold()` dropped NFC-normalization (casefold only) | 4 NFC/NFD cross-form cases | 4 failed / 9 |
+
+Deviation: a name written with no separator (張偉李娜, CJK, no
+whitespace) still does not trip - the same limitation as two ASCII
+names concatenated with no separator, pre-existing and out of this
+task's scope.
+

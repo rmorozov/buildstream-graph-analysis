@@ -36,7 +36,7 @@ from collections.abc import Callable
 from datetime import datetime, timezone
 from typing import Optional
 
-from . import __version__, anonymize, contracts, disclosure, run_store
+from . import __version__, anonymize, contracts, disclosure, public_names, run_store
 from .plural import plural
 
 SCHEMA = "bundle-manifest/v1"
@@ -166,8 +166,8 @@ def neutral_tarinfo(arcname: str, size: int) -> tarfile.TarInfo:
     return info
 
 
-def anonymized_manifest(manifest: dict, key: bytes, pmap: "anonymize.PseudonymMap"
-                        ) -> dict:
+def anonymized_manifest(manifest: dict, key: bytes, pmap: "anonymize.PseudonymMap",
+                        junctions: tuple = ()) -> dict:
     """`manifest`, with the fields 6.9 names as identifying dropped or
     pseudonymized: `stamp` through `anonymize.pseudonymize` (the stamp is
     a directory name, `.bga/runs/<stamp>/`), `packed_at` removed outright
@@ -181,6 +181,10 @@ def anonymized_manifest(manifest: dict, key: bytes, pmap: "anonymize.PseudonymMa
         manifest["stamp"], "directory", key, pmap)
     transformed.pop("packed_at", None)
     transformed["key_fingerprint"] = anonymize.key_fingerprint(key)
+    if junctions:
+        # UX-1065: which declared junctions passed their names through, and
+        # how many - the export's own account, not a claim the far side must trust blind.
+        transformed["public_junctions"] = list(junctions)
     return transformed
 
 
@@ -305,8 +309,10 @@ def _rewrite(node: dict, value, pattern: str, leaf, rename):
 class _Anonymizer:
     """One export's walk: the values it rewrote, per class, and what it kept verbatim."""
 
-    def __init__(self, key: bytes, pmap: "anonymize.PseudonymMap"):
-        self.key, self.pmap = key, _Recording(pmap)
+    def __init__(self, key: bytes, pmap: "anonymize.PseudonymMap", public: frozenset = frozenset(),
+                public_junctions: frozenset = frozenset()):
+        self.key, self.pmap, self.public = key, _Recording(pmap), public
+        self.public_junctions = public_junctions
         self.counts: collections.Counter = collections.Counter()
         self.kept: set = set()
         self.times: dict = collections.defaultdict(list)
@@ -355,11 +361,10 @@ class _Anonymizer:
             if isinstance(value, str):
                 self.kept.add(value)
             return value
+        if head == "A":
+            return self._element_name(value, key, pmap)
         command = head == "F" and (self.policy, pattern) in _COMMAND_PATHS
         self.counts[{"F": "F rebuilt" if command else "F dropped"}.get(head, head)] += 1
-        if head == "A":
-            pmap.originals.add(value)
-            return anonymize.pseudonymize_identifier(value, key, pmap)
         if hostname:
             pmap.originals.add(str(value))
             return anonymize.pseudonymize(str(value), "host", key, pmap)
@@ -374,6 +379,27 @@ class _Anonymizer:
         if isinstance(value, int) and shifted == shifted.to_integral_value():
             return int(shifted)
         return float(shifted)
+
+    def _element_name(self, value: str, key: bytes, pmap):
+        """A class-A `.bst` name: whole, junction-only, or fully pseudonymized.
+
+        UX-1065: a declared junction's own name is never the secret; a
+        listed member's name is public too, so both pass through - only the
+        rest of the path, and an unlisted element under a declared junction,
+        still reach `pseudonymize_identifier`.
+        """
+        if value in self.public:
+            self.kept.add(value)
+            return value
+        junction, sep, rest = value.partition(":")
+        if sep and junction in self.public_junctions and rest.endswith(".bst"):
+            self.counts["A"] += 1
+            self.kept.add(junction)
+            pmap.originals.add(rest)
+            return f"{junction}{sep}{anonymize.pseudonymize_element_path(rest, key, pmap)}"
+        self.counts["A"] += 1
+        pmap.originals.add(value)
+        return anonymize.pseudonymize_identifier(value, key, pmap)
 
     def _command(self, value):
         """Rebuilt through the bare map: an argument is not a known name, so
@@ -576,9 +602,17 @@ def export_anonymized(snapshot: str, key: bytes, pmap: "anonymize.PseudonymMap",
         raise BundleError(
             f"{snapshot} holds none of the files the capture-layout "
             f"contract names, so there is nothing to carry")
-    walk = _Anonymizer(key, pmap)
+    # UX-1065: the project the snapshot sits under (`<project>/.bga/runs/<stamp>`),
+    # so a declared public junction's config is read without a second argument.
+    project = os.path.dirname(os.path.dirname(os.path.dirname(snapshot)))
+    declared = run_store.public_junctions(project)
+    try:
+        public, junctions = public_names.public_names(declared) if declared else (frozenset(), [])
+    except public_names.PublicNamesError as error:
+        raise BundleError(str(error)) from error
+    walk = _Anonymizer(key, pmap, public, frozenset(declared))
     shipped, payloads, dropped = _anonymized_members(snapshot, manifest["members"], walk)
-    anon_manifest = anonymized_manifest(dict(manifest, members=shipped), key, walk.pmap)
+    anon_manifest = anonymized_manifest(dict(manifest, members=shipped), key, walk.pmap, tuple(junctions))
     destination = output or anonymized_output()
     archive = _pack(anon_manifest, payloads)
     dictionary = residue_dictionary(walk.pmap.originals)

@@ -252,6 +252,8 @@ bga/bundle.py          a capture packed to carry, and what the far
 bga/disclosure.py      what each bundle member's value paths disclose,
                        class A-H per path
 bga/anonymize.py       keyed, shape-keeping pseudonyms and the local map
+bga/public_names.py    a declared public junction's name list, from
+                       `git ls-tree` at its tag, never the working tree
 bga/sources.py         the source inventory and resource identity
 bga/plane2.py          what a Plane 2 report is, and which shape one is
 bga/hostinfo.py        the host manifest; the cross-host refusal

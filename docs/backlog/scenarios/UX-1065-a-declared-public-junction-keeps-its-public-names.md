@@ -39,3 +39,37 @@ Class:     product
 Split:     one track after UX-1061 and UX-1062.
 
 ## Outcome
+
+Gap measured: before this task no `.bst` name ever survived export -
+`test_an_anonymized_bundle_trips_on_a_leftover_name.py` packs 14+
+fixtures and every element uid comes back a pseudonym; a fork of a
+public subproject looked identical to the subproject itself.
+
+Close measured: `pytest tests/unit/test_a_public_junction_keeps_only_public_names.py
+-q` → `2 passed in 0.76s`. `libfoo.bst` (tagged) survives verbatim under
+`subproj-junction.bst:`; `forked.bst` (added after the tag) comes back
+`subproj-junction.bst:e-....bst` - the junction name stays (it is the
+declared-public fact), the fork's own element name does not. With
+nothing declared both are pseudonymized (`test_nothing_declared_pseudonymizes_both`).
+`python3 tools/dev_touching.py --base 7bd141a2 --loud`: 2372 passed, 12
+skipped. `python3 tools/dev_sizes.py --check`: `sizes ok: 154 file(s)
+measured`. `python3 tools/dev_close_task.py --check`: `0 problem(s)
+over 8 propert(y/ies), 1027 backlog row(s)`.
+
+Mutation table:
+
+| mutation | reddened | count |
+|---|---|---|
+| `bga/bundle.py`: `if value in self.public:` → `if True:` (drop the list intersection) | both guard tests | 2 failed / 2 |
+| `bga/public_names.py`: `ls-tree ... tag` → `ls-tree ... HEAD` (working tree, not the tag) | `test_the_tagged_name_passes_and_the_forked_one_does_not` | 1 failed / 2 |
+
+Deviation: the Decision's Files line named `bga/anonymize.py` as
+touched; the pass-through and the junction-only-literal case were both
+put in `bundle.py`'s `_Anonymizer._element_name` (its one caller, per
+the Decision's own parenthetical) instead, so `anonymize.py` is
+unchanged. The Decision did not say whether an unlisted element under a
+declared junction keeps the junction name literal or gets a fresh `j-`
+pseudonym for it too; the literal case was necessary - pseudonymizing
+it collided the residue scanner against the same junction name kept
+verbatim by a listed sibling - and matches the Motivation ("knowing an
+element is freedesktop-sdk's `gcc.bst`... ").

@@ -88,6 +88,10 @@ VOCABULARIES = {
     "spine_policy": Vocabulary(frozenset({"off", "auto", "on", "always"}), None),
     "parallelism_finding": Vocabulary(frozenset(
         {"pinned_to_one_job", "underachieved_requested_jobs"}), None),
+    "jobserver_auth": Vocabulary(frozenset({"fd", "fifo"}), None),
+    "jobserver_mode": Vocabulary(frozenset({"off", "auto", "n"}), None),
+    "artifact_weight_source": Vocabulary(frozenset(
+        {"cas_walk", "ref_absent", "incomplete", "budget_exceeded"}), None),
 }
 
 _PER_ELEMENT = "{A}"
@@ -135,9 +139,31 @@ POLICIES = {
         "native_max_jobs_source": "B:provenance",
         "trace_epsilon_us": "C",
         "cpu_accounting.effective_cpus": "C",
+        "cpu_budget": "C",
+        "memory_budget_mb": "C",
+        "estimated_job_memory_mb": "C",
+        "jobserver_env[].name": "F",
+        "jobserver_env[].prefix": "F",
+        "jobserver.mode": "B:jobserver_mode",
+        "jobserver.ceiling": "C",
+        "jobserver.seed": "C",
+        "jobserver.auth": "B:jobserver_auth",
+        "jobserver.project_max_jobs": "C",
+        "build_class.type": "A",
+        "build_class.variant.{A}": "A",
+        "artifact_weights.cachedir": "A",
+        "artifact_weights.project": "A",
+        "artifact_weights.run_unique_bytes": "C",
+        "artifact_weights.walk_dirs_read": "C",
+        "artifact_weights.elements.{A}.files_bytes": "C",
+        "artifact_weights.elements.{A}.buildtree_bytes": "C",
+        "artifact_weights.elements.{A}.source": "B:artifact_weight_source",
+        "project_refs_provenance.path": "A",
+        "project_refs_provenance.sha256": "E",
         "build_outcome.failed_count": "C",
         "build_outcome.failed_elements[]": "A",
         "build_outcome.interrupted": "C",
+        "build_outcome.suspended.suspended_seconds": "C",
         "cache_capacity.cache_used_bytes": "C",
         "cache_capacity.cache_used_source": "B:provenance",
         "cache_capacity.cachedir": "A",
@@ -208,11 +234,19 @@ POLICIES = {
         **dict.fromkeys(("cached_kb", "cores", "cpu_busy_cores", "load1", "mem_available_kb", "mem_free_kb", "mem_total_kb", "net_rx_bytes", "net_tx_bytes", "pgmajfault", "pswpin", "pswpout", "swap_free_kb", "swap_total_kb"), "C"),
     },
     "plane2/v3": {
+        "schema": "B:schema",
         **dict.fromkeys(("matched_count", "max_concurrency", "open_count", "process_count", "wall_span_s", "wrapped_command_exit_code"), "C"),
         "open_records_note": "F",
         "static_binary_disclaimer": "F",
         "by_binary.{B:binary}": "C",
         "by_element.{A}": "C",
+        "commands_not_observed.available": "C",
+        "commands_not_observed.note": "F",
+        "commands_not_observed.elements_with_gap[]": "A",
+        "commands_not_observed.per_element.{A}.named[]": "B:binary",
+        "commands_not_observed.per_element.{A}.observed[]": "B:binary",
+        "commands_not_observed.per_element.{A}.named_not_observed[]": "B:binary",
+        "commands_not_observed.per_element.{A}.commands_not_read": "C",
         f"binary_cost.{_PER_ELEMENT}.available": "C",
         f"binary_cost.{_PER_ELEMENT}.measured_cpu_us": "C",
         f"binary_cost.{_PER_ELEMENT}.by_count[].binary": "B:binary",
@@ -272,7 +306,7 @@ POLICIES = {
         "invocation_correlation.relabelled_processes": "C",
         "invocation_correlation.resolved.{C}": "A",
         **{f"opens_captured.{_PER_ELEMENT}.{key}": "C" for key in (
-            "dropped", "paths", "processes", "windows")},
+            "dropped", "paths", "processes", "windows", "relative", "dirfd")},
         "peak_memory.available": "C",
         "peak_memory.note": "F",
         **{f"peak_memory.per_element.{_PER_ELEMENT}.{key}": "C" for key in (
@@ -282,7 +316,8 @@ POLICIES = {
         "per_element_parallelism[].unclassified_binaries.{B:binary}": "C",
         **{f"per_element_parallelism[].{key}": "C" for key in (
             "achieved_vs_requested", "mean_work_concurrency",
-            "peak_work_concurrency", "requested_jobs", "work_process_count",
+            "peak_work_concurrency", "requested_jobs", "resolved_jobs",
+            "jobs_denominator", "work_process_count",
             "work_process_lifetime_s", "work_span_s")},
         "redundant_operations[].elements[]": "A",
         "redundant_operations[].worst_element": "A",
@@ -292,7 +327,29 @@ POLICIES = {
             "max_element_duration_s", "occurrence_count", "total_duration_s")},
         "redundant_operations_coverage.excluded_element_command_blocks": "C",
         "redundant_operations_coverage.excluded_unresolved_only": "C",
+        "redundant_operations_coverage.findings_cap": "C",
+        "redundant_operations_coverage.omitted_beyond_cap": "C",
+        "redundant_operations_coverage.total_findings": "C",
+        "redundant_operations_coverage.display_floor_seconds": "C",
         "redundant_operations_coverage.note": "F",
+        "resource_pressure.available": "C",
+        "resource_pressure.note": "F",
+        "resource_pressure.measured": "C",
+        "resource_pressure.unmeasured": "C",
+        **{f"resource_pressure.per_element.{_PER_ELEMENT}.{key}": "C" for key in (
+            "read_bytes", "written_bytes", "major_faults", "minor_faults",
+            "voluntary_switches", "involuntary_switches", "measured",
+            "unmeasured", "coverage")},
+        "process_outcomes.available": "C",
+        "process_outcomes.note": "F",
+        "process_outcomes.unknown": "C",
+        "process_outcomes.exited_zero": "C",
+        "process_outcomes.exited_nonzero": "C",
+        "process_outcomes.killed": "C",
+        "process_outcomes.killed_by_signal.{C}": "C",
+        f"process_outcomes.per_element.{_PER_ELEMENT}.killed": "C",
+        f"process_outcomes.per_element.{_PER_ELEMENT}.exited_nonzero": "C",
+        f"process_outcomes.per_element.{_PER_ELEMENT}.statuses.{{C}}": "C",
         "spine_policy.policy": "B:spine_policy",
         "spine_policy.sandboxes": "C",
         "spine_policy.spine_traced": "C",
@@ -410,6 +467,21 @@ def _refused(klass: str, value: Any) -> bool:
             and not vocab.admits(value))
 
 
+#: A class-C *key* names a number (a pid, a signal, an exit status), not a
+#: measurement of its own - `_refused` only checks a `B:` vocabulary, so a
+#: class-C key otherwise accepted any string verbatim.
+_INTEGER_KEY_RE = re.compile(r"-?\d+")
+
+
+def _key_refused(klass: str, key: Any) -> bool:
+    """A map key's class, checked separately from `_refused`'s leaf values:
+    a class-C key must itself look like the number it claims to be, fail-
+    closed against anything else smuggled in as a key."""
+    if klass == "C":
+        return not (isinstance(key, str) and _INTEGER_KEY_RE.fullmatch(key))
+    return _refused(klass, key)
+
+
 def _walk_map(node: dict, value: dict, path: str) -> Iterator[Gap]:
     literal = {k: v for k, v in node.items() if not k.startswith(("{", "[", "."))}
     placeholder = next((k for k in node if k.startswith("{")), None)
@@ -421,7 +493,7 @@ def _walk_map(node: dict, value: dict, path: str) -> Iterator[Gap]:
         if key in literal:
             yield from _walk(literal[key], item, where)
         elif placeholder is not None:
-            if _refused(placeholder[1:-1], key):
+            if _key_refused(placeholder[1:-1], key):
                 yield Gap(where, f"key {key!r} is not on its allowlist")
             yield from _walk(node[placeholder], item, where)
         else:

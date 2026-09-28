@@ -54,3 +54,11 @@ Mutation table:
 | mutation | reddened | count |
 |---|---|---|
 | drop `sys.intern(...)`, `.add(line)` | `test_the_opens_pass_peaks_under_60_percent_of_the_uninterned_rss` | 1 failed (560,504 KB interned vs 559,916 KB uninterned, no longer under 60%) |
+
+**Deviation (round 147 integration).** The guard first read `ru_maxrss`, which
+Linux carries across `exec`, so under `make push-check` both children reported
+their xdist worker's peak (`616800 KB` either way, red). It now reads `VmHWM`
+from `/proc/self/status`. A parent holding 700 MB reproduces it: `ru_maxrss`
+728,004 KB against `VmHWM` 10,240 KB in the same child. The old guard reds
+under that parent and the new one passes. Dropping `sys.intern` still reddens
+the new guard (560,348 against 559,816 KB).

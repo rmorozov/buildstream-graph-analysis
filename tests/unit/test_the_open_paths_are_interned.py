@@ -17,14 +17,18 @@ import textwrap
 ELEMENTS, PROCESSES_PER_ELEMENT, PATHS_PER_PROCESS = 1202, 160, 50
 
 _MEASURE = textwrap.dedent("""
-    import resource, sys
+    import sys
     if sys.argv[2] == "no-intern":
         sys.intern = lambda s: s
     sys.path.insert(0, sys.argv[3])
     from tools.bst_native_build_tracer import parse_open_lines
     with open(sys.argv[1]) as handle:
         report = parse_open_lines(handle)
-    rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    # VmHWM, not ru_maxrss: Linux carries ru_maxrss across exec, so a
+    # child of a large xdist worker reads the worker's peak.
+    with open('/proc/self/status') as status:
+        rss = next(int(line.split()[1]) for line in status
+                   if line.startswith('VmHWM:'))
     total = sum(len(v["paths"]) for v in report.values())
     print(rss, total, sorted(report), sep="|")
 """)

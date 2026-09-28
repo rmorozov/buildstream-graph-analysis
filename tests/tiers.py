@@ -629,7 +629,7 @@ LARGE = (
     # viewports, every journey on one load each and J2 per chapter.
     # Measured alone in one process: 37.28 / 37.64 / 37.12s.
     "tests/unit/test_pointer_travel_is_a_budget.py",                 #   37.3s
-    # `UX-1076`: one interned 5,002-element capture, no browser.
+    # `UX-1076`: two 1,202-element opens passes, no browser.
     # Measured alone in one process: 15.96 / 14.91 / 16.37s.
     "tests/unit/test_the_open_paths_are_interned.py",                #   16.0s
 )

@@ -29,10 +29,11 @@ What the cut needs, as read on `6faf61bb` in round 147:
 
 ## Required Fix
 
-Following `docs/contributing/release-guide.md` §"Cutting one", add a
-0.5.0 `extending` row to `CHANGELOG.md` with its generated body and
-`state` block, freeze 0.4.1 with its digest, and bump `bga/__init__.py`
-and `pyproject.toml` together. The tag `v0.5.0` is Ruslan's, at merge.
+Following `docs/contributing/release-guide.md` §"Cutting one", rename
+`CHANGELOG.md`'s `Unreleased` row (UX-1078 adds it; Ruslan's call,
+2026-09-28) to 0.5.0 `extending`. Give it its generated body, freeze
+0.4.1 with its digest, and bump `bga/__init__.py` and `pyproject.toml`
+together. The tag `v0.5.0` is Ruslan's, at merge.
 
 ## Out of Scope
 

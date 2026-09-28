@@ -195,8 +195,10 @@ def _differences(real, anon, shift: int, path=""):
     return []
 
 
-#: A topology starts at 0, where the export's shift is 0; this makes it a real one.
+#: A topology's own shift, real minus `bundle.CANONICAL_ORIGIN_US["wall"]`
+#: (`UX-1062`) rather than 0 - this makes it a real one, not a stub at 0.
 EPOCH_US = 1_790_000_000_000_000
+TOPOLOGY_SHIFT = EPOCH_US - bundle.CANONICAL_ORIGIN_US["wall"]
 
 
 def _topology(name: str, tmp_path: pathlib.Path) -> pathlib.Path:
@@ -256,7 +258,7 @@ def test_every_exemption_names_a_path_some_capture_has(tmp_path):
         where = tmp_path / str(index)
         run = which if kind == "golden" else _topology(which, where)
         case = _Case(run, where)
-        assert kind == "golden" or case.shift == EPOCH_US, (which, case.shift)
+        assert kind == "golden" or case.shift == TOPOLOGY_SHIFT, (which, case.shift)
         shapes |= _shapes(case.real)
     dead = sorted(p for p in NOT_COMPARED | ABSOLUTE if p not in shapes)
     dead += sorted(p for p in LISTED if not any(_matches(p, s) for s in shapes))

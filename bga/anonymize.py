@@ -283,13 +283,45 @@ _KEPT_FLAG = re.compile(r"-(?:O[0-3sgz]?|Ofast|g[0-3]?|j\d*|[cESvwsP]|shared|sta
 _NAMED_FLAG = re.compile(r"(--|-[fmW]|-std|-(?=[a-km-np-z][a-z0-9-]{2}))([a-z][a-z0-9+-]*)?(=.*)?", re.S)
 _MACRO = re.compile(r"([A-Za-z_][A-Za-z0-9_]*)(?::([A-Z]+))?(=.*)?", re.S)
 
+#: The only flag names a rebuilt command keeps verbatim, on any `argv[0]`;
+#: any other name becomes an `m-` pseudonym behind its dashes (6.6, 6.11).
+PUBLIC_FLAGS = frozenset([
+    # long options: cmake, make, ninja, meson, configure, the GNU toolchain
+    "--build", "--install", "--target", "--config", "--parallel", "--prefix", "--libdir",
+    "--bindir", "--includedir", "--datadir", "--sysconfdir", "--localstatedir", "--host",
+    "--help", "--version", "--verbose", "--quiet", "--silent", "--jobs", "--keep-going",
+    "--output", "--sysroot", "--as-needed", "--no-as-needed", "--whole-archive",
+    "--no-whole-archive", "--start-group", "--end-group", "--gc-sections", "--build-id",
+    "--hash-style", "--eh-frame-hdr", "--enable-shared", "--disable-shared",
+    "--enable-static", "--disable-static", "--with-pic", "--buildtype", "--wrap-mode",
+    "--switch", "--cyan", "--green", "--red", "--blue", "--magenta", "--bold",
+    "--progress-dir", "--progress-num", "--mode", "--tag", "--preserve-dup-deps",
+    # single-dash words: gcc, cc1, collect2, ld
+    "-std", "-quiet", "-version", "-dumpdir", "-dumpbase", "-dumpbase-ext", "-imultiarch",
+    "-isystem", "-iquote", "-idirafter", "-include", "-print-sysroot", "-nostdlib",
+    "-nostdinc", "-nostartfiles", "-pie", "-no-pie", "-plugin", "-plugin-opt", "-soname",
+    "-rpath", "-dynamic-linker", "-export-dynamic", "-auxbase", "-auxbase-strip",
+    # -f, -m, -W families
+    "-fPIC", "-fpic", "-fPIE", "-fpie", "-flto", "-fno-lto", "-fcommon", "-fno-common",
+    "-fexceptions", "-fno-exceptions", "-frtti", "-fno-rtti", "-fopenmp", "-fvisibility",
+    "-fdiagnostics-color", "-fasynchronous-unwind-tables", "-fcf-protection",
+    "-fstack-clash-protection", "-fstack-protector", "-fstack-protector-strong",
+    "-fstack-protector-all", "-fno-omit-frame-pointer", "-fomit-frame-pointer",
+    "-fno-plt", "-fdebug-prefix-map", "-ffile-prefix-map", "-fmacro-prefix-map",
+    "-ffunction-sections", "-fdata-sections", "-fno-strict-aliasing", "-fwrapv",
+    "-march", "-mtune", "-mcpu", "-m32", "-m64", "-mfpu", "-mfloat-abi", "-mabi",
+    "-Wall", "-Wextra", "-Werror", "-Wpedantic", "-Wformat", "-Wformat-security",
+    "-Wno-error", "-Wshadow", "-Wconversion", "-Wno-unused-parameter",
+    "-Wno-unused-variable", "-Wno-deprecated-declarations", "-Wunused",
+])
+
 
 def rebuild_command(cmd, key, pmap, public_binaries):
     """A class F command line rebuilt from its grammar (`anonymized-bundle.md` 6.6).
 
     `argv[0]`'s basename is kept when public, else a `b-` pseudonym; a
-    flag keeps its name; every value slot, argument and private macro
-    is a pseudonym. Nothing of the original survives outside that.
+    flag keeps its name only from `PUBLIC_FLAGS`; every value slot,
+    argument, private flag and private macro is a pseudonym.
     """
     if not isinstance(cmd, str):
         return cmd
@@ -316,9 +348,13 @@ def _argument(word, key, pmap):
         if kind is not None:
             kind = kind if kind in _CMAKE_TYPES else pseudonymize(kind, "macro", key, pmap)
         return f"-D{name}{'' if kind is None else ':' + kind}{_assigned(assigned, key, pmap)}"
+    flag, equals, assigned = word.partition("=")
+    if flag in PUBLIC_FLAGS:
+        return flag + _assigned(equals + assigned, key, pmap)
     named = _NAMED_FLAG.fullmatch(word)
-    if named and (named.group(2) or named.group(1) == "-std"):
-        return named.group(1) + (named.group(2) or "") + _assigned(named.group(3), key, pmap)
+    if named and named.group(2):
+        return (named.group(1) + pseudonymize(named.group(2), "macro", key, pmap)
+                + _assigned(named.group(3), key, pmap))
     return word[:2] + _value(word[2:], key, pmap)
 
 

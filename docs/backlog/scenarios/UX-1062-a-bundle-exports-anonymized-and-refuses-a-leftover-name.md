@@ -70,7 +70,7 @@ UX-1067's test fixture was reshaped to documents the policy clears,
 and passes `approve`.
 
 **Mutations**, each on a copy-backed file (`/tmp/<track>/mutate.py`),
-reverted from the copy, 23 green after:
+reverted from the copy, 23 green after (24 after the flag fix):
 
 | mutation | reddened | count |
 |---|---|---|
@@ -84,5 +84,15 @@ reverted from the copy, 23 green after:
 | class F kept, not dropped | residue scan trips on prose naming elements | 5 failed, 18 passed |
 | no time shift | both time tests | 2 failed, 21 passed |
 | commands kept raw | residue scan trips on `core.bst` in a cmd | 5 failed, 18 passed |
+
+| any `--word` flag kept (verifier's leak) | `test_a_private_long_flag_travels_as_a_pseudonym_on_any_binary` | 1 failed, 23 passed |
+
+The verifier found `--word` flag names kept verbatim on any `argv[0]`
+(`cc1plus --acme-license-server=foo`); now a named flag (`--x`, `-word`,
+`-f`/`-m`/`-W`) keeps its name only from `anonymize.PUBLIC_FLAGS`, else
+an `m-` pseudonym behind its dashes. A private name equal to a public
+word (`toolchain.bst`) is scanned only as its whole value, so its bare
+stem in a kept class D string does not trip the residue scan: accepted,
+the stem is a public word and carries nothing private.
 
 In passing: `bga/anonymize.py` added to the fixing guide's context map.

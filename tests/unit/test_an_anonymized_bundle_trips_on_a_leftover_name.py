@@ -203,6 +203,24 @@ def test_host_samples_shift_on_their_own_clock_and_keep_every_delta(tmp_path):
         real[1]["t"] - real[0]["monotonic_at_start"], abs=1e-9)
 
 
+def _private_flags(document):
+    for operation, argv0 in zip(document["redundant_operations"], ("/usr/bin/cc1plus", "acme-codegen")):
+        operation["example_cmd"] = operation["signature"] = f"{argv0} --acme-license-server=foo -O2"
+
+
+def test_a_private_long_flag_travels_as_a_pseudonym_on_any_binary(tmp_path):
+    path, _manifest, pmap = _export(tmp_path, "macro_micro", {"plane2.json": _private_flags})
+    decoded = _decoded(path)
+    assert "acme" not in "\n".join(decoded.values()).lower()
+    public, private = (op["example_cmd"].split() for op in
+                       json.loads(decoded["capture/plane2.json"])["redundant_operations"][:2])
+    assert public[0] == "cc1plus" and private[0].startswith("b-")
+    for words in (public, private):
+        flag = words[1].split("=")[0]
+        assert flag.startswith("--m-") and words[2] == "-O2"
+        assert pmap.resolve(flag[2:]) == "macro\0acme-license-server"
+
+
 def test_free_text_is_rebuilt_or_dropped(tmp_path):
     path, _manifest, _pmap = _export(tmp_path, "macro_micro")
     plane2 = json.loads(_decoded(path)["capture/plane2.json"])

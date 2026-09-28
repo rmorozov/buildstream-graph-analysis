@@ -34,6 +34,7 @@ foundation tier with project.conf's variables: {bga-foundation:
 Full background: docs/guides/real-project.md
 """
 import argparse
+import functools
 import gzip
 import json
 import os
@@ -332,6 +333,8 @@ def take_snapshot(project: str, command: list[str], config: dict,
     from .bst_native_build_tracer import main as capture_main
 
     snapshot = snapshot or run_store.new_snapshot_dir(project)
+    stamp = _producer_stamp()
+    progress.reset_ledger(on_row=lambda: _write_tail(snapshot, stamp))
     mode, ceiling, seed = resolve_jobserver_ceiling(jobserver, command, cpu_count=cpu_count)
     set_jobserver_mode_env(mode)
     _set_baseline_run_dir_env(project)
@@ -381,6 +384,43 @@ def take_snapshot(project: str, command: list[str], config: dict,
         with progress.timed("raw log gzip", say="Compressing the raw Plane 2 log..."):
             _compress_raw_log(snapshot)
     return snapshot, exit_code
+
+
+@functools.lru_cache(maxsize=1)
+def _producer_stamp() -> Optional[dict]:
+    from bga import producer
+
+    try:
+        return producer.stamp()
+    except Exception:  # provenance never fails a capture (`producer.add`)
+        return None
+
+
+def _write_tail(snapshot: str, stamp: Optional[dict], complete: bool = False) -> None:
+    """UX-1078: the progress ledger as `tail/v1`, replaced whole after
+    every phase so an interrupted tail keeps the rows it finished."""
+    from bga import schemas
+
+    recorded = progress.ledger()
+    document = schemas.stamp({"producer": stamp,
+                              "build_wall_us": recorded["build_wall_us"],
+                              "phases": recorded["phases"],
+                              "complete": complete}, schemas.TAIL)
+    path = os.path.join(snapshot, run_store.TAIL_NAME)
+    try:
+        with open(path + ".tmp", "w", encoding="utf-8") as handle:
+            json.dump(document, handle, indent=2)
+        os.replace(path + ".tmp", path)
+    except OSError as error:
+        print(f"Warning: could not write {path} ({error}).", file=sys.stderr)
+
+
+def _close_tail(snapshot: str) -> None:
+    """The tail finished: `complete: true`, its total line, and the
+    ledger detached so a later phase in this process writes nowhere."""
+    _write_tail(snapshot, _producer_stamp(), complete=True)
+    progress.total_line()
+    progress.reset_ledger()
 
 
 RAW_LOG_COMPRESSLEVEL = 6  # UX-1075: 3.1s vs 16.0s at level 9, 31MB vs 30MB
@@ -676,7 +716,6 @@ def main(argv: Optional[list[str]] = None) -> int:
     # against, and offering it as `@prev` produces an error about a
     # path the user never typed.
     previous = run_store.list_runs(project)
-    progress.reset_ledger()
     snapshot, build_exit = take_snapshot(project, command, config,
                                          diagnose=args.diagnose,
                                          no_inject=args.no_inject,
@@ -695,7 +734,7 @@ def main(argv: Optional[list[str]] = None) -> int:
               f"build exited {build_exit}.\n"
               f"Diagnostics: {os.path.join(snapshot, PLANE2_NAME)}"
               f".diagnostics.jsonl", file=sys.stderr)
-        progress.total_line()
+        _close_tail(snapshot)
         return build_exit
 
     run_dir = os.path.join(snapshot, RUN_SUBDIR)
@@ -720,7 +759,7 @@ def main(argv: Optional[list[str]] = None) -> int:
             print("Re-run with --diagnose to record what the bwrap shim "
                   "received and exec'd; --no-inject then says whether the "
                   "rewrite is what breaks it.", file=sys.stderr)
-        progress.total_line()
+        _close_tail(snapshot)
         return build_exit or 1
 
     print()
@@ -752,7 +791,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     with progress.timed("store size", say="Weighing the store..."):
         _say_what_it_weighs(snapshot, project)
         _warn_if_large(project)
-    progress.total_line()
+    _close_tail(snapshot)
     # UX-738: round 100's gate read a complete-looking report next to
     # `assert 255 == 0` with nothing in either stream saying why. This is
     # the last thing printed, so a reader who only sees the tail still
@@ -1277,6 +1316,8 @@ def store_listing(project: str, window: Optional[int] = None) -> dict:
         # declared nothing, so the listing is byte-identical to today's.
         if measured.get("build_class"):
             rows[-1]["build_class"] = measured["build_class"]
+        # UX-1078: bga's own tail beside the build; absent before tail.json.
+        rows[-1].update(_tail_measurements(path))
     # Before the window, not after: a verdict compares a run with the
     # one before it, and the first row of a window has a predecessor.
     _mark_verdicts(rows)
@@ -1291,6 +1332,19 @@ def store_listing(project: str, window: Optional[int] = None) -> dict:
         "total_bytes": sum(row["bytes"] for row in rows),
     }, schemas.STORE)
 
+
+
+def _tail_measurements(snapshot: str) -> dict:
+    """`bga_tail_us` (the phases' sum) and `build_wall_us`, each absent
+    where `tail/v1` does not carry it."""
+    tail = run_store.read_tail(snapshot) or {}
+    phases, build = tail.get("phases"), tail.get("build_wall_us")
+    out = {}
+    if isinstance(phases, list):
+        out["bga_tail_us"] = progress.tail_us(phases)
+    if isinstance(build, int):
+        out["build_wall_us"] = build
+    return out
 
 
 def _run_measurements(snapshot: str) -> dict:
@@ -1463,6 +1517,16 @@ def _capacity(project: str, spec: str, fmt: str = "text") -> int:
     return EXIT_CODE_MISMATCHED_RUNS if document.get("refusal") else 0
 
 
+def _tail_cell(row: dict) -> str:
+    """UX-1078: `  build 34.7s + bga 5.6s`, or empty before tail.json."""
+    tail = row.get("bga_tail_us")
+    if tail is None:
+        return ""
+    build = row.get("build_wall_us")
+    lead = f"build {build / 1e6:.1f}s + " if build is not None else ""
+    return f"  {lead}bga {tail / 1e6:.1f}s"
+
+
 def _list(project: str, as_json: bool = False) -> int:
     """Everything on disk, with the aliases resolution would give it."""
     listing = store_listing(project)
@@ -1493,7 +1557,7 @@ def _list(project: str, as_json: bool = False) -> int:
         # is told the store is large and left to guess which snapshot is
         # the heavy one.
         print(f"  {row['stamp']:<18}"
-              f"{run_store.human_bytes(row['bytes']):>9}{suffix}")
+              f"{run_store.human_bytes(row['bytes']):>9}{_tail_cell(row)}{suffix}")
     print(f"  {'total':<18}"
           f"{run_store.human_bytes(listing['total_bytes']):>9}")
     return 0

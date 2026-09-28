@@ -55,7 +55,7 @@ Every JSON document `bga` writes carries its schema id, and
 and the view-hints the browser report renders from (`UX-201`). Where a
 command emits two documents, the flag selects: `bga snapshot --list
 --schema` and `bga snapshot --aggregate --schema` print different
-contracts. Twenty-five ids, and what writes each:
+contracts. Twenty-six ids, and what writes each:
 
 | document | written by |
 |---|---|
@@ -68,6 +68,7 @@ contracts. Twenty-five ids, and what writes each:
 | `store-aggregate/v1` | `bga snapshot --aggregate --format json` — the store as a distribution, per host class (`UX-234`) |
 | `capacity-model/v1` | `bga snapshot --capacity N,RATE --format json` — a builder count and an arrival rate as a queue: utilization, the wait before a build starts and the number waiting, per host class, each figure carrying the assumptions its own arithmetic used (`UX-613`) |
 | `sweep/v1` | `bga sweep --format json` — what more capacity would buy, the knee past which it buys little, and where the model contradicted itself (`UX-339`) |
+| `tail/v1` | `bga snapshot`, at `tail.json` beside each snapshot — what the tool itself cost after the build: each phase's wall and peak RSS, and the build's own wall (`UX-1078`) |
 | `host/v2` | `bga.hostinfo`, inside every `run-context.json` — which machine measured this run, and what makes two runs comparable |
 | `sources/v1` | `bga extract`, at `sources.json` in a run directory — every element's sources, and how each one is keyed |
 | `plane2/v3` | `bga capture`, at `plane2.json` beside a run — what Plane 2 measured about one build: run-level measurements, with the per-element reductions among them. Measured on the committed fixture, 21 of 24 top-level blocks are run-level and 3 are keyed by element uid, so a reader after the host's peak memory, the build's process count or whether the spine ran is in the right file (`UX-386`). The per-process record list `UX-297` retired is gone |
@@ -85,13 +86,13 @@ contracts. Twenty-five ids, and what writes each:
 | `correlate/v1` | the same, for the two-plane join. Still read, never written |
 | `host/v1` | the host manifest with `memory_mb` where `host/v2` has `memory_bytes`. Read and converted on the way in, so an old baseline still compares — never written |
 
-The last sixteen are written into a run directory — or, for
+The last seventeen are written into a run directory — or, for
 `bundle-manifest/v1`, into the bundle that carries one — rather than
 printed by a command, so no `--schema` invocation prints them, and ten of those
 are only ever *read* - they are the shapes an older store's artifacts
 are in (`plane2/v1` from `UX-297`, `plane2/v2` from `UX-384`, five from
 `UX-341`, `analyze/v3` from `UX-344`, `analyze/v4` from `UX-535` and
-`analyze/v5` from `UX-641`). The other nine
+`analyze/v5` from `UX-641`). The other ten
 each have a command that prints their contract, and
 `tests/unit/test_every_emitted_contract_is_answerable.py` holds that
 split by running both sides rather than by reading this table

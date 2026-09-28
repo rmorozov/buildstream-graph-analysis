@@ -1521,6 +1521,7 @@ run-context/v9      graph/v9      trace/v9      analysis/v9   (inputs, and the a
 analyze/v6          compare/v2    blast/v2      correlate/v2  (published outputs - 32.5)
 store/v1            store-aggregate/v1          whatif/v1     (published outputs - 32.5)
 sweep/v1            capacity-model/v1                         (what capacity buys - 32.5)
+tail/v1                                                       (what bga cost after the build - 32.5, UX-1078)
 host/v2                                                       (the measuring machine - UX-186)
 sources/v1                                                    (the source inventory - UX-171)
 capture-layout/v1                                             (the capture directory - UX-381)
@@ -1676,6 +1677,7 @@ key:
 | `bga snapshot --capacity N,RATE --format json` | `capacity-model/v1` | as above |
 | `bga whatif --format json` | `whatif/v1` | as above |
 | `bga sweep --format json` | `sweep/v1` | as above |
+| `tail.json` beside a snapshot, written by `bga snapshot`: each post-build phase's wall and peak RSS, and the build's own wall (`UX-1078`) | `tail/v1` | as above |
 | the host manifest inside `run-context.json` | `host/v2` | `bga.hostinfo.collect` |
 | the source inventory at `sources.json` in a run directory | `sources/v1` | `bga.sources.build_inventory` |
 | the Plane 2 report at `plane2.json` beside a run | `plane2/v3` | `bga.plane2` |
@@ -1730,7 +1732,7 @@ run directory for nine rounds while appearing in no registry, no guard
 and no document.
 
 **The versioning rule**: a field *rename or removal* bumps the version — and so does a key entering **`required`** under a live id (`UX-629`), because a document a consumer already wrote stops validating, which is a break by the only reading a consumer has. A *permitted* addition does not.
-So `additionalProperties` is true in all nine schemas `bga/schemas.py` defines, and a consumer that pins `analyze/v6` keeps working while the tool grows.
+So `additionalProperties` is true in all ten schemas `bga/schemas.py` defines, and a consumer that pins `analyze/v6` keeps working while the tool grows.
 A key the emitter writes on every document therefore lands **permitted-and-always-written** rather than required: declared, named in the schema's own `bga:always_written` so `--schema` states the choice, and guaranteed against the real payload by a guard rather than by `required`.
 `compare/v2`'s `verdict_provenance` is the worked example — `UX-610` took its required set from 14 to 15 under an unmoved id, and this is that undone without a `v3`.
 
@@ -1792,6 +1794,7 @@ cannot tell a broken capture from a cheap one:
 | `.bga/runs/<stamp>/plane2-resource.json` | conditional | — | the two capacity scalars, beside the report so the aggregator never opens the big file for them (`UX-296`). Absent where the report is. |
 | `.bga/runs/<stamp>/host-samples.jsonl` | conditional | `host-samples/v1` | the host's memory, swap and CPU while the build ran, one JSON per line (`UX-378`). Absent on a capture taken before that item or with sampling unavailable. |
 | `.bga/runs/<stamp>/analyze.json` | conditional | `analyze/v6` | the analysis this capture published, so `bga view` renders rather than re-deriving (`UX-296`). Absent means the viewer parses the run itself, and the trace carries no graph structure (`UX-380`). |
+| `.bga/runs/<stamp>/tail.json` | conditional | `tail/v1` | wall and peak RSS of each phase bga ran after the build, and the build's own wall (`UX-1078`). `complete: false` is a tail that was interrupted; a phase that did not run has no row. |
 | `.bga/runs/<stamp>/build.log` | conditional | — | the wrapped BuildStream log, kept because its first line records the real invocation (`UX-29`). `bga timeline` needs it and refuses without it. |
 | `.bga/runs/<stamp>/element-slice.json` | conditional | — | which elements the capture was asked for, where it was asked for a slice rather than the whole project. |
 | `.bga/runs/<stamp>/capture-context.txt` | conditional | — | what the capture did and why, in prose - the diagnostics `UX-146` writes. Never parsed. |

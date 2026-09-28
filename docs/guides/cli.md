@@ -1087,7 +1087,7 @@ the blocks a reader meets first, and `certified_headroom`, the number
 Key Findings leads with, had never been in the population at all. It was
 302 such keys when that was filed and 305 when it landed. One level and
 no further: `blast_radius_distribution.deciles` is in the population and
-its own nine buckets are not. The surface is **580 keys** today, and
+its own nine buckets are not. The surface is **583 keys** today, and
 that figure is derived from the walk rather than typed here.
 
 So the statement of coverage, which is now a statement and not a
@@ -1266,6 +1266,8 @@ can look one up.
 | `stamps`, `stamps_total` | Which snapshots a figure came from — the most recent `STAMPS_MAX` of them — and how many there are in all (`UX-528`). |
 | `excluded` | What was left out and why, counted by reason: "we had nine runs" and "we had nine and threw two away" are different claims. |
 | `resource_shortfall` | Present instead of `cores_busy` and `peak_rss_bytes` where no run in the class carries them (`UX-296`). |
+| `bga_tail_us` | What the tool itself spent after the build, summed from that snapshot's `tail.json` — per run in `snapshots`, as a distribution in `host_classes` and `blended` (`UX-1078`). Absent before the file existed. |
+| `build_wall_us` | The build subprocess's own wall, from the same `tail.json`: the figure `bga_tail_us` sits beside (`UX-1078`). |
 
 `capacity-model/v1`:
 
@@ -1273,6 +1275,13 @@ can look one up.
 |---|---|
 | `service` | The service-time moments this class's queue is modelled from: `samples`, `mean_us` and `stdev_us`. The mean, not the median — waiting is a function of the mean and the spread around it. |
 | `excluded_runs` | Captures left out of every service time — failed, interrupted, suspended or unfinished. Counted, so a thin model says why it is thin. |
+
+`tail/v1` — `tail.json` beside each snapshot, written by `bga snapshot` after every phase of its tail (`UX-1078`):
+
+| key | what it is |
+|---|---|
+| `phases` | One row per phase the tool ran after the build, in order: `name`, `wall_us`, `peak_rss_bytes` (the process's high-water mark reset at the phase's start, `null` off Linux) and the `calls` it made. A phase that did not run has no row. |
+| `complete` | Whether the tail ran to its end; `false` is one interrupted after the rows it holds. |
 
 `sweep/v1`:
 

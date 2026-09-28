@@ -435,13 +435,17 @@ export function renderTrend(store, schema = undefined,
     { name: "last", at: 100, label: rows[rows.length - 1].stamp },
   ]));
   wrapper.append(caption);
+  // UX-1078: bga's own tail beside the build, only once a row carries it.
+  const tailed = rows.some((row) => notNullish(row.bga_tail_us));
   const twinRows = (list) => list.map((row) => [
     row.stamp,
     notNullish(row.total_duration_us) ? seconds(row.total_duration_us) : "—",
     row.incomplete_reason ? row.incomplete_reason
       : (row.verdict_kind ?? "—").replace(/_/g, " "),
+    ...(tailed ? [tailCell(row)] : []),
   ]);
-  const columns = ["Snapshot", "Duration", "Verdict"];
+  const columns = ["Snapshot", "Duration", "Verdict",
+                   ...(tailed ? ["bga after the build"] : [])];
   let twin = exhibitTwin(document, columns, twinRows(rows));
   wrapper.append(twin);
   // §3a.1: a window says how deep it goes and where the rest are. The
@@ -514,6 +518,14 @@ export function renderTrend(store, schema = undefined,
   // sentence, and the twin is where every value it names lives.
   nameDrawing(figure, caption.textContent, twin);
   return wrapper;
+}
+
+/** UX-1078: `5.6 s beside a 34.7 s build`, or a dash before `tail.json`. */
+function tailCell(row) {
+  if (!notNullish(row.bga_tail_us)) return "—";
+  return notNullish(row.build_wall_us)
+    ? `${seconds(row.bga_tail_us)} beside a ${seconds(row.build_wall_us)} build`
+    : seconds(row.bga_tail_us);
 }
 
 /**

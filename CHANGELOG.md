@@ -3,7 +3,7 @@
 What changed between the `bga` you installed and the one you have now.
 
 A release here records a **contract state**, not a date: the
-twenty-five published contracts and the command surface as they stood, plus what
+twenty-six published contracts and the command surface as they stood, plus what
 moved since the last row. The procedure is
 [`docs/contributing/release-guide.md`](docs/contributing/release-guide.md)
 and the argument is
@@ -24,7 +24,9 @@ Two things a reader should know before using the numbers:
   shipped release's state reddens the guard rather than passing
   silently (`UX-550`). The newest row carries none: it is the one the
   tree itself answers for, and when the tree moves past it the answer
-  is a new row, not an edit to that one.
+  is a new row, not an edit to that one. Between cuts that new row is
+  **Unreleased**: no version, the tree's state, and the kind the next
+  cut would be (`UX-1078`).
 
 The `commit` column this table used to carry is gone, for the reason
 `UX-332` dropped it from the review log: the one hash it held,
@@ -37,6 +39,7 @@ derivation actually reads.
 
 | release | date | closed rows | kind |
 |---|---|---|---|
+| [Unreleased](#unreleased) | — | — | extending |
 | [0.4.1](#041--the-tool-says-what-it-assumes-2026-09-12) | 2026-09-12 | 813 | patch |
 | [0.4.0](#040--a-capture-you-can-carry-2026-09-03) | 2026-09-03 | 537 | breaking |
 | [0.3.0](#030--every-document-says-what-shape-it-is-2026-08-27) | 2026-08-27 | 332 | breaking |
@@ -57,6 +60,21 @@ round 86 first "corrected" that to *a lineage `main` cannot reach*.
 Both are wrong: `pyproject.toml` enters this history at `4ace856`
 (2026-08-13) and `0.2.0` is an ordinary release. The wrong correction
 was read off a shallow clone — `UX-633`, and `UX-637` for the cause.
+
+## Unreleased
+
+What has landed since `0.4.1` and not been cut. The state below is
+this tree's, and the kind in the table is what the next cut would be
+(`UX-1078`).
+
+**Contract delta:** one new contract, `tail/v1` - what bga itself
+costs after the build, written beside each snapshot (`UX-1078`) - which
+makes the next cut `extending`.
+
+```text state
+contracts: analyze/v2 analyze/v3 analyze/v4 analyze/v5 analyze/v6 blast/v1 blast/v2 bundle-manifest/v1 capacity-model/v1 capture-layout/v1 compare/v1 compare/v2 correlate/v1 correlate/v2 host-samples/v1 host/v1 host/v2 plane2/v1 plane2/v2 plane2/v3 sources/v1 store-aggregate/v1 store/v1 sweep/v1 tail/v1 whatif/v1
+commands: analyze baseline blast bundle cache-logs cache-trend capture checkout-cost chrome-to-trace compare correlate cross-check diagnostics doctor extract floors gen-synthetic graph graph-from-show log-to-chrome native-to-chrome rebuild-set release-notes replay run-context snapshot sweep timeline utilisation view whatif wrap
+```
 
 ## 0.4.1 — the tool says what it assumes (2026-09-12)
 

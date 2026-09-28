@@ -178,6 +178,8 @@ CORRELATE = "correlate/v2"
 # and this is a *model over* it, with an operator-declared arrival rate
 # and ten named assumptions the fact base does not carry.
 CAPACITY_MODEL = "capacity-model/v1"
+# UX-1078: bga's own cost after the build, written beside the capture.
+TAIL = "tail/v1"
 
 #: `UX-408`: **what `serialized_pairs` is**, written once.
 #:
@@ -5661,6 +5663,8 @@ _STORE_AGGREGATE_HINTS = {
                 "cores_busy": _store_distribution("count"),
                 "peak_rss_bytes": _store_distribution("bytes"),
                 "snapshot_bytes": _store_distribution("bytes"),
+                # UX-1078: what bga itself cost after each build.
+                "bga_tail_us": _store_distribution("duration_us"),
                 "total_bytes": {
                     QUANTITY: "bytes",
                     "description": "What this class's snapshots weigh on disk, "
@@ -5725,6 +5729,7 @@ _STORE_AGGREGATE_HINTS = {
             "cores_busy": _store_distribution("count"),
             "peak_rss_bytes": _store_distribution("bytes"),
             "snapshot_bytes": _store_distribution("bytes"),
+            "bga_tail_us": _store_distribution("duration_us"),
             "total_bytes": {
                 QUANTITY: "bytes",
                 "description": "What every class's snapshots weigh on disk, "
@@ -5879,6 +5884,22 @@ _STORE_HINTS = {
                               QUANTITY: "bytes",
                               "description": "What that snapshot occupies "
                                              "on disk."},
+                          # UX-1078: bga's own cost beside the build's.
+                          "bga_tail_us": {
+                              QUANTITY: "duration_us",
+                              "description": "What bga itself spent after "
+                                             "the build: the sum of the "
+                                             "phase rows in that "
+                                             "snapshot's `tail.json`. "
+                                             "Absent before that file "
+                                             "existed."},
+                          "build_wall_us": {
+                              QUANTITY: "duration_us",
+                              "description": "The build subprocess's own "
+                                             "wall, from the same "
+                                             "`tail.json`: the figure "
+                                             "`bga_tail_us` is a share "
+                                             "of."},
                           # UX-226: a *history*, not an archive. Bounded
                           # at capture time to the elements that were
                           # worth looking at in that run - the critical
@@ -6128,6 +6149,31 @@ _CORRELATE_HINTS = {
 }
 
 
+
+# UX-1078: `tail/v1`, in the one unit per dimension UX-341 settled.
+_TAIL_HINTS = {
+    "build_wall_us": {
+        QUANTITY: "duration_us",
+        "description": "The build subprocess's own wall, timed around it "
+                       "alone. `null` where the build was not run by "
+                       "this process."},
+    "phases": {
+        COLUMNS: [
+            {"key": "name", "title": "Phase"},
+            {"key": "wall_us", "title": "Wall", "quantity": "duration_us"},
+            {"key": "peak_rss_bytes", "title": "Peak RSS",
+             "quantity": "bytes"},
+        ],
+        "description": "One row per phase bga ran after the build, in "
+                       "order: its `name`, its `wall_us`, its "
+                       "`peak_rss_bytes` - the process's VmHWM reset at "
+                       "the phase's start, `null` off Linux - and the "
+                       "`calls` it made to other programs."},
+    "complete": {
+        "description": "Whether the tail ran to its end. `false` is a "
+                       "tail interrupted after the rows it holds."},
+}
+
 _SCHEMAS = {
     ANALYZE: lambda: _document(
         ANALYZE, "bga analyze --format json",
@@ -6193,6 +6239,16 @@ _SCHEMAS = {
         "is declared rather than measured, and an unstable queue "
         "publishes no wait at all.",
         hints=_CAPACITY_MODEL_HINTS),
+    TAIL: lambda: _document(
+        TAIL, "tail.json, written by bga snapshot",
+        {"producer": "object", "build_wall_us": "", "phases": "array",
+         "complete": "boolean"},
+        "What bga itself cost after the build: one row per phase it ran "
+        "and the build's own wall. Rewritten after every phase, so "
+        "`complete: false` is a tail that was interrupted; a phase that "
+        "did not run has no row. No total is stored: `bga snapshot "
+        "--list` sums the rows.",
+        hints=_TAIL_HINTS),
     SWEEP: lambda: _document(
         SWEEP, "bga sweep RUN --format json",
         _SWEEP_REQUIRED,

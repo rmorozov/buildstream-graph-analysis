@@ -28,7 +28,9 @@ Both are in [`guides/cli.md`](guides/cli.md#bga-snapshot--the-local-loop-ux-126)
 `bga view` (`UX-193`) opens the same report in a browser, and
 `bga view --export` writes it as one file you can attach. `bga bundle`
 carries a whole capture to another machine in one file — `run/` is
-only half of it (`UX-520`). Three more
+only half of it (`UX-520`); `bga bundle --resolve` rewrites a pseudonym
+in a reply back to its real name, entirely on this machine (`UX-1064`).
+Three more
 answer questions the analysis alone does not: `bga whatif` prices a
 chosen set of fixes (`UX-230`), `bga analyze --explain` shows the
 evidence behind every claim (`UX-229`), and `bga snapshot --aggregate`
@@ -190,6 +192,7 @@ Why it is this way. Arguments and structure, not instructions.
 | [`design/directions.md`](design/directions.md) | `bga` as a local helper vs `bga` as a CI gate |
 | [`design/continuous-build-improvement.md`](design/continuous-build-improvement.md) | what changes when four modelled roles become a real team — the rollout's four constraints, instrument versus intervention, and the four guidelines the filings are held to |
 | [`design/in-step-parallelism.md`](design/in-step-parallelism.md) | why the certified floors read builder slots and not cores, what the capture already measures about parallelism inside an element, and the one increment to file first |
+| [`design/anonymized-bundle.md`](design/anonymized-bundle.md) | sharing a private capture with an outside reader - what a pseudonymized bundle keeps, how each value is classed, and how the owner resolves a pseudonym back to the real element |
 | [`design/roles.md`](design/roles.md) | the role model — eight roles, their contradictions, and the gap analysis |
 | [`design/styleguide.md`](design/styleguide.md) | the web report's visual contract — shape→control mapping, drawings, color and emphasis budget, dark first |
 
@@ -323,6 +326,10 @@ The rounds themselves:
 [142](audits/round-142.md) ·
 [143](audits/round-143.md) ·
 [144](audits/round-144.md) ·
+[145](audits/round-145.md) ·
+[146](audits/round-146.md) ·
+[147](audits/round-147.md) ·
+[148](audits/round-148.md) ·
 [149](audits/round-149.md) ·
 [the guard census of round 64](audits/guard-census-round-64.md)
 

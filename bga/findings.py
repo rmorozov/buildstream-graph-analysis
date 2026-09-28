@@ -1765,11 +1765,17 @@ def _ranking_findings(result: AnalysisResult, chain_bound: bool) -> list[dict]:
             elements=list(foundation[:BLAST_RADIUS_SHOWN]),
         ))
 
-    findings.extend(_foundation_candidates(blast_radius, distribution))
+    findings.extend(_foundation_candidates(blast_radius, distribution, _graph_order(signals)))
     return findings
 
 
-def _foundation_candidates(blast_radius: dict, distribution: Optional[dict]) -> list[dict]:
+def _graph_order(signals: dict) -> dict:
+    """Each uid's graph.json position: `compute_fan_in` publishes its rows in that order."""
+    return {uid: index for index, uid in enumerate(signals.get('fan_in') or {})}
+
+
+def _foundation_candidates(blast_radius: dict, distribution: Optional[dict],
+                           order: dict) -> list[dict]:
     """UX-683's discovery half: the owner declares, the tool proposes.
 
     Candidates are the top p5 fan-out among elements that are neither a
@@ -1785,7 +1791,7 @@ def _foundation_candidates(blast_radius: dict, distribution: Optional[dict]) -> 
         (uid for uid, row in blast_radius.items()
          if not row.get('is_structural_kind') and not row.get('is_foundation')
          and (row.get('downstream_count') or 0) >= threshold),
-        key=lambda uid: (-blast_radius[uid]['downstream_count'], uid))
+        key=lambda uid: (-blast_radius[uid]['downstream_count'], order.get(uid, len(order)), uid))
     if not candidates:
         return []
     named = ", ".join(
@@ -1815,6 +1821,7 @@ def _fan_in_findings(result: AnalysisResult) -> list[dict]:
     if not fan_in:
         return []
     distribution = signals.get('fan_in_distribution')
+    order = _graph_order(signals)
 
     findings = []
     shown = ranked[:BLAST_RADIUS_SHOWN]
@@ -1845,7 +1852,7 @@ def _fan_in_findings(result: AnalysisResult) -> list[dict]:
     foundation = sorted(
         (uid for uid, row in fan_in.items()
          if row.get('is_foundation') and row.get('transitive_count')),
-        key=lambda uid: (-fan_in[uid]['transitive_count'], uid))
+        key=lambda uid: (-fan_in[uid]['transitive_count'], order[uid]))
 
     # `UX-76` again, and the one place this graph's widest fan-in
     # actually lands: a stack names everything on purpose.
@@ -1853,7 +1860,7 @@ def _fan_in_findings(result: AnalysisResult) -> list[dict]:
         (uid for uid, row in fan_in.items()
          if row.get('is_structural_kind') and row.get('transitive_count')
          and uid not in foundation),
-        key=lambda uid: (-fan_in[uid]['transitive_count'], uid))
+        key=lambda uid: (-fan_in[uid]['transitive_count'], order[uid]))
     if structural:
         named = ", ".join(
             f"{uid} ({fan_in[uid]['transitive_count']} upstream)"

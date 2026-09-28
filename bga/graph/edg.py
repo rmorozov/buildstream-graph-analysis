@@ -57,6 +57,11 @@ def build_element_graph(
     return dict(predecessors), dict(successors)
 
 
+def element_order(graph: Graph) -> dict[str, int]:
+    """Each uid's position in graph.json: the tie-break a pseudonym cannot reorder (UX-1063)."""
+    return {element.uid: index for index, element in enumerate(graph.elements)}
+
+
 def compute_in_out_degree(
     graph: Graph,
     exclude_dependency_types: Optional[set[str]] = None,

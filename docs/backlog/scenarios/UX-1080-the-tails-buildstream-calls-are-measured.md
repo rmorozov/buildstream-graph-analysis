@@ -71,8 +71,8 @@ manager yielding `{verb, wall_us, exit}`. Buffered in `_CURRENT_CALLS`
 because a call inside `with timed(name):` runs before that phase's own
 row exists; the enclosing `timed()`'s `finally` drains the whole buffer
 into the row it is about to append. `bga_snapshot.main` wraps the
-doctor/preflight window itself in `progress.timed("before the build")`
-- a named, announced phase like every other one - rather than leaning
+doctor/preflight window itself in `progress.timed("before the build")`,
+a named, announced phase like every other one - rather than leaning
 on drain-on-close, which a verifier run on a real capture caught
 crediting the doctor's `bst --version` to `Plane 2 report` (the first
 phase `take_snapshot` actually opens). Drain-on-close stays as the

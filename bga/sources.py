@@ -27,7 +27,7 @@ inventory into the run directory at extract time, which is the one
 moment the project and the run are both in hand.
 """
 import os
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from typing import Optional
 
 from .plural import plural
@@ -358,7 +358,7 @@ def elements_by_resource(inventory: dict) -> dict[tuple[str, str], list[str]]:
 
 
 def resource_blast(inventory: dict,
-                   downstream: dict[str, set[str]],
+                   downstream: Mapping[str, set],
                    element_kinds: dict[str, str],
                    element_durations_us: Optional[dict[str, int]] = None,
                    minimum_elements: int = 2) -> list[dict]:

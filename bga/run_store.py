@@ -475,6 +475,16 @@ def read_config(project: str) -> dict:
     return data if isinstance(data, dict) else {}
 
 
+def public_junctions(project: str) -> dict:
+    """`.bga/config`'s `public_junctions` key: `{"<junction>.bst": {"checkout", "tag"}}`.
+
+    UX-1065: hand-edited, not written by any command here, so `read_config`
+    and `write_config`'s "unknown keys survive" already carries it.
+    """
+    declared = read_config(project).get("public_junctions")
+    return declared if isinstance(declared, dict) else {}
+
+
 def write_config(project: str, config: dict) -> None:
     os.makedirs(store_dir(project), exist_ok=True)
     _write_gitignore(project)

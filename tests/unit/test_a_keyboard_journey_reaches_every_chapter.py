@@ -224,28 +224,42 @@ class TestTheFirstTabFromAFreshLoadStartsAtTheTop:
         assert stops[0] == "decide", stops
 
 
+def _hold_on(chapter):
+    """After each `Tab`: once focus is on `chapter`'s fold, later `Tab`s
+    are swallowed, so the walk stops there whatever the stop count."""
+    return (
+        '(() => { const a = document.activeElement; '
+        'if (!window.__bgaHeld && a && '
+        f'a.getAttribute("data-toc-chapter") === {chapter!r}) {{ '
+        'window.__bgaHeld = true; addEventListener("keydown", (e) => { '
+        'if (e.key === "Tab") e.preventDefault(); }, true); } '
+        'return null; })()')
+
+
 @needs_browser
 class TestEnterOpensTheFoldEnterReached:
     def test_enter_on_a_reached_fold_opens_its_chapter(self, journey,
                                                        tmp_path_factory):
-        """`journey`'s own trace already located every fold's `Tab`
-        count; this presses one `Enter` where the first one lands, in a
-        fresh journey over exactly that many `Tab`s plus one."""
+        """`UX-1093`: `Tab` until the first closed fold `journey` found,
+        then `Enter` - one walk in a fresh load, not a stop count carried
+        over from another."""
         ids, trace = journey
-        at = next(i for i, row in enumerate(trace)
-                  if row["chapterOpen"] and row["expanded"] == "false")
+        fold = next(row["chapterOpen"] for row in trace
+                    if row["chapterOpen"] and row["expanded"] == "false")
         into = tmp_path_factory.mktemp("u1016-enter")
         uri = pages.export_uri(MACRO, into)
         with Browser(chrome) as browser:
             steps = list(_START_AT_THE_TOP)
-            for _ in range(at + 1):
+            for _ in range(TAB_CAP):
                 steps.append({"key": "Tab"})
+                steps.append({"read": _hold_on(fold)})
             steps.append({"read": _READ_ACTIVE})
             steps.append({"key": "Enter"})
             steps.append({"read": _READ_ACTIVE})
-            before, after = browser.journey(uri, steps, 1440, 900)[1:]
+            before, after = browser.journey(uri, steps, 1440, 900)[-2:]
         assert len(ids) > 1, ids
-        assert before["chapterOpen"] == trace[at]["chapterOpen"], before
+        assert before["chapterOpen"] == fold, (
+            f"the walk did not end on {fold}'s fold in {TAB_CAP} Tabs: {before}")
         assert before["expanded"] == "false", before
         assert after["expanded"] == "true", after
 

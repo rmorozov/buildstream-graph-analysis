@@ -60,3 +60,55 @@ Races:     1 (likely) the Tab-stop count ahead of the fold differs between loads
 ```
 
 ## Outcome
+
+### The gap, measured
+
+Not reproduced: the race is **inferred, not observed**. 145 fresh
+loads, a per-Tab trace (tag, `data-toc`, `data-step`,
+`data-toc-chapter`) of 40 Tabs each, found the first closed fold at
+the same stop every time - fresh browser per load, measure-then-journey
+on one target (race 2's shape), `taskset -c 0` beside busy loops, and
+two processes concurrently:
+
+```text
+unloaded, one target   10 loads  {(11, 'change'): 10}
+taskset -c 0, 2 busy   20 loads  {(11, 'change'): 20}
+  + measure first      35 loads  11 change x35
+two processes          80 loads  {(11, 'change'): 80}
+stop 1-12: SELECT, BUTTON previous, BUTTON next, INPUT, BUTTON decide(open),
+           A decision, A evidence, A overview, A findings, A headline, A next_steps,
+           BUTTON change(closed)
+```
+
+CI's signature is reproduced by the Decision's mutation - one extra
+stop in the Enter load only (`[data-step="top"]` unhidden) - on the
+count replay: `assert None == 'change'`, focus on `A`. So the
+failure is the count replay meeting a load with a different stop
+count ahead of the fold; which of the Decision's races moved it on 3.9
+and 3.11 this container did not show.
+
+### The close, measured
+
+The Enter load walks: Tab until focus is on the fold `journey` found
+(cap `TAB_CAP`; later Tabs are swallowed), then Enter.
+
+```text
+$ REP=200 python3 -m pytest -p rep200 -p no:randomly -n 2 \
+    tests/unit/test_a_keyboard_journey_reaches_every_chapter.py::TestEnterOpensTheFoldEnterReached
+200 passed in 566.91s (0:09:26)
+$ python3 -m pytest -n 0 tests/unit/test_a_keyboard_journey_reaches_every_chapter.py
+9 passed in 50.14s
+$ make lint
+clean: 577 finding(s) match tests/quality_baseline.json
+```
+
+(`rep200` is a scratch plugin: an autouse fixture parametrised 200 ways.)
+
+### Mutations verified red and reverted (4)
+
+| # | mutation | reddened | count |
+|---|---|---|---|
+| M1 | `[data-step="top"]` unhidden in the Enter load only, on the old count replay | `test_enter_on_a_reached_fold_opens_its_chapter` | 1 failed: `assert None == 'change'` (`A`) |
+| M2 | M1 on the walk | - (holds) | 1 passed |
+| M3 | the hold's `e.preventDefault()` removed | same | 1 failed: `the walk did not end on change's fold in 40 Tabs`, `assert None == 'change'` |
+| M4 | the `Enter` step removed | same | 1 failed: `assert 'false' == 'true'` |

@@ -93,3 +93,29 @@ def test_the_default_anonymized_name_carries_no_stamp(
     path, _manifest = bundle.export_anonymized(snapshot, key, pmap)
     assert STAMP not in os.path.basename(path)
     assert os.path.basename(path) == bundle.anonymized_output()
+
+
+#: gzip header: magic, method, flags, mtime(4), extra flags, OS.
+_FNAME_BIT = 0x08
+
+
+def test_the_gzip_header_carries_no_file_name(snapshot, key_and_map, tmp_path):
+    """`gzip.GzipFile` writes FNAME from `fileobj.name` unless told not to
+    (`filename=""`); an output named after the owner or their machine
+    would otherwise travel inside the gzip header itself, ahead of and
+    outside anything the tar layer or the manifest transform touches."""
+    key, pmap = key_and_map
+    private_name = "acme-corp-alice-laptop-capture.tar.gz"
+    destination = str(tmp_path / private_name)
+    path, _manifest = bundle.export_anonymized(snapshot, key, pmap, destination)
+
+    with open(path, "rb") as handle:
+        header = handle.read(10)
+        rest = handle.read()
+
+    assert header[:2] == b"\x1f\x8b", "not a gzip stream"
+    flags = header[3]
+    mtime = int.from_bytes(header[4:8], "little")
+    assert not flags & _FNAME_BIT, "FNAME bit set in gzip flags"
+    assert mtime == 0
+    assert b"acme-corp-alice-laptop-capture" not in header + rest

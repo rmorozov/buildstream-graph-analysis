@@ -245,8 +245,11 @@ def export_anonymized(snapshot: str, key: bytes, pmap: "anonymize.PseudonymMap",
     destination = output or anonymized_output()
 
     payload = json.dumps(anon_manifest, indent=2, sort_keys=True).encode("utf-8")
+    # `filename=""` so the gzip header's FNAME does not carry `destination`'s
+    # basename, which a caller can name after the machine or the owner.
     with open(destination, "wb") as raw, \
-            gzip.GzipFile(fileobj=raw, mode="wb", mtime=0) as compressed, \
+            gzip.GzipFile(fileobj=raw, mode="wb", mtime=0,
+                          filename="") as compressed, \
             tarfile.open(fileobj=compressed, mode="w") as archive:
         payload_info = neutral_tarinfo(MANIFEST_NAME, len(payload))
         archive.addfile(payload_info, io.BytesIO(payload))

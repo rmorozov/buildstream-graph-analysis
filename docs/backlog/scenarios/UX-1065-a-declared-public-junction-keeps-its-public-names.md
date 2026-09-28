@@ -1,6 +1,6 @@
 # UX-1065: a declared public junction keeps its public names
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-1062 | **Found by:** the 2026-09-27 brainstorm with the owner ([`anonymized-bundle.md`](../../design/anonymized-bundle.md)), section 5 | **Serves:** anyone sharing a private capture with an outside reader | **Topic:** store | **Area:** bga | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-1062 | **Found by:** the 2026-09-27 brainstorm with the owner ([`anonymized-bundle.md`](../../design/anonymized-bundle.md)), section 5 | **Serves:** anyone sharing a private capture with an outside reader | **Topic:** store | **Area:** bga | **Shape:** mechanical
 
 ## Motivation
 
@@ -73,3 +73,7 @@ pseudonym for it too; the literal case was necessary - pseudonymizing
 it collided the residue scanner against the same junction name kept
 verbatim by a listed sibling - and matches the Motivation ("knowing an
 element is freedesktop-sdk's `gcc.bst`... ").
+
+**Session decision.** A public name whose stem equals a private
+element's stem elsewhere in the same capture makes the residue scan
+refuse the whole export, with a generic message: fails closed.

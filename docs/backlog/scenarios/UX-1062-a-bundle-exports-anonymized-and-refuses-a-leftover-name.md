@@ -1,6 +1,6 @@
 # UX-1062: a bundle exports anonymized, and refuses a leftover name
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-1060, UX-1061, UX-1067 | **Found by:** the 2026-09-27 brainstorm with the owner ([`anonymized-bundle.md`](../../design/anonymized-bundle.md)), sections 1, 6 and 7; the owner's review on #298, findings 3 and 4, and its follow-up at `8c3bead1`, findings 1 and 2 | **Serves:** anyone sharing a private capture with an outside reader | **Topic:** store | **Area:** bga | **Shape:** mechanical
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-1060, UX-1061, UX-1067 | **Found by:** the 2026-09-27 brainstorm with the owner ([`anonymized-bundle.md`](../../design/anonymized-bundle.md)), sections 1, 6 and 7; the owner's review on #298, findings 3 and 4, and its follow-up at `8c3bead1`, findings 1 and 2 | **Serves:** anyone sharing a private capture with an outside reader | **Topic:** store | **Area:** bga | **Shape:** mechanical
 
 ## Motivation
 
@@ -101,3 +101,6 @@ stem in a kept class D string does not trip the residue scan: accepted,
 the stem is a public word and carries nothing private.
 
 In passing: `bga/anonymize.py` added to the fixing guide's context map.
+
+**Session decision.** `export_anonymized` ships with no CLI switch:
+unreleased until the owner turns it on.

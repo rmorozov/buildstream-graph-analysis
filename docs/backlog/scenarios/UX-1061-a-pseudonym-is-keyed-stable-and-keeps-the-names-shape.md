@@ -1,6 +1,6 @@
 # UX-1061: a pseudonym is keyed, stable, and keeps the name's shape
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the 2026-09-27 brainstorm with the owner ([`anonymized-bundle.md`](../../design/anonymized-bundle.md)), section 4 | **Serves:** anyone sharing a private capture with an outside reader | **Topic:** store | **Area:** bga | **Shape:** mechanical
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the 2026-09-27 brainstorm with the owner ([`anonymized-bundle.md`](../../design/anonymized-bundle.md)), section 4 | **Serves:** anyone sharing a private capture with an outside reader | **Topic:** store | **Area:** bga | **Shape:** mechanical
 
 ## Motivation
 
@@ -62,4 +62,6 @@ there; everything else in the selection passes
 Both reverted from the pre-mutation copy; all 8 pass again
 (`8 passed in 0.29s`).
 
-**Deviation.**
+**Deviation.** Tokens draw from a character-class alphabet, not literal
+base32; the length-band fix (`k` starts at the band's own width) came
+from verification, not the implementer's first pass.

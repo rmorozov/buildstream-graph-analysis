@@ -1,6 +1,6 @@
 # UX-1064: a pseudonym in any text resolves back to the real name
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-1061 | **Found by:** the 2026-09-27 brainstorm with the owner ([`anonymized-bundle.md`](../../design/anonymized-bundle.md)), section 4 | **Serves:** anyone sharing a private capture with an outside reader | **Topic:** cli | **Area:** bga | **Shape:** mechanical
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-1061 | **Found by:** the 2026-09-27 brainstorm with the owner ([`anonymized-bundle.md`](../../design/anonymized-bundle.md)), section 4 | **Serves:** anyone sharing a private capture with an outside reader | **Topic:** cli | **Area:** bga | **Shape:** mechanical
 
 ## Motivation
 
@@ -59,3 +59,6 @@ taking the map needs the page, out of this mechanical CLI track's file
 |---|---|---|---|
 | `_bundle_resolve` calls `check_fingerprint` before resolving | drop the `try`/`check_fingerprint` call from `_bundle_resolve` | `test_the_cli_refuses_a_foreign_map_by_fingerprint` | 1 of 4 in the new file |
 | `resolve_text` lists an unmapped token | drop the `unknown.append` branch | `test_an_unknown_pseudonym_shaped_token_is_listed_not_dropped` | 1 of 4 in the new file |
+
+**Session decision.** A word shaped like `e-mail` matches the token
+regex and is listed as unresolved rather than silently kept; fail-safe.

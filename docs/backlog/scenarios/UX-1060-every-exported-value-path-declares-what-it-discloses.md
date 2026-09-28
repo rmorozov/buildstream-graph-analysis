@@ -1,6 +1,6 @@
 # UX-1060: every exported value path declares what it discloses
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the 2026-09-27 brainstorm with the owner ([`anonymized-bundle.md`](../../design/anonymized-bundle.md)), section 3; the owner's review on #298, finding 1, and its follow-up at `8c3bead1`, finding 1 | **Serves:** anyone sharing a private capture with an outside reader | **Topic:** contracts | **Area:** bga | **Shape:** mechanical
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the 2026-09-27 brainstorm with the owner ([`anonymized-bundle.md`](../../design/anonymized-bundle.md)), section 3; the owner's review on #298, finding 1, and its follow-up at `8c3bead1`, finding 1 | **Serves:** anyone sharing a private capture with an outside reader | **Topic:** contracts | **Area:** bga | **Shape:** mechanical
 
 ## Motivation
 
@@ -90,3 +90,7 @@ literals.
 | `"foundation[]": "A"` -> `"Z"` | `test_every_class_names_one_of_the_eight_or_a_vocabulary` | 1 failed, 61 passed |
 | `cc1plus` off `_BINARIES` | `test_a_fallback_vocabulary_keeps_public_values_and_only_those[binary-cc1plus-True]` | 1 failed, 61 passed |
 | test selects `DROP` members, not `TRANSFORM` | `test_the_fixtures_hold_every_contracted_transform_member` (+ 4 drop members with no policy) | 5 failed, 14 passed |
+
+**Session decision.** `note`, `disclaimer`, `evidence`, `reason`, `cmd`
+and `signature` are class F, not B: a fixed `bga`-authored sentence
+could later be allowlisted into class B, but nothing here does that yet.

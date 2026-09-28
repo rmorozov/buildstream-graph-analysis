@@ -84,7 +84,6 @@ reverted from the copy, 23 green after (24 after the flag fix):
 | class F kept, not dropped | residue scan trips on prose naming elements | 5 failed, 18 passed |
 | no time shift | both time tests | 2 failed, 21 passed |
 | commands kept raw | residue scan trips on `core.bst` in a cmd | 5 failed, 18 passed |
-
 | any `--word` flag kept (verifier's leak) | `test_a_private_long_flag_travels_as_a_pseudonym_on_any_binary` | 1 failed, 23 passed |
 | wall origin back to 0 | `test_an_anonymized_analysis_still_has_a_start_at_the_canonical_origin`, host-samples test | 2 failed, 23 passed |
 

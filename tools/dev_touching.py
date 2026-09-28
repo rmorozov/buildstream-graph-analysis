@@ -10,12 +10,10 @@ that change are the ones that name them.
 
 So this maps the working diff to a test set by **grep over the path,
 the dotted name and the `from x import y` line**, not by import graph:
-
-* an import graph would miss `tests/unit/test_docs_links_and_commands.py`
-  reading `docs/guides/cli.md`, and half this suite's guards are of that
-  kind — they read a document or a fixture and import nothing from it;
-* a grep over 200-odd test files costs milliseconds, and the whole point
-  is to be faster than the thing it replaces.
+an import graph would miss `tests/unit/test_docs_links_and_commands.py`
+reading `docs/guides/cli.md`, and half this suite's guards read a
+document and import nothing from it; a grep over 200-odd test files
+costs milliseconds, faster than the thing it replaces.
 
 **It is a selector, not a gate.** `make test` before a commit is
 unchanged; what this buys is the twenty runs *before* that one. Three
@@ -24,6 +22,8 @@ sets, unioned, `--why` naming which chose each: the **grep**; the
 and the **map** (`UX-524`), what CI measured each test executing. A
 green run prints one line (`UX-525`) - pytest output is 10-16% of a
 track's tokens; red prints everything, and `--loud` always does.
+Trailing args pass through to pytest, so `-n 2` overrides this
+module's own `-n auto`.
 """
 import argparse
 import functools

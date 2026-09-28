@@ -29,7 +29,8 @@ same function.
 2. Run the Acceptance Test command verbatim. Paste what it printed.
 3. Run `python tools/dev_touching.py --base <the track's base> --loud`, then
    `make lint` — `make test-touching` diffs the working tree against `HEAD`
-   and sees nothing once the track's commit is `HEAD`.
+   and sees nothing once the track's commit is `HEAD`. Run
+   `python3 tools/dev_sizes.py --check`.
 4. Read the diff (`git diff main...HEAD`) against the Required Fix.
 
 **Retrospective** — a track already merged, read after the fact

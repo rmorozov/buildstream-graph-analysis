@@ -184,7 +184,9 @@ mkdir -p "<the scratchpad path you were given>/$(basename "$PWD")"
    bga.cli` — otherwise it resolves to the session's install, not your
    copy (`UX-728`); `bga` warns at startup when it can tell the two
    apart.
-4. `make test-touching` while you work.
+4. `make test-touching` while you work. When `dev_touching.py` selects
+   the whole suite, run the whole suite at `-n 2`, never a hand-picked
+   subset.
 5. **Mutate every new guard** and watch it go red — the `falsify`
    skill. A guard nobody mutated is a guard nobody knows can fail. Then
    revert the mutation and confirm green. Revert **from the copy the

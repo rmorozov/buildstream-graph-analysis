@@ -58,3 +58,32 @@ the same keys under different targets (build B vs build A and B, where
 B depends on A, so `requested_target` differs); a changed
 `bga-foundation`; a changed `--max-jobs`. Mutation: drop any one
 fingerprint term, and its case reds.
+
+## Outcome
+
+**Gap measured** (`docs/audits/perf-snapshot-view-2026-09-28.md`,
+`bstshim`, `examples/06`): `bst show --deps all` cost 1.27s of a 1.07s
+warm build (1.17s of a 34.72s cold one), even when nothing the graph is
+made of changed - `bst show` scales to 42.28s at 5,001 elements.
+
+**Close measured**: `tools/bst_extract_run.py`'s `extract_run` gained
+`cache_key_set`/`bst_global_options`/`baseline_run_dir` and a
+`_graph_fingerprint` of five terms (key set, targets, global options,
+resolved max-jobs, `bga-foundation`); `graph.json` is reused from
+`baseline_run_dir` only on an exact fingerprint match, and
+`requested_target`/`foundation` are re-applied for this invocation
+either way. `tests/unit/test_an_equal_key_set_reuses_the_graph.py`: 8
+passed - one `bst show --deps all` call between two snapshots sharing
+a fingerprint, and each of the four regression cases (changed key,
+same keys under different targets, changed foundation, changed
+`--max-jobs`) issues its own call and matches a fresh extraction.
+
+**Mutation table**
+
+| mutation | reddened | count |
+|---|---|---|
+| `cache_key_set` term dropped from `_graph_fingerprint` | all 8 tests (every case now compares equal fingerprints regardless of key) | 8 of 8 |
+| `targets` term dropped | `test_the_same_keys_under_different_targets_runs_bst_show_again` | 1 of 1 |
+| `bst_global_options` term dropped | `test_different_bst_global_options_with_equal_keys_runs_bst_show_again` | 1 of 1 |
+| `resolved_max_jobs` term dropped | `test_a_changed_max_jobs_runs_bst_show_again` | 1 of 1 |
+| `bga_foundation` term dropped | `test_a_changed_foundation_runs_bst_show_again` | 1 of 1 |

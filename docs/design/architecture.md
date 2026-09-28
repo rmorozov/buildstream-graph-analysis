@@ -502,6 +502,16 @@ with the tables above destroys the one thing the entry is for
 (`UX-653`). The newest entry is the exception: every round that
 re-grounds the document rewrites it.
 
+Updated 2026-09-28 (after `UX-1101`), covering one change to this
+document and one beside it, re-grounded at round 150's merge of both.
+The contract table gains the `tail/v1` row (`UX-1078`), and
+`analyze/v6` gains `fingerprint`, an addition, which `bga compare`
+matches a published `analyze.json` on before reusing it (`UX-1073`,
+`bga/fingerprint.py`). The figures are re-grounded in `bga analyze
+--schema` (`analyze/v6`: **63 top-level properties**) and in
+`python3 -m pytest $(grep -ln "architecture.md" tests/unit/*.py) -q`,
+run at this commit: **26 emitted ids**.
+
 Updated 2026-09-20 (after `UX-898`), covering one change to this
 document — the `compare/v2` row in the contract table now names
 `build_class_comparison` (`UX-898`, `UX-903`): whether the two runs

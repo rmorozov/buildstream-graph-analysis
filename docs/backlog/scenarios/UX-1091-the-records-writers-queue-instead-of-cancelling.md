@@ -57,3 +57,34 @@ Question:  none
 ```
 
 ## Outcome
+
+Gap: `flake-ledger-adopt` and `touch-map-adopt` shared `concurrency:
+records` with only `needs: test` between them, so both could reach
+"pending" within the same window - 1 of 11 main runs since `ad27b616`
+read `cancelled` (`#297`, `39d89d38`).
+
+Close: `flake-ledger-adopt`'s `needs: test` -> `needs: [test,
+touch-map-adopt]` totally orders the four writers
+(`tier-reference-adopt` -> `touch-map-adopt` -> `flake-ledger-adopt`
+-> `area-pages-publish`); its existing `!cancelled()` already runs it
+past a skipped `touch-map-adopt`. New guard
+`tests/unit/test_the_records_writers_are_one_chain.py`, 4 tests:
+
+```text
+$ python3 -m pytest tests/unit/test_the_records_writers_are_one_chain.py \
+    tests/unit/test_ci_publishes_the_area_pages.py -q
+8 passed in 2.47s
+```
+
+Mutation table:
+
+| mutation | reddened | count |
+|---|---|---|
+| `flake-ledger-adopt` `needs: test` (drop `touch-map-adopt`) | `test_every_writer_is_ordered_after_every_other_writer` | 1 failed, 3 passed |
+| `flake-ledger-adopt`'s `if:` drops `!cancelled()` | `test_a_writer_needing_a_writer_runs_past_a_skip` | 1 failed, 3 passed |
+| `area-pages-publish` `concurrency: records` -> `other` | `test_every_writer_shares_the_records_concurrency_group` | 1 failed, 3 passed |
+
+Cross-run limit: the chain orders jobs *within* one workflow run; two
+pushes close together still start two runs, and a writer job in the
+older run can still be replaced by the same-named job in the newer
+one - `needs:` does not reach across runs.

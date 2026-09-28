@@ -72,8 +72,15 @@ class TestTheListsNameRealFiles:
 #: rejects, and rightly. What can be read without timing anything is
 #: *construction*: a file that boots a real Chrome cannot be small, and
 #: says so in its own imports. Four were, when this was written.
-BOOTS_A_BROWSER = re.compile(r"from tests\.browser import|from browser import"
-                             r"|find_chrome\(")
+#: `UX-998` sweep: `_code()` tokenises and rejoins with single spaces,
+#: so `from tests.browser import x` reads `from tests . browser import
+#: x` and a literal `tests\.browser` or a bare `find_chrome\(` never
+#: matched a tokenised file - only a file whose raw text still had the
+#: bare spelling (the tokenize fallback) was ever caught. `\s+`/`\s*`
+#: match both the tokenised and the raw-text shapes.
+BOOTS_A_BROWSER = re.compile(
+    r"from\s+tests\s*\.\s*browser\s+import|from\s+browser\s+import"
+    r"|find_chrome\s*\(")
 
 
 def _code(path):

@@ -13,8 +13,24 @@ options, so two variants' key sets compare as the same build. The
 `extract_run` call already forwards them (`_bst_global_options`,
 `UX-870`); this one does not. It is also `shutil.which("bst")`, not the
 build's own `cmd[0]`, and it prints nothing for up to its 300 s
-timeout while the build has not started. Inferred from the code: this
-container has no `bst` to run it.
+timeout while the build has not started.
+
+It is also a whole project load the build repeats a second later.
+Measured with BuildStream 2.8.1 (a PATH shim timing each `bst`; the
+audit's `genproj.py` projects for size):
+
+```text
+examples/06 (11 el), cold    key-set bst show 1.16s of a 40.2s snapshot
+examples/06 (11 el), warm    key-set bst show 1.18s of a 5.1s snapshot (build 1.07s)
+1,201 elements               key-set bst show 5.87s
+5,001 elements               key-set bst show 23.68s, silent
+```
+
+The build's own Plane 1 log already carries every key: its `Pipeline`
+block lists `<state> <64-hex key> <name>` per element. Parsed from
+`build.log`, the set is identical to the `bst show` output on both the
+cold and the warm capture of `examples/06` (11 of 11, strict build
+plan). Non-strict mode is unmeasured.
 
 ## Decomposition
 
@@ -24,18 +40,24 @@ Journey: `bga snapshot`'s pre-build window.
 
 ## Required Fix
 
-In `tools/bst_native_build_tracer.py`: the key-set call uses the
-build's own `cmd[0]` and `_bst_global_options(cmd)`, and runs under
-`progress.ticker` like `extract_graph`'s `bst show`.
+In `tools/bst_native_build_tracer.py`: the key set is read from the
+build's own Plane 1 log (the `Pipeline` block), so it is the keys of
+the options the build ran with, and the separate `bst show` goes. Where
+the log's block is absent or partial (a build that failed while
+loading, non-strict keys not yet resolved), the report says the key
+set is unread rather than guessing; if a fallback `bst show` stays, it
+uses the build's own `cmd[0]` and `_bst_global_options(cmd)` under
+`progress.ticker`.
 
 ## Out of Scope
 
-Folding it into the post-build `bst show` (non-strict builds can change
-keys during the build; `UX-1080` decides).
+Reusing the post-build graph (`UX-1083`).
 
 ## Acceptance Test
 
-`tests/unit/test_the_key_set_reads_the_builds_options.py`: with a fake
-`bst` on PATH recording its argv, `bst -o arch aarch64 build all.bst`
-issues `show` with `-o arch aarch64` and the build's executable.
-Mutation: drop the options, and it reds.
+`tests/unit/test_the_key_set_reads_the_builds_options.py`: on a
+committed Plane 1 log, the key set equals the one `hash_cache_key_lines`
+makes of the matching `bst show` output; a snapshot issues no `bst
+show` before the build (fake `bst` on PATH recording argv); a log with
+no `Pipeline` block yields an unread key set, not an empty one.
+Mutation: restore the pre-build `bst show`, and the argv count reds.

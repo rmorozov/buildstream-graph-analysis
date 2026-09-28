@@ -1,7 +1,7 @@
 # bga's own cost on the snapshot → view path (2026-09-28)
 
-Measured on `39d89d4`, a 4-core / 15 GB container, Python 3.11, no
-`bst` installed. Rows filed: `UX-1072`..`UX-1082`. Related, not
+Measured on `39d89d4`, a 4-core / 15 GB container, Python 3.11; the
+real captures with BuildStream 2.8.1 and buildstream-plugins 2.8.0. Rows filed: `UX-1072`..`UX-1083`. Related, not
 re-filed: `UX-1069` (the anonymized export's whole-file loads) and
 `UX-1071` (its residue scan at ~0.4 MB/s).
 
@@ -136,6 +136,45 @@ key-set `bst show` is also silent for up to 300 s and drops the build's
 own `-o`/`--option` flags, so two variants record one key set
 (`UX-1082`).
 
+## Real captures: `examples/06` with BuildStream 2.8.1
+
+`bga snapshot` on a cache-busted copy (the `measure` skill's recipe),
+every `bst` timed by a PATH shim (`bstshim` below), output lines
+timestamped:
+
+```text
+                                  cold             warm (all cached)
+snapshot wall                     40.2s            5.1s
+bst build itself                  34.72s           1.07s
+before the build (bga + bst)      2.3s             2.2s
+after the build (bga + bst)       3.3s             1.8s
+bga's own share outside build     5.6s (14%)       4.0s (79%)
+
+bst calls around the build        cold             warm
+--version (doctor, before)        0.38s            0.31s
+show, key set (before)            1.16s            1.18s
+artifact list-contents (after)    1.29s            -
+show --deps all (after)           1.17s            1.27s
+--version (hostinfo, after)       0.29s            0.26s
+```
+
+On the warm build, the one a review pipeline takes most, the snapshot
+is 4.8x the build and 3.0 of bga's 4.0 s are BuildStream restarts.
+`bst show` scales with the project (`genproj.py` projects):
+
+```text
+elements   key-set format   graph format (--deps all)
+1,201        5.87s             11.21s
+5,001       23.68s             42.28s
+```
+
+The key-set call is redundant: the build's own `build.log` lists every
+element's 64-hex key in its `Pipeline` block, and parsed from there the
+set is identical to `bst show`'s on both captures (11 of 11, strict
+plan) - `UX-1082`. The warm snapshot's `graph.json` is structurally
+identical to the cold one's, so an equal key set could reuse it -
+`UX-1083`. At 5,001 elements the two together are 66 s per snapshot.
+
 ## Findings, ranked by what the tail costs
 
 | Rank | Row | Finding | At 5,002 el / 192k proc |
@@ -150,7 +189,8 @@ own `-o`/`--option` flags, so two variants record one key set
 | 8 | `UX-1080` | the `bst` calls around the build are unmeasured | no reading |
 | 9 | `UX-1078` | the snapshot does not record bga's own cost | — |
 | 10 | `UX-1081` | the export renders a timeline it then refuses | 7.2 s |
-| 11 | `UX-1082` | the pre-build key set drops the build's options (correctness), silently | up to 300 s |
+| 11 | `UX-1082` | the pre-build key set is a second project load, drops the build's options, and is silent; the build log already has it | 23.7 s |
+| 12 | `UX-1083` | an equal key set still re-reads the graph with `bst show` | 42.3 s |
 
 Rows 1-3 remove about 70 of the 104 s tail at 5,002 elements before
 the analyzer itself gets faster; row 2 then cuts the rest's memory.
@@ -158,9 +198,10 @@ the analyzer itself gets faster; row 2 then cuts the rest's memory.
 ## Scenarios that shape the snapshot → view experience
 
 1. **The incremental build.** The tail does not depend on how much was
-   built. A build of a 5,002-element project that rebuilds nothing
-   still pays about 104 s of analysis and compare (inferred, not
-   captured). When the pre-build key set (`UX-844`) equals the
+   built. Measured on `examples/06`: a warm build of 1.07 s took a
+   5.1 s snapshot. At 5,002 elements the analysis and compare alone are
+   about 104 s, plus 66 s of `bst show` (inferred by adding the
+   readings above; not one capture). When the pre-build key set (`UX-844`) equals the
    baseline's, the tail could reuse the baseline's analysis.
 2. **Hundreds of review builds a day.** The tail competes with the
    next job on the agent: 2 GB peak at 5,002 elements. An option to
@@ -189,8 +230,9 @@ the analyzer itself gets faster; row 2 then cuts the rest's memory.
 
 ## Not measured here
 
-- Any real `bst` call in the tail (`UX-1080`): no BuildStream in this
-  container.
+- `bst artifact list-contents` at scale (`UX-1080`): it needs built
+  artifacts, and the large projects here were only loaded, not built.
+- Non-strict build plans, where the log's keys may not all resolve.
 - A real capture's Plane 2 shape. The scaler is a model: real logs
   have deeper process trees, `configure` storms and less repetitive
   paths.
@@ -323,4 +365,16 @@ step("compile_hook", lambda: t.compile_hook(d))
 step("compile_spine", lambda: t.compile_spine(d))
 step("discover_element_names", lambda: t.discover_element_names(proj))
 step("census_spine_verdicts (spine=auto)", lambda: t.census_spine_verdicts(proj))
+```
+
+`bstshim` (put first on PATH as `bst`; set `REAL` to the real binary
+and `LOG` to the log path):
+
+```bash
+#!/bin/bash
+s=$(date +%s.%N)
+$REAL "$@"; rc=$?
+e=$(date +%s.%N)
+echo "$s $e $rc $*" | cut -c1-200 >> "$LOG"
+exit $rc
 ```

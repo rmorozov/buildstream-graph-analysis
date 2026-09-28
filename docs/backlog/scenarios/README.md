@@ -58,6 +58,7 @@ task file, which is the only place it ever lived twice.
 | UX-1080 | [the BuildStream calls bga makes around the build have never been timed](UX-1080-the-tails-buildstream-calls-are-measured.md) | capture | Medium | R5 | 🔴 Not Started |
 | UX-1081 | [`bga view --export` renders a whole timeline before refusing it and rendering a narrower one](UX-1081-the-export-predicts-the-timeline-it-can-carry.md) | viewer | Low | R1 | 🔴 Not Started |
 | UX-1082 | [the cache key set is read without the build's own options, and silently](UX-1082-the-cache-key-set-reads-the-builds-options.md) | capture | High | R5, R1 | 🔴 Not Started |
+| UX-1083 | [a build whose key set equals the baseline's reads its graph again](UX-1083-an-equal-key-set-reuses-the-graph.md) | capture | High | R5, R8 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

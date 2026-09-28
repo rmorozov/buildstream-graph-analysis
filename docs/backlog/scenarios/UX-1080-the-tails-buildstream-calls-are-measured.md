@@ -18,6 +18,25 @@ cache-key `bst show`). No reading of either exists; `bst show` alone
 took about 2 s per call on the Graviton host (2026-09-25). This
 container has no `bst`, so [the audit](../../audits/perf-snapshot-view-2026-09-28.md) could not take one.
 
+Measured afterwards with BuildStream 2.8.1 in the audit container
+(a PATH shim timing every `bst`), `examples/06`:
+
+```text
+call                                  cold (40.2s)   warm (5.1s, build 1.07s)
+bst --version (doctor, before)           0.38s          0.31s
+bst show, key set (before)               1.16s          1.18s
+bst artifact list-contents (after)       1.29s          -  (nothing built)
+bst show --deps all (after)              1.17s          1.27s
+bst --version (hostinfo, after)          0.29s          0.26s
+bga's own share outside the build        5.6s           4.0s
+```
+
+On a warm build BuildStream restarts are 3.0 of bga's 4.0 s, and the
+snapshot takes 4.8x the build. `bst show --deps all` with the graph
+format took 11.21 s at 1,201 elements and 42.28 s at 5,001
+(`genproj.py`). `list-contents` at scale needs built artifacts and is
+still unread.
+
 ## Decomposition
 
 Input classes: a cached build and a cold one; a project of tens and of thousands of elements. Journey: `bga snapshot`'s tail.

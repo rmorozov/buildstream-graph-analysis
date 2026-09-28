@@ -1956,7 +1956,7 @@ def _two_trees(tmp_path_factory):
     subprocess.run([*git, "-C", str(main), "worktree", "add", "-q",
                     str(linked)], check=True)
     for name in ("agent_worktree_limits.py", "gate_covers_push.py",
-                 "no_bulk_add.py"):
+                 "no_bulk_add.py", "agent-worktree-limits.sh"):
         shutil.copy(HOOKS / name, home / name)
     return main, linked, home / "agent_worktree_limits.py", elsewhere
 
@@ -2005,6 +2005,9 @@ class TestAWorktreeCannotRepointTheInstallOrStartTheSweep:
     @pytest.mark.parametrize("command", (
         "pip install ruff",
         "python3 tools/dev_touching.py --spread",
+        "python3 tools/dev_touching.py --base HEAD --list",
+        "python3 tools/dev_touching.py --base HEAD --why",
+        "python3 tools/dev_touching.py --size",
         "cat > /tmp/m.txt <<'EOF'\nmake test\npip install -e .\nEOF",
         "echo 'make test'",
         "make lint",
@@ -2020,16 +2023,38 @@ class TestAWorktreeCannotRepointTheInstallOrStartTheSweep:
         code, said = _limits(_two_trees, _two_trees[3], "make test")
         assert code == 0, (code, said)
 
-    def test_the_declared_entry_blocks(self, _two_trees):
-        code, said = fire("agent-worktree-limits.sh", {
-            "cwd": str(_two_trees[1]), "tool_input": {"command": "make test"}})
-        assert code == 2, (code, said)
+    def test_the_declared_entry_blocks(self, _two_trees, monkeypatch):
+        # The declared entry's copy, from a non-repo cwd: only the
+        # payload's cwd names a checkout, even when this suite runs in one.
+        monkeypatch.chdir(_two_trees[3])
+        entry = _two_trees[2].with_name("agent-worktree-limits.sh")
+        done = subprocess.run([str(entry)], capture_output=True, text=True,
+                              timeout=30, input=json.dumps({
+                                  "cwd": str(_two_trees[1]),
+                                  "tool_input": {"command": "make test"}}))
+        assert done.returncode == 2, (done.returncode, done.stderr)
 
     def test_settings_declares_it_on_bash(self):
         held = json.loads(SETTINGS.read_text(encoding="utf-8"))
         commands = [h["command"] for m in held["hooks"]["PreToolUse"]
                     if m.get("matcher") == "Bash" for h in m["hooks"]]
         assert any("agent-worktree-limits.sh" in c for c in commands), commands
+
+    @pytest.mark.parametrize("brief", ("implementer.md", "verifier.md"))
+    def test_the_briefs_select_the_way_the_hook_allows(self, brief,
+                                                       _two_trees):
+        """A track's brief names the one selector the hook lets through,
+        and the pytest run at `-n 2` it feeds."""
+        body = " ".join(
+            (AGENTS / brief).read_text(encoding="utf-8").split())
+        selector = re.search(r"`(python3 tools/dev_touching\.py [^`]*)`",
+                             body)
+        assert selector and "--list" in selector.group(1), (
+            f"{brief} names no `dev_touching.py ... --list` selector")
+        assert "python3 -m pytest -n 2" in body, (
+            f"{brief} does not run the selection at -n 2")
+        code, said = _limits(_two_trees, _two_trees[1], selector.group(1))
+        assert code == 0, (brief, selector.group(1), said)
 
 
 class TestTheSelectorJudgesThePayloadsCwd:

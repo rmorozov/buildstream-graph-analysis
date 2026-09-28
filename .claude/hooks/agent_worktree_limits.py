@@ -10,7 +10,8 @@ Refuses, when the payload's `cwd` is a linked worktree (`git rev-parse
 --git-dir` differs from `--git-common-dir`): `pip install -e` or
 `--editable` (pip, pip3, `python -m pip`, `uv pip`), `make` with
 `test`, `test-touching`, `test-tiers` or `push-check`, and
-`dev_touching.py` without `--spread`. The main checkout is untouched.
+`dev_touching.py` without a flag that only prints (`--spread`,
+`--list`, `--why`, `--size`). The main checkout is untouched.
 Tokenised as `no_bulk_add` does, so a heredoc or a quoted mention of a
 command is not one (UX-424). Exit 2 names the rule.
 """
@@ -25,6 +26,8 @@ from gate_covers_push import repo_root
 from no_bulk_add import SEPARATORS, tokens_of, without_heredocs
 
 MAKE_TARGETS = {"test", "test-touching", "test-tiers", "push-check"}
+# Each prints and returns before `dev_touching.py` starts pytest.
+PRINTS_ONLY = {"--spread", "--list", "--why", "--size"}
 _ASSIGNMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 _PYTHON = re.compile(r"^python(\d+(\.\d+)?)?$")
 
@@ -91,8 +94,8 @@ def refusal(words):
     elif _PYTHON.match(head):
         script = next((pathlib.PurePath(w).name for w in rest
                        if not w.startswith("-")), None)
-    if script == "dev_touching.py" and "--spread" not in rest:
-        return "`dev_touching.py` without `--spread` starts the sweep"
+    if script == "dev_touching.py" and not PRINTS_ONLY.intersection(rest):
+        return "`dev_touching.py` without `--list` starts the sweep"
     return None
 
 
@@ -101,8 +104,8 @@ MESSAGE = """Blocked from a linked worktree ({root}): {why} (UX-1041).
 A worktree shares one Python install and one machine with every other
 track: never `pip install -e .` here, and leave `make test`,
 `make test-touching`, `make test-tiers`, `make push-check` and the
-touching sweep to the session. Run pytest on the named files directly;
-`dev_touching.py --spread` only lists them.
+touching sweep to the session. `dev_touching.py --base <base> --list`
+prints the selection; run `python3 -m pytest -n 2 -q` on those files.
 """
 
 

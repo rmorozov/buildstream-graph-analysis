@@ -98,3 +98,14 @@ exit=0
 `test_the_declared_entry_blocks` stays green under the second: the real
 hook's fallback, `parents[2]`, is itself a linked worktree when the suite
 runs in one. The copied-hook clauses carry that mutation.
+
+**Integration (r149).** `refusal()` lets `dev_touching.py --list`, `--why`
+and `--size` through (each prints and starts no pytest); a kept-clause
+each, and dropping each flag from `PRINTS_ONLY` reddens its own clause
+(1 failed, 36 passed, x3). `test_the_declared_entry_blocks` now fires a
+copy of the `.sh` from the non-repo hook home, the process chdir'd to a
+non-repo: `repo_root(None)` reddens it from the main checkout and from a
+linked worktree (1 failed each; before, 1 passed in the linked tree).
+implementer.md and verifier.md select with `--base <base> --list` and
+run pytest at `-n 2`; a clause reads both against the hook, and the
+verifier's old `--loud` line reddens it.

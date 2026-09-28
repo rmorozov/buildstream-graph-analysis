@@ -1,7 +1,7 @@
 {
   "paths": [".claude/hooks", "bga", "tools"],
   "files": {
-    ".claude/hooks/agent_worktree_limits.py": {"duplicate_blocks": 0, "file_lines": 128, "longest_function": 25},
+    ".claude/hooks/agent_worktree_limits.py": {"duplicate_blocks": 0, "file_lines": 131, "longest_function": 25},
     ".claude/hooks/gate_covers_push.py": {"duplicate_blocks": 1, "file_lines": 166, "longest_function": 28},
     ".claude/hooks/no_bulk_add.py": {"duplicate_blocks": 1, "file_lines": 152, "longest_function": 27},
     ".claude/hooks/selector_before_commit.py": {"duplicate_blocks": 0, "file_lines": 161, "longest_function": 20},

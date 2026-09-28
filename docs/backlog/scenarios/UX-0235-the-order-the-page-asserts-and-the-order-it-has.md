@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-207, UX-216, UX-221 (the guards it repairs) | **Serves:** the maintainers; R1 indirectly | **Topic:** guards
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Round 27's verification ran twenty-two mutations; twenty reddened.

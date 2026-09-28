@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-666 (the writer), UX-341 (the lesson it cites) | **Serves:** the round that appends a ledger row and finds CI red for it | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** test_a_counted_figure_is_derived.py
+
 ## Motivation
 
 `docs/audits/agent-runs.md` carries a count sentence that

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-97 (done — this is its item 2, recurring in the same file) | **Topic:** docs
 
+**Guard:** test_capture_ref_patterns.py · inferred r149
+
 ## Motivation
 
 UX-97 fixed the mode-less ref glob once and automated the two *counts*

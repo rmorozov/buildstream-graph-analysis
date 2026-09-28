@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-158 (the help surface completion complements), UX-126 (the alias grammar worth completing) | **Topic:** cli | **Area:** bga
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Field feedback: *"maybe it's good idea to bring autocompletion for

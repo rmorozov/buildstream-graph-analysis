@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-70` (done — which measured the right number and did not wire it here) | **Topic:** analysis
 
+**Guard:** test_correlate.py · inferred r149
+
 ## Motivation
 
 `bga/correlate.py`'s own module docstring states what the join exists to

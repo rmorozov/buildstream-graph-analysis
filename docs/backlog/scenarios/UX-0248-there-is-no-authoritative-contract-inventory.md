@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Fixed & Verified | **Depends on:** — | **Serves:** R4 and R8, who pin a document; and every guard that thinks it covers "every contract" | **Topic:** contracts
 
+**Guard:** test_the_documents_keep_up_with_the_contracts.py, test_the_front_door_is_current.py, test_the_contract_inventory_is_derived.py · inferred r149
+
 ## Motivation
 
 Direction 10 needs one thing before anything else: a list of what this

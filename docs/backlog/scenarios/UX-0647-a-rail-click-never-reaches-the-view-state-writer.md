@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-211 (URL state), UX-225 (the working set travels in the link), UX-640 (which measured it) | **Found by:** round 87, track B, settling a question UX-640 got half right | **Serves:** anyone who navigates by the rail and then shares the link | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** test_a_rail_click_reaches_the_writer.py, test_the_report_you_can_attach.py, test_the_rail_takes_a_step.py, test_the_page_has_a_reader.py, test_the_fold_says_how_deep_it_goes.py · inferred r149
+
 ## Motivation
 
 `wireViewState` delegates from `#report`. The rail is not inside it:

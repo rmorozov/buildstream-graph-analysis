@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-521 (the tokens-by-phase measurement), UX-508 (the process bands) | **Serves:** the round choosing a model and a shape for its next agent | **Topic:** docs | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The Agent tool returns tokens, tool calls and wall clock for every

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-442 (two-run confirmation), UX-495 (browser guards under load), UX-496 | **Serves:** the round reading a red gate on a file nobody touched | **Topic:** guards | **Area:** unassigned | **Shape:** bounded
 
+**Guard:** test_a_file_with_three_excursions_has_a_filed_task.py, test_the_flake_ledger_grows_from_the_drift_gate.py · inferred r149
+
 ## Motivation
 
 ```text

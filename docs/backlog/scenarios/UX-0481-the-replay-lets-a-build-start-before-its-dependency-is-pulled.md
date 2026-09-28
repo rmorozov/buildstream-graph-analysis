@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 72, `UX-459` — the first committed capture with `PULL` tasks reports a reduced model score on every analysis | **Serves:** the reader of a cache-hit build, whose certified floor is computed from a schedule that could not have happened | **Topic:** analysis | **Area:** bga/normalize
 
+**Guard:** test_a_pulled_dependency_gates_the_build.py · inferred r149
+
 ## Motivation
 
 `UX-60` decided what `T∞,observed` counts, and applying that decision

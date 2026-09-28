@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-220 (the numbers that need a sentence have one), UX-317 (apparatus in its place) | **Serves:** every reader of the report | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-220` gave every declared quantity a sentence, sourced from the

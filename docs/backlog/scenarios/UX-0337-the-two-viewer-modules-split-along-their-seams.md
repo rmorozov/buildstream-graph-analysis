@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-336 (which measured the cost and deferred this), UX-199 (the export's derived module order), UX-294 (the module map) | **Serves:** the maintainers — edit cost, not page cost | **Topic:** guards | **Area:** bga/viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-336`'s fifth lever, split out of it rather than rushed inside it.

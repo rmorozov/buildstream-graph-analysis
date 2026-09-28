@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done — (1) and (2) shipped; (3) declined on a measurement | **Depends on:** — (new capability direction) | **Topic:** capture
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Everything `bga` ingests today requires deciding to capture *before*

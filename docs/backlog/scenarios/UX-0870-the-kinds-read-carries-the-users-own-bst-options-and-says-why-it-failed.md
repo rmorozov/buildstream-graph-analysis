@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-843 | **Found by:** round 121, the user (a real project under a junction, GNU Make 4.4 on the host) | **Serves:** R2 (every element joins by its kind on a project built with -o and --config) | **Topic:** capture | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_the_kinds_read_carries_the_options.py
+
 ## Motivation
 
 `read_element_kinds_for_jobserver` runs `bst show --format '%{name}

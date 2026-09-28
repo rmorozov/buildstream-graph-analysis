@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-233 (the mechanical half), UX-610, UX-612 (which added them) | **Found by:** architecture review 15 | **Serves:** anyone reading a payload against the prose that describes it | **Topic:** contracts
 
+**Guard:** test_the_spec_outside_part_32_is_read_only.py, test_the_documents_keep_up_with_the_contracts.py · inferred r149
+
 ## Motivation
 
 Five keys shipped in this window and no document outside

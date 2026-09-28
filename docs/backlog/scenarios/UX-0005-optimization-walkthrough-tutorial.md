@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-01`, `UX-02` (the walkthrough should demonstrate the real comparison/efficiency-score tooling, not manual eyeballing - see Sequencing note below) | **Topic:** docs
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Filed while brainstorming `bga`'s main user scenarios, directly for the next planned work session: iteratively optimize one or more of `examples/01-03` (or a new example project), using `bga`'s own output to pick each iteration's change, until reaching a "good enough" efficiency level. That work session's real transcript - the actual sequence of "here's what `bga` said, here's what I changed, here's what improved" - is exactly the missing tutorial content this repo doesn't have yet. `docs/guides/cli.md` has an "Example Workflows" section, but it's command-reference-oriented (what flag does what), not narrative (what decision each number should drive, and what "done" looks like).

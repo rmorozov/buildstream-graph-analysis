@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-851, UX-849 | **Found by:** round 119, the user | **Serves:** R4 (the local loop captures under the mode with one flag) | **Topic:** capture | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_the_snapshot_takes_the_jobserver_switch.py
+
 ## Motivation
 
 `bga capture run --jobserver auto` (`UX-851`) and `--plan` (`UX-849`)

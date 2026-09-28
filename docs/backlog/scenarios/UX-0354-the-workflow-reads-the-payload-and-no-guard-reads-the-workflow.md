@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-293 (the packaging step reads the contract from the tree), UX-344 (the two namespaces lifted) | **Serves:** whoever changes a contract next | **Topic:** contracts | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Twice now, a deliberate contract change has been discovered by a red

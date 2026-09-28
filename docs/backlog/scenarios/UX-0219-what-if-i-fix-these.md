@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-207 (the top actions), UX-208 (the table it replaces) | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** test_a_report_you_can_navigate.py · inferred r149
+
 ## Motivation
 
 `signals.optimization_horizon` already carries the whole answer, per

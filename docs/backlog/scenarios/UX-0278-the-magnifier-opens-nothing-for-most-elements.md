@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-216 | **Serves:** R1 and R7 — who click it to find out more | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** test_any_element_can_be_inspected.py · inferred r149
+
 ## Motivation
 
 Reported: *"when i click magnifier icon near some element - it opens only

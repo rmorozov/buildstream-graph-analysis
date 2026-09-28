@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-187 (the fold rule), UX-286 (the chapters), styleguide §3b | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Two costs the field pass priced. The critical-chain section lists

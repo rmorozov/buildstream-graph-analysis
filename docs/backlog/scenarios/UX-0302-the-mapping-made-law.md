@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-267, UX-277 (the shape dispatch and the fold this codifies) | **Serves:** R1 — every reader of the page | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** test_the_mapping_is_law.py · inferred r149
+
 ## Motivation
 
 The style guide (round 41, `docs/design/styleguide.md` §1) turns the

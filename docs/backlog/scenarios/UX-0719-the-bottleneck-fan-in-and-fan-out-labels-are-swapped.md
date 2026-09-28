@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-681 (which measured it) | **Serves:** R3 reading the graph's shape | **Topic:** analysis | **Shape:** judgement | **Area:** bga/structural
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `bottleneck.high_fanin_elements` ranks `G.in_degree`, and the edges

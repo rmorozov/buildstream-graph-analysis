@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-617 (the widening), UX-501 (the derivation) | **Found by:** round 85, in UX-617's own Deviation section | **Serves:** the session filing a row | **Topic:** guards | **Area:** tools
 
+**Guard:** test_a_counted_figure_is_derived.py · inferred r149
+
 ## Motivation
 
 `UX-617` widened `dev_close_task.py`'s population to the index **plus**

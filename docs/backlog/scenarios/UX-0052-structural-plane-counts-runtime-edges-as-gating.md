@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** — (pre-existing; `UX-50` fixed the *durations* on this same code path, this is the *edges*) | **Topic:** analysis
 
+**Guard:** test_runtime_edge_gating.py · inferred r149
+
 ## Motivation
 
 Found in round 5, the first round to point `bga` at a **real, well-maintained BuildStream project** (`freedesktop-sdk`, 1089 elements) instead of a purpose-built example.

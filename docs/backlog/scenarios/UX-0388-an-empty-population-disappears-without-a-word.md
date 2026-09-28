@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-107 ("nobody could look" is not "looked and found nothing"), UX-286 (the report has chapters), UX-320 (the page conforms to its sections) | **Serves:** anyone reading the report of an incremental build | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** test_a_sentence_lives_on_its_door.py, test_apparatus_in_its_place.py, test_an_empty_population_says_so.py, test_the_report_you_can_attach.py · inferred r149
+
 ## Motivation
 
 Round 63 ran the user's `snapshot` → `view` cycle twice over

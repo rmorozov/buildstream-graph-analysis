@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-139 (verbatim is evidence), UX-511 (the dated block), UX-492 | **Serves:** anyone diffing a guide's output against their own | **Topic:** docs
 
+**Guard:** test_a_pasted_guide_block_is_fresh_or_dated.py · inferred r149
+
 ## Motivation
 
 Five pasted outputs in the guides drifted from the tool without a

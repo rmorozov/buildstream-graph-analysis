@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-669 (a citation is a question, not a key) | **Found by:** round 115, the design review | **Serves:** every reader opening a section | **Topic:** viewer | **Area:** bga-viewer | **Shape:** bounded
 
+**Guard:** test_the_json_toggle_carries_the_key.py · inferred r149
+
 ## Motivation
 
 `format.js:353` appends `span.section-key.muted` — the payload key —

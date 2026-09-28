@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-42 (the last superlinear term closed) | **Serves:** anyone opening a run of a few thousand elements | **Topic:** analysis
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 ```text

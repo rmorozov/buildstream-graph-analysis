@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** test_the_canned_prose_reads_as_written.py · inferred r149
+
 ## Motivation
 
 `bga/viewer/questions.js` builds each `why` by concatenating string

@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-663 (the model advisory), UX-498 (the decompose skill) | **Found by:** round 94, pricing the pipeline | **Serves:** the session deciding which of a round's filings a cheaper model may run, without reading them all | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
+**Guard:** test_a_task_declares_its_shape.py · inferred r149
+
 ## Motivation
 
 The advisory of round 90 put reading and checking on `sonnet` and code

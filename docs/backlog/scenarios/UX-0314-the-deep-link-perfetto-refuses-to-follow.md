@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-198 (the link), UX-299 (what made it load-bearing) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Reported from a real local run of the previous round's `bga`:

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-212 (the non-color channels that make print free), styleguide §4-5 | **Serves:** R1 — the user asked for it by name | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The user is a dark-theme reader and the page is designed light-first

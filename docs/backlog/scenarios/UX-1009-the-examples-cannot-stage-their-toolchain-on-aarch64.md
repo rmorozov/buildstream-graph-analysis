@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-915, UX-925, UX-927 | **Found by:** CodSpeed's bare-metal Graviton runner (16 real Cortex-A72 cores, measured 1:161.3s 2:80.7s 4:40.6s 8:23.0s 16:15.1s 32:14.6s compile width, sudo and `bwrap --unshare-net` work) is the only real-core host available for UX-905/UX-895, and it is aarch64. Owner decision (Ruslan, 2026-09-24): the jobserver showcase uses `examples/11-serial-giant` on real cores rather than freedesktop-sdk | **Serves:** R4, R5 (UX-905/UX-895 need a real-core host, and the only one available is aarch64) | **Topic:** capture | **Area:** tools | **Shape:** judgement
 
+**Guard:** test_buildbox_is_pinned_for_aarch64.py · inferred r149
+
 ## Motivation
 
 Two gaps block staging on aarch64. `tools/nix_store_fetch.py` `PINS` and

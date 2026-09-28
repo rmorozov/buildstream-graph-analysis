@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-312 (the canned question library), UX-368 (findings carry their query) | **Serves:** anyone pasting a query into Perfetto | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** test_the_console_stays_clean.py · inferred r149
+
 ## Motivation
 
 Thirteen queries ship. Three of them ask about **one** element:

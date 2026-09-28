@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-213 (guards that only guard one machine), UX-418 (the claim with no local instrument) | **Found by:** round 86, by `UX-633` being wrong | **Serves:** anyone whose guard reads history, and every future session in this environment | **Topic:** contracts
 
+**Guard:** test_a_guard_that_reads_history_declares_its_depth.py, test_a_release_records_a_contract_state.py · inferred r149
+
 ## Motivation
 
 A session's checkout in this environment is **shallow**, and nothing in

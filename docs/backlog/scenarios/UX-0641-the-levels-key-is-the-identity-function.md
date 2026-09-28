@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-52 (the gating graph), UX-303 (the shape before the rows) | **Found by:** round 87, by the owner opening the Levels fold | **Serves:** anyone reading the parallelism block | **Topic:** analysis
 
+**Guard:** test_runtime_edge_gating.py · inferred r149
+
 ## Motivation
 
 `parallelism.levels` publishes `[0, 1, 2, ... n-1]`. Always. Measured

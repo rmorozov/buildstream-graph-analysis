@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 72, PR #191 — `bst-tests` failed on a run where all 45 bst-gated tests passed | **Serves:** the contributor whose PR is red on a job that has just reported everything green | **Topic:** guards
 
+**Guard:** test_docs_links_and_commands.py
+
 ## Motivation
 
 `ci.yml`'s `bst-tests` job pins how many `bst`-marked tests must run, so

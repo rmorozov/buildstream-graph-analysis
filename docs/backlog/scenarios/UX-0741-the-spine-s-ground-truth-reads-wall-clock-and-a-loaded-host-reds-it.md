@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-108 (the guards), UX-731 (the same swap, done once), UX-110 | **Serves:** R8 reading a red gate on a file nobody touched | **Topic:** guards | **Shape:** judgement | **Area:** tools
 
+**Guard:** test_spine_ground_truth.py · inferred r149
+
 ## Motivation
 
 `tests/unit/test_spine_ground_truth.py` checks Plane 2 against

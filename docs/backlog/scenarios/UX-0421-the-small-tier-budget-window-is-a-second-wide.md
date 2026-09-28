@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 66, a red `test (3.9)` on PR #183 | **Serves:** every contributor, at the point CI tells them something is wrong | **Topic:** guards
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-363` sized the small tier's two CI budgets by one inequality:

@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Serves:** the reader who opens the spec's tail for the report or the tree | **Topic:** docs
 
+**Guard:** test_the_spec_says_which_parts_are_advisory.py, test_a_counted_figure_is_derived.py · inferred r149
+
 ## Motivation
 
 ```text

@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-397 (the filed question), UX-392 (the filters it would buy), UX-367 (the volume budget that arbitrates) | **Serves:** R8, and anyone deciding what this page may depend on | **Topic:** viewer
 
+**Guard:** test_one_factory_builds_every_table.py, test_docs_links_and_commands.py · inferred r149
+
 ## Motivation
 
 `UX-397` files the Tabulator question with one argument for adoption:

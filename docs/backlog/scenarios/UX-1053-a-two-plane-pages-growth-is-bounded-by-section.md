@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** UX-1050's architect (2026-09-27), styleguide §3e, §3k | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement
 
+**Guard:** test_a_findings_element_list_is_bounded.py · inferred r149
+
 ## Motivation
 
 From UX-1050's table, on `bga gen-synthetic <d> --store --seed 1` with

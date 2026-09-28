@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-308, UX-309, UX-310, UX-311 (the vocabulary it queries), UX-210 (the library's last upgrade) | **Serves:** R1, R2 | **Topic:** viewer
 
+**Guard:** test_the_real_reader_agrees.py · inferred r149
+
 ## Motivation
 
 The canned library was track-scoped by `UX-210` and has been

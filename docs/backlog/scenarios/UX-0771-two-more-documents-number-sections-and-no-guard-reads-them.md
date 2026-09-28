@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-763 (the guard this widens) | **Serves:** the round that renames a section and learns which id was taken from CI | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** test_the_styleguide_names_its_guards.py
+
 ## Motivation
 
 `UX-763` widened `_ambiguous()` from one document against the union to

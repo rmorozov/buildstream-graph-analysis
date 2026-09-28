@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-106, UX-107 (done — these are their S4/S5/S6) | **Topic:** capture | **Area:** tools
 
+**Guard:** test_spine_record_hygiene.py · inferred r149
+
 ## Motivation
 
 Three record-level defects from round 12's `spine.c`/parser review,

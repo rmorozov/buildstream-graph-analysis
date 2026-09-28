@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-687 (the impact tool and its guard) | **Found by:** round 113, the round gate, red on it a second time | **Serves:** the session closing a round; a guard that reads the tool, not the backlog | **Topic:** guards | **Area:** tools | **Shape:** bounded
 
+**Guard:** test_the_impact_set_is_derived.py
+
 ## Motivation
 
 `test_the_impact_set_is_derived.py`'s

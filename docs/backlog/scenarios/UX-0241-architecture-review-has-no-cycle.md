@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-233 (the drift guard), UX-237 (the filing rule) | **Serves:** R8, and the maintainers pricing the next big change | **Topic:** docs
 
+**Guard:** test_the_review_has_a_cadence.py · inferred r149
+
 ## Motivation
 
 The user's last observation: *regarding keeping documentation updated

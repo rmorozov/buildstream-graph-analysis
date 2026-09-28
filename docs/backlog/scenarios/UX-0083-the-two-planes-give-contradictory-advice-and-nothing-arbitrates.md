@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-51, UX-45 (both done); UX-09/UX-14 (context) | **Topic:** analysis
 
+**Guard:** test_plane2_conditioned_capacity_advice.py · inferred r149
+
 ## Motivation
 
 Measured this round on the macro-fixed variant of `examples/06`

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-849, UX-852 | **Found by:** round 118, UX-849's verifier | **Serves:** R4 (a killed link does not shrink the pool for the rest of the build) | **Topic:** capture | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_the_broker_grants_by_slack.py
+
 ## Motivation
 
 `UX-852` audits the wrappers' acquire rows against live pids and

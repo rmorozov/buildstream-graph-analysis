@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-685 (which gave the walk one), UX-686 (which needs this one) | **Serves:** the release gate, and the round reading a review it did not run | **Topic:** guards | **Shape:** bounded | **Area:** tools
 
+**Guard:** test_a_release_records_a_contract_state.py, test_a_scenario_is_named_by_its_seed.py · inferred r149
+
 ## Motivation
 
 `UX-685` gave the walk a fixed report shape, and

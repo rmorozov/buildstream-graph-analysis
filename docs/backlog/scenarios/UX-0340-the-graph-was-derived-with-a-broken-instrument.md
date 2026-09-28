@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-337 (which needed it and had to build it twice), UX-199 (the export's derived module order) | **Serves:** the maintainers — the next time code moves between viewer modules | **Topic:** guards | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-337`'s Required Fix opens *"the dependency graph between the

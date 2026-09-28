@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** — | **Serves:** R1, on the projects most worth analysing | **Topic:** viewer
 
+**Guard:** test_the_report_has_two_panes.py, test_tables_you_can_interrogate.py · inferred r149
+
 ## Motivation
 
 The third thing the report asked to recheck, and it is real. `UX-187`

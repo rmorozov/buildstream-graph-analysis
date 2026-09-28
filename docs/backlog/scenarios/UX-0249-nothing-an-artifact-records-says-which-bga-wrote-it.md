@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-248 (the set to stamp) | **Serves:** R1 and R7 — whose questions are answered by comparing against runs an older bga measured | **Topic:** contracts
 
+**Guard:** test_golden.py, test_output_schemas.py, test_the_viewer_renders_the_schema.py · inferred r149
+
 ## Motivation
 
 `bga` reads its own past output as input: `@last`/`@prev`, the baseline

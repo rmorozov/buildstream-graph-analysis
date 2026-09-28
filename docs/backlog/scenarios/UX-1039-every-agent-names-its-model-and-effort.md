@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-993 | **Blocks:** UX-1040 | **Found by:** round 143 — Ruslan in the project thread, 2026-09-27 07:36 ("aiming at cost/ratio value with good enough speed and quality") and 07:53 ("let's go with your recommended variant") | **Serves:** every round's agent spend, and the defects that land between tracks | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** test_the_agent_configuration_holds.py
+
 ## Motivation
 
 No file under `.claude/agents/` set `effort`, so every role ran at the

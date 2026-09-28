@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Found by:** round 69, running the question library against a real capture of `examples/06-macro-micro-optimization` | **Serves:** anyone opening the timeline to see the shape of their dependency graph | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** test_the_graph_shape_query_answers.py, test_the_real_reader_agrees.py · inferred r149
+
 ## Motivation
 
 `graph-levels` is the question that answers "what does my graph look

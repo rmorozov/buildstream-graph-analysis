@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-81` (the schedule), `UX-92` (the gate that needs the variation) | **Found by:** round 76, re-checking `UX-92` for the fourth time | **Serves:** `UX-92`'s gate, which has been "deferred, re-check next month" since n=3 | **Topic:** capture
 
+**Guard:** test_the_pinned_ref_is_a_decision.py · inferred r149
+
 ## Motivation
 
 `UX-92`'s cache gate has been deferred four times — n=3, n=5, n=6 and

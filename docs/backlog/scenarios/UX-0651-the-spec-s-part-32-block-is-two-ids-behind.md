@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** architecture review 16 | **Serves:** anyone reading the spec to find out what contracts `bga` has | **Topic:** docs
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Part 32 opens with a fenced block listing every contract by name,

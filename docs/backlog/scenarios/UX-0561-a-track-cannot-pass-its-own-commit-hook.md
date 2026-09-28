@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-501 (the index counts), the `decompose` skill (which owns the split) | **Found by:** round 81's two tracks, independently | **Serves:** every track that closes a row | **Topic:** guards
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The `decompose` skill makes `docs/backlog/scenarios/README.md` and

@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-846 | **Found by:** round 120, review 24 | **Serves:** R4 (the map says which rows are still open, truthfully) | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** test_docs_links_and_commands.py, test_the_context_map_is_the_tree.py · inferred r149
+
 ## Motivation
 
 `docs/contributing/fixing-guide.md` §6 labels

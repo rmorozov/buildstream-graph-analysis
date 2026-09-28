@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Serves:** the maintainers, and the next reader of `bga/viewer/` | **Topic:** docs
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Found by review 3, checklist item 4 — *what shipped since the last

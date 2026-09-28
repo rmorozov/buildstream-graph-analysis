@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-308 (a slice that says what bga knows about it), UX-312 (the trace dictionary) | **Serves:** anyone in Perfetto asking which level a slice belongs to | **Topic:** viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Round 60 asked whether `bga view` or Perfetto can show which elements

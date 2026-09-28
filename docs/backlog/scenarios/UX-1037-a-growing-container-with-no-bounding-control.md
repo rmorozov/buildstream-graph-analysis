@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-1031 | **Found by:** UX-1031's own declaration pass | **Serves:** R1, R5 | **Topic:** viewer | **Area:** bga | **Shape:** judgement
 
+**Guard:** test_every_drawing_has_a_name_and_a_data_route.py, test_every_payload_sequence_is_declared.py
+
 ## Motivation
 
 `UX-1031` required every container in `analyze/v6` to declare whether it

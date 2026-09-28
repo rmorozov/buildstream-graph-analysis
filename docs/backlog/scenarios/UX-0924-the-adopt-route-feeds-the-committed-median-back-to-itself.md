@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-496, UX-503, UX-803 | **Found by:** round 131 — `UX-908`'s re-record: 37 consecutive adopt commits on `main`, `6ad0d884`..`4145a45c`, carried a 2.1x-stale entry at 6.47 while the gate read the file at 13.3-14.5s | **Serves:** every branch charged for a cost `main` carries, and every round that re-records a cell by hand | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
+**Guard:** test_a_drawing_is_graded.py, test_docs_links_and_commands.py
+
 ## Motivation
 
 `UX-496` made a reference entry the median of a file's last five

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-229 (provenance, the deepest shape), UX-288 (publish each population once), UX-277 (what a deep value costs a cell) | **Serves:** anyone reading the JSON, and every renderer that walks it | **Topic:** contracts
 
+**Guard:** test_no_level_carries_nothing.py · inferred r149
+
 ## Motivation
 
 Asked directly: can the documents be organised at most three levels

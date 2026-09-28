@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-850 | **Found by:** round 118, UX-850's verifier | **Serves:** R5 (two elements each under the bound do not jointly exceed the host) | **Topic:** capture | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_the_pool_withholds_for_memory.py
+
 ## Motivation
 
 `UX-850`'s gate reads `MemAvailable` once per tick and compares it

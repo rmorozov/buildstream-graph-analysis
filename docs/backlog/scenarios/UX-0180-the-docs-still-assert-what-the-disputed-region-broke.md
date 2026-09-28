@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-170 (the fix the docs trail), UX-138 (the glossary), UX-135 (the README budget) | **Topic:** docs
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 UX-170's mechanism landed and holds (the −25% same-commit pair now

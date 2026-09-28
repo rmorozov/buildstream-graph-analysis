@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-267 | **Serves:** R1 | **Topic:** viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Requested: *"analysis of the length of contents of every field and

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-84, UX-86, UX-88 (all done — this is their drift) | **Topic:** guards
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Round 11's commit-by-commit review found five regressions where a later

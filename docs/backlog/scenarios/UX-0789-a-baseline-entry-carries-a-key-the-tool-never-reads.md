@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-694 (the baseline), UX-712, UX-703 | **Found by:** round 109, retro-verifying round 102 | **Serves:** the `--check` output that promises to name every forced batch forever | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_the_baseline_only_shrinks.py
+
 ## Motivation
 
 `tests/quality_baseline.json`'s entries for `tools/dev_sizes.py` and

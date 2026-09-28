@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-202 (the overview these hang off), UX-199 (the anchors they link to), Direction 7 second iteration | **Topic:** viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The external review and Direction 7 arrived at the same restraint

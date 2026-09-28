@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-845, UX-849 | **Found by:** round 117, Direction 20 | **Serves:** R5 (a machine that overcommitted memory before) | **Topic:** capture | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_the_pool_withholds_for_memory.py
+
 ## Motivation
 
 A token is a core; nothing in the protocol says bytes. `UX-678` put

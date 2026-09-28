@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-632 (the spread), UX-336 (the selector) | **Serves:** the round that re-derives what it was told to and is red anyway | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** test_the_cost_row_is_derived_from_the_selector.py, test_a_batch_closes_in_one_move.py · inferred r149
+
 ## Motivation
 
 `CLAUDE.md` and the fixing guide say the touch-map spread is

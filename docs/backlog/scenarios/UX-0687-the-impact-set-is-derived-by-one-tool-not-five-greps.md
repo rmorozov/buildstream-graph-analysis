@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-524 (the CI-measured touching map), UX-498 (decompose), UX-499 (the orient recipes) | **Serves:** the session at the design stage, before the first edit | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The `decompose` skill derives *surfaces* — the files a change touches

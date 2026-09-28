@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-207 (the ranking), UX-215 (the join), UX-216 (the element object) | **Serves:** R1, R8 | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The fourth external review's cheapest good idea. The page can say

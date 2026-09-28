@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-252 (the generated body) | **Found by:** round 114, the 0.4.1 cut | **Serves:** the reader of CHANGELOG.md, and `make lint` reading it | **Topic:** docs | **Area:** tools | **Shape:** bounded
 
+**Guard:** test_a_release_records_a_contract_state.py · inferred r149
+
 ## Motivation
 
 `bga release-notes` ends its body on the last closed row's bullet, and

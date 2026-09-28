@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-584 (the figures that derive), UX-233 (the contracts guard) | **Serves:** the next contract bump, which will pass a guard that should have caught it | **Topic:** guards
 
+**Guard:** test_the_process_documents_derive_their_figures.py · inferred r149
+
 ## Motivation
 
 `UX-584` made the process documents derive their versions from

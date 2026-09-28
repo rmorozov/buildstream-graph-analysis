@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-614 (the base instruction), UX-510 (the brief names its base) | **Found by:** round 85, measuring UX-614 | **Serves:** a track checking the base it was given | **Topic:** guards
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 **Corrected round 85, by measurement — the filed text is kept below.**

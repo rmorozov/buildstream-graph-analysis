@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-393 (the stepper), UX-399 (the mark), UX-359 (the guard that measures a different reader) | **Serves:** every session reading a red CI job on a branch that changed nothing | **Topic:** guards
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `test (3.11)` red on round 83's branch at `5b4c05f`, on two clauses

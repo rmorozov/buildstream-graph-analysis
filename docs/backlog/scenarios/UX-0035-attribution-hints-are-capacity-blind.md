@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-04 (done - this is a correctness fix to the hints it added), UX-12/UX-29 (the capacity facts the hint should consult) | **Topic:** analysis
 
+**Guard:** test_capacity_aware_hints.py · inferred r149
+
 ## Motivation
 
 `UX-04` added a static per-category "what to do about it" line under Biggest Opportunity. The hints are constant strings, chosen by attribution category alone. Real run, `examples/06-macro-micro-optimization/optimized`, `bst --builders 4 --max-jobs 4` on a **4-core** host:

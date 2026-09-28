@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-476` items 1-3, which are what a candidate must be taken *after* | **Found by:** round 73, closing `UX-476` | **Serves:** the round that reads `spread`'s history off the reference's git log and finds one entry repeated five times | **Topic:** guards
 
+**Guard:** test_the_capability_census_discriminates.py · inferred r149
+
 ## Motivation
 
 `UX-476` item 4 asked for a wholesale re-record of

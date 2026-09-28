@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 68, working UX-421..UX-425 | **Serves:** the next session, before it spends an hour proving something its machine cannot prove | **Topic:** docs
 
+**Guard:** test_the_agent_configuration_holds.py
+
 ## Motivation
 
 The `verify` skill's Definition of Done is a sequence of things to run

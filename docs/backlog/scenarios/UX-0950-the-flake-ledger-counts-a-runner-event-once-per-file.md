@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-691, UX-936 | **Blocks:** — | **Found by:** round 138 — `UX-936`'s reading of `tests/flake_ledger.json` grouped by run id | **Serves:** the next round whose push gate reads a file the census names, and the reader of the round document's Standing | **Topic:** guards | **Area:** tools | **Shape:** mechanical | **Reading:** container
 
+**Guard:** test_a_run_that_moves_many_files_counts_once.py · inferred r149
+
 ## Motivation
 
 `dev_flake_census.py` counts ledger rows per file. The rows are not

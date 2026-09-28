@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Found by:** round 71, running `make test-tiers` while closing `UX-451` | **Serves:** the contributor whose `make test-medium` quietly costs a minute more than the tier says | **Topic:** guards | **Area:** tools
 
+**Guard:** test_the_page_moves_between_runs.py, test_a_command_renders_as_a_command.py, test_a_candidate_is_confirmed_alone.py, test_a_slow_file_says_which_file.py · inferred r149
+
 ## Motivation
 
 `make test-tiers` is red, and not on anything `UX-451` touched.

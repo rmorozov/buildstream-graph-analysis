@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-496 (the samples), UX-503 (the adopt job), UX-442 (the two-run confirmation) | **Found by:** round 110, PR #218's three CI runs | **Serves:** R8 reading a red drift gate on a PR whose diff touched a file main had already made slower | **Topic:** guards | **Area:** tools | **Shape:** bounded
 
+**Guard:** test_the_baseline_only_shrinks.py, test_a_slow_file_says_which_file.py · inferred r149
+
 ## Motivation
 
 ```console

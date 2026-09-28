@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-132 (the convention this extends), UX-130 | **Topic:** docs
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 UX-132 wrote the annotate-what-you-invalidate convention into the

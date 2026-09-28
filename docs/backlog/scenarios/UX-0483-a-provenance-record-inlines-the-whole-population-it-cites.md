@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 73, `UX-479`'s export measurement | **Serves:** the round that adds a claim, cites the map its finding is about, and ships a report carrying that population once per claim | **Topic:** contracts | **Area:** bga
 
+**Guard:** test_the_report_you_can_attach.py · inferred r149
+
 ## Motivation
 
 `bga/provenance.py::record` builds one evidence row per cited path:

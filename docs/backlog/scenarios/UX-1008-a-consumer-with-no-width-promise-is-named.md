@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-1007 | **Found by:** the census of four BuildStream projects (2026-09-24) - gnome-build-meta's `nvidia-container-toolkit.bst` runs `go build` with no `-p` and no `GOMAXPROCS` of its own | **Serves:** R5 (the report says which sandboxes the pool cannot size) | **Topic:** analysis | **Area:** bga | **Shape:** judgement | **Reading:** container
 
+**Guard:** none — open, no guard named yet
+
 ## Motivation
 
 `go build` takes every CPU whatever `max-jobs` says, and a pool cannot

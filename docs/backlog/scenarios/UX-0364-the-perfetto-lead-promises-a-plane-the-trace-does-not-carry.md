@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-348 (the lead sentence), UX-362 (the same defect, opposite sign) | **Serves:** anyone opening a Plane 1 capture's trace in Perfetto | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-362` fixed an absence sentence that denied a timeline it did not

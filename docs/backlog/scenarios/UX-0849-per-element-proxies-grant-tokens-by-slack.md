@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-845, UX-847 | **Found by:** round 117, Direction 20 | **Serves:** R4 (the critical path gets the cores first) | **Topic:** capture | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_the_broker_grants_by_slack.py
+
 ## Motivation
 
 One FIFO is first-come: the element with three hours of slack and

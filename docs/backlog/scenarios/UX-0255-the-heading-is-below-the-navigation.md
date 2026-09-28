@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-254 (the layout it sits in) | **Serves:** R1 and R8 — whoever opens a report someone else sent them | **Topic:** viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The user's observation, beside `UX-254`: *"proper heading as we have

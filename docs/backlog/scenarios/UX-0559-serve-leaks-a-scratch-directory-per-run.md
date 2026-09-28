@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-299 (which added the served trace) | **Found by:** `UX-546`'s track, measuring under load | **Serves:** anyone who leaves the viewer running | **Topic:** viewer | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `tools/bga_view.py:1522`:

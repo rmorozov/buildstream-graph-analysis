@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-571 | **Blocks:** — | **Found by:** round 136 — reading the durable version claims while filing `UX-939`, after CI's binary moved to 2.8.1 | **Serves:** whoever reads a BuildStream behaviour claim in this codebase and has to decide whether it still holds | **Topic:** guards | **Area:** bga | **Shape:** judgement
 
+**Guard:** test_a_behaviour_claim_names_the_bst_it_was_read_on.py · inferred r149
+
 ## Motivation
 
 `UX-939` argues that the durable form of a version claim is what a

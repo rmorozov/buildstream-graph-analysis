@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-201 (the schema says what things are), UX-326 (the tool's own sentences are contracts) | **Serves:** anyone searching the page for a name they know | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `format.js`'s `title()` capitalises the first character of every key:

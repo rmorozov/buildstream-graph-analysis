@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-848, UX-856 | **Found by:** round 119, the user | **Serves:** R4 (an llvm-sized element alone on the critical path takes the whole machine) | **Topic:** capture | **Area:** tools | **Shape:** judgement
 
+**Guard:** test_the_examples_build.py
+
 ## Motivation
 
 BuildStream caps an element's `max-jobs` at 8 by default. On a 40-core

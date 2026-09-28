@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-203 (store/v1), UX-186 (the comparability grammar), Direction 9 | **Serves:** R5, R7 — first instrumentation for the unserved half of the role model | **Topic:** store
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Direction 9's anchor. Every question R5 and R7 ask begins with a

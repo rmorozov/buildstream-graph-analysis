@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-429 (§1d, a command is one line), UX-285, UX-535 | **Serves:** R1, at the moment of deciding what to run | **Topic:** viewer | **Shape:** judgement
 
+**Guard:** test_a_runbook_is_not_a_table.py · inferred r149
+
 ## Motivation
 
 The next steps render **twice** in chapter 1:

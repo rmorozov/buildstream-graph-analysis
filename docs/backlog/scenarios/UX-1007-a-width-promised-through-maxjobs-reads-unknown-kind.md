@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-859, UX-1003 | **Found by:** the census of four BuildStream projects (fdsdk, gnome-build-meta, carbonOS, libreml; ~2,450 elements, 2026-09-24) | **Serves:** R2, R5 (an auto arm on a real project changes the sandboxes it names) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement | **Reading:** container
 
+**Guard:** none — open, no guard named yet
+
 ## Motivation
 
 `recipe_promise` reads `JOBS` and a `MAKEFLAGS` carrying `-jN`. Real

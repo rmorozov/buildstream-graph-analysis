@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-613 (capacity-model/v1), UX-30 (the sweep), UX-116 (memory envelope) | **Serves:** R5 sizing a builder, R4 reading the sweep | **Topic:** analysis | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 ```text

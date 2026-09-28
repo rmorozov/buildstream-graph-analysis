@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Found by:** review 8, checklist item 3 — `UX-430`'s own §3.10 debt, one round later | **Serves:** anyone whose export drops the timeline and goes looking for the reason | **Topic:** docs | **Area:** tools
 
+**Guard:** test_the_ceilings_reach_a_reader.py · inferred r149
+
 ## Motivation
 
 `UX-430` added `TRACE_TRACK_BUDGET`, a second bound on the Perfetto

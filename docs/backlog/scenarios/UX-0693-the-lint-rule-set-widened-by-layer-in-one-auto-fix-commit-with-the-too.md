@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Serves:** the implementing session, whose edit hook then reads the same rules the gate reads | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
+**Guard:** test_the_minutes_inside_analyze.py · inferred r149
+
 ## Motivation
 
 `pyproject.toml`'s `[tool.ruff.lint]` selects `F` alone, under a

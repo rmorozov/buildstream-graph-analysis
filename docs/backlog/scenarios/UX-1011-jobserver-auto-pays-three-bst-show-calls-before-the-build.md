@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-842, UX-843, UX-882 | **Found by:** Graviton run 36123209379 (`bst-perf-tools/bga-bench` job 108033307761), `10-jobserver`, cold cache, 3 repeats | **Serves:** R4 | **Topic:** capture | **Area:** tools | **Shape:** bounded
 
+**Guard:** test_jobserver_reads_pay_one_bst_show_call.py, test_the_kinds_read_carries_the_options.py, test_a_public_annotation_sets_the_auth_style.py, test_native_build_tracer.py
+
 ## Motivation
 
 ```text

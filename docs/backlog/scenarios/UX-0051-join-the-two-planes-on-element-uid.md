@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-23 (element tagging - the join key), UX-24 (single-invocation dual capture), UX-32/UX-45/UX-46 (the Plane 2 facts worth joining), UX-44 (the Plane 1 ranking worth joining to) | **Topic:** analysis | **Area:** bga
 
+**Guard:** test_correlate.py · inferred r149
+
 ## Motivation
 
 `docs/design/directions.md` named this as the biggest thing the tool cannot do, and observed that it got *sharper* rather than smaller as Plane 2 improved: every capability added to Plane 2 widened the set of answers a user has to assemble by hand.

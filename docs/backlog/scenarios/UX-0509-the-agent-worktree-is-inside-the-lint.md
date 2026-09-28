@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-504` (the agent that runs in one) | **Found by:** round 75, three tracks in flight at once | **Serves:** the orchestrating session whose `make lint` is red on a file it did not write | **Topic:** guards
 
+**Guard:** test_the_register_is_terse.py, test_the_lint_reads_its_own_tree.py · inferred r149
+
 ## Motivation
 
 `UX-504`'s `implementer` runs in a worktree, and the Agent tool puts

@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-658 (which made the first three copies one), UX-634 (which built the release body) | **Serves:** anyone adding a topic and expecting the release notes to know about it | **Found by:** round 89, track X, counting the copies UX-658 was about | **Topic:** guards | **Shape:** judgement
 
+**Guard:** test_the_release_body_is_generated.py · inferred r149
+
 ## Motivation
 
 `UX-658` made the topic taxonomy one statement: `TOPIC_ORDER` in

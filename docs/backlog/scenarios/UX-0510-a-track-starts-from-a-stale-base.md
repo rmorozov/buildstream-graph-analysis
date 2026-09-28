@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-504` | **Found by:** round 75, three tracks in flight | **Serves:** the track told to read a file that does not exist in its copy | **Topic:** guards
 
+**Guard:** test_the_loop_stays_fast.py, test_the_agent_configuration_holds.py · inferred r149
+
 ## Motivation
 
 All three of round 75's `implementer` worktrees were created from

@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-330 (the planted store it can start from), UX-345 (the real-boot precedent) | **Serves:** every future round, before its walk | **Topic:** guards
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Round 45's stranger walk found four bugs forty-four feature rounds

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-388 (empty is rendered, absent is not) | **Serves:** R2 and R3, reading an incremental run's report | **Topic:** analysis | **Shape:** judgement | **Area:** bga/diagnostics
 
+**Guard:** test_the_journey_has_an_answer_key.py · inferred r149
+
 ## Motivation
 
 Found by `UX-685`'s walk at seed 2 — the empty-population class.

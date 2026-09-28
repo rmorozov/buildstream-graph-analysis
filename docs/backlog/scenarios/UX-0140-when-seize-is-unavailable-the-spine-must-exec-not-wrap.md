@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-130 (done — this is its fallback path) | **Topic:** capture
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 UX-130's SEIZE rewrite is correct in the traced path — and its

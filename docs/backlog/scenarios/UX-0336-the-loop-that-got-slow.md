@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-238 (the tiers this extends), the verify/falsify/measure skills | **Serves:** the maintainers — every future round's throughput | **Topic:** guards | **Area:** tools
 
+**Guard:** test_the_loop_stays_fast.py · inferred r149
+
 ## Motivation
 
 The user's observation: the implementing session slows down as the

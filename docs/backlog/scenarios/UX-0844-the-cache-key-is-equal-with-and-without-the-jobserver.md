@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-843 | **Found by:** round 117, Direction 20 | **Serves:** R4 (artifacts built either way are shared) | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
+**Guard:** test_the_key_is_equal_either_way.py
+
 ## Motivation
 
 BuildStream folds the composed environment minus `environment-nocache`

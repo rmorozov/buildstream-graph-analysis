@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-258 (the ranking it corrects) | **Serves:** R1 and R3 — and R8, handed the number in a slide | **Topic:** contracts
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `753 downstream` is unreadable on its own. Measured on the

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-277 | **Serves:** R1 and R7 — who found the choke point and now want it | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** test_one_click_from_investigation.py · inferred r149
+
 ## Motivation
 
 Reported: *"there is very useful bottleneck view, but it doesn't have

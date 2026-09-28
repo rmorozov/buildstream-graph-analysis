@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-587 (the same property, recorded for the backlog guard), UX-662 (the retire, which does not reach this class), UX-503 (`--adopt` adds names, rewrites none) | **Found by:** round 96, by CI going red on a file its diff never touched | **Serves:** the branch that goes red for test files another branch added | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
+**Guard:** test_docs_links_and_commands.py, test_a_guard_reads_only_what_a_clone_has.py · inferred r149
+
 ## Motivation
 
 Round 96's PR went red on the drift gate with **7295 tests, 0 failures**:

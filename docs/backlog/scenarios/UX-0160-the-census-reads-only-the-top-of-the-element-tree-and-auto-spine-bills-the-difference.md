@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-113 (the auto policy), UX-153 (which routed the directory and not the recursion), UX-108 (the unmeasured overhead this multiplies) | **Topic:** capture | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Element discovery is `os.listdir(elements_dir).endswith(".bst")` — in

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-32, UX-377 | **Found by:** round 131, [`docs/design/in-step-parallelism.md`](../../design/in-step-parallelism.md) §6 item 4 — filing it showed `graph.json` already carries the resolved number, so this is a join and not the capture change the document costed it as | **Serves:** R2 (the recipe author whose element is scored against the width it was actually given) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement
 
+**Guard:** test_the_width_comes_from_the_graph_not_the_argv.py
+
 ## Motivation
 
 `per_element_parallelism.requested_jobs` is `-j(\d+)` matched against

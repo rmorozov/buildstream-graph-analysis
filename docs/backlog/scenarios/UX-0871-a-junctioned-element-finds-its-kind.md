@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-843 | **Found by:** round 121, the user (a real project under a junction, GNU Make 4.4 on the host) | **Serves:** R2 (an element behind a junction joins the jobserver by its kind) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** mechanical
 
+**Guard:** test_bwrap_shim.py
+
 ## Motivation
 
 `bst show`'s `%{name}` is the junction-qualified name

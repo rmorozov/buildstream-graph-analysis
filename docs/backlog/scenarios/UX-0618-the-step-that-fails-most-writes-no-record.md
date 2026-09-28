@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-554 (the namer), UX-589 (its provenance), UX-418 (the backstop) | **Found by:** round 84, after four rounds of bisecting a log tail | **Serves:** every session reading a red CI job | **Topic:** guards
 
+**Guard:** test_a_failed_suite_names_what_failed.py · inferred r149
+
 ## Motivation
 
 `Test (small tier, with a backstop)` is the step CI fails on most —

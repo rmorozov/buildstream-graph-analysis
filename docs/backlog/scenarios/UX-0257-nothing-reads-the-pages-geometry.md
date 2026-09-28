@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-254 (the layout worth checking) | **Serves:** the maintainers; R1 through the defects it would catch | **Topic:** guards
 
+**Guard:** test_the_report_has_two_panes.py · inferred r149
+
 ## Motivation
 
 The user asked to *"recheck that information on page won't overlap"*.

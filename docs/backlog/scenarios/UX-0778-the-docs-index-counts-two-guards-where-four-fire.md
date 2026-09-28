@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-584 (which fixed this sentence's twin one document over) | **Serves:** the reader deciding which style rules are mechanical and which are honour-system | **Topic:** docs | **Area:** unassigned | **Shape:** bounded
 
+**Guard:** test_docs_links_and_commands.py
+
 ## Motivation
 
 `docs/README.md` names two of the style guide's rules as enforced:

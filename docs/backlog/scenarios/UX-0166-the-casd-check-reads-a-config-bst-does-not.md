@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-161 (the detection this corrects) | **Topic:** capture
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 UX-161's detection works — round 17 verified the positive and negative

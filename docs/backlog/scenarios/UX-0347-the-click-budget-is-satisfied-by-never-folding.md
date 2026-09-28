@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-319 (the chain folds, and the clicks are counted), UX-286 (the report has chapters) | **Serves:** anyone looking for one number in a twenty-screen document | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** test_the_page_has_geometry.py · inferred r149
+
 ## Motivation
 
 The visual contract's §3b sets a **click budget**: any section's

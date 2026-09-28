@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-195 (the export this weighs), UX-287 (the split that measures it) | **Serves:** R1 — whoever a report is sent to | **Topic:** viewer | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `--export` inlines every viewer module verbatim, and this

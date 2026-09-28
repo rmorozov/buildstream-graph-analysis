@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-284 (tools above the table), UX-318 (the rabbit hole announces its depth) | **Found by:** round 87, by the repository's owner pressing Expand twice | **Serves:** anyone who expands a table below the first screen | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** test_the_fold_says_how_deep_it_goes.py, test_docs_links_and_commands.py, test_focus_keeps_the_reading_position.py · inferred r149
+
 ## Motivation
 
 `Expand` is not an expand. It is **table focus**: a single global slot

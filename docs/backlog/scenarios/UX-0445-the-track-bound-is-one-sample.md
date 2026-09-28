@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** ⚪ Blocked / Deferred | **Found by:** round 70, setting `TRACE_TRACK_BUDGET` in `UX-430` | **Serves:** anyone whose capture the handoff refuses, and the round that has to decide whether it was right to | **Topic:** guards | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-430` gave the handoff a bound in the unit Perfetto actually spends:

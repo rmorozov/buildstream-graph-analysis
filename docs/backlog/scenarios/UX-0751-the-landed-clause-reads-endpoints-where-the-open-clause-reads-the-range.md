@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-748 (the open clause), UX-231 (the directions guard) | **Serves:** the reader trusting a Direction's status line | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-748` gave `test_a_range_called_open_names_no_closed_filing` a

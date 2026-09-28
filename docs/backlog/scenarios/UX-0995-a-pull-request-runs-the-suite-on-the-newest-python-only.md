@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-956 | **Blocks:** — | **Found by:** round 139 — Ruslan in the project thread, 2026-09-23 14:44, answering the workflow review ([doc](https://claude.ai/code/artifact/7f65768e-b4bb-405a-b3e1-90a672a249f5)) | **Serves:** every pull request waiting in the queue behind another's matrix | **Topic:** guards | **Area:** unassigned | **Shape:** mechanical
 
+**Guard:** test_a_pull_request_runs_the_newest_python_only.py · inferred r149
+
 ## Motivation
 
 On 10 sampled runs the four `test` cells are 68.5% of CI's job-seconds

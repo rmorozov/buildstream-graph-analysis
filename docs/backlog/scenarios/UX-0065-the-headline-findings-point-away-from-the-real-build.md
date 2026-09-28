@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** — (blocked calling the tool an MVP) | **Topic:** analysis
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The question this project keeps asking is *"is the tool what it claims to

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** — | **Serves:** R1 and R5 — the two who would act on a `--builders`/`--max-jobs` answer | **Topic:** docs
 
+**Guard:** test_the_builders_question_has_a_document.py · inferred r149
+
 ## Motivation
 
 Filed by `UX-237`'s rule on its own first application: this is one of

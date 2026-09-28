@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-340 (`dev_js_deps`), UX-450 (the skill's reason to exist) | **Serves:** the session about to move viewer code, which `CLAUDE.md` sends to `derive` first | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `CLAUDE.md` says *"`derive` before moving viewer code"*. Run the

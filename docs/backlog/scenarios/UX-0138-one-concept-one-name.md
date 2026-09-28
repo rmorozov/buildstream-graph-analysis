@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — (mechanical; the worklist is written) | **Topic:** docs
 
+**Guard:** none — no guard named at close
+
 Docs polish round (round 14); the full variants table with locations is
 in [`round-14`](../../audits/round-14.md).
 

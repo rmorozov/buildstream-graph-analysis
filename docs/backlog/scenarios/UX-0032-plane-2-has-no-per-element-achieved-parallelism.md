@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-11, UX-23 (both done - the data this needs is already captured and already element-tagged) | **Topic:** capture | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Plane 2 exists to answer one question, quoted from `docs/design/architecture.md`: *"inside this one element's own sandbox, is its native build system actually achieving the parallelism it should, or silently serializing?"* Its report does not answer it. Real run, `examples/06-macro-micro-optimization`, `bst --builders 4 --max-jobs 4 build all.bst` on a 4-core host:

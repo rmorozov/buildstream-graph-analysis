@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-501 (which made the number visible) | **Serves:** the round that asks "how much of the backlog was viewer work" and gets an answer that is 44 % blank | **Topic:** docs
 
+**Guard:** test_the_loop_stays_fast.py · inferred r149
+
 ## Motivation
 
 `UX-501` made the index's topic table a derivation, and the derivation

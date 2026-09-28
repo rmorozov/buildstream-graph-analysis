@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-469 (the seventeenth question), UX-549 (derived figures) | **Serves:** the reader deciding whether to open Perfetto | **Topic:** docs | **Area:** tools
 
+**Guard:** test_a_counted_figure_is_derived.py · inferred r149
+
 ## Motivation
 
 ```text

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-878 | **Found by:** round 126 (UX-878's `_COMPILER_SAFE_POLICIES` names `cmake_meson`, `jobs_env`, `cargo` — a `make`/autotools element that itself drives GCC LTO is excluded on purpose, but the exclusion's safety is unproven for the LTO case) | **Serves:** R2 (a make/autotools element that does GCC LTO does not ICE under the injected jobserver) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `_COMPILER_SAFE_POLICIES = {cmake_meson, jobs_env, cargo}`

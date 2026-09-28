@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Found by:** round 68, three red CI runs on PR #187 | **Serves:** every contributor, at the point CI tells them a file is not in the reference | **Topic:** guards
 
+**Guard:** test_the_order_the_page_has.py · inferred r149
+
 ## Motivation
 
 `UX-420` designed `tests/ci_reference.json` around four ways it can rot

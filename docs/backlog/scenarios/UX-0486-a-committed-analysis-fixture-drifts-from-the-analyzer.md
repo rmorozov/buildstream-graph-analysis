@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 73, closing `UX-469` | **Serves:** the round whose guards pass against an analysis the current code would never emit | **Topic:** guards | **Area:** tools
 
+**Guard:** test_golden.py, test_an_artifact_says_what_wrote_it.py, test_a_guard_reads_only_what_a_clone_has.py, test_a_committed_analysis_matches_the_analyzer.py · inferred r149
+
 ## Motivation
 
 `tests/fixtures/with_timeline/analyze.json` is a committed

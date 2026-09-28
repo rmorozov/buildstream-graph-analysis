@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-676 (the intervals), UX-230 (what-if pricing), UX-31 (pinned elements) | **Serves:** R4 and R2 — the operator who sets the numbers and the owner whose recipe carries them | **Topic:** analysis | **Shape:** bounded
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 BuildStream has no cross-element job server, so `builders ×

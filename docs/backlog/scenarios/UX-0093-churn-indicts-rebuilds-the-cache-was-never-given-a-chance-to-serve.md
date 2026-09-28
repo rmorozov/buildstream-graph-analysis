@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-92 (done), UX-55 (done) | **Topic:** store | **Area:** bga
 
+**Guard:** test_compare.py, test_cache_effectiveness.py · inferred r149
+
 ## Motivation
 
 UX-92's churn detector calls a rebuild-with-unchanged-key "waste by

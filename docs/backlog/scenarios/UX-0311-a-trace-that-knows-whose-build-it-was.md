@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-298, UX-308 (the annotation vocabulary) | **Serves:** R1, R4 | **Topic:** capture
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 A trace file leaves the machine that made it — attached, shared,

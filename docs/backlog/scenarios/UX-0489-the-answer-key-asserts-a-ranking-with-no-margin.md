@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 73, one red run of `make test-touching` while closing `UX-486` | **Serves:** the contributor whose unrelated diff is red because a real build ranked two elements the other way round | **Topic:** guards
 
+**Guard:** test_the_journey_has_an_answer_key.py
+
 ## Motivation
 
 `tests/unit/test_the_journey_has_an_answer_key.py::TestTheMacroAnswer::test_the_first_thing_to_fix_is_core`

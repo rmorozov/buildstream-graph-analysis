@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Found by:** round 67, while writing the hook — recorded in commit `af209a7`'s message and nowhere else | **Serves:** every contributor, at the point a hook blocks them | **Topic:** guards
 
+**Guard:** test_the_agent_configuration_holds.py
+
 ## Motivation
 
 `.claude/hooks/no-bulk-add.sh` enforces fixing guide §4a.1 by matching

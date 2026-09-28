@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-199 (a report you can find your way around), UX-286 (the report has chapters), UX-347 (the distance budget), UX-209 (the rail) | **Serves:** anyone reading past the first screen | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The user asked whether there is an easy way to reach the next section

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-12` | **Topic:** analysis
 
+**Guard:** test_cpu_budget.py · inferred r149
+
 ## Motivation
 
 Raised directly by the user after `UX-12`/`UX-13` shipped: `bga`'s oversubscription check (`UX-12`) compares declared concurrency demand against `host_cpu_count`, a value *detected* from the execution environment (`os.sched_getaffinity`, falling back to `os.cpu_count()`). The user's proposal: a `bga` user may deliberately want the tool's analysis to respect their *own* declared CPU budget - the number of cores they intend a build to use - rather than raw hardware detection, and the tool's "whole optimization process" should honor that.

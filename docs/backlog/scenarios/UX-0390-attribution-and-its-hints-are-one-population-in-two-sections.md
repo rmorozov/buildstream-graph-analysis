@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-288 (a population is published once), UX-351 (the label prints the unit the value carries), UX-286 (the report has chapters) | **Serves:** anyone reading where a build's time went | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** test_the_label_is_for_the_reader.py · inferred r149
+
 ## Motivation
 
 The user asked whether `attribution` and `attribution_hints` could be

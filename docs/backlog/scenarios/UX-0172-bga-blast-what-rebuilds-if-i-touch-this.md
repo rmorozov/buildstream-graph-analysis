@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-171 (the inventory this queries) | **Topic:** cli | **Area:** bga
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 UX-171's table ranks the widest resources; the developer's question

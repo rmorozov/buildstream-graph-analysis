@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-499 (the orient recipes), UX-687 (the impact tool, which reads it) | **Serves:** the session at the start of a task, which today spends five greps and their raw lines to learn who calls what | **Topic:** guards | **Area:** tools | **Shape:** bounded
 
+**Guard:** test_the_symbol_index_reads_the_tree_not_the_text.py · inferred r149
+
 ## Motivation
 
 The `orient` skill answers "where is it defined, who calls it, who

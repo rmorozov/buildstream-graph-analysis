@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-471 (the count removed from CLAUDE.md), UX-505 (the card), UX-551 (the suite figure) | **Serves:** every session's first read | **Topic:** docs
 
+**Guard:** test_the_process_documents_derive_their_figures.py · inferred r149
+
 ## Motivation
 
 Round 82 checked every number in the process documents against the

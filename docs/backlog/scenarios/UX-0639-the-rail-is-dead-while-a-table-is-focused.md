@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-638 (same module) | **Found by:** round 87, measuring what table focus hides | **Serves:** anyone who reaches for the rail to leave a focused table | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** test_the_rail_says_it_is_not_the_way_out.py · inferred r149
+
 ## Motivation
 
 Table focus hides every section with `display: none`. The left-hand

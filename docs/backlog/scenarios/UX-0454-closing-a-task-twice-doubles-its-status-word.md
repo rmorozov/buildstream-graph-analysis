@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Found by:** round 70, reading `UX-453`'s own header after closing it | **Serves:** anyone reading a task file's header, and the next round that greps the status line | **Topic:** guards | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Twenty-four of the 387 closed task files say `🟢 Done Done`:

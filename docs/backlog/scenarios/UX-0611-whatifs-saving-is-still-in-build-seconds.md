@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-596 (which built the converter) | **Serves:** the team deciding whether a fix is worth a day | **Topic:** analysis
 
+**Guard:** test_whatifs_saving_is_in_the_teams_units.py, test_every_direction_names_its_reader.py · inferred r149
+
 ## Motivation
 
 `UX-596` converted the headline and the plan into the team's units.

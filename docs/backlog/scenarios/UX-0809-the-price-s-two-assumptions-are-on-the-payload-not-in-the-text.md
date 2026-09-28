@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-739 (the price) | **Found by:** round 112, `UX-739`'s verifier | **Serves:** R4 and R5 reading the priced advice as text | **Topic:** analysis | **Area:** bga | **Shape:** bounded
 
+**Guard:** test_the_page_has_a_volume_budget.py, test_the_chain_folds_and_clicks_are_counted.py, test_the_report_you_can_attach.py, test_the_max_jobs_price_moves_with_the_recommendation.py · inferred r149
+
 ## Motivation
 
 `UX-739`'s Required Fix asked that the figure "say what the model

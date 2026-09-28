@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 69, twice, diagnosing two separate reds on `test (3.11)` | **Serves:** whoever reads the next red CI run, which under `UX-426`'s loop is everybody | **Topic:** guards
 
+**Guard:** test_a_slow_file_says_which_file.py · inferred r149
+
 ## Motivation
 
 `UX-427` added a step that prints this run's per-file timings so the

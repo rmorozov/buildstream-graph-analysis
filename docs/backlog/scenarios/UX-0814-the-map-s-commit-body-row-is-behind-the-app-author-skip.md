@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-811 (the mechanism) | **Found by:** round 113, review 22 | **Serves:** the reader pricing a change from §6 | **Topic:** docs | **Area:** tools | **Shape:** mechanical
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `docs/contributing/fixing-guide.md` §6's row for

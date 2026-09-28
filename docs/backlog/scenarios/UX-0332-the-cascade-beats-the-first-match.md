@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-318 (the guard it repairs) | **Serves:** the maintainers | **Topic:** guards
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Round 45's verification proved the round-44 landing thirteen ways

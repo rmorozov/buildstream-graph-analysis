@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Found by:** UX-418, over three CI runs | **Serves:** the edit-run loop, in the place a full run already happens | **Topic:** guards | **Area:** tools
 
+**Guard:** test_a_slow_file_says_which_file.py, test_output_schemas.py, test_marginal_efficiency_gate.py · inferred r149
+
 ## Motivation
 
 `UX-418` built `tools/dev_tier_drift.py` to close the half of the tier

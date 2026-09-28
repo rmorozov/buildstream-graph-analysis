@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-146 (the record this extends), UX-11 (the split contract) | **Topic:** capture
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The round-15 code review produced the strongest remaining hypothesis

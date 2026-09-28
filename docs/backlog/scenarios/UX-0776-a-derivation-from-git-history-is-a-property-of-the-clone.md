@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-744 (the register this fired on) | **Serves:** the session whose `--write` produces a different answer from CI's, on the same commit | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-744` derives the round register from `git log`. This container's

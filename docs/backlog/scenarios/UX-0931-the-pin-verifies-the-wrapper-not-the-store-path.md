@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-927 | **Blocks:** — | **Found by:** `UX-927` — it named this Out of Scope on one observation, and the closure walk then made it four | **Serves:** every pinned component the examples stage, and the next person to read a red pin | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
+**Guard:** test_the_staged_make_is_the_pinned_one.py
+
 ## Motivation
 
 `nix_store_fetch.PINS` carried one digest per pin, `sha256`, and

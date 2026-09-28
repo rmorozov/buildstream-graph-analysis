@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-325 (the installed sweep), UX-327 (documented invocations parse) | **Serves:** the next flag rename | **Topic:** guards
 
+**Guard:** test_the_documented_bga_lines_parse.py · inferred r149
+
 ## Motivation
 
 `test_docs_links_and_commands.py:573-604` checks that `bga <word>`

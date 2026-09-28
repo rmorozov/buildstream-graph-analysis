@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-195 | **Found by:** round 120, the user (a 16-core, 32 GB host, `--builders 16 --jobserver auto`) | **Serves:** R1 (the strip and the table under it say the same percentiles) | **Topic:** viewer | **Area:** bga-viewer | **Shape:** mechanical
 
+**Guard:** test_a_drawing_is_graded.py
+
 ## Motivation
 
 The distribution shape publishes nine deciles, p95, p99, min, max

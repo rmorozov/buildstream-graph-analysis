@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-360 (the volume budget), UX-305 (emphasis is a budget) | **Serves:** anyone reading more than the first screen | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** test_why_is_this_ranked_first.py · inferred r149
+
 ## Motivation
 
 Counted over the rendered blocks a reader sees — every `p`, `li`,

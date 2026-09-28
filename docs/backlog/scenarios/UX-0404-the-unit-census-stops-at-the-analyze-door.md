@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-343 (the census this extends) | **Serves:** anyone reading a whatif or store number outside the page | **Topic:** guards | **Area:** bga
 
+**Guard:** test_every_number_says_what_it_is.py · inferred r149
+
 ## Motivation
 
 Round 64's falsification pass on the rounds 47-63 landing found one

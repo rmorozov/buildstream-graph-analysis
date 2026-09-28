@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-628 (the undocumented-key ratchet), UX-655 (a walk that stops one level short), UX-829 (which added the key) | **Found by:** review 23 | **Serves:** anyone reading `elements.fan_in` against the guide that describes it | **Topic:** contracts | **Area:** bga | **Shape:** judgement
 
+**Guard:** test_the_documents_keep_up_with_the_contracts.py
+
 ## Motivation
 
 `UX-829` (round 116) gave `analyze/v6`'s `elements.fan_in[uid]` a

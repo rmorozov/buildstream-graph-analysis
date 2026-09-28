@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-876, UX-878 | **Found by:** round 125, the user (a mixed-make project — some elements pinned to GNU Make ≤4.2.1, others migrating to 4.4 — needs to force `fd` on a ≤4.2.1 element so it fills the pool while it is being fixed, rather than let UX-878 scrub it to its recipe `-jN`) | **Serves:** R2 (an operator migrates make version by version and keeps the jobserver's effect per element) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** bounded
 
+**Guard:** test_bwrap_shim.py, test_the_lto_link_survives_the_jobserver.py, test_the_environment_surface_is_an_inventory.py, test_a_per_element_switch_forces_the_auth_style.py · inferred r149
+
 ## Motivation
 
 `--jobserver auto` resolves one style for the whole capture, and UX-878

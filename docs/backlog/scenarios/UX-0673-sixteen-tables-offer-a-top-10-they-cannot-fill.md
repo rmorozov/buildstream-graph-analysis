@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-194 (the Top-N control), UX-349 (the tools scale with the table) | **Serves:** anyone reading a three-row table with a five-option menu | **Topic:** viewer | **Shape:** judgement
 
+**Guard:** test_the_report_you_can_attach.py · inferred r149
+
 ## Motivation
 
 ```text

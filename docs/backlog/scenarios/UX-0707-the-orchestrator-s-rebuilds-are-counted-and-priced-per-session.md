@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-525 (the track-cost tool), UX-663 (the run ledger) | **Serves:** the session deciding how long to stay idle and how much to keep in view, from a number rather than a feeling | **Topic:** guards | **Area:** tools | **Shape:** bounded
 
+**Guard:** test_a_rebuild_is_a_wake_with_nothing_before_it.py · inferred r149
+
 ## Motivation
 
 `tools/dev_track_cost.py` prices a track by phase; nothing prices the

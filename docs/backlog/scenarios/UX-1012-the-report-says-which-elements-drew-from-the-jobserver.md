@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-1005 | **Found by:** Ruslan on the Graviton thread (2026-09-25): "does bga show in report which elements actually used jobserver and which are not?" | **Serves:** R4, R5 | **Topic:** analysis | **Area:** bga | **Shape:** judgement | **Reading:** container
 
+**Guard:** none — open, no guard named yet
+
 ## Motivation
 
 `jobserver.per_element[uid].joined` (`bga/correlate.py:1404-1451`)

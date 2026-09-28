@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-497 (the budget these are over) | **Serves:** every session that opens a dev tool to use it, not to relive it | **Topic:** docs | **Area:** tools
 
+**Guard:** test_the_register_is_terse.py
+
 ## Motivation
 
 The dev tools carry their own history in-line. Measured in round 74:

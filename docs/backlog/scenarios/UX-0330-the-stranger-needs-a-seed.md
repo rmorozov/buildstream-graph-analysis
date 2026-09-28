@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-213 (the committed-capture precedent), UX-188 (the timeline this makes reachable) | **Serves:** R1 — the evaluating newcomer | **Topic:** docs | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Three walk frictions with one root: a no-bst newcomer has no

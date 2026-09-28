@@ -4,6 +4,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-12` | **Topic:** capture
 
+**Guard:** test_bst_show_to_graph.py, test_serialization_points.py, test_serialization_point_integration.py · inferred r149
+
 ## Motivation
 
 Raised by the user, with a concrete, compelling real-world scenario: nothing prevents a BuildStream project from setting a *different* `max-jobs` value per element (via `project.conf`'s `elements:<kind>:variables:max-jobs` or a per-element `public: bst: max-jobs:` override - a real, resolvable BuildStream variable, not hypothetical) rather than one uniform value across the whole build. This is often *correct*, not a misconfiguration: a large, monolithic element like an LLVM build can be a genuine single point of synchronization in the whole project's build graph - it doesn't meaningfully parallelize with anything else while it runs, so giving *it specifically* the full host core count for `max-jobs` (rather than a smaller shared value) can cut real wall-clock time dramatically (the user's own cited real-world figure: roughly half an hour down to about five minutes). But this same reasoning becomes actively harmful once BuildStream's own `--builders` setting allows *multiple* such large elements to build concurrently - N simultaneous full-core-count LLVM-style builds is a severe, real oversubscription risk `UX-12`'s current single global `native_max_jobs` value has no way to represent or detect at all.

@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-112 (done — this audits its headline number) | **Topic:** docs | **Area:** tools/native_trace
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 UX-112's factorial rightly refuted the +31-44% interaction it was

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** ⚪ Blocked — stages 1 and 2 done; stage 3's trend shipped as `UX-103`. Its gate is **not deferred, it is not gateable on this history**: `UX-514` chose `capture-ref-policy: pinned` in round 80, so the cache variation this waited for cannot arrive from the schedule. Unblocking it means a second ref, which is that item's Out of Scope | **Depends on:** UX-55 (done), UX-81 (history to trend over) | **Topic:** store | **Area:** bga
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 For an incremental CI build — which round 6 established is *every* CI

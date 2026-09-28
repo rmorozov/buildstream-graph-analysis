@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-628 (which measured this and froze it) | **Found by:** round 86, closing UX-628 | **Serves:** anyone reading a payload against the prose that describes it | **Topic:** docs
 
+**Guard:** test_the_documents_keep_up_with_the_contracts.py
+
 ## Motivation
 
 `UX-628` named the five keys review 15 found and, in doing so, measured

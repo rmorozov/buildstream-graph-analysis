@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** Direction 15, UX-298 (the trace it writes beside), UX-215 (the aggregate pattern) | **Serves:** R1, R2 | **Topic:** capture
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Measured this round: **~95 % of the 1.5 GB monolith is dead weight

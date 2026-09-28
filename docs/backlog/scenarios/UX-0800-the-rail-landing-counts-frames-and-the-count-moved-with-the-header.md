@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-670 (the landing), UX-668 (the header that moved it), UX-795 (the settle shape) | **Found by:** round 110, `UX-668`'s verifier | **Serves:** R8 reading a red gate on a rail click nobody touched | **Topic:** viewer | **Area:** bga-viewer | **Shape:** mechanical
 
+**Guard:** test_a_rail_click_lands_on_its_section.py
+
 ## Motivation
 
 ```console

@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-359 (the page fixture every browser guard measures), UX-532 (the nested-row class a census would have caught) | **Serves:** the orchestrating session paying for a walk | **Topic:** guards | **Shape:** bounded
 
+**Guard:** test_a_new_control_class_lands_declared.py · inferred r149
+
 ## Motivation
 
 Every walk since round 63 has re-derived the same census by driving

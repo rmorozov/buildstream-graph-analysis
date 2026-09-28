@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-199 (which derived the module order), UX-669 (which hit it) | **Serves:** anyone editing a viewer module | **Topic:** viewer | **Shape:** judgement | **Area:** tools
 
+**Guard:** test_an_aliased_import_is_refused.py · inferred r149
+
 ## Motivation
 
 `tools/bga_view.py:872` matches an import statement to find the module

@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-104 (done, one clause honestly unattainable at the time), UX-108 (whose capture makes it attainable) | **Topic:** docs
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 UX-104's acceptance named an fdsdk check — the envelope computed from

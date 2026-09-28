@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-503, UX-524, UX-691 | **Blocks:** — | **Found by:** round 136 — `2a3f2ee7` took two files to `EXCURSION_FLOOR` and left `main` red on `test_a_file_with_three_excursions_has_a_filed_task.py`; GitHub shows that commit with **zero** check runs, and the first thing to notice was another thread's push gate refusing; the same again at `408235c7` and `8090a99d`, which took `test_every_skip_reason_is_declared.py` to three, and `461c9c6b` unchecked with the reference's 46.28 s entry (`UX-944`) | **Serves:** every branch that inherits a red `main` it cannot see and did not cause | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
+**Guard:** test_a_file_with_three_excursions_has_a_filed_task.py, test_a_slow_file_says_which_file.py, test_the_process_documents_derive_their_figures.py, test_the_touching_map_is_measured.py, test_the_loop_stays_fast.py, test_an_adopt_job_reads_its_record_before_it_pushes.py · inferred r149
+
 ## Motivation
 
 A push authenticated with `GITHUB_TOKEN` does not trigger a workflow —

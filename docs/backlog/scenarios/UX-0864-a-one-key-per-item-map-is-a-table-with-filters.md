@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-419, UX-526 | **Found by:** round 120, the user (a 16-core, 32 GB host, `--builders 16 --jobserver auto`) | **Serves:** R2 (find one binary or one task among a thousand) | **Topic:** viewer | **Area:** bga-viewer | **Shape:** mechanical
 
+**Guard:** test_the_mapping_is_law.py
+
 ## Motivation
 
 `renderSection` (`bga/viewer/sections.js`) sends every object value

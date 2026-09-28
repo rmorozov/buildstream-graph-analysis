@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-666 (the runs ledger) | **Serves:** the session that reads the mandatory entry point and never learns a verifier exists | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** test_a_merged_track_names_its_verifier.py · inferred r149
+
 ## Motivation
 
 The pipeline's most valuable step is stated once, in the document the

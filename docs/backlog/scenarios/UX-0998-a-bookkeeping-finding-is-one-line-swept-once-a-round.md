@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-994, UX-996 | **Blocks:** UX-999 | **Found by:** round 139 — Ruslan in the project thread, 2026-09-23 15:03: "for bookkeeping we can invent some kind of batching to compress amount work" | **Serves:** every round, through the cost a bookkeeping row pays today | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_a_bookkeeping_finding_is_one_line.py
+
 ## Motivation
 
 A bookkeeping drift (a stale figure, a doc naming a retired flag) is filed

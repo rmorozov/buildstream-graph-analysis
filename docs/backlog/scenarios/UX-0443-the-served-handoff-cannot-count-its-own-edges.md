@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 70, closing `UX-431` | **Serves:** anyone who runs `bga view` and opens the handoff page instead of exporting a report | **Topic:** viewer | **Area:** tools
 
+**Guard:** test_the_served_handoff_counts_its_edges.py · inferred r149
+
 ## Motivation
 
 `UX-431` gave the trace handoff a sentence saying what the dependency

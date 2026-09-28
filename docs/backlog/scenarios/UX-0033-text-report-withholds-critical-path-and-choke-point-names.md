@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Topic:** analysis | **Area:** bga/report
 
+**Guard:** test_critical_path_and_choke_point_naming.py · inferred r149
+
 ## Motivation
 
 `README.md` on the critical path: *"the one chain of elements that determines total build time... this is always where to look first"*. `bga/report/text.py`:

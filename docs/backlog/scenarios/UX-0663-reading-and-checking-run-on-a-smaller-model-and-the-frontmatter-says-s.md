@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-504 (the three agents), UX-521 (tokens by phase) | **Serves:** the maintainer's subscription; the orchestrating session's context | **Topic:** docs
 
+**Guard:** test_the_agent_configuration_holds.py · inferred r149
+
 ## Motivation
 
 Every subagent this repository launches ran on the session's model,

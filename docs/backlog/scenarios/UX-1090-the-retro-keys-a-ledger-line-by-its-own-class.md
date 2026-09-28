@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-999 | **Blocks:** — | **Found by:** round 149 — the first weekly retro, `docs/audits/retro-2026-09-28.md`, proposal 1 | **Serves:** every weekly retro, whose top class is its whole output | **Topic:** guards | **Area:** tools | **Shape:** mechanical | **Reading:** container
 
+**Guard:** none — open, no guard named yet
+
 ## Motivation
 
 `python3 tools/dev_retro.py` read 158 findings for 2026-09-21..28 and left

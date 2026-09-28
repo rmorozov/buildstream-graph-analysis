@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-308 (which split name from annotation), UX-298 (the interning that prices this) | **Serves:** R1, R2 | **Topic:** capture
 
+**Guard:** test_the_real_reader_agrees.py · inferred r149
+
 ## Motivation
 
 The user's field report: slice names are still trimmed in the

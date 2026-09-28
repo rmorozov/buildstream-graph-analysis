@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-12`, `UX-15` | **Topic:** analysis
 
+**Guard:** test_max_jobs_zero_sentinel.py · inferred r149
+
 ## Motivation
 
 Raised by an external review of `UX-12`/`UX-13`/`UX-14`/`UX-15`'s merged code, specifically flagging that BuildStream documents `--max-jobs 0` as a real, meaningful sentinel value ("let BuildStream choose - up to the available host threads, capped at 8"), not "zero parallelism" - and asking whether `bga`'s new `native_max_jobs` field handles that value correctly anywhere it's consumed.

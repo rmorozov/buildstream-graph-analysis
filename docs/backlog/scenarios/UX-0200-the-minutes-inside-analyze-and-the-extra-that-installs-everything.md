@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-183 (the Ticker this extends), UX-42 (which documented the quadratic phase) | **Topic:** cli | **Area:** bga
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Field report, both halves: *"bga analyze in bga snapshot work for

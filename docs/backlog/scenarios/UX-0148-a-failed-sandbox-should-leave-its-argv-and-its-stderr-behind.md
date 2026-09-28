@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-146 (the record this extends) | **Topic:** capture
 
+**Guard:** none — no guard named at close
+
 Same field failure as UX-146/UX-147: `buildbox-run failed with
 returncode 1` and nothing else. Round 15 measured the gap directly: a
 `bwrap`-level failure's stderr *does* reach BuildStream's log on this

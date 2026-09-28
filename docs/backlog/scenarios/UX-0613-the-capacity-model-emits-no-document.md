@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-595 (which built it), UX-341 (the quantity rule that blocks it) | **Serves:** R4 and anyone wanting the model's answer in a pipeline | **Topic:** contracts
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-595` built the queueing model and `bga snapshot --capacity N,RATE`

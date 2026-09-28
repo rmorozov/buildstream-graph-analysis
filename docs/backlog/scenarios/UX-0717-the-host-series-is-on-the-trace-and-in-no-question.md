@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-675 (the three CPU tracks); **not** UX-676 - the round-101 track verified it publishes a report section and per-row trace queries, not a Finding the reachability gate reads, so the premise this row was filed on does not hold | **Serves:** R5, the capacity operator - the question hangs off `capacity-recommendation`, which publishes `cores_busy` and `binding_constraint`; the row said R4 before it was built | **Topic:** viewer | **Shape:** judgement | **Area:** bga/viewer
 
+**Guard:** test_the_questions_ask_what_the_trace_answers.py, test_buttons_that_know_why.py, test_a_counted_figure_is_derived.py, test_the_report_you_can_attach.py · inferred r149
+
 ## Motivation
 
 `UX-675` put eight host counter tracks on the trace and no canned

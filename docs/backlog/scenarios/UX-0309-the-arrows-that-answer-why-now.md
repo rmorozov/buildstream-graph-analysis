@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-298 (the emitter), UX-308 (the vocabulary beside it) | **Serves:** R1, R3 | **Topic:** capture
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The dependency question is the one a timeline is *for* — an element

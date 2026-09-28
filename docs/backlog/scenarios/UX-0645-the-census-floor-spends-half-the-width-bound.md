@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-644 (the row that declined it), UX-606 (the selector's measured shape) | **Found by:** round 87, measuring why one module crossed the bound | **Serves:** anyone reading a width figure as if it were about their module | **Topic:** guards | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Eleven of every module's selection comes from **census** guards —

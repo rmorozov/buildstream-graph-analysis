@@ -3,6 +3,8 @@
 **Flake:** tests/unit/test_a_drawing_is_graded.py
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-691 | **Found by:** round 131 — `3c12c9eb` appended the third excursion and shipped `main` red: `make test` fails `test_the_real_ledger_has_no_unfiled_repeat_excursion`, which is `UX-691`'s guard doing its job | **Serves:** the round whose push gate is blocked by a file nobody has named | **Topic:** guards | **Area:** tools | **Shape:** bounded
 
+**Guard:** test_a_file_with_three_excursions_has_a_filed_task.py
+
 ## Motivation
 
 `UX-691`'s rule is that a file the flake ledger excurses on three times

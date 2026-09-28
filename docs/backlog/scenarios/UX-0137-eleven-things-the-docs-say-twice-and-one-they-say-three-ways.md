@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-135, UX-136 (land the reorder and the era fixes first, so the dedup doesn't move stale text) | **Topic:** docs
 
+**Guard:** none — no guard named at close
+
 Docs polish round (round 14); the full duplicate-cluster table with
 locations is in [`round-14`](../../audits/round-14.md).
 

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-719 (the bottleneck view), UX-681 (fan-in) | **Found by:** round 115, the design review | **Serves:** R3 deciding which chain to split | **Topic:** analysis | **Area:** bga | **Shape:** judgement
 
+**Guard:** test_a_distribution_twin_draws_every_mark.py · inferred r149
+
 ## Motivation
 
 `bottleneck` draws one "Longest serial chain" (walk capture:

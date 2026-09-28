@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 70, the half of `UX-435` that could not be measured | **Serves:** the reader whose hand-off failed — the only reader who ever sees this sentence | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** test_the_palette_is_validated.py · inferred r149
+
 ## Motivation
 
 `#handoff` is the status line inside the rail's hand-off group.

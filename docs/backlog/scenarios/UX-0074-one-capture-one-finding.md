@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-70` (done — which built the per-element simulation this generalizes), `UX-20` (done — whose grouping rule is measured wrong here) | **Topic:** analysis
 
+**Guard:** test_optimization_horizon.py, test_headline_points_at_the_time.py · inferred r149
+
 ## Motivation
 
 Round 9's real capture takes ~60 minutes of CI to produce. From it, a

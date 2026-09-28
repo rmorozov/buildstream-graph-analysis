@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-930 | **Blocks:** — | **Found by:** round 137 — `#266` moved `tests/ci_reference.json`'s entry for `tests/unit/test_the_toolchain_parameters_are_read_back.py` from 3.15 to 46.28, and the window behind that number reads `[46.28, 3.15, 94.23]` | **Serves:** the next reader of that entry, and every run of the `test` job, which pays the dear mode whenever the runner's `/usr` and its temporary directory are on different filesystems | **Topic:** guards | **Area:** unassigned | **Shape:** mechanical
 
+**Guard:** test_the_toolchain_parameters_are_read_back.py
+
 ## Motivation
 
 The entry is not a number the file ever produced. On `origin/main`:

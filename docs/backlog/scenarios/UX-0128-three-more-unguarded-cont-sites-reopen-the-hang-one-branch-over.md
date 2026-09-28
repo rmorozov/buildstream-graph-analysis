@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-117 (done — this is its perimeter, not its regression) | **Topic:** capture | **Area:** tools/native_trace
 
+**Guard:** test_process_spine.py · inferred r149
+
 ## Motivation
 
 UX-117 guarded the generic signal-delivery restart

@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-11 (done) | **Topic:** capture | **Area:** tools
 
+**Guard:** test_tracer_report_input_detection.py · inferred r149
+
 ## Motivation
 
 `tools/bst_native_build_tracer.py run` writes a JSON report to its `output` positional argument. Its sibling subcommand is `report`, and the obvious thing to do with a saved report is render it again. Real session:

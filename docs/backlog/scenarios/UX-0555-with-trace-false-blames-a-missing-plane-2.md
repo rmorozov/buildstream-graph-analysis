@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** `UX-545` (which fixed the branch beside this one) | **Found by:** `UX-545`'s track, one branch over from its own fix | **Serves:** anyone who exports without a timeline on purpose | **Topic:** viewer | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `tools/bga_view.py:1203` is the fallback for "no timeline in this

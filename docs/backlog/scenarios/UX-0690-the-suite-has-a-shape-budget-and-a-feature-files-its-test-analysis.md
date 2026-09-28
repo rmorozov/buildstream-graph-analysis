@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-238 (the tiers), UX-400 (the population sweep), UX-498 | **Serves:** R8 reading whether the suite is balanced; the implementer writing the right guard | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** test_the_suite_holds_its_shape_budget.py, test_the_cost_row_is_derived_from_the_selector.py · inferred r149
+
 ## Motivation
 
 ```text

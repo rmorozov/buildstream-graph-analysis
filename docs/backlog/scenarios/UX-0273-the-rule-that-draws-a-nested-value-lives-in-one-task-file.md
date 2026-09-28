@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-267 | **Serves:** the maintainers, R8 | **Topic:** docs
 
+**Guard:** test_the_value_rule_has_a_home.py · inferred r149
+
 ## Motivation
 
 Found by review 2 (`UX-241`). Round 36 gave the viewer a rule that now

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-675 | **Found by:** round 131, [`docs/design/in-step-parallelism.md`](../../design/in-step-parallelism.md) §6 item 3 | **Serves:** R5 (the capacity operator distinguishing a box half-idle throughout from one saturated for half the span), R2 second | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement
 
+**Guard:** test_the_cpu_series_separates_shape_from_total.py
+
 ## Motivation
 
 Per-element CPU is read once, at exit. `hook.c` takes one `getrusage`

@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-341 (one unit per dimension) | **Serves:** anyone reading a field name on the page | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `title(key)` turns a payload key into a label by replacing underscores

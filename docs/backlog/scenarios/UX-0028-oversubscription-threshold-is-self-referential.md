@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-12, UX-15, UX-16 (all done - this is a threshold-semantics fix to the check they built) | **Topic:** analysis
 
+**Guard:** test_oversubscription_threshold.py · inferred r149
+
 ## Motivation
 
 > **Filed-then-corrected.** This task was originally filed claiming the check "cannot fire on real contention", citing a Plane 2 measurement that `core.bst`'s compile process-lifetime rose from 11.05s to 20.00s between two real runs of `examples/06-macro-micro-optimization`. That evidence does not support the claim and the original framing was wrong: the two runs are not comparable (in the baseline that element ran essentially alone; in the optimized run six elements compiled concurrently), and the run with the *higher* per-element cost was **30.5% faster overall** - that is beneficial parallelism, not oversubscription harm. `UX-09`'s own real 6-configuration table also shows the check firing correctly on the configuration it measured as slowest. The Motivation below is the re-verified defect, which is different and provable. Left visible rather than quietly rewritten, since "don't trust a claim of done without independently re-verifying it" applies to this backlog's own filings too.

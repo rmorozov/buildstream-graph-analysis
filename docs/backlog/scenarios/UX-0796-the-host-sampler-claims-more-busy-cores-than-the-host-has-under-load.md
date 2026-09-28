@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-675 (the sampler and its ceiling), UX-741 (the same shape in the spine's guard) | **Found by:** round 110, in a `make test` gate on a loaded machine | **Serves:** the gate that reds on a host reading nothing in the diff touched | **Topic:** guards | **Area:** bga | **Shape:** mechanical
 
+**Guard:** test_the_host_was_asked.py
+
 ## Motivation
 
 ```console

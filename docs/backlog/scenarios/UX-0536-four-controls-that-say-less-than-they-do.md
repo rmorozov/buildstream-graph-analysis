@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-280 (the Markdown preference), UX-223 (the accelerators), UX-334 | **Serves:** the keyboard and screen-reader reader | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** test_the_journey_has_an_answer_key.py · inferred r149
+
 ## Motivation
 
 From the 782-control census, the four that are reachable and usable

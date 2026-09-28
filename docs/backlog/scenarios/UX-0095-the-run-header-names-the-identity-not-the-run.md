@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-07 (done) | **Topic:** analysis
 
+**Guard:** test_run_instance.py · inferred r149
+
 ## Motivation
 
 `bga analyze` and `bga compare` label runs with the run-identity hash —

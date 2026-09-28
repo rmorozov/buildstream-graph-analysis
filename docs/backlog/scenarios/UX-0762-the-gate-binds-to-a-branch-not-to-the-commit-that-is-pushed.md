@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-336 (the loop), UX-522 (the selector hook) | **Serves:** the session whose gate passed on a commit it did not push | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** test_the_gate_covers_the_pushed_commit.py · inferred r149
+
 ## Motivation
 
 `CLAUDE.md` calls `make test` **the gate** and *"required before

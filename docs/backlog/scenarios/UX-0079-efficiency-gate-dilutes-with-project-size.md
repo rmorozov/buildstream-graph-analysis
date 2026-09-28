@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-39, UX-74 (both done) | **Topic:** analysis | **Area:** bga
 
+**Guard:** test_marginal_efficiency_gate.py · inferred r149
+
 ## Motivation
 
 The build owner's CI requirement, in their own words: *adding new

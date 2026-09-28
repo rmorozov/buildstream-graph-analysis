@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-213 | **Serves:** the maintainers, and CI | **Topic:** guards
 
+**Guard:** test_a_guard_reads_only_what_a_clone_has.py · inferred r149
+
 ## Motivation
 
 Found by CI on round 37's own pull request, which is the only reason it

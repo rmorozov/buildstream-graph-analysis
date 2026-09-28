@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-914 | **Blocks:** — | **Found by:** `UX-914` — it took the runtime axis and recorded why the toolchain is a separate question | **Serves:** every example, and the comparison class a `variant` dimension names | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_the_sysroot_declares_both_axes.py
+
 ## Motivation
 
 `UX-914` split the examples' sysroot into two axes and closed the

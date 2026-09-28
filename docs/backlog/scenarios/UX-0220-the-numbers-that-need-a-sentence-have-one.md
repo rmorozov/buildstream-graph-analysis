@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-201 (the description channel that already renders) | **Topic:** contracts | **Area:** bga
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The round-24 review proposed "Why?" popovers on headline metrics and

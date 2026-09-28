@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §3k | **Serves:** R1, R5 | **Topic:** contracts | **Area:** bga | **Shape:** judgement
 
+**Guard:** test_every_payload_sequence_is_declared.py
+
 ## Motivation
 
 Walking every list and data-keyed map in two `analyze/v6` payloads (`macro_micro`, 11 elements, both planes; the 4,002-element run) and resolving each path in `schemas.schema("analyze/v6")` (script: `/mnt/project-files/styleguide-audit/schema_containers.py`):

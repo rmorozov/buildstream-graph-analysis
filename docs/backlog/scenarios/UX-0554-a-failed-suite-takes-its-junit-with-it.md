@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-491` (which made the *success* path legible) | **Found by:** round 81, unable to diagnose a red `test (3.11)` | **Serves:** anyone reading a CI failure they cannot reproduce | **Topic:** guards | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `.github/workflows/ci.yml:87` runs the suite with

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-247, UX-604, UX-620 (the three rounds that built and narrowed this guard) | **Found by:** architecture review 16 | **Serves:** a reader deciding whether to trust `architecture.md` | **Topic:** docs
 
+**Guard:** test_the_verification_log_is_true.py · inferred r149
+
 ## Motivation
 
 `test_the_verification_log_is_true.py` asks whether the architecture

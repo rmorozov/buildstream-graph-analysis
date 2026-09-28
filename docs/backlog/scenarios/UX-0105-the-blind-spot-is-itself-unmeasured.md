@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — (first step of Direction 4) | **Topic:** capture | **Area:** tools
 
+**Guard:** test_static_census.py · inferred r149
+
 Direction 4 — see [`design/directions.md`](../../design/directions.md).
 
 ## Motivation

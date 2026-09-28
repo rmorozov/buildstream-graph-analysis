@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-388 (what zero does today), UX-367 (what many did until the sweep held it) | **Serves:** every future section, before its bug is filed | **Topic:** guards
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The escape ledger for population-shape bugs is now three entries

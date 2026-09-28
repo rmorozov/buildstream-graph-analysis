@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-134 (the store names the run but not its Plane 2 report), UX-328 (--schema answers for everything that emits one) | **Serves:** anyone reading a snapshot with something other than bga | **Topic:** contracts | **Area:** bga
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Every published `bga` command line names a path inside `.bga/`. The tool

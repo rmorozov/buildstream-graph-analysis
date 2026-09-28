@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Found by:** round 70, `UX-437`'s consumer census on its first run | **Serves:** the reader who tars a capture up for an issue, and pays for a file nobody reads | **Topic:** contracts | **Area:** tools
 
+**Guard:** test_every_captured_file_has_a_consumer.py
+
 ## Motivation
 
 `UX-437` built a census that wraps `builtins.open` while every reader

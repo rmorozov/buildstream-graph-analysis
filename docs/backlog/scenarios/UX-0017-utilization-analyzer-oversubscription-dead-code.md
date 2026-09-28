@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-12`, `UX-15` | **Topic:** analysis
 
+**Guard:** test_utilisation.py, test_utilization_delegation.py · inferred r149
+
 ## Motivation
 
 An external review of `UX-12`'s builders/`native_max_jobs` split raised a general architectural concern: `RunContext.max_jobs` is a spec-defined field that actually means `builders` (confirmed - see `UX-12`'s own docstring citations), a naming trap that's "easy to misunderstand" and could cause a future bug where code reads `max_jobs` expecting it to mean the native `--max-jobs` concept. Checking whether this had *already* happened anywhere in the existing codebase (not just a hypothetical risk) turned up a real, concrete instance - a genuine bug independent of anything the review directly cited.

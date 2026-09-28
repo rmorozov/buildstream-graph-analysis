@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-677 (which produces the recommendation this would price), UX-219 (what-if, the projection that exists), UX-116 | **Serves:** R4 and R5, deciding whether the recommendation is worth applying | **Topic:** analysis | **Shape:** judgement | **Area:** bga
 
+**Guard:** test_the_report_you_can_attach.py · inferred r149
+
 ## Motivation
 
 `UX-677`'s Required Fix asked for a per-element `max-jobs`

@@ -3,6 +3,8 @@
 **Flake:** tests/unit/test_the_view_parses_nothing.py
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-691, UX-442 | **Blocks:** — | **Found by:** round 136 — `408235c7` appended run 35755437814's excursions and took this file to `EXCURSION_FLOOR`, reddening `main` on `test_a_file_with_three_excursions_has_a_filed_task.py` for every branch | **Serves:** every branch whose push gate reads a suite `main` has already reddened, and the next reader of the ledger | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
+**Guard:** test_the_view_parses_nothing.py
+
 ## Motivation
 
 `tests/unit/test_the_view_parses_nothing.py` reached the floor, and it

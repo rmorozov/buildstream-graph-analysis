@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-387 (the guard that runs it eleven times), UX-418 (the drift gate that reported it) | **Found by:** round 93, the tier-drift gate red on PR #209 | **Serves:** the session whose fast check and whose CI gate both pay for the backlog's size twice over | **Topic:** guards | **Area:** tools
 
+**Guard:** test_the_fast_check_holds_what_the_suite_holds.py · inferred r149
+
 ## Motivation
 
 `tools/dev_close_task.py`'s `task_file()` globbed the scenarios

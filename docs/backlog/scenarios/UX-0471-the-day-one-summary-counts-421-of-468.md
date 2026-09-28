@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** none | **Found by:** architecture review 9, checklist question 3 | **Serves:** the session whose first reading of this repository is a number 47 rows out of date | **Topic:** docs
 
+**Guard:** test_the_agent_configuration_holds.py · inferred r149
+
 ## Motivation
 
 `CLAUDE.md` is the file every session reads before anything else, and

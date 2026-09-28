@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-347 (chapters that fold), UX-372 (the page has one reader), UX-305 (emphasis is a budget) | **Found by:** round 87, by the owner asking for a role filter | **Serves:** all five readers, each of whom currently gets the other four's page | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The page has five declared readers and shows all of them everything.

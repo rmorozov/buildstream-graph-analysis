@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 72, generating the bulk tree the way `examples/README.md` says to | **Serves:** the contributor who follows the examples guide and then cannot tell their own diff from the guide's side effect | **Topic:** guards
 
+**Guard:** test_a_guard_reads_only_what_a_clone_has.py
+
 ## Motivation
 
 `examples/README.md` tells the reader to run the generator before

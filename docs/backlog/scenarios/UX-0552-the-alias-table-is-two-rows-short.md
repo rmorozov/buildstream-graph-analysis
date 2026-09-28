@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Serves:** a reader looking up what `bga` can run | **Topic:** docs
 
+**Guard:** test_the_command_table_is_the_cli.py, test_the_alias_table_is_the_help.py, test_the_loop_stays_fast.py · inferred r149
+
 ## Motivation
 
 Architecture review 12, checklist 4:

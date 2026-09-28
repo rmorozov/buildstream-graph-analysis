@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-260 (the percentiles), UX-303 (the spread drawn), UX-581 | **Serves:** the reader who trusts Direction 11's table | **Topic:** contracts
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Direction 11's table says `yes` for four quantities. Measured in

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-745 (which built the visibility) | **Serves:** the session reading `make lint` and believing the baseline did not grow | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-745` found that a track could authorise its own baseline growth

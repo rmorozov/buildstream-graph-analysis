@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-573 (which fixed this walk for two trees), UX-608 (the map guard) | **Found by:** architecture review 15 | **Serves:** a reader looking a module up in the map | **Topic:** docs | **Area:** bga
 
+**Guard:** test_the_context_map_is_the_tree.py
+
 ## Motivation
 
 `_real_modules()` returns 104 paths and maps a `bga/` package to its

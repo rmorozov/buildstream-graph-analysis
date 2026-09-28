@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-531` (the three it did take, and the profile) | **Serves:** anyone opening a run of a few thousand elements | **Topic:** analysis
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-531` turned three per-gap scans into index lookups and cut

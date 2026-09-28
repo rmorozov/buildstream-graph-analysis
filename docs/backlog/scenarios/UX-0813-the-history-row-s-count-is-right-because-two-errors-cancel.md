@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-798 (the derived counts), UX-806 (the row it miscounts) | **Found by:** round 113, review 22 | **Serves:** the reader of the directions table; a guard whose population is the sentence's | **Topic:** guards | **Area:** unassigned | **Shape:** bounded
 
+**Guard:** test_the_round_history_names_every_audit.py
+
 ## Motivation
 
 `test_the_round_history_names_every_audit.py`'s `_what_closed_ids`

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-105 (the bwrap shim), UX-675 and UX-676 (the instruments that judge it) | **Serves:** R4 and R5 — dynamic sharing instead of static tuning | **Topic:** capture | **Shape:** judgement
 
+**Guard:** test_bwrap_shim.py, test_help_is_short.py · inferred r149
+
 ## Motivation
 
 Every native build system BuildStream drives speaks the GNU jobserver

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-130, UX-133 (done — these are their edges) | **Topic:** capture
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Batched from round 14's spine re-review, none build-breaking, each a

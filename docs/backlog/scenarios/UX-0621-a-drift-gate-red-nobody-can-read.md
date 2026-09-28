@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-418 (the gate), UX-476 (the log-tail route), UX-491 (the gate's line) | **Found by:** round 85, while root-causing UX-619 | **Serves:** a session reading a red tier-drift step | **Topic:** guards | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `6febb53` was red on 3.11 only, at step 14 — `Tiers match CI's own

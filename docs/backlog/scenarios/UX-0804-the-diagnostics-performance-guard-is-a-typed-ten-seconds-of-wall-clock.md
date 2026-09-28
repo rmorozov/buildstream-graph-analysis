@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-731 (the same swap, done once), UX-741, UX-551 | **Found by:** round 111, the first gate under eight agents | **Serves:** R8 reading a red gate on a file nobody touched | **Topic:** guards | **Area:** bga | **Shape:** bounded
 
+**Guard:** test_diagnostics_performance.py · inferred r149
+
 ## Motivation
 
 ```console

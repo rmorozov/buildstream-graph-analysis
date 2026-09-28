@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-183, UX-185, UX-188 (the landings these trail), UX-190 (whose guard the environment note concerns) | **Topic:** guards
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The round-21 review verified all ten field-feedback landings — four

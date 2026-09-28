@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the second styleguide audit (2026-09-27), styleguide §3c, §3e, §6e.10 | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement
 
+**Guard:** test_the_two_capabilities_are_offered.py, test_the_styleguide_names_its_guards.py, test_the_chain_folds_and_clicks_are_counted.py, test_the_page_has_a_volume_budget.py · inferred r149
+
 ## Motivation
 
 The same quantity, the height of the page a reader lands on, is bound

@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-375 (the cap that made this the remaining term) | **Serves:** anyone whose store holds a monorepo's captures | **Topic:** contracts | **Area:** bga
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-375` capped `redundant_operations` at 40 findings and cut the

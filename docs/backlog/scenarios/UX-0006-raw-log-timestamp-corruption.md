@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** none | **Topic:** capture | **Area:** tools
 
+**Guard:** test_bst_log_converter.py, test_pipeline_overhead.py, test_bst_checkout_cost.py, test_bst_extract_run.py, test_bst_extract_run_strict.py · inferred r149
+
 ## Motivation
 
 Found while building `examples/04-critical-path-optimization` for UX-05's real optimization walkthrough. `tools/bst_log_to_chrome_trace.py --format raw` (the format `tools/bst_extract_run.py --format raw` and, critically, **all three existing example projects' CI job** (`.github/workflows/ci.yml`'s `bst-examples` job, `examples/01..03`) use to extract a real `bst build` log saved to a file) reconstructs absolute timestamps as:

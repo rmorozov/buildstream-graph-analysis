@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-286 (the chapters), UX-640 (the mark), UX-393 | **Serves:** R1..R8 — every reader past the first screen | **Topic:** viewer | **Shape:** judgement
 
+**Guard:** test_the_report_you_can_attach.py, test_the_page_has_a_volume_budget.py · inferred r149
+
 ## Motivation
 
 Round 90's design review, on a capture with every plane, measured

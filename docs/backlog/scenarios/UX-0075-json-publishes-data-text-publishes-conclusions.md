@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-71`–`UX-74` (all done — they settled what the conclusions are, which is why this was sequenced last) | **Topic:** contracts
 
+**Guard:** test_findings_are_data.py, test_correlate.py · inferred r149
+
 ## Motivation
 
 Asked directly: *does everything valuable reach the JSON report, or only

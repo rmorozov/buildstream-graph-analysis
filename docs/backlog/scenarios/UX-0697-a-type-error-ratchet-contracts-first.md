@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-694 (the baseline) | **Serves:** the session editing a schema or a contract, where a wrong key is a `UX-190` bump nobody meant | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 No `[tool.pyright]`, no `[tool.mypy]`, no type step in CI.

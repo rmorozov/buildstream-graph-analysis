@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** UX-1046's verifier (round 143) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
 
+**Guard:** test_a_keyboard_journey_reaches_every_chapter.py
+
 ## Motivation
 
 Measured on the branch at `18afdebb` (the same at `5f967f09`): `macro_micro` exported by

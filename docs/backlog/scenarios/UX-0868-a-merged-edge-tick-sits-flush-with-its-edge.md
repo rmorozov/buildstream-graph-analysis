@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-863, UX-758 | **Found by:** round 120, UX-863's verifier | **Serves:** R1 (a merged p99-and-max tick reads at the strip's edge, not its middle) | **Topic:** viewer | **Area:** bga-viewer | **Shape:** bounded
 
+**Guard:** test_a_drawing_is_graded.py, test_the_shape_channel_is_built.py · inferred r149
+
 ## Motivation
 
 `UX-863` changed the strip's `[data-mark=...]` selectors to `~=` so a

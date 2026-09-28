@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-762 (the gate it limits) | **Serves:** the session that trusts the push gate to cover its branch | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-762` binds the gate to the pushed commit with a Claude Code

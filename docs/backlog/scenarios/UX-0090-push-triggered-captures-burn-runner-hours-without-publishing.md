@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-81 (done — which superseded the push trigger's purpose) | **Topic:** capture
 
+**Guard:** test_rebuild_set.py · inferred r149
+
 ## Motivation
 
 Of the 24 `Real-project capture` runs to date: 4 succeeded, 2 failed

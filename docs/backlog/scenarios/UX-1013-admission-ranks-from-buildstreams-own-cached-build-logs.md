@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-1005 | **Found by:** Ruslan on the Graviton thread (2026-09-25), on ranking admission with no previous capture | **Serves:** R4, R5 | **Topic:** capture | **Area:** tools | **Shape:** judgement | **Reading:** runner:bst-examples
 
+**Guard:** none — open, no guard named yet
+
 ## Motivation
 
 UX-1005 track C ranks waiting sandboxes by slack from a `--plan`, or,

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-171 (the inventory), UX-181 (the identity model) | **Topic:** analysis | **Area:** bga
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Field feedback: *"when analyzing blast radius for repos there is a

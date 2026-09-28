@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-12`, `UX-16` | **Topic:** analysis
 
+**Guard:** test_memory_oversubscription.py, test_run_context_common.py, test_bst_run_context.py · inferred r149
+
 ## Motivation
 
 Raised by the user: `UX-12`'s oversubscription check (and `UX-16`'s fix to it) is entirely about CPU-core contention - `builders x native_max_jobs` vs. a core-count ceiling. But every concurrently-running build subprocess also consumes real memory (compilers, especially C++ ones doing heavy template instantiation or LTO, can each use gigabytes), and there is no CPU-contention slowdown anywhere near as catastrophic as pushing the build host into swap - which can effectively freeze the entire machine (every process thrashing, not just the build), a qualitatively different and often far worse failure mode than "the build is merely slower than optimal."

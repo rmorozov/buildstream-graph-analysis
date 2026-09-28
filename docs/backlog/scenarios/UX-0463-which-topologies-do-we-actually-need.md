@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** none — this is the decision `UX-459` was blocked on, and `UX-464`/`UX-465` both consume it | **Found by:** round 72, asked to inventory the generation tooling before building more of it | **Serves:** the round that wants a fixture for a case nobody has enumerated, and adds a tenth example instead | **Topic:** guards
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-459` left a choice with no measurement between its arms: curated

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-381` (the capture-directory contract this bundles), `UX-186` (the host manifest that must travel with it), `UX-300` (what the raw log weighs) | **Found by:** round 77, field request — *"convenience commands for bga snapshot export and load, to create a run bundle and move it to another machine for later analysis"* | **Serves:** the engineer who captured on a build runner and wants to read it on a laptop | **Topic:** store | **Area:** bga
 
+**Guard:** test_a_run_bundle_you_can_carry.py · inferred r149
+
 ## Motivation
 
 The analysis half already works. A run directory copied out of its store,

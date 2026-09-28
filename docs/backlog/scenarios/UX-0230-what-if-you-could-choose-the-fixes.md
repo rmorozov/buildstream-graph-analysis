@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-219 (the plan drawn), UX-229 (the chains it explains) | **Serves:** R1, R8 | **Topic:** viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-219` draws the published optimization plan as the fixed sequence

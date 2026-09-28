@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-668 (the picker in the identity line), UX-285 (identity is reference) | **Found by:** round 115, the design review | **Serves:** every reader, on every load | **Topic:** viewer | **Area:** bga-viewer | **Shape:** bounded
 
+**Guard:** test_a_rail_click_lands_on_its_section.py, test_the_report_you_can_attach.py, test_the_header_keeps_its_budget.py · inferred r149
+
 ## Motivation
 
 Measured at 1440×900 on both pages this round:

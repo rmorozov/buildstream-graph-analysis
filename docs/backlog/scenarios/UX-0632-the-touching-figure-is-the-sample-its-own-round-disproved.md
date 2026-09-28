@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-606 (which replaced it in the guard), UX-336 (which measured it) | **Found by:** architecture review 15 | **Serves:** anyone budgeting the inner loop | **Topic:** docs
 
+**Guard:** test_the_loop_stays_fast.py, test_the_cost_row_is_derived_from_the_selector.py · inferred r149
+
 ## Motivation
 
 **Corrected round 86, re-measured before the fix; the filing as sent is

@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-585 (the markers) | **Serves:** the session reading the card's guard column | **Topic:** guards
 
+**Guard:** test_docs_links_and_commands.py, test_the_agent_configuration_holds.py · inferred r149
+
 ## Motivation
 
 `UX-585` gave each guard named on `docs/contributing/rules.md` a

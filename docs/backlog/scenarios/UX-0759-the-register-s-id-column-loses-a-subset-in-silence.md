@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-744 (the register and its pin) | **Serves:** the round that reads the register to learn what an earlier round closed | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Superseded by UX-744's landed shape (2026-09-07)
 
 Everything below describes a register with an **ids** column. The one

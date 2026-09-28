@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 71, driving PR #190 to green — two red `bst-tests` jobs on superseded heads | **Serves:** the contributor whose PR goes red on a job their diff cannot have touched | **Topic:** guards
 
+**Guard:** test_a_control_acts_on_what_it_names.py · inferred r149
+
 ## Motivation
 
 Two `bst-tests` runs failed during round 71, on different heads, for

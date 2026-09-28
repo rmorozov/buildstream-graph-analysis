@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-524 (the map), UX-336 (the bound it broke) | **Found by:** round 84, CI red on the merge commit and green on both parents | **Serves:** every session running `make test-touching` | **Topic:** guards
 
+**Guard:** test_the_loop_stays_fast.py · inferred r149
+
 ## Motivation
 
 `0bc5aff` on `main` — CI adopting the map its own run measured — turned

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-497 (the register) | **Serves:** the reader who opens a module a year on and meets its history instead of its reason | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** test_the_register_is_terse.py, test_a_commit_body_is_eight_lines.py · inferred r149
+
 ## Motivation
 
 `test_the_register_is_terse.py` holds the docstring and Outcome rows.

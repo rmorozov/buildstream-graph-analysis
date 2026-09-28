@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** round 131, [`docs/design/in-step-parallelism.md`](../../design/in-step-parallelism.md) §8 — the design document argued the axis and named this as the one increment that needs no new capture | **Serves:** R5 (the capacity operator asking whether zero headroom on a four-core box is true), R2 second | **Topic:** analysis | **Area:** bga | **Shape:** judgement
 
+**Guard:** test_the_cpu_floor_divides_by_cores.py
+
 ## Motivation
 
 Every floor in Part 16 divides work by a *builder slot* count.

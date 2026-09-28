@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-56, UX-64 (both done) | **Topic:** capture
 
+**Guard:** test_invocation_correlation.py · inferred r149
+
 > **Reopened by audit round 11 (2026-08-18).** The mechanism is in the
 > live path (`resolve_invocation_log_path`: `--wrapped-log` implies the
 > record, `--no-invocation-log` opts out — re-verified) and is probably

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-347 (chapters fold), UX-279 (a copy control says what it copies) | **Serves:** anyone who lands on the report and tries to open it | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Round 55 pressed every control class the page offers, on the page an

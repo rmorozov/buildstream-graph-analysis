@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-915 | **Blocks:** UX-925 | **Found by:** `UX-925` — its Required Fix names the closure walk, the isolation proof and the decompressor as three requirements the `make` pin never had to meet | **Serves:** every pinned component the examples stage, and `UX-925`'s toolchain axis | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
+**Guard:** test_the_staged_closure_is_complete.py
+
 ## Motivation
 
 `tools/nix_store_fetch.py` stages **one** NAR per pin. That is enough

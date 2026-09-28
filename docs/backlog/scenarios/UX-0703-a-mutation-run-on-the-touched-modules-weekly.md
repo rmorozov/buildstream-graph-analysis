@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-524 (the touching map), UX-698 (the weekly workflow) | **Serves:** the falsify skill, which is a hand ritual per guard and cannot be run over the suite | **Topic:** guards | **Area:** unassigned | **Shape:** bounded
 
+**Guard:** test_a_new_control_class_lands_declared.py, test_the_weekly_mutation_run_names_its_survivors.py · inferred r149
+
 ## Motivation
 
 `falsify` mutates one guard by hand and pastes the red. The reverse

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-666 (the runs ledger, and the guard that stops at the documents which exist) | **Serves:** the session opening a round, which cannot number it from any record | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** test_a_run_is_priced.py · inferred r149
+
 ## Motivation
 
 `UX-666` wanted a guard over "every round document from 90 on". Its

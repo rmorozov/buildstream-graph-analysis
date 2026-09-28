@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-594 (which subtracts from it) | **Found by:** round 84, while building the queue seam | **Serves:** anyone computing a duration from a capture's start | **Topic:** capture | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `wall_clock.start_us` is two different measurements wearing one name:

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-21`, `UX-45` (both done) | **Topic:** capture | **Area:** tools/native_trace
 
+**Guard:** test_peak_memory.py · inferred r149
+
 ## Motivation
 
 `UX-21` added a memory dimension to the oversubscription guard, because

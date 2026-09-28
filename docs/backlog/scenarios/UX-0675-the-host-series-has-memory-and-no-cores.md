@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-378 (host-samples.jsonl), UX-437 (the host tracks on the trace) | **Serves:** R4, asking whether the cores were busy | **Topic:** capture | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The one series the capture keeps about the host is memory:

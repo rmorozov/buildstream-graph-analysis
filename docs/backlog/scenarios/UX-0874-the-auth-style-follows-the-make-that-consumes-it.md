@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-841, UX-869 | **Found by:** round 122, the user (a make-kind element from a tar source, GNU Make 4.4 on the host) | **Serves:** R2 (a make element joins the jobserver whatever make its own sysroot ships) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** mechanical
 
+**Guard:** test_bwrap_shim.py
+
 ## Motivation
 
 `jobserver_auth_style("auto")` runs `make --version` **on the

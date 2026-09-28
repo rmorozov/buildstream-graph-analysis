@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-158 (the concision pass that cut them) | **Topic:** cli
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 UX-158's cut worked at the line level and the guard proves it — but

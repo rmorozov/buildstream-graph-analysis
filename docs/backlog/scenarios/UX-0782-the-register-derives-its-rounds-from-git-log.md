@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-781 (which stopped CI cutting it), UX-772 (the datelines this would read) | **Serves:** the round whose register disagrees with itself on a second machine | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** test_a_run_is_priced.py, test_the_round_register_is_derived.py
+
 ## Motivation
 
 `rounds()` takes its population from commit subjects reachable from

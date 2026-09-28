@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 69, strand (b) — pressing all 468 controls on a real capture | **Serves:** every reader, and the next round that trusts a clean console | **Topic:** contracts | **Area:** bga
 
+**Guard:** test_every_number_says_what_it_is.py, test_the_cache_block_declares_what_it_emits.py, test_the_console_stays_clean.py · inferred r149
+
 ## Motivation
 
 Booting the export of a real capture of `examples/06` and pressing every

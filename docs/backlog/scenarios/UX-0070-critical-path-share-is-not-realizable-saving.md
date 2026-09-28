@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-65` (which introduced the ranking this corrects) | **Topic:** analysis
 
+**Guard:** test_realizable_saving.py · inferred r149
+
 ## Motivation
 
 Raised by the user: *"won't we force user to wait for hours of rebuilds

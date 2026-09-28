@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Found by:** round 69, strand (a) of the outside walk — is every captured thing reachable? | **Serves:** anyone whose build was slow because the host ran out of memory | **Topic:** viewer | **Area:** tools
 
+**Guard:** test_every_captured_file_has_a_consumer.py · inferred r149
+
 ## Motivation
 
 `bga snapshot` samples the host every two seconds for the whole build

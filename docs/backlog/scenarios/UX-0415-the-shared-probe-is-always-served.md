@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Found by:** UX-402's journey guard | **Serves:** every guard that boots the page in node | **Topic:** guards
 
+**Guard:** test_the_shape_before_the_rows.py · inferred r149
+
 ## Motivation
 
 `tests/unit/test_a_report_you_can_navigate.py::_PROBE` is the boot

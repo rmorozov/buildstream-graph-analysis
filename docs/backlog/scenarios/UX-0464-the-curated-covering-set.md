@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-463` (which specs, and why five) · freezes under `UX-460`'s guard · closes most of `UX-459` | **Found by:** round 72 | **Serves:** the round that adds a heuristic to a reader whose fixtures cannot exercise it | **Topic:** guards
 
+**Guard:** test_topology_fixtures.py · inferred r149
+
 ## Motivation
 
 `UX-463`'s covering set assigns four of its five specs to curated

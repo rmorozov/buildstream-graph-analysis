@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Serves:** the maintainer deciding the spec's edge | **Topic:** analysis
 
+**Guard:** test_the_declared_signals_are_the_published_ones.py · inferred r149
+
 ## Motivation
 
 ```text

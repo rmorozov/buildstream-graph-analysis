@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-689 (the rule and the first area), UX-807 (the third, and the one-id-per-chapter rule) | **Found by:** round 113, `UX-807`'s Out of Scope | **Serves:** the reader pricing a change to the persisted-log reader; the session restructuring without losing a sentence | **Topic:** docs | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_docs_links_and_commands.py
+
 ## Motivation
 
 `UX-807` named the next chapter: Plane 3, BuildStream's own persisted

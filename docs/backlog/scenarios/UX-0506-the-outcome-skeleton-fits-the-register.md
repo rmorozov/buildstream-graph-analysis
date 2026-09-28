@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-497 (the cap), UX-336 (`dev_close_task --outcome`) | **Serves:** the session closing a task, and the round that reads it later | **Topic:** docs | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `dev_close_task.py --outcome` prints five headings and the sessions

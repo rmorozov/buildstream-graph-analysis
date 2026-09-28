@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-689 (the rule and the first area), UX-806 (the second, and the one-id-per-chapter rule) | **Found by:** round 112, `UX-806`'s Out of Scope | **Serves:** the reader pricing a change to a projection; the session restructuring without losing a sentence | **Topic:** docs | **Area:** bga-replay | **Shape:** mechanical
 
+**Guard:** test_docs_links_and_commands.py
+
 ## Motivation
 
 `UX-806` named the next chapter: the projection one. The log guard's

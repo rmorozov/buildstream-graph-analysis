@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-915 | **Found by:** round 133 — Ruslan asked for the corner cases to be covered after the fast unblock lands (2026-09-21) | **Serves:** every host that runs the examples, whatever its own make | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `style_for_make_version` has two outcomes, `fifo` and `fd`, and which

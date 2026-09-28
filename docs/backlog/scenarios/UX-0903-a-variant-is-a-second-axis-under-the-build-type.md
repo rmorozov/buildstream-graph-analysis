@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-898 (the type) | **Found by:** the 2026-09-20 rollout thread — the owner's pipeline builds per instruction set, release-with-symbols, address sanitizer and coverage, and every one of those is a different build of the same tree | **Serves:** R4 (a gate that does not compare a sanitizer build against a release one), R5 and R7 (a population that is one thing), R2 (whose element's cost is a different number per variant) | **Topic:** contracts | **Area:** bga | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-898` makes the build *type* — night, review, guard — part of what

@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Found by:** round 69, an outside walk of `bga snapshot` → `bga view` → Perfetto | **Serves:** every future round that touches the trace or the query library | **Topic:** guards | **Area:** tools
 
+**Guard:** test_the_questions_are_asked_of_a_real_trace.py · inferred r149
+
 ## Motivation
 
 `bga/viewer/questions.js` ships fourteen questions the page hands a

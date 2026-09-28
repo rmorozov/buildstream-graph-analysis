@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-238 (the tiers), UX-584 (the remeasurement) | **Serves:** the session that follows a cross-reference and finds the other number | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** test_the_process_documents_derive_their_figures.py · inferred r149
+
 ## Motivation
 
 Two small instances of the shape `UX-750` fixed for figures, here in

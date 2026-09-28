@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** P1-33 (which established the honest internal meaning), UX-13 (the same report-honesty fix, already applied to the floors block) | **Topic:** analysis | **Area:** bga/report
 
+**Guard:** test_occupancy_block_honesty.py, test_cli_subcommands.py · inferred r149
+
 ## Motivation
 
 Real output, `examples/06-macro-micro-optimization`, the same project built twice - once with a serialized graph, once with the identical work correctly parallelized:

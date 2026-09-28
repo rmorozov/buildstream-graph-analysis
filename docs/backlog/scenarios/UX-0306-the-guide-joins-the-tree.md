@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** styleguide (the document), UX-231 (the traceability pattern) | **Serves:** the maintainers | **Topic:** docs
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 A style guide nobody is routed to governs nothing. The document

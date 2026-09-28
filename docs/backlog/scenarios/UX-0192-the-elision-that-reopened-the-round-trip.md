@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-178 (reopened for long identities), UX-181 (whose sentence one surface resurrects) | **Topic:** analysis | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The round-20 review verified all five round-19 landings (nine

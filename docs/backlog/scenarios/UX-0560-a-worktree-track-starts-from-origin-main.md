@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-510 (which made the brief name its base) | **Found by:** round 81's two parallel tracks, independently | **Serves:** every round that runs a track | **Topic:** guards
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-510` closed "a track's brief names the base it will actually get".

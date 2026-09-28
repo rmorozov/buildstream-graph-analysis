@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-305 (the conformance checklist), UX-316 | **Serves:** every reader of prose on the page | **Topic:** viewer | **Shape:** judgement
 
+**Guard:** test_the_type_scale_is_four_steps.py, test_the_page_has_a_volume_budget.py, test_the_shape_channel_is_built.py · inferred r149
+
 ## Motivation
 
 ```text

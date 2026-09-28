@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-111 (done — this is its unfinished sixth surface) | **Topic:** guards
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 UX-111 item 1 fixed `Execution On Chain Us` → `Execution On Chain` —

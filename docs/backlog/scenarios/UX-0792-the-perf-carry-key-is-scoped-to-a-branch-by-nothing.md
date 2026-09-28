@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-702 (the ratchet), UX-442 (the tier-carry guard this copies) | **Found by:** round 109, retro-verifying round 102 | **Serves:** the branch whose analyzer regression is confirmed by another branch's run | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** test_a_slow_file_says_which_file.py
+
 ## Motivation
 
 `UX-702`'s "two consecutive runs" means two runs on one branch only

@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-218 (the executed-argv precedent) | **Serves:** R1 | **Topic:** cli
 
+**Guard:** test_the_printed_sentences_are_contracts.py · inferred r149
+
 ## Motivation
 
 Two frictions from the stranger walk, one rule. (F3) `bga analyze`

@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Fixed & Verified | **Depends on:** — | **Serves:** R1, whenever a timeline is worth opening | **Topic:** viewer | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Reported from a real project: *"perfetto handover doesn't work in

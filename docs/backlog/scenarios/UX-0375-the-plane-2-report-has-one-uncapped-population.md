@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-297 (extraction streams), UX-300 (what a two-gigabyte snapshot does to a store) | **Serves:** anyone whose store has to hold a monorepo's captures | **Topic:** capture | **Area:** tools
 
+**Guard:** test_the_population_that_had_no_ceiling.py · inferred r149
+
 ## Motivation
 
 Round 60 asked whether Plane 2 capture is memory-bounded all the way to

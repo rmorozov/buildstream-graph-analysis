@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done — and the interaction it was filed for is not there | **Depends on:** UX-108 (the per-mode measurement) | **Topic:** capture
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 UX-108 measured the spine's overhead per **mode** — spine on vs off,

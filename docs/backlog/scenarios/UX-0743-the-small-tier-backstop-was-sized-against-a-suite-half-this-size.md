@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-363 (the two steps), UX-421 (backstop, not budget), UX-418 (the per-file rule that took the other half) | **Serves:** R8 reading a red CI on a commit that broke nothing | **Topic:** guards | **Shape:** judgement | **Area:** unassigned
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 CI is red on every interpreter, and no test failed. Run

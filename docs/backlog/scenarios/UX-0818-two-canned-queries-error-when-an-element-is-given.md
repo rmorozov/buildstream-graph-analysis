@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-432 (the library runs) | **Found by:** round 114, walk seed 3 | **Serves:** R1 at the Perfetto handoff | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 On seed 3's cold trace (examples/08, 2011 slices, 2002 flows), the

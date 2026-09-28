@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** stage 3 needs `UX-465` · independent of `UX-464` | **Found by:** round 72, thread 1 of the audit — whether the maximum information Perfetto and `bga view` could analyse is captured, and whether the mapping to Perfetto's format is right | **Serves:** the reader who opens the trace expecting a field the capture holds and finds the track empty | **Topic:** contracts | **Area:** tools
 
+**Guard:** test_the_trace_census_reads_both_ends.py, test_a_candidate_is_confirmed_alone.py · inferred r149
+
 ## Motivation
 
 Three planes write records; one trace is emitted from them. Nothing in

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-233 (the rule it extends) | **Serves:** the maintainers; R8 when the next big change is priced | **Topic:** docs
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The user's observation, and it is the *general* form of what `UX-233`

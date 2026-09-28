@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-719 (the same swap, in the ranked blocks) | **Serves:** R3 reading the graph-shape block | **Topic:** analysis | **Shape:** judgement | **Area:** bga/structural
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-719`'s track found the mirror of its own defect one screen up, in

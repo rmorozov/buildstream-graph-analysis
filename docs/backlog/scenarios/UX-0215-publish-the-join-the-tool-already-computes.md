@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-201 (the schema vocabulary), UX-190 (outputs that say what shape they are), UX-051 (`bga correlate`) | **Topic:** contracts
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `bga/correlate.py:141` assembles an `ElementJoin` per element:

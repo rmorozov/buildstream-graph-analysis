@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-33 (which made these names visible, and is how this became legible) | **Topic:** analysis | **Area:** bga/structural
 
+**Guard:** test_choke_points.py · inferred r149
+
 ## Motivation
 
 Round-2 scale probe, 1202-element run:

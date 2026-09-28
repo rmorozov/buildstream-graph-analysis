@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-688 | **Blocks:** — | **Found by:** round 137 — `UX-925`'s close put three new skip reasons in `tests/conftest.py` and a new guard file in `tests/unit/`, and there was no area to declare for either | **Serves:** every row whose change lives under `tests/`, and the area pages that are meant to say where work lands | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_the_context_map_is_the_tree.py
+
 ## Motivation
 
 `UX-688` made the area vocabulary a derivation on purpose, and says

@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-125 (done — this is its flagship check's blind spot) | **Topic:** cli
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `bga doctor`'s `project-loads` check runs

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — (third recurrence of the class) | **Topic:** guards | **Area:** tools/native_trace
 
+**Guard:** test_docs_links_and_commands.py · inferred r149
+
 ## Motivation
 
 Round 13 found **five** status-table rows contradicting their task

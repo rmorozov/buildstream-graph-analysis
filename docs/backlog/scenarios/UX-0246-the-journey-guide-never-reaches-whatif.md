@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-230 (the command it should reach) | **Serves:** R1 — the local optimizer the guide is written for | **Topic:** docs
 
+**Guard:** test_the_journey_reaches_what_if.py · inferred r149
+
 ## Motivation
 
 Found by review 1 (`UX-241`).

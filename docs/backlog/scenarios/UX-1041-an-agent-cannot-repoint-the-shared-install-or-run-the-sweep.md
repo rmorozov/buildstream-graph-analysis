@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** round 143 — the workflow review of rounds 140 and 142 | **Serves:** every parallel round's verifiers and the push gate after them | **Topic:** guards | **Area:** unassigned | **Shape:** mechanical | **Reading:** container
 
+**Guard:** test_the_agent_configuration_holds.py
+
 ## Motivation
 
 Every agent brief says never `pip install -e .` from a worktree and not to

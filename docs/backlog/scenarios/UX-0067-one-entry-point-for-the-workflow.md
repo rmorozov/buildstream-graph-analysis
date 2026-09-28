@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Topic:** cli | **Area:** bga
 
+**Guard:** test_tools_dispatch.py · inferred r149
+
 ## Motivation
 
 Raised by the user while reviewing the tool for real adoption. A real

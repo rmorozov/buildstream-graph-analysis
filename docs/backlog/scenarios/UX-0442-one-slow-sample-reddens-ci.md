@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Found by:** round 69, the third `test (3.11)` red on a branch whose diff could not cause any of them | **Serves:** every contributor whose PR the drift gate stops for a number that will not reproduce | **Topic:** guards | **Area:** tools
 
+**Guard:** test_the_page_has_geometry.py, test_the_journey_has_an_answer_key.py · inferred r149
+
 ## Motivation
 
 `test (3.11)` went red on `279900f`, a commit whose diff is one backlog

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-230 (the code it documents) | **Serves:** R8 — who takes the projected number into a prioritisation meeting | **Topic:** docs
 
+**Guard:** test_the_whatif_convention_is_one_claim.py · inferred r149
+
 ## Motivation
 
 The third round-28 instance `UX-237` names, and the one with the

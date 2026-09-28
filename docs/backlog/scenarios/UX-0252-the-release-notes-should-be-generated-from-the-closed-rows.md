@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-251 (the ledger the notes live in) | **Serves:** R8, reading what landed; and the maintainers, who should not write it a third time | **Topic:** docs
 
+**Guard:** test_golden.py · inferred r149
+
 ## Motivation
 
 Every closed backlog row already carries a one-line statement of what

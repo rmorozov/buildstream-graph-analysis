@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-199 (the jump box), UX-216 (the actions it offers), UX-218 | **Topic:** viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `wireJumpBox` searches section names and element uids and scrolls to

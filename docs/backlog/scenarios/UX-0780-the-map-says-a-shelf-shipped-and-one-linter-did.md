@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-746 (which built this table and checked triggers, not contents) | **Serves:** the round pricing whether the analysis shelf exists before deciding to build it | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** test_the_context_map_is_the_tree.py · inferred r149
+
 ## Motivation
 
 The fixing guide's §6 map describes a workflow by what two tasks

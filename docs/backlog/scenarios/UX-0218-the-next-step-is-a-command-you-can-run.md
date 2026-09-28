@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-207 (the diagnosis it branches on), UX-126 (the loop as one command run twice) | **Topic:** viewer
 
+**Guard:** test_golden.py · inferred r149
+
 ## Motivation
 
 This tool is used in a loop:

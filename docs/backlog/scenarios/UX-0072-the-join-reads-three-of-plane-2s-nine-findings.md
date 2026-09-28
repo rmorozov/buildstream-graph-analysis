@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-63`, `UX-68`, `UX-69` (all done — all three produce findings nothing consumes), `UX-73` (done first, so the join does not inherit its false positives) | **Topic:** analysis | **Area:** bga
 
+**Guard:** test_correlate.py · inferred r149
+
 ## Motivation
 
 `bga correlate` is the command the workflow ends on: its heading is

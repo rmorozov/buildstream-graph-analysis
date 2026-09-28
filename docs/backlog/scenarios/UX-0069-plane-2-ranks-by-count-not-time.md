@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-45` (CPU time), `UX-64` (real per-element attribution) | **Topic:** capture
 
+**Guard:** test_binary_cost.py · inferred r149
+
 ## Motivation
 
 Raised by the user: *"regarding our micro level captures — brainstorm

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-846, UX-880, UX-913 | **Found by:** UX-913's first design, measured red on run 35610762079 — nine cmake elements compiled through a shim they could not source | **Serves:** any element that drives LTO under a jobserver, and every future wrapper | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `tools/native_trace/wrappers/_common.sh` is sourced by every wrapper and

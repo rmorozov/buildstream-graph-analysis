@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Serves:** the reader tracing a decision to the round that made it | **Topic:** docs
 
+**Guard:** test_the_round_history_names_every_audit.py · inferred r149
+
 ## Motivation
 
 ```text

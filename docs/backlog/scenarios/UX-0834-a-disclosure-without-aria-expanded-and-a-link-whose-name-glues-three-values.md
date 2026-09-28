@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-716 (every control has a resting appearance), UX-532 (the twin) | **Found by:** round 115, the design review | **Serves:** a keyboard or screen-reader user | **Topic:** viewer | **Area:** bga-viewer | **Shape:** mechanical
 
+**Guard:** test_every_control_has_a_resting_appearance.py
+
 ## Motivation
 
 Two controls differ from every other of their class:

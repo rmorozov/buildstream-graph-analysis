@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the second styleguide audit (2026-09-27), styleguide §3, §3d | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement | **Reading:** container
 
+**Guard:** test_the_tools_scale_with_the_table.py
+
 ## Motivation
 
 §3 says "one tool row per table: filter, presets, top-N, copy"; §3d

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-760 (the twelve it did fix) | **Serves:** the session whose `make test` reds on two files nobody touched, at a margin the other twelve survive | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** test_process_spine.py, test_native_build_tracer.py, test_dual_plane_capture.py, test_a_generated_project_builds.py, test_the_cost_row_is_derived_from_the_selector.py · inferred r149
+
 ## Motivation
 
 `UX-760` moved twelve files onto `tests/unit/_bst_env.py`'s isolated

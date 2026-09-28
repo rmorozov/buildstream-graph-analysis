@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-30 (the sweep), UX-9 (what the tool sees under RE) | **Serves:** R4 and R8 deciding whether to buy it | **Topic:** analysis | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Direction 5 left remote execution "deliberately unfiled"

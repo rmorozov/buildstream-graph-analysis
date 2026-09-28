@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-567 (the invariant half of the same index) | **Serves:** the next specification review — this one took five agents | **Topic:** guards
 
+**Guard:** test_the_declared_signals_are_the_published_ones.py, test_the_spec_says_which_parts_are_advisory.py, test_fetch_build_overlap.py, test_phase_and_occupancy.py, test_every_part_has_a_guard.py · inferred r149
+
 ## Motivation
 
 A census of `Part N` mentions across `tests/unit/*.py` names Parts

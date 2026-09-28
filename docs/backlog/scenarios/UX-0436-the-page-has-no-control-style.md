@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 69, a field report that the page's buttons look dull | **Serves:** every reader, on every screen of the report | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** test_every_control_has_a_resting_appearance.py · inferred r149
+
 ## Motivation
 
 Counted over the booted export of a real capture, at 1440x900:

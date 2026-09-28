@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Serves:** the maintainers, and the next review | **Topic:** docs
 
+**Guard:** test_the_verification_log_is_true.py · inferred r149
+
 ## Motivation
 
 Found by review 1 (`UX-241`), and it is the smallest finding with the

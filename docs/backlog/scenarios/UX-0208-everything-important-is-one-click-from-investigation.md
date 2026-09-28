@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-204 (the TraceContext transport), UX-205 (the table tools these extend), UX-207 (the panel the top actions live in) | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 UX-204 gave findings an "Investigate in Perfetto" button; the

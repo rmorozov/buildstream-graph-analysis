@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-741 (the two clauses beside it, re-expressed), UX-110 | **Found by:** round 110, `UX-741`'s verifier, 20 bare runs of the file | **Serves:** the gate that reds on a host reading nothing in the diff touched | **Topic:** guards | **Area:** tools | **Shape:** bounded
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 ```console

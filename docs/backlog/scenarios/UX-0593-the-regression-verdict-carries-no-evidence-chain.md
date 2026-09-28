@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-229 (why bga believes what it believes), UX-221 (the culprits), UX-581 (the status that names this tail) | **Serves:** R4, the CI gatekeeper asked to defend a red gate | **Topic:** analysis
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Direction 8's decomposition landed `UX-227`..`UX-230` and the CI

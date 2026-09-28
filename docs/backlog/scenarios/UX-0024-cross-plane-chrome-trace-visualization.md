@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-11` (done), `UX-23` (done - element tagging, needed for the combined mode) | **Topic:** capture | **Area:** tools
 
+**Guard:** test_native_trace_to_chrome_trace.py, test_dual_plane_capture.py · inferred r149
+
 ## Motivation
 
 Plane 1 already has a real, working Chrome Trace export path (`tools/bst_log_to_chrome_trace.py`, confirmed real and in active use for the user's own `ui.perfetto.dev` visualization workflow - see `docs/spec/ingestion-pipeline.md`'s own note that this output shape "must keep working exactly as before"). Plane 2 (`tools/bst_native_build_tracer.py`) currently only emits its own custom JSON report shape (`by_binary`/`max_concurrency`/`processes` - see `bst_native_build_tracer.py`'s `summarize`) - real, useful data, but not viewable in the same tool the user already uses for Plane 1.

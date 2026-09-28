@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-249 (the stamp it reads) | **Serves:** R4 — whose gate must not report a definition change as a regression | **Topic:** contracts
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 With `UX-249`'s stamp recorded, the policy question becomes answerable,

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-716, UX-803, UX-924 | **Blocks:** — | **Found by:** round 138 — `UX-929`'s reading: `c2fbf2b6` restarted `test_docs_links_and_commands.py` at 34.03 and left its `population` at 737 | **Serves:** every branch that makes the backlog guard slower, which the gate should name | **Topic:** guards | **Area:** tools | **Shape:** mechanical | **Reading:** container
 
+**Guard:** test_docs_links_and_commands.py
+
 ## Motivation
 
 `UX-716` defines `population` as each entry's tree size "when its

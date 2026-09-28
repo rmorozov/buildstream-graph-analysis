@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-551 (a machine-dependent figure is not reproducible), UX-779 (the wall-clock guard this extends) | **Found by:** review 23 | **Serves:** someone deciding whether `--single-branch` is worth typing | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** test_docs_links_and_commands.py
+
 ## Motivation
 
 `README.md:14` states a default clone (every `captures/*` branch) at

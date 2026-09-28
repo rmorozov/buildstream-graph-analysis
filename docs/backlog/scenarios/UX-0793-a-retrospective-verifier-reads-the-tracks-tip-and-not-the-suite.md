@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-761 (the verifier mandate) | **Found by:** round 109, on its own nine retrospective runs | **Serves:** the round that verifies a merged track after the fact, on a shared machine | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Nine retro-verifiers ran at once on four cores in round 109. Every

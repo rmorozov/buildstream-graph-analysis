@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Topic:** analysis | **Area:** bga/structural
 
+**Guard:** test_level_decomposition.py · inferred r149
+
 ## Motivation
 
 Found by the round-2 scale probe (`docs/design/directions.md`'s own next-round item 3): a synthetic but realistically-shaped 1202-element run - a `toolchain.bst` import that everything depends on, twelve layers of 100 modules each with real fan-out/fan-in between adjacent layers, and an `all.bst` stack. Reproduce it with `tools/gen_synthetic_scale_run.py /tmp/run-scale-1200`.

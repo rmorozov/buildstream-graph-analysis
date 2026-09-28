@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-896 | **Found by:** `UX-896`, which measured the gap its own Decomposition asked about and closed the host-level half without it | **Serves:** R2 (which element's artifacts are the expensive ones), R5 (how much of an agent's cache one project needs) | **Topic:** capture | **Area:** tools | **Shape:** judgement
 
+**Guard:** test_an_artifact_has_a_weight.py · inferred r149
+
 ## Motivation
 
 `UX-896` carries the cache's ceiling and what the volume under it can

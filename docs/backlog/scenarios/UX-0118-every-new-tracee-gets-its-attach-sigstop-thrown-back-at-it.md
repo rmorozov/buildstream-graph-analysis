@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done — and it corrected `UX-106`'s recorded conclusion | **Depends on:** UX-106 (done — this is its S3); feeds UX-112's overhead matrix | **Topic:** capture
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `spine.c:462-464` zeroes the restart signal only for `SIGTRAP`. A

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-494` stopped it failing the build; `UX-458` is the sizing question | **Found by:** round 73, three sightings in one session | **Serves:** the round that reads a browser guard's drift reading and cannot tell an excursion from a regression | **Topic:** guards
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Three sightings in one session, all in the Chrome-driven guards:

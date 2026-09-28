@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-554 (the namer), UX-558 (its position), UX-588 (which met it) | **Found by:** round 83, chasing two tests that had not failed | **Serves:** every session reading a red CI job | **Topic:** guards
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `tools/dev_junit_tail.py` names the failing tests so a log-tail reader

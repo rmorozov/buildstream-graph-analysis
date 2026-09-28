@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-336, UX-730 | **Blocks:** — | **Found by:** round 136 — choosing which guard `UX-934`'s ledger adopt job runs; `make test-touching` on a `tests/flake_ledger.json` edit selects 31 files and not the one that reds | **Serves:** every session whose inner loop is `make test-touching` on a change to a committed record | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
+**Guard:** test_a_file_with_three_excursions_has_a_filed_task.py
+
 ## Motivation
 
 `dev_touching.py` selects by grep over the changed path, plus the census

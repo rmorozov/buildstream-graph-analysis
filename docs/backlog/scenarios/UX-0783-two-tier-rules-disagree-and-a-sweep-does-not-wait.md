@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-773 (the sweep), UX-418 (the tier record) | **Serves:** the round that moves a file to satisfy one guard and reddens another | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** test_a_killed_browser_does_not_outlive_the_worker.py, test_a_slow_file_says_which_file.py, test_the_tiers_are_a_partition.py
+
 ## Motivation
 
 Three findings, all from `UX-773`'s verifier, all in the same corner.

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-23 (done - this is a scoring/reporting fix to the detector it added), UX-26 (the same class of fix, already applied to Plane 1's batch report) | **Topic:** capture | **Area:** tools
 
+**Guard:** test_redundancy_scoring.py · inferred r149
+
 ## Motivation
 
 `UX-23` shipped `detect_redundant_operations`: real operations repeated independently inside multiple elements' own sandboxes. It works - a real run against `examples/05-cmake-cpp-toolchain` found 37 findings, every one correctly spanning all 6 cmake elements. The output, real, from that run:

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-688, UX-501 | **Blocks:** — | **Found by:** round 136 — the merge that brought `#261` onto this branch; `--check --write` reported 0 problems over 10 properties and committed `architecture.md` saying 932 files where git has 930 | **Serves:** every catch-up merge, which is the step this repository already runs before every landing | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
+**Guard:** test_an_unmerged_index_derives_nothing.py · inferred r149
+
 ## Motivation
 
 `architecture.md`'s opening counts the backlog directories, and the

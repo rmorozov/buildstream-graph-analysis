@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-303 (the shape before the rows), UX-316 (exhibits drawn at annotation size) | **Serves:** the reader comparing a number to its population | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The visual contract's §2 is one of its longest sections. It adopts the

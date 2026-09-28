@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-46` (which produces the evidence), `UX-66` (which unblocked the join that surfaces it) | **Topic:** analysis
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Round 9 closed the macro→micro loop on a real project, and the first

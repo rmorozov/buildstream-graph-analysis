@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Found by:** round 69, two real captures of `examples/06` — a field report that the graph shape could not be resolved in the trace | **Serves:** anyone opening the timeline to see why an element started when it did | **Topic:** contracts
 
+**Guard:** test_golden.py · inferred r149
+
 ## Motivation
 
 The dependency graph reaches the trace as Perfetto flows, one per

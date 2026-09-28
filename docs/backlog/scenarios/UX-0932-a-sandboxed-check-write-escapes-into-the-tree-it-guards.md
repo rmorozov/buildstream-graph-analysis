@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-688, UX-501 | **Blocks:** — | **Found by:** round 136 — a `make test` on `78b4997b` came back 4 failed with a clean diff, and the tree had a `docs/backlog/areas/tools.md` row the run itself had written | **Serves:** every session that reads a red as a finding, and every gate run taken as a reading of its own sha | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
+**Guard:** test_the_loop_stays_fast.py
+
 ## Motivation
 
 `test_a_hand_edited_count_is_reported_and_then_restored` copies the

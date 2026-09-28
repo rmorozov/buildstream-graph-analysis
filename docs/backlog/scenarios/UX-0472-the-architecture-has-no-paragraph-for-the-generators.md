@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-465`, `UX-466` shipped the tools; nothing blocks the document | **Found by:** architecture review 9, checklist questions 1 and 4 | **Serves:** the round that asks the architecture where fixtures come from and finds one paragraph about one script | **Topic:** docs
 
+**Guard:** test_docs_links_and_commands.py
+
 ## Motivation
 
 `docs/design/architecture.md:91` opens:

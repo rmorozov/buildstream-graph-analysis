@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** none | **Topic:** analysis | **Area:** bga/report
 
+**Guard:** test_attribution_hints.py · inferred r149
+
 ## Motivation
 
 Filed while brainstorming `bga`'s main user scenarios, specifically first-run triage: "I just built my project, is it slow, where do I look first?" Confirmed against a real run (`bga analyze tests/fixtures/synthetic_multi_subproject --diagnostics`):

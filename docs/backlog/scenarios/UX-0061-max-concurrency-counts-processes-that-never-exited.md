@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-11` (which introduced the metric) | **Topic:** capture
 
+**Guard:** test_concurrency_pairing_key.py · inferred r149
+
 ## Motivation
 
 The real `freedesktop-sdk` capture reports:

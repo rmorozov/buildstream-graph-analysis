@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-106 (the spine records), UX-105 (the census) | **Topic:** capture | **Area:** tools
 
+**Guard:** test_stream_merge.py · inferred r149
+
 Direction 4, integration — see
 [`design/directions.md`](../../design/directions.md).
 

@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-683 (the tier), UX-684 (the cached-build verdict) | **Found by:** round 115, the design review | **Serves:** R3 whose base runtime leads every ranking | **Topic:** docs | **Area:** bga | **Shape:** mechanical
 
+**Guard:** test_docs_links_and_commands.py
+
 ## Motivation
 
 `UX-683` made foundation a declaration — `variables: {bga-foundation:

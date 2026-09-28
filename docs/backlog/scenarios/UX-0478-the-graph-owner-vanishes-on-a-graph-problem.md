@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-477` (the diagnosis both R3 findings key off) | **Found by:** round 72, `UX-468`'s planted walk 3 | **Serves:** the graph-owner who opens the report on a strict chain and finds their reader is not there | **Topic:** analysis | **Area:** bga
 
+**Guard:** test_the_shape_conclusions_have_a_negative_case.py · inferred r149
+
 ## Motivation
 
 `UX-468` generated a project that is six elements in one line — no

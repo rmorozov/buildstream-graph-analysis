@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-230 | **Serves:** R5 and R7 — the payload consumers | **Topic:** docs
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Found by review 3, checklist item 2 — *does every published contract

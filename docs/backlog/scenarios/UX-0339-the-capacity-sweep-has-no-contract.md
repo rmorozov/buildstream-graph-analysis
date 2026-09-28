@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-328 (which found it), UX-190 (the rule it breaks) | **Serves:** R5 — capacity operators, and every payload consumer | **Topic:** contracts | **Area:** bga
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Found while enrolling `UX-328`'s three emitters, and it is the

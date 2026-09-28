@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-276` built the scan; `UX-485` walked into the hole | **Found by:** round 73, writing `UX-485`'s end-to-end clauses | **Serves:** the round whose new guard rests on a capture in `/tmp` and passes here, green, for one session | **Topic:** guards | **Area:** tools
 
+**Guard:** test_a_guard_reads_only_what_a_clone_has.py
+
 ## Motivation
 
 `tests/unit/test_a_guard_reads_only_what_a_clone_has.py` exists so a

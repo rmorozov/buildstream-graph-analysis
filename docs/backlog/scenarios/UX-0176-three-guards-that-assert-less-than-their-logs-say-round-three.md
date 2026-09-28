@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-163, UX-164, UX-165, UX-169, UX-170 (the logs these correct) | **Topic:** guards
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The round-18 review's target-class summary was clean — every measured

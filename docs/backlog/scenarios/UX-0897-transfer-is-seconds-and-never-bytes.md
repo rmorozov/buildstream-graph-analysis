@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-92, UX-103 | **Found by:** the 2026-09-20 rollout brief ([`continuous-build-improvement.md`](../../design/continuous-build-improvement.md), section 1) — on a review build with the cache on, the question is whether the link is the bottleneck for sources and artifacts | **Serves:** R5 (whether more bandwidth is worth buying), R6 (why a cached build still waited) | **Topic:** capture | **Area:** tools | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `bga/cache_effectiveness.py` names pull and push time as a share of wall

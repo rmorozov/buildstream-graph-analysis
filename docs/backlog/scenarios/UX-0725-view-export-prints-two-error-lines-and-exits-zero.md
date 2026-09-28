@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-326 (the tool's own sentences are contracts), UX-55 (compare's run-mode refusal) | **Serves:** anyone exporting a run whose neighbour is a different run mode | **Topic:** cli | **Shape:** judgement | **Area:** bga
 
+**Guard:** test_the_export_names_a_bands_absence.py · inferred r149
+
 ## Motivation
 
 Found by `UX-685`'s walk at seed 2, reproduced here verbatim:

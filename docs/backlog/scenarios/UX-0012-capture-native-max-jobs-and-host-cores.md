@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-09` (the joint-optimization finding this directly closes the cheapest part of) | **Topic:** capture
 
+**Guard:** test_process_oversubscription.py, test_bst_extract_run.py · inferred r149
+
 ## Motivation
 
 `UX-09` proved, with real evidence, that `--builders` (BuildStream's own element-dispatch concurrency) and native `--max-jobs` (each element's own internal `make -jN`/`ninja` parallelism) both consume the same physical CPU cores, uncoordinated - and that `bga`'s current capacity model has zero visibility into the second axis. Checking exactly how zero: `tools/bst_extract_run.py:325` sets `resource_capacities.PROCESS = scheduler["builders"]`, and run-context/v9's own `max_jobs` field is - confirmed via `tools/bst_log_to_chrome_trace.py:207-224`'s own docstring - a spec-defined synonym for `builders` itself, **not** the real native `--max-jobs` value ("`--max-jobs` is a different, unrelated concept... and is not what run-context/v9's `max_jobs` field means"). So today, no run-context.json anywhere records the real `--max-jobs` a build was actually invoked with, and none records the host's real CPU core count either. `bga` cannot even show a user "you ran builders=8 × max-jobs=8 = 64 potential concurrent processes on a 4-core host" - the input data for that sentence doesn't exist.

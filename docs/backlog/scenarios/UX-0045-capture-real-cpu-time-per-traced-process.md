@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-11 (the hook), UX-23 (element tagging), UX-36 (which established the caveats this would let us retire), UX-27 (`occupancy_ratio`, the metric that most wants a CPU denominator) | **Topic:** capture
 
+**Guard:** test_native_cpu_time.py · inferred r149
+
 ## Motivation
 
 `bga` has been carefully honest, across several tasks, about one thing it cannot measure: **it has never had a CPU-time measurement.** `UX-36` put it plainly, and the honesty now costs three separate pieces of report machinery:

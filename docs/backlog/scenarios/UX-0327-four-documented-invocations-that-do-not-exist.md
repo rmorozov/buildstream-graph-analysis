@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-139 (case-study vs instruction rule), the docs-command guard this extends | **Serves:** R1 | **Topic:** docs | **Area:** tools
 
+**Guard:** test_docs_links_and_commands.py, test_the_documented_invocations_parse.py · inferred r149
+
 ## Motivation
 
 The stranger walk followed the guides verbatim and hit four

@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-505 (the card) | **Serves:** the session that trusts the card's guard column | **Topic:** guards
 
+**Guard:** test_docs_links_and_commands.py, test_the_loop_stays_fast.py, test_the_spec_outside_part_32_is_read_only.py · inferred r149
+
 ## Motivation
 
 `docs/contributing/rules.md` has 30 rule rows (not the 34 `UX-505`'s

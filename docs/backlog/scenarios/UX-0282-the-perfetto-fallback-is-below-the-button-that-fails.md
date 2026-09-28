@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-265 | **Serves:** R7 — mid-handoff, when it did not work | **Topic:** viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Reported: *"move nothing opened? open ui.perfetto… to the right as

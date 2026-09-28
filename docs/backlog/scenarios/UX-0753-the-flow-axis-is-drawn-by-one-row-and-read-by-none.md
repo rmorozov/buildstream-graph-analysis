@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-674 (which added it), UX-361 (the shapes) | **Serves:** the reader of an exhibit axis, and the round that changes one | **Topic:** viewer | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-674` changed `exhibitAxis` in `bga/viewer/drawings.js` from

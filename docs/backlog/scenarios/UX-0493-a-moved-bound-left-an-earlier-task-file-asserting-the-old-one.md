@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** `UX-469` moved the figure; `UX-132` is the rule | **Found by:** architecture review 10 | **Serves:** the round that reads `UX-479`'s Outcome for the export bound and gets a number the tree has not had since the same day | **Topic:** docs | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Fixing guide §3.6: a fix annotates the task file whose figure it

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-730 (which built the first half and measured this one), UX-716, UX-336 | **Serves:** the round whose CI reds on a guard its pre-commit hook could not select | **Topic:** guards | **Shape:** bounded | **Area:** tools
 
+**Guard:** test_a_guard_reads_only_what_a_clone_has.py, test_docs_links_and_commands.py, test_the_agent_configuration_holds.py, test_the_context_map_is_the_tree.py, test_the_selector_carries_the_census.py, test_the_loop_stays_fast.py, test_the_cost_row_is_derived_from_the_selector.py · inferred r149
+
 ## Motivation
 
 `UX-730` closed the delegated-population half of the census detector

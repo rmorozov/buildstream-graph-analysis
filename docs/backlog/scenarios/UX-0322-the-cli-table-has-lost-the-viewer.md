@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Serves:** R2 — whoever is looking for what this tool can do | **Topic:** docs
 
+**Guard:** test_the_command_table_is_the_cli.py · inferred r149
+
 ## Motivation
 
 `docs/design/architecture.md`'s command table is the one place a

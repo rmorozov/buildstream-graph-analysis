@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Serves:** anyone trusting the report's `I1..I13` line | **Topic:** guards
 
+**Guard:** test_cold_floor.py, test_occupancy_within_capacity.py · inferred r149
+
 ## Motivation
 
 Part 34's thirteen invariants, mapped to the tests that name them:

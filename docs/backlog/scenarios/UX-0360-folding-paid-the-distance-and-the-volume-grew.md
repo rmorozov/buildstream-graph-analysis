@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-347 (the distance budget), UX-346 (the schema's sentence on the door) | **Serves:** anyone who opens more than the first chapter | **Topic:** viewer
 
+**Guard:** test_the_page_has_a_volume_budget.py, test_the_report_you_can_attach.py · inferred r149
+
 ## Motivation
 
 Round 52's complaint was distance: twenty screens, the element table

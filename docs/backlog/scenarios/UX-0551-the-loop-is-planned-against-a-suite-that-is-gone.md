@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-336 (the tiers), UX-500 (which measured it) | **Serves:** the implementing session's wall clock | **Topic:** docs
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Architecture review 12, checklist 3. `CLAUDE.md` line 16 is the first

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done — premise corrected, and the alternative measured and rejected | **Depends on:** UX-106 (done — this is its S2) | **Topic:** capture | **Area:** tools/native_trace
 
+**Guard:** test_process_spine.py · inferred r149
+
 ## Motivation
 
 `spine.c`'s header and signal design rest on the premise that under

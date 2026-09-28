@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-54` (done — which recorded the failure at run level) | **Topic:** contracts
 
+**Guard:** test_i3_and_span_status.py · inferred r149
+
 ## Motivation
 
 `UX-54` made a failed build visible, and deliberately did so at the

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-679 (the spike) | **Found by:** round 117, Direction 20 | **Serves:** R4, before any jobserver capture is trusted | **Topic:** capture | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_the_jobserver_fifo_has_a_lifecycle.py
+
 ## Motivation
 
 `UX-679`'s Outcome closes on its own gap: `tools/bst_native_build_tracer.py`

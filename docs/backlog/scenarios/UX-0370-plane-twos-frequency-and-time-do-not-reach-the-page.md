@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-356 (every field of the element join reaches a reader), UX-102 (configure tax, both planes side by side) | **Serves:** anyone asking what the build spends its time running | **Topic:** viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The round's question was concrete: can a reader tell what cmake

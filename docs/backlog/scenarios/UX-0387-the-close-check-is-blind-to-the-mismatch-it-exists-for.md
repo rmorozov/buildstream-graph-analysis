@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-131 (guard the status table against its task files), UX-336 (the loop that got slow) | **Serves:** anyone closing a task before running the full suite | **Topic:** guards | **Area:** tools
 
+**Guard:** test_docs_links_and_commands.py · inferred r149
+
 ## Motivation
 
 Review 6, checklist item 1: does the code still do what it says.

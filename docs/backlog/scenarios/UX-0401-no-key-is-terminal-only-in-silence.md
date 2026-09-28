@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-389 (the fourteen blocks it will hold in place) | **Serves:** whoever adds the sixteenth block | **Topic:** guards | **Area:** bga/viewer
 
+**Guard:** test_every_plane2_block_has_a_destination.py · inferred r149
+
 ## Motivation
 
 `UX-389` counts the damage — fourteen of twenty-five Plane 2 blocks

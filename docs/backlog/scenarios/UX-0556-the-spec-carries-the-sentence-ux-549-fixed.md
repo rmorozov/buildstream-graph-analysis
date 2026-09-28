@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** `UX-549` (which fixed the architecture's copy) | **Found by:** `UX-549`'s track, which could not edit ground truth | **Serves:** anyone counting contracts from the spec | **Topic:** docs
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-549` derived five counted figures rather than restating them. One

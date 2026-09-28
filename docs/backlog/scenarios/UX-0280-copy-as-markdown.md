@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-279 | **Serves:** R8 — whose destination is a ticket, a PR body or a chat message | **Topic:** viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Reported: *"maybe it would be great to have copy as markdown."*

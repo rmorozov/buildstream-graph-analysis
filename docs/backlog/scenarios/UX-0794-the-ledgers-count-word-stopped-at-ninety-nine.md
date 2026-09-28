@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-666 (the derived count sentence), UX-752 (the guard reads the writer's own words) | **Found by:** round 109, appending the hundredth row | **Serves:** the round that appends a row and gets a traceback for a ledger sentence | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_a_run_is_priced.py
+
 ## Motivation
 
 ```console

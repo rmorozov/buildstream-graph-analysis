@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 69, a field report that the Perfetto handoff occupies more of the left rail than it needs | **Serves:** anyone reading the rail while a server is behind the page — the mode `bga view` opens by default | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** test_the_handoff_box_is_measured_served.py · inferred r149
+
 ## Motivation
 
 `#actions-group` holds the Perfetto handoff in the sticky rail. Measured

@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-202 (plane2_coverage), UX-297 (the report beside the run) | **Serves:** R1, R2 | **Topic:** analysis
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Stranger walk friction 15, against `bga view --help`'s own promise

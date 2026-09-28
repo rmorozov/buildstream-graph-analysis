@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Serves:** anyone who reads a guide to find out what `bga view` does | **Topic:** docs
 
+**Guard:** test_the_viewer_perfetto_boundary.py, test_the_verification_log_is_true.py · inferred r149
+
 ## Motivation
 
 Architecture review 12. `UX-241` filed the cadence guard because the

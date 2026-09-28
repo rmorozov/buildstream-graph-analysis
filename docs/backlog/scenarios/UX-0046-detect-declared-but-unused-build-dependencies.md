@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-11 (the Plane 2 hook), UX-23 (element tagging, which is what makes a per-element answer possible at all) | **Topic:** capture | **Area:** tools/native_trace
 
+**Guard:** test_declared_vs_used.py · inferred r149
+
 ## Motivation
 
 `examples/06-macro-micro-optimization` was built with three deliberate defects. `bga` finds two of them. The third - an over-declared build dependency - it does not find, and cannot: `docs/design/directions.md` names it as the round's own item (1), *"the one problem in that project that no `bga` signal found - it was found by knowing the project"*.

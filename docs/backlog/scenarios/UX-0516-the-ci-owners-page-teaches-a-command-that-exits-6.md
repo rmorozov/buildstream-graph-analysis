@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-96` (which added the remedy) | **Found by:** review 11 | **Serves:** the CI owner who copies the block, meets exit 6, and has no next line to type | **Topic:** docs
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `docs/guides/ci-comment.md` is the CI owner's page (`UX-139`), and its

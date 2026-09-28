@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §6e.6 | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
 
+**Guard:** test_spacing_comes_from_a_scale.py
+
 ## Motivation
 
 `grep` of `bga/viewer/style.css` on `98ab850`: 23 distinct `margin`/`padding`/`gap` lengths. Type has four tokens and drawings seven; spacing has none.

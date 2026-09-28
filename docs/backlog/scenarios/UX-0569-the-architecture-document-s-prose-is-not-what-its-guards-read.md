@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-233 (the contracts guard), UX-472 (the last prose drift filed here) | **Serves:** the reader who opens architecture.md to price a change | **Topic:** docs | **Area:** tools
 
+**Guard:** test_docs_links_and_commands.py · inferred r149
+
 ## Motivation
 
 Round 82 read every section of `docs/design/architecture.md` against

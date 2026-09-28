@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 68, a red `test (3.10)` on PR #187 that no other interpreter reproduced | **Serves:** every contributor, at the point CI reddens on something their diff cannot reach | **Topic:** guards
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 ```text

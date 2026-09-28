@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-602 (which fixed the same defect one layer out) | **Serves:** the reader opening the module to find what it enforces | **Topic:** guards
 
+**Guard:** test_the_gate_docstring_is_the_registry.py, test_every_direction_names_its_reader.py · inferred r149
+
 ## Motivation
 
 `UX-602` found Part 33.1 naming four of the six published hard gates

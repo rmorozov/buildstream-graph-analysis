@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-96, UX-108 (both done — this is their edges) | **Topic:** store
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Round 12 exercised the new baseline/trend machinery against the live

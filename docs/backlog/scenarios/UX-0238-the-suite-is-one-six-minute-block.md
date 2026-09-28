@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Serves:** the maintainers, and every future session most of all | **Topic:** guards
 
+**Guard:** test_process_spine.py · inferred r149
+
 ## Motivation
 
 The user's observation: the full suite is slow enough to distort how

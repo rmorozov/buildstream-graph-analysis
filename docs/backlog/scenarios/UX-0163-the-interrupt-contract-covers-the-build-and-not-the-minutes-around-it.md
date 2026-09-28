@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-157 (the contract this widens), UX-159 (which made the surrounding phases visible) | **Topic:** capture
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 UX-157's salvage works — round 17 SIGINTed a real capture mid-build

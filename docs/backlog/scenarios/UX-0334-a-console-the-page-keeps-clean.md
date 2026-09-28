@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-320 (the walks this joins), UX-193 (the CSP that is right to be strict) | **Serves:** R1 — and every developer who opens devtools | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The user's field report: the Chrome console on `bga view` is full

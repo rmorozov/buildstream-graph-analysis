@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-183` (the progress module), `UX-518` (batch first) | **Found by:** round 77, field report — *"take considerable time on big projects... at least show progress?"* | **Serves:** the user watching a capture that has stopped saying anything | **Topic:** capture | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-183` gave the long phases a moving line, and the capture's tail is

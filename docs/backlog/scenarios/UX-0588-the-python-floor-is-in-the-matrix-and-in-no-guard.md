@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-579 (whose new file tripped it) | **Found by:** round 83's own CI, blocking PR #200 | **Serves:** every track that writes Python on a newer interpreter than the floor | **Topic:** guards
 
+**Guard:** test_the_python_floor_is_a_guard.py
+
 ## Motivation
 
 `pyproject.toml:11` declares `requires-python = ">=3.9"`. Nothing local

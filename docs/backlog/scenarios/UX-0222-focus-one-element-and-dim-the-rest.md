@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-216 (the element object), UX-211 (the fragment that carries the state) | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 At 1,202 elements, "show me everything about `openssl.bst`" is answered

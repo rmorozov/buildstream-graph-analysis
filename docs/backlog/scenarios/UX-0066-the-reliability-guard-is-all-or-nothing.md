@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-64` (done — which raised real attribution to 86.1% and made this the blocker) | **Topic:** analysis
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Round 8 took Plane 2's element attribution on a real `freedesktop-sdk`

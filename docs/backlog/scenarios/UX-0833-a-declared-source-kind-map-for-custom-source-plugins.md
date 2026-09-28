@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-192 (the source kind behind a heuristic), UX-683 (a declaration in project.conf) | **Found by:** round 115, the design review | **Serves:** R2 whose sources come through a custom plugin | **Topic:** analysis | **Area:** bga | **Shape:** judgement
 
+**Guard:** test_a_declared_source_kind_maps_onto_a_known_one.py · inferred r149
+
 ## Motivation
 
 `bga/blast.py:202` names the source kind behind a resource-blast

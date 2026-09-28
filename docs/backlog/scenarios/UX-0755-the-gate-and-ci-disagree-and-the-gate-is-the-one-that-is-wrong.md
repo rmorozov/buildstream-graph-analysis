@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-336 (the loop), UX-418 (a slow file CI sees differently) | **Serves:** the session that runs `make test` and believes it | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** test_a_generated_project_builds.py · inferred r149
+
 ## Motivation
 
 **Corrected**, against the diagnosis track's own measurement: this row

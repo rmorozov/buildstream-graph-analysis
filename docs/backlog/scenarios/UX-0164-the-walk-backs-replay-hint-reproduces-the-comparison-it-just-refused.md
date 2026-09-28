@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-156 (the refusal these words surround) | **Topic:** store
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 UX-156's mechanics hold — round 17 verified the refusal, the banner,

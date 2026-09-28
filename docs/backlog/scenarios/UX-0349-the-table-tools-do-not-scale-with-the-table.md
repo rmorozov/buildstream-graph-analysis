@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-284 (table tools above the table), UX-289 (one element table, many presets) | **Serves:** the reader counting controls on a screen | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The report carries a lot of controls. Measured on a real boot:

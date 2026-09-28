@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-638 (the guard), UX-691 (the flake ledger this should reach) | **Found by:** round 109, on PR #215's head 8b4012ee | **Serves:** the branch that goes red on one of four matrix runners for a page it never touched | **Topic:** guards | **Area:** bga-viewer | **Shape:** bounded
 
+**Guard:** test_the_dom_shim_is_one_instrument.py, test_focus_keeps_the_reading_position.py · inferred r149
+
 ## Motivation
 
 ```console

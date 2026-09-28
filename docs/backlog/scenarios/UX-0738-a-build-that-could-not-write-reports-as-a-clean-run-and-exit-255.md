@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-156 (a failed build must not verdict as if it finished), UX-324, UX-148 | **Serves:** anyone whose disk fills mid-capture, and the round that then reads the report | **Topic:** capture | **Shape:** judgement | **Area:** tools
 
+**Guard:** test_the_journey_has_an_answer_key.py · inferred r149
+
 ## Motivation
 
 Round 100's gate went red with eighteen fixture errors in

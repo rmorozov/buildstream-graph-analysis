@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Found by:** round 69, an outside walk of `bga snapshot` → `bga view` → Perfetto, after a field report of the UI freezing on a real build | **Serves:** anyone who clicks "Open timeline in Perfetto" on a build big enough to be worth analysing | **Topic:** viewer | **Area:** tools
 
+**Guard:** test_the_handoff_counts_what_perfetto_spends.py · inferred r149
+
 ## Motivation
 
 `tools/bga_view.py:601` holds the only bound the handoff has:

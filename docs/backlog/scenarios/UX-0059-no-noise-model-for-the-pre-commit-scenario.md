@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-55` (done — which made the two CI scenarios explicit) | **Topic:** analysis
 
+**Guard:** test_baseline_noise_band.py · inferred r149
+
 ## Motivation
 
 `bga` serves two CI scenarios, now distinguished by `run_mode` (`UX-55`):

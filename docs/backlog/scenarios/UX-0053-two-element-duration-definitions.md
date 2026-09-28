@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** — (introduced by `UX-50`, and violates the invariant `UX-52` wrote down) | **Topic:** analysis
 
+**Guard:** test_shared_element_durations.py · inferred r149
+
 ## Motivation
 
 Found in round 6, by running the cross-check sweep against

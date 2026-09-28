@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-211 (URL state), UX-318 (the rabbit hole announces its depth) | **Found by:** round 87, while measuring the parallelism block | **Serves:** anyone who shares a link to a report they were reading | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** test_a_fold_stays_open_in_the_link.py · inferred r149
+
 ## Motivation
 
 View state travels in the fragment, and folds are part of it —

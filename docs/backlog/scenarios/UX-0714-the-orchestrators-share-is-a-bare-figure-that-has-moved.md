@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-707 (the rebuild count), UX-711 (the reader that works on a live session), UX-511 (dated or derived) | **Found by:** architecture review 17, checklist item 3 | **Serves:** the session pricing a batch against a figure it believes | **Topic:** docs | **Area:** tools | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `CLAUDE.md` steers every session with:

@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-56` (done — which built the correlation this sharpens) | **Topic:** capture | **Area:** tools
 
+**Guard:** test_invocation_correlation.py · inferred r149
+
 ## Motivation
 
 `UX-56` recovered element identity for a real `freedesktop-sdk` capture

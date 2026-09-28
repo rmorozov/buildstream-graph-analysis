@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-451 (the refusal leaves the column), UX-198 | **Serves:** anyone whose browser blocks the Perfetto tab | **Topic:** viewer | **Shape:** judgement
 
+**Guard:** test_the_handoff_says_whether_perfetto_fetched.py, test_the_report_you_can_attach.py · inferred r149
+
 ## Motivation
 
 ```text

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-597 (which declined this tag), UX-637 (which explains why this row is wrong) | **Found by:** round 86, closing UX-597 | **Serves:** anyone checking out a release this repository claims to have made | **Topic:** docs
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 **This row's premise is false, and the file is kept as the record of

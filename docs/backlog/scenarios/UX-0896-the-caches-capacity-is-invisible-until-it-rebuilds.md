@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-92 (the cache report card) | **Found by:** the 2026-09-20 rollout brief ([`continuous-build-improvement.md`](../../design/continuous-build-improvement.md), section 1) — a field case where the local cache could not hold the project's artifacts, so reaching for one triggered a rebuild | **Serves:** R5 (how large an agent's cache has to be), R2 (which element's artifacts are the expensive ones) | **Topic:** capture | **Area:** tools | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `bga` reads the cache's *behaviour* — `bga/cache_effectiveness.py`

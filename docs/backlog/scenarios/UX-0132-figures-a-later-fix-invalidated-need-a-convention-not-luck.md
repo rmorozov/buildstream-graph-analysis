@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-123 (whose fix moved the figures) | **Topic:** docs | **Area:** tools/native_trace
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 UX-123's exec-chain collapse changed `examples/06` from 822 to 813

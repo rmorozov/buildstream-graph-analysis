@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Found by:** review 8, checklist item 4 | **Serves:** the contributor whose PR the drift gate stops, who is told to re-record and not where from | **Topic:** docs | **Area:** tools
 
+**Guard:** test_the_refresh_route_is_written_down.py · inferred r149
+
 ## Motivation
 
 Three items built the route by which `tests/ci_reference.json` gets

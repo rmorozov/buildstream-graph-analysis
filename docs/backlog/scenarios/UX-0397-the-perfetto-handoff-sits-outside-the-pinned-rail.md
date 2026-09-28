@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-373 (two satellite pages for one handoff), UX-282 (the fallback below the button that fails), UX-209 (the rail), UX-348 (the handoff) | **Serves:** anyone who decides to open the trace after reading a finding | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** test_one_factory_builds_every_table.py, test_apparatus_in_its_place.py, test_the_shape_channel_is_built.py · inferred r149
+
 ## Motivation
 
 The user proposed pinning the Perfetto handoff into the left pane,

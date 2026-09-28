@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-298 (the emitter), UX-297 (the reductions beside it) | **Serves:** R1, R2 | **Topic:** capture
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Round 43 inventoried the trace against what the run directory

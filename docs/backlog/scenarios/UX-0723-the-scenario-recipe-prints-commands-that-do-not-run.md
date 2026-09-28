@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-685 (which built the tool) | **Serves:** the walker following the script the seed prints | **Topic:** guards | **Shape:** judgement | **Area:** tools
 
+**Guard:** test_a_scenario_is_named_by_its_seed.py · inferred r149
+
 ## Motivation
 
 `UX-685`'s first walk, at seed 1, found it in its first minute. The

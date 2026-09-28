@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-142 (the fix this completes), UX-125 (doctor's probe principle) | **Topic:** cli
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 UX-142's headline fix is real: doctor's project probe reads

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** round 143's walk (`10cde1d2`) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement | **Reading:** container
 
+**Guard:** none — open, no guard named yet
+
 ## Motivation
 
 Measured on `10cde1d2`, `macro_micro`, 1440x900, through `tests/browser.py`:

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-100 (reopened by this filing) | **Topic:** guards
 
+**Guard:** test_fine_grained_fixture.py, test_granularity.py · inferred r149
+
 ## Motivation
 
 UX-100's acceptance named a positive case: *"a purpose-built

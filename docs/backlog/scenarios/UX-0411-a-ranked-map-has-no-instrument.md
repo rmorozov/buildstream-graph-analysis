@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-303 (the shape before the rows), UX-350 (the shape channel), UX-396 (the census that found this) | **Serves:** anyone scanning a per-key measure for its shape | **Topic:** viewer
 
+**Guard:** test_a_shapeable_population_is_drawn.py · inferred r149
+
 ## Motivation
 
 `UX-396` swept the sections publishing a population of numbers in one

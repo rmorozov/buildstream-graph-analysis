@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-706 (the shape), UX-666 (a subagent's cost written down) | **Serves:** the advisory in `CLAUDE.md`, which today says `sonnet` for tracks on the strength of the reading rows alone | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The ledger holds 17 rows: researcher and general-purpose runs, none

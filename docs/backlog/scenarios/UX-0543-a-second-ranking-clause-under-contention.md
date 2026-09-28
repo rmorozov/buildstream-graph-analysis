@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-538` (the same species, one clause over), `UX-489` (the margin instrument) | **Found by:** `UX-538`, fixing its sibling | **Serves:** the implementing session, which must be able to believe a red | **Topic:** guards
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-538` took the timing out of `test_the_first_thing_to_fix_is_core`.

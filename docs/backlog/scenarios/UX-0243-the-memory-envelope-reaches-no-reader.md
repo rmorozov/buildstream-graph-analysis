@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** — | **Serves:** R5 — whose whole question is how many builds a machine can hold | **Topic:** docs
 
+**Guard:** test_the_builders_question_has_a_document.py · inferred r149
+
 ## Motivation
 
 The second of `UX-237`'s three round-28 instances.

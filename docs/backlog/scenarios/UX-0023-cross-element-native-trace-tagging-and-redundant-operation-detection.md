@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-11` (done - supplies the real per-process trace this builds on) | **Topic:** capture | **Area:** tools/native_trace
 
+**Guard:** test_bwrap_shim.py, test_native_build_tracer.py · inferred r149
+
 ## Motivation
 
 `docs/design/architecture.md`'s own "Where the two planes connect" section named a real, not-yet-built opportunity: Plane 1 (whole-project) can tell you which elements are expensive; Plane 2 (`UX-11`'s intra-element tracer) can tell you what one element's own native build system spent its time on - but running Plane 2 across *multiple* elements of the same project could reveal that they're each independently, redundantly doing the same real sub-work. This task is that brainstorm, performed for real rather than left as a hypothetical.

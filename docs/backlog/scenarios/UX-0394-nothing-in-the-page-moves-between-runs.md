@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-234 (the store speaks for more than one build), UX-226 (what happened to this element since last time), UX-221 (which elements caused the regression), UX-211 (URL state) | **Serves:** anyone who has captured the same project twice | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The user's instinct was right, and it is measurable. Round 63 ran the

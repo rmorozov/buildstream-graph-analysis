@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Serves:** the round that adds a tool and finds an unrelated paragraph is what it has to delete | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** test_the_process_documents_derive_their_figures.py · inferred r149
+
 ## Motivation
 
 `test_a_paragraph_does_not_move_the_stated_figure` (`UX-607`) requires

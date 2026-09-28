@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-125/UX-142 (doctor), UX-146/UX-147/UX-148 (the diagnostics it composes) | **Topic:** capture
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The field failure's diagnostic dead-end, restated as the gap between

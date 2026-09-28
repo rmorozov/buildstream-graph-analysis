@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** architecture review 16 | **Serves:** anyone opening `format.js` to find out what the page's vocabulary is | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** test_the_contract_names_its_vocabulary.py · inferred r149
+
 ## Motivation
 
 `bga/viewer/format.js` opens by saying what the module is:

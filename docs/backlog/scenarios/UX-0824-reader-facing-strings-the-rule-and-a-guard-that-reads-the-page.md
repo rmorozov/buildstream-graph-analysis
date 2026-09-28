@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-669 (a task id is never bare in prose), UX-665 (the census) | **Found by:** round 115, the design review | **Serves:** every reader of the page | **Topic:** guards | **Area:** tools | **Shape:** bounded
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 §4b's sentence rule exists and no guard reads the rendered page for

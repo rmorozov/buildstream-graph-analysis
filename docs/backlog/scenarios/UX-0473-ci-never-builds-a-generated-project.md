@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-465` stages 1-4, which shipped | **Found by:** round 72, closing `UX-465`'s first four stages | **Serves:** the round whose spec change breaks a build nobody runs until someone runs it by hand | **Topic:** guards | **Area:** tools
 
+**Guard:** none — named test_the_workflow_runs_what_it_says.py, absent from tests/
+
 ## Motivation
 
 `UX-465` stage 5, split out so the item could close on what it did.

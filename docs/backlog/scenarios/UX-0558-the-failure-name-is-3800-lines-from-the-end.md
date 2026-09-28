@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-554 (which added the naming step), UX-441 and UX-491 (which set the rule) | **Serves:** the reader who has the log and not the browser | **Topic:** guards
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-441` set the rule: the failure stays the last thing in the log.

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-497 (the Outcome cap), UX-749 (which broke one) | **Serves:** the reader who trusts a cap because the guard reported green | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** test_a_commit_body_is_eight_lines.py, test_the_register_is_terse.py, test_the_commit_body_gate_runs_before_ci.py, test_cache_logs.py · inferred r149
+
 ## Motivation
 
 `CLAUDE.md`'s Register states four caps. `rules.md` says it is "every

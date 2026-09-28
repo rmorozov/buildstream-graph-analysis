@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-376 (the policy that made this the remaining half) | **Serves:** anyone reading a capture taken with the spine off | **Topic:** capture | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-105` established that the LD_PRELOAD hook "cannot detect its own

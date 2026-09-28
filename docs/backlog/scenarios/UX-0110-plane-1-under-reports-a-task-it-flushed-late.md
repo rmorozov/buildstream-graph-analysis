@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done — measured, bounded, and reported; corrected deliberately not | **Depends on:** — (found by UX-108's ground-truth check) | **Topic:** capture
 
+**Guard:** test_plane1_timestamp_resolution.py · inferred r149
+
 ## Motivation
 
 `examples/01-resource-contention` runs eight identical elements, each of

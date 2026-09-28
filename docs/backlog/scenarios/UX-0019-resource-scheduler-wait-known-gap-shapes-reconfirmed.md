@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `P1-31`, `P1-39`, `P1-30` (all already done - this task is about their own documented residual limitations) | **Topic:** analysis | **Area:** bga/attribution
 
+**Guard:** test_wait_gap_resaturation.py, test_blame_chain.py, test_resource_wait.py, test_retry_wait_classification.py · inferred r149
+
 ## Motivation
 
 An external review, auditing `bga`'s attribution correctness independently of `UX-12`-`UX-15`'s builders/max-jobs work, flagged what it called a P0 issue: a wait gap can pass through `RESOURCE_WAIT` then `SCHEDULER_WAIT` and, if the resource becomes saturated *again* later within the same gap, that re-saturation isn't correctly reclassified - and separately, that retry gaps with no other real predecessor can't be decomposed into resource/scheduler sub-portions at all, defaulting entirely to `RETRY_WAIT` even when contention explains part of the gap.

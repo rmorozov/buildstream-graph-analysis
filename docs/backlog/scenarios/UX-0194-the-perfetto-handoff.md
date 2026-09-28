@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-193 (the page that hosts the button), UX-188 (`bga timeline`, the input) | **Topic:** viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Direction 7's timeline rule: none of our own, ever —

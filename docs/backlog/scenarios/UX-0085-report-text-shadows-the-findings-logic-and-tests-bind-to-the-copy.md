@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-75 (done) | **Topic:** guards
 
+**Guard:** test_correlate.py, test_realizable_saving.py, test_no_shadowed_findings.py · inferred r149
+
 ## Motivation
 
 UX-75's core claim is that what is worth saying is *decided once* in

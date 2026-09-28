@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-756 (the rule that re-derives it) | **Serves:** the branch whose CI reds on a figure its own tool just wrote | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** test_the_cost_row_is_derived_from_the_selector.py
+
 ## Motivation
 
 `dev_touching.py --spread` publishes `median 38` into

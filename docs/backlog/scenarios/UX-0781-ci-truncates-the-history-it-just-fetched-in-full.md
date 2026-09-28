@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-776 (the refusal whose detector this falsifies) | **Serves:** the round reading a red CI job that the same tree passes locally | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** test_a_guard_that_reads_history_declares_its_depth.py, test_the_round_register_is_derived.py
+
 ## Motivation
 
 `test (3.11)` was the only red job on `9fba634`, and inside it only

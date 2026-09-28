@@ -60,6 +60,10 @@ measured, the mutation table — because the task file is not a shared
 file and those three are pasted output, not judgement. The deviation
 line is the orchestrator's.
 
+The task file's `**Guard:**` line, under its header, is yours too: name
+the test file(s) your guard lives in, or `none — <reason>`. `--check`
+refuses a missing line or a name absent from `tests/` (`UX-1092`).
+
 ## What shape you are handed
 
 A task's header carries `**Shape:**`, derived by `dev_close_task.py

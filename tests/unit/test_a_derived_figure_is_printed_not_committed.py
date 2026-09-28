@@ -108,6 +108,7 @@ _TASK = ("# UX-{n}: a batch row\n\n"
         "**Priority:** Low | **Status:** \U0001f534 Not Started | "
         "**Serves:** nobody | **Topic:** guards | **Shape:** judgement | "
         "**Reading:** container\n\n"
+        "**Guard:** none — a fixture row\n\n"
         "## Outcome\n\nmeasured.\n")
 
 

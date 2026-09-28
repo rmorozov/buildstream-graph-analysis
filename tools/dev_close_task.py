@@ -36,6 +36,7 @@ sys.path.insert(0, str(REPO / "tools"))
 import _close_task_checks as checks
 
 SCENARIOS = REPO / "docs/backlog/scenarios"
+TESTS_ROOT = REPO / "tests"
 INDEX = SCENARIOS / "README.md"
 CLOSED = SCENARIOS / "closed.md"
 #: UX-938: fixed at import, unlike `REPO` - a test that monkeypatches
@@ -821,6 +822,8 @@ CHECKS = (
      lambda: checks.id_problems(SCENARIOS, REPO)),
     ("every open row at UX-938 or later names where its Acceptance "
      "Test's reading is taken", lambda: reading_problems()),
+    ("every task file names its guard, and the guard exists (UX-1092)",
+     lambda: checks.guard_problems(SCENARIOS, TESTS_ROOT)),
 )
 
 

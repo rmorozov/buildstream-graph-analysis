@@ -47,6 +47,7 @@ task file, which is the only place it ever lived twice.
 | UX-1056 | [navigating back after an in-page reveal does not re-fold the chapter](UX-1056-back-after-a-reveal-does-not-re-fold.md) | viewer | Medium | R1 | 🔴 Not Started |
 | UX-1057 | [the decomposition bar's aria-details twin table drops the certified lower-bound mark](UX-1057-the-drawing-routes-twin-table-drops-the-lower-bound-mark.md) | viewer | Medium | R1 | 🔴 Not Started |
 | UX-1058 | [the narrow-rail fold toggle is a click-only `<p>`, unreachable by keyboard](UX-1058-the-narrow-rail-toggle-is-unreachable-by-keyboard.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1066 | [raw logs travel tokenized](UX-1066-raw-logs-travel-tokenized.md) | store | Low | anyone sharing a private capture with an outside reader | 🔴 Not Started |
 | UX-1100 | [cut release 0.5.0 once the next features are in](UX-1100-cut-release-0-5-0.md) | contracts | Medium | R8 | 🔴 Not Started |
 | UX-1102 | [the architecture review is due once #298 and #300 have both landed](UX-1102-review-the-architecture-after-298-and-300.md) | guards | High | R8 | 🔴 Not Started |
 

@@ -18,7 +18,7 @@ carries and most captures could only fill with nulls.
 """
 from typing import Optional
 
-from .edg import compute_dominators, compute_reachability
+from .edg import compute_dominators, compute_reachability, element_order
 
 #: `UX-681`: how many rows the ranking names, the same five
 #: `top_blast_radius` names (`bga/analyzer.py`). Its mirror should be
@@ -51,17 +51,21 @@ def compute_fan_in(graph, kinds: dict, structural_kinds, foundation=frozenset())
     """Per element: what it names, what that pulls in, and its gate."""
     _downstream, upstream = compute_reachability(graph)
     dominators = compute_dominators(graph)
+    order = element_order(graph)
     direct: dict = {element.uid: set() for element in graph.elements}
     for edge in graph.dependencies:
         if edge.successor in direct:
             direct[edge.successor].add(edge.predecessor)
     rows = {}
-    for uid in sorted(direct):
+    # graph.json order: `top_fan_in` and the findings break ties on it.
+    for uid in direct:
         rows[uid] = {
             "direct_count": len(direct[uid]),
             # `UX-829`: the names themselves, for the element card -
             # `direct_count` is the population, this is the capped list.
-            "direct": sorted(direct[uid])[:DIRECT_NAMES_CAP],
+            # Which names by graph order, shown by name (UX-1063).
+            "direct": sorted(sorted(direct[uid], key=lambda u: (order.get(u, len(order)), u)
+                                    )[:DIRECT_NAMES_CAP]),
             # `compute_reachability` excludes the element itself, so
             # this is the closure and not the closure plus one - held
             # by a clause on that helper rather than by a subtraction
@@ -95,5 +99,6 @@ def top_fan_in(rows: dict, limit: int = TOP_FAN_IN) -> list:
     reaching = [uid for uid, row in rows.items()
                 if not row["is_structural_kind"] and not row["is_foundation"]
                 and row["transitive_count"]]
-    reaching.sort(key=lambda uid: (-rows[uid]["transitive_count"], uid))
+    position = {uid: index for index, uid in enumerate(rows)}
+    reaching.sort(key=lambda uid: (-rows[uid]["transitive_count"], position[uid]))
     return reaching[:limit]

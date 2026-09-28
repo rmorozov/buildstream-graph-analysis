@@ -500,27 +500,7 @@
             }
         },
         "fan_in": {
-            "app.bst": {
-                "direct_count": 1,
-                "direct": [
-                    "lib.bst"
-                ],
-                "transitive_count": 2,
-                "immediate_dominator": "lib.bst",
-                "element_kind": "unknown",
-                "is_structural_kind": false,
-                "is_foundation": false
-            },
             "base.bst": {
-                "direct_count": 0,
-                "direct": [],
-                "transitive_count": 0,
-                "immediate_dominator": null,
-                "element_kind": "unknown",
-                "is_structural_kind": false,
-                "is_foundation": false
-            },
-            "extra.bst": {
                 "direct_count": 0,
                 "direct": [],
                 "transitive_count": 0,
@@ -536,6 +516,26 @@
                 ],
                 "transitive_count": 1,
                 "immediate_dominator": "base.bst",
+                "element_kind": "unknown",
+                "is_structural_kind": false,
+                "is_foundation": false
+            },
+            "app.bst": {
+                "direct_count": 1,
+                "direct": [
+                    "lib.bst"
+                ],
+                "transitive_count": 2,
+                "immediate_dominator": "lib.bst",
+                "element_kind": "unknown",
+                "is_structural_kind": false,
+                "is_foundation": false
+            },
+            "extra.bst": {
+                "direct_count": 0,
+                "direct": [],
+                "transitive_count": 0,
+                "immediate_dominator": null,
                 "element_kind": "unknown",
                 "is_structural_kind": false,
                 "is_foundation": false

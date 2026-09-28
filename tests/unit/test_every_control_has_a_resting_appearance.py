@@ -89,16 +89,26 @@ GRADES = {
 #: What a control drawn by nobody looks like: the UA button.
 UA_BEVEL = "outset"
 
-#: Read at rest: `aria-current` is a state over a grade (§6d), like
-#: hover and `aria-pressed`, so a current control is read with it lifted.
+#: Read at rest: `aria-current`, `aria-pressed="true"` and
+#: `aria-expanded="true"` are states over a grade (§6d), so each is
+#: lifted for the read and put back after it. Weight is read against
+#: the parent's: a grade draws no weight, it wears its context's.
 LOOKS = """
 (() => JSON.stringify([...document.querySelectorAll("button")].map((b) => {
-  const current = b.getAttribute("aria-current");
-  if (current !== null) b.removeAttribute("aria-current");
+  const held = {};
+  for (const name of ["aria-current", "aria-pressed", "aria-expanded"]) {
+    const value = b.getAttribute(name);
+    if (value === null || (name !== "aria-current" && value !== "true")) continue;
+    held[name] = value;
+    if (name === "aria-current") b.removeAttribute(name);
+    else b.setAttribute(name, "false");
+  }
   const s = getComputedStyle(b);
   const look = [s.backgroundColor, s.borderTopStyle, s.borderRadius, s.padding,
-                s.fontSize, s.color, s.transitionDuration, s.boxShadow];
-  if (current !== null) b.setAttribute("aria-current", current);
+                s.fontSize, s.color, s.transitionDuration, s.boxShadow,
+                s.fontWeight === getComputedStyle(b.parentElement).fontWeight
+                  ? "inherited" : s.fontWeight];
+  for (const [name, value] of Object.entries(held)) b.setAttribute(name, value);
   return look;
 })))()
 """
@@ -166,6 +176,13 @@ class TestNoControlIsTheBrowsers:
         for name, looks in drawn.items():
             stray = sorted({(one[0], one[1], one[2]) for one in looks} - named)
             assert stray == [], (name, stray)
+
+    def test_no_grade_sets_a_font_weight(self, drawn):
+        """A weight of the button's own is drift the key above cannot
+        see; one inherited from a heading is the heading's."""
+        for name, looks in drawn.items():
+            weighted = sorted({one[8] for one in looks} - {"inherited"})
+            assert weighted == [], (name, weighted)
 
     def test_the_grades_stay_four(self, drawn):
         """Twelve is what drift looks like. The bound is over the whole
@@ -345,10 +362,24 @@ FORM_JS = """
 """
 
 
+#: A checkbox is the browser's own at rest: the form-control base rule
+#: is for `select` and text inputs, and a box it restyles reads here.
+UA_CHECKBOX = ("auto", "rgba(0, 0, 0, 0)", "none", "0px")
+
+CHECKBOX_JS = """
+(() => JSON.stringify([...document.querySelectorAll('input[type="checkbox"]')]
+  .map((el) => {
+    const s = getComputedStyle(el);
+    return [el.className, s.appearance, s.backgroundColor, s.borderTopStyle,
+            s.borderRadius];
+  })))()
+"""
+
+
 @pytest.fixture(scope="module")
-def forms(tmp_path_factory):
-    """`{scheme: {page: [(name, background, border-style, radius), ...]}}`
-    - `golden` and `macro_micro`, light and dark, one browser."""
+def form_reads(tmp_path_factory):
+    """`{scheme: {page: {"forms": [...], "checkboxes": [...]}}}` -
+    `golden` and `macro_micro`, light and dark, one browser."""
     if chrome is None or shutil.which("node") is None:    # pragma: no cover
         pytest.skip(NO_BROWSER)
     uris = fixture_pages(tmp_path_factory, prefix="forms")
@@ -356,11 +387,20 @@ def forms(tmp_path_factory):
     with Browser(chrome) as opened:
         for scheme in ("light", "dark"):
             out[scheme] = {
-                name: [tuple(row) for row in json.loads(
-                    opened.observe(uri, FORM_JS, scheme=scheme)["value"])]
+                name: {key: [tuple(row) for row in json.loads(
+                    opened.observe(uri, js, scheme=scheme)["value"])]
+                       for key, js in (("forms", FORM_JS),
+                                       ("checkboxes", CHECKBOX_JS))}
                 for name, uri in uris.items()
             }
     return out
+
+
+@pytest.fixture(scope="module")
+def forms(form_reads):
+    """`{scheme: {page: [(name, background, border-style, radius), ...]}}`."""
+    return {scheme: {page: reads["forms"] for page, reads in pages_.items()}
+            for scheme, pages_ in form_reads.items()}
 
 
 @needs_browser
@@ -413,3 +453,11 @@ class TestEverySelectAndTextInputRests:
                 preset = [v for k, v in found.items() if "preset-view" in k]
                 if top_n and preset:
                     assert set(top_n) == set(preset), (scheme, page, found)
+
+    def test_every_checkbox_is_the_browsers(self, form_reads):
+        for scheme, pages_ in form_reads.items():
+            for page, reads in pages_.items():
+                boxes = reads["checkboxes"]
+                assert boxes, (scheme, page)
+                stray = sorted({box for box in boxes if box[1:] != UA_CHECKBOX})
+                assert stray == [], (scheme, page, stray)

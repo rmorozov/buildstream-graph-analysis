@@ -54,3 +54,54 @@ Question:  none
 ```
 
 ## Outcome
+
+Gap measured: before the fix, `bookkeeping_findings` keyed every line by
+`class_key(line)` (the first `tools/dev_*.py`/`tests/unit/test_*.py`/
+`` `make <target>` `` token), so 7 of 15 in-window ledger lines read
+unclassed though each carries a `class` field, and every ledger friction
+cell - including "none reported" - counted as a finding.
+
+Close measured: `BOOKKEEPING_LINE` now names a `class` group and
+`bookkeeping_findings` keys on it; `ledger_findings` drops a cell in
+`NO_FINDING` ("none reported", "none", "-", "—", "") before counting,
+keys a tokened cell as `<agent> · <token>`, and reports a cell with
+neither as `friction without a command: N`, outside the classed/
+unclassed total.
+
+```text
+$ python3 tools/dev_retro.py
+since 2026-09-21: 42 finding(s)
+
+classes by count:
+  coverage                                    9
+  brief                                       4
+  doc-drift                                   2
+  fail-open                                   1
+  make lint                                   1
+  make test                                   1
+  tests/unit/test_a_bookkeeping_finding_is_one_line.py    1
+  tests/unit/test_a_derived_figure_is_printed_not_committed.py    1
+  tests/unit/test_docs_links_and_commands.py    1
+  tests/unit/test_the_context_map_is_the_tree.py    1
+  tests/unit/test_the_documents_keep_up_with_the_contracts.py    1
+
+unclassed: 19 of 42 (45.2%)
+friction without a command: 86
+
+bookkeeping lines per ISO week:
+  2026-W39   15
+  2026-W40   1
+```
+
+The bookkeeping source alone (`bookkeeping_findings`, direct call): 16
+findings in-window, 0 unclassed - the extra line past the Acceptance
+Test's 15 is round 149's own retro filing (`c324f250`, dated
+2026-09-28, inside the window), landed after the Decision's count was
+taken; it carries a `class` too, so the reading is still 0 unclassed.
+
+Mutation table:
+
+| mutation | reddens | run |
+|---|---|---|
+| (a) key bookkeeping by `class_key(line)` again | `TestABookkeepingLineWithNoTokenKeysByItsClass` | 1 failed, 3 passed |
+| (b) drop the `NO_FINDING` filter before counting | `TestNoFindingFrictionCellsAddNothing` | 1 failed, 3 passed |

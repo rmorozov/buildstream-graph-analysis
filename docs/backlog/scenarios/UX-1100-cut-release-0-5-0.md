@@ -1,6 +1,6 @@
-# UX-1088: cut release 0.5.0 once the next features are in
+# UX-1100: cut release 0.5.0 once the next features are in
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-1078 | **Found by:** round 147, UX-1078's new `tail/v1` contract (2026-09-28) | **Serves:** R8 | **Topic:** contracts | **Area:** bga | **Shape:** judgement
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-1078 | **Found by:** round 150, UX-1078's new `tail/v1` contract (2026-09-28) | **Serves:** R8 | **Topic:** contracts | **Area:** bga | **Shape:** judgement
 
 ## Motivation
 
@@ -12,7 +12,7 @@ next release `extending` (MINOR, 0.5.0). Ruslan wants more features in
 before the cut (2026-09-28), so this row carries the cut, not the
 round.
 
-What the cut needs, as read on `6faf61bb` in round 147:
+What the cut needs, as read on `6faf61bb` in round 150:
 
 - **The walk gate is not met** (guide step 1). The newest walk report
   is `walk-seed-3.md`, 2026-09-12. A walk dated on or after the

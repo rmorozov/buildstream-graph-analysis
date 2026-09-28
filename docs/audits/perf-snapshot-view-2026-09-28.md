@@ -1,0 +1,243 @@
+# bga's own cost on the snapshot → view path (2026-09-28)
+
+Measured on `39d89d4`, a 4-core / 15 GB container, Python 3.11, no
+`bst` installed. Rows filed: `UX-1072`..`UX-1081`. Related, not
+re-filed: `UX-1069` (the anonymized export's whole-file loads) and
+`UX-1071` (its residue scan at ~0.4 MB/s).
+
+## The one contradiction
+
+`UX-296` settled *capture computes, view serves*: the analysis runs
+once, where the user already waits for a build. But that moved the
+analysis onto the hot path of every build, and the code does not run
+it once. After `bst` exits, the tail runs the full analyzer **four
+times** (`_analyze`, the element slice, and both sides of `compare`),
+and `bga view` runs it **twice more** before the page exists. Each run
+builds a quadratic reachability closure **five times**. So the tail
+grows with the square of the graph, not with the work the build did.
+
+The resolution is *compute once, reuse everywhere*: one analysis per
+snapshot, published, and every later reader (slice, compare, view)
+takes the published result. The next contradiction is already
+visible: a reused analysis can be stale. When the analyzer changes,
+every stored `analyze.json` is out of date at once, and the first view
+after an upgrade pays the full cost again. `UX-1073` therefore requires
+a currency check, not only reuse.
+
+## Measurements
+
+Stores from `bga gen-synthetic --store --seed 1`: 74 elements
+(`--layers 6 --width 12`), 1,202 (`20 x 60`) and 5,002 (`40 x 125`).
+Plane 2 logs scaled with `genlog.py` below: per element, one `make`
+root plus P−1 compiler children, each with 50 opened paths drawn from
+a 3,000-header sysroot.
+
+### The tail after the build, per step (`step.py` below)
+
+```text
+store   step      wall     peak RSS
+74      analyze    0.09s     40 MB
+74      slice      0.03s     37 MB
+74      compare    0.18s     40 MB
+1,202   analyze    1.85s    127 MB
+1,202   slice      0.75s    125 MB
+1,202   compare    3.44s    140 MB
+5,002   analyze   35.58s   1967 MB
+5,002   slice     18.62s   1965 MB
+5,002   compare   49.27s   2010 MB
+60 snapshots   weigh 0.02s   listing 0.01s
+```
+
+1,202 → 5,002 elements is 4.2x the elements and 17x the tail
+(6.0 s → 103.5 s). cProfile of `_analyze` at 5,002 (50.8 s under the
+profiler): `set.update` 17.3 s, `compute_reachability` 21.6 s cum over
+5 calls. `_compare`: 2 `analyze` calls, 80.0 of 81.6 s; 8 reachability
+calls.
+
+### Reachability alone (`bga/graph/edg.py:219`)
+
+```text
+elements   set entries   time   RSS after one call
+1,202        660,754     0.1s      78 MB
+5,002     14,481,214     6.8s     995 MB
+```
+
+### The Plane 2 report (`capture report --json`, the tail's first step)
+
+```text
+processes  raw log   wall     peak RSS   note
+ 12,020     24 MB     1.02s     54 MB    from .gz
+ 48,080    ~95 MB     4.60s    113 MB    from .gz
+192,320    417 MB    12.5s     374 MB    from .gz - opens pass read nothing (UX-1079)
+192,320    417 MB    20.9s     714 MB    plain log, as the tail reads it
+400,160   ~800 MB    32.0s     763 MB    from .gz - opens pass read nothing
+```
+
+About 20 MB/s on the plain log, in two passes. The opens pass alone:
+7.4 s and 552 MB for 3,710,972 per-element set entries; with
+`sys.intern` on each path, 5.5 s and 261 MB (`UX-1076`).
+
+### The raw log's compression (`_compress_raw_log`, 417 MB)
+
+```text
+level 9 (default)  16.0s  30 MB
+level 6             3.1s  31 MB
+level 1             1.5s  42 MB
+copyfile            1.6s
+```
+
+### bga view --export
+
+```text
+store   wall     peak RSS   HTML (page / data)
+74      0.49s     49 MB      477 KiB (137 / 340)
+1,202   3.74s    148 MB      672 KiB (137 / 535)
+5,002  54.93s   2038 MB     1285 KiB (137 / 1148)
+```
+
+At 5,002: compare's two analyses are 80.4 of 89.1 s profiled, the
+timeline renders twice (7.2 s, `UX-1081`). Nothing is printed before
+the final `Wrote` line.
+
+### The page in Chromium (`tests/browser.py`, headless)
+
+```text
+store   DOMContentLoaded   DOM settled   DOM nodes
+74       38 ms              0.4 s         5,406
+1,202    33 ms              0.8 s         7,293
+5,002    67 ms              2.9 s         7,598
+```
+
+The fold works: nodes stay flat. Boot time grows about linearly.
+
+## Findings, ranked by what the tail costs
+
+| Rank | Row | Finding | At 5,002 el / 192k proc |
+|---|---|---|---|
+| 1 | `UX-1073` | compare re-analyzes both runs; tail and view both pay it | 49 s tail, 80 s of view |
+| 2 | `UX-1074` | reachability as sets, 5x per analysis, O(V²) memory | ~1 GB per call, 22 s |
+| 3 | `UX-1072` | the element slice runs the analyzer a second time | 18.6 s |
+| 4 | `UX-1077` | 6 phases run silent; no timing anywhere | 20-55 s each |
+| 5 | `UX-1079` | a gzipped log drops every opened path (correctness) | declared-vs-used absent |
+| 6 | `UX-1075` | gzip level 9 on the raw log | 16.0 s → 3.1 s |
+| 7 | `UX-1076` | opened paths held uninterned | 552 → 261 MB |
+| 8 | `UX-1080` | the tail's `bst` calls are unmeasured | no reading |
+| 9 | `UX-1078` | the snapshot does not record bga's own cost | — |
+| 10 | `UX-1081` | the export renders a timeline it then refuses | 7.2 s |
+
+Rows 1-3 remove about 70 of the 104 s tail at 5,002 elements before
+the analyzer itself gets faster; row 2 then cuts the rest's memory.
+
+## Scenarios that shape the snapshot → view experience
+
+1. **The incremental build.** The tail does not depend on how much was
+   built. A build of a 5,002-element project that rebuilds nothing
+   still pays about 104 s of analysis and compare (inferred, not
+   captured). When the pre-build key set (`UX-844`) equals the
+   baseline's, the tail could reuse the baseline's analysis.
+2. **Hundreds of review builds a day.** The tail competes with the
+   next job on the agent: 2 GB peak at 5,002 elements. An option to
+   return the build's exit code first and finish the tail in the
+   background would take it off the CI job's wall.
+3. **An analyzer upgrade.** Every stored `analyze.json` goes stale at
+   once. With `UX-1073`'s currency check, the first view of each old
+   snapshot re-analyzes; the page should say that it is doing so.
+4. **A long build's raw log.** The log grows with processes × opened
+   paths, and the tail passes over it up to four times (copy-out from
+   scratch when used, two parse passes, gzip). Compressing while the build runs would remove the
+   copy and the gzip from the tail.
+5. **A memory-tight agent right after a build.** The tail runs when
+   the page cache is full. If it is killed for memory, the raw data is
+   already on disk; whether anything then tells the user to re-run
+   the analysis is unchecked.
+6. **Opening a bundle on another machine.** `bga view` does the
+   compare on the reader's laptop, silently, before it binds.
+7. **The timeline on first click.** It renders on request, 3.6 s per
+   render at 5,002 elements, and the page shows no progress meanwhile.
+8. **A large store.** Windowed at 12 (`STORE_WINDOW`), and 60
+   snapshots list in 0.02 s: this one is not a problem today.
+9. **Two snapshots into one store at once** (parallel CI jobs on one
+   agent). A compare could pick the other job's half-written snapshot
+   as its baseline. Not measured.
+
+## Not measured here
+
+- Any real `bst` call in the tail (`UX-1080`): no BuildStream in this
+  container.
+- A real capture's Plane 2 shape. The scaler is a model: real logs
+  have deeper process trees, `configure` storms and less repetitive
+  paths.
+- The page's JS heap (`performance.memory` is quantized in headless
+  mode).
+
+## Recipe
+
+```bash
+S=/tmp/perf; mkdir -p $S
+bga gen-synthetic $S/l --store --seed 1 --layers 40 --width 125
+d=$(ls -d $S/l/.bga/runs/* | tail -1)
+python3 genlog.py $d/plane2.log.gz $S/l_p80.log.gz 80 50
+bga capture report --json $S/l_p80.log.gz > $S/l_p80.json
+for s in $S/l/.bga/runs/*; do cp $S/l_p80.json $s/plane2.json; done
+for st in analyze slice compare; do python3 step.py $S/l $st; done
+python3 -m tools.bga_view $d/run --export $S/l.html
+```
+
+`genlog.py` (scales a synthetic `plane2.log.gz`; args: source, target,
+processes per element, paths per process):
+
+```python
+import gzip, random, sys
+src, dst, P, U = sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4])
+rnd = random.Random(1)
+elems = []
+for line in gzip.open(src, "rt"):
+    if line.startswith("START "):
+        f = dict(kv.split("=", 1) for kv in line.split(" cmd=")[0].split()[1:])
+        elems.append((f["element"], float(f["ts"])))
+sysroot = [f"/usr/include/c++/13/bits/h{i:04d}.h" for i in range(3000)]
+pid = 100000
+with gzip.open(dst, "wt", compresslevel=1) as out:
+    for el, t0 in elems:
+        base = el.replace(".bst", "")
+        root = pid; pid += 1
+        out.write(f"START pid={root} ppid=1 ts={t0:.6f} element={el} inv=inv-{root} src=spine cmd=/bin/sh -c make -j8\n")
+        t = t0
+        for k in range(P - 1):
+            p = pid; pid += 1
+            t += 0.01
+            cmd = f"/usr/bin/cc -O2 -c -o {base}/u{k}.o {base}/u{k}.c"
+            out.write(f"START pid={p} ppid={root} ts={t:.6f} element={el} inv=inv-{root} src=hook cmd={cmd}\n")
+            paths = rnd.sample(sysroot, U - 2) + [f"/buildstream/{base}/u{k}.c", f"/buildstream/{base}/u{k}.o"]
+            out.write(f"OPENS pid={p} element={el} inv=inv-{root} unique={len(paths)} dropped=0\n")
+            out.write("\n".join(paths) + "\n")
+            out.write(f"END pid={p} ppid={root} ts={t+0.5:.6f} element={el} inv=inv-{root} src=hook exit=0 utime=0.400 stime=0.050 maxrss_kb={rnd.randint(20000,300000)} cmd={cmd}\n")
+        out.write(f"END pid={root} ppid=1 ts={t+1:.6f} element={el} inv=inv-{root} src=spine exit=0 utime=0.010 stime=0.010 maxrss_kb=4000 cmd=/bin/sh -c make -j8\n")
+```
+
+`step.py` (run from the repository root; args: store, step):
+
+```python
+import contextlib, io, os, resource, sys, time
+sys.path.insert(0, os.getcwd())
+from tools import bga_snapshot as s
+store, step = sys.argv[1], sys.argv[2]
+runs = os.path.join(store, ".bga/runs")
+snaps = sorted(os.path.join(runs, d) for d in os.listdir(runs))
+cur, prev = snaps[-1], snaps[-2]
+t = time.monotonic()
+with contextlib.redirect_stdout(io.StringIO()):
+    if step == "analyze":
+        s._analyze(os.path.join(cur, "run"), os.path.join(cur, "plane2.json"),
+                   publish_to=os.path.join(cur, "analyze.json"))
+    elif step == "slice":
+        s.write_element_slice(cur, os.path.join(cur, "run"))
+    elif step == "compare":
+        s._compare(prev, cur)
+    elif step == "weigh":
+        s._say_what_it_weighs(cur, store); s._warn_if_large(store)
+    elif step == "listing":
+        s.store_listing(store)
+rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss // 1024
+print(f"{step}\t{time.monotonic() - t:.2f}s\tpeakRSS={rss}MB")
+```

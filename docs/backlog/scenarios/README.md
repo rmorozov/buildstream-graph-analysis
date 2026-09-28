@@ -47,6 +47,16 @@ task file, which is the only place it ever lived twice.
 | UX-1056 | [navigating back after an in-page reveal does not re-fold the chapter](UX-1056-back-after-a-reveal-does-not-re-fold.md) | viewer | Medium | R1 | 🔴 Not Started |
 | UX-1057 | [the decomposition bar's aria-details twin table drops the certified lower-bound mark](UX-1057-the-drawing-routes-twin-table-drops-the-lower-bound-mark.md) | viewer | Medium | R1 | 🔴 Not Started |
 | UX-1058 | [the narrow-rail fold toggle is a click-only `<p>`, unreachable by keyboard](UX-1058-the-narrow-rail-toggle-is-unreachable-by-keyboard.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1072 | [the snapshot tail analyzes the run once, not twice](UX-1072-the-snapshot-tail-analyzes-the-run-once.md) | capture | High | R5, R1 | 🔴 Not Started |
+| UX-1073 | [compare reads each side's published analysis instead of analyzing both runs again](UX-1073-compare-reads-the-published-analyses.md) | analysis | High | R5, R1 | 🔴 Not Started |
+| UX-1074 | [graph reachability is materialised as sets, five times per analysis](UX-1074-reachability-is-one-bitset-closure-per-graph.md) | analysis | High | anyone opening a run of a few thousand elements | 🔴 Not Started |
+| UX-1075 | [the raw Plane 2 log is compressed at gzip level 9, 5x slower than level 6 for 3% size](UX-1075-the-raw-log-is-compressed-at-level-six.md) | capture | Medium | R5 | 🔴 Not Started |
+| UX-1076 | [the Plane 2 report holds each element's opened paths as separate strings](UX-1076-the-open-paths-are-interned.md) | capture | Medium | R5 | 🔴 Not Started |
+| UX-1077 | [the snapshot tail and bga view run minutes of work with no progress and no timing](UX-1077-the-tail-and-the-view-say-what-they-are-doing.md) | cli | High | R1, R5 | 🔴 Not Started |
+| UX-1078 | [a snapshot does not record what bga itself cost the build](UX-1078-the-snapshot-records-bgas-own-cost.md) | capture | Medium | R5, R8 | 🔴 Not Started |
+| UX-1079 | [`bga capture report` on a gzipped raw log drops every opened path, silently](UX-1079-capture-report-reads-opens-from-a-gzipped-log.md) | capture | High | R1, R5 | 🔴 Not Started |
+| UX-1080 | [the snapshot tail's BuildStream calls have never been timed](UX-1080-the-tails-buildstream-calls-are-measured.md) | capture | Medium | R5 | 🔴 Not Started |
+| UX-1081 | [`bga view --export` renders a whole timeline before refusing it and rendering a narrower one](UX-1081-the-export-predicts-the-timeline-it-can-carry.md) | viewer | Low | R1 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

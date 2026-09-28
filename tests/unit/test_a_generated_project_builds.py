@@ -269,11 +269,11 @@ def test_every_cas_writing_bst_gated_file_reaches_the_isolation():
     sixth landing without it fails only on a negative-margin host - this
     counts the population so it fails here instead."""
     gated = _bst_gated_files()
-    assert len(gated) == 19, sorted(p.name for p in gated)  # UX-760's 18, UX-1082's two-variant build
+    assert len(gated) == 20, sorted(p.name for p in gated)  # UX-760's 18, UX-1082's and UX-1083's two-variant builds
 
     excluded = set(_NOT_CAS_WRITING) | _ISOLATES_ITS_OWN_WAY
     cas_writing = [p for p in gated if p.name not in excluded]
-    assert len(cas_writing) == 17, sorted(p.name for p in cas_writing)
+    assert len(cas_writing) == 18, sorted(p.name for p in cas_writing)
 
     missing = sorted(p.name for p in cas_writing
                       if "_bst_env" not in p.read_text(encoding="utf-8"))

@@ -17,8 +17,15 @@ examples/06 warm (build 1.07s)   bst show --deps all 1.27s
 ```
 
 The warm `examples/06` snapshot's `graph.json` is structurally identical
-to the cold one's (every key and value). This is the incremental and
-no-op review build, the most frequent snapshot a team takes.
+to the cold one's (every key and value), but that is one pair, not a
+general equivalence. `graph.json` also carries fields the key set does
+not decide: `requested_target` follows the invocation's targets
+(building B, which depends on A, and building A and B name the same
+keys), `extract_run` adds the project's `bga-foundation` tier
+(`UX-683`), and `max_jobs`/`notparallel` are resolved from the build's
+options and configuration, which BuildStream keeps out of cache keys.
+This is still the incremental and no-op review build, the most
+frequent snapshot a team takes.
 
 ## Decomposition
 
@@ -28,11 +35,13 @@ with equal keys. Journey: `bga snapshot`'s tail.
 
 ## Required Fix
 
-In `tools/bst_extract_run.py`: when the snapshot's key set is read and
-equals the baseline snapshot's, `graph.json` is taken from the
-baseline, and the resolved widths (`UX-894`) are re-applied from this
-build; otherwise `bst show` runs as today. The snapshot records which
-happened.
+In `tools/bst_extract_run.py`: the baseline's `graph.json` is reused
+only when the whole graph fingerprint matches: the key set, the
+requested targets, the `bst` global options, the resolved max-jobs
+configuration, and the `bga-foundation` tier. `requested_target`,
+`foundation` and the resolved widths (`UX-894`) are then re-applied
+from this build rather than copied. Any difference or unread term runs
+`bst show` as today. The snapshot records which happened and why.
 
 ## Out of Scope
 
@@ -41,7 +50,11 @@ Reusing the analysis itself (`UX-1073`).
 ## Acceptance Test
 
 `tests/unit/test_an_equal_key_set_reuses_the_graph.py`: two snapshots
-with equal key sets issue one `bst show --deps all` between them (fake
-`bst` recording argv), and the second `graph.json` equals the first; a
-changed key issues the call. Mutation: skip the key-set comparison,
-and the changed-key case reds.
+with the same fingerprint issue one `bst show --deps all` between them
+(fake `bst` recording argv), and the second `graph.json` equals the
+one a fresh `bst show` would write. Each of these issues the call or
+re-derives the field, and matches a fresh extraction: a changed key;
+the same keys under different targets (build B vs build A and B, where
+B depends on A, so `requested_target` differs); a changed
+`bga-foundation`; a changed `--max-jobs`. Mutation: drop any one
+fingerprint term, and its case reds.

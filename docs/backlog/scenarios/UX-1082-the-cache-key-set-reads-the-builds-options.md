@@ -55,9 +55,13 @@ Reusing the post-build graph (`UX-1083`).
 
 ## Acceptance Test
 
-`tests/unit/test_the_key_set_reads_the_builds_options.py`: on a
-committed Plane 1 log, the key set equals the one `hash_cache_key_lines`
-makes of the matching `bst show` output; a snapshot issues no `bst
-show` before the build (fake `bst` on PATH recording argv); a log with
-no `Pipeline` block yields an unread key set, not an empty one.
-Mutation: restore the pre-build `bst show`, and the argv count reds.
+`tests/unit/test_the_key_set_reads_the_builds_options.py`, bst-marked:
+two builds of one fixture project under different key-affecting
+options (a project option that changes an element variable, passed as
+`-o`), each key set read from its own Plane 1 log, equals an
+option-aware `bst show -o ...` for that variant, and the two sets
+differ. Unmarked: a snapshot issues no `bst show` before the build
+(fake `bst` on PATH recording argv), and a log with no `Pipeline`
+block yields an unread key set, not an empty one. Mutation: read the
+keys from an option-less `bst show`, and the two-variant case reds;
+restore the pre-build call, and the argv count reds.

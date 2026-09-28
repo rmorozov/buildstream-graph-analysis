@@ -172,8 +172,8 @@ The key-set call is redundant: the build's own `build.log` lists every
 element's 64-hex key in its `Pipeline` block, and parsed from there the
 set is identical to `bst show`'s on both captures (11 of 11, strict
 plan) - `UX-1082`. The warm snapshot's `graph.json` is structurally
-identical to the cold one's, so an equal key set could reuse it -
-`UX-1083`. At 5,001 elements the two together are 66 s per snapshot.
+identical to the cold one's, so an equal graph fingerprint (keys,
+targets, options, max-jobs, foundation) could reuse it - `UX-1083`. At 5,001 elements the two together are 66 s per snapshot.
 
 ## Findings, ranked by what the tail costs
 
@@ -190,7 +190,7 @@ identical to the cold one's, so an equal key set could reuse it -
 | 9 | `UX-1078` | the snapshot does not record bga's own cost | — |
 | 10 | `UX-1081` | the export renders a timeline it then refuses | 7.2 s |
 | 11 | `UX-1082` | the pre-build key set is a second project load, drops the build's options, and is silent; the build log already has it | 23.7 s |
-| 12 | `UX-1083` | an equal key set still re-reads the graph with `bst show` | 42.3 s |
+| 12 | `UX-1083` | an unchanged graph fingerprint still re-reads the graph with `bst show` | 42.3 s |
 
 Rows 1-3 remove about 70 of the 104 s tail at 5,002 elements before
 the analyzer itself gets faster; row 2 then cuts the rest's memory.

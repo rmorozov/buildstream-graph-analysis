@@ -829,6 +829,8 @@ class StructuralAnalyzer:
             return []
         durations = self._durations()
         longest_path = self._longest_path_us()
+        # `_nx_graph` adds nodes in graph.json order: a tie-break a pseudonym keeps.
+        order = {node: index for index, node in enumerate(G.nodes())}
         rows = []
         for node in G.nodes():
             if G.in_degree(node) == 1:
@@ -839,13 +841,13 @@ class StructuralAnalyzer:
                     continue
                 weighted = sum(durations.get(m, 0) for m in members)
                 # The split that shortens the chain most: largest
-                # duration first, name breaks a tie deterministically.
-                best_split = min(members, key=lambda m: (-durations.get(m, 0), m))
+                # duration first, graph order breaks a tie.
+                best_split = min(members, key=lambda m: (-durations.get(m, 0), order[m]))
                 wall_share = weighted / longest_path if longest_path else 0.0
                 rows.append((weighted, len(members), members, best_split, wall_share))
-        # Duration descending; length, then the start's own name, break
-        # a tie so the order is deterministic rather than iteration luck.
-        rows.sort(key=lambda row: (-row[0], -row[1], row[2][0]))
+        # Duration descending; length, then the start's and the first
+        # step's graph order, break a tie so it is not iteration luck.
+        rows.sort(key=lambda row: (-row[0], -row[1], order[row[2][0]], order[row[2][1]]))
         return [
             SerialChain(rank=i + 1, members=members, length=length,
                         weighted_duration_us=weighted, wall_share=wall_share,

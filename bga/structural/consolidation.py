@@ -15,7 +15,7 @@ candidates worth considering for consolidation under one.
 """
 from collections import defaultdict
 
-from bga.graph.edg import build_element_graph
+from bga.graph.edg import build_element_graph, element_order
 from bga.ingest.models import Graph
 
 
@@ -23,8 +23,8 @@ def find_consolidation_candidates(graph: Graph) -> list[dict]:
     """Real, deterministic structural candidates - never a timing
     estimate (see the module docstring). Each result:
     {"elements": [uid, ...], "shared_consumers": [uid, ...]}, sorted by
-    group size (largest first) then by the group's own sorted element
-    list (for deterministic output, Part 35/I11's same discipline).
+    group size (largest first) then by its members' graph.json positions
+    (deterministic, Part 35/I11, and unmoved by a pseudonym: UX-1063).
     """
     if not graph.elements or not graph.dependencies:
         return []
@@ -62,5 +62,6 @@ def find_consolidation_candidates(graph: Graph) -> list[dict]:
             "shared_consumers": sorted(consumers),
         })
 
-    candidates.sort(key=lambda c: (-len(c["elements"]), c["elements"]))
+    order = element_order(graph)
+    candidates.sort(key=lambda c: (-len(c["elements"]), sorted(order[u] for u in c["elements"])))
     return candidates

@@ -98,7 +98,7 @@ class TestTheRankingCodeIsTheOneThatShips:
         the shipped path ties by chance."""
         source = (REPO / "bga/diagnostics/analyzer.py").read_text(
             encoding="utf-8")
-        assert "order_blast_radius(results, element_durations)" in source, (
+        assert "order_blast_radius(results, element_durations," in source, (
             "compute_blast_radius no longer calls order_blast_radius, so "
             "every clause in this file is measuring something the tool "
             "does not run")

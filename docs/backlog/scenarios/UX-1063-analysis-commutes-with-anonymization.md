@@ -41,3 +41,58 @@ Class:     product
 Split:     one track after UX-1062, model opus (>150 lines, UX-1039).
 
 ## Outcome
+
+**Gap measured** at `7bd141a2`: the guard below, run against that base's
+`bga/` (`/tmp/<track>/swap.sh base`): `3 failed, 10 passed`. Golden
+`mixed_task_kinds` green (one chain, no tie); `diamond` red on
+`serial_chains[].best_split`, `top_fan_in`, the fan-in finding's
+`elements`; `shared_base_wide` red on `top_fan_in[0..4]`; `fan_in` red
+on `serial_chains[].members[0]`, `top_blast_radius[1..2]`.
+
+**Close measured.** `edg.element_order(graph)`, the uid's graph.json
+position, replaces the name as tie key at `fan_in.py` (`top_fan_in`;
+`direct` now *selects* its 40 by position, still shown by name),
+`structural/analyzer.py` (best split, chain rank),
+`consolidation.py`, `diagnostics/analyzer.py` (`order_blast_radius`
+takes `order`; the uid stays last, for a uid outside the graph),
+`findings.py:1784,1845,1852` and `correlate.py:2476`. Those two see no
+graph: `compute_fan_in` now emits its rows in graph.json order and they
+read that order off `fan_in`. `python -m pytest -q
+tests/unit/test_analysis_commutes_with_anonymization.py`:
+`13 passed in 1.57s` - golden, `diamond`, `shared_base_wide`, plus
+`fan_in` (4 tied predecessors, which reaches the chain rank and the
+blast ranking), topologies moved to a 2026 epoch so the export's shift
+is `1790000000000000` and not 0.
+
+Two existing outputs moved, refreshed with `dev_refresh_analysis.py
+--write`: `golden/.../expected_output.json` (`elements.fan_in` key
+order only) and `with_timeline/analyze.json` (the same, plus
+`bottleneck.serial_chains[]`, tied chains now in graph order).
+`test_the_ranking_orders_equals.py`'s source grep now reads the call
+with its third argument.
+
+Found: the export shifts the wall origin to 0, and `_run_instance`
+reads a 0 start as none, so `run_instance.started_at` and every
+`copy_text`'s `Captured:` line vanish from an anonymized analysis. The
+guard does not compare them (`NOT_COMPARED`); the date is what the
+export withholds. `occupancy.horizon_{start,end}_us` are absolute and
+are compared through the shift (`ABSOLUTE`).
+
+**Mutations** (`/tmp/<track>/mutate.py`, each file copy-backed and
+restored, 13 green after):
+
+| mutation | reddened | count |
+|---|---|---|
+| `compute_critical_path` successors `sorted(...)` | `[diamond]` | 1 failed, 12 passed |
+| `top_fan_in` tie on uid | `[diamond]`, `[shared_base_wide]` | 2 failed, 11 passed |
+| best split tie on name | `[diamond]` | 1 failed, 12 passed |
+| chain rank tie on start name | `[fan_in]` | 1 failed, 12 passed |
+| blast ranking, measured branch, position dropped | `[fan_in]` | 1 failed, 12 passed |
+| `LISTED` emptied | 3 topologies | 3 failed, 10 passed |
+| `ABSOLUTE` emptied | 3 topologies | 3 failed, 10 passed |
+| `NOT_COMPARED` emptied | 3 topologies | 3 failed, 10 passed |
+| a uid not translated | all 4 captures | 4 failed, 9 passed |
+
+Not discriminated, no capture here holds the tie: consolidation's
+order, the blast ranking's count-only branch, `findings.py`'s three,
+`correlate.py` (needs Plane 2). Each passed its mutation, 13 of 13.

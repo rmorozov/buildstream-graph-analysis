@@ -2473,7 +2473,9 @@ def correlate(analysis: dict, native_report: dict, tasks=None, run_context=None,
     # Ranked by what Plane 1 says is worth fixing, since that is the
     # question the user arrived with; Plane 2 explains the top of that
     # list rather than reordering it.
-    joined.sort(key=lambda e: (-e.potential_saving_us, e.element))
+    # `elements.fan_in` is published in graph.json order: a tie-break a pseudonym keeps.
+    order = {uid: i for i, uid in enumerate((analysis.get("elements") or {}).get("fan_in") or {})}
+    joined.sort(key=lambda e: (-e.potential_saving_us, order.get(e.element, len(order)), e.element))
 
     # UX-71: a metric that is constant over the ranked population does
     # not rank it, and the tie was previously broken by element name and

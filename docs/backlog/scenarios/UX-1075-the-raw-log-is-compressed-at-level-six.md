@@ -32,5 +32,8 @@ Another codec (zstd is in `requirements.lock` since `UX-927`; a separate call).
 
 ## Acceptance Test
 
-`tests/unit/test_the_raw_log_compression_level.py`: a guard reads the compressed file's header flags (XFL=0, not 2)
-after `_compress_raw_log`. Mutation: drop the level, and it reds.
+`tests/unit/test_the_raw_log_compression_level.py`: a spy on `gzip.open` asserts `_compress_raw_log` passes
+`compresslevel=6` (the header's XFL byte does not tell 6 from other
+middle levels), and a round-trip reads the compressed log back
+byte-identical to the original. Mutation: drop the level or pass 9,
+and the spy reds.

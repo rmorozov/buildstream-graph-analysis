@@ -502,6 +502,15 @@ with the tables above destroys the one thing the entry is for
 (`UX-653`). The newest entry is the exception: every round that
 re-grounds the document rewrites it.
 
+Updated 2026-09-28 (after `UX-1103`), covering one change to this
+document that landed beside round 150's, re-grounded at the merge of
+#298 into round 150. The `bga bundle` row gains `--resolve
+--key-fingerprint FP` (`UX-1064`), which the `UX-1101` entry's anchor
+does not carry; no contract moved. The figures are re-grounded in `bga
+analyze --schema` (`analyze/v6`: **63 top-level properties**) and in
+`python3 -m pytest $(grep -ln "architecture.md" tests/unit/*.py) -q`,
+run at this commit: **26 emitted ids**.
+
 Updated 2026-09-28 (after `UX-1101`), covering one change to this
 document and one beside it, re-grounded at round 150's merge of both.
 The contract table gains the `tail/v1` row (`UX-1078`), and

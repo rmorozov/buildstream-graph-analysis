@@ -2,17 +2,17 @@
 
 Run on 2026-09-28 off main at `aa0198f6` (the snapshot and view
 performance audit, `docs/audits/perf-snapshot-view-2026-09-28.md`),
-which filed `UX-1072`-`UX-1083`. All twelve close this round, plus one
-bookkeeping row the integrator seam left behind (`UX-1101`). `UX-1100`
-(cut 0.5.0) stays open.
+which filed `UX-1072`-`UX-1083`. All twelve close this round, plus two
+bookkeeping rows the integrator seams left behind (`UX-1101`, `UX-1103`). `UX-1100`
+(cut 0.5.0) and `UX-1102` (the architecture review) stay open.
 
 ```text
 closed   UX-1072 UX-1073 UX-1074 UX-1075 UX-1076 UX-1077 UX-1078
-         UX-1079 UX-1080 UX-1081 UX-1082 UX-1083 UX-1101
-filed    none this round
-open     UX-1100 (cut 0.5.0)
-index    dev_close_task.py --counts: 1033 scenarios, 22 open, 1011 closed
-spread   dev_touching.py --spread: 33-173 of 660 test files
+         UX-1079 UX-1080 UX-1081 UX-1082 UX-1083 UX-1101 UX-1103
+filed    UX-1100 UX-1101 UX-1102 UX-1103
+open     UX-1100 (cut 0.5.0) UX-1102 (architecture review)
+index    dev_close_task.py --counts: 1054 scenarios, 24 open, 1030 closed
+spread   dev_touching.py --spread: 33-174 of 677 test files
 ```
 
 ## What closed
@@ -51,6 +51,9 @@ spread   dev_touching.py --spread: 33-173 of 660 test files
   covering `UX-1073` and `UX-1078` together (63 properties, 26 emitted
   ids); neither track's own entry could see the other's contract
   change.
+- `UX-1103` — at the #298 merge, the Verification Log re-grounds past
+  `UX-1064`'s `--resolve` row (63 properties, 26 emitted ids), and the
+  selector ceiling takes the merged reading: p90 61, max 174 over 677.
 
 ## In progress
 

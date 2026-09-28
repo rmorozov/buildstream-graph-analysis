@@ -166,7 +166,8 @@ class TestTheSelectorStillSelects:
     # `UX-1064`'s CLI-level resolve refusal test names `bga.cli` too:
     # median 38, p90 59, max 173 over 649.
     # `UX-1073`'s reuse guard names `bga.cli`: median 38, p90 59, max 173 over 648.
-    CEILING = {"median": 38, "p90": 60, "max": 173}
+    # `UX-1103`: #298's UX-1064 and #300's UX-1073 each name `bga.cli`; merged: median 38, p90 61, max 174 over 677.
+    CEILING = {"median": 38, "p90": 61, "max": 174}
     POPULATION_FLOOR = 60
     #: `UX-645`: **13 census + 14 of your own**. The census floor is
     #: inside this bound because those files run - the figure is what

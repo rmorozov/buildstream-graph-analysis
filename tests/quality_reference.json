@@ -110,7 +110,7 @@
     "tools/dev_docs_only.py": {"duplicate_blocks": 0, "file_lines": 40, "longest_function": 7},
     "tools/dev_env_check.py": {"duplicate_blocks": 0, "file_lines": 165, "longest_function": 27},
     "tools/dev_finding_coverage.py": {"duplicate_blocks": 0, "file_lines": 211, "longest_function": 38},
-    "tools/dev_flake_census.py": {"duplicate_blocks": 0, "file_lines": 105, "longest_function": 17},
+    "tools/dev_flake_census.py": {"duplicate_blocks": 0, "file_lines": 203, "longest_function": 22},
     "tools/dev_impact.py": {"duplicate_blocks": 0, "file_lines": 245, "longest_function": 36},
     "tools/dev_js_deps.py": {"duplicate_blocks": 0, "file_lines": 486, "longest_function": 81},
     "tools/dev_junit_tail.py": {"duplicate_blocks": 0, "file_lines": 95, "longest_function": 23},

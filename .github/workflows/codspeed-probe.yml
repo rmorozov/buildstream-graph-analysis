@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
   push:
     branches: [claude/project-thread-bim9mu, claude/project-thread-pxl1wp]
-    paths: [.github/workflows/codspeed-probe.yml]
+    paths: [.github/workflows/codspeed-probe.yml, examples/11-serial-giant/graviton_arms.sh]
 
 permissions:
   contents: read

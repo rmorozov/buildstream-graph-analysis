@@ -116,13 +116,17 @@ spined() {  # the spine alone reports how processes ended
     python3 -c 'import json, sys; sys.exit(not json.load(open(sys.argv[1])).get("process_outcomes"))' "$1"
 }
 
+why() {  # a failed arm's cause as a notice: bst's own failure lines and the kernel's OOM kills
+    echo "::notice title=$1 failed::$(grep -E ' FAILURE |Killed|rror' "$OUT/$1.log" | head -3 | cut -c1-200 | paste -sd'|' -) | oom: $(sudo -n dmesg 2>/dev/null | grep -ciE 'out of memory|oom-kill') kill(s), $(sudo -n dmesg 2>/dev/null | grep -iE 'killed process' | tail -1 | cut -c1-160)"
+}
+
 build() {  # build <arm> <repeat> <plane2 path or -> -- <command...>
     arm=$1 i=$2 plane2=$3; shift 4
     rm -rf ~/.cache/buildstream ~/.local/share/buildstream .bga
     m0=$(used_mb); b0=$(busy)
     (while :; do used_mb; sleep 1; done) > "$OUT/mem" & sampler=$!
     { /usr/bin/time -f '%e' -o "$OUT/time" "$@" 2>&1 || echo "BGA-ARM-FAILED"; } | stamp > "$OUT/$arm-$i.log"
-    ! grep -q '^[0-9.]* BGA-ARM-FAILED$' "$OUT/$arm-$i.log" || { kill $sampler; tail -40 "$OUT/$arm-$i.log"; exit 1; }
+    ! grep -q '^[0-9.]* BGA-ARM-FAILED$' "$OUT/$arm-$i.log" || { kill $sampler; why "$arm-$i"; tail -40 "$OUT/$arm-$i.log"; exit 1; }
     b1=$(busy); kill $sampler; read -r wall < "$OUT/time"
     [ "$MODE" != noharm ] || [ "$i" != 1 ] || { echo "== $arm head"; sed -n '1,/ START /p' "$OUT/$arm-$i.log" | cut -c1-200; }
     ! mode_in mixed twogiants widechain memgiant || [ "$i" != 1 ] || { echo "== $arm bst lines"; grep -E ' (START|SUCCESS|FAILURE) |Pipeline Summary' "$OUT/$arm-$i.log" | cut -c1-160; }

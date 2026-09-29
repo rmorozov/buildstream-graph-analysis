@@ -1626,8 +1626,9 @@ _EVIDENCE_FIELDS = {
     "path_us": ("duration_us", "The critical path's duration - the chain, not the wall-clock."),
     "sum_of_individual_us": (
         "duration_us",
-        "The savings added one at a time, which double-counts the "
-        "overlap. Published beside `joint_saving_us` to show the gap.",
+        "Each element's saving priced alone, added up - above the joint "
+        "saving when they overlap, below it when they compound. Published "
+        "beside `joint_saving_us` to show the gap.",
     ),
     "swap_start_offset_us": ("duration_us", "Offset from the run's start where the earliest swapping window opens."),
     "swap_end_offset_us": ("duration_us", "Offset from the run's start where the latest swapping window closes."),
@@ -3110,10 +3111,24 @@ _SIGNALS_TABLES = {
                 # carriers rather than on one.
                 INLINE: "caveat",
                 QUANTITY: "duration_us",
-                "description": "Those same savings added up, "
-                "published so the difference from "
+                "description": "What each candidate is worth fixed alone, "
+                "added up - published so the difference from "
                 "the joint figure is visible "
                 "rather than implied.",
+            },
+            "relation": {
+                "type": "string",
+                "enum": ["add", "overlap", "compound"],
+                "description": "The joint figure against that sum: equal "
+                "within 1 ms, below it (one fix makes another worth less), "
+                "or above it (one pays off only once another is fixed).",
+            },
+            "worth_more_after": {
+                GROWS: False,
+                "maxItems": 3,  # `JOINT_SAVING_SET_SIZE`
+                "items": {"type": "string", "description": "element uid"},
+                "description": "Candidates worth more at their horizon step "
+                "than alone - work them after the ones listed before them.",
             },
         }
     },

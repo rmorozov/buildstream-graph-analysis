@@ -935,6 +935,40 @@ LATENT_HEAVIES_SHOWN = 5
 # ranks; the question "do these compose" is only interesting for a set
 # small enough to actually plan around.
 JOINT_SAVING_SET_SIZE = 3
+# Joint vs the individual sum within this reads as "they add" (UX-1135).
+JOINT_SAVING_TOLERANCE_US = 1_000
+
+
+def price_joint_saving(graph: Graph, durations: dict[str, int], steps: Sequence[dict]) -> dict:
+    """The horizon's first `steps` fixed together, against each priced alone.
+
+    `relation` is `add` (joint equals the sum), `overlap` (below it) or
+    `compound` (above it); `worth_more_after` names the steps worth more
+    after the ones above them than alone.
+    """
+    elements = [step['element_uid'] for step in steps]
+    joint_us = compute_joint_saving(graph, durations, elements)
+    # Each alone, as `bga whatif --element` prices it; the horizon's steps telescope.
+    individual = [compute_joint_saving(graph, durations, [uid]) for uid in elements]
+    sum_us = sum(individual)
+    if abs(joint_us - sum_us) <= JOINT_SAVING_TOLERANCE_US:
+        relation = 'add'
+    elif joint_us < sum_us:
+        relation = 'overlap'
+    else:
+        relation = 'compound'
+    return {
+        'elements': elements,
+        'joint_saving_us': joint_us,
+        'sum_of_individual_us': sum_us,
+        'worth_more_after': [
+            uid
+            for uid, alone, step in zip(elements, individual, steps)
+            if step['saving_us'] - alone > JOINT_SAVING_TOLERANCE_US
+        ],
+        'relation': relation,
+        'savings_add': relation == 'add',
+    }
 
 
 def compute_latent_heavies(

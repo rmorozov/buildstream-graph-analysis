@@ -192,7 +192,7 @@
         {
             "id": "joint-saving",
             "severity": "high",
-            "title": "Together, the top 3 are worth 23.1s (50% of the build) - exactly the sum of their individual savings, so they are three separate pieces of work that do not overlap",
+            "title": "Together, the top 3 are worth 23.1s (50% of the build) - more than the 16.1s they are worth one at a time - codegen.bst pays off only once core.bst is fixed, so work them in the order listed",
             "detail": [],
             "elements": [
                 "core.bst",
@@ -201,11 +201,12 @@
             ],
             "evidence": {
                 "joint_saving_us": 23050000,
-                "sum_of_individual_us": 23050000,
-                "savings_add": true
+                "sum_of_individual_us": 16050000,
+                "savings_add": false,
+                "relation": "compound"
             },
             "reader": "local-optimizer",
-            "copy_text": "BGA finding: Together, the top 3 are worth 23.1s (50% of the build) - exactly the sum of their individual savings, so they are three separate pieces of work that do not overlap\n  joint_saving_us 23.1s\n  sum_of_individual_us 23.1s\n  savings_add True\n  Elements: core.bst, codegen.bst, lib-b.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "copy_text": "BGA finding: Together, the top 3 are worth 23.1s (50% of the build) - more than the 16.1s they are worth one at a time - codegen.bst pays off only once core.bst is fixed, so work them in the order listed\n  joint_saving_us 23.1s\n  sum_of_individual_us 16.1s\n  savings_add False\n  relation compound\n  Elements: core.bst, codegen.bst, lib-b.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
             "trace_query": "waited-on-flow"
         },
         {
@@ -1057,8 +1058,12 @@
             "lib-b.bst"
         ],
         "joint_saving_us": 23050000,
-        "sum_of_individual_us": 23050000,
-        "savings_add": true
+        "sum_of_individual_us": 16050000,
+        "worth_more_after": [
+            "codegen.bst"
+        ],
+        "relation": "compound",
+        "savings_add": false
     },
     "latent_heavies": [
         {
@@ -2036,13 +2041,18 @@
                 {
                     "path": "joint_saving.sum_of_individual_us",
                     "resolved": true,
-                    "value": 23050000,
+                    "value": 16050000,
                     "quantity": "duration_us"
                 },
                 {
                     "path": "joint_saving.savings_add",
                     "resolved": true,
-                    "value": true
+                    "value": false
+                },
+                {
+                    "path": "joint_saving.relation",
+                    "resolved": true,
+                    "value": "compound"
                 },
                 {
                     "path": "total_duration_us",
@@ -2254,10 +2264,10 @@
         }
     ],
     "document_shape": {
-        "leaves": 1518,
+        "leaves": 1524,
         "deepest_depth": 7,
         "deepest_path": "findings.[].evidence.steps.[].entering.[]",
-        "deeper_than_three": 909,
-        "deeper_than_three_share": 0.5988142292490118
+        "deeper_than_three": 913,
+        "deeper_than_three_share": 0.5990813648293963
     }
 }

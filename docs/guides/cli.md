@@ -1147,7 +1147,7 @@ the blocks a reader meets first, and `certified_headroom`, the number
 Key Findings leads with, had never been in the population at all. It was
 302 such keys when that was filed and 305 when it landed. One level and
 no further: `blast_radius_distribution.deciles` is in the population and
-its own nine buckets are not. The surface is **602 keys** today, and
+its own nine buckets are not. The surface is **604 keys** today, and
 that figure is derived from the walk rather than typed here.
 
 So the statement of coverage, which is now a statement and not a
@@ -1207,7 +1207,7 @@ can look one up.
 | `latent_heavies` | Heavy elements not on the path today. They cost nothing now and become the constraint once what is above them is fixed. |
 | `consolidation_candidates` | Elements always consumed together that could be one element. Structural: from the graph's edges, never a timing estimate. |
 | `batch_opportunities` | What could be built together, with `serialized_pairs` naming the pairs that share a chain and therefore cannot. |
-| `joint_saving` | What fixing the top candidates *together* is worth, simulated, beside `sum_of_individual_us` — they differ when savings overlap. |
+| `joint_saving` | What fixing the top candidates *together* is worth, simulated, beside `sum_of_individual_us` — they differ when savings overlap or compound. `relation` says which (`add`, `overlap`, `compound`); `worth_more_after` names the candidates worth more once the ones above them are fixed. |
 | `serialization_point_risks` | Where the run is forced to serialize. Each entry carries `pinned_elements` (what was pinned, and to what), `governing_cores` (the cores they competed for) and `typical_max_jobs` (the `-j` their own builds used). |
 | `resource_blast` | What one shared resource rebuilds. `null` where no source inventory was captured. |
 | `fingerprint` | `UX-1073`: what this analysis was computed from - the producer stamp, a sha256 of each run-directory input and of the Plane 2 report attached, and every result-affecting option. `bga compare` reads a published `analyze.json` instead of analyzing again only when this equals its own; `--reanalyse` never reads it. |

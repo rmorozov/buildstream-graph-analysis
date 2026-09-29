@@ -28,10 +28,10 @@ from .graph.edg import (
     analyze_graph,
     compute_element_durations,
     compute_element_stage_durations,
-    compute_joint_saving,
     compute_latent_heavies,
     compute_optimization_horizon,
     compute_realizable_savings,
+    price_joint_saving,
 )
 from .ingest.loader import load_all
 from .ingest.models import STRUCTURAL_ELEMENT_KINDS, AnalysisResult, Graph, RunContext, TaskKind, Trace
@@ -1936,19 +1936,9 @@ class BuildEfficiencyAnalyzer:
             )
         ]
         recommended = [step['element_uid'] for step in horizon[:JOINT_SAVING_SET_SIZE]]
-        joint_us = compute_joint_saving(self.graph, dict(durations), recommended)
-        sum_us = sum(step['saving_us'] for step in horizon[:JOINT_SAVING_SET_SIZE])
         return {
             'optimization_horizon': horizon,
-            'joint_saving': {
-                'elements': recommended,
-                'joint_saving_us': joint_us,
-                'sum_of_individual_us': sum_us,
-                # True means the savings compose - the set can be worked
-                # as separate pieces without them overlapping. False
-                # means fixing one of them makes another worth less.
-                'savings_add': joint_us >= sum_us,
-            }
+            'joint_saving': price_joint_saving(self.graph, dict(durations), horizon[:JOINT_SAVING_SET_SIZE])
             if recommended
             else None,
             'latent_heavies': compute_latent_heavies(

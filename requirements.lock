@@ -86,7 +86,7 @@ rpds-py==2026.6.3
     # via
     #   jsonschema
     #   referencing
-ruff==0.16.8
+ruff==0.16.9
     # via bga (pyproject.toml)
 sly==0.5
     # via py-walk

@@ -1,6 +1,6 @@
 # UX-1113: the gate runs whichever ruff and pyright are first on PATH, not the locked ones
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** quality gates audit (`docs/audits/quality-gates-2026-09-29.md`, 2026-09-29) | **Serves:** anyone whose push gate reds on a clean tree | **Topic:** guards | **Area:** tools | **Shape:** judgement | **Reading:** container
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** quality gates audit (`docs/audits/quality-gates-2026-09-29.md`, 2026-09-29) | **Serves:** anyone whose push gate reds on a clean tree | **Topic:** guards | **Area:** tools | **Shape:** mechanical | **Reading:** container
 
 **Guard:** none — named test_the_gate_runs_the_locked_tools.py, absent from tests/
 
@@ -13,6 +13,20 @@ the locked 0.16.8, `pyright` 1.1.408 against 1.1.414. On `main` at
 `new: pyright reportOperatorIssue tools/bst_cache_logs.py (#1)`, a finding
 the pinned pyright does not make (round 149 saw the same line). A gate that
 reds on a clean tree for a version reason teaches people to force past it.
+
+## Decision
+
+Architect, round 151 (2026-09-29):
+
+```text
+Route:     remove the shadow: dev_baseline.py runs `[sys.executable, "-m", "ruff"|"pyright", ...]` (the lock's: 0.16.8, 1.1.414 measured); the Makefile and lint-edited-python.sh call `python3 -m ruff`; `--check` prints both versions and exits 2 when either differs from requirements.lock, read through dev_env_check.py's pinned_version/reported_version/version_ok
+Rejected:  PYRIGHT_PYTHON_FORCE_VERSION (downloads another node bundle on a mismatch); PATH reordering (a hook and a direct call would still differ); keeping `ruff_version` in quality_baseline.json (a committed copy of the pin, UX-996)
+Files:     tools/dev_baseline.py; Makefile; .claude/hooks/lint-edited-python.sh; tests/quality_baseline.json (drop `ruff_version`, and DOCUMENT_KEYS); tools/dev_env_check.py (retire ruff/pyright TOOLS entries); tests/unit/test_the_env_check_catches_a_repoint.py; tests/unit/test_the_gate_runs_the_locked_tools.py
+Guard:     (a) fake `ruff`/`pyright` printing 0.0.1 first on PATH: the version line reads the lock's pins, verdict unchanged; (b) reported version monkeypatched off the lock: `--check` names it and exits 2; (c) no Makefile recipe or hook line starts with bare `ruff`/`pyright`
+Mutation:  restore `["ruff", "--version"]` - (a); delete the refusal - (b); bare `ruff check` in the hook - (c)
+Class:     bookkeeping (cap lifted) - a false red on a clean main (r149, e88c2773)
+Split:     B track, first; before 1112, 1119 and 1118
+```
 
 ## Required Fix
 

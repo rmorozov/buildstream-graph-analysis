@@ -1071,11 +1071,15 @@ def summarize_plane2_capacity(
     wall_span = native_report.get("wall_span_s")
     measured_cpu_us = sum((entry.get("cpu_us") or 0) for entry in per_element.values())
     cores_busy = (measured_cpu_us / 1e6) / wall_span if wall_span and measured_cpu_us else None
-    pinned = sorted(
+    # UX-1139: costliest first, so the sentence's first three are the ones worth fixing.
+    pinned = [
         entry["element"]
-        for entry in native_report.get("per_element_parallelism") or []
+        for entry in sorted(
+            native_report.get("per_element_parallelism") or [],
+            key=lambda entry: (-(entry.get("work_span_s") or 0), entry.get("element") or ""),
+        )
         if "pinned_to_one_job" in (entry.get("findings") or []) and entry.get("element")
-    )
+    ]
     saturated = cores_busy is not None and host_cpu_count and cores_busy >= _SATURATION_SHARE * host_cpu_count
     return {
         "cores_busy": cores_busy,

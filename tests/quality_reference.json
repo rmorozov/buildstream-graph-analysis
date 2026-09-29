@@ -1,5 +1,5 @@
 {
-  "paths": ["bga/cli.py", "bga/plane2.py"],
+  "paths": ["bga/correlate.py", "bga/report/text.py"],
   "files": {
     ".claude/hooks/agent_worktree_limits.py": {"duplicate_blocks": 0, "file_lines": 128, "longest_function": 23},
     ".claude/hooks/gate_covers_push.py": {"duplicate_blocks": 1, "file_lines": 168, "longest_function": 28},
@@ -22,7 +22,7 @@
     "bga/cli.py": {"duplicate_blocks": 0, "file_lines": 3491, "longest_function": 246},
     "bga/compare.py": {"duplicate_blocks": 0, "file_lines": 1665, "longest_function": 281},
     "bga/contracts.py": {"duplicate_blocks": 0, "file_lines": 175, "longest_function": 26},
-    "bga/correlate.py": {"duplicate_blocks": 0, "file_lines": 2943, "longest_function": 210},
+    "bga/correlate.py": {"duplicate_blocks": 0, "file_lines": 2947, "longest_function": 210},
     "bga/diagnostics/__init__.py": {"duplicate_blocks": 0, "file_lines": 31, "longest_function": 0},
     "bga/diagnostics/analyzer.py": {"duplicate_blocks": 2, "file_lines": 1205, "longest_function": 119},
     "bga/disclosure.py": {"duplicate_blocks": 3, "file_lines": 846, "longest_function": 16},
@@ -63,7 +63,7 @@
     "bga/report/ci_comment.py": {"duplicate_blocks": 0, "file_lines": 483, "longest_function": 131},
     "bga/report/json.py": {"duplicate_blocks": 0, "file_lines": 679, "longest_function": 106},
     "bga/report/rate.py": {"duplicate_blocks": 0, "file_lines": 93, "longest_function": 24},
-    "bga/report/text.py": {"duplicate_blocks": 0, "file_lines": 1967, "longest_function": 258},
+    "bga/report/text.py": {"duplicate_blocks": 0, "file_lines": 1970, "longest_function": 258},
     "bga/run_store.py": {"duplicate_blocks": 1, "file_lines": 833, "longest_function": 78},
     "bga/schema_hints.py": {"duplicate_blocks": 0, "file_lines": 531, "longest_function": 164},
     "bga/schemas.py": {"duplicate_blocks": 0, "file_lines": 6922, "longest_function": 62},

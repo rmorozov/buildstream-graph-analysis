@@ -1243,9 +1243,11 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
         # where the graph binds, the element is longer than it needs to be
         # and it is usually on the path. Either way it is capacity already
         # paid for and declined, and it beats raising anything.
+        more = f" and {plural(len(pinned) - 3, 'more element')}" if len(pinned) > 3 else ""
         detail.append(
             "    Free capacity you already have: "
             + ", ".join(pinned[:3])
+            + more
             + " asked its native build for -j1 - a builder slot drawing one core. "
             "Fix that before raising anything, then re-measure."
         )

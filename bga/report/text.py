@@ -1519,7 +1519,10 @@ def _plane2_knee_caveat(plane2_capacity: Optional[dict], knee) -> list[str]:
         )
     pinned = plane2.get('pinned_elements') or []
     if pinned:
-        lines.append("  Free capacity you already have: " + ", ".join(pinned[:3]) + " asked its native build for -j1.")
+        more = f" and {plural(len(pinned) - 3, 'more element')}" if len(pinned) > 3 else ""
+        lines.append(
+            "  Free capacity you already have: " + ", ".join(pinned[:3]) + more + " asked its native build for -j1."
+        )
     return lines
 
 

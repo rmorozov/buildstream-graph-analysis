@@ -24,7 +24,7 @@ execnet==2.1.2
     # via pytest-xdist
 iniconfig==2.3.0
     # via pytest
-isort==9.0.1
+isort==9.0.2
     # via pylint
 jsonschema==4.26.0
     # via bga (pyproject.toml)

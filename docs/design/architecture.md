@@ -400,6 +400,7 @@ renderers are built against, so nothing here is a second copy to drift.
 | `capacity-model/v1` | that same store as a queue (`UX-613`): what a builder count and a declared arrival rate would do to utilization, the wait before a build starts and the number waiting, per host class. A model over the fact base rather than a block inside it - the arrival rate is the operator's, not measured, and every figure carries the assumption ids its own arithmetic used | `bga snapshot --capacity N,RATE --format json` |
 | `whatif/v1` | what the build would drop to for a chosen set of fixes - one projection, never a sum | `bga whatif --format json` |
 | `sweep/v1` | what more capacity would buy: one makespan per capacity tried, the knee past which it buys little, and where the replay model contradicted itself (`UX-339`) | `bga sweep --format json` |
+| `tail/v1` | what bga itself cost after the build (`UX-1078`): one row per post-build phase with its wall and peak RSS, and the build's own wall; rewritten after every phase, `complete: false` when interrupted. No total is stored - `store/v1` rows carry the sum as `bga_tail_us` beside `build_wall_us` | at `tail.json` beside a snapshot |
 | `host/v2` | the machine a capture was taken on; written into every run context and read by the cross-host refusal | inside `run-context.json` |
 | `sources/v1` | every element's source resources and how each is keyed - the on-disk shape `bga blast` reads | inside `sources.json` |
 | `plane2/v3` | Plane 2's report about one build: **run-level measurements, with the per-element reductions among them** - 21 of its 24 top-level blocks answer for the whole run and 3 are keyed by element uid, which is the ratio `bga correlate`'s join and every "what did this build cost" question read from opposite ends of (`UX-386`). `UX-297` retired the per-process record list, which is a statement about what was removed rather than about the shape of what is left | at `plane2.json` beside a run |
@@ -500,6 +501,25 @@ and is superseded now is what the record says, and sweeping it forward
 with the tables above destroys the one thing the entry is for
 (`UX-653`). The newest entry is the exception: every round that
 re-grounds the document rewrites it.
+
+Updated 2026-09-28 (after `UX-1103`), covering one change to this
+document that landed beside round 150's, re-grounded at the merge of
+#298 into round 150. The `bga bundle` row gains `--resolve
+--key-fingerprint FP` (`UX-1064`), which the `UX-1101` entry's anchor
+does not carry; no contract moved. The figures are re-grounded in `bga
+analyze --schema` (`analyze/v6`: **63 top-level properties**) and in
+`python3 -m pytest $(grep -ln "architecture.md" tests/unit/*.py) -q`,
+run at this commit: **26 emitted ids**.
+
+Updated 2026-09-28 (after `UX-1101`), covering one change to this
+document and one beside it, re-grounded at round 150's merge of both.
+The contract table gains the `tail/v1` row (`UX-1078`), and
+`analyze/v6` gains `fingerprint`, an addition, which `bga compare`
+matches a published `analyze.json` on before reusing it (`UX-1073`,
+`bga/fingerprint.py`). The figures are re-grounded in `bga analyze
+--schema` (`analyze/v6`: **63 top-level properties**) and in
+`python3 -m pytest $(grep -ln "architecture.md" tests/unit/*.py) -q`,
+run at this commit: **26 emitted ids**.
 
 Updated 2026-09-20 (after `UX-898`), covering one change to this
 document — the `compare/v2` row in the contract table now names

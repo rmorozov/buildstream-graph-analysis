@@ -504,6 +504,24 @@ pairing for every merged row from round 103 on.
 | 148 | implementer | opus | root-cause the tier-gate red on #298 (researcher-style) | 77892 | — | — | --dist load splits test_the_page_conforms_to_its_sections.py; its module fixture rebuilds per worker | — |
 | 148 | implementer | sonnet | measure --dist loadgroup for UX-1105 (rejected) | 82500 | — | — | file 25.8s -> 6.7s, full suite 515s -> 774s: rejected | — |
 | 148 | implementer | opus | UX-1105, the sections page built once across workers | unknown | — | — | file alone 27.9s -> 14.7-17.2s junit sum at -n 4 --dist load | the lock alone moved nothing: a waiting worker is charged its wait |
+| 150 | architect | opus | architect: UX-1073, UX-1078 | 52k | 13 | 2.5 m | shaped both; Unify route (Ruslan) for UX-1073 | — |
+| 150 | implementer | sonnet | implementer: UX-1074 | 686k | 256 | 95.4 m | merged, VERIFIED | verifier found 184 s guard, fixed to 1 s plus memory guard |
+| 150 | implementer | sonnet | implementer: UX-1079, UX-1076 | 130k | 114 | 33.4 m | merged, VERIFIED | ru_maxrss carried across exec red the push gate |
+| 150 | implementer | sonnet | implementer: UX-1082, UX-1083 | 949k | 399 | 91 m | merged, VERIFIED | verifier found live wiring gap (help cap) |
+| 150 | implementer | sonnet | implementer: UX-1075, UX-1072, UX-1081 | 810k | 302 | 90.1 m | merged, VERIFIED | — |
+| 150 | implementer | opus | implementer: UX-1073 | 2079k | 214 | 280.3 m | merged, VERIFIED | verifier found a Plane 2 stat proxy, fixed to digested |
+| 150 | implementer | opus | implementer: UX-1077, UX-1078 | 1479k | 283 | 147.4 m | merged, VERIFIED | stopped once on the release-row question; Ruslan chose the Unreleased row |
+| 150 | implementer | sonnet | implementer: UX-1080 | 408k | 218 | 59 m | merged, VERIFIED | verifier found pre-build call attribution gap |
+| 150 | verifier | sonnet | verifier: UX-1074 | 75k | 75 | 34 m | PASS | worktree lacks gitignored ci_reference.json/flake_ledger.json/touch_map.json |
+| 150 | verifier | sonnet | verifier: UX-1079, UX-1076 | 62k | 51 | 16.3 m | PASS | worktree lacks gitignored ci_reference.json/flake_ledger.json/touch_map.json |
+| 150 | verifier | sonnet | verifier: UX-1082, UX-1083 | 90k | 78 | 14.4 m | PASS | worktree lacks gitignored ci_reference.json/flake_ledger.json/touch_map.json |
+| 150 | verifier | sonnet | verifier: UX-1075, UX-1072, UX-1081 | 161k | 120 | 40.9 m | PASS | worktree lacks gitignored ci_reference.json/flake_ledger.json/touch_map.json |
+| 150 | verifier | sonnet | verifier: UX-1073 | 99k | 92 | 16.6 m | PASS | found the Plane 2 stat proxy, sent back |
+| 150 | verifier | sonnet | verifier: UX-1077 | 99k | 89 | 13.3 m | PASS | dev_env_check suggests pip install -e <worktree>, forbidden by the brief |
+| 150 | verifier | sonnet | verifier: UX-1078 | 156k | 137 | 23.9 m | PASS | new tail/v1 contract forces a release row, surfaced at the touching sweep |
+| 150 | verifier | sonnet | verifier: UX-1080 | 87k | 61 | 13.4 m | PASS | found pre-build call attribution gap, sent back |
+| 150 | integrator | opus | integrator: merge t4 t1 t2 t3 | 47k | 28 | 12.6 m | merged | pushed-gate reds only the merged tree showed: ru_maxrss across exec, bst-gated population count, spread fixture count |
+| 150 | integrator | opus | integrator: merge UX-1080, UX-1073 | 60k | 45 | 16 m | merged | pushed-gate reds only the merged tree showed |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -516,7 +534,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the four hundred and eighty-seven rows already say: a researcher that reads a document
+What the five hundred and five rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

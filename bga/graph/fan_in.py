@@ -70,7 +70,8 @@ def compute_fan_in(graph, kinds: dict, structural_kinds, foundation=frozenset())
             # this is the closure and not the closure plus one - held
             # by a clause on that helper rather than by a subtraction
             # here, which would be a second rule that could not be wrong.
-            "transitive_count": len(upstream.get(uid) or ()),
+            # UX-1074: a popcount on the shared bitset, not a decode.
+            "transitive_count": upstream.count(uid),
             "immediate_dominator": immediate_dominator(dominators, uid),
             "element_kind": kinds.get(uid, "unknown"),
             "is_structural_kind": kinds.get(uid) in structural_kinds,

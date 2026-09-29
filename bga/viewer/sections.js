@@ -331,11 +331,16 @@ export const DRAWN_ELSEWHERE = {
 //: `UX-401`: the fourth destination, and the only silent one allowed.
 //: A key reaches a reader as its own section, as a `Run` row (every
 //: scalar), through `DRAWN_ELSEWHERE`, or declared here with the reason
-//: it stops at the terminal. Empty is the *measurement*: every key of
-//: `analyze/v5` reaches a reader today, and the slot exists so the next
-//: one that cannot is written down rather than left to the next walk -
-//: which is what fourteen Plane 2 blocks were for six rounds.
-export const TERMINAL_ONLY = {};
+//: it stops at the terminal. One entry is the *measurement*: every other
+//: key reaches a reader, and the slot exists so the next one that cannot
+//: is written down rather than left to the next walk - which is what
+//: fourteen Plane 2 blocks were for six rounds. Never drawn by `render`.
+export const TERMINAL_ONLY = {
+  fingerprint: "`UX-1073`: the sha256 digests and options `bga compare` "
+    + "matches a published analysis on before reusing it. A reader has "
+    + "no question it answers; `producer` already says which build "
+    + "wrote the document",
+};
 
 /**
  * `UX-388`: **an empty population is a result, and the page says so.**
@@ -669,7 +674,7 @@ export function render(payload, schema, root, investigate = null) {
   root.replaceChildren();
   for (const banner of renderVerdict(payload)) root.append(banner);
   for (const [key, value] of Object.entries(payload)) {
-    if (key === "schema") continue;
+    if (key === "schema" || key in TERMINAL_ONLY) continue;
     // UX-270: the critical path is the one table that grows with *path
     // depth* rather than element count, so it folds by the chain's own
     // numbers. `UX-344` made it a key of the document rather than a row

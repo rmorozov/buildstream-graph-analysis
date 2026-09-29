@@ -24,12 +24,14 @@ from the exact same log removes that whole class of mismatch.
 """
 import argparse
 import contextlib
+import copy
 import hashlib
 import json
 import os
 import shutil
 import subprocess
 import sys
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Optional
 
@@ -281,6 +283,81 @@ def _read_bga_foundation(project_dir: str) -> Optional[list]:
     return [name.strip() for name in str(declared).split(",") if name.strip()]
 
 
+def _graph_fingerprint(cache_key_set: Optional[dict], targets: Sequence[str],
+                       bst_global_options: Optional[Sequence[str]],
+                       resolved_max_jobs: Optional[int],
+                       declared_foundation: Optional[list]) -> dict:
+    """UX-1083: the whole-graph equivalence test. Cache keys cover each
+    element's config, variables, sources and dependencies; these four
+    terms cover what a key does not - which elements were asked for,
+    the invocation's own global options, the resolved scheduler width
+    (kept out of cache keys), and the project's foundation tier.
+    """
+    return {
+        "cache_key_set": cache_key_set,
+        "targets": sorted(targets),
+        "bst_global_options": list(bst_global_options or []),
+        "resolved_max_jobs": resolved_max_jobs,
+        "bga_foundation": sorted(declared_foundation or []),
+    }
+
+
+# BuildStream 2.8's `cli` group options that change what `show` resolves;
+# `--max-jobs` is replayed from the log instead, the rest leave the graph alone.
+_GRAPH_OPTIONS_TWO_VALUES = frozenset({"-o", "--option"})
+_GRAPH_OPTIONS_ONE_VALUE = frozenset({"-c", "--config", "-C", "--directory"})
+_GRAPH_OPTIONS_FLAGS = frozenset({"--strict", "--no-strict"})
+
+
+def _graph_affecting_options(bst_global_options: Optional[Sequence[str]]) -> list:
+    """UX-1083: the build's own `-o`/`--config`/`--directory`/`--strict`
+    tokens, in order, from the arity-parsed list the tracer hands over."""
+    from .bst_native_build_tracer import _BST_GLOBAL_OPTIONS_ONE_VALUE
+    opts = list(bst_global_options or [])
+    kept: list = []
+    i = 0
+    while i < len(opts):
+        tok = opts[i]
+        if tok in _GRAPH_OPTIONS_TWO_VALUES:
+            kept.extend(opts[i:i + 3])
+            i += 3
+        elif tok in _GRAPH_OPTIONS_ONE_VALUE:
+            kept.extend(opts[i:i + 2])
+            i += 2
+        elif tok in _GRAPH_OPTIONS_FLAGS or tok.split("=", 1)[0] in _GRAPH_OPTIONS_ONE_VALUE:
+            kept.append(tok)
+            i += 1
+        elif tok in _BST_GLOBAL_OPTIONS_ONE_VALUE:
+            i += 2
+        else:
+            i += 1
+    return kept
+
+
+def _reused_graph_from_baseline(baseline_run_dir: Optional[str],
+                                fingerprint: dict) -> Optional[dict]:
+    """UX-1083: `None` unless `baseline_run_dir/graph.json` carries an
+    exactly equal fingerprint - a `None` cache_key_set (UX-1082's
+    "unread") never matches, so an unread build never reuses and never
+    is reused from. Only `elements`/`dependencies` travel; the caller
+    re-applies `requested_target`, `foundation` and
+    `cache_fingerprint` for this invocation rather than copying them.
+    """
+    if not baseline_run_dir or fingerprint["cache_key_set"] is None:
+        return None
+    try:
+        with open(os.path.join(baseline_run_dir, "graph.json"), encoding="utf-8") as handle:
+            baseline = json.load(handle)
+    except (OSError, json.JSONDecodeError):
+        return None
+    if baseline.get("cache_fingerprint") != fingerprint:
+        return None
+    return {
+        "elements": copy.deepcopy(baseline.get("elements") or []),
+        "dependencies": copy.deepcopy(baseline.get("dependencies") or []),
+    }
+
+
 def _read_bga_source_kind_map(project_dir: str) -> Optional[dict]:
     """`UX-833`: `project.conf`'s declared custom-source-kind map, the
     same minimal-YAML read `_read_bga_foundation` uses.
@@ -488,6 +565,9 @@ def extract_run(
     artifact_weights: bool = False,
     build_type: Optional[str] = None,
     variant: Optional[dict] = None,
+    cache_key_set: Optional[dict] = None,
+    bst_global_options: Optional[Sequence[str]] = None,
+    baseline_run_dir: Optional[str] = None,
 ):
     """Run the full extraction pipeline. Returns a dict summary (targets,
     span/element/dependency counts, warnings) - the CLI entry point below
@@ -498,6 +578,13 @@ def extract_run(
     report and `BGA_JOBSERVER_MODE` - this function only writes what it
     is given, straight into `run_context`, the same pass-through
     `_read_bga_jobserver_env` below feeds for `jobserver_env`.
+
+    `cache_key_set`/`bst_global_options`/`baseline_run_dir` (`UX-1083`):
+    this build's own key set (`UX-1082`) and top-level `bst` options,
+    and a previous run directory to compare against. `graph.json` is
+    reused from `baseline_run_dir` only when the whole graph fingerprint
+    matches (`_graph_fingerprint`); any difference, or no
+    `baseline_run_dir`, runs `bst show` as before.
     """
     warnings = []
 
@@ -542,22 +629,45 @@ def extract_run(
     parsed_jobs = scheduler.get("native_max_jobs")
     replayed = (["--max-jobs", str(parsed_jobs)]
                 if parsed_jobs is not None else [])
-    try:
-        graph = extract_graph(project_dir, targets, bst_bin=bst_bin,
-                              bst_options=replayed)
-    except RuntimeError as e:
-        raise RuntimeError(f"graph extraction failed: {e}") from e
 
     # UX-683: `project.conf`'s `variables.bga-foundation` wins; the
     # `foundation=` argument (a programmatic caller's own list) is the
     # fallback, never both merged - one declaration, not a silent union
-    # of two. Validated against this graph's own uids: a name that is
-    # not one is a diagnostic, never a crash (the owner may have
-    # mistyped or the element may have been renamed since the
-    # declaration was written).
+    # of two. Read before the graph itself (UX-1083 needs it for the
+    # fingerprint) rather than after.
     declared_foundation = _read_bga_foundation(project_dir)
     if declared_foundation is None:
         declared_foundation = list(foundation or [])
+
+    # UX-1083: an equal whole-graph fingerprint means an equal graph -
+    # reuse the baseline's elements/dependencies instead of paying
+    # another `bst show --deps all`. Any difference, or no baseline,
+    # falls back to the real extraction exactly as before.
+    fingerprint = _graph_fingerprint(
+        cache_key_set, targets, bst_global_options, parsed_jobs, declared_foundation)
+    reused = _reused_graph_from_baseline(baseline_run_dir, fingerprint)
+    if reused is not None:
+        graph = reused
+    else:
+        try:
+            graph = extract_graph(project_dir, targets, bst_bin=bst_bin, bst_options=[
+                *_graph_affecting_options(bst_global_options), *replayed])
+        except RuntimeError as e:
+            raise RuntimeError(f"graph extraction failed: {e}") from e
+
+    # `requested_target` is this invocation's own targets, whether the
+    # graph above was freshly extracted or reused from a baseline whose
+    # own targets could differ (the fingerprint's `targets` term is
+    # exact-match, but a reused graph's flags are re-applied here
+    # rather than trusted, per UX-1083's Required Fix).
+    requested = set(targets)
+    for element in graph["elements"]:
+        element["requested_target"] = element["uid"] in requested
+
+    # Validated against this graph's own uids: a name that is not one
+    # is a diagnostic, never a crash (the owner may have mistyped or
+    # the element may have been renamed since the declaration was
+    # written).
     known_uids = {element["uid"] for element in graph["elements"]}
     for name in declared_foundation:
         if name not in known_uids:
@@ -565,6 +675,7 @@ def extract_run(
                 f"declared foundation element {name!r} is not in the graph")
     graph["foundation"] = sorted(
         name for name in declared_foundation if name in known_uids)
+    graph["cache_fingerprint"] = fingerprint
 
     consistency_warning = _git_consistency_note(project_dir)
     if consistency_warning:
@@ -820,6 +931,9 @@ def extract_run(
         "spans": len(spans),
         "output_dir": str(out_dir),
         "warnings": warnings,
+        # UX-1083: whether `graph.json` was reused from `baseline_run_dir`
+        # (an equal fingerprint) or freshly extracted (`bst show`).
+        "graph_reused": reused is not None,
     }
 
 

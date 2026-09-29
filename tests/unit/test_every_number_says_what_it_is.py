@@ -44,6 +44,7 @@ store-aggregate/v1        12        0       26
 Seventy-nine numeric leaves outside the analyze door with no unit or a
 sniffed one - the exact class `UX-343` closed inside it.
 """
+import io
 import json
 import os
 import pathlib
@@ -233,6 +234,8 @@ CONTRACT_RUNS = {
     # needs a store of finished runs, and `_store_document` below is
     # where one gets built.
     "capacity-model/v1": None,
+    # `UX-1078`: written beside each snapshot of that store.
+    "tail/v1": None,
 }
 
 #: What the `neither` bag is allowed to hold outside `analyze/v6`, and
@@ -302,6 +305,11 @@ def _store_document(contract):
         shutil.copytree(FIXTURES["golden"], run)
         os.remove(run / "expected_output.json")
         runs.append(str(run))
+        _write_a_tail(run.parent, nth)
+    if contract == "tail/v1":
+        from bga import run_store
+
+        return run_store.read_tail(str(pathlib.Path(runs[-1]).parent))
     if contract == "capacity-model/v1":
         from bga import capacity_model
 
@@ -316,6 +324,18 @@ def _store_document(contract):
     aggregate = store_aggregate_payload(store)
     assert aggregate, "the store fixture produced no aggregate"
     return aggregate
+
+
+def _write_a_tail(snapshot, nth):
+    """`UX-1078`: the recorder's own writer, over a ledger of two phases."""
+    from bga import progress
+    from tools.bga_snapshot import _write_tail
+
+    progress.reset_ledger()
+    with progress.timed_build(), progress.timed("analyze", stream=io.StringIO()):
+        pass
+    _write_tail(str(snapshot), None, complete=True)
+    progress.reset_ledger()
 
 
 def _census_document(document):

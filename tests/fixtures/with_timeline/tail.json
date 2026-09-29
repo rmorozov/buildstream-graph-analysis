@@ -1,0 +1,44 @@
+{
+  "schema": "tail/v1",
+  "producer": null,
+  "build_wall_us": 2,
+  "phases": [
+    {
+      "name": "Plane 2 report",
+      "wall_us": 2,
+      "peak_rss_bytes": 39436288,
+      "calls": []
+    },
+    {
+      "name": "run directory",
+      "wall_us": 1,
+      "peak_rss_bytes": 39436288,
+      "calls": []
+    },
+    {
+      "name": "raw log gzip",
+      "wall_us": 1,
+      "peak_rss_bytes": 39436288,
+      "calls": []
+    },
+    {
+      "name": "analyze",
+      "wall_us": 3,
+      "peak_rss_bytes": 39436288,
+      "calls": []
+    },
+    {
+      "name": "element slice",
+      "wall_us": 1,
+      "peak_rss_bytes": 39436288,
+      "calls": []
+    },
+    {
+      "name": "store size",
+      "wall_us": 1,
+      "peak_rss_bytes": 39436288,
+      "calls": []
+    }
+  ],
+  "complete": true
+}

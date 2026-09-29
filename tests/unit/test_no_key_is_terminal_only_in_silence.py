@@ -214,8 +214,9 @@ class TestTheCensusIsExhaustive:
         """The measurement, stated: every key of `analyze/v4` reaches a
         reader today, so `TERMINAL_ONLY` is empty. Filling it is a
         deliberate act with a reason, and this is where that act is
-        noticed rather than absorbed."""
-        assert booted["terminal_only"] == {}, (
+        noticed rather than absorbed. `UX-1073` decided `fingerprint`:
+        digests `compare` matches on, which no reader asks for."""
+        assert set(booted["terminal_only"]) <= {"fingerprint"}, (
             f"a key was declared terminal-only: {booted['terminal_only']}. "
             f"That is allowed - update this clause and say which round "
             f"decided it, so the entry is a decision and not a default")

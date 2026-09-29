@@ -105,6 +105,9 @@ ANALYSIS_NAME = "analyze.json"
 # inside a report written at the end would not.
 HOST_SAMPLES_NAME = "host-samples.jsonl"
 
+# UX-1078: what bga itself cost after the build, one row per tail phase.
+TAIL_NAME = "tail.json"
+
 # UX-155: bga's own scratch — the shim it puts on `$PATH`, the compiled
 # hook and spine, and the unnamed intermediate logs. Project-local for
 # the same reason the runs are: `TMPDIR` is inherited by every service
@@ -275,6 +278,16 @@ def read_resource_profile(snapshot: str) -> dict:
     except (OSError, ValueError):
         return {}
     return profile if isinstance(profile, dict) else {}
+
+
+def read_tail(snapshot: str) -> Optional[dict]:
+    """`tail/v1` beside the capture, or None before UX-1078 wrote one."""
+    try:
+        with open(os.path.join(snapshot, TAIL_NAME), encoding="utf-8") as handle:
+            tail = json.load(handle)
+    except (OSError, ValueError):
+        return None
+    return tail if isinstance(tail, dict) else None
 
 
 def write_resource_profile(destination: str, native_report: dict) -> dict:
@@ -712,6 +725,10 @@ CAPTURE_LAYOUT = (
      "the analysis this capture published, so `bga view` renders "
      "rather than re-deriving. Absent means the viewer "
      "parses the run itself, and the trace carries no graph structure."),
+    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{TAIL_NAME}", CONDITIONAL, "tail/v1",
+     "wall and peak RSS of each phase bga ran after the build, and the "
+     "build's own wall. `complete: false` is a tail that was interrupted; "
+     "a phase that did not run has no row."),
     (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/build.log", CONDITIONAL, None,
      "the wrapped BuildStream log, kept because its first line records "
      "the real invocation. `bga timeline` needs it and "

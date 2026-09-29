@@ -25,6 +25,7 @@ already uses elsewhere in this codebase. A structural best-case
 estimate, not a claim about what any real optimization would actually
 achieve.
 """
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -58,7 +59,7 @@ class BatchOpportunities:
     serialized_pairs: list[tuple[str, str]]
 
 
-def _are_independent(a: str, b: str, reachable_downstream: dict[str, set[str]]) -> bool:
+def _are_independent(a: str, b: str, reachable_downstream: Mapping[str, set]) -> bool:
     """True iff neither element can reach the other - no ancestor/
     descendant relationship, i.e. fixing one is not blocked on fixing
     the other first."""
@@ -66,7 +67,7 @@ def _are_independent(a: str, b: str, reachable_downstream: dict[str, set[str]]) 
 
 
 def _partition_into_independent_groups(
-    candidates: list[str], reachable_downstream: dict[str, set[str]],
+    candidates: list[str], reachable_downstream: Mapping[str, set],
 ) -> tuple[list[list[str]], list[tuple[str, str]]]:
     """Greedy antichain partition over `candidates` (caller supplies
     them in most-impactful-first order): each candidate joins the first

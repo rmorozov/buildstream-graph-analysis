@@ -629,6 +629,9 @@ LARGE = (
     # viewports, every journey on one load each and J2 per chapter.
     # Measured alone in one process: 37.28 / 37.64 / 37.12s.
     "tests/unit/test_pointer_travel_is_a_budget.py",                 #   37.3s
+    # `UX-1076`: two 1,202-element opens passes, no browser.
+    # Measured alone in one process: 15.96 / 14.91 / 16.37s.
+    "tests/unit/test_the_open_paths_are_interned.py",                #   16.0s
 )
 
 MEDIUM = (
@@ -1026,4 +1029,20 @@ MEDIUM = (
     "tests/unit/test_the_viewer_js_ships_compressed.py",               #  1.5s
     # `UX-1044`: 2.91 / 2.80 / 2.85s.
     "tests/unit/test_a_chapter_fold_has_one_place_and_one_label.py",   #  2.9s
+    # Round 147, tiered on the merged tree: three single-process runs
+    # alone each (setup+call+teardown).
+    # `UX-1083`: 4.17 / 4.08 / 4.23s.
+    "tests/unit/test_an_equal_key_set_reuses_the_graph.py",            #  4.2s
+    # `UX-1082`: 2.48 / 2.64 / 2.50s, its bst arm included.
+    "tests/unit/test_the_key_set_reads_the_builds_options.py",         #  2.5s
+    # `UX-1081`: 1.56 / 1.79 / 1.89s.
+    "tests/unit/test_the_export_renders_one_timeline.py",              #  1.8s
+    # Round 150, tiered on the merged tree: three single-process runs
+    # alone each (setup+call+teardown).
+    # `UX-1073`: 1.50 / 1.53 / 1.50s.
+    "tests/unit/test_compare_reads_published_analyses.py",             #  1.5s
+    # `UX-1078`: 1.08 / 1.03 / 1.03s.
+    "tests/unit/test_the_tail_says_what_it_is_doing.py",               #  1.0s
+    # `UX-1083` review (PR #300): 7.58 / 7.40 / 7.39s, its bst arm included.
+    "tests/unit/test_the_graph_reads_the_builds_options.py",           #  7.5s
 )

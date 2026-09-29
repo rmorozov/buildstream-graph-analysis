@@ -268,6 +268,14 @@ def published_analysis(run: str) -> Optional[dict]:
     return document if isinstance(document, dict) else None
 
 
+def _timed_capture(name: str, argv: list[str]) -> dict:
+    """`_capture`, announced and timed through `bga.progress` (UX-1077)."""
+    from bga import progress
+
+    with progress.timed(name, say=f"bga view: running bga {name}"):
+        return _capture(argv)
+
+
 def _analyze_now(run: str) -> dict:
     """Analyze a run whose capture published nothing - the older case.
 
@@ -289,7 +297,7 @@ def _analyze_now(run: str) -> dict:
         argv += ["--plane2", path]
     elif refusal:
         print(refusal, file=sys.stderr)
-    return _capture(argv)
+    return _timed_capture("analyze", argv)
 
 
 #: `UX-533`: the two answers to "whose analysis is this page showing".
@@ -397,6 +405,8 @@ def payloads(run: str, baseline: Optional[str] = None,
     against = baseline if baseline is not None else (earlier[-1] if earlier else None)
     if against:
         argv = ["compare", against, run, "--format", "json"]
+        if reanalyse:
+            argv.append("--reanalyse")
         # Every earlier run in this store becomes a band sample, so the
         # band is derived from the history the user actually has.
         #
@@ -408,7 +418,7 @@ def payloads(run: str, baseline: Optional[str] = None,
         for path in earlier:
             argv += ["--baseline-run", path]
         try:
-            documents["compare.json"] = _capture(argv)
+            documents["compare.json"] = _timed_capture("compare", argv)
         except (RuntimeError, json.JSONDecodeError, OSError) as error:
             # A predecessor that cannot be compared is not an error
             # here - the report still renders, minus one view. An
@@ -593,15 +603,44 @@ def trace_render(run: str, destination: str,
     Plane 2, while `bga timeline` reads the raw log regardless and the
     lanes *are* there. Only the render knows, so the render is asked.
     """
+    from bga import progress
+
     from .bga_timeline import PLANES_BOTH, render
 
     snapshot = os.path.dirname(os.path.abspath(run))
     try:
-        result = render(snapshot, destination, quiet=True,
-                        planes=planes or PLANES_BOTH)
+        with progress.timed("timeline", say="bga view: rendering the timeline"):
+            result = render(snapshot, destination, quiet=True,
+                            planes=planes or PLANES_BOTH)
     except (FileNotFoundError, RuntimeError, OSError):
         return None
     return dict(result or {}, path=destination)
+
+
+def predicted_tracks(run: str, planes: Optional[str] = None) -> Optional[int]:
+    """How many tracks this step would open, without rendering it.
+
+    `UX-1081`: the export's degradation ladder used to render a step to
+    find out it was over `TRACE_TRACK_BUDGET`, then rendered the next
+    one anyway - two full renders, 7.2s at 5,002 elements, when the
+    first was never going to be shown. `render(..., tracks_only=True)`
+    still opens every track this run's data would (so the count is
+    exact, not a curve fit) but skips every slice, instant and counter
+    point - the record population, which is what the render actually
+    spends its time on. `None` on any refusal a real render would also
+    give, so the caller falls back to rendering and finding out. Inside
+    `bga_timeline.shared_inputs()` the render after it reuses its Plane 1
+    conversion and Plane 2 record pass.
+    """
+    from .bga_timeline import PLANES_BOTH, render
+
+    snapshot = os.path.dirname(os.path.abspath(run))
+    try:
+        result = render(snapshot, None, quiet=True,
+                        planes=planes or PLANES_BOTH, tracks_only=True)
+    except (FileNotFoundError, RuntimeError, OSError):
+        return None
+    return (result or {}).get("tracks")
 
 
 def trace_bytes(run: str) -> Optional[bytes]:
@@ -1243,27 +1282,39 @@ def _degradation_steps():
                           "lanes out"))
 
 
-def _over_a_ceiling(trace: bytes, tracks: Optional[int]) -> Optional[str]:
-    """Which ceiling this rendering hits, or `None`. Two units, two
-    sentences: a refusal reading "4 MiB" when the problem is the rows
-    sends the reader to compress something that is not the cost.
+def _over_track_ceiling(tracks: Optional[int],
+                        trace: Optional[bytes] = None) -> Optional[str]:
+    """The track-ceiling refusal, or `None`. `trace`, when a render has
+    already happened, adds the byte size so the reader can see the two
+    ceilings disagree; `UX-1081`'s pre-render check has no bytes yet and
+    says so with the count alone.
 
     `UX-530`: the track count is what `_write_trackevent` opens - one
     process track per element and one thread track per traced *pid*,
     after `merge_record_streams` - so it counts **processes**, never the
     two slices the spine and the hook record for one of them.
     """
+    if (tracks or 0) <= TRACE_TRACK_BUDGET:
+        return None
+    sentence = (f"the timeline draws {tracks:,} tracks, over this export's "
+                f"{TRACE_TRACK_BUDGET:,}-track ceiling - Perfetto draws a "
+                f"row per track")
+    if trace is not None:
+        sentence += (f", and the byte size ({len(trace) / 1048576:.1f} MiB) "
+                    f"is well inside its own ceiling")
+    return sentence
+
+
+def _over_a_ceiling(trace: bytes, tracks: Optional[int]) -> Optional[str]:
+    """Which ceiling this rendering hits, or `None`. Two units, two
+    sentences: a refusal reading "4 MiB" when the problem is the rows
+    sends the reader to compress something that is not the cost.
+    """
     if len(trace) * 4 / 3 > TRACE_BUDGET_B:
         return (f"the timeline is {len(trace) / 1048576:.1f} MiB "
                 f"compressed, over this export's "
                 f"{TRACE_BUDGET_B / 1048576:.0f} MiB ceiling for it")
-    if (tracks or 0) > TRACE_TRACK_BUDGET:
-        return (f"the timeline draws {tracks:,} tracks, over this export's "
-                f"{TRACE_TRACK_BUDGET:,}-track ceiling - Perfetto draws a "
-                f"row per track, and the byte size "
-                f"({len(trace) / 1048576:.1f} MiB) is well inside its own "
-                f"ceiling")
-    return None
+    return _over_track_ceiling(tracks, trace)
 
 
 def export(run: str, path: str, with_trace: bool = True,
@@ -1301,33 +1352,51 @@ def export(run: str, path: str, with_trace: bool = True,
         # into a band (`UX-55`).
         documents["run"]["comparison_unavailable"] = notes["comparison_unavailable"]
 
+    from .bga_timeline import shared_inputs
+
     trace = trace_planes = flow_losses = trace_tracks = None
     omitted = degraded = None
+    ceiling_refused = False
     if with_trace:
         # `UX-530`: the recipe below already named the flag that would
         # have fitted, and the export refused without trying it.
         refusals, tried, fitted = [], [], False
-        for step, narrowing in _degradation_steps():
-            trace, trace_planes, flow_losses, trace_tracks = trace_with_planes(
-                run, planes=step)
-            if trace is None:
-                break
-            refusal = _over_a_ceiling(trace, trace_tracks)
-            if refusal is None:
-                fitted = True
-                if refusals:
-                    degraded = (f"The whole timeline did not fit - "
-                                f"{refusals[0]} - so this file carries "
-                                f"{narrowing}: {trace_tracks:,} tracks.")
-                break
-            refusals.append(refusal)
-            tried.append(narrowing or "the whole timeline")
+        # `UX-1081`'s review: a step's track count and its render
+        # share one Plane 1 conversion and one Plane 2 record pass.
+        with shared_inputs():
+            for step, narrowing in _degradation_steps():
+                # `UX-1081`: known from the run's own counts, before paying
+                # to render this step at all - a step already over the track
+                # ceiling is never rendered to find that out. The byte
+                # ceiling has no such shortcut: it is only knowable once the
+                # bytes exist.
+                counted = predicted_tracks(run, planes=step)
+                precheck = _over_track_ceiling(counted)
+                if precheck is not None:
+                    refusals.append(precheck)
+                    tried.append(narrowing or "the whole timeline")
+                    continue
+                trace, trace_planes, flow_losses, trace_tracks = trace_with_planes(
+                    run, planes=step)
+                if trace is None:
+                    break
+                refusal = _over_a_ceiling(trace, trace_tracks)
+                if refusal is None:
+                    fitted = True
+                    if refusals:
+                        degraded = (f"The whole timeline did not fit - "
+                                    f"{refusals[0]} - so this file carries "
+                                    f"{narrowing}: {trace_tracks:,} tracks.")
+                    break
+                refusals.append(refusal)
+                tried.append(narrowing or "the whole timeline")
         if refusals and not fitted:
             # Every step tried and none fitted. The reader is owed each
             # number, not only the last: a refusal naming one narrowing
             # it never tried is what this item was filed on.
             omitted = "; ".join(f"{what} - {why}"
                                 for what, why in zip(tried, refusals))
+            ceiling_refused = True
     if trace is None and omitted is None:
         # UX-329: which absence, from `bga.plane2` - the same sentence
         # the terminal prints and the JSON publishes. The one this
@@ -1338,7 +1407,7 @@ def export(run: str, path: str, with_trace: bool = True,
 
         # `UX-555`: the caller's own flag is not an absence of Plane 2.
         omitted = TIMELINE_NOT_ASKED_FOR if not with_trace else plane2_shape.absence(run) or TIMELINE_DID_NOT_RENDER
-    if omitted and trace is not None:
+    if omitted and (trace is not None or ceiling_refused):
         # UX-299: and what to do instead, because "the timeline is not
         # in this file" is a dead end without it. The blast box's
         # honesty pattern: name the command that produces what the page

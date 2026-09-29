@@ -124,3 +124,12 @@ Chrome's 50-entry cap an entry added without user activation is pruned
 first, and a scripted `click()` lost `e0` (measured: `-n 2`, 5 errors).
 After "Expand all" the restored `scrollY` drifts 583 px
 (`content-visibility` estimates); not asserted.
+
+**Regression in the shared tab** (`test_the_rail_takes_a_step.py`, `-p no:randomly`:
+1 failed, 13 passed): a fragment click now costs two navigations (the
+snapshot's `replaceState` plus the hash), 10 `]` presses measured 10
+`hashchange` + 11 `replaceState`. `_WALK`'s 95 presses plus `_COLD`'s 6
+pass Chrome's 200-per-10s cap, so `_KEYS`'s were ignored (`''`); after an
+11 s wait, or a `data:` load between, it passed. A reader needs ~100 steps
+in 10 s to meet it, so the fix is the test's: `walked` loads a `data:` page
+after its walk. Removing that load: 1 failed, 13 passed; restored: 14 passed x3.

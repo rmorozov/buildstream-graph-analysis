@@ -151,10 +151,18 @@ def uri(tmp_path_factory):
     return pages.export_uri(pages.FIXTURES["macro_micro"], tmp_path_factory.mktemp("stepper"))
 
 
+#: Chrome ignores a tab's navigations past 200 in 10s; a cross-origin
+#: load gives the shared tab a fresh frame, and with it a fresh budget.
+_FRESH_FRAME = "data:text/html,<p>fresh</p>"
+
+
 @pytest.fixture(scope="module")
 def walked(uri):
     with Browser(find_chrome()) as browser:
-        return browser.measure(uri, _WALK, 1440, 900)
+        seen = browser.measure(uri, _WALK, 1440, 900)
+        # 95 presses at two each (UX-1056): the next drive here needs its own.
+        browser.measure(_FRESH_FRAME, "1", 1440, 900)
+        return seen
 
 
 @pytest.fixture(scope="module")

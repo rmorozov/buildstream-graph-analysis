@@ -26,8 +26,10 @@ import pathlib
 import re
 import sys
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import dev_close_task
+
 REPO = pathlib.Path(__file__).resolve().parents[1]
-CLOSED = REPO / "docs/backlog/scenarios/closed.md"
 SCENARIOS = REPO / "docs/backlog/scenarios"
 
 # The order topics appear in a release body. A reader scanning for
@@ -43,9 +45,7 @@ _TOPIC = re.compile(r"\*\*Topic:\*\*\s*(\w+)")
 def _rows():
     """Every closed row, in file order — which is the order they closed."""
     rows = []
-    for line in CLOSED.read_text(encoding="utf-8").splitlines():
-        if not line.startswith("| UX-"):
-            continue
+    for line in dev_close_task.closed_rows():
         cells = [cell.strip() for cell in
                  re.split(r"(?<!\\)\|", line.strip().strip("|"))]
         if len(cells) < 6:

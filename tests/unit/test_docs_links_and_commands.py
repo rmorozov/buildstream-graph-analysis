@@ -486,6 +486,7 @@ from tools.dev_close_task import (
 from tools.dev_close_task import (
     close_status_line as _close_status_line,
 )
+from tools.dev_close_task import closed_rows
 from tools.dev_close_task import (
     file_priorities as _file_priorities,
 )
@@ -588,7 +589,7 @@ def test_every_rows_priority_matches_its_task_files():
         "backlog row(s) whose priority disagrees with the task file's "
         "header:\n  " + "\n  ".join(_priority_disagreements())
         + "\nThe task file is the record; update the row in "
-          "docs/backlog/scenarios/README.md or closed.md to match it.")
+          "docs/backlog/scenarios/README.md or the closed rows to match it.")
 
 
 def test_every_task_file_has_a_row_in_the_table():
@@ -684,7 +685,7 @@ def test_the_table_status_matches_the_task_files():
     table it sits in.
     """
     tables = {
-        "docs/backlog/scenarios/README.md or closed.md": _table_statuses(),
+        "docs/backlog/scenarios/README.md or the closed rows": _table_statuses(),
         "docs/design/architecture.md": _architecture_table_statuses(),
     }
     file_statuses = _file_statuses()
@@ -1196,9 +1197,7 @@ def test_every_open_row_carries_a_topic_from_the_closed_set():
     # `UX-562`: 0 open rows is a backlog a round emptied, not a parser
     # that matched nothing - so the vacuity refusal stands on closed.md,
     # which only grows, and the open rows are checked however many.
-    closed = [line for line in (REPO / "docs/backlog/scenarios/closed.md")
-              .read_text(encoding="utf-8").splitlines()
-              if _TABLE_ROW.match(line)]
+    closed = [line for line in closed_rows() if _TABLE_ROW.match(line)]
     assert closed, "the row pattern matches nothing in closed.md"
     bad = []
     for line in rows:

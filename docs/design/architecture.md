@@ -1330,7 +1330,7 @@ Direction 15 asks for and the one the field capture broke.
 
 Updated 2026-08-25 (after `UX-286`), re-grounded in `bga/viewer/`'s
 module list, the published schema `bga analyze --schema` prints, and
-`docs/backlog/scenarios/closed.md`'s round-38 and round-39 rows: the
+the `docs/backlog/scenarios/closed/` chunks' round-38 and round-39 rows: the
 viewer axis gained the chapters `UX-286` groups the document into, and
 the contracts table's `analyze/v2` row is checked against the keys the
 schema declares - which `UX-275` added one to. (`analyze/v2` is

@@ -44,3 +44,47 @@ quarter files' rows equals the pre-split rows, and every one of the 19
 readers resolves through the one function (grep for a direct `closed.md`
 open outside it). Mutation: a reader opening `closed.md` directly reddens.
 The Outcome carries `make lint-docs`' wall before and after.
+
+## Outcome (round 151, 2026-09-29)
+
+**Premise:** held — one 729 KB file dominated `make lint-docs`.
+
+### The gap, measured
+
+```text
+$ make lint-docs        # single process, load 2.4, before the split
+real    2m52.831s       (172.8 s)
+```
+
+### The close measured
+
+```text
+$ make lint-docs        # after: 9 chunks of <=128 rows + history.md, load 4.0
+real    1m22.428s       (82.4 s)
+$ closed_rows() vs `git show d3ef4bf6:.../closed.md` rows: 1039 == 1039, equal in order
+$ python3 tools/dev_close_task.py --check   -> 0 problem(s) over 10 propert(y/ies), 1075 backlog row(s)
+```
+
+Row content: relative links in chunks are one directory deeper, so a
+chunk holds `](../X)` where the row had `](X)`; `closed_rows()` strips
+that one `../`, so the rows read back byte-identical (the guard pins their
+sha256). The append adds the prefix.
+
+### Mutation table
+
+| Mutation | Reddened | Count |
+|---|---|---|
+| `bga_release_notes` binds and reads `closed.md` directly | `test_no_reader_outside_the_tool_opens_a_closed_path` | 1 failed, 6 passed |
+| the append's `>= CHUNK_ROWS` check made `>= 10**9` | `test_the_129th_row_opens_a_new_chunk` | 1 failed, 6 passed |
+| function-local `p = SCENARIOS / "closed.md"; p.read_text()` in `bga_release_notes._rows` | `test_no_reader_outside_the_tool_opens_a_closed_path` | 1 failed, 8 passed |
+| the append drops its `../` link prefix | `test_an_appended_row_links_from_the_chunks_directory` | 1 failed, 8 passed |
+
+### Deviation
+
+- `backlog_files()` is now `(README.md, *closed_files())`; `closed.md` holds no rows.
+- `tests/quality_reference.json`: `dev_close_task.py` file_lines 1302 -> 1331 adopted with `--force`.
+- `test_the_closed_index_reads_as_one.py` walks every tracked `.py`, so
+  `tests/tiers.py` CENSUS needs its row (orchestrator's file); until then
+  `test_every_derived_census_guard_is_declared` is red.
+- Prose the Decision missed, updated: README.md lines 18 and 902 (prose only), spec line 1895 (inside Part 32), architecture.md:1333, `.pymarkdown.json:50`, `dev_close_task.py` help and comments.
+- `closed_rows(scenarios=None)` takes a sandbox directory: the fixtures that run `--scenarios` read their copy.

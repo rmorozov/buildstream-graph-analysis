@@ -43,12 +43,12 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "tools"))
 import dev_track_cost
+from dev_close_task import closed_rows
 
 AUDITS = "docs/audits"
 DIRECTIONS = "docs/design/directions.md"
 README = "docs/README.md"
 SCENARIOS = "docs/backlog/scenarios"
-CLOSED = f"{SCENARIOS}/closed.md"
 HISTORY_HEADING = "## Round history"
 
 #: `UX-798`: rows from here on carry a derived "N closed, M filed";
@@ -221,7 +221,7 @@ def test_a_links_text_names_the_file_it_opens(doc):
 def _closed_status():
     """`UX-798`: id -> the marker on that id's own row in `closed.md`."""
     status = {}
-    for line in (REPO / CLOSED).read_text(encoding="utf-8").splitlines():
+    for line in closed_rows():
         head = re.match(r"^\| (UX-\d+) \|", line)
         if not head:
             continue
@@ -322,7 +322,7 @@ def test_a_history_row_s_counts_are_derived():
         not_green = [i for i in closed_ids if status.get(i) != "🟢"]
         assert not not_green, (
             f"round {round_}: What closed names {', '.join(not_green)}, "
-            f"not 🟢 in {CLOSED}")
+            "not 🟢 in the closed rows")
         derived_closed = len(closed_ids)
         derived_filed = len(_found_by_round(round_))
         assert (said_closed, said_filed) == (derived_closed, derived_filed), (

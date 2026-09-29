@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-Closed rows live in [closed.md](closed.md), verbatim. The counts
+Closed rows live in [closed.md](closed.md)'s chunks, verbatim. The counts
 sentence and the per-topic table are derived, never committed
 (`UX-996`) - run `python3 tools/dev_close_task.py --counts` for both.
 
@@ -899,7 +899,7 @@ about what the tool says:
 Order: `UX-238` first — everything after it is cheaper — then `UX-239`,
 then `UX-236` and `UX-237` together, then `UX-240` on top of both, and
 `UX-241` last because it is the cycle that keeps the rest true.
-All six are done; their rows are in [closed.md](closed.md).
+All six are done; their rows are in [closed.md](closed.md)'s chunks.
 
 `UX-245`..`UX-247` are what `UX-241`'s **first review** found, which is
 the item working rather than a coincidence: the architecture's CLI

@@ -96,9 +96,10 @@ class TestTheRealBacklogAgrees:
         into.mkdir()
         for path in (REPO / "docs/backlog/scenarios").glob("*.md"):
             shutil.copy(path, into / path.name)
+        shutil.copytree(REPO / "docs/backlog/scenarios/closed", into / "closed")
         # Round 116 closed every open row, so the copy reopens one:
         # the index the tool reads is the copy's own (`--scenarios`).
-        rows = [line for line in (into / "closed.md").read_text(encoding="utf-8").splitlines()
+        rows = [line for line in tool.closed_rows(into)
                 if tool._TABLE_ROW.match(line)]
         uid = int(tool._TABLE_ROW.match(rows[-1]).group(1))
         with (into / "README.md").open("a", encoding="utf-8") as index:

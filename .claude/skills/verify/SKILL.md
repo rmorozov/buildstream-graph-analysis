@@ -185,7 +185,8 @@ line in the task file are two hand-maintained copies of one fact and
 have drifted in three separate rounds. Change both in the same commit,
 and move the row to
 [`closed.md`](../../../docs/backlog/scenarios/closed.md) when it closes
-— open rows live in `README.md`, closed ones verbatim in `closed.md`.
+— open rows live in `README.md`, closed ones verbatim in the numbered files under `closed/`, read through
+`closed_rows()` in `tools/dev_close_task.py` (`closed.md` links them).
 
 `tests/unit/test_docs_links_and_commands.py::test_the_table_status_matches_the_task_files`
 fails naming the item if you miss one, and

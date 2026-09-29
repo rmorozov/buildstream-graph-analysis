@@ -132,9 +132,10 @@ def _scratch_repo(tmp_path):
     (scenarios / "README.md").write_text(
         "# Index\n\n## Open scenarios\n\n" + "\n".join(rows) + "\n",
         encoding="utf-8")
-    (scenarios / "closed.md").write_text(
+    (scenarios / "closed").mkdir()
+    (scenarios / "closed/0001.md").write_text(
         "# Closed\n\n| UX-1 | done row | guards | Low | — | "
-        "\U0001f7e2 Done — x | [UX-1](UX-1.md) |\n", encoding="utf-8")
+        "\U0001f7e2 Done — x | [UX-1](../UX-1.md) |\n", encoding="utf-8")
     shutil.copyfile(REPO / ".gitattributes", repo / ".gitattributes")
     for argv in (["init", "-q", "-b", "main"],
                  ["config", "user.email", "a@b"],

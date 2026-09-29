@@ -39,6 +39,12 @@ SCENARIOS = REPO / "docs/backlog/scenarios"
 TESTS_ROOT = REPO / "tests"
 INDEX = SCENARIOS / "README.md"
 CLOSED = SCENARIOS / "closed.md"
+#: `UX-1120`: the closed rows live in `closed/NNNN.md`, this many each.
+CHUNK_ROWS = 128
+_CHUNK_HEADER = ("| ID | Scenario | Priority | Depends on | Status | Task File |\n"
+                 "|---|---|---|---|---|---|\n")
+#: A relative link in a chunk is one directory deeper than in the row.
+_REL_LINK = re.compile(r"\]\((?!https?:|#|mailto:)([^)\s]*)")
 #: UX-938: fixed at import, unlike `REPO` - a test that monkeypatches
 #: `REPO` to a synthetic repo (`UX-935`) has no `.github` of its own,
 #: and the CI job list is this repository's, not a sandbox's.
@@ -131,7 +137,7 @@ def open_row(uid: str):
 
 
 # UX-232 split the backlog by liveness: open rows in README.md, closed
-# ones verbatim in closed.md. Both are the backlog, so anything that
+# ones verbatim in closed/. Both are the backlog, so anything that
 # reads a status reads both.
 #
 # `UX-387`: this tool read only the open index, and the guard that
@@ -159,7 +165,27 @@ def backlog_files():
     send every reader below at the real backlog while the caller
     believed it was pointed at a fixture.
     """
-    return (INDEX, CLOSED)
+    return (INDEX, *closed_files())
+
+
+def closed_files(scenarios=None):
+    """The closed chunks, in close order, read at call time."""
+    directory = pathlib.Path(scenarios or CLOSED.parent) / "closed"
+    return sorted(directory.glob("[0-9]*.md")) if directory.is_dir() else []
+
+
+def closed_rows(scenarios=None):
+    """Every closed row, in close order, as written before the split."""
+    rows = []
+    for path in closed_files(scenarios):
+        rows += [_REL_LINK.sub(lambda m: "](" + m.group(1)[3:], line)
+                 for line in path.read_text(encoding="utf-8").splitlines()
+                 if line.startswith("| UX-")]
+    return rows
+
+
+def closed_ids():
+    return [row.split("|")[1].strip() for row in closed_rows()]
 
 
 #: `UX-454`: the words a status line may carry after its glyph.
@@ -492,7 +518,7 @@ def topics():
     """
     declared = _declared_topics()
     found = {}
-    for uid in row_ids(INDEX) + row_ids(CLOSED):
+    for uid in row_ids(INDEX) + closed_ids():
         header = header_topic(task_file(uid).read_text(encoding="utf-8"))
         found[uid] = header or declared.get(uid) or TOPIC_UNKNOWN
     return found
@@ -502,7 +528,7 @@ def file_topics():
     """`{filename: the `**Topic:**` header it declares, or None}`.
 
     Every task file, not every row: `UX-656` was filed and closed
-    inside one round, so its row went straight to `closed.md` and the
+    inside one round, so its row went straight to the closed chunks and the
     open index never carried it.
     """
     found = {}
@@ -578,7 +604,7 @@ def index_header():
     made them the line two parallel tracks collide on even when neither
     touched the other's row.
     """
-    open_ids, closed_ids = row_ids(INDEX), row_ids(CLOSED)
+    open_ids, closed = row_ids(INDEX), closed_ids()
     of = topics()
     every = sorted({of[uid] for uid in of},
                    key=lambda name: (name == TOPIC_UNKNOWN,
@@ -590,8 +616,8 @@ def index_header():
         open_here = sum(1 for uid in open_ids if of[uid] == topic)
         every_here = sum(1 for uid in of if of[uid] == topic)
         rows.append(f"| {topic} | {open_here} | {every_here} |")
-    sentence = (f"{len(open_ids) + len(closed_ids)} scenarios: "
-                f"**{len(open_ids)} open**, {len(closed_ids)} closed.")
+    sentence = (f"{len(open_ids) + len(closed)} scenarios: "
+                f"**{len(open_ids)} open**, {len(closed)} closed.")
     return sentence, "\n".join(rows)
 
 
@@ -929,7 +955,7 @@ def _closed_rows_left_open():
         declared = declared.group(1) if declared else "?"
         if marker == "🟢" or declared == "🟢":
             problems.append(f"{match.group(1)}: row {marker}, file {declared} "
-                            "- a closed row belongs in closed.md")
+                            "- a closed row belongs in closed/")
     return problems
 
 
@@ -1026,14 +1052,17 @@ def _close_one(uid: str, note: str, path, line: str, topic) -> str:
     text = text.replace(line + "\n", "")
     INDEX.write_text(text, encoding="utf-8")
 
-    # After the **last table row**, not at the end of the file:
-    # `closed.md` carries per-round narrative sections below its table,
-    # and the first draft appended into those - which broke the table
-    # and was caught by `test_no_table_is_split_by_a_blank_line`.
-    closed = CLOSED.read_text(encoding="utf-8").splitlines()
-    last = max(i for i, text in enumerate(closed) if text.startswith("| UX-"))
-    closed.insert(last + 1, closed_row)
-    CLOSED.write_text("\n".join(closed) + "\n", encoding="utf-8")
+    # Into the last chunk, which opens the next one when it holds CHUNK_ROWS.
+    files = closed_files()
+    last = files[-1] if files else CLOSED.parent / "closed" / "0001.md"
+    text = last.read_text(encoding="utf-8") if files else (
+        "# Closed scenarios 0001\n\n" + _CHUNK_HEADER)
+    if sum(1 for row in text.splitlines() if row.startswith("| UX-")) >= CHUNK_ROWS:
+        last = last.with_name(f"{int(last.stem) + 1:04d}.md")
+        text = f"# Closed scenarios {last.stem}\n\n" + _CHUNK_HEADER
+    row = _REL_LINK.sub(lambda m: "](../" + m.group(1), closed_row)
+    last.parent.mkdir(exist_ok=True)
+    last.write_text(text.rstrip("\n") + "\n" + row + "\n", encoding="utf-8")
     return ""
 
 
@@ -1057,7 +1086,7 @@ def move(uid: str, note: str) -> int:
           f"  Read the row it just wrote. The scenario text is copied from "
           f"the open row and usually wants rewriting into what was *found*, "
           f"and this function's own first run produced a malformed row -\n"
-          f"    grep '^| {uid} |' {_shown(CLOSED)}\n"
+          f"    grep -rh '^| {uid} |' {_shown(CLOSED.parent / 'closed')}\n"
           f"  The counts sentence and topic table (UX-501) are printed, "
           f"never committed:\n"
           f"    python tools/dev_close_task.py --counts")
@@ -1086,7 +1115,7 @@ def move_batch(pairs: list) -> int:
             return 2
         seen.add(short)
         if not note.strip():
-            print(f"{uid}: --move needs --note: the closed.md row is a "
+            print(f"{uid}: --move needs --note: the closed row is a "
                   f"sentence about what was found, and nothing can write "
                   f"it for you", file=sys.stderr)
             return 2
@@ -1192,7 +1221,7 @@ def main(argv=None) -> int:
     parser.add_argument("--move", action="store_true",
                         help="flip both markers, move the row, fix the counts")
     parser.add_argument("--note", default="",
-                        help="the one-line narrative for the closed.md row "
+                        help="the one-line narrative for the closed row "
                              "- a shell word, so a backtick in it runs "
                              "(UX-768); prefer --note-file")
     parser.add_argument("--note-file", default=None,
@@ -1291,7 +1320,7 @@ def main(argv=None) -> int:
                 if args.note_file else args.note)
         if not note:
             parser.error("--move needs --note or --note-file: the "
-                         "closed.md row is a sentence about what was "
+                         "closed row is a sentence about what was "
                          "found, and nothing can write it for you")
         return move(args.uid, note)
     parser.error("give --outcome, --move, --check, --counts, --areas or "

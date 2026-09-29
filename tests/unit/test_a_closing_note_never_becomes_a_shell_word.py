@@ -12,6 +12,10 @@ import subprocess
 import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+
+from dev_close_task import closed_rows
+
 CLOSE_TASK = REPO / "tools/dev_close_task.py"
 
 
@@ -80,7 +84,7 @@ class TestNoteFileNeverTransitsAShellWord:
         done = _run("UX-9911", "--move", "--note-file", str(note_path),
                     "--scenarios", str(scenarios))
         assert done.returncode == 0, done.stdout + done.stderr
-        closed = (scenarios / "closed.md").read_text(encoding="utf-8")
+        closed = "\n".join(closed_rows(scenarios))
         assert "`backtick span`" in closed
         assert "| UX-9911 |" in closed
 
@@ -104,7 +108,7 @@ class TestASubstitutedNoteIsRefused:
                "substituted note (UX-768)" in done.stderr
         assert (scenarios / "README.md").read_bytes() == before
         assert "| UX-9911 |" not in (
-            scenarios / "closed.md").read_text(encoding="utf-8")
+            "\n".join(closed_rows(scenarios)))
 
     def test_a_multiline_note_file_is_also_refused(self, tmp_path):
         scenarios = _one_open_row(tmp_path)
@@ -115,7 +119,7 @@ class TestASubstitutedNoteIsRefused:
         assert done.returncode != 0
         assert "UX-9911: --note is one line" in done.stderr
         assert "| UX-9911 |" not in (
-            scenarios / "closed.md").read_text(encoding="utf-8")
+            "\n".join(closed_rows(scenarios)))
 
     def test_a_trailing_newline_alone_does_not_trip_the_guard(
             self, tmp_path):
@@ -144,7 +148,7 @@ class TestASubstitutedNoteIsRefused:
         assert done.returncode != 0, done.stdout + done.stderr
         assert ids[1][0] in done.stderr
         assert (scenarios / "README.md").read_bytes() == before_readme
-        closed = (scenarios / "closed.md").read_text(encoding="utf-8")
+        closed = "\n".join(closed_rows(scenarios))
         assert f"| {ids[0][0]} |" not in closed, (
             "the first id closed before the batch's bad note was caught")
         assert f"| {ids[1][0]} |" not in closed

@@ -22,7 +22,6 @@ import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 REVIEW_LOG = REPO / "docs/audits/architecture-review.md"
-CLOSED = REPO / "docs/backlog/scenarios/closed.md"
 
 # The bound, argued in the review document rather than guessed: below
 # the 34-row drift that was actually missed, and far enough above one
@@ -67,8 +66,9 @@ def _closed_now():
     nine commits, the count is in the tree so the guard needs no git,
     and it gives the same answer on every machine.
     """
-    return sum(1 for line in CLOSED.read_text(encoding="utf-8").splitlines()
-               if line.startswith("| UX-"))
+    from tools.dev_close_task import closed_rows
+
+    return len(closed_rows())
 
 
 class TestTheReviewIsARoundType:

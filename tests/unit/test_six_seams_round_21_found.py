@@ -156,12 +156,11 @@ class TestTheCountsAreRight:
         # UX-232 moved closed rows to `closed.md`; UX-192 is one of
         # them. The guard follows the row rather than the filename -
         # a guard pinned to one file goes quiet the day the row moves.
-        rows = []
-        for name in ("docs/backlog/scenarios/README.md",
-                     "docs/backlog/scenarios/closed.md"):
-            rows += [line for line in
-                     open(name, encoding="utf-8").read().splitlines()
-                     if line.startswith("| UX-192 |")]
+        from tools.dev_close_task import closed_rows
+
+        text = open("docs/backlog/scenarios/README.md", encoding="utf-8").read()
+        rows = [line for line in text.splitlines() + closed_rows()
+                if line.startswith("| UX-192 |")]
         assert len(rows) == 1, f"UX-192 has {len(rows)} rows across the backlog"
         row = rows[0]
         stale = re.search(r"(all )?\b(\d+|ten|eleven|twelve|seventeen|eighteen)\b"

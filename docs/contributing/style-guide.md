@@ -213,8 +213,8 @@ the round history already tells that story.
 ## 11. The backlog is split by liveness, and a row is an index entry
 
 `docs/backlog/scenarios/README.md` holds the **open** rows;
-[`closed.md`](../backlog/scenarios/closed.md) holds the closed ones,
-verbatim. A row moves in the same commit that flips its marker, and
+[`closed.md`](../backlog/scenarios/closed.md) links the closed ones,
+verbatim in the numbered files under `closed/`, read through `closed_rows()`. A row moves in the same commit that flips its marker, and
 `UX ids are never renumbered` — they are load-bearing in task files,
 commit messages and guards.
 

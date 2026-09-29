@@ -29,7 +29,6 @@ import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 GUIDE = REPO / "docs/contributing/fixing-guide.md"
-CLOSED = REPO / "docs/backlog/scenarios/closed.md"
 
 #: `UX-780`: a citation with no `(open)` beside it reads as closed.
 #: `UX-786`: a slash group (`UX-698/699/787`) shares its `UX-` prefix
@@ -585,7 +584,9 @@ class TestTheMapNamesTheTree:
         its own status was Not Started, and the row described the
         ambition rather than the file. An open id may still appear,
         spelled `(open)` beside it."""
-        closed = set(re.findall(r"UX-\d+", CLOSED.read_text(encoding="utf-8")))
+        from tools.dev_close_task import closed_rows
+
+        closed = set(re.findall(r"UX-\d+", "\n".join(closed_rows())))
         text = _map_text()
         bare = []
         for cluster in CITATION.finditer(text):

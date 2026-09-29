@@ -561,7 +561,7 @@ docs/spec/specification.md v9 spec, ground truth - use line ranges, never read w
 docs/design/architecture.md  all three planes plus the viewer axis and the contracts
 docs/design/directions.md    where the tool is going, argued · roles.md  who it answers to
 docs/backlog/scenarios/README.md   active backlog index - start here
-docs/backlog/scenarios/closed.md   every closed row, verbatim
+docs/backlog/scenarios/closed/     every closed row, verbatim, in chunks; `closed_rows()`
 docs/backlog/progress-tracker.md   closed spec-compliance backlog - archaeology only
 CLAUDE.md                  the day-one page, loaded every session; this guide is the rule
 ```

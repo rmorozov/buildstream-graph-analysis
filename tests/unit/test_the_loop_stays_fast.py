@@ -693,7 +693,7 @@ class TestTheIndexIsDerivedNotMerged:
                   for line in table.splitlines() if line.startswith("| ")
                   and not line.startswith("| Topic")]
         rows = (len(close_task.row_ids(close_task.INDEX))
-                + len(close_task.row_ids(close_task.CLOSED)))
+                + len(close_task.closed_ids()))
         assert sum(totals) == rows, (
             f"the topic table accounts for {sum(totals)} of {rows} rows")
 

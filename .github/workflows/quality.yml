@@ -48,6 +48,8 @@ jobs:
       - name: The lockfile is the dev extra, resolved
         run: |
           pip install uv
+          # UX-1128: seeded, so an upstream release is Dependabot's row, not a red audit.
+          cp requirements.lock /tmp/requirements.lock
           uv pip compile pyproject.toml --extra dev -o /tmp/requirements.lock -q
           diff <(grep -v '^#' requirements.lock) <(grep -v '^#' /tmp/requirements.lock) \
             || { echo "requirements.lock is stale: run make lock"; exit 1; }
@@ -65,5 +67,6 @@ jobs:
           python-version: "3.11"
       - name: The size ledger only shrinks
         run: |
-          pip install -e '.[dev]' pylint
+          pip install -r requirements.lock
+          pip install -e . --no-deps
           python3 tools/dev_sizes.py --check

@@ -956,7 +956,7 @@ _JUNCTION_COST_HINTS = {
             },
             "separate_floors_us": {
                 "description": "Each run's own T-infinity, in run order [unlimited_capacity].",
-                "items": {**_JUNCTION_US},
+                "items": {**_JUNCTION_US, "description": "One run's own T-infinity, unlimited builders."},
             },
             "union_floor_us": {
                 **_JUNCTION_US,

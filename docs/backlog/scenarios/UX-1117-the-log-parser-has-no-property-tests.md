@@ -1,6 +1,6 @@
 # UX-1117: the scheduler-log parser is tested only on the logs someone thought to write
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** quality gates audit (`docs/audits/quality-gates-2026-09-29.md`, 2026-09-29) | **Serves:** anyone whose BuildStream version prints a line the fixtures never held | **Topic:** capture | **Area:** tools | **Shape:** judgement | **Reading:** container
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** quality gates audit (`docs/audits/quality-gates-2026-09-29.md`, 2026-09-29) | **Serves:** anyone whose BuildStream version prints a line the fixtures never held | **Topic:** capture | **Area:** tools | **Shape:** mechanical | **Reading:** container
 
 **Guard:** none — named test_the_log_reader_holds_its_properties.py, absent from tests/
 
@@ -15,6 +15,19 @@ is not in the dev extra, and no test file generates log lines.
 
 Input classes: well-formed interleaved event lines; lines the grammar does not match; elapsed strings of every width; timestamps across midnight.
 Journey: Plane 1 ingest in `bga analyze`.
+
+## Decision
+
+Architect, round 151 (2026-09-29):
+
+```text
+Route:     `hypothesis` in the dev extra and requirements.lock. New small test over `WrapperTraceConverter`: raw mode `process_line_raw` (raw_start_time_us=0), wrapped mode `process_line` after an `Executing command: bst build x.bst` line. Properties: (1) balanced START/terminal pairs over distinct hashes, elements padded "", " ", "  ", give one B and one E per hash on its tid with E.ts >= B.ts, both modes, wrapped timestamps nondecreasing across midnight, under TZ=UTC; (2) a line BST_LOG_RE does not match never raises and adds no span; (3) elapsed strings round-trip and "--:--:--" is 0.0. Profile in the module: `derandomize=True, database=None, max_examples=100`
+Rejected:  the row's "counted" clause - no counter exists and every build-output line is unmatched, so a count is noise (the Outcome records it); importorskip (a skip nobody sees)
+Files:     pyproject.toml ([dev]), requirements.lock, tests/unit/test_the_log_reader_holds_its_properties.py
+Guard:     that file, properties (1)-(3), small tier
+Mutation:  in handle_bst_event before the strip, `if status != "START" and element.endswith(" "): return` - (1) reddens
+Class:     product. Finding for a new row: `parse_timestamp` (:292-298) reads the UTC wrapper stamp as local time (bst_run_wrapped.py:49 writes UTC); off by the TZ offset outside UTC
+```
 
 ## Required Fix
 

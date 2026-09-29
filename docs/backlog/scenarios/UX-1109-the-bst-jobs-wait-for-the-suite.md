@@ -1,6 +1,6 @@
 # UX-1109: the bst jobs wait for the suite and use nothing it produced
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** quality gates audit (`docs/audits/quality-gates-2026-09-29.md`, 2026-09-29) | **Serves:** anyone waiting on a PR to go green | **Topic:** guards | **Area:** tools | **Shape:** judgement | **Reading:** runner:bst-examples
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** quality gates audit (`docs/audits/quality-gates-2026-09-29.md`, 2026-09-29) | **Serves:** anyone waiting on a PR to go green | **Topic:** guards | **Area:** tools | **Shape:** mechanical | **Reading:** runner:bst-examples
 
 **Guard:** none — named test_the_bst_jobs_start_beside_the_suite.py, absent from tests/
 
@@ -12,6 +12,20 @@
 2,064 s (medians, newest 100 runs; the ledger's spread still reads 620-964s), against a run wall of 3,350 s. Starting
 the bst jobs beside `test` would put the path at ~2,100 s (estimate from
 the medians, not a reading).
+
+## Decision
+
+Architect, round 151 (2026-09-29):
+
+```text
+Route:     `bst-smoke`, `bst-tests` and `bst-examples` drop `test` from `needs`: smoke needs [changes], the other two [changes, bst-smoke]. None reads anything `test` produces (no download-artifact, no needs.test.outputs, no carry restore)
+Rejected:  the row's "bst-smoke keeps its own place" - bst-smoke needs `test` (ci.yml:1164), so the bst jobs would still wait and save 0 s; the deviation goes in the Outcome
+Files:     .github/workflows/ci.yml; tests/unit/test_the_bst_jobs_start_beside_the_suite.py
+Guard:     `test` is not in the transitive `needs` closure of bst-smoke, bst-tests or bst-examples (the `_ancestors` shape of test_the_records_writers_are_one_chain.py)
+Mutation:  put `test` back into bst-smoke's needs only - a direct-needs guard stays green, this one reddens
+Class:     optimization - the bst jobs start after ~40 s instead of ~1,340 s (estimate from medians)
+Split:     CI track, after 1108
+```
 
 ## Required Fix
 

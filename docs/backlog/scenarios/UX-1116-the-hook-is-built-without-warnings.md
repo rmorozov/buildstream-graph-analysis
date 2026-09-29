@@ -1,6 +1,6 @@
 # UX-1116: the LD_PRELOAD hook is built with no warnings and never runs under a sanitizer
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** quality gates audit (`docs/audits/quality-gates-2026-09-29.md`, 2026-09-29) | **Serves:** anyone whose build runs with the hook loaded into every process | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement | **Reading:** container
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** quality gates audit (`docs/audits/quality-gates-2026-09-29.md`, 2026-09-29) | **Serves:** anyone whose build runs with the hook loaded into every process | **Topic:** capture | **Area:** tools-native_trace | **Shape:** mechanical | **Reading:** container
 
 **Guard:** none — named test_the_hook_builds_clean_and_sanitized.py, absent from tests/
 
@@ -18,6 +18,19 @@ runs the hook under ASan or UBSan.
 
 Input classes: the hook and the spine source under `-Werror`; the hook under ASan/UBSan over a process tree that forks, execs and opens files.
 Journey: `capture` with the native tracer loaded.
+
+## Decision
+
+Architect, round 151 (2026-09-29):
+
+```text
+Route:     `-Wall -Wextra` in `compile_hook` and `compile_spine` (tools/bst_native_build_tracer.py:173-174). New medium test: (a) `-Wall -Wextra -Werror -O2 -c -o /dev/null` on hook.c and spine.c (0 warnings today); (b) hook.c built `-fsanitize=address,undefined -O1 -g -fno-omit-frame-pointer -DOPEN_SLOTS=16 -DOPEN_ARENA_BYTES=256`, run under `LD_PRELOAD=<cc -print-file-name=libasan.so>:<hook.so>` with `ASAN_OPTIONS=detect_leaks=0:exitcode=86`, `UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1`, over a python3 opener (60 files, copied from test_open_window_flush.py) plus `sh -c 'cat /etc/hostname; ls /'`; rc 0, no "Sanitizer" in stderr, START lines from more than one pid
+Rejected:  importing from another test file (tests do not import tests); clang/MSan (gcc is what CI has)
+Files:     tools/bst_native_build_tracer.py, tests/unit/test_the_hook_builds_clean_and_sanitized.py, tests/conftest.py (KNOWN_SKIP_REASONS: "no sanitizer runtime (libasan) for the C compiler")
+Guard:     that file; skips when `-print-file-name=libasan.so` returns a bare name
+Mutation:  `int x;` unused in hook.c reddens (a); `g_open_arena[OPEN_ARENA_BYTES] = 0;` after the memcpy at hook.c:349 reddens (b) - measured rc 86, global-buffer-overflow (the arena is static, not heap, unlike the row's text)
+Class:     product
+```
 
 ## Required Fix
 

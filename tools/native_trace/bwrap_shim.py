@@ -258,7 +258,10 @@ def element_from_build_root(path: str) -> Optional[str]:
 # integer (verified: `bst show --format '%{env}'` on a `notparallel`
 # meson element prints `JOBS: 1`, not `JOBS: -j1`) - so `JOBS` alone
 # also accepts a bare int, `MAKEFLAGS` never does.
-_JOB_SETENV_VARS = ("MAKEFLAGS", "JOBS")
+_JOB_SETENV_VARS = ("MAKEFLAGS", "JOBS", "MAXJOBS", "MAX_JOBS")
+# UX-1007: `JOBS` and these carry a bare integer; `MAKEFLAGS` never does.
+_BARE_INT_VARS = ("JOBS", "MAXJOBS", "MAX_JOBS")
+_MAXJOBS_VARS = ("MAXJOBS", "MAX_JOBS")
 _JOB_FLAG_RE = re.compile(r"-j\s*(\d+)|--jobs=(\d+)")
 _BARE_INT_RE = re.compile(r"^(\d+)$")
 
@@ -275,10 +278,10 @@ def parse_element_max_jobs(opts: list[str]) -> Optional[int]:
     for i, opt in enumerate(opts):
         if opt == "--setenv" and i + 2 < len(opts) and opts[i + 1] in _JOB_SETENV_VARS:
             value = opts[i + 2]
-            match = _JOB_FLAG_RE.search(value)
+            match = _JOB_FLAG_RE.search(value) if opts[i + 1] not in _MAXJOBS_VARS else None
             if match:
                 return int(match.group(1) or match.group(2))
-            if opts[i + 1] == "JOBS":
+            if opts[i + 1] in _BARE_INT_VARS:
                 bare = _BARE_INT_RE.match(value.strip())
                 if bare:
                     return int(bare.group(1))
@@ -364,6 +367,8 @@ def kind_job_env(kind, auth_value, ninja_probe=None, wrappers_dir=None, jobs_pre
         return _ninja_aware_env(ninja_probe, wrappers_dir, auth_value, "cmake_meson")
     if jobs_present == "MAKEFLAGS":
         return [("MAKEFLAGS", auth_value)], [], "make"
+    if jobs_present == "MAXJOBS":
+        return [("MAKEFLAGS", auth_value)], [], "maxjobs_env"
     if jobs_present:
         return _ninja_aware_env(ninja_probe, wrappers_dir, auth_value, "jobs_env")
     return [], [], JOBSERVER_UNKNOWN_KIND
@@ -376,11 +381,14 @@ def recipe_promise(opts: list[str]):
     """UX-1003: `"JOBS"`, `"MAKEFLAGS"` or `None` - which of BuildStream's own
     `--setenv`s promises this sandbox spends a width, for a kind the shim cannot
     name (a shared `build-root` hides it). `JOBS` wins; a `MAKEFLAGS` counts
-    only with a `-jN`."""
+    only with a `-jN`; UX-1007: a bare-integer `MAXJOBS`/`MAX_JOBS` reads `"MAXJOBS"`."""
     if _setenv_value(opts, "JOBS") is not None:
         return "JOBS"
     if _MAKEFLAGS_JOBS_RE.search(_setenv_value(opts, "MAKEFLAGS") or ""):
         return "MAKEFLAGS"
+    for name in _MAXJOBS_VARS:
+        if _BARE_INT_RE.match((_setenv_value(opts, name) or "").strip()):
+            return "MAXJOBS"
     return None
 
 

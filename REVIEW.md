@@ -66,6 +66,7 @@ nobody finishes reading is a review that did not happen.
   enforces. If CI can catch it, CI should, and a finding about it is a
   finding about the wrong layer.
 - Prose style in a task file's Outcome. It is a record, not an essay.
+- Docstring layout: the Google convention (`Args:`, `Returns:`) is held by `dev_baseline.py`, not by review.
 
 ## The threshold
 

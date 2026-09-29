@@ -7,7 +7,7 @@
                                                 # matches now
 
 Two producers feed one list: ruff (json) for S, C901, PLR0912, PLR0913,
-PLR0915, SIM115 - not in the gate's own `--select` (`pyproject.toml`) -
+PLR0915, SIM115, D2-D4 (Google convention, `pyproject.toml`) - not in the gate's own `--select` (`pyproject.toml`) -
 and pyright (`--outputjson`, its own errors) over bga, tools,
 .claude/hooks (never tests - `tests/**` is a different ledger). A
 finding's identity is `(tool, rule, file, the source line's text with
@@ -36,7 +36,9 @@ import tokenize
 import dev_env_check
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
-FAMILIES = ("S", "C901", "PLR0912", "PLR0913", "PLR0915", "SIM115")
+FAMILIES = ("S", "C901", "PLR0912", "PLR0913", "PLR0915", "SIM115", "D2", "D3", "D4")
+#: pydocstyle layout rules that conflict with the house register (UX-1119).
+IGNORED = ("D205", "D209", "D212")
 DEFAULT_PATHS = ("bga", "tools", ".claude/hooks")
 DEFAULT_BASELINE = REPO / "tests" / "quality_baseline.json"
 
@@ -72,6 +74,7 @@ def version_verdict(reported, lock_text):
 def ruff_findings(root, paths, families):
     cmd = [sys.executable, "-m", "ruff", "check", *[str(p) for p in paths],
            "--select", ",".join(sorted(families)),
+           "--ignore", ",".join(IGNORED),
            "--output-format", "json"]
     run = subprocess.run(cmd, cwd=root, capture_output=True,
                           text=True, check=False)

@@ -42,3 +42,23 @@ Writing missing docstrings; the register cap.
 names `google` and that `dev_baseline.py --check` reads the `D` family.
 Mutation: a new function in `bga/` with an Args section in another style
 reds the baseline check.
+
+## Outcome
+
+**Gap measured.** `python3 -m ruff check --select D bga tools tests` on
+`d3ef4bf6` (Decision's reading): D205 5,115, D209 4,311; no convention named.
+
+**Close measured.** `pyproject.toml` `[tool.ruff.lint.pydocstyle]
+convention = "google"`; `dev_baseline.py` FAMILIES gain D2/D3/D4, `IGNORED =
+(D205, D209, D212)` passed as `--ignore`; baseline 576 -> 598 (22 forced by
+`--reason UX-1119`: D301 9, D403 5, D415 4, D417 3, D200 1); `REVIEW.md` names
+the convention in one line. `tests/` stays out (`DEFAULT_PATHS`). The
+guard's scratch tree carries only the real `[tool.ruff.lint.pydocstyle]`
+section, not the whole pyproject (the suppression census reads a copied one).
+UX-1112's own S603 (`tools/dev_lint_docs.py`) was forced under `UX-1112` in
+that commit.
+
+| Mutation | Reddened | Count |
+|---|---|---|
+| `D4` out of FAMILIES | families test, D417 scratch case | 2 failed, 3 passed |
+| `convention = "numpy"` | names-google test, D417 scratch case | 2 failed, 3 passed |

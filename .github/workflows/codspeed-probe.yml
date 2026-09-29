@@ -11,7 +11,7 @@ name: CodSpeed runner probe
 on:
   workflow_dispatch:
   push:
-    branches: [claude/project-thread-bim9mu]
+    branches: [claude/project-thread-bim9mu, claude/project-thread-pxl1wp]
     paths: [.github/workflows/codspeed-probe.yml]
 
 permissions:

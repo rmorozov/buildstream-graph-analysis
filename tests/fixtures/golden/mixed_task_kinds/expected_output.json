@@ -1261,10 +1261,10 @@
         }
     ],
     "document_shape": {
-        "leaves": 847,
+        "leaves": 849,
         "deepest_depth": 7,
         "deepest_path": "findings.[].evidence.steps.[].entering.[]",
-        "deeper_than_three": 439,
-        "deeper_than_three_share": 0.5182998819362455
+        "deeper_than_three": 440,
+        "deeper_than_three_share": 0.5182567726737338
     }
 }

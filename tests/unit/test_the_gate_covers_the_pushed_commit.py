@@ -240,7 +240,9 @@ class TestTheEscapeHatch:
 PUSH_CHECKS = ("pymarkdown", "ruff", "dev_baseline.py", "dev_touching.py",
                "dev_sizes.py", "dev_close_task.py")
 
-STUB = '#!/bin/sh\ncase "${0##*/} $*" in *"$BGA_FAIL_ON"*) exit 1;; esac\nexit 0\n'
+#: The changed-docs selector prints one file, so `xargs -r` has something to lint.
+STUB = ('#!/bin/sh\ncase "$*" in *dev_lint_docs*) printf "README.md\\0";; esac\n'
+        'case "${0##*/} $*" in *"$BGA_FAIL_ON"*) exit 1;; esac\nexit 0\n')
 
 #: A pytest run under `make` (CI's steps) exports these; a child make
 #: that inherits them prints `Leaving directory` as its last line.

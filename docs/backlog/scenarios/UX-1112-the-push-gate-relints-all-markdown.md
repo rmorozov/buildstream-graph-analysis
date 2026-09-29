@@ -44,3 +44,23 @@ push-check's docs half is green; flip which is changed and it reds; touch
 `.pymarkdown.json` and it reds. Mutation: make the selector return every
 file; the first case reddens. The Outcome carries push-check's wall before
 and after on one tree.
+
+## Outcome
+
+**Gap measured.** `time make lint-docs` on this tree (`a1749c52`, 4 cores,
+other tracks running): real 3m02.9s, user 2m49.6s; `push-check` ran all of it.
+
+**Close measured.** `time python3 tools/dev_lint_docs.py --base d3ef4bf6 |
+xargs -0 -r python3 -m pymarkdown --config .pymarkdown.json scan` (this
+branch's changed docs): real 0.57s. `make lint` and CI keep the full scan
+(`lint: lint-docs lint-code`). Done as decided: `tools/dev_lint_docs.py`,
+`lint-code` split out, `push-check: records lint-code` plus the changed-docs
+line, `.pymarkdown.json` change or an unresolvable base = full list. Guard
+`test_the_gate_covers_the_pushed_commit.py` edited: its stub `python3` prints
+one file for the selector so `xargs -r` still reaches the pymarkdown check
+(the `[pymarkdown]` case reddened otherwise). Fixing guide §6 gained a row.
+
+| Mutation | Reddened | Count |
+|---|---|---|
+| `changed()` returns every tracked doc | unchanged-broken, rename, delete cases | 3 failed, 5 passed |
+| `lint-docs` runs the selector with `--base HEAD` | `test_the_docs_lint_scans_the_tree_it_names` | 1 failed, 59 passed |

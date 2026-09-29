@@ -23,7 +23,7 @@ MAIN = {"event_name": "push", "ref": "refs/heads/main",
         "event": {"repository": {"default_branch": "main"}}}
 STATUS = re.compile(r"\b(success|failure|always|cancelled)\(")
 TOKEN = re.compile(r"\s*(?:(\d+(?:\.\d+)?)|'((?:[^']|'')*)'|"
-                   r"(==|!=|<=|>=|&&|\|\||[()!<>,.\[\]])|([A-Za-z_][\w-]*))")
+                   r"(==|!=|<=|>=|&&|\|\||[()!<>,.\[\]*])|([A-Za-z_][\w-]*))")
 
 
 def _jobs():
@@ -113,13 +113,25 @@ class _Expr:
                               args[0])
             if name == "fromJSON":
                 return json.loads(args[0])
+            if name == "contains":
+                hay, needle = args[0], str(args[1]).lower()
+                if isinstance(hay, list):
+                    return any(str(item).lower() == needle for item in hay)
+                return needle in str(hay).lower()
             return self.functions[name]()
-        value = self.context.get(name, "")
+        value, spread = self.context.get(name, ""), False
         while self._peek() == ".":
             self._take(".")
+            if self._peek() == "*":  # an object filter: `labels.*.name`
+                self._take("*")
+                value, spread = (value if isinstance(value, list) else []), True
+                continue
             key = self.tokens[self.at][3]
             self.at += 1
-            value = value.get(key, "") if isinstance(value, dict) else ""
+            if spread:
+                value = [v.get(key, "") for v in value if isinstance(v, dict)]
+            else:
+                value = value.get(key, "") if isinstance(value, dict) else ""
         return value
 
 
@@ -148,6 +160,14 @@ def _raises(step):
     return bool(lines) and lines[-1].strip() == "exit 1"
 
 
+def _continues(step, context):
+    """`continue-on-error`: a bool, or an expression (`UX-1121`)."""
+    value = step.get("continue-on-error", False)
+    if isinstance(value, str):
+        return bool(_Expr(value, context, {}).value())
+    return value is True
+
+
 def _cell(job, python, red, github, tmp_path):
     """One matrix cell: its result, and the outputs the runner sends."""
     steps, failed = {}, False
@@ -172,7 +192,7 @@ def _cell(job, python, red, github, tmp_path):
                                check=True)
                 outputs = dict(line.split("=", 1) for line in
                                out.read_text(encoding="utf-8").splitlines())
-        excused = outcome == "failure" and step.get("continue-on-error") is True
+        excused = outcome == "failure" and _continues(step, context)
         failed = failed or (outcome == "failure" and not excused)
         if "id" in step:
             steps[step["id"]] = {"outcome": outcome, "outputs": outputs,

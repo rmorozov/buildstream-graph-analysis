@@ -78,6 +78,8 @@ dev = [
     # break a suite under xdist. A dev dependency: nothing a user
     # installs needs it.
     "pytest-xdist>=3.5",
+    # UX-1111: a hang fails the one test and names it, inside the one run.
+    "pytest-timeout==2.4.0",
     # UX-712: the size ledger's duplicate-block count -
     # `--enable=duplicate-code`, pip-installable and the only one of
     # the tried tools with no CI-side account needed. Unpinned above
@@ -227,6 +229,9 @@ pythonpath = ["tests"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
 addopts = "-v --tb=short"
+# UX-1111: per test, 4.2x the slowest whole file (71.6 s); replaces the small-tier backstop.
+timeout = 300
+timeout_method = "signal"
 markers = [
     "slow: full-scale tests (e.g. N=100 determinism runs) not needed on every fast pass",
     # UX-84: the tier that needs a real BuildStream (plus, for two of

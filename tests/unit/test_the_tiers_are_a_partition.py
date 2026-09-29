@@ -48,15 +48,9 @@ class TestTheListsNameRealFiles:
         both = sorted(set(tiers.LARGE) & set(tiers.MEDIUM))
         assert both == [], f"listed in both LARGE and MEDIUM: {both}"
 
-    def test_the_floors_are_ordered_and_the_backstop_clears_them(self):
+    def test_the_floors_are_ordered(self):
+        # `UX-1111` retired the parallel backstop this also checked.
         assert tiers.MEDIUM_FLOOR_S < tiers.LARGE_FLOOR_S
-        # `UX-421`: the backstop no longer has to be *reachable* by one
-        # large file - the per-file rule catches that, and this catches
-        # a hang. It still has to be above the tier plus such a file,
-        # or it would red on the case the other instrument is reporting
-        # and bury the legible message under a timeout.
-        assert (tiers.SMALL_TIER_BACKSTOP_S
-                > tiers.SMALL_TIER_CI_SLOW_S + tiers.LARGE_FLOOR_S)
 
 
 #: `UX-403`: what a file has to be listed *for*.
@@ -175,12 +169,10 @@ class TestTheTiersPartitionTheSuite:
 
 
 class TestTheDefaultTierStaysFast:
-    #: `UX-363`: the small tier runs twice in CI and each run has its
-    #: own budget. The pairs are (what the workflow line looks like,
-    #: the constant it has to equal).
-    STEPS = ((r"timeout (\d+) make test-small", "SMALL_TIER_BACKSTOP_S"),
-             (r"PYTEST_XDIST= timeout (\d+) make test-small",
-              "SMALL_TIER_BACKSTOP_1P_S"))
+    #: `UX-363`: (what the workflow line looks like, the constant it
+    #: has to equal). `UX-1111` retired the parallel step's pair.
+    STEPS = ((r"PYTEST_XDIST= timeout (\d+) make test-small",
+              "SMALL_TIER_BACKSTOP_1P_S"),)
 
     @staticmethod
     def _workflow():
@@ -219,27 +211,17 @@ class TestTheDefaultTierStaysFast:
             f"CI budgets {budget.group(1)}s, tests/tiers.py declares "
             f"{declared}s as {constant} - two copies of one number")
 
-    def test_the_two_steps_are_different_lines_of_the_workflow(self):
-        """The parallel step is matched by a prefix of the
-        single-process step's line, so a regex that is too loose reads
-        one line twice and calls it agreement. This is what makes the
-        clause above a pair rather than the same check run twice.
-
-        `UX-421` had to rewrite it: the two backstops are deliberately
-        the *same* number now, so comparing the values no longer
-        distinguishes anything and the old clause would have passed
-        while reading one line twice. The positions are what differ.
-        """
-        workflow = self._workflow()
-        where = {name: re.search(pattern, workflow).start()
-                 for pattern, name in self.STEPS}
-        assert len(set(where.values())) == 2, (
-            f"both patterns matched the same workflow line: {where} - "
-            f"the single-process step is going unchecked")
+    def test_the_small_tier_runs_once_in_the_workflow(self):
+        """`UX-1111`: the parallel backstop step is retired; a second
+        `make test-small` line would be a step no constant sizes."""
+        lines = [line for line in self._workflow().splitlines()
+                 if re.search(r"\bmake test-small\b", line)
+                 and not line.lstrip().startswith("#")]
+        assert len(lines) == 1, lines
+        assert "PYTEST_XDIST= timeout" in lines[0], lines[0]
 
     @pytest.mark.parametrize("slowest,backstop", (
-        ("SMALL_TIER_CI_SLOW_S", "SMALL_TIER_BACKSTOP_S"),
-        ("SMALL_TIER_CI_SLOW_1P_S", "SMALL_TIER_BACKSTOP_1P_S")))
+        ("SMALL_TIER_CI_SLOW_1P_S", "SMALL_TIER_BACKSTOP_1P_S"),))
     def test_each_backstop_is_far_above_normal_running(self, slowest,
                                                        backstop):
         """`UX-421` retired `UX-363`'s inequality:
@@ -288,8 +270,8 @@ class TestTheDefaultTierStaysFast:
         assert len(small) <= ceiling, (
             f"the small tier is {len(small)} files against the "
             f"{tiers.SMALL_TIER_POPULATION_FILES} the backstops were sized "
-            f"on. Re-read SMALL_TIER_CI_SLOW_S and _1P_S off a CI run's "
-            f"two small-tier steps, re-size the backstops, and set "
+            f"on. Re-read SMALL_TIER_CI_SLOW_1P_S off a CI run's "
+            f"single-process step, re-size its backstop, and set "
             f"SMALL_TIER_POPULATION_FILES to what you measured on")
 
     def test_the_per_file_rule_is_what_catches_a_large_file_now(self):

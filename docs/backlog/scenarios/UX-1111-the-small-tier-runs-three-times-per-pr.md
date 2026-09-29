@@ -2,7 +2,7 @@
 
 **Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** quality gates audit (`docs/audits/quality-gates-2026-09-29.md`, 2026-09-29) | **Serves:** the implementing session | **Topic:** guards | **Area:** tools | **Shape:** mechanical | **Reading:** runner:test
 
-**Guard:** none — named test_a_hang_is_caught_inside_the_one_run.py, absent from tests/
+**Guard:** test_a_hang_is_caught_inside_the_one_run.py
 
 ## Motivation
 
@@ -44,3 +44,57 @@ sleeps past the ceiling, run in a subprocess, fails with the timeout's
 message and its node id. Mutation: remove the `timeout` setting; the
 subprocess hangs to the harness limit and the guard reddens. The Outcome
 carries `test (3.12)`'s wall on three PR runs against 1,300 s.
+
+## Outcome
+
+### The gap, measured
+
+```text
+$ python3 A-1111-gap.py <ci.yml>   (the `make test`/`test-small` steps whose if: holds, replay engine)
+A-ci-base.yml pull_request 3.12: ['Test (small tier, with a backstop)', 'Test (with a timing report)', 'Test (small tier, single process)']
+A-ci-base.yml push 3.12: ['Test (small tier, with a backstop)', 'Test (with a timing report)', 'Test (small tier, single process)']
+```
+
+### The close, measured
+
+```text
+ci.yml pull_request 3.12: ['Test (with a timing report)']
+ci.yml push 3.12: ['Test (with a timing report)', 'Test (small tier, single process)']
+$ uv pip compile pyproject.toml --extra dev -o requirements.lock -q; git diff --stat requirements.lock
+ requirements.lock | 3 +++      (pytest-timeout==2.4.0 and its `via` line; nothing else moved)
+$ the 12 named ci.yml guards + this round's four + this file + newest-python, -n 2
+301 passed in 20.64s
+$ the lock/pyproject readers + tier-map readers (8 files), -n 2
+390 passed in 32.79s
+```
+
+`pytest-timeout==2.4.0` (latest on the index) joins `dev`; `timeout = 300`,
+`timeout_method = "signal"` in `[tool.pytest.ini_options]`. The backstop step
+is deleted; the single-process step is `if: github.event_name == 'push'` and
+keeps `timeout 900`. `tests/tiers.py` retires `SMALL_TIER_BACKSTOP_S`,
+`SMALL_TIER_CI_SLOW_S` and `SMALL_TIER_CI_FAST_S` (the parallel step's third
+figure, read by nothing). `test_the_tiers_are_a_partition.py` loses the
+parallel pair; its two-lines clause becomes `test_the_small_tier_runs_once_in_the_workflow`.
+`test_a_pull_request_runs_the_newest_python_only.py` names the single-process
+step in `PUSH_ONLY_STEPS`. `test (3.12)`'s wall on three PR runs is not read:
+nothing is pushed from a track.
+
+### Mutations verified red and reverted (7)
+
+| # | mutation | reddened |
+|---|---|---|
+| A | remove `timeout = 300` from pyproject | 1 failed: `test_the_suite_declares_a_per_test_ceiling` |
+| B | `-p no:timeout` in the guard's subprocess | 1 failed: the sleeper ran to the 20 s harness limit |
+| C | the sleeper sleeps 0 s | 1 failed: returncode 0, no `Timeout` |
+| D | a `timeout 300 make test-small` step restored in ci.yml | 1 failed: `test_the_small_tier_runs_once_in_the_workflow` |
+| E | single-process step `if: always()` | 1 failed: `test_the_single_process_small_tier_runs_on_push_only` |
+| F | single-process step's `if:` dropped | 1 failed: the same |
+| G | single-process step `if: github.event_name == 'pull_request'` | 1 failed: the same |
+
+Restored from a copy: 2 passed. Mutations A-C on this file, D on the tiers guard.
+E survived the first draft (verifier: 23 passed) - `PUSH_ONLY_STEPS` exempts the
+step by name; the push-only clause was added to
+`test_a_pull_request_runs_the_newest_python_only.py` (5 passed).
+
+**Deviation:** `SMALL_TIER_CI_FAST_S` retired beside the two the Decision
+named; it described the deleted step and nothing read it.

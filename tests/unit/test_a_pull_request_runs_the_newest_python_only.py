@@ -60,6 +60,8 @@ PUSH_ONLY_STEPS = (
     "Test (with a coverage-derived touching map)",
     "This run's touching map, for adopting",
     "Upload it, so the adopt job can merge it",
+    # `UX-1111`: a PR's hang is pytest-timeout's, inside its one suite run.
+    "Test (small tier, single process)",
 )
 
 
@@ -124,3 +126,14 @@ def test_every_pull_request_step_moves_to_the_cell_it_keeps():
         assert _holds(condition, _pr_context(newest), _status(["success"])), (
             f"{step.get('name')!r} holds on some push cell but not on "
             f"(pull_request, {newest!r}), and it is not in PUSH_ONLY_STEPS")
+
+
+def test_the_single_process_small_tier_runs_on_push_only():
+    """`UX-1111`: named in `PUSH_ONLY_STEPS`, which exempts it above - so
+    its own `if:` is read here, per event."""
+    (step,) = [s for s in _jobs()["test"]["steps"]
+               if s.get("name") == "Test (small tier, single process)"]
+    newest = max(_classifiers(), key=_version_key)
+    ok = _status(["success"])
+    assert not _holds(step.get("if"), _pr_context(newest), ok), step.get("if")
+    assert _holds(step.get("if"), _push_context(newest), ok), step.get("if")

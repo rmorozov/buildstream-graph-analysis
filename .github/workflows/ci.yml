@@ -1841,6 +1841,24 @@ jobs:
             "$OUT/plane2-off.json" "$OUT/plane2-auto.json" \
             giant.bst "$OUT/capture-auto.txt"
 
+      - name: 11's artifact log, read back (UX-1013)
+        # Before the calibration, which deletes giant.bst's artifact; reads, never gates.
+        if: always()
+        run: |
+          PROJ=examples/11-serial-giant
+          OUT=artifacts/11-serial-giant
+          export XDG_CONFIG_HOME="$GITHUB_WORKSPACE/$PROJ/xdg_config_home"
+          mkdir -p "$OUT"
+          for element in giant.bst leaf-a.bst; do
+            f="$OUT/artifact-log-$element.txt"
+            rc=0; (cd "$PROJ" && bst artifact log "$element") > "$f" 2>&1 || rc=$?
+            stamps=$(grep -cE '\[[0-9]{2}:[0-9]{2}:[0-9]{2}\]' "$f" || true)
+            echo "::notice title=UX-1013 $element::rc=$rc lines=$(wc -l < "$f") elapsed-stamps=$stamps | first: $(head -3 "$f" | cut -c1-120 | paste -sd'|' -) | last: $(tail -3 "$f" | cut -c1-120 | paste -sd'|' -)"
+          done
+          f="$OUT/artifact-log-deps-none.txt"
+          rc=0; (cd "$PROJ" && bst artifact log --deps none giant.bst) > "$f" 2>&1 || rc=$?
+          echo "::notice title=UX-1013 --deps none::rc=$rc lines=$(wc -l < "$f") | $(head -2 "$f" | cut -c1-160 | paste -sd'|' -)"
+
       - name: Calibrate the runner's width and run the pinned 2x2 arm (UX-1004)
         # `UX-1110`: gates nothing, so a PR pays for it only under the `jobserver` label.
         if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'jobserver')
@@ -1857,6 +1875,17 @@ jobs:
           bga compare "$OUT/run-pinned" "$OUT/run-auto" | tee "$OUT/compare-pinned-vs-auto.txt"
           python3 "$PROJ/calibrate_width.py" "$PROJ" 1 2 4 6 8 | tee "$OUT/calibration.txt"
           while read -r line; do echo "::notice::calibration: $line"; done < "$OUT/calibration.txt"
+
+      - name: The builder and pool recommendation, read from 11's auto run (UX-1005)
+        # The knee, when the calibration above ran (`jobserver` label or a push), sizes the pool.
+        if: always()
+        run: |
+          OUT=artifacts/11-serial-giant
+          test -d "$OUT/run-auto" || { echo "::warning title=UX-1005::no $OUT/run-auto to analyze"; exit 0; }
+          KNEE=$(sed -n 's/^knee: width \([0-9]*\).*/\1/p' "$OUT/calibration.txt" 2>/dev/null | head -1)
+          BGA_CALIBRATED_CORES="$KNEE" bga analyze "$OUT/run-auto" --format text > "$OUT/analyze-auto.txt" 2>&1 || true
+          echo "::notice title=UX-1005::knee=${KNEE:-none} | $(grep -E '^(Builders|  Ready-set width|Pool size)' "$OUT/analyze-auto.txt" | cut -c1-140 | paste -sd'|' -)"
+          echo "::notice title=UX-1012::$(grep -F giant.bst "$OUT/analyze-auto.txt" | head -6 | cut -c1-160 | paste -sd'|' -)"
 
       - name: Build + capture 12-junctioned (UX-872)
         # UX-869/UX-871 were real first-day defects on the user's own

@@ -58,6 +58,9 @@ A-ci-base.yml {'bst-smoke': ['changes', 'test'], 'bst-tests': ['bst-smoke', 'cha
 ```text
 $ same, on the branch
 ci.yml {'bst-smoke': ['changes'], 'bst-tests': ['bst-smoke', 'changes'], 'bst-examples': ['bst-smoke', 'changes']}
+```
+
+```text
 $ the 12 named ci.yml guards + UX-1108's + this file + newest-python + generated-project, -n 2
 300 passed in 26.68s
 ```

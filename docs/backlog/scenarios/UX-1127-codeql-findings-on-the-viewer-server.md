@@ -1,6 +1,6 @@
 # UX-1127: the viewer's pre-flight echoes any header list, and CodeQL reads the asset path as the request's
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-198 | **Found by:** CodeQL on PR #301 (`a49e34a3`), Ruslan took it (2026-09-29 08:51) | **Serves:** anyone running `bga view` on a shared host | **Topic:** viewer | **Area:** tools | **Shape:** judgement | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-198 | **Found by:** CodeQL on PR #301 (`a49e34a3`), Ruslan took it (2026-09-29 08:51) | **Serves:** anyone running `bga view` on a shared host | **Topic:** viewer | **Area:** tools | **Shape:** judgement | **Reading:** container
 
 **Guard:** test_the_perfetto_handoff.py
 
@@ -14,6 +14,11 @@ medium), and `test_the_report_you_can_attach.py` accepted any URL
 also is. The `_asset` path alert reads a name already on the `ASSETS`
 allowlist. The `bga/blast.py` alert is a CLI argument naming the
 user's own file, which is the command's purpose.
+
+## Decomposition
+
+Input classes: a token list, one token, a CRLF, an obs-fold continuation, a space, an empty value.
+Journey: `bga view` serving a trace to Perfetto's pre-flight.
 
 ## Required Fix
 

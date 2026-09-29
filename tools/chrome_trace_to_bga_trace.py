@@ -19,6 +19,7 @@ this conversion possible without message-text guessing), which is
 BuildStream's own real action word (track/fetch/build/pull/push) taken
 straight from the log line's own `[hash][action:element]` bracket.
 """
+
 import argparse
 import json
 import sys
@@ -173,11 +174,10 @@ def invocation_wall_clock(events: Sequence[dict]):
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="Convert Chrome Trace Event JSON into trace/v9 JSON."
+    parser = argparse.ArgumentParser(description="Convert Chrome Trace Event JSON into trace/v9 JSON.")
+    parser.add_argument(
+        "chrome_trace_json", help="Path to a Chrome Trace JSON file (from tools/bst_log_to_chrome_trace.py)."
     )
-    parser.add_argument("chrome_trace_json", help="Path to a Chrome Trace JSON file "
-                         "(from tools/bst_log_to_chrome_trace.py).")
     parser.add_argument("output_json", help="Path to write the trace/v9 JSON to.")
     args = parser.parse_args()
 
@@ -190,8 +190,7 @@ def main() -> int:
     with open(args.output_json, "w", encoding="utf-8") as f:
         json.dump(trace, f, indent=2)
 
-    print(f"Wrote trace.json with {len(spans)} span(s) to {args.output_json}",
-          file=sys.stderr)
+    print(f"Wrote trace.json with {len(spans)} span(s) to {args.output_json}", file=sys.stderr)
     if dropped:
         print(f"Note: {len(dropped)} event(s) dropped:")
         for reason in dropped:

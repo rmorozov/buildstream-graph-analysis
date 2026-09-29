@@ -11,6 +11,7 @@ resolves inside the same document, every quoted value equals the field
 it cites, the rule's threshold is the live constant, and the two
 renderers print the object rather than each wording it.
 """
+
 import json
 import os
 import shutil
@@ -30,9 +31,11 @@ needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 
 def _bga(args):
     result = subprocess.run(
-        [sys.executable, "-c",
-         f"from bga.cli import main; raise SystemExit(main({args!r}))"],
-        capture_output=True, text=True, cwd=os.getcwd())
+        [sys.executable, "-c", f"from bga.cli import main; raise SystemExit(main({args!r}))"],
+        capture_output=True,
+        text=True,
+        cwd=os.getcwd(),
+    )
     assert result.returncode == 0, result.stderr
     return result.stdout
 
@@ -71,8 +74,8 @@ class TestTheReferencesResolve:
                 live = provenance.resolve(document, entry["path"])
                 if live is provenance.UNRESOLVED or live != entry["value"]:
                     wrong.append(
-                        f"{record['claim']}: {entry['path']} quoted "
-                        f"{entry['value']!r}, document holds {live!r}")
+                        f"{record['claim']}: {entry['path']} quoted {entry['value']!r}, document holds {live!r}"
+                    )
         assert wrong == [], wrong
 
     def test_every_claim_in_the_document_carries_one(self, synthetic):
@@ -88,13 +91,11 @@ class TestTheReferencesResolve:
             assert action["finding_id"] in explained, action
 
     def test_a_dangling_path_is_published_as_unresolved_not_dropped(self):
-        """"We could not read it" and "there was nothing there" are
+        """ "We could not read it" and "there was nothing there" are
         different claims, and the record has to keep them apart."""
-        record = provenance.record({"id": "confidence"}, "confidence",
-                                   "finding", {"confidence": {}})
+        record = provenance.record({"id": "confidence"}, "confidence", "finding", {"confidence": {}})
         assert [e["resolved"] for e in record["evidence"]] == [False, False, False]
-        assert provenance.unresolved_references(
-            {"findings": [{"id": "confidence"}], "provenance": [record]})
+        assert provenance.unresolved_references({"findings": [{"id": "confidence"}], "provenance": [record]})
 
 
 class TestTheRuleIsTheLiveConstant:
@@ -137,20 +138,20 @@ class TestTheRuleIsTheLiveConstant:
 class TestTheTableCoversTheFindings:
     def _finding_ids(self):
         import re
+
         source = open("bga/findings.py", encoding="utf-8").read()
         return set(re.findall(r"_finding\(\s*\n?\s*'([a-z0-9-]+)'", source))
 
     def test_every_finding_the_pipeline_emits_can_be_explained(self):
         missing = sorted(self._finding_ids() - set(provenance.claim_ids()))
         assert missing == [], (
-            f"finding(s) with no provenance entry: {missing} - they would "
-            f"publish a record with no rule and no evidence")
+            f"finding(s) with no provenance entry: {missing} - they would publish a record with no rule and no evidence"
+        )
 
     def test_the_table_names_no_finding_that_does_not_exist(self):
         """The other direction: a renamed finding leaves its entry
         behind, and the entry then explains nothing forever."""
-        stale = sorted(set(provenance.claim_ids())
-                       - self._finding_ids() - {"diagnosis"})
+        stale = sorted(set(provenance.claim_ids()) - self._finding_ids() - {"diagnosis"})
         assert stale == [], f"provenance entries for no such finding: {stale}"
 
     def test_the_mesh_threshold_is_named_rather_than_a_literal(self):
@@ -161,7 +162,10 @@ class TestTheTableCoversTheFindings:
         assert findings_mod.MESH_ZERO_SLACK_SHARE == 0.5
         record = provenance.record(
             {"id": "mesh-graph", "evidence": {"zero_slack_share": 0.62}},
-            "mesh-graph", "finding", {"elements": {"zero_slack_share": 0.62}})
+            "mesh-graph",
+            "finding",
+            {"elements": {"zero_slack_share": 0.62}},
+        )
         assert record["rule"]["name"] == "MESH_ZERO_SLACK_SHARE"
         assert record["rule"]["threshold"] == 0.5
 
@@ -173,8 +177,7 @@ class TestTheTableCoversTheFindings:
         `capacity_recommendation` was the other one until `UX-275`
         published it; it is checked below instead, from the other
         direction."""
-        record = provenance.record(
-            {"id": "memory-envelope"}, "memory-envelope", "finding", {})
+        record = provenance.record({"id": "memory-envelope"}, "memory-envelope", "finding", {})
         assert record["unpublished_inputs"]
 
     def test_a_claim_whose_fields_were_published_cites_them(self):
@@ -182,20 +185,19 @@ class TestTheTableCoversTheFindings:
         label outlives the defect: a chain that still says "computed,
         not published" about a field a consumer can now read is a lie
         that reads as candour."""
-        payload = {"capacity_recommendation": {
-            "builders": 4,
-            "binding_constraint": "graph",
-            "recommended_builders": 2,
-            "cores_busy": 1.6}}
-        record = provenance.record({"id": "capacity-recommendation"},
-                                   "capacity-recommendation", "finding",
-                                   payload)
+        payload = {
+            "capacity_recommendation": {
+                "builders": 4,
+                "binding_constraint": "graph",
+                "recommended_builders": 2,
+                "cores_busy": 1.6,
+            }
+        }
+        record = provenance.record({"id": "capacity-recommendation"}, "capacity-recommendation", "finding", payload)
         assert record["unpublished_inputs"] == []
         cited = {entry["path"]: entry for entry in record["evidence"]}
-        assert cited["capacity_recommendation.binding_constraint"]["value"] \
-            == "graph"
-        assert cited["capacity_recommendation.recommended_builders"][
-            "resolved"], cited
+        assert cited["capacity_recommendation.binding_constraint"]["value"] == "graph"
+        assert cited["capacity_recommendation.recommended_builders"]["resolved"], cited
         assert all(entry["resolved"] for entry in record["evidence"]), record
 
 
@@ -225,8 +227,8 @@ class TestATopActionPointsRatherThanCopies:
 
     def test_a_pointer_that_dangles_is_reported(self):
         assert provenance.unresolved_references(
-            {"provenance": [], "headline": {"top_actions": [
-                {"finding_id": "no-such-finding"}]}})
+            {"provenance": [], "headline": {"top_actions": [{"finding_id": "no-such-finding"}]}}
+        )
 
 
 @pytest.fixture(scope="module")
@@ -255,29 +257,32 @@ class TestTheComparisonCitesTheCandidatesChain:
         record = comparison.to_dict()["candidate_diagnosis"]["provenance"]
         assert record["document"] == "analyze/v6"
         for entry in record["evidence"]:
-            assert provenance.resolve(comparison.to_dict(),
-                                      entry["path"]) is provenance.UNRESOLVED
+            assert provenance.resolve(comparison.to_dict(), entry["path"]) is provenance.UNRESOLVED
             assert provenance.resolve(golden, entry["path"]) == entry["value"]
 
-    def test_the_ci_comment_quotes_the_record_and_invents_nothing(
-            self, comparison):
+    def test_the_ci_comment_quotes_the_record_and_invents_nothing(self, comparison):
         import argparse
 
         from bga.report.ci_comment import render_ci_comment
 
-        comment = render_ci_comment(comparison, argparse.Namespace(
-            fail_on_regression=False, max_addition_stretch=None,
-            min_efficiency=None, fail_on_efficiency_regression=False,
-            fail_on_cache_regression=False, fail_on_low_confidence=False))
+        comment = render_ci_comment(
+            comparison,
+            argparse.Namespace(
+                fail_on_regression=False,
+                max_addition_stretch=None,
+                min_efficiency=None,
+                fail_on_efficiency_regression=False,
+                fail_on_cache_regression=False,
+                fail_on_low_confidence=False,
+            ),
+        )
         record = comparison.to_dict()["candidate_diagnosis"]["provenance"]
         assert record["rule"]["sentence"] in comment
-        assert f"`{record['rule']['name']}` = `{record['rule']['threshold']}`" \
-            in comment
+        assert f"`{record['rule']['name']}` = `{record['rule']['threshold']}`" in comment
         for entry in record["evidence"]:
             assert f"`{entry['path']}` | {entry['value']}" in comment
 
-    def test_moving_the_threshold_moves_what_the_comment_prints(
-            self, tmp_path, monkeypatch):
+    def test_moving_the_threshold_moves_what_the_comment_prints(self, tmp_path, monkeypatch):
         """A literal `0.9` in the comment passes every assertion above,
         because 0.9 is what the constant holds today. Only moving the
         constant tells a citation from a copy - the same reason the
@@ -293,10 +298,17 @@ class TestTheComparisonCitesTheCandidatesChain:
 
         def comment():
             result = compare_runs(Path(GOLDEN), Path(GOLDEN))
-            return render_ci_comment(result, argparse.Namespace(
-                fail_on_regression=False, max_addition_stretch=None,
-                min_efficiency=None, fail_on_efficiency_regression=False,
-                fail_on_cache_regression=False, fail_on_low_confidence=False))
+            return render_ci_comment(
+                result,
+                argparse.Namespace(
+                    fail_on_regression=False,
+                    max_addition_stretch=None,
+                    min_efficiency=None,
+                    fail_on_efficiency_regression=False,
+                    fail_on_cache_regression=False,
+                    fail_on_low_confidence=False,
+                ),
+            )
 
         assert "`CHAIN_BOUND_RATIO` = `0.9`" in comment()
         monkeypatch.setattr(findings_mod, "CHAIN_BOUND_RATIO", 0.42)
@@ -309,29 +321,32 @@ class TestTheComparisonCitesTheCandidatesChain:
 
         from bga.report.ci_comment import render_ci_comment
 
-        comment = render_ci_comment(comparison, argparse.Namespace(
-            fail_on_regression=False, max_addition_stretch=None,
-            min_efficiency=None, fail_on_efficiency_regression=False,
-            fail_on_cache_regression=False, fail_on_low_confidence=False))
+        comment = render_ci_comment(
+            comparison,
+            argparse.Namespace(
+                fail_on_regression=False,
+                max_addition_stretch=None,
+                min_efficiency=None,
+                fail_on_efficiency_regression=False,
+                fail_on_cache_regression=False,
+                fail_on_low_confidence=False,
+            ),
+        )
         opened = comment.index("<details><summary>Why the candidate")
         closed = comment.index("</details>", opened)
-        assert comment.index(
-            "The critical path is", opened) < closed
+        assert comment.index("The critical path is", opened) < closed
 
 
 class TestThePathGrammar:
     def test_a_list_entry_is_selected_by_key_not_by_position(self):
         """`violations` order is not a contract. `[0]` would be correct
         until the day a second violation is prepended."""
-        document = {"violations": [{"type": "clock_skew"},
-                                   {"type": "build_failed", "failed_count": 4}]}
-        assert provenance.resolve(
-            document, "violations[type=build_failed].failed_count") == 4
+        document = {"violations": [{"type": "clock_skew"}, {"type": "build_failed", "failed_count": 4}]}
+        assert provenance.resolve(document, "violations[type=build_failed].failed_count") == 4
 
     def test_an_index_walks_a_list(self):
         document = {"latent_heavies": [{"duration_us": 7}]}
-        assert provenance.resolve(
-            document, "latent_heavies[0].duration_us") == 7
+        assert provenance.resolve(document, "latent_heavies[0].duration_us") == 7
 
     def test_a_missing_key_is_unresolved_and_not_none(self):
         assert provenance.resolve({"a": {"b": None}}, "a.b") is None
@@ -353,8 +368,7 @@ class TestBothRenderersReadTheSameObject:
 
     def test_the_chain_appears_under_the_claim_it_explains(self):
         explained = _bga(["analyze", GOLDEN, "--explain"]).splitlines()
-        titles = [i for i, line in enumerate(explained)
-                  if line.startswith("  Confidence: ")]
+        titles = [i for i, line in enumerate(explained) if line.startswith("  Confidence: ")]
         assert titles, explained[:40]
         assert explained[titles[0] + 1].strip().startswith("why:")
 
@@ -363,9 +377,9 @@ class TestBothRenderersReadTheSameObject:
 class TestThePageDrawsTheObject:
     def _render(self, record):
         script = _HARNESS.replace("__RECORD__", json.dumps(record))
-        result = subprocess.run([node, "--input-type=module", "-e", script],
-                                capture_output=True, text=True,
-                                cwd=os.getcwd(), timeout=60)
+        result = subprocess.run(
+            [node, "--input-type=module", "-e", script], capture_output=True, text=True, cwd=os.getcwd(), timeout=60
+        )
         assert result.returncode == 0, result.stderr
         return json.loads(result.stdout)
 
@@ -376,16 +390,19 @@ class TestThePageDrawsTheObject:
         """
         record = provenance.for_claim(golden, "diagnosis")
         out = self._render(record)
-        published = {str(record["rule"]["sentence"]), str(record["rule"]["name"]),
-                     str(record["rule"]["threshold"]),
-                     str(record["rule"]["module"]),
-                     # `UX-357`: three more the block draws, and each is
-                     # a field of the same record rather than a reading
-                     # of it.
-                     str(record["rule"].get("observed_path")),
-                     str(record["rule"].get("comparison")),
-                     str(record.get("document")),
-                     str(record.get("claim"))}
+        published = {
+            str(record["rule"]["sentence"]),
+            str(record["rule"]["name"]),
+            str(record["rule"]["threshold"]),
+            str(record["rule"]["module"]),
+            # `UX-357`: three more the block draws, and each is
+            # a field of the same record rather than a reading
+            # of it.
+            str(record["rule"].get("observed_path")),
+            str(record["rule"].get("comparison")),
+            str(record.get("document")),
+            str(record.get("claim")),
+        }
         for entry in record["evidence"]:
             published.add(str(entry["path"]))
             published.add(str(entry["value"]))
@@ -407,12 +424,15 @@ class TestThePageDrawsTheObject:
         # count is a fact about the record's own shape, not about the
         # build - and neither may grow into a sentence without being
         # written down here.
-        layout = {"Why", " in ", "Paths resolve against ",
-                  "No named threshold; computed in ",
-                  # `UX-1025`: an unlabeled fold names its content
-                  # first ("The rule") - never depth and count alone.
-                  f"The rule · 1 level, {len(record['evidence'])} "
-                  f"row{'' if len(record['evidence']) == 1 else 's'}"}
+        layout = {
+            "Why",
+            " in ",
+            "Paths resolve against ",
+            "No named threshold; computed in ",
+            # `UX-1025`: an unlabeled fold names its content
+            # first ("The rule") - never depth and count alone.
+            f"The rule · 1 level, {len(record['evidence'])} row{'' if len(record['evidence']) == 1 else 's'}",
+        }
 
         def accounted(text):
             if text in published or text in layout:
@@ -425,10 +445,8 @@ class TestThePageDrawsTheObject:
             words = [w.strip("()") for w in text.split()]
             return all(w in published or w == "=" for w in words)
 
-        unaccounted = [text for text in out["text"]
-                       if text and not accounted(text)]
-        assert unaccounted == [], (
-            f"the page shows text no field of the record holds: {unaccounted}")
+        unaccounted = [text for text in out["text"] if text and not accounted(text)]
+        assert unaccounted == [], f"the page shows text no field of the record holds: {unaccounted}"
 
     def test_the_reference_paths_and_values_are_the_records_own(self, golden):
         """Compared as *values*, not as spellings. Python writes a whole
@@ -460,8 +478,7 @@ class TestThePageDrawsTheObject:
         assert out["rule"] == "CHAIN_BOUND_RATIO"
 
     def test_an_unresolved_reference_says_so_rather_than_blank(self):
-        record = provenance.record({"id": "confidence"}, "confidence",
-                                   "finding", {})
+        record = provenance.record({"id": "confidence"}, "confidence", "finding", {})
         out = self._render(record)
         assert "unresolved" in out["text"]
 

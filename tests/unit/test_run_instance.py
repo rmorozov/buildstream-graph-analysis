@@ -10,6 +10,7 @@ seconds apart in total duration, both print
 `UX-81` retaining a per-run ref every week, that directory of
 indistinguishable captures is now the normal case.
 """
+
 import json
 
 from bga.analyzer import _run_instance

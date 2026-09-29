@@ -18,6 +18,7 @@ concept (see inline comments), not guessed from nothing.
 cold_confidence stays fully separate (already lives in floors, from
 bga.floors.cold.compute_cold_floor - never read or written here).
 """
+
 import logging
 from typing import Optional
 
@@ -64,12 +65,8 @@ def compute_confidence(
         violations list.
     """
     graph_analysis = graph_analysis or {}
-    ordering_violations = sum(
-        1 for v in violations if v.get('type') == 'ordering_violation'
-    )
-    reconciliation_violations = [
-        v for v in violations if v.get('type') == 'attribution_reconciliation'
-    ]
+    ordering_violations = sum(1 for v in violations if v.get('type') == 'ordering_violation')
+    reconciliation_violations = [v for v in violations if v.get('type') == 'attribution_reconciliation']
 
     total_tasks = len(normalized_tasks) if normalized_tasks else 0
     _, _, horizon_us = compute_task_horizon(normalized_tasks) if normalized_tasks else (0, 0, 0)
@@ -99,13 +96,9 @@ def compute_confidence(
     if run_context is not None and run_context.run_mode == 'incremental':
         built = run_context.built_element_count
         if not run_context.failed_elements and built == len(elements_with_tasks):
-            cached_on_critical_path = [
-                uid for uid in critical_path if uid not in elements_with_tasks
-            ]
+            cached_on_critical_path = [uid for uid in critical_path if uid not in elements_with_tasks]
 
-    measured_critical_path = [
-        uid for uid in critical_path if uid not in set(cached_on_critical_path)
-    ]
+    measured_critical_path = [uid for uid in critical_path if uid not in set(cached_on_critical_path)]
     if measured_critical_path:
         resolved = sum(1 for uid in measured_critical_path if uid in elements_with_tasks)
         critical_path_coverage = resolved / len(measured_critical_path)
@@ -119,10 +112,17 @@ def compute_confidence(
     total_elements = len(graph.elements) if graph else 0
     dominator_coverage = (len(dominators) / total_elements) if total_elements > 0 else 1.0
 
-    attribution_sum_us = sum(attribution.get(k, 0) for k in (
-        'execution_on_chain_us', 'dependency_wait_us', 'resource_wait_us',
-        'scheduler_wait_us', 'idle_us', 'retry_wait_us',
-    ))
+    attribution_sum_us = sum(
+        attribution.get(k, 0)
+        for k in (
+            'execution_on_chain_us',
+            'dependency_wait_us',
+            'resource_wait_us',
+            'scheduler_wait_us',
+            'idle_us',
+            'retry_wait_us',
+        )
+    )
     blame_chain_coverage = (attribution_sum_us / horizon_us) if horizon_us > 0 else 1.0
 
     declared_task_count = len(trace.spans) if trace else 0
@@ -143,8 +143,7 @@ def compute_confidence(
     grid_slack_us = epsilon_us * len(normalized_tasks)
     if declared_duration_us > 0:
         duration_coverage = accounted_duration_us / declared_duration_us
-        if (duration_coverage > 1.0
-                and accounted_duration_us - declared_duration_us <= grid_slack_us):
+        if duration_coverage > 1.0 and accounted_duration_us - declared_duration_us <= grid_slack_us:
             duration_coverage = 1.0
     else:
         duration_coverage = 1.0
@@ -163,28 +162,24 @@ def compute_confidence(
     # genuine hard-gate failure and violation, since analysis would
     # otherwise silently proceed over mismatched inputs.
     run_context_identity_hash = (
-        (run_context.run_identity or {}).get('manifest_hash')
-        if run_context and run_context.run_identity else None
+        (run_context.run_identity or {}).get('manifest_hash') if run_context and run_context.run_identity else None
     )
     graph_identity_hash = graph.run_identity_hash if graph else None
     trace_identity_hash = trace.run_identity_hash if trace else None
     identity_hashes = (run_context_identity_hash, graph_identity_hash, trace_identity_hash)
     run_identity_all_present = all(h is not None for h in identity_hashes)
-    run_identity_consistent = (
-        len(set(identity_hashes)) == 1 if run_identity_all_present else True
-    )
+    run_identity_consistent = len(set(identity_hashes)) == 1 if run_identity_all_present else True
 
     # --- Occupancy capacity (I6, Part 34) ---
     # Only capacities the capture declared: PROCESS falls back to the
     # scheduler's own max_jobs, which is a declaration, never to
     # compute_default_capacities' literals, which are guesses.
-    declared_capacities = dict(
-        (run_context.resource_capacities or {}) if run_context else {}
-    )
+    declared_capacities = dict((run_context.resource_capacities or {}) if run_context else {})
     if run_context and run_context.max_jobs and 'PROCESS' not in declared_capacities:
         declared_capacities['PROCESS'] = run_context.max_jobs
     capacity_excursions = compute_capacity_excursions(
-        normalized_tasks or [], declared_capacities,
+        normalized_tasks or [],
+        declared_capacities,
     )
 
     # --- Hard gates (33.1) ---
@@ -238,47 +233,59 @@ def compute_confidence(
     t_infinity = floors.get('t_infinity_observed')
     longest_task_us = max((t.dur_us for t in normalized_tasks), default=0)
     if t_infinity is not None and longest_task_us > t_infinity:
-        new_violations.append({
-            'type': 'floor_below_longest_task',
-            'invariant': 'I3',
-            't_infinity_observed_us': t_infinity,
-            'longest_task_us': longest_task_us,
-            'detail': (
-                'the structural floor is shorter than a single observed task, '
-                'so it claims a schedule that cannot exist - no amount of '
-                'capacity makes one task finish sooner than it did'
-            ),
-        })
+        new_violations.append(
+            {
+                'type': 'floor_below_longest_task',
+                'invariant': 'I3',
+                't_infinity_observed_us': t_infinity,
+                'longest_task_us': longest_task_us,
+                'detail': (
+                    'the structural floor is shorter than a single observed task, '
+                    'so it claims a schedule that cannot exist - no amount of '
+                    'capacity makes one task finish sooner than it did'
+                ),
+            }
+        )
     if not hard_gates['critical_path_coverage_full']:
-        missing_critical_path_uids = [
-            uid for uid in measured_critical_path if uid not in elements_with_tasks
-        ]
-        new_violations.append({
-            'type': 'hard_gate_failed', 'gate': 'critical_path_coverage',
-            'value': critical_path_coverage,
-            'detail': _missing_element_detail(missing_critical_path_uids),
-        })
+        missing_critical_path_uids = [uid for uid in measured_critical_path if uid not in elements_with_tasks]
+        new_violations.append(
+            {
+                'type': 'hard_gate_failed',
+                'gate': 'critical_path_coverage',
+                'value': critical_path_coverage,
+                'detail': _missing_element_detail(missing_critical_path_uids),
+            }
+        )
     if not hard_gates['dominator_coverage_full']:
         missing_dominator_uids = [e.uid for e in graph.elements if e.uid not in dominators] if graph else []
-        new_violations.append({
-            'type': 'hard_gate_failed', 'gate': 'dominator_coverage',
-            'value': dominator_coverage,
-            'detail': _missing_element_detail(missing_dominator_uids),
-        })
+        new_violations.append(
+            {
+                'type': 'hard_gate_failed',
+                'gate': 'dominator_coverage',
+                'value': dominator_coverage,
+                'detail': _missing_element_detail(missing_dominator_uids),
+            }
+        )
     if not hard_gates['occupancy_within_capacity']:
         # A run whose occupancy exceeds a capacity it declared is a broken
         # capture, not a finding: every bound below divides by that C_p.
-        new_violations.append({
-            'type': 'hard_gate_failed', 'gate': 'occupancy_within_capacity',
-            'invariant': 'I6', 'detail': capacity_excursions,
-        })
+        new_violations.append(
+            {
+                'type': 'hard_gate_failed',
+                'gate': 'occupancy_within_capacity',
+                'invariant': 'I6',
+                'detail': capacity_excursions,
+            }
+        )
     if not hard_gates['run_identity_consistent']:
-        new_violations.append({
-            'type': 'run_identity_mismatch',
-            'run_context_hash': run_context_identity_hash,
-            'graph_hash': graph_identity_hash,
-            'trace_hash': trace_identity_hash,
-        })
+        new_violations.append(
+            {
+                'type': 'run_identity_mismatch',
+                'run_context_hash': run_context_identity_hash,
+                'graph_hash': graph_identity_hash,
+                'trace_hash': trace_identity_hash,
+            }
+        )
     for gate_name, passed in hard_gates.items():
         if not passed:
             logger.warning("Hard gate failed: %s", gate_name)
@@ -289,12 +296,15 @@ def compute_confidence(
     # confidence reduction comes from coverage_score's min() below.
     if task_coverage < TASK_COVERAGE_THRESHOLD:
         logger.warning(
-            "Soft gate failed: task_coverage %.3f < %.2f", task_coverage, TASK_COVERAGE_THRESHOLD,
+            "Soft gate failed: task_coverage %.3f < %.2f",
+            task_coverage,
+            TASK_COVERAGE_THRESHOLD,
         )
     if duration_coverage < DURATION_COVERAGE_THRESHOLD:
         logger.warning(
             "Soft gate failed: duration_coverage %.3f < %.2f",
-            duration_coverage, DURATION_COVERAGE_THRESHOLD,
+            duration_coverage,
+            DURATION_COVERAGE_THRESHOLD,
         )
 
     # --- Sub-scores (33.4) ---
@@ -322,8 +332,11 @@ def compute_confidence(
         provenance_score = min(provenance_score, 0.75)
 
     coverage_score = min(
-        critical_path_coverage, dominator_coverage, blame_chain_coverage,
-        task_coverage, duration_coverage,
+        critical_path_coverage,
+        dominator_coverage,
+        blame_chain_coverage,
+        task_coverage,
+        duration_coverage,
     )
 
     # model_score: reflects whether the replay counterfactual model
@@ -344,12 +357,9 @@ def compute_confidence(
     ambiguous_wait_us = sum(
         seg.end_us - seg.start_us
         for seg in (attribution_segments or [])
-        if seg.category.value == 'RESOURCE_WAIT'
-        and seg.metadata.get('holder_info', {}).get('ambiguous')
+        if seg.category.value == 'RESOURCE_WAIT' and seg.metadata.get('holder_info', {}).get('ambiguous')
     )
-    violation_us = sum(
-        abs(v.get('gap_us', 0)) for v in violations if v.get('type') == 'ordering_violation'
-    )
+    violation_us = sum(abs(v.get('gap_us', 0)) for v in violations if v.get('type') == 'ordering_violation')
     violation_us += sum(abs(v.get('residual_us', 0)) for v in reconciliation_violations)
 
     # UX-40: untracked time that is *explained* by BuildStream's own
@@ -416,9 +426,7 @@ def compute_confidence(
         # as a run with no failures and is why `run_mode`-style
         # "unrecorded" handling applies to the *span* field, not here.
         'failed_task_count': sum(1 for t in normalized_tasks if t.failed),
-        'failed_task_us': sum(
-            t.finish_us - t.start_us for t in normalized_tasks if t.failed
-        ),
+        'failed_task_us': sum(t.finish_us - t.start_us for t in normalized_tasks if t.failed),
         'critical_path_cached': cached_on_critical_path,
         'dominator_coverage': dominator_coverage,
         'blame_chain_coverage': blame_chain_coverage,

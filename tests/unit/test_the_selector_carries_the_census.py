@@ -31,6 +31,7 @@ Condition 2 is why `__init__` is no longer a token: fifteen
 about skip reasons. That false edge alone hid one of round 75's two
 misses from this derivation.
 """
+
 import ast
 import inspect
 import pathlib
@@ -73,9 +74,7 @@ NOT_A_TREE_WALK = {"tests/unit/test_a_committed_analysis_matches_the_analyzer.py
 #: `UX-737`: the other half of the gap - a guard that shells out
 #: (`git ls-files`, a pytest collection run) rather than calling a
 #: named tool function - closed below, by `_shells_out_for_a_population`.
-POPULATION_DELEGATES = {"spread", "test_files", "touch_map",
-                         "table_statuses", "backlog_files",
-                         "shape_disagreements"}
+POPULATION_DELEGATES = {"spread", "test_files", "touch_map", "table_statuses", "backlog_files", "shape_disagreements"}
 
 #: The modules those names are trusted from. A same-named method on an
 #: unrelated object - `dev_tier_drift.spread`, a statistical spread -
@@ -125,19 +124,26 @@ def _walks_the_repo(path):
     tree = ast.parse(path.read_text(encoding="utf-8"))
     rooted = set(ROOTS)
     for node in tree.body:
-        if (isinstance(node, ast.Assign) and len(node.targets) == 1
-                and isinstance(node.targets[0], ast.Name)
-                and _base(node.value) in rooted):
+        if (
+            isinstance(node, ast.Assign)
+            and len(node.targets) == 1
+            and isinstance(node.targets[0], ast.Name)
+            and _base(node.value) in rooted
+        ):
             rooted.add(node.targets[0].id)
     for fn in ast.walk(tree):
         if isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            defaulted = fn.args.args[len(fn.args.args) - len(fn.args.defaults):]
+            defaulted = fn.args.args[len(fn.args.args) - len(fn.args.defaults) :]
             for arg, default in zip(defaulted, fn.args.defaults):
                 if _base(default) in rooted:
                     rooted.add(arg.arg)
-    return any(isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
-               and n.func.attr in WALKS and _base(n.func.value) in rooted
-               for n in ast.walk(tree))
+    return any(
+        isinstance(n, ast.Call)
+        and isinstance(n.func, ast.Attribute)
+        and n.func.attr in WALKS
+        and _base(n.func.value) in rooted
+        for n in ast.walk(tree)
+    )
 
 
 def _sources():
@@ -147,15 +153,16 @@ def _sources():
     including it here would make this derivation reproduce the false
     edge the fix removed.
     """
-    return [str(p.relative_to(REPO))
-            for root in ("bga", "tools")
-            for p in (REPO / root).rglob("*.py")
-            if "__pycache__" not in p.parts and p.name != "__init__.py"]
+    return [
+        str(p.relative_to(REPO))
+        for root in ("bga", "tools")
+        for p in (REPO / root).rglob("*.py")
+        if "__pycache__" not in p.parts and p.name != "__init__.py"
+    ]
 
 
 def _guard_files():
-    return sorted(p for p in (REPO / "tests").rglob("test_*.py")
-                  if "__pycache__" not in p.parts)
+    return sorted(p for p in (REPO / "tests").rglob("test_*.py") if "__pycache__" not in p.parts)
 
 
 def _delegate_names(tree):
@@ -190,9 +197,11 @@ def _delegates_a_population(path):
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
             continue
-        if (isinstance(node.func, ast.Attribute)
-                and node.func.attr in POPULATION_DELEGATES
-                and _base(node.func.value) in modules):
+        if (
+            isinstance(node.func, ast.Attribute)
+            and node.func.attr in POPULATION_DELEGATES
+            and _base(node.func.value) in modules
+        ):
             return True
         if isinstance(node.func, ast.Name) and node.func.id in functions:
             return True
@@ -205,9 +214,9 @@ def _literal_argv(node):
     `None` so a positional check (`argv[:2]`) still lines up."""
     if not node.args or not isinstance(node.args[0], (ast.List, ast.Tuple)):
         return []
-    return [elt.value if isinstance(elt, ast.Constant)
-            and isinstance(elt.value, str) else None
-            for elt in node.args[0].elts]
+    return [
+        elt.value if isinstance(elt, ast.Constant) and isinstance(elt.value, str) else None for elt in node.args[0].elts
+    ]
 
 
 def _shells_out_for_a_population(path):
@@ -220,10 +229,12 @@ def _shells_out_for_a_population(path):
     argument, not merely present in the command."""
     tree = ast.parse(path.read_text(encoding="utf-8"))
     for node in ast.walk(tree):
-        if not (isinstance(node, ast.Call)
-                and isinstance(node.func, ast.Attribute)
-                and node.func.attr in {"run", "check_output", "check_call", "call"}
-                and _base(node.func.value) == "subprocess"):
+        if not (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr in {"run", "check_output", "check_call", "call"}
+            and _base(node.func.value) == "subprocess"
+        ):
             continue
         argv = _literal_argv(node)
         if argv[:2] == ["git", "ls-files"] and "--error-unmatch" not in argv:
@@ -238,20 +249,22 @@ def derived():
     reachable = set()
     for module in _sources():
         reachable.update(dev_touching.select([module], census=False)[0])
-    walked = {str(p.relative_to(REPO)) for p in _guard_files()
-              if _walks_the_repo(p)
-              and str(p.relative_to(REPO)) not in reachable}
+    walked = {
+        str(p.relative_to(REPO))
+        for p in _guard_files()
+        if _walks_the_repo(p) and str(p.relative_to(REPO)) not in reachable
+    }
     # `UX-730`: not filtered by `reachable`. The event that invalidates
     # these - a file added elsewhere in `tests/` or the backlog - is
     # not one `_sources()` ever asks about; being selected for an edit
     # to the delegate tool itself answers a different question than the
     # one this derivation exists for.
-    delegated = {str(p.relative_to(REPO)) for p in _guard_files()
-                 if _delegates_a_population(p)} - DELEGATED_UNDER_A_FIXTURE
+    delegated = {
+        str(p.relative_to(REPO)) for p in _guard_files() if _delegates_a_population(p)
+    } - DELEGATED_UNDER_A_FIXTURE
     # `UX-737`: same reasoning as `delegated` - the walk happens inside
     # a subprocess, not here, so it is not filtered by `reachable` either.
-    shelled = {str(p.relative_to(REPO)) for p in _guard_files()
-               if _shells_out_for_a_population(p)}
+    shelled = {str(p.relative_to(REPO)) for p in _guard_files() if _shells_out_for_a_population(p)}
     return sorted(walked | delegated | shelled)
 
 
@@ -263,7 +276,8 @@ class TestTheDeclarationIsTheDerivation:
         assert missing == [], (
             f"{len(missing)} guard(s) walk the repository tree and no grep "
             f"selects them, so they run only if listed in tests/tiers.py's "
-            f"CENSUS: {missing}")
+            f"CENSUS: {missing}"
+        )
 
     def test_nothing_is_declared_that_does_not_read_the_tree(self):
         """The other direction: no padding. Not "not grep-reachable" -
@@ -288,30 +302,33 @@ class TestTheDeclarationIsTheDerivation:
         for named in tiers.CENSUS:
             if named in NOT_A_TREE_WALK:
                 continue
-            assert (_walks_the_repo(REPO / named)
-                    or _delegates_a_population(REPO / named)
-                    or _shells_out_for_a_population(REPO / named)), (
+            assert (
+                _walks_the_repo(REPO / named)
+                or _delegates_a_population(REPO / named)
+                or _shells_out_for_a_population(REPO / named)
+            ), (
                 f"{named} is declared census but walks no repository tree, "
-                f"delegates no known population and shells out for none")
+                f"delegates no known population and shells out for none"
+            )
 
     def test_the_set_stays_the_size_it_was_measured_at(self):
         """The price, asserted. Every `test-touching` run pays this
-        set; at 33 files it is 1598 tests/53.7s at `-n auto`, load 3.8
+        set; at 33 files it was 1598 tests/53.7s at `-n auto`, load 3.8
         beside two tracks (`UX-996`; 32 files/1562 tests/34.8s, `UX-940`; 31 files/891 tests/24.2s before that; `UX-730`:
         19 files/716 tests/36.6s before - seconds are the machine
         (`UX-551`), not comparable across rounds) against a ~4s
         selection, and the round that doubles it should have to say
-        so. The bound is a ceiling, not a target."""
-        assert len(tiers.CENSUS) <= 33, (
-            f"{len(tiers.CENSUS)} census files - re-measure the set's "
-            f"seconds and move this bound with the number")
+        so. The bound is a ceiling, not a target. `UX-1120`: 34 files,
+        1887 tests/68.9s at `-n auto`, load 3.0 beside one track."""
+        assert len(tiers.CENSUS) <= 34, (
+            f"{len(tiers.CENSUS)} census files - re-measure the set's seconds and move this bound with the number"
+        )
 
     def test_the_two_misses_round_75_measured_are_in_it(self):
         """The item's own evidence, made a clause. `UX-503`'s register
         cap and `UX-502`'s skip census are the two defects that reached
         a commit past a green `test-touching`."""
-        for named in ("tests/unit/test_the_register_is_terse.py",
-                      "tests/unit/test_every_skip_reason_is_declared.py"):
+        for named in ("tests/unit/test_the_register_is_terse.py", "tests/unit/test_every_skip_reason_is_declared.py"):
             assert named in tiers.CENSUS, named
 
     def test_the_module_this_derivation_cannot_see_is_in_it(self):
@@ -329,8 +346,7 @@ class TestTheDeclarationIsTheDerivation:
         passed locally at 251 files - one round, two misses of one
         class, and neither is `derived`'s shape (it walks nothing;
         `NOT_A_TREE_WALK` above says why)."""
-        assert ("tests/unit/test_a_committed_analysis_matches_the_analyzer.py"
-                in tiers.CENSUS)
+        assert "tests/unit/test_a_committed_analysis_matches_the_analyzer.py" in tiers.CENSUS
 
     def test_every_declared_file_exists(self):
         for named in tiers.CENSUS:
@@ -358,17 +374,25 @@ class TestPopulationDelegatesActuallyDelegate:
         every clause below - and `derived`'s use of it - pass at
         nothing."""
         assert POPULATION_DELEGATES, "no delegate is declared"
-        assert set(self.OWNERS) == POPULATION_DELEGATES, (
-            "OWNERS and POPULATION_DELEGATES have drifted apart")
+        assert set(self.OWNERS) == POPULATION_DELEGATES, "OWNERS and POPULATION_DELEGATES have drifted apart"
 
     @pytest.mark.parametrize("name", sorted(POPULATION_DELEGATES))
     def test_each_delegate_still_reads_the_tree_or_an_index(self, name):
         source = inspect.getsource(self.OWNERS[name])
-        markers = ("rglob(", "glob(", "INDEX", "CLOSED", "touch_map(",
-                   "test_files(", "task_file(", "backlog_files(", "ls-files")
+        markers = (
+            "rglob(",
+            "glob(",
+            "INDEX",
+            "CLOSED",
+            "touch_map(",
+            "test_files(",
+            "task_file(",
+            "backlog_files(",
+            "ls-files",
+        )
         assert any(marker in source for marker in markers), (
-            f"{name} no longer shows any of the markers this set was "
-            f"curated for - re-derive POPULATION_DELEGATES")
+            f"{name} no longer shows any of the markers this set was curated for - re-derive POPULATION_DELEGATES"
+        )
 
 
 class TestSubprocessPopulationMarkersAreNotAProxy:
@@ -390,13 +414,14 @@ class TestSubprocessPopulationMarkersAreNotAProxy:
         of it - pass at nothing."""
         assert SUBPROCESS_POPULATION_MARKERS, "no marker is declared"
         assert set(self.WORKED_EXAMPLES) == SUBPROCESS_POPULATION_MARKERS, (
-            "WORKED_EXAMPLES and SUBPROCESS_POPULATION_MARKERS have drifted apart")
+            "WORKED_EXAMPLES and SUBPROCESS_POPULATION_MARKERS have drifted apart"
+        )
 
     @pytest.mark.parametrize("marker", sorted(SUBPROCESS_POPULATION_MARKERS))
     def test_each_marker_is_carried_by_a_real_guard(self, marker):
         assert _shells_out_for_a_population(REPO / self.WORKED_EXAMPLES[marker]), (
-            f"{marker} no longer fires on its own worked example - "
-            f"re-derive SUBPROCESS_POPULATION_MARKERS")
+            f"{marker} no longer fires on its own worked example - re-derive SUBPROCESS_POPULATION_MARKERS"
+        )
 
 
 class TestTheSelectorRunsThem:
@@ -405,7 +430,8 @@ class TestTheSelectorRunsThem:
         `docs/` selected whatever happened to name the file - and the
         register cap, which reads every task file, was not in it."""
         selected, why = dev_touching.select(
-            ["docs/backlog/scenarios/UX-0522-the-selector-runs-last-and-carries-the-census.md"])
+            ["docs/backlog/scenarios/UX-0522-the-selector-runs-last-and-carries-the-census.md"]
+        )
         for named in tiers.CENSUS:
             assert named in selected, named
             assert "census" in why[named]
@@ -428,9 +454,9 @@ class TestTheSelectorRunsThem:
         # a different module object from this file's `dev_touching`.
         asked = {}
         monkeypatch.setattr(imported, "changed_files", lambda *a, **k: [])
-        monkeypatch.setattr(imported, "select",
-                            lambda changed, census=True: (
-                                asked.setdefault("census", census), ([], {}))[1])
+        monkeypatch.setattr(
+            imported, "select", lambda changed, census=True: (asked.setdefault("census", census), ([], {}))[1]
+        )
         dev_tier_drift.explained_by("HEAD")
         assert asked["census"] is False
 
@@ -451,13 +477,11 @@ class TestTheStemIsNotADunder:
     def test_a_real_stem_still_is(self):
         """And the behaviour it must not have cost: `store_aggregate`
         is a token because a test naming it is about it."""
-        assert "store_aggregate" in dev_touching.tokens_for(
-            "bga/store_aggregate.py")
+        assert "store_aggregate" in dev_touching.tokens_for("bga/store_aggregate.py")
 
     def test_the_skip_census_is_no_longer_selected_by_a_package_init(self):
         """The measured consequence, in the direction of the defect."""
-        selected, _ = dev_touching.select(["bga/graph/__init__.py"],
-                                          census=False)
+        selected, _ = dev_touching.select(["bga/graph/__init__.py"], census=False)
         assert "tests/unit/test_every_skip_reason_is_declared.py" not in selected
 
     def test_the_import_spelling_did_not_swallow_the_two_misses(self):
@@ -473,8 +497,7 @@ class TestTheStemIsNotADunder:
             reachable.update(dev_touching.select([module], census=False)[0])
         assert len(reachable) > 100, (
             f"only {len(reachable)} files reachable - the derivation's input "
-            f"collapsed, so the clause below would pass vacuously")
-        for named in ("tests/unit/test_the_register_is_terse.py",
-                      "tests/unit/test_every_skip_reason_is_declared.py"):
-            assert named not in reachable, (
-                f"{named} is round-75's own miss and a grep now reaches it")
+            f"collapsed, so the clause below would pass vacuously"
+        )
+        for named in ("tests/unit/test_the_register_is_terse.py", "tests/unit/test_every_skip_reason_is_declared.py"):
+            assert named not in reachable, f"{named} is round-75's own miss and a grep now reaches it"

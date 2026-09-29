@@ -31,6 +31,7 @@ The other half of the filing - whether to adopt a table library - was
 decided in round 65 as `UX-398`: no library, with the price in
 styleguide §6b. Nothing here reopens it.
 """
+
 import pathlib
 import sys
 import threading
@@ -97,8 +98,7 @@ _SERVED = """(() => {
 def at_the_bottom(tmp_path_factory):
     if find_chrome() is None:
         pytest.skip(NO_BROWSER)
-    uri = pages.export_uri(pages.FIXTURES["macro_micro"],
-                           tmp_path_factory.mktemp("handoff"))
+    uri = pages.export_uri(pages.FIXTURES["macro_micro"], tmp_path_factory.mktemp("handoff"))
     with Browser(find_chrome()) as browser:
         return browser.measure(uri, _AT_THE_BOTTOM, 1440, 900)
 
@@ -135,21 +135,21 @@ class TestItIsReachableFromTheLastScreen:
         assert not at_the_bottom["inHeader"]
         assert at_the_bottom["railPosition"] == "sticky"
 
-    def test_it_is_still_on_screen_at_the_bottom_of_the_report(
-            self, at_the_bottom):
+    def test_it_is_still_on_screen_at_the_bottom_of_the_report(self, at_the_bottom):
         """The Falsification, as written.
 
         Nine thousand pixels down, the control that opens the trace is
         where it was at the top.
         """
         assert at_the_bottom["pageHeight"] > 4 * at_the_bottom["height"], (
-            "the fixture's page is no longer long enough for this to mean "
-            "anything")
+            "the fixture's page is no longer long enough for this to mean anything"
+        )
         assert at_the_bottom["scrolled"] > 0
         assert at_the_bottom["inViewport"], (
             f"the handoff is {at_the_bottom['top']:.0f} px from the top of a "
             f"{at_the_bottom['height']} px viewport with the document "
-            f"scrolled to its end")
+            f"scrolled to its end"
+        )
 
     def test_it_sits_above_the_chapters(self, at_the_bottom):
         """The rail scrolls on its own axis.
@@ -166,16 +166,13 @@ class TestItIsReachableFromTheLastScreen:
         # `.chapters` rather than a child of `nav.toc`. The claim is
         # unchanged - what the rail's own scroll can hide is what sits
         # below the chapter list.
-        first_chapter = next(
-            (at for at, name in enumerate(order) if "chapters" in name), None)
+        first_chapter = next((at for at, name in enumerate(order) if "chapters" in name), None)
         assert first_chapter is not None, order
         assert order.index("actions-group") < first_chapter, order
 
     def test_the_fallback_travelled_with_it(self, at_the_bottom):
         """`UX-282`: the fallback is not below the button that fails."""
-        assert at_the_bottom["carries"] == [
-            "actions", "actions-fallback", "actions-download"], (
-            at_the_bottom["carries"])
+        assert at_the_bottom["carries"] == ["actions", "actions-fallback", "actions-download"], at_the_bottom["carries"]
 
 
 @pytest.mark.skipif(find_chrome() is None, reason=NO_BROWSER)
@@ -188,6 +185,6 @@ class TestServedItStillOpensTheTrace:
     def test_the_button_is_offered_and_in_the_rail(self, served):
         assert served["inRail"], served
         assert served["offered"], (
-            "the served page no longer offers the handoff at all, so its "
-            "position is not what this file is measuring")
+            "the served page no longer offers the handoff at all, so its position is not what this file is measuring"
+        )
         assert "Perfetto" in served["label"], served["label"]

@@ -10,6 +10,7 @@ The `PATH` here is built from `stage_cpp_toolchain.sh`'s own `BINARIES`
 list rather than a copy of it, so widening what the examples stage
 relaxes this guard by itself and cannot drift from it.
 """
+
 import os
 import pathlib
 import re
@@ -36,8 +37,7 @@ def _staged_names():
     for array in ("RUNTIME_BINARIES", "TOOLCHAIN_BINARIES"):
         block = re.search(rf"^{array}=\((.*?)^\)", text, re.DOTALL | re.MULTILINE)
         assert block, f"stage_cpp_toolchain.sh no longer declares {array}=(...)"
-        names |= {pathlib.PurePosixPath(word).name
-                  for word in block.group(1).split() if word.startswith("/")}
+        names |= {pathlib.PurePosixPath(word).name for word in block.group(1).split() if word.startswith("/")}
     assert names, "no absolute paths read out of the stager's axis arrays"
     return names
 
@@ -46,8 +46,9 @@ def _sandbox_path(tmp_path, tool_name):
     """A bin directory holding only what the stager stages, plus a fake
     tool standing in for the one the wrapper will exec into."""
     staged = _staged_names()
-    assert "dirname" not in staged and "basename" not in staged, \
+    assert "dirname" not in staged and "basename" not in staged, (
         "the stager now stages coreutils - this guard has nothing to prove"
+    )
     bin_dir = tmp_path / "staged-bin"
     bin_dir.mkdir()
     for name in sorted(staged):
@@ -67,13 +68,11 @@ def _run(wrapper, args, bin_dir, env_extra=None):
     whole point is that nothing outside the staged set is reachable."""
     env = {"PATH": str(bin_dir), "HOME": str(bin_dir)}
     env.update(env_extra or {})
-    return subprocess.run(["sh", str(WRAPPERS / wrapper), *args],
-                          env=env, capture_output=True, text=True)
+    return subprocess.run(["sh", str(WRAPPERS / wrapper), *args], env=env, capture_output=True, text=True)
 
 
 @pytest.mark.parametrize("wrapper", HELD_TOOLS + FLTO_TOOLS)
-def test_every_wrapper_execs_its_tool_with_no_coreutils_on_path(
-        wrapper, tmp_path):
+def test_every_wrapper_execs_its_tool_with_no_coreutils_on_path(wrapper, tmp_path):
     """The defect itself: source-time `dirname` killed the wrapper
     before it could find, let alone run, the real tool."""
     tool = wrapper.rsplit("/", 1)[-1]
@@ -90,11 +89,16 @@ def test_the_flto_shim_pins_the_cap_with_no_coreutils_on_path(tmp_path):
     sandbox, so `-flto` is pinned and the auth stripped there too."""
     bin_dir = _sandbox_path(tmp_path, "cc")
 
-    done = _run("flto/cc", ["-flto", "x.c"], bin_dir, {
-        "BST_TRACE_FLTO_ACTIVE": "1",
-        "BST_TRACE_LTO_CAP": "3",
-        "MAKEFLAGS": "--jobserver-auth=7,8 -j4",
-    })
+    done = _run(
+        "flto/cc",
+        ["-flto", "x.c"],
+        bin_dir,
+        {
+            "BST_TRACE_FLTO_ACTIVE": "1",
+            "BST_TRACE_LTO_CAP": "3",
+            "MAKEFLAGS": "--jobserver-auth=7,8 -j4",
+        },
+    )
 
     assert done.returncode == 0, done.stderr
     assert "REAL:-flto=3 x.c" in done.stdout
@@ -111,8 +115,7 @@ def test_the_recursion_marker_is_still_read_with_no_grep(tmp_path):
     decoy.write_text("#!/bin/sh\n# UX-846 marker\nprintf 'DECOY\\n'\nexit 0\n")
     decoy.chmod(0o755)
 
-    done = _run("flto/cc", ["-c", "a.c"], bin_dir,
-                {"PATH": f"{decoy_dir}{os.pathsep}{bin_dir}"})
+    done = _run("flto/cc", ["-c", "a.c"], bin_dir, {"PATH": f"{decoy_dir}{os.pathsep}{bin_dir}"})
 
     assert done.returncode == 0, done.stderr
     assert "DECOY" not in done.stdout

@@ -27,6 +27,7 @@ naming `analyze/v3` would pass with the set hardcoded, and hardcoding is
 the failure this replaces: a page that later embeds a `correlate/v2`
 document has to get that schema with no edit to the exporter.
 """
+
 import json
 import pathlib
 import re
@@ -80,7 +81,6 @@ def _declared_by(blocks, known):
 
 @pytest.mark.parametrize("label", ["golden", "macro_micro"])
 class TestItEmbedsWhatItsDocumentsDeclare:
-
     def test_the_embedded_set_is_the_declared_set(self, exports, label):
         """Derived on both sides, so a hardcoded list reddens."""
         from bga import schemas
@@ -92,10 +92,10 @@ class TestItEmbedsWhatItsDocumentsDeclare:
             f"{label}: the export embeds {sorted(embedded)} and its "
             f"documents declare {sorted(declared)}. Embedding more is dead "
             f"weight the page cannot reach; embedding less is a section "
-            f"that renders without its units")
+            f"that renders without its units"
+        )
 
-    def test_the_page_can_resolve_the_schema_its_report_declares(
-            self, exports, label):
+    def test_the_page_can_resolve_the_schema_its_report_declares(self, exports, label):
         """The clause the trim must not break: `render(payload,
         schemas[payload.schema], …)` is the first thing `boot()` does,
         and an id with no schema behind it renders the whole report
@@ -103,8 +103,8 @@ class TestItEmbedsWhatItsDocumentsDeclare:
         blocks = exports[label]["blocks"]
         declared = blocks["report"]["schema"]
         assert declared in blocks["schemas"], (
-            f"{label}: the report declares {declared!r} and the page does "
-            f"not carry it")
+            f"{label}: the report declares {declared!r} and the page does not carry it"
+        )
 
     def test_it_stops_carrying_the_ones_nothing_declares(self, exports, label):
         """The subtraction actually happened.
@@ -119,17 +119,18 @@ class TestItEmbedsWhatItsDocumentsDeclare:
             f"{label}: the export carries every published schema again. "
             f"The page resolves `payload.schema` and `store.schema` and "
             f"nothing else, so the rest is bytes in an attachment nobody "
-            f"can use")
+            f"can use"
+        )
         assert {"blast/v2", "whatif/v1"} <= left_out, (
             f"{label}: `blast/v2` and `whatif/v1` are answers the *server* "
             f"computes on demand. An export has no server, so carrying "
             f"their schemas is carrying a contract for a document this "
             f"file can never hold. Still embedded: "
-            f"{sorted(set(schemas.names()) - left_out)}")
+            f"{sorted(set(schemas.names()) - left_out)}"
+        )
 
 
 class TestTheServedEndpointIsUnchanged:
-
     def test_schemas_json_still_answers_for_every_published_id(self):
         """`schemas.json` is a published API. The export is a page with
         no network; the server is not, and `curl .../schemas.json` has
@@ -138,7 +139,8 @@ class TestTheServedEndpointIsUnchanged:
         from tools.bga_view import schemas_payload
 
         assert set(schemas_payload()) == set(schemas.names()), (
-            "the served schemas endpoint lost ids along with the export")
+            "the served schemas endpoint lost ids along with the export"
+        )
 
     def test_the_export_and_the_server_read_the_same_function(self):
         """One function, two answers, told apart by its argument.
@@ -155,10 +157,11 @@ class TestTheServedEndpointIsUnchanged:
         assert list(signature.parameters) == ["documents"], (
             f"schemas_payload takes {list(signature.parameters)}: the "
             f"export's set and the server's set are no longer the same "
-            f"function answering differently")
+            f"function answering differently"
+        )
         assert signature.parameters["documents"].default is None, (
-            "the server's answer must be the default, so a caller that "
-            "says nothing gets everything")
+            "the server's answer must be the default, so a caller that says nothing gets everything"
+        )
 
 
 class TestADeclarationDeeperInADocumentStillCounts:
@@ -170,8 +173,7 @@ class TestADeclarationDeeperInADocumentStillCounts:
     def test_a_nested_schema_id_is_found(self):
         from tools.bga_view import _declared_schemas
 
-        documents = {"report": {"schema": "analyze/v3",
-                                "nested": [{"deep": {"schema": "store/v1"}}]}}
+        documents = {"report": {"schema": "analyze/v3", "nested": [{"deep": {"schema": "store/v1"}}]}}
         found = _declared_schemas(documents, {"analyze/v3", "store/v1"})
         assert found == {"analyze/v3", "store/v1"}, found
 
@@ -181,6 +183,5 @@ class TestADeclarationDeeperInADocumentStillCounts:
         export it."""
         from tools.bga_view import _declared_schemas
 
-        found = _declared_schemas({"report": {"schema": "analyze/v9"}},
-                                  {"analyze/v3"})
+        found = _declared_schemas({"report": {"schema": "analyze/v9"}}, {"analyze/v3"})
         assert found == set(), found

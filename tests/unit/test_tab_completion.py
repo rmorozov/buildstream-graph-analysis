@@ -17,6 +17,7 @@ The completions are driven through the real `argcomplete` entry point
 where possible, and through the completer functions directly where the
 answer depends on a project on disk.
 """
+
 import io
 import json
 import os
@@ -67,13 +68,11 @@ class TestTheCommandNames:
     def test_it_offers_nothing_for_a_prefix_nothing_matches(self):
         assert cli._command_completer("zzz", None) == []
 
-    def test_a_broken_completer_answers_nothing_rather_than_raising(
-            self, monkeypatch):
+    def test_a_broken_completer_answers_nothing_rather_than_raising(self, monkeypatch):
         """A dead TAB is worse than no answer: an exception here reaches
         the user's shell as a traceback in the middle of a command
         line."""
-        monkeypatch.setattr(cli, "create_parser",
-                            lambda: (_ for _ in ()).throw(RuntimeError("boom")))
+        monkeypatch.setattr(cli, "create_parser", lambda: (_ for _ in ()).throw(RuntimeError("boom")))
         assert cli._command_completer("a", None) == []
 
 
@@ -92,15 +91,13 @@ class TestTheRunReferences:
         assert "@20260101T000000Z" in offered
         assert "@20260102T000000Z" in offered
 
-    def test_outside_a_project_only_the_aliases_are_offered(
-            self, tmp_path, monkeypatch):
+    def test_outside_a_project_only_the_aliases_are_offered(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         assert cli._snapshot_completer("@", None) == ["@last", "@prev"]
 
     def test_an_unreadable_store_answers_nothing(self, tmp_path, monkeypatch):
         monkeypatch.chdir(_project(tmp_path))
-        monkeypatch.setattr("bga.run_store.list_runs",
-                            lambda _p: (_ for _ in ()).throw(OSError("nope")))
+        monkeypatch.setattr("bga.run_store.list_runs", lambda _p: (_ for _ in ()).throw(OSError("nope")))
         assert cli._snapshot_completer("@", None) == []
 
     def test_every_run_shaped_argument_has_it(self):
@@ -151,8 +148,8 @@ class TestElementNames:
         monkeypatch.chdir(tmp_path)
         walked = []
         monkeypatch.setattr(
-            "tools.bst_native_build_tracer.discover_element_names",
-            lambda project: walked.append(project) or [])
+            "tools.bst_native_build_tracer.discover_element_names", lambda project: walked.append(project) or []
+        )
 
         assert cli._element_completer("", None) == []
         assert walked == [], f"walked {walked} with no project to walk"
@@ -174,8 +171,7 @@ class TestTheIntegrationIsInert:
         assert "argcomplete.autocomplete(create_parser())" in source
 
     def test_a_missing_argcomplete_is_not_an_error(self, monkeypatch):
-        real_import = __builtins__["__import__"] if isinstance(__builtins__, dict) \
-            else __builtins__.__import__
+        real_import = __builtins__["__import__"] if isinstance(__builtins__, dict) else __builtins__.__import__
 
         def refuse(name, *args, **kwargs):
             if name == "argcomplete":
@@ -183,23 +179,30 @@ class TestTheIntegrationIsInert:
             return real_import(name, *args, **kwargs)
 
         monkeypatch.setattr("builtins.__import__", refuse)
-        cli._maybe_complete()   # must not raise
+        cli._maybe_complete()  # must not raise
 
     def test_help_output_is_unchanged(self):
         """`UX-158`'s caps: completion must not have grown the help by a
         line."""
         result = subprocess.run(
-            [sys.executable, "-c",
-             "from bga.cli import main; raise SystemExit(main(['analyze','--help']))"],
-            capture_output=True, text=True, cwd=os.getcwd())
+            [sys.executable, "-c", "from bga.cli import main; raise SystemExit(main(['analyze','--help']))"],
+            capture_output=True,
+            text=True,
+            cwd=os.getcwd(),
+        )
         assert len(result.stdout.splitlines()) <= 45
 
     def test_the_command_still_runs_without_the_shell_hook(self):
         result = subprocess.run(
-            [sys.executable, "-c",
-             "from bga.cli import main; raise SystemExit(main("
-             f"['analyze', {GOLDEN!r}, '--format', 'json']))"],
-            capture_output=True, text=True, cwd=os.getcwd())
+            [
+                sys.executable,
+                "-c",
+                f"from bga.cli import main; raise SystemExit(main(['analyze', {GOLDEN!r}, '--format', 'json']))",
+            ],
+            capture_output=True,
+            text=True,
+            cwd=os.getcwd(),
+        )
         assert result.returncode == 0, result.stderr
         assert json.loads(result.stdout)["schema"] == "analyze/v6"
 

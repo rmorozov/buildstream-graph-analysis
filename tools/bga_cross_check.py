@@ -116,9 +116,7 @@ def longest_path_us(graph: dict, durations: dict[str, int], build_only: bool = T
     order, predecessors = topological_order(graph, build_only)
     best: dict[str, int] = {}
     for node in order:
-        best[node] = durations.get(node, 0) + max(
-            (best[p] for p in predecessors.get(node, ())), default=0
-        )
+        best[node] = durations.get(node, 0) + max((best[p] for p in predecessors.get(node, ())), default=0)
     return max(best.values()) if best else 0
 
 
@@ -143,9 +141,7 @@ def run(run_dir: str, analysis: dict) -> int:
         if kind == "BUILD":
             build_durations[uid] = max(build_durations[uid], length)
 
-    runtime_edges = sum(
-        1 for d in graph["dependencies"] if d.get("dependency_type") == "runtime"
-    )
+    runtime_edges = sum(1 for d in graph["dependencies"] if d.get("dependency_type") == "runtime")
     kinds: dict[str, int] = defaultdict(int)
     for element in graph["elements"]:
         kinds[element.get("element_kind")] += 1
@@ -153,11 +149,12 @@ def run(run_dir: str, analysis: dict) -> int:
 
     print(f"elements:   {len(graph['elements'])}")
     print(f"deps:       {len(graph['dependencies'])} ({runtime_edges} runtime)")
-    print(f"spans:      {len(spans)} over {len(durations)} elements "
-          f"({tasks_per_element:.1f} tasks/element)")
+    print(f"spans:      {len(spans)} over {len(durations)} elements ({tasks_per_element:.1f} tasks/element)")
     print(f"kinds:      {dict(sorted(kinds.items(), key=lambda kv: -kv[1]))}")
-    print(f"longest path: {longest_path_elements(graph, True)} elements build-only, "
-          f"{longest_path_elements(graph, False)} counting runtime edges")
+    print(
+        f"longest path: {longest_path_elements(graph, True)} elements build-only, "
+        f"{longest_path_elements(graph, False)} counting runtime edges"
+    )
     print()
 
     checks = []
@@ -174,40 +171,54 @@ def run(run_dir: str, analysis: dict) -> int:
     occupancy = analysis.get("occupancy") or {}
 
     if metrics and path:
-        check("graph_metrics.critical_path_length vs len(critical_path_detail)",
-              metrics["critical_path_length"],
-              len(_schemas.critical_path_uids(analysis)))
-        check("sensitivity.critical_path_us vs floors.t_infinity_observed",
-              sensitivity["critical_path_us"],
-              floors["t_infinity_observed"])
-        check("graph_metrics.num_elements vs graph.json",
-              metrics["num_elements"], len(graph["elements"]))
+        check(
+            "graph_metrics.critical_path_length vs len(critical_path_detail)",
+            metrics["critical_path_length"],
+            len(_schemas.critical_path_uids(analysis)),
+        )
+        check(
+            "sensitivity.critical_path_us vs floors.t_infinity_observed",
+            sensitivity["critical_path_us"],
+            floors["t_infinity_observed"],
+        )
+        check("graph_metrics.num_elements vs graph.json", metrics["num_elements"], len(graph["elements"]))
     if floors:
-        check("independent longest weighted path vs t_infinity_observed",
-              longest_path_us(graph, build_durations), floors["t_infinity_observed"])
+        check(
+            "independent longest weighted path vs t_infinity_observed",
+            longest_path_us(graph, build_durations),
+            floors["t_infinity_observed"],
+        )
         if path:
-            check("BUILD durations along the reported critical path vs t_infinity",
-                  sum(build_durations[e]
-                      for e in _schemas.critical_path_uids(analysis)),
-                  floors["t_infinity_observed"])
+            check(
+                "BUILD durations along the reported critical path vs t_infinity",
+                sum(build_durations[e] for e in _schemas.critical_path_uids(analysis)),
+                floors["t_infinity_observed"],
+            )
     if analysis.get("attribution"):
-        check("sum(attribution categories) vs total_duration_us",
-              sum(analysis["attribution"].values()), analysis["total_duration_us"])
+        check(
+            "sum(attribution categories) vs total_duration_us",
+            sum(analysis["attribution"].values()),
+            analysis["total_duration_us"],
+        )
     if occupancy.get("horizon_us"):
         busy = sum(quantize(s["ts_us"] + s["dur_us"]) - quantize(s["ts_us"]) for s in spans)
-        check("busy time / horizon vs occupancy.average_concurrency",
-              round(busy / occupancy["horizon_us"], 6),
-              round(occupancy["average_concurrency"], 6))
+        check(
+            "busy time / horizon vs occupancy.average_concurrency",
+            round(busy / occupancy["horizon_us"], 6),
+            round(occupancy["average_concurrency"], 6),
+        )
     utilisation = analysis.get("utilisation") or {}
     if utilisation.get("buckets"):
-        check("sum(utilisation buckets) vs total_accounted_us",
-              sum(utilisation["buckets"].values()), utilisation["total_accounted_us"])
+        check(
+            "sum(utilisation buckets) vs total_accounted_us",
+            sum(utilisation["buckets"].values()),
+            utilisation["total_accounted_us"],
+        )
 
     agreed = 0
     for name, mine, reported, ok, note in checks:
         agreed += ok
-        print(f"  {'OK  ' if ok else 'FAIL'} {name}: independent={mine} "
-              f"reported={reported} {note}")
+        print(f"  {'OK  ' if ok else 'FAIL'} {name}: independent={mine} reported={reported} {note}")
     print(f"\n{agreed}/{len(checks)} cross-checks agree")
 
     violations = analysis.get("violations") or []
@@ -219,9 +230,7 @@ def run(run_dir: str, analysis: dict) -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(
-        description=HELP, formatter_class=argparse.RawDescriptionHelpFormatter
-    )
+    parser = argparse.ArgumentParser(description=HELP, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("run_dir", help="A bga run directory.")
     parser.add_argument("analysis_json", help="`bga analyze -f json` output for it.")
     args = parser.parse_args()

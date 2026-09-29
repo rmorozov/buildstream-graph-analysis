@@ -8,6 +8,7 @@ commit spanned 2712.39s .. 3614.22s, the band came to 2762.79s ..
 helped compute. `bga compare` then announced that same-commit pair as
 `IMPROVED (-25.0%)`.
 """
+
 import pytest
 
 from bga.compare import _compare_results, compute_band
@@ -63,7 +64,10 @@ class _Result:
 
 def _verdict(baseline_us, candidate_us, baselines=FDSDK):
     comparison = _compare_results(
-        _Result(baseline_us), _Result(candidate_us), [], [],
+        _Result(baseline_us),
+        _Result(candidate_us),
+        [],
+        [],
         baseline_band=compute_band(list(baselines)),
     )
     return comparison.verdict
@@ -72,8 +76,7 @@ def _verdict(baseline_us, candidate_us, baselines=FDSDK):
 class TestTheDisputedRegionIsRefused:
     def test_the_pair_that_read_improved_now_refuses(self):
         """The headline case, on the real numbers."""
-        assert _verdict(3614.22e6, 2712.39e6) == \
-            "within the baseline set's own observed range"
+        assert _verdict(3614.22e6, 2712.39e6) == "within the baseline set's own observed range"
 
     def test_the_pairs_the_band_handled_keep_their_answer(self):
         """Deliberately narrower than "refuse whenever the set is noisy"."""

@@ -9,6 +9,7 @@ identical work must measure identically.
 It is also the project whose Plane 2 capture was empty for as long as
 Plane 2 existed, so none of this could be asked before `UX-106`.
 """
+
 import os
 import shutil
 import time
@@ -78,8 +79,11 @@ def test_the_spine_measures_sleep_3_as_three_seconds_of_nothing(tmp_path):
     harness_start = time.monotonic()
     try:
         code = run_traced_build(
-            project, ["bst", "--no-colors", "--builders", "2", "build", "all.bst"],
-            str(raw), wrapped_log_path=str(plane1), trace_spine=True,
+            project,
+            ["bst", "--no-colors", "--builders", "2", "build", "all.bst"],
+            str(raw),
+            wrapped_log_path=str(plane1),
+            trace_spine=True,
         )
         records = load_records(str(raw))
     finally:
@@ -106,8 +110,7 @@ def test_the_spine_measures_sleep_3_as_three_seconds_of_nothing(tmp_path):
     assert len(sleepers) == 8, f"expected 8 work elements, got {sorted(sleepers)}"
     for element, record in sorted(sleepers.items()):
         assert record["duration_s"] >= SLEEP_S, (
-            f"{element}: {record['duration_s']:.3f}s for a `sleep 3` "
-            "- a sleep cannot finish early"
+            f"{element}: {record['duration_s']:.3f}s for a `sleep 3` - a sleep cannot finish early"
         )
         assert record["duration_s"] <= harness_span, (
             f"{element}: {record['duration_s']:.3f}s exceeds the harness's "
@@ -179,8 +182,11 @@ def test_the_two_planes_agree_on_how_long_each_element_took(tmp_path):
     harness_mono_before = time.monotonic()
     try:
         code = run_traced_build(
-            project, ["bst", "--no-colors", "--builders", "2", "build", "all.bst"],
-            str(raw), wrapped_log_path=str(plane1), trace_spine=True,
+            project,
+            ["bst", "--no-colors", "--builders", "2", "build", "all.bst"],
+            str(raw),
+            wrapped_log_path=str(plane1),
+            trace_spine=True,
         )
         records = load_records(str(raw))
     finally:
@@ -196,8 +202,7 @@ def test_the_two_planes_agree_on_how_long_each_element_took(tmp_path):
     for record in records:
         if record["end_ts"] is None:
             continue
-        window = by_element.setdefault(
-            record["element"], [record["start_ts"], record["end_ts"]])
+        window = by_element.setdefault(record["element"], [record["start_ts"], record["end_ts"]])
         window[0] = min(window[0], record["start_ts"])
         window[1] = max(window[1], record["end_ts"])
 

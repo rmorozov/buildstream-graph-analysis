@@ -13,6 +13,7 @@ count. Several fixtures below were re-pointed at configurations that
 still exceed the new bar - the sentinel-resolution behaviour they test
 is unchanged, only the demand numbers needed to trip a violation are.
 """
+
 import json
 
 from bga import BuildEfficiencyAnalyzer
@@ -27,8 +28,13 @@ def _write_run_dir(tmp_path, name, run_context):
     }
     trace = {
         "spans": [
-            {"task_key": "a.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 1000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
+            {
+                "task_key": "a.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 1000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
         ],
         "phases": [],
     }
@@ -77,7 +83,12 @@ def test_native_max_jobs_zero_resolution_uses_governing_cores_not_raw_host(tmp_p
     host_cpu_count - consistent with UX-15's own "declared budget
     governs" precedent."""
     result = _analyze(
-        tmp_path, "run", builders=16, native_max_jobs=0, host_cpu_count=32, cpu_budget=4,
+        tmp_path,
+        "run",
+        builders=16,
+        native_max_jobs=0,
+        host_cpu_count=32,
+        cpu_budget=4,
     )
     violation = next(v for v in result.violations if v["type"] == "resource_oversubscription")
     assert violation["native_max_jobs"] == 4  # min(cpu_budget=4, 8), not min(32, 8)

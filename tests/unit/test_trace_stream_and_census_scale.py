@@ -11,6 +11,7 @@ are deliberately loose, because the point of the guard is the *shape*
 (streaming beats slurping, memo beats re-walking), not a byte count
 that would go red on a faster disk.
 """
+
 import json
 import os
 import re
@@ -72,7 +73,10 @@ def _peak_mb(source, *args):
     """
     completed = subprocess.run(
         [sys.executable, "-c", textwrap.dedent(source), *args],
-        cwd=REPO_ROOT, capture_output=True, text=True, check=True,
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
     )
     return json.loads(completed.stdout.strip().splitlines()[-1])
 
@@ -93,9 +97,10 @@ class TestTheTraceParseStreams:
         # unmistakable, small enough to parse in a couple of seconds.
         log = tmp_path / "trace.log"
         _write_trace(str(log), 120_000)
-        size_mb = os.path.getsize(log) / 1024 ** 2
+        size_mb = os.path.getsize(log) / 1024**2
 
-        streaming = _peak_mb('''
+        streaming = _peak_mb(
+            '''
             import json, sys, tracemalloc
             from tools.bst_native_build_tracer import parse_trace_lines
             tracemalloc.start()
@@ -103,8 +108,11 @@ class TestTheTraceParseStreams:
                 events = parse_trace_lines(handle)
             assert len(events) == 120_000, len(events)
             print(json.dumps(tracemalloc.get_traced_memory()[1] / 1024 ** 2))
-        ''', str(log))
-        slurping = _peak_mb('''
+        ''',
+            str(log),
+        )
+        slurping = _peak_mb(
+            '''
             import json, sys, tracemalloc
             from tools.bst_native_build_tracer import parse_trace_log
             tracemalloc.start()
@@ -112,7 +120,9 @@ class TestTheTraceParseStreams:
             events = parse_trace_log(text)
             assert len(events) == 120_000, len(events)
             print(json.dumps(tracemalloc.get_traced_memory()[1] / 1024 ** 2))
-        ''', str(log))
+        ''',
+            str(log),
+        )
 
         # Measured on the development machine at 400k events / 56 MB:
         # 215 MB streaming against 365 MB slurped (tracemalloc; 243 vs
@@ -132,6 +142,7 @@ class TestTheTraceParseStreams:
         Making it fatal proves the caller streams, which a test that only
         exercised `parse_trace_lines` directly would not.
         """
+
         def refuse(_text):
             raise AssertionError("load_and_summarize read the whole trace into a string")
 
@@ -146,9 +157,7 @@ class TestTheCensusReadsEachElementOnce:
     def _project(self, tmp_path, count, fan_in=5):
         project = tmp_path / "proj"
         (project / "elements").mkdir(parents=True)
-        (project / "project.conf").write_text(
-            "name: censusscale\nmin-version: 2.0\nelement-path: elements\n"
-        )
+        (project / "project.conf").write_text("name: censusscale\nmin-version: 2.0\nelement-path: elements\n")
         for i in range(count):
             body = ["kind: manual"]
             deps = [f"e{j:04d}.bst" for j in range(max(0, i - fan_in), i)]
@@ -224,9 +233,7 @@ class TestTheClosureMemoIsStillCorrect:
         """
         project = tmp_path / "proj"
         (project / "elements").mkdir(parents=True)
-        (project / "project.conf").write_text(
-            "name: closure\nmin-version: 2.0\nelement-path: elements\n"
-        )
+        (project / "project.conf").write_text("name: closure\nmin-version: 2.0\nelement-path: elements\n")
         for name, deps in graph.items():
             body = ["kind: manual"]
             if name in static_in:
@@ -242,16 +249,20 @@ class TestTheClosureMemoIsStillCorrect:
         return str(project)
 
     def test_a_diamond_propagates_the_shared_dependency_to_the_top(self, tmp_path):
-        project = self._project(tmp_path, {
-            "base.bst": [],
-            "left.bst": ["base.bst"],
-            "right.bst": ["base.bst"],
-            "top.bst": ["left.bst", "right.bst"],
-        }, static_in={"base.bst"})
+        project = self._project(
+            tmp_path,
+            {
+                "base.bst": [],
+                "left.bst": ["base.bst"],
+                "right.bst": ["base.bst"],
+                "top.bst": ["left.bst", "right.bst"],
+            },
+            static_in={"base.bst"},
+        )
         tracer._ELEMENT_YAML_CACHE.clear()
-        per_element = tracer.census_project(
-            project, sorted(os.listdir(os.path.join(project, "elements")))
-        )["per_element"]
+        per_element = tracer.census_project(project, sorted(os.listdir(os.path.join(project, "elements"))))[
+            "per_element"
+        ]
         # Reached twice, counted once, and reached at all - which is the
         # memo's whole job.
         assert per_element["top.bst"]["static_count"] == 1
@@ -266,11 +277,15 @@ class TestTheClosureMemoIsStillCorrect:
         static binary `c.bst` stages behind `b.bst`. This memo only ever
         stores a *completed* reachable set, so both members see it.
         """
-        project = self._project(tmp_path, {
-            "a.bst": ["b.bst"],
-            "b.bst": ["a.bst", "c.bst"],
-            "c.bst": [],
-        }, static_in={"c.bst"})
+        project = self._project(
+            tmp_path,
+            {
+                "a.bst": ["b.bst"],
+                "b.bst": ["a.bst", "c.bst"],
+                "c.bst": [],
+            },
+            static_in={"c.bst"},
+        )
         tracer._ELEMENT_YAML_CACHE.clear()
         elements = sorted(os.listdir(os.path.join(project, "elements")))
         assert tracer.read_declared_build_deps(project, elements)["a.bst"] == ["b.bst"]
@@ -342,13 +357,15 @@ class TestTheSixOneLiners:
         for a real daemon, forever, with the build wedged behind it.
         """
         fake_bwrap = tmp_path / "bwrap"
-        fake_bwrap.write_text(textwrap.dedent('''\
+        fake_bwrap.write_text(
+            textwrap.dedent('''\
             #!/bin/sh
             echo "sandbox said something" >&2
             # A grandchild that keeps stderr open long past this exit.
             sleep 30 &
             exit 3
-        '''))
+        ''')
+        )
         fake_bwrap.chmod(0o755)
         stderr_path = tmp_path / "invocation.stderr"
 
@@ -376,8 +393,7 @@ class TestTheSixOneLiners:
 
     def test_3_the_self_test_sentinel_is_assigned_once(self):
         source = open(bwrap_shim.__file__, encoding="utf-8").read()
-        assignments = [line for line in source.splitlines()
-                       if line.startswith("SELF_TEST_ARGV")]
+        assignments = [line for line in source.splitlines() if line.startswith("SELF_TEST_ARGV")]
         assert assignments == ['SELF_TEST_ARGV = "--bga-shim-self-test"'], assignments
 
     def test_4_the_interrupt_notice_points_at_what_comes_after_it(self):
@@ -386,24 +402,17 @@ class TestTheSixOneLiners:
         # so join adjacent string literals before looking for it - and
         # drop comments, since the one recording this fix quotes the
         # wording it replaced.
-        code = "\n".join(line for line in source.splitlines()
-                         if not line.lstrip().startswith("#"))
+        code = "\n".join(line for line in source.splitlines() if not line.lstrip().startswith("#"))
         joined = re.sub(r'"\s*\n\s*"', "", code)
         assert "every figure that follows" in joined
-        assert "analyzed above" not in joined, (
-            "the notice prints before the report it describes"
-        )
+        assert "analyzed above" not in joined, "the notice prints before the report it describes"
 
     def test_5_a_census_with_no_static_binaries_does_not_pose_a_riddle(self, tmp_path):
         project = tmp_path / "proj"
         (project / "elements").mkdir(parents=True)
-        (project / "project.conf").write_text(
-            "name: riddle\nmin-version: 2.0\nelement-path: elements\n"
-        )
+        (project / "project.conf").write_text("name: riddle\nmin-version: 2.0\nelement-path: elements\n")
         (project / "elements" / "only.bst").write_text("kind: manual\n")
-        summary = tracer.format_census_coverage(
-            str(project), tracer.census_spine_verdicts(str(project))
-        )
+        summary = tracer.format_census_coverage(str(project), tracer.census_spine_verdicts(str(project)))
         assert "the spine is not needed" in summary
         assert "spine traced" not in summary
 

@@ -9,6 +9,7 @@ result-affecting option of
 equals the one a fresh analysis would carry; an option in neither table
 below makes the analysis non-reusable (`None`), never reusable.
 """
+
 import hashlib
 import os
 from pathlib import Path
@@ -17,12 +18,26 @@ from typing import Optional
 KEY = "fingerprint"
 
 #: Options that change the analysis. `history_dir` enters as a digest.
-RESULT = frozenset({"capacity", "replay", "heuristic", "diagnostics", "cold",
-                    "allow_partial_cold", "history_dir"})
+RESULT = frozenset({"capacity", "replay", "heuristic", "diagnostics", "cold", "allow_partial_cold", "history_dir"})
 #: Options that change only the rendering, or enter as a digest term.
-INERT = frozenset({"directory", "plane2", "no_plane2", "verbose", "quiet",
-                   "log_file", "format", "output", "explain", "full_path",
-                   "full_sources", "by_kind", "section", "help"})
+INERT = frozenset(
+    {
+        "directory",
+        "plane2",
+        "no_plane2",
+        "verbose",
+        "quiet",
+        "log_file",
+        "format",
+        "output",
+        "explain",
+        "full_path",
+        "full_sources",
+        "by_kind",
+        "section",
+        "help",
+    }
+)
 
 _CHUNK = 1 << 20
 
@@ -113,10 +128,8 @@ def of(args, dests: Optional[list] = None) -> Optional[dict]:
         "producer": producer.stamp(),
         "inputs": _tree(run_dir, cache),
         "beside": {
-            run_store.HOST_SAMPLES_NAME:
-                digest(os.path.join(beside, run_store.HOST_SAMPLES_NAME), cache),
-            run_store.PLANE2_NAME: _sibling(
-                run_dir, bool(getattr(args, "no_plane2", False)), cache),
+            run_store.HOST_SAMPLES_NAME: digest(os.path.join(beside, run_store.HOST_SAMPLES_NAME), cache),
+            run_store.PLANE2_NAME: _sibling(run_dir, bool(getattr(args, "no_plane2", False)), cache),
             run_store.RAW_LOG_NAME: run_store.sibling_raw_log(run_dir) is not None,
         },
         "plane2": digest(plane2, cache) if plane2 else None,

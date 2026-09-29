@@ -17,6 +17,7 @@ copy missing a directory a guard reads fails for a reason that is not
 the mutation. `source_paths` below is therefore the whole tree, with
 `only_mutate` narrowing what actually gets mutated to the one module.
 """
+
 import argparse
 import json
 import os
@@ -39,8 +40,7 @@ CACHE = REPO / ".mutmut-cache"
 # `parents[N]` computed from a file now one directory deeper. Cheap:
 # the whole tree is 26 MB (`du -sh --exclude=.git .`, this container).
 SOURCE_PATHS = (".claude", ".github", "bga", "docs", "examples", "tests", "tools")
-ALSO_COPY = (".pymarkdown.json", "CLAUDE.md", "README.md", "REVIEW.md",
-             "CHANGELOG.md")
+ALSO_COPY = (".pymarkdown.json", "CLAUDE.md", "README.md", "REVIEW.md", "CHANGELOG.md")
 
 _RESULT_RE = re.compile(r"^\s*(\S+): (\S.*\S|\S)\s*$")
 _TRAMPOLINE_RE = re.compile(r"^def (x_\w+__mutmut_\d+)\(", re.MULTILINE)
@@ -56,11 +56,13 @@ def touched_modules(since):
     """`.py` files under `bga/` or `tools/` the diff touched, not a test."""
     changed = dt.changed_files(base=since)
     return sorted(
-        p for p in changed
+        p
+        for p in changed
         if p.endswith(".py")
         and p.split("/")[0] in ("bga", "tools")
         and not pathlib.Path(p).name.startswith("test_")
-        and (REPO / p).exists())
+        and (REPO / p).exists()
+    )
 
 
 def _verdict_lines(results_text):
@@ -84,8 +86,7 @@ def classify(results_text):
     for _, verdict in _verdict_lines(results_text):
         counts[verdict] = counts.get(verdict, 0) + 1
     total = sum(counts.values())
-    counts["caught"] = sum(n for verdict, n in counts.items()
-                            if verdict in _CAUGHT)
+    counts["caught"] = sum(n for verdict, n in counts.items() if verdict in _CAUGHT)
     counts["survivors"] = total - counts["caught"]
     return counts
 
@@ -109,7 +110,8 @@ def _mutmut_config(module, guards):
         f"only_mutate = {json.dumps([module])}\n"
         f"pytest_add_cli_args_test_selection = {json.dumps(guards)}\n"
         "use_git_change_detection = false\n"
-        f"also_copy = {json.dumps(list(ALSO_COPY))}\n")
+        f"also_copy = {json.dumps(list(ALSO_COPY))}\n"
+    )
 
 
 def _clean():
@@ -140,29 +142,23 @@ def run_module(module, max_children):
 
     dotted = module[:-3].replace("/", ".")
     original = PYPROJECT.read_text(encoding="utf-8")
-    PYPROJECT.write_text(original + _mutmut_config(module, guards),
-                          encoding="utf-8")
+    PYPROJECT.write_text(original + _mutmut_config(module, guards), encoding="utf-8")
     _clean()
     try:
-        _run([sys.executable, "-m", "mutmut", "run",
-              "--max-children", str(max_children)])
+        _run([sys.executable, "-m", "mutmut", "run", "--max-children", str(max_children)])
         generated = (MUTANTS_DIR / module).read_text(encoding="utf-8")
-        all_ids = {f"{dotted}.{name}"
-                   for name in _TRAMPOLINE_RE.findall(generated)}
-        results = _run([sys.executable, "-m", "mutmut", "results", "--all",
-                        "true"])
+        all_ids = {f"{dotted}.{name}" for name in _TRAMPOLINE_RE.findall(generated)}
+        results = _run([sys.executable, "-m", "mutmut", "results", "--all", "true"])
     finally:
         PYPROJECT.write_text(original, encoding="utf-8")
         _clean()
 
     counts = classify(results.stdout)
-    status = {mid: verdict for mid, verdict in _verdict_lines(results.stdout)
-              if mid in all_ids}
-    survivors = [(mutant, status.get(mutant, "no verdict"))
-                 for mutant in sorted(all_ids)
-                 if status.get(mutant) not in _CAUGHT]
-    return {"module": module, "guards": guards, "survivors": survivors,
-            "counts": counts}
+    status = {mid: verdict for mid, verdict in _verdict_lines(results.stdout) if mid in all_ids}
+    survivors = [
+        (mutant, status.get(mutant, "no verdict")) for mutant in sorted(all_ids) if status.get(mutant) not in _CAUGHT
+    ]
+    return {"module": module, "guards": guards, "survivors": survivors, "counts": counts}
 
 
 _FUNC_RE = re.compile(r"^(.*)__mutmut_\d+$")
@@ -181,8 +177,7 @@ def _function(mutant):
 
 def render_row(run):
     if not run["guards"]:
-        return (f"| `{run['module']}` | - | no test names this module "
-                f"(`test-touching` finding) |\n")
+        return f"| `{run['module']}` | - | no test names this module (`test-touching` finding) |\n"
     if not run["survivors"]:
         return ""
     guard_list = ", ".join(f"`{g}`" for g in run["guards"])
@@ -194,8 +189,7 @@ def render_row(run):
     for (func, status), mutants in sorted(grouped.items()):
         example = mutants[0]
         count = f" x{len(mutants)}" if len(mutants) > 1 else ""
-        rows += (f"| `{run['module']}` | `{func}` ({status}{count}, "
-                 f"e.g. `{example}`) | {guard_list} |\n")
+        rows += f"| `{run['module']}` | `{func}` ({status}{count}, e.g. `{example}`) | {guard_list} |\n"
     return rows
 
 
@@ -208,8 +202,7 @@ def write_ledger(date, runs, dry_run=False):
     if not rows:
         rows = "| - | - | every touched module's mutants were killed |\n"
     body += rows
-    body += (f"\n{total_survivors} survivor(s) over {len(runs)} touched "
-             f"module(s).\n")
+    body += f"\n{total_survivors} survivor(s) over {len(runs)} touched module(s).\n"
     if dry_run:
         print(body)
         return
@@ -218,29 +211,28 @@ def write_ledger(date, runs, dry_run=False):
             "# UX-703: the weekly mutation ledger\n\n"
             "One section per run. A survivor is a filing, not a "
             "failure - see the task file for the loop that produces "
-            "this.\n", encoding="utf-8")
+            "this.\n",
+            encoding="utf-8",
+        )
     with LEDGER.open("a", encoding="utf-8") as fh:
         fh.write(body)
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--since", default=None,
-                         help="diff base (default: 7 days ago on HEAD)")
-    parser.add_argument("--module", action="append", default=None,
-                         help="mutate this module instead of computing the "
-                              "touched set (repeatable)")
-    parser.add_argument("--max-children", type=int,
-                         default=os.cpu_count() or 2)
-    parser.add_argument("--dry-run", action="store_true",
-                         help="print the touched modules and their guards, "
-                              "run nothing")
-    parser.add_argument("--write", action="store_true",
-                         help="append the ledger section to "
-                              "docs/audits/mutation.md")
-    parser.add_argument("--date", default=None,
-                         help="the ledger section's heading (default: today, "
-                              "UTC)")
+    parser.add_argument("--since", default=None, help="diff base (default: 7 days ago on HEAD)")
+    parser.add_argument(
+        "--module",
+        action="append",
+        default=None,
+        help="mutate this module instead of computing the touched set (repeatable)",
+    )
+    parser.add_argument("--max-children", type=int, default=os.cpu_count() or 2)
+    parser.add_argument(
+        "--dry-run", action="store_true", help="print the touched modules and their guards, run nothing"
+    )
+    parser.add_argument("--write", action="store_true", help="append the ledger section to docs/audits/mutation.md")
+    parser.add_argument("--date", default=None, help="the ledger section's heading (default: today, UTC)")
     args = parser.parse_args(argv)
 
     if args.module:
@@ -248,8 +240,7 @@ def main(argv=None):
     else:
         since = args.since
         if since is None:
-            found = _run(["git", "rev-list", "-1", "--before=7 days ago",
-                          "HEAD"])
+            found = _run(["git", "rev-list", "-1", "--before=7 days ago", "HEAD"])
             since = found.stdout.strip() or None
         modules = touched_modules(since) if since else []
 
@@ -264,8 +255,7 @@ def main(argv=None):
         return 0
 
     runs = [run_module(module, args.max_children) for module in modules]
-    date = args.date or __import__("datetime").datetime.now(
-        __import__("datetime").timezone.utc).date().isoformat()
+    date = args.date or __import__("datetime").datetime.now(__import__("datetime").timezone.utc).date().isoformat()
     write_ledger(date, runs, dry_run=not args.write)
     return 0
 

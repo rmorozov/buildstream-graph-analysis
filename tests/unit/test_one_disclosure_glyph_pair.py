@@ -8,6 +8,7 @@ said "1 level, N rows" alone, which `test_the_fold_says_how_deep_it_goes.py`
 already guards at the data level (`data-levels`/`data-rows`) - this
 file is the rendered-label half.
 """
+
 import pathlib
 import re
 import sys
@@ -47,8 +48,7 @@ _MEASURE = r"""
 
 @pytest.fixture(scope="module", params=["golden", "macro_micro"])
 def measured(request, tmp_path_factory):
-    uri = pages.export_uri(pages.FIXTURES[request.param],
-                           tmp_path_factory.mktemp(f"u1025-{request.param}"))
+    uri = pages.export_uri(pages.FIXTURES[request.param], tmp_path_factory.mktemp(f"u1025-{request.param}"))
     with Browser(chrome) as opened:
         rows = opened.measure(uri, _MEASURE)
     return {"label": request.param, "rows": rows}
@@ -63,12 +63,12 @@ class TestOneDisclosureGlyphPair:
             closed_glyph, open_glyph = row["before"], row["beforeToggled"]
             if row["open"]:
                 open_glyph, closed_glyph = closed_glyph, open_glyph
-            assert "25b8" in closed_glyph.encode("unicode_escape").decode() \
-                or "▸" in closed_glyph, (measured["label"], row)
-            assert "25be" in open_glyph.encode("unicode_escape").decode() \
-                or "▾" in open_glyph, (measured["label"], row)
+            assert "25b8" in closed_glyph.encode("unicode_escape").decode() or "▸" in closed_glyph, (
+                measured["label"],
+                row,
+            )
+            assert "25be" in open_glyph.encode("unicode_escape").decode() or "▾" in open_glyph, (measured["label"], row)
 
     def test_no_label_is_depth_and_count_alone(self, measured):
-        bad = [row["text"] for row in measured["rows"]
-              if _DEPTH_COUNT_ALONE.match(row["text"])]
+        bad = [row["text"] for row in measured["rows"] if _DEPTH_COUNT_ALONE.match(row["text"])]
         assert bad == [], (measured["label"], bad)

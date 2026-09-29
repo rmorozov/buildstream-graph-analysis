@@ -18,6 +18,7 @@ hand-built run directory may have none. That is what the fixtures below
 strip, rather than deleting the computed number afterwards: it is the
 real route by which the field goes missing.
 """
+
 import json
 import subprocess
 import sys
@@ -36,9 +37,7 @@ def _run_dir(tmp_path, name, *, with_occupancy=True):
     if not with_occupancy:
         ctx_path = dest / "run-context.json"
         ctx = json.loads(ctx_path.read_text())
-        ctx["resource_capacities"] = {
-            k: v for k, v in ctx["resource_capacities"].items() if k != "PROCESS"
-        }
+        ctx["resource_capacities"] = {k: v for k, v in ctx["resource_capacities"].items() if k != "PROCESS"}
         ctx_path.write_text(json.dumps(ctx, indent=2))
     return dest
 
@@ -46,7 +45,8 @@ def _run_dir(tmp_path, name, *, with_occupancy=True):
 def _compare(*args):
     proc = subprocess.run(
         [sys.executable, "-m", "bga.cli", "compare", *[str(a) for a in args]],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
         cwd=Path(__file__).resolve().parents[2],
     )
     return proc
@@ -66,6 +66,7 @@ def test_the_fixture_really_loses_the_signal(tmp_path):
 
 
 # --- the unit: which gates could run, and what was missing -------------
+
 
 class _Cmp:
     def __init__(self, baseline, candidate):
@@ -104,11 +105,13 @@ def test_a_missing_candidate_stops_both_gates():
     assert status["evaluated"] is False
     assert status["missing_occupancy_in"] == ["candidate"]
     assert status["gates_not_applied"] == [
-        "--min-efficiency", "--fail-on-efficiency-regression",
+        "--min-efficiency",
+        "--fail-on-efficiency-regression",
     ]
 
 
 # --- the end-to-end contract, as a CI consumer sees it -----------------
+
 
 def test_a_gate_that_cannot_run_fails_open_but_says_so(tmp_path):
     """The task's own acceptance test: exit 0 **and** a stderr line
@@ -128,7 +131,9 @@ def test_the_json_distinguishes_passed_from_did_not_run(tmp_path):
     proc = _compare(
         _run_dir(tmp_path, "stripped", with_occupancy=False),
         _run_dir(tmp_path, "normal"),
-        "--fail-on-efficiency-regression", "-f", "json",
+        "--fail-on-efficiency-regression",
+        "-f",
+        "json",
     )
     payload = json.loads(proc.stdout)
     assert payload["efficiency_gate_evaluated"] is False
@@ -137,8 +142,11 @@ def test_the_json_distinguishes_passed_from_did_not_run(tmp_path):
 
 def test_a_gate_that_did_run_publishes_true(tmp_path):
     proc = _compare(
-        _run_dir(tmp_path, "a"), _run_dir(tmp_path, "b"),
-        "--fail-on-efficiency-regression", "-f", "json",
+        _run_dir(tmp_path, "a"),
+        _run_dir(tmp_path, "b"),
+        "--fail-on-efficiency-regression",
+        "-f",
+        "json",
     )
     payload = json.loads(proc.stdout)
     assert payload["efficiency_gate_evaluated"] is True
@@ -152,7 +160,8 @@ def test_require_efficiency_signal_turns_it_into_a_failure(tmp_path):
     proc = _compare(
         _run_dir(tmp_path, "stripped", with_occupancy=False),
         _run_dir(tmp_path, "normal"),
-        "--fail-on-efficiency-regression", "--require-efficiency-signal",
+        "--fail-on-efficiency-regression",
+        "--require-efficiency-signal",
     )
     from bga.cli import EXIT_CODE_SIGNAL_UNAVAILABLE
 
@@ -164,8 +173,10 @@ def test_require_efficiency_signal_is_inert_when_the_signal_is_there(tmp_path):
     """The strict flag must not become a second way to fail a healthy
     comparison."""
     proc = _compare(
-        _run_dir(tmp_path, "a"), _run_dir(tmp_path, "b"),
-        "--fail-on-efficiency-regression", "--require-efficiency-signal",
+        _run_dir(tmp_path, "a"),
+        _run_dir(tmp_path, "b"),
+        "--fail-on-efficiency-regression",
+        "--require-efficiency-signal",
     )
     assert proc.returncode == 0
     assert "NOT APPLIED" not in proc.stderr
@@ -195,7 +206,8 @@ def test_the_floor_gate_still_fires_when_only_the_baseline_is_missing(tmp_path):
     proc = _compare(
         _run_dir(tmp_path, "stripped", with_occupancy=False),
         _run_dir(tmp_path, "normal"),
-        "--min-efficiency", "0.9",
+        "--min-efficiency",
+        "0.9",
     )
     assert proc.returncode == 5
     assert "NOT APPLIED" not in proc.stderr

@@ -8,6 +8,7 @@ through the interpreter symlink `stage_cpp_toolchain.sh` leaves there -
 so what it asserts is the version a sandbox would really exec, not what
 the pin table says about itself.
 """
+
 import os
 import struct
 import subprocess
@@ -34,19 +35,44 @@ def _nar_regular(contents, executable=False):
 
 class TestTheNarReader:
     def test_a_tree_with_an_executable_and_a_symlink_round_trips(self, tmp_path):
-        entry = (_nar_str("entry") + _nar_str("(") + _nar_str("name")
-                 + _nar_str("make") + _nar_str("node")
-                 + _nar_regular(b"#!/bin/sh\n", executable=True) + _nar_str(")"))
-        link = (_nar_str("entry") + _nar_str("(") + _nar_str("name")
-                + _nar_str("cc") + _nar_str("node") + _nar_str("(")
-                + _nar_str("type") + _nar_str("symlink") + _nar_str("target")
-                + _nar_str("make") + _nar_str(")") + _nar_str(")"))
-        bin_dir = (_nar_str("(") + _nar_str("type") + _nar_str("directory")
-                   + entry + link + _nar_str(")"))
-        root = (_nar_str("nix-archive-1") + _nar_str("(") + _nar_str("type")
-                + _nar_str("directory") + _nar_str("entry") + _nar_str("(")
-                + _nar_str("name") + _nar_str("bin") + _nar_str("node")
-                + bin_dir + _nar_str(")") + _nar_str(")"))
+        entry = (
+            _nar_str("entry")
+            + _nar_str("(")
+            + _nar_str("name")
+            + _nar_str("make")
+            + _nar_str("node")
+            + _nar_regular(b"#!/bin/sh\n", executable=True)
+            + _nar_str(")")
+        )
+        link = (
+            _nar_str("entry")
+            + _nar_str("(")
+            + _nar_str("name")
+            + _nar_str("cc")
+            + _nar_str("node")
+            + _nar_str("(")
+            + _nar_str("type")
+            + _nar_str("symlink")
+            + _nar_str("target")
+            + _nar_str("make")
+            + _nar_str(")")
+            + _nar_str(")")
+        )
+        bin_dir = _nar_str("(") + _nar_str("type") + _nar_str("directory") + entry + link + _nar_str(")")
+        root = (
+            _nar_str("nix-archive-1")
+            + _nar_str("(")
+            + _nar_str("type")
+            + _nar_str("directory")
+            + _nar_str("entry")
+            + _nar_str("(")
+            + _nar_str("name")
+            + _nar_str("bin")
+            + _nar_str("node")
+            + bin_dir
+            + _nar_str(")")
+            + _nar_str(")")
+        )
 
         dest = str(tmp_path / "out")
         nix_store_fetch.unpack_nar_data(root, dest)
@@ -66,11 +92,19 @@ class TestThePinIsVerified:
         """A pin whose NAR this test builds, served over `file://`."""
         import hashlib
         import lzma
-        entry = (_nar_str("entry") + _nar_str("(") + _nar_str("name")
-                 + _nar_str("make") + _nar_str("node")
-                 + _nar_regular(contents) + _nar_str(")"))
-        raw = (_nar_str("nix-archive-1") + _nar_str("(") + _nar_str("type")
-               + _nar_str("directory") + entry + _nar_str(")"))
+
+        entry = (
+            _nar_str("entry")
+            + _nar_str("(")
+            + _nar_str("name")
+            + _nar_str("make")
+            + _nar_str("node")
+            + _nar_regular(contents)
+            + _nar_str(")")
+        )
+        raw = (
+            _nar_str("nix-archive-1") + _nar_str("(") + _nar_str("type") + _nar_str("directory") + entry + _nar_str(")")
+        )
         source = tmp_path / "some.nar.xz"
         source.write_bytes(lzma.compress(raw))
         pin = {
@@ -170,10 +204,12 @@ class TestTheStagedMake:
         the pin's own and its RUNPATH is an absolute `/nix/store` that
         resolves only once the sandbox mounts the tree at `/`."""
         loader = os.path.join(SYSROOT + group["interpreter_dir"], group["loader"])
-        result = subprocess.run([loader, "--library-path",
-                                 nix_toolchain.library_path(SYSROOT),
-                                 binary, "--version"],
-                                capture_output=True, text=True, timeout=30)
+        result = subprocess.run(
+            [loader, "--library-path", nix_toolchain.library_path(SYSROOT), binary, "--version"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
         assert result.returncode == 0, result.stderr
         return result.stdout.splitlines()[0]
 
@@ -189,7 +225,6 @@ class TestTheStagedMake:
         named a store path would break on every pin bump."""
         group = nix_store_fetch.host_arch()
 
-        staged = {name: self._version_of(group, SYSROOT + nix_store_fetch.alias_path(name))
-                  for name in group["paths"]}
+        staged = {name: self._version_of(group, SYSROOT + nix_store_fetch.alias_path(name)) for name in group["paths"]}
 
         assert staged == {name: pin["version"] for name, pin in group["paths"].items()}

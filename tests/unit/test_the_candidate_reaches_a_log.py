@@ -32,6 +32,7 @@ stays a job that only prints - the moment it grows something that can
 fail, `UX-441`'s trade is back and the document is burying a failure
 again.
 """
+
 import pathlib
 import re
 import sys
@@ -80,8 +81,7 @@ def _summary_path():
     """
     for step in _jobs()["test"]["steps"]:
         script = step.get("run") or ""
-        found = re.search(r"--summary\s+\"?\$\{\{[^}]+\}\}/(\S+?)\"?\s",
-                          script)
+        found = re.search(r"--summary\s+\"?\$\{\{[^}]+\}\}/(\S+?)\"?\s", script)
         if found:
             return found.group(1)
     raise AssertionError("no step in `test` runs --against with --summary")
@@ -108,7 +108,8 @@ def test_the_gate_line_is_printed_where_a_log_tail_reader_gets_it():
     assert wrote in _candidate_step(), (
         f"the gate writes its line to `{wrote}` and the step that prints "
         f"the candidate does not read it, so the line is still two steps "
-        f"and one collapsed document above the tail")
+        f"and one collapsed document above the tail"
+    )
 
 
 def test_the_line_lands_after_the_document_not_inside_it():
@@ -119,8 +120,8 @@ def test_the_line_lands_after_the_document_not_inside_it():
     assert "::endgroup::" in script, script
     tail = script.split("::endgroup::")[-1]
     assert _summary_path() in tail, (
-        f"`{_summary_path()}` is printed before the document's "
-        f"`::endgroup::`, so the tail still ends in the document")
+        f"`{_summary_path()}` is printed before the document's `::endgroup::`, so the tail still ends in the document"
+    )
 
 
 def test_the_later_step_does_not_recompute_the_shift():
@@ -137,8 +138,8 @@ def test_a_gate_that_never_ran_does_not_fail_the_printing():
     UX-491's convenience into a red step."""
     tail = _candidate_step().split("::endgroup::")[-1]
     assert "||" in tail, (
-        "the summary is printed with no fallback, so a run whose gate "
-        "step never reached its return fails here instead")
+        "the summary is printed with no fallback, so a run whose gate step never reached its return fails here instead"
+    )
 
 
 def test_a_job_exists_whose_log_is_the_document():
@@ -146,7 +147,8 @@ def test_a_job_exists_whose_log_is_the_document():
     assert drift.CI_CANDIDATE_JOB in jobs, (
         f"`ci.yml` has jobs {sorted(jobs)} and the drift tool's advice "
         f"sends a reader to `{drift.CI_CANDIDATE_JOB}` - so the route it "
-        f"names ends nowhere, which is UX-457's own defect one level over")
+        f"names ends nowhere, which is UX-457's own defect one level over"
+    )
 
 
 def test_that_job_fetches_the_artifact_the_tool_names():
@@ -157,22 +159,24 @@ def test_that_job_fetches_the_artifact_the_tool_names():
     a *different* run's clock and look identical.
     """
     steps = _jobs()[drift.CI_CANDIDATE_JOB]["steps"]
-    fetched = {(step.get("with") or {}).get("name") for step in steps
-               if "download-artifact" in (step.get("uses") or "")}
+    fetched = {
+        (step.get("with") or {}).get("name") for step in steps if "download-artifact" in (step.get("uses") or "")
+    }
     assert drift.CI_CANDIDATE_ARTIFACT in fetched, (
         f"`{drift.CI_CANDIDATE_JOB}` downloads {sorted(n for n in fetched if n)} "
-        f"and the tool names `{drift.CI_CANDIDATE_ARTIFACT}`")
+        f"and the tool names `{drift.CI_CANDIDATE_ARTIFACT}`"
+    )
 
 
 def test_the_job_prints_the_file_the_record_step_wrote():
     """The join a rename breaks, and the reason this file is not a
     string comparison against a constant of its own."""
     wrote = _recorded_path()
-    printed = "\n".join(step.get("run") or ""
-                        for step in _jobs()[drift.CI_CANDIDATE_JOB]["steps"])
+    printed = "\n".join(step.get("run") or "" for step in _jobs()[drift.CI_CANDIDATE_JOB]["steps"])
     assert wrote in printed, (
         f"`test` records to `{wrote}` and `{drift.CI_CANDIDATE_JOB}` prints "
-        f"{printed!r} - the job would report an empty log on every run")
+        f"{printed!r} - the job would report an empty log on every run"
+    )
 
 
 def test_the_printing_job_cannot_fail_an_assertion():
@@ -184,13 +188,16 @@ def test_the_printing_job_cannot_fail_an_assertion():
     printing happens somewhere nothing else can fail.
     """
     steps = _jobs()[drift.CI_CANDIDATE_JOB]["steps"]
-    offending = [step.get("name") or step.get("uses")
-                 for step in steps
-                 if any(word in (step.get("run") or "") for word in FORBIDDEN)]
+    offending = [
+        step.get("name") or step.get("uses")
+        for step in steps
+        if any(word in (step.get("run") or "") for word in FORBIDDEN)
+    ]
     assert offending == [], (
         f"{offending} in `{drift.CI_CANDIDATE_JOB}` can fail, and a failure "
         f"there puts a failing assertion back under the document - which is "
-        f"the state UX-441 moved the document out of `test` to end")
+        f"the state UX-441 moved the document out of `test` to end"
+    )
 
 
 def test_the_job_runs_on_the_red_runs_too():
@@ -199,9 +206,11 @@ def test_the_job_runs_on_the_red_runs_too():
     job = _jobs()[drift.CI_CANDIDATE_JOB]
     assert "always()" in str(job.get("if", "")), (
         f"`{drift.CI_CANDIDATE_JOB}` has no always() condition, so it is "
-        f"skipped exactly when the refresh is being asked for")
+        f"skipped exactly when the refresh is being asked for"
+    )
 
 
 if __name__ == "__main__":  # pragma: no cover
     import pytest
+
     raise SystemExit(pytest.main([__file__, "-v"]))

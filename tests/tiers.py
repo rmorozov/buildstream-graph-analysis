@@ -92,6 +92,7 @@ review - see `test_the_tiers_are_a_partition.py`.
 A file moves tier when its *measurement* moves, not when it feels
 slower. Re-measure with the command above before editing either list.
 """
+
 import pathlib
 import re
 
@@ -131,6 +132,7 @@ CENSUS = (
     "tests/unit/test_one_factory_builds_every_table.py",
     "tests/unit/test_the_agent_configuration_holds.py",
     "tests/unit/test_the_canned_prose_reads_as_written.py",
+    "tests/unit/test_the_closed_index_reads_as_one.py",
     # `UX-718`: 18 modules already named in its own docstring make it
     # grep-reachable for those; a *new* module is not. Reddened all
     # four CI jobs on `44d211f`, quiet at 104 files locally.
@@ -219,7 +221,7 @@ CENSUS = (
 # a wall-clock step budget cannot separate *a runner four seconds
 # slower than its siblings* from *a fifteen-second file in the default
 # tier*, and by round 67 its window was a second wide either side. It
-# is now `SMALL_TIER_BACKSTOP_S`, a hang-catcher, and the per-file rule
+# became a hang-catcher (`UX-1111`: pytest-timeout), and the per-file rule
 # below does the job it was doing.
 #
 # `UX-420` gave CI the other half - `tests/ci_reference.json`, one full
@@ -244,9 +246,11 @@ def recorded():
     one level up.
     """
     source = pathlib.Path(__file__).read_text(encoding="utf-8")
-    return {found.group(1): float(found.group(2)) for found in
-            re.finditer(r'^\s*"(tests/[^"]+)",\s*#\s*([\d.]+)s\s*$',
-                        source, re.M)}
+    return {
+        found.group(1): float(found.group(2))
+        for found in re.finditer(r'^\s*"(tests/[^"]+)",\s*#\s*([\d.]+)s\s*$', source, re.M)
+    }
+
 
 # `UX-363`: the two wall-clock budgets, and the measurement they are
 # sized against.
@@ -419,7 +423,7 @@ def recorded():
 # for two different reasons and the bound cannot tell them apart.
 #
 # The table above is kept as the record of what was measured. It is no
-# longer what sizes anything - see `SMALL_TIER_BACKSTOP_S` below.
+# longer what sizes anything - see `SMALL_TIER_BACKSTOP_1P_S` below.
 #
 # The extremes of all three runs above, which is the whole population
 # these constants have. Named by the job that produced each, not
@@ -457,10 +461,10 @@ def recorded():
 # `-n auto` pay more, so an estimate extrapolated from the local ratio
 # over-predicted CI at 200-260s. The lesson is the file's own: a ratio
 # measured on one machine is not a measurement of another.
-SMALL_TIER_CI_SLOW_S = 89.0       # parallel, `-n auto`, slowest seen (3.12)
-SMALL_TIER_CI_FAST_S = 66.0       # parallel, fastest seen (3.11)
-SMALL_TIER_CI_SLOW_1P_S = 154.0   # single process, slowest seen (3.12)
-SMALL_TIER_CI_FAST_1P_S = 125.0   # single process, fastest seen (3.11)
+# `UX-1111` retired the parallel step, and its two figures with it
+# (89.0 slowest, 66.0 fastest); pytest-timeout catches its hang now.
+SMALL_TIER_CI_SLOW_1P_S = 154.0  # single process, slowest seen (3.12)
+SMALL_TIER_CI_FAST_1P_S = 125.0  # single process, fastest seen (3.11)
 
 # `UX-743`: the population the four figures above were measured on,
 # counted in files rather than tests. Files are free to count from the
@@ -492,14 +496,14 @@ SMALL_TIER_POPULATION_FILES = 326  # small-tier files at `b1b664b`
 # 120 because the two steps then differed by a second; on CI the single-
 # process step now costs 1.75x the parallel one, so one number cannot
 # sit several times above both. 300 is 3.4x the measured 89s; 900 is
-# 5.8x the measured 154s.
+# 5.8x the measured 154s. `UX-1111` retired the 300: the parallel step
+# is gone, and `timeout = 300` in pyproject.toml is per test.
 #
 # **What actually catches a large file in the default tier** is
 # `tools/dev_tier_drift.py --against`, run in CI on the 3.11 job. It
 # compares each file to CI's own recorded seconds with the run's median
 # shift divided out, so a slow runner is not read as a slow file - and
 # it names the file, which a timeout never could.
-SMALL_TIER_BACKSTOP_S = 300.0     # the `-n auto` step's timeout
 SMALL_TIER_BACKSTOP_1P_S = 900.0  # the single-process step's timeout
 
 # The sizing this replaced, kept because it is the argument `UX-421`
@@ -526,53 +530,53 @@ LARGE = (
     # rendered chapter has a real height, so a second link driven on
     # the same load would be measured against the fix. Three
     # single-process runs: 24.98 / 24.16 / 24.07s.
-    "tests/unit/test_a_rail_click_lands_on_its_section.py",          #   24.1s
+    "tests/unit/test_a_rail_click_lands_on_its_section.py",  #   24.1s
     # `UX-435`, then `UX-451`. It was medium at 14.2s - "just under the
     # large floor", which is a note about a file one clause from
     # crossing it. `UX-451` added the refused state: a second served
     # page, a second browser, and eight clauses over two viewports.
     # Measured on the same machine either side, 14.22s -> 28.78s, so it
     # is large now by its own measurement rather than by feel.
-    "tests/unit/test_the_handoff_box_is_measured_served.py",         #   28.8s
+    "tests/unit/test_the_handoff_box_is_measured_served.py",  #   28.8s
     # `UX-402`: the documented journey, walked. One cold `bst build`
     # against an isolated artifact cache (so the durations are real),
     # one incremental, then analyze, correlate, export and a browser.
-    "tests/unit/test_the_journey_has_an_answer_key.py",              #   50.0s
+    "tests/unit/test_the_journey_has_an_answer_key.py",  #   50.0s
     # `UX-418`'s first catch, and the reason that item exists. All three
     # were listed medium and had grown past the large floor, and nothing
     # said so: `test_the_tiers_are_a_partition.py` reads the lists
     # against each other, not against a clock. Re-measured
     # single-process, which is what the `measure` skill's recipe uses -
     # the CI report is `-n auto` and reads 5-9% higher on these three.
-    "tests/unit/test_the_chain_folds_and_clicks_are_counted.py",     #   24.5s
-    "tests/unit/test_any_element_can_be_inspected.py",               #   16.6s
-    "tests/unit/test_the_handoff_has_a_fixture.py",                  #   15.5s
+    "tests/unit/test_the_chain_folds_and_clicks_are_counted.py",  #   24.5s
+    "tests/unit/test_any_element_can_be_inspected.py",  #   16.6s
+    "tests/unit/test_the_handoff_has_a_fixture.py",  #   15.5s
     # UX-257's geometry instrument: a real Chrome over CDP, an exported
     # report per class, and every claim measured at three viewports. It
     # was never listed, so it sat in the default tier at 42.6s and then
     # at 61.7s once `UX-285` and `UX-286` added fourteen checks - which
     # is what finally blew the small tier's budget in CI. The file is
     # four times the large floor on its own.
-    "tests/unit/test_the_page_has_geometry.py",                      #   61.7s
-    "tests/unit/test_process_spine.py",                              #   35.8s
-    "tests/unit/test_spine_ground_truth.py",                         #   26.9s
-    "tests/unit/test_analysis_memory_shape.py",                      #   24.6s
-    "tests/unit/test_trace_stream_and_census_scale.py",              #   19.4s
-    "tests/unit/test_snapshot.py",                                   #   18.9s
-    "tests/unit/test_cache_logs.py",                                 #   18.2s
-    "tests/unit/test_doctor.py",                                     #   15.4s
+    "tests/unit/test_the_page_has_geometry.py",  #   61.7s
+    "tests/unit/test_process_spine.py",  #   35.8s
+    "tests/unit/test_spine_ground_truth.py",  #   26.9s
+    "tests/unit/test_analysis_memory_shape.py",  #   24.6s
+    "tests/unit/test_trace_stream_and_census_scale.py",  #   19.4s
+    "tests/unit/test_snapshot.py",  #   18.9s
+    "tests/unit/test_cache_logs.py",  #   18.2s
+    "tests/unit/test_doctor.py",  #   15.4s
     # UX-336, re-measured 2026-08-27: the drift the aggregate budget
     # hides, again. `UX-317`'s apparatus checks boot the exported page
     # once per claim and had reached the large floor while sitting in
     # the default tier - the same mechanism round 39 documented, three
     # rounds later.
-    "tests/unit/test_apparatus_in_its_place.py",                     #   17.4s
+    "tests/unit/test_apparatus_in_its_place.py",  #   17.4s
     # UX-334's console net: four boots of a real Chromium - two fixture
     # runs, served and exported - and three positive controls that each
     # start a browser of their own to prove one channel of the
     # instrument can still hear. Measured at 13.8s with two controls and
     # 16.4s with the third, which is what moved it over the floor.
-    "tests/unit/test_the_console_stays_clean.py",                    #   16.4s
+    "tests/unit/test_the_console_stays_clean.py",  #   16.4s
     # Round 56, re-measured after `UX-355`..`UX-361` landed. Twelve
     # files had drifted over the medium floor, seven of them over the
     # large one, and together they were 213s of the small tier's 214s -
@@ -582,13 +586,13 @@ LARGE = (
     # a real Chromium against an exported page, which is precisely the
     # character of the three files above it. A browser boot per claim
     # is a large test; the tier is where that gets said.
-    "tests/unit/test_a_control_acts_on_what_it_names.py",             #   30.0s
-    "tests/unit/test_the_two_capabilities_are_offered.py",            #   27.9s
-    "tests/unit/test_the_vocabulary_has_the_shape.py",                #   25.0s
-    "tests/unit/test_the_provenance_names_its_rule.py",               #   22.7s
-    "tests/unit/test_a_sentence_lives_on_its_door.py",                #   20.2s
-    "tests/unit/test_the_shape_channel_is_built.py",                  #   19.8s
-    "tests/unit/test_the_tools_scale_with_the_table.py",              #   16.8s
+    "tests/unit/test_a_control_acts_on_what_it_names.py",  #   30.0s
+    "tests/unit/test_the_two_capabilities_are_offered.py",  #   27.9s
+    "tests/unit/test_the_vocabulary_has_the_shape.py",  #   25.0s
+    "tests/unit/test_the_provenance_names_its_rule.py",  #   22.7s
+    "tests/unit/test_a_sentence_lives_on_its_door.py",  #   20.2s
+    "tests/unit/test_the_shape_channel_is_built.py",  #   19.8s
+    "tests/unit/test_the_tools_scale_with_the_table.py",  #   16.8s
     # `UX-367` moved this one across the floor by adding the size it
     # was missing: the volume budget now boots the seeded 1,202-element
     # run beside the two fixtures, which is a `gen-synthetic`, a
@@ -602,14 +606,14 @@ LARGE = (
     # in one process on this machine. The track that wrote it measured
     # 127s in a worktree under four parallel tracks; both are this
     # file, and the quiet number is the one the floors are made of.
-    "tests/unit/test_the_page_has_a_volume_budget.py",                #   65.0s
+    "tests/unit/test_the_page_has_a_volume_budget.py",  #   65.0s
     # `UX-455`. Listed medium at 13.5s when `UX-394` wrote it - a
     # three-snapshot store, served, four browser boots and one export.
     # Nothing since has been *about* it; it is the browser boots that
     # have grown under it. Re-measured alone in one process, three
     # runs: 18.30 / 18.33 / 18.28s, so it is past the 15.0s large floor
     # by three seconds rather than by a hair.
-    "tests/unit/test_the_page_moves_between_runs.py",                #   18.3s
+    "tests/unit/test_the_page_moves_between_runs.py",  #   18.3s
     # `UX-527`, and the round that tripped over it is this one. The
     # note this row carried in `MEDIUM` said "14.7s against a large
     # floor of 15.0 - one more browser clause moves this file"; the
@@ -617,52 +621,52 @@ LARGE = (
     # eight from one offering four thousand, and **54.1s** is where it
     # landed, measured alone in one process. The prediction was right
     # and the row is where it belongs.
-    "tests/unit/test_the_query_asks_about_this_run.py",              #   54.1s
+    "tests/unit/test_the_query_asks_about_this_run.py",  #   54.1s
     # `UX-529`, large on landing and for one reason: the defect is
     # invisible below a thousand elements, so the population is the two
     # committed fixtures **and** the two seeded runs the volume budget
     # uses. Two `gen-synthetic` calls and four exports, the 4,002 one
     # 17s of them; no browser. Measured alone in one process, twice:
     # 44.74 / 40.87s.
-    "tests/unit/test_the_exports_data_half_has_a_budget.py",         #   40.9s
+    "tests/unit/test_the_exports_data_half_has_a_budget.py",  #   40.9s
     # `UX-1042`, `UX-1055`: one shared setup - two pages at two
     # viewports, every journey on one load each and J2 per chapter.
     # Measured alone in one process: 37.28 / 37.64 / 37.12s.
-    "tests/unit/test_pointer_travel_is_a_budget.py",                 #   37.3s
+    "tests/unit/test_pointer_travel_is_a_budget.py",  #   37.3s
     # `UX-1076`: two 1,202-element opens passes, no browser.
     # Measured alone in one process: 15.96 / 14.91 / 16.37s.
-    "tests/unit/test_the_open_paths_are_interned.py",                #   16.0s
+    "tests/unit/test_the_open_paths_are_interned.py",  #   16.0s
 )
 
 MEDIUM = (
-    "tests/unit/test_a_broken_pipe_is_not_an_error.py",             # 1.6s
+    "tests/unit/test_a_broken_pipe_is_not_an_error.py",  # 1.6s
     # `UX-665`, tiered on landing: one Chromium, three boots (golden,
     # macro_micro, the built shared-resource fixture). 1.77/1.78/1.82s
     # single-process.
-    "tests/unit/test_a_new_control_class_lands_declared.py",        # 1.8s
-    "tests/unit/test_a_pasted_guide_block_is_fresh_or_dated.py",    # 3.6s
-    "tests/unit/test_the_documented_bga_lines_parse.py",            # 2.0s
+    "tests/unit/test_a_new_control_class_lands_declared.py",  # 1.8s
+    "tests/unit/test_a_pasted_guide_block_is_fresh_or_dated.py",  # 3.6s
+    "tests/unit/test_the_documented_bga_lines_parse.py",  # 2.0s
     # `UX-545`, tiered on landing. A real two-plane render with the
     # ceiling monkeypatched under both rungs, then the exported page
     # booted - so `bga view` and node, twice over. Measured here on a
     # quiet 4-core box, single process: 2.65 / 2.51s, and the track
     # that wrote it read 2.51s.
-    "tests/unit/test_a_refused_timeline_says_it_was_refused.py",    #    2.5s
+    "tests/unit/test_a_refused_timeline_says_it_was_refused.py",  #    2.5s
     # `UX-669`, tiered on landing. One Chromium, two boots (golden,
     # macro_micro) read in one measure call each, plus three source
     # clauses that need no browser. Three single-process runs:
     # 1.41 / 1.35 / 1.35s.
-    "tests/unit/test_a_runbook_is_not_a_table.py",                #    1.4s
+    "tests/unit/test_a_runbook_is_not_a_table.py",  #    1.4s
     # `UX-667`, tiered on landing. One Chromium, one module-scoped
     # page - the rail's landing state, a 68-mark walk and the CSS
     # sweep all read from it. Measured single-process, `--durations=0`:
     # 10.5s.
-    "tests/unit/test_the_rail_is_a_source_list.py",               #   10.5s
+    "tests/unit/test_the_rail_is_a_source_list.py",  #   10.5s
     # `UX-455`, tiered on landing, and it earned the tier the way the
     # item is about: two clauses run the confirmation for real, which
     # is a pytest subprocess each. Three single-process runs:
     # 1.22 / 1.25 / 1.24s.
-    "tests/unit/test_the_browser_waits_for_a_condition.py",         #    2.6s
+    "tests/unit/test_the_browser_waits_for_a_condition.py",  #    2.6s
     # `UX-528`, tiered on landing. A store of N golden runs, served,
     # and the window read at three populations - so a browser, and
     # `bga view` in front of it. **13.4s** alone in one process, which
@@ -670,55 +674,55 @@ MEDIUM = (
     # 18s under this round's parallel load and called it large. Medium
     # is what the quiet machine says, and the margin is small enough
     # that the next clause moves it.
-    "tests/unit/test_the_store_section_takes_a_window.py",          #   13.4s
+    "tests/unit/test_the_store_section_takes_a_window.py",  #   13.4s
     # `UX-520`, tiered on landing. Nineteen clauses, each packing and
     # unpacking a real gzipped tar of a small capture, two driving the
     # CLI end to end. Three single-process runs: 1.84 / 2.97 / 2.27s.
-    "tests/unit/test_a_run_bundle_you_can_carry.py",                #    2.3s
+    "tests/unit/test_a_run_bundle_you_can_carry.py",  #    2.3s
     # `UX-535`, tiered on landing. Eleven clauses, one of them a
     # subprocess `analyze` over the golden fixture. 4.27s measured.
     # `UX-539` follow-up. An AST walk of every file in `bga/` and
     # `tools/` - 3.50 / 3.66 / 3.83s measured alone in one process.
     "tests/unit/test_the_package_runs_on_the_python_it_claims.py",  #  3.7s
-    "tests/unit/test_one_fact_is_published_once.py",                #    4.3s
-    "tests/unit/test_a_candidate_is_confirmed_alone.py",            # 1.2s
+    "tests/unit/test_one_fact_is_published_once.py",  #    4.3s
+    "tests/unit/test_a_candidate_is_confirmed_alone.py",  # 1.2s
     # `UX-460`, tiered on landing. It runs `analyze` in-process over
     # every committed capture in the tree - seven of them now - which
     # is the census itself and not overhead. Three single-process runs:
     # 1.09 / 1.22 / 1.14s, over the 1.0s medium floor on every one.
-    "tests/unit/test_every_finding_reaches_a_fixture.py",           # 1.2s
+    "tests/unit/test_every_finding_reaches_a_fixture.py",  # 1.2s
     # `UX-455`. Was in the default tier and never listed. Re-measured
     # alone in one process, three runs: 1.35 / 1.34 / 1.37s, over the
     # 1.0s medium floor on every one. It renders every documented
     # command and parses each back, which is a subprocess per command
     # rather than anything a browser does.
-    "tests/unit/test_a_command_renders_as_a_command.py",            # 1.4s
+    "tests/unit/test_a_command_renders_as_a_command.py",  # 1.4s
     # `UX-443`, tiered on landing. Two real servers on a socket and
     # two full trace renders over a committed capture. 2.8s.
-    "tests/unit/test_the_served_handoff_counts_its_edges.py",       # 2.8s
-    "tests/unit/test_the_served_scratch_is_not_leaked.py",          # 1.6s
+    "tests/unit/test_the_served_handoff_counts_its_edges.py",  # 2.8s
+    "tests/unit/test_the_served_scratch_is_not_leaked.py",  # 1.6s
     # `UX-449`, tiered on landing. It parses every test source in the
     # suite - 195 skip call sites over ~380 files - which is why it is
     # seconds rather than milliseconds despite running no build and
     # opening no browser. 3.2s.
-    "tests/unit/test_every_skip_reason_is_declared.py",            # 3.2s
+    "tests/unit/test_every_skip_reason_is_declared.py",  # 3.2s
     # `UX-436`, tiered on landing. One `gen-synthetic` run, two
     # exports and one browser reading the computed appearance of every
     # button on both - 1,591 of them on the scale page, which is where
     # the fourth grade appears at all. 6.7s.
-    "tests/unit/test_every_control_has_a_resting_appearance.py",   #  6.7s
-    "tests/unit/test_the_json_toggle_carries_the_key.py",          #  2.0s
-    "tests/unit/test_the_readers_are_drawn_once.py",               #  2.3s
-    "tests/unit/test_a_capped_table_filters_what_it_sorts.py",     #  3.6s
-    "tests/unit/test_a_distribution_twin_draws_every_mark.py",    #  3.5s
-    "tests/unit/test_the_header_keeps_its_budget.py",             #  2.9s
-    "tests/unit/test_a_reader_never_sees_the_register.py",        #  3.6s
-    "tests/unit/test_the_max_jobs_advice_is_one_level.py",        #  1.3s
-    "tests/unit/test_the_serial_chains_are_ranked.py",            #  5.4s
+    "tests/unit/test_every_control_has_a_resting_appearance.py",  #  6.7s
+    "tests/unit/test_the_json_toggle_carries_the_key.py",  #  2.0s
+    "tests/unit/test_the_readers_are_drawn_once.py",  #  2.3s
+    "tests/unit/test_a_capped_table_filters_what_it_sorts.py",  #  3.6s
+    "tests/unit/test_a_distribution_twin_draws_every_mark.py",  #  3.5s
+    "tests/unit/test_the_header_keeps_its_budget.py",  #  2.9s
+    "tests/unit/test_a_reader_never_sees_the_register.py",  #  3.6s
+    "tests/unit/test_the_max_jobs_advice_is_one_level.py",  #  1.3s
+    "tests/unit/test_the_serial_chains_are_ranked.py",  #  5.4s
     # `UX-433`, tiered on landing. One `gen-synthetic` run and one
     # render of a 1,202-element two-plane snapshot, then the pivot
     # queries against a SQLite table. 1.6s.
-    "tests/unit/test_the_build_pivots_by_program.py",             #  1.6s
+    "tests/unit/test_the_build_pivots_by_program.py",  #  1.6s
     # `UX-430`, tiered on landing. Two `gen-synthetic` runs and six
     # renders of a 1,202-element two-plane snapshot - the size the
     # track bound is measured at, which is the whole point of the
@@ -732,23 +736,23 @@ MEDIUM = (
     # `UX-370`, tiered on landing. One boot of `macro_micro` - the only
     # committed fixture with a Plane 2 report beside its run - plus
     # four payload clauses that need no browser at all. 2.2s.
-    "tests/unit/test_plane_two_says_what_it_ran.py",              #    2.2s
+    "tests/unit/test_plane_two_says_what_it_ran.py",  #    2.2s
     # `UX-366`, tiered on landing. One boot of the seeded 1,202-element
     # run, every population driven twice - at rest and on "All rows" -
     # in a single measure call. 8.2s, most of it the generate and the
     # export.
-    "tests/unit/test_all_rows_means_all_rows.py",                #    8.2s
+    "tests/unit/test_all_rows_means_all_rows.py",  #    8.2s
     # `UX-368`, tiered on landing. Four browser clauses over the three
     # committed captures - `with_timeline` for the page that has a
     # handoff, the other two for the dead-control rule. 7.6s.
-    "tests/unit/test_a_finding_reaches_the_timeline.py",         #    7.6s
+    "tests/unit/test_a_finding_reaches_the_timeline.py",  #    7.6s
     # `UX-364`, tiered on landing rather than after CI noticed - which
     # it did, at 96% of `timeout 33 make test-small`. Four page exports
     # and eleven clauses over a real Chromium; measured at 10.3s, which
     # is `UX-359`'s rule costing what it costs. The file that measures
     # the page a user gets is a medium test by construction, and this
     # list is where that gets said rather than rediscovered.
-    "tests/unit/test_the_lead_names_the_planes_it_has.py",       #   10.3s
+    "tests/unit/test_the_lead_names_the_planes_it_has.py",  #   10.3s
     # `UX-372` and `UX-373`, tiered **after** CI noticed - which is the
     # part worth recording. Both landed in the default tier and neither
     # was measured on landing, and the two of them put the small tier
@@ -762,8 +766,8 @@ MEDIUM = (
     # default that is the trap rather than either author: a file that
     # boots a page belongs here by construction, and the cost of
     # forgetting is a red CI on somebody else's clock.
-    "tests/unit/test_the_page_has_a_reader.py",                  #    6.3s
-    "tests/unit/test_one_page_behind_the_button.py",             #    4.4s
+    "tests/unit/test_the_page_has_a_reader.py",  #    6.3s
+    "tests/unit/test_one_page_behind_the_button.py",  #    4.4s
     # `UX-374`, tiered on landing - which is what the note above says
     # to do. Two exports booted in a real Chromium plus seven node
     # clauses on `format.js`; 4.2s.
@@ -772,12 +776,12 @@ MEDIUM = (
     # exports of `macro_micro` booted in a real Chromium, plus nine
     # node clauses on the shim. Three single-process runs: 2.15 / 1.84
     # / 1.46s.
-    "tests/unit/test_a_fold_stays_open_in_the_link.py",          #    2.2s
+    "tests/unit/test_a_fold_stays_open_in_the_link.py",  #    2.2s
     # Round 56, the other five of the twelve (see the LARGE block
     # above): over the medium floor, under the large one.
-    "tests/unit/test_the_guards_measure_the_page.py",            #   11.5s
-    "tests/unit/test_the_merge_carries_every_field.py",          #    8.7s
-    "tests/unit/test_the_label_is_for_the_reader.py",            #    6.4s
+    "tests/unit/test_the_guards_measure_the_page.py",  #   11.5s
+    "tests/unit/test_the_merge_carries_every_field.py",  #    8.7s
+    "tests/unit/test_the_label_is_for_the_reader.py",  #    6.4s
     # Re-measured 2026-08-25 (round 39). Twenty-four files had drifted
     # over the medium floor while staying in the default tier: the
     # budget is an aggregate, so each one was invisible on its own and
@@ -790,214 +794,214 @@ MEDIUM = (
     # lesson is that a file joins `small` by *default* - so the tier is
     # chosen when the file is written, not when the budget notices.
     # The small tier went 23.6s -> 46.2s with these two in it.
-    "tests/unit/test_one_bad_row_costs_one_section.py",         #   11.3s
+    "tests/unit/test_one_bad_row_costs_one_section.py",  #   11.3s
     "tests/unit/test_every_emitted_contract_is_answerable.py",  #    9.0s
-    "tests/unit/test_the_view_parses_nothing.py",               #    7.6s
+    "tests/unit/test_the_view_parses_nothing.py",  #    7.6s
     # Round 50, tiered on landing for the same reason: four `bga analyze`
     # subprocesses, three of them `--format json --explain`.
-    "tests/unit/test_the_readme_block_is_the_real_output.py",   #    1.2s
+    "tests/unit/test_the_readme_block_is_the_real_output.py",  #    1.2s
     # `UX-330`'s walk: a seed planted once, then ten `bga` subprocesses
     # run against it - the whole point is that it is not in-process.
-    "tests/unit/test_the_stranger_has_a_seed.py",               #    5.6s
+    "tests/unit/test_the_stranger_has_a_seed.py",  #    5.6s
     # UX-298's emitter: a 40,000-process trace written twice, once for
     # the ceiling and once for the bytes-before-close clause.
-    "tests/unit/test_the_timeline_speaks_perfetto.py",           #    6.0s
-    "tests/unit/test_one_table_many_views.py",                  #    8.1s
+    "tests/unit/test_the_timeline_speaks_perfetto.py",  #    6.0s
+    "tests/unit/test_one_table_many_views.py",  #    8.1s
     # `UX-414` gave it a second fixture: three of its clauses boot the
     # two-plane export as well as the single-plane one, which is where
     # `restructuring` and `binary_cost` exist at all. That took it to
     # 15.9s - over the large floor - and `UX-418`'s new step is what
     # said so. One export and one boot per fixture now, cached.
-    "tests/unit/test_the_report_has_chapters.py",               #    4.9s
-    "tests/unit/test_a_table_cell_obeys_the_value_rule.py",     #    3.2s
+    "tests/unit/test_the_report_has_chapters.py",  #    4.9s
+    "tests/unit/test_a_table_cell_obeys_the_value_rule.py",  #    3.2s
     # `UX-641`: two `bga analyze` subprocesses and four node ones.
-    "tests/unit/test_a_level_names_who_is_in_it.py",            #    2.4s
+    "tests/unit/test_a_level_names_who_is_in_it.py",  #    2.4s
     # `UX-674`, tiered on landing: one Chromium, two page boots
     # (golden and macro_micro) over eight clauses. 2.35s measured
     # single-process with `--durations=0`.
-    "tests/unit/test_the_type_scale_is_four_steps.py",          #    2.4s
-    "tests/unit/test_a_control_says_what_it_does.py",           #    2.7s
-    "tests/unit/test_every_table_has_its_own_state_key.py",     #    1.5s
-    "tests/unit/test_findings_carry_their_evidence.py",         #    1.5s
+    "tests/unit/test_the_type_scale_is_four_steps.py",  #    2.4s
+    "tests/unit/test_a_control_says_what_it_does.py",  #    2.7s
+    "tests/unit/test_every_table_has_its_own_state_key.py",  #    1.5s
+    "tests/unit/test_findings_carry_their_evidence.py",  #    1.5s
     # `UX-343`: five node subprocesses, one per census. Tiered on
     # landing rather than after the drift - `UX-336`'s rule.
-    "tests/unit/test_every_number_says_what_it_is.py",          #    1.3s
-    "tests/unit/test_the_structural_block_is_reachable.py",     #    1.5s
-    "tests/unit/test_dev_run_script.py",                        #    1.4s
-    "tests/unit/test_focused_graphs_not_a_dag_viewer.py",       #    1.4s
-    "tests/unit/test_a_value_shows_what_it_is.py",              #    1.4s
-    "tests/unit/test_element_kind_heuristics.py",               #    1.4s
-    "tests/unit/test_logging_and_exceptions.py",                #    1.3s
-    "tests/unit/test_capture_diagnostics.py",                   #    1.3s
-    "tests/unit/test_correlate.py",                             #    1.2s
-    "tests/unit/test_focus_and_the_working_set.py",             #    1.2s
-    "tests/unit/test_the_tiers_are_a_partition.py",             #    1.2s
+    "tests/unit/test_every_number_says_what_it_is.py",  #    1.3s
+    "tests/unit/test_the_structural_block_is_reachable.py",  #    1.5s
+    "tests/unit/test_dev_run_script.py",  #    1.4s
+    "tests/unit/test_focused_graphs_not_a_dag_viewer.py",  #    1.4s
+    "tests/unit/test_a_value_shows_what_it_is.py",  #    1.4s
+    "tests/unit/test_element_kind_heuristics.py",  #    1.4s
+    "tests/unit/test_logging_and_exceptions.py",  #    1.3s
+    "tests/unit/test_capture_diagnostics.py",  #    1.3s
+    "tests/unit/test_correlate.py",  #    1.2s
+    "tests/unit/test_focus_and_the_working_set.py",  #    1.2s
+    "tests/unit/test_the_tiers_are_a_partition.py",  #    1.2s
     "tests/unit/test_a_comparison_class_is_the_host_and_the_build_type.py",  # 1.1s
-    "tests/unit/test_ci_comment.py",                            #    1.1s
-    "tests/unit/test_open_window_flush.py",                     #    1.1s
-    "tests/unit/test_focus_is_an_investigation.py",             #    1.1s
-    "tests/test_golden.py",                                     #    1.1s
-    "tests/unit/test_why_is_this_ranked_first.py",              #    1.0s
-    "tests/unit/test_the_jump_box_offers_what_it_knows.py",     #    1.0s
-    "tests/unit/test_the_capacity_answer_is_published.py",      #    1.3s
-    "tests/unit/test_comparison_refuses_on_contract_movement.py",       #    2.1s
-    "tests/unit/test_report_stays_readable_at_scale.py",             #   12.8s
-    "tests/unit/test_marginal_efficiency_gate.py",                   #   11.3s
-    "tests/unit/test_build_root_override_join.py",                   #    9.9s
-    "tests/unit/test_dual_plane_capture.py",                         #    9.8s
-    "tests/unit/test_six_seams_round_21_found.py",                   #    7.7s
-    "tests/unit/test_stream_merge.py",                               #    7.6s
-    "tests/unit/test_the_viewer_renders_the_schema.py",              #    6.6s
-    "tests/unit/test_the_perfetto_handoff.py",                       #    6.4s
-    "tests/unit/test_docs_links_and_commands.py",                    #    6.2s
-    "tests/unit/test_output_schemas.py",                             #    5.7s
+    "tests/unit/test_ci_comment.py",  #    1.1s
+    "tests/unit/test_open_window_flush.py",  #    1.1s
+    "tests/unit/test_focus_is_an_investigation.py",  #    1.1s
+    "tests/test_golden.py",  #    1.1s
+    "tests/unit/test_why_is_this_ranked_first.py",  #    1.0s
+    "tests/unit/test_the_jump_box_offers_what_it_knows.py",  #    1.0s
+    "tests/unit/test_the_capacity_answer_is_published.py",  #    1.3s
+    "tests/unit/test_comparison_refuses_on_contract_movement.py",  #    2.1s
+    "tests/unit/test_report_stays_readable_at_scale.py",  #   12.8s
+    "tests/unit/test_marginal_efficiency_gate.py",  #   11.3s
+    "tests/unit/test_build_root_override_join.py",  #    9.9s
+    "tests/unit/test_dual_plane_capture.py",  #    9.8s
+    "tests/unit/test_six_seams_round_21_found.py",  #    7.7s
+    "tests/unit/test_stream_merge.py",  #    7.6s
+    "tests/unit/test_the_viewer_renders_the_schema.py",  #    6.6s
+    "tests/unit/test_the_perfetto_handoff.py",  #    6.4s
+    "tests/unit/test_docs_links_and_commands.py",  #    6.2s
+    "tests/unit/test_output_schemas.py",  #    5.7s
     "tests/unit/test_the_handoff_says_whether_perfetto_fetched.py",  #    5.4s
-    "tests/unit/test_grace_window_drains.py",                        #    5.3s
-    "tests/unit/test_bst_extract_run.py",                            #    5.0s
-    "tests/unit/test_blast_ranking_discriminates.py",                #    4.8s
-    "tests/unit/test_cli_subcommands.py",                            #    4.6s
-    "tests/unit/test_bst_extract_run_strict.py",                     #    4.5s
-    "tests/unit/test_why_bga_believes_what_it_believes.py",          #    4.3s
-    "tests/unit/test_publish_the_join.py",                           #    4.1s
-    "tests/unit/test_a_report_you_can_navigate.py",                  #    3.8s
-    "tests/unit/test_native_build_tracer.py",                        #    3.6s
-    "tests/unit/test_diagnostics_performance.py",                    #    3.2s
-    "tests/unit/test_the_minutes_inside_analyze.py",                 #    2.8s
-    "tests/unit/test_bst_run_context.py",                            #    2.7s
-    "tests/unit/test_compare_mismatch_refusal.py",                   #    2.6s
-    "tests/unit/test_the_views_that_draw.py",                        #    2.5s
-    "tests/unit/test_compare.py",                                    #    2.2s
-    "tests/unit/test_shared_source_blast.py",                        #    2.2s
-    "tests/unit/test_the_report_you_can_attach.py",                  #    2.2s
-    "tests/unit/test_the_order_the_page_has.py",                     #    2.1s
-    "tests/unit/test_the_numbers_have_a_sentence.py",                #    2.1s
-    "tests/unit/test_copy_a_finding.py",                             #    1.8s
-    "tests/test_cli.py",                                             #    1.8s
-    "tests/unit/test_granularity.py",                                #    1.8s
-    "tests/unit/test_efficiency_gate_exit_codes.py",                 #    1.7s
-    "tests/unit/test_determinism.py",                                #    1.7s
-    "tests/unit/test_bst_show_to_graph.py",                          #    1.7s
-    "tests/unit/test_what_if_you_could_choose_the_fixes.py",         #    1.7s
-    "tests/unit/test_efficiency_gate_signal.py",                     #    1.7s
-    "tests/unit/test_a_clone_without_the_archive.py",                #    1.6s
-    "tests/unit/test_bst_checkout_cost.py",                          #    1.6s
-    "tests/unit/test_host_manifest_and_cross_host.py",               #    1.6s
-    "tests/unit/test_one_timeline_both_planes.py",                   #    1.5s
-    "tests/unit/test_a_link_that_shows_what_i_was_looking_at.py",    #    1.5s
-    "tests/unit/test_progress_never_touches_the_pipe.py",            #    1.4s
-    "tests/unit/test_cli_exit_codes.py",                             #    1.4s
-    "tests/unit/test_one_click_from_investigation.py",               #    1.4s
-    "tests/unit/test_a_capture_that_slept.py",                       #    1.3s
-    "tests/unit/test_tables_you_can_interrogate.py",                 #    1.3s
-    "tests/unit/test_the_page_that_answers_why.py",                  #    1.3s
-    "tests/unit/test_graph_performance.py",                          #    1.2s
-    "tests/unit/test_the_first_screen_is_a_decision.py",             #    1.2s
-    "tests/unit/test_every_element_is_one_object.py",                #    1.2s
-    "tests/unit/test_the_next_step_is_a_command.py",                 #    1.1s
-    "tests/unit/test_blast_query_and_kinds.py",                      #    1.1s
+    "tests/unit/test_grace_window_drains.py",  #    5.3s
+    "tests/unit/test_bst_extract_run.py",  #    5.0s
+    "tests/unit/test_blast_ranking_discriminates.py",  #    4.8s
+    "tests/unit/test_cli_subcommands.py",  #    4.6s
+    "tests/unit/test_bst_extract_run_strict.py",  #    4.5s
+    "tests/unit/test_why_bga_believes_what_it_believes.py",  #    4.3s
+    "tests/unit/test_publish_the_join.py",  #    4.1s
+    "tests/unit/test_a_report_you_can_navigate.py",  #    3.8s
+    "tests/unit/test_native_build_tracer.py",  #    3.6s
+    "tests/unit/test_diagnostics_performance.py",  #    3.2s
+    "tests/unit/test_the_minutes_inside_analyze.py",  #    2.8s
+    "tests/unit/test_bst_run_context.py",  #    2.7s
+    "tests/unit/test_compare_mismatch_refusal.py",  #    2.6s
+    "tests/unit/test_the_views_that_draw.py",  #    2.5s
+    "tests/unit/test_compare.py",  #    2.2s
+    "tests/unit/test_shared_source_blast.py",  #    2.2s
+    "tests/unit/test_the_report_you_can_attach.py",  #    2.2s
+    "tests/unit/test_the_order_the_page_has.py",  #    2.1s
+    "tests/unit/test_the_numbers_have_a_sentence.py",  #    2.1s
+    "tests/unit/test_copy_a_finding.py",  #    1.8s
+    "tests/test_cli.py",  #    1.8s
+    "tests/unit/test_granularity.py",  #    1.8s
+    "tests/unit/test_efficiency_gate_exit_codes.py",  #    1.7s
+    "tests/unit/test_determinism.py",  #    1.7s
+    "tests/unit/test_bst_show_to_graph.py",  #    1.7s
+    "tests/unit/test_what_if_you_could_choose_the_fixes.py",  #    1.7s
+    "tests/unit/test_efficiency_gate_signal.py",  #    1.7s
+    "tests/unit/test_a_clone_without_the_archive.py",  #    1.6s
+    "tests/unit/test_bst_checkout_cost.py",  #    1.6s
+    "tests/unit/test_host_manifest_and_cross_host.py",  #    1.6s
+    "tests/unit/test_one_timeline_both_planes.py",  #    1.5s
+    "tests/unit/test_a_link_that_shows_what_i_was_looking_at.py",  #    1.5s
+    "tests/unit/test_progress_never_touches_the_pipe.py",  #    1.4s
+    "tests/unit/test_cli_exit_codes.py",  #    1.4s
+    "tests/unit/test_one_click_from_investigation.py",  #    1.4s
+    "tests/unit/test_a_capture_that_slept.py",  #    1.3s
+    "tests/unit/test_tables_you_can_interrogate.py",  #    1.3s
+    "tests/unit/test_the_page_that_answers_why.py",  #    1.3s
+    "tests/unit/test_graph_performance.py",  #    1.2s
+    "tests/unit/test_the_first_screen_is_a_decision.py",  #    1.2s
+    "tests/unit/test_every_element_is_one_object.py",  #    1.2s
+    "tests/unit/test_the_next_step_is_a_command.py",  #    1.1s
+    "tests/unit/test_blast_query_and_kinds.py",  #    1.1s
     # UX-336, re-measured 2026-08-27 on the small tier alone. Thirteen
     # more files had crossed the medium floor since round 39 and were
     # invisible for the same reason: each is small, the budget is an
     # aggregate. Together they were 46.2s of the small tier's 81.7s.
-    "tests/unit/test_emphasis_is_a_budget.py",                       #   12.4s
-    "tests/unit/test_the_documented_invocations_parse.py",           #    5.6s
-    "tests/unit/test_the_fold_says_how_deep_it_goes.py",             #    4.4s
-    "tests/unit/test_the_shape_before_the_rows.py",                  #    3.6s
+    "tests/unit/test_emphasis_is_a_budget.py",  #   12.4s
+    "tests/unit/test_the_documented_invocations_parse.py",  #    5.6s
+    "tests/unit/test_the_fold_says_how_deep_it_goes.py",  #    4.4s
+    "tests/unit/test_the_shape_before_the_rows.py",  #    3.6s
     # `UX-908`: 3.1s was recorded at 25 tests; three commits on
     # 2026-09-15 took the file to 36 and its first two browser cases.
-    "tests/unit/test_a_drawing_is_graded.py",                        #    8.7s
-    "tests/unit/test_the_mapping_is_law.py",                         #    2.2s
-    "tests/unit/test_the_page_conforms_to_its_sections.py",          #    2.1s
-    "tests/unit/test_a_guard_reads_only_what_a_clone_has.py",        #    6.2s
+    "tests/unit/test_a_drawing_is_graded.py",  #    8.7s
+    "tests/unit/test_the_mapping_is_law.py",  #    2.2s
+    "tests/unit/test_the_page_conforms_to_its_sections.py",  #    2.1s
+    "tests/unit/test_a_guard_reads_only_what_a_clone_has.py",  #    6.2s
     # `UX-466`: draws a real timeline per committed capture with
     # `bga timeline` in a subprocess, seven of them.
-    "tests/unit/test_the_trace_census_reads_both_ends.py",           #    4.9s
+    "tests/unit/test_the_trace_census_reads_both_ends.py",  #    4.9s
     # `UX-465`: two real `bst build` runs where bst is installed,
     # and the spec/YAML half everywhere.
-    "tests/unit/test_a_generated_project_builds.py",                 #    6.5s
-    "tests/unit/test_the_printed_sentences_are_contracts.py",        #    1.6s
-    "tests/unit/test_a_capture_that_cannot_start.py",                #    1.5s
-    "tests/unit/test_the_handoff_does_not_carry_the_trace.py",       #    1.3s
-    "tests/unit/test_buttons_that_know_why.py",                      #    1.0s
+    "tests/unit/test_a_generated_project_builds.py",  #    6.5s
+    "tests/unit/test_the_printed_sentences_are_contracts.py",  #    1.6s
+    "tests/unit/test_a_capture_that_cannot_start.py",  #    1.5s
+    "tests/unit/test_the_handoff_does_not_carry_the_trace.py",  #    1.3s
+    "tests/unit/test_buttons_that_know_why.py",  #    1.0s
     # `UX-399`, tiered on landing. Two browser boots over
     # `macro_micro` - one for the rail's scrollspy, one for the
     # layout-cost pair with the optimisation forced off and on in
     # the same page - plus five source clauses that need neither.
-    "tests/unit/test_the_browser_is_the_library.py",                 #    4.8s
+    "tests/unit/test_the_browser_is_the_library.py",  #    4.8s
     # `UX-392`: exports the 1,202-element synthetic run and boots a
     # browser twice. Measured 7.7s total.
-    "tests/unit/test_a_filter_is_a_property_of_a_table.py",           #    7.7s
+    "tests/unit/test_a_filter_is_a_property_of_a_table.py",  #    7.7s
     # `UX-393`: three browser boots on `macro_micro` - the walk, the
     # scroll and the keyboard. 8.6s.
-    "tests/unit/test_the_rail_takes_a_step.py",                      #    8.6s
+    "tests/unit/test_the_rail_takes_a_step.py",  #    8.6s
     # `UX-397`: two browser boots - the export scrolled to its end and
     # a served two-plane snapshot where the button is drawn. 4.6s.
-    "tests/unit/test_the_handoff_rides_the_rail.py",                 #    4.6s
+    "tests/unit/test_the_handoff_rides_the_rail.py",  #    4.6s
     # `UX-400`: one `analyze` subprocess and one node sweep that renders
     # ten populations at three sizes each - the subprocess is all of it.
-    "tests/unit/test_every_population_at_zero_one_and_many.py",      #    1.3s
+    "tests/unit/test_every_population_at_zero_one_and_many.py",  #    1.3s
     # `UX-401`: one export, one page boot and one `analyze` subprocess -
     # the census reads the keys off the payload and the destinations off
     # the booted document.
-    "tests/unit/test_no_key_is_terminal_only_in_silence.py",         #    4.9s
+    "tests/unit/test_no_key_is_terminal_only_in_silence.py",  #    4.9s
     # `UX-403`'s census found these four booting a real browser from the
     # *small* tier - the escape `test_the_tiers_are_a_partition.py` is
     # for and could not see, because its clauses read the lists against
     # each other and nothing read the lists against the suite.
-    "tests/unit/test_a_shapeable_population_is_drawn.py",             #    2.2s
-    "tests/unit/test_a_task_uid_is_not_a_label.py",                   #    1.7s
-    "tests/unit/test_one_bucket_one_row.py",                          #    1.9s
-    "tests/unit/test_the_synthesis_reaches_the_page.py",              #    2.6s
+    "tests/unit/test_a_shapeable_population_is_drawn.py",  #    2.2s
+    "tests/unit/test_a_task_uid_is_not_a_label.py",  #    1.7s
+    "tests/unit/test_one_bucket_one_row.py",  #    1.9s
+    "tests/unit/test_the_synthesis_reaches_the_page.py",  #    2.6s
     # `UX-432`, tiered after CI caught it rather than on landing - the
     # note twelve lines up says a file like this belongs here by
     # construction and this round forgot anyway. Seven clauses, each
     # spawning `dev_perfetto_queries.py`, which itself spawns `node` to
     # read the question library: the subprocesses are all of it, and no
     # browser is involved. 4.6s here, 6.1s on CI.
-    "tests/unit/test_the_questions_are_asked_of_a_real_trace.py",     #    4.6s
+    "tests/unit/test_the_questions_are_asked_of_a_real_trace.py",  #    4.6s
     # `UX-612`, tiered on landing. Seventeen clauses; the four that
     # publish or refuse a queue wait each drive the capture path end to
     # end. Single-process, twice: 2.13s on a quiet box, 1.91s here
     # under two parallel tracks - over the 1.0s floor on both.
-    "tests/unit/test_the_start_clock_says_where_it_came_from.py",     #    2.1s
+    "tests/unit/test_the_start_clock_says_where_it_came_from.py",  #    2.1s
     # `UX-632`, tiered on landing. One clause runs the selector over
     # all 85 mapped modules to derive the spread the documents quote -
     # 85 selections over 463 test files, `lru_cache`d to once per
     # session (38.7s without it). Single-process here: 4.51s in that
     # one call, 4.58s for the file.
-    "tests/unit/test_the_cost_row_is_derived_from_the_selector.py",   #    4.6s
+    "tests/unit/test_the_cost_row_is_derived_from_the_selector.py",  #    4.6s
     # `UX-640`, tiered on landing. One browser boot, two exported
     # pages - the rail's labels read against their headings on both
     # committed fixtures. Single-process and alone: 1.26s, all of it
     # the setup that exports and loads.
     # `UX-648` added a second boot for the palette's half of the same
     # claim: 2.20 / 2.20s, still the setup and not the clauses.
-    "tests/unit/test_the_rail_says_what_the_heading_says.py",         #    2.2s
+    "tests/unit/test_the_rail_says_what_the_heading_says.py",  #    2.2s
     # `UX-643`, tiered on landing for the reason the note above the
     # reader file gives. One browser boot, two exported pages, the
     # picker driven through every role it offers. Three single-process
     # runs alone: 2.32 / 2.21 / 2.15s.
-    "tests/unit/test_a_reader_role_demotes.py",                       #    2.2s
+    "tests/unit/test_a_reader_role_demotes.py",  #    2.2s
     # `UX-638`/`UX-639`, tiered on landing. One served run and one
     # browser boot each over `macro_micro`: the scroll offset and the
     # rail's hit test are geometry, so the shim cannot hold either.
     # Single-process, alone: 2.78s and 3.24s.
-    "tests/unit/test_focus_keeps_the_reading_position.py",            #    2.8s
-    "tests/unit/test_the_rail_says_it_is_not_the_way_out.py",         #    3.2s
+    "tests/unit/test_focus_keeps_the_reading_position.py",  #    2.8s
+    "tests/unit/test_the_rail_says_it_is_not_the_way_out.py",  #    3.2s
     # `UX-647`, tiered on landing. Two served runs and a browser boot -
     # a rail click's anchor navigation is the browser's own default
     # action and no shim has one - plus three node clauses.
     # Single-process and alone: 4.51 / 4.45s.
-    "tests/unit/test_a_rail_click_reaches_the_writer.py",             #    4.5s
+    "tests/unit/test_a_rail_click_reaches_the_writer.py",  #    4.5s
     # `UX-646`, tiered on landing, the same shape: a `<summary>`'s
     # activation is a default action too, and the fold it opens has to
     # be read out of a real page. 3.55 / 3.79s.
-    "tests/unit/test_the_fragment_keeps_up_with_the_fold.py",         #    3.8s
+    "tests/unit/test_the_fragment_keeps_up_with_the_fold.py",  #    3.8s
     # `UX-692`, tiered on landing. 50 generated shapes through the full
     # `analyze()` pipeline plus 9 re-runs at n=3 for determinism - no
     # browser, no subprocess, but 59 real analyses. Three
     # single-process runs alone: 4.93 / 5.17 / 5.12s.
-    "tests/unit/test_the_invariants_hold_for_any_shape.py",           #    5.2s
+    "tests/unit/test_the_invariants_hold_for_any_shape.py",  #    5.2s
     # `UX-773`, tiered on landing. `test_the_tiers_are_a_partition.py`
     # decides this one by construction, not duration: a file matching
     # `BOOTS_A_BROWSER` may not sit in the small tier whatever it
@@ -1008,53 +1012,53 @@ MEDIUM = (
     # The UI batch, tiered on the merged tree: six browser guards, three
     # single-process runs alone each (setup+call+teardown).
     # `UX-1032`: 14.63 / 14.67 / 15.49s - one step control from large.
-    "tests/unit/test_every_step_past_a_bound_is_bounded.py",           # 14.7s
+    "tests/unit/test_every_step_past_a_bound_is_bounded.py",  # 14.7s
     # `UX-1016`: 7.62 / 8.99 / 8.29s.
-    "tests/unit/test_a_keyboard_journey_reaches_every_chapter.py",     #  8.3s
+    "tests/unit/test_a_keyboard_journey_reaches_every_chapter.py",  #  8.3s
     # `UX-1018`: 1.89 / 1.67 / 1.76s.
-    "tests/unit/test_the_heading_outline_has_three_levels.py",         #  1.8s
+    "tests/unit/test_the_heading_outline_has_three_levels.py",  #  1.8s
     # `UX-1022`: 1.41 / 1.47 / 1.33s.
-    "tests/unit/test_controls_meet_the_target_size.py",                #  1.4s
+    "tests/unit/test_controls_meet_the_target_size.py",  #  1.4s
     # `UX-1015`: 1.30 / 1.28 / 1.50s.
-    "tests/unit/test_find_in_page_reaches_folded_chapters.py",         #  1.3s
+    "tests/unit/test_find_in_page_reaches_folded_chapters.py",  #  1.3s
     # `UX-1035`: 1.01 / 1.01 / 1.05s.
-    "tests/unit/test_fonts_compute_to_two_stacks.py",                  #  1.0s
+    "tests/unit/test_fonts_compute_to_two_stacks.py",  #  1.0s
     # Round 143, tiered on the merged tree: three single-process runs
     # alone each (setup+call+teardown).
     # `UX-1043`: 5.69 / 5.82 / 5.82s.
-    "tests/unit/test_a_sections_controls_sit_together.py",             #  5.8s
+    "tests/unit/test_a_sections_controls_sit_together.py",  #  5.8s
     # `UX-1048`: 3.48 / 3.60 / 3.79s.
-    "tests/unit/test_the_accent_does_only_its_listed_jobs.py",         #  3.6s
+    "tests/unit/test_the_accent_does_only_its_listed_jobs.py",  #  3.6s
     # `UX-1052`: 1.54 / 1.53 / 1.62s.
-    "tests/unit/test_the_viewer_js_ships_compressed.py",               #  1.5s
+    "tests/unit/test_the_viewer_js_ships_compressed.py",  #  1.5s
     # `UX-1044`: 2.91 / 2.80 / 2.85s.
-    "tests/unit/test_a_chapter_fold_has_one_place_and_one_label.py",   #  2.9s
+    "tests/unit/test_a_chapter_fold_has_one_place_and_one_label.py",  #  2.9s
     # r149 sweep C: BOOTS_A_BROWSER, tightened, reads these five as
     # browser guards - medium by construction. `--durations=0`, one process.
     # 0.98 / 0.86s: under the floor, listed for the browser it boots.
-    "tests/unit/test_an_absence_is_one_sentence.py",                   #  0.9s
+    "tests/unit/test_an_absence_is_one_sentence.py",  #  0.9s
     # 6.58 / 6.91s.
-    "tests/unit/test_labels_are_sentence_case.py",                     #  6.7s
+    "tests/unit/test_labels_are_sentence_case.py",  #  6.7s
     # 1.50 / 1.44s.
-    "tests/unit/test_one_disclosure_glyph_pair.py",                    #  1.5s
+    "tests/unit/test_one_disclosure_glyph_pair.py",  #  1.5s
     # 1.39 / 1.35s.
-    "tests/unit/test_one_door_per_block.py",                           #  1.4s
+    "tests/unit/test_one_door_per_block.py",  #  1.4s
     # 8.60 / 8.75s.
-    "tests/unit/test_the_rail_and_the_jump_box_write_the_anchor.py",   #  8.7s
+    "tests/unit/test_the_rail_and_the_jump_box_write_the_anchor.py",  #  8.7s
     # Round 147, tiered on the merged tree: three single-process runs
     # alone each (setup+call+teardown).
     # `UX-1083`: 4.17 / 4.08 / 4.23s.
-    "tests/unit/test_an_equal_key_set_reuses_the_graph.py",            #  4.2s
+    "tests/unit/test_an_equal_key_set_reuses_the_graph.py",  #  4.2s
     # `UX-1082`: 2.48 / 2.64 / 2.50s, its bst arm included.
-    "tests/unit/test_the_key_set_reads_the_builds_options.py",         #  2.5s
+    "tests/unit/test_the_key_set_reads_the_builds_options.py",  #  2.5s
     # `UX-1081`: 1.56 / 1.79 / 1.89s.
-    "tests/unit/test_the_export_renders_one_timeline.py",              #  1.8s
+    "tests/unit/test_the_export_renders_one_timeline.py",  #  1.8s
     # Round 150, tiered on the merged tree: three single-process runs
     # alone each (setup+call+teardown).
     # `UX-1073`: 1.50 / 1.53 / 1.50s.
-    "tests/unit/test_compare_reads_published_analyses.py",             #  1.5s
+    "tests/unit/test_compare_reads_published_analyses.py",  #  1.5s
     # `UX-1078`: 1.08 / 1.03 / 1.03s.
-    "tests/unit/test_the_tail_says_what_it_is_doing.py",               #  1.0s
+    "tests/unit/test_the_tail_says_what_it_is_doing.py",  #  1.0s
     # `UX-1083` review (PR #300): 7.58 / 7.40 / 7.39s, its bst arm included.
-    "tests/unit/test_the_graph_reads_the_builds_options.py",           #  7.5s
+    "tests/unit/test_the_graph_reads_the_builds_options.py",  #  7.5s
 )

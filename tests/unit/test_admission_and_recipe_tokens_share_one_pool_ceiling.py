@@ -13,6 +13,7 @@ peak concurrent count read back from it must never exceed 4. Mutation:
 a second, separate admission FIFO (the pre-fix shape) - `run_admitted`
 and the wrapper draws then read from different pools, and the giant's
 draws are no longer capped by what admission already spent."""
+
 import json
 import os
 import stat
@@ -52,10 +53,10 @@ def _fake_bwrap(path, sleep_s):
     return str(path)
 
 
-
 @pytest.fixture(autouse=True)
 def _admission_on(monkeypatch):
     monkeypatch.setenv("BGA_ADMISSION", "1")
+
 
 def _stub_shim(monkeypatch):
     monkeypatch.setattr(tracer, "compile_hook", lambda d: None)
@@ -84,8 +85,7 @@ def _recipe_draws(pool_path, ledger_path, hold_s, deadline):
         t_end = time.time()
         os.write(fd, b"+")
         with open(ledger_path, "a", encoding="utf-8") as handle:
-            handle.write(json.dumps(
-                {"event": "recipe_hold", "t_start": t_start, "t_end": t_end}) + "\n")
+            handle.write(json.dumps({"event": "recipe_hold", "t_start": t_start, "t_end": t_end}) + "\n")
 
     while time.time() < deadline:
         threads.append(threading.Thread(target=_one))
@@ -98,8 +98,7 @@ def _recipe_draws(pool_path, ledger_path, hold_s, deadline):
 
 def _peak_concurrent_holds_from_lines(lines):
     rows = [json.loads(line) for line in lines]
-    waits = {row["element"]: row["wait_us"] for row in rows
-             if row.get("event") == "admission_wait"}
+    waits = {row["element"]: row["wait_us"] for row in rows if row.get("event") == "admission_wait"}
     events = []
     for row in rows:
         if row.get("event") == "recipe_hold":
@@ -136,16 +135,16 @@ def test_admission_and_recipe_draws_never_exceed_the_pool_capacity(tmp_path, mon
             handle.write(_RUN_ONE.format(srcdir=_REPO_ROOT))
 
         admitted = [
-            real_popen([sys.executable, runner_path, bwrap, admission_pool_path,
-                       ledger_path, f"mod-{i}.bst"])
-            for i in range(3)]
+            real_popen([sys.executable, runner_path, bwrap, admission_pool_path, ledger_path, f"mod-{i}.bst"])
+            for i in range(3)
+        ]
         # The recipe's own extra `-jK` draws come from the *recipe*
         # pool, not the admission one - only the fix makes these the
         # same FIFO; the mutation must be free to give them separate
         # supplies for this guard to tell the two shapes apart.
         recipe_thread = threading.Thread(
-            target=_recipe_draws,
-            args=(recipe_pool_path, ledger_path, hold_s, time.time() + hold_s * 4))
+            target=_recipe_draws, args=(recipe_pool_path, ledger_path, hold_s, time.time() + hold_s * 4)
+        )
         recipe_thread.start()
         for proc in admitted:
             assert proc.wait(timeout=5) == 0
@@ -160,8 +159,7 @@ def test_admission_and_recipe_draws_never_exceed_the_pool_capacity(tmp_path, mon
 
     monkeypatch.setattr(tracer.subprocess, "Popen", fake_popen)
 
-    tracer.run_traced_build(str(project), ["bst", "build", "x.bst"],
-                            str(raw_log), jobserver=4, jobserver_pool="fixed")
+    tracer.run_traced_build(str(project), ["bst", "build", "x.bst"], str(raw_log), jobserver=4, jobserver_pool="fixed")
 
     assert "ledger_lines" in seen
     peak = _peak_concurrent_holds_from_lines(seen["ledger_lines"])

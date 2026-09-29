@@ -4,6 +4,7 @@ wakeups would give a raw read. Mirrors `test_the_broker_grants_by_slack.
 py`'s own shape (real FIFOs, `_readable` inspects without consuming) -
 and the same FIFO `open_jobserver` seeds, per the verifier fix: admission
 has no pool of its own, so its own guard uses none either."""
+
 import json
 import os
 
@@ -48,7 +49,8 @@ def test_a_later_arrival_with_less_slack_is_admitted_first():
     with tempfile.TemporaryDirectory() as tmp:
         tmp_path = Path(tmp)
         broker, global_fd, proxy_fds, requests_path, ledger = _broker(
-            tmp_path, ["early", "late"], {"early": 100, "late": 5}, pool_size=2)
+            tmp_path, ["early", "late"], {"early": 100, "late": 5}, pool_size=2
+        )
         # "early" arrives first (t=1.0) but has more slack; "late" arrives
         # second (t=2.0) with the least slack - it must be admitted first.
         _request(requests_path, "early", 111, 1.0)
@@ -73,8 +75,7 @@ def test_an_unplanned_element_falls_back_to_arrival_order():
 
     with tempfile.TemporaryDirectory() as tmp:
         tmp_path = Path(tmp)
-        broker, global_fd, proxy_fds, requests_path, ledger = _broker(
-            tmp_path, ["a", "b"], {}, pool_size=2)
+        broker, global_fd, proxy_fds, requests_path, ledger = _broker(tmp_path, ["a", "b"], {}, pool_size=2)
         _request(requests_path, "a", 1, 5.0)
         _request(requests_path, "b", 2, 1.0)
 

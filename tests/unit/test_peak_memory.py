@@ -15,6 +15,7 @@ concurrent total nothing measured — the same class of error as reading
 occupancy as CPU (`UX-36`) or summing per-element redundancy savings
 (`UX-37`).
 """
+
 from tools.bst_native_build_tracer import (
     compute_peak_memory,
     pair_events,

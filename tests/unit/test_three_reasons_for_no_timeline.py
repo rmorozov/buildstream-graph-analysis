@@ -24,6 +24,7 @@ guard is vacuous, so it is asserted rather than assumed — the task file's
 own Acceptance Test named `tests/fixtures/with_timeline`, which has no
 Plane 2 at all (`absence()` there is `NOT_CAPTURED`).
 """
+
 import json
 import pathlib
 import re
@@ -47,8 +48,7 @@ def _omitted(run, tmp_path, name, **kwargs):
     """`timeline_omitted` as the exported page actually publishes it."""
     out = tmp_path / f"{name}.html"
     bga_view.export(str(run), str(out), **kwargs)
-    block = re.search(r'id="bga-run">(.*?)</script>',
-                      out.read_text(encoding="utf-8"), re.S)
+    block = re.search(r'id="bga-run">(.*?)</script>', out.read_text(encoding="utf-8"), re.S)
     return json.loads(block.group(1)).get("timeline_omitted")
 
 
@@ -60,54 +60,49 @@ def complete(tmp_path):
     `or` reached the false one.
     """
     run = pages.two_plane_snapshot(tmp_path / "store")
-    shutil.copy(REPO / "tests/fixtures/macro_micro/plane2.json",
-                run.parent / run_store.PLANE2_NAME)
+    shutil.copy(REPO / "tests/fixtures/macro_micro/plane2.json", run.parent / run_store.PLANE2_NAME)
     assert run_store.sibling_raw_log(str(run)) is not None, (
         "the fixture has no raw Plane 2 log, so the sentence under test "
-        "would be true and this guard would assert nothing")
+        "would be true and this guard would assert nothing"
+    )
     assert plane2.absence(str(run)) is None, (
         "the fixture has an absence, so the `or` never reaches its "
-        "right-hand side and the defect is not being reproduced")
+        "right-hand side and the defect is not being reproduced"
+    )
     return run
 
 
 class TestEachReasonIsItsOwn:
-
     def test_the_flag_is_named_not_the_run(self, complete, tmp_path):
         """The acceptance test: a run that demonstrably kept its log is
         not told it kept none."""
         said = _omitted(complete, tmp_path, "declined", with_trace=False)
         assert said, "no reason published at all for an export that has none"
         assert "with_trace" in said, (
-            f"the reason for no timeline is the caller's flag and the "
-            f"sentence does not name it: {said!r}")
+            f"the reason for no timeline is the caller's flag and the sentence does not name it: {said!r}"
+        )
         assert "kept no raw Plane 2 log" not in said, (
-            f"a run holding a raw Plane 2 log is told it kept none - the "
-            f"defect UX-555 was filed on: {said!r}")
+            f"a run holding a raw Plane 2 log is told it kept none - the defect UX-555 was filed on: {said!r}"
+        )
 
     def test_a_run_without_plane_two_gets_the_absence(self, tmp_path):
         """The second state keeps `bga/plane2.py`'s sentence - the same
         one the terminal prints, which `UX-329` exists to keep single."""
         said = _omitted(GOLDEN, tmp_path, "absent")
         assert said == plane2.NOT_CAPTURED, (
-            f"a run that never captured Plane 2 no longer gets the "
-            f"absence grammar's own sentence: {said!r}")
+            f"a run that never captured Plane 2 no longer gets the absence grammar's own sentence: {said!r}"
+        )
 
-    def test_a_refusal_says_it_was_refused(self, complete, tmp_path,
-                                           monkeypatch):
+    def test_a_refusal_says_it_was_refused(self, complete, tmp_path, monkeypatch):
         """The third state, `UX-545`'s, still names its numbers. The
         ceiling is lowered rather than the fixture grown - `UX-430`
         measured where it belongs."""
         monkeypatch.setattr(bga_view, "TRACE_TRACK_BUDGET", 1)
         said = _omitted(complete, tmp_path, "refused")
-        assert said and "ceiling" in said, (
-            f"a timeline refused for its size does not say so: {said!r}")
-        assert "with_trace" not in said, (
-            f"a refusal blames the caller's flag, which was not passed: "
-            f"{said!r}")
+        assert said and "ceiling" in said, f"a timeline refused for its size does not say so: {said!r}"
+        assert "with_trace" not in said, f"a refusal blames the caller's flag, which was not passed: {said!r}"
 
-    def test_the_three_are_three_different_sentences(self, complete,
-                                                     tmp_path, monkeypatch):
+    def test_the_three_are_three_different_sentences(self, complete, tmp_path, monkeypatch):
         """Collapsing two of them is the mutation this file exists for,
         and a clause that only checked "a sentence is published" would
         not see it."""
@@ -119,4 +114,5 @@ class TestEachReasonIsItsOwn:
         assert all(said), f"one of the three states published nothing: {said}"
         assert len(set(said)) == 3, (
             f"two of the three reasons for no timeline are the same "
-            f"sentence, which is the defect UX-555 was filed for: {said}")
+            f"sentence, which is the defect UX-555 was filed for: {said}"
+        )

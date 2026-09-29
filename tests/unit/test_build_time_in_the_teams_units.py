@@ -14,6 +14,7 @@ two properties, and the second is why the first is not enough - with no
 rate the report is byte-identical to before, and with one, no converted
 figure can be printed apart from the rate that converted it.
 """
+
 import json
 import os
 import pathlib
@@ -50,12 +51,10 @@ def _block(analysis, value, monkeypatch):
 
 
 class TestWithNoRateNothingIsInvented:
-
     def test_the_block_is_absent_rather_than_empty(self, analysis, monkeypatch):
         assert _block(analysis, None, monkeypatch) == []
 
-    def test_and_the_report_says_nothing_about_units(
-            self, analysis, monkeypatch):
+    def test_and_the_report_says_nothing_about_units(self, analysis, monkeypatch):
         monkeypatch.delenv(rate.ENV_VAR, raising=False)
         text = format_text(analysis)
 
@@ -73,17 +72,14 @@ class TestWithNoRateNothingIsInvented:
 
 
 class TestEveryConvertedFigureNamesItsRate:
-
-    def test_the_rate_is_stated_as_the_reader_s_input(
-            self, analysis, monkeypatch):
+    def test_the_rate_is_stated_as_the_reader_s_input(self, analysis, monkeypatch):
         lines = _block(analysis, RATE, monkeypatch)
 
         assert lines[1].strip().startswith(f"rate: {RATE}")
         assert "an input you supplied" in lines[1]
         assert "not anything this run measured" in lines[1]
 
-    def test_no_converted_figure_is_printed_apart_from_its_rate(
-            self, analysis, monkeypatch):
+    def test_no_converted_figure_is_printed_apart_from_its_rate(self, analysis, monkeypatch):
         """The acceptance test's mutation, as the assertion: find every
         line carrying a figure in the supplied unit and require the rate
         on that same line - not merely somewhere in the block, which a
@@ -95,8 +91,7 @@ class TestEveryConvertedFigureNamesItsRate:
         for line in converted:
             assert f"at {RATE}" in line, line
 
-    def test_the_same_holds_for_an_engineer_hours_rate(
-            self, analysis, monkeypatch):
+    def test_the_same_holds_for_an_engineer_hours_rate(self, analysis, monkeypatch):
         lines = _block(analysis, HOURS, monkeypatch)
         converted = [line for line in lines[2:] if " engineer-hours" in line]
 
@@ -104,8 +99,7 @@ class TestEveryConvertedFigureNamesItsRate:
         for line in converted:
             assert f"at {HOURS}" in line, line
 
-    def test_the_seconds_stay_beside_the_conversion(
-            self, analysis, monkeypatch):
+    def test_the_seconds_stay_beside_the_conversion(self, analysis, monkeypatch):
         """The measurement is the seconds; the conversion is the
         reader's arithmetic on top. A row that dropped the seconds would
         publish the derived number as the fact."""
@@ -115,15 +109,13 @@ class TestEveryConvertedFigureNamesItsRate:
 
 
 class TestTheArithmeticAndWhatItIsAppliedTo:
-
     def test_an_hour_of_build_costs_the_rate(self):
         supplied = rate.parse(RATE)
 
         assert rate.convert(3_600_000_000, supplied) == pytest.approx(90.0)
         assert rate.convert(1_800_000_000, supplied) == pytest.approx(45.0)
 
-    def test_the_joint_figure_is_published_not_summed(
-            self, analysis, monkeypatch):
+    def test_the_joint_figure_is_published_not_summed(self, analysis, monkeypatch):
         """`UX-230`'s rule: two fixes on one chain do not add. The
         together row is `joint-saving`'s own number, and on this fixture
         that number differs from the sum of the rows above it."""
@@ -149,15 +141,14 @@ class TestTheArithmeticAndWhatItIsAppliedTo:
 
 
 class TestARateThatCannotBeUsedIsNamed:
-
-    @pytest.mark.parametrize("supplied", [
-        "cheap", "90USD/machine-hour", "90 USD", "90 USD/fortnight",
-        "-90 USD/machine-hour", "0 USD/machine-hour"])
+    @pytest.mark.parametrize(
+        "supplied",
+        ["cheap", "90USD/machine-hour", "90 USD", "90 USD/fortnight", "-90 USD/machine-hour", "0 USD/machine-hour"],
+    )
     def test_it_refuses_rather_than_guessing(self, supplied):
         assert rate.parse(supplied).get("error"), supplied
 
-    def test_and_the_report_says_why_instead_of_falling_silent(
-            self, analysis, monkeypatch):
+    def test_and_the_report_says_why_instead_of_falling_silent(self, analysis, monkeypatch):
         """A reader who set a rate and got the unconverted report has no
         way to learn that the tool did not understand it."""
         lines = _block(analysis, "cheap", monkeypatch)
@@ -174,17 +165,18 @@ class TestARateThatCannotBeUsedIsNamed:
 
 
 class TestTheRateIsNotAMeasurement:
-
     def test_it_never_reaches_the_published_document(self):
         """The seconds are what this run measured and the payload
         publishes them; the rate is the reader's input, and a
         schema-described record of a build is not where an input goes."""
         done = subprocess.run(
-            [sys.executable, "-m", "bga.cli", "analyze", str(FIXTURE),
-             "--format", "json"],
-            capture_output=True, text=True, cwd=REPO, timeout=300,
-            env={**os.environ, "PYTHONPATH": str(REPO),
-                 rate.ENV_VAR: RATE})
+            [sys.executable, "-m", "bga.cli", "analyze", str(FIXTURE), "--format", "json"],
+            capture_output=True,
+            text=True,
+            cwd=REPO,
+            timeout=300,
+            env={**os.environ, "PYTHONPATH": str(REPO), rate.ENV_VAR: RATE},
+        )
         assert done.returncode == 0, done.stderr[-2000:]
         payload = json.loads(done.stdout)
 

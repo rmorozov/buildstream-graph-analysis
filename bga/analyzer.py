@@ -99,9 +99,7 @@ _OVERSUBSCRIPTION_DEMAND_RATIO = 8.0
 #     narrow section must not compute it either.
 #
 # A section absent from this map (including None) runs everything.
-_ALL_STAGES = frozenset(
-    {'floors', 'attribution', 'utilisation', 'diagnostics', 'structural', 'confidence'}
-)
+_ALL_STAGES = frozenset({'floors', 'attribution', 'utilisation', 'diagnostics', 'structural', 'confidence'})
 _SECTION_STAGES = {
     'graph': frozenset({'structural'}),
     'floors': frozenset({'floors'}),
@@ -132,7 +130,8 @@ def _run_instance(run_context, loaded_from) -> dict:
     if start_us:
         instance['started_at_us'] = start_us
         instance['started_at'] = datetime.fromtimestamp(
-            start_us / 1e6, tz=timezone.utc,
+            start_us / 1e6,
+            tz=timezone.utc,
         ).strftime('%Y-%m-%d %H:%M:%S UTC')
     if loaded_from:
         instance['run_dir'] = loaded_from
@@ -191,7 +190,6 @@ def _run_instance(run_context, loaded_from) -> dict:
     return instance
 
 
-
 # UX-110: the share of a task's own duration at which the wrapped log's
 # read-lag stops being negligible. 5% rather than a rounder number
 # because it is the point where the lag exceeds the noise band `bga
@@ -204,10 +202,7 @@ _RESOLUTION_MATERIAL_SHARE = 0.05
 # inlined because UX-116 retires *this clause* - and only where a joint
 # capacity recommendation actually ran for the capture in hand. Everywhere
 # else it stays, because everywhere else it is still true.
-UNMODELED_AXIS_CLAUSE = (
-    "native build-system parallelism (--max-jobs) is a separate, currently "
-    "unmodeled axis."
-)
+UNMODELED_AXIS_CLAUSE = "native build-system parallelism (--max-jobs) is a separate, currently unmodeled axis."
 
 # What replaces it when UX-116's block ran: the axis was modelled for this
 # capture, from its own measurements, so the note must stop saying it was
@@ -245,26 +240,19 @@ MIN_ELEMENTS_FOR_DISTRIBUTION = 10
 # argument invites the next person to add it.
 DISTRIBUTED_QUANTITIES = {
     'blast_radius': 'spans 0..n across one graph; "753 downstream" is p99.9 '
-                    'in a 1,202-element run and unremarkable in 40,000',
-    'element_duration': 'spans orders of magnitude; "is 40s slow *here*?" '
-                        'has no answer without the population',
-    'sandbox_tax': 'the useful question is literally "is this element\'s '
-                   'sandbox tax unusual"',
-    'process_count': 'heavy tails - one element with 40,000 processes *is* '
-                     'the finding',
+    'in a 1,202-element run and unremarkable in 40,000',
+    'element_duration': 'spans orders of magnitude; "is 40s slow *here*?" has no answer without the population',
+    'sandbox_tax': 'the useful question is literally "is this element\'s sandbox tax unusual"',
+    'process_count': 'heavy tails - one element with 40,000 processes *is* the finding',
 }
 UNDISTRIBUTED_QUANTITIES = {
     'share_of_critical_path': 'already a percentage of a known whole; a '
-                              'percentile of a percentage is a second scale '
-                              'for one fact',
-    'confidence': 'a run-level singleton with no population to be a '
-                  'percentile of',
-    'coverage': 'a run-level singleton with no population to be a '
-                'percentile of',
-    'efficiency_score': 'a run-level singleton with no population to be a '
-                        'percentile of',
-    'wall_clock': 'one number per run; the store aggregate is '
-                  'where its distribution across runs already lives',
+    'percentile of a percentage is a second scale '
+    'for one fact',
+    'confidence': 'a run-level singleton with no population to be a percentile of',
+    'coverage': 'a run-level singleton with no population to be a percentile of',
+    'efficiency_score': 'a run-level singleton with no population to be a percentile of',
+    'wall_clock': 'one number per run; the store aggregate is where its distribution across runs already lives',
     'optimization_horizon': 'one number per run, same as wall-clock - and it is\n                             already a projection, so a percentile of it would rank\n                             guesses against each other',
 }
 
@@ -289,8 +277,7 @@ def distribution(values):
         'n': len(numbers),
         'min': numbers[0],
         'max': numbers[-1],
-        'deciles': {f'p{p}': percentile(numbers, p)
-                    for p in BLAST_DISTRIBUTION_DECILES},
+        'deciles': {f'p{p}': percentile(numbers, p) for p in BLAST_DISTRIBUTION_DECILES},
     }
     for p in BLAST_DISTRIBUTION_TAIL:
         shape[f'p{p}'] = percentile(numbers, p)
@@ -331,9 +318,7 @@ def _blast_signals(diag_result, kind_by_uid: dict, foundation: frozenset = froze
             }
             for br in diag_result.blast_radius
         }
-        out['top_blast_radius'] = [
-            br.element_uid for br in diag_result.top_blast_radius_elements[:5]
-        ]
+        out['top_blast_radius'] = [br.element_uid for br in diag_result.top_blast_radius_elements[:5]]
         # UX-259: the shape the counts come from. `753 downstream`
         # is p99.9 in a graph of 1,202 and unremarkable in one of
         # forty thousand, and the *number* is what travels into a
@@ -345,8 +330,7 @@ def _blast_signals(diag_result, kind_by_uid: dict, foundation: frozenset = froze
         # distribution to mean anything - the same shape `UX-249`
         # settled on for "we do not have this", so a consumer never
         # has to interpret a published null.
-        shape = blast_radius_distribution(
-            [br.downstream_count for br in diag_result.blast_radius])
+        shape = blast_radius_distribution([br.downstream_count for br in diag_result.blast_radius])
         if shape:
             out['blast_radius_distribution'] = shape
         # UX-173: which order the ranking above is in, published
@@ -354,8 +338,7 @@ def _blast_signals(diag_result, kind_by_uid: dict, foundation: frozenset = froze
         # count because nothing was measured" are different claims.
         out['blast_radius_ranked_by'] = (
             'measured-rebuild-time'
-            if any(br.downstream_weighted_duration_us
-                   for br in diag_result.blast_radius)
+            if any(br.downstream_weighted_duration_us for br in diag_result.blast_radius)
             else 'element-count'
         )
     return out
@@ -376,8 +359,7 @@ def _fan_in_signals(graph, kinds: dict) -> dict:
         return {}
     rows = compute_fan_in(graph, kinds, STRUCTURAL_ELEMENT_KINDS, graph.foundation)
     out = {'fan_in': rows, 'top_fan_in': top_fan_in(rows)}
-    shape = blast_radius_distribution(
-        [row['transitive_count'] for row in rows.values()])
+    shape = blast_radius_distribution([row['transitive_count'] for row in rows.values()])
     if shape:
         out['fan_in_distribution'] = shape
     return out
@@ -392,17 +374,17 @@ def blast_radius_distribution(counts):
 class BuildEfficiencyAnalyzer:
     """
     Main analyzer class implementing the bga v9 specification.
-    
+
     The analyzer separates three fundamentally different kinds of statements:
     1. Measurement - what actually happened in the trace
     2. Certification - what cannot be beaten given constraints
     3. Estimation/counterfactual modeling - what might happen under different conditions
-    
+
     Governing principle:
     > Measure what happened. Certify what cannot be improved. Label what is estimated.
       Never mix the three.
     """
-    
+
     def __init__(
         self,
         run_dir: Optional[Path] = None,
@@ -464,31 +446,31 @@ class BuildEfficiencyAnalyzer:
         self.blame_chain_analyzer: Optional[BlameChainAnalyzer] = None
         self.replay_scheduler: Optional[ReplayScheduler] = None
         self.utilization_analyzer: Optional[UtilizationAnalyzer] = None
-    
+
     def load(self, run_dir: Optional[Path] = None) -> None:
         """
         Load input data from a run directory.
-        
+
         Expected structure:
             run_dir/
                 run_context.json
                 graph.json
                 trace.json
-        
+
         Args:
             run_dir: Path to run directory (uses instance run_dir if not provided)
         """
         path = run_dir or self.run_dir
         if path is None:
             raise ValueError("No run directory specified")
-        
+
         self.run_context, self.graph, self.trace = load_all(path)
         # UX-95: which run directory this analysis came from. The
         # identity hash is deliberately stable across captures of the
         # same project and targets - that is its job - so it cannot tell
         # two captures apart, and the path is half of what can.
         self.loaded_from = str(path)
-    
+
     def load_from_data(
         self,
         run_context: RunContext,
@@ -497,7 +479,7 @@ class BuildEfficiencyAnalyzer:
     ) -> None:
         """
         Load input data directly from objects.
-        
+
         Args:
             run_context: Run context object
             graph: Dependency graph object
@@ -506,7 +488,7 @@ class BuildEfficiencyAnalyzer:
         self.run_context = run_context
         self.graph = graph
         self.trace = trace
-    
+
     def normalize(self, admission_wait_by_element: Optional[dict] = None) -> None:
         """
         Normalize the trace data.
@@ -560,27 +542,29 @@ class BuildEfficiencyAnalyzer:
             queue = self.run_context.build_queue if self.run_context else {}
             counts = [queue.get('processed'), queue.get('skipped'), queue.get('failed')]
             recorded = all(isinstance(value, int) for value in counts)
-            self.violations.append({
-                'type': 'build_failed',
-                'failed_count': len(failed),
-                'failed_elements': failed,
-                'built_count': queue.get('processed') if recorded else None,
-                'scheduled_count': sum(counts) if recorded else None,
-                # UX-164 item 3: what actually happened to the rest.
-                # `scheduled` alone reads as "seven builds lost" when six
-                # of them were cache hits that never needed to run.
-                'cached_count': queue.get('skipped') if recorded else None,
-                # UX-157: the same violation covers both ways of not
-                # finishing, so every consumer of `build_failed` gets
-                # the interrupted case for free instead of needing to
-                # learn about it separately.
-                'interrupted': interrupted,
-                'suspended': suspension,
-            })
+            self.violations.append(
+                {
+                    'type': 'build_failed',
+                    'failed_count': len(failed),
+                    'failed_elements': failed,
+                    'built_count': queue.get('processed') if recorded else None,
+                    'scheduled_count': sum(counts) if recorded else None,
+                    # UX-164 item 3: what actually happened to the rest.
+                    # `scheduled` alone reads as "seven builds lost" when six
+                    # of them were cache hits that never needed to run.
+                    'cached_count': queue.get('skipped') if recorded else None,
+                    # UX-157: the same violation covers both ways of not
+                    # finishing, so every consumer of `build_failed` gets
+                    # the interrupted case for free instead of needing to
+                    # learn about it separately.
+                    'interrupted': interrupted,
+                    'suspended': suspension,
+                }
+            )
 
         # Initialize blame chain analyzer with normalized tasks
         phase_spans = self.trace.phases if self.trace else []
-        
+
         # Build active_tasks_at_time for classification (kept for
         # BlameChainAnalyzer's interface stability - unused internally as
         # of P1-31, which derives real occupancy from the task list
@@ -595,7 +579,7 @@ class BuildEfficiencyAnalyzer:
         for task in self.normalized_tasks:
             # Mark task as active during its execution [start_us, finish_us)
             active_tasks_at_time[task.start_us].add(str(task.task_key))
-        
+
         # Resource capacity from run context (run-context/v9's own
         # resource_capacities field, e.g. {"PROCESS": 4} - Part 32.1).
         # P1-31: this previously checked a `run_context.builders`
@@ -611,6 +595,7 @@ class BuildEfficiencyAnalyzer:
         resource_capacity = {}
         if self.run_context and self.run_context.resource_capacities:
             from .ingest.models import Resource
+
             for name, capacity in self.run_context.resource_capacities.items():
                 try:
                     resource_capacity[Resource(name)] = capacity
@@ -619,9 +604,9 @@ class BuildEfficiencyAnalyzer:
                         "Ignoring unrecognized resource %r in run_context.resource_capacities",
                         name,
                     )
-        
+
         max_jobs = self.run_context.max_jobs if self.run_context else None
-        
+
         self.blame_chain_analyzer = BlameChainAnalyzer(
             self.normalized_tasks,
             self.run_context,
@@ -630,13 +615,13 @@ class BuildEfficiencyAnalyzer:
             resource_capacity=resource_capacity,
             max_jobs=max_jobs,
         )
-        
+
         # Initialize replay scheduler
         self.replay_scheduler = ReplayScheduler(
             self.normalized_tasks,
             self.run_context,
         )
-        
+
         # Initialize utilization analyzer (M4)
         if self.run_context:
             cpu_accounting = None
@@ -647,7 +632,7 @@ class BuildEfficiencyAnalyzer:
                     cgroup_period_us=self.run_context.cpu_accounting.get('cgroup_period_us'),
                     accounting_method=self.run_context.cpu_accounting.get('accounting_method'),
                 )
-            
+
             wall_clock_us = self.run_context.wall_clock_us or 0
 
             # host_cpu_count/cpu_budget (UX-12/UX-15), not max_jobs -
@@ -663,7 +648,7 @@ class BuildEfficiencyAnalyzer:
                 host_cpu_count=self.run_context.host_cpu_count,
                 cpu_budget=self.run_context.cpu_budget,
             )
-    
+
     def _compute_floors(self, graph_analysis: Optional[dict] = None) -> dict:
         """
         Compute certified and advisory floors (Part 14-17).
@@ -764,8 +749,11 @@ class BuildEfficiencyAnalyzer:
         # durations already finalized (lb/certified_headroom/t_c/model_slack
         # never read cold_floor, and cold_floor never reads them back).
         cold_floor = compute_cold_floor(
-            self.graph, self.normalized_tasks, self.historical_runs,
-            self.cold, self.allow_partial_cold,
+            self.graph,
+            self.normalized_tasks,
+            self.historical_runs,
+            self.cold,
+            self.allow_partial_cold,
         )
 
         # P2-08: assemble the final plain floors dict (the existing wire
@@ -859,7 +847,7 @@ class BuildEfficiencyAnalyzer:
         # Get graph analysis for depths and predecessors
         if graph_analysis is None:
             graph_analysis = analyze_graph(self.graph, self.normalized_tasks)
-        
+
         # Build explicit predecessor map from graph, at task granularity.
         #
         # Element-level dependency edges (graph.dependencies) express "this
@@ -907,13 +895,10 @@ class BuildEfficiencyAnalyzer:
                 continue
             for succ_key in tasks_by_element.get(dep.successor, []):
                 explicit_predecessors.setdefault(succ_key, []).append(pred_key)
-        
+
         # Build finish time map
-        task_finish_times: dict[str, int] = {
-            str(t.task_key): t.finish_us
-            for t in self.normalized_tasks
-        }
-        
+        task_finish_times: dict[str, int] = {str(t.task_key): t.finish_us for t in self.normalized_tasks}
+
         # Use unweighted depth as proxy for task depths
         task_depths: dict[str, int] = {}
         for task in self.normalized_tasks:
@@ -933,8 +918,7 @@ class BuildEfficiencyAnalyzer:
             successor_elements[dep.predecessor].append(dep.successor)
 
         terminal_element_uids = {
-            elem.uid for elem in self.graph.elements
-            if elem.requested_target or not successor_elements.get(elem.uid)
+            elem.uid for elem in self.graph.elements if elem.requested_target or not successor_elements.get(elem.uid)
         }
 
         terminal_tasks: set[str] = set()
@@ -954,7 +938,7 @@ class BuildEfficiencyAnalyzer:
             task_depths,
             terminal_tasks=terminal_tasks or None,
         )
-        
+
         # Reconcile attribution
         reconciled = self.blame_chain_analyzer.reconcile_attribution(segments)
 
@@ -971,7 +955,8 @@ class BuildEfficiencyAnalyzer:
         untracked_head_us = 0
         untracked_tail_us = 0
         if (
-            self.run_context and self.normalized_tasks
+            self.run_context
+            and self.normalized_tasks
             and self.run_context.wall_start_us is not None
             and self.run_context.wall_end_us is not None
         ):
@@ -997,23 +982,34 @@ class BuildEfficiencyAnalyzer:
         # are reported, not hidden; resource ambiguity is UNKNOWN, not
         # invented), any future residual must be reported, not silently
         # absorbed. Never pad or truncate to force the sum to match.
-        attribution_sum_us = sum(result[k] for k in (
-            'execution_on_chain_us', 'dependency_wait_us', 'resource_wait_us',
-            'scheduler_wait_us', 'idle_us', 'retry_wait_us',
-        ))
+        attribution_sum_us = sum(
+            result[k]
+            for k in (
+                'execution_on_chain_us',
+                'dependency_wait_us',
+                'resource_wait_us',
+                'scheduler_wait_us',
+                'idle_us',
+                'retry_wait_us',
+            )
+        )
         if attribution_sum_us != horizon_us:
             residual_us = horizon_us - attribution_sum_us
             logger.warning(
                 "Attribution reconciliation (I4) failed: Sigma=%dus != H=%dus (residual %dus)",
-                attribution_sum_us, horizon_us, residual_us,
+                attribution_sum_us,
+                horizon_us,
+                residual_us,
             )
-            self.violations.append({
-                'type': 'attribution_reconciliation',
-                'invariant': 'I4',
-                'attribution_sum_us': attribution_sum_us,
-                'horizon_us': horizon_us,
-                'residual_us': residual_us,
-            })
+            self.violations.append(
+                {
+                    'type': 'attribution_reconciliation',
+                    'invariant': 'I4',
+                    'attribution_sum_us': attribution_sum_us,
+                    'horizon_us': horizon_us,
+                    'residual_us': residual_us,
+                }
+            )
 
         # Store detailed attribution for later use
         self._task_attributions = task_attributions
@@ -1073,13 +1069,16 @@ class BuildEfficiencyAnalyzer:
                 "declared cpu_budget=%d exceeds this environment's detected "
                 "host_cpu_count=%d - the declared budget itself may be "
                 "unrealistic here (see UX-15)",
-                cpu_budget, host_cpu_count,
+                cpu_budget,
+                host_cpu_count,
             )
-            self.violations.append({
-                'type': 'cpu_budget_exceeds_host_capacity',
-                'cpu_budget': cpu_budget,
-                'host_cpu_count': host_cpu_count,
-            })
+            self.violations.append(
+                {
+                    'type': 'cpu_budget_exceeds_host_capacity',
+                    'cpu_budget': cpu_budget,
+                    'host_cpu_count': host_cpu_count,
+                }
+            )
 
         # UX-891: the one derivation, in bga/floors/cpu.py, which the CPU
         # floor divides by - so the floor and this check cannot disagree
@@ -1099,11 +1098,13 @@ class BuildEfficiencyAnalyzer:
             # UX-12/15/16/17/21 keys off these three inputs, so say which
             # one was missing rather than returning in silence.
             missing = [
-                name for name, value in (
+                name
+                for name, value in (
                     ('builders', builders),
                     ('native_max_jobs', native_max_jobs),
                     ('governing core count (host_cpu_count/cpu_budget)', governing_cores),
-                ) if value is None
+                )
+                if value is None
             ]
             logger.info("capacity checks not run - missing: %s", ", ".join(missing))
             # Recorded on the analyzer, not appended to `violations`:
@@ -1143,45 +1144,56 @@ class BuildEfficiencyAnalyzer:
                 "%gx the cores, past the ratio UX-09 measured as genuinely "
                 "slower on a real host (BuildStream's own unconfigured default "
                 "here would be %d)",
-                builders, resolved_native_max_jobs,
+                builders,
+                resolved_native_max_jobs,
                 " (resolved from BuildStream's own max-jobs=0 auto sentinel)" if native_max_jobs_was_auto else "",
-                actual_demand, governing_cores, capacity_source,
-                _OVERSUBSCRIPTION_DEMAND_RATIO, default_demand,
+                actual_demand,
+                governing_cores,
+                capacity_source,
+                _OVERSUBSCRIPTION_DEMAND_RATIO,
+                default_demand,
             )
-            self.violations.append({
-                'type': 'resource_oversubscription',
-                'builders': builders,
-                'native_max_jobs': resolved_native_max_jobs,
-                'native_max_jobs_was_auto': native_max_jobs_was_auto,
-                'actual_demand': actual_demand,
-                'governing_cores': governing_cores,
-                'capacity_source': capacity_source,
-                'host_cpu_count': host_cpu_count,
-                'cpu_budget': cpu_budget,
-                'default_demand': default_demand,
-                'oversubscription_ceiling': oversubscription_ceiling,
-                'demand_ratio': actual_demand / governing_cores if governing_cores else None,
-            })
+            self.violations.append(
+                {
+                    'type': 'resource_oversubscription',
+                    'builders': builders,
+                    'native_max_jobs': resolved_native_max_jobs,
+                    'native_max_jobs_was_auto': native_max_jobs_was_auto,
+                    'actual_demand': actual_demand,
+                    'governing_cores': governing_cores,
+                    'capacity_source': capacity_source,
+                    'host_cpu_count': host_cpu_count,
+                    'cpu_budget': cpu_budget,
+                    'default_demand': default_demand,
+                    'oversubscription_ceiling': oversubscription_ceiling,
+                    'demand_ratio': actual_demand / governing_cores if governing_cores else None,
+                }
+            )
         elif actual_demand < governing_cores:
             logger.info(
                 "builders=%d x native max-jobs=%d%s = %d potential concurrent "
                 "processes vs a governing ceiling of %d cores (%s) - fewer "
                 "than one process per core, may be leaving cores idle",
-                builders, resolved_native_max_jobs,
+                builders,
+                resolved_native_max_jobs,
                 " (resolved from BuildStream's own max-jobs=0 auto sentinel)" if native_max_jobs_was_auto else "",
-                actual_demand, governing_cores, capacity_source,
+                actual_demand,
+                governing_cores,
+                capacity_source,
             )
-            self.violations.append({
-                'type': 'resource_undersubscription',
-                'builders': builders,
-                'native_max_jobs': resolved_native_max_jobs,
-                'native_max_jobs_was_auto': native_max_jobs_was_auto,
-                'actual_demand': actual_demand,
-                'governing_cores': governing_cores,
-                'capacity_source': capacity_source,
-                'host_cpu_count': host_cpu_count,
-                'cpu_budget': cpu_budget,
-            })
+            self.violations.append(
+                {
+                    'type': 'resource_undersubscription',
+                    'builders': builders,
+                    'native_max_jobs': resolved_native_max_jobs,
+                    'native_max_jobs_was_auto': native_max_jobs_was_auto,
+                    'actual_demand': actual_demand,
+                    'governing_cores': governing_cores,
+                    'capacity_source': capacity_source,
+                    'host_cpu_count': host_cpu_count,
+                    'cpu_budget': cpu_budget,
+                }
+            )
 
         # UX-28: a second, independent and much sharper signal. The
         # product check above is over *potential* demand, which UX-09
@@ -1203,16 +1215,20 @@ class BuildEfficiencyAnalyzer:
                 "BuildStream dispatches that many elements concurrently and each "
                 "runs at least one process, so the host is oversubscribed even at "
                 "--max-jobs 1 (see UX-09/UX-28)",
-                builders, governing_cores, capacity_source,
+                builders,
+                governing_cores,
+                capacity_source,
             )
-            self.violations.append({
-                'type': 'dispatch_oversubscription',
-                'builders': builders,
-                'governing_cores': governing_cores,
-                'capacity_source': capacity_source,
-                'host_cpu_count': host_cpu_count,
-                'cpu_budget': cpu_budget,
-            })
+            self.violations.append(
+                {
+                    'type': 'dispatch_oversubscription',
+                    'builders': builders,
+                    'governing_cores': governing_cores,
+                    'capacity_source': capacity_source,
+                    'host_cpu_count': host_cpu_count,
+                    'cpu_budget': cpu_budget,
+                }
+            )
 
     def _check_memory_oversubscription(self) -> None:
         """UX-21: every concurrently-running build subprocess also
@@ -1246,10 +1262,7 @@ class BuildEfficiencyAnalyzer:
 
         # UX-16: explicit `is None` checks, not truthiness - see
         # _check_process_oversubscription's own comment on this.
-        if (
-            builders is None or native_max_jobs is None
-            or memory_budget_mb is None or estimated_job_memory_mb is None
-        ):
+        if builders is None or native_max_jobs is None or memory_budget_mb is None or estimated_job_memory_mb is None:
             return
 
         if native_max_jobs == 0:
@@ -1282,19 +1295,24 @@ class BuildEfficiencyAnalyzer:
                 "~%dMB/job = ~%dMB vs a declared memory budget of %dMB - risk of "
                 "swap (see UX-21); this is a config-driven estimate, not a "
                 "real per-task memory measurement",
-                builders, resolved_native_max_jobs,
+                builders,
+                resolved_native_max_jobs,
                 " (resolved from BuildStream's own max-jobs=0 auto sentinel)" if native_max_jobs_was_auto else "",
-                estimated_job_memory_mb, estimated_demand_mb, memory_budget_mb,
+                estimated_job_memory_mb,
+                estimated_demand_mb,
+                memory_budget_mb,
             )
-            self.violations.append({
-                'type': 'memory_oversubscription',
-                'builders': builders,
-                'native_max_jobs': resolved_native_max_jobs,
-                'native_max_jobs_was_auto': native_max_jobs_was_auto,
-                'estimated_job_memory_mb': estimated_job_memory_mb,
-                'estimated_demand_mb': estimated_demand_mb,
-                'memory_budget_mb': memory_budget_mb,
-            })
+            self.violations.append(
+                {
+                    'type': 'memory_oversubscription',
+                    'builders': builders,
+                    'native_max_jobs': resolved_native_max_jobs,
+                    'native_max_jobs_was_auto': native_max_jobs_was_auto,
+                    'estimated_job_memory_mb': estimated_job_memory_mb,
+                    'estimated_demand_mb': estimated_demand_mb,
+                    'memory_budget_mb': memory_budget_mb,
+                }
+            )
 
     def _compute_occupancy_ratio(self, horizon_us: int) -> Optional[float]:
         """UX-27: sum of real task slot-occupancy over the dispatch
@@ -1327,9 +1345,7 @@ class BuildEfficiencyAnalyzer:
         types = {v.get('type') for v in self.violations}
         skipped = list(getattr(self, 'capacity_check_skipped_inputs', []) or [])
         return {
-            'oversubscribed': bool(
-                types & {'resource_oversubscription', 'dispatch_oversubscription'}
-            ),
+            'oversubscribed': bool(types & {'resource_oversubscription', 'dispatch_oversubscription'}),
             'undersubscribed': 'resource_undersubscription' in types,
             'checks_ran': not skipped,
             'skipped_inputs': skipped,
@@ -1377,7 +1393,8 @@ class BuildEfficiencyAnalyzer:
         a single source of truth.
         """
         oversub = next(
-            (v for v in self.violations if v.get('type') == 'resource_oversubscription'), None,
+            (v for v in self.violations if v.get('type') == 'resource_oversubscription'),
+            None,
         )
         if oversub:
             if oversub.get('capacity_source') == 'declared_cpu_budget':
@@ -1406,16 +1423,15 @@ class BuildEfficiencyAnalyzer:
         if getattr(self, 'capacity_check_skipped_inputs', None):
             note += (
                 " Capacity checks (over/under-subscription, memory) did not run for "
-                "this run - missing: " + ", ".join(self.capacity_check_skipped_inputs)
+                "this run - missing: "
+                + ", ".join(self.capacity_check_skipped_inputs)
                 + ". They are inert here, not passing; a wrapped log records "
                 "--max-jobs on its own first line, or declare the missing "
                 "value explicitly at extraction time."
             )
         return note
 
-    def analyze(
-        self, run_dir: Optional[Path] = None, section: Optional[str] = None
-    ) -> AnalysisResult:
+    def analyze(self, run_dir: Optional[Path] = None, section: Optional[str] = None) -> AnalysisResult:
         """
         Perform complete analysis.
 
@@ -1434,10 +1450,10 @@ class BuildEfficiencyAnalyzer:
         6. CPU utilization analysis (M4)
         7. Advanced diagnostics (M5)
         8. Structural analysis (M6)
-        
+
         Args:
             run_dir: Path to run directory (uses instance run_dir if not provided)
-        
+
         Returns:
             AnalysisResult with all computed metrics
         """
@@ -1446,12 +1462,12 @@ class BuildEfficiencyAnalyzer:
             self.load(run_dir)
         elif self.run_dir is not None and (self.run_context is None or self.graph is None or self.trace is None):
             self.load()
-        
+
         if self.normalized_tasks is None or len(self.normalized_tasks) == 0:
             self.normalize()
-        
+
         result = AnalysisResult()
-        
+
         # Set run_id and total_duration from context/trace. Previously
         # read a `run_id`/`uuid` attribute RunContext has never actually
         # defined (always '' in practice) - now the real run-identity
@@ -1479,7 +1495,7 @@ class BuildEfficiencyAnalyzer:
         # analysis document, which does not exist at this point.
         result.normalized_tasks = self.normalized_tasks
         result.run_context = self.run_context
-        
+
         # Compute horizon for total duration
         occupancy_stats = compute_occupancy_stats(self.normalized_tasks)
         horizon_us = occupancy_stats.get('horizon_us', 0)
@@ -1500,11 +1516,7 @@ class BuildEfficiencyAnalyzer:
         # (each category / total_duration_us) sum to 100% again, per Part
         # 12's exact identity (UNTRACKED_HEAD + task-horizon attribution
         # + UNTRACKED_TAIL == wall_clock).
-        if (
-            self.run_context
-            and self.run_context.wall_start_us is not None
-            and self.run_context.wall_end_us is not None
-        ):
+        if self.run_context and self.run_context.wall_start_us is not None and self.run_context.wall_end_us is not None:
             wall_clock_us = self.run_context.wall_end_us - self.run_context.wall_start_us
             result.total_duration_us = wall_clock_us
             # Part 13: "wall_clock >= H is a provenance/containment
@@ -1517,14 +1529,17 @@ class BuildEfficiencyAnalyzer:
                     "Wall clock (%dus) is less than task horizon (%dus) - "
                     "this violates Part 13's containment relationship and "
                     "usually indicates corrupted timestamp reconstruction",
-                    wall_clock_us, horizon_us,
+                    wall_clock_us,
+                    horizon_us,
                 )
-                self.violations.append({
-                    'type': 'wall_clock_containment',
-                    'invariant': 'Part 13',
-                    'wall_clock_us': wall_clock_us,
-                    'horizon_us': horizon_us,
-                })
+                self.violations.append(
+                    {
+                        'type': 'wall_clock_containment',
+                        'invariant': 'Part 13',
+                        'wall_clock_us': wall_clock_us,
+                        'horizon_us': horizon_us,
+                    }
+                )
         else:
             result.total_duration_us = horizon_us
 
@@ -1543,7 +1558,7 @@ class BuildEfficiencyAnalyzer:
         # Element-kind summary (P4-12 Direction 3, non-spec additive
         # signal) - see docs/backlog/tasks/P4-12-element-kind-based-heuristics.md
         result.element_kind_summary = self._compute_element_kind_summary()
-        
+
         # Occupancy analysis (M0)
         occupancy_stats = compute_occupancy_stats(self.normalized_tasks)
         result.occupancy = {
@@ -1553,14 +1568,10 @@ class BuildEfficiencyAnalyzer:
             'horizon_end_us': occupancy_stats['horizon_end'],
             'horizon_us': occupancy_stats['horizon_us'],
             'idle_us': occupancy_stats['idle_us'],
-            'resource_occupancy': {
-                str(k): v for k, v in occupancy_stats['resource_occupancy'].items()
-            },
-            'peak_resource_occupancy': {
-                str(k): v for k, v in occupancy_stats['peak_resource_occupancy'].items()
-            },
+            'resource_occupancy': {str(k): v for k, v in occupancy_stats['resource_occupancy'].items()},
+            'peak_resource_occupancy': {str(k): v for k, v in occupancy_stats['peak_resource_occupancy'].items()},
         }
-        
+
         # Graph analysis (M1) - computed once and reused by _compute_floors/
         # _compute_attribution below (P1-21) instead of each recomputing it
         # independently (previously 3x per analyze() call, tripling the
@@ -1584,9 +1595,7 @@ class BuildEfficiencyAnalyzer:
                 # `structural.sensitivity.critical_path_us`: one
                 # duration published three times, once falsely. The two
                 # truthful names remain.
-                'critical_path_detail': self._build_critical_path_detail(
-                    graph_analysis['critical_path']
-                ),
+                'critical_path_detail': self._build_critical_path_detail(graph_analysis['critical_path']),
                 'downstream_count': graph_analysis['downstream_count'],
                 'slack': graph_analysis['slack'],
                 # UX-70: is this build a chain or a mesh? The share of
@@ -1596,9 +1605,9 @@ class BuildEfficiencyAnalyzer:
                 # element was worth 3.2% of the build rather than its
                 # 17.7% share of the path.
                 'zero_slack_share': (
-                    sum(1 for v in graph_analysis['slack'].values() if v == 0)
-                    / len(graph_analysis['slack'])
-                    if graph_analysis['slack'] else None
+                    sum(1 for v in graph_analysis['slack'].values() if v == 0) / len(graph_analysis['slack'])
+                    if graph_analysis['slack']
+                    else None
                 ),
                 'unweighted_depth': graph_analysis['unweighted_depth'],
                 # UX-79: every element's measured duration, not just the
@@ -1609,9 +1618,7 @@ class BuildEfficiencyAnalyzer:
                 # what a marginal, per-element diff between two runs
                 # needs, since a well-added element is off the path by
                 # construction.
-                'element_durations': dict(
-                    compute_element_durations(self.normalized_tasks)
-                ),
+                'element_durations': dict(compute_element_durations(self.normalized_tasks)),
             }
             # UX-260: the same statistic `UX-259` gave blast radius,
             # over the other population a reader cannot know the scale
@@ -1620,8 +1627,7 @@ class BuildEfficiencyAnalyzer:
             # beside the durations rather than in `_compute_diagnostics`
             # - that runs before this dict exists, which is where the
             # first attempt put it and why it published nothing.
-            duration_shape = distribution(
-                result.signals['element_durations'].values())
+            duration_shape = distribution(result.signals['element_durations'].values())
             if duration_shape:
                 result.signals['element_duration_distribution'] = duration_shape
             # UX-74: one ~60-minute capture used to yield exactly one
@@ -1653,7 +1659,9 @@ class BuildEfficiencyAnalyzer:
         # without a host-samples series, which is where the clause
         # disappears rather than printing a zero.
         cache_accounting = compute_cache_accounting(
-            self.run_context, self.graph, self.normalized_tasks,
+            self.run_context,
+            self.graph,
+            self.normalized_tasks,
             result.total_duration_us,
             network_bytes=self._network_bytes(),
         )
@@ -1689,8 +1697,9 @@ class BuildEfficiencyAnalyzer:
         # Attribution (M2) - `UX-42` documents this one as quadratic per
         # gap, which is where the minutes actually go.
         if 'attribution' in stages:
-            with progress.ticker("analyzing: attribution",
-                                 total=len(self.graph.elements) if self.graph else None) as tick:
+            with progress.ticker(
+                "analyzing: attribution", total=len(self.graph.elements) if self.graph else None
+            ) as tick:
                 result.attribution = self._compute_attribution(graph_analysis)
                 tick.step(len(self.graph.elements) if self.graph else 1)
 
@@ -1707,11 +1716,11 @@ class BuildEfficiencyAnalyzer:
             # (`UX-675`'s own argument, one layer up).
             envelope = self._compute_utilization_envelope()
             result.utilization_envelope = envelope.get("envelope") or {
-                "available": False, "absence": envelope.get("absence")}
-            result.underutilized_intervals = envelope.get(
-                "underutilized_intervals") or []
-            result.overcommitted_intervals = envelope.get(
-                "overcommitted_intervals") or []
+                "available": False,
+                "absence": envelope.get("absence"),
+            }
+            result.underutilized_intervals = envelope.get("underutilized_intervals") or []
+            result.overcommitted_intervals = envelope.get("overcommitted_intervals") or []
 
         # Advanced Diagnostics (M5)
         if 'diagnostics' in stages:
@@ -1738,16 +1747,14 @@ class BuildEfficiencyAnalyzer:
         # at all. Absent when none - the run had none, not the tool had
         # nothing to say.
         result.duration_resolution = self._build_duration_resolution()
-        
+
         # Confidence (Part 33) - rendered by the full report only (both
         # formatters gate it on `section is None`), and it consumes
         # attribution and floors, so computing it for a narrow section
         # would reintroduce exactly the cost this gating removes.
         if 'confidence' in stages:
             with progress.ticker("analyzing: confidence") as tick:
-                result.confidence = self._compute_confidence(
-                    graph_analysis, result.attribution, result.floors
-                )
+                result.confidence = self._compute_confidence(graph_analysis, result.attribution, result.floors)
                 tick.step()
 
         self.analysis_result = result
@@ -1763,29 +1770,20 @@ class BuildEfficiencyAnalyzer:
         everything on a three-second task, so the resolution alone does
         not say whether it matters; the ratio does.
         """
-        agreement = getattr(self.run_context, "timestamp_agreement", None) \
-            if self.run_context else None
+        agreement = getattr(self.run_context, "timestamp_agreement", None) if self.run_context else None
         if not agreement or not agreement.get("tasks_compared"):
             return {}
         resolution_s = self.run_context.plane1_resolution_s
-        durations = [
-            span.dur_us / 1e6 for span in (self.trace.spans if self.trace else [])
-            if span.dur_us
-        ]
+        durations = [span.dur_us / 1e6 for span in (self.trace.spans if self.trace else []) if span.dur_us]
         # The lag is a fixed number of seconds, so whether it matters is
         # a question about each task's own length. Counted at a stated
         # share rather than left for the reader to divide.
-        material = [
-            d for d in durations
-            if resolution_s and d and resolution_s / d > _RESOLUTION_MATERIAL_SHARE
-        ]
+        material = [d for d in durations if resolution_s and d and resolution_s / d > _RESOLUTION_MATERIAL_SHARE]
         # UX-341: `run-context.json` records these four in seconds and
         # is an input with its own conventions; the payload is in µs,
         # like every other duration it publishes. The conversion is
         # here, at the boundary, rather than in four readers.
-        published = {k: v for k, v in agreement.items()
-                     if k not in ("note", "worst_shortfall_s",
-                                  "worst_excess_s")}
+        published = {k: v for k, v in agreement.items() if k not in ("note", "worst_shortfall_s", "worst_excess_s")}
         return {
             **published,
             "worst_shortfall_us": _s_to_us(agreement.get("worst_shortfall_s")),
@@ -1817,10 +1815,7 @@ class BuildEfficiencyAnalyzer:
         entries = self.run_context.pipeline_overhead if self.run_context else []
         if not entries:
             return {}
-        phases = [
-            {'phase': e.get('phase', ''), 'elapsed_us': e.get('elapsed_us', 0)}
-            for e in entries
-        ]
+        phases = [{'phase': e.get('phase', ''), 'elapsed_us': e.get('elapsed_us', 0)} for e in entries]
         total_us = sum(p['elapsed_us'] for p in phases)
         return {
             'phases': phases,
@@ -1872,24 +1867,18 @@ class BuildEfficiencyAnalyzer:
         savings: dict[str, int] = {}
         if self.graph:
             candidates = [
-                uid for uid in sorted(
-                    critical_path, key=lambda u: -duration_by_uid.get(u, 0)
-                )
-                if duration_by_uid.get(uid)
-                and kind_by_uid.get(uid) not in STRUCTURAL_ELEMENT_KINDS
+                uid
+                for uid in sorted(critical_path, key=lambda u: -duration_by_uid.get(u, 0))
+                if duration_by_uid.get(uid) and kind_by_uid.get(uid) not in STRUCTURAL_ELEMENT_KINDS
             ]
-            savings = compute_realizable_savings(
-                self.graph, dict(duration_by_uid), candidates
-            )
+            savings = compute_realizable_savings(self.graph, dict(duration_by_uid), candidates)
         return [
             {
                 'element_uid': uid,
                 'element_kind': kind_by_uid.get(uid, 'unknown'),
                 'is_structural_kind': kind_by_uid.get(uid) in STRUCTURAL_ELEMENT_KINDS,
                 'duration_us': duration_by_uid.get(uid, 0),
-                'share_of_path': (
-                    duration_by_uid.get(uid, 0) / path_total_us if path_total_us else None
-                ),
+                'share_of_path': (duration_by_uid.get(uid, 0) / path_total_us if path_total_us else None),
                 # None means "not evaluated" (structural, zero-duration, or
                 # outside the evaluated candidates), never "no saving".
                 'realizable_saving_us': savings.get(uid),
@@ -1930,13 +1919,8 @@ class BuildEfficiencyAnalyzer:
         for task in self.normalized_tasks:
             durations[task.task_key.element_uid] += task.dur_us
         kind_by_uid = self._element_kind_lookup()
-        structural = {
-            uid for uid, kind in kind_by_uid.items()
-            if kind in STRUCTURAL_ELEMENT_KINDS
-        }
-        horizon = compute_optimization_horizon(
-            self.graph, dict(durations), excluded=structural
-        )
+        structural = {uid for uid, kind in kind_by_uid.items() if kind in STRUCTURAL_ELEMENT_KINDS}
+        horizon = compute_optimization_horizon(self.graph, dict(durations), excluded=structural)
         # Stashed for `_compute_structural_analysis`, which runs later in
         # the same `analyze()` (UX-74). Only elements whose saving is
         # realizable against *this* run's durations - the later horizon
@@ -1947,19 +1931,13 @@ class BuildEfficiencyAnalyzer:
         self._realizable_candidates = [
             entry['element_uid']
             for entry in sorted(
-                (
-                    d for d in (result_detail or [])
-                    if d.get('realizable_saving_us')
-                    and not d.get('is_structural_kind')
-                ),
+                (d for d in (result_detail or []) if d.get('realizable_saving_us') and not d.get('is_structural_kind')),
                 key=lambda d: -d['realizable_saving_us'],
             )
         ]
         recommended = [step['element_uid'] for step in horizon[:JOINT_SAVING_SET_SIZE]]
         joint_us = compute_joint_saving(self.graph, dict(durations), recommended)
-        sum_us = sum(
-            step['saving_us'] for step in horizon[:JOINT_SAVING_SET_SIZE]
-        )
+        sum_us = sum(step['saving_us'] for step in horizon[:JOINT_SAVING_SET_SIZE])
         return {
             'optimization_horizon': horizon,
             'joint_saving': {
@@ -1970,9 +1948,14 @@ class BuildEfficiencyAnalyzer:
                 # as separate pieces without them overlapping. False
                 # means fixing one of them makes another worth less.
                 'savings_add': joint_us >= sum_us,
-            } if recommended else None,
+            }
+            if recommended
+            else None,
             'latent_heavies': compute_latent_heavies(
-                dict(durations), critical_path, total_duration_us, structural,
+                dict(durations),
+                critical_path,
+                total_duration_us,
+                structural,
             ),
         }
 
@@ -2021,9 +2004,15 @@ class BuildEfficiencyAnalyzer:
         bga/validation/ extraction, P1-15).
         """
         confidence, new_violations = compute_confidence(
-            self.normalized_tasks, self.run_context, self.trace, self.graph,
-            self.violations, getattr(self, '_attribution_segments', []),
-            graph_analysis, attribution, floors,
+            self.normalized_tasks,
+            self.run_context,
+            self.trace,
+            self.graph,
+            self.violations,
+            getattr(self, '_attribution_segments', []),
+            graph_analysis,
+            attribution,
+            floors,
         )
         self.violations.extend(new_violations)
         # UX-202: the band beside the score. `findings.py` already
@@ -2034,6 +2023,7 @@ class BuildEfficiencyAnalyzer:
         primary = confidence.get('primary')
         if isinstance(primary, (int, float)):
             from .findings import confidence_band
+
             confidence['band'] = confidence_band(primary)
         return confidence
 
@@ -2068,8 +2058,7 @@ class BuildEfficiencyAnalyzer:
         path = Path(directory).parent / HOST_SAMPLES_NAME
         if not path.is_file():
             return None
-        return _import_tool(
-            "tools.bst_native_build_tracer").read_host_samples(str(path))
+        return _import_tool("tools.bst_native_build_tracer").read_host_samples(str(path))
 
     def _compute_utilization_envelope(self) -> dict:
         """`UX-676`: the host CPU series, read against this run's caps."""
@@ -2079,39 +2068,48 @@ class BuildEfficiencyAnalyzer:
         if read is None:
             directory = self.loaded_from or self.run_dir
             if not self.run_context or not self.graph or not directory:
-                return {"absence": "this analysis has no run context, "
-                                   "graph or run directory to read a host "
-                                   "series against"}
+                return {
+                    "absence": "this analysis has no run context, graph or run directory to read a host series against"
+                }
             from .run_store import HOST_SAMPLES_NAME
-            return {"absence": f"this capture has no {HOST_SAMPLES_NAME} - "
-                               f"it was taken before host memory sampling "
-                               f"was added, or the host exposes no "
-                               f"/proc/meminfo"}
-        tasks = [{"element": task.task_key.element_uid,
-                  "start_us": task.start_us, "finish_us": task.finish_us,
-                  "ready_us": task.ready_us}
-                 for task in self.normalized_tasks]
+
+            return {
+                "absence": f"this capture has no {HOST_SAMPLES_NAME} - "
+                f"it was taken before host memory sampling "
+                f"was added, or the host exposes no "
+                f"/proc/meminfo"
+            }
+        tasks = [
+            {
+                "element": task.task_key.element_uid,
+                "start_us": task.start_us,
+                "finish_us": task.finish_us,
+                "ready_us": task.ready_us,
+            }
+            for task in self.normalized_tasks
+        ]
         successors: dict = {}
         for edge in self.graph.dependencies:
             successors.setdefault(edge.predecessor, []).append(edge.successor)
-        return envelope_module.compute(read, {
-            "builders": (self.run_context.resource_capacities
-                         or {}).get('PROCESS'),
-            "native_max_jobs": self.run_context.native_max_jobs,
-            "tasks": tasks,
-            "max_jobs": {element.uid: element.max_jobs
-                         for element in self.graph.elements},
-            "successors": successors,
-            "started_us": getattr(self.run_context, "wall_start_us", None),
-        })
+        return envelope_module.compute(
+            read,
+            {
+                "builders": (self.run_context.resource_capacities or {}).get('PROCESS'),
+                "native_max_jobs": self.run_context.native_max_jobs,
+                "tasks": tasks,
+                "max_jobs": {element.uid: element.max_jobs for element in self.graph.elements},
+                "successors": successors,
+                "started_us": getattr(self.run_context, "wall_start_us", None),
+            },
+        )
 
     def _compute_utilization(self, occupancy_stats: dict) -> dict:
         """
         Compute CPU utilization analysis (M4, Part 30).
-        
+
         Args:
             occupancy_stats: Occupancy statistics from sweep analysis
-            
+
         Returns:
             Dict containing utilization metrics including:
             - effective_cpus
@@ -2122,7 +2120,7 @@ class BuildEfficiencyAnalyzer:
         """
         if not self.utilization_analyzer or not self.run_context:
             return {}
-        
+
         # Build task intervals from real, measured wall-clock job-slot
         # occupancy (task.dur_us - how long each task actually held a job
         # slot, real data). This is NOT a CPU-time measurement (P1-33) -
@@ -2154,7 +2152,7 @@ class BuildEfficiencyAnalyzer:
                 'ready_us': task.ready_us,
             }
             task_intervals.append(interval)
-        
+
         # Convert occupancy segments to format expected by utilization analyzer
         occupancy_segments = []
         if 'segments' in occupancy_stats:
@@ -2166,13 +2164,15 @@ class BuildEfficiencyAnalyzer:
                     start_us = seg.start_us
                     end_us = seg.end_us
                     active_tasks = seg.active_tasks
-                
-                occupancy_segments.append({
-                    'start_us': start_us,
-                    'end_us': end_us,
-                    'active_tasks': list(active_tasks),
-                })
-        
+
+                occupancy_segments.append(
+                    {
+                        'start_us': start_us,
+                        'end_us': end_us,
+                        'active_tasks': list(active_tasks),
+                    }
+                )
+
         # Run utilization analysis. UX-17: evidence source 1 (Part 30.3's
         # config-based oversubscription check) delegates to
         # _check_process_oversubscription's (UX-12) own already-computed
@@ -2180,31 +2180,34 @@ class BuildEfficiencyAnalyzer:
         # runs (_check_process_oversubscription is called early in
         # analyze(), well before _compute_utilization).
         oversubscription_violation = next(
-            (v for v in self.violations if v.get('type') == 'resource_oversubscription'), None,
+            (v for v in self.violations if v.get('type') == 'resource_oversubscription'),
+            None,
         )
         util_result = self.utilization_analyzer.analyze(
             task_intervals=task_intervals,
             occupancy_segments=occupancy_segments,
             retry_tasks=compute_retry_tasks(self.normalized_tasks),
             rebuild_tasks=compute_rebuild_tasks(
-                self.graph, self.normalized_tasks, self.historical_runs,
+                self.graph,
+                self.normalized_tasks,
+                self.historical_runs,
             ),
             oversubscription_violation=oversubscription_violation,
         )
-        
+
         # Store result for later access
         self._utilization_result = util_result
-        
+
         return util_result.to_dict()
-    
+
     def _compute_diagnostics(self, occupancy_stats: dict, graph_analysis: dict) -> dict:
         """
         Compute advanced diagnostics (M5, Parts 20-29).
-        
+
         Args:
             occupancy_stats: Occupancy statistics from sweep analysis
             graph_analysis: Graph analysis results
-            
+
         Returns:
             Dict containing diagnostic metrics including:
             - wall_clock_share_us
@@ -2217,7 +2220,7 @@ class BuildEfficiencyAnalyzer:
         """
         if not self.normalized_tasks or not graph_analysis:
             return {}
-        
+
         # Get blame chain and critical path from attribution/graph
         blame_chain = None
         if hasattr(self, '_blame_chain'):
@@ -2228,10 +2231,10 @@ class BuildEfficiencyAnalyzer:
             # on_blame_chain check in DiagnosticsAnalyzer was structurally
             # always False as a result.
             blame_chain = [str(t.task_key) for t in self._blame_chain]
-        
+
         critical_path = graph_analysis.get('critical_path', [])
         slack = graph_analysis.get('slack', {})
-        
+
         # Convert occupancy segments
         occupancy_segments = []
         if 'segments' in occupancy_stats:
@@ -2243,18 +2246,20 @@ class BuildEfficiencyAnalyzer:
                     start_us = seg.start_us
                     end_us = seg.end_us
                     active_tasks = seg.active_tasks
-                
-                occupancy_segments.append({
-                    'start_us': start_us,
-                    'end_us': end_us,
-                    'active_tasks': list(active_tasks),
-                })
-        
+
+                occupancy_segments.append(
+                    {
+                        'start_us': start_us,
+                        'end_us': end_us,
+                        'active_tasks': list(active_tasks),
+                    }
+                )
+
         # Resource capacities
         resource_caps = {}
         if self.run_context:
             resource_caps = self.run_context.resource_capacities or {}
-        
+
         # Requested targets, from the graph's own requested_target markers.
         # Previously hardcoded to None, which made compute_leaf_analysis's
         # `if not requested_targets: reachable_from_targets = <everything>`
@@ -2265,15 +2270,14 @@ class BuildEfficiencyAnalyzer:
         if self.graph:
             explicit_targets = {elem.uid for elem in self.graph.elements if elem.requested_target}
             requested_targets = explicit_targets or None
-        
+
         # `UX-565`: Part 29's history, from the store this run was
         # captured into - `None` for a run analysed outside one.
         # Imported here because `store_aggregate` reaches `compare`,
         # which imports this module.
         from .store_aggregate import element_history
 
-        history = element_history(
-            self.loaded_from, compute_element_durations(self.normalized_tasks))
+        history = element_history(self.loaded_from, compute_element_durations(self.normalized_tasks))
         historical_durations = history["durations"] if history else None
 
         # Run diagnostics analysis
@@ -2288,17 +2292,16 @@ class BuildEfficiencyAnalyzer:
             requested_targets=requested_targets,
             historical_durations=historical_durations,
         )
-        
+
         # Store for later access
         self._diagnostics_result = diag_result
-        
+
         # Convert to signals dict format
         signals = {}
         kind_by_uid = self._element_kind_lookup()
         # UX-288: one task per element, for the deferral-risk rule.
-        _task_by_uid = {t.task_key.element_uid: t
-                        for t in self.normalized_tasks}
-        
+        _task_by_uid = {t.task_key.element_uid: t for t in self.normalized_tasks}
+
         # Wall-clock share (Part 20)
         if diag_result.wall_clock_shares:
             # UX-345: `wall_clock_share_us` is what the producer calls
@@ -2308,10 +2311,8 @@ class BuildEfficiencyAnalyzer:
             # put 20,433,333.33 through `format.js`'s share branch and
             # printed "2043333333.0%". Found by the guard this item
             # asked for, on its first run.
-            signals['wall_clock_share_us'] = {
-                s.task_key: s.wall_clock_share_us for s in diag_result.wall_clock_shares
-            }
-        
+            signals['wall_clock_share_us'] = {s.task_key: s.wall_clock_share_us for s in diag_result.wall_clock_shares}
+
         # Ready queue (Part 21)
         if diag_result.ready_queue:
             signals['ready_queue'] = {
@@ -2319,10 +2320,8 @@ class BuildEfficiencyAnalyzer:
                 'peak_depth': diag_result.ready_queue.peak_depth,
                 'nonzero_fraction': diag_result.ready_queue.nonzero_fraction,
             }
-        
-        signals.update(_blast_signals(
-            diag_result, kind_by_uid,
-            self.graph.foundation if self.graph else frozenset()))
+
+        signals.update(_blast_signals(diag_result, kind_by_uid, self.graph.foundation if self.graph else frozenset()))
 
         # `UX-681`: fan-in, the mirror of the blast radius above.
         signals.update(_fan_in_signals(self.graph, kind_by_uid))
@@ -2341,7 +2340,7 @@ class BuildEfficiencyAnalyzer:
                 }
                 for cp in diag_result.criticality_probabilities
             }
-        
+
         # Fetch/build overlap (Part 28)
         if diag_result.fetch_build_overlap:
             signals['fetch_build_overlap'] = {
@@ -2350,7 +2349,7 @@ class BuildEfficiencyAnalyzer:
                 'build_suffix_us': diag_result.fetch_build_overlap.build_only_suffix_us,
                 'fraction': diag_result.fetch_build_overlap.overlap_fraction,
             }
-        
+
         # Duration variability (Part 29)
         if diag_result.duration_variability:
             signals['duration_variability'] = {
@@ -2421,21 +2420,21 @@ class BuildEfficiencyAnalyzer:
                         # leaf of the same run. `test_section_stage_gating`
                         # caught it.
                         'deferral_risk': deferral_risk_for(
-                            getattr(_task_by_uid.get(la.element_uid), 'kind',
-                                    'BUILD'),
-                            getattr(_task_by_uid.get(la.element_uid),
-                                    'dur_us', None)),
+                            getattr(_task_by_uid.get(la.element_uid), 'kind', 'BUILD'),
+                            getattr(_task_by_uid.get(la.element_uid), 'dur_us', None),
+                        ),
                     }
-                    for la in diag_result.leaf_analysis if la.is_leaf
+                    for la in diag_result.leaf_analysis
+                    if la.is_leaf
                 },
             }
-        
+
         return signals
-    
+
     def _compute_structural_analysis(self) -> dict:
         """
         Compute structural analysis (M6, Parts 31-39).
-        
+
         Returns:
             Dict containing structural metrics including:
             - metrics (graph topology, critical path structure, parallelism)
@@ -2446,7 +2445,7 @@ class BuildEfficiencyAnalyzer:
         """
         if not self.graph or len(self.normalized_tasks) == 0:
             return {}
-        
+
         # Create task dictionary keyed by element UID (extract from task_key)
         #
         # UX-50: this comprehension keeps one task per element, and a real
@@ -2484,9 +2483,11 @@ class BuildEfficiencyAnalyzer:
 
         # Initialize structural analyzer
         from bga.structural.analyzer import build_edg
+
         edg = build_edg(self.graph)
         structural_analyzer = StructuralAnalyzer(
-            edg, tasks_dict,
+            edg,
+            tasks_dict,
             element_durations={
                 uid: work_durations.get(uid, element_durations.get(uid, 0))
                 for uid in set(element_durations) | set(work_durations)
@@ -2505,6 +2506,7 @@ class BuildEfficiencyAnalyzer:
         # additive signal) - purely structural, no timing data used or
         # changed. See docs/backlog/tasks/P4-15-stack-consolidation-heuristic.md.
         from bga.structural.consolidation import find_consolidation_candidates
+
         consolidation_candidates = find_consolidation_candidates(self.graph)
 
         # Batch-opportunity map-reduce simulation (UX-20, non-spec
@@ -2552,16 +2554,18 @@ class BuildEfficiencyAnalyzer:
                 # seconds this element could take off the finish, which
                 # is what the text report was computing at its own print
                 # site from `score` and the path length.
-                actionable_opportunities.append({
-                    'element_uid': entry[0],
-                    'sensitivity': entry[1],
-                    'saving_us': int(entry[1]
-                                     * result.sensitivity.critical_path_us),
-                })
+                actionable_opportunities.append(
+                    {
+                        'element_uid': entry[0],
+                        'sensitivity': entry[1],
+                        'saving_us': int(entry[1] * result.sensitivity.critical_path_us),
+                    }
+                )
 
         batch_opportunities = {'groups': [], 'omitted_zero_savings_groups': [], 'serialized_pairs': []}
         if self.replay_scheduler is not None:
             from bga.structural.batching import compute_batch_opportunities, serialize_batch_opportunities
+
             # Same UX-34 reasoning applies transitively to batching and
             # to its `serialized_pairs` byproduct, both of which are
             # derived purely from this candidate list: "fixing" a
@@ -2581,14 +2585,11 @@ class BuildEfficiencyAnalyzer:
             # *concurrently* is this module's graph-independence result,
             # which is a fact about people, not about the schedule.
             realizable = getattr(self, '_realizable_candidates', None) or []
-            candidates = realizable[:5] or [
-                row['element_uid'] for row in actionable_opportunities
-            ]
-            element_to_task_key = {
-                t.task_key.element_uid: str(t.task_key) for t in self.normalized_tasks
-            }
+            candidates = realizable[:5] or [row['element_uid'] for row in actionable_opportunities]
+            element_to_task_key = {t.task_key.element_uid: str(t.task_key) for t in self.normalized_tasks}
             batch_result = compute_batch_opportunities(
-                candidates=candidates, graph=self.graph,
+                candidates=candidates,
+                graph=self.graph,
                 replay_scheduler=self.replay_scheduler,
                 element_to_task_key=element_to_task_key,
             )
@@ -2606,13 +2607,17 @@ class BuildEfficiencyAnalyzer:
         serialization_point_risks = []
         if self.run_context:
             from bga.structural.serialization_points import detect_large_serialization_points
+
             builders = self.run_context.resource_capacities.get('PROCESS')
             cpu_budget = self.run_context.cpu_budget
             host_cpu_count = self.run_context.host_cpu_count
             governing_cores = cpu_budget if cpu_budget is not None else host_cpu_count
             serialization_analysis = detect_large_serialization_points(
-                elements=self.graph.elements, tasks=tasks_dict, graph=self.graph,
-                builders=builders, governing_cores=governing_cores,
+                elements=self.graph.elements,
+                tasks=tasks_dict,
+                graph=self.graph,
+                builders=builders,
+                governing_cores=governing_cores,
             )
             serialization_point_risks = [
                 {
@@ -2631,9 +2636,11 @@ class BuildEfficiencyAnalyzer:
                     # that is `UX-292`; adding a fourteenth collision
                     # while fixing a table is not a fix.
                     'pinned_elements': [
-                        {'element_uid': uid,
-                         'max_jobs': risk.element_max_jobs.get(uid),
-                         'duration_us': risk.element_duration_us.get(uid)}
+                        {
+                            'element_uid': uid,
+                            'max_jobs': risk.element_max_jobs.get(uid),
+                            'duration_us': risk.element_duration_us.get(uid),
+                        }
                         for uid in risk.elements
                     ],
                     'builders': risk.builders,
@@ -2670,9 +2677,7 @@ class BuildEfficiencyAnalyzer:
                 # carries the rank *and* the value, which is the shape
                 # `critical_path_detail` already uses.
                 'choke_points': [
-                    {'element_uid': uid,
-                     'downstream_count':
-                         result.bottleneck.choke_point_impact.get(uid)}
+                    {'element_uid': uid, 'downstream_count': result.bottleneck.choke_point_impact.get(uid)}
                     for uid in result.bottleneck.choke_points
                 ],
                 'resource_contention': result.bottleneck.resource_contention,
@@ -2682,28 +2687,30 @@ class BuildEfficiencyAnalyzer:
                 # `longest_serial_chain` above keeps its one exhibit
                 # byte for byte; this is the table it was missing.
                 'serial_chains': [
-                    {'rank': c.rank, 'members': c.members, 'length': c.length,
-                     'weighted_duration_us': c.weighted_duration_us,
-                     'wall_share': c.wall_share, 'best_split': c.best_split}
+                    {
+                        'rank': c.rank,
+                        'members': c.members,
+                        'length': c.length,
+                        'weighted_duration_us': c.weighted_duration_us,
+                        'wall_share': c.wall_share,
+                        'best_split': c.best_split,
+                    }
                     for c in result.bottleneck.serial_chains
                 ],
                 # `UX-343`: rows, not positional pairs - the columns
                 # have had names since `UX-290` and the payload did not.
                 'high_fanin_elements': [
-                    {'element_uid': uid, 'fan_in': count}
-                    for uid, count in result.bottleneck.high_fanin_elements[:5]
+                    {'element_uid': uid, 'fan_in': count} for uid, count in result.bottleneck.high_fanin_elements[:5]
                 ],
                 'high_fanout_elements': [
-                    {'element_uid': uid, 'fan_out': count}
-                    for uid, count in result.bottleneck.high_fanout_elements[:5]
+                    {'element_uid': uid, 'fan_out': count} for uid, count in result.bottleneck.high_fanout_elements[:5]
                 ],
             },
             'parallelism': {
                 # `UX-641`: one row per level, naming its members. It
                 # published `[0..n-1]` - the row number - until v6.
                 'levels': [
-                    {'level': row.level, 'width': row.width,
-                     'elements': list(row.elements)}
+                    {'level': row.level, 'width': row.width, 'elements': list(row.elements)}
                     for row in result.parallelism.levels
                 ],
                 'width_at_level': result.parallelism.width_at_level,
@@ -2746,19 +2753,19 @@ class BuildEfficiencyAnalyzer:
             # checkout cost, run the separate tools/bst_checkout_cost.py.
             'consolidation_candidates': consolidation_candidates,
         }
-    
+
     def get_summary(self) -> str:
         """
         Generate a text summary of the analysis.
-        
+
         Returns:
             Formatted text summary
         """
         if self.analysis_result is None:
             self.analyze()
-        
+
         result = self.analysis_result
-        
+
         lines = [
             "=" * 60,
             "BGA BUILD EFFICIENCY REPORT",
@@ -2777,35 +2784,38 @@ class BuildEfficiencyAnalyzer:
             "",
             "CRITICAL PATH",
         ]
-        
+
         if result.signals and result.signals.get('critical_path_detail'):
             from . import schemas
+
             critical_path = schemas.critical_path_uids(result.signals)
             lines.append(f"  Length: {len(critical_path)} elements")
             if critical_path:
                 lines.append(f"  Elements: {' -> '.join(critical_path[:5])}")
                 if len(critical_path) > 5:
                     lines.append(f"          ... ({len(critical_path) - 5} more)")
-        
-        lines.extend([
-            "",
-            "TRACE QUALITY",
-            f"  Ordering violations: {result.confidence.get('ordering_violations', 0)}",
-            f"  Confidence: {result.confidence.get('primary', 0):.0%}",
-            "",
-            "=" * 60,
-        ])
-        
+
+        lines.extend(
+            [
+                "",
+                "TRACE QUALITY",
+                f"  Ordering violations: {result.confidence.get('ordering_violations', 0)}",
+                f"  Confidence: {result.confidence.get('primary', 0):.0%}",
+                "",
+                "=" * 60,
+            ]
+        )
+
         return "\n".join(lines)
 
 
 def analyze_run(run_dir: Path) -> AnalysisResult:
     """
     Convenience function to analyze a run directory.
-    
+
     Args:
         run_dir: Path to run directory
-        
+
     Returns:
         AnalysisResult with all computed metrics
     """

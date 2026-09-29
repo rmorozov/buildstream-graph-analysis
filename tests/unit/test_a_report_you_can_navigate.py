@@ -21,6 +21,7 @@ an error instead of their report. The module list is derived from the
 entry point's own `import` lines now, because a hand-written list is a
 thing to forget - which is exactly what happened.
 """
+
 import json
 import os
 import re
@@ -65,14 +66,22 @@ def _boot(page, tmp_path, protocol="file:"):
     probe = tmp_path / "probe.mjs"
     probe.write_text(_PROBE, encoding="utf-8")
     result = subprocess.run(
-        [node, str(probe)], capture_output=True, text=True, cwd=os.getcwd(),
-        timeout=60, env=dict(os.environ, PAGE=str(tmp_path / "page.html"),
-                             MOD=str(module), PROTOCOL=protocol))
+        [node, str(probe)],
+        capture_output=True,
+        text=True,
+        cwd=os.getcwd(),
+        timeout=60,
+        env=dict(os.environ, PAGE=str(tmp_path / "page.html"), MOD=str(module), PROTOCOL=protocol),
+    )
     (tmp_path / "page.html").write_text(page, encoding="utf-8")
     result = subprocess.run(
-        [node, str(probe)], capture_output=True, text=True, cwd=os.getcwd(),
-        timeout=60, env=dict(os.environ, PAGE=str(tmp_path / "page.html"),
-                             MOD=str(module), PROTOCOL=protocol))
+        [node, str(probe)],
+        capture_output=True,
+        text=True,
+        cwd=os.getcwd(),
+        timeout=60,
+        env=dict(os.environ, PAGE=str(tmp_path / "page.html"), MOD=str(module), PROTOCOL=protocol),
+    )
     assert result.returncode == 0, result.stderr
     return json.loads(result.stdout)
 
@@ -88,7 +97,8 @@ class TestTheExportedPageActuallyRuns:
         assert not missing, (
             f"the exported page calls {missing} and defines none of them - "
             f"a ReferenceError in boot(), and the reader gets the catch-all "
-            f"banner instead of their report")
+            f"banner instead of their report"
+        )
 
     @needs_node
     def test_it_renders_sections_rather_than_an_error(self, exported, tmp_path):
@@ -141,10 +151,8 @@ class TestEverySectionCanBeLinkedTo:
         `test_one_click_from_investigation.py`."""
         out = _boot(exported, tmp_path)
         rendered = [s["key"] for s in out["sections"]]
-        assert sorted(out["toc"]) == sorted(rendered), (
-            "the table of contents and the document disagree")
-        assert len(out["toc"]) == len(set(out["toc"])), (
-            "a section is listed twice")
+        assert sorted(out["toc"]) == sorted(rendered), "the table of contents and the document disagree"
+        assert len(out["toc"]) == len(set(out["toc"])), "a section is listed twice"
 
     def test_the_contents_is_generated_from_the_render(self):
         """Not from a hardcoded list - so a section a schema addition
@@ -160,15 +168,13 @@ class TestCollapse:
     def test_sections_start_open(self, exported, tmp_path):
         out = _boot(exported, tmp_path)
         assert all(s["collapsed"] != "true" for s in out["sections"]), (
-            "a report that hides itself on load answers the navigation "
-            "complaint by making the document harder to read")
+            "a report that hides itself on load answers the navigation complaint by making the document harder to read"
+        )
 
     @needs_node
-    def test_collapse_state_is_remembered_where_there_is_somewhere_to_put_it(
-            self, exported, tmp_path):
+    def test_collapse_state_is_remembered_where_there_is_somewhere_to_put_it(self, exported, tmp_path):
         out = _boot(exported, tmp_path, protocol="http:")
-        assert out["storageWrites"], (
-            "nothing was written, so a reload forgets every choice")
+        assert out["storageWrites"], "nothing was written, so a reload forgets every choice"
 
     @needs_node
     def test_an_unavailable_localstorage_is_not_an_error(self, exported, tmp_path):
@@ -188,10 +194,18 @@ class TestTheExportKeepsItsFunctionality:
         now that there is nothing left to drift *from*. `UX-373` moved
         the page: it is `perfetto.html`, under the handoff."""
         result = subprocess.run(
-            [node, "--input-type=module", "-e",
-             'const { QUESTIONS } = await import("./bga/viewer/questions.js");'
-             'console.log(JSON.stringify(QUESTIONS.map(q => q.title)));'],
-            capture_output=True, text=True, cwd=os.getcwd(), timeout=60)
+            [
+                node,
+                "--input-type=module",
+                "-e",
+                'const { QUESTIONS } = await import("./bga/viewer/questions.js");'
+                'console.log(JSON.stringify(QUESTIONS.map(q => q.title)));',
+            ],
+            capture_output=True,
+            text=True,
+            cwd=os.getcwd(),
+            timeout=60,
+        )
         assert result.returncode == 0, result.stderr
         titles = json.loads(result.stdout)
         assert len(titles) >= 4, titles
@@ -206,23 +220,20 @@ class TestTheExportKeepsItsFunctionality:
         assert 'from "./questions.js"' in script
         # The redirect too: a page that named a question would be a
         # third copy, and it is the one place a merge could leave one.
-        page = page + script + open("bga/viewer/sql.html",
-                                    encoding="utf-8").read()
+        page = page + script + open("bga/viewer/sql.html", encoding="utf-8").read()
         for title in titles:
             assert title not in page, (
-                f"the handoff page spells out {title!r} instead of "
-                f"rendering the module - that is the copy this closed")
+                f"the handoff page spells out {title!r} instead of rendering the module - that is the copy this closed"
+            )
 
     @needs_node
     def test_the_export_carries_the_questions(self, exported, tmp_path):
         out = _boot(exported, tmp_path)
         keys = [s["key"] for s in out["sections"]]
-        assert "perfetto-questions" in keys, (
-            "the export used to strip the link to them and leave nothing")
+        assert "perfetto-questions" in keys, "the export used to strip the link to them and leave nothing"
 
     @needs_node
-    def test_the_export_does_not_ship_a_search_box_that_cannot_work(
-            self, exported, tmp_path):
+    def test_the_export_does_not_ship_a_search_box_that_cannot_work(self, exported, tmp_path):
         out = _boot(exported, tmp_path)
         blast = [s for s in out["sections"] if s["key"] == "blast"]
         # `UX-348`: what may not ship is the box, not the section. The
@@ -231,8 +242,8 @@ class TestTheExportKeepsItsFunctionality:
         # section left the reader with nothing to run instead.
         assert blast, "the export draws no blast section at all"
         assert blast[0]["inputs"] == 0, (
-            f"the export ships {blast[0]['inputs']} control(s) whose fetch "
-            f"can never succeed from file://")
+            f"the export ships {blast[0]['inputs']} control(s) whose fetch can never succeed from file://"
+        )
 
     @needs_node
     def test_the_served_page_keeps_both(self, exported, tmp_path):
@@ -242,9 +253,9 @@ class TestTheExportKeepsItsFunctionality:
         served = next(s for s in out["sections"] if s["key"] == "blast")
         assert served["inputs"] >= 1, (
             "served, the section is the search box - both shapes drawing "
-            "the same thing would make the guard above vacuous")
-        assert "perfetto-questions" not in keys, (
-            "served, the questions have their own page to link to")
+            "the same thing would make the guard above vacuous"
+        )
+        assert "perfetto-questions" not in keys, "served, the questions have their own page to link to"
 
 
 class TestTheProbeMeasuresTheShapeItIsToldTo:
@@ -264,19 +275,18 @@ class TestTheProbeMeasuresTheShapeItIsToldTo:
 
     @needs_node
     @pytest.mark.parametrize("protocol", ["file:", "http:"])
-    def test_the_url_agrees_with_the_protocol(self, exported, tmp_path,
-                                              protocol):
+    def test_the_url_agrees_with_the_protocol(self, exported, tmp_path, protocol):
         out = _boot(exported, tmp_path, protocol=protocol)
         where = out["location"]
         assert where["protocol"] == protocol, where
         assert where["href"].startswith(protocol), (
             f"told {protocol!r}, the probe's URL is {where['href']!r} - "
-            f"every consumer resolving against it measures the other shape")
+            f"every consumer resolving against it measures the other shape"
+        )
 
     @needs_node
     @pytest.mark.parametrize("protocol", ["file:", "http:"])
-    def test_a_relative_trace_resolves_to_that_protocol(self, exported,
-                                                        tmp_path, protocol):
+    def test_a_relative_trace_resolves_to_that_protocol(self, exported, tmp_path, protocol):
         """The consumer's own computation, run over the probe's base.
 
         `new URL(traceUrl(), location.href)` is what `wireTheHandoff`
@@ -288,7 +298,8 @@ class TestTheProbeMeasuresTheShapeItIsToldTo:
         assert resolved.startswith(protocol), (
             f"a relative trace resolves to {resolved!r} under "
             f"{protocol!r} - the branch a reader's browser takes and "
-            f"this harness cannot see")
+            f"this harness cannot see"
+        )
 
 
 _PROBE = r"""

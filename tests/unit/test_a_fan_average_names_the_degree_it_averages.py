@@ -8,6 +8,7 @@ a sentence copied from the fix would pass however wrong it was. The
 equality is derived the same way, from the raw edge count, not from
 either description's claim about it.
 """
+
 import json
 import pathlib
 import statistics
@@ -42,8 +43,7 @@ def _report():
 
 
 def _graph_metrics():
-    return schemas.schema(schemas.ANALYZE)["properties"]["graph_metrics"][
-        "properties"]
+    return schemas.schema(schemas.ANALYZE)["properties"]["graph_metrics"]["properties"]
 
 
 class TestBothAveragesMatchTheDegreeTheyClaimAndEachOther:
@@ -79,9 +79,9 @@ class TestEachDescriptionNamesTheDegreeItAverages:
         """Confirms the derivation, not the fix: `fan_in.direct_count`
         is untouched by this task and already names in-degree
         correctly - that's what "dependencies" means below."""
-        anchor = schemas.schema(schemas.ANALYZE)["properties"]["elements"][
-            "properties"]["fan_in"]["additionalProperties"][
-            "properties"]["direct_count"]["description"].lower()
+        anchor = schemas.schema(schemas.ANALYZE)["properties"]["elements"]["properties"]["fan_in"][
+            "additionalProperties"
+        ]["properties"]["direct_count"]["description"].lower()
         assert self.ANCHOR_PHRASE in anchor
 
     def test_avg_fanin_names_dependencies_not_dependents(self):

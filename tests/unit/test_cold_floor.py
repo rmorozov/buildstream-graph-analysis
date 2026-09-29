@@ -11,6 +11,7 @@ helper for a different milestone (M6). Fixed by adding
 match -> cohort median -> declared estimate [never populated by any
 current schema field] -> unavailable) and the Part 15.3 publication gate.
 """
+
 import json
 
 from bga import BuildEfficiencyAnalyzer
@@ -20,9 +21,7 @@ from bga.ingest.loader import load_historical_runs
 def _write_run_dir(run_dir, run_context, elements, spans, dependencies=None):
     run_dir.mkdir(parents=True)
     graph = {
-        "elements": [
-            {"uid": uid, "cache_key": cache_key} for uid, cache_key in elements
-        ],
+        "elements": [{"uid": uid, "cache_key": cache_key} for uid, cache_key in elements],
         "dependencies": dependencies or [],
     }
     trace = {"spans": spans, "phases": []}
@@ -33,15 +32,21 @@ def _write_run_dir(run_dir, run_context, elements, spans, dependencies=None):
 
 
 _RUN_CONTEXT = {
-    "trace_epsilon_us": 1000, "wall_start_us": 0, "wall_end_us": 200000,
-    "max_jobs": 2, "resource_capacities": {"PROCESS": 2},
+    "trace_epsilon_us": 1000,
+    "wall_start_us": 0,
+    "wall_end_us": 200000,
+    "max_jobs": 2,
+    "resource_capacities": {"PROCESS": 2},
 }
 
 
 def _span(uid, ts, dur, kind="BUILD", phase="BUILD"):
     return {
-        "task_key": f"{uid}|{kind}|{phase}|0", "ts_us": ts, "dur_us": dur,
-        "resources": ["PROCESS"], "primary_resource": "PROCESS",
+        "task_key": f"{uid}|{kind}|{phase}|0",
+        "ts_us": ts,
+        "dur_us": dur,
+        "resources": ["PROCESS"],
+        "primary_resource": "PROCESS",
     }
 
 
@@ -153,7 +158,10 @@ def test_partial_history_unavailable_unless_allow_partial_cold(tmp_path):
     assert result.floors["cold_partial"] is False
 
     analyzer2 = BuildEfficiencyAnalyzer(
-        current_dir, cold=True, allow_partial_cold=True, historical_runs=historical_runs,
+        current_dir,
+        cold=True,
+        allow_partial_cold=True,
+        historical_runs=historical_runs,
     )
     analyzer2.load()
     result2 = analyzer2.analyze()
@@ -189,8 +197,11 @@ def test_cold_floor_isolated_from_observed_values(tmp_path):
     result_with_history = analyzer_with_history.analyze()
 
     cold_keys = {
-        "t_infinity_cold", "cold_partial", "cold_confidence",
-        "cold_duration_sources", "cold_critical_path_duration_sources",
+        "t_infinity_cold",
+        "cold_partial",
+        "cold_confidence",
+        "cold_duration_sources",
+        "cold_critical_path_duration_sources",
     }
     for key in result_no_history.floors:
         if key in cold_keys:
@@ -205,6 +216,7 @@ def test_cold_floor_isolated_from_observed_values(tmp_path):
 
 
 # --- P2-06: per-task/tier duration-source provenance -----------------------
+
 
 def test_duration_source_breakdown_reflects_a_real_mix_of_tiers(tmp_path):
     """A linear chain a -> b -> c (the whole chain is the cold critical
@@ -302,7 +314,10 @@ def test_unavailable_element_reported_with_unavailable_tier(tmp_path):
     historical_runs = load_historical_runs([hist_dir])
 
     analyzer = BuildEfficiencyAnalyzer(
-        current_dir, cold=True, historical_runs=historical_runs, allow_partial_cold=True,
+        current_dir,
+        cold=True,
+        historical_runs=historical_runs,
+        allow_partial_cold=True,
     )
     analyzer.load()
     result = analyzer.analyze()

@@ -1,6 +1,7 @@
 """UX-1075: the raw Plane 2 log compresses at gzip level 6, not the
 default 9 - 3.1s vs 16.0s at 417MB for 3% more bytes (the audit).
 """
+
 import gzip
 
 

@@ -7,6 +7,7 @@ the twin drew five. The mean was not published at all. `twinRows` in
 mean, n in the population's order; this reads it through node, and the
 booted export once, on the section the measurement named.
 """
+
 import json
 import pathlib
 import shutil
@@ -24,11 +25,17 @@ from tests.browser import NO_BROWSER, Browser, find_chrome
 node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 
-FULL = {"n": 1202, "min": 0, "max": 1201,
-        "deciles": {f"p{s}": s for s in range(10, 100, 10)},
-        "p95": 575, "p99": 900, "mean": 68, "is_flat": False}
-ORDER = ["min", "p10", "p20", "p30", "p40", "median", "p60", "p70",
-         "p80", "p90", "p95", "p99", "max", "mean", "n"]
+FULL = {
+    "n": 1202,
+    "min": 0,
+    "max": 1201,
+    "deciles": {f"p{s}": s for s in range(10, 100, 10)},
+    "p95": 575,
+    "p99": 900,
+    "mean": 68,
+    "is_flat": False,
+}
+ORDER = ["min", "p10", "p20", "p30", "p40", "median", "p60", "p70", "p80", "p90", "p95", "p99", "max", "mean", "n"]
 
 _HARNESS = """
 const { marksOf, twinRows } = await import("./bga/viewer/drawings.js");
@@ -40,7 +47,11 @@ console.log(JSON.stringify(rows.map(([name]) => name)));
 def _labels(distribution):
     result = subprocess.run(
         [node, "--input-type=module", "-e", _HARNESS % json.dumps(distribution)],
-        capture_output=True, text=True, cwd=str(REPO), timeout=60)
+        capture_output=True,
+        text=True,
+        cwd=str(REPO),
+        timeout=60,
+    )
     assert result.returncode == 0, result.stderr
     return json.loads(result.stdout)
 
@@ -61,11 +72,14 @@ class TestTheBootedExportAgrees:
         """The section round 115 measured, on the run it measured it on."""
         export = pages.export_uri(pages.scale_run(tmp_path), tmp_path)
         with Browser(find_chrome()) as browser:
-            got = browser.measure(export, """
+            got = browser.measure(
+                export,
+                """
               (() => {
                 const twin = document.querySelector(
                   '[data-section="blast_radius_distribution"] [data-role="drawing-twin"]');
                 return twin ? [...twin.querySelectorAll('tbody tr')]
                   .map((r) => r.cells[0].textContent) : null;
-              })()""")
+              })()""",
+            )
         assert got == ORDER, got

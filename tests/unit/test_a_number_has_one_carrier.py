@@ -32,6 +32,7 @@ than assumed - which is the gap the item names. Nothing was wrong when
 it was filed; what was missing was the rule saying it has to stay that
 way.
 """
+
 import json
 import pathlib
 import subprocess
@@ -50,8 +51,8 @@ SNAPSHOT = REPO / "tests/fixtures/macro_micro"
 
 def _analyze(*args):
     done = subprocess.run(
-        [sys.executable, "-m", "bga.cli", "analyze", *args],
-        capture_output=True, text=True, cwd=REPO, timeout=300)
+        [sys.executable, "-m", "bga.cli", "analyze", *args], capture_output=True, text=True, cwd=REPO, timeout=300
+    )
     assert done.returncode == 0, done.stderr[-2000:]
     return json.loads(done.stdout)
 
@@ -59,8 +60,7 @@ def _analyze(*args):
 @pytest.fixture(scope="module")
 def measured():
     """The run with both planes - the one the item measured."""
-    return _analyze(str(SNAPSHOT / "run"), "--plane2",
-                    str(SNAPSHOT / "plane2.json"), "--format", "json")
+    return _analyze(str(SNAPSHOT / "run"), "--plane2", str(SNAPSHOT / "plane2.json"), "--format", "json")
 
 
 @pytest.fixture(scope="module")
@@ -79,27 +79,22 @@ def _pairs(document):
     found = []
     # `UX-344`: one published list keyed by claim, rather than a record
     # written into each finding.
-    chains = {entry.get("claim"): entry
-              for entry in document.get("provenance") or []}
+    chains = {entry.get("claim"): entry for entry in document.get("provenance") or []}
     for finding in document.get("findings") or []:
         evidence = finding.get("evidence") or {}
         for cite in (chains.get(finding.get("id")) or {}).get("evidence") or []:
             leaf = cite["path"].split(".")[-1].split("[")[0]
             if leaf in evidence:
-                found.append((finding["id"], leaf, evidence[leaf],
-                              cite["value"]))
+                found.append((finding["id"], leaf, evidence[leaf], cite["value"]))
     return found
 
 
 class TestTheCarriersAgree:
-
     @pytest.mark.parametrize("run", ["measured", "golden"])
     def test_the_finding_and_its_citation_carry_one_number(self, run, request):
         document = request.getfixturevalue(run)
         disagree = [row for row in _pairs(document) if row[2] != row[3]]
-        assert disagree == [], (
-            "a finding's evidence and its provenance citation disagree: "
-            f"{disagree}")
+        assert disagree == [], f"a finding's evidence and its provenance citation disagree: {disagree}"
 
     def test_the_run_actually_has_pairs_to_check(self, measured, golden):
         """The number that makes the check above mean something. A
@@ -118,8 +113,7 @@ class TestTheCarriersAgree:
         document = request.getfixturevalue(run)
         wrong = []
         quoted = 0
-        chains = {entry.get("claim"): entry
-                  for entry in document.get("provenance") or []}
+        chains = {entry.get("claim"): entry for entry in document.get("provenance") or []}
         for finding in document["findings"]:
             for cite in (chains.get(finding.get("id")) or {}).get("evidence") or []:
                 if not cite["resolved"]:
@@ -127,8 +121,7 @@ class TestTheCarriersAgree:
                 quoted += 1
                 live = provenance.resolve(document, cite["path"])
                 if live is provenance.UNRESOLVED or live != cite["value"]:
-                    wrong.append((finding["id"], cite["path"], cite["value"],
-                                  live))
+                    wrong.append((finding["id"], cite["path"], cite["value"], live))
         assert quoted >= 5, f"only {quoted} citations resolved; nothing checked"
         assert wrong == [], wrong
 
@@ -146,9 +139,7 @@ class TestTheContractSaysWhichOneToBelieve:
         node = schemas.schema(schemas.ANALYZE)["properties"]["provenance"]
         cited = node["items"]["properties"]["evidence"]["description"]
         assert "quotation" in cited.lower(), cited
-        assert "believe" in cited.lower(), (
-            "the contract does not say which carrier wins when two name "
-            "one number")
+        assert "believe" in cited.lower(), "the contract does not say which carrier wins when two name one number"
 
     def test_the_rendering_is_still_declared_a_rendering(self):
         """Item 2: `copy_text` stays what `UX-224` made it. A guard that
@@ -167,14 +158,12 @@ class TestTheDerivedFindingDoesNotOutliveItsSource:
     is that the derived copy still equals it.
     """
 
-    def test_the_finding_and_the_signal_carry_one_set_of_numbers(
-            self, measured):
+    def test_the_finding_and_the_signal_carry_one_set_of_numbers(self, measured):
         signal = (measured.get("signals") or {}).get("joint_saving")
         finding = [f for f in measured["findings"] if f["id"] == "joint-saving"]
         if not signal or not finding:
             pytest.skip("this run published no joint-saving signal")
         evidence = finding[0]["evidence"]
         for key in ("joint_saving_us", "sum_of_individual_us", "savings_add"):
-            assert evidence[key] == signal[key], (key, evidence[key],
-                                                  signal[key])
+            assert evidence[key] == signal[key], (key, evidence[key], signal[key])
         assert sorted(finding[0]["elements"]) == sorted(signal["elements"])

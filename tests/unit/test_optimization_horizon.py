@@ -6,6 +6,7 @@ thing to fix cost another full build to discover. Everything these tests
 cover is a longest-path recompute over data the tool already holds -
 0.40 ms each, 17 ms for the whole projection.
 """
+
 from bga.graph.edg import (
     compute_joint_saving,
     compute_latent_heavies,
@@ -23,7 +24,8 @@ def _chain_with_a_latent_branch():
     return Graph(
         elements=[Element("A"), Element("B"), Element("C"), Element("L")],
         dependencies=[
-            DependencyEdge("A", "B"), DependencyEdge("B", "C"),
+            DependencyEdge("A", "B"),
+            DependencyEdge("B", "C"),
             DependencyEdge("A", "L"),
         ],
     )
@@ -33,9 +35,7 @@ _CHAIN_DURATIONS = {"A": 100, "B": 50, "C": 10, "L": 40}
 
 
 def test_the_horizon_names_what_becomes_binding_after_each_fix():
-    horizon = compute_optimization_horizon(
-        _chain_with_a_latent_branch(), _CHAIN_DURATIONS
-    )
+    horizon = compute_optimization_horizon(_chain_with_a_latent_branch(), _CHAIN_DURATIONS)
 
     assert [step["element_uid"] for step in horizon[:2]] == ["A", "B"]
     assert horizon[0]["saving_us"] == 100
@@ -49,9 +49,7 @@ def test_a_latent_element_is_named_when_it_enters_the_frontier():
     """`L` is on no critical path today. On the real capture the
     equivalent is `git-minimal.bst`, the **4th heaviest element in the
     build**, which appears in no ranking the tool produces."""
-    horizon = compute_optimization_horizon(
-        _chain_with_a_latent_branch(), _CHAIN_DURATIONS
-    )
+    horizon = compute_optimization_horizon(_chain_with_a_latent_branch(), _CHAIN_DURATIONS)
 
     assert "L" in horizon[1]["entering"]
 
@@ -111,7 +109,10 @@ def test_structural_elements_are_never_a_step_or_a_latent_heavy():
     assert "S" not in [step["element_uid"] for step in horizon]
 
     latent = compute_latent_heavies(
-        {"A": 100, "S": 90}, critical_path=["A"], total_us=1000, excluded={"S"},
+        {"A": 100, "S": 90},
+        critical_path=["A"],
+        total_us=1000,
+        excluded={"S"},
     )
     assert latent == []
 

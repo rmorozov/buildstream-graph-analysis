@@ -17,6 +17,7 @@ reader cannot act on a number they do not know is missing - which is
 `UX-160`'s standing lesson, and the specific defect fixed here in the
 serialized-pairs line, which had sliced to five and said nothing.
 """
+
 import json
 import os
 import re
@@ -37,9 +38,11 @@ _REPORT_LINE_BUDGET = 200
 
 def _bga(args):
     return subprocess.run(
-        [sys.executable, "-c",
-         f"from bga.cli import main; raise SystemExit(main({args!r}))"],
-        capture_output=True, text=True, cwd=os.getcwd())
+        [sys.executable, "-c", f"from bga.cli import main; raise SystemExit(main({args!r}))"],
+        capture_output=True,
+        text=True,
+        cwd=os.getcwd(),
+    )
 
 
 @pytest.fixture(scope="module")
@@ -54,8 +57,7 @@ def deep_run(tmp_path_factory):
     because this fixture is analyzed eight times below.
     """
     out = tmp_path_factory.mktemp("deep") / "run"
-    result = _bga(["gen-synthetic", str(out), "--layers", "400",
-                   "--width", "2", "--seed", "1"])
+    result = _bga(["gen-synthetic", str(out), "--layers", "400", "--width", "2", "--seed", "1"])
     assert result.returncode == 0, result.stderr
     return str(out)
 
@@ -65,16 +67,15 @@ class TestTheCriticalPathIsFolded:
         rendered = _bga(["analyze", deep_run, "--diagnostics"]).stdout.splitlines()
         assert len(rendered) <= _REPORT_LINE_BUDGET, (
             f"{len(rendered)} lines - the report grew past the budget this "
-            f"item set. If that is deliberate, move the number and say why.")
+            f"item set. If that is deliberate, move the number and say why."
+        )
 
     def test_the_path_section_is_no_longer_most_of_the_report(self, deep_run):
         rendered = _bga(["analyze", deep_run, "--diagnostics"]).stdout
         section = rendered.split("Path (chain order", 1)[1].split("\n\n", 1)[0]
-        rows = [line for line in section.splitlines()
-                if re.match(r"^    \S+\.bst\s", line)]
+        rows = [line for line in section.splitlines() if re.match(r"^    \S+\.bst\s", line)]
         assert len(rows) <= 24, f"{len(rows)} path rows still render by default"
-        assert len(rows) >= 10, (
-            f"only {len(rows)} rows - the fold took the finding with it")
+        assert len(rows) >= 10, f"only {len(rows)} rows - the fold took the finding with it"
 
     def test_both_ends_of_the_chain_survive(self, deep_run):
         """A chain's two ends are where an optimizer starts: the root
@@ -86,19 +87,15 @@ class TestTheCriticalPathIsFolded:
 
     def test_the_elision_names_its_count_and_its_flag(self, deep_run):
         rendered = _bga(["analyze", deep_run, "--diagnostics"]).stdout
-        match = re.search(r"\.\.\. (\d+) more elements? \(--full-path to print all\)",
-                          rendered)
+        match = re.search(r"\.\.\. (\d+) more elements? \(--full-path to print all\)", rendered)
         assert match, "the fold is silent"
-        assert int(match.group(1)) > 300, (
-            "the count must be the real number of hidden elements")
+        assert int(match.group(1)) > 300, "the count must be the real number of hidden elements"
 
     def test_the_flag_restores_the_section(self, deep_run):
         capped = _bga(["analyze", deep_run, "--diagnostics"]).stdout.splitlines()
-        full = _bga(["analyze", deep_run, "--diagnostics",
-                     "--full-path"]).stdout.splitlines()
+        full = _bga(["analyze", deep_run, "--diagnostics", "--full-path"]).stdout.splitlines()
         assert len(full) > len(capped) * 3
-        assert "--full-path to print all" not in "\n".join(full), (
-            "the elision line must not survive its own flag")
+        assert "--full-path to print all" not in "\n".join(full), "the elision line must not survive its own flag"
 
     def test_a_short_path_is_untouched(self):
         """The golden fixture's three-element path renders exactly as it
@@ -120,9 +117,13 @@ class TestTheSharedSourcesTableIsCapped:
         elements = {}
         for uid in ("base.bst", "lib.bst"):
             elements[uid] = [
-                {"kind": "git", "identity": f"host/org/repo-{n:02d}",
-                 "declared": f"https://host/org/repo-{n:02d}.git",
-                 "keying": "ref", "staged_at": None}
+                {
+                    "kind": "git",
+                    "identity": f"host/org/repo-{n:02d}",
+                    "declared": f"https://host/org/repo-{n:02d}.git",
+                    "keying": "ref",
+                    "staged_at": None,
+                }
                 for n in range(20)
             ]
         (run / "sources.json").write_text(json.dumps(sources.build_inventory(elements)))
@@ -141,8 +142,7 @@ class TestJsonNeverTruncates:
     JSON asked for all of it."""
 
     def test_the_whole_path_is_in_the_json(self, deep_run):
-        payload = json.loads(
-            _bga(["analyze", deep_run, "--format", "json"]).stdout)
+        payload = json.loads(_bga(["analyze", deep_run, "--format", "json"]).stdout)
         # `UX-288`: the path lives in `critical_path_detail` now,
         # which is the one place it is published.
         path = payload["critical_path_detail"]
@@ -152,8 +152,7 @@ class TestJsonNeverTruncates:
         """A `--full-*` flag is about the page, so it must be inert
         here - otherwise the caps have leaked into the contract."""
         without = _bga(["analyze", deep_run, "--format", "json"]).stdout
-        with_flag = _bga(["analyze", deep_run, "--format", "json",
-                          "--full-path", "--full-sources"]).stdout
+        with_flag = _bga(["analyze", deep_run, "--format", "json", "--full-path", "--full-sources"]).stdout
         assert without == with_flag
 
 
@@ -192,13 +191,13 @@ class TestNothingIsCutSilently:
         matched = [line for line in rendered.splitlines() if "Serialized" in line]
         assert matched, (
             "the Serialized line did not render at all - the stub no longer "
-            "reaches the block, so this test would pass while asserting nothing")
+            "reaches the block, so this test would pass while asserting nothing"
+        )
         return matched[0]
 
     def test_the_line_names_what_it_dropped(self):
         line = self._serialized_line([(f"a{n}.bst", f"b{n}.bst") for n in range(9)])
-        assert "+4 more" in line, (
-            "the line sliced to five and said nothing about the rest")
+        assert "+4 more" in line, "the line sliced to five and said nothing about the rest"
 
     def test_it_stays_quiet_when_nothing_was_dropped(self):
         line = self._serialized_line([("a.bst", "b.bst")])

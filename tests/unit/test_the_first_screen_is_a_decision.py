@@ -36,6 +36,7 @@ nothing to read: a guard standing on a published defect. It now reads
 whose reach really is 3, 2, 1, 0, beside a crowd of independent work
 that puts wall-clock several times above the path.
 """
+
 import contextlib
 import io
 import json
@@ -67,13 +68,11 @@ needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 
 # `UX-213`'s rule, applied from the start here: the committed fixture is
 # never marked, so every guard below runs on a fresh clone.
-_needs_real = pytest.mark.skipif(not os.path.isdir(REAL),
-                                 reason="no real capture here")
+_needs_real = pytest.mark.skipif(not os.path.isdir(REAL), reason="no real capture here")
 RUNS = [
     pytest.param(GOLDEN, DIAGNOSIS_CHAIN_BOUND, id="committed"),
     pytest.param(SCHEDULED, DIAGNOSIS_SCHEDULER_BOUND, id="scheduler-bound"),
-    pytest.param(REAL, DIAGNOSIS_CHAIN_BOUND, id="real-capture",
-                 marks=_needs_real),
+    pytest.param(REAL, DIAGNOSIS_CHAIN_BOUND, id="real-capture", marks=_needs_real),
 ]
 
 
@@ -102,9 +101,12 @@ def _render(payload, timeout=120):
         json.dump(payload, handle)
     try:
         result = subprocess.run(
-            [node, "--input-type=module", "-e",
-             _HARNESS % json.dumps(path)],
-            capture_output=True, text=True, cwd=os.getcwd(), timeout=timeout)
+            [node, "--input-type=module", "-e", _HARNESS % json.dumps(path)],
+            capture_output=True,
+            text=True,
+            cwd=os.getcwd(),
+            timeout=timeout,
+        )
         assert result.returncode == 0, result.stderr
         return json.loads(result.stdout)
     finally:
@@ -137,8 +139,7 @@ class TestTheDiagnosisIsDecidedOnce:
             assert ratio < CHAIN_BOUND_RATIO, ratio
 
     @pytest.mark.parametrize("run,expected", RUNS)
-    def test_the_ratio_is_the_published_floors_over_the_published_horizon(
-            self, run, expected):
+    def test_the_ratio_is_the_published_floors_over_the_published_horizon(self, run, expected):
         """The one arithmetic claim, checked against its own inputs -
         so nobody can quietly change what the diagnosis is a ratio
         *of*.
@@ -150,9 +151,7 @@ class TestTheDiagnosisIsDecidedOnce:
         the denominator has to change this line too."""
         payload = _report(run)
         attribution = payload["attribution"]
-        horizon = (payload["total_duration_us"]
-                   - attribution["untracked_head_us"]
-                   - attribution["untracked_tail_us"])
+        horizon = payload["total_duration_us"] - attribution["untracked_head_us"] - attribution["untracked_tail_us"]
         expected_ratio = payload["floors"]["t_infinity_observed"] / horizon
         assert payload["headline"]["chain_share"] == pytest.approx(expected_ratio)
         assert payload["headline"]["chain_share_of"] == "task_horizon"
@@ -168,13 +167,16 @@ class TestTheDiagnosisIsDecidedOnce:
         payload = _report(run)
         head = payload["attribution"]["untracked_head_us"]
         tail = payload["attribution"]["untracked_tail_us"]
-        against_wall = (payload["floors"]["t_infinity_observed"]
-                        / payload["total_duration_us"])
+        against_wall = payload["floors"]["t_infinity_observed"] / payload["total_duration_us"]
         if head + tail == 0:
             assert payload["headline"]["chain_share"] == pytest.approx(against_wall)
         else:
             assert payload["headline"]["chain_share"] > against_wall, (
-                head, tail, payload["headline"]["chain_share"], against_wall)
+                head,
+                tail,
+                payload["headline"]["chain_share"],
+                against_wall,
+            )
 
     def test_the_findings_read_the_same_decision(self):
         """`compute_findings` used to recompute the ratio itself. Two
@@ -187,12 +189,9 @@ class TestTheDiagnosisIsDecidedOnce:
 
         source = inspect.getsource(findings.compute_findings)
         tree = ast.parse(source.lstrip())
-        calls = {n.func.id for n in ast.walk(tree)
-                 if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)}
-        assert "diagnose" in calls, (
-            "compute_findings decides chain-boundness on its own again")
-        assert "CHAIN_BOUND_RATIO" not in source, (
-            "the threshold is compared in two places again")
+        calls = {n.func.id for n in ast.walk(tree) if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)}
+        assert "diagnose" in calls, "compute_findings decides chain-boundness on its own again"
+        assert "CHAIN_BOUND_RATIO" not in source, "the threshold is compared in two places again"
 
     def test_a_run_with_no_durations_is_inconclusive_not_guessed(self):
         from bga.findings import diagnose
@@ -214,15 +213,13 @@ class TestTheOpportunityIsPublishedNotSubtracted:
         page to do"."""
         payload = _report(run)
         gap = payload["headline"]["scheduling_gap_us"]
-        assert gap == (payload["total_duration_us"]
-                       - payload["floors"]["t_infinity_observed"])
+        assert gap == (payload["total_duration_us"] - payload["floors"]["t_infinity_observed"])
         assert gap >= 0
 
     @pytest.mark.parametrize("run,expected", RUNS)
     def test_certified_headroom_comes_from_floors(self, run, expected):
         payload = _report(run)
-        assert (payload["headline"]["certified_headroom_us"]
-                == payload["floors"]["certified_headroom"])
+        assert payload["headline"]["certified_headroom_us"] == payload["floors"]["certified_headroom"]
 
 
 class TestTheActionsAreReferencesNotCopies:
@@ -265,8 +262,7 @@ class TestTheActionsAreReferencesNotCopies:
 
     def test_a_saving_nobody_projected_is_absent_rather_than_zero(self):
         for action in _report(SCHEDULED)["headline"]["top_actions"]:
-            assert "saving_us" not in action, (
-                "a zero saving claims a projection that was never made")
+            assert "saving_us" not in action, "a zero saving claims a projection that was never made"
 
 
 class TestOneVocabularyAcrossTheRenderers:
@@ -280,8 +276,7 @@ class TestOneVocabularyAcrossTheRenderers:
     def test_the_schema_declares_the_block_and_its_enum(self):
         declared = schemas.schema(schemas.ANALYZE)["properties"]["headline"]
         assert declared["properties"]["diagnosis"]["enum"] == list(DIAGNOSES)
-        assert declared["properties"]["scheduling_gap_us"]["bga:quantity"] \
-            == "duration_us"
+        assert declared["properties"]["scheduling_gap_us"]["bga:quantity"] == "duration_us"
 
     def test_the_enum_is_the_tuple_the_pipeline_emits(self):
         """`UX-201`'s rule about closed sets: the published enum and the
@@ -291,7 +286,8 @@ class TestOneVocabularyAcrossTheRenderers:
         source = open("bga/schemas.py", encoding="utf-8").read()
         assert "from .findings import DIAGNOSES" in source
         assert not re.search(r'"enum":\s*\[\s*"chain_bound"', source), (
-            "the enum is spelled out again instead of imported")
+            "the enum is spelled out again instead of imported"
+        )
 
     def test_headline_is_in_the_full_key_list(self):
         assert "headline" in schemas.ANALYZE_FULL_KEYS
@@ -306,8 +302,9 @@ class TestThePanel:
         out = _render(payload)
         assert out["decision"]["diagnosis"] == expected
         assert out["decision"]["sentence"] == payload["headline"]["sentence"]
-        assert ([a["element"] for a in out["decision"]["actions"]]
-                == [a["element_uid"] for a in payload["headline"]["top_actions"]])
+        assert [a["element"] for a in out["decision"]["actions"]] == [
+            a["element_uid"] for a in payload["headline"]["top_actions"]
+        ]
 
     @pytest.mark.parametrize("run,expected", RUNS)
     def test_every_number_in_it_is_a_published_field(self, run, expected):
@@ -317,8 +314,7 @@ class TestThePanel:
         out = _render(payload)
         for key, raw in out["decision"]["values"].items():
             assert float(raw) == float(payload["headline"][key]), key
-        for shown, published in zip(out["decision"]["actions"],
-                                    payload["headline"]["top_actions"]):
+        for shown, published in zip(out["decision"]["actions"], payload["headline"]["top_actions"]):
             if shown["worth"] is None:
                 continue
             field = shown["worth_field"]
@@ -340,17 +336,23 @@ class TestThePanel:
         Direction 7's rule exists to prevent, and it would ship silently
         without this fixture.
         """
-        out = _render({
-            "schema": schemas.ANALYZE,
-            "total_duration_us": 1000,
-            "floors": {"t_infinity_observed": 950, "certified_headroom": 0},
-            "headline": {"diagnosis": DIAGNOSIS_SCHEDULER_BOUND,
-                         "chain_share": 0.95, "chain_bound_share": 0.9,
-                         "sentence": "The pipeline said scheduler-bound.",
-                         "top_actions": []},
-        })
+        out = _render(
+            {
+                "schema": schemas.ANALYZE,
+                "total_duration_us": 1000,
+                "floors": {"t_infinity_observed": 950, "certified_headroom": 0},
+                "headline": {
+                    "diagnosis": DIAGNOSIS_SCHEDULER_BOUND,
+                    "chain_share": 0.95,
+                    "chain_bound_share": 0.9,
+                    "sentence": "The pipeline said scheduler-bound.",
+                    "top_actions": [],
+                },
+            }
+        )
         assert out["decision"]["diagnosis"] == DIAGNOSIS_SCHEDULER_BOUND, (
-            "the page recomputed the diagnosis and overruled the pipeline")
+            "the page recomputed the diagnosis and overruled the pipeline"
+        )
         assert out["decision"]["sentence"] == "The pipeline said scheduler-bound."
 
     def test_no_headline_means_no_panel(self):
@@ -365,7 +367,7 @@ class TestThePanel:
         assert out["overview"] is True
 
     def test_the_decision_comes_before_the_evidence(self):
-        """"First screen = decision, everything else = evidence" - as
+        """ "First screen = decision, everything else = evidence" - as
         DOM order, which is the only form of it a reader experiences."""
         out = _render(_report())
         order = out["order"]
@@ -389,8 +391,7 @@ class TestTheEvidenceHeaderCompresses:
     def test_the_status_line_reads_the_published_band(self):
         """Not a threshold the page applies to `primary` itself - that
         would be the second copy of the thresholds `UX-202` removed."""
-        line = _render({"schema": schemas.ANALYZE,
-                        "confidence": {"primary": 0.87, "band": "low"}})
+        line = _render({"schema": schemas.ANALYZE, "confidence": {"primary": 0.87, "band": "low"}})
         assert "low confidence" in line["status_line"], line["status_line"]
         # 0.87 would read "high" to anyone applying a threshold here;
         # the published band says low, and the band wins.
@@ -418,8 +419,8 @@ class TestTheOverviewCompacts:
             node = payload
             for part in field.split("."):
                 assert part in node, (
-                    f"{field} does not resolve in the payload - a bar the "
-                    f"page invented is exactly what this forbids")
+                    f"{field} does not resolve in the payload - a bar the page invented is exactly what this forbids"
+                )
                 node = node[part]
             assert isinstance(node, (int, float)), field
 

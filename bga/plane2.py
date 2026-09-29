@@ -24,6 +24,7 @@ can see is `records_embedded`, which the analysis publishes so that
 "this run's report is 1.5 GB" is a fact about the capture rather than a
 mystery about the tool.
 """
+
 import json
 import os
 from typing import Optional
@@ -93,9 +94,9 @@ RECORDS_KEY = "processes"
 # with no entry fails `test_every_plane2_block_has_a_destination.py`,
 # which is the whole point of writing the inventory down rather than
 # leaving it implied by what `bga/cli.py` happens to copy.
-PAYLOAD = "payload"          #: a named key of `analyze/v5`
-JOIN = "join"                #: a field on an `element_join` row (`UX-382`)
-TERMINAL = "terminal"        #: deliberately terminal-only, with a reason
+PAYLOAD = "payload"  #: a named key of `analyze/v5`
+JOIN = "join"  #: a field on an `element_join` row (`UX-382`)
+TERMINAL = "terminal"  #: deliberately terminal-only, with a reason
 
 #: `{block: (destination, where, why)}` for every top-level key a
 #: `plane2/v3` report carries. `where` is the payload key or the join
@@ -109,7 +110,6 @@ DESTINATIONS = {
     "cpu_time": (PAYLOAD, "cpu_time", ""),
     "peak_memory": (PAYLOAD, "peak_memory", ""),
     "resource_pressure": (PAYLOAD, "resource_pressure", ""),
-
     # --- the capture's own identity: what the instrument could see.
     # All six land in `plane2_coverage`, which is the block a reader
     # already opens to ask how much of the build Plane 2 saw - not six
@@ -128,67 +128,82 @@ DESTINATIONS = {
     # number whose caveat stayed at the terminal is the same defect in
     # miniature, so they travel with what they qualify.
     "open_records_note": (PAYLOAD, "plane2_coverage.open_records_note", ""),
-    "static_binary_disclaimer": (
-        PAYLOAD, "plane2_coverage.static_binary_disclaimer", ""),
-
+    "static_binary_disclaimer": (PAYLOAD, "plane2_coverage.static_binary_disclaimer", ""),
     # --- the per-element blocks, on the join row by `UX-382`'s rule
     "per_element_parallelism": (JOIN, "requested_jobs", ""),
     "redundant_operations": (JOIN, "redundancy_count", ""),
     "declared_vs_used": (JOIN, "unused_dependencies", ""),
-
     # --- terminal-only, on purpose, each with the reason
     "by_element": (
-        TERMINAL, "",
+        TERMINAL,
+        "",
         "Processes per element, which is the input the attribution "
         "table is built from rather than an answer of its own - and "
         "`element_join` already carries one row per element. Publishing "
-        "it beside them would be `UX-288`'s duplicate population."),
+        "it beside them would be `UX-288`'s duplicate population.",
+    ),
     "element_attribution": (
-        TERMINAL, "",
+        TERMINAL,
+        "",
         "How the capture labelled its processes, summarised. Its "
         "`recognized_elements` is the join's own population and its "
         "share is `plane2_coverage.opens_coverage` seen from the other "
-        "side; what is left is a debugging view of the labeller."),
+        "side; what is left is a debugging view of the labeller.",
+    ),
     "invocation_correlation": (
-        TERMINAL, "",
+        TERMINAL,
+        "",
         "The pid-to-element mapping itself, resolved and ambiguous. "
         "Every join row rests on it, so it is apparatus rather than a "
         "measurement - and it names pids, which mean nothing after the "
-        "build that owned them exited."),
+        "build that owned them exited.",
+    ),
     "opens_captured": (
-        TERMINAL, "",
+        TERMINAL,
+        "",
         "Per-element open-window bookkeeping (paths, windows, dropped). "
         "`plane2_coverage.opens_coverage` is the run-level answer a "
         "reader needs; the per-element breakdown is for diagnosing a "
-        "capture, which is `bga doctor`'s job."),
+        "capture, which is `bga doctor`'s job.",
+    ),
     "redundant_operations_coverage": (
-        TERMINAL, "",
+        TERMINAL,
+        "",
         "What the redundancy scan excluded and why. A caveat on a "
         "population the join already caps, and the cap is "
-        "stated where the rows are."),
+        "stated where the rows are.",
+    ),
     "matched_count": (
-        TERMINAL, "",
+        TERMINAL,
+        "",
         "Records matched to an element, before the reductions. "
         "`plane2_coverage.processes` is the same census at the level a "
-        "reader asks it."),
+        "reader asks it.",
+    ),
     "open_count": (
-        TERMINAL, "",
+        TERMINAL,
+        "",
         "Raw open events, which is a size of the trace log rather than "
         "a property of the build - the trace's own size is published "
-        "by the capture layout."),
+        "by the capture layout.",
+    ),
     "wrapped_command_exit_code": (
-        TERMINAL, "",
+        TERMINAL,
+        "",
         "Whether the wrapped `bst` command succeeded. Plane 1 publishes "
         "the run's outcome, and two documents answering that "
-        "differently is the disagreement this tool exists not to have."),
+        "differently is the disagreement this tool exists not to have.",
+    ),
 }
 
 #: The blocks `coverage_additions` copies into `plane2_coverage`, in
 #: the order they are read. Derived from `DESTINATIONS` so the
 #: inventory above is the one place the carry is written down.
 COVERAGE_ADDITIONS = tuple(
-    block for block, (kind, where, _why) in DESTINATIONS.items()
-    if kind == PAYLOAD and where.startswith("plane2_coverage."))
+    block
+    for block, (kind, where, _why) in DESTINATIONS.items()
+    if kind == PAYLOAD and where.startswith("plane2_coverage.")
+)
 
 
 def coverage_additions(report: Optional[dict]) -> dict:
@@ -220,8 +235,7 @@ def coverage_additions(report: Optional[dict]) -> dict:
             # "what the census counted per element" is `bga doctor`'s
             # question rather than a reader's; `elements_at_risk` is
             # the answer this block exists to give.
-            value = {key: member for key, member in value.items()
-                     if key != "per_element"}
+            value = {key: member for key, member in value.items() if key != "per_element"}
         carried[name] = value
     return carried
 
@@ -258,8 +272,8 @@ def provenance(report: Optional[dict]) -> Optional[dict]:
             "per-process record list, which no published number reads. "
             "The aggregates below are the same either way; the file is "
             "large for a reason that is now historical."
-            if embedded else
-            "This run's Plane 2 report carries per-element aggregates "
+            if embedded
+            else "This run's Plane 2 report carries per-element aggregates "
             "only. The per-process records are in the raw trace log the "
             "snapshot keeps, which is what the timeline is built from."
         ),
@@ -296,31 +310,39 @@ VIEW_MAX_BYTES = 64 * 1024 * 1024
 # exactly that run, and the page carried the button and this denial at
 # the same time for two rounds. Whether there is a timeline is
 # `run.has_timeline`, which the page reads and the handoff acts on.
-NOT_CAPTURED = ("Plane 2 was not captured for this run, so there is no "
-                "per-process detail. `bga snapshot -- bst build TARGET` "
-                "captures both planes.")
-CAPTURED_NO_RAW_LOG = ("Plane 2 was captured - its report is beside this run "
-                       "- but the raw trace log it was built from was not "
-                       "kept, so there is no timeline to render. `bga "
-                       "snapshot` keeps one by default; `--no-keep-raw` and a "
-                       "hand-pruned store are the two ways it goes missing.")
+NOT_CAPTURED = (
+    "Plane 2 was not captured for this run, so there is no "
+    "per-process detail. `bga snapshot -- bst build TARGET` "
+    "captures both planes."
+)
+CAPTURED_NO_RAW_LOG = (
+    "Plane 2 was captured - its report is beside this run "
+    "- but the raw trace log it was built from was not "
+    "kept, so there is no timeline to render. `bga "
+    "snapshot` keeps one by default; `--no-keep-raw` and a "
+    "hand-pruned store are the two ways it goes missing."
+)
 
 
-DECLINED = ("Plane 2 was captured and this report was asked not to read it "
-            "(`--no-plane2`), so every figure below is Plane 1 alone.")
+DECLINED = (
+    "Plane 2 was captured and this report was asked not to read it "
+    "(`--no-plane2`), so every figure below is Plane 1 alone."
+)
 
 
 #: `UX-726`: the fourth state, which `UX-685`'s seed-2 walk met and no
 #: sentence covered. A report that exists and recorded nothing is not
 #: "no absence" - the reader who asked for Plane 1 alone gets it, and
 #: the reader whose hook failed to attach gets the same file.
-CAPTURED_EMPTY = ("Plane 2 was captured and recorded no process at all, so "
-                  "there is no per-process detail. That is what every "
-                  "`bga snapshot` flag that reads like \"off\" produces - "
-                  "`--no-inject`, `--no-trace-opens`, `--trace-spine=off` - "
-                  "and it is also what a hook that failed to attach looks "
-                  "like. `bga wrap` then `bga extract` captures Plane 1 "
-                  "alone on purpose.")
+CAPTURED_EMPTY = (
+    "Plane 2 was captured and recorded no process at all, so "
+    "there is no per-process detail. That is what every "
+    "`bga snapshot` flag that reads like \"off\" produces - "
+    "`--no-inject`, `--no-trace-opens`, `--trace-spine=off` - "
+    "and it is also what a hook that failed to attach looks "
+    "like. `bga wrap` then `bga extract` captures Plane 1 "
+    "alone on purpose."
+)
 
 
 def absence(run_dir: str, declined: bool = False):
@@ -401,7 +423,8 @@ def attachable(run_dir: str):
         f"analysis, so the report is rendered from Plane 1 alone - parsing it "
         f"here costs about {run_store.human_bytes(int(size * 2.9))} of memory. "
         f"`bga snapshot -- bst build TARGET` publishes an analysis "
-        f"that carries both planes.")
+        f"that carries both planes."
+    )
 
 
 # `UX-894`: the denominator a per-element parallelism ratio divided by.
@@ -469,8 +492,7 @@ def apply_resolved_widths(native_report: dict, widths: dict[str, int]) -> int:
         filled += 1
         entry["jobs_denominator"] = GRAPH_DENOMINATOR
         peak = entry.get("peak_work_concurrency") or 0
-        findings = [f for f in (entry.get("findings") or [])
-                    if f != OVERLAP_FINDING]
+        findings = [f for f in (entry.get("findings") or []) if f != OVERLAP_FINDING]
         if width > 0 and peak > width:
             findings.append(OVERLAP_FINDING)
         entry["findings"] = findings
@@ -478,6 +500,5 @@ def apply_resolved_widths(native_report: dict, widths: dict[str, int]) -> int:
         # element was not granted is the finding above, and a
         # parallelism score that reads 2.0 against a width of one is
         # the number `UX-894` was filed for.
-        entry["achieved_vs_requested"] = (
-            min(1.0, peak / width) if width > 0 else None)
+        entry["achieved_vs_requested"] = min(1.0, peak / width) if width > 0 else None
     return filled

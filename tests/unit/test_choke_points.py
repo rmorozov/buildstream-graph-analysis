@@ -13,6 +13,7 @@ the answer is obvious, and pin the two properties the placeholder failed:
 it must not fire on ordinary layered structure, and it must tell the
 `examples/06` baseline apart from its `optimized/` variant.
 """
+
 import networkx as nx
 
 from bga.ingest.models import NormalizedTask, TaskKey, TaskKind
@@ -45,9 +46,7 @@ def _choke_points(nodes, edges):
 def test_chain_is_all_choke_points():
     """Every element of a pure chain runs alone - that is what a chain
     is - and all of them are correctly reported."""
-    assert _choke_points(
-        ["a", "b", "c"], [("a", "b"), ("b", "c")]
-    ) == ["a", "b", "c"]
+    assert _choke_points(["a", "b", "c"], [("a", "b"), ("b", "c")]) == ["a", "b", "c"]
 
 
 def test_diamond_identifies_the_waist_and_not_the_parallel_pair():
@@ -64,8 +63,7 @@ def test_element_running_alongside_another_is_not_a_choke_point():
     bottleneck by degree, but `codegen` genuinely overlaps it."""
     choke = _choke_points(
         ["toolchain", "core", "codegen", "lib", "app"],
-        [("toolchain", "core"), ("toolchain", "codegen"),
-         ("core", "lib"), ("codegen", "lib"), ("lib", "app")],
+        [("toolchain", "core"), ("toolchain", "codegen"), ("core", "lib"), ("codegen", "lib"), ("lib", "app")],
     )
 
     assert "core" not in choke and "codegen" not in choke
@@ -112,9 +110,7 @@ def test_serialized_chain_is_found_and_disappears_when_it_is_removed():
 
     chained = _choke_points(
         nodes,
-        common
-        + [(libs[i], libs[i + 1]) for i in range(len(libs) - 1)]
-        + [(libs[-1], "app")],
+        common + [(libs[i], libs[i + 1]) for i in range(len(libs) - 1)] + [(libs[-1], "app")],
     )
     fanned = _choke_points(nodes, common + [(lib, "app") for lib in libs])
 

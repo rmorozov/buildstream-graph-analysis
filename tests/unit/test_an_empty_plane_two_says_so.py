@@ -21,6 +21,7 @@ orthogonal - opened paths, the ptrace spine, the argv rewrite - and
 none claims to be "capture Plane 1 alone". `bga wrap` + `bga extract`
 is that, and the sentence says so.
 """
+
 import json
 import pathlib
 import sys
@@ -41,9 +42,17 @@ def _run(tmp_path, *, process_count, raw_log=True):
     snapshot = tmp_path / "20260906T000000Z"
     run = snapshot / "run"
     run.mkdir(parents=True)
-    (snapshot / "plane2.json").write_text(json.dumps({
-        "schema": "plane2/v3", "process_count": process_count,
-        "matched_count": 0, "open_count": 0, "by_binary": []}))
+    (snapshot / "plane2.json").write_text(
+        json.dumps(
+            {
+                "schema": "plane2/v3",
+                "process_count": process_count,
+                "matched_count": 0,
+                "open_count": 0,
+                "by_binary": [],
+            }
+        )
+    )
     if raw_log:
         (snapshot / "plane2.log.gz").write_bytes(b"")
     return str(run)
@@ -51,8 +60,7 @@ def _run(tmp_path, *, process_count, raw_log=True):
 
 class TestTheFourthStateHasASentence:
     def test_a_report_that_counted_nothing_is_named(self, tmp_path):
-        assert plane2.absence(_run(tmp_path, process_count=0)) \
-            == plane2.CAPTURED_EMPTY
+        assert plane2.absence(_run(tmp_path, process_count=0)) == plane2.CAPTURED_EMPTY
 
     def test_a_report_with_processes_has_no_absence(self, tmp_path):
         """The discriminating half. Without it the clause above passes
@@ -63,8 +71,7 @@ class TestTheFourthStateHasASentence:
         """Order matters: the three older states are about what is
         beside the run, this one about what is inside the report. A run
         with neither reports the older, more actionable one."""
-        assert plane2.absence(_run(tmp_path, process_count=0, raw_log=False)) \
-            == plane2.CAPTURED_NO_RAW_LOG
+        assert plane2.absence(_run(tmp_path, process_count=0, raw_log=False)) == plane2.CAPTURED_NO_RAW_LOG
 
     def test_no_plane_two_at_all_still_wins(self, tmp_path):
         run = tmp_path / "20260906T000000Z" / "run"
@@ -98,6 +105,5 @@ class TestTheSentenceIsUsable:
         assert "failed to attach" in plane2.CAPTURED_EMPTY
 
     def test_the_four_sentences_are_four(self):
-        said = {plane2.NOT_CAPTURED, plane2.CAPTURED_NO_RAW_LOG,
-                plane2.DECLINED, plane2.CAPTURED_EMPTY}
+        said = {plane2.NOT_CAPTURED, plane2.CAPTURED_NO_RAW_LOG, plane2.DECLINED, plane2.CAPTURED_EMPTY}
         assert len(said) == 4

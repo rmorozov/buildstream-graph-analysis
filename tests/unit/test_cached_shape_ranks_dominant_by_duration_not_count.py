@@ -9,6 +9,7 @@ synthetic Plane 3 history built the way `UX-682`'s own tests build one
 - reproduced in the task file's Outcome with the exact log tree and
 `bga cache-logs`/`bga correlate` commands that regenerate it.
 """
+
 from bga.correlate import cached_shape
 from tests.unit.test_correlate import _analysis
 from tests.unit.test_granularity import _Edge
@@ -26,8 +27,12 @@ _BLAST = {
     'lib-d.bst': {'downstream_count': 4, 'weighted_duration_us': 10_150_000, 'element_kind': 'cmake'},
     'lib-e.bst': {'downstream_count': 3, 'weighted_duration_us': 7_150_000, 'element_kind': 'cmake'},
     'lib-f.bst': {'downstream_count': 2, 'weighted_duration_us': 3_150_000, 'element_kind': 'cmake'},
-    'toolchain.bst': {'downstream_count': 10, 'weighted_duration_us': 50_200_000,
-                       'element_kind': 'import', 'is_foundation': True},
+    'toolchain.bst': {
+        'downstream_count': 10,
+        'weighted_duration_us': 50_200_000,
+        'element_kind': 'import',
+        'is_foundation': True,
+    },
 }
 
 # Five elements recorded, so their own median (`lib-b.bst`, rank 3 of
@@ -57,24 +62,35 @@ _ELEMENTS = [
 # chain at all, so its real weight lead over `lib-d.bst`/`lib-f.bst`
 # is not matched by height (isolate).
 _HEIGHT_EDGES = [
-    ('lib-a.bst', 'h-a1.bst'), ('h-a1.bst', 'h-a2.bst'), ('h-a2.bst', 'h-a3.bst'),
-    ('h-a3.bst', 'h-a4.bst'), ('h-a4.bst', 'h-a5.bst'), ('h-a5.bst', 'h-a6.bst'),
-    ('lib-d.bst', 'h-d1.bst'), ('h-d1.bst', 'h-d2.bst'), ('h-d2.bst', 'h-d3.bst'),
-    ('h-d3.bst', 'h-d4.bst'), ('h-d4.bst', 'h-d5.bst'),
-    ('lib-f.bst', 'h-f1.bst'), ('h-f1.bst', 'h-f2.bst'), ('h-f2.bst', 'h-f3.bst'),
+    ('lib-a.bst', 'h-a1.bst'),
+    ('h-a1.bst', 'h-a2.bst'),
+    ('h-a2.bst', 'h-a3.bst'),
+    ('h-a3.bst', 'h-a4.bst'),
+    ('h-a4.bst', 'h-a5.bst'),
+    ('h-a5.bst', 'h-a6.bst'),
+    ('lib-d.bst', 'h-d1.bst'),
+    ('h-d1.bst', 'h-d2.bst'),
+    ('h-d2.bst', 'h-d3.bst'),
+    ('h-d3.bst', 'h-d4.bst'),
+    ('h-d4.bst', 'h-d5.bst'),
+    ('lib-f.bst', 'h-f1.bst'),
+    ('h-f1.bst', 'h-f2.bst'),
+    ('h-f2.bst', 'h-f3.bst'),
 ]
 
 
 def _fixture():
     analysis = _analysis(blast=_BLAST)
-    cache_logs = {'change_frequency': {
-        'builds_lower_bound': max(e['rebuilds'] for e in _ELEMENTS),
-        'window': {'first_us': 0, 'last_us': 1},
-        'elements': list(_ELEMENTS),
-        'co_change': [],
-        'co_change_window_us': 0,
-        'pairs_below_floor': 0,
-    }}
+    cache_logs = {
+        'change_frequency': {
+            'builds_lower_bound': max(e['rebuilds'] for e in _ELEMENTS),
+            'window': {'first_us': 0, 'last_us': 1},
+            'elements': list(_ELEMENTS),
+            'co_change': [],
+            'co_change_window_us': 0,
+            'pairs_below_floor': 0,
+        }
+    }
     return analysis, cache_logs
 
 
@@ -111,14 +127,10 @@ def test_cheap_share_matches_an_independent_recount():
     # would classify it cheap instead of expensive.
     p50 = sorted(e['weighted_duration_us'] for e in _BLAST.values())[5]
     assert p50 == 14_150_000
-    history_only_p50 = sorted(
-        _BLAST[e['element']]['weighted_duration_us'] for e in _ELEMENTS
-    )[2]
-    assert history_only_p50 == 17_150_000 != p50, (
-        "the fixture no longer discriminates the p50 population mutation")
+    history_only_p50 = sorted(_BLAST[e['element']]['weighted_duration_us'] for e in _ELEMENTS)[2]
+    assert history_only_p50 == 17_150_000 != p50, "the fixture no longer discriminates the p50 population mutation"
     total_changes = sum(e['rebuilds'] for e in _ELEMENTS)
-    cheap_changes = sum(e['rebuilds'] for e in _ELEMENTS
-                        if _BLAST[e['element']]['weighted_duration_us'] <= p50)
+    cheap_changes = sum(e['rebuilds'] for e in _ELEMENTS if _BLAST[e['element']]['weighted_duration_us'] <= p50)
     assert (shape['total_changes'], shape['cheap_changes']) == (total_changes, cheap_changes)
     assert shape['cheap_share'] == cheap_changes / total_changes
     assert shape['verdict'] == 'rebuilds_the_cheapest_subgraph'
@@ -132,11 +144,11 @@ def test_dominant_is_ranked_by_duration_weighted_cost_not_change_count():
     # `toolchain.bst` is the true expensive-blast leader by either
     # ranking but is a declared foundation (`UX-683`) and never leads.
     non_foundation = [e for e in _ELEMENTS if e['element'] != 'toolchain.bst']
-    by_duration = max(non_foundation, key=lambda e:
-                       e['rebuilds'] * _BLAST[e['element']]['weighted_duration_us'])
+    by_duration = max(non_foundation, key=lambda e: e['rebuilds'] * _BLAST[e['element']]['weighted_duration_us'])
     by_count = max(non_foundation, key=lambda e: e['rebuilds'])
     assert by_duration['element'] != by_count['element'], (
-        "the fixture no longer discriminates - duration and count agree")
+        "the fixture no longer discriminates - duration and count agree"
+    )
     assert shape['dominant'][0]['element'] == by_duration['element']
 
 
@@ -149,8 +161,7 @@ def test_the_advice_matches_an_independent_height_and_weight_rank_comparison():
     dominant_elements = [e['element'] for e in _ELEMENTS if e['element'] != 'toolchain.bst']
     heights = {e: _independent_height(e, _HEIGHT_EDGES) for e in dominant_elements}
     by_height = sorted(dominant_elements, key=lambda e: -heights[e])
-    by_weight = sorted(dominant_elements,
-                       key=lambda e: -_BLAST[e]['weighted_duration_us'])
+    by_weight = sorted(dominant_elements, key=lambda e: -_BLAST[e]['weighted_duration_us'])
     height_rank = {e: i for i, e in enumerate(by_height, start=1)}
     weight_rank = {e: i for i, e in enumerate(by_weight, start=1)}
 
@@ -158,12 +169,12 @@ def test_the_advice_matches_an_independent_height_and_weight_rank_comparison():
     # both rankings and reads as `isolate`, never a null advice.
     assert height_rank['lib-a.bst'] == weight_rank['lib-a.bst'] == 1
     expected = {
-        e: ("split the tall chain" if height_rank[e] < weight_rank[e]
-            else "isolate the heavy element")
+        e: ("split the tall chain" if height_rank[e] < weight_rank[e] else "isolate the heavy element")
         for e in dominant_elements
     }
     assert set(expected.values()) == {"split the tall chain", "isolate the heavy element"}, (
-        "the fixture no longer exercises both advice branches")
+        "the fixture no longer exercises both advice branches"
+    )
 
     by_element = {d['element']: d for d in shape['dominant']}
     for element, advice in expected.items():

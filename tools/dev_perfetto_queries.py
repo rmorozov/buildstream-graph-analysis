@@ -16,6 +16,7 @@ downloads the pinned reader when `PATH` and `BGA_TRACE_PROCESSOR` have
 none, into `--fetch-into`, and prints where: that friction is what kept
 the gate skipping.
 """
+
 import argparse
 import csv
 import io
@@ -41,8 +42,10 @@ QUESTIONS_JS = REPO / "bga/viewer/questions.js"
 #: prebuilts here; `get.perfetto.dev` is a redirector to the same bucket
 #: and is blocked by some proxies, so the bucket is named directly.
 READER_VERSION = "v57.2"
-READER_URL = ("https://commondatastorage.googleapis.com/perfetto-luci-artifacts/"
-              f"{READER_VERSION}/linux-amd64/trace_processor_shell")
+READER_URL = (
+    "https://commondatastorage.googleapis.com/perfetto-luci-artifacts/"
+    f"{READER_VERSION}/linux-amd64/trace_processor_shell"
+)
 
 #: Lines the shell writes around the result set.
 NOISE = re.compile(r"^(Loading trace|\[\d|column \d+ =)")
@@ -79,8 +82,7 @@ def rendered_sql(question, element=None, bounds=None):
         window = f"and c.ts between {_number(start)} and {_number(end)}"
     else:
         window = WINDOW_PLACEHOLDER if bounds is not None else ""
-    return (question["sql"].replace(ELEMENT_PLACEHOLDER, target)
-                            .replace(WINDOW_PLACEHOLDER, window))
+    return question["sql"].replace(ELEMENT_PLACEHOLDER, target).replace(WINDOW_PLACEHOLDER, window)
 
 
 def questions():
@@ -92,12 +94,11 @@ def questions():
     """
     node = shutil.which("node")
     if node is None:
-        raise SystemExit("node is not installed, and it is what reads "
-                         "bga/viewer/questions.js")
-    script = ('const { QUESTIONS } = await import("./bga/viewer/questions.js");'
-              'console.log(JSON.stringify(QUESTIONS));')
-    done = subprocess.run([node, "--input-type=module", "-e", script],
-                          capture_output=True, text=True, cwd=REPO, timeout=60)
+        raise SystemExit("node is not installed, and it is what reads bga/viewer/questions.js")
+    script = 'const { QUESTIONS } = await import("./bga/viewer/questions.js");console.log(JSON.stringify(QUESTIONS));'
+    done = subprocess.run(
+        [node, "--input-type=module", "-e", script], capture_output=True, text=True, cwd=REPO, timeout=60
+    )
     if done.returncode != 0:
         raise SystemExit(f"could not read the question library: {done.stderr}")
     return json.loads(done.stdout)
@@ -124,9 +125,11 @@ def reader(fetch_if_missing, into):
         return pathlib.Path(found)
     if fetch_if_missing:
         return fetch(into)
-    print(f"{trace_processor.REASON}. Re-run with --fetch to download "
-          f"the pinned {READER_VERSION} reader, or set BGA_TRACE_PROCESSOR.",
-          file=sys.stderr)
+    print(
+        f"{trace_processor.REASON}. Re-run with --fetch to download "
+        f"the pinned {READER_VERSION} reader, or set BGA_TRACE_PROCESSOR.",
+        file=sys.stderr,
+    )
     return None
 
 
@@ -134,13 +137,11 @@ def ask(shell, trace, sql, workdir):
     """`(rows, error)` - the shell takes a file, never stdin."""
     path = workdir / "_ask.sql"
     path.write_text(sql, encoding="utf-8")
-    done = subprocess.run([str(shell), "-q", str(path), str(trace)],
-                          capture_output=True, text=True, timeout=900)
+    done = subprocess.run([str(shell), "-q", str(path), str(trace)], capture_output=True, text=True, timeout=900)
     if done.returncode != 0:
         lines = [ln for ln in (done.stderr or "").splitlines() if ln.strip()]
         return None, (lines[-1] if lines else f"exit {done.returncode}")
-    body = [ln for ln in (done.stdout or "").splitlines()
-            if ln.strip() and not NOISE.search(ln)]
+    body = [ln for ln in (done.stdout or "").splitlines() if ln.strip() and not NOISE.search(ln)]
     if not body:
         return [], None
     reader_ = csv.reader(io.StringIO("\n".join(body)))
@@ -167,7 +168,10 @@ def an_element(shell, trace, workdir):
     `--element` overrides, and the chosen element is printed, because a
     heuristic that picks silently is one nobody can check.
     """
-    rows, error = ask(shell, trace, """
+    rows, error = ask(
+        shell,
+        trace,
+        """
 select extract_arg(s.arg_set_id, 'debug.element') as element,
        max(case when f.slice_in is not null then 1 else 0 end) as waits,
        sum(s.dur) as total
@@ -175,7 +179,9 @@ from slice s left join flow f on f.slice_in = s.id
 where s.category glob '*bst-builder*'
   and extract_arg(s.arg_set_id, 'debug.element') is not null
 group by element
-order by waits desc, total desc limit 1;""", workdir)
+order by waits desc, total desc limit 1;""",
+        workdir,
+    )
     if error or not rows:
         return None
     return rows[0].get("element")
@@ -184,13 +190,11 @@ order by waits desc, total desc limit 1;""", workdir)
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("trace", help="a .pftrace written by `bga timeline`")
-    parser.add_argument("--element", help="fill {element} with this rather "
-                                          "than one read from the trace")
-    parser.add_argument("--fetch", action="store_true",
-                        help="download the pinned reader if none is found")
-    parser.add_argument("--fetch-into",
-                        default=str(pathlib.Path.home() / ".cache/bga"),
-                        help="where --fetch puts the reader")
+    parser.add_argument("--element", help="fill {element} with this rather than one read from the trace")
+    parser.add_argument("--fetch", action="store_true", help="download the pinned reader if none is found")
+    parser.add_argument(
+        "--fetch-into", default=str(pathlib.Path.home() / ".cache/bga"), help="where --fetch puts the reader"
+    )
     parser.add_argument("--format", choices=("text", "json"), default="text")
     args = parser.parse_args(argv)
 
@@ -210,19 +214,36 @@ def main(argv=None):
     for question in library:
         sql = rendered_sql(question, element)
         rows, error = ask(shell, trace, sql, workdir)
-        results.append({"id": question["id"], "plane": question.get("plane"),
-                        "rows": None if error else len(rows), "error": error,
-                        "first": (rows or [None])[0] if not error else None})
+        results.append(
+            {
+                "id": question["id"],
+                "plane": question.get("plane"),
+                "rows": None if error else len(rows),
+                "error": error,
+                "first": (rows or [None])[0] if not error else None,
+            }
+        )
         if error:
             broken.append(question["id"])
         elif not rows:
             empty.append(question["id"])
 
     if args.format == "json":
-        print(json.dumps({"trace": str(trace), "bytes": trace.stat().st_size,
-                          "reader": str(shell), "element": element,
-                          "questions": len(library), "empty": empty,
-                          "errors": broken, "results": results}, indent=2))
+        print(
+            json.dumps(
+                {
+                    "trace": str(trace),
+                    "bytes": trace.stat().st_size,
+                    "reader": str(shell),
+                    "element": element,
+                    "questions": len(library),
+                    "empty": empty,
+                    "errors": broken,
+                    "results": results,
+                },
+                indent=2,
+            )
+        )
     else:
         print(f"trace   {trace} ({trace.stat().st_size:,} B)")
         print(f"reader  {shell}")
@@ -230,12 +251,10 @@ def main(argv=None):
         print()
         for row in results:
             if row["error"]:
-                print(f"  {row['id']:20s} {str(row['plane']):12s} "
-                      f"ERROR  {row['error'][:60]}")
+                print(f"  {row['id']:20s} {str(row['plane']):12s} ERROR  {row['error'][:60]}")
                 continue
             mark = "  <-- EMPTY" if not row["rows"] else ""
-            print(f"  {row['id']:20s} {str(row['plane']):12s} "
-                  f"{row['rows']:5d} row(s){mark}")
+            print(f"  {row['id']:20s} {str(row['plane']):12s} {row['rows']:5d} row(s){mark}")
         print()
         print(f"empty:  {len(empty)}/{len(library)}  {empty}")
         print(f"errors: {len(broken)}/{len(library)}  {broken}")

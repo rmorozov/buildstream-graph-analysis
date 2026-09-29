@@ -22,6 +22,7 @@ block must say what a fresh run would add, and the last clause here
 asserts both branches are non-empty, so a change that quietly labelled
 everything reddens.
 """
+
 import pathlib
 import re
 import shlex
@@ -94,7 +95,7 @@ def _blocks():
             close = index + 1
             while close < len(lines) and not lines[close].startswith("```"):
                 close += 1
-            body = lines[index + 1:close]
+            body = lines[index + 1 : close]
             if body and body[0].startswith("$ bga "):
                 # The prose between this fence and the next one is where
                 # a label lives; stopping at the next fence keeps a
@@ -102,9 +103,9 @@ def _blocks():
                 after = close + 1
                 while after < len(lines) and not lines[after].startswith("```"):
                     after += 1
-                found.append(Block(
-                    path.relative_to(REPO).as_posix(), index + 2, body,
-                    "\n".join(lines[close + 1:after])))
+                found.append(
+                    Block(path.relative_to(REPO).as_posix(), index + 2, body, "\n".join(lines[close + 1 : after]))
+                )
             index = close + 1
     return found
 
@@ -116,9 +117,9 @@ def _fresh(command):
     """The command, run from the repository root, as a list of lines."""
     argv = shlex.split(command)
     assert argv[0] == "bga", command
-    done = subprocess.run([sys.executable, "-m", "bga.cli"] + argv[1:],
-                          capture_output=True, text=True, cwd=str(REPO),
-                          timeout=180)
+    done = subprocess.run(
+        [sys.executable, "-m", "bga.cli"] + argv[1:], capture_output=True, text=True, cwd=str(REPO), timeout=180
+    )
     assert done.returncode == 0, (command, done.returncode, done.stderr)
     return done.stdout.splitlines()
 
@@ -128,9 +129,12 @@ def _json(subcommand, *args):
     import json
 
     done = subprocess.run(
-        [sys.executable, "-m", "bga.cli", subcommand, *args,
-         "--format", "json"],
-        capture_output=True, text=True, cwd=str(REPO), timeout=180)
+        [sys.executable, "-m", "bga.cli", subcommand, *args, "--format", "json"],
+        capture_output=True,
+        text=True,
+        cwd=str(REPO),
+        timeout=180,
+    )
     assert done.returncode == 0, done.stderr
     return json.loads(done.stdout)
 
@@ -143,8 +147,9 @@ class TestThePopulationIsTheOneTheItemNamed:
     def test_there_are_blocks_to_read(self):
         """A population rule that selects nothing passes everything."""
         assert len(BLOCKS) >= 5, (
-            "no `$ bga` blocks found under docs/guides; the guard below "
-            "would be reading an empty set", _ids(BLOCKS))
+            "no `$ bga` blocks found under docs/guides; the guard below would be reading an empty set",
+            _ids(BLOCKS),
+        )
 
     def test_both_branches_are_exercised(self):
         """Non-vacuity, both ways. If nothing is diffable this guard is
@@ -152,35 +157,27 @@ class TestThePopulationIsTheOneTheItemNamed:
         branch has never run."""
         diffed = [block for block in BLOCKS if block.diffable]
         kept = [block for block in BLOCKS if not block.diffable]
-        assert diffed and kept, (
-            "one branch of the rule has no block in it",
-            _ids(diffed), _ids(kept))
+        assert diffed and kept, ("one branch of the rule has no block in it", _ids(diffed), _ids(kept))
 
     def test_a_block_that_can_be_re_run_is_not_labelled_instead(self):
         """The two branches are exclusive. A `kept, not current` label
         on a block whose fixture is committed would stand where the diff
         should be, and the diff is the stronger claim."""
-        mislabelled = [block.id for block in BLOCKS
-                       if block.diffable and KEPT.search(block.trailer)]
+        mislabelled = [block.id for block in BLOCKS if block.diffable and KEPT.search(block.trailer)]
         assert mislabelled == [], (
             "block(s) name a committed fixture and are dated as archives "
             "anyway; they are diffed, so the label is not the answer",
-            mislabelled)
+            mislabelled,
+        )
 
 
-@pytest.mark.parametrize(
-    "block", [b for b in BLOCKS if b.diffable], ids=_ids(
-        [b for b in BLOCKS if b.diffable]))
+@pytest.mark.parametrize("block", [b for b in BLOCKS if b.diffable], ids=_ids([b for b in BLOCKS if b.diffable]))
 class TestADiffedBlockIsAFreshRun:
     def test_every_pasted_line_is_a_real_line(self, block):
         for command, pasted in block.segments():
             fresh = _fresh(command)
-            missing = [line for line in pasted
-                       if line.strip() and not ELISION.match(line)
-                       and line not in fresh]
-            assert missing == [], (
-                f"{block.id} pastes lines `{command}` does not print",
-                missing)
+            missing = [line for line in pasted if line.strip() and not ELISION.match(line) and line not in fresh]
+            assert missing == [], (f"{block.id} pastes lines `{command}` does not print", missing)
 
     def test_the_lines_are_in_the_order_and_contiguity_pasted(self, block):
         """Membership alone cannot see a reshuffle, and adjacency is
@@ -196,16 +193,15 @@ class TestADiffedBlockIsAFreshRun:
                 if ELISION.match(line):
                     previous = None
                     continue
-                assert line in fresh, (
-                    f"{block.id} pastes a line `{command}` does not "
-                    f"print:\n  {line!r}")
+                assert line in fresh, f"{block.id} pastes a line `{command}` does not print:\n  {line!r}"
                 here = fresh.index(line)
                 if previous is not None and here != previous + 1:
-                    undeclared.append((line, fresh[previous + 1:here]))
+                    undeclared.append((line, fresh[previous + 1 : here]))
                 previous = here
             assert undeclared == [], (
-                f"{block.id} jumps over lines `{command}` prints with no "
-                f"`[... elided: … ...]` marker", undeclared)
+                f"{block.id} jumps over lines `{command}` prints with no `[... elided: … ...]` marker",
+                undeclared,
+            )
 
     def test_the_ends_of_each_paste_are_declared_too(self, block):
         """The clause the first mutation of this guard walked through:
@@ -222,29 +218,33 @@ class TestADiffedBlockIsAFreshRun:
                 assert lines[end] == edge, (
                     f"{block.id} starts or stops partway through what "
                     f"`{command}` prints with no `[... elided: … ...]` "
-                    f"marker at that end", lines[end], edge)
+                    f"marker at that end",
+                    lines[end],
+                    edge,
+                )
 
 
 @pytest.mark.parametrize(
-    "block", [b for b in BLOCKS if not b.diffable], ids=_ids(
-        [b for b in BLOCKS if not b.diffable]))
+    "block", [b for b in BLOCKS if not b.diffable], ids=_ids([b for b in BLOCKS if not b.diffable])
+)
 class TestAKeptBlockCarriesItsDateAndItsCuts:
     def test_it_is_framed_as_kept_not_current(self, block):
         assert KEPT.search(block.trailer), (
             f"{block.id} cannot be re-run here and does not say so; a "
             f"reader diffing it against their own run concludes the tool "
-            f"is wrong rather than the page")
+            f"is wrong rather than the page"
+        )
 
     def test_it_names_the_day(self, block):
         assert ISO_DATE.search(block.trailer), (
-            f"{block.id} is kept without a date; 'an old run' is not "
-            f"something a reader can check")
+            f"{block.id} is kept without a date; 'an old run' is not something a reader can check"
+        )
 
     def test_it_lists_its_cuts(self, block):
         found = CUTS.search(block.trailer)
         assert found and found.group(1).strip(), (
-            f"{block.id} carries no `Cuts:` sentence, so a reader cannot "
-            f"tell what a fresh run would add to it")
+            f"{block.id} carries no `Cuts:` sentence, so a reader cannot tell what a fresh run would add to it"
+        )
 
 
 class TestTheGuidesNameKeysTheReportPublishes:
@@ -265,20 +265,17 @@ class TestTheGuidesNameKeysTheReportPublishes:
 
     @pytest.fixture(scope="module")
     def report(self):
-        return _json("analyze", "tests/fixtures/macro_micro/run",
-                     "--plane2", "tests/fixtures/macro_micro/plane2.json")
+        return _json("analyze", "tests/fixtures/macro_micro/run", "--plane2", "tests/fixtures/macro_micro/plane2.json")
 
     @pytest.fixture(scope="module")
     def joined(self):
-        return _json("correlate", "tests/fixtures/macro_micro/run",
-                     "tests/fixtures/macro_micro/plane2.json")
+        return _json("correlate", "tests/fixtures/macro_micro/run", "tests/fixtures/macro_micro/plane2.json")
 
     def _cells(self, document, anchor, column):
         text = (REPO / document).read_text(encoding="utf-8")
         start = text.index(anchor)
         end = text.index("\n## ", start + 4)
-        rows = [line for line in text[start:end].splitlines()
-                if line.startswith("|") and "---" not in line]
+        rows = [line for line in text[start:end].splitlines() if line.startswith("|") and "---" not in line]
         assert rows, (document, anchor)
         return [row.split("|")[column].strip() for row in rows]
 
@@ -288,25 +285,26 @@ class TestTheGuidesNameKeysTheReportPublishes:
         row = report["element_join"][0]
         named = set()
         for path in sorted(GUIDES.glob("*.md")):
-            named |= set(re.findall(r"`element_join\[\]\.([a-z_0-9]+)`",
-                                    path.read_text(encoding="utf-8")))
+            named |= set(re.findall(r"`element_join\[\]\.([a-z_0-9]+)`", path.read_text(encoding="utf-8")))
         assert named, "no `element_join[].…` key named in the guides"
         assert sorted(k for k in named if k not in row) == [], (
-            "the guides name element_join key(s) the report does not "
-            "publish", sorted(named), sorted(row))
+            "the guides name element_join key(s) the report does not publish",
+            sorted(named),
+            sorted(row),
+        )
 
     def test_every_namespace_the_page_answers_with_exists(self, report):
         """`UX-578`'s fourth: `waited-on-flow` was answered with "the
         declared graph, in `structural`" and there is no such key."""
         named = set()
-        for cell in self._cells("docs/guides/what-the-viewer-answers.md",
-                                self.PAGE_ANSWERS, 2):
+        for cell in self._cells("docs/guides/what-the-viewer-answers.md", self.PAGE_ANSWERS, 2):
             named |= set(re.findall(r"`([a-z_0-9]+)(?:\.[a-z_0-9]+)?`", cell))
-        assert len(named) >= 4, ("the page-answers table named almost "
-                                 "nothing; the anchor has moved", named)
+        assert len(named) >= 4, ("the page-answers table named almost nothing; the anchor has moved", named)
         assert sorted(k for k in named if k not in report) == [], (
-            "the page-answers table names namespace(s) analyze does not "
-            "publish", sorted(named), sorted(report))
+            "the page-answers table names namespace(s) analyze does not publish",
+            sorted(named),
+            sorted(report),
+        )
 
     def test_the_correlate_row_table_names_the_rows_own_keys(self, joined):
         """The same rename, on `cli.md`'s side of it."""
@@ -314,11 +312,12 @@ class TestTheGuidesNameKeysTheReportPublishes:
         named = set()
         for cell in self._cells("docs/guides/cli.md", self.CORRELATE_ROW, 2):
             named |= set(re.findall(r"`([a-z_0-9]+)`", cell))
-        assert len(named) >= 4, ("the correlate row table named almost "
-                                 "nothing; the anchor has moved", named)
+        assert len(named) >= 4, ("the correlate row table named almost nothing; the anchor has moved", named)
         assert sorted(k for k in named if k not in row) == [], (
-            "cli.md's correlate table names key(s) the row does not "
-            "carry", sorted(named), sorted(row))
+            "cli.md's correlate table names key(s) the row does not carry",
+            sorted(named),
+            sorted(row),
+        )
 
 
 class TestOneMeasurementForTheScaleTrace:
@@ -340,25 +339,21 @@ class TestOneMeasurementForTheScaleTrace:
         found = {}
         for path in sorted(GUIDES.glob("*.md")):
             text = path.read_text(encoding="utf-8")
-            for anchor in [found for marker in self.ANCHORS
-                           for found in re.finditer(re.escape(marker), text)]:
-                window = text[max(0, anchor.start() - self.WINDOW):
-                              anchor.end() + self.WINDOW]
+            for anchor in [found for marker in self.ANCHORS for found in re.finditer(re.escape(marker), text)]:
+                window = text[max(0, anchor.start() - self.WINDOW) : anchor.end() + self.WINDOW]
                 for match in self.FIGURE.finditer(window):
                     raw = match.group(0)
-                    value = (int(raw.replace(",", "")) if "," in raw
-                             else int(match.group(3)) * 1000)
+                    value = int(raw.replace(",", "")) if "," in raw else int(match.group(3)) * 1000
                     if self.BAND[0] <= value <= self.BAND[1]:
-                        found.setdefault(round(value / 1000), set()).add(
-                            f"{path.name}: {raw}")
+                        found.setdefault(round(value / 1000), set()).add(f"{path.name}: {raw}")
         return found
 
     def test_the_guides_quote_one_figure_for_it(self):
         found = self._figures()
         assert len(found) == 1, (
-            "the guides quote more than one byte figure for the "
-            "16,832-track seeded scale trace",
-            {kb: sorted(where) for kb, where in found.items()})
+            "the guides quote more than one byte figure for the 16,832-track seeded scale trace",
+            {kb: sorted(where) for kb, where in found.items()},
+        )
 
     def test_it_is_quoted_in_more_than_one_place(self):
         """The clause above passes on an empty set and on a single
@@ -366,8 +361,9 @@ class TestOneMeasurementForTheScaleTrace:
         found = self._figures()
         assert found, "no byte figure for the scale trace found"
         assert len(next(iter(found.values()))) >= 2, (
-            "only one place quotes it, so the agreement clause above is "
-            "not reading the drift this item found", found)
+            "only one place quotes it, so the agreement clause above is not reading the drift this item found",
+            found,
+        )
 
 
 class TestATimeConcentrationBlockMatchesWhatFindingsAlwaysPrints:
@@ -382,7 +378,8 @@ class TestATimeConcentrationBlockMatchesWhatFindingsAlwaysPrints:
     DOC = REPO / "docs/guides/real-project.md"
     HEADER = re.compile(
         r"Where the time is: (\d+) element\(s\) are [\d.]+% of the "
-        r"[\d.]+s critical path\n")
+        r"[\d.]+s critical path\n"
+    )
     ROW = re.compile(r"^ {2}\S.*-> fixing it saves [\d.]+s(.*)$", re.M)
     SUFFIX = re.compile(r"\(\d+\.\d% of the build\)")
 
@@ -391,15 +388,15 @@ class TestATimeConcentrationBlockMatchesWhatFindingsAlwaysPrints:
         found = self.HEADER.search(text)
         assert found, "no time-concentration block in real-project.md"
         end = text.index("```", found.end())
-        return found, text[found.end():end], text[end:end + 600]
+        return found, text[found.end() : end], text[end : end + 600]
 
     def test_the_header_count_matches_the_rows_pasted(self):
         found, body, _ = self._block()
         rows = [line for line in body.splitlines() if line.strip()]
         assert rows, "the block pastes no rows"
         assert int(found.group(1)) == len(rows), (
-            f"the header says {found.group(1)} element(s); {len(rows)} "
-            f"row(s) are pasted")
+            f"the header says {found.group(1)} element(s); {len(rows)} row(s) are pasted"
+        )
 
     def test_every_row_carries_the_suffix_findings_always_appends(self):
         _, body, _ = self._block()
@@ -408,14 +405,14 @@ class TestATimeConcentrationBlockMatchesWhatFindingsAlwaysPrints:
         missing = [m.group(0) for m in rows if not self.SUFFIX.search(m.group(1))]
         assert missing == [], (
             "bga/findings.py always appends `(NN.N% of the build)` to a "
-            f"row with a realizable saving; missing from: {missing}")
+            f"row with a realizable saving; missing from: {missing}"
+        )
 
     def test_the_block_is_dated_since_it_cannot_be_re_run(self):
         """The capture behind it is a build artifact and never committed
         (`UX-126`, `UX-189`), so this block takes the `UX-511` branch."""
         _, _, trailer = self._block()
-        assert KEPT.search(trailer), (
-            "the block cannot be re-run here and does not say so")
+        assert KEPT.search(trailer), "the block cannot be re-run here and does not say so"
         assert ISO_DATE.search(trailer), "the block is not dated"
         assert CUTS.search(trailer), "the block names no Cuts:"
 

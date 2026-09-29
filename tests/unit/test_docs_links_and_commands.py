@@ -22,6 +22,7 @@ that can be enforced rather than asked for.
 
 holds: rules.md#both-status-markers-same-commit-the-counts-are-derived
 """
+
 import re
 import subprocess
 import sys
@@ -117,13 +118,15 @@ def test_no_instructional_doc_tells_a_user_to_run_python_dash_m_tools():
 
 
 @pytest.mark.parametrize(
-    "required", ["docs/README.md", "docs/contributing/style-guide.md"],
+    "required",
+    ["docs/README.md", "docs/contributing/style-guide.md"],
 )
 def test_the_navigational_documents_exist(required):
     """The index and the style guide are load-bearing: the first is how
     a reader finds anything after the reorganisation, the second is what
     the two tests above enforce."""
     assert (REPO / required).exists()
+
 
 # --- UX-97: the two counts that drifted within one commit range -------
 #
@@ -146,9 +149,7 @@ def _declared_finding_ids():
     # `UX-102`'s Plane 3 finding is built in the tool because it reads
     # BuildStream's own logs, which the analyzer never sees.
     for module in ("bga/correlate.py", "tools/bst_cache_logs.py", "bga/cache_trend.py"):
-        ids |= set(
-            re.findall(r"'id': '([a-z0-9-]+)'", (REPO / module).read_text(encoding="utf-8"))
-        )
+        ids |= set(re.findall(r"'id': '([a-z0-9-]+)'", (REPO / module).read_text(encoding="utf-8")))
     return ids
 
 
@@ -164,10 +165,7 @@ def test_every_finding_id_appears_in_the_published_table():
     """
     published = (REPO / "docs/guides/cli.md").read_text(encoding="utf-8")
     missing = sorted(i for i in _declared_finding_ids() if f"`{i}`" not in published)
-    assert missing == [], (
-        "finding id(s) declared in code but absent from the table in "
-        f"docs/guides/cli.md: {missing}"
-    )
+    assert missing == [], f"finding id(s) declared in code but absent from the table in docs/guides/cli.md: {missing}"
 
 
 def test_the_pinned_bst_tier_count_matches_the_number_of_marked_tests():
@@ -196,9 +194,21 @@ def test_the_pinned_bst_tier_count_matches_the_number_of_marked_tests():
     one that decides is the grep.
     """
     collected = subprocess.run(
-        [sys.executable, "-m", "pytest", "-m", "bst", "--collect-only", "-q",
-         "-p", "no:cacheprovider", str(REPO / "tests")],
-        capture_output=True, text=True, cwd=REPO,
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "-m",
+            "bst",
+            "--collect-only",
+            "-q",
+            "-p",
+            "no:cacheprovider",
+            str(REPO / "tests"),
+        ],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
     )
     assert collected.returncode == 0, collected.stdout[-2000:] + collected.stderr[-2000:]
     # pytest's own summary, because `pyproject.toml`'s `addopts = "-v"`
@@ -212,8 +222,7 @@ def test_the_pinned_bst_tier_count_matches_the_number_of_marked_tests():
     said = re.search(r"Expected exactly (\d+) bst-gated tests to run", workflow)
     assert said, "the bst-tests job no longer pins a count - that pin is the guard"
     # The one that actually decides the step's exit status.
-    asserted = re.search(r"grep -qE \"\(\^\|\[\[:space:\]=\]\)(\d+) passed",
-                         workflow)
+    asserted = re.search(r"grep -qE \"\(\^\|\[\[:space:\]=\]\)(\d+) passed", workflow)
     assert asserted, (
         "the bst-tests job no longer greps for `N passed` - that grep is what "
         "fails the step, and this guard cannot read a pin that is not there"
@@ -261,8 +270,10 @@ def test_the_packaging_config_keeps_tools_out_of_the_top_level():
     assert "bga._tools" in packages and "bga._tools.native_trace" in packages
     assert "bga._tools.native_trace" in setuptools["package-data"]
     # UX-901: a new `tools/` package is invisible to the wheel until listed.
-    subpackages = {"bga._tools." + p.parent.relative_to(REPO / "tools").as_posix().replace("/", ".")
-                   for p in (REPO / "tools").glob("*/__init__.py")}
+    subpackages = {
+        "bga._tools." + p.parent.relative_to(REPO / "tools").as_posix().replace("/", ".")
+        for p in (REPO / "tools").glob("*/__init__.py")
+    }
     assert subpackages <= set(packages), f"unlisted: {sorted(subpackages - set(packages))}"
 
 
@@ -413,8 +424,7 @@ def test_scenario_filenames_are_zero_padded_so_they_sort():
         if not re.match(r"^UX-\d{4}-", path.name)
     ]
     assert offenders == [], (
-        "scenario filenames must be zero-padded to four digits so they sort "
-        f"lexicographically: {offenders}"
+        f"scenario filenames must be zero-padded to four digits so they sort lexicographically: {offenders}"
     )
 
 
@@ -438,20 +448,22 @@ def test_the_docs_lint_scans_the_tree_it_names():
     """
     recipe = _lint_recipe()
     listing = recipe.split("|", 1)[0]
-    files = subprocess.run(listing, shell=True, cwd=REPO,
-                           capture_output=True, text=True).stdout.split("\0")
+    files = subprocess.run(listing, shell=True, cwd=REPO, capture_output=True, text=True).stdout.split("\0")
     files = [name for name in files if name]
     assert len(files) > 100, (
         f"the docs lint receives {len(files)} file(s) - it scanned two "
-        f"before UX-109 and that is the state this guard exists to catch")
+        f"before UX-109 and that is the state this guard exists to catch"
+    )
     # One *nested* document per root: a listing that reached only the
     # top of each would pass a name check and be UX-109 again.
-    for deep in ("README.md", "CLAUDE.md", "REVIEW.md",
-                 "docs/backlog/scenarios/README.md",
-                 ".claude/skills/verify/SKILL.md"):
-        assert deep in files, (
-            f"the docs lint no longer reaches {deep}: it received "
-            f"{len(files)} file(s)")
+    for deep in (
+        "README.md",
+        "CLAUDE.md",
+        "REVIEW.md",
+        "docs/backlog/scenarios/README.md",
+        ".claude/skills/verify/SKILL.md",
+    ):
+        assert deep in files, f"the docs lint no longer reaches {deep}: it received {len(files)} file(s)"
 
 
 # `**Status:** 🟢 Done | ...` on the task file's header line, and the
@@ -486,6 +498,7 @@ from tools.dev_close_task import (
 from tools.dev_close_task import (
     close_status_line as _close_status_line,
 )
+from tools.dev_close_task import closed_rows
 from tools.dev_close_task import (
     file_priorities as _file_priorities,
 )
@@ -539,13 +552,11 @@ def test_every_task_file_declares_a_status():
     """The guard below compares two markers; a file with none would make
     it vacuously pass for that item."""
     missing = [
-        name for _number, (name, line) in sorted(_file_statuses().items())
+        name
+        for _number, (name, line) in sorted(_file_statuses().items())
         if line is None or _status_marker(line) is None
     ]
-    assert missing == [], (
-        "task file(s) with no `**Status:**` marker in their first 8 lines: "
-        f"{missing}"
-    )
+    assert missing == [], f"task file(s) with no `**Status:**` marker in their first 8 lines: {missing}"
 
 
 def test_a_row_has_exactly_one_priority_cell():
@@ -559,22 +570,19 @@ def test_a_row_has_exactly_one_priority_cell():
     word; `table_priorities` answers `None` for one that does, and the
     pair clause below would then go quiet on it rather than fail.
     """
-    unreadable = sorted(number for number, cell in _table_priorities().items()
-                        if cell is None)
+    unreadable = sorted(number for number, cell in _table_priorities().items() if cell is None)
     assert unreadable == [], (
         "backlog row(s) with no single priority cell, so the pair guard "
-        f"below cannot read them: {[f'UX-{n}' for n in unreadable]}")
+        f"below cannot read them: {[f'UX-{n}' for n in unreadable]}"
+    )
 
 
 def test_every_task_file_declares_a_priority():
     """The other half of the same non-vacuity, and the twin of
     `test_every_task_file_declares_a_status` above: a header with no
     `**Priority:**` compares `None` to `None` for that item."""
-    missing = [name for _number, (name, word) in
-               sorted(_file_priorities().items()) if word not in _PRIORITIES]
-    assert missing == [], (
-        "task file(s) with no `**Priority:**` word in their first 8 lines: "
-        f"{missing}")
+    missing = [name for _number, (name, word) in sorted(_file_priorities().items()) if word not in _PRIORITIES]
+    assert missing == [], f"task file(s) with no `**Priority:**` word in their first 8 lines: {missing}"
 
 
 def test_every_rows_priority_matches_its_task_files():
@@ -586,19 +594,16 @@ def test_every_rows_priority_matches_its_task_files():
     """
     assert _priority_disagreements() == [], (
         "backlog row(s) whose priority disagrees with the task file's "
-        "header:\n  " + "\n  ".join(_priority_disagreements())
-        + "\nThe task file is the record; update the row in "
-          "docs/backlog/scenarios/README.md or closed.md to match it.")
+        "header:\n  " + "\n  ".join(_priority_disagreements()) + "\nThe task file is the record; update the row in "
+        "docs/backlog/scenarios/README.md or the closed rows to match it."
+    )
 
 
 def test_every_task_file_has_a_row_in_the_table():
     """A file with no row is a scenario the backlog does not list, which
     is the same invisibility the status drift causes."""
     rows = _table_statuses()
-    orphans = [
-        name for number, (name, _line) in sorted(_file_statuses().items())
-        if number not in rows
-    ]
+    orphans = [name for number, (name, _line) in sorted(_file_statuses().items()) if number not in rows]
     assert orphans == [], f"task file(s) with no backlog table row: {orphans}"
 
 
@@ -630,19 +635,16 @@ def _architecture_table_statuses():
     """
     path = REPO / "docs/design/architecture.md"
     lines = path.read_text(encoding="utf-8").splitlines()
-    start = next((i for i, line in enumerate(lines)
-                  if line.startswith(_ARCHITECTURE_TABLE_HEADING)), None)
+    start = next((i for i, line in enumerate(lines) if line.startswith(_ARCHITECTURE_TABLE_HEADING)), None)
     if start is None:
         return {}
-    end = next((i for i, line in enumerate(lines[start + 1:], start + 1)
-                if line.startswith("## ")), len(lines))
+    end = next((i for i, line in enumerate(lines[start + 1 :], start + 1) if line.startswith("## ")), len(lines))
     statuses = {}
     for line in lines[start:end]:
         match = _TABLE_ROW.match(line)
         if not match:
             continue
-        cells = [cell.strip() for cell in
-                 re.split(r"(?<!\\)\|", line.strip().strip("|"))]
+        cells = [cell.strip() for cell in re.split(r"(?<!\\)\|", line.strip().strip("|"))]
         marker = next((c for c in cells if c[:1] in _STATUS_EMOJI), "")
         if marker:
             statuses[int(match.group(1))] = marker
@@ -684,7 +686,7 @@ def test_the_table_status_matches_the_task_files():
     table it sits in.
     """
     tables = {
-        "docs/backlog/scenarios/README.md or closed.md": _table_statuses(),
+        "docs/backlog/scenarios/README.md or the closed rows": _table_statuses(),
         "docs/design/architecture.md": _architecture_table_statuses(),
     }
     file_statuses = _file_statuses()
@@ -708,37 +710,36 @@ def test_the_table_status_matches_the_task_files():
                 # three times, and it still fails everywhere.
                 pending.append(f"UX-{number}: {name} is 🟢, its row not moved yet")
                 continue
-            disagreements.append(
-                f"UX-{number} ({table_name}): table says {in_table}, "
-                f"{name} says {in_file}"
-            )
+            disagreements.append(f"UX-{number} ({table_name}): table says {in_table}, {name} says {in_file}")
     # `UX-791`: absence, not disagreement - a row for an id with no task
     # file at all. `closed.md` is out of scope: `dev_close_task.py
     # --check` already owns that index (`topics()` calls `task_file()`
     # on every closed row and raises on exactly this). `README.md`'s own
     # rows are not covered by that and are read here, alongside
     # architecture.md's.
-    readme_only = {number for number, files in _rows_by_file().items()
-                   if files == ["docs/backlog/scenarios/README.md"]}
+    readme_only = {number for number, files in _rows_by_file().items() if files == ["docs/backlog/scenarios/README.md"]}
     orphan_tables = {
         "docs/backlog/scenarios/README.md": readme_only,
         "docs/design/architecture.md": set(tables["docs/design/architecture.md"]),
     }
     for table_name, numbers in orphan_tables.items():
         for number in sorted(numbers - set(file_statuses)):
-            disagreements.append(
-                f"UX-{number} ({table_name}): a row with no task file"
-            )
+            disagreements.append(f"UX-{number} ({table_name}): a row with no task file")
     if pending:
-        print("\n".join(
-            ["a track's tree: these rows are the orchestrator's to move "
-             "(UX-561), and `dev_close_task.py --move` is what moves them:"]
-            + [f"  {one}" for one in pending]))
+        print(
+            "\n".join(
+                [
+                    "a track's tree: these rows are the orchestrator's to move "
+                    "(UX-561), and `dev_close_task.py --move` is what moves them:"
+                ]
+                + [f"  {one}" for one in pending]
+            )
+        )
     assert disagreements == [], (
         "a status table and its task files disagree about status:\n  "
         + "\n  ".join(disagreements)
         + "\nUpdate the row in docs/backlog/scenarios/README.md in the same "
-          "commit as the file (docs/contributing/fixing-guide.md)."
+        "commit as the file (docs/contributing/fixing-guide.md)."
     )
 
 
@@ -771,8 +772,7 @@ def test_every_bga_command_the_docs_tell_you_to_type_exists():
                 if name in known or name in {"is", "does", "refuses", "says", "and", "on", "can", "it"}:
                     continue
                 offenders.append(f"{path.relative_to(REPO)}:{number}: bga {name}")
-    assert offenders == [], (
-        "documented `bga <command>` with no such command:\n  " + "\n  ".join(offenders))
+    assert offenders == [], "documented `bga <command>` with no such command:\n  " + "\n  ".join(offenders)
 
 
 def test_the_guides_teach_the_two_line_loop():
@@ -793,8 +793,7 @@ def test_the_cli_reference_does_not_still_say_run_directories_only():
     reference = (REPO / "docs" / "guides" / "cli.md").read_text(encoding="utf-8")
 
     assert "Run *directories* only" not in reference
-    assert "bga correlate @last\n" in reference, (
-        "the short form the note was standing in for is not documented")
+    assert "bga correlate @last\n" in reference, "the short form the note was standing in for is not documented"
 
 
 def test_the_guide_teaches_the_one_command_baseline_set():
@@ -804,10 +803,10 @@ def test_the_guide_teaches_the_one_command_baseline_set():
     no other test catches."""
     guide = (REPO / "docs" / "guides" / "real-project.md").read_text(encoding="utf-8")
 
-    assert "bga baseline" in guide, (
-        "the guide still teaches only the manual --baseline-run assembly")
+    assert "bga baseline" in guide, "the guide still teaches only the manual --baseline-run assembly"
     assert guide.index("bga baseline") < guide.index("--baseline-run"), (
-        "the one-command form should lead; the explicit one is what it composes")
+        "the one-command form should lead; the explicit one is what it composes"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -844,8 +843,8 @@ def test_every_verdict_the_code_emits_is_listed_where_verdicts_are_listed():
     not find it in either document."""
     verdicts = _verdict_strings()
     assert "within the baseline set's own observed range" in verdicts, (
-        "the disputed-region verdict is gone from bga/compare.py - "
-        "update this guard and the documents together")
+        "the disputed-region verdict is gone from bga/compare.py - update this guard and the documents together"
+    )
 
     for name in ("README.md", "docs/guides/cli.md"):
         text = (REPO / name).read_text(encoding="utf-8")
@@ -860,15 +859,16 @@ def test_no_document_still_promises_the_gate_and_the_verdict_agree():
     divergence is allowed; asserting it away is not."""
     surfaces = {
         "bga/compare.py": (REPO / "bga" / "compare.py").read_text(encoding="utf-8"),
-        "docs/guides/cli.md": (REPO / "docs" / "guides" / "cli.md").read_text(
-            encoding="utf-8"),
+        "docs/guides/cli.md": (REPO / "docs" / "guides" / "cli.md").read_text(encoding="utf-8"),
     }
     for name, text in surfaces.items():
         assert "never a second, silently-different definition" not in text, (
-            f"{name} still promises an equivalence UX-59 and UX-170 removed")
+            f"{name} still promises an equivalence UX-59 and UX-170 removed"
+        )
 
     assert "Where the gate and the verdict now diverge" in surfaces["bga/compare.py"], (
-        "regression_exceeds_threshold's docstring should name the two divergences")
+        "regression_exceeds_threshold's docstring should name the two divergences"
+    )
 
 
 _GLOSSARY_TERMS = (
@@ -901,7 +901,8 @@ def test_the_readme_stays_inside_its_measured_line_budget():
     if lines > 250:
         assert f"{lines} lines" in readme, (
             f"README is {lines} lines against UX-135's 250-line budget and "
-            "carries no annotation restating the number and the reason")
+            "carries no annotation restating the number and the reason"
+        )
 
 
 #: A bare duration - `5m11s`, `21s`, `5 min` - the shape `UX-236` gave
@@ -942,7 +943,8 @@ def test_no_readme_line_states_a_suite_wall_clock_beside_make_test():
     assert offenders == [], (
         "README states a wall clock beside (or directly below) a "
         "`make test*` command, which UX-551 found is not reproducible "
-        "across machines:\n  " + "\n  ".join(offenders))
+        "across machines:\n  " + "\n  ".join(offenders)
+    )
 
 
 #: A clone-size figure - `50 MiB`, `5.3 MiB`, `47 KiB` - ages the way
@@ -966,15 +968,16 @@ def test_every_readme_clone_size_sits_in_a_dated_commanded_parenthetical():
     offenders = []
     for figure in _CLONE_SIZE.finditer(install):
         start, end = figure.span()
-        group = next((p.group(1) for p in _PAREN_GROUP.finditer(install)
-                       if p.start() <= start and end <= p.end()), None)
-        if (group is None or not _CLONE_SIZE_DATE.search(group)
-                or not _CLONE_SIZE_CMD.search(group)):
+        group = next(
+            (p.group(1) for p in _PAREN_GROUP.finditer(install) if p.start() <= start and end <= p.end()), None
+        )
+        if group is None or not _CLONE_SIZE_DATE.search(group) or not _CLONE_SIZE_CMD.search(group):
             offenders.append(figure.group(0))
     assert offenders == [], (
         "README's Install section states a clone-size figure that is "
         "not inside a parenthetical naming both a date and a `du`/`git "
-        "clone` command:\n  " + "\n  ".join(offenders))
+        "clone` command:\n  " + "\n  ".join(offenders)
+    )
 
 
 def _github_slug(heading: str) -> str:
@@ -1000,8 +1003,8 @@ def test_the_readmes_link_into_the_guide_names_a_heading_that_exists():
     assert anchors, "README links no anchor into the fixing guide"
     missing = [a for a in anchors if a not in slugs]
     assert missing == [], (
-        f"README links fixing-guide.md anchor(s) {missing}, which no "
-        f"`## ` heading in the guide slugs to")
+        f"README links fixing-guide.md anchor(s) {missing}, which no `## ` heading in the guide slugs to"
+    )
 
 
 def test_the_keying_claim_carries_the_provenance_it_was_accepted_with():
@@ -1014,8 +1017,8 @@ def test_the_keying_claim_carries_the_provenance_it_was_accepted_with():
 
     assert "get_unique_key()" in section
     assert 'key_dict["directory"] = source._directory' in section, (
-        "the note should say where BuildStream keys the staging path, "
-        "since that is the half a reader gets wrong")
+        "the note should say where BuildStream keys the staging path, since that is the half a reader gets wrong"
+    )
     assert "BuildStream 2.7.0" in section, "the measurement names no version"
     assert "%{full-key}" in section, "no measured keys, only an argument"
 
@@ -1051,10 +1054,15 @@ def test_every_flag_blast_accepts_is_in_its_entry():
             blast = action.choices.get("blast")
     assert blast is not None, "no `blast` subparser"
 
-    entry = ((REPO / "docs" / "guides" / "cli.md").read_text(encoding="utf-8")
-             .split("## `bga blast`", 1)[1].split("\n## ", 1)[0])
-    flags = {option for action in blast._actions for option in action.option_strings
-             if option.startswith("--")} - {"--help"}
+    entry = (
+        (REPO / "docs" / "guides" / "cli.md")
+        .read_text(encoding="utf-8")
+        .split("## `bga blast`", 1)[1]
+        .split("\n## ", 1)[0]
+    )
+    flags = {option for action in blast._actions for option in action.option_strings if option.startswith("--")} - {
+        "--help"
+    }
     missing = sorted(flag for flag in flags if flag not in entry)
     assert not missing, f"cli.md's blast entry documents no {missing}"
 
@@ -1067,8 +1075,7 @@ def test_the_ci_journey_documents_the_cross_host_gate():
     assert "--allow-cross-host" in guide
     assert "host_manifest" in guide, "the field a reader would go looking for"
     assert "exit 6" in guide, "the code a pipeline branches on"
-    assert "host unknown" in guide.lower(), (
-        "old captures still compare, and the guide should say so")
+    assert "host unknown" in guide.lower(), "old captures still compare, and the guide should say so"
 
 
 def _versioning_history():
@@ -1076,8 +1083,11 @@ def _versioning_history():
     follows. The pinning clause's live ids are read by
     `test_the_process_documents_derive_their_figures.py`; two guards on
     one sentence is how the two disagree."""
-    item = (REPO / "docs" / "contributing" / "fixing-guide.md").read_text(
-        encoding="utf-8").split("\n7. **If your fix renames", 1)[1]
+    item = (
+        (REPO / "docs" / "contributing" / "fixing-guide.md")
+        .read_text(encoding="utf-8")
+        .split("\n7. **If your fix renames", 1)[1]
+    )
     return item.split("are what a consumer pins", 1)[1].split("\n8. ", 1)[0]
 
 
@@ -1092,8 +1102,7 @@ def test_the_fixing_guide_names_the_output_versioning_rule():
     later bump leaves it green, which is correct; a history sentence
     rewritten to a live id reds.
     """
-    guide = (REPO / "docs" / "contributing" / "fixing-guide.md").read_text(
-        encoding="utf-8")
+    guide = (REPO / "docs" / "contributing" / "fixing-guide.md").read_text(encoding="utf-8")
 
     named = set(re.findall(r"`([a-z][a-z0-9-]*/v\d+)`", _versioning_history()))
     assert named, "§3.7's history names no contract id"
@@ -1102,10 +1111,10 @@ def test_the_fixing_guide_names_the_output_versioning_rule():
         f"§3.7's history names {sorted(live)}, which `bga/schemas.py` does "
         f"not list as superseded - a history sentence naming a live id "
         f"either dates the wrong bump or is the current {schemas.ANALYZE} "
-        f"typed in")
+        f"typed in"
+    )
     assert "bump" in guide.lower()
-    assert "additionalProperties" in guide, (
-        "the rule's other half - an addition is not a breaking change")
+    assert "additionalProperties" in guide, "the rule's other half - an addition is not a breaking change"
 
 
 def test_the_reference_documents_the_full_flags():
@@ -1148,8 +1157,7 @@ def test_the_docs_explain_how_to_turn_completion_on():
     for text in (reference, readme):
         assert "register-python-argcomplete bga" in text
         assert "bga[completion]" in text
-    assert "click" in reference.lower(), (
-        "the declined alternative should be recorded where a reader asks")
+    assert "click" in reference.lower(), "the declined alternative should be recorded where a reader asks"
 
 
 def test_every_scenario_has_exactly_one_row_across_the_two_files():
@@ -1161,11 +1169,8 @@ def test_every_scenario_has_exactly_one_row_across_the_two_files():
     `test_every_task_file_has_a_row_in_the_table`, which now reads
     both).
     """
-    duplicated = {number: files for number, files in _rows_by_file().items()
-                  if len(files) != 1}
-    assert duplicated == {}, (
-        f"a scenario must appear in exactly one of README.md/closed.md: "
-        f"{duplicated}")
+    duplicated = {number: files for number, files in _rows_by_file().items() if len(files) != 1}
+    assert duplicated == {}, f"a scenario must appear in exactly one of README.md/closed.md: {duplicated}"
 
 
 def test_open_rows_are_in_the_readme_and_closed_rows_are_not():
@@ -1191,14 +1196,11 @@ def test_every_open_row_carries_a_topic_from_the_closed_set():
     """
     topics = set(_TOPIC_ORDER)
     path = REPO / "docs/backlog/scenarios/README.md"
-    rows = [line for line in path.read_text(encoding="utf-8").splitlines()
-            if _TABLE_ROW.match(line)]
+    rows = [line for line in path.read_text(encoding="utf-8").splitlines() if _TABLE_ROW.match(line)]
     # `UX-562`: 0 open rows is a backlog a round emptied, not a parser
     # that matched nothing - so the vacuity refusal stands on closed.md,
     # which only grows, and the open rows are checked however many.
-    closed = [line for line in (REPO / "docs/backlog/scenarios/closed.md")
-              .read_text(encoding="utf-8").splitlines()
-              if _TABLE_ROW.match(line)]
+    closed = [line for line in closed_rows() if _TABLE_ROW.match(line)]
     assert closed, "the row pattern matches nothing in closed.md"
     bad = []
     for line in rows:
@@ -1212,10 +1214,8 @@ def test_every_task_file_declares_a_topic():
     """The non-vacuity of the clause below: a file with no
     `**Topic:**` header declares nothing to be outside the set, and the
     twin of `test_every_task_file_declares_a_status` above."""
-    missing = sorted(name for name, topic in _file_topics().items()
-                     if topic is None)
-    assert missing == [], (
-        f"task file(s) with no `**Topic:**` header: {missing}")
+    missing = sorted(name for name, topic in _file_topics().items() if topic is None)
+    assert missing == [], f"task file(s) with no `**Topic:**` header: {missing}"
 
 
 def test_a_topic_quoted_below_the_header_is_not_the_files_topic():
@@ -1225,13 +1225,16 @@ def test_a_topic_quoted_below_the_header_is_not_the_files_topic():
     the day its header went missing - a wrong name, not a missing one.
     """
     header = "**Priority:** Low | **Status:** \U0001f534 Open"
-    quoted = ("# UX-9999: a thing\n\n" + header
-              + "\n\n## Motivation\n\n" + "x\n" * 8
-              + "\n## Outcome\n\nFiled with `**Topic:** process` "
-                "and refused.\n")
+    quoted = (
+        "# UX-9999: a thing\n\n"
+        + header
+        + "\n\n## Motivation\n\n"
+        + "x\n" * 8
+        + "\n## Outcome\n\nFiled with `**Topic:** process` "
+        "and refused.\n"
+    )
     assert _header_topic(quoted) is None
-    assert _header_topic(quoted.replace(
-        header, "**Topic:** docs | " + header, 1)) == "docs"
+    assert _header_topic(quoted.replace(header, "**Topic:** docs | " + header, 1)) == "docs"
 
 
 def test_no_task_file_declares_a_topic_outside_the_set():
@@ -1248,7 +1251,8 @@ def test_no_task_file_declares_a_topic_outside_the_set():
         f"{sorted(_TOPIC_ORDER)}:\n  "
         + "\n  ".join(_topic_disagreements())
         + "\nEither the topic joins TOPIC_ORDER in tools/dev_close_task.py "
-          "or the file takes one the set names.")
+        "or the file takes one the set names."
+    )
 
 
 def test_the_index_counts_match_the_rows_they_index():
@@ -1259,14 +1263,12 @@ def test_the_index_counts_match_the_rows_they_index():
     path = REPO / "docs/backlog/scenarios/README.md"
     text = path.read_text(encoding="utf-8")
     rows = [line for line in text.splitlines() if _TABLE_ROW.match(line)]
-    assert not re.search(r"\*\*\d+ open\*\*", text), (
-        "the index states the open count; `--counts` prints it instead")
-    assert "| Topic | Open | Total |" not in text, (
-        "the index states the topic table; `--counts` prints it instead")
+    assert not re.search(r"\*\*\d+ open\*\*", text), "the index states the open count; `--counts` prints it instead"
+    assert "| Topic | Open | Total |" not in text, "the index states the topic table; `--counts` prints it instead"
     sentence, table = _index_header()
     assert f"**{len(rows)} open**" in sentence, (
-        f"index_header() claims a different open count than the "
-        f"{len(rows)} rows in the table")
+        f"index_header() claims a different open count than the {len(rows)} rows in the table"
+    )
     per_topic = {}
     for line in table.splitlines():
         match = re.match(r"^\| (\w+) \| (\d+) \| (\d+) \|$", line)
@@ -1278,8 +1280,8 @@ def test_the_index_counts_match_the_rows_they_index():
         counted[cells[2]] = counted.get(cells[2], 0) + 1
     for topic, number in counted.items():
         assert per_topic.get(topic) == number, (
-            f"index_header() says {per_topic.get(topic)} open {topic} rows; "
-            f"the table has {number}")
+            f"index_header() says {per_topic.get(topic)} open {topic} rows; the table has {number}"
+        )
 
 
 def _out_of_scope_entries(path):
@@ -1328,15 +1330,18 @@ def test_every_out_of_scope_entry_names_a_task_or_states_a_decline():
             # second sentence and were reported as bare. A bare noun
             # phrase still cannot pass - it has no second sentence to
             # put six words in.
-            gives_reason = (re.search(r"\([^)]{12,}\)", entry)
-                            or re.search(r"—[^—]{12,}", entry)
-                            or re.search(r":\s+\S", entry)
-                            or re.search(r"\.\s+(?:\S+\s+){5,}\S", entry))
+            gives_reason = (
+                re.search(r"\([^)]{12,}\)", entry)
+                or re.search(r"—[^—]{12,}", entry)
+                or re.search(r":\s+\S", entry)
+                or re.search(r"\.\s+(?:\S+\s+){5,}\S", entry)
+            )
             if not (names_task or gives_reason):
                 unjustified.append(f"{path.name}: {entry[:70]}")
     assert unjustified == [], (
         f"an Out of Scope entry must reference a task or state why it is "
-        f"declined, or the idea is lost again: {unjustified}")
+        f"declined, or the idea is lost again: {unjustified}"
+    )
 
 
 # `UX-454`. The guard above compares the two copies of the marker by
@@ -1396,8 +1401,7 @@ def test_no_task_file_repeats_its_status_word():
         "task file(s) whose status line carries a word `STATUS_WORDS` "
         "does not name - either `--move` doubled it against a word the "
         "substitution could not see, or the tree has grown a status the "
-        "helper has to learn:\n  "
-        + "\n  ".join(wrong)
+        "helper has to learn:\n  " + "\n  ".join(wrong)
     )
 
 
@@ -1415,9 +1419,9 @@ def test_closing_a_task_twice_says_done_once(value):
     assert _status_value(once) == ("🟢", "Done"), (
         f"{name} carries {value!r} and closes to {_status_value(once)!r} - "
         f"the substitution did not name the word it was replacing, so the "
-        f"glyph moved and the word stayed")
-    assert twice == once, (
-        f"closing {name} twice is not idempotent:\n  {once!r}\n  {twice!r}")
+        f"glyph moved and the word stayed"
+    )
+    assert twice == once, f"closing {name} twice is not idempotent:\n  {once!r}\n  {twice!r}"
 
 
 def test_the_closing_sweep_reads_more_than_the_closed_form():
@@ -1426,8 +1430,9 @@ def test_the_closing_sweep_reads_more_than_the_closed_form():
     forms = _tree_status_forms()
     open_words = {words for glyph, words in forms if glyph != "🟢"}
     assert len(forms) >= 4 and len(open_words) >= 2, (
-        "the backlog no longer carries enough distinct status forms for "
-        "the sweep above to mean anything", sorted(forms))
+        "the backlog no longer carries enough distinct status forms for the sweep above to mean anything",
+        sorted(forms),
+    )
 
 
 def test_the_verdict_prose_survives_a_close():
@@ -1437,8 +1442,7 @@ def test_the_verdict_prose_survives_a_close():
     `move()` replaces the status *word* and keeps whatever verdict
     follows an em-dash - eleven closed rows carry one.
     """
-    closed = _close_status_line(
-        "**Status:** 🟡 In Progress — stages 1 and 2 done |")
+    closed = _close_status_line("**Status:** 🟡 In Progress — stages 1 and 2 done |")
     assert closed == "**Status:** 🟢 Done — stages 1 and 2 done |", closed
 
 
@@ -1476,19 +1480,22 @@ _SCENARIO_PSEUDO_PATH = re.compile(r"^docs/backlog/scenarios/[\w.+-]+$")
 #: entry is asserted still present, so an exemption cannot outlive its
 #: reason (`UX-576`'s `HISTORICAL`).
 _NOT_A_FILE = {
-    ("docs/contributing/style-guide.md", "design-directions.md"):
-        "§3's worked example is about the document that reached 1237 "
-        "lines before round 11 split it into docs/design/directions.md",
-    ("docs/contributing/style-guide.md", "UX-0097-short-slug.md"):
-        "§9's illustration of the padded-filename form, not a file",
+    (
+        "docs/contributing/style-guide.md",
+        "design-directions.md",
+    ): "§3's worked example is about the document that reached 1237 "
+    "lines before round 11 split it into docs/design/directions.md",
+    (
+        "docs/contributing/style-guide.md",
+        "UX-0097-short-slug.md",
+    ): "§9's illustration of the padded-filename form, not a file",
 }
 
 
 def _tracked_paths():
     """The paths the index has. Not the paths on disk: a checkout holds
     `.claude/worktrees/<agent>/`, a whole second copy of the tree."""
-    out = subprocess.run(["git", "ls-files"], cwd=REPO, check=True,
-                         capture_output=True, text=True).stdout
+    out = subprocess.run(["git", "ls-files"], cwd=REPO, check=True, capture_output=True, text=True).stdout
     return out.splitlines()
 
 
@@ -1497,8 +1504,9 @@ def _reference_documents():
     `docs/audits/` are the dated record - a task file naming the
     document a past round read is a fact, and renaming it would make
     that record false. The same exclusion `INSTRUCTIONAL` makes."""
-    return [one for one in _tracked_paths() if one.endswith(".md")
-            and not one.startswith(("docs/backlog/", "docs/audits/"))]
+    return [
+        one for one in _tracked_paths() if one.endswith(".md") and not one.startswith(("docs/backlog/", "docs/audits/"))
+    ]
 
 
 def _locate(rel, name, tracked):
@@ -1516,8 +1524,7 @@ def _locate(rel, name, tracked):
         pass
     if name in tracked:
         return name
-    matches = [one for one in tracked
-               if one == name or one.endswith("/" + name)]
+    matches = [one for one in tracked if one == name or one.endswith("/" + name)]
     return matches[0] if len(matches) == 1 else None
 
 
@@ -1556,11 +1563,8 @@ def test_every_backticked_markdown_name_resolves():
                 if (rel, name) in _NOT_A_FILE:
                     continue
                 is_name = _MD_NAME.match(name)
-                is_pseudo_path = (
-                    not is_name and _SCENARIO_PSEUDO_PATH.match(name))
-                is_test_citation = (
-                    not is_name and not is_pseudo_path
-                    and _TEST_CITATION.match(name))
+                is_pseudo_path = not is_name and _SCENARIO_PSEUDO_PATH.match(name)
+                is_test_citation = not is_name and not is_pseudo_path and _TEST_CITATION.match(name)
                 if is_test_citation:
                     citations += 1
                     file_part, _, member = name.partition("::")
@@ -1572,14 +1576,12 @@ def test_every_backticked_markdown_name_resolves():
                     continue
                 if not _resolves(rel, name, tracked):
                     dangling.append(f"{rel}:{number} -> `{name}`")
-    assert dangling == [], (
-        "backticked markdown name(s) that resolve to no file:\n  "
-        + "\n  ".join(dangling))
+    assert dangling == [], "backticked markdown name(s) that resolve to no file:\n  " + "\n  ".join(dangling)
     #: `UX-979`'s Decision: a floor, so shrinking the population to
     #: nothing (matching no citation) passes silently no longer.
     assert citations >= 7, (
-        f"only {citations} `file.py::Name` citation(s) read - the "
-        f"population shrank; measured 7 on 398b4db9")
+        f"only {citations} `file.py::Name` citation(s) read - the population shrank; measured 7 on 398b4db9"
+    )
 
 
 def test_the_code_span_sweep_reads_a_population():
@@ -1587,30 +1589,29 @@ def test_the_code_span_sweep_reads_a_population():
     documents the fix was measured on are read, and what is read is
     code spans rather than links."""
     documents = _reference_documents()
-    for rel in ("docs/design/architecture.md", "README.md",
-                "docs/contributing/style-guide.md"):
+    for rel in ("docs/design/architecture.md", "README.md", "docs/contributing/style-guide.md"):
         assert rel in documents, f"the sweep does not read {rel}"
-    names = [match.group(1).strip()
-             for rel in documents
-             for match in _CODE_SPAN.finditer(
-                 (REPO / rel).read_text(encoding="utf-8"))
-             if _MD_NAME.match(match.group(1).strip())]
-    assert len(names) > 100, (
-        "the code-span sweep reads too few names to be reading these "
-        "documents", len(names))
-    architecture = (REPO / "docs/design/architecture.md").read_text(
-        encoding="utf-8")
+    names = [
+        match.group(1).strip()
+        for rel in documents
+        for match in _CODE_SPAN.finditer((REPO / rel).read_text(encoding="utf-8"))
+        if _MD_NAME.match(match.group(1).strip())
+    ]
+    assert len(names) > 100, ("the code-span sweep reads too few names to be reading these documents", len(names))
+    architecture = (REPO / "docs/design/architecture.md").read_text(encoding="utf-8")
     assert "`optimization-walkthrough.md` (what that felt like)" in architecture, (
-        "the reading order's names are not code spans any more, so this "
-        "guard is not what holds them")
+        "the reading order's names are not code spans any more, so this guard is not what holds them"
+    )
 
 
 def test_every_exempt_name_is_still_written():
     """`_NOT_A_FILE` is an exemption list, and an exemption nothing uses
     is one nobody rechecks."""
-    stale = [f"{rel} no longer writes `{name}` ({why})"
-             for (rel, name), why in sorted(_NOT_A_FILE.items())
-             if f"`{name}`" not in (REPO / rel).read_text(encoding="utf-8")]
+    stale = [
+        f"{rel} no longer writes `{name}` ({why})"
+        for (rel, name), why in sorted(_NOT_A_FILE.items())
+        if f"`{name}`" not in (REPO / rel).read_text(encoding="utf-8")
+    ]
     assert stale == [], "stale exemption(s):\n  " + "\n  ".join(stale)
 
 
@@ -1641,16 +1642,18 @@ def _dispatched_aliases():
     there rather than by being remembered here."""
     from bga.tools_dispatch import TOOL_ALIASES
 
-    chapter = _ARCHITECTURE.read_text(encoding="utf-8").split(
-        _CLI_CHAPTER, 1)[1].split("\n## ", 1)[0]
+    chapter = _ARCHITECTURE.read_text(encoding="utf-8").split(_CLI_CHAPTER, 1)[1].split("\n## ", 1)[0]
     named = set()
     for line in chapter.splitlines():
         if line.startswith("|"):
             match = re.match(r"`bga ([a-z][a-z-]*)", line.split("|")[1].strip())
             if match:
                 named.add(match.group(1))
-    return {alias: TOOL_ALIASES[alias][0].replace("tools.", "tools/") + ".py"
-            for alias in sorted(named) if alias in TOOL_ALIASES}
+    return {
+        alias: TOOL_ALIASES[alias][0].replace("tools.", "tools/") + ".py"
+        for alias in sorted(named)
+        if alias in TOOL_ALIASES
+    }
 
 
 def test_the_architecture_names_the_file_behind_each_command():
@@ -1659,13 +1662,14 @@ def test_the_architecture_names_the_file_behind_each_command():
     aliases = _dispatched_aliases()
     assert set(aliases) >= _PLANE_ALIASES, (
         "the CLI chapter no longer names the planes' own entry points, so "
-        "this guard is not reading the table it is for", sorted(aliases))
+        "this guard is not reading the table it is for",
+        sorted(aliases),
+    )
     text = _ARCHITECTURE.read_text(encoding="utf-8")
-    missing = sorted(f"{alias} -> {path}" for alias, path in aliases.items()
-                     if path not in text)
-    assert missing == [], (
-        "architecture.md names these commands and not the file each one "
-        "runs:\n  " + "\n  ".join(missing))
+    missing = sorted(f"{alias} -> {path}" for alias, path in aliases.items() if path not in text)
+    assert missing == [], "architecture.md names these commands and not the file each one runs:\n  " + "\n  ".join(
+        missing
+    )
 
 
 def test_the_architecture_lists_every_native_trace_member():
@@ -1678,18 +1682,15 @@ def test_the_architecture_lists_every_native_trace_member():
     directory, the same way `__init__.py` is not a member on its own,
     so a sixth wrapped tool does not need a doc edit of its own.
     """
-    raw = [one for one in _tracked_paths()
-           # A package marker is not a member of the mechanism.
-           if one.startswith("tools/native_trace/")
-           and not one.endswith("__init__.py")]
+    raw = [
+        one
+        for one in _tracked_paths()
+        # A package marker is not a member of the mechanism.
+        if one.startswith("tools/native_trace/") and not one.endswith("__init__.py")
+    ]
     wrappers = "tools/native_trace/wrappers/"
-    members = sorted({wrappers if one.startswith(wrappers) else one
-                      for one in raw})
-    assert len(members) == 5, (
-        "tools/native_trace/ no longer holds the five members this guard "
-        "is for", members)
+    members = sorted({wrappers if one.startswith(wrappers) else one for one in raw})
+    assert len(members) == 5, ("tools/native_trace/ no longer holds the five members this guard is for", members)
     text = _ARCHITECTURE.read_text(encoding="utf-8")
     missing = [one for one in members if one not in text]
-    assert missing == [], (
-        "architecture.md describes Plane 2 without naming:\n  "
-        + "\n  ".join(missing))
+    assert missing == [], "architecture.md describes Plane 2 without naming:\n  " + "\n  ".join(missing)

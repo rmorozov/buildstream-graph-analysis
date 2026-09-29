@@ -19,6 +19,7 @@ real `examples/06` capture (822 processes, 9 elements, every tag ending
 in `.bst`) - so this is not the mechanism failing, it is the mechanism
 resting on a convention a real project is free to override.
 """
+
 import pytest
 
 from bga.correlate import correlate, format_correlation
@@ -36,9 +37,7 @@ def test_real_element_names_are_reliable():
 
 
 def test_the_real_freedesktop_sdk_collapse_is_caught():
-    result = assess_element_attribution(
-        {"buildstream-build": 126871, "expat": 411, "unknown": 336, "flit_core": 12}
-    )
+    result = assess_element_attribution({"buildstream-build": 126871, "expat": 411, "unknown": 336, "flit_core": 12})
 
     assert result["reliable"] is False
     assert result["largest_bucket"] == "buildstream-build"
@@ -123,9 +122,7 @@ _ANALYSIS = {
 
 def _native(attribution):
     return {
-        "per_element_parallelism": [
-            {"element": "buildstream-build", "requested_jobs": 4, "findings": []}
-        ],
+        "per_element_parallelism": [{"element": "buildstream-build", "requested_jobs": 4, "findings": []}],
         "cpu_time": {"per_element": {}},
         "element_attribution": attribution,
     }
@@ -179,7 +176,10 @@ def test_a_report_without_the_field_correlates_as_before():
 def _build_task(element):
     return TaskSpan(
         task_key=TaskKey(element_uid=element, task_kind=TaskKind.BUILD, phase="BUILD"),
-        ts_us=0, dur_us=1, resources=[], primary_resource=None,
+        ts_us=0,
+        dur_us=1,
+        resources=[],
+        primary_resource=None,
     )
 
 

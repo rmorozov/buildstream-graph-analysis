@@ -15,6 +15,7 @@ Two properties matter as much as the measurement itself:
 - coverage is always reported, because a per-element total that silently
   omits a fifth of its processes is worse than no total.
 """
+
 from tools.bst_native_build_tracer import (
     compute_cpu_time,
     pair_events,
@@ -72,13 +73,39 @@ def test_pre_ux45_trace_still_parses_everything_else():
 
 def test_per_element_totals_and_coverage():
     records = [
-        {"element": "core.bst", "cmd": "cc1", "start_ts": 0.0, "end_ts": 4.0,
-         "duration_s": 4.0, "open": False, "pid": 2, "ppid": 1, "cpu_us": 3_000_000},
-        {"element": "core.bst", "cmd": "as", "start_ts": 1.0, "end_ts": 2.0,
-         "duration_s": 1.0, "open": False, "pid": 3, "ppid": 2, "cpu_us": 1_000_000},
+        {
+            "element": "core.bst",
+            "cmd": "cc1",
+            "start_ts": 0.0,
+            "end_ts": 4.0,
+            "duration_s": 4.0,
+            "open": False,
+            "pid": 2,
+            "ppid": 1,
+            "cpu_us": 3_000_000,
+        },
+        {
+            "element": "core.bst",
+            "cmd": "as",
+            "start_ts": 1.0,
+            "end_ts": 2.0,
+            "duration_s": 1.0,
+            "open": False,
+            "pid": 3,
+            "ppid": 2,
+            "cpu_us": 1_000_000,
+        },
         # No `cpu_us`: exited abnormally, so unmeasured rather than zero.
-        {"element": "core.bst", "cmd": "sh", "start_ts": 0.0, "end_ts": None,
-         "duration_s": None, "open": True, "pid": 4, "ppid": 1},
+        {
+            "element": "core.bst",
+            "cmd": "sh",
+            "start_ts": 0.0,
+            "end_ts": None,
+            "duration_s": None,
+            "open": True,
+            "pid": 4,
+            "ppid": 1,
+        },
     ]
 
     cpu = compute_cpu_time(records)
@@ -95,8 +122,17 @@ def test_cores_busy_answers_cpu_bound_or_waiting():
     """The question the micro-optimization half of the walkthrough could
     not answer. 2s of CPU over a 4s span is half a core."""
     records = [
-        {"element": "x.bst", "cmd": "cc1", "start_ts": 0.0, "end_ts": 4.0,
-         "duration_s": 4.0, "open": False, "pid": 2, "ppid": 1, "cpu_us": 2_000_000},
+        {
+            "element": "x.bst",
+            "cmd": "cc1",
+            "start_ts": 0.0,
+            "end_ts": 4.0,
+            "duration_s": 4.0,
+            "open": False,
+            "pid": 2,
+            "ppid": 1,
+            "cpu_us": 2_000_000,
+        },
     ]
 
     entry = compute_cpu_time(records)["per_element"]["x.bst"]
@@ -110,9 +146,18 @@ def test_children_cpu_is_tracked_separately_not_summed_in():
     children reported for themselves, so adding both would double-count.
     Self time is the additive quantity."""
     records = [
-        {"element": "x.bst", "cmd": "make", "start_ts": 0.0, "end_ts": 4.0,
-         "duration_s": 4.0, "open": False, "pid": 2, "ppid": 1,
-         "cpu_us": 100_000, "children_cpu_us": 9_000_000},
+        {
+            "element": "x.bst",
+            "cmd": "make",
+            "start_ts": 0.0,
+            "end_ts": 4.0,
+            "duration_s": 4.0,
+            "open": False,
+            "pid": 2,
+            "ppid": 1,
+            "cpu_us": 100_000,
+            "children_cpu_us": 9_000_000,
+        },
     ]
 
     entry = compute_cpu_time(records)["per_element"]["x.bst"]

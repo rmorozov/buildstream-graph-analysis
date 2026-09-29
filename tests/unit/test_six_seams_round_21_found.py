@@ -12,6 +12,7 @@ off against off. `UX-185` declared a `suspended` field nothing ever
 assigned. That is the class this file exists to close, one instance at
 a time.
 """
+
 import os
 import re
 import signal
@@ -39,9 +40,17 @@ class TestTheTimelinePrintsNoPathThatIsAlreadyGone:
     def test_every_path_it_prints_exists_afterwards(self, tmp_path, snapshot):
         out = tmp_path / "timeline.json"
         result = subprocess.run(
-            [sys.executable, "-c",
-             "from bga.cli import main; raise SystemExit(main({!r}))".format(["timeline", str(snapshot), "-o", str(out)])],
-            capture_output=True, text=True, cwd=REPO)
+            [
+                sys.executable,
+                "-c",
+                "from bga.cli import main; raise SystemExit(main({!r}))".format(
+                    ["timeline", str(snapshot), "-o", str(out)]
+                ),
+            ],
+            capture_output=True,
+            text=True,
+            cwd=REPO,
+        )
         assert result.returncode == 0, result.stderr
 
         printed = set(re.findall(r"/[\w./-]+\.json", result.stdout + result.stderr))
@@ -49,7 +58,8 @@ class TestTheTimelinePrintsNoPathThatIsAlreadyGone:
         missing = sorted(p for p in printed if not os.path.exists(p))
         assert not missing, (
             f"told the user to open {missing}, which does not exist - "
-            f"the scratch directory is gone by the time they read it")
+            f"the scratch directory is gone by the time they read it"
+        )
 
     def test_the_converter_still_says_it_when_called_directly(self, tmp_path):
         """The sentence is useful to `bga log-to-chrome`; only the
@@ -58,9 +68,17 @@ class TestTheTimelinePrintsNoPathThatIsAlreadyGone:
         log = tmp_path / "build.log"
         log.write_text(_WRAPPED)
         result = subprocess.run(
-            [sys.executable, "-c",
-             "from bga.cli import main; raise SystemExit(main({!r}))".format(["log-to-chrome", str(log), str(tmp_path / "out.json")])],
-            capture_output=True, text=True, cwd=REPO)
+            [
+                sys.executable,
+                "-c",
+                "from bga.cli import main; raise SystemExit(main({!r}))".format(
+                    ["log-to-chrome", str(log), str(tmp_path / "out.json")]
+                ),
+            ],
+            capture_output=True,
+            text=True,
+            cwd=REPO,
+        )
         assert "Successfully generated" in result.stderr
         assert str(tmp_path / "out.json") in result.stderr
 
@@ -69,9 +87,17 @@ class TestTheTimelinePrintsNoPathThatIsAlreadyGone:
         printed to stdout and `return`ed None, which `sys.exit(None)`
         renders as exit 0."""
         result = subprocess.run(
-            [sys.executable, "-c",
-             "from bga.cli import main; raise SystemExit(main({!r}))".format(["log-to-chrome", "/nope/missing.log", str(tmp_path / "o.json")])],
-            capture_output=True, text=True, cwd=REPO)
+            [
+                sys.executable,
+                "-c",
+                "from bga.cli import main; raise SystemExit(main({!r}))".format(
+                    ["log-to-chrome", "/nope/missing.log", str(tmp_path / "o.json")]
+                ),
+            ],
+            capture_output=True,
+            text=True,
+            cwd=REPO,
+        )
         assert result.returncode != 0, "a missing input exited 0"
         assert result.stdout == "", "the error went to stdout"
         assert "Could not find input file" in result.stderr
@@ -86,14 +112,12 @@ class TestTheDeadSuspendedFieldIsGone:
     def test_the_field_does_not_exist(self):
         from bga.ingest.models import RunContext
 
-        assert "suspended" not in RunContext.__dataclass_fields__, (
-            "a field nothing assigns is a trap, not an API")
+        assert "suspended" not in RunContext.__dataclass_fields__, "a field nothing assigns is a trap, not an API"
 
     def test_the_accessor_that_works_still_does(self):
         from bga.ingest.models import RunContext
 
-        run = RunContext(
-            build_outcome={"suspended": {"suspended_seconds": 900.0}})
+        run = RunContext(build_outcome={"suspended": {"suspended_seconds": 900.0}})
         assert run.suspension == {"suspended_seconds": 900.0}
         assert run.incomplete_reason == "suspended"
 
@@ -118,8 +142,7 @@ class TestCtrlCDuringBstShowLeavesNoChild:
         probe = tmp_path / "probe.py"
         probe.write_text(_ORPHAN_PROBE % {"marker": marker, "repo": REPO})
 
-        subprocess.run([sys.executable, str(probe)], capture_output=True,
-                       text=True, timeout=60, cwd=REPO)
+        subprocess.run([sys.executable, str(probe)], capture_output=True, text=True, timeout=60, cwd=REPO)
 
         assert marker.exists(), "the probe never started a child to orphan"
         pid = int(marker.read_text().strip())
@@ -128,7 +151,7 @@ class TestCtrlCDuringBstShowLeavesNoChild:
             if not _alive(pid):
                 return
             time.sleep(0.1)
-        os.kill(pid, signal.SIGKILL)          # do not leak it out of the suite
+        os.kill(pid, signal.SIGKILL)  # do not leak it out of the suite
         pytest.fail(f"pid {pid} outlived the interrupted parent")
 
 
@@ -137,8 +160,7 @@ class TestTheCountsAreRight:
 
     def test_round_20_counts_its_own_items(self):
         text = open("docs/audits/round-20.md", encoding="utf-8").read()
-        assert "All ten items UX-183..UX-192" in text, (
-            "UX-183..UX-192 is ten items; the section said twelve")
+        assert "All ten items UX-183..UX-192" in text, "UX-183..UX-192 is ten items; the section said twelve"
 
     def test_the_status_table_does_not_hardcode_the_alias_count(self):
         """The first version of this guard asserted the row named
@@ -156,19 +178,18 @@ class TestTheCountsAreRight:
         # UX-232 moved closed rows to `closed.md`; UX-192 is one of
         # them. The guard follows the row rather than the filename -
         # a guard pinned to one file goes quiet the day the row moves.
-        rows = []
-        for name in ("docs/backlog/scenarios/README.md",
-                     "docs/backlog/scenarios/closed.md"):
-            rows += [line for line in
-                     open(name, encoding="utf-8").read().splitlines()
-                     if line.startswith("| UX-192 |")]
+        from tools.dev_close_task import closed_rows
+
+        text = open("docs/backlog/scenarios/README.md", encoding="utf-8").read()
+        rows = [line for line in text.splitlines() + closed_rows() if line.startswith("| UX-192 |")]
         assert len(rows) == 1, f"UX-192 has {len(rows)} rows across the backlog"
         row = rows[0]
-        stale = re.search(r"(all )?\b(\d+|ten|eleven|twelve|seventeen|eighteen)\b"
-                          r" alias commands", row)
-        assert not stale, (
-            f"the UX-192 row names a count ({stale.group(0)}) that the next "
-            f"command added will make wrong")
+        stale = re.search(
+            r"(all )?\b(\d+|ten|eleven|twelve|seventeen|eighteen)\b"
+            r" alias commands",
+            row,
+        )
+        assert not stale, f"the UX-192 row names a count ({stale.group(0)}) that the next command added will make wrong"
         assert "alias command" in row
 
 
@@ -194,37 +215,47 @@ class TestTheSchemaGuardsCannotVanishQuietly:
 
         offenders = []
         for path in sorted(pathlib.Path("tests").rglob("test_*.py")):
-            for number, line in enumerate(
-                    path.read_text(encoding="utf-8").splitlines(), 1):
+            for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
                 if "importorskip" not in line or line.lstrip().startswith("#"):
                     continue
-                if line == line.lstrip():          # no indentation: module scope
+                if line == line.lstrip():  # no indentation: module scope
                     offenders.append(f"{path}:{number}")
         assert offenders == [], (
             f"a module-scope importorskip hides every guard in its file: "
             f"{offenders}. Use a module-level `skipif` marker on the tests "
-            f"that need the import, so the rest of the file still runs.")
+            f"that need the import, so the rest of the file still runs."
+        )
 
     def test_ci_declares_itself_a_dev_environment(self):
         import yaml
 
         workflow = yaml.safe_load(open(".github/workflows/ci.yml", encoding="utf-8"))
         assert workflow.get("env", {}).get("BGA_EXPECT_DEV") == "1", (
-            "without this the schema guards skip silently in CI too")
+            "without this the schema guards skip silently in CI too"
+        )
 
     def test_the_canary_fails_rather_than_skips_when_dev_is_claimed(self):
         """Driven for real: run that one test with `BGA_EXPECT_DEV` set
         and `jsonschema` made unimportable."""
         result = subprocess.run(
-            [sys.executable, "-m", "pytest",
-             "tests/unit/test_output_schemas.py::test_the_dev_extras_are_actually_here",
-             "-q", "-p", "no:cacheprovider", "-p", "_hide_jsonschema"],
-            capture_output=True, text=True, cwd=REPO,
-            env=dict(os.environ, BGA_EXPECT_DEV="1",
-                     PYTHONPATH=os.path.join(REPO, "tests", "support")))
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                "tests/unit/test_output_schemas.py::test_the_dev_extras_are_actually_here",
+                "-q",
+                "-p",
+                "no:cacheprovider",
+                "-p",
+                "_hide_jsonschema",
+            ],
+            capture_output=True,
+            text=True,
+            cwd=REPO,
+            env=dict(os.environ, BGA_EXPECT_DEV="1", PYTHONPATH=os.path.join(REPO, "tests", "support")),
+        )
         assert "1 failed" in result.stdout, result.stdout[-1500:]
-        assert "pip install -e" in result.stdout, (
-            "the failure should name the fix")
+        assert "pip install -e" in result.stdout, "the failure should name the fix"
 
 
 def _alive(pid):

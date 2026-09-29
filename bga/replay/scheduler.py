@@ -91,7 +91,8 @@ def _interpolate_calibrated_duration(points: list[tuple[int, int]], cap: int) ->
 
 
 def _peak_concurrent_rss_bytes(
-    scheduled_tasks: list, peak_rss_bytes: dict[str, int],
+    scheduled_tasks: list,
+    peak_rss_bytes: dict[str, int],
 ) -> int:
     """UX-678: memory's own knee input - the highest sum of peak RSS
     held by elements building at once in *this* replayed schedule.
@@ -123,7 +124,8 @@ def _peak_concurrent_rss_bytes(
 
 
 def _add_memory_envelope(
-    sweep_entry: dict, scheduled_tasks: list,
+    sweep_entry: dict,
+    scheduled_tasks: list,
     peak_rss_bytes: Optional[dict[str, int]],
     host_memory_bytes: Optional[int],
 ) -> None:
@@ -138,7 +140,9 @@ def _add_memory_envelope(
 
 
 def _memory_sweep_result(
-    sweeps: list[dict], resource: str, knee_point: Optional[int],
+    sweeps: list[dict],
+    resource: str,
+    knee_point: Optional[int],
     peak_rss_bytes: Optional[dict[str, int]],
     host_memory_bytes: Optional[int],
 ) -> tuple[dict[str, int], dict[str, dict]]:
@@ -148,8 +152,7 @@ def _memory_sweep_result(
     reason as `_add_memory_envelope`."""
     if not (peak_rss_bytes and host_memory_bytes):
         return {}, {}
-    fitting = [entry['capacity'][resource] for entry in sweeps
-              if entry.get('memory_fits')]
+    fitting = [entry['capacity'][resource] for entry in sweeps if entry.get('memory_fits')]
     memory_cap = max(fitting) if fitting else 0
     # Memory binds first only when it is strictly the tighter ceiling -
     # a tie or an unmeasured graph knee both read as the builder cap,
@@ -164,12 +167,13 @@ def _memory_sweep_result(
 @dataclass
 class ScheduledTask:
     """A task in the replay schedule."""
+
     task_key: str
     start_us: int
     finish_us: int
     duration_us: int
     resources_required: dict[str, int] = field(default_factory=dict)
-    
+
     @property
     def element_uid(self) -> str:
         """Extract element UID from task key."""
@@ -179,16 +183,17 @@ class ScheduledTask:
 @dataclass
 class ReplayResult:
     """Result of a single replay simulation."""
+
     makespan_us: int
     scheduled_tasks: list[ScheduledTask]
     capacity_used: dict[str, int]
     timeline: list[tuple[int, str, int]]  # (time_us, event_type, task_key)
-    
+
     @property
     def model_slack_us(self) -> Optional[int]:
         """
         Model slack = T_C - LB (Part 18).
-        
+
         Large model slack indicates the replay model itself is leaving
         opportunity on the table.
         """
@@ -199,6 +204,7 @@ class ReplayResult:
 @dataclass
 class CapacitySweepResult:
     """Result of a capacity sweep across multiple configurations."""
+
     sweeps: list[dict]
     knee_points: dict[str, int]
     monotonicity_violations: list[str]
@@ -211,20 +217,20 @@ class CapacitySweepResult:
     def is_monotonic(self, resource: str) -> bool:
         """Check if makespan decreases monotonically with capacity."""
         makespans = [s['makespan_us'] for s in self.sweeps if s['capacity'].get(resource, 0) > 0]
-        return all(makespans[i] >= makespans[i+1] for i in range(len(makespans)-1))
+        return all(makespans[i] >= makespans[i + 1] for i in range(len(makespans) - 1))
 
 
 class ReplayScheduler:
     """
     Deterministic replay scheduler implementing Part 18.
-    
+
     Simulates task execution under specified capacity constraints using
     a priority-based scheduling algorithm.
-    
+
     The scheduler is deterministic: given the same inputs and capacity,
     it will always produce the same schedule.
     """
-    
+
     def __init__(
         self,
         tasks: list[NormalizedTask],
@@ -232,30 +238,28 @@ class ReplayScheduler:
     ):
         """
         Initialize the replay scheduler.
-        
+
         Args:
             tasks: List of normalized tasks with observed durations
             run_context: Optional run context for default capacities
         """
         self.tasks = tasks
         self.run_context = run_context
-        
+
         # Build task lookup
-        self._task_map: dict[str, NormalizedTask] = {
-            str(t.task_key): t for t in tasks
-        }
-        
+        self._task_map: dict[str, NormalizedTask] = {str(t.task_key): t for t in tasks}
+
         # Build dependency graph (successors for each task)
         self._predecessors: dict[str, set[str]] = defaultdict(set)
         self._successors: dict[str, set[str]] = defaultdict(set)
-        
+
         for task in tasks:
             task_key = str(task.task_key)
             for dep in task.dependencies:
                 dep_key = str(dep)
                 self._predecessors[task_key].add(dep_key)
                 self._successors[dep_key].add(task_key)
-        
+
         # Default capacities from run context or sensible defaults (P2-09:
         # previously read nonexistent run_context.builders/fetchers/pushers
         # attributes - RunContext has never defined those, only the real
@@ -305,7 +309,7 @@ class ReplayScheduler:
                 if out_degree[pred] == 0:
                     queue.append(pred)
         return depths
-    
+
     def _get_task_resources(self, task_key: str) -> dict[str, int]:
         """
         Determine resource requirements for a task, from the task's own
@@ -320,7 +324,7 @@ class ReplayScheduler:
         if not resources:
             return {'PROCESS': 1}
         return {res.value: 1 for res in resources}
-    
+
     def replay(
         self,
         capacities: Optional[dict[str, int]] = None,
@@ -367,36 +371,35 @@ class ReplayScheduler:
 
         # Track remaining predecessor count for each task
         remaining_preds: dict[str, int] = {
-            str(t.task_key): len(self._predecessors[str(t.task_key)])
-            for t in self.tasks
+            str(t.task_key): len(self._predecessors[str(t.task_key)]) for t in self.tasks
         }
-        
+
         # Track finish times for dependency resolution
         finish_times: dict[str, int] = {}
-        
+
         # Ready queue: tasks with all predecessors done
         # Heap: (-priority, task_key) for max-heap behavior
         ready_queue: list[tuple[int, str]] = []
-        
+
         # Initialize with tasks that have no predecessors
         for task in self.tasks:
             task_key = str(task.task_key)
             if remaining_preds[task_key] == 0:
                 priority = self._compute_priority(task, priority_rule, duration_overrides)
                 heapq.heappush(ready_queue, (priority, task_key))
-        
+
         # Current time and active tasks
         current_time = 0
         active_tasks: dict[str, ScheduledTask] = {}
         scheduled_tasks: list[ScheduledTask] = []
         timeline: list[tuple[int, str, str]] = []
-        
+
         # Event queue: (finish_time, task_key)
         event_queue: list[tuple[int, str]] = []
-        
+
         # Available capacity
         available_capacity = capacities.copy()
-        
+
         while ready_queue or event_queue:
             # Try to schedule ready tasks
             while ready_queue:
@@ -404,7 +407,7 @@ class ReplayScheduler:
                 _, task_key = ready_queue[0]
                 task = self._task_map[task_key]
                 resources = self._get_task_resources(task_key)
-                
+
                 # Check if we have capacity
                 can_schedule = True
                 for resource, needed in resources.items():
@@ -413,25 +416,22 @@ class ReplayScheduler:
                     if needed > avail:
                         can_schedule = False
                         break
-                
+
                 if not can_schedule:
                     break
-                
+
                 # Schedule the task
                 heapq.heappop(ready_queue)
-                
+
                 # Compute start time (after all predecessors finish)
-                pred_finish = max(
-                    (finish_times.get(pred, 0) for pred in self._predecessors[task_key]),
-                    default=0
-                )
+                pred_finish = max((finish_times.get(pred, 0) for pred in self._predecessors[task_key]), default=0)
                 start_time = max(current_time, pred_finish)
-                
+
                 # Use observed duration, unless a duration_override
                 # applies to this task_key (UX-20).
                 duration = duration_overrides.get(task_key, task.dur_us)
                 finish_time = start_time + duration
-                
+
                 # Create scheduled task
                 scheduled = ScheduledTask(
                     task_key=task_key,
@@ -442,18 +442,18 @@ class ReplayScheduler:
                 )
                 scheduled_tasks.append(scheduled)
                 active_tasks[task_key] = scheduled
-                
+
                 # Update capacity
                 for resource, needed in resources.items():
                     available_capacity[resource] -= needed
-                
+
                 # Record timeline events
                 timeline.append((start_time, 'START', task_key))
                 timeline.append((finish_time, 'FINISH', task_key))
-                
+
                 # Add to event queue
                 heapq.heappush(event_queue, (finish_time, task_key))
-            
+
             # If nothing can be scheduled, advance time
             if not active_tasks:
                 if ready_queue:
@@ -470,16 +470,16 @@ class ReplayScheduler:
                     current_time, completed_key = heapq.heappop(event_queue)
                 else:
                     break
-            
+
             # Process task completion
             if completed_key in active_tasks:
                 completed = active_tasks.pop(completed_key)
                 finish_times[completed_key] = completed.finish_us
-                
+
                 # Free capacity
                 for resource, needed in completed.resources_required.items():
                     available_capacity[resource] += needed
-                
+
                 # Add successors to ready queue
                 for succ_key in self._successors[completed_key]:
                     remaining_preds[succ_key] -= 1
@@ -487,15 +487,18 @@ class ReplayScheduler:
                         succ_task = self._task_map[succ_key]
                         priority = self._compute_priority(succ_task, priority_rule, duration_overrides)
                         heapq.heappush(ready_queue, (priority, succ_key))
-        
+
         # Sort timeline by time
         timeline.sort(key=lambda x: (x[0], x[1] == 'START'))
-        
+
         # Compute makespan
         makespan = max((t.finish_us for t in scheduled_tasks), default=0)
         logger.info(
             "Replay (%s, capacities=%s): makespan=%dus over %d tasks",
-            priority_rule, capacities, makespan, len(scheduled_tasks),
+            priority_rule,
+            capacities,
+            makespan,
+            len(scheduled_tasks),
         )
 
         return ReplayResult(
@@ -504,8 +507,10 @@ class ReplayScheduler:
             capacity_used=capacities,
             timeline=timeline,
         )
-    
-    def _compute_priority(self, task: NormalizedTask, rule: str, duration_overrides: Optional[dict[str, int]] = None) -> int:
+
+    def _compute_priority(
+        self, task: NormalizedTask, rule: str, duration_overrides: Optional[dict[str, int]] = None
+    ) -> int:
         """
         Compute priority value for task selection.
 
@@ -548,7 +553,7 @@ class ReplayScheduler:
         else:
             # Default to LPT
             return -duration
-    
+
     def capacity_sweep(
         self,
         resource: str,
@@ -645,16 +650,15 @@ class ReplayScheduler:
                 'makespan_us': result.makespan_us,
                 'normalized_improvement': (
                     (prev_makespan - result.makespan_us) / prev_makespan
-                    if has_prior_sample and prev_makespan > 0 else 0
+                    if has_prior_sample and prev_makespan > 0
+                    else 0
                 ),
             }
             if contention_model is not None:
                 sweep_entry['contention_model'] = contention_model
             # UX-678: memory as a second capacity, read off this same
             # replayed schedule rather than a proxy for it.
-            _add_memory_envelope(
-                sweep_entry, result.scheduled_tasks,
-                peak_rss_bytes, host_memory_bytes)
+            _add_memory_envelope(sweep_entry, result.scheduled_tasks, peak_rss_bytes, host_memory_bytes)
             sweeps.append(sweep_entry)
 
             # UX-30: the knee is computed after the sweep, over the whole
@@ -667,13 +671,13 @@ class ReplayScheduler:
             # not the end of the curve. On a real run that reported
             # `Knee point: capacity 2` while its own printed table showed
             # capacity 4 to be a further 35.1% faster.
-            
+
             # Check monotonicity
             if result.makespan_us > prev_makespan and prev_makespan < float('inf'):
                 monotonicity_violations.append(f"Capacity {cap}: makespan increased")
-            
+
             prev_makespan = result.makespan_us
-        
+
         # UX-30: last-significant-gain. The knee is the largest swept
         # capacity whose own marginal improvement still cleared the
         # threshold - i.e. the last capacity that bought something.
@@ -693,7 +697,8 @@ class ReplayScheduler:
         # fit host memory - `{}` when memory data was not supplied,
         # never treated as an unbounded ceiling.
         memory_knee_points, binding_constraints = _memory_sweep_result(
-            sweeps, resource, knee_point, peak_rss_bytes, host_memory_bytes)
+            sweeps, resource, knee_point, peak_rss_bytes, host_memory_bytes
+        )
 
         return CapacitySweepResult(
             sweeps=sweeps,
@@ -702,7 +707,7 @@ class ReplayScheduler:
             memory_knee_points=memory_knee_points,
             binding_constraints=binding_constraints,
         )
-    
+
     def multi_resource_sweep(
         self,
         resources: list[str],
@@ -710,24 +715,26 @@ class ReplayScheduler:
     ) -> list[dict]:
         """
         Sweep multiple resource configurations.
-        
+
         Args:
             resources: List of resources to consider
             capacity_sets: List of capacity configurations to test
-        
+
         Returns:
             List of sweep results for each configuration
         """
         results = []
-        
+
         for capacities in capacity_sets:
             result = self.replay(capacities)
-            results.append({
-                'capacity': capacities,
-                'makespan_us': result.makespan_us,
-                'scheduled_count': len(result.scheduled_tasks),
-            })
-        
+            results.append(
+                {
+                    'capacity': capacities,
+                    'makespan_us': result.makespan_us,
+                    'scheduled_count': len(result.scheduled_tasks),
+                }
+            )
+
         return results
 
 
@@ -738,12 +745,12 @@ def compute_replay_makespan(
 ) -> int:
     """
     Convenience function to compute replay makespan.
-    
+
     Args:
         tasks: Normalized tasks
         capacities: Resource capacities
         run_context: Optional run context
-    
+
     Returns:
         Makespan in microseconds
     """

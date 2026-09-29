@@ -11,6 +11,7 @@ episode, to stdout (the job log) and `--out`, led by a `::warning::`.
 
     python3 -m tools.hang_witness --out capture/hang-witness.log &
 """
+
 import argparse
 import fcntl
 import os
@@ -78,13 +79,16 @@ def process_rows(proc="/proc") -> list:
             except OSError:
                 continue
             fifos.append({"fd": int(fd), "target": target, "link": link})
-        rows.append({
-            "pid": int(name), "ppid": int(after[1]) if len(after) > 1 else 0,
-            "state": after[0] if after else "?",
-            "wchan": _read(os.path.join(base, "wchan")) or "-",
-            "argv": _read(os.path.join(base, "cmdline")).replace("\0", " ").strip(),
-            "fifos": fifos,
-        })
+        rows.append(
+            {
+                "pid": int(name),
+                "ppid": int(after[1]) if len(after) > 1 else 0,
+                "state": after[0] if after else "?",
+                "wchan": _read(os.path.join(base, "wchan")) or "-",
+                "argv": _read(os.path.join(base, "cmdline")).replace("\0", " ").strip(),
+                "fifos": fifos,
+            }
+        )
     return sorted(rows, key=lambda r: r["pid"])
 
 
@@ -93,8 +97,7 @@ def render(rows: list) -> list:
     lines = [f"{'pid':>7} {'ppid':>7} st {'wchan':<22} argv"]
     pools = {}
     for row in rows:
-        lines.append(f"{row['pid']:>7} {row['ppid']:>7} {row['state']:<2} "
-                     f"{row['wchan'][:22]:<22} {row['argv'][:160]}")
+        lines.append(f"{row['pid']:>7} {row['ppid']:>7} {row['state']:<2} {row['wchan'][:22]:<22} {row['argv'][:160]}")
         for fifo in row["fifos"]:
             lines.append(f"{'':>19}fd {fifo['fd']} -> {fifo['target']}")
             if "jobserver" in fifo["target"] and fifo["target"] not in pools:
@@ -119,8 +122,9 @@ def watch(every: float, quiet_after: float, idle_cores: float, out, rounds=None)
         quiet_since = quiet_since or time.monotonic() - every
         if dumped or time.monotonic() - quiet_since < quiet_after:
             continue
-        lines = [f"::warning::hang witness: {cores:.2f} cores busy for "
-                 f"{time.monotonic() - quiet_since:.0f}s"] + render(process_rows())
+        lines = [f"::warning::hang witness: {cores:.2f} cores busy for {time.monotonic() - quiet_since:.0f}s"] + render(
+            process_rows()
+        )
         text = "\n".join(lines) + "\n"
         sys.stdout.write(text)
         sys.stdout.flush()

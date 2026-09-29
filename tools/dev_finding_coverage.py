@@ -19,6 +19,7 @@ a real `analyze` payload.
 on a green tree) and `UX-376` is the rule it follows: a census names
 what it could not assess.
 """
+
 import argparse
 import contextlib
 import io
@@ -40,24 +41,19 @@ from bga.findings import FINDING_READERS
 #: is a different fixture with a different contract (`UX-156` decides
 #: what a failed build may verdict), not a row in this census.
 UNREACHABLE = {
-    "build-failed":
-        "every committed capture is of a build that succeeded; this "
-        "finding exists to describe one that did not (UX-156)",
-    "failed-task-time":
-        "same - it accounts for time spent in tasks that failed, and no "
-        "committed capture has any",
-    "swap-observed":
-        "the only committed capture with a host CPU series, "
-        "tests/fixtures/host_cpu, never wrote a page to swap (UX-860); "
-        "this finding needs one whose pswpout rises",
-    "artifact-weight":
-        "the block it reads is walked out of the capture host's own CAS "
-        "at capture time (UX-907, `bga extract --artifact-weights`), and "
-        "every committed capture predates the flag - the cache those runs "
-        "used is gone, so the block cannot be added to them after the "
-        "fact. A capture taken with the flag is the fixture this needs; "
-        "tests/fixtures/cas_artifact is a real BuildStream CAS and guards "
-        "the walk itself, but it is not a capture",
+    "build-failed": "every committed capture is of a build that succeeded; this "
+    "finding exists to describe one that did not (UX-156)",
+    "failed-task-time": "same - it accounts for time spent in tasks that failed, and no committed capture has any",
+    "swap-observed": "the only committed capture with a host CPU series, "
+    "tests/fixtures/host_cpu, never wrote a page to swap (UX-860); "
+    "this finding needs one whose pswpout rises",
+    "artifact-weight": "the block it reads is walked out of the capture host's own CAS "
+    "at capture time (UX-907, `bga extract --artifact-weights`), and "
+    "every committed capture predates the flag - the cache those runs "
+    "used is gone, so the block cannot be added to them after the "
+    "fact. A capture taken with the flag is the fixture this needs; "
+    "tests/fixtures/cas_artifact is a real BuildStream CAS and guards "
+    "the walk itself, but it is not a capture",
 }
 
 
@@ -79,8 +75,7 @@ def tracked_paths(root=REPO):
     """
     import subprocess
 
-    done = subprocess.run(["git", "ls-files"], cwd=str(root),
-                          capture_output=True, text=True)
+    done = subprocess.run(["git", "ls-files"], cwd=str(root), capture_output=True, text=True)
     return set(done.stdout.split())
 
 
@@ -105,9 +100,7 @@ def captures(root=REPO, tracked_only=True, also=()):
     found |= set(root.glob("tests/fixtures/*/run"))
     if tracked_only:
         tracked = tracked_paths(root)
-        found = {run for run in found
-                 if any(t.startswith(str(run.relative_to(root)))
-                        for t in tracked)}
+        found = {run for run in found if any(t.startswith(str(run.relative_to(root))) for t in tracked)}
     return sorted(found) + [pathlib.Path(run).resolve() for run in also]
 
 
@@ -140,8 +133,7 @@ def findings_of(run):
     # capture over the top of its own table.
     buffer = io.StringIO()
     try:
-        with contextlib.redirect_stdout(buffer), \
-                contextlib.redirect_stderr(io.StringIO()):
+        with contextlib.redirect_stdout(buffer), contextlib.redirect_stderr(io.StringIO()):
             main(["analyze", str(run), "--format", "json"])
         return {f["id"] for f in json.loads(buffer.getvalue())["findings"]}
     except BaseException:
@@ -163,21 +155,24 @@ def coverage(root=REPO, tracked_only=True, also=()):
 def uncovered(root=REPO, tracked_only=True, also=()):
     """The findings that are neither produced nor declared unreachable."""
     got = coverage(root, tracked_only, also)
-    return sorted(name for name, where in got.items()
-                  if not where and name not in UNREACHABLE)
+    return sorted(name for name, where in got.items() if not where and name not in UNREACHABLE)
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--quiet", action="store_true",
-                        help="print only the findings nothing produces")
-    parser.add_argument("--local", action="store_true",
-                        help="count untracked captures under examples/ too - "
-                             "what this machine has, not what a clone does")
-    parser.add_argument("--also", action="append", default=[],
-                        metavar="RUN",
-                        help="a run directory outside the tree, repeatable - "
-                             "for a generated project's capture (UX-473)")
+    parser.add_argument("--quiet", action="store_true", help="print only the findings nothing produces")
+    parser.add_argument(
+        "--local",
+        action="store_true",
+        help="count untracked captures under examples/ too - what this machine has, not what a clone does",
+    )
+    parser.add_argument(
+        "--also",
+        action="append",
+        default=[],
+        metavar="RUN",
+        help="a run directory outside the tree, repeatable - for a generated project's capture (UX-473)",
+    )
     args = parser.parse_args(argv)
 
     got = coverage(tracked_only=not args.local, also=args.also)
@@ -197,11 +192,13 @@ def main(argv=None):
     scope = "this machine" if args.local else "a clone"
     if args.also:
         scope += f" + {len(args.also)} generated"
-    print(f"({scope}) "
-          f"{len(got)} findings | "
-          f"{sum(1 for w in got.values() if w)} produced by a capture | "
-          f"{len(UNREACHABLE)} declared unreachable | "
-          f"{len(missing)} neither")
+    print(
+        f"({scope}) "
+        f"{len(got)} findings | "
+        f"{sum(1 for w in got.values() if w)} produced by a capture | "
+        f"{len(UNREACHABLE)} declared unreachable | "
+        f"{len(missing)} neither"
+    )
     for name in missing:
         print(f"  neither: {name}", file=sys.stderr)
     return 1 if missing else 0

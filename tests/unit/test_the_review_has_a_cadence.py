@@ -15,6 +15,7 @@ scenarios have closed since the last row of the review log.
 It measures *distance since*, never whether a chapter is true. That
 part is judgment and stays judgment.
 """
+
 import pathlib
 import re
 
@@ -22,7 +23,6 @@ import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 REVIEW_LOG = REPO / "docs/audits/architecture-review.md"
-CLOSED = REPO / "docs/backlog/scenarios/closed.md"
 
 # The bound, argued in the review document rather than guessed: below
 # the 34-row drift that was actually missed, and far enough above one
@@ -35,8 +35,7 @@ MAX_ROWS_BETWEEN_REVIEWS = 25
 # with an ordinary clone cannot resolve them. "Closed rows at review" is
 # the merge-stable identity, it was already in the table, and it is what
 # this guard measures distance in.
-_LOG_ROW = re.compile(
-    r"^\|\s*(\d+)\s*\|\s*([\d-]+)\s*\|\s*(\d+)\s*\|")
+_LOG_ROW = re.compile(r"^\|\s*(\d+)\s*\|\s*([\d-]+)\s*\|\s*(\d+)\s*\|")
 
 
 def _log_rows():
@@ -44,8 +43,7 @@ def _log_rows():
     for line in REVIEW_LOG.read_text(encoding="utf-8").splitlines():
         match = _LOG_ROW.match(line)
         if match:
-            rows.append({"n": int(match.group(1)), "date": match.group(2),
-                         "rows_at_review": int(match.group(3))})
+            rows.append({"n": int(match.group(1)), "date": match.group(2), "rows_at_review": int(match.group(3))})
     return rows
 
 
@@ -57,7 +55,8 @@ def _cadence_message(distance, last):
         f"({last['date']}), against a bound of "
         f"{MAX_ROWS_BETWEEN_REVIEWS}. Run a review: the checklist is in "
         f"docs/audits/architecture-review.md, and the `review` skill runs "
-        f"it.")
+        f"it."
+    )
 
 
 def _closed_now():
@@ -67,8 +66,9 @@ def _closed_now():
     nine commits, the count is in the tree so the guard needs no git,
     and it gives the same answer on every machine.
     """
-    return sum(1 for line in CLOSED.read_text(encoding="utf-8").splitlines()
-               if line.startswith("| UX-"))
+    from tools.dev_close_task import closed_rows
+
+    return len(closed_rows())
 
 
 class TestTheReviewIsARoundType:
@@ -80,12 +80,10 @@ class TestTheReviewIsARoundType:
 
     def test_the_stream_table_carries_it(self):
         """A round type nobody is told about is not a round type."""
-        guide = (REPO / "docs/contributing/fixing-guide.md").read_text(
-            encoding="utf-8")
+        guide = (REPO / "docs/contributing/fixing-guide.md").read_text(encoding="utf-8")
         body = guide.split("## 6a. Which kind of session is this?", 1)[1]
         body = body.split("\n## ", 1)[0]
-        assert "**review**" in body, (
-            "section 6a does not list review beside the other streams")
+        assert "**review**" in body, "section 6a does not list review beside the other streams"
 
     def test_a_review_produces_no_code(self):
         """The rule that keeps a review a review. A session that fixes
@@ -99,7 +97,8 @@ class TestTheDistanceIsMeasured:
         rows = _log_rows()
         assert rows, (
             "the review log has no row this guard can read; the table is "
-            "`| n | date | closed rows at review | findings |`")
+            "`| n | date | closed rows at review | findings |`"
+        )
         assert [r["n"] for r in rows] == list(range(1, len(rows) + 1))
 
     def test_the_log_cites_no_hash_a_clone_cannot_resolve(self):
@@ -121,13 +120,12 @@ class TestTheDistanceIsMeasured:
         head = _re.search(r"^\| review \|.*$", text, _re.M)
         assert head, "the log has no header row to read"
         assert "commit" not in head.group(0), (
-            "the commit column is back; it cites branch tips that do not "
-            "survive a merged pull request", head.group(0))
-        rows = [line for line in text.splitlines()
-                if _re.match(r"^\|\s*\d+\s*\|", line)]
+            "the commit column is back; it cites branch tips that do not survive a merged pull request",
+            head.group(0),
+        )
+        rows = [line for line in text.splitlines() if _re.match(r"^\|\s*\d+\s*\|", line)]
         stray = [line for line in rows if _re.search(r"`[0-9a-f]{7,40}`", line)]
-        assert not stray, (
-            "a log row still cites a bare commit hash", stray)
+        assert not stray, ("a log row still cites a bare commit hash", stray)
 
     def test_the_last_review_is_not_too_far_back(self):
         rows = _log_rows()
@@ -136,9 +134,9 @@ class TestTheDistanceIsMeasured:
         assert distance >= 0, (
             f"review {last['n']} records {last['rows_at_review']} closed rows "
             f"and closed.md has {_closed_now()} — the log is ahead of the "
-            f"tree, which means a row was recorded before it closed")
-        assert distance <= MAX_ROWS_BETWEEN_REVIEWS, (
-            _cadence_message(distance, last))
+            f"tree, which means a row was recorded before it closed"
+        )
+        assert distance <= MAX_ROWS_BETWEEN_REVIEWS, _cadence_message(distance, last)
 
     def test_the_cadence_message_names_the_skill_as_well_as_the_checklist(self):
         """`UX-713`: the message is what a stopped session reads first,
@@ -153,8 +151,8 @@ class TestTheDistanceIsMeasured:
         same bound this module enforces."""
         text = REVIEW_LOG.read_text(encoding="utf-8")
         assert f"**{MAX_ROWS_BETWEEN_REVIEWS} scenarios**" in text, (
-            f"the review document does not state the bound of "
-            f"{MAX_ROWS_BETWEEN_REVIEWS} this guard enforces")
+            f"the review document does not state the bound of {MAX_ROWS_BETWEEN_REVIEWS} this guard enforces"
+        )
 
     def test_the_first_review_named_what_it_found(self):
         """A review that files nothing and says nothing is a review
@@ -162,9 +160,9 @@ class TestTheDistanceIsMeasured:
         empty."""
         text = REVIEW_LOG.read_text(encoding="utf-8")
         for row in _log_rows():
-            line = next(l for l in text.splitlines()
-                        if _LOG_ROW.match(l)
-                        and int(_LOG_ROW.match(l).group(1)) == row["n"])
+            line = next(
+                l for l in text.splitlines() if _LOG_ROW.match(l) and int(_LOG_ROW.match(l).group(1)) == row["n"]
+            )
             # UX-332: the *last* cell, not column 4. Dropping the
             # commit column shifted findings from index 4 to 3, and a
             # fixed index made this clause raise `IndexError` rather
@@ -172,8 +170,7 @@ class TestTheDistanceIsMeasured:
             # a column change is a guard that gets deleted at the next
             # one. Findings is the last column and reads as one.
             findings = line.strip().strip("|").split("|")[-1].strip()
-            assert findings and findings != "—", (
-                f"review {row['n']} names no findings and no explicit none")
+            assert findings and findings != "—", f"review {row['n']} names no findings and no explicit none"
 
 
 if __name__ == "__main__":  # pragma: no cover

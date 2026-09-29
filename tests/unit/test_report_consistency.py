@@ -6,6 +6,7 @@ was checked against the others. This is the cross-check: the properties
 below are about *consistency* between reports and about numbers a reader
 could misread, not about any single report's contents.
 """
+
 from bga.cache_trend import format_trend_text
 from bga.correlate import format_correlation
 from bga.report.text import _attribution_label
@@ -29,8 +30,11 @@ def _correlation(**overrides) -> dict:
     """A minimal, valid correlation result. These tests are about the
     frame around the rows, not about the rows."""
     result = {
-        "elements": [], "actionable": [], "coverage": dict(_COVERAGE),
-        "attribution_unreliable": None, "attribution_partial": None,
+        "elements": [],
+        "actionable": [],
+        "coverage": dict(_COVERAGE),
+        "attribution_unreliable": None,
+        "attribution_partial": None,
         "note": _NOTE,
     }
     result.update(overrides)
@@ -62,15 +66,19 @@ def _rendered_surfaces() -> dict:
     }
     surfaces = {
         section or 'analyze': format_text(result, section=section)
-        for section in (None, 'graph', 'floors', 'replay', 'utilisation',
-                        'diagnostics')
+        for section in (None, 'graph', 'floors', 'replay', 'utilisation', 'diagnostics')
     }
     surfaces['compare'] = _rendered_comparison()
     surfaces['correlate'] = format_correlation(_correlation())
-    surfaces['cache-trend'] = format_trend_text({
-        'runs': [], 'findings': [], 'insufficient_window': None,
-        'heterogeneous': None, 'note': 'a note',
-    })
+    surfaces['cache-trend'] = format_trend_text(
+        {
+            'runs': [],
+            'findings': [],
+            'insufficient_window': None,
+            'heterogeneous': None,
+            'note': 'a note',
+        }
+    )
     return surfaces
 
 
@@ -81,24 +89,34 @@ def _rendered_comparison() -> str:
     from bga.report.text import format_compare_text
 
     comparison = ComparisonResult(
-        baseline_run_id='a' * 8, candidate_run_id='a' * 8,
+        baseline_run_id='a' * 8,
+        candidate_run_id='a' * 8,
         baseline_metrics={'total_duration_us': 10_000_000},
         candidate_metrics={'total_duration_us': 9_000_000},
         deltas={'total_duration_us': -1_000_000},
-        baseline_confidence=1.0, candidate_confidence=1.0,
-        verdict='IMPROVED', low_confidence=False,
+        baseline_confidence=1.0,
+        candidate_confidence=1.0,
+        verdict='IMPROVED',
+        low_confidence=False,
         attribution_deltas={
-        'execution_on_chain_us': {
-            'baseline_us': 9_000_000, 'candidate_us': 8_000_000,
-            'baseline_share': 0.90, 'candidate_share': 0.889,
-            'delta_us': -1_000_000, 'delta_share': -0.011,
+            'execution_on_chain_us': {
+                'baseline_us': 9_000_000,
+                'candidate_us': 8_000_000,
+                'baseline_share': 0.90,
+                'candidate_share': 0.889,
+                'delta_us': -1_000_000,
+                'delta_share': -0.011,
+            },
+            'retry_wait_us': {
+                'baseline_us': 0,
+                'candidate_us': 0,
+                'baseline_share': 0.0,
+                'candidate_share': 0.0,
+                'delta_us': 0,
+                'delta_share': 0.0,
+            },
         },
-        'retry_wait_us': {
-            'baseline_us': 0, 'candidate_us': 0,
-            'baseline_share': 0.0, 'candidate_share': 0.0,
-            'delta_us': 0, 'delta_share': 0.0,
-        },
-    })
+    )
     return format_compare_text(comparison)
 
 
@@ -108,10 +126,14 @@ class TestOneBannerWidth:
     other report was 60."""
 
     def test_the_trend_matches_the_others(self):
-        text = format_trend_text({
-            "runs": [], "findings": [], "insufficient_window": None,
-            "note": "a note",
-        })
+        text = format_trend_text(
+            {
+                "runs": [],
+                "findings": [],
+                "insufficient_window": None,
+                "note": "a note",
+            }
+        )
         banners = [line for line in text.splitlines() if set(line) == {"="}]
 
         assert banners, "the trend report printed no banner at all"
@@ -130,11 +152,12 @@ class TestEveryReportSaysWhichRunItIs:
     `bga compare`, and to nothing else."""
 
     def test_the_correlation_carries_plane_1s_identity(self):
-        text = format_correlation(_correlation(
-            run_id="f12a845e2327de7a",
-            run_instance={"started_at": "2026-08-19 06:34:51 UTC",
-                          "run_dir": "capture/run"},
-        ))
+        text = format_correlation(
+            _correlation(
+                run_id="f12a845e2327de7a",
+                run_instance={"started_at": "2026-08-19 06:34:51 UTC", "run_dir": "capture/run"},
+            )
+        )
 
         assert "Run: f12a845e2327de7a" in text
         assert "Instance: 2026-08-19 06:34:51 UTC  capture/run" in text
@@ -201,24 +224,43 @@ class TestTheSameSentenceIsNotPrintedFourTimes:
         """Four split candidates used to mean four verbatim copies of the
         same three-sentence caveat - 1300 characters saying one thing."""
         rationale = "Evidence, not a recommendation: a split's shape is a human decision"
-        text = format_correlation(_correlation(granularity=[
-            {"severity": "info", "id": "split-candidate",
-             "title": f"{name} holds 20% of the critical path",
-             "rationale": rationale}
-            for name in ("a.bst", "b.bst", "c.bst", "d.bst")
-        ]))
+        text = format_correlation(
+            _correlation(
+                granularity=[
+                    {
+                        "severity": "info",
+                        "id": "split-candidate",
+                        "title": f"{name} holds 20% of the critical path",
+                        "rationale": rationale,
+                    }
+                    for name in ("a.bst", "b.bst", "c.bst", "d.bst")
+                ]
+            )
+        )
 
         assert text.count(rationale) == 1
         for name in ("a.bst", "b.bst", "c.bst", "d.bst"):
             assert name in text
 
     def test_findings_with_different_rationales_keep_both(self):
-        text = format_correlation(_correlation(granularity=[
-            {"severity": "info", "id": "split-candidate",
-             "title": "a.bst is big", "rationale": "because of one thing"},
-            {"severity": "info", "id": "merge-candidate",
-             "title": "b.bst is small", "rationale": "because of another"},
-        ]))
+        text = format_correlation(
+            _correlation(
+                granularity=[
+                    {
+                        "severity": "info",
+                        "id": "split-candidate",
+                        "title": "a.bst is big",
+                        "rationale": "because of one thing",
+                    },
+                    {
+                        "severity": "info",
+                        "id": "merge-candidate",
+                        "title": "b.bst is small",
+                        "rationale": "because of another",
+                    },
+                ]
+            )
+        )
 
         assert "because of one thing" in text
         assert "because of another" in text
@@ -232,17 +274,28 @@ class TestEveryReportNamesItself:
     def test_the_native_report_names_its_plane(self):
         from tools.bst_native_build_tracer import _format_text
 
-        text = _format_text({
-            "process_count": 24, "matched_count": 24, "open_count": 0,
-            "max_concurrency": 4, "wall_span_s": 12.0, "by_binary": {},
-            "by_element": {}, "element_attribution": {"reliable": True},
-            "cpu_time": {"available": False, "note": "n"},
-            "peak_memory": {"available": False, "note": "n"},
-            "binary_cost": {}, "per_element_parallelism": [],
-            "redundant_operations": [], "opens_captured": {},
-            "open_records_note": "n", "static_binary_disclaimer": "n",
-            "processes": [], "matched": [],
-        })
+        text = _format_text(
+            {
+                "process_count": 24,
+                "matched_count": 24,
+                "open_count": 0,
+                "max_concurrency": 4,
+                "wall_span_s": 12.0,
+                "by_binary": {},
+                "by_element": {},
+                "element_attribution": {"reliable": True},
+                "cpu_time": {"available": False, "note": "n"},
+                "peak_memory": {"available": False, "note": "n"},
+                "binary_cost": {},
+                "per_element_parallelism": [],
+                "redundant_operations": [],
+                "opens_captured": {},
+                "open_records_note": "n",
+                "static_binary_disclaimer": "n",
+                "processes": [],
+                "matched": [],
+            }
+        )
         lines = text.splitlines()
 
         assert lines[0] == BANNER
@@ -257,20 +310,29 @@ class TestEveryReportNamesItself:
         has to understand before any number below means anything."""
         from tools.bst_native_build_tracer import _format_text
 
-        text = _format_text({
-            "process_count": 1, "matched_count": 1, "open_count": 0,
-            "max_concurrency": 1, "wall_span_s": 1.0, "by_binary": {},
-            "by_element": {}, "element_attribution": {"reliable": True},
-            "cpu_time": {"available": False, "note": "n"},
-            "peak_memory": {"available": False, "note": "n"},
-            "binary_cost": {}, "per_element_parallelism": [],
-            "redundant_operations": [], "opens_captured": {},
-            "open_records_note": "n", "static_binary_disclaimer": "n",
-            "processes": [], "matched": [],
-        })
-        concurrency = next(
-            line for line in text.splitlines() if "Max observed concurrency" in line
+        text = _format_text(
+            {
+                "process_count": 1,
+                "matched_count": 1,
+                "open_count": 0,
+                "max_concurrency": 1,
+                "wall_span_s": 1.0,
+                "by_binary": {},
+                "by_element": {},
+                "element_attribution": {"reliable": True},
+                "cpu_time": {"available": False, "note": "n"},
+                "peak_memory": {"available": False, "note": "n"},
+                "binary_cost": {},
+                "per_element_parallelism": [],
+                "redundant_operations": [],
+                "opens_captured": {},
+                "open_records_note": "n",
+                "static_binary_disclaimer": "n",
+                "processes": [],
+                "matched": [],
+            }
         )
+        concurrency = next(line for line in text.splitlines() if "Max observed concurrency" in line)
 
         assert "(UX-61)" in concurrency
         assert "UX-61:" not in concurrency

@@ -9,6 +9,7 @@ a `fetch` before its `publish --pages` step - ordering otherwise is
 `test_an_adopt_job_reads_its_record_before_it_pushes.py`'s, generic
 across every publishing job.
 """
+
 import os
 import pathlib
 import shutil
@@ -24,9 +25,14 @@ TREE = ("tools/dev_records.py", "tools/dev_adopt_check.py", "tools/__init__.py")
 
 def _git(cwd, *args, check=True, env=None):
     run_env = {**os.environ, **(env or {})}
-    return subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t",
-                           *args], cwd=cwd, check=check, capture_output=True,
-                          text=True, env=run_env)
+    return subprocess.run(
+        ["git", "-c", "user.name=t", "-c", "user.email=t@t", *args],
+        cwd=cwd,
+        check=check,
+        capture_output=True,
+        text=True,
+        env=run_env,
+    )
 
 
 def _seed(tmp_path_work):
@@ -37,8 +43,7 @@ def _seed(tmp_path_work):
     (tmp_path_work / "tests").mkdir(parents=True)
     (tmp_path_work / "tests/ci_reference.json").write_text("{}", encoding="utf-8")
     (tmp_path_work / "tests/touch_map.json").write_text("{}", encoding="utf-8")
-    (tmp_path_work / "tests/flake_ledger.json").write_text(
-        '{"entries": [], "declared": {}}', encoding="utf-8")
+    (tmp_path_work / "tests/flake_ledger.json").write_text('{"entries": [], "declared": {}}', encoding="utf-8")
     (tmp_path_work / "docs/audits").mkdir(parents=True)
     (tmp_path_work / "docs/audits/mutation.md").write_text("# mutation\n", encoding="utf-8")
 
@@ -57,8 +62,9 @@ def _repo(tmp_path):
 def _dev_records(tmp_path_work, *args):
     run_env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
     run_env["PATH"] = f"{pathlib.Path(sys.executable).parent}{os.pathsep}{run_env['PATH']}"
-    return subprocess.run([sys.executable, "tools/dev_records.py", *args],
-                          cwd=tmp_path_work, env=run_env, capture_output=True, text=True)
+    return subprocess.run(
+        [sys.executable, "tools/dev_records.py", *args], cwd=tmp_path_work, env=run_env, capture_output=True, text=True
+    )
 
 
 def _pages(tmp_path, **files):
@@ -70,7 +76,6 @@ def _pages(tmp_path, **files):
 
 
 class TestPublishPages:
-
     def test_pages_push_beside_untouched_records(self, tmp_path):
         tmp_path_work, remote = _repo(tmp_path)
         seeded = _dev_records(tmp_path_work, "publish")
@@ -103,7 +108,6 @@ class TestPublishPages:
 
 
 class TestTheJob:
-
     def _job(self):
         jobs = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))["jobs"]
         return jobs["area-pages-publish"]
@@ -112,9 +116,7 @@ class TestTheJob:
         assert set(self._job()["needs"]) == {"touch-map-adopt", "flake-ledger-adopt"}
 
     def test_it_fetches_before_it_publishes_pages(self):
-        lines = [line for step in self._job()["steps"]
-                 for line in (step.get("run") or "").splitlines()]
+        lines = [line for step in self._job()["steps"] for line in (step.get("run") or "").splitlines()]
         fetch_at = next(i for i, s in enumerate(lines) if "dev_records.py fetch" in s)
-        publish_at = next(i for i, s in enumerate(lines)
-                          if "dev_records.py publish --pages" in s)
+        publish_at = next(i for i, s in enumerate(lines) if "dev_records.py publish --pages" in s)
         assert fetch_at < publish_at, lines

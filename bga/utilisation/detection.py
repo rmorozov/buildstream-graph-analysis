@@ -7,6 +7,7 @@ already keys `task_intervals` by), so their output can be passed
 straight through to `UtilizationAnalyzer.analyze`'s `retry_tasks`/
 `rebuild_tasks` parameters unchanged.
 """
+
 from collections import defaultdict
 from typing import Optional
 

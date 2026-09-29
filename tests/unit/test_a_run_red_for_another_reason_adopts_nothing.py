@@ -6,6 +6,7 @@ every completion order, and each adopt job's `if:` is evaluated on the
 result. The tier reference and the touch map adopt from a green run;
 the flake ledger from a green run or one red at the drift step alone.
 """
+
 import itertools
 import json
 import os
@@ -19,11 +20,12 @@ import yaml
 REPO = pathlib.Path(__file__).resolve().parents[2]
 WORKFLOW = REPO / ".github/workflows/ci.yml"
 ADOPTS = ("tier-reference-adopt", "touch-map-adopt", "flake-ledger-adopt")
-MAIN = {"event_name": "push", "ref": "refs/heads/main",
-        "event": {"repository": {"default_branch": "main"}}}
+MAIN = {"event_name": "push", "ref": "refs/heads/main", "event": {"repository": {"default_branch": "main"}}}
 STATUS = re.compile(r"\b(success|failure|always|cancelled)\(")
-TOKEN = re.compile(r"\s*(?:(\d+(?:\.\d+)?)|'((?:[^']|'')*)'|"
-                   r"(==|!=|<=|>=|&&|\|\||[()!<>,.\[\]])|([A-Za-z_][\w-]*))")
+TOKEN = re.compile(
+    r"\s*(?:(\d+(?:\.\d+)?)|'((?:[^']|'')*)'|"
+    r"(==|!=|<=|>=|&&|\|\||[()!<>,.\[\]*])|([A-Za-z_][\w-]*))"
+)
 
 
 def _jobs():
@@ -47,14 +49,14 @@ class _Expr:
 
     def value(self):
         result = self._or()
-        assert self.at == len(self.tokens), self.tokens[self.at:]
+        assert self.at == len(self.tokens), self.tokens[self.at :]
         return result
 
     def _peek(self):
         return self.tokens[self.at][2] if self.at < len(self.tokens) else None
 
     def _take(self, op):
-        assert self._peek() == op, (op, self.tokens[self.at:])
+        assert self._peek() == op, (op, self.tokens[self.at :])
         self.at += 1
 
     def _or(self):
@@ -109,25 +111,39 @@ class _Expr:
                     self._take(",")
             self._take(")")
             if name == "format":
-                return re.sub(r"\{(\d+)\}", lambda m: str(args[1 + int(m[1])]),
-                              args[0])
+                return re.sub(r"\{(\d+)\}", lambda m: str(args[1 + int(m[1])]), args[0])
             if name == "fromJSON":
                 return json.loads(args[0])
+            if name == "contains":
+                hay, needle = args[0], str(args[1]).lower()
+                if isinstance(hay, list):
+                    return any(str(item).lower() == needle for item in hay)
+                return needle in str(hay).lower()
             return self.functions[name]()
-        value = self.context.get(name, "")
+        value, spread = self.context.get(name, ""), False
         while self._peek() == ".":
             self._take(".")
+            if self._peek() == "*":  # an object filter: `labels.*.name`
+                self._take("*")
+                value, spread = (value if isinstance(value, list) else []), True
+                continue
             key = self.tokens[self.at][3]
             self.at += 1
-            value = value.get(key, "") if isinstance(value, dict) else ""
+            if spread:
+                value = [v.get(key, "") for v in value if isinstance(v, dict)]
+            else:
+                value = value.get(key, "") if isinstance(value, dict) else ""
         return value
 
 
 def _status(results):
     """The four status functions, over the results they read."""
-    return {"success": lambda: all(r == "success" for r in results),
-            "failure": lambda: "failure" in results,
-            "always": lambda: True, "cancelled": lambda: False}
+    return {
+        "success": lambda: all(r == "success" for r in results),
+        "failure": lambda: "failure" in results,
+        "always": lambda: True,
+        "cancelled": lambda: False,
+    }
 
 
 def _holds(condition, context, functions):
@@ -138,8 +154,7 @@ def _holds(condition, context, functions):
 
 
 def _render(text, context):
-    return re.sub(r"\$\{\{(.*?)\}\}",
-                  lambda m: str(_Expr(m[1], context, {}).value()), text)
+    return re.sub(r"\$\{\{(.*?)\}\}", lambda m: str(_Expr(m[1], context, {}).value()), text)
 
 
 def _raises(step):
@@ -148,12 +163,24 @@ def _raises(step):
     return bool(lines) and lines[-1].strip() == "exit 1"
 
 
+def _continues(step, context):
+    """`continue-on-error`: a bool, or an expression (`UX-1121`)."""
+    value = step.get("continue-on-error", False)
+    if isinstance(value, str):
+        return bool(_Expr(value, context, {}).value())
+    return value is True
+
+
 def _cell(job, python, red, github, tmp_path):
     """One matrix cell: its result, and the outputs the runner sends."""
     steps, failed = {}, False
     for step in job["steps"]:
-        context = {"matrix": {"python-version": python}, "github": github,
-                   "steps": steps, "runner": {"temp": str(tmp_path)}}
+        context = {
+            "matrix": {"python-version": python},
+            "github": github,
+            "steps": steps,
+            "runner": {"temp": str(tmp_path)},
+        }
         functions = _status(["failure" if failed else "success"])
         outputs = {}
         if not _holds(step.get("if"), context, functions):
@@ -165,21 +192,23 @@ def _cell(job, python, red, github, tmp_path):
             if "GITHUB_OUTPUT" in (step.get("run") or ""):
                 out = tmp_path / "github_output"
                 out.write_text("", encoding="utf-8")
-                env = {k: _render(str(v), context)
-                       for k, v in (step.get("env") or {}).items()}
-                subprocess.run(["bash", "-e", "-c", _render(step["run"], context)],
-                               env={**os.environ, **env, "GITHUB_OUTPUT": str(out)},
-                               check=True)
-                outputs = dict(line.split("=", 1) for line in
-                               out.read_text(encoding="utf-8").splitlines())
-        excused = outcome == "failure" and step.get("continue-on-error") is True
+                env = {k: _render(str(v), context) for k, v in (step.get("env") or {}).items()}
+                subprocess.run(
+                    ["bash", "-e", "-c", _render(step["run"], context)],
+                    env={**os.environ, **env, "GITHUB_OUTPUT": str(out)},
+                    check=True,
+                )
+                outputs = dict(line.split("=", 1) for line in out.read_text(encoding="utf-8").splitlines())
+        excused = outcome == "failure" and _continues(step, context)
         failed = failed or (outcome == "failure" and not excused)
         if "id" in step:
-            steps[step["id"]] = {"outcome": outcome, "outputs": outputs,
-                                 "conclusion": "success" if excused else outcome}
+            steps[step["id"]] = {
+                "outcome": outcome,
+                "outputs": outputs,
+                "conclusion": "success" if excused else outcome,
+            }
     context = {"steps": steps, "matrix": {"python-version": python}}
-    sent = {key: _render(str(value), context)
-            for key, value in (job.get("outputs") or {}).items()}
+    sent = {key: _render(str(value), context) for key, value in (job.get("outputs") or {}).items()}
     # The runner skips an empty output (`JobExtension.cs`, "Skip output").
     return ("failure" if failed else "success"), {k: v for k, v in sent.items() if v}
 
@@ -187,16 +216,16 @@ def _cell(job, python, red, github, tmp_path):
 def _matrix_cells(jobs, github):
     """`UX-995`: the matrix is an expression now, evaluated per event -
     a pull request gets the newest Python alone, a push all four."""
-    return _Expr(jobs["test"]["strategy"]["matrix"]["python-version"],
-                {"github": github}, {}).value()
+    return _Expr(jobs["test"]["strategy"]["matrix"]["python-version"], {"github": github}, {}).value()
 
 
 def _adopted(red_by_cell, tmp_path, github=MAIN):
     """Which adopt jobs run, once per order the cells could finish in."""
     jobs = _jobs()
-    cells = {python: _cell(jobs["test"], python, red_by_cell.get(python, ()),
-                           github, tmp_path)
-             for python in _matrix_cells(jobs, github)}
+    cells = {
+        python: _cell(jobs["test"], python, red_by_cell.get(python, ()), github, tmp_path)
+        for python in _matrix_cells(jobs, github)
+    }
     result = "failure" if any(r == "failure" for r, _ in cells.values()) else "success"
     verdicts = set()
     for order in itertools.permutations(cells):
@@ -209,8 +238,7 @@ def _adopted(red_by_cell, tmp_path, github=MAIN):
             wanted = jobs[name]["needs"]
             wanted = [wanted] if isinstance(wanted, str) else wanted
             results = [needs[need]["result"] for need in wanted]
-            runs = _holds(jobs[name]["if"], {"needs": needs, "github": github},
-                          _status(results))
+            runs = _holds(jobs[name]["if"], {"needs": needs, "github": github}, _status(results))
             needs[name] = {"result": "success" if runs else "skipped"}
             if runs:
                 ran.append(name)
@@ -220,15 +248,13 @@ def _adopted(red_by_cell, tmp_path, github=MAIN):
 
 
 def _step(predicate):
-    names = [s["name"] for s in _jobs()["test"]["steps"]
-             if predicate(s.get("run") or "")]
+    names = [s["name"] for s in _jobs()["test"]["steps"] if predicate(s.get("run") or "")]
     assert len(names) == 1, names
     return names[0]
 
 
 def _suites():
-    return [s["name"] for s in _jobs()["test"]["steps"]
-            if re.search(r"\bmake test(?!-)", s.get("run") or "")]
+    return [s["name"] for s in _jobs()["test"]["steps"] if re.search(r"\bmake test(?!-)", s.get("run") or "")]
 
 
 DRIFT = _step(lambda run: "dev_tier_drift.py" in run and "--against" in run)
@@ -246,13 +272,16 @@ def test_a_green_pull_request_adopts_nothing(tmp_path):
     assert _adopted({}, tmp_path, github) == ("success", set())
 
 
-@pytest.mark.parametrize("red_by_cell", [
-    pytest.param({python: set(_suites()) for python in CELLS}, id="every-suite"),
-    pytest.param({CELLS[0]: set(_suites())}, id="one-suite"),
-    # `UX-995`: DRIFT and PERF moved onto 3.12.
-    pytest.param({"3.12": {DRIFT, PERF}}, id="drift-and-perf"),
-    pytest.param({"3.12": {DRIFT}, "3.11": set(_suites())}, id="drift-and-3.11"),
-])
+@pytest.mark.parametrize(
+    "red_by_cell",
+    [
+        pytest.param({python: set(_suites()) for python in CELLS}, id="every-suite"),
+        pytest.param({CELLS[0]: set(_suites())}, id="one-suite"),
+        # `UX-995`: DRIFT and PERF moved onto 3.12.
+        pytest.param({"3.12": {DRIFT, PERF}}, id="drift-and-perf"),
+        pytest.param({"3.12": {DRIFT}, "3.11": set(_suites())}, id="drift-and-3.11"),
+    ],
+)
 def test_a_run_red_for_another_reason_adopts_nothing(red_by_cell, tmp_path):
     assert _adopted(red_by_cell, tmp_path) == ("failure", set())
 
@@ -260,5 +289,4 @@ def test_a_run_red_for_another_reason_adopts_nothing(red_by_cell, tmp_path):
 def test_a_run_red_only_at_the_drift_step_appends_the_ledger_alone(tmp_path):
     """Still red - the gate's verdict is raised - and the ledger's rows are
     exactly that step's excursions."""
-    assert _adopted({"3.12": {DRIFT}}, tmp_path) == (
-        "failure", {"flake-ledger-adopt"})
+    assert _adopted({"3.12": {DRIFT}}, tmp_path) == ("failure", {"flake-ledger-adopt"})

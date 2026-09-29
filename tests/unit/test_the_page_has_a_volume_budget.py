@@ -37,6 +37,7 @@ The bounds are set with headroom against the measurement below rather
 than at it: a budget that reddens on the commit that lands it teaches
 the next person to raise it rather than to think.
 """
+
 import base64
 import collections
 import functools
@@ -437,10 +438,12 @@ def budget_for(elements):
             return row
     raise AssertionError(
         f"{elements:,} elements is past every size class in BUDGETS; "
-        f"decide a bound for that size rather than inheriting one")
+        f"decide a bound for that size rather than inheriting one"
+    )
 
 
-_LOOK = r"""
+_LOOK = (
+    r"""
 (() => {
   // `UX-399`: measure the page with the layout optimisation forced off.
   //
@@ -454,7 +457,9 @@ _LOOK = r"""
   // Turning it off here would hide its removal, so the other half of
   // this pair lives in `test_the_browser_is_the_library.py`: the
   // shipped stylesheet really does carry the optimisation.
-  """ + pages.FULL_LAYOUT_JS + r"""
+  """
+    + pages.FULL_LAYOUT_JS
+    + r"""
   const state = () => {
     const main = document.querySelector("main") || document.body;
     return {
@@ -501,6 +506,7 @@ _LOOK = r"""
   return { landed, opened, everything: state() };
 })()
 """
+)
 
 
 @pytest.fixture(scope="module")
@@ -523,10 +529,9 @@ LABELS = sorted(pages.FIXTURES) + ["scale", "xl", "xl_both"]
 
 #: The generated members, and what builds each.
 _GENERATED = {
-    "scale": pages.scale_run, "xl": pages.xl_run,
-    "xl_both": functools.partial(
-        pages.two_plane_run, shape=("--layers", "20", "--width", "200"),
-        name="xl_both"),
+    "scale": pages.scale_run,
+    "xl": pages.xl_run,
+    "xl_both": functools.partial(pages.two_plane_run, shape=("--layers", "20", "--width", "200"), name="xl_both"),
 }
 
 
@@ -554,8 +559,7 @@ def built():
     try:
         for label, fixture in pages.FIXTURES.items():
             into = root / label
-            made[label] = (pages.snapshot_copy(fixture, into),
-                           pages.export_page(fixture, into, f"{label}.html"))
+            made[label] = (pages.snapshot_copy(fixture, into), pages.export_page(fixture, into, f"{label}.html"))
         for label, build in _GENERATED.items():
             into = root / label
             run = build(into)
@@ -582,8 +586,7 @@ def sizes(built):
     """`{label: element count}`, read from the payload each page was
     exported from - so the class a page is measured against is a fact
     about the run rather than a constant beside the label."""
-    return {label: len(_report_in(page)["elements"]["element_durations"])
-            for label, (_run, page) in built.items()}
+    return {label: len(_report_in(page)["elements"]["element_durations"]) for label, (_run, page) in built.items()}
 
 
 @pytest.fixture(scope="module")
@@ -595,8 +598,7 @@ def looked(browser, booted):
     and the opened state from a single visit, so a second visit can only
     repeat it.
     """
-    return {label: browser.measure(booted[label], _LOOK, 1440, 900)
-            for label in LABELS}
+    return {label: browser.measure(booted[label], _LOOK, 1440, 900) for label in LABELS}
 
 
 @needs_browser
@@ -611,8 +613,8 @@ class TestBothBudgetsAreBound:
     def test_the_landed_page_is_short(self, looked, label):
         landed = looked[label]["landed"]
         assert landed["height"] <= LANDED_HEIGHT_PX, (
-            f"{label}: the page a reader lands on is {landed['height']} px, "
-            f"over the {LANDED_HEIGHT_PX} px budget")
+            f"{label}: the page a reader lands on is {landed['height']} px, over the {LANDED_HEIGHT_PX} px budget"
+        )
 
     def test_the_whole_page_is_bounded_too(self, looked, sizes, label):
         """The sibling `UX-347` did not have. A fold is not a licence:
@@ -627,17 +629,19 @@ class TestBothBudgetsAreBound:
         assert opened["nodes"] <= nodes, (
             f"{label}: {opened['nodes']} DOM elements, over the {nodes} "
             f"budget for runs up to {klass} elements - the measure that "
-            f"sees a table growing, which height and words do not")
+            f"sees a table growing, which height and words do not"
+        )
         assert opened["height"] <= height, (
             f"{label}: the whole document is {opened['height']} px, over "
             f"the {height} px budget for runs up to {klass} elements - "
-            f"folding it further is not an answer to this clause")
+            f"folding it further is not an answer to this clause"
+        )
         assert opened["words"] <= words, (
-            f"{label}: {opened['words']} words, over the {words} budget "
-            f"for runs up to {klass} elements")
+            f"{label}: {opened['words']} words, over the {words} budget for runs up to {klass} elements"
+        )
         assert opened["controls"] <= controls, (
-            f"{label}: {opened['controls']} controls, over the {controls} "
-            f"budget for runs up to {klass} elements")
+            f"{label}: {opened['controls']} controls, over the {controls} budget for runs up to {klass} elements"
+        )
 
     def test_the_page_still_folds(self, looked, label):
         """Without this, the landed clause is satisfied by a page that
@@ -669,15 +673,17 @@ class TestBothBudgetsAreBound:
         out = looked[label]
         opened = out["opened"]
         for measured, bound, name in (
-                (out["landed"]["height"], LANDED_HEIGHT_PX, "landed height"),
-                (opened["height"], height, "opened height"),
-                (opened["words"], words, "words"),
-                (opened["controls"], controls, "controls"),
-                (opened["nodes"], nodes, "DOM elements")):
+            (out["landed"]["height"], LANDED_HEIGHT_PX, "landed height"),
+            (opened["height"], height, "opened height"),
+            (opened["words"], words, "words"),
+            (opened["controls"], controls, "controls"),
+            (opened["nodes"], nodes, "DOM elements"),
+        ):
             assert measured * 2 > bound, (
                 f"the {name} budget for runs up to {klass} elements is "
                 f"{bound} and {label} measures {measured}; a bound with "
-                f"that much slack is a number nobody will ever meet")
+                f"that much slack is a number nobody will ever meet"
+            )
 
 
 #: The rail's own emptiness check (UX-1023): a child of `nav.toc` that
@@ -718,23 +724,20 @@ class TestTheCompactSizeClassIsBoundToo:
         bound = COMPACT_LANDED_HEIGHT_PX[label]
         assert out["landed"]["height"] <= bound, (
             f"{label} at 390x844: the page a reader lands on is "
-            f"{out['landed']['height']} px, over the {bound} px budget")
+            f"{out['landed']['height']} px, over the {bound} px budget"
+        )
 
     @pytest.mark.parametrize("label", sorted(pages.FIXTURES))
     def test_no_rail_child_is_empty_chrome(self, browser, booted, label):
-        bad = browser.measure(
-            booted[label], _RAIL_CHILDREN_ARE_NEVER_EMPTY, 390, 844)
-        assert bad == [], (
-            f"{label} at 390x844: {bad} in nav.toc renders neither text "
-            f"nor a control")
+        bad = browser.measure(booted[label], _RAIL_CHILDREN_ARE_NEVER_EMPTY, 390, 844)
+        assert bad == [], f"{label} at 390x844: {bad} in nav.toc renders neither text nor a control"
 
 
 @pytest.fixture(scope="module")
 def two_plane(built):
     """`{label: whether its run has Plane 2's report beside it}`, read
     off the tree `sibling_plane2` reads (`UX-1050`)."""
-    return {label: run_store.sibling_plane2(str(run)) is not None
-            for label, (run, _page) in built.items()}
+    return {label: run_store.sibling_plane2(str(run)) is not None for label, (run, _page) in built.items()}
 
 
 class TestEverySizeClassIsActuallyMeasured:
@@ -756,18 +759,18 @@ class TestEverySizeClassIsActuallyMeasured:
         assert not missing, (
             f"no run in the population falls in the class(es) bounded at "
             f"{missing} elements - those bounds govern nothing. The "
-            f"population is {sizes}")
+            f"population is {sizes}"
+        )
 
-    def test_every_class_is_measured_with_both_planes(self, sizes,
-                                                      two_plane):
+    def test_every_class_is_measured_with_both_planes(self, sizes, two_plane):
         """`UX-1050` (§3f): a class met only by Plane 1 alone was never
         measured in the mode the tool recommends."""
-        covered = {budget_for(sizes[label])[0] for label in LABELS
-                   if two_plane[label]}
+        covered = {budget_for(sizes[label])[0] for label in LABELS if two_plane[label]}
         missing = [row[0] for row in BUDGETS if row[0] not in covered]
         assert not missing, (
             f"no two-plane run falls in the class(es) bounded at {missing} "
-            f"elements; Plane 2 beside each run: {two_plane}")
+            f"elements; Plane 2 beside each run: {two_plane}"
+        )
 
     def test_a_run_past_every_class_is_refused_and_not_clamped(self):
         """The other half of the population claim, and the second one
@@ -793,10 +796,12 @@ class TestEverySizeClassIsActuallyMeasured:
         assert budget_for(biggest)[0] == largest, (
             f"the biggest run measured has {biggest:,} elements and falls "
             f"in the class bounded at {budget_for(biggest)[0]:,} - nothing "
-            f"reaches the {largest:,} class these bounds were written for")
+            f"reaches the {largest:,} class these bounds were written for"
+        )
         assert biggest > 100, (
             f"{biggest:,} elements is not a scale probe; the item this "
-            f"clause belongs to is about measuring where the page is used")
+            f"clause belongs to is about measuring where the page is used"
+        )
 
 
 @needs_browser
@@ -821,8 +826,7 @@ class TestRepetitionIsSpentFromTheSameBudget:
         blocks = out["everything"]["blocks"]
         counts = collections.Counter(blocks)
         total = sum(len(text) for text in blocks)
-        repeated = sum(len(text) * (n - 1) for text, n in counts.items()
-                       if n > 1)
+        repeated = sum(len(text) * (n - 1) for text, n in counts.items() if n > 1)
         return counts, total, repeated
 
     def test_repetition_is_under_the_budget(self, browser, booted, label):
@@ -832,8 +836,8 @@ class TestRepetitionIsSpentFromTheSameBudget:
         assert share <= REPEATED_SHARE_MAX, (
             f"{label}: {repeated} of {total} block characters are said "
             f"more than once ({share:.1%}), over the "
-            f"{REPEATED_SHARE_MAX:.0%} budget. Worst: "
-            + "; ".join(f"x{n} {text[:50]!r}" for text, n in worst))
+            f"{REPEATED_SHARE_MAX:.0%} budget. Worst: " + "; ".join(f"x{n} {text[:50]!r}" for text, n in worst)
+        )
 
     def test_nothing_was_deleted_to_meet_it(self, browser, booted, label):
         """The discriminating half. The cheapest way to drive a
@@ -844,10 +848,10 @@ class TestRepetitionIsSpentFromTheSameBudget:
         assert len(counts) >= floor, (
             f"{label} publishes {len(counts)} distinct blocks, under the "
             f"{floor} measured when this budget was set - a claim was "
-            f"lost rather than a copy")
+            f"lost rather than a copy"
+        )
 
-    def test_the_count_is_of_blocks_and_not_sentences(self, browser,
-                                                      booted, label):
+    def test_the_count_is_of_blocks_and_not_sentences(self, browser, booted, label):
         """The instrument, asserted. Splitting the page into sentences
         found **zero** duplicates when this was filed, because the
         repeated blocks sit inside different surrounding text. A guard
@@ -855,11 +859,11 @@ class TestRepetitionIsSpentFromTheSameBudget:
         out = browser.measure(booted[label], _LOOK, 1440, 900)
         blocks = out["everything"]["blocks"]
         assert blocks, f"{label}: the block walk found nothing"
-        assert all(len(text) > BLOCK_FLOOR_CHARS for text in blocks), (
-            "a block under the label floor reached the count")
+        assert all(len(text) > BLOCK_FLOOR_CHARS for text in blocks), "a block under the label floor reached the count"
         assert len(set(blocks)) < len(blocks), (
             f"{label} has no repeated block at all - either the page "
-            f"changed profoundly or this walk has stopped finding them")
+            f"changed profoundly or this walk has stopped finding them"
+        )
 
 
 @needs_browser
@@ -879,9 +883,7 @@ class TestTheBudgetIsWrittenWhereItIsRead:
         for row in BUDGETS:
             numbers.extend(row)
         for number in numbers:
-            assert f"{number:,}" in section, (
-                f"§3e does not state the {number:,} bound this file "
-                f"asserts")
+            assert f"{number:,}" in section, f"§3e does not state the {number:,} bound this file asserts"
 
     def test_the_summary_rows_match_the_budgets_structurally(self):
         """`UX-840`: the membership clause above is satisfied by a
@@ -903,26 +905,25 @@ class TestTheBudgetIsWrittenWhereItIsRead:
         section = text.split("## 3e.", 1)[1].split("\n## ", 1)[0]
         row_re = re.compile(
             r"budget, to ([\d,]+) elts\s+([\d,]+)\s+([\d,]+)\s+([\d,]+)"
-            r"\s+([\d,]+)\s+([\d,]+)")
+            r"\s+([\d,]+)\s+([\d,]+)"
+        )
         found = {}
         for match in row_re.finditer(section):
             klass = int(match.group(1).replace(",", ""))
-            landed, opened, words, controls, nodes = (
-                int(group.replace(",", "")) for group in match.groups()[1:])
+            landed, opened, words, controls, nodes = (int(group.replace(",", "")) for group in match.groups()[1:])
             found[klass] = (landed, opened, words, controls, nodes)
         for row in BUDGETS:
             klass, opened, words, controls, nodes = row
-            assert klass in found, (
-                f"§3e states no 'budget, to {klass:,} elts' summary row "
-                f"for a class this file bounds")
+            assert klass in found, f"§3e states no 'budget, to {klass:,} elts' summary row for a class this file bounds"
             landed, *rest = found[klass]
             assert tuple(rest) == (opened, words, controls, nodes), (
-                f"§3e's 'to {klass:,} elts' row reads "
-                f"{found[klass][1:]}, not this file's {row[1:]}")
+                f"§3e's 'to {klass:,} elts' row reads {found[klass][1:]}, not this file's {row[1:]}"
+            )
             assert landed == LANDED_HEIGHT_PX, (
                 f"§3e's 'to {klass:,} elts' row states a landed height "
                 f"of {landed:,} px; every class shares the one landed "
-                f"bound, {LANDED_HEIGHT_PX:,}")
+                f"bound, {LANDED_HEIGHT_PX:,}"
+            )
 
     def test_the_size_classes_are_stated_too(self):
         """A budget per class is only readable if the guide says which
@@ -932,9 +933,7 @@ class TestTheBudgetIsWrittenWhereItIsRead:
         section = text.split("## 3e.", 1)[1].split("\n## ", 1)[0]
         assert len(BUDGETS) > 1, "one class is not a per-size budget"
         for row in BUDGETS:
-            assert f"{row[0]:,}" in section, (
-                f"§3e does not name the size class for runs up to "
-                f"{row[0]:,} elements")
+            assert f"{row[0]:,}" in section, f"§3e does not name the size class for runs up to {row[0]:,} elements"
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -33,6 +33,7 @@ answers to the three questions the item posed are:
    exclusion's *mechanism* — counted, named, with a reason — but not
    the host class's refusal, because the runs are not incomparable.
 """
+
 import json
 import pathlib
 
@@ -50,24 +51,26 @@ def _snapshot(root, name, contracts, duration_us=1_000_000):
     run.mkdir(parents=True)
     report = {"total_duration_us": duration_us}
     if contracts is not None:
-        report["producer"] = {"tool": "bga", "version": "0.2.0",
-                              "contracts": list(contracts)}
+        report["producer"] = {"tool": "bga", "version": "0.2.0", "contracts": list(contracts)}
     (run / "report.json").write_text(json.dumps(report))
-    return {"path": str(snapshot), "total_duration_us": duration_us,
-            "cache_hit_rate": 0.5, "host_class": "x86_64/linux",
-            "snapshot": name, "stamp": f"2026-08-24T0{len(name)}:00:00Z"}
+    return {
+        "path": str(snapshot),
+        "total_duration_us": duration_us,
+        "cache_hit_rate": 0.5,
+        "host_class": "x86_64/linux",
+        "snapshot": name,
+        "stamp": f"2026-08-24T0{len(name)}:00:00Z",
+    }
 
 
 class TestTheCompositionIsPublished:
     def test_one_contract_set_says_so(self, tmp_path):
         from bga.store_aggregate import _contract_composition
 
-        rows = [_snapshot(tmp_path, f"s{i}", ["analyze/v2", "store/v1"])
-                for i in range(3)]
+        rows = [_snapshot(tmp_path, f"s{i}", ["analyze/v2", "store/v1"]) for i in range(3)]
         out = _contract_composition(rows)
         assert out["mixed"] is False
-        assert out["sets"] == [
-            {"contracts": ["analyze/v2", "store/v1"], "runs": 3}]
+        assert out["sets"] == [{"contracts": ["analyze/v2", "store/v1"], "runs": 3}]
         assert out["unstamped_runs"] == 0
 
     def test_two_contract_sets_are_both_named(self, tmp_path):
@@ -76,14 +79,13 @@ class TestTheCompositionIsPublished:
         from bga.store_aggregate import _contract_composition
 
         rows = [_snapshot(tmp_path, f"old{i}", ["analyze/v2"]) for i in range(2)]
-        rows += [_snapshot(tmp_path, f"new{i}", ["analyze/v2", "store/v1"])
-                 for i in range(7)]
+        rows += [_snapshot(tmp_path, f"new{i}", ["analyze/v2", "store/v1"]) for i in range(7)]
         out = _contract_composition(rows)
         assert out["mixed"] is True
         assert [entry["runs"] for entry in out["sets"]] == [7, 2], out
         assert out["sets"][0]["contracts"] == ["analyze/v2", "store/v1"], (
-            "the commonest set is not first, so a reader cannot tell which "
-            "is the minority")
+            "the commonest set is not first, so a reader cannot tell which is the minority"
+        )
 
     def test_an_unstamped_run_is_an_explicit_unknown(self, tmp_path):
         """Every artifact predating `UX-249` carries no producer.
@@ -91,13 +93,12 @@ class TestTheCompositionIsPublished:
         the history it protects."""
         from bga.store_aggregate import _contract_composition
 
-        rows = [_snapshot(tmp_path, "a", None),
-                _snapshot(tmp_path, "b", ["analyze/v2"])]
+        rows = [_snapshot(tmp_path, "a", None), _snapshot(tmp_path, "b", ["analyze/v2"])]
         out = _contract_composition(rows)
         assert out["unstamped_runs"] == 1
         assert out["mixed"] is False, (
-            "an unstamped run was counted as a second contract set - it is "
-            "an unknown, not a disagreement")
+            "an unstamped run was counted as a second contract set - it is an unknown, not a disagreement"
+        )
 
     def test_it_names_the_contracts_it_reads(self):
         """The half that makes the rest meaningful: `whatif/v1` moving
@@ -115,9 +116,7 @@ class TestItRidesWithTheDocument:
     def test_the_aggregate_carries_the_composition(self, tmp_path):
         from bga.store_aggregate import aggregate
 
-        rows = [_snapshot(tmp_path, f"s{i}", ["analyze/v2", "store/v1"],
-                          duration_us=1_000_000 + i)
-                for i in range(3)]
+        rows = [_snapshot(tmp_path, f"s{i}", ["analyze/v2", "store/v1"], duration_us=1_000_000 + i) for i in range(3)]
         document = aggregate({"project": "p", "snapshots": rows})
         assert "contract_composition" in document
         assert document["contract_composition"]["sets"][0]["runs"] == 3
@@ -127,13 +126,11 @@ class TestItRidesWithTheDocument:
         viewer cannot render and a reader cannot look up."""
         from bga import schemas
 
-        sentence = schemas.description(
-            schemas.STORE_AGGREGATE, "contract_composition")
+        sentence = schemas.description(schemas.STORE_AGGREGATE, "contract_composition")
         assert "movement in the contracts" in sentence, sentence
         assert "contract set" in sentence
         # And the sub-fields a reader will actually look up.
-        assert "explicit unknown" in schemas.description(
-            schemas.STORE_AGGREGATE, "contract_composition.unstamped_runs")
+        assert "explicit unknown" in schemas.description(schemas.STORE_AGGREGATE, "contract_composition.unstamped_runs")
 
 
 class TestTheRuleIsTheOneThatWasArgued:
@@ -146,7 +143,8 @@ class TestTheRuleIsTheOneThatWasArgued:
         block = block.split("\ndef ", 1)[0]
         assert "version" not in block, (
             "the composition reads the producer's version; UX-250 settled "
-            "that comparability follows contract movement, never the number")
+            "that comparability follows contract movement, never the number"
+        )
 
     def test_the_argument_is_written_where_the_rule_is(self):
         """A rule with no argument beside it is re-litigated by the next
@@ -154,8 +152,8 @@ class TestTheRuleIsTheOneThatWasArgued:
         source = (REPO / "bga/store_aggregate.py").read_text(encoding="utf-8")
         head = source.split("AGGREGATE_READS", 1)[0]
         assert "UX-253" in head and "UX-234" in head and "UX-250" in head, (
-            "the contract-set rule no longer cites the two precedents it "
-            "was argued against")
+            "the contract-set rule no longer cites the two precedents it was argued against"
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

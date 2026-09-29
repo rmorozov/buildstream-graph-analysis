@@ -21,6 +21,7 @@ is `test_the_styleguide_names_its_guards.py` and the rules-card clauses
 in `test_the_agent_configuration_holds.py`, both ways, and two guards
 on one claim is how the two disagree.
 """
+
 import functools
 import pathlib
 import posixpath
@@ -64,8 +65,7 @@ LEDGER_FLOOR = 3
 def _tracked():
     """`UX-577`: git's list, never a glob - the main checkout holds
     `.claude/worktrees/<agent>/`, a whole second tree."""
-    out = subprocess.run(["git", "ls-files"], cwd=REPO, check=True,
-                         capture_output=True, text=True).stdout
+    out = subprocess.run(["git", "ls-files"], cwd=REPO, check=True, capture_output=True, text=True).stdout
     return frozenset(out.splitlines())
 
 
@@ -84,7 +84,7 @@ def _tables(text):
         if not DELIMITER.match(lines[n + 1].strip()):
             continue
         body = []
-        for after in lines[n + 2:]:
+        for after in lines[n + 2 :]:
             if not after.startswith("|"):
                 break
             body.append(after)
@@ -94,9 +94,11 @@ def _tables(text):
 
 def _named_guards(cell):
     """The tracked `tests/unit` modules a cell names."""
-    return [one for one in
-            (pathlib.Path(name).name for name in GUARD_FILE.findall(cell))
-            if f"tests/unit/{one}" in _tracked()]
+    return [
+        one
+        for one in (pathlib.Path(name).name for name in GUARD_FILE.findall(cell))
+        if f"tests/unit/{one}" in _tracked()
+    ]
 
 
 def _guard_columns(text):
@@ -133,8 +135,8 @@ def _registry():
     text = STYLE_GUIDE.read_text(encoding="utf-8")
     heading = RULE_HEADING.search(text)
     assert heading, "the style guide states no guard-ledger rule"
-    body = text[heading.end():]
-    body = body[:body.index("\n## ")] if "\n## " in body else body
+    body = text[heading.end() :]
+    body = body[: body.index("\n## ")] if "\n## " in body else body
     out = {}
     for header, rows in _tables(body):
         if [one.lower() for one in header] != ["ledger", "link"]:
@@ -146,8 +148,8 @@ def _registry():
             target = found.group(2) or found.group(3)
             # A registry link is relative to the guide that holds it.
             rel = posixpath.normpath(
-                posixpath.join(posixpath.dirname(STYLE_GUIDE.relative_to(
-                    REPO).as_posix()), target))
+                posixpath.join(posixpath.dirname(STYLE_GUIDE.relative_to(REPO).as_posix()), target)
+            )
             if CITATION_FORM.search(link):
                 out[rel] = ("citation", CITATION_FORM.search(link).group(0))
             elif MARKER_FORM.search(link):
@@ -193,13 +195,11 @@ def _headings(rel):
 class TestTheRegistryIsReadable:
     def test_the_rule_declares_two_ledgers_and_two_links(self):
         registry = _registry()
-        assert len(registry) == 2, (
-            f"the guard-ledger rule declares {len(registry)} ledgers: "
-            f"{sorted(registry)}")
+        assert len(registry) == 2, f"the guard-ledger rule declares {len(registry)} ledgers: {sorted(registry)}"
         kinds = sorted(kind for kind, _ in registry.values())
         assert kinds == ["citation", "marker"], (
-            f"the rule's links are {kinds}; it must name both mechanisms, "
-            f"so a third ledger has two to choose between")
+            f"the rule's links are {kinds}; it must name both mechanisms, so a third ledger has two to choose between"
+        )
         for rel in registry:
             assert rel in _tracked(), f"the rule names {rel}, which git has not"
 
@@ -210,8 +210,7 @@ class TestEachLedgerUsesItsDeclaredLink:
     hold each row, and this holds the convention."""
 
     def _ledger(self, kind):
-        found = [rel for rel, (declared, _) in _registry().items()
-                 if declared == kind]
+        found = [rel for rel, (declared, _) in _registry().items() if declared == kind]
         assert len(found) == 1, f"{len(found)} ledgers declare {kind}"
         return found[0], _registry()[found[0]][1]
 
@@ -219,10 +218,8 @@ class TestEachLedgerUsesItsDeclaredLink:
         rel, probe = self._ledger("citation")
         rows = _section_rows(rel)
         assert len(rows) >= 30, f"{rel}'s ledger is {len(rows)} rows"
-        named = {section: _named_guards(cell)
-                 for section, cell in rows.items() if _named_guards(cell)}
-        assert len(named) >= 20, (
-            f"only {len(named)} of {rel}'s rows name a guard")
+        named = {section: _named_guards(cell) for section, cell in rows.items() if _named_guards(cell)}
+        assert len(named) >= 20, f"only {len(named)} of {rel}'s rows name a guard"
         assert len({one for guards in named.values() for one in guards}) >= 30
         missing = []
         for section, guards in sorted(named.items()):
@@ -230,32 +227,29 @@ class TestEachLedgerUsesItsDeclaredLink:
             for name in guards:
                 text = (REPO / "tests/unit" / name).read_text(encoding="utf-8")
                 if not re.search(re.escape(want) + r"(?![0-9a-g])", text):
-                    missing.append(f"{rel} row {want} names {name}, which does "
-                                   f"not cite it")
-        assert not missing, (
-            f"{rel} is linked by a {probe} citation in the guard's own "
-            f"text:\n" + "\n".join(missing))
+                    missing.append(f"{rel} row {want} names {name}, which does not cite it")
+        assert not missing, f"{rel} is linked by a {probe} citation in the guard's own text:\n" + "\n".join(missing)
 
     def test_the_marker_ledger_is_linked_by_markers(self):
         rel, probe = self._ledger("marker")
         rows = _sentence_rows(rel)
         assert len(rows) >= 25, f"{rel}'s ledger is {len(rows)} rows"
         named = sorted({one for _, cell in rows for one in _named_guards(cell)})
-        assert len(named) >= 8, (
-            f"only {len(named)} of {rel}'s rows name a tracked guard")
+        assert len(named) >= 8, f"only {len(named)} of {rel}'s rows name a tracked guard"
         # A row whose marker has not landed yet is a debt the card's own
         # guard already carries, with the reason and a clause that reds
         # when it goes stale. Anything else skipped the convention.
-        missing = [name for name in named
-                   if probe not in (REPO / "tests/unit" / name).read_text(
-                       encoding="utf-8")
-                   and name not in CARD_GUARD.UNMARKED]
+        missing = [
+            name
+            for name in named
+            if probe not in (REPO / "tests/unit" / name).read_text(encoding="utf-8") and name not in CARD_GUARD.UNMARKED
+        ]
         assert not missing, (
-            f"{rel} is linked by a `{probe}<slug>` line in the guard, and "
-            f"these name no such line: {missing}")
+            f"{rel} is linked by a `{probe}<slug>` line in the guard, and these name no such line: {missing}"
+        )
         assert len(named) - len(CARD_GUARD.UNMARKED) >= 8, (
-            f"{len(CARD_GUARD.UNMARKED)} of {len(named)} guards are deferred; "
-            f"the ledger is a list of intentions")
+            f"{len(CARD_GUARD.UNMARKED)} of {len(named)} guards are deferred; the ledger is a list of intentions"
+        )
 
 
 class TestNoThirdLedgerInventsAThirdLink:
@@ -265,14 +259,17 @@ class TestNoThirdLedgerInventsAThirdLink:
     appears."""
 
     def test_the_tree_has_only_the_declared_ledgers(self):
-        found = sorted(rel for rel in _tracked()
-                       if rel.endswith(".md") and (REPO / rel).is_file()
-                       and _ledger_weight(rel) >= LEDGER_FLOOR)
+        found = sorted(
+            rel
+            for rel in _tracked()
+            if rel.endswith(".md") and (REPO / rel).is_file() and _ledger_weight(rel) >= LEDGER_FLOOR
+        )
         assert found == sorted(_registry()), (
             "these documents map rows to guards and the style guide's "
             "guard-ledger rule does not say how they link: "
             f"{sorted(set(found) - set(_registry()))}; declared and no "
-            f"longer a ledger: {sorted(set(_registry()) - set(found))}")
+            f"longer a ledger: {sorted(set(_registry()) - set(found))}"
+        )
 
     def test_the_scan_reads_a_population(self):
         """Every clause above passes on a scan that finds nothing."""
@@ -286,38 +283,27 @@ class TestTheRuleStatesTheTestForChoosing:
     def test_the_rule_asks_a_question(self):
         text = STYLE_GUIDE.read_text(encoding="utf-8")
         heading = RULE_HEADING.search(text)
-        body = text[heading.end():]
-        body = body[:body.index("\n## ")]
-        assert "?" in body, (
-            "the guard-ledger rule names two links and no test for "
-            "choosing between them")
+        body = text[heading.end() :]
+        body = body[: body.index("\n## ")]
+        assert "?" in body, "the guard-ledger rule names two links and no test for choosing between them"
 
     def test_the_stated_test_separates_the_two_ledgers(self):
         """The rule says the citation works where the row *is* a
         numbered section. Held as a property, so a rule stating a test
         that does not discriminate cannot pass."""
         registry = _registry()
-        cited = [rel for rel, (kind, _) in registry.items()
-                 if kind == "citation"][0]
-        marked = [rel for rel, (kind, _) in registry.items()
-                  if kind == "marker"][0]
+        cited = [rel for rel, (kind, _) in registry.items() if kind == "citation"][0]
+        marked = [rel for rel, (kind, _) in registry.items() if kind == "marker"][0]
         sections = _section_rows(cited)
-        assert sections, (
-            f"{cited} is linked by citation and its rows carry no id to "
-            f"cite; the rule's test says they do")
+        assert sections, f"{cited} is linked by citation and its rows carry no id to cite; the rule's test says they do"
         stray = sorted(set(sections) - _headings(cited))
-        assert not stray, (
-            f"{cited} is linked by citation and these rows are not "
-            f"sections it numbers: {stray}")
+        assert not stray, f"{cited} is linked by citation and these rows are not sections it numbers: {stray}"
         sentences = _sentence_rows(marked)
-        assert sentences, (
-            f"{marked} is linked by a declared line and has no rows the "
-            f"rule's test can be asked about")
-        numbered = [rule for rule, _ in sentences
-                    if rule.lstrip("§") in _headings(marked)]
+        assert sentences, f"{marked} is linked by a declared line and has no rows the rule's test can be asked about"
+        numbered = [rule for rule, _ in sentences if rule.lstrip("§") in _headings(marked)]
         assert not numbered, (
-            f"{marked}'s rows carry ids after all ({numbered}); the rule "
-            f"says they do not, and a citation would do")
+            f"{marked}'s rows carry ids after all ({numbered}); the rule says they do not, and a citation would do"
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

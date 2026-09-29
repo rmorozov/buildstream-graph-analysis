@@ -2,6 +2,7 @@
 test, not a hand-simulation, since the whole point of this script is to
 be run directly by a developer.
 """
+
 import subprocess
 from pathlib import Path
 
@@ -24,7 +25,10 @@ def test_default_mode_produces_a_real_report_and_exits_zero():
 
 def test_large_mode_produces_a_real_report_and_exits_zero():
     proc = subprocess.run(
-        [str(SCRIPT), "--large"], capture_output=True, text=True, cwd=REPO_ROOT,
+        [str(SCRIPT), "--large"],
+        capture_output=True,
+        text=True,
+        cwd=REPO_ROOT,
     )
     assert proc.returncode == 0, proc.stderr
     assert "Build Efficiency Report" in proc.stdout
@@ -39,7 +43,10 @@ def test_runs_correctly_regardless_of_invocation_cwd():
     """A developer might run this from anywhere, not just the repo
     root - the script must cd to REPO_ROOT itself."""
     proc = subprocess.run(
-        [str(SCRIPT)], capture_output=True, text=True, cwd=str(Path.home()),
+        [str(SCRIPT)],
+        capture_output=True,
+        text=True,
+        cwd=str(Path.home()),
     )
     assert proc.returncode == 0, proc.stderr
     assert "Build Efficiency Report" in proc.stdout
@@ -47,7 +54,10 @@ def test_runs_correctly_regardless_of_invocation_cwd():
 
 def test_make_dev_run_target_works():
     proc = subprocess.run(
-        ["make", "dev-run"], capture_output=True, text=True, cwd=REPO_ROOT,
+        ["make", "dev-run"],
+        capture_output=True,
+        text=True,
+        cwd=REPO_ROOT,
     )
     assert proc.returncode == 0, proc.stderr
     assert "Build Efficiency Report" in proc.stdout

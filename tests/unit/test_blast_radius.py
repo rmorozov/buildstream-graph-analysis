@@ -9,6 +9,7 @@ durations of the elements in `graph_analysis['reachable_downstream']`
 (already computed once, O(N+E), by `analyze_graph` - reused here rather
 than re-traversed per element).
 """
+
 import json
 
 from bga import BuildEfficiencyAnalyzer
@@ -18,8 +19,11 @@ def _write_run_dir(tmp_path, elements, dependencies, spans):
     run_dir = tmp_path / "run"
     run_dir.mkdir()
     run_context = {
-        "trace_epsilon_us": 1000, "wall_start_us": 0, "wall_end_us": 5000000,
-        "max_jobs": len(elements), "resource_capacities": {"PROCESS": len(elements)},
+        "trace_epsilon_us": 1000,
+        "wall_start_us": 0,
+        "wall_end_us": 5000000,
+        "max_jobs": len(elements),
+        "resource_capacities": {"PROCESS": len(elements)},
     }
     graph = {
         "elements": [{"uid": uid, "requested_target": is_target} for uid, is_target in elements],
@@ -41,26 +45,62 @@ def test_equal_downstream_count_different_weighted_duration(tmp_path):
     run_dir = _write_run_dir(
         tmp_path,
         elements=[
-            ("light.bst", False), ("light-dep-a.bst", True), ("light-dep-b.bst", True),
-            ("heavy.bst", False), ("heavy-dep-a.bst", True), ("heavy-dep-b.bst", True),
+            ("light.bst", False),
+            ("light-dep-a.bst", True),
+            ("light-dep-b.bst", True),
+            ("heavy.bst", False),
+            ("heavy-dep-a.bst", True),
+            ("heavy-dep-b.bst", True),
         ],
         dependencies=[
-            ("light.bst", "light-dep-a.bst"), ("light.bst", "light-dep-b.bst"),
-            ("heavy.bst", "heavy-dep-a.bst"), ("heavy.bst", "heavy-dep-b.bst"),
+            ("light.bst", "light-dep-a.bst"),
+            ("light.bst", "light-dep-b.bst"),
+            ("heavy.bst", "heavy-dep-a.bst"),
+            ("heavy.bst", "heavy-dep-b.bst"),
         ],
         spans=[
-            {"task_key": "light.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 1000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "light-dep-a.bst|BUILD|BUILD|0", "ts_us": 1000, "dur_us": 1000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "light-dep-b.bst|BUILD|BUILD|0", "ts_us": 1000, "dur_us": 1000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "heavy.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 1000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "heavy-dep-a.bst|BUILD|BUILD|0", "ts_us": 1000, "dur_us": 10000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "heavy-dep-b.bst|BUILD|BUILD|0", "ts_us": 1000, "dur_us": 10000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
+            {
+                "task_key": "light.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 1000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "light-dep-a.bst|BUILD|BUILD|0",
+                "ts_us": 1000,
+                "dur_us": 1000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "light-dep-b.bst|BUILD|BUILD|0",
+                "ts_us": 1000,
+                "dur_us": 1000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "heavy.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 1000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "heavy-dep-a.bst|BUILD|BUILD|0",
+                "ts_us": 1000,
+                "dur_us": 10000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "heavy-dep-b.bst|BUILD|BUILD|0",
+                "ts_us": 1000,
+                "dur_us": 10000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
         ],
     )
     analyzer = BuildEfficiencyAnalyzer(run_dir)
@@ -85,8 +125,13 @@ def test_leaf_element_has_zero_weighted_duration(tmp_path):
         elements=[("leaf.bst", True)],
         dependencies=[],
         spans=[
-            {"task_key": "leaf.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 50000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
+            {
+                "task_key": "leaf.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 50000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
         ],
     )
     analyzer = BuildEfficiencyAnalyzer(run_dir)

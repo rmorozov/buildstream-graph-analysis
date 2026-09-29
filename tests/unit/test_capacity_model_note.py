@@ -11,6 +11,7 @@ own acceptance test requires this in both `--format text` and
 `--format json` output - `AnalysisResult.floors['capacity_model_note']`
 is the single source of truth both formatters read from.
 """
+
 import json
 
 from bga import BuildEfficiencyAnalyzer
@@ -27,8 +28,13 @@ def _write_run_dir(tmp_path, name, run_context):
     }
     trace = {
         "spans": [
-            {"task_key": "a.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 1000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
+            {
+                "task_key": "a.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 1000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
         ],
         "phases": [],
     }

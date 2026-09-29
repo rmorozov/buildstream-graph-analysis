@@ -11,6 +11,7 @@ So this reads the other direction, derived rather than restated: the
 closed filings are the population, each row's last cell is the claim,
 and a role the corpus serves whose row names nobody is the defect.
 """
+
 import functools
 import pathlib
 import re
@@ -54,16 +55,18 @@ def _filings():
     an older commit, and a walk would count it twice (`UX-577`).
     """
     listed = subprocess.run(
-        ["git", "ls-files", SCENARIOS + "/UX-*.md"],
-        cwd=REPO, check=True, capture_output=True, text=True).stdout.split()
+        ["git", "ls-files", SCENARIOS + "/UX-*.md"], cwd=REPO, check=True, capture_output=True, text=True
+    ).stdout.split()
     out = {}
     for relative in listed:
         number = int(re.search(r"UX-0*(\d+)-", relative).group(1))
         header = (REPO / relative).read_text(encoding="utf-8").split("\n## ", 1)[0]
         serves = [line for line in header.splitlines() if "**Serves:**" in line]
-        roles = frozenset(
-            re.findall(r"\bR\d+\b", serves[0].split("**Serves:**")[1].split("|")[0])
-        ) if serves else frozenset()
+        roles = (
+            frozenset(re.findall(r"\bR\d+\b", serves[0].split("**Serves:**")[1].split("|")[0]))
+            if serves
+            else frozenset()
+        )
         out[number] = ("**Status:** 🟢" in header, roles)
     return out
 
@@ -82,8 +85,7 @@ class TestThereIsSomethingToCheck:
     """A guard over an empty population passes vacuously."""
 
     def test_the_table_parses_as_eight_rows(self):
-        assert sorted(_rows(), key=lambda r: int(r[1:])) == [
-            f"R{n}" for n in range(1, 9)], sorted(_rows())
+        assert sorted(_rows(), key=lambda r: int(r[1:])) == [f"R{n}" for n in range(1, 9)], sorted(_rows())
 
     def test_the_corpus_is_the_backlog_and_not_a_handful(self):
         filings = _filings()
@@ -97,7 +99,6 @@ class TestThereIsSomethingToCheck:
 
 
 class TestEveryRowNamesWhoServesIt:
-
     def test_a_role_the_corpus_serves_names_a_closed_filing_that_carries_it(self):
         """The claim. Derived from the counts, so the next mechanism
         that serves a role cannot leave the row stale: the row must
@@ -108,24 +109,23 @@ class TestEveryRowNamesWhoServesIt:
         for role, candidates in sorted(_closed_by_role().items()):
             cell = _rows()[role]
             named = [int(n) for n in ITEM.findall(cell)]
-            good = [n for n in named
-                    if filings.get(n, (False, frozenset()))[0]
-                    and role in filings[n][1]]
+            good = [n for n in named if filings.get(n, (False, frozenset()))[0] and role in filings[n][1]]
             if not good:
                 stale.append(
                     f"{role}: the row's served-by cell names {named or 'nobody'}, "
                     f"and none of those is a closed filing carrying {role}. "
-                    f"{len(candidates)} filing(s) do, e.g. "
-                    + ", ".join(f"UX-{n}" for n in candidates[:4]))
-        assert stale == [], (
-            "roles.md's table is archaeological again (rule 3):\n  "
-            + "\n  ".join(stale))
+                    f"{len(candidates)} filing(s) do, e.g. " + ", ".join(f"UX-{n}" for n in candidates[:4])
+                )
+        assert stale == [], "roles.md's table is archaeological again (rule 3):\n  " + "\n  ".join(stale)
 
     def test_every_id_a_cell_names_is_a_filing_that_exists(self):
         filings = _filings()
-        unknown = [(role, n) for role, cell in _rows().items()
-                   for n in (int(x) for x in ITEM.findall(cell))
-                   if n not in filings]
+        unknown = [
+            (role, n)
+            for role, cell in _rows().items()
+            for n in (int(x) for x in ITEM.findall(cell))
+            if n not in filings
+        ]
         assert unknown == [], f"served-by cell(s) citing no filing: {unknown}"
 
     def test_a_role_no_closed_filing_carries_names_nobody(self):
@@ -138,12 +138,10 @@ class TestEveryRowNamesWhoServesIt:
         for role, cell in sorted(_rows().items()):
             if role in served:
                 continue
-            named = [n for n in (int(x) for x in ITEM.findall(cell))
-                     if filings.get(n, (False, frozenset()))[0]]
+            named = [n for n in (int(x) for x in ITEM.findall(cell)) if filings.get(n, (False, frozenset()))[0]]
             if named:
                 borrowed.append((role, named))
-        assert borrowed == [], (
-            f"a role no closed filing serves, whose row names one: {borrowed}")
+        assert borrowed == [], f"a role no closed filing serves, whose row names one: {borrowed}"
 
     def test_the_served_by_cell_is_the_column_the_header_names(self):
         """What the parse above depends on. An extra column, or a row an
@@ -164,12 +162,10 @@ class TestEveryRowNamesWhoServesIt:
 
 
 class TestTheGapAnalysisIsDated:
-
     def test_the_paragraph_says_when_it_was_last_measured(self):
         """A gap analysis with no date reads as current forever; this
         one was quoted as current for four rounds after it stopped
         being true."""
-        heading = [line for line in ROLES.read_text(encoding="utf-8").splitlines()
-                   if line.startswith("## The gap")]
+        heading = [line for line in ROLES.read_text(encoding="utf-8").splitlines() if line.startswith("## The gap")]
         assert len(heading) == 1, heading
         assert re.search(r"round \d+, \d{4}-\d{2}-\d{2}", heading[0]), heading[0]

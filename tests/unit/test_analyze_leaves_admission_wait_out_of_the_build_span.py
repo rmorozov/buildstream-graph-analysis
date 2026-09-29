@@ -4,6 +4,7 @@ off the sibling Plane 2 report before `Analyzer.normalize()` runs
 (`bga.cli._resolve_admission_wait`, `bga.cli.analyzed`). Real fixture
 data (`macro_micro`), not hand-built spans, so the wiring is proven on
 the actual pipeline entry a user reaches through `bga analyze`."""
+
 import json
 import shutil
 
@@ -15,15 +16,13 @@ FIXTURE_PLANE2 = "tests/fixtures/macro_micro/plane2.json"
 
 def _codegen_build(result):
     for task in result.normalized_tasks:
-        if task.task_key.element_uid == "codegen.bst" and \
-                task.task_key.task_kind.value == "BUILD":
+        if task.task_key.element_uid == "codegen.bst" and task.task_key.task_kind.value == "BUILD":
             return task
     raise AssertionError("codegen.bst BUILD span not found")
 
 
 def _analyze(run_dir, plane2_path):
-    args = create_parser().parse_args(
-        ["analyze", str(run_dir), "--plane2", str(plane2_path), "--format", "json"])
+    args = create_parser().parse_args(["analyze", str(run_dir), "--plane2", str(plane2_path), "--format", "json"])
     return analyzed(args)
 
 
@@ -49,4 +48,5 @@ def test_a_recorded_admission_wait_shortens_the_reported_build_span(tmp_path):
 
     assert waited_build.finish_us == baseline_build.finish_us, "finish is immutable"
     assert waited_build.start_us > baseline_build.start_us, (
-        "the recorded admission wait must move the reported BUILD start later")
+        "the recorded admission wait must move the reported BUILD start later"
+    )

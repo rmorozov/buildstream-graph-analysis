@@ -8,6 +8,7 @@ resolves to one of those tokens (`var(--space-N)`, a `calc()` built
 from them) or `0`. This file is the guard: read the source, not the
 page - a bare length anywhere fails it.
 """
+
 import pathlib
 import re
 

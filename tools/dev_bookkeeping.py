@@ -17,6 +17,7 @@ that would leave an open line past `SWEEP_LIMIT` sweeps, name an
 unknown class, duplicate a key, or point an open line at a path that
 does not exist is refused rather than made.
 """
+
 import argparse
 import collections
 import hashlib
@@ -47,8 +48,7 @@ LINE_RE = re.compile(
 STATUS_ROUND_RE = re.compile(r"^(?:swept|promoted|dropped) r(\d+)\b")
 PROMOTED_RE = re.compile(r"^promoted r\d+ UX-(\d+)$")
 
-Entry = collections.namedtuple(
-    "Entry", "lineno filed status cls path what command")
+Entry = collections.namedtuple("Entry", "lineno filed status cls path what command")
 
 #: `--add` and `--mark` each take more inputs than a five-argument cap
 #: allows named separately, so the where/what/how three and the two
@@ -60,8 +60,7 @@ DEFAULT_PATHS = Paths(LEDGER, REPO)
 
 def derive_key(path, what):
     #: not a security hash - a short, stable id for one ledger line.
-    return hashlib.sha1(f"{path} · {what}".encode(),
-                        usedforsecurity=False).hexdigest()[:7]
+    return hashlib.sha1(f"{path} · {what}".encode(), usedforsecurity=False).hexdigest()[:7]
 
 
 def parse_entries(text):
@@ -74,9 +73,17 @@ def parse_entries(text):
             problems.append(f"line {lineno}: malformed entry: {line!r}")
             continue
         fields = match.groupdict()
-        entries.append(Entry(lineno, int(fields["filed"]), fields["status"],
-                              fields["cls"], fields["path"], fields["what"],
-                              fields["command"]))
+        entries.append(
+            Entry(
+                lineno,
+                int(fields["filed"]),
+                fields["status"],
+                fields["cls"],
+                fields["path"],
+                fields["what"],
+                fields["command"],
+            )
+        )
     return entries, problems
 
 
@@ -103,26 +110,20 @@ def validate(text, repo_root=REPO):
     for entry in entries:
         key = derive_key(entry.path, entry.what)
         if key in seen:
-            problems.append(
-                f"line {entry.lineno}: key {key} duplicates line {seen[key]}")
+            problems.append(f"line {entry.lineno}: key {key} duplicates line {seen[key]}")
         else:
             seen[key] = entry.lineno
         if entry.status == "open":
             path = entry.path.split(":", 1)[0]
             if not (repo_root / path).exists():
-                problems.append(
-                    f"line {entry.lineno}: open line's path does not exist: {path}")
+                problems.append(f"line {entry.lineno}: open line's path does not exist: {path}")
             if sweeps_survived(entry, rounds) >= SWEEP_LIMIT:
-                problems.append(
-                    f"line {entry.lineno}: open past {SWEEP_LIMIT} sweeps")
+                problems.append(f"line {entry.lineno}: open past {SWEEP_LIMIT} sweeps")
         promoted = PROMOTED_RE.match(entry.status)
         if promoted:
             uid = int(promoted.group(1))
-            if not list(
-                (repo_root / "docs/backlog/scenarios").glob(f"UX-{uid:04d}-*.md")
-            ):
-                problems.append(
-                    f"line {entry.lineno}: promoted names UX-{uid}, no task file")
+            if not list((repo_root / "docs/backlog/scenarios").glob(f"UX-{uid:04d}-*.md")):
+                problems.append(f"line {entry.lineno}: promoted names UX-{uid}, no task file")
     return problems
 
 
@@ -136,8 +137,7 @@ def add(finding, cls, round_no, paths=DEFAULT_PATHS, new_class=False):
         raise ValueError(f"bad class {cls!r}: must match {CLASS_RE.pattern}")
     if cls not in {e.cls for e in entries} and not new_class:
         raise ValueError(f"unknown class {cls!r}; pass --new-class to add it")
-    line = (f"- r{round_no} · open · {cls} · `{finding.path}` · "
-           f"{finding.what} · `{finding.command}`")
+    line = f"- r{round_no} · open · {cls} · `{finding.path}` · {finding.what} · `{finding.command}`"
     new_text = (text if text.endswith("\n") or not text else text + "\n") + line + "\n"
     problems = validate(new_text, repo_root=repo_root)
     if problems:
@@ -151,8 +151,7 @@ def sweep(paths=DEFAULT_PATHS):
     if problems:
         raise ValueError("\n".join(problems))
     rounds = sweep_rounds(entries)
-    open_entries = sorted((e for e in entries if e.status == "open"),
-                           key=lambda e: e.filed)
+    open_entries = sorted((e for e in entries if e.status == "open"), key=lambda e: e.filed)
     return [(e, sweeps_survived(e, rounds)) for e in open_entries]
 
 
@@ -180,8 +179,7 @@ def mark(key, status, round_no, detail=None, paths=DEFAULT_PATHS):
         new_status = "open"
     else:
         raise ValueError(f"unknown status {status!r}")
-    rebuilt = (f"- r{target.filed} · {new_status} · {target.cls} · "
-              f"`{target.path}` · {target.what} · `{target.command}`")
+    rebuilt = f"- r{target.filed} · {new_status} · {target.cls} · `{target.path}` · {target.what} · `{target.command}`"
     lines = text.splitlines()
     lines[target.lineno - 1] = rebuilt
     new_text = "\n".join(lines) + "\n"
@@ -193,8 +191,7 @@ def mark(key, status, round_no, detail=None, paths=DEFAULT_PATHS):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(
-        description=(__doc__ or "").splitlines()[0])
+    parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--add", nargs=3, metavar=("PATH", "WHAT", "COMMAND"))
     group.add_argument("--sweep", action="store_true")
@@ -212,17 +209,14 @@ def main(argv=None):
             if args.round is None or not args.cls:
                 parser.error("--add needs --class and --round")
             path, what, command = args.add
-            print(add(Finding(path, what, command), args.cls, args.round,
-                      new_class=args.new_class))
+            print(add(Finding(path, what, command), args.cls, args.round, new_class=args.new_class))
         elif args.sweep:
             for entry, n in sweep():
-                print(f"r{entry.filed} · {n} sweep(s) · {entry.cls} · "
-                      f"{entry.path} · {entry.what}")
+                print(f"r{entry.filed} · {n} sweep(s) · {entry.cls} · {entry.path} · {entry.what}")
         else:
             if args.round is None or not args.status:
                 parser.error("--mark needs --status and --round")
-            print(mark(args.mark, args.status, args.round,
-                       detail=args.ux or args.reason))
+            print(mark(args.mark, args.status, args.round, detail=args.ux or args.reason))
     except ValueError as exc:
         print(str(exc), file=sys.stderr)
         return 1

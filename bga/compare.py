@@ -9,6 +9,7 @@ already-correct single-run analyses) and reports signed deltas plus a
 verdict, gated on confidence and on whether the two runs' graphs are
 even the same project.
 """
+
 import json
 import logging
 import statistics
@@ -41,8 +42,12 @@ _SIGNIFICANCE_PCT = 1
 # included here as the primary, most user-meaningful "did the build get
 # faster" number; the rest are the certified/advisory floors themselves.
 _FLOOR_KEYS = (
-    'total_duration_us', 't_infinity_observed', 'lb', 'certified_headroom',
-    't_c', 'efficiency_score',
+    'total_duration_us',
+    't_infinity_observed',
+    'lb',
+    'certified_headroom',
+    't_c',
+    'efficiency_score',
     # UX-27: the graph-shape-aware signal. Included here specifically
     # because the iterative-optimization workflow `bga compare` exists
     # for is where the gap shows: on a real 30.5% improvement every other
@@ -96,8 +101,7 @@ def widen_band(band: dict, baseline_total_us: float) -> dict:
     half_width = max(band['k'] * band['scaled_mad_us'], fixed_half_width)
     low = band['median_us'] - half_width
     high = band['median_us'] + half_width
-    widened = dict(band, low_us=low, high_us=high,
-                   widened_to_fixed_pct=half_width == fixed_half_width)
+    widened = dict(band, low_us=low, high_us=high, widened_to_fixed_pct=half_width == fixed_half_width)
     edges = [widened.get('observed_low_us'), widened.get('observed_high_us')]
     outside = [x for x in edges if x is not None and not (low <= x <= high)]
     widened['edges_outside_band'] = len(outside)
@@ -106,8 +110,7 @@ def widen_band(band: dict, baseline_total_us: float) -> dict:
     return widened
 
 
-def classify_against_band(candidate_us: float, band: dict,
-                          delta_us: Optional[float] = None) -> str:
+def classify_against_band(candidate_us: float, band: dict, delta_us: Optional[float] = None) -> str:
     """**The** verdict chain, for a candidate judged against a band.
 
     `UX-214`: there were two. `bga compare` ran significance, then
@@ -129,8 +132,7 @@ def classify_against_band(candidate_us: float, band: dict,
     significant = not (low <= candidate_us <= high)
     edges = [band.get('observed_low_us'), band.get('observed_high_us')]
     outside = [x for x in edges if x is not None and not (low <= x <= high)]
-    in_observed_range = (edges[0] is not None
-                         and edges[0] <= candidate_us <= edges[1])
+    in_observed_range = edges[0] is not None and edges[0] <= candidate_us <= edges[1]
     if significant and in_observed_range and bool(outside):
         return "within_observed_range"
     if not significant:
@@ -403,8 +405,10 @@ def _deltas(baseline: dict[str, Optional[float]], candidate: dict[str, Optional[
 
 
 def _attribution_deltas(
-    baseline_attr: dict, candidate_attr: dict,
-    baseline_total_us: int, candidate_total_us: int,
+    baseline_attr: dict,
+    candidate_attr: dict,
+    baseline_total_us: int,
+    candidate_total_us: int,
 ) -> dict[str, dict]:
     """Per-category delta, both absolute (microseconds) and as a share
     of each run's own total - a category that grows in absolute time but
@@ -428,9 +432,7 @@ def _attribution_deltas(
             'delta_us': c_us - b_us,
             'baseline_share': b_share,
             'candidate_share': c_share,
-            'delta_share': ((c_share - b_share)
-                            if (b_share is not None and c_share is not None)
-                            else None),
+            'delta_share': ((c_share - b_share) if (b_share is not None and c_share is not None) else None),
         }
     return result
 
@@ -470,20 +472,14 @@ def _element_diff(
     """
     baseline_uids = {e.uid for e in baseline_elements}
     candidate_uids = {e.uid for e in candidate_elements}
-    baseline_path = set(
-        schemas.critical_path_uids(getattr(baseline_result, 'signals', None) or {})
-    )
-    candidate_path = set(
-        schemas.critical_path_uids(getattr(candidate_result, 'signals', None) or {})
-    )
+    baseline_path = set(schemas.critical_path_uids(getattr(baseline_result, 'signals', None) or {}))
+    candidate_path = set(schemas.critical_path_uids(getattr(candidate_result, 'signals', None) or {}))
     candidate_durations = _element_durations(candidate_result)
     baseline_durations = _element_durations(baseline_result)
 
     new = sorted(candidate_uids - baseline_uids)
     removed = sorted(baseline_uids - candidate_uids)
-    moved_onto_path = sorted(
-        (candidate_path & baseline_uids) - baseline_path
-    )
+    moved_onto_path = sorted((candidate_path & baseline_uids) - baseline_path)
     return {
         'new': [
             {
@@ -499,8 +495,7 @@ def _element_diff(
         # marginal metric below deliberately does not cover it - the
         # whole-build gate does.
         'moved_onto_critical_path': [
-            {'element_uid': uid, 'duration_us': candidate_durations.get(uid, 0)}
-            for uid in moved_onto_path
+            {'element_uid': uid, 'duration_us': candidate_durations.get(uid, 0)} for uid in moved_onto_path
         ],
         'baseline_element_count': len(baseline_uids),
         'candidate_element_count': len(candidate_uids),
@@ -570,24 +565,28 @@ def _element_deltas(
                 verdict = 'improved'
             else:
                 verdict = 'no_significant_change'
-        rows.append({
-            'element_uid': uid,
-            'baseline_us': before,
-            'candidate_us': after,
-            'delta_us': delta,
-            'presence': presence,
-            'verdict_kind': verdict,
-        })
+        rows.append(
+            {
+                'element_uid': uid,
+                'baseline_us': before,
+                'candidate_us': after,
+                'delta_us': delta,
+                'presence': presence,
+                'verdict_kind': verdict,
+            }
+        )
 
     # Ranked by what moved most. A row with no delta cannot be ranked
     # against one that has one, so the appeared/disappeared rows sort
     # after the measurable ones rather than being given a stand-in
     # magnitude - the same refusal as the verdict above.
-    rows.sort(key=lambda row: (
-        row['delta_us'] is None,
-        -abs(row['delta_us'] or 0),
-        row['element_uid'],
-    ))
+    rows.sort(
+        key=lambda row: (
+            row['delta_us'] is None,
+            -abs(row['delta_us'] or 0),
+            row['element_uid'],
+        )
+    )
     counts = dict.fromkeys(('grew', 'shrank', 'unchanged', 'appeared', 'disappeared'), 0)
     for row in rows:
         if row['presence'] != 'both':
@@ -642,17 +641,13 @@ def compute_marginal_efficiency(element_diff: dict) -> Optional[dict]:
     added_work_us = sum(entry['duration_us'] for entry in added)
     if added_work_us <= 0:
         return None
-    added_path_us = sum(
-        entry['duration_us'] for entry in added if entry['on_critical_path']
-    )
+    added_path_us = sum(entry['duration_us'] for entry in added if entry['on_critical_path'])
     return {
         'added_elements': [entry['element_uid'] for entry in added],
         'added_work_us': added_work_us,
         'added_critical_path_us': added_path_us,
         'stretch': added_path_us / added_work_us,
-        'on_critical_path': [
-            entry['element_uid'] for entry in added if entry['on_critical_path']
-        ],
+        'on_critical_path': [entry['element_uid'] for entry in added if entry['on_critical_path']],
     }
 
 
@@ -691,7 +686,7 @@ def _build_failure_detail(name: str, result) -> dict:
     built = scheduled = cached = None
     interrupted = False
     suspended = None
-    for violation in (result.violations or []):
+    for violation in result.violations or []:
         if violation.get('type') == 'build_failed':
             failed = list(violation.get('failed_elements') or [])
             built = violation.get('built_count')
@@ -700,9 +695,15 @@ def _build_failure_detail(name: str, result) -> dict:
             interrupted = bool(violation.get('interrupted'))
             suspended = violation.get('suspended')
             break
-    return {'run': name, 'failed_elements': failed, 'built': built,
-            'scheduled': scheduled, 'cached': cached,
-            'interrupted': interrupted, 'suspended': suspended}
+    return {
+        'run': name,
+        'failed_elements': failed,
+        'built': built,
+        'scheduled': scheduled,
+        'cached': cached,
+        'interrupted': interrupted,
+        'suspended': suspended,
+    }
 
 
 def _count_clause(detail: dict) -> Optional[str]:
@@ -731,13 +732,11 @@ def _describe_build_failures(details: list[dict]) -> str:
     parts = []
     for detail in details:
         counted = _count_clause(detail)
-        if detail.get('suspended') and not detail['failed_elements'] \
-                and not detail.get('interrupted'):
+        if detail.get('suspended') and not detail['failed_elements'] and not detail.get('interrupted'):
             # UX-185: the durations are not measurements, so there is
             # nothing to verdict - the same refusal, for a third reason.
             slept = detail['suspended'].get('suspended_seconds', 0)
-            clause = (f"the {detail['run']} capture spans a suspend "
-                      f"({slept:.0f}s of sleep)")
+            clause = f"the {detail['run']} capture spans a suspend ({slept:.0f}s of sleep)"
         elif detail.get('interrupted') and not detail['failed_elements']:
             # UX-157: say what happened. "The build failed" is wrong here
             # and would send a user looking for a compile error that does
@@ -755,9 +754,7 @@ def _describe_build_failures(details: list[dict]) -> str:
     return "; ".join(parts) + " - duration deltas of an unfinished build are not a measurement"
 
 
-def _check_run_modes(
-    baseline_result: AnalysisResult, candidate_result: AnalysisResult
-) -> Optional[str]:
+def _check_run_modes(baseline_result: AnalysisResult, candidate_result: AnalysisResult) -> Optional[str]:
     """UX-55: flag (don't block) a comparison between a caches-off run
     and an incremental one.
 
@@ -766,10 +763,7 @@ def _check_run_modes(
     warning on every pre-UX-55 capture would train the reader to ignore
     the field.
     """
-    modes = tuple(
-        (result.confidence or {}).get('run_mode') for result in
-        (baseline_result, candidate_result)
-    )
+    modes = tuple((result.confidence or {}).get('run_mode') for result in (baseline_result, candidate_result))
     if 'unknown' in modes or None in modes or modes[0] == modes[1]:
         return None
     return (
@@ -796,9 +790,8 @@ def _candidate_diagnosis(candidate_result: AnalysisResult) -> Optional[dict]:
 
     try:
         # UX-1073: a published analysis is already this document.
-        document = (getattr(candidate_result, 'published_document', None)
-                    or build_document(candidate_result))
-    except Exception:                                # pragma: no cover
+        document = getattr(candidate_result, 'published_document', None) or build_document(candidate_result)
+    except Exception:  # pragma: no cover
         # The verdict must not cost a reader the comparison, which is
         # this file's standing rule for every optional enrichment.
         return None
@@ -812,9 +805,7 @@ def _candidate_diagnosis(candidate_result: AnalysisResult) -> Optional[dict]:
     record = _provenance.for_claim(document, 'diagnosis')
     if not record:
         return None
-    return {'diagnosis': headline.get('diagnosis'),
-            'sentence': headline.get('sentence'),
-            'provenance': record}
+    return {'diagnosis': headline.get('diagnosis'), 'sentence': headline.get('sentence'), 'provenance': record}
 
 
 # UX-593: the claim id the run verdict's chain is published under, and
@@ -846,35 +837,42 @@ def _verdict_rule(kind: str, document: dict) -> dict:
     baseline_total = (document.get('baseline') or {}).get('total_duration_us')
     delta = (document.get('deltas') or {}).get('total_duration_us')
     pct = (delta / baseline_total * 100) if (baseline_total and delta is not None) else None
-    against = (f"The candidate is {pct:+.1f}% against baseline run "
-               f"{document.get('baseline_run_id') or '(no run identity)'}"
-               if pct is not None else
-               "The candidate is compared against baseline run "
-               f"{document.get('baseline_run_id') or '(no run identity)'}")
+    against = (
+        f"The candidate is {pct:+.1f}% against baseline run {document.get('baseline_run_id') or '(no run identity)'}"
+        if pct is not None
+        else f"The candidate is compared against baseline run {document.get('baseline_run_id') or '(no run identity)'}"
+    )
     if band and not band.get('widened_to_fixed_pct'):
         name, threshold = 'DEFAULT_BAND_K', band.get('k')
-        where = (f"the noise band from {band.get('n')} baseline runs "
-                 f"(median +/- {band.get('k'):g}x scaled MAD)")
+        where = f"the noise band from {band.get('n')} baseline runs (median +/- {band.get('k'):g}x scaled MAD)"
     elif band:
         name, threshold = '_SIGNIFICANCE_PCT', _SIGNIFICANCE_PCT
-        where = (f"the noise band from {band.get('n')} baseline runs, widened "
-                 f"to the fixed {_SIGNIFICANCE_PCT}% rule because it came out "
-                 f"narrower than it")
+        where = (
+            f"the noise band from {band.get('n')} baseline runs, widened "
+            f"to the fixed {_SIGNIFICANCE_PCT}% rule because it came out "
+            f"narrower than it"
+        )
     else:
         name, threshold = '_SIGNIFICANCE_PCT', _SIGNIFICANCE_PCT
-        where = (f"the fixed {_SIGNIFICANCE_PCT}% band around the baseline "
-                 f"(no baseline set was supplied, so no measured band was "
-                 f"derived)")
+        where = (
+            f"the fixed {_SIGNIFICANCE_PCT}% band around the baseline "
+            f"(no baseline set was supplied, so no measured band was "
+            f"derived)"
+        )
     crossed = kind in ('regressed', 'improved', 'within_observed_range')
     if kind == 'within_observed_range':
-        sentence = (f"{against}, which is outside {where} but inside the range "
-                    f"the baseline runs themselves reached - so "
-                    f"within_observed_range, and the duration verdict is "
-                    f"withheld rather than issued against the set's own spread.")
+        sentence = (
+            f"{against}, which is outside {where} but inside the range "
+            f"the baseline runs themselves reached - so "
+            f"within_observed_range, and the duration verdict is "
+            f"withheld rather than issued against the set's own spread."
+        )
     elif kind == 'no_significant_change':
-        sentence = (f"{against}, which is inside {where} - so "
-                    f"no_significant_change, and no element is coloured on "
-                    f"its own when the run itself was not.")
+        sentence = (
+            f"{against}, which is inside {where} - so "
+            f"no_significant_change, and no element is coloured on "
+            f"its own when the run itself was not."
+        )
     else:
         counts = (document.get('element_deltas') or {}).get('counts') or {}
         moved = counts.get(_CROSSING_COUNT.get(kind, ''), 0)
@@ -882,19 +880,23 @@ def _verdict_rule(kind: str, document: dict) -> dict:
             f"{plural(moved, 'element')} present in both runs "
             f"{_CROSSING_COUNT.get(kind, 'moved')}, and the "
             f"{min(moved, VERDICT_CULPRITS_CITED)} largest are cited"
-            if moved else
-            "No element present in both runs "
+            if moved
+            else "No element present in both runs "
             f"{_CROSSING_COUNT.get(kind, 'moved')}, so what moved is in the "
-            f"elements this change added or removed")
-        sentence = (f"{against}, which is outside {where} - so {kind}. "
-                    f"{crossers}.")
-    return {'name': name, 'threshold': threshold,
-            'comparison': '>' if crossed else '<=',
-            # No published field is in the unit either threshold is in -
-            # scaled-MAD units and a percentage of the baseline - so the
-            # path is null rather than pointed at a duration it is not.
-            'observed_path': None, 'sentence': sentence,
-            'module': VERDICT_RULE_MODULE}
+            f"elements this change added or removed"
+        )
+        sentence = f"{against}, which is outside {where} - so {kind}. {crossers}."
+    return {
+        'name': name,
+        'threshold': threshold,
+        'comparison': '>' if crossed else '<=',
+        # No published field is in the unit either threshold is in -
+        # scaled-MAD units and a percentage of the baseline - so the
+        # path is null rather than pointed at a duration it is not.
+        'observed_path': None,
+        'sentence': sentence,
+        'module': VERDICT_RULE_MODULE,
+    }
 
 
 def verdict_provenance(comparison, document: Optional[dict] = None) -> Optional[dict]:
@@ -925,37 +927,42 @@ def verdict_provenance(comparison, document: Optional[dict] = None) -> Optional[
     if kind in (None, 'not_comparable'):
         return None
     document = comparison.to_dict() if document is None else document
-    paths = ['baseline_run_id', 'baseline.total_duration_us',
-             'candidate.total_duration_us', 'deltas.total_duration_us']
+    paths = ['baseline_run_id', 'baseline.total_duration_us', 'candidate.total_duration_us', 'deltas.total_duration_us']
     if document.get('baseline_band'):
-        paths += ['baseline_band.n', 'baseline_band.low_us',
-                  'baseline_band.high_us']
+        paths += ['baseline_band.n', 'baseline_band.low_us', 'baseline_band.high_us']
     crossing = _CROSSING_COUNT.get(kind)
     if crossing:
         paths.append(f'element_deltas.counts.{crossing}')
         rows = (document.get('element_deltas') or {}).get('rows') or []
         # Already ranked by absolute delta, so the head is the largest.
-        culprits = [row for row in rows if row.get('presence') == 'both'
-                    and row.get('verdict_kind') == kind]
+        culprits = [row for row in rows if row.get('presence') == 'both' and row.get('verdict_kind') == kind]
         paths += [
             f"element_deltas.rows[element_uid={row['element_uid']}].delta_us"
-            for row in culprits[:VERDICT_CULPRITS_CITED]]
+            for row in culprits[:VERDICT_CULPRITS_CITED]
+        ]
     evidence = []
     for path in paths:
         value = _provenance.resolve(document, path)
-        row = {'path': path, 'resolved': value is not _provenance.UNRESOLVED,
-               'value': None if value is _provenance.UNRESOLVED else value}
+        row = {
+            'path': path,
+            'resolved': value is not _provenance.UNRESOLVED,
+            'value': None if value is _provenance.UNRESOLVED else value,
+        }
         quantity = schemas.quantity_for_path(path, schemas.COMPARE)
         if quantity:
             row['quantity'] = quantity
         evidence.append(row)
     return {
-        'claim': VERDICT_CLAIM, 'kind': 'verdict', 'document': schemas.COMPARE,
-        'evidence': evidence, 'rule': _verdict_rule(kind, document),
+        'claim': VERDICT_CLAIM,
+        'kind': 'verdict',
+        'document': schemas.COMPARE,
+        'evidence': evidence,
+        'rule': _verdict_rule(kind, document),
         # No library question deepens a two-run verdict: `TRACE_QUERIES`
         # is keyed by the claims of one run's analysis, and pointing at
         # one of those would deepen the candidate, not the comparison.
-        'trace_query': None, 'unpublished_inputs': [],
+        'trace_query': None,
+        'unpublished_inputs': [],
     }
 
 
@@ -976,8 +983,10 @@ def _compare_results(
     baseline_confidence = (baseline_result.confidence or {}).get('primary')
     candidate_confidence = (candidate_result.confidence or {}).get('primary')
     low_confidence = (
-        baseline_confidence is None or baseline_confidence < _CONFIDENCE_HIGH
-        or candidate_confidence is None or candidate_confidence < _CONFIDENCE_HIGH
+        baseline_confidence is None
+        or baseline_confidence < _CONFIDENCE_HIGH
+        or candidate_confidence is None
+        or candidate_confidence < _CONFIDENCE_HIGH
     )
 
     # UX-78: both checks are recorded structurally as well as in prose.
@@ -988,7 +997,10 @@ def _compare_results(
     # The refusal itself lives in the CLI (it is an exit-code decision);
     # what belongs here is naming which check failed.
     element_diff = _element_diff(
-        baseline_result, candidate_result, baseline_elements, candidate_elements,
+        baseline_result,
+        candidate_result,
+        baseline_elements,
+        candidate_elements,
     )
     marginal_efficiency = compute_marginal_efficiency(element_diff)
 
@@ -1003,29 +1015,27 @@ def _compare_results(
     # gets no churn block rather than a guessed one: "not measured" and
     # "nothing rebuilt" are different facts and only one of them is an
     # all-clear.
-    built_durations = (getattr(candidate_result, 'signals', None) or {}).get(
-        'element_durations'
-    )
+    built_durations = (getattr(candidate_result, 'signals', None) or {}).get('element_durations')
     # UX-93: the baseline's built set and both runs' modes decide whether
     # an unchanged-key rebuild is waste, a cache-retention failure, or
     # simply what a caches-off run does. All three are already computed
     # and sitting in the two results; the round-11 call passed none of
     # them, which is how a deliberate cut came to be reported as 4604
     # seconds that "bought nothing".
-    baseline_durations = (getattr(baseline_result, 'signals', None) or {}).get(
-        'element_durations'
-    )
+    baseline_durations = (getattr(baseline_result, 'signals', None) or {}).get('element_durations')
     cache_churn = (
         compute_cache_churn(
-            baseline_elements, candidate_elements, candidate_dependencies,
-            set(built_durations), built_durations,
-            baseline_built=(
-                set(baseline_durations) if isinstance(baseline_durations, dict) else None
-            ),
+            baseline_elements,
+            candidate_elements,
+            candidate_dependencies,
+            set(built_durations),
+            built_durations,
+            baseline_built=(set(baseline_durations) if isinstance(baseline_durations, dict) else None),
             candidate_run_mode=(candidate_result.confidence or {}).get('run_mode'),
             baseline_run_mode=(baseline_result.confidence or {}).get('run_mode'),
         )
-        if isinstance(built_durations, dict) else {}
+        if isinstance(built_durations, dict)
+        else {}
     )
 
     mismatches: list[dict] = []
@@ -1043,20 +1053,15 @@ def _compare_results(
     mode_warning = _check_run_modes(baseline_result, candidate_result)
     if mode_warning:
         mismatches.append({'check': 'run_mode', 'message': mode_warning})
-        comparability_warning = (
-            f"{comparability_warning}; {mode_warning}" if comparability_warning
-            else mode_warning
-        )
+        comparability_warning = f"{comparability_warning}; {mode_warning}" if comparability_warning else mode_warning
 
     # UX-186: and whether the two were measured on the same machine at
     # all. Before this there was no host check of any kind, so a
     # baseline captured on a laptop gated a candidate from a CI runner
     # with no caveat - the class of not-a-measurement UX-78's refusal
     # grammar exists for, never firing.
-    baseline_host = (getattr(baseline_result, 'run_instance', None)
-                     or {}).get('host_manifest')
-    candidate_host = (getattr(candidate_result, 'run_instance', None)
-                      or {}).get('host_manifest')
+    baseline_host = (getattr(baseline_result, 'run_instance', None) or {}).get('host_manifest')
+    candidate_host = (getattr(candidate_result, 'run_instance', None) or {}).get('host_manifest')
     host_comparison = hostinfo.classify(baseline_host, candidate_host)
     host_warning = hostinfo.describe(host_comparison, baseline_host, candidate_host)
     if host_comparison['status'] == 'different':
@@ -1071,10 +1076,7 @@ def _compare_results(
         # renders with the numbers, and the refusal lives on the
         # `--fail-on-*` gates, where `--allow-cross-host` opts a uniform
         # CI farm back in once, deliberately.
-        comparability_warning = (
-            f"{comparability_warning}; {host_warning}" if comparability_warning
-            else host_warning
-        )
+        comparability_warning = f"{comparability_warning}; {host_warning}" if comparability_warning else host_warning
 
     # UX-898/UX-903: and whether the two runs are even the same build.
     # The machine above is half a comparison class; the declared type
@@ -1082,13 +1084,10 @@ def _compare_results(
     # rather than collected, so its absence is the norm rather than an
     # old capture - `absent` therefore says nothing at all, and only a
     # one-sided declaration earns the caveat.
-    baseline_class = (getattr(baseline_result, 'run_instance', None)
-                      or {}).get('build_class')
-    candidate_class = (getattr(candidate_result, 'run_instance', None)
-                       or {}).get('build_class')
+    baseline_class = (getattr(baseline_result, 'run_instance', None) or {}).get('build_class')
+    candidate_class = (getattr(candidate_result, 'run_instance', None) or {}).get('build_class')
     build_class_comparison = buildclass.classify(baseline_class, candidate_class)
-    class_warning = buildclass.describe(
-        build_class_comparison, baseline_class, candidate_class)
+    class_warning = buildclass.describe(build_class_comparison, baseline_class, candidate_class)
     if build_class_comparison['status'] == 'different':
         # Same cap and the same reason as the cross-host case: a
         # sanitizer build against a release one is not one measurement,
@@ -1098,10 +1097,7 @@ def _compare_results(
         # Beside the host caveat rather than in `mismatches`, for the
         # reason stated there: looking at a mixed pair is fine, gating
         # on it is not, and the refusal lives on the gate.
-        comparability_warning = (
-            f"{comparability_warning}; {class_warning}" if comparability_warning
-            else class_warning
-        )
+        comparability_warning = f"{comparability_warning}; {class_warning}" if comparability_warning else class_warning
 
     # UX-250: and whether one tool measured both. The refusal is on
     # *contract movement*, never on the version number - two runs from
@@ -1112,34 +1108,35 @@ def _compare_results(
     # and a refusal that fires constantly gets switched off.
     baseline_producer = getattr(baseline_result, 'run_instance', None) or {}
     candidate_producer = getattr(candidate_result, 'run_instance', None) or {}
-    contract_movement = producer.comparison_movement(
-        baseline_producer, candidate_producer)
+    contract_movement = producer.comparison_movement(baseline_producer, candidate_producer)
     if contract_movement:
         # In `mismatches`, unlike the host caveat above: a cross-host
         # pair is still worth *looking* at, but two runs whose shared
         # definitions changed underneath them are two different
         # measurements wearing one set of field names.
-        mismatches.append({
-            'check': 'producer_contracts',
-            'message': ("the two runs were measured against different "
-                        "published contracts (" + ", ".join(contract_movement)
-                        + "), so their numbers do not mean the same thing"),
-        })
-    producer_note = producer.comparison_note(
-        baseline_producer, candidate_producer)
+        mismatches.append(
+            {
+                'check': 'producer_contracts',
+                'message': (
+                    "the two runs were measured against different "
+                    "published contracts ("
+                    + ", ".join(contract_movement)
+                    + "), so their numbers do not mean the same thing"
+                ),
+            }
+        )
+    producer_note = producer.comparison_note(baseline_producer, candidate_producer)
     if producer_note and not contract_movement:
         # A caveat, not a refusal. Every artifact written before
         # `UX-249` is unstamped, and refusing those would make the
         # stamp's arrival delete the history it was built to protect.
-        comparability_warning = (
-            f"{comparability_warning}; {producer_note}" if comparability_warning
-            else producer_note
-        )
+        comparability_warning = f"{comparability_warning}; {producer_note}" if comparability_warning else producer_note
 
     # UX-54: a run whose build failed is not a candidate for a
     # scheduling verdict at all.
     failed_runs = [
-        name for name, res in (("baseline", baseline_result), ("candidate", candidate_result))
+        name
+        for name, res in (("baseline", baseline_result), ("candidate", candidate_result))
         if any(v.get('type') == 'build_failed' for v in (res.violations or []))
     ]
     # UX-156: the same fact, with enough detail for the verdict to name
@@ -1190,8 +1187,7 @@ def _compare_results(
             # counts edges, not runs) and UX-170's
             # `describes_its_own_set`.
             baseline_band = widen_band(baseline_band, baseline_total)
-            significant = not (baseline_band['low_us'] <= candidate_total
-                               <= baseline_band['high_us'])
+            significant = not (baseline_band['low_us'] <= candidate_total <= baseline_band['high_us'])
         else:
             significant = abs(delta_total_us) * 100 >= baseline_total * _SIGNIFICANCE_PCT
         # UX-201: the sentence and the enum come out of the same
@@ -1204,8 +1200,7 @@ def _compare_results(
         # here, and the copy in `tools/bga_snapshot.py` had drifted -
         # no disputed-region branch and a sixth value nothing declared.
         if baseline_band is not None:
-            verdict_kind = classify_against_band(
-                candidate_total, baseline_band, delta_us=delta_total_us)
+            verdict_kind = classify_against_band(candidate_total, baseline_band, delta_us=delta_total_us)
         elif not significant:
             verdict_kind = "no_significant_change"
         else:
@@ -1213,14 +1208,15 @@ def _compare_results(
         verdict = VERDICT_SENTENCES[verdict_kind]
 
     attribution_deltas = _attribution_deltas(
-        baseline_result.attribution or {}, candidate_result.attribution or {},
-        baseline_total or 0, candidate_total or 0,
+        baseline_result.attribution or {},
+        candidate_result.attribution or {},
+        baseline_total or 0,
+        candidate_total or 0,
     )
     # UX-221: computed after the run verdict, because a row inside the
     # run's own noise inherits it rather than being coloured as a
     # regression on its own.
-    element_deltas = _element_deltas(
-        baseline_result, candidate_result, verdict_kind)
+    element_deltas = _element_deltas(baseline_result, candidate_result, verdict_kind)
 
     return ComparisonResult(
         candidate_diagnosis=_candidate_diagnosis(candidate_result),
@@ -1274,8 +1270,7 @@ def _band_source(run_dir: Path) -> dict:
             context = json.loads(context_path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             break
-        source["manifest_hash"] = (
-            context.get("run_identity") or {}).get("manifest_hash")
+        source["manifest_hash"] = (context.get("run_identity") or {}).get("manifest_hash")
         break
     return source
 
@@ -1356,15 +1351,19 @@ def _from_document(document: dict):
     return SimpleNamespace(
         run_id=document.get('run_id'),
         total_duration_us=document.get('total_duration_us'),
-        floors=document.get('floors'), confidence=document.get('confidence'),
+        floors=document.get('floors'),
+        confidence=document.get('confidence'),
         attribution=document.get('attribution'),
         violations=document.get('violations'),
         run_instance=document.get('run_instance'),
-        signals=signals, published_document=document)
+        signals=signals,
+        published_document=document,
+    )
 
 
-def _analyze_side(run_dir: Path, plane2: Optional[str], reanalyse: bool,
-                  capacity=None, verbose=False) -> tuple[Any, list, Any]:
+def _analyze_side(
+    run_dir: Path, plane2: Optional[str], reanalyse: bool, capacity=None, verbose=False
+) -> tuple[Any, list, Any]:
     """`(result, elements, dependencies)` for one side of a comparison:
     the published analysis when its fingerprint is this one's, else a
     fresh `cli.analyzed` (UX-1073)."""
@@ -1376,8 +1375,7 @@ def _analyze_side(run_dir: Path, plane2: Optional[str], reanalyse: bool,
     if not reanalyse:
         document = _published(run_dir)
         wanted = fingerprint.of(args) if document is not None else None
-        if document is not None and wanted is not None \
-                and document.get(fingerprint.KEY) == wanted:
+        if document is not None and wanted is not None and document.get(fingerprint.KEY) == wanted:
             graph = load_graph(Path(run_dir) / 'graph.json')
             return _from_document(document), graph.elements, graph.dependencies
     analyzer, result = analyzed_with_analyzer(args)
@@ -1387,10 +1385,13 @@ def _analyze_side(run_dir: Path, plane2: Optional[str], reanalyse: bool,
     return result, graph.elements, graph.dependencies
 
 
-def compare_runs(baseline_dir: Path, candidate_dir: Path,
-                 baseline_runs: Optional[list[Path]] = None,
-                 band_k: float = DEFAULT_BAND_K,
-                 **options) -> ComparisonResult:
+def compare_runs(
+    baseline_dir: Path,
+    candidate_dir: Path,
+    baseline_runs: Optional[list[Path]] = None,
+    band_k: float = DEFAULT_BAND_K,
+    **options,
+) -> ComparisonResult:
     """Load, analyze, and compare two run directories independently,
     each as `bga analyze` would with its own Plane 2 report
     (`baseline_plane2`/`candidate_plane2`), reading a side's published
@@ -1398,17 +1399,17 @@ def compare_runs(baseline_dir: Path, candidate_dir: Path,
     `reanalyse=True` never reads it). `capacity` and `verbose` apply to
     both sides symmetrically.
     """
-    unknown = set(options) - {'capacity', 'verbose', 'baseline_plane2',
-                              'candidate_plane2', 'reanalyse'}
+    unknown = set(options) - {'capacity', 'verbose', 'baseline_plane2', 'candidate_plane2', 'reanalyse'}
     if unknown:
         raise TypeError(f"compare_runs: unsupported options {sorted(unknown)}")
     reanalyse = bool(options.get('reanalyse'))
-    analyzer_kwargs = {key: options[key] for key in ('capacity', 'verbose')
-                       if key in options}
+    analyzer_kwargs = {key: options[key] for key in ('capacity', 'verbose') if key in options}
     baseline_result, baseline_elements, _ = _analyze_side(
-        baseline_dir, options.get('baseline_plane2'), reanalyse, **analyzer_kwargs)
+        baseline_dir, options.get('baseline_plane2'), reanalyse, **analyzer_kwargs
+    )
     candidate_result, candidate_elements, candidate_dependencies = _analyze_side(
-        candidate_dir, options.get('candidate_plane2'), reanalyse, **analyzer_kwargs)
+        candidate_dir, options.get('candidate_plane2'), reanalyse, **analyzer_kwargs
+    )
 
     # UX-59: a baseline is a *set* when one is supplied. Each run is
     # analyzed the same way the two principals are, and one that does not
@@ -1439,8 +1440,7 @@ def compare_runs(baseline_dir: Path, candidate_dir: Path,
             # would narrow itself and report a tighter noise floor than
             # the store supports.
             mode, duration = _band_sample(run_dir, analyzer_kwargs)
-            if candidate_mode not in (None, 'unknown') and mode not in (None, 'unknown') \
-                    and mode != candidate_mode:
+            if candidate_mode not in (None, 'unknown') and mode not in (None, 'unknown') and mode != candidate_mode:
                 raise RunsNotComparableError(
                     f"baseline run {run_dir} is a {mode} run but the candidate is "
                     f"{candidate_mode} - a noise band may only be built from runs of "
@@ -1455,12 +1455,15 @@ def compare_runs(baseline_dir: Path, candidate_dir: Path,
             # three" was not something a user could act on; now it is,
             # and a silent fallback would hide the one step left.
             band_shortfall = {
-                'supplied': len(durations), 'required': MIN_BASELINE_RUNS,
+                'supplied': len(durations),
+                'required': MIN_BASELINE_RUNS,
             }
 
     return _compare_results(
-        baseline_result, candidate_result,
-        baseline_elements, candidate_elements,
+        baseline_result,
+        candidate_result,
+        baseline_elements,
+        candidate_elements,
         baseline_band=band,
         baseline_band_shortfall=band_shortfall,
         baseline_band_sources=band_sources,
@@ -1515,9 +1518,9 @@ def regression_exceeds_threshold(comparison: ComparisonResult, threshold_pct: Op
     return delta_total > 0 and abs(delta_total) * 100 >= baseline_total * pct
 
 
-def regression_gate_failed(comparison: ComparisonResult,
-                           threshold_pct: Optional[float] = None,
-                           against_band: bool = False) -> bool:
+def regression_gate_failed(
+    comparison: ComparisonResult, threshold_pct: Optional[float] = None, against_band: bool = False
+) -> bool:
     """The one predicate the exit code and the CI comment both read.
 
     `UX-899`: `--band-from-class` is the gate mode that closes the seam
@@ -1566,7 +1569,9 @@ _EFFICIENCY_DROP_PP = 5.0
 
 
 def efficiency_signal_status(
-    comparison: "ComparisonResult", drop_gate_on: bool, floor_gate_on: bool,
+    comparison: "ComparisonResult",
+    drop_gate_on: bool,
+    floor_gate_on: bool,
 ) -> dict:
     """UX-87: whether the requested efficiency gate(s) could actually be
     evaluated, and which run withheld the signal if not.
@@ -1589,10 +1594,7 @@ def efficiency_signal_status(
     """
     baseline = comparison.baseline_metrics.get('occupancy_share')
     candidate = comparison.candidate_metrics.get('occupancy_share')
-    missing = [
-        label for label, value in (('baseline', baseline), ('candidate', candidate))
-        if value is None
-    ]
+    missing = [label for label, value in (('baseline', baseline), ('candidate', candidate)) if value is None]
     not_applied = []
     if floor_gate_on and candidate is None:
         not_applied.append('--min-efficiency')
@@ -1608,7 +1610,8 @@ def efficiency_signal_status(
 
 
 def efficiency_regression_exceeds_threshold(
-    comparison: ComparisonResult, max_drop_pp: Optional[float] = None,
+    comparison: ComparisonResult,
+    max_drop_pp: Optional[float] = None,
 ) -> bool:
     """UX-39: "did this change make the build *less efficient*", as
     distinct from "did it make the build slower".
@@ -1638,7 +1641,8 @@ def efficiency_regression_exceeds_threshold(
 
 
 def efficiency_below_floor(
-    comparison: ComparisonResult, min_efficiency: Optional[float] = None,
+    comparison: ComparisonResult,
+    min_efficiency: Optional[float] = None,
 ) -> bool:
     """UX-39: an absolute floor on the candidate run's own
     `occupancy_share`, independent of any baseline.

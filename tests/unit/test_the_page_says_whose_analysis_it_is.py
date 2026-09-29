@@ -20,6 +20,7 @@ version string, which Direction 10 argues is a lossy summary of nine
 contracts. `test_a_stored_analysis_from_this_build_is_not_stale` is the
 other direction: the same code path, a stamp that agrees, no sentence.
 """
+
 import json
 import os
 import pathlib
@@ -45,30 +46,25 @@ needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 def _stamped(contracts):
     """A stored analysis whose producer records `contracts`."""
     document = json.loads(STORED.read_text(encoding="utf-8"))
-    document["producer"] = {"tool": "bga", "version": "0.2.9",
-                            "contracts": list(contracts)}
+    document["producer"] = {"tool": "bga", "version": "0.2.9", "contracts": list(contracts)}
     return document
 
 
 class TestWhichAnalysisThisIs:
-
     def test_an_unstamped_capture_is_stale_and_says_it_cannot_count(self):
         """Every artifact written before `UX-249`. The absence is a
         state with consequences, not agreement with this build."""
-        note = view.analysis_source(json.loads(
-            STORED.read_text(encoding="utf-8")), reanalysed=False)
+        note = view.analysis_source(json.loads(STORED.read_text(encoding="utf-8")), reanalysed=False)
         assert note["source"] == view.ANALYSIS_FROM_CAPTURE
         assert note["stored_producer"] == producer.UNSTAMPED
         assert note["stale"] is True
-        assert note["contracts_moved"] == [], (
-            "an unstamped capture cannot name a contract that moved")
+        assert note["contracts_moved"] == [], "an unstamped capture cannot name a contract that moved"
 
     def test_a_stored_analysis_from_this_build_is_not_stale(self):
         """The clause that makes the sentence discriminate. Same run,
         same code path, a stamp that agrees - and no claim of staleness,
         so a page that says it every time fails here."""
-        note = view.analysis_source(
-            _stamped(producer.stamp()["contracts"]), reanalysed=False)
+        note = view.analysis_source(_stamped(producer.stamp()["contracts"]), reanalysed=False)
         assert note["stale"] is False, note["contracts_moved"]
 
     def test_a_moved_contract_is_named_in_the_direction_it_moved(self):
@@ -104,14 +100,14 @@ class TestWhichAnalysisThisIs:
 
 
 class TestTheFlagChangesWhatIsServed:
-
     def test_reanalyse_returns_this_builds_answer(self):
         stored = view.payloads(str(RUN))["report.json"]
         fresh = view.payloads(str(RUN), reanalyse=True)["report.json"]
         added = set(fresh) - set(stored)
         assert added, (
             "re-analysing added no key the stored document lacked, so the "
-            "flag cannot be shown to do anything on this fixture")
+            "flag cannot be shown to do anything on this fixture"
+        )
         assert "producer" in added
 
     def test_view_never_writes_the_stored_analysis(self, tmp_path):
@@ -122,14 +118,13 @@ class TestTheFlagChangesWhatIsServed:
         stored = snapshot / "analyze.json"
         before = (stored.read_bytes(), os.stat(stored).st_mtime_ns)
         for flag in (False, True):
-            view.export(str(snapshot / "run"), str(tmp_path / "out.html"),
-                        with_trace=False, reanalyse=flag)
+            view.export(str(snapshot / "run"), str(tmp_path / "out.html"), with_trace=False, reanalyse=flag)
         assert (stored.read_bytes(), os.stat(stored).st_mtime_ns) == before
 
     def test_the_flag_reaches_the_command_line(self):
         result = subprocess.run(
-            [sys.executable, "-m", "bga.cli", "view", "--help"],
-            capture_output=True, text=True, cwd=REPO, timeout=120)
+            [sys.executable, "-m", "bga.cli", "view", "--help"], capture_output=True, text=True, cwd=REPO, timeout=120
+        )
         assert "--reanalyse" in result.stdout, result.stdout[-2000:]
 
     def test_the_export_carries_the_note_the_page_reads(self, tmp_path):
@@ -182,15 +177,18 @@ console.log(JSON.stringify({
 def probed():
     result = subprocess.run(
         [node, "--input-type=module", "-e", _PROBE],
-        capture_output=True, text=True, cwd=REPO, timeout=60,
-        env=dict(os.environ, BGA_DOM_SHIM=str(REPO / "tests" / "dom_shim.mjs")))
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=60,
+        env=dict(os.environ, BGA_DOM_SHIM=str(REPO / "tests" / "dom_shim.mjs")),
+    )
     assert result.returncode == 0, result.stderr[-3000:]
     return json.loads(result.stdout)
 
 
 @needs_node
 class TestThePageStatesIt:
-
     def test_a_stale_capture_names_the_count_and_the_flag(self, probed):
         said = probed["stale"]
         assert "analysed at capture" in said and "0.2.9" in said, said

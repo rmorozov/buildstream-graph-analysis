@@ -13,6 +13,7 @@ document, which is the shape `CLAUDE.md` warns about. The register
 holds back at most its one next round (fixing-guide.md §7a, UX-926),
 so this file never demands a document from a round still in progress.
 """
+
 import pathlib
 import re
 import subprocess
@@ -55,27 +56,27 @@ class TestTheRowIsWritten:
     below the table is derived from the count rather than typed."""
 
     def test_the_row_goes_after_the_tables_last_row(self, ledger):
-        dev_track_cost.append_row("| 92 | implementer | sonnet | c | 1k | 1 "
-                                  "| 1 m | merged | — |", ledger)
-        rows = [line for line in ledger.read_text(encoding="utf-8").splitlines()
-                if line.startswith("| ") and line.split("|")[1].strip().isdigit()]
+        dev_track_cost.append_row("| 92 | implementer | sonnet | c | 1k | 1 | 1 m | merged | — |", ledger)
+        rows = [
+            line
+            for line in ledger.read_text(encoding="utf-8").splitlines()
+            if line.startswith("| ") and line.split("|")[1].strip().isdigit()
+        ]
         assert [row.split("|")[1].strip() for row in rows] == ["90", "91", "92"], (
-            "the appended row belongs after the table's last row, in "
-            f"round order; the table now reads {rows}")
+            f"the appended row belongs after the table's last row, in round order; the table now reads {rows}"
+        )
 
     def test_the_count_sentence_is_re_derived(self, ledger):
-        said = dev_track_cost.append_row("| 92 | implementer | sonnet | c | 1k "
-                                         "| 1 | 1 m | merged | — |", ledger)
+        said = dev_track_cost.append_row("| 92 | implementer | sonnet | c | 1k | 1 | 1 m | merged | — |", ledger)
         assert said == "three"
-        assert "What the three rows already say" in ledger.read_text(
-            encoding="utf-8"), (
+        assert "What the three rows already say" in ledger.read_text(encoding="utf-8"), (
             "appending a third row must leave the summary saying 'three'; "
-            "a typed count is the defect UX-666 was filed on")
+            "a typed count is the defect UX-666 was filed on"
+        )
 
     def test_nothing_else_in_the_document_moves(self, ledger):
         before = ledger.read_text(encoding="utf-8")
-        dev_track_cost.append_row("| 92 | a | b | c | 1k | 1 | 1 m | d | e |",
-                                  ledger)
+        dev_track_cost.append_row("| 92 | a | b | c | 1k | 1 | 1 m | d | e |", ledger)
         after = ledger.read_text(encoding="utf-8")
         assert after.startswith("# Agent runs\n")
         assert len(after.splitlines()) == len(before.splitlines()) + 1
@@ -101,12 +102,12 @@ class TestTheTableIsRead:
         assert len(runs) == 2, (
             "the header and the `|---|` separator split into nine cells "
             f"too; only a row whose first cell is a round number is a run: "
-            f"{runs}")
+            f"{runs}"
+        )
         assert [run["round"] for run in runs] == ["90", "91"]
 
     def test_the_real_ledger_parses_to_its_own_row_count(self):
-        rows = [line for line in LEDGER.read_text(encoding="utf-8").splitlines()
-                if line.startswith("| ")]
+        rows = [line for line in LEDGER.read_text(encoding="utf-8").splitlines() if line.startswith("| ")]
         # `rows` includes the header; the separator starts `|---`.
         assert len(dev_process_bands.ledger_runs()) == len(rows) - 1
 
@@ -117,29 +118,34 @@ class TestTheTableIsRead:
             "outcome | friction |\n|---|---|---|---|---|---|---|---|---|\n"
             "| 82 | researcher | main | cut | — | — | — | cut, re-run | — |\n"
             "| 83 | researcher | main | ran | 100k | 10 | 5 m | complete | — |\n"
-            "\nWhat the two rows already say: x.\n", encoding="utf-8")
+            "\nWhat the two rows already say: x.\n",
+            encoding="utf-8",
+        )
         runs = dev_process_bands.ledger_runs(path)
         assert runs[0]["tokens"] is None and runs[0]["wall"] is None
         report = "\n".join(dev_process_bands.runs_report(runs, 2))
         assert "100k" in report, (
             "the median of one priced run and one unpriced is the priced "
-            f"one; averaging the cut run in as 0 reads a proxy:\n{report}")
+            f"one; averaging the cut run in as 0 reads a proxy:\n{report}"
+        )
         assert "no token figure: 1 of 2" in report
 
     def test_the_band_prices_by_kind_and_model(self, ledger):
-        report = "\n".join(dev_process_bands.runs_report(
-            dev_process_bands.ledger_runs(ledger), 2))
+        report = "\n".join(dev_process_bands.runs_report(dev_process_bands.ledger_runs(ledger), 2))
         assert "researcher" in report and "verifier" in report
         assert "100k" in report and "50k" in report
 
     def test_the_flag_runs_on_the_real_ledger(self):
         out = subprocess.run(
-            [sys.executable, str(REPO / "tools/dev_process_bands.py"),
-             "--runs", "12"], capture_output=True, text=True, check=True)
+            [sys.executable, str(REPO / "tools/dev_process_bands.py"), "--runs", "12"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
         assert "run(s) in the ledger" in out.stdout
         assert "No band is drawn" in out.stdout, (
-            "the runs band reports and does not verdict, for the reason "
-            f"the other bands do not:\n{out.stdout}")
+            f"the runs band reports and does not verdict, for the reason the other bands do not:\n{out.stdout}"
+        )
 
 
 def _registered_rounds():
@@ -147,16 +153,16 @@ def _registered_rounds():
     round is already excluded there - a round in progress cannot yet
     have written its document (fixing-guide.md §7a) - so this class
     never demands one from it."""
-    return sorted((n for n in dev_round_register.written_rounds()
-                   if int(n) >= FIRST_PRICED_ROUND), key=int)
+    return sorted((n for n in dev_round_register.written_rounds() if int(n) >= FIRST_PRICED_ROUND), key=int)
 
 
 #: `UX-757`: named, not patterned - any other round arriving unpriced
 #: still reds.
 UNPRICEABLE_ROUND_WAIVER = {
-    "101": ("2026-09-07", "3805321: transcripts unrecoverable after a "
-                           "context rebuild, a guessed row worse than "
-                           "a missing one"),
+    "101": (
+        "2026-09-07",
+        "3805321: transcripts unrecoverable after a context rebuild, a guessed row worse than a missing one",
+    ),
 }
 
 
@@ -164,14 +170,14 @@ UNPRICEABLE_ROUND_WAIVER = {
 #: not patterned, so any other round without one still reds. Writing
 #: them is `docs/audits/` history's, not the row that found them.
 NO_DOCUMENT_WAIVER = {
-    "96": ("2026-09-23", "UX-716's Found by names it (filed 2026-09-05); "
-                         "no document was written, and UX-926's "
-                         "widening is what first read it"),
-    "132": ("2026-09-23", "UX-891..UX-894's Outcomes name it; shipped "
-                          "with no document (UX-926's Motivation)"),
-    "133": ("2026-09-23", "UX-915's and UX-916's Found by name it; "
-                          "shipped with no document (UX-926's "
-                          "Motivation)"),
+    "96": (
+        "2026-09-23",
+        "UX-716's Found by names it (filed 2026-09-05); "
+        "no document was written, and UX-926's "
+        "widening is what first read it",
+    ),
+    "132": ("2026-09-23", "UX-891..UX-894's Outcomes name it; shipped with no document (UX-926's Motivation)"),
+    "133": ("2026-09-23", "UX-915's and UX-916's Found by name it; shipped with no document (UX-926's Motivation)"),
 }
 
 
@@ -184,17 +190,17 @@ class TestTheInProgressExemptionIsOneRound:
         registered = dev_round_register.rounds()
         held = set(registered) - set(dev_round_register.written_rounds())
         assert held <= {max(registered, key=int)} and len(held) <= 1, (
-            f"the register holds back {sorted(held, key=int)} as in "
-            "progress; only the one newest number may be")
+            f"the register holds back {sorted(held, key=int)} as in progress; only the one newest number may be"
+        )
 
     def test_a_waived_round_is_still_owed_its_document(self):
         written = set(dev_round_register.written_rounds())
-        stale = [n for n in NO_DOCUMENT_WAIVER
-                 if n not in written or (AUDITS / f"round-{n}.md").exists()]
+        stale = [n for n in NO_DOCUMENT_WAIVER if n not in written or (AUDITS / f"round-{n}.md").exists()]
         assert not stale, (
             f"NO_DOCUMENT_WAIVER names {stale}, which the written "
             "register no longer lists or which now has a document - "
-            "drop it from the waiver")
+            "drop it from the waiver"
+        )
 
 
 class TestEveryRegisteredRoundPricesItsAgents:
@@ -209,7 +215,8 @@ class TestEveryRegisteredRoundPricesItsAgents:
         assert len(_registered_rounds()) >= 6, (
             "this class asserts nothing if the register is empty - "
             f"registered rounds from {FIRST_PRICED_ROUND} on are "
-            f"{_registered_rounds()}")
+            f"{_registered_rounds()}"
+        )
 
     @pytest.mark.parametrize("number", _registered_rounds())
     def test_it_carries_a_document_or_is_waived(self, number):
@@ -220,14 +227,16 @@ class TestEveryRegisteredRoundPricesItsAgents:
             f"round {number} is in the register and has no "
             f"docs/audits/round-{number}.md - UX-666 was filed on "
             "exactly this silence, which a glob over the documents "
-            "that exist cannot see")
+            "that exist cannot see"
+        )
         text = path.read_text(encoding="utf-8")
         if "no agents launched" in text:
             return
         assert "\n## Agents" in text, (
             f"round-{number}.md must carry a `## Agents` section or say "
             "'no agents launched'; a round that priced its runs nowhere "
-            "is what UX-666 was filed on")
+            "is what UX-666 was filed on"
+        )
         if number in UNPRICEABLE_ROUND_WAIVER:
             return
         section = text.split("\n## Agents", 1)[1].split("\n## ", 1)[0]
@@ -235,19 +244,23 @@ class TestEveryRegisteredRoundPricesItsAgents:
         assert len(rows) >= 2, (
             f"round-{number}.md's `## Agents` section has a heading and "
             f"{len(rows)} table line(s) - a header with no run under it "
-            "prices nothing")
+            "prices nothing"
+        )
 
     def test_the_ledger_prices_every_round_that_documents_agents(self):
         priced = {run["round"] for run in dev_process_bands.ledger_runs()}
-        missing = [number for number in _registered_rounds()
-                   if (AUDITS / f"round-{number}.md").exists()
-                   and "no agents launched" not in
-                   (AUDITS / f"round-{number}.md").read_text(encoding="utf-8")
-                   and number not in priced
-                   and number not in UNPRICEABLE_ROUND_WAIVER]
+        missing = [
+            number
+            for number in _registered_rounds()
+            if (AUDITS / f"round-{number}.md").exists()
+            and "no agents launched" not in (AUDITS / f"round-{number}.md").read_text(encoding="utf-8")
+            and number not in priced
+            and number not in UNPRICEABLE_ROUND_WAIVER
+        ]
         assert not missing, (
             f"round(s) {missing} document agents that the ledger does not "
-            "price; the table is where the next round chooses a model")
+            "price; the table is where the next round chooses a model"
+        )
 
 
 class TestTheRoundRegisterIsDerived:
@@ -260,9 +273,9 @@ class TestTheRoundRegisterIsDerived:
         # red CI run is read through and it truncates, so a message that
         # opens with an absolute path spends the whole budget on it.
         written = set(dev_round_register.written_rounds())
-        on_disk = set(re.findall(
-            r"^\| (\d+) \|", dev_round_register.REGISTER.read_text(
-                encoding="utf-8"), re.MULTILINE))
+        on_disk = set(
+            re.findall(r"^\| (\d+) \|", dev_round_register.REGISTER.read_text(encoding="utf-8"), re.MULTILINE)
+        )
         derived = dev_round_register.rounds()
         odd = sorted(written ^ on_disk, key=int)
         dates = [(n, derived[n]["date"]) for n in odd if n in derived]
@@ -274,21 +287,23 @@ class TestTheRoundRegisterIsDerived:
         assert problems == [], (
             f"derived-not-written {sorted(written - on_disk, key=int)} "
             f"written-not-derived {sorted(on_disk - written, key=int)} "
-            f"dates {dates} check {problems}")
+            f"dates {dates} check {problems}"
+        )
 
     def test_the_register_names_99_through_103(self):
         registered = set(dev_round_register.rounds())
         assert {"99", "100", "101", "102", "103"} <= registered, (
             f"the register names {sorted(registered, key=int)} - these "
             "five rounds are real (closed ids, a naming commit, or a "
-            "ledger row each) and must appear")
+            "ledger row each) and must appear"
+        )
 
     def test_the_ledgers_round_column_is_a_subset(self):
         ledger_rounds = {run["round"] for run in dev_process_bands.ledger_runs()}
         registered = set(dev_round_register.rounds())
         assert ledger_rounds <= registered, (
-            f"the ledger prices round(s) {ledger_rounds - registered} that "
-            "the register does not name")
+            f"the ledger prices round(s) {ledger_rounds - registered} that the register does not name"
+        )
 
 
 #: `UX-782`'s verifier: `first_commit_date()` reads when
@@ -301,10 +316,14 @@ class TestTheRoundRegisterIsDerived:
 #: their dateline states - and are not carried forward.)
 DATE_MISMATCH_WAIVER = dict.fromkeys(
     ("99", "100", "101", "102"),
-    ("2026-09-08", "UX-757 added docs/audits/round-N.md for all four "
-                   "on 2026-09-07, retroactively, from committed "
-                   "material; each document's own dateline states "
-                   "2026-09-06, the round's actual work date"))
+    (
+        "2026-09-08",
+        "UX-757 added docs/audits/round-N.md for all four "
+        "on 2026-09-07, retroactively, from committed "
+        "material; each document's own dateline states "
+        "2026-09-06, the round's actual work date",
+    ),
+)
 
 #: `UX-926`: round 134 shipped with no document and left a ledger row
 #: but no `docs/audits/round-134.md`, so the register did not list it
@@ -313,17 +332,21 @@ DATE_MISMATCH_WAIVER = dict.fromkeys(
 #: was then written from this round's own committed records, the way
 #: `UX-757` wrote rounds 99-102.
 DATE_MISMATCH_WAIVER["134"] = (
-    "2026-09-22", "round 134's document states 2026-09-21, the round's "
-                  "actual work date as its two closed rows record it; "
-                  "round 135 wrote the document on 2026-09-22 from "
-                  "UX-915's and UX-916's Outcomes and the ledger row")
+    "2026-09-22",
+    "round 134's document states 2026-09-21, the round's "
+    "actual work date as its two closed rows record it; "
+    "round 135 wrote the document on 2026-09-22 from "
+    "UX-915's and UX-916's Outcomes and the ledger row",
+)
 
 #: `UX-922`: a squash merge keeps one commit, dated when it landed, so
 #: a round document merged across a UTC midnight reads a day late.
 DATE_MISMATCH_WAIVER["130"] = (
-    "2026-09-22", "round 130's document states 2026-09-21, the round's "
-                  "work date and the date of its own commit on the "
-                  "branch; #249 squash-merged it on 2026-09-22")
+    "2026-09-22",
+    "round 130's document states 2026-09-21, the round's "
+    "work date and the date of its own commit on the "
+    "branch; #249 squash-merged it on 2026-09-22",
+)
 
 
 #: `UX-772`'s verifier: a round whose document states no recognized
@@ -335,26 +358,34 @@ DATE_MISMATCH_WAIVER["130"] = (
 #: this class's own check below rather than staying silently waived.
 NO_DATELINE_WAIVER = dict.fromkeys(
     ("75", "76", "77", "78", "80", "81", "83", "84", "85", "86"),
-    ("2026-09-07", "pre-round-99 audit-cadence document, no stated "
-                   "dateline (UX-772)"))
+    ("2026-09-07", "pre-round-99 audit-cadence document, no stated dateline (UX-772)"),
+)
 #: Rounds 7-9 open on the CI run that produced the capture - `Run
 #: [\`32044281643\`](...)`, a run id and no date anywhere in the
 #: document. They entered this population when `UX-781` un-truncated
 #: the history the register derives from, not by any change to them.
-NO_DATELINE_WAIVER.update(dict.fromkeys(
-    ("7", "8", "9"),
-    ("2026-09-07", "opens on a CI run id, not a date; states none "
-                   "(UX-772, population widened by UX-781)")))
+NO_DATELINE_WAIVER.update(
+    dict.fromkeys(
+        ("7", "8", "9"),
+        ("2026-09-07", "opens on a CI run id, not a date; states none (UX-772, population widened by UX-781)"),
+    )
+)
 #: Rounds 2-6, moved verbatim out of `docs/design/directions.md`
 #: during round 11's housekeeping - closed-history prose, never a
 #: dateline. They enter the population under `UX-782`'s committed
 #: union (they have no naming commit `git log` could find at all).
-NO_DATELINE_WAIVER.update(dict.fromkeys(
-    ("2", "3", "4", "5", "6"),
-    ("2026-09-08", "moved verbatim from docs/design/directions.md in "
-                   "round 11's housekeeping; states no dateline "
-                   "(UX-782, population widened to the committed "
-                   "union)")))
+NO_DATELINE_WAIVER.update(
+    dict.fromkeys(
+        ("2", "3", "4", "5", "6"),
+        (
+            "2026-09-08",
+            "moved verbatim from docs/design/directions.md in "
+            "round 11's housekeeping; states no dateline "
+            "(UX-782, population widened to the committed "
+            "union)",
+        ),
+    )
+)
 
 
 def _documented_rounds():
@@ -364,8 +395,7 @@ def _documented_rounds():
     left (round 64 used to need one; it now dates from its own
     document, like any other)."""
     reg = dev_round_register.rounds()
-    return sorted((n for n in reg if (AUDITS / f"round-{n}.md").exists()),
-                  key=int)
+    return sorted((n for n in reg if (AUDITS / f"round-{n}.md").exists()), key=int)
 
 
 class TestARegisteredRoundsDateMatchesItsDocument:
@@ -380,15 +410,16 @@ class TestARegisteredRoundsDateMatchesItsDocument:
 
     def test_the_population_is_not_empty(self):
         assert len(_documented_rounds()) >= 6, (
-            "this class asserts nothing if no registered round has a "
-            f"document: {_documented_rounds()}")
+            f"this class asserts nothing if no registered round has a document: {_documented_rounds()}"
+        )
 
     def test_the_population_reaches_below_first_priced_round(self):
         below = [n for n in _documented_rounds() if int(n) < FIRST_PRICED_ROUND]
         assert below, (
             f"`FIRST_PRICED_ROUND` ({FIRST_PRICED_ROUND}) stopped exactly "
             "where rounds 76 and 85 fail (UX-772); a population narrowed "
-            "back to it buys nothing")
+            "back to it buys nothing"
+        )
 
     @pytest.mark.parametrize("number", _documented_rounds())
     def test_a_documents_dateline_matches_its_own_first_commit(self, number):
@@ -397,31 +428,35 @@ class TestARegisteredRoundsDateMatchesItsDocument:
             assert document_date is None, (
                 f"round {number} is waived for stating no dateline, but "
                 "now states one - drop it from NO_DATELINE_WAIVER and let "
-                "it compare")
+                "it compare"
+            )
             return
         assert document_date is not None, (
             f"round {number} has no register-recognized dateline in "
             f"docs/audits/round-{number}.md ('Run on ...', 'Opens at "
             "...', or a heading's parenthesised date) and is not named "
             "in NO_DATELINE_WAIVER - a document that does not state its "
-            "own date is exactly UX-772's defect")
+            "own date is exactly UX-772's defect"
+        )
         if dev_round_register.is_shallow():
             pytest.skip(
                 f"shallow clone (boundary names "
                 f"{dev_round_register.shallow_depth()} commit(s)) - git "
                 "log cannot see round "
-                f"{number}'s own first commit (UX-782)")
+                f"{number}'s own first commit (UX-782)"
+            )
         git_date = dev_round_register.first_commit_date(number)
         if number in DATE_MISMATCH_WAIVER:
             assert git_date != document_date, (
-                f"round {number} is waived for a mismatch that no "
-                "longer reproduces - drop it from DATE_MISMATCH_WAIVER")
+                f"round {number} is waived for a mismatch that no longer reproduces - drop it from DATE_MISMATCH_WAIVER"
+            )
             return
         assert git_date == document_date, (
             f"round {number}: docs/audits/round-{number}.md's own "
             f"dateline says {document_date}, but it was first "
             f"committed on {git_date} - a retroactively-written "
-            "document not named in DATE_MISMATCH_WAIVER")
+            "document not named in DATE_MISMATCH_WAIVER"
+        )
 
 
 class TestATrackIsPricedByShape:
@@ -438,31 +473,25 @@ class TestATrackIsPricedByShape:
         assert dev_process_bands.shape_of(run) in ("bounded", "judgement")
 
     def test_a_run_naming_no_task_has_no_shape(self):
-        assert dev_process_bands.shape_of(
-            {"agent": "researcher", "task": "spec vs code"}) is None
+        assert dev_process_bands.shape_of({"agent": "researcher", "task": "spec vs code"}) is None
 
     def test_an_unknown_id_is_no_shape_rather_than_a_crash(self):
-        assert dev_process_bands.shape_of(
-            {"agent": "implementer", "task": "`UX-99999` gone"}) is None
+        assert dev_process_bands.shape_of({"agent": "implementer", "task": "`UX-99999` gone"}) is None
 
     def test_only_implementer_runs_are_shaped(self):
-        report = "\n".join(dev_process_bands.shape_report(
-            dev_process_bands.ledger_runs()))
-        tracks = [r for r in dev_process_bands.ledger_runs()
-                  if r["agent"] == "implementer"]
+        report = "\n".join(dev_process_bands.shape_report(dev_process_bands.ledger_runs()))
+        tracks = [r for r in dev_process_bands.ledger_runs() if r["agent"] == "implementer"]
         assert f"{len(tracks)} implementer run(s)" in report, (
-            "a researcher's sweep has no task shape; folding it in would "
-            f"price a different question:\n{report}")
+            f"a researcher's sweep has no task shape; folding it in would price a different question:\n{report}"
+        )
 
     def test_a_cell_that_disagrees_is_named_not_silently_resolved(self):
         """A row whose file derives `judgement` can still have handed a
         track a *bounded* slice - a burn-down batch is exactly that - so
         the split is reported with the disagreeing rows beside it."""
-        tracks = [r for r in dev_process_bands.ledger_runs()
-                  if r["agent"] == "implementer"]
+        tracks = [r for r in dev_process_bands.ledger_runs() if r["agent"] == "implementer"]
         off = dev_process_bands.disagreements(tracks)
-        report = "\n".join(dev_process_bands.shape_report(
-            dev_process_bands.ledger_runs()))
+        report = "\n".join(dev_process_bands.shape_report(dev_process_bands.ledger_runs()))
         if off:
             assert f"differs on {len(off)} of {len(tracks)}" in report
             for task, _said, _derived in off:
@@ -475,15 +504,13 @@ class TestATrackIsPricedByShape:
         is the sentence the split decides. A number in it and no run
         behind it is the defect this repository files rows about."""
         claude = (REPO / "CLAUDE.md").read_text(encoding="utf-8")
-        tracks = [r for r in dev_process_bands.ledger_runs()
-                  if r["agent"] == "implementer"]
+        tracks = [r for r in dev_process_bands.ledger_runs() if r["agent"] == "implementer"]
         # The split `--runs` prints, not the cell's own word: review 19
         # found the sentence citing a command that produced a different
         # number, which is the defect this file exists to stop.
-        judgement = [r for r in tracks
-                     if dev_process_bands.shape_of(r) == "judgement"]
+        judgement = [r for r in tracks if dev_process_bands.shape_of(r) == "judgement"]
         assert f"{len(judgement)} of {len(tracks)} runs" in claude, (
             f"CLAUDE.md's pipeline should say '{len(judgement)} of "
             f"{len(tracks)} runs'; the ledger has {len(tracks)} implementer "
-            f"rows, {len(judgement)} of them judgement-shaped")
-
+            f"rows, {len(judgement)} of them judgement-shaped"
+        )

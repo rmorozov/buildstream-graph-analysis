@@ -23,6 +23,7 @@ what entered the context is that turn's tool results and its own text.
 The phase comes from tool argv, never from prose; a turn touching two
 phases is charged to the higher, and `-v` prints how many that was.
 """
+
 import argparse
 import collections
 import datetime
@@ -45,7 +46,8 @@ _WRITE = re.compile(r"write_text\(|sed +-i|<<'|<<\"|\btee\b|>>? *[\w./]")
 _TASK_FILE = re.compile(r"docs/backlog/scenarios/UX-\d+[\w-]*\.md")
 _READ = re.compile(
     r"\b(cat|head|tail|grep|rg|ls|wc|find|awk|sed +-n"
-    r"|git +(log|grep|show|diff|status|ls-remote))\b")
+    r"|git +(log|grep|show|diff|status|ls-remote))\b"
+)
 
 
 def _record(line):
@@ -68,8 +70,7 @@ def _tool_text(block):
     args = block.get("input") or {}
     if not isinstance(args, dict):
         return block.get("name", ""), ""
-    parts = [str(args.get(key, "")) for key in
-             ("command", "file_path", "path", "pattern", "new_string")]
+    parts = [str(args.get(key, "")) for key in ("command", "file_path", "path", "pattern", "new_string")]
     return block.get("name", ""), " ".join(part for part in parts if part)
 
 
@@ -128,8 +129,7 @@ def responses(path):
                 tools[key] = []
             content = message.get("content")
             if isinstance(content, list):
-                tools[key] += [b for b in content if isinstance(b, dict)
-                               and b.get("type") == "tool_use"]
+                tools[key] += [b for b in content if isinstance(b, dict) and b.get("type") == "tool_use"]
     return [(tools[key], usage[key]) for key in order]
 
 
@@ -176,10 +176,15 @@ def split(path):
     if stamps:
         span = _parse_ts(max(stamps)) - _parse_ts(min(stamps))
         wall = round(span.total_seconds())
-    return {"phases": by_phase, "responses": len(rows), "wall": wall,
-            "peak_context": peak,
-            "cache_read": sum(u.get("cache_read_input_tokens", 0) for _, u in rows),
-            "ambiguous_turns": ambiguous[0], "ambiguous_tokens": ambiguous[1]}
+    return {
+        "phases": by_phase,
+        "responses": len(rows),
+        "wall": wall,
+        "peak_context": peak,
+        "cache_read": sum(u.get("cache_read_input_tokens", 0) for _, u in rows),
+        "ambiguous_turns": ambiguous[0],
+        "ambiguous_tokens": ambiguous[1],
+    }
 
 
 def _response_stamps(path):
@@ -214,9 +219,13 @@ def rebuilds(path, floor=30000):
         if cost > floor and no_tool_before:
             found.append({"timestamp": stamps[index], "cost": cost})
     tokens = sum(item["cost"] for item in found)
-    return {"count": len(found), "tokens": tokens,
-            "share": tokens / total if total else 0.0,
-            "total": total, "rebuilds": found}
+    return {
+        "count": len(found),
+        "tokens": tokens,
+        "share": tokens / total if total else 0.0,
+        "total": total,
+        "rebuilds": found,
+    }
 
 
 def _round_boundaries(spec):
@@ -233,8 +242,7 @@ def round_totals(path, rounds_spec, floor=30000):
     boundaries = _round_boundaries(rounds_spec)
     rows = responses(path)
     stamps = _response_stamps(path)
-    totals = {name: {"responses": 0, "tokens": 0, "rebuilds": 0}
-              for name, _ in boundaries}
+    totals = {name: {"responses": 0, "tokens": 0, "rebuilds": 0} for name, _ in boundaries}
     for index, (_tools, usage) in enumerate(rows):
         stamp = stamps[index]
         owner = boundaries[0][0]
@@ -252,36 +260,36 @@ def round_totals(path, rounds_spec, floor=30000):
 
 def report_rebuilds(path, floor=30000, rounds_spec=None):
     data = rebuilds(path, floor)
-    lines = [f"{os.path.basename(path)}  rebuilds {data['count']}  "
-             f"tokens {data['tokens']}  share {100.0 * data['share']:.1f}%"]
+    lines = [
+        f"{os.path.basename(path)}  rebuilds {data['count']}  "
+        f"tokens {data['tokens']}  share {100.0 * data['share']:.1f}%"
+    ]
     for item in data["rebuilds"]:
         lines.append(f"  {item['timestamp']}  {item['cost']}")
     if rounds_spec:
         lines.append("round      responses     tokens  rebuilds")
         for name, _ in _round_boundaries(rounds_spec):
             row = round_totals(path, rounds_spec, floor)[name]
-            lines.append(f"{name:<10} {row['responses']:9d} "
-                         f"{row['tokens']:10d} {row['rebuilds']:9d}")
+            lines.append(f"{name:<10} {row['responses']:9d} {row['tokens']:10d} {row['rebuilds']:9d}")
     return "\n".join(lines)
 
 
 def report(path, verbose=False):
     data = split(path)
     total = sum(count for _, count in data["phases"].values()) or 1
-    lines = [f"{os.path.basename(path)}  {data['wall']}s  "
-             f"{data['responses']} responses",
-             "phase      turns     tokens      %"]
+    lines = [
+        f"{os.path.basename(path)}  {data['wall']}s  {data['responses']} responses",
+        "phase      turns     tokens      %",
+    ]
     for phase in PHASES:
         if phase not in data["phases"]:
             continue
         turns, tokens = data["phases"][phase]
         lines.append(f"{phase:<9} {turns:6d} {tokens:10d} {100.0 * tokens / total:6.1f}")
     lines.append(f"{'TOTAL':<9} {data['responses']:6d} {total:10d} {100.0:6.1f}")
-    lines.append(f"context high-water {data['peak_context']}, "
-                 f"cache re-reads {data['cache_read']}")
+    lines.append(f"context high-water {data['peak_context']}, cache re-reads {data['cache_read']}")
     if verbose:
-        lines.append(f"turns in two phases: {data['ambiguous_turns']} "
-                     f"({data['ambiguous_tokens']} tokens)")
+        lines.append(f"turns in two phases: {data['ambiguous_turns']} ({data['ambiguous_tokens']} tokens)")
     return "\n".join(lines)
 
 
@@ -310,8 +318,11 @@ def implementer_transcripts(root):
         message = record.get("message") or {}
         text = message.get("content")
         text = text if isinstance(text, str) else json.dumps(text)
-        if re.search(r"running (ONE|one) [Tt][Rr][Aa][Cc][Kk]"
-                     r"|Implement \*\*UX-\d+\*\* only", text):
+        if re.search(
+            r"running (ONE|one) [Tt][Rr][Aa][Cc][Kk]"
+            r"|Implement \*\*UX-\d+\*\* only",
+            text,
+        ):
             item = re.search(r"UX-\d+", text)
             found.append((str(path), item.group(0) if item else "?"))
     return found
@@ -356,9 +367,11 @@ def ledger_row(path, round_, task, outcome, friction):
     if stamps:
         wall = (_parse_ts(max(stamps)) - _parse_ts(min(stamps))).total_seconds() / 60
     wall_text = f"{wall:.1f}".removesuffix(".0")
-    return (f"| {round_} | {agent} | {_model_short(model)} | {task} | "
-            f"{round(tokens / 1000)}k | {calls} | {wall_text} m | "
-            f"{outcome} | {friction} |")
+    return (
+        f"| {round_} | {agent} | {_model_short(model)} | {task} | "
+        f"{round(tokens / 1000)}k | {calls} | {wall_text} m | "
+        f"{outcome} | {friction} |"
+    )
 
 
 #: `UX-666`: the ledger the rows go into. A round appends here; the
@@ -366,12 +379,29 @@ def ledger_row(path, round_, task, outcome, friction):
 #: typed - `test_a_counted_figure_is_derived.py` reads it back.
 LEDGER = pathlib.Path(__file__).resolve().parents[1] / "docs/audits/agent-runs.md"
 
-_TENS = ("", "", "twenty", "thirty", "forty", "fifty",
-         "sixty", "seventy", "eighty", "ninety")
-_UNITS = ("zero", "one", "two", "three", "four", "five", "six", "seven",
-          "eight", "nine", "ten", "eleven", "twelve", "thirteen",
-          "fourteen", "fifteen", "sixteen", "seventeen", "eighteen",
-          "nineteen")
+_TENS = ("", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety")
+_UNITS = (
+    "zero",
+    "one",
+    "two",
+    "three",
+    "four",
+    "five",
+    "six",
+    "seven",
+    "eight",
+    "nine",
+    "ten",
+    "eleven",
+    "twelve",
+    "thirteen",
+    "fourteen",
+    "fifteen",
+    "sixteen",
+    "seventeen",
+    "eighteen",
+    "nineteen",
+)
 
 
 def count_word(n):
@@ -394,13 +424,10 @@ def append_row(row, ledger=LEDGER):
     """`UX-666`: the row after the table's last, count sentence re-derived."""
     lines = ledger.read_text(encoding="utf-8").splitlines()
     start = next(i for i, line in enumerate(lines) if line.startswith("|---"))
-    body = [i for i, line in enumerate(lines[start + 1:], start + 1)
-            if line.startswith("| ")]
+    body = [i for i, line in enumerate(lines[start + 1 :], start + 1) if line.startswith("| ")]
     lines.insert(body[-1] + 1, row)
     said = count_word(len(body) + 1)
-    text = re.sub(r"What the [a-z -]+ rows already say",
-                  f"What the {said} rows already say",
-                  "\n".join(lines) + "\n")
+    text = re.sub(r"What the [a-z -]+ rows already say", f"What the {said} rows already say", "\n".join(lines) + "\n")
     ledger.write_text(text, encoding="utf-8")
     return said
 
@@ -408,23 +435,25 @@ def append_row(row, ledger=LEDGER):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("transcripts", nargs="*")
-    parser.add_argument("--root", default=os.path.expanduser("~/.claude/projects"),
-                        help="Where the harness writes agent transcripts.")
-    parser.add_argument("--list", action="store_true",
-                        help="Name the implementer transcripts under --root.")
+    parser.add_argument(
+        "--root", default=os.path.expanduser("~/.claude/projects"), help="Where the harness writes agent transcripts."
+    )
+    parser.add_argument("--list", action="store_true", help="Name the implementer transcripts under --root.")
     parser.add_argument("--session", help="Count and price one session's rebuilds.")
-    parser.add_argument("--floor", type=int, default=30000,
-                        help="Fresh-token floor for a rebuild.")
+    parser.add_argument("--floor", type=int, default=30000, help="Fresh-token floor for a rebuild.")
     parser.add_argument("--rounds", help="name=ISO-timestamp,... round boundaries.")
     parser.add_argument("--ledger", help="Print one agent-runs.md row for a transcript.")
     parser.add_argument("--round", dest="round_", help="The round cell for --ledger.")
     parser.add_argument("--task", default="", help="The task cell for --ledger.")
     parser.add_argument("--outcome", default="", help="The outcome cell for --ledger.")
     parser.add_argument("--friction", default="", help="The friction cell for --ledger.")
-    parser.add_argument("--append", action="store_true",
-                        help="With --ledger: write the row into "
-                             "docs/audits/agent-runs.md and re-derive its "
-                             "count sentence, instead of printing it.")
+    parser.add_argument(
+        "--append",
+        action="store_true",
+        help="With --ledger: write the row into "
+        "docs/audits/agent-runs.md and re-derive its "
+        "count sentence, instead of printing it.",
+    )
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args(argv)
     if args.list:
@@ -435,8 +464,7 @@ def main(argv=None):
         print(report_rebuilds(args.session, args.floor, args.rounds))
         return 0
     if args.ledger:
-        row = ledger_row(args.ledger, args.round_, args.task,
-                         args.outcome, args.friction)
+        row = ledger_row(args.ledger, args.round_, args.task, args.outcome, args.friction)
         if args.append:
             said = append_row(row)
             print(f"appended to {LEDGER}; the summary now says {said}")

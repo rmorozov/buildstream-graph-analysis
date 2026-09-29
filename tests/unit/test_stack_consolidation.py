@@ -4,6 +4,7 @@ immediate-consumer set, with no existing `kind: stack` element already
 covering them, flagged as candidates worth considering for consolidation.
 See docs/backlog/tasks/P4-15-stack-consolidation-heuristic.md.
 """
+
 import json
 
 from bga import BuildEfficiencyAnalyzer
@@ -33,12 +34,16 @@ def test_two_elements_always_consumed_by_the_same_single_target_are_flagged():
 def test_existing_stack_covering_the_group_exactly_suppresses_the_candidate():
     graph = _graph(
         elements=[
-            ("app.bst", "import"), ("x.bst", "import"), ("y.bst", "import"),
+            ("app.bst", "import"),
+            ("x.bst", "import"),
+            ("y.bst", "import"),
             ("grp.bst", "stack"),
         ],
         deps=[
-            ("x.bst", "app.bst"), ("y.bst", "app.bst"),
-            ("x.bst", "grp.bst"), ("y.bst", "grp.bst"),
+            ("x.bst", "app.bst"),
+            ("y.bst", "app.bst"),
+            ("x.bst", "grp.bst"),
+            ("y.bst", "grp.bst"),
         ],
     )
     candidates = find_consolidation_candidates(graph)
@@ -81,6 +86,7 @@ def test_output_is_json_serializable_and_deterministic():
 
 # --- Wiring: analyzer -> result.structural -> text report ----------------
 
+
 def _write_run_dir(tmp_path):
     run_dir = tmp_path / "run"
     run_dir.mkdir()
@@ -97,12 +103,27 @@ def _write_run_dir(tmp_path):
     }
     trace = {
         "spans": [
-            {"task_key": "x.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 5000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "y.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 5000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "app.bst|BUILD|BUILD|0", "ts_us": 5000, "dur_us": 5000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
+            {
+                "task_key": "x.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 5000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "y.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 5000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "app.bst|BUILD|BUILD|0",
+                "ts_us": 5000,
+                "dur_us": 5000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
         ],
         "phases": [],
     }

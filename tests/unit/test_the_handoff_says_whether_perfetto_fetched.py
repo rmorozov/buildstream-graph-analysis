@@ -18,6 +18,7 @@ rather than *bodies* would report "Perfetto has the whole trace" at the
 moment zero bytes had been sent, which is the failure this item exists
 to remove wearing a new hat.
 """
+
 import gzip
 import json
 import os
@@ -126,8 +127,7 @@ class TestTheServerKnowsWhetherTheTraceWasFetched:
         serving one would print "Perfetto has it" over a blank tab."""
         assert _status(served(snapshot / "run")) == {"fetches": 0, "bytes": 0}
 
-    def test_a_served_body_is_a_fetch_and_carries_its_size(
-            self, snapshot, served):
+    def test_a_served_body_is_a_fetch_and_carries_its_size(self, snapshot, served):
         """`UX-546`: read through `_status_when`, which is where the
         3-in-600-at-loadavg-7.12 race and its 4.2-5.9 ms are measured.
         """
@@ -313,15 +313,26 @@ NOT_YET = [{"fetches": 0, "bytes": 0}]
 LANDED = [{"fetches": 0, "bytes": 0}, {"fetches": 1, "bytes": 9_000_000}]
 
 
-def _click(answers, size=9_000_000, inline_max=INLINE_MAX, here=FETCHABLE,
-           open_returns=True):
+def _click(answers, size=9_000_000, inline_max=INLINE_MAX, here=FETCHABLE, open_returns=True):
     result = subprocess.run(
-        [node, "--input-type=module", "-e",
-         _HARNESS % {"size": size, "inline_max": inline_max,
-                     "here": json.dumps(here),
-                     "answers": json.dumps(answers),
-                     "open_returns": json.dumps(open_returns)}],
-        capture_output=True, text=True, cwd=REPO, timeout=90)
+        [
+            node,
+            "--input-type=module",
+            "-e",
+            _HARNESS
+            % {
+                "size": size,
+                "inline_max": inline_max,
+                "here": json.dumps(here),
+                "answers": json.dumps(answers),
+                "open_returns": json.dumps(open_returns),
+            },
+        ],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=90,
+    )
     assert result.returncode == 0, result.stderr[-3000:]
     return json.loads(result.stdout.strip().splitlines()[-1])
 

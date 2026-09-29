@@ -3,6 +3,7 @@
 Covers P1-02 (real scheduler-wait detection) and P1-01 (real resource-wait
 holder tracking).
 """
+
 import pytest
 
 from bga.attribution.blame_chain import BlameChainAnalyzer
@@ -25,6 +26,7 @@ def _analyzer(tasks=None):
 
 # --- P1-02 (P1-32: made a real interval sweep, not per-start-timestamp
 # snapshots) : classify_scheduler_wait -----------------------------------
+
 
 def test_scheduler_wait_detected_when_capacity_was_free():
     """Dependency-ready at t=100, max_jobs=2, but only one other task is
@@ -105,6 +107,7 @@ def test_scheduler_wait_detects_slot_freed_by_an_earlier_finish_not_a_new_start(
 
 # --- _resource_available_at (call-site fix backing classify_scheduler_wait) --
 
+
 def test_resource_available_at_true_when_under_capacity():
     waiting = _task("elem-a", ready_us=100, start_us=200, finish_us=300, resources=[Resource.PROCESS])
     other = _task("elem-b", ready_us=0, start_us=0, finish_us=500, resources=[Resource.PROCESS])
@@ -132,6 +135,7 @@ def test_resource_available_at_true_for_task_with_no_resources():
 # Deeper capacity-aware coverage (spare-capacity, mid-wait saturation
 # changes, unknown-capacity fallthrough, multi-resource) lives in
 # tests/unit/test_resource_wait.py; these are basic smoke coverage.
+
 
 def test_resource_wait_single_holder():
     """Wait window [100, 200), one other task occupying PROCESS for the
@@ -227,6 +231,7 @@ def test_resource_wait_false_when_not_actually_waiting():
 # saturate PROCESS during [0, 100), then both finish, leaving PROCESS
 # genuinely free for [100, 200) - the maximal saturated prefix
 # classify_resource_wait reports is exactly [0, 100).
+
 
 def test_wait_gap_remainder_becomes_scheduler_wait_when_slot_genuinely_free():
     """The real P1-39 bug, demonstrated end-to-end: after the RESOURCE_WAIT

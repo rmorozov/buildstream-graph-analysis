@@ -34,6 +34,7 @@ Latent heavies      5     1   codegen.bst
 Every guard here runs on `tests/fixtures/macro_micro/run`, which is
 committed - `UX-276`'s rule, applied from the start.
 """
+
 import json
 import os
 import pathlib
@@ -88,9 +89,10 @@ PUBLISHED_VIEWS = {
 # outside the folded `members` cell). `binary_cost` needs Plane 2,
 # which only this committed fixture carries, so there is no second run
 # to measure the coincidence away on.
-KNOWN_COINCIDENCE = ["batch_opportunities.serialized_pairs and "
-                     "top_opportunities (5)",
-                     "binary_cost and serial_chains (9)"]
+KNOWN_COINCIDENCE = [
+    "batch_opportunities.serialized_pairs and top_opportunities (5)",
+    "binary_cost and serial_chains (9)",
+]
 
 # The bound, stated here rather than read from `schemas`. Reading the
 # constant and asserting against it is the mutation that passes:
@@ -101,15 +103,18 @@ VIEW_COLUMNS_BOUND = 8
 
 
 def _presets():
-    return schemas.schema(schemas.ANALYZE)["properties"]["elements"][
-        schemas.PRESETS]
+    return schemas.schema(schemas.ANALYZE)["properties"]["elements"][schemas.PRESETS]
 
 
 @pytest.fixture(scope="module")
 def payload():
     done = subprocess.run(
         ["python", "-m", "bga.cli", "analyze", str(RUN), "--format", "json"],
-        capture_output=True, text=True, cwd=REPO, timeout=180)
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=180,
+    )
     assert done.returncode == 0, done.stderr[-2000:]
     return json.loads(done.stdout)
 
@@ -216,24 +221,29 @@ console.log(JSON.stringify({
 def _page(payload, apply=None):
     """The rendered report, and what its element views draw."""
     import tempfile
+
     scratch = tempfile.mkdtemp()
     try:
         run = pathlib.Path(scratch, "payload.json")
         run.write_text(json.dumps(payload), encoding="utf-8")
         doc = pathlib.Path(scratch, "schema.json")
-        doc.write_text(json.dumps(schemas.schema(schemas.ANALYZE)),
-                       encoding="utf-8")
+        doc.write_text(json.dumps(schemas.schema(schemas.ANALYZE)), encoding="utf-8")
         script = _HARNESS % (
             (REPO / "tests/viewer.mjs").as_uri(),
             (REPO / "bga/viewer/nav.js").as_uri(),
             (REPO / "bga/viewer/viewstate.js").as_uri(),
-            json.dumps(str(run)), json.dumps(str(doc)),
-            json.dumps(apply) if apply else "null")
-        done = subprocess.run([node, "--input-type=module", "-e", script],
-                              capture_output=True, text=True, cwd=REPO,
-                              timeout=120,
-                              env={**os.environ, "BGA_DOM_SHIM":
-                                   (REPO / "tests/dom_shim.mjs").as_uri()})
+            json.dumps(str(run)),
+            json.dumps(str(doc)),
+            json.dumps(apply) if apply else "null",
+        )
+        done = subprocess.run(
+            [node, "--input-type=module", "-e", script],
+            capture_output=True,
+            text=True,
+            cwd=REPO,
+            timeout=120,
+            env={**os.environ, "BGA_DOM_SHIM": (REPO / "tests/dom_shim.mjs").as_uri()},
+        )
         assert done.returncode == 0, done.stderr[-3000:]
         return json.loads(done.stdout)
     finally:
@@ -245,8 +255,8 @@ class TestThePresetsAreDeclaredNotCoded:
         names = [preset["name"] for preset in _presets()]
         assert len(names) >= 4, names
         assert "All elements" in names, (
-            "the unfiltered union stopped being one of the views, so the "
-            "page can no longer show every element at all")
+            "the unfiltered union stopped being one of the views, so the page can no longer show every element at all"
+        )
 
     def test_the_page_does_not_name_a_view_of_its_own(self):
         """`UX-201`'s rule, one level down. A view named in JavaScript is
@@ -254,17 +264,15 @@ class TestThePresetsAreDeclaredNotCoded:
         is exactly what `UX-288` had just finished undoing in the
         contract."""
         source = (REPO / "bga/viewer/app.js").read_text(encoding="utf-8")
-        code = "\n".join(line for line in source.splitlines()
-                         if not line.strip().startswith(("//", "*", "/*")))
-        named = [preset["name"] for preset in _presets()
-                 if preset["name"] in code]
-        assert named == [], (
-            f"the page names view(s) {named} itself; they are the schema's")
+        code = "\n".join(line for line in source.splitlines() if not line.strip().startswith(("//", "*", "/*")))
+        named = [preset["name"] for preset in _presets() if preset["name"] in code]
+        assert named == [], f"the page names view(s) {named} itself; they are the schema's"
 
     def test_every_view_shows_fewer_columns_than_the_union(self):
         for preset in _presets():
             assert len(preset["columns"]) <= VIEW_COLUMNS_BOUND, (
-                f"{preset['name']} shows {len(preset['columns'])} columns")
+                f"{preset['name']} shows {len(preset['columns'])} columns"
+            )
 
     def test_the_module_is_pinned_to_the_bound(self):
         """The other half of stating it here: if the schema's own
@@ -277,18 +285,28 @@ class TestThePresetsAreDeclaredNotCoded:
         exercised at a fixed width rather than at `PRESET_COLUMNS_MAX +
         1` - which would keep raising however far the constant moved."""
         with pytest.raises(ValueError, match="columns"):
-            schemas._check_hint("analyze/v4", "elements", {
-                schemas.PRESETS: [{"name": "wide", "columns":
-                                   [f"c{n}" for n in
-                                    range(VIEW_COLUMNS_BOUND + 1)]}]})
+            schemas._check_hint(
+                "analyze/v4",
+                "elements",
+                {schemas.PRESETS: [{"name": "wide", "columns": [f"c{n}" for n in range(VIEW_COLUMNS_BOUND + 1)]}]},
+            )
 
     def test_a_preset_choosing_rows_two_ways_is_refused(self):
         with pytest.raises(ValueError, match="two answers"):
-            schemas._check_hint("analyze/v4", "elements", {
-                schemas.PRESETS: [{"name": "both", "columns": ["element"],
-                                   "from": "critical_path_detail",
-                                   "where": {"column": "is_leaf",
-                                             "equals": True}}]})
+            schemas._check_hint(
+                "analyze/v4",
+                "elements",
+                {
+                    schemas.PRESETS: [
+                        {
+                            "name": "both",
+                            "columns": ["element"],
+                            "from": "critical_path_detail",
+                            "where": {"column": "is_leaf", "equals": True},
+                        }
+                    ]
+                },
+            )
 
 
 class TestEveryViewIsAFilterOverPublishedFields:
@@ -305,35 +323,30 @@ class TestEveryViewIsAFilterOverPublishedFields:
                 at = (at or {}).get(step) if isinstance(at, dict) else None
             if not at:
                 missing.append(f"{preset['name']} -> {path}")
-        assert missing == [], (
-            f"view(s) over a path this run does not publish: {missing}")
+        assert missing == [], f"view(s) over a path this run does not publish: {missing}"
 
     def test_each_where_column_is_a_column_the_rows_carry(self, payload):
         drawn = _page(payload)
-        columns = {header for table in drawn["tables"]
-                   for header in table["headers"]}
+        columns = {header for table in drawn["tables"] for header in table["headers"]}
         # The rendered headers are titled, so compare against the raw
         # keys the payload carries for an element instead.
-        record = next(iter((payload["elements"].get("blast_radius") or {})
-                           .values()), {})
-        record = {**record,
-                  **next(iter((payload["elements"].get("criticality_probability")
-                               or {}).values()), {})}
-        unknown = [preset["name"] for preset in _presets()
-                   if preset.get("where")
-                   and preset["where"]["column"] not in record]
+        record = next(iter((payload["elements"].get("blast_radius") or {}).values()), {})
+        record = {**record, **next(iter((payload["elements"].get("criticality_probability") or {}).values()), {})}
+        unknown = [
+            preset["name"] for preset in _presets() if preset.get("where") and preset["where"]["column"] not in record
+        ]
         assert unknown == [], (
             f"view(s) filtering on a field no element record carries: "
             f"{unknown}; the records carry {sorted(record)} and the page "
-            f"drew columns {sorted(columns)}")
+            f"drew columns {sorted(columns)}"
+        )
 
 
 @needs_node
 class TestThePageDrawsThem:
     def test_every_declared_view_is_offered(self, payload):
         drawn = _page(payload)
-        assert drawn["offered"] == [preset["name"] for preset in _presets()], (
-            f"offered {drawn['offered']}")
+        assert drawn["offered"] == [preset["name"] for preset in _presets()], f"offered {drawn['offered']}"
 
     def test_each_view_draws_what_the_payload_publishes(self, payload):
         drawn = _page(payload)
@@ -344,8 +357,8 @@ class TestThePageDrawsThem:
                 at = at[step]
             published = [entry["element_uid"] for entry in at]
             assert by_name[name]["population"] == published, (
-                f"{name} draws {by_name[name]['population'][:4]}…, "
-                f"{path} publishes {published[:4]}…")
+                f"{name} draws {by_name[name]['population'][:4]}…, {path} publishes {published[:4]}…"
+            )
 
     def test_the_leaves_view_is_the_leaves(self, payload):
         drawn = _page(payload)
@@ -357,9 +370,11 @@ class TestThePageDrawsThem:
         """The acceptance test's second clause, over the whole page
         rather than over the presets - a view that is narrow while the
         table beside it is not has moved the problem."""
-        wide = {f"{t['section']}[{t['preset'] or ''}]": t["columns"]
-                for t in _page(payload)["tables"]
-                if t["columns"] > VIEW_COLUMNS_BOUND}
+        wide = {
+            f"{t['section']}[{t['preset'] or ''}]": t["columns"]
+            for t in _page(payload)["tables"]
+            if t["columns"] > VIEW_COLUMNS_BOUND
+        }
         assert wide == {}, f"table(s) wider than eight columns: {wide}"
 
     def test_the_element_table_is_drawn_once(self, payload):
@@ -368,14 +383,14 @@ class TestThePageDrawsThem:
         `UX-288`, four tables drew the 135 leaves and two drew the 14
         critical-path elements."""
         drawn = _page(payload)
-        elements = [table for table in drawn["tables"]
-                    if frozenset(table["population"])
-                    == frozenset(payload["elements"].get("element_durations")
-                                 or {})
-                    ]
+        elements = [
+            table
+            for table in drawn["tables"]
+            if frozenset(table["population"]) == frozenset(payload["elements"].get("element_durations") or {})
+        ]
         assert len(elements) <= 1, (
-            f"{len(elements)} tables draw the whole element population: "
-            f"{[t['section'] for t in elements]}")
+            f"{len(elements)} tables draw the whole element population: {[t['section'] for t in elements]}"
+        )
 
     def test_no_two_tables_carry_the_same_elements(self, payload):
         """The same clause over the whole page.
@@ -414,14 +429,14 @@ class TestThePageDrawsThem:
                 if seen == members:
                     clashes.append(f"{name} and {other} ({len(members)})")
             pops[name] = members
-        assert clashes == KNOWN_COINCIDENCE, (
-            f"table(s) drawing one population twice: {clashes}")
+        assert clashes == KNOWN_COINCIDENCE, f"table(s) drawing one population twice: {clashes}"
 
     def test_the_exempted_pair_is_two_publications(self, payload):
         """The exemption above is not a hole: the two tables draw two
         *different* published fields. If one of them ever became a copy
         of the other, this is what would say so - and `UX-288`'s guard
         would fail first, on the payload."""
+
         def uids(value):
             """Element uids out of a row, whatever shape the row is.
 
@@ -430,23 +445,25 @@ class TestThePageDrawsThem:
             read here, because what this clause is about is *which
             elements* each publishes, not how either spells a row.
             """
+
             def members(row):
                 if isinstance(row, dict):
                     return row.values()
                 return row if isinstance(row, list) else [row]
 
-            return {member for row in (value or []) for member in members(row)
-                    if isinstance(member, str) and member.endswith(".bst")}
+            return {
+                member
+                for row in (value or [])
+                for member in members(row)
+                if isinstance(member, str) and member.endswith(".bst")
+            }
 
         top = uids(payload["sensitivity"]["top_opportunities"])
-        pairs = uids(payload["batch_opportunities"]
-                     ["serialized_pairs"])
+        pairs = uids(payload["batch_opportunities"]["serialized_pairs"])
         assert top and pairs, "the exempted pair no longer draws anything"
-        assert (payload["sensitivity"]["top_opportunities"]
-                != payload["batch_opportunities"]
-                ["serialized_pairs"]), (
-            "the two fields are now the same value, which is a duplication "
-            "rather than a coincidence")
+        assert payload["sensitivity"]["top_opportunities"] != payload["batch_opportunities"]["serialized_pairs"], (
+            "the two fields are now the same value, which is a duplication rather than a coincidence"
+        )
 
 
 _JOIN_HARNESS = r"""
@@ -523,13 +540,15 @@ class TestTheJoinMergesWithoutOverwriting:
 
     @staticmethod
     def _merge():
-        script = _JOIN_HARNESS % ((REPO / "tests/viewer.mjs").as_uri(),
-                                  json.dumps(_presets()))
-        done = subprocess.run([node, "--input-type=module", "-e", script],
-                              capture_output=True, text=True, cwd=REPO,
-                              timeout=120,
-                              env={**os.environ, "BGA_DOM_SHIM":
-                                   (REPO / "tests/dom_shim.mjs").as_uri()})
+        script = _JOIN_HARNESS % ((REPO / "tests/viewer.mjs").as_uri(), json.dumps(_presets()))
+        done = subprocess.run(
+            [node, "--input-type=module", "-e", script],
+            capture_output=True,
+            text=True,
+            cwd=REPO,
+            timeout=120,
+            env={**os.environ, "BGA_DOM_SHIM": (REPO / "tests/dom_shim.mjs").as_uri()},
+        )
         assert done.returncode == 0, done.stderr[-3000:]
         return json.loads(done.stdout)
 
@@ -538,8 +557,7 @@ class TestTheJoinMergesWithoutOverwriting:
         """A join field shadowing an existing column would change what
         that column means without changing its heading - the reader sees
         `Rebuilds: 999` and has no way to know which plane said so."""
-        assert self._merge()["a"]["downstream_count"] == 1, (
-            "the join overwrote a Plane 1 column")
+        assert self._merge()["a"]["downstream_count"] == 1, "the join overwrote a Plane 1 column"
 
     @needs_node
     def test_the_join_introduces_no_element(self):
@@ -548,7 +566,8 @@ class TestTheJoinMergesWithoutOverwriting:
         the schedule does not carry would make this table a population
         it does not claim to be."""
         assert self._merge()["elements"] == ["a.bst", "b.bst"], (
-            "an element with no Plane 1 row joined the element table")
+            "an element with no Plane 1 row joined the element table"
+        )
 
     @needs_node
     def test_the_plane_two_view_is_not_offered_without_plane_two(self):
@@ -566,20 +585,21 @@ class TestTheJoinMergesWithoutOverwriting:
         merged = self._merge()
         assert "Plane 2 (sandbox)" in merged["offeredWithJoin"], (
             "the view is not offered even where it can answer",
-            merged["offeredWithJoin"])
+            merged["offeredWithJoin"],
+        )
         assert "Plane 2 (sandbox)" not in merged["offeredWithoutJoin"], (
             "a run with no Plane 2 is still offered the sandbox view",
-            merged["offeredWithoutJoin"])
+            merged["offeredWithoutJoin"],
+        )
         assert merged["offeredWithoutJoin"], (
-            "no view at all survived, so the assertion above passes for "
-            "the wrong reason")
+            "no view at all survived, so the assertion above passes for the wrong reason"
+        )
 
     @needs_node
     def test_the_columns_it_did_add_are_reported(self):
         """The merge says what it merged, so the section's own sentence
         counts signals rather than guessing."""
-        assert self._merge()["joined"] == ["cores_busy", "requested_jobs",
-                                           "peak_rss_bytes"], self._merge()
+        assert self._merge()["joined"] == ["cores_busy", "requested_jobs", "peak_rss_bytes"], self._merge()
 
 
 @needs_node
@@ -587,8 +607,7 @@ class TestAViewTravelsInTheLink:
     def test_the_fragment_carries_the_view(self, payload):
         drawn = _page(payload, apply="v.elements=Critical+path")
         assert drawn["drawn"] == ["Critical path"], drawn["drawn"]
-        assert "v.elements=Critical+path" in drawn["captured"], (
-            drawn["captured"])
+        assert "v.elements=Critical+path" in drawn["captured"], drawn["captured"]
 
     def test_the_rail_names_every_view_and_links_to_it(self, payload):
         drawn = _page(payload)
@@ -598,7 +617,7 @@ class TestAViewTravelsInTheLink:
             assert entry["name"].replace(" ", "%20") in entry["href"], entry
 
     def test_a_view_this_run_cannot_support_is_not_offered(self, payload):
-        """"There are no choke points" and "this run does not carry
+        """ "There are no choke points" and "this run does not carry
         choke points" are different claims, and a view drawn empty makes
         them look alike. So the selection is removed and the view has to
         disappear - not appear with zero rows."""
@@ -606,8 +625,7 @@ class TestAViewTravelsInTheLink:
         without["bottleneck"]["choke_points"] = []
         drawn = _page(without)
         assert "Choke points" not in drawn["offered"], drawn["offered"]
-        assert "Critical path" in drawn["offered"], (
-            "removing one selection took the others with it")
+        assert "Critical path" in drawn["offered"], "removing one selection took the others with it"
 
     def test_a_view_whose_filter_matches_nothing_is_not_offered(self, payload):
         """The `where` half of the rule above, and it needs its own case:

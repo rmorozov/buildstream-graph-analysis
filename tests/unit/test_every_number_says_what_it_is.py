@@ -44,6 +44,7 @@ store-aggregate/v1        12        0       26
 Seventy-nine numeric leaves outside the analyze door with no unit or a
 sniffed one - the exact class `UX-343` closed inside it.
 """
+
 import io
 import json
 import os
@@ -56,8 +57,10 @@ import tempfile
 import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-FIXTURES = {"golden": REPO / "tests/fixtures/golden/mixed_task_kinds",
-            "macro_micro": REPO / "tests/fixtures/macro_micro/run"}
+FIXTURES = {
+    "golden": REPO / "tests/fixtures/golden/mixed_task_kinds",
+    "macro_micro": REPO / "tests/fixtures/macro_micro/run",
+}
 node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 
@@ -74,12 +77,10 @@ shutil.copytree(FIXTURES["golden"], _GOLDEN_TWIN)
 UNDECLARABLE = {
     # `UX-344`: one list at the top level rather than a copy inside every
     # claim, so there is one path here where there were three.
-    "provenance.[].rule.threshold":
-        "A rule whose `observed_path` is null compares against a quantity "
-        "the finding computes rather than publishes, so no path names the "
-        "unit. Rules that do have one carry `threshold_quantity`.",
-    "provenance.[].rule.threshold.[]":
-        "The banded form of the same rule - two thresholds, same reason.",
+    "provenance.[].rule.threshold": "A rule whose `observed_path` is null compares against a quantity "
+    "the finding computes rather than publishes, so no path names the "
+    "unit. Rules that do have one carry `threshold_quantity`.",
+    "provenance.[].rule.threshold.[]": "The banded form of the same rule - two thresholds, same reason.",
 }
 
 _CENSUS = r"""
@@ -152,18 +153,22 @@ def _census(label):
     from tools.bga_view import payloads
 
     scratch = pathlib.Path(tempfile.mkdtemp())
-    (scratch / "payload.json").write_text(
-        json.dumps(payloads(str(FIXTURES[label]))["report.json"]))
-    (scratch / "schemas.json").write_text(
-        json.dumps({name: schemas.schema(name) for name in schemas.names()}))
+    (scratch / "payload.json").write_text(json.dumps(payloads(str(FIXTURES[label]))["report.json"]))
+    (scratch / "schemas.json").write_text(json.dumps({name: schemas.schema(name) for name in schemas.names()}))
     done = subprocess.run(
         [node, "--input-type=module", "-e", _CENSUS],
-        capture_output=True, text=True, cwd=REPO, timeout=120,
-        env={**os.environ,
-             "BGA_DOM_SHIM": (REPO / "tests/dom_shim.mjs").as_uri(),
-             "BGA_VIEWER": (REPO / "tests/viewer.mjs").as_uri(),
-             "BGA_PAYLOAD": str(scratch / "payload.json"),
-             "BGA_SCHEMAS": str(scratch / "schemas.json")})
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=120,
+        env={
+            **os.environ,
+            "BGA_DOM_SHIM": (REPO / "tests/dom_shim.mjs").as_uri(),
+            "BGA_VIEWER": (REPO / "tests/viewer.mjs").as_uri(),
+            "BGA_PAYLOAD": str(scratch / "payload.json"),
+            "BGA_SCHEMAS": str(scratch / "schemas.json"),
+        },
+    )
     assert done.returncode == 0, done.stderr
     return json.loads(done.stdout)
 
@@ -171,7 +176,6 @@ def _census(label):
 @needs_node
 @pytest.mark.parametrize("label", sorted(FIXTURES))
 class TestEveryNumberResolvesToAUnit:
-
     def test_nothing_renders_from_a_guess(self, label):
         """`guessQuantity` is the fallback `UX-201` kept as a
         *complaint*. This item empties its input: no numeric leaf in
@@ -182,7 +186,8 @@ class TestEveryNumberResolvesToAUnit:
         census = _census(label)
         assert census["guessed"] == [], (
             f"{label}: {len(census['guessed'])} numeric leaves render from "
-            f"a name-sniffed guess: {census['guessed'][:8]}")
+            f"a name-sniffed guess: {census['guessed'][:8]}"
+        )
 
     def test_what_cannot_resolve_is_named_with_a_reason(self, label):
         """An allowlist with reasons, not a count.
@@ -193,17 +198,15 @@ class TestEveryNumberResolvesToAUnit:
         """
         census = _census(label)
         unexpected = sorted(set(census["neither"]) - set(UNDECLARABLE))
-        assert unexpected == [], (
-            f"{label}: numeric leaves with no unit at all and no entry "
-            f"saying why: {unexpected}")
+        assert unexpected == [], f"{label}: numeric leaves with no unit at all and no entry saying why: {unexpected}"
 
     def test_the_walk_reached_the_document(self, label):
         """A census that resolved nothing would pass every clause above
         by finding no numbers to complain about."""
         census = _census(label)
         assert census["declared"] > 150, (
-            f"{label}: only {census['declared']} declared leaves found - the "
-            f"walk is not reaching the document")
+            f"{label}: only {census['declared']} declared leaves found - the walk is not reaching the document"
+        )
 
 
 #: Every document `bga` emits, and the argv or builder that produces
@@ -216,17 +219,17 @@ class TestEveryNumberResolvesToAUnit:
 #: builds them from a run store, which is what the two entries below
 #: with no argv are.
 CONTRACT_RUNS = {
-    "analyze/v6": ["analyze", str(FIXTURES["macro_micro"]), "--format",
-                   "json"],
-    "compare/v2": ["compare", str(FIXTURES["golden"]),
-                   str(_GOLDEN_TWIN), "--format", "json"],
-    "correlate/v2": ["correlate", str(FIXTURES["macro_micro"]),
-                     str(REPO / "tests/fixtures/macro_micro/plane2.json"),
-                     "--format", "json"],
-    "blast/v2": ["blast", "toolchain.bst", str(FIXTURES["golden"]),
-                 "--format", "json"],
-    "whatif/v1": ["whatif", str(FIXTURES["macro_micro"]), "--format",
-                  "json"],
+    "analyze/v6": ["analyze", str(FIXTURES["macro_micro"]), "--format", "json"],
+    "compare/v2": ["compare", str(FIXTURES["golden"]), str(_GOLDEN_TWIN), "--format", "json"],
+    "correlate/v2": [
+        "correlate",
+        str(FIXTURES["macro_micro"]),
+        str(REPO / "tests/fixtures/macro_micro/plane2.json"),
+        "--format",
+        "json",
+    ],
+    "blast/v2": ["blast", "toolchain.bst", str(FIXTURES["golden"]), "--format", "json"],
+    "whatif/v1": ["whatif", str(FIXTURES["macro_micro"]), "--format", "json"],
     "sweep/v1": ["sweep", str(FIXTURES["macro_micro"]), "--format", "json"],
     "store/v1": None,
     "store-aggregate/v1": None,
@@ -244,19 +247,17 @@ CONTRACT_RUNS = {
 #: is null.
 UNDECLARABLE_ELSEWHERE = {
     "compare/v2": {
-        "candidate_diagnosis.provenance.rule.threshold":
-            "`UNDECLARABLE`'s first entry, one document over: a rule "
-            "whose `observed_path` is null compares against a quantity "
-            "the finding computes rather than publishes.",
+        "candidate_diagnosis.provenance.rule.threshold": "`UNDECLARABLE`'s first entry, one document over: a rule "
+        "whose `observed_path` is null compares against a quantity "
+        "the finding computes rather than publishes.",
         # `UX-610`: the same case for the *verdict*'s rule. Its two
         # thresholds are scaled-MAD units and a percentage of the
         # baseline, and no published field is in either - so
         # `observed_path` is null rather than pointed at a duration it
         # is not.
-        "verdict_provenance.rule.threshold":
-            "The verdict's own rule: neither threshold is in the unit "
-            "of any published field, so the path is null and the "
-            "number is not a quantity this document carries.",
+        "verdict_provenance.rule.threshold": "The verdict's own rule: neither threshold is in the unit "
+        "of any published field, so the path is null and the "
+        "number is not a quantity this document carries.",
     },
 }
 
@@ -268,13 +269,18 @@ def _emitted(contract):
         return _store_document(contract)
     done = subprocess.run(
         [sys.executable, "-m", "bga.cli", *argv],
-        capture_output=True, text=True, cwd=REPO, timeout=300,
-        env={**os.environ, "PYTHONPATH": str(REPO)})
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=300,
+        env={**os.environ, "PYTHONPATH": str(REPO)},
+    )
     assert done.returncode == 0, f"{contract}: {done.stderr[-2000:]}"
     document = json.loads(done.stdout)
     assert document.get("schema") == contract, (
         f"{' '.join(argv)} emitted {document.get('schema')!r}, not "
-        f"{contract!r} - the inventory and the emitter disagree")
+        f"{contract!r} - the inventory and the emitter disagree"
+    )
     return document
 
 
@@ -314,8 +320,7 @@ def _store_document(contract):
         from bga import capacity_model
 
         document = capacity_model.read(str(into), 4, 400)
-        assert document["host_classes"][0]["answers"], (
-            "the store fixture produced a model with no figures in it")
+        assert document["host_classes"][0]["answers"], "the store fixture produced a model with no figures in it"
         return document
     store = store_payload(runs[-1])
     assert store, "the store fixture produced no store/v1 document"
@@ -345,16 +350,21 @@ def _census_document(document):
 
     scratch = pathlib.Path(tempfile.mkdtemp())
     (scratch / "payload.json").write_text(json.dumps(document))
-    (scratch / "schemas.json").write_text(
-        json.dumps({name: schemas.schema(name) for name in schemas.names()}))
+    (scratch / "schemas.json").write_text(json.dumps({name: schemas.schema(name) for name in schemas.names()}))
     done = subprocess.run(
         [node, "--input-type=module", "-e", _CENSUS],
-        capture_output=True, text=True, cwd=REPO, timeout=120,
-        env={**os.environ,
-             "BGA_DOM_SHIM": (REPO / "tests/dom_shim.mjs").as_uri(),
-             "BGA_VIEWER": (REPO / "tests/viewer.mjs").as_uri(),
-             "BGA_PAYLOAD": str(scratch / "payload.json"),
-             "BGA_SCHEMAS": str(scratch / "schemas.json")})
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=120,
+        env={
+            **os.environ,
+            "BGA_DOM_SHIM": (REPO / "tests/dom_shim.mjs").as_uri(),
+            "BGA_VIEWER": (REPO / "tests/viewer.mjs").as_uri(),
+            "BGA_PAYLOAD": str(scratch / "payload.json"),
+            "BGA_SCHEMAS": str(scratch / "schemas.json"),
+        },
+    )
     assert done.returncode == 0, done.stderr
     return json.loads(done.stdout)
 
@@ -373,15 +383,15 @@ class TestTheCensusReachesEveryContract:
         from bga import schemas
 
         assert sorted(CONTRACT_RUNS) == sorted(schemas.names()), (
-            f"censused: {sorted(CONTRACT_RUNS)}; emitted: "
-            f"{sorted(schemas.names())}")
+            f"censused: {sorted(CONTRACT_RUNS)}; emitted: {sorted(schemas.names())}"
+        )
 
     @pytest.mark.parametrize("contract", sorted(CONTRACT_RUNS))
     def test_nothing_renders_from_a_guess(self, contract):
         census = _census_document(_emitted(contract))
         assert census["guessed"] == [], (
-            f"{contract}: {len(census['guessed'])} numeric leaves resolve "
-            f"only by name-sniffing: {census['guessed']}")
+            f"{contract}: {len(census['guessed'])} numeric leaves resolve only by name-sniffing: {census['guessed']}"
+        )
 
     @pytest.mark.parametrize("contract", sorted(CONTRACT_RUNS))
     def test_what_cannot_resolve_is_named_with_a_reason(self, contract):
@@ -390,17 +400,14 @@ class TestTheCensusReachesEveryContract:
         if contract == "analyze/v6":
             excused.update(UNDECLARABLE)
         unexpected = sorted(set(census["neither"]) - set(excused))
-        assert unexpected == [], (
-            f"{contract}: numeric leaves with no unit at all and no entry "
-            f"saying why: {unexpected}")
+        assert unexpected == [], f"{contract}: numeric leaves with no unit at all and no entry saying why: {unexpected}"
 
     @pytest.mark.parametrize("contract", sorted(CONTRACT_RUNS))
     def test_the_walk_reached_the_document(self, contract):
         """A contract whose emitter produced an empty document would
         pass both clauses above by having nothing to complain about."""
         census = _census_document(_emitted(contract))
-        assert census["declared"] > 0, (
-            f"{contract}: the walk found no declared numeric leaf at all")
+        assert census["declared"] > 0, f"{contract}: the walk found no declared numeric leaf at all"
 
     def test_no_excuse_outlives_what_it_excused(self):
         """`TestTheAllowlistIsNotAGraveyard`'s rule, for the second
@@ -409,8 +416,7 @@ class TestTheCensusReachesEveryContract:
         dead = []
         for contract, entries in UNDECLARABLE_ELSEWHERE.items():
             census = _census_document(_emitted(contract))
-            dead += [f"{contract}: {path}" for path in entries
-                     if path not in census["neither"]]
+            dead += [f"{contract}: {path}" for path in entries if path not in census["neither"]]
         assert dead == [], dead
 
 
@@ -428,8 +434,7 @@ class TestTheAllowlistIsNotAGraveyard:
     def test_every_entry_still_has_something_to_excuse(self):
         census = _census("macro_micro")
         dead = sorted(set(UNDECLARABLE) - set(census["neither"]))
-        assert dead == [], (
-            f"these resolve now and the allowlist still excuses them: {dead}")
+        assert dead == [], f"these resolve now and the allowlist still excuses them: {dead}"
 
 
 class TestAPathResolvesToItsUnit:
@@ -445,25 +450,28 @@ class TestAPathResolvesToItsUnit:
     and every other clause would stay green.
     """
 
-    @pytest.mark.parametrize("path,expected", [
-        ("total_duration_us", "duration_us"),
-        ("floors.lb", "duration_us"),
-        ("headline.chain_share", "share"),
-        # A list of records, subscripted by index.
-        ("critical_path_detail[0].duration_us", "duration_us"),
-        # A table that declares columns instead of `items`.
-        ("element_join[0].peak_rss_bytes", "bytes"),
-        # A map keyed by an element uid - the dot inside the subscript
-        # is the case a split-first walk loses.
-        ("elements.element_durations[app.bst]", "duration_us"),
-        ("elements.blast_radius[app.bst].risk_score", "ratio"),
-        ("elements.criticality_probability[lib.bst].probability", "share"),
-        # The selector form the provenance grammar also allows.
-        ("findings[id=x].evidence.share", "share"),
-        # A path the schema does not describe resolves to nothing rather
-        # than to a guess.
-        ("nonsense.path", None),
-    ])
+    @pytest.mark.parametrize(
+        "path,expected",
+        [
+            ("total_duration_us", "duration_us"),
+            ("floors.lb", "duration_us"),
+            ("headline.chain_share", "share"),
+            # A list of records, subscripted by index.
+            ("critical_path_detail[0].duration_us", "duration_us"),
+            # A table that declares columns instead of `items`.
+            ("element_join[0].peak_rss_bytes", "bytes"),
+            # A map keyed by an element uid - the dot inside the subscript
+            # is the case a split-first walk loses.
+            ("elements.element_durations[app.bst]", "duration_us"),
+            ("elements.blast_radius[app.bst].risk_score", "ratio"),
+            ("elements.criticality_probability[lib.bst].probability", "share"),
+            # The selector form the provenance grammar also allows.
+            ("findings[id=x].evidence.share", "share"),
+            # A path the schema does not describe resolves to nothing rather
+            # than to a guess.
+            ("nonsense.path", None),
+        ],
+    )
     def test_it_reads_the_unit_the_page_would(self, path, expected):
         from bga import schemas
 
@@ -478,14 +486,14 @@ class TestTheProducerMatchesItsOwnColumns:
     a consumer reads the contract and gets the payload.
     """
 
-    @pytest.mark.parametrize("where,key,columns", [
-        ("bottleneck", "high_fanin_elements",
-         {"element_uid", "fan_in"}),
-        ("bottleneck", "high_fanout_elements",
-         {"element_uid", "fan_out"}),
-        ("sensitivity", "top_opportunities",
-         {"element_uid", "sensitivity", "saving_us"}),
-    ])
+    @pytest.mark.parametrize(
+        "where,key,columns",
+        [
+            ("bottleneck", "high_fanin_elements", {"element_uid", "fan_in"}),
+            ("bottleneck", "high_fanout_elements", {"element_uid", "fan_out"}),
+            ("sensitivity", "top_opportunities", {"element_uid", "sensitivity", "saving_us"}),
+        ],
+    )
     def test_the_rows_carry_the_declared_keys(self, where, key, columns):
         from tools.bga_view import payloads
 
@@ -496,11 +504,8 @@ class TestTheProducerMatchesItsOwnColumns:
         rows = node[key]
         assert rows, f"{where}.{key} publishes nothing on this fixture"
         for row in rows:
-            assert isinstance(row, dict), (
-                f"{where}.{key} still publishes a positional tuple: {row!r}")
-            assert columns <= set(row), (
-                f"{where}.{key} row is missing declared columns: "
-                f"{sorted(columns - set(row))}")
+            assert isinstance(row, dict), f"{where}.{key} still publishes a positional tuple: {row!r}"
+            assert columns <= set(row), f"{where}.{key} row is missing declared columns: {sorted(columns - set(row))}"
 
     def test_the_declared_columns_are_the_published_keys(self):
         """Derived from the schema rather than restated, so the two
@@ -512,14 +517,17 @@ class TestTheProducerMatchesItsOwnColumns:
         # `UX-344`: the two blocks are keys of the document; the columns
         # are declared where they always were, one level up.
         properties = schemas.schema(schemas.ANALYZE)["properties"]
-        for block, key in (("bottleneck", "high_fanin_elements"),
-                           ("bottleneck", "high_fanout_elements"),
-                           ("sensitivity", "top_opportunities")):
-            declared = {spec["key"] for spec
-                        in properties[block]["properties"][key]["bga:columns"]
-                        if isinstance(spec, dict) and spec.get("key")}
+        for block, key in (
+            ("bottleneck", "high_fanin_elements"),
+            ("bottleneck", "high_fanout_elements"),
+            ("sensitivity", "top_opportunities"),
+        ):
+            declared = {
+                spec["key"]
+                for spec in properties[block]["properties"][key]["bga:columns"]
+                if isinstance(spec, dict) and spec.get("key")
+            }
             published = set(payload[block][key][0])
             assert declared == published, (
-                f"{block}.{key}: the schema declares "
-                f"{sorted(declared)} and the payload publishes "
-                f"{sorted(published)}")
+                f"{block}.{key}: the schema declares {sorted(declared)} and the payload publishes {sorted(published)}"
+            )

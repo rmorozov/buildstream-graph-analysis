@@ -6,6 +6,7 @@ element path comes from that tag's `project.conf`, read by
 `read_scalar_key`'s own tolerant rule (`tools/bst_native_build_tracer.py`)
 so a nonstandard layout is not silently missed.
 """
+
 import os
 import subprocess
 import tempfile
@@ -18,11 +19,9 @@ class PublicNamesError(Exception):
 
 
 def _git(checkout: str, args: list) -> str:
-    result = subprocess.run(["git", "-C", checkout, *args],
-                            capture_output=True, text=True)
+    result = subprocess.run(["git", "-C", checkout, *args], capture_output=True, text=True)
     if result.returncode != 0:
-        raise PublicNamesError(
-            f"{checkout}: git {' '.join(args)} failed: {result.stderr.strip()}")
+        raise PublicNamesError(f"{checkout}: git {' '.join(args)} failed: {result.stderr.strip()}")
     return result.stdout
 
 
@@ -54,7 +53,7 @@ def names_for(junction: str, spec: dict) -> set:
     for line in listing.splitlines():
         if not line.endswith(".bst"):
             continue
-        relative = line[len(prefix):] if line.startswith(prefix) else line
+        relative = line[len(prefix) :] if line.startswith(prefix) else line
         passed.add(f"{junction}:{relative}")
     return passed
 

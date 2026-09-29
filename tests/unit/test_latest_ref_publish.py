@@ -13,6 +13,7 @@ for one reason: so this file can extract it and *run* it, rather than
 assert on prose about it. A test that re-implemented the rule would pass
 against a workflow that had stopped following it.
 """
+
 import re
 import subprocess
 from pathlib import Path
@@ -36,20 +37,19 @@ def _decision_source() -> str:
     indent = match.group("indent")
     lines = ["publish_decision() {"]
     for line in match.group("body").splitlines():
-        lines.append(line[len(indent):] if line.startswith(indent) else line)
+        lines.append(line[len(indent) :] if line.startswith(indent) else line)
     lines.append("}")
     return "\n".join(lines)
 
 
-def decide(traced_exit="0", trace_spine="false", trace_opens="true",
-           jobserver="off") -> str:
+def decide(traced_exit="0", trace_spine="false", trace_opens="true", jobserver="off") -> str:
     """The workflow's own decision, run under a real shell."""
     script = f'{_decision_source()}\npublish_decision "{traced_exit}"\n'
     result = subprocess.run(
         ["bash", "-c", script],
-        capture_output=True, text=True,
-        env={"TRACE_SPINE": trace_spine, "TRACE_OPENS": trace_opens,
-             "JOBSERVER": jobserver, "PATH": "/usr/bin:/bin"},
+        capture_output=True,
+        text=True,
+        env={"TRACE_SPINE": trace_spine, "TRACE_OPENS": trace_opens, "JOBSERVER": jobserver, "PATH": "/usr/bin:/bin"},
     )
     assert result.returncode == 0, result.stderr
     return result.stdout.strip()
@@ -102,10 +102,7 @@ def test_the_pointer_push_is_reachable_only_from_the_move_branch():
     to `$LATEST_REF` sitting outside the `move-latest` branch would make
     every test above decorative."""
     text = WORKFLOW.read_text()
-    pushes = [
-        line.strip() for line in text.splitlines()
-        if "LATEST_REF" in line and "git push" in line
-    ]
+    pushes = [line.strip() for line in text.splitlines() if "LATEST_REF" in line and "git push" in line]
     assert len(pushes) == 1, pushes
 
     case_body = text.split("case \"$(publish_decision")[1]

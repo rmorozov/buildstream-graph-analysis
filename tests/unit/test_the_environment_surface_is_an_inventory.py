@@ -14,6 +14,7 @@ made the population a set of prefixes rather than one.
 Both directions, because a scan that finds nothing satisfies "every
 name is documented" and says so to no one.
 """
+
 import functools
 import pathlib
 import re
@@ -71,8 +72,9 @@ def _scan():
     appears in `tools/` only in a docstring and an error message and is
     a real variable, so a scan that read code alone would drop it.
     """
-    listed = subprocess.run(["git", "ls-files", "--", *ROOTS], cwd=REPO,
-                            check=True, capture_output=True, text=True).stdout
+    listed = subprocess.run(
+        ["git", "ls-files", "--", *ROOTS], cwd=REPO, check=True, capture_output=True, text=True
+    ).stdout
     found, read = {}, set()
     for rel in listed.splitlines():
         try:
@@ -82,13 +84,13 @@ def _scan():
         read.add(rel)
         for name in NAME.findall(text):
             found.setdefault(name, set()).add(rel)
-    return ({name: sorted(paths) for name, paths in sorted(found.items())},
-            read)
+    return ({name: sorted(paths) for name, paths in sorted(found.items())}, read)
 
 
 def _tracked():
-    listed = subprocess.run(["git", "ls-files", "--", *ROOTS], cwd=REPO,
-                            check=True, capture_output=True, text=True).stdout
+    listed = subprocess.run(
+        ["git", "ls-files", "--", *ROOTS], cwd=REPO, check=True, capture_output=True, text=True
+    ).stdout
     return set(listed.splitlines())
 
 
@@ -120,8 +122,8 @@ class TestTheInventoryIsTheTree:
         missing = sorted(set(_scan()[0]) - set(_rows()))
         assert missing == [], (
             f"environment name(s) in {'/, '.join(ROOTS)}/ with no row under "
-            f"`{SECTION}` in docs/guides/cli.md: "
-            + ", ".join(f"{n} ({', '.join(_scan()[0][n])})" for n in missing))
+            f"`{SECTION}` in docs/guides/cli.md: " + ", ".join(f"{n} ({', '.join(_scan()[0][n])})" for n in missing)
+        )
 
     def test_every_row_names_something_the_tree_still_has(self):
         """The other direction. A row for a variable that was removed
@@ -129,9 +131,7 @@ class TestTheInventoryIsTheTree:
         is also what keeps the clause above from passing on an empty
         scan."""
         stale = sorted(set(_rows()) - set(_scan()[0]))
-        assert stale == [], (
-            f"row(s) under `{SECTION}` naming nothing in "
-            f"{'/, '.join(ROOTS)}/: {stale}")
+        assert stale == [], f"row(s) under `{SECTION}` naming nothing in {'/, '.join(ROOTS)}/: {stale}"
 
     def test_the_scan_reads_every_tracked_file_in_its_roots(self):
         """A population that quietly shrinks is how this guard goes
@@ -158,6 +158,4 @@ class TestTheInventoryIsTheTree:
                     wrong.append(f"{name}: {rel} does not exist")
                 elif name not in path.read_text(encoding="utf-8"):
                     wrong.append(f"{name}: {rel} does not name it")
-        assert wrong == [], (
-            f"row(s) under `{SECTION}` citing a file that does not carry "
-            f"the name: {wrong}")
+        assert wrong == [], f"row(s) under `{SECTION}` citing a file that does not carry the name: {wrong}"

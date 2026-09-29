@@ -14,6 +14,7 @@ directly here rather than through a full pipeline run - except for the
 is meaningfully only a full-pipeline claim and uses
 `tests/fixtures/topologies.py::multiple_equal_predecessors`.
 """
+
 from bga.attribution.blame_chain import BlameChainAnalyzer
 from tests.fixtures import topologies as topo
 
@@ -27,7 +28,8 @@ def _analyzer():
 def test_greatest_finish_time_wins_when_depths_differ():
     a = _analyzer()
     winner = a.select_dependency_blame(
-        "t", ["early.bst", "late.bst"],
+        "t",
+        ["early.bst", "late.bst"],
         task_finish_times={"early.bst": 10000, "late.bst": 20000},
         task_depths={"early.bst": 5, "late.bst": 1},
     )
@@ -37,7 +39,8 @@ def test_greatest_finish_time_wins_when_depths_differ():
 def test_greatest_depth_wins_on_finish_time_tie():
     a = _analyzer()
     winner = a.select_dependency_blame(
-        "t", ["shallow.bst", "deep.bst"],
+        "t",
+        ["shallow.bst", "deep.bst"],
         task_finish_times={"shallow.bst": 20000, "deep.bst": 20000},
         task_depths={"shallow.bst": 1, "deep.bst": 3},
     )
@@ -47,7 +50,8 @@ def test_greatest_depth_wins_on_finish_time_tie():
 def test_smallest_task_key_wins_when_finish_and_depth_both_tie():
     a = _analyzer()
     winner = a.select_dependency_blame(
-        "t", ["zzz.bst", "aaa.bst", "mmm.bst"],
+        "t",
+        ["zzz.bst", "aaa.bst", "mmm.bst"],
         task_finish_times={"zzz.bst": 20000, "aaa.bst": 20000, "mmm.bst": 20000},
         task_depths={"zzz.bst": 2, "aaa.bst": 2, "mmm.bst": 2},
     )
@@ -69,7 +73,8 @@ def test_out_degree_is_never_used_as_a_tiebreaker():
     # since it sorts first lexicographically despite "losing" on any
     # hypothetical out-degree comparison.
     winner = a.select_dependency_blame(
-        "t", ["zzz_hub.bst", "aaa_leaf.bst"],
+        "t",
+        ["zzz_hub.bst", "aaa_leaf.bst"],
         task_finish_times={"zzz_hub.bst": 20000, "aaa_leaf.bst": 20000},
         task_depths={"zzz_hub.bst": 2, "aaa_leaf.bst": 2},
     )
@@ -79,7 +84,10 @@ def test_out_degree_is_never_used_as_a_tiebreaker():
 def test_single_predecessor_is_trivially_selected():
     a = _analyzer()
     winner = a.select_dependency_blame(
-        "t", ["only.bst"], task_finish_times={"only.bst": 1000}, task_depths={"only.bst": 1},
+        "t",
+        ["only.bst"],
+        task_finish_times={"only.bst": 1000},
+        task_depths={"only.bst": 1},
     )
     assert winner == "only.bst"
 
@@ -91,6 +99,7 @@ def test_no_predecessors_returns_none():
 
 # --- Full-pipeline regression: adding an unrelated node must not change
 # the tie-break winner (spec explicitly calls this out). ---
+
 
 def _tied_predecessor_and_winner(tmp_path, topology, name):
     analyzer = topo.build_analyzer(tmp_path, topology, name=name)
@@ -104,7 +113,9 @@ def _tied_predecessor_and_winner(tmp_path, topology, name):
 def test_unrelated_graph_node_does_not_change_tie_break_winner(tmp_path):
     run_context, graph, trace = topo.multiple_equal_predecessors()
     baseline_chain = _tied_predecessor_and_winner(
-        tmp_path, (run_context, graph, trace), name="baseline",
+        tmp_path,
+        (run_context, graph, trace),
+        name="baseline",
     )
     assert "deep.bst|BUILD|BUILD|0" in baseline_chain
     assert "shallow.bst|BUILD|BUILD|0" not in baseline_chain
@@ -116,14 +127,22 @@ def test_unrelated_graph_node_does_not_change_tie_break_winner(tmp_path):
         "dependencies": graph["dependencies"],
     }
     trace_with_extra = {
-        "spans": trace["spans"] + [
-            {"task_key": "unrelated.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 5000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"}
+        "spans": trace["spans"]
+        + [
+            {
+                "task_key": "unrelated.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 5000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            }
         ],
         "phases": [],
     }
     extended_chain = _tied_predecessor_and_winner(
-        tmp_path, (run_context, graph_with_extra, trace_with_extra), name="extended",
+        tmp_path,
+        (run_context, graph_with_extra, trace_with_extra),
+        name="extended",
     )
     assert "deep.bst|BUILD|BUILD|0" in extended_chain
     assert "shallow.bst|BUILD|BUILD|0" not in extended_chain

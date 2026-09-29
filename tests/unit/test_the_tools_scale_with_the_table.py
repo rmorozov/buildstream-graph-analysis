@@ -40,6 +40,7 @@ Sorting is deliberately untouched: it costs one header affordance at
 any length and helps at every one, so there is nothing for a threshold
 to scale.
 """
+
 import json
 import os
 import pathlib
@@ -57,8 +58,10 @@ sys.path.insert(0, str(REPO / "tests"))
 from browser import NO_BROWSER, Browser, find_chrome
 from pages import snapshot_copy
 
-FIXTURES = {"golden": REPO / "tests/fixtures/golden/mixed_task_kinds",
-            "macro_micro": REPO / "tests/fixtures/macro_micro/run"}
+FIXTURES = {
+    "golden": REPO / "tests/fixtures/golden/mixed_task_kinds",
+    "macro_micro": REPO / "tests/fixtures/macro_micro/run",
+}
 chrome = find_chrome()
 needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
 
@@ -193,9 +196,12 @@ _installDocument({
 def _mixed_table():
     done = subprocess.run(
         [node, "--input-type=module", "-e", _SHIM + (_MIXED % ())],
-        capture_output=True, text=True, cwd=REPO, timeout=120,
-        env={**os.environ,
-             "BGA_DOM_SHIM": (REPO / "tests/dom_shim.mjs").as_uri()})
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=120,
+        env={**os.environ, "BGA_DOM_SHIM": (REPO / "tests/dom_shim.mjs").as_uri()},
+    )
     assert done.returncode == 0, done.stderr[-2000:]
     return json.loads(done.stdout)
 
@@ -216,8 +222,8 @@ class TestAThresholdBoxNeedsANumber:
         assert out["search"] == 1, out
         assert "duration_us" in out["thresholds"], out
         assert "is_leaf" not in out["thresholds"], (
-            "a boolean column carries a numeric threshold box; its "
-            "quantity was guessed `count`, never declared")
+            "a boolean column carries a numeric threshold box; its quantity was guessed `count`, never declared"
+        )
 
     def test_the_uniform_column_is_stated_and_gone(self):
         """The same table proves the second rule: `kind` is `cmake` in
@@ -251,19 +257,15 @@ def pages(tmp_path_factory):
 @pytest.mark.medium
 @pytest.mark.parametrize("label", sorted(FIXTURES))
 class TestAFilterAppearsWhereItHelps:
-    def test_no_table_under_the_cap_carries_a_filter(
-            self, browser, pages, label):
+    def test_no_table_under_the_cap_carries_a_filter(self, browser, pages, label):
         """The acceptance's first clause."""
         cap = _row_cap()
         out = browser.measure(pages[label], _LOOK, 1440, 900)
-        bad = [t for t in out["tables"]
-               if t["rows"] <= cap and (t["search"] or t["thresholds"])]
-        assert bad == [], (
-            f"{label}: {len(bad)} table(s) at or under {cap} rows carry "
-            f"filters: "
-            + ", ".join(f"{t['table']} ({t['rows']} rows, {t['search']} "
-                        f"search + {len(t['thresholds'])} thresholds)"
-                        for t in bad[:6]))
+        bad = [t for t in out["tables"] if t["rows"] <= cap and (t["search"] or t["thresholds"])]
+        assert bad == [], f"{label}: {len(bad)} table(s) at or under {cap} rows carry filters: " + ", ".join(
+            f"{t['table']} ({t['rows']} rows, {t['search']} search + {len(t['thresholds'])} thresholds)"
+            for t in bad[:6]
+        )
 
     def test_the_population_is_the_page(self, browser, pages, label):
         """A page with no tables passes the clause above forever, and a
@@ -273,16 +275,13 @@ class TestAFilterAppearsWhereItHelps:
         out = browser.measure(pages[label], _LOOK, 1440, 900)
         assert len(out["tables"]) >= 10, len(out["tables"])
         short = [t for t in out["tables"] if t["rows"] <= _row_cap()]
-        assert len(short) >= 10, (
-            f"{label}: only {len(short)} short tables - this page no longer "
-            f"exercises the rule")
+        assert len(short) >= 10, f"{label}: only {len(short)} short tables - this page no longer exercises the rule"
 
     def test_sorting_survives(self, browser, pages, label):
         """Explicitly out of scope, and worth asserting: the fix is a
         threshold on *filters*, not a general stripping of the header."""
         out = browser.measure(pages[label], _LOOK, 1440, 900)
-        assert all(t["sortable"] for t in out["tables"]), (
-            [t["table"] for t in out["tables"] if not t["sortable"]])
+        assert all(t["sortable"] for t in out["tables"]), [t["table"] for t in out["tables"] if not t["sortable"]]
 
 
 @needs_browser
@@ -294,11 +293,8 @@ class TestAColumnThatNeverVariesIsASentence:
         because two rows that agree are a coincidence rather than a
         fact about a population - `UX-226`'s floor, applied to width."""
         out = browser.measure(pages[label], _LOOK, 1440, 900)
-        bad = [(t["table"], column, value)
-               for t in out["tables"] for column, value in t["uniform"]]
-        assert bad == [], (
-            f"{label}: {len(bad)} column(s) with one distinct value over "
-            f"more than three rows: {bad[:6]}")
+        bad = [(t["table"], column, value) for t in out["tables"] for column, value in t["uniform"]]
+        assert bad == [], f"{label}: {len(bad)} column(s) with one distinct value over more than three rows: {bad[:6]}"
 
     def test_what_was_removed_is_said(self, browser, pages, label):
         """Removed is not the same as hidden. A column that goes must
@@ -308,7 +304,8 @@ class TestAColumnThatNeverVariesIsASentence:
         noted = [t for t in out["tables"] if t["note"]]
         assert noted, (
             f"{label}: no table states a uniform column - both fixtures "
-            f"had one when this was measured, so the walk has broken")
+            f"had one when this was measured, so the walk has broken"
+        )
         for table in noted:
             assert table["note"].startswith("All "), table
             assert table["note"].endswith("."), table
@@ -318,17 +315,18 @@ class TestAColumnThatNeverVariesIsASentence:
 @pytest.mark.medium
 @pytest.mark.parametrize("label", sorted(FIXTURES))
 class TestAThresholdGoesWhereANumberIs:
-    def test_every_threshold_box_sits_over_numbers(
-            self, browser, pages, label):
+    def test_every_threshold_box_sits_over_numbers(self, browser, pages, label):
         """The acceptance's third clause. `> 10` under a boolean was
         the tell: the column's quantity was `count` by the fallback in
         `columnSpecs`, never declared, and the box read the guess."""
         out = browser.measure(pages[label], _LOOK, 1440, 900)
-        bad = [(t["table"], box["column"], box["placeholder"])
-               for t in out["tables"] for box in t["thresholds"]
-               if not box["numeric"]]
-        assert bad == [], (
-            f"{label}: threshold box over a column with no numbers: {bad}")
+        bad = [
+            (t["table"], box["column"], box["placeholder"])
+            for t in out["tables"]
+            for box in t["thresholds"]
+            if not box["numeric"]
+        ]
+        assert bad == [], f"{label}: threshold box over a column with no numbers: {bad}"
 
 
 if __name__ == "__main__":  # pragma: no cover

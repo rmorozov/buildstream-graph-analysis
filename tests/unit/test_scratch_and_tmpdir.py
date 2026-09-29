@@ -6,6 +6,7 @@ supplied: a capture failed on temp-directory permissions, and
 relative path and `buildbox-casd` died with
 `error in mkdtemp, errno: no such file or directory`.
 """
+
 import os
 import subprocess
 import sys
@@ -59,8 +60,7 @@ class TestScratchIsProjectLocal:
             os.chmod(script, 0o755)
             assert subprocess.run([script]).returncode == 0
 
-    def test_a_project_it_cannot_write_to_falls_back_rather_than_refusing(
-            self, tmp_path, capsys):
+    def test_a_project_it_cannot_write_to_falls_back_rather_than_refusing(self, tmp_path, capsys):
         """A scratch directory bga cannot make is a reason to fall back, not to
         refuse to capture - but it says so, because the fallback lands
         back in `TMPDIR`, which is the `noexec` case this item is about.
@@ -121,16 +121,14 @@ class TestRelativeTmpdirIsMadeAbsolute:
     def test_an_unset_tmpdir_is_not_invented(self):
         assert "TMPDIR" not in tracer.absolute_tmpdir_env({})
 
-    def test_it_says_so_rather_than_changing_the_environment_silently(
-            self, tmp_path, monkeypatch, capsys):
+    def test_it_says_so_rather_than_changing_the_environment_silently(self, tmp_path, monkeypatch, capsys):
         monkeypatch.chdir(tmp_path)
         tracer.absolute_tmpdir_env({"TMPDIR": "rel_tmp"})
         err = capsys.readouterr().err
         assert "TMPDIR" in err and "rel_tmp" in err
         assert "mkdtemp" in err, "the message should name the error the user will have seen"
 
-    def test_normalize_tmpdir_fixes_os_environ_so_children_inherit_it(
-            self, tmp_path, monkeypatch):
+    def test_normalize_tmpdir_fixes_os_environ_so_children_inherit_it(self, tmp_path, monkeypatch):
         """The child `env` dict alone was not enough.
 
         Measured against a wrapper on `buildbox-casd`: the traced build
@@ -143,13 +141,12 @@ class TestRelativeTmpdirIsMadeAbsolute:
         monkeypatch.setenv("TMPDIR", "rel_tmp")
         tracer.normalize_tmpdir()
         seen = subprocess.run(
-            [sys.executable, "-c", "import os; print(os.environ['TMPDIR'])"],
-            capture_output=True, text=True, check=True).stdout.strip()
+            [sys.executable, "-c", "import os; print(os.environ['TMPDIR'])"], capture_output=True, text=True, check=True
+        ).stdout.strip()
         assert seen == os.path.join(str(tmp_path), "rel_tmp")
         assert os.path.isabs(seen)
 
-    def test_normalize_tmpdir_is_a_no_op_when_there_is_nothing_to_fix(
-            self, monkeypatch):
+    def test_normalize_tmpdir_is_a_no_op_when_there_is_nothing_to_fix(self, monkeypatch):
         monkeypatch.setenv("TMPDIR", "/var/tmp/mine")
         tracer.normalize_tmpdir()
         assert os.environ["TMPDIR"] == "/var/tmp/mine"

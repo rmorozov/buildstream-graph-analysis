@@ -25,6 +25,7 @@ next_steps[0]  shorten-what-the-build-waits-for
 next_steps[1]  blast-the-top-element
 ```
 """
+
 import pathlib
 
 import pytest
@@ -48,15 +49,16 @@ class TestTheCriticalPathComesFirst:
 
         class Result:
             run_instance = {"run_dir": "/runs/one"}
-            signals = {"critical_path_detail": [
-                {"element_uid": "slow.bst", "duration_us": 60_000_000,
-                 "share_of_path": 0.6},
-                {"element_uid": "quick.bst", "duration_us": 1_000_000,
-                 "share_of_path": 0.01}]}
+            signals = {
+                "critical_path_detail": [
+                    {"element_uid": "slow.bst", "duration_us": 60_000_000, "share_of_path": 0.6},
+                    {"element_uid": "quick.bst", "duration_us": 1_000_000, "share_of_path": 0.01},
+                ]
+            }
 
         steps = compute_next_steps(
-            Result(), headline={"top_actions": [
-                {"element_uid": "wide.bst", "saving_us": 1_000_000}]})
+            Result(), headline={"top_actions": [{"element_uid": "wide.bst", "saving_us": 1_000_000}]}
+        )
         assert steps[0]["id"] == "shorten-what-the-build-waits-for", steps
         assert "slow.bst" in steps[0]["reason"]
         assert "60.0s" in steps[0]["reason"]
@@ -68,10 +70,13 @@ class TestTheCriticalPathComesFirst:
         from bga.findings import _longest_on_the_path
 
         class Result:
-            signals = {"critical_path_detail": [
-                {"element_uid": "a.bst", "duration_us": 10},
-                {"element_uid": "b.bst", "duration_us": 900},
-                {"element_uid": "c.bst", "duration_us": 20}]}
+            signals = {
+                "critical_path_detail": [
+                    {"element_uid": "a.bst", "duration_us": 10},
+                    {"element_uid": "b.bst", "duration_us": 900},
+                    {"element_uid": "c.bst", "duration_us": 20},
+                ]
+            }
 
         assert _longest_on_the_path(Result())["element_uid"] == "b.bst"
 
@@ -89,8 +94,7 @@ class TestTheCriticalPathComesFirst:
 
         class Result:
             run_instance = {"run_dir": "/runs/one"}
-            signals = {"critical_path_detail": [
-                {"element_uid": "slow.bst", "duration_us": 60_000_000}]}
+            signals = {"critical_path_detail": [{"element_uid": "slow.bst", "duration_us": 60_000_000}]}
 
         steps = compute_next_steps(Result(), headline={})
         assert steps[0]["follows_from"] == "critical_path_detail"
@@ -98,8 +102,7 @@ class TestTheCriticalPathComesFirst:
 
 class TestTheShapeIsOneLine:
     def test_a_spread_graph_says_so(self):
-        line = _shape({"n": 1202, "max": 1201, "is_flat": False,
-                       "deciles": {"p50": 30, "p90": 465}})
+        line = _shape({"n": 1202, "max": 1201, "is_flat": False, "deciles": {"p50": 30, "p90": 465}})
         assert "1202 elements reach 30 others or fewer" in line, line
         assert "spread across many elements" in line, line
 
@@ -107,14 +110,12 @@ class TestTheShapeIsOneLine:
         """The case the first draft got backwards: in a star both the
         median and the top decile are zero, and comparing them called
         the most concentrated shape there is "spread"."""
-        line = _shape({"n": 44, "max": 42, "is_flat": False,
-                       "deciles": {"p50": 0, "p90": 0}})
+        line = _shape({"n": 44, "max": 42, "is_flat": False, "deciles": {"p50": 0, "p90": 0}})
         assert "reach nothing" in line, line
         assert "concentrated in a few elements" in line, line
 
     def test_a_flat_graph_gets_no_sentence(self):
-        assert _shape({"n": 20, "max": 5, "is_flat": True,
-                       "deciles": {"p50": 5, "p90": 5}}) is None
+        assert _shape({"n": 20, "max": 5, "is_flat": True, "deciles": {"p50": 5, "p90": 5}}) is None
 
     def test_a_run_with_no_distribution_gets_no_sentence(self):
         from bga.findings import _graph_shape
@@ -128,8 +129,7 @@ class TestTheShapeIsOneLine:
         """`UX-196`: a decile histogram earns its place only if a
         sentence cannot carry the shape. This is the check that nobody
         quietly grew one."""
-        line = _shape({"n": 1202, "max": 1201, "is_flat": False,
-                       "deciles": {"p50": 30, "p90": 465}})
+        line = _shape({"n": 1202, "max": 1201, "is_flat": False, "deciles": {"p50": 30, "p90": 465}})
         assert line.count(".") <= 3 and "\n" not in line, line
 
 
@@ -137,8 +137,7 @@ class TestTheHeadlineCarriesIt:
     def test_the_shape_reaches_the_headline(self):
         from tools.bga_view import payloads
 
-        headline = payloads(str(GOLDEN)).get("report.json", {}).get(
-            "headline", {})
+        headline = payloads(str(GOLDEN)).get("report.json", {}).get("headline", {})
         # The 4-element golden run publishes no distribution, so no
         # sentence - absence rather than an invented one.
         assert "graph_shape" not in headline

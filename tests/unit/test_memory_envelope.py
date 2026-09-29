@@ -8,6 +8,7 @@ capture time by this task), and the builders count (Plane 1). Leaving it
 to the reader has a failure mode in each direction - raise `builders`
 into swap, or leave headroom unused out of caution.
 """
+
 from bga.correlate import compute_memory_envelope
 from bga.findings import _memory_envelope_findings, _memory_refuses_more_builders
 from bga.ingest.models import AnalysisResult
@@ -22,10 +23,14 @@ def _report(*peaks_mb):
     Building this helper in bytes would test the conversion against
     itself.
     """
-    return {'peak_memory': {'per_element': {
-        f"e{i}.bst": {'peak_rss_kb': int(peak * 1024), 'measured': 10, 'unmeasured': 0}
-        for i, peak in enumerate(peaks_mb)
-    }}}
+    return {
+        'peak_memory': {
+            'per_element': {
+                f"e{i}.bst": {'peak_rss_kb': int(peak * 1024), 'measured': 10, 'unmeasured': 0}
+                for i, peak in enumerate(peaks_mb)
+            }
+        }
+    }
 
 
 def test_the_envelope_sums_the_n_largest_peaks():
@@ -83,6 +88,7 @@ def test_no_reserve_is_invented_and_the_payload_says_so():
 
 
 # --- what the advice does with it ---------------------------------------
+
 
 def _result(envelope):
     result = AnalysisResult()

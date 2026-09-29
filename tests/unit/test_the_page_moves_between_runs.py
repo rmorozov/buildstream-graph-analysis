@@ -26,6 +26,7 @@ reach no other, so it renders no selector rather than a control that
 fails - which is what the Falsification's other direction forbids. The
 list comes from `store.json`, which only a served page has.
 """
+
 import pathlib
 import shutil
 import sys
@@ -118,8 +119,7 @@ _SWITCH = """(() => {
 
 def _project(into, count=3):
     """A project whose store holds `count` analysable snapshots."""
-    (into / "project.conf").write_text("name: p\nmin-version: 2.0\n",
-                                       encoding="utf-8")
+    (into / "project.conf").write_text("name: p\nmin-version: 2.0\n", encoding="utf-8")
     runs = []
     for n in range(1, count + 1):
         run = into / ".bga" / "runs" / f"2026010{n}T000000Z" / "run"
@@ -156,12 +156,9 @@ class TestTheSelectorIsThere:
         # `UX-428`: the message names what was present when the wait
         # ran out, because "no picker" has two causes and only one of
         # them is a defect in the page.
-        assert seen["found"], (
-            f"no run picker after {seen.get('waitedMs')}ms; the page had "
-            f"{seen.get('saw')}")
+        assert seen["found"], f"no run picker after {seen.get('waitedMs')}ms; the page had {seen.get('saw')}"
         assert seen["inRail"]
-        assert seen["options"] == ["20260101T000000Z", "20260102T000000Z",
-                                   "20260103T000000Z"], seen["options"]
+        assert seen["options"] == ["20260101T000000Z", "20260102T000000Z", "20260103T000000Z"], seen["options"]
 
     def test_the_identity_is_what_the_run_is(self, served):
         """`UX-95`: the alias a reader types and what the run measured,
@@ -200,10 +197,8 @@ class TestSwitchingReachesTheOtherRun:
         """
         browser, url, _ = served
         seen = browser.measure(url, _SWITCH, 1440, 900)
-        assert seen["urls"] == [
-            [stamp, f"?run={stamp}"] for stamp, _ in seen["urls"]], seen
-        assert all(link and link.startswith("?run=")
-                   for link in seen["jumpUrls"]), seen
+        assert seen["urls"] == [[stamp, f"?run={stamp}"] for stamp, _ in seen["urls"]], seen
+        assert all(link and link.startswith("?run=") for link in seen["jumpUrls"]), seen
 
     def test_the_other_run_s_payload_is_what_comes_back(self, served):
         """The server builds it on request, from the store it lists.
@@ -241,10 +236,10 @@ class TestAnExportOffersNothingItCannotReach:
     """`UX-195`: an export is one self-contained file."""
 
     def test_it_renders_no_selector(self, tmp_path_factory):
-        uri = pages.export_uri(pages.FIXTURES["macro_micro"],
-                               tmp_path_factory.mktemp("no-store"))
+        uri = pages.export_uri(pages.FIXTURES["macro_micro"], tmp_path_factory.mktemp("no-store"))
         with Browser(find_chrome()) as browser:
             seen = browser.measure(uri, _PICKER, 1440, 900)
         assert seen["found"] is False, (
             "the export offers a run selector it cannot follow, which is "
-            "the one thing the Falsification says it must not do")
+            "the one thing the Falsification says it must not do"
+        )

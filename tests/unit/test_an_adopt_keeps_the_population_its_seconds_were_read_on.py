@@ -9,6 +9,7 @@ was actually run against had grown to 942, a 1.28x scale that hid a
 `population_for` - the same helper `record` uses - so `files` and
 `population` move together.
 """
+
 import pathlib
 import sys
 
@@ -57,14 +58,13 @@ class TestAdoptRewritesThePopulation:
         document, _added = drift.adopt(reference, _candidate())
         assert document["population"][THIS_FILE] == 942, document["population"]
 
-    def test_a_name_it_did_not_sample_keeps_its_old_population(
-            self, monkeypatch):
+    def test_a_name_it_did_not_sample_keeps_its_old_population(self, monkeypatch):
         """`for each POPULATION_CLASS name it samples` (Decision) - a
         run that never measured a name must not invent a size for it."""
         reference = _reference(recorded_population=737)
         candidate = drift.record(
-            {name: seconds for name, seconds in tiers.recorded().items()
-             if name != THIS_FILE}, "a candidate run")
+            {name: seconds for name, seconds in tiers.recorded().items() if name != THIS_FILE}, "a candidate run"
+        )
         monkeypatch.setattr(drift, "population_size", lambda _pop: 942)
         document, _added = drift.adopt(reference, candidate)
         assert document["population"][THIS_FILE] == 737, document["population"]
@@ -83,8 +83,7 @@ class TestAdoptRewritesThePopulation:
         verdict, _shift, rows = drift.against(_reading(1.2), document)
         assert verdict == "ok", rows
 
-    def test_the_stale_population_the_bug_left_reads_1_6x_ok(
-            self, monkeypatch):
+    def test_the_stale_population_the_bug_left_reads_1_6x_ok(self, monkeypatch):
         """The regression this guard falsifies: `population` stuck at
         737 while the tree measuring `THIS_FILE` grew to 942 scales
         `expected` by 942/737 = 1.28 and hides a 1.6x reading as `ok` -

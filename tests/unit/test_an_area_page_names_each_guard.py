@@ -5,6 +5,7 @@ A sandbox of rows - a named guard that exists, one that does not, a
 `none — <reason>`, and a row with no line - so the counts are exact
 without touching the real backlog or `tests/` tree.
 """
+
 import pathlib
 import sys
 
@@ -23,7 +24,9 @@ def _task(scenarios, number, guard, body=""):
     path.write_text(
         f"# UX-{number}: x\n\n**Priority:** Low | **Status:** "
         f"\N{LARGE RED CIRCLE} Not Started | **Topic:** guards | "
-        f"**Area:** tools\n\n{line}{body}\n", encoding="utf-8")
+        f"**Area:** tools\n\n{line}{body}\n",
+        encoding="utf-8",
+    )
     tasks._FILES_BY_NUMBER.clear()
     return path
 
@@ -41,8 +44,7 @@ def sandbox(tmp_path, monkeypatch):
     _task(scenarios, 1, "test_present.py")
     _task(scenarios, 2, "test_absent.py")
     _task(scenarios, 3, "none — nothing to hold")
-    _task(scenarios, 4, None,
-          "## Outcome (round 1) — Done\n\n`test_present.py` covers it.\n")
+    _task(scenarios, 4, None, "## Outcome (round 1) — Done\n\n`test_present.py` covers it.\n")
     yield scenarios
     tasks._FILES_BY_NUMBER.clear()
 
@@ -52,7 +54,6 @@ def _page(ids=("UX-1", "UX-2", "UX-3", "UX-4")):
 
 
 class TestTheGuardColumn:
-
     def test_a_named_existing_guard_reads_present(self, sandbox):
         assert "| `test_present.py` |" in _page()
 
@@ -84,10 +85,16 @@ class TestNothingIsInferredFromProse:
         assert "covered 0 / 1 (none 0, inferred r149 0, no line 1)" in body
 
     def test_the_line_wins_over_every_section(self, sandbox):
-        _task(sandbox, 5, "test_present.py", (
-            "## Acceptance Test\n\nGuard: `test_other.py`.\n\n"
-            "## Decision\n\n```text\nGuard:     `test_other.py`\n```\n\n"
-            "## Outcome (round 1) — Done\n\n`test_other.py` covers it.\n"))
+        _task(
+            sandbox,
+            5,
+            "test_present.py",
+            (
+                "## Acceptance Test\n\nGuard: `test_other.py`.\n\n"
+                "## Decision\n\n```text\nGuard:     `test_other.py`\n```\n\n"
+                "## Outcome (round 1) — Done\n\n`test_other.py` covers it.\n"
+            ),
+        )
         body = _page(["UX-5"])
         assert "| `test_present.py` |" in body
         assert "test_other.py" not in body
@@ -108,17 +115,14 @@ class TestAnInferredGuardIsCountedApart:
 
     def test_the_footer_counts_it(self, sandbox):
         _task(sandbox, 7, "test_present.py · inferred r149")
-        assert ("covered 2 / 5 (none 1, inferred r149 1, no line 1)"
-                in _page(["UX-1", "UX-2", "UX-3", "UX-4", "UX-7"]))
+        assert "covered 2 / 5 (none 1, inferred r149 1, no line 1)" in _page(["UX-1", "UX-2", "UX-3", "UX-4", "UX-7"])
 
     def test_the_mark_off_the_line_is_not_it(self, sandbox):
-        _task(sandbox, 8, "test_present.py",
-              "## Outcome\n\n**Guard:** test_present.py · inferred r149\n")
+        _task(sandbox, 8, "test_present.py", "## Outcome\n\n**Guard:** test_present.py · inferred r149\n")
         assert "(none 0, inferred r149 0, no line 0)" in _page(["UX-8"])
 
 
 class TestReportAreasStillOnlyPrints:
-
     def test_areas_names_the_unknown_one_and_exits_1(self, sandbox, capsys):
         assert dap.report_areas("nowhere-at-all") == 1
         assert "no such area" in capsys.readouterr().err

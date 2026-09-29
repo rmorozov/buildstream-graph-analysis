@@ -24,6 +24,7 @@ toolchain's; every answer is normalized first. And an include search
 list is a proxy - a listed directory can hold nothing - so a header
 class asks `-H` about a real `#include`.
 """
+
 import argparse
 import glob
 import os
@@ -43,38 +44,29 @@ TOOLCHAIN, SYSROOT, MOUNTED = "toolchain", "sysroot", "mounted"
 #: nothing, and the C++ entries drop out of the list silently when the
 #: prefix has no `include/c++`.
 CLASSES = (
-    {"name": "exec-prefix", "owner": TOOLCHAIN, "driver": "gcc",
-     "ask": ("program", "cc1")},
+    {"name": "exec-prefix", "owner": TOOLCHAIN, "driver": "gcc", "ask": ("program", "cc1")},
     # `as` and `ld` are the two the driver execs but does not carry.
     # An unwrapped host driver resolves them through `PATH` at exec
     # time, where `-print-prog-name` answers the bare name and reads
     # nothing - so they become readable only once a `-B` names the
     # pin's own `bin` (`UX-925`), which is `host_owner: None`.
-    {"name": "assembler", "owner": TOOLCHAIN, "host_owner": None,
-     "driver": "gcc", "ask": ("program", "as")},
-    {"name": "linker", "owner": TOOLCHAIN, "host_owner": None,
-     "driver": "gcc", "ask": ("program", "ld")},
-    {"name": "libgcc", "owner": TOOLCHAIN, "driver": "gcc",
-     "ask": ("file", "libgcc.a")},
-    {"name": "gcc-headers", "owner": TOOLCHAIN, "driver": "gcc",
-     "ask": ("header", "stddef.h")},
-    {"name": "start-files", "owner": SYSROOT, "driver": "gcc",
-     "ask": ("file", "crt1.o")},
+    {"name": "assembler", "owner": TOOLCHAIN, "host_owner": None, "driver": "gcc", "ask": ("program", "as")},
+    {"name": "linker", "owner": TOOLCHAIN, "host_owner": None, "driver": "gcc", "ask": ("program", "ld")},
+    {"name": "libgcc", "owner": TOOLCHAIN, "driver": "gcc", "ask": ("file", "libgcc.a")},
+    {"name": "gcc-headers", "owner": TOOLCHAIN, "driver": "gcc", "ask": ("header", "stddef.h")},
+    {"name": "start-files", "owner": SYSROOT, "driver": "gcc", "ask": ("file", "crt1.o")},
     # The dev `.so` is a symlink the gcc libdir owns, pointing at
     # content in the target half - so the *link* is what the search
     # answers with, and a dangling one reads as nothing rather than as
     # the host.
-    {"name": "libstdc++", "owner": TOOLCHAIN, "driver": "g++",
-     "ask": ("file", "libstdc++.so")},
-    {"name": "c-headers", "owner": SYSROOT, "driver": "gcc",
-     "ask": ("header", "stdio.h")},
+    {"name": "libstdc++", "owner": TOOLCHAIN, "driver": "g++", "ask": ("file", "libstdc++.so")},
+    {"name": "c-headers", "owner": SYSROOT, "driver": "gcc", "ask": ("header", "stdio.h")},
     # The one class whose owner the *toolchain* decides rather than
     # the parameters: Ubuntu packages libstdc++'s headers separately
     # under `/usr/include`, and an unwrapped nix gcc carries them
     # inside its own store prefix, where `argv[0]` relocation reaches
     # them with no flag at all (measured 2026-09-22, both trees).
-    {"name": "cxx-headers", "owner": TOOLCHAIN, "host_owner": SYSROOT,
-     "driver": "g++", "ask": ("header", "vector")},
+    {"name": "cxx-headers", "owner": TOOLCHAIN, "host_owner": SYSROOT, "driver": "g++", "ask": ("header", "vector")},
 )
 
 #: The directories the driver's own half lives in, relative to the
@@ -139,23 +131,21 @@ def parameters(dest: str) -> dict:
         # `gcc-14.3.0-lib` is on no default search path, so the
         # binaries the pin links carry it as a RUNPATH - the one thing
         # `-B` cannot do, since it moves the link and not the load.
-        return {"prefixes": pinned, "sysroot": dest, "root": dest,
-                "rpath": pinned["gcc-lib"]}
+        return {"prefixes": pinned, "sysroot": dest, "root": dest, "rpath": pinned["gcc-lib"]}
     # Each prefix is found by a file only its directory has, under
     # either layout: this host's `/usr` tree, or a pinned closure's
     # own `/nix/store/<hash>` (`UX-925`). The start files are the
     # reason both are named - in the closure they sit in **glibc's**
     # store path, not gcc's, so a `/usr/lib/*` glob alone would write
     # a `-B` short of the tree, which is the silent case.
-    marks = (("libgcc", ("usr/lib/gcc/*/*/libgcc.a",
-                         "nix/store/*/lib/gcc/*/*/libgcc.a")),
-             ("crt1", ("usr/lib/*/crt1.o", "nix/store/*/lib/crt1.o")))
+    marks = (
+        ("libgcc", ("usr/lib/gcc/*/*/libgcc.a", "nix/store/*/lib/gcc/*/*/libgcc.a")),
+        ("crt1", ("usr/lib/*/crt1.o", "nix/store/*/lib/crt1.o")),
+    )
     prefixes = {}
     for name, patterns in marks:
-        found = sorted(one for pattern in patterns
-                       for one in glob.glob(os.path.join(dest, pattern)))
-        prefixes[name] = (os.path.dirname(found[0]) + os.sep
-                          if len(found) == 1 else None)
+        found = sorted(one for pattern in patterns for one in glob.glob(os.path.join(dest, pattern)))
+        prefixes[name] = os.path.dirname(found[0]) + os.sep if len(found) == 1 else None
     # The exec prefix is `UX-914`'s own answer, not a second copy of
     # it: `helper_path` already locates a staged helper by name.
     cc1 = sysroot_manifest.helper_path(dest, "cc1")
@@ -174,13 +164,15 @@ def reroot(params: dict, root: str) -> dict:
     def moved(path):
         if path is None:
             return None
-        tail = path if old == os.sep else path[len(old):]
-        return (os.path.join(root, tail.strip(os.sep))
-                + (os.sep if path.endswith(os.sep) else ""))
+        tail = path if old == os.sep else path[len(old) :]
+        return os.path.join(root, tail.strip(os.sep)) + (os.sep if path.endswith(os.sep) else "")
 
-    found = dict(params, root=root, sysroot=moved(params["sysroot"]) or root,
-                 prefixes={name: moved(path)
-                           for name, path in params["prefixes"].items()})
+    found = dict(
+        params,
+        root=root,
+        sysroot=moved(params["sysroot"]) or root,
+        prefixes={name: moved(path) for name, path in params["prefixes"].items()},
+    )
     rpath = params.get("rpath")
     if rpath:
         found["rpath"] = moved(rpath) or rpath
@@ -193,8 +185,7 @@ def flags_for(params: dict) -> list:
     than passed empty - `-B` at a directory with no `cc1` is the
     silent fallback this row exists for, so it is never written by
     this code."""
-    flags = [f"-B{path}" for _name, path in sorted(params["prefixes"].items())
-             if path is not None]
+    flags = [f"-B{path}" for _name, path in sorted(params["prefixes"].items()) if path is not None]
     flags.append("--sysroot=" + params["sysroot"])
     if params.get("rpath"):
         flags.append("-Wl,-rpath," + params["rpath"].rstrip(os.sep))
@@ -208,11 +199,13 @@ def _header_path(argv: list, language: str, name: str) -> Optional[str]:
     answers with the file's `realpath`, and the question is which
     parameter reached it: inside the sandbox the staged tree *is* the
     path, so a resolved one reads a host that is not mounted there."""
-    result = subprocess.run(argv + ["-fno-canonical-system-headers",
-                                    "-E", "-H", "-x", language, "-", "-o",
-                                    os.devnull],
-                            input=f"#include <{name}>\n", capture_output=True,
-                            text=True, timeout=60)
+    result = subprocess.run(
+        argv + ["-fno-canonical-system-headers", "-E", "-H", "-x", language, "-", "-o", os.devnull],
+        input=f"#include <{name}>\n",
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
     for line in result.stderr.splitlines():
         if line.startswith(". ") and not line.startswith(". ."):
             return os.path.normpath(line[2:].strip())
@@ -242,8 +235,7 @@ def driver_argv(row: dict, driver_root: str) -> list:
     return nix_toolchain.run_prefix(driver_root) + [pinned]
 
 
-def resolve(dest: str, row: dict, flags: Optional[list] = None,
-            driver_root: Optional[str] = None) -> Optional[str]:
+def resolve(dest: str, row: dict, flags: Optional[list] = None, driver_root: Optional[str] = None) -> Optional[str]:
     """Where the driver really finds this class, normalized. `None`
     when it finds nothing: `-print-file-name` answers with the bare
     name it was given, and a header directory that does not exist is
@@ -257,8 +249,7 @@ def resolve(dest: str, row: dict, flags: Optional[list] = None,
     if kind == "header":
         return _header_path(argv, "c++" if row["driver"] == "g++" else "c", what)
     flag = "-print-prog-name=" if kind == "program" else "-print-file-name="
-    result = subprocess.run(argv + [flag + what], capture_output=True,
-                            text=True, stdin=subprocess.DEVNULL, timeout=60)
+    result = subprocess.run(argv + [flag + what], capture_output=True, text=True, stdin=subprocess.DEVNULL, timeout=60)
     answer = result.stdout.strip()
     if result.returncode != 0 or not answer or answer == what:
         return None
@@ -284,13 +275,12 @@ def owner_of(dest: str, path: Optional[str]) -> Optional[str]:
     if root == os.sep:
         inside = path
     elif path == root or path.startswith(root + os.sep):
-        inside = path[len(root):] or os.sep
+        inside = path[len(root) :] or os.sep
     else:
         return MOUNTED if os.path.exists(root + path) else None
     if inside.startswith(nix_closure.STORE + os.sep):
         return _store_owner(dest, inside)
-    return (TOOLCHAIN if any(inside.startswith(part + os.sep) or inside == part
-                             for part in TOOLCHAIN_ROOTS) else SYSROOT)
+    return TOOLCHAIN if any(inside.startswith(part + os.sep) or inside == part for part in TOOLCHAIN_ROOTS) else SYSROOT
 
 
 def _store_owner(dest: str, inside: str) -> str:
@@ -314,8 +304,7 @@ def mounted_owner(dest: str, path: str) -> Optional[str]:
     return owner_of(dest, os.path.abspath(dest) + path)
 
 
-def measure(dest: str, flags: Optional[list] = None,
-            driver_root: Optional[str] = None) -> dict:
+def measure(dest: str, flags: Optional[list] = None, driver_root: Optional[str] = None) -> dict:
     """`{class: (path, owner)}` for every row."""
     dest = os.path.abspath(dest)
     asked = declared(dest)
@@ -341,8 +330,7 @@ def divergences(dest: str, measured: Optional[dict] = None) -> list:
         path, owner = measured[name]
         if owner == declared_owner:
             continue
-        if (owner == MOUNTED and name in UNREADABLE_HERE
-                and mounted_owner(dest, path) == declared_owner):
+        if owner == MOUNTED and name in UNREADABLE_HERE and mounted_owner(dest, path) == declared_owner:
             continue
         found.append((name, declared_owner, path, owner))
     return found
@@ -355,10 +343,14 @@ def unreadable_here(dest: str, measured: Optional[dict] = None) -> list:
     dest = os.path.abspath(dest)
     measured = measure(dest) if measured is None else measured
     asked = declared(dest)
-    return [(name, measured[name][0]) for name in asked
-            if name in measured and measured[name][1] == MOUNTED
-            and name in UNREADABLE_HERE
-            and mounted_owner(dest, measured[name][0]) == asked[name]]
+    return [
+        (name, measured[name][0])
+        for name in asked
+        if name in measured
+        and measured[name][1] == MOUNTED
+        and name in UNREADABLE_HERE
+        and mounted_owner(dest, measured[name][0]) == asked[name]
+    ]
 
 
 def shim_text(driver: str, params: dict) -> str:
@@ -373,52 +365,63 @@ def shim_text(driver: str, params: dict) -> str:
         if "'" in value:
             raise ValueError(f"a single quote in {value!r} would break the shim")
     quoted = " ".join(f"'{flag}'" for flag in flags)
-    return ("#!/bin/sh\n"
-            "# UX-930: the driver, with its parameters baked in. Neither\n"
-            "# flag is loud when it is wrong, so toolchain_params --check\n"
-            "# reads back where each file class actually came from.\n"
-            f"exec '{driver}' {quoted} \"$@\"\n")
+    return (
+        "#!/bin/sh\n"
+        "# UX-930: the driver, with its parameters baked in. Neither\n"
+        "# flag is loud when it is wrong, so toolchain_params --check\n"
+        "# reads back where each file class actually came from.\n"
+        f"exec '{driver}' {quoted} \"$@\"\n"
+    )
 
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
     parser.add_argument("dest", help="the staged sysroot's root")
-    parser.add_argument("--check", action="store_true",
-                        help="exit 1 on a class answering from outside the tree")
-    parser.add_argument("--shim", metavar="DRIVER",
-                        help="write this driver's shim to stdout instead")
-    parser.add_argument("--driver-root", default=None,
-                        help="where the toolchain's own bin lives, when it is "
-                             "not the staged tree (default: the staged tree)")
-    parser.add_argument("--shim-root", default=os.sep,
-                        help="the root the shim's own flags name (default: /, "
-                             "the sandbox, where the staged tree is the root)")
+    parser.add_argument("--check", action="store_true", help="exit 1 on a class answering from outside the tree")
+    parser.add_argument("--shim", metavar="DRIVER", help="write this driver's shim to stdout instead")
+    parser.add_argument(
+        "--driver-root",
+        default=None,
+        help="where the toolchain's own bin lives, when it is not the staged tree (default: the staged tree)",
+    )
+    parser.add_argument(
+        "--shim-root",
+        default=os.sep,
+        help="the root the shim's own flags name (default: /, the sandbox, where the staged tree is the root)",
+    )
     args = parser.parse_args(argv)
     params = parameters(args.dest)
     if args.shim:
-        missing = sorted(name for name, path in params["prefixes"].items()
-                         if path is None)
+        missing = sorted(name for name, path in params["prefixes"].items() if path is None)
         if missing:
-            print(f"toolchain_params: {args.dest} has no {', '.join(missing)} "
-                  "- a shim written now would carry a -B short of the tree, "
-                  "which is the silent case (UX-930).", file=sys.stderr)
+            print(
+                f"toolchain_params: {args.dest} has no {', '.join(missing)} "
+                "- a shim written now would carry a -B short of the tree, "
+                "which is the silent case (UX-930).",
+                file=sys.stderr,
+            )
             return 1
         shim = reroot(params, args.shim_root)
-        driver = (nix_toolchain.driver_target(args.shim_root, args.shim)
-                  or os.path.join(args.shim_root, "usr", "bin", args.shim))
+        driver = nix_toolchain.driver_target(args.shim_root, args.shim) or os.path.join(
+            args.shim_root, "usr", "bin", args.shim
+        )
         sys.stdout.write(shim_text(driver, shim))
         return 0
     # The stager calls this as a hard gate, so a driver that is not
     # there names itself rather than arriving as a traceback (UX-930).
     asked = declared(args.dest)
-    absent = sorted({path for path in
-                     (driver_path(row, args.driver_root or args.dest)
-                      for row in CLASSES if row["name"] in asked)
-                     if not os.path.exists(path)})
+    absent = sorted(
+        {
+            path
+            for path in (driver_path(row, args.driver_root or args.dest) for row in CLASSES if row["name"] in asked)
+            if not os.path.exists(path)
+        }
+    )
     if absent:
-        print(f"toolchain_params: no driver at {', '.join(absent)} - "
-              "nothing to ask, so nothing is read back (UX-930).",
-              file=sys.stderr)
+        print(
+            f"toolchain_params: no driver at {', '.join(absent)} - nothing to ask, so nothing is read back (UX-930).",
+            file=sys.stderr,
+        )
         return 1
     measured = measure(args.dest, driver_root=args.driver_root)
     print("toolchain\t" + ("pinned" if is_pinned(args.dest) else "host"))
@@ -431,18 +434,23 @@ def main(argv=None) -> int:
     if not args.check:
         return 0
     for name, path in unreadable_here(args.dest, measured):
-        print(f"toolchain_params: {name} answers {path}, which no parameter "
-              f"moves - this host cannot read it, and the sandbox answers it "
-              f"from the staged tree at the same path (UX-930).",
-              file=sys.stderr)
+        print(
+            f"toolchain_params: {name} answers {path}, which no parameter "
+            f"moves - this host cannot read it, and the sandbox answers it "
+            f"from the staged tree at the same path (UX-930).",
+            file=sys.stderr,
+        )
     found = divergences(args.dest, measured)
     for name, half, path, owner in found:
-        where = ("with nothing - no such name anywhere the parameters reach"
-                 if path is None
-                 else f"from {owner or 'this host'}, at {path}")
-        print(f"toolchain_params: {name} declares {half} and answers "
-              f"{where}. Neither flag says so on its own (UX-930).",
-              file=sys.stderr)
+        where = (
+            "with nothing - no such name anywhere the parameters reach"
+            if path is None
+            else f"from {owner or 'this host'}, at {path}"
+        )
+        print(
+            f"toolchain_params: {name} declares {half} and answers {where}. Neither flag says so on its own (UX-930).",
+            file=sys.stderr,
+        )
     return 1 if found else 0
 
 

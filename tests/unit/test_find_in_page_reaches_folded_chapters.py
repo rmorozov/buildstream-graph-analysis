@@ -16,6 +16,7 @@ all - so `Ctrl+F` finds it. The fold is that one attribute now;
 `setOpen` writes it alongside `data-open` and `aria-expanded`, so the
 three can never disagree.
 """
+
 import json
 import os
 import pathlib
@@ -52,28 +53,33 @@ MACRO = REPO / "tests" / "fixtures" / "macro_micro" / "run"
 # 1. The mechanism, in `style.css` - read once, statically.
 # --------------------------------------------------------------------------
 
+
 class TestTheMechanismIsThreePlaces:
     def test_the_display_none_fold_rule_is_gone(self):
         css = STYLE.read_text(encoding="utf-8")
         assert 'section[data-section] { display: none; }' not in css, (
             "the old fold rule is still here - it hides text from find "
-            "the same way whether or not hidden=\"until-found\" is also set")
+            "the same way whether or not hidden=\"until-found\" is also set"
+        )
 
     def test_content_visibility_excludes_a_hidden_section(self):
         css = STYLE.read_text(encoding="utf-8")
         assert re.search(
             r"section\.chapter > section\[data-section\]:not\(\[hidden\]\)"
-            r"\s*\{[^}]*content-visibility:\s*auto", css), (
+            r"\s*\{[^}]*content-visibility:\s*auto",
+            css,
+        ), (
             "the content-visibility rule does not exclude [hidden] - it "
             "would override the browser's own content-visibility: hidden "
-            "on a folded (hidden=\"until-found\") section")
+            "on a folded (hidden=\"until-found\") section"
+        )
 
     def test_print_reveals_a_folded_section_by_the_attribute(self):
         css = STYLE.read_text(encoding="utf-8")
         blocks = re.findall(r"@media print \{(.*?)\n\}", css, re.S)
-        assert any('[hidden="until-found"]' in b and "display: block" in b
-                  for b in blocks), (
-            "no print rule reveals a hidden=\"until-found\" section")
+        assert any('[hidden="until-found"]' in b and "display: block" in b for b in blocks), (
+            "no print rule reveals a hidden=\"until-found\" section"
+        )
 
 
 # --------------------------------------------------------------------------
@@ -135,8 +141,13 @@ def _run_probe(source=_PROBE):
     probe = tmp / "probe.mjs"
     probe.write_text(source, encoding="utf-8")
     done = subprocess.run(
-        [node, str(probe)], capture_output=True, text=True, cwd=REPO, timeout=60,
-        env=dict(os.environ, BGA_DOM_SHIM=SHIM, MOD=str(CHAPTERS_JS)))
+        [node, str(probe)],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=60,
+        env=dict(os.environ, BGA_DOM_SHIM=SHIM, MOD=str(CHAPTERS_JS)),
+    )
     assert done.returncode == 0, done.stderr[-3000:]
     return json.loads(done.stdout)
 
@@ -246,16 +257,14 @@ class TestAFoldedChapterPrintsItsText:
         into = pathlib.Path(tempfile.mkdtemp())
         uri = pages.export_uri(MACRO, into)
         with Browser(chrome) as browser:
-            out = browser.measure(uri, _PRINT_LAYOUT, 1440, 900,
-                                   media="print")
+            out = browser.measure(uri, _PRINT_LAYOUT, 1440, 900, media="print")
         assert out, "no folded chapter with a section found on this fixture"
         assert out["hiddenAttr"] == "until-found", out
         assert out["contentVisibility"] == "visible", (
             "content-visibility is still hidden under print media - the "
             "section's text has no rendered size even though display "
-            f"is not none: {out}")
-        assert out["height"] > 0, (
-            f"a folded section renders at zero height in print: {out}")
+            f"is not none: {out}"
+        )
+        assert out["height"] > 0, f"a folded section renders at zero height in print: {out}"
         assert out["scrollHeight"] > 0, out
-        assert out["headingRectHeight"] > 0, (
-            f"the folded section's own heading has zero rendered size: {out}")
+        assert out["headingRectHeight"] > 0, f"the folded section's own heading has zero rendered size: {out}"

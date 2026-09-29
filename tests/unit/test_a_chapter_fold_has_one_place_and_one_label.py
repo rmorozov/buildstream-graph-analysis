@@ -7,6 +7,7 @@ accessible name; each glyph follows its own control (the document fold's
 control's offset in `h2.chapter-title` is held with `UX-1042`'s
 placement rule: dx from either edge and dy each spread by at most 24 px.
 """
+
 import pathlib
 import sys
 
@@ -64,8 +65,7 @@ _READ = r"""
 
 @pytest.fixture(scope="module", params=VIEWPORTS, ids=lambda v: f"{v[0]}x{v[1]}")
 def measured(request, tmp_path_factory):
-    uri = pages.export_uri(pages.FIXTURES["macro_micro"],
-                           tmp_path_factory.mktemp("u1044"))
+    uri = pages.export_uri(pages.FIXTURES["macro_micro"], tmp_path_factory.mktemp("u1044"))
     with Browser(chrome) as opened:
         return opened.measure(uri, _READ, *request.param)
 
@@ -84,15 +84,13 @@ class TestBothControlsSayOneThing:
         for state in ("folded", "opened", "pressed"):
             for row in measured[state]:
                 assert _glyph(row["doc"]) == ("▾" if row["open"] else "▸"), (state, row)
-                assert _glyph(row["rail"]) == ("▾" if row["railCurrent"] else "▸"), (
-                    state, row)
+                assert _glyph(row["rail"]) == ("▾" if row["railCurrent"] else "▸"), (state, row)
         assert any(row["railCurrent"] for row in measured["pressed"]), measured["pressed"]
 
     def test_both_controls_carry_the_same_count(self, measured):
         for state in ("folded", "opened"):
             for row in measured[state]:
-                assert _count(row["doc"]) and _count(row["doc"]) == _count(row["rail"]), (
-                    state, row)
+                assert _count(row["doc"]) and _count(row["doc"]) == _count(row["rail"]), (state, row)
 
     def test_each_accessible_name_holds_the_chapter_title(self, measured):
         rows = measured["folded"] + measured["opened"]
@@ -112,7 +110,8 @@ class TestTheDocumentFoldSitsAtOnePlace:
             return max(row[key] for row in rows) - min(row[key] for row in rows)
 
         assert min(spread("dxl"), spread("dxr")) <= SPREAD, [
-            (row["id"], round(row["dxl"]), round(row["dxr"])) for row in rows]
+            (row["id"], round(row["dxl"]), round(row["dxr"])) for row in rows
+        ]
         assert spread("dy") <= SPREAD, [(row["id"], round(row["dy"])) for row in rows]
 
     def test_the_control_ends_at_the_chapter_heads_right_edge(self, measured):
@@ -120,8 +119,7 @@ class TestTheDocumentFoldSitsAtOnePlace:
         pass a control that merely trails a long title."""
         rows = measured["folded"] + measured["opened"]
         assert rows, measured
-        off = [(row["id"], round(row["dxr"], 1)) for row in rows
-               if abs(row["dxr"]) > EDGE]
+        off = [(row["id"], round(row["dxr"], 1)) for row in rows if abs(row["dxr"]) > EDGE]
         assert off == [], off
 
 

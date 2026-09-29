@@ -8,6 +8,7 @@ now records directly in each bst-builder event's args - BuildStream's own
 real action word, confirmed against a real, installed BuildStream 2.7.0
 build (see docs/spec/ingestion-pipeline.md).
 """
+
 from tools.chrome_trace_to_bga_trace import (
     ACTION_TO_KIND,
     KIND_TO_RESOURCE,
@@ -45,17 +46,19 @@ def test_single_build_task_converts_to_one_span():
     spans, dropped = chrome_events_to_bga_spans(events)
 
     assert dropped == []
-    assert spans == [{
-        "task_key": "app.bst|BUILD|BUILD|0",
-        "ts_us": 1000,
-        "dur_us": 4000,
-        "resources": ["PROCESS"],
-        "primary_resource": "PROCESS",
-        # UX-62: BuildStream's own terminal status for this attempt,
-        # carried onto the span. Additive and omitted when the log did
-        # not say - "not recorded" and "SUCCESS" are different claims.
-        "status": "SUCCESS",
-    }]
+    assert spans == [
+        {
+            "task_key": "app.bst|BUILD|BUILD|0",
+            "ts_us": 1000,
+            "dur_us": 4000,
+            "resources": ["PROCESS"],
+            "primary_resource": "PROCESS",
+            # UX-62: BuildStream's own terminal status for this attempt,
+            # carried onto the span. Additive and omitted when the log did
+            # not say - "not recorded" and "SUCCESS" are different claims.
+            "status": "SUCCESS",
+        }
+    ]
 
 
 def test_every_task_kind_maps_to_the_right_resource():

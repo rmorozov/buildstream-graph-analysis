@@ -20,6 +20,7 @@ The strongest of these is the agreement test: `max_depth` and the level
 count are the same computation keyed two ways, and having them disagree
 in one report block was the user-visible face of this bug.
 """
+
 import networkx as nx
 import pytest
 

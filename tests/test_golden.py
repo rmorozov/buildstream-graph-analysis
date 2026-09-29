@@ -29,6 +29,7 @@ neither and drifted four findings behind the analyzer. Which keys are
 the machine rather than the analysis, and why each is dropped, is
 stated once in that tool.
 """
+
 import sys
 from pathlib import Path
 
@@ -50,7 +51,8 @@ def _fixture():
             return fixture
     raise AssertionError(
         "the golden fixture is not in dev_refresh_analysis.FIXTURES, so "
-        "nothing can regenerate what this file compares against")
+        "nothing can regenerate what this file compares against"
+    )
 
 
 def test_mixed_task_kinds_golden_snapshot():

@@ -38,6 +38,7 @@ than going through chrome_trace_to_bga_trace.py's TaskKind conversion at
 all - that conversion deliberately drops action="main" events, and this
 tool's whole reason to exist is to *not* drop them.
 """
+
 import argparse
 import json
 import sys
@@ -198,11 +199,15 @@ def _format_compare_text(result: dict) -> str:
 def main() -> int:
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument(
-        "--format", choices=("auto", "wrapped", "raw"), default="auto",
+        "--format",
+        choices=("auto", "wrapped", "raw"),
+        default="auto",
         help="Input log format - same semantics as bst_log_to_chrome_trace.py",
     )
     common.add_argument(
-        "--json", action="store_true", help="Emit JSON instead of a human-readable summary",
+        "--json",
+        action="store_true",
+        help="Emit JSON instead of a human-readable summary",
     )
 
     parser = argparse.ArgumentParser(
@@ -215,7 +220,9 @@ def main() -> int:
     summarize_parser.add_argument("log_path")
 
     compare_parser = subparsers.add_parser(
-        "compare", parents=[common], help="Compare N individual checkout logs against one consolidated checkout log",
+        "compare",
+        parents=[common],
+        help="Compare N individual checkout logs against one consolidated checkout log",
     )
     compare_parser.add_argument("--individual", nargs="+", required=True, metavar="LOG")
     compare_parser.add_argument("--consolidated", required=True, metavar="LOG")

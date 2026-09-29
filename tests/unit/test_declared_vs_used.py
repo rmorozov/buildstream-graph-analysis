@@ -18,6 +18,7 @@ The tests below concentrate on the ways this can be dangerously wrong,
 because the costly failure is a confident false "unused" that gets a real
 dependency deleted.
 """
+
 from tools.bst_native_build_tracer import (
     compute_declared_vs_used,
     parse_open_records,
@@ -29,6 +30,7 @@ def _opens(paths, dropped=0, processes=1):
 
 
 # --- parsing ------------------------------------------------------------
+
 
 def test_open_records_are_unioned_across_an_elements_processes():
     text = (
@@ -42,7 +44,9 @@ def test_open_records_are_unioned_across_an_elements_processes():
     parsed = parse_open_records(text)
 
     assert parsed["a.bst"]["paths"] == {
-        "/usr/include/x.hpp", "/usr/lib/libx.a", "/usr/include/y.hpp",
+        "/usr/include/x.hpp",
+        "/usr/lib/libx.a",
+        "/usr/include/y.hpp",
     }
     assert parsed["a.bst"]["processes"] == 2
 
@@ -79,6 +83,7 @@ def test_truncated_block_does_not_swallow_the_next_record():
 
 # --- the analysis -------------------------------------------------------
 
+
 def test_dependency_whose_files_were_never_opened_is_a_candidate():
     result = compute_declared_vs_used(
         {"app.bst": _opens(["/usr/include/used.hpp"])},
@@ -86,8 +91,7 @@ def test_dependency_whose_files_were_never_opened_is_a_candidate():
         # UX-68: a real dependency stages many files. One staged file is
         # the `stack` signature and is now classified separately, so this
         # fixture uses a realistic count to keep testing what it means to.
-        {"used.bst": {"/usr/include/used.hpp"},
-         "unused.bst": {"/usr/include/unused.hpp", "/usr/lib/libunused.so"}},
+        {"used.bst": {"/usr/include/used.hpp"}, "unused.bst": {"/usr/include/unused.hpp", "/usr/lib/libunused.so"}},
     )
 
     assert [c["dependency"] for c in result["unused_candidates"]] == ["unused.bst"]

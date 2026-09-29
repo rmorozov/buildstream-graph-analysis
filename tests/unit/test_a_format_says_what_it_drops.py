@@ -28,6 +28,7 @@ trackevent protobuf, so a reader who clicks through from the report
 gets the complete trace. This is the documented
 `bga timeline --format chrome` invocation, taken by hand.
 """
+
 import json
 import pathlib
 import sys
@@ -57,8 +58,7 @@ def rendered(tmp_path_factory):
     for fmt in ("trackevent", "chrome"):
         path = str(into / f"timeline.{fmt}")
         result = render(snapshot, path, fmt=fmt, quiet=True)
-        out[fmt] = {"result": result, "said": describe(result, path),
-                    "path": path}
+        out[fmt] = {"result": result, "said": describe(result, path), "path": path}
     return out
 
 
@@ -84,14 +84,13 @@ class TestTheSummaryReportsWhatIsThere:
         with open(rendered["chrome"]["path"], encoding="utf-8") as handle:
             events = json.load(handle)
         rows = events.get("traceEvents") if isinstance(events, dict) else events
-        slices = sum(1 for event in rows
-                     if isinstance(event, dict) and event.get("ph") in ("X", "B"))
+        slices = sum(1 for event in rows if isinstance(event, dict) and event.get("ph") in ("X", "B"))
         assert rendered["chrome"]["result"]["slices"] == slices
-        assert not any(event.get("ph") in ("s", "t", "f", "C")
-                       for event in rows if isinstance(event, dict)), (
+        assert not any(event.get("ph") in ("s", "t", "f", "C") for event in rows if isinstance(event, dict)), (
             "the chrome writer started emitting flow or counter events, so "
             "the zeroes this file asserts are no longer true - re-measure "
-            "before changing them")
+            "before changing them"
+        )
 
     def test_both_summaries_report_the_same_three(self, rendered):
         """One shape, so the two formats can be compared at a glance."""
@@ -130,7 +129,8 @@ class TestTheQueryLibraryNamesItsRequirement:
             block = QUESTIONS.split(f'id: "{query}"', 1)[1].split("sql:", 1)[0]
             assert f'reads: "{table}"' in block, (
                 f"`{query}` reads the `{table}` table and does not say so, "
-                f"so the page cannot tell a reader why it came back empty")
+                f"so the page cannot tell a reader why it came back empty"
+            )
 
     def test_every_declared_table_has_a_sentence(self):
         """A declaration the renderer has no wording for is silent."""
@@ -140,8 +140,7 @@ class TestTheQueryLibraryNamesItsRequirement:
         block = QUESTIONS.split("export const NEEDS_TRACKEVENT = {", 1)[1]
         block = block.split("};", 1)[0]
         worded = set(findall(r"^\s*([a-z_]+):", block, flags=8))
-        assert declared <= worded, (
-            f"declared and unworded: {sorted(declared - worded)}")
+        assert declared <= worded, f"declared and unworded: {sorted(declared - worded)}"
 
     def test_the_sentence_says_which_format_and_why_it_is_empty(self):
         block = QUESTIONS.split("export function requirementLine", 1)[1]
@@ -150,4 +149,5 @@ class TestTheQueryLibraryNamesItsRequirement:
         assert "not the build lacking it" in block, (
             "the sentence must say the *format* is missing the structure - "
             "a reader who reads it as the build having none is exactly the "
-            "wrong answer this item was filed on")
+            "wrong answer this item was filed on"
+        )

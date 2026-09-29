@@ -7,6 +7,7 @@ walk report that follows the `walk` skill's shape is required to name
 its seed and the answer-key rows it added, and one that does not is
 caught rather than read as an ordinary round document.
 """
+
 import pathlib
 import re
 import sys
@@ -25,16 +26,14 @@ def test_two_seeds_draw_different_scenarios():
     """Measured over the open backlog: seeds 1 and 2 disagree on the
     area and on at least one input class - not merely the RNG state."""
     one, two = scenario.draw(1), scenario.draw(2)
-    assert one["area"] != two["area"] or one["classes"] != two["classes"], (
-        one, two)
+    assert one["area"] != two["area"] or one["classes"] != two["classes"], (one, two)
 
 
 def test_the_walk_names_every_partition_dimension():
     """Every dimension `decompose`'s §2 table lists is drawn, not a
     subset chosen here - a class the skill adds shows up unasked."""
     classes = scenario.partition_classes()
-    assert set(classes) == {"population", "contract version", "capture mode",
-                            "Plane 2", "reader", "host"}, classes
+    assert set(classes) == {"population", "contract version", "capture mode", "Plane 2", "reader", "host"}, classes
     drawn = scenario.draw(3)["classes"]
     assert set(drawn) == set(classes)
 
@@ -51,13 +50,15 @@ class TestAWalkReportNamesItsSeedAndItsRows:
     `walk` skill's shape (`capture` / `findings`) with its `seed` line
     removed is exactly what `report_problems` must catch."""
 
-    GOOD = ("capture      2026-09-06 - macro/micro recording\n"
-            "seed         1\n"
-            "answer key   3 lines\n"
-            "per plane    plane1 | said X | match\n"
-            "findings     none new\n"
-            "friction     nothing notable\n"
-            "rows added   0\n")
+    GOOD = (
+        "capture      2026-09-06 - macro/micro recording\n"
+        "seed         1\n"
+        "answer key   3 lines\n"
+        "per plane    plane1 | said X | match\n"
+        "findings     none new\n"
+        "friction     nothing notable\n"
+        "rows added   0\n"
+    )
 
     def test_a_conforming_report_is_clean(self):
         assert scenario.report_problems([("r.md", self.GOOD)]) == []
@@ -140,20 +141,17 @@ class TestEveryPrintedCommandRuns:
     @staticmethod
     def _bga_commands(text):
         """`bga ...` fragments inside backticks, one per match."""
-        return [found.strip() for found in
-                re.findall(r"`(bga [^`]+)`", text)]
+        return [found.strip() for found in re.findall(r"`(bga [^`]+)`", text)]
 
     @staticmethod
     def _flags(command):
         """The `--flag` tokens in one command fragment."""
-        return [token.split("=")[0] for token in command.split()
-                if token.startswith("--") and token != "--"]
+        return [token.split("=")[0] for token in command.split() if token.startswith("--") and token != "--"]
 
     def _known_flags(self, sub):
         import subprocess
 
-        done = subprocess.run(["bga", sub, "--help"], capture_output=True,
-                              text=True, timeout=60)
+        done = subprocess.run(["bga", sub, "--help"], capture_output=True, text=True, timeout=60)
         if done.returncode != 0:
             return None
         return set(re.findall(r"(--[a-z0-9-]+)", done.stdout))
@@ -161,18 +159,18 @@ class TestEveryPrintedCommandRuns:
     def test_every_recipe_command_names_a_real_subcommand(self):
         import subprocess
 
-        subs = set(re.findall(r"^\s+\{?([a-z][a-z0-9,-]*)\}?",
-                              subprocess.run(["bga", "--help"],
-                                             capture_output=True, text=True,
-                                             timeout=60).stdout, re.M))
-        named = {command.split()[1]
-                 for seed in self.SEEDS
-                 for command in self._bga_commands(scenario.scripted_walk(seed))}
-        unknown = sorted(name for name in named
-                         if not any(name in group.split(",")
-                                    for group in subs))
-        assert unknown == [], (
-            f"the recipe names subcommand(s) `bga` does not have: {unknown}")
+        subs = set(
+            re.findall(
+                r"^\s+\{?([a-z][a-z0-9,-]*)\}?",
+                subprocess.run(["bga", "--help"], capture_output=True, text=True, timeout=60).stdout,
+                re.M,
+            )
+        )
+        named = {
+            command.split()[1] for seed in self.SEEDS for command in self._bga_commands(scenario.scripted_walk(seed))
+        }
+        unknown = sorted(name for name in named if not any(name in group.split(",") for group in subs))
+        assert unknown == [], f"the recipe names subcommand(s) `bga` does not have: {unknown}"
 
     def test_every_recipe_flag_is_one_its_subcommand_takes(self):
         """The clause seed 1's finding needed. `--elements` parsed as a

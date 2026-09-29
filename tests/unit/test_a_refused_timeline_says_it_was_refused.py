@@ -26,6 +26,7 @@ wiring is what breaks.
 The ceiling is lowered rather than the fixture grown: `UX-430` measured
 where it belongs and this item's Out of Scope is that it stays there.
 """
+
 import json
 import os
 import pathlib
@@ -81,8 +82,7 @@ def _probe_source():
     A second copy of the preamble is a second model of the browser; the
     shim is imported by the probe and this only appends a read to it.
     """
-    source = (REPO / "tests/unit/test_a_report_you_can_navigate.py").read_text(
-        encoding="utf-8")
+    source = (REPO / "tests/unit/test_a_report_you_can_navigate.py").read_text(encoding="utf-8")
     return source.split('_PROBE = r"""', 1)[1].rsplit('"""', 1)[0] + _TAIL
 
 
@@ -93,17 +93,23 @@ def _boot(page):
     tmp = pathlib.Path(tempfile.mkdtemp())
     html = pathlib.Path(page).read_text(encoding="utf-8")
     module = tmp / "inline.mjs"
-    module.write_text(
-        view.inflated_module(html),
-        encoding="utf-8")
+    module.write_text(view.inflated_module(html), encoding="utf-8")
     probe = tmp / "probe.mjs"
     probe.write_text(_probe_source(), encoding="utf-8")
     result = subprocess.run(
-        [node, str(probe)], capture_output=True, text=True, cwd=REPO,
+        [node, str(probe)],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
         timeout=90,
-        env=dict(os.environ, PAGE=str(page), MOD=str(module),
-                 PROTOCOL="file:",
-                 BGA_DOM_SHIM=str(REPO / "tests" / "dom_shim.mjs")))
+        env=dict(
+            os.environ,
+            PAGE=str(page),
+            MOD=str(module),
+            PROTOCOL="file:",
+            BGA_DOM_SHIM=str(REPO / "tests" / "dom_shim.mjs"),
+        ),
+    )
     assert result.returncode == 0, result.stderr[-3000:]
     lines = result.stdout.strip().splitlines()
     booted = json.loads(lines[-2])
@@ -126,8 +132,7 @@ def refused(tmp_path_factory):
 
     into = tmp_path_factory.mktemp("refused")
     run = pages.two_plane_snapshot(into)
-    narrowed = render(str(run.parent), str(into / "probe1.pftrace"),
-                      planes=PLANE1_ONLY, quiet=True)
+    narrowed = render(str(run.parent), str(into / "probe1.pftrace"), planes=PLANE1_ONLY, quiet=True)
     ceiling = narrowed["tracks"] - 1
     page = into / "report.html"
     before = view.TRACE_TRACK_BUDGET
@@ -136,11 +141,8 @@ def refused(tmp_path_factory):
         view.export(str(run), str(page))
     finally:
         view.TRACE_TRACK_BUDGET = before
-    payload = json.loads(re.search(
-        r'id="bga-run">(.*?)</script>',
-        page.read_text(encoding="utf-8"), re.S).group(1))
-    return {"page": page, "payload": payload, "run": run,
-            "tracks": narrowed["tracks"], "ceiling": ceiling}
+    payload = json.loads(re.search(r'id="bga-run">(.*?)</script>', page.read_text(encoding="utf-8"), re.S).group(1))
+    return {"page": page, "payload": payload, "run": run, "tracks": narrowed["tracks"], "ceiling": ceiling}
 
 
 @pytest.fixture(scope="module")
@@ -150,14 +152,11 @@ def absent(tmp_path_factory):
 
     into = tmp_path_factory.mktemp("absent")
     run = into / "run"
-    shutil.copytree(pages.FIXTURES["golden"], run,
-                    ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+    shutil.copytree(pages.FIXTURES["golden"], run, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
     (run / "expected_output.json").unlink(missing_ok=True)
     page = into / "report.html"
     view.export(str(run), str(page))
-    payload = json.loads(re.search(
-        r'id="bga-run">(.*?)</script>',
-        page.read_text(encoding="utf-8"), re.S).group(1))
+    payload = json.loads(re.search(r'id="bga-run">(.*?)</script>', page.read_text(encoding="utf-8"), re.S).group(1))
     return {"page": page, "payload": payload}
 
 
@@ -169,8 +168,7 @@ class TestTheExportPublishesTheRefusal:
         assert payload["has_timeline"] is False, payload
         said = payload["timeline_omitted"]
         assert "the whole timeline" in said, said
-        assert "--planes 1" in said, (
-            f"the narrowed rung was not tried or not reported: {said}")
+        assert "--planes 1" in said, f"the narrowed rung was not tried or not reported: {said}"
         assert f"{refused['ceiling']:,}-track ceiling" in said, said
         assert payload["timeline_recipe"]["command"].endswith("--perfetto")
 
@@ -199,8 +197,7 @@ class TestTheServedPageIsNotToldItWasRefused:
         httpd, url = serve(str(refused["run"]), port=0)
         threading.Thread(target=httpd.serve_forever, daemon=True).start()
         try:
-            with urllib.request.urlopen(url.rstrip("/") + "/run.json",
-                                        timeout=30) as response:
+            with urllib.request.urlopen(url.rstrip("/") + "/run.json", timeout=30) as response:
                 run_json = _json.loads(response.read().decode("utf-8"))
         finally:
             httpd.shutdown()
@@ -212,15 +209,13 @@ class TestTheServedPageIsNotToldItWasRefused:
 
 @needs_node
 class TestThePageNamesTheRefusal:
-
-    def test_the_refused_page_says_what_it_refused_and_what_to_run(
-            self, refused):
+    def test_the_refused_page_says_what_it_refused_and_what_to_run(self, refused):
         read = _boot(refused["page"])
         lead = read["lead"]
-        assert NO_LOG not in lead, (
-            f"a refusal is still told it has no build log: {lead}")
+        assert NO_LOG not in lead, f"a refusal is still told it has no build log: {lead}"
         assert refused["payload"]["timeline_omitted"] in lead, (
-            f"the refusal did not reach the page in its own words: {lead}")
+            f"the refusal did not reach the page in its own words: {lead}"
+        )
         assert f"{refused['ceiling']:,}-track ceiling" in lead, lead
         assert refused["payload"]["timeline_recipe"]["command"] in lead, lead
         assert read["omitted"] == "refused", read

@@ -1,4 +1,5 @@
 """UX-901: one tolerant JSON-lines read for every ledger reader here."""
+
 import json
 from typing import Optional
 

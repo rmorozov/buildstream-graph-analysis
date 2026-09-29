@@ -136,7 +136,9 @@ def test_scheduler_config_parsed_from_maximum_tasks_header_lines():
 
     config = converter.get_scheduler_config()
     assert config == {
-        "builders": 3, "fetchers": 7, "pushers": 2,
+        "builders": 3,
+        "fetchers": 7,
+        "pushers": 2,
         # UX-29: BuildStream's own header never reports --max-jobs, and a
         # raw log has no wrapper invocation line to recover it from -
         # "not recorded", never a fabricated default.
@@ -148,9 +150,7 @@ def test_scheduler_config_parsed_in_wrapped_mode_too():
     """The same standalone header lines, as they'd appear wrapped by a CI
     tool (which wraps every line of bst's stdout, header included)."""
     converter = WrapperTraceConverter()
-    converter.process_line_wrapped(
-        "[wrapper][2026-08-14 11:00:00,000] INFO: Maximum Build Tasks:     3"
-    )
+    converter.process_line_wrapped("[wrapper][2026-08-14 11:00:00,000] INFO: Maximum Build Tasks:     3")
     assert converter.get_scheduler_config()["builders"] == 3
 
 
@@ -160,7 +160,9 @@ def test_scheduler_config_defaults_match_buildstream_bundled_defaults():
     fetchers=10, builders=4, pushers=4), not an invented guess."""
     converter = WrapperTraceConverter(raw_start_time_us=0)
     assert converter.get_scheduler_config() == {
-        "builders": 4, "fetchers": 10, "pushers": 4,
+        "builders": 4,
+        "fetchers": 10,
+        "pushers": 4,
         # UX-29: no invocation line parsed, so "not recorded" - never a
         # fabricated default.
         "native_max_jobs": None,
@@ -169,14 +171,13 @@ def test_scheduler_config_defaults_match_buildstream_bundled_defaults():
 
 # --- Wrapped-mode regression (must be entirely unaffected) --------------
 
+
 def test_wrapped_mode_still_works_and_ignores_raw_only_state():
     """Regression: --format wrapped (or auto's wrapped branch) must
     behave exactly as before - the elapsed bracket is parsed but unused,
     the wrapper's own UTC timestamp is the only time source."""
     converter = WrapperTraceConverter()
-    converter.process_line_wrapped(
-        "[wrapper][2026-08-14 11:00:00,000] INFO: Executing command: bst build base.bst"
-    )
+    converter.process_line_wrapped("[wrapper][2026-08-14 11:00:00,000] INFO: Executing command: bst build base.bst")
     converter.process_line_wrapped(
         "[wrapper][2026-08-14 11:00:00,100] INFO: "
         "[--:--:--][4a9059d4][   build:base.bst] START   base/4a9059d4-build.log"
@@ -200,9 +201,7 @@ def test_wrapped_mode_still_works_and_ignores_raw_only_state():
 def test_auto_format_detects_wrapped_and_raw_lines_independently():
     converter = WrapperTraceConverter(raw_start_time_us=0)
     # A wrapped line and a raw line, mixed - auto must handle both.
-    converter.process_line(
-        "[wrapper][2026-08-14 11:00:00,000] INFO: Executing command: bst build base.bst"
-    )
+    converter.process_line("[wrapper][2026-08-14 11:00:00,000] INFO: Executing command: bst build base.bst")
     converter.process_line(
         "[wrapper][2026-08-14 11:00:00,100] INFO: "
         "[--:--:--][4a9059d4][   build:base.bst] START   base/4a9059d4-build.log"
@@ -220,14 +219,18 @@ def test_auto_format_detects_wrapped_and_raw_lines_independently():
 
 # --- Elapsed-time parsing -------------------------------------------------
 
-@pytest.mark.parametrize("raw,expected", [
-    ("00:00:00", 0.0),
-    ("00:01:05", 65.0),
-    ("01:02:03", 3723.0),
-    ("00:00:01.500000", 1.5),
-    ("--:--:--", 0.0),
-    ("--:--:--.------", 0.0),
-])
+
+@pytest.mark.parametrize(
+    "raw,expected",
+    [
+        ("00:00:00", 0.0),
+        ("00:01:05", 65.0),
+        ("01:02:03", 3723.0),
+        ("00:00:01.500000", 1.5),
+        ("--:--:--", 0.0),
+        ("--:--:--.------", 0.0),
+    ],
+)
 def test_parse_elapsed_to_seconds(raw, expected):
     assert parse_elapsed_to_seconds(raw) == expected
 
@@ -244,9 +247,7 @@ def test_raw_mode_anchors_a_tasks_first_start_to_the_current_watermark():
     ignored, matching real semantics (see _process_raw_line's docstring
     and docs/backlog/scenarios/UX-0006-raw-log-timestamp-corruption.md)."""
     converter = WrapperTraceConverter(raw_start_time_us=1_700_000_000_000_000)
-    converter.process_line_raw(
-        "[00:00:05][4a9059d4][   build:base.bst] START   base/4a9059d4-build.log"
-    )
+    converter.process_line_raw("[00:00:05][4a9059d4][   build:base.bst] START   base/4a9059d4-build.log")
     begin = _builder_events(converter)[0]
     assert begin["ts"] == 1_700_000_000_000_000
 
@@ -258,12 +259,8 @@ def test_raw_mode_applies_a_terminals_own_elapsed_to_its_tasks_anchor():
     value, since it's what makes the task's real measured duration
     survive into the reconstructed timeline."""
     converter = WrapperTraceConverter(raw_start_time_us=1_700_000_000_000_000)
-    converter.process_line_raw(
-        "[--:--:--][4a9059d4][   build:base.bst] START   Running commands"
-    )
-    converter.process_line_raw(
-        "[00:00:05][4a9059d4][   build:base.bst] SUCCESS base/4a9059d4-build.log"
-    )
+    converter.process_line_raw("[--:--:--][4a9059d4][   build:base.bst] START   Running commands")
+    converter.process_line_raw("[00:00:05][4a9059d4][   build:base.bst] SUCCESS base/4a9059d4-build.log")
     end = _builder_events(converter)[-1]
     assert end["ph"] == "E"
     assert end["ts"] == 1_700_000_000_000_000 + 5_000_000
@@ -272,12 +269,11 @@ def test_raw_mode_applies_a_terminals_own_elapsed_to_its_tasks_anchor():
 def test_raw_mode_requires_start_time():
     converter = WrapperTraceConverter(raw_start_time_us=None)
     with pytest.raises(ValueError):
-        converter.process_line_raw(
-            "[00:00:00][4a9059d4][   build:base.bst] START   base/4a9059d4-build.log"
-        )
+        converter.process_line_raw("[00:00:00][4a9059d4][   build:base.bst] START   base/4a9059d4-build.log")
 
 
 # --- --start-time resolution ---------------------------------------------
+
 
 def test_resolve_start_time_us_from_explicit_iso8601():
     us = _resolve_start_time_us("2026-08-14T00:00:00+00:00", "/nonexistent")
@@ -293,6 +289,7 @@ def test_resolve_start_time_us_defaults_to_file_mtime(tmp_path):
 
 # --- Targets: header line (used by tools/bst_extract_run.py, P4-10) -----
 
+
 def test_targets_regex_matches_real_header_line():
     m = TARGETS_RE.match("    Targets:       base.bst, base2.bst")
     assert m.group(1) == "base.bst, base2.bst"
@@ -306,9 +303,7 @@ def test_targets_captured_during_raw_processing():
 
 def test_targets_captured_during_wrapped_processing():
     converter = WrapperTraceConverter()
-    converter.process_line_wrapped(
-        "[wrapper][2026-08-14 11:00:00,000] INFO: Targets:       base.bst, base2.bst"
-    )
+    converter.process_line_wrapped("[wrapper][2026-08-14 11:00:00,000] INFO: Targets:       base.bst, base2.bst")
     assert converter.targets == "base.bst, base2.bst"
 
 
@@ -358,11 +353,7 @@ _UPSTREAM_THEN_DOWNSTREAM_LINES = [
 def _spans_by_hash(converter):
     begins = {e["tid"]: e for e in _builder_events(converter) if e["ph"] == "B"}
     ends = {e["tid"]: e for e in _builder_events(converter) if e["ph"] == "E"}
-    return {
-        tid: (begins[tid]["ts"], ends[tid]["ts"])
-        for tid in begins
-        if tid in ends
-    }
+    return {tid: (begins[tid]["ts"], ends[tid]["ts"]) for tid in begins if tid in ends}
 
 
 def test_downstream_task_does_not_collapse_to_upstreams_own_start():

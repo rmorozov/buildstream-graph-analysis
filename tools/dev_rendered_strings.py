@@ -11,6 +11,7 @@ the exception class it needs (`code`, `unit`, `product name`,
 generator run read-only, for the test that walks the live page against
 the committed file.
 """
+
 import argparse
 import json
 import pathlib
@@ -41,19 +42,21 @@ ROLES = {
 #: label; walking `textContent` would concatenate both.
 _STRIP = "button, [data-reader-tag], [data-json-toggle]"
 
-WALK_JS = "(() => {\n  const out = [];\n" \
-    f'  const strip = "{_STRIP}";\n' \
-    "  const ownText = (el) => {\n" \
-    "    const clone = el.cloneNode(true);\n" \
-    "    for (const dead of clone.querySelectorAll(strip)) dead.remove();\n" \
-    "    return (clone.textContent || \"\").trim().replace(/\\s+/g, \" \");\n" \
-    "  };\n" \
-    "  const grab = (sel, role) => {\n" \
-    "    for (const el of document.querySelectorAll(sel)) {\n" \
-    "      const t = ownText(el);\n" \
-    "      if (t) out.push([role, t]);\n    }\n  };\n" \
-    + "\n".join(f'  grab("{sel}", "{role}");' for role, sel in ROLES.items()) \
+WALK_JS = (
+    "(() => {\n  const out = [];\n"
+    f'  const strip = "{_STRIP}";\n'
+    "  const ownText = (el) => {\n"
+    "    const clone = el.cloneNode(true);\n"
+    "    for (const dead of clone.querySelectorAll(strip)) dead.remove();\n"
+    "    return (clone.textContent || \"\").trim().replace(/\\s+/g, \" \");\n"
+    "  };\n"
+    "  const grab = (sel, role) => {\n"
+    "    for (const el of document.querySelectorAll(sel)) {\n"
+    "      const t = ownText(el);\n"
+    "      if (t) out.push([role, t]);\n    }\n  };\n"
+    + "\n".join(f'  grab("{sel}", "{role}");' for role, sel in ROLES.items())
     + "\n  return out;\n})()"
+)
 
 #: A rendered word never has to be sentence case when it is one of
 #: these - a published element/task name, a command, an id a schema
@@ -118,8 +121,7 @@ def rows_for(browser, label, uri):
         if key in seen:
             continue
         seen.add(key)
-        rows.append({"role": role, "text": norm,
-                      "exception": exception_of(text)})
+        rows.append({"role": role, "text": norm, "exception": exception_of(text)})
     return rows
 
 
@@ -142,6 +144,7 @@ def generate():
 
     from tests import pages
     from tests.browser import Browser, find_chrome
+
     chrome = find_chrome()
     with Browser(chrome) as browser, tempfile.TemporaryDirectory() as td:
         tdp = pathlib.Path(td)

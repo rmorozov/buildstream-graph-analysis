@@ -502,6 +502,14 @@ with the tables above destroys the one thing the entry is for
 (`UX-653`). The newest entry is the exception: every round that
 re-grounds the document rewrites it.
 
+Updated 2026-09-29 (after `UX-1123`), covering one change to this
+document in round 151. The closed index moves from one `closed.md` to
+128-row chunks under `closed/`, read through `closed_rows()`
+(`UX-1120`); no contract moved. The figures are re-grounded in `bga
+analyze --schema` (`analyze/v6`: **63 top-level properties**) and in
+`python3 -m pytest $(grep -ln "architecture.md" tests/unit/*.py) -q`,
+run at this commit: **26 emitted ids**.
+
 Updated 2026-09-28 (after `UX-1103`), covering one change to this
 document that landed beside round 150's, re-grounded at the merge of
 #298 into round 150. The `bga bundle` row gains `--resolve
@@ -1330,7 +1338,7 @@ Direction 15 asks for and the one the field capture broke.
 
 Updated 2026-08-25 (after `UX-286`), re-grounded in `bga/viewer/`'s
 module list, the published schema `bga analyze --schema` prints, and
-`docs/backlog/scenarios/closed.md`'s round-38 and round-39 rows: the
+the `docs/backlog/scenarios/closed/` chunks' round-38 and round-39 rows: the
 viewer axis gained the chapters `UX-286` groups the document into, and
 the contracts table's `analyze/v2` row is checked against the keys the
 schema declares - which `UX-275` added one to. (`analyze/v2` is

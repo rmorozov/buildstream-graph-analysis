@@ -28,6 +28,7 @@ package. The argument is in `tests/browser.py`.
   hand-off, the blast endpoint. This loads the **exported** report,
   which is one file with its payloads inlined.
 """
+
 import pathlib
 import shutil
 import sys
@@ -44,8 +45,7 @@ GOLDEN = REPO / "tests/fixtures/golden/mixed_task_kinds"
 
 chrome = find_chrome()
 needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
-needs_node = pytest.mark.skipif(shutil.which("node") is None,
-                                reason="node is not installed")
+needs_node = pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
 
 # The viewports this claims to have checked. Part of the contract: a
 # claim about "the page" that was measured at one width is a claim
@@ -74,9 +74,7 @@ def reports(report, tmp_path_factory):
     about two runs, and this file exported one. The golden page is the
     one above rather than a second export of it.
     """
-    return {"golden": report,
-            **pages.pages(tmp_path_factory, "geometry",
-                          labels=["macro_micro"])}
+    return {"golden": report, **pages.pages(tmp_path_factory, "geometry", labels=["macro_micro"])}
 
 
 @pytest.fixture(scope="module")
@@ -89,14 +87,13 @@ def browser():
 # overlap scan with no exemptions reports every tooltip and every
 # sticky heading; one with unexplained exemptions reports nothing.
 ALLOWED_TO_OVERLAP = {
-    "header": "sticky by design (UX-254): it is *supposed* to sit over "
-              "the reading column as it scrolls",
+    "header": "sticky by design (UX-254): it is *supposed* to sit over the reading column as it scrolls",
     ".toc": "the rail is a fixed column beside the text, and folds over "
-            "it at narrow widths by design (UX-254's breakpoint)",
+    "it at narrow widths by design (UX-254's breakpoint)",
     "svg": "inside a drawing, marks sit *on* the line they mark - "
-           "UX-303's sparkline puts a circle at each endpoint and at the "
-           "peak, and a scan that called that an overlap would be asking "
-           "for a chart whose points float beside their own curve",
+    "UX-303's sparkline puts a circle at each endpoint and at the "
+    "peak, and a scan that called that an overlap would be asking "
+    "for a chart whose points float beside their own curve",
 }
 
 _OVERLAP_SCAN = """
@@ -163,14 +160,13 @@ class TestNothingOverlaps:
         import json
 
         out = browser.measure(
-            report, _OVERLAP_SCAN % json.dumps(sorted(ALLOWED_TO_OVERLAP)),
-            width=width, height=height)
+            report, _OVERLAP_SCAN % json.dumps(sorted(ALLOWED_TO_OVERLAP)), width=width, height=height
+        )
         assert out["scanned"] > 20, (
             f"only {out['scanned']} boxes were scanned at {width}x{height} - "
-            f"the page did not render, so 'no overlaps' means nothing")
-        assert out["count"] == 0, (
-            f"{out['count']} overlapping sibling pair(s) at {width}x{height}: "
-            f"{out['sample']}")
+            f"the page did not render, so 'no overlaps' means nothing"
+        )
+        assert out["count"] == 0, f"{out['count']} overlapping sibling pair(s) at {width}x{height}: {out['sample']}"
 
     def test_every_exemption_carries_a_reason(self):
         for selector, reason in ALLOWED_TO_OVERLAP.items():
@@ -203,41 +199,40 @@ class TestTheReadingColumnComesFirst:
     """
 
     @pytest.mark.parametrize("width,height", [(1440, 900), (1280, 800)])
-    def test_the_heading_is_the_first_thing_on_the_page(
-            self, browser, report, width, height):
+    def test_the_heading_is_the_first_thing_on_the_page(self, browser, report, width, height):
         out = browser.measure(report, self._FIRST_CONTENT, width, height)
         assert out["headerTop"] < out["mainTop"], out
         assert out["mainTop"] < out["viewport"] * 0.5, (
             f"the reading column starts at y={out['mainTop']} of "
             f"{out['viewport']} - more than half the first screen is chrome, "
-            f"which is the defect UX-254 fixed")
+            f"which is the defect UX-254 fixed"
+        )
 
     def test_the_rail_is_beside_the_text_not_above_it(self, browser, report):
         out = browser.measure(report, self._FIRST_CONTENT, 1440, 900)
         if out["tocLeft"] is None:
             pytest.skip("this run rendered no rail")
-        assert out["tocLeft"] < out["mainLeft"], (
-            f"the rail is not in its own column left of the text: {out}")
+        assert out["tocLeft"] < out["mainLeft"], f"the rail is not in its own column left of the text: {out}"
 
     @pytest.mark.parametrize("width,height", VIEWPORTS)
-    def test_the_page_never_scrolls_sideways(
-            self, browser, report, width, height):
+    def test_the_page_never_scrolls_sideways(self, browser, report, width, height):
         """Measured at 390px before `UX-254`: tables 217px wide against
         a 390px viewport, so the whole report scrolled horizontally."""
         out = browser.measure(report, self._FIRST_CONTENT, width, height)
         assert out["docWidth"] <= out["innerWidth"] + 2, (
-            f"the document is {out['docWidth']}px wide in a "
-            f"{out['innerWidth']}px viewport at {width}x{height}")
+            f"the document is {out['docWidth']}px wide in a {out['innerWidth']}px viewport at {width}x{height}"
+        )
 
 
 @needs_node
 @needs_browser
 class TestAnAnchorLandsWhereYouCanReadIt:
-    def test_a_jump_does_not_land_under_the_sticky_heading(
-            self, browser, report):
+    def test_a_jump_does_not_land_under_the_sticky_heading(self, browser, report):
         """The reader-visible half of "information overlaps": a jump
         that lands behind the heading that never scrolls away."""
-        out = browser.measure(report, """
+        out = browser.measure(
+            report,
+            """
         (() => {
           const target = document.querySelector("section[id]");
           if (!target) return null;
@@ -248,11 +243,13 @@ class TestAnAnchorLandsWhereYouCanReadIt:
           return {hidden: Math.round(headerBox.bottom - box.top),
                   id: target.id};
         })()
-        """, 1440, 900)
+        """,
+            1440,
+            900,
+        )
         if out is None:
             pytest.skip("this run rendered no anchored section")
-        assert out["hidden"] <= 0, (
-            f"#{out['id']} lands {out['hidden']}px under the sticky heading")
+        assert out["hidden"] <= 0, f"#{out['id']} lands {out['hidden']}px under the sticky heading"
 
 
 class TestATableSControlsStayInReach:
@@ -298,23 +295,21 @@ class TestATableSControlsStayInReach:
     """
 
     @pytest.mark.parametrize("width,height", VIEWPORTS)
-    def test_no_table_hides_its_own_tools_below_itself(
-            self, browser, report, width, height):
+    def test_no_table_hides_its_own_tools_below_itself(self, browser, report, width, height):
         out = browser.measure(report, self._TOOLS, width, height)
         assert out["tools"] > 0, "the report drew no table tools at all"
         assert out["below"] == 0, (
-            f"{out['below']} of {out['tools']} tool strips start below "
-            f"their table at {width}x{height}")
+            f"{out['below']} of {out['tools']} tool strips start below their table at {width}x{height}"
+        )
 
     @pytest.mark.parametrize("width,height", VIEWPORTS)
-    def test_every_strip_stays_while_its_table_scrolls(
-            self, browser, report, width, height):
+    def test_every_strip_stays_while_its_table_scrolls(self, browser, report, width, height):
         """Sticky *inside the table's own scroll box*, not fixed to the
         viewport - so two tables never both claim the same strip."""
         out = browser.measure(report, self._TOOLS, width, height)
         assert out["sticky"] == out["tools"], (
-            f"{out['tools'] - out['sticky']} of {out['tools']} strips are "
-            f"not sticky at {width}x{height}")
+            f"{out['tools'] - out['sticky']} of {out['tools']} strips are not sticky at {width}x{height}"
+        )
 
     def test_the_jump_box_is_on_the_first_screen(self, browser, report):
         """`UX-284` item 3: it is the page's coarse navigation - the
@@ -323,8 +318,8 @@ class TestATableSControlsStayInReach:
         out = browser.measure(report, self._TOOLS, 1440, 900)
         assert out["jump_top"] is not None, "the report has no jump box"
         assert out["jump_top"] < out["viewport"], (
-            f"the jump box starts at {out['jump_top']}px, below the "
-            f"{out['viewport']}px fold")
+            f"the jump box starts at {out['jump_top']}px, below the {out['viewport']}px fold"
+        )
 
 
 @needs_node
@@ -393,9 +388,8 @@ class TestTheDocumentEndsWithItsIdentity:
     """
 
     @pytest.mark.parametrize("width,height", VIEWPORTS)
-    def test_nothing_is_drawn_below_the_identity(self, browser, report,
-                                                 width, height):
-        """"Closes the document", in pixels.
+    def test_nothing_is_drawn_below_the_identity(self, browser, report, width, height):
+        """ "Closes the document", in pixels.
 
         This is the clause that catches the mutation, and the one below
         is not: moving the placement back inside `render` - so the
@@ -406,13 +400,10 @@ class TestTheDocumentEndsWithItsIdentity:
         passed under exactly that mutation before this one existed."""
         out = browser.measure(report, self._WHERE, width, height)
         assert out["producer"], "producer did not render; nothing measured"
-        assert out["below"] == [], (
-            f"{out['below']} are drawn below the identity group at "
-            f"{width}x{height}")
+        assert out["below"] == [], f"{out['below']} are drawn below the identity group at {width}x{height}"
 
     @pytest.mark.parametrize("width,height", VIEWPORTS)
-    def test_the_identity_sits_in_the_last_third(self, browser, report,
-                                                 width, height):
+    def test_the_identity_sits_in_the_last_third(self, browser, report, width, height):
         """The acceptance test's first clause, read as a fraction of the
         document because the same three blocks are 96% of an 18-screen
         report and 94% of an 11-screen one.
@@ -428,35 +419,31 @@ class TestTheDocumentEndsWithItsIdentity:
         start = out["summary"]["top"] / out["total"]
         assert start >= 2 / 3, (
             f"the identity group starts at {100 * start:.0f}% of the "
-            f"document at {width}x{height}, not in the last third")
+            f"document at {width}x{height}, not in the last third"
+        )
 
     @pytest.mark.parametrize("width,height", VIEWPORTS)
-    def test_the_identity_blocks_are_adjacent(self, browser, report,
-                                              width, height):
-        """"Adjacent" as the reader meets it: no gap wider than a
+    def test_the_identity_blocks_are_adjacent(self, browser, report, width, height):
+        """ "Adjacent" as the reader meets it: no gap wider than a
         quarter-screen between the three of them. The DOM-order guard
         says nothing sits between; this says nothing *looks* like it
         does."""
         out = browser.measure(report, self._WHERE, width, height)
-        gaps = [(out["run_instance"]["top"] - out["summary"]["bottom"]) / out["vh"],
-                (out["producer"]["top"] - out["run_instance"]["bottom"]) / out["vh"]]
-        assert max(gaps) <= 0.25, (
-            f"identity blocks {max(gaps):.2f} screens apart at "
-            f"{width}x{height}")
+        gaps = [
+            (out["run_instance"]["top"] - out["summary"]["bottom"]) / out["vh"],
+            (out["producer"]["top"] - out["run_instance"]["bottom"]) / out["vh"],
+        ]
+        assert max(gaps) <= 0.25, f"identity blocks {max(gaps):.2f} screens apart at {width}x{height}"
 
     @pytest.mark.parametrize("width,height", VIEWPORTS)
-    def test_the_blast_control_is_above_the_midpoint(self, browser, report,
-                                                     width, height):
+    def test_the_blast_control_is_above_the_midpoint(self, browser, report, width, height):
         out = browser.measure(report, self._WHERE, width, height)
         assert out["blast"], "the export drew no blast block"
         at = out["blast"]["top"] / out["total"]
-        assert at < 0.5, (
-            f"the blast block sits at {100 * at:.0f}% of the document at "
-            f"{width}x{height}")
+        assert at < 0.5, f"the blast block sits at {100 * at:.0f}% of the document at {width}x{height}"
 
     @pytest.mark.parametrize("width,height", VIEWPORTS[:2])
-    def test_the_blast_control_is_within_two_screens_of_the_findings(
-            self, browser, report, width, height):
+    def test_the_blast_control_is_within_two_screens_of_the_findings(self, browser, report, width, height):
         """The acceptance test's second clause, measured from the *end*
         of `findings` - the scroll a reader actually makes. Top-to-top
         is 2.96 screens on the 1,202-element run for a reason that is
@@ -480,13 +467,10 @@ class TestTheDocumentEndsWithItsIdentity:
         """
         out = browser.measure(report, self._WHERE, width, height)
         gap = (out["blast"]["top"] - out["findings"]["bottom"]) / out["vh"]
-        assert gap <= 2.0, (
-            f"{gap:.2f} screens between the end of the findings and the "
-            f"blast block at {width}x{height}")
+        assert gap <= 2.0, f"{gap:.2f} screens between the end of the findings and the blast block at {width}x{height}"
 
     @pytest.mark.parametrize("width,height", VIEWPORTS)
-    def test_only_the_diagnosis_separates_them(self, browser, report,
-                                               width, height):
+    def test_only_the_diagnosis_separates_them(self, browser, report, width, height):
         """The width-independent form of the clause above, and the one
         that says what "near findings" means: the only thing between the
         finding and the control is `headline` and `next_steps` - the two
@@ -495,14 +479,16 @@ class TestTheDocumentEndsWithItsIdentity:
         widens this gap beyond what those two occupy, at any width."""
         out = browser.measure(report, self._WHERE, width, height)
         gap = out["blast"]["top"] - out["findings"]["bottom"]
-        narrative = out["headline"]["bottom"] - out["headline"]["top"] \
-            + out["next_steps"]["bottom"] - out["next_steps"]["top"]
+        narrative = (
+            out["headline"]["bottom"] - out["headline"]["top"] + out["next_steps"]["bottom"] - out["next_steps"]["top"]
+        )
         # A quarter-screen of slack for the margins between four blocks;
         # measured at 0.05-0.12 screens across the three viewports.
         assert gap <= narrative + 0.25 * out["vh"], (
             f"{(gap - narrative) / out['vh']:.2f} screens beyond the "
             f"diagnosis between the findings and the blast block at "
-            f"{width}x{height}")
+            f"{width}x{height}"
+        )
 
 
 @needs_node
@@ -546,9 +532,12 @@ class TestChaptersCostNoHeight:
     # the fix - four extra frames and a 500ms sleep moved none of these
     # numbers by a digit; being near the viewport is what renders a
     # section, and no page-level settle can supply that.
-    _COST = """
+    _COST = (
+        """
     (() => {
-    """ + pages.FULL_LAYOUT_JS + """
+    """
+        + pages.FULL_LAYOUT_JS
+        + """
       // UX-347: every chapter but the first folds now, and a folded
       // chapter draws none of its sections. These three clauses are
       // about what the document costs *when it is read* - a heading
@@ -594,20 +583,17 @@ class TestChaptersCostNoHeight:
                sections: heights.length };
     })()
     """
+    )
 
     @pytest.mark.parametrize("width,height", VIEWPORTS)
-    def test_the_headings_cost_a_twentieth_of_the_document_at_most(
-            self, browser, report, width, height):
+    def test_the_headings_cost_a_twentieth_of_the_document_at_most(self, browser, report, width, height):
         out = browser.measure(report, self._COST, width, height)
         assert out["chapters"], "the page drew no chapters"
         share = out["headings"] / out["total"]
-        assert share <= 0.05, (
-            f"the chapter headings are {100 * share:.1f}% of the document "
-            f"at {width}x{height}")
+        assert share <= 0.05, f"the chapter headings are {100 * share:.1f}% of the document at {width}x{height}"
 
     @pytest.mark.parametrize("width,height", VIEWPORTS)
-    def test_no_chapter_pads_its_sections(self, browser, report,
-                                          width, height):
+    def test_no_chapter_pads_its_sections(self, browser, report, width, height):
         """A chapter is as tall as what is in it. The difference between
         a chapter's height and the sum of its sections is its heading,
         `UX-347`'s one-line answer and the control that opens it - a
@@ -628,16 +614,12 @@ class TestChaptersCostNoHeight:
         in one chapter the *gaps between them* are most of that
         difference, and a gap is layout."""
         out = browser.measure(report, self._COST, width, height)
-        padded = {chapter["id"]: round(chapter["slack"], 2)
-                  for chapter in out["chapters"] if chapter["slack"] > 0.34}
-        assert padded == {}, (
-            f"{padded} screens of chapter beyond their sections at "
-            f"{width}x{height}")
+        padded = {chapter["id"]: round(chapter["slack"], 2) for chapter in out["chapters"] if chapter["slack"] > 0.34}
+        assert padded == {}, f"{padded} screens of chapter beyond their sections at {width}x{height}"
 
     @pytest.mark.parametrize("label", sorted(pages.FIXTURES))
     @pytest.mark.parametrize("width,height", VIEWPORTS)
-    def test_the_sections_are_still_as_tall_as_their_content(
-            self, browser, reports, label, width, height):
+    def test_the_sections_are_still_as_tall_as_their_content(self, browser, reports, label, width, height):
         """Direction 13's refusal, guarded: sections size themselves
         from the run, and a layout that equalised them would read as
         "chapters" and be the change the measurement refused.
@@ -656,14 +638,18 @@ class TestChaptersCostNoHeight:
         spread = out["tallest"] / max(out["shortest"], 0.001)
         assert spread >= 20, (
             f"{label}: the tallest section is only {spread:.1f}x the "
-            f"shortest at {width}x{height} - something is equalising them")
+            f"shortest at {width}x{height} - something is equalising them"
+        )
 
     #: `UX-649`: the same reading, after every section has been near the
     #: viewport. Its own copy of the forcing statement, so a `_COST`
     #: that lost one still has this to disagree with.
-    _WALKED = """
+    _WALKED = (
+        """
     (async () => {
-    """ + pages.FULL_LAYOUT_JS + """
+    """
+        + pages.FULL_LAYOUT_JS
+        + """
       const frame = () => new Promise(
         (go) => requestAnimationFrame(() => requestAnimationFrame(go)));
       for (const box of document.querySelectorAll("section.chapter")) {
@@ -686,9 +672,9 @@ class TestChaptersCostNoHeight:
                sections: heights.length };
     })()
     """
+    )
 
-    def test_the_spread_is_read_from_content_and_not_from_paint(
-            self, browser, report):
+    def test_the_spread_is_read_from_content_and_not_from_paint(self, browser, report):
         """`UX-649`'s cause, held. The clause above must read the same
         page whether or not the compositor has laid a section out, or
         it is a guard on the runner: with `content-visibility: auto`
@@ -708,7 +694,8 @@ class TestChaptersCostNoHeight:
         assert abs(one - two) <= 0.02 * two, (
             f"the spread reads {one:.1f}x on the page as it lands and "
             f"{two:.1f}x once every section has been near the viewport - "
-            f"this clause is measuring paint, not content (UX-649)")
+            f"this clause is measuring paint, not content (UX-649)"
+        )
 
 
 class TestTheInstrumentSaysWhatItCannotSee:
@@ -719,19 +706,22 @@ class TestTheInstrumentSaysWhatItCannotSee:
         conftest = (REPO / "tests/conftest.py").read_text(encoding="utf-8")
         assert NO_BROWSER in conftest, (
             "the no-browser skip is not in the census, so these guards can "
-            "go quiet on every machine and the suite stays green (UX-235)")
+            "go quiet on every machine and the suite stays green (UX-235)"
+        )
 
     def test_the_shim_still_refuses_to_invent_geometry(self):
         shim = (REPO / "tests/dom_shim.mjs").read_text(encoding="utf-8")
         assert "There is no layout" in shim, (
             "tests/dom_shim.mjs no longer says it has no layout engine - if "
             "it grew one, this file is redundant; if it grew a fake one, "
-            "every geometric guard built on it is invented")
+            "every geometric guard built on it is invented"
+        )
 
     def test_the_viewports_are_part_of_the_contract(self):
         assert (390, 844) in VIEWPORTS, (
             "the narrow viewport is where the sideways-scroll defect was "
-            "found; dropping it makes this suite blind to it")
+            "found; dropping it makes this suite blind to it"
+        )
         assert len(VIEWPORTS) >= 3
 
 

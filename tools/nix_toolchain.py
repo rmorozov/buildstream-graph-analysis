@@ -24,6 +24,7 @@ every binary it links, so the closure's real glibc replaces
 untouched: the host-staged `sh`, coreutils and their glibc still load
 through the tree's own `/lib64`.
 """
+
 import argparse
 import glob
 import os
@@ -43,30 +44,42 @@ from tools import nix_closure, nix_store_fetch
 #: for targets no example has.
 TOOLCHAIN_PINS = {
     "x86_64": {
-        "gcc": {"version": "14.3.0", "axis": "toolchain",
-                "store_path": ("/nix/store/ipr6y28viyqkhkg58rdvy27m01q5j5nh"
-                               "-gcc-14.3.0"),
-                "binaries": ("/usr/bin/gcc", "/usr/bin/g++", "/usr/bin/cc",
-                             "/usr/bin/c++"),
-                # `-nostdinc` because the pin's `cc1` has no compiled-in
-                # include path: asked bare it prints its version and then
-                # exits 1 on `stdc-predef.h`, which reads as a pin that
-                # did not take. Ubuntu's answers 0, which is the host
-                # fact this row is removing.
-                "helpers": {"cc1": ("-nostdinc -version", "stderr"),
-                            "cc1plus": ("-nostdinc -version", "stderr"),
-                            "collect2": ("--version", "stderr")}},
-        "binutils": {"version": "2.44", "axis": "toolchain",
-                     "store_path": ("/nix/store/i7mdvmliqcb5lz0nqija8rq55vws"
-                                    "6gi8-binutils-2.44"),
-                     "binaries": ("/usr/bin/ld", "/usr/bin/ld.bfd",
-                                  "/usr/bin/as", "/usr/bin/ar",
-                                  "/usr/bin/ranlib", "/usr/bin/nm",
-                                  "/usr/bin/strip")},
-        "cmake": {"version": "4.1.2", "axis": "toolchain",
-                  "store_path": ("/nix/store/i5zf2arkflazjnxv2y46fmhyfwzl5hdy"
-                                 "-cmake-4.1.2"),
-                  "binaries": ("/usr/bin/cmake",)},
+        "gcc": {
+            "version": "14.3.0",
+            "axis": "toolchain",
+            "store_path": ("/nix/store/ipr6y28viyqkhkg58rdvy27m01q5j5nh-gcc-14.3.0"),
+            "binaries": ("/usr/bin/gcc", "/usr/bin/g++", "/usr/bin/cc", "/usr/bin/c++"),
+            # `-nostdinc` because the pin's `cc1` has no compiled-in
+            # include path: asked bare it prints its version and then
+            # exits 1 on `stdc-predef.h`, which reads as a pin that
+            # did not take. Ubuntu's answers 0, which is the host
+            # fact this row is removing.
+            "helpers": {
+                "cc1": ("-nostdinc -version", "stderr"),
+                "cc1plus": ("-nostdinc -version", "stderr"),
+                "collect2": ("--version", "stderr"),
+            },
+        },
+        "binutils": {
+            "version": "2.44",
+            "axis": "toolchain",
+            "store_path": ("/nix/store/i7mdvmliqcb5lz0nqija8rq55vws6gi8-binutils-2.44"),
+            "binaries": (
+                "/usr/bin/ld",
+                "/usr/bin/ld.bfd",
+                "/usr/bin/as",
+                "/usr/bin/ar",
+                "/usr/bin/ranlib",
+                "/usr/bin/nm",
+                "/usr/bin/strip",
+            ),
+        },
+        "cmake": {
+            "version": "4.1.2",
+            "axis": "toolchain",
+            "store_path": ("/nix/store/i5zf2arkflazjnxv2y46fmhyfwzl5hdy-cmake-4.1.2"),
+            "binaries": ("/usr/bin/cmake",),
+        },
     },
     # UX-1009: CodSpeed's Graviton runner (the only real-core host
     # available) is aarch64. Roots only - `stage_closure` reads each
@@ -74,25 +87,37 @@ TOOLCHAIN_PINS = {
     # here. Identified by `References` the same way as the x86_64 row:
     # all three reach `jjjpj4p9bz505ac1c747f2j5z3xw170p-glibc-2.40-224`.
     "aarch64": {
-        "gcc": {"version": "14.3.0", "axis": "toolchain",
-                "store_path": ("/nix/store/8ybmj60hvhl7g6kl6zhwq3zyyg4hfz5g"
-                               "-gcc-14.3.0"),
-                "binaries": ("/usr/bin/gcc", "/usr/bin/g++", "/usr/bin/cc",
-                             "/usr/bin/c++"),
-                "helpers": {"cc1": ("-nostdinc -version", "stderr"),
-                            "cc1plus": ("-nostdinc -version", "stderr"),
-                            "collect2": ("--version", "stderr")}},
-        "binutils": {"version": "2.44", "axis": "toolchain",
-                     "store_path": ("/nix/store/m02hdx6a5zqqk7v8qli96jzp6r12"
-                                    "ngwv-binutils-2.44"),
-                     "binaries": ("/usr/bin/ld", "/usr/bin/ld.bfd",
-                                  "/usr/bin/as", "/usr/bin/ar",
-                                  "/usr/bin/ranlib", "/usr/bin/nm",
-                                  "/usr/bin/strip")},
-        "cmake": {"version": "4.1.2", "axis": "toolchain",
-                  "store_path": ("/nix/store/44fsdxj6326i871bgsdcp05c4rbnl9"
-                                 "yc-cmake-4.1.2"),
-                  "binaries": ("/usr/bin/cmake",)},
+        "gcc": {
+            "version": "14.3.0",
+            "axis": "toolchain",
+            "store_path": ("/nix/store/8ybmj60hvhl7g6kl6zhwq3zyyg4hfz5g-gcc-14.3.0"),
+            "binaries": ("/usr/bin/gcc", "/usr/bin/g++", "/usr/bin/cc", "/usr/bin/c++"),
+            "helpers": {
+                "cc1": ("-nostdinc -version", "stderr"),
+                "cc1plus": ("-nostdinc -version", "stderr"),
+                "collect2": ("--version", "stderr"),
+            },
+        },
+        "binutils": {
+            "version": "2.44",
+            "axis": "toolchain",
+            "store_path": ("/nix/store/m02hdx6a5zqqk7v8qli96jzp6r12ngwv-binutils-2.44"),
+            "binaries": (
+                "/usr/bin/ld",
+                "/usr/bin/ld.bfd",
+                "/usr/bin/as",
+                "/usr/bin/ar",
+                "/usr/bin/ranlib",
+                "/usr/bin/nm",
+                "/usr/bin/strip",
+            ),
+        },
+        "cmake": {
+            "version": "4.1.2",
+            "axis": "toolchain",
+            "store_path": ("/nix/store/44fsdxj6326i871bgsdcp05c4rbnl9yc-cmake-4.1.2"),
+            "binaries": ("/usr/bin/cmake",),
+        },
     },
 }
 
@@ -105,16 +130,11 @@ DRIVERS = {"gcc": "gcc", "g++": "g++", "cc": "gcc", "c++": "g++"}
 #: that locates it. `root` names a declared pin; `closure` is reached
 #: through gcc's `References` and located by its mark alone.
 PREFIXES = (
-    {"name": "gcc-libexec", "owner": "gcc", "kind": "root",
-     "mark": "libexec/gcc/*/*/cc1"},
-    {"name": "gcc-libdir", "owner": "gcc", "kind": "root",
-     "mark": "lib/gcc/*/*/libgcc.a"},
-    {"name": "gcc-lib", "owner": None, "kind": "closure",
-     "mark": "lib/libstdc++.so"},
-    {"name": "binutils", "owner": "binutils", "kind": "root",
-     "mark": "bin/ld.bfd"},
-    {"name": "glibc", "owner": None, "kind": "closure",
-     "mark": "lib/crt1.o"},
+    {"name": "gcc-libexec", "owner": "gcc", "kind": "root", "mark": "libexec/gcc/*/*/cc1"},
+    {"name": "gcc-libdir", "owner": "gcc", "kind": "root", "mark": "lib/gcc/*/*/libgcc.a"},
+    {"name": "gcc-lib", "owner": None, "kind": "closure", "mark": "lib/libstdc++.so"},
+    {"name": "binutils", "owner": "binutils", "kind": "root", "mark": "bin/ld.bfd"},
+    {"name": "glibc", "owner": None, "kind": "closure", "mark": "lib/crt1.o"},
 )
 
 
@@ -124,8 +144,8 @@ def pins(arch=None) -> dict:
     arch = arch or platform.machine()
     if arch not in TOOLCHAIN_PINS:
         raise SystemExit(
-            f"nix_toolchain: no pinned toolchain for {arch!r} "
-            f"(pinned: {', '.join(sorted(TOOLCHAIN_PINS))}) - UX-925")
+            f"nix_toolchain: no pinned toolchain for {arch!r} (pinned: {', '.join(sorted(TOOLCHAIN_PINS))}) - UX-925"
+        )
     return TOOLCHAIN_PINS[arch]
 
 
@@ -158,8 +178,7 @@ def prefixes(dest: str, arch=None):
         return None
     found = {}
     for row in PREFIXES:
-        base = (dest + pin[row["owner"]]["store_path"]
-                if row["kind"] == "root" else os.path.join(store, "*"))
+        base = dest + pin[row["owner"]]["store_path"] if row["kind"] == "root" else os.path.join(store, "*")
         mark = _one(os.path.join(base, row["mark"]))
         found[row["name"]] = None if mark is None else os.path.dirname(mark) + os.sep
     return found
@@ -171,12 +190,9 @@ def target_store_paths(dest: str, arch=None) -> set:
     by a mark rather than by name. Everything else the closure stages is
     the toolchain's, which is how `toolchain_params` keeps `UX-914`'s
     seam once both halves sit under one `/nix/store`."""
-    marks = ("lib/" + nix_store_fetch.host_arch(arch)["loader"],
-             "include/stdio.h")
-    found = {_one(os.path.join(dest + nix_closure.STORE, "*", mark))
-             for mark in marks}
-    return {os.path.dirname(os.path.dirname(path)) if path.count("/") else path
-            for path in found if path is not None}
+    marks = ("lib/" + nix_store_fetch.host_arch(arch)["loader"], "include/stdio.h")
+    found = {_one(os.path.join(dest + nix_closure.STORE, "*", mark)) for mark in marks}
+    return {os.path.dirname(os.path.dirname(path)) if path.count("/") else path for path in found if path is not None}
 
 
 def driver_target(root: str, name: str, arch=None):
@@ -186,8 +202,7 @@ def driver_target(root: str, name: str, arch=None):
     yet."""
     if name not in DRIVERS:
         return None
-    return (root.rstrip(os.sep) + pins(arch)["gcc"]["store_path"]
-            + "/bin/" + DRIVERS[name])
+    return root.rstrip(os.sep) + pins(arch)["gcc"]["store_path"] + "/bin/" + DRIVERS[name]
 
 
 def driver_path(dest: str, name: str, arch=None):
@@ -211,8 +226,7 @@ def library_path(dest: str) -> str:
     on the *staging* host: its `RUNPATH` is absolute and resolves only
     inside the sandbox, so the loader is told where the tree keeps
     them instead."""
-    return ":".join(sorted(glob.glob(
-        os.path.join(dest + nix_closure.STORE, "*", "lib"))))
+    return ":".join(sorted(glob.glob(os.path.join(dest + nix_closure.STORE, "*", "lib"))))
 
 
 def run_prefix(dest: str, arch=None) -> list:
@@ -226,9 +240,7 @@ def run_prefix(dest: str, arch=None) -> list:
     store = glibc_store_path(dest, arch)
     if store is None:
         return []
-    return [os.path.join(store, "lib",
-                         nix_store_fetch.host_arch(arch)["loader"]),
-            "--library-path", library_path(dest)]
+    return [os.path.join(store, "lib", nix_store_fetch.host_arch(arch)["loader"]), "--library-path", library_path(dest)]
 
 
 def probe_flags(dest: str, arch=None) -> list:
@@ -290,14 +302,12 @@ def stage(dest: str, arch=None, cache_dir=None) -> list:
     `toolchain_params --shim` after this runs: they need the prefixes
     this staging is what produces."""
     pin = pins(arch)
-    staged = nix_closure.stage_closure(
-        dest, roots(arch), cache_dir or nix_closure.default_cache_dir())
+    staged = nix_closure.stage_closure(dest, roots(arch), cache_dir or nix_closure.default_cache_dir())
     for _name, row in sorted(pin.items()):
         for path in row["binaries"]:
             if os.path.basename(path) in DRIVERS:
                 continue
-            _relative_link(dest, path,
-                           row["store_path"] + "/bin/" + os.path.basename(path))
+            _relative_link(dest, path, row["store_path"] + "/bin/" + os.path.basename(path))
     return staged
 
 
@@ -306,23 +316,29 @@ def main(argv=None) -> int:
     parser.add_argument("dest", help="the sysroot root to stage under")
     parser.add_argument("--arch", default=None)
     parser.add_argument("--cache-dir", default=None)
-    parser.add_argument("--check-shims", action="store_true",
-                        help="exit 1 unless every driver at /usr/bin is a "
-                             "shim leading to the pin's own binary")
-    parser.add_argument("--library-path", action="store_true",
-                        help="print the staged store's lib directories and "
-                             "stage nothing - what the loader is told when a "
-                             "pinned binary is run on the staging host")
-    parser.add_argument("--prefixes", action="store_true",
-                        help="print the -B prefixes of an already staged tree")
+    parser.add_argument(
+        "--check-shims",
+        action="store_true",
+        help="exit 1 unless every driver at /usr/bin is a shim leading to the pin's own binary",
+    )
+    parser.add_argument(
+        "--library-path",
+        action="store_true",
+        help="print the staged store's lib directories and "
+        "stage nothing - what the loader is told when a "
+        "pinned binary is run on the staging host",
+    )
+    parser.add_argument("--prefixes", action="store_true", help="print the -B prefixes of an already staged tree")
     args = parser.parse_args(argv)
     if args.check_shims:
         found = shim_divergences(args.dest, args.arch)
         for name, target in found:
-            print(f"nix_toolchain: /usr/bin/{name} execs {target!r}, not the "
-                  f"pin's own binary - a driver over the shim answers every "
-                  f"version probe and compiles something else (UX-925).",
-                  file=sys.stderr)
+            print(
+                f"nix_toolchain: /usr/bin/{name} execs {target!r}, not the "
+                f"pin's own binary - a driver over the shim answers every "
+                f"version probe and compiles something else (UX-925).",
+                file=sys.stderr,
+            )
         return 1 if found else 0
     if args.library_path:
         print(library_path(args.dest))

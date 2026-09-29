@@ -26,6 +26,7 @@ past version — that is history, and `directions.md` is full of it — but
 an executable check that pins one is a stale assertion waiting for the
 next bump.
 """
+
 import pathlib
 import re
 
@@ -68,8 +69,7 @@ def _executed(text):
     A `#` line is a comment in YAML and a comment in the shell inside a
     `run: |` block, so one rule covers both.
     """
-    return "\n".join(line for line in text.splitlines()
-                      if not line.lstrip().startswith("#"))
+    return "\n".join(line for line in text.splitlines() if not line.lstrip().startswith("#"))
 
 
 def _pins(text):
@@ -78,8 +78,7 @@ def _pins(text):
     not contracts, and a check that flagged them would be noise nobody
     reads."""
     names = {name.split("/")[0] for name in _declared()}
-    return {found for found in _LITERAL.findall(_executed(text))
-            if found.split("/")[0] in names}
+    return {found for found in _LITERAL.findall(_executed(text)) if found.split("/")[0] in names}
 
 
 class TestNoCheckPinsAContractTheToolMoved:
@@ -93,7 +92,8 @@ class TestNoCheckPinsAContractTheToolMoved:
         assert stale == {}, (
             "CI check(s) pinning a contract version the tool no longer "
             f"declares: {stale}. The tool declares {sorted(declared)}. Read "
-            "the expected version from the tree instead of writing it here.")
+            "the expected version from the tree instead of writing it here."
+        )
 
     def test_the_sweep_reaches_the_file_that_broke(self):
         """`UX-276`'s lesson: a sweep that finds nothing and a sweep that
@@ -102,16 +102,14 @@ class TestNoCheckPinsAContractTheToolMoved:
         scanned = {path.relative_to(REPO).as_posix() for path in _checks()}
         assert ".github/workflows/ci.yml" in scanned, scanned
         text = (REPO / ".github/workflows/ci.yml").read_text(encoding="utf-8")
-        assert "pkgvenv" in text, (
-            "the packaging job this was filed for is no longer in this file")
+        assert "pkgvenv" in text, "the packaging job this was filed for is no longer in this file"
 
     def test_the_check_can_see_a_stale_pin_at_all(self):
         """The pattern fires on the shape it is written for. Without
         this, narrowing `_LITERAL` to something that matches nothing
         would leave the guard green and empty."""
         assert _pins("assert d['schema']=='analyze/v1'") == {"analyze/v1"}
-        assert "analyze/v1" not in _declared(), (
-            "this fixture is only a stale pin while v1 is behind us")
+        assert "analyze/v1" not in _declared(), "this fixture is only a stale pin while v1 is behind us"
 
     def test_a_comment_naming_a_past_version_is_not_a_pin(self):
         """The other half, and the one the first draft got wrong: the
@@ -119,14 +117,14 @@ class TestNoCheckPinsAContractTheToolMoved:
         Without this, the honest fix - writing down what happened - is
         what reddens the guard."""
         assert _pins("          # went red when analyze/v1 became v2") == set()
-        assert _pins("  # analyze/v1\n  assert x=='analyze/v1'") == {
-            "analyze/v1"}, "stripping comments must not strip the code too"
+        assert _pins("  # analyze/v1\n  assert x=='analyze/v1'") == {"analyze/v1"}, (
+            "stripping comments must not strip the code too"
+        )
         # A line that *runs* and carries a trailing comment is code. The
         # rule has to be "the line starts with `#`", not "the line
         # contains one" - measured: the contains-form left every test
         # here green while hiding any pin written with a note after it.
-        assert _pins("  assert x=='analyze/v1'  # the contract") == {
-            "analyze/v1"}
+        assert _pins("  assert x=='analyze/v1'  # the contract") == {"analyze/v1"}
 
     def test_it_does_not_flag_what_is_not_a_contract(self):
         """`actions/checkout@v4` and `python/v3` are not this tool's
@@ -142,10 +140,8 @@ class TestNoCheckPinsAContractTheToolMoved:
         step = text.split("UX-293:", 1)
         assert len(step) == 2, "the packaging step no longer explains itself"
         body = step[1].split("\n      - name:", 1)[0]
-        assert "bga/schemas.py" in body, (
-            "the step stopped reading the contract from the tree")
-        assert "sys.argv[1]" in body, (
-            "the assertion no longer compares against what it read")
+        assert "bga/schemas.py" in body, "the step stopped reading the contract from the tree"
+        assert "sys.argv[1]" in body, "the assertion no longer compares against what it read"
 
 
 if __name__ == "__main__":  # pragma: no cover
@@ -162,8 +158,7 @@ if __name__ == "__main__":  # pragma: no cover
 # The clause below derives the pairs from the workflow itself rather
 # than listing them, so a step that starts grepping a third module is
 # covered without an edit here.
-_VIEWER_GREP = re.compile(
-    r'^\s*grep -q "([^"]+)" /tmp/([A-Za-z_]+)\.js\s*$', re.M)
+_VIEWER_GREP = re.compile(r'^\s*grep -q "([^"]+)" /tmp/([A-Za-z_]+)\.js\s*$', re.M)
 
 
 def _viewer_greps():
@@ -183,7 +178,8 @@ def test_the_packaging_step_greps_a_symbol_the_module_still_has():
     assert pairs, (
         "the packaging step no longer greps a viewer module, so this "
         "guard is watching a door that is gone - delete it or point it "
-        "at what replaced it")
+        "at what replaced it"
+    )
     missing = []
     for pattern, module in pairs:
         source = REPO / "bga/viewer" / f"{module}.js"
@@ -194,14 +190,12 @@ def test_the_packaging_step_greps_a_symbol_the_module_still_has():
         # The step's patterns are `a\|b` alternations; any one hit is
         # what `grep -q` needs, so any one hit is what this needs.
         if not any(part and part in text for part in pattern.split("\\|")):
-            missing.append(
-                f"{pattern!r} is grepped in /tmp/{module}.js and appears "
-                f"nowhere in bga/viewer/{module}.js")
+            missing.append(f"{pattern!r} is grepped in /tmp/{module}.js and appears nowhere in bga/viewer/{module}.js")
     assert missing == [], (
         "the packaging job greps the installed wheel for a symbol that "
         "has moved or been renamed. It will go red in CI and nowhere "
-        "else, which is what UX-450 spent a round-trip on:\n  "
-        + "\n  ".join(missing))
+        "else, which is what UX-450 spent a round-trip on:\n  " + "\n  ".join(missing)
+    )
 
 
 def test_every_viewer_module_the_step_fetches_is_also_served():
@@ -209,8 +203,8 @@ def test_every_viewer_module_the_step_fetches_is_also_served():
     cannot pass: the `curl` fails before the grep runs."""
     from tools.bga_view import ASSETS
 
-    unserved = sorted({f"{module}.js" for _pattern, module in _viewer_greps()
-                       if f"{module}.js" not in ASSETS})
+    unserved = sorted({f"{module}.js" for _pattern, module in _viewer_greps() if f"{module}.js" not in ASSETS})
     assert unserved == [], (
         f"the packaging step fetches {unserved} from the served viewer, "
-        f"and tools/bga_view.py's ASSETS does not offer it")
+        f"and tools/bga_view.py's ASSETS does not offer it"
+    )

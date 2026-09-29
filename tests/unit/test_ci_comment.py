@@ -11,6 +11,7 @@ The last of those is the one that would rot silently: a renderer that
 re-derived a threshold would drift from `_compare_exit_code` and the
 comment would explain a verdict the pipeline did not reach.
 """
+
 import argparse
 import json
 import subprocess
@@ -28,9 +29,12 @@ B = 4
 
 def _args(**overrides):
     base = dict(
-        fail_on_regression=False, fail_on_efficiency_regression=False,
-        min_efficiency=None, fail_on_inefficient_additions=False,
-        max_addition_stretch=None, regression_threshold=None,
+        fail_on_regression=False,
+        fail_on_efficiency_regression=False,
+        min_efficiency=None,
+        fail_on_inefficient_additions=False,
+        max_addition_stretch=None,
+        regression_threshold=None,
     )
     base.update(overrides)
     return argparse.Namespace(**base)
@@ -41,29 +45,43 @@ def _write_run(tmp_path, name, elements, deps, spans, builders=B):
     run_dir.mkdir()
     identity = {"manifest_hash": "ci-comment-fixture", "targets": list(elements)}
     end = max(start + dur for _, start, dur in spans)
-    (run_dir / "run-context.json").write_text(json.dumps({
-        "trace_epsilon_us": 1000,
-        "resource_capacities": {"PROCESS": builders},
-        "run_identity": identity,
-        "wall_clock": {"start_us": 0, "end_us": end},
-    }))
-    (run_dir / "graph.json").write_text(json.dumps({
-        "elements": [{"uid": uid, "requested_target": True} for uid in elements],
-        "dependencies": [
-            {"predecessor": a, "successor": b, "dependency_type": "build"}
-            for a, b in deps
-        ],
-        "run_identity_hash": identity["manifest_hash"],
-    }))
-    (run_dir / "trace.json").write_text(json.dumps({
-        "run_identity_hash": identity["manifest_hash"],
-        "spans": [
-            {"task_key": f"{uid}|BUILD|BUILD|0", "ts_us": start, "dur_us": dur,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"}
-            for uid, start, dur in spans
-        ],
-        "phases": [],
-    }))
+    (run_dir / "run-context.json").write_text(
+        json.dumps(
+            {
+                "trace_epsilon_us": 1000,
+                "resource_capacities": {"PROCESS": builders},
+                "run_identity": identity,
+                "wall_clock": {"start_us": 0, "end_us": end},
+            }
+        )
+    )
+    (run_dir / "graph.json").write_text(
+        json.dumps(
+            {
+                "elements": [{"uid": uid, "requested_target": True} for uid in elements],
+                "dependencies": [{"predecessor": a, "successor": b, "dependency_type": "build"} for a, b in deps],
+                "run_identity_hash": identity["manifest_hash"],
+            }
+        )
+    )
+    (run_dir / "trace.json").write_text(
+        json.dumps(
+            {
+                "run_identity_hash": identity["manifest_hash"],
+                "spans": [
+                    {
+                        "task_key": f"{uid}|BUILD|BUILD|0",
+                        "ts_us": start,
+                        "dur_us": dur,
+                        "resources": ["PROCESS"],
+                        "primary_resource": "PROCESS",
+                    }
+                    for uid, start, dur in spans
+                ],
+                "phases": [],
+            }
+        )
+    )
     return run_dir
 
 
@@ -93,6 +111,7 @@ def _compare(baseline, candidate):
     from pathlib import Path
 
     from bga.compare import compare_runs
+
     return compare_runs(Path(baseline), Path(candidate))
 
 
@@ -147,8 +166,7 @@ class TestGatesCannotLookLikePasses:
     def test_a_failing_marginal_gate_states_the_stretch_and_the_limit(self, tmp_path):
         comparison = _compare(_base(tmp_path), _grown(tmp_path, "bad", serialized=True))
 
-        comment = render_ci_comment(
-            comparison, _args(fail_on_inefficient_additions=True))
+        comment = render_ci_comment(comparison, _args(fail_on_inefficient_additions=True))
 
         assert "| Marginal efficiency | FAIL |" in comment
         assert "stretch 1.00 > 0.50" in comment
@@ -156,8 +174,7 @@ class TestGatesCannotLookLikePasses:
     def test_a_passing_marginal_gate_states_the_same_numbers(self, tmp_path):
         comparison = _compare(_base(tmp_path), _grown(tmp_path, "good", serialized=False))
 
-        comment = render_ci_comment(
-            comparison, _args(fail_on_inefficient_additions=True))
+        comment = render_ci_comment(comparison, _args(fail_on_inefficient_additions=True))
 
         assert "| Marginal efficiency | pass |" in comment
         assert "stretch 0.00" in comment
@@ -168,8 +185,7 @@ class TestGatesCannotLookLikePasses:
         that `UX-87` found in an exit code."""
         comparison = _compare(_base(tmp_path), _base(tmp_path, "same"))
 
-        comment = render_ci_comment(
-            comparison, _args(fail_on_inefficient_additions=True))
+        comment = render_ci_comment(comparison, _args(fail_on_inefficient_additions=True))
 
         assert "| Marginal efficiency | not applied |" in comment
         assert "an empty check, not a pass" in comment
@@ -182,14 +198,25 @@ class TestTheCommentAgreesWithTheExitCode:
 
     def _run(self, baseline, candidate, *flags):
         return subprocess.run(
-            [sys.executable, "-m", "bga.cli", "compare", str(baseline), str(candidate),
-             "--format", "ci-comment", *flags],
-            capture_output=True, text=True,
+            [
+                sys.executable,
+                "-m",
+                "bga.cli",
+                "compare",
+                str(baseline),
+                str(candidate),
+                "--format",
+                "ci-comment",
+                *flags,
+            ],
+            capture_output=True,
+            text=True,
         )
 
     def test_a_failing_marginal_gate_exits_5_and_the_comment_says_fail(self, tmp_path):
         result = self._run(
-            _base(tmp_path), _grown(tmp_path, "bad", serialized=True),
+            _base(tmp_path),
+            _grown(tmp_path, "bad", serialized=True),
             "--fail-on-inefficient-additions",
         )
 
@@ -198,7 +225,8 @@ class TestTheCommentAgreesWithTheExitCode:
 
     def test_a_passing_marginal_gate_exits_0_and_the_comment_says_pass(self, tmp_path):
         result = self._run(
-            _base(tmp_path), _grown(tmp_path, "good", serialized=False),
+            _base(tmp_path),
+            _grown(tmp_path, "good", serialized=False),
             "--fail-on-inefficient-additions",
         )
 
@@ -209,7 +237,8 @@ class TestTheCommentAgreesWithTheExitCode:
         """A failing pipeline must still show why - the same rule the text
         report already follows."""
         result = self._run(
-            _base(tmp_path), _grown(tmp_path, "bad", serialized=True),
+            _base(tmp_path),
+            _grown(tmp_path, "bad", serialized=True),
             "--fail-on-inefficient-additions",
         )
 
@@ -218,7 +247,7 @@ class TestTheCommentAgreesWithTheExitCode:
 
 class TestWhatWasNotMeasured:
     def test_without_plane_2_the_never_read_column_is_absent_and_named(self, tmp_path):
-        """"Nothing was staged and never read" and "nobody looked" are
+        """ "Nothing was staged and never read" and "nobody looked" are
         different claims. An empty column would assert the first."""
         comparison = _compare(_base(tmp_path), _grown(tmp_path, "bad", serialized=True))
 
@@ -229,10 +258,20 @@ class TestWhatWasNotMeasured:
 
     def test_with_plane_2_the_column_names_the_unread_dependency(self, tmp_path):
         comparison = _compare(_base(tmp_path), _grown(tmp_path, "bad", serialized=True))
-        native = {"declared_vs_used": {"available": True, "unused_candidates": [
-            {"element": "lib-h.bst", "dependency": "lib-g.bst",
-             "staged_files": 12, "opened_files": 0, "evidence": "..."},
-        ]}}
+        native = {
+            "declared_vs_used": {
+                "available": True,
+                "unused_candidates": [
+                    {
+                        "element": "lib-h.bst",
+                        "dependency": "lib-g.bst",
+                        "staged_files": 12,
+                        "opened_files": 0,
+                        "evidence": "...",
+                    },
+                ],
+            }
+        }
 
         comment = render_ci_comment(comparison, _args(), native_report=native)
 
@@ -301,8 +340,7 @@ class TestThePropertiesAPipelineDependsOn:
         deps = [("root.bst", f"n{i}.bst") for i in range(30)]
         spans = [("root.bst", 0, D)] + [(f"n{i}.bst", D, D) for i in range(30)]
         candidate = _write_run(tmp_path, "many", elements, deps, spans, builders=32)
-        comparison = _compare(_write_run(
-            tmp_path, "root-only", ["root.bst"], [], [("root.bst", 0, D)]), candidate)
+        comparison = _compare(_write_run(tmp_path, "root-only", ["root.bst"], [], [("root.bst", 0, D)]), candidate)
 
         comment = render_ci_comment(comparison, _args())
 

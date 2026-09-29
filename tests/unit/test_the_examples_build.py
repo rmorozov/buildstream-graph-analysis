@@ -24,6 +24,7 @@ one-liner - `UX-354`) against the junctioned cmake element's
 `jobserver_decisions` row. The mutation is pointing that check at an
 unjunctioned element name, which the same script refuses.
 """
+
 import json
 import re
 import subprocess
@@ -43,7 +44,9 @@ EXIT_MISMATCHED_RUNS = 6
 
 def _run_bga(args):
     return subprocess.run(
-        [sys.executable, "-m", "bga.cli"] + args, capture_output=True, text=True,
+        [sys.executable, "-m", "bga.cli"] + args,
+        capture_output=True,
+        text=True,
     )
 
 
@@ -60,20 +63,33 @@ def _write_run(tmp_path, name, uids, offset_us=0):
         "wall_clock": {"start_us": 0, "end_us": horizon_end},
     }
     (run_dir / "run-context.json").write_text(json.dumps(context))
-    (run_dir / "graph.json").write_text(json.dumps({
-        "elements": [{"uid": uid, "requested_target": True} for uid in uids],
-        "dependencies": [],
-        "run_identity_hash": identity["manifest_hash"],
-    }))
-    (run_dir / "trace.json").write_text(json.dumps({
-        "run_identity_hash": identity["manifest_hash"],
-        "spans": [
-            {"task_key": f"{uid}|BUILD|BUILD|0", "ts_us": start, "dur_us": dur,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"}
-            for uid, start, dur in spans
-        ],
-        "phases": [],
-    }))
+    (run_dir / "graph.json").write_text(
+        json.dumps(
+            {
+                "elements": [{"uid": uid, "requested_target": True} for uid in uids],
+                "dependencies": [],
+                "run_identity_hash": identity["manifest_hash"],
+            }
+        )
+    )
+    (run_dir / "trace.json").write_text(
+        json.dumps(
+            {
+                "run_identity_hash": identity["manifest_hash"],
+                "spans": [
+                    {
+                        "task_key": f"{uid}|BUILD|BUILD|0",
+                        "ts_us": start,
+                        "dur_us": dur,
+                        "resources": ["PROCESS"],
+                        "primary_resource": "PROCESS",
+                    }
+                    for uid, start, dur in spans
+                ],
+                "phases": [],
+            }
+        )
+    )
     return run_dir
 
 
@@ -89,7 +105,7 @@ def _extract_ci_step(name):
 
 def test_the_ci_step_captures_both_modes_from_a_cold_cache():
     step = _extract_ci_step(STEP_NAME)
-    body = step[step.index("run: |"):]
+    body = step[step.index("run: |") :]
     assert "--jobserver off" in body
     assert "--jobserver auto" in body
     assert body.count("rm -rf ~/.cache/buildstream") == 2
@@ -153,7 +169,7 @@ def test_a_comparable_pair_is_unaffected(tmp_path):
 
 def test_the_ci_step_11_captures_both_modes_from_a_cold_cache():
     step = _extract_ci_step(STEP_NAME_11)
-    body = step[step.index("run: |"):]
+    body = step[step.index("run: |") :]
     assert "--jobserver off" in body
     assert "--jobserver auto" in body
     assert body.count("rm -rf ~/.cache/buildstream") == 2
@@ -180,13 +196,14 @@ def test_the_ci_steps_11_own_wall_assertion_matches_real_compare_output():
     assert re.search(pattern, result.stdout), result.stdout
 
 
-CHECK_WIDTH_SCRIPT = (REPO_ROOT / "examples" / "11-serial-giant"
-                      / "check_jobserver_width.py")
+CHECK_WIDTH_SCRIPT = REPO_ROOT / "examples" / "11-serial-giant" / "check_jobserver_width.py"
 
 #: `lto_preflight_warnings`' real line, verbatim.
-SCRUB_LINE = ("Warning: giant.bst scrubbed to recipe -jN (sandbox make "
-              "<4.4); move it to make >=4.4 for fifo pool-fill, or force "
-              "fd/flto (UX-879/880)\n")
+SCRUB_LINE = (
+    "Warning: giant.bst scrubbed to recipe -jN (sandbox make "
+    "<4.4); move it to make >=4.4 for fifo pool-fill, or force "
+    "fd/flto (UX-879/880)\n"
+)
 
 
 def test_the_ci_step_11_goes_through_the_committed_width_check():
@@ -196,7 +213,7 @@ def test_the_ci_step_11_goes_through_the_committed_width_check():
     tee the auto capture the scrub check reads, and no longer carry the
     ordering `awk`."""
     step = _extract_ci_step(STEP_NAME_11)
-    body = step[step.index("run: |"):]
+    body = step[step.index("run: |") :]
     assert "check_jobserver_width.py" in body
     assert CHECK_WIDTH_SCRIPT.is_file()
     assert 'tee "$OUT/capture-auto.txt"' in body
@@ -209,10 +226,8 @@ def test_the_ci_step_11_goes_through_the_committed_width_check():
 #: width. `test_the_version_switch_has_two_live_arms.py` is where a
 #: disagreeing pair is read.
 SWITCH_ROWS = [
-    {"element": "switch-4-4.bst", "sandbox_make": "GNU Make 4.4.1",
-     "auth_style": "fifo"},
-    {"element": "switch-4-2.bst", "sandbox_make": "GNU Make 4.2.1",
-     "auth_style": "fd"},
+    {"element": "switch-4-4.bst", "sandbox_make": "GNU Make 4.4.1", "auth_style": "fifo"},
+    {"element": "switch-4-2.bst", "sandbox_make": "GNU Make 4.2.1", "auth_style": "fd"},
 ]
 
 
@@ -221,20 +236,17 @@ def _run_width_check(off_row, auto_row, element, tmp_path, scrub=False):
     auto_path = tmp_path / "plane2-auto.json"
     log_path = tmp_path / "capture-auto.txt"
     off_path.write_text(json.dumps({"per_element_parallelism": [off_row]}))
-    auto_path.write_text(json.dumps({"per_element_parallelism": [auto_row],
-                                     "jobserver_decisions": SWITCH_ROWS}))
-    log_path.write_text(
-        "bga capture: 4 elements\n" + (SCRUB_LINE if scrub else ""))
+    auto_path.write_text(json.dumps({"per_element_parallelism": [auto_row], "jobserver_decisions": SWITCH_ROWS}))
+    log_path.write_text("bga capture: 4 elements\n" + (SCRUB_LINE if scrub else ""))
     return subprocess.run(
-        [sys.executable, str(CHECK_WIDTH_SCRIPT), str(off_path),
-         str(auto_path), element, str(log_path)],
-        capture_output=True, text=True,
+        [sys.executable, str(CHECK_WIDTH_SCRIPT), str(off_path), str(auto_path), element, str(log_path)],
+        capture_output=True,
+        text=True,
     )
 
 
 def _row(peak, width=2):
-    return {"element": "giant.bst", "peak_work_concurrency": peak,
-            "resolved_jobs": width, "jobs_denominator": "graph"}
+    return {"element": "giant.bst", "peak_work_concurrency": peak, "resolved_jobs": width, "jobs_denominator": "graph"}
 
 
 def test_the_width_check_accepts_a_granted_pool(tmp_path):
@@ -266,8 +278,7 @@ def test_the_width_check_says_so_when_no_resolved_width_is_published(tmp_path):
     exceeded would report `auto peak 4` against `off`'s 2 as the pool
     going undrawn, which is the defect this whole row is about, in the
     other direction."""
-    result = _run_width_check(_row(2, width=None), _row(4), "giant.bst",
-                              tmp_path)
+    result = _run_width_check(_row(2, width=None), _row(4), "giant.bst", tmp_path)
 
     assert result.returncode == 0, result.stderr
     assert "resolved width unknown" in result.stdout
@@ -293,8 +304,7 @@ def test_the_width_check_refuses_a_scrubbed_auth(tmp_path):
     """`UX-913`'s own defect, which ran silently under eight off/auto
     pairs: the capture printed this line four times a run and the step
     asserted a wall instead of reading it."""
-    result = _run_width_check(_row(2), _row(2), "giant.bst", tmp_path,
-                              scrub=True)
+    result = _run_width_check(_row(2), _row(2), "giant.bst", tmp_path, scrub=True)
 
     assert result.returncode != 0
     assert "scrubbed an auth" in result.stderr
@@ -330,13 +340,12 @@ def test_the_width_check_refuses_an_element_neither_arm_carries(tmp_path):
 
 # --- UX-872: examples/12-junctioned's own step ---------------------------
 
-CHECK_DECISION_SCRIPT = (REPO_ROOT / "examples" / "12-junctioned"
-                         / "check_jobserver_decision.py")
+CHECK_DECISION_SCRIPT = REPO_ROOT / "examples" / "12-junctioned" / "check_jobserver_decision.py"
 
 
 def test_the_ci_step_12_captures_via_bga_snapshot_with_the_jobserver_on():
     step = _extract_ci_step(STEP_NAME_12)
-    body = step[step.index("run: |"):]
+    body = step[step.index("run: |") :]
     assert "examples/12-junctioned" in body
     assert "bga snapshot --jobserver auto" in body
     assert "bst --builders 2 build all.bst" in body
@@ -356,17 +365,19 @@ def _run_decision_check(plane2_report, element, tmp_path):
     plane2_path.write_text(json.dumps(plane2_report))
     return subprocess.run(
         [sys.executable, str(CHECK_DECISION_SCRIPT), str(plane2_path), element],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     )
 
 
 def test_the_ci_steps_12_decision_check_accepts_a_joined_real_kind(tmp_path):
     """This box's own real reading (UX-872's Outcome): `core.bst`
     `joined`, kind `cmake` - the step's check must pass it."""
-    report = {"jobserver_decisions": [
-        {"element": "core.bst", "max_jobs": 4, "decision": "joined",
-         "kind": "cmake", "policy": "cmake_meson"},
-    ]}
+    report = {
+        "jobserver_decisions": [
+            {"element": "core.bst", "max_jobs": 4, "decision": "joined", "kind": "cmake", "policy": "cmake_meson"},
+        ]
+    }
 
     result = _run_decision_check(report, "core.bst", tmp_path)
 
@@ -378,10 +389,11 @@ def test_the_ci_steps_12_decision_check_refuses_unknown_kind(tmp_path):
     """A failed kinds read degrades every decision to `unknown_kind`
     (`jobserver_kinds_warning`) - the exact regression UX-871 fixed and
     this step exists to catch a return of."""
-    report = {"jobserver_decisions": [
-        {"element": "core.bst", "max_jobs": 4, "decision": "joined",
-         "kind": "unknown_kind", "policy": None},
-    ]}
+    report = {
+        "jobserver_decisions": [
+            {"element": "core.bst", "max_jobs": 4, "decision": "joined", "kind": "unknown_kind", "policy": None},
+        ]
+    }
 
     result = _run_decision_check(report, "core.bst", tmp_path)
 
@@ -394,10 +406,11 @@ def test_the_ci_steps_12_decision_check_refuses_an_unjunctioned_element(tmp_path
     unjunctioned element - a name `jobserver_decisions` never carries
     for this report must refuse, not silently pass the row that is
     there for a different element."""
-    report = {"jobserver_decisions": [
-        {"element": "core.bst", "max_jobs": 4, "decision": "joined",
-         "kind": "cmake", "policy": "cmake_meson"},
-    ]}
+    report = {
+        "jobserver_decisions": [
+            {"element": "core.bst", "max_jobs": 4, "decision": "joined", "kind": "cmake", "policy": "cmake_meson"},
+        ]
+    }
 
     result = _run_decision_check(report, "unjunctioned.bst", tmp_path)
 

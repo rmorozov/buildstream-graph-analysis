@@ -15,6 +15,7 @@ row unconditionally, `dev_baseline.py --shrink`'s shape - a grown cell
 elsewhere does not hold a shrink back - then names each grown cell and
 exits 1, unless `--force` moves it up too.
 """
+
 import argparse
 import ast
 import collections
@@ -81,8 +82,7 @@ def module_index(root, files):
         if stem_parts:
             dotted[".".join(stem_parts)] = rel
             bare[stem_parts[-1]].add(rel)
-    return dotted, {stem: rel for stem, rels in bare.items()
-                    if len(rels) == 1 for rel in rels}
+    return dotted, {stem: rel for stem, rels in bare.items() if len(rels) == 1 for rel in rels}
 
 
 def duplicate_blocks(root, paths, files):
@@ -94,10 +94,10 @@ def duplicate_blocks(root, paths, files):
     those against `module_index` rather than the filesystem."""
     root = pathlib.Path(root).resolve()
     dotted, bare = module_index(root, files)
-    cmd = ["pylint", "--disable=all", "--enable=duplicate-code",
-           "--output-format=json", *paths]
-    run = subprocess.run(cmd, cwd=root, capture_output=True, text=True,
-                         check=False)
+    # pylint's R0801 grouping depends on file order, and a directory walks in the filesystem's order.
+    ordered = sorted(path.relative_to(root).as_posix() for path in files)
+    cmd = ["pylint", "--disable=all", "--enable=duplicate-code", "--output-format=json", *ordered]
+    run = subprocess.run(cmd, cwd=root, capture_output=True, text=True, check=False)
     if run.returncode not in PYLINT_OK_CODES:
         raise PylintFailure(f"pylint exited {run.returncode}: {run.stderr.strip()}")
     try:
@@ -146,13 +146,13 @@ def load_reference(path):
 
 
 def write_reference(path, files, paths):
-    body = ",\n".join(
-        f"    {json.dumps(rel)}: {json.dumps(files[rel], sort_keys=True)}"
-        for rel in sorted(files))
-    text = ("{\n"
-            f'  "paths": {json.dumps(sorted(set(paths)))},\n'
-            '  "files": {\n' + (body + "\n" if body else "") + "  }\n"
-            "}\n")
+    body = ",\n".join(f"    {json.dumps(rel)}: {json.dumps(files[rel], sort_keys=True)}" for rel in sorted(files))
+    text = (
+        "{\n"
+        f'  "paths": {json.dumps(sorted(set(paths)))},\n'
+        '  "files": {\n' + (body + "\n" if body else "") + "  }\n"
+        "}\n"
+    )
     pathlib.Path(path).write_text(text, encoding="utf-8")
 
 
@@ -181,8 +181,7 @@ def do_check(args, current, existing):
         print(f"grew: {rel} {cell} {before} -> {after}")
     if grown:
         return 1
-    print(f"sizes ok: {len(current)} file(s) measured, "
-          f"none above the cell {args.reference} records")
+    print(f"sizes ok: {len(current)} file(s) measured, none above the cell {args.reference} records")
     return 0
 
 
@@ -210,12 +209,10 @@ def do_adopt(args, current, existing):
                     blocked.append((rel, cell, before.get(cell, 0), after[cell]))
         merged[rel] = row
     write_reference(args.reference, merged, args.paths or list(DEFAULT_PATHS))
-    print(f"wrote {len(merged)} file(s) to {args.reference} "
-          f"({changed} cell(s) changed)")
+    print(f"wrote {len(merged)} file(s) to {args.reference} ({changed} cell(s) changed)")
     if blocked:
         for rel, cell, before, after in blocked:
-            print(f"refused: {rel} {cell} {before} -> {after} - rerun with "
-                  "--force to move a cell upward")
+            print(f"refused: {rel} {cell} {before} -> {after} - rerun with --force to move a cell upward")
         return 1
     return 0
 
@@ -224,8 +221,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--adopt", action="store_true")
-    parser.add_argument("--force", action="store_true",
-                         help="with --adopt, allow moving a cell upward")
+    parser.add_argument("--force", action="store_true", help="with --adopt, allow moving a cell upward")
     parser.add_argument("--reference", type=pathlib.Path, default=DEFAULT_REFERENCE)
     parser.add_argument("--root", type=pathlib.Path, default=REPO)
     parser.add_argument("--paths", nargs="+", default=None)

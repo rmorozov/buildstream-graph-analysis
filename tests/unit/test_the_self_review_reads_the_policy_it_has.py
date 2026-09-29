@@ -11,6 +11,7 @@ diff that reaches a contract, the spec, a hook or a skill is sent on by
 something that can be run and mutated: to `design-review` with a page
 in it, to `review` without one (`UX-928`).
 """
+
 import pathlib
 import sys
 
@@ -37,9 +38,12 @@ class TestTheRoutingRuleIsRunNotRemembered:
     def test_every_named_surface_routes(self):
         """A rule that fires on one surface and not the others reads as
         complete and is not."""
-        for path in ("bga/schemas.py", "docs/spec/specification.md",
-                     ".claude/hooks/no-bulk-add.sh",
-                     ".claude/skills/verify/SKILL.md"):
+        for path in (
+            "bga/schemas.py",
+            "docs/spec/specification.md",
+            ".claude/hooks/no-bulk-add.sh",
+            ".claude/skills/verify/SKILL.md",
+        ):
             assert dev_impact.route([path])[0] != "self-review", path
 
 
@@ -52,8 +56,7 @@ class TestASurfaceDiffWithNoPageIsNotSentToThePage:
         assert (where, why) == ("review", ["a skill"])
 
     def test_a_surface_diff_with_a_page_in_it_still_goes_to_the_page(self):
-        for page in ("bga/viewer/app.js", "bga/viewer/style.css",
-                     "tests/viewer.mjs"):
+        for page in ("bga/viewer/app.js", "bga/viewer/style.css", "tests/viewer.mjs"):
             where, _ = dev_impact.route(["bga/schemas.py", page])
             assert where == "design-review", page
 
@@ -61,8 +64,7 @@ class TestASurfaceDiffWithNoPageIsNotSentToThePage:
         assert dev_impact.route(["bga/viewer/app.js"]) == ("self-review", [])
 
     def test_every_destination_is_a_skill_that_exists(self):
-        for paths in ([".claude/hooks/no-bulk-add.sh"],
-                      ["bga/schemas.py", "bga/viewer/app.js"]):
+        for paths in ([".claude/hooks/no-bulk-add.sh"], ["bga/schemas.py", "bga/viewer/app.js"]):
             where, _ = dev_impact.route(paths)
             assert (REPO / ".claude/skills" / where / "SKILL.md").is_file(), where
 
@@ -70,8 +72,7 @@ class TestASurfaceDiffWithNoPageIsNotSentToThePage:
         """A surface added to `DESIGN_SURFACES` with no row in the
         destination's clause is routed to a protocol with nothing to run."""
         where, _ = dev_impact.route(["docs/spec/specification.md"])
-        text = (REPO / ".claude/skills" / where / "SKILL.md").read_text(
-            encoding="utf-8")
+        text = (REPO / ".claude/skills" / where / "SKILL.md").read_text(encoding="utf-8")
         clause = text.split("routed here", 1)[-1]
         for name, _ in dev_impact.DESIGN_SURFACES:
             assert f"| {name} |" in clause, name
@@ -88,8 +89,7 @@ class TestTheSkillPointsRatherThanRestates:
     def test_it_does_not_carry_its_own_nit_cap(self):
         """`REVIEW.md` owns the number. A copy here is a copy to drift."""
         text = SKILL.read_text(encoding="utf-8").lower()
-        assert "five nits" not in text, (
-            "the skill restates REVIEW.md's cap instead of citing it")
+        assert "five nits" not in text, "the skill restates REVIEW.md's cap instead of citing it"
 
     def test_it_names_the_model_the_round_advised(self):
         assert "sonnet" in SKILL.read_text(encoding="utf-8")

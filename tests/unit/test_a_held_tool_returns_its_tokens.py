@@ -4,6 +4,7 @@ unless something holds tokens for it. Runs the real wrapper scripts
 under `sh` against a real FIFO or pipe pair - never a proxy for the
 kernel object - with a fake tool standing in for `ld.lld`/`ninja`.
 """
+
 import array
 import fcntl
 import os
@@ -54,8 +55,7 @@ def _fake_tool(bin_dir, name, marker, out, hang):
         'case "$1" in --help) exit 0 ;; esac\n'
         'printf \'RAN:%s\\n\' "$*"\n'
         f'printf \'%s\\n\' "$*" > "{out}"\n'
-        f': > "{marker}"\n'
-        + ("while :; do sleep 1; done\n" if hang else "sleep 0.2\n")
+        f': > "{marker}"\n' + ("while :; do sleep 1; done\n" if hang else "sleep 0.2\n")
     )
     tool.chmod(0o755)
 
@@ -64,8 +64,9 @@ def _run(tool, args, path_dir, env_extra, pass_fds=()):
     env = dict(os.environ)
     env["PATH"] = f"{path_dir}{os.pathsep}{env['PATH']}"
     env.update(env_extra)
-    return subprocess.run(["sh", str(WRAPPERS / tool), *args], env=env,
-                          pass_fds=pass_fds, capture_output=True, text=True)
+    return subprocess.run(
+        ["sh", str(WRAPPERS / tool), *args], env=env, pass_fds=pass_fds, capture_output=True, text=True
+    )
 
 
 def _fifo(tmp_path, tokens=4):
@@ -85,12 +86,15 @@ class TestAHeldToolReturnsItsTokens:
         path, fd = _fifo(tmp_path)
         out, marker = tmp_path / "out", tmp_path / "marker"
         _fake_tool(tmp_path, "ld.lld", marker, out, hang=False)
-        env = {"MAKEFLAGS": f"--jobserver-auth={fd},{fd}",
-              "BST_TRACE_WRAPPER_CAP": "3"}
+        env = {"MAKEFLAGS": f"--jobserver-auth={fd},{fd}", "BST_TRACE_WRAPPER_CAP": "3"}
         proc = subprocess.Popen(
             ["sh", str(WRAPPERS / "ld.lld")],
             env={**os.environ, "PATH": f"{tmp_path}{os.pathsep}{os.environ['PATH']}", **env},
-            pass_fds=(fd,), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            pass_fds=(fd,),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
         for _ in range(100):
             if marker.exists():
                 break
@@ -116,12 +120,15 @@ class TestAHeldToolReturnsItsTokens:
         path, fd = _fifo(tmp_path)
         out, marker = tmp_path / "out", tmp_path / "marker"
         _fake_tool(tmp_path, "ld.lld", marker, out, hang=True)
-        env = {"MAKEFLAGS": f"--jobserver-auth={fd},{fd}",
-              "BST_TRACE_WRAPPER_CAP": "3"}
+        env = {"MAKEFLAGS": f"--jobserver-auth={fd},{fd}", "BST_TRACE_WRAPPER_CAP": "3"}
         proc = subprocess.Popen(
             ["sh", str(WRAPPERS / "ld.lld")],
             env={**os.environ, "PATH": f"{tmp_path}{os.pathsep}{os.environ['PATH']}", **env},
-            pass_fds=(fd,), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            pass_fds=(fd,),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
         for _ in range(100):
             if marker.exists():
                 break
@@ -154,8 +161,7 @@ class TestNoAuthRunsTheToolUntouched:
     def test_no_jobserver_auth_in_makeflags_leaves_argv_alone(self, tmp_path):
         out, marker = tmp_path / "out", tmp_path / "marker"
         _fake_tool(tmp_path, "ld.lld", marker, out, hang=False)
-        result = _run("ld.lld", ["-o", "a.out", "x.o"], tmp_path,
-                      {"MAKEFLAGS": "-j8"})
+        result = _run("ld.lld", ["-o", "a.out", "x.o"], tmp_path, {"MAKEFLAGS": "-j8"})
         assert result.returncode == 0
         assert out.read_text().strip() == "-o a.out x.o"
 
@@ -168,9 +174,9 @@ class TestFifoStyleAuth:
         os.write(host_fd, b"++")  # 2 tokens
         out, marker = tmp_path / "out", tmp_path / "marker"
         _fake_tool(tmp_path, "ld.lld", marker, out, hang=False)
-        result = _run("ld.lld", [], tmp_path,
-                      {"MAKEFLAGS": f"--jobserver-auth=fifo:{fifo_path}",
-                       "BST_TRACE_WRAPPER_CAP": "8"})
+        result = _run(
+            "ld.lld", [], tmp_path, {"MAKEFLAGS": f"--jobserver-auth=fifo:{fifo_path}", "BST_TRACE_WRAPPER_CAP": "8"}
+        )
         assert result.returncode == 0
         assert "--threads=3" in out.read_text()  # 2 held + 1 implicit
         assert _readable(host_fd) == 2
@@ -192,8 +198,9 @@ class TestFdStyleAuthWithDistinctReadAndWriteEnds:
         env["PATH"] = f"{tmp_path}{os.pathsep}{env['PATH']}"
         env["MAKEFLAGS"] = f"--jobserver-auth={r},{w}"
         env["BST_TRACE_WRAPPER_CAP"] = "8"
-        result = subprocess.run(["sh", str(WRAPPERS / "ld.lld")], env=env,
-                                pass_fds=(r, w), capture_output=True, text=True)
+        result = subprocess.run(
+            ["sh", str(WRAPPERS / "ld.lld")], env=env, pass_fds=(r, w), capture_output=True, text=True
+        )
         assert result.returncode == 0, result.stderr
         assert "--threads=4" in out.read_text()  # 3 held + 1 implicit
         assert _readable(r) == 3, "all 3 returned to the read end"
@@ -212,8 +219,9 @@ class TestNothingReadableFallsBackToOne:
         env["PATH"] = f"{tmp_path}{os.pathsep}{env['PATH']}"
         env["MAKEFLAGS"] = f"--jobserver-auth={r},{w}"
         env["BST_TRACE_WRAPPER_CAP"] = "8"
-        result = subprocess.run(["sh", str(WRAPPERS / "ld.lld")], env=env,
-                                pass_fds=(r, w), capture_output=True, text=True)
+        result = subprocess.run(
+            ["sh", str(WRAPPERS / "ld.lld")], env=env, pass_fds=(r, w), capture_output=True, text=True
+        )
         assert result.returncode == 0, result.stderr
         assert "--threads=1" in out.read_text()
         os.close(r)
@@ -232,8 +240,9 @@ class TestTheNinjaWrapperUsesDashJ:
         env["PATH"] = f"{tmp_path}{os.pathsep}{env['PATH']}"
         env["MAKEFLAGS"] = f"--jobserver-auth={r},{w}"
         env["BST_TRACE_WRAPPER_CAP"] = "8"
-        result = subprocess.run(["sh", str(WRAPPERS / "ninja")], env=env,
-                                pass_fds=(r, w), capture_output=True, text=True)
+        result = subprocess.run(
+            ["sh", str(WRAPPERS / "ninja")], env=env, pass_fds=(r, w), capture_output=True, text=True
+        )
         assert result.returncode == 0, result.stderr
         text = out.read_text()
         assert "-j 3" in text  # 2 held + 1 implicit
@@ -292,13 +301,13 @@ class TestASymlinkedInvocationFindsTheRealToolNotItself:
         env = dict(os.environ)
         # The wrapper directory genuinely first on PATH - the shape
         # that made the old self-dir-only skip miss it entirely.
-        env["PATH"] = (f"{WRAPPERS}{os.pathsep}{other_dir}{os.pathsep}"
-                       f"{fake_dir}{os.pathsep}{env['PATH']}")
+        env["PATH"] = f"{WRAPPERS}{os.pathsep}{other_dir}{os.pathsep}{fake_dir}{os.pathsep}{env['PATH']}"
         env["MAKEFLAGS"] = f"--jobserver-auth={r},{w}"
         env["BST_TRACE_WRAPPER_CAP"] = "8"
 
-        result = subprocess.run(["sh", str(symlink)], env=env, pass_fds=(r, w),
-                                capture_output=True, text=True, timeout=5)
+        result = subprocess.run(
+            ["sh", str(symlink)], env=env, pass_fds=(r, w), capture_output=True, text=True, timeout=5
+        )
         os.close(r)
         os.close(w)
         assert result.returncode == 0, (result.stdout, result.stderr)
@@ -333,9 +342,9 @@ class TestNoRealToolAnywhereRefusesFastWithNoTokensTouched:
 
         # An absolute `sh`, not a bare name resolved through `env["PATH"]`
         # - that PATH is deliberately empty of everything, `sh` included.
-        result = subprocess.run(["/bin/sh", str(WRAPPERS / "ld.lld")], env=env,
-                                pass_fds=(fd,), capture_output=True, text=True,
-                                timeout=2)
+        result = subprocess.run(
+            ["/bin/sh", str(WRAPPERS / "ld.lld")], env=env, pass_fds=(fd,), capture_output=True, text=True, timeout=2
+        )
         assert result.returncode == 127, (result.stdout, result.stderr)
         assert "no real tool found" in result.stderr
         assert _readable(fd) == 4, "bga_find_real fails before any read"
@@ -358,8 +367,7 @@ class TestTheReentryGuardRefusesInIsolation:
         # Already "inside" a wrapper invocation for this same tool.
         env["BGA_WRAPPER_TOOL"] = "ld.lld"
 
-        result = subprocess.run(["sh", str(WRAPPERS / "ld.lld")], env=env,
-                                capture_output=True, text=True, timeout=2)
+        result = subprocess.run(["sh", str(WRAPPERS / "ld.lld")], env=env, capture_output=True, text=True, timeout=2)
         assert result.returncode == 127, (result.stdout, result.stderr)
         assert "re-entered itself" in result.stderr
         assert not marker.exists(), "the fake tool must never have run"

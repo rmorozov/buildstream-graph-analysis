@@ -7,6 +7,7 @@ builds one marker per block that opens every collected `.description`
 in place; a block's own selector is the styleguide's own census one
 (`dl, table, section[data-section], ul, ol`, nearest ancestor first).
 """
+
 import pathlib
 import sys
 
@@ -40,8 +41,7 @@ _MEASURE = r"""
 
 @pytest.fixture(scope="module", params=["golden", "macro_micro"])
 def measured(request, tmp_path_factory):
-    uri = pages.export_uri(pages.FIXTURES[request.param],
-                           tmp_path_factory.mktemp(f"u1021-{request.param}"))
+    uri = pages.export_uri(pages.FIXTURES[request.param], tmp_path_factory.mktemp(f"u1021-{request.param}"))
     with Browser(chrome) as opened:
         result = opened.measure(uri, _MEASURE)
     result["label"] = request.param
@@ -54,6 +54,5 @@ class TestOneDoorPerBlock:
         assert measured["doors"] > 0, measured["label"]
 
     def test_at_most_one_door_per_block(self, measured):
-        over = {block: count for block, count in measured["perBlock"].items()
-               if count > 1}
+        over = {block: count for block, count in measured["perBlock"].items() if count > 1}
         assert over == {}, (measured["label"], over)

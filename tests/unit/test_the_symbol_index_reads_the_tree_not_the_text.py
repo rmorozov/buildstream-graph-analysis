@@ -6,6 +6,7 @@ and `DIRS` monkeypatched to it so the walk covers exactly this fixture.
 for real once; `unused_fn` is never referenced; `pkg.a` is imported both
 ways, from two different files.
 """
+
 import json
 import pathlib
 
@@ -114,5 +115,10 @@ def test_the_tool_runs_from_the_command_line_on_this_tree():
     repo = pathlib.Path(__file__).resolve().parents[2]
     result = subprocess.run(
         [sys.executable, str(repo / "tools" / "dev_symbols.py"), "def", "analyze"],
-        cwd=repo, capture_output=True, text=True, timeout=60, check=True)
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=True,
+    )
     assert "bga/analyzer.py:" in result.stdout, result.stdout

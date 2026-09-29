@@ -17,6 +17,7 @@ The cross-check that caught it is cheap and is pinned here as a test:
 `sensitivity.critical_path_us` and `floors.t_infinity_observed` are the
 same quantity computed two ways and must agree.
 """
+
 import networkx as nx
 import pytest
 
@@ -87,10 +88,7 @@ def test_zeroed_element_is_excluded_from_the_ranking():
     tasks = {uid: _task(uid, TaskKind.FETCH, 0) for uid in nodes}
     durations = {"core": 9_000_000, "a": 1_000_000, "b": 1_000_000}
 
-    ranked = [
-        key for key, _, _ in
-        _analyzer(nodes, edges, tasks, durations).compute_sensitivity().top_opportunities
-    ]
+    ranked = [key for key, _, _ in _analyzer(nodes, edges, tasks, durations).compute_sensitivity().top_opportunities]
 
     assert ranked and ranked[0] == "core"
 
@@ -128,9 +126,8 @@ def test_element_absent_from_durations_contributes_zero():
 
 # --- the cross-check that found this, pinned end to end ----------------
 
-@pytest.mark.parametrize(
-    "topology_name", ["diamond", "linear_chain", "fan_in", "fan_out", "independent_branches"]
-)
+
+@pytest.mark.parametrize("topology_name", ["diamond", "linear_chain", "fan_in", "fan_out", "independent_branches"])
 def test_critical_path_us_agrees_with_t_infinity(tmp_path, topology_name):
     """Two independently-computed longest-weighted-path numbers for the
     same run. They disagreed by 9 seconds on a real capture, and either
@@ -142,15 +139,10 @@ def test_critical_path_us_agrees_with_t_infinity(tmp_path, topology_name):
     result = topologies.build_analyzer(tmp_path, topology).analyze()
     data = json.loads(format_json(result))
 
-    assert (
-        data["sensitivity"]["critical_path_us"]
-        == data["floors"]["t_infinity_observed"]
-    )
+    assert data["sensitivity"]["critical_path_us"] == data["floors"]["t_infinity_observed"]
 
 
-@pytest.mark.parametrize(
-    "topology_name", ["diamond", "linear_chain", "fan_in", "fan_out", "independent_branches"]
-)
+@pytest.mark.parametrize("topology_name", ["diamond", "linear_chain", "fan_in", "fan_out", "independent_branches"])
 def test_critical_path_length_agrees_with_the_named_path(tmp_path, topology_name):
     import json
 

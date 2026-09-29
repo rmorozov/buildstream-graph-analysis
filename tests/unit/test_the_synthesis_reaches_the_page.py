@@ -37,6 +37,7 @@ under one declaration - and the section that draws it.
 Two renderings had to be fixed for the page to say what the terminal
 says, and both are in `TestTheUnitsSurviveTheCell`.
 """
+
 import json
 import os
 import pathlib
@@ -60,8 +61,12 @@ node = __import__("shutil").which("node")
 def _cli(*args):
     done = subprocess.run(
         [sys.executable, "-m", "bga.cli", *args],
-        capture_output=True, text=True, cwd=REPO, timeout=180,
-        env=dict(os.environ, PYTHONPATH=str(REPO)))
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=180,
+        env=dict(os.environ, PYTHONPATH=str(REPO)),
+    )
     assert done.returncode == 0, done.stderr[-3000:]
     return done.stdout
 
@@ -83,7 +88,8 @@ class TestTheContractCarriesItOnBothSurfaces:
         assert node, (
             "`analyze/v4` does not declare the synthesis, so `bga view` - "
             "which renders that document and embeds no other - has nothing "
-            "to draw")
+            "to draw"
+        )
         assert node[schemas.RAIL] == "act"
 
     def test_one_declaration_serves_both_contracts(self):
@@ -94,8 +100,7 @@ class TestTheContractCarriesItOnBothSurfaces:
         opposite for as long as both existed.
         """
         analyze = schemas.schema(schemas.ANALYZE)["properties"]["restructuring"]
-        correlate = schemas.schema(
-            schemas.CORRELATE)["properties"]["restructuring"]
+        correlate = schemas.schema(schemas.CORRELATE)["properties"]["restructuring"]
         assert analyze == correlate
         source = (REPO / "bga/schemas.py").read_text(encoding="utf-8")
         assert source.count("_RESTRUCTURING_HINT = {") == 1
@@ -113,14 +118,15 @@ class TestTheContractCarriesItOnBothSurfaces:
         assert [spec["key"] for spec in columns] == ["from", "to"]
         assert all(spec.get("role") == "element" for spec in columns), (
             "without `role: element` the two ends of an edge are strings "
-            "rather than elements a reader can open (`UX-208`)")
+            "rather than elements a reader can open (`UX-208`)"
+        )
 
 
 class TestTheDocumentTheViewerReads:
     def test_analyze_carries_the_synthesis(self, analyzed):
         assert analyzed.get("restructuring"), (
-            "the analyze document has no restructuring key, so the page "
-            "renders the crumbs and not the conclusion")
+            "the analyze document has no restructuring key, so the page renders the crumbs and not the conclusion"
+        )
 
     def test_it_carries_the_replay_rather_than_a_null(self, analyzed):
         """The join needs the tasks and the run context to replay.
@@ -134,15 +140,13 @@ class TestTheDocumentTheViewerReads:
         projection = analyzed["restructuring"][0]["projection"]
         assert projection, "the finding reached the document unprojected"
         assert projection["saving_us"] > 0
-        assert (projection["replayed_baseline_us"]
-                - projection["projected_us"] == projection["saving_us"])
+        assert projection["replayed_baseline_us"] - projection["projected_us"] == projection["saving_us"]
 
     def test_the_two_documents_publish_one_finding(self, analyzed):
-        correlated = json.loads(
-            _cli("correlate", str(FIXTURE), "--format", "json"))
+        correlated = json.loads(_cli("correlate", str(FIXTURE), "--format", "json"))
         assert analyzed["restructuring"] == correlated["restructuring"], (
-            "two documents disagreeing about one finding is worse than "
-            "one document not having it")
+            "two documents disagreeing about one finding is worse than one document not having it"
+        )
 
 
 @pytest.fixture(scope="module")
@@ -196,13 +200,13 @@ class TestOnThePage:
         assert seen["found"], (
             "the export has no restructuring section - the state this "
             "item was filed in, where a grep of the round's page found "
-            "zero hits for the synthesis")
+            "zero hits for the synthesis"
+        )
         assert seen["rail"] == "act"
 
     def test_the_edges_render_as_a_named_table(self, seen):
         assert seen["edgeRows"] == 18, seen["edgeRows"]
-        assert "Staged by" in seen["headers"] and "Never read by" in seen[
-            "headers"], seen["headers"]
+        assert "Staged by" in seen["headers"] and "Never read by" in seen["headers"], seen["headers"]
 
     def test_the_page_prints_the_terminal_s_triple(self, seen, spoken):
         """The acceptance test's own clause.
@@ -211,15 +215,14 @@ class TestOnThePage:
         the same way, read out of the paragraph the terminal prints so
         that a change to either surface has to move both.
         """
-        line = next(row for row in spoken.splitlines()
-                    if "Replaying this run" in row)
+        line = next(row for row in spoken.splitlines() if "Replaying this run" in row)
         triple = re.findall(r"(\d+\.\d+)s", line)
         assert len(triple) == 3, line
         projected, baseline, saving = triple
         for number in (baseline, projected, saving):
             assert f"{number} s" in seen["text"], (
-                f"the page does not print {number} s; the terminal's line "
-                f"is {line.strip()!r}")
+                f"the page does not print {number} s; the terminal's line is {line.strip()!r}"
+            )
 
     def test_the_projection_draws_no_distribution(self, seen):
         """`mapTable` invented `count` for every map without one.
@@ -239,8 +242,7 @@ class TestOnThePage:
         edges and the projection - and they opened and filtered as one
         key until this item, because the path was the row's.
         """
-        assert len(seen["foldPaths"]) == len(set(seen["foldPaths"])), (
-            seen["foldPaths"])
+        assert len(seen["foldPaths"]) == len(set(seen["foldPaths"])), seen["foldPaths"]
 
 
 _RECORD = """
@@ -295,9 +297,12 @@ def drawn():
         pytest.skip("node is not installed")
     done = subprocess.run(
         [node, "--input-type=module", "-e", _RECORD],
-        capture_output=True, text=True, cwd=REPO, timeout=60,
-        env=dict(os.environ,
-                 BGA_DOM_SHIM=str(REPO / "tests" / "dom_shim.mjs")))
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=60,
+        env=dict(os.environ, BGA_DOM_SHIM=str(REPO / "tests" / "dom_shim.mjs")),
+    )
     assert done.returncode == 0, done.stderr[-3000:]
     return json.loads(done.stdout)
 
@@ -324,7 +329,8 @@ class TestTheUnitsSurviveTheCell:
         assert "19.1 s" in drawn["record"], drawn["record"]
         assert "2.0 MiB" in drawn["record"], (
             "a record's members do not share one unit, and the bytes "
-            "field is what a single column quantity would have flattened")
+            "field is what a single column quantity would have flattened"
+        )
         assert "43200000" not in drawn["record"]
 
     def test_a_real_map_is_untouched(self, drawn):

@@ -22,13 +22,18 @@ exercises a nonzero UNTRACKED_HEAD/UNTRACKED_TAIL is
 tests/unit/test_untracked_head_tail.py (P1-23) and
 tests/test_synthetic_multi_subproject.py::test_full_wall_clock_attribution_identity_exact.
 """
+
 import pytest
 
 from tests.fixtures import topologies as topo
 
 _TASK_HORIZON_KEYS = (
-    "execution_on_chain_us", "dependency_wait_us", "resource_wait_us",
-    "scheduler_wait_us", "idle_us", "retry_wait_us",
+    "execution_on_chain_us",
+    "dependency_wait_us",
+    "resource_wait_us",
+    "scheduler_wait_us",
+    "idle_us",
+    "retry_wait_us",
 )
 
 
@@ -37,9 +42,11 @@ def _task_horizon_sum(attribution):
 
 
 def _full_sum(attribution):
-    return _task_horizon_sum(attribution) + attribution.get(
-        "untracked_head_us", 0
-    ) + attribution.get("untracked_tail_us", 0)
+    return (
+        _task_horizon_sum(attribution)
+        + attribution.get("untracked_head_us", 0)
+        + attribution.get("untracked_tail_us", 0)
+    )
 
 
 TOPOLOGIES = [
@@ -113,5 +120,6 @@ def test_the_flattened_timeline_is_ordered_and_non_overlapping(tmp_path, name, f
     assert gaps == [], f"{name}: gaps between segments {gaps}"
 
     assert (bounds[0][0], bounds[-1][1]) == (
-        result.occupancy["horizon_start_us"], result.occupancy["horizon_end_us"]
+        result.occupancy["horizon_start_us"],
+        result.occupancy["horizon_end_us"],
     ), f"{name}: the timeline does not span the horizon it is measured over"

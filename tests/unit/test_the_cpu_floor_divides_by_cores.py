@@ -10,6 +10,7 @@ The trap this guard clears: that fixture has `PROCESS` 4 and
 the same number. The second case runs a copy with `host_cpu_count`
 edited to 8, where the two candidate divisors give 8723282 and 17446564.
 """
+
 import json
 import shutil
 import subprocess
@@ -49,9 +50,10 @@ def _floors(tmp_path, run_dir, plane2=None):
     else:
         argv += ["--no-plane2"]
     proc = subprocess.run(
-        [sys.executable, "-c",
-         f"from bga.cli import main; raise SystemExit(main({argv!r}))"],
-        capture_output=True, text=True)
+        [sys.executable, "-c", f"from bga.cli import main; raise SystemExit(main({argv!r}))"],
+        capture_output=True,
+        text=True,
+    )
     assert proc.returncode == 0, proc.stderr
     return json.loads(out.read_text())["floors"]
 
@@ -85,8 +87,7 @@ def test_the_floor_is_the_measured_cpu_over_the_governing_cores(tmp_path):
 def test_the_divisor_is_the_cores_and_not_the_builder_slots(tmp_path):
     """The trap: `PROCESS` stays 4 while the host has 8 cores. A floor
     that read the builder count would still say 17446564 here."""
-    floors = _floors(
-        tmp_path, _fixture_with_cores(tmp_path, 8), FIXTURE / "plane2.json")
+    floors = _floors(tmp_path, _fixture_with_cores(tmp_path, 8), FIXTURE / "plane2.json")
 
     assert floors["lb_cpu_us"] == TOTAL_CPU_US // 8 == 8_723_282
     assert floors["lb_cpu_governing_cores"] == 8
@@ -95,9 +96,7 @@ def test_the_divisor_is_the_cores_and_not_the_builder_slots(tmp_path):
 def test_a_declared_budget_governs_over_the_detected_host(tmp_path):
     """`cpu_budget` is the ceiling its operator asked to be held to, so
     it wins over the detected count and says so."""
-    floors = _floors(
-        tmp_path, _fixture_with_cores(tmp_path, 1, key="cpu_budget"),
-        FIXTURE / "plane2.json")
+    floors = _floors(tmp_path, _fixture_with_cores(tmp_path, 1, key="cpu_budget"), FIXTURE / "plane2.json")
 
     assert floors["lb_cpu_governing_cores"] == 1
     assert floors["lb_cpu_cores_source"] == "cpu_budget"

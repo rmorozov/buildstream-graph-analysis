@@ -12,6 +12,7 @@ The module is `_viewer_module()` byte for byte once inflated, so a stack
 trace's `blob:` line is a line of that source; the served page is not
 touched. `PAGE_BUDGET_B` is in `CEILINGS`, so cli.md's table carries it.
 """
+
 import json
 import pathlib
 import re
@@ -46,8 +47,7 @@ def exports(tmp_path_factory):
     for label, fixture in sorted(FIXTURES.items()):
         into = tmp_path_factory.mktemp(f"gz-{label}")
         path = into / "report.html"
-        made[label] = (path, view.export(str(snapshot_copy(fixture, into)),
-                                         str(path)))
+        made[label] = (path, view.export(str(snapshot_copy(fixture, into)), str(path)))
     return made
 
 
@@ -61,7 +61,8 @@ def test_the_page_half_is_under_its_bound(exports):
         assert written["page_bytes"] < view.PAGE_BUDGET_B, (
             f"{label}: the page half is {written['page_bytes']:,} B, over "
             f"PAGE_BUDGET_B's {view.PAGE_BUDGET_B:,} - is the viewer module "
-            f"still shipped gzipped?")
+            f"still shipped gzipped?"
+        )
 
 
 def test_the_module_inflates_to_its_source_byte_for_byte(exports):
@@ -70,7 +71,8 @@ def test_the_module_inflates_to_its_source_byte_for_byte(exports):
         assert view.inflated_module(html) == view._viewer_module(), label
         inline = re.findall(r'<script type="module">(.*?)</script>', html, re.S)
         assert len(inline) == 1 and len(inline[0]) < 2_000, (
-            f"{label}: the one inline module is the loader, not the viewer")
+            f"{label}: the one inline module is the loader, not the viewer"
+        )
 
 
 @needs_browser
@@ -95,13 +97,16 @@ def test_the_export_boots_and_a_stack_names_a_source_line(exports):
     value = seen["value"]
     assert value["busy"] == "false" and value["sections"] > 0, value
     lines = view.inflated_module(path.read_text(encoding="utf-8")).split("\n")
-    frames = [(int(line), int(col)) for stack in value["stacks"]
-              for line, col in re.findall(r"\(blob:[^)]*:(\d+):(\d+)\)", stack)]
+    frames = [
+        (int(line), int(col))
+        for stack in value["stacks"]
+        for line, col in re.findall(r"\(blob:[^)]*:(\d+):(\d+)\)", stack)
+    ]
     assert frames, f"no frame from the loaded module: {value['stacks']}"
     for line, col in frames:
-        assert lines[line - 1][col - 1:].startswith("key"), (
-            f"blob line {line}:{col} is {lines[line - 1]!r}, not the source "
-            f"line that read `event.key`")
+        assert lines[line - 1][col - 1 :].startswith("key"), (
+            f"blob line {line}:{col} is {lines[line - 1]!r}, not the source line that read `event.key`"
+        )
 
 
 @needs_node
@@ -122,9 +127,9 @@ def test_a_browser_without_decompression_says_so(tmp_path):
         f'  Buffer.from({json.dumps(loader)}).toString("base64"));\n'
         'console.log(JSON.stringify({ textContent: report.textContent,\n'
         '                              attrs: report.attrs }));\n',
-        encoding="utf-8")
-    done = subprocess.run([node, str(harness)], capture_output=True, text=True,
-                          timeout=60)
+        encoding="utf-8",
+    )
+    done = subprocess.run([node, str(harness)], capture_output=True, text=True, timeout=60)
     assert done.returncode == 0, done.stderr
     report = json.loads(done.stdout)
     assert "DecompressionStream" in report["textContent"], report

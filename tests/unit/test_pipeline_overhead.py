@@ -14,6 +14,7 @@ Two layers:
 2. Analyzer/report wiring (RunContext -> AnalysisResult -> text/json) -
    synthetic run dirs, same pattern as tests/unit/test_report_key_findings.py.
 """
+
 import json
 
 import pytest
@@ -63,7 +64,7 @@ def test_converter_extracts_the_four_real_phases():
 
 
 def test_converter_excludes_the_outer_build_wrapper():
-    """"Build" spans the entire invocation - redundant with the horizon
+    """ "Build" spans the entire invocation - redundant with the horizon
     bga already computes elsewhere, deliberately not recorded."""
     converter = WrapperTraceConverter(raw_start_time_us=0)
     _feed_raw(converter, REAL_LOG_EXCERPT)
@@ -218,18 +219,26 @@ def test_real_hash_scoped_main_events_appear_as_builder_events_instead():
 
 # --- Analyzer / report wiring --------------------------------------------
 
+
 def _write_run_dir(tmp_path, pipeline_overhead):
     run_dir = tmp_path / "run"
     run_dir.mkdir()
     run_context = {
-        "trace_epsilon_us": 1000, "wall_start_us": 0, "wall_end_us": 20000,
+        "trace_epsilon_us": 1000,
+        "wall_start_us": 0,
+        "wall_end_us": 20000,
         "pipeline_overhead": pipeline_overhead,
     }
     graph = {"elements": [{"uid": "a.bst", "requested_target": True}], "dependencies": []}
     trace = {
         "spans": [
-            {"task_key": "a.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 10000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
+            {
+                "task_key": "a.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 10000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
         ],
         "phases": [],
     }

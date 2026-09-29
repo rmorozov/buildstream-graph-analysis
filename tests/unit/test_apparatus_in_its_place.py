@@ -53,6 +53,7 @@ block: 191 doors in 39 blocks on `macro_micro` was one door per value,
 not per block, so the clause below now reads `markers ==
 blocksDescribed` instead.
 """
+
 import json
 import os
 import pathlib
@@ -93,6 +94,7 @@ HEADER_LINE_BUDGET = 3
 # 1. The header carries identity only.
 # --------------------------------------------------------------------------
 
+
 def _header_html():
     match = re.search(r"<header>(.*?)</header>", INDEX, re.S)
     assert match, "the page has no header at all"
@@ -107,7 +109,8 @@ class TestTheHeaderCarriesIdentityOnly:
         for tag in ("button", "select", "input", "<a "):
             assert tag not in body, (
                 f"a {tag.strip('< ')} is back in the header: §2b.2 says "
-                f"actions and their apparatus live in the actions group")
+                f"actions and their apparatus live in the actions group"
+            )
 
     def test_it_fits_the_line_budget(self):
         body = re.sub(r"<!--.*?-->", "", _header_html(), flags=re.S)
@@ -115,7 +118,8 @@ class TestTheHeaderCarriesIdentityOnly:
         assert len(blocks) <= HEADER_LINE_BUDGET, (
             f"the header is {len(blocks)} lines against a budget of "
             f"{HEADER_LINE_BUDGET}: {blocks}. It is sticky, so each one is "
-            f"paid on every screen.")
+            f"paid on every screen."
+        )
 
     def test_the_download_sentence_sits_under_the_control_it_explains(self):
         """§2b.1, and the exact line the field pass flagged twice: it
@@ -123,11 +127,11 @@ class TestTheHeaderCarriesIdentityOnly:
         group = re.search(r'<div id="actions-group".*?</div>', INDEX, re.S)
         assert group, "there is no actions group"
         body = group.group(0)
-        for part in ('id="perfetto"', 'id="actions-fallback"',
-                     'id="actions-download"'):
+        for part in ('id="perfetto"', 'id="actions-fallback"', 'id="actions-download"'):
             assert part in body, f"{part} is not in the actions group"
         assert body.index('id="perfetto"') < body.index('id="actions-download"'), (
-            "the explanation renders above the control it explains")
+            "the explanation renders above the control it explains"
+        )
         assert 'id="actions-download"' not in _header_html()
 
 
@@ -183,8 +187,7 @@ class TestTheHeaderIsAsSmallAsItSays:
         assert out["header_px"] / out["viewport"] <= self.MAX_SHARE, out
 
     @pytest.mark.parametrize("width,height", [(1440, 900), (390, 844)])
-    def test_the_anchor_offset_covers_the_sticky_header(
-            self, browser, page, width, height):
+    def test_the_anchor_offset_covers_the_sticky_header(self, browser, page, width, height):
         """`--head` is what every anchor's `scroll-margin-top` reads. A
         token smaller than the band it describes lands every jump under
         the heading - which it did, by 84px, for as long as the header
@@ -194,24 +197,30 @@ class TestTheHeaderIsAsSmallAsItSays:
         assert out["head_px"] >= out["header_px"], (
             f"--head is {out['head_px']}px against a {out['header_px']}px "
             f"sticky header: an anchor lands "
-            f"{out['header_px'] - out['head_px']}px under it")
+            f"{out['header_px'] - out['head_px']}px under it"
+        )
 
     @pytest.mark.parametrize("width,height", [(1440, 900), (390, 844)])
-    def test_the_actions_group_is_not_sticky_and_scrolls_away(
-            self, browser, page, width, height):
+    def test_the_actions_group_is_not_sticky_and_scrolls_away(self, browser, page, width, height):
         """The move is only a win if the group's height is paid once.
         A second sticky band would be the same defect with a new name."""
         out = browser.measure(page, self._MEASURE, width=width, height=height)
         assert out["group_px"] > 0, "the actions group rendered nothing"
-        position = browser.measure(page, """
+        position = browser.measure(
+            page,
+            """
 (() => getComputedStyle(document.querySelector("#actions-group")).position)()
-""", width=width, height=height)
+""",
+            width=width,
+            height=height,
+        )
         assert position == "static", position
 
 
 # --------------------------------------------------------------------------
 # 2. A described value shows its affordance.
 # --------------------------------------------------------------------------
+
 
 def _probe_source():
     source = (REPO / "tests/unit/test_a_report_you_can_navigate.py").read_text()
@@ -281,17 +290,17 @@ def _boot(run_dir, tmp):
     view.export(str(run), str(page))
     html = page.read_text(encoding="utf-8")
     module = tmp / "inline.mjs"
-    module.write_text(
-        view.inflated_module(html),
-        encoding="utf-8")
+    module.write_text(view.inflated_module(html), encoding="utf-8")
     probe = tmp / "probe.mjs"
-    probe.write_text(_probe_source().split("const report =", 1)[0] + _TAIL,
-                     encoding="utf-8")
+    probe.write_text(_probe_source().split("const report =", 1)[0] + _TAIL, encoding="utf-8")
     result = subprocess.run(
-        [node, str(probe)], capture_output=True, text=True, cwd=REPO,
+        [node, str(probe)],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
         timeout=180,
-        env=dict(os.environ, PAGE=str(page), MOD=str(module),
-                 PROTOCOL="file:", BGA_DOM_SHIM=SHIM))
+        env=dict(os.environ, PAGE=str(page), MOD=str(module), PROTOCOL="file:", BGA_DOM_SHIM=SHIM),
+    )
     assert result.returncode == 0, result.stderr[-4000:]
     out = json.loads(result.stdout)
     assert out["error"] is None, out["error"]
@@ -333,8 +342,7 @@ class TestEveryDescribedValueShowsItsAffordance:
 
     def test_it_starts_closed_and_the_marker_round_trips(self, booted):
         for page, out in booted.items():
-            assert out["trip"] == [["false", True], ["true", False],
-                                   ["false", True]], (page, out["trip"])
+            assert out["trip"] == [["false", True], ["true", False], ["false", True]], (page, out["trip"])
 
     def test_hover_is_not_shut_only_no_longer_the_only_door(self, booted):
         for page, out in booted.items():
@@ -362,8 +370,13 @@ class TestAnAriaAttributeIsAnAttribute:
     """
 
     def test_every_aria_the_page_builds_reads_back(self):
-        out = json.loads(subprocess.run(
-            [node, "--input-type=module", "-e", """
+        out = json.loads(
+            subprocess.run(
+                [
+                    node,
+                    "--input-type=module",
+                    "-e",
+                    """
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
 globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
 _installDocument();
@@ -392,21 +405,27 @@ for (const node of [...all(table), ...all(tools)]) {
   }
 }
 console.log(JSON.stringify(aria));
-"""],
-            capture_output=True, text=True, cwd=REPO, timeout=90,
-            env=dict(os.environ, BGA_DOM_SHIM=SHIM)).stdout or "[]")
+""",
+                ],
+                capture_output=True,
+                text=True,
+                cwd=REPO,
+                timeout=90,
+                env=dict(os.environ, BGA_DOM_SHIM=SHIM),
+            ).stdout
+            or "[]"
+        )
         assert out, "the table built no aria attributes at all"
         stray = [entry for entry in out if entry[1].startswith("PROPERTY:")]
         assert not stray, (
-            f"an aria name is a property rather than an attribute, so a "
-            f"browser reflects it nowhere: {stray}")
+            f"an aria name is a property rather than an attribute, so a browser reflects it nowhere: {stray}"
+        )
 
 
 class TestTheDescriptionSurvivesPaperAndTheRoomRule:
     def _rules(self):
         css = re.sub(r"/\*.*?\*/", "", CSS, flags=re.S)
-        return [(" ".join(sel.split()), body)
-                for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", css)]
+        return [(" ".join(sel.split()), body) for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", css)]
 
     def test_nothing_hides_a_description_in_print(self):
         """§2b.3: in print the marker survives and an opened
@@ -419,8 +438,7 @@ class TestTheDescriptionSurvivesPaperAndTheRoomRule:
                 names = " ".join(selector.split())
                 if ".description" not in names and ".describe" not in names:
                     continue
-                assert "display: none" not in body, (
-                    f"print hides a description or its marker: {names}")
+                assert "display: none" not in body, f"print hides a description or its marker: {names}"
 
     def test_no_description_is_revealed_by_hover_alone(self):
         """The defect being replaced, held as a rule: a sentence whose
@@ -429,21 +447,19 @@ class TestTheDescriptionSurvivesPaperAndTheRoomRule:
         for selector, body in self._rules():
             if ":hover" not in selector or ".description" not in selector:
                 continue
-            assert "display" not in body and "visibility" not in body, (
-                f"a description is revealed by hover: {selector}")
+            assert "display" not in body and "visibility" not in body, f"a description is revealed by hover: {selector}"
 
     def test_the_room_rule_is_a_breakpoint_not_a_default(self):
         """§2b.3's "to its right where the row has room, below it where
         it does not". Below is the base - the narrow case is the one a
         default must be safe for - and the inline placement is the
         wide-viewport override."""
-        base = [body for selector, body in self._rules()
-                if selector == ".description"]
+        base = [body for selector, body in self._rules() if selector == ".description"]
         assert base and "display: block" in base[0], base
-        wide = re.search(
-            r"@media \(min-width: 60rem\) \{(.*?)\n\}", CSS, re.S)
+        wide = re.search(r"@media \(min-width: 60rem\) \{(.*?)\n\}", CSS, re.S)
         assert wide and "display: inline" in wide.group(1), (
-            "the sentence never moves beside the value where there is room")
+            "the sentence never moves beside the value where there is room"
+        )
 
 
 @needs_browser
@@ -495,6 +511,7 @@ class TestTheRoomRuleHoldsAtBothViewports:
 # --------------------------------------------------------------------------
 # The browser harness.
 # --------------------------------------------------------------------------
+
 
 @pytest.fixture(scope="module")
 def browser():

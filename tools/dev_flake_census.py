@@ -17,6 +17,7 @@ once, as improbable under independent files at the ledger's own rates
 `--record-run RUN_ID` adds a run id to the runs `per_run` divides by,
 so a run that wrote no row still counts toward N.
 """
+
 import argparse
 import collections
 import json
@@ -42,17 +43,16 @@ def load(path=LEDGER):
 def _raw_counts(document):
     """`{file: row count}`, unadjusted - the rate `per_run`'s tail is
     drawn from."""
-    return collections.Counter(row["file"]
-                               for row in document.get("entries") or [])
+    return collections.Counter(row["file"] for row in document.get("entries") or [])
 
 
 def _run_ids(document):
     """Every run id N counts: `--record-run`'s own list, union each
     entry's - the ledger only ever records a run that wrote a row."""
     entries = document.get("entries") or []
-    return ({str(r) for r in (document.get("runs") or [])}
-           | {row.get("run_id") for row in entries
-              if row.get("run_id") is not None})
+    return {str(r) for r in (document.get("runs") or [])} | {
+        row.get("run_id") for row in entries if row.get("run_id") is not None
+    }
 
 
 #: Bonferroni across N runs - the Decision's own threshold.
@@ -90,9 +90,9 @@ def per_run(document):
     for row in entries:
         by_run[row.get("run_id")].add(row.get("file"))
     threshold = FLAG_ALPHA / n
-    flagged = [(run_id, len(files), tails[len(files)])
-              for run_id, files in by_run.items()
-              if tails[len(files)] < threshold]
+    flagged = [
+        (run_id, len(files), tails[len(files)]) for run_id, files in by_run.items() if tails[len(files)] < threshold
+    ]
     return sorted(flagged, key=lambda row: row[2])
 
 
@@ -101,9 +101,7 @@ def counts(document):
     not, except a row from a run `per_run` flags: that run counts once
     as a run event, not once per file (`UX-950`)."""
     flagged = {run_id for run_id, _k, _tail in per_run(document)}
-    return collections.Counter(row["file"]
-                               for row in document.get("entries") or []
-                               if row.get("run_id") not in flagged)
+    return collections.Counter(row["file"] for row in document.get("entries") or [] if row.get("run_id") not in flagged)
 
 
 #: The header block a task's `**Flake:**` field must fall inside -
@@ -123,7 +121,7 @@ def filed(name, scenarios=SCENARIOS):
         for line in header:
             if not line.startswith("**Flake:**"):
                 continue
-            value = line[len("**Flake:**"):]
+            value = line[len("**Flake:**") :]
             if name in re.split(r"[\s,]+", value.strip()):
                 return True
     return False
@@ -137,9 +135,11 @@ def unaccounted(document, scenarios=SCENARIOS):
     excursion that is not worth a task.
     """
     declared = document.get("declared") or {}
-    found = [(name, n) for name, n in counts(document).items()
-             if n >= EXCURSION_FLOOR and not declared.get(name)
-             and not filed(name, scenarios)]
+    found = [
+        (name, n)
+        for name, n in counts(document).items()
+        if n >= EXCURSION_FLOOR and not declared.get(name) and not filed(name, scenarios)
+    ]
     return sorted(found, key=lambda row: -row[1])
 
 
@@ -158,8 +158,7 @@ def record_run(run_id, path=LEDGER):
     if run_id not in {str(r) for r in runs}:
         runs.append(run_id)
         document["runs"] = runs
-        path.write_text(json.dumps(document, indent=2) + "\n",
-                        encoding="utf-8")
+        path.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
     print(f"{run_id} recorded; {len(_run_ids(document))} run(s) known")
     return 0
 
@@ -171,15 +170,15 @@ def _report(document, top_n):
         print(f"{name}  {n} excursion(s)")
     flagged = per_run(document)
     if flagged:
-        print(f"\n{len(flagged)} run(s) moved several files together, at "
-              f"once (tail < {FLAG_ALPHA}/N):")
+        print(f"\n{len(flagged)} run(s) moved several files together, at once (tail < {FLAG_ALPHA}/N):")
         for run_id, k, tail in flagged:
             print(f"  run {run_id}  {k} file(s)  tail={tail:.4g}")
     missing = unaccounted(document)
     if missing:
-        print(f"\n{len(missing)} file(s) at or past {EXCURSION_FLOOR} "
-              f"excursions with no filed task or declared reason:",
-              file=sys.stderr)
+        print(
+            f"\n{len(missing)} file(s) at or past {EXCURSION_FLOOR} excursions with no filed task or declared reason:",
+            file=sys.stderr,
+        )
         for name, n in missing:
             print(f"  {name}  {n} excursion(s)", file=sys.stderr)
         return 1
@@ -188,11 +187,10 @@ def _report(document, top_n):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--top", type=int, default=3,
-                        help="print the ledger's N most-excursed files")
-    parser.add_argument("--record-run", metavar="RUN_ID",
-                        help="record this run id toward N, the runs "
-                             "per_run divides by (UX-950)")
+    parser.add_argument("--top", type=int, default=3, help="print the ledger's N most-excursed files")
+    parser.add_argument(
+        "--record-run", metavar="RUN_ID", help="record this run id toward N, the runs per_run divides by (UX-950)"
+    )
     args = parser.parse_args(argv)
     if args.record_run is not None:
         return record_run(args.record_run)

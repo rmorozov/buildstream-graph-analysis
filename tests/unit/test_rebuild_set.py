@@ -9,6 +9,7 @@ under-includes does not fail loudly - it silently produces a capture
 with fewer built elements than intended, which is exactly the kind of
 quiet wrongness the rest of this repository's fixtures exist to prevent.
 """
+
 import json
 
 import pytest
@@ -19,10 +20,7 @@ from tools.bst_rebuild_set import build_successors, rebuild_set
 def _graph(uids, edges):
     return {
         "elements": [{"uid": uid} for uid in uids],
-        "dependencies": [
-            {"predecessor": p, "successor": s, "dependency_type": t}
-            for p, s, t in edges
-        ],
+        "dependencies": [{"predecessor": p, "successor": s, "dependency_type": t} for p, s, t in edges],
     }
 
 
@@ -67,9 +65,7 @@ def test_runtime_edges_do_not_propagate_a_rebuild():
     """`UX-52`'s rule applied to a second consumer: a runtime-only
     dependent does not need its dependency staged at build time, so
     deleting the dependency cannot force it to rebuild."""
-    graph = _graph(
-        ["lib.bst", "app.bst"], [("lib.bst", "app.bst", "runtime")]
-    )
+    graph = _graph(["lib.bst", "app.bst"], [("lib.bst", "app.bst", "runtime")])
 
     assert rebuild_set(graph, ["lib.bst"]) == ["lib.bst"]
 

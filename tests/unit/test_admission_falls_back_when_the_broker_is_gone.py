@@ -2,6 +2,7 @@
 Decision's "never deadlock" clause - a grant through the per-element
 FIFO wins when one arrives, and a timeout (no broker, or one that never
 answers) falls back within a bounded time rather than hanging."""
+
 import os
 import time
 

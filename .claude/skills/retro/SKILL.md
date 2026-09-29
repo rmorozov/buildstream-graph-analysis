@@ -29,6 +29,21 @@ which should fall. `--since` defaults to the newest
 `docs/audits/retro-*.md` date, so a week nobody ran it is not silently
 absorbed into the next window.
 
+## Price the guards
+
+```bash
+python3 tools/dev_guard_prices.py --n 10
+```
+
+N = 10 rounds lives here. Joins `tests/ci_reference.json` seconds to the
+`**Guard:**` map and each file's last catch (`--catches <json>`; none is
+recorded yet, so a named file reads "unrecorded" and is never proposed for
+the scheduled lane: no evidence is not quiet).
+Propose in the report: "scheduled lane" for a quiet file, "needs owner"
+for an unnamed one, and confirm an `inferred r149` owner before it
+justifies a move. The retro proposes; the architect shapes; nothing moves
+without a row, and nothing is deleted.
+
 ## Add what the tool cannot read
 
 If `gh` answers, add the failed run count for the window it did not

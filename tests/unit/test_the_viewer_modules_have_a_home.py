@@ -22,6 +22,7 @@ map and the directory agree in both directions.
 The Python side has had this for many rounds; this is the viewer half
 of the same discipline.
 """
+
 import pathlib
 import re
 
@@ -37,8 +38,8 @@ def _map():
     """The module -> owns table, as the architecture writes it."""
     text = ARCHITECTURE.read_text(encoding="utf-8")
     assert HEADING in text, (
-        f"{ARCHITECTURE.name} has no {HEADING!r} section; the map a reader "
-        f"opens `bga/viewer/` with is gone")
+        f"{ARCHITECTURE.name} has no {HEADING!r} section; the map a reader opens `bga/viewer/` with is gone"
+    )
     section = text.split(HEADING, 1)[1].split("\n## ", 1)[0]
     rows = {}
     for line in section.splitlines():
@@ -49,24 +50,24 @@ def _map():
 
 
 def _shipped():
-    return {path.name for path in VIEWER.iterdir()
-            if path.suffix in (".js", ".css")}
+    return {path.name for path in VIEWER.iterdir() if path.suffix in (".js", ".css")}
 
 
 class TestTheMapAndTheDirectoryAgree:
-
     def test_every_module_has_an_entry(self):
         missing = sorted(_shipped() - set(_map()))
         assert missing == [], (
             f"viewer module(s) the architecture's map does not name: "
             f"{missing}. A reader opening `bga/viewer/` has to derive what "
-            f"they own, which is what UX-294 was filed for")
+            f"they own, which is what UX-294 was filed for"
+        )
 
     def test_the_map_names_nothing_that_shipped_out(self):
         extra = sorted(set(_map()) - _shipped())
         assert extra == [], (
             f"the map names module(s) that no longer exist: {extra}. A map "
-            f"pointing at a deleted file is worse than none")
+            f"pointing at a deleted file is worse than none"
+        )
 
     def test_every_entry_says_something(self):
         """A row is a sentence, not a filename repeated.
@@ -74,10 +75,8 @@ class TestTheMapAndTheDirectoryAgree:
         The cheapest way to satisfy the two clauses above is a table of
         names with empty cells, which would pass them and help nobody.
         """
-        thin = {name: owns for name, owns in _map().items()
-                if len(owns) < 25 or owns.strip("`") == name}
-        assert thin == {}, (
-            f"map entr(ies) that do not say what the module owns: {thin}")
+        thin = {name: owns for name, owns in _map().items() if len(owns) < 25 or owns.strip("`") == name}
+        assert thin == {}, f"map entr(ies) that do not say what the module owns: {thin}"
 
     def test_the_html_is_not_in_the_map(self):
         """`index.html` and the satellite pages are the page's *shell*,
@@ -93,8 +92,7 @@ class TestTheMapAndTheDirectoryAgree:
         here so that a module which leaves the map *and* every other
         document at once is caught twice rather than once.
         """
-        hits = [path for path in (REPO / "docs").rglob("*.md")
-                if module in path.read_text(encoding="utf-8")]
+        hits = [path for path in (REPO / "docs").rglob("*.md") if module in path.read_text(encoding="utf-8")]
         assert hits, f"{module} is named in no document under docs/"
 
 

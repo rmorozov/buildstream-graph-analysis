@@ -10,6 +10,7 @@ above it. `readers` now reaches a reader through the picker alone
 label, its `title` the question, and the chosen reader's lead still
 lands in the decision panel.
 """
+
 import pathlib
 import sys
 
@@ -59,8 +60,7 @@ def _questions(label):
 @pytest.fixture(scope="module", params=sorted(pages.FIXTURES))
 def measured(request, tmp_path_factory):
     label = request.param
-    uri = pages.export_uri(pages.FIXTURES[label],
-                           tmp_path_factory.mktemp(f"readers-once-{label}"))
+    uri = pages.export_uri(pages.FIXTURES[label], tmp_path_factory.mktemp(f"readers-once-{label}"))
     with Browser(chrome) as opened:
         return label, opened.measure(uri, _CHECK, 1440, 900)
 
@@ -77,11 +77,8 @@ class TestThePickerCarriesTheQuestion:
     def test_every_option_titles_its_question(self, measured):
         label, out = measured
         questions = _questions(label)
-        assert len(out["options"]) >= 2, (
-            f"{label}: fewer than two readers - the picker should not "
-            f"be offered at all")
-        missing = [o for o in out["options"]
-                  if not o["title"] or o["title"] != questions.get(o["value"])]
+        assert len(out["options"]) >= 2, f"{label}: fewer than two readers - the picker should not be offered at all"
+        missing = [o for o in out["options"] if not o["title"] or o["title"] != questions.get(o["value"])]
         assert missing == [], f"{label}: {missing}"
 
 

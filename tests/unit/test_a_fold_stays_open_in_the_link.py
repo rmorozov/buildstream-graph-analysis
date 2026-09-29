@@ -25,6 +25,7 @@ Both sites are covered separately — `captureView` writes `o=` and
 `applyView` reads it, and a guard that only round-trips through the
 pair cannot say which of the two it proved.
 """
+
 import json
 import pathlib
 import shutil
@@ -52,9 +53,9 @@ DECLARED_FOLD = "evidence"
 
 
 def _node(script, timeout=120):
-    result = subprocess.run([node, "--input-type=module", "-e", script],
-                            capture_output=True, text=True, cwd=str(REPO),
-                            timeout=timeout)
+    result = subprocess.run(
+        [node, "--input-type=module", "-e", script], capture_output=True, text=True, cwd=str(REPO), timeout=timeout
+    )
     assert result.returncode == 0, result.stderr
     return json.loads(result.stdout)
 
@@ -70,9 +71,7 @@ class TestBothConventionsReachTheCapture:
         """Non-vacuity. Every clause below is about a page carrying one
         fold of each convention; if a producer ever set both, or the
         same one, this file would be measuring nothing."""
-        assert folds["identities"] == {
-            PATH_FOLD: ["data-fold-path"],
-            DECLARED_FOLD: ["data-fold"]}, folds
+        assert folds["identities"] == {PATH_FOLD: ["data-fold-path"], DECLARED_FOLD: ["data-fold"]}, folds
 
     def test_a_structured_fold_reaches_the_link(self, folds):
         """The clause the defect fails: `o=` was written without it."""
@@ -82,8 +81,7 @@ class TestBothConventionsReachTheCapture:
         assert folds["captured_declared"] == DECLARED_FOLD, folds
 
     def test_one_capture_carries_both(self, folds):
-        assert sorted(folds["captured_both"].split(",")) == sorted(
-            [DECLARED_FOLD, PATH_FOLD]), folds
+        assert sorted(folds["captured_both"].split(",")) == sorted([DECLARED_FOLD, PATH_FOLD]), folds
 
     def test_a_fold_nobody_opened_is_not_in_the_link(self, folds):
         """`utilisation` and the two `.a` folds are on the same page and
@@ -108,13 +106,10 @@ class TestBothConventionsAreRestored:
     def test_the_round_trip_lands_both_in_a_fresh_render(self, folds):
         """The acceptance test: open, capture, restore into a page built
         from scratch."""
-        assert folds["round_trip"] == {PATH_FOLD: True,
-                                       DECLARED_FOLD: True}, folds
+        assert folds["round_trip"] == {PATH_FOLD: True, DECLARED_FOLD: True}, folds
 
     def test_the_fresh_render_leaves_the_rest_shut(self, folds):
-        assert folds["round_trip_shut"] == ["utilisation",
-                                            "utilisation.buckets.0.a",
-                                            "utilisation.buckets.1.a"], folds
+        assert folds["round_trip_shut"] == ["utilisation", "utilisation.buckets.0.a", "utilisation.buckets.1.a"], folds
 
 
 @pytest.fixture(scope="module")
@@ -128,8 +123,7 @@ def handed_over(tmp_path_factory):
     """
     into = tmp_path_factory.mktemp("u642")
     first = pages.export_uri(pages.FIXTURES["macro_micro"], into, "first.html")
-    second = pages.export_uri(pages.FIXTURES["macro_micro"], into,
-                              "second.html")
+    second = pages.export_uri(pages.FIXTURES["macro_micro"], into, "second.html")
     with Browser(chrome) as opened:
         wrote = opened.measure(first, _OPEN)
         read = opened.measure(second + wrote["hash"], _READ)
@@ -147,8 +141,7 @@ def _open_set(hash_text):
 
 @needs_browser
 class TestTheLinkAReaderHandsOver:
-    def test_the_page_carries_both_populations_and_shares_none(
-            self, handed_over):
+    def test_the_page_carries_both_populations_and_shares_none(self, handed_over):
         """The measurement in the docstring, held: two conventions, and
         neither a subset of the other, so a selector reading one drops
         the other whichever it reads."""

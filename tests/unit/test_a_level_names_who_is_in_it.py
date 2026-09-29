@@ -22,6 +22,7 @@ synthetic run (`bga gen-synthetic --seed 1`):
   fixtures, so the cell is bounded head-and-tail by `UX-319`'s two
   numbers.
 """
+
 import json
 import os
 import pathlib
@@ -48,10 +49,13 @@ needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 
 def _analyze(run):
     done = subprocess.run(
-        [sys.executable, "-m", "bga.cli", "analyze", str(run),
-         "--format", "json"],
-        capture_output=True, text=True, cwd=str(REPO), timeout=300,
-        env={**os.environ, "PYTHONPATH": str(REPO)})
+        [sys.executable, "-m", "bga.cli", "analyze", str(run), "--format", "json"],
+        capture_output=True,
+        text=True,
+        cwd=str(REPO),
+        timeout=300,
+        env={**os.environ, "PYTHONPATH": str(REPO)},
+    )
     assert done.returncode == 0, done.stderr[-2000:]
     return json.loads(done.stdout)
 
@@ -70,8 +74,8 @@ class TestTheKeyIsNotTheRowNumber:
         levels = documents[label]["parallelism"]["levels"]
         assert levels, f"{label}: no levels at all"
         assert levels != list(range(len(levels))), (
-            f"{label}: `parallelism.levels` is `list(range({len(levels)}))` "
-            f"again - the row number, published")
+            f"{label}: `parallelism.levels` is `list(range({len(levels)}))` again - the row number, published"
+        )
 
     def test_every_level_names_its_members(self, documents, label):
         """Not just a width: *which* elements. The width is redundant
@@ -83,23 +87,20 @@ class TestTheKeyIsNotTheRowNumber:
             assert isinstance(row["elements"], list) and row["elements"], row
             assert row["width"] == len(row["elements"]), row
             assert row["elements"] == sorted(row["elements"]), (
-                f"{label}: level {row['level']} is not sorted, so the "
-                f"document is not byte-stable across processes")
+                f"{label}: level {row['level']} is not sorted, so the document is not byte-stable across processes"
+            )
 
     def test_the_levels_are_the_depths_in_order(self, documents, label):
         levels = documents[label]["parallelism"]["levels"]
-        assert [row["level"] for row in levels] == sorted(
-            row["level"] for row in levels)
+        assert [row["level"] for row in levels] == sorted(row["level"] for row in levels)
         assert levels[0]["level"] == 0
 
-    def test_the_widths_agree_with_the_series_beside_them(self, documents,
-                                                          label):
+    def test_the_widths_agree_with_the_series_beside_them(self, documents, label):
         """`width_at_level` is the sparkline's series and stays. Two
         spellings of one number are allowed to coexist only while they
         agree - `UX-535`'s rule is that they must not diverge."""
         block = documents[label]["parallelism"]
-        assert [row["width"] for row in block["levels"]] \
-            == block["width_at_level"]
+        assert [row["width"] for row in block["levels"]] == block["width_at_level"]
 
     def test_the_members_are_every_element_once(self, documents, label):
         """A decomposition partitions. A uid in two levels, or missing
@@ -109,8 +110,8 @@ class TestTheKeyIsNotTheRowNumber:
         assert len(members) == len(set(members)), f"{label}: a uid twice"
         population = set(documents[label]["elements"]["unweighted_depth"])
         assert set(members) == population, (
-            f"{label}: {sorted(set(members) ^ population)[:6]} is in one "
-            f"population and not the other")
+            f"{label}: {sorted(set(members) ^ population)[:6]} is in one population and not the other"
+        )
 
 
 class TestTheMembersComeFromTheGatingGraph:
@@ -137,8 +138,7 @@ class TestTheMembersComeFromTheGatingGraph:
 
         uids = ["a.bst", "b.bst", "c.bst", "d.bst"]
         topology = _build(
-            elements=[_element(u, requested_target=(u == "c.bst"))
-                      for u in uids],
+            elements=[_element(u, requested_target=(u == "c.bst")) for u in uids],
             dependencies=[
                 _dependency("a.bst", "b.bst"),
                 _dependency("b.bst", "c.bst"),
@@ -146,9 +146,9 @@ class TestTheMembersComeFromTheGatingGraph:
                 # The one edge the two graphs disagree about.
                 _dependency("c.bst", "d.bst", dependency_type="runtime"),
             ],
-            spans=[_span(u, at * 10_000, 10_000)
-                   for at, u in enumerate(uids)],
-            wall_end_us=40_000)
+            spans=[_span(u, at * 10_000, 10_000) for at, u in enumerate(uids)],
+            wall_end_us=40_000,
+        )
         run = write_run_dir(tmp_path_factory.mktemp("gating"), topology)
         analyzer = BuildEfficiencyAnalyzer(run)
         return json.loads(format_json(analyzer.analyze(run))), run
@@ -174,8 +174,7 @@ class TestTheMembersComeFromTheGatingGraph:
         def depths(G):
             found = {}
             for node in nx.topological_sort(G):
-                found[node] = max(
-                    (found[p] for p in G.predecessors(node)), default=-1) + 1
+                found[node] = max((found[p] for p in G.predecessors(node)), default=-1) + 1
             return found
 
         assert depths(edg.G)["d.bst"] == 1, depths(edg.G)
@@ -188,12 +187,9 @@ class TestTheMembersComeFromTheGatingGraph:
         document, run = document
         _context, graph, _trace = load_all(pathlib.Path(run))
         analyzer = StructuralAnalyzer(build_edg(graph), {})
-        want = {level: sorted(uids) for level, uids
-                in analyzer._compute_level_decomposition().items()}
-        got = {row["level"]: row["elements"]
-               for row in document["parallelism"]["levels"]}
-        assert got == want, (
-            "the published membership is not `_compute_level_decomposition`'s")
+        want = {level: sorted(uids) for level, uids in analyzer._compute_level_decomposition().items()}
+        got = {row["level"]: row["elements"] for row in document["parallelism"]["levels"]}
+        assert got == want, "the published membership is not `_compute_level_decomposition`'s"
 
     def test_the_members_are_not_the_unweighted_depth_map(self, document):
         """The mutation this clause exists for: sourcing from
@@ -205,11 +201,10 @@ class TestTheMembersComeFromTheGatingGraph:
         for uid, depth in document["elements"]["unweighted_depth"].items():
             by_depth[depth].append(uid)
         wrong = {level: sorted(uids) for level, uids in by_depth.items()}
-        got = {row["level"]: row["elements"]
-               for row in document["parallelism"]["levels"]}
+        got = {row["level"]: row["elements"] for row in document["parallelism"]["levels"]}
         assert got != wrong, (
-            "the members are `elements.unweighted_depth` grouped by depth - "
-            "the full graph, runtime edges and all")
+            "the members are `elements.unweighted_depth` grouped by depth - the full graph, runtime edges and all"
+        )
 
 
 class TestTheSchemaSaysWhatTheKeyHolds:
@@ -223,17 +218,18 @@ class TestTheSchemaSaysWhatTheKeyHolds:
         assert "How many elements" not in levels["description"], levels
         # The sentence belongs to a count, and there is exactly one
         # count under `levels`: the `width` column.
-        carriers = [spec["key"] for spec in levels[COLUMNS]
-                    if "How many elements sit at this level"
-                    in spec.get("description", "")]
+        carriers = [
+            spec["key"]
+            for spec in levels[COLUMNS]
+            if "How many elements sit at this level" in spec.get("description", "")
+        ]
         assert carriers == ["width"], carriers
         assert "How many elements sit at each" in width["description"]
 
     def test_it_declares_the_three_columns(self):
         block = schemas.schema(schemas.ANALYZE)["properties"]["parallelism"]
         columns = block["properties"]["levels"][COLUMNS]
-        assert [spec["key"] for spec in columns] \
-            == ["level", "width", "elements"], columns
+        assert [spec["key"] for spec in columns] == ["level", "width", "elements"], columns
         for spec in columns:
             assert spec.get("description"), spec
 
@@ -289,11 +285,14 @@ console.log(JSON.stringify(cells.map((cell) => {
 
 def _cells(rows, hint=None):
     script = _CELL_PROBE % (json.dumps(rows), json.dumps(hint or {}))
-    done = subprocess.run([node, "--input-type=module", "-e", script],
-                          capture_output=True, text=True, cwd=str(REPO),
-                          timeout=120,
-                          env={**os.environ, "BGA_DOM_SHIM":
-                               (REPO / "tests/dom_shim.mjs").as_uri()})
+    done = subprocess.run(
+        [node, "--input-type=module", "-e", script],
+        capture_output=True,
+        text=True,
+        cwd=str(REPO),
+        timeout=120,
+        env={**os.environ, "BGA_DOM_SHIM": (REPO / "tests/dom_shim.mjs").as_uri()},
+    )
     assert done.returncode == 0, done.stderr[-2000:]
     return json.loads(done.stdout)
 
@@ -312,16 +311,14 @@ class TestTheCellIsBounded:
     HEAD, TAIL = 6, 3
 
     def _members(self, n, at=1):
-        return [{"level": at, "width": n,
-                 "elements": [f"layer{at:02d}/mod{i:03d}.bst"
-                              for i in range(n)]}]
+        return [{"level": at, "width": n, "elements": [f"layer{at:02d}/mod{i:03d}.bst" for i in range(n)]}]
 
     def test_a_hundred_and_two_members_show_head_and_tail(self):
         [cell] = _cells(self._members(102))
         assert cell["published"] == 102
         assert cell["shown"] == self.HEAD + self.TAIL, (
-            f"the cell holds {cell['shown']} of 102 uids, against a bound "
-            f"of {self.HEAD} + {self.TAIL}")
+            f"the cell holds {cell['shown']} of 102 uids, against a bound of {self.HEAD} + {self.TAIL}"
+        )
 
     def test_the_cell_does_not_build_a_table_for_them(self):
         """The DOM cost is what made this a defect rather than a taste:

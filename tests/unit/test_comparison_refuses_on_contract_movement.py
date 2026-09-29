@@ -17,6 +17,7 @@ changed; two runs one patch apart refuse if something did. No contract
 has moved yet, so every case below is fabricated — which is the point
 of building this before the first bump rather than after.
 """
+
 import json
 import pathlib
 import subprocess
@@ -29,8 +30,7 @@ EXIT_MISMATCHED = 6
 
 
 def _stamp(version, contracts):
-    return {"producer": {"tool": "bga", "version": version,
-                         "contracts": list(contracts)}}
+    return {"producer": {"tool": "bga", "version": version, "contracts": list(contracts)}}
 
 
 BASE = ["analyze/v2", "compare/v1", "host/v1", "store/v1", "whatif/v1"]
@@ -42,16 +42,15 @@ class TestThePolicyIsAboutContractsNotVersions:
         every contract identical is not a reason to refuse."""
         from bga import producer
 
-        assert producer.comparison_movement(
-            _stamp("0.1.0", BASE), _stamp("0.9.0", BASE)) == []
+        assert producer.comparison_movement(_stamp("0.1.0", BASE), _stamp("0.9.0", BASE)) == []
 
     def test_one_patch_apart_with_a_moved_contract_refuses(self):
         from bga import producer
 
         moved = ["analyze/v3"] + BASE[1:]
-        assert producer.comparison_movement(
-            _stamp("0.2.0", BASE), _stamp("0.2.1", moved)) == [
-                "analyze/v2 → analyze/v3"]
+        assert producer.comparison_movement(_stamp("0.2.0", BASE), _stamp("0.2.1", moved)) == [
+            "analyze/v2 → analyze/v3"
+        ]
 
     def test_a_contract_a_comparison_never_reads_does_not_refuse(self):
         """`whatif/v1` moving does not make two durations incomparable.
@@ -59,8 +58,7 @@ class TestThePolicyIsAboutContractsNotVersions:
         from bga import producer
 
         elsewhere = BASE[:-1] + ["whatif/v2"]
-        assert producer.comparison_movement(
-            _stamp("0.2.0", BASE), _stamp("0.3.0", elsewhere)) == []
+        assert producer.comparison_movement(_stamp("0.2.0", BASE), _stamp("0.3.0", elsewhere)) == []
 
     def test_the_read_set_is_named_rather_than_everything(self):
         from bga import producer
@@ -74,9 +72,10 @@ class TestThePolicyIsAboutContractsNotVersions:
         from bga import producer
 
         moved = ["analyze/v3", "compare/v3", "host/v1", "store/v1", "whatif/v1"]
-        assert producer.comparison_movement(
-            _stamp("0.2.0", BASE), _stamp("1.0.0", moved)) == [
-                "analyze/v2 → analyze/v3", "compare/v1 → compare/v3"]
+        assert producer.comparison_movement(_stamp("0.2.0", BASE), _stamp("1.0.0", moved)) == [
+            "analyze/v2 → analyze/v3",
+            "compare/v1 → compare/v3",
+        ]
 
 
 class TestAMissingStampIsNamedNotRefused:
@@ -102,14 +101,12 @@ class TestAMissingStampIsNamedNotRefused:
         """A line every comparison carries is a line nobody reads."""
         from bga import producer
 
-        assert producer.comparison_note(
-            _stamp("0.2.0", BASE), _stamp("0.2.0", BASE)) is None
+        assert producer.comparison_note(_stamp("0.2.0", BASE), _stamp("0.2.0", BASE)) is None
 
     def test_a_version_gap_with_no_movement_says_so(self):
         from bga import producer
 
-        note = producer.comparison_note(
-            _stamp("0.1.0", BASE), _stamp("0.9.0", BASE))
+        note = producer.comparison_note(_stamp("0.1.0", BASE), _stamp("0.9.0", BASE))
         assert note and "0.1.0" in note and "0.9.0" in note
         assert "no contract a comparison reads moved" in note
 
@@ -124,18 +121,33 @@ class TestTheRefusalReachesTheCommandLine:
         for name in ("baseline", "candidate"):
             target = tmp_path / name
             out = subprocess.run(
-                [sys.executable, "-m", "tools.gen_synthetic_scale_run",
-                 str(target), "--seed", "1", "--layers", "2", "--width", "3"],
-                capture_output=True, text=True, cwd=REPO)
+                [
+                    sys.executable,
+                    "-m",
+                    "tools.gen_synthetic_scale_run",
+                    str(target),
+                    "--seed",
+                    "1",
+                    "--layers",
+                    "2",
+                    "--width",
+                    "3",
+                ],
+                capture_output=True,
+                text=True,
+                cwd=REPO,
+            )
             assert out.returncode == 0, out.stderr
             runs.append(target)
         return runs
 
     def _compare(self, baseline, candidate, *extra):
         return subprocess.run(
-            [sys.executable, "-m", "bga.cli", "compare",
-             str(baseline), str(candidate), *extra],
-            capture_output=True, text=True, cwd=REPO)
+            [sys.executable, "-m", "bga.cli", "compare", str(baseline), str(candidate), *extra],
+            capture_output=True,
+            text=True,
+            cwd=REPO,
+        )
 
     def test_matching_producers_compare(self, pair):
         assert self._compare(*pair).returncode == 0
@@ -149,7 +161,8 @@ class TestTheRefusalReachesTheCommandLine:
             # `UX-641` made `analyze/v6` the id both runs carry, so
             # the movement this drives has to be to one nothing writes.
             name.replace("analyze/v6", "analyze/v7")
-            for name in data["producer"]["contracts"]]
+            for name in data["producer"]["contracts"]
+        ]
         context.write_text(json.dumps(data, indent=1))
 
         out = self._compare(baseline, candidate)
@@ -158,7 +171,8 @@ class TestTheRefusalReachesTheCommandLine:
         # goes: a caller piping stdout to a JSON parser gets an empty
         # document and a non-zero exit, not a half-parsed report.
         assert "analyze/v6 → analyze/v7" in out.stderr, (
-            f"the refusal does not name the contract that moved: {out.stderr}")
+            f"the refusal does not name the contract that moved: {out.stderr}"
+        )
         assert "producer_contracts" in out.stderr
 
     def test_allow_mismatch_still_opts_back_in(self, pair):
@@ -171,7 +185,8 @@ class TestTheRefusalReachesTheCommandLine:
             # `UX-641` made `analyze/v6` the id both runs carry, so
             # the movement this drives has to be to one nothing writes.
             name.replace("analyze/v6", "analyze/v7")
-            for name in data["producer"]["contracts"]]
+            for name in data["producer"]["contracts"]
+        ]
         context.write_text(json.dumps(data, indent=1))
 
         out = self._compare(baseline, candidate, "--allow-mismatch")

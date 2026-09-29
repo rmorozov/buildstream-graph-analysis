@@ -54,6 +54,7 @@ counter's peak is a number worth checking. A capture with a real spine
 is gitignored (`UX-189`) and needs `bst`; this needs neither and fails
 for the same reason.
 """
+
 import gzip
 import pathlib
 import shutil
@@ -109,9 +110,7 @@ def _snapshot(into):
     snapshot = pathlib.Path(into) / "20260821T120000Z"
     snapshot.mkdir(parents=True, exist_ok=True)
     (snapshot / "build.log").write_text(_WRAPPED_LOG, encoding="utf-8")
-    shutil.copytree(GOLDEN, snapshot / "run",
-                    ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
-                    dirs_exist_ok=True)
+    shutil.copytree(GOLDEN, snapshot / "run", ignore=shutil.ignore_patterns("__pycache__", "*.pyc"), dirs_exist_ok=True)
     (snapshot / "run" / "expected_output.json").unlink(missing_ok=True)
     with gzip.open(snapshot / "plane2.log.gz", "wt", encoding="utf-8") as out:
         out.write(_RAW)
@@ -168,8 +167,7 @@ def _decode(path):
         args = {names.get(iid): value for iid, value in annotations}
         if "src" in args:
             sources.append(args["src"])
-    return {"plane2_slices": len(sources), "sources": sources,
-            "counter_peak": max(counters) if counters else None}
+    return {"plane2_slices": len(sources), "sources": sources, "counter_peak": max(counters) if counters else None}
 
 
 @pytest.fixture(scope="module")
@@ -188,11 +186,13 @@ class TestTheFixtureIsTheCase:
         records = list(stream_records(stream_trace_events(_RAW.splitlines())))
         assert len(records) == RAW_RECORDS, (
             "the fixture stopped describing a capture where a process is "
-            "seen twice, so nothing below is testing this item")
+            "seen twice, so nothing below is testing this item"
+        )
         assert len(merge_record_streams(records)) == PROCESSES, (
             "`merge_record_streams` is UX-107's join and the definition of "
             "'one process'; if it disagrees with the fixture the fixture is "
-            "wrong")
+            "wrong"
+        )
 
 
 class TestOneProcessIsOneSlice:
@@ -202,7 +202,8 @@ class TestOneProcessIsOneSlice:
             f"{seen['plane2_slices']} Plane 2 slices for {PROCESSES} "
             f"processes. With both mechanisms recording, the timeline used "
             f"to emit both records - 813 hook slices beside 813 spine ones "
-            f"on examples/06 - and four canned queries then answered ~2x")
+            f"on examples/06 - and four canned queries then answered ~2x"
+        )
 
     def test_no_process_is_emitted_once_per_mechanism(self, rendered):
         """The shape of the defect, not only its count.
@@ -214,7 +215,8 @@ class TestOneProcessIsOneSlice:
         assert sources.count("hook") == 0, (
             f"a hook-sourced slice survived the join: {sources}. The spine "
             f"is the base and the hook is enrichment (UX-107), so a joined "
-            f"record carries src=spine")
+            f"record carries src=spine"
+        )
         assert len(sources) == len(set(range(len(sources)))), sources
 
     def test_the_counter_peak_is_the_reports_max_concurrency(self, rendered):
@@ -232,7 +234,8 @@ class TestOneProcessIsOneSlice:
             f"the concurrency counter peaks at "
             f"{rendered['trace']['counter_peak']}; the run has "
             f"{PEAK_CONCURRENCY} processes alive at once. On examples/06 "
-            f"this read 44 against a published max_concurrency of 24")
+            f"this read 44 against a published max_concurrency of 24"
+        )
 
 
 class TestTheStreamingPassesAreUnaffected:
@@ -250,9 +253,8 @@ class TestTheStreamingPassesAreUnaffected:
         merged = merge_record_streams(records)
 
         def longest(rows):
-            return max(row["end_ts"] - row["start_ts"] for row in rows
-                       if row.get("end_ts") is not None)
+            return max(row["end_ts"] - row["start_ts"] for row in rows if row.get("end_ts") is not None)
 
         assert longest(records) == longest(merged), (
-            "the streaming passes take a max per element and would need "
-            "the join too if a duplicate could change one")
+            "the streaming passes take a max per element and would need the join too if a duplicate could change one"
+        )

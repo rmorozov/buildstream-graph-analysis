@@ -14,6 +14,7 @@ definition, so that denominator was wrong the moment untracked_us could
 ever be nonzero. Both are fixed together here since the first fix is what
 makes the second one's bug reachable at all.
 """
+
 import json
 
 from bga import BuildEfficiencyAnalyzer
@@ -25,12 +26,20 @@ def _write_run_dir(tmp_path, wall_start_us, wall_end_us, ts_us, dur_us, name="ru
     run_context = {
         "trace_epsilon_us": 1000,
         "wall_clock": {"start_us": wall_start_us, "end_us": wall_end_us},
-        "max_jobs": 1, "resource_capacities": {"PROCESS": 1},
+        "max_jobs": 1,
+        "resource_capacities": {"PROCESS": 1},
     }
     graph = {"elements": [{"uid": "a.bst", "requested_target": True}], "dependencies": []}
     trace = {
-        "spans": [{"task_key": "a.bst|BUILD|BUILD|0", "ts_us": ts_us, "dur_us": dur_us,
-                   "resources": ["PROCESS"], "primary_resource": "PROCESS"}],
+        "spans": [
+            {
+                "task_key": "a.bst|BUILD|BUILD|0",
+                "ts_us": ts_us,
+                "dur_us": dur_us,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            }
+        ],
         "phases": [],
     }
     (run_dir / "run-context.json").write_text(json.dumps(run_context))
@@ -67,12 +76,21 @@ def test_missing_wall_clock_bounds_falls_back_to_zero(tmp_path):
     run_dir = tmp_path / "run"
     run_dir.mkdir()
     run_context = {
-        "trace_epsilon_us": 1000, "max_jobs": 1, "resource_capacities": {"PROCESS": 1},
+        "trace_epsilon_us": 1000,
+        "max_jobs": 1,
+        "resource_capacities": {"PROCESS": 1},
     }
     graph = {"elements": [{"uid": "a.bst", "requested_target": True}], "dependencies": []}
     trace = {
-        "spans": [{"task_key": "a.bst|BUILD|BUILD|0", "ts_us": 20000, "dur_us": 50000,
-                   "resources": ["PROCESS"], "primary_resource": "PROCESS"}],
+        "spans": [
+            {
+                "task_key": "a.bst|BUILD|BUILD|0",
+                "ts_us": 20000,
+                "dur_us": 50000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            }
+        ],
         "phases": [],
     }
     (run_dir / "run-context.json").write_text(json.dumps(run_context))
@@ -91,15 +109,17 @@ def test_full_wall_clock_identity_holds_exactly(tmp_path):
     UNTRACKED_TAIL == wall_clock, exactly, once real gaps exist."""
     result = _analyze(tmp_path, wall_start_us=0, wall_end_us=100000, ts_us=20000, dur_us=50000)
     task_horizon_sum = sum(
-        result.attribution.get(k, 0) for k in (
-            "execution_on_chain_us", "dependency_wait_us", "resource_wait_us",
-            "scheduler_wait_us", "idle_us", "retry_wait_us",
+        result.attribution.get(k, 0)
+        for k in (
+            "execution_on_chain_us",
+            "dependency_wait_us",
+            "resource_wait_us",
+            "scheduler_wait_us",
+            "idle_us",
+            "retry_wait_us",
         )
     )
-    total = (
-        result.attribution["untracked_head_us"] + task_horizon_sum
-        + result.attribution["untracked_tail_us"]
-    )
+    total = result.attribution["untracked_head_us"] + task_horizon_sum + result.attribution["untracked_tail_us"]
     assert total == 100000
 
 

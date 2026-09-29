@@ -46,6 +46,7 @@ the measurement instead of re-deriving it - and so that if the capture
 ever stops leaving open records, this goes red and says the question
 is worth reopening.
 """
+
 import gzip
 import pathlib
 import sys
@@ -57,24 +58,19 @@ sys.path.insert(0, str(REPO))
 
 from tools import bst_native_build_tracer as tracer
 
-CAPTURE = REPO / ("examples/06-macro-micro-optimization/.bga/runs/"
-                  "20260821T170127Z/plane2.log.gz")
+CAPTURE = REPO / ("examples/06-macro-micro-optimization/.bga/runs/20260821T170127Z/plane2.log.gz")
 
-needs_capture = pytest.mark.skipif(
-    not CAPTURE.exists(),
-    reason="the example capture is not in this clone (UX-189)")
+needs_capture = pytest.mark.skipif(not CAPTURE.exists(), reason="the example capture is not in this clone (UX-189)")
 
 
 def _records():
     with gzip.open(CAPTURE, "rt", errors="replace") as handle:
-        return list(tracer.stream_records(
-            tracer.stream_trace_events(handle)))
+        return list(tracer.stream_records(tracer.stream_trace_events(handle)))
 
 
 def _displacement(records):
     """How far each record is yielded from where start order puts it."""
-    order = sorted(range(len(records)),
-                   key=lambda i: records[i]["start_ts"])
+    order = sorted(range(len(records)), key=lambda i: records[i]["start_ts"])
     sorted_at = {yielded: i for i, yielded in enumerate(order)}
     return [yielded - sorted_at[yielded] for yielded in range(len(records))]
 
@@ -96,15 +92,15 @@ def _synthesise(processes, concurrency, long_lived=0):
         events.append(("START", processes + extra, 0.01 * extra))
         events.append(("END", processes + extra, span + 0.01 * extra))
     events.sort(key=lambda event: event[2])
-    return [f"{kind} pid={2000 + pid} ppid=1 ts={when:.6f} element=e.bst "
-            f"inv=a cmd=cc" + (" utime_us=10 stime_us=5" if kind == "END"
-                               else "")
-            for kind, pid, when in events]
+    return [
+        f"{kind} pid={2000 + pid} ppid=1 ts={when:.6f} element=e.bst "
+        f"inv=a cmd=cc" + (" utime_us=10 stime_us=5" if kind == "END" else "")
+        for kind, pid, when in events
+    ]
 
 
 def _window(lines):
-    records = list(tracer.stream_records(
-        tracer.stream_trace_events(iter(lines))))
+    records = list(tracer.stream_records(tracer.stream_trace_events(iter(lines))))
     return len(records), max(_displacement(records), default=0)
 
 
@@ -118,32 +114,29 @@ class TestTheWindowIsBoundedUntilAProcessOutlivesTheCapture:
         assert window < 40, (
             f"{processes} processes at concurrency 8 needed a window of "
             f"{window}; with every process paired the window is a property "
-            "of concurrency and should not follow the build's length")
+            "of concurrency and should not follow the build's length"
+        )
 
-    @pytest.mark.parametrize("concurrency,ceiling",
-                             ((1, 3), (8, 40), (32, 120)))
+    @pytest.mark.parametrize("concurrency,ceiling", ((1, 3), (8, 40), (32, 120)))
     def test_it_grows_with_concurrency(self, concurrency, ceiling):
         _, window = _window(_synthesise(2000, concurrency=concurrency))
-        assert window <= ceiling, (
-            f"concurrency {concurrency} needed a window of {window}, over "
-            f"the stated {ceiling}")
+        assert window <= ceiling, f"concurrency {concurrency} needed a window of {window}, over the stated {ceiling}"
 
     def test_one_process_that_outlives_the_others_takes_the_whole_list(self):
         """The case the filing named, built rather than argued."""
         _, without = _window(_synthesise(2000, concurrency=8))
-        total, with_one = _window(_synthesise(2000, concurrency=8,
-                                              long_lived=1))
+        total, with_one = _window(_synthesise(2000, concurrency=8, long_lived=1))
         assert without < 40, without
         assert with_one > total * 0.9, (
             f"one long-lived process moved the window only to {with_one} "
             f"of {total}; the filing's premise was that it takes "
             "essentially the whole list, and this clause exists to hold "
-            "that premise to a number")
+            "that premise to a number"
+        )
 
 
 @needs_capture
 class TestTheRealCaptureDefeatsItWithItsFirstProcess:
-
     def test_every_element_leaves_a_record_that_never_closed(self):
         records = _records()
         elements = {r["element"] for r in records}
@@ -152,7 +145,8 @@ class TestTheRealCaptureDefeatsItWithItsFirstProcess:
             "some element closed every one of its processes: "
             f"{sorted(elements - with_open)}. If BuildStream stopped "
             "tearing the sandbox down around the element's shell, the "
-            "windowing question in UX-313 is worth reopening.")
+            "windowing question in UX-313 is worth reopening."
+        )
 
     def test_the_earliest_unclosed_record_is_the_start_of_the_build(self):
         """The whole argument, in one number.
@@ -162,17 +156,16 @@ class TestTheRealCaptureDefeatsItWithItsFirstProcess:
         the build's first process, so the buffer is the record list.
         """
         records = _records()
-        order = sorted(range(len(records)),
-                       key=lambda i: records[i]["start_ts"])
-        open_positions = [i for i, yielded in enumerate(order)
-                          if records[yielded].get("open")]
+        order = sorted(range(len(records)), key=lambda i: records[i]["start_ts"])
+        open_positions = [i for i, yielded in enumerate(order) if records[yielded].get("open")]
         assert open_positions, "no open record in the capture at all"
         must_hold = len(records) - min(open_positions)
         assert must_hold == len(records), (
             f"a buffer would have to hold {must_hold:,} of "
             f"{len(records):,} records. It was the whole list when UX-313 "
             "measured it, which is what closed the item; a smaller number "
-            "means the premise moved.")
+            "means the premise moved."
+        )
 
     def test_the_paired_records_alone_would_have_been_windowable(self):
         """Why this is a finding and not a shrug: the bound was real."""
@@ -182,4 +175,5 @@ class TestTheRealCaptureDefeatsItWithItsFirstProcess:
         assert max(paired) < len(records) / 4, (
             f"paired records alone needed {max(paired)} of {len(records)}. "
             "UX-313 measured 83, which is what made the open records the "
-            "whole of the problem rather than one contributor among many.")
+            "whole of the problem rather than one contributor among many."
+        )

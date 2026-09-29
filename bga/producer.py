@@ -32,6 +32,7 @@ independent contracts, so comparing versions would refuse across
 upgrades that moved nothing. What a reader compares is the contract
 set; the version is how a human finds the build that wrote it.
 """
+
 import contextlib
 from typing import Optional
 
@@ -121,15 +122,14 @@ def describe(artifact: Optional[dict]) -> str:
 # durations incomparable. Named rather than "every contract", because
 # refusing on everything is how a refusal that fires constantly gets
 # switched off, and a switched-off refusal is worth less than none.
-COMPARISON_CONTRACTS = ("analyze/v2", "compare/v1", "host/v1")   # UX-288
+COMPARISON_CONTRACTS = ("analyze/v2", "compare/v1", "host/v1")  # UX-288
 
 
 def _by_name(names):
     return {name.rsplit("/v", 1)[0]: name for name in names if "/v" in name}
 
 
-def comparison_movement(baseline: Optional[dict],
-                        candidate: Optional[dict]) -> list[str]:
+def comparison_movement(baseline: Optional[dict], candidate: Optional[dict]) -> list[str]:
     """Contracts a comparison reads that moved between two producers.
 
     Empty when the two agree, when either is unstamped, or when the
@@ -146,14 +146,10 @@ def comparison_movement(baseline: Optional[dict],
         return []
     old, new = _by_name(before), _by_name(after)
     relevant = {name.rsplit("/v", 1)[0] for name in COMPARISON_CONTRACTS}
-    return sorted(
-        f"{old[name]} → {new[name]}"
-        for name in relevant & set(old) & set(new)
-        if old[name] != new[name])
+    return sorted(f"{old[name]} → {new[name]}" for name in relevant & set(old) & set(new) if old[name] != new[name])
 
 
-def comparison_note(baseline: Optional[dict],
-                    candidate: Optional[dict]) -> Optional[str]:
+def comparison_note(baseline: Optional[dict], candidate: Optional[dict]) -> Optional[str]:
     """The sentence for a pair whose producers differ but still compare.
 
     `None` when both are stamped by the same version - the common case,
@@ -163,12 +159,14 @@ def comparison_note(baseline: Optional[dict],
     if before == after and before != UNSTAMPED:
         return None
     if before == UNSTAMPED and after == UNSTAMPED:
-        return ("neither run records which `bga` measured it (both predate "
-                "the producer stamp), so whether one tool measured both "
-                "cannot be checked")
+        return (
+            "neither run records which `bga` measured it (both predate "
+            "the producer stamp), so whether one tool measured both "
+            "cannot be checked"
+        )
     if UNSTAMPED in (before, after):
         which = "baseline" if before == UNSTAMPED else "candidate"
-        return (f"the {which} does not record which `bga` measured it, so "
-                f"whether one tool measured both cannot be checked")
-    return (f"measured by different builds ({before} and {after}); no "
-            f"contract a comparison reads moved between them")
+        return (
+            f"the {which} does not record which `bga` measured it, so whether one tool measured both cannot be checked"
+        )
+    return f"measured by different builds ({before} and {after}); no contract a comparison reads moved between them"

@@ -24,6 +24,7 @@ one, and `tools/dev_refresh_analysis.py` is where the rule that makes
 either reproducible now lives - once, rather than in a docstring, a
 test helper and a skill.
 """
+
 import pathlib
 import sys
 
@@ -35,8 +36,7 @@ sys.path.insert(0, str(REPO))
 from tools import dev_refresh_analysis as refresh
 
 
-@pytest.mark.parametrize(
-    "fixture", refresh.FIXTURES, ids=lambda f: f.name.split("/")[-1])
+@pytest.mark.parametrize("fixture", refresh.FIXTURES, ids=lambda f: f.name.split("/")[-1])
 def test_the_committed_document_is_the_one_the_analyzer_emits(fixture):
     found = refresh.differences(fixture)
     assert found == [], (
@@ -45,7 +45,8 @@ def test_the_committed_document_is_the_one_the_analyzer_emits(fixture):
         + f"\n\nRefresh it with:\n"
         f"    python3 tools/dev_refresh_analysis.py --write {fixture.name}\n"
         f"and read `git diff` to confirm the change you intended is the "
-        f"only one.")
+        f"only one."
+    )
 
 
 class TestTheRuleIsOneRuleAndItIsStated:
@@ -59,8 +60,8 @@ class TestTheRuleIsOneRuleAndItIsStated:
             held = fixture.committed()
             for key in refresh.MACHINE_KEYS:
                 assert key not in held, (
-                    f"{fixture.name} carries `{key}`, which names the "
-                    f"machine or the build rather than the analysis")
+                    f"{fixture.name} carries `{key}`, which names the machine or the build rather than the analysis"
+                )
 
     def test_no_committed_document_carries_an_absolute_path(self):
         """`UX-218`'s next-step commands name the run directory,
@@ -70,24 +71,25 @@ class TestTheRuleIsOneRuleAndItIsStated:
         for fixture in refresh.FIXTURES:
             text = fixture.into.read_text(encoding="utf-8")
             assert str(REPO) not in text, (
-                f"{fixture.name} carries this machine's checkout path, so "
-                f"it can only match on this machine")
+                f"{fixture.name} carries this machine's checkout path, so it can only match on this machine"
+            )
             assert fixture.token in text, (
                 f"{fixture.name} carries neither the path nor the "
                 f"{fixture.token} token, so the rewrite is not being "
-                f"applied and the commands name nothing")
+                f"applied and the commands name nothing"
+            )
 
     def test_the_rule_is_written_where_a_regenerating_reader_looks(self):
         """The recipe was in a docstring, a test helper and a skill, and
         the fixture with no recipe is the one that drifted. It is a
         command now, and the command says what it drops and why."""
-        text = (REPO / "tools/dev_refresh_analysis.py").read_text(
-            encoding="utf-8")
+        text = (REPO / "tools/dev_refresh_analysis.py").read_text(encoding="utf-8")
         for key in refresh.MACHINE_KEYS:
             assert key in text, key
         assert "--write" in text and "git diff" in text, (
             "the tool does not tell a reader to check the diff it wrote, "
-            "which is the step that turns a refresh into a decision")
+            "which is the step that turns a refresh into a decision"
+        )
 
 
 class TestTheDifferenceIsLegibleBeforeItIsFixed:
@@ -106,8 +108,7 @@ class TestTheDifferenceIsLegibleBeforeItIsFixed:
             @staticmethod
             def committed():
                 held = dict(real)
-                held["findings"] = [f for f in real["findings"]
-                                    if f["id"] != "graph-width"]
+                held["findings"] = [f for f in real["findings"] if f["id"] != "graph-width"]
                 return held
 
         found = dict(refresh.differences(Trimmed))

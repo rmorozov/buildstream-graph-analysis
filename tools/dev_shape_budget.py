@@ -18,6 +18,7 @@ held to "never rises" against `tests/shape_ledger.json` - adopted by
 a real run (`--adopt`), the shape `dev_sizes.py --adopt` holds its own
 floor in, not typed into this file.
 """
+
 import argparse
 import functools
 import json
@@ -38,9 +39,7 @@ TOLERANCE_PCT = 1.0
 # `tests.browser`'s own docstring: a real browser over CDP, node's
 # built-in client - the harness this class is named for booting.
 _BST = re.compile(r"pytest\.mark\.bst\b")
-_BROWSER = re.compile(
-    r"^\s*(import (?:tests\.)?browser\b|from (?:tests\.)?browser import)",
-    re.M)
+_BROWSER = re.compile(r"^\s*(import (?:tests\.)?browser\b|from (?:tests\.)?browser import)", re.M)
 _JOURNEY = re.compile(r"journey", re.I)
 # UX-400's own file opens its docstring naming itself; nothing else
 # does, so this is precise rather than a keyword sweep of "population".
@@ -66,15 +65,12 @@ def load_ledger():
 
 
 def write_ledger(share):
-    LEDGER.write_text(
-        json.dumps({"browser_share_pct": round(share, 1)}, indent=2) + "\n",
-        encoding="utf-8")
+    LEDGER.write_text(json.dumps({"browser_share_pct": round(share, 1)}, indent=2) + "\n", encoding="utf-8")
 
 
 def test_files():
     """Every collected test file, repo-relative - the `ls` population."""
-    return sorted(str(p.relative_to(REPO)) for p in TESTS.rglob("test_*.py")
-                  if "__pycache__" not in p.parts)
+    return sorted(str(p.relative_to(REPO)) for p in TESTS.rglob("test_*.py") if "__pycache__" not in p.parts)
 
 
 @functools.cache
@@ -117,14 +113,14 @@ def ci_seconds():
     except (OSError, ValueError, KeyError) as exc:
         raise RuntimeError(
             f"{CI_REFERENCE.relative_to(REPO)} is missing or unreadable "
-            f"({exc}) - run `tools/dev_records.py fetch` (UX-997)") from exc
+            f"({exc}) - run `tools/dev_records.py fetch` (UX-997)"
+        ) from exc
 
 
 def seconds_by_class(classes=None, ci=None):
     classes = shapes() if classes is None else classes
     ci = ci_seconds() if ci is None else ci
-    return {c: sum(ci.get(f, 0.0) for f in files)
-            for c, files in classes.items()}
+    return {c: sum(ci.get(f, 0.0) for f in files) for c, files in classes.items()}
 
 
 def browser_share_pct(classes=None, ci=None):
@@ -149,10 +145,12 @@ def ledger_problems(classes=None, ci=None):
     except RuntimeError as exc:
         return [str(exc)]
     if measured > held + TOLERANCE_PCT:
-        return [f"browser share {measured:.1f}% moved past the ledger's "
-                f"{held:.1f}% (+{TOLERANCE_PCT:.0f} point tolerance) - "
-                f"`--adopt` if this is a deliberate move, a filing "
-                "otherwise"]
+        return [
+            f"browser share {measured:.1f}% moved past the ledger's "
+            f"{held:.1f}% (+{TOLERANCE_PCT:.0f} point tolerance) - "
+            f"`--adopt` if this is a deliberate move, a filing "
+            "otherwise"
+        ]
     return []
 
 
@@ -161,6 +159,7 @@ def published_contract_count():
     already calls `_published_schemas()`."""
     sys.path.insert(0, str(REPO))
     from bga import contracts
+
     return len(contracts.ids())
 
 
@@ -176,8 +175,7 @@ def table():
     lines = ["shape         files   CI seconds    share"]
     for c in CLASSES:
         share = secs[c] / total * 100 if total else 0.0
-        lines.append(f"{c:<13} {len(classes[c]):5d}   {secs[c]:9.1f}s   "
-                      f"{share:5.1f}%")
+        lines.append(f"{c:<13} {len(classes[c]):5d}   {secs[c]:9.1f}s   {share:5.1f}%")
     lines.append(f"{'total':<13} {len(files):5d}   {total:9.1f}s")
     journeys = len(classes["journey"])
     published = published_contract_count()
@@ -185,19 +183,19 @@ def table():
     lines.append(
         f"browser budget: {browser_share_pct(classes, ci):.1f}% measured, "
         f"{BROWSER_BUDGET_PCT:.0f}% the Required Fix states, "
-        + (f"{held:.1f}% the ledger holds" if held is not None
-           else "no ledger - run --adopt"))
+        + (f"{held:.1f}% the ledger holds" if held is not None else "no ledger - run --adopt")
+    )
     lines.append(
         f"journey budget: {journeys} file(s) measured, "
         f"{published} published contract(s) (`bga.contracts.ids()`) - "
-        "not held; UX-690's Outcome names the gap")
+        "not held; UX-690's Outcome names the gap"
+    )
     return "\n".join(lines)
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
-    parser.add_argument("--adopt", action="store_true",
-                        help="write the measured browser share to the ledger")
+    parser.add_argument("--adopt", action="store_true", help="write the measured browser share to the ledger")
     args = parser.parse_args(argv)
     if args.adopt:
         share = browser_share_pct()

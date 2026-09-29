@@ -33,6 +33,7 @@ follow-on, the same posture `UX-100` takes to its own size axis. On captures tak
 remotes ignored (which is every published freedesktop-sdk capture, by design) there is no
 transfer at all, and the trend says so rather than reporting zero.
 """
+
 import os
 from pathlib import Path
 from typing import Optional
@@ -49,15 +50,26 @@ from .units import human_bytes
 # opposite move in either is good news that must not be reported as a
 # regression.
 TRENDED_METRICS = (
-    ('hit_share', 'cache hit ratio', 'lower_is_worse',
-     'the cache is serving less of this build than it used to'),
-    ('transfer_us', 'transfer seconds', 'higher_is_worse',
-     'the cache remote is degrading, before any element gets slower'),
-    ('transfer_per_artifact_us', 'transfer seconds per artifact', 'higher_is_worse',
-     'the cache remote is degrading, before any element gets slower'),
-    ('rebuild_us', 'rebuild seconds', 'higher_is_worse',
-     'this build is doing more work than the same build used to, which the '
-     'hit ratio beside it either explains or does not'),
+    ('hit_share', 'cache hit ratio', 'lower_is_worse', 'the cache is serving less of this build than it used to'),
+    (
+        'transfer_us',
+        'transfer seconds',
+        'higher_is_worse',
+        'the cache remote is degrading, before any element gets slower',
+    ),
+    (
+        'transfer_per_artifact_us',
+        'transfer seconds per artifact',
+        'higher_is_worse',
+        'the cache remote is degrading, before any element gets slower',
+    ),
+    (
+        'rebuild_us',
+        'rebuild seconds',
+        'higher_is_worse',
+        'this build is doing more work than the same build used to, which the '
+        'hit ratio beside it either explains or does not',
+    ),
 )
 
 # The band is widened to this share of the trailing median when the
@@ -125,7 +137,9 @@ def _row(name: str, analyzer, result, previous) -> dict:
     tasks = analyzer.normalized_tasks
     run_context = analyzer.run_context
     accounting = compute_cache_accounting(
-        run_context, graph=graph, tasks=tasks,
+        run_context,
+        graph=graph,
+        tasks=tasks,
         total_duration_us=getattr(result, 'total_duration_us', None),
         # `UX-897`: the series this module's own docstring opens on -
         # "a remote that slows from 40MB/s to 5MB/s" - and could not
@@ -162,9 +176,7 @@ def _row(name: str, analyzer, result, previous) -> dict:
         # Per *artifact served*, since that is what a degrading remote
         # changes. None rather than zero where either half is unmeasured:
         # a run with no transfer has no transfer rate.
-        'transfer_per_artifact_us': (
-            transfer_us / pulled if transfer_us and pulled else None
-        ),
+        'transfer_per_artifact_us': (transfer_us / pulled if transfer_us and pulled else None),
         'rebuild_us': _rebuild_us(tasks),
         # `UX-897`: bytes over the wall-clock the transfers occupied.
         # None where the run carries no counters, which is every run
@@ -175,9 +187,11 @@ def _row(name: str, analyzer, result, previous) -> dict:
     }
     if previous is not None:
         row['churn'] = compute_cache_churn(
-            previous['elements'], graph.elements if graph else [],
+            previous['elements'],
+            graph.elements if graph else [],
             graph.dependencies if graph else [],
-            set(durations), durations,
+            set(durations),
+            durations,
             baseline_built=set(previous['durations']) if previous['durations'] is not None else None,
             candidate_run_mode=row['run_mode'],
             baseline_run_mode=previous['run_mode'],
@@ -209,40 +223,49 @@ def _band_findings(rows: list[dict]) -> list[dict]:
         # Widened to the fixed percentage when the measured band is
         # narrower, exactly as `bga compare` does with the same band.
         half_width = max(
-            band['k'] * band['scaled_mad_us'], abs(median) * BAND_FLOOR_PCT / 100,
+            band['k'] * band['scaled_mad_us'],
+            abs(median) * BAND_FLOOR_PCT / 100,
         )
         if not half_width:
             continue
         low, high = median - half_width, median + half_width
         band = dict(
-            band, low_us=low, high_us=high,
+            band,
+            low_us=low,
+            high_us=high,
             widened_to_fixed_pct=half_width > band['k'] * band['scaled_mad_us'],
         )
         worse = current < low if direction == 'lower_is_worse' else current > high
         if not worse:
             continue
         ratio = current / median if median else None
-        findings.append({
-            'id': 'cache-trend-regression',
-            'severity': 'high',
-            'metric': key,
-            'title': (
-                f"{label} is {ratio:.1f}x the trailing median"
-                if ratio else f"{label} left the trailing band"
-            ) + (
-                f" ({_render(key, current)} against {_render(key, median)} over "
-                f"{plural(band['n'], 'run')}, band {_render(key, band['low_us'])}.."
-                f"{_render(key, band['high_us'])}"
-                + (', widened to the fixed rule' if band['widened_to_fixed_pct'] else '')
-                + f") - {consequence}"
-            ),
-            'evidence': {
-                'metric': key, 'current': current, 'median': median,
-                'band_low': band['low_us'], 'band_high': band['high_us'],
-                'window_runs': band['n'], 'direction': direction,
-                'widened_to_fixed_pct': band['widened_to_fixed_pct'],
-            },
-        })
+        findings.append(
+            {
+                'id': 'cache-trend-regression',
+                'severity': 'high',
+                'metric': key,
+                'title': (
+                    f"{label} is {ratio:.1f}x the trailing median" if ratio else f"{label} left the trailing band"
+                )
+                + (
+                    f" ({_render(key, current)} against {_render(key, median)} over "
+                    f"{plural(band['n'], 'run')}, band {_render(key, band['low_us'])}.."
+                    f"{_render(key, band['high_us'])}"
+                    + (', widened to the fixed rule' if band['widened_to_fixed_pct'] else '')
+                    + f") - {consequence}"
+                ),
+                'evidence': {
+                    'metric': key,
+                    'current': current,
+                    'median': median,
+                    'band_low': band['low_us'],
+                    'band_high': band['high_us'],
+                    'window_runs': band['n'],
+                    'direction': direction,
+                    'widened_to_fixed_pct': band['widened_to_fixed_pct'],
+                },
+            }
+        )
     return findings
 
 
@@ -280,9 +303,7 @@ def build_trend(rows: list[dict]) -> dict:
     if len(subjects) > 1:
         heterogeneous = {
             'subjects': sorted(_subject_label(subject) for subject in subjects),
-            'by_run': {
-                row['run']: _subject_label(row.get('subject')) for row in rows
-            },
+            'by_run': {row['run']: _subject_label(row.get('subject')) for row in rows},
             'message': (
                 f"{len(subjects)} different projects or target sets in this series "
                 f"- these are not repeated readings of one thing, so no band over "
@@ -305,7 +326,8 @@ def build_trend(rows: list[dict]) -> dict:
                     f"The rows above are real readings with no verdict attached."
                 ),
             }
-            if len(rows) <= MIN_BASELINE_RUNS and not heterogeneous else None
+            if len(rows) <= MIN_BASELINE_RUNS and not heterogeneous
+            else None
         ),
         'note': (
             "Transfer seconds per artifact cannot separate a slower remote from a "
@@ -392,8 +414,7 @@ def format_trend_text(trend: dict) -> str:
     # The churn cell is the only column in this table a reader cannot
     # decode from its header. `0+25r` said nothing until you found the
     # docs, which is one lookup too many for a column of five characters.
-    if any((row.get('churn') or {}).get('rebuilt_in_both_count')
-           for row in trend['runs']):
+    if any((row.get('churn') or {}).get('rebuilt_in_both_count') for row in trend['runs']):
         lines.append(
             'churn: elements rebuilt since the previous run, then `+Nr` for the '
             'N of them that rebuilt in BOTH runs with the same cache key - work '
@@ -409,10 +430,7 @@ def format_trend_text(trend: dict) -> str:
     elif trend['insufficient_window']:
         lines.append(f"No verdict: {trend['insufficient_window']['message']}")
     elif not trend['findings']:
-        lines.append(
-            'Every trended metric on the newest run sits inside the band its '
-            'trailing window describes.'
-        )
+        lines.append('Every trended metric on the newest run sits inside the band its trailing window describes.')
     for finding in trend['findings']:
         lines.append(f"[{finding['severity']}] {finding['id']}: {finding['title']}")
     lines.append('')

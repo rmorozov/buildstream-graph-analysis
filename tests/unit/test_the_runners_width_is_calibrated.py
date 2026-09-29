@@ -1,11 +1,11 @@
 """UX-1004: the giant's wall at each width gives the runner's effective
 core count and the knee past which more width stops paying."""
+
 import importlib.util
 import pathlib
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-_SPEC = importlib.util.spec_from_file_location(
-    "calibrate_width", REPO / "examples/11-serial-giant/calibrate_width.py")
+_SPEC = importlib.util.spec_from_file_location("calibrate_width", REPO / "examples/11-serial-giant/calibrate_width.py")
 calibrate = importlib.util.module_from_spec(_SPEC)
 _SPEC.loader.exec_module(calibrate)
 
@@ -72,8 +72,7 @@ class TestTheLinesOverride:
         calibrate.build_at(str(tmp_path), 1, run=run)
 
         build_calls = [c for c in calls if "build" in c]
-        assert build_calls == [["bst", "--option", "giant_lines", "1800",
-                                "build", "giant.bst"]]
+        assert build_calls == [["bst", "--option", "giant_lines", "1800", "build", "giant.bst"]]
 
     def test_the_override_reaches_the_delete_command(self, monkeypatch, tmp_path):
         # Unoptioned, it deletes another cache key's artifact: widths 2-16 read 2.14s.
@@ -81,14 +80,13 @@ class TestTheLinesOverride:
         calls = []
         calibrate.build_at(str(tmp_path), 1, run=lambda argv, **k: calls.append(argv))
 
-        assert calls[0] == ["bst", "--option", "giant_lines", "1800",
-                            "artifact", "delete", "giant.bst"]
+        assert calls[0] == ["bst", "--option", "giant_lines", "1800", "artifact", "delete", "giant.bst"]
 
 
 def test_the_ci_step_calibrates_every_width_and_runs_the_pinned_arm():
     ci = (REPO / ".github/workflows/ci.yml").read_text()
-    step = ci[ci.index("Calibrate the runner's width"):]
-    step = step[:step.index("\n      - name:")]
+    step = ci[ci.index("Calibrate the runner's width") :]
+    step = step[: step.index("\n      - name:")]
     assert "calibrate_width.py\" \"$PROJ\" 1 2 4 6 8" in step
     assert "bst --builders 2 build all.bst" in step
     assert "::notice::calibration" in step

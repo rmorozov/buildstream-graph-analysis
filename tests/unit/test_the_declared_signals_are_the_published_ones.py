@@ -15,6 +15,7 @@ keys to what the tool actually publishes. This reads that mapping
 against the block above it and against a real run's key set - the
 population is the analyzer's own output, not a list.
 """
+
 import ast
 import pathlib
 import re
@@ -35,7 +36,7 @@ def _declared_keys():
     """32.4's `signals` object, in the order the block writes them."""
     text = SPEC.read_text(encoding="utf-8")
     start = text.index('  "signals": {', text.index("## 32.4 analysis/v9"))
-    block = text[start:text.index("\n  },", start)]
+    block = text[start : text.index("\n  },", start)]
     return re.findall(r'^    "([a-z_]+)":', block, re.M)
 
 
@@ -43,7 +44,7 @@ def _mapping_rows():
     """32.7.2's table, as (declared key, part, published-as cell)."""
     text = SPEC.read_text(encoding="utf-8")
     start = text.index("| 32.4 `signals` key | Part | published as |")
-    table = text[start:text.index("\n\n", start)]
+    table = text[start : text.index("\n\n", start)]
     rows = []
     for line in table.splitlines()[2:]:
         cells = [c.strip() for c in line.split("|")[1:-1]]
@@ -69,10 +70,11 @@ def _published():
                 continue
             for target in node.targets:
                 base = getattr(target, "value", None)
-                if (isinstance(target, ast.Subscript)
-                        and (getattr(base, "id", None)
-                             or getattr(base, "attr", None)) == "signals"
-                        and isinstance(target.slice, ast.Constant)):
+                if (
+                    isinstance(target, ast.Subscript)
+                    and (getattr(base, "id", None) or getattr(base, "attr", None)) == "signals"
+                    and isinstance(target.slice, ast.Constant)
+                ):
                     stored.add(target.slice.value)
     return live | stored
 
@@ -85,11 +87,11 @@ class TestTheTableIsTheDeclaredBlock:
         declared = _declared_keys()
         assert len(declared) == 10, (
             "32.4's signals block no longer declares ten keys; 32.7.2's "
-            "table is per declared key and must move with it", declared)
+            "table is per declared key and must move with it",
+            declared,
+        )
         rows = [key for key, _, _ in _mapping_rows()]
-        assert rows == declared, (
-            "32.7.2's table is not one row per 32.4 key in 32.4's own "
-            "order", rows, declared)
+        assert rows == declared, ("32.7.2's table is not one row per 32.4 key in 32.4's own order", rows, declared)
 
 
 class TestEveryPublishedRowNamesAKeyTheToolWrites:
@@ -101,15 +103,18 @@ class TestEveryPublishedRowNamesAKeyTheToolWrites:
         assert len(published) > 10, (
             "the analyzer published almost nothing - the fixture or the "
             "walk broke, and every claim below would pass vacuously",
-            sorted(published))
+            sorted(published),
+        )
         missing = []
         for key, _, cell in _mapping_rows():
             for named in re.findall(r"`signals\['([a-z_]+)'\]`", cell):
                 if named not in published:
                     missing.append((key, named))
         assert not missing, (
-            "32.7.2 maps a declared key onto a `signals` key the tool "
-            "does not write", missing, sorted(published))
+            "32.7.2 maps a declared key onto a `signals` key the tool does not write",
+            missing,
+            sorted(published),
+        )
 
 
 class TestTheDeclinedPartsReachNothing:
@@ -119,9 +124,10 @@ class TestTheDeclinedPartsReachNothing:
 
     def test_no_module_computes_a_declined_signal(self):
         declined = [key for key, _, cell in _mapping_rows() if cell == DECLINED]
-        assert sorted(declined) == ["critical_path_resource_mix",
-                                    "wait_to_execution_top"], (
-            "32.7.2 declines a different set than UX-564 decided", declined)
+        assert sorted(declined) == ["critical_path_resource_mix", "wait_to_execution_top"], (
+            "32.7.2 declines a different set than UX-564 decided",
+            declined,
+        )
         sightings = []
         for path in sorted((REPO / "bga").rglob("*")):
             if path.suffix not in {".py", ".js"} or "__pycache__" in path.parts:
@@ -132,14 +138,17 @@ class TestTheDeclinedPartsReachNothing:
                     sightings.append((str(path.relative_to(REPO)), key))
         assert not sightings, (
             "a Part 32.7.2 declines is implemented after all - the note is "
-            "now wrong and the decision has to be retaken", sightings)
+            "now wrong and the decision has to be retaken",
+            sightings,
+        )
 
     def test_neither_declined_key_is_published(self):
         published = _published()
         declined = {key for key, _, cell in _mapping_rows() if cell == DECLINED}
         assert not (declined & published), (
             "a declined key is in the published signals set",
-            sorted(declined & published))
+            sorted(declined & published),
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

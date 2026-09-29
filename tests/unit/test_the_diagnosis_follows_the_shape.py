@@ -17,6 +17,7 @@ offered as the next step.
 So the denominator is the task horizon. These are the two properties
 that makes true, and neither can be read off the source.
 """
+
 import pytest
 
 from bga.findings import (
@@ -34,8 +35,7 @@ class _Run:
     def __init__(self, critical_path_us, wall_us, head_us=0, tail_us=0):
         self.floors = {"t_infinity_observed": critical_path_us}
         self.total_duration_us = wall_us
-        self.attribution = {"untracked_head_us": head_us,
-                            "untracked_tail_us": tail_us}
+        self.attribution = {"untracked_head_us": head_us, "untracked_tail_us": tail_us}
 
 
 class TestOneGraphGetsOneVerdict:
@@ -53,8 +53,10 @@ class TestOneGraphGetsOneVerdict:
         these two read 0.865 and 0.950 - opposite sides of the line -
         for one graph whose only difference is how long its elements
         sleep."""
-        verdicts = {label: diagnose(_Run(path, wall, head, tail))["diagnosis"]
-                    for label, path, wall, head, tail in self.WALK_THREE}
+        verdicts = {
+            label: diagnose(_Run(path, wall, head, tail))["diagnosis"]
+            for label, path, wall, head, tail in self.WALK_THREE
+        }
         assert len(set(verdicts.values())) == 1, verdicts
         assert set(verdicts.values()) == {DIAGNOSIS_CHAIN_BOUND}, verdicts
 
@@ -66,8 +68,7 @@ class TestOneGraphGetsOneVerdict:
         clause above is about the denominator and not about the
         constant."""
         against_wall = [path / wall for _, path, wall, _, _ in self.WALK_THREE]
-        assert min(against_wall) < CHAIN_BOUND_RATIO <= max(against_wall), (
-            against_wall)
+        assert min(against_wall) < CHAIN_BOUND_RATIO <= max(against_wall), against_wall
 
     @pytest.mark.parametrize("head_us", [0, 1_000, 1_250_000, 5_000_000])
     def test_the_verdict_does_not_move_with_the_head(self, head_us):
@@ -93,6 +94,7 @@ class TestTheDenominatorSaysWhatItIs:
         when a capture records no wall bounds, so the two agree there -
         but the field says which was used rather than leaving a reader
         to assume."""
+
         class NoAttribution:
             floors = {"t_infinity_observed": 6_000_000}
             total_duration_us = 10_000_000
@@ -133,10 +135,13 @@ class TestTheDenominatorSaysWhatItIs:
 
 
 class TestTheSentenceNamesTheDenominator:
-    @pytest.mark.parametrize("run,expected", [
-        (_Run(9_000_000, 10_000_000, head_us=1_000_000), DIAGNOSIS_CHAIN_BOUND),
-        (_Run(4_000_000, 16_000_000), DIAGNOSIS_SCHEDULER_BOUND),
-    ])
+    @pytest.mark.parametrize(
+        "run,expected",
+        [
+            (_Run(9_000_000, 10_000_000, head_us=1_000_000), DIAGNOSIS_CHAIN_BOUND),
+            (_Run(4_000_000, 16_000_000), DIAGNOSIS_SCHEDULER_BOUND),
+        ],
+    )
     def test_neither_sentence_says_wall_clock_any_more(self, run, expected):
         """`UX-326`: the tool's own sentences are contracts. A sentence
         that still said "of wall-clock" would be describing arithmetic
@@ -144,5 +149,4 @@ class TestTheSentenceNamesTheDenominator:
         answer = diagnose(run)
         assert answer["diagnosis"] == expected
         assert "wall-clock" not in answer["sentence"], answer["sentence"]
-        assert "the time tasks were running" in answer["sentence"], (
-            answer["sentence"])
+        assert "the time tasks were running" in answer["sentence"], answer["sentence"]

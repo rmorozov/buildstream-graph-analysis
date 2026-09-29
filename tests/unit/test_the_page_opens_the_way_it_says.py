@@ -28,6 +28,7 @@ would have shipped with nothing reddening.
 This is `UX-235`'s skip census in a second place — a count with named,
 reasoned exceptions beats a prose claim that everything is fine.
 """
+
 import pathlib
 import re
 
@@ -40,8 +41,8 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 # reads all three; against `views.js` alone it would have reported
 # `renderWhyRanked` as an entry for nothing.
 VIEWS = "\n".join(
-    (REPO / "bga/viewer" / _name).read_text(encoding="utf-8")
-    for _name in ("views.js", "element.js", "decision.js"))
+    (REPO / "bga/viewer" / _name).read_text(encoding="utf-8") for _name in ("views.js", "element.js", "decision.js")
+)
 NAV = (REPO / "bga/viewer/nav.js").read_text(encoding="utf-8")
 
 # Every place the viewer opens a `<details>` on first load, and why.
@@ -51,7 +52,8 @@ OPEN_BY_DEFAULT = {
     "renderWhyRanked": (
         "UX-227: the provenance chain on the *top* action only - the one "
         "claim a reader is most likely to challenge, and the one whose "
-        "evidence is worth the vertical space"),
+        "evidence is worth the vertical space"
+    ),
 }
 
 
@@ -88,7 +90,8 @@ class TestTheOpenSetIsNamed:
             f"the viewer opens a <details> in {unexplained} and this census "
             f"does not say why. Add it to OPEN_BY_DEFAULT with a reason, or "
             f"stop opening it - a page that opens by default is vertical "
-            f"space every reader pays for (UX-254).")
+            f"space every reader pays for (UX-254)."
+        )
 
     def test_the_census_names_only_places_that_exist(self):
         """An exemption for a function that is gone quietly widens the
@@ -114,7 +117,8 @@ class TestSectionsAreOpenOnPurpose:
         collapsing them would be tidier will meet it."""
         assert "Default-open, always" in NAV, (
             "nav.js no longer states the default-open policy, so the next "
-            "change to it will be made without the argument against it")
+            "change to it will be made without the argument against it"
+        )
 
     def test_a_reader_can_still_collapse_everything(self):
         """Default-open is only defensible because collapsing is one
@@ -123,7 +127,8 @@ class TestSectionsAreOpenOnPurpose:
         assert "Collapse all" in code and "Expand all" in code
         assert "writeCollapsed" in code, (
             "what a reader collapses is no longer remembered, which makes "
-            "default-open a decision they have to re-make every load")
+            "default-open a decision they have to re-make every load"
+        )
 
     def test_nothing_collapses_a_section_on_first_load(self):
         """The other direction. A stored preference may collapse a
@@ -132,7 +137,8 @@ class TestSectionsAreOpenOnPurpose:
         collapsed = code.split("export function collapsible", 1)[1]
         assert "readCollapsed(storage)" in collapsed, (
             "the collapsed set no longer comes from storage alone, so the "
-            "page may now hide a section a reader never hid")
+            "page may now hide a section a reader never hid"
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

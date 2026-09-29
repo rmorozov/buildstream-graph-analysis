@@ -13,6 +13,7 @@ not pinned is not reproducible - and the two honesty rules the item
 inherits are checked as behaviour, not as prose: an unfinished capture
 is not a sample, and a mix of machines is not a distribution.
 """
+
 import json
 import os
 import shutil
@@ -24,10 +25,8 @@ from bga.compare import MIN_BASELINE_RUNS
 
 GOLDEN = "tests/fixtures/golden/mixed_task_kinds"
 
-FAST_HOST = {"schema": "host/v1", "cpu_model": "Ryzen 9 7950X",
-             "cpu_count": 32, "memory_mb": 64000}
-SLOW_HOST = {"schema": "host/v1", "cpu_model": "Xeon E5-2680",
-             "cpu_count": 16, "memory_mb": 32000}
+FAST_HOST = {"schema": "host/v1", "cpu_model": "Ryzen 9 7950X", "cpu_count": 32, "memory_mb": 64000}
+SLOW_HOST = {"schema": "host/v1", "cpu_model": "Xeon E5-2680", "cpu_count": 16, "memory_mb": 32000}
 
 
 def _store(tmp_path, runs):
@@ -45,8 +44,7 @@ def _store(tmp_path, runs):
         if host is not None:
             context["host_manifest"] = dict(host)
         if broken == "interrupted":
-            context["build_outcome"] = dict(
-                context.get("build_outcome") or {}, interrupted=True)
+            context["build_outcome"] = dict(context.get("build_outcome") or {}, interrupted=True)
         elif broken == "no_duration":
             context.pop("wall_clock", None)
         (run / "run-context.json").write_text(json.dumps(context))
@@ -62,7 +60,7 @@ class TestThePercentilesAreReproducible:
     definition is a number nobody can re-derive."""
 
     def test_the_rank_is_the_one_the_contract_names(self):
-        samples = list(range(1, 21))          # 1..20
+        samples = list(range(1, 21))  # 1..20
         # ceil(0.95 * 20) = 19, so the p95 is the 19th value.
         assert store_aggregate.percentile(samples, 95) == 19
         assert store_aggregate.percentile(samples, 50) == 10
@@ -85,8 +83,7 @@ class TestThePercentilesAreReproducible:
         assert shape["mad"] == 2_000_000
         assert shape["samples"] == 5
 
-    def test_below_the_floor_there_is_no_distribution_and_it_says_so(
-            self, tmp_path):
+    def test_below_the_floor_there_is_no_distribution_and_it_says_so(self, tmp_path):
         """`MIN_BASELINE_RUNS`, the same floor the noise band refuses
         under: a p95 of two samples is the larger of the two wearing a
         statistic's name."""
@@ -102,20 +99,21 @@ class TestAnUnfinishedRunIsNotASample:
     """UX-156's rule, one document up: "we had nine runs" and "we had
     nine and threw two away" are different claims."""
 
-    def test_incomplete_captures_are_excluded_from_the_distribution(
-            self, tmp_path):
-        runs = [(10, FAST_HOST), (12, FAST_HOST), (14, FAST_HOST),
-                (900, FAST_HOST, "interrupted")]
+    def test_incomplete_captures_are_excluded_from_the_distribution(self, tmp_path):
+        runs = [(10, FAST_HOST), (12, FAST_HOST), (14, FAST_HOST), (900, FAST_HOST, "interrupted")]
         document = _aggregate(tmp_path, runs)
         shape = document["host_classes"][0]["duration_us"]
         assert shape["samples"] == 3
-        assert shape["max"] == 14_000_000, (
-            "the interrupted run's 900s reached the distribution")
+        assert shape["max"] == 14_000_000, "the interrupted run's 900s reached the distribution"
 
     def test_they_are_counted_where_they_were_dropped(self, tmp_path):
-        runs = [(10, FAST_HOST), (12, FAST_HOST), (14, FAST_HOST),
-                (900, FAST_HOST, "interrupted"),
-                (0, FAST_HOST, "no_duration")]
+        runs = [
+            (10, FAST_HOST),
+            (12, FAST_HOST),
+            (14, FAST_HOST),
+            (900, FAST_HOST, "interrupted"),
+            (0, FAST_HOST, "no_duration"),
+        ]
         document = _aggregate(tmp_path, runs)
         assert document["snapshots"] == 5
         assert document["measured"] == 3
@@ -124,9 +122,9 @@ class TestAnUnfinishedRunIsNotASample:
         assert "no recorded duration" in document["excluded"]["by_reason"]
 
     def test_the_text_names_the_exclusions(self, tmp_path):
-        document = _aggregate(tmp_path, [
-            (10, FAST_HOST), (12, FAST_HOST), (14, FAST_HOST),
-            (900, FAST_HOST, "interrupted")])
+        document = _aggregate(
+            tmp_path, [(10, FAST_HOST), (12, FAST_HOST), (14, FAST_HOST), (900, FAST_HOST, "interrupted")]
+        )
         rendered = "\n".join(store_aggregate.render(document))
         assert "1 excluded" in rendered
 
@@ -135,8 +133,7 @@ class TestAMixOfMachinesIsNotADistribution:
     """UX-186's grammar. Durations are not scaled across hosts, so a
     blended figure is a claim the tool declines to make on its own."""
 
-    MIXED = [(10, FAST_HOST), (12, FAST_HOST), (14, FAST_HOST),
-             (50, SLOW_HOST), (55, SLOW_HOST), (60, SLOW_HOST)]
+    MIXED = [(10, FAST_HOST), (12, FAST_HOST), (14, FAST_HOST), (50, SLOW_HOST), (55, SLOW_HOST), (60, SLOW_HOST)]
 
     def test_each_class_aggregates_on_its_own(self, tmp_path):
         document = _aggregate(tmp_path, self.MIXED)
@@ -145,8 +142,7 @@ class TestAMixOfMachinesIsNotADistribution:
         medians = sorted(e["duration_us"]["median"] for e in by_label.values())
         assert medians == [12_000_000, 55_000_000]
 
-    def test_the_blended_number_is_refused_and_the_refusal_names_why(
-            self, tmp_path):
+    def test_the_blended_number_is_refused_and_the_refusal_names_why(self, tmp_path):
         document = _aggregate(tmp_path, self.MIXED)
         assert document["blended"] is None
         assert document["refusal"]["check"] == "cross_host_aggregate"
@@ -154,8 +150,7 @@ class TestAMixOfMachinesIsNotADistribution:
         assert "--blend" in document["refusal"]["sentence"]
         assert "Ryzen 9 7950X" in document["refusal"]["sentence"]
 
-    def test_blend_states_the_claim_and_says_how_many_it_mixed(
-            self, tmp_path):
+    def test_blend_states_the_claim_and_says_how_many_it_mixed(self, tmp_path):
         document = _aggregate(tmp_path, self.MIXED, blend=True)
         assert document["blended"]["mixes"] == 2
         # sorted: 10 12 14 50 55 60 -> median (14+50)/2 = 32
@@ -163,16 +158,14 @@ class TestAMixOfMachinesIsNotADistribution:
         assert document["refusal"], "the refusal is still recorded"
 
     def test_one_class_is_not_a_mix_so_nothing_is_refused(self, tmp_path):
-        document = _aggregate(tmp_path, [
-            (10, FAST_HOST), (12, FAST_HOST), (14, FAST_HOST)])
+        document = _aggregate(tmp_path, [(10, FAST_HOST), (12, FAST_HOST), (14, FAST_HOST)])
         assert document["refusal"] is None
         assert document["blended"]["mixes"] == 1
 
     def test_a_capture_with_no_manifest_is_its_own_class(self, tmp_path):
-        """"We do not know which machine" is not "the same machine as
+        """ "We do not know which machine" is not "the same machine as
         the others" - merging them would be the blend, silently."""
-        document = _aggregate(tmp_path, [
-            (10, FAST_HOST), (12, FAST_HOST), (14, FAST_HOST), (11, None)])
+        document = _aggregate(tmp_path, [(10, FAST_HOST), (12, FAST_HOST), (14, FAST_HOST), (11, None)])
         labels = {e["host_class"] for e in document["host_classes"]}
         assert store_aggregate.UNKNOWN_HOST_CLASS in labels
 
@@ -185,18 +178,25 @@ class TestAMixOfMachinesIsNotADistribution:
         base = {"cpu_model": "m", "cpu_count": 4, "memory_mb": 8}
         for field in hostinfo.COMPARED_FIELDS:
             other = dict(base, **{field: "different"})
-            assert store_aggregate.host_class(base) != \
-                store_aggregate.host_class(other), field
+            assert store_aggregate.host_class(base) != store_aggregate.host_class(other), field
 
 
 class TestTheCliAndTheContract:
     def test_the_document_validates_against_its_own_schema(self, tmp_path):
         jsonschema = pytest.importorskip("jsonschema")
 
-        document = _aggregate(tmp_path, [
-            (10, FAST_HOST), (12, FAST_HOST), (14, FAST_HOST),
-            (50, SLOW_HOST), (55, SLOW_HOST), (60, SLOW_HOST),
-            (900, FAST_HOST, "interrupted")])
+        document = _aggregate(
+            tmp_path,
+            [
+                (10, FAST_HOST),
+                (12, FAST_HOST),
+                (14, FAST_HOST),
+                (50, SLOW_HOST),
+                (55, SLOW_HOST),
+                (60, SLOW_HOST),
+                (900, FAST_HOST, "interrupted"),
+            ],
+        )
         jsonschema.validate(document, schemas.schema(schemas.STORE_AGGREGATE))
         assert document["schema"] == schemas.STORE_AGGREGATE
 
@@ -209,9 +209,10 @@ class TestTheCliAndTheContract:
         from bga.cli import EXIT_CODE_MISMATCHED_RUNS
         from tools.bga_snapshot import main
 
-        project = _store(tmp_path, [
-            (10, FAST_HOST), (12, FAST_HOST), (14, FAST_HOST),
-            (50, SLOW_HOST), (55, SLOW_HOST), (60, SLOW_HOST)])
+        project = _store(
+            tmp_path,
+            [(10, FAST_HOST), (12, FAST_HOST), (14, FAST_HOST), (50, SLOW_HOST), (55, SLOW_HOST), (60, SLOW_HOST)],
+        )
         code = main(["--project", project, "--aggregate"])
         assert code == EXIT_CODE_MISMATCHED_RUNS
         assert "--blend" in capsys.readouterr().out
@@ -219,24 +220,22 @@ class TestTheCliAndTheContract:
     def test_blend_makes_it_exit_zero(self, tmp_path):
         from tools.bga_snapshot import main
 
-        project = _store(tmp_path, [
-            (10, FAST_HOST), (12, FAST_HOST), (14, FAST_HOST),
-            (50, SLOW_HOST), (55, SLOW_HOST), (60, SLOW_HOST)])
+        project = _store(
+            tmp_path,
+            [(10, FAST_HOST), (12, FAST_HOST), (14, FAST_HOST), (50, SLOW_HOST), (55, SLOW_HOST), (60, SLOW_HOST)],
+        )
         assert main(["--project", project, "--aggregate", "--blend"]) == 0
 
     def test_a_single_class_store_exits_zero(self, tmp_path):
         from tools.bga_snapshot import main
 
-        project = _store(tmp_path, [(10, FAST_HOST), (12, FAST_HOST),
-                                    (14, FAST_HOST)])
+        project = _store(tmp_path, [(10, FAST_HOST), (12, FAST_HOST), (14, FAST_HOST)])
         assert main(["--project", project, "--aggregate"]) == 0
 
-    def test_the_json_and_the_text_read_the_same_document(
-            self, tmp_path, capsys):
+    def test_the_json_and_the_text_read_the_same_document(self, tmp_path, capsys):
         from tools.bga_snapshot import main
 
-        project = _store(tmp_path, [(10, FAST_HOST), (12, FAST_HOST),
-                                    (14, FAST_HOST)])
+        project = _store(tmp_path, [(10, FAST_HOST), (12, FAST_HOST), (14, FAST_HOST)])
         main(["--project", project, "--aggregate", "--format", "json"])
         document = json.loads(capsys.readouterr().out)
         main(["--project", project, "--aggregate"])
@@ -251,7 +250,8 @@ class TestTheCliAndTheContract:
         rows = store_listing(project)["snapshots"]
         assert {row["host_class"] for row in rows} == {
             store_aggregate.host_class(FAST_HOST),
-            store_aggregate.host_class(SLOW_HOST)}
+            store_aggregate.host_class(SLOW_HOST),
+        }
 
 
 class TestTheTrendDrawsThePublishedBand:
@@ -266,28 +266,25 @@ class TestTheTrendDrawsThePublishedBand:
         node = _shutil.which("node")
         if node is None:
             pytest.skip("node is not installed")
-        result = subprocess.run([node, "--input-type=module", "-e", script],
-                                capture_output=True, text=True,
-                                cwd=os.getcwd(), timeout=60)
+        result = subprocess.run(
+            [node, "--input-type=module", "-e", script], capture_output=True, text=True, cwd=os.getcwd(), timeout=60
+        )
         assert result.returncode == 0, result.stderr
         return json.loads(result.stdout)
 
     def test_the_band_edges_are_the_published_figures(self, tmp_path):
-        document = _aggregate(tmp_path, [(10, FAST_HOST), (12, FAST_HOST),
-                                         (14, FAST_HOST)])
-        out = self._node(_HARNESS.replace("__AGGREGATE__",
-                                          json.dumps(document)))
+        document = _aggregate(tmp_path, [(10, FAST_HOST), (12, FAST_HOST), (14, FAST_HOST)])
+        out = self._node(_HARNESS.replace("__AGGREGATE__", json.dumps(document)))
         shape = document["blended"]["duration_us"]
-        assert out["band"] == {"median": str(shape["median"]),
-                               "p95": str(shape["p95"])}
+        assert out["band"] == {"median": str(shape["median"]), "p95": str(shape["p95"])}
         assert out["median_line"] == str(shape["median"])
 
     def test_a_mixed_store_draws_no_band_and_says_why(self, tmp_path):
-        document = _aggregate(tmp_path, [
-            (10, FAST_HOST), (12, FAST_HOST), (14, FAST_HOST),
-            (50, SLOW_HOST), (55, SLOW_HOST), (60, SLOW_HOST)])
-        out = self._node(_HARNESS.replace("__AGGREGATE__",
-                                          json.dumps(document)))
+        document = _aggregate(
+            tmp_path,
+            [(10, FAST_HOST), (12, FAST_HOST), (14, FAST_HOST), (50, SLOW_HOST), (55, SLOW_HOST), (60, SLOW_HOST)],
+        )
+        out = self._node(_HARNESS.replace("__AGGREGATE__", json.dumps(document)))
         assert out["band"] is None
         assert out["note"] == document["refusal"]["sentence"]
         assert out["note_kind"] == "refused"

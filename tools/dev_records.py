@@ -25,6 +25,7 @@ reads nothing for a path outside the index at all. `--pages DIR`
 `.md` files onto the same commit, beside whichever of the four paths
 this run also changed.
 """
+
 import argparse
 import hashlib
 import json
@@ -43,8 +44,7 @@ REPO = pathlib.Path(__file__).resolve().parents[1]
 GIT = shutil.which("git") or "git"
 RECORDS_REF = "refs/heads/records"
 SHA_MARKER = REPO / "tests" / ".records-sha"
-RECORD_PATHS = ("tests/ci_reference.json", "tests/touch_map.json",
-                "tests/flake_ledger.json", "docs/audits/mutation.md")
+RECORD_PATHS = ("tests/ci_reference.json", "tests/touch_map.json", "tests/flake_ledger.json", "docs/audits/mutation.md")
 #: `fetch`'s own baseline for `_dirty`, once a path carries no tracked
 #: blob for `git diff` to compare against (`git rm --cached`, T2).
 BASELINE = REPO / "tests" / ".records-baseline.json"
@@ -52,15 +52,16 @@ BASELINE = REPO / "tests" / ".records-baseline.json"
 #: confirmed the tree reflects, for `publish` to check itself against
 #: before it overlays onto whatever tip is current *now*.
 BASE_KEY = "bga.records-base"
-BOT_ENV = {"GIT_AUTHOR_NAME": "github-actions[bot]",
-           "GIT_COMMITTER_NAME": "github-actions[bot]",
-           "GIT_AUTHOR_EMAIL": "41898282+github-actions[bot]@users.noreply.github.com",
-           "GIT_COMMITTER_EMAIL": "41898282+github-actions[bot]@users.noreply.github.com"}
+BOT_ENV = {
+    "GIT_AUTHOR_NAME": "github-actions[bot]",
+    "GIT_COMMITTER_NAME": "github-actions[bot]",
+    "GIT_AUTHOR_EMAIL": "41898282+github-actions[bot]@users.noreply.github.com",
+    "GIT_COMMITTER_EMAIL": "41898282+github-actions[bot]@users.noreply.github.com",
+}
 
 
 def _git(*args, env=None, check=False):
-    return subprocess.run([GIT, *args], cwd=REPO, env=env,
-                          capture_output=True, text=True, check=check)
+    return subprocess.run([GIT, *args], cwd=REPO, env=env, capture_output=True, text=True, check=check)
 
 
 def _cached_sha():
@@ -113,8 +114,7 @@ def fetch(argv=None):
         return 0
     cached = _cached_sha()
     if cached is None:
-        print("::error::no records reachable, and no cached copy "
-              "(tools/dev_records.py fetch)")
+        print("::error::no records reachable, and no cached copy (tools/dev_records.py fetch)")
         return 1
     print(f"{cached} (cached)")
     return 0
@@ -161,14 +161,16 @@ def load(rel_path):
     recognises in place of a direct read of an untracked record path."""
     full = REPO / rel_path
     if not full.is_file():
-        raise FileNotFoundError(
-            f"{rel_path} is not fetched - run `python tools/dev_records.py fetch`")
+        raise FileNotFoundError(f"{rel_path} is not fetched - run `python tools/dev_records.py fetch`")
     return full.read_text(encoding="utf-8")
 
 
 def _records_tip():
-    return (_git("rev-parse", "FETCH_HEAD", check=True).stdout.strip()
-            if _git("fetch", "--quiet", "origin", RECORDS_REF).returncode == 0 else None)
+    return (
+        _git("rev-parse", "FETCH_HEAD", check=True).stdout.strip()
+        if _git("fetch", "--quiet", "origin", RECORDS_REF).returncode == 0
+        else None
+    )
 
 
 def _pages_dirty(pages_dir, tip):
@@ -184,14 +186,14 @@ def _pages_dirty(pages_dir, tip):
     tip_names = {pathlib.Path(n).name for n in listed.stdout.split()}
     if names != tip_names:
         return True
-    return any(_git("show", f"{tip}:docs/backlog/areas/{p.name}").stdout
-               != p.read_text(encoding="utf-8") for p in local)
+    return any(
+        _git("show", f"{tip}:docs/backlog/areas/{p.name}").stdout != p.read_text(encoding="utf-8") for p in local
+    )
 
 
 def publish(argv=None):
     parser = argparse.ArgumentParser(description="push the records this run changed")
-    parser.add_argument("--pages", default=None, metavar="DIR",
-                        help="overlay docs/backlog/areas/ from DIR (UX-1000)")
+    parser.add_argument("--pages", default=None, metavar="DIR", help="overlay docs/backlog/areas/ from DIR (UX-1000)")
     args = parser.parse_args(argv)
     changed = [path for path in RECORD_PATHS if _dirty(path)]
     # `changed` only means anything relative to the tip `fetch` last
@@ -208,9 +210,11 @@ def publish(argv=None):
     elif base_known is not None and base_known == tip:
         seeding = False
     else:
-        print(f"::error::the records branch moved since this run last read "
-              f"it (read {base or 'none'}, now {tip or 'none'}) - nothing "
-              f"was published (UX-997)")
+        print(
+            f"::error::the records branch moved since this run last read "
+            f"it (read {base or 'none'}, now {tip or 'none'}) - nothing "
+            f"was published (UX-997)"
+        )
         return 1
     # The pages check needs `tip`, so the early return waits for it too -
     # ahead of it, a run that only changed pages would report nothing to
@@ -230,28 +234,28 @@ def publish(argv=None):
             _git("read-tree", tip, env=index_env, check=True)
         for path in paths:
             blob = _git("hash-object", "-w", "--", path, env=index_env, check=True).stdout.strip()
-            _git("update-index", "--add", "--cacheinfo", f"100644,{blob},{path}",
-                 env=index_env, check=True)
+            _git("update-index", "--add", "--cacheinfo", f"100644,{blob},{path}", env=index_env, check=True)
         if args.pages:
             for src in sorted(pathlib.Path(args.pages).glob("*.md")):
-                blob = _git("hash-object", "-w", "--", str(src), env=index_env,
-                            check=True).stdout.strip()
-                _git("update-index", "--add", "--cacheinfo",
-                     f"100644,{blob},docs/backlog/areas/{src.name}",
-                     env=index_env, check=True)
+                blob = _git("hash-object", "-w", "--", str(src), env=index_env, check=True).stdout.strip()
+                _git(
+                    "update-index",
+                    "--add",
+                    "--cacheinfo",
+                    f"100644,{blob},docs/backlog/areas/{src.name}",
+                    env=index_env,
+                    check=True,
+                )
         tree = _git("write-tree", env=index_env, check=True).stdout.strip()
     finally:
         shutil.rmtree(scratch, ignore_errors=True)
     parents = [] if seeding else ["-p", tip]
     commit_env = {**os.environ, **BOT_ENV}
     label = ", ".join(changed + (["docs/backlog/areas/"] if pages_changed else []))
-    commit = _git("commit-tree", tree, *parents, "-m",
-                  f"records: {label}", env=commit_env,
-                  check=True).stdout.strip()
+    commit = _git("commit-tree", tree, *parents, "-m", f"records: {label}", env=commit_env, check=True).stdout.strip()
     pushed = _git("push", "origin", f"{commit}:{RECORDS_REF}")
     if pushed.returncode:
-        print(f"::warning::the records branch refused the update; "
-              f"re-run to retry\n{pushed.stderr}")
+        print(f"::warning::the records branch refused the update; re-run to retry\n{pushed.stderr}")
         return pushed.returncode
     print(f"records @ {commit}")
     return 0

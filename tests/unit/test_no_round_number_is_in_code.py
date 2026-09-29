@@ -11,6 +11,7 @@ _census.py` pins the register guard as round 75's own miss - a file
 only the census selects. Naming the modules here is right, because a
 diff touching one of them should run this.
 """
+
 import pathlib
 import re
 
@@ -65,9 +66,7 @@ def _code_modules():
 
 
 def _round_references(path):
-    return sum(1 for line in path.read_text(encoding="utf-8").splitlines()
-               if ROUND_REFERENCE.search(line))
-
+    return sum(1 for line in path.read_text(encoding="utf-8").splitlines() if ROUND_REFERENCE.search(line))
 
 
 class TestNoRoundInCode:
@@ -85,16 +84,17 @@ class TestNoRoundInCode:
         assert grew == [], (
             f"a round number in code is history, and these gained one: "
             f"{grew}. The why goes in the line; the round goes in the task "
-            f"file")
+            f"file"
+        )
 
     def test_a_file_that_lost_them_all_leaves_the_table(self):
         """Otherwise the table rots into a list of files that are fine,
         and the next reader cannot tell the ratchet from the amnesty."""
-        clean = [rel for rel in sorted(ROUNDS_IN_CODE)
-                 if (REPO / rel).exists() and not _round_references(REPO / rel)]
+        clean = [rel for rel in sorted(ROUNDS_IN_CODE) if (REPO / rel).exists() and not _round_references(REPO / rel)]
         assert clean == [], (
             f"these carry no round reference any more - remove them from "
-            f"ROUNDS_IN_CODE so the table cannot rot: {clean}")
+            f"ROUNDS_IN_CODE so the table cannot rot: {clean}"
+        )
 
     def test_an_unlisted_module_carries_none(self):
         """The half that catches a new one. Every module not in the
@@ -108,9 +108,8 @@ class TestNoRoundInCode:
             n = _round_references(path)
             if n:
                 offenders.append(f"{rel}: {n}")
-        assert offenders == [], (
-            f"round numbers in a module not on the grandfathered list: "
-            f"{offenders}")
+        assert offenders == [], f"round numbers in a module not on the grandfathered list: {offenders}"
+
 
 if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(pytest.main([__file__, "-v"]))

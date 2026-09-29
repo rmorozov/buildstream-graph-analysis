@@ -12,6 +12,7 @@ with it, stdout is unbuffered, every write syscalls at the call site,
 and the second shape cannot happen at all. A guard that inherited it
 would be measuring an interpreter no user runs.
 """
+
 import os
 import subprocess
 import sys
@@ -46,8 +47,11 @@ def _pipe_then_stop(argv: list[str], read_lines: int) -> tuple[int, str, list[st
     """
     proc = subprocess.Popen(
         [sys.executable, "-m", "bga.cli", *argv],
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        text=True, cwd=REPO, env=_buffered_env(),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        cwd=REPO,
+        env=_buffered_env(),
     )
     lines = [proc.stdout.readline() for _ in range(read_lines)]
     proc.stdout.close()
@@ -68,7 +72,8 @@ def test_a_schema_whose_reader_left_exits_zero(command):
 
 def test_the_documented_analyze_pipe_prints_its_two_lines_and_exits_zero():
     code, stderr, lines = _pipe_then_stop(
-        ["analyze", str(RUN), "--format", "json"], read_lines=2,
+        ["analyze", str(RUN), "--format", "json"],
+        read_lines=2,
     )
 
     assert lines[0].strip() == "{"
@@ -88,8 +93,11 @@ def test_a_short_output_flushed_at_exit_does_not_reach_a_closed_pipe():
     """
     proc = subprocess.Popen(
         [sys.executable, "-m", "bga.cli", "--version"],
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        text=True, cwd=REPO, env=_buffered_env(),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        cwd=REPO,
+        env=_buffered_env(),
     )
     proc.stdout.close()
     stderr = proc.stderr.read()

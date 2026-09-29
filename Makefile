@@ -1,6 +1,6 @@
 # BuildStream Build Efficiency Analyzer - Makefile
 
-.PHONY: test push-check test-tiers test-small test-medium test-large test-fast test-touching test-e2e lint lint-docs sizes dev-run clean check-clean install dev help records
+.PHONY: lint-code test push-check test-tiers test-small test-medium test-large test-fast test-touching test-e2e lint lint-docs sizes dev-run clean check-clean install dev help records
 
 # Default target
 help:
@@ -69,7 +69,10 @@ test: records lint
 # UX-948: the gate before a push; CI's full matrix is the gate before merge.
 # The selector diffs against the merge-base: HEAD's own diff is empty once
 # the change is committed. The marker line is last, so any red skips it.
-push-check: records lint
+# UX-1112: markdown is linted only where it changed against the merge-base
+# (`make lint` and CI scan all of it); a `.pymarkdown.json` change scans all.
+push-check: records lint-code
+	base=$$(git merge-base HEAD origin/main) && python3 tools/dev_lint_docs.py --base "$$base" > .lint-docs.list && xargs -0 -r -a .lint-docs.list python3 -m pymarkdown --config .pymarkdown.json scan; status=$$?; rm -f .lint-docs.list; exit $$status
 	base=$$(git merge-base HEAD origin/main) && python tools/dev_touching.py --base "$$base"
 	python3 tools/dev_sizes.py --check
 	python3 tools/dev_close_task.py --check
@@ -120,8 +123,11 @@ test-e2e:
 lock:
 	uv pip compile pyproject.toml --extra dev -o requirements.lock -q --upgrade
 
-lint: lint-docs
-	ruff check bga/ tools/ tests/ .claude/hooks/
+lint: lint-docs lint-code
+
+lint-code:
+	python3 -m ruff check bga/ tools/ tests/ .claude/hooks/
+	python3 -m ruff format --check bga/ tools/ tests/ .claude/hooks/
 	python3 tools/dev_baseline.py --check
 
 # UX-98: markdown correctness. Only the class that changes how a document

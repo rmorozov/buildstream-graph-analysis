@@ -25,6 +25,7 @@ stream needs a real build (`UX-465`). Field numbers come from the
 emitter's own `trackevent.py`, so a number wrong in both ends is not
 caught; `UX-321`'s pinned fixture covers that.
 """
+
 import argparse
 import collections
 import gzip
@@ -58,8 +59,7 @@ CARRIERS = {
 
 #: Values that match anything and mean nothing. A field whose whole
 #: vocabulary is in here cannot discriminate.
-NOISE = {"", "true", "false", "none", "null", "0", "1", "yes", "no",
-         "unknown", "n/a"}
+NOISE = {"", "true", "false", "none", "null", "0", "1", "yes", "no", "unknown", "n/a"}
 
 
 #: Fields decided to stay out of the trace, and why (`UX-469`). The
@@ -73,35 +73,28 @@ NOISE = {"", "true", "false", "none", "null", "0", "1", "yes", "no",
 #: of these. A trace with an annotation per captured field is a trace
 #: nobody can read, and every annotation is paid for on every slice.
 DECLINED = {
-    "trace.spans[].resources[]":
-        "the list carries nothing its own `primary_resource` does not. "
-        "Measured on a two-queue capture: every span's list is the "
-        "one-element list holding exactly its primary resource "
-        "(DOWNLOAD x9, PROCESS x9), so a second annotation would cost a "
-        "key on every slice and answer the same question (UX-469)",
-    "graph.elements[].cache_key":
-        "a cache key is only meaningful against another run's, and one "
-        "trace holds one run - so the comparison it enables is the one "
-        "thing a Perfetto query on this trace cannot do. `bga compare` "
-        "is where two runs meet (UX-469)",
-    "plane2.static_census.static_executables[]":
-        "the static census names the programs the hook cannot see, "
-        "which is exactly the set with no slice to hang them on. The "
-        "*conclusion* reaches the trace - `elements_at_risk` and the "
-        "per-element keys are `reached` - and the program names belong "
-        "to the report, which is where a reader who wants them is "
-        "already looking (UX-469)",
-    "plane2.static_census.per_element.{}.static_executables[]":
-        "the same list, split per element - and the same reason: the "
-        "per-element key reaches the trace and the program names stay "
-        "in the report (UX-469)",
-    "plane2.static_census.per_element.{}.own_static[]":
-        "the same list, split by whether the element staged the binary "
-        "itself - and the same reason (UX-469)",
+    "trace.spans[].resources[]": "the list carries nothing its own `primary_resource` does not. "
+    "Measured on a two-queue capture: every span's list is the "
+    "one-element list holding exactly its primary resource "
+    "(DOWNLOAD x9, PROCESS x9), so a second annotation would cost a "
+    "key on every slice and answer the same question (UX-469)",
+    "graph.elements[].cache_key": "a cache key is only meaningful against another run's, and one "
+    "trace holds one run - so the comparison it enables is the one "
+    "thing a Perfetto query on this trace cannot do. `bga compare` "
+    "is where two runs meet (UX-469)",
+    "plane2.static_census.static_executables[]": "the static census names the programs the hook cannot see, "
+    "which is exactly the set with no slice to hang them on. The "
+    "*conclusion* reaches the trace - `elements_at_risk` and the "
+    "per-element keys are `reached` - and the program names belong "
+    "to the report, which is where a reader who wants them is "
+    "already looking (UX-469)",
+    "plane2.static_census.per_element.{}.static_executables[]": "the same list, split per element - and the same reason: the "
+    "per-element key reaches the trace and the program names stay "
+    "in the report (UX-469)",
+    "plane2.static_census.per_element.{}.own_static[]": "the same list, split by whether the element staged the binary "
+    "itself - and the same reason (UX-469)",
     "plane2.static_census.per_element.{}.staged_by_dependencies."
-    "runtime.bst[]":
-        "the same list, split by which dependency staged the binary - "
-        "and the same reason (UX-469)",
+    "runtime.bst[]": "the same list, split by which dependency staged the binary - and the same reason (UX-469)",
 }
 
 
@@ -190,6 +183,7 @@ def capture_fields(capture):
 
 # --- the trace side ---------------------------------------------------
 
+
 def _wire_fields(buf):
     """`(field number, wire type, value)` over one encoded message."""
     index = 0
@@ -200,11 +194,11 @@ def _wire_fields(buf):
             value, index = _varint(buf, index)
         elif wire == 2:
             length, index = _varint(buf, index)
-            value, index = buf[index:index + length], index + length
+            value, index = buf[index : index + length], index + length
         elif wire == 1:
-            value, index = buf[index:index + 8], index + 8
+            value, index = buf[index : index + 8], index + 8
         elif wire == 5:
-            value, index = buf[index:index + 4], index + 4
+            value, index = buf[index : index + 4], index + 4
         else:
             raise ValueError(f"unknown wire type {wire} at byte {index}")
         yield field, wire, value
@@ -241,11 +235,12 @@ def decode(path):
             raw = handle.read()
     else:
         raw = path.read_bytes()
-    packets = [v for f, _w, v in _wire_fields(raw)
-               if f == trackevent.TRACE_PACKET]
-    interned = {trackevent.INTERNED_EVENT_NAMES: {},
-                trackevent.INTERNED_EVENT_CATEGORIES: {},
-                trackevent.INTERNED_DEBUG_ANNOTATION_NAMES: {}}
+    packets = [v for f, _w, v in _wire_fields(raw) if f == trackevent.TRACE_PACKET]
+    interned = {
+        trackevent.INTERNED_EVENT_NAMES: {},
+        trackevent.INTERNED_EVENT_CATEGORIES: {},
+        trackevent.INTERNED_DEBUG_ANNOTATION_NAMES: {},
+    }
     vocabulary, used = collections.defaultdict(set), set()
     annotation_iids, name_iids, category_iids = [], [], []
     # `(annotation name iid, string value)` in emission order, so an
@@ -260,8 +255,7 @@ def decode(path):
             elif field == trackevent.PACKET_TRACK_DESCRIPTOR:
                 _read_track(value, vocabulary, used)
             elif field == trackevent.PACKET_TRACK_EVENT:
-                _read_event(value, vocabulary, used, annotation_iids,
-                            name_iids, category_iids, annotation_values)
+                _read_event(value, vocabulary, used, annotation_iids, name_iids, category_iids, annotation_values)
 
     names = interned[trackevent.INTERNED_EVENT_NAMES]
     categories = interned[trackevent.INTERNED_EVENT_CATEGORIES]
@@ -279,8 +273,7 @@ def decode(path):
         vocabulary[text].add(f"debug-annotation:{annotations.get(iid, '?')}")
     if any(i in categories for i in category_iids):
         used.add("category")
-    return ({value: frozenset(sites) for value, sites in vocabulary.items()
-             if value}, used)
+    return ({value: frozenset(sites) for value, sites in vocabulary.items() if value}, used)
 
 
 def _gzipped(path):
@@ -312,25 +305,21 @@ def _read_track(buf, vocabulary, used):
             used.add("process-track")
             for inner, _w, payload in _wire_fields(value):
                 if inner == trackevent.PROCESS_NAME:
-                    vocabulary[payload.decode("utf-8", "replace")].add(
-                        "process-name")
+                    vocabulary[payload.decode("utf-8", "replace")].add("process-name")
         elif field == trackevent.TRACK_THREAD:
             used.add("thread-track")
             for inner, _w, payload in _wire_fields(value):
                 if inner == trackevent.THREAD_NAME:
-                    vocabulary[payload.decode("utf-8", "replace")].add(
-                        "thread-name")
+                    vocabulary[payload.decode("utf-8", "replace")].add("thread-name")
         elif field == trackevent.TRACK_COUNTER:
             used.add("counter")
             for inner, _w, payload in _wire_fields(value):
                 if inner == trackevent.COUNTER_UNIT_NAME:
                     used.add("counter-unit")
-                    vocabulary[payload.decode("utf-8", "replace")].add(
-                        "counter-unit")
+                    vocabulary[payload.decode("utf-8", "replace")].add("counter-unit")
 
 
-def _read_event(buf, vocabulary, used, annotation_iids, name_iids,
-                category_iids, annotation_values):
+def _read_event(buf, vocabulary, used, annotation_iids, name_iids, category_iids, annotation_values):
     for field, _wire, value in _wire_fields(buf):
         if field == trackevent.EVENT_TYPE:
             if value == trackevent.TYPE_SLICE_BEGIN:
@@ -343,8 +332,7 @@ def _read_event(buf, vocabulary, used, annotation_iids, name_iids,
             name_iids.append(value)
         elif field == trackevent.EVENT_CATEGORY_IIDS:
             category_iids.append(value)
-        elif field in (trackevent.EVENT_FLOW_IDS,
-                       trackevent.EVENT_TERMINATING_FLOW_IDS):
+        elif field in (trackevent.EVENT_FLOW_IDS, trackevent.EVENT_TERMINATING_FLOW_IDS):
             used.add("flow")
         elif field == trackevent.EVENT_DEBUG_ANNOTATIONS:
             used.add("debug-annotation")
@@ -358,17 +346,18 @@ def _read_event(buf, vocabulary, used, annotation_iids, name_iids,
                     annotation_iids.append(payload)
                     key = payload
                 elif inner == trackevent.ANNOTATION_STRING_VALUE:
-                    annotation_values.append(
-                        (key, payload.decode("utf-8", "replace")))
+                    annotation_values.append((key, payload.decode("utf-8", "replace")))
 
 
 def emit_trace(capture, out_dir):
     """Run the shipped `bga timeline` over one capture."""
     target = pathlib.Path(out_dir) / "timeline.pftrace"
     done = subprocess.run(
-        [sys.executable, "-m", "tools.bga_timeline", str(capture),
-         "-o", str(target)],
-        cwd=str(REPO), capture_output=True, text=True)
+        [sys.executable, "-m", "tools.bga_timeline", str(capture), "-o", str(target)],
+        cwd=str(REPO),
+        capture_output=True,
+        text=True,
+    )
     if done.returncode != 0 or not target.is_file():
         return None, (done.stderr or done.stdout).strip().splitlines()[-1:]
     return target, None
@@ -376,10 +365,10 @@ def emit_trace(capture, out_dir):
 
 # --- the census -------------------------------------------------------
 
+
 def assess(values):
     """`(verdict, reason)` for one field's value set."""
-    strings = {str(v) for v in values
-               if isinstance(v, str) and str(v).lower() not in NOISE}
+    strings = {str(v) for v in values if isinstance(v, str) and str(v).lower() not in NOISE}
     if not strings:
         return "unassessable", "no string values a trace could carry"
     if len(strings) < 2:
@@ -413,7 +402,7 @@ def indistinguishable(matched):
     same = collections.defaultdict(list)
     fields = sorted(matched)
     for i, one in enumerate(fields):
-        for other in fields[i + 1:]:
+        for other in fields[i + 1 :]:
             if matched[one] and matched[one] == matched[other]:
                 same[one].append(other)
                 same[other].append(one)
@@ -443,12 +432,9 @@ def coverage(capture, vocabulary):
                 continue
             landed = matched.get(field)
             if landed:
-                reached[field] = (
-                    f"{len(landed)}/{len(detail)} value(s) via "
-                    f"{', '.join(sites_of(landed, vocabulary))}")
+                reached[field] = f"{len(landed)}/{len(detail)} value(s) via {', '.join(sites_of(landed, vocabulary))}"
             else:
-                buckets["dropped"].append(
-                    (field, f"0/{len(detail)} value(s) in the trace"))
+                buckets["dropped"].append((field, f"0/{len(detail)} value(s) in the trace"))
         # `UX-485`: a field whose matched values are exactly another's
         # is reported as *shared* rather than reached, because "these
         # values are in the trace" is all this census measured about
@@ -463,9 +449,7 @@ def coverage(capture, vocabulary):
                 # reads.
                 named = ", ".join(others[:2])
                 more = f" and {len(others) - 2} more" if len(others) > 2 else ""
-                buckets["shared"].append(
-                    (field, f"{detail}; indistinguishable from "
-                            f"{named}{more}"))
+                buckets["shared"].append((field, f"{detail}; indistinguishable from {named}{more}"))
             else:
                 buckets["reached"].append((field, detail))
         report[plane] = dict(buckets)
@@ -483,7 +467,8 @@ def render(capture, report, used, show_fields=True):
         lines.append(
             f"\nPlane {plane}: {len(reached)} reached, {len(shared)} shared, "
             f"{len(dropped)} dropped, {len(declined)} declined, "
-            f"{len(unassessable)} unassessable")
+            f"{len(unassessable)} unassessable"
+        )
         if show_fields:
             for field, detail in dropped:
                 lines.append(f"    DROPPED   {field}  ({detail})")
@@ -514,7 +499,7 @@ def drawable(root=REPO, tracked_only=True):
     can, cannot = [], []
     with tempfile.TemporaryDirectory() as tmp:
         for run in captures(root, tracked_only=tracked_only):
-            capture = run.parent                     # the snapshot, not `run/`
+            capture = run.parent  # the snapshot, not `run/`
             trace, complaint = emit_trace(capture, tmp)
             if trace is None:
                 cannot.append((label(run, root), _why(complaint)))
@@ -546,12 +531,9 @@ def survey(root=REPO, tracked_only=True):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("capture", nargs="?",
-                        help="one capture; default is every capture a clone has")
-    parser.add_argument("--carriers", action="store_true",
-                        help="stage 2 only: the carrier table, no field list")
-    parser.add_argument("--local", action="store_true",
-                        help="include captures this machine has and a clone does not")
+    parser.add_argument("capture", nargs="?", help="one capture; default is every capture a clone has")
+    parser.add_argument("--carriers", action="store_true", help="stage 2 only: the carrier table, no field list")
+    parser.add_argument("--local", action="store_true", help="include captures this machine has and a clone does not")
     args = parser.parse_args(argv)
 
     if args.capture:
@@ -564,24 +546,23 @@ def main(argv=None):
                 print(f"{capture}: {_why(complaint)}")
                 return 1
             vocabulary, used = decode(trace)
-        print(render(capture, coverage(capture, vocabulary), used,
-                     show_fields=not args.carriers))
+        print(render(capture, coverage(capture, vocabulary), used, show_fields=not args.carriers))
         return 0
 
-    blocks, cannot, planes_seen, carriers_seen = survey(
-        tracked_only=not args.local)
+    blocks, cannot, planes_seen, carriers_seen = survey(tracked_only=not args.local)
     for name, _capture, report, used in blocks:
         print(render(name, report, used, show_fields=not args.carriers))
         print()
     scope = "this machine" if args.local else "a clone"
-    print(f"({scope}) {len(blocks)} capture(s) can draw a timeline, "
-          f"{len(cannot)} cannot")
+    print(f"({scope}) {len(blocks)} capture(s) can draw a timeline, {len(cannot)} cannot")
     for name, why in cannot:
         print(f"  cannot: {name:32} {why}")
     for plane in sorted(PLANE_FILES):
         if plane not in planes_seen:
-            print(f"  Plane {plane}: no capture that can draw a timeline "
-                  f"carries its records, so nothing measures what it maps to")
+            print(
+                f"  Plane {plane}: no capture that can draw a timeline "
+                f"carries its records, so nothing measures what it maps to"
+            )
     unused = sorted(set(CARRIERS) - carriers_seen)
     if unused:
         print(f"  carriers no capture exercised: {', '.join(unused)}")

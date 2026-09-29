@@ -24,6 +24,7 @@ capture time than on any later `bga analyze` of the same snapshot.
 `test_the_sample_count_does_not_depend_on_when_it_is_asked` is that
 property.
 """
+
 import json
 import os
 import pathlib
@@ -40,10 +41,8 @@ from bga.tools_dispatch import _import_tool
 REPO = pathlib.Path(__file__).resolve().parents[2]
 GOLDEN = REPO / "tests/fixtures/golden/mixed_task_kinds"
 
-FAST_HOST = {"schema": "host/v1", "cpu_model": "Ryzen 9 7950X",
-             "cpu_count": 32, "memory_mb": 64000}
-SLOW_HOST = {"schema": "host/v1", "cpu_model": "Xeon E5-2680",
-             "cpu_count": 16, "memory_mb": 32000}
+FAST_HOST = {"schema": "host/v1", "cpu_model": "Ryzen 9 7950X", "cpu_count": 32, "memory_mb": 64000}
+SLOW_HOST = {"schema": "host/v1", "cpu_model": "Xeon E5-2680", "cpu_count": 16, "memory_mb": 32000}
 
 
 def _plant(tmp_path, runs, slices=True):
@@ -89,8 +88,7 @@ class TestTheStoreIsThePartTwentyNineHistory:
         """The Acceptance Test. Scales 1.0/1.6/2.4 on a 6000us element
         give 6000/9600/14400 -> mean 10000, and the coefficient of
         variation is hand-computable from those three."""
-        runs = _plant(tmp_path, [(1.0, FAST_HOST), (1.6, FAST_HOST),
-                                 (2.4, FAST_HOST)])
+        runs = _plant(tmp_path, [(1.0, FAST_HOST), (1.6, FAST_HOST), (2.4, FAST_HOST)])
         block = _variability(runs[-1])
         assert block, "Part 29 published nothing on a store that has a history"
         row = block["base.bst"]
@@ -111,22 +109,19 @@ class TestTheStoreIsThePartTwentyNineHistory:
         """`UX-186`, which `UX-565` is explicitly not allowed to
         suspend: two of these three ran on a different host, so this
         run's class has one sample and the floor refuses it."""
-        runs = _plant(tmp_path, [(1.0, SLOW_HOST), (1.6, SLOW_HOST),
-                                 (2.4, FAST_HOST)])
+        runs = _plant(tmp_path, [(1.0, SLOW_HOST), (1.6, SLOW_HOST), (2.4, FAST_HOST)])
         assert _variability(runs[-1]) is None
         # And the same three runs on one machine do publish - so the
         # refusal above is the host class and not the fixture.
         other = tmp_path / "same"
         other.mkdir()
-        same = _plant(other, [(1.0, FAST_HOST), (1.6, FAST_HOST),
-                              (2.4, FAST_HOST)])
+        same = _plant(other, [(1.0, FAST_HOST), (1.6, FAST_HOST), (2.4, FAST_HOST)])
         assert _variability(same[-1])
 
     def test_every_row_names_the_machine_its_samples_came_from(self, tmp_path):
         """A sample count with no host class is a figure a reader
         cannot check the refusal above against."""
-        runs = _plant(tmp_path, [(1.0, FAST_HOST), (1.6, FAST_HOST),
-                                 (2.4, FAST_HOST)])
+        runs = _plant(tmp_path, [(1.0, FAST_HOST), (1.6, FAST_HOST), (2.4, FAST_HOST)])
         classes = {row["host_class"] for row in _variability(runs[-1]).values()}
         assert len(classes) == 1
         assert "Ryzen 9 7950X" in classes.pop()
@@ -139,15 +134,13 @@ class TestTheStoreIsThePartTwentyNineHistory:
         runs = _plant(tmp_path, [(1.0, FAST_HOST), (1.6, FAST_HOST)])
         assert _variability(runs[-1]) is None
 
-    def test_the_sample_count_does_not_depend_on_when_it_is_asked(
-            self, tmp_path):
+    def test_the_sample_count_does_not_depend_on_when_it_is_asked(self, tmp_path):
         """`bga snapshot` analyses (`tools/bga_snapshot.py:543`) before
         it writes this snapshot's slice (`:548`). Reading this run's
         own sample from the store would therefore give the capture's
         `analyze.json` one fewer sample than a later `bga analyze` of
         the same directory - two documents about one run."""
-        runs = _plant(tmp_path, [(1.0, FAST_HOST), (1.6, FAST_HOST),
-                                 (2.4, FAST_HOST)])
+        runs = _plant(tmp_path, [(1.0, FAST_HOST), (1.6, FAST_HOST), (2.4, FAST_HOST)])
         after = _variability(runs[-1])
         os.remove(runs[-1].parent / "element-slice.json")
         during = _variability(runs[-1])
@@ -178,12 +171,13 @@ class TestTheDocumentDeclaresIt:
     def test_the_published_fields_are_declared(self, tmp_path):
         """`UX-343`: a member with no node renders from the viewer's
         name-sniff. Every field this publishes has one."""
-        runs = _plant(tmp_path, [(1.0, FAST_HOST), (1.6, FAST_HOST),
-                                 (2.4, FAST_HOST)])
+        runs = _plant(tmp_path, [(1.0, FAST_HOST), (1.6, FAST_HOST), (2.4, FAST_HOST)])
         published = set(next(iter(_variability(runs[-1]).values())))
-        declared = set(schemas._ANALYZE_HINTS["elements"]["properties"]
-                       ["duration_variability"]["additionalProperties"]
-                       ["properties"])
+        declared = set(
+            schemas._ANALYZE_HINTS["elements"]["properties"]["duration_variability"]["additionalProperties"][
+                "properties"
+            ]
+        )
         assert published == declared
 
     def test_the_card_draws_it(self):

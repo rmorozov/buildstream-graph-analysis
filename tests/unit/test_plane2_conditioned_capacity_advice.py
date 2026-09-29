@@ -15,6 +15,7 @@ The capacity axis being unmodeled is a known gap (`UX-09`). What was new
 is that when the missing information is present in the same capture, the
 Plane 1 advice did not consult it.
 """
+
 from bga.correlate import summarize_plane2_capacity
 from bga.findings import compute_findings, findings_by_id
 from bga.ingest.models import AnalysisResult
@@ -80,8 +81,10 @@ def test_a_pinned_element_is_named():
 
 def test_plane_2_that_cannot_answer_leaves_everything_unset():
     assert summarize_plane2_capacity({}, None) == {
-        'cores_busy': None, 'host_cpu_count': None,
-        'saturated': False, 'pinned_elements': [],
+        'cores_busy': None,
+        'host_cpu_count': None,
+        'saturated': False,
+        'pinned_elements': [],
     }
 
 
@@ -98,10 +101,16 @@ def test_without_plane_2_the_hint_is_unchanged():
 
 
 def test_a_saturated_host_is_told_not_to_raise_capacity():
-    hint = _hint(_resource_wait_result({
-        'cores_busy': 3.9, 'host_cpu_count': 4, 'saturated': True,
-        'pinned_elements': [],
-    }))
+    hint = _hint(
+        _resource_wait_result(
+            {
+                'cores_busy': 3.9,
+                'host_cpu_count': 4,
+                'saturated': True,
+                'pinned_elements': [],
+            }
+        )
+    )
 
     assert 'do NOT raise capacity' in hint
     assert '3.90 of 4 cores busy' in hint
@@ -110,10 +119,16 @@ def test_a_saturated_host_is_told_not_to_raise_capacity():
 def test_a_pinned_element_is_named_before_anything_about_capacity():
     """Intra-element parallelism is free capacity that `--builders` is
     not, so it goes first."""
-    hint = _hint(_resource_wait_result({
-        'cores_busy': 3.9, 'host_cpu_count': 4, 'saturated': True,
-        'pinned_elements': ['core.bst'],
-    }))
+    hint = _hint(
+        _resource_wait_result(
+            {
+                'cores_busy': 3.9,
+                'host_cpu_count': 4,
+                'saturated': True,
+                'pinned_elements': ['core.bst'],
+            }
+        )
+    )
 
     assert hint.index('core.bst') < hint.index('capacity you already have')
     assert 'remove `notparallel`' in hint
@@ -122,12 +137,17 @@ def test_a_pinned_element_is_named_before_anything_about_capacity():
 def test_only_the_resource_wait_hint_is_conditioned():
     """Every other category keeps today's text: Plane 2 says nothing
     about whether a dependency wait is real."""
-    result = _resource_wait_result({
-        'cores_busy': 3.9, 'host_cpu_count': 4, 'saturated': True,
-        'pinned_elements': ['core.bst'],
-    })
+    result = _resource_wait_result(
+        {
+            'cores_busy': 3.9,
+            'host_cpu_count': 4,
+            'saturated': True,
+            'pinned_elements': ['core.bst'],
+        }
+    )
     result.attribution = {
-        'execution_on_chain_us': 68_000_000, 'dependency_wait_us': 32_000_000,
+        'execution_on_chain_us': 68_000_000,
+        'dependency_wait_us': 32_000_000,
     }
 
     assert 'core.bst' not in _hint(result)
@@ -138,8 +158,7 @@ def test_only_the_resource_wait_hint_is_conditioned():
 
 def test_the_knee_line_is_annotated_with_what_was_measured():
     lines = _plane2_knee_caveat(
-        {'cores_busy': 3.25, 'host_cpu_count': 4, 'saturated': True,
-         'pinned_elements': ['core.bst']},
+        {'cores_busy': 3.25, 'host_cpu_count': 4, 'saturated': True, 'pinned_elements': ['core.bst']},
         knee=5,
     )
     text = "\n".join(lines)

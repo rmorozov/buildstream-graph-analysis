@@ -18,6 +18,7 @@ that did it by accident finds out here.
 
 holds: rules.md#never-touch-docs-spec-specification-md-outside-part-32s-registry
 """
+
 import hashlib
 import pathlib
 
@@ -47,7 +48,7 @@ def _outside():
     """The spec less Part 32, as bytes."""
     lines = SPEC.read_text(encoding="utf-8").splitlines(keepends=True)
     first, last = _part_32()
-    return "".join(lines[:first - 1] + lines[last:]).encode("utf-8")
+    return "".join(lines[: first - 1] + lines[last:]).encode("utf-8")
 
 
 class TestTheSpecOutsidePart32DoesNotMove:
@@ -57,7 +58,8 @@ class TestTheSpecOutsidePart32DoesNotMove:
             f"the spec changed outside Part 32 (lines {_part_32()[0]}-"
             f"{_part_32()[1]} are the editable Part). A factual error out "
             f"there is filed, not fixed - fixing guide item 12. If the edit "
-            f"is deliberate and a task file says so, set DIGEST to {found}")
+            f"is deliberate and a task file says so, set DIGEST to {found}"
+        )
 
     def test_the_range_is_the_part_and_not_a_number_someone_typed(self):
         """The boundary must follow the headings, or an inserted Part
@@ -65,16 +67,14 @@ class TestTheSpecOutsidePart32DoesNotMove:
         first, last = _part_32()
         lines = SPEC.read_text(encoding="utf-8").splitlines()
         assert lines[first - 1].startswith("# Part 32"), lines[first - 1]
-        assert lines[last].startswith("# "), (
-            f"line {last + 1} is not the next Part heading: {lines[last]!r}")
+        assert lines[last].startswith("# "), f"line {last + 1} is not the next Part heading: {lines[last]!r}"
         assert last > first, (first, last)
 
     def test_the_guide_quotes_the_range_the_headings_give(self):
         first, last = _part_32()
-        assert f"Part 32 spans {first}-{last}" in GUIDE.read_text(
-            encoding="utf-8"), (
-            f"the fixing guide's item 12 does not say Part 32 spans "
-            f"{first}-{last}")
+        assert f"Part 32 spans {first}-{last}" in GUIDE.read_text(encoding="utf-8"), (
+            f"the fixing guide's item 12 does not say Part 32 spans {first}-{last}"
+        )
 
     def test_the_digest_covers_most_of_the_document(self):
         """A range bug that made `_outside()` empty would pass every
@@ -82,7 +82,8 @@ class TestTheSpecOutsidePart32DoesNotMove:
         whole = SPEC.read_bytes()
         assert len(_outside()) > len(whole) // 2, (
             f"{len(_outside())} B of {len(whole)} B is outside Part 32; the "
-            f"range is wrong and the digest guards almost nothing")
+            f"range is wrong and the digest guards almost nothing"
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

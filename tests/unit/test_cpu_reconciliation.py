@@ -14,13 +14,17 @@ always reflects the true diff once capacity data exists; the 2%
 tolerance now only gates whether it's *additionally* flagged as a
 violation (logged, folded into the UNTRACKED bucket).
 """
+
 from bga.utilisation import CPUBucket, analyze_utilization
 
 
 def _interval(uid, cpu_usage_us):
     return {
-        "task_key": uid, "start_us": 0, "end_us": cpu_usage_us,
-        "cpu_usage_us": cpu_usage_us, "concurrent_tasks": [uid],
+        "task_key": uid,
+        "start_us": 0,
+        "end_us": cpu_usage_us,
+        "cpu_usage_us": cpu_usage_us,
+        "concurrent_tasks": [uid],
     }
 
 

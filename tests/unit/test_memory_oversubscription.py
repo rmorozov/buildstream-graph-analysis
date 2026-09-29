@@ -11,6 +11,7 @@ pipeline (mirrors UX-12/UX-15's own CPU-side honesty) - both
 operator-declared, so this check only ever runs when both (plus
 `builders`/`native_max_jobs`) are actually present.
 """
+
 import json
 
 from bga import BuildEfficiencyAnalyzer
@@ -25,8 +26,13 @@ def _write_run_dir(tmp_path, name, run_context):
     }
     trace = {
         "spans": [
-            {"task_key": "a.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 1000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
+            {
+                "task_key": "a.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 1000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
         ],
         "phases": [],
     }
@@ -37,8 +43,14 @@ def _write_run_dir(tmp_path, name, run_context):
 
 
 def _analyze(
-    tmp_path, name, builders, native_max_jobs=None, host_cpu_count=None,
-    cpu_budget=None, memory_budget_mb=None, estimated_job_memory_mb=None,
+    tmp_path,
+    name,
+    builders,
+    native_max_jobs=None,
+    host_cpu_count=None,
+    cpu_budget=None,
+    memory_budget_mb=None,
+    estimated_job_memory_mb=None,
 ):
     run_context = {
         "trace_epsilon_us": 100,
@@ -69,8 +81,12 @@ def test_real_oversubscribed_configuration_is_flagged(tmp_path):
     declared budget - a real, plausible C++ LTO scenario (UX-21's own
     Motivation)."""
     result = _analyze(
-        tmp_path, "run", builders=8, native_max_jobs=8,
-        memory_budget_mb=8000, estimated_job_memory_mb=1000,
+        tmp_path,
+        "run",
+        builders=8,
+        native_max_jobs=8,
+        memory_budget_mb=8000,
+        estimated_job_memory_mb=1000,
     )
     assert "memory_oversubscription" in _violation_types(result)
     violation = next(v for v in result.violations if v["type"] == "memory_oversubscription")
@@ -82,8 +98,12 @@ def test_real_oversubscribed_configuration_is_flagged(tmp_path):
 
 def test_within_budget_is_not_flagged(tmp_path):
     result = _analyze(
-        tmp_path, "run", builders=4, native_max_jobs=4,
-        memory_budget_mb=32000, estimated_job_memory_mb=1000,
+        tmp_path,
+        "run",
+        builders=4,
+        native_max_jobs=4,
+        memory_budget_mb=32000,
+        estimated_job_memory_mb=1000,
     )
     assert "memory_oversubscription" not in _violation_types(result)
 
@@ -95,16 +115,26 @@ def test_memory_and_cpu_oversubscription_are_independent(tmp_path):
     and vice versa (memory-oversubscribed, CPU-fine) - confirms the two
     dimensions are checked independently, not conflated."""
     cpu_oversub_only = _analyze(
-        tmp_path, "cpu_oversub", builders=8, native_max_jobs=8, host_cpu_count=4,
-        memory_budget_mb=1_000_000, estimated_job_memory_mb=1,
+        tmp_path,
+        "cpu_oversub",
+        builders=8,
+        native_max_jobs=8,
+        host_cpu_count=4,
+        memory_budget_mb=1_000_000,
+        estimated_job_memory_mb=1,
     )
     types = _violation_types(cpu_oversub_only)
     assert "resource_oversubscription" in types
     assert "memory_oversubscription" not in types
 
     memory_oversub_only = _analyze(
-        tmp_path, "mem_oversub", builders=2, native_max_jobs=1, host_cpu_count=32,
-        memory_budget_mb=100, estimated_job_memory_mb=1000,
+        tmp_path,
+        "mem_oversub",
+        builders=2,
+        native_max_jobs=1,
+        host_cpu_count=32,
+        memory_budget_mb=100,
+        estimated_job_memory_mb=1000,
     )
     types = _violation_types(memory_oversub_only)
     assert "resource_oversubscription" not in types
@@ -117,7 +147,10 @@ def test_check_is_skipped_when_memory_budget_is_absent(tmp_path):
     them. Must not fabricate a verdict from missing data, even with an
     extreme builders x native_max_jobs combination."""
     result = _analyze(
-        tmp_path, "run", builders=100, native_max_jobs=100,
+        tmp_path,
+        "run",
+        builders=100,
+        native_max_jobs=100,
         estimated_job_memory_mb=1000,
     )
     assert "memory_oversubscription" not in _violation_types(result)
@@ -125,7 +158,10 @@ def test_check_is_skipped_when_memory_budget_is_absent(tmp_path):
 
 def test_check_is_skipped_when_estimated_job_memory_is_absent(tmp_path):
     result = _analyze(
-        tmp_path, "run", builders=100, native_max_jobs=100,
+        tmp_path,
+        "run",
+        builders=100,
+        native_max_jobs=100,
         memory_budget_mb=100,
     )
     assert "memory_oversubscription" not in _violation_types(result)
@@ -137,8 +173,13 @@ def test_max_jobs_zero_sentinel_is_resolved_not_treated_as_missing(tmp_path):
     (min(governing_cores, 8)), not be silently skipped or treated as
     literal zero demand."""
     result = _analyze(
-        tmp_path, "run", builders=8, native_max_jobs=0, host_cpu_count=4,
-        memory_budget_mb=8000, estimated_job_memory_mb=1000,
+        tmp_path,
+        "run",
+        builders=8,
+        native_max_jobs=0,
+        host_cpu_count=4,
+        memory_budget_mb=8000,
+        estimated_job_memory_mb=1000,
     )
     assert "memory_oversubscription" in _violation_types(result)
     violation = next(v for v in result.violations if v["type"] == "memory_oversubscription")
@@ -154,8 +195,12 @@ def test_max_jobs_zero_sentinel_without_a_governing_core_count_is_skipped(tmp_pa
     memory demand (the exact class of bug UX-16 fixed for the CPU
     check)."""
     result = _analyze(
-        tmp_path, "run", builders=8, native_max_jobs=0,
-        memory_budget_mb=100, estimated_job_memory_mb=1000,
+        tmp_path,
+        "run",
+        builders=8,
+        native_max_jobs=0,
+        memory_budget_mb=100,
+        estimated_job_memory_mb=1000,
     )
     assert "memory_oversubscription" not in _violation_types(result)
 
@@ -164,8 +209,12 @@ def test_report_text_labels_the_estimate_as_config_driven(tmp_path):
     from bga.report.text import format_text
 
     result = _analyze(
-        tmp_path, "run", builders=8, native_max_jobs=8,
-        memory_budget_mb=8000, estimated_job_memory_mb=1000,
+        tmp_path,
+        "run",
+        builders=8,
+        native_max_jobs=8,
+        memory_budget_mb=8000,
+        estimated_job_memory_mb=1000,
     )
     output = format_text(result)
     assert "estimated memory oversubscription" in output

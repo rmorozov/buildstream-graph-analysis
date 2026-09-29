@@ -33,6 +33,7 @@ at the suspend is not recorded anywhere, so there is nothing to correct
 them *with*; refusal is the honest output, and `UX-129` is the standing
 lesson about the alternative.
 """
+
 import shutil
 import time
 from typing import Optional
@@ -75,8 +76,7 @@ def drift_seconds(start: Optional[dict], end: Optional[dict]) -> Optional[float]
     return wall - monotonic
 
 
-def slept(start: Optional[dict], end: Optional[dict],
-          threshold: float = DRIFT_THRESHOLD_S) -> Optional[dict]:
+def slept(start: Optional[dict], end: Optional[dict], threshold: float = DRIFT_THRESHOLD_S) -> Optional[dict]:
     """`{"suspended_seconds": float}` if the machine slept, else None."""
     drift = drift_seconds(start, end)
     if drift is None or drift < threshold:
@@ -107,8 +107,7 @@ def inhibit_argv(command: list[str]) -> list[str]:
     if found["gnome-session-inhibit"]:
         argv = [found["gnome-session-inhibit"], "--inhibit", "idle"] + argv
     if found["systemd-inhibit"]:
-        argv = [found["systemd-inhibit"], "--what=sleep:shutdown",
-                f"--why={_WHY}", f"--who={_WHO}"] + argv
+        argv = [found["systemd-inhibit"], "--what=sleep:shutdown", f"--why={_WHY}", f"--who={_WHO}"] + argv
     return argv
 
 
@@ -116,10 +115,12 @@ def unavailable_notice() -> Optional[str]:
     """One line when `--inhibit` was asked for and cannot be honoured."""
     if any(available().values()):
         return None
-    return ("--inhibit: neither `systemd-inhibit` nor `gnome-session-inhibit` "
-            "is installed, so this capture cannot stop the machine from "
-            "sleeping. Running anyway - a suspend mid-capture is detected "
-            "either way and the run will say so.")
+    return (
+        "--inhibit: neither `systemd-inhibit` nor `gnome-session-inhibit` "
+        "is installed, so this capture cannot stop the machine from "
+        "sleeping. Running anyway - a suspend mid-capture is detected "
+        "either way and the run will say so."
+    )
 
 
 def describe(suspension: dict) -> str:
@@ -131,8 +132,10 @@ def describe(suspension: dict) -> str:
     seconds = suspension.get("suspended_seconds", 0)
     minutes = seconds / 60
     span = f"{minutes:.0f} minutes" if minutes >= 2 else f"{seconds:.0f} seconds"
-    return (f"This capture spans a suspend: the machine slept for about "
-            f"{span} while it ran. Plane 1 counts that sleep as build time "
-            f"and Plane 2 does not, so the durations here are not "
-            f"measurements. Re-run with `--inhibit`, or on mains power with "
-            f"the lid open.")
+    return (
+        f"This capture spans a suspend: the machine slept for about "
+        f"{span} while it ran. Plane 1 counts that sleep as build time "
+        f"and Plane 2 does not, so the durations here are not "
+        f"measurements. Re-run with `--inhibit`, or on mains power with "
+        f"the lid open."
+    )

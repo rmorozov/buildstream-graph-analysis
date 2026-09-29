@@ -11,14 +11,14 @@ the one named, that a constraint nobody measured never becomes an
 unbounded ceiling, and that the block declines to speak at all on the
 same bar `UX-83` uses.
 """
+
 from bga.correlate import compute_capacity_recommendation
 from bga.findings import _capacity_recommendation_finding
 from bga.units import MIB
 
 
 def _plane2(cores_busy=2.0, host=4, pinned=()):
-    return {'cores_busy': cores_busy, 'host_cpu_count': host,
-            'saturated': False, 'pinned_elements': list(pinned)}
+    return {'cores_busy': cores_busy, 'host_cpu_count': host, 'saturated': False, 'pinned_elements': list(pinned)}
 
 
 def _envelope(fits_up_to, measured=None, host_mb=16000):
@@ -28,8 +28,7 @@ def _envelope(fits_up_to, measured=None, host_mb=16000):
         'elements_measured': measured,
         'largest_element_peak_bytes': 1000,
         'projections': [
-            {'builders': n, 'envelope_bytes': 1000 * n,
-             'share_of_host': 1000 * n / host_mb, 'fits': n <= fits_up_to}
+            {'builders': n, 'envelope_bytes': 1000 * n, 'share_of_host': 1000 * n / host_mb, 'fits': n <= fits_up_to}
             for n in range(1, measured + 1)
         ],
     }
@@ -40,8 +39,11 @@ class TestWhichConstraintBinds:
         """UX-116's own worked example: the graph could use five builders,
         the host's cores cannot feed them, and memory is nowhere near."""
         recommendation = compute_capacity_recommendation(
-            _plane2(cores_busy=3.4, host=4), _envelope(11), knee=5,
-            builders=4, native_max_jobs=4,
+            _plane2(cores_busy=3.4, host=4),
+            _envelope(11),
+            knee=5,
+            builders=4,
+            native_max_jobs=4,
         )
 
         assert recommendation['binding_constraint'] == 'CPU'
@@ -52,8 +54,11 @@ class TestWhichConstraintBinds:
         """More builders than the graph has parallelism for is capacity
         that cannot be spent, whatever the host could feed."""
         recommendation = compute_capacity_recommendation(
-            _plane2(cores_busy=0.5, host=16), _envelope(11), knee=2,
-            builders=4, native_max_jobs=1,
+            _plane2(cores_busy=0.5, host=16),
+            _envelope(11),
+            knee=2,
+            builders=4,
+            native_max_jobs=1,
         )
 
         assert recommendation['binding_constraint'] == 'graph'
@@ -63,8 +68,11 @@ class TestWhichConstraintBinds:
         """UX-104's whole point: advice that clears CPU and fails memory
         is advice to build into swap."""
         recommendation = compute_capacity_recommendation(
-            _plane2(cores_busy=0.5, host=16), _envelope(fits_up_to=2, measured=11),
-            knee=8, builders=4, native_max_jobs=1,
+            _plane2(cores_busy=0.5, host=16),
+            _envelope(fits_up_to=2, measured=11),
+            knee=8,
+            builders=4,
+            native_max_jobs=1,
         )
 
         assert recommendation['binding_constraint'] == 'memory'
@@ -72,8 +80,11 @@ class TestWhichConstraintBinds:
 
     def test_room_to_grow_is_reported_as_a_change(self):
         recommendation = compute_capacity_recommendation(
-            _plane2(cores_busy=1.0, host=8), _envelope(11), knee=6,
-            builders=2, native_max_jobs=2,
+            _plane2(cores_busy=1.0, host=8),
+            _envelope(11),
+            knee=6,
+            builders=2,
+            native_max_jobs=2,
         )
 
         assert recommendation['recommended_builders'] == 6
@@ -86,8 +97,11 @@ class TestWhichConstraintBinds:
         host's own cores, since a figure above them is never a
         recommendation (`UX-861`)."""
         recommendation = compute_capacity_recommendation(
-            _plane2(cores_busy=2.0, host=8), _envelope(64), knee=64,
-            builders=4, native_max_jobs=4,
+            _plane2(cores_busy=2.0, host=8),
+            _envelope(64),
+            knee=64,
+            builders=4,
+            native_max_jobs=4,
         )
 
         cpu = next(c for c in recommendation['constraints'] if c['name'] == 'CPU')
@@ -100,8 +114,11 @@ class TestWhichConstraintBinds:
         """The clamp only fires when the raw figure exceeds the host's
         own cores - most runs never reach it."""
         recommendation = compute_capacity_recommendation(
-            _plane2(cores_busy=3.4, host=4), _envelope(11), knee=5,
-            builders=4, native_max_jobs=4,
+            _plane2(cores_busy=3.4, host=4),
+            _envelope(11),
+            knee=5,
+            builders=4,
+            native_max_jobs=4,
         )
 
         cpu = next(c for c in recommendation['constraints'] if c['name'] == 'CPU')
@@ -113,8 +130,11 @@ class TestWhichConstraintBinds:
         cores is never recommended verbatim, whatever the raw arithmetic
         says."""
         recommendation = compute_capacity_recommendation(
-            _plane2(cores_busy=2.0, host=8), _envelope(64), knee=64,
-            builders=16, native_max_jobs=16,
+            _plane2(cores_busy=2.0, host=8),
+            _envelope(64),
+            knee=64,
+            builders=16,
+            native_max_jobs=16,
         )
 
         assert recommendation['binding_constraint'] == 'CPU'
@@ -125,27 +145,31 @@ class TestWhatItRefusesToSay:
     def test_no_plane_2_cpu_measurement_means_no_block(self):
         """The same bar UX-83 uses. A recommendation resting on a missing
         `cores_busy` is a guess wearing a measurement's clothes."""
-        assert compute_capacity_recommendation(
-            {'cores_busy': None, 'host_cpu_count': 4}, _envelope(11),
-            knee=5, builders=4) == {}
+        assert (
+            compute_capacity_recommendation(
+                {'cores_busy': None, 'host_cpu_count': 4}, _envelope(11), knee=5, builders=4
+            )
+            == {}
+        )
 
     def test_no_host_core_count_means_no_block(self):
-        assert compute_capacity_recommendation(
-            {'cores_busy': 2.0, 'host_cpu_count': None}, _envelope(11),
-            knee=5, builders=4) == {}
+        assert (
+            compute_capacity_recommendation(
+                {'cores_busy': 2.0, 'host_cpu_count': None}, _envelope(11), knee=5, builders=4
+            )
+            == {}
+        )
 
     def test_no_builders_value_means_no_block(self):
         """The whole derivation is per-builder; without the denominator
         there is nothing to divide."""
-        assert compute_capacity_recommendation(
-            _plane2(), _envelope(11), knee=5, builders=None) == {}
+        assert compute_capacity_recommendation(_plane2(), _envelope(11), knee=5, builders=None) == {}
 
     def test_an_unmeasured_memory_envelope_is_not_an_unbounded_ceiling(self):
         """Absent must not read as "memory allows anything" - the
         constraint is simply not listed, and the binding one is chosen
         from what was measured."""
-        recommendation = compute_capacity_recommendation(
-            _plane2(cores_busy=1.0, host=8), {}, knee=6, builders=2)
+        recommendation = compute_capacity_recommendation(_plane2(cores_busy=1.0, host=8), {}, knee=6, builders=2)
 
         assert [c['name'] for c in recommendation['constraints']] == ['graph', 'CPU']
         assert recommendation['binding_constraint'] == 'graph'
@@ -155,8 +179,8 @@ class TestWhatItRefusesToSay:
         of the range is a lower bound on what the graph wants, not the
         answer."""
         recommendation = compute_capacity_recommendation(
-            _plane2(cores_busy=0.5, host=16), _envelope(11), knee=8,
-            knee_range_top=8, builders=4)
+            _plane2(cores_busy=0.5, host=16), _envelope(11), knee=8, knee_range_top=8, builders=4
+        )
 
         graph = next(c for c in recommendation['constraints'] if c['name'] == 'graph')
         assert "the top of the range swept" in graph['reason']
@@ -164,8 +188,7 @@ class TestWhatItRefusesToSay:
     def test_the_contention_caveat_is_inherited_not_reinvented(self):
         """UX-14: the sweep replays observed durations and does not model
         contention. A recommendation built on a knee carries that."""
-        recommendation = compute_capacity_recommendation(
-            _plane2(), _envelope(11), knee=5, builders=4)
+        recommendation = compute_capacity_recommendation(_plane2(), _envelope(11), knee=5, builders=4)
 
         assert "does not model contention" in recommendation['caveat']
         assert "no configuration was tried" in recommendation['caveat']
@@ -182,8 +205,8 @@ class TestTheFinding:
         """`UX-861`: a CPU-bound builder count above the host's cores is
         never recommended verbatim, and the sentence says why."""
         recommendation = compute_capacity_recommendation(
-            _plane2(cores_busy=2.0, host=8), _envelope(64), knee=64,
-            builders=16, native_max_jobs=16)
+            _plane2(cores_busy=2.0, host=8), _envelope(64), knee=64, builders=16, native_max_jobs=16
+        )
 
         finding = _capacity_recommendation_finding(self._result(recommendation))[0]
 
@@ -192,8 +215,8 @@ class TestTheFinding:
 
     def test_the_title_names_the_setting_the_constraint_and_the_verdict(self):
         recommendation = compute_capacity_recommendation(
-            _plane2(cores_busy=3.4, host=4), _envelope(11), knee=5,
-            builders=4, native_max_jobs=4)
+            _plane2(cores_busy=3.4, host=4), _envelope(11), knee=5, builders=4, native_max_jobs=4
+        )
 
         finding = _capacity_recommendation_finding(self._result(recommendation))[0]
 
@@ -205,7 +228,8 @@ class TestTheFinding:
         """The question is the joint one. "builders 4" reads as a complete
         setting; it is not one."""
         recommendation = compute_capacity_recommendation(
-            _plane2(), _envelope(11), knee=5, builders=4, native_max_jobs=None)
+            _plane2(), _envelope(11), knee=5, builders=4, native_max_jobs=None
+        )
 
         finding = _capacity_recommendation_finding(self._result(recommendation))[0]
 
@@ -215,10 +239,10 @@ class TestTheFinding:
         """The binding one is the answer; the others are why it binds, and
         a reader who disagrees needs to see them to argue."""
         recommendation = compute_capacity_recommendation(
-            _plane2(cores_busy=3.4, host=4), _envelope(11), knee=5, builders=4)
+            _plane2(cores_busy=3.4, host=4), _envelope(11), knee=5, builders=4
+        )
 
-        detail = "\n".join(
-            _capacity_recommendation_finding(self._result(recommendation))[0]['detail'])
+        detail = "\n".join(_capacity_recommendation_finding(self._result(recommendation))[0]['detail'])
 
         assert "graph allows 5" in detail
         assert "CPU allows 4" in detail
@@ -229,8 +253,8 @@ class TestTheFinding:
         is capacity already paid for and not used, and it beats raising
         anything."""
         recommendation = compute_capacity_recommendation(
-            _plane2(cores_busy=3.4, host=4, pinned=['core.bst']), _envelope(11),
-            knee=5, builders=4)
+            _plane2(cores_busy=3.4, host=4, pinned=['core.bst']), _envelope(11), knee=5, builders=4
+        )
 
         finding = _capacity_recommendation_finding(self._result(recommendation))[0]
 
@@ -247,8 +271,8 @@ class TestTheFinding:
         graph does. `host=8`, not the original 4: on a 4-core host `UX-861`'s
         clamp caps CPU at 4, below the knee, and CPU would bind instead."""
         recommendation = compute_capacity_recommendation(
-            _plane2(cores_busy=2.11, host=8, pinned=['core.bst']),
-            _envelope(9), knee=6, builders=4)
+            _plane2(cores_busy=2.11, host=8, pinned=['core.bst']), _envelope(9), knee=6, builders=4
+        )
 
         finding = _capacity_recommendation_finding(self._result(recommendation))[0]
 
@@ -257,7 +281,8 @@ class TestTheFinding:
 
     def test_a_run_already_at_its_ceiling_is_info_not_a_problem(self):
         recommendation = compute_capacity_recommendation(
-            _plane2(cores_busy=3.4, host=4), _envelope(11), knee=5, builders=4)
+            _plane2(cores_busy=3.4, host=4), _envelope(11), knee=5, builders=4
+        )
 
         finding = _capacity_recommendation_finding(self._result(recommendation))[0]
 
@@ -268,7 +293,8 @@ class TestTheFinding:
         """Configured higher than anything measured supports is the one
         shape of this finding that is actively costing something."""
         recommendation = compute_capacity_recommendation(
-            _plane2(cores_busy=0.5, host=16), _envelope(11), knee=2, builders=4)
+            _plane2(cores_busy=0.5, host=16), _envelope(11), knee=2, builders=4
+        )
 
         finding = _capacity_recommendation_finding(self._result(recommendation))[0]
 
@@ -292,22 +318,25 @@ class TestRoomToGrowIsAHypothesis:
         return _capacity_recommendation_finding(result)[0]
 
     def test_headroom_is_worded_as_a_hypothesis_not_a_setting(self):
-        finding = self._finding(compute_capacity_recommendation(
-            _plane2(cores_busy=1.0, host=8), _envelope(11), knee=6, builders=2))
+        finding = self._finding(
+            compute_capacity_recommendation(_plane2(cores_busy=1.0, host=8), _envelope(11), knee=6, builders=2)
+        )
 
         assert "hypothesis to time rather than a setting to apply" in finding['title']
 
     def test_headroom_carries_the_reason_both_ceilings_are_optimistic(self):
-        finding = self._finding(compute_capacity_recommendation(
-            _plane2(cores_busy=1.0, host=8), _envelope(11), knee=6, builders=2))
+        finding = self._finding(
+            compute_capacity_recommendation(_plane2(cores_busy=1.0, host=8), _envelope(11), knee=6, builders=2)
+        )
 
         assert any("Time it before keeping it" in line for line in finding['detail'])
 
     def test_no_headroom_does_not_carry_the_hedge(self):
         """A run already at its ceiling has no setting to try, so the line
         would be advice about nothing."""
-        finding = self._finding(compute_capacity_recommendation(
-            _plane2(cores_busy=3.4, host=4), _envelope(11), knee=5, builders=4))
+        finding = self._finding(
+            compute_capacity_recommendation(_plane2(cores_busy=3.4, host=4), _envelope(11), knee=5, builders=4)
+        )
 
         assert not any("Time it before keeping it" in line for line in finding['detail'])
 

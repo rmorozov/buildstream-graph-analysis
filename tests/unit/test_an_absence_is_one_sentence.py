@@ -9,6 +9,7 @@ appended `" — "` between the select and the question span, and
 by hand and each already states what is missing and why; this guard
 is the one measured defect, the separator that outlives its neighbour.
 """
+
 import pathlib
 import sys
 
@@ -64,6 +65,5 @@ class TestAnAbsenceIsOneSentence:
         assert driven["picker"] is True
 
     def test_no_separator_beside_an_empty_question(self, driven):
-        bad = [row for row in driven["seen"]
-              if not row["question"] and row["dashShown"]]
+        bad = [row for row in driven["seen"] if not row["question"] and row["dashShown"]]
         assert bad == [], bad

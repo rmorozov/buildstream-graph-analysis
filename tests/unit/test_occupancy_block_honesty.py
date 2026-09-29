@@ -16,6 +16,7 @@ available" (including a merely *detected* host core count), so
 `effective_cpus_source == "measured"` is what actually distinguishes a
 real CPU measurement.
 """
+
 from bga.report.text import format_text
 
 
@@ -41,23 +42,27 @@ _BUCKETS = {"useful": 61_450_000, "idle_no_tasks": 48_550_000}
 def _detected_host_run():
     """What the documented ingestion pipeline actually produces: a real
     detected core count, no real CPU accounting."""
-    return _Result({
-        "cpu_accounting_available": True,
-        "effective_cpus": 4.0,
-        "effective_cpus_source": "detected_host_cpu_count",
-        "reconciliation_error_share": 0.0,
-        "buckets": dict(_BUCKETS),
-    })
+    return _Result(
+        {
+            "cpu_accounting_available": True,
+            "effective_cpus": 4.0,
+            "effective_cpus_source": "detected_host_cpu_count",
+            "reconciliation_error_share": 0.0,
+            "buckets": dict(_BUCKETS),
+        }
+    )
 
 
 def _measured_run():
-    return _Result({
-        "cpu_accounting_available": True,
-        "effective_cpus": 4.0,
-        "effective_cpus_source": "measured",
-        "reconciliation_error_share": 0.0012,
-        "buckets": dict(_BUCKETS),
-    })
+    return _Result(
+        {
+            "cpu_accounting_available": True,
+            "effective_cpus": 4.0,
+            "effective_cpus_source": "measured",
+            "reconciliation_error_share": 0.0012,
+            "buckets": dict(_BUCKETS),
+        }
+    )
 
 
 def test_run_without_real_cpu_accounting_is_not_titled_cpu_utilisation():

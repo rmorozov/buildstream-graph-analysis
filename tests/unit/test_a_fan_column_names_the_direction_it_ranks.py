@@ -9,6 +9,7 @@ The degree each block ranks is derived here from `graph.json`'s own
 `predecessor`/`successor` records, not read off the schema's prose -
 a sentence copied from the fix would pass however wrong it was.
 """
+
 import json
 import pathlib
 import sys
@@ -84,7 +85,7 @@ class TestTheProseNamesTheDirectionItRanks:
 
     @staticmethod
     def _names_its_own_dependencies(text):
-        """"Elements [that] depend on many others" - the subject is
+        """ "Elements [that] depend on many others" - the subject is
         the one doing the depending."""
         text = text.lower()
         i = text.find("depend on")
@@ -93,7 +94,7 @@ class TestTheProseNamesTheDirectionItRanks:
 
     @staticmethod
     def _is_named_as_a_dependency(text):
-        """"many others depend on" [it] - the subject is depended on."""
+        """ "many others depend on" [it] - the subject is depended on."""
         text = text.lower()
         i = text.find("many others")
         j = text.find("depend on")
@@ -101,38 +102,31 @@ class TestTheProseNamesTheDirectionItRanks:
 
     def test_high_fanin_block_says_it_holds_the_dependencies(self):
         node = _bottleneck_node()["properties"]["high_fanin_elements"]
-        assert self._names_its_own_dependencies(node["description"]), \
-            node["description"]
+        assert self._names_its_own_dependencies(node["description"]), node["description"]
         assert not self._is_named_as_a_dependency(node["description"])
 
     def test_high_fanout_block_says_others_hold_it(self):
         node = _bottleneck_node()["properties"]["high_fanout_elements"]
-        assert self._is_named_as_a_dependency(node["description"]), \
-            node["description"]
+        assert self._is_named_as_a_dependency(node["description"]), node["description"]
         assert not self._names_its_own_dependencies(node["description"])
 
     def test_fan_in_column_matches_the_untouched_anchor(self):
         """`elements.fan_in.direct_count` describes the same in-degree
         quantity and was not touched by this fix - the two must agree
         on which phrase means "this element's own dependencies"."""
-        anchor = schemas.schema(schemas.ANALYZE)["properties"]["elements"][
-            "properties"]["fan_in"]["additionalProperties"][
-            "properties"]["direct_count"]["description"]
+        anchor = schemas.schema(schemas.ANALYZE)["properties"]["elements"]["properties"]["fan_in"][
+            "additionalProperties"
+        ]["properties"]["direct_count"]["description"]
         phrase = "dependencies this element names"
         assert phrase in anchor.lower()
-        column = _column(_bottleneck_node()["properties"][
-            "high_fanin_elements"], "fan_in")
+        column = _column(_bottleneck_node()["properties"]["high_fanin_elements"], "fan_in")
         assert phrase in column["description"].lower()
-        assert "naming this one as a dependency" not in \
-            column["description"].lower()
+        assert "naming this one as a dependency" not in column["description"].lower()
 
     def test_fan_out_column_says_others_name_it(self):
-        column = _column(_bottleneck_node()["properties"][
-            "high_fanout_elements"], "fan_out")
-        assert "naming this one as a dependency" in \
-            column["description"].lower()
-        assert "dependencies this element names" not in \
-            column["description"].lower()
+        column = _column(_bottleneck_node()["properties"]["high_fanout_elements"], "fan_out")
+        assert "naming this one as a dependency" in column["description"].lower()
+        assert "dependencies this element names" not in column["description"].lower()
 
 
 CLI_GUIDE = REPO / "docs/guides/cli.md"

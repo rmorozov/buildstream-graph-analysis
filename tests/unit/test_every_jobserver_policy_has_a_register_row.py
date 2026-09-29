@@ -5,6 +5,7 @@ register has to carry a row for, or this reddens.
 
 holds: docs/design/continuous-build-improvement.md#7a
 """
+
 import ast
 import re
 from pathlib import Path
@@ -24,23 +25,23 @@ def _derive_policies() -> set:
     module_consts = {
         node.targets[0].id: node.value.value
         for node in ast.walk(tree)
-        if isinstance(node, ast.Assign) and len(node.targets) == 1
+        if isinstance(node, ast.Assign)
+        and len(node.targets) == 1
         and isinstance(node.targets[0], ast.Name)
-        and isinstance(node.value, ast.Constant) and isinstance(node.value.value, str)
+        and isinstance(node.value, ast.Constant)
+        and isinstance(node.value.value, str)
     }
     funcs = {
-        node.name: node for node in ast.walk(tree)
-        if isinstance(node, ast.FunctionDef)
-        and node.name in ("kind_job_env", "_ninja_aware_env")
+        node.name: node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.FunctionDef) and node.name in ("kind_job_env", "_ninja_aware_env")
     }
-    assert set(funcs) == {"kind_job_env", "_ninja_aware_env"}, \
-        "the two functions the Decision names must both exist"
+    assert set(funcs) == {"kind_job_env", "_ninja_aware_env"}, "the two functions the Decision names must both exist"
 
     policies = set()
     for func in funcs.values():
         for node in ast.walk(func):
-            if isinstance(node, ast.Return) and isinstance(node.value, ast.Tuple) \
-                    and len(node.value.elts) == 3:
+            if isinstance(node, ast.Return) and isinstance(node.value, ast.Tuple) and len(node.value.elts) == 3:
                 third = node.value.elts[2]
                 if isinstance(third, ast.Constant) and isinstance(third.value, str):
                     policies.add(third.value)
@@ -50,10 +51,12 @@ def _derive_policies() -> set:
                 # from what each call site actually passes.
 
     for node in ast.walk(funcs["kind_job_env"]):
-        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) \
-                and node.func.id == "_ninja_aware_env":
-            arg = node.args[3] if len(node.args) > 3 else next(
-                (kw.value for kw in node.keywords if kw.arg == "base_policy"), None)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "_ninja_aware_env":
+            arg = (
+                node.args[3]
+                if len(node.args) > 3
+                else next((kw.value for kw in node.keywords if kw.arg == "base_policy"), None)
+            )
             if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
                 policies.add(arg.value)
 
@@ -98,8 +101,7 @@ def test_every_guarded_rows_evidence_path_exists():
         if _strip_md(row["state"]) == "guarded":
             evidence = _strip_md(row["evidence"])
             assert evidence != "-", f"{row['corner case']!r} is guarded with no evidence"
-            assert (REPO / evidence).exists(), \
-                f"{row['corner case']!r} names a guard that does not exist: {evidence}"
+            assert (REPO / evidence).exists(), f"{row['corner case']!r} names a guard that does not exist: {evidence}"
 
 
 def test_every_known_unguarded_rows_ux_id_has_a_task_file():
@@ -115,5 +117,4 @@ def test_every_known_unguarded_rows_ux_id_has_a_task_file():
 def test_every_unexamined_row_carries_no_evidence():
     for row in _register_rows():
         if _strip_md(row["state"]) == "unexamined":
-            assert _strip_md(row["evidence"]) == "-", \
-                f"{row['corner case']!r} is unexamined but carries evidence"
+            assert _strip_md(row["evidence"]) == "-", f"{row['corner case']!r} is unexamined but carries evidence"

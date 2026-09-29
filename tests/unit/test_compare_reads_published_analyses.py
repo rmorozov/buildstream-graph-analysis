@@ -6,6 +6,7 @@ snapshot tail's own `_analyze`. The comparison read from the two
 `analyze` calls against 2, and every fingerprint term has a case that
 changes only it and falls back.
 """
+
 import contextlib
 import io
 import json
@@ -30,8 +31,7 @@ GOLDEN = REPO / "tests/fixtures/golden/mixed_task_kinds"
 def _plane2(wait_us):
     """A Plane 2 report whose admission wait moves `lib.bst`'s BUILD."""
     ledger = [{"event": "admission_wait", "element": "lib.bst", "wait_us": wait_us}]
-    return {"jobserver_ledger": ledger if wait_us else [],
-            "by_element": {"base.bst": 1, "lib.bst": 1}}
+    return {"jobserver_ledger": ledger if wait_us else [], "by_element": {"base.bst": 1, "lib.bst": 1}}
 
 
 @pytest.fixture
@@ -42,10 +42,10 @@ def store(tmp_path):
         snapshot = tmp_path / ".bga/runs" / side
         shutil.copytree(GOLDEN, snapshot / "run")
         (snapshot / "plane2.json").write_text(json.dumps(_plane2(wait_us)))
-        with contextlib.redirect_stdout(io.StringIO()), \
-                contextlib.redirect_stderr(io.StringIO()):
-            bga_snapshot._analyze(str(snapshot / "run"), str(snapshot / "plane2.json"),
-                                  publish_to=str(snapshot / "analyze.json"))
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            bga_snapshot._analyze(
+                str(snapshot / "run"), str(snapshot / "plane2.json"), publish_to=str(snapshot / "analyze.json")
+            )
         snapshots[side] = snapshot
     return snapshots
 
@@ -68,27 +68,35 @@ def _compare(store, tmp_path, analyze_calls, *extra, candidate_plane2=None):
     """`(compare JSON text, analyze calls)` for the store's pair, as the tail runs it."""
     out = tmp_path / "compare.json"
     before = len(analyze_calls)
-    argv = ["compare", str(store["baseline"] / "run"), str(store["candidate"] / "run"),
-            "--baseline-plane2", str(store["baseline"] / "plane2.json"),
-            "--candidate-plane2",
-            str(candidate_plane2 or store["candidate"] / "plane2.json"),
-            "--format", "json", "--output", str(out), *extra]
+    argv = [
+        "compare",
+        str(store["baseline"] / "run"),
+        str(store["candidate"] / "run"),
+        "--baseline-plane2",
+        str(store["baseline"] / "plane2.json"),
+        "--candidate-plane2",
+        str(candidate_plane2 or store["candidate"] / "plane2.json"),
+        "--format",
+        "json",
+        "--output",
+        str(out),
+        *extra,
+    ]
     with contextlib.redirect_stderr(io.StringIO()):
         main(argv)
     return out.read_text(encoding="utf-8"), len(analyze_calls) - before
 
 
 class TestComparisonReadsThePublishedAnalyses:
-
-    def test_the_published_comparison_is_the_reanalysed_one_byte_for_byte(
-            self, store, tmp_path, analyze_calls):
+    def test_the_published_comparison_is_the_reanalysed_one_byte_for_byte(self, store, tmp_path, analyze_calls):
         published, reads = _compare(store, tmp_path, analyze_calls)
         fresh, analyses = _compare(store, tmp_path, analyze_calls, "--reanalyse")
         assert (reads, analyses) == (0, 2)
         assert published == fresh
         assert json.loads(published)["deltas"]["lb"] == -1000, (
             "the candidate's admission wait must move the pair, or equal "
-            "outputs prove nothing about which side was read")
+            "outputs prove nothing about which side was read"
+        )
 
     def test_neither_published_analyzes_both(self, store, tmp_path, analyze_calls):
         published, _ = _compare(store, tmp_path, analyze_calls)
@@ -100,7 +108,6 @@ class TestComparisonReadsThePublishedAnalyses:
 
 
 class TestEachFingerprintTermFallsBack:
-
     def test_a_bumped_analyzer_version(self, store, tmp_path, analyze_calls, monkeypatch):
         monkeypatch.setattr(producer, "__version__", "999.0.0")
         assert _compare(store, tmp_path, analyze_calls)[1] == 2
@@ -122,8 +129,7 @@ class TestEachFingerprintTermFallsBack:
         (store["candidate"] / "plane2.log.gz").write_bytes(b"")
         assert _compare(store, tmp_path, analyze_calls)[1] == 1
 
-    def test_a_sibling_rewritten_at_the_same_size_and_mtime(
-            self, store, tmp_path, analyze_calls):
+    def test_a_sibling_rewritten_at_the_same_size_and_mtime(self, store, tmp_path, analyze_calls):
         """`plane2.absence()` reads the sibling's `process_count` when the
         raw log is there; a rewrite that keeps size and forges mtime back
         changes `plane2_absence`, so the sibling's content is the term."""
@@ -133,18 +139,14 @@ class TestEachFingerprintTermFallsBack:
         sibling = snapshot / "plane2.json"
         sibling.write_text(json.dumps({"process_count": 1}))
         (snapshot / "plane2.log.gz").write_bytes(b"")
-        with contextlib.redirect_stdout(io.StringIO()), \
-                contextlib.redirect_stderr(io.StringIO()):
-            bga_snapshot._analyze(str(snapshot / "run"), str(attached),
-                                  publish_to=str(snapshot / "analyze.json"))
-        assert _compare(store, tmp_path, analyze_calls,
-                        candidate_plane2=attached)[1] == 0
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            bga_snapshot._analyze(str(snapshot / "run"), str(attached), publish_to=str(snapshot / "analyze.json"))
+        assert _compare(store, tmp_path, analyze_calls, candidate_plane2=attached)[1] == 0
         before = sibling.stat()
         sibling.write_text(json.dumps({"process_count": 0}))
         os.utime(sibling, ns=(before.st_atime_ns, before.st_mtime_ns))
         assert sibling.stat().st_size == before.st_size
-        assert _compare(store, tmp_path, analyze_calls,
-                        candidate_plane2=attached)[1] == 1
+        assert _compare(store, tmp_path, analyze_calls, candidate_plane2=attached)[1] == 1
 
     def test_an_unclassified_option_is_never_reusable(self, store):
         from bga import fingerprint
@@ -152,8 +154,7 @@ class TestEachFingerprintTermFallsBack:
 
         args = create_parser().parse_args(["analyze", str(store["candidate"] / "run")])
         dests = fingerprint.analyze_dests()
-        assert fingerprint.of(args, dests) is not None, (
-            "every option `bga analyze` parses today is classified")
+        assert fingerprint.of(args, dests) is not None, "every option `bga analyze` parses today is classified"
         assert fingerprint.of(args, dests + ["a_new_option"]) is None
 
     def test_bga_view_reanalyse_reaches_the_comparison(self, store, analyze_calls):
@@ -165,4 +166,5 @@ class TestEachFingerprintTermFallsBack:
             bga_view.payloads(run, baseline, reanalyse=True)
         assert "compare.json" in served
         assert (reads, len(analyze_calls) - reads) == (0, 3), (
-            "--reanalyse is the page's analysis and both sides of the comparison")
+            "--reanalyse is the page's analysis and both sides of the comparison"
+        )

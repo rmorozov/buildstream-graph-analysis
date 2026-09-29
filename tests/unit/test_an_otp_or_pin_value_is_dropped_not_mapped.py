@@ -12,6 +12,7 @@ Mutation: restore `_value`'s digit branch to
 `pseudonymize_identifier` unconditionally, and an unsafe numeric
 value re-enters the map.
 """
+
 from bga import anonymize as anon
 
 KEY = bytes(range(32))
@@ -77,8 +78,7 @@ def test_a_space_form_jobs_value_follows_its_flag(tmp_path):
 
 def test_a_parallel_level_macro_keeps_its_value(tmp_path):
     pmap = _pmap(tmp_path)
-    rebuilt = anon.rebuild_command(
-        "cmake -DCMAKE_BUILD_PARALLEL_LEVEL=8", KEY, pmap, frozenset())
+    rebuilt = anon.rebuild_command("cmake -DCMAKE_BUILD_PARALLEL_LEVEL=8", KEY, pmap, frozenset())
     assert rebuilt.endswith("=8")
 
 

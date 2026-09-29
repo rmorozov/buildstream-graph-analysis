@@ -42,6 +42,7 @@ answer, and the reason the walk is the deliverable rather than a fix.
 What it buys is that the *next* structure change cannot quietly spend a
 third click: the guard reddens before a reader meets it.
 """
+
 import json
 import os
 import re
@@ -74,7 +75,8 @@ CLICK_BUDGET = 2
 
 
 def _js(body):
-    source = """
+    source = (
+        """
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
 globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
 _installDocument();
@@ -89,11 +91,17 @@ const all = (n, pred, out = []) => {
 };
 const text = (n) => !n ? "" : ((n.children ?? []).length
   ? (n._text ?? "") + n.children.map(text).join("") : (n._text ?? ""));
-""" + body
+"""
+        + body
+    )
     result = subprocess.run(
         [node, "--input-type=module", "-e", source],
-        capture_output=True, text=True, cwd=REPO, timeout=90,
-        env=dict(os.environ, BGA_DOM_SHIM=SHIM))
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=90,
+        env=dict(os.environ, BGA_DOM_SHIM=SHIM),
+    )
     assert result.returncode == 0, result.stderr[-3000:]
     return json.loads(result.stdout)
 
@@ -101,6 +109,7 @@ const text = (n) => !n ? "" : ((n.children ?? []).length
 # --------------------------------------------------------------------------
 # 1. The chain's listing folds, by the chain's own numbers.
 # --------------------------------------------------------------------------
+
 
 @needs_node
 class TestTheChainsListingFolds:
@@ -115,7 +124,8 @@ class TestTheChainsListingFolds:
     """
 
     def _chain(self, length):
-        return _js("""
+        return _js(
+            """
 const { liftedCriticalPath } = await import("./tests/viewer.mjs");
 const { PATH_HEAD, PATH_TAIL } = await import("./tests/viewer.mjs");
 const rows = Array.from({ length: __LENGTH__ }, (_, i) => ({
@@ -139,7 +149,8 @@ console.log(JSON.stringify({
   label: button ? text(button) : null,
   title: button ? button.attrs.title : null,
 }));
-""".replace("__LENGTH__", str(length)))
+""".replace("__LENGTH__", str(length))
+        )
 
     def test_a_long_chain_shows_its_head_and_its_tail(self):
         out = self._chain(20)
@@ -160,8 +171,7 @@ console.log(JSON.stringify({
         chain."""
         out = self._chain(20)
         assert out["label"] == "+11 More elements (20 in all)", out["label"]
-        assert out["title"] == (
-            "Show the 11 elements between the first 6 and the last 3")
+        assert out["title"] == ("Show the 11 elements between the first 6 and the last 3")
 
     def test_opening_it_shows_every_element(self):
         out = self._chain(20)
@@ -187,21 +197,20 @@ console.log(JSON.stringify({
         # this asserts is that the listing *imports* the drawing's two
         # numbers rather than restating them, wherever the listing is.
         listing = (VIEWER / "structured.js").read_text(encoding="utf-8")
-        assert re.search(r"export const PATH_HEAD = \d+;", views), (
-            "the chain's fold numbers are not exported")
+        assert re.search(r"export const PATH_HEAD = \d+;", views), "the chain's fold numbers are not exported"
         assert "PATH_HEAD, PATH_TAIL } from \"./views.js\"" in listing, (
-            "structured.js declares its own chain fold rather than importing "
-            "the one the drawing uses")
+            "structured.js declares its own chain fold rather than importing the one the drawing uses"
+        )
         for name in ("app.js", "structured.js"):
-            assert not re.search(
-                r"const PATH_HEAD\s*=",
-                (VIEWER / name).read_text(encoding="utf-8")), (
-                f"a second copy of the chain's head count lives in {name}")
+            assert not re.search(r"const PATH_HEAD\s*=", (VIEWER / name).read_text(encoding="utf-8")), (
+                f"a second copy of the chain's head count lives in {name}"
+            )
 
 
 # --------------------------------------------------------------------------
 # 2. The clicks, counted.
 # --------------------------------------------------------------------------
+
 
 def _probe_source():
     source = (REPO / "tests/unit/test_a_report_you_can_navigate.py").read_text()
@@ -260,9 +269,7 @@ def _boot(run_dir, tmp, narrow):
     view.export(str(run), str(page))
     html = page.read_text(encoding="utf-8")
     module = tmp / "inline.mjs"
-    module.write_text(
-        view.inflated_module(html),
-        encoding="utf-8")
+    module.write_text(view.inflated_module(html), encoding="utf-8")
     head = _probe_source().split("const report =", 1)[0]
     # The window the rail asks about its width. Inserted into the probe
     # rather than into the page: this is the *harness* standing in for a
@@ -274,15 +281,25 @@ def _boot(run_dir, tmp, narrow):
         'globalThis.document.defaultView = {\n'
         '  matchMedia: () => ({ matches: process.env.NARROW === "1",\n'
         '                       addEventListener: () => {} }),\n'
-        '};')
+        '};',
+    )
     probe = tmp / "probe.mjs"
     probe.write_text(head + _TAIL, encoding="utf-8")
     result = subprocess.run(
-        [node, str(probe)], capture_output=True, text=True, cwd=REPO,
+        [node, str(probe)],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
         timeout=180,
-        env=dict(os.environ, PAGE=str(page), MOD=str(module),
-                 PROTOCOL="file:", BGA_DOM_SHIM=SHIM,
-                 NARROW="1" if narrow else "0"))
+        env=dict(
+            os.environ,
+            PAGE=str(page),
+            MOD=str(module),
+            PROTOCOL="file:",
+            BGA_DOM_SHIM=SHIM,
+            NARROW="1" if narrow else "0",
+        ),
+    )
     assert result.returncode == 0, result.stderr[-4000:]
     out = json.loads(result.stdout)
     assert out["error"] is None, out["error"]
@@ -294,8 +311,7 @@ def walks(tmp_path_factory):
     found = {}
     for name, run in (("golden", GOLDEN), ("macro_micro", MACRO)):
         for narrow in (False, True):
-            found[(name, narrow)] = _boot(
-                run, tmp_path_factory.mktemp(f"{name}-{narrow}"), narrow)
+            found[(name, narrow)] = _boot(run, tmp_path_factory.mktemp(f"{name}-{narrow}"), narrow)
     return found
 
 
@@ -323,8 +339,7 @@ class TestTheClicksAreCounted:
         """The numbers in the docstring, held to the page. A budget
         nobody can fail is not a budget; these say where the slack
         actually is."""
-        expected = {("golden", False): 1, ("golden", True): 2,
-                    ("macro_micro", False): 1, ("macro_micro", True): 2}
+        expected = {("golden", False): 1, ("golden", True): 2, ("macro_micro", False): 1, ("macro_micro", True): 2}
         measured = {key: out["worst"] for key, out in walks.items()}
         assert measured == expected, measured
 
@@ -459,33 +474,35 @@ class TestTheDistanceIsBudgetedToo:
     def test_every_chapter_question_is_within_reach(self, browser, exports):
         for page, url in exports.items():
             out = browser.measure(url, _DISTANCE, width=1440, height=900)
-            far = [(c["id"], c["headingScr"]) for c in out["chapters"]
-                   if c["headingScr"] > CHAPTER_HEADING_SCREENS]
+            far = [(c["id"], c["headingScr"]) for c in out["chapters"] if c["headingScr"] > CHAPTER_HEADING_SCREENS]
             assert far == [], (
-                f"{page}: a chapter's question is more than "
-                f"{CHAPTER_HEADING_SCREENS} screens down: {far}. {_walk(out)}")
+                f"{page}: a chapter's question is more than {CHAPTER_HEADING_SCREENS} screens down: {far}. {_walk(out)}"
+            )
 
-    def test_every_chapter_question_is_within_reach_when_compact(
-            self, browser, exports):
+    def test_every_chapter_question_is_within_reach_when_compact(self, browser, exports):
         """`UX-1049`: the same distance clause, at 390x844 - total
         height moved to §3e's own guard, but this is a distance and
         stays independent of it (Ruslan's review)."""
         for page, url in exports.items():
             out = browser.measure(url, _DISTANCE, width=390, height=844)
-            far = [(c["id"], c["headingScr"]) for c in out["chapters"]
-                   if c["headingScr"] > COMPACT_CHAPTER_HEADING_SCREENS]
+            far = [
+                (c["id"], c["headingScr"]) for c in out["chapters"] if c["headingScr"] > COMPACT_CHAPTER_HEADING_SCREENS
+            ]
             assert far == [], (
                 f"{page}: at 390x844 a chapter's question is more than "
                 f"{COMPACT_CHAPTER_HEADING_SCREENS} screens down: {far}. "
-                f"{_walk(out)}")
+                f"{_walk(out)}"
+            )
 
-    def test_a_chapters_first_section_is_under_its_own_heading(
-            self, browser, exports):
+    def test_a_chapters_first_section_is_under_its_own_heading(self, browser, exports):
         for page, url in exports.items():
             out = browser.measure(url, _DISTANCE, width=1440, height=900)
-            far = [(c["id"], c["firstSectionScr"]) for c in out["chapters"]
-                   if (c["firstSectionScr"] or 0) > CHAPTER_FIRST_SECTION_SCREENS]
-            assert far == [], (f"{page}: {far}")
+            far = [
+                (c["id"], c["firstSectionScr"])
+                for c in out["chapters"]
+                if (c["firstSectionScr"] or 0) > CHAPTER_FIRST_SECTION_SCREENS
+            ]
+            assert far == [], f"{page}: {far}"
 
     def test_only_the_first_chapter_is_open(self, browser, exports):
         """The decision stays open - a reader who has to open the
@@ -505,10 +522,15 @@ class TestTheDistanceIsBudgetedToo:
             for chapter in out["chapters"][1:]:
                 assert chapter["control"], (page, chapter["id"], "no control")
                 assert str(chapter["sections"]) in chapter["control"], (
-                    page, chapter["id"], chapter["control"], chapter["sections"])
+                    page,
+                    chapter["id"],
+                    chapter["control"],
+                    chapter["sections"],
+                )
                 assert chapter["answer"], (
                     f"{page}: chapter {chapter['id']} folds with no answer - "
-                    f"a heading over nothing is worse than the scroll it saved")
+                    f"a heading over nothing is worse than the scroll it saved"
+                )
 
     def test_the_rail_opens_the_fold_it_points_into(self, browser, exports):
         """The click model above prices a folded chapter at zero extra
@@ -527,32 +549,31 @@ class TestTheStyleguideDerivesTheChapterFigures:
         here rather than restated as a number the guard cannot check."""
         text = (REPO / "docs/design/styleguide.md").read_text(encoding="utf-8")
         section = text.split("## 3c.", 1)[1].split("\n## ", 1)[0]
-        for label, value in (("1440x900", CHAPTER_HEADING_SCREENS),
-                              ("390x844", COMPACT_CHAPTER_HEADING_SCREENS)):
+        for label, value in (("1440x900", CHAPTER_HEADING_SCREENS), ("390x844", COMPACT_CHAPTER_HEADING_SCREENS)):
             number = f"{value:g}"
-            assert re.search(rf"\b{re.escape(number)} screens at {label}",
-                              section), (
-                f"§3c does not state {number} screens at {label}")
+            assert re.search(rf"\b{re.escape(number)} screens at {label}", section), (
+                f"§3c does not state {number} screens at {label}"
+            )
 
     def test_3c_states_no_landed_height_number(self):
         """The Decision: §3c's landed bullet points at §3e rather than
         restating a number - the mutation that puts one back reds."""
         text = (REPO / "docs/design/styleguide.md").read_text(encoding="utf-8")
         section = text.split("## 3c.", 1)[1].split("\n## ", 1)[0]
-        match = re.search(r"- the document a reader lands on:.*?(?=\n- |\n\n)",
-                           section, re.S)
+        match = re.search(r"- the document a reader lands on:.*?(?=\n- |\n\n)", section, re.S)
         assert match, "§3c's landed bullet is missing or reworded"
         stripped = re.sub(r"§[0-9]+[a-z]?", "", match.group(0))
-        assert not re.search(r"\d", stripped), (
-            f"§3c's landed bullet restates a number: {match.group(0)!r}")
+        assert not re.search(r"\d", stripped), f"§3c's landed bullet restates a number: {match.group(0)!r}"
 
 
 def _walk(out):
     """The eight destinations, in clicks and in screens - published in
     the failure message so a bound that fires says what it cost."""
-    rows = [f"{name}: {r['clicks']} click(s), {r['screensDown']} screens"
-            + (" (behind a fold)" if r["behindFold"] else "")
-            for name, r in out["reach"].items() if r]
+    rows = [
+        f"{name}: {r['clicks']} click(s), {r['screensDown']} screens" + (" (behind a fold)" if r["behindFold"] else "")
+        for name, r in out["reach"].items()
+        if r
+    ]
     return "The walk: " + "; ".join(rows)
 
 

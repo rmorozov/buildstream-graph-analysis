@@ -34,6 +34,7 @@ bst --max-jobs 2     run=2  src=parsed_from_invocation  graph=[2]  ran -j2
 and the capacity chain runs on the default capture:
 *"Capacity: builders 4 x max-jobs 2 on 4 core(s): memory binds at 1"*.
 """
+
 import ast
 import pathlib
 import sys
@@ -53,8 +54,7 @@ from tools._run_context_common import (
 
 
 def _graph(*max_jobs):
-    return {"elements": [{"uid": f"e{i}.bst", "max_jobs": value}
-                         for i, value in enumerate(max_jobs)]}
+    return {"elements": [{"uid": f"e{i}.bst", "max_jobs": value} for i, value in enumerate(max_jobs)]}
 
 
 class TestTheGraphKnowsWhatTheRunResolved:
@@ -79,23 +79,18 @@ class TestTheGraphKnowsWhatTheRunResolved:
 class TestThreeSourcesAndTheOrderAmongThem:
     def test_the_operator_still_wins(self):
         context = {}
-        add_cpu_capacity_fields(context, native_max_jobs=8,
-                                parsed_native_max_jobs=4,
-                                graph_native_max_jobs=2)
+        add_cpu_capacity_fields(context, native_max_jobs=8, parsed_native_max_jobs=4, graph_native_max_jobs=2)
         assert context["native_max_jobs"] == 8
-        assert context["native_max_jobs_source"] == (
-            NATIVE_MAX_JOBS_OPERATOR_DECLARED)
+        assert context["native_max_jobs_source"] == (NATIVE_MAX_JOBS_OPERATOR_DECLARED)
 
     def test_the_invocation_beats_the_graph(self):
         """`UX-29`'s route keeps its precedence: a flag on the command
         line is what the build was *told*, and the graph is a
         re-resolution."""
         context = {}
-        add_cpu_capacity_fields(context, parsed_native_max_jobs=4,
-                                graph_native_max_jobs=2)
+        add_cpu_capacity_fields(context, parsed_native_max_jobs=4, graph_native_max_jobs=2)
         assert context["native_max_jobs"] == 4
-        assert context["native_max_jobs_source"] == (
-            NATIVE_MAX_JOBS_PARSED_FROM_INVOCATION)
+        assert context["native_max_jobs_source"] == (NATIVE_MAX_JOBS_PARSED_FROM_INVOCATION)
 
     def test_the_graph_answers_when_nothing_else_does(self):
         """The default capture, and the user-config capture. Before
@@ -103,8 +98,7 @@ class TestThreeSourcesAndTheOrderAmongThem:
         context = {}
         add_cpu_capacity_fields(context, graph_native_max_jobs=2)
         assert context["native_max_jobs"] == 2
-        assert context["native_max_jobs_source"] == (
-            NATIVE_MAX_JOBS_RESOLVED_FROM_GRAPH)
+        assert context["native_max_jobs_source"] == (NATIVE_MAX_JOBS_RESOLVED_FROM_GRAPH)
 
     def test_none_of_the_three_publishes_nothing(self):
         """`UX-12`'s rule, unchanged: absent rather than a guessed
@@ -115,9 +109,16 @@ class TestThreeSourcesAndTheOrderAmongThem:
         assert "native_max_jobs_source" not in context
 
     def test_the_three_sources_have_three_names(self):
-        assert len({NATIVE_MAX_JOBS_OPERATOR_DECLARED,
+        assert (
+            len(
+                {
+                    NATIVE_MAX_JOBS_OPERATOR_DECLARED,
                     NATIVE_MAX_JOBS_PARSED_FROM_INVOCATION,
-                    NATIVE_MAX_JOBS_RESOLVED_FROM_GRAPH}) == 3
+                    NATIVE_MAX_JOBS_RESOLVED_FROM_GRAPH,
+                }
+            )
+            == 3
+        )
 
 
 class TestTheGraphIsExtractedWithTheBuildsOwnOptions:
@@ -127,6 +128,7 @@ class TestTheGraphIsExtractedWithTheBuildsOwnOptions:
         the argv this builds rather than on a real `bst`, because the
         placement is the whole content of the claim."""
         import tools.bst_show_to_graph as graph_tool
+
         seen = {}
 
         def fake_run(cmd, **kwargs):
@@ -137,17 +139,16 @@ class TestTheGraphIsExtractedWithTheBuildsOwnOptions:
         graph_tool.subprocess.Popen = fake_run
         try:
             with pytest.raises(RuntimeError, match="stop"):
-                graph_tool.run_bst_show("/nowhere", ["all.bst"],
-                                        bst_options=["--max-jobs", "2"])
+                graph_tool.run_bst_show("/nowhere", ["all.bst"], bst_options=["--max-jobs", "2"])
         finally:
             graph_tool.subprocess.Popen = original
         cmd = seen["cmd"]
         assert cmd[1:3] == ["--max-jobs", "2"], cmd
-        assert cmd[3] == "show", (
-            f"the option landed after the subcommand: {cmd[:5]}")
+        assert cmd[3] == "show", f"the option landed after the subcommand: {cmd[:5]}"
 
     def test_no_options_reproduces_the_old_argv(self):
         import tools.bst_show_to_graph as graph_tool
+
         seen = {}
 
         def fake_run(cmd, **kwargs):
@@ -168,30 +169,32 @@ class TestTheGraphIsExtractedWithTheBuildsOwnOptions:
         replayed options from the *scheduler's* parsed value and hand
         them to `extract_graph`. A guard on source order would go green
         for any rearrangement."""
-        tree = ast.parse((REPO / "tools/bst_extract_run.py").read_text(
-            encoding="utf-8"))
-        calls = [n for n in ast.walk(tree) if isinstance(n, ast.Call)
-                 and isinstance(n.func, ast.Name)
-                 and n.func.id == "extract_graph"]
+        tree = ast.parse((REPO / "tools/bst_extract_run.py").read_text(encoding="utf-8"))
+        calls = [
+            n
+            for n in ast.walk(tree)
+            if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == "extract_graph"
+        ]
         assert calls, "extract_run no longer calls extract_graph"
-        assert any(k.arg == "bst_options" for call in calls
-                   for k in call.keywords), (
+        assert any(k.arg == "bst_options" for call in calls for k in call.keywords), (
             "the graph is extracted without the build's own options, so its "
             "per-element max_jobs describes a fresh resolution rather than "
-            "the build")
+            "the build"
+        )
 
     def test_the_run_context_is_offered_the_graphs_value(self):
-        tree = ast.parse((REPO / "tools/bst_extract_run.py").read_text(
-            encoding="utf-8"))
-        calls = [n for n in ast.walk(tree) if isinstance(n, ast.Call)
-                 and isinstance(n.func, ast.Name)
-                 and n.func.id == "add_cpu_capacity_fields"]
+        tree = ast.parse((REPO / "tools/bst_extract_run.py").read_text(encoding="utf-8"))
+        calls = [
+            n
+            for n in ast.walk(tree)
+            if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == "add_cpu_capacity_fields"
+        ]
         assert calls
-        assert any(k.arg == "graph_native_max_jobs" for call in calls
-                   for k in call.keywords), (
+        assert any(k.arg == "graph_native_max_jobs" for call in calls for k in call.keywords), (
             "the run context is not offered the graph's resolved value, so a "
             "default capture publishes None and the capacity chain stays "
-            "inert with the number in the next file")
+            "inert with the number in the next file"
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

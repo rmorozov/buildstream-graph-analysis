@@ -51,8 +51,7 @@ SUPPORTED_BST = "2."
 
 
 def _check(id, status, summary, remedy=None, detail=None) -> dict:
-    return {"id": id, "status": status, "summary": summary,
-            "remedy": remedy, "detail": detail or []}
+    return {"id": id, "status": status, "summary": summary, "remedy": remedy, "detail": detail or []}
 
 
 def check_bst() -> dict:
@@ -69,34 +68,43 @@ def check_bst() -> dict:
         sibling = os.path.join(os.path.dirname(sys.executable), "bst")
         if os.access(sibling, os.X_OK):
             return _check(
-                "bst-present", FAIL,
+                "bst-present",
+                FAIL,
                 f"bst is not on PATH, but there is one at {sibling}",
                 remedy=f"that is the venv this `bga` lives in - activate it "
-                       f"(`source {os.path.dirname(sys.executable)}/activate`) or "
-                       f"put it on PATH. Running the console script by its full "
-                       f"path does not do that, and the capture launches `bst` "
-                       f"as a subprocess, so it needs PATH too")
+                f"(`source {os.path.dirname(sys.executable)}/activate`) or "
+                f"put it on PATH. Running the console script by its full "
+                f"path does not do that, and the capture launches `bst` "
+                f"as a subprocess, so it needs PATH too",
+            )
         return _check(
-            "bst-present", FAIL, "bst is not on PATH",
+            "bst-present",
+            FAIL,
+            "bst is not on PATH",
             remedy="pip install 'bga[bst]' (in a virtualenv - a distro-patched "
-                   "setuptools breaks pluginbase, which is how three separate "
-                   "environments for this project failed to install)")
+            "setuptools breaks pluginbase, which is how three separate "
+            "environments for this project failed to install)",
+        )
     argv = [path, "--version"]
     try:
         with progress.timed_call(argv) as call:
             result = subprocess.run(argv, capture_output=True, text=True, timeout=60)
             call["exit"] = result.returncode
     except (OSError, subprocess.SubprocessError) as error:
-        return _check("bst-present", FAIL, f"bst is on PATH but would not run: {error}",
-                      remedy="reinstall BuildStream, ideally into a fresh virtualenv")
+        return _check(
+            "bst-present",
+            FAIL,
+            f"bst is on PATH but would not run: {error}",
+            remedy="reinstall BuildStream, ideally into a fresh virtualenv",
+        )
     version = result.stdout.strip()
     if not version.startswith(SUPPORTED_BST):
         return _check(
-            "bst-present", WARN,
-            f"bst {version} is outside the {SUPPORTED_BST}x line this project is "
-            f"verified against",
-            remedy="nothing to do unless something else misbehaves - recorded so "
-                   "a later surprise has a first suspect")
+            "bst-present",
+            WARN,
+            f"bst {version} is outside the {SUPPORTED_BST}x line this project is verified against",
+            remedy="nothing to do unless something else misbehaves - recorded so a later surprise has a first suspect",
+        )
     return _check("bst-present", OK, f"bst {version}")
 
 
@@ -112,14 +120,19 @@ def check_bwrap() -> dict:
     """
     path = shutil.which("bwrap")
     if not path:
-        return _check("bwrap-present", FAIL, "bwrap is not on PATH",
-                      remedy="apt-get install -y bubblewrap (or your distro's "
-                             "bubblewrap package) - BuildStream's sandbox needs it")
+        return _check(
+            "bwrap-present",
+            FAIL,
+            "bwrap is not on PATH",
+            remedy="apt-get install -y bubblewrap (or your distro's "
+            "bubblewrap package) - BuildStream's sandbox needs it",
+        )
     try:
         probe = subprocess.run(
-            [path, "--dev-bind", "/", "/", "--unshare-pid", "--unshare-net",
-             "/bin/sh", "-c", "exit 0"],
-            capture_output=True, text=True, timeout=60,
+            [path, "--dev-bind", "/", "/", "--unshare-pid", "--unshare-net", "/bin/sh", "-c", "exit 0"],
+            capture_output=True,
+            text=True,
+            timeout=60,
         )
     except (OSError, subprocess.SubprocessError) as error:
         return _check("bwrap-works", FAIL, f"bwrap would not run: {error}")
@@ -129,16 +142,22 @@ def check_bwrap() -> dict:
     message = (probe.stderr or "").strip()
     if "loopback" in message or "RTM_NEWADDR" in message:
         return _check(
-            "bwrap-works", FAIL,
+            "bwrap-works",
+            FAIL,
             "bwrap cannot configure loopback in its own network namespace",
             remedy="sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 "
-                   "- Ubuntu 24.04+ defaults this to 1, which withholds "
-                   "CAP_NET_ADMIN inside an unprivileged user namespace. Confirmed "
-                   "on a real GitHub Actions runner; see ci.yml's bst-smoke job.",
-            detail=[message])
-    return _check("bwrap-works", FAIL, "bwrap failed to build a sandbox",
-                  remedy="run the command this printed by hand to see why",
-                  detail=[message])
+            "- Ubuntu 24.04+ defaults this to 1, which withholds "
+            "CAP_NET_ADMIN inside an unprivileged user namespace. Confirmed "
+            "on a real GitHub Actions runner; see ci.yml's bst-smoke job.",
+            detail=[message],
+        )
+    return _check(
+        "bwrap-works",
+        FAIL,
+        "bwrap failed to build a sandbox",
+        remedy="run the command this printed by hand to see why",
+        detail=[message],
+    )
 
 
 def check_compiler() -> dict:
@@ -150,11 +169,12 @@ def check_compiler() -> dict:
     cc = shutil.which("cc") or shutil.which("gcc")
     if not cc:
         return _check(
-            "c-compiler", FAIL,
-            "no C compiler (cc/gcc) on PATH - Plane 2 compiles its LD_PRELOAD "
-            "hook and ptrace spine at capture time",
+            "c-compiler",
+            FAIL,
+            "no C compiler (cc/gcc) on PATH - Plane 2 compiles its LD_PRELOAD hook and ptrace spine at capture time",
             remedy="apt-get install -y build-essential (Plane 1 and Plane 3 work "
-                   "without it; only `bga capture` needs it)")
+            "without it; only `bga capture` needs it)",
+        )
 
     # UX-153: probe, do not check - this file's own principle, applied to
     # itself. A compiler on PATH is not the question; the capture needs
@@ -162,20 +182,24 @@ def check_compiler() -> dict:
     # particular needs a static libc, which `build-essential` alone does
     # not provide - and the spine is the half that goes missing, silently,
     # on a machine where the hook compiles fine.
-    missing = [name for name, argv in (
-        ("-shared -fPIC (the LD_PRELOAD hook)", [cc, "-shared", "-fPIC",
-                                                 "-o", "/dev/null", "-x", "c", "-"]),
-        ("-static (the ptrace spine)", [cc, "-static",
-                                        "-o", "/dev/null", "-x", "c", "-"]),
-    ) if not _compiles(argv)]
+    missing = [
+        name
+        for name, argv in (
+            ("-shared -fPIC (the LD_PRELOAD hook)", [cc, "-shared", "-fPIC", "-o", "/dev/null", "-x", "c", "-"]),
+            ("-static (the ptrace spine)", [cc, "-static", "-o", "/dev/null", "-x", "c", "-"]),
+        )
+        if not _compiles(argv)
+    ]
     if missing:
         return _check(
-            "c-compiler", WARN,
+            "c-compiler",
+            WARN,
             f"{cc} cannot link: {', '.join(missing)}",
             remedy="apt-get install -y build-essential libc6-dev "
-                   "(a static libc is a separate package on some distributions; "
-                   "without it the hook still works and `--trace-spine` does not)",
-            detail=[f"probed by compiling a trivial program with {cc}"])
+            "(a static libc is a separate package on some distributions; "
+            "without it the hook still works and `--trace-spine` does not)",
+            detail=[f"probed by compiling a trivial program with {cc}"],
+        )
     return _check("c-compiler", OK, f"C compiler at {cc} links shared and static")
 
 
@@ -187,9 +211,12 @@ def _compiles(argv: list[str]) -> bool:
     twice with the same meaning (`UX-125`).
     """
     try:
-        return subprocess.run(
-            argv, input="int main(void){return 0;}\n", text=True,
-            capture_output=True, timeout=120).returncode == 0
+        return (
+            subprocess.run(
+                argv, input="int main(void){return 0;}\n", text=True, capture_output=True, timeout=120
+            ).returncode
+            == 0
+        )
     except (OSError, subprocess.SubprocessError):
         return False
 
@@ -213,6 +240,7 @@ def check_root_spanning_sources(project_dir: Optional[str] = None) -> dict:
         _local_source_paths,
         discover_element_names,
     )
+
     root = os.path.abspath(project_dir)
     store = os.path.join(root, ".bga")
     offenders = []
@@ -223,22 +251,23 @@ def check_root_spanning_sources(project_dir: Optional[str] = None) -> dict:
                 if staged == root or store.startswith(staged + os.sep):
                     offenders.append(f"{element} -> {os.path.relpath(staged, root)}")
     except (OSError, ValueError) as error:
-        return _check("sources-scoped", SKIP,
-                      f"could not read the project's sources: {error}")
+        return _check("sources-scoped", SKIP, f"could not read the project's sources: {error}")
     if not offenders:
-        return _check("sources-scoped", OK,
-                      "no element stages the project root, so `.bga` stays out "
-                      "of cache keys")
+        return _check("sources-scoped", OK, "no element stages the project root, so `.bga` stays out of cache keys")
     shown = ", ".join(offenders[:3])
     if len(offenders) > 3:
         shown += f", +{len(offenders) - 3} more"
     return _check(
-        "sources-scoped", WARN,
+        "sources-scoped",
+        WARN,
         f"{plural(len(offenders), 'element')} stage the project root: {shown}",
-        remedy=("that stages `.bga/` - including a capture's live scratch - "
-                "into the element's cache key and sandbox, so every capture "
-                "churns the key. BuildStream has no ignore mechanism for it: "
-                "scope the source below the project root, or expect the churn."))
+        remedy=(
+            "that stages `.bga/` - including a capture's live scratch - "
+            "into the element's cache key and sandbox, so every capture "
+            "churns the key. BuildStream has no ignore mechanism for it: "
+            "scope the source below the project root, or expect the churn."
+        ),
+    )
 
 
 def check_stale_casd() -> dict:
@@ -256,23 +285,25 @@ def check_stale_casd() -> dict:
     claiming more than the evidence supports still stands.
     """
     from .bst_native_build_tracer import detect_stale_casd
+
     found = detect_stale_casd()
     if not found:
-        return _check("casd-fresh", OK,
-                      "no buildbox-casd is running that a capture would reuse")
+        return _check("casd-fresh", OK, "no buildbox-casd is running that a capture would reuse")
     described = ", ".join(
-        f"pid {entry['pid']}"
-        + (f" ({entry['age_s'] / 60:.0f}m old)" if entry.get("age_s") else "")
-        for entry in found
+        f"pid {entry['pid']}" + (f" ({entry['age_s'] / 60:.0f}m old)" if entry.get("age_s") else "") for entry in found
     )
     return _check(
-        "casd-fresh", WARN,
+        "casd-fresh",
+        WARN,
         f"a buildbox-casd is already running ({described})",
-        remedy=("it was started by a `bst` that never saw a capture's PATH, so a "
-                "build reusing it can miss the shim and capture nothing. Stop it "
-                "before capturing - `bst shutdown`, or kill it - and `bst` will "
-                "start a fresh one. Note the `--capture` chain probe cannot see "
-                "this: it isolates HOME and so starts its own daemon."))
+        remedy=(
+            "it was started by a `bst` that never saw a capture's PATH, so a "
+            "build reusing it can miss the shim and capture nothing. Stop it "
+            "before capturing - `bst shutdown`, or kill it - and `bst` will "
+            "start a fresh one. Note the `--capture` chain probe cannot see "
+            "this: it isolates HOME and so starts its own daemon."
+        ),
+    )
 
 
 def check_sleep_policy() -> Optional[dict]:
@@ -296,23 +327,27 @@ def check_sleep_policy() -> Optional[dict]:
     try:
         result = subprocess.run(
             [systemctl, "is-enabled", "sleep.target"],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
     except (OSError, subprocess.SubprocessError):
         return None
     state = (result.stdout or "").strip()
     if state in ("masked", "masked-runtime", "disabled"):
-        return _check("sleep-policy", OK,
-                      f"this machine will not suspend (sleep.target is {state})")
+        return _check("sleep-policy", OK, f"this machine will not suspend (sleep.target is {state})")
     return _check(
-        "sleep-policy", WARN,
-        f"this machine can suspend while a capture runs (sleep.target is "
-        f"{state or 'enabled'})",
-        remedy=("a suspend makes Plane 1 count the sleep as build time and "
-                "Plane 2 not, so the capture's durations stop being "
-                "measurements. Pass `--inhibit` to `bga snapshot` to hold it "
-                "awake for the build. A capture that slept says so either "
-                "way, and refuses to verdict."))
+        "sleep-policy",
+        WARN,
+        f"this machine can suspend while a capture runs (sleep.target is {state or 'enabled'})",
+        remedy=(
+            "a suspend makes Plane 1 count the sleep as build time and "
+            "Plane 2 not, so the capture's durations stop being "
+            "measurements. Pass `--inhibit` to `bga snapshot` to hold it "
+            "awake for the build. A capture that slept says so either "
+            "way, and refuses to verdict."
+        ),
+    )
 
 
 def check_scratch(project_dir: Optional[str] = None) -> list[dict]:
@@ -336,15 +371,21 @@ def check_scratch(project_dir: Optional[str] = None) -> list[dict]:
     findings = []
     tmpdir = os.environ.get("TMPDIR")
     if tmpdir and not os.path.isabs(tmpdir):
-        findings.append(_check(
-            "tmpdir-absolute", FAIL,
-            f"TMPDIR is set to the relative path {tmpdir!r}",
-            remedy=(f"use an absolute path (TMPDIR={os.path.abspath(tmpdir)}) or "
+        findings.append(
+            _check(
+                "tmpdir-absolute",
+                FAIL,
+                f"TMPDIR is set to the relative path {tmpdir!r}",
+                remedy=(
+                    f"use an absolute path (TMPDIR={os.path.abspath(tmpdir)}) or "
                     f"unset it. BuildStream's helper daemons resolve TMPDIR "
                     f"after changing directory, so a relative value fails as "
                     f"`error in mkdtemp, errno: no such file or directory` from "
                     f"buildbox-casd - while Python silently falls back, which is "
-                    f"why bga itself appears to accept it.")))
+                    f"why bga itself appears to accept it."
+                ),
+            )
+        )
     elif tmpdir:
         findings.append(_check("tmpdir-absolute", OK, f"TMPDIR is absolute ({tmpdir})"))
 
@@ -352,17 +393,13 @@ def check_scratch(project_dir: Optional[str] = None) -> list[dict]:
         findings.append(_check("tmpdir-absolute", OK, "TMPDIR is not set"))
 
     if not project_dir:
-        findings.append(_check(
-            "scratch-executable", SKIP,
-            "no project given, so there is no .bga/tmp to test"))
+        findings.append(_check("scratch-executable", SKIP, "no project given, so there is no .bga/tmp to test"))
         return findings
     if not os.path.isdir(project_dir):
         # Probing would `makedirs` the whole chain and leave a `.bga` in a
         # path that is not a project. `check_project_loads` reports the
         # real problem; this one has nothing to say about it.
-        findings.append(_check(
-            "scratch-executable", SKIP,
-            f"{project_dir} is not a directory"))
+        findings.append(_check("scratch-executable", SKIP, f"{project_dir} is not a directory"))
         return findings
 
     # Deliberately *not* `capture_scratch`: that creates `.bga/` (and the
@@ -374,38 +411,42 @@ def check_scratch(project_dir: Optional[str] = None) -> list[dict]:
     try:
         scratch = tempfile.mkdtemp(dir=project_dir, prefix=".bga-doctor-")
     except OSError as error:
-        return findings + [_check(
-            "scratch-executable", FAIL,
-            f"bga cannot create a scratch directory in {project_dir} "
-            f"({error.strerror})",
-            remedy=("a capture writes its shim under this project's `.bga/tmp`, "
-                    "so it needs to be writable"))]
+        return findings + [
+            _check(
+                "scratch-executable",
+                FAIL,
+                f"bga cannot create a scratch directory in {project_dir} ({error.strerror})",
+                remedy=("a capture writes its shim under this project's `.bga/tmp`, so it needs to be writable"),
+            )
+        ]
     try:
         probe = os.path.join(scratch, "probe")
         with open(probe, "w", encoding="utf-8") as handle:
             handle.write("#!/bin/sh\nexit 0\n")
         os.chmod(probe, 0o700)
         try:
-            subprocess.run([probe], check=True, timeout=30,
-                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run([probe], check=True, timeout=30, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except OSError as error:
-            findings.append(_check(
-                "scratch-executable", FAIL,
-                f"bga cannot execute a file it wrote to {project_dir} "
-                f"({error.strerror})",
-                remedy=("bga puts a `bwrap` shim on $PATH from this project's "
+            findings.append(
+                _check(
+                    "scratch-executable",
+                    FAIL,
+                    f"bga cannot execute a file it wrote to {project_dir} ({error.strerror})",
+                    remedy=(
+                        "bga puts a `bwrap` shim on $PATH from this project's "
                         "`.bga/tmp`, so a noexec mount or an AppArmor rule "
                         "covering it fails the capture inside the sandbox layer, "
                         "where the error is swallowed. Mount the project with "
-                        "exec permitted, or check out somewhere that is.")))
+                        "exec permitted, or check out somewhere that is."
+                    ),
+                )
+            )
         except subprocess.SubprocessError as error:
-            findings.append(_check(
-                "scratch-executable", FAIL,
-                f"a file bga wrote to {project_dir} would not run: {error}"))
+            findings.append(
+                _check("scratch-executable", FAIL, f"a file bga wrote to {project_dir} would not run: {error}")
+            )
         else:
-            findings.append(_check(
-                "scratch-executable", OK,
-                f"bga can write and execute from {project_dir}"))
+            findings.append(_check("scratch-executable", OK, f"bga can write and execute from {project_dir}"))
     finally:
         shutil.rmtree(scratch, ignore_errors=True)
     return findings
@@ -422,26 +463,28 @@ def check_plane3(project_name: Optional[str] = None) -> dict:
     root = default_log_root()
     if not os.path.isdir(root):
         return _check(
-            "plane3-logs", WARN, f"no BuildStream log tree at {root}",
+            "plane3-logs",
+            WARN,
+            f"no BuildStream log tree at {root}",
             remedy="run any `bst build` - these logs are BuildStream's own, and "
-                   "Plane 3 reads them with no capture needed")
+            "Plane 3 reads them with no capture needed",
+        )
     projects = summarize_log_tree(root)
     if not projects:
-        return _check("plane3-logs", WARN, f"{root} exists but holds no element logs",
-                      remedy="run any `bst build` first")
+        return _check(
+            "plane3-logs", WARN, f"{root} exists but holds no element logs", remedy="run any `bst build` first"
+        )
     if project_name:
         match = next((p for p in projects if p["project"] == project_name), None)
         if match:
-            return _check(
-                "plane3-logs", OK,
-                f"{plural(match['logs'], 'log')} for {project_name} in {root}")
+            return _check("plane3-logs", OK, f"{plural(match['logs'], 'log')} for {project_name} in {root}")
         return _check(
-            "plane3-logs", WARN,
+            "plane3-logs",
+            WARN,
             f"{root} has logs, but none for {project_name}",
-            remedy=f"build this project once; the tree holds "
-                   f"{', '.join(p['project'] for p in projects[:4])}")
-    return _check("plane3-logs", OK,
-                  f"{plural(len(projects), 'project')} with logs in {root}")
+            remedy=f"build this project once; the tree holds {', '.join(p['project'] for p in projects[:4])}",
+        )
+    return _check("plane3-logs", OK, f"{plural(len(projects), 'project')} with logs in {root}")
 
 
 def check_project_loads(project_dir: str) -> list[dict]:
@@ -453,14 +496,18 @@ def check_project_loads(project_dir: str) -> list[dict]:
     """
     conf = os.path.join(project_dir, "project.conf")
     if not os.path.isfile(conf):
-        return [_check("project-loads", FAIL,
-                       f"{project_dir} has no project.conf",
-                       remedy="point this at a BuildStream project directory")]
+        return [
+            _check(
+                "project-loads",
+                FAIL,
+                f"{project_dir} has no project.conf",
+                remedy="point this at a BuildStream project directory",
+            )
+        ]
 
     bst = shutil.which("bst")
     if not bst:
-        return [_check("project-loads", SKIP,
-                       "cannot load the project without bst")]
+        return [_check("project-loads", SKIP, "cannot load the project without bst")]
 
     # UX-142: whatever this project actually declares, not `all.bst`.
     # Every `examples/*` here ships one, and reading that fixture
@@ -469,26 +516,31 @@ def check_project_loads(project_dir: str) -> list[dict]:
     # walkthrough teaches.
     targets = discover_elements(project_dir)
     if not targets:
-        return [_check(
-            "project-loads", WARN,
-            f"no element found to probe under {element_path(project_dir)}/",
-            remedy="this check loads one of the project's own elements; a "
-                   "project with none cannot be probed, which is not the same "
-                   "as one that fails to load")]
+        return [
+            _check(
+                "project-loads",
+                WARN,
+                f"no element found to probe under {element_path(project_dir)}/",
+                remedy="this check loads one of the project's own elements; a "
+                "project with none cannot be probed, which is not the same "
+                "as one that fails to load",
+            )
+        ]
 
     result = None
     for target in targets[:_PROBE_LIMIT]:
         result = subprocess.run(
             [bst, "show", "--deps", "none", "--format", "%{name}", target],
-            cwd=project_dir, capture_output=True, text=True, timeout=300,
+            cwd=project_dir,
+            capture_output=True,
+            text=True,
+            timeout=300,
         )
         if result.returncode == 0:
-            return [_check("project-loads", OK,
-                           f"{project_dir} loads ({target})")]
+            return [_check("project-loads", OK, f"{project_dir} loads ({target})")]
 
     message = (result.stderr or result.stdout or "").strip()
-    remedy = ("read the error below - `bst show` is what this ran, and it is "
-              "the same thing a build starts with")
+    remedy = "read the error below - `bst show` is what this ran, and it is the same thing a build starts with"
     if "plugin registered" in message:
         # Two different problems wear the same error, and the remedies
         # are opposites. Checking which one it is costs an import.
@@ -497,16 +549,22 @@ def check_project_loads(project_dir: str) -> list[dict]:
             "`autotools`, `make` and `git` kinds that are not in BuildStream "
             "core, and its absence surfaces only at the first element of such a "
             "kind"
-            if not _plugins_package_installed() else
-            "buildstream-plugins *is* installed, so this project has not "
+            if not _plugins_package_installed()
+            else "buildstream-plugins *is* installed, so this project has not "
             "declared it: add a `plugins:` block to project.conf naming the "
             "kinds it uses (origin: pip, package-name: buildstream-plugins). "
             "See examples/06-macro-micro-optimization/project.conf"
         )
     probed = ", ".join(targets[:_PROBE_LIMIT])
-    return [_check("project-loads", FAIL,
-                   f"the project does not load (tried {probed})", remedy=remedy,
-                   detail=message.splitlines()[-6:])]
+    return [
+        _check(
+            "project-loads",
+            FAIL,
+            f"the project does not load (tried {probed})",
+            remedy=remedy,
+            detail=message.splitlines()[-6:],
+        )
+    ]
 
 
 # How many of a project's own elements to try before calling it broken.
@@ -577,12 +635,11 @@ def check_staged_sources(project_dir: str) -> list[dict]:
     # with `element_path()` sitting two functions away.
     elements_dir = os.path.join(project_dir, element_path(project_dir))
     if not os.path.isdir(elements_dir):
-        return [_check("census", SKIP,
-                       f"{project_dir} has no {element_path(project_dir)}/ "
-                       f"directory to census")]
+        return [_check("census", SKIP, f"{project_dir} has no {element_path(project_dir)}/ directory to census")]
     # UX-160: recursive, via the tracer's one implementation - a
     # nested layout is the normal shape of a real project.
     from .bst_native_build_tracer import discover_element_names
+
     elements = discover_element_names(project_dir)
     if not elements:
         return [_check("census", SKIP, "the project declares no elements")]
@@ -595,38 +652,48 @@ def check_staged_sources(project_dir: str) -> list[dict]:
     findings = []
     per_element = census.get("per_element") or {}
     executables = sum(
-        (entry.get("dynamic_executables") or 0) + (entry.get("static_count") or 0)
-        for entry in per_element.values()
+        (entry.get("dynamic_executables") or 0) + (entry.get("static_count") or 0) for entry in per_element.values()
     )
     if executables == 0:
-        findings.append(_check(
-            "staged-sources", WARN,
-            "this project's own sources stage no executable at all - a sandbox "
-            "with no shell cannot run install-commands",
-            remedy="examples/stage_runtimes.sh (busybox) or "
-                   "examples/stage_cpp_toolchain.sh (a real gcc/cmake sysroot), "
-                   "depending on the project. Both are gitignored by design and "
-                   "must be run once per checkout."))
+        findings.append(
+            _check(
+                "staged-sources",
+                WARN,
+                "this project's own sources stage no executable at all - a sandbox "
+                "with no shell cannot run install-commands",
+                remedy="examples/stage_runtimes.sh (busybox) or "
+                "examples/stage_cpp_toolchain.sh (a real gcc/cmake sysroot), "
+                "depending on the project. Both are gitignored by design and "
+                "must be run once per checkout.",
+            )
+        )
     else:
-        findings.append(_check("staged-sources", OK,
-                               f"{plural(executables, 'executable')} staged by this "
-                               f"project's own sources"))
+        findings.append(
+            _check("staged-sources", OK, f"{plural(executables, 'executable')} staged by this project's own sources")
+        )
 
     at_risk = census.get("elements_at_risk") or []
     if at_risk:
-        findings.append(_check(
-            "static-blind-spot", WARN,
-            f"{plural(len(at_risk), 'element')} stage a statically-linked executable, "
-            f"which the LD_PRELOAD hook structurally cannot see",
-            remedy="capture with `--trace-spine=auto` - it pays the ptrace cost "
-                   "only for the elements the census says the hook is blind for "
-                   "(UX-105/UX-113)",
-            detail=at_risk[:6]))
+        findings.append(
+            _check(
+                "static-blind-spot",
+                WARN,
+                f"{plural(len(at_risk), 'element')} stage a statically-linked executable, "
+                f"which the LD_PRELOAD hook structurally cannot see",
+                remedy="capture with `--trace-spine=auto` - it pays the ptrace cost "
+                "only for the elements the census says the hook is blind for "
+                "(UX-105/UX-113)",
+                detail=at_risk[:6],
+            )
+        )
     else:
-        findings.append(_check(
-            "static-blind-spot", OK,
-            "nothing this project stages is statically linked, so the hook is "
-            "not blind to any of it"))
+        findings.append(
+            _check(
+                "static-blind-spot",
+                OK,
+                "nothing this project stages is statically linked, so the hook is not blind to any of it",
+            )
+        )
     return findings
 
 
@@ -642,6 +709,7 @@ def run_checks(project_dir: Optional[str] = None) -> list[dict]:
     project_name = None
     if project_dir:
         from .bst_cache_logs import project_name_from_dir
+
         project_name = project_name_from_dir(project_dir)
         checks.extend(check_project_loads(project_dir))
         checks.extend(check_staged_sources(project_dir))
@@ -666,16 +734,20 @@ def format_text(checks: list[dict], project_dir: Optional[str]) -> str:
     failed = [c for c in checks if c["status"] == FAIL]
     lines.append("")
     if failed:
-        lines.append(f"  {plural(len(failed), 'check')} failed. Each line above carries the "
-                     f"remedy that actually fixed it.")
+        lines.append(
+            f"  {plural(len(failed), 'check')} failed. Each line above carries the remedy that actually fixed it."
+        )
     else:
         warned = [c for c in checks if c["status"] == WARN]
         lines.append(
             "  Everything a capture needs is here."
-            + (f" {plural(len(warned), 'warning')} worth reading first." if warned else ""))
+            + (f" {plural(len(warned), 'warning')} worth reading first." if warned else "")
+        )
     if not project_dir:
-        lines.append("  Pass a project directory to also check that it loads, that "
-                     "its plugins are installed, and what it stages.")
+        lines.append(
+            "  Pass a project directory to also check that it loads, that "
+            "its plugins are installed, and what it stages."
+        )
     lines.append("=" * 60)
     return "\n".join(lines)
 
@@ -728,9 +800,7 @@ def _find_stageable_runtime() -> Optional[str]:
     return None
 
 
-_CHAIN_BUILD_REMEDY = (
-    "the probe project is one `manual` element; a failure here "
-    "is BuildStream or the sandbox, not bga")
+_CHAIN_BUILD_REMEDY = "the probe project is one `manual` element; a failure here is BuildStream or the sandbox, not bga"
 
 _CACHE_TOO_FULL_HINT = (
     "'Cache too full' with no config carried in: bst's "
@@ -739,7 +809,8 @@ _CACHE_TOO_FULL_HINT = (
     "An absolute value sidesteps the percentage-of-total arithmetic - "
     "`reserved-disk-space: 500M` under `cache:` in "
     "~/.config/buildstream.conf, the way UX-755 fixed it for production "
-    "captures.")
+    "captures."
+)
 
 
 def _chain_build_remedy(detail: list[str]) -> str:
@@ -768,11 +839,15 @@ def check_capture_chain(project_dir: Optional[str] = None) -> list[dict]:
         return [_check("capture-chain", SKIP, "cannot run a build without bst")]
     runtime = _find_stageable_runtime()
     if runtime is None:
-        return [_check(
-            "capture-chain", SKIP,
-            "no staged runtime to build a probe project from",
-            remedy="run examples/stage_runtimes.sh - the probe needs a sandbox "
-                   "with a shell in it, and this check will not build one")]
+        return [
+            _check(
+                "capture-chain",
+                SKIP,
+                "no staged runtime to build a probe project from",
+                remedy="run examples/stage_runtimes.sh - the probe needs a sandbox "
+                "with a shell in it, and this check will not build one",
+            )
+        ]
 
     from .bst_native_build_tracer import (
         count_build_tasks,
@@ -800,64 +875,84 @@ def check_capture_chain(project_dir: Optional[str] = None) -> list[dict]:
             # Probing with the hook alone would report a correct blind
             # spot as a broken chain, every time.
             code = run_traced_build(
-                project, ["bst", "--no-colors", "build", "probe.bst"], raw,
-                wrapped_log_path=plane1, trace_opens=True,
-                diagnostics_path=diagnostics, trace_spine="auto")
+                project,
+                ["bst", "--no-colors", "build", "probe.bst"],
+                raw,
+                wrapped_log_path=plane1,
+                trace_opens=True,
+                diagnostics_path=diagnostics,
+                trace_spine="auto",
+            )
         except Exception as error:
-            return [_check("capture-chain", FAIL,
-                           f"the probe capture could not start: {error}",
-                           remedy="the message above is the first broken link")]
+            return [
+                _check(
+                    "capture-chain",
+                    FAIL,
+                    f"the probe capture could not start: {error}",
+                    remedy="the message above is the first broken link",
+                )
+            ]
         finally:
             os.environ.clear()
             os.environ.update(previous)
 
         # 1. the shim was executable at all - `run_traced_build` probes
         #    this itself (UX-147) and raises above if it fails.
-        findings.append(_check("chain-shim-exec", OK,
-                               "the bwrap shim is executable and answers its probe"))
+        findings.append(_check("chain-shim-exec", OK, "the bwrap shim is executable and answers its probe"))
 
         # 2. did bst launch a sandbox?
         tasks = count_build_tasks(plane1) or 0
         if code != 0 and tasks == 0:
             detail = _tail(plane1)
-            findings.append(_check(
-                "chain-build", FAIL,
-                f"the probe build failed (exit {code}) before running any command",
-                remedy=_chain_build_remedy(detail),
-                detail=detail))
+            findings.append(
+                _check(
+                    "chain-build",
+                    FAIL,
+                    f"the probe build failed (exit {code}) before running any command",
+                    remedy=_chain_build_remedy(detail),
+                    detail=detail,
+                )
+            )
             return findings
-        findings.append(_check("chain-build", OK,
-                               f"bst ran {plural(tasks, 'sandboxed task')}"))
+        findings.append(_check("chain-build", OK, f"bst ran {plural(tasks, 'sandboxed task')}"))
 
         # 3. did buildbox-run reach the shim?
         records = read_capture_diagnostics(diagnostics)
         if not records:
-            findings.append(_check(
-                "chain-shim-reached", FAIL,
-                "the shim was executable and bst launched a sandbox, but the "
-                "shim was never called",
-                remedy="buildbox-run resolved `bwrap` without going through "
-                       "$PATH, or `bst` reused a buildbox-casd started before "
-                       "this capture (stop it and let bst restart it), or "
-                       "something in the chain sanitises $PATH"))
-            findings.append(_check("chain-records", SKIP,
-                                   "unreachable: the shim never ran"))
+            findings.append(
+                _check(
+                    "chain-shim-reached",
+                    FAIL,
+                    "the shim was executable and bst launched a sandbox, but the shim was never called",
+                    remedy="buildbox-run resolved `bwrap` without going through "
+                    "$PATH, or `bst` reused a buildbox-casd started before "
+                    "this capture (stop it and let bst restart it), or "
+                    "something in the chain sanitises $PATH",
+                )
+            )
+            findings.append(_check("chain-records", SKIP, "unreachable: the shim never ran"))
             return findings
-        findings.append(_check(
-            "chain-shim-reached", OK,
-            f"buildbox-run reached the shim {plural(len(records), 'time')} through $PATH"))
+        findings.append(
+            _check(
+                "chain-shim-reached", OK, f"buildbox-run reached the shim {plural(len(records), 'time')} through $PATH"
+            )
+        )
 
         # 4. did anything record a process from inside the sandbox?
         report = load_and_summarize(raw, project_dir=project)
         processes = report.get("process_count", 0)
         if not processes:
-            findings.append(_check(
-                "chain-records", FAIL,
-                "the shim rewrote the argv and nothing recorded a process",
-                remedy="neither the LD_PRELOAD hook nor the ptrace spine saw "
-                       "anything inside a sandbox that ran a command - the "
-                       "injection reached bwrap and did not survive into the "
-                       "sandbox. Send the diagnostics record."))
+            findings.append(
+                _check(
+                    "chain-records",
+                    FAIL,
+                    "the shim rewrote the argv and nothing recorded a process",
+                    remedy="neither the LD_PRELOAD hook nor the ptrace spine saw "
+                    "anything inside a sandbox that ran a command - the "
+                    "injection reached bwrap and did not survive into the "
+                    "sandbox. Send the diagnostics record.",
+                )
+            )
             return findings
 
         # `UX-297`: read from the report's own coverage census rather
@@ -867,8 +962,7 @@ def check_capture_chain(project_dir: Optional[str] = None) -> list[dict]:
         # implementation of the same tally over the 99.9% of the
         # document that no longer exists. A legacy monolith still
         # answers, because it carries the same census.
-        by_coverage = dict(
-            (report.get("stream_coverage") or {}).get("by_coverage") or {})
+        by_coverage = dict((report.get("stream_coverage") or {}).get("by_coverage") or {})
         hook_seen = sum(count for key, count in by_coverage.items() if "hook" in key)
         summary = ", ".join(f"{count} {key}" for key, count in sorted(by_coverage.items()))
         if not hook_seen:
@@ -876,18 +970,20 @@ def check_capture_chain(project_dir: Optional[str] = None) -> list[dict]:
             # this repository can stage a probe from are static busybox,
             # which the hook structurally cannot see. The spine answering
             # instead is the blind spot being covered, working.
-            findings.append(_check(
-                "chain-records", WARN,
-                f"{processes} process(es) recorded, none by the LD_PRELOAD hook "
-                f"({summary})",
-                remedy="the probe's runtime is statically linked, so only the "
-                       "ptrace spine can see it - which it did. On a dynamic "
-                       "project the hook is what carries opened paths"))
+            findings.append(
+                _check(
+                    "chain-records",
+                    WARN,
+                    f"{processes} process(es) recorded, none by the LD_PRELOAD hook ({summary})",
+                    remedy="the probe's runtime is statically linked, so only the "
+                    "ptrace spine can see it - which it did. On a dynamic "
+                    "project the hook is what carries opened paths",
+                )
+            )
         else:
-            findings.append(_check(
-                "chain-records", OK,
-                f"{processes} process(es) recorded from inside the sandbox "
-                f"({summary})"))
+            findings.append(
+                _check("chain-records", OK, f"{processes} process(es) recorded from inside the sandbox ({summary})")
+            )
     return findings
 
 
@@ -924,8 +1020,7 @@ def _isolated_home(home: str) -> dict:
         user_site = None
     if user_site and user_site in sys.path and os.path.isdir(user_site):
         existing = os.environ.get("PYTHONPATH")
-        env["PYTHONPATH"] = (f"{user_site}{os.pathsep}{existing}"
-                             if existing else user_site)
+        env["PYTHONPATH"] = f"{user_site}{os.pathsep}{existing}" if existing else user_site
     if not os.environ.get("XDG_CONFIG_HOME"):
         real_config = os.path.expanduser("~/.config")
         for name in ("buildstream.conf", "buildstream2.conf"):
@@ -949,25 +1044,31 @@ def _CompactRawHelp(prog):
     """UX-158: one shared compact help layout, imported lazily so
     this module stays runnable on its own."""
     from bga.help_format import CompactRawHelp
+
     return CompactRawHelp(prog)
+
 
 def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(
-        description=HELP, formatter_class=_CompactRawHelp,
+        description=HELP,
+        formatter_class=_CompactRawHelp,
     )
     parser.add_argument(
-        "project_dir", nargs="?", default=None,
+        "project_dir",
+        nargs="?",
+        default=None,
         help="A BuildStream project to check as well as the environment: that it "
-             "loads, that every plugin kind it names is installed, and what its "
-             "sources stage.",
+        "loads, that every plugin kind it names is installed, and what its "
+        "sources stage.",
     )
     parser.add_argument(
-        "--capture", action="store_true",
+        "--capture",
+        action="store_true",
         help="UX-149: also run the whole capture chain - bst, buildbox-run, the "
-             "PATH shim, the rewritten argv, the hook inside the sandbox - on a "
-             "canned one-element probe build, and report per link in chain "
-             "order. Takes a few seconds and needs a staged runtime; this is the "
-             "check to run when a capture fails on a build plain `bst` completes.",
+        "PATH shim, the rewritten argv, the hook inside the sandbox - on a "
+        "canned one-element probe build, and report per link in chain "
+        "order. Takes a few seconds and needs a staged runtime; this is the "
+        "check to run when a capture fails on a build plain `bst` completes.",
     )
     parser.add_argument("-f", "--format", choices=["text", "json"], default="text")
     args = parser.parse_args(argv)

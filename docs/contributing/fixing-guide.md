@@ -399,6 +399,8 @@ tools/dev_touching.py        the tests that name what your diff touched, plus th
                              can hold a record any more (UX-997)
 tools/dev_docs_only.py, dev_docs_lane.py  whether a PR is docs only, and the doc
                              guards its one-Python CI lane runs (UX-956)
+tools/dev_lint_docs.py       the markdown list `lint-docs` scans, or only what a
+                             diff changed, for push-check
 tools/dev_touch_map.py       which test files executed which module, off CI's own
                              coverage run - the import chain a grep cannot see (UX-524)
 tools/dev_impact.py          what a change reaches - contracts, findings, guides,
@@ -455,10 +457,12 @@ tools/dev_baseline.py       every current ruff and pyright finding
                              by identity in tests/quality_baseline.json;
                              a new one is red, the list only shrinks (UX-694/697)
 tools/dev_env_check.py       the pre-gate env check: `import bga` resolves
-                             under the main checkout, and PATH's ruff, pyright
-                             and node are the pinned ones (UX-887/889)
+                             under the main checkout, and PATH's node is the
+                             pinned major (UX-887/889)
 tools/dev_trace_coverage.py  which captured field reaches the emitted
                              trace, and which Perfetto carriers it uses (UX-466)
+tools/dev_guard_prices.py    each guard's CI seconds, owner and last catch;
+                             proposes a scheduled lane or an owner
 tools/dev_retro.py           a window's bookkeeping, grouped by the command
                              that shows it, for the weekly `retro` skill (UX-999)
 tools/dev_page_census.py     the page's structure and control classes, one
@@ -512,6 +516,10 @@ A citation is closed or marked (open).
                                              Graviton runner: sudo, bwrap,
                                              bst on aarch64, compile width
                                              (UX-895, UX-905)
+.github/workflows/timing.yml                daily + dispatch - the tier
+                                             drift and analyzer clock
+                                             verdicts off the PR path,
+                                             two-run carry (UX-1121)
 ```
 
 **Tests and docs:**
@@ -561,7 +569,7 @@ docs/spec/specification.md v9 spec, ground truth - use line ranges, never read w
 docs/design/architecture.md  all three planes plus the viewer axis and the contracts
 docs/design/directions.md    where the tool is going, argued · roles.md  who it answers to
 docs/backlog/scenarios/README.md   active backlog index - start here
-docs/backlog/scenarios/closed.md   every closed row, verbatim
+docs/backlog/scenarios/closed/     every closed row, verbatim, in chunks; `closed_rows()`
 docs/backlog/progress-tracker.md   closed spec-compliance backlog - archaeology only
 CLAUDE.md                  the day-one page, loaded every session; this guide is the rule
 ```

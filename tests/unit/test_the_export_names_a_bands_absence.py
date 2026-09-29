@@ -11,6 +11,7 @@ wrote its export and exited 0) reached the real terminal anyway. The
 reason was then discarded, so the page had nothing to say about the
 missing band either.
 """
+
 import json
 import os
 import re
@@ -37,9 +38,12 @@ def _run_mode_store(tmp_path, candidate_mode, baseline_mode):
         run.parent.mkdir(parents=True, exist_ok=True)
         shutil.copytree(GOLDEN, run)
         os.remove(run / "expected_output.json")
-        context = dict(base_context, queue_summary={
-            "build": ({"processed": 5, "skipped": 0} if mode == "full"
-                      else {"processed": 1, "skipped": 4})})
+        context = dict(
+            base_context,
+            queue_summary={
+                "build": ({"processed": 5, "skipped": 0} if mode == "full" else {"processed": 1, "skipped": 4})
+            },
+        )
         (run / "run-context.json").write_text(json.dumps(context))
         return str(run)
 
@@ -48,9 +52,7 @@ def _run_mode_store(tmp_path, candidate_mode, baseline_mode):
 
 
 def _run_json_block(html, name):
-    match = re.search(
-        r'<script type="application/json" id="bga-' + re.escape(name)
-        + r'">([\s\S]*?)</script>', html)
+    match = re.search(r'<script type="application/json" id="bga-' + re.escape(name) + r'">([\s\S]*?)</script>', html)
     return json.loads(match.group(1)) if match else None
 
 
@@ -88,9 +90,7 @@ def test_the_reason_appears_exactly_once(tmp_path, capsys):
 
     captured = capsys.readouterr()
     occurrences = captured.err.count("noise band may only be built")
-    assert occurrences == 0, (
-        f"the refusal sentence reached the real terminal {occurrences} "
-        f"time(s): {captured.err!r}")
+    assert occurrences == 0, f"the refusal sentence reached the real terminal {occurrences} time(s): {captured.err!r}"
 
 
 def test_the_page_carries_the_bands_reason(tmp_path):
@@ -140,10 +140,11 @@ def test_render_band_unavailable_writes_the_empty_section_vocabulary():
     script = _HARNESS % json.dumps(
         "baseline run x is a full run but the candidate is incremental "
         "- a noise band may only be built from runs of the same kind "
-        "(UX-55)")
-    result = subprocess.run([node, "--input-type=module", "-e", script],
-                            capture_output=True, text=True,
-                            cwd=os.getcwd(), timeout=60)
+        "(UX-55)"
+    )
+    result = subprocess.run(
+        [node, "--input-type=module", "-e", script], capture_output=True, text=True, cwd=os.getcwd(), timeout=60
+    )
     assert result.returncode == 0, result.stderr
     out = json.loads(result.stdout)
     assert out["section"] == "band"

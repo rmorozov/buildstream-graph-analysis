@@ -33,6 +33,7 @@ OLD: [(0, 4, 0.0)]     # one row, on_path 0.0, from four elements at three depth
 real reader when this machine has one, so the emulation is anchored
 rather than trusted.
 """
+
 import json
 import pathlib
 import shutil
@@ -77,11 +78,10 @@ SHAPE = {
 
 def library():
     """The question library, as data, read by running the module."""
-    script = ('const { QUESTIONS } = await import("./bga/viewer/questions.js");'
-              'console.log(JSON.stringify(QUESTIONS));')
-    done = subprocess.run([node, "--input-type=module", "-e", script],
-                          capture_output=True, text=True, cwd=REPO,
-                          timeout=120)
+    script = 'const { QUESTIONS } = await import("./bga/viewer/questions.js");console.log(JSON.stringify(QUESTIONS));'
+    done = subprocess.run(
+        [node, "--input-type=module", "-e", script], capture_output=True, text=True, cwd=REPO, timeout=120
+    )
     assert done.returncode == 0, done.stderr
     return json.loads(done.stdout)
 
@@ -104,22 +104,20 @@ def _db(rows):
     """
     args = {}
     db = sqlite3.connect(":memory:")
-    db.create_function("extract_arg", 2,
-                       lambda set_id, key: args.get(set_id, {}).get(key))
-    db.execute("create table slice (id integer, arg_set_id integer, "
-               "dur integer, depth integer, name text, category text)")
+    db.create_function("extract_arg", 2, lambda set_id, key: args.get(set_id, {}).get(key))
+    db.execute(
+        "create table slice (id integer, arg_set_id integer, dur integer, depth integer, name text, category text)"
+    )
     for index, (depth, element, on_path, dur) in enumerate(rows):
-        args[index] = {"debug.depth": depth, "debug.element": element,
-                       "debug.on_critical_path": on_path}
-        db.execute("insert into slice values (?,?,?,?,?,?)",
-                   (index, index, dur, 0, element, "bga,bst-builder"))
+        args[index] = {"debug.depth": depth, "debug.element": element, "debug.on_critical_path": on_path}
+        db.execute("insert into slice values (?,?,?,?,?,?)", (index, index, dur, 0, element, "bga,bst-builder"))
     # The wrapper span: category `bst-builder`, no `depth`. It is what
     # the query's `is not null` exists for, and leaving it out would let
     # a mutation removing that clause pass.
     args[len(rows)] = {"debug.element": None}
-    db.execute("insert into slice values (?,?,?,?,?,?)",
-               (len(rows), len(rows), 1, 0, "bst build all.bst",
-                "bga,bst-builder"))
+    db.execute(
+        "insert into slice values (?,?,?,?,?,?)", (len(rows), len(rows), 1, 0, "bst build all.bst", "bga,bst-builder")
+    )
     return db
 
 
@@ -136,9 +134,7 @@ def _fixture_rows():
     rows = []
     for depth, (elements, _on_path) in SHAPE.items():
         for element in elements:
-            rows.append((depth, element,
-                         "false" if element == "codegen.bst" else "true",
-                         1_000_000_000))
+            rows.append((depth, element, "false" if element == "codegen.bst" else "true", 1_000_000_000))
             if element == "lib-a.bst":
                 rows.append((depth, element, "true", 1_000_000_000))
     return rows
@@ -146,7 +142,6 @@ def _fixture_rows():
 
 @needs_node
 class TestTheGraphShapeQueryIsRun:
-
     def _answer(self):
         sql = question("graph-levels")["sql"].rstrip().rstrip(";")
         return _db(_fixture_rows()).execute(sql).fetchall()
@@ -156,23 +151,21 @@ class TestTheGraphShapeQueryIsRun:
         assert len(answer) == len(SHAPE), (
             f"{len(answer)} row(s) for a graph {len(SHAPE)} levels deep - "
             f"a `group by` that binds to slice.depth gives exactly one, "
-            f"which is what UX-434 was filed on: {answer}")
+            f"which is what UX-434 was filed on: {answer}"
+        )
         assert [row[0] for row in answer] == sorted(SHAPE), answer
 
     def test_each_level_counts_its_own_elements(self):
         counts = {row[0]: row[1] for row in self._answer()}
-        assert counts == {depth: len(elements)
-                          for depth, (elements, _) in SHAPE.items()}, counts
+        assert counts == {depth: len(elements) for depth, (elements, _) in SHAPE.items()}, counts
 
     def test_the_critical_path_column_is_not_always_zero(self):
         """The second defect. `sum('true')` is 0, so this column read
         zero on every capture ever taken - including one where eight of
         ten elements were on the path."""
         on_path = {row[0]: row[3] for row in self._answer()}
-        assert on_path == {depth: count
-                           for depth, (_, count) in SHAPE.items()}, on_path
-        assert any(value for value in on_path.values()), (
-            "every level reports nothing on the critical path")
+        assert on_path == {depth: count for depth, (_, count) in SHAPE.items()}, on_path
+        assert any(value for value in on_path.values()), "every level reports nothing on the critical path"
 
     def test_the_wrapper_span_is_not_a_level(self):
         """It carries the builder category and no depth, so a query that
@@ -187,8 +180,7 @@ class TestTheGraphShapeQueryIsRun:
         query that groups by one of them is grouping by Perfetto's
         value however it aliased its own.
         """
-        columns = {row[1] for row in
-                   _db([]).execute("pragma table_info(slice)").fetchall()}
+        columns = {row[1] for row in _db([]).execute("pragma table_info(slice)").fetchall()}
         offenders = {}
         for entry in library():
             sql = (entry.get("sql") or "").lower()
@@ -203,7 +195,8 @@ class TestTheGraphShapeQueryIsRun:
         assert offenders == {}, (
             f"a query aliases a name the slice table also defines and "
             f"then groups or orders by it, so the alias is shadowed: "
-            f"{offenders}")
+            f"{offenders}"
+        )
 
 
 #: `UX-321` made this one gate, asked in one place, because the skip
@@ -212,8 +205,7 @@ class TestTheGraphShapeQueryIsRun:
 #: coined did exactly that, and CI is where it showed: undeclared, the
 #: census failed all four interpreters while every test passed.
 READER = trace_processor.shell()
-needs_reader = pytest.mark.skipif(
-    READER is None, reason=trace_processor.REASON)
+needs_reader = pytest.mark.skipif(READER is None, reason=trace_processor.REASON)
 
 
 @needs_node
@@ -232,14 +224,12 @@ class TestTheQueryAnswersARealTrace:
         render(str(FIXTURE), str(trace))
         sql = tmp_path / "q.sql"
         sql.write_text(question("graph-levels")["sql"], encoding="utf-8")
-        done = subprocess.run([READER, "-q", str(sql), str(trace)],
-                              capture_output=True, text=True, timeout=300)
+        done = subprocess.run([READER, "-q", str(sql), str(trace)], capture_output=True, text=True, timeout=300)
         assert done.returncode == 0, done.stderr
         # Drop the header by position, not by name: keying on
         # `"graph_depth"` made a mutation that renamed the column redden
         # this clause for the wrong reason - the header parsed as a row.
-        body = [line for line in done.stdout.splitlines()
-                if line and not line.startswith("Loading")][1:]
+        body = [line for line in done.stdout.splitlines() if line and not line.startswith("Loading")][1:]
         return [line.split(",") for line in body]
 
     def test_the_real_reader_gives_one_row_per_level(self, tmp_path):
@@ -249,8 +239,7 @@ class TestTheQueryAnswersARealTrace:
 
     def test_the_real_reader_counts_the_critical_path(self, tmp_path):
         on_path = {int(row[0]): int(row[3]) for row in self._rows(tmp_path)}
-        assert on_path == {depth: count
-                           for depth, (_, count) in SHAPE.items()}, on_path
+        assert on_path == {depth: count for depth, (_, count) in SHAPE.items()}, on_path
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -31,6 +31,7 @@ export is the shape with the fewest documents - anything reachable
 there is reachable served, and the reverse is what `UX-203` was filed
 for.
 """
+
 import json
 import os
 import pathlib
@@ -92,10 +93,10 @@ console.log("CENSUS " + JSON.stringify({
 
 def _declarations(name):
     """A declaration table read out of `app.js`, as {key: reason}."""
-# `UX-450` split the section walk out of `app.js` when that file sat
-# exactly on `UX-337`'s ceiling. What this reads - the section
-# router and its declarations - moved to `sections.js`; the name
-# here follows the code rather than the file it used to be in.
+    # `UX-450` split the section walk out of `app.js` when that file sat
+    # exactly on `UX-337`'s ceiling. What this reads - the section
+    # router and its declarations - moved to `sections.js`; the name
+    # here follows the code rather than the file it used to be in.
     source = (REPO / "bga/viewer/sections.js").read_text(encoding="utf-8")
     found = re.search(rf"export const {name} = \{{(.*?)\}};", source, re.S)
     assert found, f"app.js no longer declares {name}"
@@ -111,25 +112,34 @@ def booted(tmp_path_factory):
     page = into / "report.html"
     view.export(str(RUN), str(page))
     html = page.read_text(encoding="utf-8")
-    (into / "inline.mjs").write_text(
-        view.inflated_module(html),
-        encoding="utf-8")
+    (into / "inline.mjs").write_text(view.inflated_module(html), encoding="utf-8")
     # The same boot every navigation guard uses, so this census reads
     # the document a reader gets rather than one assembled here.
-    probe = (REPO / "tests/unit/test_a_report_you_can_navigate.py").read_text(
-        encoding="utf-8").split('_PROBE = r"""', 1)[1].rsplit('"""', 1)[0]
+    probe = (
+        (REPO / "tests/unit/test_a_report_you_can_navigate.py")
+        .read_text(encoding="utf-8")
+        .split('_PROBE = r"""', 1)[1]
+        .rsplit('"""', 1)[0]
+    )
     (into / "probe.mjs").write_text(probe + _TAIL, encoding="utf-8")
     done = subprocess.run(
         [node, str(into / "probe.mjs")],
-        capture_output=True, text=True, cwd=REPO, timeout=120,
-        env=dict(os.environ, PAGE=str(page), MOD=str(into / "inline.mjs"),
-                 PROTOCOL="file:",
-                 BGA_VIEWER=str(REPO / "tests/viewer.mjs"),
-                 BGA_DOM_SHIM=str(REPO / "tests/dom_shim.mjs")))
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=120,
+        env=dict(
+            os.environ,
+            PAGE=str(page),
+            MOD=str(into / "inline.mjs"),
+            PROTOCOL="file:",
+            BGA_VIEWER=str(REPO / "tests/viewer.mjs"),
+            BGA_DOM_SHIM=str(REPO / "tests/dom_shim.mjs"),
+        ),
+    )
     assert done.returncode == 0, done.stderr[-2500:]
-    line = [ln for ln in done.stdout.splitlines()
-            if ln.startswith("CENSUS ")][-1]
-    return json.loads(line[len("CENSUS "):])
+    line = [ln for ln in done.stdout.splitlines() if ln.startswith("CENSUS ")][-1]
+    return json.loads(line[len("CENSUS ") :])
 
 
 @pytest.fixture(scope="module")
@@ -141,10 +151,13 @@ def written():
 @pytest.fixture(scope="module")
 def payload():
     done = subprocess.run(
-        [sys.executable, "-m", "bga.cli", "analyze", str(RUN),
-         "--format", "json"],
-        capture_output=True, text=True, cwd=REPO, timeout=180,
-        env=dict(os.environ, PYTHONPATH=str(REPO)))
+        [sys.executable, "-m", "bga.cli", "analyze", str(RUN), "--format", "json"],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=180,
+        env=dict(os.environ, PYTHONPATH=str(REPO)),
+    )
     assert done.returncode == 0, done.stderr[-3000:]
     return json.loads(done.stdout)
 
@@ -168,8 +181,8 @@ class TestTheCensusIsExhaustive:
     def test_the_page_drew_something_to_census(self, booted):
         assert len(booted["rendered"]) > 40, sorted(booted["rendered"])
         assert SCALAR_HOME in booted["rendered"], (
-            f"the `{SCALAR_HOME}` block is gone; every scalar of the "
-            f"document just lost its destination")
+            f"the `{SCALAR_HOME}` block is gone; every scalar of the document just lost its destination"
+        )
 
     def test_every_key_of_the_document_reaches_a_reader(self, payload, booted):
         """Read off the payload, not off a list.
@@ -178,13 +191,12 @@ class TestTheCensusIsExhaustive:
         catch the next one, which is exactly how the count went from
         fourteen to fifteen inside a single round.
         """
-        silent = {key: value.__class__.__name__
-                  for key, value in payload.items()
-                  if not _homes(key, value, booted)}
+        silent = {key: value.__class__.__name__ for key, value in payload.items() if not _homes(key, value, booted)}
         assert silent == {}, (
             f"{len(silent)} key(s) of the analyze document reach no "
             f"reader: {silent}. Draw it, or declare it in "
-            f"`TERMINAL_ONLY` with the reason it stops at the terminal")
+            f"`TERMINAL_ONLY` with the reason it stops at the terminal"
+        )
 
     def test_a_declaration_carries_a_reason(self):
         """Silence is what produced fourteen. A wildcard entry would
@@ -196,18 +208,13 @@ class TestTheCensusIsExhaustive:
     def test_nothing_declared_unreachable_is_drawn(self, booted):
         """The anti-rot direction. A declaration the page has outgrown
         is a lie of the same kind as no declaration at all."""
-        rotted = [key for key in (booted["terminal_only"] or {})
-                  if key in booted["rendered"]]
-        assert rotted == [], (
-            f"declared terminal-only and drawn as a section: {rotted}")
-        misplaced = [key for key in (booted["drawn_elsewhere"] or {})
-                     if key in booted["rendered"]]
-        assert misplaced == [], (
-            f"declared drawn elsewhere and drawn here too: {misplaced}")
+        rotted = [key for key in (booted["terminal_only"] or {}) if key in booted["rendered"]]
+        assert rotted == [], f"declared terminal-only and drawn as a section: {rotted}"
+        misplaced = [key for key in (booted["drawn_elsewhere"] or {}) if key in booted["rendered"]]
+        assert misplaced == [], f"declared drawn elsewhere and drawn here too: {misplaced}"
 
     def test_the_declarations_do_not_overlap(self, booted):
-        both = set(booted["drawn_elsewhere"] or {}) & set(
-            booted["terminal_only"] or {})
+        both = set(booted["drawn_elsewhere"] or {}) & set(booted["terminal_only"] or {})
         assert both == set(), both
 
     def test_the_slot_is_empty_because_nothing_needs_it(self, booted):
@@ -219,7 +226,8 @@ class TestTheCensusIsExhaustive:
         assert set(booted["terminal_only"]) <= {"fingerprint"}, (
             f"a key was declared terminal-only: {booted['terminal_only']}. "
             f"That is allowed - update this clause and say which round "
-            f"decided it, so the entry is a decision and not a default")
+            f"decided it, so the entry is a decision and not a default"
+        )
 
 
 @needs_node
@@ -234,12 +242,9 @@ class TestThePlaneTwoDestinationsReachTheBrowser:
                 continue
             if where.split(".")[0] not in booted["rendered"]:
                 unreached.append(f"{block} -> {where}")
-        assert unreached == [], (
-            f"declared to reach the payload, and the page draws no "
-            f"section for it: {unreached}")
+        assert unreached == [], f"declared to reach the payload, and the page draws no section for it: {unreached}"
 
-    def test_every_carried_member_is_drawn_where_it_landed(
-            self, booted, written):
+    def test_every_carried_member_is_drawn_where_it_landed(self, booted, written):
         """A member carried into a section that does not draw it is the
         same silence one level down: the block resolves in the payload,
         the section exists, and the number still reaches nobody.
@@ -260,16 +265,15 @@ class TestThePlaneTwoDestinationsReachTheBrowser:
                 undrawn.append(f"{where} (no term drawn in `{root}`)")
         assert undrawn == [], undrawn
 
-    def test_a_join_destination_lands_where_the_page_declares_it(
-            self, booted):
+    def test_a_join_destination_lands_where_the_page_declares_it(self, booted):
         """`element_join` is `DRAWN_ELSEWHERE`, and its fields are
         `UX-356`'s guard. What this asserts is the cross-reference: a
         block declared to land on a join field lands on a population
         the page has a written destination for."""
-        joins = [where for kind, where, _why in plane2.DESTINATIONS.values()
-                 if kind == plane2.JOIN]
+        joins = [where for kind, where, _why in plane2.DESTINATIONS.values() if kind == plane2.JOIN]
         if not joins:
             pytest.skip("no block declares a join destination")
         assert "element_join" in (booted["drawn_elsewhere"] or {}), (
             "blocks are declared to land on `element_join` rows, and the "
-            "page has no written destination for that population")
+            "page has no written destination for that population"
+        )

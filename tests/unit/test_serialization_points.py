@@ -12,6 +12,7 @@ rest of the build by `variables: notparallel: True`.
 Real, hand-built fixtures (no run-dir/JSON needed), matching
 `tests/unit/test_batch_opportunities.py`'s own pattern.
 """
+
 from bga.ingest.models import DependencyEdge, Element, Graph, NormalizedTask, Resource, TaskKey, TaskKind
 from bga.structural.serialization_points import detect_large_serialization_points
 
@@ -19,8 +20,11 @@ from bga.structural.serialization_points import detect_large_serialization_point
 def _task(uid, dur_us, dependencies=()):
     return NormalizedTask(
         task_key=TaskKey(uid, TaskKind.BUILD, "BUILD", 0),
-        ready_us=0, start_us=0, finish_us=dur_us,
-        dependencies=list(dependencies), resources=[Resource.PROCESS],
+        ready_us=0,
+        start_us=0,
+        finish_us=dur_us,
+        dependencies=list(dependencies),
+        resources=[Resource.PROCESS],
     )
 
 
@@ -55,7 +59,11 @@ def test_a_pinned_expensive_depended_on_element_is_flagged():
     graph = _graph(elements, [("core.bst", "lib-a.bst")])
 
     result = detect_large_serialization_points(
-        elements=elements, tasks=tasks, graph=graph, builders=4, governing_cores=4,
+        elements=elements,
+        tasks=tasks,
+        graph=graph,
+        builders=4,
+        governing_cores=4,
     )
 
     assert len(result.risks) == 1
@@ -77,7 +85,11 @@ def test_a_uniformly_single_job_project_is_not_flagged():
     )
     graph = _graph(elements, [("a.bst", "b.bst")])
     result = detect_large_serialization_points(
-        elements=elements, tasks=tasks, graph=graph, builders=4, governing_cores=4,
+        elements=elements,
+        tasks=tasks,
+        graph=graph,
+        builders=4,
+        governing_cores=4,
     )
     assert result.risks == []
 
@@ -90,7 +102,11 @@ def test_a_pinned_but_cheap_element_is_not_flagged():
     )
     graph = _graph(elements, [("tiny.bst", "lib-a.bst")])
     result = detect_large_serialization_points(
-        elements=elements, tasks=tasks, graph=graph, builders=4, governing_cores=4,
+        elements=elements,
+        tasks=tasks,
+        graph=graph,
+        builders=4,
+        governing_cores=4,
     )
     assert result.risks == []
 
@@ -104,7 +120,11 @@ def test_a_pinned_leaf_with_nothing_waiting_on_it_is_not_flagged():
     )
     graph = _graph(elements, [])
     result = detect_large_serialization_points(
-        elements=elements, tasks=tasks, graph=graph, builders=4, governing_cores=4,
+        elements=elements,
+        tasks=tasks,
+        graph=graph,
+        builders=4,
+        governing_cores=4,
     )
     assert result.risks == []
 
@@ -122,7 +142,11 @@ def test_only_one_qualifying_element_is_not_flagged():
     graph = _graph(elements, [])
 
     result = detect_large_serialization_points(
-        elements=elements, tasks=tasks, graph=graph, builders=4, governing_cores=4,
+        elements=elements,
+        tasks=tasks,
+        graph=graph,
+        builders=4,
+        governing_cores=4,
     )
 
     assert result.risks == []
@@ -142,7 +166,11 @@ def test_builders_one_makes_concurrent_dispatch_impossible_regardless_of_config(
     graph = _graph(elements, [])
 
     result = detect_large_serialization_points(
-        elements=elements, tasks=tasks, graph=graph, builders=1, governing_cores=4,
+        elements=elements,
+        tasks=tasks,
+        graph=graph,
+        builders=1,
+        governing_cores=4,
     )
 
     assert result.risks == []
@@ -161,7 +189,11 @@ def test_serialized_elements_are_not_flagged_as_concurrent_risk():
     graph = _graph(elements, [("llvm1.bst", "llvm2.bst")])
 
     result = detect_large_serialization_points(
-        elements=elements, tasks=tasks, graph=graph, builders=4, governing_cores=4,
+        elements=elements,
+        tasks=tasks,
+        graph=graph,
+        builders=4,
+        governing_cores=4,
     )
 
     assert result.risks == []
@@ -179,7 +211,11 @@ def test_missing_governing_cores_is_not_flagged():
     graph = _graph(elements, [])
 
     result = detect_large_serialization_points(
-        elements=elements, tasks=tasks, graph=graph, builders=4, governing_cores=None,
+        elements=elements,
+        tasks=tasks,
+        graph=graph,
+        builders=4,
+        governing_cores=None,
     )
 
     assert result.risks == []
@@ -197,7 +233,11 @@ def test_low_max_jobs_element_does_not_qualify():
     graph = _graph(elements, [])
 
     result = detect_large_serialization_points(
-        elements=elements, tasks=tasks, graph=graph, builders=4, governing_cores=4,
+        elements=elements,
+        tasks=tasks,
+        graph=graph,
+        builders=4,
+        governing_cores=4,
     )
 
     assert result.risks == []
@@ -216,7 +256,11 @@ def test_short_duration_near_full_core_element_does_not_qualify():
     graph = _graph(elements, [])
 
     result = detect_large_serialization_points(
-        elements=elements, tasks=tasks, graph=graph, builders=4, governing_cores=4,
+        elements=elements,
+        tasks=tasks,
+        graph=graph,
+        builders=4,
+        governing_cores=4,
     )
 
     assert result.risks == []

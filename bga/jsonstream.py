@@ -11,6 +11,7 @@ record and a sliding buffer, not by the member. It yields events:
 
 `pattern` names the policy path (`{A}`, `[]`), `path` the document's.
 """
+
 import json
 import re
 from collections.abc import Iterator
@@ -39,7 +40,7 @@ class _Buffer:
         if not data:
             self.eof = True
             return False
-        self.text = self.text[self.pos:] + data
+        self.text = self.text[self.pos :] + data
         self.pos = 0
         return True
 
@@ -68,8 +69,7 @@ class _Buffer:
                 if self._fill(len(self.text) - self.pos):
                     continue
                 raise
-            if (end < len(self.text) and self.text[end] in _DELIMITERS) or not self._fill(
-                    len(self.text) - self.pos):
+            if (end < len(self.text) and self.text[end] in _DELIMITERS) or not self._fill(len(self.text) - self.pos):
                 self.pos = end
                 return value
 
@@ -87,8 +87,7 @@ class _Reader:
         """Whether the policy repeats anywhere under `node`: then it is walked, not decoded."""
         found = self.repeats.get(id(node))
         if found is None:
-            found = any(k.startswith(("{", "[")) or (k != "." and self._repeats(v))
-                        for k, v in node.items())
+            found = any(k.startswith(("{", "[")) or (k != "." and self._repeats(v)) for k, v in node.items())
             self.repeats[id(node)] = found
         return found
 

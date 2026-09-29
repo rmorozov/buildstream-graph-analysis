@@ -9,6 +9,7 @@ and `localStorage`, so the pasted link opened the unfiltered wall.
 grayscale print or a colour-blind reader lost the direction of the one
 chart that answers "is this project drifting".
 """
+
 import json
 import os
 import shutil
@@ -23,9 +24,9 @@ needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 
 
 def _node(script, timeout=120):
-    result = subprocess.run([node, "--input-type=module", "-e", script],
-                            capture_output=True, text=True, cwd=os.getcwd(),
-                            timeout=timeout)
+    result = subprocess.run(
+        [node, "--input-type=module", "-e", script], capture_output=True, text=True, cwd=os.getcwd(), timeout=timeout
+    )
     assert result.returncode == 0, result.stderr
     return json.loads(result.stdout)
 
@@ -44,8 +45,7 @@ class TestTheMarkerVocabularyIsDeclared:
 
     def test_a_map_that_misses_a_kind_is_rejected(self):
         with pytest.raises(ValueError, match="no shape for"):
-            schemas._check_hint("x/v1", "k", {
-                schemas.MARKERS: {"improved": "circle"}})
+            schemas._check_hint("x/v1", "k", {schemas.MARKERS: {"improved": "circle"}})
 
     def test_a_map_that_repeats_a_shape_is_rejected(self):
         """The mutation the item is really about: a declaration that
@@ -61,16 +61,14 @@ class TestTheMarkerVocabularyIsDeclared:
             schemas._check_hint("x/v1", "k", {schemas.MARKERS: bad})
 
     def test_the_store_schema_publishes_it(self):
-        declared = schemas.schema(schemas.STORE)["properties"]["snapshots"][
-            "items"]["properties"]["verdict_kind"]
+        declared = schemas.schema(schemas.STORE)["properties"]["snapshots"]["items"]["properties"]["verdict_kind"]
         assert declared[schemas.MARKERS] == schemas.VERDICT_MARKERS
 
 
 @needs_node
 class TestTheTrendDrawsTheShapeTheSchemaAssigns:
     def test_different_verdicts_differ_without_colour(self):
-        out = _node(_SHIM + _TREND % json.dumps(
-            schemas.schema(schemas.STORE)))
+        out = _node(_SHIM + _TREND % json.dumps(schemas.schema(schemas.STORE)))
         markers = {row["verdict"]: row["marker"] for row in out["points"]}
         assert markers["improved"] != markers["regressed"], markers
         for kind, marker in markers.items():
@@ -86,8 +84,7 @@ class TestTheTrendDrawsTheShapeTheSchemaAssigns:
         """`data-cy` on every marker. Without it a guard on the y axis
         has to know which verdict happened to draw a circle - which is
         how this change first reddened an unrelated test."""
-        out = _node(_SHIM + _TREND % json.dumps(
-            schemas.schema(schemas.STORE)))
+        out = _node(_SHIM + _TREND % json.dumps(schemas.schema(schemas.STORE)))
         ys = [float(row["cy"]) for row in out["points"]]
         assert len(ys) == 3 and len(set(ys)) == 3, ys
 
@@ -111,9 +108,7 @@ class TestTheTrendDrawsTheShapeTheSchemaAssigns:
         verdict kinds in JavaScript to drift from `VERDICT_KINDS`."""
         source = open("bga/viewer/views.js", encoding="utf-8").read()
         for kind in schemas.VERDICT_KINDS:
-            assert kind not in source, (
-                f"{kind} is named in the viewer; the vocabulary belongs "
-                f"to the schema")
+            assert kind not in source, f"{kind} is named in the viewer; the vocabulary belongs to the schema"
 
 
 @needs_node
@@ -138,14 +133,13 @@ class TestTheFragmentCarriesTheView:
         assert out["untouched"] == [], out["untouched"]
 
     def test_a_silent_hash_leaves_what_the_reader_remembered(self):
-        """"The hash wins where it speaks; `localStorage` remains the
+        """ "The hash wins where it speaks; `localStorage` remains the
         default where it is silent" - which only means something if a
         silent hash cannot *expand* what storage collapsed. Measured on
         a page whose section is already shut."""
         out = _node(_SHIM + _VIEWSTATE)
         assert out["remembered_after_silence"] == "true", out
-        assert out["remembered_after_speaking"] == "false", (
-            "a hash that names its collapse set must win")
+        assert out["remembered_after_speaking"] == "false", "a hash that names its collapse set must win"
 
     def test_a_key_naming_something_this_run_does_not_have_is_dropped(self):
         out = _node(_SHIM + _VIEWSTATE)
@@ -158,13 +152,12 @@ class TestTheFragmentCarriesTheView:
             '  plain: v.splitHash("#floors"),'
             '  both: v.splitHash("#floors~c=a&f.b=x"),'
             '  joined: v.joinHash("floors", "c=a"),'
-            '  nostate: v.joinHash("floors", "") }));')
+            '  nostate: v.joinHash("floors", "") }));'
+        )
         assert out["plain"] == {"anchor": "floors", "query": ""}
         assert out["both"] == {"anchor": "floors", "query": "c=a&f.b=x"}
         assert out["joined"] == "#floors~c=a"
-        assert out["nostate"] == "#floors", (
-            "a stateless link must stay the link that was already pasted "
-            "into an issue")
+        assert out["nostate"] == "#floors", "a stateless link must stay the link that was already pasted into an issue"
 
     def test_the_link_is_this_document_at_this_view(self):
         out = _node(_SHIM + _LINK)

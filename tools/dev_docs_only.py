@@ -10,6 +10,7 @@ sends the run to the full workflow. So does anything but a
 `pull_request` event, or an empty list - which is what a failed
 `git diff` leaves. `tools/dev_docs_lane.py` is what the lane runs.
 """
+
 import argparse
 import sys
 

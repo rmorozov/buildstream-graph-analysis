@@ -4,6 +4,7 @@ announces - and the listing, the aggregate and the page carry its sum.
 Harness: `test_the_tail_says_what_it_is_doing.project` (the tracer's
 `main` for real on the golden run; the build and `bst show` replaced).
 """
+
 import json
 import os
 import pathlib
@@ -66,15 +67,13 @@ def test_the_listing_carries_the_sum(project, capsys):
     assert main(["--list", "--format", "json"]) == 0
     listing = json.loads(capsys.readouterr().out)
     for row, tail in zip(listing["snapshots"], _tails(project)):
-        assert row["bga_tail_us"] == sum(
-            p["wall_us"] for p in tail["phases"] if p.get("stage") != "before")
+        assert row["bga_tail_us"] == sum(p["wall_us"] for p in tail["phases"] if p.get("stage") != "before")
     assert main(["--list"]) == 0
     text = capsys.readouterr().out
     assert text.count("  bga ") == 2, text
 
 
-def test_a_nonzero_pre_build_duration_stays_out_of_the_post_build_sum(
-        tmp_path, capsys, monkeypatch):
+def test_a_nonzero_pre_build_duration_stays_out_of_the_post_build_sum(tmp_path, capsys, monkeypatch):
     """review, pull request 300: `before the build` is measured and kept in
     `tail.json`, but a nonzero readiness check must not land in
     `bga_tail_us` (the store's aggregate) or the total line."""
@@ -88,8 +87,7 @@ def test_a_nonzero_pre_build_duration_stays_out_of_the_post_build_sum(
     tail = _tails(root)[-1]
     before = next(p for p in tail["phases"] if p["name"] == "before the build")
     assert before["wall_us"] >= 150_000, "the sleep did not land in the phase"
-    after_sum = sum(p["wall_us"] for p in tail["phases"]
-                    if p["name"] != "before the build")
+    after_sum = sum(p["wall_us"] for p in tail["phases"] if p["name"] != "before the build")
     full_sum = sum(p["wall_us"] for p in tail["phases"])
     printed_s = float(re.match(r"^bga's own time after the build: (\d+\.\d)s", total_line).group(1))
     assert abs(printed_s - after_sum / 1e6) < 0.1, total_line
@@ -126,9 +124,17 @@ def test_an_interrupted_tail_keeps_its_rows(project, capsys, monkeypatch):
 
 
 def _rows(n):
-    return [{"stamp": f"2026010{i}T000000Z", "total_duration_us": 10_000_000,
-             "bga_tail_us": 1_000_000 * (i + 1), "build_wall_us": 9_000_000,
-             "incomplete_reason": None, "bytes": 1} for i in range(n)]
+    return [
+        {
+            "stamp": f"2026010{i}T000000Z",
+            "total_duration_us": 10_000_000,
+            "bga_tail_us": 1_000_000 * (i + 1),
+            "build_wall_us": 9_000_000,
+            "incomplete_reason": None,
+            "bytes": 1,
+        }
+        for i in range(n)
+    ]
 
 
 def test_the_aggregate_carries_the_tail():
@@ -152,12 +158,18 @@ console.log(JSON.stringify(text(views.renderTrend(%(store)s, null, null))));
 
 @pytest.mark.skipif(node is None, reason="node is not installed")
 def test_the_page_shows_the_tail_beside_the_build():
-    script = _TREND % {"views": (REPO / "tests/viewer.mjs").as_uri(),
-                       "store": json.dumps({"snapshots": _rows(3), "count": 3})}
-    done = subprocess.run([node, "--input-type=module", "-e", script],
-                          capture_output=True, text=True, cwd=REPO, timeout=120,
-                          env={**os.environ, "BGA_DOM_SHIM":
-                               (REPO / "tests/dom_shim.mjs").as_uri()})
+    script = _TREND % {
+        "views": (REPO / "tests/viewer.mjs").as_uri(),
+        "store": json.dumps({"snapshots": _rows(3), "count": 3}),
+    }
+    done = subprocess.run(
+        [node, "--input-type=module", "-e", script],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=120,
+        env={**os.environ, "BGA_DOM_SHIM": (REPO / "tests/dom_shim.mjs").as_uri()},
+    )
     assert done.returncode == 0, done.stderr[-3000:]
     drawn = json.loads(done.stdout)
     assert "bga after the build" in drawn

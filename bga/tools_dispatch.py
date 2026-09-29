@@ -42,6 +42,7 @@ the native tracer, the Chrome-trace converters and the synthetic-run
 generator on every run. Importing the table eagerly would put every
 tool's import cost on the hot path of the command people run most.
 """
+
 import importlib
 import sys
 from typing import Optional

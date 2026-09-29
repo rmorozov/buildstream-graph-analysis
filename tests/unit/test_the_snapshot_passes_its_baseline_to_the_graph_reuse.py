@@ -8,6 +8,7 @@ faked (no bwrap/cc needed, since the fake `bst` below never runs a
 sandboxed command), but `take_snapshot`, `tracer.main` and `extract_run`
 are all real.
 """
+
 import os
 import stat
 
@@ -69,7 +70,8 @@ def test_a_baseline_snapshot_pair_issues_one_bst_show_through_the_snapshot_path(
     snapshot1, rc1 = bga_snapshot.take_snapshot(str(project), ["bst", "build", "app.bst"], config)
     assert rc1 == 0
     assert os.environ.get("BGA_BASELINE_RUN_DIR") is None, (
-        "the first snapshot has no previous healthy run to reuse from")
+        "the first snapshot has no previous healthy run to reuse from"
+    )
 
     snapshot2, rc2 = bga_snapshot.take_snapshot(str(project), ["bst", "build", "app.bst"], config)
     assert rc2 == 0
@@ -79,6 +81,7 @@ def test_a_baseline_snapshot_pair_issues_one_bst_show_through_the_snapshot_path(
     assert len(show_calls) == 1, show_calls
 
     import json
+
     with open(os.path.join(snapshot2, bga_snapshot.RUN_SUBDIR, "graph.json"), encoding="utf-8") as f:
         graph2 = json.load(f)
     assert graph2["cache_fingerprint"]["cache_key_set"] is not None

@@ -6,6 +6,7 @@ is monkeypatched to a counter, since the point under test is *whether*
 it is called, not what a real one returns (that is
 `tests/unit/test_bst_show_to_graph.py`'s job).
 """
+
 import json
 
 import pytest
@@ -27,8 +28,14 @@ def fake_extract_graph(monkeypatch):
         calls.append({"targets": list(targets), "bst_options": list(bst_options or [])})
         return {
             "elements": [
-                {"uid": t, "cache_key": f"key-{t}", "requested_target": False,
-                 "max_jobs": 4, "notparallel": None, "element_kind": "import"}
+                {
+                    "uid": t,
+                    "cache_key": f"key-{t}",
+                    "requested_target": False,
+                    "max_jobs": 4,
+                    "notparallel": None,
+                    "element_kind": "import",
+                }
                 for t in targets
             ],
             "dependencies": [],
@@ -47,8 +54,7 @@ def _extract(tmp_path, name, project_dir=None, **kwargs):
     log = tmp_path / f"{name}.log"
     _write_log(log, targets=kwargs.pop("targets_line", "app.bst"))
     out = tmp_path / name
-    summary = extract_run(str(project_dir or tmp_path / "proj"), str(log), str(out),
-                          log_format="wrapped", **kwargs)
+    summary = extract_run(str(project_dir or tmp_path / "proj"), str(log), str(out), log_format="wrapped", **kwargs)
     with open(out / "graph.json", encoding="utf-8") as f:
         graph = json.load(f)
     return summary, graph
@@ -61,8 +67,7 @@ def test_an_equal_fingerprint_issues_one_bst_show_between_two_snapshots(tmp_path
     assert len(fake_extract_graph) == 1
     assert summary1["graph_reused"] is False
 
-    summary2, graph2 = _extract(
-        tmp_path, "run2", cache_key_set=key_set, baseline_run_dir=str(tmp_path / "run1"))
+    summary2, graph2 = _extract(tmp_path, "run2", cache_key_set=key_set, baseline_run_dir=str(tmp_path / "run1"))
 
     # One `bst show --deps all` between the two snapshots, not two.
     assert len(fake_extract_graph) == 1
@@ -74,8 +79,8 @@ def test_an_equal_fingerprint_issues_one_bst_show_between_two_snapshots(tmp_path
 def test_a_changed_key_runs_bst_show_again(tmp_path, fake_extract_graph):
     _extract(tmp_path, "run1", cache_key_set={"sha256": "one", "elements": 1})
     summary2, graph2 = _extract(
-        tmp_path, "run2", cache_key_set={"sha256": "two", "elements": 1},
-        baseline_run_dir=str(tmp_path / "run1"))
+        tmp_path, "run2", cache_key_set={"sha256": "two", "elements": 1}, baseline_run_dir=str(tmp_path / "run1")
+    )
 
     assert len(fake_extract_graph) == 2
     assert summary2["graph_reused"] is False
@@ -90,8 +95,8 @@ def test_the_same_keys_under_different_targets_runs_bst_show_again(tmp_path, fak
 
     _extract(tmp_path, "run1", cache_key_set=key_set, targets_line="b.bst")
     summary2, graph2 = _extract(
-        tmp_path, "run2", cache_key_set=key_set, targets_line="a.bst, b.bst",
-        baseline_run_dir=str(tmp_path / "run1"))
+        tmp_path, "run2", cache_key_set=key_set, targets_line="a.bst, b.bst", baseline_run_dir=str(tmp_path / "run1")
+    )
 
     assert len(fake_extract_graph) == 2
     assert summary2["graph_reused"] is False
@@ -103,8 +108,8 @@ def test_a_changed_foundation_runs_bst_show_again(tmp_path, fake_extract_graph):
     key_set = {"sha256": "same", "elements": 1}
     _extract(tmp_path, "run1", cache_key_set=key_set, foundation=["app.bst"])
     summary2, graph2 = _extract(
-        tmp_path, "run2", cache_key_set=key_set, foundation=[],
-        baseline_run_dir=str(tmp_path / "run1"))
+        tmp_path, "run2", cache_key_set=key_set, foundation=[], baseline_run_dir=str(tmp_path / "run1")
+    )
 
     assert len(fake_extract_graph) == 2
     assert summary2["graph_reused"] is False
@@ -120,8 +125,7 @@ def test_a_changed_max_jobs_runs_bst_show_again(tmp_path, fake_extract_graph):
         "bst --max-jobs 2 build app.bst\n"
         "[wrapper][2026-01-01 00:00:00,001] INFO: Targets:       app.bst\n"
     )
-    extract_run(str(tmp_path / "proj"), str(log1), str(tmp_path / "run1"),
-               log_format="wrapped", cache_key_set=key_set)
+    extract_run(str(tmp_path / "proj"), str(log1), str(tmp_path / "run1"), log_format="wrapped", cache_key_set=key_set)
     assert len(fake_extract_graph) == 1
 
     log2 = tmp_path / "run2.log"
@@ -130,9 +134,14 @@ def test_a_changed_max_jobs_runs_bst_show_again(tmp_path, fake_extract_graph):
         "bst --max-jobs 4 build app.bst\n"
         "[wrapper][2026-01-01 00:00:00,001] INFO: Targets:       app.bst\n"
     )
-    summary2 = extract_run(str(tmp_path / "proj"), str(log2), str(tmp_path / "run2"),
-                           log_format="wrapped", cache_key_set=key_set,
-                           baseline_run_dir=str(tmp_path / "run1"))
+    summary2 = extract_run(
+        str(tmp_path / "proj"),
+        str(log2),
+        str(tmp_path / "run2"),
+        log_format="wrapped",
+        cache_key_set=key_set,
+        baseline_run_dir=str(tmp_path / "run1"),
+    )
 
     assert len(fake_extract_graph) == 2
     assert summary2["graph_reused"] is False
@@ -143,8 +152,7 @@ def test_an_unread_key_set_never_reuses(tmp_path, fake_extract_graph):
     and never reused into - the whole point of "unread rather than
     guessing" carries through here."""
     _extract(tmp_path, "run1", cache_key_set=None)
-    summary2, _ = _extract(
-        tmp_path, "run2", cache_key_set=None, baseline_run_dir=str(tmp_path / "run1"))
+    summary2, _ = _extract(tmp_path, "run2", cache_key_set=None, baseline_run_dir=str(tmp_path / "run1"))
 
     assert len(fake_extract_graph) == 2
     assert summary2["graph_reused"] is False
@@ -152,9 +160,7 @@ def test_an_unread_key_set_never_reuses(tmp_path, fake_extract_graph):
 
 def test_a_baseline_without_a_graph_json_runs_bst_show(tmp_path, fake_extract_graph):
     missing = tmp_path / "no-such-run"
-    summary, _ = _extract(
-        tmp_path, "run1", cache_key_set={"sha256": "x", "elements": 1},
-        baseline_run_dir=str(missing))
+    summary, _ = _extract(tmp_path, "run1", cache_key_set={"sha256": "x", "elements": 1}, baseline_run_dir=str(missing))
 
     assert len(fake_extract_graph) == 1
     assert summary["graph_reused"] is False
@@ -164,8 +170,12 @@ def test_different_bst_global_options_with_equal_keys_runs_bst_show_again(tmp_pa
     key_set = {"sha256": "same", "elements": 1}
     _extract(tmp_path, "run1", cache_key_set=key_set, bst_global_options=["-o", "variant", "a"])
     summary2, _ = _extract(
-        tmp_path, "run2", cache_key_set=key_set, bst_global_options=["-o", "variant", "b"],
-        baseline_run_dir=str(tmp_path / "run1"))
+        tmp_path,
+        "run2",
+        cache_key_set=key_set,
+        bst_global_options=["-o", "variant", "b"],
+        baseline_run_dir=str(tmp_path / "run1"),
+    )
 
     assert len(fake_extract_graph) == 2
     assert summary2["graph_reused"] is False

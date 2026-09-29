@@ -8,6 +8,7 @@ every Plane 1 element as pinned, held, yes or unknown_kind.
 a number. `tokens_by_element` (`tools/bst_native_build_tracer.py`) is
 the producer: UX-846's wrapper rows joined to an element by pid.
 """
+
 from bga.correlate import (
     compute_jobserver_block,
     compute_jobserver_per_element,
@@ -24,8 +25,14 @@ from tools.bst_native_build_tracer import (
 
 
 def _tick(busy_cores, pool, action="hold"):
-    return {"t_us": 0, "busy_cores": busy_cores, "psi_some10": None,
-            "pool": pool, "action": action, "reason": "synthetic"}
+    return {
+        "t_us": 0,
+        "busy_cores": busy_cores,
+        "psi_some10": None,
+        "pool": pool,
+        "action": action,
+        "reason": "synthetic",
+    }
 
 
 def _wrapper_row(event="acquire", tool="lld", pid=111, tokens=2):
@@ -47,10 +54,10 @@ class TestTheTwoShares:
 
     def test_many_rows_mixed(self):
         rows = [
-            _tick(1.0, pool=2),   # idle
-            _tick(1.0, pool=0),   # starved
-            _tick(3.9, pool=2),   # within band - neither
-            _tick(1.0, pool=1),   # idle
+            _tick(1.0, pool=2),  # idle
+            _tick(1.0, pool=0),  # starved
+            _tick(3.9, pool=2),  # within band - neither
+            _tick(1.0, pool=1),  # idle
         ]
         idle, starved = compute_jobserver_shares(rows, capacity=4)
         assert idle == 0.5
@@ -69,24 +76,18 @@ class TestTheTwoShares:
 class TestThePerElementTable:
     def test_run_without_the_mode_is_absent(self):
         assert compute_jobserver_block({}, ["a.bst"]) is None
-        assert compute_jobserver_block(
-            {"jobserver": None}, ["a.bst"]) is None
+        assert compute_jobserver_block({"jobserver": None}, ["a.bst"]) is None
 
     def test_every_element_joined(self):
-        decisions = [{"element": "a.bst", "decision": "joined"},
-                     {"element": "b.bst", "decision": "capped_pending"}]
+        decisions = [{"element": "a.bst", "decision": "joined"}, {"element": "b.bst", "decision": "capped_pending"}]
         table = compute_jobserver_per_element(["a.bst", "b.bst"], decisions)
         assert table["a.bst"]["joined"] == "yes"
         assert table["b.bst"]["joined"] == "yes"
 
     def test_one_pinned_and_one_held(self):
-        decisions = [{"element": "pinned.bst", "decision": "pinned"},
-                     {"element": "held.bst", "decision": "joined"}]
-        tokens_by_element = {
-            "held.bst": {"tokens_held_p50": 2, "tokens_held_max": 4}}
-        table = compute_jobserver_per_element(
-            ["pinned.bst", "held.bst", "unseen.bst"], decisions,
-            tokens_by_element)
+        decisions = [{"element": "pinned.bst", "decision": "pinned"}, {"element": "held.bst", "decision": "joined"}]
+        tokens_by_element = {"held.bst": {"tokens_held_p50": 2, "tokens_held_max": 4}}
+        table = compute_jobserver_per_element(["pinned.bst", "held.bst", "unseen.bst"], decisions, tokens_by_element)
         assert table["pinned.bst"]["joined"] == "pinned"
         assert table["pinned.bst"]["tokens_held_p50"] is None
         assert table["held.bst"]["joined"] == "held"
@@ -106,9 +107,10 @@ class TestThePerElementTable:
             ],
         }
         block = compute_jobserver_block(
-            native_report, ["pinned.bst", "held.bst", "yes.bst"],
-            tokens_by_element={"held.bst": {"tokens_held_p50": 1,
-                                            "tokens_held_max": 3}})
+            native_report,
+            ["pinned.bst", "held.bst", "yes.bst"],
+            tokens_by_element={"held.bst": {"tokens_held_p50": 1, "tokens_held_max": 3}},
+        )
         assert block["mode"] == "dynamic"
         assert block["pool_ceiling"] == 4
         assert block["tokens_idle_share"] == 0.5
@@ -120,16 +122,18 @@ class TestThePerElementTable:
 
 class TestAPinnedElementRefuses:
     def _host_samples(self):
-        return {"header": {"monotonic_at_start": 0, "wall_at_start": 0},
-                "samples": [{"t": 0, "cpu_busy_cores": 1.0, "cores": 4},
-                            {"t": 2, "cpu_busy_cores": 1.0, "cores": 4},
-                            {"t": 4, "cpu_busy_cores": 1.0, "cores": 4}]}
+        return {
+            "header": {"monotonic_at_start": 0, "wall_at_start": 0},
+            "samples": [
+                {"t": 0, "cpu_busy_cores": 1.0, "cores": 4},
+                {"t": 2, "cpu_busy_cores": 1.0, "cores": 4},
+                {"t": 4, "cpu_busy_cores": 1.0, "cores": 4},
+            ],
+        }
 
     def test_a_pinned_element_gets_no_number(self):
         tasks = [{"element": "pinned.bst", "start_us": 0, "finish_us": 4_000_000}]
-        advice = compute_max_jobs_advice(
-            self._host_samples(), tasks, {"pinned.bst": 1},
-            pinned_elements={"pinned.bst"})
+        advice = compute_max_jobs_advice(self._host_samples(), tasks, {"pinned.bst": 1}, pinned_elements={"pinned.bst"})
         row = advice["elements"][0]
         assert row["refusal"] == "pinned by the project"
         assert row["recommended_max_jobs"] is None
@@ -151,8 +155,7 @@ class TestTheTokensByElementProducer:
         clock that came with it."""
         rows = [_wrapper_row(pid=1, tokens=3)]
         raw, unmapped = producer_tokens_by_element(rows, {1: "held.bst"})
-        assert [(event, tokens) for event, _pid, _t, tokens
-                in raw["held.bst"]] == [("acquire", 3)]
+        assert [(event, tokens) for event, _pid, _t, tokens in raw["held.bst"]] == [("acquire", 3)]
         assert unmapped == 0
 
     def test_a_release_row_is_not_a_hold(self):
@@ -160,11 +163,9 @@ class TestTheTokensByElementProducer:
         a grant: the reduction below reads `acquire` rows alone."""
         rows = [_wrapper_row(event="release", pid=1, tokens=3)]
         raw, unmapped = producer_tokens_by_element(rows, {1: "held.bst"})
-        assert [event for event, _pid, _t, _tokens
-                in raw["held.bst"]] == ["release"]
+        assert [event for event, _pid, _t, _tokens in raw["held.bst"]] == ["release"]
         assert unmapped == 0
-        by_element, _ = summarize_jobserver_tokens_by_element(
-            rows, {1: "held.bst"})
+        by_element, _ = summarize_jobserver_tokens_by_element(rows, {1: "held.bst"})
         assert by_element["held.bst"]["tokens_held_p50"] is None
         assert by_element["held.bst"]["tokens_held_max"] is None
 
@@ -178,11 +179,9 @@ class TestTheTokensByElementProducer:
         to disagree about which one to report."""
         rows = [_wrapper_row(pid=1, tokens=2), _wrapper_row(pid=1, tokens=4)]
         raw, unmapped = producer_tokens_by_element(rows, {1: "held.bst"})
-        assert [tokens for _event, _pid, _t, tokens
-                in raw["held.bst"]] == [2, 4]
+        assert [tokens for _event, _pid, _t, tokens in raw["held.bst"]] == [2, 4]
         assert unmapped == 0
-        by_element, unmapped = summarize_jobserver_tokens_by_element(
-            rows, {1: "held.bst"})
+        by_element, unmapped = summarize_jobserver_tokens_by_element(rows, {1: "held.bst"})
         assert by_element["held.bst"]["tokens_held_p50"] == 3
         assert by_element["held.bst"]["tokens_held_max"] == 4
         # `UX-892`'s share is `None`, not 1.0, where the element's own
@@ -208,24 +207,27 @@ class TestReadPidToElement:
         return str(path)
 
     def test_two_elements_three_pids(self, tmp_path):
-        path = self._write(tmp_path,
+        path = self._write(
+            tmp_path,
             "START pid=100 ppid=1 ts=10.0 element=a.bst cmd=cc1 -c a.c\n"
             "END pid=100 ppid=1 ts=10.5 element=a.bst cmd=cc1 -c a.c\n"
             "START pid=101 ppid=1 ts=11.0 element=a.bst cmd=cc1 -c b.c\n"
             "END pid=101 ppid=1 ts=11.5 element=a.bst cmd=cc1 -c b.c\n"
             "START pid=200 ppid=1 ts=12.0 element=b.bst cmd=ld -o b\n"
-            "END pid=200 ppid=1 ts=12.5 element=b.bst cmd=ld -o b\n")
-        assert read_pid_to_element(path) == {
-            100: "a.bst", 101: "a.bst", 200: "b.bst"}
+            "END pid=200 ppid=1 ts=12.5 element=b.bst cmd=ld -o b\n",
+        )
+        assert read_pid_to_element(path) == {100: "a.bst", 101: "a.bst", 200: "b.bst"}
 
     def test_an_empty_log_is_an_empty_map(self, tmp_path):
         path = self._write(tmp_path, "")
         assert read_pid_to_element(path) == {}
 
     def test_a_malformed_line_does_not_drop_the_well_formed_pids(self, tmp_path):
-        path = self._write(tmp_path,
+        path = self._write(
+            tmp_path,
             "START pid=100 ppid=1 ts=10.0 element=a.bst cmd=cc1 -c a.c\n"
             "this is unrelated stderr noise that ended up in the same file\n"
             "START pid=bogus ppid=1 ts=oops element=a.bst cmd=broken\n"
-            "END pid=100 ppid=1 ts=10.5 element=a.bst cmd=cc1 -c a.c\n")
+            "END pid=100 ppid=1 ts=10.5 element=a.bst cmd=cc1 -c a.c\n",
+        )
         assert read_pid_to_element(path) == {100: "a.bst"}

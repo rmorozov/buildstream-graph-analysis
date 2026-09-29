@@ -13,6 +13,7 @@ query one paste away", and the paste appears whether the handoff
 succeeds or not, because a blocked pop-up is exactly when the reader
 needs the SQL most.
 """
+
 import json
 import os
 import pathlib
@@ -35,9 +36,9 @@ GOLDEN = "tests/fixtures/golden/mixed_task_kinds"
 
 
 def _node(script):
-    result = subprocess.run([node, "--input-type=module", "-e", script],
-                            capture_output=True, text=True, cwd=os.getcwd(),
-                            timeout=60)
+    result = subprocess.run(
+        [node, "--input-type=module", "-e", script], capture_output=True, text=True, cwd=os.getcwd(), timeout=60
+    )
     assert result.returncode == 0, result.stderr
     return json.loads(result.stdout)
 
@@ -46,7 +47,8 @@ def _library():
     return _node(
         'const q = await import("./bga/viewer/questions.js");'
         "console.log(JSON.stringify({ ids: q.QUESTIONS.map((x) => x.id),"
-        "  categories: q.CATEGORIES }));")
+        "  categories: q.CATEGORIES }));"
+    )
 
 
 def _map():
@@ -65,10 +67,10 @@ def _map():
     # values. Reading `.values()` here would put tuples in the set and
     # the reachability clause below would report every library entry as
     # an orphan, which is a red nobody could act on.
-    return {"map": {claim: list(queries)
-                    for claim, queries in TRACE_QUERIES.items()},
-            "referenced": sorted({query for queries in TRACE_QUERIES.values()
-                                  for query in queries})}
+    return {
+        "map": {claim: list(queries) for claim, queries in TRACE_QUERIES.items()},
+        "referenced": sorted({query for queries in TRACE_QUERIES.values() for query in queries}),
+    }
 
 
 @needs_node
@@ -86,7 +88,8 @@ class TestTheContextTravels:
             # passed over an object the pipeline had stopped writing
             # while every button in the report was dead.
             '  trace_query: "element-commands",'
-            '  elements: ["core.bst", "lib-b.bst"] })));')
+            '  elements: ["core.bst", "lib-b.bst"] })));'
+        )
         assert out["queryId"] == "element-commands"
         assert out["element"] == "core.bst"
         # The title is what Perfetto shows in its tab, so it carries the
@@ -105,7 +108,8 @@ class TestTheContextTravels:
             '  trace_query: "dependency-wait",'
             '  title: "The chain", elements: ["core.bst"] });'
             'console.log(JSON.stringify({ ctx,'
-            '  entry: q.renderedSql(q.byId(ctx.queryId), "core.bst") }));')
+            '  entry: q.renderedSql(q.byId(ctx.queryId), "core.bst") }));'
+        )
         assert out["ctx"]["sql"] == out["entry"]
 
     def test_the_element_is_substituted_not_appended(self):
@@ -113,7 +117,8 @@ class TestTheContextTravels:
             'const t = await import("./bga/viewer/trace_context.js");'
             'console.log(JSON.stringify(t.traceContext({'
             '  element_uid: "libfoo.bst", reason: "why",'
-            '  query: "element-commands" })));')
+            '  query: "element-commands" })));'
+        )
         # `UX-210` changed *how* an element is selected - by the
         # `args.element` both planes carry, rather than by a
         # `native: <uid>` lane name that is a process name and never
@@ -123,8 +128,7 @@ class TestTheContextTravels:
         assert "{element}" not in out["sql"]
         assert "core.bst" not in out["sql"], "the example leaked past the real uid"
 
-    def test_a_query_needing_an_element_it_was_not_given_shows_the_token(
-            self):
+    def test_a_query_needing_an_element_it_was_not_given_shows_the_token(self):
         """`UX-369` removed the per-entry `example`, and `withElement`
         fell back to the empty string - so a finding whose query asks
         about one element while naming none handed the reader `= ''`, a
@@ -143,7 +147,8 @@ class TestTheContextTravels:
             "  bare: t.withElement(entry, null),"
             "  viaFinding: t.investigationFor({ id: 'latent-heavies',"
             "    title: 'heavy', trace_query: entry.id, elements: [] }),"
-            "  token: q.ELEMENT_TOKEN }));")
+            "  token: q.ELEMENT_TOKEN }));"
+        )
         assert out["token"] in out["bare"], out["bare"]
         assert "= ''" not in out["bare"], out["bare"]
         assert out["token"] in out["viaFinding"]["sql"], out["viaFinding"]
@@ -154,7 +159,8 @@ class TestTheContextTravels:
             'const t = await import("./bga/viewer/trace_context.js");'
             'console.log(JSON.stringify({ v: t.investigationFor({'
             '  id: "confidence", title: "Confidence: 0.97",'
-            '  trace_query: null, elements: [] }) }));')
+            '  trace_query: null, elements: [] }) }));'
+        )
         assert out["v"] is None
 
     def test_a_context_naming_a_query_that_does_not_exist_is_refused(self):
@@ -163,7 +169,8 @@ class TestTheContextTravels:
         out = _node(
             'const t = await import("./bga/viewer/trace_context.js");'
             'console.log(JSON.stringify({ v: t.traceContext({'
-            '  reason: "why", query: "no-such-query" }) }));')
+            '  reason: "why", query: "no-such-query" }) }));'
+        )
         assert out["v"] is None
 
 
@@ -176,7 +183,8 @@ class TestTheLibraryAndTheFindingsAgree:
         missing = [q for q in mapping["referenced"] if q not in library["ids"]]
         assert not missing, (
             f"findings reference queries the library page does not list: "
-            f"{missing} - the button would open the trace with nothing")
+            f"{missing} - the button would open the trace with nothing"
+        )
 
     def test_every_library_query_is_reachable_from_a_finding(self):
         """The other direction. A question nobody's report links to is a
@@ -184,8 +192,7 @@ class TestTheLibraryAndTheFindingsAgree:
         finding is how a reader arrives."""
         library, mapping = _library(), _map()
         orphans = [q for q in library["ids"] if q not in mapping["referenced"]]
-        assert not orphans, (
-            f"library questions no finding points at: {orphans}")
+        assert not orphans, f"library questions no finding points at: {orphans}"
 
     def test_every_mapped_finding_id_names_a_real_query(self):
         library, mapping = _library(), _map()
@@ -198,7 +205,8 @@ class TestTheLibraryAndTheFindingsAgree:
         by_category = _node(
             'const q = await import("./bga/viewer/questions.js");'
             "console.log(JSON.stringify(Object.fromEntries("
-            "  q.CATEGORIES.map((c) => [c, q.inCategory(c).length]))));")
+            "  q.CATEGORIES.map((c) => [c, q.inCategory(c).length]))));"
+        )
         for category in library["categories"]:
             assert by_category[category] > 0, f"{category} has no questions"
 
@@ -233,11 +241,11 @@ class TestTheShapeIsThePayloadsShape:
         assert missing == [], (
             f"{label}: finding(s) with no `trace_query` key at all: "
             f"{missing}. The page's `queryFor` reads that key; a finding "
-            f"without it gets no button and says nothing about why")
+            f"without it gets no button and says nothing about why"
+        )
 
     @pytest.mark.parametrize("label", sorted(pages.FIXTURES))
-    def test_the_mapping_reaches_the_finding_not_only_the_record(
-            self, label):
+    def test_the_mapping_reaches_the_finding_not_only_the_record(self, label):
         """The join, closed. `provenance[].trace_query` carried this
         for four rounds and no consumer of the *finding* could see it.
 
@@ -250,19 +258,18 @@ class TestTheShapeIsThePayloadsShape:
         from bga.provenance import queries_for
 
         published = self._findings(pages.FIXTURES[label])
-        wrong = [(f["id"], f.get("trace_query"), f.get("trace_queries"))
-                 for f in published
-                 if (f.get("trace_query"), f.get("trace_queries"))
-                 != (queries_for(f["id"])[0] if queries_for(f["id"]) else None,
-                     list(queries_for(f["id"]))
-                     if len(queries_for(f["id"])) > 1 else None)]
-        assert wrong == [], (
-            f"{label}: finding(s) disagreeing with the published table: "
-            f"{wrong}")
+        wrong = [
+            (f["id"], f.get("trace_query"), f.get("trace_queries"))
+            for f in published
+            if (f.get("trace_query"), f.get("trace_queries"))
+            != (
+                queries_for(f["id"])[0] if queries_for(f["id"]) else None,
+                list(queries_for(f["id"])) if len(queries_for(f["id"])) > 1 else None,
+            )
+        ]
+        assert wrong == [], f"{label}: finding(s) disagreeing with the published table: {wrong}"
         carried = [f["id"] for f in published if f.get("trace_query")]
-        assert carried, (
-            f"{label}: not one finding carries a query - which is the "
-            f"state this item was filed for")
+        assert carried, f"{label}: not one finding carries a query - which is the state this item was filed for"
 
     @needs_node
     def test_this_file_constructs_the_shape_the_pipeline_writes(self):
@@ -278,16 +285,18 @@ class TestTheShapeIsThePayloadsShape:
         assert dead not in source, (
             "a clause in this file still builds the nested shape "
             "`UX-344` removed; it would pass over an object the "
-            "pipeline has not written since")
+            "pipeline has not written since"
+        )
         out = _node(
             'const t = await import("./bga/viewer/trace_context.js");'
             "console.log(JSON.stringify({"
             '  nested: t.queryFor({ ' + dead + ': "stalls" } }),'
-            '  flat: t.queryFor({ trace_query: "stalls" }) }));')
+            '  flat: t.queryFor({ trace_query: "stalls" }) }));'
+        )
         assert out["flat"] == "stalls"
         assert out["nested"] is None, (
-            "the page still reads the nested shape, so a payload written "
-            "either way passes and the two can drift again")
+            "the page still reads the nested shape, so a payload written either way passes and the two can drift again"
+        )
 
 
 @needs_node
@@ -300,8 +309,7 @@ class TestTheButtonsInThePage:
 
     def test_a_finding_gets_a_button_carrying_its_query(self):
         out = self._render()
-        button = [b for b in out["buttons"]
-                  if b["queryId"] == "element-commands"]
+        button = [b for b in out["buttons"] if b["queryId"] == "element-commands"]
         assert button, out["buttons"]
         assert button[0]["element"] == "core.bst"
 
@@ -329,15 +337,13 @@ class TestTheButtonsInThePage:
         satisfy "one tab".
         """
         out = self._render()
-        box = [b for b in out["buttons"]
-               if b["queryId"] == "element-commands"][0]
-        assert [p["queryId"] for p in box["pastes"]] == [
-            "element-commands", "executables-in-element"], box["pastes"]
+        box = [b for b in out["buttons"] if b["queryId"] == "element-commands"][0]
+        assert [p["queryId"] for p in box["pastes"]] == ["element-commands", "executables-in-element"], box["pastes"]
         for paste in box["pastes"]:
             assert paste["sql"].strip().lower().startswith("select"), paste
             assert "core.bst" in paste["sql"], (
-                f"the paste for {paste['queryId']} was not aimed at the "
-                f"element the finding names: {paste['sql']}")
+                f"the paste for {paste['queryId']} was not aimed at the element the finding names: {paste['sql']}"
+            )
         # One handoff per *finding*, not per grain. Counting them all
         # would count the one-grain finding below as well, so this asks
         # the discriminating question directly: nothing hands off the
@@ -345,7 +351,8 @@ class TestTheButtonsInThePage:
         sent = [h["queryId"] for h in out["handedOff"]]
         assert "executables-in-element" not in sent, (
             f"the second grain handed the trace off on its own - it drew "
-            f"a second button rather than a second paste: {sent}")
+            f"a second button rather than a second paste: {sent}"
+        )
         assert sent.count("element-commands") == 1, sent
 
     def test_a_one_grain_claim_still_pastes_exactly_one(self):
@@ -356,10 +363,8 @@ class TestTheButtonsInThePage:
         above could not tell the difference.
         """
         out = self._render()
-        box = [b for b in out["buttons"]
-               if b["queryId"] == "cost-by-executable"][0]
-        assert [p["queryId"] for p in box["pastes"]] == [
-            "cost-by-executable"], box["pastes"]
+        box = [b for b in out["buttons"] if b["queryId"] == "cost-by-executable"][0]
+        assert [p["queryId"] for p in box["pastes"]] == ["cost-by-executable"], box["pastes"]
 
     def test_no_timeline_means_no_buttons(self):
         """`UX-194`'s dead-button rule, applied to ten more buttons than

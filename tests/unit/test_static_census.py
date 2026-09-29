@@ -9,6 +9,7 @@ list is empty because every command it runs is static busybox.
 Whether a binary is static is knowable before anything runs, from the
 file on disk.
 """
+
 import struct
 
 import pytest
@@ -78,8 +79,7 @@ def test_a_shared_library_is_neither(tmp_path):
 def test_both_widths_and_both_endiannesses_are_read(tmp_path, bits, endian):
     """A cross-built sysroot is exactly the case where this question
     matters, so the header arithmetic cannot assume the host's shape."""
-    path = _elf(tmp_path / f"bin-{bits}-{endian}", e_type=2, interp=False,
-                bits=bits, endian=endian)
+    path = _elf(tmp_path / f"bin-{bits}-{endian}", e_type=2, interp=False, bits=bits, endian=endian)
     assert classify_elf(str(path)) == "static"
 
 
@@ -90,7 +90,7 @@ def test_a_non_elf_file_is_not_classified(tmp_path):
 
 
 def test_a_truncated_header_is_unclassified_rather_than_static(tmp_path):
-    """"Not classifiable" and "not static" are different answers and
+    """ "Not classifiable" and "not static" are different answers and
     only one of them is safe to act on."""
     stub = tmp_path / "truncated"
     stub.write_bytes(b"\x7fELF\x02\x01")
@@ -98,6 +98,7 @@ def test_a_truncated_header_is_unclassified_rather_than_static(tmp_path):
 
 
 # --- the census ---------------------------------------------------------
+
 
 def test_the_census_lists_static_binaries_and_counts_the_rest(tmp_path):
     root = tmp_path / "root"
@@ -142,6 +143,7 @@ def test_a_missing_root_is_empty_rather_than_an_error(tmp_path):
 
 # --- per-element attribution --------------------------------------------
 
+
 def _project(tmp_path):
     """A two-element project: one imports a static binary, the other
     build-depends on it - which is `examples/01`'s exact shape."""
@@ -149,12 +151,8 @@ def _project(tmp_path):
     (project / "elements").mkdir(parents=True)
     (project / "files" / "runtime" / "bin").mkdir(parents=True)
     _elf(project / "files" / "runtime" / "bin" / "busybox", e_type=2, interp=False)
-    (project / "elements" / "runtime.bst").write_text(
-        "kind: import\nsources:\n- kind: local\n  path: files/runtime\n"
-    )
-    (project / "elements" / "work.bst").write_text(
-        "kind: manual\ndepends:\n- filename: runtime.bst\n  type: build\n"
-    )
+    (project / "elements" / "runtime.bst").write_text("kind: import\nsources:\n- kind: local\n  path: files/runtime\n")
+    (project / "elements" / "work.bst").write_text("kind: manual\ndepends:\n- filename: runtime.bst\n  type: build\n")
     return project
 
 
@@ -182,9 +180,7 @@ def test_the_payload_states_what_it_cannot_see(tmp_path):
 
 def test_two_censuses_of_one_project_are_identical(tmp_path):
     project = str(_project(tmp_path))
-    assert census_project(project, ["runtime.bst", "work.bst"]) == census_project(
-        project, ["runtime.bst", "work.bst"]
-    )
+    assert census_project(project, ["runtime.bst", "work.bst"]) == census_project(project, ["runtime.bst", "work.bst"])
 
 
 def test_the_disclaimer_names_the_way_out_and_its_price():
@@ -218,8 +214,7 @@ def test_the_census_blind_spot_is_a_result_once_the_spine_has_run():
     report = {
         "static_binary_disclaimer": "the old generic footnote",
         "static_census": {"static_executables": [], "elements_at_risk": []},
-        "stream_coverage": {"processes": 127632,
-                            "by_coverage": {COVERAGE_BOTH: 127632}},
+        "stream_coverage": {"processes": 127632, "by_coverage": {COVERAGE_BOTH: 127632}},
     }
     note = " ".join(_format_static_census(report))
 

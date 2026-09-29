@@ -16,6 +16,7 @@ direction is to block: a false block costs one retry with explicit
 paths, a missed one costs a tree somebody else unpicks. `UX-424`'s
 Outcome carries the fourteen payloads it was measured on.
 """
+
 import json
 import re
 import shlex
@@ -82,8 +83,7 @@ def _as_one_line(command):
 
 def tokens_of(command):
     """`shlex` tokens, or None when the command will not parse."""
-    lexer = shlex.shlex(_as_one_line(command), posix=True,
-                        punctuation_chars=True)
+    lexer = shlex.shlex(_as_one_line(command), posix=True, punctuation_chars=True)
     lexer.whitespace_split = True
     try:
         return list(lexer)
@@ -103,7 +103,7 @@ def is_bulk_add(command):
             at_command_start = True
             continue
         if at_command_start and word == "git":
-            rest = words[index + 1:]
+            rest = words[index + 1 :]
             if rest and rest[0] == "add":
                 for operand in rest[1:]:
                     if operand in SEPARATORS:
@@ -112,9 +112,7 @@ def is_bulk_add(command):
                         return True
                     # A short-flag cluster such as `-Av`, but never a
                     # path like `./bga/x.py` or a long option.
-                    if (operand.startswith("-")
-                            and not operand.startswith("--")
-                            and "A" in operand[1:]):
+                    if operand.startswith("-") and not operand.startswith("--") and "A" in operand[1:]:
                         return True
         at_command_start = False
     return False

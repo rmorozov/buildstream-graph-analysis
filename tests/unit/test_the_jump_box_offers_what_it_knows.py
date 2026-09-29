@@ -17,6 +17,7 @@ The two rules with teeth:
   row on a run with no timeline is a dead affordance.
 * **the numbers beside an element are read, never recomputed.**
 """
+
 import json
 import os
 import shutil
@@ -31,15 +32,11 @@ REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 _PAYLOAD = {
     "total_duration_us": 100_000_000,
     "critical_path_detail": [
-        {"element_uid": "openssl.bst", "duration_us": 672_000_000,
-         "share_of_path": 0.186},
-        {"element_uid": "zlib.bst", "duration_us": 12_000_000,
-         "share_of_path": 0.02},
+        {"element_uid": "openssl.bst", "duration_us": 672_000_000, "share_of_path": 0.186},
+        {"element_uid": "zlib.bst", "duration_us": 12_000_000, "share_of_path": 0.02},
     ],
     "elements": {
-        "element_durations": {"openssl.bst": 672_000_000,
-                              "zlib.bst": 12_000_000,
-                              "docs.bst": 900_000},
+        "element_durations": {"openssl.bst": 672_000_000, "zlib.bst": 12_000_000, "docs.bst": 900_000},
     },
     "headline": {
         "top_actions": [{"element_uid": "openssl.bst", "saving_us": 522_000_000}],
@@ -56,8 +53,9 @@ _TARGETS = [
 
 
 def _js(body):
-    result = subprocess.run([node, "--input-type=module", "-e", body],
-                            capture_output=True, text=True, cwd=REPO, timeout=60)
+    result = subprocess.run(
+        [node, "--input-type=module", "-e", body], capture_output=True, text=True, cwd=REPO, timeout=60
+    )
     assert result.returncode == 0, result.stderr
     return json.loads(result.stdout)
 
@@ -71,7 +69,6 @@ def _palette(query, context=None):
 
 @needs_node
 class TestTheResultsAreGrouped:
-
     def test_an_element_query_yields_its_element(self):
         out = _palette("openssl")
         assert [e["key"] for e in out["elements"]] == ["openssl.bst"]
@@ -92,7 +89,6 @@ class TestTheResultsAreGrouped:
 
 @needs_node
 class TestTheNumbersAreRead:
-
     def test_the_element_row_carries_its_published_numbers(self):
         out = _palette("openssl")
         facts = out["elements"][0]["facts"]
@@ -106,10 +102,8 @@ class TestTheNumbersAreRead:
         two - `total_duration_us` is 100 s while `openssl.bst` alone is
         672 s, so anything derived from the total cannot match."""
         out = _palette("openssl")
-        assert out["elements"][0]["facts"]["duration_us"] == \
-            _PAYLOAD["critical_path_detail"][0]["duration_us"]
-        assert out["elements"][0]["facts"]["duration_us"] != \
-            _PAYLOAD["total_duration_us"]
+        assert out["elements"][0]["facts"]["duration_us"] == _PAYLOAD["critical_path_detail"][0]["duration_us"]
+        assert out["elements"][0]["facts"]["duration_us"] != _PAYLOAD["total_duration_us"]
 
     def test_an_element_off_the_path_has_no_share_of_it(self):
         out = _palette("docs")
@@ -127,7 +121,6 @@ class TestTheNumbersAreRead:
 
 @needs_node
 class TestAnAbsentPreconditionIsNotOffered:
-
     def test_no_perfetto_row_without_a_timeline(self):
         """UX-194's rule. The fixture is a run with no timeline."""
         out = _palette("openssl", {"hasTimeline": False})
@@ -155,7 +148,6 @@ class TestAnAbsentPreconditionIsNotOffered:
 
 @needs_node
 class TestTheAnchorIsNotSpeltTwice:
-
     def test_the_show_action_points_at_the_element_section(self):
         out = _palette("openssl", {})
         show = next(a for a in out["actions"] if a["id"] == "show")
@@ -180,10 +172,8 @@ class TestTheAnchorIsNotSpeltTwice:
         assert out["href"] == out["expected"]
 
     def test_nav_does_not_declare_its_own_anchor_function(self):
-        source = open(os.path.join(REPO, "bga/viewer/nav.js"),
-                      encoding="utf-8").read()
-        code = "\n".join(line for line in source.splitlines()
-                         if not line.lstrip().startswith("//"))
+        source = open(os.path.join(REPO, "bga/viewer/nav.js"), encoding="utf-8").read()
+        code = "\n".join(line for line in source.splitlines() if not line.lstrip().startswith("//"))
         assert "function cssId" not in code
         assert "function elementAnchor" not in code
         assert 'import { elementAnchor }' in code
@@ -204,15 +194,13 @@ class TestTheFlattenedExportHasNoDuplicateNames:
         seen = {}
         clashes = []
         for name in view._module_order():
-            source = open(os.path.join(view.ASSET_DIR, name),
-                          encoding="utf-8").read()
-            for match in re.finditer(
-                    r"^export\s+(?:async\s+)?(?:function|const|let|class)\s+(\w+)",
-                    source, re.M):
+            source = open(os.path.join(view.ASSET_DIR, name), encoding="utf-8").read()
+            for match in re.finditer(r"^export\s+(?:async\s+)?(?:function|const|let|class)\s+(\w+)", source, re.M):
                 symbol = match.group(1)
                 if symbol in seen:
                     clashes.append(f"{symbol}: {seen[symbol]} and {name}")
                 seen[symbol] = name
         assert clashes == [], (
             "the export flattens every module into one scope, so these "
-            f"would be a SyntaxError in the shipped page: {clashes}")
+            f"would be a SyntaxError in the shipped page: {clashes}"
+        )

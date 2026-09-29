@@ -74,6 +74,7 @@ sha256, not remembered. `track_event.proto` and `interned_data.proto`
 came back byte-identical to what `UX-298` pinned, which is the evidence
 that the numbers above are still the numbers upstream means.
 """
+
 import gzip
 import struct
 from typing import Optional
@@ -262,15 +263,14 @@ class TrackEventWriter:
     ```
     """
 
-    def __init__(self, path: Optional[str], sequence_id: int = 1,
-                compress: bool = True):
+    def __init__(self, path: Optional[str], sequence_id: int = 1, compress: bool = True):
         # `UX-1081`: `path=None` opens nothing and every packet is
         # discarded - a caller that only wants `self.tracks` (`export`'s
         # degradation ladder, before committing to a render) pays for no
         # file at all.
-        self._handle = (None if path is None else
-                        gzip.open(path, "wb", compresslevel=6) if compress
-                        else open(path, "wb"))
+        self._handle = (
+            None if path is None else gzip.open(path, "wb", compresslevel=6) if compress else open(path, "wb")
+        )
         self._sequence_id = sequence_id
         # UX-308: three interning tables, each with its own iid space
         # (`InternedData` field number -> {name: iid}) and its own
@@ -317,11 +317,9 @@ class TrackEventWriter:
         names are interned and a reader that dropped the earlier packets
         must know it can no longer resolve them.
         """
-        flags = (SEQ_INCREMENTAL_STATE_CLEARED if self._first
-                 else SEQ_NEEDS_INCREMENTAL_STATE)
+        flags = SEQ_INCREMENTAL_STATE_CLEARED if self._first else SEQ_NEEDS_INCREMENTAL_STATE
         self._first = False
-        return (uint_field(PACKET_SEQUENCE_ID, self._sequence_id)
-                + uint_field(PACKET_SEQUENCE_FLAGS, flags))
+        return uint_field(PACKET_SEQUENCE_ID, self._sequence_id) + uint_field(PACKET_SEQUENCE_FLAGS, flags)
 
     # `InternedData` field -> the (iid, name) field numbers of its entry
     # message. All three entry messages happen to be `iid = 1, name = 2`,
@@ -329,10 +327,8 @@ class TrackEventWriter:
     # same today" is not a wire guarantee.
     _ENTRY_FIELDS = {
         INTERNED_EVENT_NAMES: (EVENT_NAME_IID_FIELD, EVENT_NAME_NAME),
-        INTERNED_EVENT_CATEGORIES: (EVENT_CATEGORY_IID_FIELD,
-                                    EVENT_CATEGORY_NAME),
-        INTERNED_DEBUG_ANNOTATION_NAMES: (DEBUG_ANNOTATION_NAME_IID_FIELD,
-                                          DEBUG_ANNOTATION_NAME_NAME),
+        INTERNED_EVENT_CATEGORIES: (EVENT_CATEGORY_IID_FIELD, EVENT_CATEGORY_NAME),
+        INTERNED_DEBUG_ANNOTATION_NAMES: (DEBUG_ANNOTATION_NAME_IID_FIELD, DEBUG_ANNOTATION_NAME_NAME),
     }
 
     def _intern(self, name: str, table: int = INTERNED_EVENT_NAMES) -> int:
@@ -360,10 +356,8 @@ class TrackEventWriter:
                 continue
             iid_field, name_field = self._ENTRY_FIELDS[table]
             entries += b"".join(
-                bytes_field(table,
-                            uint_field(iid_field, iid)
-                            + string_field(name_field, name))
-                for iid, name in queued)
+                bytes_field(table, uint_field(iid_field, iid) + string_field(name_field, name)) for iid, name in queued
+            )
             queued.clear()
         return bytes_field(PACKET_INTERNED_DATA, entries)
 
@@ -383,15 +377,12 @@ class TrackEventWriter:
         for key, value in annotations:
             if value is None:
                 continue
-            payload = uint_field(ANNOTATION_NAME_IID,
-                                 self._intern(key,
-                                              INTERNED_DEBUG_ANNOTATION_NAMES))
+            payload = uint_field(ANNOTATION_NAME_IID, self._intern(key, INTERNED_DEBUG_ANNOTATION_NAMES))
             if isinstance(value, bool):
                 # Before `int`, which `bool` is a subclass of. Written as
                 # its word rather than as 0/1, because these are read by
                 # a person in a details panel.
-                payload += string_field(ANNOTATION_STRING_VALUE,
-                                        "true" if value else "false")
+                payload += string_field(ANNOTATION_STRING_VALUE, "true" if value else "false")
             elif isinstance(value, int):
                 payload += int_field(ANNOTATION_INT_VALUE, value)
             else:
@@ -410,18 +401,17 @@ class TrackEventWriter:
         takes: field 47 with a varint in it is a packet a reader drops
         without complaining.
         """
-        return (b"".join(fixed64_field(EVENT_FLOW_IDS, flow)
-                         for flow in flows)
-                + b"".join(fixed64_field(EVENT_TERMINATING_FLOW_IDS, flow)
-                           for flow in terminating_flows))
+        return b"".join(fixed64_field(EVENT_FLOW_IDS, flow) for flow in flows) + b"".join(
+            fixed64_field(EVENT_TERMINATING_FLOW_IDS, flow) for flow in terminating_flows
+        )
 
     def _categories(self, categories) -> bytes:
         """`repeated uint64 category_iids`, which is what makes a class
         of slice filterable in the UI and selectable in SQL."""
         return b"".join(
-            uint_field(EVENT_CATEGORY_IIDS,
-                       self._intern(category, INTERNED_EVENT_CATEGORIES))
-            for category in categories)
+            uint_field(EVENT_CATEGORY_IIDS, self._intern(category, INTERNED_EVENT_CATEGORIES))
+            for category in categories
+        )
 
     # -- tracks -----------------------------------------------------------
     def _uuid(self) -> int:
@@ -429,8 +419,7 @@ class TrackEventWriter:
         self._next_uuid += 1
         return value
 
-    def counter_track(self, name: str, parent: int, unit_name: str,
-                      unit: int = UNIT_COUNT) -> int:
+    def counter_track(self, name: str, parent: int, unit_name: str, unit: int = UNIT_COUNT) -> int:
         """A graph rather than a lane. Returns its uuid.
 
         `UX-310`. `unit_name` rides in the descriptor rather than being
@@ -443,11 +432,9 @@ class TrackEventWriter:
             uint_field(TRACK_UUID, uuid)
             + string_field(TRACK_NAME, name)
             + uint_field(TRACK_PARENT_UUID, parent)
-            + bytes_field(TRACK_COUNTER,
-                          uint_field(COUNTER_UNIT, unit)
-                          + string_field(COUNTER_UNIT_NAME, unit_name)))
-        self._write_packet(self._sequence_prefix()
-                           + bytes_field(PACKET_TRACK_DESCRIPTOR, descriptor))
+            + bytes_field(TRACK_COUNTER, uint_field(COUNTER_UNIT, unit) + string_field(COUNTER_UNIT_NAME, unit_name))
+        )
+        self._write_packet(self._sequence_prefix() + bytes_field(PACKET_TRACK_DESCRIPTOR, descriptor))
         self.tracks += 1
         return uuid
 
@@ -458,12 +445,16 @@ class TrackEventWriter:
         which is the whole reason a series costs so much less than the
         slices it was folded from.
         """
-        event = (uint_field(EVENT_TYPE, TYPE_COUNTER)
-                 + uint_field(EVENT_TRACK_UUID, track)
-                 + int_field(EVENT_COUNTER_VALUE, value))
-        self._write_packet(self._sequence_prefix()
-                           + uint_field(PACKET_TIMESTAMP, timestamp_ns)
-                           + bytes_field(PACKET_TRACK_EVENT, event))
+        event = (
+            uint_field(EVENT_TYPE, TYPE_COUNTER)
+            + uint_field(EVENT_TRACK_UUID, track)
+            + int_field(EVENT_COUNTER_VALUE, value)
+        )
+        self._write_packet(
+            self._sequence_prefix()
+            + uint_field(PACKET_TIMESTAMP, timestamp_ns)
+            + bytes_field(PACKET_TRACK_EVENT, event)
+        )
         self.counters += 1
 
     def order_processes_explicitly(self) -> None:
@@ -476,10 +467,11 @@ class TrackEventWriter:
         """
         self._write_packet(
             self._sequence_prefix()
-            + bytes_field(PACKET_TRACK_DESCRIPTOR,
-                          uint_field(TRACK_UUID, ROOT_TRACK_UUID)
-                          + uint_field(TRACK_PROCESS_ORDERING,
-                                       PROCESS_ORDERING_EXPLICIT)))
+            + bytes_field(
+                PACKET_TRACK_DESCRIPTOR,
+                uint_field(TRACK_UUID, ROOT_TRACK_UUID) + uint_field(TRACK_PROCESS_ORDERING, PROCESS_ORDERING_EXPLICIT),
+            )
+        )
 
     def process_track(self, name: str, pid: int, rank: int = 0) -> int:
         """A process lane. Returns its uuid, which slices are hung from.
@@ -493,11 +485,9 @@ class TrackEventWriter:
             uint_field(TRACK_UUID, uuid)
             + string_field(TRACK_NAME, name)
             + uint_field(TRACK_SIBLING_ORDER_RANK, rank)
-            + bytes_field(TRACK_PROCESS,
-                          uint_field(PROCESS_PID, pid)
-                          + string_field(PROCESS_NAME, name)))
-        self._write_packet(self._sequence_prefix()
-                           + bytes_field(PACKET_TRACK_DESCRIPTOR, descriptor))
+            + bytes_field(TRACK_PROCESS, uint_field(PROCESS_PID, pid) + string_field(PROCESS_NAME, name))
+        )
+        self._write_packet(self._sequence_prefix() + bytes_field(PACKET_TRACK_DESCRIPTOR, descriptor))
         self.tracks += 1
         return uuid
 
@@ -507,20 +497,20 @@ class TrackEventWriter:
         descriptor = (
             uint_field(TRACK_UUID, uuid)
             + string_field(TRACK_NAME, name)
-            + bytes_field(TRACK_THREAD,
-                          uint_field(THREAD_PID, pid)
-                          + uint_field(THREAD_TID, tid)
-                          + string_field(THREAD_NAME, name))
-            + uint_field(TRACK_PARENT_UUID, parent))
-        self._write_packet(self._sequence_prefix()
-                           + bytes_field(PACKET_TRACK_DESCRIPTOR, descriptor))
+            + bytes_field(
+                TRACK_THREAD,
+                uint_field(THREAD_PID, pid) + uint_field(THREAD_TID, tid) + string_field(THREAD_NAME, name),
+            )
+            + uint_field(TRACK_PARENT_UUID, parent)
+        )
+        self._write_packet(self._sequence_prefix() + bytes_field(PACKET_TRACK_DESCRIPTOR, descriptor))
         self.tracks += 1
         return uuid
 
     # -- events -----------------------------------------------------------
-    def slice_begin(self, timestamp_ns: int, track: int, name: str,
-                    annotations=(), categories=(),
-                    flows=(), terminating_flows=()) -> None:
+    def slice_begin(
+        self, timestamp_ns: int, track: int, name: str, annotations=(), categories=(), flows=(), terminating_flows=()
+    ) -> None:
         """A slice opens, carrying what is known about it.
 
         `annotations` are `(key, value)` pairs (`UX-308`) - the details
@@ -536,16 +526,20 @@ class TrackEventWriter:
         both lists for one id would be a flow that is its own end, which
         upstream says not to write, so the caller keeps them disjoint.
         """
-        event = (uint_field(EVENT_TYPE, TYPE_SLICE_BEGIN)
-                 + uint_field(EVENT_TRACK_UUID, track)
-                 + uint_field(EVENT_NAME_IID, self._intern(name))
-                 + self._categories(categories)
-                 + self._flows(flows, terminating_flows)
-                 + self._annotations(annotations))
-        self._write_packet(self._sequence_prefix()
-                           + uint_field(PACKET_TIMESTAMP, timestamp_ns)
-                           + self._take_interned()
-                           + bytes_field(PACKET_TRACK_EVENT, event))
+        event = (
+            uint_field(EVENT_TYPE, TYPE_SLICE_BEGIN)
+            + uint_field(EVENT_TRACK_UUID, track)
+            + uint_field(EVENT_NAME_IID, self._intern(name))
+            + self._categories(categories)
+            + self._flows(flows, terminating_flows)
+            + self._annotations(annotations)
+        )
+        self._write_packet(
+            self._sequence_prefix()
+            + uint_field(PACKET_TIMESTAMP, timestamp_ns)
+            + self._take_interned()
+            + bytes_field(PACKET_TRACK_EVENT, event)
+        )
         self.slices += 1
 
     def slice_end(self, timestamp_ns: int, track: int) -> None:
@@ -555,15 +549,16 @@ class TrackEventWriter:
         supplies it - which is the property that makes the format
         appendable: the end of a slice need not know how it began.
         """
-        event = (uint_field(EVENT_TYPE, TYPE_SLICE_END)
-                 + uint_field(EVENT_TRACK_UUID, track))
-        self._write_packet(self._sequence_prefix()
-                           + uint_field(PACKET_TIMESTAMP, timestamp_ns)
-                           + bytes_field(PACKET_TRACK_EVENT, event))
+        event = uint_field(EVENT_TYPE, TYPE_SLICE_END) + uint_field(EVENT_TRACK_UUID, track)
+        self._write_packet(
+            self._sequence_prefix()
+            + uint_field(PACKET_TIMESTAMP, timestamp_ns)
+            + bytes_field(PACKET_TRACK_EVENT, event)
+        )
 
-    def instant(self, timestamp_ns: int, track: int, name: str,
-                annotations=(), categories=(),
-                flows=(), terminating_flows=()) -> None:
+    def instant(
+        self, timestamp_ns: int, track: int, name: str, annotations=(), categories=(), flows=(), terminating_flows=()
+    ) -> None:
         """A moment rather than a span - what a process with no observed
         exit gets, because a zero-width bar reads as "instantaneous" and
         `bga` does not fabricate an end it never saw.
@@ -571,14 +566,18 @@ class TrackEventWriter:
         It carries the same annotations a slice does: a process whose
         exit was never seen is exactly the one a reader wants the full
         command line of."""
-        event = (uint_field(EVENT_TYPE, TYPE_INSTANT)
-                 + uint_field(EVENT_TRACK_UUID, track)
-                 + uint_field(EVENT_NAME_IID, self._intern(name))
-                 + self._categories(categories)
-                 + self._flows(flows, terminating_flows)
-                 + self._annotations(annotations))
-        self._write_packet(self._sequence_prefix()
-                           + uint_field(PACKET_TIMESTAMP, timestamp_ns)
-                           + self._take_interned()
-                           + bytes_field(PACKET_TRACK_EVENT, event))
+        event = (
+            uint_field(EVENT_TYPE, TYPE_INSTANT)
+            + uint_field(EVENT_TRACK_UUID, track)
+            + uint_field(EVENT_NAME_IID, self._intern(name))
+            + self._categories(categories)
+            + self._flows(flows, terminating_flows)
+            + self._annotations(annotations)
+        )
+        self._write_packet(
+            self._sequence_prefix()
+            + uint_field(PACKET_TIMESTAMP, timestamp_ns)
+            + self._take_interned()
+            + bytes_field(PACKET_TRACK_EVENT, event)
+        )
         self.slices += 1

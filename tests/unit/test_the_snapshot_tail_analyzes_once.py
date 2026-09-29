@@ -2,6 +2,7 @@
 analyze the run once, not twice - 18.62s at 5,002 elements was a
 second full pass over the same run (the audit).
 """
+
 import os
 import shutil
 
@@ -33,14 +34,13 @@ def test_the_tail_analyzes_the_run_once(tmp_path, monkeypatch):
     monkeypatch.setattr(BuildEfficiencyAnalyzer, "analyze", counting_analyze)
 
     publish_to = str(snap / "analysis.json")
-    _, analyzed_result = _analyze(str(run_dir), str(snap / "plane2.json"),
-                                   publish_to=publish_to)
-    written = write_element_slice(str(snap), str(run_dir),
-                                   analysis_result=analyzed_result)
+    _, analyzed_result = _analyze(str(run_dir), str(snap / "plane2.json"), publish_to=publish_to)
+    written = write_element_slice(str(snap), str(run_dir), analysis_result=analyzed_result)
 
     assert len(calls) == 1, (
         f"expected exactly 1 BuildEfficiencyAnalyzer.analyze() call across "
-        f"_analyze + write_element_slice, got {len(calls)}")
+        f"_analyze + write_element_slice, got {len(calls)}"
+    )
     assert written is not None
 
 
@@ -53,10 +53,9 @@ def test_the_reused_slice_is_byte_identical_to_a_fresh_analysis(tmp_path):
     fresh_snap, fresh_run = _make_snapshot(tmp_path, "fresh")
 
     _, analyzed_result = _analyze(
-        str(reused_run), str(reused_snap / "plane2.json"),
-        publish_to=str(reused_snap / "analysis.json"))
-    write_element_slice(str(reused_snap), str(reused_run),
-                         analysis_result=analyzed_result)
+        str(reused_run), str(reused_snap / "plane2.json"), publish_to=str(reused_snap / "analysis.json")
+    )
+    write_element_slice(str(reused_snap), str(reused_run), analysis_result=analyzed_result)
     write_element_slice(str(fresh_snap), str(fresh_run))  # no reuse: old path
 
     reused_bytes = (reused_snap / SLICE_NAME).read_bytes()

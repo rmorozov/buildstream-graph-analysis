@@ -22,6 +22,7 @@ The control matters as much as the assertion. Without it a passing test
 proves only that this fixture is not adversarial - which is the exact
 mistake the pre-UX-80 suite made.
 """
+
 import json
 import os
 import shutil
@@ -59,7 +60,8 @@ def _staged_project(tmp_path):
     runtime = os.path.join(project_dir, "files", "runtime")
     result = subprocess.run(
         [os.path.join(project_dir, "stage_runtime.sh"), runtime],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     )
     if result.returncode != 0:
         pytest.skip(f"could not stage a dynamically-linked runtime: {result.stderr.strip()}")
@@ -79,8 +81,7 @@ def test_readme_sequence_joins_by_uid_when_build_root_is_overridden(tmp_path):
 
     # README, "Joining the two planes", verbatim but for the paths.
     _run(
-        ["bga", "capture", "run", "--wrapped-log", plane1, project_dir, plane2,
-         "--", "bst", "build", "worker.bst"],
+        ["bga", "capture", "run", "--wrapped-log", plane1, project_dir, plane2, "--", "bst", "build", "worker.bst"],
         env,
     )
     _run(["bga", "extract", "--format", "wrapped", project_dir, plane1, str(tmp_path / "run")], env)
@@ -125,9 +126,20 @@ def test_without_the_invocation_log_the_same_build_collapses(tmp_path):
     plane2 = str(tmp_path / "plane2.json")
 
     _run(
-        ["bga", "capture", "run", "--no-invocation-log",
-         "--wrapped-log", str(tmp_path / "plane1.log"), project_dir, plane2,
-         "--", "bst", "build", "worker.bst"],
+        [
+            "bga",
+            "capture",
+            "run",
+            "--no-invocation-log",
+            "--wrapped-log",
+            str(tmp_path / "plane1.log"),
+            project_dir,
+            plane2,
+            "--",
+            "bst",
+            "build",
+            "worker.bst",
+        ],
         env,
     )
 

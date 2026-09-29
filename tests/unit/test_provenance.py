@@ -8,6 +8,7 @@ bga/floors/cold.py's advisory output (t_infinity_cold) - not a rewrite
 of AnalysisResult's dict-based fields, just a type-checked assembly
 step that makes an accidental swap loud (TypeError) instead of silent.
 """
+
 import pytest
 
 from bga.validation.provenance import Advisory, Certified, Measured, assemble_floors

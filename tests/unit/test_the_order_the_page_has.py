@@ -33,6 +33,7 @@ test.
 
 holds: rules.md#a-guard-that-asserts-an-order-reads-the-order-never-restates-it
 """
+
 import json
 import os
 import shutil
@@ -73,8 +74,7 @@ def _boot_order(compare=None, inventory=None):
     shutil.copytree(GOLDEN, run)
     os.remove(run / "expected_output.json")
     if inventory is not None:
-        (run / "sources.json").write_text(json.dumps(inventory),
-                                          encoding="utf-8")
+        (run / "sources.json").write_text(json.dumps(inventory), encoding="utf-8")
 
     import tools.bga_view as view
 
@@ -87,20 +87,22 @@ def _boot_order(compare=None, inventory=None):
         # band and the culprit strip never render in one. `load()` reads
         # an inlined block before it tries the network, so splicing one
         # in boots the real comparison path rather than a stub of it.
-        block = ('<script type="application/json" id="bga-compare">'
-                 + json.dumps(compare) + "</script>")
+        block = '<script type="application/json" id="bga-compare">' + json.dumps(compare) + "</script>"
         html = html.replace("</body>", block + "</body>", 1)
         page.write_text(html, encoding="utf-8")
 
     module = tmp / "inline.mjs"
-    module.write_text(
-        view.inflated_module(html),
-        encoding="utf-8")
+    module.write_text(view.inflated_module(html), encoding="utf-8")
     probe = tmp / "probe.mjs"
     probe.write_text(_probe_source(), encoding="utf-8")
     result = subprocess.run(
-        [node, str(probe)], capture_output=True, text=True, cwd=REPO, timeout=90,
-        env=dict(os.environ, PAGE=str(page), MOD=str(module), PROTOCOL="file:"))
+        [node, str(probe)],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=90,
+        env=dict(os.environ, PAGE=str(page), MOD=str(module), PROTOCOL="file:"),
+    )
     assert result.returncode == 0, result.stderr
     out = json.loads(result.stdout)
     assert out["error"] is None, out["error"]
@@ -112,38 +114,59 @@ def _comparison():
     strip render, so their order is observable at all."""
     return {
         "schema": "compare/v1",
-        "baseline_run_id": "a", "candidate_run_id": "b",
+        "baseline_run_id": "a",
+        "candidate_run_id": "b",
         "baseline": {"total_duration_us": 100000},
         "candidate": {"total_duration_us": 140000},
         "deltas": {"total_duration_us": 40000},
-        "verdict": "regressed", "verdict_kind": "regressed",
-        "low_confidence": False, "mismatches": [], "failed_runs": [],
+        "verdict": "regressed",
+        "verdict_kind": "regressed",
+        "low_confidence": False,
+        "mismatches": [],
+        "failed_runs": [],
         "attribution_deltas": {},
-        "baseline_band": {"n": 3, "median_us": 100000, "scaled_mad_us": 5000,
-                          "k": 3.0, "low_us": 85000, "high_us": 115000,
-                          "observed_low_us": 95000, "observed_high_us": 105000,
-                          "describes_its_own_set": True,
-                          "widened_to_fixed_pct": False,
-                          "edges_outside_band": 0, "runs_us": [95000, 100000, 105000]},
+        "baseline_band": {
+            "n": 3,
+            "median_us": 100000,
+            "scaled_mad_us": 5000,
+            "k": 3.0,
+            "low_us": 85000,
+            "high_us": 115000,
+            "observed_low_us": 95000,
+            "observed_high_us": 105000,
+            "describes_its_own_set": True,
+            "widened_to_fixed_pct": False,
+            "edges_outside_band": 0,
+            "runs_us": [95000, 100000, 105000],
+        },
         "element_deltas": {
             "rows": [
-                {"element_uid": "base.bst", "baseline_us": 10000,
-                 "candidate_us": 40000, "delta_us": 30000,
-                 "presence": "both", "verdict_kind": "regressed"},
-                {"element_uid": "lib.bst", "baseline_us": 20000,
-                 "candidate_us": 12000, "delta_us": -8000,
-                 "presence": "both", "verdict_kind": "improved"},
+                {
+                    "element_uid": "base.bst",
+                    "baseline_us": 10000,
+                    "candidate_us": 40000,
+                    "delta_us": 30000,
+                    "presence": "both",
+                    "verdict_kind": "regressed",
+                },
+                {
+                    "element_uid": "lib.bst",
+                    "baseline_us": 20000,
+                    "candidate_us": 12000,
+                    "delta_us": -8000,
+                    "presence": "both",
+                    "verdict_kind": "improved",
+                },
             ],
-            "counts": {"grew": 1, "shrank": 1, "unchanged": 0,
-                       "appeared": 0, "disappeared": 0},
-            "ranked_by": "absolute-duration-delta", "banded": False,
+            "counts": {"grew": 1, "shrank": 1, "unchanged": 0, "appeared": 0, "disappeared": 0},
+            "ranked_by": "absolute-duration-delta",
+            "banded": False,
         },
     }
 
 
 @needs_node
 class TestTheOrderIsReadFromTheBootedPage:
-
     def test_the_decision_is_the_first_thing_in_the_document(self):
         """UX-207's promise, as the reader meets it."""
         order = _boot_order()
@@ -199,12 +222,12 @@ class TestTheProbeShimCanSeeOrderAtAll:
         # and a guard still reading the old location would pass on a
         # file that no longer defines `prepend` at all.
         source = (REPO / "tests/dom_shim.mjs").read_text(encoding="utf-8")
-        assert "prepend(...items) {" in source, (
-            "the shared shim no longer defines prepend")
+        assert "prepend(...items) {" in source, "the shared shim no longer defines prepend"
         prepend = source.split("prepend(...items) {", 1)[1].split("\n    }", 1)[0]
         assert "this.append(" not in prepend, (
             "prepend is implemented as append again - every order guard in "
-            "this file would read a reversed document (UX-235)")
+            "this file would read a reversed document (UX-235)"
+        )
 
     def test_the_shim_unshifts(self):
         source = (REPO / "tests/dom_shim.mjs").read_text(encoding="utf-8")
@@ -232,14 +255,15 @@ class TestTheSkipCensus:
     @staticmethod
     def _census():
         import sys
+
         sys.path.insert(0, str(REPO / "tests"))
         import conftest
+
         return conftest
 
     def test_a_whole_file_going_quiet_is_a_complaint(self):
         conftest = self._census()
-        complaints = conftest.census_complaints(
-            {"node is not installed": 26})
+        complaints = conftest.census_complaints({"node is not installed": 26})
         assert complaints, "26 tests skipping for one reason must complain"
         assert "26" in complaints[0]
 
@@ -253,8 +277,7 @@ class TestTheSkipCensus:
         """Otherwise the census cries wolf on every run and gets muted."""
         conftest = self._census()
         baseline = {
-            "not a dev environment by its own account "
-            "(BGA_EXPECT_DEV is unset)": 2,
+            "not a dev environment by its own account (BGA_EXPECT_DEV is unset)": 2,
             "trace_processor_shell is not installed": 1,
         }
         assert conftest.census_complaints(baseline) == []
@@ -265,7 +288,8 @@ class TestTheSkipCensus:
             meaning, measured = declared
             assert len(meaning.split()) >= 5, (reason, meaning)
             assert isinstance(measured, int) and measured >= 0, (
-                f"{reason}: the baseline must be a count somebody measured")
+                f"{reason}: the baseline must be a count somebody measured"
+            )
 
     def test_the_cap_is_below_the_measured_collapse(self):
         """26 is what `test_output_schemas.py` skips without jsonschema.
@@ -281,15 +305,10 @@ class TestTheSkipCensus:
         to silence the census, which is the defect wearing the fix's
         clothes."""
         conftest = self._census()
-        known = {"an environmental absence somewhere": ("a measured arm "
-                                                        "that runs in "
-                                                        "another job", 19)}
-        assert conftest.census_complaints({"an environmental absence "
-                                           "somewhere": 19}, known) == []
-        assert conftest.census_complaints({"an environmental absence "
-                                           "somewhere": 27}, known) == []
-        complaints = conftest.census_complaints(
-            {"an environmental absence somewhere": 28}, known)
+        known = {"an environmental absence somewhere": ("a measured arm that runs in another job", 19)}
+        assert conftest.census_complaints({"an environmental absence somewhere": 19}, known) == []
+        assert conftest.census_complaints({"an environmental absence somewhere": 27}, known) == []
+        complaints = conftest.census_complaints({"an environmental absence somewhere": 28}, known)
         assert complaints, "a file's worth past the baseline stayed quiet"
         assert "19 measured" in complaints[0]
 
@@ -301,12 +320,9 @@ class TestTheSkipCensus:
         measured_in_ci = {
             "bst not found on PATH": 2,
             "bst not found on PATH - see docs/spec/ingestion-pipeline.md": 12,
-            "bst and/or buildstream-plugins not available - "
-            "see docs/spec/ingestion-pipeline.md": 1,
-            "bst/bwrap/bga not all found on PATH - "
-            "see docs/spec/ingestion-pipeline.md": 2,
-            "bst/bwrap/cc not all found on PATH - "
-            "see docs/spec/ingestion-pipeline.md": 6,
+            "bst and/or buildstream-plugins not available - see docs/spec/ingestion-pipeline.md": 1,
+            "bst/bwrap/bga not all found on PATH - see docs/spec/ingestion-pipeline.md": 2,
+            "bst/bwrap/cc not all found on PATH - see docs/spec/ingestion-pipeline.md": 6,
             "bwrap not on PATH": 5,
             "bwrap/cc not both on PATH": 8,
             "no real capture here": 19,
@@ -330,10 +346,21 @@ class TestTheSkipCensus:
 # one section each and are eleven now, so the two landmarks in the
 # middle are the two tables a reader arrives at - the element table and
 # the graph's shape - rather than the boxes they used to sit in.
-INTENDED_ORDER = ["decision", "evidence", "overview",
-                  "findings", "headline", "next_steps", "blast",
-                  "elements", "graph_metrics",
-                  "summary", "run_instance", "producer", "document_shape"]
+INTENDED_ORDER = [
+    "decision",
+    "evidence",
+    "overview",
+    "findings",
+    "headline",
+    "next_steps",
+    "blast",
+    "elements",
+    "graph_metrics",
+    "summary",
+    "run_instance",
+    "producer",
+    "document_shape",
+]
 
 # What a run with a shared git repository has in it. Four elements, one
 # monorepo behind three of them - `examples/06`'s shape, small enough to
@@ -341,14 +368,10 @@ INTENDED_ORDER = ["decision", "evidence", "overview",
 SHARED_MONOREPO = {
     "schema": "sources/v1",
     "elements": {
-        "lib.bst": [{"kind": "git", "identity": "example.com/org/mono",
-                     "keying": "ref", "staged_at": "src/lib"}],
-        "app.bst": [{"kind": "git", "identity": "example.com/org/mono",
-                     "keying": "ref", "staged_at": "src/app"}],
-        "extra.bst": [{"kind": "git", "identity": "example.com/org/mono",
-                       "keying": "ref", "staged_at": "src/extra"}],
-        "base.bst": [{"kind": "local", "identity": "files/base",
-                      "keying": "content"}],
+        "lib.bst": [{"kind": "git", "identity": "example.com/org/mono", "keying": "ref", "staged_at": "src/lib"}],
+        "app.bst": [{"kind": "git", "identity": "example.com/org/mono", "keying": "ref", "staged_at": "src/app"}],
+        "extra.bst": [{"kind": "git", "identity": "example.com/org/mono", "keying": "ref", "staged_at": "src/extra"}],
+        "base.bst": [{"kind": "local", "identity": "files/base", "keying": "content"}],
     },
     "unreadable": {},
 }
@@ -400,8 +423,7 @@ class TestThePageReadsInTheOrderItShould:
         about the artifact rather than about the run, and it closes the
         same chapter for the same reason `producer` does."""
         order = _boot_order()
-        assert order[-4:] == ["summary", "run_instance", "producer",
-                              "document_shape"], order[-7:]
+        assert order[-4:] == ["summary", "run_instance", "producer", "document_shape"], order[-7:]
 
     def test_the_element_sections_sit_above_the_identity(self):
         """`UX-216` appends one section per element *after* `render`
@@ -409,8 +431,7 @@ class TestThePageReadsInTheOrderItShould:
         `boot`. Without that second call the identity is last of the
         payload and twenty-five detail blocks sit below it."""
         order = _boot_order()
-        elements = [at for at, key in enumerate(order)
-                    if key.startswith("element-")]
+        elements = [at for at, key in enumerate(order) if key.startswith("element-")]
         assert elements, "no element sections rendered; nothing checked"
         assert max(elements) < order.index("summary"), order[-8:]
 
@@ -421,8 +442,7 @@ class TestThePageReadsInTheOrderItShould:
         inside it - and `next_steps` is where the run prints
         `bga blast <target>` as the command to run."""
         order = _boot_order()
-        assert order.index("blast") == order.index("next_steps") + 1, (
-            order[:10])
+        assert order.index("blast") == order.index("next_steps") + 1, order[:10]
 
     def test_the_control_sits_beside_the_table_when_there_is_one(self):
         """The clause the item could not check when it was filed: both
@@ -430,15 +450,12 @@ class TestThePageReadsInTheOrderItShould:
         absent from the page and "the pair sits together" was unfalsifiable.
         This run has one."""
         order = _boot_order(inventory=SHARED_MONOREPO)
-        assert "resource_blast" in order, (
-            "the inventory produced no table; the pair is unchecked")
-        assert order.index("blast") == order.index("resource_blast") + 1, (
-            order[:12])
+        assert "resource_blast" in order, "the inventory produced no table; the pair is unchecked"
+        assert order.index("blast") == order.index("resource_blast") + 1, order[:12]
 
     def test_the_table_displaces_next_steps_as_the_anchor(self):
         """Not a restatement of the two above: it is the *preference*
         that matters. With a table present the control leaves the
         `next_steps` slot it takes without one."""
         order = _boot_order(inventory=SHARED_MONOREPO)
-        assert order.index("blast") > order.index("next_steps") + 1, (
-            order[:12])
+        assert order.index("blast") > order.index("next_steps") + 1, order[:12]

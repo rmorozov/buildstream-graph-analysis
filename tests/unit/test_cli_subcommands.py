@@ -17,6 +17,7 @@ ReplayScheduler.capacity_sweep's first-sample normalized_improvement
 (prev_makespan starts at +inf; `prev_makespan > 0` is true for infinity
 too) - also fixed, since it was cosmetic but immediately visible.
 """
+
 import json
 import subprocess
 import sys
@@ -33,11 +34,14 @@ def _write_fixture(tmp_path):
     run_context = {
         "trace_epsilon_us": 1000,
         "wall_clock": {"start_us": 0, "end_us": 200000},
-        "max_jobs": 2, "resource_capacities": {"PROCESS": 2},
+        "max_jobs": 2,
+        "resource_capacities": {"PROCESS": 2},
     }
     graph = {
         "elements": [
-            {"uid": "a.bst"}, {"uid": "b.bst"}, {"uid": "c.bst", "requested_target": True},
+            {"uid": "a.bst"},
+            {"uid": "b.bst"},
+            {"uid": "c.bst", "requested_target": True},
         ],
         "dependencies": [
             {"predecessor": "a.bst", "successor": "c.bst"},
@@ -46,12 +50,27 @@ def _write_fixture(tmp_path):
     }
     trace = {
         "spans": [
-            {"task_key": "a.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 50000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "b.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 49000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "c.bst|BUILD|BUILD|0", "ts_us": 50000, "dur_us": 10000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
+            {
+                "task_key": "a.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 50000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "b.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 49000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "c.bst|BUILD|BUILD|0",
+                "ts_us": 50000,
+                "dur_us": 10000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
         ],
         "phases": [],
     }
@@ -128,10 +147,20 @@ def test_diagnostics_subcommand_forces_diagnostics_on(tmp_path):
 
 def test_sweep_subcommand_reports_makespan_per_capacity(tmp_path):
     run_dir = _write_fixture(tmp_path)
-    result = _run_bga([
-        "sweep", str(run_dir), "--resource", "PROCESS",
-        "--min-capacity", "1", "--max-capacity", "2", "--format", "json",
-    ])
+    result = _run_bga(
+        [
+            "sweep",
+            str(run_dir),
+            "--resource",
+            "PROCESS",
+            "--min-capacity",
+            "1",
+            "--max-capacity",
+            "2",
+            "--format",
+            "json",
+        ]
+    )
     assert result.returncode == 0, result.stderr
     data = json.loads(result.stdout)
     assert data["resource"] == "PROCESS"
@@ -166,9 +195,18 @@ def test_sweep_text_includes_the_capacity_model_caveat(tmp_path):
 
 def test_sweep_json_includes_the_capacity_model_caveat(tmp_path):
     run_dir = _write_fixture(tmp_path)
-    result = _run_bga([
-        "sweep", str(run_dir), "--min-capacity", "1", "--max-capacity", "2", "--format", "json",
-    ])
+    result = _run_bga(
+        [
+            "sweep",
+            str(run_dir),
+            "--min-capacity",
+            "1",
+            "--max-capacity",
+            "2",
+            "--format",
+            "json",
+        ]
+    )
     assert result.returncode == 0, result.stderr
     data = json.loads(result.stdout)
     assert "does not model real CPU contention" in data["capacity_model_caveat"]
@@ -188,8 +226,13 @@ def _write_calibration_run(tmp_path, name, capacity, core_dur_us):
     graph = {"elements": [{"uid": "core.bst", "requested_target": True}], "dependencies": []}
     trace = {
         "spans": [
-            {"task_key": "core.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": core_dur_us,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
+            {
+                "task_key": "core.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": core_dur_us,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
         ],
         "phases": [],
     }
@@ -214,12 +257,26 @@ def test_sweep_calibration_dir_shows_real_degradation_not_flat_plateau(tmp_path)
     calib_4 = _write_calibration_run(tmp_path, "calib_4", capacity=4, core_dur_us=100000)
     calib_8 = _write_calibration_run(tmp_path, "calib_8", capacity=8, core_dur_us=150000)
 
-    result = _run_bga([
-        "sweep", str(swept_run), "--resource", "PROCESS",
-        "--min-capacity", "4", "--max-capacity", "8", "--step", "4",
-        "--calibration-dir", str(calib_4), "--calibration-dir", str(calib_8),
-        "--format", "json",
-    ])
+    result = _run_bga(
+        [
+            "sweep",
+            str(swept_run),
+            "--resource",
+            "PROCESS",
+            "--min-capacity",
+            "4",
+            "--max-capacity",
+            "8",
+            "--step",
+            "4",
+            "--calibration-dir",
+            str(calib_4),
+            "--calibration-dir",
+            str(calib_8),
+            "--format",
+            "json",
+        ]
+    )
 
     assert result.returncode == 0, result.stderr
     data = json.loads(result.stdout)
@@ -236,11 +293,24 @@ def test_sweep_calibration_dir_text_output_names_real_capacities(tmp_path):
     calib_4 = _write_calibration_run(tmp_path, "calib_4", capacity=4, core_dur_us=100000)
     calib_8 = _write_calibration_run(tmp_path, "calib_8", capacity=8, core_dur_us=150000)
 
-    result = _run_bga([
-        "sweep", str(run_dir), "--resource", "PROCESS",
-        "--min-capacity", "4", "--max-capacity", "8", "--step", "4",
-        "--calibration-dir", str(calib_4), "--calibration-dir", str(calib_8),
-    ])
+    result = _run_bga(
+        [
+            "sweep",
+            str(run_dir),
+            "--resource",
+            "PROCESS",
+            "--min-capacity",
+            "4",
+            "--max-capacity",
+            "8",
+            "--step",
+            "4",
+            "--calibration-dir",
+            str(calib_4),
+            "--calibration-dir",
+            str(calib_8),
+        ]
+    )
 
     assert result.returncode == 0, result.stderr
     assert "Contention-aware duration model active" in result.stdout
@@ -252,9 +322,18 @@ def test_sweep_without_calibration_dir_omits_contention_model(tmp_path):
     completely unaffected (no contention_model key anywhere, no new
     caveat text)."""
     run_dir = _write_fixture(tmp_path)
-    result = _run_bga([
-        "sweep", str(run_dir), "--min-capacity", "1", "--max-capacity", "2", "--format", "json",
-    ])
+    result = _run_bga(
+        [
+            "sweep",
+            str(run_dir),
+            "--min-capacity",
+            "1",
+            "--max-capacity",
+            "2",
+            "--format",
+            "json",
+        ]
+    )
     assert result.returncode == 0, result.stderr
     data = json.loads(result.stdout)
     assert data["calibration_capacities"] == []

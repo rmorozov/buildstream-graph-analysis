@@ -10,6 +10,7 @@ scheme-less identity and the url detector wanted a scheme.
 The guard here is the round-trip itself: render the table, take the
 cell verbatim, ask the query, compare the numbers.
 """
+
 import json
 import os
 import re
@@ -38,12 +39,19 @@ def _run_with(tmp_path, inventory=None, name="run"):
 
 
 def _monorepo_inventory():
-    resource = {"kind": "git", "identity": sources.normalize_url(MONO),
-                "declared": MONO, "keying": "ref", "staged_at": "src"}
-    return sources.build_inventory({
-        "lib.bst": [dict(resource, staged_at="src/lib")],
-        "extra.bst": [dict(resource, staged_at="src/extra")],
-    })
+    resource = {
+        "kind": "git",
+        "identity": sources.normalize_url(MONO),
+        "declared": MONO,
+        "keying": "ref",
+        "staged_at": "src",
+    }
+    return sources.build_inventory(
+        {
+            "lib.bst": [dict(resource, staged_at="src/lib")],
+            "extra.bst": [dict(resource, staged_at="src/extra")],
+        }
+    )
 
 
 class _Result:
@@ -53,9 +61,18 @@ class _Result:
 
 class TestTheTableCellIsAValidQuery:
     def _table_cell(self, rows):
-        text = "\n".join(_format_resource_blast(_Result({
-            'rows': rows, 'element_count': 4, 'headline': None, 'unreadable': {},
-        })))
+        text = "\n".join(
+            _format_resource_blast(
+                _Result(
+                    {
+                        'rows': rows,
+                        'element_count': 4,
+                        'headline': None,
+                        'unreadable': {},
+                    }
+                )
+            )
+        )
         # The first column of the first data row - what a reader copies.
         for line in text.splitlines():
             match = re.match(r"^  (\S+)\s+\d+\s", line)
@@ -69,6 +86,7 @@ class TestTheTableCellIsAValidQuery:
         run = _run_with(tmp_path, inventory)
         from bga.graph.edg import compute_reachability
         from bga.ingest.loader import load_all
+
         _ctx, graph, _trace = load_all(run)
         downstream, _ = compute_reachability(graph)
         kinds = {e.uid: (e.element_kind or "unknown") for e in graph.elements}
@@ -90,11 +108,19 @@ class TestTheTableCellIsAValidQuery:
 
     def test_an_exact_match_still_reports_the_other_readings(self, tmp_path):
         """Deciding the answer is not the same as hiding the ambiguity."""
-        inventory = sources.build_inventory({
-            "lib.bst": [{"kind": "local", "identity": "lib.bst",
-                         "declared": "lib.bst", "keying": "content",
-                         "staged_at": None}],
-        })
+        inventory = sources.build_inventory(
+            {
+                "lib.bst": [
+                    {
+                        "kind": "local",
+                        "identity": "lib.bst",
+                        "declared": "lib.bst",
+                        "keying": "content",
+                        "staged_at": None,
+                    }
+                ],
+            }
+        )
         run = _run_with(tmp_path, inventory)
         answer = blast(run, "lib.bst", project_dir=str(tmp_path))
         assert answer["resolved_as"] == "path"
@@ -117,18 +143,18 @@ class TestTheAdjacentEdges:
     def _blast(self, run, target, *extra):
         return subprocess.run(
             [sys.executable, "-m", "bga.cli", "blast", target, str(run), *extra],
-            capture_output=True, text=True, cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
         )
 
-    def test_a_directory_that_is_not_a_run_gets_a_sentence_not_a_traceback(
-            self, tmp_path):
+    def test_a_directory_that_is_not_a_run_gets_a_sentence_not_a_traceback(self, tmp_path):
         """The likeliest slip: `<snapshot>/` where `<snapshot>/run` was
         meant. `analyze` prints a sentence for the same mistake, and
         UX-172's log claimed exit 2 for it."""
         snapshot = tmp_path / "20260820T120000Z"
         (snapshot / "run").mkdir(parents=True)
-        shutil.copyfile(os.path.join(GOLDEN, "graph.json"),
-                        snapshot / "run" / "graph.json")
+        shutil.copyfile(os.path.join(GOLDEN, "graph.json"), snapshot / "run" / "graph.json")
 
         done = self._blast(snapshot, "base.bst")
         assert done.returncode == 2, done.stdout + done.stderr
@@ -143,8 +169,7 @@ class TestTheAdjacentEdges:
         assert "No element of that name is in this run" in text
         assert "rebuilds nothing here" not in text
 
-    def test_an_element_that_really_rebuilds_nothing_says_that_instead(
-            self, tmp_path):
+    def test_an_element_that_really_rebuilds_nothing_says_that_instead(self, tmp_path):
         run = _run_with(tmp_path)
         answer = blast(run, "app.bst", project_dir=str(tmp_path))
         text = format_blast_text(answer)
@@ -155,10 +180,13 @@ class TestTheAdjacentEdges:
 
     def test_a_deleted_top_level_file_is_read_as_a_path(self, tmp_path):
         """No `/` to recognise it by - only the inventory can say."""
-        inventory = sources.build_inventory({
-            "lib.bst": [{"kind": "local", "identity": ".", "declared": ".",
-                         "keying": "content", "staged_at": None}],
-        })
+        inventory = sources.build_inventory(
+            {
+                "lib.bst": [
+                    {"kind": "local", "identity": ".", "declared": ".", "keying": "content", "staged_at": None}
+                ],
+            }
+        )
         assert "path" in classify_target("README.md", str(tmp_path), inventory)
         assert "path" not in classify_target("README.md", str(tmp_path), {})
 

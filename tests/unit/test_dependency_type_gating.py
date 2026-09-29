@@ -9,6 +9,7 @@ Structural analysis (bga/graph/edg.py: reachability, depth, dominators,
 critical path) is deliberately untouched and still reads every edge
 regardless of type - only *gating* semantics changed.
 """
+
 from bga.graph.edg import compute_critical_path, compute_reachability
 from bga.ingest.models import DependencyEdge, Element, Graph, Resource, TaskKey, TaskKind, TaskSpan
 from bga.normalize.timestamps import (
@@ -21,12 +22,16 @@ from bga.normalize.timestamps import (
 
 def _span(uid, ts_us, dur_us, kind=TaskKind.BUILD, phase="BUILD"):
     return TaskSpan(
-        task_key=TaskKey(uid, kind, phase, 0), ts_us=ts_us, dur_us=dur_us,
-        resources=[Resource.PROCESS], primary_resource=Resource.PROCESS,
+        task_key=TaskKey(uid, kind, phase, 0),
+        ts_us=ts_us,
+        dur_us=dur_us,
+        resources=[Resource.PROCESS],
+        primary_resource=Resource.PROCESS,
     )
 
 
 # --- compute_ready_times ------------------------------------------------
+
 
 def test_runtime_only_edge_does_not_gate_ready_time():
     """b.bst's BUILD starts and finishes entirely before a.bst's BUILD
@@ -52,6 +57,7 @@ def test_build_type_edge_still_gates_ready_time():
 
 
 # --- validate_ordering ---------------------------------------------------
+
 
 def test_runtime_only_edge_never_flagged_as_ordering_violation():
     """Without the fix, a.bst finishing (200000) after b.bst starts (0)
@@ -83,6 +89,7 @@ def test_build_only_edge_still_flags_a_genuine_violation():
 
 
 # --- clamp_task_starts (feeds replay/scheduler.py) -----------------------
+
 
 def test_runtime_only_edge_not_included_in_normalized_task_dependencies():
     spans = [_span("a.bst", 100000, 100000), _span("b.bst", 0, 50000)]
@@ -125,6 +132,7 @@ def test_build_type_edge_still_included_in_normalized_task_dependencies():
 
 
 # --- Structural analysis stays unfiltered (Part 24/25) --------------------
+
 
 def test_runtime_only_edge_excluded_from_critical_path_certified_floor():
     """Part 14.1: T-infinity,observed is a *certified* claim ("no
@@ -211,10 +219,20 @@ def test_end_to_end_runtime_only_dependency_does_not_delay_critical_path(tmp_pat
         elements=[("a.bst", False), ("b.bst", True)],
         dependencies=[("a.bst", "b.bst", "runtime")],
         spans=[
-            {"task_key": "a.bst|BUILD|BUILD|0", "ts_us": 100000, "dur_us": 100000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "b.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 50000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
+            {
+                "task_key": "a.bst|BUILD|BUILD|0",
+                "ts_us": 100000,
+                "dur_us": 100000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "b.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 50000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
         ],
     )
     result = analyze_run(run_dir)

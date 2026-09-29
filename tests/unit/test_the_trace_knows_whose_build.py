@@ -30,6 +30,7 @@ which is what this command can compute from what it reads, and the
 trace says which rule it used in `lane_order` rather than leaving a
 reader to assume the other one.
 """
+
 import gzip
 import json
 import pathlib
@@ -59,8 +60,7 @@ from tools.bga_timeline import (
 from tools.native_trace import trackevent
 
 GOLDEN = REPO / "tests/fixtures/golden/mixed_task_kinds"
-REAL_CAPTURE = REPO / ("examples/06-macro-micro-optimization/.bga/runs/"
-                       "20260821T170127Z")
+REAL_CAPTURE = REPO / ("examples/06-macro-micro-optimization/.bga/runs/20260821T170127Z")
 
 # `examples/06`'s capture is real and **gitignored** - it exists on this
 # machine and not in a clone. The measured figures below are taken from
@@ -68,8 +68,7 @@ REAL_CAPTURE = REPO / ("examples/06-macro-micro-optimization/.bga/runs/"
 # skipped rather than deleted; every *property* they check is also
 # checked on a committed fixture, so CI is not left believing something
 # it never ran.
-needs_real_capture = pytest.mark.skipif(
-    not REAL_CAPTURE.is_dir(), reason="no real capture in this tree")
+needs_real_capture = pytest.mark.skipif(not REAL_CAPTURE.is_dir(), reason="no real capture in this tree")
 
 
 # Three elements whose Plane 2 spans are deliberately in the *reverse*
@@ -94,13 +93,17 @@ def _raw():
     base = 1000.0
     for index, (element, length) in enumerate(sorted(_SPANS.items())):
         start = base + index
-        lines.append(f"START pid={10 + index} ppid=1 ts={start:.6f} "
-                     f"element={element} inv=inv-{index} src=spine "
-                     f"cmd=cc -c {element}.c\n")
-        lines.append(f"END pid={10 + index} ppid=1 ts={start + length:.6f} "
-                     f"element={element} inv=inv-{index} src=spine exit=0 "
-                     f"utime=0.1 stime=0.1 maxrss_kb=1024 "
-                     f"cmd=cc -c {element}.c\n")
+        lines.append(
+            f"START pid={10 + index} ppid=1 ts={start:.6f} "
+            f"element={element} inv=inv-{index} src=spine "
+            f"cmd=cc -c {element}.c\n"
+        )
+        lines.append(
+            f"END pid={10 + index} ppid=1 ts={start + length:.6f} "
+            f"element={element} inv=inv-{index} src=spine exit=0 "
+            f"utime=0.1 stime=0.1 maxrss_kb=1024 "
+            f"cmd=cc -c {element}.c\n"
+        )
     return "".join(lines)
 
 
@@ -121,8 +124,7 @@ _CONTEXT = {
         "distro_id": "testdistro 1.0",
         "toolchain": {"bst": "2.7.0"},
     },
-    "build_outcome": {"failed_elements": [], "failed_count": 0,
-                      "interrupted": False},
+    "build_outcome": {"failed_elements": [], "failed_count": 0, "interrupted": False},
     # `UX-380` put the second factor of `UX-116`'s question on the run
     # slice beside `builders`, and this fixture is the one that has to
     # be able to produce every identity key or the coverage clause
@@ -143,16 +145,20 @@ def _snapshot(tmp_path, name="20260821T120000Z", outcome=None):
     context = json.loads(json.dumps(_CONTEXT))
     if outcome is not None:
         context["build_outcome"] = outcome
-    (snapshot / "run" / "run-context.json").write_text(
-        json.dumps(context), encoding="utf-8")
-    (snapshot / "run" / "graph.json").write_text(json.dumps({
-        "elements": [{"uid": uid, "cache_key": "k",
-                      "requested_target": False, "element_kind": kind}
-                     for uid, kind in (("aaa.bst", "manual"),
-                                       ("bbb.bst", "cmake"),
-                                       ("ccc.bst", "autotools"))],
-        "dependencies": [], "run_identity_hash": "identity-fixture"}),
-        encoding="utf-8")
+    (snapshot / "run" / "run-context.json").write_text(json.dumps(context), encoding="utf-8")
+    (snapshot / "run" / "graph.json").write_text(
+        json.dumps(
+            {
+                "elements": [
+                    {"uid": uid, "cache_key": "k", "requested_target": False, "element_kind": kind}
+                    for uid, kind in (("aaa.bst", "manual"), ("bbb.bst", "cmake"), ("ccc.bst", "autotools"))
+                ],
+                "dependencies": [],
+                "run_identity_hash": "identity-fixture",
+            }
+        ),
+        encoding="utf-8",
+    )
     with gzip.open(snapshot / "plane2.log.gz", "wt", encoding="utf-8") as out:
         out.write(_raw())
     return snapshot
@@ -181,9 +187,10 @@ def decode(path):
                 interned = value
         if interned is not None:
             for field, _wire, value in _fields(interned):
-                table = {trackevent.INTERNED_EVENT_NAMES: event_names,
-                         trackevent.INTERNED_DEBUG_ANNOTATION_NAMES:
-                             annotation_names}.get(field)
+                table = {
+                    trackevent.INTERNED_EVENT_NAMES: event_names,
+                    trackevent.INTERNED_DEBUG_ANNOTATION_NAMES: annotation_names,
+                }.get(field)
                 if table is None:
                     continue
                 iid = name = None
@@ -229,11 +236,10 @@ def decode(path):
                         val = payload.decode("utf-8")
                 args[key] = val
         if kind == trackevent.TYPE_INSTANT:
-            instants.append({"name": event_names.get(name_iid),
-                             "args": {annotation_names[k]: v
-                                      for k, v in args.items()}})
-    return {"processes": processes, "instants": instants,
-            "root_ordering": root_ordering}
+            instants.append(
+                {"name": event_names.get(name_iid), "args": {annotation_names[k]: v for k, v in args.items()}}
+            )
+    return {"processes": processes, "instants": instants, "root_ordering": root_ordering}
 
 
 @pytest.fixture(scope="module")
@@ -243,25 +249,19 @@ def rendered(tmp_path_factory):
     out = tmp / DEFAULT_OUTPUT[FORMAT_TRACKEVENT]
     result = render(str(snapshot), str(out))
     trace = decode(out)
-    identity = next(entry for entry in trace["instants"]
-                    if entry["name"].startswith(IDENTITY_TRACK))
-    return {"snapshot": snapshot, "path": out, "result": result,
-            "trace": trace, "identity": identity}
+    identity = next(entry for entry in trace["instants"] if entry["name"].startswith(IDENTITY_TRACK))
+    return {"snapshot": snapshot, "path": out, "result": result, "trace": trace, "identity": identity}
 
 
 class TestTheTraceSaysWhoseBuildItWas:
-
     def test_the_identity_values_are_the_run_contexts_own(self, rendered):
         """Equality, field by field, against the file they came from."""
-        context = json.loads(
-            (rendered["snapshot"] / "run" / "run-context.json")
-            .read_text(encoding="utf-8"))
+        context = json.loads((rendered["snapshot"] / "run" / "run-context.json").read_text(encoding="utf-8"))
         args = rendered["identity"]["args"]
         assert args["run"] == "20260821T120000Z"
         assert args["project"] == context["run_identity"]["project_identity"]
         assert args["manifest_hash"] == context["run_identity"]["manifest_hash"]
-        assert args["project_git_commit"] == \
-            context["run_identity"]["project_git_commit"]
+        assert args["project_git_commit"] == context["run_identity"]["project_git_commit"]
         assert args["targets"] == "all.bst"
         assert args["builders"] == context["run_identity"]["scheduler"]["builders"]
         manifest = context["host_manifest"]
@@ -269,25 +269,23 @@ class TestTheTraceSaysWhoseBuildItWas:
         assert args["host_cpu_count"] == manifest["cpu_count"]
         # UX-341: the fixture's manifest is a `host/v1` one, in MB;
         # the annotation is in bytes, converted where it is read.
-        assert args["host_memory_bytes"] == hostinfo.normalised(
-            manifest)["memory_bytes"]
+        assert args["host_memory_bytes"] == hostinfo.normalised(manifest)["memory_bytes"]
         assert args["kernel_release"] == manifest["kernel_release"]
         assert args["distro_id"] == manifest["distro_id"]
         assert args["bst_version"] == manifest["toolchain"]["bst"]
 
     def test_it_says_which_bga_wrote_it(self, rendered):
         from bga import __version__
+
         assert rendered["identity"]["args"]["bga_version"] == __version__
 
-    def test_it_states_the_alignment_rather_than_leaving_it_implied(
-            self, rendered):
+    def test_it_states_the_alignment_rather_than_leaving_it_implied(self, rendered):
         args = rendered["identity"]["args"]
         assert args["anchor_element"] == rendered["result"]["anchor"]
         assert isinstance(args["plane_offset_us"], int)
         assert args["lane_order"] == LANE_ORDER_RULE
 
-    def test_two_runs_are_distinguishable_by_their_identity_alone(
-            self, tmp_path):
+    def test_two_runs_are_distinguishable_by_their_identity_alone(self, tmp_path):
         """The sharing scenario: two traces open together, and the only
         thing that tells them apart is the track a reader meets first.
         """
@@ -296,8 +294,7 @@ class TestTheTraceSaysWhoseBuildItWas:
             snapshot = _snapshot(tmp_path / name, name=name)
             out = tmp_path / f"{name}.gz"
             render(str(snapshot), str(out))
-            identity = next(e for e in decode(out)["instants"]
-                            if e["name"].startswith(IDENTITY_TRACK))
+            identity = next(e for e in decode(out)["instants"] if e["name"].startswith(IDENTITY_TRACK))
             seen.append(identity["args"]["run"])
         assert seen == ["20260821T120000Z", "20260822T090000Z"]
         assert len(set(seen)) == 2
@@ -308,24 +305,29 @@ class TestTheTraceSaysWhoseBuildItWas:
         assert run_identity(str(snapshot)) == {}
         out = tmp_path / "trace.gz"
         render(str(snapshot), str(out))
-        identity = next(e for e in decode(out)["instants"]
-                        if e["name"].startswith(IDENTITY_TRACK))
+        identity = next(e for e in decode(out)["instants"] if e["name"].startswith(IDENTITY_TRACK))
         assert identity["args"]["run"] == "20260821T120000Z"
         assert "project" not in identity["args"]
 
 
 class TestAnIncompleteRunSaysSoInTheName:
-
-    @pytest.mark.parametrize("outcome,reason", [
-        ({"failed_elements": ["app.bst"], "failed_count": 1,
-          "interrupted": False}, "failed"),
-        ({"failed_elements": [], "failed_count": 0,
-          "interrupted": True}, "interrupted"),
-        ({"failed_elements": [], "failed_count": 0, "interrupted": False,
-          "suspended": {"suspended_seconds": 42.0}}, "suspended"),
-    ])
-    def test_each_way_of_being_incomplete_reaches_the_track_name(
-            self, tmp_path, outcome, reason):
+    @pytest.mark.parametrize(
+        "outcome,reason",
+        [
+            ({"failed_elements": ["app.bst"], "failed_count": 1, "interrupted": False}, "failed"),
+            ({"failed_elements": [], "failed_count": 0, "interrupted": True}, "interrupted"),
+            (
+                {
+                    "failed_elements": [],
+                    "failed_count": 0,
+                    "interrupted": False,
+                    "suspended": {"suspended_seconds": 42.0},
+                },
+                "suspended",
+            ),
+        ],
+    )
+    def test_each_way_of_being_incomplete_reaches_the_track_name(self, tmp_path, outcome, reason):
         """All three, because `UX-156`/`UX-157`/`UX-185` are answered by
         one accessor precisely so a consumer cannot handle one and
         forget the others - and this is a new consumer."""
@@ -334,15 +336,12 @@ class TestAnIncompleteRunSaysSoInTheName:
         result = render(str(snapshot), str(out))
         assert result["incomplete_reason"] == reason
         trace = decode(out)
-        named = [entry["name"] for entry in trace["processes"]
-                 if entry["name"].startswith(IDENTITY_TRACK)]
+        named = [entry["name"] for entry in trace["processes"] if entry["name"].startswith(IDENTITY_TRACK)]
         assert named == [f"{IDENTITY_TRACK} ({reason})"], named
-        identity = next(e for e in trace["instants"]
-                        if e["name"].startswith(IDENTITY_TRACK))
+        identity = next(e for e in trace["instants"] if e["name"].startswith(IDENTITY_TRACK))
         assert identity["args"]["incomplete_reason"] == reason
 
-    def test_a_finished_run_says_nothing_rather_than_saying_fine(
-            self, rendered):
+    def test_a_finished_run_says_nothing_rather_than_saying_fine(self, rendered):
         assert rendered["result"]["incomplete_reason"] is None
         assert identity_track_name(None) == IDENTITY_TRACK
         assert "incomplete_reason" not in rendered["identity"]["args"]
@@ -356,26 +355,24 @@ class TestAnIncompleteRunSaysSoInTheName:
         from bga.ingest.models import RunContext
         from tools.bga_timeline import _incomplete_reason
 
-        for outcome in ({"failed_elements": ["a"], "interrupted": False},
-                        {"failed_elements": [], "interrupted": True},
-                        {"suspended": {"suspended_seconds": 1.0}},
-                        {"failed_elements": [], "interrupted": False}):
-            assert _incomplete_reason(outcome) == \
-                RunContext(build_outcome=outcome).incomplete_reason
+        for outcome in (
+            {"failed_elements": ["a"], "interrupted": False},
+            {"failed_elements": [], "interrupted": True},
+            {"suspended": {"suspended_seconds": 1.0}},
+            {"failed_elements": [], "interrupted": False},
+        ):
+            assert _incomplete_reason(outcome) == RunContext(build_outcome=outcome).incomplete_reason
 
 
 class TestTheLanesOpenWhereTheReaderShouldLook:
-
     def test_the_root_descriptor_asks_for_explicit_order(self, rendered):
         """Without this one packet every rank below is a hint no UI
         reads - and the trace would look correct while ordering
         nothing."""
-        assert rendered["trace"]["root_ordering"] == \
-            trackevent.PROCESS_ORDERING_EXPLICIT
+        assert rendered["trace"]["root_ordering"] == trackevent.PROCESS_ORDERING_EXPLICIT
 
     def test_identity_first_then_plane_one_then_the_elements(self, rendered):
-        ranked = sorted(rendered["trace"]["processes"],
-                        key=lambda entry: entry["rank"])
+        ranked = sorted(rendered["trace"]["processes"], key=lambda entry: entry["rank"])
         assert ranked[0]["name"].startswith(IDENTITY_TRACK)
         assert ranked[0]["rank"] == 0
         assert ranked[1]["name"] == "Plane 1: BuildStream"
@@ -386,57 +383,45 @@ class TestTheLanesOpenWhereTheReaderShouldLook:
         """And the fixture's spans run the *reverse* of its names, so a
         rank that agreed with the alphabetical pid assignment would be
         ordering nothing."""
-        lanes = [entry for entry in rendered["trace"]["processes"]
-                 if entry["name"].startswith("native: ")]
-        by_rank = [entry["name"] for entry in
-                   sorted(lanes, key=lambda entry: entry["rank"])]
-        assert by_rank == ["native: ccc.bst (autotools)",
-                           "native: bbb.bst (cmake)",
-                           "native: aaa.bst (manual)"], by_rank
+        lanes = [entry for entry in rendered["trace"]["processes"] if entry["name"].startswith("native: ")]
+        by_rank = [entry["name"] for entry in sorted(lanes, key=lambda entry: entry["rank"])]
+        assert by_rank == ["native: ccc.bst (autotools)", "native: bbb.bst (cmake)", "native: aaa.bst (manual)"], (
+            by_rank
+        )
         assert by_rank != sorted(by_rank), (
             "the ranks agree with alphabetical order - this fixture cannot "
-            "tell an ordering rule from the pid assignment")
+            "tell an ordering rule from the pid assignment"
+        )
 
     def test_each_lane_says_what_kind_of_element_it_is(self, rendered):
-        labels = {entry["name"] for entry in rendered["trace"]["processes"]
-                  if entry["name"].startswith("native: ")}
-        assert labels == {"native: aaa.bst (manual)",
-                          "native: bbb.bst (cmake)",
-                          "native: ccc.bst (autotools)"}
+        labels = {entry["name"] for entry in rendered["trace"]["processes"] if entry["name"].startswith("native: ")}
+        assert labels == {"native: aaa.bst (manual)", "native: bbb.bst (cmake)", "native: ccc.bst (autotools)"}
 
     def test_a_lane_whose_kind_is_unknown_says_only_its_name(self, tmp_path):
         """An empty pair of brackets would be worse than none."""
         snapshot = _snapshot(tmp_path)
-        graph = json.loads((snapshot / "run" / "graph.json")
-                           .read_text(encoding="utf-8"))
+        graph = json.loads((snapshot / "run" / "graph.json").read_text(encoding="utf-8"))
         for element in graph["elements"]:
             element.pop("element_kind")
-        (snapshot / "run" / "graph.json").write_text(json.dumps(graph),
-                                                     encoding="utf-8")
+        (snapshot / "run" / "graph.json").write_text(json.dumps(graph), encoding="utf-8")
         out = tmp_path / "trace.gz"
         render(str(snapshot), str(out))
-        labels = {entry["name"] for entry in decode(out)["processes"]
-                  if entry["name"].startswith("native: ")}
-        assert labels == {"native: aaa.bst (unknown)",
-                          "native: bbb.bst (unknown)",
-                          "native: ccc.bst (unknown)"}
+        labels = {entry["name"] for entry in decode(out)["processes"] if entry["name"].startswith("native: ")}
+        assert labels == {"native: aaa.bst (unknown)", "native: bbb.bst (unknown)", "native: ccc.bst (unknown)"}
 
 
 class TestTheIdentityKeysAreInTheContract:
-
     def test_every_identity_key_is_emitted_on_a_run_that_has_them(self):
         """Including `incomplete_reason`, which only an unfinished run
         emits - so the coverage is taken over the union of the fixtures
         rather than over one of them."""
         emitted = set()
-        for outcome in (None, {"failed_elements": [], "failed_count": 0,
-                               "interrupted": True}):
+        for outcome in (None, {"failed_elements": [], "failed_count": 0, "interrupted": True}):
             import tempfile
+
             with tempfile.TemporaryDirectory() as tmp:
                 snapshot = _snapshot(pathlib.Path(tmp), outcome=outcome)
-                emitted.update(
-                    key for key, _ in
-                    identity_annotations(str(snapshot), "aaa.bst", 1.0))
+                emitted.update(key for key, _ in identity_annotations(str(snapshot), "aaa.bst", 1.0))
         documented = {key for key, _ in IDENTITY_ANNOTATIONS}
         assert documented - emitted == set()
         assert emitted - documented == set()

@@ -45,6 +45,7 @@ subprocess while deriving the list from the checkout. Pointed at a
 checkout's own `bga` it passes trivially, which is exactly the blindness
 it exists to remove.
 """
+
 import argparse
 import json
 import os
@@ -61,9 +62,9 @@ FIXTURE_RUN = REPO / "tests/fixtures/macro_micro/run"
 
 _ROW = re.compile(r"^\| `bga ([a-z-]+)", re.M)
 
-OK = "ok"                  # exit 0 on a real invocation
-REFUSES = "refuses"        # non-zero, one clean line, no traceback
-REPORTS = "reports"        # runs; the exit code judges the *machine*
+OK = "ok"  # exit 0 on a real invocation
+REFUSES = "refuses"  # non-zero, one clean line, no traceback
+REPORTS = "reports"  # runs; the exit code judges the *machine*
 PARSE_ONLY = "parse-only"  # cannot be run in CI; the reason says why
 
 
@@ -128,31 +129,44 @@ class Fixtures:
         shutil.copytree(FIXTURE_RUN, self.snapshot / "run")
         (self.snapshot / "build.log").write_text("", encoding="utf-8")
         self.plane2 = self.snapshot / "plane2.json"
-        self.plane2.write_text(json.dumps({
-            "by_element": {}, "per_element_parallelism": [],
-            "cpu_time": {"per_element": {}},
-            "declared_vs_used": {"unused_candidates": []},
-        }), encoding="utf-8")
+        self.plane2.write_text(
+            json.dumps(
+                {
+                    "by_element": {},
+                    "per_element_parallelism": [],
+                    "cpu_time": {"per_element": {}},
+                    "declared_vs_used": {"unused_candidates": []},
+                }
+            ),
+            encoding="utf-8",
+        )
 
         # The store `--aggregate` reads: a project with three measured
         # snapshots in it. This is the UX-325 defect's own path.
         self.store = root / "project"
         runs = self.store / ".bga" / "runs"
-        for index, stamp in enumerate(("20260801T000000Z", "20260802T000000Z",
-                                       "20260803T000000Z")):
+        for index, stamp in enumerate(("20260801T000000Z", "20260802T000000Z", "20260803T000000Z")):
             run = runs / stamp / "run"
             run.mkdir(parents=True)
-            (run / "report.json").write_text(json.dumps({
-                "schema": "analyze/v2",
-                "producer": {"tool": "bga", "version": "0.2.0",
-                             "contracts": ["analyze/v2"]},
-            }), encoding="utf-8")
-            (run / "run-context.json").write_text(json.dumps({
-                "wall_clock": {"start_us": 0, "end_us": 1_000_000 * (index + 2)},
-                "queue_summary": {"build": {"processed": 8, "skipped": 2}},
-                "host_manifest": {"os": "linux", "arch": "x86_64",
-                                  "cpu_count": 8, "memory_mb": 16000},
-            }), encoding="utf-8")
+            (run / "report.json").write_text(
+                json.dumps(
+                    {
+                        "schema": "analyze/v2",
+                        "producer": {"tool": "bga", "version": "0.2.0", "contracts": ["analyze/v2"]},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (run / "run-context.json").write_text(
+                json.dumps(
+                    {
+                        "wall_clock": {"start_us": 0, "end_us": 1_000_000 * (index + 2)},
+                        "queue_summary": {"build": {"processed": 8, "skipped": 2}},
+                        "host_manifest": {"os": "linux", "arch": "x86_64", "cpu_count": 8, "memory_mb": 16000},
+                    }
+                ),
+                encoding="utf-8",
+            )
         (self.store / "project.conf").write_text("name: sweep\n", encoding="utf-8")
 
         # A log that is not a wrapped log, so `extract` refuses for a
@@ -206,18 +220,12 @@ def invocations(fx: Fixtures):
         # and the path is the one that needs no ambient state.
         # One argv per row, so `--load` is not reachable here;
         # `test_a_run_bundle_you_can_carry.py` holds the round trip.
-        "bundle": (OK, ["bundle", "--export", snap,
-                        "-o", str(fx.out / "carry.tar.gz")]),
-
+        "bundle": (OK, ["bundle", "--export", snap, "-o", str(fx.out / "carry.tar.gz")]),
         # --- the viewer axis, which no installed-mode step ran -------
-        "view": (OK, ["view", run, "--no-browser",
-                      "--export", str(fx.out / "report.html")]),
-        "timeline": (OK, ["timeline", snap,
-                          "-o", str(fx.out / "trace.perfetto-trace")]),
-
+        "view": (OK, ["view", run, "--no-browser", "--export", str(fx.out / "report.html")]),
+        "timeline": (OK, ["timeline", snap, "-o", str(fx.out / "trace.perfetto-trace")]),
         # --- UX-325's own defect ------------------------------------
         "snapshot": (OK, ["snapshot", "--aggregate", "--project", str(fx.store)]),
-
         # --- runs anywhere, and says what it found ------------------
         # `REPORTS`, not `OK`: `bga doctor` exits non-zero when a
         # check *fails*, and on a bare CI runner two of them do - no
@@ -226,30 +234,31 @@ def invocations(fx: Fixtures):
         # you could capture a build on, which is not a fact about the
         # wheel and is false on every runner by design.
         "doctor": (REPORTS, ["doctor"]),
-
         # --- the two whose refusal is the reachable path ------------
         "cache-logs": (REFUSES, ["cache-logs", str(fx.empty)]),
-        "extract": (REFUSES, ["extract", str(fx.empty), str(fx.not_a_log),
-                              str(fx.out / "extracted")]),
-
+        "extract": (REFUSES, ["extract", str(fx.empty), str(fx.not_a_log), str(fx.out / "extracted")]),
         # --- and the three that cannot run on a CI runner -----------
-        "capture": (PARSE_ONLY,
-                    "every capture needs `bst` and a working sandbox; the "
-                    "installed-capture job below is the exercise for it"),
-        "wrap": (PARSE_ONLY,
-                 "its only argument shape is `-- bst ...`, which needs `bst` "
-                 "on PATH; the non-`bst` path raises rather than refusing, "
-                 "which is UX-326's subject and not this sweep's to assert"),
-        "baseline": (PARSE_ONLY,
-                     "needs a git remote carrying published capture refs; "
-                     "there is none on a runner and inventing one would test "
-                     "the fixture"),
+        "capture": (
+            PARSE_ONLY,
+            "every capture needs `bst` and a working sandbox; the installed-capture job below is the exercise for it",
+        ),
+        "wrap": (
+            PARSE_ONLY,
+            "its only argument shape is `-- bst ...`, which needs `bst` "
+            "on PATH; the non-`bst` path raises rather than refusing, "
+            "which is UX-326's subject and not this sweep's to assert",
+        ),
+        "baseline": (
+            PARSE_ONLY,
+            "needs a git remote carrying published capture refs; "
+            "there is none on a runner and inventing one would test "
+            "the fixture",
+        ),
     }
 
 
 def _run(bga, argv, cwd):
-    return subprocess.run([bga, *argv], capture_output=True, text=True,
-                          cwd=cwd, timeout=300)
+    return subprocess.run([bga, *argv], capture_output=True, text=True, cwd=cwd, timeout=300)
 
 
 def sweep(bga: str, verbose: bool = True) -> int:
@@ -270,7 +279,8 @@ def sweep(bga: str, verbose: bool = True) -> int:
         if missing:
             failures.append(
                 f"documented but not swept: {missing}. Add an entry to "
-                "invocations() - PARSE_ONLY with a reason if it cannot run.")
+                "invocations() - PARSE_ONLY with a reason if it cannot run."
+            )
         stale = sorted(set(plan) - set(commands))
         if stale:
             failures.append(f"swept but not documented: {stale}")
@@ -278,9 +288,7 @@ def sweep(bga: str, verbose: bool = True) -> int:
         for command in parseable:
             done = _run(bga, [command, "--help"], cwd)
             if done.returncode != 0:
-                failures.append(
-                    f"`bga {command} --help` exited {done.returncode}\n"
-                    f"{done.stdout}{done.stderr}")
+                failures.append(f"`bga {command} --help` exited {done.returncode}\n{done.stdout}{done.stderr}")
                 continue
             if verbose:
                 print(f"  parse   bga {command} --help")
@@ -299,16 +307,13 @@ def sweep(bga: str, verbose: bool = True) -> int:
             joined = done.stdout + done.stderr
             label = " ".join(detail[:2])
             if "Traceback (most recent call last)" in joined:
-                failures.append(
-                    f"`bga {label} ...` printed a traceback:\n{joined[-2000:]}")
+                failures.append(f"`bga {label} ...` printed a traceback:\n{joined[-2000:]}")
             elif verdict == OK and done.returncode != 0:
-                failures.append(
-                    f"`bga {label} ...` exited {done.returncode}, expected 0\n"
-                    f"{joined[-2000:]}")
+                failures.append(f"`bga {label} ...` exited {done.returncode}, expected 0\n{joined[-2000:]}")
             elif verdict == REFUSES and done.returncode == 0:
                 failures.append(
-                    f"`bga {label} ...` succeeded where the sweep records a "
-                    "refusal; the entry is out of date")
+                    f"`bga {label} ...` succeeded where the sweep records a refusal; the entry is out of date"
+                )
             elif verdict == REPORTS and not joined.strip():
                 # The only thing a `REPORTS` entry can get wrong: any
                 # exit code is allowed, so silence is what would mean
@@ -316,26 +321,27 @@ def sweep(bga: str, verbose: bool = True) -> int:
                 failures.append(
                     f"`bga {label} ...` printed nothing; a command whose "
                     f"exit code judges the machine has to say what it "
-                    f"found")
+                    f"found"
+                )
             elif verbose:
                 print(f"  {verdict:7s} bga {label} ... -> {done.returncode}")
 
     if failures:
-        print(f"\n{len(failures)} failure(s) sweeping {len(parseable)} "
-              f"command(s) against {bga}:\n", file=sys.stderr)
+        print(f"\n{len(failures)} failure(s) sweeping {len(parseable)} command(s) against {bga}:\n", file=sys.stderr)
         for failure in failures:
             print(f"* {failure}\n", file=sys.stderr)
         return 1
-    print(f"\n{len(parseable)} commands parsed ({len(commands)} documented), "
-          f"{ran} real invocation(s) clean, {skipped} parse-only, "
-          f"against {bga}")
+    print(
+        f"\n{len(parseable)} commands parsed ({len(commands)} documented), "
+        f"{ran} real invocation(s) clean, {skipped} parse-only, "
+        f"against {bga}"
+    )
     return 0
 
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--bga", required=True,
-                        help="the installed `bga` entry point to drive")
+    parser.add_argument("--bga", required=True, help="the installed `bga` entry point to drive")
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args(argv)
     if not os.path.exists(args.bga):

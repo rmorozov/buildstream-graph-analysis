@@ -4,6 +4,7 @@ moving the 9800 every other `bst build` still gets - `--option` only
 overrides what `bst show`/`bst build` resolve to, never the file on
 disk.
 """
+
 import pathlib
 
 import yaml

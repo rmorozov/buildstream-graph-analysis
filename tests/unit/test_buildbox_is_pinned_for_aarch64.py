@@ -8,6 +8,7 @@ The staging test needs the network (`cache.nixos.org`) and downloads
 ~70 MiB, so it is opt-in via `BGA_TEST_NIX_NETWORK=1` rather than run
 by default - the shape tests below need neither and run always.
 """
+
 import os
 
 import pytest
@@ -46,19 +47,17 @@ class TestThePinIsDeclared:
 
         out = nix_buildbox.link(str(tmp_path), "aarch64")
 
-        assert os.path.realpath(os.path.join(out, "buildbox-run")) == \
-            os.path.join(store_bin, "buildbox-run-bubblewrap")
-        assert os.path.realpath(os.path.join(out, "buildbox-casd")) == \
-            os.path.join(store_bin, "buildbox-casd")
+        assert os.path.realpath(os.path.join(out, "buildbox-run")) == os.path.join(store_bin, "buildbox-run-bubblewrap")
+        assert os.path.realpath(os.path.join(out, "buildbox-casd")) == os.path.join(store_bin, "buildbox-casd")
 
 
-@pytest.mark.skipif(not os.environ.get("BGA_TEST_NIX_NETWORK"),
-                    reason="downloads the pinned buildbox closure from "
-                           "cache.nixos.org - set BGA_TEST_NIX_NETWORK=1")
+@pytest.mark.skipif(
+    not os.environ.get("BGA_TEST_NIX_NETWORK"),
+    reason="downloads the pinned buildbox closure from cache.nixos.org - set BGA_TEST_NIX_NETWORK=1",
+)
 class TestTheStagedClosure:
     def test_buildbox_casd_and_buildbox_run_are_staged(self, tmp_path):
         path = nix_buildbox.stage(str(tmp_path), "aarch64")
 
         assert os.path.isfile(os.path.join(path, "buildbox-casd"))
-        assert os.path.realpath(os.path.join(path, "buildbox-run")).endswith(
-            "/bin/buildbox-run-bubblewrap")
+        assert os.path.realpath(os.path.join(path, "buildbox-run")).endswith("/bin/buildbox-run-bubblewrap")

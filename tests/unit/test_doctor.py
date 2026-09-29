@@ -11,6 +11,7 @@ cannot run says so instead of passing, that two problems wearing the
 same error message get different remedies, and that the exit code means
 what a script would assume.
 """
+
 import json
 import os
 import re
@@ -41,6 +42,7 @@ def _by_id(checks, check_id):
     assert len(found) == 1, f"expected one {check_id!r}, got {[c['id'] for c in checks]}"
     return found[0]
 
+
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
@@ -52,10 +54,8 @@ def bare_project(tmp_path):
     root = tmp_path / "bare"
     (root / "elements").mkdir(parents=True)
     (root / "files" / "src").mkdir(parents=True)
-    (root / "project.conf").write_text(
-        "name: bare-project\nmin-version: 2.0\nelement-path: elements\n")
-    (root / "elements" / "all.bst").write_text(
-        "kind: import\nsources:\n- kind: local\n  path: files/src\n")
+    (root / "project.conf").write_text("name: bare-project\nmin-version: 2.0\nelement-path: elements\n")
+    (root / "elements" / "all.bst").write_text("kind: import\nsources:\n- kind: local\n  path: files/src\n")
     (root / "files" / "src" / "README").write_text("nothing executable here\n")
     return root
 
@@ -81,14 +81,11 @@ class TestItNeverChangesAnything:
         assert before == after
 
     def test_no_new_files_appear(self, bare_project):
-        listing = sorted(
-            os.path.join(r, f) for r, _d, fs in os.walk(bare_project) for f in fs)
+        listing = sorted(os.path.join(r, f) for r, _d, fs in os.walk(bare_project) for f in fs)
 
         run_checks(str(bare_project))
 
-        assert sorted(
-            os.path.join(r, f) for r, _d, fs in os.walk(bare_project) for f in fs
-        ) == listing
+        assert sorted(os.path.join(r, f) for r, _d, fs in os.walk(bare_project) for f in fs) == listing
 
 
 class TestAnUnrunnableCheckSaysSoRatherThanPassing:
@@ -131,8 +128,7 @@ class TestTheCensusChecksAreTwoDifferentThings:
         capture. That is a coverage fact with a remedy (`--trace-spine`),
         not a broken environment."""
         project = os.path.join(REPO, "examples", "01-resource-contention")
-        if not os.path.isfile(
-                os.path.join(project, "files", "runtime", "bin", "sh")):
+        if not os.path.isfile(os.path.join(project, "files", "runtime", "bin", "sh")):
             pytest.skip("examples/01 is not staged - run examples/stage_runtimes.sh")
 
         findings = {f["id"]: f for f in check_staged_sources(project)}
@@ -143,8 +139,7 @@ class TestTheCensusChecksAreTwoDifferentThings:
 
     def test_an_all_dynamic_project_is_not_flagged_blind(self):
         project = os.path.join(REPO, "examples", "06-macro-micro-optimization")
-        if not os.path.isfile(
-                os.path.join(project, "files", "toolchain", "usr", "bin", "gcc")):
+        if not os.path.isfile(os.path.join(project, "files", "toolchain", "usr", "bin", "gcc")):
             pytest.skip("examples/06 is not staged - run examples/stage_cpp_toolchain.sh")
 
         findings = {f["id"]: f for f in check_staged_sources(project)}
@@ -153,7 +148,7 @@ class TestTheCensusChecksAreTwoDifferentThings:
 
 
 class TestTwoProblemsWearingOneErrorGetDifferentRemedies:
-    """"No element plugin registered for kind 'cmake'" is produced both
+    """ "No element plugin registered for kind 'cmake'" is produced both
     by a missing `buildstream-plugins` **and** by a project that has not
     declared it. The remedies are opposites, and telling a user to
     install what they already have is how a diagnostic loses its
@@ -164,16 +159,15 @@ class TestTwoProblemsWearingOneErrorGetDifferentRemedies:
         root = tmp_path / "nocmake"
         (root / "elements").mkdir(parents=True)
         (root / "files" / "src").mkdir(parents=True)
-        (root / "project.conf").write_text(
-            "name: no-plugins-project\nmin-version: 2.0\nelement-path: elements\n")
-        (root / "elements" / "all.bst").write_text(
-            "kind: cmake\nsources:\n- kind: local\n  path: files/src\n")
+        (root / "project.conf").write_text("name: no-plugins-project\nmin-version: 2.0\nelement-path: elements\n")
+        (root / "elements" / "all.bst").write_text("kind: cmake\nsources:\n- kind: local\n  path: files/src\n")
         (root / "files" / "src" / "CMakeLists.txt").write_text("")
         return root
 
     def _remedy(self, project, installed, monkeypatch):
         import tools.bga_doctor as doctor
         from tests.unit._bst_env import bst_env  # UX-801: `bst show` writes the CAS
+
         monkeypatch.setattr(doctor, "_plugins_package_installed", lambda: installed)
         with bst_env(project.parent / "home"):
             [finding] = doctor.check_project_loads(str(project))
@@ -184,6 +178,7 @@ class TestTwoProblemsWearingOneErrorGetDifferentRemedies:
     @pytest.mark.skipif(not os.environ.get("PATH"), reason="no PATH")
     def test_the_package_missing_says_install_it(self, undeclared_cmake, monkeypatch):
         import shutil
+
         if not shutil.which("bst"):
             pytest.skip("bst not found on PATH")
 
@@ -194,6 +189,7 @@ class TestTwoProblemsWearingOneErrorGetDifferentRemedies:
     @pytest.mark.bst
     def test_the_package_present_says_declare_it(self, undeclared_cmake, monkeypatch):
         import shutil
+
         if not shutil.which("bst"):
             pytest.skip("bst not found on PATH")
 
@@ -235,14 +231,12 @@ class TestTheContractAScriptWouldAssume:
         assert "-> r" in rendered
 
     def test_a_remedy_is_printed_for_everything_that_is_not_ok(self):
-        checks = [{"id": "x", "status": WARN, "summary": "s",
-                   "remedy": "do the thing", "detail": []}]
+        checks = [{"id": "x", "status": WARN, "summary": "s", "remedy": "do the thing", "detail": []}]
 
         assert "do the thing" in format_text(checks, None)
 
     def test_an_ok_check_does_not_print_a_remedy(self):
-        checks = [{"id": "x", "status": OK, "summary": "fine",
-                   "remedy": "unused", "detail": []}]
+        checks = [{"id": "x", "status": OK, "summary": "fine", "remedy": "unused", "detail": []}]
 
         assert "unused" not in format_text(checks, None)
 
@@ -267,6 +261,7 @@ def test_the_compiler_check_is_the_one_the_capture_performs():
     assert compilers, "compile_hook no longer resolves a compiler by name"
 
     import shutil
+
     if not any(shutil.which(name) for name in compilers):
         assert check_compiler()["status"] == FAIL
         return
@@ -274,15 +269,17 @@ def test_the_compiler_check_is_the_one_the_capture_performs():
     # only pass - a compiler that cannot link `-static` warns, naming
     # which capability is missing, rather than reporting a spine that
     # will not build as a healthy environment.
-    assert check_compiler()["status"] in (OK, WARN), (
-        f"doctor and compile_hook disagree about {sorted(compilers)}")
+    assert check_compiler()["status"] in (OK, WARN), f"doctor and compile_hook disagree about {sorted(compilers)}"
 
 
 def test_doctor_is_reachable_through_the_cli():
     """It is only useful if it is the thing a confused user can find."""
     result = subprocess.run(
         [sys.executable, "-m", "bga.cli", "doctor", "--format", "json"],
-        capture_output=True, text=True, cwd=REPO, timeout=300,
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=300,
     )
 
     assert result.returncode in (0, 1), result.stderr
@@ -306,16 +303,17 @@ class TestTheLoadProbeUsesTheProjectsOwnElements:
             (root / relative).write_text("kind: manual\n")
 
         assert discover_elements(str(tmp_path / "p")) == [
-            "z.bst", os.path.join("components", "b.bst"),
-            os.path.join("components", "deep", "c.bst")]
+            "z.bst",
+            os.path.join("components", "b.bst"),
+            os.path.join("components", "deep", "c.bst"),
+        ]
 
     def test_a_declared_element_path_is_honoured(self, tmp_path):
         from tools.bga_doctor import discover_elements, element_path
 
         project = tmp_path / "p"
         (project / "parts").mkdir(parents=True)
-        (project / "project.conf").write_text(
-            "name: p\nmin-version: 2.0\nelement-path: parts\n")
+        (project / "project.conf").write_text("name: p\nmin-version: 2.0\nelement-path: parts\n")
         (project / "parts" / "only.bst").write_text("kind: manual\n")
 
         assert element_path(str(project)) == "parts"
@@ -329,7 +327,7 @@ class TestTheLoadProbeUsesTheProjectsOwnElements:
         assert element_path(str(tmp_path)) == "elements"
 
     def test_a_project_with_no_elements_warns_rather_than_failing(self, tmp_path):
-        """"Nothing to probe" is not "does not load" - the second sends a
+        """ "Nothing to probe" is not "does not load" - the second sends a
         user hunting a plugin problem that is not there."""
         from tools.bga_doctor import check_project_loads
 
@@ -345,20 +343,20 @@ class TestTheLoadProbeUsesTheProjectsOwnElements:
     def test_a_project_whose_only_element_is_not_all_bst_passes(self, tmp_path):
         """The acceptance: `examples/06` with `all.bst` renamed."""
         import shutil
+
         if not shutil.which("bst"):
             pytest.skip("bst not found on PATH")
         source = os.path.join(REPO, "examples", "06-macro-micro-optimization")
-        if not os.path.isfile(
-                os.path.join(source, "files", "toolchain", "usr", "bin", "gcc")):
+        if not os.path.isfile(os.path.join(source, "files", "toolchain", "usr", "bin", "gcc")):
             pytest.skip("examples/06 is not staged - run examples/stage_cpp_toolchain.sh")
 
         project = tmp_path / "renamed"
         shutil.copytree(source, project, symlinks=True)
         shutil.rmtree(project / "optimized", ignore_errors=True)
-        os.rename(project / "elements" / "all.bst",
-                  project / "elements" / "everything.bst")
+        os.rename(project / "elements" / "all.bst", project / "elements" / "everything.bst")
 
         from tests.unit._bst_env import bst_env  # UX-801: `bst show` writes the CAS
+
         with bst_env(tmp_path / "home"):
             [finding] = check_project_loads(str(project))
 
@@ -370,21 +368,20 @@ class TestTheLoadProbeUsesTheProjectsOwnElements:
         """A single element failing on its own is a fact about that
         element. The probe falls through to the next one."""
         import shutil
+
         if not shutil.which("bst"):
             pytest.skip("bst not found on PATH")
 
         project = tmp_path / "mixed"
         (project / "elements").mkdir(parents=True)
         (project / "files").mkdir()
-        (project / "project.conf").write_text(
-            "name: mixed\nmin-version: 2.0\nelement-path: elements\n")
+        (project / "project.conf").write_text("name: mixed\nmin-version: 2.0\nelement-path: elements\n")
         # Sorts first, and names a kind no plugin provides.
-        (project / "elements" / "aaa-broken.bst").write_text(
-            "kind: cmake\nsources:\n- kind: local\n  path: files\n")
-        (project / "elements" / "zzz-fine.bst").write_text(
-            "kind: import\nsources:\n- kind: local\n  path: files\n")
+        (project / "elements" / "aaa-broken.bst").write_text("kind: cmake\nsources:\n- kind: local\n  path: files\n")
+        (project / "elements" / "zzz-fine.bst").write_text("kind: import\nsources:\n- kind: local\n  path: files\n")
 
         from tests.unit._bst_env import bst_env  # UX-801: `bst show` writes the CAS
+
         with bst_env(tmp_path / "home"):
             [finding] = check_project_loads(str(project))
 
@@ -409,14 +406,12 @@ class TestTheCompilerCheckProbesRatherThanChecks:
         assert "-shared" in source and "-fPIC" in source
         assert "-static" in source
 
-    def test_a_compiler_that_cannot_link_static_warns_and_says_which(
-            self, monkeypatch):
+    def test_a_compiler_that_cannot_link_static_warns_and_says_which(self, monkeypatch):
         """Not FAIL: Plane 1, Plane 3 and the hook all still work. Not
         OK either, because `--trace-spine` will not."""
         import tools.bga_doctor as doctor
 
-        monkeypatch.setattr(doctor, "_compiles",
-                            lambda argv: "-static" not in argv)
+        monkeypatch.setattr(doctor, "_compiles", lambda argv: "-static" not in argv)
 
         finding = doctor.check_compiler()
 
@@ -475,8 +470,7 @@ class TestTheWholeChainProbe:
 
         assert finding["status"] == SKIP
 
-    def test_without_a_staged_runtime_it_skips_and_names_the_script(
-            self, monkeypatch):
+    def test_without_a_staged_runtime_it_skips_and_names_the_script(self, monkeypatch):
         """It will not build a sysroot: a diagnostic that builds a
         sysroot is not a diagnostic.
 
@@ -487,8 +481,7 @@ class TestTheWholeChainProbe:
         """
         import tools.bga_doctor as doctor
 
-        monkeypatch.setattr(doctor.shutil, "which",
-                            lambda name: "/usr/bin/bst" if name == "bst" else None)
+        monkeypatch.setattr(doctor.shutil, "which", lambda name: "/usr/bin/bst" if name == "bst" else None)
         monkeypatch.setattr(doctor, "_find_stageable_runtime", lambda: None)
 
         [finding] = doctor.check_capture_chain()
@@ -517,8 +510,7 @@ class TestTheWholeChainProbe:
         if user_site and user_site in sys.path and os.path.isdir(user_site):
             assert user_site in env["PYTHONPATH"]
 
-    def test_the_users_config_is_copied_into_the_throwaway_home(
-            self, tmp_path, monkeypatch):
+    def test_the_users_config_is_copied_into_the_throwaway_home(self, tmp_path, monkeypatch):
         """UX-805: without it `bst` reads no `buildstream.conf` in the
         throwaway `HOME` and falls back to a 5%-of-total reserve that a
         near-full disk can meet before any build runs. Both config file
@@ -566,9 +558,7 @@ class TestTheWholeChainProbe:
         ordinary = doctor._chain_build_remedy(["some other bst error"])
         assert "reserved-disk-space" not in ordinary
 
-        hinted = doctor._chain_build_remedy(
-            ["[main:base.bst] FAILURE Staging local files into CAS",
-             "Cache too full"])
+        hinted = doctor._chain_build_remedy(["[main:base.bst] FAILURE Staging local files into CAS", "Cache too full"])
         assert "reserved-disk-space" in hinted
         assert "5%" in hinted
 
@@ -606,8 +596,7 @@ class TestTheWholeChainProbe:
         if not shutil.which("bst") or doctor._find_stageable_runtime() is None:
             pytest.skip("bst or a staged runtime is missing")
 
-        records = [f for f in doctor.check_capture_chain()
-                   if f["id"] == "chain-records"]
+        records = [f for f in doctor.check_capture_chain() if f["id"] == "chain-records"]
 
         assert records and records[0]["status"] in (OK, WARN)
         if records[0]["status"] == WARN:
@@ -640,10 +629,10 @@ class TestBstBesideTheConsoleScriptButNotOnPath:
         assert "activate" in finding["remedy"]
         assert "pip install" not in finding["remedy"], (
             "telling a user to install what is already beside the binary "
-            "they just ran is how a diagnostic loses its reader")
+            "they just ran is how a diagnostic loses its reader"
+        )
 
-    def test_with_no_bst_anywhere_the_install_remedy_stands(
-            self, tmp_path, monkeypatch):
+    def test_with_no_bst_anywhere_the_install_remedy_stands(self, tmp_path, monkeypatch):
         import tools.bga_doctor as doctor
 
         monkeypatch.setattr(doctor.sys, "executable", str(tmp_path / "python3"))
@@ -658,15 +647,14 @@ class TestBstBesideTheConsoleScriptButNotOnPath:
 class TestScratchAndTmpdirChecks:
     """UX-155: the two conditions that produced a real field report."""
 
-    def test_a_relative_tmpdir_fails_and_the_remedy_names_the_error(
-            self, tmp_path, monkeypatch):
+    def test_a_relative_tmpdir_fails_and_the_remedy_names_the_error(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         monkeypatch.setenv("TMPDIR", "rel_tmp")
         found = _by_id(check_scratch(None), "tmpdir-absolute")
         assert found["status"] == FAIL
         assert "mkdtemp" in found["remedy"], (
-            "the remedy should quote the error buildbox-casd prints, since that "
-            "is the string the user will search for")
+            "the remedy should quote the error buildbox-casd prints, since that is the string the user will search for"
+        )
         assert str(tmp_path) in found["remedy"]
 
     def test_an_absolute_tmpdir_passes(self, monkeypatch):
@@ -692,8 +680,7 @@ class TestScratchAndTmpdirChecks:
         assert not (tmp_path / ".bga").exists()
         assert sorted(p.name for p in tmp_path.iterdir()) == ["project.conf"]
 
-    def test_it_does_not_create_a_bga_directory_in_a_path_that_is_not_one(
-            self, tmp_path):
+    def test_it_does_not_create_a_bga_directory_in_a_path_that_is_not_one(self, tmp_path):
         """Probing used to `makedirs` the whole chain, leaving `.bga` behind in
         a directory the user only mistyped."""
         missing = tmp_path / "not-a-project"

@@ -15,6 +15,7 @@ an empty cache, the rows therefore overlap, and the block and the
 sentence both have to say so rather than quietly publishing a sum that
 is not the cache's content.
 """
+
 import pathlib
 
 import pytest
@@ -87,6 +88,7 @@ class TestTheWalkReadsARealCache:
         the subtree it names is not, which is what an eviction between
         `bst build` and the walk leaves behind."""
         import shutil
+
         cache = tmp_path / "cache"
         shutil.copytree(FIXTURE, cache)
         # `usr/` under `base` - b397bacc..., the one subdirectory its
@@ -107,8 +109,7 @@ class TestTheWalkReadsARealCache:
         it - the suffix dropped, separators to `-`, the rest to `_`."""
         assert artifact_weight.normal_name("base/thing.bst") == "base-thing"
         assert artifact_weight.normal_name("a+b.bst") == "a_b"
-        assert artifact_weight.ref_path("/c", "p", "sub/e.bst", "k") == (
-            "/c/artifacts/refs/p/sub-e/k")
+        assert artifact_weight.ref_path("/c", "p", "sub/e.bst", "k") == ("/c/artifacts/refs/p/sub-e/k")
 
 
 class _Ctx:
@@ -131,8 +132,7 @@ class TestTheBlockSaysWhatTheNumberIs:
         """Not a block of zeros: a capture taken without
         `--artifact-weights` looked at no cache at all."""
         assert compute_artifact_weights(_Ctx(None)) == {}
-        assert compute_artifact_weights(_Ctx(
-            {"elements": {"a.bst": {"source": "ref_absent"}}})) == {}
+        assert compute_artifact_weights(_Ctx({"elements": {"a.bst": {"source": "ref_absent"}}})) == {}
 
     def test_the_sentence_says_the_number_is_walked(self, walked):
         finding = _artifact_weight_findings(compute_artifact_weights(_Ctx(walked)))[0]

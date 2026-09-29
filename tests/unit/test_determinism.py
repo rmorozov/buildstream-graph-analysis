@@ -4,6 +4,7 @@ No file anywhere previously implemented the repeated-run comparison the
 spec calls for; no bga/validation/ package existed. Added
 bga/validation/determinism.py::run_determinism_check.
 """
+
 import json
 
 import pytest
@@ -17,11 +18,14 @@ def _write_run_dir(tmp_path):
     run_context = {
         "trace_epsilon_us": 1000,
         "wall_clock": {"start_us": 0, "end_us": 200000},
-        "max_jobs": 2, "resource_capacities": {"PROCESS": 2},
+        "max_jobs": 2,
+        "resource_capacities": {"PROCESS": 2},
     }
     graph = {
         "elements": [
-            {"uid": "a.bst"}, {"uid": "b.bst"}, {"uid": "c.bst", "requested_target": True},
+            {"uid": "a.bst"},
+            {"uid": "b.bst"},
+            {"uid": "c.bst", "requested_target": True},
         ],
         "dependencies": [
             {"predecessor": "a.bst", "successor": "c.bst"},
@@ -30,12 +34,27 @@ def _write_run_dir(tmp_path):
     }
     trace = {
         "spans": [
-            {"task_key": "a.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 50000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "b.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 49000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "c.bst|BUILD|BUILD|0", "ts_us": 50000, "dur_us": 10000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
+            {
+                "task_key": "a.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 50000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "b.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 49000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "c.bst|BUILD|BUILD|0",
+                "ts_us": 50000,
+                "dur_us": 10000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
         ],
         "phases": [],
     }
@@ -105,6 +124,7 @@ def test_full_scale_determinism_check(tmp_path):
 # check is the only way to catch that class of bug, e.g. P1-34's
 # hash-derived replay fifo priority. ---
 
+
 @pytest.mark.slow
 def test_cross_process_determinism_check_passes_on_deterministic_pipeline(tmp_path):
     """After P1-34's fix, the real pipeline (including replay's fifo
@@ -154,7 +174,4 @@ def test_cross_process_determinism_check_would_have_caught_p1_34(tmp_path, monke
     report = run_cross_process_determinism_check(run_dir, n=3)
 
     assert report["deterministic"] is False
-    assert any(
-        "_test_only_hash_derived_field" in d
-        for m in report["mismatches"] for d in m["diffs"]
-    )
+    assert any("_test_only_hash_derived_field" in d for m in report["mismatches"] for d in m["diffs"])

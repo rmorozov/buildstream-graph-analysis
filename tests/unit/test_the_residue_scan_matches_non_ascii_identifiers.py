@@ -3,6 +3,7 @@ such as `café` could never be indexed or matched, wholly within one
 chunk or split across a streamed-chunk boundary (UX-1069). NFC and NFD
 forms of the same name must also compare equal on either side.
 """
+
 import gzip
 import io
 import tarfile
@@ -16,9 +17,11 @@ assert NFC_CAFE != NFD_CAFE
 
 
 def _archive(path, members: dict) -> None:
-    with open(path, "wb") as raw, \
-            gzip.GzipFile(filename="", fileobj=raw, mode="wb", mtime=0) as compressed, \
-            tarfile.open(fileobj=compressed, mode="w", format=tarfile.USTAR_FORMAT) as archive:
+    with (
+        open(path, "wb") as raw,
+        gzip.GzipFile(filename="", fileobj=raw, mode="wb", mtime=0) as compressed,
+        tarfile.open(fileobj=compressed, mode="w", format=tarfile.USTAR_FORMAT) as archive,
+    ):
         for name, body in members.items():
             data = body.encode("utf-8")
             archive.addfile(bundle.neutral_tarinfo(name, len(data)), io.BytesIO(data))

@@ -18,6 +18,7 @@ and Plane 2's `binary_cost` critical-path share - never through
 `bga.cli`'s own projection helpers, so the finding cannot invent a
 number neither of those recomputes.
 """
+
 import contextlib
 import io
 import json
@@ -43,8 +44,7 @@ def _analyzed():
     from bga.cli import main
 
     buffer = io.StringIO()
-    with contextlib.redirect_stdout(buffer), \
-            contextlib.redirect_stderr(io.StringIO()):
+    with contextlib.redirect_stdout(buffer), contextlib.redirect_stderr(io.StringIO()):
         main(["analyze", str(FIXTURE / "run"), "--format", "json"])
     return json.loads(buffer.getvalue())
 
@@ -60,9 +60,7 @@ def finding(analyzed):
         (f for f in analyzed["findings"] if f["id"] == "remote-execution-whatif"),
         None,
     )
-    assert found is not None, (
-        "tests/fixtures/macro_micro carries a Plane 2 binary_cost - the "
-        "finding must fire on it")
+    assert found is not None, "tests/fixtures/macro_micro carries a Plane 2 binary_cost - the finding must fire on it"
     return found
 
 
@@ -84,7 +82,8 @@ class TestTheTwoFiguresAreNotInvented:
     reddens here either way."""
 
     def test_unbounded_builders_matches_the_sweeps_own_unbounded_row(
-        self, finding,
+        self,
+        finding,
     ):
         from bga.analyzer import BuildEfficiencyAnalyzer
 
@@ -93,7 +92,9 @@ class TestTheTwoFiguresAreNotInvented:
         analyzer.normalize()
         scheduler = analyzer.replay_scheduler
         sweep = scheduler.capacity_sweep(
-            resource="PROCESS", min_capacity=1, max_capacity=len(scheduler.tasks),
+            resource="PROCESS",
+            min_capacity=1,
+            max_capacity=len(scheduler.tasks),
         )
         want_after = sweep.sweeps[-1]["makespan_us"]
 
@@ -101,7 +102,9 @@ class TestTheTwoFiguresAreNotInvented:
         assert got["wall_us_after"] == pytest.approx(want_after)
 
     def test_compiler_offload_matches_the_by_binary_critical_path_share(
-        self, finding, analyzed,
+        self,
+        finding,
+        analyzed,
     ):
         """Per element, restricted to the critical path: a compile
         cannot remove more wall than its own element had, and an

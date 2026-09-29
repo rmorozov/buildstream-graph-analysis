@@ -9,6 +9,7 @@ backlog, because a guard that asserts today's rate is a guard that
 reddens on the next honest round - the numbers are supposed to move.
 What must not move is what each phrase counts.
 """
+
 import pathlib
 import sys
 
@@ -42,34 +43,33 @@ class TestItReadsTheOutcomeAndOnlyTheOutcome:
         """The Motivation quotes other items constantly - that is what
         the backlog is for. Counting those would make every item that
         cites `UX-420` look like it found a guard of its own."""
-        text = task(outcome="Nothing notable.",
-                    motivation="UX-412's C3 did not discriminate.")
+        text = task(outcome="Nothing notable.", motivation="UX-412's C3 did not discriminate.")
         found = bands.read(written(tmp_path, "UX-0001-x.md", text))
         assert found["non_discriminating"] is False, found
 
 
 class TestEachSignalCountsWhatItSays:
-    @pytest.mark.parametrize("key,outcome", (
-        ("falsified", "### Mutations verified red and reverted (3)"),
-        ("falsified", "One mutation verified red and reverted."),
-        ("non_discriminating", "B2 did not discriminate until D3 said so."),
-        ("non_discriminating", "a non-discriminating guard of its own"),
-        # `premise_false` stopped being a phrase in `UX-586`: it reads
-        # the declared field, and the four ways this repository wrote
-        # the sentence are in test_the_premise_is_a_declared_field.py.
-        ("premise_false", "**Premise:** falsified - it did not hold."),
-        ("premise_false", "Premise: falsified - it did not hold."),
-    ))
-    def test_a_phrase_the_repository_writes_is_caught(self, tmp_path, key,
-                                                      outcome):
+    @pytest.mark.parametrize(
+        "key,outcome",
+        (
+            ("falsified", "### Mutations verified red and reverted (3)"),
+            ("falsified", "One mutation verified red and reverted."),
+            ("non_discriminating", "B2 did not discriminate until D3 said so."),
+            ("non_discriminating", "a non-discriminating guard of its own"),
+            # `premise_false` stopped being a phrase in `UX-586`: it reads
+            # the declared field, and the four ways this repository wrote
+            # the sentence are in test_the_premise_is_a_declared_field.py.
+            ("premise_false", "**Premise:** falsified - it did not hold."),
+            ("premise_false", "Premise: falsified - it did not hold."),
+        ),
+    )
+    def test_a_phrase_the_repository_writes_is_caught(self, tmp_path, key, outcome):
         found = bands.read(written(tmp_path, "UX-0001-x.md", task(outcome)))
         assert found[key] is True, (key, outcome, found)
 
-    @pytest.mark.parametrize("key", ("falsified", "non_discriminating",
-                                     "premise_false"))
+    @pytest.mark.parametrize("key", ("falsified", "non_discriminating", "premise_false"))
     def test_an_ordinary_outcome_trips_nothing(self, tmp_path, key):
-        found = bands.read(written(tmp_path, "UX-0001-x.md", task(
-            "The gap is closed and the suite is green.")))
+        found = bands.read(written(tmp_path, "UX-0001-x.md", task("The gap is closed and the suite is green.")))
         assert found[key] is False, (key, found)
 
 
@@ -80,24 +80,30 @@ class TestTheDeviationSignalIsInverted:
     would report a disciplined round as a sloppy one."""
 
     def test_none_is_not_a_deviation(self, tmp_path):
-        found = bands.read(written(tmp_path, "UX-0001-x.md", task(
-            "### Deviation from the Required Fix\n\n- **None.** It holds.")))
+        found = bands.read(
+            written(tmp_path, "UX-0001-x.md", task("### Deviation from the Required Fix\n\n- **None.** It holds."))
+        )
         assert found["deviation_stated"] is True
         assert found["deviated"] is False, found
 
     def test_anything_else_is(self, tmp_path):
-        found = bands.read(written(tmp_path, "UX-0001-x.md", task(
-            "### Deviation from the Required Fix\n\n- The acceptance test's "
-            "first clause cannot be met by the design it mandates.")))
+        found = bands.read(
+            written(
+                tmp_path,
+                "UX-0001-x.md",
+                task(
+                    "### Deviation from the Required Fix\n\n- The acceptance test's "
+                    "first clause cannot be met by the design it mandates."
+                ),
+            )
+        )
         assert found["deviated"] is True, found
 
-    def test_an_item_with_no_such_section_is_counted_neither_way(self,
-                                                                 tmp_path):
+    def test_an_item_with_no_such_section_is_counted_neither_way(self, tmp_path):
         """Outcomes predating the heading exist. Counting them as
         deviations would put a step in the series that is a change of
         convention rather than a change of behaviour."""
-        found = bands.read(written(tmp_path, "UX-0001-x.md",
-                                   task("Closed, and nothing to add.")))
+        found = bands.read(written(tmp_path, "UX-0001-x.md", task("Closed, and nothing to add.")))
         assert found["deviation_stated"] is False
         assert found["deviated"] is False, found
 
@@ -108,11 +114,9 @@ class TestTheCensusAndTheReport:
         a window over lexical order is a window over time only while
         that holds, and `test_docs_links_and_commands.py` enforces it."""
         for index in range(1, 6):
-            written(tmp_path, f"UX-000{index}-x.md",
-                    task("Mutations verified red." if index >= 4 else "ok"))
+            written(tmp_path, f"UX-000{index}-x.md", task("Mutations verified red." if index >= 4 else "ok"))
         rows, totals = bands.census(tmp_path.glob("UX-*.md"))
-        assert [name for name, _f in rows] == [
-            f"UX-000{i}-x.md" for i in range(1, 6)]
+        assert [name for name, _f in rows] == [f"UX-000{i}-x.md" for i in range(1, 6)]
         assert totals["falsified"] == 2
         assert sum(1 for _n, f in rows[-2:] if f["falsified"]) == 2
 
@@ -122,16 +126,15 @@ class TestTheCensusAndTheReport:
         text = "\n".join(bands.report(rows, 40))
         assert "No band is drawn" in text
         assert "ambiguous by direction" in text, (
-            "the report must say why a band would fire at improvement, or "
-            "the next round draws one on the wrong row")
+            "the report must say why a band would fire at improvement, or the next round draws one on the wrong row"
+        )
 
     def test_it_names_the_row_a_band_should_start_on(self, tmp_path):
         written(tmp_path, "UX-0001-x.md", task("ok"))
         rows, _totals = bands.census(tmp_path.glob("UX-*.md"))
         assert "falsify rate" in "\n".join(bands.report(rows, 40))
 
-    def test_an_empty_backlog_is_an_error_not_a_clean_bill(self, tmp_path,
-                                                           monkeypatch):
+    def test_an_empty_backlog_is_an_error_not_a_clean_bill(self, tmp_path, monkeypatch):
         """`UX-109`'s shape: a report over nothing that prints 0.0%
         everywhere reads as a healthy process."""
         monkeypatch.setattr(bands, "SCENARIOS", tmp_path)
@@ -147,5 +150,6 @@ class TestItRunsAgainstTheRealRecord:
         assert totals["outcomes"] > 50, (
             f"only {totals['outcomes']} Outcome(s) parsed - the signals "
             f"read phrases this repository writes by convention, and if "
-            f"that convention moved they stop matching silently")
+            f"that convention moved they stop matching silently"
+        )
         assert len(rows) == totals["outcomes"]

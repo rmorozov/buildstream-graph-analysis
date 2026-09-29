@@ -12,6 +12,7 @@ are not about tracing at all: the wrapped build's exit status must be
 what it would have been untraced, in every failure mode, and a tracer
 that dies must leave the build running.
 """
+
 import contextlib
 import os
 import shutil
@@ -45,11 +46,14 @@ def _run(spine_bin, script, log=None, env=None):
     environment.update(env or {})
     return subprocess.run(
         [spine_bin, "--", "/bin/sh", "-c", script],
-        env=environment, capture_output=True, text=True,
+        env=environment,
+        capture_output=True,
+        text=True,
     )
 
 
 # --- injection ----------------------------------------------------------
+
 
 def test_the_spine_wraps_the_sandboxed_command_not_the_bwrap_options():
     """It has to run *inside* the sandbox, after bwrap has set the
@@ -57,8 +61,13 @@ def test_the_spine_wraps_the_sandboxed_command_not_the_bwrap_options():
     its own descendant, and so traceable with no capability under Yama
     `ptrace_scope=1`."""
     argv = build_shim_argv(
-        "/usr/bin/bwrap", ["--dir", "/buildstream/x/core.bst", "--", "sh", "-c", "make"],
-        "/bind", "/dst", "/dst/hook.so", "/dst/trace.log", spine="/dst/spine",
+        "/usr/bin/bwrap",
+        ["--dir", "/buildstream/x/core.bst", "--", "sh", "-c", "make"],
+        "/bind",
+        "/dst",
+        "/dst/hook.so",
+        "/dst/trace.log",
+        spine="/dst/spine",
     )
     assert argv[-5:] == ["/dst/spine", "--", "sh", "-c", "make"]
     # And the injected options still precede it, unchanged.
@@ -69,12 +78,13 @@ def test_without_a_spine_the_argv_is_byte_for_byte_what_it_was():
     """Opt-in until `UX-108` measures the overhead, and opt-in has to
     mean the untraced path is untouched."""
     args = ["--dir", "/buildstream/x/core.bst", "--", "sh", "-c", "make"]
-    assert build_shim_argv("/usr/bin/bwrap", args, "/b", "/d", "/d/h.so", "/d/t.log") == \
-        build_shim_argv("/usr/bin/bwrap", args, "/b", "/d", "/d/h.so", "/d/t.log",
-                        spine=None)
+    assert build_shim_argv("/usr/bin/bwrap", args, "/b", "/d", "/d/h.so", "/d/t.log") == build_shim_argv(
+        "/usr/bin/bwrap", args, "/b", "/d", "/d/h.so", "/d/t.log", spine=None
+    )
 
 
 # --- the record format --------------------------------------------------
+
 
 def test_spine_records_round_trip_through_the_existing_parser():
     """`src=` and `exit=` are new fields, and the parser's key loop
@@ -106,20 +116,23 @@ def test_a_signal_death_is_distinguishable_from_that_exit_code():
     """`exit=signal:9` and `exit=9` are different facts. The hook has no
     equivalent at all: its destructor runs before the process has a
     status, and does not run when one is killed."""
-    text = ("END pid=7 ppid=3 ts=1.9 element=e.bst inv=1 exit=signal:9 src=spine "
-            "cmd=/bin/sleep 5\n")
+    text = "END pid=7 ppid=3 ts=1.9 element=e.bst inv=1 exit=signal:9 src=spine cmd=/bin/sleep 5\n"
     assert parse_trace_log(text)[0]["exit_status"] == "signal:9"
 
 
 # --- the tracer itself --------------------------------------------------
 
-@pytest.mark.parametrize("script,expected", [
-    ("exit 0", 0),
-    ("exit 7", 7),
-    # Negative: Python reports a signal death as -N, and that is exactly
-    # why this case is checked through Python rather than a shell.
-    ("kill -TERM $$", -15),
-])
+
+@pytest.mark.parametrize(
+    "script,expected",
+    [
+        ("exit 0", 0),
+        ("exit 7", 7),
+        # Negative: Python reports a signal death as -N, and that is exactly
+        # why this case is checked through Python rather than a shell.
+        ("kill -TERM $$", -15),
+    ],
+)
 def test_the_exit_status_is_the_commands_own(spine, script, expected):
     """`hook.c`'s standing rule - never break the wrapped build - is
     harder to keep here, because this process sits between BuildStream
@@ -132,8 +145,7 @@ def test_the_exit_status_is_the_commands_own(spine, script, expected):
     exiting with a number that looks like it.
     """
     assert _run(spine, script).returncode == expected
-    assert subprocess.run(["/bin/sh", "-c", script],
-                          capture_output=True).returncode == expected
+    assert subprocess.run(["/bin/sh", "-c", script], capture_output=True).returncode == expected
 
 
 def test_a_static_binary_is_traced(spine, tmp_path):
@@ -161,10 +173,7 @@ def test_a_killed_process_is_recorded_with_how_it_died(spine, tmp_path):
     Nothing is invented - a measurement the hook simply cannot take."""
     log = tmp_path / "trace.log"
     _run(spine, "/bin/sleep 5 & p=$!; /bin/sleep 0.2; kill -9 $p; wait", log=log)
-    ends = [
-        r for r in parse_trace_log(log.read_text())
-        if r["event"] == "END" and r["cmd"] == "/bin/sleep 5"
-    ]
+    ends = [r for r in parse_trace_log(log.read_text()) if r["event"] == "END" and r["cmd"] == "/bin/sleep 5"]
     assert [r["exit_status"] for r in ends] == ["signal:9"]
 
 
@@ -188,7 +197,9 @@ def test_no_trace_log_means_no_records_and_no_failure(spine):
     environment = {k: v for k, v in os.environ.items() if k != "BST_TRACE_LOG"}
     result = subprocess.run(
         [spine, "--", "/bin/sh", "-c", "echo hi"],
-        env=environment, capture_output=True, text=True,
+        env=environment,
+        capture_output=True,
+        text=True,
     )
     assert result.returncode == 0
     assert result.stdout.strip() == "hi"
@@ -210,7 +221,8 @@ def test_a_lone_tracee_survives_the_tracers_death(spine, tmp_path):
     script = f"/bin/sleep 1.5; echo done > {marker}"
     process = subprocess.Popen(
         [spine, "--", "/bin/sleep", "1.5"],
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
     )
     _wait_until(lambda: _children_of(process.pid), timeout=3.0)
     tracee = _children_of(process.pid)
@@ -238,7 +250,9 @@ def _children_of(pid):
     loaded machine."""
     try:
         return subprocess.run(
-            ["pgrep", "-P", str(pid)], capture_output=True, text=True,
+            ["pgrep", "-P", str(pid)],
+            capture_output=True,
+            text=True,
         ).stdout.split()
     except OSError:
         return []
@@ -282,7 +296,9 @@ def test_a_real_static_build_is_invisible_to_the_hook_and_visible_to_the_spine(t
         os.environ.update(environment)
         try:
             code = run_traced_build(
-                project, ["bst", "--no-colors", "build", "all.bst"], str(raw),
+                project,
+                ["bst", "--no-colors", "build", "all.bst"],
+                str(raw),
                 trace_spine=trace_spine,
             )
         finally:
@@ -296,9 +312,7 @@ def test_a_real_static_build_is_invisible_to_the_hook_and_visible_to_the_spine(t
     # The build itself is unaffected either way - the whole point.
     assert hook_code == 0 and spine_code == 0
 
-    assert hook_records == [], (
-        "the hook is expected to see nothing here: every command is static busybox"
-    )
+    assert hook_records == [], "the hook is expected to see nothing here: every command is static busybox"
     assert spine_records, "the spine saw nothing on a build that runs real commands"
     assert {r["src"] for r in spine_records} == {"spine"}
     # Real element attribution, inherited from the same shim env the hook
@@ -310,6 +324,7 @@ def test_a_real_static_build_is_invisible_to_the_hook_and_visible_to_the_spine(t
 
 
 # --- the two failure paths round 12's code review found -----------------
+
 
 def test_a_degrade_does_not_strand_the_tracees_it_was_meant_to_free(spine, tmp_path):
     """UX-117: the error path inverted its own contract.
@@ -326,18 +341,23 @@ def test_a_degrade_does_not_strand_the_tracees_it_was_meant_to_free(spine, tmp_p
     0.7s, every time.
     """
     marker = tmp_path / "done"
-    script = (f"for i in 1 2 3 4 5; do (sleep 0.4; true) & done; wait; "
-              f"sleep 0.3; echo done > {marker}; exit 4")
+    script = f"for i in 1 2 3 4 5; do (sleep 0.4; true) & done; wait; sleep 0.3; echo done > {marker}; exit 4"
     log = tmp_path / "trace.log"
 
     result = subprocess.run(
         [spine, "--", "/bin/sh", "-c", script],
-        env={**os.environ, "BST_TRACE_LOG": str(log),
-             "BST_TRACE_ELEMENT": "e.bst", "BST_TRACE_INVOCATION": "inv",
-             # The seam exists because this failure cannot be provoked
-             # from outside: only the tracer may detach its own tracees.
-             "BST_TRACE_SPINE_DEGRADE_AFTER": "4"},
-        capture_output=True, text=True, timeout=30,
+        env={
+            **os.environ,
+            "BST_TRACE_LOG": str(log),
+            "BST_TRACE_ELEMENT": "e.bst",
+            "BST_TRACE_INVOCATION": "inv",
+            # The seam exists because this failure cannot be provoked
+            # from outside: only the tracer may detach its own tracees.
+            "BST_TRACE_SPINE_DEGRADE_AFTER": "4",
+        },
+        capture_output=True,
+        text=True,
+        timeout=30,
     )
 
     assert result.returncode == 4, "the build's own exit status must survive a degrade"
@@ -362,8 +382,13 @@ def test_the_seams_are_off_unless_asked_for(spine, tmp_path):
     assert result.returncode == 0
     assert "DEGRADED" not in (log.read_text() if log.exists() else "")
     argv = build_shim_argv(
-        "/usr/bin/bwrap", ["--", "sh", "-c", "true"],
-        "/bind", "/dst", "/dst/hook.so", "/dst/trace.log", spine="/dst/spine",
+        "/usr/bin/bwrap",
+        ["--", "sh", "-c", "true"],
+        "/bind",
+        "/dst",
+        "/dst/hook.so",
+        "/dst/trace.log",
+        spine="/dst/spine",
     )
     rendered = " ".join(str(arg) for arg in argv)
     for seam in ("DEGRADE_AFTER", "FAIL_CONT_AT", "FAIL_SEIZE"):
@@ -388,12 +413,16 @@ def test_a_killed_tracer_leaves_the_build_running(spine, tmp_path):
     marker = tmp_path / "done"
     proc = subprocess.Popen(
         [spine, "--", "/bin/sh", "-c", f"sleep 4; echo done > {marker}"],
-        env={**os.environ, "BST_TRACE_LOG": str(tmp_path / "t.log"),
-             "BST_TRACE_ELEMENT": "e.bst", "BST_TRACE_INVOCATION": "inv"},
+        env={
+            **os.environ,
+            "BST_TRACE_LOG": str(tmp_path / "t.log"),
+            "BST_TRACE_ELEMENT": "e.bst",
+            "BST_TRACE_INVOCATION": "inv",
+        },
         start_new_session=True,
     )
     time.sleep(1.0)
-    os.kill(proc.pid, signal.SIGKILL)   # the tracer itself, directly
+    os.kill(proc.pid, signal.SIGKILL)  # the tracer itself, directly
     proc.wait()
 
     deadline = time.monotonic() + 20
@@ -423,9 +452,15 @@ def _stop_probe(binary, tmp_path, delay=1.0):
     started = time.time()
     process = subprocess.Popen(
         [binary, "--", "/bin/sh", "-c", script],
-        env={**os.environ, "BST_TRACE_LOG": str(tmp_path / "t.log"),
-             "BST_TRACE_ELEMENT": "e.bst", "BST_TRACE_INVOCATION": "inv"},
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+        env={
+            **os.environ,
+            "BST_TRACE_LOG": str(tmp_path / "t.log"),
+            "BST_TRACE_ELEMENT": "e.bst",
+            "BST_TRACE_INVOCATION": "inv",
+        },
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
     )
     pid = None
     while time.time() - started < 10 and pid is None:
@@ -444,8 +479,12 @@ def _stop_probe(binary, tmp_path, delay=1.0):
     with contextlib.suppress(ProcessLookupError):
         os.kill(pid, signal.SIGCONT)
     returncode = process.wait(timeout=30)
-    return {"state": state, "exited_before_cont": exited_before_cont,
-            "returncode": returncode, "elapsed": time.time() - started}
+    return {
+        "state": state,
+        "exited_before_cont": exited_before_cont,
+        "returncode": returncode,
+        "elapsed": time.time() - started,
+    }
 
 
 def test_a_stop_the_program_raises_itself_really_stops_it(spine, tmp_path):
@@ -465,9 +504,9 @@ def test_a_stop_the_program_raises_itself_really_stops_it(spine, tmp_path):
 
     assert not probe["exited_before_cont"], (
         "the traced shell ran to completion through its own SIGSTOP - the "
-        "stop was swallowed, which is what UX-130 was filed for")
-    assert probe["state"] in ("T", "t"), (
-        f"the traced shell was in state {probe['state']!r}, not stopped")
+        "stop was swallowed, which is what UX-130 was filed for"
+    )
+    assert probe["state"] in ("T", "t"), f"the traced shell was in state {probe['state']!r}, not stopped"
     assert probe["returncode"] == 3, "the exit status changed"
 
 
@@ -485,9 +524,15 @@ def test_a_grandchilds_stop_is_honored_too(spine, tmp_path):
     started = time.time()
     process = subprocess.Popen(
         [spine, "--", "/bin/sh", "-c", script],
-        env={**os.environ, "BST_TRACE_LOG": str(tmp_path / "t.log"),
-             "BST_TRACE_ELEMENT": "e.bst", "BST_TRACE_INVOCATION": "inv"},
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+        env={
+            **os.environ,
+            "BST_TRACE_LOG": str(tmp_path / "t.log"),
+            "BST_TRACE_ELEMENT": "e.bst",
+            "BST_TRACE_INVOCATION": "inv",
+        },
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
     )
     pid = None
     while time.time() - started < 10 and pid is None:
@@ -525,11 +570,11 @@ def test_pid_churn_at_scale_loses_no_records(spine, tmp_path):
     """
     log = tmp_path / "churn.log"
     result = subprocess.run(
-        [spine, "--", "/bin/sh", "-c", "i=0; while [ $i -lt 2000 ]; do "
-                                       "/bin/true; i=$((i+1)); done; exit 0"],
-        env={**os.environ, "BST_TRACE_LOG": str(log),
-             "BST_TRACE_ELEMENT": "e.bst", "BST_TRACE_INVOCATION": "inv"},
-        capture_output=True, text=True, timeout=300,
+        [spine, "--", "/bin/sh", "-c", "i=0; while [ $i -lt 2000 ]; do /bin/true; i=$((i+1)); done; exit 0"],
+        env={**os.environ, "BST_TRACE_LOG": str(log), "BST_TRACE_ELEMENT": "e.bst", "BST_TRACE_INVOCATION": "inv"},
+        capture_output=True,
+        text=True,
+        timeout=300,
     )
 
     assert result.returncode == 0
@@ -557,6 +602,7 @@ def test_the_stop_probe_reproduces_untraced_behaviour(tmp_path):
 
 # --- the shape it actually ships in (UX-119) ----------------------------
 
+
 @pytest.mark.bst
 @pytest.mark.skipif(not BWRAP_AVAILABLE, reason="bwrap not on PATH")
 def test_the_spine_is_pid_2_in_the_shape_buildstream_runs(spine, tmp_path):
@@ -565,11 +611,14 @@ def test_the_spine_is_pid_2_in_the_shape_buildstream_runs(spine, tmp_path):
     argv carries `--unshare-pid --die-with-parent` and no `--as-pid-1`,
     so bubblewrap's own reaper is pid 1 and everything it launches starts
     at 2."""
+
     def _pid_of_shell(extra):
         return subprocess.run(
-            ["bwrap", "--dev-bind", "/", "/", "--unshare-pid", *extra,
-             "/bin/sh", "-c", "echo $$"],
-            capture_output=True, text=True, timeout=60).stdout.strip()
+            ["bwrap", "--dev-bind", "/", "/", "--unshare-pid", *extra, "/bin/sh", "-c", "echo $$"],
+            capture_output=True,
+            text=True,
+            timeout=60,
+        ).stdout.strip()
 
     assert _pid_of_shell([]) == "2"
     assert _pid_of_shell(["--as-pid-1"]) == "1"
@@ -577,13 +626,15 @@ def test_the_spine_is_pid_2_in_the_shape_buildstream_runs(spine, tmp_path):
 
 @pytest.mark.bst
 @pytest.mark.skipif(not BWRAP_AVAILABLE, reason="bwrap not on PATH")
-@pytest.mark.parametrize("script,label", [
-    ("exit 0", "success"),
-    ("exit 7", "an ordinary failure"),
-    ("kill -TERM $$", "a signal death"),
-])
-def test_a_traced_status_equals_an_untraced_one_inside_the_sandbox(
-        spine, script, label):
+@pytest.mark.parametrize(
+    "script,label",
+    [
+        ("exit 0", "success"),
+        ("exit 7", "an ordinary failure"),
+        ("kill -TERM $$", "a signal death"),
+    ],
+)
+def test_a_traced_status_equals_an_untraced_one_inside_the_sandbox(spine, script, label):
     """The contract, checked where it is actually kept: inside a real
     bwrap sandbox, against bare bwrap as the control.
 
@@ -592,11 +643,14 @@ def test_a_traced_status_equals_an_untraced_one_inside_the_sandbox(
     rather than against an expected number, because bwrap renders a
     signal death as 143 all by itself.
     """
+
     def _run(argv):
         return subprocess.run(
-            ["bwrap", "--dev-bind", "/", "/", "--unshare-pid", *argv,
-             "/bin/sh", "-c", script],
-            capture_output=True, text=True, timeout=60).returncode
+            ["bwrap", "--dev-bind", "/", "/", "--unshare-pid", *argv, "/bin/sh", "-c", script],
+            capture_output=True,
+            text=True,
+            timeout=60,
+        ).returncode
 
     assert _run([spine, "--"]) == _run([]), label
 
@@ -613,21 +667,29 @@ def test_why_the_shim_does_not_pass_as_pid_1(spine):
 
     def _bare(extra):
         return subprocess.run(
-            ["bwrap", "--dev-bind", "/", "/", "--unshare-pid", *extra,
-             "/bin/sh", "-c", "kill -TERM $$"],
-            capture_output=True, text=True, timeout=60).returncode
+            ["bwrap", "--dev-bind", "/", "/", "--unshare-pid", *extra, "/bin/sh", "-c", "kill -TERM $$"],
+            capture_output=True,
+            text=True,
+            timeout=60,
+        ).returncode
 
     assert _bare([]) == 143
     assert _bare(["--as-pid-1"]) == 0, "the reason the flag stays out"
 
     argv = build_shim_argv(
-        "/usr/bin/bwrap", ["--unshare-pid", "--", "sh", "-c", "true"],
-        "/bind", "/dst", "/dst/hook.so", "/dst/trace.log", spine="/dst/spine",
+        "/usr/bin/bwrap",
+        ["--unshare-pid", "--", "sh", "-c", "true"],
+        "/bind",
+        "/dst",
+        "/dst/hook.so",
+        "/dst/trace.log",
+        spine="/dst/spine",
     )
     assert "--as-pid-1" not in argv, "the shim must not change the sandbox"
 
 
 # --- UX-128: every restart site, not one of five ------------------------
+
 
 def _nothing_is_stopped(pids):
     """The pids from `pids` still in state `T`, read from /proc.
@@ -644,7 +706,7 @@ def _nothing_is_stopped(pids):
             with open(f"/proc/{pid}/stat") as handle:
                 fields = handle.read().rsplit(") ", 1)[-1].split()
         except OSError:
-            continue                      # reaped between listing and reading
+            continue  # reaped between listing and reading
         if fields and fields[0] == "T":
             stopped.append(pid)
     return stopped
@@ -696,20 +758,24 @@ def test_a_cont_failure_at_any_site_still_completes_the_build(spine, tmp_path, s
     exists to prevent, one branch over.
     """
     marker = tmp_path / f"done-{site}"
-    script = (f"for i in 1 2 3; do (sleep 0.3; true) & done; wait; "
-              f"echo done > {marker}; exit 7")
+    script = f"for i in 1 2 3; do (sleep 0.3; true) & done; wait; echo done > {marker}; exit 7"
     log = tmp_path / f"trace-{site}.log"
 
     result = subprocess.run(
         [spine, "--", "/bin/sh", "-c", script],
-        env={**os.environ, "BST_TRACE_LOG": str(log),
-             "BST_TRACE_ELEMENT": "e.bst", "BST_TRACE_INVOCATION": "inv",
-             "BST_TRACE_SPINE_FAIL_CONT_AT": site},
-        capture_output=True, text=True, timeout=30,
+        env={
+            **os.environ,
+            "BST_TRACE_LOG": str(log),
+            "BST_TRACE_ELEMENT": "e.bst",
+            "BST_TRACE_INVOCATION": "inv",
+            "BST_TRACE_SPINE_FAIL_CONT_AT": site,
+        },
+        capture_output=True,
+        text=True,
+        timeout=30,
     )
 
-    assert result.returncode == 7, (
-        f"a CONT failure at the {site} site changed the build's exit status")
+    assert result.returncode == 7, f"a CONT failure at the {site} site changed the build's exit status"
     assert marker.exists(), f"the wrapped command did not complete ({site})"
 
 
@@ -721,10 +787,16 @@ def test_a_cont_failure_names_the_site_it_happened_at(spine, tmp_path, site):
     log = tmp_path / f"trace-{site}.log"
     subprocess.run(
         [spine, "--", "/bin/sh", "-c", "(sleep 0.2; true) & wait; exit 0"],
-        env={**os.environ, "BST_TRACE_LOG": str(log),
-             "BST_TRACE_ELEMENT": "e.bst", "BST_TRACE_INVOCATION": "inv",
-             "BST_TRACE_SPINE_FAIL_CONT_AT": site},
-        capture_output=True, text=True, timeout=30,
+        env={
+            **os.environ,
+            "BST_TRACE_LOG": str(log),
+            "BST_TRACE_ELEMENT": "e.bst",
+            "BST_TRACE_INVOCATION": "inv",
+            "BST_TRACE_SPINE_FAIL_CONT_AT": site,
+        },
+        capture_output=True,
+        text=True,
+        timeout=30,
     )
 
     assert f"reason=cont-failed-{site}" in log.read_text()
@@ -740,15 +812,20 @@ def test_a_degrade_leaves_nothing_in_state_T(spine, tmp_path):
     """
     log = tmp_path / "trace.log"
     marker = tmp_path / "spawned"
-    script = (f"(sleep 2; true) & echo $! > {marker}; "
-              f"for i in 1 2 3; do (sleep 0.2; true) & done; wait -n; exit 0")
+    script = f"(sleep 2; true) & echo $! > {marker}; for i in 1 2 3; do (sleep 0.2; true) & done; wait -n; exit 0"
 
     process = subprocess.Popen(
         [spine, "--", "/bin/sh", "-c", script],
-        env={**os.environ, "BST_TRACE_LOG": str(log),
-             "BST_TRACE_ELEMENT": "e.bst", "BST_TRACE_INVOCATION": "inv",
-             "BST_TRACE_SPINE_DEGRADE_AFTER": "3"},
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+        env={
+            **os.environ,
+            "BST_TRACE_LOG": str(log),
+            "BST_TRACE_ELEMENT": "e.bst",
+            "BST_TRACE_INVOCATION": "inv",
+            "BST_TRACE_SPINE_DEGRADE_AFTER": "3",
+        },
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
     )
     deadline = time.time() + 10
     survivors = []
@@ -778,20 +855,21 @@ def test_a_degrade_leaves_nothing_in_state_T(spine, tmp_path):
 # environment from a bare `subprocess.run` - and it is the one every real
 # capture uses.
 
+
 def _in_sandbox(argv, timeout=90, env=None):
     return subprocess.run(
         ["bwrap", "--dev-bind", "/", "/", "--unshare-pid", *argv],
-        capture_output=True, text=True, timeout=timeout,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
         env={**os.environ, **(env or {})},
     )
 
 
 @pytest.mark.bst
-@pytest.mark.skipif(not (BWRAP_AVAILABLE and CC_AVAILABLE),
-                    reason="bwrap/cc not both on PATH")
+@pytest.mark.skipif(not (BWRAP_AVAILABLE and CC_AVAILABLE), reason="bwrap/cc not both on PATH")
 @pytest.mark.parametrize("site", CONT_SITES)
-def test_a_cont_failure_inside_the_sandbox_still_completes_the_build(
-        spine, tmp_path, site):
+def test_a_cont_failure_inside_the_sandbox_still_completes_the_build(spine, tmp_path, site):
     """UX-128, in the shape it ships in.
 
     Measured with the guard removed (`resume` returning before its error
@@ -801,30 +879,33 @@ def test_a_cont_failure_inside_the_sandbox_still_completes_the_build(
     """
     log = tmp_path / f"sandbox-{site}.log"
     result = _in_sandbox(
-        [spine, "--", "/bin/sh", "-c",
-         "for i in 1 2 3; do (sleep 0.3; true) & done; wait; exit 7"],
-        env={"BST_TRACE_LOG": str(log), "BST_TRACE_ELEMENT": "e.bst",
-             "BST_TRACE_INVOCATION": "inv",
-             "BST_TRACE_SPINE_FAIL_CONT_AT": site},
+        [spine, "--", "/bin/sh", "-c", "for i in 1 2 3; do (sleep 0.3; true) & done; wait; exit 7"],
+        env={
+            "BST_TRACE_LOG": str(log),
+            "BST_TRACE_ELEMENT": "e.bst",
+            "BST_TRACE_INVOCATION": "inv",
+            "BST_TRACE_SPINE_FAIL_CONT_AT": site,
+        },
     )
 
     assert result.returncode == 7, (
-        f"a CONT failure at the {site} site inside the sandbox changed the "
-        f"build's exit status ({result.stderr[-400:]})")
+        f"a CONT failure at the {site} site inside the sandbox changed the build's exit status ({result.stderr[-400:]})"
+    )
 
 
 @pytest.mark.bst
-@pytest.mark.skipif(not (BWRAP_AVAILABLE and CC_AVAILABLE),
-                    reason="bwrap/cc not both on PATH")
+@pytest.mark.skipif(not (BWRAP_AVAILABLE and CC_AVAILABLE), reason="bwrap/cc not both on PATH")
 def test_a_degrade_inside_the_sandbox_keeps_the_builds_exit_status(spine, tmp_path):
     """UX-117's own acceptance clause, run where it said it would be."""
     log = tmp_path / "sandbox-degrade.log"
     result = _in_sandbox(
-        [spine, "--", "/bin/sh", "-c",
-         "for i in 1 2 3 4 5; do (sleep 0.4; true) & done; wait; exit 4"],
-        env={"BST_TRACE_LOG": str(log), "BST_TRACE_ELEMENT": "e.bst",
-             "BST_TRACE_INVOCATION": "inv",
-             "BST_TRACE_SPINE_DEGRADE_AFTER": "4"},
+        [spine, "--", "/bin/sh", "-c", "for i in 1 2 3 4 5; do (sleep 0.4; true) & done; wait; exit 4"],
+        env={
+            "BST_TRACE_LOG": str(log),
+            "BST_TRACE_ELEMENT": "e.bst",
+            "BST_TRACE_INVOCATION": "inv",
+            "BST_TRACE_SPINE_DEGRADE_AFTER": "4",
+        },
     )
 
     assert result.returncode == 4
@@ -832,8 +913,7 @@ def test_a_degrade_inside_the_sandbox_keeps_the_builds_exit_status(spine, tmp_pa
 
 
 @pytest.mark.bst
-@pytest.mark.skipif(not (BWRAP_AVAILABLE and CC_AVAILABLE),
-                    reason="bwrap/cc not both on PATH")
+@pytest.mark.skipif(not (BWRAP_AVAILABLE and CC_AVAILABLE), reason="bwrap/cc not both on PATH")
 @pytest.mark.parametrize("tracees", [1, 8])
 def test_sigterm_at_the_spine_inside_the_sandbox(spine, tmp_path, tracees):
     """UX-119's clause, corrected twice over.
@@ -847,15 +927,20 @@ def test_sigterm_at_the_spine_inside_the_sandbox(spine, tmp_path, tracees):
     bubblewrap renders a signal death itself and the contract is
     "identical to untraced", not "equal to 143".
     """
-    script = (f"for i in $(seq {tracees}); do (sleep 5; true) & done; wait")
+    script = f"for i in $(seq {tracees}); do (sleep 5; true) & done; wait"
 
     def _kill_after_start(argv):
         process = subprocess.Popen(
-            ["bwrap", "--dev-bind", "/", "/", "--unshare-pid", *argv,
-             "/bin/sh", "-c", script],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
-            env={**os.environ, "BST_TRACE_LOG": str(tmp_path / f"t{tracees}.log"),
-                 "BST_TRACE_ELEMENT": "e.bst", "BST_TRACE_INVOCATION": "inv"},
+            ["bwrap", "--dev-bind", "/", "/", "--unshare-pid", *argv, "/bin/sh", "-c", script],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env={
+                **os.environ,
+                "BST_TRACE_LOG": str(tmp_path / f"t{tracees}.log"),
+                "BST_TRACE_ELEMENT": "e.bst",
+                "BST_TRACE_INVOCATION": "inv",
+            },
         )
         time.sleep(1.0)
         process.terminate()
@@ -864,10 +949,12 @@ def test_sigterm_at_the_spine_inside_the_sandbox(spine, tmp_path, tracees):
 
     assert _kill_after_start([spine, "--"]) == _kill_after_start([]), (
         f"a SIGTERM at the spine with {tracees} tracee(s) produced a different "
-        "status than the same signal with no tracer at all")
+        "status than the same signal with no tracer at all"
+    )
 
 
 # --- UX-133: the tracer must not change when an element finishes --------
+
 
 def test_a_background_daemon_does_not_hold_the_element_open(spine, tmp_path):
     """UX-133 item 3, and a "never break the wrapped build" defect no
@@ -895,9 +982,10 @@ def test_a_background_daemon_does_not_hold_the_element_open(spine, tmp_path):
         started = time.time()
         result = subprocess.run(
             argv + ["/bin/sh", "-c", script],
-            env={**os.environ, "BST_TRACE_LOG": str(log),
-                 "BST_TRACE_ELEMENT": "e.bst", "BST_TRACE_INVOCATION": "inv"},
-            capture_output=True, text=True, timeout=60,
+            env={**os.environ, "BST_TRACE_LOG": str(log), "BST_TRACE_ELEMENT": "e.bst", "BST_TRACE_INVOCATION": "inv"},
+            capture_output=True,
+            text=True,
+            timeout=60,
         )
         return time.time() - started, result.returncode
 
@@ -907,7 +995,8 @@ def test_a_background_daemon_does_not_hold_the_element_open(spine, tmp_path):
     assert traced_rc == untraced_rc == 0
     assert traced < untraced + 5.0, (
         f"the traced step took {traced:.2f}s against {untraced:.2f}s untraced - "
-        "the tracer is waiting for a descendant the build does not wait for")
+        "the tracer is waiting for a descendant the build does not wait for"
+    )
 
 
 def test_a_released_survivor_is_visible_as_an_open_record(spine, tmp_path):
@@ -930,11 +1019,11 @@ def test_a_released_survivor_is_visible_as_an_open_record(spine, tmp_path):
     # guaranteed is that a process the spine *did* see start and never
     # saw finish is reported as open rather than dropped.
     subprocess.run(
-        [spine, "--", "/bin/sh", "-c",
-         "sleep 30 >/dev/null 2>&1 & sleep 0.3; exit 0"],
-        env={**os.environ, "BST_TRACE_LOG": str(log),
-             "BST_TRACE_ELEMENT": "e.bst", "BST_TRACE_INVOCATION": "inv"},
-        capture_output=True, text=True, timeout=60,
+        [spine, "--", "/bin/sh", "-c", "sleep 30 >/dev/null 2>&1 & sleep 0.3; exit 0"],
+        env={**os.environ, "BST_TRACE_LOG": str(log), "BST_TRACE_ELEMENT": "e.bst", "BST_TRACE_INVOCATION": "inv"},
+        capture_output=True,
+        text=True,
+        timeout=60,
     )
 
     records = pair_events(parse_trace_log(log.read_text()))
@@ -952,9 +1041,10 @@ def test_a_build_that_reaps_its_own_children_leaves_no_open_records(spine, tmp_p
     log = tmp_path / "clean.log"
     subprocess.run(
         [spine, "--", "/bin/sh", "-c", "(sleep 0.1; true) & wait; exit 0"],
-        env={**os.environ, "BST_TRACE_LOG": str(log),
-             "BST_TRACE_ELEMENT": "e.bst", "BST_TRACE_INVOCATION": "inv"},
-        capture_output=True, text=True, timeout=60,
+        env={**os.environ, "BST_TRACE_LOG": str(log), "BST_TRACE_ELEMENT": "e.bst", "BST_TRACE_INVOCATION": "inv"},
+        capture_output=True,
+        text=True,
+        timeout=60,
     )
 
     records = pair_events(parse_trace_log(log.read_text()))
@@ -984,29 +1074,29 @@ class TestWhenSeizeIsUnavailableTheSpineExecsRatherThanWrapping:
         process.send_signal(getattr(signals, signal_name))
         return process.wait(timeout=30)
 
-    def test_a_signal_killed_command_reaches_the_caller_as_a_signal(
-            self, spine, tmp_path):
+    def test_a_signal_killed_command_reaches_the_caller_as_a_signal(self, spine, tmp_path):
         """`subprocess` reports WIFSIGNALED as a *negative* returncode -
         the technique that caught this class of bug before."""
         log = tmp_path / "trace.log"
-        env = {**os.environ, "BST_TRACE_LOG": str(log),
-               "BST_TRACE_SPINE_FAIL_SEIZE": "1"}
+        env = {**os.environ, "BST_TRACE_LOG": str(log), "BST_TRACE_SPINE_FAIL_SEIZE": "1"}
 
         traced = self._kill_after([spine, "--", "/bin/sh", "-c", "sleep 30"], env)
         untraced = self._kill_after(["/bin/sh", "-c", "sleep 30"], dict(os.environ))
 
         assert traced == untraced == -15, (
-            f"traced {traced}, untraced {untraced} - the fallback must be "
-            f"indistinguishable from not being there")
+            f"traced {traced}, untraced {untraced} - the fallback must be indistinguishable from not being there"
+        )
 
     def test_the_exit_status_of_a_normal_command_survives_too(self, spine, tmp_path):
         log = tmp_path / "trace.log"
 
         result = subprocess.run(
             [spine, "--", "/bin/sh", "-c", "exit 7"],
-            env={**os.environ, "BST_TRACE_LOG": str(log),
-                 "BST_TRACE_SPINE_FAIL_SEIZE": "1"},
-            capture_output=True, text=True, timeout=30)
+            env={**os.environ, "BST_TRACE_LOG": str(log), "BST_TRACE_SPINE_FAIL_SEIZE": "1"},
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
 
         assert result.returncode == 7
 
@@ -1019,23 +1109,21 @@ class TestWhenSeizeIsUnavailableTheSpineExecsRatherThanWrapping:
         log = tmp_path / "trace.log"
         marker = tmp_path / "pids"
         process = subprocess.Popen(
-            [spine, "--", "/bin/sh", "-c",
-             f"sleep 5 & echo $$ > {marker}; wait"],
-            env={**os.environ, "BST_TRACE_LOG": str(log),
-                 "BST_TRACE_SPINE_FAIL_SEIZE": "1"})
+            [spine, "--", "/bin/sh", "-c", f"sleep 5 & echo $$ > {marker}; wait"],
+            env={**os.environ, "BST_TRACE_LOG": str(log), "BST_TRACE_SPINE_FAIL_SEIZE": "1"},
+        )
         time.sleep(0.6)
         try:
             # The spine's own pid *is* the shell's, because it exec'd.
             shell_pid = int(marker.read_text().strip())
             assert shell_pid == process.pid, (
-                f"the command runs as pid {shell_pid} under a wrapper at "
-                f"{process.pid} - the spine did not exec")
+                f"the command runs as pid {shell_pid} under a wrapper at {process.pid} - the spine did not exec"
+            )
         finally:
             process.kill()
             process.wait(timeout=30)
 
-    def test_the_degradation_is_recorded_before_control_transfers(
-            self, spine, tmp_path):
+    def test_the_degradation_is_recorded_before_control_transfers(self, spine, tmp_path):
         """Exec destroys this process image, so a record written after it
         would never exist. "We could not trace" and "there was nothing to
         trace" must not look the same."""
@@ -1043,9 +1131,11 @@ class TestWhenSeizeIsUnavailableTheSpineExecsRatherThanWrapping:
 
         subprocess.run(
             [spine, "--", "/bin/sh", "-c", "exit 0"],
-            env={**os.environ, "BST_TRACE_LOG": str(log),
-                 "BST_TRACE_SPINE_FAIL_SEIZE": "1"},
-            capture_output=True, text=True, timeout=30)
+            env={**os.environ, "BST_TRACE_LOG": str(log), "BST_TRACE_SPINE_FAIL_SEIZE": "1"},
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
 
         assert "reason=seize-failed" in log.read_text()
 
@@ -1055,8 +1145,13 @@ class TestWhenSeizeIsUnavailableTheSpineExecsRatherThanWrapping:
         from tools.native_trace.bwrap_shim import build_shim_argv
 
         argv = build_shim_argv(
-            "/usr/bin/bwrap", ["--", "sh", "-c", "true"],
-            "/bind", "/dst", "/dst/hook.so", "/dst/trace.log", spine="/dst/spine",
+            "/usr/bin/bwrap",
+            ["--", "sh", "-c", "true"],
+            "/bind",
+            "/dst",
+            "/dst/hook.so",
+            "/dst/trace.log",
+            spine="/dst/spine",
         )
 
         assert not any("FAIL_SEIZE" in str(arg) for arg in argv)
@@ -1069,7 +1164,10 @@ class TestWhenSeizeIsUnavailableTheSpineExecsRatherThanWrapping:
         result = subprocess.run(
             [spine, "--", "/bin/sh", "-c", "exit 0"],
             env={**os.environ, "BST_TRACE_LOG": str(log)},
-            capture_output=True, text=True, timeout=30)
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
 
         assert result.returncode == 0
         assert "seize-failed" not in (log.read_text() if log.exists() else "")
@@ -1082,9 +1180,10 @@ def test_a_site_that_names_no_restart_is_rejected_rather_than_ignored(spine, tmp
     them inside the pinned bst tier."""
     result = subprocess.run(
         [spine, "--", "/bin/sh", "-c", "exit 7"],
-        env={**os.environ, "BST_TRACE_LOG": str(tmp_path / "t.log"),
-             "BST_TRACE_SPINE_FAIL_CONT_AT": "initial"},
-        capture_output=True, text=True, timeout=30,
+        env={**os.environ, "BST_TRACE_LOG": str(tmp_path / "t.log"), "BST_TRACE_SPINE_FAIL_CONT_AT": "initial"},
+        capture_output=True,
+        text=True,
+        timeout=30,
     )
 
     assert result.returncode == 2, "a stale site name ran the build instead"
@@ -1115,26 +1214,37 @@ class TestAGroupStoppedTraceeIsNotResumedByADetach:
 
     def _table(self, spine):
         result = subprocess.run(
-            [spine], env={**os.environ, "BST_TRACE_SPINE_SELFTEST": "detach-signal"},
-            capture_output=True, text=True, timeout=60)
+            [spine],
+            env={**os.environ, "BST_TRACE_SPINE_SELFTEST": "detach-signal"},
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
         assert result.returncode == 0, result.stderr
-        return {
-            line.split()[0]: int(line.split()[1])
-            for line in result.stdout.splitlines() if line.strip()}
+        return {line.split()[0]: int(line.split()[1]) for line in result.stdout.splitlines() if line.strip()}
 
-    @pytest.mark.parametrize("case,expected", [
-        ("group-stop-SIGSTOP", signal.SIGSTOP),
-        ("group-stop-SIGTSTP", signal.SIGTSTP),
-        ("group-stop-SIGTTIN", signal.SIGTTIN),
-        ("group-stop-SIGTTOU", signal.SIGTTOU),
-    ])
+    @pytest.mark.parametrize(
+        "case,expected",
+        [
+            ("group-stop-SIGSTOP", signal.SIGSTOP),
+            ("group-stop-SIGTSTP", signal.SIGTSTP),
+            ("group-stop-SIGTTIN", signal.SIGTTIN),
+            ("group-stop-SIGTTOU", signal.SIGTTOU),
+        ],
+    )
     def test_a_group_stop_detaches_with_its_own_signal(self, spine, case, expected):
         """Re-delivering it is what keeps the process stopped."""
         assert self._table(spine)[case] == expected
 
-    @pytest.mark.parametrize("case", [
-        "attach-stop-SIGTRAP", "exec-event", "exit-event", "signal-SIGTRAP",
-    ])
+    @pytest.mark.parametrize(
+        "case",
+        [
+            "attach-stop-SIGTRAP",
+            "exec-event",
+            "exit-event",
+            "signal-SIGTRAP",
+        ],
+    )
     def test_the_tracers_own_stops_detach_with_nothing(self, spine, case):
         """Passing SIGTRAP on would kill a process that never asked for
         it - the mirror error, and the reason the group-stop test comes
@@ -1159,7 +1269,8 @@ class TestAGroupStoppedTraceeIsNotResumedByADetach:
         by_rule = [c for c in calls if "detach_signal" in c]
         assert len(by_rule) == 3, (
             f"{len(by_rule)} of 5 detach sites use detach_signal; the degrade "
-            f"branch keeping its own copy is what UX-152 was filed for")
+            f"branch keeping its own copy is what UX-152 was filed for"
+        )
 
         # The other two are `resume`'s failure detach and the
         # listen-failed branch, which pass on the signal they were handed

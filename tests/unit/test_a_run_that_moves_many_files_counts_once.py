@@ -6,6 +6,7 @@ file), that six-file run's tail is 1.2557e-3 - below 0.05/19 - and the
 eighteen single-file runs are not. `per_run` names only the first;
 `counts` then reads each of its six files one fewer.
 """
+
 import pathlib
 import sys
 
@@ -19,11 +20,11 @@ SINGLE_FILES = [f"tests/unit/test_s{i}.py" for i in range(1, 19)]
 
 
 def _ledger():
-    entries = [{"file": name, "run_id": "r-multi", "shift": 1.7,
-               "confirmed": False} for name in MULTI_FILES]
-    entries += [{"file": name, "run_id": f"r{i}", "shift": 1.7,
-                "confirmed": False}
-               for i, name in enumerate(SINGLE_FILES, start=1)]
+    entries = [{"file": name, "run_id": "r-multi", "shift": 1.7, "confirmed": False} for name in MULTI_FILES]
+    entries += [
+        {"file": name, "run_id": f"r{i}", "shift": 1.7, "confirmed": False}
+        for i, name in enumerate(SINGLE_FILES, start=1)
+    ]
     return {"entries": entries, "declared": {}}
 
 

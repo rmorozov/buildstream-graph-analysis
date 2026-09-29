@@ -13,6 +13,7 @@ migration bug because no fixture had one), so the nested-table clause
 runs `pages.shared_resource_run` too - the fixture that shape needs,
 not a fixture that merely could have one.
 """
+
 import pathlib
 import re
 import sys
@@ -39,16 +40,16 @@ needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
 #: `button.copy-rows` says "Copy 5 rows" on one page and "Copy 3 rows"
 #: on the other, and the row count is not the claim.
 REGISTRY = {
-    "a": (r".+", "UX-216"),                    # a plain citation link
-    "a.element": (r".+", "UX-216"),            # a generic element-name link
-    "a.from.muted": (r"^from: ", "§1e"),       # a runbook step's citation
-    "a.inspect": (r"^⌕$", "§1a"),               # bga:role's generic Inspect link
-    "a.path-box": (r".+", "§3c"),              # the critical chain, folded
+    "a": (r".+", "UX-216"),  # a plain citation link
+    "a.element": (r".+", "UX-216"),  # a generic element-name link
+    "a.from.muted": (r"^from: ", "§1e"),  # a runbook step's citation
+    "a.inspect": (r"^⌕$", "§1a"),  # bga:role's generic Inspect link
+    "a.path-box": (r".+", "§3c"),  # the critical chain, folded
     "a.runbook-link": (r"^\d+ steps?, in the decision panel$", "§1e"),
     # `a.why` (UX-207) retired by `UX-1019`: one "why" control per top
     # action, and `renderWhyRanked`'s disclosure is the one both
     # fixtures' actions always have something to say in.
-    "button": (r".+", "§4d"),                  # the Perfetto handoff button
+    "button": (r".+", "§4d"),  # the Perfetto handoff button
     "button.chapter-open": (r"^[▸▾] Sections · \d+$", "§3c"),  # UX-1044
     "button.collapse": (r"^[▾▸]$", "§3c"),
     "button.copy-rows": (r"^Copy \d+ rows?$", "§3d"),
@@ -56,18 +57,18 @@ REGISTRY = {
     "button.copy-step": (r"^Copy command$", "§4c"),
     "button.copy-step.primary": (r"^Copy command$", "§6e.5"),  # UX-1027
     "button.copy-view": (r"^Copy ", "§4c"),
-    "button.describe": (r"^\?$", "§2b"),       # the described-value affordance
+    "button.describe": (r"^\?$", "§2b"),  # the described-value affordance
     "button.focus-this": (r"^Focus", "§4c"),
     "button.json-toggle": (r"View as JSON", "§1"),
     "button.mark-this": (r".+", "§4c"),
     "button.twin-toggle": (r"^As (table|drawing)$", "§2a"),
-    "button[data-all]": (r".+", "§3c"),        # Collapse all / Expand all
-    "button[data-step]": (r".+", "§3c"),       # the Top/Prev/Next stepper
+    "button[data-all]": (r".+", "§3c"),  # Collapse all / Expand all
+    "button[data-step]": (r".+", "§3c"),  # the Top/Prev/Next stepper
     "input.copy-markdown": (r".*", "§4c"),
     "input.table-filter": (r".+", "§3d"),
     "input.th-filter": (r"^threshold for ", "§3d"),
     "input[type=checkbox]": (r".*", "UX-219"),  # the what-if boxes
-    "input[type=search]": (r".+", "UX-223"),    # the jump box
+    "input[type=search]": (r".+", "UX-223"),  # the jump box
     "select.preset-view": (r".+", "§3d"),
     "select.top-n": (r".+", "§3d"),
 }
@@ -84,10 +85,8 @@ def censuses(tmp_path_factory, browser):
     """`{label: census}` for the two committed fixtures plus the fixture
     `UX-532`'s shape needs - one browser, one boot per page."""
     booted = pages.pages(tmp_path_factory, "control-registry")
-    shared = pages.shared_resource_uri(
-        tmp_path_factory.mktemp("control-registry-shared"))
-    out = {label: census_tool.census(uri, browser)
-           for label, uri in booted.items()}
+    shared = pages.shared_resource_uri(tmp_path_factory.mktemp("control-registry-shared"))
+    out = {label: census_tool.census(uri, browser) for label, uri in booted.items()}
     out["shared_resource"] = census_tool.census(shared, browser)
     return out
 
@@ -96,14 +95,17 @@ def censuses(tmp_path_factory, browser):
 @pytest.mark.medium
 class TestEveryControlClassIsDeclared:
     def test_every_measured_class_is_in_the_registry(self, censuses):
-        undeclared = sorted({
-            control["selector"]
-            for label in pages.FIXTURES
-            for control in censuses[label]["controls"]
-            if control["selector"] not in REGISTRY})
+        undeclared = sorted(
+            {
+                control["selector"]
+                for label in pages.FIXTURES
+                for control in censuses[label]["controls"]
+                if control["selector"] not in REGISTRY
+            }
+        )
         assert not undeclared, (
-            f"undeclared control class(es), add a REGISTRY row naming "
-            f"the owning section: {undeclared}")
+            f"undeclared control class(es), add a REGISTRY row naming the owning section: {undeclared}"
+        )
 
     def test_a_declared_label_still_matches_what_is_measured(self, censuses):
         mismatched = []
@@ -111,18 +113,13 @@ class TestEveryControlClassIsDeclared:
             for control in censuses[label]["controls"]:
                 pattern = REGISTRY.get(control["selector"], (None, None))[0]
                 if pattern and not re.search(pattern, control["label"]):
-                    mismatched.append(
-                        (label, control["selector"], control["label"]))
-        assert not mismatched, (
-            f"a declared class's label no longer matches its pattern: "
-            f"{mismatched}")
+                    mismatched.append((label, control["selector"], control["label"]))
+        assert not mismatched, f"a declared class's label no longer matches its pattern: {mismatched}"
 
     def test_the_registry_is_not_wider_than_what_is_measured(self, censuses):
         """A row for a class neither page grows any more is drift the
         other way - undetectable, because nothing reds on it."""
-        measured = {control["selector"]
-                   for label in pages.FIXTURES
-                   for control in censuses[label]["controls"]}
+        measured = {control["selector"] for label in pages.FIXTURES for control in censuses[label]["controls"]}
         stale = sorted(set(REGISTRY) - measured)
         assert not stale, f"registry row(s) for no measured class: {stale}"
 
@@ -132,18 +129,28 @@ class TestEveryControlClassIsDeclared:
         reason to exist is `resource_blast`'s sixty rotating rows."""
         assert censuses["golden"]["tables_with_nested"] == []
         assert censuses["macro_micro"]["tables_with_nested"], (
-            "macro_micro should already enumerate a folded nested table")
-        sections = {row["section"]
-                   for row in censuses["shared_resource"]["tables_with_nested"]}
+            "macro_micro should already enumerate a folded nested table"
+        )
+        sections = {row["section"] for row in censuses["shared_resource"]["tables_with_nested"]}
         assert "resource_blast" in sections, (
             f"the fixture built for UX-532's shape enumerated no nested "
             f"table where it should: "
-            f"{censuses['shared_resource']['tables_with_nested']}")
+            f"{censuses['shared_resource']['tables_with_nested']}"
+        )
 
 
 #: `tools/dev_page_census.py`'s `tables` entry, per `UX-836`.
-TABLE_KEYS = {"section", "rows", "visible_rows", "badge", "filters",
-              "sortable", "data_joined", "data_levels", "show_all"}
+TABLE_KEYS = {
+    "section",
+    "rows",
+    "visible_rows",
+    "badge",
+    "filters",
+    "sortable",
+    "data_joined",
+    "data_levels",
+    "show_all",
+}
 
 
 @pytest.fixture(scope="module")
@@ -170,16 +177,14 @@ class TestTheTableCensus:
             for entry in censuses[label]["tables"]:
                 assert set(entry) == TABLE_KEYS, (label, entry)
 
-    def test_the_table_count_matches_the_dom_independently(
-            self, censuses, tmp_path_factory, browser):
+    def test_the_table_count_matches_the_dom_independently(self, censuses, tmp_path_factory, browser):
         """`UX-836`: the census's own count against a plain DOM query on
         a fresh boot - not the call `censuses` already made, so a count
         that only holds for one shared page load cannot hide here."""
-        uri = pages.export_uri(
-            pages.FIXTURES["golden"], tmp_path_factory.mktemp("table-census"))
+        uri = pages.export_uri(pages.FIXTURES["golden"], tmp_path_factory.mktemp("table-census"))
         dom_count = browser.measure(
-            uri, "(document.querySelector('main') || document.body)"
-                 ".querySelectorAll('table').length")
+            uri, "(document.querySelector('main') || document.body).querySelectorAll('table').length"
+        )
         assert len(censuses["golden"]["tables"]) == dom_count
 
     def test_filters_excludes_the_copy_checkbox(self, censuses):
@@ -187,17 +192,14 @@ class TestTheTableCensus:
         `input.table-filter` - but 14 of its 18 tables carry
         `input.copy-markdown`, the control a wider `input` selector
         would have miscounted as a filter."""
-        assert all(t["filters"] == 0 for t in censuses["golden"]["tables"]), (
-            censuses["golden"]["tables"])
-        checkbox = next(c for c in censuses["golden"]["controls"]
-                        if c["selector"] == "input.copy-markdown")
+        assert all(t["filters"] == 0 for t in censuses["golden"]["tables"]), censuses["golden"]["tables"]
+        checkbox = next(c for c in censuses["golden"]["controls"] if c["selector"] == "input.copy-markdown")
         assert checkbox["count"] >= 1, checkbox
 
     def test_a_bounded_table_reports_its_own_filter(self, scale_census):
         """The one table on `scale` past the cap: badge `25 of 1,202`,
         one `input.table-filter` in its own tools."""
-        elements = next(t for t in scale_census["tables"]
-                        if t["section"] == "elements")
+        elements = next(t for t in scale_census["tables"] if t["section"] == "elements")
         assert elements["filters"] >= 1, elements
 
 

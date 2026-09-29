@@ -15,6 +15,7 @@ and the guards below are shaped accordingly: they assert that what is
 published is *the same join*, field for field, rather than that it has
 some plausible shape.
 """
+
 import json
 import os
 import shutil
@@ -33,25 +34,21 @@ from bga import plane2, schemas
 # assertions skip and the other fifteen in this file still run.
 try:
     import jsonschema
-except ImportError:                      # pragma: no cover - the point
+except ImportError:  # pragma: no cover - the point
     jsonschema = None
 
 needs_jsonschema = pytest.mark.skipif(
-    jsonschema is None,
-    reason="jsonschema is not installed - `pip install -e '.[dev]'`")
+    jsonschema is None, reason="jsonschema is not installed - `pip install -e '.[dev]'`"
+)
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 GOLDEN = os.path.join(REPO, "tests", "fixtures", "golden", "mixed_task_kinds")
-REAL = os.path.join(
-    REPO, "examples", "06-macro-micro-optimization", ".bga", "runs",
-    "20260821T170127Z")
-has_capture = pytest.mark.skipif(
-    not os.path.isdir(REAL), reason="the examples/06 capture is not here")
+REAL = os.path.join(REPO, "examples", "06-macro-micro-optimization", ".bga", "runs", "20260821T170127Z")
+has_capture = pytest.mark.skipif(not os.path.isdir(REAL), reason="the examples/06 capture is not here")
 
 
 def _bga(args):
-    return subprocess.run([sys.executable, "-m", "bga.cli", *args],
-                          capture_output=True, text=True, cwd=REPO)
+    return subprocess.run([sys.executable, "-m", "bga.cli", *args], capture_output=True, text=True, cwd=REPO)
 
 
 # `UX-213`'s rule, which this item is one round too young to forget: an
@@ -68,20 +65,23 @@ def _golden_plane2():
     return {
         "by_element": {"base.bst": 1, "lib.bst": 1, "ghost.bst": 1},
         "per_element_parallelism": [
-            {"element": "base.bst", "requested_jobs": 1,
-             "findings": ["pinned_to_one_job"]},
+            {"element": "base.bst", "requested_jobs": 1, "findings": ["pinned_to_one_job"]},
             {"element": "lib.bst", "requested_jobs": 4, "findings": []},
             {"element": "ghost.bst", "requested_jobs": 1, "findings": []},
         ],
-        "cpu_time": {"per_element": {
-            "base.bst": {"cpu_per_wall_second": 0.87, "coverage": 0.94},
-            "lib.bst": {"cpu_per_wall_second": 3.4, "coverage": 1.0},
-            "ghost.bst": {"cpu_per_wall_second": 1.0, "coverage": 1.0},
-        }},
-        "peak_memory": {"per_element": {
-            "base.bst": {"peak_rss_kb": 157200},
-            "lib.bst": {"peak_rss_kb": 48000},
-        }},
+        "cpu_time": {
+            "per_element": {
+                "base.bst": {"cpu_per_wall_second": 0.87, "coverage": 0.94},
+                "lib.bst": {"cpu_per_wall_second": 3.4, "coverage": 1.0},
+                "ghost.bst": {"cpu_per_wall_second": 1.0, "coverage": 1.0},
+            }
+        },
+        "peak_memory": {
+            "per_element": {
+                "base.bst": {"peak_rss_kb": 157200},
+                "lib.bst": {"peak_rss_kb": 48000},
+            }
+        },
         "declared_vs_used": {"unused_candidates": []},
     }
 
@@ -110,8 +110,7 @@ class TestTheDocumentIsPublished:
         with no per-table code, on both arrays that carry the join."""
         declared = schemas.schema(schemas.CORRELATE)["properties"]
         for key in ("elements", "actionable"):
-            roles = {c["key"]: c.get("role")
-                     for c in declared[key][schemas.COLUMNS]}
+            roles = {c["key"]: c.get("role") for c in declared[key][schemas.COLUMNS]}
             assert roles["element"] == "element", key
 
     def test_every_join_column_that_is_a_quantity_says_which(self):
@@ -121,9 +120,10 @@ class TestTheDocumentIsPublished:
         of error. `UX-341` fixed the *value* instead of the label: the
         conversion happens at the input boundary, so the payload is in
         bytes and the vocabulary has one spelling for memory."""
-        columns = {c["key"]: c.get("quantity") for c in
-                   schemas.schema(schemas.CORRELATE)["properties"]
-                   ["elements"][schemas.COLUMNS]}
+        columns = {
+            c["key"]: c.get("quantity")
+            for c in schemas.schema(schemas.CORRELATE)["properties"]["elements"][schemas.COLUMNS]
+        }
         assert columns["peak_rss_bytes"] == "bytes"
         assert columns["potential_saving_us"] == "duration_us"
         assert columns["critical_path_share"] == "share"
@@ -137,10 +137,8 @@ class TestTheDocumentIsPublished:
         assert "kilobytes" not in schemas.QUANTITIES
         # `UX-337`: the formatter moved out of `app.js` into
         # `format.js` with the hint keys that select it.
-        source = open(os.path.join(REPO, "bga/viewer/format.js"),
-                      encoding="utf-8").read()
-        assert 'case "bytes":' in source, (
-            "a quantity nothing renders is a promise nothing keeps")
+        source = open(os.path.join(REPO, "bga/viewer/format.js"), encoding="utf-8").read()
+        assert 'case "bytes":' in source, "a quantity nothing renders is a promise nothing keeps"
 
 
 class TestItIsTheSameJoinOnACommittedFixture:
@@ -162,11 +160,9 @@ class TestItIsTheSameJoinOnACommittedFixture:
         cannot pass by re-deriving anything."""
         from bga.correlate import correlate
 
-        analysis = json.loads(
-            _bga(["analyze", GOLDEN, "--format", "json"]).stdout)
+        analysis = json.loads(_bga(["analyze", GOLDEN, "--format", "json"]).stdout)
         direct = correlate(analysis, _golden_plane2())
-        published = json.loads(_bga(
-            ["correlate", GOLDEN, golden_plane2, "--format", "json"]).stdout)
+        published = json.loads(_bga(["correlate", GOLDEN, golden_plane2, "--format", "json"]).stdout)
         assert published["elements"] == direct["elements"]
         assert published["actionable"] == direct["actionable"]
 
@@ -176,11 +172,8 @@ class TestItIsTheSameJoinOnACommittedFixture:
         `bga correlate` cannot describe the same element differently -
         which is the failure `UX-214` found one round earlier, in the
         verdicts."""
-        report = json.loads(_bga(
-            ["analyze", GOLDEN, "--format", "json",
-             "--plane2", golden_plane2]).stdout)
-        joined = json.loads(_bga(
-            ["correlate", GOLDEN, golden_plane2, "--format", "json"]).stdout)
+        report = json.loads(_bga(["analyze", GOLDEN, "--format", "json", "--plane2", golden_plane2]).stdout)
+        joined = json.loads(_bga(["correlate", GOLDEN, golden_plane2, "--format", "json"]).stdout)
         assert report["element_join"] == joined["elements"]
         assert report["element_join"], "the report published an empty join"
         jsonschema.validate(report, schemas.schema(schemas.ANALYZE))
@@ -190,8 +183,7 @@ class TestItIsTheSameJoinOnACommittedFixture:
         graph and Plane 2's measurement inside the sandbox, in a single
         row. `base.bst` holds 43% of the golden path and ran at 0.87
         cores busy having asked for one job."""
-        joined = json.loads(_bga(
-            ["correlate", GOLDEN, golden_plane2, "--format", "json"]).stdout)
+        joined = json.loads(_bga(["correlate", GOLDEN, golden_plane2, "--format", "json"]).stdout)
         rows = {row["element"]: row for row in joined["elements"]}
         base = rows["base.bst"]
         assert base["on_critical_path"] is True
@@ -200,31 +192,26 @@ class TestItIsTheSameJoinOnACommittedFixture:
         assert base["requested_jobs"] == 1
         assert base["peak_rss_bytes"] == 157200 * 1024
 
-    def test_an_element_plane2_never_saw_degrades_rather_than_zeroes(
-            self, golden_plane2):
+    def test_an_element_plane2_never_saw_degrades_rather_than_zeroes(self, golden_plane2):
         """`app.bst` is on the path and absent from Plane 2. Its row
         carries the Plane 1 half and no Plane 2 numbers - not zeros,
         which would read as "measured, and idle"."""
-        joined = json.loads(_bga(
-            ["correlate", GOLDEN, golden_plane2, "--format", "json"]).stdout)
+        joined = json.loads(_bga(["correlate", GOLDEN, golden_plane2, "--format", "json"]).stdout)
         rows = {row["element"]: row for row in joined["elements"]}
         assert "app.bst" in rows, "an unseen element must still be a row"
         app = rows["app.bst"]
         assert app.get("cores_busy") is None
         assert app.get("peak_rss_bytes") is None
         assert app["on_critical_path"] is True, "its Plane 1 half survives"
-        assert joined["coverage"]["plane1_elements"] > \
-            joined["coverage"]["plane2_elements"]
+        assert joined["coverage"]["plane1_elements"] > joined["coverage"]["plane2_elements"]
 
-    def test_a_plane2_only_name_is_listed_and_never_actionable(
-            self, golden_plane2):
+    def test_a_plane2_only_name_is_listed_and_never_actionable(self, golden_plane2):
         """`UX-66`'s rule, which the published document must not
         weaken: `ghost.bst` is a name Plane 2 produced and Plane 1
         never declared. It belongs in `elements` - hiding it would hide
         a real disagreement between the planes - and may never appear
         in `actionable`."""
-        joined = json.loads(_bga(
-            ["correlate", GOLDEN, golden_plane2, "--format", "json"]).stdout)
+        joined = json.loads(_bga(["correlate", GOLDEN, golden_plane2, "--format", "json"]).stdout)
         rows = {row["element"]: row for row in joined["elements"]}
         assert "ghost.bst" in rows, "an undeclared name must be visible"
         assert rows["ghost.bst"]["declared"] is False
@@ -246,8 +233,7 @@ class TestItIsTheSameJoinOnACommittedFixture:
         `test_an_element_plane2_never_saw_degrades_rather_than_zeroes`
         asserts.
         """
-        report = json.loads(
-            _bga(["analyze", GOLDEN, "--format", "json"]).stdout)
+        report = json.loads(_bga(["analyze", GOLDEN, "--format", "json"]).stdout)
         assert "element_join" not in report
         assert "element_join_coverage" not in report
         jsonschema.validate(report, schemas.schema(schemas.ANALYZE))
@@ -260,8 +246,7 @@ class TestItIsTheSameJoin:
 
     @needs_jsonschema
     def test_the_output_validates_against_its_own_schema(self):
-        result = _bga(["correlate", os.path.join(REAL, "run"),
-                       "--format", "json"])
+        result = _bga(["correlate", os.path.join(REAL, "run"), "--format", "json"])
         assert result.returncode == 0, result.stderr
         payload = json.loads(result.stdout)
         assert payload["schema"] == schemas.CORRELATE
@@ -273,15 +258,11 @@ class TestItIsTheSameJoin:
         this cannot pass by re-deriving anything."""
         from bga.correlate import correlate
 
-        analysis = json.loads(_bga(
-            ["analyze", os.path.join(REAL, "run"), "--format", "json"]).stdout)
-        native = json.load(open(os.path.join(REAL, "plane2.json"),
-                                encoding="utf-8"))
+        analysis = json.loads(_bga(["analyze", os.path.join(REAL, "run"), "--format", "json"]).stdout)
+        native = json.load(open(os.path.join(REAL, "plane2.json"), encoding="utf-8"))
         direct = correlate(analysis, native)
 
-        published = json.loads(_bga(
-            ["correlate", os.path.join(REAL, "run"),
-             "--format", "json"]).stdout)
+        published = json.loads(_bga(["correlate", os.path.join(REAL, "run"), "--format", "json"]).stdout)
         assert published["elements"] == direct["elements"]
         assert published["actionable"] == direct["actionable"]
 
@@ -290,20 +271,36 @@ class TestItIsTheSameJoin:
         `bga correlate` cannot describe the same element differently -
         which is the failure `UX-214` found one round earlier, in the
         verdicts."""
-        report = json.loads(_bga(
-            ["analyze", os.path.join(REAL, "run"), "--format", "json",
-             "--plane2", os.path.join(REAL, "plane2.json")]).stdout)
-        joined = json.loads(_bga(
-            ["correlate", os.path.join(REAL, "run"),
-             "--format", "json"]).stdout)
+        report = json.loads(
+            _bga(
+                [
+                    "analyze",
+                    os.path.join(REAL, "run"),
+                    "--format",
+                    "json",
+                    "--plane2",
+                    os.path.join(REAL, "plane2.json"),
+                ]
+            ).stdout
+        )
+        joined = json.loads(_bga(["correlate", os.path.join(REAL, "run"), "--format", "json"]).stdout)
         assert report["element_join"] == joined["elements"]
         assert report["element_join"], "the report published an empty join"
 
     @needs_jsonschema
     def test_the_report_still_validates_with_the_join_in_it(self):
-        report = json.loads(_bga(
-            ["analyze", os.path.join(REAL, "run"), "--format", "json",
-             "--plane2", os.path.join(REAL, "plane2.json")]).stdout)
+        report = json.loads(
+            _bga(
+                [
+                    "analyze",
+                    os.path.join(REAL, "run"),
+                    "--format",
+                    "json",
+                    "--plane2",
+                    os.path.join(REAL, "plane2.json"),
+                ]
+            ).stdout
+        )
         jsonschema.validate(report, schemas.schema(schemas.ANALYZE))
 
 
@@ -324,8 +321,7 @@ class TestOnePlaneIsNotAJoin:
         a row is still a degrade rather than an error, which is what
         the next test asserts.
         """
-        report = json.loads(_bga(
-            ["analyze", GOLDEN, "--format", "json"]).stdout)
+        report = json.loads(_bga(["analyze", GOLDEN, "--format", "json"]).stdout)
         assert "element_join" not in report
         assert "element_join_coverage" not in report
         # UX-329: `GOLDEN`, not the real capture this used to read. That
@@ -336,7 +332,8 @@ class TestOnePlaneIsNotAJoin:
         # a snapshot and has no sibling.
         assert plane2.attachable(GOLDEN) == (None, None), (
             "the fixture this clause calls single-plane has a Plane 2 "
-            "report beside it, so it is not asserting what it says")
+            "report beside it, so it is not asserting what it says"
+        )
         jsonschema.validate(report, schemas.schema(schemas.ANALYZE))
 
     def test_an_element_plane2_never_saw_degrades_rather_than_zeroes(self):
@@ -344,14 +341,12 @@ class TestOnePlaneIsNotAJoin:
         and Plane 2 saw 9. The two it missed are rows with a Plane 1
         half and no Plane 2 numbers - not rows claiming zero cores
         busy, which would read as "measured, and idle"."""
-        joined = json.loads(_bga(
-            ["correlate", os.path.join(REAL, "run"),
-             "--format", "json"]).stdout)
+        joined = json.loads(_bga(["correlate", os.path.join(REAL, "run"), "--format", "json"]).stdout)
         coverage = joined["coverage"]
         assert coverage["plane1_elements"] > coverage["plane2_elements"], (
-            "this fixture no longer exercises the partial-coverage case")
-        unseen = [row for row in joined["elements"]
-                  if row.get("cores_busy") is None]
+            "this fixture no longer exercises the partial-coverage case"
+        )
+        unseen = [row for row in joined["elements"] if row.get("cores_busy") is None]
         assert unseen, "no element is missing its Plane 2 half"
         for row in unseen:
             assert "cores_busy" not in row or row["cores_busy"] is None
@@ -402,11 +397,10 @@ def rendered():
     import pathlib as _pathlib
 
     repo = _pathlib.Path(__file__).resolve().parents[2]
-    script = _RENDER % {
-        "sections": (repo / "bga/viewer/sections.js").as_uri()}
-    done = subprocess.run([_node, "--input-type=module", "-e", script],
-                          capture_output=True, text=True, cwd=str(repo),
-                          timeout=60)
+    script = _RENDER % {"sections": (repo / "bga/viewer/sections.js").as_uri()}
+    done = subprocess.run(
+        [_node, "--input-type=module", "-e", script], capture_output=True, text=True, cwd=str(repo), timeout=60
+    )
     assert done.returncode == 0, done.stderr[-2000:]
     return json.loads(done.stdout)
 
@@ -424,13 +418,11 @@ class TestAJoinWithNoPlaneTwoSaysSo:
         assert out["rendered"], out
         assert out["empty"] == "true", out
         assert out["sentence"], "no sentence where the zeros were"
-        assert out["sentence"].startswith("Plane 2 not captured"), (
-            out["sentence"])
+        assert out["sentence"].startswith("Plane 2 not captured"), out["sentence"]
 
     def test_it_draws_no_zeros_to_be_read_as_measurements(self, rendered):
         """The other half: the numbers go, they are not annotated."""
-        assert "dd" not in rendered["noPlane2"]["tags"], (
-            rendered["noPlane2"]["tags"])
+        assert "dd" not in rendered["noPlane2"]["tags"], rendered["noPlane2"]["tags"]
 
     def test_a_real_join_is_untouched(self, rendered):
         """So the rule is a distinction rather than a section that never
@@ -469,20 +461,23 @@ class TestTheUndeclaredGateIsLoadBearing:
             "critical_path_detail": [{"element_uid": "real.bst"}],
             "elements": {"blast_radius": {"real.bst": 2}},
             "sensitivity": {
-                "top_opportunities": [["real.bst", 0.45],
-                                      ["orphan.bst", 0.40]],
-                "critical_path_us": 20_000_000},
+                "top_opportunities": [["real.bst", 0.45], ["orphan.bst", 0.40]],
+                "critical_path_us": 20_000_000,
+            },
             "total_duration_us": 20_000_000,
         }
         native = {
             "by_element": {"real.bst": 1, "orphan.bst": 1},
             "per_element_parallelism": [
                 {"element": "real.bst", "requested_jobs": 1, "findings": []},
-                {"element": "orphan.bst", "requested_jobs": 1,
-                 "findings": []}],
-            "cpu_time": {"per_element": {
-                "real.bst": {"cpu_per_wall_second": 0.8, "coverage": 1.0},
-                "orphan.bst": {"cpu_per_wall_second": 0.8, "coverage": 1.0}}},
+                {"element": "orphan.bst", "requested_jobs": 1, "findings": []},
+            ],
+            "cpu_time": {
+                "per_element": {
+                    "real.bst": {"cpu_per_wall_second": 0.8, "coverage": 1.0},
+                    "orphan.bst": {"cpu_per_wall_second": 0.8, "coverage": 1.0},
+                }
+            },
             "declared_vs_used": {"unused_candidates": []},
         }
         return analysis, native
@@ -493,12 +488,12 @@ class TestTheUndeclaredGateIsLoadBearing:
         `_recommend` fires on."""
         from bga.correlate import ElementJoin, _recommend
 
-        orphan = ElementJoin(element="orphan.bst", declared=False,
-                             potential_saving_us=8_000_000,
-                             saving_share=0.4, cores_busy=0.8)
+        orphan = ElementJoin(
+            element="orphan.bst", declared=False, potential_saving_us=8_000_000, saving_share=0.4, cores_busy=0.8
+        )
         assert _recommend(orphan), (
-            "the fixture no longer reaches _recommend, so the gate "
-            "below is being asserted against nothing")
+            "the fixture no longer reaches _recommend, so the gate below is being asserted against nothing"
+        )
 
     def test_an_undeclared_element_is_listed_and_never_actionable(self):
         from bga.correlate import correlate
@@ -508,17 +503,16 @@ class TestTheUndeclaredGateIsLoadBearing:
         rows = {row["element"]: row for row in joined["elements"]}
         assert "orphan.bst" in rows, (
             "an undeclared name must be visible, not hidden - hiding it "
-            "would hide a real disagreement between the planes")
+            "would hide a real disagreement between the planes"
+        )
         assert rows["orphan.bst"]["declared"] is False
         assert rows["orphan.bst"]["recommendations"] == []
-        assert "orphan.bst" not in {r["element"]
-                                    for r in joined["actionable"]}
+        assert "orphan.bst" not in {r["element"] for r in joined["actionable"]}
 
     def test_the_published_document_carries_that_distinction(self, tmp_path):
         """Through the schema, not just the function: `declared` is a
         published field, so a consumer can make the same refusal."""
-        declared = schemas.schema(schemas.CORRELATE)["properties"][
-            "elements"]["items"]["properties"]["declared"]
+        declared = schemas.schema(schemas.CORRELATE)["properties"]["elements"]["items"]["properties"]["declared"]
         assert declared["type"] == "boolean"
         assert "is not one" in declared["description"]
 

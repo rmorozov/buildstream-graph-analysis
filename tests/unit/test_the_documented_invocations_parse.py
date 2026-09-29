@@ -29,6 +29,7 @@ argv, not bga's). Positional *counts* are not checked either: several
 commands take optional positionals and a guide legitimately shows the
 short form.
 """
+
 import ast
 import pathlib
 import re
@@ -142,8 +143,7 @@ def _alias_flags(module_name: str):
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
             continue
-        literals = [a.value for a in node.args
-                    if isinstance(a, ast.Constant) and isinstance(a.value, str)]
+        literals = [a.value for a in node.args if isinstance(a, ast.Constant) and isinstance(a.value, str)]
         if node.func.attr == "add_argument":
             flags |= {text for text in literals if text.startswith("-")}
         elif node.func.attr == "add_parser" and literals:
@@ -182,7 +182,6 @@ def _known(command):
 
 
 class TestEveryDocumentedInvocationParses:
-
     def test_the_scan_finds_the_commands_the_guides_teach(self):
         """A scan that matched nothing would pass every clause below -
         which is how a name-only guard let four invocations through."""
@@ -190,10 +189,12 @@ class TestEveryDocumentedInvocationParses:
         assert len(found) >= 40, (
             f"only {len(found)} `bga …` invocations found in the guides; "
             "there were 80-odd when this was written, so the fence or "
-            "prompt pattern has moved")
+            "prompt pattern has moved"
+        )
         commands = {argv[1] for _, _, argv in found}
         assert {"analyze", "snapshot", "compare"} <= commands, (
-            f"the guides no longer teach the basic loop: {sorted(commands)}")
+            f"the guides no longer teach the basic loop: {sorted(commands)}"
+        )
 
     def test_a_wrapped_invocation_is_read_past_its_backslash(self):
         """`UX-516`: the CI owner's step 2 wraps over two lines, so the
@@ -218,11 +219,13 @@ class TestEveryDocumentedInvocationParses:
             wrapped.append(f"{path}:{number}")
             assert tokens[0] in argv, (
                 f"{path}:{number}: the scan stopped at the backslash - "
-                f"{tokens[0]!r} is on the next line and not in {argv}")
+                f"{tokens[0]!r} is on the next line and not in {argv}"
+            )
         assert len(wrapped) >= 8, (
             f"only {len(wrapped)} wrapped invocation(s) reached the check; "
             "there were 11 when this was written, so the join or the "
-            "guides' wrapping has moved")
+            "guides' wrapping has moved"
+        )
 
     def test_no_documented_flag_is_one_the_command_does_not_have(self):
         """`bga cache-logs . --native-report @last` is the shape: a real
@@ -240,11 +243,8 @@ class TestEveryDocumentedInvocationParses:
                     continue
                 name = token.split("=", 1)[0]
                 if name not in flags:
-                    offenders.append(
-                        f"{path}:{number}: `bga {command} {name}` - no such flag")
-        assert not offenders, (
-            "documented flag(s) the command does not have:\n  "
-            + "\n  ".join(offenders))
+                    offenders.append(f"{path}:{number}: `bga {command} {name}` - no such flag")
+        assert not offenders, "documented flag(s) the command does not have:\n  " + "\n  ".join(offenders)
 
     def test_no_documented_subcommand_is_one_the_command_does_not_have(self):
         """`bga capture census` is the shape this checks - a second word
@@ -260,11 +260,9 @@ class TestEveryDocumentedInvocationParses:
                 continue
             if word not in subcommands:
                 offenders.append(
-                    f"{path}:{number}: `bga {command} {word}` - {command} "
-                    f"dispatches on {sorted(subcommands)}")
-        assert not offenders, (
-            "documented subcommand(s) that do not exist:\n  "
-            + "\n  ".join(offenders))
+                    f"{path}:{number}: `bga {command} {word}` - {command} dispatches on {sorted(subcommands)}"
+                )
+        assert not offenders, "documented subcommand(s) that do not exist:\n  " + "\n  ".join(offenders)
 
     def test_the_flag_inventory_is_really_read_from_the_source(self):
         """The AST reader is the load-bearing half for every alias, and
@@ -273,11 +271,11 @@ class TestEveryDocumentedInvocationParses:
         flags, subcommands = _alias_flags("tools.bst_native_build_tracer")
         assert "--wrapped-log" in flags, sorted(flags)[:20]
         assert {"run", "report", "census", "replay-sandbox"} <= subcommands, (
-            f"`bga capture` dispatches on {sorted(subcommands)}")
+            f"`bga capture` dispatches on {sorted(subcommands)}"
+        )
 
 
 class TestTheHelpDoesNotCiteWhatIsNotThere:
-
     def test_every_doc_path_a_help_string_names_exists(self):
         """`bga snapshot --help` ended with "Full background:
         docs/guides/local-loop.md", and that file has never existed. A
@@ -294,9 +292,7 @@ class TestTheHelpDoesNotCiteWhatIsNotThere:
             for match in pattern.findall(text):
                 if not (REPO / match).exists():
                     missing.append(f"{path.relative_to(REPO)} -> {match}")
-        assert not missing, (
-            "source names documentation that does not exist:\n  "
-            + "\n  ".join(sorted(set(missing))))
+        assert not missing, "source names documentation that does not exist:\n  " + "\n  ".join(sorted(set(missing)))
 
 
 class TestTheMisuseErrorSaysWhatWouldHaveWorked:
@@ -309,24 +305,25 @@ class TestTheMisuseErrorSaysWhatWouldHaveWorked:
 
         return subprocess.run(
             [sys.executable, "-m", "bga.cli", "cache-logs", *argv],
-            capture_output=True, text=True, cwd=str(tmp_path), timeout=120,
-            env={**__import__("os").environ, "PYTHONPATH": str(REPO)})
+            capture_output=True,
+            text=True,
+            cwd=str(tmp_path),
+            timeout=120,
+            env={**__import__("os").environ, "PYTHONPATH": str(REPO)},
+        )
 
     def test_a_log_root_with_nothing_in_it_names_the_two_ways_out(self, tmp_path):
         done = self._cache_logs(tmp_path, ".")
         assert done.returncode == 1, done.stdout
         message = done.stderr
         assert str(tmp_path) in message, (
-            f"the error says where it looked as `.`, which only the reader "
-            f"can resolve:\n{message}")
-        assert "--project" in message, (
-            f"the error names neither of the arguments that would have "
-            f"worked:\n{message}")
+            f"the error says where it looked as `.`, which only the reader can resolve:\n{message}"
+        )
+        assert "--project" in message, f"the error names neither of the arguments that would have worked:\n{message}"
         assert "PROJECT_DIR" in message, message
         assert "--list" in message, message
 
-    def test_a_project_directory_still_gets_the_project_shaped_error(
-            self, tmp_path):
+    def test_a_project_directory_still_gets_the_project_shaped_error(self, tmp_path):
         """The negative: `UX-127`'s better message must not be replaced
         by the generic one."""
         (tmp_path / "project.conf").write_text("name: ux327\n", encoding="utf-8")

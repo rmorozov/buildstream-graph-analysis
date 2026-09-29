@@ -12,6 +12,7 @@ Both controls now write the section they land on before the
 view-state writer's own capture runs, the same anchor a plain rail
 `<a href="#key">` already gets from the browser for free.
 """
+
 import pathlib
 import sys
 
@@ -47,7 +48,9 @@ const waitFor = async (check, tries = 60, ms = 50) => {
 #: `test_a_rail_click_lands_on_its_section.py` bands it at 57-63).
 LANDING_PX = 60
 
-_PRESET = _WAIT + """(async () => {
+_PRESET = (
+    _WAIT
+    + """(async () => {
   const link = document.querySelector(
     'a[data-toc-view][href^="#elements~"][data-toc-view="Critical path"]');
   const section = document.getElementById("elements");
@@ -63,12 +66,15 @@ _PRESET = _WAIT + """(async () => {
   const link1 = location.href;
   return { before, after, link1 };
 })()"""
+)
 
 #: The jump box, landed by the hit and by Enter - the two ways in the
 #: Required Fix names. `evidence` is not the run's first section, so a
 #: write that only ever preserved whatever anchor was already there
 #: would still show `""`.
-_JUMP = _WAIT + """(async () => {
+_JUMP = (
+    _WAIT
+    + """(async () => {
   const box = document.getElementById("jump");
   const setter = Object.getOwnPropertyDescriptor(
     window.HTMLInputElement.prototype, "value").set;
@@ -97,11 +103,14 @@ _JUMP = _WAIT + """(async () => {
   };
   return { hit: await search("click"), enter: await search("enter") };
 })()"""
+)
 
 #: Reopening the copied link on a fresh load: the anchor the writer put
 #: in it must be what the second load scrolls to, unaided by anything
 #: this session remembered.
-_REOPEN = _WAIT + """(async (target) => {
+_REOPEN = (
+    _WAIT
+    + """(async (target) => {
   const before = window.scrollY;
   await waitFor(() => window.scrollY !== before || true, 1, 200);
   const key = location.hash.replace(/^#/, "").split("~")[0];
@@ -110,6 +119,7 @@ _REOPEN = _WAIT + """(async (target) => {
     window.scrollY + node.getBoundingClientRect().top - 60) < 40);  // LANDING_PX
   return { key, rectTop: node ? node.getBoundingClientRect().top : null };
 })()"""
+)
 
 
 @pytest.fixture(scope="module")
@@ -120,8 +130,7 @@ def preset(tmp_path_factory):
     # moved on from) does not reliably force a reload.
     if chrome is None:
         pytest.skip(NO_BROWSER)
-    at = pages.export_uri(pages.FIXTURES["macro_micro"],
-                          tmp_path_factory.mktemp("rail-jump-preset"))
+    at = pages.export_uri(pages.FIXTURES["macro_micro"], tmp_path_factory.mktemp("rail-jump-preset"))
     with Browser(chrome) as browser:
         return browser.measure(at, _PRESET, 1440, 900)
 
@@ -130,8 +139,7 @@ def preset(tmp_path_factory):
 def jumped(tmp_path_factory):
     if chrome is None:
         pytest.skip(NO_BROWSER)
-    at = pages.export_uri(pages.FIXTURES["macro_micro"],
-                          tmp_path_factory.mktemp("rail-jump-jumped"))
+    at = pages.export_uri(pages.FIXTURES["macro_micro"], tmp_path_factory.mktemp("rail-jump-jumped"))
     with Browser(chrome) as browser:
         return browser.measure(at, _JUMP, 1440, 900)
 

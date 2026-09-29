@@ -1,4 +1,5 @@
 """Human-readable text/CSV report formatting (Part 37)."""
+
 from typing import Optional
 
 from .. import findings as findings_mod
@@ -67,6 +68,8 @@ def _head_and_tail(items, head: int, tail: int, full: bool = False):
     if full or len(items) <= head + tail:
         return list(items), None
     return list(items[:head]) + list(items[-tail:]), head
+
+
 # UX-92: an invalidation with twenty independent roots is a different
 # problem from one with a single root, and the reader needs to see that
 # it is - but not twenty lines of it.
@@ -81,9 +84,7 @@ def _format_instance(instance: dict) -> str:
     run directory with no wall clock genuinely has no capture time, and
     "unknown" beside a real path reads worse than the path alone.
     """
-    return "  ".join(
-        instance[key] for key in ('started_at', 'run_dir') if instance.get(key)
-    )
+    return "  ".join(instance[key] for key in ('started_at', 'run_dir') if instance.get(key))
 
 
 def _format_build_class(instance: dict) -> Optional[str]:
@@ -239,8 +240,7 @@ def _format_capacity_model_note(result: AnalysisResult) -> str:
     return f"  Note: {note}"
 
 
-def _format_key_findings(result: AnalysisResult,
-                         explain: bool = False) -> list[str]:
+def _format_key_findings(result: AnalysisResult, explain: bool = False) -> list[str]:
     """Synthesized "what to look at first" summary (P4-02).
 
     `UX-75`: this used to *be* the synthesis - every conclusion the tool
@@ -273,8 +273,7 @@ def _format_key_findings(result: AnalysisResult,
     document = build_document(result)
     # `UX-344`: one published list keyed by claim, so the terminal looks
     # each chain up by the id the claim already carries.
-    lines.extend(provenance.render(
-        provenance.for_claim(document, "diagnosis") or {}, indent="    "))
+    lines.extend(provenance.render(provenance.for_claim(document, "diagnosis") or {}, indent="    "))
     for finding in findings:
         lines.append(f"{finding.get('indent', '  ')}{finding['title']}")
         lines.extend(finding.get('detail') or [])
@@ -292,14 +291,15 @@ def _priced_fixes(result: AnalysisResult, findings) -> list[tuple]:
     it is absent.
     """
     headline = compute_headline(result, findings)
-    rows = [(action["element_uid"], action["saving_us"])
-            for action in headline.get("top_actions") or []
-            if action.get("saving_us") is not None]
+    rows = [
+        (action["element_uid"], action["saving_us"])
+        for action in headline.get("top_actions") or []
+        if action.get("saving_us") is not None
+    ]
     joint = next((f for f in findings if f.get("id") == "joint-saving"), None)
     together = ((joint or {}).get("evidence") or {}).get("joint_saving_us")
     if together:
-        rows.append((f"the top {len((joint or {}).get('elements') or [])} together",
-                     together))
+        rows.append((f"the top {len((joint or {}).get('elements') or [])} together", together))
     return rows
 
 
@@ -318,15 +318,17 @@ def _format_in_your_units(result: AnalysisResult, findings) -> list[str]:
         return ["In Your Units:", f"  not applied: {supplied['error']}", ""]
     rows = _priced_fixes(result, findings)
     if not rows:
-        return ["In Your Units:",
-                f"  {rate.preamble(supplied)}",
-                "  this run prices no fix, so there is nothing to convert", ""]
+        return [
+            "In Your Units:",
+            f"  {rate.preamble(supplied)}",
+            "  this run prices no fix, so there is nothing to convert",
+            "",
+        ]
     lines = ["In Your Units:", f"  {rate.preamble(supplied)}"]
     width = max(len(what) for what, _ in rows)
     shown = max(len(_fmt_us(us)) for _, us in rows)
     for what, saving_us in rows:
-        lines.append(f"  {what:<{width}}  {_fmt_us(saving_us):>{shown}} = "
-                     f"{rate.phrase(saving_us, supplied)}")
+        lines.append(f"  {what:<{width}}  {_fmt_us(saving_us):>{shown}} = {rate.phrase(saving_us, supplied)}")
     return lines + [""]
 
 
@@ -429,11 +431,13 @@ def _format_timestamp_resolution(result: AnalysisResult) -> list[str]:
         lines.append(
             f"    {plural(provably_short, 'task')} are reported SHORTER than BuildStream's "
             f"own timing of them"
-            + (f" - {worst.get('element')} at {worst['span_s']:.3f}s against "
-               f"{worst['bst_elapsed_s']:.0f}s" if worst.get('span_s') is not None
-               else "")
+            + (
+                f" - {worst.get('element')} at {worst['span_s']:.3f}s against {worst['bst_elapsed_s']:.0f}s"
+                if worst.get('span_s') is not None
+                else ""
+            )
             + ", which is a duration that did not happen rather than one measured "
-              "imprecisely (UX-110)"
+            "imprecisely (UX-110)"
         )
     return lines + [""]
 
@@ -527,12 +531,10 @@ def _format_resource_blast(result, full_sections=frozenset()) -> list[str]:
     shown = rows if 'sources' in full_sections else rows[:_SHARED_SOURCE_ROWS]
     hidden_rows = len(rows) - len(shown)
     for row in shown:
-        cost = ("unmeasured" if row['measured_us'] is None
-                else f"{row['measured_us'] / US_PER_S:.0f}s")
+        cost = "unmeasured" if row['measured_us'] is None else f"{row['measured_us'] / US_PER_S:.0f}s"
         identity = row['identity']
         share = f"/{total}" if total else ""
-        numbers = (f"{row['direct_count']:>7}"
-                   f"{str(row['blast_count']) + share:>9}{cost:>11}")
+        numbers = f"{row['direct_count']:>7}{str(row['blast_count']) + share:>9}{cost:>11}"
         # UX-192: the identity is the join key - `bga blast <identity>`
         # is the next command a reader types - so it is never elided.
         # An identity too wide for the column takes its own line and the
@@ -546,18 +548,20 @@ def _format_resource_blast(result, full_sections=frozenset()) -> list[str]:
         else:
             lines.append(f"  {identity:<44}{numbers}")
         lines.append(f"      {sources.keying_clause(row)}")
-        kinds = ", ".join(f"{count} {kind}" for kind, count
-                          in (row['by_element_kind'] or {}).items())
+        kinds = ", ".join(f"{count} {kind}" for kind, count in (row['by_element_kind'] or {}).items())
         if kinds:
             # UX-173: the split first, because it is what the count
             # means; the per-kind detail behind it.
             lines.append(
                 f"      rebuilds "
                 f"{sources.format_kind_split(row.get('building_count', row['blast_count']), row.get('assembling_count', 0))}"
-                f": {kinds}")
+                f": {kinds}"
+            )
         if row['measured_elements'] < row['blast_count']:
-            lines.append(f"      measured for {row['measured_elements']} of "
-                         f"{row['blast_count']} - the rest did not run in this build")
+            lines.append(
+                f"      measured for {row['measured_elements']} of "
+                f"{row['blast_count']} - the rest did not run in this build"
+            )
     if hidden_rows:
         # UX-187: named, not silent. The rows are ranked widest-first,
         # so what folds is the tail - but a reader still has to be told
@@ -567,8 +571,7 @@ def _format_resource_blast(result, full_sections=frozenset()) -> list[str]:
     if unreadable:
         # UX-160's lesson: a reader that silently drops what it cannot
         # parse reports zero and looks like an answer.
-        lines.append(f"  ({plural(len(unreadable), 'element')} whose "
-                     f"sources could not be read are not counted above)")
+        lines.append(f"  ({plural(len(unreadable), 'element')} whose sources could not be read are not counted above)")
     lines += [
         "",
         "  Work is the sum of the named elements' own durations, not wall clock:",
@@ -594,8 +597,11 @@ def _format_blast_ranking(signals: dict) -> list[str]:
         return []
     br_data = signals.get('blast_radius') or {}
     ranked_by = signals.get('blast_radius_ranked_by') or 'element-count'
-    label = ("measured rebuild time" if ranked_by == 'measured-rebuild-time'
-             else "downstream element count (this run measured no durations)")
+    label = (
+        "measured rebuild time"
+        if ranked_by == 'measured-rebuild-time'
+        else "downstream element count (this run measured no durations)"
+    )
     lines = [f"  Widest blast radius, by {label}:"]
     for uid in top[:5]:
         entry = br_data.get(uid) if isinstance(br_data, dict) else None
@@ -604,11 +610,9 @@ def _format_blast_ranking(signals: dict) -> list[str]:
             continue
         cost = entry.get('weighted_duration_us') or 0
         kind = entry.get('element_kind') or 'unknown'
-        suffix = (f", {cost / 1e6:.1f}s of rebuilding below it"
-                  if cost else "")
+        suffix = f", {cost / 1e6:.1f}s of rebuilding below it" if cost else ""
         assembles = "" if sources.is_building_kind(kind) else " - assembles, does not build"
-        lines.append(f"    {uid} ({kind}): "
-                     f"{entry.get('downstream_count', 0)} downstream{suffix}{assembles}")
+        lines.append(f"    {uid} ({kind}): {entry.get('downstream_count', 0)} downstream{suffix}{assembles}")
     return lines
 
 
@@ -638,7 +642,7 @@ def _render_header_section(result: AnalysisResult, section, by_kind, full_sectio
     # already carries the same fact (UX-54), but it is a dozen lines
     # down a report a user scrolls past - and the figures above it are
     # the ones that get quoted.
-    for violation in (result.violations or []):
+    for violation in result.violations or []:
         if violation.get('type') != 'build_failed':
             continue
         # UX-164 item 3: cache hits are not casualties.
@@ -648,14 +652,14 @@ def _render_header_section(result: AnalysisResult, section, by_kind, full_sectio
             counts = f", {built} built"
             if cached:
                 counts += f", {cached} already cached"
-        if violation.get('suspended') and not violation.get('failed_elements') \
-                and not violation.get('interrupted'):
+        if violation.get('suspended') and not violation.get('failed_elements') and not violation.get('interrupted'):
             # UX-185: neither a failure nor an interrupt - the build ran
             # to the end, and the machine was asleep for part of it. The
             # sentence names the fix, because the reader has a capture
             # they cannot use and the next question is what to do
             # differently.
             from ..suspend import describe as _describe_suspension
+
             lines.append(_describe_suspension(violation['suspended']))
             what = "the machine slept while it ran"
         elif violation.get('interrupted') and not violation.get('failed_elements'):
@@ -665,10 +669,7 @@ def _render_header_section(result: AnalysisResult, section, by_kind, full_sectio
         else:
             named = ", ".join(violation.get('failed_elements') or []) or "unnamed element"
             what = f"{plural(violation.get('failed_count'), 'element')} ended in FAILURE ({named})"
-        lines.append(
-            f"THIS BUILD DID NOT FINISH: {what}{counts}. Every figure below "
-            f"describes a partial build."
-        )
+        lines.append(f"THIS BUILD DID NOT FINISH: {what}{counts}. Every figure below describes a partial build.")
         break
     lines.append("")
     return lines
@@ -714,7 +715,9 @@ def _render_floors_section(result: AnalysisResult, section, by_kind, full_sectio
             lines.append(f"  T_C (replay makespan):       {t_replay / 1e6:.2f}s")
         efficiency_score = floors.get('efficiency_score')
         if efficiency_score is not None:
-            lines.append(f"  Efficiency Score:            {efficiency_score:.2f} ({_efficiency_band(efficiency_score)})")
+            lines.append(
+                f"  Efficiency Score:            {efficiency_score:.2f} ({_efficiency_band(efficiency_score)})"
+            )
         # UX-27: the graph-shape-aware companion to the score above.
         occupancy_share = floors.get('occupancy_share')
         if occupancy_share is not None:
@@ -736,8 +739,7 @@ def _render_floors_section(result: AnalysisResult, section, by_kind, full_sectio
             lines.append(
                 f"  LB_cpu (CPU over cores):     {lb_cpu_us / 1e6:.2f}s "
                 f"({floors.get('lb_cpu_governing_cores')} cores from "
-                f"{floors.get('lb_cpu_cores_source')}{share})"
-                + (" - binding" if floors.get('lb_cpu_binds') else "")
+                f"{floors.get('lb_cpu_cores_source')}{share})" + (" - binding" if floors.get('lb_cpu_binds') else "")
             )
             for sentence in cpu_floor_assumptions.values():
                 lines.append(f"    assumes: {sentence}")
@@ -759,8 +761,7 @@ def _render_floors_section(result: AnalysisResult, section, by_kind, full_sectio
         resolution = getattr(result, 'duration_resolution', None) or {}
         if resolution.get('note'):
             lines.append("  " + resolution['note'])
-            lines.append(f"  Unmeasurable at this epsilon: "
-                         f"{', '.join(resolution.get('elements', []))}")
+            lines.append(f"  Unmeasurable at this epsilon: {', '.join(resolution.get('elements', []))}")
         lines.append("")
     return lines
 
@@ -773,10 +774,7 @@ def _render_attribution_section(result: AnalysisResult, section, by_kind, full_s
         total = result.total_duration_us
         for category, duration_us in result.attribution.items():
             pct = (duration_us / total * 100) if total > 0 else 0
-            lines.append(
-                f"  {_attribution_label(category):25s} "
-                f"{duration_us / 1e6:8.2f}s ({pct:5.1f}%)"
-            )
+            lines.append(f"  {_attribution_label(category):25s} {duration_us / 1e6:8.2f}s ({pct:5.1f}%)")
         lines.append("")
     return lines
 
@@ -807,8 +805,7 @@ def _render_critical_path_section(result: AnalysisResult, section, by_kind, full
     # task_key.element_name, so this block never actually fired for any
     # input - a pre-existing dead-code bug, fixed here since P1-14's new
     # `graph` subcommand's whole purpose depends on this content existing.
-    if section in (None, 'graph') and hasattr(result, 'signals') \
-            and schemas.critical_path_uids(result.signals):
+    if section in (None, 'graph') and hasattr(result, 'signals') and schemas.critical_path_uids(result.signals):
         critical_path = schemas.critical_path_uids(result.signals)
         lines.append(f"Critical Path Length: {len(critical_path)} elements")
         # UX-33: the path is always printed now. It used to be withheld
@@ -825,9 +822,7 @@ def _render_critical_path_section(result: AnalysisResult, section, by_kind, full
             lines.append(f"  Path: {' → '.join(critical_path)}")
         elif detail:
             lines.append("  Path (chain order, with each element's real measured duration):")
-            shown, hidden_at = _head_and_tail(
-                detail, _PATH_HEAD, _PATH_TAIL,
-                full=('path' in full_sections))
+            shown, hidden_at = _head_and_tail(detail, _PATH_HEAD, _PATH_TAIL, full=('path' in full_sections))
             for index, entry in enumerate(shown):
                 if index == hidden_at:
                     lines.append(_elision(len(detail) - len(shown), "--full-path"))
@@ -835,11 +830,11 @@ def _render_critical_path_section(result: AnalysisResult, section, by_kind, full
                 share_text = f"{share * 100:5.1f}% of path" if share is not None else "  n/a"
                 structural = (
                     " [structural: {}, no build commands to speed up]".format(entry['element_kind'])
-                    if entry.get('is_structural_kind') else ""
+                    if entry.get('is_structural_kind')
+                    else ""
                 )
                 lines.append(
-                    f"    {entry['element_uid']:<40s} {entry['duration_us'] / 1e6:7.2f}s "
-                    f"({share_text}){structural}"
+                    f"    {entry['element_uid']:<40s} {entry['duration_us'] / 1e6:7.2f}s ({share_text}){structural}"
                 )
         else:
             # No per-element detail available (an older run directory, or
@@ -887,10 +882,7 @@ def _render_cpu_utilisation_buckets(util: dict) -> list[str]:
             "has N*H of them to spend:"
         )
     for bucket_name, bucket_us in buckets.items():
-        lines.append(
-            f"  {str(bucket_name).replace('_', ' ').title():20s} "
-            f"{bucket_us / 1e6:8.2f} slot-s"
-        )
+        lines.append(f"  {str(bucket_name).replace('_', ' ').title():20s} {bucket_us / 1e6:8.2f} slot-s")
     # UX-48: the two idle buckets recommend opposite fixes, so
     # whichever one dominates is the actionable part of this block.
     # Naming that here rather than leaving a reader to infer it from
@@ -949,8 +941,7 @@ def _render_cpu_utilisation_section(result: AnalysisResult, section, by_kind, fu
             label = "Effective CPUs" if measured_cpu else "Capacity"
             lines.append(f"  {label}: {util['effective_cpus']}{source_text}")
         if measured_cpu and util.get('reconciliation_error_share') is not None:
-            lines.append("  Reconciliation Error: "
-                         f"{util['reconciliation_error_share'] * 100:.2f}%")
+            lines.append(f"  Reconciliation Error: {util['reconciliation_error_share'] * 100:.2f}%")
         elif not measured_cpu:
             # Previously rendered as `Reconciliation Error: 0.00%`, which
             # implies something was reconciled. Nothing was: I9
@@ -974,7 +965,10 @@ def _render_diagnostics_section(result: AnalysisResult, section, by_kind, full_s
                 br_data = diagnostics_signals['blast_radius']
                 # Handle both dict format and dataclass format
                 if isinstance(br_data, dict) and br_data:
-                    max_blast = max((v.get('downstream_count', 0) if isinstance(v, dict) else getattr(v, 'blast_count', 0)) for v in br_data.values())
+                    max_blast = max(
+                        (v.get('downstream_count', 0) if isinstance(v, dict) else getattr(v, 'blast_count', 0))
+                        for v in br_data.values()
+                    )
                     lines.append(f"  Max Blast Radius: {max_blast} downstream elements")
                 elif isinstance(br_data, list) and br_data:
                     max_blast = max((br.blast_count for br in br_data if hasattr(br, 'blast_count')), default=0)
@@ -989,7 +983,12 @@ def _render_diagnostics_section(result: AnalysisResult, section, by_kind, full_s
                 # Handle both dict format and dataclass format
                 high_crit = 0
                 if isinstance(cp_data, dict):
-                    high_crit = sum(1 for v in cp_data.values() if (isinstance(v, dict) and v.get('probability', 0) > 0.5) or (not isinstance(v, dict) and getattr(v, 'probability', 0) > 0.5))
+                    high_crit = sum(
+                        1
+                        for v in cp_data.values()
+                        if (isinstance(v, dict) and v.get('probability', 0) > 0.5)
+                        or (not isinstance(v, dict) and getattr(v, 'probability', 0) > 0.5)
+                    )
                 elif isinstance(cp_data, list):
                     high_crit = sum(1 for cp in cp_data if getattr(cp, 'probability', 0) > 0.5)
                 lines.append(f"  High Criticality Elements: {high_crit} (>50% probability)")
@@ -1024,7 +1023,8 @@ def _render_structural_overview(metrics: dict, bottleneck: dict, parallelism: di
             f"  Bottlenecks Identified: {len(choke_points)} - {', '.join(shown)}"
             + (
                 f" (+{len(choke_points) - len(shown)} more, see --format json)"
-                if len(choke_points) > len(shown) else ""
+                if len(choke_points) > len(shown)
+                else ""
             )
         )
     if parallelism:
@@ -1085,10 +1085,7 @@ def _render_structural_sensitivity(sensitivity: dict) -> list[str]:
         # None means every element is on the critical path, so
         # the ceiling is unbounded rather than 1.0 - see
         # SensitivityResult.best_case_speedup.
-        ceiling = (
-            f"{speedup:.2f}x" if speedup is not None
-            else "unbounded (every element is on the critical path)"
-        )
+        ceiling = f"{speedup:.2f}x" if speedup is not None else "unbounded (every element is on the critical path)"
         lines.append(
             f"  Top Improvement Opportunities (critical path "
             f"{critical_path_us / 1e6:.2f}s; structural ceiling "
@@ -1108,10 +1105,7 @@ def _render_structural_sensitivity(sensitivity: dict) -> list[str]:
             else:
                 key, score = row[0], row[1]
                 saving_us = score * critical_path_us
-            lines.append(
-                f"    - {key}: up to {saving_us / 1e6:.2f}s "
-                f"off the finish ({score * 100:.1f}%)"
-            )
+            lines.append(f"    - {key}: up to {saving_us / 1e6:.2f}s off the finish ({score * 100:.1f}%)")
         lines.append(
             "    (graph-only upper bound, not a target: each saving is capped "
             "where the next path becomes critical, and the savings are not "
@@ -1126,9 +1120,7 @@ def _render_structural_sensitivity(sensitivity: dict) -> list[str]:
         lines.append(
             "  (structural {} omitted - no build commands to speed up: {})".format(
                 plural(len(omitted_structural), "element"),
-                ", ".join(
-                    f"{o['element']} [{o['element_kind']}]" for o in omitted_structural[:5]
-                ),
+                ", ".join(f"{o['element']} [{o['element_kind']}]" for o in omitted_structural[:5]),
             )
         )
     return lines
@@ -1325,9 +1317,13 @@ _TEXT_REPORT_SECTIONS = [
 ]
 
 
-def format_text(result: AnalysisResult, section: Optional[str] = None,
-                by_kind: bool = False, full_sections=frozenset(),
-                explain: bool = False) -> str:
+def format_text(
+    result: AnalysisResult,
+    section: Optional[str] = None,
+    by_kind: bool = False,
+    full_sections=frozenset(),
+    explain: bool = False,
+) -> str:
     """
     Format analysis results as human-readable text.
 
@@ -1468,15 +1464,17 @@ def _plane2_knee_caveat(plane2_capacity: Optional[dict], knee) -> list[str]:
         )
     pinned = plane2.get('pinned_elements') or []
     if pinned:
-        lines.append(
-            "  Free capacity you already have: "
-            + ", ".join(pinned[:3])
-            + " asked its native build for -j1."
-        )
+        lines.append("  Free capacity you already have: " + ", ".join(pinned[:3]) + " asked its native build for -j1.")
     return lines
 
 
-def format_sweep_text(resource: str, sweep_result, calibration_capacities: Optional[list[int]] = None, plane2_capacity: Optional[dict] = None, memory_envelope: Optional[dict] = None) -> str:
+def format_sweep_text(
+    resource: str,
+    sweep_result,
+    calibration_capacities: Optional[list[int]] = None,
+    plane2_capacity: Optional[dict] = None,
+    memory_envelope: Optional[dict] = None,
+) -> str:
     """Format a capacity_sweep result (Part 19) as human-readable text.
 
     `calibration_capacities` (UX-14 tier 2, PR #58's approved design):
@@ -1572,12 +1570,11 @@ def _format_invalidation_roots(churn: dict) -> list[str]:
         total_us = root['duration_us'] + root['downstream_us']
         # UX-173: the split, where there is one to make.
         assembling = root.get('downstream_assembling') or 0
-        building = root.get('downstream_building',
-                            root['downstream_rebuilt'] - assembling)
+        building = root.get('downstream_building', root['downstream_rebuilt'] - assembling)
         downstream = (
-            f" and invalidated "
-            f"{sources.format_kind_split(building, assembling)} below it"
-            if root['downstream_rebuilt'] else " and invalidated nothing below it"
+            f" and invalidated {sources.format_kind_split(building, assembling)} below it"
+            if root['downstream_rebuilt']
+            else " and invalidated nothing below it"
         )
         lines.append(
             f"  Invalidated at {root['element_uid']}: its cache key changed "
@@ -1611,9 +1608,8 @@ def _format_element_deltas(comparison) -> list[str]:
     counts = deltas.get('counts') or {}
     lines = ["", "Which Elements Changed:"]
     shape = ", ".join(
-        f"{counts[name]} {name}" for name in
-        ("grew", "shrank", "appeared", "disappeared")
-        if counts.get(name))
+        f"{counts[name]} {name}" for name in ("grew", "shrank", "appeared", "disappeared") if counts.get(name)
+    )
     if shape:
         lines.append(f"  {shape} (per-element deltas are not noise-banded)")
     for row in rows[:ELEMENT_DELTAS_SHOWN]:
@@ -1621,11 +1617,13 @@ def _format_element_deltas(comparison) -> list[str]:
             lines.append(
                 f"  {row['element_uid']}: {row['presence']} "
                 f"({_fmt_us(row['candidate_us'] if row['presence'] == 'appeared' else row['baseline_us'])}, "
-                f"no delta to compare)")
+                f"no delta to compare)"
+            )
         else:
             lines.append(
                 f"  {row['element_uid']}: {_fmt_signed_us(row['delta_us'])} "
-                f"({_fmt_us(row['baseline_us'])} -> {_fmt_us(row['candidate_us'])})")
+                f"({_fmt_us(row['baseline_us'])} -> {_fmt_us(row['candidate_us'])})"
+            )
     remaining = len(rows) - ELEMENT_DELTAS_SHOWN
     if remaining > 0:
         lines.append(f"  ... and {remaining} more (full list in --format json)")
@@ -1650,8 +1648,7 @@ def _format_verdict_chain(comparison) -> list[str]:
         return []
     lines = [f"  Why: {rule['sentence']}"]
     if rule.get('name'):
-        lines.append(f"  Rule: {rule['name']} = {rule['threshold']} "
-                     f"({rule['comparison']}, {rule['module']})")
+        lines.append(f"  Rule: {rule['name']} = {rule['threshold']} ({rule['comparison']}, {rule['module']})")
     return lines
 
 
@@ -1692,9 +1689,13 @@ def format_compare_text(comparison) -> str:
     head, _, reason = comparison.verdict.partition(" (")
     reason = reason[:-1] if reason.endswith(")") else reason
     measurement = (
-        f"total duration {_fmt_signed_us(delta_total, pct)}, "
-        f"{_fmt_us(baseline_total)} -> {_fmt_us(c.get('total_duration_us'))}"
-    ) if pct is not None else None
+        (
+            f"total duration {_fmt_signed_us(delta_total, pct)}, "
+            f"{_fmt_us(baseline_total)} -> {_fmt_us(c.get('total_duration_us'))}"
+        )
+        if pct is not None
+        else None
+    )
     if reason:
         lines.append(f"Verdict: {head.upper()}")
         lines.append(f"  {reason}")
@@ -1709,9 +1710,12 @@ def format_compare_text(comparison) -> str:
     # it cannot be argued with.
     band = comparison.baseline_band
     if band:
-        width = "widened to the fixed 1% rule" if band.get('widened_to_fixed_pct') else (
-            f"median {_fmt_us(band['median_us'])} +/- "
-            f"{band['k']:g}x{_fmt_us(band['scaled_mad_us'])} (scaled MAD)"
+        width = (
+            "widened to the fixed 1% rule"
+            if band.get('widened_to_fixed_pct')
+            else (
+                f"median {_fmt_us(band['median_us'])} +/- {band['k']:g}x{_fmt_us(band['scaled_mad_us'])} (scaled MAD)"
+            )
         )
         lines.append(
             f"  Judged against a noise band from baseline {plural(band['n'], 'run')}: "
@@ -1730,10 +1734,7 @@ def format_compare_text(comparison) -> str:
     marginal = getattr(comparison, 'marginal_efficiency', None)
     if marginal:
         added = ", ".join(marginal['added_elements'][:4])
-        more = (
-            f" (+{len(marginal['added_elements']) - 4} more)"
-            if len(marginal['added_elements']) > 4 else ""
-        )
+        more = f" (+{len(marginal['added_elements']) - 4} more)" if len(marginal['added_elements']) > 4 else ""
         lines.append(
             f"  New this change: {added}{more} - "
             f"{marginal['added_work_us'] / 1e6:.1f}s of work added, "
@@ -1741,9 +1742,7 @@ def format_compare_text(comparison) -> str:
             f"path (stretch {marginal['stretch']:.2f})"
         )
         if marginal['on_critical_path']:
-            lines.append(
-                "    on the path: " + ", ".join(marginal['on_critical_path'][:4])
-            )
+            lines.append("    on the path: " + ", ".join(marginal['on_critical_path'][:4]))
 
     # UX-92: what the cache did between these two runs. Placed after the
     # marginal block because both answer "what did this change cost",
@@ -1760,10 +1759,7 @@ def format_compare_text(comparison) -> str:
     elif churn:
         if churn.get('rebuilt_in_both_count'):
             named = ", ".join(churn['rebuilt_in_both_elements'][:4])
-            more = (
-                f" (+{churn['rebuilt_in_both_count'] - 4} more)"
-                if churn['rebuilt_in_both_count'] > 4 else ""
-            )
+            more = f" (+{churn['rebuilt_in_both_count'] - 4} more)" if churn['rebuilt_in_both_count'] > 4 else ""
             lines.append(
                 f"  Cache retention: {plural(churn['rebuilt_in_both_count'], 'element')} "
                 f"rebuilt in BOTH runs with the same cache key, costing "
@@ -1774,10 +1770,7 @@ def format_compare_text(comparison) -> str:
             )
         if churn.get('churned_count'):
             named = ", ".join(churn['churned_elements'][:4])
-            more = (
-                f" (+{churn['churned_count'] - 4} more)"
-                if churn['churned_count'] > 4 else ""
-            )
+            more = f" (+{churn['churned_count'] - 4} more)" if churn['churned_count'] > 4 else ""
             lines.append(
                 f"  Cache churn: {plural(churn['churned_count'], 'element')} rebuilt with an "
                 f"unchanged cache key, costing "
@@ -1787,9 +1780,7 @@ def format_compare_text(comparison) -> str:
         lines.extend(_format_invalidation_roots(churn))
         extra = len(churn.get('invalidation_roots') or []) - _INVALIDATION_ROOTS_SHOWN
         if extra > 0:
-            lines.append(
-                f"    (+{plural(extra, 'more independent invalidation root')}, see --format json)"
-            )
+            lines.append(f"    (+{plural(extra, 'more independent invalidation root')}, see --format json)")
 
     # UX-104: did this change make the build need more memory? Placed
     # with the other "what did this change cost" answers.
@@ -1819,7 +1810,9 @@ def format_compare_text(comparison) -> str:
             f"would replace the fixed 1% significance rule used here"
         )
     if comparison.low_confidence:
-        lines.append("  Caveat: at least one run's confidence is below the 'high' band - treat this comparison with caution.")
+        lines.append(
+            "  Caveat: at least one run's confidence is below the 'high' band - treat this comparison with caution."
+        )
     if comparison.comparability_warning:
         lines.append(f"  Warning: {comparison.comparability_warning}")
         # UX-326: gated on `mismatches`, not on the warning. The comment
@@ -1836,11 +1829,9 @@ def format_compare_text(comparison) -> str:
         # the flag was not given (`cli.py`), so a comparison that is
         # being printed *with* mismatches is one where it was.
         if comparison.mismatches:
-            lines.append("  (--allow-mismatch was given; treat every figure "
-                         "below with real skepticism)")
+            lines.append("  (--allow-mismatch was given; treat every figure below with real skepticism)")
         else:
-            lines.append("  (a caveat, not a refusal - no flag was needed and "
-                         "the figures below still compare)")
+            lines.append("  (a caveat, not a refusal - no flag was needed and the figures below still compare)")
     lines.append("")
 
     lines.append("Certified Floors:")
@@ -1854,7 +1845,9 @@ def format_compare_text(comparison) -> str:
     for key, label in floor_labels:
         if b.get(key) is None and c.get(key) is None:
             continue
-        lines.append(f"  {label:20s} {_fmt_us(b.get(key)):>10s} -> {_fmt_us(c.get(key)):>10s}   ({_fmt_signed_us(d.get(key))})")
+        lines.append(
+            f"  {label:20s} {_fmt_us(b.get(key)):>10s} -> {_fmt_us(c.get(key)):>10s}   ({_fmt_signed_us(d.get(key))})"
+        )
     if b.get('efficiency_score') is not None or c.get('efficiency_score') is not None:
         be = b.get('efficiency_score')
         ce = c.get('efficiency_score')
@@ -1904,7 +1897,11 @@ def format_compare_text(comparison) -> str:
             c_pct = f"{c_share * 100:.1f}%" if c_share is not None else "n/a"
             delta = entry['delta_share']
             delta_pp = None if delta is None else delta * 100
-            delta_pp_s = f"{'+' if delta_pp is not None and delta_pp >= 0 else ''}{delta_pp:.1f}pp" if delta_pp is not None else "n/a"
+            delta_pp_s = (
+                f"{'+' if delta_pp is not None and delta_pp >= 0 else ''}{delta_pp:.1f}pp"
+                if delta_pp is not None
+                else "n/a"
+            )
             lines.append(
                 f"  {label:25s} {_fmt_us(entry['baseline_us']):>8s} ({b_pct:>6s}) -> "
                 f"{_fmt_us(entry['candidate_us']):>8s} ({c_pct:>6s})   {_fmt_signed_us(entry['delta_us'])} ({delta_pp_s})"

@@ -19,6 +19,7 @@ These tests compile the real `hook.c` with a deliberately tiny window, so
 the flush path runs for real rather than only on a build large enough to
 fill a megabyte.
 """
+
 import os
 import re
 import shutil
@@ -47,10 +48,23 @@ def _build_hook(tmp_path, slots, arena_bytes):
     cc = shutil.which("cc") or shutil.which("gcc")
     hook_so = tmp_path / "hook.so"
     subprocess.run(
-        [cc, "-shared", "-fPIC", "-O2", "-Wall", "-Wextra",
-         f"-DOPEN_SLOTS={slots}", f"-DOPEN_ARENA_BYTES={arena_bytes}",
-         "-o", str(hook_so), _HOOK_C, "-ldl"],
-        check=True, capture_output=True, text=True,
+        [
+            cc,
+            "-shared",
+            "-fPIC",
+            "-O2",
+            "-Wall",
+            "-Wextra",
+            f"-DOPEN_SLOTS={slots}",
+            f"-DOPEN_ARENA_BYTES={arena_bytes}",
+            "-o",
+            str(hook_so),
+            _HOOK_C,
+            "-ldl",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
     )
     return hook_so
 
@@ -64,11 +78,13 @@ def _run_opener(tmp_path, hook_so, n_paths):
         (files / f"a-rather-long-file-name-so-the-arena-fills-{i:04d}.txt").write_text("x")
 
     script = tmp_path / "opener.py"
-    script.write_text(textwrap.dedent(f"""
+    script.write_text(
+        textwrap.dedent(f"""
         import glob
         for p in sorted(glob.glob({str(files)!r} + "/*.txt")):
             open(p).close()
-    """))
+    """)
+    )
 
     trace_log = tmp_path / "trace.log"
     env = dict(os.environ)
@@ -93,8 +109,7 @@ def test_a_window_that_fills_flushes_instead_of_dropping(tmp_path):
 def test_the_windows_are_numbered_in_order(tmp_path):
     text = _run_opener(tmp_path, _build_hook(tmp_path, 16, 256), 60)
 
-    parts = [int(h.group(5)) for line in text.splitlines()
-             if (h := HEADER_RE.match(line))]
+    parts = [int(h.group(5)) for line in text.splitlines() if (h := HEADER_RE.match(line))]
 
     assert parts == sorted(parts)
     assert parts[0] == 0
@@ -121,8 +136,7 @@ def test_a_generous_window_never_flushes(tmp_path):
     so ordinary processes must still write exactly one window."""
     text = _run_opener(tmp_path, _build_hook(tmp_path, 32768, 1048576), 60)
 
-    parts = [int(h.group(5)) for line in text.splitlines()
-             if (h := HEADER_RE.match(line))]
+    parts = [int(h.group(5)) for line in text.splitlines() if (h := HEADER_RE.match(line))]
 
     assert parts == [0]
 

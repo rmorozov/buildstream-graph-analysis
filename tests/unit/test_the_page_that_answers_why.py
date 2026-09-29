@@ -14,6 +14,7 @@ high?" would be a second copy of the thresholds — and
 `run_instance.incomplete_reason`, the one `UX-185` accessor published
 rather than left for a consumer to re-derive from `build_outcome`.
 """
+
 import contextlib
 import io
 import json
@@ -43,9 +44,9 @@ def _report(run=GOLDEN):
 
 def _render(fn, payload):
     script = _HARNESS % (fn, json.dumps(payload))
-    result = subprocess.run([node, "--input-type=module", "-e", script],
-                            capture_output=True, text=True, cwd=os.getcwd(),
-                            timeout=60)
+    result = subprocess.run(
+        [node, "--input-type=module", "-e", script], capture_output=True, text=True, cwd=os.getcwd(), timeout=60
+    )
     assert result.returncode == 0, result.stderr
     return json.loads(result.stdout)
 
@@ -63,10 +64,15 @@ class TestTheOverviewReadsRatherThanComputes:
     """The acceptance's centrepiece: every rendered number equals a
     field in `report.json`, byte for byte."""
 
-    @pytest.mark.parametrize("run", [GOLDEN,
-                                     pytest.param(REAL, marks=pytest.mark.skipif(
-                                         not os.path.isdir(REAL),
-                                         reason="no real capture in this tree"))])
+    @pytest.mark.parametrize(
+        "run",
+        [
+            GOLDEN,
+            pytest.param(
+                REAL, marks=pytest.mark.skipif(not os.path.isdir(REAL), reason="no real capture in this tree")
+            ),
+        ],
+    )
     def test_every_number_is_a_published_field(self, run):
         payload = _report(run)
         out = _render("renderOverview", payload)
@@ -75,8 +81,7 @@ class TestTheOverviewReadsRatherThanComputes:
             field = bar["field"]
             assert field, bar
             published = _dig(payload, field)
-            assert float(bar["raw"]) == float(published), (
-                f"{field}: rendered {bar['raw']}, payload says {published}")
+            assert float(bar["raw"]) == float(published), f"{field}: rendered {bar['raw']}, payload says {published}"
 
     def test_it_shows_the_total_and_the_gaps_and_the_floors(self):
         out = _render("renderOverview", _report())
@@ -96,8 +101,7 @@ class TestTheOverviewReadsRatherThanComputes:
     def test_a_payload_without_attribution_renders_nothing(self):
         """Rather than an overview of one bar that implies the rest is
         zero."""
-        out = _render("renderOverview",
-                      {"schema": schemas.ANALYZE, "total_duration_us": 10})
+        out = _render("renderOverview", {"schema": schemas.ANALYZE, "total_duration_us": 10})
         assert out["rendered"] is False
 
 
@@ -133,11 +137,14 @@ class TestTheEvidenceHeader:
         fixture before this."""
         payload = _report()
         payload["run_instance"]["incomplete_reason"] = reason
-        banners = (_render("renderVerdict", payload)["incomplete_count"]
-                   + _render("renderEvidence", payload)["incomplete_count"])
+        banners = (
+            _render("renderVerdict", payload)["incomplete_count"]
+            + _render("renderEvidence", payload)["incomplete_count"]
+        )
         assert banners == 1, (
             f"{banners} refusal banners for one run - a reader meets the "
-            f"same sentence twice and wonders which is the answer")
+            f"same sentence twice and wonders which is the answer"
+        )
 
     def test_plane2_coverage_is_stated_when_plane_2_was_there(self):
         """The Required Fix asks for `stream_coverage` in this header.
@@ -146,8 +153,7 @@ class TestTheEvidenceHeader:
         payload = _report()
         payload["plane2_coverage"] = {"processes": 813, "opens_coverage": 1.0}
         out = _render("renderEvidence", payload)
-        shown = [r for r in out["rows"]
-                 if r["field"] == "plane2_coverage.processes"]
+        shown = [r for r in out["rows"] if r["field"] == "plane2_coverage.processes"]
         assert shown, out["rows"]
         assert "813" in shown[0]["value"], shown
 
@@ -155,8 +161,7 @@ class TestTheEvidenceHeader:
         """Rather than a 0% row, which claims the hook saw nothing when
         the truth is that nobody looked."""
         out = _render("renderEvidence", _report())
-        assert not [r for r in out["rows"]
-                    if r["field"].startswith("plane2_coverage")]
+        assert not [r for r in out["rows"] if r["field"].startswith("plane2_coverage")]
 
     def test_a_finished_run_gets_no_banner(self):
         out = _render("renderVerdict", _report())
@@ -174,26 +179,28 @@ class TestTheEvidenceHeader:
 
         from bga.ingest.models import RunContext
 
-        tree = ast.parse(textwrap.dedent(
-            inspect.getsource(RunContext.incomplete_reason.fget)))
-        published = {n.value.value for n in ast.walk(tree)
-                     if isinstance(n, ast.Return)
-                     and isinstance(n.value, ast.Constant)
-                     and isinstance(n.value.value, str)}
+        tree = ast.parse(textwrap.dedent(inspect.getsource(RunContext.incomplete_reason.fget)))
+        published = {
+            n.value.value
+            for n in ast.walk(tree)
+            if isinstance(n, ast.Return) and isinstance(n.value, ast.Constant) and isinstance(n.value.value, str)
+        }
         assert published, "could not read the reasons out of the accessor"
 
         source = open("bga/viewer/views.js").read()
         block = source.split("export const INCOMPLETE = {", 1)[1].split("};", 1)[0]
         described = set(re.findall(r"^\s*(\w+):", block, re.M))
-        assert published <= described, (
-            f"published but never explained on the page: {published - described}")
+        assert published <= described, f"published but never explained on the page: {published - described}"
 
     def test_the_three_sentences_agree_with_the_python_side(self):
-        out = _render("renderVerdict", {
-            "schema": schemas.ANALYZE,
-            "run_instance": {"incomplete_reason": "suspended"},
-            "confidence": {"primary": 0.9},
-        })
+        out = _render(
+            "renderVerdict",
+            {
+                "schema": schemas.ANALYZE,
+                "run_instance": {"incomplete_reason": "suspended"},
+                "confidence": {"primary": 0.9},
+            },
+        )
         from bga import suspend
 
         # Not a string compare of the whole sentence - the CLI's carries
@@ -215,8 +222,7 @@ class TestTheTwoFieldsEnteredTheSchema:
         from bga.findings import confidence_band
 
         payload = _report()
-        assert payload["confidence"]["band"] == \
-            confidence_band(payload["confidence"]["primary"])
+        assert payload["confidence"]["band"] == confidence_band(payload["confidence"]["primary"])
 
     def test_plane2_coverage_is_published_and_declared(self, tmp_path):
         """Through `bga view`, which finds the sibling report the store
@@ -233,12 +239,19 @@ class TestTheTwoFieldsEnteredTheSchema:
 
         snapshot = tmp_path / "20260101T000000Z"
         shutil.copytree(GOLDEN, snapshot / "run")
-        (snapshot / "plane2.json").write_text(json.dumps({
-            "by_element": {},
-            "stream_coverage": {"processes": 7, "opens_coverage": 1.0,
-                                "by_coverage": {"hook-only": 7},
-                                "cpu_disagreement_count": 0},
-        }))
+        (snapshot / "plane2.json").write_text(
+            json.dumps(
+                {
+                    "by_element": {},
+                    "stream_coverage": {
+                        "processes": 7,
+                        "opens_coverage": 1.0,
+                        "by_coverage": {"hook-only": 7},
+                        "cpu_disagreement_count": 0,
+                    },
+                }
+            )
+        )
 
         served = payloads(str(snapshot / "run"))["report.json"]
         coverage = served.get("plane2_coverage")
@@ -257,8 +270,8 @@ class TestTheTwoFieldsEnteredTheSchema:
 
     def test_a_run_without_plane_2_publishes_no_coverage(self):
         assert "plane2_coverage" not in _report(), (
-            "absence is the claim: 'not looked at' is not 'looked at and "
-            "saw nothing'")
+            "absence is the claim: 'not looked at' is not 'looked at and saw nothing'"
+        )
 
     def test_incomplete_reason_is_published_when_there_is_one(self, tmp_path):
         run = tmp_path / "run"
@@ -273,7 +286,8 @@ class TestTheTwoFieldsEnteredTheSchema:
 
     def test_a_finished_run_publishes_no_reason(self):
         assert "incomplete_reason" not in _report()["run_instance"], (
-            "absence is the claim; a key saying 'None' is a different one")
+            "absence is the claim; a key saying 'None' is a different one"
+        )
 
 
 _HARNESS = r"""

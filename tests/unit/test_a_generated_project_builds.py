@@ -15,6 +15,7 @@ The half that does is the point of the item: `bst build` accepts what
 this writes. It skips where `bst` and `bwrap` are absent, which is CI's
 `test` job; `bst-examples` is where it runs.
 """
+
 import json
 import pathlib
 import re
@@ -48,8 +49,7 @@ class TestTheSpecIsChecked:
 
     def test_an_edge_to_nothing_is_refused(self):
         spec = _spec("shared-base-wide.json")
-        spec["graph"]["dependencies"].append(
-            {"predecessor": "ghost.bst", "successor": "mod0.bst"})
+        spec["graph"]["dependencies"].append({"predecessor": "ghost.bst", "successor": "mod0.bst"})
         with pytest.raises(gen.SpecError, match="ghost.bst"):
             gen.validate(spec)
 
@@ -93,9 +93,7 @@ class TestTheYamlItWritesIsYaml:
         """The bug this file was written after. The process-storm
         command contains `sh -c "sleep 0.30"`; inside a double-quoted
         scalar the inner quote closes it and bst refuses the project."""
-        body = gen._element_yaml(
-            "x.bst", "manual", ["runtime.bst"],
-            {"seconds": 1.0, "processes": 4})
+        body = gen._element_yaml("x.bst", "manual", ["runtime.bst"], {"seconds": 1.0, "processes": 4})
         parsed = yaml.safe_load(body)
 
         commands = parsed["config"]["install-commands"]
@@ -106,17 +104,16 @@ class TestTheYamlItWritesIsYaml:
         quote today, so this goes through `_scalar` directly - the
         clause that keeps it honest when one does."""
         command = """echo 'hi' && sh -c "true" """.strip()
-        body = ("kind: manual\nconfig:\n  install-commands:\n"
-                f"  - {gen._scalar(command)}\n")
+        body = f"kind: manual\nconfig:\n  install-commands:\n  - {gen._scalar(command)}\n"
 
         parsed = yaml.safe_load(body)
         assert parsed["config"]["install-commands"] == [command]
 
     def test_every_element_of_every_committed_spec_parses(self, tmp_path):
         for spec_file in sorted(SPECS.glob("*.json")):
-            out = gen.write_project(_spec(spec_file.name),
-                                    tmp_path / spec_file.stem,
-                                    busybox=shutil.which("busybox") or __file__)
+            out = gen.write_project(
+                _spec(spec_file.name), tmp_path / spec_file.stem, busybox=shutil.which("busybox") or __file__
+            )
             for element in sorted((out / "elements").glob("*.bst")):
                 parsed = yaml.safe_load(element.read_text(encoding="utf-8"))
                 assert isinstance(parsed, dict), f"{spec_file.name}:{element.name}"
@@ -153,20 +150,17 @@ class TestTheTwoHalvesSpeakOneLanguage:
 @pytest.mark.bst
 @pytest.mark.skipif(
     not (BST_AVAILABLE and BWRAP_AVAILABLE and BUSYBOX_AVAILABLE),
-    reason="bst/bwrap/busybox not all found on PATH - "
-           "see docs/spec/ingestion-pipeline.md",
+    reason="bst/bwrap/busybox not all found on PATH - see docs/spec/ingestion-pipeline.md",
 )
 class TestBstAcceptsWhatItWrites:
     def test_the_acceptance_spec_builds(self, tmp_path):
         """`UX-465`'s Acceptance Test, minus the capture - the capture
         is `bga snapshot`'s own guard, and this one is about whether
         `bst` accepts a generated project at all."""
-        out = gen.write_project(_spec("shared-base-wide.json"),
-                                tmp_path / "project")
+        out = gen.write_project(_spec("shared-base-wide.json"), tmp_path / "project")
         done = subprocess.run(
-            ["bst", "build", "all.bst"], cwd=str(out),
-            capture_output=True, text=True,
-            env=_isolated(tmp_path))
+            ["bst", "build", "all.bst"], cwd=str(out), capture_output=True, text=True, env=_isolated(tmp_path)
+        )
 
         assert done.returncode == 0, done.stderr[-2000:]
         assert "Build Queue: processed 9" in done.stderr, done.stderr[-2000:]
@@ -175,12 +169,10 @@ class TestBstAcceptsWhatItWrites:
         """Axis D. A spec that says an element fails must produce a
         build that fails - not one that errors before starting, which
         would exercise none of the capture."""
-        out = gen.write_project(_spec("a-build-that-fails.json"),
-                                tmp_path / "project")
+        out = gen.write_project(_spec("a-build-that-fails.json"), tmp_path / "project")
         done = subprocess.run(
-            ["bst", "build", "all.bst"], cwd=str(out),
-            capture_output=True, text=True,
-            env=_isolated(tmp_path))
+            ["bst", "build", "all.bst"], cwd=str(out), capture_output=True, text=True, env=_isolated(tmp_path)
+        )
 
         assert done.returncode != 0
         assert "mod2.bst" in done.stderr
@@ -202,9 +194,12 @@ def _isolated(tmp_path):
 
     home = tmp_path / "home"
     home.mkdir(exist_ok=True)
-    return dict(os.environ, XDG_CACHE_HOME=str(home / "cache"),
-                XDG_CONFIG_HOME=str(BST_XDG_CONFIG_HOME),
-                XDG_DATA_HOME=str(home / "data"))
+    return dict(
+        os.environ,
+        XDG_CACHE_HOME=str(home / "cache"),
+        XDG_CONFIG_HOME=str(BST_XDG_CONFIG_HOME),
+        XDG_DATA_HOME=str(home / "data"),
+    )
 
 
 # --- UX-775/UX-801: a third un-isolated CAS-writing file can't land silently
@@ -213,8 +208,7 @@ def _isolated(tmp_path):
 #: from a bare filename whether that was still true, so each entry carries
 #: the command the file actually runs - checked against below.
 _NOT_CAS_WRITING = {
-    "test_the_printed_sentences_are_contracts.py": "bga blast/correlate "
-                                                     "argv only, no bst call",
+    "test_the_printed_sentences_are_contracts.py": "bga blast/correlate argv only, no bst call",
 }
 
 #: writes to CAS and isolates, but predates `_bst_env.py` - its own
@@ -243,8 +237,7 @@ def _cas_writing_subcommand(text):
     `run_traced_build(..., ["bst", "--no-colors", "build", ...], ...)` use,
     where `bst` is either the literal string or a name this same file bound
     from `which("bst")`."""
-    names = ['["\']bst["\']'] + [r'\b' + re.escape(n) + r'\b'
-                                  for n in _BST_BINDING_RE.findall(text)]
+    names = ['["\']bst["\']'] + [r'\b' + re.escape(n) + r'\b' for n in _BST_BINDING_RE.findall(text)]
     argv_re = re.compile(
         r'(?:' + '|'.join(names) + r')'
         r'''(?:\s*,\s*["'][^"']*["']){0,4}\s*,\s*["'](show|build|artifact)["']'''
@@ -259,8 +252,7 @@ def _cas_writing_subcommand(text):
 
 
 def _bst_gated_files():
-    return [p for p in sorted((REPO / "tests").rglob("test_*.py"))
-            if _GATE in p.read_text(encoding="utf-8")]
+    return [p for p in sorted((REPO / "tests").rglob("test_*.py")) if _GATE in p.read_text(encoding="utf-8")]
 
 
 def test_every_cas_writing_bst_gated_file_reaches_the_isolation():
@@ -275,8 +267,7 @@ def test_every_cas_writing_bst_gated_file_reaches_the_isolation():
     cas_writing = [p for p in gated if p.name not in excluded]
     assert len(cas_writing) == 18, sorted(p.name for p in cas_writing)
 
-    missing = sorted(p.name for p in cas_writing
-                      if "_bst_env" not in p.read_text(encoding="utf-8"))
+    missing = sorted(p.name for p in cas_writing if "_bst_env" not in p.read_text(encoding="utf-8"))
     assert not missing, (
         f"{missing} shell out to a real bst without tests/unit/_bst_env.py's "
         "isolated HOME - either route the build through isolated_bst_env/"

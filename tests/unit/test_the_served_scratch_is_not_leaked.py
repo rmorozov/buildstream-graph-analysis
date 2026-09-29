@@ -22,6 +22,7 @@ a trace at all.
 is this test's and not the machine's — under `-n auto` another worker
 serving a run would otherwise land in the same count.
 """
+
 import glob
 import os
 import pathlib
@@ -63,10 +64,8 @@ def _serve_once(run, where):
     thread = threading.Thread(target=httpd.serve_forever, daemon=True)
     thread.start()
     try:
-        body = urllib.request.urlopen(
-            url + bga_view.TRACE_NAME, timeout=30).read()
-        assert body, "the timeline endpoint served nothing, so no scratch " \
-                     "was ever made and this guard would be vacuous"
+        body = urllib.request.urlopen(url + bga_view.TRACE_NAME, timeout=30).read()
+        assert body, "the timeline endpoint served nothing, so no scratch was ever made and this guard would be vacuous"
         during = _scratches(where)
     finally:
         httpd.shutdown()
@@ -75,9 +74,7 @@ def _serve_once(run, where):
 
 
 class TestTheServedScratchIsNotLeaked:
-
-    def test_serving_twice_and_stopping_leaves_nothing(self, tmp_path,
-                                                       isolated_tmp):
+    def test_serving_twice_and_stopping_leaves_nothing(self, tmp_path, isolated_tmp):
         """The acceptance test: count before, count after, and the two
         agree across two served runs."""
         run = pages.two_plane_snapshot(tmp_path / "store")
@@ -86,11 +83,10 @@ class TestTheServedScratchIsNotLeaked:
             _serve_once(run, isolated_tmp)
         after = _scratches(isolated_tmp)
         assert after == before, (
-            f"serving twice left {after - before} scratch director(y/ies) "
-            f"behind - the leak UX-559 was filed on")
+            f"serving twice left {after - before} scratch director(y/ies) behind - the leak UX-559 was filed on"
+        )
 
-    def test_the_scratch_exists_while_the_server_does(self, tmp_path,
-                                                      isolated_tmp):
+    def test_the_scratch_exists_while_the_server_does(self, tmp_path, isolated_tmp):
         """The positive control. Without this, a server that rendered no
         trace would satisfy the clause above by doing nothing."""
         run = pages.two_plane_snapshot(tmp_path / "store")
@@ -98,11 +94,11 @@ class TestTheServedScratchIsNotLeaked:
         during = _serve_once(run, isolated_tmp)
         assert during == before + 1, (
             f"a served timeline made no scratch directory ({before} -> "
-            f"{during}), so the clause above is not measuring a cleanup")
+            f"{during}), so the clause above is not measuring a cleanup"
+        )
         assert _scratches(isolated_tmp) == before
 
-    def test_closing_without_serving_a_trace_is_fine(self, tmp_path,
-                                                     isolated_tmp):
+    def test_closing_without_serving_a_trace_is_fine(self, tmp_path, isolated_tmp):
         """The route out that never renders one: `server_close` must not
         care that there is nothing to remove."""
         run = pages.two_plane_snapshot(tmp_path / "store")

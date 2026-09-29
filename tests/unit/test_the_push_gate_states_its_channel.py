@@ -7,6 +7,7 @@ channel, so the hook is non-total. Read here, not enforced by a second
 check: this is a text guard, so it can confirm the sentence's
 substantive terms are present, never that the sentence is *true*.
 """
+
 import pathlib
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
@@ -19,8 +20,7 @@ FIXING_GUIDE = REPO / "docs" / "contributing" / "fixing-guide.md"
 #: replaced by "this hook catches every push on every channel" with
 #: `UX-767` left in place). Collapsed to single spaces before matching:
 #: the hook's docstring wraps the same phrase across two source lines.
-SUBSTANTIVE_TERMS = ("not recoverable from committed material",
-                      "at least one used this covered channel")
+SUBSTANTIVE_TERMS = ("not recoverable from committed material", "at least one used this covered channel")
 REVERSAL = "this hook catches every push on every channel"
 
 

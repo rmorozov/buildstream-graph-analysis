@@ -26,6 +26,7 @@ below them holds the wiring itself: an event that arrives at the
 document, from a control drawn nowhere near `root`, writes the
 fragment. It runs everywhere.
 """
+
 import json
 import pathlib
 import shutil
@@ -88,15 +89,14 @@ _RAIL = r"""(async () => {
 @pytest.fixture(scope="module")
 def railed(tmp_path_factory):
     """Both fixtures, served - which is where round 87 measured it."""
-    if chrome is None or node is None:                   # pragma: no cover
+    if chrome is None or node is None:  # pragma: no cover
         pytest.skip(NO_BROWSER)
     from tools.bga_view import serve
 
     out = {}
     with Browser(chrome) as opened:
         for label, fixture in pages.FIXTURES.items():
-            run = pages.snapshot_copy(
-                fixture, tmp_path_factory.mktemp(f"rail-{label}"))
+            run = pages.snapshot_copy(fixture, tmp_path_factory.mktemp(f"rail-{label}"))
             httpd, url = serve(str(run), port=0)
             threading.Thread(target=httpd.serve_forever, daemon=True).start()
             time.sleep(0.3)
@@ -120,8 +120,7 @@ class TestTheRailIsOutsideTheReport:
         """The collapse reached the fragment, so what the rail click
         does to it afterwards is about the rail and not the collapse."""
         for label, out in railed.items():
-            assert out["key"] in _query(out["set"]).get("c", [""])[0], (
-                label, out)
+            assert out["key"] in _query(out["set"]).get("c", [""])[0], (label, out)
 
 
 @needs_browser
@@ -188,9 +187,9 @@ console.log(JSON.stringify({ onRoot, onDocument, wrote: where.hash }));
 
 @pytest.fixture(scope="module")
 def wired():
-    done = subprocess.run([node, "--input-type=module", "-e", _WIRED],
-                          capture_output=True, text=True, cwd=str(REPO),
-                          timeout=120)
+    done = subprocess.run(
+        [node, "--input-type=module", "-e", _WIRED], capture_output=True, text=True, cwd=str(REPO), timeout=120
+    )
     assert done.returncode == 0, done.stderr
     return json.loads(done.stdout)
 
@@ -207,8 +206,7 @@ class TestTheWriterListensWhereTheControlsAre:
         subtree, and the rail is not in it."""
         assert wired["onRoot"] == [], wired
 
-    def test_an_event_from_outside_the_root_writes_the_view(
-            self, wired):
+    def test_an_event_from_outside_the_root_writes_the_view(self, wired):
         """Captured from `root` wherever it was heard - the anchor kept,
         the collapse set appended."""
         assert wired["wrote"] == "#floors~c=floors", wired

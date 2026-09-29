@@ -51,6 +51,7 @@ order every downstream reader sees is sorted from. That is
 `O(processes)`, not `O(events)`, and windowing it is a different
 question with a different measurement behind it (`UX-313`).
 """
+
 import gzip
 import os
 import random
@@ -82,25 +83,19 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fi
 # path-like literals, and a path split across `join` arguments is
 # invisible to it. That is how this file got past it - and the guard now
 # reads fragments too, so the next one does not.
-RAW_CAPTURE = os.path.join(
-    REPO_ROOT,
-    "examples/01-resource-contention/.bga/tmp/trace-qmy4cnf0/bind/trace.log")
-GZ_CAPTURE = os.path.join(
-    REPO_ROOT,
-    "examples/06-macro-micro-optimization/.bga/runs/20260821T170127Z"
-    "/plane2.log.gz")
+RAW_CAPTURE = os.path.join(REPO_ROOT, "examples/01-resource-contention/.bga/tmp/trace-qmy4cnf0/bind/trace.log")
+GZ_CAPTURE = os.path.join(REPO_ROOT, "examples/06-macro-micro-optimization/.bga/runs/20260821T170127Z/plane2.log.gz")
 
 
 def _needs(path):
-    return pytest.mark.skipif(not os.path.exists(path),
-                              reason="no real capture in this tree")
+    return pytest.mark.skipif(not os.path.exists(path), reason="no real capture in this tree")
 
 
 CAPTURES = [
-    pytest.param(RAW_CAPTURE, open, id="examples-01-raw",
-                 marks=_needs(RAW_CAPTURE)),
-    pytest.param(GZ_CAPTURE, lambda p: gzip.open(p, "rt", errors="ignore"),
-                 id="examples-06-plane2-gz", marks=_needs(GZ_CAPTURE)),
+    pytest.param(RAW_CAPTURE, open, id="examples-01-raw", marks=_needs(RAW_CAPTURE)),
+    pytest.param(
+        GZ_CAPTURE, lambda p: gzip.open(p, "rt", errors="ignore"), id="examples-06-plane2-gz", marks=_needs(GZ_CAPTURE)
+    ),
 ]
 
 
@@ -128,8 +123,7 @@ class TestTheTwoEntryPointsAgree:
         """Record for record, on both real captures."""
         events = _events(path, opener)
         assert events, f"{path} parsed to nothing"
-        streamed = sorted(stream_records(iter(events)),
-                          key=lambda record: record["start_ts"])
+        streamed = sorted(stream_records(iter(events)), key=lambda record: record["start_ts"])
         assert streamed == pair_events(list(events))
 
     @pytest.mark.parametrize("path,opener", CAPTURES)
@@ -160,10 +154,12 @@ class TestTheTwoEntryPointsAgree:
         assert gz_global > 0, (
             "examples/06 is globally ordered now - the agreement above no "
             "longer distinguishes a streaming pass from a sorting one, and "
-            "this file needs a capture that does")
+            "this file needs a capture that does"
+        )
         assert gz_per_key == 0, (
             f"{gz_per_key} events arrive before an earlier event of their own "
-            "key - the property the streaming pass rests on does not hold")
+            "key - the property the streaming pass rests on does not hold"
+        )
 
     def test_the_premise_holds_on_a_capture_a_clone_has(self):
         """The same premise as the clause above, where CI can check it.
@@ -180,11 +176,13 @@ class TestTheTwoEntryPointsAgree:
             pid = 1000 + index % 11
             lines.append(
                 f"START pid={pid} ppid=1 ts={2000.0 + index * 2} "
-                f"element={element} inv=inv-{index % 5:02d} cmd=cc f{index}.c")
+                f"element={element} inv=inv-{index % 5:02d} cmd=cc f{index}.c"
+            )
             lines.append(
                 f"END pid={pid} ppid=1 ts={2000.0 + index * 2 + 1} "
                 f"element={element} inv=inv-{index % 5:02d} "
-                f"utime=0.01 stime=0.01 maxrss_kb=512 cmd=cc f{index}.c")
+                f"utime=0.01 stime=0.01 maxrss_kb=512 cmd=cc f{index}.c"
+            )
         events = parse_trace_lines(lines)
         # Interleave across keys the way concurrent writers do, without
         # ever reordering one key's own two events.
@@ -201,11 +199,10 @@ class TestTheTwoEntryPointsAgree:
 
         global_inv, per_key_inv = _inversions(interleaved)
         assert global_inv > 0, (
-            "the generated log is globally ordered, so it cannot stand in "
-            "for a real capture's interleaving")
+            "the generated log is globally ordered, so it cannot stand in for a real capture's interleaving"
+        )
         assert per_key_inv == 0
-        streamed = sorted(stream_records(iter(interleaved)),
-                          key=lambda record: record["start_ts"])
+        streamed = sorted(stream_records(iter(interleaved)), key=lambda record: record["start_ts"])
         assert streamed == pair_events(list(interleaved))
 
     def test_they_agree_when_the_global_order_is_deliberately_shuffled(self):
@@ -222,11 +219,13 @@ class TestTheTwoEntryPointsAgree:
             pid = 1000 + index % 53
             lines.append(
                 f"START pid={pid} ppid=1 ts={1000.0 + index} element={element} "
-                f"inv=inv-{index % 7:02d} cmd=/usr/bin/cc -c f{index}.c")
+                f"inv=inv-{index % 7:02d} cmd=/usr/bin/cc -c f{index}.c"
+            )
             lines.append(
                 f"END pid={pid} ppid=1 ts={1000.5 + index} element={element} "
                 f"inv=inv-{index % 7:02d} utime_us=1200 stime_us=300 "
-                f"max_rss_kb=2048 cmd=/usr/bin/cc -c f{index}.c")
+                f"max_rss_kb=2048 cmd=/usr/bin/cc -c f{index}.c"
+            )
         events = parse_trace_lines(lines)
 
         by_key = {}
@@ -245,8 +244,7 @@ class TestTheTwoEntryPointsAgree:
         assert global_inv > 100, "the shuffle did not disorder anything"
         assert per_key_inv == 0, "the shuffle broke the premise it was to preserve"
 
-        streamed = sorted(stream_records(iter(shuffled)),
-                          key=lambda record: record["start_ts"])
+        streamed = sorted(stream_records(iter(shuffled)), key=lambda record: record["start_ts"])
         assert streamed == pair_events(list(shuffled))
         assert len(streamed) == 400
 
@@ -288,11 +286,13 @@ def _write_trace(path, processes):
             handle.write(
                 f"START pid={1000 + index} ppid=1 ts={1000.0 + index} "
                 f"element={element} inv=inv-{index % 4:02d} "
-                f"cmd=/usr/bin/cc -c f{index}.c\n")
+                f"cmd=/usr/bin/cc -c f{index}.c\n"
+            )
             handle.write(
                 f"END pid={1000 + index} ppid=1 ts={1000.5 + index} "
                 f"element={element} inv=inv-{index % 4:02d} utime_us=1200 "
-                f"stime_us=300 max_rss_kb=2048 cmd=/usr/bin/cc -c f{index}.c\n")
+                f"stime_us=300 max_rss_kb=2048 cmd=/usr/bin/cc -c f{index}.c\n"
+            )
 
 
 class TestTheAnswerIsWrittenDown:
@@ -319,29 +319,27 @@ class TestTheAnswerIsWrittenDown:
         "END pid=2 ppid=1 ts=2.0 element=e.bst inv=a utime_us=10 stime_us=5",
         "START pid=3 ppid=1 ts=1.5 element=e.bst inv=a cmd=still-running",
         "END pid=4 ppid=1 ts=3.0 element=e.bst inv=a utime_us=1 stime_us=1",
-        "END pid=5 ppid=1 ts=3.5 element=e.bst inv=a src=spine "
-        "utime_us=1 stime_us=1",
+        "END pid=5 ppid=1 ts=3.5 element=e.bst inv=a src=spine utime_us=1 stime_us=1",
     ]
 
     def test_the_pass_yields_exactly_these_records(self):
         counts = {}
-        records = sorted(stream_records(iter(parse_trace_lines(self.LOG))),
-                         key=lambda record: record["start_ts"])
+        records = sorted(stream_records(iter(parse_trace_lines(self.LOG))), key=lambda record: record["start_ts"])
 
         assert [(r["pid"], r["cmd"], r["open"]) for r in records] == [
             (2, "paired", False),
             (3, "still-running", True),
         ], "an open record is a process, not an omission"
         assert records[0]["duration_s"] == 1.0
-        assert records[1]["duration_s"] is None, (
-            "a process with no observed exit must not get a fabricated end")
+        assert records[1]["duration_s"] is None, "a process with no observed exit must not get a fabricated end"
         assert records[1]["open_reason"] == "no-observed-exit"
 
         list(stream_records(iter(parse_trace_lines(self.LOG)), counts))
         assert counts == {"fork_only": 1, "unmatched": 1}, (
             "the spine END is a fork-without-exec child and the hook END is "
             "a truncated log; one number for both states what neither "
-            "record can support")
+            "record can support"
+        )
 
 
 class TestNothingOnTheseTwoPathsBuildsAList:
@@ -356,8 +354,8 @@ class TestNothingOnTheseTwoPathsBuildsAList:
 
     def _run(self, source, log):
         completed = subprocess.run(
-            [sys.executable, "-c", source, str(log)],
-            cwd=REPO_ROOT, capture_output=True, text=True)
+            [sys.executable, "-c", source, str(log)], cwd=REPO_ROOT, capture_output=True, text=True
+        )
         assert completed.returncode == 0, completed.stderr
         return completed.stdout.strip()
 
@@ -376,21 +374,25 @@ class TestTheOldEntryPointStillMeansWhatItSaid:
     """`pair_events` is a wrapper now. Its contract is not."""
 
     def test_it_still_returns_a_start_sorted_list(self):
-        events = parse_trace_lines([
-            "START pid=3 ppid=1 ts=2.0 element=a.bst inv=a cmd=second",
-            "END pid=3 ppid=1 ts=2.5 element=a.bst inv=a utime_us=1 stime_us=1",
-            "START pid=2 ppid=1 ts=1.0 element=a.bst inv=a cmd=first",
-            "END pid=2 ppid=1 ts=3.0 element=a.bst inv=a utime_us=1 stime_us=1",
-        ])
+        events = parse_trace_lines(
+            [
+                "START pid=3 ppid=1 ts=2.0 element=a.bst inv=a cmd=second",
+                "END pid=3 ppid=1 ts=2.5 element=a.bst inv=a utime_us=1 stime_us=1",
+                "START pid=2 ppid=1 ts=1.0 element=a.bst inv=a cmd=first",
+                "END pid=2 ppid=1 ts=3.0 element=a.bst inv=a utime_us=1 stime_us=1",
+            ]
+        )
         records = pair_events(list(events))
         assert [r["cmd"] for r in records] == ["first", "second"]
         assert isinstance(records, list)
 
     def test_consume_still_empties_the_list_it_was_given(self):
-        events = parse_trace_lines([
-            "START pid=2 ppid=1 ts=1.0 element=a.bst inv=a cmd=only",
-            "END pid=2 ppid=1 ts=2.0 element=a.bst inv=a utime_us=1 stime_us=1",
-        ])
+        events = parse_trace_lines(
+            [
+                "START pid=2 ppid=1 ts=1.0 element=a.bst inv=a cmd=only",
+                "END pid=2 ppid=1 ts=2.0 element=a.bst inv=a utime_us=1 stime_us=1",
+            ]
+        )
         given = list(events)
         records = pair_events(given, consume=True)
         assert given == []

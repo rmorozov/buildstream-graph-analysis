@@ -14,6 +14,7 @@ is guessing at. It is **adopted from CI**, never recorded locally, for
 `UX-447`'s reason about references from another clock: a laptop's run
 covers what that laptop can run.
 """
+
 import argparse
 import collections
 import json
@@ -50,7 +51,8 @@ def read(database):
         rows = db.execute(
             "SELECT f.path, c.context FROM line_bits lb "
             "JOIN file f ON f.id = lb.file_id "
-            "JOIN context c ON c.id = lb.context_id").fetchall()
+            "JOIN context c ON c.id = lb.context_id"
+        ).fetchall()
     finally:
         db.close()
     found = collections.defaultdict(set)
@@ -110,9 +112,7 @@ def retire(reference, names):
     document = dict(reference)
     for key in ("files", "samples"):
         if key in document:
-            document[key] = {name: value
-                             for name, value in document[key].items()
-                             if name not in set(retired)}
+            document[key] = {name: value for name, value in document[key].items() if name not in set(retired)}
     return document, retired
 
 
@@ -126,32 +126,29 @@ def load():
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("database", nargs="?", default=".coverage",
-                        help="a coverage database written with --cov-context")
-    parser.add_argument("--write", metavar="PATH",
-                        help="write the map this run measured, and stop")
-    parser.add_argument("--adopt", metavar="PATH",
-                        help="merge a measured map into tests/touch_map.json")
+    parser.add_argument(
+        "database", nargs="?", default=".coverage", help="a coverage database written with --cov-context"
+    )
+    parser.add_argument("--write", metavar="PATH", help="write the map this run measured, and stop")
+    parser.add_argument("--adopt", metavar="PATH", help="merge a measured map into tests/touch_map.json")
     args = parser.parse_args(argv)
 
     if args.adopt:
         measured = json.loads(pathlib.Path(args.adopt).read_text())
         before = load()
         merged = adopt(before, measured)
-        MAP.write_text(json.dumps(merged, indent=1, sort_keys=True) + "\n",
-                       encoding="utf-8")
-        print(f"{len(merged)} module(s), "
-              f"{sum(len(v) for v in merged.values())} edge(s)")
+        MAP.write_text(json.dumps(merged, indent=1, sort_keys=True) + "\n", encoding="utf-8")
+        print(f"{len(merged)} module(s), {sum(len(v) for v in merged.values())} edge(s)")
         if merged != before:
-            reference = json.loads(
-                dev_tier_drift.CI_REFERENCE.read_text(encoding="utf-8"))
+            reference = json.loads(dev_tier_drift.CI_REFERENCE.read_text(encoding="utf-8"))
             document, retired = retire(reference, readers(merged))
             if retired:
-                dev_tier_drift.CI_REFERENCE.write_text(
-                    json.dumps(document, indent=2) + "\n", encoding="utf-8")
-                print(f"retired {len(retired)} drift entr"
-                      f"{'y' if len(retired) == 1 else 'ies'} the map's "
-                      f"readers own, for the next run to re-record:")
+                dev_tier_drift.CI_REFERENCE.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
+                print(
+                    f"retired {len(retired)} drift entr"
+                    f"{'y' if len(retired) == 1 else 'ies'} the map's "
+                    f"readers own, for the next run to re-record:"
+                )
                 for name in retired:
                     print(f"  {name}")
         return 0
@@ -160,8 +157,7 @@ def main(argv=None) -> int:
     body = json.dumps(measured, indent=1, sort_keys=True) + "\n"
     if args.write:
         pathlib.Path(args.write).write_text(body, encoding="utf-8")
-        print(f"{len(measured)} module(s), "
-              f"{sum(len(v) for v in measured.values())} edge(s)")
+        print(f"{len(measured)} module(s), {sum(len(v) for v in measured.values())} edge(s)")
         return 0
     sys.stdout.write(body)
     return 0

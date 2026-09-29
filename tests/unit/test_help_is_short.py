@@ -16,6 +16,7 @@ Experiment - the module docstrings were fed to argparse as
 This guard exists so the next design saga lands in a file rather than in
 argparse.
 """
+
 import contextlib
 import io
 
@@ -48,10 +49,25 @@ TOP_LEVEL_CAP = 51
 # newest subcommand is the shape UX-176 exists to hunt. Every subcommand
 # `bga` dispatches belongs here, and the test below checks that.
 SUBCOMMANDS = [
-    "analyze", "graph", "floors", "replay", "sweep", "utilisation",
-    "diagnostics", "correlate", "cache-trend", "compare", "blast",
-    "extract", "capture", "snapshot", "cache-logs", "baseline", "doctor",
-    "whatif", "bundle",
+    "analyze",
+    "graph",
+    "floors",
+    "replay",
+    "sweep",
+    "utilisation",
+    "diagnostics",
+    "correlate",
+    "cache-trend",
+    "compare",
+    "blast",
+    "extract",
+    "capture",
+    "snapshot",
+    "cache-logs",
+    "baseline",
+    "doctor",
+    "whatif",
+    "bundle",
 ]
 
 # UX-192: the `UX-67` aliases dispatch through `tools/` rather than
@@ -64,9 +80,18 @@ SUBCOMMANDS = [
 # was filed about, still live in the half of the surface its guard
 # could not reach.
 TOOL_COMMANDS = [
-    "wrap", "rebuild-set", "checkout-cost", "run-context",
-    "graph-from-show", "log-to-chrome", "native-to-chrome",
-    "chrome-to-trace", "cross-check", "gen-synthetic", "timeline", "view",
+    "wrap",
+    "rebuild-set",
+    "checkout-cost",
+    "run-context",
+    "graph-from-show",
+    "log-to-chrome",
+    "native-to-chrome",
+    "chrome-to-trace",
+    "cross-check",
+    "gen-synthetic",
+    "timeline",
+    "view",
     "release-notes",
 ]
 
@@ -88,13 +113,13 @@ def test_every_command_bga_dispatches_is_covered_by_this_file():
     covered = set(SUBCOMMANDS) | set(TOOL_COMMANDS)
     missing = sorted((registered | set(TOOL_ALIASES)) - covered - {"version"})
     assert not missing, (
-        f"command(s) with no help guard: {', '.join(missing)}. "
-        f"Add them to SUBCOMMANDS or TOOL_COMMANDS."
+        f"command(s) with no help guard: {', '.join(missing)}. Add them to SUBCOMMANDS or TOOL_COMMANDS."
     )
 
 
 def _help(argv):
     from bga.cli import main
+
     out = io.StringIO()
     with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out), pytest.raises(SystemExit):
         main(argv)
@@ -128,9 +153,9 @@ def test_flags_are_visible_on_the_first_screen():
     for command in ("capture", "compare", "extract"):
         rendered = _help([command, "--help"]).splitlines()
         first_screen = rendered[:24]
-        assert any(line.lstrip().startswith(("-", "{", "positional", "options"))
-                   for line in first_screen), (
-            f"`bga {command} --help` shows no flags in its first 24 lines")
+        assert any(line.lstrip().startswith(("-", "{", "positional", "options")) for line in first_screen), (
+            f"`bga {command} --help` shows no flags in its first 24 lines"
+        )
 
 
 def test_module_docstrings_are_no_longer_the_help_text():
@@ -138,6 +163,7 @@ def test_module_docstrings_are_no_longer_the_help_text():
     docstring is a design record. The docstrings themselves may stay any
     length - they just stop being what argparse prints."""
     import tools.bst_native_build_tracer as tracer
+
     assert tracer.__doc__ != tracer.HELP
     assert len(tracer.HELP.splitlines()) <= 10
     # the history is still there for a reader of the source
@@ -150,6 +176,7 @@ def test_snapshots_two_command_loop_survived_the_cut():
     rendered = _help(["snapshot", "--help"])
     assert "bga snapshot" in rendered
 
+
 # UX-165: the cut that UX-158's guard could not see.
 #
 # "flag help cut to its first sentence" was applied by deleting
@@ -158,9 +185,11 @@ def test_snapshots_two_command_loop_survived_the_cut():
 # *shorter*, which is exactly what the cap rewards. So this checks shape
 # instead of length.
 
+
 def _help_blocks(rendered):
     """Each flag or positional and its help, as one joined string."""
     import re
+
     blocks, current = [], None
     for line in rendered.splitlines():
         if re.match(r"^  (-|\{|[a-z][\w-]*\s{2,})", line):
@@ -191,8 +220,7 @@ def _carries_prose(block: str) -> bool:
     # Everything after the last token that still looks like part of the
     # invocation - a flag, a metavar, a choice list.
     for index, word in enumerate(words):
-        if not (word.startswith("-") or word.startswith("{")
-                or word.rstrip(",").isupper() or word.endswith(",")):
+        if not (word.startswith("-") or word.startswith("{") or word.rstrip(",").isupper() or word.endswith(",")):
             return len(words) - index >= 3
     return False
 
@@ -203,10 +231,44 @@ def test_no_help_string_ends_mid_sentence(command):
     # Words a sentence cannot end on. Deliberately a small, concrete list:
     # this is a shape check for a known failure, not a grammar checker.
     dangling = {
-        "the", "a", "an", "of", "for", "and", "or", "to", "in", "on", "at",
-        "by", "with", "from", "same", "when", "which", "that", "this", "its",
-        "than", "as", "is", "are", "was", "were", "be", "into", "per", "via",
-        "but", "so", "if", "then", "while", "because", "each", "knee",
+        "the",
+        "a",
+        "an",
+        "of",
+        "for",
+        "and",
+        "or",
+        "to",
+        "in",
+        "on",
+        "at",
+        "by",
+        "with",
+        "from",
+        "same",
+        "when",
+        "which",
+        "that",
+        "this",
+        "its",
+        "than",
+        "as",
+        "is",
+        "are",
+        "was",
+        "were",
+        "be",
+        "into",
+        "per",
+        "via",
+        "but",
+        "so",
+        "if",
+        "then",
+        "while",
+        "because",
+        "each",
+        "knee",
     }
     for block in _help_blocks(_help([command, "--help"])):
         if not block or block.startswith("-h,"):
@@ -244,7 +306,8 @@ def test_help_brackets_balance(command):
     shape a mid-sentence cut takes."""
     for block in _help_blocks(_help([command, "--help"])):
         assert block.count("(") == block.count(")"), (
-            f"`bga {command} --help` has an unbalanced bracket:\n  ...{block[-90:]}")
+            f"`bga {command} --help` has an unbalanced bracket:\n  ...{block[-90:]}"
+        )
 
 
 def test_no_help_string_in_source_ends_on_a_dangling_space():
@@ -253,6 +316,7 @@ def test_no_help_string_in_source_ends_on_a_dangling_space():
     continuation line was deleted."""
     import glob
     import re
+
     offenders = []
     for path in ["bga/cli.py"] + glob.glob("tools/*.py") + glob.glob("tools/native_trace/*.py"):
         lines = open(path, encoding="utf-8").read().split("\n")
@@ -261,9 +325,9 @@ def test_no_help_string_in_source_ends_on_a_dangling_space():
             if not match or not match.group(2).endswith(" "):
                 continue
             following = lines[n + 1].strip() if n + 1 < len(lines) else ""
-            if following.startswith(("'", '"', "f'", 'f\"')):
+            if following.startswith(("'", '"', "f'", 'f"')):
                 continue  # a real continuation follows
             offenders.append(f"{path}:{n + 1}")
     assert not offenders, (
-        "help strings ending in a space with no continuation - the "
-        f"signature of a deleted line: {offenders}")
+        f"help strings ending in a space with no continuation - the signature of a deleted line: {offenders}"
+    )

@@ -11,6 +11,7 @@ A versioned line that is not a behaviour claim (a fixture's own capture
 version, an external convention) is `provenance`, not a claim: named,
 so completeness stays per-line, but it does not age.
 """
+
 import copy
 import json
 import re
@@ -64,8 +65,11 @@ def versioned_lines(roots):
 
 
 def unconfirmed(register, pin):
-    return [f"{c['id']} ({c['confirmed_on']}) {where(c['sites'][0])}"
-            for c in register if version(c["confirmed_on"]) < version(pin)]
+    return [
+        f"{c['id']} ({c['confirmed_on']}) {where(c['sites'][0])}"
+        for c in register
+        if version(c["confirmed_on"]) < version(pin)
+    ]
 
 
 def test_every_claim_is_whole():
@@ -80,9 +84,12 @@ def test_every_claim_is_whole():
 
 
 def test_every_site_still_carries_its_claim():
-    lost = [f"{c['id']}: {s['path']} no longer says {s['anchor']!r}"
-            for c in claims() for s in c["sites"]
-            if not (REPO / s["path"]).is_file() or where(s) is None]
+    lost = [
+        f"{c['id']}: {s['path']} no longer says {s['anchor']!r}"
+        for c in claims()
+        for s in c["sites"]
+        if not (REPO / s["path"]).is_file() or where(s) is None
+    ]
     assert lost == [], "move the anchor with the sentence, or retire the claim:\n" + "\n".join(lost)
 
 
@@ -90,8 +97,11 @@ def test_every_provenance_entry_is_whole_and_still_holds():
     entries = provenance()
     for entry in entries:
         assert set(entry) == PROVENANCE_FIELDS, f"{entry.get('path')}: fields {sorted(set(entry) ^ PROVENANCE_FIELDS)}"
-    lost = [f"{e['path']} no longer says {e['anchor']!r}"
-            for e in entries if not (REPO / e["path"]).is_file() or where(e) is None]
+    lost = [
+        f"{e['path']} no longer says {e['anchor']!r}"
+        for e in entries
+        if not (REPO / e["path"]).is_file() or where(e) is None
+    ]
     assert lost == [], "move the anchor with the sentence, or retire the provenance entry:\n" + "\n".join(lost)
 
 
@@ -117,10 +127,13 @@ def test_every_versioned_line_in_bga_and_tools_is_registered_or_provenance():
 def test_a_claim_older_than_the_pinned_bst_is_named():
     stale = unconfirmed(claims(), pinned())
     if stale:
-        warnings.warn(UnconfirmedBehaviourClaim(
-            f"{len(stale)} BuildStream claim(s) last read before ci.yml's {pinned()}; "
-            f"re-read each in that wheel and move `confirmed_on` in {REGISTER.name}: "
-            + "; ".join(stale)), stacklevel=1)
+        warnings.warn(
+            UnconfirmedBehaviourClaim(
+                f"{len(stale)} BuildStream claim(s) last read before ci.yml's {pinned()}; "
+                f"re-read each in that wheel and move `confirmed_on` in {REGISTER.name}: " + "; ".join(stale)
+            ),
+            stacklevel=1,
+        )
 
 
 def test_an_aged_claim_is_the_one_named():

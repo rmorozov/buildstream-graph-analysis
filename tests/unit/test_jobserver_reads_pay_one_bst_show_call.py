@@ -5,6 +5,7 @@ starts (`auto`'s "Compiling the trace hook..." at 8.9s against `off`'s
 2.8s). `read_jobserver_metadata_for_build` is `main`'s own site for the
 read; this counts the `bst show` calls it makes, via a fake `bst` that
 logs its own argv - no real `bst`/`bwrap` needed."""
+
 import stat
 
 from tools.bst_native_build_tracer import read_jobserver_metadata_for_build
@@ -27,19 +28,16 @@ def _fake_bst(tmp_path, monkeypatch):
 def test_the_jobserver_path_pays_one_bst_show_call(tmp_path, monkeypatch):
     script, argv_file = _fake_bst(tmp_path, monkeypatch)
 
-    read_jobserver_metadata_for_build(
-        str(tmp_path), [script, "build", "t.bst"], jobserver=4)
+    read_jobserver_metadata_for_build(str(tmp_path), [script, "build", "t.bst"], jobserver=4)
 
-    show_calls = [line for line in argv_file.read_text().splitlines()
-                 if "show" in line]
+    show_calls = [line for line in argv_file.read_text().splitlines() if "show" in line]
     assert len(show_calls) == 1
 
 
 def test_no_jobserver_reads_nothing(tmp_path, monkeypatch):
     script, argv_file = _fake_bst(tmp_path, monkeypatch)
 
-    result = read_jobserver_metadata_for_build(
-        str(tmp_path), [script, "build", "t.bst"], jobserver=None)
+    result = read_jobserver_metadata_for_build(str(tmp_path), [script, "build", "t.bst"], jobserver=None)
 
     assert result == (None, None, None, {}, {}, {})
     assert not argv_file.exists()

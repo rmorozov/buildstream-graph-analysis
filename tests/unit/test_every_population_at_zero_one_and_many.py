@@ -50,6 +50,7 @@ would have been filed as a defect in the page:
   which is the payload's sentence about a measurement, not the
   renderer's sentence about a population.
 """
+
 import json
 import os
 import pathlib
@@ -238,25 +239,33 @@ def swept(tmp_path_factory):
     from bga import schemas
 
     done = subprocess.run(
-        [sys.executable, "-m", "bga.cli", "analyze", str(RUN),
-         "--format", "json"],
-        capture_output=True, text=True, cwd=REPO, timeout=180,
-        env=dict(os.environ, PYTHONPATH=str(REPO)))
+        [sys.executable, "-m", "bga.cli", "analyze", str(RUN), "--format", "json"],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=180,
+        env=dict(os.environ, PYTHONPATH=str(REPO)),
+    )
     assert done.returncode == 0, done.stderr[-3000:]
     into = tmp_path_factory.mktemp("sweep")
     (into / "payload.json").write_text(done.stdout, encoding="utf-8")
-    (into / "schema.json").write_text(
-        json.dumps(schemas.schema(schemas.ANALYZE)), encoding="utf-8")
+    (into / "schema.json").write_text(json.dumps(schemas.schema(schemas.ANALYZE)), encoding="utf-8")
     result = subprocess.run(
         [node, "--input-type=module", "-e", _SWEEP],
-        capture_output=True, text=True, cwd=REPO, timeout=180,
-        env=dict(os.environ,
-                 BGA_REPO=str(REPO),
-                 BGA_VIEWER=str(REPO / "tests" / "viewer.mjs"),
-                 BGA_DOM_SHIM=str(REPO / "tests" / "dom_shim.mjs"),
-                 BGA_PAYLOAD=str(into / "payload.json"),
-                 BGA_SCHEMA=str(into / "schema.json"),
-                 BGA_MANY=str(MANY)))
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=180,
+        env=dict(
+            os.environ,
+            BGA_REPO=str(REPO),
+            BGA_VIEWER=str(REPO / "tests" / "viewer.mjs"),
+            BGA_DOM_SHIM=str(REPO / "tests" / "dom_shim.mjs"),
+            BGA_PAYLOAD=str(into / "payload.json"),
+            BGA_SCHEMA=str(into / "schema.json"),
+            BGA_MANY=str(MANY),
+        ),
+    )
     assert result.returncode == 0, result.stderr[-3000:]
     return json.loads(result.stdout.strip().splitlines()[-1])
 
@@ -267,8 +276,7 @@ def swept(tmp_path_factory):
 #: added cards, and the map went unread for six rounds because nothing
 #: named the shape. A clause that reads one shape is a clause the next
 #: shape walks past.
-DRAWN_AS = (("shown", "rows"), ("cards_shown", "cards"),
-            ("pairs_shown", "pairs"))
+DRAWN_AS = (("shown", "rows"), ("cards_shown", "cards"), ("pairs_shown", "pairs"))
 
 
 def _seen(leg):
@@ -283,14 +291,12 @@ def _seen(leg):
 class TestTheSweepReachesEveryPopulation:
     """The instrument's own coverage, before any leg is read."""
 
-    def test_it_discovers_the_populations_rather_than_listing_them(
-            self, swept):
+    def test_it_discovers_the_populations_rather_than_listing_them(self, swept):
         assert len(swept["swept"]) >= 10, swept["swept"]
         # A spot check that discovery found the ones three separate
         # filings were about, so a discovery rule that quietly stopped
         # matching reddens here rather than sweeping nothing.
-        for named in ("findings", "next_steps", "critical_path_detail",
-                      "latent_heavies", "provenance"):
+        for named in ("findings", "next_steps", "critical_path_detail", "latent_heavies", "provenance"):
             assert named in swept["swept"], swept["swept"]
 
     def test_nothing_published_is_left_out(self, swept):
@@ -303,9 +309,11 @@ class TestTheSweepReachesEveryPopulation:
         `swept["records"]` only, so a whole shape could be left out
         without the clause noticing - which is exactly what happened,
         for six rounds."""
-        missed = [key for key in (*swept["records"], *swept["maps"])
-                  if key not in swept["swept"]
-                  and key not in swept["elsewhere"]]
+        missed = [
+            key
+            for key in (*swept["records"], *swept["maps"])
+            if key not in swept["swept"] and key not in swept["elsewhere"]
+        ]
         assert missed == [], missed
 
     def test_it_sweeps_both_shapes(self, swept):
@@ -327,12 +335,16 @@ class TestTheSweepReachesEveryPopulation:
         assert BOUND == BOUND_AS_MEASURED, (
             f"the viewer bounds above {BOUND}; this sweep is sized for "
             f"{BOUND_AS_MEASURED} and renders {MANY} rows. Re-measure "
-            f"the ledgers before moving the constant here")
+            f"the ledgers before moving the constant here"
+        )
 
     def test_no_population_throws_at_any_size(self, swept):
-        threw = {f"{key}/{leg}": seen["threw"]
-                 for key, legs in swept["out"].items()
-                 for leg, seen in legs.items() if seen.get("threw")}
+        threw = {
+            f"{key}/{leg}": seen["threw"]
+            for key, legs in swept["out"].items()
+            for leg, seen in legs.items()
+            if seen.get("threw")
+        }
         assert threw == {}, threw
 
     #: Empty, and it was empty all along: the two entries it held under
@@ -359,13 +371,13 @@ class TestTheSweepReachesEveryPopulation:
         (discovered from the payload, and nothing published left out)
         plus this: each one resolves to a *named* chapter.
         """
-        fallback = {key: chapter for key, chapter in swept["placed"].items()
-                    if chapter == swept["unchaptered"]}
+        fallback = {key: chapter for key, chapter in swept["placed"].items() if chapter == swept["unchaptered"]}
         assert fallback.keys() == self.UNPLACED.keys(), (
             f"filed under 'Everything else': {sorted(fallback)}; the "
             f"ledger says {sorted(self.UNPLACED)}. A new one means a "
             f"section with no chapter; a missing one means the ledger "
-            f"outlived its fix and should be deleted with it")
+            f"outlived its fix and should be deleted with it"
+        )
 
 
 @needs_node
@@ -378,20 +390,18 @@ class TestZero:
     """
 
     def test_a_declared_collection_still_draws_its_section(self, swept):
-        gone = [key for key, legs in swept["out"].items()
-                if not legs["zero"].get("drawn")]
+        gone = [key for key, legs in swept["out"].items() if not legs["zero"].get("drawn")]
         assert gone == [], (
             f"{gone} vanish at zero rows. That is the incremental run - "
-            f"the common case - losing a section without a word")
+            f"the common case - losing a section without a word"
+        )
 
     def test_it_says_the_analysis_found_none(self, swept):
-        silent = [key for key, legs in swept["out"].items()
-                  if not legs["zero"].get("says_none")]
+        silent = [key for key, legs in swept["out"].items() if not legs["zero"].get("says_none")]
         assert silent == [], silent
 
     def test_the_rail_can_tell_an_empty_one_apart(self, swept):
-        unmarked = [key for key, legs in swept["out"].items()
-                    if legs["zero"].get("empty") != "true"]
+        unmarked = [key for key, legs in swept["out"].items() if legs["zero"].get("empty") != "true"]
         assert unmarked == [], unmarked
 
 
@@ -409,36 +419,38 @@ class TestOne:
     PLURAL = {}
 
     def test_one_row_still_draws_a_section(self, swept):
-        missing = [key for key, legs in swept["out"].items()
-                   if not legs["one"].get("drawn")]
+        missing = [key for key, legs in swept["out"].items() if not legs["one"].get("drawn")]
         assert missing == [], missing
 
     def test_no_badge_pluralises_a_single_row(self, swept):
-        lying = {key: legs["one"]["badges"]
-                 for key, legs in swept["out"].items()
-                 if any(badge.startswith("1 ") and badge.endswith("s")
-                        and " of " not in badge
-                        for badge in legs["one"].get("badges") or [])}
+        lying = {
+            key: legs["one"]["badges"]
+            for key, legs in swept["out"].items()
+            if any(
+                badge.startswith("1 ") and badge.endswith("s") and " of " not in badge
+                for badge in legs["one"].get("badges") or []
+            )
+        }
         assert lying.keys() == self.PLURAL.keys(), (
-            f"badges over one row: {lying}; the ledger says "
-            f"{sorted(self.PLURAL)}")
+            f"badges over one row: {lying}; the ledger says {sorted(self.PLURAL)}"
+        )
 
     def test_no_copy_control_pluralises_a_single_row(self, swept):
         """`UX-412`'s second call site. The badge and this label are
         written from the same count and used to disagree with the same
         noun, which is why the fix is one helper rather than two
         edits."""
-        lying = {key: legs["one"]["copies"]
-                 for key, legs in swept["out"].items()
-                 if any("1 rows" in label
-                        for label in legs["one"].get("copies") or [])}
+        lying = {
+            key: legs["one"]["copies"]
+            for key, legs in swept["out"].items()
+            if any("1 rows" in label for label in legs["one"].get("copies") or [])
+        }
         assert lying == {}, lying
 
     def test_the_copy_controls_are_there_to_be_read(self, swept):
         """What keeps the clause above from passing on an empty set -
         the mistake `UX-403`'s census exists to find."""
-        seen = sum(len(legs["one"].get("copies") or [])
-                   for legs in swept["out"].values())
+        seen = sum(len(legs["one"].get("copies") or []) for legs in swept["out"].values())
         assert seen >= 5, f"only {seen} copy control(s) rendered at one row"
 
     def test_a_map_of_many_is_bounded_like_a_table(self, swept):
@@ -449,8 +461,7 @@ class TestOne:
         every map stopped drawing pairs, `_seen` would return `None`
         and they would all pass. This asserts the maps are there and
         bounded, by name."""
-        maps = {key: _seen(legs["many"]) for key, legs in swept["out"].items()
-                if swept["shape"][key] == "map"}
+        maps = {key: _seen(legs["many"]) for key, legs in swept["out"].items() if swept["shape"][key] == "map"}
         drawing = {key: seen for key, seen in maps.items() if seen}
         assert len(drawing) >= 5, maps
         for key, (shown, total) in drawing.items():
@@ -460,9 +471,11 @@ class TestOne:
 
     def test_a_population_of_one_is_never_bounded(self, swept):
         """A Top-N over one row would hide the only row there is."""
-        hiding = {key: legs["one"] for key, legs in swept["out"].items()
-                  if legs["one"].get("rows")
-                  and legs["one"]["shown"] != legs["one"]["rows"]}
+        hiding = {
+            key: legs["one"]
+            for key, legs in swept["out"].items()
+            if legs["one"].get("rows") and legs["one"]["shown"] != legs["one"]["rows"]
+        }
         assert hiding == {}, hiding
 
 
@@ -490,8 +503,8 @@ class TestMany:
             if seen and seen[0] > allowed:
                 drawn_whole[key] = seen[0]
         assert drawn_whole.keys() == self.UNBOUNDED.keys(), (
-            f"drawing every one of {MANY} at once: {drawn_whole}; the "
-            f"ledger says {sorted(self.UNBOUNDED)}")
+            f"drawing every one of {MANY} at once: {drawn_whole}; the ledger says {sorted(self.UNBOUNDED)}"
+        )
 
     def test_no_control_singularises_a_population(self, swept):
         """`UX-412`'s other direction, and the reason this clause
@@ -501,10 +514,8 @@ class TestMany:
         where the second one can be read."""
         lying = {}
         for key, legs in swept["out"].items():
-            said = [*(legs["many"].get("copies") or []),
-                    *(legs["many"].get("badges") or [])]
-            wrong = [text for text in said
-                     if re.search(r"\b(?!1\b)[\d,]+ row\b", text)]
+            said = [*(legs["many"].get("copies") or []), *(legs["many"].get("badges") or [])]
+            wrong = [text for text in said if re.search(r"\b(?!1\b)[\d,]+ row\b", text)]
             if wrong:
                 lying[key] = wrong
         assert lying == {}, lying
@@ -522,15 +533,15 @@ class TestMany:
                 silent[key] = badges
         assert silent == {}, silent
 
-    def test_the_bound_holds_at_the_threshold_the_viewer_declares(
-            self, swept):
+    def test_the_bound_holds_at_the_threshold_the_viewer_declares(self, swept):
         """The ledger's other half: everything not in it is bounded to
         the viewer's own number, so raising `TABLE_OPENS_BOUNDED_ABOVE`
         without saying so moves this rather than passing quietly."""
-        bounded = {key: _seen(legs["many"])
-                   for key, legs in swept["out"].items()
-                   if key not in self.UNBOUNDED and _seen(legs["many"])}
+        bounded = {
+            key: _seen(legs["many"])
+            for key, legs in swept["out"].items()
+            if key not in self.UNBOUNDED and _seen(legs["many"])
+        }
         assert bounded, "nothing was bounded; the sweep measured nothing"
-        over = {key: seen for key, seen in bounded.items()
-                if seen[0] > BOUND + 1}
+        over = {key: seen for key, seen in bounded.items() if seen[0] > BOUND + 1}
         assert over == {}, over

@@ -26,6 +26,7 @@ the one whose command a guard can actually run. This one cannot diff
 against a fresh run; what it can do is prove the block still needs its
 date.
 """
+
 import pathlib
 import re
 import subprocess
@@ -69,14 +70,14 @@ def _section(document="README.md") -> str:
     # stays greppable, so the lookup is on the prefix before it.
     heading = DOCUMENTS[document].split(" - ")[0]
     start = text.index(heading)
-    return text[start:text.index("\n## ", start + 4)]
+    return text[start : text.index("\n## ", start + 4)]
 
 
 def _block(document="README.md") -> list:
     fences = re.findall(r"```text\n(.*?)```", _section(document), re.S)
     assert len(fences) == 1, (
-        f"{document}'s section has {len(fences)} `text` fences; this "
-        f"guard reads the one holding the archived report")
+        f"{document}'s section has {len(fences)} `text` fences; this guard reads the one holding the archived report"
+    )
     return fences[0].splitlines()
 
 
@@ -98,7 +99,7 @@ def _pasted_note(document="README.md") -> str:
     start = next(i for i, line in enumerate(lines) if line.strip().startswith("Note:"))
     indent = len(lines[start]) - len(lines[start].lstrip())
     parts = [lines[start].strip()]
-    for line in lines[start + 1:]:
+    for line in lines[start + 1 :]:
         if len(line) - len(line.lstrip()) < indent or line.strip().startswith("Note:"):
             break
         parts.append(line.strip())
@@ -112,14 +113,19 @@ def emitted_notes():
     for expected_id, fixture in FIXTURES.items():
         done = subprocess.run(
             [sys.executable, "-m", "bga.cli", "analyze", fixture, "--format", "json"],
-            capture_output=True, text=True, cwd=str(REPO), timeout=180)
+            capture_output=True,
+            text=True,
+            cwd=str(REPO),
+            timeout=180,
+        )
         assert done.returncode == 0, done.stderr
         import json
 
         found = {f["id"]: f["title"] for f in json.loads(done.stdout)["findings"]}
         assert expected_id in found, (
-            f"{fixture} no longer publishes {expected_id!r}; this guard "
-            f"reads it to learn what the code can print", sorted(found))
+            f"{fixture} no longer publishes {expected_id!r}; this guard reads it to learn what the code can print",
+            sorted(found),
+        )
         notes[expected_id] = _normalise(found[expected_id])
     return notes
 
@@ -133,10 +139,10 @@ class TestTheSectionDoesNotPresentTheBlockAsCurrent:
         assert "verbatim" not in _section(document), (
             f"{document}'s real-project section calls its archived block "
             f"verbatim again; the run behind it cannot be re-run, so the "
-            f"block cannot carry that claim")
+            f"block cannot carry that claim"
+        )
 
-    def test_the_pasted_note_is_one_no_emitter_can_produce(
-            self, document, emitted_notes):
+    def test_the_pasted_note_is_one_no_emitter_can_produce(self, document, emitted_notes):
         """Why the date is load-bearing rather than decorative. If this
         line becomes printable again the section's account of what
         changed is wrong, and the framing has to be re-decided rather
@@ -145,7 +151,10 @@ class TestTheSectionDoesNotPresentTheBlockAsCurrent:
         assert pasted not in emitted_notes.values(), (
             f"{document}'s zero-slack note is one the code prints today, "
             f"so the section's 'kept, not current' framing no longer "
-            f"describes it", pasted, emitted_notes)
+            f"describes it",
+            pasted,
+            emitted_notes,
+        )
 
     def test_the_block_does_not_carry_the_label_ux_365_retired(self, document):
         """`UX-511`: the guide held `Biggest Opportunity` where the
@@ -154,16 +163,17 @@ class TestTheSectionDoesNotPresentTheBlockAsCurrent:
         link met the retired reading twice."""
         assert "Biggest Opportunity:" not in _section(document), (
             f"{document} prints `Biggest Opportunity:` in its block; "
-            f"UX-365 scoped that label to `Biggest wait category`")
+            f"UX-365 scoped that label to `Biggest wait category`"
+        )
 
-    def test_the_two_emitters_still_differ_from_each_other(
-            self, document, emitted_notes):
+    def test_the_two_emitters_still_differ_from_each_other(self, document, emitted_notes):
         """The clause that keeps the check above from passing vacuously:
         if both fixtures produced the same sentence, one branch would be
         unexercised and the comparison would be against half the code."""
         assert len(set(emitted_notes.values())) == 2, (
-            "both fixtures print the same zero-slack note; one branch of "
-            "the split is no longer covered", emitted_notes)
+            "both fixtures print the same zero-slack note; one branch of the split is no longer covered",
+            emitted_notes,
+        )
 
 
 @pytest.mark.parametrize("document", sorted(DOCUMENTS))
@@ -171,11 +181,11 @@ class TestTheSectionSaysWhereTheBlockIsFrom:
     def test_it_names_the_capture_run_and_the_day_it_ran(self, document):
         section = _section(document)
         assert RUN_ID.search(section), (
-            "the section names no capture run, so the block's numbers "
-            "cannot be traced to a run that produced them")
+            "the section names no capture run, so the block's numbers cannot be traced to a run that produced them"
+        )
         assert ISO_DATE.search(section), (
-            "the section gives no date for the capture; 'an old run' is "
-            "not a date a reader can check")
+            "the section gives no date for the capture; 'an old run' is not a date a reader can check"
+        )
 
     def test_the_capture_ref_and_the_linked_run_are_the_same_run(self, document):
         """Two names for one capture, and a half-updated section is how
@@ -184,21 +194,18 @@ class TestTheSectionSaysWhereTheBlockIsFrom:
         linked = RUN_ID.search(section)
         assert linked, "the section links no capture run to check the ref against"
         run_id = linked.group(1)
-        refs = [ref for ref in CAPTURE_REF.findall(section) if "/" in ref[len("captures/"):]]
+        refs = [ref for ref in CAPTURE_REF.findall(section) if "/" in ref[len("captures/") :]]
         assert refs, "the section names no `captures/…` ref for the block"
         assert any(ref.endswith(run_id) for ref in refs), (
-            f"the section links run {run_id} but names capture ref(s) "
-            f"{refs}, which are a different run")
+            f"the section links run {run_id} but names capture ref(s) {refs}, which are a different run"
+        )
 
     def test_every_task_it_names_is_a_task_that_exists(self, document):
         """The section explains what changed by naming rows. A typo'd or
         retired id is a dead end where the explanation should be."""
         named = sorted(set(TASK_ID.findall(_section(document))))
-        missing = [f"UX-{n}" for n in named
-                   if not list(SCENARIOS.glob(f"UX-{int(n):04d}-*.md"))]
-        assert missing == [], (
-            f"the section names task(s) with no file under "
-            f"docs/backlog/scenarios: {missing}")
+        missing = [f"UX-{n}" for n in named if not list(SCENARIOS.glob(f"UX-{int(n):04d}-*.md"))]
+        assert missing == [], f"the section names task(s) with no file under docs/backlog/scenarios: {missing}"
 
 
 class TestTheGuidesAppendixDoesNotClaimFreshness:
@@ -221,7 +228,8 @@ class TestTheGuidesAppendixDoesNotClaimFreshness:
         assert "analysed with the current code" not in self._appendix(), (
             "the appendix claims the Plane 1 figures are this capture "
             "re-analysed today; UX-492 measured four sentences the "
-            "emitter prints that the block does not carry")
+            "emitter prints that the block does not carry"
+        )
 
     def test_it_says_which_they_are_instead(self):
         """Removing the claim is half the fix - a reader still has to be
@@ -229,7 +237,8 @@ class TestTheGuidesAppendixDoesNotClaimFreshness:
         appendix = " ".join(self._appendix().split())
         assert "**not** re-run since" in appendix, (
             "the appendix drops the freshness claim without replacing it, "
-            "so a reader is told nothing about what the figures are")
+            "so a reader is told nothing about what the figures are"
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

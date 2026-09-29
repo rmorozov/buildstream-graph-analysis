@@ -7,6 +7,7 @@ correlates Plane 1's wall-clock timeline with Plane 2's own
 skipped rather than failed when they're not all present, matching every
 other real-sandbox-dependent test in this suite.
 """
+
 import json
 import os
 import shutil
@@ -31,7 +32,8 @@ CC_AVAILABLE = shutil.which("cc") is not None or shutil.which("gcc") is not None
 def test_single_real_build_captures_both_planes_and_combined_trace_correlates(tmp_path):
     project_dir = os.path.join(
         os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-        "examples", "05-cmake-cpp-toolchain",
+        "examples",
+        "05-cmake-cpp-toolchain",
     )
     if not os.path.isdir(os.path.join(project_dir, "files", "toolchain", "usr", "bin")):
         pytest.skip("examples/05-cmake-cpp-toolchain's toolchain isn't staged - run stage_cpp_toolchain.sh first")
@@ -43,7 +45,10 @@ def test_single_real_build_captures_both_planes_and_combined_trace_correlates(tm
     with bst_env(tmp_path / "home"):
         subprocess.run(["bst", "artifact", "delete", "core.bst"], cwd=project_dir, capture_output=True)
         returncode = run_traced_build(
-            project_dir, ["bst", "--no-colors", "build", "core.bst"], raw_log, wrapped_log_path=wrapped_log,
+            project_dir,
+            ["bst", "--no-colors", "build", "core.bst"],
+            raw_log,
+            wrapped_log_path=wrapped_log,
         )
     assert returncode == 0
 
@@ -87,7 +92,8 @@ def test_single_real_build_captures_both_planes_and_combined_trace_correlates(tm
     # also hid a real bug in `compute_clock_offset_us`, which took the
     # *first* matching B event - see the anchor assertions below.
     element_b_events = [
-        e for e in plane1_events
+        e
+        for e in plane1_events
         if e.get("ph") == "B" and e.get("cat") == "bst-builder" and e.get("args", {}).get("element") == "core.bst"
     ]
     build_b_events = [e for e in element_b_events if e.get("args", {}).get("action") == "build"]
@@ -112,8 +118,7 @@ def test_single_real_build_captures_both_planes_and_combined_trace_correlates(tm
     # regression this exists to prevent, checked directly rather than
     # hoping the real capture happens to produce the ordering.
     fetch_first = [
-        dict(e, ts=e["ts"] - 30_000_000, args=dict(e["args"], action="fetch"))
-        for e in build_b_events
+        dict(e, ts=e["ts"] - 30_000_000, args=dict(e["args"], action="fetch")) for e in build_b_events
     ] + list(plane1_events)
     assert compute_clock_offset_us(fetch_first, plane2_records, "core.bst") == offset_us
 
@@ -135,8 +140,7 @@ def test_single_real_build_captures_both_planes_and_combined_trace_correlates(tm
     # cluster from a clock-anchoring mismatch.
     element_start_us = element_b_events[0]["ts"]
     core_plane2_events = [
-        e for e in combined
-        if e.get("cat") == "native-process" and e.get("args", {}).get("element") == "core.bst"
+        e for e in combined if e.get("cat") == "native-process" and e.get("args", {}).get("element") == "core.bst"
     ]
     assert core_plane2_events
     for ev in core_plane2_events:

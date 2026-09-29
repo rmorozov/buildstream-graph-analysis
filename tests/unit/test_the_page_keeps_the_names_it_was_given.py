@@ -31,6 +31,7 @@ fix is to stop humanising: then `violation_count` reads
 `TestASchemaKeyStillReadsAsEnglish` is that half — 241 of them on
 `macro_micro`, and they are still English.
 """
+
 import pathlib
 import shutil
 import subprocess
@@ -62,6 +63,7 @@ DATA_KEYED = (
     ("downstream_count", ("elements",)),
 )
 
+
 def _is_the_given_name(row):
     """Is what the reader sees a name they gave, verbatim?
 
@@ -86,8 +88,7 @@ def _is_the_given_name(row):
 
 #: A schema key that must still read as English, and what it must read
 #: as. Two of them, because one could be satisfied by an accident.
-HUMANISED = {"element_durations": "Element durations",
-             "violation_count": "Violation count"}
+HUMANISED = {"element_durations": "Element durations", "violation_count": "Violation count"}
 
 #: What the reader sees against what the payload published. `data-key`
 #: carries the key verbatim and always has; the label is the text node
@@ -150,17 +151,17 @@ def browser():
 @pytest.fixture(scope="module")
 def looked(browser, tmp_path_factory):
     into = tmp_path_factory.mktemp("u374")
-    return {label: browser.measure(
-        pages.export_uri(pages.FIXTURES[label], into, name=f"{label}.html"),
-        _LOOK, 1440, 900) for label in sorted(pages.FIXTURES)}
+    return {
+        label: browser.measure(pages.export_uri(pages.FIXTURES[label], into, name=f"{label}.html"), _LOOK, 1440, 900)
+        for label in sorted(pages.FIXTURES)
+    }
 
 
 @needs_browser
 @pytest.mark.medium
 @pytest.mark.parametrize("label", sorted(pages.FIXTURES))
 class TestADataKeyIsRenderedAsPublished:
-    def test_every_data_key_on_the_page_is_spelled_as_it_was_given(
-            self, looked, label):
+    def test_every_data_key_on_the_page_is_spelled_as_it_was_given(self, looked, label):
         """The clause the defect fails: it was 22 of 22 on
         `macro_micro`, 0 of 22 correct."""
         payload = _payload(label)
@@ -169,15 +170,11 @@ class TestADataKeyIsRenderedAsPublished:
             data |= _published(payload, name, under)
         if not data:
             pytest.skip(f"{label} publishes none of the data-keyed maps")
-        renamed = [row for row in looked[label]["seen"]
-                   if row["key"] in data and not _is_the_given_name(row)]
-        assert renamed == [], (
-            f"{label}: the page renamed {len(renamed)} of the reader's own "
-            f"names, e.g. {renamed[:3]}")
+        renamed = [row for row in looked[label]["seen"] if row["key"] in data and not _is_the_given_name(row)]
+        assert renamed == [], f"{label}: the page renamed {len(renamed)} of the reader's own names, e.g. {renamed[:3]}"
 
     @pytest.mark.parametrize("name", ["wall_clock_share_us", "by_binary"])
-    def test_the_reader_can_find_what_they_searched_for(self, looked, label,
-                                                        name):
+    def test_the_reader_can_find_what_they_searched_for(self, looked, label, name):
         """Non-vacuity, and not against a round number. The clause above
         passes trivially if no data key reaches a `<dt>` at all, so
         these two maps - the ones that render as pair lists on both
@@ -195,7 +192,8 @@ class TestADataKeyIsRenderedAsPublished:
         assert missing == [], (
             f"{label}: {len(missing)} of {len(published)} {name} keys reach "
             f"no label at all, so the clause above is guarding an absence: "
-            f"{missing[:3]}")
+            f"{missing[:3]}"
+        )
 
 
 @needs_browser
@@ -214,8 +212,8 @@ class TestASchemaKeyStillReadsAsEnglish:
                 continue
             checked += 1
             assert by_key[key] == reads, (
-                f"{label}: {key!r} reads {by_key[key]!r}, not {reads!r} - "
-                f"a contract key is not the reader's name")
+                f"{label}: {key!r} reads {by_key[key]!r}, not {reads!r} - a contract key is not the reader's name"
+            )
         if not checked:
             pytest.skip(f"{label} renders neither of {sorted(HUMANISED)}")
 
@@ -227,12 +225,12 @@ class TestASchemaKeyStillReadsAsEnglish:
         data = set()
         for name, under in DATA_KEYED:
             data |= _published(payload, name, under)
-        schema = [row for row in looked[label]["seen"]
-                  if row["key"] not in data]
+        schema = [row for row in looked[label]["seen"] if row["key"] not in data]
         humanised = [row for row in schema if row["shown"] != row["key"]]
         assert len(humanised) > len(schema) * 0.5, (
             f"{label}: {len(humanised)} of {len(schema)} contract keys read "
-            f"as English; the fix has become 'stop humanising'")
+            f"as English; the fix has become 'stop humanising'"
+        )
 
 
 @needs_node
@@ -252,28 +250,30 @@ class TestThePredicateIsTheSchemas:
         import os
 
         result = subprocess.run(
-            [node, "--input-type=module", "-e",
-             'const f = await import("./bga/viewer/format.js");'
-             f"console.log(JSON.stringify({script}));"],
-            capture_output=True, text=True, cwd=os.getcwd(), timeout=60)
+            [
+                node,
+                "--input-type=module",
+                "-e",
+                f'const f = await import("./bga/viewer/format.js");console.log(JSON.stringify({script}));',
+            ],
+            capture_output=True,
+            text=True,
+            cwd=os.getcwd(),
+            timeout=60,
+        )
         assert result.returncode == 0, result.stderr
         return json.loads(result.stdout)
 
     def test_a_declared_property_is_not_data(self):
-        assert self._ask(
-            'f.dataKeyed({properties: {core: {type: "number"}}}, "core")'
-        ) is False
+        assert self._ask('f.dataKeyed({properties: {core: {type: "number"}}}, "core")') is False
 
     def test_a_map_declaring_its_value_once_is_data(self):
-        assert self._ask(
-            'f.dataKeyed({additionalProperties: {type: "number"}}, "core.bst")'
-        ) is True
+        assert self._ask('f.dataKeyed({additionalProperties: {type: "number"}}, "core.bst")') is True
 
     def test_a_declared_property_wins_over_additional_ones(self):
         """Both present is the shape a partly-declared map has, and the
         named member is contract however the rest is keyed."""
-        node = ('{properties: {total_us: {}}, '
-                'additionalProperties: {type: "number"}}')
+        node = '{properties: {total_us: {}}, additionalProperties: {type: "number"}}'
         assert self._ask(f'f.dataKeyed({node}, "total_us")') is False
         assert self._ask(f'f.dataKeyed({node}, "core.bst")') is True
 
@@ -348,18 +348,15 @@ class TestTheInlineObjectAsksToo:
         import json
         import os
 
-        script = (_INLINE.replace("__VALUE__", json.dumps(value))
-                         .replace("__NODE__", json.dumps(schema)))
-        result = subprocess.run([node, "--input-type=module", "-e", script],
-                                capture_output=True, text=True,
-                                cwd=os.getcwd(), timeout=60)
+        script = _INLINE.replace("__VALUE__", json.dumps(value)).replace("__NODE__", json.dumps(schema))
+        result = subprocess.run(
+            [node, "--input-type=module", "-e", script], capture_output=True, text=True, cwd=os.getcwd(), timeout=60
+        )
         assert result.returncode == 0, result.stderr
         return json.loads(result.stdout)
 
     def test_a_small_data_keyed_map_keeps_its_names(self):
-        keys = self._render({"cc1plus": 3, "cmake": 1},
-                            {"type": "object",
-                             "additionalProperties": {"type": "number"}})
+        keys = self._render({"cc1plus": 3, "cmake": 1}, {"type": "object", "additionalProperties": {"type": "number"}})
         assert keys, "the inline-object branch drew no pair keys"
         # Named before it is used: without `data-key` the label has
         # nothing to be compared against, and the clause would fail as
@@ -367,18 +364,17 @@ class TestTheInlineObjectAsksToo:
         blind = [k for k in keys if not k.get("key")]
         assert blind == [], (
             f"{len(blind)} pair key(s) publish no `data-key`, so what the "
-            f"reader sees cannot be checked against what was given")
+            f"reader sees cannot be checked against what was given"
+        )
         renamed = [k for k in keys if k["shown"] != k["key"]]
-        assert renamed == [], (
-            f"the inline object renamed the reader's programs: {renamed}")
+        assert renamed == [], f"the inline object renamed the reader's programs: {renamed}"
 
     def test_a_small_declared_map_still_reads_as_english(self):
         """The same shape, declared - so this cannot pass by the
         renderer having stopped humanising everywhere."""
         keys = self._render(
-            {"violation_count": 3},
-            {"type": "object",
-             "properties": {"violation_count": {"type": "number"}}})
+            {"violation_count": 3}, {"type": "object", "properties": {"violation_count": {"type": "number"}}}
+        )
         assert keys, "the inline-object branch drew no pair keys"
         assert keys[0]["shown"] == "Violation count", keys
 

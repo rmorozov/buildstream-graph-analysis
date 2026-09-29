@@ -18,6 +18,7 @@ diff touched `bga/analyzer.py`.
 Never run inside `make test`: the reading is CI's own clock, and no
 number taken on another machine compares with it (Out of Scope).
 """
+
 import argparse
 import json
 import pathlib
@@ -44,8 +45,7 @@ ANALYZER_FILE = "bga/analyzer.py"
 ANALYZE_WALL_MARGIN_S = 5.0
 ANALYZE_RSS_MARGIN_MB = 50.0
 
-_WALL_RE = re.compile(
-    r"Elapsed \(wall clock\) time \(h:mm:ss or m:ss\):\s*([\d:.]+)")
+_WALL_RE = re.compile(r"Elapsed \(wall clock\) time \(h:mm:ss or m:ss\):\s*([\d:.]+)")
 _RSS_RE = re.compile(r"Maximum resident set size \(kbytes\):\s*(\d+)")
 
 
@@ -77,8 +77,7 @@ def measured(paths):
     """
     wall = rss = 0.0
     for path in paths:
-        one_wall, one_rss = parse_time_v(
-            pathlib.Path(path).read_text(encoding="utf-8"))
+        one_wall, one_rss = parse_time_v(pathlib.Path(path).read_text(encoding="utf-8"))
         wall, rss = max(wall, one_wall), max(rss, one_rss)
     return {"analyze_wall_s": round(wall, 2), "analyze_rss_mb": round(rss, 1)}
 
@@ -88,11 +87,11 @@ def merge(candidate_path, readings, source):
     `dev_tier_drift.py --record` already wrote at `candidate_path`, so
     the one artifact and the one `--adopt` job that already exist carry
     both (`UX-503`'s shape, not a second job)."""
-    document = (json.loads(candidate_path.read_text(encoding="utf-8"))
-                if candidate_path.is_file() else {"measured_on": source})
+    document = (
+        json.loads(candidate_path.read_text(encoding="utf-8")) if candidate_path.is_file() else {"measured_on": source}
+    )
     document.update(readings)
-    candidate_path.write_text(json.dumps(document, indent=2) + "\n",
-                              encoding="utf-8")
+    candidate_path.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
     return document
 
 
@@ -106,8 +105,8 @@ def touches_analyzer(base):
     if not base:
         return None
     resolved = subprocess.run(
-        [GIT, "rev-parse", "--verify", "--quiet", f"{base}^{{commit}}"],
-        capture_output=True, text=True, cwd=REPO)
+        [GIT, "rev-parse", "--verify", "--quiet", f"{base}^{{commit}}"], capture_output=True, text=True, cwd=REPO
+    )
     if resolved.returncode != 0:
         return None
     return ANALYZER_FILE in dev_touching.changed_files(base=base)
@@ -120,11 +119,9 @@ def exceeded(times, reference):
     (`UX-503`'s shape, on a scalar instead of a file)."""
     wall_over = rss_over = None
     if "analyze_wall_s" in reference and "analyze_wall_s" in times:
-        wall_over = (times["analyze_wall_s"] - reference["analyze_wall_s"]
-                    >= ANALYZE_WALL_MARGIN_S)
+        wall_over = times["analyze_wall_s"] - reference["analyze_wall_s"] >= ANALYZE_WALL_MARGIN_S
     if "analyze_rss_mb" in reference and "analyze_rss_mb" in times:
-        rss_over = (times["analyze_rss_mb"] - reference["analyze_rss_mb"]
-                   >= ANALYZE_RSS_MARGIN_MB)
+        rss_over = times["analyze_rss_mb"] - reference["analyze_rss_mb"] >= ANALYZE_RSS_MARGIN_MB
     return wall_over, rss_over
 
 
@@ -133,8 +130,7 @@ def confirmed(wall_over, rss_over, history):
     reports off one sample - the run behind this one on the same
     branch must have exceeded the same margin too."""
     before = history or {}
-    return (bool(wall_over) and bool(before.get("wall")),
-            bool(rss_over) and bool(before.get("rss")))
+    return (bool(wall_over) and bool(before.get("wall")), bool(rss_over) and bool(before.get("rss")))
 
 
 def carried(path):
@@ -150,19 +146,20 @@ def carried(path):
 def carry(path, wall_over, rss_over, source):
     """Write what this run found, for the next run on this branch to
     agree or disagree with (`UX-442`)."""
-    pathlib.Path(path).write_text(json.dumps(
-        {"exceeded": {"wall": bool(wall_over), "rss": bool(rss_over)},
-         "measured_on": source}, indent=2) + "\n", encoding="utf-8")
+    pathlib.Path(path).write_text(
+        json.dumps({"exceeded": {"wall": bool(wall_over), "rss": bool(rss_over)}, "measured_on": source}, indent=2)
+        + "\n",
+        encoding="utf-8",
+    )
 
 
 def _done(code, message, args):
     if args.summary:
-        pathlib.Path(args.summary).write_text(message + "\n",
-                                              encoding="utf-8")
+        pathlib.Path(args.summary).write_text(message + "\n", encoding="utf-8")
     if args.annotate and code:
         from tools.dev_tier_drift import annotation
-        print(annotation(message, path=args.against or "unknown",
-                         title="analyzer gate"))
+
+        print(annotation(message, path=args.against or "unknown", title="analyzer gate"))
     return code
 
 
@@ -172,13 +169,14 @@ def _against(readings, args):
     unrecorded, not confirmed yet, confirmed but no cause, confirmed and
     caused - rather than one function carrying all four."""
     ref_path = pathlib.Path(args.against)
-    reference = (json.loads(ref_path.read_text(encoding="utf-8"))
-                if ref_path.is_file() else {})
+    reference = json.loads(ref_path.read_text(encoding="utf-8")) if ref_path.is_file() else {}
     wall_over, rss_over = exceeded(readings, reference)
     if wall_over is None and rss_over is None:
-        message = (f"{ref_path} holds no analyze_wall_s/analyze_rss_mb yet, "
-                   f"so nothing is being checked (UX-702). Merge this run's "
-                   f"reading and let the adopt job carry it in.")
+        message = (
+            f"{ref_path} holds no analyze_wall_s/analyze_rss_mb yet, "
+            f"so nothing is being checked (UX-702). Merge this run's "
+            f"reading and let the adopt job carry it in."
+        )
         print(message, file=sys.stderr)
         return _done(0, message, args)
 
@@ -187,49 +185,58 @@ def _against(readings, args):
     if args.carry:
         carry(args.carry, wall_over, rss_over, args.source)
 
-    reading_line = (f"analyze+export: {readings['analyze_wall_s']}s "
-                    f"(recorded {reference.get('analyze_wall_s')}s, margin "
-                    f"{ANALYZE_WALL_MARGIN_S:g}s), "
-                    f"{readings['analyze_rss_mb']} MB (recorded "
-                    f"{reference.get('analyze_rss_mb')} MB, margin "
-                    f"{ANALYZE_RSS_MARGIN_MB:g} MB)")
+    reading_line = (
+        f"analyze+export: {readings['analyze_wall_s']}s "
+        f"(recorded {reference.get('analyze_wall_s')}s, margin "
+        f"{ANALYZE_WALL_MARGIN_S:g}s), "
+        f"{readings['analyze_rss_mb']} MB (recorded "
+        f"{reference.get('analyze_rss_mb')} MB, margin "
+        f"{ANALYZE_RSS_MARGIN_MB:g} MB)"
+    )
     if not (wall_confirmed or rss_confirmed):
         message = f"{reading_line} - within margin, or not confirmed yet."
         print(message)
         return _done(0, message, args)
 
     if touches_analyzer(args.base) is False:
-        message = (f"{reading_line} - two consecutive runs over margin, but "
-                   f"the diff against {args.base} does not touch "
-                   f"{ANALYZER_FILE}, so nothing is being failed on it "
-                   f"(UX-702's own scope).")
+        message = (
+            f"{reading_line} - two consecutive runs over margin, but "
+            f"the diff against {args.base} does not touch "
+            f"{ANALYZER_FILE}, so nothing is being failed on it "
+            f"(UX-702's own scope)."
+        )
         print(message, file=sys.stderr)
         return _done(0, message, args)
 
-    message = (f"{ANALYZER_FILE} changed and {reading_line} - two "
-              f"consecutive runs over margin.")
+    message = f"{ANALYZER_FILE} changed and {reading_line} - two consecutive runs over margin."
     print(message, file=sys.stderr)
     return _done(1, message, args)
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("logs", nargs="*",
-                        help="/usr/bin/time -v report(s) for this run")
-    parser.add_argument("--merge", metavar="CANDIDATE",
-                        help="fold this run's reading into the tier "
-                             "candidate at PATH, for --adopt to carry")
-    parser.add_argument("--against", metavar="REFERENCE",
-                        help="tests/ci_reference.json - check this run "
-                             "against its analyze_wall_s/analyze_rss_mb")
+    parser.add_argument("logs", nargs="*", help="/usr/bin/time -v report(s) for this run")
+    parser.add_argument(
+        "--merge",
+        metavar="CANDIDATE",
+        help="fold this run's reading into the tier candidate at PATH, for --adopt to carry",
+    )
+    parser.add_argument(
+        "--against",
+        metavar="REFERENCE",
+        help="tests/ci_reference.json - check this run against its analyze_wall_s/analyze_rss_mb",
+    )
     parser.add_argument("--carry", metavar="PATH", default=None)
     parser.add_argument("--base", metavar="REF", default=None)
     parser.add_argument("--source", default="unknown")
     parser.add_argument("--summary", metavar="PATH", default=None)
-    parser.add_argument("--annotate", action="store_true",
-                        help="on a red run, print a check-run annotation "
-                             "(UX-621's route - a job's own API entry "
-                             "carries no output field)")
+    parser.add_argument(
+        "--annotate",
+        action="store_true",
+        help="on a red run, print a check-run annotation "
+        "(UX-621's route - a job's own API entry "
+        "carries no output field)",
+    )
     args = parser.parse_args(argv)
 
     if not args.logs:
@@ -238,8 +245,7 @@ def main(argv=None):
 
     if args.merge:
         merge(pathlib.Path(args.merge), readings, args.source)
-        print(f"{args.merge}: analyze_wall_s={readings['analyze_wall_s']}, "
-              f"analyze_rss_mb={readings['analyze_rss_mb']}")
+        print(f"{args.merge}: analyze_wall_s={readings['analyze_wall_s']}, analyze_rss_mb={readings['analyze_rss_mb']}")
     if not args.against:
         return 0
     return _against(readings, args)

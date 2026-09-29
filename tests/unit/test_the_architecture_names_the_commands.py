@@ -23,6 +23,7 @@ reverse direction is not decoration - a row for a command that has been
 removed sends a reader to type something that does not exist, which is
 the failure `UX-122` measured on ref globs.
 """
+
 import pathlib
 import re
 
@@ -95,7 +96,8 @@ class TestTheTableNamesTheCLI:
         assert missing == [], (
             f"subcommand(s) `bga --help` lists and the architecture's "
             f"CLI-surface table does not: {missing}. "
-            f"docs/design/architecture.md, {CHAPTER!r}.")
+            f"docs/design/architecture.md, {CHAPTER!r}."
+        )
 
     def test_the_table_names_nothing_that_does_not_exist(self):
         """A row for a retired command is worse than a missing row: it
@@ -103,14 +105,16 @@ class TestTheTableNamesTheCLI:
         unreal = sorted(_named_in_the_table() - _subcommands() - _aliases())
         assert unreal == [], (
             f"the architecture's CLI-surface table names command(s) "
-            f"neither `bga --help` nor `tools_dispatch` has: {unreal}")
+            f"neither `bga --help` nor `tools_dispatch` has: {unreal}"
+        )
 
     def test_the_table_is_not_one_row(self):
         """The two checks above both pass on an empty table. This is
         the floor under them."""
         assert len(_first_column()) >= len(_subcommands()), (
             f"the CLI-surface table has {len(_first_column())} rows for "
-            f"{len(_subcommands())} subcommands, before aliases")
+            f"{len(_subcommands())} subcommands, before aliases"
+        )
 
 
 class TestTheEntryPointsAreNamed:
@@ -121,17 +125,18 @@ class TestTheEntryPointsAreNamed:
         text = ARCHITECTURE.read_text(encoding="utf-8")
         assert "--explain" in text, (
             "architecture.md describes the provenance chain and names no "
-            "way to print it (`bga analyze --explain`, UX-229)")
+            "way to print it (`bga analyze --explain`, UX-229)"
+        )
 
     def test_the_flag_is_named_beside_the_provenance_it_prints(self):
         """Named anywhere would pass the check above; the point is that
         a reader meeting provenance is told how to see it."""
         text = ARCHITECTURE.read_text(encoding="utf-8")
         where = text.index("--explain")
-        window = text[max(0, where - 600):where + 600]
+        window = text[max(0, where - 600) : where + 600]
         assert "provenance" in window, (
-            "`--explain` is named in architecture.md but not near any "
-            "description of the provenance it prints")
+            "`--explain` is named in architecture.md but not near any description of the provenance it prints"
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

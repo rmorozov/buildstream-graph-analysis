@@ -19,6 +19,7 @@ the cases that are easy to get wrong: tasks spanning the whole window,
 zero-duration tasks, multi-resource holders, and re-saturation after a
 gap of slack.
 """
+
 import itertools
 
 from bga.attribution.blame_chain import BlameChainAnalyzer
@@ -47,10 +48,7 @@ def _reference_intervals(tasks, task, window_start, window_end, capacity):
     if not required:
         return [(False, window_start, window_end, {})]
 
-    relevant = [
-        other for other in tasks
-        if other.task_key != task.task_key and (set(required) & set(other.resources))
-    ]
+    relevant = [other for other in tasks if other.task_key != task.task_key and (set(required) & set(other.resources))]
     boundaries = {window_start, window_end}
     for other in relevant:
         if window_start < other.start_us < window_end:
@@ -62,12 +60,14 @@ def _reference_intervals(tasks, task, window_start, window_end, capacity):
     out = []
     for t1, t2 in zip(points, points[1:]):
         saturated = {
-            resource for resource, cap in required.items()
+            resource
+            for resource, cap in required.items()
             if sum(
-                1 for other in relevant
-                if resource in other.resources
-                and other.start_us <= t1 and other.finish_us >= t2
-            ) >= cap
+                1
+                for other in relevant
+                if resource in other.resources and other.start_us <= t1 and other.finish_us >= t2
+            )
+            >= cap
         }
         if not saturated:
             out.append((False, t1, t2, {}))
@@ -89,16 +89,9 @@ def _assert_matches_reference(tasks, capacity, windows):
     analyzer = BlameChainAnalyzer(normalized_tasks=tasks, resource_capacity=capacity)
     for task in tasks:
         for window_start, window_end in windows:
-            actual = analyzer._resource_saturation_intervals(
-                task, window_start, window_end, capacity
-            )
-            expected = _reference_intervals(
-                tasks, task, window_start, window_end, capacity
-            )
-            assert actual == expected, (
-                f"{task.task_key} over [{window_start}, {window_end}): "
-                f"{actual} != {expected}"
-            )
+            actual = analyzer._resource_saturation_intervals(task, window_start, window_end, capacity)
+            expected = _reference_intervals(tasks, task, window_start, window_end, capacity)
+            assert actual == expected, f"{task.task_key} over [{window_start}, {window_end}): {actual} != {expected}"
 
 
 PROCESS = Resource.PROCESS
@@ -136,9 +129,7 @@ def test_matches_reference_with_multi_resource_holders():
         _task("c", 0, 100, [DOWNLOAD]),
         _task("waiter", 100, 150, [PROCESS, DOWNLOAD]),
     ]
-    _assert_matches_reference(
-        tasks, {PROCESS: 2, DOWNLOAD: 3}, [(0, 100), (25, 75)]
-    )
+    _assert_matches_reference(tasks, {PROCESS: 2, DOWNLOAD: 3}, [(0, 100), (25, 75)])
 
 
 def test_matches_reference_with_zero_duration_tasks():
@@ -171,9 +162,7 @@ def test_matches_reference_across_many_generated_overlaps():
     varied lengths across two resources, checked over every task and
     several windows."""
     tasks = []
-    for index, (start, length) in enumerate(
-        itertools.product((0, 15, 30, 45), (20, 35, 50))
-    ):
+    for index, (start, length) in enumerate(itertools.product((0, 15, 30, 45), (20, 35, 50))):
         resources = [PROCESS] if index % 3 else [PROCESS, DOWNLOAD]
         tasks.append(_task(f"t{index}", start, start + length, resources))
 
@@ -196,9 +185,7 @@ def test_task_with_no_capacity_known_resource_is_one_unsaturated_span():
     tasks = [_task("a", 0, 100, [DOWNLOAD])]
     analyzer = BlameChainAnalyzer(normalized_tasks=tasks, resource_capacity={PROCESS: 2})
 
-    assert analyzer._resource_saturation_intervals(
-        tasks[0], 0, 100, {PROCESS: 2}
-    ) == [(False, 0, 100, {})]
+    assert analyzer._resource_saturation_intervals(tasks[0], 0, 100, {PROCESS: 2}) == [(False, 0, 100, {})]
 
 
 def test_timeline_is_built_once_and_reused():

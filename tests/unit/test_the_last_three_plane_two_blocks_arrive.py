@@ -33,6 +33,7 @@ beside it are sums that may be. Both say which they are in their own
 schema sentence, which is `UX-346`'s door and the place a reader about
 to add two numbers actually looks.
 """
+
 import json
 import pathlib
 import sys
@@ -52,8 +53,7 @@ FIXTURE = REPO / "tests/fixtures/macro_micro"
 FROM_EACH_BLOCK = {
     "cpu_time": ("cores_busy", "cpu_coverage", "cpu_us"),
     "peak_memory": ("peak_rss_bytes",),
-    "resource_pressure": ("read_bytes", "written_bytes", "major_faults",
-                          "involuntary_switches"),
+    "resource_pressure": ("read_bytes", "written_bytes", "major_faults", "involuntary_switches"),
 }
 
 
@@ -64,6 +64,7 @@ def payload():
     import pages
 
     from tools.bga_view import payloads
+
     return payloads(str(pages.FIXTURES["macro_micro"]))["report.json"]
 
 
@@ -81,8 +82,7 @@ class TestTheBlocksAreInTheContract:
         document = schemas.schema(schemas.ANALYZE)
         assert key in document["properties"], key
 
-    @pytest.mark.parametrize("field", sorted(
-        f for fields in FROM_EACH_BLOCK.values() for f in fields))
+    @pytest.mark.parametrize("field", sorted(f for fields in FROM_EACH_BLOCK.values() for f in fields))
     def test_every_per_element_field_has_a_sentence(self, field):
         """`UX-201`/`UX-346`: the schema's own sentence is the `?` door,
         so a field with no description is a number with no unit and no
@@ -104,28 +104,25 @@ class TestTheBlocksArriveInThePayload:
         rows = payload.get("element_join") or []
         assert rows, "the fixture has no join to carry them"
         row = rows[0]
-        for field in ("cores_busy", "cpu_coverage", "cpu_us",
-                      "peak_rss_bytes"):
+        for field in ("cores_busy", "cpu_coverage", "cpu_us", "peak_rss_bytes"):
             assert field in row, (field, sorted(row))
 
     def test_the_cpu_quantity_is_not_just_the_ratio(self, payload):
         """The gap this half closes. `cores_busy` said an element was
         CPU-bound and nothing said what that cost."""
         rows = payload.get("element_join") or []
-        burned = [row["cpu_us"] for row in rows
-                  if row.get("cpu_us") is not None]
+        burned = [row["cpu_us"] for row in rows if row.get("cpu_us") is not None]
         assert burned, "no element publishes the CPU it burned"
         assert max(burned) > 0
 
-    def test_a_block_the_capture_lacks_is_absent_rather_than_empty(
-            self, payload):
+    def test_a_block_the_capture_lacks_is_absent_rather_than_empty(self, payload):
         """`UX-107`'s rule. This fixture predates `UX-379`, so it has no
         `resource_pressure` at all - and an empty block would read as
         "measured, and it was zero"."""
         report = json.loads((FIXTURE / "plane2.json").read_text("utf-8"))
         assert "resource_pressure" not in report, (
-            "the fixture gained the block, so this clause no longer "
-            "exercises the absence it exists for")
+            "the fixture gained the block, so this clause no longer exercises the absence it exists for"
+        )
         assert "resource_pressure" not in payload
 
 
@@ -143,27 +140,35 @@ class TestThePressurePathIsGuardedWithoutAFixtureThatHasIt:
     @staticmethod
     def _joined():
         from bga.correlate import _plane2_view
-        return _plane2_view({
-            "resource_pressure": {
-                "available": True,
-                "per_element": {
-                    "a.bst": {"read_bytes": 4096, "written_bytes": 8192,
-                              "major_faults": 7, "involuntary_switches": 21,
-                              "measured": 3, "unmeasured": 0,
-                              "coverage": 1.0},
-                    # An element the capture measured only partly. The
-                    # sweep put this here: with every counter present,
-                    # a mutation writing `entry.get(name) or 0` was
-                    # indistinguishable from the real thing.
-                    "c.bst": {"read_bytes": 512, "measured": 1,
-                              "unmeasured": 0, "coverage": 1.0},
-                },
-            },
-        })
 
-    @pytest.mark.parametrize("field,value", (
-        ("read_bytes", 4096), ("written_bytes", 8192),
-        ("major_faults", 7), ("involuntary_switches", 21)))
+        return _plane2_view(
+            {
+                "resource_pressure": {
+                    "available": True,
+                    "per_element": {
+                        "a.bst": {
+                            "read_bytes": 4096,
+                            "written_bytes": 8192,
+                            "major_faults": 7,
+                            "involuntary_switches": 21,
+                            "measured": 3,
+                            "unmeasured": 0,
+                            "coverage": 1.0,
+                        },
+                        # An element the capture measured only partly. The
+                        # sweep put this here: with every counter present,
+                        # a mutation writing `entry.get(name) or 0` was
+                        # indistinguishable from the real thing.
+                        "c.bst": {"read_bytes": 512, "measured": 1, "unmeasured": 0, "coverage": 1.0},
+                    },
+                },
+            }
+        )
+
+    @pytest.mark.parametrize(
+        "field,value",
+        (("read_bytes", 4096), ("written_bytes", 8192), ("major_faults", 7), ("involuntary_switches", 21)),
+    )
     def test_each_counter_reaches_the_join_row(self, field, value):
         assert self._joined()["a.bst"].get(field) == value, field
 
@@ -179,8 +184,7 @@ class TestThePressurePathIsGuardedWithoutAFixtureThatHasIt:
         faulted" - which is a different claim from "not measured"."""
         row = self._joined()["c.bst"]
         assert row["read_bytes"] == 512
-        for missing in ("written_bytes", "major_faults",
-                        "involuntary_switches"):
+        for missing in ("written_bytes", "major_faults", "involuntary_switches"):
             assert missing not in row, (missing, row)
 
 
@@ -190,12 +194,12 @@ class TestOnePopulationIsStillDrawnOnce:
     `macro_micro` four times over."""
 
     def test_no_new_per_element_table_was_added(self, payload):
-        for name in ("element_cpu_time", "element_peak_memory",
-                     "element_resource_pressure"):
+        for name in ("element_cpu_time", "element_peak_memory", "element_resource_pressure"):
             assert name not in payload, (
                 f"`{name}` is a second table over a population "
                 f"`element_join` already carries - `UX-382` puts these "
-                f"on the join row")
+                f"on the join row"
+            )
 
     def test_the_run_level_blocks_carry_no_element_map(self, payload):
         """`per_element` stays in `plane2.json`, where `bga correlate`
@@ -217,12 +221,10 @@ class TestTheSummingRuleSurvivesTheRendering:
         text = schemas._JOIN_ITEM_PROPERTIES["peak_rss_bytes"]["description"]
         assert "maximum" in text.lower()
         assert "adding" in text.lower() or "added" in text.lower(), (
-            "the peak's sentence does not warn against the operation it "
-            "cannot support")
+            "the peak's sentence does not warn against the operation it cannot support"
+        )
 
-    @pytest.mark.parametrize("field", (
-        "read_bytes", "written_bytes", "major_faults",
-        "involuntary_switches"))
+    @pytest.mark.parametrize("field", ("read_bytes", "written_bytes", "major_faults", "involuntary_switches"))
     def test_each_sum_says_it_is_one(self, field):
         text = schemas._JOIN_ITEM_PROPERTIES[field]["description"]
         assert "summed" in text.lower(), (field, text)

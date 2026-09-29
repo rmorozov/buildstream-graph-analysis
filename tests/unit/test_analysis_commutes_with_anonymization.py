@@ -5,6 +5,7 @@ tiers: every measurement exactly, a name through the export's own map;
 every tie-broken list exactly, since each break is on graph.json position;
 the `LISTED` outputs as sets. Prose, a string holding a name, is not compared.
 """
+
 import json
 import math
 import pathlib
@@ -50,7 +51,8 @@ NAMED_ONLY = {
 #: Not a measurement of the build: the export withholds the capture date (its
 #: origin shifts to 0, which `_run_instance` reads as none) and these restate it.
 NOT_COMPARED = {
-    ".run_instance.started_at", ".run_instance.started_at_us",
+    ".run_instance.started_at",
+    ".run_instance.started_at_us",
     # the document's own leaf count, the two keys above among them.
     ".document_shape",
     # title, detail and evidence, each compared, plus the run's id and date.
@@ -63,8 +65,7 @@ ABSOLUTE = {".occupancy.horizon_start_us", ".occupancy.horizon_end_us"}
 #: Each topology and the uids its tie is between (the second precondition).
 TOPOLOGIES = {
     "diamond": (topologies.diamond, ("b.bst", "c.bst")),
-    "shared_base_wide": (topologies.shared_base_wide,
-                         tuple(f"mod{i}.bst" for i in range(6))),
+    "shared_base_wide": (topologies.shared_base_wide, tuple(f"mod{i}.bst" for i in range(6))),
     "fan_in": (topologies.fan_in, tuple(f"pred{i}.bst" for i in range(4))),
 }
 
@@ -90,21 +91,22 @@ class _Case:
         pmap = anonymize.PseudonymMap(str(tmp_path / "anon" / "map.json"))
         self.run = _snapshot(tmp_path / "project", run)
         path, _manifest = bundle.export_anonymized(
-            str(self.run.parent), KEY, pmap,
-            str(tmp_path / "out.tar.gz"), approve=lambda screen: True)
+            str(self.run.parent), KEY, pmap, str(tmp_path / "out.tar.gz"), approve=lambda screen: True
+        )
         target, _ = bundle.load(path, str(tmp_path / "far"))
         self.anon_run = pathlib.Path(target) / "run"
-        self.places = {"real": (self.run, tmp_path / "project"),
-                       "anon": (self.anon_run, tmp_path / "far")}
+        self.places = {"real": (self.run, tmp_path / "project"), "anon": (self.anon_run, tmp_path / "far")}
         self.graph = json.loads((run / "graph.json").read_text(encoding="utf-8"))
         self.anon_graph = json.loads((self.anon_run / "graph.json").read_text(encoding="utf-8"))
         self.pmap = pmap
-        self.names = {e["uid"]: anonymize.pseudonymize_identifier(e["uid"], KEY, pmap)
-                      for e in self.graph["elements"]}
+        self.names = {e["uid"]: anonymize.pseudonymize_identifier(e["uid"], KEY, pmap) for e in self.graph["elements"]}
         with open(pmap.path, encoding="utf-8") as handle:
             saved = json.load(handle)
-        self.hashes = {original.split("\0", 1)[1]: pseudonym
-                       for pseudonym, original in saved.items() if original.startswith("hash\0")}
+        self.hashes = {
+            original.split("\0", 1)[1]: pseudonym
+            for pseudonym, original in saved.items()
+            if original.startswith("hash\0")
+        }
         self.shift = _start(self.run) - _start(self.anon_run)
         self.real = _analysis(self.run)
         self.anon = _analysis(self.anon_run)
@@ -174,8 +176,11 @@ def _differences(real, anon, shift: int, path=""):
     if shape in ABSOLUTE and isinstance(real, int):
         real -= shift
     if isinstance(real, dict) and isinstance(anon, dict):
-        out = [f"{path}.{k}: only one side" for k in sorted(set(real) ^ set(anon))
-               if _pattern(f"{path}.{k}") not in NOT_COMPARED]
+        out = [
+            f"{path}.{k}: only one side"
+            for k in sorted(set(real) ^ set(anon))
+            if _pattern(f"{path}.{k}") not in NOT_COMPARED
+        ]
         for key in sorted(set(real) & set(anon)):
             out += _differences(real[key], anon[key], shift, f"{path}.{key}")
         return out
@@ -185,8 +190,7 @@ def _differences(real, anon, shift: int, path=""):
             return [] if same else [f"{path}: differ as sets"]
         if len(real) != len(anon):
             return [f"{path}: {len(real)} items against {len(anon)}"]
-        return [d for i, (r, a) in enumerate(zip(real, anon))
-                for d in _differences(r, a, shift, f"{path}[{i}]")]
+        return [d for i, (r, a) in enumerate(zip(real, anon)) for d in _differences(r, a, shift, f"{path}[{i}]")]
     numbers = all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in (real, anon))
     if numbers and math.isclose(real, anon, rel_tol=1e-12):
         return []
@@ -211,7 +215,8 @@ def _topology(name: str, tmp_path: pathlib.Path) -> pathlib.Path:
 
 
 CAPTURES = [pytest.param(("golden", p), id=f"golden/{p.name}") for p in GOLDEN] + [
-    pytest.param(("topology", name), id=name) for name in TOPOLOGIES]
+    pytest.param(("topology", name), id=name) for name in TOPOLOGIES
+]
 
 
 @pytest.fixture(params=CAPTURES)
@@ -227,8 +232,7 @@ def test_the_golden_fixtures_are_captures():
 
 def test_anonymization_keeps_the_graph_order(case):
     """The first precondition: the tie-break key survives the export."""
-    assert [case.names[e["uid"]] for e in case.graph["elements"]] == \
-        [e["uid"] for e in case.anon_graph["elements"]]
+    assert [case.names[e["uid"]] for e in case.graph["elements"]] == [e["uid"] for e in case.anon_graph["elements"]]
 
 
 @pytest.mark.parametrize("name", TOPOLOGIES)
@@ -243,8 +247,13 @@ def test_the_key_reorders_each_tie(name, tmp_path):
 
 def _shapes(node, path="") -> set:
     out = {_pattern(path)}
-    items = node.items() if isinstance(node, dict) else (
-        (f"[{i}]", v) for i, v in enumerate(node)) if isinstance(node, list) else ()
+    items = (
+        node.items()
+        if isinstance(node, dict)
+        else ((f"[{i}]", v) for i, v in enumerate(node))
+        if isinstance(node, list)
+        else ()
+    )
     for step, value in items:
         out |= _shapes(value, path + (step if step.startswith("[") else f".{step}"))
     return out

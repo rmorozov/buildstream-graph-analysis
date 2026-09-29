@@ -7,6 +7,7 @@ per-element rebuild count and a pairwise co-rebuild count out of them,
 reusing `developer_tax`'s population and cause annotation rather than
 re-deciding what a rebuild or its cause is.
 """
+
 from datetime import datetime, timedelta, timezone
 
 from tools.bst_cache_logs import (
@@ -54,23 +55,41 @@ def _log_tree(tmp_path):
         # three unchanged-key rebuilds out of thirty.
         key_index = min(i, 26)
         _write_build(
-            root, "p", "lib-a.bst", f"{key_index + 1:08x}", 1,
+            root,
+            "p",
+            "lib-a.bst",
+            f"{key_index + 1:08x}",
+            1,
             base + timedelta(hours=2 * i),
         )
 
     base = datetime(2026, 9, 1, tzinfo=timezone.utc)
     for i in range(2):
         _write_build(
-            root, "p", "codegen.bst", f"c000000{i}", 600, base + timedelta(hours=i),
+            root,
+            "p",
+            "codegen.bst",
+            f"c000000{i}",
+            600,
+            base + timedelta(hours=i),
         )
 
     base = datetime(2026, 10, 1, tzinfo=timezone.utc)
     for i in range(3):
         _write_build(
-            root, "p", "pair-x.bst", f"a000000{i}", 5, base + timedelta(hours=i),
+            root,
+            "p",
+            "pair-x.bst",
+            f"a000000{i}",
+            5,
+            base + timedelta(hours=i),
         )
         _write_build(
-            root, "p", "pair-y.bst", f"b000000{i}", 5,
+            root,
+            "p",
+            "pair-y.bst",
+            f"b000000{i}",
+            5,
             base + timedelta(hours=i, minutes=5),
         )
 

@@ -52,6 +52,7 @@ two mechanisms its size earns it - the ceiling stands at 200, so this
 run's 1,202-row `All elements` reaches through paging and anything at
 or under it may still reach through "All rows" in one step.
 """
+
 import collections
 import pathlib
 import sys
@@ -148,8 +149,7 @@ def total(tmp_path_factory):
     from tools.bga_view import payloads
 
     run = pages.scale_run(tmp_path_factory.mktemp("u366-count"))
-    return len(payloads(str(run))["report.json"]["elements"]
-               ["element_durations"])
+    return len(payloads(str(run))["report.json"]["elements"]["element_durations"])
 
 
 class TestThePresetDoesNotCapWhatTheReaderCanLift:
@@ -163,14 +163,14 @@ class TestThePresetDoesNotCapWhatTheReaderCanLift:
         assert bounded == [], (
             f"preset(s) still cap their own rows: {bounded}. The table's "
             f"own limit is where a cap belongs, because that is the one a "
-            f"reader can lift")
+            f"reader can lift"
+        )
 
 
 @needs_browser
 @pytest.mark.medium
 class TestAllRowsMeansAllRows:
-    def test_the_population_that_names_the_run_can_be_seen_whole(
-            self, driven, total):
+    def test_the_population_that_names_the_run_can_be_seen_whole(self, driven, total):
         """The defect, as a clause: choose the population that names
         every element, then reach the end of it.
 
@@ -182,10 +182,11 @@ class TestAllRowsMeansAllRows:
         view = driven["views"]["All elements"]
         assert not view["hasAllRows"], (
             "'All elements' still offers 'All rows' at 1,202 rows - "
-            "this clause is proving nothing about the paging step")
+            "this clause is proving nothing about the paging step"
+        )
         assert view["reachedEnd"] == total, (
-            f"'All elements' paged to the end reads 'of {view['reachedEnd']}' "
-            f"rather than the run's {total}")
+            f"'All elements' paged to the end reads 'of {view['reachedEnd']}' rather than the run's {total}"
+        )
         assert view["pressed"] > 0, "no paging step was pressed at all"
 
     def test_every_population_can_be_seen_whole(self, driven):
@@ -202,13 +203,13 @@ class TestAllRowsMeansAllRows:
                 assert view["allRows"] >= view["visible"], (name, view)
             else:
                 assert view["reachedEnd"] is not None, (
-                    f"{name}: no paging step and no 'All rows' - "
-                    f"unreachable past the bound")
+                    f"{name}: no paging step and no 'All rows' - unreachable past the bound"
+                )
         leaves = driven["views"].get("Leaves")
         if leaves and not leaves["hasAllRows"]:
             assert leaves["pressed"] > 0, (
-                f"Leaves shows {leaves['visible']} at rest and offers "
-                f"paging that was never exercised")
+                f"Leaves shows {leaves['visible']} at rest and offers paging that was never exercised"
+            )
 
     def test_a_long_table_still_opens_bounded(self, driven):
         """The other direction, so the fix is not "render everything".
@@ -218,7 +219,8 @@ class TestAllRowsMeansAllRows:
         assert view["visible"] == 25, (
             f"the element table opens on {view['visible']} rows; a "
             f"1,202-row table that opens whole is the page `UX-262` "
-            f"bounded")
+            f"bounded"
+        )
         assert "Top 25" in view["limit"], view["limit"]
 
     def test_a_short_population_is_not_bounded_at_all(self, driven):
@@ -237,30 +239,28 @@ class TestAllRowsMeansAllRows:
             assert view["visible"] == view["allRows"], (name, view)
             if view["limit"] is None:
                 assert view["visible"] <= 10, (
-                    f"{name} shows {view['visible']} rows and offers no "
-                    f"limit - `Top 10` could have filled")
+                    f"{name} shows {view['visible']} rows and offers no limit - `Top 10` could have filled"
+                )
             else:
                 assert view["limit"] == "All rows", (name, view["limit"])
 
-    def test_the_caption_and_the_badge_say_different_true_things(
-            self, driven, total):
+    def test_the_caption_and_the_badge_say_different_true_things(self, driven, total):
         """The half the first two rewrites got wrong. The caption names
         the view's size and never moves; the badge names what is shown
         and moves with the limit."""
         view = driven["views"]["All elements"]
         assert f"all {total} elements" in view["caption"], view["caption"]
         assert view["caption"] == view["captionAfter"], (
-            "the caption changed when the limit did - it is now claiming "
-            "a shown-count it does not own")
+            "the caption changed when the limit did - it is now claiming a shown-count it does not own"
+        )
         assert view["badge"].startswith("25 of "), view["badge"]
 
         narrow = driven["views"].get("Leaves")
         if narrow:
-            assert f"of {total} elements" in narrow["caption"], (
-                narrow["caption"])
+            assert f"of {total} elements" in narrow["caption"], narrow["caption"]
             assert f"all {total}" not in narrow["caption"], (
-                f"a view narrower than the run says it holds all of it: "
-                f"{narrow['caption']}")
+                f"a view narrower than the run says it holds all of it: {narrow['caption']}"
+            )
 
     def test_the_three_statements_agree(self, driven):
         """`UX-366`'s acceptance, stated as one clause: the population
@@ -277,13 +277,11 @@ class TestAllRowsMeansAllRows:
             if not (stated or "").isdigit():
                 continue
             reached = view["allRows"] if view["hasAllRows"] else view["reachedEnd"]
-            assert reached == int(stated), (
-                f"the population is labelled {name!r} and reaches "
-                f"{reached} of it")
+            assert reached == int(stated), f"the population is labelled {name!r} and reaches {reached} of it"
             if view["limit"] == "All rows":
                 assert view["visible"] == view["allRows"], (
-                    f"{name}: the limit reads 'All rows' and shows "
-                    f"{view['visible']} of {view['allRows']}")
+                    f"{name}: the limit reads 'All rows' and shows {view['visible']} of {view['allRows']}"
+                )
 
 
 #: `UX-532`: the same three statements, over a table whose cells fold.
@@ -361,25 +359,22 @@ class TestATableDoesNotOwnTheNestedTablesRows:
         """
         assert folded["atRest"]["ownRows"] == OPENING, (
             f"the outer tbody holds {folded['atRest']['ownRows']} direct "
-            f"<tr> where the bound shows {OPENING} of {RESOURCES}")
+            f"<tr> where the bound shows {OPENING} of {RESOURCES}"
+        )
 
     def test_the_nested_folds_keep_their_own_rows(self, folded):
         """The other end of the same migration - the folds opened empty
         because their rows had been appended to the outer tbody."""
         nested = folded["atRest"]["nested"]
         assert nested and all(n > 0 for n in nested), (
-            f"{sum(1 for n in nested if not n)} of {len(nested)} nested "
-            f"tables hold no rows")
+            f"{sum(1 for n in nested if not n)} of {len(nested)} nested tables hold no rows"
+        )
 
-    def test_the_badge_and_the_copy_count_say_the_published_number(
-            self, folded):
+    def test_the_badge_and_the_copy_count_say_the_published_number(self, folded):
         """`UX-366`'s three statements, on this shape."""
-        assert folded["atRest"]["badge"] == f"25 of {RESOURCES}", (
-            folded["atRest"]["badge"])
-        assert folded["allRows"]["visible"] == RESOURCES, (
-            folded["allRows"])
-        assert folded["allRows"]["copy"] == f"Copy {RESOURCES} rows", (
-            folded["allRows"]["copy"])
+        assert folded["atRest"]["badge"] == f"25 of {RESOURCES}", folded["atRest"]["badge"]
+        assert folded["allRows"]["visible"] == RESOURCES, folded["allRows"]
+        assert folded["allRows"]["copy"] == f"Copy {RESOURCES} rows", folded["allRows"]["copy"]
 
     def test_all_rows_moves_no_row_between_tables(self, folded):
         """And lifting the bound is not what tears them out.
@@ -389,31 +384,29 @@ class TestATableDoesNotOwnTheNestedTablesRows:
         with one still holds its own rows. What the migration did -
         empty folds, `660 of 60` - reddens on both halves.
         """
-        assert folded["allRows"]["ownRows"] == RESOURCES, (
-            folded["allRows"]["ownRows"])
+        assert folded["allRows"]["ownRows"] == RESOURCES, folded["allRows"]["ownRows"]
         nested = folded["allRows"]["nested"]
         assert len(nested) == RESOURCES and all(n > 0 for n in nested), (
-            f"{sum(1 for n in nested if not n)} of {len(nested)} nested "
-            f"tables hold no rows once the bound is lifted")
+            f"{sum(1 for n in nested if not n)} of {len(nested)} nested tables hold no rows once the bound is lifted"
+        )
         # A sub-multiset, not a prefix of the sorted list: the bound
         # keeps the top rows by its own column, which is not the 25
         # smallest folds.
         rest = collections.Counter(folded["atRest"]["nested"])
         assert not (rest - collections.Counter(nested)), (
-            "pressing 'All rows' changed what the nested tables hold: "
-            f"{rest - collections.Counter(nested)}")
+            f"pressing 'All rows' changed what the nested tables hold: {rest - collections.Counter(nested)}"
+        )
 
     def test_sorting_moves_no_row_between_tables(self, folded):
         """`sortable` re-appends every row it ranked, which is the same
         migration by another control."""
-        assert folded["sorted"]["ownRows"] == RESOURCES, (
-            folded["sorted"]["ownRows"])
+        assert folded["sorted"]["ownRows"] == RESOURCES, folded["sorted"]["ownRows"]
         # Against `allRows`, not `atRest`: the sort happens with the
         # bound already lifted, so those two hold the same population
         # and only the order between them differs.
-        assert (sorted(folded["sorted"]["nested"])
-                == sorted(folded["allRows"]["nested"])), (
-            "sorting the outer table changed what the nested tables hold")
+        assert sorted(folded["sorted"]["nested"]) == sorted(folded["allRows"]["nested"]), (
+            "sorting the outer table changed what the nested tables hold"
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

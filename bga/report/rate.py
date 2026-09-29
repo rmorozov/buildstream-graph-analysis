@@ -23,6 +23,7 @@ the multiplication is a rendering.
 45-line cap `UX-158` measured, so a flag would have had to move that
 budget; `BGA_RATE` costs no help line and is set once in a CI config.
 """
+
 import os
 import re
 from typing import Optional
@@ -34,8 +35,7 @@ ENV_VAR = "BGA_RATE"
 # arguments: what the runner cost, and what the wait cost.
 DENOMINATORS = ("machine-hour", "build-hour")
 
-_GRAMMAR = re.compile(
-    r"^\s*(-?[0-9]+(?:\.[0-9]+)?)\s+([^/\s]+)\s*/\s*([a-z-]+)\s*$")
+_GRAMMAR = re.compile(r"^\s*(-?[0-9]+(?:\.[0-9]+)?)\s+([^/\s]+)\s*/\s*([a-z-]+)\s*$")
 
 _EXAMPLE = "90 USD/machine-hour"
 
@@ -49,18 +49,21 @@ def parse(text: str) -> dict:
     """
     match = _GRAMMAR.match(text or "")
     if not match:
-        return {"error": f"{ENV_VAR}={text!r} is not "
-                         f"`<amount> <unit>/<{'|'.join(DENOMINATORS)}>` "
-                         f"(for example `{_EXAMPLE}`)"}
+        return {
+            "error": f"{ENV_VAR}={text!r} is not "
+            f"`<amount> <unit>/<{'|'.join(DENOMINATORS)}>` "
+            f"(for example `{_EXAMPLE}`)"
+        }
     amount, unit, per = match.group(1), match.group(2), match.group(3)
     if per not in DENOMINATORS:
-        return {"error": f"{ENV_VAR}={text!r} is per {per!r}; this converts "
-                         f"build seconds, so the denominator has to be one "
-                         f"of {', '.join(DENOMINATORS)}"}
+        return {
+            "error": f"{ENV_VAR}={text!r} is per {per!r}; this converts "
+            f"build seconds, so the denominator has to be one "
+            f"of {', '.join(DENOMINATORS)}"
+        }
     if float(amount) <= 0:
         return {"error": f"{ENV_VAR}={text!r} is not a positive rate"}
-    return {"amount": float(amount), "unit": unit, "per": per,
-            "text": f"{amount} {unit}/{per}"}
+    return {"amount": float(amount), "unit": unit, "per": per, "text": f"{amount} {unit}/{per}"}
 
 
 def supplied(environ=None) -> Optional[dict]:
@@ -83,10 +86,8 @@ def phrase(duration_us: float, rate: dict) -> str:
     One function, so no surface can print half of it - which is the
     whole guard this item asks for.
     """
-    return (f"{_amount(convert(duration_us, rate))} {rate['unit']} "
-            f"at {rate['text']}")
+    return f"{_amount(convert(duration_us, rate))} {rate['unit']} at {rate['text']}"
 
 
 def preamble(rate: dict) -> str:
-    return (f"rate: {rate['text']} - an input you supplied ({ENV_VAR}), not "
-            f"anything this run measured")
+    return f"rate: {rate['text']} - an input you supplied ({ENV_VAR}), not anything this run measured"

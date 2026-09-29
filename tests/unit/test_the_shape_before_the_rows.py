@@ -42,6 +42,7 @@ no derived number**. Its labels are the smallest and largest *rows*
 and a count of rows; the p50 and p95 ticks are positions and nothing
 else. A percentile worth printing enters the payload first.
 """
+
 import json
 import os
 import re
@@ -67,7 +68,8 @@ SHIM = str(REPO / "tests" / "dom_shim.mjs")
 
 def _js(body, protocol="file:"):
     """Run a snippet against the shared shim and parse what it printed."""
-    source = """
+    source = (
+        """
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
 globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
 _installDocument();
@@ -88,11 +90,17 @@ const all = (n, pred, out = []) => {
 };
 const text = (n) => !n ? "" : ((n.children ?? []).length
   ? (n._text ?? "") + n.children.map(text).join("") : (n._text ?? ""));
-""" + body
+"""
+        + body
+    )
     result = subprocess.run(
         [node, "--input-type=module", "-e", source],
-        capture_output=True, text=True, cwd=REPO, timeout=90,
-        env=dict(os.environ, BGA_DOM_SHIM=SHIM, PROTOCOL=protocol))
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=90,
+        env=dict(os.environ, BGA_DOM_SHIM=SHIM, PROTOCOL=protocol),
+    )
     assert result.returncode == 0, result.stderr[-3000:]
     return json.loads(result.stdout)
 
@@ -126,15 +134,14 @@ console.log(JSON.stringify({{
         out = self._drawn(values)
         assert out["drawn"] == "true"
         assert out["values"] == "4,1,9,3,7"
-        drawn = [tuple(float(n) for n in pair.split(","))
-                 for pair in out["polyline"].split()]
+        drawn = [tuple(float(n) for n in pair.split(",")) for pair in out["polyline"].split()]
         low, high = min(values), max(values)
         for index, (x, y) in enumerate(drawn):
             assert x == pytest.approx(index / (len(values) - 1) * 100, abs=0.01)
             expected = 18 - ((values[index] - low) / (high - low)) * 16
             assert y == pytest.approx(expected, abs=0.01), (
-                f"point {index} (value {values[index]}) is at y={y}, and its "
-                f"value puts it at {expected}")
+                f"point {index} (value {values[index]}) is at y={y}, and its value puts it at {expected}"
+            )
 
     def test_the_geometry_is_not_uniform(self):
         """The mutation the acceptance test names. A drawing that
@@ -156,8 +163,7 @@ console.log(JSON.stringify({{
         assert out["sentence"] == "5 levels, 4 → 7, peak 9 at level 3."
 
     @pytest.mark.parametrize("values,expected_points", [([5, 9], "2"), ([5], "1")])
-    def test_under_three_points_is_a_sentence_and_no_drawing(
-            self, values, expected_points):
+    def test_under_three_points_is_a_sentence_and_no_drawing(self, values, expected_points):
         """`UX-226`'s rule, now global: two points joined by a line
         claim a trend two points cannot support."""
         out = self._drawn(values)
@@ -194,8 +200,7 @@ console.log(JSON.stringify({{
 """)
 
     def test_every_tick_sits_where_its_value_puts_it(self):
-        shape = {"n": 11, "min": 0, "max": 100,
-                 "deciles": {"p50": 25}, "p95": 90}
+        shape = {"n": 11, "min": 0, "max": 100, "deciles": {"p50": 25}, "p95": 90}
         out = self._drawn(shape)
         placed = {mark: (value, float(x)) for mark, value, x in out["ticks"]}
         assert placed["p50"] == ("25", pytest.approx(25.0, abs=0.01))
@@ -206,16 +211,14 @@ console.log(JSON.stringify({{
     def test_n_is_always_printed(self):
         """§2's rule: a strip without its population is a picture of an
         opinion."""
-        out = self._drawn({"n": 11, "min": 0, "max": 100,
-                           "deciles": {"p50": 25}, "p95": 90})
+        out = self._drawn({"n": 11, "min": 0, "max": 100, "deciles": {"p50": 25}, "p95": 90})
         assert out["n"] == "11"
         assert "n=11" in out["sentence"], out["sentence"]
 
     def test_it_reads_the_store_aggregate_shape_too(self):
         """One control, two published shapes — which is what naming the
         count key in the hint buys."""
-        out = self._drawn({"samples": 30, "min": 1, "median": 4, "p95": 9,
-                           "max": 10}, count_key="samples")
+        out = self._drawn({"samples": 30, "min": 1, "median": 4, "p95": 9, "max": 10}, count_key="samples")
         assert out["drawn"] == "true"
         assert out["n"] == "30"
         placed = {mark: value for mark, value, _ in out["ticks"]}
@@ -236,8 +239,7 @@ console.log(JSON.stringify({{
         from a fixture because neither committed run has one - both
         publish n=11 - which is exactly how the gap survived being
         written down."""
-        out = self._drawn({"n": 2, "min": 1, "max": 9,
-                           "deciles": {"p50": 5}, "p95": 9})
+        out = self._drawn({"n": 2, "min": 1, "max": 9, "deciles": {"p50": 5}, "p95": 9})
         assert out["drawn"] == "false", out
         assert "too few to have a shape" in out["sentence"], out
         # The numbers the payload published are still printed. Only
@@ -282,8 +284,8 @@ console.log(JSON.stringify({{
         printed = [int(n) for n in re.findall(r"\d+", out["sentence"])]
         allowed = set(values) | {len(values)}
         assert set(printed) <= allowed, (
-            f"{sorted(set(printed) - allowed)} is neither a row value nor a "
-            f"row count: {out['sentence']!r}")
+            f"{sorted(set(printed) - allowed)} is neither a row value nor a row count: {out['sentence']!r}"
+        )
         # And the derived ticks are *not* in it, which is the half a
         # subset check alone would not catch if p50 happened to be a
         # row value that is also printed. 5 is a row value and is the
@@ -315,7 +317,9 @@ const strip = all(tools, (n) => n.attrs["data-role"] === "density")[0] ?? null;
 @needs_node
 class TestALongTableWearsItsShape:
     def test_a_table_past_the_bound_gets_a_strip(self):
-        out = _js(_TABLE % 60 + """
+        out = _js(
+            _TABLE % 60
+            + """
 console.log(JSON.stringify({
   present: Boolean(strip), column: strip?.attrs["data-column"] ?? null,
   n: strip?.attrs["data-n"] ?? null,
@@ -323,7 +327,8 @@ console.log(JSON.stringify({
   sentence: strip ? text(all(strip,
     (n) => n.attrs["data-role"] === "density-sentence")[0]) : null,
 }));
-""")
+"""
+        )
         assert out["present"], "no strip on a 60-row table"
         assert out["column"] == "duration_us"
         assert out["n"] == "60"
@@ -342,11 +347,14 @@ console.log(JSON.stringify({
         The row cap decides whether a table is *paged*. Whether its
         shape is worth showing is a different question, and §2 answers
         it the same way at every length."""
-        out = _js(_TABLE % 12 + """
+        out = _js(
+            _TABLE % 12
+            + """
 console.log(JSON.stringify({ present: Boolean(strip),
   drawn: strip?.attrs["data-drawn"] ?? null,
   n: strip?.attrs["data-n"] ?? null }));
-""")
+"""
+        )
         assert out["present"], "a twelve-row table draws no strip"
         assert out["drawn"] == "true", out
 
@@ -354,12 +362,15 @@ console.log(JSON.stringify({ present: Boolean(strip),
         """The floor that replaced the cap, and the only one left:
         `UX-226`'s rule that fewer than three points is a sentence. Two
         rows have no shape to show, at any table length."""
-        out = _js(_TABLE % 2 + """
+        out = _js(
+            _TABLE % 2
+            + """
 console.log(JSON.stringify({ present: Boolean(strip),
   drawn: strip?.attrs["data-drawn"] ?? null,
   sentence: strip ? text(all(strip,
     (n) => n.attrs["data-role"] === "density-sentence")[0]) : null }));
-""")
+"""
+        )
         assert out["present"], "the strip's box is still drawn"
         assert out["drawn"] == "false", out
         assert "too few to have a shape" in (out["sentence"] or ""), out
@@ -368,12 +379,16 @@ console.log(JSON.stringify({ present: Boolean(strip),
         """`UX-194`'s rule: an affordance whose precondition is absent
         is not shown as a dead one. The *shape* still renders — it is
         the point — and only the click is withheld."""
-        out = _js(_TABLE % 60 + """
+        out = _js(
+            _TABLE % 60
+            + """
 console.log(JSON.stringify({
   interactive: strip?.attrs["data-interactive"] ?? null,
   listeners: (all(strip, (n) => n.tagName === "svg")[0]?.listeners?.click ?? []).length,
 }));
-""", protocol="file:")
+""",
+            protocol="file:",
+        )
         assert out["interactive"] == "false"
         assert out["listeners"] == 0
 
@@ -383,7 +398,9 @@ console.log(JSON.stringify({
         **actual row value**, never to the position the click landed
         on, which would be a derived number entering through a mouse.
         """
-        out = _js(_TABLE % 60 + """
+        out = _js(
+            _TABLE % 60
+            + """
 const svg = all(strip, (n) => n.tagName === "svg")[0];
 svg.clientWidth = 100;
 // Half way along the range: values run 1000..60000, so the midpoint
@@ -397,14 +414,16 @@ console.log(JSON.stringify({
   interactive: strip.attrs["data-interactive"],
   value: input?.value ?? null, shown,
 }));
-""", protocol="http:")
+""",
+            protocol="http:",
+        )
         assert out["interactive"] == "true"
         assert out["value"] is not None, "the click set no threshold"
         threshold = int(re.search(r"(\d+)", out["value"]).group(1))
         assert threshold % 1000 == 0 and 1000 <= threshold <= 60000, (
-            f"{threshold} is not one of the table's published values")
-        assert out["shown"] < 60, (
-            f"the threshold filtered nothing: {out['shown']} rows still shown")
+            f"{threshold} is not one of the table's published values"
+        )
+        assert out["shown"] < 60, f"the threshold filtered nothing: {out['shown']} rows still shown"
 
 
 @needs_node
@@ -415,14 +434,17 @@ class TestAPresetOffersOnlyWhatItCanFill:
 
     @staticmethod
     def _select(total):
-        return _js(_TABLE % total + """
+        return _js(
+            _TABLE % total
+            + """
 const select = all(tools, (n) => n.tagName === "select"
   && (n.attrs.class || "").includes("top-n"))[0] ?? null;
 const ns = select ? all(select, (n) => n.tagName === "option")
   .map((o) => o.attrs.value).filter((v) => v.includes(":"))
   .map((v) => Number(v.split(":")[0])) : [];
 console.log(JSON.stringify({ present: Boolean(select), ns }));
-""")
+"""
+        )
 
     def test_no_offered_n_reaches_the_row_count(self):
         """15 rows: `Top 10` can still shrink it, `Top 25` cannot."""
@@ -434,8 +456,8 @@ console.log(JSON.stringify({ present: Boolean(select), ns }));
     def test_under_the_smallest_preset_gets_no_control(self):
         out = self._select(3)
         assert not out["present"], (
-            f"a 3-row table cannot fill `Top 10`, so it should offer no "
-            f"top-n control at all: {out}")
+            f"a 3-row table cannot fill `Top 10`, so it should offer no top-n control at all: {out}"
+        )
 
 
 class TestTheHintsAreDeclaredWhereTheyBelong:
@@ -455,18 +477,17 @@ class TestTheHintsAreDeclaredWhereTheyBelong:
         # `UX-344`: the two distributions and `parallelism` are keys of
         # the document, where they were members of two namespaces.
         analyze = schemas.schema(schemas.ANALYZE)["properties"]
-        for name in ("element_duration_distribution",
-                     "blast_radius_distribution"):
+        for name in ("element_duration_distribution", "blast_radius_distribution"):
             assert analyze[name][schemas.DISTRIBUTION] == "n", name
             assert schemas.QUANTITY in analyze[name], name
-        width = (analyze["parallelism"]["properties"]["width_at_level"])
+        width = analyze["parallelism"]["properties"]["width_at_level"]
         assert width[schemas.SERIES] == "level"
 
         aggregate = schemas.schema(schemas.STORE_AGGREGATE)["properties"]
         duration = aggregate["blended"]["properties"]["duration_us"]
         assert duration[schemas.DISTRIBUTION] == "samples", (
-            "the store aggregate counts in `samples`, and the hint is "
-            "what lets one control read both shapes")
+            "the store aggregate counts in `samples`, and the hint is what lets one control read both shapes"
+        )
 
     def test_the_two_thresholds_agree(self):
         """`SERIES_MIN_POINTS` is declared twice — once for the pipeline
@@ -475,8 +496,7 @@ class TestTheHintsAreDeclaredWhereTheyBelong:
         from bga import schemas
 
         source = (REPO / "bga/viewer/drawings.js").read_text(encoding="utf-8")
-        declared = int(re.search(
-            r"export const SERIES_MIN_POINTS = (\d+);", source).group(1))
+        declared = int(re.search(r"export const SERIES_MIN_POINTS = (\d+);", source).group(1))
         assert declared == schemas.SERIES_MIN_POINTS
 
 
@@ -531,18 +551,17 @@ class TestTheRealPagesDrawThem:
                 view.export(str(target), str(page))
                 html = page.read_text(encoding="utf-8")
                 module = tmp / "inline.mjs"
-                module.write_text(
-                    view.inflated_module(html),
-                    encoding="utf-8")
+                module.write_text(view.inflated_module(html), encoding="utf-8")
                 probe = tmp / "probe.mjs"
-                probe.write_text(
-                    _probe_source().split("const report =", 1)[0] + _BOOT_TAIL,
-                    encoding="utf-8")
+                probe.write_text(_probe_source().split("const report =", 1)[0] + _BOOT_TAIL, encoding="utf-8")
                 result = subprocess.run(
-                    [node, str(probe)], capture_output=True, text=True,
-                    cwd=REPO, timeout=180,
-                    env=dict(os.environ, PAGE=str(page), MOD=str(module),
-                             PROTOCOL="file:", BGA_DOM_SHIM=SHIM))
+                    [node, str(probe)],
+                    capture_output=True,
+                    text=True,
+                    cwd=REPO,
+                    timeout=180,
+                    env=dict(os.environ, PAGE=str(page), MOD=str(module), PROTOCOL="file:", BGA_DOM_SHIM=SHIM),
+                )
                 assert result.returncode == 0, result.stderr[-4000:]
                 out = json.loads(result.stdout)
                 assert out["error"] is None, out["error"]
@@ -567,15 +586,13 @@ class TestTheRealPagesDrawThem:
         carries a self-built strip per table now, and those are a
         reading of rows rather than a published distribution. The split
         is `density-self`, which `drawings.js` sets and this reads."""
-        published = [one for one in booted["macro_micro"]["density"]
-                     if "density-self" not in (one["klass"] or "")]
+        published = [one for one in booted["macro_micro"]["density"] if "density-self" not in (one["klass"] or "")]
         sentences = [one["sentence"] for one in published]
         assert len(sentences) == 3, sentences
         # `UX-863`: `median` (p50) is too close to the wide `min`/`p10`
         # merge here (both 0 ms) to keep its own label -
         # `STRIP_LABEL_GAP_PCT_PER_CHAR` drops it, not the strip.
-        assert ("0 ms → 19.1 s, p10 0 ms, p90 7.0 s, "
-                "p99 19.1 s — n=11.") in sentences
+        assert ("0 ms → 19.1 s, p10 0 ms, p90 7.0 s, p99 19.1 s — n=11.") in sentences
         # `UX-681`: two of the three, and they are **the same
         # sentence** - blast radius and fan-in are different maps on
         # this fixture (`toolchain` is 10 and 0, `all` is 0 and 10) and
@@ -586,10 +603,8 @@ class TestTheRealPagesDrawThem:
         # count rather than a set, because a sentence is not an
         # identity and a reader of this clause should not conclude the
         # two strips are one.
-        assert sentences.count(
-            "0 → 10, p10 1, median 5, p99 10 — n=11.") == 2, sentences
-        assert not [one for one in booted["golden"]["density"]
-                    if "density-self" not in (one["klass"] or "")]
+        assert sentences.count("0 → 10, p10 1, median 5, p99 10 — n=11.") == 2, sentences
+        assert not [one for one in booted["golden"]["density"] if "density-self" not in (one["klass"] or "")]
 
     @pytest.mark.parametrize("page", ["golden", "macro_micro"])
     def test_every_drawing_states_its_population(self, booted, page):
@@ -600,7 +615,7 @@ class TestTheRealPagesDrawThem:
         rows`, because rows are what it counted."""
         for one in booted[page]["density"]:
             if one["drawn"] != "true":
-                continue    # the floor's sentence, checked above
+                continue  # the floor's sentence, checked above
             assert one["n"], one
             if "density-self" in (one["klass"] or ""):
                 assert f"across {one['n']} row" in one["sentence"], one

@@ -5,6 +5,7 @@ jobs on a pull request and a weekly schedule; `make lint` never runs
 them. The lockfile is the dev extra resolved, so an audit reads what
 CI installs; an archive member that escapes its directory is dropped.
 """
+
 import io
 import pathlib
 import re
@@ -24,11 +25,13 @@ LOCK = REPO / "requirements.lock"
 
 def _dev_extra_names():
     text = (REPO / "pyproject.toml").read_text(encoding="utf-8")
-    block = text[text.index("dev = ["):]
-    block = block[:block.index("\n]")]
-    return {re.match(r"[A-Za-z0-9_.-]+", line.strip().strip('",')).group(0).lower()
-            for line in block.splitlines()[1:]
-            if line.strip().startswith('"')}
+    block = text[text.index("dev = [") :]
+    block = block[: block.index("\n]")]
+    return {
+        re.match(r"[A-Za-z0-9_.-]+", line.strip().strip('",')).group(0).lower()
+        for line in block.splitlines()[1:]
+        if line.strip().startswith('"')
+    }
 
 
 class TestTheShelfIsHosted:
@@ -52,13 +55,12 @@ class TestTheShelfIsHosted:
         }
         for job, needle in expect.items():
             steps = workflow["jobs"][job]["steps"]
-            blob = "\n".join(str(step.get("run", "")) + str(step.get("uses", ""))
-                             for step in steps)
+            blob = "\n".join(str(step.get("run", "")) + str(step.get("uses", "")) for step in steps)
             assert needle in blob, (job, blob)
 
     def test_make_lint_runs_none_of_them(self):
         lint = (REPO / "Makefile").read_text(encoding="utf-8")
-        target = lint[lint.index("\nlint:"):lint.index("\nlint-docs:")]
+        target = lint[lint.index("\nlint:") : lint.index("\nlint-docs:")]
         for word in ("codeql", "pip-audit", "eslint", "dependabot", "dev_sizes"):
             assert word not in target, word
 
@@ -70,14 +72,20 @@ class TestTheShelfIsHosted:
 
 class TestTheLockfileIsTheDevExtra:
     def test_every_dev_dependency_is_pinned(self):
-        pinned = {line.split("==")[0].lower() for line in LOCK.read_text(encoding="utf-8").splitlines()
-                  if "==" in line and not line.startswith("#")}
+        pinned = {
+            line.split("==")[0].lower()
+            for line in LOCK.read_text(encoding="utf-8").splitlines()
+            if "==" in line and not line.startswith("#")
+        }
         missing = _dev_extra_names() - pinned
         assert not missing, missing
 
     def test_every_pin_is_exact(self):
-        loose = [line for line in LOCK.read_text(encoding="utf-8").splitlines()
-                 if line and not line.startswith(("#", " ")) and "==" not in line]
+        loose = [
+            line
+            for line in LOCK.read_text(encoding="utf-8").splitlines()
+            if line and not line.startswith(("#", " ")) and "==" not in line
+        ]
         assert loose == [], loose
 
 

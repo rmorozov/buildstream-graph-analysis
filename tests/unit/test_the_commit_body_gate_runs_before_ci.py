@@ -17,6 +17,7 @@ job, which never fetches it - only `agent-config` does), and a commit
 already folded into `origin/main` itself, whose range is then empty by
 construction - this is a pre-merge gate, not a retroactive audit.
 """
+
 import pathlib
 import subprocess
 import sys
@@ -31,13 +32,10 @@ BASE = "origin/main"
 
 
 def _base_resolves():
-    return subprocess.run(
-        ["git", "rev-parse", "--verify", "-q", BASE], cwd=REPO,
-        capture_output=True).returncode == 0
+    return subprocess.run(["git", "rev-parse", "--verify", "-q", BASE], cwd=REPO, capture_output=True).returncode == 0
 
 
-@pytest.mark.skipif(not _base_resolves(),
-                     reason="origin/main does not resolve in this checkout")
+@pytest.mark.skipif(not _base_resolves(), reason="origin/main does not resolve in this checkout")
 def test_the_checkout_stays_within_the_commit_body_cap():
     over, considered, in_range, _skipped = tool.over_cap(base=BASE)
     assert over == [], (
@@ -45,7 +43,8 @@ def test_the_checkout_stays_within_the_commit_body_cap():
         f"{BASE}..HEAD are over CLAUDE.md's {tool.CAP}-line commit-body "
         f"cap: {over}. Run `python3 tools/dev_commit_bodies.py {BASE}` "
         f"and move the argument to the task file - the body says what "
-        f"changed.")
+        f"changed."
+    )
 
 
 if __name__ == "__main__":  # pragma: no cover

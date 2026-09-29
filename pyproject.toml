@@ -36,6 +36,7 @@ dependencies = [
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
+    "hypothesis==6.168.3",
     # UX-927: in `dev` as well as in `nix` below, because a guard that
     # skips where nobody looks is the shape this repository keeps
     # catching - the closure guard's `zstd` clause has to really run.
@@ -77,6 +78,8 @@ dev = [
     # break a suite under xdist. A dev dependency: nothing a user
     # installs needs it.
     "pytest-xdist>=3.5",
+    # UX-1111: a hang fails the one test and names it, inside the one run.
+    "pytest-timeout==2.4.0",
     # UX-712: the size ledger's duplicate-block count -
     # `--enable=duplicate-code`, pip-installable and the only one of
     # the tried tools with no CI-side account needed. Unpinned above
@@ -192,6 +195,10 @@ packages = [
 line-length = 120
 target-version = "py39"
 
+[tool.ruff.format]
+# UX-1118: layout is the formatter's; quotes kept, so the rewrite is layout alone.
+quote-style = "preserve"
+
 [tool.ruff.lint]
 # UX-693: the auto-fixed shelf, enforced from the commit that fixed it;
 # S, C901 and PLR are the baseline's (UX-694), never zero-tolerance here.
@@ -205,6 +212,9 @@ ignore = ["SIM115"]
 # tools/ prints by design; tests/ may build a dict or a list by hand.
 "tools/**" = ["T201"]
 "tests/**" = ["C408"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
 
 [tool.pyright]
 # UX-697: basic mode over the two packages the baseline reads; the gate
@@ -226,6 +236,9 @@ pythonpath = ["tests"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
 addopts = "-v --tb=short"
+# UX-1111: per test, 4.2x the slowest whole file (71.6 s); replaces the small-tier backstop.
+timeout = 300
+timeout_method = "signal"
 markers = [
     "slow: full-scale tests (e.g. N=100 determinism runs) not needed on every fast pass",
     # UX-84: the tier that needs a real BuildStream (plus, for two of

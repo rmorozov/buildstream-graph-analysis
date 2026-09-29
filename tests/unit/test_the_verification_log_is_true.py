@@ -29,6 +29,7 @@ the entry's date moving. It is commits now: the entry credits an item,
 the item resolves to the commit that closed it, and the question is
 whether anything substantive touched the document after it.
 """
+
 import datetime
 import pathlib
 import re
@@ -105,17 +106,16 @@ def _claimed():
     assert found, (
         "the log's first entry does not read `Updated YYYY-MM-DD (after "
         "`UX-N`)` - which is the shape this guard, and a reader deciding "
-        "whether to trust the document, both read")
+        "whether to trust the document, both read"
+    )
     # `UX-604`: the entry ends where the next one begins, not 1200
     # characters later. At a fixed width the window reached into the
     # entry below and found *its* "re-grounded in", so the clause
     # passed for any newest entry shorter than the slice.
-    rest = log[found.end():]
-    following = re.search(r"^Updated \d{4}-\d{2}-\d{2} \(after `UX-\d+`\)",
-                          rest, re.M)
+    rest = log[found.end() :]
+    following = re.search(r"^Updated \d{4}-\d{2}-\d{2} \(after `UX-\d+`\)", rest, re.M)
     ends = found.end() + (following.start() if following else len(rest))
-    return (datetime.date.fromisoformat(found.group(1)), found.group(2),
-            log[found.start():ends])
+    return (datetime.date.fromisoformat(found.group(1)), found.group(2), log[found.start() : ends])
 
 
 def stale(landed):
@@ -128,15 +128,13 @@ def stale(landed):
 
 def _graft_boundary():
     """The commits where a shallow clone's history was cut, if any."""
-    done = subprocess.run(["git", "rev-parse", "--git-dir"],
-                          capture_output=True, text=True, cwd=REPO, timeout=60)
+    done = subprocess.run(["git", "rev-parse", "--git-dir"], capture_output=True, text=True, cwd=REPO, timeout=60)
     if done.returncode != 0:
         return set()
     shallow = pathlib.Path(REPO, done.stdout.strip(), "shallow")
     if not shallow.exists():
         return set()
-    return {line.strip() for line in
-            shallow.read_text(encoding="utf-8").splitlines() if line.strip()}
+    return {line.strip() for line in shallow.read_text(encoding="utf-8").splitlines() if line.strip()}
 
 
 # `UX-620`: the counts `tools/dev_close_task.py --write` derives into the
@@ -157,8 +155,7 @@ def only_the_count_moved(removed, added):
     """
     if not removed or len(removed) != len(added):
         return False
-    return all(_COUNT.sub(r"N \1", a) == _COUNT.sub(r"N \1", b)
-               for a, b in zip(removed, added))
+    return all(_COUNT.sub(r"N \1", a) == _COUNT.sub(r"N \1", b) for a, b in zip(removed, added))
 
 
 def _only_a_derived_figure_moved(sha):
@@ -167,17 +164,19 @@ def _only_a_derived_figure_moved(sha):
     # diff whose prefix is two columns wide, so `ln[1:]` left `+text`
     # against ` text` and the exclusion never fired (`UX-754`).
     done = subprocess.run(
-        ["git", "show", "--format=", "--unified=0", "--first-parent", "-m",
-         sha, "--", str(DOC)],
-        capture_output=True, text=True, cwd=REPO, timeout=60)
+        ["git", "show", "--format=", "--unified=0", "--first-parent", "-m", sha, "--", str(DOC)],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=60,
+    )
     if done.returncode != 0:
         return False
     lines = done.stdout.splitlines()
     return only_the_count_moved(
-        [ln[1:] for ln in lines
-         if ln.startswith("-") and not ln.startswith("---")],
-        [ln[1:] for ln in lines
-         if ln.startswith("+") and not ln.startswith("+++")])
+        [ln[1:] for ln in lines if ln.startswith("-") and not ln.startswith("---")],
+        [ln[1:] for ln in lines if ln.startswith("+") and not ln.startswith("+++")],
+    )
 
 
 def entries(text):
@@ -191,10 +190,10 @@ def entries(text):
         return []
     log = text.split(HEADING, 1)[1]
     heads = list(ENTRY.finditer(log))
-    return [((head.group(1), head.group(2)),
-             log[head.start():(heads[n + 1].start()
-                               if n + 1 < len(heads) else len(log))])
-            for n, head in enumerate(heads)]
+    return [
+        ((head.group(1), head.group(2)), log[head.start() : (heads[n + 1].start() if n + 1 < len(heads) else len(log))])
+        for n, head in enumerate(heads)
+    ]
 
 
 def rewritten_below_the_newest(before, after):
@@ -211,10 +210,11 @@ def rewritten_below_the_newest(before, after):
     working mechanism. Pure, so both halves are testable claims.
     """
     was = dict(entries(before))
-    return [key for key, body in entries(after)[1:]
-            if key in was
-            and sorted(set(CONTRACT_ID.findall(was[key])))
-            != sorted(set(CONTRACT_ID.findall(body)))]
+    return [
+        key
+        for key, body in entries(after)[1:]
+        if key in was and sorted(set(CONTRACT_ID.findall(was[key]))) != sorted(set(CONTRACT_ID.findall(body)))
+    ]
 
 
 def _previous_body():
@@ -227,8 +227,9 @@ def _previous_body():
     newest = _commits_touching("-1")
     if not newest or newest[0] in _graft_boundary():
         return None
-    done = subprocess.run(["git", "show", f"{newest[0]}^:{DOC_REL}"],
-                          capture_output=True, text=True, cwd=REPO, timeout=60)
+    done = subprocess.run(
+        ["git", "show", f"{newest[0]}^:{DOC_REL}"], capture_output=True, text=True, cwd=REPO, timeout=60
+    )
     return done.stdout if done.returncode == 0 else None
 
 
@@ -238,8 +239,9 @@ def _history_is_readable():
     Separated from the range above so the non-vacuity clause can tell
     "no history here" from "the exclusion ate everything".
     """
-    done = subprocess.run(["git", "log", "-1", "--format=%H", "--", str(DOC)],
-                          capture_output=True, text=True, cwd=REPO, timeout=60)
+    done = subprocess.run(
+        ["git", "log", "-1", "--format=%H", "--", str(DOC)], capture_output=True, text=True, cwd=REPO, timeout=60
+    )
     if done.returncode != 0 or not done.stdout.strip():
         return False
     return done.stdout.strip() not in _graft_boundary()
@@ -268,12 +270,10 @@ def _closing_commit(item):
     """`closing_commit` over this clone's log. `None` where the clone
     has no such commit - a cut history, or an entry crediting an item
     whose commit is not written yet."""
-    done = subprocess.run(["git", "log", "--format=%H%x09%s"],
-                          capture_output=True, text=True, cwd=REPO, timeout=60)
+    done = subprocess.run(["git", "log", "--format=%H%x09%s"], capture_output=True, text=True, cwd=REPO, timeout=60)
     if done.returncode != 0:
         return None
-    found = closing_commit(item, [line.split("\t", 1) for line
-                                  in done.stdout.splitlines() if "\t" in line])
+    found = closing_commit(item, [line.split("\t", 1) for line in done.stdout.splitlines() if "\t" in line])
     return None if found in _graft_boundary() else found
 
 
@@ -284,8 +284,8 @@ def _commits_touching(*revs):
     "nothing landed".
     """
     done = subprocess.run(
-        ["git", "log", "--format=%H", *revs, "--", str(DOC)],
-        capture_output=True, text=True, cwd=REPO, timeout=60)
+        ["git", "log", "--format=%H", *revs, "--", str(DOC)], capture_output=True, text=True, cwd=REPO, timeout=60
+    )
     if done.returncode != 0:
         return None
     return done.stdout.split()
@@ -314,8 +314,9 @@ def _merge_has_no_claim(sha, parents):
     """
     if len(parents) <= 1:
         return False
-    done = subprocess.run(["git", "diff-tree", "--cc", sha, "--", str(DOC)],
-                          capture_output=True, text=True, cwd=REPO, timeout=60)
+    done = subprocess.run(
+        ["git", "diff-tree", "--cc", sha, "--", str(DOC)], capture_output=True, text=True, cwd=REPO, timeout=60
+    )
     if done.returncode != 0:
         return False
     body = done.stdout.split("\n", 1)
@@ -339,33 +340,43 @@ def _landed_after(anchor):
     """
     done = subprocess.run(
         ["git", "log", "--format=%H%x09%P", f"{anchor}..HEAD", "--", str(DOC)],
-        capture_output=True, text=True, cwd=REPO, timeout=60)
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=60,
+    )
     if done.returncode != 0:
         return None
     rows = [line.split("\t", 1) for line in done.stdout.splitlines() if line]
-    return [sha for sha, parents in rows
-            if not _only_a_derived_figure_moved(sha)
-            and not _merge_has_no_claim(sha, parents.split())]
+    return [
+        sha
+        for sha, parents in rows
+        if not _only_a_derived_figure_moved(sha) and not _merge_has_no_claim(sha, parents.split())
+    ]
 
 
 def _describe(shas):
-    done = subprocess.run(["git", "log", "--no-walk", "--format=%h %s", *shas],
-                          capture_output=True, text=True, cwd=REPO, timeout=60)
+    done = subprocess.run(
+        ["git", "log", "--no-walk", "--format=%h %s", *shas], capture_output=True, text=True, cwd=REPO, timeout=60
+    )
     return done.stdout.strip() or " ".join(shas)
 
 
 def _committed_on(sha):
-    done = subprocess.run(["git", "log", "-1", "--date=short", "--format=%ad",
-                           sha], capture_output=True, text=True, cwd=REPO,
-                          timeout=60)
+    done = subprocess.run(
+        ["git", "log", "-1", "--date=short", "--format=%ad", sha], capture_output=True, text=True, cwd=REPO, timeout=60
+    )
     return done.stdout.strip()
 
 
 def _is_present(sha):
     """Content, not ancestry: this clone either has the object or not."""
-    return subprocess.run(["git", "cat-file", "-e", f"{sha}^{{commit}}"],
-                          capture_output=True, text=True, cwd=REPO,
-                          timeout=60).returncode == 0
+    return (
+        subprocess.run(
+            ["git", "cat-file", "-e", f"{sha}^{{commit}}"], capture_output=True, text=True, cwd=REPO, timeout=60
+        ).returncode
+        == 0
+    )
 
 
 class TestTheExclusionIsNarrow:
@@ -374,8 +385,10 @@ class TestTheExclusionIsNarrow:
     clause - it removes its date and the clause *skips*, which is how a
     guard gets switched off without going red. These hold the width."""
 
-    SENTENCE = ("reconstruct that history from 619 `docs/backlog/scenarios/` "
-                "files, 75 `docs/backlog/tasks/` files, and the commit log")
+    SENTENCE = (
+        "reconstruct that history from 619 `docs/backlog/scenarios/` "
+        "files, 75 `docs/backlog/tasks/` files, and the commit log"
+    )
 
     def test_a_count_only_change_is_excused(self):
         before = self.SENTENCE.replace("619", "604")
@@ -384,8 +397,7 @@ class TestTheExclusionIsNarrow:
     def test_a_count_and_a_word_on_one_line_is_not_excused(self):
         """The case a per-line pattern would wave through, and the
         reason the comparison normalises instead of matching."""
-        before = self.SENTENCE.replace("619", "604").replace(
-            "the commit log", "the commit history")
+        before = self.SENTENCE.replace("619", "604").replace("the commit log", "the commit history")
         assert not only_the_count_moved([before], [self.SENTENCE])
 
     def test_a_prose_only_change_is_not_excused(self):
@@ -396,8 +408,7 @@ class TestTheExclusionIsNarrow:
         assert not only_the_count_moved([], [self.SENTENCE])
 
     def test_an_uneven_change_is_not_excused(self):
-        assert not only_the_count_moved(
-            [self.SENTENCE], [self.SENTENCE, "and one more sentence"])
+        assert not only_the_count_moved([self.SENTENCE], [self.SENTENCE, "and one more sentence"])
 
 
 class TestTheAnchorIsTheItemsOwnCommit:
@@ -406,11 +417,13 @@ class TestTheAnchorIsTheItemsOwnCommit:
     resolved too far forward empties the range and the clause below
     passes on a document nobody re-grounded."""
 
-    ROWS = (("cb0c31e", "Architecture review 16, and the six rows it filed"),
-            ("e6400a1", "Merge UX-628, UX-629: the contract prose goes down"),
-            ("6235fc9", "UX-641: a level names its members"),
-            ("9beda27", "UX-629: a required set growing under a live id"),
-            ("fab3307", "fix(UX-535): the graph's shape is published once"))
+    ROWS = (
+        ("cb0c31e", "Architecture review 16, and the six rows it filed"),
+        ("e6400a1", "Merge UX-628, UX-629: the contract prose goes down"),
+        ("6235fc9", "UX-641: a level names its members"),
+        ("9beda27", "UX-629: a required set growing under a live id"),
+        ("fab3307", "fix(UX-535): the graph's shape is published once"),
+    )
 
     def test_the_id_first_is_the_close(self):
         assert closing_commit("UX-641", self.ROWS) == "6235fc9"
@@ -426,8 +439,7 @@ class TestTheAnchorIsTheItemsOwnCommit:
     def test_the_oldest_match_wins(self):
         """A round that names the id again - a close, a carry, a
         follow-up - must not move the anchor forward."""
-        rows = (("aaaaaaa", "UX-641: the follow-up nobody expected"),) \
-            + self.ROWS
+        rows = (("aaaaaaa", "UX-641: the follow-up nobody expected"),) + self.ROWS
         assert closing_commit("UX-641", rows) == "6235fc9"
 
     def test_a_longer_id_is_not_this_one(self):
@@ -436,7 +448,6 @@ class TestTheAnchorIsTheItemsOwnCommit:
 
 
 class TestTheLogIsNotStaleAboutItself:
-
     #: How far back the non-vacuity clause reads. Bounded because the
     #: exclusion spawns one `git show` per commit and this file is
     #: `small`: 108 commits touch the document, 20 was 0.2s of them.
@@ -466,14 +477,14 @@ class TestTheLogIsNotStaleAboutItself:
         recent = _commits_touching(f"-{self.WINDOW}")
         if not recent:
             pytest.skip(NO_HISTORY)
-        assert [sha for sha in recent
-                if not _only_a_derived_figure_moved(sha)], (
+        assert [sha for sha in recent if not _only_a_derived_figure_moved(sha)], (
             f"all {len(recent)} of the document's newest commits were "
             "excused as a derived figure, so the clause below reads "
             "nothing. Either the exclusion is too wide, or the document "
             "has taken only derived counts for that long and the window "
             "above needs re-measuring against its first survivor "
-            "(`UX-669`)")
+            "(`UX-669`)"
+        )
 
     def test_nothing_landed_after_the_commit_the_entry_credits(self):
         """The mechanical half of item 2, in the unit the tree moves in
@@ -494,18 +505,18 @@ class TestTheLogIsNotStaleAboutItself:
             f"credits {item} ({anchor[:7]}); {len(landed)} substantive "
             f"commit(s) have changed {DOC.name} since:\n{_describe(landed)}\n"
             f"Re-ground the document and say what against, or the log is "
-            f"worse than no log (UX-247, UX-652).")
+            f"worse than no log (UX-247, UX-652)."
+        )
 
     def test_the_window_is_the_entry_and_not_the_one_below(self):
         """`UX-604`: what the clause below reads. A window that runs on
         past the next `Updated ` heading is checking its predecessor,
         which is how the grounding clause passed while saying nothing."""
         _, _, entry = _claimed()
-        following = re.findall(
-            r"^Updated \d{4}-\d{2}-\d{2} \(after `UX-\d+`\)", entry, re.M)
+        following = re.findall(r"^Updated \d{4}-\d{2}-\d{2} \(after `UX-\d+`\)", entry, re.M)
         assert len(following) == 1, (
-            f"the window holds {len(following)} entry headings; it should "
-            "end where the next entry begins")
+            f"the window holds {len(following)} entry headings; it should end where the next entry begins"
+        )
 
     def test_the_entry_says_what_it_was_grounded_in(self):
         """The half a hook cannot write, which is why the item declined
@@ -516,7 +527,8 @@ class TestTheLogIsNotStaleAboutItself:
         # Named sources, not an adjective: a file, a command or a
         # document the next reviewer can open.
         assert re.search(r"`[a-z_/.]+\.(md|py|js)`|`bga [a-z]+", entry), (
-            "the entry names no source a reader could re-check")
+            "the entry names no source a reader could re-check"
+        )
 
     def test_the_entry_credits_the_true_schema_size(self):
         """`UX-748`: the clause above credits a *commit*, never a figure,
@@ -527,22 +539,22 @@ class TestTheLogIsNotStaleAboutItself:
         import bga.schemas as schemas
 
         _, _, entry = _claimed()
-        found = re.search(
-            r"`(analyze/v\d+)`[^\n]*?\*\*(\d+) top-level properties\*\*",
-            entry)
+        found = re.search(r"`(analyze/v\d+)`[^\n]*?\*\*(\d+) top-level properties\*\*", entry)
         assert found, f"the newest entry names no schema figure: {entry!r}"
         contract, stated = found.group(1), int(found.group(2))
         actual = len(schemas.schema(contract)["properties"])
         assert actual == stated, (
             f"the newest entry says {contract} has {stated} top-level "
             f"properties; bga.schemas.schema({contract!r})['properties'] "
-            f"has {actual}")
+            f"has {actual}"
+        )
 
     def test_the_older_entries_are_kept(self):
         """A log that replaces its own history is a field, not a log."""
         text = DOC.read_text(encoding="utf-8").split(HEADING, 1)[1]
         assert len(re.findall(r"Updated \d{4}-\d{2}-\d{2}", text)) >= 2, (
-            "the log holds one entry; earlier groundings were overwritten")
+            "the log holds one entry; earlier groundings were overwritten"
+        )
         assert "Originally written" in text
 
 
@@ -575,8 +587,8 @@ class TestTheGuardWouldHaveCaughtIt:
         landed = _landed_after(self.ANCHOR)
         assert stale(landed)
         assert any(sha.startswith(self.AFTER) for sha in landed), (
-            f"{self.AFTER} is not in what landed after {self.ANCHOR}: "
-            f"{[sha[:7] for sha in landed]}")
+            f"{self.AFTER} is not in what landed after {self.ANCHOR}: {[sha[:7] for sha in landed]}"
+        )
 
     def test_the_two_commits_share_a_day(self):
         """The resolution, pinned. If these two ever read as different
@@ -594,14 +606,13 @@ class TestTheGuardWouldHaveCaughtIt:
 
 
 def _git(cwd, *args):
-    return subprocess.run(["git", *args], cwd=cwd, capture_output=True,
-                          text=True, timeout=60)
+    return subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True, timeout=60)
 
 
 def _write(repo, body):
     (repo / DOC_REL).write_text(
-        "# Architecture\n\n## Verification Log\n\n"
-        "append-only below its newest entry\n\n" + body, encoding="utf-8")
+        "# Architecture\n\n## Verification Log\n\nappend-only below its newest entry\n\n" + body, encoding="utf-8"
+    )
 
 
 @pytest.fixture
@@ -654,8 +665,7 @@ class TestAMergeCanCarryAnEntryWithoutLanding:
         _git(merge_repo, "commit", "-q", "-m", "UX-900: entry")
         anchor = _git(merge_repo, "rev-parse", "HEAD").stdout.strip()
         _git(merge_repo, "checkout", "-q", "master")
-        _git(merge_repo, "merge", "--no-ff", "-q", "-m", "Merge track",
-            "track")
+        _git(merge_repo, "merge", "--no-ff", "-q", "-m", "Merge track", "track")
         assert not stale(_landed_after(anchor))
 
     def _count_conflict(self, repo):
@@ -664,26 +674,31 @@ class TestAMergeCanCarryAnEntryWithoutLanding:
         different region, so that half auto-merges regardless); master
         bumps it to a different value on an ordinary commit."""
         (repo / DOC_REL).write_text(
-            "# Architecture\n\n" + _COUNT_LINE.format(n=5) +
-            "\n## Verification Log\n\nappend-only below its newest entry\n")
+            "# Architecture\n\n"
+            + _COUNT_LINE.format(n=5)
+            + "\n## Verification Log\n\nappend-only below its newest entry\n"
+        )
         _git(repo, "add", DOC_REL)
         _git(repo, "commit", "-q", "-m", "base count")
         _git(repo, "checkout", "-q", "-b", "track")
         (repo / DOC_REL).write_text(
-            "# Architecture\n\n" + _COUNT_LINE.format(n=6) +
-            "\n## Verification Log\n\nappend-only below its newest entry\n\n"
-            "Updated 2026-01-02 (after `UX-900`), track's own.\n")
+            "# Architecture\n\n"
+            + _COUNT_LINE.format(n=6)
+            + "\n## Verification Log\n\nappend-only below its newest entry\n\n"
+            "Updated 2026-01-02 (after `UX-900`), track's own.\n"
+        )
         _git(repo, "add", DOC_REL)
         _git(repo, "commit", "-q", "-m", "UX-900: entry")
         anchor = _git(repo, "rev-parse", "HEAD").stdout.strip()
         _git(repo, "checkout", "-q", "master")
         (repo / DOC_REL).write_text(
-            "# Architecture\n\n" + _COUNT_LINE.format(n=7) +
-            "\n## Verification Log\n\nappend-only below its newest entry\n")
+            "# Architecture\n\n"
+            + _COUNT_LINE.format(n=7)
+            + "\n## Verification Log\n\nappend-only below its newest entry\n"
+        )
         _git(repo, "add", DOC_REL)
         _git(repo, "commit", "-q", "-m", "bump count")
-        conflicted = _git(repo, "merge", "--no-ff", "-m", "Merge track",
-                          "track")
+        conflicted = _git(repo, "merge", "--no-ff", "-m", "Merge track", "track")
         assert "CONFLICT" in conflicted.stdout, conflicted.stdout
         return anchor
 
@@ -694,23 +709,26 @@ class TestAMergeCanCarryAnEntryWithoutLanding:
         merge decided nothing of its own."""
         anchor = self._count_conflict(merge_repo)
         (merge_repo / DOC_REL).write_text(
-            "# Architecture\n\n" + _COUNT_LINE.format(n=7) +
-            "\n## Verification Log\n\nappend-only below its newest entry\n\n"
-            "Updated 2026-01-02 (after `UX-900`), track's own.\n")
+            "# Architecture\n\n"
+            + _COUNT_LINE.format(n=7)
+            + "\n## Verification Log\n\nappend-only below its newest entry\n\n"
+            "Updated 2026-01-02 (after `UX-900`), track's own.\n"
+        )
         _git(merge_repo, "add", DOC_REL)
         _git(merge_repo, "commit", "-q", "-m", "Merge track")
         assert not stale(_landed_after(anchor))
 
-    def test_a_conflict_resolved_with_new_content_is_a_landing(
-            self, merge_repo):
+    def test_a_conflict_resolved_with_new_content_is_a_landing(self, merge_repo):
         """Resolved by writing a count present in *neither* parent -
         `--cc` has a hunk for that line, so this is a real landing, the
         half that keeps this from reading as "skip merges"."""
         anchor = self._count_conflict(merge_repo)
         (merge_repo / DOC_REL).write_text(
-            "# Architecture\n\n" + _COUNT_LINE.format(n=8) +
-            "\n## Verification Log\n\nappend-only below its newest entry\n\n"
-            "Updated 2026-01-02 (after `UX-900`), track's own.\n")
+            "# Architecture\n\n"
+            + _COUNT_LINE.format(n=8)
+            + "\n## Verification Log\n\nappend-only below its newest entry\n\n"
+            "Updated 2026-01-02 (after `UX-900`), track's own.\n"
+        )
         _git(merge_repo, "add", DOC_REL)
         _git(merge_repo, "commit", "-q", "-m", "Merge track")
         assert stale(_landed_after(anchor))
@@ -722,24 +740,21 @@ class TestTheEntriesAreReadAsWritten:
     here: a comparison that saw nothing, or one that saw the whole
     document, would both leave that clause green forever."""
 
-    BEFORE = ("## Verification Log\n\n"
-              "Updated 2026-09-04 (after `UX-629`), the `analyze/v5` row.\n\n"
-              "Updated 2026-09-03 (after `UX-569`), the `analyze/v5` row.\n\n"
-              "Updated 2026-08-25 (after `UX-286`), the `analyze/v2` row.\n")
+    BEFORE = (
+        "## Verification Log\n\n"
+        "Updated 2026-09-04 (after `UX-629`), the `analyze/v5` row.\n\n"
+        "Updated 2026-09-03 (after `UX-569`), the `analyze/v5` row.\n\n"
+        "Updated 2026-08-25 (after `UX-286`), the `analyze/v2` row.\n"
+    )
 
     def test_a_sweep_through_an_old_entry_is_named_by_its_date(self):
-        after = self.BEFORE.replace(
-            "(after `UX-286`), the `analyze/v2`",
-            "(after `UX-286`), the `analyze/v6`")
-        assert rewritten_below_the_newest(self.BEFORE, after) == [
-            ("2026-08-25", "UX-286")]
+        after = self.BEFORE.replace("(after `UX-286`), the `analyze/v2`", "(after `UX-286`), the `analyze/v6`")
+        assert rewritten_below_the_newest(self.BEFORE, after) == [("2026-08-25", "UX-286")]
 
     def test_the_newest_entry_may_be_rewritten(self):
         """Out of Scope, and the reason: every round that re-grounds the
         document rewrites its top entry."""
-        after = self.BEFORE.replace(
-            "(after `UX-629`), the `analyze/v5`",
-            "(after `UX-629`), the `analyze/v6`")
+        after = self.BEFORE.replace("(after `UX-629`), the `analyze/v5`", "(after `UX-629`), the `analyze/v6`")
         assert rewritten_below_the_newest(self.BEFORE, after) == []
 
     def test_an_entry_pushed_down_by_a_new_one_is_still_itself(self):
@@ -747,8 +762,8 @@ class TestTheEntriesAreReadAsWritten:
         index, adding an entry would report every older one at once."""
         after = self.BEFORE.replace(
             "## Verification Log\n\n",
-            "## Verification Log\n\n"
-            "Updated 2026-09-05 (after `UX-653`), the `analyze/v6` row.\n\n")
+            "## Verification Log\n\nUpdated 2026-09-05 (after `UX-653`), the `analyze/v6` row.\n\n",
+        )
         assert rewritten_below_the_newest(self.BEFORE, after) == []
 
     def test_a_contract_table_above_the_log_is_not_an_entry(self):
@@ -762,16 +777,18 @@ class TestTheEntriesAreReadAsWritten:
         """`UX-353`'s marker word is the green this rule wants a session
         to reach for, so adding it must not be what this reports."""
         after = self.BEFORE.replace(
-            "(after `UX-286`), the `analyze/v2` row.",
-            "(after `UX-286`), the `analyze/v2` row, superseded now.")
+            "(after `UX-286`), the `analyze/v2` row.", "(after `UX-286`), the `analyze/v2` row, superseded now."
+        )
         assert rewritten_below_the_newest(self.BEFORE, after) == []
 
     def test_the_split_finds_every_entry(self):
         """Non-vacuity: a split that found one entry, or none, would
         make every clause above pass by reading nothing."""
         assert [key for key, _ in entries(self.BEFORE)] == [
-            ("2026-09-04", "UX-629"), ("2026-09-03", "UX-569"),
-            ("2026-08-25", "UX-286")]
+            ("2026-09-04", "UX-629"),
+            ("2026-09-03", "UX-569"),
+            ("2026-08-25", "UX-286"),
+        ]
         assert len(entries(DOC.read_text(encoding="utf-8"))) >= 20
 
 
@@ -785,22 +802,23 @@ class TestTheLogIsAppendOnlyBelowItsNewestEntry:
         before = _previous_body()
         if before is None:
             pytest.skip(NO_HISTORY)
-        rewritten = rewritten_below_the_newest(
-            before, DOC.read_text(encoding="utf-8"))
+        rewritten = rewritten_below_the_newest(before, DOC.read_text(encoding="utf-8"))
         assert rewritten == [], (
             "the Verification Log is append-only below its newest entry, "
-            "and a contract id moved inside " + ", ".join(
-                f"the {date} entry (after {item})" for date, item in rewritten)
+            "and a contract id moved inside "
+            + ", ".join(f"the {date} entry (after {item})" for date, item in rewritten)
             + ". That entry says what was checked on that date, against the "
             "id that was live then; if `UX-353`'s guard is red on it, say "
             "the id is superseded in the entry rather than sweeping it "
-            "forward (UX-653).")
+            "forward (UX-653)."
+        )
 
     def test_the_document_states_the_rule_a_reader_is_held_to(self):
         log = DOC.read_text(encoding="utf-8").split(HEADING, 1)[1]
         assert APPEND_ONLY in log.split("Updated", 1)[0], (
             f"{DOC.name}'s log does not say it is {APPEND_ONLY!r} above its "
-            f"newest entry, so the rule lives only in a guard")
+            f"newest entry, so the rule lives only in a guard"
+        )
 
     def test_the_guide_says_which_of_the_two_greens_is_meant(self):
         """The half a guard cannot do. `UX-353` has two greens - add the
@@ -811,4 +829,5 @@ class TestTheLogIsAppendOnlyBelowItsNewestEntry:
             assert stated in guide, (
                 f"the fixing guide does not name {stated!r} - a session "
                 f"meeting UX-353's red has no way to learn which green is "
-                f"meant, and the sweep is the cheaper one")
+                f"meant, and the sweep is the cheaper one"
+            )

@@ -7,6 +7,7 @@ code. A user with the diagnostics file still could not answer "so what
 did bwrap object to?", and nothing let anyone re-run the sandbox to find
 out.
 """
+
 import json
 import os
 import subprocess
@@ -60,7 +61,8 @@ class TestTheTeeKeepsUx140sContract:
         result = subprocess.run([sys.executable, "-c", program])
         assert result.returncode == -11, (
             "a signal-killed sandbox must reach bst as WIFSIGNALED, not as an "
-            "ordinary exit code - that is UX-140's contract")
+            "ordinary exit code - that is UX-140's contract"
+        )
 
     def test_an_ordinary_exit_code_passes_through(self, tmp_path):
         fake = _script(tmp_path, "bwrap", "exit 42\n")
@@ -87,9 +89,17 @@ class TestTheSummaryQuotesWhatTheSandboxSaid:
         with open(diagnostics, "w") as handle:
             handle.write(json.dumps({"record": "fingerprint"}) + "\n")
             for pid, element, text in rows:
-                handle.write(json.dumps({
-                    "pid": pid, "element": element, "exec_argv": ["/bin/true"],
-                    "stderr_path": f"/gone/{pid}.stderr"}) + "\n")
+                handle.write(
+                    json.dumps(
+                        {
+                            "pid": pid,
+                            "element": element,
+                            "exec_argv": ["/bin/true"],
+                            "stderr_path": f"/gone/{pid}.stderr",
+                        }
+                    )
+                    + "\n"
+                )
                 (stderr_dir / f"{pid}.stderr").write_text(text)
         return str(diagnostics)
 
@@ -101,8 +111,7 @@ class TestTheSummaryQuotesWhatTheSandboxSaid:
     def test_the_last_speaking_sandbox_is_the_one_that_died(self, tmp_path):
         """The build stops at its first failing element, so the sandbox that
         spoke last is the sandbox that died."""
-        path = self._capture(tmp_path, [(1, "a.bst", "early noise\n"),
-                                        (2, "b.bst", "the real failure\n")])
+        path = self._capture(tmp_path, [(1, "a.bst", "early noise\n"), (2, "b.bst", "the real failure\n")])
         assert "the real failure" in format_sandbox_stderr(path)
 
     def test_it_points_at_the_replay_command_with_the_right_index(self, tmp_path):
@@ -136,8 +145,7 @@ class TestReplaySandbox:
         path = tmp_path / "d.jsonl"
         with open(path, "w") as handle:
             handle.write(json.dumps({"record": "fingerprint"}) + "\n")
-            handle.write(json.dumps({
-                "pid": 5, "element": element, "exec_argv": argv}) + "\n")
+            handle.write(json.dumps({"pid": 5, "element": element, "exec_argv": argv}) + "\n")
         return str(path)
 
     def test_it_runs_the_recorded_argv(self, tmp_path, capfd):
@@ -157,16 +165,14 @@ class TestReplaySandbox:
         """Sandbox roots are ephemeral, so a partially expired recording is
         the common case - and a confusing error here would recreate the
         problem this fixes."""
-        record = self._record(
-            tmp_path, ["/bin/true", "--bind", "/gone/staging/xyz", "/x"])
+        record = self._record(tmp_path, ["/bin/true", "--bind", "/gone/staging/xyz", "/x"])
         assert replay_sandbox(record) == 2
         err = capfd.readouterr().err
         assert "/gone/staging/xyz" in err
         assert "no longer exist" in err
 
     def test_it_names_every_missing_bind_flag_form(self):
-        argv = ["/bin/true", "--ro-bind", "/gone/a", "/x",
-                "--dev-bind", "/gone/b", "/y", "--bind", "/tmp", "/z"]
+        argv = ["/bin/true", "--ro-bind", "/gone/a", "/x", "--dev-bind", "/gone/b", "/y", "--bind", "/tmp", "/z"]
         assert missing_bind_paths(argv) == ["/gone/a", "/gone/b"]
 
     def test_a_relative_or_special_bind_is_not_mistaken_for_a_path(self):
@@ -177,10 +183,8 @@ class TestReplaySandbox:
         stderr_dir = tmp_path / "d.jsonl.stderr"
         stderr_dir.mkdir()
         with open(path, "w") as handle:
-            handle.write(json.dumps({"pid": 1, "element": "a.bst",
-                                     "exec_argv": ["/bin/true"]}) + "\n")
-            handle.write(json.dumps({"pid": 2, "element": "b.bst",
-                                     "exec_argv": ["/bin/true"]}) + "\n")
+            handle.write(json.dumps({"pid": 1, "element": "a.bst", "exec_argv": ["/bin/true"]}) + "\n")
+            handle.write(json.dumps({"pid": 2, "element": "b.bst", "exec_argv": ["/bin/true"]}) + "\n")
         (stderr_dir / "2.stderr").write_text("said something\n")
         assert replay_sandbox(str(path), listing=True) == 0
         out = capfd.readouterr().out
@@ -215,6 +219,7 @@ class TestTheDefaultPathStillExecs:
         import inspect
 
         from tools.native_trace import bwrap_shim
+
         main_source = inspect.getsource(bwrap_shim.main)
         assert "_dispatch(" in main_source, "main must still reach the dispatch"
         dispatch_source = inspect.getsource(bwrap_shim._dispatch)

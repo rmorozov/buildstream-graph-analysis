@@ -7,6 +7,7 @@ every element whose computed colour, border, background, outline,
 box-shadow, fill or stroke is an accent grade matches a table selector
 for that grade and channel, and each at-rest job is seen on every page.
 """
+
 import json
 import pathlib
 import re
@@ -27,8 +28,7 @@ GUIDE = (REPO / "docs/design/styleguide.md").read_text()
 
 chrome = find_chrome()
 needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
-needs_node = pytest.mark.skipif(shutil.which("node") is None,
-                                reason="node is not installed")
+needs_node = pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
 
 TOKEN = re.compile(r"var\(--(accent(?:-mark)?)\)")
 AT_REST = {1, 5, 7, 8}
@@ -58,7 +58,7 @@ def _rules(text):
         while depth:
             depth += {"{": 1, "}": -1}.get(text[end], 0)
             end += 1
-        body = text[brace + 1:end - 1]
+        body = text[brace + 1 : end - 1]
         if prelude.startswith("@"):
             if "{" in body:
                 yield from _rules(body)
@@ -68,8 +68,7 @@ def _rules(text):
 
 
 COLOUR = re.compile(r"#[0-9a-fA-F]{3,8}\b|rgba?\([^)]*\)")
-ACCENT_VALUE = re.compile(
-    r"--accent(?:-mark)?\s*:\s*(#[0-9a-fA-F]{3,8}\b|rgba?\([^)]*\))")
+ACCENT_VALUE = re.compile(r"--accent(?:-mark)?\s*:\s*(#[0-9a-fA-F]{3,8}\b|rgba?\([^)]*\))")
 
 
 def _rgb(literal):
@@ -78,8 +77,8 @@ def _rgb(literal):
         digits = literal[1:]
         if len(digits) in (3, 4):
             digits = "".join(c * 2 for c in digits)
-        return tuple(int(digits[i:i + 2], 16) for i in (0, 2, 4))
-    parts = re.split(r"[\s,/]+", literal[literal.index("(") + 1:-1].strip())
+        return tuple(int(digits[i : i + 2], 16) for i in (0, 2, 4))
+    parts = re.split(r"[\s,/]+", literal[literal.index("(") + 1 : -1].strip())
     return tuple(round(float(p)) for p in parts[:3])
 
 
@@ -102,19 +101,22 @@ def table_rows():
         cells = [c.strip() for c in line.strip().strip("|").split("|")]
         if len(cells) != 4 or not re.match(r"\d+ ", cells[0]):
             continue
-        rows.append((int(cells[0].split()[0]), cells[1],
-                     [c.strip() for c in cells[2].split(",")],
-                     [_selector(s) for s in re.findall(r"`([^`]+)`", cells[3])]))
+        rows.append(
+            (
+                int(cells[0].split()[0]),
+                cells[1],
+                [c.strip() for c in cells[2].split(",")],
+                [_selector(s) for s in re.findall(r"`([^`]+)`", cells[3])],
+            )
+        )
     return rows
 
 
 def table_uses():
-    return {(grade, sel, ch) for _, grade, chans, sels in table_rows()
-            for ch in chans for sel in sels}
+    return {(grade, sel, ch) for _, grade, chans, sels in table_rows() for ch in chans for sel in sels}
 
 
 class TestTheStylesheetSpendsTheAccentOnlyOnListedJobs:
-
     def test_the_table_has_eight_jobs(self):
         assert {row[0] for row in table_rows()} == set(range(1, 9))
 
@@ -189,7 +191,7 @@ BOOTED = r"""
 @pytest.fixture(scope="module")
 def booted(tmp_path_factory):
     """`{(fixture, mode): {strays, jobs}}`, one browser for all six."""
-    if chrome is None or shutil.which("node") is None:    # pragma: no cover
+    if chrome is None or shutil.which("node") is None:  # pragma: no cover
         pytest.skip(NO_BROWSER)
     rows = json.dumps(table_rows())
     out = {}
@@ -198,18 +200,15 @@ def booted(tmp_path_factory):
             uri = export_uri(fixture, tmp_path_factory.mktemp(f"accent-{name}"))
             for mode in MODES:
                 expression = BOOTED % (rows, json.dumps(mode == "dark"))
-                out[name, mode] = opened.measure(
-                    uri, expression, media="print" if mode == "print" else None)
+                out[name, mode] = opened.measure(uri, expression, media="print" if mode == "print" else None)
     return out
 
 
 @needs_browser
 @needs_node
 class TestTheBootedPageSpendsTheAccentOnlyOnListedJobs:
-
     def test_no_element_wears_an_unlisted_accent(self, booted):
-        strays = {f"{name} {mode}": seen["strays"]
-                  for (name, mode), seen in booted.items() if seen["strays"]}
+        strays = {f"{name} {mode}": seen["strays"] for (name, mode), seen in booted.items() if seen["strays"]}
         assert strays == {}
 
     def test_every_at_rest_job_is_seen(self, booted):

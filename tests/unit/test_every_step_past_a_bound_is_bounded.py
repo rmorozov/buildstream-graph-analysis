@@ -27,6 +27,7 @@ pass whatever that bound happened to be.
 `GROWN` names on a second page and held to the control that table says
 draws them - read from the styleguide, not restated here.
 """
+
 import copy
 import json
 import pathlib
@@ -203,49 +204,42 @@ class TestTheCensusReadsSomething:
 
     def test_at_least_one_table_is_pressed_past_one_reading(self, census):
         assert any(len(t["readings"]) > 1 for t in census["tables"]), (
-            "no table offered a step to press - the census pressed nothing")
+            "no table offered a step to press - the census pressed nothing"
+        )
 
     def test_at_least_one_reveal_is_pressed_past_one_reading(self, census):
         assert any(len(r["readings"]) > 1 for r in census["reveals"]), (
-            "no reveal offered a step to press - the census pressed nothing")
+            "no reveal offered a step to press - the census pressed nothing"
+        )
 
     def test_at_least_one_door_reaches_the_cap(self, census):
         """The door that broke this: `elements`, 3,592,666 characters.
         A door that never reaches the cap does not prove the cap holds
         at the size that matters."""
-        assert any(d["max"] == TEXT_CHARS_MAX for d in census["doors"]), (
-            [d["max"] for d in census["doors"]])
+        assert any(d["max"] == TEXT_CHARS_MAX for d in census["doors"]), [d["max"] for d in census["doors"]]
 
 
 @needs_browser
 @pytest.mark.large
 class TestEveryTableStaysBounded:
     def test_no_table_ever_mounts_past_the_bound(self, census):
-        over = [(t["key"], t["readings"]) for t in census["tables"]
-                if t["max"] > MOUNTED_ROWS_MAX]
-        assert not over, (
-            f"table(s) mounted more than {MOUNTED_ROWS_MAX} rows at some "
-            f"step: {over}")
+        over = [(t["key"], t["readings"]) for t in census["tables"] if t["max"] > MOUNTED_ROWS_MAX]
+        assert not over, f"table(s) mounted more than {MOUNTED_ROWS_MAX} rows at some step: {over}"
 
     def test_all_rows_is_not_offered_past_the_ceiling(self, census):
         """The other half of the same rule: a table large enough to
         need ten presses to page through must not also offer the whole
         population in one step."""
-        wrong = [t["key"] for t in census["tables"]
-                 if t["offersAllRows"] and t["max"] > MOUNTED_ROWS_MAX]
-        assert not wrong, (
-            f"table(s) offer 'All rows' and mount past the bound: {wrong}")
+        wrong = [t["key"] for t in census["tables"] if t["offersAllRows"] and t["max"] > MOUNTED_ROWS_MAX]
+        assert not wrong, f"table(s) offer 'All rows' and mount past the bound: {wrong}"
 
 
 @needs_browser
 @pytest.mark.large
 class TestEveryRevealStaysBounded:
     def test_no_reveal_ever_mounts_past_the_bound(self, census):
-        over = [(r["items"], r["readings"]) for r in census["reveals"]
-                if r["max"] > NAMES_MAX]
-        assert not over, (
-            f"reveal(s) mounted more than {NAMES_MAX} names between the "
-            f"head and tail at some step: {over}")
+        over = [(r["items"], r["readings"]) for r in census["reveals"] if r["max"] > NAMES_MAX]
+        assert not over, f"reveal(s) mounted more than {NAMES_MAX} names between the head and tail at some step: {over}"
 
 
 @needs_browser
@@ -261,8 +255,7 @@ class TestARevealCanBePagedBackward:
     def test_prev_is_offered_on_a_reveal_that_pages_forward(self, census):
         offered = [r for r in census["reveals"] if len(r["readings"]) > 1]
         assert offered, "no reveal pressed 'more' at all - nothing to page back"
-        assert any(r["positionsBack"] for r in offered), (
-            "no reveal offered 'prev' after being paged forward")
+        assert any(r["positionsBack"] for r in offered), "no reveal offered 'prev' after being paged forward"
 
     def test_prev_returns_to_the_first_chunk(self, census):
         """Reachable, not necessarily the last backward reading: pressed
@@ -279,28 +272,25 @@ class TestARevealCanBePagedBackward:
                 continue
             assert r["firstChunkText"] in r["backTexts"], (
                 f"{r['items']}-item reveal never showed the first chunk's "
-                f"own names again while paging back: {r['backTexts']}")
+                f"own names again while paging back: {r['backTexts']}"
+            )
             assert r["firstChunkReading"] in r["backReadings"], (
                 f"{r['items']}-item reveal never showed the first chunk's "
                 f"{r['firstChunkReading']} names again while paging back: "
-                f"{r['backReadings']}")
+                f"{r['backReadings']}"
+            )
 
     def test_prev_never_mounts_past_the_bound_either(self, census):
-        over = [(r["items"], r["readings"]) for r in census["reveals"]
-                if r["max"] > NAMES_MAX]
-        assert not over, (
-            f"reveal(s) mounted more than {NAMES_MAX} names while paging "
-            f"backward: {over}")
+        over = [(r["items"], r["readings"]) for r in census["reveals"] if r["max"] > NAMES_MAX]
+        assert not over, f"reveal(s) mounted more than {NAMES_MAX} names while paging backward: {over}"
 
 
 @needs_browser
 @pytest.mark.large
 class TestEveryJsonDoorStaysBounded:
     def test_no_door_ever_draws_past_the_cap(self, census):
-        over = [(d["key"], d["max"]) for d in census["doors"]
-                if d["max"] > TEXT_CHARS_MAX]
-        assert not over, (
-            f"door(s) drew more than {TEXT_CHARS_MAX} characters: {over}")
+        over = [(d["key"], d["max"]) for d in census["doors"] if d["max"] > TEXT_CHARS_MAX]
+        assert not over, f"door(s) drew more than {TEXT_CHARS_MAX} characters: {over}"
 
 
 #: Past `NAMES_MAX`, `REVEAL_STEP` and `TABLE_OPENS_BOUNDED_ABOVE` at
@@ -309,19 +299,25 @@ class TestEveryJsonDoorStaysBounded:
 GROWN = 300
 NAMES_PER_LIST_MAX = NAMES_MAX + 10
 STYLEGUIDE = REPO / "docs/design/styleguide.md"
-_ROW = re.compile(r"^\| `([^`]+)` \| (reveal|table|JSON door|not drawn) \|",
-                  re.M)
+_ROW = re.compile(r"^\| `([^`]+)` \| (reveal|table|JSON door|not drawn) \|", re.M)
 #: Plane 2 containers the synthetic store has no data for.
-_GRAFTED = ("element_join", "element_join_coverage", "plane2_coverage",
-            "cache", "capacity_recommendation", "restructuring",
-            "timestamp_agreement", "serialization_point_risks")
+_GRAFTED = (
+    "element_join",
+    "element_join_coverage",
+    "plane2_coverage",
+    "cache",
+    "capacity_recommendation",
+    "restructuring",
+    "timestamp_agreement",
+    "serialization_point_risks",
+)
 
 
 def _named_paths() -> dict:
     """§3k's `UX-1037` table: `{path: drawn as}`."""
     text = STYLEGUIDE.read_text(encoding="utf-8")
-    section = text[text.index("## 3k."):]
-    section = section[:section.index("\n## ", 1)]
+    section = text[text.index("## 3k.") :]
+    section = section[: section.index("\n## ", 1)]
     return dict(_ROW.findall(section))
 
 
@@ -340,9 +336,12 @@ def _holders(value, segments):
 
 def _analyze(run) -> dict:
     done = subprocess.run(
-        [sys.executable, "-m", "bga.cli", "analyze", str(run),
-         "--format", "json"], capture_output=True, text=True, cwd=REPO,
-        timeout=600)
+        [sys.executable, "-m", "bga.cli", "analyze", str(run), "--format", "json"],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=600,
+    )
     assert done.returncode == 0, done.stderr[-2000:]
     return json.loads(done.stdout)
 
@@ -359,8 +358,7 @@ def _fill(payload, paths) -> dict:
         for inst, (holder, key) in enumerate(holders):
             names = [f"{tag}{inst}x{j:04d}.bst" for j in range(GROWN)]
             if isinstance(template, dict):
-                holder[key] = [{f: (n if isinstance(v, str) else v)
-                                for f, v in template.items()} for n in names]
+                holder[key] = [{f: (n if isinstance(v, str) else v) for f, v in template.items()} for n in names]
             else:
                 tail = "|" + template.partition("|")[2] if "|" in template else ""
                 holder[key] = [n + tail for n in names]
@@ -418,17 +416,35 @@ def grown(browser, tmp_path_factory):
 
     into = tmp_path_factory.mktemp("u1037")
     subprocess.run(
-        [sys.executable, "-m", "bga.cli", "gen-synthetic", str(into / "s"),
-         "--seed", "1", "--layers", "20", "--width", "200", "--store",
-         "--runs", "2"], check=True, capture_output=True, cwd=REPO)
+        [
+            sys.executable,
+            "-m",
+            "bga.cli",
+            "gen-synthetic",
+            str(into / "s"),
+            "--seed",
+            "1",
+            "--layers",
+            "20",
+            "--width",
+            "200",
+            "--store",
+            "--runs",
+            "2",
+        ],
+        check=True,
+        capture_output=True,
+        cwd=REPO,
+    )
     snapshot = sorted((into / "s/.bga/runs").iterdir())[-1]
     payload = _analyze(snapshot / "run")
     two_plane = _analyze(pages.FIXTURES["macro_micro"])
     for key in _GRAFTED:
         if not payload.get(key):
             payload[key] = copy.deepcopy(two_plane[key])
-    payload["findings"].append(copy.deepcopy(next(
-        f for f in two_plane["findings"] if f.get("evidence", {}).get("steps"))))
+    payload["findings"].append(
+        copy.deepcopy(next(f for f in two_plane["findings"] if f.get("evidence", {}).get("steps")))
+    )
     named = _named_paths()
     markers = _fill(payload, named)
     (snapshot / "analyze.json").write_text(json.dumps(payload))
@@ -446,39 +462,33 @@ class TestEveryNamedGrowerIsDrawnByItsBound:
     def test_the_table_names_paths_and_the_page_draws_them(self, grown):
         named, markers, got = grown
         drawn = {p for p, how in named.items() if how in ("reveal", "table")}
-        missing = sorted(p for tag, p in markers.items()
-                         if p in drawn and tag not in got["seen"])
+        missing = sorted(p for tag, p in markers.items() if p in drawn and tag not in got["seen"])
         assert drawn and not missing, ("filled but never drawn", missing)
 
     def test_no_instance_mounts_past_the_bound(self, grown):
         _, markers, got = grown
-        over = sorted((markers[tag], s["max"]) for tag, s in got["seen"].items()
-                      if s["max"] > NAMES_PER_LIST_MAX)
-        assert not over, (
-            f"path(s) mounted more than {NAMES_PER_LIST_MAX} names of one "
-            f"instance at some step: {over}")
+        over = sorted((markers[tag], s["max"]) for tag, s in got["seen"].items() if s["max"] > NAMES_PER_LIST_MAX)
+        assert not over, f"path(s) mounted more than {NAMES_PER_LIST_MAX} names of one instance at some step: {over}"
 
     def test_each_path_lands_only_in_its_named_control(self, grown):
         named, markers, got = grown
         wrong = []
         for tag, path in markers.items():
             where = set(got["seen"].get(tag, {}).get("where", {}))
-            want = {"reveal": {"reveal"}, "table": {"table"}}.get(
-                named[path], set())
+            want = {"reveal": {"reveal"}, "table": {"table"}}.get(named[path], set())
             if where - want - {"door"}:
                 wrong.append((path, named[path], sorted(where)))
             door = path.split("[")[0].split(".")[0] in got["doors"]
-            if named[path] in ("JSON door", "not drawn") and (
-                    door != (named[path] == "JSON door")):
+            if named[path] in ("JSON door", "not drawn") and (door != (named[path] == "JSON door")):
                 wrong.append((path, named[path], "door" if door else "no door"))
         assert not wrong, wrong
 
     def test_a_named_path_has_left_the_unbounded_list(self):
         sys.path.insert(0, str(REPO / "tests/unit"))
         from test_every_payload_sequence_is_declared import KNOWN_UNBOUNDED_GROWERS
+
         stale = sorted(set(_named_paths()) & KNOWN_UNBOUNDED_GROWERS)
-        assert not stale, (
-            f"bounded in §3k and still listed unbounded (UX-1037): {stale}")
+        assert not stale, f"bounded in §3k and still listed unbounded (UX-1037): {stale}"
 
 
 if __name__ == "__main__":  # pragma: no cover

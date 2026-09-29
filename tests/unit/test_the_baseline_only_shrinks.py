@@ -4,9 +4,11 @@ A temporary package and a temporary baseline, so these mutate the
 tree - move lines, add and fix findings, shrink - without touching the
 real `tests/quality_baseline.json`.
 """
+
 import json
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -14,10 +16,7 @@ import sys
 REPO = pathlib.Path(__file__).resolve().parents[2]
 TOOL = REPO / "tools" / "dev_baseline.py"
 
-VIOLATION = ("import subprocess\n\n\n"
-             "def f():\n"
-             "    cmd = []\n"
-             "    subprocess.run(cmd, shell=True)\n")
+VIOLATION = "import subprocess\n\n\ndef f():\n    cmd = []\n    subprocess.run(cmd, shell=True)\n"
 CLEAN = "def f():\n    return 1\n"
 # UX-697: pyright's own kind of finding - a type error basic mode reads
 # without any config, so this needs no fixture beyond the module itself.
@@ -60,8 +59,7 @@ def _minimal_bin(root):
 
 
 def _run(root, baseline, *flags, env=None, spawn_pyright=False):
-    cmd = [sys.executable, str(TOOL), "--root", str(root), "--paths", "pkg",
-           "--baseline", str(baseline)]
+    cmd = [sys.executable, str(TOOL), "--root", str(root), "--paths", "pkg", "--baseline", str(baseline)]
     run_env = dict(os.environ if env is None else env)
     if not spawn_pyright:
         cmd += ["--pyright-from", str(_pyright_fixture(root))]
@@ -80,8 +78,7 @@ def _load(path):
 
 
 def _git(root, *args):
-    return subprocess.run(["git", "-C", str(root), *args],
-                          capture_output=True, text=True, check=True)
+    return subprocess.run(["git", "-C", str(root), *args], capture_output=True, text=True, check=True)
 
 
 class TestIdentityIgnoresTheLineNumber:
@@ -164,11 +161,13 @@ class TestShrinkOnlyShrinks:
 
 class TestOccurrenceDisambiguates:
     def test_the_same_line_twice_gives_two_identities(self, tmp_path):
-        text = ("import subprocess\n\n\n"
-                "def f():\n"
-                "    subprocess.run(cmd, shell=True)\n\n\n"
-                "def g():\n"
-                "    subprocess.run(cmd, shell=True)\n")
+        text = (
+            "import subprocess\n\n\n"
+            "def f():\n"
+            "    subprocess.run(cmd, shell=True)\n\n\n"
+            "def g():\n"
+            "    subprocess.run(cmd, shell=True)\n"
+        )
         module = tmp_path / "pkg" / "m.py"
         baseline = tmp_path / "baseline.json"
         _write(module, text)
@@ -183,9 +182,7 @@ class TestIdentityCollapsesInteriorWhitespace:
         baseline = tmp_path / "baseline.json"
         _write(module, VIOLATION)
         assert _run(tmp_path, baseline, "--write").returncode == 0
-        reformatted = VIOLATION.replace(
-            "subprocess.run(cmd, shell=True)",
-            "subprocess.run(cmd,   shell=True)")
+        reformatted = VIOLATION.replace("subprocess.run(cmd, shell=True)", "subprocess.run(cmd,   shell=True)")
         _write(module, reformatted)
         check = _run(tmp_path, baseline, "--check")
         assert check.returncode == 0, check.stdout
@@ -199,10 +196,8 @@ class TestTheGitDiffShrinkGuard:
         _write(module, VIOLATION)
         assert _run(tmp_path, baseline, "--write").returncode == 0
         _git(tmp_path, "init", "-q")
-        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t",
-             "add", "-A")
-        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t",
-             "commit", "-q", "-m", "baseline")
+        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t", "add", "-A")
+        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t", "commit", "-q", "-m", "baseline")
         _write(other, VIOLATION)
         # `UX-745`: a forced write is *red until it is committed*, and the
         # message says who signed it. It used to be waived outright, which
@@ -211,8 +206,17 @@ class TestTheGitDiffShrinkGuard:
         check = _run(tmp_path, baseline, "--check")
         assert check.returncode == 1, check.stdout
         assert "authorised by UX-1, red until committed" in check.stdout
-        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t",
-             "commit", "-q", "-am", "UX-1 adds a finding")
+        _git(
+            tmp_path,
+            "-c",
+            "user.email=t@example.com",
+            "-c",
+            "user.name=t",
+            "commit",
+            "-q",
+            "-am",
+            "UX-1 adds a finding",
+        )
         # Committed, it is HEAD's own line and costs nothing - which is
         # why this is free in CI, where the working file *is* HEAD.
         assert _run(tmp_path, baseline, "--check").returncode == 0
@@ -232,23 +236,21 @@ class TestTheGitDiffShrinkGuard:
         _write(tmp_path / "pkg" / "m.py", VIOLATION)
         assert _run(tmp_path, baseline, "--write").returncode == 0
         _git(tmp_path, "init", "-q")
-        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t",
-             "add", "-A")
-        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t",
-             "commit", "-q", "-m", "baseline")
+        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t", "add", "-A")
+        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t", "commit", "-q", "-m", "baseline")
         _write(tmp_path / "pkg" / "signed.py", VIOLATION)
-        assert _run(tmp_path, baseline, "--write", "--force",
-                    "--reason", "UX-2").returncode == 0
+        assert _run(tmp_path, baseline, "--write", "--force", "--reason", "UX-2").returncode == 0
         # A line the force never saw, hand-added to the list afterwards.
         document = json.loads(baseline.read_text(encoding="utf-8"))
-        document["findings"].append({"file": "pkg/smuggled.py", "line": VIOLATION.strip(),
-                                     "nth": 1, "rule": "S602", "tool": "ruff"})
+        document["findings"].append(
+            {"file": "pkg/smuggled.py", "line": VIOLATION.strip(), "nth": 1, "rule": "S602", "tool": "ruff"}
+        )
         baseline.write_text(json.dumps(document), encoding="utf-8")
         check = _run(tmp_path, baseline, "--check")
         assert check.returncode == 1, check.stdout
         assert "pkg/smuggled.py" in check.stdout, (
-            f"the hand-added line rode in on the force's signature:\n"
-            f"{check.stdout}")
+            f"the hand-added line rode in on the force's signature:\n{check.stdout}"
+        )
 
     def test_force_without_a_reason_writes_nothing(self, tmp_path):
         module = tmp_path / "pkg" / "m.py"
@@ -267,10 +269,8 @@ class TestTheGitDiffShrinkGuard:
         _write(module, VIOLATION)
         assert _run(tmp_path, baseline, "--write").returncode == 0
         _git(tmp_path, "init", "-q")
-        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t",
-             "add", "-A")
-        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t",
-             "commit", "-q", "-m", "baseline")
+        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t", "add", "-A")
+        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t", "commit", "-q", "-m", "baseline")
         _write(module, CLEAN)
         assert _run(tmp_path, baseline, "--shrink").returncode == 0
         check = _run(tmp_path, baseline, "--check")
@@ -346,12 +346,16 @@ class TestPyrightEntersTheSameList:
         _write(module, CLEAN)
         assert _run(tmp_path, baseline, "--write", spawn_pyright=True).returncode == 0
         before = baseline.read_text(encoding="utf-8")
-        fake_bin = tmp_path / "fakebin"
-        fake_pyright = fake_bin / "pyright"
-        _write(fake_pyright, "#!/bin/sh\nexit 3\n")
-        fake_pyright.chmod(0o755)
+        fake_pkg = tmp_path / "fakepkg" / "pyright"
+        lock = (pathlib.Path(__file__).resolve().parents[2] / "requirements.lock").read_text(encoding="utf-8")
+        pin = re.search(r"^pyright==(\S+)", lock, re.MULTILINE).group(1)
+        _write(fake_pkg / "__init__.py", "")
+        _write(
+            fake_pkg / "__main__.py",
+            f"import sys\nif '--version' in sys.argv: print('pyright {pin}'); sys.exit(0)\nsys.exit(3)\n",
+        )
         env = dict(os.environ)
-        env["PATH"] = str(fake_bin) + os.pathsep + env.get("PATH", "")
+        env["PYTHONPATH"] = str(tmp_path / "fakepkg")
         done = _run(tmp_path, baseline, "--write", env=env, spawn_pyright=True)
         assert done.returncode == 2, done.stdout + done.stderr
         assert baseline.read_text(encoding="utf-8") == before
@@ -362,13 +366,10 @@ class TestPyrightEntersTheSameList:
         _write(module, CLEAN)
         assert _run(tmp_path, baseline, "--write", spawn_pyright=True).returncode == 0
         _git(tmp_path, "init", "-q")
-        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t",
-             "add", "-A")
-        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t",
-             "commit", "-q", "-m", "baseline")
+        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t", "add", "-A")
+        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t", "commit", "-q", "-m", "baseline")
         _write(module, PYRIGHT_VIOLATION)
-        assert _run(tmp_path, baseline, "--write", "--force",
-                    "--reason", "UX-697", spawn_pyright=True).returncode == 0
+        assert _run(tmp_path, baseline, "--write", "--force", "--reason", "UX-697", spawn_pyright=True).returncode == 0
         check = _run(tmp_path, baseline, "--check", spawn_pyright=True)
         assert check.returncode == 1, check.stdout
         assert "authorised by UX-697, red until committed" in check.stdout

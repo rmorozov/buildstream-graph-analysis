@@ -33,6 +33,7 @@ run" - `UX-366`'s defect committed again one control over.
 `TestThePopulationIsTheRunsOwn` is that clause, and it is why
 `elementUids` unions the duration map in.
 """
+
 import pathlib
 import shutil
 import subprocess
@@ -137,9 +138,9 @@ def _look(typed=""):
 def _node(script):
     import json
 
-    result = subprocess.run([node, "--input-type=module", "-e", script],
-                            capture_output=True, text=True, cwd=str(REPO),
-                            timeout=60)
+    result = subprocess.run(
+        [node, "--input-type=module", "-e", script], capture_output=True, text=True, cwd=str(REPO), timeout=60
+    )
     assert result.returncode == 0, result.stderr
     return json.loads(result.stdout)
 
@@ -153,8 +154,7 @@ def browser():
 @pytest.fixture(scope="module")
 def golden_page(tmp_path_factory):
     """`golden`, whose elements are `base/extra/lib/app.bst`."""
-    return pages.export_uri(pages.FIXTURES["golden"],
-                            tmp_path_factory.mktemp("q369-golden"))
+    return pages.export_uri(pages.FIXTURES["golden"], tmp_path_factory.mktemp("q369-golden"))
 
 
 @needs_node
@@ -166,7 +166,8 @@ class TestNoFixtureNameIsCompiledIn:
         out = _node(
             'const q = await import("./bga/viewer/questions.js");'
             "console.log(JSON.stringify(q.QUESTIONS.map("
-            "  (x) => [x.id, x.example ?? null]).filter((p) => p[1])));")
+            "  (x) => [x.id, x.example ?? null]).filter((p) => p[1])));"
+        )
         assert out == [], f"entries still ship an element name: {out}"
 
     def test_an_unfilled_query_shows_the_token(self):
@@ -179,7 +180,8 @@ class TestNoFixtureNameIsCompiledIn:
             "const asks = q.QUESTIONS.filter(q.takesElement);"
             "console.log(JSON.stringify({ n: asks.length,"
             "  rendered: asks.map((x) => q.renderedSql(x)),"
-            "  token: q.ELEMENT_TOKEN }));")
+            "  token: q.ELEMENT_TOKEN }));"
+        )
         # Four since `UX-448` added `executables-in-element`; three
         # before it. A count rather than a floor, so a query that stops
         # taking an element is a red rather than a silence - which is
@@ -194,7 +196,8 @@ class TestNoFixtureNameIsCompiledIn:
         out = _node(
             'const q = await import("./bga/viewer/questions.js");'
             "console.log(JSON.stringify(q.QUESTIONS.filter(q.takesElement)"
-            '  .map((x) => q.renderedSql(x, "zz/odd-name.bst"))));')
+            '  .map((x) => q.renderedSql(x, "zz/odd-name.bst"))));'
+        )
         for sql in out:
             assert "'zz/odd-name.bst'" in sql, sql
             assert "{element}" not in sql, sql
@@ -220,10 +223,12 @@ class TestThePopulationIsTheRunsOwn:
             "console.log(JSON.stringify(e.elementUids({"
             "  elements: { element_durations: durations },"
             '  headline: { top_actions: ['
-            '    { element_uid: "mod007.bst", saving_us: 1 }] } })));')
+            '    { element_uid: "mod007.bst", saving_us: 1 }] } })));'
+        )
         assert len(out) == 100, (
             f"the picker's population is {len(out)} of 100 - it is reading "
-            f"what the report ranked, not what the run built")
+            f"what the report ranked, not what the run built"
+        )
         assert out == sorted(out), "not sorted"
 
     def test_an_element_only_a_finding_names_is_still_reachable(self):
@@ -234,24 +239,22 @@ class TestThePopulationIsTheRunsOwn:
             "console.log(JSON.stringify(e.elementUids({"
             '  elements: { element_durations: { "a.bst": 1 } },'
             '  headline: { top_actions: ['
-            '    { element_uid: "only-here.bst", saving_us: 1 }] } })));')
+            '    { element_uid: "only-here.bst", saving_us: 1 }] } })));'
+        )
         assert "only-here.bst" in out, out
 
 
 @needs_browser
 @pytest.mark.medium
 class TestThePageSubstitutesThisRun:
-    def test_no_query_on_the_page_names_another_projects_element(
-            self, browser, golden_page):
+    def test_no_query_on_the_page_names_another_projects_element(self, browser, golden_page):
         """The defect, as a page. `golden` has no element called
         `core.bst`; before this item its page said `core.bst` three
         times, once per element-scoped query."""
         out = browser.measure(golden_page, _look(), 1440, 900)
-        assert FOREIGN not in out["body"], (
-            "a foreign fixture's element name is still on the page")
+        assert FOREIGN not in out["body"], "a foreign fixture's element name is still on the page"
 
-    def test_the_default_is_an_element_this_run_has(self, browser,
-                                                    golden_page):
+    def test_the_default_is_an_element_this_run_has(self, browser, golden_page):
         out = browser.measure(golden_page, _look(), 1440, 900)
         assert out["options"], "no element picker on a page with a run"
         # `headline.top_actions[0]` on `golden`. Read from the payload
@@ -263,30 +266,22 @@ class TestThePageSubstitutesThisRun:
         expected = report["headline"]["top_actions"][0]["element_uid"]
         assert out["chosen"] == expected, out
         assert expected in out["options"], out["options"]
-        assert out["chosenIsInTheSql"], (
-            "the control says one element and the SQL below it says "
-            "another")
+        assert out["chosenIsInTheSql"], "the control says one element and the SQL below it says another"
 
-    def test_changing_it_moves_the_query_and_the_paste_together(
-            self, browser, golden_page):
+    def test_changing_it_moves_the_query_and_the_paste_together(self, browser, golden_page):
         """A builder that updates the display and copies the old text
         is worse than none - which is what the closure in `copyButton`
         would have done had the payload stayed the text it was built
         with."""
         out = browser.measure(golden_page, _look(), 1440, 900)
         assert out["startedMatched"], "display and payload differed at rest"
-        assert out["target"] != out["chosen"], (
-            "the fixture's population is too small to move the picker")
+        assert out["target"] != out["chosen"], "the fixture's population is too small to move the picker"
         assert f"'{out['target']}'" in out["afterSql"], out["afterSql"]
         assert f"'{out['target']}'" in out["afterCopy"], out["afterCopy"]
-        assert out["afterSql"] == out["afterCopy"], (
-            "the query shown and the query copied are no longer the same "
-            "query")
-        assert f"'{out['chosen']}'" not in out["afterCopy"], (
-            "the paste still carries the element the reader moved off")
+        assert out["afterSql"] == out["afterCopy"], "the query shown and the query copied are no longer the same query"
+        assert f"'{out['chosen']}'" not in out["afterCopy"], "the paste still carries the element the reader moved off"
 
-    def test_pressing_copy_hands_over_the_query_now_on_screen(
-            self, browser, golden_page):
+    def test_pressing_copy_hands_over_the_query_now_on_screen(self, browser, golden_page):
         """The attribute is not the deliverable - the clipboard is.
         `copyButton` closes over the text it was built with, so a
         button reading the closure would leave `data-copy` correct and
@@ -295,15 +290,18 @@ class TestThePageSubstitutesThisRun:
         assert out["pasted"], f"nothing reached the clipboard: {out['pasted']}"
         assert out["pasted"] == out["afterCopy"], out["pasted"]
         assert f"'{out['target']}'" in out["pasted"], out["pasted"]
-        assert f"'{out['chosen']}'" not in out["pasted"], (
-            "the clipboard carries the element the reader moved off")
+        assert f"'{out['chosen']}'" not in out["pasted"], "the clipboard carries the element the reader moved off"
 
 
 #: `UX-527`: what the control may draw at once, read off the source so
 #: the probe asks the page about the rule the page has.
 PICKER_SHOWN = int(
-    (REPO / "bga/viewer/questions.js").read_text(encoding="utf-8")
-    .split("PICKER_SHOWN = ", 1)[1].split(";", 1)[0].strip())
+    (REPO / "bga/viewer/questions.js")
+    .read_text(encoding="utf-8")
+    .split("PICKER_SHOWN = ", 1)[1]
+    .split(";", 1)[0]
+    .strip()
+)
 
 #: And the number the item chose, written down - the jump box's limit.
 #: Reading the constant off the source is right for the probe and
@@ -330,9 +328,12 @@ def at_scale(browser, tmp_path_factory):
     uri = pages.export_uri(run, made, name="xl.html")
     report = payloads(str(run))["report.json"]
     uids = sorted(report["elements"]["element_durations"])
-    return {"population": len(uids), "uid": uids[-1],
-            "rest": browser.measure(uri, _look(), 1440, 900),
-            "typed": browser.measure(uri, _look(uids[-1]), 1440, 900)}
+    return {
+        "population": len(uids),
+        "uid": uids[-1],
+        "rest": browser.measure(uri, _look(), 1440, 900),
+        "typed": browser.measure(uri, _look(uids[-1]), 1440, 900),
+    }
 
 
 @needs_browser
@@ -351,11 +352,11 @@ class TestItReachesEveryElementAtScale:
         out = at_scale["rest"]
         assert at_scale["population"] > 4000, at_scale["population"]
         assert out["population"] == at_scale["population"], (
-            f"the picker reaches {out['population']} of "
-            f"{at_scale['population']} elements")
+            f"the picker reaches {out['population']} of {at_scale['population']} elements"
+        )
         assert str(at_scale["population"]) in out["note"], (
-            f"the sentence beside the control does not say the count it "
-            f"searches: {out['note']!r}")
+            f"the sentence beside the control does not say the count it searches: {out['note']!r}"
+        )
         assert FOREIGN not in out["body"]
 
     def test_it_draws_eight_and_not_the_project(self, at_scale):
@@ -363,8 +364,8 @@ class TestItReachesEveryElementAtScale:
         control anyone can use, and it was 4,119 of that page's 8,953
         DOM elements."""
         assert PICKER_SHOWN == PICKER_SHOWN_AS_CHOSEN, (
-            f"the picker's bound moved to {PICKER_SHOWN}; say what was "
-            f"measured before changing it")
+            f"the picker's bound moved to {PICKER_SHOWN}; say what was measured before changing it"
+        )
         # **Before the probe types and after**, which the first draft of
         # this clause got wrong: it read only the post-typing list, so
         # removing the bound from `fill` left it green - the needle was
@@ -374,10 +375,9 @@ class TestItReachesEveryElementAtScale:
             for when in ("options", "offered"):
                 drawn = at_scale[phase][when]
                 assert len(drawn) <= PICKER_SHOWN, (
-                    f"{phase}/{when}: the control draws {len(drawn)} "
-                    f"options of {at_scale['population']}")
-        assert at_scale["typed"]["offered"] == [at_scale["uid"]], (
-            at_scale["typed"]["offered"])
+                    f"{phase}/{when}: the control draws {len(drawn)} options of {at_scale['population']}"
+                )
+        assert at_scale["typed"]["offered"] == [at_scale["uid"]], at_scale["typed"]["offered"]
 
     def test_the_typed_element_reaches_the_query(self, at_scale):
         """The other half: an element no published array names is what

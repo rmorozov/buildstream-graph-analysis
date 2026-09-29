@@ -6,6 +6,7 @@ from "hung"), and the store grows without bound behind a 2 GB warning
 whose only advice was to delete directories by hand - with no size in
 `--list` to say *which* directory, and no command that deletes anything.
 """
+
 import json
 import os
 import time
@@ -20,11 +21,9 @@ def _snapshot(project, name, files=(("plane2.json", "x" * 1000),), failed=()):
     run = os.path.join(project, ".bga", "runs", name, "run")
     os.makedirs(run, exist_ok=True)
     with open(os.path.join(run, "run-context.json"), "w", encoding="utf-8") as h:
-        json.dump({"build_outcome": {"failed_elements": list(failed),
-                                     "failed_count": len(failed)}}, h)
+        json.dump({"build_outcome": {"failed_elements": list(failed), "failed_count": len(failed)}}, h)
     for filename, content in files:
-        with open(os.path.join(project, ".bga", "runs", name, filename),
-                  "w", encoding="utf-8") as handle:
+        with open(os.path.join(project, ".bga", "runs", name, filename), "w", encoding="utf-8") as handle:
             handle.write(content)
     return os.path.join(project, ".bga", "runs", name)
 
@@ -45,14 +44,19 @@ class TestSizesAreVisible:
         _snapshot(project, "01")
         _snapshot(project, "02")
         total = run_store.store_size_bytes(project)
-        parts = sum(run_store.snapshot_size_bytes(p)
-                    for p in run_store.list_snapshots(project))
+        parts = sum(run_store.snapshot_size_bytes(p) for p in run_store.list_snapshots(project))
         assert total == parts
 
-    @pytest.mark.parametrize("size,expected", [
-        (0, "0B"), (512, "512B"), (2048, "2.0K"),
-        (5 * 1024 ** 2, "5.0M"), (3 * 1024 ** 3, "3.0G"),
-    ])
+    @pytest.mark.parametrize(
+        "size,expected",
+        [
+            (0, "0B"),
+            (512, "512B"),
+            (2048, "2.0K"),
+            (5 * 1024**2, "5.0M"),
+            (3 * 1024**3, "3.0G"),
+        ],
+    )
     def test_sizes_read_the_way_du_prints_them(self, size, expected):
         assert run_store.human_bytes(size) == expected
 
@@ -88,12 +92,12 @@ class TestPruneDeletesButNotTheOnesInUse:
         (below) covers what it was for."""
         for name in ("01", "02", "03"):
             _snapshot(project, name)
-        run_store.write_config(project, {"baseline":
-                                         os.path.join(project, ".bga", "runs", "01")})
+        run_store.write_config(project, {"baseline": os.path.join(project, ".bga", "runs", "01")})
         assert os.path.join(project, ".bga", "runs", "01") not in _protected(project)
         import inspect
 
         from tools import bga_snapshot
+
         assert '"baseline"' not in inspect.getsource(bga_snapshot._protected)
 
     def test_the_newest_healthy_run_survives_two_unhealthy_aliases(self, project):
@@ -101,19 +105,17 @@ class TestPruneDeletesButNotTheOnesInUse:
         an interrupted run as the two newest, `--keep 2` protected exactly
         those and offered to delete the store's only healthy snapshot -
         the one UX-156's walk-back needs as the next baseline."""
-        _snapshot(project, "01")                       # healthy
+        _snapshot(project, "01")  # healthy
         _snapshot(project, "02", failed=["lib-d.bst"])  # failed
         broken = os.path.join(project, ".bga", "runs", "03", "run")
         os.makedirs(broken)
         with open(os.path.join(broken, "run-context.json"), "w") as handle:
-            json.dump({"build_outcome": {"failed_elements": [], "failed_count": 0,
-                                         "interrupted": True}}, handle)
+            json.dump({"build_outcome": {"failed_elements": [], "failed_count": 0, "interrupted": True}}, handle)
 
         _prune(project, keep=2, older_than=None, dry_run=False)
 
         survivors = [os.path.basename(p) for p in run_store.list_snapshots(project)]
-        assert "01" in survivors, (
-            "the only healthy run is what the walk-back would compare against")
+        assert "01" in survivors, "the only healthy run is what the walk-back would compare against"
         assert survivors == ["01", "02", "03"]
 
     def test_a_store_of_healthy_runs_prunes_exactly_as_before(self, project):
@@ -122,8 +124,7 @@ class TestPruneDeletesButNotTheOnesInUse:
         for name in ("01", "02", "03", "04"):
             _snapshot(project, name)
         _prune(project, keep=2, older_than=None, dry_run=False)
-        assert [os.path.basename(p)
-                for p in run_store.list_snapshots(project)] == ["03", "04"]
+        assert [os.path.basename(p) for p in run_store.list_snapshots(project)] == ["03", "04"]
 
     def test_husks_go_first_and_are_counted_separately(self, project, capsys):
         """A snapshot with no run directory is not in `list_runs`, not
@@ -147,8 +148,7 @@ class TestPruneDeletesButNotTheOnesInUse:
         ancient = time.time() - 30 * 86400
         os.utime(old, (ancient, ancient))
         _prune(project, keep=None, older_than=7, dry_run=False)
-        assert "01" not in [os.path.basename(p)
-                            for p in run_store.list_snapshots(project)]
+        assert "01" not in [os.path.basename(p) for p in run_store.list_snapshots(project)]
 
     def test_dry_run_deletes_nothing_but_says_what_would_go(self, project, capsys):
         for name in ("01", "02", "03", "04"):
@@ -189,6 +189,7 @@ class TestTheSizeWarningNamesTheCommand:
         import inspect
 
         from tools import bga_snapshot
+
         source = inspect.getsource(bga_snapshot._warn_if_large)
         assert "prune" in source
         assert "Delete snapshot directories you no longer need" not in source

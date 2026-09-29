@@ -36,6 +36,7 @@ finished document, which is also why `attach` runs at the end of the
 report build rather than beside `compute_findings`: the paths are only
 meaningful once the document they point into exists.
 """
+
 from typing import Any, Optional
 
 from . import findings as _findings
@@ -70,7 +71,7 @@ class _Bracket:
     def __init__(self, text):
         self.text = text
 
-    def __repr__(self):                             # pragma: no cover
+    def __repr__(self):  # pragma: no cover
         return f"[{self.text}]"
 
 
@@ -78,7 +79,7 @@ class _Unresolved:
     """What a dangling path resolves to. Distinct from `None`, which is
     a real published value on plenty of these fields."""
 
-    def __repr__(self):                             # pragma: no cover
+    def __repr__(self):  # pragma: no cover
         return "<unresolved>"
 
 
@@ -102,8 +103,7 @@ def resolve(document: dict, path: str):
             if not isinstance(node, list):
                 return UNRESOLVED
             node = next(
-                (item for item in node
-                 if isinstance(item, dict) and str(item.get(key)) == wanted),
+                (item for item in node if isinstance(item, dict) and str(item.get(key)) == wanted),
                 _MISSING,
             )
         elif isinstance(segment, _Bracket):
@@ -112,10 +112,8 @@ def resolve(document: dict, path: str):
             # element uid becomes addressable at all, since a uid
             # contains dots and cannot go through the dotted form.
             if isinstance(node, list):
-                index = int(segment.text) if segment.text.lstrip("-").isdigit() \
-                    else None
-                node = (node[index] if index is not None and -len(node) <= index
-                        < len(node) else _MISSING)
+                index = int(segment.text) if segment.text.lstrip("-").isdigit() else None
+                node = node[index] if index is not None and -len(node) <= index < len(node) else _MISSING
             elif isinstance(node, dict):
                 node = node.get(segment.text, _MISSING)
             else:
@@ -192,8 +190,7 @@ TRACE_QUERIES = {
     # `host_cpu_count`, `cores_busy` and the binding constraint, so it
     # is what the host counter-track question hangs off - no finding
     # UX-676 published reaches `findings.py`'s claim mechanism at all.
-    "capacity-recommendation": ("resource-queues", "stalls",
-                                "were-the-cores-busy"),
+    "capacity-recommendation": ("resource-queues", "stalls", "were-the-cores-busy"),
     # Execution: the finding names elements; the query opens them.
     #
     # `UX-433`: **which programs**, not which elements. The claim is that
@@ -290,11 +287,15 @@ def _published_queries(claim_id) -> dict:
     return published
 
 
-def _rule(name, threshold, comparison, observed_path, sentence,
-          module=RULE_MODULE):
-    rule = {"name": name, "threshold": threshold, "comparison": comparison,
-            "observed_path": observed_path, "sentence": sentence,
-            "module": module}
+def _rule(name, threshold, comparison, observed_path, sentence, module=RULE_MODULE):
+    rule = {
+        "name": name,
+        "threshold": threshold,
+        "comparison": comparison,
+        "observed_path": observed_path,
+        "sentence": sentence,
+        "module": module,
+    }
     # `UX-343`: a threshold is in the unit of the field it is compared
     # against, and `observed_path` names that field - so the unit is
     # resolvable rather than a property of the number. Omitted where
@@ -323,9 +324,7 @@ def _diagnosis_rule(claim, document):
     ratio = resolve(document, "headline.chain_share")
     name = resolve(document, "headline.diagnosis")
     if ratio is UNRESOLVED or ratio is None:
-        return _unconditional(
-            "Neither branch could be taken: this run did not record both "
-            "durations the ratio needs.")
+        return _unconditional("Neither branch could be taken: this run did not record both durations the ratio needs.")
     fired = ">=" if name == _findings.DIAGNOSIS_CHAIN_BOUND else "<"
     # UX-674 (styleguide §4b, extended to sentences): `fired` and `name`
     # stay raw in the *rule* - `comparison` and the diagnosis value are
@@ -336,69 +335,90 @@ def _diagnosis_rule(claim, document):
     above_or_below = "at or above" if fired == ">=" else "below"
     label = name.replace("_", "-") if isinstance(name, str) else "unresolved"
     return _rule(
-        "CHAIN_BOUND_RATIO", _findings.CHAIN_BOUND_RATIO, fired,
+        "CHAIN_BOUND_RATIO",
+        _findings.CHAIN_BOUND_RATIO,
+        fired,
         "headline.chain_share",
         f"The critical path is {ratio:.1%} of the task horizon (the span "
         f"from the first task's start to the last one's finish, "
         f"excluding BuildStream's own startup), {above_or_below} the "
         f"{_findings.CHAIN_BOUND_RATIO:.0%} line at which the chain "
         f"rather than the scheduler is called the constraint, so this "
-        f"build is {label}.")
+        f"build is {label}.",
+    )
 
 
 def _wait_category_rule(claim, document):
-    share = ((claim.get("evidence") or {}).get("share"))
+    share = (claim.get("evidence") or {}).get("share")
     return _rule(
-        "OPPORTUNITY_FLOOR_PCT", _findings.OPPORTUNITY_FLOOR_PCT / 100, ">=",
+        "OPPORTUNITY_FLOOR_PCT",
+        _findings.OPPORTUNITY_FLOOR_PCT / 100,
+        ">=",
         None,
         f"The largest non-execution category is {share:.1%} of wall-clock, "
         f"at or above the {_findings.OPPORTUNITY_FLOOR_PCT:.0f}% floor below "
         f"which the largest of the remainder is rounding rather than an "
-        f"opportunity." if isinstance(share, (int, float)) else
-        "The largest non-execution category cleared the opportunity floor.")
+        f"opportunity."
+        if isinstance(share, (int, float))
+        else "The largest non-execution category cleared the opportunity floor.",
+    )
 
 
 def _cache_hit_rule(claim, document):
     ratio = (claim.get("evidence") or {}).get("hit_share")
     if (claim.get("evidence") or {}).get("run_mode") == "full":
         return _rule(
-            None, None, "present", "confidence.run_mode",
+            None,
+            None,
+            "present",
+            "confidence.run_mode",
             "Caches were off for this run, so the hit ratio is the intent "
-            "rather than a finding and no band is applied.")
-    if not isinstance(ratio, (int, float)):        # pragma: no cover
+            "rather than a finding and no band is applied.",
+        )
+    if not isinstance(ratio, (int, float)):  # pragma: no cover
         return _unconditional("The cache reported no hit ratio.")
-    band = ("below POOR_HIT_RATIO" if ratio < POOR_HIT_RATIO
-            else "below HEALTHY_HIT_RATIO" if ratio < HEALTHY_HIT_RATIO
-            else "at or above HEALTHY_HIT_RATIO")
+    band = (
+        "below POOR_HIT_RATIO"
+        if ratio < POOR_HIT_RATIO
+        else "below HEALTHY_HIT_RATIO"
+        if ratio < HEALTHY_HIT_RATIO
+        else "at or above HEALTHY_HIT_RATIO"
+    )
     return _rule(
-        "POOR_HIT_RATIO/HEALTHY_HIT_RATIO", [POOR_HIT_RATIO, HEALTHY_HIT_RATIO],
-        "banded", "cache.hit_share",
+        "POOR_HIT_RATIO/HEALTHY_HIT_RATIO",
+        [POOR_HIT_RATIO, HEALTHY_HIT_RATIO],
+        "banded",
+        "cache.hit_share",
         f"A {ratio:.0%} hit ratio is {band} "
         f"({POOR_HIT_RATIO:.0%}/{HEALTHY_HIT_RATIO:.0%}), which is what sets "
         f"this finding's severity.",
-        module=CACHE_RULE_MODULE)
+        module=CACHE_RULE_MODULE,
+    )
 
 
 def _confidence_rule(claim, document):
     primary = (claim.get("evidence") or {}).get("primary")
-    if not isinstance(primary, (int, float)):      # pragma: no cover
+    if not isinstance(primary, (int, float)):  # pragma: no cover
         return _unconditional("This run published no confidence score.")
     return _rule(
         "_CONFIDENCE_HIGH/_CONFIDENCE_MEDIUM",
-        [_findings._CONFIDENCE_MEDIUM, _findings._CONFIDENCE_HIGH], "banded",
+        [_findings._CONFIDENCE_MEDIUM, _findings._CONFIDENCE_HIGH],
+        "banded",
         "confidence.primary",
         f"{primary:.2f} bands as "
         f"{_findings.confidence_band(primary)} against "
-        f"{_findings._CONFIDENCE_MEDIUM:.2f}/{_findings._CONFIDENCE_HIGH:.2f}.")
+        f"{_findings._CONFIDENCE_MEDIUM:.2f}/{_findings._CONFIDENCE_HIGH:.2f}.",
+    )
 
 
 def _efficiency_rule(claim, document):
     score = (claim.get("evidence") or {}).get("efficiency_score")
-    if not isinstance(score, (int, float)):        # pragma: no cover
+    if not isinstance(score, (int, float)):  # pragma: no cover
         return _unconditional("This run published no efficiency score.")
     return _rule(
         "_EFFICIENCY_HIGH/_EFFICIENCY_MEDIUM",
-        [_findings._EFFICIENCY_MEDIUM, _findings._EFFICIENCY_HIGH], "banded",
+        [_findings._EFFICIENCY_MEDIUM, _findings._EFFICIENCY_HIGH],
+        "banded",
         "floors.efficiency_score",
         f"{score:.2f} is "
         f"{'at or above' if score >= _findings._EFFICIENCY_HIGH else 'below'} "
@@ -407,19 +427,23 @@ def _efficiency_rule(claim, document):
         f"{_findings._EFFICIENCY_MEDIUM:.2f}, which is what chooses the "
         f"sentence beside it; the caveat below "
         f"{_findings._CONFIDENCE_HIGH:.1f} confidence is a second rule, not "
-        f"this one.")
+        f"this one.",
+    )
 
 
 def _mesh_rule(claim, document):
     density = (claim.get("evidence") or {}).get("zero_slack_share")
     return _rule(
-        "MESH_ZERO_SLACK_SHARE", _findings.MESH_ZERO_SLACK_SHARE, ">=",
+        "MESH_ZERO_SLACK_SHARE",
+        _findings.MESH_ZERO_SLACK_SHARE,
+        ">=",
         "elements.zero_slack_share",
         f"{density:.0%} of elements have zero slack, at or above the "
         f"{_findings.MESH_ZERO_SLACK_SHARE:.0%} at which the graph is called "
         f"a mesh rather than a chain."
-        if isinstance(density, (int, float)) else
-        "The zero-slack share cleared the mesh threshold.")
+        if isinstance(density, (int, float))
+        else "The zero-slack share cleared the mesh threshold.",
+    )
 
 
 def _width_rule(claim, document):
@@ -436,15 +460,14 @@ def _width_rule(claim, document):
     widest = evidence.get("widest_stage")
     count = evidence.get("element_count")
     if not isinstance(stages, int) or not isinstance(widest, int):
-        return _unconditional(
-            "Published for any graph whose elements do not all sit in one "
-            "dependency stage.")
+        return _unconditional("Published for any graph whose elements do not all sit in one dependency stage.")
     return _unconditional(
         f"{count} elements group into {stages} dependency stages by their "
         f"dependencies alone; the widest holds {widest}, and nothing in a "
         f"stage can start before the stage above it finishes. Published "
         f"whenever there is more than one stage - with one, the widest "
-        f"stage is the whole graph and the shape forbids nothing.")
+        f"stage is the whole graph and the shape forbids nothing."
+    )
 
 
 def _chain_rule(claim, document):
@@ -458,13 +481,14 @@ def _chain_rule(claim, document):
     """
     density = (claim.get("evidence") or {}).get("zero_slack_share")
     return _rule(
-        "MESH_ZERO_SLACK_SHARE", _findings.MESH_ZERO_SLACK_SHARE, ">=",
+        "MESH_ZERO_SLACK_SHARE",
+        _findings.MESH_ZERO_SLACK_SHARE,
+        ">=",
         "elements.zero_slack_share",
-        f"{density:.0%} of elements have zero slack and none is off the "
-        f"critical path, so the graph is one chain."
-        if isinstance(density, (int, float)) else
-        "The zero-slack share cleared the threshold with nothing off the "
-        "critical path.")
+        f"{density:.0%} of elements have zero slack and none is off the critical path, so the graph is one chain."
+        if isinstance(density, (int, float))
+        else "The zero-slack share cleared the threshold with nothing off the critical path.",
+    )
 
 
 # claim id -> (evidence paths, rule, unpublished inputs)
@@ -511,8 +535,7 @@ def _blast_paths(claim: dict, document: dict) -> tuple[str, ...]:
     whatever any path resolves to, and only convention keeps the next
     claim from citing a population.
     """
-    return tuple(f"elements.blast_radius[{uid}].downstream_count"
-                 for uid in (claim.get("elements") or ()))
+    return tuple(f"elements.blast_radius[{uid}].downstream_count" for uid in (claim.get("elements") or ()))
 
 
 def _fan_in_paths(claim: dict, document: dict) -> tuple[str, ...]:
@@ -522,79 +545,103 @@ def _fan_in_paths(claim: dict, document: dict) -> tuple[str, ...]:
     `elements.fan_in` would inline the whole map, which is the defect
     `_blast_paths` above was written to stop.
     """
-    return tuple(f"elements.fan_in[{uid}].transitive_count"
-                 for uid in (claim.get("elements") or ()))
+    return tuple(f"elements.fan_in[{uid}].transitive_count" for uid in (claim.get("elements") or ()))
 
 
 _CLAIMS = {
-    "diagnosis": (
-        ("floors.t_infinity_observed", "total_duration_us",
-         "headline.chain_share"),
-        _diagnosis_rule, ()),
+    "diagnosis": (("floors.t_infinity_observed", "total_duration_us", "headline.chain_share"), _diagnosis_rule, ()),
     "build-failed": (
-        ("violations[type=build_failed].failed_count",
-         "violations[type=build_failed].interrupted"),
+        ("violations[type=build_failed].failed_count", "violations[type=build_failed].interrupted"),
         _unconditional(
             "Published whenever the run recorded a `build_failed` violation; "
             "there is no threshold - a build that did not finish is not a "
-            "matter of degree."), ()),
+            "matter of degree."
+        ),
+        (),
+    ),
     "failed-task-time": (
         ("confidence.failed_task_us", "confidence.failed_task_count"),
-        _rule(None, 0, ">", "confidence.failed_task_us",
-              "Published when any task attempt failed and still cost time.",
-              ), ()),
+        _rule(
+            None,
+            0,
+            ">",
+            "confidence.failed_task_us",
+            "Published when any task attempt failed and still cost time.",
+        ),
+        (),
+    ),
     "run-mode-incremental": (
         ("confidence.run_mode",),
         _unconditional(
             "Published when the run recorded `run_mode: incremental`; the "
-            "mode is a fact about the capture, not a measurement to band."),
-        ()),
+            "mode is a fact about the capture, not a measurement to band."
+        ),
+        (),
+    ),
     "cache-hit-ratio": (
-        ("cache.hit_share", "cache.built_elements",
-         "cache.cached_elements", "confidence.run_mode"),
-        _cache_hit_rule, ()),
+        ("cache.hit_share", "cache.built_elements", "cache.cached_elements", "confidence.run_mode"),
+        _cache_hit_rule,
+        (),
+    ),
     # `UX-896`: two claims under one id, and both fire on a recorded
     # fact rather than on a threshold this repository chose - the
     # watermark is BuildStream's own configuration, and the volume is
     # the disk. `_unconditional` is the honest rule shape for that.
     "cache-capacity": (
-        ("cache.capacity.quota_bytes", "cache.capacity.cache_used_bytes",
-         "cache.capacity.used_share", "cache.capacity.headroom_bytes",
-         "cache.capacity.low_watermark_share",
-         "cache.capacity.quota_over_volume_bytes"),
+        (
+            "cache.capacity.quota_bytes",
+            "cache.capacity.cache_used_bytes",
+            "cache.capacity.used_share",
+            "cache.capacity.headroom_bytes",
+            "cache.capacity.low_watermark_share",
+            "cache.capacity.quota_over_volume_bytes",
+        ),
         _unconditional(
             "Published when the capture recorded a quota and the cache is "
             "at or past the low watermark BuildStream itself is configured "
             "with, or the quota exceeds what its volume can give. No "
             "threshold of this repository's own: both comparisons are "
-            "against numbers the host declared."),
-        ()),
+            "against numbers the host declared."
+        ),
+        (),
+    ),
     # `UX-907`: one claim on a walked number. No threshold - the row is
     # published whenever a capture walked the CAS, because "which
     # artifact is heaviest" has an answer at every size.
     "artifact-weight": (
-        ("cache.artifact_weights.walked_bytes",
-         "cache.artifact_weights.run_unique_bytes",
-         "cache.artifact_weights.shared_bytes",
-         "cache.artifact_weights.elements_walked"),
+        (
+            "cache.artifact_weights.walked_bytes",
+            "cache.artifact_weights.run_unique_bytes",
+            "cache.artifact_weights.shared_bytes",
+            "cache.artifact_weights.elements_walked",
+        ),
         _unconditional(
             "Published when the capture walked the local CAS for each "
             "element's artifact (`--artifact-weights`). Every byte is that "
             "artifact's own, summed over the distinct blobs under its "
             "`files` tree - not BuildStream's `%{artifact-cas-digest}`, "
-            "which renders the root directory proto's own length."),
-        ()),
+            "which renders the root directory proto's own length."
+        ),
+        (),
+    ),
     "cache-transfer-cost": (
         ("cache.transfer_share",),
-        _rule("TRANSFER_SHARE_NOTABLE", TRANSFER_SHARE_NOTABLE, ">=",
-              "cache.transfer_share",
-              "Artifact transfer took at or above the share of wall-clock at "
-              "which moving artifacts is worth saying out loud.",
-              module=CACHE_RULE_MODULE), ()),
+        _rule(
+            "TRANSFER_SHARE_NOTABLE",
+            TRANSFER_SHARE_NOTABLE,
+            ">=",
+            "cache.transfer_share",
+            "Artifact transfer took at or above the share of wall-clock at "
+            "which moving artifacts is worth saying out loud.",
+            module=CACHE_RULE_MODULE,
+        ),
+        (),
+    ),
     "confidence": (
-        ("confidence.primary", "confidence.coverage_score",
-         "confidence.task_coverage"),
-        _confidence_rule, ()),
+        ("confidence.primary", "confidence.coverage_score", "confidence.task_coverage"),
+        _confidence_rule,
+        (),
+    ),
     "time-concentration": (
         # `UX-345`: this named the same duration twice - once as
         # `signals.critical_path_length`, which held it under a `count`
@@ -603,11 +650,12 @@ _CLAIMS = {
         _unconditional(
             "Published whenever the critical path has measured elements on "
             "it; which elements, and their share, are the finding's own "
-            "`evidence.rows`."), ()),
-    "mesh-graph": (
-        ("elements.zero_slack_share",), _mesh_rule, ()),
-    "chain-graph": (
-        ("elements.zero_slack_share",), _chain_rule, ()),
+            "`evidence.rows`."
+        ),
+        (),
+    ),
+    "mesh-graph": (("elements.zero_slack_share",), _mesh_rule, ()),
+    "chain-graph": (("elements.zero_slack_share",), _chain_rule, ()),
     # `UX-478`: **no evidence path**, and deliberately.
     #
     # What this claim reads is `elements.unweighted_depth`, which is a
@@ -620,17 +668,21 @@ _CLAIMS = {
     "graph-width": ((), _width_rule, ()),
     "shared-source-blast": (
         ("resource_blast.element_count",),
-        _unconditional(
-            "Published whenever the source inventory found a resource more "
-            "than one element shares."), ()),
+        _unconditional("Published whenever the source inventory found a resource more than one element shares."),
+        (),
+    ),
     "memory-envelope": (
         (),
         _unconditional(
             "Published whenever both halves were measured - the per-element "
-            "peaks from Plane 2 and the host's RAM from the capture."),
-        ("memory_envelope.at_observed_builders.envelope_mb",
-         "memory_envelope.host_memory_mb",
-         "memory_envelope.first_builders_that_does_not_fit")),
+            "peaks from Plane 2 and the host's RAM from the capture."
+        ),
+        (
+            "memory_envelope.at_observed_builders.envelope_mb",
+            "memory_envelope.host_memory_mb",
+            "memory_envelope.first_builders_that_does_not_fit",
+        ),
+    ),
     "capacity-recommendation": (
         # UX-275: these resolve now. The block was computed, rendered by
         # the text report and dropped by the JSON renderer, so the four
@@ -643,14 +695,18 @@ _CLAIMS = {
         # never carried a builder count. The recommendation does, and
         # now that the recommendation is published the citation can
         # point at a field a reader can actually open.
-        ("capacity_recommendation.builders",
-         "capacity_recommendation.binding_constraint",
-         "capacity_recommendation.recommended_builders",
-         "capacity_recommendation.cores_busy"),
+        (
+            "capacity_recommendation.builders",
+            "capacity_recommendation.binding_constraint",
+            "capacity_recommendation.recommended_builders",
+            "capacity_recommendation.cores_busy",
+        ),
         _unconditional(
             "Published whenever the four constraints could be intersected; "
-            "which one binds is the finding's own `evidence`."),
-        ()),
+            "which one binds is the finding's own `evidence`."
+        ),
+        (),
+    ),
     # `UX-860`: **no evidence path**, `graph-width`'s reason again - the
     # span and page count are read from `overcommitted_intervals`' rows
     # and summed into the finding's own `evidence`, and no document
@@ -660,8 +716,10 @@ _CLAIMS = {
         _unconditional(
             "Published whenever an overcommitted window's own `swapped_out` "
             "count is over zero - the span and the pages are the finding's "
-            "own `evidence`."),
-        ()),
+            "own `evidence`."
+        ),
+        (),
+    ),
     # `UX-680`: **no evidence path**, for `graph-width`'s reason - both
     # halves live in `findings[].evidence.{unbounded_builders,
     # compiler_offload}`, nested under the finding rather than at a
@@ -674,48 +732,78 @@ _CLAIMS = {
             "Published whenever `bga sweep`'s own unbounded-capacity row "
             "priced the builder cap; the compiler-offload half needs a "
             "Plane 2 `binary_cost` too, and is absent without one - both "
-            "numbers are the finding's own `evidence`."),
-        ()),
+            "numbers are the finding's own `evidence`."
+        ),
+        (),
+    ),
     "execution-bound": (
         ("total_duration_us",),
-        _rule("OPPORTUNITY_FLOOR_PCT", _findings.OPPORTUNITY_FLOOR_PCT / 100,
-              "<", None,
-              f"No wait category reaches "
-              f"{_findings.OPPORTUNITY_FLOOR_PCT:.0f}% of wall-clock, so "
-              f"there is no scheduling gap to close and the elements "
-              f"themselves are the work."), ()),
+        _rule(
+            "OPPORTUNITY_FLOOR_PCT",
+            _findings.OPPORTUNITY_FLOOR_PCT / 100,
+            "<",
+            None,
+            f"No wait category reaches "
+            f"{_findings.OPPORTUNITY_FLOOR_PCT:.0f}% of wall-clock, so "
+            f"there is no scheduling gap to close and the elements "
+            f"themselves are the work.",
+        ),
+        (),
+    ),
     "wait-category": (
         lambda claim, document: (
             "attribution." + str((claim.get("evidence") or {}).get("category")),
-            "total_duration_us"),
-        _wait_category_rule, ()),
+            "total_duration_us",
+        ),
+        _wait_category_rule,
+        (),
+    ),
     "joint-saving": (
-        ("joint_saving.joint_saving_us",
-         "joint_saving.sum_of_individual_us",
-         "joint_saving.savings_add", "total_duration_us"),
+        (
+            "joint_saving.joint_saving_us",
+            "joint_saving.sum_of_individual_us",
+            "joint_saving.savings_add",
+            "total_duration_us",
+        ),
         _unconditional(
             "Published whenever the top elements have a joint projection; "
-            "whether the savings add is the finding, not its gate."), ()),
+            "whether the savings add is the finding, not its gate."
+        ),
+        (),
+    ),
     "optimization-horizon": (
-        ("optimization_horizon[0].makespan_after_us",
-         "optimization_horizon[0].cumulative_saving_us",
-         "total_duration_us"),
+        (
+            "optimization_horizon[0].makespan_after_us",
+            "optimization_horizon[0].cumulative_saving_us",
+            "total_duration_us",
+        ),
         _unconditional(
             "Published when the horizon has more than one step - a "
-            "single-step horizon is the first fix, which is already named."),
-        ()),
+            "single-step horizon is the first fix, which is already named."
+        ),
+        (),
+    ),
     "latent-heavies": (
         ("latent_heavies[0].duration_us",),
         _unconditional(
             "Published whenever elements off the critical path are heavy "
-            "enough to bound how far shortening the chain can go."), ()),
+            "enough to bound how far shortening the chain can go."
+        ),
+        (),
+    ),
     "blast-radius-ranking": (
         ("headline.chain_share",),
-        _rule("CHAIN_BOUND_RATIO", _findings.CHAIN_BOUND_RATIO, "<",
-              "headline.chain_share",
-              "Who-depends-on-me is ranked only on a build the chain does "
-              "not already constrain; above the threshold the ranking that "
-              "matters is how long each element takes."), ()),
+        _rule(
+            "CHAIN_BOUND_RATIO",
+            _findings.CHAIN_BOUND_RATIO,
+            "<",
+            "headline.chain_share",
+            "Who-depends-on-me is ranked only on a build the chain does "
+            "not already constrain; above the threshold the ranking that "
+            "matters is how long each element takes.",
+        ),
+        (),
+    ),
     "blast-radius-reach": (
         _blast_paths,
         _unconditional(
@@ -727,7 +815,10 @@ _CLAIMS = {
             "the build is bound. Elements with no dependents "
             "are left out rather than listed at zero: a row reading "
             "\"0 downstream\" answers the question with a number "
-            "meaning nobody."), ()),
+            "meaning nobody."
+        ),
+        (),
+    ),
     "blast-radius-structural": (
         _blast_paths,
         _unconditional(
@@ -735,7 +826,10 @@ _CLAIMS = {
             "structural kinds - a base image, a toolchain, a stack. Their "
             "dependents are the graph's shape rather than a task, which is "
             "why UX-258 reports them here instead of ranking them as work "
-            "(the rule UX-76 already applied to criticality)."), ()),
+            "(the rule UX-76 already applied to criticality)."
+        ),
+        (),
+    ),
     "fan-in-ranking": (
         _fan_in_paths,
         _unconditional(
@@ -746,14 +840,20 @@ _CLAIMS = {
             "mirror it is not gated on the diagnosis: what an element "
             "is built on is true whichever way the build is bound, and "
             "the claim is a description of the graph rather than an "
-            "ordering of work."), ()),
+            "ordering of work."
+        ),
+        (),
+    ),
     "fan-in-structural": (
         _fan_in_paths,
         _unconditional(
             "Published when a structural kind - a stack, a base image - "
             "has the widest closure. It depends on everything on "
             "purpose, so the count is the graph's shape and not a "
-            "task."), ()),
+            "task."
+        ),
+        (),
+    ),
     "blast-radius-foundation": (
         _blast_paths,
         _unconditional(
@@ -761,36 +861,52 @@ _CLAIMS = {
             "declared foundation element - a toolchain or base image the "
             "kind-based exemption above misses, because it is an "
             "`autotools`/`manual`/`cmake` element by kind. Excluded from "
-            "the ranking on the declaration, not a guess."), ()),
+            "the ranking on the declaration, not a guess."
+        ),
+        (),
+    ),
     "fan-in-foundation": (
         _fan_in_paths,
         _unconditional(
             "UX-683: the fan-in mirror - a declared foundation element "
             "has the widest closure on purpose, same rule as the blast "
-            "claim above."), ()),
+            "claim above."
+        ),
+        (),
+    ),
     "foundation-candidates": (
         _blast_paths,
         _unconditional(
             "UX-683's discovery half: published when an element at or "
             "above the top p5 fan-out is neither a structural kind nor "
             "already declared foundation - the owner declares, the tool "
-            "only proposes."), ()),
+            "only proposes."
+        ),
+        (),
+    ),
     "criticality": (
         ("floors.t_infinity_observed",),
         _unconditional(
             "Published when at least one non-structural element has a "
             "non-certain probability of being on the path; a list where "
-            "every entry is 1.0 ranks nothing."), ()),
+            "every entry is 1.0 ranks nothing."
+        ),
+        (),
+    ),
     "certified-headroom": (
-        ("floors.certified_headroom", "floors.t_infinity_observed",
-         "floors.lb"),
-        _rule(None, 0, ">", "floors.certified_headroom",
-              "Published when the certified floor leaves any headroom at "
-              "all; zero headroom is a fact the floors section states, not "
-              "a finding."), ()),
-    "efficiency-score": (
-        ("floors.efficiency_score", "confidence.primary"),
-        _efficiency_rule, ()),
+        ("floors.certified_headroom", "floors.t_infinity_observed", "floors.lb"),
+        _rule(
+            None,
+            0,
+            ">",
+            "floors.certified_headroom",
+            "Published when the certified floor leaves any headroom at "
+            "all; zero headroom is a fact the floors section states, not "
+            "a finding.",
+        ),
+        (),
+    ),
+    "efficiency-score": (("floors.efficiency_score", "confidence.primary"), _efficiency_rule, ()),
 }
 
 
@@ -805,11 +921,13 @@ def record(claim: dict, claim_id: str, kind: str, document: dict) -> dict:
     spec = _CLAIMS.get(claim_id)
     if spec is None:
         return {
-            "claim": claim_id, "kind": kind, "document": ANALYZE_DOCUMENT,
+            "claim": claim_id,
+            "kind": kind,
+            "document": ANALYZE_DOCUMENT,
             "evidence": [],
             "rule": _unconditional(
-                "No rule is recorded for this claim - it is published "
-                "without one rather than with an invented one."),
+                "No rule is recorded for this claim - it is published without one rather than with an invented one."
+            ),
             **_published_queries(claim_id),
             "unpublished_inputs": [],
         }
@@ -897,10 +1015,12 @@ def attach(document: dict) -> dict:
     already carried. `headline.top_actions[].finding_id` and
     `findings[].id` are the claim ids; this is what they resolve into.
     """
-    records = [record(document["headline"], "diagnosis", "diagnosis", document)
-               ] if isinstance(document.get("headline"), dict) else []
-    records += [record(finding, finding.get("id"), "finding", document)
-                for finding in document.get("findings") or []]
+    records = (
+        [record(document["headline"], "diagnosis", "diagnosis", document)]
+        if isinstance(document.get("headline"), dict)
+        else []
+    )
+    records += [record(finding, finding.get("id"), "finding", document) for finding in document.get("findings") or []]
     document["provenance"] = records
     # `UX-368`: and on the finding itself, from the same table, in the
     # same pass. The mapping was published only on the record, and
@@ -918,8 +1038,7 @@ def attach(document: dict) -> dict:
 
 
 def _finding_by_id(document: dict, finding_id: Optional[str]):
-    return next((f for f in document.get("findings") or []
-                 if f.get("id") == finding_id), None)
+    return next((f for f in document.get("findings") or [] if f.get("id") == finding_id), None)
 
 
 def unresolved_references(document: dict) -> list[str]:
@@ -939,8 +1058,7 @@ def unresolved_references(document: dict) -> list[str]:
                 dangling.append(f"{entry['claim']}: {cited['path']}")
     for action in (document.get("headline") or {}).get("top_actions") or []:
         if action.get("finding_id") and action["finding_id"] not in published:
-            dangling.append(
-                f"headline.top_actions: {action['finding_id']} explains nothing")
+            dangling.append(f"headline.top_actions: {action['finding_id']} explains nothing")
     for finding in document.get("findings") or []:
         if finding.get("id") and finding["id"] not in published:
             dangling.append(f"findings: {finding['id']} explains nothing")
@@ -981,9 +1099,7 @@ def render(provenance: dict, indent: str = "    ") -> list[str]:
     lines = [f"{indent}why: {provenance['rule']['sentence']}"]
     rule = provenance["rule"]
     if rule.get("name"):
-        lines.append(
-            f"{indent}rule: {rule['name']} = {rule['threshold']} "
-            f"({rule['comparison']}, {rule['module']})")
+        lines.append(f"{indent}rule: {rule['name']} = {rule['threshold']} ({rule['comparison']}, {rule['module']})")
     for entry in provenance.get("evidence") or []:
         mark = "" if entry.get("resolved") else "  [unresolved]"
         lines.append(f"{indent}  {entry['path']} = {entry['value']}{mark}")
@@ -991,10 +1107,8 @@ def render(provenance: dict, indent: str = "    ") -> list[str]:
         lines.append(f"{indent}  {path} = (computed, not published)")
     # `UX-448`: every grain, not only the first. A terminal reader who
     # is told one query exists has no way to learn the second one does.
-    deeper = provenance.get("trace_queries") or (
-        [provenance["trace_query"]] if provenance.get("trace_query") else [])
+    deeper = provenance.get("trace_queries") or ([provenance["trace_query"]] if provenance.get("trace_query") else [])
     if deeper:
         named = ", ".join(f"`{query}`" for query in deeper)
-        lines.append(f"{indent}deeper: trace "
-                     f"{'queries' if len(deeper) > 1 else 'query'} {named}")
+        lines.append(f"{indent}deeper: trace {'queries' if len(deeper) > 1 else 'query'} {named}")
     return lines

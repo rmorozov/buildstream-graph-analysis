@@ -6,6 +6,7 @@ as `UX-1078`'s phases, as `calls` rows under the phase they ran inside.
 A fake `bst` on PATH logs every invocation it received to a file; the
 guard is that `tail.json`'s (or the ledger's) `calls` equal that log.
 """
+
 import json
 import os
 import stat
@@ -85,8 +86,7 @@ def test_hostinfo_times_bst_but_not_the_others(tmp_path, monkeypatch):
 def test_list_contents_records_one_call_per_batch(tmp_path, monkeypatch):
     from tools.bst_native_build_tracer import read_artifact_contents
 
-    binaries, log = _fake_bst(
-        tmp_path, "echo 'app.bst:'; echo '/usr/include/app.h'")
+    binaries, log = _fake_bst(tmp_path, "echo 'app.bst:'; echo '/usr/include/app.h'")
     monkeypatch.setenv("PATH", f"{binaries}{os.pathsep}{os.environ['PATH']}")
 
     with progress.timed("Plane 2 report"):
@@ -195,4 +195,5 @@ def test_the_doctor_call_sits_under_before_the_build(tmp_path, monkeypatch):
         if name == "before the build":
             continue
         assert not any(c["verb"].endswith("bst --version") for c in row["calls"]), (
-            f"{name!r} carries the doctor's call too: {row['calls']}")
+            f"{name!r} carries the doctor's call too: {row['calls']}"
+        )

@@ -18,6 +18,7 @@ This file covers item 1's correctness angle (multi-task-per-element
 predecessor mapping, via P1-19's fix) plus an informal but real
 performance check across items 1 and 2.
 """
+
 import json
 import sys
 
@@ -38,17 +39,23 @@ def _linear_chain_run_dir(tmp_path, n, epsilon_us=1000, dur_us=1000):
     run_dir = tmp_path / "run"
     run_dir.mkdir(parents=True)
     elements = [{"uid": f"e{i}.bst", "requested_target": (i == n - 1)} for i in range(n)]
-    dependencies = [
-        {"predecessor": f"e{i}.bst", "successor": f"e{i + 1}.bst"} for i in range(n - 1)
-    ]
+    dependencies = [{"predecessor": f"e{i}.bst", "successor": f"e{i + 1}.bst"} for i in range(n - 1)]
     spans = [
-        {"task_key": f"e{i}.bst|BUILD|BUILD|0", "ts_us": i * dur_us, "dur_us": dur_us,
-         "resources": ["PROCESS"], "primary_resource": "PROCESS"}
+        {
+            "task_key": f"e{i}.bst|BUILD|BUILD|0",
+            "ts_us": i * dur_us,
+            "dur_us": dur_us,
+            "resources": ["PROCESS"],
+            "primary_resource": "PROCESS",
+        }
         for i in range(n)
     ]
     run_context = {
-        "trace_epsilon_us": epsilon_us, "wall_start_us": 0, "wall_end_us": n * dur_us + dur_us,
-        "max_jobs": 1, "resource_capacities": {"PROCESS": 1},
+        "trace_epsilon_us": epsilon_us,
+        "wall_start_us": 0,
+        "wall_end_us": n * dur_us + dur_us,
+        "max_jobs": 1,
+        "resource_capacities": {"PROCESS": 1},
     }
     graph = {"elements": elements, "dependencies": dependencies}
     trace = {"spans": spans, "phases": []}
@@ -67,8 +74,11 @@ def test_multi_task_kind_element_predecessors_correctly_distinguished(tmp_path):
     run_dir = tmp_path / "run"
     run_dir.mkdir()
     run_context = {
-        "trace_epsilon_us": 1000, "wall_start_us": 0, "wall_end_us": 100000,
-        "max_jobs": 1, "resource_capacities": {"PROCESS": 1, "DOWNLOAD": 1},
+        "trace_epsilon_us": 1000,
+        "wall_start_us": 0,
+        "wall_end_us": 100000,
+        "max_jobs": 1,
+        "resource_capacities": {"PROCESS": 1, "DOWNLOAD": 1},
     }
     graph = {
         "elements": [{"uid": "a.bst"}, {"uid": "b.bst", "requested_target": True}],
@@ -76,12 +86,27 @@ def test_multi_task_kind_element_predecessors_correctly_distinguished(tmp_path):
     }
     trace = {
         "spans": [
-            {"task_key": "a.bst|FETCH|FETCH|0", "ts_us": 0, "dur_us": 5000,
-             "resources": ["DOWNLOAD"], "primary_resource": "DOWNLOAD"},
-            {"task_key": "a.bst|BUILD|BUILD|0", "ts_us": 5000, "dur_us": 5000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "b.bst|BUILD|BUILD|0", "ts_us": 10000, "dur_us": 5000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
+            {
+                "task_key": "a.bst|FETCH|FETCH|0",
+                "ts_us": 0,
+                "dur_us": 5000,
+                "resources": ["DOWNLOAD"],
+                "primary_resource": "DOWNLOAD",
+            },
+            {
+                "task_key": "a.bst|BUILD|BUILD|0",
+                "ts_us": 5000,
+                "dur_us": 5000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "b.bst|BUILD|BUILD|0",
+                "ts_us": 10000,
+                "dur_us": 5000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
         ],
         "phases": [],
     }
@@ -92,9 +117,14 @@ def test_multi_task_kind_element_predecessors_correctly_distinguished(tmp_path):
     result = analyze_run(run_dir)
     h = result.occupancy["horizon_us"]
     total = sum(
-        result.attribution.get(k, 0) for k in (
-            "execution_on_chain_us", "dependency_wait_us", "resource_wait_us",
-            "scheduler_wait_us", "idle_us", "retry_wait_us",
+        result.attribution.get(k, 0)
+        for k in (
+            "execution_on_chain_us",
+            "dependency_wait_us",
+            "resource_wait_us",
+            "scheduler_wait_us",
+            "idle_us",
+            "retry_wait_us",
         )
     )
     # If b.bst's task had been mismapped to depend on a.bst's FETCH task
@@ -128,8 +158,7 @@ def _steps_taken(run_dir):
     steps = dict.fromkeys(_MEASURED, 0)
 
     def _count(frame, event, _arg):
-        where = next((one for one in _MEASURED
-                      if frame.f_code.co_filename.endswith(one)), None)
+        where = next((one for one in _MEASURED if frame.f_code.co_filename.endswith(one)), None)
         if where is None:
             return None
         if event != "call":
@@ -175,8 +204,10 @@ class TestTheThreeFunctionsScaleSubquadratically:
 
     @staticmethod
     def _both(tmp_path):
-        return (_steps_taken(_linear_chain_run_dir(tmp_path / "small", 500)),
-                _steps_taken(_linear_chain_run_dir(tmp_path / "large", 2000)))
+        return (
+            _steps_taken(_linear_chain_run_dir(tmp_path / "small", 500)),
+            _steps_taken(_linear_chain_run_dir(tmp_path / "large", 2000)),
+        )
 
     def test_four_times_the_graph_is_not_sixteen_times_the_work(self, tmp_path):
         small, large = self._both(tmp_path)
@@ -185,7 +216,8 @@ class TestTheThreeFunctionsScaleSubquadratically:
         assert ratio < self.BOUND, (
             f"4x the graph took {ratio:.2f}x the steps ({done} -> {grew}) - "
             f"looks quadratic, not O(N+E). Per module: "
-            f"{ {k: (small[k], large[k]) for k in _MEASURED} }")
+            f"{ {k: (small[k], large[k]) for k in _MEASURED} }"
+        )
 
     def test_every_measured_module_is_reached(self, tmp_path):
         """The vacuity floor. A module that moves, or a filename the
@@ -194,8 +226,10 @@ class TestTheThreeFunctionsScaleSubquadratically:
         small, large = self._both(tmp_path)
         silent = [one for one in _MEASURED if not small[one] or not large[one]]
         assert not silent, (
-            f"the trace reached no line of {silent}, so the ratio above is "
-            f"not about them", small, large)
+            f"the trace reached no line of {silent}, so the ratio above is not about them",
+            small,
+            large,
+        )
 
     def test_the_count_does_not_move_between_runs(self, tmp_path):
         """What the timed version could not claim, and the whole reason
@@ -204,5 +238,4 @@ class TestTheThreeFunctionsScaleSubquadratically:
         again and the ratio clause's margin means nothing."""
         first = _steps_taken(_linear_chain_run_dir(tmp_path / "one", 500))
         again = _steps_taken(_linear_chain_run_dir(tmp_path / "two", 500))
-        assert first == again, (
-            "two runs of the same graph counted different work", first, again)
+        assert first == again, ("two runs of the same graph counted different work", first, again)

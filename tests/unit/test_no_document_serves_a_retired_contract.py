@@ -34,6 +34,7 @@ occurrence is legitimate when the block it sits in states the
 retirement, and a finding when it does not - which is exactly the
 distinction a reader makes.
 """
+
 import pathlib
 
 import pytest
@@ -117,9 +118,7 @@ def _findings():
                     continue
                 for contract in retired:
                     if contract in line:
-                        found.append((path.relative_to(REPO).as_posix(),
-                                      start + offset, contract,
-                                      line.strip()[:120]))
+                        found.append((path.relative_to(REPO).as_posix(), start + offset, contract, line.strip()[:120]))
     return found
 
 
@@ -136,8 +135,8 @@ class TestNoLiveDocumentServesARetiredContract:
         assert bad == [], (
             "a document a reader reads for what bga does today names a "
             "contract nothing writes, without saying so:\n"
-            + "\n".join(f"  {name}:{line}  {contract}\n      {text}"
-                        for name, line, contract, text in bad))
+            + "\n".join(f"  {name}:{line}  {contract}\n      {text}" for name, line, contract, text in bad)
+        )
 
     def test_the_retired_tables_are_still_reachable_by_this_walk(self):
         """The other direction, and the one that makes the clause above
@@ -153,7 +152,8 @@ class TestNoLiveDocumentServesARetiredContract:
             seen.update(name for name in retired if name in text)
         assert len(seen) >= 5, (
             f"the walk finds only {sorted(seen)} of {sorted(retired)} - it "
-            f"has stopped reading the tables it is meant to be allowing")
+            f"has stopped reading the tables it is meant to be allowing"
+        )
 
     def test_the_exemption_still_earns_itself(self):
         """`directions.md` is skipped because it says, in its own
@@ -164,8 +164,8 @@ class TestNoLiveDocumentServesARetiredContract:
             found = [path for path in _documents() if path.name == name]
             assert found, f"{name} is exempted and does not exist"
             assert sentence in found[0].read_text(encoding="utf-8"), (
-                f"{name} no longer says {sentence!r}, which is the whole "
-                f"reason this guard skips it")
+                f"{name} no longer says {sentence!r}, which is the whole reason this guard skips it"
+            )
 
 
 class TestTheRoleTableNamesTheLiveJoin:
@@ -177,12 +177,11 @@ class TestTheRoleTableNamesTheLiveJoin:
         from bga import schemas
 
         text = (REPO / "docs/design/roles.md").read_text(encoding="utf-8")
-        row = [line for line in text.splitlines()
-               if line.startswith("| R2 ")]
+        row = [line for line in text.splitlines() if line.startswith("| R2 ")]
         assert len(row) == 1, row
         assert schemas.CORRELATE in row[0], (
-            f"R2 is served by the element object, whose contract is "
-            f"{schemas.CORRELATE}: {row[0]}")
+            f"R2 is served by the element object, whose contract is {schemas.CORRELATE}: {row[0]}"
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

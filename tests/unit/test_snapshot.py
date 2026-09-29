@@ -11,6 +11,7 @@ The `capture run` half is called for real in `test_dual_plane_capture.py`
 and friends; here it is replaced by a recorder, because what this file
 is about is the argv that reaches it.
 """
+
 import os
 
 import pytest
@@ -84,14 +85,14 @@ def recorded(monkeypatch, a_bst_on_path):
 
     fake_capture.returncode = 0
     import tools.bst_native_build_tracer as tracer
+
     monkeypatch.setattr(tracer, "main", fake_capture)
     return calls
 
 
 class TestWhatReachesCaptureRun:
     def test_the_stored_flags_are_the_ones_passed(self, project, recorded):
-        take_snapshot(str(project), ["bst", "build", "all.bst"],
-                      {"trace_opens": True, "trace_spine": "auto"})
+        take_snapshot(str(project), ["bst", "build", "all.bst"], {"trace_opens": True, "trace_spine": "auto"})
 
         [argv] = recorded
         assert argv[0] == "run"
@@ -105,32 +106,30 @@ class TestWhatReachesCaptureRun:
         """`--trace-spine` takes an *optional* value, so
         `--trace-spine auto PROJECT` feeds the positional to the flag -
         the exact trap UX-113's own documented capture command hit."""
-        take_snapshot(str(project), ["bst", "build", "all.bst"],
-                      {"trace_opens": False, "trace_spine": "on"})
+        take_snapshot(str(project), ["bst", "build", "all.bst"], {"trace_opens": False, "trace_spine": "on"})
 
         [argv] = recorded
         assert "--trace-spine=on" in argv
         assert "auto" not in argv and "on" not in argv
 
     def test_opens_off_means_the_flag_is_absent_not_negated(self, project, recorded):
-        take_snapshot(str(project), ["bst", "build", "all.bst"],
-                      {"trace_opens": False, "trace_spine": "off"})
+        take_snapshot(str(project), ["bst", "build", "all.bst"], {"trace_opens": False, "trace_spine": "off"})
 
         [argv] = recorded
         assert "--trace-opens" not in argv
 
     def test_the_command_is_passed_after_a_separator(self, project, recorded):
-        take_snapshot(str(project), ["bst", "--builders", "4", "build", "all.bst"],
-                      {"trace_opens": True, "trace_spine": "auto"})
+        take_snapshot(
+            str(project), ["bst", "--builders", "4", "build", "all.bst"], {"trace_opens": True, "trace_spine": "auto"}
+        )
 
         [argv] = recorded
-        assert argv[argv.index("--") + 1:] == [
-            "bst", "--builders", "4", "build", "all.bst"]
+        assert argv[argv.index("--") + 1 :] == ["bst", "--builders", "4", "build", "all.bst"]
 
     def test_the_snapshot_holds_the_documented_layout(self, project, recorded):
         snapshot, _code = take_snapshot(
-            str(project), ["bst", "build", "all.bst"],
-            {"trace_opens": True, "trace_spine": "auto"})
+            str(project), ["bst", "build", "all.bst"], {"trace_opens": True, "trace_spine": "auto"}
+        )
 
         assert os.path.isdir(os.path.join(snapshot, RUN_SUBDIR))
         assert os.path.isfile(os.path.join(snapshot, "capture-context.txt"))
@@ -146,8 +145,7 @@ class TestStickyFlags:
     def test_what_was_passed_wins_and_is_remembered(self, project):
         _sticky_config(str(project), _args(trace_spine="off", trace_opens=False))
 
-        assert run_store.read_config(str(project)) == {
-            "trace_opens": False, "trace_spine": "off"}
+        assert run_store.read_config(str(project)) == {"trace_opens": False, "trace_spine": "off"}
 
     def test_what_was_not_passed_is_what_the_project_last_used(self, project):
         _sticky_config(str(project), _args(trace_spine="off", trace_opens=False))
@@ -164,8 +162,7 @@ class TestStickyFlags:
         assert config == {"trace_opens": False, "trace_spine": "on"}
 
     def test_the_context_file_records_what_was_used(self, project):
-        text = _capture_context(str(project), ["bst", "build", "all.bst"],
-                                {"trace_opens": False, "trace_spine": "on"})
+        text = _capture_context(str(project), ["bst", "build", "all.bst"], {"trace_opens": False, "trace_spine": "on"})
 
         assert "trace_opens=false" in text
         assert "trace_spine=on" in text
@@ -174,6 +171,7 @@ class TestStickyFlags:
 
 def _args(**overrides):
     import argparse
+
     namespace = argparse.Namespace(trace_opens=None, trace_spine=None)
     for key, value in overrides.items():
         setattr(namespace, key, value)
@@ -181,8 +179,7 @@ def _args(**overrides):
 
 
 class TestTheLoop:
-    def test_the_first_run_says_what_makes_the_second_one_useful(
-            self, project, recorded, monkeypatch, capsys):
+    def test_the_first_run_says_what_makes_the_second_one_useful(self, project, recorded, monkeypatch, capsys):
         monkeypatch.chdir(project)
         monkeypatch.setattr(bga_snapshot, "_analyze", lambda *a, **k: (0, None))
 
@@ -190,13 +187,11 @@ class TestTheLoop:
 
         assert "first snapshot" in capsys.readouterr().out
 
-    def test_the_second_run_compares_against_the_first(
-            self, project, recorded, monkeypatch, capsys):
+    def test_the_second_run_compares_against_the_first(self, project, recorded, monkeypatch, capsys):
         monkeypatch.chdir(project)
         monkeypatch.setattr(bga_snapshot, "_analyze", lambda *a, **k: (0, None))
         compared = []
-        monkeypatch.setattr(bga_snapshot, "_compare",
-                            lambda base, cand: compared.append((base, cand)) or 0)
+        monkeypatch.setattr(bga_snapshot, "_compare", lambda base, cand: compared.append((base, cand)) or 0)
 
         main(["--", "bst", "build", "all.bst"])
         main(["--", "bst", "build", "all.bst"])
@@ -205,15 +200,13 @@ class TestTheLoop:
         snapshots = run_store.list_runs(str(project))
         assert (baseline, candidate) == (snapshots[-2], snapshots[-1])
 
-    def test_the_baseline_is_chosen_before_the_new_snapshot_exists(
-            self, project, recorded, monkeypatch):
+    def test_the_baseline_is_chosen_before_the_new_snapshot_exists(self, project, recorded, monkeypatch):
         """Off-by-one waiting to happen: list the store *after* the
         capture and the new run is its own baseline."""
         monkeypatch.chdir(project)
         monkeypatch.setattr(bga_snapshot, "_analyze", lambda *a, **k: (0, None))
         compared = []
-        monkeypatch.setattr(bga_snapshot, "_compare",
-                            lambda base, cand: compared.append((base, cand)) or 0)
+        monkeypatch.setattr(bga_snapshot, "_compare", lambda base, cand: compared.append((base, cand)) or 0)
 
         main(["--", "bst", "build", "all.bst"])
         main(["--", "bst", "build", "all.bst"])
@@ -221,18 +214,15 @@ class TestTheLoop:
         [(baseline, candidate)] = compared
         assert baseline != candidate
 
-    def test_no_compare_takes_the_snapshot_and_stops(
-            self, project, recorded, monkeypatch):
+    def test_no_compare_takes_the_snapshot_and_stops(self, project, recorded, monkeypatch):
         monkeypatch.chdir(project)
         monkeypatch.setattr(bga_snapshot, "_analyze", lambda *a, **k: (0, None))
-        monkeypatch.setattr(bga_snapshot, "_compare",
-                            lambda *a: pytest.fail("compared anyway"))
+        monkeypatch.setattr(bga_snapshot, "_compare", lambda *a: pytest.fail("compared anyway"))
 
         main(["--", "bst", "build", "all.bst"])
         assert main(["--no-compare", "--", "bst", "build", "all.bst"]) == 0
 
-    def test_both_plane2_reports_are_joined_to_their_own_runs(
-            self, project, recorded, monkeypatch):
+    def test_both_plane2_reports_are_joined_to_their_own_runs(self, project, recorded, monkeypatch):
         """Joining yesterday's report to today's run is precisely the
         mistake this item exists to remove, and the store is the only
         thing that knows which is which."""
@@ -246,24 +236,23 @@ class TestTheLoop:
 
         [argv] = [a for a in seen if a and a[0] == "compare"]
         baseline, candidate = argv[1], argv[2]
-        assert argv[argv.index("--baseline-plane2") + 1] == os.path.join(
-            os.path.dirname(baseline), PLANE2_NAME)
-        assert argv[argv.index("--candidate-plane2") + 1] == os.path.join(
-            os.path.dirname(candidate), PLANE2_NAME)
+        assert argv[argv.index("--baseline-plane2") + 1] == os.path.join(os.path.dirname(baseline), PLANE2_NAME)
+        assert argv[argv.index("--candidate-plane2") + 1] == os.path.join(os.path.dirname(candidate), PLANE2_NAME)
 
 
 class TestTheAnswerIsTheBuildsAnswer:
-    def test_a_failed_build_is_not_a_successful_snapshot(
-            self, project, recorded, monkeypatch):
+    def test_a_failed_build_is_not_a_successful_snapshot(self, project, recorded, monkeypatch):
         monkeypatch.chdir(project)
         monkeypatch.setattr(bga_snapshot, "_analyze", lambda *a, **k: (0, None))
         import tools.bst_native_build_tracer as tracer
+
         tracer.main.returncode = 255
 
         assert main(["--", "bst", "build", "all.bst"]) == 255
 
     def test_a_build_that_produced_no_run_directory_says_which_half_survived(
-            self, project, monkeypatch, capsys, a_bst_on_path):
+        self, project, monkeypatch, capsys, a_bst_on_path
+    ):
         def capture_without_a_run(argv):
             snapshot = os.path.dirname(argv[argv.index("--run-dir") + 1])
             with open(os.path.join(snapshot, PLANE2_NAME), "w") as handle:
@@ -271,6 +260,7 @@ class TestTheAnswerIsTheBuildsAnswer:
             return 255
 
         import tools.bst_native_build_tracer as tracer
+
         monkeypatch.setattr(tracer, "main", capture_without_a_run)
         monkeypatch.chdir(project)
 
@@ -280,16 +270,14 @@ class TestTheAnswerIsTheBuildsAnswer:
 
 
 class TestTheFrontDoorsOwnErrors:
-    def test_outside_a_project_it_says_so_rather_than_building(
-            self, tmp_path, monkeypatch, capsys):
+    def test_outside_a_project_it_says_so_rather_than_building(self, tmp_path, monkeypatch, capsys):
         monkeypatch.chdir(tmp_path)
 
         assert main(["--", "bst", "build", "all.bst"]) == 2
 
         assert "no BuildStream project here" in capsys.readouterr().err
 
-    def test_no_command_is_a_usage_error_not_an_empty_build(
-            self, project, monkeypatch, capsys):
+    def test_no_command_is_a_usage_error_not_an_empty_build(self, project, monkeypatch, capsys):
         monkeypatch.chdir(project)
 
         assert main([]) == 2
@@ -303,8 +291,7 @@ class TestListing:
 
         assert "bga snapshot" in capsys.readouterr().out
 
-    def test_the_aliases_shown_are_the_ones_resolution_would_give(
-            self, project, capsys):
+    def test_the_aliases_shown_are_the_ones_resolution_would_give(self, project, capsys):
         for stamp in ("20260101T000000Z", "20260102T000000Z", "20260103T000000Z"):
             os.makedirs(os.path.join(run_store.runs_dir(str(project)), stamp, "run"))
 
@@ -313,36 +300,29 @@ class TestListing:
         out = capsys.readouterr().out
         assert "20260103T000000Z" in out and "@last" in out
         # UX-159 put a size between the name and the alias.
-        assert [ln for ln in out.splitlines()
-                if "20260103T000000Z" in ln and ln.rstrip().endswith("@last")]
-        assert [ln for ln in out.splitlines()
-                if "20260102T000000Z" in ln and ln.rstrip().endswith("@prev")]
+        assert [ln for ln in out.splitlines() if "20260103T000000Z" in ln and ln.rstrip().endswith("@last")]
+        assert [ln for ln in out.splitlines() if "20260102T000000Z" in ln and ln.rstrip().endswith("@prev")]
         # the oldest carries no alias - the line ends at its size
-        assert [ln for ln in out.splitlines()
-                if "20260101T000000Z" in ln
-                and not ln.rstrip().endswith(("@last", "@prev"))]
+        assert [
+            ln for ln in out.splitlines() if "20260101T000000Z" in ln and not ln.rstrip().endswith(("@last", "@prev"))
+        ]
 
     def test_an_incomplete_capture_is_listed_without_an_alias(self, project, capsys):
-        os.makedirs(os.path.join(
-            run_store.runs_dir(str(project)), "20260101T000000Z", "run"))
-        os.makedirs(os.path.join(
-            run_store.runs_dir(str(project)), "20260102T000000Z"))
+        os.makedirs(os.path.join(run_store.runs_dir(str(project)), "20260101T000000Z", "run"))
+        os.makedirs(os.path.join(run_store.runs_dir(str(project)), "20260102T000000Z"))
 
         _list(str(project))
 
         out = capsys.readouterr().out
-        assert [ln for ln in out.splitlines()
-                if "20260101T000000Z" in ln and ln.rstrip().endswith("@last")]
-        assert [ln for ln in out.splitlines()
-                if "20260102T000000Z" in ln and "(no run directory" in ln]
+        assert [ln for ln in out.splitlines() if "20260101T000000Z" in ln and ln.rstrip().endswith("@last")]
+        assert [ln for ln in out.splitlines() if "20260102T000000Z" in ln and "(no run directory" in ln]
 
 
 class TestAnExitThatSaysWhy:
     """UX-738: round 100's gate read a complete-looking report beside
     `assert 255 == 0` with nothing in either stream saying why."""
 
-    def test_the_last_line_names_the_exit_code_and_incompletion(
-            self, project, recorded, monkeypatch):
+    def test_the_last_line_names_the_exit_code_and_incompletion(self, project, recorded, monkeypatch):
         """Both streams land on the same terminal in call order, which
         `capsys` cannot show (it keeps stdout/stderr in two buffers) -
         so both are redirected to one buffer here instead."""
@@ -352,6 +332,7 @@ class TestAnExitThatSaysWhy:
         monkeypatch.chdir(project)
         monkeypatch.setattr(bga_snapshot, "_analyze", lambda *a, **k: (0, None))
         import tools.bst_native_build_tracer as tracer
+
         tracer.main.returncode = 255
 
         buffer = io.StringIO()
@@ -362,8 +343,7 @@ class TestAnExitThatSaysWhy:
         lines = [ln for ln in buffer.getvalue().splitlines() if ln.strip()]
         assert "255" in lines[-1] and "did not complete" in lines[-1]
 
-    def test_a_zero_exit_names_nothing(
-            self, project, recorded, monkeypatch, capsys):
+    def test_a_zero_exit_names_nothing(self, project, recorded, monkeypatch, capsys):
         """The mutation's control: a clean build must not gain a trailing
         line it never had before."""
         monkeypatch.chdir(project)
@@ -401,23 +381,19 @@ class TestZeroExecutionRefusesAVerdict:
         plane2.write_text("{}")
         return str(run_dir), str(plane2), str(tmp_path / "out.json")
 
-    def test_zero_execution_and_a_failed_build_is_refused(
-            self, monkeypatch, tmp_path, capsys):
+    def test_zero_execution_and_a_failed_build_is_refused(self, monkeypatch, tmp_path, capsys):
         run_dir, plane2, publish_to = self._stub(monkeypatch, tmp_path, 0)
 
-        bga_snapshot._analyze(run_dir, plane2, publish_to=publish_to,
-                              build_exit=255)
+        bga_snapshot._analyze(run_dir, plane2, publish_to=publish_to, build_exit=255)
 
         out = capsys.readouterr().out
         assert "DID NOT FINISH" in out
         assert "VERDICT" not in out
 
-    def test_a_cached_build_with_zero_execution_still_prints(
-            self, monkeypatch, tmp_path, capsys):
+    def test_a_cached_build_with_zero_execution_still_prints(self, monkeypatch, tmp_path, capsys):
         run_dir, plane2, publish_to = self._stub(monkeypatch, tmp_path, 0)
 
-        bga_snapshot._analyze(run_dir, plane2, publish_to=publish_to,
-                              build_exit=0)
+        bga_snapshot._analyze(run_dir, plane2, publish_to=publish_to, build_exit=0)
 
         assert "VERDICT" in capsys.readouterr().out
 
@@ -444,8 +420,7 @@ def test_a_write_failure_names_the_path_from_the_wrapped_log(tmp_path):
 def test_the_size_warning_fires_only_past_the_threshold(project, monkeypatch, capsys):
     monkeypatch.setattr(bga_snapshot, "_SIZE_WARN_BYTES", 10)
     os.makedirs(os.path.join(run_store.runs_dir(str(project)), "20260101T000000Z"))
-    with open(os.path.join(run_store.runs_dir(str(project)),
-                           "20260101T000000Z", "big"), "wb") as handle:
+    with open(os.path.join(run_store.runs_dir(str(project)), "20260101T000000Z", "big"), "wb") as handle:
         handle.write(b"x" * 64)
 
     bga_snapshot._warn_if_large(str(project))
@@ -501,20 +476,34 @@ def test_the_two_line_loop_on_a_real_build(tmp_path):
     # was written, for the same reason on the one example that already had
     # one. Copying an example project root is now a thing with a
     # precondition.
-    shutil.copytree(source, project, symlinks=True,
-                    ignore=shutil.ignore_patterns(".bga"))
+    shutil.copytree(source, project, symlinks=True, ignore=shutil.ignore_patterns(".bga"))
     # Prepended, not assigned: `isolated_bst_env` may have put the real
     # user site-packages on PYTHONPATH to survive the changed HOME, and
     # replacing it takes jinja2 away from `bst` (UX-84's own trap).
     env = isolated_bst_env(tmp_path / "home")
-    env["PYTHONPATH"] = os.pathsep.join(
-        [repo] + ([env["PYTHONPATH"]] if env.get("PYTHONPATH") else []))
+    env["PYTHONPATH"] = os.pathsep.join([repo] + ([env["PYTHONPATH"]] if env.get("PYTHONPATH") else []))
 
     def snapshot():
         return subprocess.run(
-            [sys.executable, "-m", "bga.cli", "snapshot", "--",
-             "bst", "--no-colors", "--builders", "2", "build", "all.bst"],
-            cwd=str(project), env=env, capture_output=True, text=True, timeout=900)
+            [
+                sys.executable,
+                "-m",
+                "bga.cli",
+                "snapshot",
+                "--",
+                "bst",
+                "--no-colors",
+                "--builders",
+                "2",
+                "build",
+                "all.bst",
+            ],
+            cwd=str(project),
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=900,
+        )
 
     first = snapshot()
     assert first.returncode == 0, first.stderr[-4000:]
@@ -537,12 +526,22 @@ def test_the_two_line_loop_on_a_real_build(tmp_path):
     # The store is what the aliases name, from a shell that knows no paths.
     listed = subprocess.run(
         [sys.executable, "-m", "bga.cli", "snapshot", "--list"],
-        cwd=str(project), env=env, capture_output=True, text=True, timeout=60)
+        cwd=str(project),
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
     assert "@last" in listed.stdout and "@prev" in listed.stdout
 
     resolved = subprocess.run(
         [sys.executable, "-m", "bga.cli", "compare", "@prev", "@last"],
-        cwd=str(project), env=env, capture_output=True, text=True, timeout=300)
+        cwd=str(project),
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=300,
+    )
     assert "Verdict:" in resolved.stdout, resolved.stderr[-4000:]
 
 
@@ -553,8 +552,7 @@ class TestStickyFlagsSayThemselves:
     unexplained blind spot is otherwise found at read time."""
 
     def test_a_remembered_non_default_is_named(self, project, capsys):
-        run_store.write_config(str(project), {"trace_spine": "off",
-                                              "trace_opens": True})
+        run_store.write_config(str(project), {"trace_spine": "off", "trace_opens": True})
 
         _sticky_config(str(project), _args())
 
@@ -575,16 +573,14 @@ class TestStickyFlagsSayThemselves:
     def test_a_flag_passed_now_is_not_reported_as_remembered(self, project, capsys):
         """It is on the command line the user just typed; telling them
         about it is noise, and calling it remembered is wrong."""
-        run_store.write_config(str(project), {"trace_spine": "off",
-                                              "trace_opens": True})
+        run_store.write_config(str(project), {"trace_spine": "off", "trace_opens": True})
 
         _sticky_config(str(project), _args(trace_spine="on"))
 
         assert "--trace-spine" not in capsys.readouterr().err
 
     def test_opens_off_is_reported_in_the_spelling_that_sets_it(self, project, capsys):
-        run_store.write_config(str(project), {"trace_spine": "auto",
-                                              "trace_opens": False})
+        run_store.write_config(str(project), {"trace_spine": "auto", "trace_opens": False})
 
         _sticky_config(str(project), _args())
 

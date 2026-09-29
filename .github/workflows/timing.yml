@@ -1,0 +1,123 @@
+name: Timing
+
+# `UX-1121`: the timing verdicts a pull request only reports. Daily on the
+# default branch, both gates against CI's own record; each tool's `--carry`
+# (UX-442) reds only when two consecutive scheduled runs agree, from a
+# carry family of this workflow's own so ci.yml's series never mixes in.
+on:
+  schedule:
+    - cron: "30 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: timing
+  cancel-in-progress: false
+
+jobs:
+  timing:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-tags: true
+          fetch-depth: 0
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Read the records branch the gates read
+        run: python tools/dev_records.py fetch || true
+
+      - name: Test (with a timing report)
+        run: make test PYTEST_ARGS="--junitxml=${{ runner.temp }}/junit.xml"
+
+      - name: What the last scheduled run found over the tier gate
+        if: always()
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ runner.temp }}/tier_carry.json
+          key: timing-tier-carry-${{ github.run_id }}
+          restore-keys: |
+            timing-tier-carry-
+
+      - name: Tiers match CI's own record of them, on two runs
+        id: drift
+        if: always()
+        continue-on-error: true
+        run: |
+          python tools/dev_tier_drift.py "${{ runner.temp }}/junit.xml" \
+            --against --carry "${{ runner.temp }}/tier_carry.json" \
+            --summary "${{ runner.temp }}/tier_gate.txt" --annotate \
+            --source "github-actions ubuntu-latest, timing (3.12), -n auto"
+
+      - name: Leave it for the next scheduled run (tier gate)
+        if: always()
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ runner.temp }}/tier_carry.json
+          key: timing-tier-carry-${{ github.run_id }}
+
+      - name: What the last scheduled run found over the analyzer gate
+        if: always()
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ runner.temp }}/perf_carry.json
+          key: timing-perf-carry-${{ github.run_id }}
+          restore-keys: |
+            timing-perf-carry-
+
+      - name: The largest fixture, for the analyzer's own clock
+        if: always()
+        run: |
+          python -m bga.cli gen-synthetic "${{ runner.temp }}/perf_analyze" \
+            --seed 1 --layers 20 --width 200
+          python -m bga.cli gen-synthetic "${{ runner.temp }}/perf_export" \
+            --seed 1 --layers 20 --width 200
+
+      - name: The analyzer's own wall clock and peak RSS, on the largest fixture
+        if: always()
+        run: |
+          /usr/bin/time -v python -m bga.cli analyze \
+            "${{ runner.temp }}/perf_analyze" --format json \
+            -o "${{ runner.temp }}/perf_analyze/analyze.json" \
+            2> "${{ runner.temp }}/perf_analyze.time"
+          /usr/bin/time -v python -m bga.cli view --export \
+            "${{ runner.temp }}/perf_export.html" \
+            "${{ runner.temp }}/perf_export" \
+            2> "${{ runner.temp }}/perf_export.time"
+
+      - name: The analyzer's wall clock and RSS, on two runs
+        id: perf
+        if: always()
+        continue-on-error: true
+        run: |
+          python tools/dev_perf_ratchet.py --against tests/ci_reference.json \
+            --carry "${{ runner.temp }}/perf_carry.json" \
+            --summary "${{ runner.temp }}/perf_gate.txt" --annotate \
+            --source "github-actions ubuntu-latest, timing (3.12), -n auto" \
+            "${{ runner.temp }}/perf_analyze.time" \
+            "${{ runner.temp }}/perf_export.time"
+
+      - name: Leave it for the next scheduled run (analyzer gate)
+        if: always()
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ runner.temp }}/perf_carry.json
+          key: timing-perf-carry-${{ github.run_id }}
+
+      # Both gates run whatever the other found; the verdict is raised last.
+      - name: A timing gate held on two runs, raised
+        if: always() && (steps.drift.outcome == 'failure' || steps.perf.outcome == 'failure')
+        run: |
+          cat "${{ runner.temp }}/tier_gate.txt" "${{ runner.temp }}/perf_gate.txt" \
+            || echo "a gate wrote no summary."
+          echo "red at a timing gate on two consecutive scheduled runs (UX-1121)"
+          exit 1

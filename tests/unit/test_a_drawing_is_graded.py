@@ -46,6 +46,7 @@ geometry — every coordinate, every radius, both CSS boxes — is
 identical, and clause 3 asserts that from the numbers. The attribute is
 what makes clause 1 readable off the page rather than off the source.
 """
+
 import json
 import os
 import re
@@ -75,7 +76,8 @@ SHIM = str(REPO / "tests" / "dom_shim.mjs")
 
 def _js(body):
     """Drive the shipped modules against the shared shim (`UX-264`)."""
-    source = """
+    source = (
+        """
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
 globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
 _installDocument();
@@ -90,11 +92,17 @@ const all = (n, pred, out = []) => {
 };
 const text = (n) => !n ? "" : ((n.children ?? []).length
   ? (n._text ?? "") + n.children.map(text).join("") : (n._text ?? ""));
-""" + body
+"""
+        + body
+    )
     result = subprocess.run(
         [node, "--input-type=module", "-e", source],
-        capture_output=True, text=True, cwd=REPO, timeout=90,
-        env=dict(os.environ, BGA_DOM_SHIM=SHIM))
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=90,
+        env=dict(os.environ, BGA_DOM_SHIM=SHIM),
+    )
     return result
 
 
@@ -105,15 +113,12 @@ def _rules():
     forbids, and `style.css` explains the scale above the rules that use
     it.
     """
-    css = re.sub(r"/\*.*?\*/", "", (VIEWER / "style.css").read_text(
-        encoding="utf-8"), flags=re.S)
+    css = re.sub(r"/\*.*?\*/", "", (VIEWER / "style.css").read_text(encoding="utf-8"), flags=re.S)
     out = []
     for match in re.finditer(r"([^{}]+)\{([^{}]*)\}", css):
         selector = " ".join(match.group(1).split())
-        decls = [tuple(part.split(":", 1)) for part in match.group(2).split(";")
-                 if ":" in part]
-        out.append((selector, [(name.strip(), value.strip())
-                               for name, value in decls]))
+        decls = [tuple(part.split(":", 1)) for part in match.group(2).split(";") if ":" in part]
+        out.append((selector, [(name.strip(), value.strip()) for name, value in decls]))
     return out
 
 
@@ -127,6 +132,7 @@ def _ok(body):
 # 1. The grade is chosen, never defaulted.
 # --------------------------------------------------------------------------
 
+
 @needs_node
 class TestADrawingMustChooseItsGrade:
     """§2a's last rule: the grade is declared where the drawing is
@@ -135,10 +141,13 @@ class TestADrawingMustChooseItsGrade:
     which is precisely how three exhibits came to be drawn at annotation
     size."""
 
-    @pytest.mark.parametrize("call", [
-        'sparkline([1, 2, 3], { unit: "level" })',
-        'strip({ n: 3, min: 0, max: 9, p95: 8, deciles: { p50: 4 } }, {})',
-    ])
+    @pytest.mark.parametrize(
+        "call",
+        [
+            'sparkline([1, 2, 3], { unit: "level" })',
+            'strip({ n: 3, min: 0, max: 9, p95: 8, deciles: { p50: 4 } }, {})',
+        ],
+    )
     def test_omitting_the_grade_is_an_error(self, call):
         result = _js(f"""
 const {{ sparkline, strip }} = await import("./bga/viewer/drawings.js");
@@ -147,11 +156,12 @@ console.log("{{}}");
 """)
         assert result.returncode != 0, (
             "a drawing was made without a grade; §2a says the call site "
-            "chooses, and a silent default is what this item is fixing")
+            "chooses, and a silent default is what this item is fixing"
+        )
         assert "styleguide §2a" in result.stderr
 
     def test_an_invented_grade_is_an_error(self):
-        """"There is no third size" - so a third *name* cannot quietly
+        """ "There is no third size" - so a third *name* cannot quietly
         acquire one by being passed."""
         result = _js("""
 const { sparkline } = await import("./bga/viewer/drawings.js");
@@ -174,6 +184,7 @@ console.log(JSON.stringify(made));
 # --------------------------------------------------------------------------
 # 2. The scale is the only source of geometry.
 # --------------------------------------------------------------------------
+
 
 class TestTheScaleIsTheOnlySourceOfGeometry:
     """§2a: "drawing heights and type sizes come from a small token
@@ -202,12 +213,12 @@ class TestTheScaleIsTheOnlySourceOfGeometry:
     def test_every_view_box_is_built_from_the_scale(self):
         boxes = self._view_boxes()
         assert boxes, "no drawing found at all - the scan stopped working"
-        loose = [(name, line, expr) for name, line, expr in boxes
-                 if "size." not in expr and "SCALE[" not in expr
-                 and "${H}" not in expr and "${W}" not in expr]
-        assert not loose, (
-            "a drawing's box is written out rather than read from the "
-            f"scale (styleguide §2a): {loose}")
+        loose = [
+            (name, line, expr)
+            for name, line, expr in boxes
+            if "size." not in expr and "SCALE[" not in expr and "${H}" not in expr and "${W}" not in expr
+        ]
+        assert not loose, f"a drawing's box is written out rather than read from the scale (styleguide §2a): {loose}"
 
     def test_the_two_composed_figures_take_their_height_from_the_scale(self):
         """`${H}` passes the scan above only because `H` itself is
@@ -217,48 +228,48 @@ class TestTheScaleIsTheOnlySourceOfGeometry:
         assigns = re.findall(r"const (?:W = [^,;]+, )?H = ([^;]+);", source)
         assert assigns, "no figure height assigned in views.js"
         for expr in assigns:
-            assert "SCALE[" in expr, (
-                f"a figure's height is a local constant, not the scale: {expr}")
+            assert "SCALE[" in expr, f"a figure's height is a local constant, not the scale: {expr}"
 
     def test_the_css_boxes_are_tokens(self):
         """The half a reader actually measures. A `rem` beside a drawing
         selector is the same defect one layer down."""
         css = (VIEWER / "style.css").read_text(encoding="utf-8")
-        assert "--draw-annotation-h:" in css and "--draw-exhibit-h:" in css, (
-            "the size scale is not declared as tokens"
-        )
+        assert "--draw-annotation-h:" in css and "--draw-exhibit-h:" in css, "the size scale is not declared as tokens"
         # Every selector that sizes a drawing, and the rules that mention
         # it. A selector can appear in more than one rule - the two
         # exhibits share a `width: 100%` rule and each sets its own
         # height - so the question is asked of the whole set: *some* rule
         # gives it a height, and no rule gives it a literal one.
-        for selector in (".sparkline", ".density-strip", ".trend", ".band",
-                         ".series.exhibit .sparkline",
-                         ".density.exhibit .density-strip"):
-            rules = [(sel, decls) for sel, decls in _rules()
-                     if selector in [one.strip() for one in sel.split(",")]]
+        for selector in (
+            ".sparkline",
+            ".density-strip",
+            ".trend",
+            ".band",
+            ".series.exhibit .sparkline",
+            ".density.exhibit .density-strip",
+        ):
+            rules = [(sel, decls) for sel, decls in _rules() if selector in [one.strip() for one in sel.split(",")]]
             assert rules, f"no rule sizes {selector}"
-            heights = [(sel, value) for sel, decls in rules
-                       for name, value in decls if name == "height"]
+            heights = [(sel, value) for sel, decls in rules for name, value in decls if name == "height"]
             assert heights, f"{selector} is never given a height"
             for sel, value in heights:
-                assert "var(--draw-" in value, (
-                    f"a drawing's height is a literal, not a scale token: "
-                    f"{sel} -> {value}")
+                assert "var(--draw-" in value, f"a drawing's height is a literal, not a scale token: {sel} -> {value}"
 
     def test_an_exhibit_takes_the_container_width(self):
         css = (VIEWER / "style.css").read_text(encoding="utf-8")
         rule = re.search(
             r"\.series\.exhibit \.sparkline,\s*\n\.density\.exhibit "
-            r"\.density-strip\s*\{([^}]*)\}", css)
+            r"\.density-strip\s*\{([^}]*)\}",
+            css,
+        )
         assert rule, "the two exhibit drawings do not share a width rule"
-        assert "width: 100%" in rule.group(1), (
-            "§2a: an exhibit takes the container's width")
+        assert "width: 100%" in rule.group(1), "§2a: an exhibit takes the container's width"
 
 
 # --------------------------------------------------------------------------
 # 3. Annotation grade did not move.
 # --------------------------------------------------------------------------
+
 
 @needs_node
 class TestAnnotationGradeIsUnchanged:
@@ -288,8 +299,7 @@ console.log(JSON.stringify({
 """)
         assert out["viewBox"] == "0 0 100 20"
         # The §2 geometry, spelled out: y = 18 - fraction * 16.
-        assert out["points"] == (
-            "0.00,12.00 25.00,18.00 50.00,2.00 75.00,14.00 100.00,6.00")
+        assert out["points"] == ("0.00,12.00 25.00,18.00 50.00,2.00 75.00,14.00 100.00,6.00")
         assert set(out["radii"]) == {"1.60"}
 
     def test_an_annotation_strip_draws_the_same_bar_and_ticks(self):
@@ -318,6 +328,7 @@ console.log(JSON.stringify({
 # --------------------------------------------------------------------------
 # 4. An exhibit is an exhibit all the way.
 # --------------------------------------------------------------------------
+
 
 @needs_node
 class TestAnExhibitIsDrawnAtExhibitSize:
@@ -355,8 +366,8 @@ const at = (grade) => {
 console.log(JSON.stringify({ annotation: at("annotation"), exhibit: at("exhibit") }));
 """)
         assert out["annotation"] == out["exhibit"], (
-            "an exhibit is the annotation drawing at exhibit size; these "
-            "two drew different pictures")
+            "an exhibit is the annotation drawing at exhibit size; these two drew different pictures"
+        )
 
     def test_an_exhibit_labels_its_ends(self):
         """UX-863: the labelled set is min, p10, p50, p90, p99, max -
@@ -374,9 +385,14 @@ console.log(JSON.stringify(
   (axis?.children ?? []).map((n) => [n.attrs["data-mark"], n.attrs["data-at"],
                                      text(n)])));
 """)
-        assert out == [["min", "0.00", "0u"], ["p10", "8.33", "10u"],
-                       ["p50", "25.00", "30u"], ["p90", "50.00", "60u"],
-                       ["p99", "75.00", "90u"], ["max", "100.00", "120u"]]
+        assert out == [
+            ["min", "0.00", "0u"],
+            ["p10", "8.33", "10u"],
+            ["p50", "25.00", "30u"],
+            ["p90", "50.00", "60u"],
+            ["p99", "75.00", "90u"],
+            ["max", "100.00", "120u"],
+        ]
 
     def test_every_tick_sits_where_the_drawing_puts_that_mark(self):
         """The label and the mark are one reading, so they are asserted
@@ -397,7 +413,8 @@ console.log(JSON.stringify({ drawn, labels: Object.fromEntries(
 """)
         for mark, position in out["labels"].items():
             assert position == pytest.approx(out["drawn"][mark], abs=0.01), (
-                f"the {mark} label is not above the {mark} mark")
+                f"the {mark} label is not above the {mark} mark"
+            )
 
 
 @needs_node
@@ -424,8 +441,7 @@ console.log(JSON.stringify({
 """)
         assert out["drawn"] == "4,1,9,3,7"
         assert out["head"] == ["Level", "Value"]
-        assert out["rows"] == [["1", "4u"], ["2", "1u"], ["3", "9u"],
-                               ["4", "3u"], ["5", "7u"]]
+        assert out["rows"] == [["1", "4u"], ["2", "1u"], ["3", "9u"], ["4", "3u"], ["5", "7u"]]
 
     def test_a_distribution_twin_holds_every_published_mark(self):
         out = _ok("""
@@ -436,8 +452,7 @@ const twin = all(block, (n) => n.attrs["data-role"] === "drawing-twin")[0];
 console.log(JSON.stringify(
   (twin.children[1].children ?? []).map((tr) => (tr.children ?? []).map(text))));
 """)
-        assert out == [["min", "0"], ["median", "25"], ["p95", "90"],
-                       ["max", "100"], ["n", "11"]]
+        assert out == [["min", "0"], ["median", "25"], ["p95", "90"], ["max", "100"], ["n", "11"]]
 
     def test_the_twin_starts_closed_and_round_trips(self):
         """Closed, because the drawing is the answer; reachable, because
@@ -454,8 +469,7 @@ button.click(); seen.push([table.hidden, text(button)]);
 button.click(); seen.push([table.hidden, text(button)]);
 console.log(JSON.stringify(seen));
 """)
-        assert out == [[True, "As table"], [False, "As drawing"],
-                       [True, "As table"]]
+        assert out == [[True, "As table"], [False, "As drawing"], [True, "As table"]]
 
     def test_the_twin_survives_print_without_the_toggle(self):
         """§2b's rule that hover is never the only door, applied to a
@@ -465,10 +479,10 @@ console.log(JSON.stringify(seen));
         # override and this one - and the question is whether *some*
         # block prints the twin open.
         blocks = re.findall(r"@media print \{(.*?)\n\}", css, re.S)
-        assert any("twin-table" in one and "display: table" in one
-                   for one in blocks), "the twin does not print open"
-        assert any("twin-toggle" in one and "display: none" in one
-                   for one in blocks), "the toggle prints as a dead control"
+        assert any("twin-table" in one and "display: table" in one for one in blocks), "the twin does not print open"
+        assert any("twin-toggle" in one and "display: none" in one for one in blocks), (
+            "the toggle prints as a dead control"
+        )
 
 
 @needs_node
@@ -504,21 +518,33 @@ console.log(JSON.stringify({{
     #: than clustered, so the tick-count and outer-class clauses below
     #: are not answered by the collision-avoidance dropping every
     #: interior label - that property has its own case, next.
-    V6 = {"n": 5000, "min": 0, "max": 1000,
-          "deciles": {"p10": 100, "p20": 200, "p30": 300, "p40": 400,
-                      "p50": 500, "p60": 600, "p70": 700, "p80": 800,
-                      "p90": 900},
-          "p95": 950, "p99": 990, "mean": 500}
+    V6 = {
+        "n": 5000,
+        "min": 0,
+        "max": 1000,
+        "deciles": {
+            "p10": 100,
+            "p20": 200,
+            "p30": 300,
+            "p40": 400,
+            "p50": 500,
+            "p60": 600,
+            "p70": 700,
+            "p80": 800,
+            "p90": 900,
+        },
+        "p95": 950,
+        "p99": 990,
+        "mean": 500,
+    }
     V2 = {"n": 20, "min": 0, "max": 100, "deciles": {"p50": 40}, "p95": 90}
 
     @pytest.mark.parametrize("shape,label", [(V6, "v6"), (V2, "v2")])
     def test_the_tick_count_equals_the_twins_percentile_rows(self, shape, label):
         out = self._ticks_and_twin(shape)
-        percentile_rows = [r for r in out["rows"]
-                           if r == "median" or re.fullmatch(r"p\d+", r)]
+        percentile_rows = [r for r in out["rows"] if r == "median" or re.fullmatch(r"p\d+", r)]
         assert out["tickMarks"], (label, out)
-        assert len(out["tickMarks"]) == len(percentile_rows), (
-            label, out["tickMarks"], percentile_rows)
+        assert len(out["tickMarks"]) == len(percentile_rows), (label, out["tickMarks"], percentile_rows)
 
     def test_the_outer_marks_carry_the_second_stroke_class(self):
         out = self._ticks_and_twin(self.V6)
@@ -572,12 +598,22 @@ console.log(JSON.stringify(
         # The tick itself is undiminished - only the label was dropped.
         assert "p99" in out["tickMarks"], out
 
-    @pytest.mark.parametrize("distribution", [
-        {"n": 20, "min": 50, "max": 50, "is_flat": True,
-         "deciles": {f"p{s}": 50 for s in range(10, 91, 10)},
-         "p95": 50, "p99": 50, "mean": 50},
-        {"n": 1, "min": 7, "max": 7},
-    ])
+    @pytest.mark.parametrize(
+        "distribution",
+        [
+            {
+                "n": 20,
+                "min": 50,
+                "max": 50,
+                "is_flat": True,
+                "deciles": {f"p{s}": 50 for s in range(10, 91, 10)},
+                "p95": 50,
+                "p99": 50,
+                "mean": 50,
+            },
+            {"n": 1, "min": 7, "max": 7},
+        ],
+    )
     def test_a_flat_distribution_and_n_of_one_draw_without_error(self, distribution):
         result = _js(f"""
 const {{ strip }} = await import("./bga/viewer/drawings.js");
@@ -647,17 +683,17 @@ def _boot(run_dir, tmp):
     view.export(str(run), str(page))
     html = page.read_text(encoding="utf-8")
     module = tmp / "inline.mjs"
-    module.write_text(
-        view.inflated_module(html),
-        encoding="utf-8")
+    module.write_text(view.inflated_module(html), encoding="utf-8")
     probe = tmp / "probe.mjs"
-    probe.write_text(_probe_source().split("const report =", 1)[0] + _TAIL,
-                     encoding="utf-8")
+    probe.write_text(_probe_source().split("const report =", 1)[0] + _TAIL, encoding="utf-8")
     result = subprocess.run(
-        [node, str(probe)], capture_output=True, text=True, cwd=REPO,
+        [node, str(probe)],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
         timeout=180,
-        env=dict(os.environ, PAGE=str(page), MOD=str(module),
-                 PROTOCOL="file:", BGA_DOM_SHIM=SHIM))
+        env=dict(os.environ, PAGE=str(page), MOD=str(module), PROTOCOL="file:", BGA_DOM_SHIM=SHIM),
+    )
     assert result.returncode == 0, result.stderr[-4000:]
     out = json.loads(result.stdout)
     assert out["error"] is None, out["error"]
@@ -674,8 +710,7 @@ def _declared(out):
     with `density-self`, which is the split `drawings.js` already
     makes, so this reads it rather than inventing a second rule.
     """
-    return [one for one in out["drawings"]
-            if "density-self" not in one["klass"]]
+    return [one for one in out["drawings"] if "density-self" not in one["klass"]]
 
 
 @pytest.fixture(scope="module")
@@ -743,8 +778,7 @@ class TestTheNamedDrawingsAreExhibitsOnTheRealPages:
         and asserting that is what keeps the population above from
         being whatever the page happens to draw."""
         for page, out in booted.items():
-            built = [one for one in out["drawings"]
-                     if "density-self" in one["klass"]]
+            built = [one for one in out["drawings"] if "density-self" in one["klass"]]
             assert built, f"{page} draws no self-built strip at all"
             for one in built:
                 assert one["grade"] == "annotation", (page, one)
@@ -753,8 +787,7 @@ class TestTheNamedDrawingsAreExhibitsOnTheRealPages:
     def test_each_one_is_drawn_at_the_scale_and_not_beside_a_cell(self, booted):
         for page, out in booted.items():
             for one in _declared(out):
-                expected = "0 0 100 60" if one["role"] == "series" \
-                    else "0 0 100 26"
+                expected = "0 0 100 60" if one["role"] == "series" else "0 0 100 26"
                 assert one["viewBox"] == expected, (page, one)
 
     def test_each_one_labels_its_ends_and_carries_its_twin(self, booted):
@@ -806,17 +839,38 @@ console.log(JSON.stringify({{
         return json.loads(result.stdout)
 
     def test_the_store_diagram_is_an_exhibit_at_the_scale(self):
-        store = {"schema": "store/v1", "project": "/p", "count": 3,
-                 "total_bytes": 6,
-                 "snapshots": [
-                     {"stamp": "a", "bytes": 1, "alias": None, "has_run": True,
-                      "incomplete_reason": None, "total_duration_us": 1000},
-                     {"stamp": "b", "bytes": 2, "alias": "@prev",
-                      "has_run": True, "incomplete_reason": None,
-                      "total_duration_us": 3000},
-                     {"stamp": "c", "bytes": 3, "alias": "@last",
-                      "has_run": True, "incomplete_reason": None,
-                      "total_duration_us": 2000}]}
+        store = {
+            "schema": "store/v1",
+            "project": "/p",
+            "count": 3,
+            "total_bytes": 6,
+            "snapshots": [
+                {
+                    "stamp": "a",
+                    "bytes": 1,
+                    "alias": None,
+                    "has_run": True,
+                    "incomplete_reason": None,
+                    "total_duration_us": 1000,
+                },
+                {
+                    "stamp": "b",
+                    "bytes": 2,
+                    "alias": "@prev",
+                    "has_run": True,
+                    "incomplete_reason": None,
+                    "total_duration_us": 3000,
+                },
+                {
+                    "stamp": "c",
+                    "bytes": 3,
+                    "alias": "@last",
+                    "has_run": True,
+                    "incomplete_reason": None,
+                    "total_duration_us": 2000,
+                },
+            ],
+        }
         out = self._render("renderTrend", json.dumps(store))
         assert out["grade"] == "exhibit"
         # The scale's `spark`: a line over an order. It drew at 40.
@@ -829,24 +883,36 @@ console.log(JSON.stringify({{
         it one: its height is the same 74 it always drew at, read from
         the scale's `figure` rather than from a `const H` beside the
         drawing. What it gains is the grade and the twin."""
-        compare = {"baseline_band": {"band_low_us": 100, "band_high_us": 200,
-                                     "observed_low_us": 80,
-                                     "observed_high_us": 260,
-                                     "runs": [90, 150, 250]},
-                   "candidate": {"total_duration_us": 230}}
+        compare = {
+            "baseline_band": {
+                "band_low_us": 100,
+                "band_high_us": 200,
+                "observed_low_us": 80,
+                "observed_high_us": 260,
+                "runs": [90, 150, 250],
+            },
+            "candidate": {"total_duration_us": 230},
+        }
         out = self._render("renderBand", json.dumps(compare))
         assert out["grade"] == "exhibit"
         assert out["viewBox"] == "0 0 100 74"
         assert [row[0] for row in out["twin"]] == [
-            "candidate", "band low", "band high", "observed low",
-            "observed high", "baseline 1", "baseline 2", "baseline 3"]
-        assert [row[1] for row in out["twin"]] == [
-            "230", "100", "200", "80", "260", "90", "150", "250"]
+            "candidate",
+            "band low",
+            "band high",
+            "observed low",
+            "observed high",
+            "baseline 1",
+            "baseline 2",
+            "baseline 3",
+        ]
+        assert [row[1] for row in out["twin"]] == ["230", "100", "200", "80", "260", "90", "150", "250"]
 
 
 # --------------------------------------------------------------------------
 # 6. And in a real Chrome: the shim's `hidden` is not what a reader sees.
 # --------------------------------------------------------------------------
+
 
 @needs_browser
 class TestTheTwinReallyHidesOnScreen:
@@ -860,7 +926,9 @@ class TestTheTwinReallyHidesOnScreen:
     def test_the_twin_is_hidden_until_toggled_open(self, tmp_path):
         uri = export_uri(MACRO, tmp_path)
         with Browser(chrome) as opened:
-            out = opened.measure(uri, """
+            out = opened.measure(
+                uri,
+                """
 (() => {
   const table = document.querySelector("table.twin-table");
   const before = getComputedStyle(table).display;
@@ -868,7 +936,8 @@ class TestTheTwinReallyHidesOnScreen:
   const after = getComputedStyle(table).display;
   return { before, after };
 })()
-""")
+""",
+            )
         assert out["before"] == "none", out
         assert out["after"] == "table", out
 
@@ -876,6 +945,7 @@ class TestTheTwinReallyHidesOnScreen:
 # --------------------------------------------------------------------------
 # 7. A merged edge tick sits flush with its edge, not centred over it.
 # --------------------------------------------------------------------------
+
 
 @pytest.fixture(scope="module")
 def browser():

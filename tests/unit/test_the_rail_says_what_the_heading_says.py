@@ -41,6 +41,7 @@ heading, so the palette was searchable only by the mangled key.
 past `matches`' eight-row limit - which is `UX-223`'s ranking and out
 of this item's scope, so the floor below is a floor and not equality.
 """
+
 import pathlib
 import sys
 
@@ -90,36 +91,35 @@ _LABELS = """
 @pytest.fixture(scope="module")
 def booted(tmp_path_factory):
     with Browser(chrome) as opened:
-        return {label: opened.measure(uri, _LABELS, 1440, 900)
-                for label, uri in pages.pages(tmp_path_factory, "rail").items()}
+        return {
+            label: opened.measure(uri, _LABELS, 1440, 900)
+            for label, uri in pages.pages(tmp_path_factory, "rail").items()
+        }
 
 
 @needs_browser
 @pytest.mark.parametrize("label", sorted(pages.FIXTURES))
 class TestTheRailAsksWhatTheHeadingAsks:
-    def test_every_entry_leads_to_a_section_that_names_itself(self, booted,
-                                                              label):
+    def test_every_entry_leads_to_a_section_that_names_itself(self, booted, label):
         """The population, so nothing below can pass on an empty rail or
         on a rail whose entries all fell back to the key."""
         rows = booted[label]
         assert len(rows) >= 40, len(rows)
         headed = [row for row in rows if row["heading"]]
-        assert len(headed) == len(rows), (
-            [row["key"] for row in rows if not row["heading"]])
+        assert len(headed) == len(rows), [row["key"] for row in rows if not row["heading"]]
         asking = [row for row in rows if row["heading"].endswith("?")]
         assert len(asking) >= 25, (
             f"only {len(asking)} of {len(rows)} headings ask a question; the "
-            f"agreement below would be about labels nobody renamed")
+            f"agreement below would be about labels nobody renamed"
+        )
 
-    def test_the_rail_entry_reads_its_destinations_heading(self, booted,
-                                                           label):
+    def test_the_rail_entry_reads_its_destinations_heading(self, booted, label):
         """The whole item, over every rendered section at once."""
         rows = booted[label]
-        differ = [(row["key"], row["rail"], row["heading"])
-                  for row in rows if row["rail"] != row["heading"]]
+        differ = [(row["key"], row["rail"], row["heading"]) for row in rows if row["rail"] != row["heading"]]
         assert not differ, (
-            f"{len(differ)} of {len(rows)} rail entries name their section "
-            f"something the section does not: {differ[:5]}")
+            f"{len(differ)} of {len(rows)} rail entries name their section something the section does not: {differ[:5]}"
+        )
 
 
 #: `UX-648`: one row per section, driven through the palette itself.
@@ -176,16 +176,16 @@ _PALETTE = """
 @pytest.fixture(scope="module")
 def palette(tmp_path_factory):
     with Browser(chrome) as opened:
-        return {label: opened.measure(uri, _PALETTE, 1440, 900)
-                for label, uri in pages.pages(tmp_path_factory,
-                                              "palette").items()}
+        return {
+            label: opened.measure(uri, _PALETTE, 1440, 900)
+            for label, uri in pages.pages(tmp_path_factory, "palette").items()
+        }
 
 
 @needs_browser
 @pytest.mark.parametrize("label", sorted(pages.FIXTURES))
 class TestThePaletteAsksWhatTheHeadingAsks:
-    def test_a_section_is_reachable_by_what_the_page_calls_it(self, palette,
-                                                              label):
+    def test_a_section_is_reachable_by_what_the_page_calls_it(self, palette, label):
         """The population, so the agreement below cannot pass on a
         palette offering no sections at all: 0 of 46 and 0 of 66 before
         this item, 46 and 65 after."""
@@ -195,17 +195,19 @@ class TestThePaletteAsksWhatTheHeadingAsks:
         assert len(reached) >= 40, (
             f"only {len(reached)} of {len(rows)} sections are reachable by "
             f"typing their own heading: "
-            f"{[row['key'] for row in rows if row['palette'] is None][:5]}")
+            f"{[row['key'] for row in rows if row['palette'] is None][:5]}"
+        )
 
-    def test_the_palette_entry_reads_its_destinations_heading(self, palette,
-                                                              label):
+    def test_the_palette_entry_reads_its_destinations_heading(self, palette, label):
         """The item: one string per section over rail, palette and
         heading."""
         rows = [row for row in palette[label] if row["palette"] is not None]
-        differ = [(row["key"], row["palette"], row["heading"], row["rail"])
-                  for row in rows
-                  if row["palette"] != row["heading"]
-                  or row["palette"] != row["rail"]]
+        differ = [
+            (row["key"], row["palette"], row["heading"], row["rail"])
+            for row in rows
+            if row["palette"] != row["heading"] or row["palette"] != row["rail"]
+        ]
         assert not differ, (
             f"{len(differ)} of {len(rows)} palette entries name their section "
-            f"something the section or the rail does not: {differ[:5]}")
+            f"something the section or the rail does not: {differ[:5]}"
+        )

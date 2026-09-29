@@ -7,6 +7,7 @@ oracle, over generated archives with multi-word names split by a
 separator; then bounds scan time by dictionary size, the axis the
 architect's own measurement (~800 variants) turns on.
 """
+
 import gzip
 import io
 import re
@@ -25,8 +26,7 @@ def _oracle_pattern(dictionary):
     variants, public = {}, bundle._public_words()
     for token in dictionary:
         low = token.lower()
-        for form in {low, re.sub(r"[-_.]", "", low),
-                     *(re.sub(r"[-_.]", sep, low) for sep in "-_.")}:
+        for form in {low, re.sub(r"[-_.]", "", low), *(re.sub(r"[-_.]", sep, low) for sep in "-_.")}:
             if form == low or (len(form) >= RESIDUE_MIN and form not in public):
                 variants.setdefault(form, token)
     if not variants:
@@ -43,9 +43,11 @@ def _oracle_hits(text: str, dictionary) -> set:
 
 
 def _archive(path, members: dict) -> None:
-    with open(path, "wb") as raw, \
-            gzip.GzipFile(filename="", fileobj=raw, mode="wb", mtime=0) as compressed, \
-            tarfile.open(fileobj=compressed, mode="w", format=tarfile.USTAR_FORMAT) as archive:
+    with (
+        open(path, "wb") as raw,
+        gzip.GzipFile(filename="", fileobj=raw, mode="wb", mtime=0) as compressed,
+        tarfile.open(fileobj=compressed, mode="w", format=tarfile.USTAR_FORMAT) as archive,
+    ):
         for name, body in members.items():
             data = body.encode("utf-8")
             archive.addfile(bundle.neutral_tarinfo(name, len(data)), io.BytesIO(data))
@@ -55,16 +57,26 @@ DICTIONARY = {"acme-codegen", "libfoo.bst", "lib-a.bst", "acme_lib_1", "core-run
 
 
 def test_hits_match_the_alternation_across_separators_and_squashed_forms(tmp_path):
-    text = ("\n".join([
-        "path is /a/libfoo.bst here", "the tool acme_codegen ran",
-        "the tool acme.codegen ran", "the tool acmecodegen ran",
-        "Xeon lib-a.bst edition", "acme_lib_1 seen twice acme_lib_1",
-        "host core-runner-7 reporting", "unrelated cmake -B build",
-    ]) + "\n") * 40
+    text = (
+        "\n".join(
+            [
+                "path is /a/libfoo.bst here",
+                "the tool acme_codegen ran",
+                "the tool acme.codegen ran",
+                "the tool acmecodegen ran",
+                "Xeon lib-a.bst edition",
+                "acme_lib_1 seen twice acme_lib_1",
+                "host core-runner-7 reporting",
+                "unrelated cmake -B build",
+            ]
+        )
+        + "\n"
+    ) * 40
     path = str(tmp_path / "a.tar.gz")
     _archive(path, {"member": text})
     assert bundle.residue(path, DICTIONARY) == [
-        f"member: {t}" for t in sorted(_oracle_hits("\n" + text.lower() + "\n", DICTIONARY))]
+        f"member: {t}" for t in sorted(_oracle_hits("\n" + text.lower() + "\n", DICTIONARY))
+    ]
 
 
 def test_a_name_split_across_a_small_chunk_boundary_is_still_caught(tmp_path, monkeypatch):
@@ -104,8 +116,12 @@ def test_scan_time_does_not_grow_with_dictionary_size(tmp_path):
     path = str(tmp_path / "n.tar.gz")
     _archive(path, {"member": unit * 6000})
     small = {f"runner-host-{i}" for i in range(10)}
-    large = ({f"acme-lib-{i}.bst" for i in range(200)} | {f"runner-host-{i}" for i in range(200)}
-             | {f"binary-tool-{i}" for i in range(200)} | {f"flag-value-{i}" for i in range(200)})
+    large = (
+        {f"acme-lib-{i}.bst" for i in range(200)}
+        | {f"runner-host-{i}" for i in range(200)}
+        | {f"binary-tool-{i}" for i in range(200)}
+        | {f"flag-value-{i}" for i in range(200)}
+    )
     assert len(large) > 700, len(large)
     _timed(path, small)  # warm caches first
     small_time = min(_timed(path, small) for _ in range(3))

@@ -4,6 +4,7 @@ A module of its own so the size ledger (`UX-712`) holds for the tool it
 serves: each function takes the paths it reads rather than importing
 the tool, which imports this.
 """
+
 import pathlib
 import re
 import sys
@@ -26,8 +27,7 @@ def unmerged_paths(ls_files):
     `UX-935`: an unmerged path is listed once per stage, so every count
     read from `git ls-files` mid-merge is inflated by two per conflict.
     """
-    return sorted({line.split("\t", 1)[1] for line in ls_files("-u")["all"]
-                   if "\t" in line})
+    return sorted({line.split("\t", 1)[1] for line in ls_files("-u")["all"] if "\t" in line})
 
 
 def index_is_merged(ls_files, real):
@@ -37,10 +37,13 @@ def index_is_merged(ls_files, real):
     """
     unmerged = unmerged_paths(ls_files) if real else []
     if unmerged:
-        print(f"refused: the git index is unmerged ({len(unmerged)} "
-              f"path(s) mid-merge: {', '.join(unmerged)}) - stage the "
-              f"resolution with `git add`, then derive; nothing was "
-              f"checked or written", file=sys.stderr)
+        print(
+            f"refused: the git index is unmerged ({len(unmerged)} "
+            f"path(s) mid-merge: {', '.join(unmerged)}) - stage the "
+            f"resolution with `git add`, then derive; nothing was "
+            f"checked or written",
+            file=sys.stderr,
+        )
         raise SystemExit(2)
     return True
 
@@ -82,18 +85,20 @@ def id_problems(scenarios: pathlib.Path, repo: pathlib.Path):
             title = _TITLE.search(path.read_text(encoding="utf-8"))
             said = re.match(r"UX-0*(\d+):", title.group(1)) if title else None
             headings[path] = (number, int(said.group(1)) if said else None)
-    problems = [f"UX-{number} names {len(paths)} files: "
-                + ", ".join(_shown(p, repo) for p in paths)
-                for number, paths in sorted(by_number.items())
-                if len(paths) > 1]
+    problems = [
+        f"UX-{number} names {len(paths)} files: " + ", ".join(_shown(p, repo) for p in paths)
+        for number, paths in sorted(by_number.items())
+        if len(paths) > 1
+    ]
     for path, (number, said) in headings.items():
         if said is None:
             problems.append(f"{_shown(path, repo)}: no `# UX-NNN:` heading")
         elif said != number:
             other = ", ".join(_shown(p, repo) for p in by_number.get(said, []))
-            problems.append(f"{_shown(path, repo)}: heading says UX-{said}, "
-                            f"filename says UX-{number}"
-                            + (f"; UX-{said} is {other}" if other else ""))
+            problems.append(
+                f"{_shown(path, repo)}: heading says UX-{said}, "
+                f"filename says UX-{number}" + (f"; UX-{said} is {other}" if other else "")
+            )
     return problems
 
 
@@ -131,12 +136,11 @@ def guard_problems(scenarios: pathlib.Path, tests_root: pathlib.Path):
             continue
         guard = header_guard(path.read_text(encoding="utf-8"))
         if guard is None:
-            problems.append(f"{path.name}: no **Guard:** line above its "
-                            "first heading")
+            problems.append(f"{path.name}: no **Guard:** line above its first heading")
             continue
         if guard == ([], ""):
-            problems.append(f"{path.name}: **Guard:** names no test_*.py "
-                            "and gives no `none — <reason>`")
-        problems += [f"{path.name}: **Guard:** {name} is absent from tests/"
-                     for name in guard[0] if name not in present]
+            problems.append(f"{path.name}: **Guard:** names no test_*.py and gives no `none — <reason>`")
+        problems += [
+            f"{path.name}: **Guard:** {name} is absent from tests/" for name in guard[0] if name not in present
+        ]
     return problems

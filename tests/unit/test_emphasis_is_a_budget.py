@@ -43,6 +43,7 @@ emphasis inside a block, and a block's own heading is its name.
 Without those two exclusions the golden page reported dozens of blocks
 over budget, all of them table headers.
 """
+
 import pathlib
 import re
 import shutil
@@ -62,8 +63,7 @@ CSS = (REPO / "bga/viewer/style.css").read_text(encoding="utf-8")
 
 chrome = find_chrome()
 needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
-needs_node = pytest.mark.skipif(shutil.which("node") is None,
-                                reason="node is not installed")
+needs_node = pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
 VIEWPORTS = ((1440, 900), (1280, 800), (390, 844))
 
 
@@ -92,15 +92,18 @@ class TestOneAccentAndNoSecondPalette:
         colour = re.compile(
             r"var\(\s*--[\w-]+\s*,\s*(#[0-9a-fA-F]{3,8}|rgba?\(|hsla?\(|"
             r"transparent|currentColor|\b(?:black|white|red|green|blue|"
-            r"orange|gold|gray|grey)\b)")
-        found = [f"{selector} {{ {piece.strip()} }}"
-                 for selector, decls in _rules()
-                 for piece in decls.split(";")
-                 if colour.search(piece)]
+            r"orange|gold|gray|grey)\b)"
+        )
+        found = [
+            f"{selector} {{ {piece.strip()} }}"
+            for selector, decls in _rules()
+            for piece in decls.split(";")
+            if colour.search(piece)
+        ]
         assert not found, (
             "a colour token with a fallback - the fallback is a palette "
-            "nobody chose, and it hides the token from the guards:\n  "
-            + "\n  ".join(found))
+            "nobody chose, and it hides the token from the guards:\n  " + "\n  ".join(found)
+        )
 
     # Set from JavaScript rather than in the stylesheet, with the site
     # that sets it. A custom property nothing declares anywhere is the
@@ -112,19 +115,15 @@ class TestOneAccentAndNoSecondPalette:
         used = set(re.findall(r"var\(--([\w-]+)", CSS))
         missing = used - declared - set(self.SET_BY_THE_PAGE)
         assert not missing, (
-            f"used and never declared: {sorted(missing)} - which means "
-            f"whatever the fallback said, or nothing")
+            f"used and never declared: {sorted(missing)} - which means whatever the fallback said, or nothing"
+        )
 
     def test_the_runtime_properties_are_really_set(self):
         """The other direction: an exemption whose setter is gone is a
         property that silently became nothing."""
-        source = "".join(
-            path.read_text(encoding="utf-8")
-            for path in sorted((REPO / "bga" / "viewer").glob("*.js")))
+        source = "".join(path.read_text(encoding="utf-8") for path in sorted((REPO / "bga" / "viewer").glob("*.js")))
         for name in self.SET_BY_THE_PAGE:
-            assert f'"--{name}"' in source, (
-                f"--{name} is exempted as set by the page, and no module "
-                f"sets it")
+            assert f'"--{name}"' in source, f"--{name} is exempted as set by the page, and no module sets it"
 
     def _colour_tokens(self):
         """The tokens that declare a **colour**.
@@ -138,18 +137,15 @@ class TestOneAccentAndNoSecondPalette:
         found = {}
         for name, value in re.findall(r"--([\w-]+)\s*:\s*([^;]+);", CSS):
             found.setdefault(name, value.strip())
-        return {name for name, value in found.items()
-                if value.startswith("#") or value.startswith("rgb")}
+        return {name for name, value in found.items() if value.startswith("#") or value.startswith("rgb")}
 
     def test_the_size_scale_is_not_a_colour(self):
         """The split above, asserted in both directions - or a colour
         renamed to `--draw-…` would leave the accent census silently."""
         colours = self._colour_tokens()
-        sizes = {name for name in re.findall(r"--([\w-]+)\s*:", CSS)
-                 if name.startswith("draw-")}
+        sizes = {name for name in re.findall(r"--([\w-]+)\s*:", CSS) if name.startswith("draw-")}
         assert sizes, "UX-316's size scale is gone"
-        assert not (sizes & colours), (
-            f"a size token declares a colour: {sorted(sizes & colours)}")
+        assert not (sizes & colours), f"a size token declares a colour: {sorted(sizes & colours)}"
 
     def test_one_accent_hue(self):
         """Outside ink, the surfaces and the three status tones, the
@@ -157,10 +153,8 @@ class TestOneAccentAndNoSecondPalette:
         head, _, rest = CSS.partition("* { box-sizing")
         hues = set(re.findall(r"var\(--([\w-]+)\)", rest)) & self._colour_tokens()
         ink = {"fg", "muted", "line", "bg", "panel", "muted-bg", "head", "w"}
-        status = {"good", "warn", "bad",
-                  "good-mark", "warn-mark", "bad-mark"}
-        assert hues - ink - status == {"accent", "accent-mark"}, (
-            f"a second accent: {sorted(hues - ink - status)}")
+        status = {"good", "warn", "bad", "good-mark", "warn-mark", "bad-mark"}
+        assert hues - ink - status == {"accent", "accent-mark"}, f"a second accent: {sorted(hues - ink - status)}"
 
     def test_no_class_is_styled_by_two_rules_that_disagree(self):
         """`svg.sparkline` and `.sparkline` both set a width and
@@ -172,8 +166,7 @@ class TestOneAccentAndNoSecondPalette:
             for piece in decls.split(";"):
                 name, _, value = piece.partition(":")
                 name, value = name.strip(), value.strip()
-                if name not in {"width", "height", "fill", "stroke",
-                                "background", "color"} or not value:
+                if name not in {"width", "height", "fill", "stroke", "background", "color"} or not value:
                     continue
                 # The class this rule is *about*, ignoring the element
                 # it was qualified with.
@@ -184,7 +177,8 @@ class TestOneAccentAndNoSecondPalette:
                 if key in seen and seen[key] != value:
                     pytest.fail(
                         f".{classes[0]} is given two different `{name}` "
-                        f"values by two rules: {seen[key]!r} and {value!r}")
+                        f"values by two rules: {seen[key]!r} and {value!r}"
+                    )
                 seen[key] = value
 
 
@@ -299,8 +293,10 @@ def _export(tmp_path_factory, run, name):
 
 @pytest.fixture(scope="module")
 def pages(tmp_path_factory):
-    return {"golden": _export(tmp_path_factory, GOLDEN, "golden").as_uri(),
-            "macro_micro": _export(tmp_path_factory, MACRO, "macro").as_uri()}
+    return {
+        "golden": _export(tmp_path_factory, GOLDEN, "golden").as_uri(),
+        "macro_micro": _export(tmp_path_factory, MACRO, "macro").as_uri(),
+    }
 
 
 @needs_node
@@ -309,15 +305,13 @@ def pages(tmp_path_factory):
 class TestTheBudgetHolds:
     @pytest.mark.parametrize("page", ["golden", "macro_micro"])
     @pytest.mark.parametrize("width,height", VIEWPORTS)
-    def test_no_block_spends_its_emphasis_twice(
-            self, browser, pages, page, width, height):
+    def test_no_block_spends_its_emphasis_twice(self, browser, pages, page, width, height):
         out = browser.measure(pages[page], _BUDGET, width=width, height=height)
         assert out["blocks"] > 20, (
             f"only {out['blocks']} blocks at {width}x{height} - the page did "
-            f"not render, so 'inside budget' means nothing")
-        assert out["over"] == 0, (
-            f"{out['over']} block(s) over budget on {page} at "
-            f"{width}x{height}: {out['sample']}")
+            f"not render, so 'inside budget' means nothing"
+        )
+        assert out["over"] == 0, f"{out['over']} block(s) over budget on {page} at {width}x{height}: {out['sample']}"
 
     @pytest.mark.parametrize("page", ["golden", "macro_micro"])
     def test_no_text_wears_a_status_tone(self, browser, pages, page):
@@ -325,9 +319,7 @@ class TestTheBudgetHolds:
         not."""
         out = browser.measure(pages[page], _TONED_TEXT)
         assert out["scanned"] > 50, out["scanned"]
-        assert out["toned"] == 0, (
-            f"{out['toned']} status-toned text node(s) on {page}: "
-            f"{out['sample']}")
+        assert out["toned"] == 0, f"{out['toned']} status-toned text node(s) on {page}: {out['sample']}"
 
 
 class TestTheGuideCarriesTheChecklistLine:
@@ -338,18 +330,14 @@ class TestTheGuideCarriesTheChecklistLine:
     def test_the_fixing_guide_names_the_budget(self):
         guide = REPO / "docs/contributing/fixing-guide.md"
         text = guide.read_text(encoding="utf-8")
-        assert "design/styleguide.md" in text, (
-            "the fixing guide does not point at the visual contract")
-        assert "conformance checklist" in text.lower(), (
-            "the fixing guide mentions the guide but sets no checklist")
+        assert "design/styleguide.md" in text, "the fixing guide does not point at the visual contract"
+        assert "conformance checklist" in text.lower(), "the fixing guide mentions the guide but sets no checklist"
         # The three questions §7 names, in wordings that appear nowhere
         # else in the guide - "budget" and "sentence" alone are words
         # this document uses for other things, and a clause that
         # matched them would pass on a checklist that had been deleted.
-        for question in ("shape in the §1 table", "sentence written",
-                         "budget kept"):
-            assert question in text.lower(), (
-                f"the checklist does not ask: {question!r}")
+        for question in ("shape in the §1 table", "sentence written", "budget kept"):
+            assert question in text.lower(), f"the checklist does not ask: {question!r}"
 
 
 if __name__ == "__main__":  # pragma: no cover

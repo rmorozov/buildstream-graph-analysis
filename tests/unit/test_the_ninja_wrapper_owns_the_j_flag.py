@@ -6,6 +6,7 @@ the recipe's own `-jN`/`--jobs=N`/dangling-`-j` before prepending its
 token-held `-j<width>`. Runs the real `ninja` wrapper under `sh` against
 a real pipe pair with a fake ninja that echoes its argv (UX-846 harness).
 """
+
 import os
 import subprocess
 
@@ -36,9 +37,9 @@ def _run_ninja(tmp_path, args, tokens=2):
     env["MAKEFLAGS"] = f"--jobserver-auth={r},{w}"
     env["BST_TRACE_WRAPPER_CAP"] = "8"
     try:
-        result = subprocess.run(["sh", str(WRAPPERS / "ninja"), *args], env=env,
-                                 pass_fds=(r, w), capture_output=True, text=True,
-                                 timeout=10)
+        result = subprocess.run(
+            ["sh", str(WRAPPERS / "ninja"), *args], env=env, pass_fds=(r, w), capture_output=True, text=True, timeout=10
+        )
     finally:
         os.close(r)
         os.close(w)
@@ -49,8 +50,7 @@ def _run_ninja(tmp_path, args, tokens=2):
 def _j_flags(argv):
     """The parallelism flags in `argv` - the wrapper's own bare `-j`
     (its width follows as a separate token), a glued `-jN`, `--jobs=N`."""
-    return [tok for tok in argv
-            if tok == "-j" or tok.startswith("-j") or tok.startswith("--jobs=")]
+    return [tok for tok in argv if tok == "-j" or tok.startswith("-j") or tok.startswith("--jobs=")]
 
 
 class TestTheWrapperOwnsTheJFlag:
@@ -69,7 +69,7 @@ class TestTheWrapperOwnsTheJFlag:
         argv = _run_ninja(tmp_path, ["-j", "8", "build"])
         assert _j_flags(argv) == ["-j"], argv
         assert "-j 3" in " ".join(argv), argv
-        assert "8" not in argv, argv          # the recipe's count is gone
+        assert "8" not in argv, argv  # the recipe's count is gone
         assert "build" in argv, argv
 
     def test_a_glued_dash_jn_is_stripped(self, tmp_path):

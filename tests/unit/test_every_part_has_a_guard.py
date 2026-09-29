@@ -11,6 +11,7 @@ both are the same failure in miniature: a declared key list that no
 guard reads against the code (32.4 vs `AnalysisResult`, 32.1 vs
 `load_run_context`).
 """
+
 import ast
 import dataclasses
 import re
@@ -36,9 +37,9 @@ PROSE_ONLY = {
 # this list may shrink, never grow.
 UNGUARDED = {
     20: "the 1/n share integral. `wall_clock_share_us` is published and "
-        "held by the golden fixture, but no file asserts the integral",
+    "held by the golden fixture, but no file asserts the integral",
     22: "compute_average_concurrency and compute_peak_occupancy are "
-        "reached only through the occupancy dict a fixture pins",
+    "reached only through the occupancy dict a fixture pins",
 }
 
 # Part 29 was here until `UX-565` landed in the same round: the
@@ -51,14 +52,23 @@ UNGUARDED = {
 # rule makes an addition an addition, so each is listed rather than
 # silently tolerated.
 ANALYSIS_ADDITIONS = {
-    "structural", "run_id", "run_instance", "memory_envelope",
-    "plane2_absence", "total_duration_us", "pipeline_overhead",
-    "timestamp_agreement", "element_kind_summary", "capacity_verdict",
-    "plane2_capacity", "capacity_recommendation",
+    "structural",
+    "run_id",
+    "run_instance",
+    "memory_envelope",
+    "plane2_absence",
+    "total_duration_us",
+    "pipeline_overhead",
+    "timestamp_agreement",
+    "element_kind_summary",
+    "capacity_verdict",
+    "plane2_capacity",
+    "capacity_recommendation",
     # `UX-676`: cores busy against this run's caps, and the two windows
     # that violate it. Additive like the rest - 32.4 predates the host
     # CPU series entirely (`UX-675`).
-    "utilization_envelope", "underutilized_intervals",
+    "utilization_envelope",
+    "underutilized_intervals",
     "overcommitted_intervals",
     # `UX-740`: which of this run's durations the epsilon grid could not
     # express. Additive for the same reason - 32.4 states the grid but
@@ -67,7 +77,8 @@ ANALYSIS_ADDITIONS = {
     # `UX-697`: set by `cli.py` since `UX-171`/`UX-202` but never a
     # declared field until the type ratchet's `bga/report` sweep needed
     # one to type against.
-    "resource_blast", "plane2_coverage",
+    "resource_blast",
+    "plane2_coverage",
     # `UX-1005` track A: read only by `cli.py`'s own text renderer,
     # never published in `--format json` - see the field's own comment.
     "builder_pool_recommendation",
@@ -77,11 +88,21 @@ ANALYSIS_ADDITIONS = {
 
 # Likewise for 32.1's six against what `load_run_context` reads.
 RUN_CONTEXT_ADDITIONS = {
-    "native_max_jobs", "native_max_jobs_source", "host_cpu_count",
-    "cpu_budget", "memory_budget_mb", "host_memory_mb",
-    "estimated_job_memory_mb", "exclusive_resources", "pipeline_overhead",
-    "run_identity", "host_manifest", "producer", "build_outcome",
-    "queue_summary", "timestamp_agreement",
+    "native_max_jobs",
+    "native_max_jobs_source",
+    "host_cpu_count",
+    "cpu_budget",
+    "memory_budget_mb",
+    "host_memory_mb",
+    "estimated_job_memory_mb",
+    "exclusive_resources",
+    "pipeline_overhead",
+    "run_identity",
+    "host_manifest",
+    "producer",
+    "build_outcome",
+    "queue_summary",
+    "timestamp_agreement",
     # `UX-851`: the mode `bga capture` ran the jobserver in.
     "jobserver",
     # `UX-896`: what the local cache was configured to hold, and what
@@ -103,8 +124,8 @@ def _part_headings():
 
 def _unit_test_paths():
     listed = subprocess.run(
-        ["git", "ls-files", "tests/unit/*.py"],
-        cwd=REPO, capture_output=True, text=True, check=True).stdout.split()
+        ["git", "ls-files", "tests/unit/*.py"], cwd=REPO, capture_output=True, text=True, check=True
+    ).stdout.split()
     return [REPO / p for p in listed]
 
 
@@ -127,8 +148,8 @@ def _json_block_keys(section_heading):
     heading - the declaration, not the prose around it."""
     text = _spec_text()
     start = text.index(section_heading)
-    block = text[text.index("```json", start) + len("```json"):]
-    block = block[:block.index("```")]
+    block = text[text.index("```json", start) + len("```json") :]
+    block = block[: block.index("```")]
     return [m.group(1) for m in re.finditer(r'^  "([^"]+)":', block, re.M)]
 
 
@@ -136,15 +157,18 @@ def _run_context_keys_the_loader_reads():
     """`data.get('X')` inside `load_run_context`'s RunContext(...) call,
     read from the syntax tree rather than grepped."""
     tree = ast.parse((REPO / "bga/ingest/loader.py").read_text(encoding="utf-8"))
-    function = next(n for n in ast.walk(tree)
-                    if isinstance(n, ast.FunctionDef) and n.name == "load_run_context")
+    function = next(n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name == "load_run_context")
     keys = set()
     for node in ast.walk(function):
-        if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
-                and node.func.attr == "get" and node.args
-                and isinstance(node.args[0], ast.Constant)
-                and isinstance(node.func.value, ast.Name)
-                and node.func.value.id == "data"):
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "get"
+            and node.args
+            and isinstance(node.args[0], ast.Constant)
+            and isinstance(node.func.value, ast.Name)
+            and node.func.value.id == "data"
+        ):
             keys.add(node.args[0].value)
     # `wall_clock` is read into a local first and then indexed twice.
     if "wall_clock" in {n.id for n in ast.walk(function) if isinstance(n, ast.Name)}:
@@ -168,16 +192,15 @@ class TestTheIndexReadsSomething:
 
 
 class TestEveryPartIsAccountedFor:
-
     def test_every_heading_has_a_guard_or_a_row(self):
         named = _parts_named_by_a_file()
         allowlisted = set(PROSE_ONLY) | set(UNGUARDED)
-        orphans = [p for p in _part_headings()
-                   if p not in named and p not in allowlisted]
+        orphans = [p for p in _part_headings() if p not in named and p not in allowlisted]
         assert orphans == [], (
             f"Part(s) {orphans} have no file naming them and no allowlist "
             f"row - name the Part in the guard that holds it, or add the "
-            f"row and its reason")
+            f"row and its reason"
+        )
 
     def test_no_allowlist_row_names_a_part_the_spec_does_not_have(self):
         headings = set(_part_headings())
@@ -188,8 +211,8 @@ class TestEveryPartIsAccountedFor:
         named = _parts_named_by_a_file()
         stale = sorted(p for p in (set(PROSE_ONLY) | set(UNGUARDED)) if p in named)
         assert stale == [], (
-            f"Part(s) {stale} are allowlisted and also named by "
-            f"{[sorted(named[p]) for p in stale]} - drop the row")
+            f"Part(s) {stale} are allowlisted and also named by {[sorted(named[p]) for p in stale]} - drop the row"
+        )
 
     def test_a_part_is_prose_only_or_unguarded_never_both(self):
         assert sorted(set(PROSE_ONLY) & set(UNGUARDED)) == []
@@ -210,10 +233,8 @@ class TestThirtyTwoFourAgainstTheResult:
 
     def test_every_declared_key_is_a_field_the_result_carries(self):
         fields = {f.name for f in dataclasses.fields(AnalysisResult)}
-        phantom = sorted(k for k in _json_block_keys("## 32.4 analysis/v9")
-                         if k not in fields)
-        assert phantom == [], (
-            f"32.4 declares {phantom}, which AnalysisResult does not carry")
+        phantom = sorted(k for k in _json_block_keys("## 32.4 analysis/v9") if k not in fields)
+        assert phantom == [], f"32.4 declares {phantom}, which AnalysisResult does not carry"
 
     def test_every_field_32_4_omits_is_a_declared_addition(self):
         declared = set(_json_block_keys("## 32.4 analysis/v9"))
@@ -221,7 +242,8 @@ class TestThirtyTwoFourAgainstTheResult:
         undeclared = sorted(fields - declared - ANALYSIS_ADDITIONS)
         assert undeclared == [], (
             f"AnalysisResult carries {undeclared}, which 32.4 does not "
-            f"declare and this list does not name as an addition")
+            f"declare and this list does not name as an addition"
+        )
 
     def test_the_addition_list_has_no_field_the_result_dropped(self):
         fields = {f.name for f in dataclasses.fields(AnalysisResult)}
@@ -234,18 +256,16 @@ class TestThirtyTwoOneAgainstTheLoader:
 
     def test_every_declared_field_is_one_the_loader_reads(self):
         read = _run_context_keys_the_loader_reads()
-        ignored = sorted(k for k in _json_block_keys("## 32.1 run-context/v9")
-                         if k not in read)
-        assert ignored == [], (
-            f"32.1 declares {ignored}, which load_run_context never reads")
+        ignored = sorted(k for k in _json_block_keys("## 32.1 run-context/v9") if k not in read)
+        assert ignored == [], f"32.1 declares {ignored}, which load_run_context never reads"
 
     def test_every_key_32_1_omits_is_a_declared_addition(self):
         declared = set(_json_block_keys("## 32.1 run-context/v9"))
-        undeclared = sorted(
-            _run_context_keys_the_loader_reads() - declared - RUN_CONTEXT_ADDITIONS)
+        undeclared = sorted(_run_context_keys_the_loader_reads() - declared - RUN_CONTEXT_ADDITIONS)
         assert undeclared == [], (
             f"load_run_context reads {undeclared}, which 32.1 does not "
-            f"declare and this list does not name as an addition")
+            f"declare and this list does not name as an addition"
+        )
 
     def test_the_addition_list_has_no_key_the_loader_stopped_reading(self):
         gone = sorted(RUN_CONTEXT_ADDITIONS - _run_context_keys_the_loader_reads())

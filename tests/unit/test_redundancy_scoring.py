@@ -10,6 +10,7 @@ element's own `make -jN` takes every top slot, because its signature is
 identical across elements by construction while doing entirely different
 work in each.
 """
+
 from tools.bst_native_build_tracer import (
     _elide_cmd,
     _is_element_build_driver,
@@ -19,9 +20,14 @@ from tools.bst_native_build_tracer import (
 
 def _record(element, cmd, start, end):
     return {
-        "pid": 1, "ppid": 0, "element": element, "cmd": cmd,
-        "start_ts": start, "end_ts": end,
-        "duration_s": end - start, "open": False,
+        "pid": 1,
+        "ppid": 0,
+        "element": element,
+        "cmd": cmd,
+        "start_ts": start,
+        "end_ts": end,
+        "duration_s": end - start,
+        "open": False,
     }
 
 
@@ -32,10 +38,7 @@ def _findings(records):
 def test_wall_clock_figure_is_the_worst_element_not_the_sum():
     """Six elements ran concurrently, so eliminating five of six probes
     does not give the build back six probes' worth of time."""
-    records = [
-        _record(f"lib-{c}.bst", "/usr/bin/c++ CMakeCXXCompilerId.cpp", 0.0, 0.5)
-        for c in "abcdef"
-    ]
+    records = [_record(f"lib-{c}.bst", "/usr/bin/c++ CMakeCXXCompilerId.cpp", 0.0, 0.5) for c in "abcdef"]
     finding = _findings(records)["/usr/bin/c++ CMakeCXXCompilerId.cpp"]
     assert finding["total_duration_s"] == 3.0
     assert finding["max_element_duration_s"] == 0.5
@@ -53,10 +56,7 @@ def test_worst_element_is_named():
 
 def test_ranking_uses_recoverable_wall_clock_not_the_sum():
     """A 6x-repeated fast probe must not outrank a 2x-repeated slow one."""
-    records = [
-        _record(f"lib-{c}.bst", "/usr/bin/c++ fast-probe.cpp", 0.0, 0.05)
-        for c in "abcdef"
-    ] + [
+    records = [_record(f"lib-{c}.bst", "/usr/bin/c++ fast-probe.cpp", 0.0, 0.05) for c in "abcdef"] + [
         _record("x.bst", "/usr/bin/codegen big", 0.0, 5.0),
         _record("y.bst", "/usr/bin/codegen big", 0.0, 5.0),
     ]
@@ -67,10 +67,7 @@ def test_ranking_uses_recoverable_wall_clock_not_the_sum():
 def test_an_elements_own_build_driver_is_not_redundancy():
     """Every element runs `make -f Makefile -jN`; the signature matches
     across elements while the work does not."""
-    records = [
-        _record(f"lib-{c}.bst", "/usr/bin/make -f Makefile -j4", 0.0, 3.0)
-        for c in "abcdef"
-    ]
+    records = [_record(f"lib-{c}.bst", "/usr/bin/make -f Makefile -j4", 0.0, 3.0) for c in "abcdef"]
     assert detect_redundant_operations(records)[0] == []
 
 
@@ -118,9 +115,14 @@ def test_a_short_command_is_not_elided():
 
 def _proc(element, cmd, start, end, pid=100, ppid=50):
     return {
-        "pid": pid, "ppid": ppid, "element": element, "cmd": cmd,
-        "start_ts": start, "end_ts": end,
-        "duration_s": end - start, "open": False,
+        "pid": pid,
+        "ppid": ppid,
+        "element": element,
+        "cmd": cmd,
+        "start_ts": start,
+        "end_ts": end,
+        "duration_s": end - start,
+        "open": False,
     }
 
 
@@ -154,8 +156,7 @@ def test_two_real_elements_are_still_a_finding():
     # `UX-384`: the names are no longer carried - `element_count` and
     # `worst_element` are what a finding publishes about its width.
     assert findings[0]["element_count"] == 2
-    assert findings[0]["worst_element"] in (
-        "components/a.bst", "components/b.bst")
+    assert findings[0]["worst_element"] in ("components/a.bst", "components/b.bst")
     assert coverage["excluded_unresolved_only"] == 0
 
 
@@ -212,4 +213,3 @@ def test_the_coverage_note_says_the_figures_do_not_add():
     _findings_, coverage = detect_redundant_operations([])
 
     assert "must not be summed" in coverage["note"]
-

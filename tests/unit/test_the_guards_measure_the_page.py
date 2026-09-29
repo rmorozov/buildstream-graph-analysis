@@ -37,6 +37,7 @@ best fixture into your worst is worse than no instrument, which is why
 `TestTheOldIdiomStillLosesIt` asserts the loss rather than trusting
 that it is gone.
 """
+
 import ast
 import json
 import pathlib
@@ -93,17 +94,14 @@ def _payload_keys(page: pathlib.Path):
     does not carry - measurable wherever the suite runs.
     """
     html = page.read_text(encoding="utf-8")
-    found = re.search(
-        r'<script type="application/json" id="bga-report">(.*?)</script>',
-        html, re.S)
+    found = re.search(r'<script type="application/json" id="bga-report">(.*?)</script>', html, re.S)
     assert found, f"{page.name} has no embedded payload"
     return sorted(json.loads(found.group(1)))
 
 
 def _names_in(node):
     """Every bare name in an expression or assignment target."""
-    return [child.id for child in ast.walk(node)
-            if isinstance(child, ast.Name)]
+    return [child.id for child in ast.walk(node) if isinstance(child, ast.Name)]
 
 
 def _called(node):
@@ -145,12 +143,12 @@ class TestTheCopyIsStillNecessary:
     """
 
     def test_a_fixture_still_carries_the_file_the_copy_drops(self):
-        carried = [label for label, fixture in pages.FIXTURES.items()
-                   if pages.has_expected_output(fixture)]
+        carried = [label for label, fixture in pages.FIXTURES.items() if pages.has_expected_output(fixture)]
         assert carried, (
             "no fixture carries expected_output.json any more - "
             "`pages.snapshot_copy` has nothing left to do, and the guards "
-            "should export in place instead of copying")
+            "should export in place instead of copying"
+        )
 
     def test_the_copy_drops_it(self, tmp_path):
         for label, fixture in pages.FIXTURES.items():
@@ -167,19 +165,18 @@ class TestTheCopyCarriesTheSiblings:
 
         for label, fixture in pages.FIXTURES.items():
             before = run_store.sibling_plane2(str(fixture))
-            after = run_store.sibling_plane2(
-                str(pages.snapshot_copy(fixture, tmp_path / f"sib-{label}")))
+            after = run_store.sibling_plane2(str(pages.snapshot_copy(fixture, tmp_path / f"sib-{label}")))
             assert (before is None) == (after is None), (
                 f"{label}: the fixture has a Plane 2 sibling "
                 f"({before is not None}) and its copy does not "
-                f"({after is not None})")
+                f"({after is not None})"
+            )
 
     def test_the_population_has_a_fixture_with_a_sibling(self):
         """Without this the clause above is 0 of 0 twice over."""
         from bga import run_store
 
-        with_sibling = [label for label, fixture in pages.FIXTURES.items()
-                        if run_store.sibling_plane2(str(fixture))]
+        with_sibling = [label for label, fixture in pages.FIXTURES.items() if run_store.sibling_plane2(str(fixture))]
         assert with_sibling == ["macro_micro"], with_sibling
 
 
@@ -200,7 +197,8 @@ class TestTheOldIdiomStillLosesIt:
         assert run_store.sibling_plane2(str(lost)) is None, (
             "the run-only copy now finds the Plane 2 report; this guard's "
             "counter-example has stopped being one, and every clause here "
-            "is passing for a new reason")
+            "is passing for a new reason"
+        )
 
     def test_the_two_copies_export_different_documents(self, tmp_path):
         """And the loss reaches the payload, not just the filesystem."""
@@ -214,8 +212,8 @@ class TestTheOldIdiomStillLosesIt:
 
         kept, dropped = _payload_keys(whole), _payload_keys(lost)
         assert set(dropped) < set(kept), (
-            f"the run-only copy no longer loses documents: "
-            f"{sorted(set(kept) - set(dropped))}")
+            f"the run-only copy no longer loses documents: {sorted(set(kept) - set(dropped))}"
+        )
 
 
 @pytest.mark.parametrize("label", sorted(pages.FIXTURES))
@@ -224,8 +222,7 @@ class TestTheCopyExportsTheSameDocument:
         """Browser-free, so this runs everywhere the suite does."""
         fixture = pages.FIXTURES[label]
         copied = pages.export_page(fixture, tmp_path / "copied")
-        in_place = pathlib.Path(
-            pages.in_place_uri(fixture, tmp_path / "in-place")[len("file://"):])
+        in_place = pathlib.Path(pages.in_place_uri(fixture, tmp_path / "in-place")[len("file://") :])
         assert _payload_keys(copied) == _payload_keys(in_place), label
 
 
@@ -236,17 +233,14 @@ class TestTheCopyRendersTheSamePage:
     def test_the_two_pages_agree(self, browser, tmp_path, label):
         """The claim the item is about, measured on the booted page."""
         fixture = pages.FIXTURES[label]
-        copied = browser.measure(
-            pages.export_uri(fixture, tmp_path / "copied"), _LOOK, 1440, 900)
-        in_place = browser.measure(
-            pages.in_place_uri(fixture, tmp_path / "in-place"),
-            _LOOK, 1440, 900)
+        copied = browser.measure(pages.export_uri(fixture, tmp_path / "copied"), _LOOK, 1440, 900)
+        in_place = browser.measure(pages.in_place_uri(fixture, tmp_path / "in-place"), _LOOK, 1440, 900)
         assert copied == in_place, (
             f"{label}: the page a guard measures is not the page a user "
-            f"gets\n  copied:   {copied}\n  in place: {in_place}")
+            f"gets\n  copied:   {copied}\n  in place: {in_place}"
+        )
 
-    def test_the_measurement_can_tell_them_apart(
-            self, browser, tmp_path, label):
+    def test_the_measurement_can_tell_them_apart(self, browser, tmp_path, label):
         """`_LOOK` has to be able to see the difference, or the clause
         above passes on any two pages. Asserted where the difference is
         known to exist, and stated as a skip where it is not."""
@@ -255,15 +249,14 @@ class TestTheCopyRendersTheSamePage:
         fixture = pages.FIXTURES[label]
         if label != "macro_micro":
             pytest.skip("golden has no Plane 2 sibling to lose")
-        whole = browser.measure(
-            pages.export_uri(fixture, tmp_path / "whole"), _LOOK, 1440, 900)
+        whole = browser.measure(pages.export_uri(fixture, tmp_path / "whole"), _LOOK, 1440, 900)
         lost_run = _run_only_copy(fixture, tmp_path / "lost")
         lost_page = tmp_path / "lost" / "report.html"
         view.export(str(lost_run), str(lost_page))
         lost = browser.measure(lost_page.as_uri(), _LOOK, 1440, 900)
         assert whole != lost, (
-            "`_LOOK` reports the same page with and without Plane 2; it "
-            "cannot see what this file exists to compare")
+            "`_LOOK` reports the same page with and without Plane 2; it cannot see what this file exists to compare"
+        )
         assert whole["sections"] != lost["sections"], (whole, lost)
 
 
@@ -310,20 +303,18 @@ class TestNoGuardReinventsTheCopy:
         """
         try:
             tree = ast.parse(text)
-        except SyntaxError:      # pragma: no cover - a broken guard
+        except SyntaxError:  # pragma: no cover - a broken guard
             return False
 
-        bound = {}      # name -> the source text that bound it
+        bound = {}  # name -> the source text that bound it
         for node in ast.walk(tree):
             if isinstance(node, ast.Assign):
                 for target in node.targets:
                     for name in _names_in(target):
-                        bound.setdefault(name, []).append(
-                            ast.get_source_segment(text, node.value) or "")
+                        bound.setdefault(name, []).append(ast.get_source_segment(text, node.value) or "")
             elif isinstance(node, (ast.For, ast.AsyncFor)):
                 for name in _names_in(node.target):
-                    bound.setdefault(name, []).append(
-                        ast.get_source_segment(text, node.iter) or "")
+                    bound.setdefault(name, []).append(ast.get_source_segment(text, node.iter) or "")
 
         def macro(source, seen=frozenset()):
             """Does this expression's text, or anything that bound a name
@@ -337,22 +328,23 @@ class TestNoGuardReinventsTheCopy:
                 return True
             try:
                 names = _names_in(ast.parse(source, mode="eval").body)
-            except SyntaxError:      # pragma: no cover
+            except SyntaxError:  # pragma: no cover
                 return False
             for name in names:
                 if name in seen:
                     continue
                 onwards = seen | {name}
-                if any(macro(binding, onwards)
-                       for binding in bound.get(name, ())):
+                if any(macro(binding, onwards) for binding in bound.get(name, ())):
                     return True
             return False
 
         for node in ast.walk(tree):
-            if (isinstance(node, ast.Call)
-                    and _called(node) == "copytree" and node.args
-                    and macro(ast.get_source_segment(text, node.args[0])
-                              or "")):
+            if (
+                isinstance(node, ast.Call)
+                and _called(node) == "copytree"
+                and node.args
+                and macro(ast.get_source_segment(text, node.args[0]) or "")
+            ):
                 return True
         return False
 
@@ -365,27 +357,27 @@ class TestNoGuardReinventsTheCopy:
         shape, the clause below would pass over a repository full of
         them - so it is exercised against the idiom itself."""
         assert self._copies_macro(
-            'MACRO = REPO / "tests/fixtures/macro_micro/run"\n'
-            'shutil.copytree(MACRO, tmp / "run")\n')
-        assert self._copies_macro(
-            'shutil.copytree(REPO / "tests/fixtures/macro_micro/run",'
-            ' snap / "run")\n')
+            'MACRO = REPO / "tests/fixtures/macro_micro/run"\nshutil.copytree(MACRO, tmp / "run")\n'
+        )
+        assert self._copies_macro('shutil.copytree(REPO / "tests/fixtures/macro_micro/run", snap / "run")\n')
         # The idiom as it was actually written, with the destination
         # bound a line earlier. A mutation reverting one guard to this
         # passed the first draft of the clause below.
         assert self._copies_macro(
             'MACRO = REPO / "tests/fixtures/macro_micro/run"\n'
             'run = tmp_path_factory.mktemp("shape") / "run"\n'
-            'shutil.copytree(MACRO, run)\n')
+            'shutil.copytree(MACRO, run)\n'
+        )
         # And through the loop variable, which is how every one of the
         # converted guards actually spelled it.
         assert self._copies_macro(
             'FIXTURES = {"macro_micro": REPO / "tests/fixtures/macro_micro/run"}\n'
             'for name, fixture in FIXTURES.items():\n'
-            '    shutil.copytree(fixture, run)\n')
+            '    shutil.copytree(fixture, run)\n'
+        )
         assert not self._copies_macro(
-            'GOLDEN = REPO / "tests/fixtures/golden/mixed_task_kinds"\n'
-            'shutil.copytree(GOLDEN, tmp / "run")\n')
+            'GOLDEN = REPO / "tests/fixtures/golden/mixed_task_kinds"\nshutil.copytree(GOLDEN, tmp / "run")\n'
+        )
 
     def test_every_macro_micro_page_goes_through_the_helper(self):
         bad = []
@@ -402,7 +394,8 @@ class TestNoGuardReinventsTheCopy:
         assert bad == [], (
             "a guard copies a `macro_micro` run to build a page without "
             "going through `tests/pages.py`, which silently drops the "
-            "Plane 2 report:\n  " + "\n  ".join(bad))
+            "Plane 2 report:\n  " + "\n  ".join(bad)
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -12,6 +12,7 @@ id at all, and what is left is the name. So the join is by name, it
 places 14 of 25, and `unplaced()` names the rest rather than letting a
 partial row read as a complete one - `UX-376`'s rule.
 """
+
 import pathlib
 import sys
 
@@ -51,7 +52,8 @@ class TestTheSetNamesWhatTheChangeReaches:
             "|---|---|---|---|---|---|\n"
             "| UX-1 | [an analysis row](UX-0001-x.md) | analysis | Medium | R4 | 🔴 |\n"
             "| UX-2 | [a docs row](UX-0002-y.md) | docs | Medium | R1 | 🟡 |\n",
-            encoding="utf-8")
+            encoding="utf-8",
+        )
         monkeypatch.setattr(dev_impact, "INDEX", index)
         assert dev_impact.filings_of("bga/correlate.py") == ["UX-1 an analysis row"]
 
@@ -59,8 +61,7 @@ class TestTheSetNamesWhatTheChangeReaches:
         """Empty when the backlog has no open analysis row - that is the
         backlog's state, not the tool's defect (`UX-812`)."""
         expected = []
-        for line in (REPO / "docs/backlog/scenarios/README.md").read_text(
-                encoding="utf-8").splitlines():
+        for line in (REPO / "docs/backlog/scenarios/README.md").read_text(encoding="utf-8").splitlines():
             cells = [c.strip() for c in line.split("|")]
             if len(cells) > 4 and cells[1].startswith("UX-") and cells[3] == "analysis":
                 expected.append(f"{cells[1]} {cells[2].split(']')[0].lstrip('[')}")
@@ -74,10 +75,10 @@ class TestTheContractRowSaysWhatItCannotPlace:
     def test_every_contract_is_placed_or_named_unplaced(self):
         placed = set()
         for module in (REPO / "bga").rglob("*.py"):
-            placed |= set(dev_impact.contracts_of(
-                str(module.relative_to(REPO))))
-        assert placed | set(dev_impact.unplaced()) == set(
-            contracts.inventory()), "a contract is neither placed nor named"
+            placed |= set(dev_impact.contracts_of(str(module.relative_to(REPO))))
+        assert placed | set(dev_impact.unplaced()) == set(contracts.inventory()), (
+            "a contract is neither placed nor named"
+        )
 
     def test_the_unplaced_set_is_not_everything(self):
         """A join that places nothing would pass the clause above."""

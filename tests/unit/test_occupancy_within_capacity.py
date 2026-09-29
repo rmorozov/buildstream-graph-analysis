@@ -6,6 +6,7 @@ it fails a Part 33.1 hard gate and carries the excursion as evidence.
 A resource whose capacity is simply unknown is never gated: a default
 would make the gate report the default rather than the run.
 """
+
 import json
 from pathlib import Path
 
@@ -33,8 +34,13 @@ def _write_run(tmp_path, name, run_context, concurrent=3, resource="PROCESS"):
     }
     trace = {
         "spans": [
-            {"task_key": f"{u}|BUILD|BUILD|0", "ts_us": 0, "dur_us": DURATION_US,
-             "resources": [resource], "primary_resource": resource}
+            {
+                "task_key": f"{u}|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": DURATION_US,
+                "resources": [resource],
+                "primary_resource": resource,
+            }
             for u in uids
         ],
         "phases": [],
@@ -55,8 +61,7 @@ def _analyze(tmp_path, name, run_context, concurrent=3, resource="PROCESS"):
 
 
 def _base_context(**extra):
-    context = {"trace_epsilon_us": EPSILON_US,
-               "wall_clock": {"start_us": 0, "end_us": DURATION_US}}
+    context = {"trace_epsilon_us": EPSILON_US, "wall_clock": {"start_us": 0, "end_us": DURATION_US}}
     context.update(extra)
     return context
 
@@ -69,19 +74,15 @@ class TestTheGateFires:
     """Occupancy above a declared capacity is a hard-gate failure."""
 
     def test_three_concurrent_against_a_declared_two_fails_the_gate(self, tmp_path):
-        _, result = _analyze(
-            tmp_path, "over",
-            _base_context(resource_capacities={"PROCESS": 2}), concurrent=3)
+        _, result = _analyze(tmp_path, "over", _base_context(resource_capacities={"PROCESS": 2}), concurrent=3)
         assert result.confidence["hard_gates"]["occupancy_within_capacity"] is False
 
     def test_the_failure_carries_the_excursion_as_evidence(self, tmp_path):
-        _, result = _analyze(
-            tmp_path, "over",
-            _base_context(resource_capacities={"PROCESS": 2}), concurrent=3)
+        _, result = _analyze(tmp_path, "over", _base_context(resource_capacities={"PROCESS": 2}), concurrent=3)
         violations = _i6_violations(result)
         assert len(violations) == 1, result.violations
         assert violations[0]["gate"] == "occupancy_within_capacity"
-        excursion, = violations[0]["detail"]
+        (excursion,) = violations[0]["detail"]
         assert excursion["resource"] == "PROCESS"
         assert excursion["capacity"] == 2
         assert excursion["peak_occupancy"] == 3
@@ -91,16 +92,13 @@ class TestTheGateFires:
         """`max_jobs` is run-context/v9's own `builders` field, which is
         what `compute_default_capacities` already treats as PROCESS's
         C_p - a declaration, unlike that function's literal fallbacks."""
-        _, result = _analyze(
-            tmp_path, "over", _base_context(max_jobs=2), concurrent=3)
+        _, result = _analyze(tmp_path, "over", _base_context(max_jobs=2), concurrent=3)
         assert result.confidence["hard_gates"]["occupancy_within_capacity"] is False
 
     def test_the_gate_is_hard_not_a_soft_caveat(self, tmp_path):
         """Part 33.1: it sits in `hard_gates`, so `all(...)` - which the
         suite uses as the healthy-run assertion - is False."""
-        _, result = _analyze(
-            tmp_path, "over",
-            _base_context(resource_capacities={"PROCESS": 2}), concurrent=3)
+        _, result = _analyze(tmp_path, "over", _base_context(resource_capacities={"PROCESS": 2}), concurrent=3)
         assert not all(result.confidence["hard_gates"].values())
 
 
@@ -119,15 +117,12 @@ class TestTheGateDoesNotFireOnAGuess:
         """DOWNLOAD occupancy of 3 with only PROCESS declared: the
         PROCESS number must not be applied to DOWNLOAD."""
         _, result = _analyze(
-            tmp_path, "other",
-            _base_context(resource_capacities={"PROCESS": 1}),
-            concurrent=3, resource="DOWNLOAD")
+            tmp_path, "other", _base_context(resource_capacities={"PROCESS": 1}), concurrent=3, resource="DOWNLOAD"
+        )
         assert result.confidence["hard_gates"]["occupancy_within_capacity"] is True
 
     def test_occupancy_exactly_at_capacity_passes(self, tmp_path):
-        _, result = _analyze(
-            tmp_path, "at",
-            _base_context(resource_capacities={"PROCESS": 3}), concurrent=3)
+        _, result = _analyze(tmp_path, "at", _base_context(resource_capacities={"PROCESS": 3}), concurrent=3)
         assert result.confidence["hard_gates"]["occupancy_within_capacity"] is True
 
 
@@ -137,15 +132,13 @@ class TestTheGateReadsThePublishedOccupancy:
     @pytest.mark.parametrize("concurrent,capacity", [(3, 2), (5, 1), (8, 4)])
     def test_the_peak_is_the_sweeps_own_peak(self, tmp_path, concurrent, capacity):
         analyzer, _ = _analyze(
-            tmp_path, "run",
-            _base_context(resource_capacities={"PROCESS": capacity}),
-            concurrent=concurrent)
+            tmp_path, "run", _base_context(resource_capacities={"PROCESS": capacity}), concurrent=concurrent
+        )
         segments = compute_occupancy_segments(analyzer.normalized_tasks)
         _, peak_resources = compute_peak_occupancy(segments)
         published_peak = {r.value: c for r, c in peak_resources.items()}
 
-        excursion, = compute_capacity_excursions(
-            analyzer.normalized_tasks, {"PROCESS": capacity})
+        (excursion,) = compute_capacity_excursions(analyzer.normalized_tasks, {"PROCESS": capacity})
         assert excursion["peak_occupancy"] == published_peak["PROCESS"]
 
     def test_the_over_capacity_time_is_measured_not_the_whole_horizon(self, tmp_path):
@@ -153,24 +146,46 @@ class TestTheGateReadsThePublishedOccupancy:
         the horizon: `over_capacity_us` is that quarter."""
         run_dir = tmp_path / "partial"
         run_dir.mkdir()
-        (run_dir / "run-context.json").write_text(json.dumps(_base_context(
-            resource_capacities={"PROCESS": 1})))
-        (run_dir / "graph.json").write_text(json.dumps({
-            "elements": [{"uid": "a.bst", "requested_target": True},
-                         {"uid": "b.bst", "requested_target": True}],
-            "dependencies": []}))
-        (run_dir / "trace.json").write_text(json.dumps({"spans": [
-            {"task_key": "a.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 20000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "b.bst|BUILD|BUILD|0", "ts_us": 15000, "dur_us": 20000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-        ], "phases": []}))
+        (run_dir / "run-context.json").write_text(json.dumps(_base_context(resource_capacities={"PROCESS": 1})))
+        (run_dir / "graph.json").write_text(
+            json.dumps(
+                {
+                    "elements": [
+                        {"uid": "a.bst", "requested_target": True},
+                        {"uid": "b.bst", "requested_target": True},
+                    ],
+                    "dependencies": [],
+                }
+            )
+        )
+        (run_dir / "trace.json").write_text(
+            json.dumps(
+                {
+                    "spans": [
+                        {
+                            "task_key": "a.bst|BUILD|BUILD|0",
+                            "ts_us": 0,
+                            "dur_us": 20000,
+                            "resources": ["PROCESS"],
+                            "primary_resource": "PROCESS",
+                        },
+                        {
+                            "task_key": "b.bst|BUILD|BUILD|0",
+                            "ts_us": 15000,
+                            "dur_us": 20000,
+                            "resources": ["PROCESS"],
+                            "primary_resource": "PROCESS",
+                        },
+                    ],
+                    "phases": [],
+                }
+            )
+        )
         analyzer = BuildEfficiencyAnalyzer(run_dir)
         analyzer.load()
         analyzer.analyze()
 
-        excursion, = compute_capacity_excursions(
-            analyzer.normalized_tasks, {"PROCESS": 1})
+        (excursion,) = compute_capacity_excursions(analyzer.normalized_tasks, {"PROCESS": 1})
         assert excursion["over_capacity_us"] == 5000
         assert excursion["first_start_us"] == 15000
         assert excursion["first_end_us"] == 20000

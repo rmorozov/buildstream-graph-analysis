@@ -36,6 +36,7 @@ p95 is the 19th; on 3 it is the 3rd. No interpolation, so every figure
 here is a value the store actually measured - which is the same reason
 `compute_band` uses a median and a MAD rather than a mean.
 """
+
 import math
 import os
 import statistics
@@ -187,10 +188,13 @@ def _resource_profile(row: dict) -> dict:
     return dict(row.get("resource") or {})
 
 
-def _class_aggregate(label: str, manifest: Optional[dict],
-                     rows: list[dict],
-                     declared: Optional[dict] = None,
-                     host_label: Optional[str] = None) -> dict:
+def _class_aggregate(
+    label: str,
+    manifest: Optional[dict],
+    rows: list[dict],
+    declared: Optional[dict] = None,
+    host_label: Optional[str] = None,
+) -> dict:
     """One comparison class's distributions, or its shortfall.
 
     `label` is the whole class - the machine and the declared build
@@ -206,14 +210,14 @@ def _class_aggregate(label: str, manifest: Optional[dict],
         "runs": len(rows),
         "duration_us": distribution(durations),
         "cache_hit_rate": distribution(
-            [row["cache_hit_rate"] for row in rows
-             if row.get("cache_hit_rate") is not None]),
+            [row["cache_hit_rate"] for row in rows if row.get("cache_hit_rate") is not None]
+        ),
         "cores_busy": distribution(
-            [row["resource"]["cores_busy"] for row in rows
-             if "cores_busy" in (row.get("resource") or {})]),
+            [row["resource"]["cores_busy"] for row in rows if "cores_busy" in (row.get("resource") or {})]
+        ),
         "peak_rss_bytes": distribution(
-            [row["resource"]["peak_rss_bytes"] for row in rows
-             if "peak_rss_bytes" in (row.get("resource") or {})]),
+            [row["resource"]["peak_rss_bytes"] for row in rows if "peak_rss_bytes" in (row.get("resource") or {})]
+        ),
         # UX-300: what these runs cost on disk. The rows have carried
         # `bytes` since `UX-159` and nothing read them, so a store whose
         # snapshots grew from kilobytes to gigabytes said nothing about
@@ -221,12 +225,9 @@ def _class_aggregate(label: str, manifest: Optional[dict],
         # A distribution rather than a total alone, because "the median
         # capture is 4.7 MB and the p95 is 2.1 GB" is the reading that
         # names the run worth looking at.
-        "snapshot_bytes": distribution(
-            [row["bytes"] for row in rows if row.get("bytes")]),
+        "snapshot_bytes": distribution([row["bytes"] for row in rows if row.get("bytes")]),
         # UX-1078: bga's own tail after each build, from `tail.json`.
-        "bga_tail_us": distribution(
-            [row["bga_tail_us"] for row in rows
-             if row.get("bga_tail_us") is not None]),
+        "bga_tail_us": distribution([row["bga_tail_us"] for row in rows if row.get("bga_tail_us") is not None]),
         "total_bytes": sum(row.get("bytes") or 0 for row in rows),
         # `UX-528`: capped. This is one entry per run per host class,
         # and nothing reads it as a list - the trend plots `store/v1`'s
@@ -255,7 +256,8 @@ def _class_aggregate(label: str, manifest: Optional[dict],
                 "beside the Plane 2 report at capture time, and these "
                 "snapshots predate that or recorded no Plane 2. "
                 "`bga snapshot -- bst build TARGET` writes them for the "
-                "next run; nothing re-reads an old capture to find them."),
+                "next run; nothing re-reads an old capture to find them."
+            ),
         }
     if entry["duration_us"] is None:
         # Named, not silent. `UX-114`'s shortfall shape: what is missing
@@ -267,7 +269,8 @@ def _class_aggregate(label: str, manifest: Optional[dict],
             "sentence": (
                 f"{plural(len(rows), 'finished run')} on {label}: "
                 f"{MIN_BASELINE_RUNS} are needed before a distribution "
-                f"means anything, so none is published for this class."),
+                f"means anything, so none is published for this class."
+            ),
         }
     return entry
 
@@ -282,11 +285,9 @@ def _excluded(rows: list[dict]) -> dict:
     reasons: dict[str, int] = {}
     for row in rows:
         if row.get("incomplete_reason"):
-            reasons[str(row["incomplete_reason"])] = (
-                reasons.get(str(row["incomplete_reason"]), 0) + 1)
+            reasons[str(row["incomplete_reason"])] = reasons.get(str(row["incomplete_reason"]), 0) + 1
         elif row.get("total_duration_us") is None:
-            reasons["no recorded duration"] = (
-                reasons.get("no recorded duration", 0) + 1)
+            reasons["no recorded duration"] = reasons.get("no recorded duration", 0) + 1
     return {"count": sum(reasons.values()), "by_reason": reasons}
 
 
@@ -318,7 +319,7 @@ def _excluded(rows: list[dict]) -> dict:
 #
 # The minority is defined against the **newest** state rather than by
 # count or by age: the newest is the one the reader is holding.
-AGGREGATE_READS = ("analyze/v2", "store/v1")   # UX-288
+AGGREGATE_READS = ("analyze/v2", "store/v1")  # UX-288
 
 
 def _contract_set_of(snapshot: str) -> Optional[tuple]:
@@ -355,8 +356,10 @@ def _contract_composition(rows: list[dict]) -> dict:
             unstamped += 1
         else:
             seen[found] = seen.get(found, 0) + 1
-    sets = [{"contracts": list(contracts), "runs": count}
-            for contracts, count in sorted(seen.items(), key=lambda kv: -kv[1])]
+    sets = [
+        {"contracts": list(contracts), "runs": count}
+        for contracts, count in sorted(seen.items(), key=lambda kv: -kv[1])
+    ]
     return {
         "sets": sets,
         "unstamped_runs": unstamped,
@@ -407,13 +410,18 @@ def aggregate(listing: dict, blend: bool = False) -> dict:
             manifests[label] = manifest
         declarations[label] = declared
         host_labels[label] = host_label
-        by_class.setdefault(label, []).append(dict(
-            row, resource=_resource_profile(row)))
+        by_class.setdefault(label, []).append(dict(row, resource=_resource_profile(row)))
 
-    classes = [_class_aggregate(label, manifests[label], by_class[label],
-                                declared=declarations.get(label),
-                                host_label=host_labels.get(label))
-               for label in sorted(by_class)]
+    classes = [
+        _class_aggregate(
+            label,
+            manifests[label],
+            by_class[label],
+            declared=declarations.get(label),
+            host_label=host_labels.get(label),
+        )
+        for label in sorted(by_class)
+    ]
 
     document = {
         "project": project,
@@ -436,10 +444,10 @@ def aggregate(listing: dict, blend: bool = False) -> dict:
             "snapshots": len(rows),
             "measured_total": sum(row.get("bytes") or 0 for row in usable),
             "note": "Bytes on disk under `.bga/runs`, over every snapshot "
-                    "this store holds - a capture excluded from the "
-                    "distributions above for failing or being interrupted "
-                    "still occupies its disk. `bga snapshot prune` says "
-                    "what deleting would recover.",
+            "this store holds - a capture excluded from the "
+            "distributions above for failing or being interrupted "
+            "still occupies its disk. `bga snapshot prune` says "
+            "what deleting would recover.",
         },
         "blended": None,
         "refusal": None,
@@ -452,9 +460,7 @@ def aggregate(listing: dict, blend: bool = False) -> dict:
         # the same document, byte for byte.
         declared = [entry for entry in classes if entry.get("build_class")]
         if declared:
-            names = ", ".join(
-                class_label(entry["host_class"], entry.get("build_class"))
-                for entry in classes)
+            names = ", ".join(class_label(entry["host_class"], entry.get("build_class")) for entry in classes)
             refusal = {
                 "check": "mixed_class_aggregate",
                 "classes": len(classes),
@@ -465,7 +471,8 @@ def aggregate(listing: dict, blend: bool = False) -> dict:
                     f"says when and why a build ran, a variant says what it "
                     f"did - so a blended distribution is a median describing "
                     f"no build anyone runs: read the per-class figures, or "
-                    f"pass --blend to state the mixed claim yourself."),
+                    f"pass --blend to state the mixed claim yourself."
+                ),
             }
         else:
             names = ", ".join(entry["host_class"] for entry in classes)
@@ -478,7 +485,8 @@ def aggregate(listing: dict, blend: bool = False) -> dict:
                     f"machines here and should not be, so a blended "
                     f"distribution is not published: read the per-class "
                     f"figures, or pass --blend to state the mixed claim "
-                    f"yourself."),
+                    f"yourself."
+                ),
             }
         document["refusal"] = refusal
         if blend:
@@ -488,10 +496,21 @@ def aggregate(listing: dict, blend: bool = False) -> dict:
         # One class is not a mix, so the blended figure *is* the answer
         # and there is nothing to refuse.
         document["blended"] = dict(
-            {k: classes[0][k] for k in
-             ("duration_us", "cache_hit_rate", "cores_busy", "peak_rss_bytes",
-              "snapshot_bytes", "bga_tail_us", "total_bytes")},
-            runs=classes[0]["runs"], mixes=1)
+            {
+                k: classes[0][k]
+                for k in (
+                    "duration_us",
+                    "cache_hit_rate",
+                    "cores_busy",
+                    "peak_rss_bytes",
+                    "snapshot_bytes",
+                    "bga_tail_us",
+                    "total_bytes",
+                )
+            },
+            runs=classes[0]["runs"],
+            mixes=1,
+        )
     return schemas.stamp(document, schemas.STORE_AGGREGATE)
 
 
@@ -499,26 +518,22 @@ def _blended(by_class: dict[str, list[dict]]) -> dict:
     every = [row for rows in by_class.values() for row in rows]
     return {
         "runs": len(every),
-        "duration_us": distribution(
-            [row["total_duration_us"] for row in every]),
+        "duration_us": distribution([row["total_duration_us"] for row in every]),
         "cache_hit_rate": distribution(
-            [row["cache_hit_rate"] for row in every
-             if row.get("cache_hit_rate") is not None]),
+            [row["cache_hit_rate"] for row in every if row.get("cache_hit_rate") is not None]
+        ),
         "cores_busy": distribution(
-            [row["resource"]["cores_busy"] for row in every
-             if "cores_busy" in (row.get("resource") or {})]),
+            [row["resource"]["cores_busy"] for row in every if "cores_busy" in (row.get("resource") or {})]
+        ),
         "peak_rss_bytes": distribution(
-            [row["resource"]["peak_rss_bytes"] for row in every
-             if "peak_rss_bytes" in (row.get("resource") or {})]),
+            [row["resource"]["peak_rss_bytes"] for row in every if "peak_rss_bytes" in (row.get("resource") or {})]
+        ),
         # UX-300: disk is the one figure that *does* blend across host
         # classes without lying. A duration measured on two machines is
         # two populations (`UX-186`); a byte is a byte, and the question
         # "what does this store weigh" has one answer whatever built it.
-        "snapshot_bytes": distribution(
-            [row["bytes"] for row in every if row.get("bytes")]),
-        "bga_tail_us": distribution(
-            [row["bga_tail_us"] for row in every
-             if row.get("bga_tail_us") is not None]),
+        "snapshot_bytes": distribution([row["bytes"] for row in every if row.get("bytes")]),
+        "bga_tail_us": distribution([row["bga_tail_us"] for row in every if row.get("bga_tail_us") is not None]),
         "total_bytes": sum(row.get("bytes") or 0 for row in every),
     }
 
@@ -528,8 +543,10 @@ def render(document: dict) -> list[str]:
     `--aggregate --format json` cannot describe one store two ways."""
     from .run_store import human_bytes
 
-    lines = [f"Store: {document.get('project')}",
-             f"  {plural(document['measured'], 'measured run')} of {plural(document['snapshots'], 'snapshot')}"]
+    lines = [
+        f"Store: {document.get('project')}",
+        f"  {plural(document['measured'], 'measured run')} of {plural(document['snapshots'], 'snapshot')}",
+    ]
     # UX-300: what it weighs, on the second line, because a store that
     # has quietly reached tens of gigabytes is a fact about the machine
     # before it is a fact about any build.
@@ -553,8 +570,7 @@ def render(document: dict) -> list[str]:
         lines += ["", f"  {refusal['sentence']}"]
     blended = document.get("blended")
     if blended and (blended.get("mixes") or 1) > 1:
-        lines += ["", f"  Blended across {blended['mixes']} host classes, "
-                      f"at your request:"]
+        lines += ["", f"  Blended across {blended['mixes']} host classes, at your request:"]
         lines.extend(_distribution_lines(blended))
     return lines
 
@@ -567,7 +583,7 @@ _FIGURES = (
     # UX-300: in MiB, beside the other per-run figures, because the
     # question "which capture is the big one" is answered by a p95
     # against a median and not by a total.
-    ("snapshot_bytes", "Snapshot size", 1024 ** 2, " MiB"),
+    ("snapshot_bytes", "Snapshot size", 1024**2, " MiB"),
     ("bga_tail_us", "bga after the build", 1e6, "s"),
 )
 
@@ -583,7 +599,8 @@ def _distribution_lines(entry: dict) -> list[str]:
             f"median {shape['median'] / divisor:.1f}{unit}, "
             f"p95 {shape['p95'] / divisor:.1f}{unit}, "
             f"max {shape['max'] / divisor:.1f}{unit} "
-            f"(MAD {shape['mad'] / divisor:.1f}{unit}, n={shape['samples']})")
+            f"(MAD {shape['mad'] / divisor:.1f}{unit}, n={shape['samples']})"
+        )
     return lines
 
 
@@ -621,8 +638,7 @@ def _snapshot_of(run_dir: Optional[str]) -> Optional[str]:
     return snapshot
 
 
-def element_history(run_dir: Optional[str],
-                    measured: Optional[dict[str, int]]) -> Optional[dict]:
+def element_history(run_dir: Optional[str], measured: Optional[dict[str, int]]) -> Optional[dict]:
     """Per-element duration series for the run at `run_dir`, or `None`.
 
     `UX-565`. Part 29 needed a history and one existed: `UX-226` writes
@@ -680,5 +696,3 @@ def element_history(run_dir: Optional[str],
     if not durations:
         return None
     return {"host_class": label, "runs": runs + 1, "durations": durations}
-
-

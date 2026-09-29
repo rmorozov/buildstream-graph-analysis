@@ -10,7 +10,10 @@ case "$path" in
 esac
 [ -f "$path" ] || exit 0
 
-if ! out=$(ruff check "$path" 2>&1); then
+# UX-1118: layout is the formatter's, so the edit lands formatted.
+python3 -m ruff format --quiet "$path" >/dev/null 2>&1
+
+if ! out=$(python3 -m ruff check "$path" 2>&1); then
   # Exit 2 sends the message back to the agent as feedback. The edit has
   # already happened; this is the report, not a block.
   printf 'ruff on the file you just edited:\n%s\n' "$out" >&2

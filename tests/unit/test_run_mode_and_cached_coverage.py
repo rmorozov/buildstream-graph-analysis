@@ -19,6 +19,7 @@ Measured on the real `freedesktop-sdk` capture (25 built, 65 skipped,
 126 elements): confidence 0.82 with a failed hard gate, before; 1.00 with
 none, after.
 """
+
 import pytest
 
 from bga.ingest.models import RunContext
@@ -27,9 +28,7 @@ from bga.ingest.models import RunContext
 def _context(processed=None, skipped=None, failed=(), **kwargs):
     queue_summary = None
     if processed is not None:
-        queue_summary = {
-            "build": {"processed": processed, "skipped": skipped, "failed": 0}
-        }
+        queue_summary = {"build": {"processed": processed, "skipped": skipped, "failed": 0}}
     return RunContext(
         queue_summary=queue_summary,
         build_outcome={"failed_elements": list(failed), "failed_count": len(failed)},
@@ -75,7 +74,9 @@ def _coverage(context, critical_path, elements_with_tasks):
     tasks = [
         NormalizedTask(
             task_key=TaskKey(element_uid=uid, task_kind=TaskKind.BUILD, phase="EXECUTION"),
-            ready_us=0, start_us=0, finish_us=1_000_000,
+            ready_us=0,
+            start_us=0,
+            finish_us=1_000_000,
         )
         for uid in elements_with_tasks
     ]
@@ -97,9 +98,7 @@ CHAIN = ["a.bst", "cached.bst", "c.bst"]
 
 
 def test_a_cached_critical_path_element_is_not_a_coverage_gap():
-    confidence, violations = _coverage(
-        _context(processed=2, skipped=1), CHAIN, ["a.bst", "c.bst"]
-    )
+    confidence, violations = _coverage(_context(processed=2, skipped=1), CHAIN, ["a.bst", "c.bst"])
 
     assert confidence["critical_path_coverage"] == 1.0
     assert confidence["hard_gates"]["critical_path_coverage_full"] is True
@@ -111,9 +110,7 @@ def test_a_full_run_still_fails_on_a_missing_element():
     """The caches-off nightly keeps today's behaviour exactly: nothing
     was skipped, so an element with no task really is a lost
     measurement."""
-    confidence, violations = _coverage(
-        _context(processed=3, skipped=0), CHAIN, ["a.bst", "c.bst"]
-    )
+    confidence, violations = _coverage(_context(processed=3, skipped=0), CHAIN, ["a.bst", "c.bst"])
 
     assert confidence["critical_path_coverage"] == pytest.approx(2 / 3)
     assert confidence["hard_gates"]["critical_path_coverage_full"] is False
@@ -130,9 +127,7 @@ def test_a_capture_without_a_summary_keeps_the_old_behaviour():
 def test_a_failed_build_is_never_given_the_benefit_of_the_doubt():
     """A failed build's missing tasks may genuinely be lost, so absence
     must not be read as 'cached' there (UX-54 supplies the signal)."""
-    confidence, _ = _coverage(
-        _context(processed=2, skipped=1, failed=["x.bst"]), CHAIN, ["a.bst", "c.bst"]
-    )
+    confidence, _ = _coverage(_context(processed=2, skipped=1, failed=["x.bst"]), CHAIN, ["a.bst", "c.bst"])
 
     assert confidence["critical_path_coverage"] == pytest.approx(2 / 3)
     assert confidence["critical_path_cached"] == []
@@ -142,9 +137,7 @@ def test_a_count_mismatch_is_never_given_the_benefit_of_the_doubt():
     """The checksum: BuildStream said it processed 3 elements but only 2
     produced tasks, so something really was lost in extraction and the
     gate must still fire."""
-    confidence, _ = _coverage(
-        _context(processed=3, skipped=1), CHAIN, ["a.bst", "c.bst"]
-    )
+    confidence, _ = _coverage(_context(processed=3, skipped=1), CHAIN, ["a.bst", "c.bst"])
 
     assert confidence["critical_path_coverage"] == pytest.approx(2 / 3)
     assert confidence["critical_path_cached"] == []

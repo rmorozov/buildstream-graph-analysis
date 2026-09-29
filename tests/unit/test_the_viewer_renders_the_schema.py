@@ -17,6 +17,7 @@ here rather than asserted in prose:
 The JavaScript is exercised through Node where it is available and
 through its own structure where it is not, so CI needs no browser.
 """
+
 import json
 import os
 import re
@@ -54,13 +55,12 @@ def test_node_is_here_where_it_is_expected():
     keeps it that way.
     """
     if not os.environ.get("BGA_EXPECT_DEV"):
-        pytest.skip("not a dev environment by its own account "
-                    "(BGA_EXPECT_DEV is unset)")
+        pytest.skip("not a dev environment by its own account (BGA_EXPECT_DEV is unset)")
     assert node is not None, (
         "BGA_EXPECT_DEV is set, so this environment claims to be able to run "
         "the viewer's guards, but `node` is missing and every JavaScript "
-        "guard in this suite just skipped.")
-
+        "guard in this suite just skipped."
+    )
 
 
 def _package_data_for(package):
@@ -83,15 +83,15 @@ def _package_data_for(package):
     text = open("pyproject.toml", encoding="utf-8").read()
     try:
         import tomllib
-    except ImportError:                       # pragma: no cover - <3.11
+    except ImportError:  # pragma: no cover - <3.11
         import ast
         import re
 
-        match = re.search(rf'^"{package}"\s*=\s*(\[[^\]]*\])',
-                          text, re.M)
+        match = re.search(rf'^"{package}"\s*=\s*(\[[^\]]*\])', text, re.M)
         return ast.literal_eval(match.group(1)) if match else []
     data = tomllib.loads(text)
     return data["tool"]["setuptools"]["package-data"].get(package, [])
+
 
 @pytest.fixture
 def served():
@@ -128,18 +128,22 @@ class TestItServesTheSameJsonTheCliPrints:
         served_payload = json.loads(body)
 
         printed = subprocess.run(
-            [sys.executable, "-c",
-             "from bga.cli import main; raise SystemExit(main("
-             f"['analyze', {GOLDEN!r}, '--format', 'json']))"],
-            capture_output=True, text=True, cwd=os.getcwd())
+            [
+                sys.executable,
+                "-c",
+                f"from bga.cli import main; raise SystemExit(main(['analyze', {GOLDEN!r}, '--format', 'json']))",
+            ],
+            capture_output=True,
+            text=True,
+            cwd=os.getcwd(),
+        )
         assert served_payload == json.loads(printed.stdout)
 
     def test_the_schemas_are_served_too(self, served):
         _, _, body = _get(served() + "schemas.json")
         document = json.loads(body)
         assert set(document) == set(schemas.names())
-        assert document[schemas.ANALYZE]["properties"]["schema"]["const"] == \
-            schemas.ANALYZE
+        assert document[schemas.ANALYZE]["properties"]["schema"]["const"] == schemas.ANALYZE
 
 
 class TestTheServerIsLocalAndNarrow:
@@ -149,17 +153,20 @@ class TestTheServerIsLocalAndNarrow:
         httpd, _ = serve(GOLDEN)
         try:
             assert httpd.server_address[0] == "127.0.0.1", (
-                f"bound to {httpd.server_address[0]} - reachable off this "
-                f"machine")
+                f"bound to {httpd.server_address[0]} - reachable off this machine"
+            )
         finally:
             httpd.server_close()
 
-    @pytest.mark.parametrize("path", [
-        "../../../etc/passwd",
-        "run/trace.json",          # a real file in the run, not in the table
-        "run-context.json",
-        "",                        # handled: index.html
-    ])
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "../../../etc/passwd",
+            "run/trace.json",  # a real file in the run, not in the table
+            "run-context.json",
+            "",  # handled: index.html
+        ],
+    )
     def test_only_the_table_is_reachable(self, served, path):
         url = served()
         try:
@@ -176,8 +183,7 @@ class TestTheServerIsLocalAndNarrow:
 
     def test_it_answers_no_write_method(self, served):
         url = served()
-        request = urllib.request.Request(url + "report.json", method="POST",
-                                         data=b"{}")
+        request = urllib.request.Request(url + "report.json", method="POST", data=b"{}")
         with pytest.raises(urllib.error.HTTPError) as caught:
             urllib.request.urlopen(request, timeout=10)
         assert caught.value.code in (404, 501), caught.value.code
@@ -196,8 +202,7 @@ class TestTheViewHints:
         for name in schemas.names():
             document = schemas.schema(name)
             for key, sub in document["properties"].items():
-                for hint in (schemas.QUANTITY, schemas.SEVERITY,
-                             schemas.COLUMNS, schemas.DIRECTION):
+                for hint in (schemas.QUANTITY, schemas.SEVERITY, schemas.COLUMNS, schemas.DIRECTION):
                     if hint in sub:
                         assert key in document["properties"], key
 
@@ -205,19 +210,16 @@ class TestTheViewHints:
         for name in schemas.names():
             for key, sub in schemas.schema(name)["properties"].items():
                 if schemas.QUANTITY in sub:
-                    assert sub[schemas.QUANTITY] in schemas.QUANTITIES, \
-                        f"{name}.{key}"
+                    assert sub[schemas.QUANTITY] in schemas.QUANTITIES, f"{name}.{key}"
 
     def test_a_typo_in_a_quantity_is_refused(self):
         with pytest.raises(ValueError, match="furlongs"):
-            schemas._document("x/v1", "x", {"a": "number"}, "d",
-                              hints={"a": {schemas.QUANTITY: "furlongs"}})
+            schemas._document("x/v1", "x", {"a": "number"}, "d", hints={"a": {schemas.QUANTITY: "furlongs"}})
 
     def test_a_hint_on_a_key_that_does_not_exist_is_refused(self):
         """Silent otherwise: the renderer would simply never see it."""
         with pytest.raises(KeyError, match="nosuchkey"):
-            schemas._document("x/v1", "x", {"a": "number"}, "d",
-                              hints={"nosuchkey": {schemas.QUANTITY: "bytes"}})
+            schemas._document("x/v1", "x", {"a": "number"}, "d", hints={"nosuchkey": {schemas.QUANTITY: "bytes"}})
 
     def test_the_findings_array_is_marked_as_findings(self):
         analyze = schemas.schema(schemas.ANALYZE)["properties"]
@@ -233,12 +235,16 @@ class TestTheViewHints:
         jsonschema = pytest.importorskip("jsonschema")
 
         printed = subprocess.run(
-            [sys.executable, "-c",
-             "from bga.cli import main; raise SystemExit(main("
-             f"['analyze', {GOLDEN!r}, '--format', 'json']))"],
-            capture_output=True, text=True, cwd=os.getcwd())
-        jsonschema.validate(json.loads(printed.stdout),
-                            schemas.schema(schemas.ANALYZE))
+            [
+                sys.executable,
+                "-c",
+                f"from bga.cli import main; raise SystemExit(main(['analyze', {GOLDEN!r}, '--format', 'json']))",
+            ],
+            capture_output=True,
+            text=True,
+            cwd=os.getcwd(),
+        )
+        jsonschema.validate(json.loads(printed.stdout), schemas.schema(schemas.ANALYZE))
 
 
 @needs_node
@@ -251,44 +257,59 @@ class TestThePageRendersFromTheSchema:
         # for `-e SCRIPT` (`OSError: Argument list too long`) - stdin
         # has no such ceiling, and `-` reads the script from it.
         script = _RENDER_HARNESS % (json.dumps(payload), json.dumps(schema))
-        result = subprocess.run([node, "--input-type=module", "-"],
-                                input=script,
-                                capture_output=True, text=True,
-                                cwd=os.getcwd(), timeout=60)
+        result = subprocess.run(
+            [node, "--input-type=module", "-"],
+            input=script,
+            capture_output=True,
+            text=True,
+            cwd=os.getcwd(),
+            timeout=60,
+        )
         assert result.returncode == 0, result.stderr
         return json.loads(result.stdout)
 
     def test_a_findings_array_renders_as_findings_with_severity(self):
         rendered = self._render(
-            {"schema": schemas.ANALYZE, "run_id": "r",
-             "total_duration_us": 1_500_000, "section": None,
-             "findings": [{"id": "x", "severity": "critical",
-                           "title": "The build is serialised",
-                           "detail": ["one"], "elements": ["a.bst"]}]},
-            schemas.schema(schemas.ANALYZE))
+            {
+                "schema": schemas.ANALYZE,
+                "run_id": "r",
+                "total_duration_us": 1_500_000,
+                "section": None,
+                "findings": [
+                    {
+                        "id": "x",
+                        "severity": "critical",
+                        "title": "The build is serialised",
+                        "detail": ["one"],
+                        "elements": ["a.bst"],
+                    }
+                ],
+            },
+            schemas.schema(schemas.ANALYZE),
+        )
         assert "critical" in rendered["severities"]
         assert "The build is serialised" in rendered["text"]
 
     def test_a_duration_hint_makes_the_number_human(self):
         rendered = self._render(
-            {"schema": schemas.ANALYZE, "run_id": "r", "section": None,
-             "total_duration_us": 5_400_000_000},
-            schemas.schema(schemas.ANALYZE))
+            {"schema": schemas.ANALYZE, "run_id": "r", "section": None, "total_duration_us": 5_400_000_000},
+            schemas.schema(schemas.ANALYZE),
+        )
         assert "1.5 h" in rendered["text"], rendered["text"]
 
     def test_a_delta_is_coloured_by_the_direction_hint(self):
         rendered = self._render(
-            {"schema": schemas.COMPARE, "deltas": {"total_duration_us": -900000,
-                                                   "contention_us": 400000}},
-            schemas.schema(schemas.COMPARE))
+            {"schema": schemas.COMPARE, "deltas": {"total_duration_us": -900000, "contention_us": 400000}},
+            schemas.schema(schemas.COMPARE),
+        )
         assert "better" in rendered["classes"], rendered["classes"]
         assert "worse" in rendered["classes"]
 
     def test_a_refusal_gets_visual_weight(self):
         rendered = self._render(
-            {"schema": schemas.COMPARE,
-             "verdict": "not comparable (trace_spine differs)"},
-            schemas.schema(schemas.COMPARE))
+            {"schema": schemas.COMPARE, "verdict": "not comparable (trace_spine differs)"},
+            schemas.schema(schemas.COMPARE),
+        )
         assert "refused" in rendered["classes"]
         assert "not comparable" in rendered["text"]
 
@@ -302,21 +323,26 @@ class TestThePageRendersFromTheSchema:
         before = open(APP_JS, "rb").read()
 
         schema = schemas.schema(schemas.ANALYZE)
-        schema["properties"]["cache_efficiency"] = {
-            "type": ["object", "null"], schemas.QUANTITY: "share"}
+        schema["properties"]["cache_efficiency"] = {"type": ["object", "null"], schemas.QUANTITY: "share"}
         schema["properties"]["hotspots"] = {
             "type": ["array", "null"],
             # Deliberately neither key order nor alphabetical order.
             # The first draft used ["element", "seconds"], which is
             # both - so ignoring the hint entirely left this green.
-            schemas.COLUMNS: ["seconds", "element"]}
+            schemas.COLUMNS: ["seconds", "element"],
+        }
 
         rendered = self._render(
-            {"schema": schemas.ANALYZE, "run_id": "r", "section": None,
-             "total_duration_us": 10,
-             "cache_efficiency": {"pull_share": 0.42},
-             "hotspots": [{"element": "slow.bst", "seconds": 61.0}]},
-            schema)
+            {
+                "schema": schemas.ANALYZE,
+                "run_id": "r",
+                "section": None,
+                "total_duration_us": 10,
+                "cache_efficiency": {"pull_share": 0.42},
+                "hotspots": [{"element": "slow.bst", "seconds": 61.0}],
+            },
+            schema,
+        )
 
         assert "cache_efficiency" in rendered["sections"], rendered["sections"]
         assert "hotspots" in rendered["sections"]
@@ -327,20 +353,25 @@ class TestThePageRendersFromTheSchema:
         assert rendered["columns"]["hotspots"] == ["seconds", "element"]
 
         assert open(APP_JS, "rb").read() == before, (
-            "the renderer was edited to make this pass, which is the "
-            "opposite of what it asserts")
+            "the renderer was edited to make this pass, which is the opposite of what it asserts"
+        )
 
     def test_an_unhinted_field_still_renders(self):
         """The other half: the schemas deliberately do not describe
         every nested shape, so absence of a hint must degrade, not
         erase."""
         rendered = self._render(
-            {"schema": schemas.ANALYZE, "run_id": "r", "section": None,
-             "total_duration_us": 1, "mystery": {"alpha": 3}},
-            schemas.schema(schemas.ANALYZE))
+            {
+                "schema": schemas.ANALYZE,
+                "run_id": "r",
+                "section": None,
+                "total_duration_us": 1,
+                "mystery": {"alpha": 3},
+            },
+            schemas.schema(schemas.ANALYZE),
+        )
         assert "mystery" in rendered["sections"]
         assert "Alpha" in rendered["text"]
-
 
 
 class TestTheSchemaDescribesWhatRealRunsEmit:
@@ -377,10 +408,15 @@ class TestTheSchemaDescribesWhatRealRunsEmit:
 
     def _analyze(self, run):
         result = subprocess.run(
-            [sys.executable, "-c",
-             "from bga.cli import main; raise SystemExit(main("
-             f"['analyze', {run!r}, '--format', 'json']))"],
-            capture_output=True, text=True, cwd=os.getcwd())
+            [
+                sys.executable,
+                "-c",
+                f"from bga.cli import main; raise SystemExit(main(['analyze', {run!r}, '--format', 'json']))",
+            ],
+            capture_output=True,
+            text=True,
+            cwd=os.getcwd(),
+        )
         assert result.returncode == 0, result.stderr
         return json.loads(result.stdout)
 
@@ -391,7 +427,8 @@ class TestTheSchemaDescribesWhatRealRunsEmit:
         enriched = set(self._analyze(self._enriched_run(tmp_path)))
         assert enriched - plain, (
             "the enriched run emits nothing the golden one does not - "
-            "this fixture no longer exercises the wrapper-derived keys")
+            "this fixture no longer exercises the wrapper-derived keys"
+        )
 
     def test_every_key_a_real_run_emits_is_declared(self, tmp_path):
         declared = set(schemas.schema(schemas.ANALYZE)["properties"])
@@ -400,7 +437,9 @@ class TestTheSchemaDescribesWhatRealRunsEmit:
         assert not undeclared, (
             f"the analyzer emits {undeclared}, which the schema does not "
             f"declare - a consumer reading the schema would not know they "
-            f"exist, and a rename would be silent")
+            f"exist, and a rename would be silent"
+        )
+
 
 # `UX-314`. What a viewer module may say about `http://`.
 #
@@ -421,14 +460,14 @@ class TestTheSchemaDescribesWhatRealRunsEmit:
 # a local name. So the match ends at `:`, `/`, or the end of the token.
 _INERT_URL = re.compile(
     r"http://(?:127\.0\.0\.1|localhost)(?=[:/]|\b(?![.\w]))"
-    r"|http://www\.w3\.org/2000/svg")
+    r"|http://www\.w3\.org/2000/svg"
+)
 
 
 def _no_cdn(text):
     """True if `text` fetches nothing from anyone else's server."""
     text = _INERT_URL.sub("", text)
-    return ("http://" not in text and "cdn." not in text
-            and "unpkg" not in text and "jsdelivr" not in text)
+    return "http://" not in text and "cdn." not in text and "unpkg" not in text and "jsdelivr" not in text
 
 
 class TestTheViewerShipsNoToolchain:
@@ -445,13 +484,11 @@ class TestTheViewerShipsNoToolchain:
         for name in files:
             assert os.path.splitext(name)[1] in (".html", ".js", ".css"), name
             assert not name.endswith((".min.js", ".min.css", ".map")), (
-                f"{name} looks generated; every file here is source a "
-                f"human edits")
+                f"{name} looks generated; every file here is source a human edits"
+            )
             text = open(os.path.join("bga/viewer", name), encoding="utf-8").read()
             longest = max((len(line) for line in text.splitlines()), default=0)
-            assert longest < 400, (
-                f"{name} has a {longest}-character line - that is what "
-                f"bundled output looks like")
+            assert longest < 400, f"{name} has a {longest}-character line - that is what bundled output looks like"
 
     def test_nothing_is_fetched_from_a_cdn(self):
         # `http://www.w3.org/2000/svg` is an XML *namespace identifier*,
@@ -489,14 +526,15 @@ class TestTheViewerShipsNoToolchain:
         assert not _no_cdn('<script src="https://cdn.example/x.js">')
         assert not _no_cdn('import x from "https://unpkg.com/x";')
         assert not _no_cdn('// see http://localhost.evil.example/x.js'), (
-            "a host that merely starts with `localhost` is not loopback")
+            "a host that merely starts with `localhost` is not loopback"
+        )
         assert not _no_cdn('src="http://127.0.0.1.evil.example/x.js"'), (
-            "a host that merely starts with `127.0.0.1` is not loopback")
+            "a host that merely starts with `127.0.0.1` is not loopback"
+        )
 
     def test_there_is_no_package_json_anywhere_near_it(self):
         assert not os.path.exists("bga/viewer/package.json")
         assert not os.path.exists("package.json")
-
 
     def test_the_assets_are_found_through_the_package_not_the_checkout(self):
         """`ASSET_DIR` must be right in both install shapes.
@@ -511,8 +549,7 @@ class TestTheViewerShipsNoToolchain:
         import bga
         import tools.bga_view as view
 
-        expected = os.path.join(os.path.dirname(os.path.abspath(bga.__file__)),
-                                "viewer")
+        expected = os.path.join(os.path.dirname(os.path.abspath(bga.__file__)), "viewer")
         assert expected == view.ASSET_DIR
         for name in view.ASSETS:
             assert os.path.exists(os.path.join(view.ASSET_DIR, name)), name
@@ -528,9 +565,11 @@ class TestTheViewerShipsNoToolchain:
         assert "bga.__file__" in derivation[1], (
             "ASSET_DIR is not derived from the bga package's location - "
             "packaged as bga._tools, walking up from this file lands in "
-            "site-packages and every asset 404s")
+            "site-packages and every asset 404s"
+        )
         assert "dirname(os.path.dirname" not in derivation[1].replace(" ", ""), (
-            "walking up from __file__ is the derivation that broke")
+            "walking up from __file__ is the derivation that broke"
+        )
 
     def test_the_viewer_ships_in_the_wheel(self):
         """The other half: the files have to be *in* the package.
@@ -543,8 +582,8 @@ class TestTheViewerShipsNoToolchain:
         for name in sorted(os.listdir("bga/viewer")):
             suffix = os.path.splitext(name)[1]
             assert any(pattern.endswith(f"*{suffix}") for pattern in patterns), (
-                f"{name} is not covered by package-data {patterns} - it would "
-                f"not ship, and `bga view` would 404 on it")
+                f"{name} is not covered by package-data {patterns} - it would not ship, and `bga view` would 404 on it"
+            )
 
     def test_the_tool_modules_import_each_other_relatively(self):
         """`UX-94`'s rule, which this round broke twice: packaged, this
@@ -554,9 +593,9 @@ class TestTheViewerShipsNoToolchain:
         import re
 
         source = open("tools/bga_view.py", encoding="utf-8").read()
-        offenders = [line.strip() for line in source.splitlines()
-                     if re.match(r"\s*(from|import)\s+tools\.", line)]
+        offenders = [line.strip() for line in source.splitlines() if re.match(r"\s*(from|import)\s+tools\.", line)]
         assert not offenders, offenders
+
 
 class TestTheCommandLine:
     def test_no_browser_prints_the_url_and_opens_nothing(self, tmp_path):
@@ -578,19 +617,29 @@ class TestTheCommandLine:
 
     def test_a_bad_run_is_an_error_not_a_traceback(self, tmp_path):
         result = subprocess.run(
-            [sys.executable, "-c",
-             "from bga.cli import main; raise SystemExit(main("
-             "['view', {!r}, '--no-browser']))".format(str(tmp_path / "nope"))],
-            capture_output=True, text=True, cwd=os.getcwd(), timeout=60)
+            [
+                sys.executable,
+                "-c",
+                "from bga.cli import main; raise SystemExit(main(['view', {!r}, '--no-browser']))".format(
+                    str(tmp_path / "nope")
+                ),
+            ],
+            capture_output=True,
+            text=True,
+            cwd=os.getcwd(),
+            timeout=60,
+        )
         assert result.returncode == 2, result.stdout
         assert "Traceback" not in result.stderr
         assert "Error:" in result.stderr
 
     def test_the_help_is_under_the_cap(self):
         result = subprocess.run(
-            [sys.executable, "-c",
-             "from bga.cli import main; raise SystemExit(main(['view','--help']))"],
-            capture_output=True, text=True, cwd=os.getcwd())
+            [sys.executable, "-c", "from bga.cli import main; raise SystemExit(main(['view','--help']))"],
+            capture_output=True,
+            text=True,
+            cwd=os.getcwd(),
+        )
         assert len(result.stdout.splitlines()) <= 45, result.stdout
 
 

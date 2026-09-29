@@ -24,6 +24,7 @@ says its documentation is coming later must name where it went.**
 
 holds: rules.md#documentation-you-are-not-writing-now-file-the-row-first
 """
+
 import pathlib
 import re
 
@@ -101,8 +102,7 @@ def _deferrals_without_an_id(path):
     for sentence in _sentences(text):
         if not _DEFERRAL.search(sentence):
             continue
-        others = [n for n in re.findall(r"UX-(\d+)", sentence)
-                  if n.lstrip("0") != own.lstrip("0")]
+        others = [n for n in re.findall(r"UX-(\d+)", sentence) if n.lstrip("0") != own.lstrip("0")]
         if not others:
             bare.append(sentence.strip()[:90])
     return bare
@@ -114,8 +114,7 @@ class TestTheRuleIsWrittenDown:
         body = text.split("## 3. Definition of Done", 1)
         assert len(body) == 2, "the guide has no Definition of Done"
         body = body[1].split("\n## ", 1)[0]
-        assert "documentation you are not writing now" in body, (
-            "the Definition of Done does not carry UX-237's rule")
+        assert "documentation you are not writing now" in body, "the Definition of Done does not carry UX-237's rule"
         assert "UX-237" in body
 
     def test_the_style_guide_carries_the_counterpart(self):
@@ -125,8 +124,7 @@ class TestTheRuleIsWrittenDown:
         section = text.split("## 14. ", 1)
         assert len(section) == 2, "the style guide has no rule 14"
         body = section[1].split("\n## ", 1)[0]
-        assert "fixing-guide.md" in body, (
-            "rule 14 does not point at the rule it is the counterpart of")
+        assert "fixing-guide.md" in body, "rule 14 does not point at the rule it is the counterpart of"
         assert "UX-237" in body
 
     def test_the_definition_of_done_is_numbered_once_each(self):
@@ -135,21 +133,16 @@ class TestTheRuleIsWrittenDown:
         every reference below the duplicate pointed one item wrong."""
         text = FIXING_GUIDE.read_text(encoding="utf-8")
         body = text.split("## 3. Definition of Done", 1)[1].split("\n## ", 1)[0]
-        numbers = [int(m.group(1)) for m in
-                   re.finditer(r"^(\d+)\. ", body, re.MULTILINE)]
-        assert numbers == list(range(1, len(numbers) + 1)), (
-            f"the Definition of Done is numbered {numbers}")
+        numbers = [int(m.group(1)) for m in re.finditer(r"^(\d+)\. ", body, re.MULTILINE)]
+        assert numbers == list(range(1, len(numbers) + 1)), f"the Definition of Done is numbered {numbers}"
 
 
 class TestADeferralNamesWhereItWent:
     def test_no_filing_defers_documentation_without_an_id(self):
-        """"documented later" with no id is the parking `§12` exists to
+        """ "documented later" with no id is the parking `§12` exists to
         stop, one document over."""
-        bare = {path.name: entries for path in _filings()
-                if (entries := _deferrals_without_an_id(path))}
-        assert bare == {}, (
-            "filing(s) deferring documentation without naming where it "
-            f"was filed: {bare}")
+        bare = {path.name: entries for path in _filings() if (entries := _deferrals_without_an_id(path))}
+        assert bare == {}, f"filing(s) deferring documentation without naming where it was filed: {bare}"
 
     def test_the_check_can_see_a_deferral_at_all(self):
         """The guard above passes on an empty repository and on one
@@ -157,8 +150,7 @@ class TestADeferralNamesWhereItWent:
         things. This pins that the pattern fires on the shape it is
         written for - without it, retiring `DEFERRALS` to `()` would
         leave the suite green."""
-        planted = ("This mechanism needs proper documentation and it is "
-                   "not in this round's scope.")
+        planted = "This mechanism needs proper documentation and it is not in this round's scope."
         assert _DEFERRAL.search(planted)
         others = list(re.findall(r"UX-(\d+)", planted))
         assert others == [], "the fixture accidentally names an id"
@@ -179,12 +171,12 @@ class TestADeferralNamesWhereItWent:
         # check read only the open half, so the three rows reddened it
         # on the day they were *done* (round 37). "Has a row" is the
         # claim; which file the row is in is the index's business.
-        index = "".join((SCENARIOS / name).read_text(encoding="utf-8")
-                        for name in ("README.md", "closed.md"))
+        from tools.dev_close_task import closed_rows
+
+        index = (SCENARIOS / "README.md").read_text(encoding="utf-8") + "\n".join(closed_rows())
         wrong = []
         for mechanism, item in ROUND_28_INSTANCES.items():
-            filings = [p for p in _filings()
-                       if p.name.startswith(f"UX-0{item}")]
+            filings = [p for p in _filings() if p.name.startswith(f"UX-0{item}")]
             if not filings:
                 wrong.append(f"{mechanism}: no {item} filing")
                 continue
@@ -192,8 +184,7 @@ class TestADeferralNamesWhereItWent:
                 wrong.append(f"{mechanism}: {item} does not name it")
             if f"| UX-{item} |" not in index:
                 wrong.append(f"{mechanism}: {item} has no backlog row")
-        assert wrong == [], (
-            f"round-28 mechanism(s) UX-237 names and nothing filed: {wrong}")
+        assert wrong == [], f"round-28 mechanism(s) UX-237 names and nothing filed: {wrong}"
 
 
 if __name__ == "__main__":  # pragma: no cover

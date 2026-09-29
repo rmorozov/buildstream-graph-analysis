@@ -11,6 +11,7 @@ branch it is about to adopt onto before its own tool runs, and
 rejects is `test_a_run_names_the_records_it_read.py`, against a
 scratch remote.
 """
+
 import pathlib
 import re
 import sys
@@ -50,8 +51,7 @@ def test_a_publishing_job_does_not_recompute_add_commit_push(name):
     itself would be the duplication this file was filed to prevent."""
     job = _publishing_jobs()[name]
     scripts = [step.get("run") or "" for step in job["steps"]]
-    hits = [line for script in scripts for line in script.splitlines()
-            if RECOMPUTED.search(line)]
+    hits = [line for script in scripts for line in script.splitlines() if RECOMPUTED.search(line)]
     assert not hits, (name, hits)
 
 
@@ -61,13 +61,18 @@ def test_a_publishing_job_reads_the_branch_it_adopts_onto_first(name):
     reversed, a run would adopt onto its own stale copy and republish
     a regression (`UX-997`)."""
     job = _publishing_jobs()[name]
-    lines = [line for step in job["steps"]
-             for line in (step.get("run") or "").splitlines()]
+    lines = [line for step in job["steps"] for line in (step.get("run") or "").splitlines()]
     fetch_at = next(i for i, s in enumerate(lines) if "dev_records.py fetch" in s)
     publish_at = next(i for i, s in enumerate(lines) if PUBLISH in s)
-    tool_at = next(i for i, s in enumerate(lines)
-                   if re.search(r"dev_(tier_drift|touch_map)\.py --adopt"
-                                 r"|dev_area_pages\.py --out", s))
+    tool_at = next(
+        i
+        for i, s in enumerate(lines)
+        if re.search(
+            r"dev_(tier_drift|touch_map)\.py --adopt"
+            r"|dev_area_pages\.py --out",
+            s,
+        )
+    )
     assert fetch_at < tool_at < publish_at, (name, lines)
 
 

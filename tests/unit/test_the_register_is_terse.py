@@ -10,6 +10,7 @@ numbers in `CLAUDE.md` to the ones enforced here.
 Existing files over the docstring cap are listed with the count they
 had, and may only shrink - a ratchet, not an amnesty.
 """
+
 import ast
 import pathlib
 import re
@@ -50,15 +51,16 @@ def _rel(path):
 
 
 class TestModuleDocstrings:
-    @pytest.mark.parametrize("path", [p for p in _budgeted_modules()
-                                      if _rel(p) not in GRANDFATHERED],
-                             ids=lambda p: _rel(p))
+    @pytest.mark.parametrize(
+        "path", [p for p in _budgeted_modules() if _rel(p) not in GRANDFATHERED], ids=lambda p: _rel(p)
+    )
     def test_a_budgeted_docstring_fits(self, path):
         n = _docstring_lines(path)
         assert n <= DOCSTRING_CAP, (
             f"{_rel(path)}: module docstring is {n} lines, cap is "
             f"{DOCSTRING_CAP}. The why is one sentence; the history "
-            f"lives in the task file and git log.")
+            f"lives in the task file and git log."
+        )
 
     def test_a_grandfathered_docstring_only_shrinks(self):
         """`UX-502` emptied the table, so this loops rather than
@@ -68,14 +70,13 @@ class TestModuleDocstrings:
         with nothing left to guard."""
         for rel, recorded in sorted(GRANDFATHERED.items()):
             path = REPO / rel
-            assert path.exists(), (
-                f"{rel} is grandfathered but gone - drop the entry")
+            assert path.exists(), f"{rel} is grandfathered but gone - drop the entry"
             n = _docstring_lines(path)
-            assert n <= recorded, (
-                f"{rel}: {n} lines, recorded {recorded} - it may only shrink")
+            assert n <= recorded, f"{rel}: {n} lines, recorded {recorded} - it may only shrink"
             assert n > DOCSTRING_CAP, (
                 f"{rel}: {n} lines now fits the cap of {DOCSTRING_CAP} - "
-                f"remove it from GRANDFATHERED so the table cannot rot")
+                f"remove it from GRANDFATHERED so the table cannot rot"
+            )
 
     def test_every_grandfathered_file_is_budgeted(self):
         budgeted = {_rel(p) for p in _budgeted_modules()}
@@ -86,7 +87,7 @@ def _outcome_body(text):
     m = re.search(r"^## Outcome.*$", text, re.M)
     if not m:
         return None
-    rest = text[m.start():]
+    rest = text[m.start() :]
     nxt = re.search(r"^## (?!Outcome)", rest[1:], re.M)
     return rest if not nxt else rest[: nxt.start() + 1]
 
@@ -111,8 +112,7 @@ def _is_closed(text):
 
 
 def _closed_budgeted_task_files():
-    return [p for p in _budgeted_task_files()
-            if _is_closed(p.read_text(encoding="utf-8"))]
+    return [p for p in _budgeted_task_files() if _is_closed(p.read_text(encoding="utf-8"))]
 
 
 #: Closed before `UX-497` on and shipped no code guard, so there is
@@ -144,7 +144,8 @@ class TestOutcomes:
             return  # not closed yet; nothing to measure
         assert n <= OUTCOME_CAP, (
             f"{path.name}: Outcome is {n} lines, cap is {OUTCOME_CAP} - the "
-            f"gap measured, the close measured, the mutation table, the deviation")
+            f"gap measured, the close measured, the mutation table, the deviation"
+        )
 
     def test_the_counter_reads_a_section_not_the_file(self):
         text = "# t\n\n## Motivation\nx\n\n## Outcome (r)\na\nb\n\n## After\nz\n"
@@ -159,22 +160,24 @@ class TestOutcomeContentIsGuarded:
     about which text they mean."""
 
     @pytest.mark.parametrize(
-        "path", [p for p in _closed_budgeted_task_files()
-                 if p.name[:7] not in NO_GUARD_OUTCOMES],
-        ids=lambda p: p.name[:7])
+        "path",
+        [p for p in _closed_budgeted_task_files() if p.name[:7] not in NO_GUARD_OUTCOMES],
+        ids=lambda p: p.name[:7],
+    )
     def test_a_closed_outcome_names_its_mutation(self, path):
         body = _outcome_body(path.read_text(encoding="utf-8"))
         assert body is not None
         assert "mutation" in body.lower(), (
             f"{path.name}: closed Outcome names no mutation table - the "
             f"defect `docs/audits/round-94.md` counted five of sixty "
-            f"closed tasks having, with the suite green throughout")
+            f"closed tasks having, with the suite green throughout"
+        )
 
     def test_every_exemption_is_a_real_closed_task(self):
         closed = {p.name[:7] for p in _closed_budgeted_task_files()}
         assert set(NO_GUARD_OUTCOMES) <= closed, (
-            f"exempted but not a closed, budgeted task file: "
-            f"{sorted(set(NO_GUARD_OUTCOMES) - closed)}")
+            f"exempted but not a closed, budgeted task file: {sorted(set(NO_GUARD_OUTCOMES) - closed)}"
+        )
 
 
 def _register_rows():
@@ -186,8 +189,7 @@ def _register_rows():
     assert m, "CLAUDE.md has no ## Register section"
     rows = []
     for line in m.group(1).splitlines():
-        if not (line.startswith("| ") and line.count("|") == 3
-                and "---" not in line):
+        if not (line.startswith("| ") and line.count("|") == 3 and "---" not in line):
             continue
         cap, detail = (cell.strip() for cell in line.split("|")[1:3])
         if (cap, detail) == ("", ""):
@@ -222,18 +224,13 @@ class TestEveryRegisterRowNamesItsEnforcement:
                 if missing:
                     bad.append((cap, detail, f"missing file(s): {missing}"))
                     continue
-                proxies = [n for n in named
-                           if not _HOLDS_CLAUDE_MD.search(
-                               (REPO / n).read_text(encoding="utf-8"))]
+                proxies = [n for n in named if not _HOLDS_CLAUDE_MD.search((REPO / n).read_text(encoding="utf-8"))]
                 if proxies:
-                    bad.append((cap, detail,
-                                f"names {proxies} which never reads "
-                                f"CLAUDE.md or a rules.md heading"))
+                    bad.append((cap, detail, f"names {proxies} which never reads CLAUDE.md or a rules.md heading"))
                 continue
             if re.search(r"\bconvention\b", detail):
                 continue
-            bad.append((cap, detail, "names no guard file and no "
-                        "whole-word 'convention'"))
+            bad.append((cap, detail, "names no guard file and no whole-word 'convention'"))
         assert not bad, f"Register row(s) fail enforcement: {bad}"
 
 
@@ -241,9 +238,11 @@ class TestClaudeMdCarriesTheSameNumbers:
     def test_the_register_section_exists(self):
         assert re.search(r"^## Register", CLAUDE_MD.read_text(encoding="utf-8"), re.M)
 
-    @pytest.mark.parametrize("figure", [f"≤ {DOCSTRING_CAP} lines", f"≤ {OUTCOME_CAP} lines",
-                                        f"UX-{FIRST_BUDGETED_ID}"])
+    @pytest.mark.parametrize(
+        "figure", [f"≤ {DOCSTRING_CAP} lines", f"≤ {OUTCOME_CAP} lines", f"UX-{FIRST_BUDGETED_ID}"]
+    )
     def test_a_budget_is_stated_as_enforced(self, figure):
         assert figure in CLAUDE_MD.read_text(encoding="utf-8"), (
             f"CLAUDE.md does not state {figure!r}; the budget it states and "
-            f"the one enforced here are two copies of one fact")
+            f"the one enforced here are two copies of one fact"
+        )

@@ -2,6 +2,7 @@
 `bst` global options and says why it failed, instead of dropping
 everything but `cmd[0]` and one target. A fake `bst` script on disk
 records its own argv; no real `bst`/`bwrap` needed."""
+
 import json
 import stat
 
@@ -47,8 +48,18 @@ def fake_bst(tmp_path, monkeypatch):
 def test_global_options_and_their_values_precede_show(fake_bst, tmp_path):
     cmd = [fake_bst, "-o", "arch", "x86_64", "--config", "c.yml", "build", "t.bst"]
     kinds, diag = read_element_kinds_for_jobserver(str(tmp_path), cmd)
-    assert diag["argv"] == [fake_bst, "-o", "arch", "x86_64", "--config", "c.yml",
-                            "show", "--format", "%{name} %{kind}", "t.bst"]
+    assert diag["argv"] == [
+        fake_bst,
+        "-o",
+        "arch",
+        "x86_64",
+        "--config",
+        "c.yml",
+        "show",
+        "--format",
+        "%{name} %{kind}",
+        "t.bst",
+    ]
     assert kinds == {"core.bst": "cmake", "toolchain.bst": "import"}
     assert diag == {"argv": diag["argv"], "count": 2, "junctions": 0, "collisions": 0}
 
@@ -71,13 +82,11 @@ def test_no_target_runs_with_no_target_argument(fake_bst, tmp_path):
 
 
 def test_no_subcommand_at_all_is_no_target_without_running(tmp_path):
-    opts, found = _bst_global_options([  "bst", "--no-colors", "--strict"])
+    opts, found = _bst_global_options(["bst", "--no-colors", "--strict"])
     assert (opts, found) == (["--no-colors", "--strict"], False)
-    kinds, diag = read_element_kinds_for_jobserver(
-        str(tmp_path), ["bst", "--no-colors", "--strict"])
+    kinds, diag = read_element_kinds_for_jobserver(str(tmp_path), ["bst", "--no-colors", "--strict"])
     assert kinds is None
-    assert diag == {"argv": None, "returncode": None, "stderr_tail": "",
-                    "reason": "no-target"}
+    assert diag == {"argv": None, "returncode": None, "stderr_tail": "", "reason": "no-target"}
 
 
 def test_a_nonzero_exit_writes_the_reason_and_stderr_tail(fake_bst, tmp_path, monkeypatch):
@@ -113,14 +122,12 @@ def test_a_success_file_records_argv_and_count(fake_bst, tmp_path):
     bind_dir.mkdir()
     warning = _write_kinds_read(str(bind_dir), 4, kinds, diag)
     written = json.loads((bind_dir / "kinds_read.json").read_text())
-    assert written == {"argv": diag["argv"], "count": 2,
-                       "junctions": 0, "collisions": 0}
+    assert written == {"argv": diag["argv"], "count": 2, "junctions": 0, "collisions": 0}
     assert warning is None  # kinds resolved - jobserver_kinds_warning says nothing
 
 
 def test_the_warning_names_the_reason_and_the_path():
-    diagnostic = {"argv": ["bst", "show"], "returncode": 2,
-                 "stderr_tail": "boom", "reason": "exit"}
+    diagnostic = {"argv": ["bst", "show"], "returncode": 2, "stderr_tail": "boom", "reason": "exit"}
     line = jobserver_kinds_warning(4, None, diagnostic, "/tmp/x/kinds_read.json")
     assert line.startswith("Warning:") and "exit" in line
     assert "/tmp/x/kinds_read.json" in line
@@ -141,9 +148,12 @@ def test_every_valued_option_of_the_installed_bst_consumes_its_values():
     group is what checks it - a bst release that adds a valued global
     option reds here before it swallows a subcommand."""
     cli = pytest.importorskip("buildstream._frontend.cli")
-    valued = [(opt, param.nargs) for param in cli.cli.params
-              if not getattr(param, "is_flag", False) and param.nargs > 0
-              for opt in param.opts]
+    valued = [
+        (opt, param.nargs)
+        for param in cli.cli.params
+        if not getattr(param, "is_flag", False) and param.nargs > 0
+        for opt in param.opts
+    ]
     assert valued, "the installed cli group defines no valued option"
     wrong = []
     for opt, nargs in valued:
@@ -161,9 +171,12 @@ def test_every_valued_option_of_the_installed_build_skips_its_value():
     target."""
     cli = pytest.importorskip("buildstream._frontend.cli")
     build = cli.cli.commands["build"]
-    valued = [(opt, param.nargs) for param in build.params
-              if not getattr(param, "is_flag", False) and param.nargs > 0
-              for opt in param.opts]
+    valued = [
+        (opt, param.nargs)
+        for param in build.params
+        if not getattr(param, "is_flag", False) and param.nargs > 0
+        for opt in param.opts
+    ]
     assert valued, "the installed build command defines no valued option"
     wrong = []
     for opt, nargs in valued:
@@ -179,8 +192,7 @@ def test_a_bare_flag_before_the_target_is_not_swallowed():
 
 
 def test_a_repeated_valued_option_still_finds_the_target():
-    cmd = ["bst", "build", "--artifact-remote", "u1",
-           "--artifact-remote", "u2", "t.bst"]
+    cmd = ["bst", "build", "--artifact-remote", "u1", "--artifact-remote", "u2", "t.bst"]
     assert _cmd_target(cmd) == "t.bst"
 
 
@@ -190,12 +202,10 @@ def test_the_kinds_read_argv_keeps_the_target_past_deps_all(fake_bst, tmp_path):
     assert diag["argv"][-1] == "t.bst"
 
 
-def test_a_success_file_counts_the_junctioned_names_it_resolved(
-        fake_bst, tmp_path, monkeypatch):
+def test_a_success_file_counts_the_junctioned_names_it_resolved(fake_bst, tmp_path, monkeypatch):
     """`UX-871`: the record says how many names came through a junction,
     so a `zlib.bst` reached as `sdk.bst:zlib.bst` is visibly resolved."""
     monkeypatch.setenv("FAKE_BST_JUNCTION", "1")
-    kinds, diag = read_element_kinds_for_jobserver(
-        str(tmp_path), [fake_bst, "build", "t.bst"])
+    kinds, diag = read_element_kinds_for_jobserver(str(tmp_path), [fake_bst, "build", "t.bst"])
     assert kinds["zlib.bst"] == "cmake"
     assert (diag["count"], diag["junctions"], diag["collisions"]) == (4, 1, 0)

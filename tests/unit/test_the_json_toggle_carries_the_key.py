@@ -7,6 +7,7 @@ section's `h2`. Measured on the golden export before the fix,
 fix moves the key onto the JSON toggle's `title`/`aria-label` and out
 of the heading, `data-section` still carrying it for the guards.
 """
+
 import pathlib
 import sys
 
@@ -38,8 +39,7 @@ _KEYS = """
 
 @pytest.fixture(scope="module")
 def measured(tmp_path_factory):
-    uri = pages.export_uri(pages.FIXTURES["golden"],
-                           tmp_path_factory.mktemp("json-toggle-key"))
+    uri = pages.export_uri(pages.FIXTURES["golden"], tmp_path_factory.mktemp("json-toggle-key"))
     with Browser(chrome) as opened:
         return opened.measure(uri, _KEYS, 1440, 900)
 
@@ -52,7 +52,5 @@ class TestTheKeyStaysOffTheHeading:
     def test_every_toggle_carries_its_key(self, measured):
         toggles = measured["toggles"]
         assert len(toggles) >= 30, len(toggles)
-        missing = [t for t in toggles
-                  if t["key"] not in t["title"]
-                  or t["key"] not in (t["ariaLabel"] or "")]
+        missing = [t for t in toggles if t["key"] not in t["title"] or t["key"] not in (t["ariaLabel"] or "")]
         assert not missing, missing

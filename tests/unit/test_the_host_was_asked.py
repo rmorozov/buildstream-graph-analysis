@@ -44,6 +44,7 @@ One sample costs 37 microseconds — 1,000 reads of both `/proc` files in
 0.037 s — so the two-second interval is set by how fast memory pressure
 moves, not by what sampling costs.
 """
+
 import json
 import os
 import pathlib
@@ -75,9 +76,18 @@ T_QUANTUM_S = 0.001
 
 
 def _record(element="a.bst", **extra):
-    record = {"element": element, "cmd": "cc -c x.c", "open": False,
-              "start_ts": 0.0, "end_ts": 1.0, "duration_s": 1.0, "pid": 1,
-              "src": "spine", "invocation": "1", "exec_chain": 1}
+    record = {
+        "element": element,
+        "cmd": "cc -c x.c",
+        "open": False,
+        "start_ts": 0.0,
+        "end_ts": 1.0,
+        "duration_s": 1.0,
+        "pid": 1,
+        "src": "spine",
+        "invocation": "1",
+        "exec_chain": 1,
+    }
     record.update(extra)
     return record
 
@@ -105,8 +115,7 @@ def sampled(tmp_path_factory):
     with HostSampler(str(path), interval_s=0.05):
         time.sleep(0.3)
     after = time.monotonic()
-    return {"path": path, "before": before, "after": after,
-            "back": read_host_samples(str(path))}
+    return {"path": path, "before": before, "after": after, "back": read_host_samples(str(path))}
 
 
 class TestTheCoresAreSampledToo:
@@ -145,8 +154,7 @@ class TestTheCoresAreSampledToo:
         # sums to what it has rather than raising.
         assert _busy_jiffies(line[:7]) == 10 + 20 + 30 + 1 + 2
 
-    def test_cores_busy_lands_exactly_where_a_tick_can_resolve_it(
-            self, sampled):
+    def test_cores_busy_lands_exactly_where_a_tick_can_resolve_it(self, sampled):
         """A rate over a gap shorter than one jiffy is not a coarse
         reading, it is 0 or 1 whatever the machine was doing - so the
         sampler publishes nothing there rather than a number. Asserted
@@ -157,16 +165,13 @@ class TestTheCoresAreSampledToo:
         back = sampled["back"]
         if not back["samples"]:
             pytest.skip("this host exposes no /proc/meminfo")
-        edges = ([back["header"]["monotonic_at_start"]]
-                 + [row["t"] for row in back["samples"]])
-        for row, gap in zip(back["samples"],
-                            [later - earlier
-                             for earlier, later in zip(edges, edges[1:])]):
+        edges = [back["header"]["monotonic_at_start"]] + [row["t"] for row in back["samples"]]
+        for row, gap in zip(back["samples"], [later - earlier for earlier, later in zip(edges, edges[1:])]):
             assert ("cpu_busy_cores" in row) == (gap >= 1.0 / _TICKS_PER_S), (
-                f"gap {gap}s against a {1.0 / _TICKS_PER_S}s tick: {row}")
+                f"gap {gap}s against a {1.0 / _TICKS_PER_S}s tick: {row}"
+            )
 
-    def test_no_sample_claims_more_cores_busy_than_the_host_has(
-            self, sampled):
+    def test_no_sample_claims_more_cores_busy_than_the_host_has(self, sampled):
         """The bound is the machine, plus the quantisation the delta
         carries over that gap - not a slack constant.
 
@@ -184,11 +189,8 @@ class TestTheCoresAreSampledToo:
         back = sampled["back"]
         if not back["samples"]:
             pytest.skip("this host exposes no /proc/meminfo")
-        edges = ([back["header"]["monotonic_at_start"]]
-                 + [row["t"] for row in back["samples"]])
-        for row, gap in zip(back["samples"],
-                            [later - earlier
-                             for earlier, later in zip(edges, edges[1:])]):
+        edges = [back["header"]["monotonic_at_start"]] + [row["t"] for row in back["samples"]]
+        for row, gap in zip(back["samples"], [later - earlier for earlier, later in zip(edges, edges[1:])]):
             if "cpu_busy_cores" not in row:
                 continue
             ceiling = row["cores"] * (1.0 + 1.0 / (_TICKS_PER_S * gap))
@@ -208,14 +210,15 @@ class TestTheCoresAreSampledToo:
         sampler._cpu = None
         cores = 4
         total_delta = 2 * _TICKS_PER_S * cores  # a real 2s, all cores
-        busy_delta = int(0.75 * total_delta)    # 3 of 4 cores, that span
-        first = {"cpu_busy_jiffies": 10_000, "cpu_total_jiffies": 40_000,
-                 "cores": cores, "t": 0.0}
-        second = {"cpu_busy_jiffies": 10_000 + busy_delta,
-                  "cpu_total_jiffies": 40_000 + total_delta,
-                  "cores": cores,
-                  # a wall gap of exactly one tick - the descheduled read
-                  "t": 1.0 / _TICKS_PER_S}
+        busy_delta = int(0.75 * total_delta)  # 3 of 4 cores, that span
+        first = {"cpu_busy_jiffies": 10_000, "cpu_total_jiffies": 40_000, "cores": cores, "t": 0.0}
+        second = {
+            "cpu_busy_jiffies": 10_000 + busy_delta,
+            "cpu_total_jiffies": 40_000 + total_delta,
+            "cores": cores,
+            # a wall gap of exactly one tick - the descheduled read
+            "t": 1.0 / _TICKS_PER_S,
+        }
         sampler._to_cores(first)
         sampler._to_cores(second)
         assert "cpu_busy_cores" in second
@@ -233,8 +236,7 @@ class TestTheHostIsSampled:
 
     def test_the_series_lands_and_reads_back(self, sampled):
         assert sampled["back"]["header"]["schema"] == HOST_SAMPLES_SCHEMA
-        assert sampled["back"]["samples"], (
-            "the sampler wrote a header and no samples")
+        assert sampled["back"]["samples"], "the sampler wrote a header and no samples"
 
     def test_it_stamps_the_traces_own_clock(self, sampled):
         """`hook.c` uses `clock_gettime(CLOCK_MONOTONIC)`; so does
@@ -265,7 +267,8 @@ class TestTheHostIsSampled:
                 f"[{before}, {after}] by more than the {T_QUANTUM_S}s "
                 f"stamp resolution - the series is not on the trace's "
                 f"clock and every join against a process record would be "
-                f"silently wrong")
+                f"silently wrong"
+            )
 
     def test_the_header_carries_the_pair_that_reaches_wall_time(self, sampled):
         """`UX-185`'s `bga-clocks` shape: a monotonic series is useless
@@ -280,9 +283,12 @@ class TestTheHostIsSampled:
         path = tmp_path / "host-samples.jsonl"
         path.write_text(
             json.dumps({"schema": HOST_SAMPLES_SCHEMA, "available": True})
-            + "\n" + json.dumps({"t": 1.0, "mem_free_kb": 5}) + "\n"
+            + "\n"
+            + json.dumps({"t": 1.0, "mem_free_kb": 5})
+            + "\n"
             + '{"t": 2.0, "mem_fre',
-            encoding="utf-8")
+            encoding="utf-8",
+        )
         back = read_host_samples(str(path))
         assert len(back["samples"]) == 1
         assert back["header"]["schema"] == HOST_SAMPLES_SCHEMA
@@ -295,11 +301,13 @@ class TestTheHostIsSampled:
 
 class TestTheReportSaysHowProcessesEnded:
     def test_a_killed_process_is_counted_by_its_signal(self):
-        result = compute_process_outcomes([
-            _record(exit_status="0"),
-            _record(exit_status="signal:9"),
-            _record(exit_status="signal:15"),
-        ])
+        result = compute_process_outcomes(
+            [
+                _record(exit_status="0"),
+                _record(exit_status="signal:9"),
+                _record(exit_status="signal:15"),
+            ]
+        )
         assert result["available"] is True
         assert result["killed_by_signal"] == {"15": 1, "9": 1}
         assert result["killed"] == 2
@@ -312,13 +320,15 @@ class TestTheReportSaysHowProcessesEnded:
         assert result["killed"] == 0
 
     def test_the_element_that_lost_a_process_is_named(self):
-        result = compute_process_outcomes([
-            _record(element="a.bst", exit_status="0"),
-            _record(element="b.bst", exit_status="signal:9"),
-        ])
+        result = compute_process_outcomes(
+            [
+                _record(element="a.bst", exit_status="0"),
+                _record(element="b.bst", exit_status="signal:9"),
+            ]
+        )
         assert set(result["per_element"]) == {"b.bst"}, (
-            "a clean element is listed, which makes the block O(elements) "
-            "and buries the one that matters")
+            "a clean element is listed, which makes the block O(elements) and buries the one that matters"
+        )
         assert result["per_element"]["b.bst"]["killed"] == 1
 
     def test_no_status_at_all_is_unavailable_and_not_zero_kills(self):
@@ -328,8 +338,7 @@ class TestTheReportSaysHowProcessesEnded:
         nothing was killed."""
         result = compute_process_outcomes([_record(), _record()])
         assert result["available"] is False
-        assert "killed" not in result, (
-            "a count published for a capture that could not look")
+        assert "killed" not in result, "a count published for a capture that could not look"
         assert result["unknown"] == 2
         assert "spine" in result["note"]
 
@@ -357,8 +366,7 @@ class TestTheCaptureAsksForIt:
         assert "HOST_SAMPLES_NAME" in source
 
     def test_the_tracer_takes_the_path_and_a_flag_offers_it(self):
-        source = (REPO / "tools/bst_native_build_tracer.py").read_text(
-            encoding="utf-8")
+        source = (REPO / "tools/bst_native_build_tracer.py").read_text(encoding="utf-8")
         assert "host_samples_path" in source
         assert '"--host-samples"' in source
 
@@ -373,27 +381,33 @@ class TestTheCaptureAsksForIt:
         stays green for any rearrangement that keeps the order.
         """
         import ast
-        tree = ast.parse((REPO / "tools/bst_native_build_tracer.py")
-                         .read_text(encoding="utf-8"))
-        func = next(n for n in ast.walk(tree)
-                    if isinstance(n, ast.FunctionDef)
-                    and n.name == "run_traced_build")
-        withs = [n for n in ast.walk(func) if isinstance(n, ast.With)
-                 and any(isinstance(i.context_expr, ast.Name)
-                         and i.context_expr.id == "sampler"
-                         for i in n.items)]
+
+        tree = ast.parse((REPO / "tools/bst_native_build_tracer.py").read_text(encoding="utf-8"))
+        func = next(n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name == "run_traced_build")
+        withs = [
+            n
+            for n in ast.walk(func)
+            if isinstance(n, ast.With)
+            and any(isinstance(i.context_expr, ast.Name) and i.context_expr.id == "sampler" for i in n.items)
+        ]
         assert len(withs) == 1, "no single `with sampler:` in run_traced_build"
-        called = {n.func.id for n in ast.walk(withs[0])
-                  if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)}
+        called = {n.func.id for n in ast.walk(withs[0]) if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)}
         assert "run_wrapped" in called, (
             "the sampler does not wrap the build, so its series describes "
-            "some other interval than the one being measured")
-        for tool_own_work in ("compile_hook", "compile_spine",
-                              "probe_bwrap_shim", "install_bwrap_shim",
-                              "census_project", "detect_stale_casd"):
+            "some other interval than the one being measured"
+        )
+        for tool_own_work in (
+            "compile_hook",
+            "compile_spine",
+            "probe_bwrap_shim",
+            "install_bwrap_shim",
+            "census_project",
+            "detect_stale_casd",
+        ):
             assert tool_own_work not in called, (
                 f"{tool_own_work} runs inside the sampled window - the series "
-                f"would describe bga's own startup as build memory pressure")
+                f"would describe bga's own startup as build memory pressure"
+            )
 
 
 if __name__ == "__main__":  # pragma: no cover

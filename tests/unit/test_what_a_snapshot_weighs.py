@@ -29,6 +29,7 @@ fact still lives - but the sentence a capture prints had to change with
 it, because `--no-keep-raw` now looks like a small saving and is the
 whole one.
 """
+
 import pytest
 
 from bga import run_store, store_aggregate
@@ -40,11 +41,18 @@ class TestASizeCanBeTyped:
     `human_bytes` prints - a figure read off one command has to be
     typeable into the other."""
 
-    @pytest.mark.parametrize("text,expected", [
-        ("1024", 1024), ("8k", 8192), ("500M", 500 * 1024 ** 2),
-        ("2G", 2 * 1024 ** 3), ("2GB", 2 * 1024 ** 3),
-        ("1.5G", int(1.5 * 1024 ** 3)), ("1T", 1024 ** 4),
-    ])
+    @pytest.mark.parametrize(
+        "text,expected",
+        [
+            ("1024", 1024),
+            ("8k", 8192),
+            ("500M", 500 * 1024**2),
+            ("2G", 2 * 1024**3),
+            ("2GB", 2 * 1024**3),
+            ("1.5G", int(1.5 * 1024**3)),
+            ("1T", 1024**4),
+        ],
+    )
     def test_it_reads_what_a_person_writes(self, text, expected):
         assert parse_size(text) == expected
 
@@ -58,8 +66,8 @@ class TestASizeCanBeTyped:
         """`human_bytes` prints it, `parse_size` reads it. If they used
         different multiples a user would type in what they were shown
         and get a different store."""
-        assert parse_size("2G") == 2 * 1024 ** 3
-        assert run_store.human_bytes(2 * 1024 ** 3).startswith("2")
+        assert parse_size("2G") == 2 * 1024**3
+        assert run_store.human_bytes(2 * 1024**3).startswith("2")
 
 
 class TestTheBudgetIsMetOutOfWhatIsFree:
@@ -71,57 +79,68 @@ class TestTheBudgetIsMetOutOfWhatIsFree:
         return lambda path: pairs[path]
 
     def test_it_deletes_oldest_first_until_it_is_under(self):
-        doomed = over_budget(["a", "b", "c", "d"], budget=25, protected=set(),
-                             size_of=self._sizes(a=10, b=10, c=10, d=10))
+        doomed = over_budget(
+            ["a", "b", "c", "d"], budget=25, protected=set(), size_of=self._sizes(a=10, b=10, c=10, d=10)
+        )
         assert doomed == ["a", "b"]
 
     def test_it_stops_as_soon_as_the_budget_is_met(self):
-        doomed = over_budget(["a", "b", "c"], budget=25, protected=set(),
-                             size_of=self._sizes(a=10, b=10, c=10))
+        doomed = over_budget(["a", "b", "c"], budget=25, protected=set(), size_of=self._sizes(a=10, b=10, c=10))
         assert doomed == ["a"]
 
     def test_it_never_takes_a_protected_snapshot(self):
-        doomed = over_budget(["a", "b", "c"], budget=5, protected={"b", "c"},
-                             size_of=self._sizes(a=10, b=10, c=10))
-        assert doomed == ["a"], (
-            "the budget was met by deleting what the next comparison reads")
+        doomed = over_budget(["a", "b", "c"], budget=5, protected={"b", "c"}, size_of=self._sizes(a=10, b=10, c=10))
+        assert doomed == ["a"], "the budget was met by deleting what the next comparison reads"
 
     def test_a_store_that_cannot_reach_the_budget_says_so_by_stopping(self):
         """Rather than emptying itself. The item prices; it does not
         delete beyond what it was asked for."""
-        doomed = over_budget(["a", "b"], budget=1, protected={"a", "b"},
-                             size_of=self._sizes(a=10, b=10))
+        doomed = over_budget(["a", "b"], budget=1, protected={"a", "b"}, size_of=self._sizes(a=10, b=10))
         assert doomed == []
 
     def test_a_store_already_under_loses_nothing(self):
-        doomed = over_budget(["a", "b"], budget=100, protected=set(),
-                             size_of=self._sizes(a=10, b=10))
+        doomed = over_budget(["a", "b"], budget=100, protected=set(), size_of=self._sizes(a=10, b=10))
         assert doomed == []
 
 
 class TestTheAggregateReportsWhatTheStoreWeighs:
-
     @pytest.fixture
     def rows(self):
         return [
-            {"stamp": "20260101T000000Z", "path": "/s/1", "bytes": 4_000_000,
-             "total_duration_us": 1_000_000, "host_class": "one",
-             "outcome": "ok", "cache_hit_rate": 0.5},
-            {"stamp": "20260102T000000Z", "path": "/s/2", "bytes": 6_000_000,
-             "total_duration_us": 1_200_000, "host_class": "one",
-             "outcome": "ok", "cache_hit_rate": 0.6},
-            {"stamp": "20260103T000000Z", "path": "/s/3", "bytes": 9_000_000,
-             "total_duration_us": 1_100_000, "host_class": "one",
-             "outcome": "ok", "cache_hit_rate": 0.7},
+            {
+                "stamp": "20260101T000000Z",
+                "path": "/s/1",
+                "bytes": 4_000_000,
+                "total_duration_us": 1_000_000,
+                "host_class": "one",
+                "outcome": "ok",
+                "cache_hit_rate": 0.5,
+            },
+            {
+                "stamp": "20260102T000000Z",
+                "path": "/s/2",
+                "bytes": 6_000_000,
+                "total_duration_us": 1_200_000,
+                "host_class": "one",
+                "outcome": "ok",
+                "cache_hit_rate": 0.6,
+            },
+            {
+                "stamp": "20260103T000000Z",
+                "path": "/s/3",
+                "bytes": 9_000_000,
+                "total_duration_us": 1_100_000,
+                "host_class": "one",
+                "outcome": "ok",
+                "cache_hit_rate": 0.7,
+            },
         ]
 
     def _document(self, rows, monkeypatch):
         monkeypatch.setattr(store_aggregate, "_manifest_of", lambda _p: None)
-        return store_aggregate.aggregate(
-            {"project": "/project", "snapshots": rows})
+        return store_aggregate.aggregate({"project": "/project", "snapshots": rows})
 
-    def test_the_store_total_is_published_at_the_document_level(
-            self, rows, monkeypatch):
+    def test_the_store_total_is_published_at_the_document_level(self, rows, monkeypatch):
         """Not inside `blended`: every other blended figure is refused
         across host classes because a duration measured on two machines
         is two populations. A byte is a byte."""
@@ -129,22 +148,20 @@ class TestTheAggregateReportsWhatTheStoreWeighs:
         assert document["store_bytes"]["total"] == 19_000_000
         assert document["store_bytes"]["snapshots"] == 3
 
-    def test_a_capture_that_failed_still_occupies_its_disk(
-            self, rows, monkeypatch):
+    def test_a_capture_that_failed_still_occupies_its_disk(self, rows, monkeypatch):
         """The distinction the item is about: a run excluded from every
         distribution for failing is not a sample, and is still on the
         disk. The two totals say which is which."""
-        rows = rows + [{"stamp": "20260104T000000Z", "path": "/s/4",
-                        "bytes": 5_000_000, "outcome": "failed",
-                        "host_class": "one"}]
+        rows = rows + [
+            {"stamp": "20260104T000000Z", "path": "/s/4", "bytes": 5_000_000, "outcome": "failed", "host_class": "one"}
+        ]
         document = self._document(rows, monkeypatch)
         assert document["store_bytes"]["total"] == 24_000_000
         assert document["store_bytes"]["measured_total"] == 19_000_000
         assert document["measured"] == 3 and document["snapshots"] == 4
 
-    def test_the_class_carries_the_distribution_not_just_the_sum(
-            self, rows, monkeypatch):
-        """"Which capture is the big one" is answered by a p95 against a
+    def test_the_class_carries_the_distribution_not_just_the_sum(self, rows, monkeypatch):
+        """ "Which capture is the big one" is answered by a p95 against a
         median, not by a total."""
         entry = self._document(rows, monkeypatch)["host_classes"][0]
         assert entry["total_bytes"] == 19_000_000
@@ -170,7 +187,6 @@ class TestTheAggregateReportsWhatTheStoreWeighs:
 
 
 class TestTheCaptureSaysWhatItJustWrote:
-
     def test_it_states_the_snapshot_and_the_store(self, tmp_path, capsys):
         from tools.bga_snapshot import _say_what_it_weighs
 
@@ -181,8 +197,7 @@ class TestTheCaptureSaysWhatItJustWrote:
         (project / "project.conf").write_text("name: p\n", encoding="utf-8")
         (snapshot / "plane2.json").write_text("{}" * 500, encoding="utf-8")
         (runs / "20260820T120000Z").mkdir()
-        (runs / "20260820T120000Z" / "plane2.json").write_text(
-            "{}" * 500, encoding="utf-8")
+        (runs / "20260820T120000Z" / "plane2.json").write_text("{}" * 500, encoding="utf-8")
 
         _say_what_it_weighs(str(snapshot), str(project))
         said = capsys.readouterr().err
@@ -190,8 +205,7 @@ class TestTheCaptureSaysWhatItJustWrote:
         assert "2 snapshots" in said, said
         assert str(runs) in said, said
 
-    def test_it_names_the_raw_log_when_that_is_what_the_snapshot_is(
-            self, tmp_path, capsys):
+    def test_it_names_the_raw_log_when_that_is_what_the_snapshot_is(self, tmp_path, capsys):
         """`UX-297` made the raw log 99% of a capture. `--no-keep-raw`
         now looks like a small saving and is the whole one, so the
         sentence says what dropping it costs."""
@@ -210,8 +224,7 @@ class TestTheCaptureSaysWhatItJustWrote:
         assert "--no-keep-raw" in said, said
         assert "timeline" in said, said
 
-    def test_a_snapshot_that_is_mostly_report_gets_no_such_sentence(
-            self, tmp_path, capsys):
+    def test_a_snapshot_that_is_mostly_report_gets_no_such_sentence(self, tmp_path, capsys):
         """The clause is about a specific fact - that the log dominates.
         A capture where it does not must not claim it does."""
         from tools.bga_snapshot import RAW_LOG_NAME, _say_what_it_weighs
@@ -230,7 +243,6 @@ class TestTheCaptureSaysWhatItJustWrote:
 
 
 class TestPruneSaysWhatItWouldRecover:
-
     def _store(self, tmp_path, sizes):
         project = tmp_path / "project"
         runs = project / ".bga" / "runs"
@@ -243,13 +255,11 @@ class TestPruneSaysWhatItWouldRecover:
             (snapshot / "plane2.json").write_bytes(b"x" * size)
         return project
 
-    def test_a_budget_deletes_the_oldest_and_names_the_bytes(
-            self, tmp_path, capsys):
+    def test_a_budget_deletes_the_oldest_and_names_the_bytes(self, tmp_path, capsys):
         from tools.bga_snapshot import _prune
 
         project = self._store(tmp_path, [400_000, 400_000, 400_000, 400_000])
-        code = _prune(str(project), keep=None, older_than=None, dry_run=True,
-                      max_store=900_000)
+        code = _prune(str(project), keep=None, older_than=None, dry_run=True, max_store=900_000)
         said = capsys.readouterr().out
         assert code == 0
         assert "would delete" in said, said
@@ -258,17 +268,16 @@ class TestPruneSaysWhatItWouldRecover:
         # Nothing was actually removed: this is a dry run.
         assert len(list((project / ".bga" / "runs").iterdir())) == 4
 
-    def test_the_keep_set_survives_a_budget_it_cannot_meet(
-            self, tmp_path, capsys):
+    def test_the_keep_set_survives_a_budget_it_cannot_meet(self, tmp_path, capsys):
         from tools.bga_snapshot import _prune
 
         project = self._store(tmp_path, [400_000, 400_000])
-        code = _prune(str(project), keep=None, older_than=None, dry_run=False,
-                      max_store=1_000)
+        code = _prune(str(project), keep=None, older_than=None, dry_run=False, max_store=1_000)
         said = capsys.readouterr().out
         assert code == 0
         assert len(list((project / ".bga" / "runs").iterdir())) == 2, (
-            "the budget was met by deleting what @last and @prev point at")
+            "the budget was met by deleting what @last and @prev point at"
+        )
         assert "protected by @last/@prev" in said, said
 
     def test_prune_still_refuses_with_no_rule_at_all(self, tmp_path, capsys):

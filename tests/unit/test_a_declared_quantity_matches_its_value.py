@@ -51,6 +51,7 @@ now. `SHARE_SLACK` stayed at 1e-6 - widening it to admit 1.8e-4 would
 have bought nothing this fix does not, and every other share in both
 fixtures lands inside 0..1 exactly.
 """
+
 import json
 import os
 import pathlib
@@ -60,8 +61,10 @@ import subprocess
 import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-FIXTURES = {"golden": REPO / "tests/fixtures/golden/mixed_task_kinds",
-            "macro_micro": REPO / "tests/fixtures/macro_micro/run"}
+FIXTURES = {
+    "golden": REPO / "tests/fixtures/golden/mixed_task_kinds",
+    "macro_micro": REPO / "tests/fixtures/macro_micro/run",
+}
 node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 
@@ -74,10 +77,8 @@ SHARE_SLACK = 1e-6
 #: reason. An average over a population is a count of things per thing,
 #: and rounding it would be the lie.
 FRACTIONAL_COUNTS = {
-    "graph_metrics.avg_fanin":
-        "Edges per element, averaged over the graph - a mean of counts.",
-    "graph_metrics.avg_fanout":
-        "The same, the other way round.",
+    "graph_metrics.avg_fanin": "Edges per element, averaged over the graph - a mean of counts.",
+    "graph_metrics.avg_fanout": "The same, the other way round.",
 }
 
 _CENSUS = r"""
@@ -135,18 +136,22 @@ def _declared_values(label):
     from tools.bga_view import payloads
 
     scratch = pathlib.Path(tempfile.mkdtemp())
-    (scratch / "payload.json").write_text(
-        json.dumps(payloads(str(FIXTURES[label]))["report.json"]))
-    (scratch / "schemas.json").write_text(
-        json.dumps({name: schemas.schema(name) for name in schemas.names()}))
+    (scratch / "payload.json").write_text(json.dumps(payloads(str(FIXTURES[label]))["report.json"]))
+    (scratch / "schemas.json").write_text(json.dumps({name: schemas.schema(name) for name in schemas.names()}))
     done = subprocess.run(
         [node, "--input-type=module", "-e", _CENSUS],
-        capture_output=True, text=True, cwd=REPO, timeout=120,
-        env={**os.environ,
-             "BGA_DOM_SHIM": (REPO / "tests/dom_shim.mjs").as_uri(),
-             "BGA_VIEWER": (REPO / "tests/viewer.mjs").as_uri(),
-             "BGA_PAYLOAD": str(scratch / "payload.json"),
-             "BGA_SCHEMAS": str(scratch / "schemas.json")})
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=120,
+        env={
+            **os.environ,
+            "BGA_DOM_SHIM": (REPO / "tests/dom_shim.mjs").as_uri(),
+            "BGA_VIEWER": (REPO / "tests/viewer.mjs").as_uri(),
+            "BGA_PAYLOAD": str(scratch / "payload.json"),
+            "BGA_SCHEMAS": str(scratch / "schemas.json"),
+        },
+    )
     assert done.returncode == 0, done.stderr
     return json.loads(done.stdout)
 
@@ -158,20 +163,22 @@ class TestAValueCanBeWhatItSaysItIs:
         """`43200000` passed this one; it is the *pair* of checks that
         locates a duration wearing a count's declaration, and this is
         the half that catches the fractional case."""
-        bad = [(path, value) for path, quantity, value in _declared_values(label)
-               if quantity == "count" and float(value) != int(float(value))
-               and path not in FRACTIONAL_COUNTS]
-        assert bad == [], (
-            f"{label}: leaves declared `count` holding a fraction: {bad[:6]}")
+        bad = [
+            (path, value)
+            for path, quantity, value in _declared_values(label)
+            if quantity == "count" and float(value) != int(float(value)) and path not in FRACTIONAL_COUNTS
+        ]
+        assert bad == [], f"{label}: leaves declared `count` holding a fraction: {bad[:6]}"
 
     def test_every_share_is_between_zero_and_one(self, label):
         """The half that found `signals.wall_clock_share` holding
         20,433,333 microseconds under a `share`."""
-        bad = [(path, value) for path, quantity, value in _declared_values(label)
-               if quantity == "share"
-               and not (-SHARE_SLACK <= float(value) <= 1 + SHARE_SLACK)]
-        assert bad == [], (
-            f"{label}: leaves declared `share` outside 0..1: {bad[:6]}")
+        bad = [
+            (path, value)
+            for path, quantity, value in _declared_values(label)
+            if quantity == "share" and not (-SHARE_SLACK <= float(value) <= 1 + SHARE_SLACK)
+        ]
+        assert bad == [], f"{label}: leaves declared `share` outside 0..1: {bad[:6]}"
 
     def test_the_summary_quotes_no_metric_at_all(self, label):
         """`UX-535` replaces the agreement this asserted. `graph_summary`
@@ -188,20 +195,23 @@ class TestAValueCanBeWhatItSaysItIs:
         metrics = document.get("graph_metrics") or {}
         summary = document.get("graph_summary") or {}
         assert metrics and summary, (label, sorted(document))
-        for quoted, source in (("total_elements", "num_elements"),
-                               ("critical_path_length", "critical_path_length"),
-                               ("max_parallelism", "max_parallelism")):
+        for quoted, source in (
+            ("total_elements", "num_elements"),
+            ("critical_path_length", "critical_path_length"),
+            ("max_parallelism", "max_parallelism"),
+        ):
             assert quoted not in summary, (
                 f"{label}: graph_summary.{quoted} is back, republishing "
-                f"graph_metrics.{source} ({metrics.get(source)!r})")
+                f"graph_metrics.{source} ({metrics.get(source)!r})"
+            )
 
     def test_the_walk_reached_the_document(self, label):
         """A census that resolved nothing would pass both clauses above
         by finding no values to judge."""
         found = _declared_values(label)
         assert len(found) > 150, (
-            f"{label}: only {len(found)} declared values found - the walk is "
-            f"not reaching the document")
+            f"{label}: only {len(found)} declared values found - the walk is not reaching the document"
+        )
 
 
 @needs_node
@@ -220,12 +230,11 @@ class TestTheOneThisWasFiledFor:
             # back as a key of the document or as a member of `elements`.
             for where in (payload, payload.get("elements") or {}):
                 assert "critical_path_length" not in where, (
-                    f"{label}: critical_path_length is back, holding "
-                    f"{where['critical_path_length']}")
+                    f"{label}: critical_path_length is back, holding {where['critical_path_length']}"
+                )
             # The two that remain say the same thing, truthfully.
             floors = (payload.get("floors") or {}).get("t_infinity_observed")
-            sensitivity = (payload.get("sensitivity") or {}).get(
-                "critical_path_us")
+            sensitivity = (payload.get("sensitivity") or {}).get("critical_path_us")
             assert floors == sensitivity, (label, floors, sensitivity)
 
     def test_the_count_of_elements_on_the_chain_still_reads_as_one(self):
@@ -238,4 +247,7 @@ class TestTheOneThisWasFiledFor:
             metrics = payload.get("graph_metrics") or {}
             detail = payload.get("critical_path_detail")
             assert metrics.get("critical_path_length") == len(detail or []), (
-                label, metrics.get("critical_path_length"), len(detail or []))
+                label,
+                metrics.get("critical_path_length"),
+                len(detail or []),
+            )

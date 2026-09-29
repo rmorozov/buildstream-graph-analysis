@@ -24,6 +24,7 @@ unchanged - `HOME` is the only thing `bst` keys its cache and config off
 absolute-valued cache config, so every caller sizes its reserve against
 real disk rather than nominal. `extra` still overrides or removes it.
 """
+
 import contextlib
 import os
 import pathlib
@@ -33,8 +34,7 @@ from typing import Optional
 
 #: `UX-755`: one repo-owned config, absolute `cache` values - read by
 #: every real-`bst` test through this module, never copied per file.
-BST_XDG_CONFIG_HOME = (pathlib.Path(__file__).resolve().parents[2]
-                        / "tests/fixtures/macro_micro/xdg_config_home")
+BST_XDG_CONFIG_HOME = pathlib.Path(__file__).resolve().parents[2] / "tests/fixtures/macro_micro/xdg_config_home"
 
 
 def _user_site_to_preserve() -> Optional[str]:

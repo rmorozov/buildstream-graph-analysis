@@ -19,6 +19,7 @@ attribution (I12) - reads only the graph/tasks/historical_runs passed
 in, and its output is merged into floors under cold-prefixed keys only
 by the caller (bga/analyzer.py::_compute_floors).
 """
+
 import logging
 from collections import defaultdict
 from typing import Optional
@@ -65,8 +66,11 @@ def compute_cold_floor(
     """
     if not cold or not historical_runs or not graph:
         return {
-            't_infinity_cold': None, 'cold_partial': False, 'cold_confidence': None,
-            'cold_duration_sources': {}, 'cold_critical_path_duration_sources': {},
+            't_infinity_cold': None,
+            'cold_partial': False,
+            'cold_confidence': None,
+            'cold_duration_sources': {},
+            'cold_critical_path_duration_sources': {},
         }
 
     # Candidate duration pools from historical runs, at decreasing
@@ -178,7 +182,9 @@ def compute_cold_floor(
             plural(sum(1 for uid in cold_path if uid in unavailable_elements), "element"),
         )
         return {
-            't_infinity_cold': None, 'cold_partial': False, 'cold_confidence': None,
+            't_infinity_cold': None,
+            'cold_partial': False,
+            'cold_confidence': None,
             'cold_duration_sources': cold_duration_sources,
             'cold_critical_path_duration_sources': cold_critical_path_duration_sources,
         }

@@ -47,7 +47,7 @@ def test_cli_analyze_fixture(tmp_path):
     # Create minimal fixture files
     fixture_dir = tmp_path / "fixture_run"
     fixture_dir.mkdir()
-    
+
     # Minimal run-context.json
     run_context = {
         "version": "run-context/v9",
@@ -59,7 +59,7 @@ def test_cli_analyze_fixture(tmp_path):
         "resource_capacities": {"PROCESS": 2, "DOWNLOAD": 1, "UPLOAD": 1},
     }
     (fixture_dir / "run_context.json").write_text(json.dumps(run_context))
-    
+
     # Minimal graph.json
     graph = {
         "version": "graph/v9",
@@ -67,12 +67,10 @@ def test_cli_analyze_fixture(tmp_path):
             {"uid": "elem1", "name": "element1"},
             {"uid": "elem2", "name": "element2"},
         ],
-        "dependencies": [
-            {"predecessor": "elem1", "successor": "elem2"}
-        ],
+        "dependencies": [{"predecessor": "elem1", "successor": "elem2"}],
     }
     (fixture_dir / "graph.json").write_text(json.dumps(graph))
-    
+
     # Minimal trace.json
     trace = {
         "version": "trace/v9",
@@ -99,11 +97,11 @@ def test_cli_analyze_fixture(tmp_path):
         "phases": [],
     }
     (fixture_dir / "trace.json").write_text(json.dumps(trace))
-    
+
     # Run analyze
     result = run_bga(["analyze", str(fixture_dir), "--format", "json"], check=False)
     assert result.returncode == 0, f"Failed: {result.stderr}"
-    
+
     # Parse and validate JSON output
     output = json.loads(result.stdout)
     assert "floors" in output
@@ -116,7 +114,7 @@ def test_cli_analyze_text_format(tmp_path):
     # Create minimal fixture (same as above)
     fixture_dir = tmp_path / "fixture_run"
     fixture_dir.mkdir()
-    
+
     run_context = {
         "version": "run-context/v9",
         "trace_epsilon_us": 50000,
@@ -127,29 +125,31 @@ def test_cli_analyze_text_format(tmp_path):
         "resource_capacities": {"PROCESS": 2},
     }
     (fixture_dir / "run_context.json").write_text(json.dumps(run_context))
-    
+
     graph = {
         "version": "graph/v9",
         "elements": [{"uid": "elem1", "name": "element1"}],
         "dependencies": [],
     }
     (fixture_dir / "graph.json").write_text(json.dumps(graph))
-    
+
     trace = {
         "version": "trace/v9",
-        "tasks": [{
-            "element_uid": "elem1",
-            "kind": "BUILD",
-            "phase": "EXECUTION",
-            "attempt": 1,
-            "start_us": 0,
-            "finish_us": 100000,
-            "cpu_usage_us": 100000,
-        }],
+        "tasks": [
+            {
+                "element_uid": "elem1",
+                "kind": "BUILD",
+                "phase": "EXECUTION",
+                "attempt": 1,
+                "start_us": 0,
+                "finish_us": 100000,
+                "cpu_usage_us": 100000,
+            }
+        ],
         "phases": [],
     }
     (fixture_dir / "trace.json").write_text(json.dumps(trace))
-    
+
     result = run_bga(["analyze", str(fixture_dir), "--format", "text"], check=False)
     assert result.returncode == 0
     assert "Build Efficiency Report" in result.stdout
@@ -160,7 +160,7 @@ def test_cli_analyze_csv_format(tmp_path):
     """Test analyze command with CSV output format."""
     fixture_dir = tmp_path / "fixture_run"
     fixture_dir.mkdir()
-    
+
     run_context = {
         "version": "run-context/v9",
         "trace_epsilon_us": 50000,
@@ -171,29 +171,31 @@ def test_cli_analyze_csv_format(tmp_path):
         "resource_capacities": {"PROCESS": 2},
     }
     (fixture_dir / "run_context.json").write_text(json.dumps(run_context))
-    
+
     graph = {
         "version": "graph/v9",
         "elements": [{"uid": "elem1", "name": "element1"}],
         "dependencies": [],
     }
     (fixture_dir / "graph.json").write_text(json.dumps(graph))
-    
+
     trace = {
         "version": "trace/v9",
-        "tasks": [{
-            "element_uid": "elem1",
-            "kind": "BUILD",
-            "phase": "EXECUTION",
-            "attempt": 1,
-            "start_us": 0,
-            "finish_us": 100000,
-            "cpu_usage_us": 100000,
-        }],
+        "tasks": [
+            {
+                "element_uid": "elem1",
+                "kind": "BUILD",
+                "phase": "EXECUTION",
+                "attempt": 1,
+                "start_us": 0,
+                "finish_us": 100000,
+                "cpu_usage_us": 100000,
+            }
+        ],
         "phases": [],
     }
     (fixture_dir / "trace.json").write_text(json.dumps(trace))
-    
+
     result = run_bga(["analyze", str(fixture_dir), "--format", "csv"], check=False)
     assert result.returncode == 0
     assert "category,duration_us,duration_s,percent" in result.stdout

@@ -40,6 +40,7 @@ detail block per row**, which is exactly what `elements` and the
 element sections are. `renderProvenance` has existed since `UX-229`;
 nothing reached it from the section path.
 """
+
 import pathlib
 import sys
 
@@ -119,8 +120,7 @@ def _leaves(node, prefix=""):
 def _records(label):
     from tools.bga_view import payloads
 
-    return payloads(str(pages.FIXTURES[label]))["report.json"].get(
-        "provenance") or []
+    return payloads(str(pages.FIXTURES[label]))["report.json"].get("provenance") or []
 
 
 @pytest.fixture(scope="module")
@@ -143,8 +143,7 @@ class TestThePopulationIsThePublishedRecords:
         """The nested half is what this file is about; a payload whose
         records were flat would make every clause below vacuous."""
         ruled = [record for record in _records(label) if record.get("rule")]
-        assert len(ruled) == len(_records(label)), (
-            f"{len(ruled)} of {len(_records(label))} records carry a rule")
+        assert len(ruled) == len(_records(label)), f"{len(ruled)} of {len(_records(label))} records carry a rule"
 
 
 @needs_browser
@@ -169,11 +168,10 @@ class TestEveryPublishedFieldReachesAReader:
                     continue
                 withheld.setdefault(field, 0)
                 withheld[field] += 1
-        unexpected = {field: count for field, count in withheld.items()
-                      if field.split(".")[-1].rstrip("[]") not in EXEMPT}
-        assert unexpected == {}, (
-            f"{label}: provenance field(s) that reach no rendered node: "
-            f"{unexpected}")
+        unexpected = {
+            field: count for field, count in withheld.items() if field.split(".")[-1].rstrip("[]") not in EXEMPT
+        }
+        assert unexpected == {}, f"{label}: provenance field(s) that reach no rendered node: {unexpected}"
 
     def test_the_exemption_is_still_withheld(self, browser, booted, label):
         """An exemption for a field the page draws anyway is an
@@ -181,17 +179,15 @@ class TestEveryPublishedFieldReachesAReader:
         `trace_query` is out of scope *because* it is a machine's
         channel; if it starts rendering, this should say so."""
         out = browser.measure(booted[label], _LOOK, 1440, 900)
-        queries = {record.get("trace_query") for record in _records(label)
-                   if record.get("trace_query")}
+        queries = {record.get("trace_query") for record in _records(label) if record.get("trace_query")}
         # `UX-448`: both exempt fields, or the second one could start
         # rendering under an exemption written for the first.
-        queries |= {query for record in _records(label)
-                    for query in record.get("trace_queries") or []}
+        queries |= {query for record in _records(label) for query in record.get("trace_queries") or []}
         assert queries, f"{label}: no record carries a trace_query"
         shown = [query for query in queries if query in out["text"]]
         assert len(shown) < len(queries), (
-            f"{label}: every trace_query renders now - EXEMPT is covering "
-            f"a field the page draws")
+            f"{label}: every trace_query renders now - EXEMPT is covering a field the page draws"
+        )
 
 
 @needs_browser
@@ -203,7 +199,8 @@ class TestTheSectionIsAnIndexAndItsRecords:
         assert out["exists"], f"{label}: no provenance section"
         claims = [record.get("claim") for record in _records(label)]
         assert [block["claim"] for block in out["blocks"]] == claims, (
-            f"{label}: the blocks do not match the published claims")
+            f"{label}: the blocks do not match the published claims"
+        )
 
     def test_the_index_table_survives(self, browser, booted, label):
         """`UX-338`'s relationship, not its violation: the two-column
@@ -214,8 +211,7 @@ class TestTheSectionIsAnIndexAndItsRecords:
         out = browser.measure(booted[label], _LOOK, 1440, 900)
         assert out["tables"] == 1, out["tables"]
 
-    def test_each_block_names_its_rule_and_where_it_lives(
-            self, browser, booted, label):
+    def test_each_block_names_its_rule_and_where_it_lives(self, browser, booted, label):
         out = browser.measure(booted[label], _LOOK, 1440, 900)
         named = 0
         for block, record in zip(out["blocks"], _records(label)):
@@ -244,12 +240,10 @@ class TestTheSectionIsAnIndexAndItsRecords:
                 assert block["observed"] == rule["observed_path"], block
         assert named, f"{label}: no record publishes a named rule"
 
-    def test_each_evidence_row_carries_its_path(
-            self, browser, booted, label):
+    def test_each_evidence_row_carries_its_path(self, browser, booted, label):
         out = browser.measure(booted[label], _LOOK, 1440, 900)
         for block, record in zip(out["blocks"], _records(label)):
-            assert block["refs"] == len(record.get("evidence") or []), (
-                block, record.get("evidence"))
+            assert block["refs"] == len(record.get("evidence") or []), (block, record.get("evidence"))
 
     def test_the_unpublished_inputs_are_stated(self, browser, booted, label):
         """`UX-329`'s rule - absence is stated, never drawn - on the one

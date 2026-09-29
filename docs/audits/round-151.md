@@ -20,7 +20,7 @@ census   34 files, 1887 tests, 68.9 s
 ## What closed
 
 - `UX-1108` — CI cancels a superseded PR run; a push gets its own run-id group and is never cancelled.
-- `UX-1109` — bst-smoke, bst-tests and bst-examples no longer wait for test (bst-smoke needed test too, so the row's own route saved 0 s).
+- `UX-1109` — bst-smoke, bst-tests and bst-examples no longer wait for test (bst-smoke needed test too, so the row's own route shortened nothing against bst-examples' 620-964s spread).
 - `UX-1110` — the `UX-1004` width calibration runs on push and on a PR labelled jobserver only.
 - `UX-1111` — pytest-timeout (300 s, signal) replaces the small-tier backstop; the single-process small tier runs on push only.
 - `UX-1112` — push-check lints only the markdown changed against the merge-base (0.57 s against 3 m); make lint keeps the full scan.

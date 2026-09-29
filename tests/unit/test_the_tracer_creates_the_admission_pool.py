@@ -129,6 +129,7 @@ def test_no_plan_falls_back_to_structural_ranking(tmp_path, monkeypatch):
         return type("P", (), {"wait": lambda self: 0})()
 
     monkeypatch.setattr(tracer.subprocess, "Popen", fake_popen)
+    monkeypatch.setattr(tracer, "read_cached_build_log", lambda argv, project_dir: None)  # UX-1013: no cache
 
     tracer.run_traced_build(
         str(project),

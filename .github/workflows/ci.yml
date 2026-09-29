@@ -1893,6 +1893,17 @@ jobs:
           rc=0; (cd "$PROJ" && bst artifact log --deps none giant.bst) > "$f" 2>&1 || rc=$?
           echo "::notice title=UX-1013 --deps none::rc=$rc lines=$(wc -l < "$f") | $(head -2 "$f" | cut -c1-160 | paste -sd'|' -)"
 
+      - name: 11's second capture ranks admission from the cached logs (UX-1013)
+        # The cache the auto run left is still warm; reads, never gates.
+        if: always()
+        run: |
+          PROJ=examples/11-serial-giant
+          OUT=artifacts/11-serial-giant
+          export XDG_CONFIG_HOME="$GITHUB_WORKSPACE/$PROJ/xdg_config_home"
+          BGA_ADMISSION=1 bga capture run --run-dir "$OUT/run-cached" --jobserver auto \
+            "$PROJ" "$OUT/plane2-cached.json" -- bst build all.bst > "$OUT/capture-cached.txt" 2>&1 || true
+          echo "::notice title=UX-1013 ranking::$(grep -F 'admission ranking:' "$OUT/capture-cached.txt" | head -1 | cut -c1-200)"
+
       - name: Calibrate the runner's width and run the pinned 2x2 arm (UX-1004)
         # `UX-1110`: gates nothing, so a PR pays for it only under the `jobserver` label.
         if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'jobserver')

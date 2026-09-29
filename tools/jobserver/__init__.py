@@ -14,6 +14,7 @@ tracer imports these names directly, by name.
 """
 
 from . import pool as _pool
+from .cached_logs import cached_log_ranking, parse_cached_build_seconds, rank_admission, read_cached_build_log
 from .ledger import (
     JOBSERVER_SERIES_CAP,
     admission_wait_by_element,
@@ -63,10 +64,14 @@ __all__ = [
     "admission_wait_by_element",
     "bind_cpu_sampler",
     "bind_pid_to_element_reader",
+    "cached_log_ranking",
     "close_jobserver",
     "create_jobserver_proxies",
     "jobserver_auth_style",
     "open_jobserver",
+    "parse_cached_build_seconds",
+    "rank_admission",
+    "read_cached_build_log",
     "read_jobserver_decisions",
     "read_jobserver_ledger",
     "read_mem_available_bytes",

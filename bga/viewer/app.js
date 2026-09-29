@@ -184,17 +184,23 @@ export function foldOnNarrow(nav, doc) {
   const title = nav.querySelector?.(".toc-title");
   if (!title) return;
   const narrow = doc.defaultView?.matchMedia?.("(max-width: 60rem)");
-  const apply = (isNarrow) => {
-    nav.setAttribute("data-folded", isNarrow ? "true" : "false");
+  const apply = (folded) => {
+    nav.setAttribute("data-folded", folded ? "true" : "false");
+    title.setAttribute?.("aria-expanded", folded ? "false" : "true");
   };
-  apply(Boolean(narrow?.matches));
+  // Wide, the rail never folds: a disabled button is no dead tab stop.
+  const settle = (isNarrow) => {
+    apply(isNarrow);
+    title.disabled = !isNarrow;
+  };
+  settle(Boolean(narrow?.matches));
   title.addEventListener?.("click", () => {
     apply(nav.getAttribute("data-folded") !== "true");
   });
   // `addEventListener` on a MediaQueryList is the modern spelling and
   // the only one worth carrying; a browser without it keeps whatever
   // the first `apply` decided, which is correct for its width.
-  narrow?.addEventListener?.("change", (event) => apply(event.matches));
+  narrow?.addEventListener?.("change", (event) => settle(event.matches));
 }
 
 export function wireJumpBox(nav, root, payload, context = {}) {

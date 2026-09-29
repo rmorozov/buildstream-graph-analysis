@@ -61,6 +61,7 @@ REGISTRY = {
     "button.focus-this": (r"^Focus", "§4c"),
     "button.json-toggle": (r"View as JSON", "§1"),
     "button.mark-this": (r".+", "§4c"),
+    "button.toc-title": (r"^Sections$", "§3c"),  # UX-1058
     "button.twin-toggle": (r"^As (table|drawing)$", "§2a"),
     "button[data-all]": (r".+", "§3c"),  # Collapse all / Expand all
     "button[data-step]": (r".+", "§3c"),  # the Top/Prev/Next stepper

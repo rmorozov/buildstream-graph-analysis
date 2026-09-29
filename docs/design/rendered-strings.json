@@ -367,6 +367,11 @@
   {
     "exception": null,
     "role": "button",
+    "text": "Sections"
+  },
+  {
+    "exception": null,
+    "role": "button",
     "text": "\u2191 Top"
   },
   {

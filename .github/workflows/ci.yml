@@ -1238,8 +1238,7 @@ jobs:
       - name: Install bubblewrap and a C toolchain
         # bwrap for the sandbox; gcc for the two tests that compile the
         # Plane 2 LD_PRELOAD hook (`bst/bwrap/cc not all found on PATH`);
-        # cmake because staging the example toolchain below needs it on
-        # the host to copy from.
+        # cmake is not read by the stager (the toolchain comes from the pin).
         run: sudo apt-get update && sudo apt-get install -y bubblewrap busybox-static build-essential cmake
 
       - name: Allow bwrap to configure loopback in its network namespace
@@ -1385,8 +1384,8 @@ jobs:
         run: examples/stage_runtimes.sh
 
       - name: Stage real gcc/cmake/make toolchain for 05-cmake-cpp-toolchain
-        # A full real sysroot staged from THIS runner's own installed
-        # build-essential/cmake packages - see examples/stage_cpp_toolchain.sh
+        # A full real sysroot: runtime binaries copied off the runner, the
+        # toolchain (gcc/binutils/cmake) from the nix pin - see examples/stage_cpp_toolchain.sh
         # for why (BuildStream's sandbox binds in nothing from the host
         # except staged dependencies) and the real trial-and-error it took.
         run: examples/stage_cpp_toolchain.sh

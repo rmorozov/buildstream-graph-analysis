@@ -188,7 +188,8 @@ did for the whole toolchain axis at once, since a compiler's closure
 arrives as one unit.
 
 ```
-sudo apt-get install -y build-essential cmake
+# build-essential is for the hook and spine; gcc, binutils and cmake come from the pin
+sudo apt-get install -y build-essential
 ../examples/stage_cpp_toolchain.sh   # (or ./stage_cpp_toolchain.sh from examples/)
 bst --builders 4 --max-jobs 4 build all.bst   # BuildStream's own defaults - real fastest config found
 ```
@@ -240,7 +241,8 @@ script stages it (it hardlink-clones the one staged sysroot into this
 project and its `optimized/` variant, so this costs no extra disk):
 
 ```
-sudo apt-get install -y build-essential cmake
+# build-essential is for the hook and spine; gcc, binutils and cmake come from the pin
+sudo apt-get install -y build-essential
 ../examples/stage_cpp_toolchain.sh   # (or ./stage_cpp_toolchain.sh from examples/)
 bst --builders 4 --max-jobs 4 build all.bst              # the mis-optimized baseline
 (cd optimized && bst --builders 4 --max-jobs 4 build all.bst)

@@ -101,6 +101,7 @@ would have caught it; a bound at it would only just have.
 | 27 | 2026-09-23 | 945 | one bookkeeping line filed, no task file — a skill's citation names the wrong section and the wrong document: `retro/SKILL.md:7` quotes "a drift you notice is a line" as fixing-guide.md §2, and the phrase is rules.md's row, with fixing-guide's own rule at §2.5 (the guard that reads a skill checks only that the guide's filename appears in it, not the section it names). Sound: `_consumer_surface()` still 563 and undoubled in `cli.md`, the contract counts, the §6 map's new tool and record rows all resolve, `dev_process_bands.py --runs` reproduces `CLAUDE.md`'s 73-of-160/318k-228k line exactly, `dev_bst_examples_spread.py` reproduces `ci.yml`'s pasted 26-run clock, `dev_records.py fetch`'s `records` branch carries `docs/audits/mutation.md` at the link `docs/README.md` now points to, and every push-gate/CI-matrix sentence in `CLAUDE.md`, `rules.md`, `verify` and `decompose` matches `Makefile`'s `push-check` target and `ci.yml`'s matrix condition; the §6 map's `(open)` labels on `UX-997`/`998`/`999`/`1000` are known and being fixed in this round's own close |
 | 28 | 2026-09-27 | 982 | two bookkeeping lines filed, no task file, and five plain mismatches fixed in place - all review 20's shape, a record no guard reads beside the tree that shows it: the `UX-1018` guard commit `round-142.md` and `agent-runs.md` cite is not reachable from `HEAD`, a rebase having landed it under another hash; `directions.md`'s round-142 row says *no verifier ran* against the round document's seven; `architecture.md`'s `format.js` row says *nine* `bga:` keys against 18, the copy `UX-654` did not reach; §6 credits `pairs.js`'s split to `UX-268`, not `UX-1028`; the styleguide's rule index says §3j's guard is not filed while its §7 names it. Sound: the contract counts, `_consumer_surface()` 580, 23 viewer modules, 21 hints, the §3e budgets, round 142's counts and spread |
 | 29 | 2026-09-28 | 1009 | two mismatches fixed in place, no task file - both shipped-but-undocumented (checklist item 4) on the anonymized-bundle rows this round closed (`UX-1060`..`UX-1071`): `cli.md`'s bundle section documented `--export`/`--load`/`--no-plane2` and said nothing of `--resolve --key-fingerprint FP` (`UX-1064`, merged the same day), and never named `bundle-manifest/v1` where the manifest it already describes is introduced - both one paragraph, added beside the existing bundle prose. Two named gaps, left open. `test_the_verification_log_is_true.py::test_nothing_landed_after_the_commit_the_entry_credits` (item 5's own guard) has been silently **skipped**, not green, since the entry it checks was written: `closing_commit()`'s regex requires the credited id to be the only one in the closing commit's subject (`^(?:\w+\()?UX-NNN\)?:`), and `UX-898` closed jointly, subject "UX-898, UX-903: the declaration flags live in the shared producer module" - no subject matches alone, `_closing_commit` returns `None`, and the clause that would catch a stale entry never runs (`pytest -rs`: 1 skipped, `NO_HISTORY`). In the window this left unchecked, `UX-1064` (2026-09-28) rewrote the very bundle row the `after UX-898` entry was written to describe, and nothing said so. Second: `docs/design/anonymized-bundle.md`'s section 1 says `run_store.CAPTURE_LAYOUT` is "13 rows under one snapshot"; the bundle's own filter (`bundle._layout_relative()`) gives **14**, both on this tree and against the base the document names itself as read against - miscounted at the moment it was written, not drifted since. Both are left as filings: the first needs a guard change (widen the regex, or require every closing id to resolve on its own), the second edits an owner-decided document (`**Status:** decided`) rather than a guide. Sound: the CLI table's "remaining eleven" aliases (32 total - 13 subcommands, 19 `tools/` aliases, 8 individually described) reproduces exactly; every other live contract already named a guide; the styleguide's §3l row's three guards all cite §3l in their own docstrings; `dev_process_bands.py --runs 200` reproduces `CLAUDE.md`'s 318k/246k, 82-of-200 line exactly; 23 viewer modules, all named in `architecture.md` |
+| 30 | 2026-09-29 | 1039 | five bookkeeping lines filed, no task file, nothing fixed - rounds 147-150 (29 closed), and the shape is review 22's: **a guard that reads a sentence against a proxy for what the sentence names.** `docs/README.md:97` says *the other ten* contracts have a command that prints them; 9 do, and `test_a_counted_figure_is_derived.py` holds the word to `contracts.printable()`, which is `schemas.names()` and took `tail/v1` in (`UX-1078`), while the same block's *last seventeen* is held to a list that also has it - 17 + 10 over 26 rows, both guards green. `dev_process_bands.py` multiplies every tokens cell by 1000 and 24 ledger rows of rounds 145-148 carry raw counts: integrator/sonnet reads an 84154k median, mechanical 261k against 193k. Plus three records: `directions.md`'s round-148 row says no verifier ran against `round-148.md:37` and its ledger row (the r142 line, swept by a prose rule no guard reads); `anonymized-bundle.md`'s *13 rows* is 15 (review 29 named it at 14); `CLAUDE.md`'s *81 of 189* cites `--runs` bare, which exits 2, and reads 83 of 227 one round on. Sound: the contract counts, `_consumer_surface()` 584, `analyze/v6` 63 properties, 23 viewer modules, `bga/fingerprint.py` in §6, all 29 closes 🟢 in both markers |
 
 ### Review 11 — 2026-09-02
 
@@ -1559,6 +1560,58 @@ six named plus §1a were checked. The §6 module map's ~103 per-row
 descriptions were checked for the CI-workflow block only — `UX-780`
 came out of that block, which is a reason to think the rest is worth a
 pass. `UX-689` owns the map's structural half.
+
+## Review 30 — 2026-09-29, at 1039 closed rows
+
+Run by one reader over rounds 147-150 (`closed.md` 1009 to 1038: rounds
+147's four, 148's three, 149's eight, 150's fourteen) and the documents
+`git diff --stat 156d7436..HEAD -- docs ':!docs/backlog'` lists - 19
+files, 1,061 insertions. Rounds 145 and 146 closed before review 29
+and were its subject. Five bookkeeping lines filed, no task file,
+nothing fixed. Review 29 has a row and no section; this is the next
+section after review 28's.
+
+**The shape** is review 22's: a guard green because it reads a proxy
+for what the sentence names.
+
+```text
+$ python3 -c "import bga.contracts as c; print(len(c.ids()), len(c.printable()))"
+26 10                              # printable() is schemas.names(); tail/v1 has a schema and no --schema
+$ python3 -c "from bga.cli import _SCHEMA_BY_COMMAND as C,_SCHEMA_BY_FLAG as F; p=set(C.values()); [p.update(n for _,n in v) for v in F.values()]; print(len(p))"
+9                                  # README.md:97 "The other ten each have a command"; :91 "the last seventeen"
+$ python3 tools/dev_process_bands.py --runs 400 | grep -E "integrator|^mechanical"
+integrator    sonnet         3         84154k            -
+mechanical    100           261k       44.3 m          43
+                                   # 24 rows, rounds 145-148, carry 88216 not 88k; rescaled, mechanical is 193k
+$ grep -n "verifier" docs/audits/round-148.md
+37:A verifier ran on `1a498516` and found one leak: a single-dash flag
+48:| implementer | sonnet | ... | no separate verifier; the session probed the leaks itself |
+                                   # directions.md:2101 "no separate verifier ran", and no UX-1105
+$ python3 -c "from bga import bundle; print(len(bundle._layout_relative()))"
+15                                 # anonymized-bundle.md:21 "13 rows under one snapshot"
+$ python3 tools/dev_process_bands.py --runs; echo $?
+dev_process_bands.py: error: argument --runs: expected one argument
+2                                  # CLAUDE.md:30's command; --runs 200 gives judgement 83 of 227, bounded 249k
+```
+
+Filed, as `r149` lines in `bookkeeping.md`: the first two `coverage`,
+the verifier clause `coverage`, the last two `doc-drift`.
+
+### The five checks
+
+| check | result |
+|---|---|
+| code does what it says | `bga/fingerprint.py` is the §6 row `UX-1073` added; `tail/v1` rows in `cli.md`, `architecture.md` and spec Part 32 (lines 1521-1794, inside 1515-1962) describe `phases` and `complete`, the keys the schema has; `agent_worktree_limits.py` (`UX-1041`) is named where its readers are, `implementer.md` and `verifier.md` |
+| contracts have a home | `ids()` 26, `superseded()` 10, `reads()` 3, `names()` 10; release-guide's *sixteen live*, spec's *all ten schemas* and README's *Twenty-six ids* reproduce; `_consumer_surface()` 584 as `cli.md` says; README's *other ten* does not (above) |
+| figures invalidated | `analyze/v6` 63 properties, as both new `architecture.md` entries say; 23 `bga/viewer/*.js`; `CLAUDE.md`'s shape figure moved in one round (above) |
+| shipped, no document names it | none beyond the above: `BGA_BASELINE_RUN_DIR` (`UX-1083`), `bga_tail_us`/`build_wall_us`, `fingerprint` and `tail.json`'s bundle row each have their line |
+| last-updated claims | `architecture.md`'s newest entry reads 2026-09-28, `git log -1` 2026-09-28; the 29 ids rounds 147-150 list as closed are 🟢 in the task file and in `closed.md` |
+
+### One gap in this sweep
+
+The round documents' pasted suite and timing blocks, and the two
+2026-09-28 perf audits, are records with their commands beside them
+and were not re-run.
 
 ## Review 28 — 2026-09-27, at 982 closed rows
 

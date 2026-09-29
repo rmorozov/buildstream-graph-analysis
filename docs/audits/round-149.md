@@ -12,6 +12,7 @@ reusing PR 299"). 11 tracks ran in parallel: `UX-938`, `UX-950`,
 
 ```text
 closed   UX-938 UX-950 UX-955 UX-1041 UX-1090 UX-1091 UX-1092 UX-1093
+         UX-1102 (review 30, after #298 and #300 merged in)
 open     UX-1040 (a paid paired-model reading; put to Ruslan as a
          decision rather than run unbudgeted)
 filed    4 bookkeeping lines at integration (fail-open UX-1041 took the
@@ -103,10 +104,11 @@ clauses, which this document and its ledger rows now satisfy.
 | verifier | sonnet | UX-950 UX-1041 UX-1092 UX-1093 sweep B | 111k | 88 | 21 m | make lint pyright past 180s |
 | verifier | sonnet | UX-938 | 74k | 54 | 9 m | pyright shadow gave a false new finding |
 | integrator | opus | round 149 | 161k | 116 | 57 m | merge=union reopened 12 swept bookkeeping lines |
+| general-purpose | opus | architecture review 30 (UX-1102) | 160k | 55 | 18 m | none reported |
 
 Full detail, including outcome cells, is `docs/audits/agent-runs.md`'s
-own round-149 rows (20: 5 `architect`, 11 `implementer`, 3 `verifier`,
-1 `integrator`).
+own round-149 rows (21: 5 `architect`, 11 `implementer`, 3 `verifier`,
+1 `integrator`, 1 `general-purpose` for review 30).
 
 `make push-check` is this session's, run on the commit about to push
 (fixing-guide.md §7a step 7).

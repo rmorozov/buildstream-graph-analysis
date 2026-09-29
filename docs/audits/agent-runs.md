@@ -524,6 +524,7 @@ pairing for every merged row from round 103 on.
 | 149 | verifier | sonnet | UX-950 UX-1041 UX-1092 UX-1093 UX-998 sweep B | 111k | 88 | 21 m | 5 MERGE; 1 of 8 backfill samples wrong | make lint pyright past 180s |
 | 149 | verifier | sonnet | UX-938 | 74k | 54 | 9 m | MERGE; UX-1014 Reading wrong | pyright shadow gave a false new finding |
 | 149 | integrator | opus | round 149 | 161k | 116 | 57 m | 11 merges, 5 fix-ups, suite 10088 passed 2 expected red | merge=union reopened 12 swept bookkeeping lines |
+| 149 | general-purpose | opus | architecture review 30 (UX-1102), the cadence guard at 29 > 25 | 160k | 55 | 18 m | complete; five bookkeeping lines, no task file, nothing fixed | two guards held one README sentence to two inventories, both green |
 | 150 | architect | opus | architect: UX-1073, UX-1078 | 52k | 13 | 2.5 m | shaped both; Unify route (Ruslan) for UX-1073 | — |
 | 150 | implementer | sonnet | implementer: UX-1074 | 686k | 256 | 95.4 m | merged, VERIFIED | verifier found 184 s guard, fixed to 1 s plus memory guard |
 | 150 | implementer | sonnet | implementer: UX-1079, UX-1076 | 130k | 114 | 33.4 m | merged, VERIFIED | ru_maxrss carried across exec red the push gate |
@@ -554,7 +555,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the five hundred and twenty-five rows already say: a researcher that reads a document
+What the five hundred and twenty-six rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

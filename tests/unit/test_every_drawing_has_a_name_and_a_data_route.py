@@ -197,6 +197,20 @@ class TestEveryPlottedValueReachesTheRoute:
                 "annotation",
             ),
             (
+                'decomposition([{ key: "a", label: "a", value: 3 }, '
+                '{ key: "b", label: "b", value: 1 }], '
+                '{ total: 4, mark: { key: "lb", label: "lower bound", value: 2 }, '
+                'grade: "GRADE" })',
+                "annotation",
+            ),
+            (
+                'decomposition([{ key: "a", label: "a", value: 3 }, '
+                '{ key: "b", label: "b", value: 1 }], '
+                '{ total: 4, mark: { key: "lb", label: "lower bound", value: 2 }, '
+                'grade: "GRADE" })',
+                "exhibit",
+            ),
+            (
                 'interval([{ key: "a", label: "a", value: 0.3 }, '
                 '{ key: "b", label: "b", value: 0.8 }], { grade: "GRADE" })',
                 "annotation",

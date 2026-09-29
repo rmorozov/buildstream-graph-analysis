@@ -18,8 +18,8 @@ changed; section 9 lists the rows filed with it.
 ## 1. The seam already exists
 
 `bga bundle --export` (`bga/bundle.py`, `UX-520`) packs a capture as a
-member list **derived from** `run_store.CAPTURE_LAYOUT`, 13 rows under
-one snapshot. An anonymized bundle is the same derivation with one more
+member list **derived from** `run_store.CAPTURE_LAYOUT`, one row per
+member under one snapshot. An anonymized bundle is the same derivation with one more
 column per row: keep, transform, or drop. A row added to the layout with
 no such column refuses the anonymized export: fail closed, the way the
 plain bundle says a member added to the contract "is bundled by existing".

@@ -130,6 +130,10 @@ class TestTheTableIsRead:
         )
         assert "no token figure: 1 of 2" in report
 
+    def test_a_raw_count_cell_is_not_read_as_thousands(self):
+        assert dev_process_bands._number("88216", "k") == 88216
+        assert dev_process_bands._number("88k", "k") == 88000
+
     def test_the_band_prices_by_kind_and_model(self, ledger):
         report = "\n".join(dev_process_bands.runs_report(dev_process_bands.ledger_runs(ledger), 2))
         assert "researcher" in report and "verifier" in report

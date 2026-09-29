@@ -176,12 +176,13 @@ UNKNOWN = ("—", "-", "", "?")
 
 
 def _number(cell, suffix):
-    """`190k` -> 190000, `35.4 m` -> 35.4, an unfilled cell -> None."""
-    text = cell.strip().removesuffix(suffix).strip()
+    """`190k` -> 190000, `88216` -> 88216, `35.4 m` -> 35.4, an unfilled cell -> None."""
+    raw = cell.strip()
+    text = raw.removesuffix(suffix).strip()
     if text in UNKNOWN:
         return None
     try:
-        return float(text) * (1000 if suffix == "k" else 1)
+        return float(text) * (1000 if suffix == "k" and raw.endswith("k") else 1)
     except ValueError:
         return None
 

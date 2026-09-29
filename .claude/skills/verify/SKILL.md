@@ -19,14 +19,16 @@ description of what it printed.
 ## 2. The tests that touch what you changed
 
 ```bash
-make test-touching   # the files that name the modules your diff touched
+python3 tools/dev_touching.py --base <sha> --list   # the files that name the modules your diff touched
+python3 -m pytest -n 2 <the files it lists>
+# `make test-touching` is the same selection on the main checkout; a linked worktree's hook refuses it
 ```
 
 Measured on a one-module diff: **4s**, 7 files, 123 tests (`UX-336`).
 A *selector*, not a gate - a grep-derived set can miss a test that
 exercises a module without naming it, which is why CI on the pull
 request gates the merge (step 3), on the newest Python alone (`UX-995`).
-`make test-touching ARGS=--why` says what selected each file.
+`python3 tools/dev_touching.py --base <sha> --why` says what selected each file.
 
 Then the tier, when the change is wider than one module:
 
@@ -275,7 +277,7 @@ after, and let each commit collect a run while you move on.
 
 What follows from that:
 
-1. **Per item:** implement, `make test-touching`, mutate every new
+1. **Per item:** implement, `dev_touching.py --list` then pytest on it, mutate every new
    guard until it reddens, commit, push. Do not wait for the run.
 2. **Between items:** read the check runs — one call, and no log
    unless something is red.

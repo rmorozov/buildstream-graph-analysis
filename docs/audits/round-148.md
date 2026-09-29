@@ -45,5 +45,5 @@ Full `make test` on `1a498516`: 10241 passed / 199 skipped / 0 failed.
 
 | agent | model | task | tokens | calls | wall | friction |
 |---|---|---|---|---|---|---|
-| implementer | sonnet | UX-1088+UX-1089, the #298 review's two remaining numeric-leak findings (filed and fixed, one track) | 144356 | — | — | no separate verifier; the session probed the leaks itself |
+| implementer | sonnet | UX-1088+UX-1089, the #298 review's two remaining numeric-leak findings (filed and fixed, one track) | 144356 | — | — | the session probed the leaks itself; the verifier (its own row) found the `-j=N` leak |
 | closer | sonnet | close: row moves, ledger, round document | unknown | — | — | — |

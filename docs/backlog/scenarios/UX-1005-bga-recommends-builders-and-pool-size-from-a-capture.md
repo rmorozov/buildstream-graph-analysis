@@ -1,6 +1,6 @@
 # UX-1005: bga recommends a builder count and a pool size from a capture, and the critical path gets the next token
 
-**Priority:** High | **Status:** 🟡 In Progress | **Depends on:** UX-1004, UX-1003 | **Found by:** Ruslan on the jobserver batch thread (2026-09-24): whether to oversubscribe BuildStream's builders or native `max-jobs` depends on graph shape and the machine, and there is no rule for it | **Serves:** R5, R4 (a single-machine deployment sized from its own readings) | **Topic:** analysis | **Area:** unassigned | **Shape:** judgement | **Reading:** container
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-1004, UX-1003 | **Found by:** Ruslan on the jobserver batch thread (2026-09-24): whether to oversubscribe BuildStream's builders or native `max-jobs` depends on graph shape and the machine, and there is no rule for it | **Serves:** R5, R4 (a single-machine deployment sized from its own readings) | **Topic:** analysis | **Area:** unassigned | **Shape:** judgement | **Reading:** container
 
 **Guard:** test_the_admission_broker_ranks_by_slack.py · inferred r149
 
@@ -73,8 +73,6 @@ Gap: `bga analyze` printed no builder/pool count, nothing gated
 `13-mixed-graph`, 16 cores: 4 -> 32 builders took wall 143s -> 208s at
 equal host CPU (1160s, 1180s).
 
-Close, track A: as before. Close, track B: as before (9 tests).
-
 Close, track C + verifier fix:
 
 ```text
@@ -118,8 +116,13 @@ to a wider sibling). A real `--plan` still wins;
 | verifier: structural never gated in | `test_no_plan_falls_back_to_structural_ranking` | 1 |
 | verifier: plan loses to structural | `test_a_real_plan_wins_over_the_structural_fallback` | 1 |
 
-Not re-measured: `11-serial-giant`, `13-mixed-graph` (the Graviton
-spend was withheld pending this fix - run next, ranked + shared-pool).
+Acceptance, PR #303 notices: `bst-examples` on 11's auto run
+(`dbdc366a`), `fdsdk-reading` on run 36306876024 (`879ed047`):
+
+```text
+11    Builders: 2 with --jobserver auto (critical path max-jobs=2) | Pool size: 4, from host_cpu_count (4), uncalibrated
+fdsdk Builders: 1 with --jobserver auto (critical path max-jobs=4) | Pool size: 4, from host_cpu_count (4), uncalibrated
+```
 
 Graviton, `13-mixed-graph`, 3 repeats (runs 36153575373, 36163582462):
 admission 202/217/203s against 182s without; 8 builders off 143.6s,

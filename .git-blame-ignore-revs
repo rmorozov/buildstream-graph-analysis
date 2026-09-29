@@ -1,0 +1,4 @@
+# `git blame --ignore-revs-file .git-blame-ignore-revs`, or once:
+# `git config blame.ignoreRevsFile .git-blame-ignore-revs`.
+# UX-1118: ruff format, layout alone.
+6e2043a61f0fae8ed075314aebe000d0d17d699a

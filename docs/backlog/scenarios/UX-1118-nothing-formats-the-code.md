@@ -1,6 +1,6 @@
 # UX-1118: nothing formats the code, so layout is argued in review
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** quality gates audit (`docs/audits/quality-gates-2026-09-29.md`, 2026-09-29); Ruslan took it on the audit thread (2026-09-29 06:09) | **Serves:** the implementing session and every reviewer | **Topic:** guards | **Area:** tools | **Shape:** mechanical | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** quality gates audit (`docs/audits/quality-gates-2026-09-29.md`, 2026-09-29); Ruslan took it on the audit thread (2026-09-29 06:09) | **Serves:** the implementing session and every reviewer | **Topic:** guards | **Area:** tools | **Shape:** mechanical | **Reading:** container
 
 **Guard:** none — named test_the_tree_is_formatted.py, absent from tests/
 
@@ -42,3 +42,40 @@ Any rule-set change beyond formatting; the docstring convention (`UX-1119`).
 --check` over `bga tools tests .claude/hooks` and asserts the ignore-revs
 file names a commit that exists. Mutation: re-indent one function by hand;
 it reddens.
+
+## Outcome
+
+**Gap measured.** On `939947cf`: `python3 -m ruff format --check bga tools
+tests .claude/hooks` (ruff 0.16.8) -> `867 files would be reformatted, 13
+files already formatted`; with `quote-style = "preserve"` -> `859 files would
+be reformatted, 21 files already formatted` (the Decision's 842 was an older
+tree).
+
+**Close measured.** Commit A (`6e2043a6`): `859 files reformatted`. Per file,
+`ast.dump` of `HEAD~` vs A: 816 identical, 39 equal once docstring lines are
+stripped (ruff re-indents docstrings), 4 differ - the four deviations below.
+`dev_baseline.py --rekey`: `rekeyed 128 identities; 600 finding(s)`, every
+forced batch's size unchanged; `--check` -> `clean: 600 finding(s)`.
+`dev_sizes.py --adopt --force`: `wrote 161 file(s) ... (253 cell(s)
+changed)`, 175 grown. Commit B: `ruff format --check` -> `881 files already
+formatted`, exit 0; in `make lint-code`; the edit hook formats before it
+lints. `git blame -s bga/sources.py`: 98 lines on A; with
+`--ignore-revs-file .git-blame-ignore-revs`: 7.
+
+| Mutation | Reddened | Count |
+|---|---|---|
+| `bga/sources.py` `is_building_kind` body re-indented by hand | `test_the_tree_is_formatted` | 1 failed, 4 passed |
+| multiset check dropped from `rekey_pairs` | `test_an_extra_finding_is_refused_and_nothing_is_written` | 1 failed, 4 passed |
+| stale paired by `sort_key`, not HEAD's row | `test_pairs_follow_the_source_order_not_the_text` | 1 failed, 4 passed |
+| ignore-revs sha -> `000...01` | `test_the_ignore_revs_name_commits_that_exist` | 1 failed, 4 passed |
+| `compute_blast_radius` passes `list(results)` | `test_compute_blast_radius_uses_this_function` (AST) | 1 failed, 5 passed |
+
+**Deviation.** A is not format-only in four files: the format turned two
+docstrings opening on a quote into `""" "...`, which raised two new `D210`
+findings `--rekey` refused (130 new vs 128 stale), so `bga/sources.py`
+`format_kind_split` and `tools/bst_native_build_tracer.py` `classify_binary`
+docstrings were reworded (AST equal with docstrings blanked);
+`tools/dev_baseline.py` gained `--rekey`, with `head_document`'s git read
+split into `head_text` so the rekey adds no `S603`/`S607`;
+`test_the_ranking_orders_equals.py` became the AST call check. The rekey
+guards live in `test_the_tree_is_formatted.py`, not a file of their own.

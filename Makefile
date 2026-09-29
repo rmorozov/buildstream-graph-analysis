@@ -127,6 +127,7 @@ lint: lint-docs lint-code
 
 lint-code:
 	python3 -m ruff check bga/ tools/ tests/ .claude/hooks/
+	python3 -m ruff format --check bga/ tools/ tests/ .claude/hooks/
 	python3 tools/dev_baseline.py --check
 
 # UX-98: markdown correctness. Only the class that changes how a document

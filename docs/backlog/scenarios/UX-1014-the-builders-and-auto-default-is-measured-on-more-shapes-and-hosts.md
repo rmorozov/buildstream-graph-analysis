@@ -22,7 +22,7 @@ after UX-1011; `11-serial-giant` at max-jobs 3 reads -57%.
 surfaces: new `examples/` shapes, `graviton_arms.sh` legs, the probe workflow
 guards: each shape's reading is pasted with its run id; the default holds or is filed against
 gap: which shapes break it - two critical chains; a giant that is memory-bound; many medium elements; a host whose knee sits below its cores
-track: a sequence of measured legs, one row each as they land
+track: a sequence of measured legs, one row each as they land; the shapes and legs a session can build are `UX-1132` (round 152), the Graviton spend runs at that round's end by the owner's word (2026-09-29)
 
 ## Required Fix
 

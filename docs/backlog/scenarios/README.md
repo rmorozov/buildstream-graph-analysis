@@ -49,6 +49,10 @@ task file, which is the only place it ever lived twice.
 | UX-1107 | [the export's anchor breaks a tie by set order](UX-1107-the-exports-anchor-breaks-a-tie-by-set-order.md) | viewer | Medium | R1 | 🔴 Not Started |
 | UX-1124 | [`parse_timestamp` reads the wrapper's UTC stamp as local time](UX-1124-parse-timestamp-reads-the-wrappers-utc-stamp-as-local.md) | capture | Medium | anyone reading a wrapped capture outside UTC | 🔴 Not Started |
 | UX-1125 | [a red ledger gives `dev_guard_prices` a last-catch source](UX-1125-a-red-ledger-gives-the-guard-prices-a-last-catch.md) | guards | Medium | Ruslan, who decides what the per-PR path costs | 🔴 Not Started |
+| UX-1129 | [a union merge reopens swept bookkeeping lines](UX-1129-a-union-merge-reopens-swept-bookkeeping-lines.md) | guards | Medium | every round's sweep | 🔴 Not Started |
+| UX-1130 | [the resting-appearance guard reads a weight equal to the parent's as inherited](UX-1130-the-resting-appearance-guard-reads-weight-against-the-parent.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1131 | [`docs/README.md` counts ten printable contracts and `bga --schema` prints nine](UX-1131-the-schema-count-says-ten-and-bga-schema-prints-nine.md) | contracts | Low | R8 | 🔴 Not Started |
+| UX-1132 | [three new example shapes and their arm legs test the "safe cap plus auto" default](UX-1132-new-jobserver-shapes-for-the-default.md) | capture | High | R4, R5 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

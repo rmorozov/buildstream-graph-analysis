@@ -41,3 +41,29 @@ Installing non-Python tools (bst, bwrap, node).
 `tests/unit/test_a_session_starts_ready.py` runs the hook against a
 shallow scratch clone and asserts it leaves it unshallow, and that a second
 run does nothing. Mutation: drop the unshallow branch; it reddens.
+
+## Outcome
+
+**The gap measured:** a `git clone --depth 1` scratch repo reports
+`--is-shallow-repository` true; no hook registered under `SessionStart`.
+
+**The close measured:** `pytest tests/unit/test_a_session_starts_ready.py`:
+6 passed (unshallow + second run "nothing to do", lock install via stub,
+linked worktree nothing, raising installer returns a line, shell entry
+exits 0, `missing_locked`). 12 touching files: 280 passed, 3 skipped.
+`missing_locked` counts absent pins only, not version drift (a drift
+would reinstall at every start).
+
+| Mutation | Reddened | Printed |
+|---|---|---|
+| unshallow branch `if False and installer(...)` | `test_a_shallow_clone_is_unshallowed_and_a_second_run_does_nothing` | 1 failed, 5 passed |
+| worktree early exit `if False:` | `test_a_linked_worktree_does_nothing` | 1 failed, 5 passed |
+
+Files as Decided: settings.json, session-start.sh, session_start.py,
+the test (`missing_locked` lives in `session_start.py`; `dev_env_check.py` is at its size ceiling).
+
+Deviation: `missing_locked` lives in `session_start.py`, not
+`dev_env_check.py` (at its size ceiling), and counts only absent pins.
+`tests/quality_baseline.json` gained 2 ruff S603 entries via
+`dev_baseline.py --write --force --reason UX-1114`; that write flipped
+`ruff_version` to the stale 0.15.8, restored by hand to 0.16.8.

@@ -585,6 +585,8 @@ pairing for every merged row from round 103 on.
 | 152 | verifier | sonnet | verifier: UX-1106 UX-1107 UX-1124 UX-1007 UX-1057 UX-1066 UX-1012 UX-900 UX-1008 UX-975 UX-976 UX-904 UX-1130 UX-1125 UX-1129 UX-1131 UX-1056 UX-1058 UX-1045 UX-1133 UX-1010 | 55k | — | — | PASS | — |
 | 152 | verifier | sonnet | verifier: UX-1106 UX-1107 UX-1124 UX-1007 UX-1057 UX-1066 UX-1012 UX-900 UX-1008 UX-975 UX-976 UX-904 UX-1130 UX-1125 UX-1129 UX-1131 UX-1056 UX-1058 UX-1045 UX-1133 UX-1010 | 62k | — | — | PASS | — |
 | 152 | verifier | sonnet | verifier: UX-1106 UX-1107 UX-1124 UX-1007 UX-1057 UX-1066 UX-1012 UX-900 UX-1008 UX-975 UX-976 UX-904 UX-1130 UX-1125 UX-1129 UX-1131 UX-1056 UX-1058 UX-1045 UX-1133 UX-1010 | 62k | — | — | PASS | — |
+| 153 | design-review | opus | design review: two-plane page | 163k | 53 | 13m27s | 25 findings, filed | a `pkill` matched its own shell; `details.open` does not unfold chapters |
+| 153 | verifier | sonnet | verifier: UX-1136 UX-1137 UX-1138 UX-1139 | 45k | 35 | 3m47s | 4 pass; dev_sizes red and an unguarded text-report sentence, both fixed | the sandbox refused compound commands setting `PYTHONPATH` |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -597,7 +599,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the five hundred and sixty-eight rows already say: a researcher that reads a document
+What the five hundred and seventy rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

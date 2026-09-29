@@ -1147,7 +1147,7 @@ the blocks a reader meets first, and `certified_headroom`, the number
 Key Findings leads with, had never been in the population at all. It was
 302 such keys when that was filed and 305 when it landed. One level and
 no further: `blast_radius_distribution.deciles` is in the population and
-its own nine buckets are not. The surface is **586 keys** today, and
+its own nine buckets are not. The surface is **603 keys** today, and
 that figure is derived from the walk rather than typed here.
 
 So the statement of coverage, which is now a statement and not a
@@ -1668,6 +1668,47 @@ still exits 0 — which is why a consumer reads `refusals` before
 statement rather than a missing field.
 
 `bga whatif --schema` prints the whole shape without needing a run.
+
+### N variant builds, or one junctioned invocation (`UX-904`)
+
+`bga junction-cost` prices N separate builds of one type under
+different variants against one BuildStream invocation that junctions
+them together:
+
+```bash
+bga junction-cost RUN-x86/ RUN-arm/ --format json
+```
+
+Two elements in different variants are one element only when their
+cache key is identical; a name is not an identity, because an asan and
+a release compile of one source share a name and not a key. The runs
+must declare one build type (`UX-898`); variants differ by design.
+A single run, mixed build types, or a run with no cache keys is
+**refused by name**, and a refusal still exits 0.
+
+**The payload: `junction-cost/v1`.** `runs` lists each run's
+`run_id`, `build_class`, `elements`, `keyed_elements` and
+`pipeline_overhead_us`; `assumptions` is a list of `{id, text}` every
+figure cites; `refusals` is a list of `{check, runs, sentence}`; and
+`projected`, `null` on a refusal, carries:
+
+| key | what it is |
+|---|---|
+| `shared` | `{cache_key, elements, duration_us}` per key two or more runs share; built once, at its longest measured duration |
+| `shared_closed_downward` | whether every dependency of a shared key is shared too |
+| `shared_work_saving_us` | build work the N runs repeated on shared keys |
+| `pipeline` | per phase: `phase`, `sum_us` paid N times, `max_us` paid once, `saving_us` |
+| `pipeline_saving_us` | the phases' savings summed — an upper bound |
+| `saving_us` | the two savings together — an upper bound |
+| `separate_floors_us` | each run's own T∞, in run order |
+| `union_floor_us` | T∞ over the N graphs merged at shared keys |
+| `one_invocation_lower_bound_us` | the pipeline paid once plus `union_floor_us` |
+| `junction_staging_us` | `null`: staging the subprojects is not measured, and the bound excludes it |
+| `overlap` | the shared set in one sentence, including when it is empty |
+
+With no shared key the build-work saving is zero and `overlap` says so;
+the pipeline term is then all that remains, and it is an assumption.
+A re-capture of the junctioned invocation is still the ground truth.
 
 ### Why this one is ranked first (`UX-227`)
 

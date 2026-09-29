@@ -67,6 +67,7 @@ SUBCOMMANDS = [
     "baseline",
     "doctor",
     "whatif",
+    "junction-cost",
     "bundle",
 ]
 

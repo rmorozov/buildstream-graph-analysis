@@ -179,6 +179,8 @@ CORRELATE = "correlate/v2"
 CAPACITY_MODEL = "capacity-model/v1"
 # UX-1078: bga's own cost after the build, written beside the capture.
 TAIL = "tail/v1"
+# UX-904: N separate variant builds priced against one junctioned invocation.
+JUNCTION_COST = "junction-cost/v1"
 
 #: `UX-408`: **what `serialized_pairs` is**, written once.
 #:
@@ -856,6 +858,120 @@ _SWEEP_HINTS = {
         "`memory_knee_points` - is the tighter one, as "
         "`{name, builders}`. `{}` under the same condition "
         "as `memory_knee_points`."
+    },
+}
+
+
+_JUNCTION_US = {QUANTITY: "duration_us"}
+
+_JUNCTION_COST_REQUIRED = {
+    "runs": "array",
+    "convention": "string",
+    "assumptions": "array",
+    "refusals": "array",
+    "projected": "object",
+}
+
+_JUNCTION_COST_HINTS = {
+    "runs": {
+        "description": "The N runs, in the order given: build class, how many elements carry a cache key, and the pipeline overhead each paid.",
+        "items": {
+            "properties": {
+                "run_id": {"description": "The run."},
+                "build_class": {"description": "Its declared build type and variant, as a label."},
+                "elements": {QUANTITY: "count", "description": "Elements in its graph."},
+                "keyed_elements": {
+                    QUANTITY: "count",
+                    "description": "Of those, how many carry a cache key - the only identity a join can use.",
+                },
+                "pipeline_overhead_us": {
+                    **_JUNCTION_US,
+                    "description": "Its pipeline phases summed: paid once per invocation.",
+                },
+            }
+        },
+    },
+    "convention": {"description": "What the projection is and is not: a re-capture is the ground truth."},
+    "assumptions": {
+        "description": "Every assumption a figure uses, by id; the text renderer tags each figure with its id.",
+        "items": {
+            "properties": {
+                "id": {"description": "The name a figure cites."},
+                "text": {"description": "The assumption in words."},
+            }
+        },
+    },
+    "refusals": {
+        "description": "Why nothing is projected, when nothing is: a single run, runs of different build types, or a run with no cache keys.",
+        "items": {
+            "properties": {
+                "check": {"description": "The name a caller matches on, rather than the prose."},
+                "runs": {"description": "Which runs it fired on."},
+                "sentence": {"description": "The refusal in words."},
+            }
+        },
+    },
+    "projected": {
+        QUESTION: "What would one junctioned invocation cost, and what would it win?",
+        "description": "The projection. `null` when anything was refused.",
+        "properties": {
+            "shared": {
+                "description": "Elements whose cache key is identical in two or more runs: built once in one invocation.",
+                "items": {
+                    "properties": {
+                        "cache_key": {"description": "The key the runs share."},
+                        "elements": {"description": "The element names that key carried, across the runs."},
+                        "duration_us": {
+                            **_JUNCTION_US,
+                            "description": "The longest of its measured durations [shared_by_key].",
+                        },
+                    }
+                },
+            },
+            "shared_closed_downward": {
+                "description": "Whether every dependency of a shared key is shared too; false says the keys do not cover their dependencies."
+            },
+            "shared_work_saving_us": {
+                **_JUNCTION_US,
+                "description": "Build work the N runs repeated on shared keys: per key, the sum of its measured durations less the longest [shared_by_key].",
+            },
+            "pipeline": {
+                "description": "Per pipeline phase: the N runs' sum, the largest, and the difference [pipeline_once].",
+                "items": {
+                    "properties": {
+                        "phase": {"description": "The phase as BuildStream logged it."},
+                        "sum_us": {**_JUNCTION_US, "description": "Paid by N separate invocations."},
+                        "max_us": {**_JUNCTION_US, "description": "Paid once, at the largest of the N."},
+                        "saving_us": {**_JUNCTION_US, "description": "The sum less the largest."},
+                    }
+                },
+            },
+            "pipeline_saving_us": {
+                **_JUNCTION_US,
+                "description": "The pipeline phases' savings summed - an upper bound [pipeline_once].",
+            },
+            "saving_us": {
+                **_JUNCTION_US,
+                "description": "The pipeline saving plus the shared-work saving - an upper bound.",
+            },
+            "separate_floors_us": {
+                "description": "Each run's own T-infinity, in run order [unlimited_capacity].",
+                "items": {**_JUNCTION_US},
+            },
+            "union_floor_us": {
+                **_JUNCTION_US,
+                "description": "T-infinity over the N graphs merged at shared keys - the one invocation's critical path [unlimited_capacity].",
+            },
+            "one_invocation_lower_bound_us": {
+                **_JUNCTION_US,
+                "description": "The pipeline paid once plus the union floor: no one invocation is faster, before junction staging.",
+            },
+            "junction_staging_us": {
+                **_JUNCTION_US,
+                "description": "Staging the junctioned subprojects: `null`, not measured on this host [junction_staging].",
+            },
+            "overlap": {"description": "The shared set in one sentence, including when it is empty."},
+        },
     },
 }
 
@@ -6564,6 +6680,18 @@ _SCHEMAS = {
         "durations, so the caveat travels with the numbers rather than "
         "beside them.",
         hints=_SWEEP_HINTS,
+    ),
+    JUNCTION_COST: lambda: _document(
+        JUNCTION_COST,
+        "bga junction-cost RUN RUN [RUN...] --format json",
+        _JUNCTION_COST_REQUIRED,
+        "N separate builds of one type under different variants, priced "
+        "against one junctioned invocation: the elements they share by "
+        "cache key, the pipeline cost paid N times, the union graph's "
+        "floor and a lower bound on the one invocation. A projection, "
+        "each figure citing its assumption; refused for a single run, "
+        "mixed build types, or runs with no cache keys.",
+        hints=_JUNCTION_COST_HINTS,
     ),
     WHATIF: lambda: _document(
         WHATIF,

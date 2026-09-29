@@ -1644,6 +1644,36 @@ def cmd_whatif(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_junction_cost(args: argparse.Namespace) -> int:
+    """Execute `bga junction-cost RUN RUN [RUN...]` (UX-904): N variant builds against one junctioned invocation.
+
+    A question, not a gate: a refusal is the answer, so it exits 0.
+    """
+    from bga.junction_cost import project, render, run_view
+
+    views = []
+    for run in args.run_dirs:
+        try:
+            run_dir = resolve_run_alias(run)
+        except StoreError as error:
+            print(f"Error: {error}", file=sys.stderr)
+            return 2
+        if not Path(run_dir).is_dir():
+            print(f"Error: not a run directory: {run_dir}", file=sys.stderr)
+            return 2
+        analyzer = BuildEfficiencyAnalyzer(verbose=getattr(args, 'verbose', False))
+        analyzer.load(Path(run_dir))
+        views.append(run_view(analyzer.analyze(Path(run_dir)), analyzer.graph))
+    document = project(views)
+    output = json.dumps(document, indent=2, default=str) if args.format == 'json' else "\n".join(render(document))
+    if getattr(args, 'output', None):
+        with open(args.output, 'w', encoding='utf-8') as handle:
+            handle.write(output + "\n")
+    else:
+        print(output)
+    return 0
+
+
 def cmd_blast(args: argparse.Namespace) -> int:
     """Execute `bga blast TARGET` (UX-172) - what rebuilds if I touch this.
 
@@ -2491,6 +2521,33 @@ def _add_whatif_subcommand(subparsers) -> None:
     whatif_parser.set_defaults(func=cmd_whatif)
 
 
+def _add_junction_cost_subcommand(subparsers) -> None:
+    junction_parser = subparsers.add_parser(
+        'junction-cost',
+        help="N variant builds, or one junctioned invocation?",
+        description='Price N separate builds of one type under different '
+        'variants against one junctioned invocation: elements shared by '
+        'cache key, the pipeline paid N times, the union floor and a '
+        'lower bound on one invocation. A projection with its assumptions '
+        'stated; refusals are answers, so it always exits 0.',
+    )
+    junction_parser.add_argument('run_dirs', nargs='+', metavar='RUN', help='A run of one variant. Two or more.')
+    junction_parser.add_argument(
+        '-f',
+        '--format',
+        choices=['text', 'json'],
+        default='text',
+        help='Output format: text (human-readable), json (machine-readable).',
+    )
+    junction_parser.add_argument(
+        '-o',
+        '--output',
+        default=None,
+        help='Write output to PATH instead of stdout.',
+    )
+    junction_parser.set_defaults(func=cmd_junction_cost)
+
+
 def _add_cache_trend_subcommand(subparsers) -> None:
     cache_trend_parser = subparsers.add_parser(
         'cache-trend',
@@ -2723,6 +2780,7 @@ _SUBCOMMAND_BUILDERS = [
     _add_correlate_subcommand,
     _add_blast_subcommand,
     _add_whatif_subcommand,
+    _add_junction_cost_subcommand,
     _add_cache_trend_subcommand,
     _add_compare_subcommand,
     _add_bundle_subcommand,
@@ -2835,6 +2893,7 @@ _SCHEMA_BY_COMMAND = {
     # which is why the guard over this table is structural now rather
     # than a second list somebody has to remember.
     "whatif": schemas.WHATIF,
+    "junction-cost": schemas.JUNCTION_COST,
     # UX-339: and the capacity sweep, which is `R5`'s command and was
     # the one printed document a consumer could not version-check.
     "sweep": schemas.SWEEP,

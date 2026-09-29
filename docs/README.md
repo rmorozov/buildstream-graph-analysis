@@ -30,9 +30,10 @@ Both are in [`guides/cli.md`](guides/cli.md#bga-snapshot--the-local-loop-ux-126)
 carries a whole capture to another machine in one file — `run/` is
 only half of it (`UX-520`); `bga bundle --resolve` rewrites a pseudonym
 in a reply back to its real name, entirely on this machine (`UX-1064`).
-Three more
+Four more
 answer questions the analysis alone does not: `bga whatif` prices a
-chosen set of fixes (`UX-230`), `bga analyze --explain` shows the
+chosen set of fixes (`UX-230`), `bga junction-cost` prices N variant
+builds against one junctioned invocation (`UX-904`), `bga analyze --explain` shows the
 evidence behind every claim (`UX-229`), and `bga snapshot --aggregate`
 speaks for the whole store rather than one run (`UX-234`). The
 section-only commands — `graph`, `floors`, `replay`, `sweep`,
@@ -57,7 +58,7 @@ Every JSON document `bga` writes carries its schema id, and
 and the view-hints the browser report renders from (`UX-201`). Where a
 command emits two documents, the flag selects: `bga snapshot --list
 --schema` and `bga snapshot --aggregate --schema` print different
-contracts. Twenty-six ids, and what writes each:
+contracts. Twenty-seven ids, and what writes each:
 
 | document | written by |
 |---|---|
@@ -66,6 +67,7 @@ contracts. Twenty-six ids, and what writes each:
 | `blast/v2` | `bga blast --format json` — what a change to one resource rebuilds |
 | `correlate/v2` | `bga correlate --format json` — Plane 1 and Plane 2 joined on element uid |
 | `whatif/v1` | `bga whatif --format json` — what the build drops to if a chosen set is fixed, and whether the savings add (`UX-230`) |
+| `junction-cost/v1` | `bga junction-cost RUN RUN --format json` — N builds of one type under different variants priced against one junctioned invocation: the elements shared by cache key, the pipeline paid N times, the union floor, each figure citing its assumption (`UX-904`) |
 | `store/v1` | `bga snapshot --list --format json` — the runs in this project's `.bga/runs` |
 | `store-aggregate/v1` | `bga snapshot --aggregate --format json` — the store as a distribution, per host class (`UX-234`) |
 | `capacity-model/v1` | `bga snapshot --capacity N,RATE --format json` — a builder count and an arrival rate as a queue: utilization, the wait before a build starts and the number waiting, per host class, each figure carrying the assumptions its own arithmetic used (`UX-613`) |

@@ -1521,6 +1521,7 @@ run-context/v9      graph/v9      trace/v9      analysis/v9   (inputs, and the a
 analyze/v6          compare/v2    blast/v2      correlate/v2  (published outputs - 32.5)
 store/v1            store-aggregate/v1          whatif/v1     (published outputs - 32.5)
 sweep/v1            capacity-model/v1                         (what capacity buys - 32.5)
+junction-cost/v1                                              (N variant builds against one junctioned invocation - 32.5, UX-904)
 tail/v1                                                       (what bga cost after the build - 32.5, UX-1078)
 host/v2                                                       (the measuring machine - UX-186)
 sources/v1                                                    (the source inventory - UX-171)
@@ -1676,6 +1677,7 @@ key:
 | `bga snapshot --aggregate --format json` | `store-aggregate/v1` | as above |
 | `bga snapshot --capacity N,RATE --format json` | `capacity-model/v1` | as above |
 | `bga whatif --format json` | `whatif/v1` | as above |
+| `bga junction-cost --format json` | `junction-cost/v1` | `bga junction-cost --schema` |
 | `bga sweep --format json` | `sweep/v1` | as above |
 | `tail.json` beside a snapshot, written by `bga snapshot`: each phase's wall and peak RSS, staged `before`/`after` the build, and the build's own wall (`UX-1078`) | `tail/v1` | as above |
 | the host manifest inside `run-context.json` | `host/v2` | `bga.hostinfo.collect` |

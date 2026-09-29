@@ -230,6 +230,13 @@ CONTRACT_RUNS = {
     ],
     "blast/v2": ["blast", "toolchain.bst", str(FIXTURES["golden"]), "--format", "json"],
     "whatif/v1": ["whatif", str(FIXTURES["macro_micro"]), "--format", "json"],
+    "junction-cost/v1": [
+        "junction-cost",
+        str(FIXTURES["macro_micro"]),
+        str(FIXTURES["macro_micro"]),
+        "--format",
+        "json",
+    ],
     "sweep/v1": ["sweep", str(FIXTURES["macro_micro"]), "--format", "json"],
     "store/v1": None,
     "store-aggregate/v1": None,

@@ -442,6 +442,7 @@ class TestTheDocumentSaysWhatTheToolDoes:
             "twenty-four": 24,
             "twenty-five": 25,
             "twenty-six": 26,
+            "twenty-seven": 27,
         }
         claimed = re.search(r"\b(" + "|".join(words) + r")\b ids", block, re.I)
         assert claimed, "the block no longer states a count at all"

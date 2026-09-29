@@ -437,7 +437,7 @@ addition does not and `additionalProperties` is true everywhere, so a
 key the emitter always writes lands permitted, named in the schema's
 `bga:always_written` and guaranteed against the real payload.
 
-Six rows are written but not printable — on-disk shapes a run
+Seven rows are written but not printable — on-disk shapes a run
 directory carries rather than documents a subcommand emits. `--schema`
 does not know them, and `bga.contracts.unprintable()` says so.
 The last ten go one further: they are read and never written, which

@@ -1691,7 +1691,7 @@ key:
 | what `analyze`, `compare`, `blast` and `correlate` wrote before `UX-341` unified the units, what `analyze` wrote before `UX-344` lifted its two namespaces, what it wrote before `UX-535` published the graph's shape once, and what it wrote before `UX-641` gave `parallelism.levels` its members instead of the row number - read, never written | `analyze/v5`, `analyze/v4`, `analyze/v3`, `analyze/v2`, `compare/v1`, `blast/v1`, `correlate/v1` | `bga.schemas.SUPERSEDED` |
 | the host manifest with `memory_mb` where `host/v2` has `memory_bytes` - read and normalised, never written | `host/v1` | `bga.hostinfo.SUPERSEDED` |
 
-The six above the retired rows are **written but not printable**: they
+The seven above the retired rows are **written but not printable**: they
 are on-disk shapes a run directory carries, not documents a subcommand
 emits, so `--schema` does not know them. `bga.contracts.unprintable()`
 less `superseded()` names that difference rather than leaving a reader
@@ -1734,7 +1734,7 @@ run directory for nine rounds while appearing in no registry, no guard
 and no document.
 
 **The versioning rule**: a field *rename or removal* bumps the version — and so does a key entering **`required`** under a live id (`UX-629`), because a document a consumer already wrote stops validating, which is a break by the only reading a consumer has. A *permitted* addition does not.
-So `additionalProperties` is true in all ten schemas `bga/schemas.py` defines, and a consumer that pins `analyze/v6` keeps working while the tool grows.
+So `additionalProperties` is true in all eleven schemas `bga/schemas.py` defines, and a consumer that pins `analyze/v6` keeps working while the tool grows.
 A key the emitter writes on every document therefore lands **permitted-and-always-written** rather than required: declared, named in the schema's own `bga:always_written` so `--schema` states the choice, and guaranteed against the real payload by a guard rather than by `required`.
 `compare/v2`'s `verdict_provenance` is the worked example — `UX-610` took its required set from 14 to 15 under an unmoved id, and this is that undone without a `v3`.
 

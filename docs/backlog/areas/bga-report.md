@@ -4,8 +4,8 @@ Printed by `dev_area_pages.py --areas` (`UX-688`, `UX-1000`) from each task's `*
 
 | Task | Topic | Guard |
 |---|---|---|
-| [UX-4](https://github.com/rmorozov/buildstream-graph-analysis/blob/eaaeda85196c302a79428db9ab1d558e33139827/docs/backlog/scenarios/UX-0004-attribution-category-next-step-hints.md) | analysis | `test_attribution_hints.py` (inferred) |
-| [UX-33](https://github.com/rmorozov/buildstream-graph-analysis/blob/eaaeda85196c302a79428db9ab1d558e33139827/docs/backlog/scenarios/UX-0033-text-report-withholds-critical-path-and-choke-point-names.md) | analysis | `test_critical_path_and_choke_point_naming.py` (inferred) |
-| [UX-36](https://github.com/rmorozov/buildstream-graph-analysis/blob/eaaeda85196c302a79428db9ab1d558e33139827/docs/backlog/scenarios/UX-0036-cpu-utilisation-block-reports-occupancy-not-cpu.md) | analysis | `test_occupancy_block_honesty.py` (inferred), `test_cli_subcommands.py` (inferred) |
+| [UX-4](https://github.com/rmorozov/buildstream-graph-analysis/blob/f97f65bb3b0dbd0b3571d469beddeaf1d0b8460d/docs/backlog/scenarios/UX-0004-attribution-category-next-step-hints.md) | analysis | `test_attribution_hints.py` (inferred) |
+| [UX-33](https://github.com/rmorozov/buildstream-graph-analysis/blob/f97f65bb3b0dbd0b3571d469beddeaf1d0b8460d/docs/backlog/scenarios/UX-0033-text-report-withholds-critical-path-and-choke-point-names.md) | analysis | `test_critical_path_and_choke_point_naming.py` (inferred) |
+| [UX-36](https://github.com/rmorozov/buildstream-graph-analysis/blob/f97f65bb3b0dbd0b3571d469beddeaf1d0b8460d/docs/backlog/scenarios/UX-0036-cpu-utilisation-block-reports-occupancy-not-cpu.md) | analysis | `test_occupancy_block_honesty.py` (inferred), `test_cli_subcommands.py` (inferred) |
 
 covered 3 / 3 (declared 0, inferred 3)

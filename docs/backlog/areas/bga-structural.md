@@ -4,9 +4,9 @@ Printed by `dev_area_pages.py --areas` (`UX-688`, `UX-1000`) from each task's `*
 
 | Task | Topic | Guard |
 |---|---|---|
-| [UX-41](https://github.com/rmorozov/buildstream-graph-analysis/blob/eaaeda85196c302a79428db9ab1d558e33139827/docs/backlog/scenarios/UX-0041-level-decomposition-uses-shortest-not-longest-path.md) | analysis | `test_level_decomposition.py` (inferred) |
-| [UX-43](https://github.com/rmorozov/buildstream-graph-analysis/blob/eaaeda85196c302a79428db9ab1d558e33139827/docs/backlog/scenarios/UX-0043-choke-point-detection-degenerates-at-scale.md) | analysis | `test_choke_points.py` (inferred) |
-| [UX-719](https://github.com/rmorozov/buildstream-graph-analysis/blob/eaaeda85196c302a79428db9ab1d558e33139827/docs/backlog/scenarios/UX-0719-the-bottleneck-fan-in-and-fan-out-labels-are-swapped.md) | analysis | no guard named |
-| [UX-733](https://github.com/rmorozov/buildstream-graph-analysis/blob/eaaeda85196c302a79428db9ab1d558e33139827/docs/backlog/scenarios/UX-0733-the-two-fan-averages-are-the-same-number-and-both-described-wrong.md) | analysis | no guard named |
+| [UX-41](https://github.com/rmorozov/buildstream-graph-analysis/blob/f97f65bb3b0dbd0b3571d469beddeaf1d0b8460d/docs/backlog/scenarios/UX-0041-level-decomposition-uses-shortest-not-longest-path.md) | analysis | `test_level_decomposition.py` (inferred) |
+| [UX-43](https://github.com/rmorozov/buildstream-graph-analysis/blob/f97f65bb3b0dbd0b3571d469beddeaf1d0b8460d/docs/backlog/scenarios/UX-0043-choke-point-detection-degenerates-at-scale.md) | analysis | `test_choke_points.py` (inferred) |
+| [UX-719](https://github.com/rmorozov/buildstream-graph-analysis/blob/f97f65bb3b0dbd0b3571d469beddeaf1d0b8460d/docs/backlog/scenarios/UX-0719-the-bottleneck-fan-in-and-fan-out-labels-are-swapped.md) | analysis | no guard named |
+| [UX-733](https://github.com/rmorozov/buildstream-graph-analysis/blob/f97f65bb3b0dbd0b3571d469beddeaf1d0b8460d/docs/backlog/scenarios/UX-0733-the-two-fan-averages-are-the-same-number-and-both-described-wrong.md) | analysis | no guard named |
 
 covered 2 / 4 (declared 0, inferred 2)

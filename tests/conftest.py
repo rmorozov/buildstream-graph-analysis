@@ -115,6 +115,10 @@ KNOWN_SKIP_REASONS = {
     # there is nothing to read. 0 on this container and on
     # `ubuntu-latest`, both of which have one; the wording is a module
     # constant in that file so this census can read it without running.
+    # `UX-1116`: the sanitizer run needs libasan next to the C compiler.
+    # 0 here and on `ubuntu-latest`, whose gcc ships it.
+    "no sanitizer runtime (libasan) for the C compiler": (
+        "a compiler without libasan cannot build the hook under ASan", 0),
     "no host toolchain to clone a sysroot off": (
         "a host with no gcc cannot answer where a file class came from", 0),
     # `UX-925`: the pin's own mutations need something of this host

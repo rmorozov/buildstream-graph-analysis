@@ -171,7 +171,7 @@ def compile_hook(build_dir: str) -> str:
         # -ldl for UX-46's dlsym(RTLD_NEXT, ...) interposition. Harmless
         # on glibc >= 2.34 where libdl is folded into libc, and required
         # on older ones.
-        [cc, "-shared", "-fPIC", "-O2", "-o", hook_so, _HOOK_C, "-ldl"],
+        [cc, "-shared", "-fPIC", "-O2", "-Wall", "-Wextra", "-o", hook_so, _HOOK_C, "-ldl"],
         capture_output=True, text=True,
     )
     if result.returncode != 0:
@@ -199,7 +199,7 @@ def compile_spine(build_dir: str) -> str:
             "no C compiler (cc/gcc) found on PATH - required to build the ptrace spine"
         )
     result = subprocess.run(
-        [cc, "-static", "-O2", "-o", spine_bin, _SPINE_C],
+        [cc, "-static", "-O2", "-Wall", "-Wextra", "-o", spine_bin, _SPINE_C],
         capture_output=True, text=True,
     )
     if result.returncode != 0:

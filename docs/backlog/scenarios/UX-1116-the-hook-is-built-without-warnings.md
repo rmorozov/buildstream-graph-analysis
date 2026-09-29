@@ -50,3 +50,23 @@ clang-tidy or cppcheck.
 an unused variable to `hook.c` (the `-Werror` build reddens); add a one-byte
 heap overflow on a path the fixture exercises (the sanitizer run
 reddens).
+
+## Outcome
+
+Gap measured: `gcc -Wall -Wextra -Werror -O2 -c -o /dev/null` on `hook.c`
+and `spine.c` exits 0 at `438740ac`; `compile_hook`/`compile_spine` passed
+no `-W` flag; no test ran the hook under a sanitizer.
+
+Close measured: `python3 -m pytest tests/unit/test_the_hook_builds_clean_and_sanitized.py -q -n0`
+-> 3 passed in 0.96s (libasan at `/usr/lib/gcc/x86_64-linux-gnu/13/libasan.so`).
+Both compile calls now carry `-Wall -Wextra`.
+
+| mutation | red | printed |
+|---|---|---|
+| `int x;` inside `write_trace_line` (a global `int x;` did not warn) | `test_the_source_compiles_without_a_warning[hook]` | 1 failed, 2 passed |
+| `g_open_arena[OPEN_ARENA_BYTES] = 0;` after the memcpy | the ASan run (rc 1, AddressSanitizer report) and, via `-Warray-bounds`, the `-Werror` hook build | 2 failed, 1 passed |
+
+Deviation: the Decision's mutation (b) measured rc 86; here python3 under
+ASan printed rc 1 with a report - still red. The arena mutation also trips
+`-Wall`, so (b) is not isolated by that mutation alone; the ASan test
+reddens on its own return code and "Sanitizer" grep.

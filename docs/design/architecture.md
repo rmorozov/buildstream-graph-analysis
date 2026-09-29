@@ -502,6 +502,14 @@ with the tables above destroys the one thing the entry is for
 (`UX-653`). The newest entry is the exception: every round that
 re-grounds the document rewrites it.
 
+Updated 2026-09-29 (after `UX-1123`), covering one change to this
+document in round 151. The closed index moves from one `closed.md` to
+128-row chunks under `closed/`, read through `closed_rows()`
+(`UX-1120`); no contract moved. The figures are re-grounded in `bga
+analyze --schema` (`analyze/v6`: **63 top-level properties**) and in
+`python3 -m pytest $(grep -ln "architecture.md" tests/unit/*.py) -q`,
+run at this commit: **26 emitted ids**.
+
 Updated 2026-09-28 (after `UX-1103`), covering one change to this
 document that landed beside round 150's, re-grounded at the merge of
 #298 into round 150. The `bga bundle` row gains `--resolve

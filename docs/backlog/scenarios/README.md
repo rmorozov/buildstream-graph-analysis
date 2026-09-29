@@ -62,6 +62,7 @@ task file, which is the only place it ever lived twice.
 | UX-1120 | [the closed index is one 729 KB file the markdown lint reads superlinearly](UX-1120-the-closed-index-is-one-large-file.md) | guards | Medium | the implementing session, which pays the full markdown scan | 🔴 Not Started |
 | UX-1121 | [timing gates red pull requests for the runner's speed](UX-1121-timing-gates-red-prs-for-the-runner.md) | guards | High | the implementing session, whose PR reds for a file it never touched | 🔴 Not Started |
 | UX-1122 | [a guard never retires, so every gate is paid on every pull request forever](UX-1122-a-guard-never-retires.md) | guards | High | Ruslan, who decides what the per-PR path costs | 🔴 Not Started |
+| UX-1123 | [the verification log re-grounds at round 151's merge](UX-1123-the-verification-log-re-grounds-at-round-151.md) | contracts | Medium | whoever reads architecture.md's Verification Log next | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

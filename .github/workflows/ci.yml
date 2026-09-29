@@ -1821,6 +1821,8 @@ jobs:
             giant.bst "$OUT/capture-auto.txt"
 
       - name: Calibrate the runner's width and run the pinned 2x2 arm (UX-1004)
+        # `UX-1110`: gates nothing, so a PR pays for it only under the `jobserver` label.
+        if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'jobserver')
         run: |
           set -euo pipefail
           PROJ=examples/11-serial-giant

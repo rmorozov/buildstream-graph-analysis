@@ -23,7 +23,7 @@ MAIN = {"event_name": "push", "ref": "refs/heads/main",
         "event": {"repository": {"default_branch": "main"}}}
 STATUS = re.compile(r"\b(success|failure|always|cancelled)\(")
 TOKEN = re.compile(r"\s*(?:(\d+(?:\.\d+)?)|'((?:[^']|'')*)'|"
-                   r"(==|!=|<=|>=|&&|\|\||[()!<>,.\[\]])|([A-Za-z_][\w-]*))")
+                   r"(==|!=|<=|>=|&&|\|\||[()!<>,.\[\]*])|([A-Za-z_][\w-]*))")
 
 
 def _jobs():
@@ -113,13 +113,25 @@ class _Expr:
                               args[0])
             if name == "fromJSON":
                 return json.loads(args[0])
+            if name == "contains":
+                hay, needle = args[0], str(args[1]).lower()
+                if isinstance(hay, list):
+                    return any(str(item).lower() == needle for item in hay)
+                return needle in str(hay).lower()
             return self.functions[name]()
-        value = self.context.get(name, "")
+        value, spread = self.context.get(name, ""), False
         while self._peek() == ".":
             self._take(".")
+            if self._peek() == "*":  # an object filter: `labels.*.name`
+                self._take("*")
+                value, spread = (value if isinstance(value, list) else []), True
+                continue
             key = self.tokens[self.at][3]
             self.at += 1
-            value = value.get(key, "") if isinstance(value, dict) else ""
+            if spread:
+                value = [v.get(key, "") for v in value if isinstance(v, dict)]
+            else:
+                value = value.get(key, "") if isinstance(value, dict) else ""
         return value
 
 

@@ -48,6 +48,8 @@ task file, which is the only place it ever lived twice.
 | UX-1106 | [blast radius decodes every element's downstream set to sum durations over it](UX-1106-blast-radius-sums-durations-off-the-bitset.md) | analysis | High | anyone opening a run of a few thousand elements | 🔴 Not Started |
 | UX-1107 | [the export's anchor breaks a tie by set order](UX-1107-the-exports-anchor-breaks-a-tie-by-set-order.md) | viewer | Medium | R1 | 🔴 Not Started |
 | UX-1118 | [nothing formats the code, so layout is argued in review](UX-1118-nothing-formats-the-code.md) | guards | Medium | the implementing session and every reviewer | 🔴 Not Started |
+| UX-1124 | [`parse_timestamp` reads the wrapper's UTC stamp as local time](UX-1124-parse-timestamp-reads-the-wrappers-utc-stamp-as-local.md) | capture | Medium | anyone reading a wrapped capture outside UTC | 🔴 Not Started |
+| UX-1125 | [a red ledger gives `dev_guard_prices` a last-catch source](UX-1125-a-red-ledger-gives-the-guard-prices-a-last-catch.md) | guards | Medium | Ruslan, who decides what the per-PR path costs | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

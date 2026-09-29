@@ -519,7 +519,7 @@ A citation is closed or marked (open).
 .github/workflows/timing.yml                daily + dispatch - the tier
                                              drift and analyzer clock
                                              verdicts off the PR path,
-                                             two-run carry (UX-1121 (open))
+                                             two-run carry (UX-1121)
 ```
 
 **Tests and docs:**

@@ -543,6 +543,22 @@ pairing for every merged row from round 103 on.
 | 150 | verifier | sonnet | verifier: UX-1080 | 87k | 61 | 13.4 m | PASS | found pre-build call attribution gap, sent back |
 | 150 | integrator | opus | integrator: merge t4 t1 t2 t3 | 47k | 28 | 12.6 m | merged | pushed-gate reds only the merged tree showed: ru_maxrss across exec, bst-gated population count, spread fixture count |
 | 150 | integrator | opus | integrator: merge UX-1080, UX-1073 | 60k | 45 | 16 m | merged | pushed-gate reds only the merged tree showed |
+| 151 | researcher | sonnet | researcher: quality-gates audit, CI  | 86k | 19 | 3.3 m | report | jobs API history needed 200 calls |
+| 151 | researcher | sonnet | researcher: quality-gates audit, lint  | 31k | 10 | 1.1 m | report | ruff --select overrides ignore; pylint absent |
+| 151 | researcher | sonnet | researcher: quality-gates audit, tests  | 40k | 20 | 3.4 m | report | addopts -v changes collect output |
+| 151 | architect | opus | architect: UX-1108 1109 1110 1111 1115 1121  | 86k | 24 | 4.3 m | shaped | found bst-smoke also needs test |
+| 151 | architect | opus | architect: UX-1112 1113 1118 1119 1120  | 93k | 32 | 16.5 m | shaped | measured the format on a scratch copy |
+| 151 | architect | opus | architect: UX-1114 1116 1117 1122  | 57k | 25 | 4.3 m | shaped | found parse_timestamp reads UTC as local |
+| 151 | implementer | opus | implementer: UX-1108 1109 1110 1115 1111 1121  | 197k | 193 | 30.2 m | merged | sandbox refused compound git; three weak guards sent back |
+| 151 | implementer | sonnet | implementer: UX-1113 1112 1119  | 115k | 112 | 37.3 m | merged | size ledger and forced S603 undeclared |
+| 151 | implementer | sonnet | implementer: UX-1116 1117  | 68k | 51 | 9.4 m | merged | property 2 random-only, sent back |
+| 151 | implementer | sonnet | implementer: UX-1114 1122  | 87k | 94 | 33.7 m | merged | unrecorded read as quiet, sent back |
+| 151 | implementer | sonnet | implementer: UX-1120  | 111k | 80 | 29.5 m | merged | two guard gaps sent back; census row the session's |
+| 151 | verifier | sonnet | verifier: UX-1116 1117  | 32k | 19 | 2.5 m | PASS | property 2 weak |
+| 151 | verifier | sonnet | verifier: UX-1108..1121  | 47k | 26 | 3.7 m | PASS | three surviving mutations |
+| 151 | verifier | sonnet | verifier: UX-1114 1122  | 29k | 21 | 2.5 m | PASS | skill wording over-promised |
+| 151 | verifier | sonnet | verifier: UX-1120  | 51k | 26 | 4.1 m | PASS | two surviving mutations |
+| 151 | verifier | sonnet | verifier: UX-1113 1112 1119  | 41k | 31 | 11.3 m | PASS | push-check pipe had no pipefail |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -555,7 +571,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the five hundred and twenty-six rows already say: a researcher that reads a document
+What the five hundred and forty-two rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

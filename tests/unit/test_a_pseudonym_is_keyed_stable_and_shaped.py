@@ -5,6 +5,7 @@ collision grows `k`, the map round-trips, and the key/map files are
 0600. Mutation: drop the class from the HMAC input and an element and
 a directory of the same name stop being distinguishable.
 """
+
 import hmac as hmac_module
 import stat
 
@@ -94,8 +95,7 @@ def test_the_key_and_map_files_are_0600(tmp_path):
 def test_the_path_shape_survives(tmp_path):
     key = anon.load_or_create_key(str(tmp_path))
     pmap = anon.PseudonymMap.for_project(str(tmp_path))
-    out = anon.pseudonymize_element_path(
-        "base.bst:components/gtk/gtk3.bst", key, pmap)
+    out = anon.pseudonymize_element_path("base.bst:components/gtk/gtk3.bst", key, pmap)
 
     junction, _, rest = out.partition(":")
     parts = rest.split("/")
@@ -106,8 +106,7 @@ def test_the_path_shape_survives(tmp_path):
     assert parts[2].startswith("e-") and parts[2].endswith(".bst")
 
 
-def test_the_class_salts_the_hmac_so_an_element_and_a_directory_differ(
-        tmp_path):
+def test_the_class_salts_the_hmac_so_an_element_and_a_directory_differ(tmp_path):
     """Guard for the named mutation: drop `cls` from the HMAC input and
     an element and a directory of the same name become the same token
     under their prefix, so a reader can link the two namespaces."""
@@ -129,5 +128,4 @@ def test_digest_input_includes_the_class(tmp_path):
     element_digest = anon._digest(key, "element", "gtk3", 0)
     directory_digest = anon._digest(key, "directory", "gtk3", 0)
     assert element_digest != directory_digest
-    assert element_digest == hmac_module.new(
-        key, b"element\0gtk3", "sha256").digest()
+    assert element_digest == hmac_module.new(key, b"element\0gtk3", "sha256").digest()

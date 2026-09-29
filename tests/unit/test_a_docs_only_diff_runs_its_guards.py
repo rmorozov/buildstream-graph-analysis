@@ -6,6 +6,7 @@ witness; the lane is that set plus the selector's (census included);
 the heavy jobs carry the docs-only `if:` and nothing that adopts can
 run on a lane run.
 """
+
 import io
 import pathlib
 import re
@@ -28,9 +29,17 @@ SKIPS = "needs.changes.outputs.docs_only != 'true'"
 RUNS = "needs.changes.outputs.docs_only == 'true'"
 HEAVY = {"test", "bst-smoke", "bst-tests", "bst-examples"}
 #: Jobs that run whatever the diff is; a new job has to be put in one set.
-EITHER = {"changes", "tier-reference", "tier-reference-adopt", "touch-map-adopt",
-          "flake-ledger-adopt", "area-pages-publish", "agent-config", "packaging",
-          "installed-capture"}
+EITHER = {
+    "changes",
+    "tier-reference",
+    "tier-reference-adopt",
+    "touch-map-adopt",
+    "flake-ledger-adopt",
+    "area-pages-publish",
+    "agent-config",
+    "packaging",
+    "installed-capture",
+}
 
 #: The textual witness: a line that walks or lists the tree, and a docs
 #: marker on it or on the definition of the name it walks.
@@ -48,15 +57,19 @@ def _witnessed(text):
             defs.setdefault(m.group(1), []).append(m.group(2))
 
     def marked(name, depth=0):
-        return any(MARK.search(rhs) or (depth < 3 and any(
-            marked(other, depth + 1) for other in re.findall(r"[A-Za-z_]\w*", rhs)
-            if other != name)) for rhs in defs.get(name, ()))
+        return any(
+            MARK.search(rhs)
+            or (
+                depth < 3
+                and any(marked(other, depth + 1) for other in re.findall(r"[A-Za-z_]\w*", rhs) if other != name)
+            )
+            for rhs in defs.get(name, ())
+        )
 
     for line in text.splitlines():
         if not WALK.search(line):
             continue
-        if MARK.search(line) or any(marked(m.group(1) or m.group(2))
-                                    for m in RECEIVER.finditer(line)):
+        if MARK.search(line) or any(marked(m.group(1) or m.group(2)) for m in RECEIVER.finditer(line)):
             return True
     return False
 
@@ -72,8 +85,7 @@ def jobs():
 
 
 def _steps(job):
-    return "\n".join(f"{step.get('run', '')} {step.get('with', '')}"
-                     for step in job["steps"])
+    return "\n".join(f"{step.get('run', '')} {step.get('with', '')}" for step in job["steps"])
 
 
 def _needs(job):
@@ -83,24 +95,27 @@ def _needs(job):
 
 class TestTheDocSetIsComplete:
     def test_every_test_the_witness_sees_reading_docs_is_in_the_lane(self, readers):
-        witnessed = {str(p.relative_to(REPO))
-                     for p in sorted((REPO / "tests").rglob("test_*.py"))
-                     if _witnessed(p.read_text(encoding="utf-8"))}
+        witnessed = {
+            str(p.relative_to(REPO))
+            for p in sorted((REPO / "tests").rglob("test_*.py"))
+            if _witnessed(p.read_text(encoding="utf-8"))
+        }
         assert len(witnessed) >= 20, f"the witness collapsed to {len(witnessed)}"
         missing = sorted(witnessed - readers - set(tiers.CENSUS))
-        assert missing == [], (
-            f"{len(missing)} test(s) walk docs and a docs-only lane would not "
-            f"select them: {missing}")
+        assert missing == [], f"{len(missing)} test(s) walk docs and a docs-only lane would not select them: {missing}"
 
-    @pytest.mark.parametrize("name", [
-        # a glob over a docs directory, rooted at a module constant
-        "test_documentation_debt_has_a_door.py",
-        "test_a_pasted_guide_block_is_fresh_or_dated.py",
-        # through a tool function whose own body globs the backlog
-        "test_the_premise_is_a_declared_field.py",
-        # two hops: `dev_scenario` -> `dev_finding_coverage.tracked_paths`
-        "test_a_scenario_is_named_by_its_seed.py",
-    ])
+    @pytest.mark.parametrize(
+        "name",
+        [
+            # a glob over a docs directory, rooted at a module constant
+            "test_documentation_debt_has_a_door.py",
+            "test_a_pasted_guide_block_is_fresh_or_dated.py",
+            # through a tool function whose own body globs the backlog
+            "test_the_premise_is_a_declared_field.py",
+            # two hops: `dev_scenario` -> `dev_finding_coverage.tracked_paths`
+            "test_a_scenario_is_named_by_its_seed.py",
+        ],
+    )
     def test_a_reader_the_per_file_grep_misses_is_derived(self, readers, name):
         assert f"tests/unit/{name}" in readers
 
@@ -136,15 +151,13 @@ class TestTheLaneIsThatSetPlusTheCensus:
         not this test's own nested-pytest recursion risk) under the
         same `-n auto` it always passes, so a worker - not just this
         call's own `sys.path` - has to resolve the import too."""
-        target = ("tests/unit/"
-                  "test_a_behaviour_claim_names_the_bst_it_was_read_on.py")
+        target = "tests/unit/test_a_behaviour_claim_names_the_bst_it_was_read_on.py"
         witness = REPO / "tools" / "_ux991_witness_scratch.py"
         witness.write_text(
-            "import sys\nimport dev_docs_lane as d\n"
-            f"sys.exit(d.run_pytest([{target!r}], []))\n", encoding="utf-8")
+            f"import sys\nimport dev_docs_lane as d\nsys.exit(d.run_pytest([{target!r}], []))\n", encoding="utf-8"
+        )
         try:
-            done = subprocess.run([sys.executable, str(witness)], cwd=REPO,
-                                  capture_output=True, text=True)
+            done = subprocess.run([sys.executable, str(witness)], cwd=REPO, capture_output=True, text=True)
         finally:
             witness.unlink()
         assert done.returncode == 0, done.stdout + done.stderr
@@ -154,19 +167,33 @@ class TestTheLaneIsThatSetPlusTheCensus:
         lane = jobs["docs-lane"]
         assert lane["if"] == RUNS and _needs(lane) == ["changes"]
         text = _steps(lane)
-        for step in ("dev_docs_lane.py --run", "make lint", "make check-clean",
-                     "dev_close_task.py --check", "'python-version': '3.11'"):
+        for step in (
+            "dev_docs_lane.py --run",
+            "make lint",
+            "make check-clean",
+            "dev_close_task.py --check",
+            "'python-version': '3.11'",
+        ):
             assert step in text, step
 
 
 class TestTheDetector:
-    @pytest.mark.parametrize("path, docs", [
-        ("docs/guides/cli.md", True), ("README.md", True), ("CLAUDE.md", True),
-        (".claude/skills/verify/SKILL.md", True), ("examples/README.md", True),
-        ("tools/dev_docs_lane.py", False), (".claude/hooks/no-bulk-add.sh", False),
-        ("tests/fixtures/host_cpu/README.md", False), ("Makefile", False),
-        (".github/workflows/ci.yml", False), ("docs.py", False),
-    ])
+    @pytest.mark.parametrize(
+        "path, docs",
+        [
+            ("docs/guides/cli.md", True),
+            ("README.md", True),
+            ("CLAUDE.md", True),
+            (".claude/skills/verify/SKILL.md", True),
+            ("examples/README.md", True),
+            ("tools/dev_docs_lane.py", False),
+            (".claude/hooks/no-bulk-add.sh", False),
+            ("tests/fixtures/host_cpu/README.md", False),
+            ("Makefile", False),
+            (".github/workflows/ci.yml", False),
+            ("docs.py", False),
+        ],
+    )
     def test_a_path_is_docs_by_where_and_what_it_is(self, path, docs):
         assert dev_docs_only.is_docs(path) is docs
 
@@ -176,11 +203,14 @@ class TestTheDetector:
         assert not dev_docs_only.docs_only(["docs/a.md"], event="push")
         assert not dev_docs_only.docs_only([])
 
-    @pytest.mark.parametrize("stdin, event, verdict", [
-        ("docs/a.md\n", "pull_request", "true"),
-        ("", "pull_request", "false"),  # what a failed `git diff` leaves
-        ("docs/a.md\n", "push", "false"),
-    ])
+    @pytest.mark.parametrize(
+        "stdin, event, verdict",
+        [
+            ("docs/a.md\n", "pull_request", "true"),
+            ("", "pull_request", "false"),  # what a failed `git diff` leaves
+            ("docs/a.md\n", "push", "false"),
+        ],
+    )
     def test_the_verdict_it_prints(self, capsys, stdin, event, verdict):
         dev_docs_only.main(["--event", event], stdin=io.StringIO(stdin))
         assert capsys.readouterr().out.strip() == f"docs_only={verdict}"
@@ -211,8 +241,7 @@ class TestTheHeavyJobsSkip:
         assert set(jobs) == HEAVY | EITHER | {"docs-lane"}
 
     def test_nothing_that_adopts_runs_on_a_pull_request(self, jobs):
-        writers = [name for name, job in jobs.items()
-                   if (job.get("permissions") or {}).get("contents") == "write"]
+        writers = [name for name, job in jobs.items() if (job.get("permissions") or {}).get("contents") == "write"]
         assert len(writers) >= 3, writers
         for name in writers:
             assert "github.event_name == 'push'" in jobs[name]["if"], name

@@ -26,6 +26,7 @@ nested per the contract, this table's own fold reads **3**, not the
 Acceptance Test's `1` - measured below, and flagged rather than
 resolved here (the Outcome states it as the open decision).
 """
+
 import json
 import pathlib
 import re
@@ -88,21 +89,26 @@ ELEMENTS_TABLE_JS = r"""
 def _priced(cost_us, duration_before_us=5_000_000):
     """`price_max_jobs_advice`'s own `priced` shape - the object the
     contract keeps nested and unrendered."""
-    return {"replayed_baseline_us": 100_000_000,
-            "projected_us": 100_000_000 + cost_us, "cost_us": cost_us,
-            "duration_before_us": duration_before_us,
-            "duration_floor_us": max(1, duration_before_us - cost_us),
-            "kind": "floor"}
+    return {
+        "replayed_baseline_us": 100_000_000,
+        "projected_us": 100_000_000 + cost_us,
+        "cost_us": cost_us,
+        "duration_before_us": duration_before_us,
+        "duration_floor_us": max(1, duration_before_us - cost_us),
+        "kind": "floor",
+    }
 
 
-def _row(uid, current, recommended, local_max=3, samples=10, refusal=None,
-         price_cost_us=None, price_refusal=None):
-    row = {"element": uid, "current_max_jobs": current,
-           "recommended_max_jobs": recommended,
-           "max_jobs_change": (recommended - current)
-               if recommended is not None and current is not None else None,
-           "local_max_concurrency": local_max, "samples_in_span": samples,
-           "refusal": refusal}
+def _row(uid, current, recommended, local_max=3, samples=10, refusal=None, price_cost_us=None, price_refusal=None):
+    row = {
+        "element": uid,
+        "current_max_jobs": current,
+        "recommended_max_jobs": recommended,
+        "max_jobs_change": (recommended - current) if recommended is not None and current is not None else None,
+        "local_max_concurrency": local_max,
+        "samples_in_span": samples,
+        "refusal": refusal,
+    }
     if price_cost_us is not None:
         row["priced"] = _priced(price_cost_us)
         row["price_cost_us"] = price_cost_us
@@ -130,11 +136,15 @@ def _row(uid, current, recommended, local_max=3, samples=10, refusal=None,
 _ROWS = [
     _row("libc.bst", 4, 2, price_cost_us=3000),
     _row("libb.bst", 2, 2, price_cost_us=0),
-    _row("liba.bst", 1, 4,
-         price_refusal="this run has no evidence of how it scales up"),
-    _row("core.bst", 4, None, local_max=None, samples=1,
-         refusal="only 1 host CPU sample interval(s) fall inside this "
-                 "element's BUILD span - 3 needed"),
+    _row("liba.bst", 1, 4, price_refusal="this run has no evidence of how it scales up"),
+    _row(
+        "core.bst",
+        4,
+        None,
+        local_max=None,
+        samples=1,
+        refusal="only 1 host CPU sample interval(s) fall inside this element's BUILD span - 3 needed",
+    ),
 ]
 # The rank `_advice_row_rank` would give: priced lowerings by cost
 # ascending, then the rest, refusals last.
@@ -153,12 +163,17 @@ def _advice_uri(into, rows, name="advice"):
     doc_path = pathlib.Path(run).parent / "analyze.json"
     doc = json.loads(doc_path.read_text(encoding="utf-8"))
     doc["capacity_recommendation"] = {
-        "builders": 4, "host_cpu_count": 4,
+        "builders": 4,
+        "host_cpu_count": 4,
         "constraints": [{"name": "CPU", "allows": 4, "reason": "4 cores"}],
-        "binding_constraint": "CPU", "recommended_builders": 4,
-        "builders_change": 0, "caveat": "a replay, not a prediction",
+        "binding_constraint": "CPU",
+        "recommended_builders": 4,
+        "builders_change": 0,
+        "caveat": "a replay, not a prediction",
         "max_jobs_advice": {
-            "min_samples_in_span": 3, "host_cores": 4, "elements": rows,
+            "min_samples_in_span": 3,
+            "host_cores": 4,
+            "elements": rows,
             "pricing_assumptions": ["dispatch sentence", "floor sentence"],
         },
     }
@@ -181,32 +196,29 @@ def test_the_advice_row_is_one_level_and_capped(tmp_path_factory, browser):
     result = browser.measure(uri, ELEMENTS_TABLE_JS)
 
     assert result is not None, "no capacity_recommendation.max_jobs_advice.elements table"
-    assert result["nestedTables"] == 0, (
-        "priced must not draw its own nested table: "
-        f"{result['nestedTables']} found")
+    assert result["nestedTables"] == 0, f"priced must not draw its own nested table: {result['nestedTables']} found"
     assert "Price" in result["headers"], result["headers"]
     assert "Why not priced" in result["headers"], result["headers"]
-    assert "Priced (floor)" not in result["headers"], (
-        "priced must not itself be a column: " + str(result["headers"]))
+    assert "Priced (floor)" not in result["headers"], "priced must not itself be a column: " + str(result["headers"])
     # The fold is opened before measuring (see the JS above) - a closed
     # `<details>` lays out nothing, so 0 <= 40 would pass whether or not
     # the row is really one level.
     assert result["rowHeight"] is not None and 0 < result["rowHeight"] <= 40, (
         f"{result['rowHeight']} px/row at 1440 wide, opened - either no "
         f"real row was measured or it is over the 40 px budget a "
-        f"one-level row draws at")
+        f"one-level row draws at"
+    )
     # The JSON order is the order drawn (§ Required Fix): priced
     # lowerings first, refusals last.
-    assert result["order"] == [
-        "libc.bst", "libb.bst", "liba.bst", "core.bst"], (
-        result["order"])
+    assert result["order"] == ["libc.bst", "libb.bst", "liba.bst", "core.bst"], result["order"]
     # `shapeOf`'s own floor for any non-empty array-of-records is 2 (the
     # array is a level, each row is a level); `priced` staying nested
     # per row (the contract) adds one more. See this task's Outcome.
     assert result["levels"] == "3", (  # shapeOf(elements), priced kept nested per the contract
         f"data-levels={result['levels']!r} - if this ever reads \"1\", "
         f"`priced` has left the row and the Outcome's flagged decision "
-        f"has been resolved; update this assertion, don't relax it")
+        f"has been resolved; update this assertion, don't relax it"
+    )
 
 
 @needs_browser
@@ -215,15 +227,12 @@ def test_over_the_cap_the_badge_and_a_filter_appear(tmp_path_factory, browser):
     # `TABLE_OPENS_BOUNDED_ABOVE` is 40 (structured.js); 45 priced
     # lowerings at distinct costs cross it while staying one input
     # class, which is what the badge and the filter are keyed off.
-    rows = [_row(f"lowered-{n}.bst", 4, 2, price_cost_us=1000 + n)
-            for n in range(45)]
-    uri = _advice_uri(tmp_path_factory.mktemp("advice-scale"), rows,
-                       name="advice-scale")
+    rows = [_row(f"lowered-{n}.bst", 4, 2, price_cost_us=1000 + n) for n in range(45)]
+    uri = _advice_uri(tmp_path_factory.mktemp("advice-scale"), rows, name="advice-scale")
     result = browser.measure(uri, ELEMENTS_TABLE_JS)
 
     assert result is not None
-    assert result["badge"] and CAPPED_BADGE.match(result["badge"]), (
-        result["badge"])
+    assert result["badge"] and CAPPED_BADGE.match(result["badge"]), result["badge"]
     assert result["badge"].endswith("of 45"), result["badge"]
     assert result["hasFilter"], "no input.table-filter over the row cap"
 

@@ -12,6 +12,7 @@ because the *column declares* it is a duration - and it is compared with
 `data-raw`, never with the formatted cell text. Comparing "1.2s" to "5s"
 as strings is the defect these guards exist to catch.
 """
+
 import json
 import os
 import shutil
@@ -24,46 +25,54 @@ needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 
 
 def _node(script, timeout=120):
-    result = subprocess.run([node, "--input-type=module", "-e", script],
-                            capture_output=True, text=True, cwd=os.getcwd(),
-                            timeout=timeout)
+    result = subprocess.run(
+        [node, "--input-type=module", "-e", script], capture_output=True, text=True, cwd=os.getcwd(), timeout=timeout
+    )
     assert result.returncode == 0, result.stderr
     return json.loads(result.stdout)
 
 
 @needs_node
 class TestTheThresholdParsesTheUnitTheColumnDeclares:
-    @pytest.mark.parametrize("text,quantity,expected", [
-        ("> 5s", "duration_us", {"op": ">", "value": 5_000_000}),
-        ("5s", "duration_us", {"op": ">=", "value": 5_000_000}),
-        ("<= 500ms", "duration_us", {"op": "<=", "value": 500_000}),
-        # `UX-341` retired `seconds`, `megabytes`, `kilobytes` and
-        # `percent` from the vocabulary, so no column can be declared in
-        # one and these tables no longer carry four conversion sets to
-        # filter a column that cannot exist.
-        (">= 512mb", "bytes", {"op": ">=", "value": 536_870_912}),
-        ("> 1gb", "bytes", {"op": ">", "value": 1_073_741_824}),
-        ("< 50%", "share", {"op": "<", "value": 0.5}),
-        ("> 10", "count", {"op": ">", "value": 10}),
-    ])
+    @pytest.mark.parametrize(
+        "text,quantity,expected",
+        [
+            ("> 5s", "duration_us", {"op": ">", "value": 5_000_000}),
+            ("5s", "duration_us", {"op": ">=", "value": 5_000_000}),
+            ("<= 500ms", "duration_us", {"op": "<=", "value": 500_000}),
+            # `UX-341` retired `seconds`, `megabytes`, `kilobytes` and
+            # `percent` from the vocabulary, so no column can be declared in
+            # one and these tables no longer carry four conversion sets to
+            # filter a column that cannot exist.
+            (">= 512mb", "bytes", {"op": ">=", "value": 536_870_912}),
+            ("> 1gb", "bytes", {"op": ">", "value": 1_073_741_824}),
+            ("< 50%", "share", {"op": "<", "value": 0.5}),
+            ("> 10", "count", {"op": ">", "value": 10}),
+        ],
+    )
     def test_it_parses(self, text, quantity, expected):
         out = _node(
             'const t = await import("./bga/viewer/tables.js");'
-            f'console.log(JSON.stringify(t.parseThreshold({text!r}, {quantity!r})));')
+            f'console.log(JSON.stringify(t.parseThreshold({text!r}, {quantity!r})));'
+        )
         assert out == expected
 
-    @pytest.mark.parametrize("text,quantity", [
-        ("5q", "duration_us"),      # a unit nothing declares
-        ("5mb", "duration_us"),     # a unit from the wrong quantity
-        ("lots", "duration_us"),
-        ("", "duration_us"),
-    ])
+    @pytest.mark.parametrize(
+        "text,quantity",
+        [
+            ("5q", "duration_us"),  # a unit nothing declares
+            ("5mb", "duration_us"),  # a unit from the wrong quantity
+            ("lots", "duration_us"),
+            ("", "duration_us"),
+        ],
+    )
     def test_what_it_will_not_parse_is_no_filter_at_all(self, text, quantity):
         """Not "hide everything". A threshold nobody can read must not
         silently empty the table."""
         out = _node(
             'const t = await import("./bga/viewer/tables.js");'
-            f'console.log(JSON.stringify({{v: t.parseThreshold({text!r}, {quantity!r})}}));')
+            f'console.log(JSON.stringify({{v: t.parseThreshold({text!r}, {quantity!r})}}));'
+        )
         assert out["v"] is None
 
     def test_a_bare_number_is_the_published_value(self):
@@ -71,18 +80,24 @@ class TestTheThresholdParsesTheUnitTheColumnDeclares:
         consumer of this JSON compares against."""
         out = _node(
             'const t = await import("./bga/viewer/tables.js");'
-            'console.log(JSON.stringify(t.parseThreshold("> 5", "duration_us")));')
+            'console.log(JSON.stringify(t.parseThreshold("> 5", "duration_us")));'
+        )
         assert out == {"op": ">", "value": 5}
 
 
 @needs_node
 class TestFilteringARenderedTable:
     def test_text_reduces_the_rows_and_the_badge_agrees(self):
-        out = _node(_HARNESS.replace("__ACTIONS__", """
+        out = _node(
+            _HARNESS.replace(
+                "__ACTIONS__",
+                """
           const shown = tables.applyFilters(table, { text: "lib-b" });
           out.push({ shown, badge: tables.badgeText(shown, rows.length),
                      visible: visibleNames() });
-        """))
+        """,
+            )
+        )
         [result] = out
         assert result["shown"] == 1, result
         assert result["visible"] == ["lib-b.bst"]
@@ -92,74 +107,104 @@ class TestFilteringARenderedTable:
         """The mutation the acceptance names. `duration_us` renders as
         "1.2s"/"19.1s"; compared as *strings*, "5" sorts between them
         and the answer is wrong in both directions."""
-        out = _node(_HARNESS.replace("__ACTIONS__", """
+        out = _node(
+            _HARNESS.replace(
+                "__ACTIONS__",
+                """
           const threshold = tables.parseThreshold("> 5s", "duration_us");
           const shown = tables.applyFilters(table, {
             thresholds: { duration_us: threshold } });
           out.push({ shown, visible: visibleNames(),
                      expected: rows.filter((r) => r.duration_us > 5e6).length });
-        """))
+        """,
+            )
+        )
         [result] = out
         assert result["shown"] == result["expected"]
         assert result["shown"] > 0, "the fixture has nothing above 5s"
 
     def test_text_and_threshold_are_both_applied(self):
-        out = _node(_HARNESS.replace("__ACTIONS__", """
+        out = _node(
+            _HARNESS.replace(
+                "__ACTIONS__",
+                """
           const shown = tables.applyFilters(table, {
             text: "lib",
             thresholds: { duration_us: tables.parseThreshold("> 5s", "duration_us") } });
           out.push({ shown, visible: visibleNames(),
                      expected: rows.filter((r) => r.element_uid.includes("lib")
                                                && r.duration_us > 5e6).length });
-        """))
+        """,
+            )
+        )
         [result] = out
         assert result["shown"] == result["expected"]
 
     def test_clearing_the_filter_brings_every_row_back(self):
-        out = _node(_HARNESS.replace("__ACTIONS__", """
+        out = _node(
+            _HARNESS.replace(
+                "__ACTIONS__",
+                """
           tables.applyFilters(table, { text: "lib-b" });
           const shown = tables.applyFilters(table, { text: "" });
           out.push({ shown, badge: tables.badgeText(shown, rows.length) });
-        """))
+        """,
+            )
+        )
         [result] = out
         assert result["shown"] == 40
         assert result["badge"] == "40 rows"
 
     def test_a_row_missing_the_column_a_threshold_names_is_hidden(self):
         """Rather than kept: "no value" does not pass "> 5s"."""
-        out = _node(_HARNESS.replace("__ACTIONS__", """
+        out = _node(
+            _HARNESS.replace(
+                "__ACTIONS__",
+                """
           const shown = tables.applyFilters(table, {
             thresholds: { nothing_here: { op: ">", value: 0 } } });
           out.push({ shown });
-        """))
+        """,
+            )
+        )
         assert out[0]["shown"] == 0
 
 
 @needs_node
 class TestCopy:
     def test_a_copied_row_round_trips_and_equals_the_payload_row(self):
-        out = _node(_HARNESS.replace("__ACTIONS__", """
+        out = _node(
+            _HARNESS.replace(
+                "__ACTIONS__",
+                """
           const tr = table.querySelectorAll("tbody tr")[3];
           out.push({ copied: tables.rowJson(tr, COLUMNS), row: rows[3] });
-        """))
+        """,
+            )
+        )
         [result] = out
         parsed = json.loads(result["copied"])
         for column, value in parsed.items():
             assert result["row"][column] == value, column
 
     def test_a_copied_cell_is_the_published_value_not_the_rendering(self):
-        out = _node(_HARNESS.replace("__ACTIONS__", """
+        out = _node(
+            _HARNESS.replace(
+                "__ACTIONS__",
+                """
           const tr = table.querySelectorAll("tbody tr")[3];
           const cell = [...tr.children].find(
             (td) => td.getAttribute("data-column") === "duration_us");
           out.push({ copied: tables.cellText(cell), rendered: cell.textContent,
                      raw: rows[3].duration_us });
-        """))
+        """,
+            )
+        )
         [result] = out
         assert float(result["copied"]) == result["raw"]
         assert result["copied"] != result["rendered"], (
-            "the copy is the formatted string, which does not paste into "
-            "anything that computes")
+            "the copy is the formatted string, which does not paste into anything that computes"
+        )
 
     def test_a_browser_without_a_clipboard_is_not_an_error(self):
         """A page served over http on a non-localhost origin has no
@@ -170,7 +215,8 @@ class TestCopy:
             'const ok = await t.copy("x", { clipboard: null });'
             'const bad = await t.copy("x", { clipboard: { writeText() {'
             '  throw new Error("denied"); } } });'
-            'console.log(JSON.stringify({ ok, bad }));')
+            'console.log(JSON.stringify({ ok, bad }));'
+        )
         assert out == {"ok": False, "bad": False}
 
 
@@ -204,7 +250,9 @@ function make(tag) {
 _installDocument();
 """
 
-_HARNESS = _SHIM + """
+_HARNESS = (
+    _SHIM
+    + """
 const app = await import("./tests/viewer.mjs");
 const tables = await import("./bga/viewer/tables.js");
 
@@ -230,8 +278,11 @@ const out = [];
 __ACTIONS__
 console.log(JSON.stringify(out));
 """
+)
 
-_BIG_HARNESS = _SHIM + """
+_BIG_HARNESS = (
+    _SHIM
+    + """
 const app = await import("./tests/viewer.mjs");
 const tables = await import("./bga/viewer/tables.js");
 
@@ -268,6 +319,7 @@ console.log(JSON.stringify({
   published: Number(table.getAttribute("data-rows")),
   shown, expected, render_ms, filter_ms }));
 """
+)
 
 
 if __name__ == "__main__":  # pragma: no cover

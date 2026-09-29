@@ -9,6 +9,7 @@ re-derive four thresholds out of `bga/report/text.py` to reach what a
 human read for free, and two implementations of one judgement is how
 `bga analyze` and `bga correlate` had already drifted (`UX-71`).
 """
+
 import json
 
 from bga.findings import compute_findings, findings_by_id, render_findings
@@ -19,7 +20,9 @@ from bga.report.text import format_text
 
 def _element(uid, dur_us, share, saving=None, structural=False):
     return {
-        "element_uid": uid, "duration_us": dur_us, "share_of_path": share,
+        "element_uid": uid,
+        "duration_us": dur_us,
+        "share_of_path": share,
         "is_structural_kind": structural,
         "element_kind": "import" if structural else "manual",
         "realizable_saving_us": saving,
@@ -29,36 +32,40 @@ def _element(uid, dur_us, share, saving=None, structural=False):
 def _real_shaped_result():
     """Round 9's shape: execution-bound, chain-bound, concentrated."""
     return AnalysisResult(
-        attribution={"execution_on_chain_us": 3_583_900_000,
-                     "untracked_head_us": 3_470_000},
+        attribution={"execution_on_chain_us": 3_583_900_000, "untracked_head_us": 3_470_000},
         floors={"t_infinity_observed": 3_583_900_000, "efficiency_score": 1.0},
         total_duration_us=3_587_600_000,
         confidence={"primary": 1.0, "run_mode": "incremental"},
         signals={
             "critical_path_detail": [
-                _element("components/_private/cmake-stage1.bst", 1_569_800_000,
-                         0.435, 1_569_800_000),
+                _element("components/_private/cmake-stage1.bst", 1_569_800_000, 0.435, 1_569_800_000),
                 _element("components/openssl.bst", 672_100_000, 0.186, 522_550_000),
             ],
             "zero_slack_share": 0.77,
             "joint_saving": {
-                "elements": ["components/_private/cmake-stage1.bst",
-                             "components/openssl.bst"],
+                "elements": ["components/_private/cmake-stage1.bst", "components/openssl.bst"],
                 "joint_saving_us": 2_092_300_000,
                 "sum_of_individual_us": 2_092_300_000,
                 "savings_add": True,
             },
             "optimization_horizon": [
-                {"element_uid": "components/_private/cmake-stage1.bst",
-                 "saving_us": 1_569_800_000, "makespan_after_us": 2_040_750_000,
-                 "cumulative_saving_us": 1_569_750_000, "entering": []},
-                {"element_uid": "components/openssl.bst", "saving_us": 522_550_000,
-                 "makespan_after_us": 1_518_200_000,
-                 "cumulative_saving_us": 2_092_300_000, "entering": []},
+                {
+                    "element_uid": "components/_private/cmake-stage1.bst",
+                    "saving_us": 1_569_800_000,
+                    "makespan_after_us": 2_040_750_000,
+                    "cumulative_saving_us": 1_569_750_000,
+                    "entering": [],
+                },
+                {
+                    "element_uid": "components/openssl.bst",
+                    "saving_us": 522_550_000,
+                    "makespan_after_us": 1_518_200_000,
+                    "cumulative_saving_us": 2_092_300_000,
+                    "entering": [],
+                },
             ],
             "latent_heavies": [
-                {"element_uid": "components/_private/git-minimal.bst",
-                 "duration_us": 547_700_000},
+                {"element_uid": "components/_private/git-minimal.bst", "duration_us": 547_700_000},
             ],
         },
     )
@@ -150,8 +157,7 @@ def test_a_failed_build_is_the_first_finding_and_is_critical():
     """`UX-54`: said before any efficiency number, because every number
     below describes a build that did not finish."""
     result = _real_shaped_result()
-    result.violations = [{"type": "build_failed", "failed_count": 4,
-                          "failed_elements": ["a.bst", "b.bst"]}]
+    result.violations = [{"type": "build_failed", "failed_count": 4, "failed_elements": ["a.bst", "b.bst"]}]
     findings = compute_findings(result)
 
     assert findings[0]["id"] == "build-failed"

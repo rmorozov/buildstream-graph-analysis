@@ -23,6 +23,7 @@ The acceptance that matters is not "a command is shown" but **"the
 command runs"**: every published `argv` is executed against the fixture
 and required not to error.
 """
+
 import contextlib
 import io
 import json
@@ -40,13 +41,10 @@ REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 GOLDEN = os.path.join(REPO, "tests", "fixtures", "golden", "mixed_task_kinds")
 # `UX-477`: scheduler-bound by graph shape rather than by startup.
 SCHEDULED = os.path.join(REPO, "tests", "fixtures", "shared_base_wide", "run")
-REAL = os.path.join(
-    REPO, "examples", "06-macro-micro-optimization", ".bga", "runs",
-    "20260821T170127Z")
+REAL = os.path.join(REPO, "examples", "06-macro-micro-optimization", ".bga", "runs", "20260821T170127Z")
 node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
-has_capture = pytest.mark.skipif(
-    not os.path.isdir(REAL), reason="the examples/06 capture is not here")
+has_capture = pytest.mark.skipif(not os.path.isdir(REAL), reason="the examples/06 capture is not here")
 
 
 def _report(run=GOLDEN, plane2=None):
@@ -65,8 +63,8 @@ class TestTheStepIsDecidedInThePipeline:
     def test_the_report_publishes_it(self):
         report = _report()
         assert "next_steps" in report, (
-            "a run with nothing to suggest publishes an empty list rather "
-            "than dropping the key")
+            "a run with nothing to suggest publishes an empty list rather than dropping the key"
+        )
         assert isinstance(report["next_steps"], list)
 
     def test_it_validates_against_the_schema(self):
@@ -90,8 +88,8 @@ class TestTheStepIsDecidedInThePipeline:
         scheduled = {s["id"] for s in _report(SCHEDULED)["next_steps"]}
         assert "sweep-the-capacity" in scheduled, scheduled
         assert "measure-again" not in scheduled, (
-            "this fixture is not in a store; a step it cannot run "
-            "must not be offered")
+            "this fixture is not in a store; a step it cannot run must not be offered"
+        )
 
     def test_the_sweep_is_not_offered_on_a_chain(self):
         """`UX-468`'s walk 3, as a clause. More builders buy nothing on
@@ -102,14 +100,10 @@ class TestTheStepIsDecidedInThePipeline:
 
     @has_capture
     def test_the_other_fixture_answers_the_other_way(self):
-        steps = {s["id"] for s in _report(
-            os.path.join(REAL, "run"),
-            os.path.join(REAL, "plane2.json"))["next_steps"]}
-        assert "sweep-the-capacity" not in steps, (
-            "examples/06 is chain-bound - more builders is the wrong advice")
+        steps = {s["id"] for s in _report(os.path.join(REAL, "run"), os.path.join(REAL, "plane2.json"))["next_steps"]}
+        assert "sweep-the-capacity" not in steps, "examples/06 is chain-bound - more builders is the wrong advice"
         assert {"measure-again", "compare-with-the-run-before"} <= steps
-        assert "look-inside-the-element" in steps, (
-            "Plane 2 measured this run, so the join is worth suggesting")
+        assert "look-inside-the-element" in steps, "Plane 2 measured this run, so the join is worth suggesting"
 
     def test_a_step_names_the_field_it_was_chosen_by(self):
         """So the advice can be checked against the number behind it -
@@ -119,8 +113,7 @@ class TestTheStepIsDecidedInThePipeline:
 
     def test_the_reason_carries_the_number_that_chose_it(self):
         report = _report(GOLDEN)
-        blast = next(s for s in report["next_steps"]
-                     if s["id"] == "blast-the-top-element")
+        blast = next(s for s in report["next_steps"] if s["id"] == "blast-the-top-element")
         top = report["headline"]["top_actions"][0]
         assert top["element_uid"] in blast["reason"]
 
@@ -155,8 +148,7 @@ class TestNoStepIsOfferedThatCannotBeRun:
         `_store_paths` itself still touches no disk."""
         from bga.findings import _store_paths
 
-        assert _store_paths("proj/.bga/runs/20260101T000000Z/run") == (
-            "proj", True)
+        assert _store_paths("proj/.bga/runs/20260101T000000Z/run") == ("proj", True)
         assert _store_paths("some/other/run") == (None, False)
         assert _store_paths("") == (None, False)
 
@@ -168,13 +160,12 @@ class TestTheCommandsActuallyRun:
     # UX-326: derived, not written down. This list was two ids for six
     # rounds - `blast-the-top-element` and `sweep-the-capacity` - while
     # the block published four, and both of the two it never ran were
-    # broken: `bga snapshot <project>` crashed and `bga compare … 
+    # broken: `bga snapshot <project>` crashed and `bga compare …
     # --project` named a flag that does not exist. The ids come from the
     # fixture's own report now, and the store-shaped steps (which this
     # fixture, being outside a store, does not offer) are executed by
     # `test_the_printed_sentences_are_contracts.py` against one that is.
-    @pytest.mark.parametrize("step_id", sorted(
-        {s["id"] for s in _report()["next_steps"]}))
+    @pytest.mark.parametrize("step_id", sorted({s["id"] for s in _report()["next_steps"]}))
     def test_every_published_argv_is_executable_as_spelled(self, step_id):
         steps = {s["id"]: s for s in _report()["next_steps"]}
         if step_id not in steps:
@@ -182,22 +173,24 @@ class TestTheCommandsActuallyRun:
         argv = steps[step_id]["argv"]
         assert argv[0] == "bga", argv
         result = subprocess.run(
-            [sys.executable, "-m", "bga.cli", *argv[1:]],
-            capture_output=True, text=True, cwd=REPO, timeout=300)
-        assert result.returncode == 0, (
-            f"`{' '.join(argv)}` exited {result.returncode}:\n"
-            f"{result.stderr[-800:]}")
+            [sys.executable, "-m", "bga.cli", *argv[1:]], capture_output=True, text=True, cwd=REPO, timeout=300
+        )
+        assert result.returncode == 0, f"`{' '.join(argv)}` exited {result.returncode}:\n{result.stderr[-800:]}"
         assert result.stdout.strip(), f"`{' '.join(argv)}` printed nothing"
 
     @has_capture
     def test_the_join_step_runs_on_the_capture_that_earned_it(self):
-        steps = {s["id"]: s for s in _report(
-            os.path.join(REAL, "run"),
-            os.path.join(REAL, "plane2.json"))["next_steps"]}
+        steps = {
+            s["id"]: s for s in _report(os.path.join(REAL, "run"), os.path.join(REAL, "plane2.json"))["next_steps"]
+        }
         argv = steps["look-inside-the-element"]["argv"]
         result = subprocess.run(
             [sys.executable, "-m", "bga.cli", *argv[1:], "--format", "json"],
-            capture_output=True, text=True, cwd=REPO, timeout=300)
+            capture_output=True,
+            text=True,
+            cwd=REPO,
+            timeout=300,
+        )
         assert result.returncode == 0, result.stderr[-800:]
         assert json.loads(result.stdout)["schema"] == schemas.CORRELATE
 
@@ -229,8 +222,8 @@ class TestTheTerminalAndThePageSayTheSameThing:
         out = _node(_PANEL % json.dumps(_report()))
         published = _report()["next_steps"]
         assert out["steps"] == [
-            {"id": s["id"], "from": s["follows_from"],
-             "argv": " ".join(s["argv"])} for s in published]
+            {"id": s["id"], "from": s["follows_from"], "argv": " ".join(s["argv"])} for s in published
+        ]
 
     @needs_node
     def test_the_copy_button_puts_the_exact_command_on_the_clipboard(self):
@@ -248,9 +241,9 @@ class TestTheTerminalAndThePageSayTheSameThing:
 
 
 def _node(script, timeout=120):
-    result = subprocess.run([node, "--input-type=module", "-e", script],
-                            capture_output=True, text=True, cwd=REPO,
-                            timeout=timeout)
+    result = subprocess.run(
+        [node, "--input-type=module", "-e", script], capture_output=True, text=True, cwd=REPO, timeout=timeout
+    )
     assert result.returncode == 0, result.stderr
     return json.loads(result.stdout)
 

@@ -20,6 +20,7 @@ must answer, which settles it from the other end.
 An addition, so no version bump: `UX-190`'s rule, the same one
 `UX-249`'s `producer` and `UX-215`'s `element_join` were added under.
 """
+
 import json
 import pathlib
 import subprocess
@@ -38,7 +39,11 @@ KEY = "capacity_recommendation"
 def _analyze(*extra):
     done = subprocess.run(
         [sys.executable, "-m", "bga.cli", "analyze", str(RUN), *extra],
-        capture_output=True, text=True, cwd=REPO, timeout=300)
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=300,
+    )
     assert done.returncode == 0, done.stderr[-2000:]
     return done.stdout
 
@@ -54,7 +59,6 @@ def printed():
 
 
 class TestTheRecommendationReachesAConsumer:
-
     def test_the_payload_carries_it(self, published):
         """The acceptance test's first clause, run as the command it
         names rather than through the function underneath it."""
@@ -77,8 +81,7 @@ class TestTheRecommendationReachesAConsumer:
         published its number and dropped its constraints would satisfy a
         key-presence check and answer nothing."""
         block = published[KEY]
-        for field in ("constraints", "binding_constraint",
-                      "recommended_builders", "builders_change", "caveat"):
+        for field in ("constraints", "binding_constraint", "recommended_builders", "builders_change", "caveat"):
             assert field in block, f"{field} did not survive publication"
         assert block["constraints"], "the constraint list is empty"
         for constraint in block["constraints"]:
@@ -93,8 +96,7 @@ class TestTheRecommendationReachesAConsumer:
         assert isinstance(caveat, str) and len(caveat.split()) >= 20, caveat
         assert "no configuration was tried" in caveat, caveat
 
-    def test_a_run_with_no_plane2_has_no_recommendation_rather_than_an_empty_one(
-            self):
+    def test_a_run_with_no_plane2_has_no_recommendation_rather_than_an_empty_one(self):
         """Absent, not zeroed - the distinction `run_instance` and
         `plane2_coverage` already keep. "Not measured" must not render
         as "no constraint".
@@ -116,10 +118,8 @@ class TestTheTwoRenderersCannotDisagree:
     the recommendation - so the two can drift, and only a guard that
     reads both catches it."""
 
-    def test_the_finding_and_the_payload_name_one_binding_constraint(
-            self, published):
-        finding = [f for f in published["findings"]
-                   if f["id"] == "capacity-recommendation"]
+    def test_the_finding_and_the_payload_name_one_binding_constraint(self, published):
+        finding = [f for f in published["findings"] if f["id"] == "capacity-recommendation"]
         assert finding, "the run published no capacity finding"
         evidence = finding[0]["evidence"]
         block = published[KEY]
@@ -135,28 +135,24 @@ class TestTheTwoRenderersCannotDisagree:
         block = published[KEY]
         for constraint in block["constraints"]:
             line = f"{constraint['name']} allows {constraint['allows']}"
-            assert line in printed, (
-                f"the text report does not print {line!r}")
-        binding = min(block["constraints"],
-                      key=lambda c: (c["allows"], c["name"]))
-        assert binding["name"] == block["binding_constraint"], (
-            "the payload's binding constraint is not its smallest")
-        assert f"{binding['name']} binds at {block['recommended_builders']}" \
-            in printed or f"{binding['name']} allows" in printed, printed[:400]
+            assert line in printed, f"the text report does not print {line!r}"
+        binding = min(block["constraints"], key=lambda c: (c["allows"], c["name"]))
+        assert binding["name"] == block["binding_constraint"], "the payload's binding constraint is not its smallest"
+        assert (
+            f"{binding['name']} binds at {block['recommended_builders']}" in printed
+            or f"{binding['name']} allows" in printed
+        ), printed[:400]
 
-    def test_the_provenance_chain_no_longer_calls_it_unpublished(
-            self, published):
+    def test_the_provenance_chain_no_longer_calls_it_unpublished(self, published):
         """The other half of the same disagreement. `UX-229`'s chain
         listed these fields as "computed, not published" - an honest
         label for a real gap, and a lie the moment the gap closed."""
         # `UX-344`: one published record per claim, keyed by the id the
         # finding carries.
-        chain = [entry for entry in published["provenance"]
-                 if entry["claim"] == "capacity-recommendation"][0]
+        chain = [entry for entry in published["provenance"] if entry["claim"] == "capacity-recommendation"][0]
         assert chain["unpublished_inputs"] == [], chain["unpublished_inputs"]
         cited = {entry["path"]: entry for entry in chain["evidence"]}
         assert f"{KEY}.binding_constraint" in cited, sorted(cited)
         for path, entry in cited.items():
             assert entry["resolved"], (path, "cited and unresolvable")
-        assert cited[f"{KEY}.binding_constraint"]["value"] \
-            == published[KEY]["binding_constraint"]
+        assert cited[f"{KEY}.binding_constraint"]["value"] == published[KEY]["binding_constraint"]

@@ -17,6 +17,7 @@ second blind spot nobody had named - sixteen of the eighteen were
 `pytest.skip()` raised in a **test body**, which the census hook cannot
 see at all because it counts `report.when == "setup"`.
 """
+
 import pathlib
 import sys
 
@@ -130,17 +131,13 @@ def test_every_declared_skip_reason_is_known():
     """
     resolved, _ = skip_reasons.scan()
     known = set(conftest.KNOWN_SKIP_REASONS)
-    undeclared = {
-        reason: sorted(sites)[0]
-        for reason, sites in resolved.items() if reason not in known
-    }
+    undeclared = {reason: sorted(sites)[0] for reason, sites in resolved.items() if reason not in known}
     assert undeclared == {}, (
         "skip reason(s) written into the suite that tests/conftest.py's "
         "KNOWN_SKIP_REASONS has never declared. The runtime census cannot "
         "see these until a machine without the thing being gated runs the "
         "suite - which is what CI is, and is too late:\n  "
-        + "\n  ".join(f"{reason!r} first at {site[0]}:{site[1]}"
-                      for reason, site in sorted(undeclared.items()))
+        + "\n  ".join(f"{reason!r} first at {site[0]}:{site[1]}" for reason, site in sorted(undeclared.items()))
     )
 
 
@@ -156,9 +153,7 @@ def test_the_unreadable_reasons_are_counted_not_ignored():
         f"{len(unresolved)} skip reason(s) cannot be read statically, up "
         f"from the {UNRESOLVABLE} measured. A new one is a reason no guard "
         f"can check before it fires - prefer a module-level constant, which "
-        f"this scan follows:\n  "
-        + "\n  ".join(f"{f}:{line} ({what})"
-                      for f, line, what in unresolved[UNRESOLVABLE:])
+        f"this scan follows:\n  " + "\n  ".join(f"{f}:{line} ({what})" for f, line, what in unresolved[UNRESOLVABLE:])
     )
 
 
@@ -180,7 +175,8 @@ def test_the_scan_reads_calls_and_not_text(tmp_path):
         '\n'
         'def test_real():\n'
         '    pytest.skip("the only real reason here")\n',
-        encoding="utf-8")
+        encoding="utf-8",
+    )
     resolved, _ = skip_reasons.scan(tmp_path)
     assert set(resolved) == {"the only real reason here"}, resolved
 
@@ -202,7 +198,8 @@ def test_the_order_guards_fake_reasons_are_not_in_the_population():
     invented = {"because I said so", "x", "gone"}
     assert invented & set(resolved) == set(), (
         "the scan picked up a reason that is test *data* for the census, "
-        "not a skip: it is reading more than the call sites")
+        "not a skip: it is reading more than the call sites"
+    )
 
 
 def test_the_scan_knows_the_forms_the_suite_uses():
@@ -227,13 +224,13 @@ def test_the_scan_knows_the_forms_the_suite_uses():
         for node in ast.walk(tree):
             if not isinstance(node, ast.Call):
                 continue
-            if skip_reasons._dotted(node.func, aliases) == (
-                    "pytest", "mark", "skip"):
+            if skip_reasons._dotted(node.func, aliases) == ("pytest", "mark", "skip"):
                 used.add(path.relative_to(REPO).as_posix())
     assert used == set(), (
         f"`pytest.mark.skip(` now appears in {sorted(used)}, and "
         f"tests/skip_reasons.py's SKIP_FORMS does not read it - so those "
-        f"reasons are invisible to the clause above. Add the form.")
+        f"reasons are invisible to the clause above. Add the form."
+    )
 
 
 def test_the_census_cannot_see_an_in_body_skip(pytester=None):
@@ -245,6 +242,7 @@ def test_the_census_cannot_see_an_in_body_skip(pytester=None):
     shape, and the census has never counted one of them.
     """
     import collections
+
     seen = collections.Counter()
 
     class Report:
@@ -263,7 +261,8 @@ def test_the_census_cannot_see_an_in_body_skip(pytester=None):
     assert dict(seen) == {"a marker": 1}, (
         "the census counted an in-body skip, so this scan's second reason "
         "for existing is gone and this clause should be deleted rather "
-        "than adjusted")
+        "than adjusted"
+    )
 
 
 if __name__ == "__main__":  # pragma: no cover

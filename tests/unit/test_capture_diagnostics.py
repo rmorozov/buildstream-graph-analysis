@@ -12,6 +12,7 @@ zero invocations reads as its own finding rather than as an absence,
 that both argvs are kept, and that `--no-inject` says plainly it
 measured nothing.
 """
+
 import json
 import os
 
@@ -25,12 +26,23 @@ from tools.native_trace.bwrap_shim import record_diagnostics
 
 # A real BuildStream-generated bwrap argv, trimmed to its shape.
 REAL_ARGV = [
-    "--unshare-pid", "--die-with-parent",
-    "--bind", "/cas/staging/tmp", "/",
-    "--unshare-net", "--unshare-uts", "--hostname", "buildbox",
-    "--dir", "/buildstream/my-project/core.bst",
-    "--chdir", "/buildstream/my-project/core.bst",
-    "sh", "-c", "-e", "make -j4",
+    "--unshare-pid",
+    "--die-with-parent",
+    "--bind",
+    "/cas/staging/tmp",
+    "/",
+    "--unshare-net",
+    "--unshare-uts",
+    "--hostname",
+    "buildbox",
+    "--dir",
+    "/buildstream/my-project/core.bst",
+    "--chdir",
+    "/buildstream/my-project/core.bst",
+    "sh",
+    "-c",
+    "-e",
+    "make -j4",
 ]
 
 
@@ -43,11 +55,9 @@ class TestTheRecordHoldsBothArgvs:
     def test_what_came_in_and_what_goes_out_are_both_kept(self, record_path):
         """One of them alone answers nothing: the rewrite is the suspect,
         so the comparison is the evidence."""
-        exec_argv = ["/usr/bin/bwrap", *REAL_ARGV[:-4], "--bind", "/t", "/t",
-                     "sh", "-c", "-e", "make -j4"]
+        exec_argv = ["/usr/bin/bwrap", *REAL_ARGV[:-4], "--bind", "/t", "/t", "sh", "-c", "-e", "make -j4"]
 
-        assert record_diagnostics(record_path, REAL_ARGV, exec_argv,
-                                  "/usr/bin/bwrap", "core.bst", None, True)
+        assert record_diagnostics(record_path, REAL_ARGV, exec_argv, "/usr/bin/bwrap", "core.bst", None, True)
 
         [entry] = read_capture_diagnostics(record_path)
         assert entry["received_argv"] == REAL_ARGV
@@ -55,13 +65,11 @@ class TestTheRecordHoldsBothArgvs:
         assert entry["element"] == "core.bst"
         assert entry["injected"] is True
 
-    def test_the_split_point_is_recorded_because_it_is_the_fragile_part(
-            self, record_path):
+    def test_the_split_point_is_recorded_because_it_is_the_fragile_part(self, record_path):
         """`split_bwrap_args`' arity table was validated against
         bubblewrap 0.9.0. A newer flag it does not know is assumed to
         take no arguments, which mis-splits silently."""
-        record_diagnostics(record_path, REAL_ARGV, [], "/usr/bin/bwrap",
-                           "core.bst", None, True)
+        record_diagnostics(record_path, REAL_ARGV, [], "/usr/bin/bwrap", "core.bst", None, True)
 
         [entry] = read_capture_diagnostics(record_path)
         assert entry["command"] == ["sh", "-c", "-e", "make -j4"]
@@ -69,31 +77,28 @@ class TestTheRecordHoldsBothArgvs:
 
     def test_one_line_per_invocation(self, record_path):
         for _ in range(3):
-            record_diagnostics(record_path, REAL_ARGV, [], "/usr/bin/bwrap",
-                               "core.bst", None, True)
+            record_diagnostics(record_path, REAL_ARGV, [], "/usr/bin/bwrap", "core.bst", None, True)
 
         assert len(read_capture_diagnostics(record_path)) == 3
 
     def test_it_never_raises_on_an_unwritable_path(self, tmp_path):
         """A diagnostic that can fail a real build is worse than no
         diagnostic - the same rule `record_argv` follows."""
-        assert record_diagnostics(str(tmp_path / "nope" / "x.jsonl"),
-                                  REAL_ARGV, [], "/usr/bin/bwrap",
-                                  None, None, True) is False
+        assert (
+            record_diagnostics(str(tmp_path / "nope" / "x.jsonl"), REAL_ARGV, [], "/usr/bin/bwrap", None, None, True)
+            is False
+        )
 
     def test_no_path_records_nothing(self):
         assert record_diagnostics(None, REAL_ARGV, [], "/b", None, None, True) is False
 
     def test_a_corrupt_line_does_not_lose_the_rest(self, record_path):
-        record_diagnostics(record_path, REAL_ARGV, [], "/usr/bin/bwrap",
-                           "a.bst", None, True)
+        record_diagnostics(record_path, REAL_ARGV, [], "/usr/bin/bwrap", "a.bst", None, True)
         with open(record_path, "a") as handle:
             handle.write("{not json\n")
-        record_diagnostics(record_path, REAL_ARGV, [], "/usr/bin/bwrap",
-                           "b.bst", None, True)
+        record_diagnostics(record_path, REAL_ARGV, [], "/usr/bin/bwrap", "b.bst", None, True)
 
-        assert [e["element"] for e in read_capture_diagnostics(record_path)] == [
-            "a.bst", "b.bst"]
+        assert [e["element"] for e in read_capture_diagnostics(record_path)] == ["a.bst", "b.bst"]
 
 
 class TestZeroIsTheAnswerThatMatters:
@@ -119,19 +124,25 @@ class TestZeroIsTheAnswerThatMatters:
         assert "fully cached build" in format_capture_diagnostics(record_path)
 
     def test_a_missing_file_reads_the_same_as_an_empty_one(self, tmp_path):
-        assert "ran 0 times" in format_capture_diagnostics(
-            str(tmp_path / "never-written.jsonl"))
+        assert "ran 0 times" in format_capture_diagnostics(str(tmp_path / "never-written.jsonl"))
 
 
 class TestTheSummaryLeadsWithWhatWasAsked:
     def _write(self, path, count=2, **overrides):
         for index in range(count):
             entry = {
-                "pid": 100 + index, "ppid": 1, "at": 0.0,
-                "real_bwrap": "/usr/bin/bwrap", "real_bwrap_executable": True,
-                "element": f"e{index}.bst", "spine": None, "injected": True,
-                "received_argv": REAL_ARGV, "exec_argv": REAL_ARGV,
-                "option_count": 14, "command": ["sh", "-c", "-e", "make"],
+                "pid": 100 + index,
+                "ppid": 1,
+                "at": 0.0,
+                "real_bwrap": "/usr/bin/bwrap",
+                "real_bwrap_executable": True,
+                "element": f"e{index}.bst",
+                "spine": None,
+                "injected": True,
+                "received_argv": REAL_ARGV,
+                "exec_argv": REAL_ARGV,
+                "option_count": 14,
+                "command": ["sh", "-c", "-e", "make"],
             }
             entry.update(overrides)
             with open(path, "a", encoding="utf-8") as handle:
@@ -219,18 +230,20 @@ class TestTheShimActuallyWritesIt:
         fake_bwrap.chmod(0o755)
         record = tmp_path / "diag.jsonl"
         env = dict(os.environ)
-        env.update({
-            "BST_TRACE_REAL_BWRAP": str(fake_bwrap),
-            "BST_TRACE_BIND_SRC": str(tmp_path),
-            "BST_TRACE_BIND_DST": "/tmp/.bst-native-trace",
-            "BST_TRACE_PRELOAD_SO": "/tmp/.bst-native-trace/hook.so",
-            "BST_TRACE_LOG_DST": "/tmp/.bst-native-trace/trace.log",
-            "BST_TRACE_DIAGNOSTICS": str(record),
-        })
+        env.update(
+            {
+                "BST_TRACE_REAL_BWRAP": str(fake_bwrap),
+                "BST_TRACE_BIND_SRC": str(tmp_path),
+                "BST_TRACE_BIND_DST": "/tmp/.bst-native-trace",
+                "BST_TRACE_PRELOAD_SO": "/tmp/.bst-native-trace/hook.so",
+                "BST_TRACE_LOG_DST": "/tmp/.bst-native-trace/trace.log",
+                "BST_TRACE_DIAGNOSTICS": str(record),
+            }
+        )
         env.update(extra_env or {})
         result = subprocess.run(
-            [sys.executable, bwrap_shim.__file__, *REAL_ARGV],
-            capture_output=True, text=True, env=env, timeout=120)
+            [sys.executable, bwrap_shim.__file__, *REAL_ARGV], capture_output=True, text=True, env=env, timeout=120
+        )
         assert result.returncode == 0, result.stderr
         return read_capture_diagnostics(str(record))
 
@@ -247,10 +260,13 @@ class TestTheShimActuallyWritesIt:
         carries the FIFO's host path - the record names both spellings."""
         fifo = tmp_path / "jobserver"
         fifo.touch()
-        [entry] = self._run_shim(tmp_path, {
-            "BST_TRACE_JOBSERVER": str(fifo),
-            "BST_TRACE_JOBSERVER_AUTH": "fifo",
-        })
+        [entry] = self._run_shim(
+            tmp_path,
+            {
+                "BST_TRACE_JOBSERVER": str(fifo),
+                "BST_TRACE_JOBSERVER_AUTH": "fifo",
+            },
+        )
 
         assert entry["jobserver_fifo_host"] == str(fifo)
         assert entry["jobserver_fifo_sandbox"] == "/tmp/.bst-native-trace/jobserver"
@@ -277,16 +293,19 @@ class TestTheShimActuallyWritesIt:
         fake_bwrap.chmod(0o755)
         record = tmp_path / "diag.jsonl"
         env = dict(os.environ)
-        env.update({
-            "BST_TRACE_REAL_BWRAP": str(fake_bwrap),
-            "BST_TRACE_BIND_SRC": str(tmp_path),
-            "BST_TRACE_BIND_DST": "/tmp/.bst-native-trace",
-            "BST_TRACE_PRELOAD_SO": "/tmp/.bst-native-trace/hook.so",
-            "BST_TRACE_LOG_DST": "/tmp/.bst-native-trace/trace.log",
-        })
+        env.update(
+            {
+                "BST_TRACE_REAL_BWRAP": str(fake_bwrap),
+                "BST_TRACE_BIND_SRC": str(tmp_path),
+                "BST_TRACE_BIND_DST": "/tmp/.bst-native-trace",
+                "BST_TRACE_PRELOAD_SO": "/tmp/.bst-native-trace/hook.so",
+                "BST_TRACE_LOG_DST": "/tmp/.bst-native-trace/trace.log",
+            }
+        )
         env.pop("BST_TRACE_DIAGNOSTICS", None)
-        subprocess.run([sys.executable, bwrap_shim.__file__, *REAL_ARGV],
-                       capture_output=True, text=True, env=env, timeout=120)
+        subprocess.run(
+            [sys.executable, bwrap_shim.__file__, *REAL_ARGV], capture_output=True, text=True, env=env, timeout=120
+        )
 
         assert not record.exists()
 
@@ -303,16 +322,18 @@ class TestAFailedExecReportsItself:
         from tools.native_trace import bwrap_shim
 
         env = dict(os.environ)
-        env.update({
-            "BST_TRACE_REAL_BWRAP": real_bwrap,
-            "BST_TRACE_BIND_SRC": str(tmp_path),
-            "BST_TRACE_BIND_DST": "/tmp/.bst-native-trace",
-            "BST_TRACE_PRELOAD_SO": "/tmp/.bst-native-trace/hook.so",
-            "BST_TRACE_LOG_DST": "/tmp/.bst-native-trace/trace.log",
-        })
+        env.update(
+            {
+                "BST_TRACE_REAL_BWRAP": real_bwrap,
+                "BST_TRACE_BIND_SRC": str(tmp_path),
+                "BST_TRACE_BIND_DST": "/tmp/.bst-native-trace",
+                "BST_TRACE_PRELOAD_SO": "/tmp/.bst-native-trace/hook.so",
+                "BST_TRACE_LOG_DST": "/tmp/.bst-native-trace/trace.log",
+            }
+        )
         return subprocess.run(
-            [sys.executable, bwrap_shim.__file__, *REAL_ARGV],
-            capture_output=True, text=True, env=env, timeout=120)
+            [sys.executable, bwrap_shim.__file__, *REAL_ARGV], capture_output=True, text=True, env=env, timeout=120
+        )
 
     def test_a_missing_bwrap_is_one_sentence_naming_it(self, tmp_path):
         result = self._run_shim(tmp_path, str(tmp_path / "no-such-bwrap"))
@@ -340,22 +361,34 @@ class TestTheArityTableIsTheLikeliestFieldFailure:
     def test_the_shape_that_produces_the_field_failure_now_splits(self):
         from tools.native_trace.bwrap_shim import split_bwrap_args
 
-        argv = ["--json-status-fd", "12", "--bind", "/x", "/",
-                "--unshare-pid", "sh", "-c", "make"]
+        argv = ["--json-status-fd", "12", "--bind", "/x", "/", "--unshare-pid", "sh", "-c", "make"]
 
         opts, command = split_bwrap_args(argv)
 
-        assert command == ["sh", "-c", "make"], (
-            "the fd operand was taken as the sandboxed command")
+        assert command == ["sh", "-c", "make"], "the fd operand was taken as the sandboxed command"
         assert "--json-status-fd" in opts and "12" in opts
 
-    @pytest.mark.parametrize("flag,arity", [
-        ("--seccomp", 1), ("--add-seccomp-fd", 1), ("--argv0", 1),
-        ("--size", 1), ("--perms", 1), ("--remount-ro", 1), ("--mqueue", 1),
-        ("--lock-file", 1), ("--userns", 1), ("--pidns", 1), ("--args", 1),
-        ("--chmod", 2), ("--file", 2), ("--bind-data", 2),
-        ("--bind-fd", 2), ("--ro-bind-fd", 2),
-    ])
+    @pytest.mark.parametrize(
+        "flag,arity",
+        [
+            ("--seccomp", 1),
+            ("--add-seccomp-fd", 1),
+            ("--argv0", 1),
+            ("--size", 1),
+            ("--perms", 1),
+            ("--remount-ro", 1),
+            ("--mqueue", 1),
+            ("--lock-file", 1),
+            ("--userns", 1),
+            ("--pidns", 1),
+            ("--args", 1),
+            ("--chmod", 2),
+            ("--file", 2),
+            ("--bind-data", 2),
+            ("--bind-fd", 2),
+            ("--ro-bind-fd", 2),
+        ],
+    )
     def test_every_flag_the_finding_named_has_its_arity(self, flag, arity):
         from tools.native_trace.bwrap_shim import split_bwrap_args
 
@@ -369,8 +402,7 @@ class TestTheArityTableIsTheLikeliestFieldFailure:
         """Post-0.9.0, and the only arity-3 option bwrap has."""
         from tools.native_trace.bwrap_shim import split_bwrap_args
 
-        opts, command = split_bwrap_args(
-            ["--overlay", "/rw", "/work", "/dest", "sh", "-c", "x"])
+        opts, command = split_bwrap_args(["--overlay", "/rw", "/work", "/dest", "sh", "-c", "x"])
 
         assert command == ["sh", "-c", "x"]
         assert opts == ["--overlay", "/rw", "/work", "/dest"]
@@ -380,8 +412,7 @@ class TestTheArityTableIsTheLikeliestFieldFailure:
         now a recorded condition naming the flag to add."""
         from tools.native_trace.bwrap_shim import unknown_flags
 
-        assert unknown_flags(["--bind", "/a", "/b", "--brand-new", "sh"]) == [
-            "--brand-new"]
+        assert unknown_flags(["--bind", "/a", "/b", "--brand-new", "sh"]) == ["--brand-new"]
 
     def test_a_known_argv_reports_no_unknowns(self):
         from tools.native_trace.bwrap_shim import unknown_flags
@@ -442,7 +473,7 @@ class TestTheRecordSaysWhatToParseAgainst:
         assert "bwrap_path" in fingerprint and "bst_version" in fingerprint
 
     def test_it_is_not_counted_as_an_invocation(self, tmp_path):
-        """"The shim ran 0 times" is the record's most important reading
+        """ "The shim ran 0 times" is the record's most important reading
         and a header line must not make it impossible to say."""
         from tools.bst_native_build_tracer import (
             capture_fingerprint,
@@ -470,8 +501,7 @@ class TestZeroInvocationsHasThreeCausesNotOne:
     separates the other two is whether any sandbox was ever going to
     launch."""
 
-    def test_no_tasks_is_the_cache_hit_reading_and_says_it_is_confirmed(
-            self, record_path):
+    def test_no_tasks_is_the_cache_hit_reading_and_says_it_is_confirmed(self, record_path):
         open(record_path, "w").close()
 
         rendered = format_capture_diagnostics(record_path, sandbox_tasks=0)
@@ -480,8 +510,7 @@ class TestZeroInvocationsHasThreeCausesNotOne:
         assert "confirmed one" in rendered
         assert "never *resolved*" not in rendered
 
-    def test_tasks_with_no_shim_lines_names_the_resolution_failure(
-            self, record_path):
+    def test_tasks_with_no_shim_lines_names_the_resolution_failure(self, record_path):
         open(record_path, "w").close()
 
         rendered = format_capture_diagnostics(record_path, sandbox_tasks=9)
@@ -491,9 +520,8 @@ class TestZeroInvocationsHasThreeCausesNotOne:
         assert "buildbox-casd" in rendered, "the ten-second fix is not named"
         assert "absolute path" in rendered
 
-    def test_without_the_count_it_lists_all_three_rather_than_choosing(
-            self, record_path):
-        """"We could not tell" and "it was benign" are different claims."""
+    def test_without_the_count_it_lists_all_three_rather_than_choosing(self, record_path):
+        """ "We could not tell" and "it was benign" are different claims."""
         open(record_path, "w").close()
 
         rendered = format_capture_diagnostics(record_path)
@@ -511,7 +539,8 @@ class TestZeroInvocationsHasThreeCausesNotOne:
             "[--:--:--][][main:a.bst] START   Running commands\n"
             "[--:--:--][][main:a.bst] START   Staging sources\n"
             "[--:--:--][][main:b.bst] START   Running commands\n"
-            "[--:--:--][][main:b.bst] START   Caching artifact\n")
+            "[--:--:--][][main:b.bst] START   Caching artifact\n"
+        )
 
         assert count_build_tasks(str(log)) == 2
 
@@ -538,7 +567,7 @@ class TestTheShimIsProvedExecutableBeforeTheBuild:
         )
 
         write_bwrap_shim(str(tmp_path))
-        probe_bwrap_shim(str(tmp_path / "bwrap"))   # raises on failure
+        probe_bwrap_shim(str(tmp_path / "bwrap"))  # raises on failure
 
     def test_the_shebang_is_an_absolute_interpreter(self, tmp_path):
         """`#!/usr/bin/env python3` makes the exec depend on the PATH of
@@ -568,8 +597,7 @@ class TestTheShimIsProvedExecutableBeforeTheBuild:
         assert "cannot be executed" in str(exc.value)
         assert "TMPDIR" in str(exc.value), "the remedy is not named"
 
-    def test_the_shim_without_its_environment_falls_through_rather_than_raising(
-            self, tmp_path):
+    def test_the_shim_without_its_environment_falls_through_rather_than_raising(self, tmp_path):
         """UX-147 item 4: four bare `os.environ[...]` reads, four lines
         below the traceback UX-146 fixed. Anything else on the machine
         invoking `bwrap` while the shim directory is on PATH got a
@@ -586,8 +614,9 @@ class TestTheShimIsProvedExecutableBeforeTheBuild:
         env = {k: v for k, v in os.environ.items() if not k.startswith("BST_TRACE_")}
         env["BST_TRACE_REAL_BWRAP"] = str(real)
 
-        result = subprocess.run([sys.executable, str(tmp_path / "bwrap"), "--version"],
-                                capture_output=True, text=True, env=env, timeout=60)
+        result = subprocess.run(
+            [sys.executable, str(tmp_path / "bwrap"), "--version"], capture_output=True, text=True, env=env, timeout=60
+        )
 
         assert result.returncode == 42, result.stderr
         assert "Traceback" not in result.stderr

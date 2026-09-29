@@ -30,6 +30,7 @@ test is a wait*: an upper bound on a sleep cannot be asserted except in
 seconds, and it is set at 4× the measured drive so a loaded runner does
 not redden it.
 """
+
 import os
 import pathlib
 import re
@@ -115,23 +116,20 @@ class TestTheWaitIsAConditionAndNotADuration:
     def test_a_page_that_boots_late_is_measured_whole(self, browser, pages):
         """The claim `UX-482`'s floor was protecting. It must survive
         the floor's removal, or the removal bought speed with truth."""
-        assert browser.measure(
-            pages["late"], "document.querySelectorAll('section').length") == 40
+        assert browser.measure(pages["late"], "document.querySelectorAll('section').length") == 40
 
     def test_a_page_with_no_report_is_waited_for_too(self, browser, pages):
         """The same claim on the page that has no `#report`. Without
         the declaration this measures 0 - the markup is stable and
         empty for the whole 700ms."""
-        assert browser.measure(
-            pages["handoff"], "document.querySelectorAll('h4').length") == 40
+        assert browser.measure(pages["handoff"], "document.querySelectorAll('h4').length") == 40
 
     def test_a_page_that_boots_at_once_is_not_waited_out(self, browser, pages):
         """And the claim the floor broke. Without this the condition
         can be satisfied by any sleep long enough, which is what was
         there before and what cost the suite its browser tier."""
         start = time.time()
-        assert browser.measure(
-            pages["prompt"], "document.querySelectorAll('section').length") == 40
+        assert browser.measure(pages["prompt"], "document.querySelectorAll('section').length") == 40
         spent = time.time() - start
         assert spent < PROMPT_S, f"a finished page took {spent:.2f}s to measure"
 
@@ -173,9 +171,7 @@ class TestOneBrowserPerWorker:
             assert process.poll() is None, "the launcher closed its own browser"
             with Browser(chrome) as again:
                 assert again.port == port
-                assert again.measure(
-                    pages["prompt"],
-                    "document.querySelectorAll('section').length") == 40
+                assert again.measure(pages["prompt"], "document.querySelectorAll('section').length") == 40
             module._SHARED.pop(chrome, None)
             process.terminate()
         finally:
@@ -187,8 +183,7 @@ class TestOneBrowserPerWorker:
         flag no page sets waits out its ceiling on every load. `boot()`
         sets it in a `finally`, so the failure page - a finished page,
         not a slow one - is booted too."""
-        source = open(os.path.join(REPO, "bga/viewer/app.js"),
-                      encoding="utf-8").read()
+        source = open(os.path.join(REPO, "bga/viewer/app.js"), encoding="utf-8").read()
         tail = source.split("async function boot()")[1].split("\n}")[0]
         assert "} finally {" in tail
         assert "dataset.bgaBooted" in tail.split("} finally {")[1]
@@ -199,8 +194,7 @@ class TestOneBrowserPerWorker:
         import browser as module
 
         assert chrome in module._SHARED
-        source = open(os.path.join(REPO, "tests/browser.py"),
-                      encoding="utf-8").read()
+        source = open(os.path.join(REPO, "tests/browser.py"), encoding="utf-8").read()
         assert re.search(r"@atexit\.register\s*\ndef _close_shared", source)
 
     def test_a_dead_shared_browser_is_replaced(self):
@@ -231,15 +225,13 @@ class TestBothShippedPagesSpeak:
         handoff page did not, and settled on the heuristic instead -
         three clauses of `test_one_page_behind_the_button.py` red under
         the full suite and green alone."""
-        for page, module in (("index.html", "app.js"),
-                             ("perfetto.html", "perfetto_page.js")):
-            markup = open(os.path.join(REPO, "bga/viewer", page),
-                          encoding="utf-8").read()
+        for page, module in (("index.html", "app.js"), ("perfetto.html", "perfetto_page.js")):
+            markup = open(os.path.join(REPO, "bga/viewer", page), encoding="utf-8").read()
             assert 'data-bga-boots="1"' in markup, (
-                f"{page} does not declare that it will say when it has "
-                f"booted, so the driver cannot know to wait")
-            source = open(os.path.join(REPO, "bga/viewer", module),
-                          encoding="utf-8").read()
+                f"{page} does not declare that it will say when it has booted, so the driver cannot know to wait"
+            )
+            source = open(os.path.join(REPO, "bga/viewer", module), encoding="utf-8").read()
             assert "dataset.bgaBooted" in source, (
                 f"{module} never says it, so {page}'s declaration is a "
-                f"promise nothing keeps and every drive waits the ceiling")
+                f"promise nothing keeps and every drive waits the ceiling"
+            )

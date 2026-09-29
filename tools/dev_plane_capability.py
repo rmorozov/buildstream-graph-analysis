@@ -24,6 +24,7 @@ purpose" are different answers), `gap` (the round acts on these),
 probe does not move it; `ru_nswap`, because forcing a host to swap is
 not something an instrument should do).
 """
+
 import argparse
 import json
 import os
@@ -70,8 +71,7 @@ RUSAGE_KEYS = {
 #: `unexercised` rather than `unmaintained`: this instrument may not
 #: say a kernel does not maintain a counter it never asked it to.
 NOT_EXERCISED = {
-    "ru_nswap": "moving it means forcing the host to swap, which an "
-                "instrument must not do to the machine it runs on",
+    "ru_nswap": "moving it means forcing the host to swap, which an instrument must not do to the machine it runs on",
 }
 
 #: A child that would move every `rusage` field this kernel maintains:
@@ -139,15 +139,12 @@ PROC_KEYS = {
 #: the census reports these under `declined` so a reader can tell
 #: "nobody looked" from "somebody looked and said no".
 DECLINED = {
-    ("io", "rchar"):
-        "syscall-level bytes, an axis neither plane has. The hook's "
-        "`ru_inblock`/`ru_oublock` are block-layer counts, so giving "
-        "this to the spine alone would put a column in the record that "
-        "is populated for the processes the hook could not see and "
-        "empty for the rest (UX-487)",
-    ("io", "wchar"):
-        "the same, in the other direction - and the same reason "
-        "(UX-487)",
+    ("io", "rchar"): "syscall-level bytes, an axis neither plane has. The hook's "
+    "`ru_inblock`/`ru_oublock` are block-layer counts, so giving "
+    "this to the spine alone would put a column in the record that "
+    "is populated for the processes the hook could not see and "
+    "empty for the rest (UX-487)",
+    ("io", "wchar"): "the same, in the other direction - and the same reason (UX-487)",
 }
 
 #: `/proc/<pid>/stat`'s fields are positional, so a name needs an
@@ -165,8 +162,7 @@ _KIND = re.compile(r"^([A-Z]+) ")
 
 
 def _kinds(lines):
-    return {found.group(1): _record_keys(line)
-            for line in lines for found in [_KIND.match(line)] if found}
+    return {found.group(1): _record_keys(line) for line in lines for found in [_KIND.match(line)] if found}
 
 
 def _record_keys(line):
@@ -183,11 +179,15 @@ def hook_records(build_dir):
     """A real record from a real process, under the compiled hook."""
     hook = compile_hook(build_dir)
     log = os.path.join(build_dir, "plane2.log")
-    env = dict(os.environ, LD_PRELOAD=hook, BST_TRACE_LOG=log,
-               BST_TRACE_ELEMENT="probe.bst",
-               BST_TRACE_INVOCATION="inv-probe", BST_TRACE_OPENS="1")
-    subprocess.run([sys.executable, "-c", "print(1)"], env=env,
-                   capture_output=True, timeout=120)
+    env = dict(
+        os.environ,
+        LD_PRELOAD=hook,
+        BST_TRACE_LOG=log,
+        BST_TRACE_ELEMENT="probe.bst",
+        BST_TRACE_INVOCATION="inv-probe",
+        BST_TRACE_OPENS="1",
+    )
+    subprocess.run([sys.executable, "-c", "print(1)"], env=env, capture_output=True, timeout=120)
     lines = pathlib.Path(log).read_text(encoding="utf-8").splitlines()
     return hook, _kinds(lines)
 
@@ -201,10 +201,10 @@ def spine_records(build_dir):
     """
     spine = compile_spine(build_dir)
     log = os.path.join(build_dir, "plane3.log")
-    env = dict(os.environ, BST_TRACE_LOG=log, BST_TRACE_ELEMENT="probe.bst",
-               BST_TRACE_INVOCATION="inv-probe")
-    done = subprocess.run([spine, "--", sys.executable, "-c", "print(1)"],
-                          env=env, capture_output=True, text=True, timeout=120)
+    env = dict(os.environ, BST_TRACE_LOG=log, BST_TRACE_ELEMENT="probe.bst", BST_TRACE_INVOCATION="inv-probe")
+    done = subprocess.run(
+        [spine, "--", sys.executable, "-c", "print(1)"], env=env, capture_output=True, text=True, timeout=120
+    )
     if done.returncode != 0 or not os.path.exists(log):
         return None, {}
     lines = pathlib.Path(log).read_text(encoding="utf-8").splitlines()
@@ -220,12 +220,10 @@ def interposed(hook_so):
     """
     if shutil.which("nm") is None:
         return None
-    done = subprocess.run(["nm", "-D", "--defined-only", hook_so],
-                          capture_output=True, text=True, timeout=60)
+    done = subprocess.run(["nm", "-D", "--defined-only", hook_so], capture_output=True, text=True, timeout=60)
     if done.returncode != 0:
         return None
-    return sorted(line.split()[-1] for line in done.stdout.splitlines()
-                  if line.split()[1:2] in (["T"], ["W"]))
+    return sorted(line.split()[-1] for line in done.stdout.splitlines() if line.split()[1:2] in (["T"], ["W"]))
 
 
 def rusage_probe(build_dir):
@@ -233,8 +231,8 @@ def rusage_probe(build_dir):
     script = os.path.join(build_dir, "rusage_probe.py")
     pathlib.Path(script).write_text(RUSAGE_PROBE, encoding="utf-8")
     done = subprocess.run(
-        [sys.executable, script, os.path.join(build_dir, "probe.bin")],
-        capture_output=True, text=True, timeout=300)
+        [sys.executable, script, os.path.join(build_dir, "probe.bin")], capture_output=True, text=True, timeout=300
+    )
     if done.returncode != 0:
         raise SystemExit(f"the rusage probe failed:\n{done.stderr}")
     return json.loads(done.stdout.strip().splitlines()[-1])
@@ -253,7 +251,8 @@ def _check_map(name, mapping, carried):
         raise SystemExit(
             f"{name}: the name map claims {missing} are record keys and no "
             f"real record carries them. Either a key was renamed or the map "
-            f"is wrong - fix it before reading anything below")
+            f"is wrong - fix it before reading anything below"
+        )
 
 
 def census(build_dir):
@@ -271,17 +270,12 @@ def census(build_dir):
         elif field in NOT_EXERCISED:
             plane2.append((field, "unexercised", NOT_EXERCISED[field]))
         elif float(filled.get(field) or 0) > 0:
-            plane2.append((field, "gap",
-                           f"this kernel filled it ({filled[field]}) and no "
-                           f"record key carries it"))
+            plane2.append((field, "gap", f"this kernel filled it ({filled[field]}) and no record key carries it"))
         else:
-            plane2.append((field, "unmaintained",
-                           "the probe exercised it and this kernel left it "
-                           "at zero"))
+            plane2.append((field, "unmaintained", "the probe exercised it and this kernel left it at zero"))
 
     spine_bin, spine_kinds = spine_records(build_dir)
-    spine_carried = (set().union(*spine_kinds.values())
-                     if spine_kinds else set())
+    spine_carried = set().union(*spine_kinds.values()) if spine_kinds else set()
     plane3, offers = [], proc_offers()
     if spine_bin is None:
         plane3 = None
@@ -295,15 +289,17 @@ def census(build_dir):
             elif where in DECLINED:
                 plane3.append((name, "declined", DECLINED[where]))
             elif offers.get(where) is not None:
-                plane3.append((name, "gap",
-                               f"exposed here (read as {offers[where]}) and "
-                               f"no record key carries it"))
+                plane3.append((name, "gap", f"exposed here (read as {offers[where]}) and no record key carries it"))
             else:
-                plane3.append((name, "not offered",
-                               "this kernel does not expose it for a live "
-                               "process"))
-    return {"hook": hook_so, "kinds": hook_kinds, "interposed": interposed(hook_so),
-            "plane2": plane2, "spine_kinds": spine_kinds, "plane3": plane3}
+                plane3.append((name, "not offered", "this kernel does not expose it for a live process"))
+    return {
+        "hook": hook_so,
+        "kinds": hook_kinds,
+        "interposed": interposed(hook_so),
+        "plane2": plane2,
+        "spine_kinds": spine_kinds,
+        "plane3": plane3,
+    }
 
 
 def proc_offers():
@@ -323,7 +319,7 @@ def proc_offers():
     """
     offers = {}
     stat = pathlib.Path("/proc/self/stat").read_text(encoding="utf-8")
-    fields = stat[stat.rfind(")") + 2:].split()
+    fields = stat[stat.rfind(")") + 2 :].split()
     for name, index in STAT_FIELDS.items():
         # Field 3 (state) is the first after the comm, so field N is at
         # offset N - 3 in what `fields` holds.
@@ -352,8 +348,7 @@ def render(report):
     lines.append("Plane 3 - the ptrace spine")
     lines.append("")
     if report["plane3"] is None:
-        lines.append("    unassessable  the spine could not trace a process "
-                     "here (no CAP_SYS_PTRACE?)")
+        lines.append("    unassessable  the spine could not trace a process here (no CAP_SYS_PTRACE?)")
     else:
         lines.append(f"    records      {', '.join(sorted(report['spine_kinds']))}")
         lines.append("")
@@ -373,8 +368,7 @@ def main(argv=None):
     with tempfile.TemporaryDirectory() as build:
         report = census(build)
     if args.format == "json":
-        print(json.dumps({k: v for k, v in report.items() if k != "hook"},
-                         indent=2, default=sorted))
+        print(json.dumps({k: v for k, v in report.items() if k != "hook"}, indent=2, default=sorted))
     else:
         print(render(report))
     return 0

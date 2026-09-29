@@ -127,7 +127,9 @@ def list_capture_refs(remote: str, glob: str, cwd: Optional[str] = None) -> list
     """Every published capture ref matching `glob`, newest first."""
     result = subprocess.run(
         ['git', 'ls-remote', '--heads', remote, glob],
-        cwd=cwd, capture_output=True, text=True,
+        cwd=cwd,
+        capture_output=True,
+        text=True,
     )
     if result.returncode != 0:
         raise RuntimeError(f"git ls-remote failed: {result.stderr.strip()}")
@@ -137,7 +139,7 @@ def list_capture_refs(remote: str, glob: str, cwd: Optional[str] = None) -> list
         if len(parts) != 2:
             continue
         sha, ref = parts
-        name = ref[len('refs/heads/'):] if ref.startswith('refs/heads/') else ref
+        name = ref[len('refs/heads/') :] if ref.startswith('refs/heads/') else ref
         match = _REF_RE.match(name)
         if not match:
             # A pointer ref (`captures/fdsdk-latest`) or something else
@@ -157,10 +159,11 @@ def exclude_refs(refs: list[dict], patterns: list[str]) -> list[dict]:
     if not patterns:
         return refs
     return [
-        ref for ref in refs
-        if not any(fnmatch.fnmatch(ref['ref'], pattern)
-                   or fnmatch.fnmatch(ref['run_id'], pattern)
-                   for pattern in patterns)
+        ref
+        for ref in refs
+        if not any(
+            fnmatch.fnmatch(ref['ref'], pattern) or fnmatch.fnmatch(ref['run_id'], pattern) for pattern in patterns
+        )
     ]
 
 
@@ -180,19 +183,27 @@ def fetch_run_directory(remote: str, ref: dict, dest: str, cwd: Optional[str] = 
     the homogeneity check reads.
     """
     fetch = subprocess.run(
-        ['git', 'fetch', '-q', remote, ref['ref']], cwd=cwd, capture_output=True, text=True,
+        ['git', 'fetch', '-q', remote, ref['ref']],
+        cwd=cwd,
+        capture_output=True,
+        text=True,
     )
     if fetch.returncode != 0:
         raise RuntimeError(f"git fetch {ref['ref']} failed: {fetch.stderr.strip()}")
 
     context_blob = subprocess.run(
         ['git', 'show', 'FETCH_HEAD:capture-context.txt'],
-        cwd=cwd, capture_output=True, text=True,
+        cwd=cwd,
+        capture_output=True,
+        text=True,
     )
     context = _parse_context(context_blob.stdout) if context_blob.returncode == 0 else {}
 
     listing = subprocess.run(
-        ['git', 'ls-tree', '--name-only', 'FETCH_HEAD'], cwd=cwd, capture_output=True, text=True,
+        ['git', 'ls-tree', '--name-only', 'FETCH_HEAD'],
+        cwd=cwd,
+        capture_output=True,
+        text=True,
     )
     entries = set(listing.stdout.split())
 
@@ -200,7 +211,8 @@ def fetch_run_directory(remote: str, ref: dict, dest: str, cwd: Optional[str] = 
     if 'run' in entries:
         archive = subprocess.run(
             ['git', 'archive', '--format=tar', 'FETCH_HEAD', 'run'],
-            cwd=cwd, capture_output=True,
+            cwd=cwd,
+            capture_output=True,
         )
         if archive.returncode != 0:
             raise RuntimeError(f"git archive {ref['ref']} failed")
@@ -216,7 +228,9 @@ def fetch_run_directory(remote: str, ref: dict, dest: str, cwd: Optional[str] = 
         # and a helper that only read the current one would fail on the
         # history it exists to read.
         blob = subprocess.run(
-            ['git', 'show', 'FETCH_HEAD:capture.tar.gz'], cwd=cwd, capture_output=True,
+            ['git', 'show', 'FETCH_HEAD:capture.tar.gz'],
+            cwd=cwd,
+            capture_output=True,
         )
         tarball = os.path.join(dest, 'capture.tar.gz')
         with open(tarball, 'wb') as handle:
@@ -226,9 +240,7 @@ def fetch_run_directory(remote: str, ref: dict, dest: str, cwd: Optional[str] = 
         os.remove(tarball)
         run_dir = _find_run_directory(dest)
     else:
-        raise RuntimeError(
-            f"{ref['ref']} carries neither run/ nor capture.tar.gz - not a capture ref"
-        )
+        raise RuntimeError(f"{ref['ref']} carries neither run/ nor capture.tar.gz - not a capture ref")
 
     if not run_dir or not os.path.isfile(os.path.join(run_dir, 'run-context.json')):
         raise RuntimeError(f"{ref['ref']} produced no usable run directory at {dest}")
@@ -269,13 +281,8 @@ def check_homogeneity(members: list[dict]) -> dict:
     coverage_gaps = []
     assumptions = []
     for field, absent_means in HOMOGENEOUS_FIELDS.items():
-        recorded = {
-            m['ref']['ref']: m['context'][field]
-            for m in members if m['context'].get(field)
-        }
-        silent = sorted(
-            m['ref']['ref'] for m in members if not m['context'].get(field)
-        )
+        recorded = {m['ref']['ref']: m['context'][field] for m in members if m['context'].get(field)}
+        silent = sorted(m['ref']['ref'] for m in members if not m['context'].get(field))
         values = set(recorded.values())
 
         if absent_means is not None and silent:
@@ -315,21 +322,21 @@ def check_homogeneity(members: list[dict]) -> dict:
             # No default to fall back on, so this is neither a match nor
             # a mismatch - it is a hole, and saying so is the whole point
             # of UX-114's first clause.
-            coverage_gaps.append({
-                'field': field,
-                'refs': silent,
-                'recorded': sorted(values),
-                'message': (
-                    f"{len(silent)} of {len(members)} capture(s) do not record "
-                    f"{field}, so the set was checked on {len(recorded)} of them. "
-                    f"Absence has no defined meaning for this field - it is "
-                    f"unverified, not verified-equal"
-                ),
-            })
+            coverage_gaps.append(
+                {
+                    'field': field,
+                    'refs': silent,
+                    'recorded': sorted(values),
+                    'message': (
+                        f"{len(silent)} of {len(members)} capture(s) do not record "
+                        f"{field}, so the set was checked on {len(recorded)} of them. "
+                        f"Absence has no defined meaning for this field - it is "
+                        f"unverified, not verified-equal"
+                    ),
+                }
+            )
 
-    revisions = [
-        (m['ref']['ref'], m['context'].get(DRIFT_FIELD)) for m in members
-    ]
+    revisions = [(m['ref']['ref'], m['context'].get(DRIFT_FIELD)) for m in members]
     distinct = {revision for _ref, revision in revisions if revision}
     drift = None
     if len(distinct) > 1:
@@ -429,8 +436,7 @@ def refusal_remedy(mismatches: list[dict], members: list[dict]) -> str:
     carries. For the other three it is advice that cannot be followed,
     so the odd captures are named and `--exclude` is.
     """
-    invisible = [m['field'] for m in mismatches
-                 if m['field'] not in NAMED_BY_THE_REF]
+    invisible = [m['field'] for m in mismatches if m['field'] not in NAMED_BY_THE_REF]
     if not invisible:
         return "Narrow --glob to one <commit>-<mode>-b<builders>j<max_jobs> tuple."
     verb = 'is' if len(invisible) == 1 else 'are'
@@ -479,28 +485,19 @@ def format_set_text(members: list[dict], homogeneity: dict, excluded: int = 0) -
         # A set narrowed by hand says so, in the set's own listing: a
         # band over a population the caller edited is a different
         # claim from a band over everything published.
-        lines.insert(3, f"--exclude dropped {excluded} capture(s) before the newest "
-                        f"{len(members)} were taken.")
+        lines.insert(3, f"--exclude dropped {excluded} capture(s) before the newest {len(members)} were taken.")
     for member in members:
         ref = member['ref']
-        lines.append(
-            f"  {ref['ref']}"
-        )
+        lines.append(f"  {ref['ref']}")
         lines.append(
             f"      {ref['commit']} {ref['mode']} "
             f"builders={ref['builders']} max_jobs={ref['max_jobs']}  "
             f"bga={(member['context'].get(DRIFT_FIELD) or 'unrecorded')[:8]}"
         )
     for mismatch in homogeneity['mismatches']:
-        line = (
-            f"  NOT COMPARABLE: {mismatch['field']} differs across the set "
-            f"({', '.join(mismatch['values'])})"
-        )
+        line = f"  NOT COMPARABLE: {mismatch['field']} differs across the set ({', '.join(mismatch['values'])})"
         if mismatch.get('assumed_for'):
-            line += (
-                f"; {len(mismatch['assumed_for'])} recorded nothing and were "
-                f"taken as {mismatch['assumed']}"
-            )
+            line += f"; {len(mismatch['assumed_for'])} recorded nothing and were taken as {mismatch['assumed']}"
         lines.append(line)
         if mismatch.get('assumed_for'):
             lines.append(f"      {_name_refs(mismatch['assumed_for'])}")
@@ -522,46 +519,59 @@ def _CompactRawHelp(prog):
     """UX-158: one shared compact help layout, imported lazily so
     this module stays runnable on its own."""
     from bga.help_format import CompactRawHelp
+
     return CompactRawHelp(prog)
+
 
 def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(
-        description=HELP, formatter_class=_CompactRawHelp,
+        description=HELP,
+        formatter_class=_CompactRawHelp,
     )
     parser.add_argument(
-        '--remote', default='origin',
+        '--remote',
+        default='origin',
         help='Git remote (name or URL) the captures were published to. Default: origin.',
     )
     parser.add_argument(
-        '--glob', default='captures/*/*-incremental-*',
+        '--glob',
+        default='captures/*/*-incremental-*',
         help="Ref glob selecting one comparable set, e.g. "
-             "'captures/fdsdk/953683fb-incremental-b4j4-*'. The default takes every "
-             "incremental capture, which is only a set if the project has one commit "
-             "under capture - name the tuple explicitly for CI.",
+        "'captures/fdsdk/953683fb-incremental-b4j4-*'. The default takes every "
+        "incremental capture, which is only a set if the project has one commit "
+        "under capture - name the tuple explicitly for CI.",
     )
-    parser.add_argument('-n', '--count', type=int, default=3,
-                        help='How many of the newest captures to fetch. Default: 3.')
-    parser.add_argument('--exclude', action='append', default=[], metavar='PATTERN',
-                        help='Drop a capture before the newest N are taken. A run id '
-                             '(32223468993) or a glob over the ref name '
-                             "('*-cold-*'), repeatable. The remedy for a set that "
-                             'differs on target, trace_spine or trace_opens, none of '
-                             'which the ref name carries.')
-    parser.add_argument('--workdir', default=None,
-                        help='Where to materialise the run directories. Default: a '
-                             'temporary directory, removed on exit.')
-    parser.add_argument('--repo', default=None,
-                        help='Git checkout to run git from. Default: the working directory.')
-    parser.add_argument('--candidate', default=None,
-                        help='A candidate run directory. Given one, this runs the band '
-                             'compare against the fetched set and returns its exit code. '
-                             'Takes a snapshot alias (`@last`, `@prev`, '
-                             '`@<stamp-prefix>`) as well as a path (UX-145).')
+    parser.add_argument(
+        '-n', '--count', type=int, default=3, help='How many of the newest captures to fetch. Default: 3.'
+    )
+    parser.add_argument(
+        '--exclude',
+        action='append',
+        default=[],
+        metavar='PATTERN',
+        help='Drop a capture before the newest N are taken. A run id '
+        '(32223468993) or a glob over the ref name '
+        "('*-cold-*'), repeatable. The remedy for a set that "
+        'differs on target, trace_spine or trace_opens, none of '
+        'which the ref name carries.',
+    )
+    parser.add_argument(
+        '--workdir',
+        default=None,
+        help='Where to materialise the run directories. Default: a temporary directory, removed on exit.',
+    )
+    parser.add_argument('--repo', default=None, help='Git checkout to run git from. Default: the working directory.')
+    parser.add_argument(
+        '--candidate',
+        default=None,
+        help='A candidate run directory. Given one, this runs the band '
+        'compare against the fetched set and returns its exit code. '
+        'Takes a snapshot alias (`@last`, `@prev`, '
+        '`@<stamp-prefix>`) as well as a path (UX-145).',
+    )
     parser.add_argument('-f', '--format', choices=['text', 'json'], default='text')
-    parser.add_argument('--band-k', default=None,
-                        help='Passed through to `bga compare --band-k`.')
-    parser.add_argument('compare_args', nargs='*',
-                        help='Further arguments passed through to `bga compare`.')
+    parser.add_argument('--band-k', default=None, help='Passed through to `bga compare --band-k`.')
+    parser.add_argument('compare_args', nargs='*', help='Further arguments passed through to `bga compare`.')
     args = parser.parse_args(argv)
 
     # UX-145: the one run-directory argument outside `bga.cli`'s alias
@@ -572,6 +582,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     if args.candidate:
         from bga.run_store import StoreError
         from bga.run_store import resolve as resolve_run_alias
+
         try:
             args.candidate = resolve_run_alias(args.candidate)
         except StoreError as error:
@@ -596,31 +607,40 @@ def main(argv: Optional[list[str]] = None) -> int:
         return 1
 
     workdir = args.workdir or os.path.join(
-        tempfile.gettempdir(), f'bga-baseline-{os.getpid()}',
+        tempfile.gettempdir(),
+        f'bga-baseline-{os.getpid()}',
     )
     remove_workdir = args.workdir is None
     members = []
     try:
-        for index, ref in enumerate(refs[:args.count]):
+        for index, ref in enumerate(refs[: args.count]):
             try:
-                members.append(fetch_run_directory(
-                    args.remote, ref, os.path.join(workdir, f'{index:02d}-{ref["run_id"]}'),
-                    cwd=args.repo,
-                ))
+                members.append(
+                    fetch_run_directory(
+                        args.remote,
+                        ref,
+                        os.path.join(workdir, f'{index:02d}-{ref["run_id"]}'),
+                        cwd=args.repo,
+                    )
+                )
             except RuntimeError as error:
                 print(f"Error: {error}", file=sys.stderr)
                 return 1
 
         homogeneity = check_homogeneity(members)
         if args.format == 'json':
-            print(json.dumps({
-                'members': [
-                    {'ref': m['ref'], 'run_dir': m['run_dir'], 'context': m['context']}
-                    for m in members
-                ],
-                'excluded': excluded,
-                **homogeneity,
-            }, indent=2))
+            print(
+                json.dumps(
+                    {
+                        'members': [
+                            {'ref': m['ref'], 'run_dir': m['run_dir'], 'context': m['context']} for m in members
+                        ],
+                        'excluded': excluded,
+                        **homogeneity,
+                    },
+                    indent=2,
+                )
+            )
         else:
             print(format_set_text(members, homogeneity, excluded))
 

@@ -10,6 +10,7 @@ The payoff to protect is the sentence neither plane can produce alone:
 *the element that dominates your critical path is not compute-bound, so
 fix how it is built, not what it builds.*
 """
+
 import json
 import os
 import shutil
@@ -53,6 +54,7 @@ def _cpu(cores_busy, coverage=1.0):
 
 # --- the finding the join exists for -----------------------------------
 
+
 def test_critical_path_element_that_is_waiting_is_told_to_fix_its_parallelism():
     """The real `core.bst` case: 25% of the critical path at 0.85 cores
     busy with `-j1`. Plane 1 knows the first half, Plane 2 the second,
@@ -60,8 +62,7 @@ def test_critical_path_element_that_is_waiting_is_told_to_fix_its_parallelism():
     result = correlate(
         _analysis(critical_path=["core.bst"], opportunities=[("core.bst", 0.25, 25.0)]),
         _native(
-            parallelism=[{"element": "core.bst", "requested_jobs": 1,
-                          "findings": ["pinned_to_one_job"]}],
+            parallelism=[{"element": "core.bst", "requested_jobs": 1, "findings": ["pinned_to_one_job"]}],
             cpu={"core.bst": _cpu(0.85)},
         ),
     )
@@ -121,6 +122,7 @@ def test_unused_dependencies_are_reported_as_a_macro_fix():
 
 # --- the ways this could mislead ---------------------------------------
 
+
 def test_element_on_the_path_but_unable_to_move_the_finish_makes_no_claim():
     """An element can sit on the critical path and still have zero
     measurable saving (UX-44). An earlier version rendered "holds 0% of
@@ -155,8 +157,7 @@ def test_partial_cpu_coverage_is_surfaced():
     result = correlate(
         _analysis(critical_path=["core.bst"], opportunities=[("core.bst", 0.5, 50.0)]),
         _native(
-            parallelism=[{"element": "core.bst", "requested_jobs": 1,
-                          "findings": ["pinned_to_one_job"]}],
+            parallelism=[{"element": "core.bst", "requested_jobs": 1, "findings": ["pinned_to_one_job"]}],
             cpu={"core.bst": _cpu(0.8, coverage=0.81)},
         ),
     )
@@ -237,8 +238,7 @@ REAL_ELEMENTS = [
 def _real_analysis(with_savings=True):
     detail = []
     for uid, dur, share, saving, _cores in REAL_ELEMENTS:
-        entry = {"element_uid": uid, "duration_us": dur, "share_of_path": share,
-                 "is_structural_kind": False}
+        entry = {"element_uid": uid, "duration_us": dur, "share_of_path": share, "is_structural_kind": False}
         if with_savings:
             entry["realizable_saving_us"] = saving
         detail.append(entry)
@@ -248,8 +248,7 @@ def _real_analysis(with_savings=True):
         "elements": {"blast_radius": {}},
         "sensitivity": {
             # The saturated proxy, exactly as the real capture carries it.
-            "top_opportunities": [[e[0], _TIED_SCORE, _TIED_SCORE * 100]
-                                  for e in REAL_ELEMENTS],
+            "top_opportunities": [[e[0], _TIED_SCORE, _TIED_SCORE * 100] for e in REAL_ELEMENTS],
             "critical_path_us": 3_610_500_000,
         },
     }
@@ -257,8 +256,7 @@ def _real_analysis(with_savings=True):
 
 def _real_native():
     return _native(
-        parallelism=[{"element": uid, "requested_jobs": 4, "findings": []}
-                     for uid, *_ in REAL_ELEMENTS],
+        parallelism=[{"element": uid, "requested_jobs": 4, "findings": []} for uid, *_ in REAL_ELEMENTS],
         cpu={uid: _cpu(cores) for uid, _d, _s, _sav, cores in REAL_ELEMENTS},
     )
 
@@ -287,10 +285,8 @@ def test_the_headline_verdict_fires_on_the_real_capture():
     round and never mentioned."""
     result = correlate(_real_analysis(), _real_native())
 
-    assert any("waiting, not computing" in step
-               for step in _steps(result, "components/bison.bst"))
-    assert any("already compute-bound" in step
-               for step in _steps(result, "components/_private/cmake-stage1.bst"))
+    assert any("waiting, not computing" in step for step in _steps(result, "components/bison.bst"))
+    assert any("already compute-bound" in step for step in _steps(result, "components/_private/cmake-stage1.bst"))
 
 
 def test_a_cheap_win_below_the_gate_is_still_reported():
@@ -350,8 +346,7 @@ def test_analyze_and_correlate_name_the_same_element_first():
         # `UX-344` lifted the namespaces out of the *document*; the
         # analyzer's own result still carries the two blocks, and this
         # rebuilds them from the document the helper writes.
-        signals={"critical_path_detail": analysis["critical_path_detail"],
-                 "blast_radius": {}},
+        signals={"critical_path_detail": analysis["critical_path_detail"], "blast_radius": {}},
         structural={"sensitivity": analysis["sensitivity"]},
     )
 
@@ -378,10 +373,8 @@ def _rich_native(**overrides):
             "available": True,
             "measured_cpu_us": 5_351_136_759,
             "by_cpu": [
-                {"binary": "cc1plus", "count": 885, "cpu_us": 4_352_550_957,
-                 "wall_s": 5525.6, "cpu_share": 0.8134},
-                {"binary": "as", "count": 1918, "cpu_us": 397_515_477,
-                 "wall_s": 5929.8, "cpu_share": 0.0743},
+                {"binary": "cc1plus", "count": 885, "cpu_us": 4_352_550_957, "wall_s": 5525.6, "cpu_share": 0.8134},
+                {"binary": "as", "count": 1918, "cpu_us": 397_515_477, "wall_s": 5929.8, "cpu_share": 0.0743},
             ],
             "by_count": [],
             "single_process_costs": [
@@ -443,19 +436,33 @@ def test_measured_findings_outrank_the_hedged_one():
 def test_a_redundancy_worth_less_than_a_percent_of_the_element_is_not_a_step():
     """`cmake-stage1` paying 2.2s for a shared `rm -rf` against 1569.8s
     of realizable saving is true, and is noise in that row."""
-    small = _rich_native(redundant_operations=[{
-        "signature": "rm -rf -- /buildstream-build", "elements": [CMAKE, "components/x.bst"],
-        "occurrence_count": 8, "total_duration_s": 8.0,
-        "max_element_duration_s": 2.2, "worst_element": CMAKE,
-    }])
+    small = _rich_native(
+        redundant_operations=[
+            {
+                "signature": "rm -rf -- /buildstream-build",
+                "elements": [CMAKE, "components/x.bst"],
+                "occurrence_count": 8,
+                "total_duration_s": 8.0,
+                "max_element_duration_s": 2.2,
+                "worst_element": CMAKE,
+            }
+        ]
+    )
     steps = _steps(correlate(_real_analysis(), small), CMAKE)
     assert not any("also run" in step for step in steps)
 
-    big = _rich_native(redundant_operations=[{
-        "signature": "/usr/bin/m4 -P", "elements": [CMAKE, "components/x.bst"],
-        "occurrence_count": 30, "total_duration_s": 40.0,
-        "max_element_duration_s": 20.4, "worst_element": CMAKE,
-    }])
+    big = _rich_native(
+        redundant_operations=[
+            {
+                "signature": "/usr/bin/m4 -P",
+                "elements": [CMAKE, "components/x.bst"],
+                "occurrence_count": 30,
+                "total_duration_s": 40.0,
+                "max_element_duration_s": 20.4,
+                "worst_element": CMAKE,
+            }
+        ]
+    )
     steps = _steps(correlate(_real_analysis(), big), CMAKE)
     assert any("also run" in step and "20.4s" in step for step in steps)
 
@@ -510,11 +517,15 @@ def test_a_name_that_is_not_a_declared_element_never_enters_the_join():
     """
     analysis = {
         "total_duration_us": 100_000_000,
-        "critical_path_detail": [{
-            "element_uid": "real.bst", "duration_us": 50_000_000,
-            "share_of_path": 1.0, "is_structural_kind": False,
-            "realizable_saving_us": 50_000_000,
-        }],
+        "critical_path_detail": [
+            {
+                "element_uid": "real.bst",
+                "duration_us": 50_000_000,
+                "share_of_path": 1.0,
+                "is_structural_kind": False,
+                "realizable_saving_us": 50_000_000,
+            }
+        ],
         "elements": {"slack": {"real.bst": 0}, "blast_radius": {}},
         "sensitivity": {"top_opportunities": [], "critical_path_us": 50_000_000},
     }
@@ -540,8 +551,7 @@ def test_an_off_path_element_is_still_declared():
             "slack": {"a.bst": 0, "offpath.bst": 5_000_000},
             "blast_radius": {},
         },
-        "structural": {"sensitivity": {"top_opportunities": [],
-                                       "critical_path_us": 50_000_000}},
+        "structural": {"sensitivity": {"top_opportunities": [], "critical_path_us": 50_000_000}},
     }
     native = _native(unused=[{"element": "offpath.bst", "dependency": "d.bst"}])
     native["by_element"]["offpath.bst"] = 5
@@ -564,7 +574,6 @@ def test_an_analysis_with_no_per_element_signals_degrades_rather_than_refusing()
     assert [e["element"] for e in result["actionable"]] == ["x.bst"]
 
 
-
 class TestTheReportArgumentIsOptionalWhenTheCaptureKeptThemTogether:
     """UX-134: `bga capture run --run-dir` and `bga snapshot` write the
     run directory and its Plane 2 report side by side, so restating the
@@ -580,36 +589,36 @@ class TestTheReportArgumentIsOptionalWhenTheCaptureKeptThemTogether:
         snapshot.mkdir()
         shutil.copytree(GOLDEN_RUN, snapshot / "run")
         if with_plane2:
-            (snapshot / "plane2.json").write_text(json.dumps({
-                "by_element": {},
-                "per_element_parallelism": [],
-                "cpu_time": {"per_element": {}},
-                "declared_vs_used": {"unused_candidates": []},
-            }))
+            (snapshot / "plane2.json").write_text(
+                json.dumps(
+                    {
+                        "by_element": {},
+                        "per_element_parallelism": [],
+                        "cpu_time": {"per_element": {}},
+                        "declared_vs_used": {"unused_candidates": []},
+                    }
+                )
+            )
         return snapshot
 
     def _correlate(self, *argv):
         return subprocess.run(
-            [sys.executable, "-m", "bga.cli", "correlate", *argv],
-            capture_output=True, text=True, cwd=REPO, timeout=300)
+            [sys.executable, "-m", "bga.cli", "correlate", *argv], capture_output=True, text=True, cwd=REPO, timeout=300
+        )
 
-    def test_omitting_it_joins_the_report_that_came_from_the_same_build(
-            self, tmp_path):
+    def test_omitting_it_joins_the_report_that_came_from_the_same_build(self, tmp_path):
         snapshot = self._snapshot(tmp_path)
 
         inferred = self._correlate(str(snapshot / "run"))
-        explicit = self._correlate(str(snapshot / "run"),
-                                   str(snapshot / "plane2.json"))
+        explicit = self._correlate(str(snapshot / "run"), str(snapshot / "plane2.json"))
 
         assert inferred.returncode == 0, inferred.stderr
-        assert inferred.stdout == explicit.stdout, (
-            "inferring the sibling produced a different report than naming it")
+        assert inferred.stdout == explicit.stdout, "inferring the sibling produced a different report than naming it"
         assert str(snapshot / "plane2.json") in inferred.stderr, (
-            "the inferred path is not stated, so the reader cannot tell which "
-            "report was joined")
+            "the inferred path is not stated, so the reader cannot tell which report was joined"
+        )
 
-    def test_omitting_it_with_nothing_beside_the_run_says_what_to_pass(
-            self, tmp_path):
+    def test_omitting_it_with_nothing_beside_the_run_says_what_to_pass(self, tmp_path):
         """Not a traceback and not a silent single-plane report: the
         argument is still required wherever there is nothing to infer."""
         snapshot = self._snapshot(tmp_path, with_plane2=False)

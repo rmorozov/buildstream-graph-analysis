@@ -15,6 +15,7 @@ change this, what does it cost?* Three shapes of "this", one answer.
 This is a question, not a gate: it exits 0 on an answer of zero, the same as on an answer
 of two hundred. A gate belongs in `bga compare`, where the refusal grammar already lives.
 """
+
 import contextlib
 import json
 import os
@@ -76,15 +77,14 @@ def _cwd_is_inside(project_dir: Optional[str]) -> bool:
     if not project_dir:
         return False
     try:
-        return os.path.commonpath(
-            [os.path.abspath(os.getcwd()), os.path.abspath(project_dir)]
-        ) == os.path.abspath(project_dir)
+        return os.path.commonpath([os.path.abspath(os.getcwd()), os.path.abspath(project_dir)]) == os.path.abspath(
+            project_dir
+        )
     except ValueError:  # different drives / unrelated roots
         return False
 
 
-def classify_target(target: str, project_dir: Optional[str] = None,
-                    inventory: Optional[dict] = None) -> list[str]:
+def classify_target(target: str, project_dir: Optional[str] = None, inventory: Optional[dict] = None) -> list[str]:
     """Every shape `target` could be, most specific first.
 
     Ambiguity is real: a project could name an element `https` (it
@@ -120,8 +120,11 @@ def classify_target(target: str, project_dir: Optional[str] = None,
     # UX-178: a *top-level* deleted file has no `/` to recognise it by, so
     # it only reads as a path when something in this project stages the
     # root - which is the only case where a bare name could be one.
-    if (any(os.path.exists(candidate) for candidate in candidates) or "/" in target
-            or _stages_at_project_root(inventory or {})):
+    if (
+        any(os.path.exists(candidate) for candidate in candidates)
+        or "/" in target
+        or _stages_at_project_root(inventory or {})
+    ):
         shapes.append("path")
     if target.endswith(".bst"):
         shapes.append("element")
@@ -156,8 +159,7 @@ def _elements_for_path(inventory: dict, target: str, project_dir: Optional[str])
     # (relative to cwd) first, then as project-relative.
     candidates = []
     absolute = os.path.abspath(target)
-    for base in ([project_dir] if project_dir and (
-            os.path.isabs(target) or _cwd_is_inside(project_dir)) else []):
+    for base in [project_dir] if project_dir and (os.path.isabs(target) or _cwd_is_inside(project_dir)) else []:
         with contextlib.suppress(ValueError):
             candidates.append(os.path.relpath(absolute, base))
     candidates.append(target)
@@ -207,16 +209,17 @@ def _kind_of(inventory: dict, direct: set[str], keying: Optional[str]) -> Option
     as none, and the keying sentence falls back to the keying-only
     wording rather than picking a kind at random.
     """
-    kinds = {resource.get("kind")
-             for uid in direct
-             for resource in (inventory.get("elements") or {}).get(uid) or []
-             if resource.get("keying") == keying}
+    kinds = {
+        resource.get("kind")
+        for uid in direct
+        for resource in (inventory.get("elements") or {}).get(uid) or []
+        if resource.get("keying") == keying
+    }
     kinds.discard(None)
     return kinds.pop() if len(kinds) == 1 else None
 
 
-def blast(run_dir, target: str, project_dir: Optional[str] = None,
-          measure: bool = True) -> dict:
+def blast(run_dir, target: str, project_dir: Optional[str] = None, measure: bool = True) -> dict:
     """The answer, as data. `bga/report` decides how to say it.
 
     `measure=False` (`UX-182`) answers the direct/closure/kind half from
@@ -257,8 +260,11 @@ def blast(run_dir, target: str, project_dir: Optional[str] = None,
         # share a spelling here while the table showed them apart, so the
         # two surfaces disagreed about the same run.
         key = (kind, matched.get("identity"))
-        direct = {uid for uid, resources in (inventory.get("elements") or {}).items()
-                  if any(sources_mod.resource_key(r) == key for r in resources or [])}
+        direct = {
+            uid
+            for uid, resources in (inventory.get("elements") or {}).items()
+            if any(sources_mod.resource_key(r) == key for r in resources or [])
+        }
         # The other readings are still reported: an exact match decides
         # the answer, it does not hide that the name was ambiguous.
         if used not in shapes:
@@ -288,8 +294,7 @@ def blast(run_dir, target: str, project_dir: Optional[str] = None,
     # that way. This divided them by 1e6 to publish `measured_seconds`,
     # which was a lossy downgrade of a value the tool already held
     # exactly, and put a second spelling of time in the payload.
-    durations = (compute_element_durations(_tasks_of(run_dir))
-                 if measure else {})
+    durations = compute_element_durations(_tasks_of(run_dir)) if measure else {}
     measured = [durations[uid] for uid in reachable if uid in durations]
     by_kind: dict[str, int] = {}
     for uid in reachable:
@@ -347,12 +352,14 @@ def _by_depth(direct, reachable, successors, kinds, durations) -> list[dict]:
     depth = 0
     while frontier:
         for uid in frontier:
-            tree.append({
-                "element_uid": uid,
-                "depth": depth,
-                "element_kind": kinds.get(uid, "unknown"),
-                "measured_us": durations.get(uid),
-            })
+            tree.append(
+                {
+                    "element_uid": uid,
+                    "depth": depth,
+                    "element_kind": kinds.get(uid, "unknown"),
+                    "measured_us": durations.get(uid),
+                }
+            )
         nxt = []
         for uid in frontier:
             for child in sorted(successors.get(uid) or ()):
@@ -394,30 +401,36 @@ def _article(shape: str) -> str:
 
 def format_blast_text(answer: dict) -> str:
     lines = [f"Blast radius: {answer['target']}"]
-    lines.append(f"  Resolved as {_article(answer['resolved_as'])}"
-                 + (f" (it also reads as {', '.join(_article(s) for s in answer['also_matched'])};"
-                    f" resolution order is {', '.join(RESOLUTION_ORDER)})"
-                    if answer['also_matched'] else ""))
+    lines.append(
+        f"  Resolved as {_article(answer['resolved_as'])}"
+        + (
+            f" (it also reads as {', '.join(_article(s) for s in answer['also_matched'])};"
+            f" resolution order is {', '.join(RESOLUTION_ORDER)})"
+            if answer['also_matched']
+            else ""
+        )
+    )
     if not answer['direct_count']:
         lines.append("")
         if answer['resolved_as'] == 'element' and not answer['element_exists']:
             # UX-178: the sentence `classify_target`'s comment promised
             # and no code printed.
-            lines.append("  No element of that name is in this run. Check the "
-                         "spelling, or pass a path or a repository url.")
+            lines.append(
+                "  No element of that name is in this run. Check the spelling, or pass a path or a repository url."
+            )
             return "\n".join(lines)
         if answer['resolved_as'] != 'element' and not answer['has_inventory']:
-            lines.append("  Nothing matched, and this run carries no source "
-                         "inventory - it was captured before `bga extract` wrote")
+            lines.append(
+                "  Nothing matched, and this run carries no source "
+                "inventory - it was captured before `bga extract` wrote"
+            )
             lines.append("  one, so a url or a path cannot be resolved against it.")
         else:
-            lines.append("  Nothing in this run sources it. Touching it rebuilds "
-                         "nothing here.")
+            lines.append("  Nothing in this run sources it. Touching it rebuilds nothing here.")
         return "\n".join(lines)
 
     named = ", ".join(answer['direct_elements'][:6])
-    more = ("" if len(answer['direct_elements']) <= 6
-            else f" (+{len(answer['direct_elements']) - 6} more)")
+    more = "" if len(answer['direct_elements']) <= 6 else f" (+{len(answer['direct_elements']) - 6} more)"
     lines += [
         "",
         f"  Sourced directly by {plural(answer['direct_count'], 'element')}: {named}{more}",
@@ -425,21 +438,19 @@ def format_blast_text(answer: dict) -> str:
         f" of {answer['element_count']} in this build",
     ]
     if answer['by_element_kind']:
-        lines.append("    " + ", ".join(f"{count} {kind}" for kind, count
-                                        in answer['by_element_kind'].items()))
+        lines.append("    " + ", ".join(f"{count} {kind}" for kind, count in answer['by_element_kind'].items()))
     if not answer.get('measured', True):
-        lines.append("  Cost: not measured - re-run without --no-cost for the "
-                     "measured rebuild time")
+        lines.append("  Cost: not measured - re-run without --no-cost for the measured rebuild time")
     elif answer['measured_us'] is None:
         lines.append("  Cost: unmeasured - no element of the blast ran in this build")
     else:
         lines.append(
             f"  Cost: {sources_mod.format_work(answer['measured_us'] / US_PER_S)} of build "
             f"work, measured for {answer['measured_elements']} of "
-            f"{answer['blast_count']}")
+            f"{answer['blast_count']}"
+        )
     if answer['keying']:
-        clause = sources_mod.keying_clause({'keying': answer['keying'],
-                                            'kind': answer.get('kind')})
+        clause = sources_mod.keying_clause({'keying': answer['keying'], 'kind': answer.get('kind')})
         lines.append(f"  {clause}")
     lines += [
         "",

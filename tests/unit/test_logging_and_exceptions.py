@@ -5,6 +5,7 @@ BgaError subclasses (AnalysisError for graph cycles, IngestionError for
 malformed/missing input content) that replace the previous
 string-matching-based exit-code routing in bga/cli.py.
 """
+
 import json
 import logging
 import subprocess
@@ -23,8 +24,11 @@ def _write_fixture(tmp_path):
     run_dir = tmp_path / "run"
     run_dir.mkdir()
     run_context = {
-        "trace_epsilon_us": 50000, "wall_start_us": 0, "wall_end_us": 300000,
-        "max_jobs": 1, "resource_capacities": {"PROCESS": 1},
+        "trace_epsilon_us": 50000,
+        "wall_start_us": 0,
+        "wall_end_us": 300000,
+        "max_jobs": 1,
+        "resource_capacities": {"PROCESS": 1},
     }
     graph = {
         "elements": [{"uid": "a.bst", "requested_target": True}],
@@ -32,8 +36,13 @@ def _write_fixture(tmp_path):
     }
     trace = {
         "spans": [
-            {"task_key": "a.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 150000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
+            {
+                "task_key": "a.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 150000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
         ],
         "phases": [],
     }

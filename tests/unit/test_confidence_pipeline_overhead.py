@@ -9,6 +9,7 @@ The interaction is systematic, not incidental: UX-10 deliberately made
 invisible, and the shorter the build, the larger BuildStream's fixed
 startup is as a fraction of it.
 """
+
 from bga.ingest.models import Element, Graph, NormalizedTask, RunContext, TaskKey, TaskKind
 from bga.validation.invariants import compute_confidence
 
@@ -16,7 +17,9 @@ from bga.validation.invariants import compute_confidence
 def _task(uid, start_us, finish_us):
     return NormalizedTask(
         task_key=TaskKey(uid, TaskKind.BUILD, "BUILD", 0),
-        ready_us=start_us, start_us=start_us, finish_us=finish_us,
+        ready_us=start_us,
+        start_us=start_us,
+        finish_us=finish_us,
     )
 
 
@@ -91,7 +94,8 @@ def test_overhead_larger_than_the_untracked_head_cannot_over_credit():
     exceed the untracked head. Crediting more than the head existed
     would inflate the score above what was actually measured."""
     result = _confidence(
-        500_000, [{"phase": "Resolving elements", "elapsed_us": 5_000_000}],
+        500_000,
+        [{"phase": "Resolving elements", "elapsed_us": 5_000_000}],
     )
     assert result["explained_untracked_us"] == 500_000
     assert result["attribution_score"] == 1.0

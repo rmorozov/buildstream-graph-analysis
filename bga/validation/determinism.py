@@ -9,6 +9,7 @@ run produces byte-identical canonical output.
 This is a test/validation tool, not user-facing analysis output - it is
 expected (and fine) to be slow, since it runs the full pipeline N times.
 """
+
 import json
 import logging
 import subprocess
@@ -67,7 +68,8 @@ def _compare_canonical_runs(canonical_runs: list[Any], n: int) -> dict[str, Any]
     else:
         logger.warning(
             "Determinism check FAILED: %d of %d runs differ from run 0",
-            len(mismatches), n,
+            len(mismatches),
+            n,
         )
 
     return {
@@ -153,7 +155,9 @@ def run_cross_process_determinism_check(run_dir: Path, n: int = 5) -> dict[str, 
     for _i in range(n):
         proc = subprocess.run(
             [sys.executable, "-m", "bga.cli", "analyze", "-f", "json", str(run_dir)],
-            capture_output=True, text=True, check=True,
+            capture_output=True,
+            text=True,
+            check=True,
         )
         canonical_runs.append(json.loads(proc.stdout))
 

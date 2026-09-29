@@ -171,8 +171,9 @@ def compile_hook(build_dir: str) -> str:
         # -ldl for UX-46's dlsym(RTLD_NEXT, ...) interposition. Harmless
         # on glibc >= 2.34 where libdl is folded into libc, and required
         # on older ones.
-        [cc, "-shared", "-fPIC", "-O2", "-o", hook_so, _HOOK_C, "-ldl"],
-        capture_output=True, text=True,
+        [cc, "-shared", "-fPIC", "-O2", "-Wall", "-Wextra", "-o", hook_so, _HOOK_C, "-ldl"],
+        capture_output=True,
+        text=True,
     )
     if result.returncode != 0:
         raise TraceError(f"failed to compile {_HOOK_C}:\n{result.stderr}")
@@ -195,12 +196,11 @@ def compile_spine(build_dir: str) -> str:
     spine_bin = os.path.join(build_dir, "spine")
     cc = shutil.which("cc") or shutil.which("gcc")
     if cc is None:
-        raise TraceError(
-            "no C compiler (cc/gcc) found on PATH - required to build the ptrace spine"
-        )
+        raise TraceError("no C compiler (cc/gcc) found on PATH - required to build the ptrace spine")
     result = subprocess.run(
-        [cc, "-static", "-O2", "-o", spine_bin, _SPINE_C],
-        capture_output=True, text=True,
+        [cc, "-static", "-O2", "-Wall", "-Wextra", "-o", spine_bin, _SPINE_C],
+        capture_output=True,
+        text=True,
     )
     if result.returncode != 0:
         raise TraceError(f"failed to compile {_SPINE_C}:\n{result.stderr}")
@@ -452,8 +452,7 @@ def probe_bwrap_shim(shim_path: str) -> None:
     from .native_trace.bwrap_shim import SELF_TEST_ARGV
 
     try:
-        result = subprocess.run([shim_path, SELF_TEST_ARGV],
-                                capture_output=True, text=True, timeout=120)
+        result = subprocess.run([shim_path, SELF_TEST_ARGV], capture_output=True, text=True, timeout=120)
     except OSError as error:
         if error.errno == errno.ENOENT:
             # Either the shim or the interpreter its shebang names. Both
@@ -525,8 +524,7 @@ def element_path(project_dir: str) -> str:
     for the same reason `read_declared_build_deps` is: this has to work
     on a project whose plugins are not installed.
     """
-    return read_scalar_key(os.path.join(project_dir, "project.conf"),
-                           "element-path") or "elements"
+    return read_scalar_key(os.path.join(project_dir, "project.conf"), "element-path") or "elements"
 
 
 CASD_NAME = "buildbox-casd"
@@ -541,8 +539,7 @@ def buildstream_cache_dir() -> str:
     the root filesystem. Read textually for the same reason
     `element_path` is: this has to work without importing BuildStream.
     """
-    config_home = (os.environ.get("XDG_CONFIG_HOME")
-                   or os.path.expanduser("~/.config"))
+    config_home = os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
     # UX-166: bst 2.x tries `buildstream2.conf` *first* and falls back to
     # `buildstream.conf` (`buildstream/_context.py`, confirmed in the
     # installed source). Reading only the second pointed this check at
@@ -584,8 +581,7 @@ def _process_start_age(pid: str, proc_root: str = "/proc") -> Optional[float]:
         return None
 
 
-def detect_stale_casd(cache_dir: Optional[str] = None,
-                      proc_root: str = "/proc") -> list[dict]:
+def detect_stale_casd(cache_dir: Optional[str] = None, proc_root: str = "/proc") -> list[dict]:
     """Running `buildbox-casd` processes already serving this cache.
 
     `UX-161`, completing `UX-147`'s deferred item 2. A `casd` started
@@ -607,8 +603,7 @@ def detect_stale_casd(cache_dir: Optional[str] = None,
     process's `comm` cannot be faked any other way - the alternative
     was to leave these matching rules unguarded.
     """
-    cache_dir = os.path.normpath(os.path.abspath(
-        cache_dir or buildstream_cache_dir()))
+    cache_dir = os.path.normpath(os.path.abspath(cache_dir or buildstream_cache_dir()))
     found = []
     try:
         pids = [name for name in os.listdir(proc_root) if name.isdigit()]
@@ -620,8 +615,7 @@ def detect_stale_casd(cache_dir: Optional[str] = None,
                 if handle.read().strip() != CASD_NAME:
                     continue
             with open(f"{proc_root}/{pid}/cmdline", "rb") as handle:
-                argv = [part.decode("utf-8", "replace")
-                        for part in handle.read().split(b"\0") if part]
+                argv = [part.decode("utf-8", "replace") for part in handle.read().split(b"\0") if part]
         except OSError:
             continue  # it exited while we looked; that is not staleness
         # UX-166: `abspath` on the daemon's argv resolved relative paths
@@ -633,12 +627,9 @@ def detect_stale_casd(cache_dir: Optional[str] = None,
         # unambiguous, while resolving a relative one uses bga's cwd
         # rather than the daemon's - a different directory, so a match
         # derived from it would be a coincidence.
-        if not any(os.path.normpath(arg) == cache_dir for arg in argv
-                   if arg.startswith("/")):
+        if not any(os.path.normpath(arg) == cache_dir for arg in argv if arg.startswith("/")):
             continue
-        found.append({"pid": int(pid),
-                      "age_s": _process_start_age(pid, proc_root),
-                      "cache_dir": cache_dir})
+        found.append({"pid": int(pid), "age_s": _process_start_age(pid, proc_root), "cache_dir": cache_dir})
     return sorted(found, key=lambda entry: entry["pid"])
 
 
@@ -654,8 +645,7 @@ def format_stale_casd_warning(found: list[dict]) -> Optional[str]:
     lines = []
     for entry in found:
         age = entry["age_s"]
-        when = f", started {age / 60:.0f}m ago" if age and age >= 60 else (
-            f", started {age:.0f}s ago" if age else "")
+        when = f", started {age / 60:.0f}m ago" if age and age >= 60 else (f", started {age:.0f}s ago" if age else "")
         lines.append(
             f"Warning: a {CASD_NAME} serving {entry['cache_dir']} was already "
             f"running when this capture started (pid {entry['pid']}{when}). It "
@@ -763,8 +753,8 @@ def _busy_jiffies(fields) -> int:
     neither a hypervisor nor waiting on a disk - so the clause that
     holds them constructs the line instead of sampling one.
     """
-    return sum(fields[index] for index in _STAT_BUSY_FIELDS
-               if index < len(fields))
+    return sum(fields[index] for index in _STAT_BUSY_FIELDS if index < len(fields))
+
 
 #: Jiffies per second, so a delta becomes cores. 100 on every Linux this
 #: runs on, read rather than assumed.
@@ -835,8 +825,7 @@ def network_bytes(read: dict) -> dict:
     build too short to be sampled twice gets an empty dict rather than a
     zero that reads as "this build moved nothing".
     """
-    carrying = [row for row in (read or {}).get("samples") or []
-                if "net_rx_bytes" in row and "net_tx_bytes" in row]
+    carrying = [row for row in (read or {}).get("samples") or [] if "net_rx_bytes" in row and "net_tx_bytes" in row]
     if len(carrying) < 2:
         return {}
     first, last = carrying[0], carrying[-1]
@@ -970,8 +959,7 @@ class HostSampler:
             # sample" are different facts.
             "available": bool(first),
         }
-        self._cpu = (first.get("cpu_busy_jiffies"), first.get("cpu_total_jiffies"),
-                     header["monotonic_at_start"])
+        self._cpu = (first.get("cpu_busy_jiffies"), first.get("cpu_total_jiffies"), header["monotonic_at_start"])
         self._write(header)
         if first:
             self._thread = threading.Thread(target=self._run, daemon=True)
@@ -1031,8 +1019,7 @@ class HostSampler:
         window = total - was_total if was_total is not None else 0
         if was_busy is None or elapsed < _CPU_MIN_INTERVAL_S or window <= 0:
             return
-        sample["cpu_busy_cores"] = round(
-            (busy - was_busy) * sample["cores"] / window, 3)
+        sample["cpu_busy_cores"] = round((busy - was_busy) * sample["cores"] / window, 3)
 
 
 #: `UX-893`: how many points one element's CPU curve may publish. The
@@ -1108,9 +1095,9 @@ def element_cpu_series(rows: list, cap: int = ELEMENT_CPU_SERIES_CAP) -> dict:
             bucket = deltas.setdefault(element, {})
             bucket[t1] = bucket.get(t1, 0.0) + (cpu1 - cpu0) / 1e6 / window
     return {
-        element: [[int(t * 1_000_000), round(cores, 3)]
-                  for t, cores in sorted(bucket.items())][:cap]
-        for element, bucket in sorted(deltas.items()) if bucket
+        element: [[int(t * 1_000_000), round(cores, 3)] for t, cores in sorted(bucket.items())][:cap]
+        for element, bucket in sorted(deltas.items())
+        if bucket
     }
 
 
@@ -1128,8 +1115,7 @@ class ElementCpuSampler:
     whether the build succeeds.
     """
 
-    def __init__(self, path: str, trace_log_path: str,
-                 interval_s: float = HOST_SAMPLE_INTERVAL_S):
+    def __init__(self, path: str, trace_log_path: str, interval_s: float = HOST_SAMPLE_INTERVAL_S):
         self.path = path
         self.trace_log_path = trace_log_path
         self.interval_s = interval_s
@@ -1149,11 +1135,15 @@ class ElementCpuSampler:
         # log, like the jobserver ledger and the invocation log, and
         # nothing but `attach_element_cpu_series` ever opens it. The
         # published document is `cpu_time.per_element_series`.
-        self._write({"kind": "element cpu samples",
-                     "interval_s": self.interval_s,
-                     "clock": "CLOCK_MONOTONIC",
-                     "wall_at_start": time.time(),
-                     "monotonic_at_start": time.monotonic()})
+        self._write(
+            {
+                "kind": "element cpu samples",
+                "interval_s": self.interval_s,
+                "clock": "CLOCK_MONOTONIC",
+                "wall_at_start": time.time(),
+                "monotonic_at_start": time.monotonic(),
+            }
+        )
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
         return self
@@ -1182,8 +1172,7 @@ class ElementCpuSampler:
         the last tick stopped is the whole mechanism - and no handle
         outlives the tick."""
         try:
-            with open(self.trace_log_path, encoding="utf-8",
-                      errors="replace") as handle:
+            with open(self.trace_log_path, encoding="utf-8", errors="replace") as handle:
                 handle.seek(self._offset)
                 lines = handle.readlines()
                 self._offset = handle.tell()
@@ -1211,8 +1200,7 @@ class ElementCpuSampler:
                     # series ends where the readings do.
                     self._live.pop(pid, None)
                     continue
-                self._write({"t": at, "pid": pid, "element": element,
-                             "cpu_us": cpu_us})
+                self._write({"t": at, "pid": pid, "element": element, "cpu_us": cpu_us})
                 self.samples += 1
             self._stop.wait(self.interval_s)
 
@@ -1292,8 +1280,7 @@ def _read_make_probe(cache_path: Optional[str]) -> dict:
         return {}
 
 
-def write_decisions_with_sandbox_make(captured: str, destination: str,
-                                     jobserver_fifo: Optional[str]) -> None:
+def write_decisions_with_sandbox_make(captured: str, destination: str, jobserver_fifo: Optional[str]) -> None:
     """UX-916: the shim's decisions file copied out with each row
     carrying the sandbox `make` that element was probed on, and the auth
     style that version implies (`style_for_make_version`).
@@ -1323,13 +1310,12 @@ def write_decisions_with_sandbox_make(captured: str, destination: str,
     what the probe stored."""
     with open(destination, "w", encoding="utf-8") as handle:
         for row in read_jobserver_decisions(captured):
-            probe = _read_make_probe(
-                _make_probe_cache_path(jobserver_fifo, row.get("element")))
+            probe = _read_make_probe(_make_probe_cache_path(jobserver_fifo, row.get("element")))
             if probe.get("available"):
                 version = probe.get("version")
-                row = dict(row,
-                           sandbox_make=(version or "").splitlines()[0],
-                           auth_style=style_for_make_version(version))
+                row = dict(
+                    row, sandbox_make=(version or "").splitlines()[0], auth_style=style_for_make_version(version)
+                )
             handle.write(json.dumps(row, sort_keys=True) + "\n")
 
 
@@ -1357,8 +1343,7 @@ def lto_preflight_warnings(decisions: list, jobserver_fifo: Optional[str]) -> li
         if not element or element in seen or policy not in _COMPILER_SAFE_POLICIES:
             continue
         probe = _read_make_probe(_make_probe_cache_path(jobserver_fifo, element))
-        make_below_44 = (bool(probe.get("available"))
-                         and style_for_make_version(probe.get("version")) == "fd")
+        make_below_44 = bool(probe.get("available")) and style_for_make_version(probe.get("version")) == "fd"
         if not make_below_44:
             continue
         seen.add(element)
@@ -1366,12 +1351,14 @@ def lto_preflight_warnings(decisions: list, jobserver_fifo: Optional[str]) -> li
             lines.append(
                 f"Note: {element} keeps its jobserver auth (sandbox make "
                 f"<4.4, {policy}); make reads the fd directly. An element "
-                f"that also drives LTO needs the flto override (UX-913)")
+                f"that also drives LTO needs the flto override (UX-913)"
+            )
             continue
         lines.append(
             f"Warning: {element} scrubbed to recipe -jN (sandbox make <4.4); "
             f"move it to make >=4.4 for fifo pool-fill, or force fd/flto "
-            f"(UX-879/880)")
+            f"(UX-879/880)"
+        )
     return lines
 
 
@@ -1458,8 +1445,7 @@ def count_memory_psi_withdraws(path: str) -> int:
                     row = json.loads(line)
                 except ValueError:
                     continue
-                if (row.get("action") == "withdraw"
-                        and str(row.get("reason", "")).startswith("memory psi")):
+                if row.get("action") == "withdraw" and str(row.get("reason", "")).startswith("memory psi"):
                     count += 1
     except OSError:
         return 0
@@ -1529,8 +1515,7 @@ def read_cache_key_set_from_plane1_log(plane1_log_path: Optional[str]) -> Option
 JOBSERVER_WRAPPED_TOOLS = ("ld.lld", "lld", "ld.gold", "mold", "ninja")
 
 #: The wrapper scripts, bind-mounted read-only ahead of `PATH` (UX-846).
-JOBSERVER_WRAPPERS_DIR = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "native_trace", "wrappers")
+JOBSERVER_WRAPPERS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "native_trace", "wrappers")
 
 
 def admission_enabled() -> bool:
@@ -1538,8 +1523,7 @@ def admission_enabled() -> bool:
     return os.environ.get("BGA_ADMISSION") == "1"
 
 
-def probe_jobserver_wrapper_policy(
-        tools: tuple[str, ...] = JOBSERVER_WRAPPED_TOOLS) -> list[dict]:
+def probe_jobserver_wrapper_policy(tools: tuple[str, ...] = JOBSERVER_WRAPPED_TOOLS) -> list[dict]:
     """UX-846: one row per wrapped tool name, `{tool, version, policy}`.
 
     Run once, host-side, before the build - one `--version` per tool,
@@ -1561,8 +1545,7 @@ def probe_jobserver_wrapper_policy(
             continue
         version, policy = None, "held"
         try:
-            probed = subprocess.run([path, "--version"], capture_output=True,
-                                    text=True, timeout=2, check=False)
+            probed = subprocess.run([path, "--version"], capture_output=True, text=True, timeout=2, check=False)
             out = probed.stdout.strip()
             version = out.splitlines()[0] if out else None
             if "jobserver" in (probed.stdout + probed.stderr).lower():
@@ -1604,7 +1587,7 @@ def _cmd_target(cmd: list[str]) -> Optional[str]:
         if tok in _BST_TARGET_SUBCOMMANDS:
             valued = _BST_SUBCOMMAND_OPTIONS_ONE_VALUE.get(tok, frozenset())
             skip_value = False
-            for later in cmd[i + 1:]:
+            for later in cmd[i + 1 :]:
                 if skip_value:
                     skip_value = False
                     continue
@@ -1623,12 +1606,25 @@ def _cmd_target(cmd: list[str]) -> Optional[str]:
 # below take exactly one; anything else the group defines (`--verbose`,
 # `--strict`, `--pull-buildtrees`, ...) is a bare flag, zero.
 _BST_GLOBAL_OPTIONS_TWO_VALUES = frozenset({"-o", "--option"})
-_BST_GLOBAL_OPTIONS_ONE_VALUE = frozenset({
-    "--config", "-c", "--directory", "-C", "--on-error", "--fetchers",
-    "--builders", "--pushers", "--max-jobs", "--network-retries",
-    "--error-lines", "--message-lines", "--log-file", "--default-mirror",
-    "--cache-buildtrees",
-})
+_BST_GLOBAL_OPTIONS_ONE_VALUE = frozenset(
+    {
+        "--config",
+        "-c",
+        "--directory",
+        "-C",
+        "--on-error",
+        "--fetchers",
+        "--builders",
+        "--pushers",
+        "--max-jobs",
+        "--network-retries",
+        "--error-lines",
+        "--message-lines",
+        "--log-file",
+        "--default-mirror",
+        "--cache-buildtrees",
+    }
+)
 
 
 def _bst_global_options(cmd: list[str]) -> tuple[list[str], bool]:
@@ -1646,10 +1642,10 @@ def _bst_global_options(cmd: list[str]) -> tuple[list[str], bool]:
         if not tok.startswith("-"):
             return opts, True
         if tok in _BST_GLOBAL_OPTIONS_TWO_VALUES and i + 3 <= n:
-            opts.extend(cmd[i:i + 3])
+            opts.extend(cmd[i : i + 3])
             i += 3
         elif tok in _BST_GLOBAL_OPTIONS_ONE_VALUE and i + 2 <= n:
-            opts.extend(cmd[i:i + 2])
+            opts.extend(cmd[i : i + 2])
             i += 2
         else:
             opts.append(tok)
@@ -1693,7 +1689,10 @@ def read_project_max_jobs(project_dir: str, cmd: list[str]) -> Optional[int]:
     try:
         proc = subprocess.run(
             [cmd[0], "show", "--format", "%{vars}", target],
-            cwd=project_dir, capture_output=True, text=True, check=False,
+            cwd=project_dir,
+            capture_output=True,
+            text=True,
+            check=False,
             timeout=120,
         )
     except (OSError, subprocess.TimeoutExpired):
@@ -1745,10 +1744,12 @@ def _parse_element_kinds(show_output: str) -> "_ElementKindsMap":
     return kinds
 
 
-def jobserver_kinds_warning(jobserver: Optional[int],
-                            element_kinds: Optional[dict],
-                            diagnostic: Optional[dict] = None,
-                            kinds_read_path: Optional[str] = None) -> Optional[str]:
+def jobserver_kinds_warning(
+    jobserver: Optional[int],
+    element_kinds: Optional[dict],
+    diagnostic: Optional[dict] = None,
+    kinds_read_path: Optional[str] = None,
+) -> Optional[str]:
     """UX-843's verifier: a failed kinds read must not switch the mode
     off silently - no sandbox kind is resolved, so only a recipe whose
     own env still carries `JOBS` joins (`jobs_env`, UX-859); every
@@ -1758,17 +1759,18 @@ def jobserver_kinds_warning(jobserver: Optional[int],
     when given, so the warning is answerable without a second run."""
     if not jobserver or element_kinds is not None:
         return None
-    line = ("Warning: bst show gave no element kinds - only a recipe that "
-            "itself spends JOBS joins the jobserver this capture (every "
-            "other decision reads unknown_kind)")
+    line = (
+        "Warning: bst show gave no element kinds - only a recipe that "
+        "itself spends JOBS joins the jobserver this capture (every "
+        "other decision reads unknown_kind)"
+    )
     if diagnostic and diagnostic.get("reason"):
         line += f" ({diagnostic['reason']}"
         line += f", see {kinds_read_path})" if kinds_read_path else ")"
     return line
 
 
-def read_element_kinds_for_jobserver(project_dir: str,
-                                     cmd: list[str]) -> tuple[Optional[dict], dict]:
+def read_element_kinds_for_jobserver(project_dir: str, cmd: list[str]) -> tuple[Optional[dict], dict]:
     """UX-843/UX-870: every element's own kind, one `bst show --format
     '%{name} %{kind}'` before the build - the *user's own* global
     options (`_bst_global_options`) placed before `show`, since `-o`,
@@ -1795,32 +1797,35 @@ def read_element_kinds_for_jobserver(project_dir: str,
     """
     global_opts, has_subcommand = _bst_global_options(cmd)
     if not has_subcommand:
-        return None, {"argv": None, "returncode": None, "stderr_tail": "",
-                      "reason": "no-target"}
+        return None, {"argv": None, "returncode": None, "stderr_tail": "", "reason": "no-target"}
     target = _cmd_target(cmd)
     argv = [cmd[0], *global_opts, "show", "--format", "%{name} %{kind}"]
     if target is not None:
         argv.append(target)
     try:
         proc = subprocess.run(
-            argv, cwd=project_dir, capture_output=True, text=True,
-            check=False, timeout=120,
+            argv,
+            cwd=project_dir,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=120,
         )
     except subprocess.TimeoutExpired:
-        return None, {"argv": argv, "returncode": None, "stderr_tail": "",
-                      "reason": "timeout"}
+        return None, {"argv": argv, "returncode": None, "stderr_tail": "", "reason": "timeout"}
     except OSError as exc:
-        return None, {"argv": argv, "returncode": None,
-                      "stderr_tail": str(exc)[-2000:], "reason": "oserror"}
+        return None, {"argv": argv, "returncode": None, "stderr_tail": str(exc)[-2000:], "reason": "oserror"}
     if proc.returncode != 0:
-        return None, {"argv": argv, "returncode": proc.returncode,
-                      "stderr_tail": proc.stderr[-2000:], "reason": "exit"}
+        return None, {"argv": argv, "returncode": proc.returncode, "stderr_tail": proc.stderr[-2000:], "reason": "exit"}
     kinds = _parse_element_kinds(proc.stdout)
     if not kinds:
-        return None, {"argv": argv, "returncode": proc.returncode,
-                      "stderr_tail": proc.stderr[-2000:], "reason": "no-lines"}
-    return kinds, {"argv": argv, "count": len(kinds),
-                   "junctions": kinds.junctions, "collisions": kinds.collisions}
+        return None, {
+            "argv": argv,
+            "returncode": proc.returncode,
+            "stderr_tail": proc.stderr[-2000:],
+            "reason": "no-lines",
+        }
+    return kinds, {"argv": argv, "count": len(kinds), "junctions": kinds.junctions, "collisions": kinds.collisions}
 
 
 def _public_auth_style(public_raw: str) -> Optional[str]:
@@ -1838,8 +1843,7 @@ def _public_auth_style(public_raw: str) -> Optional[str]:
     return style if style in _AUTH_OVERRIDE_STYLES else None
 
 
-def read_element_auth_map_for_jobserver(project_dir: str,
-                                        cmd: list[str]) -> dict:
+def read_element_auth_map_for_jobserver(project_dir: str, cmd: list[str]) -> dict:
     """UX-882: a *separate* `bst show --format '%{name}<US>%{public}<RS>'`
     call (the RS/US-delimited scheme `bst_show_to_graph.py` already
     uses) - never appended to `read_element_kinds_for_jobserver`'s
@@ -1860,8 +1864,12 @@ def read_element_auth_map_for_jobserver(project_dir: str,
         argv.append(target)
     try:
         proc = subprocess.run(
-            argv, cwd=project_dir, capture_output=True, text=True,
-            check=False, timeout=120,
+            argv,
+            cwd=project_dir,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=120,
         )
     except (OSError, subprocess.TimeoutExpired):
         return {}
@@ -1891,8 +1899,7 @@ def _parse_dep_list(raw: str) -> list[str]:
     raw = raw.strip()
     if not raw or raw == "[]":
         return []
-    return [line.strip()[2:].strip() for line in raw.splitlines()
-            if line.strip().startswith("- ")]
+    return [line.strip()[2:].strip() for line in raw.splitlines() if line.strip().startswith("- ")]
 
 
 def _parse_jobserver_show_records(stdout: str) -> tuple[str, str, dict, dict, dict]:
@@ -1929,23 +1936,24 @@ def _parse_jobserver_show_records(stdout: str) -> tuple[str, str, dict, dict, di
         if name and style is not None:
             auth_map[name] = style
         if name:
-            deps = list(dict.fromkeys(
-                _parse_dep_list(build_deps_raw) + _parse_dep_list(runtime_deps_raw)))
+            deps = list(dict.fromkeys(_parse_dep_list(build_deps_raw) + _parse_dep_list(runtime_deps_raw)))
             element_deps[name] = deps
             try:
                 notparallel = _parse_yaml_mapping(vars_raw).get("notparallel")
             except RuntimeError:  # no PyYAML - a ranking nicety, not a build need
                 notparallel = None
             if notparallel is not None:
-                element_notparallel[name] = bool(notparallel) if isinstance(
-                    notparallel, bool) else str(notparallel).strip().lower() not in (
-                        "", "false", "no", "0")
-    return ("\n".join(kinds_lines), "".join(vars_blocks), auth_map,
-            element_deps, element_notparallel)
+                element_notparallel[name] = (
+                    bool(notparallel)
+                    if isinstance(notparallel, bool)
+                    else str(notparallel).strip().lower() not in ("", "false", "no", "0")
+                )
+    return ("\n".join(kinds_lines), "".join(vars_blocks), auth_map, element_deps, element_notparallel)
 
 
-def read_jobserver_bst_show(project_dir: str, cmd: list[str]) -> tuple[
-        Optional[int], Optional[dict], dict, dict, dict, dict]:
+def read_jobserver_bst_show(
+    project_dir: str, cmd: list[str]
+) -> tuple[Optional[int], Optional[dict], dict, dict, dict, dict]:
     """UX-1011: one `bst show` call in place of the three separate ones
     (`read_project_max_jobs`/`read_element_kinds_for_jobserver`/
     `read_element_auth_map_for_jobserver` above) `main`'s `--jobserver`
@@ -1970,48 +1978,62 @@ def read_jobserver_bst_show(project_dir: str, cmd: list[str]) -> tuple[
     """
     global_opts, has_subcommand = _bst_global_options(cmd)
     if not has_subcommand:
-        return None, None, {"argv": None, "returncode": None,
-                            "stderr_tail": "", "reason": "no-target"}, {}, {}, {}
+        return None, None, {"argv": None, "returncode": None, "stderr_tail": "", "reason": "no-target"}, {}, {}, {}
     target = _cmd_target(cmd)
-    fmt = FIELD_SEP.join(["%{name}", "%{kind}", "%{vars}", "%{public}",
-                          "%{build-deps}", "%{runtime-deps}"]) + RECORD_SEP
+    fmt = (
+        FIELD_SEP.join(["%{name}", "%{kind}", "%{vars}", "%{public}", "%{build-deps}", "%{runtime-deps}"]) + RECORD_SEP
+    )
     argv = [cmd[0], *global_opts, "show", "--format", fmt]
     if target is not None:
         argv.append(target)
     try:
         proc = subprocess.run(
-            argv, cwd=project_dir, capture_output=True, text=True,
-            check=False, timeout=120,
+            argv,
+            cwd=project_dir,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=120,
         )
     except subprocess.TimeoutExpired:
-        return None, None, {"argv": argv, "returncode": None,
-                            "stderr_tail": "", "reason": "timeout"}, {}, {}, {}
+        return None, None, {"argv": argv, "returncode": None, "stderr_tail": "", "reason": "timeout"}, {}, {}, {}
     except OSError as exc:
-        return None, None, {"argv": argv, "returncode": None,
-                            "stderr_tail": str(exc)[-2000:],
-                            "reason": "oserror"}, {}, {}, {}
+        return (
+            None,
+            None,
+            {"argv": argv, "returncode": None, "stderr_tail": str(exc)[-2000:], "reason": "oserror"},
+            {},
+            {},
+            {},
+        )
     if proc.returncode != 0:
-        return None, None, {"argv": argv, "returncode": proc.returncode,
-                            "stderr_tail": proc.stderr[-2000:],
-                            "reason": "exit"}, {}, {}, {}
-    kinds_text, vars_text, auth_map, element_deps, element_notparallel = (
-        _parse_jobserver_show_records(proc.stdout))
+        return (
+            None,
+            None,
+            {"argv": argv, "returncode": proc.returncode, "stderr_tail": proc.stderr[-2000:], "reason": "exit"},
+            {},
+            {},
+            {},
+        )
+    kinds_text, vars_text, auth_map, element_deps, element_notparallel = _parse_jobserver_show_records(proc.stdout)
     kinds = _parse_element_kinds(kinds_text)
     if not kinds:
-        return None, None, {"argv": argv, "returncode": proc.returncode,
-                            "stderr_tail": proc.stderr[-2000:],
-                            "reason": "no-lines"}, {}, {}, {}
-    project_max_jobs = (
-        _parse_max_jobs_from_vars(vars_text) if target is not None else None)
-    diagnostic = {"argv": argv, "count": len(kinds),
-                 "junctions": kinds.junctions, "collisions": kinds.collisions}
-    return (project_max_jobs, kinds, diagnostic, auth_map,
-            element_deps, element_notparallel)
+        return (
+            None,
+            None,
+            {"argv": argv, "returncode": proc.returncode, "stderr_tail": proc.stderr[-2000:], "reason": "no-lines"},
+            {},
+            {},
+            {},
+        )
+    project_max_jobs = _parse_max_jobs_from_vars(vars_text) if target is not None else None
+    diagnostic = {"argv": argv, "count": len(kinds), "junctions": kinds.junctions, "collisions": kinds.collisions}
+    return (project_max_jobs, kinds, diagnostic, auth_map, element_deps, element_notparallel)
 
 
-def read_jobserver_metadata_for_build(project_dir: str, cmd: list[str],
-                                      jobserver: Optional[int]) -> tuple[
-        Optional[int], Optional[dict], Optional[dict], dict, dict, dict]:
+def read_jobserver_metadata_for_build(
+    project_dir: str, cmd: list[str], jobserver: Optional[int]
+) -> tuple[Optional[int], Optional[dict], Optional[dict], dict, dict, dict]:
     """UX-1011: `main`'s own `--jobserver` site - the one call
     (`read_jobserver_bst_show`) it pays before the build, and the one
     place a regression back to the three separate calls would show up.
@@ -2022,8 +2044,7 @@ def read_jobserver_metadata_for_build(project_dir: str, cmd: list[str],
     return read_jobserver_bst_show(project_dir, cmd)
 
 
-def structural_ranking(element_kinds: dict, element_deps: dict,
-                       element_notparallel: dict) -> dict[str, float]:
+def structural_ranking(element_kinds: dict, element_deps: dict, element_notparallel: dict) -> dict[str, float]:
     """UX-1005 track C (Ruslan's follow-up): the admission/recipe
     ranking `AdmissionBroker`/`Broker` fall back to when no `--plan`
     was given - a synthetic slack, least-first, from graph structure
@@ -2062,13 +2083,15 @@ def structural_ranking(element_kinds: dict, element_deps: dict,
         memo[element] = result
         return result
 
-    return {name: -float(level(name, frozenset())) + (0.5 if element_notparallel.get(name) else 0.0)
-            for name in element_kinds}
+    return {
+        name: -float(level(name, frozenset())) + (0.5 if element_notparallel.get(name) else 0.0)
+        for name in element_kinds
+    }
 
 
-def _write_kinds_read(bind_dir: str, jobserver: Optional[int],
-                      element_kinds: Optional[dict],
-                      diagnostic: dict) -> Optional[str]:
+def _write_kinds_read(
+    bind_dir: str, jobserver: Optional[int], element_kinds: Optional[dict], diagnostic: dict
+) -> Optional[str]:
     """UX-870: `kinds_read.json` beside `element_kinds.json`, and the
     warning to print (or `None`) - split out of `run_traced_build` so
     the write+warn pairing is testable without a real sandbox."""
@@ -2078,28 +2101,38 @@ def _write_kinds_read(bind_dir: str, jobserver: Optional[int],
     return jobserver_kinds_warning(jobserver, element_kinds, diagnostic, path)
 
 
-def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrapped_log_path: Optional[str] = None, trace_opens: bool = False, argv_log_path: Optional[str] = None, invocation_log_path: Optional[str] = None,
-                     trace_spine=False, diagnostics_path: Optional[str] = None,
-                     no_inject: bool = False, inhibit: bool = False,
-                     host_samples_path: Optional[str] = None,
-                     cpu_samples_path: Optional[str] = None,
-                     jobserver: Optional[int] = None,
-                     jobserver_seed: Optional[int] = None,
-                     jobserver_auth: Optional[str] = None,
-                     jobserver_pool: str = "dynamic",
-                     jobserver_capacity: Optional[int] = None,
-                     jobserver_ledger_path: Optional[str] = None,
-                     jobserver_status_path: Optional[str] = None,
-                     project_max_jobs: Optional[int] = None,
-                     jobserver_decisions_path: Optional[str] = None,
-                     element_kinds: Optional[dict] = None,
-                     kinds_read_diagnostic: Optional[dict] = None,
-                     element_auth_map: Optional[dict] = None,
-                     plan_path: Optional[str] = None,
-                     element_deps: Optional[dict] = None,
-                     element_notparallel: Optional[dict] = None,
-                     broker_status_path: Optional[str] = None,
-                     admission_status_path: Optional[str] = None) -> int:
+def run_traced_build(
+    project_dir: str,
+    cmd: list[str],
+    raw_log_path: str,
+    wrapped_log_path: Optional[str] = None,
+    trace_opens: bool = False,
+    argv_log_path: Optional[str] = None,
+    invocation_log_path: Optional[str] = None,
+    trace_spine=False,
+    diagnostics_path: Optional[str] = None,
+    no_inject: bool = False,
+    inhibit: bool = False,
+    host_samples_path: Optional[str] = None,
+    cpu_samples_path: Optional[str] = None,
+    jobserver: Optional[int] = None,
+    jobserver_seed: Optional[int] = None,
+    jobserver_auth: Optional[str] = None,
+    jobserver_pool: str = "dynamic",
+    jobserver_capacity: Optional[int] = None,
+    jobserver_ledger_path: Optional[str] = None,
+    jobserver_status_path: Optional[str] = None,
+    project_max_jobs: Optional[int] = None,
+    jobserver_decisions_path: Optional[str] = None,
+    element_kinds: Optional[dict] = None,
+    kinds_read_diagnostic: Optional[dict] = None,
+    element_auth_map: Optional[dict] = None,
+    plan_path: Optional[str] = None,
+    element_deps: Optional[dict] = None,
+    element_notparallel: Optional[dict] = None,
+    broker_status_path: Optional[str] = None,
+    admission_status_path: Optional[str] = None,
+) -> int:
     """Run cmd (a real `bst` invocation) with the bwrap shim + LD_PRELOAD
     hook active, writing raw START/END lines to raw_log_path. Returns
     cmd's own real exit code - a trace is captured best-effort and must
@@ -2244,8 +2277,10 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                 # between `Capturing into ...` and BuildStream's first
                 # line. The rule this follows: any bga-owned step that
                 # can plausibly take >5s announces itself.
-                print(f"Assessing {len(discover_element_names(project_dir))} "
-                      f"element(s) for static binaries...", file=sys.stderr)
+                print(
+                    f"Assessing {len(discover_element_names(project_dir))} element(s) for static binaries...",
+                    file=sys.stderr,
+                )
                 verdicts = census_spine_verdicts(project_dir)
                 census_path = os.path.join(shim_dir, "spine-census.json")
                 with open(census_path, "w", encoding="utf-8") as handle:
@@ -2256,11 +2291,12 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                 # expensive outcome, and it used to produce no output at
                 # all. One line, before the build, so the price is at
                 # least visible when it is being paid.
-                print(format_census_coverage(
-                          project_dir, verdicts,
-                          getattr(census_spine_verdicts,
-                                  "last_unassessable", None)),
-                      file=sys.stderr)
+                print(
+                    format_census_coverage(
+                        project_dir, verdicts, getattr(census_spine_verdicts, "last_unassessable", None)
+                    ),
+                    file=sys.stderr,
+                )
         else:
             env.pop("BST_TRACE_SPINE", None)
             env.pop("BST_TRACE_SPINE_POLICY", None)
@@ -2332,8 +2368,7 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
         # the FIFO's own lifecycle (only exists under `--jobserver`).
         captured_decisions = os.path.join(bind_dir, "jobserver_decisions.jsonl")
         if jobserver:
-            jobserver_fifo, jobserver_fd, _tokens = open_jobserver(
-                jobserver, bind_dir, seed=jobserver_seed)
+            jobserver_fifo, jobserver_fd, _tokens = open_jobserver(jobserver, bind_dir, seed=jobserver_seed)
             env["BST_TRACE_JOBSERVER"] = jobserver_fifo
             env["BST_TRACE_JOBSERVER_AUTH"] = jobserver_auth or "fd"
             # UX-1005 track C, verifier fix: admission draws its one
@@ -2397,11 +2432,15 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                 # own this same ledger's audit below - the controller's
                 # own audit thread must not also run against it.
                 pool_controller = PoolController(
-                    jobserver_fd, jobserver, capacity=jobserver_capacity,
+                    jobserver_fd,
+                    jobserver,
+                    capacity=jobserver_capacity,
                     ledger_path=captured_jobserver_ledger,
-                    psi_paths={"broker_owns_audit": bool(
-                                  element_kinds and (plan_path or element_deps)),
-                              "seed": jobserver_seed})
+                    psi_paths={
+                        "broker_owns_audit": bool(element_kinds and (plan_path or element_deps)),
+                        "seed": jobserver_seed,
+                    },
+                )
                 pool_controller.start()
             env["BST_TRACE_JOBSERVER_DECISIONS"] = captured_decisions
             if project_max_jobs is not None:
@@ -2423,8 +2462,7 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
             # back to it only when the command-line override does not
             # match the element.
             if element_auth_map:
-                captured_auth_map = os.path.join(
-                    bind_dir, "element_auth_map.json")
+                captured_auth_map = os.path.join(bind_dir, "element_auth_map.json")
                 with open(captured_auth_map, "w", encoding="utf-8") as handle:
                     json.dump(element_auth_map, handle)
                 env["BST_TRACE_ELEMENT_AUTH_MAP"] = captured_auth_map
@@ -2435,8 +2473,7 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
             # reason on failure - so a silent `unknown_kind` capture has
             # a file naming why, not just a one-line warning.
             if kinds_read_diagnostic is not None:
-                kinds_warning = _write_kinds_read(
-                    bind_dir, jobserver, element_kinds, kinds_read_diagnostic)
+                kinds_warning = _write_kinds_read(bind_dir, jobserver, element_kinds, kinds_read_diagnostic)
                 if kinds_warning:
                     print(kinds_warning, file=sys.stderr)
             # UX-849/UX-1005 track C (Ruslan): a proxy per element named
@@ -2450,8 +2487,7 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
             if plan_path:
                 slack_plan, ranking_source = read_plan_slack(plan_path), "plan"
             elif admission_enabled() and element_kinds and element_deps:
-                slack_plan = structural_ranking(
-                    element_kinds, element_deps, element_notparallel or {})
+                slack_plan = structural_ranking(element_kinds, element_deps, element_notparallel or {})
                 ranking_source = "structural"
             else:
                 slack_plan, ranking_source = None, None
@@ -2460,16 +2496,20 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                 proxy_fds = create_jobserver_proxies(proxies_dir, element_kinds)
                 env["BST_TRACE_PROXY_DIR"] = proxies_dir
                 broker = Broker(
-                    jobserver_fd, proxy_fds, slack_plan,
+                    jobserver_fd,
+                    proxy_fds,
+                    slack_plan,
                     ledger_path=captured_jobserver_ledger,
-                    scratch={"decisions": captured_decisions,
-                            "proxies_dir": proxies_dir,
-                            "peak_rss": (read_plan_peak_rss(plan_path)
-                                        if plan_path else {}),
-                            # UX-854: the *live* host-side log the hook
-                            # is still writing to - `raw_log_path` only
-                            # gets a copy after the build (`copy_out`).
-                            "raw_log_path": os.path.join(bind_dir, "trace.log")})
+                    scratch={
+                        "decisions": captured_decisions,
+                        "proxies_dir": proxies_dir,
+                        "peak_rss": (read_plan_peak_rss(plan_path) if plan_path else {}),
+                        # UX-854: the *live* host-side log the hook
+                        # is still writing to - `raw_log_path` only
+                        # gets a copy after the build (`copy_out`).
+                        "raw_log_path": os.path.join(bind_dir, "trace.log"),
+                    },
+                )
                 broker.start()
                 # UX-1005 track C: an `AdmissionBroker` too, ranking the
                 # shims *waiting to start* by the same slack plan -
@@ -2483,13 +2523,15 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                 # unchanged.
                 if admission_pool_size is not None:
                     admission_proxies_dir = os.path.join(bind_dir, "admission_proxies")
-                    admission_proxy_fds = create_jobserver_proxies(
-                        admission_proxies_dir, element_kinds)
+                    admission_proxy_fds = create_jobserver_proxies(admission_proxies_dir, element_kinds)
                     env["BST_TRACE_ADMISSION_BROKER_DIR"] = admission_proxies_dir
                     admission_broker = AdmissionBroker(
-                        jobserver_fd, admission_proxy_fds, slack_plan,
+                        jobserver_fd,
+                        admission_proxy_fds,
+                        slack_plan,
                         os.path.join(admission_proxies_dir, "requests.jsonl"),
-                        ledger_path=captured_jobserver_ledger)
+                        ledger_path=captured_jobserver_ledger,
+                    )
                     admission_broker.start()
                     admission_ranking_source = ranking_source
             else:
@@ -2543,44 +2585,38 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                 # time anyone reads the summary that points at them.
                 captured_stderr = captured_diagnostics + ".stderr"
                 if os.path.isdir(captured_stderr):
-                    shutil.copytree(captured_stderr,
-                                    diagnostics_path + ".stderr",
-                                    dirs_exist_ok=True)
+                    shutil.copytree(captured_stderr, diagnostics_path + ".stderr", dirs_exist_ok=True)
             if invocation_log_path is not None and os.path.exists(captured_invocations):
                 shutil.copyfile(captured_invocations, invocation_log_path)
-            if (jobserver_ledger_path is not None
-                    and os.path.exists(captured_jobserver_ledger)):
+            if jobserver_ledger_path is not None and os.path.exists(captured_jobserver_ledger):
                 shutil.copyfile(captured_jobserver_ledger, jobserver_ledger_path)
             if jobserver_decisions_path is not None and os.path.exists(captured_decisions):
                 # UX-916: enriched on the way out, not copied - the probe
                 # cache this reads dies with the FIFO.
-                write_decisions_with_sandbox_make(
-                    captured_decisions, jobserver_decisions_path, jobserver_fifo)
+                write_decisions_with_sandbox_make(captured_decisions, jobserver_decisions_path, jobserver_fifo)
 
         # `UX-378`: the host's own memory, sampled while the build runs.
         # Around the build and nothing else - the census and the shim
         # probe before it are bga's own work, and a series that included
         # them would describe this tool rather than the build.
-        sampler = (HostSampler(host_samples_path) if host_samples_path
-                   else contextlib.nullcontext())
+        sampler = HostSampler(host_samples_path) if host_samples_path else contextlib.nullcontext()
         # `UX-893`: and the per-element half of the same question, on
         # the same tick. `captured_log` is the raw log as the hook and
         # the spine append to it, which is where the live pid set is.
         cpu_sampler = (
-            ElementCpuSampler(cpu_samples_path,
-                              os.path.join(bind_dir, "trace.log"))
-            if cpu_samples_path else contextlib.nullcontext())
+            ElementCpuSampler(cpu_samples_path, os.path.join(bind_dir, "trace.log"))
+            if cpu_samples_path
+            else contextlib.nullcontext()
+        )
         try:
             with sampler, cpu_sampler, progress.timed_build():
                 if wrapped_log_path is not None:
                     with open(wrapped_log_path, "w", encoding="utf-8") as out_f:
-                        returncode = run_wrapped(project_dir, cmd, out_f,
-                                                 env=env, inhibit=inhibit)
+                        returncode = run_wrapped(project_dir, cmd, out_f, env=env, inhibit=inhibit)
                 else:
                     # UX-157: same own-group treatment as the wrapped
                     # path, so an interrupt here cannot orphan the build.
-                    proc = subprocess.Popen(cmd, cwd=project_dir, env=env,
-                                            start_new_session=True)
+                    proc = subprocess.Popen(cmd, cwd=project_dir, env=env, start_new_session=True)
                     try:
                         returncode = proc.wait()
                     except BaseException:
@@ -2591,9 +2627,7 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
             # below is what saves it. Re-raised as `CaptureInterrupted`
             # so callers can tell "the user stopped this" from "bga
             # crashed" without matching on a signal number.
-            raise CaptureInterrupted(
-                "the capture was interrupted; the trace captured so far was kept"
-            ) from None
+            raise CaptureInterrupted("the capture was interrupted; the trace captured so far was kept") from None
         finally:
             # UX-845: stopped before `copy_out` reads its ledger, and
             # before the FIFO it writes to closes underneath it.
@@ -2609,14 +2643,18 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                 broker.stop()
                 if broker_status_path is not None:
                     with open(broker_status_path, "w", encoding="utf-8") as handle:
-                        json.dump({
-                            "grants": broker.grants, "drains": broker.drains,
-                            "elements_in_plan": len(broker.plan),
-                            "elements_median_slack": broker.median_slack,
-                            "memory_withheld": broker.memory_withheld,
-                            "leaks": broker.leaks,
-                            "tokens_refilled": broker.tokens_refilled,
-                        }, handle)
+                        json.dump(
+                            {
+                                "grants": broker.grants,
+                                "drains": broker.drains,
+                                "elements_in_plan": len(broker.plan),
+                                "elements_median_slack": broker.median_slack,
+                                "memory_withheld": broker.memory_withheld,
+                                "leaks": broker.leaks,
+                                "tokens_refilled": broker.tokens_refilled,
+                            },
+                            handle,
+                        )
             # UX-1005 track C: stopped for the same reason `broker` is -
             # before `copy_out`/`close_jobserver` reach what it still
             # holds open. `admission_status_path` carries the pool's own
@@ -2625,16 +2663,19 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
             if admission_broker is not None:
                 admission_broker.stop()
             if admission_status_path is not None and admission_pool_size is not None:
-                wait_total_us = sum(admission_wait_by_element(
-                    read_jobserver_ledger(captured_jobserver_ledger)).values())
+                wait_total_us = sum(
+                    admission_wait_by_element(read_jobserver_ledger(captured_jobserver_ledger)).values()
+                )
                 with open(admission_status_path, "w", encoding="utf-8") as handle:
-                    json.dump({
-                        "pool_size": admission_pool_size,
-                        "wait_total_us": wait_total_us,
-                        "ranked_grants": (admission_broker.grants
-                                         if admission_broker is not None else 0),
-                        "ranking_source": admission_ranking_source,
-                    }, handle)
+                    json.dump(
+                        {
+                            "pool_size": admission_pool_size,
+                            "wait_total_us": wait_total_us,
+                            "ranked_grants": (admission_broker.grants if admission_broker is not None else 0),
+                            "ranking_source": admission_ranking_source,
+                        },
+                        handle,
+                    )
             for fd in proxy_fds.values():
                 with contextlib.suppress(OSError):
                     os.close(fd)
@@ -2645,8 +2686,7 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
             # UX-883: the elements UX-878's compiler-safe scrub silently
             # narrowed - named here, before `close_jobserver` removes
             # the FIFO whose dirname the probe cache is keyed under.
-            for line in lto_preflight_warnings(
-                    read_jobserver_decisions(captured_decisions), jobserver_fifo):
+            for line in lto_preflight_warnings(read_jobserver_decisions(captured_decisions), jobserver_fifo):
                 print(line, file=sys.stderr)
             close_jobserver(jobserver_fifo, jobserver_fd)
         return returncode
@@ -2659,9 +2699,7 @@ _RUSAGE_KEYS = frozenset({"utime", "stime", "cutime", "cstime"})
 # two above, so they join that set rather than getting a third.
 # `inblock`/`oublock` are the kernel's 512-byte block-layer units;
 # `_IO_BLOCK_BYTES` is where that is converted, once.
-_RUSAGE_INT_KEYS = frozenset({"maxrss_kb", "cmaxrss_kb",
-                              "inblock", "oublock", "majflt", "minflt",
-                              "nvcsw", "nivcsw"})
+_RUSAGE_INT_KEYS = frozenset({"maxrss_kb", "cmaxrss_kb", "inblock", "oublock", "majflt", "minflt", "nvcsw", "nivcsw"})
 
 #: `ru_inblock`/`ru_oublock` count 512-byte blocks (the kernel divides
 #: its byte counters by 512 on the way in), so this recovers bytes.
@@ -2675,9 +2713,14 @@ _IO_BLOCK_BYTES = 512
 #: through, `_ResourcePressure` folds them, and `bga timeline` annotates
 #: with four of them - and a list written out three times is how a
 #: seventh field would reach two of them.
-_PRESSURE_FIELDS = ("read_bytes", "written_bytes", "major_faults",
-                    "minor_faults", "voluntary_switches",
-                    "involuntary_switches")
+_PRESSURE_FIELDS = (
+    "read_bytes",
+    "written_bytes",
+    "major_faults",
+    "minor_faults",
+    "voluntary_switches",
+    "involuntary_switches",
+)
 
 # UX-57: `part=` is appended by hooks that flush more than one window
 # per process, and absent in logs written before that existed - optional
@@ -2757,9 +2800,17 @@ def parse_open_lines(lines, open_element_overrides: Optional[dict[str, str]] = N
             element = open_element_overrides.get(invocation, element)
         entry = per_element.setdefault(
             element,
-            {"paths": set(), "dropped": 0, "processes": 0, "dropped_by_pid": {},
-             "windows": 0, "relative": 0, "dirfd": 0,
-             "relative_by_pid": {}, "dirfd_by_pid": {}},
+            {
+                "paths": set(),
+                "dropped": 0,
+                "processes": 0,
+                "dropped_by_pid": {},
+                "windows": 0,
+                "relative": 0,
+                "dirfd": 0,
+                "relative_by_pid": {},
+                "dirfd_by_pid": {},
+            },
         )
         # UX-57: one process may now write several windows, so counting
         # blocks would overstate the process count. `dropped` is a
@@ -2853,23 +2904,23 @@ def stream_trace_events(lines, total_lines: Optional[int] = None):
             if idx != 0:
                 fields = {}
                 break
-            remaining = remaining[len(marker):]
+            remaining = remaining[len(marker) :]
             next_space = remaining.find(" ")
             if next_space == -1:
                 fields = {}
                 break
             fields[key] = remaining[:next_space]
-            remaining = remaining[next_space + 1:]
+            remaining = remaining[next_space + 1 :]
         if not fields:
             continue
         element = "unknown"
         if remaining.startswith("element="):
-            remaining = remaining[len("element="):]
+            remaining = remaining[len("element=") :]
             next_space = remaining.find(" ")
             if next_space == -1:
                 continue  # element= present but no cmd= after it - malformed, skip
             element = remaining[:next_space]
-            remaining = remaining[next_space + 1:]
+            remaining = remaining[next_space + 1 :]
         # UX-56: optional sandbox id, emitted by a hook built after that
         # task. Absent in every earlier capture, so it is parsed only if
         # present and never fabricated - a trace without it simply cannot
@@ -2878,9 +2929,9 @@ def stream_trace_events(lines, total_lines: Optional[int] = None):
         if remaining.startswith("inv="):
             next_space = remaining.find(" ")
             if next_space != -1:
-                raw = remaining[len("inv="):next_space]
+                raw = remaining[len("inv=") : next_space]
                 invocation = None if raw == "none" else raw
-                remaining = remaining[next_space + 1:]
+                remaining = remaining[next_space + 1 :]
         # UX-45: optional real CPU-time fields, emitted on END lines only
         # by a hook built after that task. Parsed as "zero or more known
         # key=value pairs before cmd=", so a trace captured with the
@@ -2900,7 +2951,7 @@ def stream_trace_events(lines, total_lines: Optional[int] = None):
             next_space = remaining.find(" ")
             if next_space == -1:
                 break
-            token, candidate = remaining[:next_space], remaining[next_space + 1:]
+            token, candidate = remaining[:next_space], remaining[next_space + 1 :]
             key, _, value = token.partition("=")
             if key == "src":
                 source = value
@@ -2955,9 +3006,7 @@ def stream_trace_events(lines, total_lines: Optional[int] = None):
         if exit_status is not None:
             record["exit_status"] = exit_status
         if {"cutime", "cstime"} <= rusage.keys():
-            record["children_cpu_us"] = int(
-                round((rusage["cutime"] + rusage["cstime"]) * 1e6)
-            )
+            record["children_cpu_us"] = int(round((rusage["cutime"] + rusage["cstime"]) * 1e6))
         # `UX-379`: the three axes the same struct was already carrying.
         # Attached field by field rather than as a set, because a hook
         # built before this wrote none of them and one built after
@@ -2968,10 +3017,12 @@ def stream_trace_events(lines, total_lines: Optional[int] = None):
             record["read_bytes"] = rusage["inblock"] * _IO_BLOCK_BYTES
         if "oublock" in rusage:
             record["written_bytes"] = rusage["oublock"] * _IO_BLOCK_BYTES
-        for key, field in (("majflt", "major_faults"),
-                           ("minflt", "minor_faults"),
-                           ("nvcsw", "voluntary_switches"),
-                           ("nivcsw", "involuntary_switches")):
+        for key, field in (
+            ("majflt", "major_faults"),
+            ("minflt", "minor_faults"),
+            ("nvcsw", "voluntary_switches"),
+            ("nivcsw", "involuntary_switches"),
+        ):
             if key in rusage:
                 record[field] = rusage[key]
         yield record
@@ -3187,8 +3238,7 @@ def stream_records(events, counts: Optional[dict[str, int]] = None):
             # this corpus, which is the kind of threshold this codebase
             # does not add.
             if pending and pending[-1].get("ppid") != ev.get("ppid"):
-                yield _open_record(pending[0], pending[-1], len(pending),
-                                   reason="end-lost-pid-reused")
+                yield _open_record(pending[0], pending[-1], len(pending), reason="end-lost-pid-reused")
                 pending.clear()
             pending.append(ev)
         elif ev["event"] == "END":
@@ -3287,8 +3337,7 @@ def stream_records(events, counts: Optional[dict[str, int]] = None):
     pair_tick.done()
 
 
-def _open_record(start_ev: dict, final_ev: dict, exec_chain: int,
-                 reason: str = "no-observed-exit") -> dict:
+def _open_record(start_ev: dict, final_ev: dict, exec_chain: int, reason: str = "no-observed-exit") -> dict:
     """A process whose exit was never seen.
 
     `reason` distinguishes the two ways that happens, because they are
@@ -3598,10 +3647,7 @@ def _is_element_command_block(record: dict) -> bool:
     """
     if record.get("ppid") == 1 and record.get("pid") == 2:
         return True
-    return (
-        record.get("ppid") == 2
-        and _binary_name(record.get("cmd") or "") in _SHELL_BINARIES
-    )
+    return record.get("ppid") == 2 and _binary_name(record.get("cmd") or "") in _SHELL_BINARIES
 
 
 def _is_element_name(name: Optional[str]) -> bool:
@@ -3677,8 +3723,7 @@ class _RedundantOperations:
             self.excluded_command_blocks += 1
             return
         if not _is_element_name(r["element"]):
-            self.unresolved_signatures[
-                normalize_cmd_signature(r["cmd"])].add(r["element"])
+            self.unresolved_signatures[normalize_cmd_signature(r["cmd"])].add(r["element"])
             return
         if _is_element_build_driver(r["cmd"]):
             # UX-37: every element runs `make -f Makefile -jN` and
@@ -3705,8 +3750,7 @@ class _RedundantOperations:
         entry[0] += 1
         entry[1] += r["duration_s"]
         per_element = entry[3]
-        per_element[r["element"]] = per_element.get(
-            r["element"], 0.0) + r["duration_s"]
+        per_element[r["element"]] = per_element.get(r["element"], 0.0) + r["duration_s"]
 
     def finish(self):
         by_signature = self.by_signature
@@ -3732,33 +3776,35 @@ class _RedundantOperations:
             # single worst-affected element paid, not the sum. Both are
             # reported, each labelled for what it is; the sum stays because
             # it is the honest "total machine time spent on this" number.
-            worst_element = max(per_element_duration,
-                                key=lambda e: per_element_duration[e])
-            findings.append({
-                "signature": signature,
-                # `UX-375` added this beside the list; `UX-384` removed
-                # the list and this is what is left. `bga correlate` -
-                # the only consumer of a redundancy finding here - reads
-                # `worst_element` and the durations and never opened
-                # `elements`, and the list was the one term still
-                # O(elements) after the row cap: with 40 capped rows it
-                # is 78% of the section at 40 elements and 99% at 1,200.
-                # Removing a published key is what made this `plane2/v3`
-                # rather than an addition.
-                "element_count": len(elements),
-                "occurrence_count": count,
-                "total_duration_s": total_duration_s,
-                # UX-37: an upper bound on recoverable wall-clock, not a
-                # promise - sharing this work would still cost whatever the
-                # shared version costs, and these elements overlapped.
-                "max_element_duration_s": per_element_duration[worst_element],
-                "worst_element": worst_element,
-                "example_cmd": example_cmd,
-            })
+            worst_element = max(per_element_duration, key=lambda e: per_element_duration[e])
+            findings.append(
+                {
+                    "signature": signature,
+                    # `UX-375` added this beside the list; `UX-384` removed
+                    # the list and this is what is left. `bga correlate` -
+                    # the only consumer of a redundancy finding here - reads
+                    # `worst_element` and the durations and never opened
+                    # `elements`, and the list was the one term still
+                    # O(elements) after the row cap: with 40 capped rows it
+                    # is 78% of the section at 40 elements and 99% at 1,200.
+                    # Removing a published key is what made this `plane2/v3`
+                    # rather than an addition.
+                    "element_count": len(elements),
+                    "occurrence_count": count,
+                    "total_duration_s": total_duration_s,
+                    # UX-37: an upper bound on recoverable wall-clock, not a
+                    # promise - sharing this work would still cost whatever the
+                    # shared version costs, and these elements overlapped.
+                    "max_element_duration_s": per_element_duration[worst_element],
+                    "worst_element": worst_element,
+                    "example_cmd": example_cmd,
+                }
+            )
         # A signature seen *only* under unresolved buckets never reached the
         # loop above, so it is counted here.
         excluded_unresolved_only += sum(
-            1 for signature, buckets in unresolved_signatures.items()
+            1
+            for signature, buckets in unresolved_signatures.items()
             if signature not in by_signature and len(buckets) >= 2
         )
         # Ranked by the wall-clock-relevant figure, not by the sum: a
@@ -3829,18 +3875,56 @@ class _RedundantOperations:
 # essentially none.
 _UNDERPARALLEL_RATIO = 0.5
 
-WORK_BINARIES = frozenset({
-    "cc1", "cc1plus", "cc1obj", "cc1objplus",  # gcc's real compiler
-    "clang", "clang++", "clang-cpp",
-    "as", "ld", "ld.bfd", "ld.gold", "ld.lld", "collect2", "lto1",
-    "ar", "ranlib", "strip", "objcopy",
-    "rustc", "go", "javac",
-})
-ORCHESTRATION_BINARIES = frozenset({
-    "sh", "bash", "dash", "env", "make", "gmake", "ninja", "cmake",
-    "meson", "python", "python3", "uname", "sed", "grep", "cat", "sort",
-    "gcc", "g++", "cc", "c++", "clang-wrapper",  # compiler *drivers* - they exec cc1/as/ld
-})
+WORK_BINARIES = frozenset(
+    {
+        "cc1",
+        "cc1plus",
+        "cc1obj",
+        "cc1objplus",  # gcc's real compiler
+        "clang",
+        "clang++",
+        "clang-cpp",
+        "as",
+        "ld",
+        "ld.bfd",
+        "ld.gold",
+        "ld.lld",
+        "collect2",
+        "lto1",
+        "ar",
+        "ranlib",
+        "strip",
+        "objcopy",
+        "rustc",
+        "go",
+        "javac",
+    }
+)
+ORCHESTRATION_BINARIES = frozenset(
+    {
+        "sh",
+        "bash",
+        "dash",
+        "env",
+        "make",
+        "gmake",
+        "ninja",
+        "cmake",
+        "meson",
+        "python",
+        "python3",
+        "uname",
+        "sed",
+        "grep",
+        "cat",
+        "sort",
+        "gcc",
+        "g++",
+        "cc",
+        "c++",
+        "clang-wrapper",  # compiler *drivers* - they exec cc1/as/ld
+    }
+)
 
 # UX-32: the real `-jN` an element's own native build system was asked
 # for. It is in the trace verbatim (`/usr/bin/make -f Makefile -j1`), so
@@ -3849,7 +3933,7 @@ _REQUESTED_JOBS_RE = re.compile(r"(?:^|\s)-j\s*(\d+)(?:\s|$)")
 
 
 def classify_binary(name: str) -> str:
-    """"work" | "orchestration" | "unclassified" - see WORK_BINARIES."""
+    """One of "work", "orchestration", "unclassified" - see WORK_BINARIES."""
     if name in WORK_BINARIES:
         return "work"
     if name in ORCHESTRATION_BINARIES:
@@ -3944,8 +4028,7 @@ class _PerElementParallelism:
                 # real build one is the one that asked for the most.
                 value = int(match.group(1))
                 current = self.requested[element]
-                self.requested[element] = (
-                    value if current is None else max(current, value))
+                self.requested[element] = value if current is None else max(current, value)
 
     def finish(self):
         profiles = []
@@ -3954,30 +4037,32 @@ class _PerElementParallelism:
             unclassified = self.unclassified[element]
             requested_jobs = self.requested[element]
             profile = _concurrency_profile(work_intervals)
-            profiles.append({
-                "element": element,
-                "work_process_count": len(work_intervals),
-                "peak_work_concurrency": profile["peak"],
-                "mean_work_concurrency": profile["mean"],
-                "work_span_s": profile["span_s"],
-                "work_process_lifetime_s": profile["total_lifetime_s"],
-                "requested_jobs": requested_jobs,
-                # `UX-894`: the recipe's own `-jN` stays published -
-                # it is what a recipe author edits - but it is no
-                # longer the denominator. The element's *resolved*
-                # width is in `graph.json`, which the capture writes
-                # after this report, so these three are filled by
-                # `bga.plane2.apply_resolved_widths` the first time a
-                # graph is in hand. Absent, not a guess: an element
-                # with no resolved width gets no ratio. Note the ratio
-                # is NOT on its own the finding - an element pinned to
-                # one job achieves 100% of what it was granted while
-                # being exactly the problem. See `findings` below.
-                "resolved_jobs": None,
-                "jobs_denominator": None,
-                "achieved_vs_requested": None,
-                "unclassified_binaries": dict(sorted(unclassified.items(), key=lambda kv: -kv[1])),
-            })
+            profiles.append(
+                {
+                    "element": element,
+                    "work_process_count": len(work_intervals),
+                    "peak_work_concurrency": profile["peak"],
+                    "mean_work_concurrency": profile["mean"],
+                    "work_span_s": profile["span_s"],
+                    "work_process_lifetime_s": profile["total_lifetime_s"],
+                    "requested_jobs": requested_jobs,
+                    # `UX-894`: the recipe's own `-jN` stays published -
+                    # it is what a recipe author edits - but it is no
+                    # longer the denominator. The element's *resolved*
+                    # width is in `graph.json`, which the capture writes
+                    # after this report, so these three are filled by
+                    # `bga.plane2.apply_resolved_widths` the first time a
+                    # graph is in hand. Absent, not a guess: an element
+                    # with no resolved width gets no ratio. Note the ratio
+                    # is NOT on its own the finding - an element pinned to
+                    # one job achieves 100% of what it was granted while
+                    # being exactly the problem. See `findings` below.
+                    "resolved_jobs": None,
+                    "jobs_denominator": None,
+                    "achieved_vs_requested": None,
+                    "unclassified_binaries": dict(sorted(unclassified.items(), key=lambda kv: -kv[1])),
+                }
+            )
         # Two distinct real findings, decided across the whole trace rather
         # than per element in isolation:
         #
@@ -3999,7 +4084,8 @@ class _PerElementParallelism:
             if requested == 1 and peak_requested is not None and peak_requested > 1:
                 findings.append("pinned_to_one_job")
             elif (
-                requested is not None and requested > 1
+                requested is not None
+                and requested > 1
                 and profile["peak_work_concurrency"] < requested * _UNDERPARALLEL_RATIO
             ):
                 findings.append("underachieved_requested_jobs")
@@ -4039,9 +4125,7 @@ def assess_element_attribution(by_element: dict[str, int]) -> dict:
     recognized_processes = sum(recognized.values())
     largest = max(by_element.items(), key=lambda kv: kv[1], default=(None, 0))
     unrecognized = {k: v for k, v in by_element.items() if not k.endswith(".bst")}
-    largest_unrecognized = max(
-        unrecognized.items(), key=lambda kv: kv[1], default=(None, 0)
-    )
+    largest_unrecognized = max(unrecognized.items(), key=lambda kv: kv[1], default=(None, 0))
 
     # UX-66: validity and coverage are different properties, and the
     # original rule (`recognized_processes == total`) conflated them.
@@ -4230,13 +4314,15 @@ def classify_elf(path: str) -> Optional[str]:
             endian = "<" if header[5] == 1 else ">"
             e_type = struct.unpack_from(endian + "H", header, 16)[0]
             if is_64:
-                phoff, phentsize, phnum = struct.unpack_from(
-                    endian + "Q", header, 32)[0], *struct.unpack_from(
-                    endian + "HH", header, 54)
+                phoff, phentsize, phnum = (
+                    struct.unpack_from(endian + "Q", header, 32)[0],
+                    *struct.unpack_from(endian + "HH", header, 54),
+                )
             else:
-                phoff, phentsize, phnum = struct.unpack_from(
-                    endian + "I", header, 28)[0], *struct.unpack_from(
-                    endian + "HH", header, 42)
+                phoff, phentsize, phnum = (
+                    struct.unpack_from(endian + "I", header, 28)[0],
+                    *struct.unpack_from(endian + "HH", header, 42),
+                )
             if not phnum:
                 # No program headers at all: a relocatable object or a
                 # static library, not an executable this can speak about.
@@ -4244,7 +4330,7 @@ def classify_elf(path: str) -> Optional[str]:
             handle.seek(phoff)
             table = handle.read(phentsize * phnum)
             for index in range(phnum):
-                entry = table[index * phentsize:(index + 1) * phentsize]
+                entry = table[index * phentsize : (index + 1) * phentsize]
                 if len(entry) < 4:
                     break
                 if struct.unpack_from(endian + "I", entry, 0)[0] == _PT_INTERP:
@@ -4295,8 +4381,7 @@ def census_static_executables(root: str) -> dict:
     static: list[str] = []
     dynamic = libraries = unclassified = scripts = 0
     if not os.path.isdir(root):
-        return {"static": [], "dynamic": 0, "libraries": 0,
-                "unclassified": 0, "scripts": 0}
+        return {"static": [], "dynamic": 0, "libraries": 0, "unclassified": 0, "scripts": 0}
     for current, _dirs, files in os.walk(root):
         for name in sorted(files):
             path = os.path.join(current, name)
@@ -4430,8 +4515,7 @@ def census_spine_verdicts(project_dir: str) -> dict[str, bool]:
     # `UX-376`: recorded on the function so the caller can say *why* an
     # element is traced without running the census a second time - it is
     # the expensive step (`UX-183` measured minutes on freedesktop-sdk).
-    census_spine_verdicts.last_unassessable = set(
-        census.get("elements_unassessable") or ())
+    census_spine_verdicts.last_unassessable = set(census.get("elements_unassessable") or ())
     # `UX-376`: an unassessable element gets the spine. The docstring
     # above always said "not assessed" and "assessed and clean" are
     # different claims and only one is safe to skip - and until this
@@ -4441,14 +4525,12 @@ def census_spine_verdicts(project_dir: str) -> dict[str, bool]:
     # `-static` tool and a later one runs it 200 times: `auto` traced 21
     # processes of 221 and printed "the spine is not needed".
     return {
-        element: bool(entry.get("static_count"))
-        or not entry.get("assessable", True)
+        element: bool(entry.get("static_count")) or not entry.get("assessable", True)
         for element, entry in (census.get("per_element") or {}).items()
     }
 
 
-def format_census_coverage(project_dir: str, verdicts: dict[str, bool],
-                           unassessable: Optional[set[str]] = None) -> str:
+def format_census_coverage(project_dir: str, verdicts: dict[str, bool], unassessable: Optional[set[str]] = None) -> str:
     """One line naming what `--trace-spine=auto` decided, and on what.
 
     `UX-160` item 3. The unassessed count is the number that matters:
@@ -4465,8 +4547,7 @@ def format_census_coverage(project_dir: str, verdicts: dict[str, bool],
     # things about them: "something static is staged here" is a
     # property of the project, and "part of what will be staged here
     # does not exist yet" is a limit of the instrument.
-    static = sum(1 for element, needs in verdicts.items()
-                 if needs and element not in unassessable)
+    static = sum(1 for element, needs in verdicts.items() if needs and element not in unassessable)
     produced = len(unassessable & set(verdicts))
     unassessed = max(0, len(declared) - len(verdicts))
     # UX-168 item 5: "0 with static binaries (spine traced)" made the
@@ -4477,11 +4558,12 @@ def format_census_coverage(project_dir: str, verdicts: dict[str, bool],
     # between 21 processes and 221, because the tool the build produced
     # was outside what a census of `local` sources can see.
     if static:
-        line = (f"Census: {assessed} of {len(declared)} element(s) assessed, "
-                f"{static} with static binaries (those get the spine)")
+        line = (
+            f"Census: {assessed} of {len(declared)} element(s) assessed, "
+            f"{static} with static binaries (those get the spine)"
+        )
     elif assessed:
-        line = (f"Census: {assessed} of {len(declared)} element(s) assessed, "
-                f"none of those staged a static binary")
+        line = f"Census: {assessed} of {len(declared)} element(s) assessed, none of those staged a static binary"
         # `UX-376` removed this parenthetical because it had been
         # printed for a build where the spine was the difference
         # between 21 processes and 221 - but it removed it from the
@@ -4494,11 +4576,11 @@ def format_census_coverage(project_dir: str, verdicts: dict[str, bool],
     else:
         line = f"Census: 0 of {len(declared)} element(s) could be assessed"
     if produced:
-        line += (f"; {produced} stage what this build produces and cannot be "
-                 f"assessed before it runs - those get the spine")
+        line += (
+            f"; {produced} stage what this build produces and cannot be assessed before it runs - those get the spine"
+        )
     if unassessed:
-        line += (f"; {unassessed} unassessed and therefore traced by default "
-                 f"- `auto` is behaving as `on` for those")
+        line += f"; {unassessed} unassessed and therefore traced by default - `auto` is behaving as `on` for those"
     return line
 
 
@@ -4537,8 +4619,7 @@ def census_project(project_dir: str, elements: list[str]) -> dict:
     census_tick = progress.ticker("census", total=len(elements))
     for index, element in enumerate(elements, 1):
         census_tick.step(index)
-        merged = {"static": [], "dynamic": 0, "libraries": 0,
-                  "unclassified": 0, "scripts": 0}
+        merged = {"static": [], "dynamic": 0, "libraries": 0, "unclassified": 0, "scripts": 0}
         for root in _local_source_paths(project_dir, element):
             counted = census_static_executables(root)
             merged["static"].extend(counted["static"])
@@ -4617,8 +4698,7 @@ def census_project(project_dir: str, elements: list[str]) -> dict:
     per_element = {}
     for element in elements:
         static = set(own[element]["static"])
-        staged_by = {name: sorted(own.get(name, {}).get("static") or [])
-                     for name in _closure(element)}
+        staged_by = {name: sorted(own.get(name, {}).get("static") or []) for name in _closure(element)}
         for names in staged_by.values():
             static.update(names)
         # `UX-376`: what this element's sandbox will hold that the
@@ -4628,15 +4708,12 @@ def census_project(project_dir: str, elements: list[str]) -> dict:
         # `import` element stages its sources verbatim and is therefore
         # assessable; every other kind runs commands and produces
         # something new.
-        produced = sorted(name for name in _closure(element)
-                          if kinds.get(name, "unknown") != "import")
+        produced = sorted(name for name in _closure(element) if kinds.get(name, "unknown") != "import")
         per_element[element] = {
             "static_executables": sorted(static),
             "static_count": len(static),
             "own_static": own[element]["static"],
-            "staged_by_dependencies": {
-                name: names for name, names in sorted(staged_by.items()) if names
-            },
+            "staged_by_dependencies": {name: names for name, names in sorted(staged_by.items()) if names},
             "dynamic_executables": own[element]["dynamic"],
             # "assessed and clean" and "not assessed" are different
             # claims and only one of them is safe to act on, which is
@@ -4645,25 +4722,17 @@ def census_project(project_dir: str, elements: list[str]) -> dict:
             "assessable": not produced,
             "unassessable_because": produced,
         }
-    total_static = sorted({
-        name for entry in per_element.values()
-        for name in entry["static_executables"]
-    })
+    total_static = sorted({name for entry in per_element.values() for name in entry["static_executables"]})
     return {
         "per_element": per_element,
         "static_executables": total_static,
-        "elements_at_risk": sorted(
-            element for element, entry in per_element.items() if entry["static_count"]
-        ),
+        "elements_at_risk": sorted(element for element, entry in per_element.items() if entry["static_count"]),
         # `UX-376`: the elements this census could not answer for. Named
         # rather than folded into `elements_at_risk`, because the reason
         # is different and so is what a reader should do about it: a
         # risk is "something static is staged here", and this is "part
         # of what will be staged here does not exist yet".
-        "elements_unassessable": sorted(
-            element for element, entry in per_element.items()
-            if not entry["assessable"]
-        ),
+        "elements_unassessable": sorted(element for element, entry in per_element.items() if not entry["assessable"]),
         "note": (
             "Read from the project's own `local` sources before anything runs: an "
             "ELF executable with no PT_INTERP never invokes the dynamic linker, so "
@@ -4715,21 +4784,74 @@ def read_element_kinds(project_dir: str) -> dict[str, str]:
 #: The leading token of `for f in *.c; do` is `for`, and a check that
 #: reported it as a binary nobody observed would be noise on every
 #: element that writes a loop.
-_SHELL_KEYWORDS = frozenset((
-    "if", "then", "else", "elif", "fi", "for", "while", "until", "do",
-    "done", "case", "esac", "in", "function", "select", "time", "{", "}",
-    "(", ")", "[", "[[", "!", "&&", "||", ";", "coproc",
-))
+_SHELL_KEYWORDS = frozenset(
+    (
+        "if",
+        "then",
+        "else",
+        "elif",
+        "fi",
+        "for",
+        "while",
+        "until",
+        "do",
+        "done",
+        "case",
+        "esac",
+        "in",
+        "function",
+        "select",
+        "time",
+        "{",
+        "}",
+        "(",
+        ")",
+        "[",
+        "[[",
+        "!",
+        "&&",
+        "||",
+        ";",
+        "coproc",
+    )
+)
 
 #: Builtins the shell runs itself: no `execve`, so no record, so their
 #: absence is not evidence of anything. `cd` and `export` are the two
 #: every `build-commands` block uses.
-_SHELL_BUILTINS = frozenset((
-    "cd", "export", "set", "unset", "shift", "return", "exit", "eval",
-    "exec", "source", ".", "alias", "unalias", "local", "readonly",
-    "trap", "wait", "umask", "read", "echo", "printf", "test", "true",
-    "false", "pwd", "break", "continue", "let", ":",
-))
+_SHELL_BUILTINS = frozenset(
+    (
+        "cd",
+        "export",
+        "set",
+        "unset",
+        "shift",
+        "return",
+        "exit",
+        "eval",
+        "exec",
+        "source",
+        ".",
+        "alias",
+        "unalias",
+        "local",
+        "readonly",
+        "trap",
+        "wait",
+        "umask",
+        "read",
+        "echo",
+        "printf",
+        "test",
+        "true",
+        "false",
+        "pwd",
+        "break",
+        "continue",
+        "let",
+        ":",
+    )
+)
 
 
 def _named_binaries(commands) -> tuple[list[str], list[str]]:
@@ -4772,10 +4894,9 @@ def _named_binaries(commands) -> tuple[list[str], list[str]]:
                 # report `f`. Dropped whole rather than word by word.
                 if words and words[0] in ("for", "select", "case"):
                     continue
-                while words and (words[0] in _SHELL_KEYWORDS
-                                 or (
-                                     "=" in words[0]
-                                     and "/" not in words[0].split("=", 1)[0])):
+                while words and (
+                    words[0] in _SHELL_KEYWORDS or ("=" in words[0] and "/" not in words[0].split("=", 1)[0])
+                ):
                     words.pop(0)
                 if not words:
                     continue
@@ -4794,9 +4915,7 @@ def _named_binaries(commands) -> tuple[list[str], list[str]]:
     return sorted(set(named)), unread
 
 
-def detect_named_but_unobserved(project_dir: Optional[str],
-                                elements: list[str],
-                                observed: dict[str, set[str]]) -> dict:
+def detect_named_but_unobserved(project_dir: Optional[str], elements: list[str], observed: dict[str, set[str]]) -> dict:
     """`UX-385`: the binaries an element names and no record for it shows.
 
     `UX-105` established that the LD_PRELOAD hook "cannot detect its own
@@ -4832,8 +4951,7 @@ def detect_named_but_unobserved(project_dir: Optional[str],
                 continue
             config = data.get("config") or {}
             commands = []
-            for key in ("configure-commands", "build-commands",
-                        "install-commands"):
+            for key in ("configure-commands", "build-commands", "install-commands"):
                 commands.extend(config.get(key) or [])
             named, unread = _named_binaries(commands)
             if not named and not unread:
@@ -4846,8 +4964,7 @@ def detect_named_but_unobserved(project_dir: Optional[str],
                 "commands_not_read": len(unread),
             }
 
-    gap = sorted(uid for uid, entry in per_element.items()
-                 if entry["named_not_observed"])
+    gap = sorted(uid for uid, entry in per_element.items() if entry["named_not_observed"])
     return {
         "available": bool(project_dir),
         "per_element": per_element,
@@ -4863,9 +4980,9 @@ def detect_named_but_unobserved(project_dir: Optional[str],
             "statically linked process the hook could not see; where it "
             "did not, that is what it would take to tell them apart "
             "(`UX-105`, `UX-385`)."
-            if project_dir else
-            "Needs the BuildStream project directory to read each "
-            "element's own commands - pass --project-dir."),
+            if project_dir
+            else "Needs the BuildStream project directory to read each element's own commands - pass --project-dir."
+        ),
     }
 
 
@@ -4953,8 +5070,7 @@ def read_artifact_contents(project_dir: str, elements: list[str]) -> dict[str, s
             for retried, element in enumerate(group, 1):
                 # `UX-519`: the batch counter cannot move during the
                 # slow path, so the line says what it is doing instead.
-                tick.note(f"{index}/{len(groups)} retry "
-                          f"{retried}/{len(group)}")
+                tick.note(f"{index}/{len(groups)} retry {retried}/{len(group)}")
                 alone = _list_contents(project_dir, [element])
                 contents[element] = (alone or {}).get(element, set())
             continue
@@ -4976,11 +5092,10 @@ LIST_CONTENTS_CHUNK = 200
 
 def _chunks(items: list[str], size: int):
     for start in range(0, len(items), size):
-        yield items[start:start + size]
+        yield items[start : start + size]
 
 
-def _list_contents(project_dir: str,
-                   group: list[str]) -> Optional[dict[str, set[str]]]:
+def _list_contents(project_dir: str, group: list[str]) -> Optional[dict[str, set[str]]]:
     """One `bst artifact list-contents` call over `group`.
 
     `None` when the call failed - which is *not* the same as "these
@@ -5136,9 +5251,11 @@ def compute_declared_vs_used(
                     f"so its read set is unmeasured rather than empty"
                 )
             else:
-                reason = ("no file opens observed for this element - it may be "
-                          "built entirely by statically-linked processes, which "
-                          "LD_PRELOAD cannot see")
+                reason = (
+                    "no file opens observed for this element - it may be "
+                    "built entirely by statically-linked processes, which "
+                    "LD_PRELOAD cannot see"
+                )
             uncovered.append({"element": element, "reason": reason})
             continue
         if measured and measured["opens_covered"] < measured["processes"]:
@@ -5146,42 +5263,50 @@ def compute_declared_vs_used(
             # exactly the same reason: a partial read set is what turns a
             # used dependency into a false unused. The difference is that
             # this one is a counted share rather than a suspicion.
-            uncovered.append({
-                "element": element,
-                "reason": f"only {measured['opens_covered']} of "
-                          f"{measured['processes']} process(es) "
-                          f"({measured['opens_coverage'] * 100:.0f}%) were "
-                          f"reachable by the hook; the other "
-                          f"{measured['spine_only']} ran statically and could "
-                          f"have opened anything this analysis would call unread",
-            })
+            uncovered.append(
+                {
+                    "element": element,
+                    "reason": f"only {measured['opens_covered']} of "
+                    f"{measured['processes']} process(es) "
+                    f"({measured['opens_coverage'] * 100:.0f}%) were "
+                    f"reachable by the hook; the other "
+                    f"{measured['spine_only']} ran statically and could "
+                    f"have opened anything this analysis would call unread",
+                }
+            )
             continue
         if observed["dropped"]:
-            uncovered.append({
-                "element": element,
-                "reason": f"{observed['dropped']} path(s) exceeded the hook's "
-                          f"per-process budget, so this element's read set is "
-                          f"incomplete and a dependency could look unused when "
-                          f"it is not",
-            })
+            uncovered.append(
+                {
+                    "element": element,
+                    "reason": f"{observed['dropped']} path(s) exceeded the hook's "
+                    f"per-process budget, so this element's read set is "
+                    f"incomplete and a dependency could look unused when "
+                    f"it is not",
+                }
+            )
             continue
 
         opened = observed["paths"]
         for dep in sorted(deps):
             staged = artifact_contents.get(dep)
             if staged is None:
-                skipped.append({
-                    "element": element, "dependency": dep,
-                    "reason": "artifact contents unavailable (not built, or "
-                              "pulled without contents)",
-                })
+                skipped.append(
+                    {
+                        "element": element,
+                        "dependency": dep,
+                        "reason": "artifact contents unavailable (not built, or pulled without contents)",
+                    }
+                )
                 continue
             if not staged:
-                skipped.append({
-                    "element": element, "dependency": dep,
-                    "reason": "dependency staged no files - nothing to detect a "
-                              "read of",
-                })
+                skipped.append(
+                    {
+                        "element": element,
+                        "dependency": dep,
+                        "reason": "dependency staged no files - nothing to detect a read of",
+                    }
+                )
                 continue
             touched = opened & staged
             record = {
@@ -5204,25 +5329,21 @@ def compute_declared_vs_used(
                 # can avoid touching.
                 record["reason"] = (
                     f"{dep} staged only {len(staged)} file(s) of its own"
-                    + (f" (kind: {element_kinds[dep]})"
-                       if element_kinds and dep in element_kinds else "")
+                    + (f" (kind: {element_kinds[dep]})" if element_kinds and dep in element_kinds else "")
                     + " - it contributes content through its dependencies, "
                     "which this comparison does not attribute, so 'nobody "
                     "opened it' is not evidence of anything"
                 )
                 aggregating.append(record)
             else:
-                record["evidence"] = (
-                    f"0 of {len(staged)} files staged by {dep} were opened "
-                    f"during {element}'s build"
-                )
+                record["evidence"] = f"0 of {len(staged)} files staged by {dep} were opened during {element}'s build"
                 unused.append(record)
 
     covered_elements = [
-        element for element in declared_deps
+        element
+        for element in declared_deps
         if not (opens_coverage or {}).get(element)
-        or (opens_coverage or {})[element]["opens_covered"]
-        == (opens_coverage or {})[element]["processes"]
+        or (opens_coverage or {})[element]["opens_covered"] == (opens_coverage or {})[element]["processes"]
     ]
     return {
         # UX-107: an element whose every process was static has no opens
@@ -5233,13 +5354,16 @@ def compute_declared_vs_used(
         # UX-107: the share this analysis speaks for. Published because a
         # candidate list computed over a fraction of the processes and one
         # computed over all of them render identically otherwise.
-        "opens_coverage": ({
-            "elements_considered": len(declared_deps),
-            "elements_fully_covered": len(covered_elements),
-            "processes": sum(e["processes"] for e in opens_coverage.values()),
-            "hook_covered_processes": sum(
-                e["opens_covered"] for e in opens_coverage.values()),
-        } if opens_coverage else None),
+        "opens_coverage": (
+            {
+                "elements_considered": len(declared_deps),
+                "elements_fully_covered": len(covered_elements),
+                "processes": sum(e["processes"] for e in opens_coverage.values()),
+                "hook_covered_processes": sum(e["opens_covered"] for e in opens_coverage.values()),
+            }
+            if opens_coverage
+            else None
+        ),
         "unused_candidates": unused,
         # UX-68: dependencies that stage nothing of their own - stacks,
         # almost always. Reported separately because "nobody opened it"
@@ -5360,15 +5484,12 @@ class _SandboxDurations:
 
     def finish(self):
         first, last = self.first, self.last
-        return {
-            key: last[key] - first[key]
-            for key in first.keys() & last.keys()
-            if last[key] >= first[key]
-        }
+        return {key: last[key] - first[key] for key in first.keys() & last.keys() if last[key] >= first[key]}
 
 
 def correlate_invocations(
-    invocations: list[dict], build_spans: list[dict],
+    invocations: list[dict],
+    build_spans: list[dict],
     durations: Optional[dict[str, float]] = None,
 ) -> dict:
     """UX-56/UX-64: recover each sandbox's real element by matching it
@@ -5434,10 +5555,7 @@ def correlate_invocations(
         # sandbox's last process must exit before its span ends. Using it
         # alone resolved 8 of those 9 sandboxes, against 2 for whole-
         # interval containment.
-        matching = [
-            span["element"] for span in build_spans
-            if span["start"] <= finished <= span["end"]
-        ]
+        matching = [span["element"] for span in build_spans if span["start"] <= finished <= span["end"]]
         if not matching:
             # No span contains the whole interval. Either the sandbox
             # belongs to no BUILD at all, or it outlived every candidate -
@@ -5522,9 +5640,7 @@ class _BinaryCost:
             return
         binary = os.path.basename((record.get("cmd") or "").split(" ")[0]) or "unknown"
         entry = self.per_element.setdefault(element, {})
-        stat = entry.setdefault(
-            binary, {"count": 0, "cpu_us": 0, "wall_s": 0.0, "measured": 0}
-        )
+        stat = entry.setdefault(binary, {"count": 0, "cpu_us": 0, "wall_s": 0.0, "measured": 0})
         stat["count"] += 1
         if record.get("cpu_us") is not None:
             stat["cpu_us"] += record["cpu_us"]
@@ -5541,8 +5657,7 @@ class _BinaryCost:
         block instead. The counter above already holds the full set; it
         costs an accessor rather than a pass.
         """
-        return {element: set(binaries)
-                for element, binaries in self.per_element.items()}
+        return {element: set(binaries) for element, binaries in self.per_element.items()}
 
     def finish(self, top_n: int = 5):
         result: dict[str, dict] = {}
@@ -5566,9 +5681,13 @@ class _BinaryCost:
                 "available": True,
                 "measured_cpu_us": measured_cpu,
                 "by_cpu": [
-                    {"binary": b, "count": v["count"], "cpu_us": v["cpu_us"],
-                     "wall_s": round(v["wall_s"], 1),
-                     "cpu_share": v["cpu_us"] / measured_cpu}
+                    {
+                        "binary": b,
+                        "count": v["count"],
+                        "cpu_us": v["cpu_us"],
+                        "wall_s": round(v["wall_s"], 1),
+                        "cpu_share": v["cpu_us"] / measured_cpu,
+                    }
                     for b, v in by_cpu[:top_n]
                 ],
                 "by_count": [
@@ -5636,18 +5755,18 @@ class _PeakMemory:
             return {
                 "available": False,
                 "note": "no process reported a peak RSS - either the hook predates "
-                        "UX-63 or every traced process was killed before its "
-                        "destructor ran",
+                "UX-63 or every traced process was killed before its "
+                "destructor ran",
             }
         return {
             "available": True,
             "per_element": {k: per_element[k] for k in sorted(per_element)},
             "note": "Peak resident set size of the single largest process in each "
-                    "element (getrusage ru_maxrss at exit, KiB). A per-process "
-                    "peak, deliberately NOT summed across processes: two "
-                    "processes peaking at different moments never held the sum "
-                    "between them. Use it as 'no single process here exceeded "
-                    "this', which is what UX-21's per-job memory estimate wants.",
+            "element (getrusage ru_maxrss at exit, KiB). A per-process "
+            "peak, deliberately NOT summed across processes: two "
+            "processes peaking at different moments never held the sum "
+            "between them. Use it as 'no single process here exceeded "
+            "this', which is what UX-21's per-job memory estimate wants.",
         }
 
 
@@ -5709,25 +5828,23 @@ class _ProcessOutcomes:
             self._note(record["element"], "exited_nonzero", str(status))
 
     def _note(self, element, kind, detail):
-        entry = self.per_element.setdefault(
-            element, {"killed": 0, "exited_nonzero": 0, "statuses": {}})
+        entry = self.per_element.setdefault(element, {"killed": 0, "exited_nonzero": 0, "statuses": {}})
         entry[kind] += 1
         entry["statuses"][detail] = entry["statuses"].get(detail, 0) + 1
 
     def finish(self):
-        measured = self.exited_zero + self.exited_nonzero + sum(
-            self.by_signal.values())
+        measured = self.exited_zero + self.exited_nonzero + sum(self.by_signal.values())
         if measured == 0:
             return {
                 "available": False,
                 "unknown": self.unknown,
                 "note": "no process reported how it ended. Only the ptrace "
-                        "spine can - the hook's destructor runs before the "
-                        "process has a status, and not at all when one is "
-                        "killed - so this is a capture taken without it "
-                        "(`--trace-spine=on`). Reported as unavailable rather "
-                        "than as zero kills, which is a claim this capture "
-                        "cannot make.",
+                "spine can - the hook's destructor runs before the "
+                "process has a status, and not at all when one is "
+                "killed - so this is a capture taken without it "
+                "(`--trace-spine=on`). Reported as unavailable rather "
+                "than as zero kills, which is a claim this capture "
+                "cannot make.",
             }
         return {
             "available": True,
@@ -5736,15 +5853,14 @@ class _ProcessOutcomes:
             "killed_by_signal": dict(sorted(self.by_signal.items())),
             "killed": sum(self.by_signal.values()),
             "unknown": self.unknown,
-            "per_element": {k: self.per_element[k]
-                            for k in sorted(self.per_element)},
+            "per_element": {k: self.per_element[k] for k in sorted(self.per_element)},
             "note": "How each traced process ended, from the spine's read of "
-                    "the kernel exit-stop. `unknown` is the processes no "
-                    "spine record covered - hook-only records carry no "
-                    "status, and one still running when the trace ended has "
-                    "none to carry. A `signal:9` with no cancellation around "
-                    "it is the shape an OOM kill leaves; `signal:15` is "
-                    "usually a build stopped on purpose.",
+            "the kernel exit-stop. `unknown` is the processes no "
+            "spine record covered - hook-only records carry no "
+            "status, and one still running when the trace ended has "
+            "none to carry. A `signal:9` with no cancellation around "
+            "it is the shape an OOM kill leaves; `signal:15` is "
+            "usually a build stopped on purpose.",
         }
 
 
@@ -5816,10 +5932,10 @@ class _ResourcePressure:
             return {
                 "available": False,
                 "note": "no process reported these counters - either the hook "
-                        "predates UX-379 or every traced process was killed "
-                        "before its destructor ran. Reported as unavailable "
-                        "rather than as zero, which here would read as a build "
-                        "that touched no disk.",
+                "predates UX-379 or every traced process was killed "
+                "before its destructor ran. Reported as unavailable "
+                "rather than as zero, which here would read as a build "
+                "that touched no disk.",
             }
         for entry in per_element.values():
             total = entry["measured"] + entry["unmeasured"]
@@ -5830,14 +5946,14 @@ class _ResourcePressure:
             "measured": measured_total,
             "unmeasured": sum(e["unmeasured"] for e in per_element.values()),
             "note": "Summed per element over the processes whose destructor "
-                    "ran (getrusage at exit). `read_bytes`/`written_bytes` are "
-                    "block-layer I/O - what reached the device - so a read "
-                    "served from the page cache is genuinely zero and a large "
-                    "figure is genuinely disk. `involuntary_switches` is the "
-                    "run queue preempting a process that still had work, which "
-                    "rises with oversubscription; `voluntary_switches` is a "
-                    "process choosing to wait. `major_faults` is the page "
-                    "pressure a memory-starved host produces.",
+            "ran (getrusage at exit). `read_bytes`/`written_bytes` are "
+            "block-layer I/O - what reached the device - so a read "
+            "served from the page cache is genuinely zero and a large "
+            "figure is genuinely disk. `involuntary_switches` is the "
+            "run queue preempting a process that still had work, which "
+            "rises with oversubscription; `voluntary_switches` is a "
+            "process choosing to wait. `major_faults` is the page "
+            "pressure a memory-starved host produces.",
         }
 
 
@@ -5891,8 +6007,7 @@ class _CpuTime:
         element = record["element"]
         entry = self.per_element.setdefault(
             element,
-            {"cpu_us": 0, "children_cpu_us": 0, "measured": 0, "unmeasured": 0,
-             "wall_span_s": None},
+            {"cpu_us": 0, "children_cpu_us": 0, "measured": 0, "unmeasured": 0, "wall_span_s": None},
         )
         if "cpu_us" in record:
             entry["cpu_us"] += record["cpu_us"]
@@ -5940,9 +6055,7 @@ class _CpuTime:
             "measured_processes": measured_total,
             "unmeasured_processes": unmeasured_total,
             "total_cpu_us": sum(e["cpu_us"] for e in per_element.values()),
-            "per_element": dict(
-                sorted(per_element.items(), key=lambda kv: -kv[1]["cpu_us"])
-            ),
+            "per_element": dict(sorted(per_element.items(), key=lambda kv: -kv[1]["cpu_us"])),
             # UX-108: which mechanism actually produced the seconds above.
             # With the spine on, a process the hook never entered carries
             # `/proc/<pid>/stat`'s tick-truncated figure instead, and a note
@@ -5952,15 +6065,21 @@ class _CpuTime:
             "note": (
                 "Real CPU time (getrusage utime+stime) for processes that exited "
                 "normally. "
-                + ("Where only the ptrace spine reached a process, the figure is "
-                   "`/proc/<pid>/stat` read at its exit-stop instead, truncated to "
-                   "whole 10ms ticks - so a short static process reads as zero "
-                   "(UX-107). " if spine_sourced else "")
+                + (
+                    "Where only the ptrace spine reached a process, the figure is "
+                    "`/proc/<pid>/stat` read at its exit-stop instead, truncated to "
+                    "whole 10ms ticks - so a short static process reads as zero "
+                    "(UX-107). "
+                    if spine_sourced
+                    else ""
+                )
                 + "Processes killed by a signal or replaced by exec run no "
                 "destructor and are counted as unmeasured, never as zero. This is "
                 "Plane 2 only - it is not wired into Plane 1's utilisation buckets, "
                 "which remain slot occupancy (UX-36)."
-            ) if measured_total else (
+            )
+            if measured_total
+            else (
                 "No CPU time in this trace - captured with a hook built before UX-45, "
                 "or every process exited abnormally. Reported as unavailable rather "
                 "than as zero."
@@ -5979,10 +6098,16 @@ class _CpuTime:
 _CONFIGURE_EXECUTABLES = (
     # autotools: `./configure`, `../configure`, `/src/foo/configure`,
     # and `config.status`, which re-runs it.
-    'configure', 'config.status',
+    'configure',
+    'config.status',
     # autotools' own generators - they exist only to produce the
     # configure machinery, so their cost is configure cost.
-    'autoconf', 'autoreconf', 'automake', 'aclocal', 'autoheader', 'libtoolize',
+    'autoconf',
+    'autoreconf',
+    'automake',
+    'aclocal',
+    'autoheader',
+    'libtoolize',
     # meson's configure step.
     'meson',
 )
@@ -6181,14 +6306,20 @@ class _ConfigurePhase:
 
         per_element: dict[str, dict] = {}
         for index, element in enumerate(self.elements):
-            entry = per_element.setdefault(element, {
-                "configure_cpu_us": 0, "build_cpu_us": 0,
-                "configure_processes": 0, "build_processes": 0,
-                "measured": 0, "unmeasured": 0,
-            })
+            entry = per_element.setdefault(
+                element,
+                {
+                    "configure_cpu_us": 0,
+                    "build_cpu_us": 0,
+                    "configure_processes": 0,
+                    "build_processes": 0,
+                    "measured": 0,
+                    "unmeasured": 0,
+                },
+            )
             configure = self._is_configure(
-                self.rows_sandbox[index], self.rows_pid[index],
-                self.rows_ppid[index], self.rows_root[index])
+                self.rows_sandbox[index], self.rows_pid[index], self.rows_ppid[index], self.rows_root[index]
+            )
             entry["configure_processes" if configure else "build_processes"] += 1
             cpu = self.cpu[index]
             if cpu != self._NO_CPU:
@@ -6199,9 +6330,7 @@ class _ConfigurePhase:
 
         for entry in per_element.values():
             total_cpu = entry["configure_cpu_us"] + entry["build_cpu_us"]
-            entry["configure_share"] = (
-                entry["configure_cpu_us"] / total_cpu if total_cpu else None
-            )
+            entry["configure_share"] = entry["configure_cpu_us"] / total_cpu if total_cpu else None
             total_processes = entry["configure_processes"] + entry["build_processes"]
             entry["coverage"] = entry["measured"] / total_processes if total_processes else 0.0
 
@@ -6212,9 +6341,12 @@ class _ConfigurePhase:
             "configure_cpu_us": configure_total,
             "total_cpu_us": cpu_total,
             "configure_share": configure_total / cpu_total if cpu_total else None,
-            "per_element": dict(sorted(
-                per_element.items(), key=lambda kv: -kv[1]["configure_cpu_us"],
-            )),
+            "per_element": dict(
+                sorted(
+                    per_element.items(),
+                    key=lambda kv: -kv[1]["configure_cpu_us"],
+                )
+            ),
             "note": (
                 "Configure-phase CPU is every traced process descending from a build "
                 "system's configure entry point (./configure, config.status, cmake "
@@ -6239,9 +6371,7 @@ class _ConfigurePhase:
 CPU_RECONCILIATION_TOLERANCE_US = 50_000
 
 
-def compute_stream_coverage(records: list[dict],
-                            fork_only_exits: int = 0,
-                            unmatched_ends: int = 0) -> dict:
+def compute_stream_coverage(records: list[dict], fork_only_exits: int = 0, unmatched_ends: int = 0) -> dict:
     """UX-107: coverage as a measured number rather than a footnote.
 
     Before the spine there was one sentence, printed identically whether
@@ -6265,8 +6395,7 @@ def compute_stream_coverage(records: list[dict],
     state = _StreamCoverage()
     for record in records:
         state.add(record)
-    return state.finish(fork_only_exits=fork_only_exits,
-                        unmatched_ends=unmatched_ends)
+    return state.finish(fork_only_exits=fork_only_exits, unmatched_ends=unmatched_ends)
 
 
 class _StreamCoverage:
@@ -6303,27 +6432,30 @@ class _StreamCoverage:
         self.hook_total += record["hook_cpu_us"]
         delta = abs(record["hook_cpu_us"] - record["spine_cpu_us"])
         if delta > CPU_RECONCILIATION_TOLERANCE_US:
-            self.disagreements.append({
-                "pid": record["pid"], "element": record["element"],
-                "spine_cpu_us": record["spine_cpu_us"],
-                "hook_cpu_us": record["hook_cpu_us"],
-                "delta_us": delta, "cmd": record["cmd"][:120],
-            })
+            self.disagreements.append(
+                {
+                    "pid": record["pid"],
+                    "element": record["element"],
+                    "spine_cpu_us": record["spine_cpu_us"],
+                    "hook_cpu_us": record["hook_cpu_us"],
+                    "delta_us": delta,
+                    "cmd": record["cmd"][:120],
+                }
+            )
 
     def finish(self, fork_only_exits: int = 0, unmatched_ends: int = 0):
         if not self.records:
             return {}
         counts = self.counts
-        opens_covered = counts.get(COVERAGE_BOTH, 0) + counts.get(
-            COVERAGE_HOOK_ONLY, 0)
+        opens_covered = counts.get(COVERAGE_BOTH, 0) + counts.get(COVERAGE_HOOK_ONLY, 0)
         disagreements = self.disagreements
         disagreements.sort(key=lambda entry: -entry["delta_us"])
-    # The per-process check above cannot see a *systematic* difference:
-    # 663 pairs each within one clock tick still summed to 58.47s against
-    # 54.14s on a real examples/06 capture - a 7.4% aggregate gap, and
-    # every pair individually "agreeing". Measured on the same
-    # population the per-process check ran on, because a total over one
-    # set compared with a total over another measures the sets.
+        # The per-process check above cannot see a *systematic* difference:
+        # 663 pairs each within one clock tick still summed to 58.47s against
+        # 54.14s on a real examples/06 capture - a 7.4% aggregate gap, and
+        # every pair individually "agreeing". Measured on the same
+        # population the per-process check ran on, because a total over one
+        # set compared with a total over another measures the sets.
         aggregate = None
         if self.reconciled:
             spine_total = self.spine_total
@@ -6336,9 +6468,7 @@ class _StreamCoverage:
                 # Against the hook's total, because that is the figure the
                 # merged model uses - a percentage of the number nobody
                 # consumes measures nothing a reader can act on.
-                "delta_pct": (
-                    (spine_total - hook_total) / hook_total * 100 if hook_total else 0.0
-                ),
+                "delta_pct": ((spine_total - hook_total) / hook_total * 100 if hook_total else 0.0),
             }
         return {
             "processes": self.records,
@@ -6375,13 +6505,13 @@ class _StreamCoverage:
             "cpu_disagreement_count": len(disagreements),
             "cpu_aggregate": aggregate,
             "note": (
-            "Process coverage is the union of both mechanisms; opens coverage is the "
-            "hook's alone, since opened paths need in-process interposition. A "
-            "`spine-only` process is fully measured except for its opens. CPU time "
-            "reported for a process seen by both is the spine's per-process figure, "
-            "never the sum of the two - and it is the later of the two "
-            "measurements, since the hook's destructor runs before the process is "
-            "finished while the spine reads /proc at the kernel's exit-stop."
+                "Process coverage is the union of both mechanisms; opens coverage is the "
+                "hook's alone, since opened paths need in-process interposition. A "
+                "`spine-only` process is fully measured except for its opens. CPU time "
+                "reported for a process seen by both is the spine's per-process figure, "
+                "never the sum of the two - and it is the later of the two "
+                "measurements, since the hook's destructor runs before the process is "
+                "finished while the spine reads /proc at the kernel's exit-stop."
             ),
         }
 
@@ -6450,12 +6580,10 @@ class Plane2Fold:
             self.matched += 1
         name = _binary_name(record["cmd"])
         self.by_binary[name] = self.by_binary.get(name, 0) + 1
-        self.by_element[record["element"]] = self.by_element.get(
-            record["element"], 0) + 1
+        self.by_element[record["element"]] = self.by_element.get(record["element"], 0) + 1
         start = record["start_ts"]
         end = record["end_ts"] if record["end_ts"] is not None else start
-        self.wall_start = start if self.wall_start is None else min(
-            self.wall_start, start)
+        self.wall_start = start if self.wall_start is None else min(self.wall_start, start)
         self.wall_end = end if self.wall_end is None else max(self.wall_end, end)
         self.concurrency.add(record)
         self.cpu_time.add(record)
@@ -6479,28 +6607,27 @@ class Plane2Fold:
         """
         return self.binary_cost.observed()
 
-    def report(self, correlation: Optional[dict] = None,
-               fork_only_exits: int = 0, unmatched_ends: int = 0) -> dict:
-        return _summarize_folded(self, correlation=correlation,
-                                 fork_only_exits=fork_only_exits,
-                                 unmatched_ends=unmatched_ends)
+    def report(self, correlation: Optional[dict] = None, fork_only_exits: int = 0, unmatched_ends: int = 0) -> dict:
+        return _summarize_folded(
+            self, correlation=correlation, fork_only_exits=fork_only_exits, unmatched_ends=unmatched_ends
+        )
 
 
-def summarize(records: list[dict], correlation: Optional[dict] = None,
-              fork_only_exits: int = 0, unmatched_ends: int = 0) -> dict:
+def summarize(
+    records: list[dict], correlation: Optional[dict] = None, fork_only_exits: int = 0, unmatched_ends: int = 0
+) -> dict:
     """The report over a record list. `UX-297`: a fold with the list
     poured into it, so the list-based and streaming paths cannot
     disagree - they are one code path with two callers."""
     fold = Plane2Fold()
     for record in records:
         fold.add(record)
-    return fold.report(correlation=correlation,
-                       fork_only_exits=fork_only_exits,
-                       unmatched_ends=unmatched_ends)
+    return fold.report(correlation=correlation, fork_only_exits=fork_only_exits, unmatched_ends=unmatched_ends)
 
 
-def _summarize_folded(fold: "Plane2Fold", correlation: Optional[dict] = None,
-                      fork_only_exits: int = 0, unmatched_ends: int = 0) -> dict:
+def _summarize_folded(
+    fold: "Plane2Fold", correlation: Optional[dict] = None, fork_only_exits: int = 0, unmatched_ends: int = 0
+) -> dict:
     by_binary = fold.by_binary
     by_element = fold.by_element
     wall_start, wall_end = fold.wall_start, fold.wall_end
@@ -6524,7 +6651,9 @@ def _summarize_folded(fold: "Plane2Fold", correlation: Optional[dict] = None,
             "real command and then exits via `_exit()` once it completes - `_exit()` "
             "bypasses the normal exit path, so this hook's destructor never fires for "
             "the wrapper itself, even though it exited quickly and normally."
-        ) if open_records else None,
+        )
+        if open_records
+        else None,
         "by_binary": dict(sorted(by_binary.items(), key=lambda kv: -kv[1])),
         "by_element": dict(sorted(by_element.items(), key=lambda kv: -kv[1])),
         # UX-56: whether those element names are element names at all.
@@ -6562,8 +6691,7 @@ def _summarize_folded(fold: "Plane2Fold", correlation: Optional[dict] = None,
         "static_binary_disclaimer": STATIC_BINARY_DISCLAIMER,
         # UX-107: which mechanism saw each process, as counts rather
         # than as a footnote.
-        "stream_coverage": fold.coverage.finish(
-            fork_only_exits=fork_only_exits, unmatched_ends=unmatched_ends),
+        "stream_coverage": fold.coverage.finish(fork_only_exits=fork_only_exits, unmatched_ends=unmatched_ends),
     }
 
 
@@ -6577,8 +6705,7 @@ def _summarize_folded(fold: "Plane2Fold", correlation: Optional[dict] = None,
 # ever written, so a legacy monolith is recognized by exactly the same
 # rule as a new aggregates-only report - which is what keeps an old
 # store readable.
-_REPORT_MARKER_KEYS = frozenset({"process_count", "matched_count", "by_binary",
-                                 "by_element"})
+_REPORT_MARKER_KEYS = frozenset({"process_count", "matched_count", "by_binary", "by_element"})
 
 
 class EmptyTraceError(TraceError):
@@ -6635,8 +6762,7 @@ def load_records(raw_log_path: str, merge: bool = True) -> list[dict]:
     what `pair_events` always returned and what every caller reads.
     """
     with open(raw_log_path, encoding="utf-8", errors="ignore") as handle:
-        records = sorted(stream_records(stream_trace_events(handle)),
-                         key=lambda record: record["start_ts"])
+        records = sorted(stream_records(stream_trace_events(handle)), key=lambda record: record["start_ts"])
     return merge_record_streams(records) if merge else records
 
 
@@ -6662,10 +6788,13 @@ def _open_maybe_gzipped(path: str):
     return open(path, encoding="utf-8", errors="ignore")
 
 
-def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
-                       invocation_log_path: Optional[str] = None,
-                       plane1_log_path: Optional[str] = None,
-                       cpu_samples_path: Optional[str] = None) -> dict:
+def load_and_summarize(
+    raw_log_path: str,
+    project_dir: Optional[str] = None,
+    invocation_log_path: Optional[str] = None,
+    plane1_log_path: Optional[str] = None,
+    cpu_samples_path: Optional[str] = None,
+) -> dict:
     """Parse a raw trace log into a report.
 
     `project_dir` (UX-46) enables the declared-vs-used dependency
@@ -6718,9 +6847,7 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
         # start, which is the order every downstream reader has always
         # seen; that list is the remaining floor, and it is O(processes)
         # rather than O(events).
-        records = merge_record_streams(sorted(
-            stream_records(events, unmatched),
-            key=lambda record: record["start_ts"]))
+        records = merge_record_streams(sorted(stream_records(events, unmatched), key=lambda record: record["start_ts"]))
     fork_only_exits = unmatched["fork_only"]
     unmatched_ends = unmatched["unmatched"]
 
@@ -6737,16 +6864,13 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
     spine_policy = None
     if invocation_log_path and os.path.exists(invocation_log_path):
         with open(invocation_log_path, errors="replace") as handle:
-            sandboxes = [
-                json.loads(line) for line in handle if line.strip()
-            ]
+            sandboxes = [json.loads(line) for line in handle if line.strip()]
         if sandboxes and any("spine_traced" in entry for entry in sandboxes):
             traced = sum(1 for entry in sandboxes if entry.get("spine_traced"))
             spine_policy = {
                 "sandboxes": len(sandboxes),
                 "spine_traced": traced,
-                "policy": ("on" if traced == len(sandboxes)
-                           else "off" if traced == 0 else "auto"),
+                "policy": ("on" if traced == len(sandboxes) else "off" if traced == 0 else "auto"),
             }
     # `os.path.exists` and not just a truthy path: a build in which no
     # sandbox ran at all - every element a cache hit, which is the
@@ -6755,16 +6879,12 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
     # after the build, discarding a report that was otherwise complete.
     if invocation_log_path and os.path.exists(invocation_log_path) and plane1_log_path:
         with open(invocation_log_path, errors="replace") as handle:
-            invocations = [
-                json.loads(line) for line in handle if line.strip()
-            ]
+            invocations = [json.loads(line) for line in handle if line.strip()]
         spans = build_spans_from_wrapped_log(plane1_log_path)
         # UX-64: give the correlation real intervals rather than start
         # instants. Under `--builders 4` an instant sits inside four
         # overlapping spans and resolves almost nothing.
-        correlation = correlate_invocations(
-            invocations, spans, durations=sandbox_durations(records)
-        )
+        correlation = correlate_invocations(invocations, spans, durations=sandbox_durations(records))
         correlation["elements_in_plane1"] = len(spans)
 
     # UX-297: fold the records into the aggregates and drop each one as
@@ -6780,9 +6900,7 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
     del records
     if correlation is not None:
         correlation["relabelled_processes"] = fold.relabelled
-    report = fold.report(correlation=correlation,
-                         fork_only_exits=fork_only_exits,
-                         unmatched_ends=unmatched_ends)
+    report = fold.report(correlation=correlation, fork_only_exits=fork_only_exits, unmatched_ends=unmatched_ends)
     if spine_policy:
         report["spine_policy"] = spine_policy
 
@@ -6799,9 +6917,7 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
     # `plane2.log.gz` every snapshot stores read deflate bytes and found
     # no OPENS lines, silently.
     with _open_maybe_gzipped(raw_log_path) as handle:
-        opens_by_element = parse_open_lines(
-            handle,
-            open_element_overrides=(correlation or {}).get('resolved'))
+        opens_by_element = parse_open_lines(handle, open_element_overrides=(correlation or {}).get('resolved'))
     # UX-107: the elements this analysis must speak about are not only the
     # ones with opens. An element built entirely by static processes has
     # none at all, and dropping it here is what made the analysis silent
@@ -6816,8 +6932,7 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
     # there had been no claim at all. Measured on `examples/06`.
     element_coverage = fold.opens_coverage.finish()
     unmeasured = {
-        element for element, entry in element_coverage.items()
-        if element != "unknown" and not entry["opens_covered"]
+        element for element, entry in element_coverage.items() if element != "unknown" and not entry["opens_covered"]
     }
     analysed = sorted(set(opens_by_element) | unmeasured)
     if project_dir and analysed and (opens_by_element or unmeasured):
@@ -6825,7 +6940,9 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
         needed = {dep for deps in declared.values() for dep in deps}
         contents = read_artifact_contents(project_dir, sorted(needed))
         report["declared_vs_used"] = compute_declared_vs_used(
-            opens_by_element, declared, contents,
+            opens_by_element,
+            declared,
+            contents,
             element_kinds=read_element_kinds(project_dir),
             # UX-107: computed over the hook-covered processes, and told
             # to say so - the alternative is a finding that reads "no
@@ -6847,25 +6964,30 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
             # the only thing a capture with the spine off can say about
             # a statically linked process.
             report["commands_not_observed"] = detect_named_but_unobserved(
-                project_dir, elements, fold.observed_binaries())
+                project_dir, elements, fold.observed_binaries()
+            )
     elif opens_by_element:
         report["declared_vs_used"] = {
             "available": False,
             "note": "opened-path data was captured, but the declared-vs-used "
-                    "analysis needs the BuildStream project directory to read "
-                    "each dependency's artifact contents - pass --project-dir.",
+            "analysis needs the BuildStream project directory to read "
+            "each dependency's artifact contents - pass --project-dir.",
         }
     attach_element_cpu_series(report, cpu_samples_path)
     report["opens_captured"] = {
-        element: {"paths": len(entry["paths"]), "dropped": entry["dropped"],
-                  "processes": entry["processes"],
-                  # UX-57: how many times a process filled its window and
-                  # flushed rather than dropping. Zero on any build small
-                  # enough never to fill one, which is most of them.
-                  "windows": entry["windows"],
-                  # UX-865: relative opens joined against a cwd, and
-                  # opens under a non-cwd dirfd counted but not resolved.
-                  "relative": entry["relative"], "dirfd": entry["dirfd"]}
+        element: {
+            "paths": len(entry["paths"]),
+            "dropped": entry["dropped"],
+            "processes": entry["processes"],
+            # UX-57: how many times a process filled its window and
+            # flushed rather than dropping. Zero on any build small
+            # enough never to fill one, which is most of them.
+            "windows": entry["windows"],
+            # UX-865: relative opens joined against a cwd, and
+            # opens under a non-cwd dirfd counted but not resolved.
+            "relative": entry["relative"],
+            "dirfd": entry["dirfd"],
+        }
         for element, entry in sorted(opens_by_element.items())
     }
     return report
@@ -6883,9 +7005,7 @@ def _format_cpu_time(cpu_time: dict) -> list[str]:
     unmeasured = cpu_time["unmeasured_processes"]
     # UX-108: name the mechanism only when it is the one that measured.
     spine_sourced = cpu_time.get("spine_sourced_processes") or 0
-    source = "getrusage" if not spine_sourced else (
-        f"getrusage, {spine_sourced} from /proc at the ptrace exit-stop"
-    )
+    source = "getrusage" if not spine_sourced else (f"getrusage, {spine_sourced} from /proc at the ptrace exit-stop")
     lines = [
         f"Real CPU time ({source}): {cpu_time['total_cpu_us'] / 1e6:.2f}s across "
         f"{measured} of {measured + unmeasured} traced processes"
@@ -6921,10 +7041,9 @@ def _format_configure_phase(configure: dict) -> list[str]:
         f"{configure['total_cpu_us'] / 1e6:.1f} measured CPU seconds ({share * 100:.1f}%) "
         f"went to configuring rather than building",
     ]
-    payers = [
-        (element, entry) for element, entry in configure["per_element"].items()
-        if entry["configure_cpu_us"]
-    ][:_CONFIGURE_PAYERS_SHOWN]
+    payers = [(element, entry) for element, entry in configure["per_element"].items() if entry["configure_cpu_us"]][
+        :_CONFIGURE_PAYERS_SHOWN
+    ]
     if not payers:
         lines.append("  No traced process descended from a configure entry point.")
     for element, entry in payers:
@@ -6933,9 +7052,7 @@ def _format_configure_phase(configure: dict) -> list[str]:
             f"({(entry['configure_share'] or 0) * 100:3.0f}% of its measured CPU, "
             f"{entry['configure_processes']} process(es))"
         )
-    remaining = sum(
-        1 for entry in configure["per_element"].values() if entry["configure_cpu_us"]
-    ) - len(payers)
+    remaining = sum(1 for entry in configure["per_element"].values() if entry["configure_cpu_us"]) - len(payers)
     if remaining > 0:
         lines.append(f"  (+{remaining} more element(s), see --format json)")
     lines.append(f"  ({configure['note']})")
@@ -6995,11 +7112,9 @@ def _format_peak_memory(peak_memory: dict) -> list[str]:
             continue
         coverage = ""
         if entry["unmeasured"]:
-            coverage = (f"  ({entry['measured']} of "
-                        f"{entry['measured'] + entry['unmeasured']} processes measured)")
+            coverage = f"  ({entry['measured']} of {entry['measured'] + entry['unmeasured']} processes measured)"
         lines.append(f"  {element:40s} {peak_kb / 1024:8.1f} MB{coverage}")
-    lines.append("  NOTE: a per-process peak, not a concurrent total - these are "
-                 "maxima and must not be summed.")
+    lines.append("  NOTE: a per-process peak, not a concurrent total - these are maxima and must not be summed.")
     lines.append("")
     return lines
 
@@ -7015,23 +7130,26 @@ def _format_resource_pressure(pressure: dict) -> list[str]:
         return []
     if not pressure.get("available"):
         return ["I/O and contention: unavailable - " + pressure.get("note", ""), ""]
-    lines = ["I/O, Faults and Contention (summed per element):",
-             f"  {'element':40s} {'read':>10s} {'written':>10s} "
-             f"{'majflt':>8s} {'preempted':>10s}"]
+    lines = [
+        "I/O, Faults and Contention (summed per element):",
+        f"  {'element':40s} {'read':>10s} {'written':>10s} {'majflt':>8s} {'preempted':>10s}",
+    ]
     for element, entry in pressure["per_element"].items():
         coverage = ""
         if entry["unmeasured"]:
-            coverage = (f"  ({entry['measured']} of "
-                        f"{entry['measured'] + entry['unmeasured']} measured)")
+            coverage = f"  ({entry['measured']} of {entry['measured'] + entry['unmeasured']} measured)"
         lines.append(
             f"  {element:40s} {_human_bytes(entry['read_bytes']):>10s} "
             f"{_human_bytes(entry['written_bytes']):>10s} "
             f"{entry['major_faults']:>8d} "
-            f"{entry['involuntary_switches']:>10d}{coverage}")
-    lines.append("  NOTE: read/written are block-layer I/O - what reached the "
-                 "device - so a cache-served read is genuinely 0. `preempted` "
-                 "is involuntary context switches, which rise with "
-                 "oversubscription rather than with work.")
+            f"{entry['involuntary_switches']:>10d}{coverage}"
+        )
+    lines.append(
+        "  NOTE: read/written are block-layer I/O - what reached the "
+        "device - so a cache-served read is genuinely 0. `preempted` "
+        "is involuntary context switches, which rise with "
+        "oversubscription rather than with work."
+    )
     lines.append("")
     return lines
 
@@ -7055,14 +7173,16 @@ def _format_process_outcomes(outcomes: dict) -> list[str]:
     if not outcomes:
         return []
     if not outcomes.get("available"):
-        return ["How processes ended: unavailable - "
-                + outcomes.get("note", ""), ""]
+        return ["How processes ended: unavailable - " + outcomes.get("note", ""), ""]
     killed = outcomes.get("killed", 0)
     nonzero = outcomes.get("exited_nonzero", 0)
     if not killed and not nonzero:
-        return [f"How processes ended: {outcomes['exited_zero']} exited 0, "
-                f"none killed, {outcomes['unknown']} not covered by a spine "
-                f"record.", ""]
+        return [
+            f"How processes ended: {outcomes['exited_zero']} exited 0, "
+            f"none killed, {outcomes['unknown']} not covered by a spine "
+            f"record.",
+            "",
+        ]
     lines = ["How Processes Ended:"]
     lines.append(f"  exited 0        {outcomes['exited_zero']:>6d}")
     if nonzero:
@@ -7074,11 +7194,13 @@ def _format_process_outcomes(outcomes: dict) -> list[str]:
         detail = ", ".join(f"{k} x{v}" for k, v in entry["statuses"].items())
         lines.append(f"    {element:38s} {detail}")
     if killed:
-        lines.append("  NOTE: a process the kernel killed with signal:9, with "
-                     "no cancellation around it, is the shape an OOM kill "
-                     "leaves. The host memory series beside this run "
-                     "(host-samples.jsonl) says whether memory was the "
-                     "reason.")
+        lines.append(
+            "  NOTE: a process the kernel killed with signal:9, with "
+            "no cancellation around it, is the shape an OOM kill "
+            "leaves. The host memory series beside this run "
+            "(host-samples.jsonl) says whether memory was the "
+            "reason."
+        )
     lines.append("")
     return lines
 
@@ -7097,8 +7219,7 @@ def _format_census_text(census: dict) -> str:
     ]
     if not names:
         lines.append(
-            "  Nothing this project stages is statically linked, so LD_PRELOAD has "
-            "nothing to miss among them."
+            "  Nothing this project stages is statically linked, so LD_PRELOAD has nothing to miss among them."
         )
     for name in names[:_CENSUS_BINARIES_SHOWN]:
         lines.append(f"    {name}")
@@ -7107,10 +7228,7 @@ def _format_census_text(census: dict) -> str:
     for element in at_risk[:_CENSUS_ELEMENTS_SHOWN]:
         entry = census["per_element"][element]
         sources = entry.get("staged_by_dependencies") or {}
-        origin = (
-            f" via {', '.join(sorted(sources)[:2])}" if sources
-            else " from its own sources"
-        )
+        origin = f" via {', '.join(sorted(sources)[:2])}" if sources else " from its own sources"
         lines.append(f"  {element}: {entry['static_count']} static{origin}")
     if len(at_risk) > _CENSUS_ELEMENTS_SHOWN:
         lines.append(f"  (+{len(at_risk) - _CENSUS_ELEMENTS_SHOWN} more element(s))")
@@ -7237,9 +7355,7 @@ def _format_static_census(report: dict) -> list[str]:
     # linkage was running at all. The old footnote's central claim -
     # "this tool cannot detect its own absence" - stops being true the
     # moment it was.
-    spine_ran = bool(
-        counts.get(COVERAGE_BOTH, 0) or counts.get(COVERAGE_SPINE_ONLY, 0)
-    )
+    spine_ran = bool(counts.get(COVERAGE_BOTH, 0) or counts.get(COVERAGE_SPINE_ONLY, 0))
     spine_seen = counts.get(COVERAGE_SPINE_ONLY, 0)
     if census is None:
         if not spine_ran:
@@ -7316,16 +7432,16 @@ def _format_static_census(report: dict) -> list[str]:
         f"linker. Affected: {', '.join(at_risk[:4])}"
         + (f" (+{len(at_risk) - 4} more)" if len(at_risk) > 4 else "")
         + ". This bounds what the trace can be missing; it does not measure what it "
-          "did miss (UX-105). "
+        "did miss (UX-105). "
         # UX-108: the budget decided the default, and a default-off
         # mechanism that nothing points at is one nobody finds. Said
         # here, where the reader is already looking at the gap, and with
         # the price attached so it is a choice rather than an
         # advertisement.
-          "Re-run with `bga capture run --trace-spine` to record them anyway: a "
-          "ptrace process-event tracer sees a process whatever its linkage, at a "
-          "measured +2.7% wall on a compile-bound build and +13.5% on a "
-          "process-dense one, which is why it is not the default (UX-106/UX-108).",
+        "Re-run with `bga capture run --trace-spine` to record them anyway: a "
+        "ptrace process-event tracer sees a process whatever its linkage, at a "
+        "measured +2.7% wall on a compile-bound build and +13.5% on a "
+        "process-dense one, which is why it is not the default (UX-106/UX-108).",
     ]
 
 
@@ -7355,9 +7471,7 @@ def _format_declared_vs_used(analysis: dict) -> list[str]:
     for entry in analysis.get("uncovered_elements") or []:
         lines.append(f"  {entry['element']:26s} UNCOVERED - {entry['reason']}")
     for entry in analysis.get("skipped") or []:
-        lines.append(
-            f"  {entry['element']:26s} skipped {entry['dependency']} - {entry['reason']}"
-        )
+        lines.append(f"  {entry['element']:26s} skipped {entry['dependency']} - {entry['reason']}")
     # UX-75: `UX-68` filtered these out of the candidate list and gave
     # them their own key, and until now nothing rendered that key at all
     # - so the filtered population was visible only to someone reading
@@ -7464,13 +7578,8 @@ def _format_text(report: dict) -> str:
     per_element = report.get("per_element_parallelism") or []
     if per_element:
         lines.append("")
-        lines.append(
-            "Per-element native parallelism (real compiler/assembler/linker processes only):"
-        )
-        lines.append(
-            f"  {'element':<24} {'peak':>4} {'req':>4} {'achieved':>9} "
-            f"{'span':>8} {'work':>4}"
-        )
+        lines.append("Per-element native parallelism (real compiler/assembler/linker processes only):")
+        lines.append(f"  {'element':<24} {'peak':>4} {'req':>4} {'achieved':>9} {'span':>8} {'work':>4}")
         for profile in per_element:
             requested = profile["requested_jobs"]
             achieved = profile["achieved_vs_requested"]
@@ -7514,23 +7623,21 @@ def _format_text(report: dict) -> str:
         # filter lived here alone, and the stored list carried every
         # finding while the terminal showed a shorter one.
         shown = [
-            f for f in redundant
-            if f.get("max_element_duration_s", f["total_duration_s"])
-            >= _REDUNDANCY_MIN_SECONDS
+            f for f in redundant if f.get("max_element_duration_s", f["total_duration_s"]) >= _REDUNDANCY_MIN_SECONDS
         ]
         below_floor = len(redundant) - len(shown)
         beyond_cap = _coverage.get("omitted_beyond_cap", 0)
         total = _coverage.get("total_findings", len(redundant))
         lines.append(
-            f"Redundant cross-element operations ({total} found, "
-            f"{len(shown)} above {_REDUNDANCY_MIN_SECONDS:.2f}s):"
+            f"Redundant cross-element operations ({total} found, {len(shown)} above {_REDUNDANCY_MIN_SECONDS:.2f}s):"
         )
         for finding in shown:
             worst = finding.get("worst_element")
             worst_s = finding.get("max_element_duration_s")
             wall_text = (
                 f"up to {worst_s:.3f}s recoverable wall-clock (worst element: {worst})"
-                if worst_s is not None else "wall-clock impact unknown"
+                if worst_s is not None
+                else "wall-clock impact unknown"
             )
             # `UX-384` removed the `elements` list: with the row cap in
             # place it was the one term still O(elements), and nothing
@@ -7575,9 +7682,7 @@ def _format_text(report: dict) -> str:
             "and must not be summed)"
         )
     coverage = _coverage
-    if coverage.get("excluded_unresolved_only") or coverage.get(
-        "excluded_element_command_blocks"
-    ):
+    if coverage.get("excluded_unresolved_only") or coverage.get("excluded_element_command_blocks"):
         # UX-73: a shorter list reads as a cleaner build unless the
         # exclusions are stated. The unresolved-only count is also a
         # coverage signal in its own right: it rises when element
@@ -7632,7 +7737,6 @@ def resolve_invocation_log_path(args) -> Optional[str]:
         scratch_mkdtemp(getattr(args, "project_dir", None), "invocations-"),
         "invocations.jsonl",
     )
-
 
 
 def _cpu_samples_path(args) -> str:
@@ -7746,8 +7850,7 @@ def _looks_mis_split(record: dict) -> bool:
     return "--" in command[1:]
 
 
-def format_untraced_build_warning(process_count: int,
-                                  sandbox_tasks: Optional[int]) -> Optional[str]:
+def format_untraced_build_warning(process_count: int, sandbox_tasks: Optional[int]) -> Optional[str]:
     """A Plane 2 capture that saw nothing while sandboxes ran, said loudly.
 
     `UX-405`: the shape this exists for traced **0 of 87** processes and
@@ -7819,6 +7922,7 @@ def resolve_buildbox_run() -> Optional[str]:
     """
     try:
         from buildstream import _site
+
         candidate = os.path.join(_site.subprojects, "buildbox", "buildbox-run")
         if os.access(candidate, os.X_OK):
             return candidate
@@ -7851,6 +7955,7 @@ def capture_fingerprint() -> dict:
     reading a user's JSONL could not tell which table applied. Collected
     once per capture rather than per sandbox.
     """
+
     def _version(argv):
         try:
             result = subprocess.run(argv, capture_output=True, text=True, timeout=60)
@@ -7920,8 +8025,9 @@ def format_sandbox_stderr(path: str, tail_lines: int = 12) -> Optional[str]:
     last is the sandbox that died.
     """
     rows = read_invocations(path)
-    speaking = [(position, row) for position, row in enumerate(rows, 1)
-                if _stderr_size(sandbox_stderr_path(path, row) or "")]
+    speaking = [
+        (position, row) for position, row in enumerate(rows, 1) if _stderr_size(sandbox_stderr_path(path, row) or "")
+    ]
     if not speaking:
         return None
     position, row = speaking[-1]
@@ -7945,8 +8051,7 @@ def format_sandbox_stderr(path: str, tail_lines: int = 12) -> Optional[str]:
         # UX-168 item 2: `.get`, not `[...]`. A record written before
         # UX-148 has no `stderr_path`, and this branch would have raised
         # while rendering a *failure* report - the worst place to.
-        out.append(f"    ... {elided} earlier line(s) in "
-                   f"{row.get('stderr_path') or live}")
+        out.append(f"    ... {elided} earlier line(s) in {row.get('stderr_path') or live}")
     out.extend(f"    {line}" for line in shown)
     out += [
         "",
@@ -7964,8 +8069,7 @@ def _stderr_size(path: str) -> int:
         return 0
 
 
-def replay_sandbox(diagnostics: str, index: Optional[int] = None,
-                   listing: bool = False, dry_run: bool = False) -> int:
+def replay_sandbox(diagnostics: str, index: Optional[int] = None, listing: bool = False, dry_run: bool = False) -> int:
     """Re-exec one recorded rewritten argv, with nothing in the way.
 
     `UX-148` item 3. Some sandboxes fail only under BuildStream's exact
@@ -7980,28 +8084,33 @@ def replay_sandbox(diagnostics: str, index: Optional[int] = None,
     """
     rows = read_invocations(diagnostics)
     if not rows:
-        print(f"No invocations recorded in {diagnostics}. A capture with zero "
-              f"shim invocations records none - see the capture's own summary "
-              f"for why.", file=sys.stderr)
+        print(
+            f"No invocations recorded in {diagnostics}. A capture with zero "
+            f"shim invocations records none - see the capture's own summary "
+            f"for why.",
+            file=sys.stderr,
+        )
         return 2
 
     if listing:
         for position, row in enumerate(rows, 1):
             spoke = _stderr_size(sandbox_stderr_path(diagnostics, row) or "")
-            print(f"{position:>3}  {row.get('element') or '(unnamed)':<28} "
-                  f"pid {row.get('pid')}"
-                  + (f"  [{spoke} bytes of stderr]" if spoke else ""))
+            print(
+                f"{position:>3}  {row.get('element') or '(unnamed)':<28} "
+                f"pid {row.get('pid')}" + (f"  [{spoke} bytes of stderr]" if spoke else "")
+            )
         return 0
 
     if index is None:
-        speaking = [r for r in rows
-                    if _stderr_size(sandbox_stderr_path(diagnostics, r) or "")]
+        speaking = [r for r in rows if _stderr_size(sandbox_stderr_path(diagnostics, r) or "")]
         row = speaking[-1] if speaking else rows[-1]
     elif 1 <= index <= len(rows):
         row = rows[index - 1]
     else:
-        print(f"There are {len(rows)} recorded invocation(s); -n must be "
-              f"between 1 and {len(rows)}. `--list` shows them.", file=sys.stderr)
+        print(
+            f"There are {len(rows)} recorded invocation(s); -n must be between 1 and {len(rows)}. `--list` shows them.",
+            file=sys.stderr,
+        )
         return 2
 
     argv = row.get("exec_argv") or []
@@ -8011,19 +8120,22 @@ def replay_sandbox(diagnostics: str, index: Optional[int] = None,
 
     missing = missing_bind_paths(argv)
     if missing:
-        print(f"Cannot replay: {len(missing)} path(s) this sandbox bound no "
-              f"longer exist. Sandbox roots are ephemeral, so a recording "
-              f"outlives them:", file=sys.stderr)
+        print(
+            f"Cannot replay: {len(missing)} path(s) this sandbox bound no "
+            f"longer exist. Sandbox roots are ephemeral, so a recording "
+            f"outlives them:",
+            file=sys.stderr,
+        )
         for path in missing[:5]:
             print(f"  {path}", file=sys.stderr)
         if len(missing) > 5:
             print(f"  ... and {len(missing) - 5} more", file=sys.stderr)
-        print("Re-run the capture with --diagnose to record a fresh one.",
-              file=sys.stderr)
+        print("Re-run the capture with --diagnose to record a fresh one.", file=sys.stderr)
         return 2
 
-    print(f"Replaying {row.get('element') or '(unnamed element)'} "
-          f"(pid {row.get('pid')} at capture time)", file=sys.stderr)
+    print(
+        f"Replaying {row.get('element') or '(unnamed element)'} (pid {row.get('pid')} at capture time)", file=sys.stderr
+    )
     if dry_run:
         print(" ".join(argv))
         return 0
@@ -8036,10 +8148,16 @@ def replay_sandbox(diagnostics: str, index: Optional[int] = None,
 
 # bwrap's own bind options, whose *source* argument is a host path that a
 # recording can outlive.
-_BIND_FLAGS = frozenset({
-    "--bind", "--bind-try", "--ro-bind", "--ro-bind-try",
-    "--dev-bind", "--dev-bind-try",
-})
+_BIND_FLAGS = frozenset(
+    {
+        "--bind",
+        "--bind-try",
+        "--ro-bind",
+        "--ro-bind-try",
+        "--dev-bind",
+        "--dev-bind-try",
+    }
+)
 
 
 def missing_bind_paths(argv: list[str]) -> list[str]:
@@ -8053,11 +8171,13 @@ def missing_bind_paths(argv: list[str]) -> list[str]:
     return missing
 
 
-def format_post_build_interrupt(report_path: Optional[str],
-                                wrapped_log_path: Optional[str],
-                                run_dir: Optional[str],
-                                project_dir: Optional[str],
-                                build_interrupted: bool = False) -> str:
+def format_post_build_interrupt(
+    report_path: Optional[str],
+    wrapped_log_path: Optional[str],
+    run_dir: Optional[str],
+    project_dir: Optional[str],
+    build_interrupted: bool = False,
+) -> str:
     """What is on disk after an interrupt *between* phases, and how to finish.
 
     `UX-163` item 2. The build is over by this point: `build.log` is
@@ -8073,22 +8193,31 @@ def format_post_build_interrupt(report_path: Optional[str],
     command that would produce a run directory claiming the same thing.
     """
     if build_interrupted:
-        lines = ["", "Interrupted again, during the salvage of an interrupted "
-                     "build. The build did not finish either; what was "
-                     "interrupted this time is bga's own post-processing."]
+        lines = [
+            "",
+            "Interrupted again, during the salvage of an interrupted "
+            "build. The build did not finish either; what was "
+            "interrupted this time is bga's own post-processing.",
+        ]
     else:
-        lines = ["", "Interrupted after the build. The build itself completed; "
-                     "what was interrupted is bga's own post-processing."]
-    kept = [(name, path) for name, path in (
-        ("Plane 1 log", wrapped_log_path),
-        ("Plane 2 report", report_path),
-    ) if path and os.path.exists(path)]
+        lines = [
+            "",
+            "Interrupted after the build. The build itself completed; "
+            "what was interrupted is bga's own post-processing.",
+        ]
+    kept = [
+        (name, path)
+        for name, path in (
+            ("Plane 1 log", wrapped_log_path),
+            ("Plane 2 report", report_path),
+        )
+        if path and os.path.exists(path)
+    ]
     if kept:
         lines.append("")
         lines.append("  Already on disk:")
         lines.extend(f"    {name}: {path}" for name, path in kept)
-    if run_dir and not os.path.isdir(run_dir) and wrapped_log_path \
-            and os.path.exists(wrapped_log_path) and project_dir:
+    if run_dir and not os.path.isdir(run_dir) and wrapped_log_path and os.path.exists(wrapped_log_path) and project_dir:
         lines += [
             "",
             "  The run directory was not extracted. Nothing needs rebuilding -",
@@ -8100,10 +8229,8 @@ def format_post_build_interrupt(report_path: Optional[str],
         if build_interrupted:
             lines += [
                 "",
-                "  `--interrupted` is not optional here: without it the "
-                "recovered run",
-                "  reads as a complete build, and every figure in it would be "
-                "presented",
+                "  `--interrupted` is not optional here: without it the recovered run",
+                "  reads as a complete build, and every figure in it would be presented",
                 "  as a measurement of one.",
             ]
     elif run_dir and os.path.isdir(run_dir):
@@ -8111,8 +8238,7 @@ def format_post_build_interrupt(report_path: Optional[str],
     return "\n".join(lines)
 
 
-def format_capture_diagnostics(path: str, no_inject: bool = False,
-                               sandbox_tasks: Optional[int] = None) -> str:
+def format_capture_diagnostics(path: str, no_inject: bool = False, sandbox_tasks: Optional[int] = None) -> str:
     """UX-146: the count first, because zero is the answer that matters.
 
     `sandbox_tasks` is how many element tasks the build actually ran, from
@@ -8192,8 +8318,8 @@ def format_capture_diagnostics(path: str, no_inject: bool = False,
         lines += [
             "  A fully cached build also launches no sandbox, which is benign -",
             "  but this build did run tasks, so that is not what happened here."
-            if sandbox_tasks else
-            "  A fully cached build launches no sandbox, which is benign.",
+            if sandbox_tasks
+            else "  A fully cached build launches no sandbox, which is benign.",
             _record_line(path),
         ]
         return "\n".join(lines)
@@ -8215,16 +8341,16 @@ def format_capture_diagnostics(path: str, no_inject: bool = False,
 
     fingerprint = read_capture_fingerprint(path) or {}
     lines += [
-        f"  The bwrap shim ran {len(records)} time(s); "
-        f"{injected} rewritten, {len(records) - injected} passed through.",
+        f"  The bwrap shim ran {len(records)} time(s); {injected} rewritten, {len(records) - injected} passed through.",
         f"  Real bwrap: {records[-1].get('real_bwrap')}"
-        + (f" ({' '.join(fingerprint['bwrap_version'])})"
-           if fingerprint.get("bwrap_version") else ""),
+        + (f" ({' '.join(fingerprint['bwrap_version'])})" if fingerprint.get("bwrap_version") else ""),
     ]
     if fingerprint.get("bst_version"):
-        lines.append(f"  {' '.join(fingerprint['bst_version'])}"
-                     f"; arity table validated against "
-                     f"{fingerprint.get('arity_table_validated_against')}")
+        lines.append(
+            f"  {' '.join(fingerprint['bst_version'])}"
+            f"; arity table validated against "
+            f"{fingerprint.get('arity_table_validated_against')}"
+        )
     if elements:
         shown = ", ".join(elements[:6])
         more = f" (+{len(elements) - 6} more)" if len(elements) > 6 else ""
@@ -8232,11 +8358,11 @@ def format_capture_diagnostics(path: str, no_inject: bool = False,
     else:
         lines.append("  Elements seen: none recoverable from the argv (UX-56)")
     if unexecutable:
-        lines.append(f"  {len(unexecutable)} invocation(s) found no executable "
-                     f"bwrap at that path - that alone fails the build.")
+        lines.append(
+            f"  {len(unexecutable)} invocation(s) found no executable bwrap at that path - that alone fails the build."
+        )
     if unknown:
-        named = ", ".join(f"{flag} (x{count})" for flag, count in
-                          sorted(unknown.items(), key=lambda kv: -kv[1])[:6])
+        named = ", ".join(f"{flag} (x{count})" for flag, count in sorted(unknown.items(), key=lambda kv: -kv[1])[:6])
         lines += [
             f"  {len(unknown)} bwrap option(s) this build used are not in the",
             "  shim's arity table, so how many arguments each takes was guessed:",
@@ -8248,8 +8374,7 @@ def format_capture_diagnostics(path: str, no_inject: bool = False,
     if suspicious:
         first = suspicious[0]
         lines += [
-            f"  {len(suspicious)} invocation(s) parsed a sandboxed command that "
-            f"does not look like one:",
+            f"  {len(suspicious)} invocation(s) parsed a sandboxed command that does not look like one:",
             f"    {' '.join((first.get('command') or [])[:4])}",
             "  That is what a mis-split looks like - the first token should be a",
             "  program, not a flag, a number or a separator. Send this file.",
@@ -8270,7 +8395,9 @@ def _CompactRawHelp(prog):
     """UX-158: one shared compact help layout, imported lazily so
     this module stays runnable on its own."""
     from bga.help_format import CompactRawHelp
+
     return CompactRawHelp(prog)
+
 
 def main(argv: Optional[list[str]] = None) -> int:
     """`argv` defaults to `sys.argv[1:]`, as argparse does.
@@ -8287,36 +8414,36 @@ def main(argv: Optional[list[str]] = None) -> int:
     run_parser.add_argument("output", help="Path to write the JSON report to")
     run_parser.add_argument("--raw-log", help="Keep the raw trace log at PATH.")
     run_parser.add_argument(
-        "--host-samples", metavar="PATH",
+        "--host-samples",
+        metavar="PATH",
         # `UX-158`: the help is a line per flag. The measured cost, the
         # OOM argument and why the series sits beside the report rather
         # than inside it are in the task file and in `run_store`'s note
         # on `HOST_SAMPLES_NAME` - not here, which is the budget this
         # flag spent 5 of 45 lines of on its first day.
         help="Where to write the host's memory series while the build "
-             f"runs (JSON Lines, one sample every "
-             f"{HOST_SAMPLE_INTERVAL_S:g}s)."
+        f"runs (JSON Lines, one sample every "
+        f"{HOST_SAMPLE_INTERVAL_S:g}s).",
     )
     run_parser.add_argument(
-        "--invocation-log", metavar="PATH",
-        help='Where to write the per-sandbox invocation record.'
+        "--invocation-log", metavar="PATH", help='Where to write the per-sandbox invocation record.'
     )
     run_parser.add_argument(
-        "--no-invocation-log", action="store_true",
-        help='UX-80: opt out of the automatic invocation record.'
+        "--no-invocation-log", action="store_true", help='UX-80: opt out of the automatic invocation record.'
     )
     run_parser.add_argument(
-        "--argv-log", metavar="PATH",
-        help='Record the bwrap argv BuildStream generated, as JSON lines.'
+        "--argv-log", metavar="PATH", help='Record the bwrap argv BuildStream generated, as JSON lines.'
     )
     run_parser.add_argument(
-        "--trace-opens", action="store_true",
-        help='Also record opened files, and unread declared dependencies.'
+        "--trace-opens", action="store_true", help='Also record opened files, and unread declared dependencies.'
     )
     run_parser.add_argument(
-        "--trace-spine", nargs="?", const="on", default="off",
+        "--trace-spine",
+        nargs="?",
+        const="on",
+        default="off",
         choices=("off", "on", "auto"),
-        help='UX-106: also run a ptrace process-event spine inside the sandbox, which sees statically-linked processes the LD_PRELOAD hook structurally cannot.'
+        help='UX-106: also run a ptrace process-event spine inside the sandbox, which sees statically-linked processes the LD_PRELOAD hook structurally cannot.',
     )
     run_parser.add_argument(
         "--wrapped-log",
@@ -8325,54 +8452,72 @@ def main(argv: Optional[list[str]] = None) -> int:
         # `UX-24`. What a reader needs is what the flag writes; why one
         # build can feed both planes is `docs/design/architecture.md`'s
         # two-plane chapter.
-        help='Also capture a wrapped-format Plane 1 log of this same bst invocation.'
+        help='Also capture a wrapped-format Plane 1 log of this same bst invocation.',
     )
     run_parser.add_argument(
-        "--run-dir", metavar="PATH",
-        help='UX-126: also extract a bga run directory (`bga analyze`\'s input) into PATH, from the Plane 1 log this same invocation captures.'
+        "--run-dir",
+        metavar="PATH",
+        help='UX-126: also extract a bga run directory (`bga analyze`\'s input) into PATH, from the Plane 1 log this same invocation captures.',
     )
     run_parser.add_argument(
-        "--diagnose", action="store_true",
-        help='UX-146: record what the bwrap shim received and what it exec\'d, one JSON line per sandbox, and print a summary of it.'
+        "--diagnose",
+        action="store_true",
+        help='UX-146: record what the bwrap shim received and what it exec\'d, one JSON line per sandbox, and print a summary of it.',
     )
     run_parser.add_argument(
-        "--no-inject", action="store_true",
-        help='UX-146: install the shim but pass BuildStream\'s bwrap argv through untouched.'
+        "--no-inject",
+        action="store_true",
+        help='UX-146: install the shim but pass BuildStream\'s bwrap argv through untouched.',
     )
     run_parser.add_argument(
-        "--inhibit", action="store_true",
+        "--inhibit",
+        action="store_true",
         help="UX-185: stop the machine sleeping while the build runs, via "
-             "systemd-inhibit (and gnome-session-inhibit when present)."
+        "systemd-inhibit (and gnome-session-inhibit when present).",
     )
     run_parser.add_argument(
-        "--jobserver", type=int, default=None, metavar="N",
-        help="Bind an N-token jobserver into every sandbox (UX-679)."
+        "--jobserver",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Bind an N-token jobserver into every sandbox (UX-679).",
     )
     run_parser.add_argument(
-        "--jobserver-auth", choices=("fd", "fifo", "auto"), default="auto",
+        "--jobserver-auth",
+        choices=("fd", "fifo", "auto"),
+        default="auto",
         help="UX-841: the --jobserver-auth style; auto picks fifo: from "
-             "GNU Make 4.4, fd below, by the host's own `make --version`."
+        "GNU Make 4.4, fd below, by the host's own `make --version`.",
     )
     run_parser.add_argument(
-        "--jobserver-pool", choices=("fixed", "dynamic"), default="dynamic",
+        "--jobserver-pool",
+        choices=("fixed", "dynamic"),
+        default="dynamic",
         help="UX-845: dynamic follows busy cores and PSI every "
-             f"{JOBSERVER_POOL_INTERVAL_S:g}s; fixed keeps the static seed."
+        f"{JOBSERVER_POOL_INTERVAL_S:g}s; fixed keeps the static seed.",
     )
     run_parser.add_argument(
-        "--jobserver-capacity", type=int, default=None, metavar="N",
+        "--jobserver-capacity",
+        type=int,
+        default=None,
+        metavar="N",
         help="UX-845: override the host core count the dynamic pool "
-             "compares busy cores against (default: os.cpu_count())."
+        "compares busy cores against (default: os.cpu_count()).",
     )
     run_parser.add_argument(
-        "--jobserver-seed", type=int, default=None, metavar="N",
-        help="UX-858: tokens the FIFO opens holding (default: "
-             "--jobserver's N minus one)."
+        "--jobserver-seed",
+        type=int,
+        default=None,
+        metavar="N",
+        help="UX-858: tokens the FIFO opens holding (default: --jobserver's N minus one).",
     )
     run_parser.add_argument(
-        "--plan", metavar="PATH", default=None,
+        "--plan",
+        metavar="PATH",
+        default=None,
         help="UX-849: an analyze.json naming this project's own slack - "
-             "a per-element proxy replaces the shared FIFO, granted by "
-             "least slack first. Off (no proxies) without it."
+        "a per-element proxy replaces the shared FIFO, granted by "
+        "least slack first. Off (no proxies) without it.",
     )
     run_parser.add_argument("--json", action="store_true", help="Print the report as JSON to stdout too")
     run_parser.add_argument("cmd", nargs=argparse.REMAINDER, help="The bst command to run, e.g. -- bst build core.bst")
@@ -8383,13 +8528,10 @@ def main(argv: Optional[list[str]] = None) -> int:
     )
     report_parser.add_argument(
         "path",
-        help='A raw trace log (as written by `run --raw-log`) or a JSON report (as written by `run`) - the kind is detected, not declared (UX-38)'
+        help='A raw trace log (as written by `run --raw-log`) or a JSON report (as written by `run`) - the kind is detected, not declared (UX-38)',
     )
     report_parser.add_argument("--json", action="store_true", help="Emit JSON instead of a human-readable summary")
-    report_parser.add_argument(
-        "--project-dir",
-        help='UX-46: the BuildStream project this trace came from.'
-    )
+    report_parser.add_argument("--project-dir", help='UX-46: the BuildStream project this trace came from.')
 
     # UX-105 item 3: the census, standalone. It reads files on disk and
     # runs nothing, so it answers "what can Plane 2 not see here?"
@@ -8399,12 +8541,11 @@ def main(argv: Optional[list[str]] = None) -> int:
         "census",
         help="Classify a project's staged executables as static or dynamic (UX-105)",
     )
+    census_parser.add_argument("project_dir", help='A BuildStream project directory.')
     census_parser.add_argument(
-        "project_dir",
-        help='A BuildStream project directory.'
-    )
-    census_parser.add_argument(
-        "--json", action="store_true", help="Emit JSON instead of a summary",
+        "--json",
+        action="store_true",
+        help="Emit JSON instead of a summary",
     )
 
     # UX-148 item 3: the ten-second local reproduction for the class of
@@ -8415,31 +8556,32 @@ def main(argv: Optional[list[str]] = None) -> int:
         "replay-sandbox",
         help="Re-run a recorded sandbox argv directly, without buildbox-run",
     )
+    replay_parser.add_argument("diagnostics", help="A capture's .diagnostics.jsonl file.")
     replay_parser.add_argument(
-        "diagnostics", help="A capture's .diagnostics.jsonl file.")
-    replay_parser.add_argument(
-        "-n", type=int, default=None, metavar="N",
+        "-n",
+        type=int,
+        default=None,
+        metavar="N",
         help="Which recorded invocation to replay (1-based). Default: the last "
-             "one that wrote to stderr, or the last recorded.")
-    replay_parser.add_argument(
-        "--list", action="store_true",
-        help="List the recorded invocations and exit.")
-    replay_parser.add_argument(
-        "--dry-run", action="store_true",
-        help="Print the argv that would run, and exit.")
+        "one that wrote to stderr, or the last recorded.",
+    )
+    replay_parser.add_argument("--list", action="store_true", help="List the recorded invocations and exit.")
+    replay_parser.add_argument("--dry-run", action="store_true", help="Print the argv that would run, and exit.")
 
     args = parser.parse_args(argv)
 
     if args.command == "replay-sandbox":
-        return replay_sandbox(args.diagnostics, index=args.n,
-                              listing=args.list, dry_run=args.dry_run)
+        return replay_sandbox(args.diagnostics, index=args.n, listing=args.list, dry_run=args.dry_run)
 
     if args.command == "census":
         elements_dir = elements_dir_for(args.project_dir)
         if not os.path.isdir(elements_dir):
-            print(f"Error: no {element_path(args.project_dir)}/ directory "
-                  f"under {args.project_dir} (the project's declared "
-                  f"element-path)", file=sys.stderr)
+            print(
+                f"Error: no {element_path(args.project_dir)}/ directory "
+                f"under {args.project_dir} (the project's declared "
+                f"element-path)",
+                file=sys.stderr,
+            )
             return 1
         elements = discover_element_names(args.project_dir)
         census = census_project(args.project_dir, elements)
@@ -8467,20 +8609,18 @@ def main(argv: Optional[list[str]] = None) -> int:
                 "`run --wrapped-log PATH PROJECT_DIR OUTPUT -- bst build target.bst`"
             )
 
-        raw_log_path = args.raw_log or os.path.join(
-            scratch_mkdtemp(args.project_dir, "trace-log-"), "trace.log")
+        raw_log_path = args.raw_log or os.path.join(scratch_mkdtemp(args.project_dir, "trace-log-"), "trace.log")
         # UX-146: `--no-inject` without the record would answer "did it
         # work?" and nothing else, and the record is the artifact the
         # user sends on.
-        diagnostics_path = (f"{args.output}.diagnostics.jsonl"
-                            if (args.diagnose or args.no_inject) else None)
+        diagnostics_path = f"{args.output}.diagnostics.jsonl" if (args.diagnose or args.no_inject) else None
         # UX-845: beside the report, only when the dynamic pool ran.
-        jobserver_ledger_path = (f"{args.output}.jobserver_ledger.jsonl"
-                                 if (args.jobserver and args.jobserver_pool == "dynamic")
-                                 else None)
-        jobserver_status_path = (f"{args.output}.jobserver_status.json"
-                                 if (args.jobserver and args.jobserver_pool == "dynamic")
-                                 else None)
+        jobserver_ledger_path = (
+            f"{args.output}.jobserver_ledger.jsonl" if (args.jobserver and args.jobserver_pool == "dynamic") else None
+        )
+        jobserver_status_path = (
+            f"{args.output}.jobserver_status.json" if (args.jobserver and args.jobserver_pool == "dynamic") else None
+        )
         # UX-126: a run directory is extracted *from* the Plane 1 log, so
         # asking for one asks for the log. Same shape as UX-80's implied
         # invocation record: named, it is kept; unnamed, it goes to a
@@ -8488,8 +8628,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         # feeds and not the file itself.
         wrapped_log_path = args.wrapped_log
         if args.run_dir and not wrapped_log_path:
-            wrapped_log_path = os.path.join(
-                scratch_mkdtemp(args.project_dir, "plane1-"), "build.log")
+            wrapped_log_path = os.path.join(scratch_mkdtemp(args.project_dir, "plane1-"), "build.log")
         args.wrapped_log = wrapped_log_path
         invocation_log_path = resolve_invocation_log_path(args)
         # `UX-893`: an intermediate in scratch, never in the snapshot.
@@ -8497,13 +8636,12 @@ def main(argv: Optional[list[str]] = None) -> int:
         interrupted = False
         # UX-841: resolved once, here - `run_traced_build` and the report
         # both need the same answer, and `auto` shells out only once.
-        jobserver_auth = (jobserver_auth_style(args.jobserver_auth)
-                          if args.jobserver else None)
+        jobserver_auth = jobserver_auth_style(args.jobserver_auth) if args.jobserver else None
         # UX-858: resolved once, here too - the FIFO's seed, the report,
         # and the fixed-mode fallback pool bounds all read this one value.
         jobserver_seed = (
-            args.jobserver_seed if args.jobserver_seed is not None
-            else (args.jobserver - 1 if args.jobserver else None))
+            args.jobserver_seed if args.jobserver_seed is not None else (args.jobserver - 1 if args.jobserver else None)
+        )
         # UX-842/UX-843/UX-882/UX-1011: one `bst show` call, before the
         # build, for the project's own `max-jobs` (`-j1` vs. an
         # element-level cap), the per-kind table and the `%{public}`
@@ -8514,60 +8652,66 @@ def main(argv: Optional[list[str]] = None) -> int:
         # `run_traced_build`, not here. `element_auth_map` is `{}`
         # (never `None`) on any failure - an annotation read gone wrong
         # must not change what the build does.
-        (project_max_jobs, element_kinds, kinds_read_diagnostic,
-         element_auth_map, element_deps,
-         element_notparallel) = read_jobserver_metadata_for_build(
-            args.project_dir, cmd, args.jobserver)
+        (
+            project_max_jobs,
+            element_kinds,
+            kinds_read_diagnostic,
+            element_auth_map,
+            element_deps,
+            element_notparallel,
+        ) = read_jobserver_metadata_for_build(args.project_dir, cmd, args.jobserver)
         jobserver_decisions_path = (
-            os.path.join(scratch_mkdtemp(args.project_dir, "jobserver-"),
-                        "jobserver_decisions.jsonl")
-            if args.jobserver else None)
+            os.path.join(scratch_mkdtemp(args.project_dir, "jobserver-"), "jobserver_decisions.jsonl")
+            if args.jobserver
+            else None
+        )
         # UX-849: the broker's own grants/drains counts, read back after
         # `run_traced_build` returns - it never leaves the function any
         # other way, the same shape `jobserver_status_path` already uses
         # for `PoolController.stopped`.
-        broker_status_path = (f"{args.output}.jobserver_broker_status.json"
-                              if (args.jobserver and args.plan) else None)
+        broker_status_path = f"{args.output}.jobserver_broker_status.json" if (args.jobserver and args.plan) else None
         # UX-1005 track C: the admission pool's own size and wait total,
         # read back the same way - always under `--jobserver`, since the
         # pool itself is created regardless of `--plan` (only the ranked
         # broker needs one).
-        admission_status_path = (f"{args.output}.admission_status.json"
-                                 if args.jobserver else None)
+        admission_status_path = f"{args.output}.admission_status.json" if args.jobserver else None
         # UX-1082: no separate pre-build `bst show` - the key set is
         # read after the build, from its own Plane 1 log's `Pipeline`
         # block, so it reflects the options this build ran with.
         cache_key_set = None
         try:
-            returncode = run_traced_build(args.project_dir, cmd, raw_log_path,
-                                          wrapped_log_path=wrapped_log_path,
-                                          trace_opens=args.trace_opens,
-                                          argv_log_path=args.argv_log,
-                                          invocation_log_path=invocation_log_path,
-                                          trace_spine=_spine_policy(args.trace_spine),
-                                          diagnostics_path=diagnostics_path,
-                                          no_inject=args.no_inject,
-                                          inhibit=args.inhibit,
-                                          host_samples_path=getattr(
-                                              args, "host_samples", None),
-                                          cpu_samples_path=cpu_samples_path,
-                                          jobserver=args.jobserver,
-                                          jobserver_seed=jobserver_seed,
-                                          jobserver_auth=jobserver_auth,
-                                          jobserver_pool=args.jobserver_pool,
-                                          jobserver_capacity=args.jobserver_capacity,
-                                          jobserver_ledger_path=jobserver_ledger_path,
-                                          jobserver_status_path=jobserver_status_path,
-                                          project_max_jobs=project_max_jobs,
-                                          jobserver_decisions_path=jobserver_decisions_path,
-                                          element_kinds=element_kinds,
-                                          kinds_read_diagnostic=kinds_read_diagnostic,
-                                          element_auth_map=element_auth_map,
-                                          plan_path=args.plan,
-                                          element_deps=element_deps,
-                                          element_notparallel=element_notparallel,
-                                          broker_status_path=broker_status_path,
-                                          admission_status_path=admission_status_path)
+            returncode = run_traced_build(
+                args.project_dir,
+                cmd,
+                raw_log_path,
+                wrapped_log_path=wrapped_log_path,
+                trace_opens=args.trace_opens,
+                argv_log_path=args.argv_log,
+                invocation_log_path=invocation_log_path,
+                trace_spine=_spine_policy(args.trace_spine),
+                diagnostics_path=diagnostics_path,
+                no_inject=args.no_inject,
+                inhibit=args.inhibit,
+                host_samples_path=getattr(args, "host_samples", None),
+                cpu_samples_path=cpu_samples_path,
+                jobserver=args.jobserver,
+                jobserver_seed=jobserver_seed,
+                jobserver_auth=jobserver_auth,
+                jobserver_pool=args.jobserver_pool,
+                jobserver_capacity=args.jobserver_capacity,
+                jobserver_ledger_path=jobserver_ledger_path,
+                jobserver_status_path=jobserver_status_path,
+                project_max_jobs=project_max_jobs,
+                jobserver_decisions_path=jobserver_decisions_path,
+                element_kinds=element_kinds,
+                kinds_read_diagnostic=kinds_read_diagnostic,
+                element_auth_map=element_auth_map,
+                plan_path=args.plan,
+                element_deps=element_deps,
+                element_notparallel=element_notparallel,
+                broker_status_path=broker_status_path,
+                admission_status_path=admission_status_path,
+            )
         except CaptureInterrupted:
             # UX-157: everything below this point is salvage, and it is
             # the same salvage a failed build already got. The trace was
@@ -8578,17 +8722,21 @@ def main(argv: Optional[list[str]] = None) -> int:
             # UX-168 item 4: this used to say "analyzed above" while half
             # the report was still below it. It prints before any of the
             # analysis, so "below" is the whole of it.
-            print("\nInterrupted. Analyzing what was captured before the "
-                  "interrupt - this is a partial build, and every figure "
-                  "that follows describes only the elements that finished.",
-                  file=sys.stderr)
+            print(
+                "\nInterrupted. Analyzing what was captured before the "
+                "interrupt - this is a partial build, and every figure "
+                "that follows describes only the elements that finished.",
+                file=sys.stderr,
+            )
         except KeyboardInterrupt:
             # UX-163: the *pre*-build window - compiling the hook, and the
             # census walk, which on a big project is minutes of silence
             # with only UX-159's one line to show for it. Nothing was
             # built, so there is nothing to salvage and nothing to resume.
-            print("\nInterrupted before the build started. Nothing was "
-                  "captured and nothing was left behind.", file=sys.stderr)
+            print(
+                "\nInterrupted before the build started. Nothing was captured and nothing was left behind.",
+                file=sys.stderr,
+            )
             return 130
         except TraceError as e:
             print(f"Error: {e}", file=sys.stderr)
@@ -8602,10 +8750,12 @@ def main(argv: Optional[list[str]] = None) -> int:
             # UX-147: how many element tasks actually ran, so a zero can
             # be told apart from a cache-hit build. Read from the Plane 1
             # log this same capture wrote.
-            print(format_capture_diagnostics(
-                diagnostics_path, no_inject=args.no_inject,
-                sandbox_tasks=count_build_tasks(wrapped_log_path)),
-                file=sys.stderr)
+            print(
+                format_capture_diagnostics(
+                    diagnostics_path, no_inject=args.no_inject, sandbox_tasks=count_build_tasks(wrapped_log_path)
+                ),
+                file=sys.stderr,
+            )
             # UX-148 item 2: on a failed build, the generic return code
             # becomes "and here is what bwrap said".
             if returncode != 0:
@@ -8622,12 +8772,14 @@ def main(argv: Optional[list[str]] = None) -> int:
         # *because* they take minutes, so they are exactly where a user
         # who has already waited three hours presses Ctrl-C.
         try:
-            with progress.timed("Plane 2 report",
-                                say="Analyzing the captured trace..."):
-                report = load_and_summarize(raw_log_path, project_dir=args.project_dir,
-                                            invocation_log_path=invocation_log_path,
-                                            plane1_log_path=wrapped_log_path,
-                                            cpu_samples_path=cpu_samples_path)
+            with progress.timed("Plane 2 report", say="Analyzing the captured trace..."):
+                report = load_and_summarize(
+                    raw_log_path,
+                    project_dir=args.project_dir,
+                    invocation_log_path=invocation_log_path,
+                    plane1_log_path=wrapped_log_path,
+                    cpu_samples_path=cpu_samples_path,
+                )
                 report["wrapped_command_exit_code"] = returncode
                 # UX-1082: `{"sha256": ..., "elements": N}` from the build's
                 # own `Pipeline` block, or `None` ("unread") - comparable
@@ -8644,30 +8796,33 @@ def main(argv: Optional[list[str]] = None) -> int:
                     # for `summarize_jobserver_tokens_by_element` below.
                     tool_pids, element_ends = read_jobserver_tool_pids(raw_log_path)
                     pid_to_element = read_pid_to_element(raw_log_path)
-                report.update(report_block({
-                    "jobserver": args.jobserver,
-                    "jobserver_seed": jobserver_seed,
-                    "jobserver_auth": jobserver_auth,
-                    "jobserver_pool_mode": args.jobserver_pool,
-                    "capacity": args.jobserver_capacity or os.cpu_count() or 1,
-                    "jobserver_ledger_path": jobserver_ledger_path,
-                    "jobserver_status_path": jobserver_status_path,
-                    "plan_path": args.plan,
-                    "broker_status_path": broker_status_path,
-                    "admission_status_path": admission_status_path,
-                    "element_kinds_present": element_kinds is not None,
-                    "jobserver_decisions_path": jobserver_decisions_path,
-                    # UX-846: the pass-through table, probed once - `None`
-                    # when the mode itself is off, since nothing was wrapped.
-                    # `probe_jobserver_wrapper_policy` reaches `bga.progress`,
-                    # so it is called here, not inside `report_block`.
-                    "jobserver_wrappers": (
-                        probe_jobserver_wrapper_policy() if args.jobserver else None),
-                    "pid_to_element": pid_to_element,
-                    "tool_pids": tool_pids,
-                    "element_ends": element_ends,
-                    "psi_withdraw_counter": count_memory_psi_withdraws,
-                }))
+                report.update(
+                    report_block(
+                        {
+                            "jobserver": args.jobserver,
+                            "jobserver_seed": jobserver_seed,
+                            "jobserver_auth": jobserver_auth,
+                            "jobserver_pool_mode": args.jobserver_pool,
+                            "capacity": args.jobserver_capacity or os.cpu_count() or 1,
+                            "jobserver_ledger_path": jobserver_ledger_path,
+                            "jobserver_status_path": jobserver_status_path,
+                            "plan_path": args.plan,
+                            "broker_status_path": broker_status_path,
+                            "admission_status_path": admission_status_path,
+                            "element_kinds_present": element_kinds is not None,
+                            "jobserver_decisions_path": jobserver_decisions_path,
+                            # UX-846: the pass-through table, probed once - `None`
+                            # when the mode itself is off, since nothing was wrapped.
+                            # `probe_jobserver_wrapper_policy` reaches `bga.progress`,
+                            # so it is called here, not inside `report_block`.
+                            "jobserver_wrappers": (probe_jobserver_wrapper_policy() if args.jobserver else None),
+                            "pid_to_element": pid_to_element,
+                            "tool_pids": tool_pids,
+                            "element_ends": element_ends,
+                            "psi_withdraw_counter": count_memory_psi_withdraws,
+                        }
+                    )
+                )
                 # UX-842: the project's own `max-jobs`, and each sandbox's
                 # pinned/joined/capped_pending decision against it - both
                 # `None`/`[]` when the jobserver itself is off. Not a
@@ -8681,18 +8836,18 @@ def main(argv: Optional[list[str]] = None) -> int:
                 # wanted them used to parse the whole document again, once
                 # per snapshot, on every page load.
                 from bga.run_store import RESOURCE_NAME, write_resource_profile
+
                 write_resource_profile(
-                    os.path.join(os.path.dirname(os.path.abspath(args.output)),
-                                 RESOURCE_NAME),
-                    report)
+                    os.path.join(os.path.dirname(os.path.abspath(args.output)), RESOURCE_NAME), report
+                )
             if args.run_dir:
                 # Best-effort, and after the report is on disk: a build that
                 # failed early produces a log with no `Targets:` line, and
                 # losing the Plane 2 capture over that would throw away the
                 # expensive half of what just ran.
                 from .bst_extract_run import extract_run
-                with progress.timed("run directory",
-                                    say="Extracting run data (bst show)..."):
+
+                with progress.timed("run directory", say="Extracting run data (bst show)..."):
                     try:
                         # UX-1083: `BGA_BASELINE_RUN_DIR`, the same shape
                         # `BGA_JOBSERVER_MODE` (UX-856) already uses - `bga
@@ -8701,15 +8856,19 @@ def main(argv: Optional[list[str]] = None) -> int:
                         # baseline to compare this build's own fingerprint
                         # against. Absent for a direct-tracer invocation,
                         # same as the jobserver mode above.
-                        extract_run(args.project_dir, wrapped_log_path, args.run_dir,
-                                    log_format="wrapped", interrupted=interrupted,
-                                    jobserver=_jobserver_block(report),
-                                    cache_key_set=cache_key_set,
-                                    bst_global_options=_bst_global_options(cmd)[0],
-                                    baseline_run_dir=os.environ.get("BGA_BASELINE_RUN_DIR"))
+                        extract_run(
+                            args.project_dir,
+                            wrapped_log_path,
+                            args.run_dir,
+                            log_format="wrapped",
+                            interrupted=interrupted,
+                            jobserver=_jobserver_block(report),
+                            cache_key_set=cache_key_set,
+                            bst_global_options=_bst_global_options(cmd)[0],
+                            baseline_run_dir=os.environ.get("BGA_BASELINE_RUN_DIR"),
+                        )
                     except Exception as exc:
-                        print(f"Warning: could not extract a run directory into "
-                              f"{args.run_dir}: {exc}", file=sys.stderr)
+                        print(f"Warning: could not extract a run directory into {args.run_dir}: {exc}", file=sys.stderr)
                     else:
                         print(f"Run directory: {args.run_dir}", file=sys.stderr)
                         # `UX-894`: `graph.json` exists only now, and it
@@ -8719,8 +8878,7 @@ def main(argv: Optional[list[str]] = None) -> int:
                         # hand on the machine that produced them.
                         from bga.plane2 import apply_resolved_widths, resolved_widths
 
-                        if apply_resolved_widths(report, resolved_widths(
-                                os.path.join(args.run_dir, "graph.json"))):
+                        if apply_resolved_widths(report, resolved_widths(os.path.join(args.run_dir, "graph.json"))):
                             with open(args.output, "w") as f:
                                 json.dump(report, f, indent=2)
             if args.json:
@@ -8731,8 +8889,8 @@ def main(argv: Optional[list[str]] = None) -> int:
             # `UX-405`: after the report, on stderr, so it survives a
             # `> report.txt` and is the last thing a terminal shows.
             untraced = format_untraced_build_warning(
-                report.get("process_count") or 0,
-                count_build_tasks(wrapped_log_path))
+                report.get("process_count") or 0, count_build_tasks(wrapped_log_path)
+            )
             if untraced:
                 print(untraced, file=sys.stderr)
             # UX-147 item 5: the failing user is told what would answer the
@@ -8744,13 +8902,16 @@ def main(argv: Optional[list[str]] = None) -> int:
                     "only fails here, re-run with --diagnose: it records what the "
                     "bwrap shim received and exec'd, and the invocation count alone "
                     "separates the three things that produce this.",
-                    file=sys.stderr)
+                    file=sys.stderr,
+                )
             return returncode
         except KeyboardInterrupt:
-            print(format_post_build_interrupt(
-                args.output, wrapped_log_path, args.run_dir,
-                args.project_dir, build_interrupted=interrupted),
-                file=sys.stderr)
+            print(
+                format_post_build_interrupt(
+                    args.output, wrapped_log_path, args.run_dir, args.project_dir, build_interrupted=interrupted
+                ),
+                file=sys.stderr,
+            )
             return 130
 
     # report

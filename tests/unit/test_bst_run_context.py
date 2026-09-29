@@ -1,6 +1,7 @@
 """Tests for tools/bst_run_context.py (P4-09): run-context.json producer
 from a real BuildStream invocation's log.
 """
+
 import json
 
 from tools.bst_run_context import build_run_context
@@ -88,8 +89,11 @@ def test_host_and_trace_epsilon_passed_through(tmp_path):
     log.write_text(RAW_LOG)
 
     run_context = build_run_context(
-        str(log), log_format="raw", start_time="2026-08-14T00:00:00+00:00",
-        trace_epsilon_us=25000, host="ci-runner-1",
+        str(log),
+        log_format="raw",
+        start_time="2026-08-14T00:00:00+00:00",
+        trace_epsilon_us=25000,
+        host="ci-runner-1",
     )
 
     assert run_context["trace_epsilon_us"] == 25000
@@ -105,8 +109,11 @@ def test_native_max_jobs_and_cpu_budget_are_captured(tmp_path):
     log.write_text(RAW_LOG)
 
     run_context = build_run_context(
-        str(log), log_format="raw", start_time="2026-08-14T00:00:00+00:00",
-        native_max_jobs=4, cpu_budget=6,
+        str(log),
+        log_format="raw",
+        start_time="2026-08-14T00:00:00+00:00",
+        native_max_jobs=4,
+        cpu_budget=6,
     )
 
     assert run_context["native_max_jobs"] == 4
@@ -120,8 +127,11 @@ def test_memory_budget_and_estimated_job_memory_are_captured(tmp_path):
     log.write_text(RAW_LOG)
 
     run_context = build_run_context(
-        str(log), log_format="raw", start_time="2026-08-14T00:00:00+00:00",
-        memory_budget_mb=8000, estimated_job_memory_mb=1000,
+        str(log),
+        log_format="raw",
+        start_time="2026-08-14T00:00:00+00:00",
+        memory_budget_mb=8000,
+        estimated_job_memory_mb=1000,
     )
 
     assert run_context["memory_budget_mb"] == 8000
@@ -182,8 +192,11 @@ def test_native_max_jobs_and_cpu_budget_round_trip_through_bgas_loader(tmp_path)
     log = tmp_path / "raw.log"
     log.write_text(RAW_LOG)
     run_context = build_run_context(
-        str(log), log_format="raw", start_time="2026-08-14T00:00:00+00:00",
-        native_max_jobs=4, cpu_budget=6,
+        str(log),
+        log_format="raw",
+        start_time="2026-08-14T00:00:00+00:00",
+        native_max_jobs=4,
+        cpu_budget=6,
     )
 
     out_path = tmp_path / "run-context.json"

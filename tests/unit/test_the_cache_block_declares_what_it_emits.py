@@ -53,6 +53,7 @@ below walks keys rather than numbers. That clause is what finds
 closure was and declared by nothing: no quantity to guess, so no console
 message, so nothing ever said it was missing.
 """
+
 import json
 import pathlib
 import shutil
@@ -90,10 +91,8 @@ def test_the_fixture_produces_the_block_that_was_never_tested(emitted):
     found nine times.
     """
     cache = emitted.get("cache") or {}
-    assert cache.get("transfer_us"), (
-        f"the run published no transfer at all: {sorted(cache)}")
-    assert isinstance(cache.get("transfer_share"), float), cache.get(
-        "transfer_share")
+    assert cache.get("transfer_us"), f"the run published no transfer at all: {sorted(cache)}"
+    assert isinstance(cache.get("transfer_share"), float), cache.get("transfer_share")
 
 
 def _undeclared(value, node, path):
@@ -128,9 +127,7 @@ def test_every_key_it_emits_is_declared(emitted):
     cache = emitted["cache"]
     node = schemas.schema(emitted["schema"])["properties"]["cache"]
     missing = _undeclared(cache, node, ["cache"])
-    assert missing == [], (
-        f"published by `compute_cache_accounting` and described by "
-        f"nothing: {missing}")
+    assert missing == [], f"published by `compute_cache_accounting` and described by nothing: {missing}"
 
 
 @needs_node
@@ -147,12 +144,10 @@ def test_no_number_in_it_renders_from_a_guess(emitted):
 
     census = _census_document(emitted)
     assert census["guessed"] == [], (
-        f"{len(census['guessed'])} numeric leaves render from a "
-        f"name-sniffed guess: {census['guessed']}")
+        f"{len(census['guessed'])} numeric leaves render from a name-sniffed guess: {census['guessed']}"
+    )
     unexpected = sorted(set(census["neither"]) - set(UNDECLARABLE))
-    assert unexpected == [], (
-        f"numeric leaves with no unit at all and no entry saying why: "
-        f"{unexpected}")
+    assert unexpected == [], f"numeric leaves with no unit at all and no entry saying why: {unexpected}"
 
 
 @needs_node
@@ -171,22 +166,26 @@ def test_the_walk_reached_the_transfer_block(emitted):
 
     scratch = pathlib.Path(tempfile.mkdtemp())
     (scratch / "payload.json").write_text(json.dumps(emitted))
-    (scratch / "schemas.json").write_text(
-        json.dumps({name: schemas.schema(name) for name in schemas.names()}))
-    reached = _CENSUS.replace(
-        "declared: declared.length,", "declared: declared,")
+    (scratch / "schemas.json").write_text(json.dumps({name: schemas.schema(name) for name in schemas.names()}))
+    reached = _CENSUS.replace("declared: declared.length,", "declared: declared,")
     done = subprocess.run(
         [node, "--input-type=module", "-e", reached],
-        capture_output=True, text=True, cwd=REPO, timeout=120,
-        env={**os.environ,
-             "BGA_DOM_SHIM": (REPO / "tests/dom_shim.mjs").as_uri(),
-             "BGA_VIEWER": (REPO / "tests/viewer.mjs").as_uri(),
-             "BGA_PAYLOAD": str(scratch / "payload.json"),
-             "BGA_SCHEMAS": str(scratch / "schemas.json")})
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=120,
+        env={
+            **os.environ,
+            "BGA_DOM_SHIM": (REPO / "tests/dom_shim.mjs").as_uri(),
+            "BGA_VIEWER": (REPO / "tests/viewer.mjs").as_uri(),
+            "BGA_PAYLOAD": str(scratch / "payload.json"),
+            "BGA_SCHEMAS": str(scratch / "schemas.json"),
+        },
+    )
     assert done.returncode == 0, done.stderr
     declared = set(json.loads(done.stdout)["declared"])
-    for path in ("cache.transfer_share", "cache.transfer_us.DOWNLOAD",
-                 "cache.transfer_us.UPLOAD"):
+    for path in ("cache.transfer_share", "cache.transfer_us.DOWNLOAD", "cache.transfer_us.UPLOAD"):
         assert path in declared, (
             f"{path} is not among the leaves the walk resolved - the "
-            f"census is not reaching the block this item is about")
+            f"census is not reaching the block this item is about"
+        )

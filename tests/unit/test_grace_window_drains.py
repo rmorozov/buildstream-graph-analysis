@@ -10,6 +10,7 @@ escalation the grace existed to avoid.
 The fixtures here are the review's own reproduction: a child that traps
 SIGINT and prints a marker, and a child that ignores it and floods.
 """
+
 import os
 import re
 import subprocess
@@ -36,7 +37,8 @@ def _fake_bst(tmp_path, body, name="bst"):
 def _spawn(script, extra_args=()):
     return subprocess.Popen(
         [sys.executable, str(script), *extra_args],
-        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
         start_new_session=True,
     )
 
@@ -50,7 +52,9 @@ class TestTheStoppingBuildIsStillRead:
         log ended at the "Stopping the build" line no matter how quickly
         the child complied.
         """
-        script = _fake_bst(tmp_path, f'''
+        script = _fake_bst(
+            tmp_path,
+            f'''
             import signal, sys, time
             def stop(_signum, _frame):
                 print({MARKER!r}, flush=True)
@@ -58,7 +62,8 @@ class TestTheStoppingBuildIsStillRead:
             signal.signal(signal.SIGINT, stop)
             print("Build started", flush=True)
             time.sleep(60)
-        ''')
+        ''',
+        )
         proc = _spawn(script)
         # Let the child install its handler and say something first.
         assert proc.stdout.readline().strip() == b"Build started"
@@ -72,8 +77,7 @@ class TestTheStoppingBuildIsStillRead:
         # Those cannot both hold, and on a loaded CI runner the pair
         # missed by 32 ms - a green shutdown reported as a red test.
         started = time.monotonic()
-        stopped = bst_run_wrapped.shutdown_build_group(
-            proc, emit=said.append, grace=10)
+        stopped = bst_run_wrapped.shutdown_build_group(proc, emit=said.append, grace=10)
         elapsed = time.monotonic() - started
 
         # Well inside the grace, not merely within it: `stopped is True`
@@ -82,13 +86,11 @@ class TestTheStoppingBuildIsStillRead:
         # draining **is** the wait, so a child that complies is noticed
         # when it complies - the old read loop burned the whole window.
         assert elapsed < 5, (
-            f"the shutdown took {elapsed:.1f}s for a child that complied "
-            f"at once; draining is supposed to be the wait")
+            f"the shutdown took {elapsed:.1f}s for a child that complied at once; draining is supposed to be the wait"
+        )
 
         assert stopped is True, "the child complied; it must not read as killed"
-        assert MARKER in "\n".join(said), (
-            f"the closing summary never reached the log: {said!r}"
-        )
+        assert MARKER in "\n".join(said), f"the closing summary never reached the log: {said!r}"
         # And the escalation never fired.
         assert not any("SIGTERM" in line for line in said), said
 
@@ -100,21 +102,23 @@ class TestTheStoppingBuildIsStillRead:
         deadline is the deadline - and what it managed to say up to
         then is in the log rather than lost with it.
         """
-        script = _fake_bst(tmp_path, '''
+        script = _fake_bst(
+            tmp_path,
+            '''
             import signal, sys, time
             signal.signal(signal.SIGINT, signal.SIG_IGN)
             print("Build started", flush=True)
             for i in range(20000):
                 print("flooding the pipe with line %06d of noise" % i, flush=True)
             time.sleep(60)
-        ''')
+        ''',
+        )
         proc = _spawn(script)
         assert proc.stdout.readline().strip() == b"Build started"
 
         said = []
         started = time.monotonic()
-        stopped = bst_run_wrapped.shutdown_build_group(
-            proc, emit=said.append, grace=2)
+        stopped = bst_run_wrapped.shutdown_build_group(proc, emit=said.append, grace=2)
         elapsed = time.monotonic() - started
 
         assert stopped is False, "a child that ignores SIGINT was not escalated"
@@ -122,8 +126,7 @@ class TestTheStoppingBuildIsStillRead:
         assert any("SIGTERM" in line for line in said), said
         flooded = [line for line in said if "flooding the pipe" in line]
         assert len(flooded) > 500, (
-            f"only {len(flooded)} of the child's lines were captured - the "
-            f"drain is not keeping up, or is not running"
+            f"only {len(flooded)} of the child's lines were captured - the drain is not keeping up, or is not running"
         )
         assert proc.poll() is not None, "the child outlived the escalation"
 
@@ -134,7 +137,9 @@ class TestTheStoppingBuildIsStillRead:
         line-oriented reader indefinitely, and the escalation exists
         precisely for a child that will not go.
         """
-        script = _fake_bst(tmp_path, '''
+        script = _fake_bst(
+            tmp_path,
+            '''
             import signal, sys, time
             signal.signal(signal.SIGINT, signal.SIG_IGN)
             print("Build started", flush=True)
@@ -145,15 +150,15 @@ class TestTheStoppingBuildIsStillRead:
             sys.stdout.write("a line that never ends")
             sys.stdout.flush()
             time.sleep(60)
-        ''')
+        ''',
+        )
         proc = _spawn(script)
         # Sync on the first complete line, so SIGINT cannot arrive before
         # the child has installed its handler.
         assert proc.stdout.readline().strip() == b"Build started"
         said = []
         started = time.monotonic()
-        stopped = bst_run_wrapped.shutdown_build_group(
-            proc, emit=said.append, grace=2)
+        stopped = bst_run_wrapped.shutdown_build_group(proc, emit=said.append, grace=2)
         elapsed = time.monotonic() - started
 
         assert stopped is False
@@ -166,12 +171,16 @@ class TestTheStoppingBuildIsStillRead:
 class TestTheCallerSaysWhyTheSummaryIsMissing:
     def test_an_escalated_build_is_named_as_such_in_the_log(self, tmp_path):
         """UX-163's own wording for this reached the tests and nothing else."""
-        script = _fake_bst(tmp_path, '''
+        script = _fake_bst(
+            tmp_path,
+            '''
             import signal, time
             signal.signal(signal.SIGINT, signal.SIG_IGN)
             print("Build started", flush=True)
             time.sleep(120)
-        ''', name="stubborn.py")
+        ''',
+            name="stubborn.py",
+        )
         log = tmp_path / "build.log"
         os.environ["BGA_INTERRUPT_GRACE_SECONDS"] = "1"
         try:
@@ -196,6 +205,7 @@ def _run_and_interrupt(project_dir, cmd, handle):
 
     class _Interrupting:
         """Raises once the child has said something, from inside the loop."""
+
         # The wrapper's own preamble - what it writes before the child
         # has produced a line. Keyed on content rather than on a count:
         # counting broke the moment `UX-185` added a second preamble
@@ -236,23 +246,29 @@ class TestTheRecoveredRunRemembers:
         """
         repo = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         completed = subprocess.run(
-            [sys.executable, "-m", "tools.bst_extract_run", "--interrupted",
-             "--format", "wrapped", str(tmp_path),
-             str(tmp_path / "absent.log"), str(tmp_path / "run")],
-            capture_output=True, text=True, cwd=repo,
+            [
+                sys.executable,
+                "-m",
+                "tools.bst_extract_run",
+                "--interrupted",
+                "--format",
+                "wrapped",
+                str(tmp_path),
+                str(tmp_path / "absent.log"),
+                str(tmp_path / "run"),
+            ],
+            capture_output=True,
+            text=True,
+            cwd=repo,
         )
         assert "unrecognized arguments" not in completed.stderr, completed.stderr
-        assert completed.returncode != 2, (
-            f"`--interrupted` was rejected by the parser:\n{completed.stderr}"
-        )
+        assert completed.returncode != 2, f"`--interrupted` was rejected by the parser:\n{completed.stderr}"
         assert re.search(r"--interrupted\b(?![-\w])", completed.stderr or "") is None
 
     def test_the_mid_build_hint_carries_it(self, tmp_path):
         log = tmp_path / "build.log"
         log.write_text("[wrapper] INFO: Executing command: bst build a.bst\n")
-        text = format_post_build_interrupt(
-            None, str(log), str(tmp_path / "run"), str(tmp_path),
-            build_interrupted=True)
+        text = format_post_build_interrupt(None, str(log), str(tmp_path / "run"), str(tmp_path), build_interrupted=True)
         assert "bga extract --format wrapped --interrupted" in text
         assert "The build did not finish either" in text
         assert "the build itself completed" not in text.lower()
@@ -261,8 +277,7 @@ class TestTheRecoveredRunRemembers:
         """An interrupt after a *complete* build recovers a complete run."""
         log = tmp_path / "build.log"
         log.write_text("[wrapper] INFO: Executing command: bst build a.bst\n")
-        text = format_post_build_interrupt(
-            None, str(log), str(tmp_path / "run"), str(tmp_path))
+        text = format_post_build_interrupt(None, str(log), str(tmp_path / "run"), str(tmp_path))
         assert "--interrupted" not in text
         assert "The build itself completed" in text
 

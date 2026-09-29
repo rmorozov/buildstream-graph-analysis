@@ -26,6 +26,7 @@ log carried. All three were reproduced before anything was changed:
 What is guarded here is reachability, not arithmetic - the drawings
 themselves are `UX-196`'s and already tested.
 """
+
 import json
 import os
 import shutil
@@ -59,12 +60,11 @@ class TestTheBandIsReachable:
         _, runs = _store(tmp_path, 2)
         served = payloads(runs[-1])
         assert "compare.json" in served, (
-            "only the analyze document is served, so renderBand has "
-            "nothing to draw from - the reported gap")
+            "only the analyze document is served, so renderBand has nothing to draw from - the reported gap"
+        )
         assert served["compare.json"]["schema"] == schemas.COMPARE
 
-    def test_the_document_carries_a_band_when_the_store_can_supply_one(
-            self, tmp_path):
+    def test_the_document_carries_a_band_when_the_store_can_supply_one(self, tmp_path):
         """Serving *a* comparison is not enough, and this is the subtler
         half: a pairwise compare has no `baseline_band` at all, because
         a band needs `compare.MIN_BASELINE_RUNS` samples. The store is
@@ -75,8 +75,8 @@ class TestTheBandIsReachable:
         _, runs = _store(tmp_path, MIN_BASELINE_RUNS + 2)
         compare = payloads(runs[-1])["compare.json"]
         assert compare["baseline_band"], (
-            "no band, so renderBand still returns null - serving the "
-            "comparison alone would have fixed nothing visible")
+            "no band, so renderBand still returns null - serving the comparison alone would have fixed nothing visible"
+        )
 
     def test_a_store_too_small_for_a_band_says_so_instead(self, tmp_path):
         """Not an error and not a blank: `baseline_band_shortfall` is
@@ -88,8 +88,7 @@ class TestTheBandIsReachable:
         assert compare["baseline_band"] is None
         assert compare["baseline_band_shortfall"], compare.get("verdict")
 
-    def test_the_first_run_in_a_store_has_nothing_to_compare_against(
-            self, tmp_path):
+    def test_the_first_run_in_a_store_has_nothing_to_compare_against(self, tmp_path):
         from tools.bga_view import payloads
 
         _, runs = _store(tmp_path, 3)
@@ -113,8 +112,7 @@ class TestTheBandIsReachable:
         compare = payloads(runs[-1])["compare.json"]
 
         out = _render("renderBand", compare)
-        assert out["rendered"], (
-            "renderBand still returns null for what the server serves")
+        assert out["rendered"], "renderBand still returns null for what the server serves"
         assert out["attrs"]["data-where"]
 
     @needs_node
@@ -140,11 +138,10 @@ class TestTheBandIsReachable:
         accepts either and would still redden if the reach went away.
         """
         source = open("bga/viewer/app.js", encoding="utf-8").read()
-        assert ('load("compare"' in source
-                or 'optional(run, "compare")' in source), (
-            "the page never asks for it, so serving it changes nothing")
-        assert "renderBand(payload)" not in source, (
-            "renderBand is being handed the analyze document again")
+        assert 'load("compare"' in source or 'optional(run, "compare")' in source, (
+            "the page never asks for it, so serving it changes nothing"
+        )
+        assert "renderBand(payload)" not in source, "renderBand is being handed the analyze document again"
 
 
 class TestTheTrendPlotsWhatItPromised:
@@ -171,10 +168,12 @@ class TestTheTrendPlotsWhatItPromised:
         measurement, so it cannot be inside or outside anything."""
         from tools.bga_snapshot import _mark_verdicts
 
-        rows = [{"total_duration_us": 10, "incomplete_reason": None},
-                {"total_duration_us": 10, "incomplete_reason": None},
-                {"total_duration_us": 10, "incomplete_reason": None},
-                {"total_duration_us": 999, "incomplete_reason": "interrupted"}]
+        rows = [
+            {"total_duration_us": 10, "incomplete_reason": None},
+            {"total_duration_us": 10, "incomplete_reason": None},
+            {"total_duration_us": 10, "incomplete_reason": None},
+            {"total_duration_us": 999, "incomplete_reason": "interrupted"},
+        ]
         _mark_verdicts(rows)
         assert rows[-1]["verdict_kind"] is None
 
@@ -185,8 +184,7 @@ class TestTheTrendPlotsWhatItPromised:
         run = snapshot / "run"
         shutil.copytree(GOLDEN, run)
         context = json.loads((run / "run-context.json").read_text())
-        context["queue_summary"] = {"build": {"processed": 3, "skipped": 7,
-                                              "failed": 0}}
+        context["queue_summary"] = {"build": {"processed": 3, "skipped": 7, "failed": 0}}
         (run / "run-context.json").write_text(json.dumps(context))
         assert _run_measurements(str(snapshot))["cache_hit_rate"] == 0.7
 
@@ -198,10 +196,10 @@ class TestTheTrendPlotsWhatItPromised:
         assert "cache_hit_rate" not in _run_measurements(str(snapshot))
 
     def test_the_schema_puts_duration_before_size(self):
-        columns = schemas.schema(schemas.STORE)["properties"]["snapshots"][
-            schemas.COLUMNS]
+        columns = schemas.schema(schemas.STORE)["properties"]["snapshots"][schemas.COLUMNS]
         assert columns.index("total_duration_us") < columns.index("bytes"), (
-            "size is still leading the row, which is the narrowing")
+            "size is still leading the row, which is the narrowing"
+        )
 
     @needs_node
     def test_the_y_axis_is_duration_not_size(self, tmp_path):
@@ -214,51 +212,88 @@ class TestTheTrendPlotsWhatItPromised:
         upside down against a chart of the other.
         """
         rows = [
-            {"stamp": "a", "bytes": 300, "total_duration_us": 100,
-             "alias": None, "incomplete_reason": None, "verdict_kind": None,
-             "cache_hit_rate": None},
-            {"stamp": "b", "bytes": 200, "total_duration_us": 200,
-             "alias": None, "incomplete_reason": None, "verdict_kind": None,
-             "cache_hit_rate": None},
-            {"stamp": "c", "bytes": 100, "total_duration_us": 300,
-             "alias": "@last", "incomplete_reason": None,
-             "verdict_kind": "regressed", "cache_hit_rate": 0.5},
+            {
+                "stamp": "a",
+                "bytes": 300,
+                "total_duration_us": 100,
+                "alias": None,
+                "incomplete_reason": None,
+                "verdict_kind": None,
+                "cache_hit_rate": None,
+            },
+            {
+                "stamp": "b",
+                "bytes": 200,
+                "total_duration_us": 200,
+                "alias": None,
+                "incomplete_reason": None,
+                "verdict_kind": None,
+                "cache_hit_rate": None,
+            },
+            {
+                "stamp": "c",
+                "bytes": 100,
+                "total_duration_us": 300,
+                "alias": "@last",
+                "incomplete_reason": None,
+                "verdict_kind": "regressed",
+                "cache_hit_rate": 0.5,
+            },
         ]
-        out = _render("renderTrend", {"schema": schemas.STORE, "project": "/p",
-                                      "count": 3, "total_bytes": 600,
-                                      "snapshots": rows})
+        out = _render(
+            "renderTrend", {"schema": schemas.STORE, "project": "/p", "count": 3, "total_bytes": 600, "snapshots": rows}
+        )
         ys = [float(p["cy"]) for p in out["points"] if "cy" in p]
         assert len(ys) == 3, out
         # y grows downward, so a rising duration means a falling y.
-        assert ys[0] > ys[1] > ys[2], (
-            f"y went {ys} - the axis is following size, not duration")
+        assert ys[0] > ys[1] > ys[2], f"y went {ys} - the axis is following size, not duration"
 
     @needs_node
     def test_the_verdict_colours_the_point(self, tmp_path):
-        rows = [{"stamp": s, "bytes": 1, "total_duration_us": d, "alias": None,
-                 "incomplete_reason": None, "verdict_kind": v,
-                 "cache_hit_rate": None}
-                for s, d, v in (("a", 10, None), ("b", 20, "regressed"))]
-        out = _render("renderTrend", {"schema": schemas.STORE, "project": "/p",
-                                      "count": 2, "total_bytes": 2,
-                                      "snapshots": rows})
-        assert any("verdict-regressed" in (p.get("class") or "")
-                   for p in out["points"]), out["points"]
+        rows = [
+            {
+                "stamp": s,
+                "bytes": 1,
+                "total_duration_us": d,
+                "alias": None,
+                "incomplete_reason": None,
+                "verdict_kind": v,
+                "cache_hit_rate": None,
+            }
+            for s, d, v in (("a", 10, None), ("b", 20, "regressed"))
+        ]
+        out = _render(
+            "renderTrend", {"schema": schemas.STORE, "project": "/p", "count": 2, "total_bytes": 2, "snapshots": rows}
+        )
+        assert any("verdict-regressed" in (p.get("class") or "") for p in out["points"]), out["points"]
 
     @needs_node
     def test_size_survives_in_the_tooltip(self, tmp_path):
         """Demoted, not deleted: the store warning is about disk, and
         the number should still be reachable."""
-        rows = [{"stamp": "a", "bytes": 5 * 1024 * 1024,
-                 "total_duration_us": 10, "alias": None,
-                 "incomplete_reason": None, "verdict_kind": None,
-                 "cache_hit_rate": None},
-                {"stamp": "b", "bytes": 1024, "total_duration_us": 20,
-                 "alias": None, "incomplete_reason": None,
-                 "verdict_kind": None, "cache_hit_rate": None}]
-        out = _render("renderTrend", {"schema": schemas.STORE, "project": "/p",
-                                      "count": 2, "total_bytes": 1,
-                                      "snapshots": rows})
+        rows = [
+            {
+                "stamp": "a",
+                "bytes": 5 * 1024 * 1024,
+                "total_duration_us": 10,
+                "alias": None,
+                "incomplete_reason": None,
+                "verdict_kind": None,
+                "cache_hit_rate": None,
+            },
+            {
+                "stamp": "b",
+                "bytes": 1024,
+                "total_duration_us": 20,
+                "alias": None,
+                "incomplete_reason": None,
+                "verdict_kind": None,
+                "cache_hit_rate": None,
+            },
+        ]
+        out = _render(
+            "renderTrend", {"schema": schemas.STORE, "project": "/p", "count": 2, "total_bytes": 1, "snapshots": rows}
+        )
         assert "5.0 MiB" in out["text"], out["text"]
 
 
@@ -266,23 +301,23 @@ class TestCiRunsTheInstalledViewer:
     def test_the_packaging_job_serves_a_page_from_the_wheel(self):
         import yaml
 
-        workflow = yaml.safe_load(open(".github/workflows/ci.yml",
-                                       encoding="utf-8"))
+        workflow = yaml.safe_load(open(".github/workflows/ci.yml", encoding="utf-8"))
         job = workflow["jobs"]["packaging"]
         steps = "\n".join(str(step.get("run", "")) for step in job["steps"])
         assert "bga view" in steps, (
             "the packaging loop stops at --help, so no CI step ever serves "
             "an asset from an installed wheel - which is the exact class "
-            "that shipped broken")
+            "that shipped broken"
+        )
         for wanted in ("report.json", "app.js"):
             assert wanted in steps, f"the job never fetches {wanted}"
 
 
 def _render(fn, payload):
     script = _HARNESS % (fn, json.dumps(payload))
-    result = subprocess.run([node, "--input-type=module", "-e", script],
-                            capture_output=True, text=True, cwd=os.getcwd(),
-                            timeout=60)
+    result = subprocess.run(
+        [node, "--input-type=module", "-e", script], capture_output=True, text=True, cwd=os.getcwd(), timeout=60
+    )
     assert result.returncode == 0, result.stderr
     return json.loads(result.stdout)
 

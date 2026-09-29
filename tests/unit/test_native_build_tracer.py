@@ -8,6 +8,7 @@ including four cc1plus processes starting within 5ms of each other
 under a real -j4 build - reproduced synthetically below as the
 regression fixture for compute_max_concurrency).
 """
+
 import os
 import shutil
 import subprocess
@@ -36,6 +37,7 @@ def _event(event, pid, ppid, ts, cmd, element="unknown"):
 
 # --- parse_trace_log -----------------------------------------------------
 
+
 def test_parse_matches_start_and_end_lines():
     text = (
         "START pid=100 ppid=1 ts=10.000000000 cmd=cmake --build .\n"
@@ -45,7 +47,11 @@ def test_parse_matches_start_and_end_lines():
 
     assert len(events) == 2
     assert events[0] == {
-        "event": "START", "pid": 100, "ppid": 1, "ts": 10.0, "element": "unknown",
+        "event": "START",
+        "pid": 100,
+        "ppid": 1,
+        "ts": 10.0,
+        "element": "unknown",
         # UX-56: additive, and None here on purpose - a line with no
         # `inv=` predates the sandbox id and must not be given a
         # fabricated one.
@@ -85,6 +91,7 @@ def test_parse_empty_text():
 
 
 # --- pair_events -----------------------------------------------------------
+
 
 def test_pair_events_matches_start_and_end_by_pid():
     events = [
@@ -175,6 +182,7 @@ def test_pair_events_does_not_cross_pair_same_pid_across_different_elements():
 
 # --- compute_max_concurrency ------------------------------------------------
 
+
 def test_max_concurrency_serial_processes_is_one():
     records = [
         {"start_ts": 0.0, "end_ts": 1.0, "open": False},
@@ -230,14 +238,19 @@ def test_max_concurrency_touching_intervals_do_not_overlap():
 
 # --- summarize ---------------------------------------------------------
 
+
 def _record(pid, cmd, start_ts, end_ts, open_=False, element="unknown"):
     return {
         # UX-73: `ppid` 0 rather than 1 - a record with pid 2 and ppid 1
         # is the sandbox's own top-level command block, which is excluded
         # from redundancy findings. These fixtures are ordinary traced
         # processes and the value was arbitrary.
-        "pid": pid, "ppid": 0, "element": element, "cmd": cmd,
-        "start_ts": start_ts, "end_ts": end_ts,
+        "pid": pid,
+        "ppid": 0,
+        "element": element,
+        "cmd": cmd,
+        "start_ts": start_ts,
+        "end_ts": end_ts,
         "duration_s": (end_ts - start_ts) if end_ts is not None else None,
         "open": open_,
     }
@@ -298,6 +311,7 @@ def test_summarize_wall_span_covers_open_records():
 
 # --- normalize_cmd_signature ---------------------------------------------
 
+
 def test_normalize_strips_per_element_build_root():
     """The real, largest source of spurious per-element uniqueness for
     an otherwise identical operation - each element's own absolute
@@ -327,6 +341,7 @@ def test_normalize_does_not_conflate_genuinely_different_operations():
 
 # --- detect_redundant_operations ------------------------------------------
 
+
 def test_detect_redundant_flags_signature_repeated_across_elements():
     records = [
         # UX-37: the real shape of CMake's own ABI probe, taken from a
@@ -335,9 +350,27 @@ def test_detect_redundant_flags_signature_repeated_across_elements():
         # now correctly excludes - an element's own build driver is
         # identical across elements by construction and is not
         # redundancy. The probe itself, which this test is about, is.)
-        _record(1, "/usr/bin/c++ -o CMakeFiles/cmTC_aaaaa.dir/CMakeCXXCompilerABI.cpp.o -c abi.cpp", 0.0, 0.1, element="core.bst"),
-        _record(2, "/usr/bin/c++ -o CMakeFiles/cmTC_bbbbb.dir/CMakeCXXCompilerABI.cpp.o -c abi.cpp", 1.0, 1.1, element="lib-a.bst"),
-        _record(3, "/usr/bin/c++ -o CMakeFiles/cmTC_ccccc.dir/CMakeCXXCompilerABI.cpp.o -c abi.cpp", 2.0, 2.1, element="lib-b.bst"),
+        _record(
+            1,
+            "/usr/bin/c++ -o CMakeFiles/cmTC_aaaaa.dir/CMakeCXXCompilerABI.cpp.o -c abi.cpp",
+            0.0,
+            0.1,
+            element="core.bst",
+        ),
+        _record(
+            2,
+            "/usr/bin/c++ -o CMakeFiles/cmTC_bbbbb.dir/CMakeCXXCompilerABI.cpp.o -c abi.cpp",
+            1.0,
+            1.1,
+            element="lib-a.bst",
+        ),
+        _record(
+            3,
+            "/usr/bin/c++ -o CMakeFiles/cmTC_ccccc.dir/CMakeCXXCompilerABI.cpp.o -c abi.cpp",
+            2.0,
+            2.1,
+            element="lib-b.bst",
+        ),
     ]
     findings, _coverage = detect_redundant_operations(records)
 
@@ -407,6 +440,7 @@ def test_summarize_includes_redundant_operations():
 
 # --- Real end-to-end: run_traced_build against a real bst build ------------
 
+
 @pytest.mark.bst
 @pytest.mark.skipif(
     not (BST_AVAILABLE and BWRAP_AVAILABLE and CC_AVAILABLE),
@@ -422,7 +456,8 @@ def test_run_traced_build_captures_real_process_lifecycle(tmp_path):
 
     project_dir = os.path.join(
         os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-        "examples", "05-cmake-cpp-toolchain",
+        "examples",
+        "05-cmake-cpp-toolchain",
     )
     if not os.path.isdir(os.path.join(project_dir, "files", "toolchain", "usr", "bin")):
         pytest.skip("examples/05-cmake-cpp-toolchain's toolchain isn't staged - run stage_cpp_toolchain.sh first")
@@ -446,10 +481,16 @@ def test_run_traced_build_captures_real_process_lifecycle(tmp_path):
 
 # --- UX-102: configure-phase classification, by parentage ---------------
 
+
 def _proc(pid, ppid, cmd, element="core.bst", invocation="1", cpu_us=1_000_000):
     record = {
-        "pid": pid, "ppid": ppid, "cmd": cmd, "element": element,
-        "invocation": invocation, "start_ts": float(pid), "end_ts": float(pid) + 1.0,
+        "pid": pid,
+        "ppid": ppid,
+        "cmd": cmd,
+        "element": element,
+        "invocation": invocation,
+        "start_ts": float(pid),
+        "end_ts": float(pid) + 1.0,
         "open": False,
     }
     if cpu_us is not None:
@@ -625,8 +666,7 @@ def test_read_jobserver_decisions_reads_zero_one_and_many_rows(tmp_path):
 
     one = tmp_path / "one.jsonl"
     one.write_text('{"element": "core.bst", "max_jobs": 1, "decision": "pinned"}\n')
-    assert read_jobserver_decisions(str(one)) == [
-        {"element": "core.bst", "max_jobs": 1, "decision": "pinned"}]
+    assert read_jobserver_decisions(str(one)) == [{"element": "core.bst", "max_jobs": 1, "decision": "pinned"}]
 
     many = tmp_path / "many.jsonl"
     many.write_text(
@@ -651,15 +691,13 @@ _REAL_NAME_KIND_STDOUT = "toolchain.bst import\ncore.bst cmake\n"
 def test_parse_element_kinds_reads_real_bst_show_stdout():
     from tools.bst_native_build_tracer import _parse_element_kinds
 
-    assert _parse_element_kinds(_REAL_NAME_KIND_STDOUT) == {
-        "toolchain.bst": "import", "core.bst": "cmake"}
+    assert _parse_element_kinds(_REAL_NAME_KIND_STDOUT) == {"toolchain.bst": "import", "core.bst": "cmake"}
 
 
 def test_parse_element_kinds_skips_a_malformed_line():
     from tools.bst_native_build_tracer import _parse_element_kinds
 
-    assert _parse_element_kinds("core.bst cmake\nnot-two-tokens\n") == {
-        "core.bst": "cmake"}
+    assert _parse_element_kinds("core.bst cmake\nnot-two-tokens\n") == {"core.bst": "cmake"}
 
 
 def test_parse_element_kinds_of_empty_text_is_empty():
@@ -670,10 +708,7 @@ def test_parse_element_kinds_of_empty_text_is_empty():
 
 # --- _parse_element_kinds, junction spellings (UX-871) ---------------------
 
-_JUNCTIONED_NAME_KIND_STDOUT = (
-    "sdk.bst:foo/bar.bst cmake\n"
-    "plain.bst autotools\n"
-    "a.bst:b.bst:deep.bst meson\n")
+_JUNCTIONED_NAME_KIND_STDOUT = "sdk.bst:foo/bar.bst cmake\nplain.bst autotools\na.bst:b.bst:deep.bst meson\n"
 
 
 def test_parse_element_kinds_resolves_both_spellings_of_a_junctioned_name():
@@ -682,17 +717,19 @@ def test_parse_element_kinds_resolves_both_spellings_of_a_junctioned_name():
     kinds = _parse_element_kinds(_JUNCTIONED_NAME_KIND_STDOUT)
 
     assert kinds == {
-        "sdk.bst:foo/bar.bst": "cmake", "foo/bar.bst": "cmake",
+        "sdk.bst:foo/bar.bst": "cmake",
+        "foo/bar.bst": "cmake",
         "plain.bst": "autotools",
-        "a.bst:b.bst:deep.bst": "meson", "deep.bst": "meson"}
+        "a.bst:b.bst:deep.bst": "meson",
+        "deep.bst": "meson",
+    }
     assert kinds.junctions == 2
 
 
 def test_parse_element_kinds_a_collision_keeps_the_first_and_counts_it():
     from tools.bst_native_build_tracer import _parse_element_kinds
 
-    kinds = _parse_element_kinds(
-        "x.bst:same.bst cmake\ny.bst:same.bst meson\n")
+    kinds = _parse_element_kinds("x.bst:same.bst cmake\ny.bst:same.bst meson\n")
 
     assert kinds["same.bst"] == "cmake"
     assert kinds["x.bst:same.bst"] == "cmake"

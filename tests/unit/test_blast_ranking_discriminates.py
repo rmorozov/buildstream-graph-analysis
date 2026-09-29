@@ -14,6 +14,7 @@ So this file builds the fixture. The graph is chosen so the two orders
 *disagree*: a cheap element with many descendants against an expensive
 one with few.
 """
+
 import os
 import shutil
 import subprocess
@@ -36,8 +37,11 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fi
 def _task(uid, dur_us):
     return NormalizedTask(
         task_key=TaskKey(element_uid=uid, task_kind=TaskKind.BUILD, phase="build"),
-        ready_us=0, start_us=0, finish_us=dur_us,
-        resources={"PROCESS": 1}, primary_resource="PROCESS",
+        ready_us=0,
+        start_us=0,
+        finish_us=dur_us,
+        resources={"PROCESS": 1},
+        primary_resource="PROCESS",
     )
 
 
@@ -54,17 +58,13 @@ def _discriminating():
     guard cannot tell the two orders apart.
     """
     elements = (
-        [Element(uid="wide.bst", element_kind="manual"),
-         Element(uid="deep.bst", element_kind="manual")]
+        [Element(uid="wide.bst", element_kind="manual"), Element(uid="deep.bst", element_kind="manual")]
         + [Element(uid=f"s{i}.bst", element_kind="stack") for i in range(1, 5)]
         + [Element(uid=f"c{i}.bst", element_kind="cmake") for i in range(1, 3)]
     )
-    deps = (
-        [DependencyEdge(predecessor="wide.bst", successor=f"s{i}.bst",
-                        dependency_type="build") for i in range(1, 5)]
-        + [DependencyEdge(predecessor="deep.bst", successor=f"c{i}.bst",
-                          dependency_type="build") for i in range(1, 3)]
-    )
+    deps = [
+        DependencyEdge(predecessor="wide.bst", successor=f"s{i}.bst", dependency_type="build") for i in range(1, 5)
+    ] + [DependencyEdge(predecessor="deep.bst", successor=f"c{i}.bst", dependency_type="build") for i in range(1, 3)]
     tasks = (
         [_task("wide.bst", 1_000_000), _task("deep.bst", 1_000_000)]
         + [_task(f"s{i}.bst", 1_000_000) for i in range(1, 5)]
@@ -80,8 +80,7 @@ def _ranked(graph, tasks):
     analysis = analyze_graph(graph, tasks)
     analyzer = DiagnosticsAnalyzer(normalized_tasks=tasks, graph_analysis=analysis)
     results = analyzer.compute_blast_radius()
-    return [(r.element_uid, r.downstream_count, r.downstream_weighted_duration_us)
-            for r in results]
+    return [(r.element_uid, r.downstream_count, r.downstream_weighted_duration_us) for r in results]
 
 
 class TestTheTwoOrdersDisagreeAndCostWins:
@@ -89,10 +88,8 @@ class TestTheTwoOrdersDisagreeAndCostWins:
         """Guard the guard: if these agreed, the test below proves nothing."""
         graph, tasks = _discriminating()
         ranked = _ranked(graph, tasks)
-        by_count = [uid for uid, _c, _w in
-                    sorted(ranked, key=lambda r: r[1], reverse=True)]
-        by_cost = [uid for uid, _c, _w in
-                   sorted(ranked, key=lambda r: r[2], reverse=True)]
+        by_count = [uid for uid, _c, _w in sorted(ranked, key=lambda r: r[1], reverse=True)]
+        by_cost = [uid for uid, _c, _w in sorted(ranked, key=lambda r: r[2], reverse=True)]
         assert by_count[0] == "wide.bst", by_count
         assert by_cost[0] == "deep.bst", by_cost
         assert by_count != by_cost
@@ -101,8 +98,7 @@ class TestTheTwoOrdersDisagreeAndCostWins:
         graph, tasks = _discriminating()
         ranked = _ranked(graph, tasks)
         assert ranked[0][0] == "deep.bst", (
-            f"the ranking put the wider blast first, not the costlier one: "
-            f"{[r[0] for r in ranked]}"
+            f"the ranking put the wider blast first, not the costlier one: {[r[0] for r in ranked]}"
         )
         # And `wide.bst`, which the count ranks first, is behind it.
         order = [uid for uid, _c, _w in ranked]
@@ -132,9 +128,7 @@ class TestTheTwoOrdersDisagreeAndCostWins:
     def test_an_unmeasured_run_falls_back_to_the_count_and_says_so(self):
         graph, _tasks = _discriminating()
         ranked = [(uid, count) for uid, count, _w in _ranked(graph, [])]
-        assert ranked[0][0] == "wide.bst", (
-            "with no durations the count is the only order there is"
-        )
+        assert ranked[0][0] == "wide.bst", "with no durations the count is the only order there is"
 
 
 BST_AVAILABLE = shutil.which("bst") is not None
@@ -168,7 +162,9 @@ class TestTheMemoDropIsWired:
         log = tmp_path / "build.log"
         proc = subprocess.run(
             ["bst", "-C", FIXTURE_PROJECT, "--no-colors", "build", "app.bst"],
-            capture_output=True, text=True, env=isolated_bst_env(tmp_path),
+            capture_output=True,
+            text=True,
+            env=isolated_bst_env(tmp_path),
         )
         log.write_text(proc.stdout + proc.stderr)
         # `UX-760`: extract_run's own internal `bst show` is a separate
@@ -178,9 +174,7 @@ class TestTheMemoDropIsWired:
             extract_run(FIXTURE_PROJECT, str(log), str(run), log_format="auto")
 
         assert (run / "graph.json").exists(), "the extraction did not succeed"
-        assert not memo.exists(), (
-            "the extraction rewrote the run and left the size memo standing"
-        )
+        assert not memo.exists(), "the extraction rewrote the run and left the size memo standing"
 
 
 if __name__ == "__main__":  # pragma: no cover

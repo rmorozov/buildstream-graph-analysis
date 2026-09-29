@@ -11,6 +11,7 @@ The element's resolved `max-jobs` was in the same snapshot the whole
 time - `UX-377` put it in `graph.json` per element, because
 `--max-jobs` reaches a command line on exactly one of its three routes.
 """
+
 import json
 import subprocess
 import sys
@@ -31,31 +32,34 @@ def _disagreeing(tmp_path):
     resolved to 8 whose recipe writes `make -j2`. Every element of that
     fixture agrees, which is why the regex survived."""
     graph = tmp_path / "graph.json"
-    graph.write_text(json.dumps({"elements": [
-        {"uid": "wide.bst", "max_jobs": 8, "notparallel": None},
-        {"uid": "pinned.bst", "max_jobs": 4, "notparallel": True},
-        {"uid": "cmake.bst", "max_jobs": 4, "notparallel": None},
-        {"uid": "unknown.bst", "max_jobs": None, "notparallel": None},
-    ]}))
-    report = {"per_element_parallelism": [
-        # The recipe asked for two; BuildStream granted eight.
-        {"element": "wide.bst", "requested_jobs": 2,
-         "peak_work_concurrency": 4, "findings": []},
-        # Declared `notparallel`, so a width of one whatever `max_jobs`
-        # says - and it overlapped two processes anyway.
-        {"element": "pinned.bst", "requested_jobs": 1,
-         "peak_work_concurrency": 2, "findings": []},
-        # Neither make nor ninja ran, so there is no recipe request at
-        # all - and the ratio is still computed.
-        {"element": "cmake.bst", "requested_jobs": None,
-         "peak_work_concurrency": 2, "findings": []},
-        # No resolved width: no ratio, rather than a ratio of one.
-        {"element": "unknown.bst", "requested_jobs": 4,
-         "peak_work_concurrency": 4, "findings": []},
-    ]}
+    graph.write_text(
+        json.dumps(
+            {
+                "elements": [
+                    {"uid": "wide.bst", "max_jobs": 8, "notparallel": None},
+                    {"uid": "pinned.bst", "max_jobs": 4, "notparallel": True},
+                    {"uid": "cmake.bst", "max_jobs": 4, "notparallel": None},
+                    {"uid": "unknown.bst", "max_jobs": None, "notparallel": None},
+                ]
+            }
+        )
+    )
+    report = {
+        "per_element_parallelism": [
+            # The recipe asked for two; BuildStream granted eight.
+            {"element": "wide.bst", "requested_jobs": 2, "peak_work_concurrency": 4, "findings": []},
+            # Declared `notparallel`, so a width of one whatever `max_jobs`
+            # says - and it overlapped two processes anyway.
+            {"element": "pinned.bst", "requested_jobs": 1, "peak_work_concurrency": 2, "findings": []},
+            # Neither make nor ninja ran, so there is no recipe request at
+            # all - and the ratio is still computed.
+            {"element": "cmake.bst", "requested_jobs": None, "peak_work_concurrency": 2, "findings": []},
+            # No resolved width: no ratio, rather than a ratio of one.
+            {"element": "unknown.bst", "requested_jobs": 4, "peak_work_concurrency": 4, "findings": []},
+        ]
+    }
     apply_resolved_widths(report, resolved_widths(str(graph)))
-    return {entry["element"]: entry
-            for entry in report["per_element_parallelism"]}
+    return {entry["element"]: entry for entry in report["per_element_parallelism"]}
 
 
 def test_the_graph_wins_where_the_two_disagree(tmp_path):
@@ -102,15 +106,14 @@ def test_the_pinned_element_of_the_real_capture_is_no_longer_two(tmp_path):
     """`core.bst` end to end: `bga analyze` on the committed snapshot,
     through the read-time join the CLI applies."""
     out = tmp_path / "report.json"
-    argv = ["analyze", str(FIXTURE / "run"), "--plane2",
-            str(FIXTURE / "plane2.json"), "-f", "json", "-o", str(out)]
+    argv = ["analyze", str(FIXTURE / "run"), "--plane2", str(FIXTURE / "plane2.json"), "-f", "json", "-o", str(out)]
     proc = subprocess.run(
-        [sys.executable, "-c",
-         f"from bga.cli import main; raise SystemExit(main({argv!r}))"],
-        capture_output=True, text=True)
+        [sys.executable, "-c", f"from bga.cli import main; raise SystemExit(main({argv!r}))"],
+        capture_output=True,
+        text=True,
+    )
     assert proc.returncode == 0, proc.stderr
-    rows = {row["element"]: row
-            for row in json.loads(out.read_text())["element_join"]}
+    rows = {row["element"]: row for row in json.loads(out.read_text())["element_join"]}
 
     core = rows["core.bst"]
     assert core["requested_jobs"] == 1 and core["resolved_jobs"] == 1

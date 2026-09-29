@@ -5,6 +5,7 @@ least slack first, capped at its own `-jK` minus one. An element `plan`
 does not name gets the plan's own median slack; a tie is broken by
 name. Without `--plan` nothing about the shim's argv changes at all.
 """
+
 import json
 import os
 import signal
@@ -39,8 +40,7 @@ def _spawn_holder(tmp_path, fifo_path, tokens, ledger, tool="ninja"):
     if not script.exists():
         script.write_text(_HOLDER)
     marker = tmp_path / f"marker-{tokens}-{tool}"
-    proc = subprocess.Popen([sys.executable, str(script), fifo_path, str(tokens),
-                             ledger, tool, str(marker)])
+    proc = subprocess.Popen([sys.executable, str(script), fifo_path, str(tokens), ledger, tool, str(marker)])
     for _ in range(100):
         if marker.exists():
             break
@@ -52,16 +52,14 @@ def _spawn_holder(tmp_path, fifo_path, tokens, ledger, tool="ninja"):
 
 
 def _write_acquire(ledger, tool, pid, tokens):
-    row = {"event": "acquire", "tool": tool, "pid": pid, "tokens": tokens,
-          "t": time.time()}
+    row = {"event": "acquire", "tool": tool, "pid": pid, "tokens": tokens, "t": time.time()}
     with open(ledger, "a", encoding="utf-8") as handle:
         handle.write(json.dumps(row) + "\n")
 
 
 def _leaked_rows(ledger):
     with open(ledger, encoding="utf-8") as handle:
-        return [json.loads(line) for line in handle
-               if line.strip() and json.loads(line)["event"] == "leaked"]
+        return [json.loads(line) for line in handle if line.strip() and json.loads(line)["event"] == "leaked"]
 
 
 def _broker(tmp_path, elements, plan, ceiling=8):
@@ -73,8 +71,7 @@ def _broker(tmp_path, elements, plan, ceiling=8):
     proxies_dir = str(tmp_path / "proxies")
     proxy_fds = tracer.create_jobserver_proxies(proxies_dir, dict.fromkeys(elements, "make"))
     ledger = str(tmp_path / "ledger.jsonl")
-    broker = tracer.Broker(global_fd, proxy_fds, plan, ledger_path=ledger,
-                           scratch={"proxies_dir": proxies_dir})
+    broker = tracer.Broker(global_fd, proxy_fds, plan, ledger_path=ledger, scratch={"proxies_dir": proxies_dir})
     return broker, global_fd, proxy_fds, ledger
 
 
@@ -96,22 +93,21 @@ def _readable(fd) -> int:
 
 def _rows(ledger):
     import json
+
     with open(ledger, encoding="utf-8") as handle:
         return [json.loads(line) for line in handle if line.strip()]
 
 
 class TestPopulation:
     def test_zero_running_elements_returns_every_token_to_the_global_fifo(self, tmp_path):
-        broker, global_fd, proxy_fds, _ledger = _broker(
-            tmp_path, ["a", "b"], {"a": 100, "b": 200}, ceiling=4)
+        broker, global_fd, proxy_fds, _ledger = _broker(tmp_path, ["a", "b"], {"a": 100, "b": 200}, ceiling=4)
         broker.tick()
         assert _readable(global_fd) == 3, "nothing running - nothing to grant"
         assert _readable(proxy_fds["a"]) == 0
         assert _readable(proxy_fds["b"]) == 0
 
     def test_one_running_element_is_capped_at_its_own_jk_minus_one(self, tmp_path):
-        broker, global_fd, proxy_fds, _ledger = _broker(
-            tmp_path, ["a"], {"a": 100}, ceiling=8)
+        broker, global_fd, proxy_fds, _ledger = _broker(tmp_path, ["a"], {"a": 100}, ceiling=8)
         broker.note_running("a", max_jobs=4)
         broker.tick()
         assert _readable(proxy_fds["a"]) == 3, "capped at -j4 minus the implicit token"
@@ -121,8 +117,7 @@ class TestPopulation:
     def test_two_running_elements_grant_least_slack_first(self, tmp_path):
         # The least-slack element sorts *last* by name, so a grant order
         # that reads names alone (the verifier's mutation) goes red here.
-        broker, global_fd, proxy_fds, ledger = _broker(
-            tmp_path, ["a", "b"], {"a": 50, "b": 5}, ceiling=8)
+        broker, global_fd, proxy_fds, ledger = _broker(tmp_path, ["a", "b"], {"a": 50, "b": 5}, ceiling=8)
         broker.note_running("a", max_jobs=8)
         broker.note_running("b", max_jobs=8)
         broker.tick()
@@ -138,8 +133,8 @@ class TestPopulation:
 class TestThePlan:
     def test_an_element_absent_from_the_plan_gets_the_median_slack(self, tmp_path):
         broker, _global_fd, proxy_fds, _ledger = _broker(
-            tmp_path, ["a", "b", "c", "unplanned"],
-            {"a": 10, "b": 20, "c": 30}, ceiling=8)
+            tmp_path, ["a", "b", "c", "unplanned"], {"a": 10, "b": 20, "c": 30}, ceiling=8
+        )
         assert broker.median_slack == 20
         assert broker.slack_for("unplanned") == 20
         broker.note_running("unplanned", max_jobs=8)
@@ -150,7 +145,8 @@ class TestThePlan:
 
     def test_a_tie_on_slack_is_broken_by_name_order(self, tmp_path):
         broker, _global_fd, _proxy_fds, ledger = _broker(
-            tmp_path, ["zeta", "alpha"], {"zeta": 5, "alpha": 5}, ceiling=3)
+            tmp_path, ["zeta", "alpha"], {"zeta": 5, "alpha": 5}, ceiling=3
+        )
         broker.note_running("zeta", max_jobs=8)
         broker.note_running("alpha", max_jobs=8)
         broker.tick()
@@ -160,8 +156,7 @@ class TestThePlan:
 
 class TestDrain:
     def test_an_element_ending_drains_its_proxy_back_to_the_global_fifo(self, tmp_path):
-        broker, global_fd, proxy_fds, ledger = _broker(
-            tmp_path, ["a"], {"a": 5}, ceiling=8)
+        broker, global_fd, proxy_fds, ledger = _broker(tmp_path, ["a"], {"a": 5}, ceiling=8)
         broker.note_running("a", max_jobs=4)
         broker.tick()
         assert _readable(proxy_fds["a"]) == 3
@@ -171,8 +166,7 @@ class TestDrain:
         assert _readable(global_fd) == before + 3
         assert "a" not in broker.running
         drains = [row for row in _rows(ledger) if row["event"] == "drain"]
-        assert drains[0] == {"event": "drain", "element": "a", "tokens": 3,
-                             "t": drains[0]["t"]}
+        assert drains[0] == {"event": "drain", "element": "a", "tokens": 3, "t": drains[0]["t"]}
         assert broker.drains == 1
 
 
@@ -183,8 +177,7 @@ class TestLeaks:
     back to that element's proxy)."""
 
     def test_a_dead_note_done_holder_is_refilled_to_the_global_fifo(self, tmp_path):
-        broker, global_fd, proxy_fds, ledger = _broker(
-            tmp_path, ["a"], {"a": 5}, ceiling=8)
+        broker, global_fd, proxy_fds, ledger = _broker(tmp_path, ["a"], {"a": 5}, ceiling=8)
         broker.note_running("a", max_jobs=4)
         broker.tick()
         assert _readable(proxy_fds["a"]) == 3, "granted 3 (cap -j4 minus one)"
@@ -211,7 +204,8 @@ class TestLeaks:
 
     def test_a_dead_tick_holder_mapped_to_a_running_element_is_refilled_to_its_proxy(self, tmp_path):
         broker, _global_fd, proxy_fds, ledger = _broker(
-            tmp_path, ["a"], {"a": 5}, ceiling=1)  # 0 seed tokens - nothing to distribute
+            tmp_path, ["a"], {"a": 5}, ceiling=1
+        )  # 0 seed tokens - nothing to distribute
         broker.note_running("a", max_jobs=4)
         dead_pid = 2**22 - 1
         _write_acquire(ledger, tool="ninja", pid=dead_pid, tokens=2)
@@ -220,8 +214,7 @@ class TestLeaks:
         assert _readable(proxy_fds["a"]) == 2, "the dead holder's tokens go back to its proxy"
         leaked = _leaked_rows(ledger)
         assert len(leaked) == 1
-        assert leaked[0] == {"event": "leaked", "element": "a", "pid": dead_pid,
-                             "tokens": 2, "t": leaked[0]["t"]}
+        assert leaked[0] == {"event": "leaked", "element": "a", "pid": dead_pid, "tokens": 2, "t": leaked[0]["t"]}
         assert broker.leaks == 1
         assert broker.tokens_refilled == 2
 
@@ -230,8 +223,7 @@ class TestLeaks:
         assert len(_leaked_rows(ledger)) == 1, "a second tick writes nothing more"
 
     def test_a_live_holder_is_left_alone(self, tmp_path):
-        broker, _global_fd, proxy_fds, ledger = _broker(
-            tmp_path, ["a"], {"a": 5}, ceiling=1)
+        broker, _global_fd, proxy_fds, ledger = _broker(tmp_path, ["a"], {"a": 5}, ceiling=1)
         broker.note_running("a", max_jobs=4)
         _write_acquire(ledger, tool="ninja", pid=os.getpid(), tokens=2)
         broker.tick({os.getpid(): "a"})
@@ -246,7 +238,8 @@ class TestLeaks:
         this ledger), it is refilled by the broker itself, to the
         global FIFO rather than any one element's proxy."""
         broker, global_fd, proxy_fds, ledger = _broker(
-            tmp_path, ["a"], {"a": 5}, ceiling=1)  # 0 seed tokens - nothing to distribute
+            tmp_path, ["a"], {"a": 5}, ceiling=1
+        )  # 0 seed tokens - nothing to distribute
         # "a" is never `note_running` - nothing is running to redistribute
         # the freed tokens to within this same `tick()`, so the refill
         # itself (not a later grant) is what lands in the global FIFO.
@@ -258,8 +251,14 @@ class TestLeaks:
         assert _readable(global_fd) == before + 2, "unmapped - refilled to the global FIFO"
         leaked = _leaked_rows(ledger)
         assert len(leaked) == 1
-        assert leaked[0] == {"event": "leaked", "tool": "ninja", "pid": dead_pid,
-                             "tokens": 2, "element": None, "t": leaked[0]["t"]}
+        assert leaked[0] == {
+            "event": "leaked",
+            "tool": "ninja",
+            "pid": dead_pid,
+            "tokens": 2,
+            "element": None,
+            "t": leaked[0]["t"],
+        }
 
 
 class TestExclusiveAudit:
@@ -278,8 +277,7 @@ class TestExclusiveAudit:
         ledger = str(tmp_path / "ledger.jsonl")
         # `PoolController.__init__` truncates `ledger_path` - both
         # constructed before the dead holder's own `acquire` row lands.
-        pc = tracer.PoolController(fd, ceiling=4, ledger_path=ledger,
-                                   psi_paths={"broker_owns_audit": True})
+        pc = tracer.PoolController(fd, ceiling=4, ledger_path=ledger, psi_paths={"broker_owns_audit": True})
         broker = tracer.Broker(fd, {}, {}, ledger_path=ledger)
         dead_pid = 2**22 - 3
         _write_acquire(ledger, tool="mold", pid=dead_pid, tokens=1)
@@ -293,8 +291,14 @@ class TestExclusiveAudit:
         assert _readable(fd) == 3, "the token came back exactly once"
         rows = _leaked_rows(ledger)
         assert len(rows) == 1
-        assert rows[0] == {"event": "leaked", "tool": "mold", "pid": dead_pid,
-                           "tokens": 1, "element": None, "t": rows[0]["t"]}
+        assert rows[0] == {
+            "event": "leaked",
+            "tool": "mold",
+            "pid": dead_pid,
+            "tokens": 1,
+            "element": None,
+            "t": rows[0]["t"],
+        }
 
 
 class TestPollRefreshesPidToElement:
@@ -309,7 +313,8 @@ class TestPollRefreshesPidToElement:
         with open(raw_log_path, "w", encoding="utf-8") as handle:
             handle.write(
                 f"START pid={dead_pid} ppid=1 ts=10.0 element=a.bst cmd=ninja\n"
-                f"END pid={dead_pid} ppid=1 ts=10.5 element=a.bst cmd=ninja\n")
+                f"END pid={dead_pid} ppid=1 ts=10.5 element=a.bst cmd=ninja\n"
+            )
         global_scratch = str(tmp_path / "global")
         os.makedirs(global_scratch, exist_ok=True)
         _path, global_fd, _tokens = tracer.open_jobserver(1, global_scratch)  # 0 seed
@@ -317,8 +322,12 @@ class TestPollRefreshesPidToElement:
         proxy_fds = tracer.create_jobserver_proxies(proxies_dir, {"a.bst": "make"})
         ledger = str(tmp_path / "ledger.jsonl")
         broker = tracer.Broker(
-            global_fd, proxy_fds, {"a.bst": 5}, ledger_path=ledger,
-            scratch={"proxies_dir": proxies_dir, "raw_log_path": raw_log_path})
+            global_fd,
+            proxy_fds,
+            {"a.bst": 5},
+            ledger_path=ledger,
+            scratch={"proxies_dir": proxies_dir, "raw_log_path": raw_log_path},
+        )
         broker.note_running("a.bst", max_jobs=4)
         _write_acquire(ledger, tool="ninja", pid=dead_pid, tokens=2)
 
@@ -339,10 +348,16 @@ def test_without_a_plan_the_shims_argv_is_byte_for_byte_unchanged():
         kwargs = dict(
             real_bwrap="/usr/bin/bwrap",
             bst_args=[
-                "--dir", "buildstream/proj/core.bst",
-                "--chdir", "buildstream/proj/core.bst",
-                "--setenv", "MAKEFLAGS", "-j4",
-                "sh", "-c", "make",
+                "--dir",
+                "buildstream/proj/core.bst",
+                "--chdir",
+                "buildstream/proj/core.bst",
+                "--setenv",
+                "MAKEFLAGS",
+                "-j4",
+                "sh",
+                "-c",
+                "make",
             ],
             bind_src="/tmp/host-trace-dir",
             bind_dst="/tmp/.bst-native-trace",

@@ -12,6 +12,7 @@ by `NormalizedTask.__post_init__` itself (P1-36), and this task is
 scoped to `compute_sensitivity`'s own handling of whatever slack value
 it's given, not to how a negative slack value could arise.
 """
+
 import networkx as nx
 
 from bga.ingest.models import NormalizedTask, TaskKey, TaskKind

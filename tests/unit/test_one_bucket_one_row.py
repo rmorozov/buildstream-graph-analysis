@@ -37,6 +37,7 @@ description, and `bga:explained_by` is what lets the page draw both on
 one row without sniffing for a key named `<something>_hints`
 (`UX-201`).
 """
+
 import json
 import os
 import pathlib
@@ -62,10 +63,13 @@ UNIT_SUFFIXES = (" us", " bytes", " s", " ms")
 @pytest.fixture(scope="module")
 def payload():
     done = subprocess.run(
-        [sys.executable, "-m", "bga.cli", "analyze", str(RUN),
-         "--format", "json"],
-        capture_output=True, text=True, cwd=REPO, timeout=180,
-        env=dict(os.environ, PYTHONPATH=str(REPO)))
+        [sys.executable, "-m", "bga.cli", "analyze", str(RUN), "--format", "json"],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=180,
+        env=dict(os.environ, PYTHONPATH=str(REPO)),
+    )
     assert done.returncode == 0, done.stderr[-3000:]
     return json.loads(done.stdout)
 
@@ -125,9 +129,7 @@ class TestThePopulationIsStillOne:
 @pytest.mark.skipif(find_chrome() is None, reason=NO_BROWSER)
 class TestOneSection:
     def test_the_hints_have_no_section_of_their_own(self, seen):
-        assert seen["hints"] is None, (
-            "`attribution_hints` still draws a second `<h2>` over the "
-            "same eight bucket names")
+        assert seen["hints"] is None, "`attribution_hints` still draws a second `<h2>` over the same eight bucket names"
         assert "attribution_hints" not in seen["sections"]
 
     def test_no_hint_was_lost_in_the_merge(self, seen, payload):
@@ -136,11 +138,9 @@ class TestOneSection:
         The count of explained buckets must not drop - which is the
         one way this fix could look right and be a deletion.
         """
-        assert len(seen["attribution"]["advice"]) == len(
-            payload["attribution_hints"]), seen["attribution"]["advice"]
+        assert len(seen["attribution"]["advice"]) == len(payload["attribution_hints"]), seen["attribution"]["advice"]
         for bucket, hint in payload["attribution_hints"].items():
-            assert any(hint.strip() in shown
-                       for shown in seen["attribution"]["advice"]), bucket
+            assert any(hint.strip() in shown for shown in seen["attribution"]["advice"]), bucket
 
     def test_the_advice_is_on_the_row_of_its_bucket(self, seen, payload):
         """Not collected at the foot of the section.
@@ -152,10 +152,9 @@ class TestOneSection:
         """
         rows = seen["attribution"]["rows"]
         assert rows, seen
-        assert seen["attribution"]["loose"] == len(
-            seen["attribution"]["advice"]), (
-            "a `run-advice` paragraph is in the section but not inside "
-            "any bucket's `<dd>`")
+        assert seen["attribution"]["loose"] == len(seen["attribution"]["advice"]), (
+            "a `run-advice` paragraph is in the section but not inside any bucket's `<dd>`"
+        )
         for row in rows:
             assert len(row["advice"]) == 1, row
         # Each bucket's own sentence, matched by the label it sits under.
@@ -167,8 +166,7 @@ class TestOneSection:
 
     def test_no_label_prints_the_unit_the_value_carries(self, seen):
         """`UX-351`, on the eight labels that never got the sweep."""
-        offenders = [label for label in seen["attribution"]["labels"]
-                     if label.endswith(UNIT_SUFFIXES)]
+        offenders = [label for label in seen["attribution"]["labels"] if label.endswith(UNIT_SUFFIXES)]
         assert offenders == [], offenders
         assert "Execution on chain" in seen["attribution"]["labels"]
 
@@ -177,8 +175,8 @@ class TestItIsDeclaredRatherThanSniffed:
     def test_the_contract_says_where_the_advice_lives(self):
         node = schemas.schema(schemas.ANALYZE)["properties"]["attribution"]
         assert node.get(schemas.EXPLAINED_BY) == "attribution_hints", (
-            "a page that looked for `<key>_hints` would be the "
-            "name-guessing UX-201 removed")
+            "a page that looked for `<key>_hints` would be the name-guessing UX-201 removed"
+        )
 
     def test_the_advice_is_not_the_schema_sentence(self, payload):
         """Two sentences, and the run computes one of them.
@@ -188,8 +186,9 @@ class TestItIsDeclaredRatherThanSniffed:
         the hint cannot become a `description` and the declaration is
         the only way the page can find it.
         """
-        described = schemas.schema(schemas.ANALYZE)["properties"][
-            "attribution"]["properties"]["resource_wait_us"]["description"]
+        described = schemas.schema(schemas.ANALYZE)["properties"]["attribution"]["properties"]["resource_wait_us"][
+            "description"
+        ]
         computed = payload["attribution_hints"]["resource_wait_us"]
         assert described != computed
         assert "this run" in computed, computed

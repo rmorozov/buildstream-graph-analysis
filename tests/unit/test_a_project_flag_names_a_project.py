@@ -23,6 +23,7 @@ Refused before anything is written, which is `UX-324`'s rule and
 and the store's `.gitignore` are all created on the way past there. The
 directory-listing clause below is that item's own acceptance shape.
 """
+
 import io
 import os
 import pathlib
@@ -43,14 +44,14 @@ def _listing(root: pathlib.Path):
 class TestTheRefusal:
     def test_a_directory_with_no_project_conf_is_refused(self, tmp_path):
         (tmp_path / "notaproject").mkdir()
-        said = bga_snapshot.why_the_project_is_not_one(
-            str(tmp_path / "notaproject"))
+        said = bga_snapshot.why_the_project_is_not_one(str(tmp_path / "notaproject"))
         assert said, (
-            "a directory with no project.conf was accepted, and bst walked "
-            "up and built the enclosing project instead")
+            "a directory with no project.conf was accepted, and bst walked up and built the enclosing project instead"
+        )
         assert "project.conf" in said, (
             "the refusal names what it looked for; a reader who is told "
-            "'not a project' and not what a project *is* cannot act on it")
+            "'not a project' and not what a project *is* cannot act on it"
+        )
 
     def test_a_path_that_does_not_exist_says_so(self, tmp_path):
         """Two mistakes, told apart.
@@ -59,8 +60,7 @@ class TestTheRefusal:
         would have sent them looking for a file in a directory that is
         not there.
         """
-        said = bga_snapshot.why_the_project_is_not_one(
-            str(tmp_path / "nowhere"))
+        said = bga_snapshot.why_the_project_is_not_one(str(tmp_path / "nowhere"))
         assert said and "does not exist" in said, said
 
     def test_the_refusal_names_the_project_bst_would_have_built(self, tmp_path):
@@ -74,8 +74,8 @@ class TestTheRefusal:
         # with the whole enclosing-project sentence deleted. Found by
         # the mutation that deleted it.
         assert said and f"nearest project above it is {tmp_path}" in said, (
-            f"the refusal must name the project bst would have walked up "
-            f"to and built; it said: {said}")
+            f"the refusal must name the project bst would have walked up to and built; it said: {said}"
+        )
 
     def test_a_real_project_is_not_refused(self, tmp_path):
         (tmp_path / "project.conf").write_text("name: real\n")
@@ -85,8 +85,7 @@ class TestTheRefusal:
 class TestNothingIsWritten:
     """`UX-324`'s clause, applied to the flag."""
 
-    def test_the_refusal_leaves_the_directory_byte_for_byte(self, tmp_path,
-                                                            monkeypatch):
+    def test_the_refusal_leaves_the_directory_byte_for_byte(self, tmp_path, monkeypatch):
         target = tmp_path / "notaproject"
         target.mkdir()
         before = _listing(tmp_path)
@@ -94,24 +93,19 @@ class TestNothingIsWritten:
         monkeypatch.chdir(tmp_path)
         stderr = io.StringIO()
         with redirect_stderr(stderr):
-            code = bga_snapshot.main(
-                ["--project", str(target), "--", "bst", "build", "all.bst"])
+            code = bga_snapshot.main(["--project", str(target), "--", "bst", "build", "all.bst"])
 
-        assert code == 2, (
-            f"a refusal exits 2 like every other one in this command; "
-            f"got {code}")
+        assert code == 2, f"a refusal exits 2 like every other one in this command; got {code}"
         assert "Nothing was captured and nothing was written" in stderr.getvalue()
         assert _listing(tmp_path) == before, (
             "the refusal path created something. `UX-324` found a snapshot "
             "directory with build.log and an empty plane2.log left behind by "
             "a capture that could not start; this is the same clause one "
-            "flag over")
-        assert not os.path.exists(target / ".bga"), (
-            "the store was created under a directory that is not a project")
+            "flag over"
+        )
+        assert not os.path.exists(target / ".bga"), "the store was created under a directory that is not a project"
 
-    def test_an_omitted_flag_still_resolves_the_enclosing_project(self,
-                                                                  tmp_path,
-                                                                  monkeypatch):
+    def test_an_omitted_flag_still_resolves_the_enclosing_project(self, tmp_path, monkeypatch):
         """Resolving upward from a subdirectory is the documented way in.
 
         The check runs on the resolved root too, and cannot fail there:
@@ -130,4 +124,5 @@ class TestNothingIsWritten:
         assert code == 0, stderr.getvalue()
         assert "not a BuildStream project" not in stderr.getvalue(), (
             "resolving upward from a subdirectory is the documented way to "
-            "run this, and it must not trip the flag's check")
+            "run this, and it must not trip the flag's check"
+        )

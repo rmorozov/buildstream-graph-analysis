@@ -17,6 +17,7 @@ payments vs. 1) actually is the dominant cost - real logs alone can't
 exercise this deterministically given BuildStream's 1-second elapsed
 precision without --verbose.
 """
+
 import json
 import shutil
 import subprocess
@@ -161,15 +162,29 @@ def test_real_end_to_end_against_a_real_build_and_checkouts(tmp_path):
     env = isolated_bst_env(tmp_path)
     subprocess.run(
         ["bst", "-C", str(FIXTURE_PROJECT), "--no-colors", "build", "all.bst"],
-        capture_output=True, text=True, env=env, check=True,
+        capture_output=True,
+        text=True,
+        env=env,
+        check=True,
     )
 
     def _checkout(target, out_name):
         log_path = tmp_path / f"{out_name}.log"
         proc = subprocess.run(
-            ["bst", "-C", str(FIXTURE_PROJECT), "--no-colors", "artifact", "checkout",
-             target, "--directory", str(tmp_path / out_name)],
-            capture_output=True, text=True, env=env,
+            [
+                "bst",
+                "-C",
+                str(FIXTURE_PROJECT),
+                "--no-colors",
+                "artifact",
+                "checkout",
+                target,
+                "--directory",
+                str(tmp_path / out_name),
+            ],
+            capture_output=True,
+            text=True,
+            env=env,
         )
         log_path.write_text(proc.stdout + proc.stderr)
         return str(log_path)

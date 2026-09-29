@@ -22,6 +22,7 @@ document. A round in progress cannot commit the row that names it; a
 claimed number past that is owed its document, not exempt (UX-926).
 `--write` renders that view; `--check` reds when the file disagrees.
 """
+
 import argparse
 import pathlib
 import re
@@ -41,7 +42,8 @@ from tools import dev_close_task, dev_process_bands
 DATELINE_RE = re.compile(
     r"^#\s.*\((20\d\d-\d\d-\d\d)\)"
     r"|^(?:Run on|Opens at)\b.*?\b(20\d\d-\d\d-\d\d)\b",
-    re.MULTILINE)
+    re.MULTILINE,
+)
 
 ROUND_DOC_RE = re.compile(r"round-(\d+)\.md$")
 
@@ -51,11 +53,8 @@ GIT_ONLY_ROUNDS = (31, 55, 60)
 
 #: `UX-926`: `## Outcome (round N` or `**Round N`, read from the first
 #: `## Outcome` on - a bold round above it is a mention.
-OUTCOME_ROUND_RE = re.compile(
-    r"^(?:## Outcome\b[^\n]*?\(round (\d+)\b|\*\*Round (\d+)\b)",
-    re.MULTILINE)
-FOUND_BY_ROUND_RE = re.compile(r"\*\*Found by:\*\*\s*round (\d+)\b",
-                               re.IGNORECASE)
+OUTCOME_ROUND_RE = re.compile(r"^(?:## Outcome\b[^\n]*?\(round (\d+)\b|\*\*Round (\d+)\b)", re.MULTILINE)
+FOUND_BY_ROUND_RE = re.compile(r"\*\*Found by:\*\*\s*round (\d+)\b", re.IGNORECASE)
 
 
 def task_file_rounds(scenarios=None):
@@ -67,11 +66,9 @@ def task_file_rounds(scenarios=None):
         if not dev_close_task._FILE_ID.match(path.name):
             continue
         text = path.read_text(encoding="utf-8")
-        found.update(FOUND_BY_ROUND_RE.findall(
-            "\n".join(text.splitlines()[:8])))
+        found.update(FOUND_BY_ROUND_RE.findall("\n".join(text.splitlines()[:8])))
         _, heading, rest = text.partition("\n## Outcome")
-        found.update(a or b for a, b in
-                     OUTCOME_ROUND_RE.findall(heading.lstrip("\n") + rest))
+        found.update(a or b for a, b in OUTCOME_ROUND_RE.findall(heading.lstrip("\n") + rest))
     return {str(int(n)) for n in found}
 
 
@@ -79,8 +76,7 @@ def git_only_conflicts(documented=None, ledger_runs=None, named=None):
     """`[(round, where)]` for a `GIT_ONLY_ROUNDS` entry the tree now
     records - accepted-as-lost must stop being true loudly."""
     docs = documented_rounds() if documented is None else documented
-    runs = (dev_process_bands.ledger_runs() if ledger_runs is None
-            else ledger_runs)
+    runs = dev_process_bands.ledger_runs() if ledger_runs is None else ledger_runs
     tasks = task_file_rounds() if named is None else named
     ledger_numbers = {run["round"] for run in runs}
     found = []
@@ -99,19 +95,19 @@ def git_only_conflicts(documented=None, ledger_runs=None, named=None):
 
 
 def _effective_git_only(documented=None, ledger_runs=None, named=None):
-    conflicted = {n for n, _ in
-                  git_only_conflicts(documented, ledger_runs, named)}
+    conflicted = {n for n, _ in git_only_conflicts(documented, ledger_runs, named)}
     return tuple(n for n in GIT_ONLY_ROUNDS if n not in conflicted)
 
 
 def _git_only_note(effective):
     if not effective:
-        return ("Every round once thought git-only now has a document, "
-                "a ledger row or a task file naming it.")
-    return (f"{len(effective)} round(s) ({min(effective)}-{max(effective)}) "
-            "exist only as a commit subject - no document, no ledger row, "
-            "no task file - and are accepted as lost, not re-derived from "
-            "`git log`.")
+        return "Every round once thought git-only now has a document, a ledger row or a task file naming it."
+    return (
+        f"{len(effective)} round(s) ({min(effective)}-{max(effective)}) "
+        "exist only as a commit subject - no document, no ledger row, "
+        "no task file - and are accepted as lost, not re-derived from "
+        "`git log`."
+    )
 
 
 def header(documented=None, ledger_runs=None):
@@ -137,9 +133,11 @@ def header(documented=None, ledger_runs=None):
 
 
 #: `UX-776`: a shallow clone's `git log` stops early.
-SHALLOW = ("{repo} is a shallow clone - `git log` cannot see the whole "
-           "history first_commit_date() derives from, so its check "
-           "means nothing here. `git fetch --unshallow` first (UX-776)")
+SHALLOW = (
+    "{repo} is a shallow clone - `git log` cannot see the whole "
+    "history first_commit_date() derives from, so its check "
+    "means nothing here. `git fetch --unshallow` first (UX-776)"
+)
 
 
 def is_shallow(repo=None):
@@ -151,9 +149,9 @@ def is_shallow(repo=None):
     if not marker.exists():
         return False
     for sha in marker.read_text(encoding="utf-8").split():
-        cuts = subprocess.run([GIT, "merge-base", "--is-ancestor", sha,
-                               "HEAD"], cwd=repo, capture_output=True,
-                              check=False)
+        cuts = subprocess.run(
+            [GIT, "merge-base", "--is-ancestor", sha, "HEAD"], cwd=repo, capture_output=True, check=False
+        )
         if cuts.returncode == 0:
             return True
     return False
@@ -171,10 +169,11 @@ def shallow_depth(repo=None):
 def documented_rounds(repo=None):
     """Round numbers with a `docs/audits/round-N.md` file."""
     repo = repo or REPO
-    return {m.group(1) for m in
-            (ROUND_DOC_RE.search(p.name)
-             for p in pathlib.Path(repo, "docs/audits").glob("round-*.md"))
-            if m}
+    return {
+        m.group(1)
+        for m in (ROUND_DOC_RE.search(p.name) for p in pathlib.Path(repo, "docs/audits").glob("round-*.md"))
+        if m
+    }
 
 
 def _first_date_in_text(text):
@@ -198,20 +197,25 @@ def first_commit_date(number, repo=None):
     over its own path - independent of its text. `None` if never added."""
     repo = str(repo or REPO)
     path = f"docs/audits/round-{number}.md"
-    out = subprocess.run(
-        [GIT, "log", "--diff-filter=A", "--format=%ad", "--date=short",
-         "--", path], cwd=repo, capture_output=True, text=True,
-        check=True).stdout.strip().splitlines()
+    out = (
+        subprocess.run(
+            [GIT, "log", "--diff-filter=A", "--format=%ad", "--date=short", "--", path],
+            cwd=repo,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        .stdout.strip()
+        .splitlines()
+    )
     return out[-1] if out else None
 
 
-def rounds(documented=None, ledger_runs=None, dates=document_date,
-           named=None):
+def rounds(documented=None, ledger_runs=None, dates=document_date, named=None):
     """`{round: {"date": str}}` over the committed union; a fixture hands
     in each source, and `dates`, without touching disk or git."""
     docs = documented_rounds() if documented is None else documented
-    runs = (dev_process_bands.ledger_runs() if ledger_runs is None
-            else ledger_runs)
+    runs = dev_process_bands.ledger_runs() if ledger_runs is None else ledger_runs
     tasks = task_file_rounds() if named is None else named
     numbers = set(docs) | {run["round"] for run in runs} | set(tasks)
     return {number: {"date": dates(number) or ""} for number in numbers}
@@ -255,14 +259,14 @@ def check():
     problems = [
         f"round {number} is in GIT_ONLY_ROUNDS (accepted as lost) but "
         f"now exists at {where} - drop it from GIT_ONLY_ROUNDS"
-        for number, where in git_only_conflicts()]
+        for number, where in git_only_conflicts()
+    ]
     want = render(written_rounds())
     if not REGISTER.exists():
         return [*problems, f"{REGISTER} does not exist - run --write"]
     have = REGISTER.read_text(encoding="utf-8")
     if have != want:
-        problems.append(f"{REGISTER} disagrees with the derivation - "
-                        "run --write")
+        problems.append(f"{REGISTER} disagrees with the derivation - run --write")
     return problems
 
 

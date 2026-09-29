@@ -28,6 +28,7 @@ Direction 10 is what needs it: a release records a contract *set*, and
 an artifact stamps the contracts it depends on. Neither is expressible
 while the set cannot be enumerated.
 """
+
 import importlib
 import pkgutil
 import re
@@ -99,7 +100,7 @@ def _declared_in_modules() -> dict[str, str]:
         try:
             loaded = importlib.import_module(name)
         except Exception:  # pragma: no cover - a module that cannot
-            continue       # import has bigger problems than its id
+            continue  # import has bigger problems than its id
         declared = getattr(loaded, _DECLARATION, None)
         if isinstance(declared, str) and CONTRACT_ID.match(declared):
             found[declared] = name

@@ -35,6 +35,7 @@ against the host's own cache every element is a hit, every duration is
 zero, and every clause below would pass over an empty run. It also
 means the guard never touches the developer's artifacts.
 """
+
 import json
 import os
 import pathlib
@@ -94,9 +95,13 @@ CORE_LEAD_FLOOR = 1.25
 #: Answer 1 as the project *declares* it: `lib-a..lib-f` six deep, none
 #: reading the one before. `UX-543` asserts this of the recording, for
 #: the reason measured on the clause.
-DECLARED_CHAIN = (("lib-a.bst", "lib-b.bst"), ("lib-b.bst", "lib-c.bst"),
-                  ("lib-c.bst", "lib-d.bst"), ("lib-d.bst", "lib-e.bst"),
-                  ("lib-e.bst", "lib-f.bst"))
+DECLARED_CHAIN = (
+    ("lib-a.bst", "lib-b.bst"),
+    ("lib-b.bst", "lib-c.bst"),
+    ("lib-c.bst", "lib-d.bst"),
+    ("lib-d.bst", "lib-e.bst"),
+    ("lib-e.bst", "lib-f.bst"),
+)
 
 node = shutil.which("node")
 
@@ -155,29 +160,28 @@ def leads(ranked, uid):
     if not ranked:
         return False
     best = max(row.get("saving_us") or 0 for row in ranked)
-    return any(row["element_uid"] == uid and (row.get("saving_us") or 0) == best
-               for row in ranked)
+    return any(row["element_uid"] == uid and (row.get("saving_us") or 0) == best for row in ranked)
 
 
 def _empty_sections(probe_output):
     """[(section, says "found none")], as the probe read them."""
     return sorted(tuple(row) for row in probe_output)
 
+
 #: One string, so the skip census counts it once (`UX-213`).
 WHY_SKIPPED = (
-    "the journey needs bst, bwrap and example 06's staged toolchain "
-    "(files/toolchain, written by generate_sources.py)")
+    "the journey needs bst, bwrap and example 06's staged toolchain (files/toolchain, written by generate_sources.py)"
+)
 walkable = pytest.mark.skipif(
-    not (shutil.which("bst") and shutil.which("bwrap")
-         and (EXAMPLE / "files" / "toolchain").exists()),
-    reason=WHY_SKIPPED)
+    not (shutil.which("bst") and shutil.which("bwrap") and (EXAMPLE / "files" / "toolchain").exists()),
+    reason=WHY_SKIPPED,
+)
 
 pytestmark = [pytest.mark.large, walkable]
 
 
 def _run(argv, cwd, env, timeout=600):
-    done = subprocess.run(argv, capture_output=True, text=True, cwd=str(cwd),
-                          env=env, timeout=timeout)
+    done = subprocess.run(argv, capture_output=True, text=True, cwd=str(cwd), env=env, timeout=timeout)
     return done
 
 
@@ -189,43 +193,46 @@ def walked(tmp_path_factory):
     # `symlinks=True`: the staged toolchain is a tree of symlinks into
     # the host, several of them dangling, and a copy that resolves them
     # fails on the first one.
-    shutil.copytree(EXAMPLE, project, symlinks=True,
-                    ignore=shutil.ignore_patterns(".bga", "optimized"))
-    env = {**os.environ,
-           "PYTHONPATH": str(REPO),
-           # The whole point of the isolation: a cold cache, and the
-           # developer's own artifacts untouched.
-           "XDG_CACHE_HOME": str(into / "cache"),
-           # `UX-755`: BuildStream's default `reserved-disk-space` (5%)
-           # reads the *total* size of the cache's filesystem, not what
-           # is actually free - a host whose real headroom is small next
-           # to its nominal disk size can see that reserve alone exceed
-           # what is free, refusing any build with "Cache too full"
-           # before a process runs. This repo-owned config overrides it
-           # with absolute values everywhere `bst` looks for a home
-           # config, reaching both this build and `extract_run`'s own
-           # internal `bst show`.
-           "XDG_CONFIG_HOME": str(BST_XDG_CONFIG_HOME)}
+    shutil.copytree(EXAMPLE, project, symlinks=True, ignore=shutil.ignore_patterns(".bga", "optimized"))
+    env = {
+        **os.environ,
+        "PYTHONPATH": str(REPO),
+        # The whole point of the isolation: a cold cache, and the
+        # developer's own artifacts untouched.
+        "XDG_CACHE_HOME": str(into / "cache"),
+        # `UX-755`: BuildStream's default `reserved-disk-space` (5%)
+        # reads the *total* size of the cache's filesystem, not what
+        # is actually free - a host whose real headroom is small next
+        # to its nominal disk size can see that reserve alone exceed
+        # what is free, refusing any build with "Cache too full"
+        # before a process runs. This repo-owned config overrides it
+        # with absolute values everywhere `bst` looks for a home
+        # config, reaching both this build and `extract_run`'s own
+        # internal `bst show`.
+        "XDG_CONFIG_HOME": str(BST_XDG_CONFIG_HOME),
+    }
 
-    doctor = _run([sys.executable, "-m", "tools.bga_doctor", str(project)],
-                  project, env, timeout=300)
-    cold = _run([sys.executable, "-m", "tools.bga_snapshot",
-                 "--", "bst", "build", "all.bst"], project, env)
+    doctor = _run([sys.executable, "-m", "tools.bga_doctor", str(project)], project, env, timeout=300)
+    cold = _run([sys.executable, "-m", "tools.bga_snapshot", "--", "bst", "build", "all.bst"], project, env)
     assert cold.returncode == 0, cold.stdout[-4000:] + cold.stderr[-4000:]
-    warm = _run([sys.executable, "-m", "tools.bga_snapshot",
-                 "--", "bst", "build", "all.bst"], project, env)
+    warm = _run([sys.executable, "-m", "tools.bga_snapshot", "--", "bst", "build", "all.bst"], project, env)
     assert warm.returncode == 0, warm.stdout[-4000:] + warm.stderr[-4000:]
 
     runs = sorted((project / ".bga" / "runs").iterdir())
     assert len(runs) == 2, [p.name for p in runs]
-    return {"project": project, "env": env, "doctor": doctor,
-            "cold": cold, "warm": warm,
-            "cold_run": str(runs[0] / "run"), "warm_run": str(runs[1] / "run")}
+    return {
+        "project": project,
+        "env": env,
+        "doctor": doctor,
+        "cold": cold,
+        "warm": warm,
+        "cold_run": str(runs[0] / "run"),
+        "warm_run": str(runs[1] / "run"),
+    }
 
 
 def _json(walked, argv):
-    done = _run([sys.executable, "-m", "bga.cli", *argv],
-                walked["project"], walked["env"], timeout=300)
+    done = _run([sys.executable, "-m", "bga.cli", *argv], walked["project"], walked["env"], timeout=300)
     assert done.returncode == 0, done.stderr[-3000:]
     return json.loads(done.stdout)
 
@@ -242,10 +249,13 @@ def recorded():
     The ranking clause reads this instead of a build it performs, so
     the number it asserts does not depend on how loaded the box is."""
     done = subprocess.run(
-        [sys.executable, "-m", "bga.cli", "analyze",
-         str(RECORDED), "--format", "json"],
-        capture_output=True, text=True, cwd=str(REPO), timeout=300,
-        env={**os.environ, "PYTHONPATH": str(REPO)})
+        [sys.executable, "-m", "bga.cli", "analyze", str(RECORDED), "--format", "json"],
+        capture_output=True,
+        text=True,
+        cwd=str(REPO),
+        timeout=300,
+        env={**os.environ, "PYTHONPATH": str(REPO)},
+    )
     assert done.returncode == 0, done.stderr[-3000:]
     return json.loads(done.stdout)
 
@@ -266,10 +276,13 @@ def recorded_join():
     `saving_us` 24150000, identical.
     """
     done = subprocess.run(
-        [sys.executable, "-m", "bga.cli", "correlate",
-         str(RECORDED), "--format", "json"],
-        capture_output=True, text=True, cwd=str(REPO), timeout=300,
-        env={**os.environ, "PYTHONPATH": str(REPO)})
+        [sys.executable, "-m", "bga.cli", "correlate", str(RECORDED), "--format", "json"],
+        capture_output=True,
+        text=True,
+        cwd=str(REPO),
+        timeout=300,
+        env={**os.environ, "PYTHONPATH": str(REPO)},
+    )
     assert done.returncode == 0, done.stderr[-3000:]
     return json.loads(done.stdout)
 
@@ -288,22 +301,31 @@ def exported(walked, tmp_path_factory):
     page = into / "incremental.html"
     view.export(walked["warm_run"], str(page))
     html = page.read_text(encoding="utf-8")
-    (into / "inline.mjs").write_text(
-        view.inflated_module(html),
-        encoding="utf-8")
-    probe = (REPO / "tests/unit/test_a_report_you_can_navigate.py").read_text(
-        encoding="utf-8").split('_PROBE = r"""', 1)[1].rsplit('"""', 1)[0]
+    (into / "inline.mjs").write_text(view.inflated_module(html), encoding="utf-8")
+    probe = (
+        (REPO / "tests/unit/test_a_report_you_can_navigate.py")
+        .read_text(encoding="utf-8")
+        .split('_PROBE = r"""', 1)[1]
+        .rsplit('"""', 1)[0]
+    )
     (into / "probe.mjs").write_text(probe + _TAIL, encoding="utf-8")
     done = subprocess.run(
-        [node, str(into / "probe.mjs")], capture_output=True, text=True,
-        cwd=REPO, timeout=120,
-        env=dict(os.environ, PAGE=str(page), MOD=str(into / "inline.mjs"),
-                 PROTOCOL="file:",
-                 BGA_DOM_SHIM=str(REPO / "tests/dom_shim.mjs")))
+        [node, str(into / "probe.mjs")],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=120,
+        env=dict(
+            os.environ,
+            PAGE=str(page),
+            MOD=str(into / "inline.mjs"),
+            PROTOCOL="file:",
+            BGA_DOM_SHIM=str(REPO / "tests/dom_shim.mjs"),
+        ),
+    )
     assert done.returncode == 0, done.stderr[-3000:]
-    line = [ln for ln in done.stdout.splitlines()
-            if ln.startswith("EMPTY ")][-1]
-    read = json.loads(line[len("EMPTY "):])
+    line = [ln for ln in done.stdout.splitlines() if ln.startswith("EMPTY ")][-1]
+    read = json.loads(line[len("EMPTY ") :])
     assert read["error"] is None, read["error"]
     return {"page": page, "probe": read["found"]}
 
@@ -327,8 +349,7 @@ class TestTheJourneyRuns:
     def test_the_capture_kept_both_planes(self, walked):
         beside = pathlib.Path(walked["cold_run"]).parent
         for name in ("analyze.json", "plane2.json", "build.log"):
-            assert (beside / name).exists(), sorted(
-                p.name for p in beside.iterdir())
+            assert (beside / name).exists(), sorted(p.name for p in beside.iterdir())
 
 
 class TestWhatTheAnswerKeyMayAssertAboutALiveBuild:
@@ -343,24 +364,20 @@ class TestWhatTheAnswerKeyMayAssertAboutALiveBuild:
 
     @staticmethod
     def _horizon(*pairs):
-        return [{"element_uid": uid, "saving_us": saving}
-                for uid, saving in pairs]
+        return [{"element_uid": uid, "saving_us": saving} for uid, saving in pairs]
 
     def test_a_clear_leader_leads(self):
-        assert leads(self._horizon(("core.bst", 6_000_000),
-                                   ("codegen.bst", 3_000_000)), "core.bst")
+        assert leads(self._horizon(("core.bst", 6_000_000), ("codegen.bst", 3_000_000)), "core.bst")
 
     def test_a_tie_still_leads(self):
         """4 of 7 loaded builds tied outright; on a tie the order is
         `max()`'s tie-break, not a fact about the graph."""
-        assert leads(self._horizon(("lib-b.bst", 5_000_000),
-                                   ("core.bst", 5_000_000)), "core.bst")
+        assert leads(self._horizon(("lib-b.bst", 5_000_000), ("core.bst", 5_000_000)), "core.bst")
 
     def test_genuinely_behind_does_not_lead(self):
         """The half that must still fail: an element really overtaking
         `core.bst` is the fixture losing its shape, and reports."""
-        assert not leads(self._horizon(("lib-c.bst", 9_000_000),
-                                       ("core.bst", 5_000_000)), "core.bst")
+        assert not leads(self._horizon(("lib-c.bst", 9_000_000), ("core.bst", 5_000_000)), "core.bst")
 
     def test_absent_does_not_lead(self):
         assert not leads(self._horizon(("lib-c.bst", 9_000_000)), "core.bst")
@@ -413,8 +430,7 @@ class TestTheMacroAnswer:
         expected = "chain_bound" if share >= line else "scheduler_bound"
         assert headline["diagnosis"] == expected, headline
 
-    def test_the_headline_sentence_carries_the_share_it_decided_on(
-            self, cold):
+    def test_the_headline_sentence_carries_the_share_it_decided_on(self, cold):
         """`UX-220`'s rule on the same field, and side-independent: both
         sentences quote the measured share and the line, so a reader can
         see how close this run sat without re-deriving anything."""
@@ -447,7 +463,8 @@ class TestTheMacroAnswer:
             f"wall-clock, under the {CHAIN_BOUND_FLOOR:.0%} this fixture "
             f"is kept above; UX-456 measured 0.853-0.916 over twenty cold "
             f"builds, so this is a change in the fixture rather than in "
-            f"the runner")
+            f"the runner"
+        )
 
     def test_the_first_thing_to_fix_is_core(self, recorded):
         """`core.bst` is what the six libraries all wait for, so a
@@ -476,18 +493,16 @@ class TestTheMacroAnswer:
         """
         ranked = recorded["optimization_horizon"]
         assert ranked, "the recorded horizon is empty"
-        assert leads(ranked, "core.bst"), [
-            (row["element_uid"], row.get("saving_us")) for row in ranked[:3]]
-        core = next(row.get("saving_us") or 0 for row in ranked
-                    if row["element_uid"] == "core.bst")
-        runner_up = max((row.get("saving_us") or 0) for row in ranked
-                        if row["element_uid"] != "core.bst")
+        assert leads(ranked, "core.bst"), [(row["element_uid"], row.get("saving_us")) for row in ranked[:3]]
+        core = next(row.get("saving_us") or 0 for row in ranked if row["element_uid"] == "core.bst")
+        runner_up = max((row.get("saving_us") or 0) for row in ranked if row["element_uid"] != "core.bst")
         assert core >= runner_up * CORE_LEAD_FLOOR, (
             f"core.bst saves {core / 1e6:.2f}s against the runner-up's "
             f"{runner_up / 1e6:.2f}s, a margin of {core / max(runner_up, 1):.2f} "
             f"under the {CORE_LEAD_FLOOR} this recording is kept above; "
             f"UX-538 measured 1.7214 on it three times, so this is the "
-            f"fixture or the ranking rule moving, not the runner")
+            f"fixture or the ranking rule moving, not the runner"
+        )
 
     def test_a_live_capture_still_ranks_something(self, cold):
         """The half a loaded box cannot move, kept live: the build the
@@ -560,20 +575,18 @@ class TestTheMacroAnswer:
         edges = {tuple(edge) for edge in findings[0]["edges"]}
         assert edges & set(DECLARED_CHAIN), sorted(edges)
 
-    def test_codegen_is_named_unused_by_the_libraries_that_declare_it(
-            self, joined):
+    def test_codegen_is_named_unused_by_the_libraries_that_declare_it(self, joined):
         """Answer 2. The finding above chains the elements; *which*
         dependency each element never opened is on the element's own
         row, which is where a reader looking at `lib-a.bst` finds it.
         """
         rows = {row["element"]: row for row in joined["elements"]}
-        named = [key for key in ("lib-a.bst", "lib-b.bst", "lib-c.bst",
-                                 "lib-d.bst", "lib-e.bst")
-                 if "codegen.bst" in (rows.get(key, {}).get(
-                     "unused_dependencies") or [])]
-        assert len(named) >= 4, {
-            key: rows.get(key, {}).get("unused_dependencies")
-            for key in rows}
+        named = [
+            key
+            for key in ("lib-a.bst", "lib-b.bst", "lib-c.bst", "lib-d.bst", "lib-e.bst")
+            if "codegen.bst" in (rows.get(key, {}).get("unused_dependencies") or [])
+        ]
+        assert len(named) >= 4, {key: rows.get(key, {}).get("unused_dependencies") for key in rows}
 
 
 class TestTheMicroAnswer:
@@ -592,16 +605,18 @@ class TestTheMicroAnswer:
         planes: Plane 1 says `core.bst` is the longest, Plane 2 says it
         is not computing while it runs, and only the join can say why.
         """
-        done = _run([sys.executable, "-m", "bga.cli", "correlate",
-                     walked["cold_run"]],
-                    walked["project"], walked["env"], timeout=300)
+        done = _run(
+            [sys.executable, "-m", "bga.cli", "correlate", walked["cold_run"]],
+            walked["project"],
+            walked["env"],
+            timeout=300,
+        )
         assert done.returncode == 0, done.stderr[-2000:]
         assert "notparallel" in done.stdout, done.stdout[-3000:]
         assert "core.bst" in done.stdout
 
     def test_the_join_says_it_in_the_document_too(self, joined):
-        core = [row for row in joined["elements"]
-                if row["element"] == "core.bst"]
+        core = [row for row in joined["elements"] if row["element"] == "core.bst"]
         assert core, [row["element"] for row in joined["elements"]]
         said = " ".join(rec["text"] for rec in core[0]["recommendations"])
         assert "notparallel" in said, said
@@ -612,13 +627,12 @@ class TestTheIncrementalRunIsStillAReport:
 
     def test_the_incremental_run_has_empty_populations(self, walked):
         """The premise: this is the run whose sections vanished."""
-        warm = _json(walked, ["analyze", walked["warm_run"],
-                              "--format", "json"])
-        empty = [key for key, value in warm.items()
-                 if isinstance(value, list) and not value]
+        warm = _json(walked, ["analyze", walked["warm_run"], "--format", "json"])
+        empty = [key for key, value in warm.items() if isinstance(value, list) and not value]
         assert empty, (
             "the incremental run published no empty collection, so this "
-            "file is no longer walking the case UX-388 was filed on")
+            "file is no longer walking the case UX-388 was filed on"
+        )
 
     def test_the_text_report_says_which_absence_it_is(self, walked):
         """`UX-685` seed 2's answer-key row, closed by `UX-724`.
@@ -635,19 +649,19 @@ class TestTheIncrementalRunIsStillAReport:
         and `--format json`'s `bottleneck` is a declared-empty `{}`
         rather than dropped.
         """
-        warm_json = _json(walked, ["analyze", walked["warm_run"],
-                                   "--diagnostics", "--format", "json"])
+        warm_json = _json(walked, ["analyze", walked["warm_run"], "--diagnostics", "--format", "json"])
         assert warm_json.get("bottleneck") == {}, (
-            "`bottleneck` should be a declared-empty object on this "
-            "0-rebuilt run, not dropped or null")
+            "`bottleneck` should be a declared-empty object on this 0-rebuilt run, not dropped or null"
+        )
         warm_text = _run(
-            [sys.executable, "-m", "bga.cli", "analyze",
-             walked["warm_run"], "--diagnostics"],
-            walked["project"], walked["env"], timeout=300).stdout
+            [sys.executable, "-m", "bga.cli", "analyze", walked["warm_run"], "--diagnostics"],
+            walked["project"],
+            walked["env"],
+            timeout=300,
+        ).stdout
         assert "Advanced Diagnostics:" in warm_text
         assert "Structural Analysis:" in warm_text
-        assert warm_text.count("the analysis ran and found none") == 2, (
-            "both blocks should say which absence it is")
+        assert warm_text.count("the analysis ran and found none") == 2, "both blocks should say which absence it is"
 
     def test_the_join_on_a_zero_rebuilt_run_recommends_nothing(self, walked):
         """`UX-685` seed 3's answer-key row, closed by `UX-817`.
@@ -659,9 +673,12 @@ class TestTheIncrementalRunIsStillAReport:
         there is nothing to join".
         """
         plane2 = str(pathlib.Path(walked["warm_run"]).parent / "plane2.json")
-        done = _run([sys.executable, "-m", "bga.cli", "correlate",
-                     walked["warm_run"], plane2],
-                    walked["project"], walked["env"], timeout=300)
+        done = _run(
+            [sys.executable, "-m", "bga.cli", "correlate", walked["warm_run"], plane2],
+            walked["project"],
+            walked["env"],
+            timeout=300,
+        )
         text = done.stdout + done.stderr
         assert "Nothing is recommended" in text, text[-2000:]
         assert "nothing was rebuilt, so there is nothing to join" in text, text[-2000:]
@@ -679,8 +696,8 @@ class TestTheIncrementalRunIsStillAReport:
         the clause below measures that the two agree."""
         drawn = _empty_sections(exported["probe"])
         assert drawn, (
-            "the incremental page drew no empty section at all - which is "
-            "exactly the disappearance UX-388 was filed on")
+            "the incremental page drew no empty section at all - which is exactly the disappearance UX-388 was filed on"
+        )
         silent = [section for section, says in drawn if not says]
         assert silent == [], silent
 
@@ -707,7 +724,6 @@ class TestTheIncrementalRunIsStillAReport:
                                 .textContent.trim().length > 20)]))()"""
         with Browser(chrome) as opened:
             seen = opened.measure(exported["page"].as_uri(), look, 1440, 900)
-        assert sorted(map(tuple, seen)) == sorted(_empty_sections(
-            exported["probe"])), (
-            "the probe and the browser disagree about which sections are "
-            "empty and which of them say so")
+        assert sorted(map(tuple, seen)) == sorted(_empty_sections(exported["probe"])), (
+            "the probe and the browser disagree about which sections are empty and which of them say so"
+        )

@@ -18,6 +18,7 @@ duration alone:
 The tests below are built on graphs where the right answer is known by
 construction rather than by re-running the implementation.
 """
+
 import networkx as nx
 
 from bga.ingest.models import NormalizedTask, TaskKey, TaskKind
@@ -45,13 +46,13 @@ def _analyzer(durations, edges):
 
 # --- real slack ---------------------------------------------------------
 
+
 def test_critical_path_elements_have_exactly_zero_slack():
     """Two branches off a root: the 9s branch is critical, the 6s one
     has exactly 3s of float."""
     analyzer = _analyzer(
         {"r": 0, "a1": 5_000_000, "a2": 4_000_000, "b1": 3_000_000, "b2": 3_000_000, "sink": 0},
-        [("r", "a1"), ("a1", "a2"), ("a2", "sink"),
-         ("r", "b1"), ("b1", "b2"), ("b2", "sink")],
+        [("r", "a1"), ("a1", "a2"), ("a2", "sink"), ("r", "b1"), ("b1", "b2"), ("b2", "sink")],
     )
 
     slacks = analyzer._compute_all_slacks()
@@ -63,9 +64,7 @@ def test_critical_path_elements_have_exactly_zero_slack():
 def test_slack_is_not_half_the_duration():
     """The placeholder's signature: slack == duration * 0.5 for every
     element regardless of graph shape."""
-    analyzer = _analyzer(
-        {"a": 6_000_000, "b": 4_000_000}, [("a", "b")]
-    )
+    analyzer = _analyzer({"a": 6_000_000, "b": 4_000_000}, [("a", "b")])
 
     slacks = analyzer._compute_all_slacks()
 
@@ -74,6 +73,7 @@ def test_slack_is_not_half_the_duration():
 
 
 # --- the ranking --------------------------------------------------------
+
 
 def test_longest_critical_element_ranks_first_not_last():
     """The inversion, minimally. Three chained elements of 6s/1s/3s: the
@@ -110,8 +110,7 @@ def test_saving_is_capped_where_the_next_path_becomes_critical():
     """
     analyzer = _analyzer(
         {"r": 0, "big": 10_000_000, "tail": 2_000_000, "par": 9_000_000, "sink": 0},
-        [("r", "big"), ("big", "tail"), ("tail", "sink"),
-         ("r", "par"), ("par", "sink")],
+        [("r", "big"), ("big", "tail"), ("tail", "sink"), ("r", "par"), ("par", "sink")],
     )
 
     result = analyzer.compute_sensitivity()
@@ -123,6 +122,7 @@ def test_saving_is_capped_where_the_next_path_becomes_critical():
 
 
 # --- the aggregates -----------------------------------------------------
+
 
 def test_best_case_speedup_is_not_a_constant():
     """~2.0x for any graph was the old behaviour, on graphs of any
@@ -154,8 +154,7 @@ def test_total_improvable_is_a_makespan_reduction_not_a_sum_of_slack():
     a graph whose finish cannot drop below 6s."""
     result = _analyzer(
         {"r": 0, "a1": 5_000_000, "a2": 4_000_000, "b1": 3_000_000, "b2": 3_000_000, "sink": 0},
-        [("r", "a1"), ("a1", "a2"), ("a2", "sink"),
-         ("r", "b1"), ("b1", "b2"), ("b2", "sink")],
+        [("r", "a1"), ("a1", "a2"), ("a2", "sink"), ("r", "b1"), ("b1", "b2"), ("b2", "sink")],
     ).compute_sensitivity()
 
     assert result.critical_path_us == 9_000_000
@@ -180,9 +179,7 @@ def test_pure_chain_reports_an_unbounded_ceiling_not_no_speedup():
     is improvable and the ratio is unbounded. Reporting a finite 1.0
     here would say "no speedup available", the opposite of the truth.
     """
-    result = _analyzer(
-        {"a": 3_000_000, "b": 3_000_000}, [("a", "b")]
-    ).compute_sensitivity()
+    result = _analyzer({"a": 3_000_000, "b": 3_000_000}, [("a", "b")]).compute_sensitivity()
 
     assert result.critical_path_us == 6_000_000
     assert result.total_improvable_time_us == 6_000_000

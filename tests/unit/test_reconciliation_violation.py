@@ -9,6 +9,7 @@ therefore tested by monkeypatching BlameChainAnalyzer.reconcile_attribution
 to return an incomplete total, simulating exactly the "Sigma segments != H"
 scenario the check exists to catch.
 """
+
 import json
 
 from bga import BuildEfficiencyAnalyzer
@@ -19,8 +20,11 @@ def _write_run_dir(tmp_path):
     run_dir = tmp_path / "run"
     run_dir.mkdir()
     run_context = {
-        "trace_epsilon_us": 50000, "wall_start_us": 0, "wall_end_us": 100000,
-        "max_jobs": 1, "resource_capacities": {"PROCESS": 1},
+        "trace_epsilon_us": 50000,
+        "wall_start_us": 0,
+        "wall_end_us": 100000,
+        "max_jobs": 1,
+        "resource_capacities": {"PROCESS": 1},
     }
     graph = {
         "elements": [{"uid": "a.bst", "requested_target": True}],
@@ -28,8 +32,13 @@ def _write_run_dir(tmp_path):
     }
     trace = {
         "spans": [
-            {"task_key": "a.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 100000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
+            {
+                "task_key": "a.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 100000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
         ],
         "phases": [],
     }

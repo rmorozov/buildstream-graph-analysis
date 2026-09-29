@@ -27,6 +27,7 @@ is a property a regression would have to delete, and deleting one is
 what this file notices. `UX-257` is the open argument about the
 instrument that could check the rest.
 """
+
 import pathlib
 import re
 
@@ -47,8 +48,7 @@ CSS = (REPO / "bga/viewer/style.css").read_text(encoding="utf-8")
 # list is where a move that outruns its guards is caught - so the move
 # and the list change together rather than the clauses going quiet.
 APP_MODULES = ("app.js", "format.js", "structured.js", "pairs.js", "tables.js")
-APP = "\n".join((REPO / "bga/viewer" / _name).read_text(encoding="utf-8")
-                for _name in APP_MODULES)
+APP = "\n".join((REPO / "bga/viewer" / _name).read_text(encoding="utf-8") for _name in APP_MODULES)
 NAV = (REPO / "bga/viewer/nav.js").read_text(encoding="utf-8")
 INDEX = (REPO / "bga/viewer/index.html").read_text(encoding="utf-8")
 
@@ -86,15 +86,15 @@ class TestTheRailIsItsOwnColumn:
         assert "grid" in block, block
         assert "grid-template-areas" in block, (
             "the panes are not placed by named areas, so which column the "
-            "rail lands in is whatever source order happens to give")
+            "rail lands in is whatever source order happens to give"
+        )
 
     def test_every_pane_is_placed(self):
         """A grid with an unplaced child puts it wherever it fits, which
         is how a rail ends up back in the reading column."""
         for part in ("header", "nav.toc", "main", "footer"):
             block = _rule(f"body[data-has-toc] > {part}")
-            assert block and "grid-area" in block, (
-                f"{part} is not assigned a grid area")
+            assert block and "grid-area" in block, f"{part} is not assigned a grid area"
 
     def test_the_rail_scrolls_itself(self):
         """The defect was a rail whose *length* was the page's problem.
@@ -112,7 +112,8 @@ class TestTheRailIsItsOwnColumn:
         assert "minmax(0, 1fr)" in block, block
         assert "min-width: 0" in (_rule("body[data-has-toc] > main") or ""), (
             "the reading column has no `min-width: 0`, so wide content "
-            "widens the page instead of scrolling inside its own box")
+            "widens the page instead of scrolling inside its own box"
+        )
 
     def test_the_group_that_grows_with_the_run_is_bounded(self):
         """One link per element the report names - 25 of the 48 entries
@@ -130,21 +131,21 @@ class TestTheRailIsItsOwnColumn:
             "the elements list has a scrollbox of its own again - the "
             "nested-scrollbox shape the styleguide's table-focus rule "
             "already abolished, and chapter disclosure is what bounds "
-            "this group now")
+            "this group now"
+        )
         assert 'list.setAttribute("data-rail", rail)' in NAV, (
-            "nav.js no longer tags each group, so the stylesheet cannot "
-            "tell the growing one from the fixed ones")
+            "nav.js no longer tags each group, so the stylesheet cannot tell the growing one from the fixed ones"
+        )
 
 
 class TestNarrowViewportsGetOneColumn:
     def test_there_is_a_breakpoint_back_to_one_column(self):
         assert re.search(r"@media \(max-width: 60rem\)", CSS), (
-            "no single-column fallback - two panes on a phone is the same "
-            "defect at a different width")
+            "no single-column fallback - two panes on a phone is the same defect at a different width"
+        )
 
     def test_the_rail_folds_rather_than_filling_the_screen(self):
-        assert 'data-folded="true"' in CSS, (
-            "the folded state has no styling, so folding hides nothing")
+        assert 'data-folded="true"' in CSS, "the folded state has no styling, so folding hides nothing"
         assert "foldOnNarrow" in APP, "nothing sets the folded state"
 
     def test_folding_is_guarded_against_a_browser_that_cannot_match(self):
@@ -160,7 +161,8 @@ class TestNarrowViewportsGetOneColumn:
         assert "main table" in CSS and "overflow-x: auto" in CSS
         assert "min-width: min(12rem, 100%)" in CSS, (
             "the table filter still has a flat `min-width` that will not "
-            "shrink, which is what widened the page at 390px")
+            "shrink, which is what widened the page at 390px"
+        )
 
 
 class TestTheHeadingComesFirst:
@@ -170,15 +172,16 @@ class TestTheHeadingComesFirst:
         code = _code(APP)
         before = code.split("const heading = document.querySelector", 1)[0]
         assert "insertBefore(contents, document.body.firstChild)" not in before, (
-            "the contents are still mounted before the heading")
+            "the contents are still mounted before the heading"
+        )
         assert "heading.after(contents)" in code, (
             "the contents are not mounted after the header, so DOM order - "
             "which is the order a screen reader and Tab follow - still "
-            "leads with navigation")
+            "leads with navigation"
+        )
 
     def test_the_heading_carries_the_producer_stamp(self):
-        assert 'id="run-producer"' in INDEX, (
-            "the heading has no slot for which build measured the run")
+        assert 'id="run-producer"' in INDEX, "the heading has no slot for which build measured the run"
         assert "stampHeader" in APP
 
     def test_an_unstamped_run_says_so_rather_than_guessing(self):
@@ -194,11 +197,10 @@ class TestTheHeadingComesFirst:
         """The reader-visible half of "information overlaps": a jump
         that lands under the sticky heading. Measured after the fix at
         1440x900 and 390x844: 0px hidden."""
-        assert "scroll-margin-top" in CSS, (
-            "nothing offsets an anchor for the sticky heading")
+        assert "scroll-margin-top" in CSS, "nothing offsets an anchor for the sticky heading"
         assert "--head" in CSS, (
-            "the heading's height is not named once, so the rail's offset "
-            "and the anchor's landing can drift apart")
+            "the heading's height is not named once, so the rail's offset and the anchor's landing can drift apart"
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover
@@ -227,8 +229,8 @@ class TestNoSectionGrowsWithoutBound:
     def test_a_long_table_opens_bounded(self):
         code = _code(APP)
         assert "TABLE_OPENS_BOUNDED_ABOVE" in code, (
-            "nothing bounds a table's default, so depth goes straight to "
-            "the page")
+            "nothing bounds a table's default, so depth goes straight to the page"
+        )
         # `UX-413`: the decision is `openingBound`, which takes the
         # total and answers with the state to open at. It used to be an
         # `if` inside the block that builds the Top-N control, and a
@@ -236,8 +238,7 @@ class TestNoSectionGrowsWithoutBound:
         # bound was a side effect of being rankable. Both halves are
         # asserted: that the caller asks, and that the answer is
         # decided on the *total*.
-        assert "openingBound(presets, total, TABLE_OPENS_BOUNDED_ABOVE)" in code, (
-            code[-1500:])
+        assert "openingBound(presets, total, TABLE_OPENS_BOUNDED_ABOVE)" in code, code[-1500:]
         assert "if (total <= bound) return null;" in code, code[-1500:]
 
     def test_the_bound_clears_the_ordinary_case(self):
@@ -251,7 +252,8 @@ class TestNoSectionGrowsWithoutBound:
         bound = int(found.group(1))
         assert 26 < bound < 132, (
             f"the bound is {bound}: it must clear the 1,202-element run's "
-            f"widest table (26 rows) and catch a 122-deep critical path")
+            f"widest table (26 rows) and catch a 122-deep critical path"
+        )
 
     def test_the_reader_still_sees_what_they_are_not_seeing(self):
         """`UX-208`'s rule: a reader who cannot see the denominator
@@ -273,8 +275,8 @@ class TestNoSectionGrowsWithoutBound:
         # concatenated modules hold several `const refresh`, and the
         # first draft of this clause split on the wrong one.
         assert "badgeText(applyFilters(table, state), total)" in code, (
-            "the badge is no longer written from the filtered count and "
-            "the total in one place")
+            "the badge is no longer written from the filtered count and the total in one place"
+        )
 
     def test_all_rows_is_still_reachable(self):
         """Bounding the default must not remove the opt-out - `UX-187`

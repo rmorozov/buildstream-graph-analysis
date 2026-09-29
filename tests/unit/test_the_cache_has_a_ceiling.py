@@ -17,6 +17,7 @@ ones, which is where `%{artifact-cas-digest}` - free, already in the
 `bst show` the extractor runs, and 165x to 530,682x under the artifact
 on a real cache - would land.
 """
+
 import json
 import os
 
@@ -94,8 +95,7 @@ class TestTheCeilingIsRead:
         needs no walk: a 600G quota on a 500G volume with 25G reserved
         is a ceiling the disk will never let the cache reach."""
         capacity = _capacity(quota_bytes=644245094400)
-        assert capacity['quota_over_volume_bytes'] == (
-            644245094400 - (536870912000 - 26843545600))
+        assert capacity['quota_over_volume_bytes'] == (644245094400 - (536870912000 - 26843545600))
 
     def test_a_quota_inside_its_volume_says_nothing(self):
         assert _capacity()['quota_over_volume_bytes'] is None
@@ -120,8 +120,7 @@ class TestAbsenceIsNotZero:
     def test_an_unwalked_cache_derives_nothing(self):
         """The default capture: quota and volume read, no walk. The
         sizing facts survive; nothing claims what the cache holds."""
-        capacity = _capacity(cache_used_bytes=_ABSENT,
-                             cache_used_source="not_walked")
+        capacity = _capacity(cache_used_bytes=_ABSENT, cache_used_source="not_walked")
         assert capacity['quota_bytes'] == 68719476736
         assert capacity['used_share'] is None
         assert capacity['at_low_watermark'] is None
@@ -165,9 +164,9 @@ class TestTheFindingFiresOnFactsOnly:
     def test_an_over_large_quota_fires_on_its_own(self):
         """It needs no walk, so it is the one claim a default capture
         can still make."""
-        capacity = _capacity(quota_bytes=644245094400, quota_declared="600G",
-                             cache_used_bytes=_ABSENT,
-                             cache_used_source="not_walked")
+        capacity = _capacity(
+            quota_bytes=644245094400, quota_declared="600G", cache_used_bytes=_ABSENT, cache_used_source="not_walked"
+        )
         finding = _findings(capacity)['cache-capacity']
         assert 'larger than the volume' in finding['title']
 
@@ -186,8 +185,7 @@ class TestTheBlockRidesWithTheAccounting:
         """`UX-460`'s rule, at the source: the fixture that reaches this
         finding is a real run directory in the tree, not a dict built
         here."""
-        path = os.path.join("tests", "fixtures", "a_build_that_pulls",
-                            "run", "run-context.json")
+        path = os.path.join("tests", "fixtures", "a_build_that_pulls", "run", "run-context.json")
         with open(path, encoding="utf-8") as handle:
             recorded = json.load(handle)["cache_capacity"]
         assert recorded["quota_declared"] == "64G"
@@ -215,9 +213,8 @@ class TestWhatTheConfigurationSays:
     def test_the_cache_block_is_read_verbatim(self, tmp_path):
         config = tmp_path / "buildstream.conf"
         config.write_text(
-            "cachedir: ${XDG_CACHE_HOME}/buildstream\n"
-            "cache:\n  quota: 64G\n  low-watermark: 80%\n",
-            encoding="utf-8")
+            "cachedir: ${XDG_CACHE_HOME}/buildstream\ncache:\n  quota: 64G\n  low-watermark: 80%\n", encoding="utf-8"
+        )
         env = {"XDG_CACHE_HOME": "/var/cache"}
         read = cache_capacity.read_config(str(config), env=env)
         assert read["cachedir"] == "/var/cache/buildstream"
@@ -261,15 +258,12 @@ class TestTheWalkCountsTheVolumeNotTheNames:
         cas = tmp_path / "cas"
         cas.mkdir()
         (cas / "blob").write_bytes(b"x" * 4096)
-        assert cache_capacity.cas_size_bytes(str(tmp_path), budget_s=-1) == (
-            None, "budget_exceeded")
+        assert cache_capacity.cas_size_bytes(str(tmp_path), budget_s=-1) == (None, "budget_exceeded")
 
     def test_the_default_capture_does_not_walk(self, tmp_path):
         """`with_usage` off is the default, and off must say `not_walked`
         rather than leave the source absent beside an absent number."""
-        block = cache_capacity.collect(
-            env={"XDG_CACHE_HOME": str(tmp_path)},
-            config={"cachedir": str(tmp_path)})
+        block = cache_capacity.collect(env={"XDG_CACHE_HOME": str(tmp_path)}, config={"cachedir": str(tmp_path)})
         assert block["cache_used_bytes"] is None
         assert block["cache_used_source"] == "not_walked"
 
@@ -283,5 +277,4 @@ class TestTheRowKnowsWhatItDoesNotCarry:
         an artifact figure *here*, in a block whose every other number
         is host-level, because that is where the free proxy
         (`%{artifact-cas-digest}`) would land if anyone reached for it."""
-        assert not [key for key in _capacity()
-                    if "artifact" in key or "element" in key]
+        assert not [key for key in _capacity() if "artifact" in key or "element" in key]

@@ -4,6 +4,7 @@
 `forked.bst` is added after the tag, in a fork. Only the first survives
 an anonymized export.
 """
+
 import json
 import pathlib
 import shutil
@@ -34,8 +35,7 @@ def _public_checkout(tmp_path) -> str:
     _git(checkout, "-c", "user.email=t@t", "-c", "user.name=t", "add", ".")
     _git(checkout, "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "-m", "public")
     _git(checkout, "tag", "v1")
-    (checkout / "elements" / "forked.bst").write_text(
-        "kind: import\nsources: []\n", encoding="utf-8")
+    (checkout / "elements" / "forked.bst").write_text("kind: import\nsources: []\n", encoding="utf-8")
     _git(checkout, "-c", "user.email=t@t", "-c", "user.name=t", "add", ".")
     _git(checkout, "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "-m", "fork")
     return str(checkout)
@@ -56,17 +56,15 @@ def _snapshot(project: pathlib.Path) -> str:
 
 def _export(project, checkout=None, tmp_path=None):
     from bga import anonymize
+
     if checkout is not None:
-        run_store.write_config(str(project), {
-            "public_junctions": {JUNCTION: {"checkout": checkout, "tag": "v1"}}})
+        run_store.write_config(str(project), {"public_junctions": {JUNCTION: {"checkout": checkout, "tag": "v1"}}})
     snapshot = _snapshot(project)
     pmap = anonymize.PseudonymMap(str(tmp_path / "anon" / "map.json"))
     destination = str(tmp_path / "out.tar.gz")
-    path, manifest = bundle.export_anonymized(
-        snapshot, KEY, pmap, destination, approve=lambda screen: True)
+    path, manifest = bundle.export_anonymized(snapshot, KEY, pmap, destination, approve=lambda screen: True)
     with tarfile.open(path, mode="r:gz") as archive:
-        text = "\n".join(archive.extractfile(i).read().decode("utf-8")
-                          for i in archive.getmembers() if i.isfile())
+        text = "\n".join(archive.extractfile(i).read().decode("utf-8") for i in archive.getmembers() if i.isfile())
     return manifest, text
 
 
@@ -77,8 +75,7 @@ def test_the_tagged_name_passes_and_the_forked_one_does_not(tmp_path):
     assert LIBFOO in text
     assert FORKED not in text and "forked" not in text
     assert f"{JUNCTION}:e-" in text  # the junction is public; the fork's own name is not
-    assert manifest["public_junctions"] == [
-        {"junction": JUNCTION, "tag": "v1", "names_passed": 1}]
+    assert manifest["public_junctions"] == [{"junction": JUNCTION, "tag": "v1", "names_passed": 1}]
 
 
 def test_nothing_declared_pseudonymizes_both(tmp_path):

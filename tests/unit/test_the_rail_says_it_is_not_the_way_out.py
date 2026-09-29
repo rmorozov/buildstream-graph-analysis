@@ -17,6 +17,7 @@ the reader gets is `pointer-events: none` plus a visible dimming, so
 the clause below hit-tests every rail link rather than reading the
 attribute that should cause it.
 """
+
 import pathlib
 import shutil
 import sys
@@ -134,8 +135,7 @@ class TestTheRailIsLiveWhenThereIsNoFocus:
         assert rail["before"]["here"] >= rail["before"]["floor"] > 0, rail["before"]
 
     def test_every_rail_link_on_screen_is_clickable(self, rail):
-        assert rail["before"]["reachable"] == rail["before"]["onScreen"], (
-            rail["before"])
+        assert rail["before"]["reachable"] == rail["before"]["onScreen"], rail["before"]
         assert rail["before"]["inert"] is None, rail["before"]
 
 
@@ -157,8 +157,7 @@ class TestFocusMakesTheRailInert:
         `.toc-sub` opens the section being read and shuts the others, so
         the rail's own visible set moves with the reading position.
         """
-        assert rail["during"]["links"] == rail["before"]["links"], (
-            rail["before"], rail["during"])
+        assert rail["during"]["links"] == rail["before"]["links"], (rail["before"], rail["during"])
         assert rail["during"]["here"] >= rail["during"]["floor"] > 0, rail["during"]
 
     def test_no_rail_link_leads_out_of_the_focused_table(self, rail):
@@ -166,8 +165,7 @@ class TestFocusMakesTheRailInert:
         at a section with no box. The ones that still resolve are the
         ones inside focus, and there is no third kind."""
         assert rail["during"]["outOfFocus"] == 0, rail["during"]
-        assert rail["during"]["targets"] < rail["before"]["targets"], (
-            rail["before"], rail["during"])
+        assert rail["during"]["targets"] < rail["before"]["targets"], (rail["before"], rail["during"])
 
 
 @pytest.mark.skipif(find_chrome() is None, reason=NO_BROWSER)
@@ -177,7 +175,5 @@ class TestLeavingFocusGivesTheRailBack:
 
     def test_every_link_is_clickable_again(self, rail):
         assert rail["after"]["here"] >= rail["after"]["floor"] > 0, rail["after"]
-        assert rail["after"]["reachable"] == rail["after"]["onScreen"], (
-            rail["after"])
-        assert rail["after"]["targets"] == rail["before"]["targets"], (
-            rail["before"], rail["after"])
+        assert rail["after"]["reachable"] == rail["after"]["onScreen"], rail["after"]
+        assert rail["after"]["targets"] == rail["before"]["targets"], (rail["before"], rail["after"])

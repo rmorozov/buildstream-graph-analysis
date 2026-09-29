@@ -44,6 +44,7 @@ edge whose two ends both have slices is emitted, because the thing a
 cap would buy is not size. What a cap would buy is a less crowded
 picture, and that is Perfetto's own UI to decide.
 """
+
 import gzip
 import hashlib
 import json
@@ -75,8 +76,7 @@ from tools.bga_timeline import (
 from tools.native_trace import trackevent
 
 GOLDEN = REPO / "tests/fixtures/golden/mixed_task_kinds"
-REAL_CAPTURE = REPO / ("examples/06-macro-micro-optimization/.bga/runs/"
-                       "20260821T170127Z")
+REAL_CAPTURE = REPO / ("examples/06-macro-micro-optimization/.bga/runs/20260821T170127Z")
 
 # `examples/06`'s capture is real and **gitignored** - it exists on this
 # machine and not in a clone. The measured figures below are taken from
@@ -84,8 +84,7 @@ REAL_CAPTURE = REPO / ("examples/06-macro-micro-optimization/.bga/runs/"
 # skipped rather than deleted; every *property* they check is also
 # checked on a committed fixture, so CI is not left believing something
 # it never ran.
-needs_real_capture = pytest.mark.skipif(
-    not REAL_CAPTURE.is_dir(), reason="no real capture in this tree")
+needs_real_capture = pytest.mark.skipif(not REAL_CAPTURE.is_dir(), reason="no real capture in this tree")
 
 
 # Three elements in a chain and one off it, with a `bst`-shaped log.
@@ -103,6 +102,7 @@ _LOG = """[wrapper][2026-08-21 12:00:00,000] INFO: Executing command: bst build 
 [wrapper][2026-08-21 12:00:06,200] INFO: Return code: 0
 """
 
+
 # Two sandboxes, each a shell that forks compilers - the *same* pid
 # numbers in both, which is what `--unshare-pid` does, and **overlapping
 # in time**, which is what a parallel build does.
@@ -116,39 +116,41 @@ _LOG = """[wrapper][2026-08-21 12:00:00,000] INFO: Executing command: bst build 
 # merged key connects one element's compiler to the other's shell.
 def _raw():
     lines = []
-    for element, invocation, base in (("mid.bst", "inv-mid", 1000.0),
-                                      ("leaf.bst", "inv-leaf", 1000.05)):
-        lines.append(f"START pid=2 ppid=1 ts={base:.6f} element={element} "
-                     f"inv={invocation} src=spine cmd=sh -c make\n")
+    for element, invocation, base in (("mid.bst", "inv-mid", 1000.0), ("leaf.bst", "inv-leaf", 1000.05)):
+        lines.append(f"START pid=2 ppid=1 ts={base:.6f} element={element} inv={invocation} src=spine cmd=sh -c make\n")
         for index in range(3):
             pid = 3 + index
             start = base + 0.1 * (index + 1)
-            lines.append(f"START pid={pid} ppid=2 ts={start:.6f} "
-                         f"element={element} inv={invocation} src=spine "
-                         f"cmd=cc -c f{index}.c\n")
-            lines.append(f"END pid={pid} ppid=2 ts={start + 0.05:.6f} "
-                         f"element={element} inv={invocation} src=spine "
-                         f"exit=0 utime=0.001 stime=0.001 maxrss_kb=1024 "
-                         f"cmd=cc -c f{index}.c\n")
-        lines.append(f"END pid=2 ppid=1 ts={base + 0.9:.6f} element={element} "
-                     f"inv={invocation} src=spine exit=0 utime=0.01 "
-                     f"stime=0.01 maxrss_kb=2048 cmd=sh -c make\n")
+            lines.append(
+                f"START pid={pid} ppid=2 ts={start:.6f} "
+                f"element={element} inv={invocation} src=spine "
+                f"cmd=cc -c f{index}.c\n"
+            )
+            lines.append(
+                f"END pid={pid} ppid=2 ts={start + 0.05:.6f} "
+                f"element={element} inv={invocation} src=spine "
+                f"exit=0 utime=0.001 stime=0.001 maxrss_kb=1024 "
+                f"cmd=cc -c f{index}.c\n"
+            )
+        lines.append(
+            f"END pid=2 ppid=1 ts={base + 0.9:.6f} element={element} "
+            f"inv={invocation} src=spine exit=0 utime=0.01 "
+            f"stime=0.01 maxrss_kb=2048 cmd=sh -c make\n"
+        )
     return "".join(lines)
 
 
 _GRAPH = {
-    "elements": [{"uid": uid, "cache_key": "k", "requested_target": False,
-                  "element_kind": "manual"}
-                 for uid in ("top.bst", "mid.bst", "leaf.bst", "spare.bst")],
+    "elements": [
+        {"uid": uid, "cache_key": "k", "requested_target": False, "element_kind": "manual"}
+        for uid in ("top.bst", "mid.bst", "leaf.bst", "spare.bst")
+    ],
     "dependencies": [
-        {"predecessor": "top.bst", "successor": "mid.bst",
-         "dependency_type": "build"},
-        {"predecessor": "mid.bst", "successor": "leaf.bst",
-         "dependency_type": "build"},
+        {"predecessor": "top.bst", "successor": "mid.bst", "dependency_type": "build"},
+        {"predecessor": "mid.bst", "successor": "leaf.bst", "dependency_type": "build"},
         # An edge onto an element this run never built: nothing to
         # connect, and an arrow to nowhere is not an improvement.
-        {"predecessor": "mid.bst", "successor": "spare.bst",
-         "dependency_type": "build"},
+        {"predecessor": "mid.bst", "successor": "spare.bst", "dependency_type": "build"},
     ],
     "run_identity_hash": "flows-fixture",
 }
@@ -160,8 +162,7 @@ def _snapshot(tmp_path, graph=None):
     (snapshot / "build.log").write_text(_LOG, encoding="utf-8")
     shutil.copytree(GOLDEN, snapshot / "run")
     (snapshot / "run" / "expected_output.json").unlink(missing_ok=True)
-    (snapshot / "run" / "graph.json").write_text(
-        json.dumps(_GRAPH if graph is None else graph), encoding="utf-8")
+    (snapshot / "run" / "graph.json").write_text(json.dumps(_GRAPH if graph is None else graph), encoding="utf-8")
     with gzip.open(snapshot / "plane2.log.gz", "wt", encoding="utf-8") as out:
         out.write(_raw())
     return snapshot
@@ -204,18 +205,16 @@ def decode(path):
                 kind = value
             elif field == trackevent.EVENT_NAME_IID:
                 name_iid = value
-            elif field in (trackevent.EVENT_FLOW_IDS,
-                           trackevent.EVENT_TERMINATING_FLOW_IDS):
+            elif field in (trackevent.EVENT_FLOW_IDS, trackevent.EVENT_TERMINATING_FLOW_IDS):
                 assert wire == trackevent.WIRE_FIXED64, (
                     f"field {field} arrived as wire type {wire}; "
                     "`repeated fixed64` is wire type 1, and a varint here "
-                    "is a packet a reader drops without complaining")
-                target = (flows if field == trackevent.EVENT_FLOW_IDS
-                          else terminating)
+                    "is a packet a reader drops without complaining"
+                )
+                target = flows if field == trackevent.EVENT_FLOW_IDS else terminating
                 target.append(struct.unpack("<Q", value)[0])
         if kind in (trackevent.TYPE_SLICE_BEGIN, trackevent.TYPE_INSTANT):
-            events.append({"name_iid": name_iid, "flows": flows,
-                           "terminating": terminating})
+            events.append({"name_iid": name_iid, "flows": flows, "terminating": terminating})
     for event in events:
         event["name"] = names.get(event["name_iid"])
     return events
@@ -228,9 +227,13 @@ def rendered(tmp_path_factory):
     out = tmp / DEFAULT_OUTPUT[FORMAT_TRACKEVENT]
     result = render(str(snapshot), str(out))
     events = decode(out)
-    return {"snapshot": snapshot, "path": out, "result": result,
-            "events": events,
-            "by_name": {event["name"]: event for event in events}}
+    return {
+        "snapshot": snapshot,
+        "path": out,
+        "result": result,
+        "events": events,
+        "by_name": {event["name"]: event for event in events},
+    }
 
 
 def _pairs(events):
@@ -243,17 +246,14 @@ def _pairs(events):
         for flow in event["terminating"]:
             assert flow not in sinks, f"flow {flow} ends twice"
             sinks[flow] = event["name"]
-    assert set(sources) == set(sinks), (
-        "a flow with only one end draws no arrow and says nothing")
+    assert set(sources) == set(sinks), "a flow with only one end draws no arrow and says nothing"
     return {flow: (sources[flow], sinks[flow]) for flow in sources}
 
 
 class TestThePlane1ArrowsAreTheGraphsEdges:
-
     def test_the_chain_is_connected_end_to_end(self, rendered):
         pairs = _pairs(rendered["events"])
-        plane1 = {(source, sink) for source, sink in pairs.values()
-                  if source and sink and "[" in source}
+        plane1 = {(source, sink) for source, sink in pairs.values() if source and sink and "[" in source}
         assert ("mid.bst [Building]", "leaf.bst [Building]") in plane1
 
     def test_an_edge_whose_ends_tie_is_dropped_and_counted(self, rendered):
@@ -262,52 +262,48 @@ class TestThePlane1ArrowsAreTheGraphsEdges:
         pick one; this drops it and says how many it dropped."""
         assert rendered["result"]["flow_losses"]["out_of_order"] == 1
         pairs = _pairs(rendered["events"])
-        assert not any(source and source.startswith("top.bst")
-                       for source, _ in pairs.values())
+        assert not any(source and source.startswith("top.bst") for source, _ in pairs.values())
 
     def test_an_edge_onto_an_unbuilt_element_draws_nothing(self, rendered):
         """`spare.bst` is in the graph and produced no task. An arrow
         to nowhere is not an improvement."""
         pairs = _pairs(rendered["events"])
-        assert not any("spare" in (name or "")
-                       for pair in pairs.values() for name in pair)
+        assert not any("spare" in (name or "") for pair in pairs.values() for name in pair)
 
-    def test_the_edges_come_from_the_graph_and_not_from_adjacency(
-            self, rendered):
+    def test_the_edges_come_from_the_graph_and_not_from_adjacency(self, rendered):
         edges = dependency_edges(str(rendered["snapshot"]))
         assert ("mid.bst", "leaf.bst") in edges
         assert ("top.bst", "leaf.bst") not in edges, (
             "the fixture has a transitive pair; if the emitter drew it the "
-            "next clause could not tell a graph edge from an adjacency")
+            "next clause could not tell a graph edge from an adjacency"
+        )
         pairs = _pairs(rendered["events"])
-        drawn = {(source, sink) for source, sink in pairs.values()
-                 if source and "[" in source}
+        drawn = {(source, sink) for source, sink in pairs.values() if source and "[" in source}
         assert ("top.bst [Building]", "leaf.bst [Building]") not in drawn
 
-    def test_a_snapshot_with_no_graph_draws_no_dependency_arrows(
-            self, tmp_path):
+    def test_a_snapshot_with_no_graph_draws_no_dependency_arrows(self, tmp_path):
         snapshot = _snapshot(tmp_path)
         (snapshot / "run" / "graph.json").unlink()
         assert dependency_edges(str(snapshot)) == []
         out = tmp_path / "trace.gz"
         result = render(str(snapshot), str(out))
         pairs = _pairs(decode(out))
-        assert not any(source and "[" in source
-                       for source, _ in pairs.values())
-        assert result["flow_losses"] == {"edges": 0, "drawn": 0,
-                                         "no_task": 0,
-                                         "out_of_order": 0}
+        assert not any(source and "[" in source for source, _ in pairs.values())
+        assert result["flow_losses"] == {"edges": 0, "drawn": 0, "no_task": 0, "out_of_order": 0}
 
 
 class TestThePlane2ArrowsAreTheExecChain:
-
     def test_a_parent_is_connected_to_each_of_its_children(self, rendered):
         pairs = _pairs(rendered["events"])
-        children = [sink for source, sink in pairs.values()
-                    if source == "sh -c make"]
-        assert sorted(children) == ["cc -c f0.c", "cc -c f0.c",
-                                    "cc -c f1.c", "cc -c f1.c",
-                                    "cc -c f2.c", "cc -c f2.c"], children
+        children = [sink for source, sink in pairs.values() if source == "sh -c make"]
+        assert sorted(children) == [
+            "cc -c f0.c",
+            "cc -c f0.c",
+            "cc -c f1.c",
+            "cc -c f1.c",
+            "cc -c f2.c",
+            "cc -c f2.c",
+        ], children
 
     def test_no_flow_crosses_two_elements(self, rendered):
         """The clause the item was filed with. Both sandboxes use pids
@@ -317,18 +313,15 @@ class TestThePlane2ArrowsAreTheExecChain:
         """
         from tools.bga_timeline import _plane2_flows
         from tools.bst_native_build_tracer import parse_trace_lines, stream_records
-        records = sorted(stream_records(iter(parse_trace_lines(
-            _raw().splitlines()))), key=lambda r: r["start_ts"])
+
+        records = sorted(stream_records(iter(parse_trace_lines(_raw().splitlines()))), key=lambda r: r["start_ts"])
         by_id = {id(record): record for record in records}
         flows, _next = _plane2_flows(records, 1)
         owners = {}
         for record_id, (sources, sinks) in flows.items():
             for flow in sources + sinks:
-                owners.setdefault(flow, set()).add(
-                    (by_id[record_id]["invocation"],
-                     by_id[record_id]["element"]))
-        crossing = {flow: sandboxes for flow, sandboxes in owners.items()
-                    if len(sandboxes) > 1}
+                owners.setdefault(flow, set()).add((by_id[record_id]["invocation"], by_id[record_id]["element"]))
+        crossing = {flow: sandboxes for flow, sandboxes in owners.items() if len(sandboxes) > 1}
         assert crossing == {}, crossing
         assert len(owners) == 6, owners
 
@@ -337,15 +330,23 @@ class TestThePlane2ArrowsAreTheExecChain:
         recorded. Nothing to point at."""
         from tools.bga_timeline import _plane2_flows
         from tools.bst_native_build_tracer import parse_trace_lines, stream_records
-        records = list(stream_records(iter(parse_trace_lines([
-            "START pid=2 ppid=1 ts=1.0 element=e.bst inv=a cmd=orphan",
-            "END pid=2 ppid=1 ts=2.0 element=e.bst inv=a utime=0.1 stime=0.1",
-        ]))))
+
+        records = list(
+            stream_records(
+                iter(
+                    parse_trace_lines(
+                        [
+                            "START pid=2 ppid=1 ts=1.0 element=e.bst inv=a cmd=orphan",
+                            "END pid=2 ppid=1 ts=2.0 element=e.bst inv=a utime=0.1 stime=0.1",
+                        ]
+                    )
+                )
+            )
+        )
         assert _plane2_flows(records, 1) == ({}, 1)
 
 
 class TestAFlowIsOneIdOnTwoSlices:
-
     def test_no_event_both_starts_and_ends_the_same_flow(self, rendered):
         for event in rendered["events"]:
             shared = set(event["flows"]) & set(event["terminating"])
@@ -353,19 +354,16 @@ class TestAFlowIsOneIdOnTwoSlices:
 
     def test_every_id_is_used_exactly_twice_and_is_unique(self, rendered):
         pairs = _pairs(rendered["events"])
-        assert len(pairs) == rendered["result"]["flows"], (
-            len(pairs), rendered["result"]["flows"])
+        assert len(pairs) == rendered["result"]["flows"], (len(pairs), rendered["result"]["flows"])
         assert len(pairs) == 7, pairs
 
     def test_the_ids_are_fixed64_on_the_wire(self, rendered):
         """`decode` asserts the wire type on every flow field it meets;
         this is the clause that says it met some."""
-        assert any(event["flows"] or event["terminating"]
-                   for event in rendered["events"])
+        assert any(event["flows"] or event["terminating"] for event in rendered["events"])
 
 
 class TestTheArrowsRideThePacketsThatExist:
-
     def test_the_trace_is_the_same_trace_twice(self, tmp_path):
         snapshot = _snapshot(tmp_path)
         digests = []
@@ -402,27 +400,25 @@ class TestTheArrowsRideThePacketsThatExist:
             with_body = handle.read()
 
         monkeypatch.setattr(timeline, "dependency_edges", lambda _s: [])
-        monkeypatch.setattr(timeline, "_plane2_flows",
-                            lambda records, first: ({}, first))
+        monkeypatch.setattr(timeline, "_plane2_flows", lambda records, first: ({}, first))
         bare = tmp_path / "bare.gz"
         without = render(str(snapshot), str(bare))
         with gzip.open(bare, "rb") as handle:
             without_body = handle.read()
 
-        assert withf["packets"] == without["packets"], (
-            withf["packets"], without["packets"])
+        assert withf["packets"] == without["packets"], (withf["packets"], without["packets"])
         assert withf["slices"] == without["slices"]
         assert without["flows"] == 0 and withf["flows"] == 836, withf["flows"]
         assert withf["flow_losses"]["out_of_order"] == 2, (
             "`toolchain.bst` is instantaneous and shares its microsecond "
-            "with both dependents - if that changed, so did the capture")
+            "with both dependents - if that changed, so did the capture"
+        )
         # 836 flows, two ids each, nine bytes an id plus the growth of
         # the length prefixes they sit inside.
         per_flow = (len(with_body) - len(without_body)) / withf["flows"]
         assert 18.0 <= per_flow <= 22.0, per_flow
 
-    def test_a_flow_costs_no_packet_on_the_committed_fixture_either(
-            self, tmp_path, monkeypatch):
+    def test_a_flow_costs_no_packet_on_the_committed_fixture_either(self, tmp_path, monkeypatch):
         """The same property where a clone can check it.
 
         The clause above takes the *figures* from `examples/06`, which
@@ -435,8 +431,7 @@ class TestTheArrowsRideThePacketsThatExist:
         out = tmp_path / "with.gz"
         withf = render(str(snapshot), str(out))
         monkeypatch.setattr(timeline, "dependency_edges", lambda _s: [])
-        monkeypatch.setattr(timeline, "_plane2_flows",
-                            lambda records, first: ({}, first))
+        monkeypatch.setattr(timeline, "_plane2_flows", lambda records, first: ({}, first))
         bare = tmp_path / "bare.gz"
         without = render(str(snapshot), str(bare))
         assert withf["flows"] == 7 and without["flows"] == 0
@@ -449,14 +444,13 @@ class TestTheArrowsRideThePacketsThatExist:
 # ordinary case - the build people profile is the one where most
 # elements are already in the cache.
 _CACHED_GRAPH = {
-    "elements": [{"uid": uid, "cache_key": "k", "requested_target": False,
-                  "element_kind": "manual"}
-                 for uid in ("cached-a.bst", "cached-b.bst", "cached-c.bst")],
+    "elements": [
+        {"uid": uid, "cache_key": "k", "requested_target": False, "element_kind": "manual"}
+        for uid in ("cached-a.bst", "cached-b.bst", "cached-c.bst")
+    ],
     "dependencies": [
-        {"predecessor": "cached-a.bst", "successor": "cached-b.bst",
-         "dependency_type": "build"},
-        {"predecessor": "cached-b.bst", "successor": "cached-c.bst",
-         "dependency_type": "build"},
+        {"predecessor": "cached-a.bst", "successor": "cached-b.bst", "dependency_type": "build"},
+        {"predecessor": "cached-b.bst", "successor": "cached-c.bst", "dependency_type": "build"},
     ],
     "run_identity_hash": "flows-fixture-cached",
 }
@@ -495,7 +489,8 @@ class TestTheLostEdgesAreAccountedFor:
         assert losses["drawn"] + named == edges, (
             f"{edges} edges, {losses['drawn']} drawn, {named} accounted "
             f"for by a named reason - the rest vanished without one, "
-            f"which is the silence UX-431 was filed for: {losses}")
+            f"which is the silence UX-431 was filed for: {losses}"
+        )
 
     def test_the_two_reasons_are_told_apart(self, rendered):
         """The fixture has one of each, so a single counter covering
@@ -514,8 +509,8 @@ class TestTheLostEdgesAreAccountedFor:
         losses = result["flow_losses"]
         assert (losses["edges"], losses["drawn"]) == (2, 0), losses
         assert losses["no_task"] == 2, (
-            f"a build that drew no arrows at all accounted for none of "
-            f"its {losses['edges']} edges: {losses}")
+            f"a build that drew no arrows at all accounted for none of its {losses['edges']} edges: {losses}"
+        )
 
     def test_the_reader_is_told_and_not_only_the_result(self, tmp_path):
         """The count was in the render result and in one test, and
@@ -527,16 +522,17 @@ class TestTheLostEdgesAreAccountedFor:
         assert "0 of 2 dependency edge(s) drawn" in said, said
         assert FLOW_LOSS_REASONS["no_task"] in said, said
         assert FLOW_LOSS_REASONS["out_of_order"] not in said, (
-            "a reason that took no edge is named anyway, so the summary "
-            "reads as a list of things that went wrong")
+            "a reason that took no edge is named anyway, so the summary reads as a list of things that went wrong"
+        )
 
     def test_a_run_that_drew_them_all_still_says_so(self, tmp_path):
         """The other half of the same rule. A line that appears only on
         loss teaches a reader that its absence means nothing was lost,
         which is the reading this item removes."""
-        graph = dict(_CACHED_GRAPH, dependencies=[
-            {"predecessor": "mid.bst", "successor": "leaf.bst",
-             "dependency_type": "build"}])
+        graph = dict(
+            _CACHED_GRAPH,
+            dependencies=[{"predecessor": "mid.bst", "successor": "leaf.bst", "dependency_type": "build"}],
+        )
         snapshot = _snapshot(tmp_path, graph=graph)
         result = render(str(snapshot), str(tmp_path / "trace.gz"))
         said = describe(result, str(tmp_path / "trace.gz"))
@@ -557,14 +553,13 @@ class TestTheLostEdgesAreAccountedFor:
         snapshot = _snapshot(tmp_path)
         path = tmp_path / "report.html"
         bga_view.export(str(snapshot / "run"), str(path))
-        payload = json.loads(re.search(
-            r'id="bga-run">(.*?)</script>',
-            path.read_text(encoding="utf-8"), re.S).group(1))
+        payload = json.loads(re.search(r'id="bga-run">(.*?)</script>', path.read_text(encoding="utf-8"), re.S).group(1))
         held = payload.get("trace_flow_losses")
         assert held, (
             "the run payload carries no edge accounting, so the page "
             "that sends a reader to look for the arrows cannot say why "
-            "they are missing")
+            "they are missing"
+        )
         assert (held["edges"], held["drawn"]) == (3, 1), held
 
 
@@ -586,36 +581,41 @@ class TestTheHandoffSectionNamesTheMissingArrows:
         '    found.push(n.textContent);'
         '  (n.children ?? []).forEach(walk); })('
         '  q.renderQuestions(make, %s));'
-        'console.log(JSON.stringify({ found }));')
+        'console.log(JSON.stringify({ found }));'
+    )
 
     def _render(self, options):
         return _node(self.SCRIPT % json.dumps(options))["found"]
 
     def test_the_paragraph_names_the_count_and_the_reason(self):
-        found = self._render({
-            "hasTimeline": True, "tracePlanes": ["1"],
-            "flowLosses": {"edges": 34, "drawn": 0, "no_task": 34,
-                           "out_of_order": 0}})
+        found = self._render(
+            {
+                "hasTimeline": True,
+                "tracePlanes": ["1"],
+                "flowLosses": {"edges": 34, "drawn": 0, "no_task": 34, "out_of_order": 0},
+            }
+        )
         assert len(found) == 1, found
         assert "0 of 34 dependency edges" in found[0], found
         assert "cached or built earlier" in found[0], found
-        assert "point the wrong way" not in found[0], (
-            "a reason that took no edge is named anyway")
+        assert "point the wrong way" not in found[0], "a reason that took no edge is named anyway"
 
     def test_a_run_with_no_timeline_draws_no_accounting(self):
         """The section already tells that reader there is nothing to
         open; a count of edges in a trace that does not exist is a
         second answer to a question nobody asked."""
-        assert self._render({
-            "hasTimeline": False,
-            "flowLosses": {"edges": 34, "drawn": 0, "no_task": 34,
-                           "out_of_order": 0}}) == []
+        assert (
+            self._render(
+                {"hasTimeline": False, "flowLosses": {"edges": 34, "drawn": 0, "no_task": 34, "out_of_order": 0}}
+            )
+            == []
+        )
 
     def test_a_graph_with_no_edges_draws_no_accounting(self):
-        assert self._render({
-            "hasTimeline": True,
-            "flowLosses": {"edges": 0, "drawn": 0, "no_task": 0,
-                           "out_of_order": 0}}) == []
+        assert (
+            self._render({"hasTimeline": True, "flowLosses": {"edges": 0, "drawn": 0, "no_task": 0, "out_of_order": 0}})
+            == []
+        )
 
 
 class TestTheCommittedFixtureCarriesTheGraphAnnotations:
@@ -636,34 +636,36 @@ class TestTheCommittedFixtureCarriesTheGraphAnnotations:
 
     def test_the_analysis_is_beside_the_run(self):
         assert (self.FIXTURE / ANALYSIS_NAME).is_file(), (
-            f"{ANALYSIS_NAME} is gone, and with it the only committed "
-            f"capture that exercises the graph annotations")
+            f"{ANALYSIS_NAME} is gone, and with it the only committed capture that exercises the graph annotations"
+        )
 
     def test_all_three_annotations_reach_every_element(self):
         structure = element_structure(str(self.FIXTURE))
         assert len(structure) == 11, sorted(structure)
-        missing = {uid: sorted(facts) for uid, facts in structure.items()
-                   if set(facts) != {"depth", "downstream_count",
-                                     "on_critical_path"}}
+        missing = {
+            uid: sorted(facts)
+            for uid, facts in structure.items()
+            if set(facts) != {"depth", "downstream_count", "on_critical_path"}
+        }
         assert missing == {}, (
             f"an annotation present on some elements and absent from "
-            f"others is a `group by` that silently drops rows: {missing}")
+            f"others is a `group by` that silently drops rows: {missing}"
+        )
 
     def test_the_chain_is_nine_levels_deep(self):
         """The shape `UX-434`'s query has to be able to see. One row per
         depth is the answer; a fixture with one depth could not tell a
         working query from the collapsed one."""
-        depths = {facts["depth"]
-                  for facts in element_structure(str(self.FIXTURE)).values()}
+        depths = {facts["depth"] for facts in element_structure(str(self.FIXTURE)).values()}
         assert len(depths) == 10, sorted(depths)
 
     def test_the_critical_path_comes_from_the_analysis(self):
         """Not every element, which a `True` default would give, and not
         none, which reading only `element_join` gave."""
         structure = element_structure(str(self.FIXTURE))
-        on_path = {uid for uid, facts in structure.items()
-                   if facts["on_critical_path"]}
+        on_path = {uid for uid, facts in structure.items() if facts["on_critical_path"]}
         assert "codegen.bst" not in on_path, (
             "every element is on the path, so the annotation says "
-            "nothing - `codegen.bst` is the one this fixture has off it")
+            "nothing - `codegen.bst` is the one this fixture has off it"
+        )
         assert {"core.bst", "lib-a.bst", "app.bst"} <= on_path, sorted(on_path)

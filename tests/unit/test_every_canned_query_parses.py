@@ -10,6 +10,7 @@ sqlite lacks both, so every question fails there too, just with
 `no such table` / `no such column` / `no such function` rather than a
 syntax error - the two are told apart by the message.
 """
+
 import functools
 import json
 import pathlib
@@ -43,11 +44,10 @@ def library():
     """The question library, as data, read by running the module it
     lives in - the same approach
     `test_the_graph_shape_query_answers.py`'s `library()` uses."""
-    script = ('const { QUESTIONS } = await import("./bga/viewer/questions.js");'
-              'console.log(JSON.stringify(QUESTIONS));')
-    done = subprocess.run([node, "--input-type=module", "-e", script],
-                          capture_output=True, text=True, cwd=REPO,
-                          timeout=120)
+    script = 'const { QUESTIONS } = await import("./bga/viewer/questions.js");console.log(JSON.stringify(QUESTIONS));'
+    done = subprocess.run(
+        [node, "--input-type=module", "-e", script], capture_output=True, text=True, cwd=REPO, timeout=120
+    )
     assert done.returncode == 0, done.stderr
     return json.loads(done.stdout)
 
@@ -62,8 +62,9 @@ def _question(qid):
 
 @needs_node
 @pytest.mark.parametrize("qid", _ids())
-@pytest.mark.parametrize("element,bounds", [(None, None), ("storm.bst", BOUNDS)],
-                         ids=["no-element", "with-element-and-bounds"])
+@pytest.mark.parametrize(
+    "element,bounds", [(None, None), ("storm.bst", BOUNDS)], ids=["no-element", "with-element-and-bounds"]
+)
 def test_question_parses(qid, element, bounds):
     sql = rendered_sql(_question(qid), element, bounds)
     db = sqlite3.connect(":memory:")
@@ -71,8 +72,7 @@ def test_question_parses(qid, element, bounds):
         db.execute(f"EXPLAIN {sql}")
     except sqlite3.OperationalError as error:
         message = str(error)
-        assert any(reason in message for reason in ALLOWED), \
-            f"{qid} ({element!r}): {message}"
+        assert any(reason in message for reason in ALLOWED), f"{qid} ({element!r}): {message}"
 
 
 #: The fills that separate the two renderers if they drift: no element
@@ -91,14 +91,16 @@ PARITY_CASES = [
 @functools.lru_cache(maxsize=1)
 def page_renders():
     """Every question through the page's own `renderedSql`, per case."""
-    script = ('const { QUESTIONS, renderedSql } = '
-              'await import("./bga/viewer/questions.js");'
-              f'const cases = {json.dumps(PARITY_CASES)};'
-              'console.log(JSON.stringify(QUESTIONS.map((q) => '
-              'cases.map(([e, b]) => renderedSql(q, e, b)))));')
-    done = subprocess.run([node, "--input-type=module", "-e", script],
-                          capture_output=True, text=True, cwd=REPO,
-                          timeout=120)
+    script = (
+        'const { QUESTIONS, renderedSql } = '
+        'await import("./bga/viewer/questions.js");'
+        f'const cases = {json.dumps(PARITY_CASES)};'
+        'console.log(JSON.stringify(QUESTIONS.map((q) => '
+        'cases.map(([e, b]) => renderedSql(q, e, b)))));'
+    )
+    done = subprocess.run(
+        [node, "--input-type=module", "-e", script], capture_output=True, text=True, cwd=REPO, timeout=120
+    )
     assert done.returncode == 0, done.stderr
     return json.loads(done.stdout)
 
@@ -110,5 +112,6 @@ def test_the_tool_renders_what_the_page_renders(qid):
     a guard that only parses the SQL would pass a swapped window."""
     index = [q["id"] for q in library()].index(qid)
     for case, (element, bounds) in enumerate(PARITY_CASES):
-        assert rendered_sql(_question(qid), element, bounds) == \
-            page_renders()[index][case], f"{qid} {element!r} {bounds!r}"
+        assert rendered_sql(_question(qid), element, bounds) == page_renders()[index][case], (
+            f"{qid} {element!r} {bounds!r}"
+        )

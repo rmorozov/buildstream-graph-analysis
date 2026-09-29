@@ -35,6 +35,7 @@ The guards below run against a local bare repository shaped like the
 remote, so they need no network and assert git's real behaviour rather
 than a description of it.
 """
+
 import random
 import re
 import subprocess
@@ -42,13 +43,11 @@ import subprocess
 import pytest
 
 DOCS_WITH_THE_CLONE = ("README.md", "docs/guides/real-project.md")
-CAPTURE_BRANCHES = ("captures/fdsdk-latest",
-                    "captures/fdsdk/953683fb-incremental-b4j4-32223468993")
+CAPTURE_BRANCHES = ("captures/fdsdk-latest", "captures/fdsdk/953683fb-incremental-b4j4-32223468993")
 
 
 def _git(*args, cwd=None):
-    result = subprocess.run(["git", *args], cwd=cwd, capture_output=True,
-                            text=True)
+    result = subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True)
     assert result.returncode == 0, f"git {' '.join(args)}: {result.stderr}"
     return result.stdout
 
@@ -91,8 +90,7 @@ def remote(tmp_path_factory):
         # failure reproduces; the first draft used an arithmetic
         # sequence, which zlib flattened to nothing and left the
         # size guard below asserting 35 KiB against 35 KiB.
-        (work / "capture.tar.gz").write_bytes(
-            random.Random(index).randbytes(400_000))
+        (work / "capture.tar.gz").write_bytes(random.Random(index).randbytes(400_000))
         (work / "capture-outcome.txt").write_text("traced_build_exit=0\n")
         _git("add", "-A", cwd=work)
         _git("commit", "-qm", f"capture {index}", cwd=work)
@@ -126,8 +124,7 @@ class TestTheDocumentedClone:
         _clone(remote, target, *_documented_clone_flags())
 
         refs = _git("branch", "-r", cwd=target).split()
-        assert not [ref for ref in refs if "captures/" in ref], (
-            f"the documented clone fetched capture refs: {refs}")
+        assert not [ref for ref in refs if "captures/" in ref], f"the documented clone fetched capture refs: {refs}"
 
     def test_the_default_clone_does_fetch_them(self, remote, tmp_path):
         """The other half of the claim: without the flag they arrive.
@@ -140,13 +137,11 @@ class TestTheDocumentedClone:
         _clone(remote, target)
 
         refs = _git("branch", "-r", cwd=target).split()
-        assert len([ref for ref in refs if "captures/" in ref]) == \
-            len(CAPTURE_BRANCHES), refs
+        assert len([ref for ref in refs if "captures/" in ref]) == len(CAPTURE_BRANCHES), refs
 
     def test_it_is_smaller(self, remote, tmp_path):
         def size(path):
-            return sum(item.stat().st_size
-                       for item in (path / ".git").rglob("*") if item.is_file())
+            return sum(item.stat().st_size for item in (path / ".git").rglob("*") if item.is_file())
 
         _clone(remote, tmp_path / "narrow", *_documented_clone_flags())
         _clone(remote, tmp_path / "wide")
@@ -154,7 +149,8 @@ class TestTheDocumentedClone:
         assert narrow * 2 < wide, (
             f"narrow clone {narrow} B is not meaningfully smaller than "
             f"{wide} B - the fixture's capture branches must carry payload "
-            f"for this to mean anything")
+            f"for this to mean anything"
+        )
 
 
 class TestFetchingOnDemandStillWorks:
@@ -167,8 +163,7 @@ class TestFetchingOnDemandStillWorks:
 
         ref = CAPTURE_BRANCHES[0]
         _git("fetch", "-q", "origin", f"{ref}:{ref}", cwd=target)
-        assert "traced_build_exit=0" in _git(
-            "show", f"{ref}:capture-outcome.txt", cwd=target)
+        assert "traced_build_exit=0" in _git("show", f"{ref}:capture-outcome.txt", cwd=target)
 
     def test_fetch_head_works_too(self, remote, tmp_path):
         """The form `bga baseline` uses, and the one the workflow doc's
@@ -177,8 +172,7 @@ class TestFetchingOnDemandStillWorks:
         _clone(remote, target, *_documented_clone_flags())
 
         _git("fetch", "-q", "origin", CAPTURE_BRANCHES[0], cwd=target)
-        assert "traced_build_exit=0" in _git(
-            "show", "FETCH_HEAD:capture-outcome.txt", cwd=target)
+        assert "traced_build_exit=0" in _git("show", "FETCH_HEAD:capture-outcome.txt", cwd=target)
 
     def test_the_remote_tracking_form_does_not(self, remote, tmp_path):
         """The measured breakage, pinned so the docs cannot drift back.
@@ -193,7 +187,10 @@ class TestFetchingOnDemandStillWorks:
 
         result = subprocess.run(
             ["git", "show", f"origin/{CAPTURE_BRANCHES[0]}:capture-outcome.txt"],
-            cwd=target, capture_output=True, text=True)
+            cwd=target,
+            capture_output=True,
+            text=True,
+        )
         assert result.returncode != 0
         assert "invalid object name" in result.stderr
 
@@ -202,8 +199,7 @@ class TestTheDocsSayIt:
     def test_both_front_doors_document_the_narrow_clone(self):
         for doc in DOCS_WITH_THE_CLONE:
             text = open(doc, encoding="utf-8").read()
-            assert re.search(r"git clone --single-branch\s+http", text), (
-                f"{doc} does not document the clone")
+            assert re.search(r"git clone --single-branch\s+http", text), f"{doc} does not document the clone"
 
     def test_they_say_why(self):
         """A flag with no reason gets dropped by the next person to edit
@@ -220,10 +216,9 @@ class TestTheDocsSayIt:
         offenders = []
         for path in pathlib.Path(".").rglob("*.md"):
             if "backlog/scenarios" in str(path) or "audits/" in str(path):
-                continue   # task files and audit rounds quote the defect
+                continue  # task files and audit rounds quote the defect
             fenced = False
-            for number, line in enumerate(
-                    open(path, encoding="utf-8").read().splitlines(), 1):
+            for number, line in enumerate(open(path, encoding="utf-8").read().splitlines(), 1):
                 if line.lstrip().startswith("```"):
                     fenced = not fenced
                     continue
@@ -231,15 +226,13 @@ class TestTheDocsSayIt:
                 # broken form is the point of the fix, not a violation
                 # of it - the first draft of this guard flagged its own
                 # explanation.
-                if fenced and re.search(
-                        r"git (show|checkout|archive)\b.*origin/captures/", line):
+                if fenced and re.search(r"git (show|checkout|archive)\b.*origin/captures/", line):
                     offenders.append(f"{path}:{number}: {line.strip()}")
         assert not offenders, "\n".join(offenders)
 
     def test_the_workflow_doc_documents_fetching_on_demand(self):
         text = open("docs/design/capture-workflow.md", encoding="utf-8").read()
-        assert "git fetch origin captures/fdsdk-latest:captures/fdsdk-latest" \
-            in text
+        assert "git fetch origin captures/fdsdk-latest:captures/fdsdk-latest" in text
 
 
 if __name__ == "__main__":  # pragma: no cover

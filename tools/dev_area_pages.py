@@ -19,6 +19,7 @@ only writer, for CI to publish to `refs/heads/records` (`UX-997`) -
 only beside a checkout's own `docs/backlog/scenarios/`, not on a page
 published alone.
 """
+
 import argparse
 import pathlib
 import re
@@ -33,8 +34,7 @@ import dev_close_task as tasks
 DESIGN_AREA_PAGES = REPO / "docs/design/areas"
 #: `UX-1092` step B: a guard the backfill read from prose, not a field.
 INFERRED = "inferred r149"
-_INFERRED_LINE = re.compile(r"^\*\*Guard:\*\*.*· " + INFERRED + r"[ \t]*$",
-                            re.M)
+_INFERRED_LINE = re.compile(r"^\*\*Guard:\*\*.*· " + INFERRED + r"[ \t]*$", re.M)
 
 
 def guard_files(text):
@@ -56,8 +56,7 @@ def _guard_cell(names, kind, present):
         return "no `Guard:` line"
     if kind == "none":
         return "none — " + names[0].replace("|", "\\|")
-    cell = ", ".join(f"`{name}`" if name in present
-                     else f"`{name}` (missing)" for name in names)
+    cell = ", ".join(f"`{name}`" if name in present else f"`{name}` (missing)" for name in names)
     return cell + (f" · {INFERRED}" if kind == "inferred" else "")
 
 
@@ -71,27 +70,28 @@ def area_page_body(area, ids, link_base=None):
     for uid in listed:
         path = tasks.task_file(uid)
         text = path.read_text(encoding="utf-8")
-        link = (f"{link_base.rstrip('/')}/{path.name}" if link_base
-                else f"../scenarios/{path.name}")
+        link = f"{link_base.rstrip('/')}/{path.name}" if link_base else f"../scenarios/{path.name}"
         names, kind = guard_files(text)
         counts[kind] += 1
-        covered += (kind in ("named", "inferred")
-                    and any(n in present for n in names))
-        lines.append(f"| [{uid}]({link}) | {tasks.header_topic(text) or ''}"
-                     f" | {_guard_cell(names, kind, present)} |")
+        covered += kind in ("named", "inferred") and any(n in present for n in names)
+        lines.append(f"| [{uid}]({link}) | {tasks.header_topic(text) or ''} | {_guard_cell(names, kind, present)} |")
     rows = "\n".join(lines)
     name = area.replace("/", "-") + ".md"
-    mechanism = (f"Mechanism: [docs/design/areas/{name}]"
-                 f"(../../design/areas/{name})\n\n"
-                 if (DESIGN_AREA_PAGES / name).exists() else "")
-    return (f"# {area}\n\n"
-            f"Printed by `dev_area_pages.py --areas` (`UX-688`, `UX-1000`) "
-            f"from each task's `**Area:**` header. {len(listed)} row(s); "
-            f"the module tree is the fixing guide's §6.\n\n"
-            f"{mechanism}| Task | Topic | Guard |\n|---|---|---|\n{rows}\n\n"
-            f"covered {covered} / {len(listed)} "
-            f"(none {counts['none']}, {INFERRED} {counts['inferred']}, "
-            f"no line {counts[None]})\n")
+    mechanism = (
+        f"Mechanism: [docs/design/areas/{name}](../../design/areas/{name})\n\n"
+        if (DESIGN_AREA_PAGES / name).exists()
+        else ""
+    )
+    return (
+        f"# {area}\n\n"
+        f"Printed by `dev_area_pages.py --areas` (`UX-688`, `UX-1000`) "
+        f"from each task's `**Area:**` header. {len(listed)} row(s); "
+        f"the module tree is the fixing guide's §6.\n\n"
+        f"{mechanism}| Task | Topic | Guard |\n|---|---|---|\n{rows}\n\n"
+        f"covered {covered} / {len(listed)} "
+        f"(none {counts['none']}, {INFERRED} {counts['inferred']}, "
+        f"no line {counts[None]})\n"
+    )
 
 
 def report_areas(name):
@@ -100,8 +100,7 @@ def report_areas(name):
     pages = tasks.area_pages()
     if name:
         if name not in pages:
-            print(f"no such area: {name!r}. Known: {', '.join(sorted(pages))}",
-                 file=sys.stderr)
+            print(f"no such area: {name!r}. Known: {', '.join(sorted(pages))}", file=sys.stderr)
             return 1
         print(area_page_body(name, pages[name]))
         return 0
@@ -118,31 +117,35 @@ def write_pages(out_dir, link_base):
     written = []
     for area, ids in tasks.area_pages().items():
         path = out_dir / (area.replace("/", "-") + ".md")
-        path.write_text(area_page_body(area, ids, link_base=link_base),
-                        encoding="utf-8")
+        path.write_text(area_page_body(area, ids, link_base=link_base), encoding="utf-8")
         written.append(path)
     print(f"wrote {len(written)} page(s) to {out_dir}")
     return 0
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(
-        description=(__doc__ or "").splitlines()[0])
-    parser.add_argument("--areas", nargs="?", const="", default=None,
-                        metavar="NAME",
-                        help="print an area page - one named area, or "
-                             "every one; never committed (UX-996)")
-    parser.add_argument("--out", default=None, metavar="DIR",
-                        help="write every area's page here - the only "
-                             "writer (needs --link-base)")
-    parser.add_argument("--link-base", default=None, metavar="URL",
-                        help="with --out: task links point here instead "
-                             "of the checkout-relative ../scenarios/")
+    parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
+    parser.add_argument(
+        "--areas",
+        nargs="?",
+        const="",
+        default=None,
+        metavar="NAME",
+        help="print an area page - one named area, or every one; never committed (UX-996)",
+    )
+    parser.add_argument(
+        "--out", default=None, metavar="DIR", help="write every area's page here - the only writer (needs --link-base)"
+    )
+    parser.add_argument(
+        "--link-base",
+        default=None,
+        metavar="URL",
+        help="with --out: task links point here instead of the checkout-relative ../scenarios/",
+    )
     args = parser.parse_args(argv)
     if args.out:
         if not args.link_base:
-            parser.error("--out needs --link-base - a page published "
-                         "alone has no sibling docs/backlog/scenarios/")
+            parser.error("--out needs --link-base - a page published alone has no sibling docs/backlog/scenarios/")
         return write_pages(args.out, args.link_base)
     if args.areas is not None:
         return report_areas(args.areas or None)

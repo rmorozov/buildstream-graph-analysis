@@ -36,6 +36,7 @@ sections."* Measured in Chromium, before and after, at two widths:
   jump box top (1440x900)          1236px      171px   (fold at 900)
 ```
 """
+
 import json
 import os
 import pathlib
@@ -54,15 +55,18 @@ needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 # What a copy control may say. The vocabulary is closed on purpose:
 # `UX-279`'s third item is that two controls copying different things
 # read differently, and an open vocabulary cannot be checked for that.
-COPY_NOUNS = ("finding", "query", "command", "rows", "row",
-              "link to this view")
+COPY_NOUNS = ("finding", "query", "command", "rows", "row", "link to this view")
 
 
 @pytest.fixture(scope="module")
 def payload():
     done = subprocess.run(
         ["python", "-m", "bga.cli", "analyze", str(RUN), "--format", "json"],
-        capture_output=True, text=True, cwd=REPO, timeout=180)
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=180,
+    )
     assert done.returncode == 0, done.stderr[-2000:]
     return json.loads(done.stdout)
 
@@ -117,21 +121,26 @@ console.log(JSON.stringify({
 
 def _page(payload):
     import tempfile
+
     scratch = tempfile.mkdtemp()
     try:
         run = pathlib.Path(scratch, "payload.json")
         run.write_text(json.dumps(payload), encoding="utf-8")
         doc = pathlib.Path(scratch, "schema.json")
-        doc.write_text(json.dumps(schemas.schema(schemas.ANALYZE)),
-                       encoding="utf-8")
+        doc.write_text(json.dumps(schemas.schema(schemas.ANALYZE)), encoding="utf-8")
         script = _HARNESS % {
             "app": (REPO / "tests/viewer.mjs").as_uri(),
-            "payload": json.dumps(str(run)), "schema": json.dumps(str(doc))}
-        done = subprocess.run([node, "--input-type=module", "-e", script],
-                              capture_output=True, text=True, cwd=REPO,
-                              timeout=120,
-                              env={**os.environ, "BGA_DOM_SHIM":
-                                   (REPO / "tests/dom_shim.mjs").as_uri()})
+            "payload": json.dumps(str(run)),
+            "schema": json.dumps(str(doc)),
+        }
+        done = subprocess.run(
+            [node, "--input-type=module", "-e", script],
+            capture_output=True,
+            text=True,
+            cwd=REPO,
+            timeout=120,
+            env={**os.environ, "BGA_DOM_SHIM": (REPO / "tests/dom_shim.mjs").as_uri()},
+        )
         assert done.returncode == 0, done.stderr[-3000:]
         return json.loads(done.stdout)
     finally:
@@ -148,9 +157,7 @@ class TestEveryCopyControlNamesItsNoun:
     def test_every_one_of_them_names_something(self, payload):
         drawn = _page(payload)
         assert drawn["controls"], "the page draws no copy controls at all"
-        unnamed = [c["label"] for c in drawn["controls"]
-                   if not any(noun in c["label"].lower()
-                              for noun in COPY_NOUNS)]
+        unnamed = [c["label"] for c in drawn["controls"] if not any(noun in c["label"].lower() for noun in COPY_NOUNS)]
         assert unnamed == [], f"control(s) naming nothing: {unnamed}"
 
     def test_every_one_of_them_says_so_on_hover_too(self, payload):
@@ -166,10 +173,8 @@ class TestEveryCopyControlNamesItsNoun:
         drawn = _page(payload)
         rows = [c for c in drawn["controls"] if "row" in c["label"].lower()]
         assert rows, "no table offers a row copy"
-        assert all(any(ch.isdigit() for ch in c["label"]) for c in rows), (
-            [c["label"] for c in rows])
-        assert not any(c["label"].lower().replace("copy ", "") == "shown rows"
-                       for c in rows)
+        assert all(any(ch.isdigit() for ch in c["label"]) for c in rows), [c["label"] for c in rows]
+        assert not any(c["label"].lower().replace("copy ", "") == "shown rows" for c in rows)
 
     def test_the_label_matches_what_the_control_actually_copies(self, payload):
         """The rule with teeth. Grouping labels by a declared kind is
@@ -182,19 +187,20 @@ class TestEveryCopyControlNamesItsNoun:
         stamped must say `finding`, and nothing else may.
         """
         drawn = _page(payload)
-        wrong = [c["label"] for c in drawn["controls"]
-                 if c["payload"].startswith("BGA finding")
-                 and "finding" not in c["label"].lower()]
-        assert wrong == [], (
-            f"control(s) copying a finding and saying {wrong}")
-        stolen = [c["label"] for c in drawn["controls"]
-                  if "finding" in c["label"].lower() and c["payload"]
-                  and not c["payload"].startswith("BGA finding")]
-        assert stolen == [], (
-            f"control(s) saying `finding` and copying something else: {stolen}")
+        wrong = [
+            c["label"]
+            for c in drawn["controls"]
+            if c["payload"].startswith("BGA finding") and "finding" not in c["label"].lower()
+        ]
+        assert wrong == [], f"control(s) copying a finding and saying {wrong}"
+        stolen = [
+            c["label"]
+            for c in drawn["controls"]
+            if "finding" in c["label"].lower() and c["payload"] and not c["payload"].startswith("BGA finding")
+        ]
+        assert stolen == [], f"control(s) saying `finding` and copying something else: {stolen}"
 
-    def test_two_controls_that_copy_different_things_read_differently(
-            self, payload):
+    def test_two_controls_that_copy_different_things_read_differently(self, payload):
         """`UX-279` item 3, the one that catches a regression rather than
         a wording choice: one label, one payload kind."""
         drawn = _page(payload)
@@ -202,10 +208,8 @@ class TestEveryCopyControlNamesItsNoun:
         for control in drawn["controls"]:
             kind = control["copies"] or control["cls"]
             kinds.setdefault(control["label"], set()).add(kind)
-        clashes = {label: sorted(seen) for label, seen in kinds.items()
-                   if len(seen) > 1}
-        assert clashes == {}, (
-            f"label(s) covering two different payloads: {clashes}")
+        clashes = {label: sorted(seen) for label, seen in kinds.items() if len(seen) > 1}
+        assert clashes == {}, f"label(s) covering two different payloads: {clashes}"
 
 
 @needs_node
@@ -213,7 +217,8 @@ class TestTheRowCopyOffersMarkdown:
     def test_every_table_offers_the_choice(self, payload):
         drawn = _page(payload)
         assert drawn["markdown_boxes"] == drawn["tables"], (
-            f"{drawn['markdown_boxes']} choices for {drawn['tables']} tables")
+            f"{drawn['markdown_boxes']} choices for {drawn['tables']} tables"
+        )
 
     def test_markdown_is_a_rendering_of_the_same_rows(self):
         """Not a second selection: the same `data-raw` values `rowJson`
@@ -241,20 +246,21 @@ console.log(JSON.stringify({{
   json: rows.map((tr) => rowJson(tr, ["element", "dur"])),
 }}));
 """.format((REPO / "bga/viewer/tables.js").as_uri())
-        done = subprocess.run([node, "--input-type=module", "-e", script],
-                              capture_output=True, text=True, cwd=REPO,
-                              timeout=60,
-                              env={**os.environ, "BGA_DOM_SHIM":
-                                   (REPO / "tests/dom_shim.mjs").as_uri()})
+        done = subprocess.run(
+            [node, "--input-type=module", "-e", script],
+            capture_output=True,
+            text=True,
+            cwd=REPO,
+            timeout=60,
+            env={**os.environ, "BGA_DOM_SHIM": (REPO / "tests/dom_shim.mjs").as_uri()},
+        )
         assert done.returncode == 0, done.stderr[-2000:]
         out = json.loads(done.stdout)
         lines = out["markdown"].splitlines()
         assert lines[0] == "| Element | Duration |"
         assert lines[1] == "| --- | ---: |", "a numeric column is not aligned"
-        assert len(lines) == 2 + len(out["json"]), (
-            "the two renderings disagree about how many rows were shown")
-        assert "a\\|b.bst" in out["markdown"], (
-            "a `|` inside a value would end the cell and was not escaped")
+        assert len(lines) == 2 + len(out["json"]), "the two renderings disagree about how many rows were shown"
+        assert "a\\|b.bst" in out["markdown"], "a `|` inside a value would end the cell and was not escaped"
         for line, raw in zip(lines[2:], out["json"]):
             for value in json.loads(raw).values():
                 # The same value, in the one form the table shape needs:
@@ -272,8 +278,7 @@ class TestTheToolsComeBeforeTheirTable:
         rather than only in the geometry guard."""
         drawn = _page(payload)
         assert drawn["strips"], "the page draws no table tools"
-        after = [s for s in drawn["strips"]
-                 if s["table_at"] >= 0 and s["tools_at"] > s["table_at"]]
+        after = [s for s in drawn["strips"] if s["table_at"] >= 0 and s["tools_at"] > s["table_at"]]
         assert after == [], f"{len(after)} tool strip(s) come after the table"
 
 

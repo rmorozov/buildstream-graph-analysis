@@ -10,6 +10,7 @@ changes *how* a value is computed, not just how fast, so every test
 here asserts the result is still right, with a performance assertion
 as a secondary check.
 """
+
 import json
 import os
 import sys
@@ -29,17 +30,23 @@ def _linear_chain_run_dir(tmp_path, n, dur_us=1000):
     run_dir = tmp_path / "run"
     run_dir.mkdir(parents=True)
     elements = [{"uid": f"e{i}.bst", "requested_target": (i == n - 1)} for i in range(n)]
-    dependencies = [
-        {"predecessor": f"e{i}.bst", "successor": f"e{i + 1}.bst"} for i in range(n - 1)
-    ]
+    dependencies = [{"predecessor": f"e{i}.bst", "successor": f"e{i + 1}.bst"} for i in range(n - 1)]
     spans = [
-        {"task_key": f"e{i}.bst|BUILD|BUILD|0", "ts_us": i * dur_us, "dur_us": dur_us,
-         "resources": ["PROCESS"], "primary_resource": "PROCESS"}
+        {
+            "task_key": f"e{i}.bst|BUILD|BUILD|0",
+            "ts_us": i * dur_us,
+            "dur_us": dur_us,
+            "resources": ["PROCESS"],
+            "primary_resource": "PROCESS",
+        }
         for i in range(n)
     ]
     run_context = {
-        "trace_epsilon_us": dur_us, "wall_start_us": 0, "wall_end_us": n * dur_us + dur_us,
-        "max_jobs": 1, "resource_capacities": {"PROCESS": 1},
+        "trace_epsilon_us": dur_us,
+        "wall_start_us": 0,
+        "wall_end_us": n * dur_us + dur_us,
+        "max_jobs": 1,
+        "resource_capacities": {"PROCESS": 1},
     }
     graph = {"elements": elements, "dependencies": dependencies}
     trace = {"spans": spans, "phases": []}
@@ -74,6 +81,7 @@ def test_estimate_ready_count_matches_brute_force_reference(tmp_path):
         return count
 
     from bga.occupancy.sweep import compute_occupancy_stats
+
     occ = compute_occupancy_stats(tasks)
     checked = 0
     for seg in occ["segments"]:
@@ -105,12 +113,17 @@ def test_leaf_analysis_and_blast_radius_report_real_critical_path_membership(tmp
     run_dir = tmp_path / "run"
     run_dir.mkdir()
     run_context = {
-        "trace_epsilon_us": 1000, "wall_start_us": 0, "wall_end_us": 200000,
-        "max_jobs": 2, "resource_capacities": {"PROCESS": 2},
+        "trace_epsilon_us": 1000,
+        "wall_start_us": 0,
+        "wall_end_us": 200000,
+        "max_jobs": 2,
+        "resource_capacities": {"PROCESS": 2},
     }
     graph = {
         "elements": [
-            {"uid": "root.bst"}, {"uid": "a.bst"}, {"uid": "b.bst"},
+            {"uid": "root.bst"},
+            {"uid": "a.bst"},
+            {"uid": "b.bst"},
             {"uid": "merge.bst", "requested_target": True},
         ],
         "dependencies": [
@@ -122,14 +135,34 @@ def test_leaf_analysis_and_blast_radius_report_real_critical_path_membership(tmp
     }
     trace = {
         "spans": [
-            {"task_key": "root.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 10000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "a.bst|BUILD|BUILD|0", "ts_us": 10000, "dur_us": 50000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "b.bst|BUILD|BUILD|0", "ts_us": 10000, "dur_us": 10000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "merge.bst|BUILD|BUILD|0", "ts_us": 60000, "dur_us": 10000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
+            {
+                "task_key": "root.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 10000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "a.bst|BUILD|BUILD|0",
+                "ts_us": 10000,
+                "dur_us": 50000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "b.bst|BUILD|BUILD|0",
+                "ts_us": 10000,
+                "dur_us": 10000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "merge.bst|BUILD|BUILD|0",
+                "ts_us": 60000,
+                "dur_us": 10000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
         ],
         "phases": [],
     }
@@ -185,9 +218,11 @@ def test_graph_analysis_not_recomputed_redundantly(tmp_path, monkeypatch):
 #: guard's own message names the remedy it prefers, so this is it: the
 #: **condition** is the reason, and the elapsed seconds are evidence
 #: rather than part of it.
-TRACED = ("the duration is a tracer's and not this pipeline's; UX-524's "
-          "coverage job runs +20% and a bare bound would read the "
-          "instrument")
+TRACED = (
+    "the duration is a tracer's and not this pipeline's; UX-524's "
+    "coverage job runs +20% and a bare bound would read the "
+    "instrument"
+)
 
 
 def _traced():
@@ -280,4 +315,5 @@ def test_full_pipeline_faster_after_p1_21(tmp_path):
     bound = 1500 * _CALLS_PER_ELEMENT_BOUND
     assert calls < bound, (
         f"1500-element analyze_run made {calls} bga calls (bound {bound}) - "
-        f"regression? [{elapsed:.2f}s wall, load {os.getloadavg()}]")
+        f"regression? [{elapsed:.2f}s wall, load {os.getloadavg()}]"
+    )

@@ -25,11 +25,11 @@ logger = logging.getLogger(__name__)
 
 class ElementDependencyGraph:
     """Wrapper for element dependency graph analysis.
-    
+
     This class provides a unified interface to the graph analysis functions
     in bga.graph.edg module.
     """
-    
+
     def __init__(self, G=None, predecessors=None, successors=None, G_full=None):
         # UX-52: `G` is the *gating* graph - `runtime`-only edges removed,
         # because they do not constrain build scheduling. `G_full` keeps
@@ -77,9 +77,7 @@ def build_edg(graph):
                 G.add_edge(pred, succ)
         return G
 
-    predecessors, successors = build_element_graph(
-        graph, exclude_dependency_types={"runtime"}
-    )
+    predecessors, successors = build_element_graph(graph, exclude_dependency_types={"runtime"})
     _, successors_full = build_element_graph(graph)
 
     return ElementDependencyGraph(
@@ -112,18 +110,17 @@ SERIAL_CHAINS_MAX = 40
 #: `requires-python` is `>=3.9`: 358 failed and 156 errored on the 3.9
 #: job while every local run was green. Bound once at import so the
 #: fast path stays a method call on the interpreters that have it.
-_popcount = getattr(int, "bit_count", None) or (
-    lambda value: bin(value).count("1"))
+_popcount = getattr(int, "bit_count", None) or (lambda value: bin(value).count("1"))
 
 
 class StructuralAnalyzer:
     """Analyzes cold structural properties of the build graph.
-    
+
     Unlike other analyzers, this focuses on static structure rather than
     dynamic timing behavior. Requires only the dependency graph, not
     detailed timing information.
     """
-    
+
     def __init__(
         self,
         edg: ElementDependencyGraph,
@@ -167,16 +164,16 @@ class StructuralAnalyzer:
         # to one of them is `UX-52` again.
         self.element_head_durations = element_head_durations or {}
         self._graph = edg.G  # NetworkX DiGraph
-        
+
     def compute_structural_metrics(self) -> StructuralMetrics:
         """Compute cold structural metrics (Part 31).
-        
+
         These metrics are purely structural and don't depend on timing.
         """
         G = self._graph
         n_elements = len(G.nodes())
         n_edges = len(G.edges())
-        
+
         # Depth analysis (Part 14.2): unweighted_depth is the LONGEST path in
         # hops from any root to each node, computed via a topological DP -
         # not nx.shortest_path_length, which finds the shortest route and so
@@ -189,31 +186,31 @@ class StructuralAnalyzer:
             max_depths[node] = 0 if not preds else 1 + max(max_depths[p] for p in preds)
 
         max_depth = max(max_depths.values()) if max_depths else 0
-        
+
         # Fan-in/fan-out
         fanouts = [G.out_degree(n) for n in G.nodes()]
         fanins = [G.in_degree(n) for n in G.nodes()]
         avg_fanout = statistics.mean(fanouts) if fanouts else 0.0
         avg_fanin = statistics.mean(fanins) if fanins else 0.0
-        
+
         # Critical path structure
         cp = self._compute_critical_path_nodes()
         cp_length = len(cp)
         cp_ratio = cp_length / n_elements if n_elements > 0 else 0.0
-        
+
         # Parallelism via level decomposition
         levels = self._compute_level_decomposition()
         widths = [len(level) for level in levels.values()]
         max_parallelism = max(widths) if widths else 0
         avg_parallelism = statistics.mean(widths) if widths else 0.0
-        
+
         # Cyclomatic complexity (for DAGs: edges - nodes + 1)
         cyclomatic = max(0, n_edges - n_elements + 1)
-        
+
         # Serialization ratio (elements with both in-degree > 0 and out-degree > 0 that form chains)
         serial_count = sum(1 for n in G.nodes() if G.in_degree(n) > 0 and G.out_degree(n) > 0)
         serialization_share = serial_count / n_elements if n_elements > 0 else 0.0
-        
+
         return StructuralMetrics(
             num_elements=n_elements,
             num_edges=n_edges,
@@ -227,7 +224,7 @@ class StructuralAnalyzer:
             cyclomatic_complexity=cyclomatic,
             serialization_share=serialization_share,
         )
-    
+
     def _reachability_counts(self):
         """`(|descendants|, |ancestors|)` per node, from one closure.
 
@@ -264,11 +261,11 @@ class StructuralAnalyzer:
 
     def analyze_bottlenecks(self) -> BottleneckAnalysis:
         """Detect structural bottlenecks (Part 32).
-        
+
         Identifies choke points, resource contention, and serialization chains.
         """
         G = self._graph
-        
+
         # UX-43: a choke point is an element that *nothing else can
         # overlap with* - every other element in the build is either
         # strictly upstream of it or strictly downstream of it, so when
@@ -311,19 +308,16 @@ class StructuralAnalyzer:
         # shows the ones worth reading first rather than an arbitrary
         # graph-iteration order.
         choke_points.sort(key=lambda node: (-choke_impact[node], node))
-        
+
         # Resource contention (structural - same resource type used by many elements)
         resource_usage = defaultdict(list)
         for key, task in self.tasks.items():
             if hasattr(task, 'resource_profile') and task.resource_profile:
                 for res_type in task.resource_profile:
                     resource_usage[res_type].append(key)
-        
-        resource_contention = {
-            res: elements for res, elements in resource_usage.items()
-            if len(elements) > 1
-        }
-        
+
+        resource_contention = {res: elements for res, elements in resource_usage.items() if len(elements) > 1}
+
         # Longest serial chain (path with no branching)
         longest_chain = []
         for start in G.nodes():
@@ -339,7 +333,7 @@ class StructuralAnalyzer:
         fanout_list = [(n, G.out_degree(n)) for n in G.nodes() if G.out_degree(n) > 2]
         fanin_list.sort(key=lambda x: x[1], reverse=True)
         fanout_list.sort(key=lambda x: x[1], reverse=True)
-        
+
         return BottleneckAnalysis(
             choke_points=choke_points,
             choke_point_impact=choke_impact,
@@ -350,14 +344,14 @@ class StructuralAnalyzer:
             high_fanin_elements=fanin_list[:10],  # Top 10
             high_fanout_elements=fanout_list[:10],
         )
-    
+
     def compute_parallelism_profile(self) -> ParallelismProfile:
         """Compute parallelism profile across pipeline depth (Part 33).
-        
+
         Shows how parallelism varies at each level of the pipeline.
         """
         levels = self._compute_level_decomposition()
-        
+
         if not levels:
             return ParallelismProfile(
                 levels=[],
@@ -368,17 +362,13 @@ class StructuralAnalyzer:
                 cumulative_work=[],
                 width_uniformity=0.0,
             )
-        
+
         level_nums = sorted(levels.keys())
         widths = [len(levels[l]) for l in level_nums]
         # UX-641: the uids this line used to discard. `sorted` because a
         # set's iteration order is not stable across processes and this
         # is a published, byte-compared document.
-        occupancy = [
-            LevelOccupancy(level=l, width=len(levels[l]),
-                           elements=sorted(levels[l]))
-            for l in level_nums
-        ]
+        occupancy = [LevelOccupancy(level=l, width=len(levels[l]), elements=sorted(levels[l])) for l in level_nums]
 
         # Cumulative work
         cumulative = []
@@ -386,7 +376,7 @@ class StructuralAnalyzer:
         for w in widths:
             total += w
             cumulative.append(total)
-        
+
         # UX-49: this ratio is level-width *uniformity*, and is named
         # for that now. It was called `parallelism_efficiency`, under
         # which a pure serial chain scored a perfect 1.000. See
@@ -396,7 +386,7 @@ class StructuralAnalyzer:
         max_width = max(widths) if widths else 0
         mean_width = statistics.mean(widths) if widths else 0.0
         uniformity = mean_width / max_width if max_width > 0 else 0.0
-        
+
         return ParallelismProfile(
             levels=occupancy,
             width_at_level=widths,
@@ -406,7 +396,7 @@ class StructuralAnalyzer:
             cumulative_work=cumulative,
             width_uniformity=uniformity,
         )
-    
+
     def compute_sensitivity(self) -> SensitivityResult:
         """Compute sensitivity analysis - a `bga`-specific additive
         heuristic, not a precisely spec-defined mechanism (UX-20
@@ -417,10 +407,10 @@ class StructuralAnalyzer:
         Uses critical path membership and slack as proxies.
         """
         cp_nodes = set(self._compute_critical_path_nodes())
-        
+
         # Compute slack for each element
         slacks = self._compute_all_slacks()
-        
+
         # Sensitivity score: higher for CP elements with low slack
         #
         # The decay formula below (`base / (1.0 + slack_s)`) is only
@@ -466,8 +456,7 @@ class StructuralAnalyzer:
         # Score is the fraction of the finish this element could remove -
         # a real 0..1 quantity, and directly comparable across runs.
         sensitivity_scores = {
-            key: (saving / makespan if makespan > 0 else 0.0)
-            for key, saving in potential_saving.items()
+            key: (saving / makespan if makespan > 0 else 0.0) for key, saving in potential_saving.items()
         }
 
         # Rank by saving, breaking ties on duration: when many critical
@@ -495,9 +484,7 @@ class StructuralAnalyzer:
         # measured durations. It is not `certified_headroom`, which
         # certifies against this run's measured resource floors; the two
         # answer different questions and the report says so.
-        zero_slack_nodes = {
-            node for node, slack in slacks.items() if max(slack, 0) <= 0
-        }
+        zero_slack_nodes = {node for node, slack in slacks.items() if max(slack, 0) <= 0}
         residual = self._longest_path_us(zeroed=zero_slack_nodes)
         total_improvable = max(0, makespan - residual)
         # `residual == 0` means every element is on the critical path
@@ -520,10 +507,10 @@ class StructuralAnalyzer:
             critical_path_us=int(makespan),
             cp_sensitivity=cp_sensitivity,
         )
-    
+
     def analyze_deferrability(self) -> DeferrabilityResult:
         """Analyze deferrability of leaf elements (Part 35).
-        
+
         Determines which leaf elements could be deferred without blocking others.
 
         UX-52: uses the *full* graph. "Is anything downstream of this
@@ -533,28 +520,28 @@ class StructuralAnalyzer:
         the wrong answer to a different question.
         """
         G = self.edg.G_full
-        
+
         # Find leaf nodes (no successors)
         leaves = [n for n in G.nodes() if G.out_degree(n) == 0]
-        
+
         deferrable = []
         non_deferrable = []
         deferral_savings = {}
         deferral_risk = {}
-        
+
         for leaf in leaves:
             # Check if deferring this leaf would block anything
             # Since it's a leaf, by definition nothing depends on it
             # But we check if it's "effectively" a dependency
-            
+
             task = self.tasks.get(leaf)
             if not task:
                 non_deferrable.append(leaf)
                 continue
-            
+
             # Heuristic: leaves with short duration are good deferral candidates
             duration = task.dur_us
-            
+
             # UX-288: one rule, in `models.deferral_risk_for`, because
             # the leaf record publishes it too and two copies would be
             # two answers waiting to disagree.
@@ -565,13 +552,13 @@ class StructuralAnalyzer:
                 deferral_savings[leaf] = duration
             else:
                 non_deferrable.append(leaf)
-            
+
             deferral_risk[leaf] = risk
-        
+
         # Recommendations: low-risk deferrable leaves
         recommended = [l for l in deferrable if deferral_risk.get(l) == 'low']
         total_deferrable = sum(deferral_savings.values())
-        
+
         return DeferrabilityResult(
             deferrable_leaves=deferrable,
             non_deferrable_leaves=non_deferrable,
@@ -580,15 +567,13 @@ class StructuralAnalyzer:
             recommended_deferrals=recommended,
             total_deferrable_work_us=int(total_deferrable),
         )
-    
-    def analyze_historical_trends(
-        self, historical_runs: list[dict[str, Any]]
-    ) -> HistoricalTrend:
+
+    def analyze_historical_trends(self, historical_runs: list[dict[str, Any]]) -> HistoricalTrend:
         """Analyze historical trends across multiple runs (Part 36).
-        
+
         Args:
             historical_runs: List of previous analysis results with metrics
-            
+
         Returns:
             HistoricalTrend with time series and statistical analysis
         """
@@ -606,14 +591,14 @@ class StructuralAnalyzer:
                 forecast_next_duration=None,
                 forecast_confidence=0.0,
             )
-        
+
         # Extract time series
         run_ids = [r.get('run_id', str(i)) for i, r in enumerate(historical_runs)]
         timestamps = [r.get('timestamp', 0) for r in historical_runs]
         durations = [r.get('total_duration_us', 0) for r in historical_runs]
         efficiencies = [r.get('efficiency', 0.0) for r in historical_runs]
         parallelisms = [r.get('avg_parallelism', 1.0) for r in historical_runs]
-        
+
         # Statistical analysis
         if len(durations) >= 2:
             # Linear regression for slope
@@ -624,7 +609,7 @@ class StructuralAnalyzer:
             duration_slope = 0.0
             efficiency_slope = 0.0
             duration_volatility = 0.0
-        
+
         # Anomaly detection (simple z-score based)
         anomalies = []
         if len(durations) >= 3:
@@ -633,12 +618,14 @@ class StructuralAnalyzer:
             for i, dur in enumerate(durations):
                 z_score = abs(dur - mean_dur) / std_dur if std_dur > 0 else 0
                 if z_score > 2.0:  # More than 2 standard deviations
-                    anomalies.append({
-                        'run_id': run_ids[i],
-                        'metric': 'duration',
-                        'deviation': z_score,
-                    })
-        
+                    anomalies.append(
+                        {
+                            'run_id': run_ids[i],
+                            'metric': 'duration',
+                            'deviation': z_score,
+                        }
+                    )
+
         # Forecasting (simple linear projection)
         if timestamps and duration_slope != 0:
             last_dur = durations[-1]
@@ -650,10 +637,10 @@ class StructuralAnalyzer:
                 forecast_next = None
         else:
             forecast_next = None
-        
+
         # Confidence based on data quality
         confidence = min(1.0, len(historical_runs) / 10.0)  # Max confidence at 10 runs
-        
+
         return HistoricalTrend(
             run_ids=run_ids,
             timestamps=timestamps,
@@ -667,15 +654,13 @@ class StructuralAnalyzer:
             forecast_next_duration=forecast_next,
             forecast_confidence=confidence,
         )
-    
-    def run_full_analysis(
-        self, historical_runs: Optional[list[dict[str, Any]]] = None
-    ) -> StructuralAnalysisResult:
+
+    def run_full_analysis(self, historical_runs: Optional[list[dict[str, Any]]] = None) -> StructuralAnalysisResult:
         """Run complete structural analysis (all M6 components).
-        
+
         Args:
             historical_runs: Optional historical data for trend analysis
-            
+
         Returns:
             Complete StructuralAnalysisResult
         """
@@ -684,11 +669,11 @@ class StructuralAnalyzer:
         parallelism = self.compute_parallelism_profile()
         sensitivity = self.compute_sensitivity()
         deferrability = self.analyze_deferrability()
-        
+
         historical = None
         if historical_runs:
             historical = self.analyze_historical_trends(historical_runs)
-        
+
         # UX-535: the three facts this took from `metrics` are the ones
         # `graph_metrics` publishes from the same object, so they are read
         # there rather than repeated under a second spelling.
@@ -697,7 +682,7 @@ class StructuralAnalyzer:
             'deferrable_leaves': len(deferrability.deferrable_leaves),
             'best_case_speedup': sensitivity.best_case_speedup,
         }
-        
+
         return StructuralAnalysisResult(
             metrics=metrics,
             bottleneck=bottleneck,
@@ -707,43 +692,44 @@ class StructuralAnalyzer:
             historical=historical,
             summary=summary,
         )
-    
+
     # Helper methods
-    
+
     def _compute_critical_path_nodes(self) -> list[str]:
         """Get nodes on the critical path."""
         # Use existing critical path computation from EDG module
         # The edg.G is a NetworkX DiGraph, we need to compute critical path using bga.graph.edg functions
         try:
             from bga.graph.edg import compute_critical_path as graph_compute_critical_path
-            
+
             # UX-50: the same per-element durations every other path
             # computation in this class uses - not `self.tasks`, which
             # holds one arbitrary task per element.
             task_durations = dict(self._durations())
-            
+
             # Build a Graph object from our NetworkX graph for the function
             from bga.ingest.models import DependencyEdge, Element, Graph
+
             elements = [Element(uid=node) for node in self._graph.nodes()]
             dependencies = []
             for pred, succ in self._graph.edges():
                 dependencies.append(DependencyEdge(predecessor=pred, successor=succ))
-            
+
             graph_obj = Graph(elements=elements, dependencies=dependencies)
-            
+
             cp_length, cp_nodes = graph_compute_critical_path(
-                graph_obj, task_durations,
+                graph_obj,
+                task_durations,
                 head_durations=self.element_head_durations,
             )
             return cp_nodes
         except Exception:
             logger.warning(
-                "Structural critical-path computation failed; "
-                "critical_path_length/max_depth will read as 0",
+                "Structural critical-path computation failed; critical_path_length/max_depth will read as 0",
                 exc_info=True,
             )
             return []
-    
+
     def _compute_level_decomposition(self) -> dict[int, set[str]]:
         """Decompose the graph into levels by *longest* path from a root.
 
@@ -778,13 +764,13 @@ class StructuralAnalyzer:
             levels[depths[node]].add(node)
 
         return dict(levels)
-    
+
     def _find_longest_serial_chain_from(self, start: str) -> list[str]:
         """Find longest serial (non-branching) chain starting from a node."""
         G = self._graph
         chain = [start]
         current = start
-        
+
         while True:
             successors = list(G.successors(current))
             if len(successors) != 1:
@@ -849,11 +835,15 @@ class StructuralAnalyzer:
         # step's graph order, break a tie so it is not iteration luck.
         rows.sort(key=lambda row: (-row[0], -row[1], order[row[2][0]], order[row[2][1]]))
         return [
-            SerialChain(rank=i + 1, members=members, length=length,
-                        weighted_duration_us=weighted, wall_share=wall_share,
-                        best_split=best_split)
-            for i, (weighted, length, members, best_split, wall_share)
-            in enumerate(rows[:SERIAL_CHAINS_MAX])
+            SerialChain(
+                rank=i + 1,
+                members=members,
+                length=length,
+                weighted_duration_us=weighted,
+                wall_share=wall_share,
+                best_split=best_split,
+            )
+            for i, (weighted, length, members, best_split, wall_share) in enumerate(rows[:SERIAL_CHAINS_MAX])
         ]
 
     def _durations(self) -> dict[str, int]:
@@ -869,14 +859,8 @@ class StructuralAnalyzer:
         than one task. See `__init__`.
         """
         if self.element_durations is not None:
-            return {
-                node: self.element_durations.get(node, 0) or 0
-                for node in self._graph.nodes()
-            }
-        return {
-            node: getattr(self.tasks.get(node), 'dur_us', 0) or 0
-            for node in self._graph.nodes()
-        }
+            return {node: self.element_durations.get(node, 0) or 0 for node in self._graph.nodes()}
+        return {node: getattr(self.tasks.get(node), 'dur_us', 0) or 0 for node in self._graph.nodes()}
 
     def _longest_path_us(self, zeroed: Optional[set[str]] = None) -> int:
         """Longest weighted path through the graph, in microseconds.
@@ -934,9 +918,7 @@ class StructuralAnalyzer:
                 (earliest_start[p] + durations[p] for p in G.predecessors(node)),
                 default=0,
             )
-        makespan = max(
-            (earliest_start[node] + durations[node] for node in order), default=0
-        )
+        makespan = max((earliest_start[node] + durations[node] for node in order), default=0)
 
         latest_finish: dict[str, int] = {}
         for node in reversed(order):
@@ -945,26 +927,23 @@ class StructuralAnalyzer:
                 default=makespan,
             )
 
-        return {
-            node: float(latest_finish[node] - durations[node] - earliest_start[node])
-            for node in order
-        }
-    
+        return {node: float(latest_finish[node] - durations[node] - earliest_start[node]) for node in order}
+
     def _compute_slope(self, x: list[float], y: list[float]) -> float:
         """Compute linear regression slope."""
         if len(x) < 2:
             return 0.0
-        
+
         n = len(x)
         sum_x = sum(x)
         sum_y = sum(y)
         sum_xy = sum(xi * yi for xi, yi in zip(x, y))
         sum_xx = sum(xi * xi for xi in x)
-        
+
         denominator = n * sum_xx - sum_x * sum_x
         if denominator == 0:
             return 0.0
-        
+
         numerator = n * sum_xy - sum_x * sum_y
         return numerator / denominator
 

@@ -35,6 +35,7 @@ Plane 2 measures the same condition directly and far more reliably
 the tracer. This is the cheap, static, Plane-1-side signal available
 from a plain `bst show`.
 """
+
 from dataclasses import dataclass, field
 from statistics import mean
 from typing import Optional
@@ -52,6 +53,7 @@ class SerializationPointRisk:
     `elements` stays a list for schema compatibility with `UX-22`'s own
     published shape, but now holds exactly one element - the pinning is
     a property of that element, not of a group."""
+
     elements: list[str]
     element_max_jobs: dict[str, int] = field(default_factory=dict)
     element_duration_us: dict[str, int] = field(default_factory=dict)
@@ -72,16 +74,17 @@ class SerializationPointAnalysis:
 
 
 def _build_hint(
-    element: str, max_jobs: int, typical_max_jobs: int, duration_us: int,
-    downstream_count: int, notparallel: Optional[bool],
+    element: str,
+    max_jobs: int,
+    typical_max_jobs: int,
+    duration_us: int,
+    downstream_count: int,
+    notparallel: Optional[bool],
 ) -> str:
     """UX-04's own per-category hint precedent: a real, actionable
     sentence naming the specific element and the real numbers behind the
     call, not just a bare flag."""
-    cause = (
-        "`variables: notparallel: True`"
-        if notparallel else f"a resolved max-jobs of {max_jobs}"
-    )
+    cause = "`variables: notparallel: True`" if notparallel else f"a resolved max-jobs of {max_jobs}"
     return (
         f"{element} runs its own build system at {max_jobs} {'job' if max_jobs == 1 else 'jobs'} - {cause} - while "
         f"the rest of this build runs at {typical_max_jobs}, and it is the longest kind of task here "
@@ -156,19 +159,25 @@ def detect_large_serialization_points(
             # only its own slot - not a synchronization point.
             continue
         max_jobs = element.max_jobs if element.max_jobs is not None else 1
-        risks.append(SerializationPointRisk(
-            elements=[element.uid],
-            element_max_jobs={element.uid: max_jobs},
-            element_duration_us={element.uid: task.dur_us},
-            builders=builders or 0,
-            governing_cores=governing_cores or 0,
-            notparallel=element.notparallel,
-            typical_max_jobs=typical_max_jobs,
-            downstream_count=downstream_count,
-            hint=_build_hint(
-                element.uid, max_jobs, typical_max_jobs, task.dur_us,
-                downstream_count, element.notparallel,
-            ),
-        ))
+        risks.append(
+            SerializationPointRisk(
+                elements=[element.uid],
+                element_max_jobs={element.uid: max_jobs},
+                element_duration_us={element.uid: task.dur_us},
+                builders=builders or 0,
+                governing_cores=governing_cores or 0,
+                notparallel=element.notparallel,
+                typical_max_jobs=typical_max_jobs,
+                downstream_count=downstream_count,
+                hint=_build_hint(
+                    element.uid,
+                    max_jobs,
+                    typical_max_jobs,
+                    task.dur_us,
+                    downstream_count,
+                    element.notparallel,
+                ),
+            )
+        )
     risks.sort(key=lambda r: -next(iter(r.element_duration_us.values())))
     return SerializationPointAnalysis(risks=risks)

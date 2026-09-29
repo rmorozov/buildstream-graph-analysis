@@ -40,6 +40,7 @@ both a map key and the run's own section. `buildTable` is the same
 builder without the section; `renderTable` is `buildTable` in a
 section.
 """
+
 import json
 import os
 import pathlib
@@ -59,8 +60,7 @@ needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 # declares it, so they read all three; pointing them at `app.js` alone
 # would have quietly stopped seeing the constants they defend.
 APP_MODULES = ("app.js", "format.js", "structured.js", "pairs.js")
-APP = "\n".join((REPO / "bga/viewer" / _name).read_text(encoding="utf-8")
-                for _name in APP_MODULES)
+APP = "\n".join((REPO / "bga/viewer" / _name).read_text(encoding="utf-8") for _name in APP_MODULES)
 
 _HARNESS = """
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
@@ -99,10 +99,14 @@ console.log(JSON.stringify({
 
 def _draw(key, value):
     script = _HARNESS % (json.dumps(key), json.dumps(value))
-    done = subprocess.run([node, "--input-type=module", "-e", script],
-                          capture_output=True, text=True, cwd=REPO, timeout=60,
-                          env={**os.environ, "BGA_DOM_SHIM":
-                               (REPO / "tests/dom_shim.mjs").as_uri()})
+    done = subprocess.run(
+        [node, "--input-type=module", "-e", script],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=60,
+        env={**os.environ, "BGA_DOM_SHIM": (REPO / "tests/dom_shim.mjs").as_uri()},
+    )
     assert done.returncode == 0, done.stderr
     return json.loads(done.stdout)
 
@@ -120,9 +124,11 @@ class TestNothingIsCalledObject:
     def test_no_shape_renders_raw_json(self):
         """The `<pre>` is the thing being removed; a guard on the label
         alone would pass a page that still dumps JSON under it."""
-        for key, value in (("m", {f"k{i}": i for i in range(20)}),
-                           ("a", list(range(30))),
-                           ("r", {f"k{i}": {"a": i} for i in range(12)})):
+        for key, value in (
+            ("m", {f"k{i}": i for i in range(20)}),
+            ("a", list(range(30))),
+            ("r", {f"k{i}": {"a": i} for i in range(12)}),
+        ):
             assert _draw(key, value)["pre"] == 0, key
 
     def test_a_map_is_a_table_a_reader_can_search(self):
@@ -153,17 +159,16 @@ class TestThePageActuallyUsesIt:
         assert "renderStructured(" in self._cell_branch(), (
             "an object cell no longer renders through renderStructured, so "
             "every measurement in this file describes a function the page "
-            "does not call (UX-267)")
+            "does not call (UX-267)"
+        )
 
     def test_no_cell_is_built_from_stringified_json(self):
         """The defect in one line, banned where it lived."""
-        assert "JSON.stringify" not in self._cell_branch(), (
-            "a cell is built from raw JSON again")
+        assert "JSON.stringify" not in self._cell_branch(), "a cell is built from raw JSON again"
 
     def test_the_page_has_no_summary_reading_object(self):
         """`el("summary", {}, "object")` is the exact reported label."""
-        assert 'el("summary", {}, "object")' not in APP, (
-            'a summary literally reading "object" is back')
+        assert 'el("summary", {}, "object")' not in APP, 'a summary literally reading "object" is back'
 
 
 @needs_node
@@ -205,9 +210,11 @@ class TestACellIsNeverASection:
     measured: 22 of them, and `summary` listed twice."""
 
     def test_no_drawn_value_contains_a_section(self):
-        for key, value in (("summary", {f"k{i}": i for i in range(20)}),
-                           ("rows", [{"a": 1, "b": 2}] * 12),
-                           ("nums", list(range(30)))):
+        for key, value in (
+            ("summary", {f"k{i}": i for i in range(20)}),
+            ("rows", [{"a": 1, "b": 2}] * 12),
+            ("nums", list(range(30))),
+        ):
             assert _draw(key, value)["sections"] == 0, key
 
     def test_the_builder_and_the_view_are_separate_functions(self):
@@ -217,14 +224,15 @@ class TestACellIsNeverASection:
         builder = builder.split("\nexport function ", 1)[0]
         assert 'data-section' not in builder, (
             "buildTable emits a section again, so every cell that uses it "
-            "puts a phantom entry in the table of contents (UX-267)")
+            "puts a phantom entry in the table of contents (UX-267)"
+        )
 
     def test_the_renderer_uses_the_builder(self):
         renderer = APP.split("export function renderStructured(", 1)[1]
         renderer = renderer.split("\nexport function ", 1)[0]
         assert "renderTable(" not in renderer, (
-            "renderStructured calls renderTable, which wraps its result in a "
-            "section - use buildTable")
+            "renderStructured calls renderTable, which wraps its result in a section - use buildTable"
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

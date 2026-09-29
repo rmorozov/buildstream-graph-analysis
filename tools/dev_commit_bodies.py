@@ -17,6 +17,7 @@ would go stale the first time this branch is merged. A GitHub App's
 commit (`UX-811`: Dependabot's generated release notes) is skipped and
 counted: the pull request is its record, not the body.
 """
+
 import re
 import shutil
 import subprocess
@@ -28,22 +29,26 @@ GIT = shutil.which("git") or "git"
 
 CAP = 8
 RULE_FROM = "2026-09-06T21:52:00+00:00"
-FOOTER = re.compile(r"^(Co-Authored-By|Claude-Session|Signed-off-by|"
-                    r"Co-authored-by):", re.I)
+FOOTER = re.compile(
+    r"^(Co-Authored-By|Claude-Session|Signed-off-by|"
+    r"Co-authored-by):",
+    re.I,
+)
 APP_AUTHOR = re.compile(r"\[bot\]@users\.noreply\.github\.com$")
 
 
 def body_lines(body):
     """The lines a body spends, footer and blanks excluded."""
-    return [line for line in body.splitlines()
-            if line.strip() and not FOOTER.match(line.strip())]
+    return [line for line in body.splitlines() if line.strip() and not FOOTER.match(line.strip())]
 
 
 def _log(base, extra):
     out = subprocess.run(
-        [GIT, "log", f"{base}..HEAD", "--no-merges",
-         *extra, "--format=%H%x1f%s%x1f%ae%x1f%b%x1e"],
-        capture_output=True, text=True, check=True).stdout
+        [GIT, "log", f"{base}..HEAD", "--no-merges", *extra, "--format=%H%x1f%s%x1f%ae%x1f%b%x1e"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
     for record in out.split("\x1e"):
         record = record.strip("\n")
         if record:
@@ -75,22 +80,21 @@ def over_cap(base="origin/main", cap=CAP, since=RULE_FROM):
     return over, considered, in_range, skipped
 
 
-
 def main(argv):
     base = argv[1] if len(argv) > 1 else "origin/main"
     over, considered, in_range, skipped = over_cap(base)
     if not over:
-        print(f"{considered} of {in_range} commit(s) in {base}..HEAD "
-              f"checked ({in_range - considered - skipped} predate the "
-              f"rule, {skipped} by a GitHub App); "
-              f"every one is within {CAP} body lines")
+        print(
+            f"{considered} of {in_range} commit(s) in {base}..HEAD "
+            f"checked ({in_range - considered - skipped} predate the "
+            f"rule, {skipped} by a GitHub App); "
+            f"every one is within {CAP} body lines"
+        )
         return 0
-    print(f"{len(over)} commit(s) over the {CAP}-line body budget "
-          f"CLAUDE.md states:")
+    print(f"{len(over)} commit(s) over the {CAP}-line body budget CLAUDE.md states:")
     for sha, subject, n in over:
         print(f"  {sha}  {n} lines  {subject}")
-    print("\nThe task file is the record - move the argument there and "
-          "leave the body saying what changed.")
+    print("\nThe task file is the record - move the argument there and leave the body saying what changed.")
     return 1
 
 

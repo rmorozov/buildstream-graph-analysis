@@ -25,6 +25,7 @@ Outcome section, when the note is empty, or when the note carries a
 newline — a substituted note, not a written one (UX-768). `--note-file`
 keeps the note off the command line; `--note` still takes a one-liner.
 """
+
 import argparse
 import pathlib
 import re
@@ -39,6 +40,11 @@ SCENARIOS = REPO / "docs/backlog/scenarios"
 TESTS_ROOT = REPO / "tests"
 INDEX = SCENARIOS / "README.md"
 CLOSED = SCENARIOS / "closed.md"
+#: `UX-1120`: the closed rows live in `closed/NNNN.md`, this many each.
+CHUNK_ROWS = 128
+_CHUNK_HEADER = "| ID | Scenario | Priority | Depends on | Status | Task File |\n|---|---|---|---|---|---|\n"
+#: A relative link in a chunk is one directory deeper than in the row.
+_REL_LINK = re.compile(r"\]\((?!https?:|#|mailto:)([^)\s]*)")
 #: UX-938: fixed at import, unlike `REPO` - a test that monkeypatches
 #: `REPO` to a synthetic repo (`UX-935`) has no `.github` of its own,
 #: and the CI job list is this repository's, not a sandbox's.
@@ -97,8 +103,6 @@ rejected it - not a paragraph about the alternatives.>
 """
 
 
-
-
 _FILES_BY_NUMBER: dict = {}
 
 
@@ -131,7 +135,7 @@ def open_row(uid: str):
 
 
 # UX-232 split the backlog by liveness: open rows in README.md, closed
-# ones verbatim in closed.md. Both are the backlog, so anything that
+# ones verbatim in closed/. Both are the backlog, so anything that
 # reads a status reads both.
 #
 # `UX-387`: this tool read only the open index, and the guard that
@@ -159,7 +163,29 @@ def backlog_files():
     send every reader below at the real backlog while the caller
     believed it was pointed at a fixture.
     """
-    return (INDEX, CLOSED)
+    return (INDEX, *closed_files())
+
+
+def closed_files(scenarios=None):
+    """The closed chunks, in close order, read at call time."""
+    directory = pathlib.Path(scenarios or CLOSED.parent) / "closed"
+    return sorted(directory.glob("[0-9]*.md")) if directory.is_dir() else []
+
+
+def closed_rows(scenarios=None):
+    """Every closed row, in close order, as written before the split."""
+    rows = []
+    for path in closed_files(scenarios):
+        rows += [
+            _REL_LINK.sub(lambda m: "](" + m.group(1)[3:], line)
+            for line in path.read_text(encoding="utf-8").splitlines()
+            if line.startswith("| UX-")
+        ]
+    return rows
+
+
+def closed_ids():
+    return [row.split("|")[1].strip() for row in closed_rows()]
 
 
 #: `UX-454`: the words a status line may carry after its glyph.
@@ -178,21 +204,27 @@ def backlog_files():
 #: here, so seventeen rows closed to `🟢 Done Open` -
 #: `test_docs_links_and_commands.py` derives its cases from the tree so
 #: the next new word reddens rather than doubling.
-STATUS_WORDS = ("Not Started", "In Progress", "Fixed & Verified",
-                "Blocked / Deferred", "Blocked", "Deferred", "Open", "Done")
+STATUS_WORDS = (
+    "Not Started",
+    "In Progress",
+    "Fixed & Verified",
+    "Blocked / Deferred",
+    "Blocked",
+    "Deferred",
+    "Open",
+    "Done",
+)
 
 
 def _alternation():
     """The words as a regex alternation, longest first - `Blocked`
     before `Blocked / Deferred` leaves `/ Deferred` standing."""
-    return "|".join(re.escape(word) for word in
-                    sorted(STATUS_WORDS, key=len, reverse=True))
+    return "|".join(re.escape(word) for word in sorted(STATUS_WORDS, key=len, reverse=True))
 
 
 _STATUS_WORD = re.compile(r"(?: (?:" + _alternation() + r")\.?)*")
 _ONE_STATUS_WORD = re.compile(r"(?:" + _alternation() + r")\.?")
-_STATUS_LINE = re.compile(
-    r"\*\*Status:\*\* (\S+)((?: (?:" + _alternation() + r")\.?)*)")
+_STATUS_LINE = re.compile(r"\*\*Status:\*\* (\S+)((?: (?:" + _alternation() + r")\.?)*)")
 
 
 def status_marker(text):
@@ -216,8 +248,7 @@ def status_words(text):
     # Matched as whole words, never split on spaces: `Fixed & Verified`
     # is one word and splitting would make every one of its 54 files
     # look like three, which is the shape the caller is counting.
-    return [word.rstrip(".")
-            for word in _ONE_STATUS_WORD.findall(found.group(2))]
+    return [word.rstrip(".") for word in _ONE_STATUS_WORD.findall(found.group(2))]
 
 
 def close_status_line(body):
@@ -233,8 +264,7 @@ def close_status_line(body):
     *open* words, so against an already-closed line it matched the glyph
     alone and left the old word standing - twenty-five files.
     """
-    return re.sub(r"\*\*Status:\*\* \S+" + _STATUS_WORD.pattern,
-                  "**Status:** 🟢 Done", body, count=1)
+    return re.sub(r"\*\*Status:\*\* \S+" + _STATUS_WORD.pattern, "**Status:** 🟢 Done", body, count=1)
 
 
 def table_statuses():
@@ -254,8 +284,7 @@ def table_statuses():
             match = _TABLE_ROW.match(line)
             if not match:
                 continue
-            cells = [cell.strip() for cell in
-                     re.split(r"(?<!\\)\|", line.strip().strip("|"))]
+            cells = [cell.strip() for cell in re.split(r"(?<!\\)\|", line.strip().strip("|"))]
             marker = next((c for c in cells if c[:1] in "🔴🟡🟢⚪"), "")
             statuses[int(match.group(1))] = marker
     return statuses
@@ -288,8 +317,7 @@ def status_disagreements():
         in_table = status_marker(rows[number])
         in_file = status_marker(line or "")
         if in_table != in_file:
-            problems.append(
-                f"UX-{number}: table says {in_table}, {name} says {in_file}")
+            problems.append(f"UX-{number}: table says {in_table}, {name} says {in_file}")
     return problems
 
 
@@ -316,8 +344,7 @@ def table_priorities():
             match = _TABLE_ROW.match(line)
             if not match:
                 continue
-            cells = [cell.strip() for cell in
-                     re.split(r"(?<!\\)\|", line.strip().strip("|"))]
+            cells = [cell.strip() for cell in re.split(r"(?<!\\)\|", line.strip().strip("|"))]
             priorities[int(match.group(1))] = priority_cell(cells)
     return priorities
 
@@ -332,8 +359,7 @@ def file_priorities():
         header = path.read_text(encoding="utf-8").splitlines()[:8]
         line = next((line for line in header if "**Priority:**" in line), None)
         word = re.search(r"\*\*Priority:\*\* (\S+)", line or "")
-        priorities[int(match.group(1))] = (path.name,
-                                           word.group(1) if word else None)
+        priorities[int(match.group(1))] = (path.name, word.group(1) if word else None)
     return priorities
 
 
@@ -350,8 +376,7 @@ def priority_disagreements():
         if number not in rows:
             continue
         if rows[number] != word:
-            problems.append(
-                f"UX-{number}: table says {rows[number]}, {name} says {word}")
+            problems.append(f"UX-{number}: table says {rows[number]}, {name} says {word}")
     return problems
 
 
@@ -368,8 +393,7 @@ def priority_disagreements():
 #: statement of it. `test_docs_links_and_commands.py` held a second,
 #: hardcoded copy, and a topic no open row could carry reached the
 #: derived table through a row filed and closed in one round.
-TOPIC_ORDER = ("capture", "analysis", "contracts", "viewer", "cli",
-               "store", "docs", "guards")
+TOPIC_ORDER = ("capture", "analysis", "contracts", "viewer", "cli", "store", "docs", "guards")
 
 #: One reading of the header, for `topics()` and `file_topics()` both.
 #: The hyphen is in the class because a two-word topic would otherwise
@@ -434,17 +458,18 @@ def file_areas():
             continue
         area = header_area(path.read_text(encoding="utf-8"))
         if area:
-            found["UX-" + str(int(re.search(r"UX-0*(\d+)",
-                                            path.name).group(1)))] = area
+            found["UX-" + str(int(re.search(r"UX-0*(\d+)", path.name).group(1)))] = area
     return found
 
 
 def area_problems():
     """An `**Area:**` the §6 tree does not know, named with its file."""
     known = declared_areas()
-    return [f"{uid}: area {area!r} is not in the fixing guide's §6 tree"
-            for uid, area in sorted(file_areas().items())
-            if area not in known]
+    return [
+        f"{uid}: area {area!r} is not in the fixing guide's §6 tree"
+        for uid, area in sorted(file_areas().items())
+        if area not in known
+    ]
 
 
 def area_pages():
@@ -456,14 +481,12 @@ def area_pages():
     pages = {}
     for uid, area in file_areas().items():
         pages.setdefault(area, []).append(uid)
-    return {a: sorted(u, key=lambda i: int(i.split("-")[1]))
-            for a, u in sorted(pages.items())}
+    return {a: sorted(u, key=lambda i: int(i.split("-")[1])) for a, u in sorted(pages.items())}
 
 
 def row_ids(path):
     """The `UX-NNN` ids of a row list, in file order."""
-    return re.findall(r"^\| (UX-\d+) \|", path.read_text(encoding="utf-8"),
-                      re.M)
+    return re.findall(r"^\| (UX-\d+) \|", path.read_text(encoding="utf-8"), re.M)
 
 
 def _declared_topics():
@@ -492,7 +515,7 @@ def topics():
     """
     declared = _declared_topics()
     found = {}
-    for uid in row_ids(INDEX) + row_ids(CLOSED):
+    for uid in row_ids(INDEX) + closed_ids():
         header = header_topic(task_file(uid).read_text(encoding="utf-8"))
         found[uid] = header or declared.get(uid) or TOPIC_UNKNOWN
     return found
@@ -502,7 +525,7 @@ def file_topics():
     """`{filename: the `**Topic:**` header it declares, or None}`.
 
     Every task file, not every row: `UX-656` was filed and closed
-    inside one round, so its row went straight to `closed.md` and the
+    inside one round, so its row went straight to the closed chunks and the
     open index never carried it.
     """
     found = {}
@@ -520,10 +543,11 @@ def topic_disagreements():
     unlisted one after the eight, so a topic the set does not name
     still prints as a row a reader may not use.
     """
-    return [f"{name}: topic {topic!r} is outside the closed set "
-            f"{sorted(TOPIC_ORDER)}"
-            for name, topic in sorted(file_topics().items())
-            if topic is not None and topic not in TOPIC_ORDER]
+    return [
+        f"{name}: topic {topic!r} is outside the closed set {sorted(TOPIC_ORDER)}"
+        for name, topic in sorted(file_topics().items())
+        if topic is not None and topic not in TOPIC_ORDER
+    ]
 
 
 #: `UX-690`: the topics a `## Decomposition` block is required for,
@@ -538,9 +562,24 @@ DECOMPOSITION_FLOOR = 690
 #: as `UNDOCUMENTED_WHEN_THE_POPULATION_BECAME_KEYS`
 #: (`test_the_documents_keep_up_with_the_contracts.py`): a frozen set
 #: that shrinks as rows are given the block, never grows.
-DECOMPOSITION_GRANDFATHERED = frozenset({
-    699, 717, 719, 721, 722, 724, 726, 729, 733, 738, 739, 740, 753, 758,
-})
+DECOMPOSITION_GRANDFATHERED = frozenset(
+    {
+        699,
+        717,
+        719,
+        721,
+        722,
+        724,
+        726,
+        729,
+        733,
+        738,
+        739,
+        740,
+        753,
+        758,
+    }
+)
 
 
 def decomposition_problems():
@@ -567,7 +606,8 @@ def decomposition_problems():
             problems.append(
                 f"UX-{number}: Topic {topic} needs a `## Decomposition` "
                 "block naming its input classes and the journey it "
-                "extends (`UX-690`)")
+                "extends (`UX-690`)"
+            )
     return problems
 
 
@@ -578,20 +618,22 @@ def index_header():
     made them the line two parallel tracks collide on even when neither
     touched the other's row.
     """
-    open_ids, closed_ids = row_ids(INDEX), row_ids(CLOSED)
+    open_ids, closed = row_ids(INDEX), closed_ids()
     of = topics()
-    every = sorted({of[uid] for uid in of},
-                   key=lambda name: (name == TOPIC_UNKNOWN,
-                                     TOPIC_ORDER.index(name)
-                                     if name in TOPIC_ORDER else len(TOPIC_ORDER),
-                                     name))
+    every = sorted(
+        {of[uid] for uid in of},
+        key=lambda name: (
+            name == TOPIC_UNKNOWN,
+            TOPIC_ORDER.index(name) if name in TOPIC_ORDER else len(TOPIC_ORDER),
+            name,
+        ),
+    )
     rows = ["| Topic | Open | Total |", "|---|---|---|"]
     for topic in every:
         open_here = sum(1 for uid in open_ids if of[uid] == topic)
         every_here = sum(1 for uid in of if of[uid] == topic)
         rows.append(f"| {topic} | {open_here} | {every_here} |")
-    sentence = (f"{len(open_ids) + len(closed_ids)} scenarios: "
-                f"**{len(open_ids)} open**, {len(closed_ids)} closed.")
+    sentence = f"{len(open_ids) + len(closed)} scenarios: **{len(open_ids)} open**, {len(closed)} closed."
     return sentence, "\n".join(rows)
 
 
@@ -604,8 +646,9 @@ def _on_the_real_index():
 
 def _ls_files(*extra):
     """Every path `git ls-files` lists, for `UX-935`'s merge check."""
-    out = subprocess.run(["git", "ls-files", *extra], cwd=REPO, check=True,
-                         capture_output=True, text=True).stdout.splitlines()
+    out = subprocess.run(
+        ["git", "ls-files", *extra], cwd=REPO, check=True, capture_output=True, text=True
+    ).stdout.splitlines()
     return {"all": out}
 
 
@@ -624,24 +667,34 @@ def _backlog_counts():
     is the untracked, non-ignored half - a task file written and not
     yet staged (`UX-617`).
     """
-    tracked, untracked = _ls_files()["all"], _ls_files(
-        "--others", "--exclude-standard")["all"]
+    tracked, untracked = _ls_files()["all"], _ls_files("--others", "--exclude-standard")["all"]
 
     def _for(directory):
         prefix = f"docs/backlog/{directory}/"
-        return sum(1 for p in tracked + untracked
-                  if p.startswith(prefix) and not p.endswith("/"))
+        return sum(1 for p in tracked + untracked if p.startswith(prefix) and not p.endswith("/"))
+
     return {one: _for(one) for one in ("scenarios", "tasks")}
 
 
 #: UX-706: which model runs a task is derived from its text, never typed.
-_SHAPE_PATH = re.compile(r"`((?:(?:bga|tools|tests|docs|\.claude|\.github)/[\w./-]+"
-                         r"|pyproject\.toml|Makefile|CLAUDE\.md|REVIEW\.md))[ `]")
+_SHAPE_PATH = re.compile(
+    r"`((?:(?:bga|tools|tests|docs|\.claude|\.github)/[\w./-]+"
+    r"|pyproject\.toml|Makefile|CLAUDE\.md|REVIEW\.md))[ `]"
+)
 _SHAPE_GUARD = re.compile(r"\btest_\w+\.py\b")
-_SHAPE_JUDGEMENT = ("bga/schemas.py", "bga/contracts.py", "docs/spec/",
-                    ".github/", ".claude/", "docs/contributing/",
-                    "docs/design/directions.md", "pyproject.toml", "Makefile",
-                    "CLAUDE.md", "REVIEW.md")
+_SHAPE_JUDGEMENT = (
+    "bga/schemas.py",
+    "bga/contracts.py",
+    "docs/spec/",
+    ".github/",
+    ".claude/",
+    "docs/contributing/",
+    "docs/design/directions.md",
+    "pyproject.toml",
+    "Makefile",
+    "CLAUDE.md",
+    "REVIEW.md",
+)
 _SHAPE_HEADER = re.compile(r" \| \*\*Shape:\*\* [a-z]+")
 SHAPES = ("mechanical", "bounded", "judgement")
 
@@ -658,10 +711,8 @@ def shape_signals(text):
     fix, test = _section(text, "Required Fix"), _section(text, "Acceptance Test")
     return {
         "names a file": bool(_SHAPE_PATH.search(fix)),
-        "names a guard and a mutation": bool(_SHAPE_GUARD.search(test)
-                                            and "mutat" in test.lower()),
-        "touches a contract or process surface": any(
-            s in fix or s in test for s in _SHAPE_JUDGEMENT),
+        "names a guard and a mutation": bool(_SHAPE_GUARD.search(test) and "mutat" in test.lower()),
+        "touches a contract or process surface": any(s in fix or s in test for s in _SHAPE_JUDGEMENT),
     }
 
 
@@ -669,8 +720,7 @@ def shaped_by_architect(text):
     """UX-993: a `## Decision` naming its files, a guard and a mutation
     has taken the judgement, so the process surface no longer holds it."""
     decision = _section(text, "Decision")
-    return ("Files:" in decision and "Mutation:" in decision
-            and bool(_SHAPE_GUARD.search(decision)))
+    return "Files:" in decision and "Mutation:" in decision and bool(_SHAPE_GUARD.search(decision))
 
 
 def derived_shape(text):
@@ -755,24 +805,21 @@ def reading_problems():
         elif reading == "container":
             pass
         elif reading.startswith("runner:"):
-            job = reading[len("runner:"):].strip()
+            job = reading[len("runner:") :].strip()
             if job not in jobs:
-                found.append(f"UX-{number}: runner job {job!r} is not "
-                            "under ci.yml's jobs:")
+                found.append(f"UX-{number}: runner job {job!r} is not under ci.yml's jobs:")
         elif reading.startswith("owner:") or reading.startswith("unpayable:"):
             _, _, rest = reading.partition(":")
             if not rest.strip():
                 found.append(f"UX-{number}: {reading!r} names no reason")
         else:
-            found.append(f"UX-{number}: Reading {reading!r} names neither "
-                        "an environment nor a reason")
+            found.append(f"UX-{number}: Reading {reading!r} names neither an environment nor a reason")
     return found
 
 
 def open_uids():
     text = INDEX.read_text(encoding="utf-8") if INDEX.exists() else ""
-    return [int(m.group(1)) for line in text.splitlines()
-            if (m := _TABLE_ROW.match(line))]
+    return [int(m.group(1)) for line in text.splitlines() if (m := _TABLE_ROW.match(line))]
 
 
 def shape_disagreements():
@@ -786,8 +833,7 @@ def shape_disagreements():
         text = path.read_text(encoding="utf-8")
         declared, derived = declared_shape(text), derived_shape(text)
         if declared != derived:
-            found.append(f"UX-{number}: declares {declared or 'no shape'}, "
-                         f"its text derives {derived}")
+            found.append(f"UX-{number}: declares {declared or 'no shape'}, its text derives {derived}")
     return found
 
 
@@ -804,26 +850,22 @@ def report_shapes(uids, write):
 
 
 CHECKS = (
-    ("every row's status glyph matches its task file's",
-     lambda: status_disagreements()),
-    ("every row's priority matches its task file's",
-     lambda: priority_disagreements()),
-    ("every task file's topic is one the closed set names",
-     lambda: topic_disagreements()),
-    ("no closed row is left in the open index",
-     lambda: _closed_rows_left_open()),
-    ("every open task declares the shape its text derives",
-     lambda: shape_disagreements()),
-    ("every declared area is one the fixing guide's tree knows",
-     lambda: area_problems()),
-    ("every analysis/viewer/capture filing past UX-690 names its "
-     "Decomposition", lambda: decomposition_problems()),
-    ("every id names one task file, and its heading names that id",
-     lambda: checks.id_problems(SCENARIOS, REPO)),
-    ("every open row at UX-938 or later names where its Acceptance "
-     "Test's reading is taken", lambda: reading_problems()),
-    ("every task file names its guard, and the guard exists (UX-1092)",
-     lambda: checks.guard_problems(SCENARIOS, TESTS_ROOT)),
+    ("every row's status glyph matches its task file's", lambda: status_disagreements()),
+    ("every row's priority matches its task file's", lambda: priority_disagreements()),
+    ("every task file's topic is one the closed set names", lambda: topic_disagreements()),
+    ("no closed row is left in the open index", lambda: _closed_rows_left_open()),
+    ("every open task declares the shape its text derives", lambda: shape_disagreements()),
+    ("every declared area is one the fixing guide's tree knows", lambda: area_problems()),
+    ("every analysis/viewer/capture filing past UX-690 names its Decomposition", lambda: decomposition_problems()),
+    ("every id names one task file, and its heading names that id", lambda: checks.id_problems(SCENARIOS, REPO)),
+    (
+        "every open row at UX-938 or later names where its Acceptance Test's reading is taken",
+        lambda: reading_problems(),
+    ),
+    (
+        "every task file names its guard, and the guard exists (UX-1092)",
+        lambda: checks.guard_problems(SCENARIOS, TESTS_ROOT),
+    ),
 )
 
 
@@ -850,8 +892,7 @@ def figures_removed(diff: str):
             close()
             gone, kept = set(), set()
         elif line[:1] in ("-", "+") and not line.startswith("--- "):
-            found = {f.replace(",", "").replace("_", "")
-                     for f in _FIGURE.findall(line[1:])}
+            found = {f.replace(",", "").replace("_", "") for f in _FIGURE.findall(line[1:])}
             (gone if line[0] == "-" else kept).update(found)
     close()
     return sorted(per_file, key=int)
@@ -866,16 +907,19 @@ def figures_still_written(figures, skip=None):
     the half that is not judgement: the grep, run rather than
     remembered, which is the half round 73 skipped.
     """
-    wanted = {d: re.compile(r"\b" + r"[,_]?".join(
-        [d[:len(d) % 3 or 3]] + [d[i:i + 3] for i in
-                                 range(len(d) % 3 or 3, len(d), 3)]) + r"\b")
-              for d in figures}
+    wanted = {
+        d: re.compile(
+            r"\b"
+            + r"[,_]?".join([d[: len(d) % 3 or 3]] + [d[i : i + 3] for i in range(len(d) % 3 or 3, len(d), 3)])
+            + r"\b"
+        )
+        for d in figures
+    }
     hits = {d: [] for d in figures}
     for path in sorted(SCENARIOS.glob("*.md")):
         if skip is not None and path.name == skip.name:
             continue
-        for number, line in enumerate(
-                path.read_text(encoding="utf-8").splitlines(), 1):
+        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
             for digits, pattern in wanted.items():
                 if pattern.search(line):
                     hits[digits].append((path, number, line.strip()))
@@ -887,15 +931,19 @@ def report_figures(diff: str, skip=None) -> int:
     figures = figures_removed(diff)
     hits = figures_still_written(figures, skip=skip)
     written = [d for d in figures if hits[d]]
-    print(f"§3.6: {len(figures)} figure(s) removed by this diff, "
-          f"{len(written) or 'none'} still written in {_shown(SCENARIOS)}.")
+    print(
+        f"§3.6: {len(figures)} figure(s) removed by this diff, "
+        f"{len(written) or 'none'} still written in {_shown(SCENARIOS)}."
+    )
     for digits in written:
         print(f"  {int(digits):,}")
         for path, number, line in hits[digits]:
             print(f"    {path.name}:{number}  {line[:72]}")
     if written:
-        print("  Each is a judgement: annotate the file, or record it in "
-              "your Outcome as history. Nothing here decides that.")
+        print(
+            "  Each is a judgement: annotate the file, or record it in "
+            "your Outcome as history. Nothing here decides that."
+        )
     return 0
 
 
@@ -908,8 +956,7 @@ def working_diff() -> str:
     `UnicodeDecodeError` where the only reader is a grep for figures.
     """
     try:
-        done = subprocess.run(["git", "diff", "HEAD"], cwd=str(REPO),
-                              capture_output=True, timeout=60)
+        done = subprocess.run(["git", "diff", "HEAD"], cwd=str(REPO), capture_output=True, timeout=60)
     except OSError:
         return ""
     if done.returncode != 0:
@@ -924,12 +971,10 @@ def _closed_rows_left_open():
         if not match:
             continue
         marker = line.rsplit("|", 2)[1].strip()
-        declared = re.search(r"\*\*Status:\*\* (\S+)",
-                             task_file(match.group(1)).read_text("utf-8"))
+        declared = re.search(r"\*\*Status:\*\* (\S+)", task_file(match.group(1)).read_text("utf-8"))
         declared = declared.group(1) if declared else "?"
         if marker == "🟢" or declared == "🟢":
-            problems.append(f"{match.group(1)}: row {marker}, file {declared} "
-                            "- a closed row belongs in closed.md")
+            problems.append(f"{match.group(1)}: row {marker}, file {declared} - a closed row belongs in closed/")
     return problems
 
 
@@ -962,13 +1007,18 @@ def _validate_close(uid: str):
     path = task_file(uid)
     body = path.read_text(encoding="utf-8")
     if "## Outcome" not in body:
-        return None, None, None, (
-            f"{path.name} has no Outcome section. Write it first - a row "
-            f"moved without one is the thing the guides warn about.")
+        return (
+            None,
+            None,
+            None,
+            (
+                f"{path.name} has no Outcome section. Write it first - a row "
+                f"moved without one is the thing the guides warn about."
+            ),
+        )
     line, topic = open_row(uid)
     if line is None:
-        return None, None, None, (
-            f"{uid} has no row in the open table (already closed?).")
+        return None, None, None, (f"{uid} has no row in the open table (already closed?).")
     return path, line, topic, None
 
 
@@ -980,8 +1030,7 @@ def _refuse_multiline_note(uid: str, note: str) -> str:
     so the row never splits for the cell-count guard to find later."""
     if "\n" not in note:
         return ""
-    return (f"{uid}: --note is one line; a multi-line note is a "
-            f"substituted note (UX-768)")
+    return f"{uid}: --note is one line; a multi-line note is a substituted note (UX-768)"
 
 
 def _close_one(uid: str, note: str, path, line: str, topic) -> str:
@@ -999,8 +1048,7 @@ def _close_one(uid: str, note: str, path, line: str, topic) -> str:
     # closed - which is 223 of the 489 closed rows, and why the derived
     # table has an `unclassified` line at all.
     if topic and not re.search(r"\*\*Topic:\*\*", body):
-        body = re.sub(r"^(\*\*Priority:.*?)$", r"\1 | **Topic:** " + topic,
-                      body, count=1, flags=re.M)
+        body = re.sub(r"^(\*\*Priority:.*?)$", r"\1 | **Topic:** " + topic, body, count=1, flags=re.M)
     path.write_text(body, encoding="utf-8")
 
     cells = list(line.split("|"))
@@ -1017,23 +1065,24 @@ def _close_one(uid: str, note: str, path, line: str, topic) -> str:
     said = note.strip()
     for opener in ("🟢 Done —", "🟢 Done -", "Done —", "Done -"):
         if said.startswith(opener):
-            said = said[len(opener):].strip()
+            said = said[len(opener) :].strip()
             break
-    closed_row = (f"| {uid} | {scenario} | {priority} | {serves} | "
-                  f"🟢 Done — {said} | [{uid}]({path.name}) |")
+    closed_row = f"| {uid} | {scenario} | {priority} | {serves} | 🟢 Done — {said} | [{uid}]({path.name}) |"
 
     text = INDEX.read_text(encoding="utf-8")
     text = text.replace(line + "\n", "")
     INDEX.write_text(text, encoding="utf-8")
 
-    # After the **last table row**, not at the end of the file:
-    # `closed.md` carries per-round narrative sections below its table,
-    # and the first draft appended into those - which broke the table
-    # and was caught by `test_no_table_is_split_by_a_blank_line`.
-    closed = CLOSED.read_text(encoding="utf-8").splitlines()
-    last = max(i for i, text in enumerate(closed) if text.startswith("| UX-"))
-    closed.insert(last + 1, closed_row)
-    CLOSED.write_text("\n".join(closed) + "\n", encoding="utf-8")
+    # Into the last chunk, which opens the next one when it holds CHUNK_ROWS.
+    files = closed_files()
+    last = files[-1] if files else CLOSED.parent / "closed" / "0001.md"
+    text = last.read_text(encoding="utf-8") if files else ("# Closed scenarios 0001\n\n" + _CHUNK_HEADER)
+    if sum(1 for row in text.splitlines() if row.startswith("| UX-")) >= CHUNK_ROWS:
+        last = last.with_name(f"{int(last.stem) + 1:04d}.md")
+        text = f"# Closed scenarios {last.stem}\n\n" + _CHUNK_HEADER
+    row = _REL_LINK.sub(lambda m: "](../" + m.group(1), closed_row)
+    last.parent.mkdir(exist_ok=True)
+    last.write_text(text.rstrip("\n") + "\n" + row + "\n", encoding="utf-8")
     return ""
 
 
@@ -1053,14 +1102,16 @@ def move(uid: str, note: str) -> int:
     # them as one hunk - and auto-merged the counts sentence to a number
     # neither branch meant, "16 open" over 14 rows. `--counts` prints
     # the sentence and table where a reader needs them, never commits it.
-    print(f"{uid}: status flipped, row moved.\n"
-          f"  Read the row it just wrote. The scenario text is copied from "
-          f"the open row and usually wants rewriting into what was *found*, "
-          f"and this function's own first run produced a malformed row -\n"
-          f"    grep '^| {uid} |' {_shown(CLOSED)}\n"
-          f"  The counts sentence and topic table (UX-501) are printed, "
-          f"never committed:\n"
-          f"    python tools/dev_close_task.py --counts")
+    print(
+        f"{uid}: status flipped, row moved.\n"
+        f"  Read the row it just wrote. The scenario text is copied from "
+        f"the open row and usually wants rewriting into what was *found*, "
+        f"and this function's own first run produced a malformed row -\n"
+        f"    grep -rh '^| {uid} |' {_shown(CLOSED.parent / 'closed')}\n"
+        f"  The counts sentence and topic table (UX-501) are printed, "
+        f"never committed:\n"
+        f"    python tools/dev_close_task.py --counts"
+    )
     report_figures(working_diff(), skip=path)
     return 0
 
@@ -1086,9 +1137,12 @@ def move_batch(pairs: list) -> int:
             return 2
         seen.add(short)
         if not note.strip():
-            print(f"{uid}: --move needs --note: the closed.md row is a "
-                  f"sentence about what was found, and nothing can write "
-                  f"it for you", file=sys.stderr)
+            print(
+                f"{uid}: --move needs --note: the closed row is a "
+                f"sentence about what was found, and nothing can write "
+                f"it for you",
+                file=sys.stderr,
+            )
             return 2
         refusal = _refuse_multiline_note(uid, note)
         if refusal:
@@ -1115,10 +1169,8 @@ def move_batch(pairs: list) -> int:
 #: `UX-709`: the argparse flags that take a value, vs. the plain
 #: switches - `_split_move_batch` needs both to walk past them without
 #: mistaking a flag's value for a bare id.
-_FLAGS_WITH_VALUE = ("--note", "--note-file", "--scenarios", "--round",
-                     "--date", "--mutations", "--diff")
-_FLAGS_BOOL = ("--move", "--check", "--write", "--shape", "--counts",
-              "--figures", "--outcome", "-h", "--help")
+_FLAGS_WITH_VALUE = ("--note", "--note-file", "--scenarios", "--round", "--date", "--mutations", "--diff")
+_FLAGS_BOOL = ("--move", "--check", "--write", "--shape", "--counts", "--figures", "--outcome", "-h", "--help")
 
 
 def _split_move_batch(argv):
@@ -1163,19 +1215,18 @@ def run_checks() -> int:
     for what, run in CHECKS:
         found = run()
         problems.extend(found)
-        print(f"  {'FAIL' if found else 'ok  '}  {what}"
-              + (f" - {len(found)} problem(s)" if found else ""))
+        print(f"  {'FAIL' if found else 'ok  '}  {what}" + (f" - {len(found)} problem(s)" if found else ""))
         for problem in found:
             print(f"          {problem}")
     rows = len(table_statuses())
-    print(f"{len(problems)} problem(s) over {len(CHECKS)} propert(y/ies), "
-          f"{rows} backlog row(s)")
+    print(f"{len(problems)} problem(s) over {len(CHECKS)} propert(y/ies), {rows} backlog row(s)")
     # `UX-690`: the suite's shape, regenerated every run rather than
     # typed into a round document by hand - `dev_flake_census.py`'s
     # `top()` is the same convention, for the Standing section a
     # round document writes.
     sys.path.insert(0, str(REPO / "tools"))
     import dev_shape_budget
+
     print()
     print(dev_shape_budget.table())
     return 1 if problems else 0
@@ -1184,62 +1235,80 @@ def run_checks() -> int:
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("uid", nargs="?", help="e.g. UX-329")
-    parser.add_argument("--outcome", action="store_true",
-                        help="print the Outcome skeleton to fill in")
+    parser.add_argument("--outcome", action="store_true", help="print the Outcome skeleton to fill in")
     parser.add_argument("--round", default="NN")
     parser.add_argument("--date", default="YYYY-MM-DD")
     parser.add_argument("--mutations", type=int, default=2)
-    parser.add_argument("--move", action="store_true",
-                        help="flip both markers, move the row, fix the counts")
-    parser.add_argument("--note", default="",
-                        help="the one-line narrative for the closed.md row "
-                             "- a shell word, so a backtick in it runs "
-                             "(UX-768); prefer --note-file")
-    parser.add_argument("--note-file", default=None,
-                        help="read the note from this file instead - it "
-                             "never transits a shell word (UX-768)")
-    parser.add_argument("--check", action="store_true",
-                        help="report every status/priority/shape/area/id "
-                             "disagreement - read-only (UX-996)")
-    parser.add_argument("--write", action="store_true",
-                        help="with --shape: put the derived shape in the "
-                             "header (UX-706). Nothing else writes - a "
-                             "derived figure is printed, never committed "
-                             "(UX-996)")
-    parser.add_argument("--shape", action="store_true",
-                        help="print the shape a task's text derives - "
-                             "mechanical, bounded or judgement - for one "
-                             "id or every open row; with --write, put it "
-                             "in the header (UX-706)")
-    parser.add_argument("--counts", action="store_true",
-                        help="print the counts sentence and topic table "
-                             "(UX-501); never committed (UX-996)")
-    parser.add_argument("--areas", nargs="?", const="", default=None,
-                        metavar="NAME",
-                        help="print an area page (UX-688) - one named area, "
-                             "or every one; never committed (UX-996)")
-    parser.add_argument("--figures", action="store_true",
-                        help="fixing guide §3.6's grep: figures this diff "
-                             "removed that the backlog still writes")
-    parser.add_argument("--diff", default=None,
-                        help="read the diff from this file instead of "
-                             "`git diff HEAD` (for a guard)")
+    parser.add_argument("--move", action="store_true", help="flip both markers, move the row, fix the counts")
+    parser.add_argument(
+        "--note",
+        default="",
+        help="the one-line narrative for the closed row "
+        "- a shell word, so a backtick in it runs "
+        "(UX-768); prefer --note-file",
+    )
+    parser.add_argument(
+        "--note-file",
+        default=None,
+        help="read the note from this file instead - it never transits a shell word (UX-768)",
+    )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="report every status/priority/shape/area/id disagreement - read-only (UX-996)",
+    )
+    parser.add_argument(
+        "--write",
+        action="store_true",
+        help="with --shape: put the derived shape in the "
+        "header (UX-706). Nothing else writes - a "
+        "derived figure is printed, never committed "
+        "(UX-996)",
+    )
+    parser.add_argument(
+        "--shape",
+        action="store_true",
+        help="print the shape a task's text derives - "
+        "mechanical, bounded or judgement - for one "
+        "id or every open row; with --write, put it "
+        "in the header (UX-706)",
+    )
+    parser.add_argument(
+        "--counts",
+        action="store_true",
+        help="print the counts sentence and topic table (UX-501); never committed (UX-996)",
+    )
+    parser.add_argument(
+        "--areas",
+        nargs="?",
+        const="",
+        default=None,
+        metavar="NAME",
+        help="print an area page (UX-688) - one named area, or every one; never committed (UX-996)",
+    )
+    parser.add_argument(
+        "--figures",
+        action="store_true",
+        help="fixing guide §3.6's grep: figures this diff removed that the backlog still writes",
+    )
+    parser.add_argument(
+        "--diff", default=None, help="read the diff from this file instead of `git diff HEAD` (for a guard)"
+    )
     # UX-336: so a guard can exercise `--move` against a copy. Found by
     # falsifying this file's own refusal: with the Outcome check removed
     # the clause *performed* the move, on the real backlog. A test that
     # edits the repository when the code under test misbehaves is a
     # worse instrument than the thing it is testing.
-    parser.add_argument("--scenarios", default=None,
-                        help="the scenarios directory to act on "
-                             "(default: this repository's)")
+    parser.add_argument(
+        "--scenarios", default=None, help="the scenarios directory to act on (default: this repository's)"
+    )
     # UX-709: several ids, each with its own --note, pulled out before
     # argparse sees them - a single positional can't hold more than one.
     raw = list(sys.argv[1:] if argv is None else argv)
     pairs, leftover_bare, filtered = _split_move_batch(raw)
     batch = bool(pairs) and "--move" in filtered
     if batch and leftover_bare:
-        parser.error("--move needs --note for every id; missing for: "
-                     + ", ".join(leftover_bare))
+        parser.error("--move needs --note for every id; missing for: " + ", ".join(leftover_bare))
     args = parser.parse_args(filtered)
 
     if args.scenarios:
@@ -1249,11 +1318,9 @@ def main(argv=None) -> int:
         CLOSED = SCENARIOS / "closed.md"
 
     if args.write and not args.shape:
-        parser.error("--write is what --shape does instead of reporting; "
-                     "give both - nothing else writes (UX-996)")
+        parser.error("--write is what --shape does instead of reporting; give both - nothing else writes (UX-996)")
     if args.shape:
-        numbers = ([int(re.sub(r"[^0-9]", "", args.uid))] if args.uid
-                   else open_uids())
+        numbers = [int(re.sub(r"[^0-9]", "", args.uid))] if args.uid else open_uids()
         return report_shapes(numbers, args.write)
     if args.counts:
         sentence, table = index_header()
@@ -1266,36 +1333,32 @@ def main(argv=None) -> int:
         # id stays the read-only entry point (--areas never writes).
         sys.path.insert(0, str(REPO / "tools"))
         import dev_area_pages
+
         return dev_area_pages.report_areas(args.areas or None)
     if args.check and checks.index_is_merged(_ls_files, _on_the_real_index()):
         return run_checks()
     if args.figures:
-        diff = (pathlib.Path(args.diff).read_text(encoding="utf-8")
-                if args.diff else working_diff())
-        return report_figures(diff,
-                              skip=task_file(args.uid) if args.uid else None)
+        diff = pathlib.Path(args.diff).read_text(encoding="utf-8") if args.diff else working_diff()
+        return report_figures(diff, skip=task_file(args.uid) if args.uid else None)
     if not args.uid and not batch:
-        parser.error("a UX id is required unless --check, --counts, --areas "
-                     "or --figures is given")
+        parser.error("a UX id is required unless --check, --counts, --areas or --figures is given")
     if args.outcome:
-        print(OUTCOME_SKELETON.format(round=args.round, date=args.date,
-                                      n=args.mutations, cap=OUTCOME_CAP))
+        print(OUTCOME_SKELETON.format(round=args.round, date=args.date, n=args.mutations, cap=OUTCOME_CAP))
         return 0
     if args.move:
         if batch:
             return move_batch(pairs)
         if args.note and args.note_file:
             parser.error("--note and --note-file: give one, not both")
-        note = (pathlib.Path(args.note_file).read_text(
-                    encoding="utf-8").rstrip("\n")
-                if args.note_file else args.note)
+        note = pathlib.Path(args.note_file).read_text(encoding="utf-8").rstrip("\n") if args.note_file else args.note
         if not note:
-            parser.error("--move needs --note or --note-file: the "
-                         "closed.md row is a sentence about what was "
-                         "found, and nothing can write it for you")
+            parser.error(
+                "--move needs --note or --note-file: the "
+                "closed row is a sentence about what was "
+                "found, and nothing can write it for you"
+            )
         return move(args.uid, note)
-    parser.error("give --outcome, --move, --check, --counts, --areas or "
-                 "--figures")
+    parser.error("give --outcome, --move, --check, --counts, --areas or --figures")
 
 
 if __name__ == "__main__":

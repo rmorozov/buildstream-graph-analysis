@@ -166,7 +166,7 @@ def parse_element_log(path: str, project_root: Optional[str] = None) -> Optional
                 pending_command = None
             continue
         if line.startswith(_COMMAND_PREFIX):
-            body = line[len(_COMMAND_PREFIX):]
+            body = line[len(_COMMAND_PREFIX) :]
             if body.rstrip().endswith('\\'):
                 pending_command = [body.strip()]
             elif body.strip():
@@ -174,11 +174,13 @@ def parse_element_log(path: str, project_root: Optional[str] = None) -> Optional
             continue
         timed = _SELF_TIMED_RE.match(line.strip())
         if timed:
-            self_timed.append({
-                'what': timed.group('what'),
-                'duration_us': int(float(timed.group('secs')) * 1_000_000),
-                'source': 'the tool reported this itself',
-            })
+            self_timed.append(
+                {
+                    'what': timed.group('what'),
+                    'duration_us': int(float(timed.group('secs')) * 1_000_000),
+                    'source': 'the tool reported this itself',
+                }
+            )
             continue
         event = _EVENT_RE.match(line)
         if not event:
@@ -197,11 +199,13 @@ def parse_element_log(path: str, project_root: Optional[str] = None) -> Optional
             total_us = duration_us
             outcome = event.group('state')
             continue
-        phases.append({
-            'name': activity,
-            'duration_us': duration_us,
-            'outcome': event.group('state'),
-        })
+        phases.append(
+            {
+                'name': activity,
+                'duration_us': duration_us,
+                'outcome': event.group('state'),
+            }
+        )
 
     return {
         'path': os.path.relpath(path, project_root) if project_root else path,
@@ -352,30 +356,28 @@ def sandbox_tax(records: list[dict]) -> dict:
                 element_work += duration
             else:
                 element_toll += duration
-                by_family[_phase_family(phase['name'])] = (
-                    by_family.get(_phase_family(phase['name']), 0) + duration
-                )
+                by_family[_phase_family(phase['name'])] = by_family.get(_phase_family(phase['name']), 0) + duration
         work_us += element_work
         toll_us += element_toll
         total_us += record['total_us']
-        payers.append({
-            'element': record['element'],
-            'cache_key': record['cache_key'],
-            'started_at': record['started_at'],
-            'total_us': record['total_us'],
-            'work_us': element_work,
-            'toll_us': element_toll,
-            'toll_share': element_toll / record['total_us'],
-        })
+        payers.append(
+            {
+                'element': record['element'],
+                'cache_key': record['cache_key'],
+                'started_at': record['started_at'],
+                'total_us': record['total_us'],
+                'work_us': element_work,
+                'toll_us': element_toll,
+                'toll_share': element_toll / record['total_us'],
+            }
+        )
 
     return {
         # Logs, not distinct elements: these accumulate across builds, so
         # `core.bst` appears once per build it took part in. Counted the
         # way it is summed, so the two numbers agree.
         'build_logs': len(builds),
-        'build_logs_without_a_total': sum(
-            1 for r in records if r['action'] == 'build' and not r['total_us']
-        ),
+        'build_logs_without_a_total': sum(1 for r in records if r['action'] == 'build' and not r['total_us']),
         'total_us': total_us,
         'work_us': work_us,
         'toll_us': toll_us,
@@ -435,25 +437,23 @@ def phase_breakdown(records: list[dict]) -> list[dict]:
         # UX-99: the toll/work split, per element, unfiltered by
         # `PHASE_SHARE_FLOOR` - the floor decides which phases are worth
         # a *row*, and a toll that is small is still part of the split.
-        work_us = sum(
-            p['duration_us'] or 0 for p in record['phases'] if p['name'] == WORK_PHASE
+        work_us = sum(p['duration_us'] or 0 for p in record['phases'] if p['name'] == WORK_PHASE)
+        toll_us = sum(p['duration_us'] or 0 for p in record['phases'] if p['name'] != WORK_PHASE)
+        rows.append(
+            {
+                'element': record['element'],
+                'cache_key': record['cache_key'],
+                'started_at': record['started_at'],
+                'total_us': total,
+                'work_us': work_us,
+                'toll_us': toll_us,
+                'toll_share': toll_us / total,
+                'phases': sorted(phases, key=lambda p: -p['duration_us']),
+                'commands': record['commands'],
+                'self_timed': record['self_timed'],
+                'unaccounted_us': total - sum(p['duration_us'] for p in record['phases']),
+            }
         )
-        toll_us = sum(
-            p['duration_us'] or 0 for p in record['phases'] if p['name'] != WORK_PHASE
-        )
-        rows.append({
-            'element': record['element'],
-            'cache_key': record['cache_key'],
-            'started_at': record['started_at'],
-            'total_us': total,
-            'work_us': work_us,
-            'toll_us': toll_us,
-            'toll_share': toll_us / total,
-            'phases': sorted(phases, key=lambda p: -p['duration_us']),
-            'commands': record['commands'],
-            'self_timed': record['self_timed'],
-            'unaccounted_us': total - sum(p['duration_us'] for p in record['phases']),
-        })
     return sorted(rows, key=lambda r: (-r['total_us'], r['element']))
 
 
@@ -498,21 +498,22 @@ def configure_tax(records: list[dict]) -> dict:
     total_us = configure_us = 0
     for record in builds:
         element_configure = sum(
-            timed['duration_us'] for timed in record['self_timed']
-            if timed['what'] in CONFIGURE_SELF_TIMED
+            timed['duration_us'] for timed in record['self_timed'] if timed['what'] in CONFIGURE_SELF_TIMED
         )
         total_us += record['total_us']
         configure_us += element_configure
         if element_configure:
-            rows.append({
-                'element': record['element'],
-                'cache_key': record['cache_key'],
-                'started_at': record['started_at'],
-                'total_us': record['total_us'],
-                'configure_us': element_configure,
-                'configure_share': element_configure / record['total_us'],
-                'source': 'plane3-self-reported',
-            })
+            rows.append(
+                {
+                    'element': record['element'],
+                    'cache_key': record['cache_key'],
+                    'started_at': record['started_at'],
+                    'total_us': record['total_us'],
+                    'configure_us': element_configure,
+                    'configure_share': element_configure / record['total_us'],
+                    'source': 'plane3-self-reported',
+                }
+            )
     if not builds:
         return {}
     return {
@@ -549,28 +550,26 @@ def join_configure_views(plane3: dict, native_report: Optional[dict]) -> dict:
     whose `configure` does not report itself - and that is the case the
     self-report is blind to and the prize is largest in.
     """
-    plane2 = ((native_report or {}).get('configure_phase') or {})
+    plane2 = (native_report or {}).get('configure_phase') or {}
     if not plane2.get('available'):
         return {}
-    plane3_by_element = {
-        row['element']: row for row in (plane3.get('top_payers') or [])
-    }
+    plane3_by_element = {row['element']: row for row in (plane3.get('top_payers') or [])}
     rows = []
     for element, entry in plane2['per_element'].items():
         plane3_row = plane3_by_element.get(element)
-        rows.append({
-            'element': element,
-            'plane2_configure_cpu_us': entry['configure_cpu_us'],
-            'plane2_configure_share': entry['configure_share'],
-            'plane2_coverage': entry['coverage'],
-            'plane3_configure_us': (plane3_row or {}).get('configure_us'),
-            'plane3_configure_share': (plane3_row or {}).get('configure_share'),
-            # The case worth naming: Plane 2 found a configure subtree
-            # and Plane 3 heard nothing about it.
-            'self_report_missing': bool(
-                entry['configure_cpu_us'] and not (plane3_row or {}).get('configure_us')
-            ),
-        })
+        rows.append(
+            {
+                'element': element,
+                'plane2_configure_cpu_us': entry['configure_cpu_us'],
+                'plane2_configure_share': entry['configure_share'],
+                'plane2_coverage': entry['coverage'],
+                'plane3_configure_us': (plane3_row or {}).get('configure_us'),
+                'plane3_configure_share': (plane3_row or {}).get('configure_share'),
+                # The case worth naming: Plane 2 found a configure subtree
+                # and Plane 3 heard nothing about it.
+                'self_report_missing': bool(entry['configure_cpu_us'] and not (plane3_row or {}).get('configure_us')),
+            }
+        )
     return {
         'elements': sorted(rows, key=lambda r: (-r['plane2_configure_cpu_us'], r['element'])),
         'elements_without_a_self_report': sum(1 for r in rows if r['self_report_missing']),
@@ -628,19 +627,23 @@ def elements_by_toll(rows):
     """
     totals = {}
     for row in rows:
-        entry = totals.setdefault(row['element'], {
-            'element': row['element'], 'total_us': 0,
-            'work_us': 0, 'toll_us': 0, 'builds': 0,
-        })
+        entry = totals.setdefault(
+            row['element'],
+            {
+                'element': row['element'],
+                'total_us': 0,
+                'work_us': 0,
+                'toll_us': 0,
+                'builds': 0,
+            },
+        )
         entry['total_us'] += row['total_us']
         entry['work_us'] += row['work_us']
         entry['toll_us'] += row['toll_us']
         entry['builds'] += 1
     for entry in totals.values():
-        entry['toll_share'] = (entry['toll_us'] / entry['total_us']
-                               if entry['total_us'] else None)
-    return sorted(totals.values(),
-                  key=lambda entry: (-entry['toll_us'], entry['element']))
+        entry['toll_share'] = entry['toll_us'] / entry['total_us'] if entry['total_us'] else None
+    return sorted(totals.values(), key=lambda entry: (-entry['toll_us'], entry['element']))
 
 
 #: How many payers a finding names. Four **distinct** elements
@@ -704,39 +707,39 @@ def _plane3_findings(plane3_configure: dict, views: dict) -> list[dict]:
     if (share or 0) < CONFIGURE_SHARE_NOTABLE and not plane2_share:
         return []
 
-    payers = top_distinct_payers(plane3_configure.get('top_payers') or [],
-                                 'configure_us')
+    payers = top_distinct_payers(plane3_configure.get('top_payers') or [], 'configure_us')
     if views.get('elements'):
         payers = payers or top_distinct_payers(
-            [r for r in views['elements'] if r['plane2_configure_cpu_us']],
-            'plane2_configure_cpu_us')
+            [r for r in views['elements'] if r['plane2_configure_cpu_us']], 'plane2_configure_cpu_us'
+        )
     prize = (
-        f"{plane3_configure['configure_us'] / 1e6:.1f}s self-reported"
-        if plane3_configure.get('configure_us') else None
+        f"{plane3_configure['configure_us'] / 1e6:.1f}s self-reported" if plane3_configure.get('configure_us') else None
     )
     if plane2_share:
         measured = f"{plane2_share / 1e6:.1f} CPU s traced"
         prize = f"{prize}, {measured}" if prize else measured
-    return [{
-        'id': 'configure-tax',
-        'severity': 'info' if (share or 0) < CONFIGURE_SHARE_NOTABLE else 'medium',
-        'title': (
-            f"Configuring cost {prize} across this log tree"
-            + (f" ({share * 100:.1f}% of element time)" if share else "")
-            + (f" - paid most by {', '.join(payers)}" if payers else "")
-            + ". Elements that configure independently re-answer the same "
-            "questions; config caches, merged elements or reusing a generated "
-            "config are the usual remedies, and which applies is a fact about "
-            "the project rather than about this measurement"
-        ),
-        'evidence': {
-            'plane3_configure_us': plane3_configure.get('configure_us'),
-            'plane3_configure_share': share,
-            'plane2_configure_cpu_us': plane2_share,
-            'elements_without_a_self_report': views.get('elements_without_a_self_report'),
-            'top_payers': payers,
-        },
-    }]
+    return [
+        {
+            'id': 'configure-tax',
+            'severity': 'info' if (share or 0) < CONFIGURE_SHARE_NOTABLE else 'medium',
+            'title': (
+                f"Configuring cost {prize} across this log tree"
+                + (f" ({share * 100:.1f}% of element time)" if share else "")
+                + (f" - paid most by {', '.join(payers)}" if payers else "")
+                + ". Elements that configure independently re-answer the same "
+                "questions; config caches, merged elements or reusing a generated "
+                "config are the usual remedies, and which applies is a fact about "
+                "the project rather than about this measurement"
+            ),
+            'evidence': {
+                'plane3_configure_us': plane3_configure.get('configure_us'),
+                'plane3_configure_share': share,
+                'plane2_configure_cpu_us': plane2_share,
+                'elements_without_a_self_report': views.get('elements_without_a_self_report'),
+                'top_payers': payers,
+            },
+        }
+    ]
 
 
 # UX-101: a ranking over fewer builds than this is a list, not a trend.
@@ -771,7 +774,9 @@ def _predecessors_by_successor(dependencies: Optional[list[dict]]) -> dict[str, 
 
 
 def _rebuild_causes(
-    element: str, history: list[dict], by_element: dict[str, list[dict]],
+    element: str,
+    history: list[dict],
+    by_element: dict[str, list[dict]],
     predecessors: dict[str, list[str]],
 ) -> tuple[dict[str, int], dict[str, int]]:
     """For each rebuild after `element`'s first: unchanged key, own key
@@ -780,18 +785,22 @@ def _rebuild_causes(
     Factored out of `developer_tax` so `change_frequency` reads the same
     annotation rather than re-deciding what a rebuild's cause is.
     """
+
     def _key_changed_between(name: str, start_us, end_us) -> bool:
         """Whether `name`'s cache key changed across (start_us, end_us]."""
         other_history = by_element.get(name) or []
         keys = [
-            record['cache_key'] for record in other_history
-            if start_us is not None and record['started_us'] is not None
+            record['cache_key']
+            for record in other_history
+            if start_us is not None
+            and record['started_us'] is not None
             and start_us < record['started_us'] <= (end_us or 0)
         ]
         if not keys:
             return False
         before = [
-            record['cache_key'] for record in other_history
+            record['cache_key']
+            for record in other_history
             if record['started_us'] is not None and record['started_us'] <= start_us
         ]
         return bool(before) and keys[-1] != before[-1]
@@ -803,9 +812,12 @@ def _rebuild_causes(
             causes['unchanged_key'] += 1
             continue
         upstream = [
-            name for name in predecessors.get(element, [])
+            name
+            for name in predecessors.get(element, [])
             if _key_changed_between(
-                name, previous['started_us'], current['started_us'],
+                name,
+                previous['started_us'],
+                current['started_us'],
             )
         ]
         if upstream:
@@ -863,18 +875,20 @@ def developer_tax(records: list[dict], dependencies: Optional[list[dict]] = None
     for element, history in by_element.items():
         total_us = sum(record['total_us'] for record in history)
         causes, roots = _rebuild_causes(element, history, by_element, predecessors)
-        rows.append({
-            'element': element,
-            'build_count': len(history),
-            'total_us': total_us,
-            'mean_us': total_us / len(history),
-            'distinct_keys': len({record['cache_key'] for record in history}),
-            'causes': causes,
-            'upstream_roots': sorted(
-                ({'element': name, 'downstream_us': cost} for name, cost in roots.items()),
-                key=lambda entry: (-entry['downstream_us'], entry['element']),
-            ),
-        })
+        rows.append(
+            {
+                'element': element,
+                'build_count': len(history),
+                'total_us': total_us,
+                'mean_us': total_us / len(history),
+                'distinct_keys': len({record['cache_key'] for record in history}),
+                'causes': causes,
+                'upstream_roots': sorted(
+                    ({'element': name, 'downstream_us': cost} for name, cost in roots.items()),
+                    key=lambda entry: (-entry['downstream_us'], entry['element']),
+                ),
+            }
+        )
     rows.sort(key=lambda row: (-row['total_us'], row['element']))
 
     starts = [r['started_us'] for r in builds if r['started_us']]
@@ -886,9 +900,7 @@ def developer_tax(records: list[dict], dependencies: Optional[list[dict]] = None
         'window_end': max((r['started_at'] for r in builds if r['started_at']), default=None),
         'window_us': (max(starts) - min(starts)) if len(starts) > 1 else 0,
         'weak_window': builds_lower_bound < TAX_WINDOW_STRONG_BUILDS,
-        'causes_available': ['unchanged_key', 'own_key_changed'] + (
-            ['rooted_upstream'] if dependencies else []
-        ),
+        'causes_available': ['unchanged_key', 'own_key_changed'] + (['rooted_upstream'] if dependencies else []),
         'ranking': rows,
         'caveat': (
             "Ranked by total build seconds across every build log in the tree. "
@@ -959,12 +971,14 @@ def change_frequency(records: list[dict], dependencies: Optional[list[dict]] = N
         causes, _roots = _rebuild_causes(element, history, by_element, predecessors)
         rebuilds = len(history)
         unchanged = causes['unchanged_key']
-        elements.append({
-            'element': element,
-            'rebuilds': rebuilds,
-            'unchanged_key_rebuilds': unchanged,
-            'unchanged_key_share': (unchanged / rebuilds) if rebuilds else 0.0,
-        })
+        elements.append(
+            {
+                'element': element,
+                'rebuilds': rebuilds,
+                'unchanged_key_rebuilds': unchanged,
+                'unchanged_key_share': (unchanged / rebuilds) if rebuilds else 0.0,
+            }
+        )
     elements.sort(key=lambda row: (-row['rebuilds'], row['element']))
 
     names = sorted(by_element)
@@ -972,20 +986,22 @@ def change_frequency(records: list[dict], dependencies: Optional[list[dict]] = N
     pairs_below_floor = 0
     for i, a in enumerate(names):
         times_a = [r['started_us'] for r in by_element[a] if r['started_us'] is not None]
-        for b in names[i + 1:]:
+        for b in names[i + 1 :]:
             times_b = [r['started_us'] for r in by_element[b] if r['started_us'] is not None]
             co_rebuilds = _co_rebuilds(times_a, times_b, CO_CHANGE_WINDOW_US)
             if co_rebuilds < CO_CHANGE_MIN_REBUILDS:
                 if co_rebuilds:
                     pairs_below_floor += 1
                 continue
-            co_change.append({
-                'a': a,
-                'b': b,
-                'co_rebuilds': co_rebuilds,
-                'share_of_a': co_rebuilds / len(by_element[a]),
-                'share_of_b': co_rebuilds / len(by_element[b]),
-            })
+            co_change.append(
+                {
+                    'a': a,
+                    'b': b,
+                    'co_rebuilds': co_rebuilds,
+                    'share_of_a': co_rebuilds / len(by_element[a]),
+                    'share_of_b': co_rebuilds / len(by_element[b]),
+                }
+            )
     co_change.sort(key=lambda row: (-row['co_rebuilds'], row['a'], row['b']))
 
     starts = [r['started_us'] for r in builds if r['started_us'] is not None]
@@ -1003,7 +1019,8 @@ def change_frequency(records: list[dict], dependencies: Optional[list[dict]] = N
 
 
 def build_report(
-    records: list[dict], native_report: Optional[dict] = None,
+    records: list[dict],
+    native_report: Optional[dict] = None,
     dependencies: Optional[list[dict]] = None,
 ) -> dict:
     projects = sorted({r['project'] for r in records if r['project']})
@@ -1050,7 +1067,7 @@ def _elide_element(name: str, width: int = _ELEMENT_COLUMN_CHARS) -> str:
     distinguishing part, so the head is what gives way."""
     if len(name) <= width:
         return name
-    return "…" + name[-(width - 1):]
+    return "…" + name[-(width - 1) :]
 
 
 def _pct(share: float) -> str:
@@ -1092,15 +1109,9 @@ def format_report_text(report: dict) -> str:
                 f"({row['total_us'] / 1e6:.1f}s)"
             )
             for phase in row['phases']:
-                lines.append(
-                    f"    {phase['name']:<32s} {phase['duration_us'] / 1e6:7.1f}s "
-                    f"({_pct(phase['share'])})"
-                )
+                lines.append(f"    {phase['name']:<32s} {phase['duration_us'] / 1e6:7.1f}s ({_pct(phase['share'])})")
             for timed in row['self_timed']:
-                lines.append(
-                    f"    {timed['what'] + ' (self-reported)':<32s} "
-                    f"{timed['duration_us'] / 1e6:7.1f}s"
-                )
+                lines.append(f"    {timed['what'] + ' (self-reported)':<32s} {timed['duration_us'] / 1e6:7.1f}s")
         if len(rows) > _ELEMENTS_SHOWN:
             lines.append(f"  (+{len(rows) - _ELEMENTS_SHOWN} more element(s), see --format json)")
     lines.append('')
@@ -1123,9 +1134,7 @@ def format_report_text(report: dict) -> str:
         for phase in tax['by_phase']:
             if not phase['duration_us']:
                 continue
-            lines.append(
-                f"    {phase['phase']:<32s} {phase['duration_us'] / 1e6:7.1f}s"
-            )
+            lines.append(f"    {phase['phase']:<32s} {phase['duration_us'] / 1e6:7.1f}s")
         payers = [p for p in tax['top_payers'] if p['toll_us']][:_TAX_PAYERS_SHOWN]
         if payers:
             lines.append('  Who paid it (by tax seconds, not by share):')
@@ -1160,14 +1169,9 @@ def format_report_text(report: dict) -> str:
             )
         if views.get('elements'):
             lines.append('  Both planes, per element (wall vs CPU - shown, never summed):')
-            lines.append(
-                f"    {'element':<28s} {'Plane 3 wall':>13s} {'Plane 2 CPU':>12s}  coverage"
-            )
+            lines.append(f"    {'element':<28s} {'Plane 3 wall':>13s} {'Plane 2 CPU':>12s}  coverage")
             for row in views['elements'][:_TAX_PAYERS_SHOWN]:
-                plane3 = (
-                    f"{row['plane3_configure_us'] / 1e6:.2f}s"
-                    if row['plane3_configure_us'] else 'not reported'
-                )
+                plane3 = f"{row['plane3_configure_us'] / 1e6:.2f}s" if row['plane3_configure_us'] else 'not reported'
                 lines.append(
                     f"    {row['element']:<28s} {plane3:>13s} "
                     f"{row['plane2_configure_cpu_us'] / 1e6:>11.2f}s "
@@ -1189,14 +1193,16 @@ def format_report_text(report: dict) -> str:
         # from any single build's critical path.
         window = (
             f"{tax['window_start']} .. {tax['window_end']}"
-            if tax['window_start'] and tax['window_end'] else 'an unrecorded window'
+            if tax['window_start'] and tax['window_end']
+            else 'an unrecorded window'
         )
         lines.append(
             f"Developer tax across {tax['build_logs']} build log(s) over {window} "
             f"(at least {tax['builds_lower_bound']} build(s))"
             + (
-                " - WEAK EVIDENCE at this few builds, printed with the count rather "
-                "than withheld" if tax['weak_window'] else ""
+                " - WEAK EVIDENCE at this few builds, printed with the count rather than withheld"
+                if tax['weak_window']
+                else ""
             )
         )
         shown = tax['ranking'][:_TAX_ELEMENTS_SHOWN]
@@ -1204,34 +1210,24 @@ def format_report_text(report: dict) -> str:
         # rebuilt more than once. An empty column on every other run
         # reads as "no cause found" rather than "no cause could be
         # looked for".
-        any_cause = any(
-            any(count for count in row['causes'].values()) for row in shown
-        )
-        lines.append(
-            f"  {'element':<28s} {'builds':>6s} {'total':>9s} {'mean':>8s}"
-            + ("  cause" if any_cause else "")
-        )
+        any_cause = any(any(count for count in row['causes'].values()) for row in shown)
+        lines.append(f"  {'element':<28s} {'builds':>6s} {'total':>9s} {'mean':>8s}" + ("  cause" if any_cause else ""))
         for row in shown:
             causes = row['causes']
-            parts = [
-                f"{count}x {name.replace('_', ' ')}"
-                for name, count in causes.items() if count
-            ]
+            parts = [f"{count}x {name.replace('_', ' ')}" for name, count in causes.items() if count]
             lines.append(
-                (f"  {_elide_element(row['element']):<28s} {row['build_count']:>6d} "
-                 f"{row['total_us'] / 1e6:>8.1f}s {row['mean_us'] / 1e6:>7.1f}s"
-                 + ("  " + ", ".join(parts) if parts else "")).rstrip()
+                (
+                    f"  {_elide_element(row['element']):<28s} {row['build_count']:>6d} "
+                    f"{row['total_us'] / 1e6:>8.1f}s {row['mean_us'] / 1e6:>7.1f}s"
+                    + ("  " + ", ".join(parts) if parts else "")
+                ).rstrip()
             )
             for root in row['upstream_roots'][:2]:
                 lines.append(
-                    f"      rooted at {root['element']} "
-                    f"({root['downstream_us'] / 1e6:.1f}s of this element's rebuilds)"
+                    f"      rooted at {root['element']} ({root['downstream_us'] / 1e6:.1f}s of this element's rebuilds)"
                 )
         if len(tax['ranking']) > _TAX_ELEMENTS_SHOWN:
-            lines.append(
-                f"  (+{len(tax['ranking']) - _TAX_ELEMENTS_SHOWN} more element(s), "
-                f"see --format json)"
-            )
+            lines.append(f"  (+{len(tax['ranking']) - _TAX_ELEMENTS_SHOWN} more element(s), see --format json)")
         if 'rooted_upstream' not in tax['causes_available']:
             lines.append(
                 "  No graph supplied, so a rebuild caused by an upstream key change "
@@ -1283,10 +1279,7 @@ def format_report_text(report: dict) -> str:
         )
         for finding in repeated[:_REPEATED_SHOWN]:
             shown = ", ".join(finding['elements'][:4])
-            more = (
-                f" (+{finding['element_count'] - 4} more)"
-                if finding['element_count'] > 4 else ""
-            )
+            more = f" (+{finding['element_count'] - 4} more)" if finding['element_count'] > 4 else ""
             lines.append(f"  {finding['element_count']}x  {finding['command'][:100]}")
             lines.append(f"        in {shown}{more}")
         if len(repeated) > _REPEATED_SHOWN:
@@ -1312,7 +1305,8 @@ def default_log_root() -> str:
     have worked out.
     """
     base = os.environ.get('XDG_CACHE_HOME') or os.path.join(
-        os.path.expanduser('~'), '.cache',
+        os.path.expanduser('~'),
+        '.cache',
     )
     return os.path.join(base, 'buildstream', 'logs')
 
@@ -1357,10 +1351,16 @@ def summarize_log_tree(root: str) -> list[dict]:
     projects: dict[str, dict] = {}
     for record in scan_log_tree(root):
         name = record.get('project') or '(unknown)'
-        entry = projects.setdefault(name, {
-            'project': name, 'logs': 0, 'elements': set(),
-            'first_us': None, 'last_us': None,
-        })
+        entry = projects.setdefault(
+            name,
+            {
+                'project': name,
+                'logs': 0,
+                'elements': set(),
+                'first_us': None,
+                'last_us': None,
+            },
+        )
         entry['logs'] += 1
         entry['elements'].add(record.get('element'))
         started = record.get('started_us')
@@ -1384,51 +1384,51 @@ def format_log_tree_listing(root: str, projects: list[dict]) -> str:
     for entry in projects:
         lines.append(f"  {entry['project']:<44} {entry['logs']:>6} {entry['elements']:>9}")
         if entry['first_us'] is not None and entry['last_us'] is not None:
-            lines.append(
-                f"      {_stamp(entry['first_us'])} .. {_stamp(entry['last_us'])}"
-            )
-    lines += ['', '  Report on one with `bga cache-logs PROJECT_DIR` (or --project NAME),',
-              '  or on every project at once with --all.']
+            lines.append(f"      {_stamp(entry['first_us'])} .. {_stamp(entry['last_us'])}")
+    lines += [
+        '',
+        '  Report on one with `bga cache-logs PROJECT_DIR` (or --project NAME),',
+        '  or on every project at once with --all.',
+    ]
     return '\n'.join(lines)
 
 
 def _stamp(micros: Optional[int]) -> str:
     if micros is None:
         return '(no timestamp)'
-    return datetime.fromtimestamp(micros / 1e6, timezone.utc).strftime(
-        '%Y-%m-%d %H:%M:%S UTC')
+    return datetime.fromtimestamp(micros / 1e6, timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
 
 
 def _CompactRawHelp(prog):
     """UX-158: one shared compact help layout, imported lazily so
     this module stays runnable on its own."""
     from bga.help_format import CompactRawHelp
+
     return CompactRawHelp(prog)
+
 
 def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(
-        description=HELP, formatter_class=_CompactRawHelp,
+        description=HELP,
+        formatter_class=_CompactRawHelp,
     )
     parser.add_argument(
-        'target', nargs='?', default=None, metavar='PROJECT_DIR|LOG_ROOT',
-        help='UX-127: a BuildStream **project directory** (detected by its project.conf) - the obvious argument, and the one that does the right thing: the project name is read from it and the log root resolved automatically.'
+        'target',
+        nargs='?',
+        default=None,
+        metavar='PROJECT_DIR|LOG_ROOT',
+        help='UX-127: a BuildStream **project directory** (detected by its project.conf) - the obvious argument, and the one that does the right thing: the project name is read from it and the log root resolved automatically.',
     )
     parser.add_argument('--project', default=None, help='Only this project\'s logs.')
+    parser.add_argument('--all', action='store_true', help='UX-127: report over every project in the log tree at once.')
     parser.add_argument(
-        '--all', action='store_true',
-        help='UX-127: report over every project in the log tree at once.'
+        '--list',
+        action='store_true',
+        help='List the projects the log tree holds, with log counts and time spans, and exit.',
     )
+    parser.add_argument('--graph', default=None, help='A run directory\'s `graph.json`.')
     parser.add_argument(
-        '--list', action='store_true',
-        help='List the projects the log tree holds, with log counts and time spans, and exit.'
-    )
-    parser.add_argument(
-        '--graph', default=None,
-        help='A run directory\'s `graph.json`.'
-    )
-    parser.add_argument(
-        '--native-report', default=None,
-        help='A Plane 2 report (`bga capture run`\'s JSON) from the same build.'
+        '--native-report', default=None, help='A Plane 2 report (`bga capture run`\'s JSON) from the same build.'
     )
     parser.add_argument('-f', '--format', choices=['text', 'json'], default='text')
     parser.add_argument('-o', '--output', default=None, help='Write here instead of stdout.')
@@ -1442,6 +1442,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     # log-tree lookup happens to say first.
     if args.native_report:
         from bga.run_store import StoreError, resolve_plane2
+
         try:
             args.native_report = resolve_plane2(args.native_report)
         except StoreError as error:
@@ -1479,16 +1480,19 @@ def main(argv: Optional[list[str]] = None) -> int:
         # developer box and failed on a fresh runner.
         lines = [f"Error: no BuildStream log directory at {root}."]
         if project:
-            lines[0] = (f"Error: no BuildStream log directory at {root}, so "
-                        f"there are no logs for project {project!r} to read.")
+            lines[0] = (
+                f"Error: no BuildStream log directory at {root}, so there are no logs for project {project!r} to read."
+            )
             if project_dir:
                 lines.append(
                     f"  {project_dir}/project.conf declares `name: {project}`, "
-                    f"and that is the name BuildStream files its logs under.")
+                    f"and that is the name BuildStream files its logs under."
+                )
         lines.append(
             "  Point this at a log directory explicitly, or run a build "
             "first - these logs are written by BuildStream itself, not by "
-            "bga.")
+            "bga."
+        )
         print("\n".join(lines), file=sys.stderr)
         return 1
 
@@ -1529,12 +1533,13 @@ def main(argv: Optional[list[str]] = None) -> int:
                 )
             lines.append(
                 "  The tree holds: "
-                + (", ".join(available[:8]) + ("…" if len(available) > 8 else "")
-                   if available else "nothing - no build has written logs here yet")
+                + (
+                    ", ".join(available[:8]) + ("…" if len(available) > 8 else "")
+                    if available
+                    else "nothing - no build has written logs here yet"
+                )
             )
-            lines.append(
-                "  `bga cache-logs --list` shows all of them with counts and spans."
-            )
+            lines.append("  `bga cache-logs --list` shows all of them with counts and spans.")
         else:
             # UX-327: the branch a stranger actually lands in, and it
             # used to say "Nothing to report on." - which names neither
@@ -1542,16 +1547,14 @@ def main(argv: Optional[list[str]] = None) -> int:
             # arguments that would have worked.
             default = default_log_root()
             if os.path.abspath(root) != os.path.abspath(default):
-                lines.append(f"  The default log root is {default}; this was "
-                             f"pointed somewhere else.")
+                lines.append(f"  The default log root is {default}; this was pointed somewhere else.")
             lines.append(
                 "  Hand it the project directory instead - `bga cache-logs "
                 "PROJECT_DIR` reads `name:` out of its project.conf and "
                 "resolves the log tree itself - or name the project with "
-                "`--project NAME`.")
-            lines.append(
-                "  `bga cache-logs --list` shows every project the tree "
-                "holds, with counts and spans.")
+                "`--project NAME`."
+            )
+            lines.append("  `bga cache-logs --list` shows every project the tree holds, with counts and spans.")
         print("\n".join(lines), file=sys.stderr)
         return 1
 
@@ -1562,8 +1565,7 @@ def main(argv: Optional[list[str]] = None) -> int:
                 native_report = json.load(handle)
         except (OSError, ValueError) as error:
             print(
-                f"Error: could not read the Plane 2 report at {args.native_report}: "
-                f"{error}",
+                f"Error: could not read the Plane 2 report at {args.native_report}: {error}",
                 file=sys.stderr,
             )
             return 1
@@ -1574,17 +1576,15 @@ def main(argv: Optional[list[str]] = None) -> int:
             with open(args.graph, encoding='utf-8') as handle:
                 dependencies = (json.load(handle) or {}).get('dependencies') or []
         except (OSError, ValueError) as error:
-            print(f"Error: could not read the graph at {args.graph}: {error}",
-                  file=sys.stderr)
+            print(f"Error: could not read the graph at {args.graph}: {error}", file=sys.stderr)
             return 1
 
     report = build_report(
-        records, native_report=native_report, dependencies=dependencies,
+        records,
+        native_report=native_report,
+        dependencies=dependencies,
     )
-    output = (
-        json.dumps(report, indent=2) if args.format == 'json'
-        else format_report_text(report)
-    )
+    output = json.dumps(report, indent=2) if args.format == 'json' else format_report_text(report)
     if args.output:
         with open(args.output, 'w', encoding='utf-8') as handle:
             handle.write(output + '\n')

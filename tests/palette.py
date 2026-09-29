@@ -27,6 +27,7 @@ No dependencies: this runs in the same interpreter as every other
 guard, and a validator that needed a wheel would be a validator nobody
 runs.
 """
+
 import math
 import re
 
@@ -41,18 +42,16 @@ def channels(value):
         text = "".join(c * 2 for c in text)
     if len(text) != 6 or not re.fullmatch(r"[0-9a-fA-F]{6}", text):
         raise ValueError(f"not a hex color: {value!r}")
-    return tuple(int(text[i:i + 2], 16) / 255 for i in (0, 2, 4))
+    return tuple(int(text[i : i + 2], 16) / 255 for i in (0, 2, 4))
 
 
 def _linear(component):
-    return (component / 12.92 if component <= 0.04045
-            else ((component + 0.055) / 1.055) ** 2.4)
+    return component / 12.92 if component <= 0.04045 else ((component + 0.055) / 1.055) ** 2.4
 
 
 def _encode(component):
     component = min(1.0, max(0.0, component))
-    return (12.92 * component if component <= 0.0031308
-            else 1.055 * component ** (1 / 2.4) - 0.055)
+    return 12.92 * component if component <= 0.0031308 else 1.055 * component ** (1 / 2.4) - 0.055
 
 
 def luminance(value):
@@ -70,13 +69,16 @@ def contrast(one, other):
 
 def _xyz(value):
     r, g, b = (_linear(c) for c in channels(value))
-    return (0.4124 * r + 0.3576 * g + 0.1805 * b,
-            0.2126 * r + 0.7152 * g + 0.0722 * b,
-            0.0193 * r + 0.1192 * g + 0.9505 * b)
+    return (
+        0.4124 * r + 0.3576 * g + 0.1805 * b,
+        0.2126 * r + 0.7152 * g + 0.0722 * b,
+        0.0193 * r + 0.1192 * g + 0.9505 * b,
+    )
 
 
 def lab(value):
     """CIE L*a*b* against D65."""
+
     def f(t):
         return t ** (1 / 3) if t > (6 / 29) ** 3 else t / (3 * (6 / 29) ** 2) + 4 / 29
 
@@ -96,7 +98,7 @@ def delta_e(one, other):
     l2, a2, b2 = lab(other)
     c1, c2 = math.hypot(a1, b1), math.hypot(a2, b2)
     cbar = (c1 + c2) / 2
-    g = 0.5 * (1 - math.sqrt(cbar ** 7 / (cbar ** 7 + 25 ** 7))) if cbar else 0.5
+    g = 0.5 * (1 - math.sqrt(cbar**7 / (cbar**7 + 25**7))) if cbar else 0.5
     a1p, a2p = (1 + g) * a1, (1 + g) * a2
     c1p, c2p = math.hypot(a1p, b1), math.hypot(a2p, b2)
     h1p = math.degrees(math.atan2(b1, a1p)) % 360 if (a1p or b1) else 0.0
@@ -125,28 +127,30 @@ def delta_e(one, other):
     else:
         hbar = (h1p + h2p - 360) / 2
 
-    t = (1 - 0.17 * math.cos(math.radians(hbar - 30))
-         + 0.24 * math.cos(math.radians(2 * hbar))
-         + 0.32 * math.cos(math.radians(3 * hbar + 6))
-         - 0.20 * math.cos(math.radians(4 * hbar - 63)))
+    t = (
+        1
+        - 0.17 * math.cos(math.radians(hbar - 30))
+        + 0.24 * math.cos(math.radians(2 * hbar))
+        + 0.32 * math.cos(math.radians(3 * hbar + 6))
+        - 0.20 * math.cos(math.radians(4 * hbar - 63))
+    )
     theta = 30 * math.exp(-(((hbar - 275) / 25) ** 2))
-    rc = 2 * math.sqrt(cbarp ** 7 / (cbarp ** 7 + 25 ** 7)) if cbarp else 0.0
+    rc = 2 * math.sqrt(cbarp**7 / (cbarp**7 + 25**7)) if cbarp else 0.0
     sl = 1 + (0.015 * (lbar - 50) ** 2) / math.sqrt(20 + (lbar - 50) ** 2)
     sc = 1 + 0.045 * cbarp
     sh = 1 + 0.015 * cbarp * t
     rt = -math.sin(math.radians(2 * theta)) * rc
-    return math.sqrt((dlp / sl) ** 2 + (dcp / sc) ** 2 + (dhp_big / sh) ** 2
-                     + rt * (dcp / sc) * (dhp_big / sh))
+    return math.sqrt((dlp / sl) ** 2 + (dcp / sc) ** 2 + (dhp_big / sh) ** 2 + rt * (dcp / sc) * (dhp_big / sh))
 
 
 # Viénot, Brettel & Mollon (1999). Hunt-Pointer-Estevez LMS for sRGB
 # primaries, the dichromat projection, and back.
-_TO_LMS = ((17.8824, 43.5161, 4.11935),
-           (3.45565, 27.1554, 3.86714),
-           (0.0299566, 0.184309, 1.46709))
-_FROM_LMS = ((0.0809444479, -0.130504409, 0.116721066),
-             (-0.0102485335, 0.0540193266, -0.113614708),
-             (-0.000365296938, -0.00412161469, 0.693511405))
+_TO_LMS = ((17.8824, 43.5161, 4.11935), (3.45565, 27.1554, 3.86714), (0.0299566, 0.184309, 1.46709))
+_FROM_LMS = (
+    (0.0809444479, -0.130504409, 0.116721066),
+    (-0.0102485335, 0.0540193266, -0.113614708),
+    (-0.000365296938, -0.00412161469, 0.693511405),
+)
 KINDS = ("protan", "deutan", "tritan")
 
 
@@ -163,8 +167,7 @@ def simulate(value, kind):
         medium = 0.494207 * long + 1.24827 * short
     else:
         short = -0.395913 * long + 0.801109 * medium
-    out = [sum(row[i] * c for i, c in enumerate((long, medium, short)))
-           for row in _FROM_LMS]
+    out = [sum(row[i] * c for i, c in enumerate((long, medium, short))) for row in _FROM_LMS]
     return "#" + "".join(f"{round(_encode(c) * 255):02x}" for c in out)
 
 
@@ -183,8 +186,7 @@ def token_sets(css):
     head, _, _ = css.partition("* { box-sizing")
     base = head.split(":root {", 1)[1].split("}", 1)[0]
     sets["root"] = dict(_DECLARATION.findall(base))
-    for name, marker in (("light", "@media (prefers-color-scheme: light)"),
-                         ("print", "@media print")):
+    for name, marker in (("light", "@media (prefers-color-scheme: light)"), ("print", "@media print")):
         if marker not in head:
             continue
         block = head.split(marker, 1)[1].split(":root {", 1)[1].split("}", 1)[0]

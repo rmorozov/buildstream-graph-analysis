@@ -7,6 +7,7 @@ session to run — was missing. `UX-471` removed a *count* of skills
 because a count decays on every addition; membership does not, since
 it is read off the directory rather than typed.
 """
+
 import pathlib
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
@@ -21,4 +22,5 @@ def test_every_skill_directory_is_named_in_claude_md():
     assert missing == [], (
         f"CLAUDE.md does not name skill(s) {missing} — a skill under "
         f".claude/skills/ that no steering document names is a skill a "
-        f"stopped session cannot find")
+        f"stopped session cannot find"
+    )

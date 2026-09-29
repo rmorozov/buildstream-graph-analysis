@@ -10,6 +10,7 @@ So a skill is held to three things. Its commands exist. It points at
 the guide that owns its rule rather than restating it. And nothing in
 it names a file that is not there.
 """
+
 import pathlib
 import re
 
@@ -62,7 +63,7 @@ def _skill(name):
 def _body(name):
     text = _skill(name)
     match = _FRONTMATTER.match(text)
-    return text[match.end():] if match else text
+    return text[match.end() :] if match else text
 
 
 def _commands(name):
@@ -82,8 +83,7 @@ def _commands(name):
 class TestEverySkillIsWellFormed:
     def test_the_skills_exist(self):
         found = sorted(p.parent.name for p in SKILLS.glob("*/SKILL.md"))
-        assert found == sorted(OWNERS), (
-            f"skills on disk {found}, skills this guard knows {sorted(OWNERS)}")
+        assert found == sorted(OWNERS), f"skills on disk {found}, skills this guard knows {sorted(OWNERS)}"
 
     @pytest.mark.parametrize("name", sorted(OWNERS))
     def test_it_has_a_name_and_a_description(self, name):
@@ -94,14 +94,13 @@ class TestEverySkillIsWellFormed:
         front = match.group(1)
         assert re.search(rf"^name:\s*{name}\s*$", front, re.M), front
         described = re.search(r"^description:\s*(\S.*)$", front, re.M)
-        assert described and len(described.group(1)) > 40, (
-            f"{name}: description is missing or too short to route on")
+        assert described and len(described.group(1)) > 40, f"{name}: description is missing or too short to route on"
 
     @pytest.mark.parametrize("name", sorted(OWNERS))
     def test_it_points_at_the_guide_that_owns_the_rule(self, name):
         assert OWNERS[name].rsplit("/", 1)[-1] in _body(name), (
-            f"{name} does not name {OWNERS[name]}, so it is a second copy "
-            f"of the rule rather than an entry point to it")
+            f"{name} does not name {OWNERS[name]}, so it is a second copy of the rule rather than an entry point to it"
+        )
 
 
 class TestEverySkillSaysThingsThatAreTrue:
@@ -121,9 +120,7 @@ class TestEverySkillSaysThingsThatAreTrue:
     @pytest.mark.parametrize("name", sorted(OWNERS))
     def test_every_make_target_it_names_exists(self, name):
         makefile = (REPO / "Makefile").read_text(encoding="utf-8")
-        targets = {line.split(":", 1)[0]
-                   for line in makefile.splitlines()
-                   if re.match(r"^[a-z][\w-]*:", line)}
+        targets = {line.split(":", 1)[0] for line in makefile.splitlines() if re.match(r"^[a-z][\w-]*:", line)}
         named = set(re.findall(r"\bmake ([a-z][\w-]*)", _commands(name)))
         missing = sorted(named - targets)
         assert missing == [], f"{name}: no such make target(s) {missing}"
@@ -144,11 +141,9 @@ class TestEverySkillSaysThingsThatAreTrue:
 
     @pytest.mark.parametrize("name", sorted(OWNERS))
     def test_every_repository_path_it_names_exists(self, name):
-        paths = set(re.findall(
-            r"`((?:tests|bga|tools|docs)/[\w./-]+)`", _body(name)))
+        paths = set(re.findall(r"`((?:tests|bga|tools|docs)/[\w./-]+)`", _body(name)))
         # A path with a `<placeholder>` segment is a recipe, not a file.
-        missing = sorted(p for p in paths
-                         if "<" not in p and not (REPO / p).exists())
+        missing = sorted(p for p in paths if "<" not in p and not (REPO / p).exists())
         assert missing == [], f"{name}: names path(s) that do not exist {missing}"
 
 
@@ -158,16 +153,13 @@ class TestTheSkillsDoNotBecomeTheRule:
         guide stops being maintained. The skill says so out loud, and
         this pins the sentence that says it."""
         body = _body("verify")
-        assert "the guide is right and this file is a bug" in body, (
-            "the verify skill does not say which document wins")
+        assert "the guide is right and this file is a bug" in body, "the verify skill does not say which document wins"
 
     def test_falsify_carries_the_failure_modes_that_cost_something(self):
         """A falsification procedure without them is the procedure this
         repository already followed while getting it wrong five times."""
         body = _body("falsify")
-        for phrase in ("does not discriminate",
-                       "matches its own explanation",
-                       "resets past your own work"):
+        for phrase in ("does not discriminate", "matches its own explanation", "resets past your own work"):
             assert phrase in body, f"falsify does not name {phrase!r}"
 
 

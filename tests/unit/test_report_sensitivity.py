@@ -4,6 +4,7 @@ but never rendered anywhere outside `--format json`'s
 `sensitivity` key - invisible to a user reading the text
 report, the one most users actually read first.
 """
+
 from pathlib import Path
 
 from bga import BuildEfficiencyAnalyzer
@@ -74,9 +75,7 @@ def test_text_report_surfaces_batch_opportunities(tmp_path):
     """
     from tests.fixtures import topologies
 
-    analyzer = topologies.build_analyzer(
-        tmp_path, topologies.independent_branches(n=2, chain_length=3)
-    )
+    analyzer = topologies.build_analyzer(tmp_path, topologies.independent_branches(n=2, chain_length=3))
     result = analyzer.analyze()
     output = format_text(result)
 
@@ -102,16 +101,11 @@ def test_element_that_cannot_move_the_finish_is_not_an_opportunity():
     ranked, and must not reach the batching tier either."""
     result = _analyze()
 
-    ranked = [row["element_uid"]
-              for row in result.structural["sensitivity"]["top_opportunities"]]
+    ranked = [row["element_uid"] for row in result.structural["sensitivity"]["top_opportunities"]]
     assert "extra.bst" not in ranked
     assert ranked == ["base.bst", "lib.bst", "app.bst"]
 
-    batched = {
-        element
-        for group in result.structural["batch_opportunities"]["groups"]
-        for element in group["elements"]
-    }
+    batched = {element for group in result.structural["batch_opportunities"]["groups"] for element in group["elements"]}
     assert "extra.bst" not in batched
 
 

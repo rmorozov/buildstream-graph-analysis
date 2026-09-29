@@ -4,6 +4,7 @@
 flag and a report field; nothing between the CLI and the page knew the
 mode, so two captures of one project could not be told apart by it.
 """
+
 import json
 import os
 import pathlib
@@ -82,28 +83,28 @@ class TestTheCLIParsesTheThreeModes:
 
     def test_a_later_call_without_the_flag_resets_the_variable(self, monkeypatch):
         monkeypatch.delenv('BGA_JOBSERVER_MODE', raising=False)
-        _translate_capture_jobserver(['capture', 'run', 'proj', 'out.json',
-                                      '--jobserver', '4', '--', 'bst', 'build'])
+        _translate_capture_jobserver(['capture', 'run', 'proj', 'out.json', '--jobserver', '4', '--', 'bst', 'build'])
         assert os.environ['BGA_JOBSERVER_MODE'] == 'n'
-        _translate_capture_jobserver(['capture', 'run', 'proj', 'out.json',
-                                      '--', 'bst', 'build'])
+        _translate_capture_jobserver(['capture', 'run', 'proj', 'out.json', '--', 'bst', 'build'])
         assert os.environ['BGA_JOBSERVER_MODE'] == 'off'
 
     def test_the_argv_translates_auto_into_the_tracers_own_int_flag(self, monkeypatch):
         monkeypatch.delenv('BGA_JOBSERVER_MODE', raising=False)
-        argv = ['capture', 'run', 'proj', 'out.json', '--jobserver', 'auto',
-                '--', 'bst', 'build', '--builders', '3']
+        argv = ['capture', 'run', 'proj', 'out.json', '--jobserver', 'auto', '--', 'bst', 'build', '--builders', '3']
         translated = _translate_capture_jobserver(argv)
         assert '--jobserver' in translated
         i = translated.index('--jobserver')
         assert translated[i + 1].isdigit()
-        assert translated[-4:] == ['--', 'bst', 'build', '--builders', '3'][-4:] \
-            or translated[-4:] == ['bst', 'build', '--builders', '3']
+        assert translated[-4:] == ['--', 'bst', 'build', '--builders', '3'][-4:] or translated[-4:] == [
+            'bst',
+            'build',
+            '--builders',
+            '3',
+        ]
 
     def test_off_drops_the_flag_entirely(self, monkeypatch):
         monkeypatch.delenv('BGA_JOBSERVER_MODE', raising=False)
-        argv = ['capture', 'run', 'proj', 'out.json', '--jobserver', 'off',
-                '--', 'bst', 'build']
+        argv = ['capture', 'run', 'proj', 'out.json', '--jobserver', 'off', '--', 'bst', 'build']
         translated = _translate_capture_jobserver(argv)
         assert '--jobserver' not in translated
 
@@ -127,9 +128,12 @@ class TestTheSnapshotFactReachesAnalyzeJSON:
             ctx["jobserver"] = jobserver_block
             ctx_path.write_text(json.dumps(ctx))
         done = subprocess.run(
-            [sys.executable, "-m", "bga.cli", "analyze", str(target),
-             "--format", "json"],
-            capture_output=True, text=True, cwd=REPO, timeout=120)
+            [sys.executable, "-m", "bga.cli", "analyze", str(target), "--format", "json"],
+            capture_output=True,
+            text=True,
+            cwd=REPO,
+            timeout=120,
+        )
         assert done.returncode == 0, done.stderr
         return json.loads(done.stdout)
 
@@ -149,12 +153,16 @@ class TestTheSnapshotFactReachesAnalyzeJSON:
 class TestCompareNamesTheModeInItsHeader:
     def _comparison(self, baseline_job, candidate_job):
         return ComparisonResult(
-            baseline_run_id='a' * 8, candidate_run_id='b' * 8,
+            baseline_run_id='a' * 8,
+            candidate_run_id='b' * 8,
             baseline_metrics={'total_duration_us': 10_000_000},
             candidate_metrics={'total_duration_us': 9_000_000},
             deltas={'total_duration_us': -1_000_000},
-            baseline_confidence=1.0, candidate_confidence=1.0,
-            attribution_deltas={}, verdict='IMPROVED', low_confidence=False,
+            baseline_confidence=1.0,
+            candidate_confidence=1.0,
+            attribution_deltas={},
+            verdict='IMPROVED',
+            low_confidence=False,
             baseline_run_instance={'jobserver': baseline_job} if baseline_job else {},
             candidate_run_instance={'jobserver': candidate_job} if candidate_job else {},
         )
@@ -164,8 +172,7 @@ class TestCompareNamesTheModeInItsHeader:
         assert text.count("jobserver off") == 2
 
     def test_both_modes_print(self):
-        comparison = self._comparison(
-            None, {"mode": "auto", "ceiling": 7, "auth": "fd", "project_max_jobs": None})
+        comparison = self._comparison(None, {"mode": "auto", "ceiling": 7, "auth": "fd", "project_max_jobs": None})
         text = format_compare_text(comparison)
         assert "jobserver off" in text
         assert "jobserver auto (ceiling 7)" in text
@@ -176,8 +183,7 @@ class TestExtractionValidatesTheJobserverEnvNames:
         project = tmp_path / "proj"
         (project / "elements").mkdir(parents=True)
         variables = f"variables:\n  bga-jobserver-env: {declaration}\n" if declaration else ""
-        (project / "project.conf").write_text(
-            f"name: p\nmin-version: 2.0\nelement-path: elements\n{variables}")
+        (project / "project.conf").write_text(f"name: p\nmin-version: 2.0\nelement-path: elements\n{variables}")
         return project
 
     def test_absent_is_an_empty_list(self, tmp_path):
@@ -186,8 +192,7 @@ class TestExtractionValidatesTheJobserverEnvNames:
 
     def test_a_well_shaped_entry_is_accepted(self, tmp_path):
         project = self._project(tmp_path, "MYJOBS=-j")
-        assert _read_bga_jobserver_env(str(project)) == [
-            {"name": "MYJOBS", "prefix": "-j"}]
+        assert _read_bga_jobserver_env(str(project)) == [{"name": "MYJOBS", "prefix": "-j"}]
 
     def test_a_bare_name_with_no_prefix_is_rejected_by_name(self, tmp_path):
         project = self._project(tmp_path, "MYJOBS")
@@ -208,21 +213,22 @@ class TestTheTracerAssemblesTheBlockFromItsReportAndTheEnvironment:
 
     def test_a_resolved_capture_carries_every_field(self, monkeypatch):
         monkeypatch.setenv('BGA_JOBSERVER_MODE', 'n')
-        report = {'jobserver': 4, 'jobserver_seed': 3, 'jobserver_auth': 'fd',
-                 'project_max_jobs': 8}
-        assert _jobserver_block(report) == {
-            'mode': 'n', 'ceiling': 4, 'seed': 3, 'auth': 'fd', 'project_max_jobs': 8}
+        report = {'jobserver': 4, 'jobserver_seed': 3, 'jobserver_auth': 'fd', 'project_max_jobs': 8}
+        assert _jobserver_block(report) == {'mode': 'n', 'ceiling': 4, 'seed': 3, 'auth': 'fd', 'project_max_jobs': 8}
 
     def test_no_jobserver_and_no_variable_reads_off(self, monkeypatch):
         monkeypatch.delenv('BGA_JOBSERVER_MODE', raising=False)
         assert _jobserver_block({}) == {
-            'mode': 'off', 'ceiling': None, 'seed': None, 'auth': None,
-            'project_max_jobs': None}
+            'mode': 'off',
+            'ceiling': None,
+            'seed': None,
+            'auth': None,
+            'project_max_jobs': None,
+        }
 
     def test_the_translate_step_sets_the_variable_for_auto(self, monkeypatch):
         monkeypatch.delenv('BGA_JOBSERVER_MODE', raising=False)
-        argv = ['capture', 'run', 'proj', 'out.json', '--jobserver', 'auto',
-                '--', 'bst', 'build']
+        argv = ['capture', 'run', 'proj', 'out.json', '--jobserver', 'auto', '--', 'bst', 'build']
         _translate_capture_jobserver(argv)
         assert os.environ['BGA_JOBSERVER_MODE'] == 'auto'
 
@@ -239,12 +245,14 @@ class TestExtractionWritesTheJobserverBlockToRunContext:
         log_path = tmp_path / "real_build.log"
         proc = subprocess.run(
             ["bst", "-C", str(FIXTURE_PROJECT), "--no-colors", "build", "app.bst"],
-            capture_output=True, text=True, env=isolated_bst_env(tmp_path))
+            capture_output=True,
+            text=True,
+            env=isolated_bst_env(tmp_path),
+        )
         log_path.write_text(proc.stdout + proc.stderr)
         out_dir = tmp_path / "run"
         with bst_env(tmp_path):
-            extract_run(str(FIXTURE_PROJECT), str(log_path), str(out_dir),
-                        log_format="auto", jobserver=jobserver)
+            extract_run(str(FIXTURE_PROJECT), str(log_path), str(out_dir), log_format="auto", jobserver=jobserver)
         return json.loads((out_dir / "run-context.json").read_text())
 
     def test_the_block_lands_with_the_values_given(self, tmp_path):
@@ -256,5 +264,9 @@ class TestExtractionWritesTheJobserverBlockToRunContext:
         block = _jobserver_block({})
         run_context = self._extracted(tmp_path, block)
         assert run_context["jobserver"] == {
-            "mode": "off", "ceiling": None, "seed": None, "auth": None,
-            "project_max_jobs": None}
+            "mode": "off",
+            "ceiling": None,
+            "seed": None,
+            "auth": None,
+            "project_max_jobs": None,
+        }

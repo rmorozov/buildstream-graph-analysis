@@ -34,6 +34,7 @@ And one defect in what *was* drawn: coincident marks printed on top of
 each other, `19.1 s (p95)` over `19.1 s max`, because on an eleven-
 element population the 95th percentile is the largest value.
 """
+
 import json
 import pathlib
 import sys
@@ -49,8 +50,10 @@ sys.path.insert(0, str(REPO / "tests"))
 from browser import NO_BROWSER, Browser, find_chrome
 from pages import snapshot_copy
 
-FIXTURES = {"golden": REPO / "tests/fixtures/golden/mixed_task_kinds",
-            "macro_micro": REPO / "tests/fixtures/macro_micro/run"}
+FIXTURES = {
+    "golden": REPO / "tests/fixtures/golden/mixed_task_kinds",
+    "macro_micro": REPO / "tests/fixtures/macro_micro/run",
+}
 chrome = find_chrome()
 needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
 
@@ -124,8 +127,7 @@ def _published_distributions(label):
             yield from walk(sub, f"{path}.{key}" if path else key)
 
     declared = list(walk(schemas.schema(document["schema"])))
-    return [path for path in declared
-            if document.get(path.split(".")[0]) and "." not in path]
+    return [path for path in declared if document.get(path.split(".")[0]) and "." not in path]
 
 
 @pytest.fixture(scope="module")
@@ -155,8 +157,7 @@ def served_url(tmp_path_factory):
     fixture happens to produce."""
     from tools.bga_view import serve
 
-    run = snapshot_copy(FIXTURES["macro_micro"],
-                         tmp_path_factory.mktemp("flow-axis-served"))
+    run = snapshot_copy(FIXTURES["macro_micro"], tmp_path_factory.mktemp("flow-axis-served"))
     httpd, url = serve(str(run), port=0)
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     time.sleep(0.3)
@@ -178,24 +179,19 @@ class TestEveryPublishedDistributionIsDrawn:
         clause below exists beside it."""
         expected = _published_distributions(label)
         out = browser.measure(pages[label], _LOOK, 1440, 900)
-        drawn = {strip["section"] for strip in out["strips"]
-                 if not strip["self"]}
-        assert set(expected) <= drawn, (
-            f"{label}: published but not drawn: "
-            f"{sorted(set(expected) - drawn)}")
+        drawn = {strip["section"] for strip in out["strips"] if not strip["self"]}
+        assert set(expected) <= drawn, f"{label}: published but not drawn: {sorted(set(expected) - drawn)}"
 
-    def test_no_strip_is_drawn_for_a_distribution_nobody_published(
-            self, browser, pages, label):
+    def test_no_strip_is_drawn_for_a_distribution_nobody_published(self, browser, pages, label):
         """The other direction. A page that drew a strip per section
         whatever the payload said would satisfy the clause above
         perfectly."""
         expected = set(_published_distributions(label))
         out = browser.measure(pages[label], _LOOK, 1440, 900)
-        published = {strip["section"] for strip in out["strips"]
-                     if not strip["self"]}
+        published = {strip["section"] for strip in out["strips"] if not strip["self"]}
         assert published <= expected, (
-            f"{label}: drawn as a published distribution and not in the "
-            f"payload: {sorted(published - expected)}")
+            f"{label}: drawn as a published distribution and not in the payload: {sorted(published - expected)}"
+        )
 
 
 @needs_browser
@@ -206,11 +202,10 @@ class TestTheTablesWearTheirShape:
         """§2's own requirement, and the one the row cap withheld from
         the table it was written about."""
         out = browser.measure(pages[label], _LOOK, 1440, 900)
-        beside = [strip for strip in out["strips"]
-                  if strip["self"] and strip["section"] == "elements"]
+        beside = [strip for strip in out["strips"] if strip["self"] and strip["section"] == "elements"]
         assert beside, (
-            f"{label}: the element table has no strip; the page draws "
-            f"{[s['section'] for s in out['strips']]}")
+            f"{label}: the element table has no strip; the page draws {[s['section'] for s in out['strips']]}"
+        )
 
     def test_the_page_draws_more_than_a_handful(self, browser, pages, label):
         """The census, as a bound. One drawing in twenty screens was
@@ -218,19 +213,15 @@ class TestTheTablesWearTheirShape:
         redden here rather than in a reader's eye."""
         out = browser.measure(pages[label], _LOOK, 1440, 900)
         assert out["sparklines"] >= 1, out["sparklines"]
-        assert len(out["strips"]) >= 5, (
-            f"{label}: {len(out['strips'])} strips over "
-            f"{out['tables']} tables")
+        assert len(out["strips"]) >= 5, f"{label}: {len(out['strips'])} strips over {out['tables']} tables"
 
-    def test_a_strip_below_the_sample_floor_states_it(
-            self, browser, pages, label):
+    def test_a_strip_below_the_sample_floor_states_it(self, browser, pages, label):
         """`UX-226`'s rule reaches every strip. A table too short to
         have a shape gets the sentence, not a range bar over two
         values - and both fixtures have such a table, so this is
         measured rather than argued."""
         out = browser.measure(pages[label], _LOOK, 1440, 900)
-        stated = [strip for strip in out["strips"]
-                  if strip["drawn"] == "false"]
+        stated = [strip for strip in out["strips"] if strip["drawn"] == "false"]
         assert stated, f"{label}: no strip is under the floor on this page"
         for strip in stated:
             assert "too few to have a shape" in strip["sentence"], strip
@@ -246,24 +237,21 @@ class TestNoTwoLabelsSitOnTopOfEachOther:
         out = browser.measure(pages[label], _LOOK, 1440, 900)
         assert out["axes"], f"{label}: no exhibit axis on the page"
         bad = [axis for axis in out["axes"] if axis["overlaps"]]
-        assert bad == [], (
-            f"{label}: {len(bad)} axis/axes with overlapping labels: "
-            + json.dumps([{ "section": a["section"],
-                            "ticks": [t["text"] for t in a["ticks"]]}
-                          for a in bad]))
+        assert bad == [], f"{label}: {len(bad)} axis/axes with overlapping labels: " + json.dumps(
+            [{"section": a["section"], "ticks": [t["text"] for t in a["ticks"]]} for a in bad]
+        )
 
-    def test_a_merged_label_names_the_marks_it_stands_for(
-            self, browser, pages, label):
+    def test_a_merged_label_names_the_marks_it_stands_for(self, browser, pages, label):
         """Not silence. Two marks at one value are one fact about the
         population, and *which* two is the interesting part - so the
         merged label says. Without this a fix that simply dropped the
         second label would pass the overlap clause."""
         out = browser.measure(pages[label], _LOOK, 1440, 900)
-        merged = [tick for axis in out["axes"] for tick in axis["ticks"]
-                  if " " in (tick["mark"] or "")]
+        merged = [tick for axis in out["axes"] for tick in axis["ticks"] if " " in (tick["mark"] or "")]
         assert merged, (
             f"{label}: no axis has coincident marks - both fixtures have "
-            f"one (p95 == max, or peak at level 1), so the walk has broken")
+            f"one (p95 == max, or peak at level 1), so the walk has broken"
+        )
         for tick in merged:
             # All but the first: the leading mark is carried by the
             # label itself - `level 1` *is* the first level, and
@@ -385,25 +373,21 @@ class TestTheFlowLayoutMatchesItsInteriorTickCount:
         checked = 0
         for axis in _axes(browser, pages):
             edges = axis["ticks"]
-            has_first = any("first" in _components(t["mark"])
-                             or "min" in _components(t["mark"]) for t in edges)
-            has_last = any("last" in _components(t["mark"])
-                            or "max" in _components(t["mark"]) for t in edges)
+            has_first = any("first" in _components(t["mark"]) or "min" in _components(t["mark"]) for t in edges)
+            has_last = any("last" in _components(t["mark"]) or "max" in _components(t["mark"]) for t in edges)
             interior = [t for t in edges if not _is_edge(t["mark"])]
             if not (has_first and has_last and len(interior) == 1):
                 continue
             checked += 1
             assert axis["layout"] == "flow", (
-                f"{axis['label']}/{axis['section']}: one interior tick, "
-                f"data-layout={axis['layout']!r}")
+                f"{axis['label']}/{axis['section']}: one interior tick, data-layout={axis['layout']!r}"
+            )
             assert interior[0]["marginLeft"] != "", (
-                f"{axis['label']}/{axis['section']}: interior tick "
-                f"{interior[0]['mark']!r} carries no margin-left")
-        assert checked, "no axis, on either fixture, has exactly one " \
-            "interior tick with both edges present"
+                f"{axis['label']}/{axis['section']}: interior tick {interior[0]['mark']!r} carries no margin-left"
+            )
+        assert checked, "no axis, on either fixture, has exactly one interior tick with both edges present"
 
-    def test_more_than_one_interior_tick_is_not_flow(
-            self, browser, pages, served_url):
+    def test_more_than_one_interior_tick_is_not_flow(self, browser, pages, served_url):
         checked = 0
         axes = _axes(browser, pages) + [_constructed_axis(browser, served_url)]
         for axis in axes:
@@ -412,16 +396,14 @@ class TestTheFlowLayoutMatchesItsInteriorTickCount:
                 continue
             checked += 1
             assert axis["layout"] != "flow", (
-                f"{axis['label']}/{axis['section']}: {len(interior)} "
-                f"interior ticks, data-layout={axis['layout']!r}")
+                f"{axis['label']}/{axis['section']}: {len(interior)} interior ticks, data-layout={axis['layout']!r}"
+            )
             assert all(t["marginLeft"] == "" for t in axis["ticks"]), (
-                f"{axis['label']}/{axis['section']}: a tick carries "
-                f"margin-left under {len(interior)} interior ticks")
-        assert checked, "no axis, real or constructed, has more than " \
-            "one interior tick"
+                f"{axis['label']}/{axis['section']}: a tick carries margin-left under {len(interior)} interior ticks"
+            )
+        assert checked, "no axis, real or constructed, has more than one interior tick"
 
-    def test_a_merged_edge_still_takes_flow_layout(
-            self, browser, pages, served_url):
+    def test_a_merged_edge_still_takes_flow_layout(self, browser, pages, served_url):
         """`UX-758`: the case the exact-name match denied - a
         distribution axis's `p95`/`max` collision leaves one real
         interior tick (`p50`) between two real edges, the exact case
@@ -435,20 +417,17 @@ class TestTheFlowLayoutMatchesItsInteriorTickCount:
         `test_more_than_one_interior_tick_is_not_flow` already does for
         its own retired case."""
         checked = 0
-        axes = _axes(browser, pages) + [
-            _constructed_merged_edge_axis(browser, served_url)]
+        axes = _axes(browser, pages) + [_constructed_merged_edge_axis(browser, served_url)]
         for axis in axes:
-            merged_edges = [t["mark"] for t in axis["ticks"]
-                             if _is_merged_edge(t["mark"])]
+            merged_edges = [t["mark"] for t in axis["ticks"] if _is_merged_edge(t["mark"])]
             interior = [t for t in axis["ticks"] if not _is_edge(t["mark"])]
             if not merged_edges or len(interior) != 1:
                 continue
             checked += 1
             assert axis["layout"] == "flow", (
-                f"{axis['label']}/{axis['section']}: merged edge "
-                f"{merged_edges}, data-layout={axis['layout']!r}")
-        assert checked, "no axis, real or constructed, has a merged " \
-            "edge with an interior tick left"
+                f"{axis['label']}/{axis['section']}: merged edge {merged_edges}, data-layout={axis['layout']!r}"
+            )
+        assert checked, "no axis, real or constructed, has a merged edge with an interior tick left"
 
 
 if __name__ == "__main__":  # pragma: no cover

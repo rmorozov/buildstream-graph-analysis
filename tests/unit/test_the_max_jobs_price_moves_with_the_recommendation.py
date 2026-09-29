@@ -5,6 +5,7 @@ Synthetic tasks, built with the same `NormalizedTask`/`TaskKey` helpers
 because the claim is about the pricing arithmetic, not a real capture
 (the real capture is `UX-739`'s own Outcome).
 """
+
 from bga.correlate import (
     _PRICE_DISPATCH_ASSUMPTION,
     _PRICE_FLOOR_ASSUMPTION,
@@ -19,19 +20,24 @@ US = 1_000_000
 
 def _task(element, start_s, finish_s):
     return NormalizedTask(
-        task_key=TaskKey(element_uid=element, task_kind=TaskKind.BUILD,
-                          phase="build"),
-        ready_us=0, start_us=int(start_s * US), finish_us=int(finish_s * US),
-        dependencies=[], resources=[], primary_resource=None,
+        task_key=TaskKey(element_uid=element, task_kind=TaskKind.BUILD, phase="build"),
+        ready_us=0,
+        start_us=int(start_s * US),
+        finish_us=int(finish_s * US),
+        dependencies=[],
+        resources=[],
+        primary_resource=None,
     )
 
 
 def _row(element, current, recommended, refusal=None):
-    return {"element": element, "current_max_jobs": current,
-            "recommended_max_jobs": recommended,
-            "max_jobs_change": (recommended - current
-                                 if recommended is not None else None),
-            "refusal": refusal}
+    return {
+        "element": element,
+        "current_max_jobs": current,
+        "recommended_max_jobs": recommended,
+        "max_jobs_change": (recommended - current if recommended is not None else None),
+        "refusal": refusal,
+    }
 
 
 def _advice(*rows):
@@ -46,10 +52,8 @@ class TestTheMutationTheAcceptanceTestNames:
         run_context = RunContext(resource_capacities={"PROCESS": 4})
         binary_cost = {"a.bst": {"available": True, "measured_cpu_us": 12 * US}}
 
-        priced_at_2 = price_max_jobs_advice(
-            _advice(_row("a.bst", 4, 2)), tasks, run_context, binary_cost)
-        priced_at_1 = price_max_jobs_advice(
-            _advice(_row("a.bst", 4, 1)), tasks, run_context, binary_cost)
+        priced_at_2 = price_max_jobs_advice(_advice(_row("a.bst", 4, 2)), tasks, run_context, binary_cost)
+        priced_at_1 = price_max_jobs_advice(_advice(_row("a.bst", 4, 1)), tasks, run_context, binary_cost)
 
         row_2 = priced_at_2["elements"][0]["priced"]
         row_1 = priced_at_1["elements"][0]["priced"]
@@ -60,7 +64,8 @@ class TestTheMutationTheAcceptanceTestNames:
         assert row_1["projected_us"] > row_2["projected_us"], (
             "recommending 1 rather than 2 must cost at least as much, and "
             "here strictly more - a price that does not track its own "
-            "recommendation is not reading it")
+            "recommendation is not reading it"
+        )
 
 
 class TestARaiseIsARefusal:
@@ -117,8 +122,7 @@ class TestTheFloorReadsPlaneTwo:
         run_context = RunContext(resource_capacities={"PROCESS": 4})
         binary_cost = {"b.bst": {"available": True, "measured_cpu_us": 8 * US}}
 
-        priced = price_max_jobs_advice(
-            _advice(_row("b.bst", 4, 1)), tasks, run_context, binary_cost)
+        priced = price_max_jobs_advice(_advice(_row("b.bst", 4, 1)), tasks, run_context, binary_cost)
 
         row = priced["elements"][0]
         assert "priced" not in row
@@ -152,26 +156,25 @@ class TestJointIsARecomputeNotASum:
         tasks = self._tasks()
 
         priced_a = price_max_jobs_advice(
-            _advice(_row("a.bst", 4, 1), _row("b.bst", 2, 2)),
-            tasks, run_context, binary_cost)
+            _advice(_row("a.bst", 4, 1), _row("b.bst", 2, 2)), tasks, run_context, binary_cost
+        )
         priced_b = price_max_jobs_advice(
-            _advice(_row("a.bst", 2, 2), _row("b.bst", 4, 1)),
-            tasks, run_context, binary_cost)
+            _advice(_row("a.bst", 2, 2), _row("b.bst", 4, 1)), tasks, run_context, binary_cost
+        )
         priced_both = price_max_jobs_advice(
-            _advice(_row("a.bst", 4, 1), _row("b.bst", 4, 1)),
-            tasks, run_context, binary_cost)
+            _advice(_row("a.bst", 4, 1), _row("b.bst", 4, 1)), tasks, run_context, binary_cost
+        )
 
-        cost_a_alone = next(r for r in priced_a["elements"]
-                             if r["element"] == "a.bst")["priced"]["cost_us"]
-        cost_b_alone = next(r for r in priced_b["elements"]
-                             if r["element"] == "b.bst")["priced"]["cost_us"]
+        cost_a_alone = next(r for r in priced_a["elements"] if r["element"] == "a.bst")["priced"]["cost_us"]
+        cost_b_alone = next(r for r in priced_b["elements"] if r["element"] == "b.bst")["priced"]["cost_us"]
         joint_cost = priced_both["priced_jointly"]["cost_us"]
 
         assert joint_cost != cost_a_alone + cost_b_alone, (
             f"joint {joint_cost} equalled the sum {cost_a_alone} + "
             f"{cost_b_alone} - on this shape (a third element only "
             f"delayed once both chains stretch) it cannot, so this "
-            f"guard read a sum instead of the recompute")
+            f"guard read a sum instead of the recompute"
+        )
 
 
 class TestTheRowsAreRankedPricedFirstRefusalsLast:
@@ -181,8 +184,7 @@ class TestTheRowsAreRankedPricedFirstRefusalsLast:
     published list does."""
 
     def test_the_order_is_cost_ascending_then_the_rest_then_refusals(self):
-        tasks = [_task("cheap.bst", 0, 2), _task("costly.bst", 0, 2),
-                 _task("same.bst", 0, 2), _task("up.bst", 0, 2)]
+        tasks = [_task("cheap.bst", 0, 2), _task("costly.bst", 0, 2), _task("same.bst", 0, 2), _task("up.bst", 0, 2)]
         run_context = RunContext(resource_capacities={"PROCESS": 4})
         binary_cost = {
             "cheap.bst": {"available": True, "measured_cpu_us": 3 * US},
@@ -191,41 +193,45 @@ class TestTheRowsAreRankedPricedFirstRefusalsLast:
         # Scrambled input order - `price_max_jobs_advice` must not just
         # preserve `compute_max_jobs_advice`'s own order.
         advice = _advice(
-            _row("up.bst", 1, 4),                 # raised -> refused
-            _row("costly.bst", 4, 1),              # lowered, larger cost
-            _row("same.bst", 2, 2),                # unchanged
-            _row("cheap.bst", 4, 2))               # lowered, smaller cost
+            _row("up.bst", 1, 4),  # raised -> refused
+            _row("costly.bst", 4, 1),  # lowered, larger cost
+            _row("same.bst", 2, 2),  # unchanged
+            _row("cheap.bst", 4, 2),
+        )  # lowered, smaller cost
 
         priced = price_max_jobs_advice(advice, tasks, run_context, binary_cost)
         order = [row["element"] for row in priced["elements"]]
 
         assert order == ["cheap.bst", "costly.bst", "same.bst", "up.bst"], (
-            f"got {order} - priced lowerings must sort by price_cost_us "
-            f"ascending, the refusal must sort last")
+            f"got {order} - priced lowerings must sort by price_cost_us ascending, the refusal must sort last"
+        )
 
 
 def _recommendation(max_jobs_advice):
     """A minimal `compute_capacity_recommendation` result, carrying
     whatever `max_jobs_advice` shape a test wants to render."""
     envelope = {
-        'host_memory_bytes': 16000, 'elements_measured': 11,
+        'host_memory_bytes': 16000,
+        'elements_measured': 11,
         'largest_element_peak_bytes': 1000,
         'projections': [
-            {'builders': n, 'envelope_bytes': 1000 * n,
-             'share_of_host': 1000 * n / 16000, 'fits': n <= 11}
-            for n in range(1, 12)],
+            {'builders': n, 'envelope_bytes': 1000 * n, 'share_of_host': 1000 * n / 16000, 'fits': n <= 11}
+            for n in range(1, 12)
+        ],
     }
     recommendation = compute_capacity_recommendation(
-        {'cores_busy': 2.0, 'host_cpu_count': 4, 'saturated': False,
-         'pinned_elements': []},
-        envelope, knee=5, builders=4, native_max_jobs=4)
+        {'cores_busy': 2.0, 'host_cpu_count': 4, 'saturated': False, 'pinned_elements': []},
+        envelope,
+        knee=5,
+        builders=4,
+        native_max_jobs=4,
+    )
     recommendation['max_jobs_advice'] = max_jobs_advice
     return recommendation
 
 
 def _detail(max_jobs_advice):
-    result = type('_R', (), {
-        'capacity_recommendation': _recommendation(max_jobs_advice)})()
+    result = type('_R', (), {'capacity_recommendation': _recommendation(max_jobs_advice)})()
     return "\n".join(_capacity_recommendation_finding(result)[0]['detail'])
 
 
@@ -238,8 +244,7 @@ class TestThePriceSTwoAssumptionsRenderWithAPricedRow:
         tasks = [_task("a.bst", 0, 2)]
         run_context = RunContext(resource_capacities={"PROCESS": 4})
         binary_cost = {"a.bst": {"available": True, "measured_cpu_us": 12 * US}}
-        advice = price_max_jobs_advice(
-            _advice(_row("a.bst", 4, 2)), tasks, run_context, binary_cost)
+        advice = price_max_jobs_advice(_advice(_row("a.bst", 4, 2)), tasks, run_context, binary_cost)
 
         detail = _detail(advice)
 
@@ -249,8 +254,7 @@ class TestThePriceSTwoAssumptionsRenderWithAPricedRow:
     def test_refusals_only_carry_neither_sentence(self):
         tasks = [_task("a.bst", 0, 2)]
         run_context = RunContext(resource_capacities={"PROCESS": 4})
-        advice = price_max_jobs_advice(
-            _advice(_row("a.bst", 1, 4)), tasks, run_context, {})
+        advice = price_max_jobs_advice(_advice(_row("a.bst", 1, 4)), tasks, run_context, {})
         assert "priced" not in advice["elements"][0]  # a raise, refused
 
         detail = _detail(advice)

@@ -15,6 +15,7 @@ against the classifiers directly, since the bug was entirely in the wiring
 between the (already-correct) classifiers and the final report - a unit
 test against the classifiers alone cannot catch it.
 """
+
 import json
 
 from bga import analyze_run
@@ -24,13 +25,8 @@ def _write_run_dir(tmp_path, run_context, elements, dependencies, spans):
     run_dir = tmp_path / "run"
     run_dir.mkdir()
     graph = {
-        "elements": [
-            {"uid": uid, "requested_target": is_target}
-            for uid, is_target in elements
-        ],
-        "dependencies": [
-            {"predecessor": pred, "successor": succ} for pred, succ in dependencies
-        ],
+        "elements": [{"uid": uid, "requested_target": is_target} for uid, is_target in elements],
+        "dependencies": [{"predecessor": pred, "successor": succ} for pred, succ in dependencies],
     }
     trace = {"spans": spans, "phases": []}
     (run_dir / "run-context.json").write_text(json.dumps(run_context))
@@ -43,8 +39,12 @@ def _attribution_total(result):
     return sum(
         result.attribution.get(k, 0)
         for k in (
-            "execution_on_chain_us", "dependency_wait_us", "resource_wait_us",
-            "scheduler_wait_us", "idle_us", "retry_wait_us",
+            "execution_on_chain_us",
+            "dependency_wait_us",
+            "resource_wait_us",
+            "scheduler_wait_us",
+            "idle_us",
+            "retry_wait_us",
         )
     )
 
@@ -59,18 +59,36 @@ def test_resource_blocked_gap_classified_as_resource_wait(tmp_path):
     run_dir = _write_run_dir(
         tmp_path,
         run_context={
-            "trace_epsilon_us": 50000, "wall_start_us": 0, "wall_end_us": 200000,
-            "max_jobs": 1, "resource_capacities": {"PROCESS": 1},
+            "trace_epsilon_us": 50000,
+            "wall_start_us": 0,
+            "wall_end_us": 200000,
+            "max_jobs": 1,
+            "resource_capacities": {"PROCESS": 1},
         },
         elements=[("a.bst", False), ("b.bst", False), ("c.bst", True)],
         dependencies=[("a.bst", "c.bst")],
         spans=[
-            {"task_key": "a.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 50000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "b.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 150000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "c.bst|BUILD|BUILD|0", "ts_us": 150000, "dur_us": 50000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
+            {
+                "task_key": "a.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 50000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "b.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 150000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "c.bst|BUILD|BUILD|0",
+                "ts_us": 150000,
+                "dur_us": 50000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
         ],
     )
     result = analyze_run(run_dir)
@@ -92,18 +110,36 @@ def test_undispatched_gap_classified_as_scheduler_wait(tmp_path):
     run_dir = _write_run_dir(
         tmp_path,
         run_context={
-            "trace_epsilon_us": 50000, "wall_start_us": 0, "wall_end_us": 150000,
-            "max_jobs": 2, "resource_capacities": {"PROCESS": 2, "DOWNLOAD": 2},
+            "trace_epsilon_us": 50000,
+            "wall_start_us": 0,
+            "wall_end_us": 150000,
+            "max_jobs": 2,
+            "resource_capacities": {"PROCESS": 2, "DOWNLOAD": 2},
         },
         elements=[("p.bst", False), ("z.bst", False), ("y.bst", True)],
         dependencies=[("p.bst", "y.bst")],
         spans=[
-            {"task_key": "p.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 10000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "z.bst|BUILD|BUILD|0", "ts_us": 50000, "dur_us": 1000,
-             "resources": ["DOWNLOAD"], "primary_resource": "DOWNLOAD"},
-            {"task_key": "y.bst|BUILD|BUILD|0", "ts_us": 100000, "dur_us": 50000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
+            {
+                "task_key": "p.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 10000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "z.bst|BUILD|BUILD|0",
+                "ts_us": 50000,
+                "dur_us": 1000,
+                "resources": ["DOWNLOAD"],
+                "primary_resource": "DOWNLOAD",
+            },
+            {
+                "task_key": "y.bst|BUILD|BUILD|0",
+                "ts_us": 100000,
+                "dur_us": 50000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
         ],
     )
     result = analyze_run(run_dir)

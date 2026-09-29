@@ -6,6 +6,7 @@ beside the job, and a sentence in the documents that prices the job in
 seconds carries its range. Its exact figures leave as `::notice::` lines
 from a last step that runs under `always()`.
 """
+
 import datetime
 import json
 import pathlib
@@ -41,14 +42,14 @@ def job_header():
     """The comment block between the job's key and its `runs-on`."""
     text = CI.read_text(encoding="utf-8")
     start = text.index(f"\n  {JOB}:\n")
-    return text[start:text.index("runs-on:", start)]
+    return text[start : text.index("runs-on:", start)]
 
 
 def job_text():
     text = CI.read_text(encoding="utf-8")
     start = text.index(f"\n  {JOB}:\n")
-    following = re.search(r"\n  [\w-]+:\n", text[start + 1:])
-    return text[start:start + 1 + following.start()] if following else text[start:]
+    following = re.search(r"\n  [\w-]+:\n", text[start + 1 :])
+    return text[start : start + 1 + following.start()] if following else text[start:]
 
 
 def steps():
@@ -63,21 +64,18 @@ def unpriced(text, token):
         rows = [line for line in paragraph.splitlines() if line.lstrip().startswith("|")]
         prose = " ".join(line for line in paragraph.splitlines() if line not in rows)
         for sentence in [*rows, *SENTENCE.split(" ".join(prose.split()))]:
-            if (JOB in sentence and DURATION.search(sentence)
-                    and not ELEMENT.search(sentence) and token not in sentence):
+            if JOB in sentence and DURATION.search(sentence) and not ELEMENT.search(sentence) and token not in sentence:
                 found.append(sentence)
     return found
 
 
 class TestTheParagraphCarriesTheMeasuredSpread:
-
     def test_the_readings_are_a_population_of_jobs_api_spans(self):
         data = spread_tool.load()
         assert len(data["runs"]) >= spread_tool.MIN_RUNS, len(data["runs"])
         assert len({r["run_id"] for r in data["runs"]}) == len(data["runs"])
         for row in data["runs"]:
-            assert row["seconds"] == spread_tool._seconds(
-                row["started_at"], row["completed_at"]), row
+            assert row["seconds"] == spread_tool._seconds(row["started_at"], row["completed_at"]), row
             assert row["started_at"][:10] >= data["since"], row
         datetime.date.fromisoformat(data["measured"])
         assert data["command"].startswith("python3 tools/dev_bst_examples_spread.py --fetch")
@@ -86,12 +84,11 @@ class TestTheParagraphCarriesTheMeasuredSpread:
         """A narrower figure typed over the derived one reds here."""
         got, measured = spread_tool.current()
         header = job_header()
-        assert spread_tool.FIGURE_LINE.search(header), (
-            f"no `# clock:` line beside `{JOB}`")
+        assert spread_tool.FIGURE_LINE.search(header), f"no `# clock:` line beside `{JOB}`"
         line = spread_tool.figure(got, measured)
         assert f"clock: {line}\n" in header, (
-            f"`{JOB}`'s clock line is not {line!r}. "
-            "Run `python3 tools/dev_bst_examples_spread.py --write`.")
+            f"`{JOB}`'s clock line is not {line!r}. Run `python3 tools/dev_bst_examples_spread.py --write`."
+        )
         text = CI.read_text(encoding="utf-8")
         assert spread_tool.write_figure(text, line) == text
 
@@ -105,11 +102,11 @@ class TestTheParagraphCarriesTheMeasuredSpread:
         assert spread_tool.drift_factor() == dev_tier_drift.CI_DRIFT_FACTOR
         assert got["max"] > got["min"] * dev_tier_drift.CI_DRIFT_FACTOR, (
             f"{got['min']}-{got['max']}s is inside CI_DRIFT_FACTOR "
-            f"{dev_tier_drift.CI_DRIFT_FACTOR}; the paragraph says it is not")
+            f"{dev_tier_drift.CI_DRIFT_FACTOR}; the paragraph says it is not"
+        )
 
 
 class TestNoSentencePricesTheJobWithoutItsSpread:
-
     def test_the_scanner_catches_a_bare_price_and_passes_a_banded_one(self):
         token = "620-964s"
         assert unpriced("Staging it costs `bst-examples` 120s.", token)
@@ -124,14 +121,13 @@ class TestNoSentencePricesTheJobWithoutItsSpread:
         names = sorted({p for pattern in DOCUMENTS for p in REPO.glob(pattern)})
         naming = [p for p in names if JOB in p.read_text(encoding="utf-8")]
         assert len(naming) >= 20, f"only {len(naming)} documents name `{JOB}`"
-        bare = {str(p.relative_to(REPO)): found for p in naming
-                if (found := unpriced(p.read_text(encoding="utf-8"), token))}
-        assert bare == {}, (
-            f"sentence(s) price `{JOB}` in seconds without {token}: {bare}")
+        bare = {
+            str(p.relative_to(REPO)): found for p in naming if (found := unpriced(p.read_text(encoding="utf-8"), token))
+        }
+        assert bare == {}, f"sentence(s) price `{JOB}` in seconds without {token}: {bare}"
 
 
 class TestAPopulationOfOneHasNoMedian:
-
     def test_one_reading_is_refused(self):
         with pytest.raises(spread_tool.TooFewRuns):
             spread_tool.spread([807])
@@ -154,7 +150,6 @@ class TestAPopulationOfOneHasNoMedian:
 
 
 class TestTheNoticeStep:
-
     def step(self):
         named = [s for s in steps() if s.get("name", "").startswith("UX-941")]
         assert len(named) == 1, [s.get("name") for s in steps()]
@@ -165,11 +160,13 @@ class TestTheNoticeStep:
         steps, such as the upload or another row's notice, may follow."""
         step = self.step()
         assert step.get("if") == "always()", step.get("if")
-        after = steps()[steps().index(step) + 1:]
-        assert all(s.get("if") == "always()" for s in after), (
-            [s.get("name") for s in after if s.get("if") != "always()"])
+        after = steps()[steps().index(step) + 1 :]
+        assert all(s.get("if") == "always()" for s in after), [
+            s.get("name") for s in after if s.get("if") != "always()"
+        ]
         assert steps().index(step) > max(
-            n for n, s in enumerate(steps()) if "bga analyze -f json" in str(s.get("run", "")))
+            n for n, s in enumerate(steps()) if "bga analyze -f json" in str(s.get("run", ""))
+        )
 
     def test_it_reads_the_toolchain_the_job_stages(self):
         run = self.step()["run"]
@@ -190,14 +187,17 @@ class TestTheNoticeStep:
         artifacts, toolchain = tmp_path / "artifacts", tmp_path / "toolchain"
         for name in spread_tool.REPORTS:
             (artifacts / name).parent.mkdir(parents=True, exist_ok=True)
-            (artifacts / name).write_text(
-                json.dumps({"graph_metrics": {"num_elements": 11}}), encoding="utf-8")
+            (artifacts / name).write_text(json.dumps({"graph_metrics": {"num_elements": 11}}), encoding="utf-8")
         for n in range(3):
             (toolchain / "nix" / "store" / f"{n:032d}-p{n}").mkdir(parents=True)
         run = self.step()["run"].split()
         out = subprocess.run(
             [sys.executable, *run[1:-2], str(artifacts), str(toolchain)],
-            cwd=REPO, capture_output=True, text=True, check=True).stdout.splitlines()
+            cwd=REPO,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.splitlines()
         assert len(out) == 1 + len(spread_tool.REPORTS), out
         assert all(line.startswith("::notice title=UX-941 structural::") for line in out)
         assert "examples/05 toolchain: 3 store paths staged" in out[0], out[0]

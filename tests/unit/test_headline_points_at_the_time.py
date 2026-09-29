@@ -17,6 +17,7 @@ which degenerates when attribution is 99.9% execution-bound; blast radius
 answers "who depends on me", which matters when the graph constrains, not
 when the chain does.
 """
+
 from bga.ingest.models import AnalysisResult
 from bga.report.text import format_text
 
@@ -37,7 +38,9 @@ def _result(*, attribution, floors, path_detail, total_us, blast=None):
 
 def _element(uid, dur_us, share, structural=False):
     return {
-        "element_uid": uid, "duration_us": dur_us, "share_of_path": share,
+        "element_uid": uid,
+        "duration_us": dur_us,
+        "share_of_path": share,
         "is_structural_kind": structural,
         # Real `critical_path_detail` entries always carry these; the
         # renderer reads them for the chain listing further down.
@@ -105,10 +108,9 @@ def test_the_headline_names_the_heaviest_elements_and_their_share():
 # not in the ranking, and named in the report.
 def _ranked_rows(text):
     lines = text.split("\n")
-    start = next(i for i, line in enumerate(lines)
-                 if line.lstrip().startswith("Where the time is"))
+    start = next(i for i, line in enumerate(lines) if line.lstrip().startswith("Where the time is"))
     rows = []
-    for line in lines[start + 1:]:
+    for line in lines[start + 1 :]:
         if not line.startswith("    "):
             break
         rows.append(line)
@@ -140,8 +142,7 @@ def test_structural_elements_are_excluded_not_merely_tagged():
     # duration. Re-gating `_ranking_findings` on `chain_bound` reddens
     # the assertion below, which is what makes this clause worth
     # running at all.
-    assert ("Reaching most of the graph by design: "
-            "bootstrap/symlinks.bst (124 downstream)" in text)
+    assert "Reaching most of the graph by design: bootstrap/symlinks.bst (124 downstream)" in text
 
 
 def test_a_chain_bound_build_ranks_by_critical_path_share():
@@ -219,8 +220,12 @@ def test_each_element_is_named_once_in_the_headline():
     text = _key_findings(_result(**_with_savings(REAL_SAVINGS)))
     table = text.split("Where the time is")[1].split("work them in this order")[0]
 
-    for uid in ("components/_private/cmake-stage1.bst", "components/openssl.bst",
-                "components/python3.bst", "components/doxygen.bst"):
+    for uid in (
+        "components/_private/cmake-stage1.bst",
+        "components/openssl.bst",
+        "components/python3.bst",
+        "components/doxygen.bst",
+    ):
         assert table.count(uid) == 1
 
 
@@ -257,19 +262,30 @@ def test_a_scheduler_bound_build_still_ranks_by_blast_radius():
 
 OUTLOOK = dict(
     optimization_horizon=[
-        {"element_uid": "components/_private/cmake-stage1.bst", "saving_us": 1_569_800_000,
-         "makespan_after_us": 2_040_750_000, "cumulative_saving_us": 1_569_750_000,
-         "entering": []},
-        {"element_uid": "components/openssl.bst", "saving_us": 522_550_000,
-         "makespan_after_us": 1_518_200_000, "cumulative_saving_us": 2_092_300_000,
-         "entering": ["components/ninja.bst"]},
-        {"element_uid": "components/doxygen.bst", "saving_us": 513_550_000,
-         "makespan_after_us": 1_004_650_000, "cumulative_saving_us": 2_605_850_000,
-         "entering": []},
+        {
+            "element_uid": "components/_private/cmake-stage1.bst",
+            "saving_us": 1_569_800_000,
+            "makespan_after_us": 2_040_750_000,
+            "cumulative_saving_us": 1_569_750_000,
+            "entering": [],
+        },
+        {
+            "element_uid": "components/openssl.bst",
+            "saving_us": 522_550_000,
+            "makespan_after_us": 1_518_200_000,
+            "cumulative_saving_us": 2_092_300_000,
+            "entering": ["components/ninja.bst"],
+        },
+        {
+            "element_uid": "components/doxygen.bst",
+            "saving_us": 513_550_000,
+            "makespan_after_us": 1_004_650_000,
+            "cumulative_saving_us": 2_605_850_000,
+            "entering": [],
+        },
     ],
     joint_saving={
-        "elements": ["components/_private/cmake-stage1.bst", "components/openssl.bst",
-                     "components/doxygen.bst"],
+        "elements": ["components/_private/cmake-stage1.bst", "components/openssl.bst", "components/doxygen.bst"],
         "joint_saving_us": 2_605_850_000,
         "sum_of_individual_us": 2_605_850_000,
         "savings_add": True,
@@ -300,12 +316,16 @@ def test_the_joint_saving_of_the_recommended_set_is_stated():
 
 
 def test_a_set_whose_savings_do_not_add_says_so():
-    text = _key_findings(_with_outlook(joint_saving={
-        "elements": ["a.bst", "b.bst"],
-        "joint_saving_us": 100_000_000,
-        "sum_of_individual_us": 180_000_000,
-        "savings_add": False,
-    }))
+    text = _key_findings(
+        _with_outlook(
+            joint_saving={
+                "elements": ["a.bst", "b.bst"],
+                "joint_saving_us": 100_000_000,
+                "sum_of_individual_us": 180_000_000,
+                "savings_add": False,
+            }
+        )
+    )
 
     assert "fixing one makes the others worth less" in text
 
@@ -339,4 +359,3 @@ def test_the_fix_order_line_is_not_repeated_once_the_horizon_names_it():
 
     assert "work them in this order (by what a fix is worth, which is" not in text
     assert text.count("components/openssl.bst") <= 2
-

@@ -22,6 +22,7 @@ it holds.
 holds: rules.md#never-let-an-instrument-read-a-proxy-for-the-thing-it-names
 holds: rules.md#a-judgement-row-goes-to-the-architect-first-and-at-most-40-of-a-rounds-rows-are-process-bookkeeping-a-process-row-that-cuts-a-measured-cost-is-exempt-ux-993-ux-994
 """
+
 import contextlib
 import io
 import json
@@ -56,8 +57,7 @@ _FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n", re.S)
 
 def fire(name, payload):
     """`(exit code, stderr)` for one hook against one PreToolUse payload."""
-    done = subprocess.run([str(HOOKS / name)], input=json.dumps(payload),
-                          capture_output=True, text=True, timeout=30)
+    done = subprocess.run([str(HOOKS / name)], input=json.dumps(payload), capture_output=True, text=True, timeout=30)
     return done.returncode, done.stderr
 
 
@@ -65,8 +65,7 @@ def _selector_hook():
     """`UX-522`'s hook, loaded fresh so a clause can replace its edges."""
     import importlib.util
 
-    spec = importlib.util.spec_from_file_location(
-        "selector_before_commit", HOOKS / "selector_before_commit.py")
+    spec = importlib.util.spec_from_file_location("selector_before_commit", HOOKS / "selector_before_commit.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -110,30 +109,35 @@ class TestTheSelectorRunsBeforeTheCommit:
     #: What the hook must recognise as a commit. The heredoc case is
     #: the one `UX-424` cost a round over: this repository's commit
     #: messages quote commands, so a text scan fires on the message.
-    @pytest.mark.parametrize("command", (
-        "git commit -m x",
-        "git commit -q -F -",
-        "make lint && git commit -m x",
-        'git commit -F - <<EOF\nfix: git commit -m nope\nEOF',
-    ))
+    @pytest.mark.parametrize(
+        "command",
+        (
+            "git commit -m x",
+            "git commit -q -F -",
+            "make lint && git commit -m x",
+            'git commit -F - <<EOF\nfix: git commit -m nope\nEOF',
+        ),
+    )
     def test_it_sees_a_commit(self, command):
         assert _selector_hook().is_git_commit(command), command
 
-    @pytest.mark.parametrize("command", (
-        "git status --short",
-        "git add tools/dev_touching.py",
-        "echo 'git commit -m x'",
-        "git log --oneline -1",
-        "python3 -c \"print('git commit')\"",
-    ))
+    @pytest.mark.parametrize(
+        "command",
+        (
+            "git status --short",
+            "git add tools/dev_touching.py",
+            "echo 'git commit -m x'",
+            "git log --oneline -1",
+            "python3 -c \"print('git commit')\"",
+        ),
+    )
     def test_it_leaves_everything_else_alone(self, command):
         assert not _selector_hook().is_git_commit(command), command
 
     def test_settings_declares_it_on_bash(self):
         """A hook nothing declares is a file, not a control."""
         held = json.loads(SETTINGS.read_text(encoding="utf-8"))
-        bash = [m for m in held["hooks"]["PreToolUse"]
-                if m.get("matcher") == "Bash"]
+        bash = [m for m in held["hooks"]["PreToolUse"] if m.get("matcher") == "Bash"]
         commands = [h["command"] for m in bash for h in m["hooks"]]
         assert any("selector-before-commit.sh" in c for c in commands), commands
 
@@ -141,8 +145,7 @@ class TestTheSelectorRunsBeforeTheCommit:
         """The case the hook cannot be right about: a commit whose
         *content* is the fix to a red guard. A block with no way past
         it is a block somebody disables permanently."""
-        source = (HOOKS / "selector_before_commit.py").read_text(
-            encoding="utf-8")
+        source = (HOOKS / "selector_before_commit.py").read_text(encoding="utf-8")
         assert "BGA_SKIP_SELECTOR" in source
         assert "{skip}" in source.split("MESSAGE = ")[1].split('"""')[1]
 
@@ -206,10 +209,8 @@ class TestTheSelectorRunsBeforeTheCommit:
         test is the decision, which is the part with the mutations."""
         module = _selector_hook()
         ran = []
-        module.selection = lambda repo: (
-            ["tests/unit/test_the_register_is_terse.py"], {})
-        module.selector_is_green = lambda files, repo: (ran.append(files),
-                                                        (False, "planted"))[1]
+        module.selection = lambda repo: (["tests/unit/test_the_register_is_terse.py"], {})
+        module.selector_is_green = lambda files, repo: (ran.append(files), (False, "planted"))[1]
         return module, ran
 
 
@@ -221,43 +222,49 @@ class TestTheHooksBlockWhatTheyClaim:
     in somebody's tree three weeks later.
     """
 
-    @pytest.mark.parametrize("command", (
-        "git add -A",
-        "git add .",
-        "git add --all",
-        "make test && git add -A",
-        "cd /tmp; git add -A",
-        # UX-424. The first three are what a quote-stripping fix would
-        # have lost: strip the quotes and `git add "-A"` reads as a
-        # bare `git add`, which passes. Tokenising keeps them, because
-        # `shlex` removes the quoting and leaves the word.
-        'git add "-A"',
-        "git add '-A'",
-        "git add -vA",
-        # `shlex` treats a newline as whitespace, so without the
-        # substitution in `_as_one_line` this puts `git` in argument
-        # position and passes.
-        "make test\ngit add -A",
-        # No parse, so the old regex decides - and it must still block.
-        "echo 'unterminated && git add -A",
-    ))
+    @pytest.mark.parametrize(
+        "command",
+        (
+            "git add -A",
+            "git add .",
+            "git add --all",
+            "make test && git add -A",
+            "cd /tmp; git add -A",
+            # UX-424. The first three are what a quote-stripping fix would
+            # have lost: strip the quotes and `git add "-A"` reads as a
+            # bare `git add`, which passes. Tokenising keeps them, because
+            # `shlex` removes the quoting and leaves the word.
+            'git add "-A"',
+            "git add '-A'",
+            "git add -vA",
+            # `shlex` treats a newline as whitespace, so without the
+            # substitution in `_as_one_line` this puts `git` in argument
+            # position and passes.
+            "make test\ngit add -A",
+            # No parse, so the old regex decides - and it must still block.
+            "echo 'unterminated && git add -A",
+        ),
+    )
     def test_a_bulk_add_is_blocked(self, command):
         code, said = fire("no-bulk-add.sh", {"tool_input": {"command": command}})
         assert code == 2, (command, code, said)
         assert "4a.1" in said, said
 
-    @pytest.mark.parametrize("command", (
-        # Every one of these blocked before UX-424, and each cost a
-        # retry in round 67. A commit message quoting the rule is the
-        # commonest: this repository's messages describe the rules they
-        # enforce, so the control was firing on its own documentation.
-        'git commit -m "never use git add -A here"',
-        "cat > /tmp/m.txt <<'EOF'\nThe rule is old; git add -A is banned.\nEOF",
-        "cat > /tmp/m.txt <<'EOF'\n| `git add -A` | forbidden |\nEOF",
-        "probe 'make test && git add -A'",
-        'grep -rn "git add -A" docs/',
-        'echo "git add -A" | wc -l',
-    ))
+    @pytest.mark.parametrize(
+        "command",
+        (
+            # Every one of these blocked before UX-424, and each cost a
+            # retry in round 67. A commit message quoting the rule is the
+            # commonest: this repository's messages describe the rules they
+            # enforce, so the control was firing on its own documentation.
+            'git commit -m "never use git add -A here"',
+            "cat > /tmp/m.txt <<'EOF'\nThe rule is old; git add -A is banned.\nEOF",
+            "cat > /tmp/m.txt <<'EOF'\n| `git add -A` | forbidden |\nEOF",
+            "probe 'make test && git add -A'",
+            'grep -rn "git add -A" docs/',
+            'echo "git add -A" | wc -l',
+        ),
+    )
     def test_writing_about_the_rule_is_not_blocked(self, command):
         """`UX-424`: the fourth sighting of an instrument reading a
         proxy rather than the thing, and the one that obstructed its
@@ -271,13 +278,16 @@ class TestTheHooksBlockWhatTheyClaim:
         code, said = fire("no-bulk-add.sh", {"tool_input": {"command": command}})
         assert code == 0, (command, code, said)
 
-    @pytest.mark.parametrize("command", (
-        "git add bga/analysis.py",
-        "git add ./bga/analysis.py",
-        "git add tests/unit/a.py tests/unit/b.py",
-        "make test",
-        "git status --short",
-    ))
+    @pytest.mark.parametrize(
+        "command",
+        (
+            "git add bga/analysis.py",
+            "git add ./bga/analysis.py",
+            "git add tests/unit/a.py tests/unit/b.py",
+            "make test",
+            "git status --short",
+        ),
+    )
     def test_a_named_path_is_not(self, command):
         """The half that makes it usable. `git add ./x.py` is a path,
         not a bulk add, and a hook that stopped it would be turned off
@@ -287,53 +297,58 @@ class TestTheHooksBlockWhatTheyClaim:
 
     @pytest.mark.parametrize("marker", (SKIP, XFAIL))
     def test_an_unconditional_skip_in_tests_is_blocked(self, marker):
-        code, said = fire("keep-the-guards-able-to-fail.sh", {"tool_input": {
-            "file_path": "tests/unit/test_x.py",
-            "new_string": marker + "\ndef test_x():\n    pass\n"}})
+        code, said = fire(
+            "keep-the-guards-able-to-fail.sh",
+            {"tool_input": {"file_path": "tests/unit/test_x.py", "new_string": marker + "\ndef test_x():\n    pass\n"}},
+        )
         assert code == 2, (marker, code, said)
         assert "cannot fail" in said, said
 
-    @pytest.mark.parametrize("allowed", (
-        SKIPIF + "(find_chrome() is None, reason=NO_BROWSER)",
-        'pytest.skip("this host exposes no /proc/meminfo")',
-        "def test_x():\n    pass\n",
-    ))
+    @pytest.mark.parametrize(
+        "allowed",
+        (
+            SKIPIF + "(find_chrome() is None, reason=NO_BROWSER)",
+            'pytest.skip("this host exposes no /proc/meminfo")',
+            "def test_x():\n    pass\n",
+        ),
+    )
     def test_a_condition_that_names_itself_is_not(self, allowed):
         """`skipif` and a runtime `pytest.skip` name why they skipped.
         Both are how this suite gates on a missing browser or a missing
         bst, and blocking them would break the suite it protects."""
-        code, said = fire("keep-the-guards-able-to-fail.sh", {"tool_input": {
-            "file_path": "tests/unit/test_x.py", "new_string": allowed}})
+        code, said = fire(
+            "keep-the-guards-able-to-fail.sh",
+            {"tool_input": {"file_path": "tests/unit/test_x.py", "new_string": allowed}},
+        )
         assert code == 0, (allowed, code, said)
 
     def test_outside_tests_it_says_nothing(self):
-        code, _said = fire("keep-the-guards-able-to-fail.sh", {"tool_input": {
-            "file_path": "bga/analysis.py", "new_string": SKIP}})
+        code, _said = fire(
+            "keep-the-guards-able-to-fail.sh", {"tool_input": {"file_path": "bga/analysis.py", "new_string": SKIP}}
+        )
         assert code == 0, code
 
     def test_it_reads_a_whole_file_write_too(self):
         """`Write` carries `content`, `Edit` carries `new_string`. Reading
         one and not the other leaves the whole-file path unguarded, which
         is the shape of `UX-363`'s regex stopping at the first match."""
-        code, _said = fire("keep-the-guards-able-to-fail.sh", {"tool_input": {
-            "file_path": "tests/unit/test_x.py", "content": SKIP}})
+        code, _said = fire(
+            "keep-the-guards-able-to-fail.sh", {"tool_input": {"file_path": "tests/unit/test_x.py", "content": SKIP}}
+        )
         assert code == 2, code
 
     def test_ruff_reports_on_the_file_just_edited(self, tmp_path):
         bad = tmp_path / "bad.py"
         bad.write_text("import os\n", encoding="utf-8")
-        code, said = fire("lint-edited-python.sh",
-                          {"tool_input": {"file_path": str(bad)}})
+        code, said = fire("lint-edited-python.sh", {"tool_input": {"file_path": str(bad)}})
         assert code == 2, (code, said)
         assert "F401" in said or "unused" in said.lower(), said
 
-    @pytest.mark.parametrize("name,body", (("clean.py", "x = 1\n"),
-                                           ("notes.md", "# not python\n")))
+    @pytest.mark.parametrize("name,body", (("clean.py", "x = 1\n"), ("notes.md", "# not python\n")))
     def test_it_is_quiet_otherwise(self, tmp_path, name, body):
         path = tmp_path / name
         path.write_text(body, encoding="utf-8")
-        code, said = fire("lint-edited-python.sh",
-                          {"tool_input": {"file_path": str(path)}})
+        code, said = fire("lint-edited-python.sh", {"tool_input": {"file_path": str(path)}})
         assert code == 0, (name, code, said)
 
 
@@ -363,8 +378,7 @@ class TestEveryDeclaredHookExists:
         reads in review as a control that is in force."""
         declared = {pathlib.Path(c).name for c in self._declared()}
         found = {p.name for p in HOOKS.glob("*.sh")}
-        assert found == declared, (
-            f"scripts on disk {sorted(found)}, declared {sorted(declared)}")
+        assert found == declared, f"scripts on disk {sorted(found)}, declared {sorted(declared)}"
 
 
 class TestClaudeMdIsTrueAndShort:
@@ -379,7 +393,8 @@ class TestClaudeMdIsTrueAndShort:
         lines = self._text().splitlines()
         assert len(lines) <= 80, (
             f"CLAUDE.md is {len(lines)} lines; it is loaded in full at the "
-            f"start of every session, so length is a per-session cost")
+            f"start of every session, so length is a per-session cost"
+        )
 
     def test_every_make_target_it_names_exists(self):
         makefile = (REPO / "Makefile").read_text(encoding="utf-8")
@@ -389,10 +404,8 @@ class TestClaudeMdIsTrueAndShort:
         assert named <= real, f"CLAUDE.md names absent target(s): {named - real}"
 
     def test_every_path_it_names_exists(self):
-        named = set(re.findall(
-            r"(?<![\w./-])((?:bga|tools|tests|docs)/[\w./-]+)", self._text()))
-        missing = sorted(p for p in named
-                         if not (REPO / p.rstrip("/")).exists())
+        named = set(re.findall(r"(?<![\w./-])((?:bga|tools|tests|docs)/[\w./-]+)", self._text()))
+        missing = sorted(p for p in named if not (REPO / p.rstrip("/")).exists())
         assert missing == [], f"CLAUDE.md names path(s) that do not exist: {missing}"
 
     def test_no_line_carries_a_count_that_a_close_makes_wrong(self):
@@ -428,7 +441,8 @@ class TestClaudeMdIsTrueAndShort:
         assert found == [], (
             f"CLAUDE.md counts {found} of something the backlog changes on "
             f"every close - the count decays on its own, and `UX-471` "
-            f"removed the last one rather than guard it")
+            f"removed the last one rather than guard it"
+        )
 
     def test_no_line_carries_a_bare_share(self):
         """`UX-714`: `73 % of its tokens when measured` carried no
@@ -449,9 +463,7 @@ class TestClaudeMdIsTrueAndShort:
             for clause in re.split(r"[,;—]", line):
                 if share.search(clause) and not pinned.search(clause):
                     bare.append(clause.strip())
-        assert bare == [], (
-            f"CLAUDE.md carries a bare share with no window or date: "
-            f"{bare}")
+        assert bare == [], f"CLAUDE.md carries a bare share with no window or date: {bare}"
 
     def test_it_points_at_the_card_rather_than_restating_it(self):
         """`UX-240`'s rule for skills, and it holds here for the same
@@ -464,12 +476,11 @@ class TestClaudeMdIsTrueAndShort:
         them.
         """
         text = self._text()
-        assert "docs/contributing/rules.md" in text, (
-            "CLAUDE.md does not send a session to the rules card")
+        assert "docs/contributing/rules.md" in text, "CLAUDE.md does not send a session to the rules card"
         assert "docs/contributing/fixing-guide.md" in text
         assert len(text.splitlines()) < len(
-            (REPO / "docs/contributing/fixing-guide.md").read_text(
-                encoding="utf-8").splitlines())
+            (REPO / "docs/contributing/fixing-guide.md").read_text(encoding="utf-8").splitlines()
+        )
 
 
 class TestTheReviewPolicyIsReadable:
@@ -482,11 +493,9 @@ class TestTheReviewPolicyIsReadable:
     def _text():
         return REVIEW_MD.read_text(encoding="utf-8")
 
-    @pytest.mark.parametrize("pass_name", ("Bugs", "Security", "Compliance",
-                                           "Evidence"))
+    @pytest.mark.parametrize("pass_name", ("Bugs", "Security", "Compliance", "Evidence"))
     def test_each_named_pass_has_a_section(self, pass_name):
-        assert f"**{pass_name}.**" in self._text(), (
-            f"REVIEW.md's passes list names {pass_name} without defining it")
+        assert f"**{pass_name}.**" in self._text(), f"REVIEW.md's passes list names {pass_name} without defining it"
 
     def test_it_says_how_many_passes_there_are_and_has_that_many(self):
         text = self._text()
@@ -494,23 +503,20 @@ class TestTheReviewPolicyIsReadable:
         assert stated, "REVIEW.md does not say how many passes to run"
         words = {"three": 3, "four": 4, "five": 5}
         defined = len(re.findall(r"^\*\*[A-Z][a-z]+\.\*\*", text, re.M))
-        assert words[stated.group(1)] == defined, (
-            f"REVIEW.md says {stated.group(1)} passes and defines {defined}")
+        assert words[stated.group(1)] == defined, f"REVIEW.md says {stated.group(1)} passes and defines {defined}"
 
     def test_it_draws_the_important_line_and_caps_the_nits(self):
         text = self._text()
         assert "Important" in text and "nit" in text.lower()
         assert re.search(r"[Aa]t most \w+ nits", text), (
-            "REVIEW.md does not cap nit volume, so a review nobody "
-            "finishes reading is a review that did not happen")
+            "REVIEW.md does not cap nit volume, so a review nobody finishes reading is a review that did not happen"
+        )
 
     def test_every_item_it_cites_exists(self):
         cited = set(re.findall(r"`(UX-\d+)`", self._text()))
         assert cited, "REVIEW.md cites no item, so its rules have no provenance"
         scenarios = REPO / "docs/backlog/scenarios"
-        missing = sorted(
-            uid for uid in cited
-            if not list(scenarios.glob(f"UX-0*{uid.split('-')[1]}-*.md")))
+        missing = sorted(uid for uid in cited if not list(scenarios.glob(f"UX-0*{uid.split('-')[1]}-*.md")))
         assert missing == [], f"REVIEW.md cites absent item(s): {missing}"
 
     def test_it_keeps_the_agent_off_its_own_approval(self):
@@ -531,14 +537,12 @@ class TestTheSubagentsAreWellFormed:
     def test_there_are_some(self):
         assert self._files(), ".claude/agents/ is empty"
 
-    @pytest.mark.parametrize(
-        "field", ("name", "description", "tools", "model", "effort"))
+    @pytest.mark.parametrize("field", ("name", "description", "tools", "model", "effort"))
     def test_each_declares_the_field(self, field):
         for path in self._files():
             head = _FRONTMATTER.match(path.read_text(encoding="utf-8"))
             assert head, f"{path.name} has no frontmatter"
-            assert re.search(rf"^{field}:", head.group(1), re.M), (
-                f"{path.name} declares no {field}")
+            assert re.search(rf"^{field}:", head.group(1), re.M), f"{path.name} declares no {field}"
 
     #: `UX-1039`: an agent with no `effort:` ran at whatever it inherited,
     #: which no round chose.
@@ -580,9 +584,7 @@ class TestTheSubagentsAreWellFormed:
             head = _FRONTMATTER.match(path.read_text(encoding="utf-8")).group(1)
             tools = re.search(r"^tools:\s*(.+)$", head, re.M).group(1)
             for forbidden in ("Edit", "Write", "MultiEdit", "NotebookEdit"):
-                assert forbidden not in tools, (
-                    f"{path.name} may use {forbidden}; a reporting agent "
-                    f"reports only")
+                assert forbidden not in tools, f"{path.name} may use {forbidden}; a reporting agent reports only"
 
     def test_a_reporter_is_never_put_on_the_editing_list(self):
         """`UX-504`. The split is a *role*, not an exemption: a verifier
@@ -591,8 +593,8 @@ class TestTheSubagentsAreWellFormed:
         reporter's body says so too, so the classification cannot be
         dodged by rewording either end alone."""
         assert self.MAY_EDIT.isdisjoint(self.REPORTERS), (
-            f"{sorted(self.MAY_EDIT & self.REPORTERS)} may edit, and they "
-            f"are the agents that exist to report")
+            f"{sorted(self.MAY_EDIT & self.REPORTERS)} may edit, and they are the agents that exist to report"
+        )
         said = ("report only", "fix nothing", "do not edit")
         for name in sorted(self.REPORTERS):
             body = (AGENTS / f"{name}.md").read_text(encoding="utf-8").lower()
@@ -600,19 +602,18 @@ class TestTheSubagentsAreWellFormed:
                 f"{name}.md no longer says it does not edit, so nothing but "
                 f"this file's own list keeps it from doing so. The three "
                 f"phrasings above are the ones the bodies carry; a fourth "
-                f"is a decision, not a pattern to lengthen")
+                f"is a decision, not a pattern to lengthen"
+            )
 
     def test_the_implementer_may_edit(self):
         """`UX-504`. Without this the split reads as an exemption rather
         than a role: an implementer whose tools were trimmed back to
         read-only would satisfy every other clause here and silently
         stop being able to run a track."""
-        head = _FRONTMATTER.match(
-            (AGENTS / "implementer.md").read_text(encoding="utf-8")).group(1)
+        head = _FRONTMATTER.match((AGENTS / "implementer.md").read_text(encoding="utf-8")).group(1)
         tools = re.search(r"^tools:\s*(.+)$", head, re.M).group(1)
         for needed in ("Edit", "Write"):
-            assert needed in tools, (
-                f"implementer.md cannot {needed}, so it cannot run a track")
+            assert needed in tools, f"implementer.md cannot {needed}, so it cannot run a track"
 
     def test_the_implementer_takes_its_base_rather_than_stopping(self):
         """`UX-560`: the worktree is created from `origin/main`, not the
@@ -637,10 +638,12 @@ class TestTheSubagentsAreWellFormed:
         body = (AGENTS / "implementer.md").read_text(encoding="utf-8")
         assert "then take the base" in body, (
             "implementer.md does not tell a track to take its named "
-            "base, so a wrong base is reported and then worked around")
+            "base, so a wrong base is reported and then worked around"
+        )
         assert "object database" in body or "object store" in body, (
             "implementer.md does not say why the reset always works, so "
-            "a track may treat its base as unreachable (UX-560)")
+            "a track may treat its base as unreachable (UX-560)"
+        )
 
     def test_the_implementer_says_where_it_runs(self):
         """Its editing is bounded by *where* it runs, not by what it
@@ -648,8 +651,8 @@ class TestTheSubagentsAreWellFormed:
         might launch in the tree itself."""
         body = (AGENTS / "implementer.md").read_text(encoding="utf-8")
         assert "worktree" in body, (
-            "implementer.md does not say it runs in a worktree, which is "
-            "the whole bound on its editing (UX-504)")
+            "implementer.md does not say it runs in a worktree, which is the whole bound on its editing (UX-504)"
+        )
 
     def test_the_implementer_names_the_files_no_track_touches(self):
         """`UX-501` measured the collision: two branches each closing one
@@ -674,12 +677,13 @@ class TestTheSubagentsAreWellFormed:
         """
         body = (AGENTS / "implementer.md").read_text(encoding="utf-8")
         assert "git log --oneline -1" in body, (
-            "implementer.md does not tell the track how to read the "
-            "commit its copy starts from (UX-510)")
+            "implementer.md does not tell the track how to read the commit its copy starts from (UX-510)"
+        )
         assert "the commit your brief names" in body, (
             "implementer.md says how to read the base but not what to "
             "compare it against, so a track behind the orchestrator has "
-            "nothing to notice")
+            "nothing to notice"
+        )
 
     def test_the_implementer_is_told_to_report_rather_than_work_around(self):
         """The half that decides what a track does with the answer. A
@@ -691,14 +695,13 @@ class TestTheSubagentsAreWellFormed:
         survived rather than the sentence that did not: the mismatch is
         reported, and a missing file is never recreated.
         """
-        body = " ".join(
-            (AGENTS / "implementer.md").read_text(encoding="utf-8").split())
+        body = " ".join((AGENTS / "implementer.md").read_text(encoding="utf-8").split())
         assert "say so in your first sentence" in body, (
-            "implementer.md tells the track to check its base and not to "
-            "report what it finds (UX-510)")
+            "implementer.md tells the track to check its base and not to report what it finds (UX-510)"
+        )
         assert "Never recreate a file the brief cites" in body, (
-            "implementer.md does not forbid recreating a file its copy "
-            "lacks, which is the working-around UX-510 priced")
+            "implementer.md does not forbid recreating a file its copy lacks, which is the working-around UX-510 priced"
+        )
 
     def test_the_merge_cost_is_a_measured_number_in_both_places(self):
         """`UX-510`'s third bullet. "Parallel is cheaper" is the claim a
@@ -706,12 +709,11 @@ class TestTheSubagentsAreWellFormed:
         round 75's - three picks, one conflicted, over nine commits. It
         lives in the brief the track reads and in the skill the
         orchestrator reads, because they are different readers."""
-        for path in (AGENTS / "implementer.md",
-                     REPO / ".claude/skills/decompose/SKILL.md"):
+        for path in (AGENTS / "implementer.md", REPO / ".claude/skills/decompose/SKILL.md"):
             body = " ".join(path.read_text(encoding="utf-8").split())
             assert "three cherry-picks" in body, (
-                f"{path.name} does not say what merging a track cost the "
-                f"one round that measured it (UX-510)")
+                f"{path.name} does not say what merging a track cost the one round that measured it (UX-510)"
+            )
             # Beside the count, not merely in the same file: three picks
             # is a number only against the distance it was over, and
             # both files say "nine commits" a paragraph earlier for a
@@ -719,16 +721,17 @@ class TestTheSubagentsAreWellFormed:
             # wide window, passes on that and checks nothing. Measured
             # offsets on the two bodies: -801/+144 and -299/-16/+139.
             at = body.index("three cherry-picks")
-            assert "nine commits" in body[max(0, at - 40):at + 200], (
+            assert "nine commits" in body[max(0, at - 40) : at + 200], (
                 f"{path.name} gives the pick count without the distance "
-                f"it was over, which is the half that makes it a number")
+                f"it was over, which is the half that makes it a number"
+            )
 
     def test_the_verifier_says_it_does_not_fix(self):
         body = (AGENTS / "verifier.md").read_text(encoding="utf-8")
         assert "Fix nothing" in body or "fix nothing" in body
         assert "falsify" in body.lower() or "mutation" in body.lower(), (
-            "a verifier for this repository that never asks whether a new "
-            "guard can fail is checking the wrong thing")
+            "a verifier for this repository that never asks whether a new guard can fail is checking the wrong thing"
+        )
 
     def test_the_verifier_runs_dev_sizes_check(self):
         """`r140` bookkeeping: a hand-typed size row passed the verifier
@@ -736,22 +739,22 @@ class TestTheSubagentsAreWellFormed:
         guard that would have caught it."""
         body = (AGENTS / "verifier.md").read_text(encoding="utf-8")
         assert "dev_sizes.py --check" in body, (
-            "verifier.md does not name dev_sizes.py --check, so a "
-            "hand-typed size row passes it")
+            "verifier.md does not name dev_sizes.py --check, so a hand-typed size row passes it"
+        )
 
     def test_the_implementer_runs_the_whole_suite_at_n2(self):
         """`r140` bookkeeping: `dev_touching.py` selecting the whole
         suite is a signal to run it, not a licence to hand-pick a
         subset - two tracks missed three regressions that way."""
-        body = " ".join(
-            (AGENTS / "implementer.md").read_text(encoding="utf-8").split())
+        body = " ".join((AGENTS / "implementer.md").read_text(encoding="utf-8").split())
         assert "run the whole suite at" in body and "-n 2" in body, (
             "implementer.md does not say to run the whole suite at -n 2 "
             "when dev_touching.py selects it, so a hand-picked subset "
-            "is still an option")
+            "is still an option"
+        )
         assert "never a hand-picked subset" in body, (
-            "implementer.md drops the prohibition on a hand-picked "
-            "subset when dev_touching.py selects everything")
+            "implementer.md drops the prohibition on a hand-picked subset when dev_touching.py selects everything"
+        )
 
     def test_the_researcher_is_told_to_name_what_it_could_not_find(self):
         """Silence reading as "there is none" is how a false premise
@@ -793,29 +796,31 @@ class TestATrackTakesTheBaseItWasNamed:
         body = (AGENTS / "implementer.md").read_text(encoding="utf-8")
         section = body.split("## Where your copy starts", 1)[1]
         section = section.split("\n## ", 1)[0]
-        lines = [line.split("#")[0].strip()
-                 for block in re.findall(r"```bash\n(.*?)```", section, re.S)
-                 for line in block.splitlines() if line.strip()]
-        found = [line for line in lines
-                 if line.startswith("git") and not line.startswith("git log")]
+        lines = [
+            line.split("#")[0].strip()
+            for block in re.findall(r"```bash\n(.*?)```", section, re.S)
+            for line in block.splitlines()
+            if line.strip()
+        ]
+        found = [line for line in lines if line.startswith("git") and not line.startswith("git log")]
         assert len(found) == 1, (
             f"'Where your copy starts' fences {len(found)} recovery "
             f"command(s), not one: {found}. A track reading two does not "
-            f"know which is the instruction")
+            f"know which is the instruction"
+        )
         return found[0]
 
     @classmethod
     def _argv(cls, sha):
         command = cls._recovery()
-        assert cls.PLACEHOLDER.search(command), (
-            f"{command!r} names no base for the track to substitute")
+        assert cls.PLACEHOLDER.search(command), f"{command!r} names no base for the track to substitute"
         import shlex
+
         return shlex.split(cls.PLACEHOLDER.sub(sha, command))
 
     @staticmethod
     def _git(where, *argv, check=True):
-        return subprocess.run(["git", *argv], cwd=where, check=check,
-                              capture_output=True, text=True, timeout=60)
+        return subprocess.run(["git", *argv], cwd=where, check=check, capture_output=True, text=True, timeout=60)
 
     @classmethod
     def _round_and_a_copy_behind_it(cls, tmp_path):
@@ -825,10 +830,13 @@ class TestATrackTakesTheBaseItWasNamed:
         repo = tmp_path / "repo"
         repo.mkdir()
         (repo / "base.md").write_text("base\n", encoding="utf-8")
-        for argv in (["init", "-q", "-b", "main"],
-                     ["config", "user.email", "a@b"],
-                     ["config", "user.name", "a"],
-                     ["add", "base.md"], ["commit", "-qm", "base"]):
+        for argv in (
+            ["init", "-q", "-b", "main"],
+            ["config", "user.email", "a@b"],
+            ["config", "user.name", "a"],
+            ["add", "base.md"],
+            ["commit", "-qm", "base"],
+        ):
             cls._git(repo, *argv)
         cls._git(repo, "checkout", "-qb", "round")
         for n in range(3):
@@ -838,8 +846,7 @@ class TestATrackTakesTheBaseItWasNamed:
         tip = cls._git(repo, "rev-parse", "HEAD").stdout.strip()
         cls._git(repo, "checkout", "-q", "main")
         copy = tmp_path / "copy"
-        cls._git(repo, "worktree", "add", "-q", "-b", "track", str(copy),
-                 "main")
+        cls._git(repo, "worktree", "add", "-q", "-b", "track", str(copy), "main")
         return repo, copy, tip
 
     def test_the_documented_recovery_reaches_the_round_s_tip(self, tmp_path):
@@ -848,21 +855,20 @@ class TestATrackTakesTheBaseItWasNamed:
         tip - with the file its brief cites now present."""
         _repo, copy, tip = self._round_and_a_copy_behind_it(tmp_path)
         assert not (copy / "docs-2.md").exists(), (
-            "the sandbox did not reproduce the shape: the copy already "
-            "has the round's work")
-        done = subprocess.run(self._argv(tip), cwd=copy, capture_output=True,
-                              text=True, timeout=60)
+            "the sandbox did not reproduce the shape: the copy already has the round's work"
+        )
+        done = subprocess.run(self._argv(tip), cwd=copy, capture_output=True, text=True, timeout=60)
         assert done.returncode == 0, (
-            f"the command implementer.md documents does not recover a "
-            f"copy three commits behind: {done.stderr}")
+            f"the command implementer.md documents does not recover a copy three commits behind: {done.stderr}"
+        )
         assert self._git(copy, "rev-parse", "HEAD").stdout.strip() == tip, (
-            "the copy ran the documented recovery and is not at the base")
+            "the copy ran the documented recovery and is not at the base"
+        )
         assert (copy / "docs-2.md").exists(), (
-            "the recovery moved the branch without the working tree, so "
-            "the files the brief cites are still missing")
+            "the recovery moved the branch without the working tree, so the files the brief cites are still missing"
+        )
 
-    def test_the_recovery_refuses_to_discard_the_copy_s_own_work(
-            self, tmp_path):
+    def test_the_recovery_refuses_to_discard_the_copy_s_own_work(self, tmp_path):
         """Why `--ff-only` and not `git reset --hard`. Behind, the two
         are the same command; diverged, the reset silently throws away
         a commit and the track reports work it no longer has. The
@@ -873,11 +879,11 @@ class TestATrackTakesTheBaseItWasNamed:
         self._git(copy, "commit", "-qm", "the track's commit")
         mine = self._git(copy, "rev-parse", "HEAD").stdout.strip()
 
-        done = subprocess.run(self._argv(tip), cwd=copy, capture_output=True,
-                              text=True, timeout=60)
+        done = subprocess.run(self._argv(tip), cwd=copy, capture_output=True, text=True, timeout=60)
         assert done.returncode != 0, (
             "the documented recovery took the base over a diverged copy "
-            "and said nothing - the track's own commit is gone")
+            "and said nothing - the track's own commit is gone"
+        )
         assert self._git(copy, "rev-parse", "HEAD").stdout.strip() == mine
         assert (copy / "mine.md").exists()
 
@@ -895,17 +901,18 @@ class TestATrackTakesTheBaseItWasNamed:
         that names the command somewhere else entirely.
         """
         verb = " ".join(self._recovery().split()[:3])
-        skill = " ".join((SKILLS / "decompose/SKILL.md").read_text(
-            encoding="utf-8").split())
+        skill = " ".join((SKILLS / "decompose/SKILL.md").read_text(encoding="utf-8").split())
         assert verb in skill, (
             f"the decompose skill does not tell the orchestrator to put "
             f"`{verb}` in the brief, so the track's remedy and the brief's "
-            f"instruction are two different sentences (UX-614)")
+            f"instruction are two different sentences (UX-614)"
+        )
         at = skill.index(verb)
-        assert "git rev-parse HEAD" in skill[max(0, at - 400):at + 400], (
+        assert "git rev-parse HEAD" in skill[max(0, at - 400) : at + 400], (
             "the skill names the recovery without saying the sha is "
             "derived at launch; a sha remembered from the round document "
-            "is the stale base this item is about")
+            "is the stale base this item is about"
+        )
 
 
 class TestATrackCanReadEveryRefItsCheckoutHas:
@@ -934,7 +941,8 @@ class TestATrackCanReadEveryRefItsCheckoutHas:
         body = (AGENTS / "implementer.md").read_text(encoding="utf-8")
         assert cls.SECTION in body, (
             f"implementer.md has no {cls.SECTION!r} section, so a track "
-            f"is never told which refs it can resolve (UX-623)")
+            f"is never told which refs it can resolve (UX-623)"
+        )
         return body.split(cls.SECTION, 1)[1].split("\n## ", 1)[0]
 
     @classmethod
@@ -942,19 +950,21 @@ class TestATrackCanReadEveryRefItsCheckoutHas:
         """The command that section tells a track to run against the
         base its brief names, read out of the file - restating it here
         would pass over a body documenting something else."""
-        lines = [line.split("#")[0].strip()
-                 for block in re.findall(r"```bash\n(.*?)```",
-                                         cls._section(), re.S)
-                 for line in block.splitlines() if line.strip()]
+        lines = [
+            line.split("#")[0].strip()
+            for block in re.findall(r"```bash\n(.*?)```", cls._section(), re.S)
+            for line in block.splitlines()
+            if line.strip()
+        ]
         assert len(lines) == 1, (
             f"{cls.SECTION!r} fences {len(lines)} commands, not one: "
-            f"{lines}. A track reading two does not know which answers")
+            f"{lines}. A track reading two does not know which answers"
+        )
         return lines[0]
 
     @staticmethod
     def _git(where, *argv, check=True):
-        return subprocess.run(["git", *argv], cwd=where, check=check,
-                              capture_output=True, text=True, timeout=60)
+        return subprocess.run(["git", *argv], cwd=where, check=check, capture_output=True, text=True, timeout=60)
 
     @classmethod
     def _checkout_with_an_unpushed_branch(cls, tmp_path):
@@ -963,10 +973,13 @@ class TestATrackCanReadEveryRefItsCheckoutHas:
         repo = tmp_path / "repo"
         repo.mkdir()
         (repo / "base.md").write_text("base\n", encoding="utf-8")
-        for argv in (["init", "-q", "-b", "main"],
-                     ["config", "user.email", "a@b"],
-                     ["config", "user.name", "a"],
-                     ["add", "base.md"], ["commit", "-qm", "base"]):
+        for argv in (
+            ["init", "-q", "-b", "main"],
+            ["config", "user.email", "a@b"],
+            ["config", "user.name", "a"],
+            ["add", "base.md"],
+            ["commit", "-qm", "base"],
+        ):
             cls._git(repo, *argv)
         cls._git(repo, "checkout", "-qb", "round")
         for n in range(3):
@@ -976,31 +989,26 @@ class TestATrackCanReadEveryRefItsCheckoutHas:
         tip = cls._git(repo, "rev-parse", "HEAD").stdout.strip()
         cls._git(repo, "checkout", "-q", "main")
         copy = tmp_path / "copy"
-        cls._git(repo, "worktree", "add", "-q", "-b", "track", str(copy),
-                 "main")
+        cls._git(repo, "worktree", "add", "-q", "-b", "track", str(copy), "main")
         assert cls._git(repo, "remote").stdout.strip() == "", (
-            "the sandbox configured a remote, so 'unpushed' is not what "
-            "is being measured")
+            "the sandbox configured a remote, so 'unpushed' is not what is being measured"
+        )
         return repo, copy, tip
 
-    def test_a_worktree_resolves_an_unpushed_branch_of_its_checkout(
-            self, tmp_path):
+    def test_a_worktree_resolves_an_unpushed_branch_of_its_checkout(self, tmp_path):
         """`UX-623`'s corrected acceptance test. The branch exists only
         in the checkout the copy was made from and has never been
         pushed anywhere; the copy resolves it by name."""
         _repo, copy, tip = self._checkout_with_an_unpushed_branch(tmp_path)
-        assert self._git(copy, "rev-parse", "--verify", "round"
-                         ).stdout.strip() == tip, (
-            "a linked worktree cannot resolve an unpushed branch of the "
-            "checkout it was copied from - UX-623 as filed")
-        unpushed = self._git(copy, "rev-parse", "--verify",
-                             "origin/round", check=False)
+        assert self._git(copy, "rev-parse", "--verify", "round").stdout.strip() == tip, (
+            "a linked worktree cannot resolve an unpushed branch of the checkout it was copied from - UX-623 as filed"
+        )
+        unpushed = self._git(copy, "rev-parse", "--verify", "origin/round", check=False)
         assert unpushed.returncode != 0, (
-            "`origin/round` resolved, so the branch was pushed and the "
-            "clause above measured the easy case")
+            "`origin/round` resolved, so the branch was pushed and the clause above measured the easy case"
+        )
 
-    def test_a_branch_ref_lives_in_the_shared_dir_not_the_private_one(
-            self, tmp_path):
+    def test_a_branch_ref_lives_in_the_shared_dir_not_the_private_one(self, tmp_path):
         """The mechanism, so the clause above reads as a property.
 
         Asked of the branch's own ref path rather than of whether a
@@ -1010,40 +1018,35 @@ class TestATrackCanReadEveryRefItsCheckoutHas:
         version instead of the ref store (`UX-623`, caught on CI).
         """
         _repo, copy, _tip = self._checkout_with_an_unpushed_branch(tmp_path)
-        private = pathlib.Path(
-            self._git(copy, "rev-parse", "--absolute-git-dir").stdout.strip())
-        common = pathlib.Path(
-            self._git(copy, "rev-parse", "--git-common-dir").stdout.strip())
+        private = pathlib.Path(self._git(copy, "rev-parse", "--absolute-git-dir").stdout.strip())
+        common = pathlib.Path(self._git(copy, "rev-parse", "--git-common-dir").stdout.strip())
         assert private != common.resolve(), (
-            f"{copy} is not a linked worktree - its git dir is the "
-            f"shared one, so nothing here is being measured")
-        where = pathlib.Path(self._git(
-            copy, "rev-parse", "--git-path",
-            "refs/heads/round").stdout.strip()).resolve()
+            f"{copy} is not a linked worktree - its git dir is the shared one, so nothing here is being measured"
+        )
+        where = pathlib.Path(self._git(copy, "rev-parse", "--git-path", "refs/heads/round").stdout.strip()).resolve()
         assert private not in where.parents and where != private, (
             f"the branch's ref path is {where}, inside the worktree's own "
             f"git dir {private} - the ref store is not shared and UX-623 "
-            f"as filed was right")
+            f"as filed was right"
+        )
 
-    def test_the_documented_check_answers_from_the_branch_name_alone(
-            self, tmp_path):
+    def test_the_documented_check_answers_from_the_branch_name_alone(self, tmp_path):
         """The base check `implementer.md` names, run with a branch name
         substituted for its placeholder: a copy behind the round is
         told so without a commit id and without a fetch."""
         _repo, copy, _tip = self._checkout_with_an_unpushed_branch(tmp_path)
         command = self._base_check()
-        assert self.PLACEHOLDER.search(command), (
-            f"{command!r} names no base for the track to substitute")
+        assert self.PLACEHOLDER.search(command), f"{command!r} names no base for the track to substitute"
         import shlex
+
         argv = shlex.split(self.PLACEHOLDER.sub("round", command))
-        done = subprocess.run(argv, cwd=copy, capture_output=True,
-                              text=True, timeout=60)
+        done = subprocess.run(argv, cwd=copy, capture_output=True, text=True, timeout=60)
         assert done.returncode == 0, (
             f"the check implementer.md documents does not answer for a "
-            f"copy behind an unpushed round branch: {done.stderr or argv}")
+            f"copy behind an unpushed round branch: {done.stderr or argv}"
+        )
 
-    def test_the_documented_check_says_no_when_the_copy_has_diverged(
-            self, tmp_path):
+    def test_the_documented_check_says_no_when_the_copy_has_diverged(self, tmp_path):
         """The half that makes it a check rather than a formality. A
         copy carrying its own commit is not behind the base, and taking
         the base would cost that commit - the same distinction
@@ -1053,12 +1056,12 @@ class TestATrackCanReadEveryRefItsCheckoutHas:
         self._git(copy, "add", "mine.md")
         self._git(copy, "commit", "-qm", "the track's commit")
         import shlex
+
         argv = shlex.split(self.PLACEHOLDER.sub("round", self._base_check()))
-        done = subprocess.run(argv, cwd=copy, capture_output=True,
-                              text=True, timeout=60)
+        done = subprocess.run(argv, cwd=copy, capture_output=True, text=True, timeout=60)
         assert done.returncode != 0, (
-            "the documented check calls a diverged copy behind its base, "
-            "so a track runs --ff-only expecting it to work")
+            "the documented check calls a diverged copy behind its base, so a track runs --ff-only expecting it to work"
+        )
 
     def test_the_section_names_the_reading_a_copy_does_not_get(self):
         """Scoped to the section, because `implementer.md` argues about
@@ -1068,24 +1071,26 @@ class TestATrackCanReadEveryRefItsCheckoutHas:
         section = " ".join(self._section().split())
         assert "per-worktree" in section, (
             "the section says which refs resolve without saying what "
-            "does not, so a track reads it as 'everything resolves'")
+            "does not, so a track reads it as 'everything resolves'"
+        )
         assert "git -C" in section, (
-            "the section does not name the one reading a track is "
-            "refused, which is the half UX-623 was filed for")
+            "the section does not name the one reading a track is refused, which is the half UX-623 was filed for"
+        )
 
     def test_the_orchestrator_is_told_the_branch_resolves(self):
         """`decompose` is what the brief is written from. Without this
         the orchestrator pushes, or copies an id, for a reason that was
         measured false - and copying an id is `UX-626`."""
-        skill = " ".join((SKILLS / "decompose/SKILL.md").read_text(
-            encoding="utf-8").split())
+        skill = " ".join((SKILLS / "decompose/SKILL.md").read_text(encoding="utf-8").split())
         assert "whether or not it is pushed" in skill, (
             "the decompose skill does not tell the orchestrator that an "
-            "unpushed branch resolves in a track's copy (UX-623)")
+            "unpushed branch resolves in a track's copy (UX-623)"
+        )
         at = skill.index("whether or not it is pushed")
-        assert "refs/heads" in skill[max(0, at - 400):at + 200], (
+        assert "refs/heads" in skill[max(0, at - 400) : at + 200], (
             "the skill states the fact without the mechanism that makes "
-            "it one, so the next round re-derives it or doubts it")
+            "it one, so the next round re-derives it or doubts it"
+        )
 
 
 class TestABriefsBaseResolvesBeforeItIsSent:
@@ -1117,8 +1122,8 @@ class TestABriefsBaseResolvesBeforeItIsSent:
     def _section():
         skill = (SKILLS / "decompose/SKILL.md").read_text(encoding="utf-8")
         assert "## 3. Tracks" in skill, (
-            "the decompose skill has no Tracks section, so the launch "
-            "contract has moved and this class reads nothing")
+            "the decompose skill has no Tracks section, so the launch contract has moved and this class reads nothing"
+        )
         return skill.split("## 3. Tracks", 1)[1].split("\n## ", 1)[0]
 
     @classmethod
@@ -1128,39 +1133,44 @@ class TestABriefsBaseResolvesBeforeItIsSent:
         shape rather than by its own text: a clause that grepped for
         `rev-parse` would find whatever command it was told to expect.
         """
-        lines = [line.split("#")[0].strip()
-                 for block in re.findall(r"```bash\n(.*?)```",
-                                         cls._section(), re.S)
-                 for line in block.splitlines() if line.strip()]
+        lines = [
+            line.split("#")[0].strip()
+            for block in re.findall(r"```bash\n(.*?)```", cls._section(), re.S)
+            for line in block.splitlines()
+            if line.strip()
+        ]
         carry = [line for line in lines if cls.PLACEHOLDER.search(line)]
         assert len(carry) == 1, (
             f"the launch section fences {len(carry)} command(s) taking a "
             f"base, not one: {carry}. UX-626 is a brief whose base was "
-            f"never resolved; two candidates is no check at all")
+            f"never resolved; two candidates is no check at all"
+        )
         return carry[0]
 
     @staticmethod
     def _git(where, *argv, check=True):
-        return subprocess.run(["git", *argv], cwd=where, check=check,
-                              capture_output=True, text=True, timeout=60)
+        return subprocess.run(["git", *argv], cwd=where, check=check, capture_output=True, text=True, timeout=60)
 
     @classmethod
     def _a_repository(cls, tmp_path):
         repo = tmp_path / "repo"
         repo.mkdir()
         (repo / "base.md").write_text("base\n", encoding="utf-8")
-        for argv in (["init", "-q", "-b", "main"],
-                     ["config", "user.email", "a@b"],
-                     ["config", "user.name", "a"],
-                     ["add", "base.md"], ["commit", "-qm", "base"]):
+        for argv in (
+            ["init", "-q", "-b", "main"],
+            ["config", "user.email", "a@b"],
+            ["config", "user.name", "a"],
+            ["add", "base.md"],
+            ["commit", "-qm", "base"],
+        ):
             cls._git(repo, *argv)
         return repo
 
     def _run(self, repo, base):
         import shlex
+
         argv = shlex.split(self.PLACEHOLDER.sub(base, self._resolve_check()))
-        return subprocess.run(argv, cwd=repo, capture_output=True,
-                              text=True, timeout=60)
+        return subprocess.run(argv, cwd=repo, capture_output=True, text=True, timeout=60)
 
     def test_it_refuses_the_id_that_was_never_an_object(self, tmp_path):
         """`UX-626`'s acceptance test: the brief's base, refused before
@@ -1170,7 +1180,8 @@ class TestABriefsBaseResolvesBeforeItIsSent:
         assert done.returncode != 0, (
             f"the documented pre-launch check accepts {self.ABSENT!r}, "
             f"the id round 85's brief carried and no object here - so a "
-            f"brief still goes out with a base nobody resolved")
+            f"brief still goes out with a base nobody resolved"
+        )
 
     def test_it_refuses_an_object_that_is_not_a_base(self, tmp_path):
         """The boundary between the classes, and why the command is not
@@ -1178,12 +1189,11 @@ class TestABriefsBaseResolvesBeforeItIsSent:
         and is not something a track can start from."""
         repo = self._a_repository(tmp_path)
         tree = self._git(repo, "rev-parse", "HEAD^{tree}").stdout.strip()
-        assert self._git(repo, "cat-file", "-t", tree).stdout.strip() \
-            == "tree", "the sandbox did not produce a tree id"
+        assert self._git(repo, "cat-file", "-t", tree).stdout.strip() == "tree", "the sandbox did not produce a tree id"
         done = self._run(repo, tree)
         assert done.returncode != 0, (
-            "the documented check calls a tree a valid base, so it "
-            "passes an id that resolves to no commit at all")
+            "the documented check calls a tree a valid base, so it passes an id that resolves to no commit at all"
+        )
 
     def test_it_accepts_a_ref_the_orchestrator_would_write(self, tmp_path):
         """The class that must pass, or the check is a command that
@@ -1192,9 +1202,7 @@ class TestABriefsBaseResolvesBeforeItIsSent:
         repo = self._a_repository(tmp_path)
         self._git(repo, "branch", "round")
         done = self._run(repo, "round")
-        assert done.returncode == 0, (
-            f"the documented check refuses a branch that exists: "
-            f"{done.stderr.strip()!r}")
+        assert done.returncode == 0, f"the documented check refuses a branch that exists: {done.stderr.strip()!r}"
 
     def test_the_skill_says_when_the_check_runs(self):
         """Scoped to the launch section. The command alone is not the
@@ -1206,10 +1214,11 @@ class TestABriefsBaseResolvesBeforeItIsSent:
         assert "before the brief goes out" in section, (
             "the launch section fences a resolve command without saying "
             "it runs before the brief is sent, which is the whole of "
-            "UX-626 - the id was wrong when it was written")
+            "UX-626 - the id was wrong when it was written"
+        )
         assert "written from memory rather than read" in section, (
-            "the section drops why the id was wrong; a round reading "
-            "'derive the sha' as advice repeats it (UX-626)")
+            "the section drops why the id was wrong; a round reading 'derive the sha' as advice repeats it (UX-626)"
+        )
 
 
 class TestTheDocumentedRevertKeepsTheTracksOwnWork:
@@ -1240,16 +1249,15 @@ class TestTheDocumentedRevertKeepsTheTracksOwnWork:
     def _fence(cls):
         body = (SKILLS / "falsify/SKILL.md").read_text(encoding="utf-8")
         assert "## The loop, per guard" in body, (
-            "the falsify skill has no loop section, so nothing here "
-            "reads the recipe a track is told to run")
+            "the falsify skill has no loop section, so nothing here reads the recipe a track is told to run"
+        )
         section = body.split("## The loop, per guard", 1)[1]
-        blocks = re.findall(r"```bash\n(.*?)```",
-                            section.split("\n## ", 1)[0], re.S)
+        blocks = re.findall(r"```bash\n(.*?)```", section.split("\n## ", 1)[0], re.S)
         assert len(blocks) == 1, (
             f"the loop section fences {len(blocks)} bash blocks, not "
-            f"one - a track reading two does not know which is the loop")
-        return [line.split("#")[0].rstrip()
-                for line in blocks[0].splitlines()]
+            f"one - a track reading two does not know which is the loop"
+        )
+        return [line.split("#")[0].rstrip() for line in blocks[0].splitlines()]
 
     @classmethod
     def _phases(cls):
@@ -1257,32 +1265,26 @@ class TestTheDocumentedRevertKeepsTheTracksOwnWork:
         first step that is not shell - steps 2 and 3 are the mutation
         and the run, and belong to the track rather than to this."""
         lines = cls._fence()
-        first = next((i for i, line in enumerate(lines)
-                      if line.startswith("python3")), None)
-        assert first is not None, (
-            "the loop fences no python step, so it is not the loop")
+        first = next((i for i, line in enumerate(lines) if line.startswith("python3")), None)
+        assert first is not None, "the loop fences no python step, so it is not the loop"
         snapshot = [line for line in lines[:first] if line.strip()]
-        revert = [line for line in lines[first:]
-                  if line.strip().startswith("cp ")]
+        revert = [line for line in lines[first:] if line.strip().startswith("cp ")]
         assert snapshot and len(revert) == 1, (
             f"the loop has {len(snapshot)} step(s) before the mutation "
             f"and {len(revert)} copy back after it; UX-625 needs one of "
-            f"each or the recipe does not round-trip")
+            f"each or the recipe does not round-trip"
+        )
         # The revert runs in a later shell, so it needs the assignments
         # the snapshot phase made.
-        return snapshot, [line for line in snapshot if re.match(r"\w+=", line)
-                          ] + revert
+        return snapshot, [line for line in snapshot if re.match(r"\w+=", line)] + revert
 
     @classmethod
     def _script(cls, phase, scratchpad):
         for placeholder in (cls.FILE, cls.SCRATCHPAD):
             assert any(placeholder in line for line in cls._fence()), (
-                f"the loop names no {placeholder} for a track to fill "
-                f"in, so this clause cannot run what it documents")
-        return "\n".join(
-            line.replace(cls.SCRATCHPAD, str(scratchpad))
-                .replace(cls.FILE, cls.NESTED)
-            for line in phase)
+                f"the loop names no {placeholder} for a track to fill in, so this clause cannot run what it documents"
+            )
+        return "\n".join(line.replace(cls.SCRATCHPAD, str(scratchpad)).replace(cls.FILE, cls.NESTED) for line in phase)
 
     def _worktree(self, tmp_path):
         work = tmp_path / "agent-abcd"
@@ -1290,11 +1292,9 @@ class TestTheDocumentedRevertKeepsTheTracksOwnWork:
         return work
 
     def _sh(self, script, cwd):
-        return subprocess.run(["sh", "-e", "-c", script], cwd=cwd,
-                              capture_output=True, text=True, timeout=60)
+        return subprocess.run(["sh", "-e", "-c", script], cwd=cwd, capture_output=True, text=True, timeout=60)
 
-    def test_the_snapshot_step_runs_for_a_file_below_the_root(
-            self, tmp_path):
+    def test_the_snapshot_step_runs_for_a_file_below_the_root(self, tmp_path):
         """The step that was broken. Every file in this repository is
         nested, so a recipe that only works at the root works never."""
         work = self._worktree(tmp_path)
@@ -1304,10 +1304,10 @@ class TestTheDocumentedRevertKeepsTheTracksOwnWork:
         done = self._sh(self._script(self._phases()[0], scratchpad), work)
         assert done.returncode == 0, (
             f"the falsify loop's snapshot step fails for a nested file, "
-            f"which is every file here: {done.stderr.strip()!r}")
+            f"which is every file here: {done.stderr.strip()!r}"
+        )
 
-    def test_the_recipe_returns_the_work_and_not_the_committed_text(
-            self, tmp_path):
+    def test_the_recipe_returns_the_work_and_not_the_committed_text(self, tmp_path):
         """`UX-625`'s acceptance test: a mutation applied to a file the
         track has already edited, reverted, and the track's own edit
         still there. The distinction `git checkout --` cannot draw -
@@ -1318,26 +1318,23 @@ class TestTheDocumentedRevertKeepsTheTracksOwnWork:
         scratchpad = tmp_path / "scratchpad"
         scratchpad.mkdir()
 
-        target.write_text("original\nthe track's own edit\n",
-                          encoding="utf-8")
+        target.write_text("original\nthe track's own edit\n", encoding="utf-8")
         snapshot, revert = self._phases()
         made = self._sh(self._script(snapshot, scratchpad), work)
         assert made.returncode == 0, made.stderr
-        target.write_text("original\nthe track's own edit\nMUTATION\n",
-                          encoding="utf-8")
+        target.write_text("original\nthe track's own edit\nMUTATION\n", encoding="utf-8")
         back = self._sh(self._script(revert, scratchpad), work)
         assert back.returncode == 0, back.stderr
 
         left = target.read_text(encoding="utf-8")
         assert "the track's own edit" in left, (
-            "the documented revert discarded the track's uncommitted "
-            "work along with the mutation - UX-625 itself")
+            "the documented revert discarded the track's uncommitted work along with the mutation - UX-625 itself"
+        )
         assert "MUTATION" not in left, (
-            "the documented revert left the mutation in place, so the "
-            "next run is green for the wrong reason")
+            "the documented revert left the mutation in place, so the next run is green for the wrong reason"
+        )
 
-    def test_two_tracks_snapshotting_one_file_do_not_collide(
-            self, tmp_path):
+    def test_two_tracks_snapshotting_one_file_do_not_collide(self, tmp_path):
         """`UX-615` in the same place: the scratchpad is keyed by the
         project, so two tracks mutating one file share a snapshot name
         unless the recipe separates them. A collision here restores the
@@ -1353,12 +1350,12 @@ class TestTheDocumentedRevertKeepsTheTracksOwnWork:
             done = self._sh(script, work)
             assert done.returncode == 0, done.stderr
             seen.append(name)
-        kept = sorted(p.read_text(encoding="utf-8").strip()
-                      for p in scratchpad.rglob("test_a_guard.py"))
+        kept = sorted(p.read_text(encoding="utf-8").strip() for p in scratchpad.rglob("test_a_guard.py"))
         assert kept == seen, (
             f"two tracks snapshotted one file and the scratchpad holds "
             f"{kept} - the second overwrote the first, so its revert "
-            f"restores the other track's text (UX-615)")
+            f"restores the other track's text (UX-615)"
+        )
 
     def test_the_heading_counts_the_failure_modes_under_it(self):
         """Derived rather than restated. The safe revert was the third
@@ -1369,14 +1366,13 @@ class TestTheDocumentedRevertKeepsTheTracksOwnWork:
         assert heading, "the falsify skill no longer heads its failure modes"
         section = body.split(heading.group(0), 1)[1].split("\n## ", 1)[0]
         written = {"One": 1, "Two": 2, "Three": 3, "Four": 4}
-        assert heading.group(1) in written, (
-            f"the heading counts in {heading.group(1)!r}, which this "
-            f"clause cannot read")
+        assert heading.group(1) in written, f"the heading counts in {heading.group(1)!r}, which this clause cannot read"
         found = len(re.findall(r"^\*\*The .*?\.\*\*", section, re.M))
         assert written[heading.group(1)] == found, (
             f"the heading says {heading.group(1)} failure modes and "
             f"{found} follow it; the one that gets dropped is the last, "
-            f"and the last is the safe revert (UX-625)")
+            f"and the last is the safe revert (UX-625)"
+        )
 
     def test_the_track_is_told_which_revert_at_the_step_it_reverts(self):
         """`implementer.md` step 5 is what a track reads at mutation
@@ -1384,14 +1380,13 @@ class TestTheDocumentedRevertKeepsTheTracksOwnWork:
         because the file argues about `--ff-only` discarding work three
         sections earlier and a whole-body read would match that."""
         body = (AGENTS / "implementer.md").read_text(encoding="utf-8")
-        loop = " ".join(body.split("## The loop", 1)[1]
-                        .split("\n## ", 1)[0].split())
+        loop = " ".join(body.split("## The loop", 1)[1].split("\n## ", 1)[0].split())
         assert "git checkout --" in loop, (
-            "implementer.md's loop says to revert without naming the "
-            "revert that discards the track's own work (UX-625)")
+            "implementer.md's loop says to revert without naming the revert that discards the track's own work (UX-625)"
+        )
         assert "step 1" in loop, (
-            "the loop names the trap without naming what to use "
-            "instead, which leaves the track where UX-625 found it")
+            "the loop names the trap without naming what to use instead, which leaves the track where UX-625 found it"
+        )
 
 
 class TestEachTrackHasItsOwnScratchpad:
@@ -1425,12 +1420,13 @@ class TestEachTrackHasItsOwnScratchpad:
         body = (AGENTS / "implementer.md").read_text(encoding="utf-8")
         section = body.split("## Where your scratch files go", 1)[1]
         section = section.split("\n## ", 1)[0]
-        lines = [line.strip()
-                 for block in re.findall(r"```bash\n(.*?)```", section, re.S)
-                 for line in block.splitlines() if line.strip()]
-        assert len(lines) == 1, (
-            f"'Where your scratch files go' fences {len(lines)} commands, "
-            f"not one: {lines}")
+        lines = [
+            line.strip()
+            for block in re.findall(r"```bash\n(.*?)```", section, re.S)
+            for line in block.splitlines()
+            if line.strip()
+        ]
+        assert len(lines) == 1, f"'Where your scratch files go' fences {len(lines)} commands, not one: {lines}"
         return lines[0]
 
     def _made(self, shared, worktree):
@@ -1439,16 +1435,18 @@ class TestEachTrackHasItsOwnScratchpad:
         placeholder the brief fills in."""
         worktree.mkdir(parents=True, exist_ok=True)
         command = self._recipe()
-        assert self.PLACEHOLDER.search(command), (
-            f"{command!r} names no scratchpad for the brief to fill in")
+        assert self.PLACEHOLDER.search(command), f"{command!r} names no scratchpad for the brief to fill in"
         done = subprocess.run(
             ["sh", "-c", self.PLACEHOLDER.sub(str(shared), command)],
-            cwd=worktree, capture_output=True, text=True, timeout=60)
+            cwd=worktree,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
         assert done.returncode == 0, done.stderr
         return sorted(p for p in shared.iterdir() if p.is_dir())
 
-    def test_two_tracks_writing_one_filename_do_not_see_each_other(
-            self, tmp_path):
+    def test_two_tracks_writing_one_filename_do_not_see_each_other(self, tmp_path):
         """`UX-615`'s acceptance test, on the documented recipe: two
         tracks, one filename, and neither reads the other's."""
         shared = tmp_path / "scratchpad"
@@ -1458,13 +1456,14 @@ class TestEachTrackHasItsOwnScratchpad:
         assert len(second) == 2, (
             f"two worktrees ran the recipe and it made {len(second)} "
             f"director(y/ies): {[p.name for p in second]}. They share a "
-            f"scratchpad, which is what UX-615 is")
+            f"scratchpad, which is what UX-615 is"
+        )
         mine, theirs = first[0], next(p for p in second if p != first[0])
         (mine / "mutate.py").write_text("mine\n", encoding="utf-8")
         (theirs / "mutate.py").write_text("theirs\n", encoding="utf-8")
         assert (mine / "mutate.py").read_text(encoding="utf-8") == "mine\n", (
-            "the second track's write landed on the first track's file - "
-            "round 84's overwrite, reproduced")
+            "the second track's write landed on the first track's file - round 84's overwrite, reproduced"
+        )
 
     def test_the_directory_is_named_for_the_worktree(self, tmp_path):
         """Not merely *a* unique directory: the name has to be one the
@@ -1474,8 +1473,8 @@ class TestEachTrackHasItsOwnScratchpad:
         shared.mkdir()
         made = self._made(shared, tmp_path / "wt" / "agent-cccc")
         assert [p.name for p in made] == ["agent-cccc"], (
-            f"the recipe made {[p.name for p in made]}, not a directory "
-            f"named for the worktree it was run in")
+            f"the recipe made {[p.name for p in made]}, not a directory named for the worktree it was run in"
+        )
 
     def test_the_orchestrator_names_the_same_convention(self):
         """One copy, in the two files that carry it - `decompose` is
@@ -1483,13 +1482,12 @@ class TestEachTrackHasItsOwnScratchpad:
         track reads. A brief that says nothing leaves the track to
         improvise a suffix, which is what the 33 `mutate*` files in the
         shared directory are."""
-        skill = " ".join((SKILLS / "decompose/SKILL.md").read_text(
-            encoding="utf-8").split())
+        skill = " ".join((SKILLS / "decompose/SKILL.md").read_text(encoding="utf-8").split())
         assert 'basename "$PWD"' in skill, (
             "the decompose skill does not tell the orchestrator to name "
-            "the track's own scratchpad in the brief (UX-615)")
-        assert 'basename "$PWD"' in self._recipe(), (
-            "implementer.md's recipe and the skill's are two conventions")
+            "the track's own scratchpad in the brief (UX-615)"
+        )
+        assert 'basename "$PWD"' in self._recipe(), "implementer.md's recipe and the skill's are two conventions"
 
 
 class TestEverySkillWouldLoad:
@@ -1507,20 +1505,17 @@ class TestEverySkillWouldLoad:
             head = _FRONTMATTER.match(path.read_text(encoding="utf-8"))
             assert head, f"{path.parent.name} has no frontmatter"
             for field in ("name", "description"):
-                assert re.search(rf"^{field}:", head.group(1), re.M), (
-                    f"{path.parent.name} declares no {field}")
+                assert re.search(rf"^{field}:", head.group(1), re.M), f"{path.parent.name} declares no {field}"
 
     def test_each_description_says_when_to_use_it(self):
         """The frontmatter's job is triggering. A description that only
         says what the skill *is* leaves the deciding to chance."""
         for path in self._skills():
             head = _FRONTMATTER.match(path.read_text(encoding="utf-8")).group(1)
-            description = re.search(r"^description:\s*(.+?)(?=^\w+:|\Z)",
-                                    head, re.M | re.S).group(1)
-            assert re.search(r"\buse (when|after|before)\b", description,
-                             re.I), (
-                f"{path.parent.name}'s description never says when to use "
-                f"it: {description.strip()[:120]!r}")
+            description = re.search(r"^description:\s*(.+?)(?=^\w+:|\Z)", head, re.M | re.S).group(1)
+            assert re.search(r"\buse (when|after|before)\b", description, re.I), (
+                f"{path.parent.name}'s description never says when to use it: {description.strip()[:120]!r}"
+            )
 
 
 class TestTheConfigurationHasItsOwnGate:
@@ -1535,16 +1530,15 @@ class TestTheConfigurationHasItsOwnGate:
         return WORKFLOW.read_text(encoding="utf-8")
 
     def test_ci_has_a_job_for_it(self):
-        assert "agent-config" in self._text(), (
-            "ci.yml runs no job named for the agent configuration")
+        assert "agent-config" in self._text(), "ci.yml runs no job named for the agent configuration"
 
     def test_it_watches_every_file_that_steers_the_agent(self):
         text = self._text()
         block = text.split("agent-config", 1)[1]
         for path in (".claude/**", "CLAUDE.md", "REVIEW.md"):
             assert path in block, (
-                f"the agent-config job does not watch {path}, so a change "
-                f"to it reaches main without this suite running")
+                f"the agent-config job does not watch {path}, so a change to it reaches main without this suite running"
+            )
 
     def test_it_runs_this_file(self):
         assert "test_the_agent_configuration_holds.py" in self._text()
@@ -1575,31 +1569,35 @@ class TestTheProxyRuleIsWhereItGetsRead:
         text = self.GUIDE.read_text(encoding="utf-8")
         rules = text.split("## 5. Hard rules")[1].split("\n## ")[0]
         assert "proxy" in rules.lower(), (
-            "fixing guide section 5 does not name the defect this "
-            "repository repeats most - see UX-425")
+            "fixing guide section 5 does not name the defect this repository repeats most - see UX-425"
+        )
 
     def test_the_measure_skill_asks_the_three_questions(self):
         """The rule is stated in the guide and *asked* here, because
         the mistake is made while writing the measurement and is
         invisible when reading it back."""
         text = self.MEASURE.read_text(encoding="utf-8").lower()
-        for phrase in ("what quantity does this actually read",
-                       "is that the quantity the name claims",
-                       "can it tell the answers apart"):
+        for phrase in (
+            "what quantity does this actually read",
+            "is that the quantity the name claims",
+            "can it tell the answers apart",
+        ):
             assert phrase in text, f"the measure skill stops asking: {phrase}"
 
-    @pytest.mark.parametrize("shape,item", (
-        ("a text scan that cannot tell code from data", "UX-403"),
-        ("a ratio at the noise floor", "UX-420"),
-        ("a comparison across machines", "UX-418"),
-        ("the wrong artifact or population", "UX-359"),
-    ))
+    @pytest.mark.parametrize(
+        "shape,item",
+        (
+            ("a text scan that cannot tell code from data", "UX-403"),
+            ("a ratio at the noise floor", "UX-420"),
+            ("a comparison across machines", "UX-418"),
+            ("the wrong artifact or population", "UX-359"),
+        ),
+    )
     def test_each_shape_names_an_item_that_exists(self, shape, item):
         """A rule with a worked example can be re-checked against the
         record; one without is an assertion. Both documents are allowed
         to cite different examples, so this checks the union."""
-        both = (self.GUIDE.read_text(encoding="utf-8")
-                + self.MEASURE.read_text(encoding="utf-8"))
+        both = self.GUIDE.read_text(encoding="utf-8") + self.MEASURE.read_text(encoding="utf-8")
         assert item in both, f"nothing cites {item} for {shape!r}"
 
     @pytest.mark.parametrize("where", ("GUIDE", "MEASURE"))
@@ -1614,17 +1612,19 @@ class TestTheProxyRuleIsWhereItGetsRead:
         round. Found by the mutation, as both were.
         """
         text = getattr(self, where).read_text(encoding="utf-8")
-        section = (text.split("## 5. Hard rules")[1].split("\n## ")[0]
-                   if where == "GUIDE"
-                   else text.split("## Before you trust the number")[1])
+        section = (
+            text.split("## 5. Hard rules")[1].split("\n## ")[0]
+            if where == "GUIDE"
+            else text.split("## Before you trust the number")[1]
+        )
         cited = sorted(set(re.findall(r"UX-(\d+)", section)))
-        assert cited, f"{where} cites no worked example, so the rule " \
-                      f"cannot be re-checked against the record"
-        missing = [f"UX-{number}" for number in cited
-                   if not list((REPO / "docs/backlog/scenarios")
-                               .glob(f"UX-{int(number):04d}-*.md"))]
-        assert missing == [], (
-            f"{where} cites {missing}, and no task file has those ids")
+        assert cited, f"{where} cites no worked example, so the rule cannot be re-checked against the record"
+        missing = [
+            f"UX-{number}"
+            for number in cited
+            if not list((REPO / "docs/backlog/scenarios").glob(f"UX-{int(number):04d}-*.md"))
+        ]
+        assert missing == [], f"{where} cites {missing}, and no task file has those ids"
 
     def test_claude_md_points_at_the_rule_rather_than_restating_it(self):
         """The page is under an 80-line bound, and two summaries of a
@@ -1632,8 +1632,8 @@ class TestTheProxyRuleIsWhereItGetsRead:
         text = CLAUDE_MD.read_text(encoding="utf-8")
         assert "proxy" in text, "the day-one page dropped the class entirely"
         assert "measure` skill" in text or "`measure`" in text, (
-            "CLAUDE.md names the class but not where its rule is, so a "
-            "session meets the summary and never the rule")
+            "CLAUDE.md names the class but not where its rule is, so a session meets the summary and never the rule"
+        )
 
 
 class TestTheCiFirstAdviceStaysTrue:
@@ -1668,13 +1668,15 @@ class TestTheCiFirstAdviceStaysTrue:
             f"ci.yml's triggers are {self._triggers()}, and the verify "
             f"skill's section 7 tells sessions to open a PR early because "
             f"they are push-to-main plus pull_request. Fix whichever is "
-            f"wrong - if CI now runs on every push, the advice is obsolete")
+            f"wrong - if CI now runs on every push, the advice is obsolete"
+        )
 
     def test_the_skill_states_the_fact_it_rests_on(self):
         text = self.VERIFY.read_text(encoding="utf-8")
         assert "pull_request" in text and "no PR collects no runs" in text, (
             "section 7 gives the advice without the fact that justifies it, "
-            "so a later round cannot tell when it stops applying")
+            "so a later round cannot tell when it stops applying"
+        )
 
     def test_it_is_guidance_and_says_so(self):
         """The half that keeps this honest. One round is not a baseline,
@@ -1682,13 +1684,17 @@ class TestTheCiFirstAdviceStaysTrue:
         one level up - so section 7 must keep saying it is unmeasured,
         and the hard rules must keep not carrying it."""
         text = self.VERIFY.read_text(encoding="utf-8")
-        assert "One round is not a baseline" in text, (
-            "section 7 stopped admitting it is one session's experience")
-        rules = (REPO / "docs/contributing/fixing-guide.md").read_text(
-            encoding="utf-8").split("## 5. Hard rules")[1].split("\n## ")[0]
+        assert "One round is not a baseline" in text, "section 7 stopped admitting it is one session's experience"
+        rules = (
+            (REPO / "docs/contributing/fixing-guide.md")
+            .read_text(encoding="utf-8")
+            .split("## 5. Hard rules")[1]
+            .split("\n## ")[0]
+        )
         assert "draft" not in rules.lower(), (
             "the PR-first loop was promoted into the hard rules; it has "
-            "not been measured against the alternative even once")
+            "not been measured against the alternative even once"
+        )
 
 
 class TestTheRulesCardIsTheEntryPoint:
@@ -1720,7 +1726,8 @@ class TestTheRulesCardIsTheEntryPoint:
         assert len(lines) <= self.CAP, (
             f"{self.CARD.name} is {len(lines)} lines, cap is {self.CAP} - "
             f"a card that grows back into a guide is a second guide, and "
-            f"two copies of a rule is how the copies disagree")
+            f"two copies of a rule is how the copies disagree"
+        )
 
     def test_it_is_a_fraction_of_what_it_replaces(self):
         """The measurement the filing asks for, as a property: what a
@@ -1729,8 +1736,8 @@ class TestTheRulesCardIsTheEntryPoint:
         of magnitude that makes reading the card first worth doing."""
         card, guide = (len(p.read_bytes()) for p in (self.CARD, self.GUIDE))
         assert card * 5 < guide, (
-            f"the card is {card} B against the guide's {guide} B; at that "
-            f"ratio a session may as well read the guide")
+            f"the card is {card} B against the guide's {guide} B; at that ratio a session may as well read the guide"
+        )
 
     def test_every_section_of_the_card_names_the_guide_section(self):
         """The card cannot carry a rule the guide does not argue. Read
@@ -1738,6 +1745,7 @@ class TestTheRulesCardIsTheEntryPoint:
         rewritten short - a clause matching sentences would be asserting
         the card is a copy, which is the thing it must not be."""
         import re
+
         text = self.CARD.read_text(encoding="utf-8")
         cited = set()
         for heading in re.findall(r"^## .*$", text, re.M):
@@ -1748,15 +1756,15 @@ class TestTheRulesCardIsTheEntryPoint:
             assert re.search(rf"^## {re.escape(section)}\.", headings, re.M), (
                 f"the card cites the guide's §{section} and the guide has "
                 f"no such section - the card is carrying a rule nothing "
-                f"argues")
+                f"argues"
+            )
 
     def test_the_guide_says_the_card_is_the_entry_point(self):
         """Otherwise a session that opens the guide first - which is
         what every document still linking to it does - never learns the
         card exists."""
         head = "\n".join(self.GUIDE.read_text(encoding="utf-8").splitlines()[:12])
-        assert "rules.md" in head, (
-            "the guide's opening does not send a reader to the card")
+        assert "rules.md" in head, "the guide's opening does not send a reader to the card"
 
     #: `UX-585`: a named guard that carries no marker, and why. Not
     #: "everything unmarked" - that would make the clause below vacuous.
@@ -1775,8 +1783,7 @@ class TestTheRulesCardIsTheEntryPoint:
         """The rule sentence as an anchor. Rewriting a rule changes its
         slug, which is the point - a marker names *that* sentence."""
         plain = re.sub(r"[`*'’]", "", rule)
-        return re.sub(r"-+", "-",
-                      re.sub(r"[^a-z0-9]+", "-", plain.lower())).strip("-")
+        return re.sub(r"-+", "-", re.sub(r"[^a-z0-9]+", "-", plain.lower())).strip("-")
 
     def _rule_rows(self):
         """`[(rule, guard cell)]` from the rule tables only. The §6a
@@ -1784,8 +1791,7 @@ class TestTheRulesCardIsTheEntryPoint:
         is dropped by its text, not by its position."""
         rows = []
         for line in self.CARD.read_text(encoding="utf-8").splitlines():
-            if not (line.startswith("| ") and line.count("|") == 3
-                    and "---" not in line):
+            if not (line.startswith("| ") and line.count("|") == 3 and "---" not in line):
                 continue
             rule, guard = (one.strip() for one in line.split("|")[1:3])
             if (rule, guard) != ("rule", "guard"):
@@ -1810,11 +1816,11 @@ class TestTheRulesCardIsTheEntryPoint:
         """
         rows = self._rule_rows()
         assert len(rows) > 20, f"the card has {len(rows)} rule rows"
-        guarded = [one for one in rows
-                   if self._named_files(one[1]) or "`make " in one[1]]
+        guarded = [one for one in rows if self._named_files(one[1]) or "`make " in one[1]]
         assert len(guarded) >= 8, (
             f"only {len(guarded)} of {len(rows)} rule rows name a guard; "
-            f"the column is what makes an unguarded rule visible")
+            f"the column is what makes an unguarded rule visible"
+        )
 
     def test_every_named_guard_carries_the_marker_for_its_row(self):
         """`UX-585`: the clause above asserts eight cells are populated,
@@ -1824,15 +1830,13 @@ class TestTheRulesCardIsTheEntryPoint:
         for rule, cell in self._rule_rows():
             want = "holds: rules.md#" + self._slug(rule)
             for name in self._named_files(cell):
-                found = [one for one in (REPO / "tests/unit" / name,
-                                         REPO / name) if one.exists()]
+                found = [one for one in (REPO / "tests/unit" / name, REPO / name) if one.exists()]
                 if not found:
                     wrong.append(f"{rule!r} names {name}, which does not exist")
                 elif pathlib.Path(name).name in self.NOT_A_GUARD_FILE or want in found[0].read_text(encoding="utf-8"):
                     continue
                 elif name not in self.UNMARKED:
-                    wrong.append(f"{name} is the guard for {rule!r} and does "
-                                 f"not say so: no `{want}` line")
+                    wrong.append(f"{name} is the guard for {rule!r} and does not say so: no `{want}` line")
         assert not wrong, "\n".join(wrong)
 
     def test_every_marker_in_the_tree_names_a_row_that_names_it(self):
@@ -1844,7 +1848,11 @@ class TestTheRulesCardIsTheEntryPoint:
         # is the case this clause is most likely to be run against.
         listed = subprocess.run(
             ["git", "ls-files", "--cached", "--others", "--exclude-standard"],
-            cwd=REPO, check=True, capture_output=True, text=True).stdout.split()
+            cwd=REPO,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.split()
         carriers, wrong = [], []
         for rel in listed:
             if rel.startswith("docs/backlog/"):  # the Outcome quotes them
@@ -1858,13 +1866,10 @@ class TestTheRulesCardIsTheEntryPoint:
             carriers.append(rel)
             for slug in re.findall(r"holds: rules\.md#([a-z0-9-]+)", text):
                 if slug not in slugs:
-                    wrong.append(f"{rel} holds `{slug}`, and the card has no "
-                                 f"rule with that slug")
+                    wrong.append(f"{rel} holds `{slug}`, and the card has no rule with that slug")
                 elif pathlib.Path(rel).name not in slugs[slug]:
-                    wrong.append(f"{rel} holds `{slug}`, whose row names "
-                                 f"{slugs[slug]!r} instead")
-        assert len(carriers) >= 8, (
-            f"only {len(carriers)} files in the tree carry a marker")
+                    wrong.append(f"{rel} holds `{slug}`, whose row names {slugs[slug]!r} instead")
+        assert len(carriers) >= 8, f"only {len(carriers)} files in the tree carry a marker"
         assert not wrong, "\n".join(wrong)
 
     def test_a_deferred_marker_is_still_missing(self):
@@ -1884,16 +1889,14 @@ class TestTheRulesCardIsTheEntryPoint:
         check-clean` is the whole guard for two rows."""
         makefile = (REPO / "Makefile").read_text(encoding="utf-8")
         real = set(re.findall(r"^([a-z][\w-]*):", makefile, re.M))
-        named = {one for _, cell in self._rule_rows()
-                 for one in re.findall(r"`make ([a-z][\w-]*)", cell)}
+        named = {one for _, cell in self._rule_rows() for one in re.findall(r"`make ([a-z][\w-]*)", cell)}
         assert named, "the guard column names no make target"
         assert named <= real, f"the card names absent target(s): {named - real}"
 
     def test_the_marker_scan_reads_a_population(self):
         """Every clause above passes on a card whose rows name nothing."""
         named = [one for one in self._rule_rows() if self._named_files(one[1])]
-        assert len(named) >= 8, (
-            f"only {len(named)} rule rows name a guard file")
+        assert len(named) >= 8, f"only {len(named)} rule rows name a guard file"
         assert self._slug("Never widen scope") == "never-widen-scope"
 
 
@@ -1915,12 +1918,11 @@ class TestATooLongToolResultGoesToAFile:
     WORDS = ("over a screen", "60 lines", "scratchpad")
 
     def test_the_orient_skill_carries_the_rule(self):
-        text = " ".join((SKILLS / "orient/SKILL.md").read_text(
-            encoding="utf-8").split())
+        text = " ".join((SKILLS / "orient/SKILL.md").read_text(encoding="utf-8").split())
         missing = [word for word in self.WORDS if word not in text]
         assert not missing, (
-            f".claude/skills/orient/SKILL.md has lost {missing} - the "
-            "rule a session reads before it opens anything")
+            f".claude/skills/orient/SKILL.md has lost {missing} - the rule a session reads before it opens anything"
+        )
 
     def test_claude_md_carries_the_rule(self):
         """`CLAUDE.md` is the day-one summary and is capped at a page,
@@ -1951,12 +1953,9 @@ def _two_trees(tmp_path_factory):
     elsewhere.mkdir()
     git = ["git", "-c", "user.name=t", "-c", "user.email=t@t"]
     subprocess.run([*git, "init", "-q", str(main)], check=True)
-    subprocess.run([*git, "-C", str(main), "commit", "-q", "--allow-empty",
-                    "-m", "x"], check=True)
-    subprocess.run([*git, "-C", str(main), "worktree", "add", "-q",
-                    str(linked)], check=True)
-    for name in ("agent_worktree_limits.py", "gate_covers_push.py",
-                 "no_bulk_add.py", "agent-worktree-limits.sh"):
+    subprocess.run([*git, "-C", str(main), "commit", "-q", "--allow-empty", "-m", "x"], check=True)
+    subprocess.run([*git, "-C", str(main), "worktree", "add", "-q", str(linked)], check=True)
+    for name in ("agent_worktree_limits.py", "gate_covers_push.py", "no_bulk_add.py", "agent-worktree-limits.sh"):
         shutil.copy(HOOKS / name, home / name)
     return main, linked, home / "agent_worktree_limits.py", elsewhere
 
@@ -1965,9 +1964,13 @@ def _limits(trees, cwd, command):
     """`(exit code, stderr)` for the copied hook, run from a non-repo."""
     _main, _linked, hook, elsewhere = trees
     done = subprocess.run(
-        [sys.executable, str(hook)], cwd=elsewhere, capture_output=True,
-        text=True, timeout=30,
-        input=json.dumps({"cwd": str(cwd), "tool_input": {"command": command}}))
+        [sys.executable, str(hook)],
+        cwd=elsewhere,
+        capture_output=True,
+        text=True,
+        timeout=30,
+        input=json.dumps({"cwd": str(cwd), "tool_input": {"command": command}}),
+    )
     return done.returncode, done.stderr
 
 
@@ -2002,20 +2005,22 @@ class TestAWorktreeCannotRepointTheInstallOrStartTheSweep:
         code, said = _limits(_two_trees, _two_trees[0], command)
         assert code == 0, (command, code, said)
 
-    @pytest.mark.parametrize("command", (
-        "pip install ruff",
-        "python3 tools/dev_touching.py --spread",
-        "python3 tools/dev_touching.py --base HEAD --list",
-        "python3 tools/dev_touching.py --base HEAD --why",
-        "python3 tools/dev_touching.py --size",
-        "cat > /tmp/m.txt <<'EOF'\nmake test\npip install -e .\nEOF",
-        "echo 'make test'",
-        "make lint",
-        "make test-small",
-        "python3 -m pytest tests/unit/test_x.py",
-    ))
-    def test_a_linked_worktree_keeps_everything_else(self, _two_trees,
-                                                     command):
+    @pytest.mark.parametrize(
+        "command",
+        (
+            "pip install ruff",
+            "python3 tools/dev_touching.py --spread",
+            "python3 tools/dev_touching.py --base HEAD --list",
+            "python3 tools/dev_touching.py --base HEAD --why",
+            "python3 tools/dev_touching.py --size",
+            "cat > /tmp/m.txt <<'EOF'\nmake test\npip install -e .\nEOF",
+            "echo 'make test'",
+            "make lint",
+            "make test-small",
+            "python3 -m pytest tests/unit/test_x.py",
+        ),
+    )
+    def test_a_linked_worktree_keeps_everything_else(self, _two_trees, command):
         code, said = _limits(_two_trees, _two_trees[1], command)
         assert code == 0, (command, code, said)
 
@@ -2028,31 +2033,28 @@ class TestAWorktreeCannotRepointTheInstallOrStartTheSweep:
         # payload's cwd names a checkout, even when this suite runs in one.
         monkeypatch.chdir(_two_trees[3])
         entry = _two_trees[2].with_name("agent-worktree-limits.sh")
-        done = subprocess.run([str(entry)], capture_output=True, text=True,
-                              timeout=30, input=json.dumps({
-                                  "cwd": str(_two_trees[1]),
-                                  "tool_input": {"command": "make test"}}))
+        done = subprocess.run(
+            [str(entry)],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            input=json.dumps({"cwd": str(_two_trees[1]), "tool_input": {"command": "make test"}}),
+        )
         assert done.returncode == 2, (done.returncode, done.stderr)
 
     def test_settings_declares_it_on_bash(self):
         held = json.loads(SETTINGS.read_text(encoding="utf-8"))
-        commands = [h["command"] for m in held["hooks"]["PreToolUse"]
-                    if m.get("matcher") == "Bash" for h in m["hooks"]]
+        commands = [h["command"] for m in held["hooks"]["PreToolUse"] if m.get("matcher") == "Bash" for h in m["hooks"]]
         assert any("agent-worktree-limits.sh" in c for c in commands), commands
 
     @pytest.mark.parametrize("brief", ("implementer.md", "verifier.md"))
-    def test_the_briefs_select_the_way_the_hook_allows(self, brief,
-                                                       _two_trees):
+    def test_the_briefs_select_the_way_the_hook_allows(self, brief, _two_trees):
         """A track's brief names the one selector the hook lets through,
         and the pytest run at `-n 2` it feeds."""
-        body = " ".join(
-            (AGENTS / brief).read_text(encoding="utf-8").split())
-        selector = re.search(r"`(python3 tools/dev_touching\.py [^`]*)`",
-                             body)
-        assert selector and "--list" in selector.group(1), (
-            f"{brief} names no `dev_touching.py ... --list` selector")
-        assert "python3 -m pytest -n 2" in body, (
-            f"{brief} does not run the selection at -n 2")
+        body = " ".join((AGENTS / brief).read_text(encoding="utf-8").split())
+        selector = re.search(r"`(python3 tools/dev_touching\.py [^`]*)`", body)
+        assert selector and "--list" in selector.group(1), f"{brief} names no `dev_touching.py ... --list` selector"
+        assert "python3 -m pytest -n 2" in body, f"{brief} does not run the selection at -n 2"
         code, said = _limits(_two_trees, _two_trees[1], selector.group(1))
         assert code == 0, (brief, selector.group(1), said)
 
@@ -2073,7 +2075,6 @@ class TestTheSelectorJudgesThePayloadsCwd:
 
     def test_a_payload_cwd_in_no_repository_allows(self, _two_trees):
         module, ran = TestTheSelectorRunsBeforeTheCommit._hook_that_always_reds()
-        with _payload({"cwd": str(_two_trees[3]),
-                       "tool_input": {"command": "git commit -m x"}}):
+        with _payload({"cwd": str(_two_trees[3]), "tool_input": {"command": "git commit -m x"}}):
             assert module.main() == 0
         assert ran == [], "the selector ran for a cwd in no repository"

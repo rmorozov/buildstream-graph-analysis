@@ -16,6 +16,7 @@ The three behaviours, in the order a user meets them: the capture
 records the machine, the comparison says when they differ, and the
 gates refuse.
 """
+
 import json
 import os
 import shutil
@@ -37,8 +38,7 @@ _XEON = {
     "kernel_release": "6.18.44-fc-v21",
     "distro_id": "ubuntu 24.04",
 }
-_RYZEN = dict(_XEON, cpu_model="AMD Ryzen 9 7950X", cpu_count=32,
-              memory_bytes=64000 * 1024 * 1024)
+_RYZEN = dict(_XEON, cpu_model="AMD Ryzen 9 7950X", cpu_count=32, memory_bytes=64000 * 1024 * 1024)
 
 
 def _run(tmp_path, name, manifest):
@@ -59,7 +59,7 @@ class TestTheManifestDescribesThisMachine:
         # Plausible rather than exact: this runs on whatever machine CI
         # gave us, and a test that pins the CPU model pins the runner.
         assert manifest["cpu_count"] and manifest["cpu_count"] >= 1
-        assert manifest["memory_bytes"] and manifest["memory_bytes"] > 128 * 1024 ** 2
+        assert manifest["memory_bytes"] and manifest["memory_bytes"] > 128 * 1024**2
         assert manifest["kernel_release"]
 
     def test_the_cpu_model_is_not_the_architecture(self):
@@ -68,7 +68,7 @@ class TestTheManifestDescribesThisMachine:
         two of them apart. That is the mistake this field exists to not
         make."""
         model = hostinfo.collect(with_toolchain=False)["cpu_model"]
-        if model is not None:      # a machine with no /proc/cpuinfo
+        if model is not None:  # a machine with no /proc/cpuinfo
             assert model not in ("x86_64", "aarch64", "arm64")
 
     def test_the_toolchain_versions_are_collected(self):
@@ -124,14 +124,12 @@ class TestClassification:
 
     def test_present_on_one_side_only_is_a_difference(self):
         """An absence is not evidence of a match."""
-        assert hostinfo.differing_fields(
-            _XEON, dict(_XEON, cpu_model=None)) == ["cpu_model"]
+        assert hostinfo.differing_fields(_XEON, dict(_XEON, cpu_model=None)) == ["cpu_model"]
 
     def test_a_kernel_bump_alone_is_not_a_different_host(self):
         """Recorded, but not compared: refusing on a point release would
         make the check noise, and noise gets switched off."""
-        assert hostinfo.classify(
-            _XEON, dict(_XEON, kernel_release="6.19.0"))["status"] == "same"
+        assert hostinfo.classify(_XEON, dict(_XEON, kernel_release="6.19.0"))["status"] == "same"
 
     def test_the_sentence_names_the_fields_and_their_values(self):
         text = hostinfo.describe(hostinfo.classify(_XEON, _RYZEN), _XEON, _RYZEN)
@@ -139,8 +137,7 @@ class TestClassification:
         assert "CPU model" in text
 
     def test_matching_hosts_produce_no_sentence(self):
-        assert hostinfo.describe(
-            hostinfo.classify(_XEON, dict(_XEON)), _XEON, _XEON) is None
+        assert hostinfo.describe(hostinfo.classify(_XEON, dict(_XEON)), _XEON, _XEON) is None
 
 
 class TestWhatCompareDoes:
@@ -176,9 +173,11 @@ class TestWhatCompareDoes:
 
 def _compare(args):
     return subprocess.run(
-        [sys.executable, "-c",
-         f"from bga.cli import main; raise SystemExit(main({args!r}))"],
-        capture_output=True, text=True, cwd=os.getcwd())
+        [sys.executable, "-c", f"from bga.cli import main; raise SystemExit(main({args!r}))"],
+        capture_output=True,
+        text=True,
+        cwd=os.getcwd(),
+    )
 
 
 class TestWhatTheGateDoes:
@@ -195,8 +194,7 @@ class TestWhatTheGateDoes:
     def test_allow_cross_host_opts_back_in(self, tmp_path):
         baseline = str(_run(tmp_path, "a", _XEON))
         candidate = str(_run(tmp_path, "b", _RYZEN))
-        result = _compare(["compare", baseline, candidate, "--fail-on-regression",
-                           "--allow-cross-host"])
+        result = _compare(["compare", baseline, candidate, "--fail-on-regression", "--allow-cross-host"])
         assert result.returncode == 0, result.stderr
 
     def test_without_a_gate_a_cross_host_pair_exits_zero(self, tmp_path):
@@ -222,11 +220,13 @@ class TestTheBaselineSetWarns:
         members = []
         for name, manifest in (("a", _XEON), ("b", _RYZEN)):
             run = _run(tmp_path, name, manifest)
-            members.append({
-                "ref": {"ref": f"captures/x-{name}", "run_id": name},
-                "run_dir": str(run),
-                "context": {},
-            })
+            members.append(
+                {
+                    "ref": {"ref": f"captures/x-{name}", "run_id": name},
+                    "run_dir": str(run),
+                    "context": {},
+                }
+            )
         drift = check_homogeneity(members)["host_drift"]
         assert drift and "different machines" in drift["message"]
         assert len(drift["cpu_models"]) == 2
@@ -234,11 +234,14 @@ class TestTheBaselineSetWarns:
     def test_a_single_host_set_is_silent(self, tmp_path):
         from tools.bst_baseline_set import check_homogeneity
 
-        members = [{
-            "ref": {"ref": f"captures/x-{name}", "run_id": name},
-            "run_dir": str(_run(tmp_path, name, dict(_XEON))),
-            "context": {},
-        } for name in ("a", "b")]
+        members = [
+            {
+                "ref": {"ref": f"captures/x-{name}", "run_id": name},
+                "run_dir": str(_run(tmp_path, name, dict(_XEON))),
+                "context": {},
+            }
+            for name in ("a", "b")
+        ]
         assert check_homogeneity(members)["host_drift"] is None
 
     def test_it_warns_rather_than_refuses(self, tmp_path):
@@ -247,16 +250,20 @@ class TestTheBaselineSetWarns:
         be. Warning, not `mismatches`."""
         from tools.bst_baseline_set import check_homogeneity
 
-        members = [{
-            "ref": {"ref": f"captures/x-{name}", "run_id": name},
-            "run_dir": str(_run(tmp_path, name, manifest)),
-            "context": {},
-        } for name, manifest in (("a", _XEON), ("b", _RYZEN))]
+        members = [
+            {
+                "ref": {"ref": f"captures/x-{name}", "run_id": name},
+                "run_dir": str(_run(tmp_path, name, manifest)),
+                "context": {},
+            }
+            for name, manifest in (("a", _XEON), ("b", _RYZEN))
+        ]
         homogeneity = check_homogeneity(members)
         assert homogeneity["host_drift"]
         assert not homogeneity["mismatches"], (
             "a mixed-host set exits 6 from `bga baseline` if this becomes a "
-            "mismatch, which is a stronger claim than the item asked for")
+            "mismatch, which is a stronger claim than the item asked for"
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

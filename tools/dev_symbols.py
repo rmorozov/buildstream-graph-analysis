@@ -18,6 +18,7 @@ Walks `bga/` and `tools/` only; `--tests` adds `tests/`. No index is
 kept between runs - the walk is under two seconds, and a cache would
 be a second source of truth (`UX-700`'s Out of Scope).
 """
+
 import argparse
 import ast
 import json
@@ -103,9 +104,13 @@ def find_definitions(name, include_tests):
                 continue
             enclosing = parents.get(node)
             cls = enclosing.name if isinstance(enclosing, ast.ClassDef) else "-"
-            kind = ("class" if isinstance(node, ast.ClassDef)
-                    else "async def" if isinstance(node, ast.AsyncFunctionDef)
-                    else "def")
+            kind = (
+                "class"
+                if isinstance(node, ast.ClassDef)
+                else "async def"
+                if isinstance(node, ast.AsyncFunctionDef)
+                else "def"
+            )
             rows.append((f"{rel(path)}:{node.lineno}", kind, cls))
     return rows
 
@@ -128,8 +133,9 @@ def find_callers(name, include_tests):
             if not isinstance(node, ast.Call):
                 continue
             func = node.func
-            hit = ((isinstance(func, ast.Name) and func.id == name)
-                   or (isinstance(func, ast.Attribute) and func.attr == name))
+            hit = (isinstance(func, ast.Name) and func.id == name) or (
+                isinstance(func, ast.Attribute) and func.attr == name
+            )
             if hit:
                 rows.append((f"{rel(path)}:{node.lineno}",))
     return rows
@@ -147,8 +153,7 @@ def imported_names(path, node):
         base = [*base, *node.module.split(".")]
     base_str = ".".join(base)
     names = [base_str] if base_str else []
-    names += [f"{base_str}.{alias.name}" if base_str else alias.name
-              for alias in node.names]
+    names += [f"{base_str}.{alias.name}" if base_str else alias.name for alias in node.names]
     return names
 
 
@@ -233,6 +238,7 @@ def find_dead(include_tests):
 def find_dead_js():
     sys.path.insert(0, str(REPO / "tools"))
     import dev_js_deps
+
     viewer = REPO / "bga" / "viewer"
     js_files = sorted(viewer.glob("*.js"))
     stripped = {p: dev_js_deps.strip_comments(p.read_text(encoding="utf-8")) for p in js_files}
@@ -242,10 +248,9 @@ def find_dead_js():
             if not block["exported"]:
                 continue
             pattern = re.compile(rf"\b{re.escape(block['name'])}\b")
-            own_text = "\n".join(stripped[path].splitlines()[block["start"] - 1:block["end"]])
+            own_text = "\n".join(stripped[path].splitlines()[block["start"] - 1 : block["end"]])
             elsewhere = stripped[path].replace(own_text, "", 1)
-            hit = pattern.search(elsewhere) or any(
-                pattern.search(stripped[p]) for p in js_files if p != path)
+            hit = pattern.search(elsewhere) or any(pattern.search(stripped[p]) for p in js_files if p != path)
             if not hit:
                 rows.append((f"{path.relative_to(REPO)}:{block['start']}", block["name"]))
     return rows
@@ -258,8 +263,7 @@ def render(headers, rows, as_json):
     if as_json:
         print(json.dumps([dict(zip(headers, row)) for row in rows]))
         return
-    widths = [max(len(h), *(len(str(r[i])) for r in rows)) if rows else len(h)
-              for i, h in enumerate(headers)]
+    widths = [max(len(h), *(len(str(r[i])) for r in rows)) if rows else len(h) for i, h in enumerate(headers)]
     print("  ".join(h.ljust(w) for h, w in zip(headers, widths)))
     for row in rows:
         print("  ".join(str(c).ljust(w) for c, w in zip(row, widths)))

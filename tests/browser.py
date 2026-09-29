@@ -20,6 +20,7 @@ census — which is the mechanism that makes a skip loud rather than
 comfortable (`UX-235`). A guard that runs nowhere and a guard that
 runs somewhere and says where are different things.
 """
+
 import atexit
 import contextlib
 import glob
@@ -37,9 +38,13 @@ import time
 # In the order a machine is likely to have one. `BGA_CHROME` wins, so a
 # runner with a browser in an unusual place can say where.
 CANDIDATES = (
-    "google-chrome", "google-chrome-stable", "chromium", "chromium-browser",
+    "google-chrome",
+    "google-chrome-stable",
+    "chromium",
+    "chromium-browser",
     "/opt/pw-browsers/chromium-1194/chrome-linux/chrome",
-    "/usr/bin/google-chrome", "/usr/bin/chromium",
+    "/usr/bin/google-chrome",
+    "/usr/bin/chromium",
 )
 
 NO_BROWSER = "no chrome/chromium for the geometry guards (set BGA_CHROME)"
@@ -141,8 +146,7 @@ def find_chrome():
     if named and os.path.exists(named):
         return named
     for candidate in CANDIDATES:
-        found = shutil.which(candidate) or (
-            candidate if os.path.exists(candidate) else None)
+        found = shutil.which(candidate) or (candidate if os.path.exists(candidate) else None)
         if found:
             return found
     return None
@@ -203,23 +207,31 @@ class Browser:
         """
         self.port = _free_port()
         self.process = subprocess.Popen(
-            [self.binary, "--headless=new", "--no-sandbox", "--disable-gpu",
-             "--disable-dev-shm-usage", f"--remote-debugging-port={self.port}",
-             f"--user-data-dir={self.profile}", "about:blank"],
-            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+            [
+                self.binary,
+                "--headless=new",
+                "--no-sandbox",
+                "--disable-gpu",
+                "--disable-dev-shm-usage",
+                f"--remote-debugging-port={self.port}",
+                f"--user-data-dir={self.profile}",
+                "about:blank",
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
             # `UX-773`: its own process group, so a later sweep can
             # `killpg` the browser (and any helper it forked) without
             # reaching the group its own launcher - possibly this
             # worker's whole xdist session - belongs to.
-            start_new_session=True)
+            start_new_session=True,
+        )
         self._stderr = self.process.stderr
         deadline = time.time() + self.START_TIMEOUT_S
         while time.time() < deadline:
             try:
                 import urllib.request
-                with urllib.request.urlopen(
-                        f"http://127.0.0.1:{self.port}/json/version",
-                        timeout=1):
+
+                with urllib.request.urlopen(f"http://127.0.0.1:{self.port}/json/version", timeout=1):
                     return True
             except Exception:
                 # A Chrome that has already exited will never answer, so
@@ -245,8 +257,7 @@ class Browser:
         # which anything is running to do it.
         _sweep_stale()
         shared = _SHARED.get(self.binary)
-        if (shared is not None and shared.process is not None
-                and shared.process.poll() is None):
+        if shared is not None and shared.process is not None and shared.process.poll() is None:
             self.port = shared.port
             self._shared = True
             #: `UX-783`: this entry made no root of its own. A guard
@@ -267,14 +278,14 @@ class Browser:
             # one case this retry exists for - a browser that runs and
             # never listens. The code is taken first, the process is
             # stopped, and only then is the pipe drained.
-            code = (self.process.poll() if self.process is not None
-                    else None)
+            code = self.process.poll() if self.process is not None else None
             self._stop()
             last = self._why_it_failed(attempt, code)
         raise RuntimeError(
             f"{self.binary} did not open a debugging port in "
             f"{self.START_ATTEMPTS} attempts of {self.START_TIMEOUT_S}s. "
-            f"Last: {last}")
+            f"Last: {last}"
+        )
 
     def _why_it_failed(self, attempt, code):
         """One line saying which of the two it was, for the message.
@@ -298,17 +309,18 @@ class Browser:
                 self._stderr.close()
                 self._stderr = None
         tail = said.decode("utf-8", "replace").strip().splitlines()[-1:]
-        return (f"attempt {attempt} on port {self.port} "
-                + (f"exited {code}" if code is not None
-                   else f"was still running after {self.START_TIMEOUT_S}s")
-                + (f": {tail[0]}" if tail else ""))
+        return (
+            f"attempt {attempt} on port {self.port} "
+            + (f"exited {code}" if code is not None else f"was still running after {self.START_TIMEOUT_S}s")
+            + (f": {tail[0]}" if tail else "")
+        )
 
     def _stop(self):
         if self.process is not None:
             self.process.terminate()
             try:
                 self.process.wait(timeout=10)
-            except subprocess.TimeoutExpired:            # pragma: no cover
+            except subprocess.TimeoutExpired:  # pragma: no cover
                 self.process.kill()
             self.process = None
 
@@ -323,18 +335,20 @@ class Browser:
     def _drive(self, url, expression, width, height, extra=()):
         driver = pathlib.Path(__file__).resolve().parent / "cdp.mjs"
         node = shutil.which("node")
-        if node is None:                                 # pragma: no cover
+        if node is None:  # pragma: no cover
             raise RuntimeError("node is required to speak CDP")
         done = subprocess.run(
-            [node, str(driver), str(self.port), url, str(width), str(height),
-             *extra],
-            input=expression, capture_output=True, text=True, timeout=120)
-        if done.returncode != 0:                         # pragma: no cover
+            [node, str(driver), str(self.port), url, str(width), str(height), *extra],
+            input=expression,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        if done.returncode != 0:  # pragma: no cover
             raise RuntimeError(done.stderr)
         return json.loads(done.stdout)
 
-    def measure(self, url, expression, width=1440, height=900, coarse=False,
-                media=None):
+    def measure(self, url, expression, width=1440, height=900, coarse=False, media=None):
         """Load `url` at `width`x`height` and return `expression`'s value.
 
         The evaluation happens in node rather than here because the CDP
@@ -357,11 +371,9 @@ class Browser:
         the keys, since only CDP's Input domain can move focus the way
         a keyboard does.
         """
-        return self._drive(url, json.dumps(steps), width, height,
-                           ("--journey",))
+        return self._drive(url, json.dumps(steps), width, height, ("--journey",))
 
-    def observe(self, url, expression="null", width=1440, height=900,
-                scheme=None):
+    def observe(self, url, expression="null", width=1440, height=900, scheme=None):
         """The same load, plus everything the console and the CSP said.
 
         `UX-334`: `{"value", "console", "csp"}`. `console` is one entry

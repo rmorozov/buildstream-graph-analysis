@@ -23,6 +23,7 @@ inventory silently normalised into something else:
 And one that is legal and was reported twice: a symlinked source
 directory, which halves the blast the table exists to show.
 """
+
 import json
 import os
 import shutil
@@ -41,29 +42,31 @@ class TestEveryElementKindIsRead:
 
     @pytest.mark.parametrize("kind", ["import", "manual", "stack", "filter", "script"])
     def test_sources_are_read_whatever_the_element_kind(self, kind):
-        resources, complaints = sources.resources_from_element({
-            "kind": kind,
-            "sources": [{"kind": "git", "url": "https://host/org/repo.git",
-                         "ref": "a" * 40}],
-        })
+        resources, complaints = sources.resources_from_element(
+            {
+                "kind": kind,
+                "sources": [{"kind": "git", "url": "https://host/org/repo.git", "ref": "a" * 40}],
+            }
+        )
         assert not complaints
         assert [r["identity"] for r in resources] == ["host/org/repo"]
 
     def test_an_import_element_with_a_local_path_is_read(self):
         """The field's own shape: "actual path to repo inside
         kind:import"."""
-        resources, _ = sources.resources_from_element({
-            "kind": "import",
-            "sources": [{"kind": "local", "path": "vendor/monorepo"}],
-        })
+        resources, _ = sources.resources_from_element(
+            {
+                "kind": "import",
+                "sources": [{"kind": "local", "path": "vendor/monorepo"}],
+            }
+        )
         assert [r["identity"] for r in resources] == ["vendor/monorepo"]
         assert resources[0]["keying"] == "content"
 
 
 class TestAPathThisProjectCannotKeyIsNamed:
     def test_an_absolute_path_is_a_complaint_not_an_identity(self):
-        resource, complaint = sources.resource_of_source(
-            {"kind": "local", "path": "/opt/monorepo"})
+        resource, complaint = sources.resource_of_source({"kind": "local", "path": "/opt/monorepo"})
         assert resource is None
         assert "absolute" in complaint
         assert "/opt/monorepo" in complaint
@@ -72,34 +75,30 @@ class TestAPathThisProjectCannotKeyIsNamed:
         """The specific harm: `.strip("/")` turned `/opt/monorepo` into
         `opt/monorepo`, which is a directory a project could really
         have - so two unrelated things merged into one row."""
-        inside, _ = sources.resource_of_source(
-            {"kind": "local", "path": "opt/monorepo"})
-        outside, complaint = sources.resource_of_source(
-            {"kind": "local", "path": "/opt/monorepo"})
+        inside, _ = sources.resource_of_source({"kind": "local", "path": "opt/monorepo"})
+        outside, complaint = sources.resource_of_source({"kind": "local", "path": "/opt/monorepo"})
         assert inside["identity"] == "opt/monorepo"
         assert outside is None and complaint
 
     def test_an_escaping_path_is_a_complaint(self):
-        resource, complaint = sources.resource_of_source(
-            {"kind": "local", "path": "../monorepo"})
+        resource, complaint = sources.resource_of_source({"kind": "local", "path": "../monorepo"})
         assert resource is None
         assert "escapes the project" in complaint
 
     def test_a_path_that_only_looks_like_it_escapes_is_kept(self):
         """`sub/../files/src` stays inside; refusing it would be the
         over-refusal this check has to avoid."""
-        resource, complaint = sources.resource_of_source(
-            {"kind": "local", "path": "sub/../files/src"})
+        resource, complaint = sources.resource_of_source({"kind": "local", "path": "sub/../files/src"})
         assert complaint is None
-        assert resource["identity"] == "files/src", (
-            "and normalised, so it is one identity with `files/src`")
+        assert resource["identity"] == "files/src", "and normalised, so it is one identity with `files/src`"
 
     def test_the_complaint_reaches_the_inventory(self):
-        resources, complaints = sources.resources_from_element({
-            "kind": "manual",
-            "sources": [{"kind": "local", "path": "/opt/monorepo"},
-                        {"kind": "local", "path": "files/src"}],
-        })
+        resources, complaints = sources.resources_from_element(
+            {
+                "kind": "manual",
+                "sources": [{"kind": "local", "path": "/opt/monorepo"}, {"kind": "local", "path": "files/src"}],
+            }
+        )
         assert [r["identity"] for r in resources] == ["files/src"]
         assert len(complaints) == 1, "the unkeyable stanza was dropped silently"
 
@@ -108,8 +107,7 @@ class TestAPathThisProjectCannotKeyIsNamed:
         legal thing, and its url is an absolute path. The check is for
         *content* keying, where a path is a project-relative identity;
         applying it to a url would refuse a working configuration."""
-        resource, complaint = sources.resource_of_source(
-            {"kind": "git", "url": "/srv/git/repo.git", "ref": "a" * 40})
+        resource, complaint = sources.resource_of_source({"kind": "git", "url": "/srv/git/repo.git", "ref": "a" * 40})
         assert complaint is None, "a ref-keyed absolute url was refused"
         assert resource["identity"] == "/srv/git/repo"
 
@@ -126,23 +124,39 @@ class TestTheQueryRefusesThemToo:
         """A `sources.json` written before the complaint existed still
         carries `../monorepo`. It must not prefix-match a query and
         answer confidently about a path this project cannot key."""
-        run = self._run(tmp_path, {
-            "lib.bst": [{"kind": "local", "identity": "../monorepo",
-                         "declared": "../monorepo", "keying": "content",
-                         "staged_at": None}],
-        })
-        answer = blast(run, "../monorepo/src/main.c", project_dir=str(tmp_path),
-                       measure=False)
+        run = self._run(
+            tmp_path,
+            {
+                "lib.bst": [
+                    {
+                        "kind": "local",
+                        "identity": "../monorepo",
+                        "declared": "../monorepo",
+                        "keying": "content",
+                        "staged_at": None,
+                    }
+                ],
+            },
+        )
+        answer = blast(run, "../monorepo/src/main.c", project_dir=str(tmp_path), measure=False)
         assert answer["direct_elements"] == []
 
     def test_a_normal_path_still_matches(self, tmp_path):
-        run = self._run(tmp_path, {
-            "lib.bst": [{"kind": "local", "identity": "files/src",
-                         "declared": "files/src", "keying": "content",
-                         "staged_at": None}],
-        })
-        answer = blast(run, "files/src/main.c", project_dir=str(tmp_path),
-                       measure=False)
+        run = self._run(
+            tmp_path,
+            {
+                "lib.bst": [
+                    {
+                        "kind": "local",
+                        "identity": "files/src",
+                        "declared": "files/src",
+                        "keying": "content",
+                        "staged_at": None,
+                    }
+                ],
+            },
+        )
+        answer = blast(run, "files/src/main.c", project_dir=str(tmp_path), measure=False)
         assert answer["direct_elements"] == ["lib.bst"]
 
 
@@ -160,17 +174,23 @@ class TestASymlinkedDirectoryIsOneResource:
 
         project = self._project(tmp_path)
         declared = [
-            {"kind": "local", "identity": "files/lib", "declared": "files/lib",
-             "keying": "content", "staged_at": None},
-            {"kind": "local", "identity": "vendor/lib", "declared": "vendor/lib",
-             "keying": "content", "staged_at": None},
+            {"kind": "local", "identity": "files/lib", "declared": "files/lib", "keying": "content", "staged_at": None},
+            {
+                "kind": "local",
+                "identity": "vendor/lib",
+                "declared": "vendor/lib",
+                "keying": "content",
+                "staged_at": None,
+            },
         ]
         resolved, notes = _resolve_symlinked(str(project), declared)
         assert not notes
         assert {r["identity"] for r in resolved} == {"files/lib"}, (
-            "a symlinked staging directory halved the blast it exists to show")
+            "a symlinked staging directory halved the blast it exists to show"
+        )
         assert [r["declared"] for r in resolved] == ["files/lib", "vendor/lib"], (
-            "`declared` keeps what the recipe wrote")
+            "`declared` keeps what the recipe wrote"
+        )
 
     def test_a_link_out_of_the_project_is_named(self, tmp_path):
         from tools.bst_extract_run import _resolve_symlinked
@@ -179,18 +199,25 @@ class TestASymlinkedDirectoryIsOneResource:
         outside = tmp_path / "outside"
         outside.mkdir()
         os.symlink(outside, project / "escape")
-        resolved, notes = _resolve_symlinked(str(project), [
-            {"kind": "local", "identity": "escape", "declared": "escape",
-             "keying": "content", "staged_at": None}])
+        resolved, notes = _resolve_symlinked(
+            str(project),
+            [{"kind": "local", "identity": "escape", "declared": "escape", "keying": "content", "staged_at": None}],
+        )
         assert resolved == []
         assert len(notes) == 1 and "outside the project" in notes[0]
 
     def test_a_ref_keyed_resource_is_left_alone(self, tmp_path):
         from tools.bst_extract_run import _resolve_symlinked
 
-        declared = [{"kind": "git", "identity": "host/org/repo",
-                     "declared": "https://host/org/repo.git", "keying": "ref",
-                     "staged_at": None}]
+        declared = [
+            {
+                "kind": "git",
+                "identity": "host/org/repo",
+                "declared": "https://host/org/repo.git",
+                "keying": "ref",
+                "staged_at": None,
+            }
+        ]
         resolved, notes = _resolve_symlinked(str(self._project(tmp_path)), declared)
         assert resolved == declared and not notes
 
@@ -200,9 +227,18 @@ class TestASymlinkedDirectoryIsOneResource:
         one would be worse."""
         from tools.bst_extract_run import _resolve_symlinked
 
-        resolved, notes = _resolve_symlinked(str(self._project(tmp_path)), [
-            {"kind": "local", "identity": "files/gone", "declared": "files/gone",
-             "keying": "content", "staged_at": None}])
+        resolved, notes = _resolve_symlinked(
+            str(self._project(tmp_path)),
+            [
+                {
+                    "kind": "local",
+                    "identity": "files/gone",
+                    "declared": "files/gone",
+                    "keying": "content",
+                    "staged_at": None,
+                }
+            ],
+        )
         assert [r["identity"] for r in resolved] == ["files/gone"]
         assert not notes
 

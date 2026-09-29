@@ -26,6 +26,7 @@ run directory already carries. `tools/bst_extract_run.py` writes the
 inventory into the run directory at extract time, which is the one
 moment the project and the run are both in hand.
 """
+
 import os
 from collections.abc import Iterable, Mapping
 from typing import Optional
@@ -70,7 +71,6 @@ KEYING_BY_KIND: dict[str, str] = {
 _IDENTITY_KEYS = ("url", "path", "location")
 
 
-
 # UX-173: kinds that *assemble* rather than build. A `stack` runs no
 # commands and a `filter` re-presents what it was given, so a blast of
 # 84 where 39 are stacks is not a blast of 84 things that build - and
@@ -81,9 +81,16 @@ _IDENTITY_KEYS = ("url", "path", "location")
 # change costs is the safe direction for a number a developer uses to
 # decide whether to make it. The report says so where it prints the
 # split.
-ASSEMBLING_KINDS = frozenset({
-    "stack", "import", "filter", "junction", "compose", "link",
-})
+ASSEMBLING_KINDS = frozenset(
+    {
+        "stack",
+        "import",
+        "filter",
+        "junction",
+        "compose",
+        "link",
+    }
+)
 
 
 def is_building_kind(kind: Optional[str]) -> bool:
@@ -98,13 +105,12 @@ def split_by_kind(uids, element_kinds: dict[str, str]) -> tuple[int, int]:
     yielded a negative assembling count from the second.
     """
     names = list(uids)
-    building = sum(1 for uid in names
-                   if is_building_kind(element_kinds.get(uid)))
+    building = sum(1 for uid in names if is_building_kind(element_kinds.get(uid)))
     return building, len(names) - building
 
 
 def format_kind_split(building: int, assembling: int) -> str:
-    """"7 elements (3 that build, 4 that assemble)" - or nothing to add.
+    """The "7 elements (3 that build, 4 that assemble)" - or nothing to add.
 
     Silent when everything builds, because "(7 that build)" after "7
     elements" is noise; a reader only needs the split where it changes
@@ -115,6 +121,7 @@ def format_kind_split(building: int, assembling: int) -> str:
     if not assembling:
         return elements
     return f"{elements} ({building} that build, {assembling} that assemble)"
+
 
 def keying_of(kind: str, kind_map: Optional[dict] = None) -> str:
     # UX-833: a custom kind declared in `kind_map` inherits the keying
@@ -129,10 +136,12 @@ def unmapped_kinds(inventory: dict) -> list[str]:
     this is what a coverage block reads to name the custom plugin
     rather than silently folding it into an unestimated blast.
     """
-    kinds = {resource.get("kind")
-             for resources in (inventory.get("elements") or {}).values()
-             for resource in resources or []
-             if resource.get("keying") == "unknown"}
+    kinds = {
+        resource.get("kind")
+        for resources in (inventory.get("elements") or {}).values()
+        for resource in resources or []
+        if resource.get("keying") == "unknown"
+    }
     kinds.discard(None)
     return sorted(kinds)
 
@@ -142,8 +151,7 @@ def unmapped_kinds(inventory: dict) -> list[str]:
 # not know produced `git+https///host/org/repo` from a perfectly good
 # `git+https://host/org/repo.git`, which is a garbage identity *and* the
 # halved blast this function exists to prevent.
-_KNOWN_SCHEMES = ("https", "http", "ssh", "git", "git+ssh", "git+https",
-                  "git+http")
+_KNOWN_SCHEMES = ("https", "http", "ssh", "git", "git+ssh", "git+https", "git+http")
 
 
 def normalize_url(url: str) -> str:
@@ -207,12 +215,16 @@ def _unkeyable_path(kind: str, path: str) -> Optional[str]:
     invents a project-relative path the project does not have.
     """
     if os.path.isabs(path):
-        return (f"`{kind}` source path {path!r} is absolute - `bst` rejects "
-                f"paths outside the project, and stripping the leading `/` "
-                f"would collide with a real project-relative path of that name")
+        return (
+            f"`{kind}` source path {path!r} is absolute - `bst` rejects "
+            f"paths outside the project, and stripping the leading `/` "
+            f"would collide with a real project-relative path of that name"
+        )
     if os.path.normpath(path).split(os.sep)[0] == "..":
-        return (f"`{kind}` source path {path!r} escapes the project - `bst` "
-                f"rejects it, and it has no project-relative identity")
+        return (
+            f"`{kind}` source path {path!r} escapes the project - `bst` "
+            f"rejects it, and it has no project-relative identity"
+        )
     return None
 
 
@@ -245,8 +257,7 @@ def resource_of_source(source, kind_map: Optional[dict] = None) -> tuple[Optiona
             if named:
                 identity = ", ".join(named)
         if identity is None:
-            return None, ("`pip` source names no packages - its index url is "
-                          "not an identity for one resource")
+            return None, ("`pip` source names no packages - its index url is not an identity for one resource")
         # UX-192: the index is not the identity, but dropping it entirely
         # collapsed one package name published on two indexes into one
         # resource - the same over-grouping UX-181 filed, pointing the
@@ -279,14 +290,18 @@ def resource_of_source(source, kind_map: Optional[dict] = None) -> tuple[Optiona
         complaint = _unkeyable_path(kind, identity)
         if complaint:
             return None, complaint
-    normalized = (identity if kind == "pip"
-                  else normalize_url(identity) if keying == "ref"
-                  # UX-184: normalised, so `sub/../files/src` and
-                  # `files/src` are one identity rather than two. The
-                  # query side (`blast._elements_for_path`) has always
-                  # normalised; the inventory side did not, so the two
-                  # disagreed about the same directory.
-                  else os.path.normpath(identity).strip("/"))
+    normalized = (
+        identity
+        if kind == "pip"
+        else normalize_url(identity)
+        if keying == "ref"
+        # UX-184: normalised, so `sub/../files/src` and
+        # `files/src` are one identity rather than two. The
+        # query side (`blast._elements_for_path`) has always
+        # normalised; the inventory side did not, so the two
+        # disagreed about the same directory.
+        else os.path.normpath(identity).strip("/")
+    )
     resource = {
         "kind": kind,
         "identity": normalized,
@@ -299,8 +314,7 @@ def resource_of_source(source, kind_map: Optional[dict] = None) -> tuple[Optiona
     return resource, None
 
 
-def resources_from_element(data: Optional[dict],
-                           kind_map: Optional[dict] = None) -> tuple[list[dict], list[str]]:
+def resources_from_element(data: Optional[dict], kind_map: Optional[dict] = None) -> tuple[list[dict], list[str]]:
     """`(resources, complaints)` for one parsed `.bst` file."""
     if not isinstance(data, dict):
         return [], ["element file could not be read"]
@@ -320,9 +334,11 @@ def resources_from_element(data: Optional[dict],
     return resources, complaints
 
 
-def build_inventory(per_element: dict[str, list[dict]],
-                    complaints: Optional[dict[str, list[str]]] = None,
-                    kind_map: Optional[dict[str, str]] = None) -> dict:
+def build_inventory(
+    per_element: dict[str, list[dict]],
+    complaints: Optional[dict[str, list[str]]] = None,
+    kind_map: Optional[dict[str, str]] = None,
+) -> dict:
     """The on-disk shape, `sources/v1`.
 
     `source_kind_map` (`UX-833`) is additive: `project.conf`'s declared
@@ -357,11 +373,13 @@ def elements_by_resource(inventory: dict) -> dict[tuple[str, str], list[str]]:
     return {key: sorted(set(uids)) for key, uids in grouped.items()}
 
 
-def resource_blast(inventory: dict,
-                   downstream: Mapping[str, set],
-                   element_kinds: dict[str, str],
-                   element_durations_us: Optional[dict[str, int]] = None,
-                   minimum_elements: int = 2) -> list[dict]:
+def resource_blast(
+    inventory: dict,
+    downstream: Mapping[str, set],
+    element_kinds: dict[str, str],
+    element_durations_us: Optional[dict[str, int]] = None,
+    minimum_elements: int = 2,
+) -> list[dict]:
     """One row per resource more than one element sources.
 
     `downstream[uid]` is everything a change to `uid` forces to rebuild,
@@ -388,31 +406,37 @@ def resource_blast(inventory: dict,
             blast |= set(downstream.get(uid) or ())
         by_kind: dict[str, int] = {}
         for uid in sorted(blast):
-            by_kind[element_kinds.get(uid, "unknown")] = \
-                by_kind.get(element_kinds.get(uid, "unknown"), 0) + 1
+            by_kind[element_kinds.get(uid, "unknown")] = by_kind.get(element_kinds.get(uid, "unknown"), 0) + 1
         building, assembling = split_by_kind(blast, element_kinds)
         measured = [durations[uid] for uid in blast if uid in durations]
-        staged = sorted({r.get("staged_at") for uid in direct
-                         for r in (inventory.get("elements") or {}).get(uid, [])
-                         if _resource_key(r) == (kind, identity)} - {None})
-        rows.append({
-            "kind": kind,
-            "identity": identity,
-            "keying": keying_of(kind, kind_map),
-            "direct_elements": direct,
-            "direct_count": len(direct),
-            "blast_elements": sorted(blast),
-            "blast_count": len(blast),
-            "by_element_kind": dict(sorted(by_kind.items(), key=lambda kv: (-kv[1], kv[0]))),
-            # UX-173: of the blast, how much of it actually builds.
-            "building_count": building,
-            "assembling_count": assembling,
-            "measured_us": sum(measured) if measured else None,
-            "measured_elements": len(measured),
-            "staged_at": staged,
-        })
-    rows.sort(key=lambda row: (-(row["measured_us"] or 0), -row["blast_count"],
-                               row["identity"]))
+        staged = sorted(
+            {
+                r.get("staged_at")
+                for uid in direct
+                for r in (inventory.get("elements") or {}).get(uid, [])
+                if _resource_key(r) == (kind, identity)
+            }
+            - {None}
+        )
+        rows.append(
+            {
+                "kind": kind,
+                "identity": identity,
+                "keying": keying_of(kind, kind_map),
+                "direct_elements": direct,
+                "direct_count": len(direct),
+                "blast_elements": sorted(blast),
+                "blast_count": len(blast),
+                "by_element_kind": dict(sorted(by_kind.items(), key=lambda kv: (-kv[1], kv[0]))),
+                # UX-173: of the blast, how much of it actually builds.
+                "building_count": building,
+                "assembling_count": assembling,
+                "measured_us": sum(measured) if measured else None,
+                "measured_elements": len(measured),
+                "staged_at": staged,
+            }
+        )
+    rows.sort(key=lambda row: (-(row["measured_us"] or 0), -row["blast_count"], row["identity"]))
     return rows
 
 
@@ -424,14 +448,11 @@ def keying_clause(row: dict) -> str:
     about a pinned package version or a tarball.
     """
     if row.get("kind") == "pip":
-        return ("keys on the pinned version: a version bump rebuilds every "
-                "element that installs this package")
+        return "keys on the pinned version: a version bump rebuilds every element that installs this package"
     if row.get("kind") in ("tar", "zip", "remote", "deb"):
-        return ("keys on the archive's ref: republishing it rebuilds every "
-                "element that unpacks it")
+        return "keys on the archive's ref: republishing it rebuilds every element that unpacks it"
     if row["keying"] == "ref":
-        return ("keys on ref: any commit to this rebuilds all of them, "
-                "whatever each one stages")
+        return "keys on ref: any commit to this rebuilds all of them, whatever each one stages"
     if row["keying"] == "content":
         return "keys on content: only the elements whose files changed rebuild"
     return f"keying unknown for `{row['kind']}` sources - blast not estimated"
@@ -460,8 +481,7 @@ def format_work(seconds: float) -> str:
     return f"{seconds:.0f}s"
 
 
-def monorepo_headline(rows: list[dict], element_count: int,
-                      share: float = MONOREPO_SHARE) -> Optional[str]:
+def monorepo_headline(rows: list[dict], element_count: int, share: float = MONOREPO_SHARE) -> Optional[str]:
     """One sentence, when one repository dominates the graph's rebuilds."""
     if not element_count:
         return None
@@ -473,13 +493,14 @@ def monorepo_headline(rows: list[dict], element_count: int,
             continue
         cost = ""
         if row["measured_us"]:
-            cost = (f", {format_work(row['measured_us'] / US_PER_S)} of "
-                    "measured build work")
-        return (f"One repository decides most of this build: any commit to "
-                f"{row['identity']} rebuilds {row['blast_count']} of "
-                f"{element_count} elements ({covered:.0%}{cost}), because its "
-                f"{row['direct_count']} direct elements key on its ref rather "
-                f"than on the files they stage.")
+            cost = f", {format_work(row['measured_us'] / US_PER_S)} of measured build work"
+        return (
+            f"One repository decides most of this build: any commit to "
+            f"{row['identity']} rebuilds {row['blast_count']} of "
+            f"{element_count} elements ({covered:.0%}{cost}), because its "
+            f"{row['direct_count']} direct elements key on its ref rather "
+            f"than on the files they stage."
+        )
     return None
 
 
@@ -491,6 +512,7 @@ def load_inventory(path) -> Optional[dict]:
     absent for a project with nothing shared.
     """
     import json
+
     try:
         with open(path, encoding="utf-8") as handle:
             data = json.load(handle)

@@ -8,6 +8,7 @@ I6 had no code at all, I10 was true on every fixture and asserted on
 none, I7 was I4 under another name, and I13 was held by behaviour under
 a name no reader could grep for.
 """
+
 import re
 import subprocess
 from pathlib import Path
@@ -38,13 +39,16 @@ GUARDS = {
 
 # I# -> (reason, the Part 32 registry heading that decided it).
 WAIVERS = {
-    "I7": ("blame_chain_coverage is I4's own sum over I4's own horizon",
-           "### 32.7.4"),
+    "I7": ("blame_chain_coverage is I4's own sum over I4's own horizon", "### 32.7.4"),
 }
 
 _HORIZON_KEYS = (
-    "execution_on_chain_us", "dependency_wait_us", "resource_wait_us",
-    "scheduler_wait_us", "idle_us", "retry_wait_us",
+    "execution_on_chain_us",
+    "dependency_wait_us",
+    "resource_wait_us",
+    "scheduler_wait_us",
+    "idle_us",
+    "retry_wait_us",
 )
 
 
@@ -57,7 +61,7 @@ def _part_34():
     else in the spec is not one of the core invariants."""
     text = _spec_text()
     start = text.index("# Part 34 — Core Invariants")
-    return text[start:text.index("\n# Part 35", start)]
+    return text[start : text.index("\n# Part 35", start)]
 
 
 def _invariant_ids():
@@ -66,8 +70,8 @@ def _invariant_ids():
 
 def _unit_test_files():
     listed = subprocess.run(
-        ["git", "ls-files", "tests/unit/*.py"],
-        cwd=REPO, capture_output=True, text=True, check=True).stdout.split()
+        ["git", "ls-files", "tests/unit/*.py"], cwd=REPO, capture_output=True, text=True, check=True
+    ).stdout.split()
     return {Path(p).name for p in listed}
 
 
@@ -85,13 +89,13 @@ class TestThePopulationIsNotEmpty:
 
 
 class TestEveryInvariantIsAccountedFor:
-
     def test_every_declared_invariant_is_guarded_or_waived(self):
         accounted = set(GUARDS) | set(WAIVERS)
         unaccounted = [i for i in _invariant_ids() if i not in accounted]
         assert unaccounted == [], (
             f"Part 34 declares {unaccounted} with neither a guard nor a "
-            f"waiver - add the file, or the waiver and its 32.7 row")
+            f"waiver - add the file, or the waiver and its 32.7 row"
+        )
 
     def test_the_map_names_no_invariant_the_spec_does_not_declare(self):
         declared = set(_invariant_ids())
@@ -110,8 +114,8 @@ class TestEachGuardExistsAndNamesItsInvariant:
     @pytest.mark.parametrize("invariant", sorted(GUARDS, key=lambda i: int(i[1:])))
     def test_the_named_file_is_one_the_repository_tracks(self, invariant):
         assert GUARDS[invariant] in _unit_test_files(), (
-            f"{invariant} is mapped to {GUARDS[invariant]}, which git does "
-            f"not track under tests/unit/")
+            f"{invariant} is mapped to {GUARDS[invariant]}, which git does not track under tests/unit/"
+        )
 
     @pytest.mark.parametrize("invariant", sorted(GUARDS, key=lambda i: int(i[1:])))
     def test_the_named_file_names_the_invariant(self, invariant):
@@ -120,17 +124,15 @@ class TestEachGuardExistsAndNamesItsInvariant:
         assert re.search(rf"\b{invariant}\b", text), (
             f"{GUARDS[invariant]} is {invariant}'s guard but never names "
             f"{invariant} - a reader cannot get from the report line back "
-            f"to the test")
+            f"to the test"
+        )
 
 
 class TestAWaiverCitesTheDecisionThatMadeIt:
-
     @pytest.mark.parametrize("invariant", sorted(WAIVERS))
     def test_the_waiver_names_a_registry_row_the_spec_carries(self, invariant):
         _reason, heading = WAIVERS[invariant]
-        assert heading in _spec_text(), (
-            f"{invariant} is waived against {heading}, which Part 32 does "
-            f"not carry")
+        assert heading in _spec_text(), f"{invariant} is waived against {heading}, which Part 32 does not carry"
 
     def test_i7_is_i4s_sum_over_i4s_horizon(self):
         """32.7.4's claim, on the code: a run whose attribution misses H
@@ -139,9 +141,16 @@ class TestAWaiverCitesTheDecisionThatMadeIt:
         attribution = dict.fromkeys(_HORIZON_KEYS, 0)
         attribution["execution_on_chain_us"] = 3
         confidence, _ = compute_confidence(
-            normalized_tasks=[_task(0, 4)], run_context=None, trace=None,
-            graph=None, violations=[], attribution_segments=[],
-            graph_analysis={}, attribution=attribution, floors={})
+            normalized_tasks=[_task(0, 4)],
+            run_context=None,
+            trace=None,
+            graph=None,
+            violations=[],
+            attribution_segments=[],
+            graph_analysis={},
+            attribution=attribution,
+            floors={},
+        )
 
         assert confidence["blame_chain_coverage"] == 3 / 4
         assert confidence["hard_gates"]["blame_chain_coverage_full"] is False
@@ -150,9 +159,16 @@ class TestAWaiverCitesTheDecisionThatMadeIt:
         attribution = dict.fromkeys(_HORIZON_KEYS, 0)
         attribution["execution_on_chain_us"] = 4
         confidence, _ = compute_confidence(
-            normalized_tasks=[_task(0, 4)], run_context=None, trace=None,
-            graph=None, violations=[], attribution_segments=[],
-            graph_analysis={}, attribution=attribution, floors={})
+            normalized_tasks=[_task(0, 4)],
+            run_context=None,
+            trace=None,
+            graph=None,
+            violations=[],
+            attribution_segments=[],
+            graph_analysis={},
+            attribution=attribution,
+            floors={},
+        )
 
         assert confidence["blame_chain_coverage"] == 1.0
         assert confidence["hard_gates"]["blame_chain_coverage_full"] is True
@@ -160,7 +176,10 @@ class TestAWaiverCitesTheDecisionThatMadeIt:
 
 def _task(start_us, finish_us):
     from bga.ingest.models import NormalizedTask, TaskKey, TaskKind
+
     return NormalizedTask(
         task_key=TaskKey("a.bst", TaskKind.BUILD, "BUILD", 0),
-        ready_us=start_us, start_us=start_us, finish_us=finish_us,
+        ready_us=start_us,
+        start_us=start_us,
+        finish_us=finish_us,
     )

@@ -11,6 +11,7 @@ CI and nothing else.
 no binary: does the pin say what the document says. Both move together
 or neither moves.
 """
+
 import re
 from pathlib import Path
 
@@ -48,8 +49,8 @@ def test_every_exercised_line_names_the_pinned_version():
     entry named an environment nothing could read."""
     assert documented(), "no exercised line"
     assert set(documented()) == {pinned()}, (
-        f"ci.yml pins {pinned()}; the document says {sorted(set(documented()))}. "
-        f"Bump both - they are one decision")
+        f"ci.yml pins {pinned()}; the document says {sorted(set(documented()))}. Bump both - they are one decision"
+    )
 
 
 def test_the_other_workflow_repeats_the_same_version():
@@ -59,8 +60,8 @@ def test_the_other_workflow_repeats_the_same_version():
     found = LITERAL.findall(CAPTURE.read_text(encoding="utf-8"))
     assert found, "real-project-capture.yml pins no BuildStream version"
     assert set(found) == {pinned()}, (
-        f"ci.yml pins {pinned()}; real-project-capture.yml says "
-        f"{sorted(set(found))}. Two pinned sites, one version")
+        f"ci.yml pins {pinned()}; real-project-capture.yml says {sorted(set(found))}. Two pinned sites, one version"
+    )
 
 
 def test_every_install_uses_the_pin_rather_than_a_floor():
@@ -69,8 +70,9 @@ def test_every_install_uses_the_pin_rather_than_a_floor():
     whatever is newest that day."""
     loose = []
     for path in (WORKFLOW, CAPTURE):
-        loose += [f"{path.name}: {line.strip()}"
-                  for line in path.read_text(encoding="utf-8").splitlines()
-                  if re.search(r"pip install\b.*\bbuildstream(-plugins)?\b", line, re.I)
-                  and "==" not in line]
+        loose += [
+            f"{path.name}: {line.strip()}"
+            for line in path.read_text(encoding="utf-8").splitlines()
+            if re.search(r"pip install\b.*\bbuildstream(-plugins)?\b", line, re.I) and "==" not in line
+        ]
     assert loose == [], f"unpinned buildstream install(s): {loose}"

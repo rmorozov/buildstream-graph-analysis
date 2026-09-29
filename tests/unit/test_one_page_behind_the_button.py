@@ -32,6 +32,7 @@ own button on `run.has_timeline` since `UX-194`; the standalone handoff
 page never had, and nothing on it contradicted the button until the
 questions moved in. `TestTheButtonIsNotDead` is that gate.
 """
+
 import json
 import pathlib
 import sys
@@ -115,11 +116,8 @@ def looked(browser, served):
     behind it and one without. Two runs, because the whole of
     `TestTheButtonIsNotDead` is a difference between them."""
     return {
-        "no_timeline": browser.measure(
-            served(pages.FIXTURES["macro_micro"]) + "perfetto.html",
-            _LOOK, 1440, 900),
-        "with_timeline": browser.measure(
-            served(pages.WITH_TIMELINE) + "perfetto.html", _LOOK, 1440, 900),
+        "no_timeline": browser.measure(served(pages.FIXTURES["macro_micro"]) + "perfetto.html", _LOOK, 1440, 900),
+        "with_timeline": browser.measure(served(pages.WITH_TIMELINE) + "perfetto.html", _LOOK, 1440, 900),
     }
 
 
@@ -134,10 +132,8 @@ class TestThereIsOnePage:
         render: the page that opens the trace carries the slot the
         library lands in."""
         page = (VIEWER / "perfetto.html").read_text(encoding="utf-8")
-        assert 'id="questions"' in page, (
-            "perfetto.html has no slot for the query library")
-        assert 'id="open"' in page, (
-            "perfetto.html has stopped being the handoff page")
+        assert 'id="questions"' in page, "perfetto.html has no slot for the query library"
+        assert 'id="open"' in page, "perfetto.html has stopped being the handoff page"
 
     def test_the_module_that_renders_them_is_the_shared_one(self):
         """`UX-204`'s single source, which a merge is exactly the
@@ -149,23 +145,24 @@ class TestThereIsOnePage:
         """The drift `UX-204` closed, re-checked over every file this
         item touched - including the redirect, which is the one place a
         merge could leave a copy behind."""
-        titles = json.loads(_node(
-            'const { QUESTIONS } = await import("./bga/viewer/questions.js");'
-            'console.log(JSON.stringify(QUESTIONS.map(q => q.title)));'))
+        titles = json.loads(
+            _node(
+                'const { QUESTIONS } = await import("./bga/viewer/questions.js");'
+                'console.log(JSON.stringify(QUESTIONS.map(q => q.title)));'
+            )
+        )
         assert len(titles) >= 4, titles
         text = "".join(
-            (VIEWER / name).read_text(encoding="utf-8")
-            for name in ("perfetto.html", "perfetto_page.js", "sql.html"))
+            (VIEWER / name).read_text(encoding="utf-8") for name in ("perfetto.html", "perfetto_page.js", "sql.html")
+        )
         spelled = [title for title in titles if title in text]
-        assert spelled == [], (
-            f"query title(s) written out instead of rendered: {spelled}")
+        assert spelled == [], f"query title(s) written out instead of rendered: {spelled}"
 
     def test_the_page_that_moved_is_gone(self):
         """`sql.js` was fourteen lines that now live in
         `perfetto_page.js`. A second renderer of one list is the thing
         this item removes."""
-        assert not (VIEWER / "sql.js").exists(), (
-            "sql.js is back; the list has two renderers again")
+        assert not (VIEWER / "sql.js").exists(), "sql.js is back; the list has two renderers again"
 
 
 class TestTheOldUrlStillGoesSomewhere:
@@ -180,12 +177,12 @@ class TestTheOldUrlStillGoesSomewhere:
 
     def test_it_names_where_the_content_went(self, served):
         _code, body = _get(served(pages.FIXTURES["golden"]) + "sql.html")
-        assert 'url=perfetto.html' in body, (
-            "sql.html no longer redirects; a published URL now dead-ends")
+        assert 'url=perfetto.html' in body, "sql.html no longer redirects; a published URL now dead-ends"
         assert 'href="perfetto.html"' in body, (
             "the redirect has no link a reader can follow when their "
             "browser has meta-refresh disabled - which is the whole "
-            "reason the link is there as well")
+            "reason the link is there as well"
+        )
 
     def test_it_redirects_without_script(self):
         """The server sends `default-src 'self'`, which refuses inline
@@ -194,13 +191,13 @@ class TestTheOldUrlStillGoesSomewhere:
         wearing a new hat."""
         page = (VIEWER / "sql.html").read_text(encoding="utf-8")
         assert 'http-equiv="refresh"' in page
-        assert "<script" not in page, (
-            "the redirect uses script, which this page's own CSP refuses")
+        assert "<script" not in page, "the redirect uses script, which this page's own CSP refuses"
 
     def test_the_report_points_at_the_merged_page(self):
         page = (VIEWER / "index.html").read_text(encoding="utf-8")
         assert '<a href="perfetto.html">Questions to ask it</a>' in page, (
-            "the report still sends readers to the half of the errand")
+            "the report still sends readers to the half of the errand"
+        )
 
     def test_the_export_still_strips_that_link(self):
         """The export inlines the section, so the link would be a
@@ -211,7 +208,8 @@ class TestTheOldUrlStillGoesSomewhere:
         assert link in source, (
             "the export's strip no longer matches the link index.html "
             "draws, so an exported report reaches the network for a page "
-            "that is not in it")
+            "that is not in it"
+        )
 
 
 @needs_browser
@@ -220,7 +218,8 @@ class TestTheServedPageCarriesBoth:
     def test_the_handoff_comes_first(self, looked):
         out = looked["with_timeline"]
         assert out["order"] == ["status", "questions"], (
-            f"the reader needs how-to-open before what-to-ask: {out['order']}")
+            f"the reader needs how-to-open before what-to-ask: {out['order']}"
+        )
 
     def test_the_library_renders(self, looked):
         out = looked["with_timeline"]
@@ -240,7 +239,8 @@ class TestTheServedPageCarriesBoth:
         out = looked["with_timeline"]
         assert out["population"] > 1, (
             f"the merged page searches {out['population']} element(s); it is "
-            f"served beside report.json and should offer the run's own")
+            f"served beside report.json and should offer the run's own"
+        )
         assert len(out["options"]) > 1, out["options"]
         assert out["chosen"] in out["options"], out
 
@@ -252,14 +252,13 @@ class TestTheServedPageCarriesBoth:
         # value is `null`, and `None in str` is a TypeError rather than
         # a sentence about what went wrong.
         assert isinstance(out["chosen"], str) and out["chosen"], (
-            f"the picker chose nothing, so no query can be aimed: "
-            f"{out['chosen']!r}")
+            f"the picker chose nothing, so no query can be aimed: {out['chosen']!r}"
+        )
         asking = [sql for sql in out["sql"] if out["chosen"] in sql]
-        assert asking, (
-            f"the picker says {out['chosen']!r} and no query asks about it")
+        assert asking, f"the picker says {out['chosen']!r} and no query asks about it"
         assert not [sql for sql in out["sql"] if "{element}" in sql], (
-            "a query still shows the token on a page that has a population "
-            "to substitute")
+            "a query still shows the token on a page that has a population to substitute"
+        )
 
 
 @needs_browser
@@ -279,7 +278,8 @@ class TestTheButtonIsNotDead:
         out = looked["no_timeline"]
         assert out["button"] is False, (
             "the page offers a handoff for a snapshot that has nothing to "
-            "hand over - and says so itself, one section below")
+            "hand over - and says so itself, one section below"
+        )
         assert out["absent"] == "absent", out
 
     def test_the_absence_is_said_and_not_just_shown(self, looked):
@@ -288,15 +288,13 @@ class TestTheButtonIsNotDead:
         the button was."""
         line = looked["no_timeline"]["line"]
         assert line and "no timeline" in line.lower(), line
-        assert "bga capture" in line, (
-            f"the absence names no way out of it: {line!r}")
+        assert "bga capture" in line, f"the absence names no way out of it: {line!r}"
 
     def test_the_questions_are_still_there_without_a_timeline(self, looked):
         """The half that must not be gated. The queries are what to ask
         a trace once there is one, and a reader deciding whether to
         capture one is exactly who wants to read them."""
-        assert looked["no_timeline"]["questions"] >= 4, (
-            "the library went with the button; it is not the button's")
+        assert looked["no_timeline"]["questions"] >= 4, "the library went with the button; it is not the button's"
 
 
 def _node(script):
@@ -307,9 +305,9 @@ def _node(script):
     node = shutil.which("node")
     if node is None:
         pytest.skip("node is not installed")
-    result = subprocess.run([node, "--input-type=module", "-e", script],
-                            capture_output=True, text=True,
-                            cwd=os.getcwd(), timeout=60)
+    result = subprocess.run(
+        [node, "--input-type=module", "-e", script], capture_output=True, text=True, cwd=os.getcwd(), timeout=60
+    )
     assert result.returncode == 0, result.stderr
     return result.stdout
 

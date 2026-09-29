@@ -49,6 +49,7 @@ guard reads the document the page actually assembles.
   per element - which have no single payload slice to show, and get no
   control rather than a control showing the wrong thing.
 """
+
 import json
 import os
 import re
@@ -228,20 +229,20 @@ def _boot(run_dir, tmp):
     view.export(str(run), str(page))
     html = page.read_text(encoding="utf-8")
     module = tmp / "inline.mjs"
-    module.write_text(
-        view.inflated_module(html),
-        encoding="utf-8")
+    module.write_text(view.inflated_module(html), encoding="utf-8")
     probe = tmp / "probe.mjs"
-    probe.write_text(_probe_source().split("const report =", 1)[0] + _TAIL,
-                     encoding="utf-8")
+    probe.write_text(_probe_source().split("const report =", 1)[0] + _TAIL, encoding="utf-8")
     result = subprocess.run(
-        [node, str(probe)], capture_output=True, text=True, cwd=REPO,
+        [node, str(probe)],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
         timeout=180,
         # `file:`, because the export is the mode that has no server -
         # the toggle is the issue-pasting affordance and it must work
         # for the person the report was *sent* to.
-        env=dict(os.environ, PAGE=str(page), MOD=str(module),
-                 PROTOCOL="file:"))
+        env=dict(os.environ, PAGE=str(page), MOD=str(module), PROTOCOL="file:"),
+    )
     assert result.returncode == 0, result.stderr[-4000:]
     out = json.loads(result.stdout)
     assert out["error"] is None, out["error"]
@@ -270,9 +271,8 @@ class TestNoRawJsonOutsideTheTwoControls:
         leaks = [leak for leak in booted[page]["leaks"] if not leak["allowed"]]
         assert not leaks, (
             f"{page}: {len(leaks)} raw-JSON text nodes outside the labeled "
-            f"fold and the JSON toggle: "
-            + "; ".join(f"<{leak['tag']}> {leak['text'][:80]!r}"
-                        for leak in leaks[:5]))
+            f"fold and the JSON toggle: " + "; ".join(f"<{leak['tag']}> {leak['text'][:80]!r}" for leak in leaks[:5])
+        )
 
     @pytest.mark.parametrize("page", ["golden", "macro_micro"])
     def test_with_every_toggle_open_it_is_all_labeled(self, booted, page):
@@ -286,14 +286,14 @@ class TestNoRawJsonOutsideTheTwoControls:
         """
         opened = booted[page]["opened"]
         assert opened["leaks"], (
-            "no raw JSON with every toggle open - the toggles did not "
-            "open, and this clause is asserting nothing")
+            "no raw JSON with every toggle open - the toggles did not open, and this clause is asserting nothing"
+        )
         loose = [leak for leak in opened["leaks"] if not leak["allowed"]]
         assert not loose, (
             f"{page}: {len(loose)} of {len(opened['leaks'])} raw-JSON text "
             f"nodes are outside `data-raw-json`: "
-            + "; ".join(f"<{leak['tag']}> {leak['text'][:60]!r}"
-                        for leak in loose[:3]))
+            + "; ".join(f"<{leak['tag']}> {leak['text'][:60]!r}" for leak in loose[:3])
+        )
 
     @pytest.mark.parametrize("page", ["golden", "macro_micro"])
     def test_closing_them_all_puts_the_page_back(self, booted, page):
@@ -301,14 +301,11 @@ class TestNoRawJsonOutsideTheTwoControls:
         again = booted[page]["closedAgain"]
         assert not [leak for leak in again["leaks"] if not leak["allowed"]]
         assert again["nodes"] == booted[page]["nodes"], (
-            f"{page}: {again['nodes']} nodes after closing every toggle, "
-            f"{booted[page]['nodes']} before")
+            f"{page}: {again['nodes']} nodes after closing every toggle, {booted[page]['nodes']} before"
+        )
 
-    @pytest.mark.parametrize("page,least_nodes,least_texted",
-                             [("golden", 1500, 800),
-                              ("macro_micro", 2500, 1400)])
-    def test_the_walk_looked_at_the_document(
-            self, booted, page, least_nodes, least_texted):
+    @pytest.mark.parametrize("page,least_nodes,least_texted", [("golden", 1500, 800), ("macro_micro", 2500, 1400)])
+    def test_the_walk_looked_at_the_document(self, booted, page, least_nodes, least_texted):
         """A zero from an instrument that read nothing is not a zero.
 
         The first draft walked `body` and reached 0 nodes of the report,
@@ -332,8 +329,7 @@ class TestTheToggleRoundTrips:
         out = booted[page]
         assert len(out["toggles"]) >= 12, out["toggles"]
         # Every toggle names a section that is really in the document.
-        assert set(out["toggles"]) <= set(out["sections"]), (
-            set(out["toggles"]) - set(out["sections"]))
+        assert set(out["toggles"]) <= set(out["sections"]), set(out["toggles"]) - set(out["sections"])
 
     @pytest.mark.parametrize("page", ["golden", "macro_micro"])
     def test_shown_then_hidden_leaves_the_section_as_it_was(self, booted, page):
@@ -341,8 +337,8 @@ class TestTheToggleRoundTrips:
         assert trip is not None, "no toggle to drive"
         assert trip["grew"], "showing the JSON changed nothing"
         assert trip["restored"], (
-            f"{page}: hiding the JSON did not restore section "
-            f"{trip['key']!r} to its serialised form")
+            f"{page}: hiding the JSON did not restore section {trip['key']!r} to its serialised form"
+        )
         assert not trip["residue"], "an empty wrapper was left behind"
 
     @pytest.mark.parametrize("page", ["golden", "macro_micro"])
@@ -369,9 +365,12 @@ console.log(JSON.stringify({ answer, controls: s.CONTROLS }));
 
 def _classify(cases):
     result = subprocess.run(
-        [node, "--input-type=module", "-e",
-         _CLASSIFY % (REPO, json.dumps(cases))],
-        capture_output=True, text=True, cwd=REPO, timeout=60)
+        [node, "--input-type=module", "-e", _CLASSIFY % (REPO, json.dumps(cases))],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=60,
+    )
     assert result.returncode == 0, result.stderr[-3000:]
     return json.loads(result.stdout)
 
@@ -384,19 +383,19 @@ class TestEveryRowOfTheTableHasAControl:
     shape."""
 
     def test_each_shape_gets_its_declared_control(self):
-        out = _classify({
-            "short scalar array": [[1, 2, 3], None],
-            "long scalar array": [list(range(9)), None],
-            "array of objects": [[{"a": 1}, {"a": 2}], None],
-            "array of pairs": [[["a", 1], ["b", 2]], None],
-            "declared tuple": [[["a", 1]],
-                               {"columns": [{"key": "name"},
-                                            {"key": "count"}]}],
-            "small keyed object": [{"a": 1, "b": 2}, None],
-            "object map": [{f"e{i}.bst": {"n": i} for i in range(5)}, None],
-            "severity list": [[{"severity": "high"}], {"severity": True}],
-            "past the nesting cap": [{"a": {"b": {"c": 1}}}, {"depth": 2}],
-        })
+        out = _classify(
+            {
+                "short scalar array": [[1, 2, 3], None],
+                "long scalar array": [list(range(9)), None],
+                "array of objects": [[{"a": 1}, {"a": 2}], None],
+                "array of pairs": [[["a", 1], ["b", 2]], None],
+                "declared tuple": [[["a", 1]], {"columns": [{"key": "name"}, {"key": "count"}]}],
+                "small keyed object": [{"a": 1, "b": 2}, None],
+                "object map": [{f"e{i}.bst": {"n": i} for i in range(5)}, None],
+                "severity list": [[{"severity": "high"}], {"severity": True}],
+                "past the nesting cap": [{"a": {"b": {"c": 1}}}, {"depth": 2}],
+            }
+        )
         controls = out["controls"]
         assert out["answer"] == {
             "short scalar array": controls["INLINE_LIST"],
@@ -416,10 +415,12 @@ class TestEveryRowOfTheTableHasAControl:
         section level and rendered `[object Object], 2` - strictly less
         than the JSON it replaced (`UX-277` found the same leaf in a
         table cell)."""
-        out = _classify({
-            "mixed": [[{"a": 1}, 2], None],
-            "objects and arrays": [[{"a": 1}, ["b", 2]], None],
-        })
+        out = _classify(
+            {
+                "mixed": [[{"a": 1}, 2], None],
+                "objects and arrays": [[{"a": 1}, ["b", 2]], None],
+            }
+        )
         assert out["answer"] == {"mixed": None, "objects and arrays": None}
 
 
@@ -468,9 +469,12 @@ console.log(JSON.stringify({
     def probed(cls):
         result = subprocess.run(
             [node, "--input-type=module", "-e", cls._PROBE],
-            capture_output=True, text=True, cwd=REPO, timeout=60,
-            env=dict(os.environ,
-                     BGA_DOM_SHIM=str(REPO / "tests" / "dom_shim.mjs")))
+            capture_output=True,
+            text=True,
+            cwd=REPO,
+            timeout=60,
+            env=dict(os.environ, BGA_DOM_SHIM=str(REPO / "tests" / "dom_shim.mjs")),
+        )
         assert result.returncode == 0, result.stderr[-3000:]
         return json.loads(result.stdout)
 
@@ -608,29 +612,27 @@ console.log(JSON.stringify({
 
         into = tmp_path_factory.mktemp("u864-schema")
         schema_path = into / "schema.json"
-        schema_path.write_text(
-            json.dumps(schemas.schema(schemas.ANALYZE)), encoding="utf-8")
+        schema_path.write_text(json.dumps(schemas.schema(schemas.ANALYZE)), encoding="utf-8")
         result = subprocess.run(
             [node, "--input-type=module", "-e", cls._PROBE],
-            capture_output=True, text=True, cwd=REPO, timeout=120,
-            env=dict(os.environ,
-                     BGA_DOM_SHIM=str(REPO / "tests" / "dom_shim.mjs"),
-                     BGA_SCHEMA=str(schema_path)))
+            capture_output=True,
+            text=True,
+            cwd=REPO,
+            timeout=120,
+            env=dict(os.environ, BGA_DOM_SHIM=str(REPO / "tests" / "dom_shim.mjs"), BGA_SCHEMA=str(schema_path)),
+        )
         assert result.returncode == 0, result.stderr[-3000:]
         return json.loads(result.stdout)
 
-    def test_forty_one_binaries_render_a_table_with_filter_and_sort(
-            self, probed):
+    def test_forty_one_binaries_render_a_table_with_filter_and_sort(self, probed):
         seen = probed["by_binary"]
         assert seen["hasTable"], seen
         assert seen["dataRows"] == "41", seen
         assert seen["hasFilter"], "a table over the bound has no filter"
         assert seen["sortable"] == ["true", "true"], seen
-        assert seen["headers"] == ["Binary", "Count"], (
-            "the key's own noun and the value's declared unit: " + str(seen))
+        assert seen["headers"] == ["Binary", "Count"], "the key's own noun and the value's declared unit: " + str(seen)
 
-    def test_twelve_hundred_tasks_render_a_table_with_filter_and_sort(
-            self, probed):
+    def test_twelve_hundred_tasks_render_a_table_with_filter_and_sort(self, probed):
         seen = probed["wall_clock_share_us"]
         assert seen["hasTable"], seen
         assert seen["dataRows"] == "1202", seen
@@ -690,25 +692,23 @@ class TestStringifyIsAllowlisted:
             lines = path.read_text(encoding="utf-8").splitlines()
             holder = "<file>"
             for line in lines:
-                match = re.match(
-                    r"^(?:export\s+)?(?:async\s+)?function\s+(\w+)", line)
+                match = re.match(r"^(?:export\s+)?(?:async\s+)?function\s+(\w+)", line)
                 if match:
                     holder = match.group(1)
                 if "JSON.stringify" not in line:
                     continue
                 if line.lstrip().startswith(("//", "*")):
-                    continue    # a comment naming it, not a call
+                    continue  # a comment naming it, not a call
                 found.append((path.name, holder, line.strip()))
         return found
 
     def test_every_site_is_one_of_the_five(self):
-        unexpected = [site for site in self._sites()
-                      if (site[0], site[1]) not in self.ALLOWED]
+        unexpected = [site for site in self._sites() if (site[0], site[1]) not in self.ALLOWED]
         assert not unexpected, (
             "JSON.stringify outside the allowlist - a new rendering path "
             "must be argued for in styleguide.md §1 first:\n"
-            + "\n".join(f"  {name}:{holder}: {line}"
-                        for name, holder, line in unexpected))
+            + "\n".join(f"  {name}:{holder}: {line}" for name, holder, line in unexpected)
+        )
 
     def test_the_allowlist_has_no_dead_entries(self):
         """The other direction: an allowlisted site that no longer
@@ -734,15 +734,11 @@ class TestTheGuideAndTheCodeAgree:
         names = re.findall(r'^\s+\w+: "([^"]+)"', source, re.M)
         assert len(names) >= 8, names
         missing = [name for name in names if name not in section]
-        assert not missing, (
-            f"controls named in shapes.js but not in styleguide.md §1: "
-            f"{missing}")
+        assert not missing, f"controls named in shapes.js but not in styleguide.md §1: {missing}"
 
     def test_the_guide_points_at_the_module(self):
         guide = (REPO / "docs/design/styleguide.md").read_text(encoding="utf-8")
-        assert "shapes.js" in guide, (
-            "§1 must name the module that implements it, or the next "
-            "reader has to find it")
+        assert "shapes.js" in guide, "§1 must name the module that implements it, or the next reader has to find it"
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -4,6 +4,7 @@ and a `leaked` ledger row; a live holder's tokens stay held. The killed
 holder is a real Python child reading real bytes off the real FIFO,
 never a proxy for the kernel object or the process table.
 """
+
 import array
 import fcntl
 import json
@@ -45,9 +46,13 @@ def _controller(tmp_path, fd, ceiling=8):
     # The pool thread must not move tokens under the audit's own guard:
     # capacity far above any busy-core reading, and the PSI path pinned
     # away from the host's file (CI's runner has one, avg10 19.31).
-    pc = tracer.PoolController(fd, ceiling, capacity=10**6, ledger_path=ledger,
-                               psi_paths={"cpu": str(tmp_path / "no-psi"),
-                                          "memory": str(tmp_path / "no-memory-psi")})
+    pc = tracer.PoolController(
+        fd,
+        ceiling,
+        capacity=10**6,
+        ledger_path=ledger,
+        psi_paths={"cpu": str(tmp_path / "no-psi"), "memory": str(tmp_path / "no-memory-psi")},
+    )
     return pc, ledger
 
 
@@ -70,8 +75,7 @@ def _leaked_rows(ledger):
 
 
 def _write_acquire(ledger, tool, pid, tokens):
-    row = {"event": "acquire", "tool": tool, "pid": pid, "tokens": tokens,
-          "t": time.time()}
+    row = {"event": "acquire", "tool": tool, "pid": pid, "tokens": tokens, "t": time.time()}
     with open(ledger, "a", encoding="utf-8") as handle:
         handle.write(json.dumps(row) + "\n")
 
@@ -81,8 +85,7 @@ def _spawn_holder(tmp_path, fifo_path, tokens, ledger, tool="ld.lld"):
     if not script.exists():
         script.write_text(_HOLDER)
     marker = tmp_path / f"marker-{tokens}-{tool}"
-    proc = subprocess.Popen([sys.executable, str(script), fifo_path, str(tokens),
-                             ledger, tool, str(marker)])
+    proc = subprocess.Popen([sys.executable, str(script), fifo_path, str(tokens), ledger, tool, str(marker)])
     for _ in range(100):
         if marker.exists():
             break

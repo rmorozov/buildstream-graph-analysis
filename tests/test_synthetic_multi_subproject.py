@@ -16,6 +16,7 @@ See tests/fixtures/synthetic_multi_subproject/ for:
                           tree matching the same model (documentation only,
                           not parsed by bga or by this test)
 """
+
 import json
 import subprocess
 import sys
@@ -80,6 +81,7 @@ def analyzer(run_dir):
 
 # --- Real converter integration -----------------------------------------
 
+
 def test_converter_produced_expected_task_count(fixture_artifacts):
     """Every scheduled (element, phase) becomes one bst-builder B/E pair in
     the real converter's Chrome trace output, except the one
@@ -94,9 +96,7 @@ def test_converter_produced_expected_task_count(fixture_artifacts):
         if ev.get("cat") == "bst-builder" and ev.get("ph") == "B"
     ]
     assert len(builder_begin_names) == expected_total
-    assert not fixture_artifacts["dropped_names"], (
-        f"adapter could not parse: {fixture_artifacts['dropped_names']}"
-    )
+    assert not fixture_artifacts["dropped_names"], f"adapter could not parse: {fixture_artifacts['dropped_names']}"
 
 
 def test_converter_drops_status_only_line_with_no_start():
@@ -117,6 +117,7 @@ def test_converter_drops_status_only_line_with_no_start():
 
 # --- Anti-drift: checked-in fixture must match what the model produces --
 
+
 def test_checked_in_fixture_matches_current_model(fixture_artifacts):
     """If this fails, build_model.py changed but nobody re-ran
     generate_fixture.py to refresh the checked-in copies under
@@ -133,6 +134,7 @@ def test_checked_in_fixture_matches_current_model(fixture_artifacts):
 
 
 # --- Structural correctness (independently computed ground truth) -------
+
 
 def test_graph_shape(result):
     assert result.structural["metrics"]["num_elements"] == len(build_model.ELEMENTS)
@@ -166,6 +168,7 @@ def test_critical_path_ends_at_app(result):
     """app.bst is the sole requested target and nothing depends on it, so
     it must be the terminal node of the observed critical path."""
     from bga import schemas as _s
+
     critical_path = _s.critical_path_uids(result.signals)
     assert isinstance(critical_path, list)
     assert len(critical_path) >= 1
@@ -173,6 +176,7 @@ def test_critical_path_ends_at_app(result):
 
 
 # --- Certified floors / core invariants ----------------------------------
+
 
 def test_certified_floor_invariants(result):
     lb = result.floors["lb"]
@@ -187,8 +191,12 @@ def test_certified_floor_invariants(result):
     total_work_us = sum(
         attribution.get(k, 0)
         for k in (
-            "execution_on_chain_us", "dependency_wait_us", "resource_wait_us",
-            "scheduler_wait_us", "idle_us", "retry_wait_us",
+            "execution_on_chain_us",
+            "dependency_wait_us",
+            "resource_wait_us",
+            "scheduler_wait_us",
+            "idle_us",
+            "retry_wait_us",
         )
     )
     assert total_work_us >= lb, f"H ({total_work_us}) < LB ({lb})"
@@ -197,8 +205,12 @@ def test_certified_floor_invariants(result):
 
 
 _TASK_HORIZON_KEYS = (
-    "execution_on_chain_us", "dependency_wait_us", "resource_wait_us",
-    "scheduler_wait_us", "idle_us", "retry_wait_us",
+    "execution_on_chain_us",
+    "dependency_wait_us",
+    "resource_wait_us",
+    "scheduler_wait_us",
+    "idle_us",
+    "retry_wait_us",
 )
 
 
@@ -212,9 +224,11 @@ def _sum_task_horizon_attribution(attribution):
 def _sum_attribution(attribution):
     """All 8 canonical categories (Part 11), including UNTRACKED_HEAD/
     UNTRACKED_TAIL - Part 12.1's full-wall-clock identity target."""
-    return _sum_task_horizon_attribution(attribution) + attribution.get(
-        "untracked_head_us", 0
-    ) + attribution.get("untracked_tail_us", 0)
+    return (
+        _sum_task_horizon_attribution(attribution)
+        + attribution.get("untracked_head_us", 0)
+        + attribution.get("untracked_tail_us", 0)
+    )
 
 
 def test_attribution_no_longer_produces_garbage_values(result):
@@ -266,8 +280,7 @@ def test_no_task_has_a_negative_duration(analyzer):
     """
     negative = [t for t in analyzer.normalized_tasks if t.dur_us < 0]
     assert negative == [], (
-        f"{len(negative)} task(s) have negative duration: "
-        f"{[(str(t.task_key), t.dur_us) for t in negative]}"
+        f"{len(negative)} task(s) have negative duration: {[(str(t.task_key), t.dur_us) for t in negative]}"
     )
 
 
@@ -346,6 +359,7 @@ def test_full_wall_clock_attribution_identity_exact(result, fixture_artifacts):
 
 
 # --- Full-stack CLI proof -------------------------------------------------
+
 
 def test_cli_end_to_end_on_synthetic_project(run_dir):
     cmd = [sys.executable, "-m", "bga.cli", "analyze", str(run_dir), "--format", "json", "--diagnostics"]

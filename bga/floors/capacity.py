@@ -5,6 +5,7 @@ term; bga/floors/serialization.py computes the exclusive-serialization
 term, sharing compute_resource_work_us below rather than duplicating the
 per-task resource scan.
 """
+
 from collections import defaultdict
 from typing import Optional
 

@@ -4,6 +4,7 @@
 ends in a period; `main()` appended `. ` before its own hint and the
 terminal printed "goes missing.. `bga timeline` renders one".
 """
+
 import json
 import os
 import shutil
@@ -17,9 +18,9 @@ def _run_with_plane2_no_raw_log(tmp_path):
     run.parent.mkdir(parents=True, exist_ok=True)
     shutil.copytree(GOLDEN, run)
     os.remove(run / "expected_output.json")
-    (snapshot / "plane2.json").write_text(json.dumps({
-        "schema": "plane2/v3", "process_count": 3,
-        "matched_count": 0, "open_count": 0, "by_binary": []}))
+    (snapshot / "plane2.json").write_text(
+        json.dumps({"schema": "plane2/v3", "process_count": 3, "matched_count": 0, "open_count": 0, "by_binary": []})
+    )
     return str(run)
 
 

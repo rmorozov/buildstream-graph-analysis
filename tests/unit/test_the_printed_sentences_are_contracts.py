@@ -28,6 +28,7 @@ So: a printed command is checked by **parsing it into the shape it
 claims**, and a printed sentence naming a flag is checked against the
 state that flag produces.
 """
+
 import contextlib
 import io
 import json
@@ -65,10 +66,10 @@ shutil.copytree(FIXTURE_RUN, _FIXTURE_RUN_TWIN)
 # in writing, and `test_only_one_step_is_exempt` keeps it from spreading.
 UNRUNNABLE = {
     "measure-again": "it runs the build again, which needs `bst` and a "
-                     "sandbox - so this one is parsed into its shape instead",
+    "sandbox - so this one is parsed into its shape instead",
     "compare-with-the-run-before": "it compares against a capture that does "
-                                   "not exist yet - the whole point of the "
-                                   "step is that you take one next",
+    "not exist yet - the whole point of the "
+    "step is that you take one next",
 }
 
 # Every sentence in `bga/report/` that claims a flag *was passed*, with
@@ -78,8 +79,8 @@ UNRUNNABLE = {
 FLAG_CLAIMS = {
     "--allow-mismatch was given": "comparison.mismatches",
     "`--fail-on-low-confidence` was passed": "the sentence is conditional "
-                                             "prose about behaviour, not a "
-                                             "claim that it was",
+    "prose about behaviour, not a "
+    "claim that it was",
 }
 _CLAIM = re.compile(r"`?--[a-z-]+`? was (?:given|passed)")
 
@@ -117,14 +118,13 @@ def _steps(run):
 
 
 class TestEveryPrintedCommandParsesIntoWhatItMeans:
-
     def test_the_store_shaped_steps_are_offered_at_all(self, store_run):
         """Without this the clauses below pass by finding nothing - which
         is exactly how F3 survived six rounds behind a guard."""
         offered = set(_steps(store_run))
         assert {"measure-again", "compare-with-the-run-before"} <= offered, (
-            f"the store-shaped steps are not offered for a run inside a "
-            f"store; got {sorted(offered)}")
+            f"the store-shaped steps are not offered for a run inside a store; got {sorted(offered)}"
+        )
 
     def test_every_published_argv_parses(self, store_run):
         """Against the *real* parser, natives through `create_parser` and
@@ -143,25 +143,24 @@ class TestEveryPrintedCommandParsesIntoWhatItMeans:
                 try:
                     parser.parse_args(argv[1:])
                 except SystemExit as exit_code:
-                    pytest.fail(f"{step_id} publishes `{' '.join(argv)}`, "
-                                f"which the parser rejects (exit {exit_code})")
+                    pytest.fail(f"{step_id} publishes `{' '.join(argv)}`, which the parser rejects (exit {exit_code})")
             else:
                 assert argv[1] in TOOL_ALIASES, (
                     f"{step_id} publishes `{' '.join(argv)}`, whose command "
-                    f"is neither a subcommand nor an alias bga dispatches")
+                    f"is neither a subcommand nor an alias bga dispatches"
+                )
                 alias_parser = ALIAS_PARSERS.get(argv[1])
                 assert alias_parser is not None, (
                     f"{step_id} publishes `bga {argv[1]}`, and no parser for "
                     "it is reachable here - add one rather than shelling out: "
-                    "`--help` appended to a REMAINDER argv runs the build")
+                    "`--help` appended to a REMAINDER argv runs the build"
+                )
                 try:
                     alias_parser().parse_args(argv[2:])
                 except SystemExit as exit_code:
-                    pytest.fail(f"{step_id} publishes `{' '.join(argv)}`, "
-                                f"which the parser rejects (exit {exit_code})")
+                    pytest.fail(f"{step_id} publishes `{' '.join(argv)}`, which the parser rejects (exit {exit_code})")
 
-    def test_the_capture_step_puts_the_project_where_the_project_goes(
-            self, store_run):
+    def test_the_capture_step_puts_the_project_where_the_project_goes(self, store_run):
         """F3, by name. `bga snapshot <project>` also *parses* - the
         positional is a REMAINDER and swallows anything - so parsing is
         not the check. What it parses **into** is."""
@@ -170,28 +169,30 @@ class TestEveryPrintedCommandParsesIntoWhatItMeans:
         assert parsed.project, (
             f"`{' '.join(step['argv'])}` leaves --project unset, so the "
             "project path is being parsed as the build command. That is the "
-            "UX-326 crash: `ValueError: command must start with 'bst'`.")
+            "UX-326 crash: `ValueError: command must start with 'bst'`."
+        )
         command = [token for token in parsed.cmd if token != "--"]
         assert command and command[0] == "bst", (
-            f"the build command parsed out of `{' '.join(step['argv'])}` is "
-            f"{command}, which `bga snapshot` refuses")
-        assert bga_snapshot.why_the_build_cannot_start(command) is None or \
-            shutil.which("bst") is None, (
-            "the command this step prints cannot start on a machine that "
-            "has bst")
+            f"the build command parsed out of `{' '.join(step['argv'])}` is {command}, which `bga snapshot` refuses"
+        )
+        assert bga_snapshot.why_the_build_cannot_start(command) is None or shutil.which("bst") is None, (
+            "the command this step prints cannot start on a machine that has bst"
+        )
 
-    @pytest.mark.parametrize("step_id", [
-        "shorten-what-the-build-waits-for", "blast-the-top-element"])
+    @pytest.mark.parametrize("step_id", ["shorten-what-the-build-waits-for", "blast-the-top-element"])
     def test_the_runnable_steps_run(self, store_run, step_id):
         steps = _steps(store_run)
         if step_id not in steps:
             pytest.skip(f"{step_id} is not offered for this fixture")
         argv = steps[step_id]["argv"]
-        done = subprocess.run([sys.executable, "-m", "bga.cli", *argv[1:]],
-                              capture_output=True, text=True,
-                              cwd=str(store_run.parent), timeout=300)
-        assert done.returncode == 0, (
-            f"`{' '.join(argv)}` exited {done.returncode}:\n{done.stderr[-800:]}")
+        done = subprocess.run(
+            [sys.executable, "-m", "bga.cli", *argv[1:]],
+            capture_output=True,
+            text=True,
+            cwd=str(store_run.parent),
+            timeout=300,
+        )
+        assert done.returncode == 0, f"`{' '.join(argv)}` exited {done.returncode}:\n{done.stderr[-800:]}"
 
     def test_exemption_from_execution_stays_a_minority(self, store_run):
         """If the exemption list grows, the guard becomes the thing it
@@ -202,10 +203,10 @@ class TestEveryPrintedCommandParsesIntoWhatItMeans:
         assert len(exempt) <= len(offered) // 2, (
             f"{len(exempt)} of {len(offered)} steps are exempt from "
             f"execution ({sorted(exempt)}); UX-326 replaced a guard that ran "
-            "two of four and this is how that starts again")
+            "two of four and this is how that starts again"
+        )
         for step_id in exempt:
-            assert len(UNRUNNABLE[step_id]) > 40, (
-                f"{step_id} is exempt with no written reason")
+            assert len(UNRUNNABLE[step_id]) > 40, f"{step_id} is exempt with no written reason"
 
     def test_no_step_is_exempt_that_is_not_offered(self, store_run):
         """A stale exemption is an exemption nobody can see expire."""
@@ -214,21 +215,24 @@ class TestEveryPrintedCommandParsesIntoWhatItMeans:
 
 
 class TestNoSentenceClaimsAFlagThatWasNotPassed:
-
     def test_the_caveat_does_not_claim_a_flag(self):
         """F4: two runs that are merely *caveated* - here by the producer
         note, since neither fixture carries a stamp - print no flag."""
         done = subprocess.run(
-            [sys.executable, "-m", "bga.cli", "compare",
-             str(FIXTURE_RUN), str(_FIXTURE_RUN_TWIN)],
-            capture_output=True, text=True, cwd=str(REPO), timeout=300)
+            [sys.executable, "-m", "bga.cli", "compare", str(FIXTURE_RUN), str(_FIXTURE_RUN_TWIN)],
+            capture_output=True,
+            text=True,
+            cwd=str(REPO),
+            timeout=300,
+        )
         assert done.returncode == 0, done.stderr[-800:]
         assert "Warning:" in done.stdout, (
             "this fixture pair no longer produces a caveat at all, so the "
-            "clause is asserting nothing - pick a pair that does")
+            "clause is asserting nothing - pick a pair that does"
+        )
         assert "--allow-mismatch was given" not in done.stdout, (
-            "a comparison run with no flags still says a flag was given:\n"
-            + done.stdout[:2000])
+            "a comparison run with no flags still says a flag was given:\n" + done.stdout[:2000]
+        )
         assert "a caveat, not a refusal" in done.stdout
 
     def test_a_real_mismatch_still_says_the_flag_was_given(self):
@@ -261,5 +265,6 @@ class TestNoSentenceClaimsAFlagThatWasNotPassed:
         assert not unclassified, (
             f"{unclassified} claim a flag was passed and are not in "
             "FLAG_CLAIMS. Say what state proves it - F4 was a sentence "
-            "gated on something that is true without the flag.")
+            "gated on something that is true without the flag."
+        )
         assert found, "the scan matched nothing; the pattern has rotted"

@@ -28,6 +28,7 @@ This file also holds the sweep's *coverage* honest, because a sweep
 that quietly stops naming a command is the failure mode the hand-written
 list had.
 """
+
 import ast
 import pathlib
 import sys
@@ -63,14 +64,17 @@ def _tools_imports(path: pathlib.Path):
                     found.append((node.lineno, f"import {alias.name}"))
         # `level > 0` is a relative import: `from .tools_dispatch`
         # is fine and is what the fix uses.
-        elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module and (
-                node.module == "tools" or node.module.startswith("tools.")):
+        elif (
+            isinstance(node, ast.ImportFrom)
+            and node.level == 0
+            and node.module
+            and (node.module == "tools" or node.module.startswith("tools."))
+        ):
             found.append((node.lineno, f"from {node.module} import …"))
     return found
 
 
 class TestThePackageNeverNamesTools:
-
     def test_no_module_under_bga_imports_tools_absolutely(self):
         offenders = []
         for path in sorted(PACKAGE.rglob("*.py")):
@@ -81,15 +85,16 @@ class TestThePackageNeverNamesTools:
             "works in this checkout and raises ModuleNotFoundError on every "
             "`pip install` - UX-77, UX-203 and UX-325 were each one of "
             "these. Route it through `bga.tools_dispatch._import_tool`, "
-            "which tries `tools.X` and then `bga._tools.X`:\n  "
-            + "\n  ".join(offenders))
+            "which tries `tools.X` and then `bga._tools.X`:\n  " + "\n  ".join(offenders)
+        )
 
     def test_the_scan_actually_reads_modules(self):
         """A walk that found no files would pass the clause above."""
         modules = list(PACKAGE.rglob("*.py"))
         assert len(modules) >= 20, (
             f"only {len(modules)} modules under bga/; the package had 40-odd "
-            "when this was written and a near-empty scan asserts nothing")
+            "when this was written and a near-empty scan asserts nothing"
+        )
 
     def test_the_dispatcher_is_the_one_place_that_may(self):
         """`_import_tool` exists precisely to hold the fallback once."""
@@ -97,26 +102,27 @@ class TestThePackageNeverNamesTools:
 
         module = _import_tool("tools.bga_snapshot")
         assert module.__name__ in ("tools.bga_snapshot", "bga._tools.bga_snapshot"), (
-            f"_import_tool resolved to {module.__name__}, which is neither "
-            "shape it exists to bridge")
+            f"_import_tool resolved to {module.__name__}, which is neither shape it exists to bridge"
+        )
 
 
 class TestTheSweepCoversWhatTheDocsPromise:
-
     def test_every_documented_command_has_a_sweep_entry(self, tmp_path):
         plan = invocations(Fixtures(tmp_path))
         missing = sorted(documented_commands() - set(plan))
         assert not missing, (
             f"{missing} have a row in the architecture's command table and no "
             "entry in the sweep. That is the round-12 hand-list defect: the "
-            "documented surface grew and the installed-mode exercise did not.")
+            "documented surface grew and the installed-mode exercise did not."
+        )
 
     def test_no_sweep_entry_names_an_undocumented_command(self, tmp_path):
         plan = invocations(Fixtures(tmp_path))
         stale = sorted(set(plan) - documented_commands())
         assert not stale, (
             f"the sweep invokes {stale}, which the command table does not "
-            "list - either the row was dropped or the entry has rotted")
+            "list - either the row was dropped or the entry has rotted"
+        )
 
     def test_every_parse_only_entry_says_why(self, tmp_path):
         plan = invocations(Fixtures(tmp_path))
@@ -125,10 +131,12 @@ class TestTheSweepCoversWhatTheDocsPromise:
                 assert isinstance(detail, str) and len(detail) > 40, (
                     f"{command} is parse-only with no written reason. "
                     "Parse-only is the sweep's one judgement and it is the "
-                    "shape the old hand-list had for every command.")
+                    "shape the old hand-list had for every command."
+                )
             else:
                 assert isinstance(detail, list) and detail[0] == command, (
-                    f"{command}'s argv does not start with the command")
+                    f"{command}'s argv does not start with the command"
+                )
 
     def test_parse_only_stays_a_small_minority(self, tmp_path):
         """If most commands end up parse-only the sweep has become the
@@ -139,16 +147,17 @@ class TestTheSweepCoversWhatTheDocsPromise:
             f"{len(parse_only)} of {len(plan)} documented commands are "
             f"parse-only ({sorted(parse_only)}); the sweep was 3 of 21 when "
             "it was written, and it is a real-invocation sweep or it is "
-            "nothing")
+            "nothing"
+        )
 
     def test_the_aggregate_is_swept_for_real(self, tmp_path):
         """The defect UX-325 was filed for, named rather than counted."""
-        verdict, argv = invocations(Fixtures(tmp_path)).get(
-            "snapshot", (PARSE_ONLY, "no entry at all"))
+        verdict, argv = invocations(Fixtures(tmp_path)).get("snapshot", (PARSE_ONLY, "no entry at all"))
         assert verdict == OK and "--aggregate" in argv, (
             "`bga snapshot --aggregate` is no longer really invoked by the "
             "sweep. It is the command that shipped broken to every user for "
-            "eleven rounds, and a `--help` does not touch its import.")
+            "eleven rounds, and a `--help` does not touch its import."
+        )
 
     def test_the_refusals_are_refusals(self, tmp_path):
         """A REFUSES entry that starts succeeding is a stale entry, not a
@@ -157,4 +166,5 @@ class TestTheSweepCoversWhatTheDocsPromise:
         refusals = [c for c, (v, _) in plan.items() if v == REFUSES]
         assert refusals, (
             "no command is swept through its refusal path any more; a clean "
-            "one-line refusal is the other half of 'the module loaded'")
+            "one-line refusal is the other half of 'the module loaded'"
+        )

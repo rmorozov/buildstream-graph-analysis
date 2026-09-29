@@ -7,6 +7,7 @@ element to cover the few where it is the only witness. So it stayed
 opt-in, and therefore mostly off, which quietly re-opened the blind spot
 the whole of Direction 4 closed.
 """
+
 import json
 import os
 
@@ -33,8 +34,7 @@ def staged_project(name, *sentinel):
     project = os.path.join(REPO_ROOT, "examples", name)
     if not os.path.isfile(os.path.join(project, *sentinel)):
         pytest.skip(
-            f"examples/{name} is not staged - run examples/stage_runtimes.sh and "
-            "examples/stage_cpp_toolchain.sh"
+            f"examples/{name} is not staged - run examples/stage_runtimes.sh and examples/stage_cpp_toolchain.sh"
         )
     return project
 
@@ -54,7 +54,7 @@ class TestWhichElementsGetTraced:
         assert spine_for_element("auto", census, "dynamic.bst", SPINE) is None
 
     def test_an_element_the_census_never_assessed_is_traced(self, census):
-        """"We did not assess it" and "we assessed it and it is clean"
+        """ "We did not assess it" and "we assessed it and it is clean"
         are different claims, and only one of them is safe to skip."""
         assert spine_for_element("auto", census, "unknown.bst", SPINE) == SPINE
 
@@ -81,8 +81,7 @@ class TestWhichElementsGetTraced:
 
 class TestTheCensusVerdicts:
     def test_a_busybox_project_needs_the_spine_everywhere(self):
-        project = staged_project(
-            "01-resource-contention", "files", "runtime", "bin", "sh")
+        project = staged_project("01-resource-contention", "files", "runtime", "bin", "sh")
         verdicts = census_spine_verdicts(project)
 
         assert verdicts, "the census produced no verdicts at all"
@@ -104,24 +103,24 @@ class TestTheCensusVerdicts:
         dynamic, and the elements that verdict `True` are exactly the
         ones it could not see - not a set that happens to overlap.
         """
-        project = staged_project(
-            "06-macro-micro-optimization", "files", "toolchain", "usr", "bin", "gcc")
+        project = staged_project("06-macro-micro-optimization", "files", "toolchain", "usr", "bin", "gcc")
         verdicts = census_spine_verdicts(project)
         unassessable = census_spine_verdicts.last_unassessable
 
         assert verdicts, "the census produced no verdicts at all"
-        assessable = {name: needs for name, needs in verdicts.items()
-                      if name not in unassessable}
+        assessable = {name: needs for name, needs in verdicts.items() if name not in unassessable}
         assert assessable, (
-            "the census could assess nothing here, so this project no "
-            "longer discriminates the dynamic case at all")
+            "the census could assess nothing here, so this project no longer discriminates the dynamic case at all"
+        )
         assert not any(assessable.values()), (
-            "an element this census could read carries no static binary "
-            "and still asks for the spine", assessable)
-        assert {name for name, needs in verdicts.items() if needs} == set(
-            unassessable), (
-            "the spine is asked for somewhere other than where the census "
-            "could not look", verdicts, sorted(unassessable))
+            "an element this census could read carries no static binary and still asks for the spine",
+            assessable,
+        )
+        assert {name for name, needs in verdicts.items() if needs} == set(unassessable), (
+            "the spine is asked for somewhere other than where the census could not look",
+            verdicts,
+            sorted(unassessable),
+        )
 
     def test_the_glibc_verdict_is_a_classification_not_an_empty_shelf(self):
         """`not any(...)` above is also what a census of nothing returns.
@@ -131,12 +130,8 @@ class TestTheCensusVerdicts:
         dynamic. Without this, deleting the toolchain would strengthen
         the test above rather than break it.
         """
-        project = staged_project(
-            "06-macro-micro-optimization", "files", "toolchain", "usr", "bin", "gcc")
-        elements = sorted(
-            name for name in os.listdir(os.path.join(project, "elements"))
-            if name.endswith(".bst")
-        )
+        project = staged_project("06-macro-micro-optimization", "files", "toolchain", "usr", "bin", "gcc")
+        elements = sorted(name for name in os.listdir(os.path.join(project, "elements")) if name.endswith(".bst"))
         toolchain = census_project(project, elements)["per_element"]["toolchain.bst"]
 
         assert toolchain["dynamic_executables"] > 0, toolchain

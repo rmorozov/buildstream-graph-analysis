@@ -7,6 +7,7 @@ while `rail.scrollTop` stayed 0 - marking, never revealing. The fix is
 disclosure by chapter, plus a scroll that follows the mark. UX-1046: the
 disclosure is the reader's chapter (`data-current`), not the document fold.
 """
+
 import pathlib
 import re
 import sys
@@ -101,30 +102,25 @@ class TestTheRailDisclosesByChapter:
         out = browser.measure(uri, _LANDING, 1440, 900)
         assert out["rows"] > 1, out
         assert out["openRows"] == ["decide"], (
-            f"exactly one chapter is current at landing, and it is the "
-            f"decision: {out}")
+            f"exactly one chapter is current at landing, and it is the decision: {out}"
+        )
         assert out["visible"] > 0, out
-        assert out["visible"] < out["links"], (
-            f"every rail link is laid out - disclosure is not hiding "
-            f"anything: {out}")
+        assert out["visible"] < out["links"], f"every rail link is laid out - disclosure is not hiding anything: {out}"
         assert out["visibleOutsideOpen"] == 0, (
-            f"{out['visibleOutsideOpen']} rail link(s) outside the open "
-            f"chapter are still laid out: {out}")
+            f"{out['visibleOutsideOpen']} rail link(s) outside the open chapter are still laid out: {out}"
+        )
 
 
 @needs_browser
 class TestTheMarkStaysInView:
-    def test_every_section_the_reader_reaches_keeps_its_mark_in_the_rail(
-            self, browser, uri):
+    def test_every_section_the_reader_reaches_keeps_its_mark_in_the_rail(self, browser, uri):
         out = browser.measure(uri, _WALK, 1440, 900)
         marked = [row for row in out if row["mark"]]
         assert len(marked) > 20, (
-            f"only {len(marked)} of {len(out)} clicks left a mark - not "
-            f"enough of a walk to trust the clause below")
+            f"only {len(marked)} of {len(out)} clicks left a mark - not enough of a walk to trust the clause below"
+        )
         outside = [row for row in marked if not row["inside"]]
-        assert outside == [], (
-            f"{len(outside)} of {len(marked)} marks sit outside the "
-            f"rail's own rect: {outside[:8]}")
+        assert outside == [], f"{len(outside)} of {len(marked)} marks sit outside the rail's own rect: {outside[:8]}"
 
 
 #: `UX-1046`: "Expand all" opens the document, never the rail; a rail row
@@ -212,21 +208,20 @@ _BACK_TO_THE_DECISION = r"""
 
 @needs_browser
 class TestTheRailFollowsTheReaderNotTheFold:
-    def test_the_decision_row_brings_its_sections_back_from_anywhere(
-            self, browser, uri):
+    def test_the_decision_row_brings_its_sections_back_from_anywhere(self, browser, uri):
         out = browser.measure(uri, _BACK_TO_THE_DECISION, 1440, 900)
         assert out["id"] == "decide" and out["away"], out
         assert out["current"] and out["laid"] == out["links"] > 0, (
-            f"the decision's sections did not come back with one press: {out}")
+            f"the decision's sections did not come back with one press: {out}"
+        )
 
     def test_expand_all_leaves_the_rail_as_it_was(self, browser, uri):
         out = browser.measure(uri, _EXPAND_ALL, 1440, 900)
         assert out["opened"] > 1, out
         assert out["after"] == out["before"], (
-            f"Expand all grew the rail from {out['before']} to "
-            f"{out['after']} px: {out}")
-        assert out["shown"] > 0 and out["outside"] == [], (
-            f"section links laid out outside the current row: {out}")
+            f"Expand all grew the rail from {out['before']} to {out['after']} px: {out}"
+        )
+        assert out["shown"] > 0 and out["outside"] == [], f"section links laid out outside the current row: {out}"
 
     def test_a_row_press_opens_and_discloses_its_chapter(self, browser, uri):
         out = browser.measure(uri, _PRESS_A_ROW, 1440, 900)
@@ -268,8 +263,7 @@ class TestNoNestedScrollboxInTheRail:
             value = decls.get("overflow-y") or decls.get("overflow")
             if value in ("auto", "scroll"):
                 offenders.append((selector, decls))
-        assert offenders == [], (
-            f"a descendant of nav.toc still scrolls on its own: {offenders}")
+        assert offenders == [], f"a descendant of nav.toc still scrolls on its own: {offenders}"
 
 
 if __name__ == "__main__":  # pragma: no cover

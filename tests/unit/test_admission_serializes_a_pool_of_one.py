@@ -8,6 +8,7 @@ calls `os.fork()`, and forking from one thread of a multi-threaded
 process while another thread holds an unrelated lock is exactly the
 hazard that leaves the fork'd copy deadlocked - not this guard's
 target."""
+
 import json
 import os
 import subprocess
@@ -42,8 +43,7 @@ def _seed_pool(path, tokens=1):
 
 
 def _spawn(runner_path, real_bwrap, pool_path, ledger_path, element):
-    return subprocess.Popen(
-        [sys.executable, runner_path, real_bwrap, pool_path, ledger_path, element])
+    return subprocess.Popen([sys.executable, runner_path, real_bwrap, pool_path, ledger_path, element])
 
 
 def test_a_pool_of_one_serializes_the_second_shim_behind_the_first(tmp_path):
@@ -69,12 +69,11 @@ def test_a_pool_of_one_serializes_the_second_shim_behind_the_first(tmp_path):
 
     # Serialized: two sleeps back to back, not overlapped.
     assert overall_elapsed >= 2 * sleep_s * 0.9, (
-        f"the two sandboxes overlapped: wall {overall_elapsed:.2f}s for "
-        f"two {sleep_s}s sandboxes on a pool of 1")
+        f"the two sandboxes overlapped: wall {overall_elapsed:.2f}s for two {sleep_s}s sandboxes on a pool of 1"
+    )
 
     rows = [json.loads(line) for line in open(ledger_path, encoding="utf-8")]
-    waits = {row["element"]: row["wait_us"] for row in rows
-             if row["event"] == "admission_wait"}
+    waits = {row["element"]: row["wait_us"] for row in rows if row["event"] == "admission_wait"}
     assert set(waits) == {"mod-a.bst", "mod-b.bst"}
     # Whichever ran second waited roughly the other's sleep for its token.
     assert max(waits.values()) >= sleep_s * 0.5 * 1_000_000

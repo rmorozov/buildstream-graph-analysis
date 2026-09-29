@@ -6,6 +6,7 @@ script shell variable it is built from. `dev_records.py publish` is the
 other route: it pushes internally, so a step that calls it needs no
 literal `git push` line of its own to be read as compliant.
 """
+
 import pathlib
 import re
 
@@ -46,8 +47,11 @@ def test_the_population_is_not_empty():
 
 
 def test_no_git_push_line_targets_the_default_branch():
-    offending = [(workflow, job, line) for workflow, job, line, script
-                 in _push_lines() if not _names_an_allowed_ref(line, script)]
+    offending = [
+        (workflow, job, line)
+        for workflow, job, line, script in _push_lines()
+        if not _names_an_allowed_ref(line, script)
+    ]
     assert not offending, offending
 
 

@@ -9,6 +9,7 @@ Real repro from the doc: a real capture of
 siblings took 2.5s. Everything needed to see that was already in the
 tracer's own emitted `processes[]`; nothing computed it.
 """
+
 from tools.bst_native_build_tracer import (
     classify_binary,
     compute_per_element_parallelism,
@@ -17,16 +18,27 @@ from tools.bst_native_build_tracer import (
 
 def _record(element, cmd, start, end):
     return {
-        "pid": 1, "ppid": 0, "element": element, "cmd": cmd,
-        "start_ts": start, "end_ts": end,
-        "duration_s": end - start, "open": False,
+        "pid": 1,
+        "ppid": 0,
+        "element": element,
+        "cmd": cmd,
+        "start_ts": start,
+        "end_ts": end,
+        "duration_s": end - start,
+        "open": False,
     }
 
 
 def _open_record(element, cmd, start):
     return {
-        "pid": 1, "ppid": 0, "element": element, "cmd": cmd,
-        "start_ts": start, "end_ts": None, "duration_s": None, "open": True,
+        "pid": 1,
+        "ppid": 0,
+        "element": element,
+        "cmd": cmd,
+        "start_ts": start,
+        "end_ts": None,
+        "duration_s": None,
+        "open": True,
     }
 
 
@@ -34,9 +46,7 @@ def _serialized_element():
     """One element pinned to -j1: four compiles back to back."""
     records = [_record("core.bst", "/usr/bin/make -f Makefile -j1", 0.0, 12.0)]
     for i in range(4):
-        records.append(
-            _record("core.bst", "/usr/libexec/gcc/cc1plus -quiet a.cpp", i * 3.0, i * 3.0 + 3.0)
-        )
+        records.append(_record("core.bst", "/usr/libexec/gcc/cc1plus -quiet a.cpp", i * 3.0, i * 3.0 + 3.0))
     return records
 
 
@@ -44,9 +54,7 @@ def _parallel_element():
     """One element at -j4: four compiles overlapping."""
     records = [_record("lib-a.bst", "/usr/bin/make -f Makefile -j4", 0.0, 3.5)]
     for _i in range(4):
-        records.append(
-            _record("lib-a.bst", "/usr/libexec/gcc/cc1plus -quiet b.cpp", 0.1, 3.1)
-        )
+        records.append(_record("lib-a.bst", "/usr/libexec/gcc/cc1plus -quiet b.cpp", 0.1, 3.1))
     return records
 
 
@@ -55,6 +63,7 @@ def _profiles(records):
 
 
 # --- classification --------------------------------------------------------
+
 
 def test_compiler_drivers_are_orchestration_not_work():
     """`gcc`/`g++` exec cc1plus and as and then wait - counting the
@@ -71,13 +80,12 @@ def test_an_unknown_binary_is_unclassified_not_silently_bucketed():
 
 
 def test_unclassified_binaries_are_reported():
-    records = _parallel_element() + [
-        _record("lib-a.bst", "/opt/vendor/codegen --emit x", 0.0, 0.5)
-    ]
+    records = _parallel_element() + [_record("lib-a.bst", "/opt/vendor/codegen --emit x", 0.0, 0.5)]
     assert _profiles(records)["lib-a.bst"]["unclassified_binaries"] == {"codegen": 1}
 
 
 # --- the measurement -------------------------------------------------------
+
 
 def test_serialized_element_reports_peak_one():
     profile = _profiles(_serialized_element())["core.bst"]
@@ -100,13 +108,12 @@ def test_orchestration_processes_do_not_inflate_concurrency():
 def test_open_records_are_excluded():
     """Same reasoning as compute_max_concurrency: a process with no
     observed exit is not assumed to run forever."""
-    records = _serialized_element() + [
-        _open_record("core.bst", "/usr/libexec/gcc/cc1plus -quiet ghost.cpp", 0.0)
-    ]
+    records = _serialized_element() + [_open_record("core.bst", "/usr/libexec/gcc/cc1plus -quiet ghost.cpp", 0.0)]
     assert _profiles(records)["core.bst"]["peak_work_concurrency"] == 1
 
 
 # --- the findings ----------------------------------------------------------
+
 
 def test_an_element_pinned_to_one_job_is_flagged_against_its_siblings():
     """The `notparallel` case, and the reason achieved-vs-requested
@@ -126,9 +133,7 @@ def test_a_build_that_is_uniformly_j1_is_not_flagged():
 def test_an_element_that_asked_for_parallelism_and_got_none_is_flagged():
     records = [_record("slow.bst", "/usr/bin/make -f Makefile -j8", 0.0, 12.0)]
     for i in range(4):
-        records.append(
-            _record("slow.bst", "/usr/libexec/gcc/cc1plus -quiet c.cpp", i * 3.0, i * 3.0 + 3.0)
-        )
+        records.append(_record("slow.bst", "/usr/libexec/gcc/cc1plus -quiet c.cpp", i * 3.0, i * 3.0 + 3.0))
     assert "underachieved_requested_jobs" in _profiles(records)["slow.bst"]["findings"]
 
 

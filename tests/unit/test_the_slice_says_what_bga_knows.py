@@ -70,6 +70,7 @@ against upstream's `.proto` with its sha256, checked by
 the emitter's *encoding*, not of its numbering, and an earlier draft of
 this docstring claimed both.
 """
+
 import gzip
 import hashlib
 import json
@@ -105,8 +106,7 @@ from tools.bst_native_build_tracer import parse_trace_lines, stream_records
 from tools.native_trace import trackevent
 
 GOLDEN = REPO / "tests/fixtures/golden/mixed_task_kinds"
-REAL_CAPTURE = REPO / ("examples/06-macro-micro-optimization/.bga/runs/"
-                       "20260821T170127Z")
+REAL_CAPTURE = REPO / ("examples/06-macro-micro-optimization/.bga/runs/20260821T170127Z")
 
 # `examples/06`'s capture is real and **gitignored** - it exists on this
 # machine and not in a clone. The measured figures below are taken from
@@ -114,16 +114,14 @@ REAL_CAPTURE = REPO / ("examples/06-macro-micro-optimization/.bga/runs/"
 # skipped rather than deleted; every *property* they check is also
 # checked on a committed fixture, so CI is not left believing something
 # it never ran.
-needs_real_capture = pytest.mark.skipif(
-    not REAL_CAPTURE.is_dir(), reason="no real capture in this tree")
+needs_real_capture = pytest.mark.skipif(not REAL_CAPTURE.is_dir(), reason="no real capture in this tree")
 
 
 # A command long enough that the 120-character name loses its tail, with
 # the distinguishing part *in* that tail - which is the case the item
 # was filed for.
 LONG_TAIL = "the-argv-tail-that-tells-two-invocations-apart"
-LONG_CMD = ("cc -c " + "-I/usr/include/very/deeply/nested/path " * 4
-            + LONG_TAIL + ".c")
+LONG_CMD = "cc -c " + "-I/usr/include/very/deeply/nested/path " * 4 + LONG_TAIL + ".c"
 assert len(LONG_CMD) > 120
 
 
@@ -137,36 +135,33 @@ def _raw():
     with a command longer than the name; and one still open when the
     capture ended.
     """
-    return "".join([
-        "START pid=101 ppid=1 ts=1000.000000 element=work-a.bst inv=inv-a "
-        "src=spine cmd=cc -c ok.c\n",
-        "END pid=101 ppid=1 ts=1000.500000 element=work-a.bst inv=inv-a "
-        "src=spine exit=0 utime=0.012 stime=0.003 maxrss_kb=2048 "
-        "cmd=cc -c ok.c\n",
-        "START pid=102 ppid=1 ts=1000.100000 element=work-a.bst inv=inv-a "
-        "src=spine cmd=cc -c broken.c\n",
-        "END pid=102 ppid=1 ts=1000.600000 element=work-a.bst inv=inv-a "
-        "src=spine exit=1 utime=0.001 stime=0.001 maxrss_kb=1024 "
-        "cmd=cc -c broken.c\n",
-        "START pid=103 ppid=1 ts=1000.200000 element=work-b.bst inv=inv-b "
-        "src=spine cmd=cc -c killed.c\n",
-        "END pid=103 ppid=1 ts=1000.700000 element=work-b.bst inv=inv-b "
-        "src=spine exit=signal:9 utime=0.002 stime=0.001 maxrss_kb=512 "
-        "cmd=cc -c killed.c\n",
-        f"START pid=104 ppid=1 ts=1000.300000 element=work-b.bst inv=inv-b "
-        f"cmd={LONG_CMD}\n",
-        # `UX-379`'s six ride here and nowhere else, which is the fact
-        # rather than a convenience: only `hook.c` reads a `struct
-        # rusage`, and the spine's `/proc` read at the exit-stop has no
-        # equivalent - so the three spine records above carry none and
-        # the reverse-direction clause still has its case.
-        f"END pid=104 ppid=1 ts=1000.800000 element=work-b.bst inv=inv-b "
-        f"utime=0.004 stime=0.001 maxrss_kb=4096 "
-        f"inblock=128 oublock=16 majflt=3 minflt=210 nvcsw=9 nivcsw=41 "
-        f"cmd={LONG_CMD}\n",
-        "START pid=105 ppid=1 ts=1000.400000 element=work-b.bst inv=inv-b "
-        "src=spine cmd=cc -c never-exits.c\n",
-    ])
+    return "".join(
+        [
+            "START pid=101 ppid=1 ts=1000.000000 element=work-a.bst inv=inv-a src=spine cmd=cc -c ok.c\n",
+            "END pid=101 ppid=1 ts=1000.500000 element=work-a.bst inv=inv-a "
+            "src=spine exit=0 utime=0.012 stime=0.003 maxrss_kb=2048 "
+            "cmd=cc -c ok.c\n",
+            "START pid=102 ppid=1 ts=1000.100000 element=work-a.bst inv=inv-a src=spine cmd=cc -c broken.c\n",
+            "END pid=102 ppid=1 ts=1000.600000 element=work-a.bst inv=inv-a "
+            "src=spine exit=1 utime=0.001 stime=0.001 maxrss_kb=1024 "
+            "cmd=cc -c broken.c\n",
+            "START pid=103 ppid=1 ts=1000.200000 element=work-b.bst inv=inv-b src=spine cmd=cc -c killed.c\n",
+            "END pid=103 ppid=1 ts=1000.700000 element=work-b.bst inv=inv-b "
+            "src=spine exit=signal:9 utime=0.002 stime=0.001 maxrss_kb=512 "
+            "cmd=cc -c killed.c\n",
+            f"START pid=104 ppid=1 ts=1000.300000 element=work-b.bst inv=inv-b cmd={LONG_CMD}\n",
+            # `UX-379`'s six ride here and nowhere else, which is the fact
+            # rather than a convenience: only `hook.c` reads a `struct
+            # rusage`, and the spine's `/proc` read at the exit-stop has no
+            # equivalent - so the three spine records above carry none and
+            # the reverse-direction clause still has its case.
+            f"END pid=104 ppid=1 ts=1000.800000 element=work-b.bst inv=inv-b "
+            f"utime=0.004 stime=0.001 maxrss_kb=4096 "
+            f"inblock=128 oublock=16 majflt=3 minflt=210 nvcsw=9 nivcsw=41 "
+            f"cmd={LONG_CMD}\n",
+            "START pid=105 ppid=1 ts=1000.400000 element=work-b.bst inv=inv-b src=spine cmd=cc -c never-exits.c\n",
+        ]
+    )
 
 
 def _snapshot(tmp_path, kinds=True):
@@ -188,9 +183,9 @@ def _snapshot(tmp_path, kinds=True):
         graph = json.loads(path.read_text(encoding="utf-8"))
         for element in graph["elements"]:
             element["element_kind"] = "cmake"
-        graph["elements"].append({"uid": "work-a.bst", "cache_key": "k",
-                                  "requested_target": False,
-                                  "element_kind": "autotools"})
+        graph["elements"].append(
+            {"uid": "work-a.bst", "cache_key": "k", "requested_target": False, "element_kind": "autotools"}
+        )
         path.write_text(json.dumps(graph), encoding="utf-8")
     # `UX-380`: the analysis a real capture writes beside the run, which
     # is where a slice's `depth`, `on_critical_path` and
@@ -203,17 +198,22 @@ def _snapshot(tmp_path, kinds=True):
     # golden graph's: `_WRAPPED` runs `work-a.bst` under `all.bst`, and
     # an analysis keyed on `base/lib/app` would leave every slice
     # without a structural key while looking correct in the file.
-    (snapshot / "analyze.json").write_text(json.dumps({
-        "schema": "analyze/v4",
-        "elements": {
-            "unweighted_depth": {"all.bst": 1, "work-a.bst": 0},
-            "downstream_count": {"all.bst": 0, "work-a.bst": 1},
-        },
-        "element_join": [
-            {"element": "work-a.bst", "on_critical_path": True},
-            {"element": "all.bst", "on_critical_path": False},
-        ],
-    }), encoding="utf-8")
+    (snapshot / "analyze.json").write_text(
+        json.dumps(
+            {
+                "schema": "analyze/v4",
+                "elements": {
+                    "unweighted_depth": {"all.bst": 1, "work-a.bst": 0},
+                    "downstream_count": {"all.bst": 0, "work-a.bst": 1},
+                },
+                "element_join": [
+                    {"element": "work-a.bst", "on_critical_path": True},
+                    {"element": "all.bst", "on_critical_path": False},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
     # `UX-469`: the queue each task held, which is a fact of the run's
     # own `trace.json` rather than of its log. The golden one copied in
     # above is keyed on `base/lib/app` - the same mismatch the analysis
@@ -225,16 +225,29 @@ def _snapshot(tmp_path, kinds=True):
     # fetch written *after* the build: the log runs only the build, so
     # the annotation must read `PROCESS`, and a map keyed on the uid
     # alone answers `DOWNLOAD` here.
-    (snapshot / "run" / "trace.json").write_text(json.dumps({
-        "spans": [
-            {"task_key": "work-a.bst|BUILD|BUILD|0", "ts_us": 0,
-             "dur_us": 3_000_000, "resources": ["PROCESS"],
-             "primary_resource": "PROCESS"},
-            {"task_key": "work-a.bst|FETCH|FETCH|0", "ts_us": 0,
-             "dur_us": 1000, "resources": ["DOWNLOAD"],
-             "primary_resource": "DOWNLOAD"},
-        ],
-    }), encoding="utf-8")
+    (snapshot / "run" / "trace.json").write_text(
+        json.dumps(
+            {
+                "spans": [
+                    {
+                        "task_key": "work-a.bst|BUILD|BUILD|0",
+                        "ts_us": 0,
+                        "dur_us": 3_000_000,
+                        "resources": ["PROCESS"],
+                        "primary_resource": "PROCESS",
+                    },
+                    {
+                        "task_key": "work-a.bst|FETCH|FETCH|0",
+                        "ts_us": 0,
+                        "dur_us": 1000,
+                        "resources": ["DOWNLOAD"],
+                        "primary_resource": "DOWNLOAD",
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
     with gzip.open(snapshot / "plane2.log.gz", "wt", encoding="utf-8") as out:
         out.write(_raw())
     return snapshot
@@ -252,9 +265,11 @@ def decode(path):
     """
     raw = gzip.open(path, "rb").read()
     packets = [v for f, w, v in _fields(raw) if f == trackevent.TRACE_PACKET]
-    tables = {trackevent.INTERNED_EVENT_NAMES: {},
-              trackevent.INTERNED_EVENT_CATEGORIES: {},
-              trackevent.INTERNED_DEBUG_ANNOTATION_NAMES: {}}
+    tables = {
+        trackevent.INTERNED_EVENT_NAMES: {},
+        trackevent.INTERNED_EVENT_CATEGORIES: {},
+        trackevent.INTERNED_DEBUG_ANNOTATION_NAMES: {},
+    }
     events = []
     for packet in packets:
         body = interned = None
@@ -292,26 +307,22 @@ def decode(path):
                     if inner == trackevent.ANNOTATION_NAME_IID:
                         key = payload
                     elif inner == trackevent.ANNOTATION_INT_VALUE:
-                        val = (payload - (1 << 64) if payload >= (1 << 63)
-                               else payload)
+                        val = payload - (1 << 64) if payload >= (1 << 63) else payload
                     elif inner == trackevent.ANNOTATION_STRING_VALUE:
                         val = payload.decode("utf-8")
                 annotations.append((key, val))
         if kind in (trackevent.TYPE_SLICE_BEGIN, trackevent.TYPE_INSTANT):
-            events.append({"type": kind, "name_iid": name_iid,
-                           "annotation_iids": annotations,
-                           "category_iids": categories})
+            events.append(
+                {"type": kind, "name_iid": name_iid, "annotation_iids": annotations, "category_iids": categories}
+            )
     names = tables[trackevent.INTERNED_EVENT_NAMES]
     annotation_names = tables[trackevent.INTERNED_DEBUG_ANNOTATION_NAMES]
     category_names = tables[trackevent.INTERNED_EVENT_CATEGORIES]
     for event in events:
         event["name"] = names.get(event["name_iid"])
-        event["args"] = {annotation_names[iid]: value
-                         for iid, value in event["annotation_iids"]}
-        event["categories"] = sorted(category_names[iid]
-                                     for iid in event["category_iids"])
-    return {"events": events, "annotation_names": annotation_names,
-            "category_names": category_names}
+        event["args"] = {annotation_names[iid]: value for iid, value in event["annotation_iids"]}
+        event["categories"] = sorted(category_names[iid] for iid in event["category_iids"])
+    return {"events": events, "annotation_names": annotation_names, "category_names": category_names}
 
 
 @pytest.fixture(scope="module")
@@ -342,7 +353,7 @@ _NO_EXIT = " (no observed exit)"
 
 
 def _command(name):
-    return name[:-len(_NO_EXIT)] if name.endswith(_NO_EXIT) else name
+    return name[: -len(_NO_EXIT)] if name.endswith(_NO_EXIT) else name
 
 
 @pytest.fixture(scope="module")
@@ -356,17 +367,18 @@ def rendered(tmp_path_factory):
     # command. It used to key on `args["cmd"]` - the annotation that
     # carried the same string a second time and is gone.
     plane1 = [e for e in trace["events"] if "element_kind" in e["args"]]
-    plane2 = [e for e in trace["events"]
-              if "src" in e["args"] and e not in plane1]
-    return {"path": out, "result": result, "trace": trace,
-            "plane2": {_command(e["name"]): e for e in plane2},
-            "plane1": plane1, "records": {
-                r["pid"]: r for r in stream_records(
-                    iter(parse_trace_lines(_raw().splitlines())))}}
+    plane2 = [e for e in trace["events"] if "src" in e["args"] and e not in plane1]
+    return {
+        "path": out,
+        "result": result,
+        "trace": trace,
+        "plane2": {_command(e["name"]): e for e in plane2},
+        "plane1": plane1,
+        "records": {r["pid"]: r for r in stream_records(iter(parse_trace_lines(_raw().splitlines())))},
+    }
 
 
 class TestTheKeysAreAContract:
-
     def test_every_documented_key_is_emitted(self, rendered):
         """This item's own two sets. `UX-311` added a third - the run
         identity - which no Plane 1 or Plane 2 slice carries and which
@@ -379,15 +391,15 @@ class TestTheKeysAreAContract:
         emitted = set(rendered["trace"]["annotation_names"].values())
         documented = {key for key, _ in PLANE1_ANNOTATIONS + PLANE2_ANNOTATIONS}
         assert documented - emitted == set(), (
-            "documented and never written - a query against it returns "
-            "nothing, and nothing here says so")
+            "documented and never written - a query against it returns nothing, and nothing here says so"
+        )
 
     def test_every_emitted_key_is_documented(self, rendered):
         emitted = set(rendered["trace"]["annotation_names"].values())
         documented = {key for key, _ in ANNOTATION_CONTRACT}
         assert emitted - documented == set(), (
-            "written and undocumented - the trace dictionary is the only "
-            "place a reader can learn a key exists")
+            "written and undocumented - the trace dictionary is the only place a reader can learn a key exists"
+        )
 
     def test_every_key_says_what_it_means(self):
         """A key with no sentence is a key nobody can use. `UX-312`
@@ -411,7 +423,8 @@ class TestTheKeysAreAContract:
             assert plane1[key] == plane2[key], (
                 f"`{key}` is declared twice with two meanings; a query "
                 f"would have to know which plane it is reading:\n"
-                f"  Plane 1: {plane1[key]}\n  Plane 2: {plane2[key]}")
+                f"  Plane 1: {plane1[key]}\n  Plane 2: {plane2[key]}"
+            )
 
     def test_the_shared_key_is_the_one_the_join_needs(self):
         """Named, not counted. A second key quietly acquiring both
@@ -419,7 +432,8 @@ class TestTheKeysAreAContract:
         shared = set(dict(PLANE1_ANNOTATIONS)) & set(dict(PLANE2_ANNOTATIONS))
         assert shared == {"element"}, (
             f"the planes share {sorted(shared)}; `element` is the join key "
-            f"`UX-321` gave them, and anything else needs its own filing")
+            f"`UX-321` gave them, and anything else needs its own filing"
+        )
 
     def test_every_plane_2_slice_carries_the_join_key(self, rendered):
         """`UX-321`, off the wire. Not "the emitter is told to write
@@ -433,11 +447,11 @@ class TestTheKeysAreAContract:
         """
         slices = list(rendered["plane2"].values())
         assert slices, "the fixture emitted no Plane 2 slices at all"
-        without = [event["name"] for event in slices
-                   if not event["args"].get("element")]
+        without = [event["name"] for event in slices if not event["args"].get("element")]
         assert without == [], (
             f"{len(without)} Plane 2 slice(s) carry no `element`, so a query "
-            f"joining the planes on it misses them: {without[:3]}")
+            f"joining the planes on it misses them: {without[:3]}"
+        )
 
     def test_the_join_key_is_the_record_s_own_element(self, rendered):
         """One meaning, checked against the record the slice was built
@@ -450,16 +464,17 @@ class TestTheKeysAreAContract:
         hook still saw - and a guard asserting containment would be
         asserting a property of the *capture*, not of the key.
         """
-        records = {record["cmd"]: record
-                   for record in rendered["records"].values()
-                   if record.get("cmd")}
+        records = {record["cmd"]: record for record in rendered["records"].values() if record.get("cmd")}
         checked = 0
         for command, event in rendered["plane2"].items():
             record = records.get(command)
             if record is None:
                 continue
             assert event["args"].get("element") == record.get("element"), (
-                command, event["args"].get("element"), record.get("element"))
+                command,
+                event["args"].get("element"),
+                record.get("element"),
+            )
             checked += 1
         assert checked >= 3, f"only {checked} slices matched a record"
 
@@ -467,27 +482,23 @@ class TestTheKeysAreAContract:
         """The join has to actually join. An `element` on Plane 2 that
         never matched a Plane 1 value would be a key with the right
         name and the wrong vocabulary."""
-        plane2 = {event["args"]["element"]
-                  for event in rendered["plane2"].values()}
-        plane1 = {event["args"]["element"] for event in rendered["plane1"]
-                  if event["args"].get("element")}
+        plane2 = {event["args"]["element"] for event in rendered["plane2"].values()}
+        plane1 = {event["args"]["element"] for event in rendered["plane1"] if event["args"].get("element")}
         assert plane2 & plane1, (sorted(plane2), sorted(plane1))
 
     def test_the_contract_lists_a_shared_key_once(self):
         keys = [key for key, _ in ANNOTATION_CONTRACT]
         assert len(keys) == len(set(keys)), (
-            f"the union documents a key twice: "
-            f"{sorted({k for k in keys if keys.count(k) > 1})}")
+            f"the union documents a key twice: {sorted({k for k in keys if keys.count(k) > 1})}"
+        )
 
-    def test_a_key_is_interned_once_on_the_committed_fixture(
-            self, rendered):
+    def test_a_key_is_interned_once_on_the_committed_fixture(self, rendered):
         """The property where a clone can check it: the names table has
         no duplicate, and more annotation *values* are written than
         there are names to write them under. The clause below takes the
         same claim at a scale only the gitignored capture has."""
         names = rendered["trace"]["annotation_names"]
-        written = sum(len(event["args"])
-                      for event in rendered["trace"]["events"])
+        written = sum(len(event["args"]) for event in rendered["trace"]["events"])
         assert len(names) == len(set(names.values())), names
         assert written > len(names), (written, len(names))
 
@@ -501,13 +512,11 @@ class TestTheKeysAreAContract:
         """
         names = real["trace"]["annotation_names"]
         written = sum(len(event["args"]) for event in real["trace"]["events"])
-        assert len(names) == len(set(names.values())), (
-            "a name is interned twice - the table is not a table")
+        assert len(names) == len(set(names.values())), "a name is interned twice - the table is not a table"
         assert written > 20 * len(names), (written, len(names))
 
 
 class TestThePlane2ValuesAreTheRecordsOwn:
-
     def test_each_annotation_equals_the_field_it_came_from(self, rendered):
         """Equality, sampled across every record the fixture has."""
         for pid, record in rendered["records"].items():
@@ -519,29 +528,23 @@ class TestThePlane2ValuesAreTheRecordsOwn:
             # An instant's name carries `UX-188`'s reason after it, so
             # the comparison is against the command half.
             assert _command(event["name"]) == record["cmd"]
-            assert "cmd" not in args, (
-                "`debug.cmd` is back - the string is now paid for twice")
+            assert "cmd" not in args, "`debug.cmd` is back - the string is now paid for twice"
             assert args["src"] == record["src"]
             assert args["exec_chain"] == record["exec_chain"]
-            for key, field in (("cpu_us", "cpu_us"),
-                               ("max_rss_kb", "max_rss_kb"),
-                               ("exit_status", "exit_status")):
+            for key, field in (("cpu_us", "cpu_us"), ("max_rss_kb", "max_rss_kb"), ("exit_status", "exit_status")):
                 if field in record:
                     assert args[key] == record[field], (pid, key)
                 else:
-                    assert key not in args, (
-                        f"pid {pid} annotates {key} the record does not have")
+                    assert key not in args, f"pid {pid} annotates {key} the record does not have"
 
-    def test_a_hook_record_carries_no_exit_status_rather_than_a_zero(
-            self, rendered):
+    def test_a_hook_record_carries_no_exit_status_rather_than_a_zero(self, rendered):
         """The hook's destructor runs before the process has a status,
         and not at all when it is killed. An absent key and a `0` say
         different things, and only the first is true."""
         event = rendered["plane2"][LONG_CMD]
         assert event["args"]["src"] == "hook"
         assert "exit_status" not in event["args"]
-        assert CATEGORY_FAILED not in event["categories"], (
-            "a process whose exit was never observed is not a failure")
+        assert CATEGORY_FAILED not in event["categories"], "a process whose exit was never observed is not a failure"
         # It still says which plane it is on (`UX-312`): the scope is
         # what a query filters by, and a slice missing from that filter
         # is a wrong answer rather than an absent one.
@@ -567,12 +570,13 @@ class TestTheNameIsTheWholeCommand:
     def test_a_long_command_is_whole_in_the_name(self, rendered):
         event = rendered["plane2"].get(LONG_CMD)
         assert event is not None, (
-            "no slice is named the whole long command; the names the "
-            "trace carries are", sorted(rendered["plane2"]))
+            "no slice is named the whole long command; the names the trace carries are",
+            sorted(rendered["plane2"]),
+        )
         assert event["name"] == LONG_CMD
         assert LONG_TAIL in event["name"], (
-            "the distinguishing tail is not on the slice - which is the "
-            "whole of what this item was filed for")
+            "the distinguishing tail is not on the slice - which is the whole of what this item was filed for"
+        )
         assert "cmd" not in event["args"]
 
     def test_the_trim_would_have_erased_this_fixture_s_identity(self):
@@ -585,7 +589,8 @@ class TestTheNameIsTheWholeCommand:
         assert sibling[:120] == LONG_CMD[:120], (
             "the fixture's two commands differ inside the first 120 "
             "characters, so the trim would have told them apart and this "
-            "guard proves nothing")
+            "guard proves nothing"
+        )
 
     @needs_real_capture
     def test_the_real_capture_has_commands_that_need_this(self):
@@ -596,26 +601,24 @@ class TestTheNameIsTheWholeCommand:
             records = list(stream_records(iter(parse_trace_lines(handle))))
         over = [r for r in records if len(r.get("cmd") or "") > 120]
         assert len(records) == 813 and len(over) == 412, (
-            f"{len(over)} of {len(records)} - the figure in this file's "
-            "header and in the task file is stale")
+            f"{len(over)} of {len(records)} - the figure in this file's header and in the task file is stale"
+        )
 
     def test_an_instant_is_annotated_too(self, rendered):
         """A process whose exit was never seen is exactly the one a
         reader wants the full command line of."""
-        instants = [e for e in rendered["trace"]["events"]
-                    if e["type"] == trackevent.TYPE_INSTANT
-                    and "src" in e["args"]]
+        instants = [
+            e for e in rendered["trace"]["events"] if e["type"] == trackevent.TYPE_INSTANT and "src" in e["args"]
+        ]
         assert len(instants) == 1, (
-            "the other instant is `UX-311`'s run-identity marker, which is "
-            "not a process and carries no command")
+            "the other instant is `UX-311`'s run-identity marker, which is not a process and carries no command"
+        )
         assert instants[0]["name"] == "cc -c never-exits.c (no observed exit)"
 
 
 class TestTheFailedCategoryIsExactlyTheFailures:
-
     def test_it_is_on_every_process_that_did_not_exit_zero(self, rendered):
-        failed = {cmd for cmd, event in rendered["plane2"].items()
-                  if CATEGORY_FAILED in event["categories"]}
+        failed = {cmd for cmd, event in rendered["plane2"].items() if CATEGORY_FAILED in event["categories"]}
         assert failed == {"cc -c broken.c", "cc -c killed.c"}
 
     def test_a_signal_counts_and_a_zero_does_not(self, rendered):
@@ -623,12 +626,9 @@ class TestTheFailedCategoryIsExactlyTheFailures:
         process that succeeded carries its plane and nothing else -
         `failed` is still exactly the failures, which is what this has
         always been about."""
-        assert rendered["plane2"]["cc -c killed.c"]["args"]["exit_status"] == \
-            "signal:9"
-        assert rendered["plane2"]["cc -c ok.c"]["categories"] == \
-            [CATEGORY_PLANE2]
-        assert CATEGORY_FAILED not in rendered["plane2"]["cc -c ok.c"][
-            "categories"]
+        assert rendered["plane2"]["cc -c killed.c"]["args"]["exit_status"] == "signal:9"
+        assert rendered["plane2"]["cc -c ok.c"]["categories"] == [CATEGORY_PLANE2]
+        assert CATEGORY_FAILED not in rendered["plane2"]["cc -c ok.c"]["categories"]
 
     def test_the_success_value_is_a_string_not_a_number(self):
         """`spine.c` writes `exit=%d`, so the status is text. Comparing
@@ -636,14 +636,11 @@ class TestTheFailedCategoryIsExactlyTheFailures:
         comparing truthiness would have called `"0"` one."""
         assert EXIT_STATUS_OK == "0"
         for record in ({"exit_status": "0"}, {"exit_status": 0}, {}):
-            assert bga_timeline._plane2_categories(record) == (
-                CATEGORY_PLANE2,), record
-        assert bga_timeline._plane2_categories(
-            {"exit_status": "signal:9"}) == (CATEGORY_PLANE2, CATEGORY_FAILED)
+            assert bga_timeline._plane2_categories(record) == (CATEGORY_PLANE2,), record
+        assert bga_timeline._plane2_categories({"exit_status": "signal:9"}) == (CATEGORY_PLANE2, CATEGORY_FAILED)
 
 
 class TestThePlane1TaskSaysWhatItWas:
-
     def test_the_task_carries_element_kind_and_outcome(self, rendered):
         assert rendered["plane1"], "no Plane 1 slice was annotated"
         for event in rendered["plane1"]:
@@ -659,12 +656,14 @@ class TestThePlane1TaskSaysWhatItWas:
         assert kinds["work-a.bst"] == "autotools"
         assert kinds["app.bst"] == "cmake"
 
-    def test_a_graph_without_kinds_says_unknown_rather_than_nothing(
-            self, tmp_path):
+    def test_a_graph_without_kinds_says_unknown_rather_than_nothing(self, tmp_path):
         snapshot = _snapshot(tmp_path, kinds=False)
         assert element_kinds(str(snapshot)) == {
-            "base.bst": "unknown", "lib.bst": "unknown",
-            "app.bst": "unknown", "extra.bst": "unknown"}
+            "base.bst": "unknown",
+            "lib.bst": "unknown",
+            "app.bst": "unknown",
+            "extra.bst": "unknown",
+        }
 
     def test_a_snapshot_with_no_graph_at_all_is_not_an_error(self, tmp_path):
         snapshot = _snapshot(tmp_path)
@@ -709,15 +708,13 @@ class TestTheTaskSaysWhichQueueItHeld:
         assert task_resources(str(snapshot)) == {}
         out = tmp_path / "no-trace.gz"
         assert render(str(snapshot), str(out))["slices"] > 0
-        drawn = [e for e in decode(out)["events"]
-                 if "element_kind" in e["args"]]
+        drawn = [e for e in decode(out)["events"] if "element_kind" in e["args"]]
         assert drawn, "no Plane 1 slice was drawn at all"
         for event in drawn:
             assert "resource" not in event["args"], event["args"]
 
 
 class TestTheAnnotationsRideTheSamePass:
-
     def test_the_trace_is_the_same_trace_twice(self, tmp_path):
         """The digest clause. Gzip stamps a timestamp in its header, so
         the comparison is of the packets, not of the file."""
@@ -743,12 +740,13 @@ class TestTheAnnotationsRideTheSamePass:
             "tracer.parse_trace_lines = refuse\n"
             "tracer.parse_trace_log = refuse\n"
             "tracer.pair_events = refuse\n"
-            "print(timeline.render(sys.argv[1], sys.argv[2])['slices'])\n")
+            "print(timeline.render(sys.argv[1], sys.argv[2])['slices'])\n"
+        )
         snapshot = _snapshot(tmp_path)
         out = tmp_path / "trace.gz"
         done = subprocess.run(
-            [sys.executable, "-c", source, str(snapshot), str(out)],
-            cwd=REPO, capture_output=True, text=True)
+            [sys.executable, "-c", source, str(snapshot), str(out)], cwd=REPO, capture_output=True, text=True
+        )
         assert done.returncode == 0, done.stderr
         assert int(done.stdout.strip()) > 0
 
@@ -775,11 +773,13 @@ class TestTheAnnotationsRideTheSamePass:
             body = handle.read()
         packed = os.path.getsize(real["path"])
         slices = real["result"]["slices"]
-        assert slices == 826, slices   # 825 processes + the identity marker
+        assert slices == 826, slices  # 825 processes + the identity marker
         assert len(body) < 420_000, (
             f"{len(body)} B uncompressed over {slices} slices - measured at "
             f"330,188 when this was written, 348,014 once `UX-309`'s flows "
-            f"and `UX-311`'s identity joined it, 316,559 after `UX-333`")
+            f"and `UX-311`'s identity joined it, 316,559 after `UX-333`"
+        )
         assert packed < 70_000, (
             f"{packed} B gzipped - measured at 51,102 when this was written, "
-            f"58,150 with the flows and the identity, 52,642 after `UX-333`")
+            f"58,150 with the flows and the identity, 52,642 after `UX-333`"
+        )

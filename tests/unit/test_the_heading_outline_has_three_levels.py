@@ -8,6 +8,7 @@ reading either.
 retags every section it collects, once, regardless of which module
 built it. This file boots the golden export and walks the outline.
 """
+
 import pathlib
 import shutil
 import sys
@@ -99,8 +100,8 @@ def test_chapter_titles_are_strictly_larger_than_section_titles(browser, golden)
     sections = [n["size"] for n in outline if n["tag"] == "H3"]
     assert chapters and sections, f"need both to compare: {outline[:10]}"
     assert min(chapters) > max(sections), (
-        f"a chapter title ({min(chapters)}px) is not larger than every "
-        f"section title ({max(sections)}px)")
+        f"a chapter title ({min(chapters)}px) is not larger than every section title ({max(sections)}px)"
+    )
 
 
 @needs_browser
@@ -128,17 +129,12 @@ def test_the_h1_is_the_run_not_the_wordmark(browser, golden):
 def test_the_h1_ties_the_chapter_size_rather_than_falling_under_it(browser, golden):
     """§6e.1's one allowed tie: `h1` and `h2` share `--font-h1`."""
     outline = browser.measure(golden, _OUTLINE)
-    font_h1 = browser.measure(
-        golden,
-        "getComputedStyle(document.documentElement)"
-        ".getPropertyValue('--font-h1').trim()")
+    font_h1 = browser.measure(golden, "getComputedStyle(document.documentElement).getPropertyValue('--font-h1').trim()")
     ones = [n["size"] for n in outline if n["tag"] == "H1"]
     chapters = [n["size"] for n in outline if n["tag"] == "H2"]
     assert ones and chapters, f"need both to compare: {outline[:5]}"
-    assert ones[0] >= max(chapters), (
-        f"the h1 ({ones[0]}px) is smaller than a chapter ({max(chapters)}px)")
-    assert ones[0] == pytest.approx(float(font_h1.removesuffix("px"))), (
-        ones[0], font_h1)
+    assert ones[0] >= max(chapters), f"the h1 ({ones[0]}px) is smaller than a chapter ({max(chapters)}px)"
+    assert ones[0] == pytest.approx(float(font_h1.removesuffix("px"))), (ones[0], font_h1)
 
 
 @needs_browser
@@ -172,8 +168,7 @@ def test_a_stamped_run_reads_the_stamp(browser, tmp_path_factory):
 
 
 @needs_browser
-def test_a_same_second_snapshot_s_disambiguator_still_reads_the_stamp(
-        browser, tmp_path_factory):
+def test_a_same_second_snapshot_s_disambiguator_still_reads_the_stamp(browser, tmp_path_factory):
     """`bga/run_store.py:new_snapshot_dir`'s `<stamp>-01` for a second
     snapshot inside one second - still a stamp, not a bare basename."""
     from tools.bga_view import export
@@ -209,7 +204,6 @@ def test_macro_micro_via_export_uri_does_not_read_snapshot(browser, tmp_path_fac
     sys.path.insert(0, str(REPO / "tests"))
     import pages
 
-    uri = pages.export_uri(pages.FIXTURES["macro_micro"],
-                            tmp_path_factory.mktemp("macro-micro"))
+    uri = pages.export_uri(pages.FIXTURES["macro_micro"], tmp_path_factory.mktemp("macro-micro"))
     heading = browser.measure(uri, _HEADING_TEXT)
     assert heading.strip() != "snapshot", heading

@@ -6,6 +6,7 @@ conflict - and `task_file` answers with the first, so nothing read the
 second. The tree is silent; the guard is proved by writing the second
 file.
 """
+
 import pathlib
 import shutil
 import subprocess
@@ -31,31 +32,29 @@ def _copy(tmp_path):
 def _run(*argv):
     return subprocess.run(
         [sys.executable, str(REPO / "tools/dev_close_task.py"), *argv],
-        capture_output=True, text=True, cwd=str(REPO), timeout=120)
+        capture_output=True,
+        text=True,
+        cwd=str(REPO),
+        timeout=120,
+    )
 
 
 class TestOneIdNamesOneTaskFile:
-
     def test_the_tree_is_silent(self):
         assert checks.id_problems(close_task.SCENARIOS, REPO) == []
 
-    def test_a_second_file_under_an_existing_id_fails_naming_both(
-            self, tmp_path):
+    def test_a_second_file_under_an_existing_id_fails_naming_both(self, tmp_path):
         scenarios = _copy(tmp_path)
-        (scenarios / SECOND).write_text(
-            "# UX-917: hidden findings keep live controls\n", encoding="utf-8")
+        (scenarios / SECOND).write_text("# UX-917: hidden findings keep live controls\n", encoding="utf-8")
         done = _run("--check", "--scenarios", str(scenarios))
         assert done.returncode == 1, done.stdout + done.stderr
-        line = next((line for line in done.stdout.splitlines()
-                     if "UX-917 names 2 files" in line), "")
+        line = next((line for line in done.stdout.splitlines() if "UX-917 names 2 files" in line), "")
         assert FIRST in line and SECOND in line, done.stdout
 
-    def test_a_heading_that_names_another_id_fails_naming_both(
-            self, tmp_path):
+    def test_a_heading_that_names_another_id_fails_naming_both(self, tmp_path):
         scenarios = _copy(tmp_path)
         stray = scenarios / "UX-9999-a-row-filed-under-a-taken-id.md"
-        stray.write_text("# UX-917: a row filed under a taken id\n",
-                         encoding="utf-8")
+        stray.write_text("# UX-917: a row filed under a taken id\n", encoding="utf-8")
         found = checks.id_problems(scenarios, REPO)
         assert len(found) == 1, found
         assert stray.name in found[0] and FIRST in found[0], found

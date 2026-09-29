@@ -22,6 +22,7 @@ built would silently corrupt leaf/deferrability analysis (Part 24) and
 terminal-task selection (Part 6.2) with no error raised - deriving both
 from the exact same log removes that whole class of mismatch.
 """
+
 import argparse
 import contextlib
 import copy
@@ -81,7 +82,9 @@ def _git_consistency_note(project_dir: str):
     try:
         status = subprocess.run(
             [GIT, "-C", project_dir, "status", "--porcelain"],
-            capture_output=True, text=True, timeout=30,
+            capture_output=True,
+            text=True,
+            timeout=30,
         )
     except (OSError, subprocess.TimeoutExpired):
         return None
@@ -106,7 +109,9 @@ def _git_commit(project_dir: str):
     try:
         result = subprocess.run(
             [GIT, "-C", project_dir, "rev-parse", "HEAD"],
-            capture_output=True, text=True, timeout=30,
+            capture_output=True,
+            text=True,
+            timeout=30,
         )
     except (OSError, subprocess.TimeoutExpired):
         return None
@@ -135,7 +140,9 @@ def _project_identity(project_dir: str) -> str:
     try:
         result = subprocess.run(
             [GIT, "-C", project_dir, "rev-parse", "--show-toplevel"],
-            capture_output=True, text=True, timeout=30,
+            capture_output=True,
+            text=True,
+            timeout=30,
         )
     except (OSError, subprocess.TimeoutExpired):
         result = None
@@ -187,9 +194,7 @@ def _compute_run_identity(project_dir: str, targets, scheduler: dict, project_re
         "project_git_commit": _git_commit(project_dir),
         "project_refs_sha256": project_refs_provenance["sha256"] if project_refs_provenance else None,
     }
-    manifest_hash = hashlib.sha256(
-        json.dumps(manifest, sort_keys=True).encode("utf-8")
-    ).hexdigest()
+    manifest_hash = hashlib.sha256(json.dumps(manifest, sort_keys=True).encode("utf-8")).hexdigest()
     return {"manifest_hash": manifest_hash, **manifest}
 
 
@@ -283,10 +288,13 @@ def _read_bga_foundation(project_dir: str) -> Optional[list]:
     return [name.strip() for name in str(declared).split(",") if name.strip()]
 
 
-def _graph_fingerprint(cache_key_set: Optional[dict], targets: Sequence[str],
-                       bst_global_options: Optional[Sequence[str]],
-                       resolved_max_jobs: Optional[int],
-                       declared_foundation: Optional[list]) -> dict:
+def _graph_fingerprint(
+    cache_key_set: Optional[dict],
+    targets: Sequence[str],
+    bst_global_options: Optional[Sequence[str]],
+    resolved_max_jobs: Optional[int],
+    declared_foundation: Optional[list],
+) -> dict:
     """UX-1083: the whole-graph equivalence test. Cache keys cover each
     element's config, variables, sources and dependencies; these four
     terms cover what a key does not - which elements were asked for,
@@ -313,16 +321,17 @@ def _graph_affecting_options(bst_global_options: Optional[Sequence[str]]) -> lis
     """UX-1083: the build's own `-o`/`--config`/`--directory`/`--strict`
     tokens, in order, from the arity-parsed list the tracer hands over."""
     from .bst_native_build_tracer import _BST_GLOBAL_OPTIONS_ONE_VALUE
+
     opts = list(bst_global_options or [])
     kept: list = []
     i = 0
     while i < len(opts):
         tok = opts[i]
         if tok in _GRAPH_OPTIONS_TWO_VALUES:
-            kept.extend(opts[i:i + 3])
+            kept.extend(opts[i : i + 3])
             i += 3
         elif tok in _GRAPH_OPTIONS_ONE_VALUE:
-            kept.extend(opts[i:i + 2])
+            kept.extend(opts[i : i + 2])
             i += 2
         elif tok in _GRAPH_OPTIONS_FLAGS or tok.split("=", 1)[0] in _GRAPH_OPTIONS_ONE_VALUE:
             kept.append(tok)
@@ -334,8 +343,7 @@ def _graph_affecting_options(bst_global_options: Optional[Sequence[str]]) -> lis
     return kept
 
 
-def _reused_graph_from_baseline(baseline_run_dir: Optional[str],
-                                fingerprint: dict) -> Optional[dict]:
+def _reused_graph_from_baseline(baseline_run_dir: Optional[str], fingerprint: dict) -> Optional[dict]:
     """UX-1083: `None` unless `baseline_run_dir/graph.json` carries an
     exactly equal fingerprint - a `None` cache_key_set (UX-1082's
     "unread") never matches, so an unread build never reuses and never
@@ -389,6 +397,7 @@ def _read_bga_source_kind_map(project_dir: str) -> Optional[dict]:
     if not declared:
         return None
     from bga.sources import KEYING_BY_KIND
+
     mapping: dict = {}
     for entry in str(declared).split(","):
         entry = entry.strip()
@@ -431,6 +440,7 @@ def _read_bga_jobserver_env(project_dir: str) -> list:
     "no custom variable" the same way an empty list always has here.
     """
     import re
+
     try:
         import yaml
     except ImportError:
@@ -516,7 +526,9 @@ def _check_project_refs_strict(project_dir: str):
     try:
         status_check = subprocess.run(
             [GIT, "-C", project_dir, "status", "--porcelain"],
-            capture_output=True, text=True, timeout=30,
+            capture_output=True,
+            text=True,
+            timeout=30,
         )
     except (OSError, subprocess.TimeoutExpired) as e:
         raise RuntimeError(f"--strict: could not run git in {project_dir}: {e}") from e
@@ -529,7 +541,9 @@ def _check_project_refs_strict(project_dir: str):
     try:
         git_check = subprocess.run(
             [GIT, "-C", project_dir, "diff", "--exit-code", "--", "project.refs"],
-            capture_output=True, text=True, timeout=30,
+            capture_output=True,
+            text=True,
+            timeout=30,
         )
     except (OSError, subprocess.TimeoutExpired) as e:
         raise RuntimeError(f"--strict: could not run git to check project.refs: {e}") from e
@@ -590,8 +604,8 @@ def extract_run(
 
     start_time_us = _resolve_start_time_us(start_time, log_path)
     converter = WrapperTraceConverter(
-        raw_start_time_us=start_time_us,
-        raw_start_time_source=_resolve_start_time_source(start_time))
+        raw_start_time_us=start_time_us, raw_start_time_source=_resolve_start_time_source(start_time)
+    )
     with open(log_path, encoding="utf-8", errors="ignore") as f:
         for line in f:
             if log_format == "wrapped":
@@ -627,8 +641,7 @@ def extract_run(
     # converter already parsed, and this needs it before the graph.
     scheduler = converter.get_scheduler_config()
     parsed_jobs = scheduler.get("native_max_jobs")
-    replayed = (["--max-jobs", str(parsed_jobs)]
-                if parsed_jobs is not None else [])
+    replayed = ["--max-jobs", str(parsed_jobs)] if parsed_jobs is not None else []
 
     # UX-683: `project.conf`'s `variables.bga-foundation` wins; the
     # `foundation=` argument (a programmatic caller's own list) is the
@@ -643,15 +656,18 @@ def extract_run(
     # reuse the baseline's elements/dependencies instead of paying
     # another `bst show --deps all`. Any difference, or no baseline,
     # falls back to the real extraction exactly as before.
-    fingerprint = _graph_fingerprint(
-        cache_key_set, targets, bst_global_options, parsed_jobs, declared_foundation)
+    fingerprint = _graph_fingerprint(cache_key_set, targets, bst_global_options, parsed_jobs, declared_foundation)
     reused = _reused_graph_from_baseline(baseline_run_dir, fingerprint)
     if reused is not None:
         graph = reused
     else:
         try:
-            graph = extract_graph(project_dir, targets, bst_bin=bst_bin, bst_options=[
-                *_graph_affecting_options(bst_global_options), *replayed])
+            graph = extract_graph(
+                project_dir,
+                targets,
+                bst_bin=bst_bin,
+                bst_options=[*_graph_affecting_options(bst_global_options), *replayed],
+            )
         except RuntimeError as e:
             raise RuntimeError(f"graph extraction failed: {e}") from e
 
@@ -671,10 +687,8 @@ def extract_run(
     known_uids = {element["uid"] for element in graph["elements"]}
     for name in declared_foundation:
         if name not in known_uids:
-            warnings.append(
-                f"declared foundation element {name!r} is not in the graph")
-    graph["foundation"] = sorted(
-        name for name in declared_foundation if name in known_uids)
+            warnings.append(f"declared foundation element {name!r} is not in the graph")
+    graph["foundation"] = sorted(name for name in declared_foundation if name in known_uids)
     graph["cache_fingerprint"] = fingerprint
 
     consistency_warning = _git_consistency_note(project_dir)
@@ -728,7 +742,9 @@ def extract_run(
     # tools/bst_run_context.py, the other producer path, so the two
     # don't silently diverge again).
     add_cpu_capacity_fields(
-        run_context, native_max_jobs=native_max_jobs, cpu_budget=cpu_budget,
+        run_context,
+        native_max_jobs=native_max_jobs,
+        cpu_budget=cpu_budget,
         # UX-29: recovered from the wrapper's own recorded invocation
         # when this log has one - see get_scheduler_config. An explicit
         # --native-max-jobs still wins; `native_max_jobs_source` records
@@ -745,7 +761,9 @@ def extract_run(
     # memory_budget_mb/estimated_job_memory_mb (UX-21) - same shared-
     # helper pattern, purely operator-declared, no auto-detection tier.
     add_memory_capacity_fields(
-        run_context, memory_budget_mb=memory_budget_mb, estimated_job_memory_mb=estimated_job_memory_mb,
+        run_context,
+        memory_budget_mb=memory_budget_mb,
+        estimated_job_memory_mb=estimated_job_memory_mb,
     )
     # UX-186: which machine measured this. Every capture, so that two
     # runs can be told apart - or told to be the same - rather than
@@ -866,7 +884,10 @@ def extract_run(
     # source won above), not just an operator-typed one - two runs that
     # genuinely differed in native parallelism must not hash identically.
     run_identity = _compute_run_identity(
-        project_dir, targets, scheduler, project_refs_provenance,
+        project_dir,
+        targets,
+        scheduler,
+        project_refs_provenance,
         native_max_jobs=run_context.get("native_max_jobs"),
     )
     run_context["run_identity"] = run_identity
@@ -920,8 +941,8 @@ def extract_run(
     # same moment, and the resolved map travels baked into every
     # resource's own keying rather than needing project.conf again.
     inventory = build_source_inventory(
-        project_dir, [element["uid"] for element in graph["elements"]],
-        kind_map=_read_bga_source_kind_map(project_dir))
+        project_dir, [element["uid"] for element in graph["elements"]], kind_map=_read_bga_source_kind_map(project_dir)
+    )
     (out_dir / "sources.json").write_text(json.dumps(inventory, indent=2))
 
     return {
@@ -995,8 +1016,7 @@ def _resolve_junctioned(project_dir: str, uid: str) -> tuple[Optional[str], Opti
     return current, parts[-1], ":".join(prefix_parts)
 
 
-def build_source_inventory(project_dir: str, element_uids,
-                           kind_map: Optional[dict] = None) -> dict:
+def build_source_inventory(project_dir: str, element_uids, kind_map: Optional[dict] = None) -> dict:
     """`sources/v1` for the elements this run built (`UX-171`).
 
     Read from the `.bst` files, with the census's own memoised reader,
@@ -1087,7 +1107,8 @@ def _resolve_symlinked(project_dir: str, resources):
             notes.append(
                 f"`{resource.get('kind')}` source {identity!r} resolves to "
                 f"{real!r}, outside the project - it has no project-relative "
-                f"identity, so its blast cannot be grouped with anything")
+                f"identity, so its blast cannot be grouped with anything"
+            )
             continue
         linked = dict(resource)
         linked["identity"] = relative
@@ -1108,7 +1129,9 @@ def _CompactRawHelp(prog):
     """UX-158: one shared compact help layout, imported lazily so this
     module stays runnable on its own."""
     from bga.help_format import CompactRawHelp
+
     return CompactRawHelp(prog)
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(
@@ -1120,63 +1143,81 @@ def main() -> int:
     parser.add_argument("log_path", help="Path to the build log (wrapped or raw).")
     parser.add_argument("output_dir", help="Where to write the run directory.")
     parser.add_argument(
-        "--format", choices=("auto", "wrapped", "raw"), default="auto",
+        "--format",
+        choices=("auto", "wrapped", "raw"),
+        default="auto",
         help="Input log format - same semantics as bst_log_to_chrome_trace.py.",
     )
     parser.add_argument(
-        "--start-time", default=None,
-        help='ISO-8601 timestamp anchor for raw-format elapsed timestamps; defaults to the log file\'s mtime.'
+        "--start-time",
+        default=None,
+        help='ISO-8601 timestamp anchor for raw-format elapsed timestamps; defaults to the log file\'s mtime.',
     )
     parser.add_argument(
-        "--trace-epsilon-us", type=int, default=50000,
+        "--trace-epsilon-us",
+        type=int,
+        default=50000,
         help="Quantization epsilon in microseconds (Part 3.2 default: 50000).",
     )
     parser.add_argument(
-        "--bst-bin", default="bst",
+        "--bst-bin",
+        default="bst",
         help="Path to the bst executable.",
     )
     parser.add_argument(
-        "--strict", action="store_true",
-        help='Fail loudly (instead of the default best-effort warning) unless the project uses ref-storage: project.refs and project.refs itself has no uncommitted changes (P4-13).'
+        "--strict",
+        action="store_true",
+        help='Fail loudly (instead of the default best-effort warning) unless the project uses ref-storage: project.refs and project.refs itself has no uncommitted changes (P4-13).',
     )
     parser.add_argument(
-        "--native-max-jobs", type=int, default=None,
+        "--native-max-jobs",
+        type=int,
+        default=None,
         help='Override the real --max-jobs the build ran with - `make -jN`\n'
-             'inside each sandbox, which is a different thing from\n'
-             '--builders. Usually recovered from a wrapped log (UX-29).'
+        'inside each sandbox, which is a different thing from\n'
+        '--builders. Usually recovered from a wrapped log (UX-29).',
     )
     parser.add_argument(
-        "--cpu-budget", type=int, default=None,
-        help='The number of CPU cores this build is *intended* to use - the operator\'s declared envelope, as opposed to the environment\'s real detected core count (host_cpu_count).'
+        "--cpu-budget",
+        type=int,
+        default=None,
+        help='The number of CPU cores this build is *intended* to use - the operator\'s declared envelope, as opposed to the environment\'s real detected core count (host_cpu_count).',
     )
     parser.add_argument(
-        "--memory-budget-mb", type=int, default=None,
-        help='The amount of memory (MB) this build is *intended* to use - the operator\'s declared envelope.'
+        "--memory-budget-mb",
+        type=int,
+        default=None,
+        help='The amount of memory (MB) this build is *intended* to use - the operator\'s declared envelope.',
     )
     parser.add_argument(
-        "--estimated-job-memory-mb", type=int, default=None,
-        help='A rough, operator-supplied estimate of one concurrent build job\'s memory footprint (MB) - a single configurable constant, not a real per-task measurement (no such measurement source exists in this pipeline, see UX-21).'
+        "--estimated-job-memory-mb",
+        type=int,
+        default=None,
+        help='A rough, operator-supplied estimate of one concurrent build job\'s memory footprint (MB) - a single configurable constant, not a real per-task measurement (no such measurement source exists in this pipeline, see UX-21).',
     )
     add_build_class_arguments(parser)
     parser.add_argument(
-        "--interrupted", action="store_true",
+        "--interrupted",
+        action="store_true",
         help="Record that this log's build was interrupted, so the run declares "
         "itself unfinished. Needed when re-running this command from the hint an "
-        "interrupted capture printed; `bga snapshot` sets it for you."
+        "interrupted capture printed; `bga snapshot` sets it for you.",
     )
     parser.add_argument(
-        "--cache-usage", action="store_true",
+        "--cache-usage",
+        action="store_true",
         help="Walk the local CAS to record what the cache currently holds "
         "(UX-896). Off by default: it is the only part of the capacity block "
         "that costs anything, and without it the block still carries the "
-        "configured quota and the volume under it."
+        "configured quota and the volume under it.",
     )
     parser.add_argument(
-        "--artifact-weights", action="store_true",
+        "--artifact-weights",
+        action="store_true",
         help="Walk each element's artifact in the local CAS to record what it "
         "weighs (UX-907). Off by default: it reads one blob per directory in "
         "every artifact. BuildStream publishes no such number - the one key "
-        "that looks like it renders the root proto's own length."
+        "that looks like it renders the root proto's own length.",
     )
     args = parser.parse_args()
 
@@ -1187,10 +1228,15 @@ def main() -> int:
 
     try:
         summary = extract_run(
-            args.project_dir, args.log_path, args.output_dir,
-            log_format=args.format, start_time=args.start_time,
-            trace_epsilon_us=args.trace_epsilon_us, bst_bin=args.bst_bin,
-            strict=args.strict, native_max_jobs=args.native_max_jobs,
+            args.project_dir,
+            args.log_path,
+            args.output_dir,
+            log_format=args.format,
+            start_time=args.start_time,
+            trace_epsilon_us=args.trace_epsilon_us,
+            bst_bin=args.bst_bin,
+            strict=args.strict,
+            native_max_jobs=args.native_max_jobs,
             cpu_budget=args.cpu_budget,
             memory_budget_mb=args.memory_budget_mb,
             estimated_job_memory_mb=args.estimated_job_memory_mb,

@@ -4,6 +4,7 @@ verifier's own mutation passed the suite. This reads the lifecycle
 directly (token count, removal, a build that raises) and the auth-style
 choice `bwrap_shim.build_shim_argv` acts on.
 """
+
 import os
 
 import pytest
@@ -40,14 +41,10 @@ class TestJobserverAuthStyleFollowsMake:
     path from inside its own sandbox. `fifo` stays an explicit opt-in."""
 
     def test_gnu_make_4_4_picks_fd(self):
-        assert tracer.jobserver_auth_style(
-            "auto", "GNU Make 4.4\nBuilt for x86_64-pc-linux-gnu\n"
-        ) == "fd"
+        assert tracer.jobserver_auth_style("auto", "GNU Make 4.4\nBuilt for x86_64-pc-linux-gnu\n") == "fd"
 
     def test_gnu_make_4_3_picks_fd(self):
-        assert tracer.jobserver_auth_style(
-            "auto", "GNU Make 4.3\nBuilt for x86_64-pc-linux-gnu\n"
-        ) == "fd"
+        assert tracer.jobserver_auth_style("auto", "GNU Make 4.3\nBuilt for x86_64-pc-linux-gnu\n") == "fd"
 
     def test_an_explicit_style_is_never_overridden(self):
         assert tracer.jobserver_auth_style("fd", "GNU Make 4.4\n") == "fd"
@@ -101,15 +98,14 @@ class TestTheShimsArgvCarriesTheChosenStyle:
             )
             setenv = argv.index("MAKEFLAGS")
             assert argv[setenv + 1] == f"--jobserver-auth={read_fd},{read_fd}"
-            assert "--bind" not in argv[argv.index("MAKEFLAGS"):]
+            assert "--bind" not in argv[argv.index("MAKEFLAGS") :]
         finally:
             os.close(read_fd)
             os.close(write_fd)
 
 
 class TestTheFifoLifecycleSurvivesAFailedBuild:
-    def test_a_build_that_raises_inside_the_try_still_removes_the_fifo(
-            self, tmp_path, monkeypatch):
+    def test_a_build_that_raises_inside_the_try_still_removes_the_fifo(self, tmp_path, monkeypatch):
         project = tmp_path / "proj"
         project.mkdir()
         raw_log = tmp_path / "trace.log"
@@ -128,8 +124,7 @@ class TestTheFifoLifecycleSurvivesAFailedBuild:
         monkeypatch.setattr(tracer.subprocess, "Popen", fake_run)
 
         with pytest.raises(RuntimeError):
-            tracer.run_traced_build(str(project), ["bst", "build", "x.bst"],
-                                    str(raw_log), jobserver=4)
+            tracer.run_traced_build(str(project), ["bst", "build", "x.bst"], str(raw_log), jobserver=4)
 
         assert "path" in seen, "fake_run never ran - the fixture is wrong"
         assert not os.path.exists(seen["path"])

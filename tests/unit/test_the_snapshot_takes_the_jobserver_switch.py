@@ -6,6 +6,7 @@ name both facts in `capture-context.txt` and the compare header.
 which `test_dual_plane_capture.py` already covers - the same posture
 `test_snapshot.py` takes for every other flag.
 """
+
 import json
 import os
 import stat
@@ -60,15 +61,20 @@ def recorded(monkeypatch, a_bst_on_path):
         return 0
 
     import tools.bst_native_build_tracer as tracer
+
     monkeypatch.setattr(tracer, "main", fake_capture)
     return calls
 
 
 class TestTheModePassesThroughToCaptureRun:
     def test_auto_resolves_against_a_faked_core_count(self, project, recorded):
-        take_snapshot(str(project), ["bst", "build", "--builders", "3", "all.bst"],
-                      {"trace_opens": True, "trace_spine": "auto"},
-                      jobserver="auto", cpu_count=8)
+        take_snapshot(
+            str(project),
+            ["bst", "build", "--builders", "3", "all.bst"],
+            {"trace_opens": True, "trace_spine": "auto"},
+            jobserver="auto",
+            cpu_count=8,
+        )
 
         # UX-858: the ceiling is the host's cores (8), never cores minus
         # builders - the seed (5, cores - 3 builders) is what shrinks.
@@ -77,15 +83,15 @@ class TestTheModePassesThroughToCaptureRun:
         assert argv[argv.index("--jobserver-seed") + 1] == "5"
 
     def test_an_explicit_int_passes_through(self, project, recorded):
-        take_snapshot(str(project), ["bst", "build", "all.bst"],
-                      {"trace_opens": True, "trace_spine": "auto"}, jobserver="4")
+        take_snapshot(
+            str(project), ["bst", "build", "all.bst"], {"trace_opens": True, "trace_spine": "auto"}, jobserver="4"
+        )
 
         [argv] = recorded
         assert argv[argv.index("--jobserver") + 1] == "4"
 
     def test_off_is_the_default_and_passes_nothing(self, project, recorded):
-        take_snapshot(str(project), ["bst", "build", "all.bst"],
-                      {"trace_opens": True, "trace_spine": "auto"})
+        take_snapshot(str(project), ["bst", "build", "all.bst"], {"trace_opens": True, "trace_spine": "auto"})
 
         [argv] = recorded
         assert "--jobserver" not in argv
@@ -98,33 +104,53 @@ class TestTheAuthStylePassesThroughToCaptureRun:
     """
 
     def test_fifo_reaches_the_tracer_argv(self, project, recorded):
-        take_snapshot(str(project), ["bst", "build", "all.bst"],
-                      {"trace_opens": True, "trace_spine": "auto"},
-                      jobserver="4", jobserver_auth="fifo")
+        take_snapshot(
+            str(project),
+            ["bst", "build", "all.bst"],
+            {"trace_opens": True, "trace_spine": "auto"},
+            jobserver="4",
+            jobserver_auth="fifo",
+        )
 
         [argv] = recorded
         assert argv[argv.index("--jobserver-auth") + 1] == "fifo"
 
     def test_off_passes_no_auth_token_either(self, project, recorded):
-        take_snapshot(str(project), ["bst", "build", "all.bst"],
-                      {"trace_opens": True, "trace_spine": "auto"},
-                      jobserver_auth="fifo")
+        take_snapshot(
+            str(project),
+            ["bst", "build", "all.bst"],
+            {"trace_opens": True, "trace_spine": "auto"},
+            jobserver_auth="fifo",
+        )
 
         [argv] = recorded
         assert "--jobserver-auth" not in argv
 
     def test_the_cli_flag_reaches_take_snapshot(self, project, recorded):
-        assert main(["--project", str(project), "--jobserver", "4",
-                     "--jobserver-auth", "fd",
-                     "--", "bst", "build", "all.bst"]) == 0
+        assert (
+            main(
+                [
+                    "--project",
+                    str(project),
+                    "--jobserver",
+                    "4",
+                    "--jobserver-auth",
+                    "fd",
+                    "--",
+                    "bst",
+                    "build",
+                    "all.bst",
+                ]
+            )
+            == 0
+        )
 
         [argv] = recorded
         assert argv[argv.index("--jobserver-auth") + 1] == "fd"
 
 
 class TestPlanResolvesAtPrev:
-    def test_plan_at_prev_resolves_to_that_snapshots_analysis(
-            self, project, recorded, monkeypatch):
+    def test_plan_at_prev_resolves_to_that_snapshots_analysis(self, project, recorded, monkeypatch):
         monkeypatch.chdir(project)
 
         def fake_analyze(run_dir, plane2, publish_to=None, build_exit=0):
@@ -144,18 +170,15 @@ class TestPlanResolvesAtPrev:
         first = run_store.list_runs(str(project))[-1]
         assert main(["--", "bst", "build", "all.bst"]) == 0
 
-        assert main(["--jobserver", "auto", "--plan", "@prev",
-                     "--", "bst", "build", "all.bst"]) == 0
+        assert main(["--jobserver", "auto", "--plan", "@prev", "--", "bst", "build", "all.bst"]) == 0
 
         argv = recorded[-1]
-        assert argv[argv.index("--plan") + 1] == os.path.join(
-            first, run_store.ANALYSIS_NAME)
+        assert argv[argv.index("--plan") + 1] == os.path.join(first, run_store.ANALYSIS_NAME)
 
     def test_plan_without_a_jobserver_mode_is_refused(self, project, recorded, capsys):
         (project / "plan.json").write_text("{}")
 
-        code = main(["--project", str(project), "--plan", str(project / "plan.json"),
-                     "--", "bst", "build", "all.bst"])
+        code = main(["--project", str(project), "--plan", str(project / "plan.json"), "--", "bst", "build", "all.bst"])
 
         assert code == 2
         assert "--plan needs --jobserver" in capsys.readouterr().err
@@ -168,23 +191,24 @@ class TestTheContextFileNamesBoth:
         plan.write_text("{}")
 
         snapshot, _code = take_snapshot(
-            str(project), ["bst", "build", "all.bst"],
+            str(project),
+            ["bst", "build", "all.bst"],
             {"trace_opens": True, "trace_spine": "auto"},
-            jobserver="4", plan=str(plan))
+            jobserver="4",
+            plan=str(plan),
+        )
 
-        with open(os.path.join(snapshot, "capture-context.txt"),
-                  encoding="utf-8") as handle:
+        with open(os.path.join(snapshot, "capture-context.txt"), encoding="utf-8") as handle:
             text = handle.read()
         assert "jobserver: n 4" in text
         assert f"plan: {plan}" in text
 
     def test_off_and_no_plan_are_dashes(self, project, recorded):
         snapshot, _code = take_snapshot(
-            str(project), ["bst", "build", "all.bst"],
-            {"trace_opens": True, "trace_spine": "auto"})
+            str(project), ["bst", "build", "all.bst"], {"trace_opens": True, "trace_spine": "auto"}
+        )
 
-        with open(os.path.join(snapshot, "capture-context.txt"),
-                  encoding="utf-8") as handle:
+        with open(os.path.join(snapshot, "capture-context.txt"), encoding="utf-8") as handle:
             text = handle.read()
         assert "jobserver: off -" in text
         assert "plan: -" in text
@@ -205,9 +229,11 @@ class TestTheCompareHeaderNamesBothModes:
         baseline.mkdir()
         candidate.mkdir()
         (baseline / "analyze.json").write_text(json.dumps({"run_instance": {}}))
-        (candidate / "analyze.json").write_text(json.dumps({"run_instance": {
-            "jobserver": {"mode": "auto", "ceiling": 4, "auth": "fd",
-                          "project_max_jobs": None}}}))
+        (candidate / "analyze.json").write_text(
+            json.dumps(
+                {"run_instance": {"jobserver": {"mode": "auto", "ceiling": 4, "auth": "fd", "project_max_jobs": None}}}
+            )
+        )
 
         line = _jobserver_compare_line(str(baseline), str(candidate))
 
@@ -221,9 +247,11 @@ class TestTheCompareHeaderNamesBothModes:
         baseline.mkdir()
         candidate.mkdir()
         (baseline / "analyze.json").write_text(json.dumps({"run_instance": {}}))
-        (candidate / "analyze.json").write_text(json.dumps({"run_instance": {
-            "jobserver": {"mode": "auto", "ceiling": 4, "auth": "fd",
-                          "project_max_jobs": None}}}))
+        (candidate / "analyze.json").write_text(
+            json.dumps(
+                {"run_instance": {"jobserver": {"mode": "auto", "ceiling": 4, "auth": "fd", "project_max_jobs": None}}}
+            )
+        )
         monkeypatch.setattr("bga.cli.main", lambda argv: 0)
 
         bga_snapshot._compare(str(baseline), str(candidate))

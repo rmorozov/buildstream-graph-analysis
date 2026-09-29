@@ -12,6 +12,7 @@ read like a paradox. Drawn, the marker lands *between* the strip's edge
 and the dots' extent. The geometry assertion below is that sentence,
 made checkable.
 """
+
 import io
 import json
 import os
@@ -39,15 +40,14 @@ SECTION_MODULES = ("views.js", "element.js", "decision.js")
 
 
 def _sections_source():
-    return "\n".join(
-        open("bga/viewer/" + name, encoding="utf-8").read()
-        for name in SECTION_MODULES)
+    return "\n".join(open("bga/viewer/" + name, encoding="utf-8").read() for name in SECTION_MODULES)
+
+
 node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 
 
-def _store(tmp_path, stamps=("20260101T000000Z", "20260102T000000Z",
-                             "20260103T000000Z")):
+def _store(tmp_path, stamps=("20260101T000000Z", "20260102T000000Z", "20260103T000000Z")):
     (tmp_path / "project.conf").write_text("name: p\nmin-version: 2.0\n")
     for stamp in stamps:
         run = tmp_path / ".bga" / "runs" / stamp / "run"
@@ -73,8 +73,7 @@ class TestStoreV1:
 
         listing = store_listing(str(_store(tmp_path)))
         assert listing["count"] == 3
-        assert listing["total_bytes"] == sum(
-            row["bytes"] for row in listing["snapshots"])
+        assert listing["total_bytes"] == sum(row["bytes"] for row in listing["snapshots"])
         aliases = [row["alias"] for row in listing["snapshots"]]
         assert aliases[-1] == "@last" and aliases[-2] == "@prev"
         assert aliases[0] is None
@@ -93,6 +92,7 @@ class TestStoreV1:
         try:
             buffer = io.StringIO()
             import contextlib
+
             with contextlib.redirect_stdout(buffer):
                 snapshot._list(project)
         finally:
@@ -107,8 +107,7 @@ class TestStoreV1:
         from tools.bga_snapshot import store_listing
 
         project = _store(tmp_path, stamps=("20260101T000000Z",))
-        context = (project / ".bga" / "runs" / "20260101T000000Z" / "run"
-                   / "run-context.json")
+        context = project / ".bga" / "runs" / "20260101T000000Z" / "run" / "run-context.json"
         loaded = json.loads(context.read_text())
         loaded["build_outcome"] = {"interrupted": True}
         context.write_text(json.dumps(loaded))
@@ -118,12 +117,18 @@ class TestStoreV1:
 
     def test_the_cli_emits_it(self, tmp_path):
         result = subprocess.run(
-            [sys.executable, "-c",
-             "import os, sys; os.chdir(sys.argv[1])\n"
-             "from bga.cli import main\n"
-             "raise SystemExit(main(['snapshot', '--list', '--format', 'json']))",
-             str(_store(tmp_path))],
-            capture_output=True, text=True, cwd=os.getcwd())
+            [
+                sys.executable,
+                "-c",
+                "import os, sys; os.chdir(sys.argv[1])\n"
+                "from bga.cli import main\n"
+                "raise SystemExit(main(['snapshot', '--list', '--format', 'json']))",
+                str(_store(tmp_path)),
+            ],
+            capture_output=True,
+            text=True,
+            cwd=os.getcwd(),
+        )
         assert result.returncode == 0, result.stderr
         assert json.loads(result.stdout)["schema"] == schemas.STORE
 
@@ -134,9 +139,9 @@ class TestTheBandDrawn:
 
     def _geometry(self, compare):
         script = _HARNESS % ("bandGeometry", json.dumps(compare))
-        result = subprocess.run([node, "--input-type=module", "-e", script],
-                                capture_output=True, text=True,
-                                cwd=os.getcwd(), timeout=60)
+        result = subprocess.run(
+            [node, "--input-type=module", "-e", script], capture_output=True, text=True, cwd=os.getcwd(), timeout=60
+        )
         assert result.returncode == 0, result.stderr
         return json.loads(result.stdout)
 
@@ -149,15 +154,19 @@ class TestTheBandDrawn:
         edge and short of the observed extent's — which is the paradox,
         drawn.
         """
-        geometry = self._geometry({
-            "schema": schemas.COMPARE,
-            "candidate": {"total_duration_us": 114_000_000},
-            "baseline_band": {
-                "band_low_us": 100_000_000, "band_high_us": 110_000_000,
-                "observed_low_us": 95_000_000, "observed_high_us": 118_000_000,
-                "runs": [95_000_000, 104_000_000, 118_000_000],
-            },
-        })
+        geometry = self._geometry(
+            {
+                "schema": schemas.COMPARE,
+                "candidate": {"total_duration_us": 114_000_000},
+                "baseline_band": {
+                    "band_low_us": 100_000_000,
+                    "band_high_us": 110_000_000,
+                    "observed_low_us": 95_000_000,
+                    "observed_high_us": 118_000_000,
+                    "runs": [95_000_000, 104_000_000, 118_000_000],
+                },
+            }
+        )
         assert geometry["disputed"] is True
         assert geometry["where"] == "outside the band, inside the observed range"
 
@@ -165,92 +174,109 @@ class TestTheBandDrawn:
         observed_right = geometry["observed"]["x"] + geometry["observed"]["width"]
         assert band_right < geometry["candidate"]["x"] < observed_right, (
             f"candidate at {geometry['candidate']['x']} is not between the "
-            f"band edge {band_right} and the observed extent {observed_right}")
+            f"band edge {band_right} and the observed extent {observed_right}"
+        )
 
         # ...and everything drawn is actually on the canvas. Falsifying
         # showed the ordering above holds however the axis is chosen -
         # narrowing it to the band alone left the assertion green while
         # pushing the marker past the viewBox's right edge, which is a
         # drawing nobody can read.
-        for name, value in (("candidate", geometry["candidate"]["x"]),
-                            ("band left", geometry["band"]["x"]),
-                            ("band right", band_right),
-                            ("observed left", geometry["observed"]["x"]),
-                            ("observed right", observed_right)):
+        for name, value in (
+            ("candidate", geometry["candidate"]["x"]),
+            ("band left", geometry["band"]["x"]),
+            ("band right", band_right),
+            ("observed left", geometry["observed"]["x"]),
+            ("observed right", observed_right),
+        ):
             assert 0 <= value <= 100, f"{name} at {value} is off the canvas"
 
     def test_a_candidate_inside_the_band_is_not_disputed(self):
-        geometry = self._geometry({
-            "schema": schemas.COMPARE,
-            "candidate": {"total_duration_us": 105_000_000},
-            "baseline_band": {"band_low_us": 100_000_000,
-                              "band_high_us": 110_000_000,
-                              "observed_low_us": 95_000_000,
-                              "observed_high_us": 118_000_000, "runs": []},
-        })
+        geometry = self._geometry(
+            {
+                "schema": schemas.COMPARE,
+                "candidate": {"total_duration_us": 105_000_000},
+                "baseline_band": {
+                    "band_low_us": 100_000_000,
+                    "band_high_us": 110_000_000,
+                    "observed_low_us": 95_000_000,
+                    "observed_high_us": 118_000_000,
+                    "runs": [],
+                },
+            }
+        )
         assert geometry["disputed"] is False
         assert geometry["where"] == "inside the band"
         band_right = geometry["band"]["x"] + geometry["band"]["width"]
         assert geometry["band"]["x"] <= geometry["candidate"]["x"] <= band_right
 
     def test_a_candidate_outside_both_says_so(self):
-        geometry = self._geometry({
-            "schema": schemas.COMPARE,
-            "candidate": {"total_duration_us": 140_000_000},
-            "baseline_band": {"band_low_us": 100_000_000,
-                              "band_high_us": 110_000_000,
-                              "observed_low_us": 95_000_000,
-                              "observed_high_us": 118_000_000, "runs": []},
-        })
+        geometry = self._geometry(
+            {
+                "schema": schemas.COMPARE,
+                "candidate": {"total_duration_us": 140_000_000},
+                "baseline_band": {
+                    "band_low_us": 100_000_000,
+                    "band_high_us": 110_000_000,
+                    "observed_low_us": 95_000_000,
+                    "observed_high_us": 118_000_000,
+                    "runs": [],
+                },
+            }
+        )
         assert geometry["where"] == "outside both"
         assert geometry["disputed"] is False
 
     def test_a_compare_with_no_band_draws_nothing(self):
         """Half the compares in the world have no baseline set."""
-        assert self._geometry({"schema": schemas.COMPARE,
-                               "candidate": {"total_duration_us": 1}}) is None
+        assert self._geometry({"schema": schemas.COMPARE, "candidate": {"total_duration_us": 1}}) is None
 
 
 @needs_node
 class TestTheStoreTrend:
     def _render(self, store):
         script = _RENDER_HARNESS % ("renderTrend", json.dumps(store))
-        result = subprocess.run([node, "--input-type=module", "-e", script],
-                                capture_output=True, text=True,
-                                cwd=os.getcwd(), timeout=60)
+        result = subprocess.run(
+            [node, "--input-type=module", "-e", script], capture_output=True, text=True, cwd=os.getcwd(), timeout=60
+        )
         assert result.returncode == 0, result.stderr
         return json.loads(result.stdout)
 
     def _store_doc(self, rows):
-        return {"schema": schemas.STORE, "project": "/p", "count": len(rows),
-                "total_bytes": sum(r["bytes"] for r in rows),
-                "snapshots": rows}
+        return {
+            "schema": schemas.STORE,
+            "project": "/p",
+            "count": len(rows),
+            "total_bytes": sum(r["bytes"] for r in rows),
+            "snapshots": rows,
+        }
 
     def test_failed_and_interrupted_snapshots_are_marked_distinctly(self):
         """Marked, not hidden: they are on the disk, so they are on the
         chart. A trend that quietly dropped them would answer the drift
         question with a curated subset."""
-        rendered = self._render(self._store_doc([
-            {"stamp": "a", "bytes": 100, "alias": None, "has_run": True,
-             "incomplete_reason": None},
-            {"stamp": "b", "bytes": 200, "alias": None, "has_run": True,
-             "incomplete_reason": "failed"},
-            {"stamp": "c", "bytes": 150, "alias": "@prev", "has_run": True,
-             "incomplete_reason": "interrupted"},
-            {"stamp": "d", "bytes": 300, "alias": "@last", "has_run": True,
-             "incomplete_reason": None},
-        ]))
+        rendered = self._render(
+            self._store_doc(
+                [
+                    {"stamp": "a", "bytes": 100, "alias": None, "has_run": True, "incomplete_reason": None},
+                    {"stamp": "b", "bytes": 200, "alias": None, "has_run": True, "incomplete_reason": "failed"},
+                    {"stamp": "c", "bytes": 150, "alias": "@prev", "has_run": True, "incomplete_reason": "interrupted"},
+                    {"stamp": "d", "bytes": 300, "alias": "@last", "has_run": True, "incomplete_reason": None},
+                ]
+            )
+        )
         assert rendered["points"] == 4, "a snapshot was dropped from the chart"
         assert rendered["incomplete"] == {"b": "failed", "c": "interrupted"}
         assert "rect" in rendered["shapes"] and "circle" in rendered["shapes"], (
-            "complete and incomplete snapshots draw the same shape")
+            "complete and incomplete snapshots draw the same shape"
+        )
         assert "The store (4 snapshots)" in rendered["text"]
         assert "failed" in rendered["text"] and "interrupted" in rendered["text"]
 
     def test_one_snapshot_is_not_a_trend(self):
-        assert self._render(self._store_doc(
-            [{"stamp": "a", "bytes": 1, "alias": "@last", "has_run": True,
-              "incomplete_reason": None}])) == {"empty": True}
+        assert self._render(
+            self._store_doc([{"stamp": "a", "bytes": 1, "alias": "@last", "has_run": True, "incomplete_reason": None}])
+        ) == {"empty": True}
 
 
 class TestTheBlastEndpoint:
@@ -273,13 +299,22 @@ class TestTheBlastEndpoint:
         answer to which elements a change touches."""
         url, run = served
         target = "work-a.bst"
-        served_answer = json.loads(urllib.request.urlopen(
-            f"{url}blast.json?target={urllib.parse.quote(target)}").read())
+        served_answer = json.loads(
+            urllib.request.urlopen(f"{url}blast.json?target={urllib.parse.quote(target)}").read()
+        )
 
         printed = subprocess.run(
-            [sys.executable, "-c",
-             "from bga.cli import main; raise SystemExit(main({!r}))".format(["blast", target, run, "--no-cost", "-f", "json"])],
-            capture_output=True, text=True, cwd=os.getcwd())
+            [
+                sys.executable,
+                "-c",
+                "from bga.cli import main; raise SystemExit(main({!r}))".format(
+                    ["blast", target, run, "--no-cost", "-f", "json"]
+                ),
+            ],
+            capture_output=True,
+            text=True,
+            cwd=os.getcwd(),
+        )
         assert printed.returncode == 0, printed.stderr
         assert served_answer == json.loads(printed.stdout)
 
@@ -290,15 +325,13 @@ class TestTheBlastEndpoint:
 
     def test_an_absurd_target_is_bounded(self, served):
         with pytest.raises(urllib.error.HTTPError) as caught:
-            urllib.request.urlopen(
-                served[0] + "blast.json?target=" + "a" * 900)
+            urllib.request.urlopen(served[0] + "blast.json?target=" + "a" * 900)
         assert caught.value.code == 400
 
     def test_an_unresolvable_target_answers_rather_than_crashing(self, served):
         """`bga blast` is a question, not a gate - it always exits 0 and
         says what reading it used. The endpoint keeps that."""
-        answer = json.loads(urllib.request.urlopen(
-            served[0] + "blast.json?target=nothing-like-this").read())
+        answer = json.loads(urllib.request.urlopen(served[0] + "blast.json?target=nothing-like-this").read())
         assert answer["schema"] == schemas.BLAST
         assert answer["element_exists"] is False
 
@@ -335,8 +368,7 @@ class TestTheViewsStayThin:
 
         source = _sections_source()
         drawing_at = [m.start() for m in re.finditer(r'svg\("svg"', source)]
-        functions = [(m.start(), m.group(1)) for m in
-                     re.finditer(r"function\s+(\w+)", source)]
+        functions = [(m.start(), m.group(1)) for m in re.finditer(r"function\s+(\w+)", source)]
         found = set()
         for position in drawing_at:
             enclosing = [name for start, name in functions if start < position]
@@ -346,14 +378,14 @@ class TestTheViewsStayThin:
             f"the set of custom drawings changed: {found ^ self.DRAWINGS}. "
             f"Direction 7 allows a drawing where the generic table cannot "
             f"say it - name the new one in DRAWINGS above with the reason, "
-            f"or use a table.")
+            f"or use a table."
+        )
 
     def test_no_library_and_no_arithmetic_beyond_layout(self):
         import re
 
         source = _sections_source()
-        code = [line for line in source.splitlines()
-                if not line.lstrip().startswith("//")]
+        code = [line for line in source.splitlines() if not line.lstrip().startswith("//")]
         # No **library**: a bare specifier reaches outside this
         # repository, and a `../` one reaches outside the viewer. A
         # sibling module is neither - `UX-316` made this file import
@@ -362,15 +394,14 @@ class TestTheViewsStayThin:
         # `viewBox: "0 0 100 20"` out by hand, which is the defect §2a
         # exists to end. `drawings.js` imports nothing, so nothing
         # arrives behind it.
-        imports = [line.strip() for line in code
-                   if line.lstrip().startswith("import")]
+        imports = [line.strip() for line in code if line.lstrip().startswith("import")]
         for line in imports:
-            source_of = re.search(r'from\s+"([^"]+)"', line + " ".join(
-                source.split(line, 1)[1].splitlines()[:3]))
+            source_of = re.search(r'from\s+"([^"]+)"', line + " ".join(source.split(line, 1)[1].splitlines()[:3]))
             assert source_of, f"cannot read what this import names: {line}"
             named = source_of.group(1)
             assert named.startswith("./") and "/" not in named[2:], (
-                f"views.js reached outside the viewer directory: {named}")
+                f"views.js reached outside the viewer directory: {named}"
+            )
         # Strings and comments stripped first: the band's caption
         # legitimately contains the word "regression" (it is quoting what
         # compare declines to call the result), and the first draft of
@@ -378,8 +409,8 @@ class TestTheViewsStayThin:
         bare = re.sub(r'"[^"\n]*"|\'[^\'\n]*\'|`[^`]*`|//[^\n]*', "", source)
         for word in ("percentile", "stddev", "regress", "quantile", "Math.sqrt"):
             assert word.lower() not in bare.lower(), (
-                f"{word} in code suggests the page is recomputing the "
-                f"analysis rather than rendering it")
+                f"{word} in code suggests the page is recomputing the analysis rather than rendering it"
+            )
 
 
 _HARNESS = """

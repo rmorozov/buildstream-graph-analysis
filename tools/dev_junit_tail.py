@@ -15,6 +15,7 @@ stdout because that is the artifact that survives.
 totals and its age - because a reader who doubts the names has no
 other way to match them against the suite's summary line above.
 """
+
 import os
 import sys
 import time
@@ -33,8 +34,7 @@ def failures(path):
             if node is None:
                 continue
             message = (node.get("message") or "").strip().splitlines()
-            where = "::".join(x for x in (case.get("classname"),
-                                          case.get("name")) if x)
+            where = "::".join(x for x in (case.get("classname"), case.get("name")) if x)
             out.append((where, kind, message[0] if message else ""))
     return out
 
@@ -60,10 +60,12 @@ def _age(seconds):
 def provenance(path):
     """The line that says whose junit this is (`UX-589`)."""
     counted, old = totals(path)
-    return (f"  read from {path}: {counted['tests']} test(s) recorded, "
-            f"{counted['failures']} failure(s), {counted['errors']} "
-            f"error(s), written {_age(old)} before this read - match that "
-            f"against the suite's own summary line above")
+    return (
+        f"  read from {path}: {counted['tests']} test(s) recorded, "
+        f"{counted['failures']} failure(s), {counted['errors']} "
+        f"error(s), written {_age(old)} before this read - match that "
+        f"against the suite's own summary line above"
+    )
 
 
 def main(argv):
@@ -74,15 +76,15 @@ def main(argv):
         found = failures(argv[1])
     except (OSError, ET.ParseError) as exc:
         # Never mask the real failure with one of its own.
-        print(f"the junit could not be read ({exc}); the suite's own "
-              f"output above is all there is", file=sys.stderr)
+        print(f"the junit could not be read ({exc}); the suite's own output above is all there is", file=sys.stderr)
         return 0
     if not found:
-        print("the junit records no failure - the suite failed elsewhere "
-              "(collection, a plugin, or the make target itself)")
+        print(
+            "the junit records no failure - the suite failed elsewhere "
+            "(collection, a plugin, or the make target itself)"
+        )
     else:
-        print(f"{len(found)} test(s) failed, named here because the log "
-              f"tail above may be truncated (UX-554):")
+        print(f"{len(found)} test(s) failed, named here because the log tail above may be truncated (UX-554):")
         for where, kind, message in found:
             print(f"  {kind.upper():7s} {where}")
             if message:

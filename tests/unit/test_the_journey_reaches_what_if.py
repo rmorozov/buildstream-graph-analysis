@@ -23,6 +23,7 @@ checks one step of one guide for one command, plus the two things that
 make the pasted figures worth anything — that they are the numbers the
 tool produces today, and that the convention travels with them.
 """
+
 import pathlib
 import re
 
@@ -55,8 +56,7 @@ def _flat(text):
 
 
 def _appendix():
-    return GUIDE.read_text(encoding="utf-8").split(
-        "## Appendix: where these numbers came from", 1)[-1]
+    return GUIDE.read_text(encoding="utf-8").split("## Appendix: where these numbers came from", 1)[-1]
 
 
 def _act_step():
@@ -97,16 +97,16 @@ def _projection():
 # say.
 FIGURE_FORMS = (
     re.compile(r"Makespan ([0-9.]+s) -> ([0-9.]+s) \(saves ([0-9.]+s)\)"),
-    re.compile(r"add up to ([0-9.]+s), which is not what they are worth "
-               r"together \(([0-9.]+s)\)"),
+    re.compile(
+        r"add up to ([0-9.]+s), which is not what they are worth "
+        r"together \(([0-9.]+s)\)"
+    ),
 )
 
 
 def _figures(text):
     flat = re.sub(r"\s+", " ", text)
-    return {(index, match.groups())
-            for index, pattern in enumerate(FIGURE_FORMS)
-            for match in pattern.finditer(flat)}
+    return {(index, match.groups()) for index, pattern in enumerate(FIGURE_FORMS) for match in pattern.finditer(flat)}
 
 
 def _produced_figures():
@@ -120,7 +120,8 @@ class TestTheActStepReachesTheCommand:
     def test_the_step_names_whatif(self):
         assert "bga whatif" in _act_step(), (
             "the act step of the journey guide does not name `bga whatif`, "
-            "the command that prices the decision it is about")
+            "the command that prices the decision it is about"
+        )
 
     def test_the_step_shows_output_and_not_only_a_command(self):
         """Every other step in this guide pastes what it got. A command
@@ -132,7 +133,8 @@ class TestTheActStepReachesTheCommand:
         example be deleted as long as the refusal stayed."""
         assert _figures(_act_step()), (
             "the act step names `bga whatif` and pastes no projection "
-            "output - no makespan line, no summed-against-joint line")
+            "output - no makespan line, no summed-against-joint line"
+        )
 
     def test_the_step_says_what_the_number_is_not(self):
         """`UX-244`'s convention, in the guide's own register. A
@@ -140,8 +142,7 @@ class TestTheActStepReachesTheCommand:
         reader's hands."""
         step = _flat(_act_step())
         for phrase in ("upper bound", "not a forecast", "instant"):
-            assert phrase in step, (
-                f"the act step quotes a projected saving without {phrase!r}")
+            assert phrase in step, f"the act step quotes a projected saving without {phrase!r}"
 
 
 class TestThePastedFiguresAreStillTrue:
@@ -150,9 +151,7 @@ class TestThePastedFiguresAreStillTrue:
     run is committed, so the claim is checkable rather than historical."""
 
     def test_the_run_the_guide_quotes_still_exists(self):
-        assert RUN.is_dir(), (
-            f"the journey guide's act step quotes {RUN}, which is not a "
-            f"run directory")
+        assert RUN.is_dir(), f"the journey guide's act step quotes {RUN}, which is not a run directory"
 
     @pytest.mark.parametrize("where", ["act step", "appendix"])
     def test_every_pasted_figure_is_one_the_tool_produces(self, where):
@@ -164,7 +163,8 @@ class TestThePastedFiguresAreStillTrue:
         stale = sorted(_figures(section) - produced)
         assert stale == [], (
             f"the {where} pastes projection figure(s) `bga whatif` does not "
-            f"produce today: {stale}. Produced: {sorted(produced)}")
+            f"produce today: {stale}. Produced: {sorted(produced)}"
+        )
 
     def test_the_run_still_discriminates_summed_from_joint(self):
         """The line the act step is *for*. If the two ever stop
@@ -173,15 +173,15 @@ class TestThePastedFiguresAreStillTrue:
         produced = _projection()
         assert "individual savings add up to" in produced, (
             "the committed run no longer discriminates between summed and "
-            "joint savings, so the act step's example proves nothing:\n"
-            + produced)
+            "joint savings, so the act step's example proves nothing:\n" + produced
+        )
 
     def test_the_appendix_says_where_the_figures_came_from(self):
         """The guide's own rule, stated in its appendix: every number
         names its capture."""
         assert "whatif" in _appendix(), (
-            "the appendix accounts for every other figure in the guide and "
-            "not for the act step's")
+            "the appendix accounts for every other figure in the guide and not for the act step's"
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

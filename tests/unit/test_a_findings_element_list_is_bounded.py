@@ -7,6 +7,7 @@ bounded list, as `app.js`'s `bounded` does for the element sections.
 This is `renderFindings` in the shim; the page-level half is
 `test_the_page_has_a_volume_budget.py` on `scale_both` and `xl_both`.
 """
+
 import json
 import os
 import pathlib
@@ -71,9 +72,14 @@ process.stdout.write(JSON.stringify(out) + "\n");
 def measured():
     result = subprocess.run(
         [node, "--input-type=module", "-e", _SCRIPT],
-        capture_output=True, text=True, cwd=REPO, timeout=60,
-        env=dict(os.environ, BGA_REPO=str(REPO), SIZES=json.dumps(SIZES),
-                 BGA_DOM_SHIM=str(REPO / "tests" / "dom_shim.mjs")))
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=60,
+        env=dict(
+            os.environ, BGA_REPO=str(REPO), SIZES=json.dumps(SIZES), BGA_DOM_SHIM=str(REPO / "tests" / "dom_shim.mjs")
+        ),
+    )
     assert result.returncode == 0, result.stderr[-3000:]
     return json.loads(result.stdout.strip().splitlines()[-1])
 

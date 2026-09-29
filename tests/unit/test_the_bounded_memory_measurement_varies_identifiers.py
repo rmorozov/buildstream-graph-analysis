@@ -8,6 +8,7 @@ distinct identifiers at fixed records grow the peak by at most a
 measured per-identifier byte constant, with margin (Outcome table,
 `/tmp/<track>/measure_axes.py`).
 """
+
 import pathlib
 import sys
 import tempfile

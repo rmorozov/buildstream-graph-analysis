@@ -27,6 +27,7 @@ Everything here is offline and cheap - `/proc/cpuinfo`, `/proc/meminfo`,
 the same short subprocess calls `UX-151`'s capture fingerprint already
 makes, each with a timeout and each degrading to `None`.
 """
+
 import os
 import shutil
 import subprocess
@@ -134,8 +135,7 @@ def _toolchain() -> dict[str, Optional[str]]:
     }
     found = {}
     for name, argv in probes.items():
-        found[name] = (_version_line(argv, timed=(name == "bst"))
-                       if shutil.which(argv[0]) else None)
+        found[name] = _version_line(argv, timed=(name == "bst")) if shutil.which(argv[0]) else None
     return found
 
 
@@ -175,8 +175,7 @@ def collect(with_toolchain: bool = True) -> dict:
     return manifest
 
 
-def differing_fields(baseline: Optional[dict],
-                     candidate: Optional[dict]) -> list[str]:
+def differing_fields(baseline: Optional[dict], candidate: Optional[dict]) -> list[str]:
     """Which of `COMPARED_FIELDS` the two manifests disagree on.
 
     A field missing from *both* is not a difference: two captures from a
@@ -187,9 +186,12 @@ def differing_fields(baseline: Optional[dict],
     if not baseline or not candidate:
         return []
     baseline, candidate = normalised(baseline), normalised(candidate)
-    return [field for field in COMPARED_FIELDS
-            if not (baseline.get(field) is None and candidate.get(field) is None)
-            and baseline.get(field) != candidate.get(field)]
+    return [
+        field
+        for field in COMPARED_FIELDS
+        if not (baseline.get(field) is None and candidate.get(field) is None)
+        and baseline.get(field) != candidate.get(field)
+    ]
 
 
 def normalised(manifest: dict) -> dict:
@@ -232,9 +234,7 @@ def classify(baseline: Optional[dict], candidate: Optional[dict]) -> dict:
     }
 
 
-def describe(classification: dict,
-             baseline: Optional[dict],
-             candidate: Optional[dict]) -> Optional[str]:
+def describe(classification: dict, baseline: Optional[dict], candidate: Optional[dict]) -> Optional[str]:
     """One sentence for the report, or None when the hosts match.
 
     Names the fields *and their values*: "different host" is a fact a
@@ -246,19 +246,22 @@ def describe(classification: dict,
         return None
     if status == "unknown":
         missing = " and ".join(classification.get("missing") or ["one run"])
-        return (f"Host unknown: the {missing} carries no host manifest (captured "
-                f"before host manifests were recorded), so this comparison "
-                f"cannot tell whether both runs were measured on the same "
-                f"machine.")
+        return (
+            f"Host unknown: the {missing} carries no host manifest (captured "
+            f"before host manifests were recorded), so this comparison "
+            f"cannot tell whether both runs were measured on the same "
+            f"machine."
+        )
     parts = []
     for field in classification.get("differing") or []:
         label = _FIELD_LABELS.get(field, field)
-        parts.append(f"{label}: {(baseline or {}).get(field)} vs "
-                     f"{(candidate or {}).get(field)}")
-    return ("Cross-host comparison: these runs were measured on different "
-            "machines (" + "; ".join(parts) + "). Run-to-run noise on one "
-            "machine already reaches 33%; across machines the "
-            "difference between the two runs is not evidence about the change.")
+        parts.append(f"{label}: {(baseline or {}).get(field)} vs {(candidate or {}).get(field)}")
+    return (
+        "Cross-host comparison: these runs were measured on different "
+        "machines (" + "; ".join(parts) + "). Run-to-run noise on one "
+        "machine already reaches 33%; across machines the "
+        "difference between the two runs is not evidence about the change."
+    )
 
 
 def homogeneous(manifests: list[Optional[dict]]) -> bool:

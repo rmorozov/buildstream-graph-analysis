@@ -24,6 +24,7 @@ against a **real browser** rather than against itself. A shim asserted
 against its own expectations is the hollow instrument this whole line
 of items is about.
 """
+
 import json
 import os
 import pathlib
@@ -44,14 +45,18 @@ ALLOWED = {"tests/dom_shim.mjs"}
 
 
 def _harness_files():
-    return sorted(p for p in (REPO / "tests/unit").glob("*.py")
-                  if "createElement" in p.read_text(encoding="utf-8"))
+    return sorted(p for p in (REPO / "tests/unit").glob("*.py") if "createElement" in p.read_text(encoding="utf-8"))
 
 
 def _run(script):
-    done = subprocess.run([node, "--input-type=module", "-e", script],
-                          capture_output=True, text=True, cwd=REPO, timeout=120,
-                          env={**os.environ, "BGA_DOM_SHIM": SHIM.as_uri()})
+    done = subprocess.run(
+        [node, "--input-type=module", "-e", script],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=120,
+        env={**os.environ, "BGA_DOM_SHIM": SHIM.as_uri()},
+    )
     assert done.returncode == 0, done.stderr
     return json.loads(done.stdout)
 
@@ -95,10 +100,9 @@ def _literal_around(source, index):
 
 def _hand_built_nodes(source):
     """Lines where an object literal defines its own `setAttribute`."""
-    return sorted({line for line in
-                   (_literal_around(source, m.start())
-                    for m in DEFINES.finditer(source))
-                   if line is not None})
+    return sorted(
+        {line for line in (_literal_around(source, m.start()) for m in DEFINES.finditer(source)) if line is not None}
+    )
 
 
 class TestThereIsOnlyOneShim:
@@ -126,15 +130,15 @@ class TestThereIsOnlyOneShim:
                 continue
             source = path.read_text(encoding="utf-8")
             for match in re.finditer(re.escape(HAND_BUILT), source):
-                offenders.setdefault(path.name, []).append(
-                    source[:match.start()].count("\n") + 1)
+                offenders.setdefault(path.name, []).append(source[: match.start()].count("\n") + 1)
         assert offenders == {}, (
             f"these harnesses hand-build a `document` instead of calling "
             f"`installDocument` from tests/dom_shim.mjs: {offenders}. "
             f"Pass what legitimately differs as overrides — a hand-built "
             f"one models only what its author thought of, which is how "
             f"UX-219 (createTextNode), UX-254 (querySelector) and UX-523 "
-            f"(documentElement) each cost a round (UX-537).")
+            f"(documentElement) each cost a round (UX-537)."
+        )
 
     def test_no_harness_builds_its_own_node(self):
         """The census. The *node* is the thing whose fidelity was wrong
@@ -161,12 +165,16 @@ class TestThereIsOnlyOneShim:
             f"these harnesses build their own DOM node instead of importing "
             f"tests/dom_shim.mjs: {offenders}. Three fidelity defects have "
             f"shipped because a shim disagreed with a browser and 25 copies "
-            f"all agreed with each other (UX-264).")
+            f"all agreed with each other (UX-264)."
+        )
 
     def test_every_harness_that_needs_a_node_imports_the_shim(self):
-        missing = [p.name for p in _harness_files()
-                   if "BGA_DOM_SHIM" not in p.read_text(encoding="utf-8")
-                   and p.name != "test_the_dom_shim_is_one_instrument.py"]
+        missing = [
+            p.name
+            for p in _harness_files()
+            if "BGA_DOM_SHIM" not in p.read_text(encoding="utf-8")
+            and p.name != "test_the_dom_shim_is_one_instrument.py"
+        ]
         assert missing == [], f"harnesses not using the shared shim: {missing}"
 
     def test_the_shim_is_reachable_without_knowing_the_cwd(self):
@@ -307,7 +315,8 @@ console.log(JSON.stringify({
         assert out == self.CHROME, (
             "the shim and the browser disagree. The browser is right; the "
             "measurements in CHROME came from Chrome 141 and are re-runnable "
-            "(see UX-263's Outcome for the driver).")
+            "(see UX-263's Outcome for the driver)."
+        )
 
     def test_a_selector_it_cannot_parse_is_loud(self):
         """The failure mode this replaces is worse than an error: a
@@ -326,18 +335,16 @@ console.log(JSON.stringify(Object.fromEntries(loud)));
 """)
         # `tr > td` is *supported* since `UX-271`; what must stay loud
         # is the shapes that are still not implemented.
-        assert out == {"tr > td": "quiet", "li:first-child": "threw",
-                       "a + b": "threw"}, out
+        assert out == {"tr > td": "quiet", "li:first-child": "threw", "a + b": "threw"}, out
 
     def test_it_says_what_it_cannot_do(self):
         """There is no layout engine, and the file must keep saying so:
         the moment it quietly returns zeroes for geometry, every
         geometric guard built on it becomes a lie (`UX-257`)."""
         source = SHIM.read_text(encoding="utf-8")
-        assert "getBoundingClientRect" not in source.replace(
-            "no `getBoundingClientRect`", ""), (
-            "the shim grew a layout API. It has no layout engine, so a "
-            "geometric answer from it is invented (UX-257)")
+        assert "getBoundingClientRect" not in source.replace("no `getBoundingClientRect`", ""), (
+            "the shim grew a layout API. It has no layout engine, so a geometric answer from it is invented (UX-257)"
+        )
         assert "There is no layout" in source
 
 

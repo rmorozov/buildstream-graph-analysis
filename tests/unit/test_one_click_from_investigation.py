@@ -11,6 +11,7 @@ read the same field.
 The alternative in both cases is a list of key names in the viewer,
 which is precisely what `UX-193` built the schema dispatch to avoid.
 """
+
 import contextlib
 import io
 import json
@@ -31,8 +32,7 @@ node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 #: `UX-544`: every harness in this file, and the ones importing
 #: `_node` from it, build their nodes with the one shim.
-SHIM = os.path.join(os.path.dirname(os.path.dirname(
-    os.path.abspath(__file__))), "dom_shim.mjs")
+SHIM = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dom_shim.mjs")
 
 
 def _report(run=GOLDEN):
@@ -45,10 +45,14 @@ def _report(run=GOLDEN):
 
 
 def _node(script, timeout=120):
-    result = subprocess.run([node, "--input-type=module", "-e", script],
-                            capture_output=True, text=True, cwd=os.getcwd(),
-                            timeout=timeout,
-                            env=dict(os.environ, BGA_DOM_SHIM=SHIM))
+    result = subprocess.run(
+        [node, "--input-type=module", "-e", script],
+        capture_output=True,
+        text=True,
+        cwd=os.getcwd(),
+        timeout=timeout,
+        env=dict(os.environ, BGA_DOM_SHIM=SHIM),
+    )
     assert result.returncode == 0, result.stderr
     return json.loads(result.stdout)
 
@@ -65,8 +69,7 @@ def _render(payload, timeout=120):
     with open(schema_path, "w", encoding="utf-8") as handle:
         json.dump(schemas.schema(payload["schema"]), handle)
     try:
-        return _node(_HARNESS % json.dumps([payload_path, schema_path]),
-                     timeout=timeout)
+        return _node(_HARNESS % json.dumps([payload_path, schema_path]), timeout=timeout)
     finally:
         shutil.rmtree(scratch, ignore_errors=True)
 
@@ -100,21 +103,18 @@ class TestTheSchemaCarriesTheVocabulary:
     def test_the_viewer_and_the_schema_agree_on_the_rails(self):
         """Two lists that happen to match today is the state `UX-214`
         found elsewhere in this same round."""
-        rails = _node('const n = await import("./bga/viewer/nav.js");'
-                      "console.log(JSON.stringify(n.RAILS));")
+        rails = _node('const n = await import("./bga/viewer/nav.js");console.log(JSON.stringify(n.RAILS));')
         assert rails == list(schemas.RAILS)
 
     def test_a_column_can_say_it_holds_element_uids(self):
-        columns = schemas.schema(schemas.BLAST)["properties"]["blast_tree"][
-            "bga:columns"]
+        columns = schemas.schema(schemas.BLAST)["properties"]["blast_tree"]["bga:columns"]
         roles = {c["key"]: c.get("role") for c in columns}
         assert roles["element_uid"] == "element"
         assert roles["depth"] is None, "only uid columns claim the role"
 
     def test_a_role_outside_the_closed_set_is_rejected(self):
         with pytest.raises(ValueError, match="role"):
-            schemas._check_hint("x/v1", "k", {schemas.COLUMNS: [
-                {"key": "a", "role": "mystery"}]})
+            schemas._check_hint("x/v1", "k", {schemas.COLUMNS: [{"key": "a", "role": "mystery"}]})
 
 
 @needs_node
@@ -123,7 +123,8 @@ class TestSectionsAreNamedAsQuestions:
         out = _node(
             'const a = await import("./tests/viewer.mjs");'
             'console.log(JSON.stringify(a.heading("floors",'
-            ' {"bga:question": "How much faster?", "bga:rail": "prove"})));')
+            ' {"bga:question": "How much faster?", "bga:rail": "prove"})));'
+        )
         assert out["label"] == "How much faster?"
         assert out["subtitle"] == "floors", "the key stays visible as a subtitle"
         assert out["rail"] == "prove"
@@ -131,8 +132,8 @@ class TestSectionsAreNamedAsQuestions:
     def test_no_question_falls_back_to_the_key(self):
         """The mutation asserted both ways, as the acceptance asks."""
         out = _node(
-            'const a = await import("./tests/viewer.mjs");'
-            'console.log(JSON.stringify(a.heading("floors", {})));')
+            'const a = await import("./tests/viewer.mjs");console.log(JSON.stringify(a.heading("floors", {})));'
+        )
         assert out["label"] == "Floors"
         assert out["subtitle"] is None
         assert out["rail"] == "raw", "no rail means raw, never nowhere"
@@ -179,8 +180,7 @@ class TestTheRailGroupsTheContents:
         out = _render(_report())
         # `UX-667`: a row now names its chapter's count too ("<title> ·
         # <n>"), and `UX-1044` its glyph ("▸ <title> · <n>").
-        rails = [re.sub(r"^[▸▾] ", "", re.split(r" · \d+$", one)[0])
-                 for one in out["toc_rails"]]
+        rails = [re.sub(r"^[▸▾] ", "", re.split(r" · \d+$", one)[0]) for one in out["toc_rails"]]
         assert rails, "the contents has no groups"
         titles = _chapter_titles()
         order = [title for title in titles if title in rails]
@@ -190,8 +190,7 @@ class TestTheRailGroupsTheContents:
         out = _render(_report())
         linked = [entry["key"] for entry in out["toc_links"]]
         assert len(linked) == len(set(linked)), "a section is in two groups"
-        assert set(linked) == set(out["sections"]), (
-            "the contents and the page disagree about what was rendered")
+        assert set(linked) == set(out["sections"]), "the contents and the page disagree about what was rendered"
 
     def test_a_section_lands_in_a_chapter_and_never_nowhere(self):
         """Not nowhere - the acceptance names this case. `UX-286` keeps
@@ -203,8 +202,7 @@ class TestTheRailGroupsTheContents:
         by_key = {e["key"]: e["rail"] for e in out["toc_links"]}
         for key, chapter in by_key.items():
             assert chapter in ids, (key, chapter)
-            assert chapter != "more", (
-                f"{key} is in no chapter; it fell through to Everything else")
+            assert chapter != "more", f"{key} is in no chapter; it fell through to Everything else"
 
 
 @needs_node
@@ -249,8 +247,7 @@ class TestInvestigationIsOneClickAway:
         it was sortable, filterable or one click from anywhere."""
         out = _render(_report())
         by_key = {t["key"]: t for t in out["tables"] if t["key"]}
-        for key in ("critical_path_detail", "optimization_horizon",
-                    "latent_heavies", "top_actions"):
+        for key in ("critical_path_detail", "optimization_horizon", "latent_heavies", "top_actions"):
             assert key in by_key, sorted(by_key)
             assert by_key[key]["element_column"] == "element_uid", by_key[key]
             assert by_key[key]["inspect"] == by_key[key]["rows"] > 0
@@ -262,7 +259,8 @@ class TestInvestigationIsOneClickAway:
             'const a = await import("./tests/viewer.mjs");'
             'console.log(JSON.stringify({'
             '  declared: a.elementColumn([{key: "element_uid", role: "element"}]),'
-            '  undeclared: a.elementColumn([{key: "element_uid"}]) }));')
+            '  undeclared: a.elementColumn([{key: "element_uid"}]) }));'
+        )
         assert out["declared"] == "element_uid"
         assert out["undeclared"] is None
 
@@ -278,7 +276,8 @@ class TestInvestigationIsOneClickAway:
             '  if (n.attrs && n.attrs["data-copy"]) found.push(n.attrs["data-copy"]);'
             '  (n.children ?? []).forEach(walk); })(q.renderQuestions(make));'
             'console.log(JSON.stringify({ copies: found,'
-            '  sql: q.QUESTIONS.map((x) => q.renderedSql(x)) }));')
+            '  sql: q.QUESTIONS.map((x) => q.renderedSql(x)) }));'
+        )
         assert out["copies"], "no SQL block offered a copy"
         # Set-wise, because the page groups the blocks by category and
         # declaration order is not render order. Both directions: no
@@ -290,11 +289,12 @@ class TestInvestigationIsOneClickAway:
         # library, once inside its category fold - so its SQL is
         # copyable from two places, and counting renders would make the
         # pitch look like a defect.
-        assert set(out["copies"]) == set(out["sql"]), (
-            "the copy text is not the block's exact SQL")
+        assert set(out["copies"]) == set(out["sql"]), "the copy text is not the block's exact SQL"
         assert len(out["copies"]) == len(out["sql"]) + 1, (
             "exactly one question is drawn twice - the worked example",
-            len(out["copies"]), len(out["sql"]))
+            len(out["copies"]),
+            len(out["sql"]),
+        )
 
     def test_the_top_n_preset_narrows_without_lying_about_the_total(self):
         out = _node(_TOP_N)
@@ -307,7 +307,8 @@ class TestInvestigationIsOneClickAway:
             'const t = await import("./bga/viewer/tables.js");'
             'console.log(JSON.stringify(t.presetColumns(['
             '  {key: "element_uid"}, {key: "duration_us", quantity: "duration_us"}'
-            '])));')
+            '])));'
+        )
         assert out == ["duration_us"]
 
     def test_blast_chips_come_from_the_published_ranking(self):
@@ -343,13 +344,16 @@ class TestTheWallOfQuestionsFolds:
             '  open: all(root, (n) => n.tagName === "details")'
             '    .filter((n) => n.attrs.open).length,'
             '  categories: q.CATEGORIES.length,'
-            '  text: text(root) }));')
+            '  text: text(root) }));'
+        )
         assert out["folds"] == out["categories"], out
         assert out["open"] == 0, "the fold opens itself"
         rendered = out["text"]
-        sql = _node('const q = await import("./bga/viewer/questions.js");'
-                    "console.log(JSON.stringify("
-                    "q.QUESTIONS.map((x) => q.renderedSql(x))));")
+        sql = _node(
+            'const q = await import("./bga/viewer/questions.js");'
+            "console.log(JSON.stringify("
+            "q.QUESTIONS.map((x) => q.renderedSql(x))));"
+        )
         for query in sql:
             assert query in rendered, query[:60]
 
@@ -372,8 +376,7 @@ class TestTheLongExplanationsMoveBehindAFold:
     def test_the_band_caption_states_the_answer_and_folds_the_rest(self):
         out = _node(_SHIM + _BAND_PROBE)
         assert out["caption"], out
-        assert out["caption"][0].endswith("so compare declines to call it."), (
-            out["caption"])
+        assert out["caption"][0].endswith("so compare declines to call it."), out["caption"]
         assert len(out["caption"][0]) < 160, "still a paragraph"
         assert len(out["folded"]) == 1, out["folded"]
         assert "Why this is not a regression" in out["folded"][0]
@@ -391,7 +394,9 @@ function make(tag) {
 _installDocument();
 """
 
-_HARNESS = _SHIM + """
+_HARNESS = (
+    _SHIM
+    + """
 const app = await import("./tests/viewer.mjs");
 const nav = await import("./bga/viewer/nav.js");
 const { readFileSync } = await import("node:fs");
@@ -486,8 +491,11 @@ console.log(JSON.stringify({
   }),
 }));
 """
+)
 
-_TOP_N = _SHIM + """
+_TOP_N = (
+    _SHIM
+    + """
 const app = await import("./tests/viewer.mjs");
 const tables = await import("./bga/viewer/tables.js");
 const rows = Array.from({length: 40}, (_, i) => ({
@@ -502,6 +510,7 @@ const visible = table.querySelectorAll("tbody tr").filter((tr) => !tr.hidden).le
 console.log(JSON.stringify({ shown, visible,
   badge: tables.badgeText(shown, rows.length) }));
 """
+)
 
 _CHIPS = """
 const views = await import("./tests/viewer.mjs");
@@ -530,7 +539,8 @@ console.log(JSON.stringify({
 }));
 """
 
-_TREND_PROBE = """
+_TREND_PROBE = (
+    """
 const views = await import("./tests/viewer.mjs");
 const rows = [
   { run_id: "a", total_duration_us: 100, incomplete_reason: null },
@@ -538,12 +548,15 @@ const rows = [
   { run_id: "c", total_duration_us: 110, incomplete_reason: "interrupted" },
 ];
 const node = views.renderTrend({ snapshots: rows });
-""" + _PROBE_TAIL
+"""
+    + _PROBE_TAIL
+)
 
 # The disputed shape `UX-170` names: the set's own high edge sits
 # outside the band its scatter produced, and the candidate lands in
 # between.
-_BAND_PROBE = """
+_BAND_PROBE = (
+    """
 const views = await import("./tests/viewer.mjs");
 const node = views.renderBand({
   baseline_band: { low_us: 99, high_us: 101, median_us: 100,
@@ -551,7 +564,9 @@ const node = views.renderBand({
                    edges_outside_band: 1 },
   candidate: { total_duration_us: 150 },
 });
-""" + _PROBE_TAIL
+"""
+    + _PROBE_TAIL
+)
 
 
 if __name__ == "__main__":  # pragma: no cover

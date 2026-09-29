@@ -22,6 +22,7 @@ file and deduplicates nothing. `UX-907` carries the question.
 Every field is `None` when unread, and `infinity` is a declared quota
 with no byte value rather than a quota of zero.
 """
+
 import os
 import shutil
 import time
@@ -52,8 +53,7 @@ def config_path(env: Optional[Mapping[str, str]] = None) -> Optional[str]:
     explicit = env.get("BST_USER_CONFIG")
     if explicit:
         return explicit if os.path.isfile(explicit) else None
-    config_home = env.get("XDG_CONFIG_HOME") or os.path.join(
-        os.path.expanduser("~"), ".config")
+    config_home = env.get("XDG_CONFIG_HOME") or os.path.join(os.path.expanduser("~"), ".config")
     for name in _CONFIG_NAMES:
         candidate = os.path.join(config_home, name)
         if os.path.isfile(candidate):
@@ -150,8 +150,7 @@ def _expand(value, env: Optional[Mapping[str, str]] = None) -> Optional[str]:
     if not isinstance(value, str):
         return None
     env = os.environ if env is None else env
-    cache_home = env.get("XDG_CACHE_HOME") or os.path.join(
-        os.path.expanduser("~"), ".cache")
+    cache_home = env.get("XDG_CACHE_HOME") or os.path.join(os.path.expanduser("~"), ".cache")
     expanded = value.replace("${XDG_CACHE_HOME}", cache_home)
     return None if "${" in expanded else expanded
 
@@ -160,8 +159,7 @@ def default_cachedir(env: Optional[Mapping[str, str]] = None) -> str:
     """Where BuildStream keeps its cache when the configuration is
     silent: `$XDG_CACHE_HOME/buildstream` (`data/userconfig.yaml`)."""
     env = os.environ if env is None else env
-    cache_home = env.get("XDG_CACHE_HOME") or os.path.join(
-        os.path.expanduser("~"), ".cache")
+    cache_home = env.get("XDG_CACHE_HOME") or os.path.join(os.path.expanduser("~"), ".cache")
     return os.path.join(cache_home, "buildstream")
 
 
@@ -208,8 +206,7 @@ def cas_size_bytes(cachedir: str, budget_s: float = WALK_BUDGET_S) -> tuple:
     return total, "cas_walk"
 
 
-def collect(env: Optional[Mapping[str, str]] = None, with_usage: bool = False,
-            config: Optional[dict] = None) -> dict:
+def collect(env: Optional[Mapping[str, str]] = None, with_usage: bool = False, config: Optional[dict] = None) -> dict:
     """The capacity block for the machine this is running on.
 
     `with_usage` is off by default because the walk is the only part
@@ -243,10 +240,8 @@ def collect(env: Optional[Mapping[str, str]] = None, with_usage: bool = False,
     if usage is not None:
         block["volume_total_bytes"] = usage.total
         block["volume_free_bytes"] = usage.free
-    block["quota_bytes"] = parse_size(
-        block["quota_declared"], block["volume_total_bytes"])
-    block["reserved_bytes"] = parse_size(
-        block["reserved_declared"], block["volume_total_bytes"])
+    block["quota_bytes"] = parse_size(block["quota_declared"], block["volume_total_bytes"])
+    block["reserved_bytes"] = parse_size(block["reserved_declared"], block["volume_total_bytes"])
     if with_usage:
         used, source = cas_size_bytes(cachedir)
         block["cache_used_bytes"] = used

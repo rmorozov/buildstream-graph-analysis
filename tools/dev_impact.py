@@ -20,6 +20,7 @@ filings     the open index                 same Topic (Area: UX-688)
 
 The tool lists; the session judges what a change may break.
 """
+
 import argparse
 import pathlib
 import re
@@ -50,14 +51,12 @@ def modules(target, stream=None):
     if target in (None, "", "-"):
         names = (stream or sys.stdin).read().split()
     elif re.fullmatch(r"UX-[0-9]+", target or ""):
-        hits = list((REPO / "docs/backlog/scenarios").glob(
-            f"UX-0*{target.split('-')[1]}-*.md"))
+        hits = list((REPO / "docs/backlog/scenarios").glob(f"UX-0*{target.split('-')[1]}-*.md"))
         text = hits[0].read_text(encoding="utf-8") if hits else ""
         names = re.findall(r"`((?:bga|tools)/[A-Za-z0-9_/]+\.py)`", text)
     else:
         names = [target]
-    return sorted({n for n in dict.fromkeys(names)
-                   if n.startswith(("bga/", "tools/"))})
+    return sorted({n for n in dict.fromkeys(names) if n.startswith(("bga/", "tools/"))})
 
 
 def contracts_of(module):
@@ -74,9 +73,11 @@ def contracts_of(module):
     """
     stem = pathlib.Path(module).stem
     names = {stem, command_of(module) or stem}
-    return sorted(cid for cid in contracts.inventory()
-                  if cid.split("/")[0].replace("-", "_") in names
-                  or cid.split("/")[0].split("-")[0] in names)
+    return sorted(
+        cid
+        for cid in contracts.inventory()
+        if cid.split("/")[0].replace("-", "_") in names or cid.split("/")[0].split("-")[0] in names
+    )
 
 
 def unplaced():
@@ -101,8 +102,7 @@ def findings_of(module):
         text = (REPO / module).read_text(encoding="utf-8")
     except OSError:
         return []
-    return sorted(i for i in findings.FINDING_READERS
-                  if re.search(rf"\b{re.escape(i)}\b", text))
+    return sorted(i for i in findings.FINDING_READERS if re.search(rf"\b{re.escape(i)}\b", text))
 
 
 def command_of(module):
@@ -127,8 +127,7 @@ def prose_of(module):
         base = REPO / root
         files = [base] if base.is_file() else sorted(base.rglob("*.md"))
         for doc in files:
-            for n, line in enumerate(
-                    doc.read_text(encoding="utf-8").splitlines(), 1):
+            for n, line in enumerate(doc.read_text(encoding="utf-8").splitlines(), 1):
                 if any(needle in line for needle in needles):
                     rows.append(f"{doc.relative_to(REPO)}:{n}")
     return rows
@@ -139,8 +138,7 @@ def styleguide_of(module):
     js = REPO / module
     if not module.startswith("bga/viewer/") or not js.exists():
         return []
-    return sorted(set(STYLEGUIDE_SECTION.findall(
-        js.read_text(encoding="utf-8"))))
+    return sorted(set(STYLEGUIDE_SECTION.findall(js.read_text(encoding="utf-8"))))
 
 
 def filings_of(module):
@@ -162,8 +160,7 @@ def _topic_of(module):
         return "viewer"
     if module.startswith("tools/"):
         return "guards"
-    return {"cli.py": "cli", "store.py": "store"}.get(
-        pathlib.Path(module).name, "analysis")
+    return {"cli.py": "cli", "store.py": "store"}.get(pathlib.Path(module).name, "analysis")
 
 
 #: A diff touching one of these is a design question as well as a
@@ -181,10 +178,8 @@ DESIGN_SURFACES = (
 def route(paths):
     """`(destination, reasons)`: `UX-701`'s rule, `UX-928`'s split - with a
     page path `design-review`, without `review`, no surface `self-review`."""
-    reasons = sorted({name for name, matches in DESIGN_SURFACES
-                      for path in paths if matches(path)})
-    page = any(p.startswith("bga/viewer/") or p.endswith((".mjs", ".css"))
-               for p in paths)
+    reasons = sorted({name for name, matches in DESIGN_SURFACES for path in paths if matches(path)})
+    page = any(p.startswith("bga/viewer/") or p.endswith((".mjs", ".css")) for p in paths)
     if reasons and page:
         return "design-review", reasons + ["the page"]
     return ("review" if reasons else "self-review"), reasons
@@ -205,25 +200,20 @@ def report(module):
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("target", nargs="?", default="-",
-                        help="`-` for paths on stdin, a UX-NNN, or a module")
-    parser.add_argument("--route", action="store_true",
-                        help="print where UX-701's rule sends this diff")
-    parser.add_argument("--rows", type=int, default=8,
-                        help="how many entries to print per row")
+    parser.add_argument("target", nargs="?", default="-", help="`-` for paths on stdin, a UX-NNN, or a module")
+    parser.add_argument("--route", action="store_true", help="print where UX-701's rule sends this diff")
+    parser.add_argument("--rows", type=int, default=8, help="how many entries to print per row")
     args = parser.parse_args(argv)
 
     if args.route:
-        paths = (sys.stdin.read().split() if args.target in (None, "", "-")
-                 else [args.target])
+        paths = sys.stdin.read().split() if args.target in (None, "", "-") else [args.target]
         where, why = route(paths)
         print(f"{where}" + (f"  ({', '.join(why)})" if why else ""))
         return 0
 
     left = unplaced()
     if left:
-        print(f"{len(left)} contract id(s) no module name claims: "
-              f"{', '.join(left)}\n")
+        print(f"{len(left)} contract id(s) no module name claims: {', '.join(left)}\n")
     found = modules(args.target)
     if not found:
         print(f"no bga/ or tools/ module in {args.target!r}")
@@ -233,11 +223,9 @@ def main(argv=None) -> int:
         for name, values in report(module).items():
             if not values:
                 continue
-            head = values[:args.rows]
-            more = f"  (+{len(values) - len(head)})" if len(
-                values) > len(head) else ""
-            print(f"  {name:<11} {len(values):>3}  "
-                  f"{', '.join(head)}{more}")
+            head = values[: args.rows]
+            more = f"  (+{len(values) - len(head)})" if len(values) > len(head) else ""
+            print(f"  {name:<11} {len(values):>3}  {', '.join(head)}{more}")
     return 0
 
 

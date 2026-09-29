@@ -27,6 +27,7 @@ and the sentence is preserved rather than dropped. Recorded here
 because a filing's premise being false is the kind of thing the next
 round should be able to find.
 """
+
 import json
 import pathlib
 import sys
@@ -50,12 +51,20 @@ def _records(signatures, elements):
     out = []
     for index in range(signatures):
         for name in names:
-            out.append({
-                "element": name, "cmd": f"cc -c file{index}.c",
-                "open": False, "start_ts": 0.0, "end_ts": 1.0,
-                "duration_s": 1.0, "pid": index, "src": "hook",
-                "invocation": "1", "exec_chain": 1,
-            })
+            out.append(
+                {
+                    "element": name,
+                    "cmd": f"cc -c file{index}.c",
+                    "open": False,
+                    "start_ts": 0.0,
+                    "end_ts": 1.0,
+                    "duration_s": 1.0,
+                    "pid": index,
+                    "src": "hook",
+                    "invocation": "1",
+                    "exec_chain": 1,
+                }
+            )
     return out
 
 
@@ -73,14 +82,12 @@ def _names_in(finding):
         if isinstance(value, str):
             total += value.endswith(".bst")
         elif isinstance(value, (list, tuple)):
-            total += sum(isinstance(item, str) and item.endswith(".bst")
-                         for item in value)
+            total += sum(isinstance(item, str) and item.endswith(".bst") for item in value)
     return total
 
 
 def _section_bytes(elements):
-    findings, _coverage = detect_redundant_operations(
-        _records(REDUNDANCY_FINDINGS_MAX + 20, elements))
+    findings, _coverage = detect_redundant_operations(_records(REDUNDANCY_FINDINGS_MAX + 20, elements))
     return len(json.dumps(findings, separators=(",", ":"))), findings
 
 
@@ -117,7 +124,8 @@ class TestTheSectionIsBoundedInBothDimensions:
         assert huge < small * 1.1, (
             f"the section is {small:,} B over 40 elements and {huge:,} B "
             f"over 1,200 - something in a row still scales with the "
-            f"population")
+            f"population"
+        )
 
     def test_a_row_names_exactly_one_element_whatever_the_population(self):
         """The term that was linear, pinned directly. One name per row -
@@ -129,15 +137,12 @@ class TestTheSectionIsBoundedInBothDimensions:
             named = [_names_in(finding) for finding in findings]
             assert set(named) == {1}, (elements, sorted(set(named)))
             widths.append(sum(len(f["worst_element"]) for f in findings))
-        assert len(set(widths)) == 1, (
-            f"the bytes spent on element names move with the population: "
-            f"{widths}")
+        assert len(set(widths)) == 1, f"the bytes spent on element names move with the population: {widths}"
 
     def test_no_finding_names_an_element_it_merely_spans(self):
         _size, findings = _section_bytes(400)
         carrying = [f for f in findings if "elements" in f]
-        assert carrying == [], (
-            f"{len(carrying)} finding(s) still carry the list")
+        assert carrying == [], f"{len(carrying)} finding(s) still carry the list"
 
 
 class TestTheWidthIsStillPublished:
@@ -167,19 +172,16 @@ class TestTheSentenceCorrelateWritesIsUnchanged:
         `element_count`; `tests/fixtures/macro_micro/plane2.json` is
         one. The sentence has to say the same thing about them, so the
         list is still read when it is the only thing there."""
-        assert _other_element_count(
-            {"elements": ["a.bst", "b.bst", "c.bst"]}) == 2
+        assert _other_element_count({"elements": ["a.bst", "b.bst", "c.bst"]}) == 2
 
     def test_the_committed_fixture_is_such_a_report(self):
-        report = json.loads(
-            (REPO / "tests/fixtures/macro_micro/plane2.json"
-             ).read_text(encoding="utf-8"))
+        report = json.loads((REPO / "tests/fixtures/macro_micro/plane2.json").read_text(encoding="utf-8"))
         findings = report.get("redundant_operations") or []
         assert findings, "the fixture has no redundancy findings"
         assert "elements" in findings[0]
         assert "element_count" not in findings[0], (
-            "the fixture gained a count, so this clause no longer "
-            "exercises the older shape it exists for")
+            "the fixture gained a count, so this clause no longer exercises the older shape it exists for"
+        )
 
     def test_a_finding_with_neither_does_not_crash(self):
         assert _other_element_count({}) == 0
@@ -198,13 +200,12 @@ class TestTheContractMoved:
     def test_the_shape_it_replaced_is_inventoried_as_read(self):
         assert plane2.PREVIOUS_SCHEMA == "plane2/v2"
         assert "plane2/v2" in contracts.superseded(), (
-            "the shape a store is full of is not declared as one the "
-            "tool still opens")
+            "the shape a store is full of is not declared as one the tool still opens"
+        )
         assert "plane2/v2" not in contracts.printable()
 
     def test_the_whole_chain_is_still_openable(self):
-        for shape in (plane2.SCHEMA, plane2.PREVIOUS_SCHEMA,
-                      plane2.LEGACY_SCHEMA):
+        for shape in (plane2.SCHEMA, plane2.PREVIOUS_SCHEMA, plane2.LEGACY_SCHEMA):
             assert shape in contracts.ids(), shape
 
     def test_an_unstamped_report_still_reads_as_the_legacy_shape(self):

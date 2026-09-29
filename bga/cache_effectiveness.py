@@ -20,6 +20,7 @@ run's own spans say where the time went. Every field is None rather than
 0 when the capture does not record it, on this codebase's standing rule
 that "not measured" and "measured as none" are different facts.
 """
+
 from typing import Optional
 
 from .cache_capacity import parse_percentage
@@ -116,9 +117,10 @@ def _transfer_window_us(tasks) -> Optional[int]:
     `None` when the run has no transfer span at all.
     """
     spans = sorted(
-        (task.start_us, task.finish_us) for task in tasks or []
-        if getattr(getattr(task, 'primary_resource', None), 'value',
-                   getattr(task, 'primary_resource', None)) in ('DOWNLOAD', 'UPLOAD')
+        (task.start_us, task.finish_us)
+        for task in tasks or []
+        if getattr(getattr(task, 'primary_resource', None), 'value', getattr(task, 'primary_resource', None))
+        in ('DOWNLOAD', 'UPLOAD')
     )
     if not spans:
         return None
@@ -236,8 +238,9 @@ def compute_artifact_weights(run_context, top: int = 5) -> dict:
     """
     recorded = getattr(run_context, 'artifact_weights', None) or {}
     rows = recorded.get('elements') or {}
-    walked = {uid: row for uid, row in rows.items()
-              if row.get('source') == 'cas_walk' and row.get('files_bytes') is not None}
+    walked = {
+        uid: row for uid, row in rows.items() if row.get('source') == 'cas_walk' and row.get('files_bytes') is not None
+    }
     if not walked:
         return {}
     unique = recorded.get('run_unique_bytes')
@@ -254,15 +257,17 @@ def compute_artifact_weights(run_context, top: int = 5) -> dict:
         # deduplicated total to subtract from.
         'shared_bytes': (total - unique) if isinstance(unique, int) else None,
         'heaviest': [
-            {'element': uid, 'files_bytes': row['files_bytes'],
-             'buildtree_bytes': row.get('buildtree_bytes')}
+            {'element': uid, 'files_bytes': row['files_bytes'], 'buildtree_bytes': row.get('buildtree_bytes')}
             for uid, row in ranked[:top]
         ],
     }
 
 
 def compute_cache_accounting(
-    run_context, graph=None, tasks=None, total_duration_us: Optional[int] = None,
+    run_context,
+    graph=None,
+    tasks=None,
+    total_duration_us: Optional[int] = None,
     network_bytes: Optional[dict] = None,
 ) -> dict:
     """UX-92 stage 1: the cache's own report card for one run.
@@ -281,8 +286,7 @@ def compute_cache_accounting(
     # same terms - a capture that walked the CAS gets a block whether or
     # not the log says what the queues did.
     weights = compute_artifact_weights(run_context)
-    machine = {key: block for key, block in
-               (('capacity', capacity), ('artifact_weights', weights)) if block}
+    machine = {key: block for key, block in (('capacity', capacity), ('artifact_weights', weights)) if block}
     if not build and not fetch:
         return machine
 
@@ -317,8 +321,7 @@ def compute_cache_accounting(
         if moved:
             accounting['transfer_bytes'] = moved
             if window_us:
-                accounting['transfer_rate_bytes_per_s'] = (
-                    moved['total'] / (window_us / 1e6))
+                accounting['transfer_rate_bytes_per_s'] = moved['total'] / (window_us / 1e6)
 
     # The requested target's own closure, which is the number a build
     # owner actually asked about: a project-wide 72% means little when
@@ -327,7 +330,8 @@ def compute_cache_accounting(
     if targets and graph is not None:
         closure = _closure(graph, targets)
         built_uids = {
-            task.task_key.element_uid for task in (tasks or [])
+            task.task_key.element_uid
+            for task in (tasks or [])
             if getattr(task.task_key, 'task_kind', None) is not None
             and getattr(task.task_key.task_kind, 'value', '') == 'BUILD'
         }
@@ -341,9 +345,7 @@ def compute_cache_accounting(
             # this run did not build, and `UX-55` established that is
             # what "cached" means in a capture.
             'cached': len(closure) - len(in_closure_built),
-            'hit_share': (
-                (len(closure) - len(in_closure_built)) / len(closure) if closure else None
-            ),
+            'hit_share': ((len(closure) - len(in_closure_built)) / len(closure) if closure else None),
         }
     accounting.update(machine)
     return accounting
@@ -390,8 +392,11 @@ def _churn_precondition(
 
 
 def compute_cache_churn(
-    baseline_elements, candidate_elements, dependencies,
-    candidate_built: set[str], candidate_durations: dict[str, int],
+    baseline_elements,
+    candidate_elements,
+    dependencies,
+    candidate_built: set[str],
+    candidate_durations: dict[str, int],
     baseline_built: Optional[set[str]] = None,
     candidate_run_mode: Optional[str] = None,
     baseline_run_mode: Optional[str] = None,
@@ -463,8 +468,7 @@ def compute_cache_churn(
     candidate_keys = {e.uid: e.cache_key for e in candidate_elements if e.cache_key}
     # UX-173: the graph already carries `element_kind`; the invalidation
     # note is one of the places that was counting without it.
-    candidate_kinds = {e.uid: (getattr(e, 'element_kind', None) or 'unknown')
-                       for e in candidate_elements}
+    candidate_kinds = {e.uid: (getattr(e, 'element_kind', None) or 'unknown') for e in candidate_elements}
     comparable = set(baseline_keys) & set(candidate_keys)
     if not comparable:
         return {}
@@ -478,7 +482,9 @@ def compute_cache_churn(
         'changed_keys': len(changed),
     }
     not_applicable = _churn_precondition(
-        candidate_run_mode, baseline_run_mode, baseline_built,
+        candidate_run_mode,
+        baseline_run_mode,
+        baseline_built,
     )
     if not_applicable:
         return {**accounting, 'applicable': False, **not_applicable}
@@ -520,17 +526,19 @@ def compute_cache_churn(
         # different fact from one that invalidated seven compilers, and
         # the count alone says they are the same.
         building, assembling = split_by_kind(rebuilt_downstream, candidate_kinds)
-        roots.append({
-            'element_uid': uid,
-            'baseline_cache_key': baseline_keys[uid],
-            'candidate_cache_key': candidate_keys[uid],
-            'rebuilt': uid in candidate_built,
-            'duration_us': candidate_durations.get(uid, 0),
-            'downstream_rebuilt': len(rebuilt_downstream),
-            'downstream_building': building,
-            'downstream_assembling': assembling,
-            'downstream_us': sum(candidate_durations.get(d, 0) for d in rebuilt_downstream),
-        })
+        roots.append(
+            {
+                'element_uid': uid,
+                'baseline_cache_key': baseline_keys[uid],
+                'candidate_cache_key': candidate_keys[uid],
+                'rebuilt': uid in candidate_built,
+                'duration_us': candidate_durations.get(uid, 0),
+                'downstream_rebuilt': len(rebuilt_downstream),
+                'downstream_building': building,
+                'downstream_assembling': assembling,
+                'downstream_us': sum(candidate_durations.get(d, 0) for d in rebuilt_downstream),
+            }
+        )
 
     return {
         **accounting,

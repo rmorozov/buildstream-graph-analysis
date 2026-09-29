@@ -14,6 +14,7 @@ paths it places 300, and the rest are the `AREA_UNKNOWN` bucket
 `UX-501` established for exactly this - a population no derivation
 reaches, left visible instead of distributed by guesswork.
 """
+
 import pathlib
 import sys
 
@@ -29,7 +30,6 @@ FIRST = 688
 
 
 class TestTheVocabularyIsTheModuleTree:
-
     def test_the_areas_come_from_the_fixing_guide(self):
         areas = dev_close_task.declared_areas()
         assert "bga/floors" in areas and "bga/graph" in areas, sorted(areas)
@@ -37,8 +37,7 @@ class TestTheVocabularyIsTheModuleTree:
 
     def test_an_area_outside_the_tree_is_a_problem(self):
         """The row's own mutation, run in-process on a fake header."""
-        assert dev_close_task.header_area(
-            "**Topic:** guards | **Area:** bga/nowhere") == "bga/nowhere"
+        assert dev_close_task.header_area("**Topic:** guards | **Area:** bga/nowhere") == "bga/nowhere"
         assert "bga/nowhere" not in dev_close_task.declared_areas()
 
 
@@ -59,40 +58,39 @@ class TestEveryTopLevelDirectoryIsRead:
         areas = dev_close_task.declared_areas()
         assert {"tests", "tests/unit"} <= areas, sorted(areas)
 
-    def test_a_row_declaring_tests_passes_and_a_stray_one_does_not(
-            self, monkeypatch):
-        monkeypatch.setattr(dev_close_task, "file_areas", lambda: {
-            "UX-1": "tests", "UX-2": "tests/unit", "UX-3": "bga/nowhere"})
+    def test_a_row_declaring_tests_passes_and_a_stray_one_does_not(self, monkeypatch):
+        monkeypatch.setattr(
+            dev_close_task, "file_areas", lambda: {"UX-1": "tests", "UX-2": "tests/unit", "UX-3": "bga/nowhere"}
+        )
         found = dev_close_task.area_problems()
         assert len(found) == 1 and "UX-3" in found[0], found
 
-    def test_a_line_leaving_the_tree_leaves_the_vocabulary(
-            self, tmp_path, monkeypatch):
+    def test_a_line_leaving_the_tree_leaves_the_vocabulary(self, tmp_path, monkeypatch):
         """The discriminating one: a fix that types `tests/unit` passes
         the clauses above and fails this."""
-        self._guide(tmp_path, monkeypatch, lambda text: "\n".join(
-            line for line in text.splitlines()
-            if not line.startswith("tests/unit/ ")))
+        self._guide(
+            tmp_path,
+            monkeypatch,
+            lambda text: "\n".join(line for line in text.splitlines() if not line.startswith("tests/unit/ ")),
+        )
         areas = dev_close_task.declared_areas()
         assert "tests/unit" not in areas and "tests" in areas, sorted(areas)
 
-    def test_a_line_joining_the_tree_joins_the_vocabulary(
-            self, tmp_path, monkeypatch):
-        self._guide(tmp_path, monkeypatch, lambda text: text.replace(
-            "\ntests/unit/ ", "\nnowhere/deep/  x\ntests/unit/ ", 1))
+    def test_a_line_joining_the_tree_joins_the_vocabulary(self, tmp_path, monkeypatch):
+        self._guide(
+            tmp_path, monkeypatch, lambda text: text.replace("\ntests/unit/ ", "\nnowhere/deep/  x\ntests/unit/ ", 1)
+        )
         assert {"nowhere", "nowhere/deep"} <= dev_close_task.declared_areas()
 
 
 class TestEveryRowFiledSinceCarriesOne:
-
     def test_the_rows_this_item_introduced_declare_an_area(self):
         missing = []
         for path in sorted(dev_close_task.SCENARIOS.glob("UX-*.md")):
             if not dev_close_task._FILE_ID.match(path.name):
                 continue
             uid = int(path.name.split("-")[1])
-            if uid >= FIRST and not dev_close_task.header_area(
-                    path.read_text(encoding="utf-8")):
+            if uid >= FIRST and not dev_close_task.header_area(path.read_text(encoding="utf-8")):
                 missing.append(path.name)
         assert not missing, f"filed since UX-{FIRST} without an Area: {missing}"
 
@@ -103,8 +101,7 @@ class TestEveryRowFiledSinceCarriesOne:
         """`== []` passes whatever the property does — the first cut of
         this clause survived deleting the comparison. So the population
         is replaced with one known-bad row and the report must name it."""
-        monkeypatch.setattr(dev_close_task, "file_areas",
-                            lambda: {"UX-1": "bga/nowhere"})
+        monkeypatch.setattr(dev_close_task, "file_areas", lambda: {"UX-1": "bga/nowhere"})
         found = dev_close_task.area_problems()
         assert len(found) == 1 and "bga/nowhere" in found[0], found
 
@@ -141,26 +138,21 @@ class TestTheGeneratedPageLinksItsHandWrittenMechanism:
 
     def test_an_area_with_a_hand_written_page_carries_the_line(self):
         name = "bga-viewer.md"
-        assert (dev_area_pages.DESIGN_AREA_PAGES / name).exists(), (
-            "fixture missing: docs/design/areas/bga-viewer.md")
+        assert (dev_area_pages.DESIGN_AREA_PAGES / name).exists(), "fixture missing: docs/design/areas/bga-viewer.md"
         text = self._body(name)
-        assert (f"Mechanism: [docs/design/areas/{name}]"
-                f"(../../design/areas/{name})") in text, text[:300]
+        assert (f"Mechanism: [docs/design/areas/{name}](../../design/areas/{name})") in text, text[:300]
 
     def test_an_area_with_no_hand_written_page_carries_nothing(self):
         name = "bga-attribution.md"
         assert not (dev_area_pages.DESIGN_AREA_PAGES / name).exists(), (
-            "fixture assumption broken: docs/design/areas/"
-            "bga-attribution.md now exists")
+            "fixture assumption broken: docs/design/areas/bga-attribution.md now exists"
+        )
         text = self._body(name)
         assert "Mechanism:" not in text, text[:300]
 
     def test_the_bga_area_gained_its_hand_written_page(self):
         """`UX-816`: `bga` was the first area with rows and no page."""
         name = "bga.md"
-        assert (dev_area_pages.DESIGN_AREA_PAGES / name).exists(), (
-            "fixture missing: docs/design/areas/bga.md")
+        assert (dev_area_pages.DESIGN_AREA_PAGES / name).exists(), "fixture missing: docs/design/areas/bga.md"
         text = self._body(name)
-        assert (f"Mechanism: [docs/design/areas/{name}]"
-                f"(../../design/areas/{name})") in text, text[:300]
-
+        assert (f"Mechanism: [docs/design/areas/{name}](../../design/areas/{name})") in text, text[:300]

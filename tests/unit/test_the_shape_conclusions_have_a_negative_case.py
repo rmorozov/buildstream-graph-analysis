@@ -22,6 +22,7 @@ Two things it found on its first run are **not** asserted here, because
 the pasted evidence and the clause that will close it. This file
 asserts what holds today, so it cannot go quietly green over either.
 """
+
 import contextlib
 import io
 import json
@@ -30,9 +31,14 @@ import pytest
 
 from tests.fixtures import topologies as topo
 
-SHAPE_FINDINGS = {"mesh-graph", "chain-graph", "graph-width",
-                  "criticality", "blast-radius-ranking",
-                  "blast-radius-structural"}
+SHAPE_FINDINGS = {
+    "mesh-graph",
+    "chain-graph",
+    "graph-width",
+    "criticality",
+    "blast-radius-ranking",
+    "blast-radius-structural",
+}
 
 
 def _payload(tmp_path, topology, name):
@@ -41,8 +47,7 @@ def _payload(tmp_path, topology, name):
 
     run = topo.write_run_dir(tmp_path, topology, name=name)
     buffer = io.StringIO()
-    with contextlib.redirect_stdout(buffer), \
-            contextlib.redirect_stderr(io.StringIO()):
+    with contextlib.redirect_stdout(buffer), contextlib.redirect_stderr(io.StringIO()):
         main(["analyze", str(run), "--format", "json"])
     return json.loads(buffer.getvalue())
 
@@ -54,15 +59,13 @@ def _by_id(payload):
 @pytest.fixture(scope="module")
 def wide(tmp_path_factory):
     """T1: a shared base, six dependents, two longest paths near-tied."""
-    return _payload(tmp_path_factory.mktemp("wide"),
-                    topo.shared_base_wide(), "wide")
+    return _payload(tmp_path_factory.mktemp("wide"), topo.shared_base_wide(), "wide")
 
 
 @pytest.fixture(scope="module")
 def chain(tmp_path_factory):
     """The flattest graph there is: one path, no contest, no fan."""
-    return _payload(tmp_path_factory.mktemp("chain"),
-                    topo.linear_chain(n=5), "chain")
+    return _payload(tmp_path_factory.mktemp("chain"), topo.linear_chain(n=5), "chain")
 
 
 @pytest.fixture(scope="module")
@@ -71,16 +74,14 @@ def crowd(tmp_path_factory):
     crowd of independent work that makes the run scheduler-bound. The
     only committed shape on which a blast-radius *ranking* orders
     anything."""
-    return _payload(tmp_path_factory.mktemp("crowd"),
-                    topo.a_chain_beside_a_crowd(), "crowd")
+    return _payload(tmp_path_factory.mktemp("crowd"), topo.a_chain_beside_a_crowd(), "crowd")
 
 
 @pytest.fixture(scope="module")
 def flat(tmp_path_factory):
     """Independent elements, capacity above demand: nothing waits on
     anything, so no shape question has an answer."""
-    return _payload(tmp_path_factory.mktemp("flat"),
-                    topo.ample_capacity(), "flat")
+    return _payload(tmp_path_factory.mktemp("flat"), topo.ample_capacity(), "flat")
 
 
 class TestTheConclusionFollowsFromThePublishedNumbers:
@@ -123,8 +124,7 @@ class TestTheConclusionFollowsFromThePublishedNumbers:
 
         for uid in finding["elements"]:
             assert uid in radius, uid
-            assert f"{radius[uid]['downstream_count']} downstream" in \
-                " ".join(finding["detail"])
+            assert f"{radius[uid]['downstream_count']} downstream" in " ".join(finding["detail"])
 
     def test_the_ranking_orders_counts_that_actually_differ(self, crowd):
         """What `UX-474` was filed for, as a positive: three rows whose
@@ -132,8 +132,7 @@ class TestTheConclusionFollowsFromThePublishedNumbers:
         ordering over a constant is not a ranking."""
         finding = _by_id(crowd)["blast-radius-ranking"]
         radius = crowd["elements"]["blast_radius"]
-        counts = [radius[uid]["downstream_count"]
-                  for uid in finding["elements"]]
+        counts = [radius[uid]["downstream_count"] for uid in finding["elements"]]
 
         assert counts == sorted(counts, reverse=True), counts
         assert len(set(counts)) == len(counts) > 1, counts
@@ -177,8 +176,8 @@ class TestTheShapeThatOffersNothing:
         radius = chain["elements"]["blast_radius"]
 
         assert max(r["downstream_count"] for r in radius.values()) > 0, (
-            "the chain has no downstream counts at all, so this clause "
-            "would pass for the wrong reason")
+            "the chain has no downstream counts at all, so this clause would pass for the wrong reason"
+        )
         assert "blast-radius-ranking" not in published
         assert "blast-radius-structural" not in published
 
@@ -244,9 +243,11 @@ class TestTheShapeThatOffersNothing:
         discriminating. None does - which is the property `UX-120`'s
         inert detector did not have."""
         for name in SHAPE_FINDINGS:
-            fired = [label for label, payload
-                     in (("wide", wide), ("chain", chain), ("flat", flat))
-                     if name in _by_id(payload)]
+            fired = [
+                label
+                for label, payload in (("wide", wide), ("chain", chain), ("flat", flat))
+                if name in _by_id(payload)
+            ]
             assert len(fired) < 3, f"{name} fires on every shape: {fired}"
 
 
@@ -254,8 +255,7 @@ class TestThePreconditionsTheFiledRowsRestOn:
     """`UX-474` and `UX-475` are rows, not fixes, so their evidence has
     to keep existing or the rows become unreproducible."""
 
-    def test_nothing_is_ranked_where_every_candidate_reaches_nothing(
-            self, wide):
+    def test_nothing_is_ranked_where_every_candidate_reaches_nothing(self, wide):
         """`UX-474`, closed. This clause used to pin the defect: the
         ranking excluded structural elements - correctly, `UX-258` - and
         published the six that were left, every one of them at zero:
@@ -272,8 +272,7 @@ class TestThePreconditionsTheFiledRowsRestOn:
         published as "Most Worth Optimizing First".
         """
         radius = wide["elements"]["blast_radius"]
-        with_reach = [uid for uid, r in radius.items()
-                      if r["downstream_count"] > 0]
+        with_reach = [uid for uid, r in radius.items() if r["downstream_count"] > 0]
 
         assert with_reach == ["toolchain.bst"]
         assert radius["toolchain.bst"]["is_structural_kind"]
@@ -299,8 +298,7 @@ class TestThePreconditionsTheFiledRowsRestOn:
         assert "mesh-graph" not in found, sorted(found)
         finding = found["chain-graph"]
 
-        assert finding["evidence"] == {"zero_slack_share": 1.0,
-                                       "zero_slack_off_path": 0}
+        assert finding["evidence"] == {"zero_slack_share": 1.0, "zero_slack_off_path": 0}
         assert "mesh" not in finding["title"], finding["title"]
         assert "its own duration" in finding["title"], finding["title"]
 
@@ -317,8 +315,7 @@ def mesh(tmp_path_factory):
 def two_paths(tmp_path_factory):
     """The minimum mesh: `a -> {b, c} -> d`, `b` and `c` equal. One of
     the two is off whichever path is reported."""
-    return _payload(tmp_path_factory.mktemp("two_paths"),
-                    topo.diamond(), "two_paths")
+    return _payload(tmp_path_factory.mktemp("two_paths"), topo.diamond(), "two_paths")
 
 
 class TestTheChainAndTheMeshGetDifferentSentences:
@@ -365,16 +362,14 @@ class TestTheChainAndTheMeshGetDifferentSentences:
         assert "chain-graph" not in found, sorted(found)
         assert found["mesh-graph"]["evidence"]["zero_slack_off_path"] == 1
 
-    def test_the_two_shapes_agree_on_the_share_and_differ_on_the_count(
-            self, mesh, chain):
+    def test_the_two_shapes_agree_on_the_share_and_differ_on_the_count(self, mesh, chain):
         """The pair that carries the file. Both graphs report
         `zero_slack_share: 1.0` - the number the old detector read - and
         the tool now says opposite things about them."""
         mesh_finding = _by_id(mesh)["mesh-graph"]
         chain_finding = _by_id(chain)["chain-graph"]
 
-        assert (mesh_finding["evidence"]["zero_slack_share"]
-                == chain_finding["evidence"]["zero_slack_share"] == 1.0)
+        assert mesh_finding["evidence"]["zero_slack_share"] == chain_finding["evidence"]["zero_slack_share"] == 1.0
         assert mesh_finding["evidence"]["zero_slack_off_path"] > 0
         assert chain_finding["evidence"]["zero_slack_off_path"] == 0
         assert "capped by the next chain" in mesh_finding["title"]
@@ -384,8 +379,7 @@ class TestTheChainAndTheMeshGetDifferentSentences:
         """`UX-478` is the row about that reader being absent; this
         keeps the split from costing it the one finding it had."""
         for payload, name in ((mesh, "mesh-graph"), (chain, "chain-graph")):
-            reader = next((r for r in payload["readers"]
-                           if r["id"] == "graph-owner"), None)
+            reader = next((r for r in payload["readers"] if r["id"] == "graph-owner"), None)
             assert reader is not None, [r["id"] for r in payload["readers"]]
             assert name in reader["findings"], reader
 
@@ -410,8 +404,7 @@ class TestTheGraphOwnerHasAFindingThatReadsNoDuration:
     `graph-width` reads `elements.unweighted_depth` and nothing else.
     """
 
-    def test_the_same_graph_at_two_speeds_says_the_same_thing(
-            self, tmp_path_factory):
+    def test_the_same_graph_at_two_speeds_says_the_same_thing(self, tmp_path_factory):
         """The clause that carries the file. One graph, durations an
         order of magnitude apart - which is the pair that made `UX-478`
         reproducible - and the shape claim is identical.
@@ -420,14 +413,13 @@ class TestTheGraphOwnerHasAFindingThatReadsNoDuration:
         """
         seen = {}
         for label, us in (("slow", 30_000_000), ("fast", 1_000_000)):
-            payload = _payload(tmp_path_factory.mktemp(f"speed_{label}"),
-                               topo.linear_chain(n=5, duration_us=us),
-                               f"speed_{label}")
+            payload = _payload(
+                tmp_path_factory.mktemp(f"speed_{label}"), topo.linear_chain(n=5, duration_us=us), f"speed_{label}"
+            )
             found = _by_id(payload)
             assert "graph-width" in found, sorted(found)
             seen[label] = found["graph-width"]["evidence"]
-        assert seen["slow"] == seen["fast"] == {
-            "element_count": 5, "dependency_stages": 5, "widest_stage": 1}, seen
+        assert seen["slow"] == seen["fast"] == {"element_count": 5, "dependency_stages": 5, "widest_stage": 1}, seen
 
     def test_it_names_the_ceiling_no_capacity_lifts(self, chain):
         finding = _by_id(chain)["graph-width"]
@@ -447,21 +439,17 @@ class TestTheGraphOwnerHasAFindingThatReadsNoDuration:
         be this graph's, or the finding is a constant with a sentence
         around it."""
         finding = _by_id(wide)["graph-width"]
-        assert finding["evidence"] == {
-            "element_count": 7, "dependency_stages": 2, "widest_stage": 6}
+        assert finding["evidence"] == {"element_count": 7, "dependency_stages": 2, "widest_stage": 6}
 
-    def test_the_graph_owner_is_offered_on_every_shape_that_has_one(
-            self, wide, chain, flat, mesh):
+    def test_the_graph_owner_is_offered_on_every_shape_that_has_one(self, wide, chain, flat, mesh):
         """The defect as the reader saw it. R3 is now offered on all
         four - three by `graph-width`, the flat set by `criticality`,
         which is the shape where a ceiling would be a lie."""
-        for label, payload in (("wide", wide), ("chain", chain),
-                               ("flat", flat), ("mesh", mesh)):
+        for label, payload in (("wide", wide), ("chain", chain), ("flat", flat), ("mesh", mesh)):
             ids = [r["id"] for r in payload["readers"]]
             assert "graph-owner" in ids, (label, ids)
 
-    def test_the_stages_are_the_graph_and_not_the_measured_path(
-            self, tmp_path_factory):
+    def test_the_stages_are_the_graph_and_not_the_measured_path(self, tmp_path_factory):
         """The clause a mutation asked for. Reading the critical path's
         length instead of the graph's depth passed every clause above,
         because on every other committed shape the two numbers are
@@ -472,11 +460,8 @@ class TestTheGraphOwnerHasAFindingThatReadsNoDuration:
         path is two elements, because the shallow predecessor was made
         heavy enough to carry it.
         """
-        payload = _payload(tmp_path_factory.mktemp("deep"),
-                           topo.deep_unequal_predecessors(shallow_us=90_000),
-                           "deep")
-        path = [row["element_uid"] for row
-                in _by_id(payload)["time-concentration"]["evidence"]["rows"]]
+        payload = _payload(tmp_path_factory.mktemp("deep"), topo.deep_unequal_predecessors(shallow_us=90_000), "deep")
+        path = [row["element_uid"] for row in _by_id(payload)["time-concentration"]["evidence"]["rows"]]
         assert path[:2] == ["shallow.bst", "target.bst"], path
         evidence = _by_id(payload)["graph-width"]["evidence"]
         assert evidence["dependency_stages"] == 4, evidence

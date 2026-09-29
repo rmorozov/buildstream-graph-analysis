@@ -17,6 +17,7 @@ believable for 4 builders x 4 jobs plus their shell and `make` wrappers.
 So this was a symptom of `UX-56` rather than an independent defect, and
 `UX-56`'s sandbox id is what fixes it.
 """
+
 from tools.bst_native_build_tracer import (
     compute_max_concurrency,
     pair_events,

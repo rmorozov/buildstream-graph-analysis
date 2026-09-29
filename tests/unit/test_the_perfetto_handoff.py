@@ -14,6 +14,7 @@ page keeps saying it.
 The handshake is driven by a scripted `window` double under Node, so
 what is tested is the shipped `perfetto.js` and CI needs no browser.
 """
+
 import gzip
 import hashlib
 import json
@@ -105,8 +106,9 @@ class TestTheServedTrace:
         # as it emits - so the comparison is of the *streams*. A gzip
         # header carries a modification time, and comparing the wrappers
         # would fail on a clock rather than on a difference.
-        assert hashlib.sha256(gzip.decompress(body)).hexdigest() == \
-            hashlib.sha256(gzip.decompress(expected)).hexdigest()
+        assert (
+            hashlib.sha256(gzip.decompress(body)).hexdigest() == hashlib.sha256(gzip.decompress(expected)).hexdigest()
+        )
 
     def test_it_is_served_gzipped_and_stays_that_way(self, snapshot, served):
         """Not `Content-Encoding: gzip`: the page hands the *compressed*
@@ -120,8 +122,7 @@ class TestTheServedTrace:
         assert body[:2] == b"\x1f\x8b", "not gzip"
         assert len(body) < len(gzip.decompress(body))
 
-    def test_a_run_with_no_timeline_says_so_rather_than_serving_nothing(
-            self, tmp_path, served):
+    def test_a_run_with_no_timeline_says_so_rather_than_serving_nothing(self, tmp_path, served):
         """An extracted run, a fetched capture, or `--no-keep-raw`."""
         from tools.bga_view import TRACE_NAME
 
@@ -142,11 +143,17 @@ class TestTheServedTrace:
         events to <path>" named that path. Reproduced here before the
         fix as `Wrote 11 trace events to /tmp/bga-view-XXXX/...`."""
         result = subprocess.run(
-            [sys.executable, "-c",
-             "import sys\n"
-             "from tools.bga_view import trace_bytes\n"
-             "sys.stdout.write(str(len(trace_bytes({!r}) or b'')))".format(str(snapshot / "run"))],
-            capture_output=True, text=True, cwd=os.getcwd())
+            [
+                sys.executable,
+                "-c",
+                "import sys\n"
+                "from tools.bga_view import trace_bytes\n"
+                "sys.stdout.write(str(len(trace_bytes({!r}) or b'')))".format(str(snapshot / "run")),
+            ],
+            capture_output=True,
+            text=True,
+            cwd=os.getcwd(),
+        )
         assert result.returncode == 0, result.stderr
         assert int(result.stdout) > 0, "nothing was rendered"
         assert "/tmp/" not in result.stderr, result.stderr
@@ -160,7 +167,11 @@ class TestTheHandshake:
     def _run(self, script):
         result = subprocess.run(
             [node, "--input-type=module", "-e", _HARNESS % script],
-            capture_output=True, text=True, cwd=os.getcwd(), timeout=60)
+            capture_output=True,
+            text=True,
+            cwd=os.getcwd(),
+            timeout=60,
+        )
         assert result.returncode == 0, result.stderr
         return json.loads(result.stdout)
 
@@ -178,8 +189,7 @@ class TestTheHandshake:
 
     def test_it_stops_pinging_once_it_has_handed_over(self):
         out = self._run("await scenario({ pongAfterPings: 2, settleMs: 40 });")
-        assert out["pingsAfterHandover"] == 0, (
-            "it kept pinging a tab that already has the trace")
+        assert out["pingsAfterHandover"] == 0, "it kept pinging a tab that already has the trace"
 
     def test_a_message_from_another_origin_does_not_trigger_the_handover(self):
         """What the origin check actually buys - established by
@@ -198,22 +208,18 @@ class TestTheHandshake:
         So: an imposter answers and the real origin never does. Nothing
         may be posted.
         """
-        out = self._run(
-            "await scenario({ pongAfterPings: null, imposterAfterPings: 2 });")
-        assert out["posted"] == [], (
-            "a PONG from another origin triggered the handover")
+        out = self._run("await scenario({ pongAfterPings: null, imposterAfterPings: 2 });")
+        assert out["posted"] == [], "a PONG from another origin triggered the handover"
         assert out["error"], "it should still be waiting, then time out"
 
     def test_a_blocked_popup_is_an_explained_failure(self):
         out = self._run("await scenario({ blockPopup: true });")
         assert out["error"], "a blocked pop-up resolved successfully"
         assert "pop-up" in out["error"]
-        assert "ui.perfetto.dev" in out["error"], (
-            "the message should name the manual route out")
+        assert "ui.perfetto.dev" in out["error"], "the message should name the manual route out"
 
     def test_a_tab_that_never_answers_times_out_rather_than_hanging(self):
-        out = self._run("await scenario({ pongAfterPings: null, "
-                        "runTimeout: true });")
+        out = self._run("await scenario({ pongAfterPings: null, runTimeout: true });")
         assert out["error"] and "did not answer" in out["error"]
 
 
@@ -247,10 +253,11 @@ def _questions():
         "console.log(JSON.stringify(q.QUESTIONS.map((x) => ({"
         "  id: x.id, title: x.title, why: x.why, category: x.category,"
         "  plane: x.plane, sql: x.sql, reads: x.reads ?? null,"
-        "  rendered: q.renderedSql(x), categories: q.CATEGORIES }))));")
-    result = subprocess.run([node, "--input-type=module", "-e", script],
-                            capture_output=True, text=True, cwd=os.getcwd(),
-                            timeout=60)
+        "  rendered: q.renderedSql(x), categories: q.CATEGORIES }))));"
+    )
+    result = subprocess.run(
+        [node, "--input-type=module", "-e", script], capture_output=True, text=True, cwd=os.getcwd(), timeout=60
+    )
     assert result.returncode == 0, result.stderr
     questions = json.loads(result.stdout)
     assert questions, "the library is empty"
@@ -287,9 +294,9 @@ class TestTheCannedSql:
     # `UX-312` added the third scope `UX-210` had already named. Every
     # slice carries exactly one of the three, so they partition the
     # trace and a scoped query cannot silently miss a class of slice.
-    @pytest.mark.parametrize("plane,category", [
-        ("Plane 1", "bst-builder"), ("Plane 2", "native-process"),
-        ("run", "bst-invocation")])
+    @pytest.mark.parametrize(
+        "plane,category", [("Plane 1", "bst-builder"), ("Plane 2", "native-process"), ("run", "bst-invocation")]
+    )
     def test_every_query_scopes_itself_to_a_plane(self, plane, category):
         """`UX-210`: the merged trace puts both planes in one `slice`
         table, and four of these six were written as if it had one
@@ -316,16 +323,16 @@ class TestTheCannedSql:
             # exactly the failures.
             assert f"'*{category}*'" in question["sql"], (
                 f"{question['id']} says it reads {plane} and never says so "
-                f"in SQL - the answer will be drawn from every scope")
+                f"in SQL - the answer will be drawn from every scope"
+            )
 
     def test_no_query_is_unscoped(self):
         """The guard the Required Fix asks for: a future question
         cannot ship without saying which plane it reads."""
         for question in _questions():
-            assert ".category" in question["sql"] or \
-                   "t.name" in question["sql"], (
-                f"{question['id']} constrains neither slice.category nor a "
-                f"counter track - it reads the whole trace")
+            assert ".category" in question["sql"] or "t.name" in question["sql"], (
+                f"{question['id']} constrains neither slice.category nor a counter track - it reads the whole trace"
+            )
             assert question["plane"], f"{question['id']} declares no plane"
 
     def test_the_planes_are_joined_by_the_uid_both_carry(self):
@@ -335,9 +342,7 @@ class TestTheCannedSql:
         on a real merged trace."""
         for question in _questions():
             if "native: " in question["sql"]:
-                pytest.fail(
-                    f"{question['id']} matches a lane by name prefix; "
-                    f"`args.element` is carried by both planes")
+                pytest.fail(f"{question['id']} matches a lane by name prefix; `args.element` is carried by both planes")
             if question.get("reads") == "counter":
                 # A counter series is selected by track name; there is
                 # no arg on a counter row to extract.
@@ -363,19 +368,18 @@ class TestTheCannedSql:
                 continue
             assert "n.element = e.element" in sql, (
                 f"{question['id']} nests by time without requiring the same "
-                f"element - a parallel build is subtracted from this one")
+                f"element - a parallel build is subtracted from this one"
+            )
             # And the nested side is the process plane, not everything.
             native = sql.split("left join", 1)[1].split(") n", 1)[0]
-            assert "native-process" in native, (
-                f"{question['id']} subtracts slices from any plane")
+            assert "native-process" in native, f"{question['id']} subtracts slices from any plane"
 
     def test_each_why_says_which_plane_it_reads(self):
         for question in _questions():
             why = question["why"].lower()
-            assert ("plane 1" in why or "plane 2" in why
-                    or "element plane" in why or "run" in why), (
-                f"{question['id']} does not tell the reader which plane its "
-                f"answer comes from")
+            assert "plane 1" in why or "plane 2" in why or "element plane" in why or "run" in why, (
+                f"{question['id']} does not tell the reader which plane its answer comes from"
+            )
 
     def test_every_question_is_in_a_declared_category(self):
         """`UX-204` item 3: the library is categorized, and a question
@@ -401,8 +405,8 @@ class TestTheCannedSql:
         assert 'src="perfetto_page.js"' in page
         assert 'from "./questions.js"' in script
         assert "<pre><code>" not in page, (
-            "the handoff page has a hand-written query again - it renders "
-            "the module, or the two drift")
+            "the handoff page has a hand-written query again - it renders the module, or the two drift"
+        )
 
     def test_it_is_reachable_from_the_handoff_page(self, snapshot, served):
         """`UX-373`: it *is* the handoff page. The old URL stays, and
@@ -412,11 +416,9 @@ class TestTheCannedSql:
         assert _get(base + "perfetto.html")[0] == 200
         code, _headers, body = _get(base + "sql.html")
         assert code == 200
-        assert b"url=perfetto.html" in body, (
-            "sql.html no longer says where its content went")
+        assert b"url=perfetto.html" in body, "sql.html no longer says where its content went"
 
-    @pytest.mark.skipif(trace_processor.shell() is None,
-                        reason=trace_processor.REASON)
+    @pytest.mark.skipif(trace_processor.shell() is None, reason=trace_processor.REASON)
     def test_the_snippets_run_against_a_real_trace(self, snapshot):  # pragma: no cover
         """Local only, deliberately: bundling Perfetto is out of scope,
         and a CI job that downloads it would be a network dependency for
@@ -430,7 +432,11 @@ class TestTheCannedSql:
             query = question["rendered"]
             result = subprocess.run(
                 [trace_processor.shell(), "-q", "/dev/stdin", trace],
-                input=query, capture_output=True, text=True, timeout=120)
+                input=query,
+                capture_output=True,
+                text=True,
+                timeout=120,
+            )
             assert result.returncode == 0, result.stderr
 
 
@@ -440,14 +446,12 @@ class TestTheCommandLine:
 
         opened = []
         monkeypatch.setattr(view.webbrowser, "open", opened.append)
-        monkeypatch.setattr(view.http.server.ThreadingHTTPServer,
-                            "serve_forever", lambda self: None)
+        monkeypatch.setattr(view.http.server.ThreadingHTTPServer, "serve_forever", lambda self: None)
         code = view.main([str(snapshot / "run"), "--perfetto"])
         assert code == 0
         assert opened and opened[0].endswith("/perfetto.html"), opened
 
-    def test_a_run_with_no_timeline_refuses_with_the_signal_code(
-            self, tmp_path, capsys):
+    def test_a_run_with_no_timeline_refuses_with_the_signal_code(self, tmp_path, capsys):
         """Exit 7 - `UX`'s "signal unavailable" - rather than opening a
         page that would say "404" in the browser."""
         import tools.bga_view as view
@@ -460,9 +464,11 @@ class TestTheCommandLine:
 
     def test_the_help_is_still_under_the_cap(self):
         result = subprocess.run(
-            [sys.executable, "-c",
-             "from bga.cli import main; raise SystemExit(main(['view','--help']))"],
-            capture_output=True, text=True, cwd=os.getcwd())
+            [sys.executable, "-c", "from bga.cli import main; raise SystemExit(main(['view','--help']))"],
+            capture_output=True,
+            text=True,
+            cwd=os.getcwd(),
+        )
         assert len(result.stdout.splitlines()) <= 45, result.stdout
 
 
@@ -491,6 +497,7 @@ class TestTheFormatDecisionIsWrittenDown:
 # orderings apart; a harness where `open` always succeeds cannot, which
 # is why the original bug shipped green.
 
+
 class TestThePageDoesNotOpenAnythingUninvited:
     """`UX-198` item 1's other half. The `--perfetto` landing page ran
     `go()` at script load, so no user activation had ever existed and
@@ -502,10 +509,8 @@ class TestThePageDoesNotOpenAnythingUninvited:
         script = page.split("<script", 1)[1]
         # A bare `go();` or `handOff();` statement at the top level of
         # the module - what a browser runs with no gesture behind it.
-        offenders = [line.strip() for line in script.splitlines()
-                     if re.match(r"^\s*(go|handOff)\s*\(", line)]
-        assert not offenders, (
-            f"the page calls {offenders} at load, with no click behind it")
+        offenders = [line.strip() for line in script.splitlines() if re.match(r"^\s*(go|handOff)\s*\(", line)]
+        assert not offenders, f"the page calls {offenders} at load, with no click behind it"
 
     def test_it_opens_from_a_click_instead(self):
         page = open("bga/viewer/perfetto.html", encoding="utf-8").read()
@@ -547,11 +552,19 @@ class TestTheDeepLink:
 
     def test_it_points_at_perfetto_with_the_trace_url(self):
         result = subprocess.run(
-            [node, "--input-type=module", "-e",
-             'const { deepLink, PERFETTO_ORIGIN } = '
-             'await import("./bga/viewer/perfetto.js");'
-             'console.log(deepLink("http://127.0.0.1:8000/timeline.json.gz"));'],
-            capture_output=True, text=True, cwd=os.getcwd(), timeout=60)
+            [
+                node,
+                "--input-type=module",
+                "-e",
+                'const { deepLink, PERFETTO_ORIGIN } = '
+                'await import("./bga/viewer/perfetto.js");'
+                'console.log(deepLink("http://127.0.0.1:8000/timeline.json.gz"));',
+            ],
+            capture_output=True,
+            text=True,
+            cwd=os.getcwd(),
+            timeout=60,
+        )
         assert result.returncode == 0, result.stderr
         link = result.stdout.strip()
         assert link.startswith("https://ui.perfetto.dev/#!/?url=")
@@ -564,8 +577,7 @@ class TestTheDeepLink:
         request = urllib.request.Request(url + TRACE_NAME)
         request.add_header("Origin", PERFETTO_ORIGIN)
         with urllib.request.urlopen(request, timeout=10) as response:
-            assert response.headers.get("Access-Control-Allow-Origin") == \
-                PERFETTO_ORIGIN
+            assert response.headers.get("Access-Control-Allow-Origin") == PERFETTO_ORIGIN
 
     def test_it_answers_nobody_else(self, snapshot, served):
         from tools.bga_view import TRACE_NAME
@@ -576,8 +588,7 @@ class TestTheDeepLink:
             if origin:
                 request.add_header("Origin", origin)
             with urllib.request.urlopen(request, timeout=10) as response:
-                assert response.headers.get("Access-Control-Allow-Origin") is None, \
-                    f"handed the trace to {origin}"
+                assert response.headers.get("Access-Control-Allow-Origin") is None, f"handed the trace to {origin}"
 
     def test_no_other_document_is_cross_origin_readable(self, snapshot, served):
         """The report and the blast endpoint carry this project's
@@ -586,13 +597,11 @@ class TestTheDeepLink:
         from tools.bga_view import PERFETTO_ORIGIN
 
         url = served(str(snapshot / "run"))
-        for path in ("report.json", "schemas.json", "run.json",
-                     "blast.json?target=work-a.bst", "trace-status.json"):
+        for path in ("report.json", "schemas.json", "run.json", "blast.json?target=work-a.bst", "trace-status.json"):
             request = urllib.request.Request(url + path)
             request.add_header("Origin", PERFETTO_ORIGIN)
             with urllib.request.urlopen(request, timeout=10) as response:
-                assert response.headers.get("Access-Control-Allow-Origin") is None, \
-                    f"{path} is readable cross-origin"
+                assert response.headers.get("Access-Control-Allow-Origin") is None, f"{path} is readable cross-origin"
 
     def test_the_two_origin_constants_agree(self):
         """One is in Python and one in JavaScript; nothing else would
@@ -614,18 +623,19 @@ class TestTheDeepLink:
     # same interface, and CSP matches the host *name*, so one is refused
     # and the other is not.
     @needs_node
-    @pytest.mark.parametrize("trace,here,shown", [
-        ("timeline.json.gz", "http://127.0.0.1:8000/index.html", False),
-        ("timeline.json.gz", "http://127.0.0.1:41234/index.html", False),
-        ("timeline.json.gz", "http://127.0.0.1:8080/index.html", False),
-        ("timeline.json.gz", "http://localhost:8080/index.html", True),
-        ("timeline.json.gz", "http://127.0.0.1:9001/index.html", True),
-        ("timeline.json.gz", "https://reports.example/index.html", True),
-        ("data:application/gzip;base64,H4sIAA==",
-         "http://localhost:8080/index.html", False),
-    ])
-    def test_the_link_appears_only_where_perfetto_may_fetch_it(
-            self, trace, here, shown):
+    @pytest.mark.parametrize(
+        "trace,here,shown",
+        [
+            ("timeline.json.gz", "http://127.0.0.1:8000/index.html", False),
+            ("timeline.json.gz", "http://127.0.0.1:41234/index.html", False),
+            ("timeline.json.gz", "http://127.0.0.1:8080/index.html", False),
+            ("timeline.json.gz", "http://localhost:8080/index.html", True),
+            ("timeline.json.gz", "http://127.0.0.1:9001/index.html", True),
+            ("timeline.json.gz", "https://reports.example/index.html", True),
+            ("data:application/gzip;base64,H4sIAA==", "http://localhost:8080/index.html", False),
+        ],
+    )
+    def test_the_link_appears_only_where_perfetto_may_fetch_it(self, trace, here, shown):
         """A deep link is offered only where it can work.
 
         Two ways it cannot. There is no server behind an export - the
@@ -642,8 +652,8 @@ class TestTheDeepLink:
         """
         script = _LINK_HARNESS % (json.dumps(trace), json.dumps(here))
         result = subprocess.run(
-            [node, "--input-type=module", "-e", script],
-            capture_output=True, text=True, cwd=os.getcwd(), timeout=60)
+            [node, "--input-type=module", "-e", script], capture_output=True, text=True, cwd=os.getcwd(), timeout=60
+        )
         assert result.returncode == 0, result.stderr
         out = json.loads(result.stdout)
         assert out["fallbackShown"] is shown, out
@@ -651,13 +661,14 @@ class TestTheDeepLink:
             assert out["href"].startswith("https://ui.perfetto.dev/#!/?url=")
 
     @needs_node
-    @pytest.mark.parametrize("trace,here,shown", [
-        ("timeline.json.gz", "http://127.0.0.1:41234/index.html", True),
-        ("data:application/gzip;base64,H4sIAA==",
-         "http://127.0.0.1:41234/index.html", False),
-    ])
-    def test_the_save_it_yourself_route_is_offered_wherever_there_is_a_server(
-            self, trace, here, shown):
+    @pytest.mark.parametrize(
+        "trace,here,shown",
+        [
+            ("timeline.json.gz", "http://127.0.0.1:41234/index.html", True),
+            ("data:application/gzip;base64,H4sIAA==", "http://127.0.0.1:41234/index.html", False),
+        ],
+    )
+    def test_the_save_it_yourself_route_is_offered_wherever_there_is_a_server(self, trace, here, shown):
         """`UX-314`: the transport nobody can refuse.
 
         Both other paths can be taken away - the deep link by Perfetto's
@@ -669,8 +680,8 @@ class TestTheDeepLink:
         """
         script = _LINK_HARNESS % (json.dumps(trace), json.dumps(here))
         result = subprocess.run(
-            [node, "--input-type=module", "-e", script],
-            capture_output=True, text=True, cwd=os.getcwd(), timeout=60)
+            [node, "--input-type=module", "-e", script], capture_output=True, text=True, cwd=os.getcwd(), timeout=60
+        )
         assert result.returncode == 0, result.stderr
         out = json.loads(result.stdout)
         assert out["downloadShown"] is shown, out
@@ -688,17 +699,16 @@ class TestTheDeepLink:
         the file it was read out of.
         """
         module = open("bga/viewer/perfetto.js", encoding="utf-8").read()
-        assert "ui/src/frontend/index.ts" in module, (
-            "the CSP rule does not say which upstream file it was read from")
+        assert "ui/src/frontend/index.ts" in module, "the CSP rule does not say which upstream file it was read from"
         assert "setupContentSecurityPolicy" in module
-        for allowed in ("'http://localhost:8080'", "'http://127.0.0.1:9001'",
-                        "'https:'"):
+        for allowed in ("'http://localhost:8080'", "'http://127.0.0.1:9001'", "'https:'"):
             assert allowed in module, (
                 f"{allowed} is missing from the quoted connect-src, so the "
-                f"rule below it cannot be checked against its source")
+                f"rule below it cannot be checked against its source"
+            )
         assert "cspAllowAnyWebsocketPort" in module, (
-            "the rpc_port escape hatch is not named, so a reader cannot tell "
-            "why it was not used")
+            "the rpc_port escape hatch is not named, so a reader cannot tell why it was not used"
+        )
 
 
 class TestTheServedOriginCanBeFetched:
@@ -738,19 +748,20 @@ class TestTheServedOriginCanBeFetched:
             'const out = {};\n'
             'for (const [port, url] of Object.entries(urls)) '
             'out[port] = perfettoCanFetch(url);\n'
-            'console.log(JSON.stringify(out));')
+            'console.log(JSON.stringify(out));'
+        )
         result = subprocess.run(
-            [node, "--input-type=module", "-e", script],
-            capture_output=True, text=True, cwd=os.getcwd(), timeout=60)
+            [node, "--input-type=module", "-e", script], capture_output=True, text=True, cwd=os.getcwd(), timeout=60
+        )
         assert result.returncode == 0, result.stderr
         verdicts = json.loads(result.stdout)
         for port in PERFETTO_FETCHABLE_PORTS:
             assert verdicts[str(port)] is True, (
-                f"Python spells port {port} as {urls[port]}, which the "
-                f"viewer says Perfetto may not fetch")
+                f"Python spells port {port} as {urls[port]}, which the viewer says Perfetto may not fetch"
+            )
         assert verdicts["41234"] is False, (
-            "an ephemeral port is being reported as fetchable, so the "
-            "deep link would be offered where it cannot work")
+            "an ephemeral port is being reported as fetchable, so the deep link would be offered where it cannot work"
+        )
 
     def test_a_default_run_says_the_handoff_is_limited(self, snapshot, capsys):
         """The reader is told at startup, not after a failed click.
@@ -818,7 +829,8 @@ class TestTheServedOriginCanBeFetched:
         err = capsys.readouterr().err
         assert "Address already in use" not in err, (
             "8080 was free a moment ago and is not now; this guard cannot "
-            "say anything about the warning it is checking for")
+            "say anything about the warning it is checking for"
+        )
         assert "may not fetch from this port" not in err, err
         assert "http://localhost:8080/" in err, err
 
@@ -892,8 +904,8 @@ class TestThePreFlightIsAnswered:
 
         url = served(str(snapshot / "run"))
         _, headers = self._options(
-            url + TRACE_NAME, PERFETTO_ORIGIN,
-            {"Access-Control-Request-Private-Network": "true"})
+            url + TRACE_NAME, PERFETTO_ORIGIN, {"Access-Control-Request-Private-Network": "true"}
+        )
         assert headers.get("Access-Control-Allow-Private-Network") == "true"
 
     def test_it_allows_the_headers_the_reader_asked_for(self, snapshot, served):
@@ -904,8 +916,8 @@ class TestThePreFlightIsAnswered:
 
         url = served(str(snapshot / "run"))
         _, headers = self._options(
-            url + TRACE_NAME, PERFETTO_ORIGIN,
-            {"Access-Control-Request-Headers": "range, cache-control"})
+            url + TRACE_NAME, PERFETTO_ORIGIN, {"Access-Control-Request-Headers": "range, cache-control"}
+        )
         assert headers.get("Access-Control-Allow-Headers") == "range, cache-control"
 
     def test_a_pre_flight_from_anyone_else_is_refused(self, snapshot, served):
@@ -924,8 +936,7 @@ class TestThePreFlightIsAnswered:
         from tools.bga_view import PERFETTO_ORIGIN
 
         url = served(str(snapshot / "run"))
-        for path in ("report.json", "schemas.json", "run.json",
-                     "blast.json?target=work-a.bst", "trace-status.json"):
+        for path in ("report.json", "schemas.json", "run.json", "blast.json?target=work-a.bst", "trace-status.json"):
             status, headers = self._options(url + path, PERFETTO_ORIGIN)
             assert status == 404, f"{path} answered a pre-flight with {status}"
             assert headers.get("Access-Control-Allow-Origin") is None
@@ -1071,9 +1082,12 @@ class TestTheTabOpensWhileTheClickStillCounts:
 
     def _gesture(self, script):
         result = subprocess.run(
-            [node, "--input-type=module", "-e",
-             _GESTURE_HARNESS % script],
-            capture_output=True, text=True, cwd=os.getcwd(), timeout=60)
+            [node, "--input-type=module", "-e", _GESTURE_HARNESS % script],
+            capture_output=True,
+            text=True,
+            cwd=os.getcwd(),
+            timeout=60,
+        )
         assert result.returncode == 0, result.stderr
         return json.loads(result.stdout)
 
@@ -1081,7 +1095,8 @@ class TestTheTabOpensWhileTheClickStillCounts:
         out = self._gesture('await scenario({});')
         assert out["openedDuringActivation"] is True, (
             "window.open ran after an await - the click that authorised it "
-            "had already expired, which is the reported bug")
+            "had already expired, which is the reported bug"
+        )
         assert out["error"] is None, out["error"]
         assert out["posted"] == 1
 
@@ -1095,6 +1110,7 @@ class TestTheTabOpensWhileTheClickStillCounts:
         out = self._gesture('await scenario({ fetchDelayMs: 40 });')
         assert out["openedDuringActivation"] is True
         assert out["error"] is None, out["error"]
+
 
 _HARNESS = """
 const { openInPerfetto, PERFETTO_ORIGIN } = await import("./bga/viewer/perfetto.js");
@@ -1191,8 +1207,8 @@ class TestTheExportsTraceIsABareUri:
     def _url(self, text):
         script = _TRACE_URL_HARNESS % json.dumps(text)
         result = subprocess.run(
-            [node, "--input-type=module", "-e", script],
-            capture_output=True, text=True, cwd=os.getcwd(), timeout=60)
+            [node, "--input-type=module", "-e", script], capture_output=True, text=True, cwd=os.getcwd(), timeout=60
+        )
         assert result.returncode == 0, result.stderr
         return json.loads(result.stdout)
 
@@ -1205,3 +1221,28 @@ class TestTheExportsTraceIsABareUri:
 
     def test_no_node_means_the_served_default(self):
         assert self._url(None) == "timeline.json.gz"
+
+
+class TestThePreFlightEchoesOnlyAHeaderList:
+    """`UX-1127`: the requested header list is echoed only when it is tokens and commas."""
+
+    @pytest.mark.parametrize("asked", ["range", "range, cache-control", "x-a,x-b"])
+    def test_a_token_list_is_echoed(self, asked):
+        from tools.bga_view import _HEADER_LIST
+
+        assert _HEADER_LIST.fullmatch(asked)
+
+    @pytest.mark.parametrize("asked", ["range\r\nSet-Cookie: a=b", "range\r\n cache", "range\n", "a b", ""])
+    def test_anything_else_is_not(self, asked):
+        from tools.bga_view import _HEADER_LIST
+
+        assert not _HEADER_LIST.fullmatch(asked)
+
+    def test_the_handler_asks_the_pattern_before_it_echoes(self):
+        import inspect
+
+        import tools.bga_view as view
+
+        source = inspect.getsource(view)
+        echo = source.index('self.send_header("Access-Control-Allow-Headers", asked)')
+        assert "_HEADER_LIST.fullmatch(asked)" in source[source.rindex("asked = ", 0, echo) : echo]

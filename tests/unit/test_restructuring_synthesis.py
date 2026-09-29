@@ -9,6 +9,7 @@ chain whose every internal edge is unread; fan them out*, was never
 drawn. It was the biggest win in the project: measured that round at
 27.9s → 25.0s, −10.1%.
 """
+
 import json
 
 from bga.analyzer import BuildEfficiencyAnalyzer
@@ -22,29 +23,43 @@ def _write_run(tmp_path, name, elements, deps, spans, builders=4):
     run_dir.mkdir()
     identity = {"manifest_hash": f"fixture-{name}", "targets": list(elements)}
     end = max(start + dur for _, start, dur in spans)
-    (run_dir / "run-context.json").write_text(json.dumps({
-        "trace_epsilon_us": 1000,
-        "resource_capacities": {"PROCESS": builders},
-        "run_identity": identity,
-        "wall_clock": {"start_us": 0, "end_us": end},
-    }))
-    (run_dir / "graph.json").write_text(json.dumps({
-        "elements": [{"uid": uid, "requested_target": True} for uid in elements],
-        "dependencies": [
-            {"predecessor": a, "successor": b, "dependency_type": "build"}
-            for a, b in deps
-        ],
-        "run_identity_hash": identity["manifest_hash"],
-    }))
-    (run_dir / "trace.json").write_text(json.dumps({
-        "run_identity_hash": identity["manifest_hash"],
-        "spans": [
-            {"task_key": f"{uid}|BUILD|BUILD|0", "ts_us": start, "dur_us": dur,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"}
-            for uid, start, dur in spans
-        ],
-        "phases": [],
-    }))
+    (run_dir / "run-context.json").write_text(
+        json.dumps(
+            {
+                "trace_epsilon_us": 1000,
+                "resource_capacities": {"PROCESS": builders},
+                "run_identity": identity,
+                "wall_clock": {"start_us": 0, "end_us": end},
+            }
+        )
+    )
+    (run_dir / "graph.json").write_text(
+        json.dumps(
+            {
+                "elements": [{"uid": uid, "requested_target": True} for uid in elements],
+                "dependencies": [{"predecessor": a, "successor": b, "dependency_type": "build"} for a, b in deps],
+                "run_identity_hash": identity["manifest_hash"],
+            }
+        )
+    )
+    (run_dir / "trace.json").write_text(
+        json.dumps(
+            {
+                "run_identity_hash": identity["manifest_hash"],
+                "spans": [
+                    {
+                        "task_key": f"{uid}|BUILD|BUILD|0",
+                        "ts_us": start,
+                        "dur_us": dur,
+                        "resources": ["PROCESS"],
+                        "primary_resource": "PROCESS",
+                    }
+                    for uid, start, dur in spans
+                ],
+                "phases": [],
+            }
+        )
+    )
     return run_dir
 
 
@@ -61,9 +76,7 @@ def _chained_libs(tmp_path):
     # projection a fan-out onto the available builders rather than a
     # free-for-all.
     deps = [("base.bst", uid) for uid in LIBS] + list(zip(LIBS, LIBS[1:]))
-    spans = [("base.bst", 0, D)] + [
-        (uid, D + i * D, D) for i, uid in enumerate(LIBS)
-    ]
+    spans = [("base.bst", 0, D)] + [(uid, D + i * D, D) for i, uid in enumerate(LIBS)]
     return _write_run(tmp_path, "baseline", elements, deps, spans)
 
 
@@ -90,17 +103,17 @@ def _native(unused, elements=LIBS):
 
 
 def _every_chain_edge_unread():
-    return [
-        {"element": successor, "dependency": predecessor}
-        for predecessor, successor in zip(LIBS, LIBS[1:])
-    ]
+    return [{"element": successor, "dependency": predecessor} for predecessor, successor in zip(LIBS, LIBS[1:])]
 
 
 def test_the_chain_becomes_one_finding_not_five_rows(tmp_path):
     analysis, tasks, context = _analysis_and_parts(_chained_libs(tmp_path))
 
     result = correlate(
-        analysis, _native(_every_chain_edge_unread()), tasks=tasks, run_context=context,
+        analysis,
+        _native(_every_chain_edge_unread()),
+        tasks=tasks,
+        run_context=context,
     )
 
     assert len(result["restructuring"]) == 1
@@ -117,7 +130,10 @@ def test_the_projection_replays_the_run_without_those_edges(tmp_path):
     analysis, tasks, context = _analysis_and_parts(_chained_libs(tmp_path))
 
     finding = correlate(
-        analysis, _native(_every_chain_edge_unread()), tasks=tasks, run_context=context,
+        analysis,
+        _native(_every_chain_edge_unread()),
+        tasks=tasks,
+        run_context=context,
     )["restructuring"][0]
     projection = finding["projection"]
 
@@ -129,9 +145,14 @@ def test_the_projection_replays_the_run_without_those_edges(tmp_path):
 def test_the_finding_is_rendered_above_the_per_element_rows(tmp_path):
     analysis, tasks, context = _analysis_and_parts(_chained_libs(tmp_path))
 
-    text = format_correlation(correlate(
-        analysis, _native(_every_chain_edge_unread()), tasks=tasks, run_context=context,
-    ))
+    text = format_correlation(
+        correlate(
+            analysis,
+            _native(_every_chain_edge_unread()),
+            tasks=tasks,
+            run_context=context,
+        )
+    )
 
     assert "Restructuring opportunity" in text
     assert "lib-a.bst -> lib-b.bst" in text
@@ -144,9 +165,14 @@ def test_the_hedge_survives_the_synthesis(tmp_path):
     attached, and says the projection is not a re-capture."""
     analysis, tasks, context = _analysis_and_parts(_chained_libs(tmp_path))
 
-    text = format_correlation(correlate(
-        analysis, _native(_every_chain_edge_unread()), tasks=tasks, run_context=context,
-    ))
+    text = format_correlation(
+        correlate(
+            analysis,
+            _native(_every_chain_edge_unread()),
+            tasks=tasks,
+            run_context=context,
+        )
+    )
 
     assert "evidence, not a verdict" in text
     assert "not a re-capture" in text
@@ -160,7 +186,8 @@ def test_an_edge_that_was_read_is_not_in_any_finding(tmp_path):
     result = correlate(
         analysis,
         _native([{"element": "lib-c.bst", "dependency": "lib-b.bst"}]),
-        tasks=tasks, run_context=context,
+        tasks=tasks,
+        run_context=context,
     )
 
     finding = result["restructuring"][0]
@@ -172,18 +199,16 @@ def test_an_unread_edge_off_the_critical_path_is_not_a_restructuring_finding(tmp
     """An unread edge that holds nothing up is a true observation and not
     a restructuring opportunity; it stays a per-element row."""
     elements = ["base.bst", "slow.bst", "fast.bst", "leaf.bst"]
-    deps = [("base.bst", "slow.bst"), ("base.bst", "fast.bst"),
-            ("fast.bst", "leaf.bst")]
-    spans = [("base.bst", 0, D), ("slow.bst", D, 10 * D),
-             ("fast.bst", D, D), ("leaf.bst", 2 * D, D)]
+    deps = [("base.bst", "slow.bst"), ("base.bst", "fast.bst"), ("fast.bst", "leaf.bst")]
+    spans = [("base.bst", 0, D), ("slow.bst", D, 10 * D), ("fast.bst", D, D), ("leaf.bst", 2 * D, D)]
     run_dir = _write_run(tmp_path, "offpath", elements, deps, spans)
     analysis, tasks, context = _analysis_and_parts(run_dir)
 
     result = correlate(
         analysis,
-        _native([{"element": "leaf.bst", "dependency": "fast.bst"}],
-                elements=["fast.bst", "leaf.bst"]),
-        tasks=tasks, run_context=context,
+        _native([{"element": "leaf.bst", "dependency": "fast.bst"}], elements=["fast.bst", "leaf.bst"]),
+        tasks=tasks,
+        run_context=context,
     )
 
     assert result["restructuring"] == []
@@ -196,7 +221,8 @@ def test_without_the_run_the_finding_still_names_the_chain(tmp_path):
     analysis, _tasks, _context = _analysis_and_parts(_chained_libs(tmp_path))
 
     finding = correlate(
-        analysis, _native(_every_chain_edge_unread()),
+        analysis,
+        _native(_every_chain_edge_unread()),
     )["restructuring"][0]
 
     assert finding["elements"] == LIBS

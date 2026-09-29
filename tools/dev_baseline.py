@@ -3,11 +3,11 @@
     python3 tools/dev_baseline.py --write     # bootstrap, or full rewrite
                                                 # (needs --force to add)
     python3 tools/dev_baseline.py --check      # make lint's line
-    python3 tools/dev_baseline.py --shrink     # drop only what nothing
-                                                # matches now
+    python3 tools/dev_baseline.py --shrink     # drop what nothing matches
+    python3 tools/dev_baseline.py --rekey      # a reformat's renames, 1:1
 
 Two producers feed one list: ruff (json) for S, C901, PLR0912, PLR0913,
-PLR0915, SIM115 - not in the gate's own `--select` (`pyproject.toml`) -
+PLR0915, SIM115, D2-D4 (Google convention, `pyproject.toml`) - not in the gate's own `--select` (`pyproject.toml`) -
 and pyright (`--outputjson`, its own errors) over bga, tools,
 .claude/hooks (never tests - `tests/**` is a different ledger). A
 finding's identity is `(tool, rule, file, the source line's text with
@@ -23,18 +23,24 @@ absence as a fix. Every forced batch stays named in `--check`'s output
 indefinitely, committed or not, accumulated rather than overwritten
 (`UX-766`).
 """
+
 import argparse
 import collections
 import functools
 import json
+import operator
 import pathlib
 import re
 import subprocess
 import sys
 import tokenize
 
+import dev_env_check
+
 REPO = pathlib.Path(__file__).resolve().parents[1]
-FAMILIES = ("S", "C901", "PLR0912", "PLR0913", "PLR0915", "SIM115")
+FAMILIES = ("S", "C901", "PLR0912", "PLR0913", "PLR0915", "SIM115", "D2", "D3", "D4")
+#: pydocstyle layout rules that conflict with the house register (UX-1119).
+IGNORED = ("D205", "D209", "D212")
 DEFAULT_PATHS = ("bga", "tools", ".claude/hooks")
 DEFAULT_BASELINE = REPO / "tests" / "quality_baseline.json"
 
@@ -47,35 +53,70 @@ class PyrightFailure(Exception):
     """pyright's answer cannot be trusted: a bad exit, or unparseable JSON."""
 
 
-def ruff_version():
-    out = subprocess.run(["ruff", "--version"], stdout=subprocess.PIPE,
-                          text=True, check=True).stdout
-    return out.strip().split()[-1]
+def reported_versions(tools=("ruff", "pyright")):
+    """`{tool: version}` of the interpreter's own `tools`, never PATH's."""
+    out = {}
+    for tool in tools:
+        run = subprocess.run([sys.executable, "-m", tool, "--version"], capture_output=True, text=True, check=False)
+        out[tool] = dev_env_check.reported_version(run.stdout, tool)
+    return out
+
+
+def version_verdict(reported, lock_text):
+    """`(line, mismatches)`: what ran, and each tool whose version is not the lock's."""
+    line = ", ".join(f"{t} {reported[t]}" for t in sorted(reported))
+    bad = [
+        f"{t} is {reported[t]!r}, requirements.lock pins {dev_env_check.pinned_version(lock_text, t)!r}"
+        for t in sorted(reported)
+        if not dev_env_check.version_ok(reported[t], dev_env_check.pinned_version(lock_text, t))
+    ]
+    return line, bad
+
+
+def refuse_off_lock(pyright_from):
+    """Print the versions run; 2 when one is off the lock, else 0.
+
+    Pyright is not spawned under `--pyright-from` (UX-802), so not read.
+    """
+    spawned = ("ruff",) if pyright_from else ("ruff", "pyright")
+    line, mismatches = version_verdict(reported_versions(spawned), dev_env_check.LOCK.read_text(encoding="utf-8"))
+    print(f"tools: {line}", file=sys.stderr)
+    if not mismatches:
+        return 0
+    print("error: not the locked tools - refusing to judge: " + "; ".join(mismatches))
+    return 2
 
 
 def ruff_findings(root, paths, families):
-    cmd = ["ruff", "check", *[str(p) for p in paths],
-           "--select", ",".join(sorted(families)),
-           "--output-format", "json"]
-    run = subprocess.run(cmd, cwd=root, capture_output=True,
-                          text=True, check=False)
+    cmd = [
+        sys.executable,
+        "-m",
+        "ruff",
+        "check",
+        *[str(p) for p in paths],
+        "--select",
+        ",".join(sorted(families)),
+        "--ignore",
+        ",".join(IGNORED),
+        "--output-format",
+        "json",
+    ]
+    run = subprocess.run(cmd, cwd=root, capture_output=True, text=True, check=False)
     if run.returncode not in (0, 1):
         raise RuffFailure(f"ruff exited {run.returncode}: {run.stderr.strip()}")
     raw = json.loads(run.stdout or "[]")
     # `invalid-syntax`: ruff reports the parse error and nothing else for
     # that file - a real finding already baselined there would read as
     # fixed, when the file is merely unreadable right now.
-    unparsable = sorted({item["filename"] for item in raw
-                          if item.get("code") == "invalid-syntax"})
+    unparsable = sorted({item["filename"] for item in raw if item.get("code") == "invalid-syntax"})
     if unparsable:
         raise RuffFailure("ruff could not parse: " + ", ".join(unparsable))
     return raw
 
 
 def pyright_findings(root, paths):
-    cmd = ["pyright", *[str(p) for p in paths], "--outputjson"]
-    run = subprocess.run(cmd, cwd=root, capture_output=True,
-                          text=True, check=False)
+    cmd = [sys.executable, "-m", "pyright", *[str(p) for p in paths], "--outputjson"]
+    run = subprocess.run(cmd, cwd=root, capture_output=True, text=True, check=False)
     if run.returncode not in (0, 1):
         raise PyrightFailure(f"pyright exited {run.returncode}: {run.stderr.strip()}")
     try:
@@ -122,11 +163,20 @@ def _python_suppressions(path, rel, lines):
             tokens = list(tokenize.tokenize(handle.readline))
     except (OSError, tokenize.TokenError, SyntaxError):
         return
-    code_rows = {tok.start[0] for tok in tokens
-                 if tok.type not in (tokenize.COMMENT, tokenize.NL,
-                                     tokenize.NEWLINE, tokenize.INDENT,
-                                     tokenize.DEDENT, tokenize.ENCODING,
-                                     tokenize.ENDMARKER)}
+    code_rows = {
+        tok.start[0]
+        for tok in tokens
+        if tok.type
+        not in (
+            tokenize.COMMENT,
+            tokenize.NL,
+            tokenize.NEWLINE,
+            tokenize.INDENT,
+            tokenize.DEDENT,
+            tokenize.ENCODING,
+            tokenize.ENDMARKER,
+        )
+    }
     for tok in tokens:
         if tok.type != tokenize.COMMENT:
             continue
@@ -166,8 +216,7 @@ def suppression_findings(root, paths):
         if base.is_file():
             files.append(base)
         elif base.is_dir():
-            files.extend(sorted(q for q in base.rglob("*")
-                                if q.suffix in (".py", ".js")))
+            files.extend(sorted(q for q in base.rglob("*") if q.suffix in (".py", ".js")))
     found = []
     for path in files:
         if not path.is_file():
@@ -179,8 +228,7 @@ def suppression_findings(root, paths):
     out = []
     for file, _row, text in found:
         counts[(file, text)] += 1
-        out.append({"tool": "repo", "rule": "SUPPRESSION", "file": file,
-                    "line": text, "nth": counts[(file, text)]})
+        out.append({"tool": "repo", "rule": "SUPPRESSION", "file": file, "line": text, "nth": counts[(file, text)]})
     return out
 
 
@@ -197,11 +245,9 @@ def _identity_list(tool, items, root):
         except ValueError:
             rel = path.as_posix()
         if path not in lines_of:
-            lines_of[path] = path.read_text(
-                encoding="utf-8", errors="replace").splitlines()
+            lines_of[path] = path.read_text(encoding="utf-8", errors="replace").splitlines()
         text_lines = lines_of[path]
-        text = (" ".join(text_lines[row - 1].split())
-                if 0 < row <= len(text_lines) else "")
+        text = " ".join(text_lines[row - 1].split()) if 0 < row <= len(text_lines) else ""
         decorated.append((rel, row, rule, text))
     decorated.sort(key=lambda t: (t[0], t[1]))
     counts = collections.Counter()
@@ -209,15 +255,13 @@ def _identity_list(tool, items, root):
     for file, _row, rule, text in decorated:
         key = (rule, file, text)
         counts[key] += 1
-        findings.append({"tool": tool, "rule": rule, "file": file,
-                          "line": text, "nth": counts[key]})
+        findings.append({"tool": tool, "rule": rule, "file": file, "line": text, "nth": counts[key]})
     return findings
 
 
 def normalize(raw, root):
     """`raw` ruff findings -> the identity list, ordered and nth-assigned."""
-    items = ((pathlib.Path(item["filename"]), item["location"]["row"], item.get("code"))
-             for item in raw)
+    items = ((pathlib.Path(item["filename"]), item["location"]["row"], item.get("code")) for item in raw)
     return _identity_list("ruff", [(p, r, rule) for p, r, rule in items if rule], root)
 
 
@@ -225,8 +269,9 @@ def normalize_pyright(raw, root):
     """`raw` pyright diagnostics -> the identity list, ordered and nth-assigned.
     A severity-`error` diagnostic with no `rule` (e.g. a module-level
     `return`) is still an error - `noRule` names it rather than dropping it."""
-    items = [(pathlib.Path(item["file"]), item["range"]["start"]["line"] + 1,
-              item.get("rule") or "noRule") for item in raw]
+    items = [
+        (pathlib.Path(item["file"]), item["range"]["start"]["line"] + 1, item.get("rule") or "noRule") for item in raw
+    ]
     return _identity_list("pyright", items, root)
 
 
@@ -238,8 +283,11 @@ def _ruff_producer(root, paths):
 def _pyright_producer(root, paths, pyright_from=None):
     """`TOOLS["pyright"]`: `--pyright-from` (`UX-802`) reads a fixture
     instead of spawning pyright; `main()` binds it before iterating."""
-    raw = (json.loads(pyright_from.read_text(encoding="utf-8"))
-           if pyright_from is not None else pyright_findings(root, paths))
+    raw = (
+        json.loads(pyright_from.read_text(encoding="utf-8"))
+        if pyright_from is not None
+        else pyright_findings(root, paths)
+    )
     return normalize_pyright(raw, root)
 
 
@@ -255,8 +303,7 @@ def identity(entry):
 
 
 def describe(entry):
-    return (f"{entry['tool']} {entry['rule']} {entry['file']} "
-            f"(#{entry['nth']}) {entry['line']}")
+    return f"{entry['tool']} {entry['rule']} {entry['file']} (#{entry['nth']}) {entry['line']}"
 
 
 def sort_key(entry):
@@ -270,7 +317,7 @@ def load_baseline(path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def write_baseline(path, findings, families, version, forced_batches=()):
+def write_baseline(path, findings, families, forced_batches=()):
     """`forced_batches` is every `(reason, identities)` a `--force` has
     signed, oldest first. `UX-745` gave it one slot that a later
     `--force` overwrote outright, so an older reason's lines dropped out
@@ -280,29 +327,30 @@ def write_baseline(path, findings, families, version, forced_batches=()):
     body = ",\n".join(f"    {json.dumps(f, sort_keys=True)}" for f in findings)
     header = ""
     if forced_batches:
-        batches = [{"reason": reason, "identities": sorted(list(i) for i in ids)}
-                   for reason, ids in forced_batches]
+        batches = [{"reason": reason, "identities": sorted(list(i) for i in ids)} for reason, ids in forced_batches]
         header = f'  "forced": {json.dumps(batches)},\n'
-    text = ("{\n"
-            f'  "ruff_version": {json.dumps(version)},\n'
-            f'  "families": {json.dumps(sorted(set(families)))},\n'
-            + header
-            + '  "findings": [\n' + (body + "\n" if body else "") + "  ]\n"
-            "}\n")
+    text = (
+        "{\n"
+        f'  "families": {json.dumps(sorted(set(families)))},\n'
+        + header
+        + '  "findings": [\n'
+        + (body + "\n" if body else "")
+        + "  ]\n"
+        "}\n"
+    )
     pathlib.Path(path).write_text(text, encoding="utf-8")
 
 
 def load_forced(document):
     """Every forced batch `document` carries, oldest first:
     `[(reason, {identity, ...})]`."""
-    return [(b["reason"], {tuple(i) for i in b["identities"]})
-            for b in document.get("forced", ())]
+    return [(b["reason"], {tuple(i) for i in b["identities"]}) for b in document.get("forced", ())]
 
 
 #: `write_baseline`'s own vocabulary - the only way a batch is
 #: authorised. Anything else on the document or a finding was written
 #: by hand, not by `--force` (`UX-789`: `"forced_by"` was one).
-DOCUMENT_KEYS = frozenset({"ruff_version", "families", "forced", "findings"})
+DOCUMENT_KEYS = frozenset({"families", "forced", "findings"})
 ENTRY_KEYS = frozenset({"tool", "rule", "file", "line", "nth"})
 
 
@@ -319,8 +367,7 @@ def _prune_forced(batches, keep):
     """Only identities still in `keep`; a batch left with none drops out -
     a line `--shrink` or a plain `--write` removed was fixed, not forced
     any more."""
-    return [(reason, kept) for reason, ids in batches
-            if (kept := {i for i in ids if i in keep})]
+    return [(reason, kept) for reason, ids in batches if (kept := {i for i in ids if i in keep})]
 
 
 def diff(current, baseline):
@@ -331,23 +378,29 @@ def diff(current, baseline):
     return new, stale
 
 
-def head_document(path):
-    """The baseline `git show HEAD:<path>` carries, or `None` if that
-    fails - no repo, no HEAD, or the path isn't tracked yet."""
+def head_text(path):
+    """`git show HEAD:<path>`, or `None` - no repo, no HEAD, or untracked."""
     path = pathlib.Path(path).resolve()
-    top = subprocess.run(["git", "-C", str(path.parent), "rev-parse",
-                          "--show-toplevel"], capture_output=True,
-                         text=True, check=False)
+    top = subprocess.run(
+        ["git", "-C", str(path.parent), "rev-parse", "--show-toplevel"], capture_output=True, text=True, check=False
+    )
     if top.returncode != 0:
         return None
     toplevel = pathlib.Path(top.stdout.strip())
     rel = path.relative_to(toplevel).as_posix()
-    show = subprocess.run(["git", "-C", str(toplevel), "show", f"HEAD:{rel}"],
-                          capture_output=True, text=True, check=False)
-    if show.returncode != 0:
+    show = subprocess.run(
+        ["git", "-C", str(toplevel), "show", f"HEAD:{rel}"], capture_output=True, text=True, check=False
+    )
+    return show.stdout if show.returncode == 0 else None
+
+
+def head_document(path):
+    """The baseline `head_text` carries, or `None`."""
+    text = head_text(path)
+    if text is None:
         return None
     try:
-        document = json.loads(show.stdout)
+        document = json.loads(text)
         document["findings"]
     except (json.JSONDecodeError, KeyError, TypeError):
         return None
@@ -374,20 +427,22 @@ def gained_since_head(path, working_findings, batches=()):
     for reason, ids in batches:
         for i in ids:
             reason_of.setdefault(i, reason)
-    return ([(reason_of[identity(f)], f) for f in gained if identity(f) in reason_of],
-            [f for f in gained if identity(f) not in reason_of])
+    return (
+        [(reason_of[identity(f)], f) for f in gained if identity(f) in reason_of],
+        [f for f in gained if identity(f) not in reason_of],
+    )
 
 
 def do_write(args, current, existing):
     if args.force and not args.reason:
-        print("--force needs --reason UX-NNN: the id that authorises adding "
-              "a finding, written into the baseline's header")
+        print(
+            "--force needs --reason UX-NNN: the id that authorises adding a finding, written into the baseline's header"
+        )
         return 2
     if existing is not None and not args.force:
         new, _stale = diff(current, existing["findings"])
         if new:
-            print(f"{len(new)} new finding(s) - rerun with --force to add, "
-                  "or fix and use --shrink:")
+            print(f"{len(new)} new finding(s) - rerun with --force to add, or fix and use --shrink:")
             for f in new:
                 print(f"  new: {describe(f)}")
             return 1
@@ -400,10 +455,11 @@ def do_write(args, current, existing):
         signed = {identity(f) for f in current if identity(f) not in carried}
         if signed:
             batches = [*batches, (args.reason, signed)]
-    write_baseline(args.baseline, current, FAMILIES, ruff_version(),
-                   forced_batches=batches)
-    print(f"wrote {len(current)} finding(s) to {args.baseline}"
-          + (f"; {len(signed)} authorised by {args.reason}" if signed else ""))
+    write_baseline(args.baseline, current, FAMILIES, forced_batches=batches)
+    print(
+        f"wrote {len(current)} finding(s) to {args.baseline}"
+        + (f"; {len(signed)} authorised by {args.reason}" if signed else "")
+    )
     return 0
 
 
@@ -430,15 +486,12 @@ def do_check(args, current, existing):
         return 1
     bad = unknown_keys(existing)
     if bad:
-        print(f"unknown key in {args.baseline}: {', '.join(bad)} - "
-              "only --write --force writes an entry into this file")
+        print(f"unknown key in {args.baseline}: {', '.join(bad)} - only --write --force writes an entry into this file")
         return 2
     new, stale = diff(current, existing["findings"])
     batches = load_forced(existing)
-    authorised, gained = gained_since_head(
-        args.baseline, existing["findings"], batches)
-    standing = standing_forced(
-        existing, batches, {identity(f) for _, f in authorised})
+    authorised, gained = gained_since_head(args.baseline, existing["findings"], batches)
+    standing = standing_forced(existing, batches, {identity(f) for _, f in authorised})
     for f in new:
         print(f"new: {describe(f)}")
     for f in stale:
@@ -452,8 +505,7 @@ def do_check(args, current, existing):
     for reason, f in authorised:
         print(f"authorised by {reason}, red until committed: {describe(f)}")
     for f in gained:
-        print(f"gained: {describe(f)} - only --write --force --reason "
-              "UX-NNN may add a line")
+        print(f"gained: {describe(f)} - only --write --force --reason UX-NNN may add a line")
     # `UX-766`: still visible after the commit that made the block above
     # silent - stays until whoever rewrites the baseline decides otherwise.
     for reason, f in standing:
@@ -462,8 +514,7 @@ def do_check(args, current, existing):
         tail = ""
         if standing:
             counts = collections.Counter(reason for reason, _ in standing)
-            tail = "; " + "; ".join(f"{n} still forced by {r}"
-                                     for r, n in sorted(counts.items()))
+            tail = "; " + "; ".join(f"{n} still forced by {r}" for r, n in sorted(counts.items()))
         print(f"clean: {len(current)} finding(s) match {args.baseline}{tail}")
         return 0
     return 1
@@ -479,9 +530,7 @@ def do_shrink(args, current, existing):
         kept = [f for f in existing["findings"] if identity(f) not in drop]
         kept_ids = {identity(f) for f in kept}
         batches = _prune_forced(load_forced(existing), kept_ids)
-        write_baseline(args.baseline, kept, existing.get("families", FAMILIES),
-                       existing.get("ruff_version", ruff_version()),
-                       forced_batches=batches)
+        write_baseline(args.baseline, kept, existing.get("families", FAMILIES), forced_batches=batches)
         plural = "y" if len(stale) == 1 else "ies"
         print(f"removed {len(stale)} stale entr{plural}")
     else:
@@ -494,33 +543,86 @@ def do_shrink(args, current, existing):
     return 0
 
 
+def _head_lines(root, file):
+    """`file`'s collapsed lines as `HEAD` carries them, or `[]`."""
+    return [" ".join(line.split()) for line in (head_text(pathlib.Path(root) / file) or "").splitlines()]
+
+
+def rekey_pairs(current, baseline, root):
+    """`{old identity: new identity}` when every stale entry has exactly one
+    renamed counterpart per `(tool, rule, file)`, paired in source order;
+    `None` when the two multisets differ."""
+    base = {identity(f) for f in baseline}
+    cur = {identity(f) for f in current}
+    new = [f for f in current if identity(f) not in base]
+    stale = [f for f in baseline if identity(f) not in cur]
+    group = operator.itemgetter("tool", "rule", "file")
+    if collections.Counter(map(group, new)) != collections.Counter(map(group, stale)):
+        return None
+    lines_of = {}
+
+    def old_row(f):
+        lines = lines_of.setdefault(f["file"], _head_lines(root, f["file"]))
+        rows = [i for i, text in enumerate(lines) if text == f["line"]]
+        return (rows[f["nth"] - 1] if len(rows) >= f["nth"] else len(lines), f["nth"], f["line"])
+
+    pairs = {}
+    for key in {group(f) for f in stale}:
+        olds = sorted((f for f in stale if group(f) == key), key=old_row)
+        news = [f for f in new if group(f) == key]
+        pairs.update((identity(o), identity(n)) for o, n in zip(olds, news))
+    return pairs
+
+
+def do_rekey(args, current, existing):
+    """`UX-1118`: a reformat renames identities without adding one; refuse
+    anything else, so a new finding cannot ride in on a layout commit."""
+    if existing is None:
+        print(f"no baseline at {args.baseline} - run --write first")
+        return 1
+    pairs = rekey_pairs(current, existing["findings"], args.root)
+    if pairs is None:
+        new, stale = diff(current, existing["findings"])
+        print(f"refused: {len(new)} new and {len(stale)} stale differ per (tool, rule, file) - not a rename")
+        for f in new:
+            print(f"  new: {describe(f)}")
+        for f in stale:
+            print(f"  stale: {describe(f)}")
+        return 1
+    batches = [(reason, {pairs.get(i, i) for i in ids}) for reason, ids in load_forced(existing)]
+    write_baseline(args.baseline, current, existing.get("families", FAMILIES), forced_batches=batches)
+    print(f"rekeyed {len(pairs)} identit{'y' if len(pairs) == 1 else 'ies'}; {len(current)} finding(s)")
+    return 0
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--write", action="store_true")
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--shrink", action="store_true")
-    parser.add_argument("--force", action="store_true",
-                         help="with --write, allow adding new entries")
-    parser.add_argument("--reason", default=None,
-                         help="with --force, the UX- id that authorises the add")
+    parser.add_argument("--rekey", action="store_true")
+    parser.add_argument("--force", action="store_true", help="with --write, allow adding new entries")
+    parser.add_argument("--reason", default=None, help="with --force, the UX- id that authorises the add")
     parser.add_argument("--baseline", type=pathlib.Path, default=DEFAULT_BASELINE)
     parser.add_argument("--root", type=pathlib.Path, default=REPO)
     parser.add_argument("--paths", nargs="+", default=None)
-    # UX-802: a ruff/bandit-only caller (a test clause, mostly) pays a
-    # whole pyright pass it never reads a diagnostic from - read its
-    # `pyright_findings` shape from a fixture instead of spawning it.
-    parser.add_argument("--pyright-from", type=pathlib.Path, default=None,
-                         help="read pyright_findings' shape from PATH instead "
-                              "of spawning pyright")
+    # UX-802: a ruff-only caller reads pyright's shape from a fixture.
+    parser.add_argument(
+        "--pyright-from",
+        type=pathlib.Path,
+        default=None,
+        help="read pyright_findings' shape from PATH instead of spawning pyright",
+    )
     args = parser.parse_args(argv)
-    if sum((args.write, args.check, args.shrink)) != 1:
-        parser.error("exactly one of --write, --check, --shrink")
+    if sum((args.write, args.check, args.shrink, args.rekey)) != 1:
+        parser.error("exactly one of --write, --check, --shrink, --rekey")
 
+    if refused := refuse_off_lock(args.pyright_from is not None):
+        return refused
     paths = args.paths or list(DEFAULT_PATHS)
     producers = dict(TOOLS)
     if args.pyright_from is not None:
-        producers["pyright"] = functools.partial(
-            _pyright_producer, pyright_from=args.pyright_from)
+        producers["pyright"] = functools.partial(_pyright_producer, pyright_from=args.pyright_from)
     current = []
     try:
         for producer in producers.values():
@@ -535,6 +637,8 @@ def main(argv=None):
         return do_write(args, current, existing)
     if args.shrink:
         return do_shrink(args, current, existing)
+    if args.rekey:
+        return do_rekey(args, current, existing)
     return do_check(args, current, existing)
 
 

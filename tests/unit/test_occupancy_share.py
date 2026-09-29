@@ -12,6 +12,7 @@ the available dispatch-slot-time the run used - so serializing
 independent work lowers it and unchaining raises it. On that same real
 pair: 27.8% -> 63.0%.
 """
+
 from bga.analyzer import BuildEfficiencyAnalyzer
 from bga.ingest.models import (
     DependencyEdge,
@@ -28,7 +29,9 @@ from bga.ingest.models import (
 def _task(uid, start_us, finish_us):
     return NormalizedTask(
         task_key=TaskKey(uid, TaskKind.BUILD, "BUILD", 0),
-        ready_us=start_us, start_us=start_us, finish_us=finish_us,
+        ready_us=start_us,
+        start_us=start_us,
+        finish_us=finish_us,
     )
 
 

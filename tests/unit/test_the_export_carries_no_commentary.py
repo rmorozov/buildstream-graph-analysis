@@ -35,6 +35,7 @@ It is not a minifier and must not become one (`UX-193`: no build step).
 Code is left exactly as written, so a stack trace from an exported page
 still quotes the source.
 """
+
 import pathlib
 import re
 import sys
@@ -66,7 +67,6 @@ def _stripped(name):
 
 
 class TestTheStripperKnowsACommentFromAString:
-
     @pytest.mark.parametrize("name", MODULES)
     def test_every_span_it_takes_is_a_whole_comment(self, name):
         """Each removed span opens *and closes* as a comment, and they
@@ -84,20 +84,13 @@ class TestTheStripperKnowsACommentFromAString:
         spans = list(view._comment_spans(source))
         for start, end in spans:
             body = source[start:end]
-            assert start > previous_end, (
-                f"{name}: span at {start} overlaps the one before it")
+            assert start > previous_end, f"{name}: span at {start} overlaps the one before it"
             previous_end = end
-            assert body[:2] in ("//", "/*"), (
-                f"{name}: a removed span does not open a comment: "
-                f"{body[:40]!r}")
+            assert body[:2] in ("//", "/*"), f"{name}: a removed span does not open a comment: {body[:40]!r}"
             if body.startswith("/*"):
-                assert body.endswith("*/"), (
-                    f"{name}: a block span does not end at its `*/`: "
-                    f"{body[-40:]!r}")
+                assert body.endswith("*/"), f"{name}: a block span does not end at its `*/`: {body[-40:]!r}"
             else:
-                assert "\n" not in body, (
-                    f"{name}: a line comment span ran past its newline: "
-                    f"{body[:60]!r}")
+                assert "\n" not in body, f"{name}: a line comment span ran past its newline: {body[:60]!r}"
         assert spans, f"{name}: no comment at all was found in the source"
 
     @pytest.mark.parametrize("name", MODULES)
@@ -105,7 +98,8 @@ class TestTheStripperKnowsACommentFromAString:
         once = _stripped(name)
         assert view._uncomment_js(once) == once, (
             f"{name}: a second pass found more to take, which means the "
-            "first pass left something it believes is a comment")
+            "first pass left something it believes is a comment"
+        )
 
     def test_a_regex_literal_full_of_slashes_survives(self):
         """The regex state, exercised - because the corpus does not.
@@ -119,34 +113,34 @@ class TestTheStripperKnowsACommentFromAString:
         guards against a whole-text `/\\*.*?\\*/` pass, not against
         this scanner.
         """
-        module = "\n".join((
-            r'const url = /^https:\/\//;   // strip the scheme',
-            'const kept = "after the regex";',
-        ))
+        module = "\n".join(
+            (
+                r'const url = /^https:\/\//;   // strip the scheme',
+                'const kept = "after the regex";',
+            )
+        )
         out = view._uncomment_js(module)
-        assert r'/^https:\/\//' in out, (
-            "the regex literal was eaten: its trailing `\\/\\/` was read "
-            "as a line comment")
-        assert 'const kept = "after the regex";' in out, (
-            "everything after the regex was swallowed")
+        assert r'/^https:\/\//' in out, "the regex literal was eaten: its trailing `\\/\\/` was read as a line comment"
+        assert 'const kept = "after the regex";' in out, "everything after the regex was swallowed"
         assert "strip the scheme" not in out
 
     def test_a_comment_delimiter_inside_a_string_survives(self):
         """The acceptance test's own case, built rather than hoped for."""
-        module = "\n".join((
-            'const a = "a string with */ inside it";   // a real comment',
-            'const b = "https://example.test/x";',
-            'const c = /\\s*\\n\\s*/g;   /* a real block comment */',
-            'const d = `a template',
-            '// this line is data, not a comment',
-            '`;',
-        ))
+        module = "\n".join(
+            (
+                'const a = "a string with */ inside it";   // a real comment',
+                'const b = "https://example.test/x";',
+                'const c = /\\s*\\n\\s*/g;   /* a real block comment */',
+                'const d = `a template',
+                '// this line is data, not a comment',
+                '`;',
+            )
+        )
         out = view._uncomment_js(module)
         assert '"a string with */ inside it"' in out
         assert '"https://example.test/x";' in out
         assert "const c = /\\s*\\n\\s*/g;" in out
-        assert "// this line is data, not a comment" in out, (
-            "a line inside a template literal was taken for a comment")
+        assert "// this line is data, not a comment" in out, "a line inside a template literal was taken for a comment"
         assert "a real comment" not in out
         assert "a real block comment" not in out
 
@@ -158,10 +152,10 @@ class TestTheStripperKnowsACommentFromAString:
         real one rather than a hypothetical.
         """
         module = 'const b = "https://example.test/x";\nconst c = /\\s*\\n\\s*/g;'
-        naive_line = "\n".join(
-            line.split("//")[0].rstrip() for line in module.splitlines())
-        assert '"https:' in naive_line and '"https://example.test/x"' \
-            not in naive_line, "the naive line stripper did not corrupt it"
+        naive_line = "\n".join(line.split("//")[0].rstrip() for line in module.splitlines())
+        assert '"https:' in naive_line and '"https://example.test/x"' not in naive_line, (
+            "the naive line stripper did not corrupt it"
+        )
 
         # The block form needs an *unpaired* `/*` for the hazard to bite,
         # which is what a `/*` inside a string literal is. A `/* ... */`
@@ -172,14 +166,14 @@ class TestTheStripperKnowsACommentFromAString:
         assert '"https://example.test/x"' not in naive_block, (
             "the naive block stripper did not pair the `/*` inside the "
             "string with the `*/` inside the regex literal, so this case "
-            "no longer discriminates")
+            "no longer discriminates"
+        )
         assert view._uncomment_js(block).count("\n") == block.count("\n"), (
-            "the careful pass changed the line structure of a module that "
-            "contains no comment at all")
+            "the careful pass changed the line structure of a module that contains no comment at all"
+        )
 
 
 class TestNothingCommentedReachesTheAttachment:
-
     def test_no_module_arrives_with_a_comment_in_it(self):
         for name in MODULES:
             spans = list(view._comment_spans(_stripped(name)))
@@ -189,8 +183,7 @@ class TestNothingCommentedReachesTheAttachment:
         """Read a second way, so a bug in the scanner cannot hide behind
         the scanner. Whole-line comments need no literal analysis."""
         for name in MODULES:
-            opens = [line for line in _stripped(name).splitlines()
-                     if line.lstrip().startswith(("//", "/*", "*/"))]
+            opens = [line for line in _stripped(name).splitlines() if line.lstrip().startswith(("//", "/*", "*/"))]
             assert not opens, f"{name}: {opens[:3]}"
 
     def test_every_double_slash_left_is_one_of_the_named_literals(self):
@@ -204,23 +197,24 @@ class TestNothingCommentedReachesTheAttachment:
         lines = [line for line in bundle.splitlines() if "//" in line]
         for line in lines:
             assert any(literal in line for literal in SURVIVING_SLASHES), (
-                f"a `//` that is not one of the named URL literals: {line!r}")
+                f"a `//` that is not one of the named URL literals: {line!r}"
+            )
         assert len(lines) >= 4, (
             f"only {len(lines)} lines still carry a `//`; this clause was "
             "written against four URL constants and a pass over none of "
-            "them would prove nothing")
+            "them would prove nothing"
+        )
 
     def test_the_literals_that_look_like_comments_are_still_there(self):
         bundle = "\n".join(_stripped(name) for name in MODULES)
         for literal in SURVIVING_SLASHES:
             assert literal in bundle, f"{literal} did not survive the pass"
         assert SURVIVING_STARSLASH in bundle, (
-            f"{SURVIVING_STARSLASH} did not survive - a block-comment pass "
-            "paired its `*/` with a `/*` somewhere above")
+            f"{SURVIVING_STARSLASH} did not survive - a block-comment pass paired its `*/` with a `/*` somewhere above"
+        )
 
 
 class TestTheRepositoryKeepsEveryWord:
-
     def test_the_served_page_is_the_file_on_disk(self):
         """Served mode keeps the comments: `view-source:` is a debugging
         affordance for whoever is working on the tree."""
@@ -231,20 +225,20 @@ class TestTheRepositoryKeepsEveryWord:
         app = (served / "app.js").read_text(encoding="utf-8")
         assert list(view._comment_spans(app)), (
             "app.js as served carries no comment at all, which means the "
-            "stripper has been applied to the tree rather than to the copy")
+            "stripper has been applied to the tree rather than to the copy"
+        )
 
     def test_the_stripped_copy_is_smaller_and_the_source_is_not(self):
-        source = sum(len((VIEWER / n).read_text(encoding="utf-8"))
-                     for n in MODULES)
+        source = sum(len((VIEWER / n).read_text(encoding="utf-8")) for n in MODULES)
         stripped = sum(len(_stripped(n)) for n in MODULES)
         assert stripped < source
         assert source > 300_000, (
             f"the modules total {source:,} B; this clause was written "
-            "against 351,930 B and a near-empty tree would pass it")
+            "against 351,930 B and a near-empty tree would pass it"
+        )
 
 
 class TestTheStylesheetsOwnHazard:
-
     def test_no_css_string_carries_a_comment_delimiter(self):
         """`_uncommented_css` strips `/* */` over the whole text with a
         regex, and its docstring says the one hazard is a `/*` inside a
@@ -256,7 +250,8 @@ class TestTheStylesheetsOwnHazard:
         assert not carriers, (
             f"a CSS string carries a comment delimiter: {carriers}. The "
             "stylesheet's stripper is a whole-text regex and would pair it "
-            "with the wrong partner.")
+            "with the wrong partner."
+        )
         assert strings, (
-            "no quoted string was found in style.css at all; this clause "
-            "would pass vacuously and needs re-pointing")
+            "no quoted string was found in style.css at all; this clause would pass vacuously and needs re-pointing"
+        )

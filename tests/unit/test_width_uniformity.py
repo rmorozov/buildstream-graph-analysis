@@ -22,6 +22,7 @@ These tests pin both halves of that decision: the renamed field keeps its
 uniformity semantics, and the field that answers the parallelism question
 is checked to actually answer it.
 """
+
 import networkx as nx
 
 from bga.ingest.models import NormalizedTask, TaskKey, TaskKind
@@ -58,9 +59,7 @@ FAN_OUT = (["r", "x", "y", "z"], [("r", "x"), ("r", "y"), ("r", "z")])
 _LIBS = [f"lib-{c}" for c in "abcdef"]
 CHAINED = (
     ["core", *_LIBS, "app"],
-    [("core", _LIBS[0])]
-    + [(_LIBS[i], _LIBS[i + 1]) for i in range(len(_LIBS) - 1)]
-    + [(_LIBS[-1], "app")],
+    [("core", _LIBS[0])] + [(_LIBS[i], _LIBS[i + 1]) for i in range(len(_LIBS) - 1)] + [(_LIBS[-1], "app")],
 )
 FANNED = (
     ["core", *_LIBS, "app"],
@@ -102,6 +101,7 @@ def test_uniformity_is_low_when_the_graph_has_a_narrow_waist():
 
 # --- the question the rename did NOT answer, and where it lives --------
 
+
 def test_mean_width_is_what_answers_how_parallel_this_build_is():
     """The reason this was renamed rather than redefined. `mean_width`
     is average parallelism - elements over depth - and it moves the right
@@ -130,9 +130,7 @@ def test_metrics_avg_parallelism_agrees_with_mean_width():
         {node: _task(node) for node in FANNED[0]},
     )
 
-    assert analyzer.compute_structural_metrics().avg_parallelism == (
-        analyzer.compute_parallelism_profile().mean_width
-    )
+    assert analyzer.compute_structural_metrics().avg_parallelism == (analyzer.compute_parallelism_profile().mean_width)
 
 
 def test_report_shows_the_discriminating_number(tmp_path):

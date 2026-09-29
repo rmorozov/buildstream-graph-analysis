@@ -4,6 +4,7 @@ Deterministic replay scheduler basic correctness and capacity-sweep
 monotonicity (Part 18/19), on small hand-built NormalizedTask lists -
 no run-dir/JSON fixture needed.
 """
+
 from bga.ingest.models import NormalizedTask, Resource, RunContext, TaskKey, TaskKind
 from bga.replay.scheduler import ReplayScheduler
 
@@ -11,8 +12,11 @@ from bga.replay.scheduler import ReplayScheduler
 def _task(uid, dur_us, dependencies=()):
     return NormalizedTask(
         task_key=TaskKey(uid, TaskKind.BUILD, "BUILD", 0),
-        ready_us=0, start_us=0, finish_us=dur_us,
-        dependencies=list(dependencies), resources=[Resource.PROCESS],
+        ready_us=0,
+        start_us=0,
+        finish_us=dur_us,
+        dependencies=list(dependencies),
+        resources=[Resource.PROCESS],
     )
 
 
@@ -121,6 +125,7 @@ def test_capacity_sweep_first_sample_normalized_improvement_is_not_nan():
 # per-process-randomized hash), and `depth` must be real, not an LPT
 # duplicate ---
 
+
 def test_fifo_tie_break_is_lexicographic_by_task_key():
     """Several independent same-duration tasks, capacity 1 (forces
     strict one-at-a-time ordering) - fifo must schedule them in
@@ -170,7 +175,9 @@ def test_fifo_is_deterministic_across_separate_processes():
     for seed in ("1", "2"):
         proc = subprocess.run(
             [sys.executable, "-c", script],
-            capture_output=True, text=True, check=True,
+            capture_output=True,
+            text=True,
+            check=True,
             env={**os.environ, "PYTHONHASHSEED": seed},
         )
         runs.append(json.loads(proc.stdout))
@@ -223,9 +230,8 @@ def test_hash_is_never_called_in_replay_scheduler():
 
     tree = ast.parse(inspect.getsource(scheduler_module))
     hash_calls = [
-        node for node in ast.walk(tree)
-        if isinstance(node, ast.Call)
-        and isinstance(node.func, ast.Name)
-        and node.func.id == "hash"
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "hash"
     ]
     assert hash_calls == []

@@ -15,6 +15,7 @@ Refuses, when the payload's `cwd` is a linked worktree (`git rev-parse
 Tokenised as `no_bulk_add` does, so a heredoc or a quoted mention of a
 command is not one (UX-424). Exit 2 names the rule.
 """
+
 import json
 import pathlib
 import re
@@ -36,8 +37,7 @@ def is_linked_worktree(root):
     """True when `root` is a worktree added by `git worktree add`."""
     dirs = []
     for flag in ("--git-dir", "--git-common-dir"):
-        done = subprocess.run(["git", "rev-parse", flag], cwd=root,
-                              capture_output=True, text=True)
+        done = subprocess.run(["git", "rev-parse", flag], cwd=root, capture_output=True, text=True)
         if done.returncode != 0 or not done.stdout.strip():
             return False
         dirs.append((pathlib.Path(root) / done.stdout.strip()).resolve())
@@ -66,8 +66,7 @@ def _editable(operands):
             return True
         if word.startswith("-e"):
             return True
-        if (word.startswith("-") and not word.startswith("--")
-                and word[1:].isalpha() and "e" in word[1:]):
+        if word.startswith("-") and not word.startswith("--") and word[1:].isalpha() and "e" in word[1:]:
             return True
     return False
 
@@ -86,14 +85,12 @@ def refusal(words):
     if pip_args and pip_args[0] == "install" and _editable(pip_args[1:]):
         return "`pip install -e` repoints the one shared `bga` install"
     if head == "make" and MAKE_TARGETS.intersection(rest):
-        return "`make " + " ".join(sorted(MAKE_TARGETS.intersection(rest))) \
-            + "` is the session's run, not a track's"
+        return "`make " + " ".join(sorted(MAKE_TARGETS.intersection(rest))) + "` is the session's run, not a track's"
     script = None
     if head == "dev_touching.py":
         script = head
     elif _PYTHON.match(head):
-        script = next((pathlib.PurePath(w).name for w in rest
-                       if not w.startswith("-")), None)
+        script = next((pathlib.PurePath(w).name for w in rest if not w.startswith("-")), None)
     if script == "dev_touching.py" and not PRINTS_ONLY.intersection(rest):
         return "`dev_touching.py` without `--list` starts the sweep"
     return None

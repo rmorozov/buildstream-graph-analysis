@@ -36,6 +36,7 @@ in `bga/findings.py` beside the findings it ranks, so the CI comment
 and the report cannot route differently (Direction 7). The page reads
 a field.
 """
+
 import pathlib
 import sys
 
@@ -136,13 +137,10 @@ def driven(browser, tmp_path_factory):
     into = tmp_path_factory.mktemp("u372")
     out = {}
     for label in sorted(pages.FIXTURES):
-        uri = pages.export_uri(pages.FIXTURES[label], into,
-                               name=f"{label}.html")
-        again = pages.export_uri(pages.FIXTURES[label], into,
-                                 name=f"{label}-pasted.html")
+        uri = pages.export_uri(pages.FIXTURES[label], into, name=f"{label}.html")
+        again = pages.export_uri(pages.FIXTURES[label], into, name=f"{label}-pasted.html")
         result = browser.measure(uri, _DRIVE, 1440, 900)
-        result["restored"] = browser.measure(
-            again + result.get("hash", ""), _RESTORED, 1440, 900)
+        result["restored"] = browser.measure(again + result.get("hash", ""), _RESTORED, 1440, 900)
         out[label] = result
     return out
 
@@ -151,18 +149,16 @@ def driven(browser, tmp_path_factory):
 class TestEveryFindingNamesItsReader:
     def test_every_published_finding_declares_one(self, label):
         """The clause the defect fails: it was zero of eleven."""
-        naked = [f.get("id") for f in _payload(label).get("findings") or []
-                 if not f.get("reader")]
-        assert naked == [], (
-            f"{label}: finding(s) serving nobody in particular: {naked}")
+        naked = [f.get("id") for f in _payload(label).get("findings") or [] if not f.get("reader")]
+        assert naked == [], f"{label}: finding(s) serving nobody in particular: {naked}"
 
     def test_the_readers_are_more_than_one(self, label):
         """`UX-372`'s own falsification. One reader with every finding
         is the page before this item wearing a new field."""
         readers = _payload(label).get("readers") or []
         assert len(readers) > 1, (
-            f"{label} publishes {len(readers)} reader(s); a role model "
-            f"with one role is the page that had none")
+            f"{label} publishes {len(readers)} reader(s); a role model with one role is the page that had none"
+        )
 
     def test_the_index_agrees_with_the_findings(self, label):
         """Two statements of one fact is how they drift. `readers[]` is
@@ -171,8 +167,7 @@ class TestEveryFindingNamesItsReader:
         payload = _payload(label)
         published = {}
         for finding in payload.get("findings") or []:
-            published.setdefault(finding.get("reader"), []).append(
-                finding.get("id"))
+            published.setdefault(finding.get("reader"), []).append(finding.get("id"))
         for entry in payload.get("readers") or []:
             assert entry["findings"] == published.get(entry["id"]), entry
             assert entry["leads_with"] in entry["findings"], entry
@@ -186,9 +181,9 @@ class TestEveryFindingNamesItsReader:
         payload = _payload(label)
         offered = [e["id"] for e in payload.get("readers") or []]
         served = {f.get("reader") for f in payload.get("findings") or []}
-        assert offered == [uid for uid, _r, _l, _q in READERS
-                           if uid in served], (
-            f"{label}: offered {offered}, has findings for {sorted(served)}")
+        assert offered == [uid for uid, _r, _l, _q in READERS if uid in served], (
+            f"{label}: offered {offered}, has findings for {sorted(served)}"
+        )
 
 
 class TestTheAssignmentIsExhaustive:
@@ -216,9 +211,7 @@ class TestTheAssignmentIsExhaustive:
 
         source = pathlib.Path(module.__file__).read_text(encoding="utf-8")
         found = set(re.findall(self._EMITS, source))
-        assert len(found) >= 21, (
-            f"the id scan found {len(found)}; it has stopped seeing calls "
-            f"it used to see")
+        assert len(found) >= 21, f"the id scan found {len(found)}; it has stopped seeing calls it used to see"
         return found
 
     def test_every_id_the_module_can_emit_has_a_reader(self):
@@ -228,7 +221,8 @@ class TestTheAssignmentIsExhaustive:
         assert missing == [], (
             f"finding id(s) with no reader in FINDING_READERS: {missing} - "
             f"a new finding must name who it is for rather than defaulting "
-            f"to nobody")
+            f"to nobody"
+        )
 
     def test_the_map_names_no_finding_that_does_not_exist(self):
         """The other direction. A stale entry is not harmless: it is the
@@ -236,8 +230,7 @@ class TestTheAssignmentIsExhaustive:
         from bga.findings import FINDING_READERS
 
         stale = sorted(set(FINDING_READERS) - self._emitted())
-        assert stale == [], (
-            f"FINDING_READERS names finding id(s) nothing emits: {stale}")
+        assert stale == [], f"FINDING_READERS names finding id(s) nothing emits: {stale}"
 
     def test_no_reader_is_named_that_the_vocabulary_lacks(self):
         from bga.findings import FINDING_READERS, READERS
@@ -254,8 +247,8 @@ class TestTheAssignmentIsExhaustive:
         used = set(FINDING_READERS.values())
         idle = [uid for uid, _r, _l, _q in READERS if uid not in used]
         assert idle == [], (
-            f"reader(s) no finding serves: {idle} - either give them one "
-            f"or take them out of the vocabulary")
+            f"reader(s) no finding serves: {idle} - either give them one or take them out of the vocabulary"
+        )
 
     def test_the_ids_are_the_role_models_own(self):
         """`roles.md` has named these readers since round 27. Two
@@ -264,8 +257,7 @@ class TestTheAssignmentIsExhaustive:
 
         text = (REPO / "docs/design/roles.md").read_text(encoding="utf-8")
         for _uid, role, _label, _question in READERS:
-            assert f"| {role} |" in text, (
-                f"{role} is not a row in docs/design/roles.md")
+            assert f"| {role} |" in text, f"{role} is not a row in docs/design/roles.md"
 
 
 @needs_browser
@@ -274,8 +266,8 @@ class TestTheAssignmentIsExhaustive:
 class TestChoosingAReaderChangesTheAnswer:
     def test_the_picker_is_offered(self, driven, label):
         assert driven[label]["picker"] is True, (
-            f"{label} publishes more than one reader and the page offers no "
-            f"way to be one")
+            f"{label} publishes more than one reader and the page offers no way to be one"
+        )
 
     def test_the_control_has_a_label(self, driven, label):
         """`UX-334`: a form control the browser can name."""
@@ -284,26 +276,22 @@ class TestChoosingAReaderChangesTheAnswer:
     def test_every_option_leads_with_something(self, driven, label):
         """A selector that reorders nothing is furniture. Every option
         but the default produces a lead block."""
-        blank = [row["chose"] for row in driven[label]["seen"]
-                 if row["chose"] and not row["got"]]
-        assert blank == [], (
-            f"{label}: option(s) that change nothing: {blank}")
+        blank = [row["chose"] for row in driven[label]["seen"] if row["chose"] and not row["got"]]
+        assert blank == [], f"{label}: option(s) that change nothing: {blank}"
 
     def test_two_readers_do_not_get_the_same_answer(self, driven, label):
         """The clause that makes the routing mean something. Distinct
         readers, distinct leads - if every option landed on the same
         finding the page would still have one reader."""
-        leads = [row["got"]["finding"] for row in driven[label]["seen"]
-                 if row["got"]]
+        leads = [row["got"]["finding"] for row in driven[label]["seen"] if row["got"]]
         assert len(set(leads)) == len(leads), (
-            f"{label}: {len(leads)} readers, {len(set(leads))} distinct "
-            f"lead(s): {leads}")
+            f"{label}: {len(leads)} readers, {len(set(leads))} distinct lead(s): {leads}"
+        )
 
     def test_the_lead_is_the_published_one(self, driven, label):
         """Direction 7, asserted at the seam: the page shows what
         `readers[].leads_with` says, not something it ranked itself."""
-        declared = {e["id"]: e["leads_with"]
-                    for e in _payload(label).get("readers") or []}
+        declared = {e["id"]: e["leads_with"] for e in _payload(label).get("readers") or []}
         for row in driven[label]["seen"]:
             if not row["got"]:
                 continue
@@ -312,8 +300,7 @@ class TestChoosingAReaderChangesTheAnswer:
     def test_the_lead_carries_the_readers_question(self, driven, label):
         """Not just a finding id: the block says what was asked, so the
         answer reads as an answer."""
-        asked = {e["id"]: e["question"]
-                 for e in _payload(label).get("readers") or []}
+        asked = {e["id"]: e["question"] for e in _payload(label).get("readers") or []}
         for row in driven[label]["seen"]:
             if not row["got"]:
                 continue
@@ -332,8 +319,8 @@ class TestTheChoiceTravelsInTheLink:
     def test_the_reader_reaches_the_fragment(self, driven, label):
         out = driven[label]
         assert f"r={out['wanted']}" in out["hash"], (
-            f"{label}: chose {out['wanted']!r} and the fragment says "
-            f"{out['hash']!r}")
+            f"{label}: chose {out['wanted']!r} and the fragment says {out['hash']!r}"
+        )
 
     def test_a_pasted_link_lands_on_the_same_answer(self, driven, label):
         """The round trip on the real control, on a second load of the
@@ -341,10 +328,8 @@ class TestTheChoiceTravelsInTheLink:
         object survived."""
         out = driven[label]
         assert out["restored"]["chosen"] == out["wanted"], out["restored"]
-        declared = {e["id"]: e["leads_with"]
-                    for e in _payload(label).get("readers") or []}
-        assert out["restored"]["finding"] == declared[out["wanted"]], (
-            out["restored"])
+        declared = {e["id"]: e["leads_with"] for e in _payload(label).get("readers") or []}
+        assert out["restored"]["finding"] == declared[out["wanted"]], out["restored"]
 
 
 @needs_browser
@@ -356,16 +341,14 @@ class TestTheDefaultStillAnswers:
 
     def test_nobody_chosen_leads_with_nothing_extra(self, driven, label):
         assert driven[label]["before"]["lead"] is None, (
-            f"{label} shows a reader's answer before anybody said who they "
-            f"are")
+            f"{label} shows a reader's answer before anybody said who they are"
+        )
 
     def test_the_diagnosis_is_there_before_any_choice(self, driven, label):
-        assert driven[label]["before"]["diagnosis"].strip(), (
-            f"{label} says nothing until a reader is chosen")
+        assert driven[label]["before"]["diagnosis"].strip(), f"{label} says nothing until a reader is chosen"
 
     def test_the_actions_are_there_before_any_choice(self, driven, label):
-        assert driven[label]["before"]["actions"], (
-            f"{label} ranks nothing until a reader is chosen")
+        assert driven[label]["before"]["actions"], f"{label} ranks nothing until a reader is chosen"
 
     def test_choosing_nobody_again_puts_it_back(self, driven, label):
         """The default is reachable, not just initial - a one-way
@@ -387,19 +370,18 @@ class TestTheHeadlineWins:
     @pytest.mark.parametrize("label", sorted(pages.FIXTURES))
     def test_the_ranked_finding_leads_for_whoever_owns_it(self, label):
         payload = _payload(label)
-        ranked = next((a.get("finding_id")
-                       for a in payload["headline"].get("top_actions") or []
-                       if a.get("finding_id")), None)
+        ranked = next(
+            (a.get("finding_id") for a in payload["headline"].get("top_actions") or [] if a.get("finding_id")), None
+        )
         if not ranked:
             pytest.skip(f"{label} ranks no action to defer to")
-        owners = [e for e in payload.get("readers") or []
-                  if ranked in e["findings"]]
-        assert owners, (
-            f"{label}: the headline ranks {ranked!r} and no reader claims it")
+        owners = [e for e in payload.get("readers") or [] if ranked in e["findings"]]
+        assert owners, f"{label}: the headline ranks {ranked!r} and no reader claims it"
         for entry in owners:
             assert entry["leads_with"] == ranked, (
                 f"{label}: {entry['id']} leads with {entry['leads_with']!r} "
-                f"while the headline this page opens with names {ranked!r}")
+                f"while the headline this page opens with names {ranked!r}"
+            )
 
     def test_the_deference_is_the_rule_and_not_the_data(self):
         """Both fixtures happen to rank a finding R1 owns, so the clause
@@ -414,9 +396,7 @@ class TestTheHeadlineWins:
         ]
         plain = reader_index(findings)
         assert plain[0]["leads_with"] == "wait-category", plain
-        deferred = reader_index(
-            findings,
-            {"top_actions": [{"finding_id": "time-concentration"}]})
+        deferred = reader_index(findings, {"top_actions": [{"finding_id": "time-concentration"}]})
         assert deferred[0]["leads_with"] == "time-concentration", deferred
 
 
@@ -467,18 +447,19 @@ class TestAReaderIsAShapeNotAHue:
     @pytest.fixture(scope="class")
     def shaped(cls, browser, tmp_path_factory):
         into = tmp_path_factory.mktemp("u668")
-        return {label: browser.measure(
-            pages.export_uri(pages.FIXTURES[label], into, name=f"{label}.html"),
-            _SHAPE, 1440, 900) for label in sorted(pages.FIXTURES)}
+        return {
+            label: browser.measure(
+                pages.export_uri(pages.FIXTURES[label], into, name=f"{label}.html"), _SHAPE, 1440, 900
+            )
+            for label in sorted(pages.FIXTURES)
+        }
 
     @pytest.mark.parametrize("label", sorted(pages.FIXTURES))
     def test_the_header_carries_the_select(self, shaped, label):
-        assert shaped[label]["inHeader"], (
-            f"{label}: no reader select inside <header>")
+        assert shaped[label]["inHeader"], f"{label}: no reader select inside <header>"
 
     @pytest.mark.parametrize("label", sorted(pages.FIXTURES))
-    def test_a_promoted_section_wears_a_three_pixel_border(self, shaped,
-                                                            label):
+    def test_a_promoted_section_wears_a_three_pixel_border(self, shaped, label):
         width = shaped[label]["borderWidth"]
         assert width is not None, f"{label}: no section was promoted"
         assert width >= 3, f"{label}: [data-promoted] border-left is {width}px"
@@ -488,8 +469,8 @@ class TestAReaderIsAShapeNotAHue:
         before = shaped[label]["before"]
         assert before["declaring"], f"{label}: no section declares a reader"
         assert sorted(before["chipped"]) == sorted(before["declaring"]), (
-            f"{label}: declares {sorted(before['declaring'])}, "
-            f"chips {sorted(before['chipped'])}")
+            f"{label}: declares {sorted(before['declaring'])}, chips {sorted(before['chipped'])}"
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -5,6 +5,7 @@ Test names a guard and a mutation, either names a contract or process
 surface - give one of three shapes, and the header carries the word
 the tool derived. `--check` holds the two equal for every open row.
 """
+
 import pathlib
 import shutil
 import subprocess
@@ -22,15 +23,16 @@ HEADER = "**Priority:** Low | **Status:** \U0001f534 Not Started | **Topic:** gu
 
 
 def _task(fix, test):
-    return (f"# UX-9999: a task\n\n{HEADER}\n\n## Motivation\n\nx\n\n"
-            f"## Required Fix\n\n{fix}\n\n## Out of Scope\n\n- none\n\n"
-            f"## Acceptance Test\n\n{test}\n")
+    return (
+        f"# UX-9999: a task\n\n{HEADER}\n\n## Motivation\n\nx\n\n"
+        f"## Required Fix\n\n{fix}\n\n## Out of Scope\n\n- none\n\n"
+        f"## Acceptance Test\n\n{test}\n"
+    )
 
 
 class TestTheThreeSignalsGiveThreeShapes:
     def test_a_file_a_guard_and_a_mutation_is_mechanical(self):
-        text = _task("Edit `bga/blast.py`.",
-                     "`test_the_blast_is_ranked.py` red under the mutation.")
+        text = _task("Edit `bga/blast.py`.", "`test_the_blast_is_ranked.py` red under the mutation.")
         assert close.derived_shape(text) == "mechanical"
 
     def test_a_file_and_no_named_guard_is_bounded(self):
@@ -41,19 +43,18 @@ class TestTheThreeSignalsGiveThreeShapes:
         text = _task("Rank the blast better.", "the rank moves.")
         assert close.derived_shape(text) == "judgement"
 
-    @pytest.mark.parametrize("surface", ("bga/schemas.py", "docs/spec/specification.md",
-                                         ".claude/hooks/x.sh", "pyproject.toml"))
+    @pytest.mark.parametrize(
+        "surface", ("bga/schemas.py", "docs/spec/specification.md", ".claude/hooks/x.sh", "pyproject.toml")
+    )
     def test_a_contract_or_process_surface_is_judgement(self, surface):
-        text = _task(f"Edit `{surface}` and `bga/blast.py`.",
-                     "`test_x.py` red under the mutation.")
+        text = _task(f"Edit `{surface}` and `bga/blast.py`.", "`test_x.py` red under the mutation.")
         assert close.derived_shape(text) == "judgement"
 
     def test_an_architects_decision_takes_the_judgement(self):
         """UX-993: files, a guard and a mutation in `## Decision` make a
         process-surface row a track; missing any one leaves it judgement."""
         text = _task("Edit `.github/workflows/ci.yml`.", "the matrix moves.")
-        full = ("Files:     .github/workflows/ci.yml\n"
-                "Guard:     test_the_matrix_is_newest.py\nMutation:  drop 3.12\n")
+        full = "Files:     .github/workflows/ci.yml\nGuard:     test_the_matrix_is_newest.py\nMutation:  drop 3.12\n"
         assert close.derived_shape(text + "\n## Decision\n\n" + full) == "mechanical"
         for line in full.splitlines():
             partial = full.replace(line + "\n", "")
@@ -96,10 +97,10 @@ class TestTheRealBacklogAgrees:
         into.mkdir()
         for path in (REPO / "docs/backlog/scenarios").glob("*.md"):
             shutil.copy(path, into / path.name)
+        shutil.copytree(REPO / "docs/backlog/scenarios/closed", into / "closed")
         # Round 116 closed every open row, so the copy reopens one:
         # the index the tool reads is the copy's own (`--scenarios`).
-        rows = [line for line in (into / "closed.md").read_text(encoding="utf-8").splitlines()
-                if tool._TABLE_ROW.match(line)]
+        rows = [line for line in tool.closed_rows(into) if tool._TABLE_ROW.match(line)]
         uid = int(tool._TABLE_ROW.match(rows[-1]).group(1))
         with (into / "README.md").open("a", encoding="utf-8") as index:
             index.write("\n" + rows[-1] + "\n")
@@ -108,8 +109,8 @@ class TestTheRealBacklogAgrees:
         derived = tool.derived_shape(text)
         wrong = next(s for s in tool.SHAPES if s != derived)
         target.write_text(tool.with_shape(text, wrong), encoding="utf-8")
-        run = subprocess.run([sys.executable, str(TOOL), "--check", "--scenarios", str(into)],
-                             capture_output=True, text=True)
+        run = subprocess.run(
+            [sys.executable, str(TOOL), "--check", "--scenarios", str(into)], capture_output=True, text=True
+        )
         assert run.returncode == 1
-        assert (f"UX-{uid}: declares {wrong}, its text derives {derived}"
-                in run.stdout), run.stdout
+        assert f"UX-{uid}: declares {wrong}, its text derives {derived}" in run.stdout, run.stdout

@@ -7,6 +7,7 @@ passes from either edge. (b) Travel: four journeys' Fitts bits
 pixels (the scroll a hop needed) stay under a bound measured on
 `macro_micro` and the two-plane 1,202-element page, both size classes.
 """
+
 import functools
 import json
 import os
@@ -30,17 +31,21 @@ SPREAD = 24
 VIEWPORTS = [(1440, 900), (390, 844)]
 LABELS = ["macro_micro", "both_scale"]
 _BUILD = {
-    "both_scale": functools.partial(
-        pages.two_plane_run, shape=("--layers", "20", "--width", "60"),
-        name="both_scale"),
+    "both_scale": functools.partial(pages.two_plane_run, shape=("--layers", "20", "--width", "60"), name="both_scale"),
 }
 
 #: The classes held to one place; each block is `blockOf`'s, below.
 #: `copy-rows`/`top-n` joined on UX-1055 (`structured.js` builds
 #: `copy-rows` first, `top-n` last in `.table-tools`'s own DOM, so
 #: Tab order matches - CSS `order` alone would not).
-PLACEMENT = ("button.collapse", "button.describe", "button.json-toggle",
-             "button.chapter-open", "button.copy-rows", "select.top-n")
+PLACEMENT = (
+    "button.collapse",
+    "button.describe",
+    "button.json-toggle",
+    "button.chapter-open",
+    "button.copy-rows",
+    "select.top-n",
+)
 #: A class dropped from here *and* PLACEMENT reds nothing on its own -
 #: the census below (`test_every_control_class_a_head_or_row_holds_is_placed`)
 #: catches that gap, so this stays empty until the next unplaced find.
@@ -57,14 +62,10 @@ DX_ONLY = ("button.copy-rows", "select.top-n")
 #: (table tools) is the journey `UX-1055`'s own Decomposition names as
 #: extended; `UX-1044`'s fold label lengthens both_scale 390 J3.
 MEASURED = {
-    ("macro_micro", 1440): {"J1": (4.53, 0), "J2": (18.5, 0),
-                            "J3": (15.67, 38172), "J4": (14.8, 11761)},
-    ("macro_micro", 390): {"J1": (2.09, 424), "J2": (17.58, 0),
-                           "J3": (18.51, 50777), "J4": (9.99, 17717)},
-    ("both_scale", 1440): {"J1": (4.48, 0), "J2": (19.67, 0),
-                           "J3": (12.49, 45945), "J4": (14.78, 12568)},
-    ("both_scale", 390): {"J1": (1.68, 771), "J2": (18.94, 0),
-                          "J3": (21.01, 57550), "J4": (10.63, 22257)},
+    ("macro_micro", 1440): {"J1": (4.53, 0), "J2": (18.5, 0), "J3": (15.67, 38172), "J4": (14.8, 11761)},
+    ("macro_micro", 390): {"J1": (2.09, 424), "J2": (17.58, 0), "J3": (18.51, 50777), "J4": (9.99, 17717)},
+    ("both_scale", 1440): {"J1": (4.48, 0), "J2": (19.67, 0), "J3": (12.49, 45945), "J4": (14.78, 12568)},
+    ("both_scale", 390): {"J1": (1.68, 771), "J2": (18.94, 0), "J3": (21.01, 57550), "J4": (10.63, 22257)},
 }
 HEADROOM_BITS = 0.5
 HEADROOM_WHEEL = 1.10
@@ -114,7 +115,10 @@ async function journey(fn) {
 """
 
 #: J1, J3, then placement with every chapter open, then J4 - one load.
-_DOCUMENT = "(async () => {" + _PRELUDE + r"""
+_DOCUMENT = (
+    "(async () => {"
+    + _PRELUDE
+    + r"""
   const out = {};
   out.J1 = await journey(async () => {
     await hop("verdict", $(".diagnosis")[0], false);
@@ -221,9 +225,13 @@ _DOCUMENT = "(async () => {" + _PRELUDE + r"""
     .map((b) => b.getAttribute("data-toc-chapter"));
   return out;
 })()"""
+)
 
 #: J2 for one chapter: rail row, its first section, ?, JSON twice, fold.
-_RAIL = "(async () => {" + _PRELUDE + r"""
+_RAIL = (
+    "(async () => {"
+    + _PRELUDE
+    + r"""
   const nav = document.querySelector("nav.toc");
   let folded = nav.getAttribute("data-folded");
   if (folded === "true") {
@@ -254,14 +262,17 @@ _RAIL = "(async () => {" + _PRELUDE + r"""
   j.walked = walked;
   return j;
 })()"""
+)
 
 
 def totals(journey):
     """`(bits, wheel px, missing labels)` over one journey's hops."""
     hops = journey["steps"]
-    return (sum(h.get("bits", 0) for h in hops),
-            sum(h.get("wheel", 0) for h in hops),
-            [h["label"] for h in hops if h.get("missing")])
+    return (
+        sum(h.get("bits", 0) for h in hops),
+        sum(h.get("wheel", 0) for h in hops),
+        [h["label"] for h in hops if h.get("missing")],
+    )
 
 
 def spread(values):
@@ -271,9 +282,10 @@ def spread(values):
 def walk(browser, uri, width, height):
     """Every journey on one page at one viewport, J2 per chapter."""
     out = browser.measure(uri, _DOCUMENT, width, height)
-    out["J2"] = {cid: browser.measure(
-        uri, _RAIL.replace("__CHAPTER__", json.dumps(cid)), width, height)
-        for cid in out["chapters"]}
+    out["J2"] = {
+        cid: browser.measure(uri, _RAIL.replace("__CHAPTER__", json.dumps(cid)), width, height)
+        for cid in out["chapters"]
+    }
     return out
 
 
@@ -282,8 +294,7 @@ def build(root):
     prints the run's path, and a longer one wraps differently."""
     made = {}
     into = root / "macro_micro"
-    made["macro_micro"] = pages.export_uri(pages.FIXTURES["macro_micro"],
-                                           into, "macro_micro.html")
+    made["macro_micro"] = pages.export_uri(pages.FIXTURES["macro_micro"], into, "macro_micro.html")
     for label, make in _BUILD.items():
         into = root / label
         made[label] = pages.in_place_uri(make(into), into, f"{label}.html")
@@ -302,8 +313,7 @@ def walked(browser):
     shutil.rmtree(root, ignore_errors=True)
     try:
         uris = build(root)
-        yield {(label, size): walk(browser, uris[label], *size)
-               for label in LABELS for size in VIEWPORTS}
+        yield {(label, size): walk(browser, uris[label], *size) for label in LABELS for size in VIEWPORTS}
     finally:
         shutil.rmtree(root, ignore_errors=True)
 
@@ -321,16 +331,17 @@ def test_a_control_class_sits_at_one_place(walked, label, size, cls):
     assert placement["shut"] == 0, f"{label}: J3 left chapters shut"
     rows = placement["classes"][cls]
     assert rows, f"{label} at {_page(size)}: no visible {cls} in its block"
-    dx = min(spread([r["left"] for r in rows]),
-             spread([r["right"] for r in rows]))
+    dx = min(spread([r["left"] for r in rows]), spread([r["right"] for r in rows]))
     dy = spread([r["top"] for r in rows])
     assert dx <= SPREAD, (
         f"{label} at {_page(size)}: {len(rows)} {cls}, offset in its block "
-        f"spreads dx {dx:.1f}px > {SPREAD}px (styleguide §3l)")
+        f"spreads dx {dx:.1f}px > {SPREAD}px (styleguide §3l)"
+    )
     if cls not in DX_ONLY:
         assert dy <= SPREAD, (
             f"{label} at {_page(size)}: {len(rows)} {cls}, offset in its "
-            f"block spreads dy {dy:.1f}px > {SPREAD}px (styleguide §3l)")
+            f"block spreads dy {dy:.1f}px > {SPREAD}px (styleguide §3l)"
+        )
 
 
 @needs_browser
@@ -345,7 +356,8 @@ def test_every_control_class_a_head_or_row_holds_is_placed(walked, label, size):
     assert not unplaced, (
         f"{label} at {_page(size)}: {unplaced} sit in a section head, "
         f"chapter head or table row but are not in PLACEMENT (styleguide "
-        f"§3l)")
+        f"§3l)"
+    )
 
 
 @needs_browser
@@ -362,7 +374,8 @@ def test_a_table_tools_row_tabs_in_its_own_reading_order(walked, label, size):
     assert not offenders, (
         f"{label} at {_page(size)}: tables {offenders} - Tab order does "
         f"not match reading order in their tool row (styleguide §3l, "
-        f"WCAG 2.4.3/1.3.2)")
+        f"WCAG 2.4.3/1.3.2)"
+    )
 
 
 @needs_browser
@@ -373,12 +386,11 @@ def test_a_journey_stays_under_its_budget(walked, label, size, name):
     out = walked[label, size]
     if name == "J2":
         runs = out["J2"]
-        assert all(j["folded"] == "false" for j in runs.values()), (
-            f"{label} at {_page(size)}: the rail did not open")
+        assert all(j["folded"] == "false" for j in runs.values()), f"{label} at {_page(size)}: the rail did not open"
         unwalked = sorted(c for c, j in runs.items() if not j["walked"])
         assert unwalked == UNOFFERED[label], (
-            f"{label}: chapters with no section offering ?, JSON and fold "
-            f"are {unwalked}, not {UNOFFERED[label]}")
+            f"{label}: chapters with no section offering ?, JSON and fold are {unwalked}, not {UNOFFERED[label]}"
+        )
         walks = [totals(j) for j in runs.values() if j["walked"]]
     else:
         walks = [totals(out[name])]
@@ -389,7 +401,9 @@ def test_a_journey_stays_under_its_budget(walked, label, size, name):
     base_bits, base_wheel = MEASURED[label, size[0]][name]
     assert bits <= base_bits + HEADROOM_BITS, (
         f"{label} at {_page(size)}: {name} is {bits:.2f} Fitts bits, measured "
-        f"{base_bits} + {HEADROOM_BITS} (styleguide §3l)")
+        f"{base_bits} + {HEADROOM_BITS} (styleguide §3l)"
+    )
     assert wheel <= base_wheel * HEADROOM_WHEEL, (
         f"{label} at {_page(size)}: {name} needs {wheel}px of wheel, measured "
-        f"{base_wheel} x {HEADROOM_WHEEL} (styleguide §3l)")
+        f"{base_wheel} x {HEADROOM_WHEEL} (styleguide §3l)"
+    )

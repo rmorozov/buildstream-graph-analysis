@@ -4,6 +4,7 @@ Round 16 verified those items as landed and collected what each one had
 left unguarded. None of this reopens its parent; together it is one
 sitting of work.
 """
+
 import json
 import os
 import sys
@@ -38,12 +39,12 @@ class TestTheFingerprintNamesTheRealBuildboxRun:
     def test_path_is_still_the_fallback(self, monkeypatch, tmp_path):
         """A distro that installs it normally must keep working."""
         import tools.bst_native_build_tracer as tracer
+
         monkeypatch.setitem(sys.modules, "buildstream", None)
         fake = tmp_path / "buildbox-run"
         fake.write_text("#!/bin/sh\n")
         fake.chmod(0o755)
-        monkeypatch.setattr(tracer.shutil, "which",
-                            lambda name: str(fake) if name == "buildbox-run" else None)
+        monkeypatch.setattr(tracer.shutil, "which", lambda name: str(fake) if name == "buildbox-run" else None)
         assert resolve_buildbox_run() == str(fake)
 
 
@@ -73,14 +74,17 @@ class TestElementPathTolerance:
     remainder handed back YAML quotes verbatim - `element-path: "files"`
     resolved to a directory literally named `"files"`."""
 
-    @pytest.mark.parametrize("line,expected", [
-        ("element-path: files", "files"),
-        ("  element-path: files", "files"),
-        ('element-path: "files"', "files"),
-        ("element-path: 'files'", "files"),
-        ("element-path: files  # where they live", "files"),
-        ("element-path:", "elements"),
-    ])
+    @pytest.mark.parametrize(
+        "line,expected",
+        [
+            ("element-path: files", "files"),
+            ("  element-path: files", "files"),
+            ('element-path: "files"', "files"),
+            ("element-path: 'files'", "files"),
+            ("element-path: files  # where they live", "files"),
+            ("element-path:", "elements"),
+        ],
+    )
     def test_it_reads_the_declared_path(self, tmp_path, line, expected):
         (tmp_path / "project.conf").write_text(f"name: x\n{line}\n")
         assert element_path(str(tmp_path)) == expected
@@ -99,6 +103,7 @@ class TestTheFourClaimsThatHadNoTest:
         import inspect
 
         from tools import bst_native_build_tracer as tracer
+
         source = inspect.getsource(tracer.main)
         assert "re-run with --diagnose" in source
         assert "returncode != 0" in source or "returncode" in source
@@ -107,20 +112,30 @@ class TestTheFourClaimsThatHadNoTest:
         """UX-152 claimed the seam is 'inert unless asked for and absent
         from the shim's injected environment'. Nothing pinned it."""
         from tools.native_trace import bwrap_shim
+
         argv = bwrap_shim.build_shim_argv(
-            real_bwrap="/usr/bin/bwrap", bst_args=["--dir", "/x"],
-            bind_src="/s", bind_dst="/d", preload_so="/d/hook.so",
-            trace_log="/d/trace.log")
+            real_bwrap="/usr/bin/bwrap",
+            bst_args=["--dir", "/x"],
+            bind_src="/s",
+            bind_dst="/d",
+            preload_so="/d/hook.so",
+            trace_log="/d/trace.log",
+        )
         joined = " ".join(argv)
         assert "SELFTEST" not in joined.upper()
-        for seam in ("BST_TRACE_SPINE_DEGRADE_AFTER", "BST_TRACE_SPINE_FAIL_CONT_AT",
-                     "BST_TRACE_SPINE_FAIL_SEIZE", "BST_TRACE_SPINE_SELFTEST"):
+        for seam in (
+            "BST_TRACE_SPINE_DEGRADE_AFTER",
+            "BST_TRACE_SPINE_FAIL_CONT_AT",
+            "BST_TRACE_SPINE_FAIL_SEIZE",
+            "BST_TRACE_SPINE_SELFTEST",
+        ):
             assert seam not in joined, f"{seam} must not reach the sandbox"
 
     def test_the_census_runs_on_an_element_path_project(self, tmp_path):
         """UX-153's acceptance, tracer side - it was covered on doctor's
         side and not here."""
         from tools.bst_native_build_tracer import discover_element_names
+
         (tmp_path / "project.conf").write_text("name: x\nelement-path: src\n")
         (tmp_path / "src").mkdir()
         (tmp_path / "src" / "a.bst").write_text("kind: manual\n")
@@ -131,6 +146,7 @@ class TestTheFourClaimsThatHadNoTest:
         FAIL branches existed and no test entered any of them; this pins
         that they are reachable and worded, without needing a build."""
         import inspect
+
         source = inspect.getsource(doctor.check_capture_chain)
         assert source.count("FAIL") >= 2
         assert "SKIP" in source, "an unrunnable chain must skip, not pass"
@@ -143,8 +159,7 @@ class TestRootSpanningSourcesAreWarnedAbout:
     def _project(self, tmp_path, source_path):
         (tmp_path / "project.conf").write_text("name: x\n")
         (tmp_path / "elements").mkdir()
-        (tmp_path / "elements" / "e.bst").write_text(
-            f"kind: manual\nsources:\n- kind: local\n  path: {source_path}\n")
+        (tmp_path / "elements" / "e.bst").write_text(f"kind: manual\nsources:\n- kind: local\n  path: {source_path}\n")
         return str(tmp_path)
 
     def test_a_root_spanning_source_warns(self, tmp_path):

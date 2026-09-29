@@ -26,6 +26,7 @@ module refuses rather than guesses.
 Not a contract id of its own: two declared fields inside
 `run-context/v9`, a permitted addition under the spec's versioning rule.
 """
+
 from typing import Optional
 
 # The keys a difference in which makes two runs a different class. The
@@ -40,8 +41,7 @@ _FIELD_LABELS = {"type": "build type", "variant": "variant"}
 NOT_DECLARED = "(not declared)"
 
 
-def declare(build_type: Optional[str] = None,
-            variant: Optional[dict] = None) -> Optional[dict]:
+def declare(build_type: Optional[str] = None, variant: Optional[dict] = None) -> Optional[dict]:
     """The block a capture records, or `None` when nothing was declared.
 
     Whitespace is stripped because a trailing space in a CI variable is
@@ -49,11 +49,7 @@ def declare(build_type: Optional[str] = None,
     touched, for the reason in the module docstring.
     """
     kind = (build_type or "").strip() or None
-    dimensions = {
-        str(name).strip(): str(value).strip()
-        for name, value in (variant or {}).items()
-        if str(name).strip()
-    }
+    dimensions = {str(name).strip(): str(value).strip() for name, value in (variant or {}).items() if str(name).strip()}
     if kind is None and not dimensions:
         return None
     return {"type": kind, "variant": dimensions}
@@ -73,7 +69,8 @@ def parse_variant(pairs) -> dict:
             raise ValueError(
                 f"--variant wants name=value, got {pair!r}. A variant is a "
                 f"named dimension (arch, sanitizer, coverage) so that two "
-                f"of them can be true at once.")
+                f"of them can be true at once."
+            )
         dimensions[name.strip()] = value.strip()
     return dimensions
 
@@ -92,8 +89,7 @@ def _variant_of(block: Optional[dict]) -> dict:
     return dict((block or {}).get("variant") or {})
 
 
-def differing_fields(baseline: Optional[dict],
-                     candidate: Optional[dict]) -> list[str]:
+def differing_fields(baseline: Optional[dict], candidate: Optional[dict]) -> list[str]:
     """Which of `COMPARED_FIELDS` two declared blocks disagree on.
 
     Both blocks declared, or this is not the question - an undeclared
@@ -110,12 +106,10 @@ def differing_fields(baseline: Optional[dict],
     return differing
 
 
-def differing_dimensions(baseline: Optional[dict],
-                         candidate: Optional[dict]) -> list[str]:
+def differing_dimensions(baseline: Optional[dict], candidate: Optional[dict]) -> list[str]:
     """The variant dimension names the two disagree on, sorted."""
     before, after = _variant_of(baseline), _variant_of(candidate)
-    return sorted(name for name in set(before) | set(after)
-                  if before.get(name) != after.get(name))
+    return sorted(name for name in set(before) | set(after) if before.get(name) != after.get(name))
 
 
 def classify(baseline: Optional[dict], candidate: Optional[dict]) -> dict:
@@ -162,24 +156,22 @@ def same_class(one: Optional[dict], other: Optional[dict]) -> bool:
     return not differing_fields(one, other)
 
 
-def _value_clause(field: str, baseline: Optional[dict],
-                  candidate: Optional[dict]) -> str:
+def _value_clause(field: str, baseline: Optional[dict], candidate: Optional[dict]) -> str:
     """One `label: a vs b` clause, naming both values it saw."""
     label = _FIELD_LABELS.get(field, field)
     if field == "variant":
         before, after = _variant_of(baseline), _variant_of(candidate)
-        parts = [f"{name}={before.get(name, NOT_DECLARED)} vs "
-                 f"{after.get(name, NOT_DECLARED)}"
-                 for name in differing_dimensions(baseline, candidate)]
+        parts = [
+            f"{name}={before.get(name, NOT_DECLARED)} vs {after.get(name, NOT_DECLARED)}"
+            for name in differing_dimensions(baseline, candidate)
+        ]
         return f"{label}: " + "; ".join(parts or [NOT_DECLARED])
     before = (baseline or {}).get(field) or NOT_DECLARED
     after = (candidate or {}).get(field) or NOT_DECLARED
     return f"{label}: {before} vs {after}"
 
 
-def describe(classification: dict,
-             baseline: Optional[dict],
-             candidate: Optional[dict]) -> Optional[str]:
+def describe(classification: dict, baseline: Optional[dict], candidate: Optional[dict]) -> Optional[str]:
     """One sentence for the report, or `None` when there is nothing to say.
 
     Names the values on both sides, because a free-text declaration's
@@ -192,17 +184,19 @@ def describe(classification: dict,
     if status == "unknown":
         missing = " and ".join(classification.get("missing") or ["one run"])
         declared = baseline or candidate
-        return (f"Build class unknown: the {missing} declares none, while the "
-                f"other is {label(declared)}. A build type and variant are "
-                f"declared at capture time, so an undeclared run cannot say "
-                f"whether it built the same thing.")
-    clauses = "; ".join(
-        _value_clause(field, baseline, candidate)
-        for field in classification.get("differing") or [])
-    return (f"Mixed build class: these runs declare different builds "
-            f"({clauses}). A build type says when and why a build ran and a "
-            f"variant says what it did, so the difference between the two "
-            f"runs is not evidence about the change.")
+        return (
+            f"Build class unknown: the {missing} declares none, while the "
+            f"other is {label(declared)}. A build type and variant are "
+            f"declared at capture time, so an undeclared run cannot say "
+            f"whether it built the same thing."
+        )
+    clauses = "; ".join(_value_clause(field, baseline, candidate) for field in classification.get("differing") or [])
+    return (
+        f"Mixed build class: these runs declare different builds "
+        f"({clauses}). A build type says when and why a build ran and a "
+        f"variant says what it did, so the difference between the two "
+        f"runs is not evidence about the change."
+    )
 
 
 def label(block: Optional[dict]) -> Optional[str]:
@@ -217,8 +211,7 @@ def label(block: Optional[dict]) -> Optional[str]:
     parts = []
     if block.get("type"):
         parts.append(str(block["type"]))
-    parts.extend(f"{name}={value}"
-                 for name, value in sorted(_variant_of(block).items()))
+    parts.extend(f"{name}={value}" for name, value in sorted(_variant_of(block).items()))
     return " · ".join(parts) or None
 
 

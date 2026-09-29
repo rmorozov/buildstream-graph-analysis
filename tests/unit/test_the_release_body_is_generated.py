@@ -11,6 +11,7 @@ So the body is generated and only the head is written. This file holds
 both halves of that: the generator does what it claims, and the
 committed body is what the generator produces.
 """
+
 import pathlib
 import re
 import subprocess
@@ -21,15 +22,20 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 CHANGELOG = REPO / "CHANGELOG.md"
 
-GENERATED = re.compile(r"<!-- generated: UX-252 (\d+)→(\d+) -->\n(.*?)"
-                       r"<!-- /generated -->", re.S)
+GENERATED = re.compile(
+    r"<!-- generated: UX-252 (\d+)→(\d+) -->\n(.*?)"
+    r"<!-- /generated -->",
+    re.S,
+)
 
 
 def _generate(start, end):
     out = subprocess.run(
-        [sys.executable, "-m", "tools.bga_release_notes",
-         "--from", str(start), "--to", str(end)],
-        capture_output=True, text=True, cwd=REPO)
+        [sys.executable, "-m", "tools.bga_release_notes", "--from", str(start), "--to", str(end)],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+    )
     assert out.returncode == 0, out.stderr
     return out.stdout
 
@@ -45,11 +51,9 @@ class TestTheGeneratorDoesWhatItClaims:
         body = notes.render(230, 238)
         for row in window:
             assert row["id"] in body, f"{row['id']} is in the range and not the body"
-        assert body.count("\n- ") == len(window), (
-            f"{body.count(chr(10) + '- ')} bullets for {len(window)} rows")
+        assert body.count("\n- ") == len(window), f"{body.count(chr(10) + '- ')} bullets for {len(window)} rows"
         for row in rows[:230] + rows[238:]:
-            assert f"[{row['id']}]" not in body, (
-                f"{row['id']} is outside the range and in the body")
+            assert f"[{row['id']}]" not in body, f"{row['id']} is outside the range and in the body"
 
     def test_it_is_deterministic(self):
         from tools import bga_release_notes as notes
@@ -75,8 +79,7 @@ class TestTheGeneratorDoesWhatItClaims:
 
         assert notes._topic("UX-238") == "guards"
         assert notes._topic("UX-233") == "docs"
-        assert notes._topic("UX-9999") == "uncategorised", (
-            "an item with no task file is dropped rather than surfaced")
+        assert notes._topic("UX-9999") == "uncategorised", "an item with no task file is dropped rather than surfaced"
 
     def test_the_topic_order_puts_contracts_before_process(self):
         """A reader scanning for "what changed for me" wants the
@@ -106,9 +109,9 @@ class TestTheGeneratorDoesWhatItClaims:
             f"the release body: {sorted(set(notes.TOPIC_ORDER) - set(close.TOPIC_ORDER))}"
             f"\n  only in the taxonomy: {sorted(set(close.TOPIC_ORDER) - set(notes.TOPIC_ORDER))}"
             "\nPlace the new topic in bga_release_notes.TOPIC_ORDER, where "
-            "its position is a decision rather than a default.")
-        assert len(notes.TOPIC_ORDER) == len(set(notes.TOPIC_ORDER)), \
-            "a permutation names each topic once"
+            "its position is a decision rather than a default."
+        )
+        assert len(notes.TOPIC_ORDER) == len(set(notes.TOPIC_ORDER)), "a permutation names each topic once"
 
 
 class TestTheCommittedBodyIsGenerated:
@@ -123,14 +126,15 @@ class TestTheCommittedBodyIsGenerated:
         text = CHANGELOG.read_text(encoding="utf-8")
         blocks = GENERATED.findall(text)
         assert blocks, (
-            "CHANGELOG.md has no `<!-- generated: UX-252 N→M -->` block; "
-            "the body is supposed to be generated")
+            "CHANGELOG.md has no `<!-- generated: UX-252 N→M -->` block; the body is supposed to be generated"
+        )
         for start, end, committed in blocks:
             expected = _generate(int(start), int(end))
             assert committed == expected, (
                 f"the committed body for markers {start}→{end} is not what "
                 f"`bga release-notes --from {start} --to {end}` produces - "
-                f"regenerate it rather than editing it by hand")
+                f"regenerate it rather than editing it by hand"
+            )
 
     def test_the_head_is_outside_the_generated_block(self):
         """The judgment half stays written. A generated theme would be
@@ -142,8 +146,7 @@ class TestTheCommittedBodyIsGenerated:
         assert "Carried findings" in head
 
     def test_the_release_guide_says_not_to_hand_write_it(self):
-        guide = " ".join((REPO / "docs/contributing/release-guide.md")
-                         .read_text(encoding="utf-8").split())
+        guide = " ".join((REPO / "docs/contributing/release-guide.md").read_text(encoding="utf-8").split())
         assert "Do not hand-write it" in guide
         assert "bga release-notes" in guide
 

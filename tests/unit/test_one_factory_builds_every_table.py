@@ -30,6 +30,7 @@ that no library may ever be adopted - §6b prices candidates rather than
 blacklisting them. It asserts that the sentence the price is computed
 from is still true.
 """
+
 import pathlib
 import re
 import sys
@@ -62,12 +63,12 @@ def _section_6b():
 
 def test_one_module_constructs_a_table():
     """The premise, measured the way the styleguide states it."""
-    builders = [path.name for path in _modules()
-                if re.search(r'el\(\s*["\']table["\']', path.read_text("utf-8"))]
+    builders = [path.name for path in _modules() if re.search(r'el\(\s*["\']table["\']', path.read_text("utf-8"))]
     assert builders == [THE_FACTORY], (
         "styleguide §6b prices a JS dependency against a single table "
         "factory. These modules construct a table of their own, so the "
-        f"rule's premise no longer holds: {builders}")
+        f"rule's premise no longer holds: {builders}"
+    )
 
 
 def test_the_factory_publishes_the_entry_points_the_page_uses():
@@ -75,16 +76,18 @@ def test_the_factory_publishes_the_entry_points_the_page_uses():
     source = (VIEWER / THE_FACTORY).read_text(encoding="utf-8")
     for name in ENTRY_POINTS:
         assert f"export function {name}" in source, (
-            f"{name} is the factory's entry point named in styleguide "
-            f"§6b; it is no longer exported from {THE_FACTORY}")
+            f"{name} is the factory's entry point named in styleguide §6b; it is no longer exported from {THE_FACTORY}"
+        )
 
-    callers = [path.name for path in _modules()
-               if path.name != THE_FACTORY
-               and any(f"{name}(" in path.read_text("utf-8")
-                       for name in ENTRY_POINTS)]
+    callers = [
+        path.name
+        for path in _modules()
+        if path.name != THE_FACTORY and any(f"{name}(" in path.read_text("utf-8") for name in ENTRY_POINTS)
+    ]
     assert callers, (
         "no module outside the factory calls it, which would mean the "
-        "page's tables are built somewhere this guard is not looking")
+        "page's tables are built somewhere this guard is not looking"
+    )
 
 
 def test_the_dependency_rule_states_both_of_its_conditions():
@@ -96,12 +99,12 @@ def test_the_dependency_rule_states_both_of_its_conditions():
     """
     section = _section_6b()
     for clause, what in (
-            ("volume budget", "the export-size half of the rule"),
-            ("undercuts", "the wiring-plus-conformance half of the rule"),
-            ("trackevent", "the named prior the rule is drawn from"),
-            ("buildTable", "the factory the price is measured against")):
-        assert clause in section, (
-            f"styleguide §6b no longer states {what} ({clause!r})")
+        ("volume budget", "the export-size half of the rule"),
+        ("undercuts", "the wiring-plus-conformance half of the rule"),
+        ("trackevent", "the named prior the rule is drawn from"),
+        ("buildTable", "the factory the price is measured against"),
+    ):
+        assert clause in section, f"styleguide §6b no longer states {what} ({clause!r})"
 
 
 def test_the_rule_carries_the_measurement_it_was_written_from():
@@ -115,4 +118,5 @@ def test_the_rule_carries_the_measurement_it_was_written_from():
     assert 'el("table"' in section, (
         "styleguide §6b no longer pastes the command that measured the "
         "factory; the next person to ask the question would have to "
-        "re-derive it, which is how the false premise got in")
+        "re-derive it, which is how the false premise got in"
+    )

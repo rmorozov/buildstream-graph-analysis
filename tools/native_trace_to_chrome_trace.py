@@ -112,17 +112,31 @@ def _plane2_trace_events(records: list[dict], element_pids: dict[str, int], ts_o
         name = r["cmd"][:120] + ("..." if len(r["cmd"]) > 120 else "")
         start_us = r["start_ts"] * 1e6 + ts_offset_us
         if r["open"]:
-            events.append({
-                "name": f"{name} (no observed exit)", "cat": PLANE2_CAT, "ph": "i",
-                "ts": start_us, "pid": pid, "tid": r["pid"], "s": "t",
-                "args": {"element": r["element"], "real_pid": r["pid"]},
-            })
+            events.append(
+                {
+                    "name": f"{name} (no observed exit)",
+                    "cat": PLANE2_CAT,
+                    "ph": "i",
+                    "ts": start_us,
+                    "pid": pid,
+                    "tid": r["pid"],
+                    "s": "t",
+                    "args": {"element": r["element"], "real_pid": r["pid"]},
+                }
+            )
         else:
-            events.append({
-                "name": name, "cat": PLANE2_CAT, "ph": "X",
-                "ts": start_us, "dur": r["duration_s"] * 1e6, "pid": pid, "tid": r["pid"],
-                "args": {"element": r["element"], "real_pid": r["pid"]},
-            })
+            events.append(
+                {
+                    "name": name,
+                    "cat": PLANE2_CAT,
+                    "ph": "X",
+                    "ts": start_us,
+                    "dur": r["duration_s"] * 1e6,
+                    "pid": pid,
+                    "tid": r["pid"],
+                    "args": {"element": r["element"], "real_pid": r["pid"]},
+                }
+            )
     return events
 
 
@@ -172,6 +186,7 @@ def compute_clock_offset_us(plane1_trace_events: list[dict], plane2_records: lis
     at all, rather than raising: an anchor from the only task there is
     beats refusing to correlate.
     """
+
     def _anchor_ts(action: Optional[str]) -> Optional[int]:
         for ev in plane1_trace_events:
             if ev.get("ph") != "B" or ev.get("cat") != "bst-builder":
@@ -199,7 +214,9 @@ def compute_clock_offset_us(plane1_trace_events: list[dict], plane2_records: lis
 
 
 def build_combined_chrome_trace(
-    plane1_trace_events: list[dict], plane2_records: list[dict], anchor_element: str,
+    plane1_trace_events: list[dict],
+    plane2_records: list[dict],
+    anchor_element: str,
 ) -> list[dict]:
     """Merges Plane 1's own real trace events (unmodified - its own
     `pid: 1`/per-task `tid` convention is untouched) with Plane 2's own
@@ -212,7 +229,8 @@ def build_combined_chrome_trace(
     offset_us = compute_clock_offset_us(plane1_trace_events, plane2_records, anchor_element)
     element_pids = assign_element_pids([r["element"] for r in plane2_records])
     return (
-        list(plane1_trace_events) + _process_name_events(element_pids)
+        list(plane1_trace_events)
+        + _process_name_events(element_pids)
         + _plane2_trace_events(plane2_records, element_pids, offset_us)
     )
 
@@ -235,15 +253,19 @@ def main(argv=None, quiet=False) -> int:
     standalone_parser.add_argument("output", help="Path to write the Chrome Trace JSON to")
 
     combined_parser = subparsers.add_parser(
-        "combined", help="Plane 1 Chrome Trace JSON + Plane 2 raw trace (same real run) -> one combined JSON",
+        "combined",
+        help="Plane 1 Chrome Trace JSON + Plane 2 raw trace (same real run) -> one combined JSON",
     )
-    combined_parser.add_argument("plane1_json", help="Path to Plane 1's own Chrome Trace JSON (bst_log_to_chrome_trace.py)")
+    combined_parser.add_argument(
+        "plane1_json", help="Path to Plane 1's own Chrome Trace JSON (bst_log_to_chrome_trace.py)"
+    )
     combined_parser.add_argument("raw_log", help="Path to a Plane 2 raw trace log (element-tagged, UX-23)")
     combined_parser.add_argument("output", help="Path to write the combined Chrome Trace JSON to")
     combined_parser.add_argument(
-        "--anchor-element", required=True,
+        "--anchor-element",
+        required=True,
         help="A real element present in both traces, used to correlate Plane 2's CLOCK_MONOTONIC "
-             "clock onto Plane 1's own wall-clock timeline.",
+        "clock onto Plane 1's own wall-clock timeline.",
     )
 
     args = parser.parse_args(argv)
@@ -294,8 +316,7 @@ def main(argv=None, quiet=False) -> int:
     # stderr-purity exception left in the tool, and it breaks
     # `bga native-to-chrome ... /dev/stdout | jq`.
     if not quiet:
-        print(f"Wrote {len(output)} trace events to {args.output}",
-              file=sys.stderr)
+        print(f"Wrote {len(output)} trace events to {args.output}", file=sys.stderr)
     return 0
 
 

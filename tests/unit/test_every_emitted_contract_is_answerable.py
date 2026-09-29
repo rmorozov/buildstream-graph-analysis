@@ -33,6 +33,7 @@ derives from the package. A new emitter cannot outgrow this without
 reddening: it either answers `--schema`, or it is declared as
 file-written, or the union stops matching.
 """
+
 import json
 import os
 import pathlib
@@ -69,8 +70,7 @@ EMITTERS = {
     "analyze": ["analyze", str(RUN), "--format", "json"],
     "compare": ["compare", str(RUN), str(_RUN_TWIN), "--format", "json"],
     "blast": ["blast", "toolchain.bst", str(RUN), "--format", "json"],
-    "correlate": ["correlate", str(MACRO), str(PLANE2),
-                  "--format", "json"],
+    "correlate": ["correlate", str(MACRO), str(PLANE2), "--format", "json"],
     "whatif": ["whatif", str(RUN), "--format", "json"],
     "sweep": ["sweep", str(RUN), "--format", "json"],
     "graph": ["graph", str(RUN), "--format", "json"],
@@ -144,13 +144,16 @@ FILE_WRITTEN = {
 
 
 def _bga(*argv, expect=0):
-    done = subprocess.run([sys.executable, "-m", "bga.cli", *argv],
-                          capture_output=True, text=True, cwd=str(REPO),
-                          timeout=180,
-                          env={**os.environ, "PYTHONPATH": str(REPO)})
+    done = subprocess.run(
+        [sys.executable, "-m", "bga.cli", *argv],
+        capture_output=True,
+        text=True,
+        cwd=str(REPO),
+        timeout=180,
+        env={**os.environ, "PYTHONPATH": str(REPO)},
+    )
     if expect is not None:
-        assert done.returncode == expect, (argv, done.returncode,
-                                           done.stderr[-2000:])
+        assert done.returncode == expect, (argv, done.returncode, done.stderr[-2000:])
     return done
 
 
@@ -163,7 +166,8 @@ def emitted():
         document = json.loads(done.stdout)
         assert "schema" in document, (
             f"`bga {name} --format json` prints a document with no `schema` "
-            f"key, which UX-190 forbids before this guard even applies")
+            f"key, which UX-190 forbids before this guard even applies"
+        )
         found[name] = document["schema"]
     return found
 
@@ -207,7 +211,9 @@ class TestTheUnversionedDocumentsAreDeclared:
         assert NO_CONTRACT == {}, (
             "a command is declared as printing an unversioned document; "
             "the clauses below check that claim, and its contract is "
-            "owed", sorted(NO_CONTRACT))
+            "owed",
+            sorted(NO_CONTRACT),
+        )
 
     def test_any_declared_one_really_emits_no_id(self):
         """Looped rather than parametrized: an empty parametrize is a
@@ -219,15 +225,16 @@ class TestTheUnversionedDocumentsAreDeclared:
             assert "schema" not in document, (
                 f"`bga {command}` emits `{document.get('schema')}` now, so "
                 f"it belongs in EMITTERS and in the enrolment table - being "
-                f"declared unversioned is no longer true of it")
+                f"declared unversioned is no longer true of it"
+            )
 
     def test_schema_refuses_for_them_rather_than_guessing(self):
         from bga.cli import _SCHEMA_BY_COMMAND
 
         for command in sorted(NO_CONTRACT):
             assert command not in _SCHEMA_BY_COMMAND, (
-                f"`bga {command} --schema` answers with a contract its own "
-                f"output does not satisfy")
+                f"`bga {command} --schema` answers with a contract its own output does not satisfy"
+            )
             done = _bga(command, "--schema", expect=2)
             assert "no schema id yet" in done.stderr, done.stderr
 
@@ -243,18 +250,19 @@ class TestTheUnversionedDocumentsAreDeclared:
         """
         from bga import schemas
 
-        document = json.loads(
-            _bga("sweep", str(RUN), "--format", "json").stdout)
+        document = json.loads(_bga("sweep", str(RUN), "--format", "json").stdout)
         analyze = schemas.schema(schemas.ANALYZE)["required"]
         assert [key for key in analyze if key in document] == ["schema"], (
             "sweep's document overlaps analyze/v2 by more than the id "
             "every document has - re-read why it was de-enrolled",
-            sorted(document))
+            sorted(document),
+        )
         assert document["schema"] == schemas.SWEEP, document["schema"]
         fits = schemas.schema(schemas.SWEEP)["required"]
         assert [key for key in fits if key not in document] == [], (
             "the document does not carry what its own contract requires",
-            sorted(document))
+            sorted(document),
+        )
 
 
 class TestEveryEmittedIdIsAnswerable:
@@ -274,7 +282,9 @@ class TestEveryEmittedIdIsAnswerable:
                 wrong[command] = (contract, enrolled)
         assert not wrong, (
             "these commands emit an id `--schema` does not answer with; "
-            "the refusal they print is falsified by their own output", wrong)
+            "the refusal they print is falsified by their own output",
+            wrong,
+        )
 
     def test_the_flagged_command_answers_per_flag(self):
         """`bga snapshot` is one command and two documents. Answering
@@ -282,11 +292,9 @@ class TestEveryEmittedIdIsAnswerable:
         wrong answer, which is worse than the missing one this
         replaced."""
         listed = json.loads(_bga("snapshot", "--list", "--schema").stdout)
-        aggregated = json.loads(
-            _bga("snapshot", "--aggregate", "--schema").stdout)
+        aggregated = json.loads(_bga("snapshot", "--aggregate", "--schema").stdout)
         assert listed["title"] == "bga snapshot --list --format json", listed
-        assert aggregated["title"] == \
-            "bga snapshot --aggregate --format json", aggregated
+        assert aggregated["title"] == "bga snapshot --aggregate --format json", aggregated
         assert listed != aggregated
 
     def test_the_bare_flagged_command_says_which_flags_have_one(self):
@@ -294,8 +302,7 @@ class TestEveryEmittedIdIsAnswerable:
         run directory, and the reader needs the two flags that do print
         a document."""
         done = _bga("snapshot", "--schema", expect=2)
-        assert "--aggregate" in done.stderr and "--list" in done.stderr, \
-            done.stderr
+        assert "--aggregate" in done.stderr and "--list" in done.stderr, done.stderr
 
 
 class TestTheUnionIsTheInventory:
@@ -312,7 +319,8 @@ class TestTheUnionIsTheInventory:
             "a run directory - it is invisible to a reader who asks the "
             "tool what shape it is",
             sorted(set(contracts.ids()) - printed - set(FILE_WRITTEN)),
-            sorted(printed & set(FILE_WRITTEN)))
+            sorted(printed & set(FILE_WRITTEN)),
+        )
 
     def test_nothing_is_both_printed_and_declared_file_written(self):
         from bga.cli import _SCHEMA_BY_COMMAND, _SCHEMA_BY_FLAG
@@ -321,8 +329,9 @@ class TestTheUnionIsTheInventory:
         for pairs in _SCHEMA_BY_FLAG.values():
             printed |= {name for _, name in pairs}
         assert not (printed & set(FILE_WRITTEN)), (
-            "declared as file-written and answerable at once, so the "
-            "declaration is stale", sorted(printed & set(FILE_WRITTEN)))
+            "declared as file-written and answerable at once, so the declaration is stale",
+            sorted(printed & set(FILE_WRITTEN)),
+        )
 
     def test_every_answerable_id_has_a_printable_schema(self, answerable):
         """`--schema` printing something `schemas.py` cannot describe
@@ -338,9 +347,17 @@ class TestTheUnionIsTheInventory:
         shapes of one report, which is what the chain in
         `bga/plane2.py` is for."""
         assert contracts.superseded() == [
-            "analyze/v2", "analyze/v3", "analyze/v4", "analyze/v5",
-            "blast/v1", "compare/v1", "correlate/v1", "host/v1",
-            "plane2/v1", "plane2/v2"], contracts.superseded()
+            "analyze/v2",
+            "analyze/v3",
+            "analyze/v4",
+            "analyze/v5",
+            "blast/v1",
+            "compare/v1",
+            "correlate/v1",
+            "host/v1",
+            "plane2/v1",
+            "plane2/v2",
+        ], contracts.superseded()
         assert "plane2/v1" in FILE_WRITTEN
         assert "plane2/v2" in FILE_WRITTEN
 
@@ -369,10 +386,10 @@ class TestAnUnknownNameAndABrokenContractAreDifferentThings:
             schemas.schema("not-a-contract/v1")
         assert "unknown schema" in str(raised.value)
 
-    def test_a_contract_that_raises_while_building_does_not_say_unknown(
-            self, monkeypatch):
+    def test_a_contract_that_raises_while_building_does_not_say_unknown(self, monkeypatch):
         """The positive control, applied to the real registry so the
         clause cannot pass against a stub of its own making."""
+
         def explode():
             raise KeyError(f"{schemas.SWEEP}: view-hint for unknown key")
 
@@ -381,7 +398,8 @@ class TestAnUnknownNameAndABrokenContractAreDifferentThings:
             schemas.schema(schemas.SWEEP)
         assert "unknown schema" not in str(raised.value), (
             "a broken contract still reports as a missing one, which is "
-            "the message that sent the last reader to the wrong file")
+            "the message that sent the last reader to the wrong file"
+        )
         assert "view-hint" in str(raised.value)
 
 
@@ -392,7 +410,7 @@ class TestTheDocumentSaysWhatTheToolDoes:
     def _block():
         text = (REPO / "docs/README.md").read_text(encoding="utf-8")
         start = text.index("## What it emits")
-        return text[start:text.index("\n## ", start + 4)]
+        return text[start : text.index("\n## ", start + 4)]
 
     def test_the_count_matches_the_inventory(self):
         """It said "Nine ids" over a table of eleven."""
@@ -400,21 +418,36 @@ class TestTheDocumentSaysWhatTheToolDoes:
         rows = re.findall(r"^\| `([a-z][a-z0-9-]*/v\d+)` \|", block, re.M)
         assert sorted(rows) == contracts.ids(), (
             "the table and the derived inventory disagree",
-            sorted(set(rows) ^ set(contracts.ids())))
-        words = {"nine": 9, "ten": 10, "eleven": 11, "twelve": 12,
-                 "thirteen": 13, "fourteen": 14, "fifteen": 15,
-                 "sixteen": 16, "seventeen": 17, "eighteen": 18,
-                 # `UX-381` took the inventory past eighteen; the map is
-                 # the guard's vocabulary, not its claim, so it grows
-                 # ahead of the count rather than being chased by it.
-                 "nineteen": 19, "twenty": 20, "twenty-one": 21,
-                 "twenty-two": 22, "twenty-three": 23, "twenty-four": 24,
-                 "twenty-five": 25, "twenty-six": 26}
-        claimed = re.search(r"\b(" + "|".join(words) + r")\b ids", block,
-                            re.I)
+            sorted(set(rows) ^ set(contracts.ids())),
+        )
+        words = {
+            "nine": 9,
+            "ten": 10,
+            "eleven": 11,
+            "twelve": 12,
+            "thirteen": 13,
+            "fourteen": 14,
+            "fifteen": 15,
+            "sixteen": 16,
+            "seventeen": 17,
+            "eighteen": 18,
+            # `UX-381` took the inventory past eighteen; the map is
+            # the guard's vocabulary, not its claim, so it grows
+            # ahead of the count rather than being chased by it.
+            "nineteen": 19,
+            "twenty": 20,
+            "twenty-one": 21,
+            "twenty-two": 22,
+            "twenty-three": 23,
+            "twenty-four": 24,
+            "twenty-five": 25,
+            "twenty-six": 26,
+        }
+        claimed = re.search(r"\b(" + "|".join(words) + r")\b ids", block, re.I)
         assert claimed, "the block no longer states a count at all"
         assert words[claimed.group(1).lower()] == len(rows), (
-            f"the block says {claimed.group(1)} ids over {len(rows)} rows")
+            f"the block says {claimed.group(1)} ids over {len(rows)} rows"
+        )
 
     def test_it_does_not_promise_a_form_that_errors(self):
         """`bga --schema <id>` is not a thing this tool has. It is
@@ -422,8 +455,8 @@ class TestTheDocumentSaysWhatTheToolDoes:
         one - which is the first thing a reader tries."""
         block = self._block()
         assert "`bga --schema <id>`" not in block, (
-            "the block still promises a global dispatcher; the working "
-            "form is `bga <command> --schema`")
+            "the block still promises a global dispatcher; the working form is `bga <command> --schema`"
+        )
 
     #: How the sentence spells its own count. `UX-341` retired five
     #: more shapes into "written, or read, but never printed", so the
@@ -437,11 +470,12 @@ class TestTheDocumentSaysWhatTheToolDoes:
         than to the sentence staying as it is."""
         block = self._block()
         word = self._COUNT_WORDS[len(FILE_WRITTEN)]
-        assert f"last {word}" in block, (
-            f"the block should say 'the last {word}'", block[-800:])
+        assert f"last {word}" in block, (f"the block should say 'the last {word}'", block[-800:])
         rows = re.findall(r"^\| `([a-z][a-z0-9-]*/v\d+)` \|", block, re.M)
-        assert set(rows[-len(FILE_WRITTEN):]) == set(FILE_WRITTEN), (
+        assert set(rows[-len(FILE_WRITTEN) :]) == set(FILE_WRITTEN), (
             f"the sentence says 'the last {word}' but the last "
             f"{len(FILE_WRITTEN)} rows of the table are not the "
             "file-written ids",
-            rows[-len(FILE_WRITTEN):], sorted(FILE_WRITTEN))
+            rows[-len(FILE_WRITTEN) :],
+            sorted(FILE_WRITTEN),
+        )

@@ -23,6 +23,7 @@ clause that keeps it a switch rather than "always compact" - the two
 committed fixtures export the same readable blocks they always did,
 which is what every other guard in the export family is reading.
 """
+
 import gzip
 import json
 import os
@@ -91,7 +92,8 @@ def budget_for(elements):
             return row
     raise AssertionError(
         f"{elements:,} elements is past every class in DATA_BUDGETS; "
-        f"decide a bound for that size rather than inheriting one")
+        f"decide a bound for that size rather than inheriting one"
+    )
 
 
 def _halves(path):
@@ -103,14 +105,23 @@ def _halves(path):
     first would have counted a compacted payload as page.
     """
     html = pathlib.Path(path).read_text(encoding="utf-8")
-    page = re.sub(r'<script[^>]*type="application/(json|octet-stream)"'
-                  r'[^>]*>.*?</script>', "", html, flags=re.S)
-    blocks = dict(re.findall(
-        r'<script[^>]*type="application/(?:json|octet-stream)"[^>]*'
-        r'id="([^"]+)"[^>]*>(.*?)</script>', html, re.S))
+    page = re.sub(
+        r'<script[^>]*type="application/(json|octet-stream)"'
+        r'[^>]*>.*?</script>',
+        "",
+        html,
+        flags=re.S,
+    )
+    blocks = dict(
+        re.findall(
+            r'<script[^>]*type="application/(?:json|octet-stream)"[^>]*'
+            r'id="([^"]+)"[^>]*>(.*?)</script>',
+            html,
+            re.S,
+        )
+    )
     schemas = len(blocks.get("bga-schemas", ""))
-    data = sum(len(body) for name, body in blocks.items()
-               if name != "bga-schemas")
+    data = sum(len(body) for name, body in blocks.items() if name != "bga-schemas")
     return len(page), schemas, data, blocks
 
 
@@ -121,8 +132,7 @@ def _document(blocks, name):
         return json.loads(plain.replace("<\\/", "</"))
     import base64
 
-    return json.loads(gzip.decompress(
-        base64.b64decode(blocks[f"bga-{name}-gz"])).decode("utf-8"))
+    return json.loads(gzip.decompress(base64.b64decode(blocks[f"bga-{name}-gz"])).decode("utf-8"))
 
 
 @pytest.fixture(scope="module")
@@ -137,15 +147,14 @@ def exports(tmp_path_factory):
         path = into / f"{label}.html"
         view.export(str(build(into)), str(path))
         made[label] = path
-    return {label: (path,
-                    len(_document(_halves(path)[3], "report")
-                        ["elements"]["element_durations"]))
-            for label, path in made.items()}
+    return {
+        label: (path, len(_document(_halves(path)[3], "report")["elements"]["element_durations"]))
+        for label, path in made.items()
+    }
 
 
 @pytest.mark.large
 class TestTheDataHalfIsBounded:
-
     @pytest.mark.parametrize("label", LABELS)
     def test_it_is_inside_its_class_budget(self, exports, label):
         path, elements = exports[label]
@@ -155,7 +164,8 @@ class TestTheDataHalfIsBounded:
             f"{label} embeds {data:,} B of this run's documents at "
             f"{elements:,} elements, over the {bound:,} B budget for runs "
             f"up to {klass:,}. The data half is what an attachment "
-            f"weighs; move the bound on a measurement or compact it")
+            f"weighs; move the bound on a measurement or compact it"
+        )
 
     @pytest.mark.parametrize("row", DATA_BUDGETS, ids=lambda r: str(r[0]))
     def test_no_class_is_met_from_far_below(self, exports, row):
@@ -166,27 +176,25 @@ class TestTheDataHalfIsBounded:
         exists to catch.
         """
         klass, bound = row
-        inside = {label: _halves(path)[2]
-                  for label, (path, count) in exports.items()
-                  if budget_for(count)[0] == klass}
+        inside = {label: _halves(path)[2] for label, (path, count) in exports.items() if budget_for(count)[0] == klass}
         assert inside, f"no run falls in the class bounded at {klass:,}"
         largest = max(inside.values())
         assert largest * 2 >= bound, (
             f"the largest data half in the class bounded at {klass:,} "
             f"elements is {largest:,} B against a {bound:,} B budget - "
-            f"the bound is met from below and governs nothing")
+            f"the bound is met from below and governs nothing"
+        )
 
     def test_every_class_has_a_run_behind_it(self, exports):
         covered = {budget_for(count)[0] for _path, count in exports.values()}
         missing = [row[0] for row in DATA_BUDGETS if row[0] not in covered]
         assert missing == [], (
-            f"no run in the population falls in the class(es) bounded at "
-            f"{missing} - those bounds govern nothing")
+            f"no run in the population falls in the class(es) bounded at {missing} - those bounds govern nothing"
+        )
 
 
 @pytest.mark.large
 class TestTheCompactFormIsASwitch:
-
     @pytest.mark.parametrize("label", sorted(pages.FIXTURES))
     def test_a_small_export_is_still_readable_json(self, exports, label):
         """`DATA_COMPACT_MIN_B` is a threshold, not a mode.
@@ -204,9 +212,7 @@ class TestTheCompactFormIsASwitch:
     def test_a_large_export_carries_the_compact_form(self, exports, label):
         _page, _schemas, _data, blocks = _halves(exports[label][0])
         assert "bga-report-gz" in blocks, sorted(blocks)
-        assert "bga-report" not in blocks, (
-            "the export carries the payload twice, which is the defect "
-            "one worse")
+        assert "bga-report" not in blocks, "the export carries the payload twice, which is the defect one worse"
 
     @pytest.mark.parametrize("label", sorted(_GENERATED))
     def test_the_compact_form_is_the_same_document(self, exports, label):
@@ -216,8 +222,7 @@ class TestTheCompactFormIsASwitch:
         path, _elements = exports[label]
         _page, _schemas, _data, blocks = _halves(path)
         run = path.parent / label
-        assert _document(blocks, "report") == \
-            view.payloads(str(run))["report.json"]
+        assert _document(blocks, "report") == view.payloads(str(run))["report.json"]
 
 
 _PROBE = """
@@ -258,9 +263,12 @@ def probed(exports):
     path, elements = exports["scale"]
     result = subprocess.run(
         [node, "--input-type=module", "-e", _PROBE],
-        capture_output=True, text=True, cwd=REPO, timeout=120,
-        env=dict(os.environ, BGA_EXPORT=str(path),
-                 BGA_DOM_SHIM=str(REPO / "tests" / "dom_shim.mjs")))
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=120,
+        env=dict(os.environ, BGA_EXPORT=str(path), BGA_DOM_SHIM=str(REPO / "tests" / "dom_shim.mjs")),
+    )
     assert result.returncode == 0, result.stderr[-3000:]
     return json.loads(result.stdout), elements
 

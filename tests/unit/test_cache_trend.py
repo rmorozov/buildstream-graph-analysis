@@ -10,15 +10,22 @@ tested here is that this uses it, including the widening rule - a band
 narrower than quantization noise fires on everything, and a set of
 near-identical CI runs produces exactly that.
 """
+
 from bga.cache_trend import _band_findings, build_trend, format_trend_text
 
 
 def _row(name, **overrides):
     row = {
-        'run': name, 'run_mode': 'incremental', 'total_duration_us': 1_000_000,
-        'hit_share': 0.72, 'built_elements': 25, 'cached_elements': 65,
-        'transfer_us': 130_000_000, 'transfer_per_artifact_us': 2_000_000,
-        'rebuild_us': 4_740_000_000, 'churn': None,
+        'run': name,
+        'run_mode': 'incremental',
+        'total_duration_us': 1_000_000,
+        'hit_share': 0.72,
+        'built_elements': 25,
+        'cached_elements': 65,
+        'transfer_us': 130_000_000,
+        'transfer_per_artifact_us': 2_000_000,
+        'rebuild_us': 4_740_000_000,
+        'churn': None,
     }
     row.update(overrides)
     return row
@@ -38,9 +45,14 @@ def test_a_degrading_remote_fires_the_transfer_finding():
     """The task's own example: pull time per artifact several times the
     trailing median, named as a cache-infrastructure problem rather than
     as a project one."""
-    findings = _band_findings(_series({
-        'transfer_us': 416_000_000, 'transfer_per_artifact_us': 6_400_000,
-    }))
+    findings = _band_findings(
+        _series(
+            {
+                'transfer_us': 416_000_000,
+                'transfer_per_artifact_us': 6_400_000,
+            }
+        )
+    )
     metrics = {f['metric'] for f in findings}
     assert metrics == {'transfer_us', 'transfer_per_artifact_us'}
     per_artifact = next(f for f in findings if f['metric'] == 'transfer_per_artifact_us')
@@ -53,9 +65,17 @@ def test_a_faster_remote_is_not_a_regression():
     """Direction is per metric and it is load-bearing. Transfer time
     dropping out of the band is good news, and reporting it as a
     degradation would teach a reader to ignore the finding."""
-    assert _band_findings(_series({
-        'transfer_us': 10_000_000, 'transfer_per_artifact_us': 150_000,
-    })) == []
+    assert (
+        _band_findings(
+            _series(
+                {
+                    'transfer_us': 10_000_000,
+                    'transfer_per_artifact_us': 150_000,
+                }
+            )
+        )
+        == []
+    )
 
 
 def test_a_falling_hit_ratio_is_a_regression_and_a_rising_one_is_not():
@@ -74,9 +94,7 @@ def test_a_near_zero_band_is_widened_rather_than_believed():
     building this: rebuild seconds differing by 0.03% produced a 2.2s
     band on a 4740s median, and a 6% rise read as a regression.
     """
-    window = [_row(f'run{i}', rebuild_us=base) for i, base in enumerate(
-        [4_740_000_000, 4_740_500_000, 4_741_000_000]
-    )]
+    window = [_row(f'run{i}', rebuild_us=base) for i, base in enumerate([4_740_000_000, 4_740_500_000, 4_741_000_000])]
     # Inside the widened (1%) band, far outside the measured one.
     assert _band_findings(window + [_row('newest', rebuild_us=4_760_000_000)]) == []
     # And a real move still fires, marked as judged against the widened band.
@@ -114,8 +132,7 @@ def test_a_metric_absent_from_the_window_is_not_trended():
     """Every published freedesktop-sdk capture is taken with remotes
     ignored, so it has no transfer at all. A trend over those must not
     invent a transfer band from Nones."""
-    window = [_row(f'run{i}', transfer_us=None, transfer_per_artifact_us=None)
-              for i in range(3)]
+    window = [_row(f'run{i}', transfer_us=None, transfer_per_artifact_us=None) for i in range(3)]
     findings = _band_findings(window + [_row('newest', transfer_us=999_000_000)])
     assert [f['metric'] for f in findings] == []
 
@@ -125,8 +142,7 @@ def test_the_table_renders_the_churn_labels_ux93_settled():
     the trend must not relabel it on its way into a column."""
     rows = [
         _row('a'),
-        _row('b', churn={'applicable': True, 'churned_count': 0,
-                         'rebuilt_in_both_count': 25}),
+        _row('b', churn={'applicable': True, 'churned_count': 0, 'rebuilt_in_both_count': 25}),
         _row('c', churn={'applicable': False, 'reason': 'candidate_run_is_full'}),
     ]
     text = format_trend_text(build_trend(rows))

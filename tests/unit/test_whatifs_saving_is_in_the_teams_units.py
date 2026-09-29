@@ -15,6 +15,7 @@ sentinel in `whatif`'s own output: a renderer that had grown its own
 multiplication would go on printing a correct-looking figure, and only
 reaching through the converter can be seen from outside.
 """
+
 import json
 import pathlib
 
@@ -54,16 +55,13 @@ def _render(document, value, monkeypatch):
 
 
 class TestWithNoRateTheProjectionIsUnchanged:
-
-    def test_nothing_is_added_and_nothing_is_invented(
-            self, document, monkeypatch):
+    def test_nothing_is_added_and_nothing_is_invented(self, document, monkeypatch):
         lines = _render(document, None, monkeypatch)
 
         assert not [line for line in lines if "In your units" in line]
         assert not [line for line in lines if "USD" in line]
 
-    def test_the_saving_is_still_published_in_seconds(
-            self, document, monkeypatch):
+    def test_the_saving_is_still_published_in_seconds(self, document, monkeypatch):
         """The measurement is the seconds. The conversion is arithmetic
         on top of it, so it may not replace it."""
         lines = _render(document, RATE, monkeypatch)
@@ -72,36 +70,29 @@ class TestWithNoRateTheProjectionIsUnchanged:
 
 
 class TestTheProjectedSavingIsConverted:
-
-    def test_the_saving_reaches_the_reader_s_unit(
-            self, document, monkeypatch):
-        converted = [line for line in _render(document, RATE, monkeypatch)
-                     if "In your units" in line]
+    def test_the_saving_reaches_the_reader_s_unit(self, document, monkeypatch):
+        converted = [line for line in _render(document, RATE, monkeypatch) if "In your units" in line]
 
         assert converted, "the projected saving was not converted at all"
         assert "0.50 USD" in converted[0], converted[0]
 
-    def test_no_converted_figure_travels_without_its_rate(
-            self, document, monkeypatch):
+    def test_no_converted_figure_travels_without_its_rate(self, document, monkeypatch):
         """`UX-596`'s rule, applied here: a row pasted into an issue
         alone must still say what converted it."""
         lines = _render(document, RATE, monkeypatch)
         preamble = rate.preamble(rate.parse(RATE))
-        carrying = [line for line in lines
-                    if " USD" in line and line.strip() != preamble]
+        carrying = [line for line in lines if " USD" in line and line.strip() != preamble]
 
         assert carrying, "no figure was converted at all"
         for line in carrying:
             assert f"at {RATE}" in line, line
 
-    def test_the_seconds_stay_beside_the_conversion(
-            self, document, monkeypatch):
+    def test_the_seconds_stay_beside_the_conversion(self, document, monkeypatch):
         lines = _render(document, RATE, monkeypatch)
 
         assert "saves 20.050s = 0.50 USD at 90 USD/machine-hour" in lines[2]
 
-    def test_the_rate_is_named_as_the_reader_s_input(
-            self, document, monkeypatch):
+    def test_the_rate_is_named_as_the_reader_s_input(self, document, monkeypatch):
         lines = _render(document, RATE, monkeypatch)
 
         assert lines[3].strip().startswith(f"rate: {RATE}")
@@ -109,32 +100,28 @@ class TestTheProjectedSavingIsConverted:
         assert "not anything this run measured" in lines[3]
 
     def test_the_other_denominator_converts_too(self, document, monkeypatch):
-        converted = [line for line in _render(document, HOURS, monkeypatch)
-                     if "In your units" in line]
+        converted = [line for line in _render(document, HOURS, monkeypatch) if "In your units" in line]
 
         assert converted
         assert f"engineer-hours at {HOURS}" in converted[0], converted[0]
 
 
 class TestOneConverterAndNotTwo:
-
-    def test_the_figure_comes_from_report_rate_and_not_a_copy(
-            self, document, monkeypatch):
+    def test_the_figure_comes_from_report_rate_and_not_a_copy(self, document, monkeypatch):
         """The Acceptance Test's mutation as an assertion. Replacing
         `report.rate.phrase` must change what `whatif` prints; a
         renderer carrying its own multiplication would be untouched by
         this and still look right."""
         monkeypatch.setenv(rate.ENV_VAR, RATE)
-        monkeypatch.setattr(rate, "phrase",
-                            lambda us, supplied: "THROUGH-THE-CONVERTER")
+        monkeypatch.setattr(rate, "phrase", lambda us, supplied: "THROUGH-THE-CONVERTER")
 
         lines = whatif.render(document)
 
         assert [line for line in lines if "THROUGH-THE-CONVERTER" in line], (
-            "whatif did not reach report.rate.phrase for its figure")
+            "whatif did not reach report.rate.phrase for its figure"
+        )
 
-    def test_the_rounding_and_vocabulary_are_the_converter_s(
-            self, document, monkeypatch):
+    def test_the_rounding_and_vocabulary_are_the_converter_s(self, document, monkeypatch):
         """Not a restatement of `rate.py`'s formatting: the expected
         string is asked of `rate.phrase` itself, so the two surfaces
         cannot round or name the unit differently."""
@@ -153,9 +140,7 @@ class TestOneConverterAndNotTwo:
 
 
 class TestARateThatCannotBeUsedIsNamed:
-
-    def test_it_says_why_instead_of_falling_silent(
-            self, document, monkeypatch):
+    def test_it_says_why_instead_of_falling_silent(self, document, monkeypatch):
         lines = _render(document, "cheap", monkeypatch)
 
         assert [line for line in lines if "not applied" in line], lines
@@ -175,31 +160,26 @@ class TestARateThatCannotBeUsedIsNamed:
 
 
 class TestTheRateIsNotAMeasurement:
-
-    def test_it_never_reaches_the_whatif_document(
-            self, analyzed, monkeypatch):
+    def test_it_never_reaches_the_whatif_document(self, analyzed, monkeypatch):
         """`whatif/v1` is a schema-described record of what this run
         measured; the rate is the reader's input and the multiplication
         is a rendering."""
         result, graph = analyzed
         monkeypatch.setenv(rate.ENV_VAR, RATE)
 
-        payload = json.dumps(whatif.project(result, graph, CHOSEN),
-                             default=str)
+        payload = json.dumps(whatif.project(result, graph, CHOSEN), default=str)
 
         assert "USD" not in payload
         assert rate.ENV_VAR not in payload
 
 
 class TestTheCommandItself:
-
     def test_bga_whatif_under_a_set_rate(self, monkeypatch, capsys):
         """The Acceptance Test, through the command a reader types."""
         from bga.cli import main
 
         monkeypatch.setenv(rate.ENV_VAR, RATE)
-        code = main(["whatif", str(FIXTURE)]
-                    + [arg for uid in CHOSEN for arg in ("--element", uid)])
+        code = main(["whatif", str(FIXTURE)] + [arg for uid in CHOSEN for arg in ("--element", uid)])
         out = capsys.readouterr().out
 
         assert code == 0

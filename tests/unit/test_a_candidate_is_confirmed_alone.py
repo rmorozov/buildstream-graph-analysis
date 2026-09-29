@@ -31,6 +31,7 @@ confirmation which could not be made is not read as a clearance, and
 that the seconds the tool then prints are the confirmed ones and not
 the parallel ones a reader would otherwise copy into `tiers.py`.
 """
+
 import pathlib
 import sys
 
@@ -61,8 +62,7 @@ def test_the_parallel_report_alone_would_accuse_it():
 
 
 def test_a_confirmation_under_the_floor_clears_it(monkeypatch):
-    monkeypatch.setattr(drift, "alone_seconds",
-                        lambda name, python=None: CONTENDED_ALONE)
+    monkeypatch.setattr(drift, "alone_seconds", lambda name, python=None: CONTENDED_ALONE)
     kept, cleared = drift.confirm(_rows({CONTENDED: CONTENDED_PARALLEL}))
     assert kept == []
     assert cleared == [(CONTENDED, CONTENDED_PARALLEL, CONTENDED_ALONE)]
@@ -71,8 +71,7 @@ def test_a_confirmation_under_the_floor_clears_it(monkeypatch):
 def test_a_confirmation_over_the_floor_keeps_it(monkeypatch):
     """The other direction, because a confirmation that cleared
     everything would satisfy the clause above and guard nothing."""
-    monkeypatch.setattr(drift, "alone_seconds",
-                        lambda name, python=None: 1.35)
+    monkeypatch.setattr(drift, "alone_seconds", lambda name, python=None: 1.35)
     kept, cleared = drift.confirm(_rows({CONTENDED: CONTENDED_PARALLEL}))
     assert cleared == []
     assert [row[0] for row in kept] == [CONTENDED]
@@ -82,8 +81,7 @@ def test_the_kept_row_carries_the_confirmed_seconds(monkeypatch):
     """What a reader copies into `tiers.py` is the number the floors
     are in. A kept row that still carried the parallel seconds would
     put this run's contention into the file's comment for good."""
-    monkeypatch.setattr(drift, "alone_seconds",
-                        lambda name, python=None: 1.35)
+    monkeypatch.setattr(drift, "alone_seconds", lambda name, python=None: 1.35)
     kept, _ = drift.confirm(_rows({CONTENDED: CONTENDED_PARALLEL}))
     assert kept[0][1] == 1.35, kept
 
@@ -123,13 +121,14 @@ def test_the_re_run_is_really_single_process(monkeypatch):
         return Done()
 
     monkeypatch.setattr(drift.subprocess, "run", watch)
-    drift.alone_seconds(CONTENDED)                 # no report -> None
+    drift.alone_seconds(CONTENDED)  # no report -> None
     argv = seen["argv"]
     assert "-n" not in argv or "auto" not in argv, argv
     assert argv[argv.index("-p") + 1] == "no:xdist", argv
     assert seen["env"].get("PYTEST_XDIST") == "", (
         "the Makefile's PYTEST_XDIST would be inherited, and it carries "
-        "`-n auto` into this run: " + repr(seen["env"].get("PYTEST_XDIST")))
+        "`-n auto` into this run: " + repr(seen["env"].get("PYTEST_XDIST"))
+    )
 
 
 def test_the_measurement_is_a_real_run_that_returns_seconds():
@@ -166,10 +165,10 @@ def test_a_file_that_cannot_be_run_comes_back_unmeasurable():
     is the un-mocked half of `..._could_not_run_is_not_a_clearance`,
     and it is deterministic: no timing, no threshold.
     """
-    assert drift.alone_seconds("tests/unit/test_there_is_no_such_file.py") \
-        is None
+    assert drift.alone_seconds("tests/unit/test_there_is_no_such_file.py") is None
 
 
 if __name__ == "__main__":  # pragma: no cover
     import pytest
+
     raise SystemExit(pytest.main([__file__, "-v"]))

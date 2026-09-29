@@ -2,6 +2,7 @@
 Part 33 hard/soft gates and min(provenance, coverage, model,
 attribution) formula, instead of only counting ordering violations.
 """
+
 import json
 
 from bga import BuildEfficiencyAnalyzer
@@ -19,7 +20,8 @@ def _write_run_dir(tmp_path, elements, dependencies, spans, wall_end_us=200000):
     run_context = {
         "trace_epsilon_us": 1000,
         "wall_clock": {"start_us": 0, "end_us": wall_end_us},
-        "max_jobs": 2, "resource_capacities": {"PROCESS": 2},
+        "max_jobs": 2,
+        "resource_capacities": {"PROCESS": 2},
         "run_identity": {"manifest_hash": run_identity_hash},
     }
     graph = {
@@ -42,8 +44,15 @@ def test_perfect_coverage_gives_confidence_one(tmp_path):
         tmp_path,
         elements=[("a.bst", True)],
         dependencies=[],
-        spans=[{"task_key": "a.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 50000,
-                "resources": ["PROCESS"], "primary_resource": "PROCESS"}],
+        spans=[
+            {
+                "task_key": "a.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 50000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            }
+        ],
         wall_end_us=50000,
     )
     analyzer = BuildEfficiencyAnalyzer(run_dir)
@@ -65,10 +74,20 @@ def test_genuine_ordering_violation_fails_hard_gate(tmp_path):
         elements=[("a.bst", False), ("b.bst", True)],
         dependencies=[("a.bst", "b.bst")],
         spans=[
-            {"task_key": "a.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 100000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "b.bst|BUILD|BUILD|0", "ts_us": 10000, "dur_us": 50000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
+            {
+                "task_key": "a.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 100000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "b.bst|BUILD|BUILD|0",
+                "ts_us": 10000,
+                "dur_us": 50000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
         ],
     )
     analyzer = BuildEfficiencyAnalyzer(run_dir)
@@ -95,8 +114,15 @@ def test_task_coverage_below_soft_threshold_degrades_confidence_without_hard_fai
         tmp_path,
         elements=[("a.bst", True)],
         dependencies=[],
-        spans=[{"task_key": "a.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 50000,
-                "resources": ["PROCESS"], "primary_resource": "PROCESS"}],
+        spans=[
+            {
+                "task_key": "a.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 50000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            }
+        ],
     )
     analyzer = BuildEfficiencyAnalyzer(run_dir)
     analyzer.load()

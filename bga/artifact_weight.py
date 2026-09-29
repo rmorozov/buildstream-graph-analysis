@@ -20,6 +20,7 @@ blob each carry its bytes, because each would need it alone. The run
 total is walked with one seen-set and is therefore smaller than the sum
 of the parts - `weigh_elements` returns both.
 """
+
 import os
 import time
 from collections.abc import Iterable, Iterator
@@ -29,8 +30,7 @@ from typing import Any, Optional
 # weight, so exceeding the budget is a named outcome, not a smaller number.
 WALK_BUDGET_S = 30.0
 
-_VALID = set("0123456789abcdefghijklmnopqrstuvwxyz"
-             "ABCDEFGHIJKLMNOPQRSTUVWXYZ-._")
+_VALID = set("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-._")
 
 
 def _fields(buf: bytes) -> Iterator[tuple[int, int, Any]]:
@@ -64,13 +64,13 @@ def _fields(buf: bytes) -> Iterator[tuple[int, int, Any]]:
             if wire == 0:
                 yield num, wire, value
             else:
-                yield num, wire, buf[i:i + value]
+                yield num, wire, buf[i : i + value]
                 i += value
         elif wire == 5:
-            yield num, wire, buf[i:i + 4]
+            yield num, wire, buf[i : i + 4]
             i += 4
         elif wire == 1:
-            yield num, wire, buf[i:i + 8]
+            yield num, wire, buf[i : i + 8]
             i += 8
         else:
             raise ValueError(f"protobuf wire type {wire}")
@@ -97,8 +97,7 @@ def normal_name(element_name: str) -> str:
 
 def ref_path(cachedir: str, project: str, element_name: str, cache_key: str) -> str:
     """Where BuildStream wrote this element's `Artifact` proto."""
-    return os.path.join(cachedir, "artifacts", "refs", project,
-                        normal_name(element_name), cache_key)
+    return os.path.join(cachedir, "artifacts", "refs", project, normal_name(element_name), cache_key)
 
 
 def read_ref(path: str) -> dict:
@@ -135,8 +134,7 @@ def _children(buf: bytes) -> Iterator[tuple[bool, tuple]]:
                 yield num == 1, _digest(subvalue)
 
 
-def walk_tree(casdir: str, root: tuple, seen: Optional[set] = None,
-              deadline: Optional[float] = None) -> tuple:
+def walk_tree(casdir: str, root: tuple, seen: Optional[set] = None, deadline: Optional[float] = None) -> tuple:
     """`(own_bytes, new_bytes, dirs_read)`, or `(None, None, n)` when the
     tree could not be walked whole.
 
@@ -159,8 +157,7 @@ def walk_tree(casdir: str, root: tuple, seen: Optional[set] = None,
             continue
         counted[hash_] = size
         try:
-            with open(os.path.join(casdir, "objects",
-                                   hash_[:2], hash_[2:]), "rb") as handle:
+            with open(os.path.join(casdir, "objects", hash_[:2], hash_[2:]), "rb") as handle:
                 buf = handle.read()
         except OSError:
             # A ref whose tree is half-evicted: the bytes still in the
@@ -180,8 +177,7 @@ def walk_tree(casdir: str, root: tuple, seen: Optional[set] = None,
     return own, new, dirs
 
 
-def weigh_elements(cachedir: str, project: str, elements: Iterable,
-                   budget_s: float = WALK_BUDGET_S) -> dict:
+def weigh_elements(cachedir: str, project: str, elements: Iterable, budget_s: float = WALK_BUDGET_S) -> dict:
     """Every element's artifact weight, and the run's deduplicated total.
 
     `elements` is `(element_name, cache_key)` pairs. Each row carries a
@@ -197,11 +193,9 @@ def weigh_elements(cachedir: str, project: str, elements: Iterable,
     shared: set = set()
     rows, unique, dirs = {}, 0, 0
     for element_name, cache_key in elements:
-        roots = ({} if not cache_key else
-                 read_ref(ref_path(cachedir, project, element_name, cache_key)))
+        roots = {} if not cache_key else read_ref(ref_path(cachedir, project, element_name, cache_key))
         if "files" not in roots:
-            rows[element_name] = {"files_bytes": None, "buildtree_bytes": None,
-                                  "source": "ref_absent"}
+            rows[element_name] = {"files_bytes": None, "buildtree_bytes": None, "source": "ref_absent"}
             continue
         row = {"files_bytes": None, "buildtree_bytes": None, "source": "cas_walk"}
         marginal = 0
@@ -211,8 +205,7 @@ def weigh_elements(cachedir: str, project: str, elements: Iterable,
             own, new, read = walk_tree(casdir, roots[key], shared, deadline)
             dirs += read
             if own is None:
-                row["source"] = ("budget_exceeded"
-                                 if time.monotonic() > deadline else "incomplete")
+                row["source"] = "budget_exceeded" if time.monotonic() > deadline else "incomplete"
                 row["files_bytes"] = row["buildtree_bytes"] = None
                 marginal = 0
                 break

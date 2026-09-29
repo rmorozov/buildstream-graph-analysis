@@ -24,6 +24,7 @@ integration. tools/chrome_trace_to_bga_trace.py converts this tool's
 Chrome Trace output the rest of the way into trace/v9 (see
 docs/spec/ingestion-pipeline.md).
 """
+
 import argparse
 import json
 import os
@@ -86,9 +87,7 @@ START_FILE_MTIME = "file_mtime"
 #     Build Queue: processed 25, skipped 65, failed 0
 # The trailing whitespace and the variable run of spaces after the
 # comma are both real - copied from a real freedesktop-sdk log.
-QUEUE_SUMMARY_RE = re.compile(
-    r"^\s*(\w+) Queue:\s+processed\s+(\d+),\s+skipped\s+(\d+),\s+failed\s+(\d+)"
-)
+QUEUE_SUMMARY_RE = re.compile(r"^\s*(\w+) Queue:\s+processed\s+(\d+),\s+skipped\s+(\d+),\s+failed\s+(\d+)")
 
 # BuildStream's own elapsed-time prefix: HH:MM:SS optionally followed by
 # .ffffff (only shown with --verbose's microsecond mode), or the literal
@@ -129,8 +128,7 @@ def parse_elapsed_to_seconds(elapsed_str):
 
 
 class WrapperTraceConverter:
-    def __init__(self, raw_start_time_us=None,
-                 raw_start_time_source=START_FILE_MTIME):
+    def __init__(self, raw_start_time_us=None, raw_start_time_source=START_FILE_MTIME):
         """
         Args:
             raw_start_time_us: absolute epoch microseconds to anchor raw-mode
@@ -260,8 +258,8 @@ class WrapperTraceConverter:
         # and docs/backlog/scenarios/UX-0006-raw-log-timestamp-corruption.md for
         # the full evidence.
         self._raw_watermark_us = None
-        self._raw_task_depth = {}       # hash -> current nesting depth
-        self._raw_task_anchor_us = {}   # hash -> that task's OUTER start ts
+        self._raw_task_depth = {}  # hash -> current nesting depth
+        self._raw_task_anchor_us = {}  # hash -> that task's OUTER start ts
         self._raw_main_anchor_stack = []  # parallel to _main_activity_stack
 
     def get_scheduler_config(self):
@@ -314,8 +312,7 @@ class WrapperTraceConverter:
 
         self.trace_events.append(
             {
-                "name": self.current_cmd[:120]
-                + ("..." if len(self.current_cmd) > 120 else ""),
+                "name": self.current_cmd[:120] + ("..." if len(self.current_cmd) > 120 else ""),
                 "cat": "bst-invocation" if self.is_bst else "wrapper",
                 "ph": "E",
                 "ts": end_ts,
@@ -420,8 +417,7 @@ class WrapperTraceConverter:
                 "failed": int(queue_match.group(4)),
             }
 
-    def handle_bst_event(self, ts, hash_val, action, element, status, msg,
-                         elapsed_s=None):
+    def handle_bst_event(self, ts, hash_val, action, element, status, msg, elapsed_s=None):
         # Clean up any accidental trailing whitespace from regex extraction
         action = action.strip()
         element = element.strip()
@@ -517,8 +513,10 @@ class WrapperTraceConverter:
         if delta < agreement["worst_shortfall_s"]:
             agreement["worst_shortfall_s"] = delta
             agreement["worst_shortfall_task"] = {
-                "element": task["element"], "action": task["action"],
-                "span_s": round(span_s, 3), "bst_elapsed_s": elapsed_s,
+                "element": task["element"],
+                "action": task["action"],
+                "span_s": round(span_s, 3),
+                "bst_elapsed_s": elapsed_s,
             }
         if delta > agreement["worst_excess_s"]:
             agreement["worst_excess_s"] = delta
@@ -528,11 +526,15 @@ class WrapperTraceConverter:
             # these two stamps describe.
             agreement["tasks_shorter_than_bst"] += 1
             if len(agreement["shorter_than_bst"]) < 8:
-                agreement["shorter_than_bst"].append({
-                    "element": task["element"], "action": task["action"],
-                    "span_s": round(span_s, 3), "bst_elapsed_s": elapsed_s,
-                    "shortfall_s": round(elapsed_s - span_s, 3),
-                })
+                agreement["shorter_than_bst"].append(
+                    {
+                        "element": task["element"],
+                        "action": task["action"],
+                        "span_s": round(span_s, 3),
+                        "bst_elapsed_s": elapsed_s,
+                        "shortfall_s": round(elapsed_s - span_s, 3),
+                    }
+                )
 
     def get_timestamp_agreement(self):
         """UX-110: what the two independent measurements of every task's
@@ -579,10 +581,12 @@ class WrapperTraceConverter:
             # The outermost command wrapper spans the entire invocation -
             # redundant with the horizon bga already computes elsewhere.
             return
-        self.pipeline_overhead.append({
-            "phase": frame["phase"],
-            "elapsed_us": ts - frame["start_ts"],
-        })
+        self.pipeline_overhead.append(
+            {
+                "phase": frame["phase"],
+                "elapsed_us": ts - frame["start_ts"],
+            }
+        )
 
     def process_line(self, line):
         """Process one line, auto-detecting wrapped vs. raw format per
@@ -637,14 +641,11 @@ class WrapperTraceConverter:
             if native_max_jobs_match:
                 self.bst_native_max_jobs = int(native_max_jobs_match.group(1))
 
-            self.is_bst = " bst " in self.current_cmd or self.current_cmd.startswith(
-                "bst "
-            )
+            self.is_bst = " bst " in self.current_cmd or self.current_cmd.startswith("bst ")
 
             self.trace_events.append(
                 {
-                    "name": self.current_cmd[:120]
-                    + ("..." if len(self.current_cmd) > 120 else ""),
+                    "name": self.current_cmd[:120] + ("..." if len(self.current_cmd) > 120 else ""),
                     "cat": "bst-invocation" if self.is_bst else "wrapper",
                     "ph": "B",
                     "ts": ts,
@@ -674,7 +675,12 @@ class WrapperTraceConverter:
                 # comparing them there would be a tautology rather than a
                 # cross-check.
                 self.handle_bst_event(
-                    ts, h, action, element, status, b_msg,
+                    ts,
+                    h,
+                    action,
+                    element,
+                    status,
+                    b_msg,
                     elapsed_s=parse_elapsed_to_seconds(_elapsed),
                 )
                 return
@@ -731,9 +737,7 @@ class WrapperTraceConverter:
         if elapsed_s is None:
             return
         if self.raw_start_time_us is None:
-            raise ValueError(
-                "raw_start_time_us is required to process raw-format lines"
-            )
+            raise ValueError("raw_start_time_us is required to process raw-format lines")
         if self._raw_watermark_us is None:
             self._raw_watermark_us = self.raw_start_time_us
 
@@ -749,11 +753,7 @@ class WrapperTraceConverter:
                 ts = self._raw_watermark_us
                 self._raw_main_anchor_stack.append(ts)
             else:
-                anchor = (
-                    self._raw_main_anchor_stack.pop()
-                    if self._raw_main_anchor_stack
-                    else self._raw_watermark_us
-                )
+                anchor = self._raw_main_anchor_stack.pop() if self._raw_main_anchor_stack else self._raw_watermark_us
                 ts = anchor + elapsed_us
                 self._raw_watermark_us = max(self._raw_watermark_us, ts)
         else:
@@ -894,8 +894,7 @@ def main(argv=None, quiet=False):
         # exit 0 - so a missing input was a silent success to every
         # caller that checks the exit status, this file's own composing
         # caller included.
-        print(f"Error: Could not find input file '{args.input_log}'",
-              file=sys.stderr)
+        print(f"Error: Could not find input file '{args.input_log}'", file=sys.stderr)
         return 2
 
     converter = WrapperTraceConverter(raw_start_time_us=start_time_us)
@@ -917,8 +916,7 @@ def main(argv=None, quiet=False):
         # exit 0 - so a missing input was a silent success to every
         # caller that checks the exit status, this file's own composing
         # caller included.
-        print(f"Error: Could not find input file '{args.input_log}'",
-              file=sys.stderr)
+        print(f"Error: Could not find input file '{args.input_log}'", file=sys.stderr)
         return 2
 
     with open(args.output_json, "w") as f:
@@ -930,8 +928,7 @@ def main(argv=None, quiet=False):
     # temporary path that is deleted a moment later.
     if not quiet:
         print(
-            f"Successfully generated trace! Open {args.output_json} in "
-            f"chrome://tracing or ui.perfetto.dev",
+            f"Successfully generated trace! Open {args.output_json} in chrome://tracing or ui.perfetto.dev",
             file=sys.stderr,
         )
     return 0

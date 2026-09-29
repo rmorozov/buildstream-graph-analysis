@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-Closed rows live in [closed.md](closed.md), verbatim. The counts
+Closed rows live in [closed.md](closed.md)'s chunks, verbatim. The counts
 sentence and the per-topic table are derived, never committed
 (`UX-996`) - run `python3 tools/dev_close_task.py --counts` for both.
 
@@ -47,6 +47,8 @@ task file, which is the only place it ever lived twice.
 | UX-1100 | [cut release 0.5.0 once the next features are in](UX-1100-cut-release-0-5-0.md) | contracts | Medium | R8 | 🔴 Not Started |
 | UX-1106 | [blast radius decodes every element's downstream set to sum durations over it](UX-1106-blast-radius-sums-durations-off-the-bitset.md) | analysis | High | anyone opening a run of a few thousand elements | 🔴 Not Started |
 | UX-1107 | [the export's anchor breaks a tie by set order](UX-1107-the-exports-anchor-breaks-a-tie-by-set-order.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1124 | [`parse_timestamp` reads the wrapper's UTC stamp as local time](UX-1124-parse-timestamp-reads-the-wrappers-utc-stamp-as-local.md) | capture | Medium | anyone reading a wrapped capture outside UTC | 🔴 Not Started |
+| UX-1125 | [a red ledger gives `dev_guard_prices` a last-catch source](UX-1125-a-red-ledger-gives-the-guard-prices-a-last-catch.md) | guards | Medium | Ruslan, who decides what the per-PR path costs | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register
@@ -884,7 +886,7 @@ about what the tool says:
 Order: `UX-238` first — everything after it is cheaper — then `UX-239`,
 then `UX-236` and `UX-237` together, then `UX-240` on top of both, and
 `UX-241` last because it is the cycle that keeps the rest true.
-All six are done; their rows are in [closed.md](closed.md).
+All six are done; their rows are in [closed.md](closed.md)'s chunks.
 
 `UX-245`..`UX-247` are what `UX-241`'s **first review** found, which is
 the item working rather than a coincidence: the architecture's CLI

@@ -14,6 +14,7 @@ The fix draws for real because `bga snapshot` calls analyze
 The second half is `[all]`: `[dev]`, `[bst]` and `[completion]` existed
 and a user who wanted the full experience assembled it by hand.
 """
+
 import os
 import re
 import subprocess
@@ -26,8 +27,7 @@ GOLDEN = "tests/fixtures/golden/mixed_task_kinds"
 # Every stage `analyze()` runs, and the label it draws under. Named
 # here rather than scraped, so a phase that loses its ticker fails
 # instead of quietly shrinking the list.
-PHASES = ("floors", "attribution", "utilisation", "diagnostics",
-          "structural", "confidence")
+PHASES = ("floors", "attribution", "utilisation", "diagnostics", "structural", "confidence")
 
 
 def _analyze(env_extra, run=GOLDEN, argv=None):
@@ -36,9 +36,17 @@ def _analyze(env_extra, run=GOLDEN, argv=None):
     env.pop("BGA_FORCE_PROGRESS", None)
     env.update(env_extra)
     return subprocess.run(
-        [sys.executable, "-c",
-         "from bga.cli import main; raise SystemExit(main({!r}))".format(argv or ["analyze", run, "--format", "json"])],
-        capture_output=True, env=env, cwd=os.getcwd())
+        [
+            sys.executable,
+            "-c",
+            "from bga.cli import main; raise SystemExit(main({!r}))".format(
+                argv or ["analyze", run, "--format", "json"]
+            ),
+        ],
+        capture_output=True,
+        env=env,
+        cwd=os.getcwd(),
+    )
 
 
 class TestEveryNamedPhaseDraws:
@@ -49,15 +57,16 @@ class TestEveryNamedPhaseDraws:
         # merges `from . import progress` with its neighbours.
         import bga.analyzer
         import bga.progress
-        assert getattr(bga.analyzer, "progress", None) is bga.progress, (
-            "the pipeline is silent again")
+
+        assert getattr(bga.analyzer, "progress", None) is bga.progress, "the pipeline is silent again"
 
     @pytest.mark.parametrize("phase", PHASES)
     def test_it_draws(self, phase):
         result = _analyze({"BGA_FORCE_PROGRESS": "1"})
         assert result.returncode == 0, result.stderr
         assert f"analyzing: {phase}".encode() in result.stderr, (
-            f"{phase} ran without saying so:\n{result.stderr.decode()[:400]}")
+            f"{phase} ran without saying so:\n{result.stderr.decode()[:400]}"
+        )
 
     def test_the_attribution_ticker_counts_elements(self):
         """`UX-42` documents attribution as quadratic per gap, which is
@@ -83,8 +92,7 @@ class TestThePipeStaysExactlyAsItWas:
         assert piped.stderr == b"", piped.stderr[:200]
 
     def test_the_off_switch_still_wins(self):
-        assert _analyze({"BGA_FORCE_PROGRESS": "1",
-                         "BGA_NO_PROGRESS": "1"}).stderr == b""
+        assert _analyze({"BGA_FORCE_PROGRESS": "1", "BGA_NO_PROGRESS": "1"}).stderr == b""
 
     def test_forcing_it_on_really_does_draw(self):
         """The precondition `UX-197` had to add once already: without
@@ -100,12 +108,10 @@ class TestASectionDrawsOnlyItsOwnPhases:
     announcing work it did not do."""
 
     def test_graph_draws_structural_and_not_attribution(self):
-        result = _analyze({"BGA_FORCE_PROGRESS": "1"},
-                          argv=["graph", GOLDEN, "--format", "json"])
+        result = _analyze({"BGA_FORCE_PROGRESS": "1"}, argv=["graph", GOLDEN, "--format", "json"])
         assert result.returncode == 0, result.stderr
         assert b"analyzing: structural" in result.stderr
-        assert b"analyzing: attribution" not in result.stderr, (
-            "announced a phase this section skips")
+        assert b"analyzing: attribution" not in result.stderr, "announced a phase this section skips"
 
 
 def _extras_without_tomllib(path="pyproject.toml"):
@@ -168,10 +174,9 @@ class TestTheEverythingExtra:
     def _extras(self):
         try:
             import tomllib
-        except ImportError:                      # pragma: no cover - <3.11
+        except ImportError:  # pragma: no cover - <3.11
             return _extras_without_tomllib()
-        return tomllib.load(open("pyproject.toml", "rb"))[
-            "project"]["optional-dependencies"]
+        return tomllib.load(open("pyproject.toml", "rb"))["project"]["optional-dependencies"]
 
     def test_the_fallback_agrees_with_tomllib(self):
         """The guard that was missing, and would have caught both of the
@@ -182,10 +187,8 @@ class TestTheEverythingExtra:
         the two matrix versions that take it - and compared against the
         real parser rather than against my idea of what it should say.
         """
-        tomllib = pytest.importorskip(
-            "tomllib", reason="nothing to compare against below 3.11")
-        real = tomllib.load(open("pyproject.toml", "rb"))[
-            "project"]["optional-dependencies"]
+        tomllib = pytest.importorskip("tomllib", reason="nothing to compare against below 3.11")
+        real = tomllib.load(open("pyproject.toml", "rb"))["project"]["optional-dependencies"]
         assert _extras_without_tomllib() == real
 
     def test_the_fallback_survives_prose_that_looks_like_syntax(self, tmp_path):
@@ -207,7 +210,8 @@ class TestTheEverythingExtra:
             '\n'
             '[project.scripts]\n'
             'bga = "bga.cli:main"\n',
-            encoding="utf-8")
+            encoding="utf-8",
+        )
         assert _extras_without_tomllib(str(toml)) == {
             "dev": ["pytest>=7.0", "ruff>=0.6"],
             "all": ["pytest>=7.0", "ruff>=0.6"],
@@ -232,10 +236,8 @@ class TestTheEverythingExtra:
     def test_ci_installs_and_checks_it(self):
         import yaml
 
-        workflow = yaml.safe_load(open(".github/workflows/ci.yml",
-                                       encoding="utf-8"))
-        steps = "\n".join(str(s.get("run", ""))
-                          for s in workflow["jobs"]["packaging"]["steps"])
+        workflow = yaml.safe_load(open(".github/workflows/ci.yml", encoding="utf-8"))
+        steps = "\n".join(str(s.get("run", "")) for s in workflow["jobs"]["packaging"]["steps"])
         assert "[all]" in steps, "nothing installs the form the README documents"
         assert "import argcomplete, buildstream" in steps
 

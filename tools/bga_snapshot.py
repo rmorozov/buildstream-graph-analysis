@@ -101,9 +101,9 @@ def _cpu_model(cpuinfo: str) -> list:
         return []
 
 
-def _capture_context(project: str, command: list[str], config: dict,
-                     jobserver: tuple = ("off", None, None),
-                     plan: Optional[str] = None) -> str:
+def _capture_context(
+    project: str, command: list[str], config: dict, jobserver: tuple = ("off", None, None), plan: Optional[str] = None
+) -> str:
     """What this capture was, in the terms UX-95 made the report carry.
 
     Written before the build rather than after, so a snapshot of a build
@@ -117,17 +117,22 @@ def _capture_context(project: str, command: list[str], config: dict,
 
     mode, ceiling, seed = jobserver
     seed_text = f" seed={seed}" if ceiling is not None and seed is not None else ""
-    return "\n".join([
-        f"project={project}",
-        f"command={' '.join(command)}",
-        f"trace_opens={'true' if config.get('trace_opens', True) else 'false'}",
-        f"trace_spine={config.get('trace_spine', 'auto')}",
-        f"runner_os={platform.platform()}",
-        f"nproc={os.cpu_count()}",
-        cpu_topology(),
-        f"jobserver: {mode} {ceiling if ceiling is not None else '-'}{seed_text}",
-        f"plan: {plan or '-'}",
-    ]) + "\n"
+    return (
+        "\n".join(
+            [
+                f"project={project}",
+                f"command={' '.join(command)}",
+                f"trace_opens={'true' if config.get('trace_opens', True) else 'false'}",
+                f"trace_spine={config.get('trace_spine', 'auto')}",
+                f"runner_os={platform.platform()}",
+                f"nproc={os.cpu_count()}",
+                cpu_topology(),
+                f"jobserver: {mode} {ceiling if ceiling is not None else '-'}{seed_text}",
+                f"plan: {plan or '-'}",
+            ]
+        )
+        + "\n"
+    )
 
 
 def why_the_project_is_not_one(project: str):
@@ -164,8 +169,7 @@ def why_the_project_is_not_one(project: str):
     # `examples/06` - and "it has no project.conf" would have sent them
     # looking for a file in a directory that does not exist.
     if not os.path.isdir(project):
-        lines = [f"Error: {project} does not exist. Nothing was captured "
-                 f"and nothing was written."]
+        lines = [f"Error: {project} does not exist. Nothing was captured and nothing was written."]
     else:
         lines = [
             f"Error: {project} is not a BuildStream project - it has no "
@@ -176,12 +180,15 @@ def why_the_project_is_not_one(project: str):
     # level of one, and both are answered by naming what is above.
     enclosing = run_store.project_root(project)
     if enclosing and os.path.abspath(enclosing) != os.path.abspath(project):
-        lines.append(f"  The nearest project above it is {enclosing}. "
-                     f"bst would have walked up to it and built *that* - "
-                     f"which is why this refuses rather than proceeding.")
+        lines.append(
+            f"  The nearest project above it is {enclosing}. "
+            f"bst would have walked up to it and built *that* - "
+            f"which is why this refuses rather than proceeding."
+        )
     else:
-        lines.append("  No enclosing project either. Check the path, or run "
-                     "`bga doctor` from inside the project you meant.")
+        lines.append(
+            "  No enclosing project either. Check the path, or run `bga doctor` from inside the project you meant."
+        )
     return "\n".join(lines)
 
 
@@ -216,16 +223,20 @@ def why_the_build_cannot_start(command: list[str]):
         if check["status"] != bga_doctor.FAIL:
             return None
         remedy = check["remedy"] or "install BuildStream"
-        return (f"Error: {check['summary']}, so this build cannot start. "
-                f"Nothing was captured and nothing was written.\n"
-                f"  -> {remedy}\n"
-                f"  `bga doctor` checks this and everything else a capture "
-                f"on this machine needs.")
+        return (
+            f"Error: {check['summary']}, so this build cannot start. "
+            f"Nothing was captured and nothing was written.\n"
+            f"  -> {remedy}\n"
+            f"  `bga doctor` checks this and everything else a capture "
+            f"on this machine needs."
+        )
 
     if shutil.which(executable) is None and not os.path.exists(executable):
-        return (f"Error: {executable!r} is not on PATH, so this build cannot "
-                f"start. Nothing was captured and nothing was written.\n"
-                f"  `bga doctor` checks what a capture on this machine needs.")
+        return (
+            f"Error: {executable!r} is not on PATH, so this build cannot "
+            f"start. Nothing was captured and nothing was written.\n"
+            f"  `bga doctor` checks what a capture on this machine needs."
+        )
     return None
 
 
@@ -245,9 +256,11 @@ def _resolve_plan(project: str, token: str) -> tuple[Optional[str], Optional[str
         return None, str(error)
     candidate = os.path.join(snapshot, run_store.ANALYSIS_NAME)
     if not os.path.isfile(candidate):
-        return None, (f"{token} resolves to "
-                       f"{os.path.basename(snapshot.rstrip('/'))}, which has no "
-                       f"{run_store.ANALYSIS_NAME} - nothing to plan from.")
+        return None, (
+            f"{token} resolves to "
+            f"{os.path.basename(snapshot.rstrip('/'))}, which has no "
+            f"{run_store.ANALYSIS_NAME} - nothing to plan from."
+        )
     return candidate, None
 
 
@@ -301,13 +314,20 @@ def _set_baseline_run_dir_env(project: str) -> None:
         os.environ.pop("BGA_BASELINE_RUN_DIR", None)
 
 
-def take_snapshot(project: str, command: list[str], config: dict,
-                  snapshot: Optional[str] = None, diagnose: bool = False,
-                  no_inject: bool = False, inhibit: bool = False,
-                  keep_raw: bool = True, jobserver: str = "off",
-                  jobserver_auth: str = "auto",
-                  plan: Optional[str] = None,
-                  cpu_count: Optional[int] = None) -> tuple[str, int]:
+def take_snapshot(
+    project: str,
+    command: list[str],
+    config: dict,
+    snapshot: Optional[str] = None,
+    diagnose: bool = False,
+    no_inject: bool = False,
+    inhibit: bool = False,
+    keep_raw: bool = True,
+    jobserver: str = "off",
+    jobserver_auth: str = "auto",
+    plan: Optional[str] = None,
+    cpu_count: Optional[int] = None,
+) -> tuple[str, int]:
     """Capture into a new snapshot directory. Returns it and the build's
     own exit code - which is the build's answer, not the capture's.
 
@@ -339,12 +359,15 @@ def take_snapshot(project: str, command: list[str], config: dict,
     set_jobserver_mode_env(mode)
     _set_baseline_run_dir_env(project)
     with open(os.path.join(snapshot, CONTEXT_NAME), "w", encoding="utf-8") as handle:
-        handle.write(_capture_context(project, command, config,
-                                      jobserver=(mode or "off", ceiling, seed),
-                                      plan=plan))
+        handle.write(_capture_context(project, command, config, jobserver=(mode or "off", ceiling, seed), plan=plan))
 
-    argv = ["run", "--wrapped-log", os.path.join(snapshot, WRAPPED_LOG_NAME),
-            "--run-dir", os.path.join(snapshot, RUN_SUBDIR)]
+    argv = [
+        "run",
+        "--wrapped-log",
+        os.path.join(snapshot, WRAPPED_LOG_NAME),
+        "--run-dir",
+        os.path.join(snapshot, RUN_SUBDIR),
+    ]
     if keep_raw:
         # Written uncompressed by the capture, then compressed in place
         # below: the tracer streams into it for hours and gzip is the
@@ -402,10 +425,15 @@ def _write_tail(snapshot: str, stamp: Optional[dict], complete: bool = False) ->
     from bga import schemas
 
     recorded = progress.ledger()
-    document = schemas.stamp({"producer": stamp,
-                              "build_wall_us": recorded["build_wall_us"],
-                              "phases": recorded["phases"],
-                              "complete": complete}, schemas.TAIL)
+    document = schemas.stamp(
+        {
+            "producer": stamp,
+            "build_wall_us": recorded["build_wall_us"],
+            "phases": recorded["phases"],
+            "complete": complete,
+        },
+        schemas.TAIL,
+    )
     path = os.path.join(snapshot, run_store.TAIL_NAME)
     try:
         with open(path + ".tmp", "w", encoding="utf-8") as handle:
@@ -437,21 +465,26 @@ def _compress_raw_log(snapshot: str) -> None:
     if not os.path.exists(plain):
         return
     try:
-        with open(plain, "rb") as source, gzip.open(
-                os.path.join(snapshot, RAW_LOG_NAME), "wb",
-                compresslevel=RAW_LOG_COMPRESSLEVEL) as target:
+        with (
+            open(plain, "rb") as source,
+            gzip.open(os.path.join(snapshot, RAW_LOG_NAME), "wb", compresslevel=RAW_LOG_COMPRESSLEVEL) as target,
+        ):
             shutil.copyfileobj(source, target, length=1024 * 1024)
         os.remove(plain)
     except OSError as error:
-        print(f"Warning: could not compress the raw Plane 2 log ({error}); "
-              f"it is kept uncompressed at {plain}.", file=sys.stderr)
+        print(
+            f"Warning: could not compress the raw Plane 2 log ({error}); it is kept uncompressed at {plain}.",
+            file=sys.stderr,
+        )
 
 
 def _CompactRawHelp(prog):
     """UX-158: one shared compact help layout, imported lazily so
     this module stays runnable on its own."""
     from bga.help_format import CompactRawHelp
+
     return CompactRawHelp(prog)
+
 
 def _jobserver_value(text: str) -> str:
     """`--jobserver`'s argparse `type`: refuse anything but the three
@@ -463,8 +496,7 @@ def _jobserver_value(text: str) -> str:
     try:
         ceiling = int(text)
     except ValueError:
-        raise argparse.ArgumentTypeError(
-            f"{text!r} is none of auto, off, or an integer") from None
+        raise argparse.ArgumentTypeError(f"{text!r} is none of auto, off, or an integer") from None
     if ceiling < 0:
         raise argparse.ArgumentTypeError(f"{text!r}: a jobserver is never negative")
     return text
@@ -482,30 +514,30 @@ def create_parser() -> argparse.ArgumentParser:
     guard's first draft ran a real capture in a unit test.
     """
     parser = argparse.ArgumentParser(
-        description=HELP, formatter_class=_CompactRawHelp,
+        description=HELP,
+        formatter_class=_CompactRawHelp,
+    )
+    parser.add_argument("--project", default=None, help='The project to snapshot.')
+    parser.add_argument(
+        "--trace-opens", dest="trace_opens", action="store_true", default=None, help='Record opened paths (UX-46).'
     )
     parser.add_argument(
-        "--project", default=None,
-        help='The project to snapshot.'
-    )
-    parser.add_argument(
-        "--trace-opens", dest="trace_opens", action="store_true", default=None,
-        help='Record opened paths (UX-46).'
-    )
-    parser.add_argument(
-        "--no-trace-opens", dest="trace_opens", action="store_false",
+        "--no-trace-opens",
+        dest="trace_opens",
+        action="store_false",
         help="Turn opened-path recording off, and remember that.",
     )
     parser.add_argument(
-        "--trace-spine", choices=["off", "on", "auto"], default=None,
-        help='The ptrace spine\'s policy (UX-113).'
+        "--trace-spine", choices=["off", "on", "auto"], default=None, help='The ptrace spine\'s policy (UX-113).'
     )
     parser.add_argument(
-        "--no-compare", action="store_true",
-        help='Take the snapshot and report on it, but do not compare against the previous one.'
+        "--no-compare",
+        action="store_true",
+        help='Take the snapshot and report on it, but do not compare against the previous one.',
     )
     parser.add_argument(
-        "--list", action="store_true",
+        "--list",
+        action="store_true",
         help="List this project's snapshots, with sizes, and exit.",
     )
     # UX-234: the store as a distribution rather than as a list. A
@@ -514,86 +546,107 @@ def create_parser() -> argparse.ArgumentParser:
     # consumer wanting the trend should not have to skip an aggregate
     # to reach it.
     parser.add_argument(
-        "--aggregate", action="store_true",
+        "--aggregate",
+        action="store_true",
         help="Cost per host class: min/median/p95 over finished runs.",
     )
     parser.add_argument(
-        "--blend", action="store_true",
+        "--blend",
+        action="store_true",
         help="With --aggregate: mix host classes. Refused by default.",
     )
     # `UX-595`: one flag, not two - they are one question, and this
     # help is at its line cap (`UX-158`).
     parser.add_argument(
-        "--capacity", metavar="N,RATE", default=None,
-        help="Model N builders at RATE builds/day: the wait, and what "
-             "it assumes.",
+        "--capacity",
+        metavar="N,RATE",
+        default=None,
+        help="Model N builders at RATE builds/day: the wait, and what it assumes.",
     )
     parser.add_argument(
-        "--format", choices=("text", "json"), default="text",
+        "--format",
+        choices=("text", "json"),
+        default="text",
         help="JSON for --list/--aggregate instead of text.",
     )
     # UX-159: the store had a size warning and no way to act on it.
     # A subcommand rather than a flag, because it deletes.
     parser.add_argument(
-        "--prune", action="store_true",
+        "--prune",
+        action="store_true",
         help="Delete old snapshots. Needs --keep and/or --older-than.",
     )
     parser.add_argument(
-        "--keep", type=int, default=None, metavar="N",
+        "--keep",
+        type=int,
+        default=None,
+        metavar="N",
         help="With --prune: keep the newest N snapshots.",
     )
     parser.add_argument(
-        "--older-than", type=float, default=None, metavar="DAYS",
+        "--older-than",
+        type=float,
+        default=None,
+        metavar="DAYS",
         help="With --prune: delete snapshots older than DAYS.",
     )
     parser.add_argument(
-        "--max-store", type=str, default=None, metavar="SIZE",
+        "--max-store",
+        type=str,
+        default=None,
+        metavar="SIZE",
         help="With --prune: keep the store under SIZE (`2G`), oldest first.",
     )
     parser.add_argument(
-        "--dry-run", action="store_true",
+        "--dry-run",
+        action="store_true",
         help="With --prune: say what would go, delete nothing.",
     )
     parser.add_argument(
-        "--diagnose", action="store_true",
-        help='Record what the bwrap shim received and exec\'d, and summarise it.'
+        "--diagnose", action="store_true", help='Record what the bwrap shim received and exec\'d, and summarise it.'
     )
     parser.add_argument(
-        "--no-inject", action="store_true",
-        help='Install the shim but inject nothing - is the argv rewrite the problem?'
+        "--no-inject",
+        action="store_true",
+        help='Install the shim but inject nothing - is the argv rewrite the problem?',
     )
     parser.add_argument(
-        "--no-keep-raw", action="store_true",
-        help="Drop the raw Plane 2 log. Kept gzipped by default; `bga "
-             "timeline` needs it."
+        "--no-keep-raw",
+        action="store_true",
+        help="Drop the raw Plane 2 log. Kept gzipped by default; `bga timeline` needs it.",
     )
     parser.add_argument(
-        "--inhibit", action="store_true",
+        "--inhibit",
+        action="store_true",
         help="Stop the machine sleeping while the build runs (systemd-inhibit). "
-             "Off by default; a suspend is detected either way."
+        "Off by default; a suspend is detected either way.",
     )
     parser.add_argument(
-        "--no-progress", action="store_true",
-        help="No in-phase progress line. Same as BGA_NO_PROGRESS=1."
+        "--no-progress", action="store_true", help="No in-phase progress line. Same as BGA_NO_PROGRESS=1."
     )
     parser.add_argument(
-        "--jobserver", type=_jobserver_value, default="off", metavar="MODE",
+        "--jobserver",
+        type=_jobserver_value,
+        default="off",
+        metavar="MODE",
         help="auto|N|off (default off): cap sandbox concurrency, as "
-             "`bga capture run --jobserver` (UX-851). Per capture, not sticky."
+        "`bga capture run --jobserver` (UX-851). Per capture, not sticky.",
     )
     parser.add_argument(
-        "--jobserver-auth", choices=("fd", "fifo", "auto"), default="auto",
-        help="UX-875: forwarded to the tracer's own --jobserver-auth "
-             "(UX-841), unused when --jobserver is off."
+        "--jobserver-auth",
+        choices=("fd", "fifo", "auto"),
+        default="auto",
+        help="UX-875: forwarded to the tracer's own --jobserver-auth (UX-841), unused when --jobserver is off.",
     )
     parser.add_argument(
-        "--plan", default=None, metavar="PATH",
+        "--plan",
+        default=None,
+        metavar="PATH",
         help="An analyze.json (@prev/@last resolve to that snapshot's own, "
-             "beside its run), naming this project's own slack (UX-849). "
-             "Needs --jobserver auto|N."
+        "beside its run), naming this project's own slack (UX-849). "
+        "Needs --jobserver auto|N.",
     )
-    parser.add_argument("cmd", nargs=argparse.REMAINDER,
-                        help="The build to run, e.g. -- bst build all.bst.")
+    parser.add_argument("cmd", nargs=argparse.REMAINDER, help="The build to run, e.g. -- bst build all.bst.")
     return parser
 
 
@@ -636,8 +689,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         return _capacity(project, args.capacity, args.format)
 
     if args.aggregate:
-        return _aggregate(project, blend=args.blend,
-                          as_json=args.format == "json")
+        return _aggregate(project, blend=args.blend, as_json=args.format == "json")
 
     if args.list:
         return _list(project, as_json=args.format == "json")
@@ -651,25 +703,34 @@ def main(argv: Optional[list[str]] = None) -> int:
     if args.prune or (args.cmd and args.cmd[0] == "prune"):
         rest = args.cmd[1:] if (args.cmd and args.cmd[0] == "prune") else []
         prune_parser = argparse.ArgumentParser(
-            prog="bga snapshot prune", formatter_class=_CompactRawHelp,
-            description="Delete old snapshots, never @last or @prev.")
-        prune_parser.add_argument("--keep", type=int, default=args.keep,
-                                  metavar="N", help="Keep the newest N.")
-        prune_parser.add_argument("--older-than", type=float,
-                                  default=args.older_than, metavar="DAYS",
-                                  help="Delete snapshots older than DAYS.")
-        prune_parser.add_argument("--max-store", type=str,
-                                  default=args.max_store, metavar="SIZE",
-                                  help="Delete oldest-first until the store "
-                                       "is under SIZE (`2G`, `500M`).")
-        prune_parser.add_argument("--dry-run", action="store_true",
-                                  default=args.dry_run,
-                                  help="Say what would go, delete nothing.")
+            prog="bga snapshot prune",
+            formatter_class=_CompactRawHelp,
+            description="Delete old snapshots, never @last or @prev.",
+        )
+        prune_parser.add_argument("--keep", type=int, default=args.keep, metavar="N", help="Keep the newest N.")
+        prune_parser.add_argument(
+            "--older-than",
+            type=float,
+            default=args.older_than,
+            metavar="DAYS",
+            help="Delete snapshots older than DAYS.",
+        )
+        prune_parser.add_argument(
+            "--max-store",
+            type=str,
+            default=args.max_store,
+            metavar="SIZE",
+            help="Delete oldest-first until the store is under SIZE (`2G`, `500M`).",
+        )
+        prune_parser.add_argument(
+            "--dry-run", action="store_true", default=args.dry_run, help="Say what would go, delete nothing."
+        )
         pruned = prune_parser.parse_args(rest)
-        if (pruned.keep is None and pruned.older_than is None
-                and pruned.max_store is None):
-            print("Error: prune needs --keep N, --older-than DAYS and/or "
-                  "--max-store SIZE. Nothing was deleted.", file=sys.stderr)
+        if pruned.keep is None and pruned.older_than is None and pruned.max_store is None:
+            print(
+                "Error: prune needs --keep N, --older-than DAYS and/or --max-store SIZE. Nothing was deleted.",
+                file=sys.stderr,
+            )
             return 2
         budget = None
         if pruned.max_store is not None:
@@ -678,13 +739,11 @@ def main(argv: Optional[list[str]] = None) -> int:
             except ValueError as error:
                 print(f"Error: {error}", file=sys.stderr)
                 return 2
-        return _prune(project, pruned.keep, pruned.older_than, pruned.dry_run,
-                      max_store=budget)
+        return _prune(project, pruned.keep, pruned.older_than, pruned.dry_run, max_store=budget)
 
     command = [token for token in args.cmd if token != "--"]
     if not command:
-        print("Error: nothing to run. Usage: bga snapshot -- bst build TARGET",
-              file=sys.stderr)
+        print("Error: nothing to run. Usage: bga snapshot -- bst build TARGET", file=sys.stderr)
         return 2
 
     # UX-1080: the ledger starts here, not in `take_snapshot` below - the
@@ -705,8 +764,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     # close next (`Plane 2 report`, on a real capture). That fallback
     # still exists for a call genuinely made with no phase open at all;
     # this one now always has one.
-    with progress.timed("before the build", say="Checking bst is ready...",
-                        before_build=True):
+    with progress.timed("before the build", say="Checking bst is ready...", before_build=True):
         refusal = why_the_build_cannot_start(command)
     if refusal is not None:
         print(refusal, file=sys.stderr)
@@ -716,9 +774,12 @@ def main(argv: Optional[list[str]] = None) -> int:
     # jobserver running has nothing to bias - refused before any write,
     # the same posture as the two refusals above.
     if args.plan is not None and args.jobserver == "off":
-        print("Error: --plan needs --jobserver auto|N - off runs no "
-              "jobserver, so a plan has nothing to bias. Nothing was "
-              "captured.", file=sys.stderr)
+        print(
+            "Error: --plan needs --jobserver auto|N - off runs no "
+            "jobserver, so a plan has nothing to bias. Nothing was "
+            "captured.",
+            file=sys.stderr,
+        )
         return 2
     plan_path = None
     if args.plan is not None:
@@ -733,24 +794,31 @@ def main(argv: Optional[list[str]] = None) -> int:
     # against, and offering it as `@prev` produces an error about a
     # path the user never typed.
     previous = run_store.list_runs(project)
-    snapshot, build_exit = take_snapshot(project, command, config,
-                                         diagnose=args.diagnose,
-                                         no_inject=args.no_inject,
-                                         inhibit=args.inhibit,
-                                         keep_raw=not args.no_keep_raw,
-                                         jobserver=args.jobserver,
-                                         jobserver_auth=args.jobserver_auth,
-                                         plan=plan_path)
+    snapshot, build_exit = take_snapshot(
+        project,
+        command,
+        config,
+        diagnose=args.diagnose,
+        no_inject=args.no_inject,
+        inhibit=args.inhibit,
+        keep_raw=not args.no_keep_raw,
+        jobserver=args.jobserver,
+        jobserver_auth=args.jobserver_auth,
+        plan=plan_path,
+    )
 
     if args.no_inject:
         # Nothing was captured, so there is nothing to analyze and
         # certainly nothing to compare. Saying so beats an analysis of an
         # empty trace, which would read as a measurement.
-        print(f"\n--no-inject: the build ran with the shim installed and "
-              f"injecting nothing, so this snapshot holds no trace. The "
-              f"build exited {build_exit}.\n"
-              f"Diagnostics: {os.path.join(snapshot, PLANE2_NAME)}"
-              f".diagnostics.jsonl", file=sys.stderr)
+        print(
+            f"\n--no-inject: the build ran with the shim installed and "
+            f"injecting nothing, so this snapshot holds no trace. The "
+            f"build exited {build_exit}.\n"
+            f"Diagnostics: {os.path.join(snapshot, PLANE2_NAME)}"
+            f".diagnostics.jsonl",
+            file=sys.stderr,
+        )
         _close_tail(snapshot)
         return build_exit
 
@@ -759,32 +827,43 @@ def main(argv: Optional[list[str]] = None) -> int:
         # UX-157: an interrupt is not a build failure and must not read
         # as one. The capture already salvaged and analyzed whatever
         # completed; what is left is to name the exit for what it was.
-        print(f"\nInterrupted. The capture was kept in {snapshot}. Whatever "
-              f"completed before the interrupt is in the report above, and a "
-              f"comparison against this snapshot obeys the same incompleteness "
-              f"rules as any unfinished build (UX-156).", file=sys.stderr)
+        print(
+            f"\nInterrupted. The capture was kept in {snapshot}. Whatever "
+            f"completed before the interrupt is in the report above, and a "
+            f"comparison against this snapshot obeys the same incompleteness "
+            f"rules as any unfinished build (UX-156).",
+            file=sys.stderr,
+        )
     if not os.path.isdir(run_dir):
         # The capture kept whatever it got (the Plane 2 report is on
         # disk); there is simply nothing to analyze. Say which of the two
         # happened rather than printing an analyzer error.
-        print(f"\nNo run directory was extracted - the build exited "
-              f"{build_exit} and its log has no completed elements to read. "
-              f"The Plane 2 capture is in {snapshot}.", file=sys.stderr)
+        print(
+            f"\nNo run directory was extracted - the build exited "
+            f"{build_exit} and its log has no completed elements to read. "
+            f"The Plane 2 capture is in {snapshot}.",
+            file=sys.stderr,
+        )
         if not args.diagnose and not args.no_inject:
             # UX-147 item 5: the one thing worth saying to someone whose
             # build works under plain `bst` and not here.
-            print("Re-run with --diagnose to record what the bwrap shim "
-                  "received and exec'd; --no-inject then says whether the "
-                  "rewrite is what breaks it.", file=sys.stderr)
+            print(
+                "Re-run with --diagnose to record what the bwrap shim "
+                "received and exec'd; --no-inject then says whether the "
+                "rewrite is what breaks it.",
+                file=sys.stderr,
+            )
         _close_tail(snapshot)
         return build_exit or 1
 
     print()
     with progress.timed("analyze", say="Analyzing the run..."):
         _, analyzed_result = _analyze(
-            run_dir, os.path.join(snapshot, PLANE2_NAME),
+            run_dir,
+            os.path.join(snapshot, PLANE2_NAME),
             publish_to=os.path.join(snapshot, run_store.ANALYSIS_NAME),
-            build_exit=build_exit)
+            build_exit=build_exit,
+        )
     # UX-226: the small slice this snapshot contributes to the store's
     # per-element history. Never fatal - see `write_element_slice`.
     # UX-1072: reuse the analysis `_analyze` already ran instead of a
@@ -801,9 +880,11 @@ def main(argv: Optional[list[str]] = None) -> int:
             with progress.timed("compare", say="Comparing against the baseline..."):
                 _compare(baseline, snapshot)
     elif not args.no_compare:
-        print("\nThis is the first snapshot of this project - make your change "
-              "and run the same command again, and the comparison against it "
-              "is automatic.")
+        print(
+            "\nThis is the first snapshot of this project - make your change "
+            "and run the same command again, and the comparison against it "
+            "is automatic."
+        )
 
     with progress.timed("store size", say="Weighing the store..."):
         _say_what_it_weighs(snapshot, project)
@@ -814,9 +895,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     # the last thing printed, so a reader who only sees the tail still
     # meets the number that mattered.
     if build_exit:
-        print(_exit_summary_line(build_exit,
-                                 os.path.join(snapshot, WRAPPED_LOG_NAME)),
-              file=sys.stderr)
+        print(_exit_summary_line(build_exit, os.path.join(snapshot, WRAPPED_LOG_NAME)), file=sys.stderr)
     # The build's own status is the answer, as everywhere else here: a
     # failed build must not look like a successful snapshot.
     return build_exit
@@ -847,16 +926,19 @@ def _sticky_config(project: str, args: argparse.Namespace) -> dict:
     # blind spot is otherwise discovered at read time. Printed only when
     # the stored config actually changes something, so the ordinary case
     # stays quiet.
-    remembered = {key: value for key, value in stored.items()
-                  if key in defaults and value != defaults[key]
-                  and getattr(args, key, None) is None}
+    remembered = {
+        key: value
+        for key, value in stored.items()
+        if key in defaults and value != defaults[key] and getattr(args, key, None) is None
+    }
     if remembered:
         flags = " ".join(
             ("--trace-opens" if config["trace_opens"] else "--no-trace-opens")
-            if key == "trace_opens" else f"--trace-spine={config['trace_spine']}"
-            for key in sorted(remembered))
-        print(f"Using {os.path.join(run_store.store_dir(project), 'config')}: "
-              f"{flags}", file=sys.stderr)
+            if key == "trace_opens"
+            else f"--trace-spine={config['trace_spine']}"
+            for key in sorted(remembered)
+        )
+        print(f"Using {os.path.join(run_store.store_dir(project), 'config')}: {flags}", file=sys.stderr)
     return config
 
 
@@ -898,12 +980,12 @@ def _exit_summary_line(build_exit: int, wrapped_log_path: str) -> str:
     """
     where = _write_failure_path(wrapped_log_path)
     named = f" Could not write {where}." if where else ""
-    return (f"bst exited {build_exit} - the analysis above describes a "
-            f"build that did not complete.{named}")
+    return f"bst exited {build_exit} - the analysis above describes a build that did not complete.{named}"
 
 
-def _analyze(run_dir: str, plane2: str, publish_to: Optional[str] = None,
-            build_exit: int = 0) -> tuple[int, Optional[object]]:
+def _analyze(
+    run_dir: str, plane2: str, publish_to: Optional[str] = None, build_exit: int = 0
+) -> tuple[int, Optional[object]]:
     """Print the report, publish the same analysis as JSON, and return it.
 
     `UX-296`: **capture computes, view serves.** `bga view` used to
@@ -936,6 +1018,7 @@ def _analyze(run_dir: str, plane2: str, publish_to: Optional[str] = None,
 
     if publish_to is None:
         from bga.cli import main as cli_main
+
         return cli_main(argv), None
 
     from bga.cli import analyzed, create_parser
@@ -949,6 +1032,7 @@ def _analyze(run_dir: str, plane2: str, publish_to: Optional[str] = None,
         raise
     except Exception:
         from bga.cli import main as cli_main
+
         return cli_main(argv), None
 
     executed_us = (result.attribution or {}).get('execution_on_chain_us') or 0
@@ -956,9 +1040,11 @@ def _analyze(run_dir: str, plane2: str, publish_to: Optional[str] = None,
         # UX-156's own grammar ("THIS BUILD DID NOT FINISH"), not a
         # second vocabulary: the verdict below would score idleness on
         # a build that never ran, which is the defect this refuses.
-        print("THIS BUILD DID NOT FINISH: zero execution was measured on "
-              "the critical path. No attribution verdict is printed for a "
-              "build that could not run.")
+        print(
+            "THIS BUILD DID NOT FINISH: zero execution was measured on "
+            "the critical path. No attribution verdict is printed for a "
+            "build that could not run."
+        )
     else:
         print(format_text(result))
     try:
@@ -980,9 +1066,7 @@ SLICE_ELEMENTS_MAX = 24
 SLICE_NAME = "element-slice.json"
 
 
-def write_element_slice(snapshot: str, run_dir: str,
-                         analysis_result: Optional[object] = None
-                         ) -> Optional[dict]:
+def write_element_slice(snapshot: str, run_dir: str, analysis_result: Optional[object] = None) -> Optional[dict]:
     """Persist a bounded per-element slice beside the snapshot.
 
     Written at capture time rather than derived at read time, and the
@@ -1012,8 +1096,7 @@ def write_element_slice(snapshot: str, run_dir: str,
             # `graph` is the narrowest section that still produces the
             # signals this slice reads, so the second analysis is the
             # cheapest one that can answer the question.
-            result = BuildEfficiencyAnalyzer().analyze(Path(run_dir),
-                                                       section='graph')
+            result = BuildEfficiencyAnalyzer().analyze(Path(run_dir), section='graph')
         except Exception:
             # A slice is a convenience on top of a capture that already
             # succeeded. It must never be the thing that fails a snapshot.
@@ -1024,6 +1107,7 @@ def write_element_slice(snapshot: str, run_dir: str,
     signals = getattr(result, 'signals', None) or {}
     durations = signals.get('element_durations') or {}
     from bga import schemas as _schemas
+
     path = list(_schemas.critical_path_uids(signals))
     # `UX-345`: `signals.critical_path_length` held this same number
     # under a `count` declaration and is gone. `sensitivity` carries it
@@ -1032,9 +1116,7 @@ def write_element_slice(snapshot: str, run_dir: str,
     sensitivity = (getattr(result, 'structural', None) or {}).get('sensitivity') or {}
     path_us = sensitivity.get('critical_path_us') or 0
     headline = getattr(result, 'headline', None) or {}
-    actions = [entry.get('element_uid')
-               for entry in (headline.get('top_actions') or [])
-               if entry.get('element_uid')]
+    actions = [entry.get('element_uid') for entry in (headline.get('top_actions') or []) if entry.get('element_uid')]
 
     # Path first, then whatever the top actions add: an element on the
     # chain is the one a reader is most likely to have worked on, and
@@ -1051,24 +1133,24 @@ def write_element_slice(snapshot: str, run_dir: str,
     elements = []
     for uid in wanted:
         duration = durations.get(uid)
-        elements.append({
-            "element_uid": uid,
-            "duration_us": duration,
-            # A share of the path, and only for elements on it: an
-            # element off the chain has no share of it, and publishing
-            # zero would read as "on the path, costing nothing".
-            "share_of_path": (duration / path_us)
-                             if (uid in path and duration and path_us) else None,
-            "on_critical_path": uid in path,
-        })
+        elements.append(
+            {
+                "element_uid": uid,
+                "duration_us": duration,
+                # A share of the path, and only for elements on it: an
+                # element off the chain has no share of it, and publishing
+                # zero would read as "on the path, costing nothing".
+                "share_of_path": (duration / path_us) if (uid in path and duration and path_us) else None,
+                "on_critical_path": uid in path,
+            }
+        )
     payload = {
         "elements": elements,
         "elements_considered": len(set(path + actions)),
         "bounded_at": SLICE_ELEMENTS_MAX,
     }
     try:
-        with open(os.path.join(snapshot, SLICE_NAME), "w",
-                  encoding="utf-8") as handle:
+        with open(os.path.join(snapshot, SLICE_NAME), "w", encoding="utf-8") as handle:
             json.dump(payload, handle, indent=2, sort_keys=True)
     except OSError:
         return None
@@ -1146,16 +1228,20 @@ def _walkback_notice(baseline: Optional[str], skipped: list[str]) -> str:
     names = ", ".join(os.path.basename(p.rstrip("/")) for p in skipped)
     one = len(skipped) == 1
     if baseline is None:
-        return (f"No comparison: the {len(skipped)} previous "
-                f"snapshot{'' if one else 's'} ({names}) "
-                f"{'records a build' if one else 'all record builds'} that "
-                f"did not finish, and a duration delta against one is not a "
-                f"measurement (UX-156). `bga compare` on an explicit pair "
-                f"still works.")
-    return (f"Comparing against {os.path.basename(baseline.rstrip('/'))} "
-            f"rather than the previous snapshot: {names} "
-            f"{'records a build' if one else 'record builds'} that did "
-            f"not finish (UX-156).")
+        return (
+            f"No comparison: the {len(skipped)} previous "
+            f"snapshot{'' if one else 's'} ({names}) "
+            f"{'records a build' if one else 'all record builds'} that "
+            f"did not finish, and a duration delta against one is not a "
+            f"measurement (UX-156). `bga compare` on an explicit pair "
+            f"still works."
+        )
+    return (
+        f"Comparing against {os.path.basename(baseline.rstrip('/'))} "
+        f"rather than the previous snapshot: {names} "
+        f"{'records a build' if one else 'record builds'} that did "
+        f"not finish (UX-156)."
+    )
 
 
 def _compare_refs(baseline_snapshot: str, candidate_snapshot: str) -> str:
@@ -1172,8 +1258,9 @@ def _compare_refs(baseline_snapshot: str, candidate_snapshot: str) -> str:
     common tenants, so the hint was wrong more often than right precisely
     where `UX-156` matters most.
     """
-    project = run_store.project_root(baseline_snapshot) or \
-        os.path.dirname(os.path.dirname(os.path.dirname(baseline_snapshot)))
+    project = run_store.project_root(baseline_snapshot) or os.path.dirname(
+        os.path.dirname(os.path.dirname(baseline_snapshot))
+    )
     runs = run_store.list_runs(project)
     aliases = {}
     if runs:
@@ -1198,8 +1285,7 @@ def _read_analysis(snapshot: str) -> dict:
     `read_element_slice` takes, and cheap enough for the compare path.
     """
     try:
-        with open(os.path.join(snapshot, run_store.ANALYSIS_NAME),
-                  encoding="utf-8") as handle:
+        with open(os.path.join(snapshot, run_store.ANALYSIS_NAME), encoding="utf-8") as handle:
             payload = json.load(handle)
     except (OSError, ValueError):
         return {}
@@ -1239,15 +1325,12 @@ def _compare(baseline_snapshot: str, candidate_snapshot: str) -> int:
     """
     from bga.cli import main as cli_main
 
-    argv = ["compare", os.path.join(baseline_snapshot, RUN_SUBDIR),
-            os.path.join(candidate_snapshot, RUN_SUBDIR)]
-    for flag, snapshot in (("--baseline-plane2", baseline_snapshot),
-                           ("--candidate-plane2", candidate_snapshot)):
+    argv = ["compare", os.path.join(baseline_snapshot, RUN_SUBDIR), os.path.join(candidate_snapshot, RUN_SUBDIR)]
+    for flag, snapshot in (("--baseline-plane2", baseline_snapshot), ("--candidate-plane2", candidate_snapshot)):
         plane2 = os.path.join(snapshot, PLANE2_NAME)
         if os.path.isfile(plane2):
             argv += [flag, plane2]
-    print(f"$ bga compare {_compare_refs(baseline_snapshot, candidate_snapshot)}"
-          f"   # {' '.join(argv[1:3])}")
+    print(f"$ bga compare {_compare_refs(baseline_snapshot, candidate_snapshot)}   # {' '.join(argv[1:3])}")
     print(_jobserver_compare_line(baseline_snapshot, candidate_snapshot))
     return cli_main(argv)
 
@@ -1281,51 +1364,51 @@ def store_listing(project: str, window: Optional[int] = None) -> dict:
     for path in snapshots:
         has_run = run_store.has_run(path)
         measured = _run_measurements(path) if has_run else {}
-        rows.append({
-            "stamp": os.path.basename(path),
-            "path": os.path.abspath(path),
-            "bytes": run_store.snapshot_size_bytes(path),
-            "alias": aliases.get(path),
-            "has_run": has_run,
-            # UX-156/157/185's three ways to be incomplete, so the trend
-            # can mark them rather than drawing them as measurements.
-            "incomplete_reason": _incomplete_reason(path) if has_run else None,
-            # UX-324: "never started" and "started and produced nothing"
-            # are different problems and used to print the same sentence.
-            "started": build_ever_started(path),
-            # UX-203: what the trend was always supposed to plot. The
-            # view drew `bytes` - so "is this project drifting" was
-            # answered by disk usage, which is not the question. Read
-            # straight off run-context rather than analysed, because
-            # this runs for every snapshot on every `bga view`.
-            "total_duration_us": measured.get("total_duration_us"),
-            "cache_hit_rate": measured.get("cache_hit_rate"),
-            # `UX-594`: what this run waited before it started, and why
-            # there is no number when there is not - never a zero.
-            "queue_wait_us": measured.get("queue_wait_us"),
-            "queue_wait_absent_reason": measured.get(
-                "queue_wait_absent_reason"),
-            # UX-226: what this run cost the elements worth watching.
-            # `None`, not `[]`, for a snapshot captured before this
-            # existed - the section says "no history" rather than
-            # drawing a flat line at zero.
-            "elements": (read_element_slice(path) or {}).get("elements"),
-            # UX-296: the capacity scalars, read from the small file the
-            # capture wrote beside its report. `{}` for a snapshot older
-            # than that sidecar - the aggregate names the command that
-            # produces one rather than parsing 1.5 GB to find out.
-            "resource": run_store.read_resource_profile(path),
-            # UX-234: which machine measured this, as the one compact
-            # label UX-186's compared fields reduce to. The *label*
-            # rather than the manifest, because this row is drawn for
-            # every snapshot on every `bga view` and a manifest per row
-            # is a page-weight tax for a string the reader wants. A
-            # capture older than the manifest gets the "unknown host"
-            # class, which is a different claim from "the same machine
-            # as the others".
-            "host_class": store_aggregate.host_class(
-                measured.get("host_manifest")),
-        })
+        rows.append(
+            {
+                "stamp": os.path.basename(path),
+                "path": os.path.abspath(path),
+                "bytes": run_store.snapshot_size_bytes(path),
+                "alias": aliases.get(path),
+                "has_run": has_run,
+                # UX-156/157/185's three ways to be incomplete, so the trend
+                # can mark them rather than drawing them as measurements.
+                "incomplete_reason": _incomplete_reason(path) if has_run else None,
+                # UX-324: "never started" and "started and produced nothing"
+                # are different problems and used to print the same sentence.
+                "started": build_ever_started(path),
+                # UX-203: what the trend was always supposed to plot. The
+                # view drew `bytes` - so "is this project drifting" was
+                # answered by disk usage, which is not the question. Read
+                # straight off run-context rather than analysed, because
+                # this runs for every snapshot on every `bga view`.
+                "total_duration_us": measured.get("total_duration_us"),
+                "cache_hit_rate": measured.get("cache_hit_rate"),
+                # `UX-594`: what this run waited before it started, and why
+                # there is no number when there is not - never a zero.
+                "queue_wait_us": measured.get("queue_wait_us"),
+                "queue_wait_absent_reason": measured.get("queue_wait_absent_reason"),
+                # UX-226: what this run cost the elements worth watching.
+                # `None`, not `[]`, for a snapshot captured before this
+                # existed - the section says "no history" rather than
+                # drawing a flat line at zero.
+                "elements": (read_element_slice(path) or {}).get("elements"),
+                # UX-296: the capacity scalars, read from the small file the
+                # capture wrote beside its report. `{}` for a snapshot older
+                # than that sidecar - the aggregate names the command that
+                # produces one rather than parsing 1.5 GB to find out.
+                "resource": run_store.read_resource_profile(path),
+                # UX-234: which machine measured this, as the one compact
+                # label UX-186's compared fields reduce to. The *label*
+                # rather than the manifest, because this row is drawn for
+                # every snapshot on every `bga view` and a manifest per row
+                # is a page-weight tax for a string the reader wants. A
+                # capture older than the manifest gets the "unknown host"
+                # class, which is a different claim from "the same machine
+                # as the others".
+                "host_class": store_aggregate.host_class(measured.get("host_manifest")),
+            }
+        )
         # UX-898/UX-903: and what build it declared itself to be, off
         # the same one small read. The block rather than its label,
         # because the aggregate publishes the declaration and a label
@@ -1339,16 +1422,18 @@ def store_listing(project: str, window: Optional[int] = None) -> dict:
     # one before it, and the first row of a window has a predecessor.
     _mark_verdicts(rows)
     shown = rows if not window else rows[-window:]
-    return schemas.stamp({
-        "project": os.path.abspath(project),
-        "snapshots": shown,
-        "count": len(rows),
-        "shown": len(shown),
-        # Sum of file sizes, so it is a little under `du` (which also
-        # counts directory entries) and matches `du --apparent-size`.
-        "total_bytes": sum(row["bytes"] for row in rows),
-    }, schemas.STORE)
-
+    return schemas.stamp(
+        {
+            "project": os.path.abspath(project),
+            "snapshots": shown,
+            "count": len(rows),
+            "shown": len(shown),
+            # Sum of file sizes, so it is a little under `du` (which also
+            # counts directory entries) and matches `du --apparent-size`.
+            "total_bytes": sum(row["bytes"] for row in rows),
+        },
+        schemas.STORE,
+    )
 
 
 def _tail_measurements(snapshot: str) -> dict:
@@ -1483,8 +1568,7 @@ def _incomplete_reason(snapshot: str):
         return None
 
 
-def _aggregate(project: str, blend: bool = False,
-               as_json: bool = False) -> int:
+def _aggregate(project: str, blend: bool = False, as_json: bool = False) -> int:
     """UX-234: the store as a distribution.
 
     Exit `EXIT_CODE_MISMATCHED_RUNS` when the store mixes host classes
@@ -1518,9 +1602,11 @@ def _capacity(project: str, spec: str, fmt: str = "text") -> int:
 
     parsed = capacity_model.parse_capacity(spec)
     if parsed is None:
-        print(f"Error: --capacity takes N,RATE - a builder count of at "
-              f"least 1 and an arrival rate above 0. Got {spec!r}.",
-              file=sys.stderr)
+        print(
+            f"Error: --capacity takes N,RATE - a builder count of at "
+            f"least 1 and an arrival rate above 0. Got {spec!r}.",
+            file=sys.stderr,
+        )
         return 2
     document = capacity_model.read(project, *parsed)
     # `UX-613`: `capacity-model/v1`, so a pipeline can act on the answer
@@ -1552,8 +1638,7 @@ def _list(project: str, as_json: bool = False) -> int:
         return 0
 
     if not listing["snapshots"]:
-        print(f"No snapshots in {project}. "
-              f"`bga snapshot -- bst build TARGET` takes one.")
+        print(f"No snapshots in {project}. `bga snapshot -- bst build TARGET` takes one.")
         return 0
     print(f"{plural(listing['count'], 'snapshot')} in {project}:")
     for row in listing["snapshots"]:
@@ -1573,10 +1658,8 @@ def _list(project: str, as_json: bool = False) -> int:
         # UX-159: the size belongs next to the name. Without it the user
         # is told the store is large and left to guess which snapshot is
         # the heavy one.
-        print(f"  {row['stamp']:<18}"
-              f"{run_store.human_bytes(row['bytes']):>9}{_tail_cell(row)}{suffix}")
-    print(f"  {'total':<18}"
-          f"{run_store.human_bytes(listing['total_bytes']):>9}")
+        print(f"  {row['stamp']:<18}{run_store.human_bytes(row['bytes']):>9}{_tail_cell(row)}{suffix}")
+    print(f"  {'total':<18}{run_store.human_bytes(listing['total_bytes']):>9}")
     return 0
 
 
@@ -1612,8 +1695,7 @@ def _protected(project: str) -> set:
     return keep
 
 
-_SIZE_SUFFIXES = {"": 1, "K": 1024, "M": 1024 ** 2, "G": 1024 ** 3,
-                  "T": 1024 ** 4}
+_SIZE_SUFFIXES = {"": 1, "K": 1024, "M": 1024**2, "G": 1024**3, "T": 1024**4}
 
 
 def parse_size(text: str) -> int:
@@ -1625,20 +1707,19 @@ def parse_size(text: str) -> int:
     """
     cleaned = text.strip().upper().rstrip("B")
     suffix = cleaned[-1:] if cleaned[-1:] in _SIZE_SUFFIXES else ""
-    number = cleaned[:len(cleaned) - len(suffix)] if suffix else cleaned
+    number = cleaned[: len(cleaned) - len(suffix)] if suffix else cleaned
     try:
         value = float(number)
     except ValueError:
         raise ValueError(
-            f"{text!r} is not a size. Write bytes, or a number with K, M, G "
-            f"or T - `--max-store 2G`.") from None
+            f"{text!r} is not a size. Write bytes, or a number with K, M, G or T - `--max-store 2G`."
+        ) from None
     if value < 0:
         raise ValueError(f"{text!r} is negative; a store cannot be.")
     return int(value * _SIZE_SUFFIXES[suffix])
 
 
-def over_budget(snapshots: list[str], budget: int, protected: set,
-                size_of) -> list[str]:
+def over_budget(snapshots: list[str], budget: int, protected: set, size_of) -> list[str]:
     """The oldest snapshots to delete to bring a store under `budget`.
 
     `UX-300`. The keep-set is not negotiable - `@last` and `@prev` are
@@ -1649,7 +1730,7 @@ def over_budget(snapshots: list[str], budget: int, protected: set,
     """
     total = sum(size_of(path) for path in snapshots)
     doomed = []
-    for path in snapshots:            # oldest first, as the store lists them
+    for path in snapshots:  # oldest first, as the store lists them
         if total <= budget:
             break
         if path in protected:
@@ -1659,8 +1740,9 @@ def over_budget(snapshots: list[str], budget: int, protected: set,
     return doomed
 
 
-def _prune(project: str, keep: Optional[int], older_than: Optional[float],
-           dry_run: bool, max_store: Optional[int] = None) -> int:
+def _prune(
+    project: str, keep: Optional[int], older_than: Optional[float], dry_run: bool, max_store: Optional[int] = None
+) -> int:
     """Delete snapshots by age, count or total size, never the ones
     still referred to.
 
@@ -1698,21 +1780,23 @@ def _prune(project: str, keep: Optional[int], older_than: Optional[float],
         # --max-store 20G` means "the newest five, and under 20 GiB" -
         # the stricter of the two, not the second overruling the first.
         surviving = [s for s in snapshots if s not in set(doomed)]
-        doomed.extend(over_budget(surviving, max_store, protected,
-                                  run_store.snapshot_size_bytes))
+        doomed.extend(over_budget(surviving, max_store, protected, run_store.snapshot_size_bytes))
     doomed = [s for s in dict.fromkeys(doomed) if s not in protected]
 
     skipped = [s for s in snapshots if s in protected]
     if not doomed:
-        print(f"Nothing to prune: {plural(len(snapshots), 'snapshot')}, "
-              f"{len(skipped)} of them still referred to by @last/@prev.")
+        print(
+            f"Nothing to prune: {plural(len(snapshots), 'snapshot')}, "
+            f"{len(skipped)} of them still referred to by @last/@prev."
+        )
         if max_store is not None:
             held = run_store.store_size_bytes(project)
-            print(f"  {run_store.human_bytes(held)} on disk, "
-                  f"{'over' if held > max_store else 'within'} the "
-                  f"{run_store.human_bytes(max_store)} asked for."
-                  + (" Everything above it is protected by @last/@prev."
-                     if held > max_store else ""))
+            print(
+                f"  {run_store.human_bytes(held)} on disk, "
+                f"{'over' if held > max_store else 'within'} the "
+                f"{run_store.human_bytes(max_store)} asked for."
+                + (" Everything above it is protected by @last/@prev." if held > max_store else "")
+            )
         return 0
 
     freed = 0
@@ -1720,25 +1804,26 @@ def _prune(project: str, keep: Optional[int], older_than: Optional[float],
     for path in doomed:
         size = run_store.snapshot_size_bytes(path)
         freed += size
-        print(f"{'would delete' if dry_run else 'deleted'} "
-              f"{os.path.basename(path)}  {run_store.human_bytes(size)}")
+        print(f"{'would delete' if dry_run else 'deleted'} {os.path.basename(path)}  {run_store.human_bytes(size)}")
         if not dry_run:
             shutil.rmtree(path, ignore_errors=True)
-    print(f"{'would free' if dry_run else 'freed'} "
-          f"{run_store.human_bytes(freed)} from {run_store.runs_dir(project)}")
+    print(f"{'would free' if dry_run else 'freed'} {run_store.human_bytes(freed)} from {run_store.runs_dir(project)}")
     if max_store is not None:
         # What the budget leaves, said plainly: a run still over it
         # after deleting everything deletable is a fact the caller
         # needs, not a silent partial success.
-        remaining = sum(run_store.snapshot_size_bytes(path)
-                        for path in snapshots if path not in set(doomed))
-        print(f"  {run_store.human_bytes(remaining)} would remain"
-              if dry_run else
-              f"  {run_store.human_bytes(remaining)} remains")
+        remaining = sum(run_store.snapshot_size_bytes(path) for path in snapshots if path not in set(doomed))
+        print(
+            f"  {run_store.human_bytes(remaining)} would remain"
+            if dry_run
+            else f"  {run_store.human_bytes(remaining)} remains"
+        )
         if remaining > max_store:
-            print(f"  still over the {run_store.human_bytes(max_store)} "
-                  f"asked for - what is left is protected by @last/@prev, "
-                  f"which the next comparison reads.")
+            print(
+                f"  still over the {run_store.human_bytes(max_store)} "
+                f"asked for - what is left is protected by @last/@prev, "
+                f"which the next comparison reads."
+            )
     if husk_count:
         # Counted separately because they are a different thing: not old
         # captures, but captures that never produced anything.
@@ -1778,10 +1863,12 @@ def _say_what_it_weighs(snapshot: str, project: str) -> None:
         count = len(run_store.list_snapshots(project))
     except OSError:
         return
-    print(f"\nThis snapshot: {run_store.human_bytes(size)}. "
-          f"{run_store.runs_dir(project)}: "
-          f"{run_store.human_bytes(total)} over {plural(count, 'snapshot')}.",
-          file=sys.stderr)
+    print(
+        f"\nThis snapshot: {run_store.human_bytes(size)}. "
+        f"{run_store.runs_dir(project)}: "
+        f"{run_store.human_bytes(total)} over {plural(count, 'snapshot')}.",
+        file=sys.stderr,
+    )
     raw = os.path.join(snapshot, RAW_LOG_NAME)
     if os.path.isfile(raw) and size:
         share = os.path.getsize(raw) / size
@@ -1795,10 +1882,12 @@ def _say_what_it_weighs(snapshot: str, project: str) -> None:
             # because `--no-keep-raw` looks like a small saving and is
             # now the whole one, at the price of a run whose timeline
             # can never be rendered again.
-            print(f"  {share * 100:.0f}% of that is the raw Plane 2 log, "
-                  f"which is what the timeline is rendered from. "
-                  f"`--no-keep-raw` drops it and the timeline with it.",
-                  file=sys.stderr)
+            print(
+                f"  {share * 100:.0f}% of that is the raw Plane 2 log, "
+                f"which is what the timeline is rendered from. "
+                f"`--no-keep-raw` drops it and the timeline with it.",
+                file=sys.stderr,
+            )
 
 
 def _warn_if_large(project: str) -> None:
@@ -1806,7 +1895,7 @@ def _warn_if_large(project: str) -> None:
     if size >= _SIZE_WARN_BYTES:
         print(
             f"\nNote: {run_store.runs_dir(project)} holds "
-            f"{size / 1024 ** 3:.1f} GB. `bga snapshot prune --keep 5` "
+            f"{size / 1024**3:.1f} GB. `bga snapshot prune --keep 5` "
             f"deletes all but the newest five, and never @last or @prev.",
             file=sys.stderr,
         )

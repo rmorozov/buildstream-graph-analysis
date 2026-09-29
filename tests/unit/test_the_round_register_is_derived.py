@@ -3,6 +3,7 @@ fixtures - not the live repository, so a guard here does not depend on
 which commits happen to exist when the suite runs, and mutation
 testing does not need a real commit to land first.
 """
+
 import os
 import pathlib
 import subprocess
@@ -26,8 +27,7 @@ class TestDocumentedRoundsReadsFilenames:
 
     def test_the_register_itself_is_not_a_round(self, tmp_path):
         (tmp_path / "docs" / "audits").mkdir(parents=True)
-        (tmp_path / "docs/audits/round-register.md").write_text(
-            "x", encoding="utf-8")
+        (tmp_path / "docs/audits/round-register.md").write_text("x", encoding="utf-8")
         assert reg.documented_rounds(tmp_path) == set()
 
 
@@ -39,27 +39,23 @@ class TestRoundsJoinsTwoSources:
     touches disk or git either."""
 
     def test_a_ledger_only_round_has_no_dateline_to_read(self):
-        result = reg.rounds(documented=set(), ledger_runs=[{"round": "5"}],
-                            named=set(),
-                            dates=lambda n: None)
+        result = reg.rounds(documented=set(), ledger_runs=[{"round": "5"}], named=set(), dates=lambda n: None)
         assert result == {"5": {"date": ""}}
 
     def test_a_document_only_round_reads_its_own_dateline(self):
-        result = reg.rounds(documented={"7"}, ledger_runs=[], named=set(),
-                            dates=lambda n: "2026-01-01" if n == "7" else None)
+        result = reg.rounds(
+            documented={"7"}, ledger_runs=[], named=set(), dates=lambda n: "2026-01-01" if n == "7" else None
+        )
         assert result == {"7": {"date": "2026-01-01"}}
 
     def test_a_round_in_both_is_named_once(self):
-        result = reg.rounds(documented={"7"}, ledger_runs=[{"round": "7"}],
-                            named=set(),
-                            dates=lambda n: "2026-01-01")
+        result = reg.rounds(documented={"7"}, ledger_runs=[{"round": "7"}], named=set(), dates=lambda n: "2026-01-01")
         assert set(result) == {"7"}
 
     def test_a_task_file_only_round_is_named(self):
         """`UX-926`: the third source - a round no document and no
         ledger row records, claimed only by a task file."""
-        result = reg.rounds(documented=set(), ledger_runs=[], named={"200"},
-                            dates=lambda n: None)
+        result = reg.rounds(documented=set(), ledger_runs=[], named={"200"}, dates=lambda n: None)
         assert result == {"200": {"date": ""}}
 
 
@@ -68,9 +64,11 @@ def _task(root, name, body):
     (root / name).write_text(body, encoding="utf-8")
 
 
-HEADER = ("# UX-9: x\n\n**Priority:** Low | **Status:** 🟢 Done | "
-          "**Found by:** round {found} — a note | **Topic:** guards\n\n"
-          "## Motivation\n\n**Round 7, 2026-01-01** is a mention here.\n\n")
+HEADER = (
+    "# UX-9: x\n\n**Priority:** Low | **Status:** 🟢 Done | "
+    "**Found by:** round {found} — a note | **Topic:** guards\n\n"
+    "## Motivation\n\n**Round 7, 2026-01-01** is a mention here.\n\n"
+)
 
 
 class TestTaskFileRoundsReadsTheThreeMarkers:
@@ -79,9 +77,12 @@ class TestTaskFileRoundsReadsTheThreeMarkers:
     above the Outcome, where a bold round is prose."""
 
     def test_each_marker_is_read(self, tmp_path):
-        _task(tmp_path, "UX-0009-a.md", HEADER.format(found=11)
-              + "## Outcome (round 12, 2026-01-02) — 🟢 Done\n\nx\n\n"
-              "**Round 13, 2026-01-03.** more\n")
+        _task(
+            tmp_path,
+            "UX-0009-a.md",
+            HEADER.format(found=11) + "## Outcome (round 12, 2026-01-02) — 🟢 Done\n\nx\n\n"
+            "**Round 13, 2026-01-03.** more\n",
+        )
         assert reg.task_file_rounds(tmp_path) == {"11", "12", "13"}
 
     def test_a_bold_round_above_the_outcome_is_a_mention(self, tmp_path):
@@ -96,16 +97,14 @@ class TestDocumentDate:
     def test_the_first_stated_date_wins(self, tmp_path):
         (tmp_path / "docs" / "audits").mkdir(parents=True)
         (tmp_path / "docs/audits/round-9.md").write_text(
-            "Opens at `abc123` (2026-01-05 10:00), closes 2026-01-06.\n",
-            encoding="utf-8")
+            "Opens at `abc123` (2026-01-05 10:00), closes 2026-01-06.\n", encoding="utf-8"
+        )
         assert reg.document_date("9", repo=tmp_path) == "2026-01-05"
 
     def test_a_document_with_no_stated_date_is_none_here(self, tmp_path):
         (tmp_path / "docs" / "audits").mkdir(parents=True)
-        (tmp_path / "docs/audits/round-9.md").write_text(
-            "No date in this text at all.\n", encoding="utf-8")
-        assert reg._first_date_in_text(
-            (tmp_path / "docs/audits/round-9.md").read_text()) is None
+        (tmp_path / "docs/audits/round-9.md").write_text("No date in this text at all.\n", encoding="utf-8")
+        assert reg._first_date_in_text((tmp_path / "docs/audits/round-9.md").read_text()) is None
 
     def test_a_missing_document_is_none(self, tmp_path):
         assert reg.document_date("404", repo=tmp_path) is None
@@ -132,8 +131,7 @@ class TestWrittenRoundsExcludesOnlyAnUndocumentedNewest:
 
     def test_every_other_round_survives_either_way(self):
         full = {str(n): {"date": "x"} for n in (1, 2, 3)}
-        assert set(reg.written_rounds(
-            full, documented=lambda n: False)) == {"1", "2"}
+        assert set(reg.written_rounds(full, documented=lambda n: False)) == {"1", "2"}
 
     def test_an_empty_register_writes_nothing(self):
         assert reg.written_rounds({}, documented=lambda n: False) == {}
@@ -173,9 +171,7 @@ class TestRenderAndCheckRoundTrip:
     def test_check_is_clean_once_written(self, tmp_path, monkeypatch):
         path = tmp_path / "round-register.md"
         monkeypatch.setattr(reg, "REGISTER", path)
-        monkeypatch.setattr(
-            reg, "rounds",
-            lambda: {"3": {"date": "d"}, "4": {"date": "e"}})
+        monkeypatch.setattr(reg, "rounds", lambda: {"3": {"date": "d"}, "4": {"date": "e"}})
         path.write_text(reg.render(reg.written_rounds()), encoding="utf-8")
         assert reg.check() == []
 
@@ -187,33 +183,26 @@ class TestGitOnlyRoundsAreCheckedAgainstTheTree:
     green while the header still said 26 was git-only."""
 
     def test_a_conflict_names_the_round_and_where(self):
-        found = dict(reg.git_only_conflicts(
-            documented={"55"}, ledger_runs=[{"round": "31"}],
-            named={"60"}))
-        assert found == {55: "docs/audits/round-55.md",
-                         31: "the ledger's round column",
-                         60: "a task file"}
+        found = dict(reg.git_only_conflicts(documented={"55"}, ledger_runs=[{"round": "31"}], named={"60"}))
+        assert found == {55: "docs/audits/round-55.md", 31: "the ledger's round column", 60: "a task file"}
 
     def test_a_round_with_neither_is_not_a_conflict(self):
-        assert reg.git_only_conflicts(documented=set(), ledger_runs=[],
-                                      named=set()) == []
+        assert reg.git_only_conflicts(documented=set(), ledger_runs=[], named=set()) == []
 
     def test_the_header_note_drops_a_conflicted_round(self):
-        effective = reg._effective_git_only(documented={"31"},
-                                            ledger_runs=[], named=set())
+        effective = reg._effective_git_only(documented={"31"}, ledger_runs=[], named=set())
         assert 31 not in effective
         assert set(effective) == set(reg.GIT_ONLY_ROUNDS) - {31}
 
-    def test_check_reds_naming_the_round_and_where(self, tmp_path,
-                                                    monkeypatch):
+    def test_check_reds_naming_the_round_and_where(self, tmp_path, monkeypatch):
         (tmp_path / "docs" / "audits").mkdir(parents=True)
-        (tmp_path / "docs/audits/round-31.md").write_text(
-            "x\n", encoding="utf-8")
+        (tmp_path / "docs/audits/round-31.md").write_text("x\n", encoding="utf-8")
         monkeypatch.setattr(reg, "REPO", tmp_path)
         monkeypatch.setattr(reg, "REGISTER", tmp_path / "round-register.md")
         problems = reg.check()
         assert any("round 31" in p and "round-31.md" in p for p in problems), (
-            f"a synthetic round-31.md must red naming 31 and where: {problems}")
+            f"a synthetic round-31.md must red naming 31 and where: {problems}"
+        )
 
 
 class TestFirstCommitDateReadsTheFilesOwnHistory:
@@ -227,14 +216,12 @@ class TestFirstCommitDateReadsTheFilesOwnHistory:
         subprocess.run(["git", "init", "-q", str(root)], check=True)
         env = ["-c", "user.email=t@t", "-c", "user.name=t"]
         (root / "docs" / "audits").mkdir(parents=True)
-        (root / "docs/audits/round-9.md").write_text(
-            "Run on 2026-02-01.\n", encoding="utf-8")
-        subprocess.run(["git", "-C", str(root), *env, "add", "-A"],
-                       check=True)
-        commit_env = dict(os.environ, GIT_AUTHOR_DATE="2026-02-01T00:00:00",
-                          GIT_COMMITTER_DATE="2026-02-01T00:00:00")
-        subprocess.run(["git", "-C", str(root), *env, "commit", "-q", "-m",
-                        "round 9: opens"], check=True, env=commit_env)
+        (root / "docs/audits/round-9.md").write_text("Run on 2026-02-01.\n", encoding="utf-8")
+        subprocess.run(["git", "-C", str(root), *env, "add", "-A"], check=True)
+        commit_env = dict(os.environ, GIT_AUTHOR_DATE="2026-02-01T00:00:00", GIT_COMMITTER_DATE="2026-02-01T00:00:00")
+        subprocess.run(
+            ["git", "-C", str(root), *env, "commit", "-q", "-m", "round 9: opens"], check=True, env=commit_env
+        )
         return root
 
     def test_the_add_commits_date_is_returned(self, tmp_path):
@@ -248,10 +235,10 @@ class TestFirstCommitDateReadsTheFilesOwnHistory:
         root = self._repo_with_a_document(tmp_path / "r")
         env = ["-c", "user.email=t@t", "-c", "user.name=t"]
         (root / "other.txt").write_text("x", encoding="utf-8")
-        subprocess.run(["git", "-C", str(root), *env, "add", "-A"],
-                       check=True)
-        subprocess.run(["git", "-C", str(root), *env, "commit", "-q", "-m",
-                        "round 9: mentioned again, elsewhere"], check=True)
+        subprocess.run(["git", "-C", str(root), *env, "add", "-A"], check=True)
+        subprocess.run(
+            ["git", "-C", str(root), *env, "commit", "-q", "-m", "round 9: mentioned again, elsewhere"], check=True
+        )
         assert reg.first_commit_date("9", repo=root) == "2026-02-01"
 
     def test_an_unadded_round_is_none(self, tmp_path):
@@ -286,16 +273,13 @@ class TestAShallowCloneIsRefused:
         subprocess.run(["git", "init", "-q", str(root)], check=True)
         env = ["-c", "user.email=t@t", "-c", "user.name=t"]
         for n in range(commits):
-            subprocess.run(["git", "-C", str(root), *env, "commit", "-q",
-                            "--allow-empty", "-m", f"c{n}"], check=True)
+            subprocess.run(["git", "-C", str(root), *env, "commit", "-q", "--allow-empty", "-m", f"c{n}"], check=True)
         return root
 
-    def test_check_refuses_rather_than_deriving_from_half_a_history(
-            self, tmp_path, monkeypatch):
+    def test_check_refuses_rather_than_deriving_from_half_a_history(self, tmp_path, monkeypatch):
         origin = self._repo(tmp_path / "o", commits=3)
         root = tmp_path / "r"
-        subprocess.run(["git", "clone", "-q", "--depth", "1",
-                        f"file://{origin}", str(root)], check=True)
+        subprocess.run(["git", "clone", "-q", "--depth", "1", f"file://{origin}", str(root)], check=True)
         monkeypatch.setattr(reg, "REPO", root)
         monkeypatch.setattr(reg, "rounds", lambda: {"3": {"date": "d"}})
         problems = reg.check()
@@ -308,13 +292,11 @@ class TestAShallowCloneIsRefused:
         history cuts nothing this derivation walks."""
         root = self._repo(tmp_path / "r", commits=2)
         env = ["-c", "user.email=t@t", "-c", "user.name=t"]
-        subprocess.run(["git", "-C", str(root), *env, "commit", "-q",
-                        "--allow-empty", "-m", "off-history"], check=True)
-        off = subprocess.run(["git", "-C", str(root), "rev-parse", "HEAD"],
-                             capture_output=True, text=True,
-                             check=True).stdout.strip()
-        subprocess.run(["git", "-C", str(root), "reset", "-q", "--hard",
-                        "HEAD~1"], check=True)
+        subprocess.run(["git", "-C", str(root), *env, "commit", "-q", "--allow-empty", "-m", "off-history"], check=True)
+        off = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "HEAD"], capture_output=True, text=True, check=True
+        ).stdout.strip()
+        subprocess.run(["git", "-C", str(root), "reset", "-q", "--hard", "HEAD~1"], check=True)
         (root / ".git" / "shallow").write_text(off + "\n", encoding="utf-8")
         assert not reg.is_shallow(root)
 
@@ -329,8 +311,7 @@ class TestAShallowCloneIsRefused:
         path.write_text(reg.render(reg.written_rounds()), encoding="utf-8")
         assert reg.check() == []
 
-    def test_a_depth_fetch_onto_a_complete_clone_is_shallow(
-            self, tmp_path):
+    def test_a_depth_fetch_onto_a_complete_clone_is_shallow(self, tmp_path):
         """`UX-781`, and the case that falsified the first two
         readings. The clone is complete, so every object is on disk and
         no parent is missing - but a `--depth` fetch grafts a boundary
@@ -338,39 +319,44 @@ class TestAShallowCloneIsRefused:
         `ci.yml`'s base-diff step, on the 3.11 job only."""
         origin = self._repo(tmp_path / "o", commits=6)
         root = tmp_path / "r"
-        subprocess.run(["git", "clone", "-q", f"file://{origin}", str(root)],
-                       check=True)
+        subprocess.run(["git", "clone", "-q", f"file://{origin}", str(root)], check=True)
         assert not reg.is_shallow(root), "a full clone, before the fetch"
-        walked = len(subprocess.run(
-            ["git", "-C", str(root), "rev-list", "--count", "HEAD"],
-            capture_output=True, text=True, check=True).stdout.split())
-        subprocess.run(["git", "-C", str(root), "fetch", "--no-tags",
-                        "--depth=2", "origin", "HEAD"], check=True,
-                       capture_output=True)
-        boundary = (root / ".git" / "shallow").read_text(
-            encoding="utf-8").split()
+        walked = len(
+            subprocess.run(
+                ["git", "-C", str(root), "rev-list", "--count", "HEAD"], capture_output=True, text=True, check=True
+            ).stdout.split()
+        )
+        subprocess.run(
+            ["git", "-C", str(root), "fetch", "--no-tags", "--depth=2", "origin", "HEAD"],
+            check=True,
+            capture_output=True,
+        )
+        boundary = (root / ".git" / "shallow").read_text(encoding="utf-8").split()
         assert boundary, "the depth fetch wrote no boundary"
         # The reading UX-776 shipped: the parent objects are all still
         # here, so object-presence reads this repository as complete.
-        present = all(subprocess.run(
-            ["git", "-C", str(root), "cat-file", "-e", line.split()[1]],
-            capture_output=True, check=False).returncode == 0
+        present = all(
+            subprocess.run(
+                ["git", "-C", str(root), "cat-file", "-e", line.split()[1]], capture_output=True, check=False
+            ).returncode
+            == 0
             for sha in boundary
             for line in subprocess.run(
-                ["git", "-C", str(root), "cat-file", "-p", sha],
-                capture_output=True, text=True, check=True).stdout.splitlines()
-            if line.startswith("parent "))
+                ["git", "-C", str(root), "cat-file", "-p", sha], capture_output=True, text=True, check=True
+            ).stdout.splitlines()
+            if line.startswith("parent ")
+        )
         assert present, "no parent object is missing - the falsifying half"
         assert reg.is_shallow(root), (
-            f"{walked} commits were reachable and the fetch grafted "
-            f"{boundary}; the derivation must refuse")
+            f"{walked} commits were reachable and the fetch grafted {boundary}; the derivation must refuse"
+        )
 
     def test_the_real_checkout_is_complete(self):
         """The one that would have caught this round: a shallow clone
         writes a truncated register and CI reds on it."""
         assert not reg.is_shallow(), (
-            "this checkout is shallow - run `git fetch --unshallow` "
-            "before deriving anything from git history")
+            "this checkout is shallow - run `git fetch --unshallow` before deriving anything from git history"
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -48,6 +48,7 @@ Three rules (styleguide §1b):
   beside a withheld sentence is that ordering inverted.
 - **The embedded payload is not a reader.**
 """
+
 import json
 import pathlib
 import re
@@ -126,13 +127,12 @@ def _payload():
 
 def _drawn_elsewhere():
     """`app.js`'s declaration, read out of the module that holds it."""
-# `UX-450` split the section walk out of `app.js` when that file sat
-# exactly on `UX-337`'s ceiling. What this reads - the section
-# router and its declarations - moved to `sections.js`; the name
-# here follows the code rather than the file it used to be in.
+    # `UX-450` split the section walk out of `app.js` when that file sat
+    # exactly on `UX-337`'s ceiling. What this reads - the section
+    # router and its declarations - moved to `sections.js`; the name
+    # here follows the code rather than the file it used to be in.
     source = (REPO / "bga/viewer/sections.js").read_text(encoding="utf-8")
-    found = re.search(r"export const DRAWN_ELSEWHERE = \{(.*?)\n\};",
-                      source, re.S)
+    found = re.search(r"export const DRAWN_ELSEWHERE = \{(.*?)\n\};", source, re.S)
     assert found, "app.js no longer declares DRAWN_ELSEWHERE"
     return found.group(1)
 
@@ -145,8 +145,7 @@ def browser():
 
 @pytest.fixture(scope="module")
 def page(tmp_path_factory):
-    return pages.export_uri(pages.FIXTURES[LABEL],
-                            tmp_path_factory.mktemp("merge"))
+    return pages.export_uri(pages.FIXTURES[LABEL], tmp_path_factory.mktemp("merge"))
 
 
 class TestThePopulationIsTheJoin:
@@ -159,9 +158,12 @@ class TestThePopulationIsTheJoin:
         assert len(joined) >= 10, len(joined)
 
     def test_it_publishes_the_sentences_this_is_about(self):
-        written = [advice for entry in _payload()["element_join"]
-                   for advice in (entry.get("recommendations") or [])
-                   if advice.get("text")]
+        written = [
+            advice
+            for entry in _payload()["element_join"]
+            for advice in (entry.get("recommendations") or [])
+            if advice.get("text")
+        ]
         assert len(written) >= 20, len(written)
 
     def test_the_join_is_declared_drawn_elsewhere(self):
@@ -195,12 +197,13 @@ class TestEveryPublishedFieldReachesAReader:
                 withheld.setdefault(field, 0)
                 withheld[field] += 1
 
-        unnamed = {field: count for field, count in withheld.items()
-                   if field.split(".")[-1].rstrip("[]") not in declared}
+        unnamed = {
+            field: count for field, count in withheld.items() if field.split(".")[-1].rstrip("[]") not in declared
+        }
         assert unnamed == {}, (
             "field(s) of a `DRAWN_ELSEWHERE` population that reach no "
-            "rendered node and are not named in its redirect sentence: "
-            + json.dumps(unnamed, indent=2))
+            "rendered node and are not named in its redirect sentence: " + json.dumps(unnamed, indent=2)
+        )
 
     def test_the_sentence_names_what_it_drops(self):
         """The other direction: a redirect sentence that named every
@@ -218,13 +221,16 @@ class TestThePublishedSentenceIsPrinted:
     def test_every_recommendation_is_on_the_page(self, browser, page):
         """§1b's second clause, on the field it was filed for."""
         out = browser.measure(page, _LOOK, 1440, 900)
-        written = [advice["text"] for entry in _payload()["element_join"]
-                   for advice in (entry.get("recommendations") or [])
-                   if advice.get("text")]
+        written = [
+            advice["text"]
+            for entry in _payload()["element_join"]
+            for advice in (entry.get("recommendations") or [])
+            if advice.get("text")
+        ]
         missing = [text for text in written if text not in out["text"]]
         assert missing == [], (
-            f"{len(missing)} of {len(written)} recommendation sentences "
-            f"reach no rendered node: {missing[:2]}")
+            f"{len(missing)} of {len(written)} recommendation sentences reach no rendered node: {missing[:2]}"
+        )
 
     def test_the_severity_travels_with_the_sentence(self, browser, page):
         """The inversion this item was filed on was `severity` rendered
@@ -236,15 +242,15 @@ class TestThePublishedSentenceIsPrinted:
             assert advice["path"].startswith("element_join["), advice
             assert len(advice["text"]) > len(advice["severity"]) + 10, advice
 
-    def test_the_sentence_is_not_only_in_the_embedded_payload(
-            self, browser, page):
+    def test_the_sentence_is_not_only_in_the_embedded_payload(self, browser, page):
         """The instrument clause, named. This whole file would pass on
         a page that rendered nothing if it read `document.body`, because
         `script#bga-report` carries every value the payload has."""
         out = browser.measure(page, _LOOK, 1440, 900)
         assert out["inScriptOnly"] is False, (
             "the recommendation reaches `document.body` and not `main` - "
-            "it is in the embedded payload and nowhere a reader looks")
+            "it is in the embedded payload and nowhere a reader looks"
+        )
 
 
 @needs_browser
@@ -285,8 +291,7 @@ _FLATTENS_TO = {
     "downstream_count": {"downstream_count"},
     "unweighted_depth": {"unweighted_depth"},
     "blast_radius": {"weighted_duration_us", "risk_score", "is_foundation"},
-    "fan_in": {"direct_count", "transitive_count", "immediate_dominator",
-               "is_foundation"},
+    "fan_in": {"direct_count", "transitive_count", "immediate_dominator", "is_foundation"},
     "criticality_probability": {"probability", "slack_us"},
 }
 
@@ -345,18 +350,20 @@ class TestEveryJoinedFieldOnTheElementsTableDrawsAColumn:
     into the `elements` table's own rows, against `presetTable`'s
     views rather than against one rendered table."""
 
-    def test_every_signal_reaches_a_column_or_the_lead_names_it(
-            self, browser, scale_page):
+    def test_every_signal_reaches_a_column_or_the_lead_names_it(self, browser, scale_page):
         out = browser.measure(scale_page, _ELEMENTS_COVERAGE_JS, 1440, 900)
         assert out["joined"], "no data-joined signals on the scale export"
         columns = set(out["columns"])
-        uncovered = [signal for signal in out["joined"]
-                     if not (_FLATTENS_TO.get(signal, {signal}) & columns)
-                     and signal not in out["lead"]]
+        uncovered = [
+            signal
+            for signal in out["joined"]
+            if not (_FLATTENS_TO.get(signal, {signal}) & columns) and signal not in out["lead"]
+        ]
         assert uncovered == [], (
             f"joined field(s) with no column in any preset and not named "
             f"in the lead sentence: {uncovered} (columns seen: "
-            f"{sorted(columns)})")
+            f"{sorted(columns)})"
+        )
 
 
 @needs_browser
@@ -365,8 +372,7 @@ class TestTheElementCardListsDirectFanIn:
     """UX-829: `fan_in[uid].direct` - drawn on the element card because
     a table cell does not survive forty names (§3c)."""
 
-    def test_an_element_with_direct_dependencies_lists_them(
-            self, browser, scale_page):
+    def test_an_element_with_direct_dependencies_lists_them(self, browser, scale_page):
         out = browser.measure(scale_page, _CLICK_INSPECT_JS, 1440, 900)
         assert out, "no element card named its direct dependencies"
         for entry in out:

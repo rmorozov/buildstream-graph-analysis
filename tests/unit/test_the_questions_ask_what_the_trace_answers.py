@@ -23,6 +23,7 @@ category it scopes by is one the emitter emits, every counter track it
 selects is one the emitter creates - and the contract is documented
 where a reader can find it, in both directions.
 """
+
 import gzip
 import json
 import pathlib
@@ -49,10 +50,10 @@ needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 
 def _questions():
     """The library, as data, read by running the module it lives in."""
-    script = ('const { QUESTIONS } = await import("./bga/viewer/questions.js");'
-              'console.log(JSON.stringify(QUESTIONS));')
-    done = subprocess.run([node, "--input-type=module", "-e", script],
-                          capture_output=True, text=True, cwd=REPO, timeout=60)
+    script = 'const { QUESTIONS } = await import("./bga/viewer/questions.js");console.log(JSON.stringify(QUESTIONS));'
+    done = subprocess.run(
+        [node, "--input-type=module", "-e", script], capture_output=True, text=True, cwd=REPO, timeout=60
+    )
     assert done.returncode == 0, done.stderr
     return json.loads(done.stdout)
 
@@ -63,19 +64,21 @@ def _arg_keys(sql):
 
 def _categories(sql):
     return set(re.findall(r"category\s+glob\s+'\*([a-z0-9-]+)\*'", sql)) | set(
-        re.findall(r"category\s*=\s*'([a-z0-9-]+)'", sql))
+        re.findall(r"category\s*=\s*'([a-z0-9-]+)'", sql)
+    )
 
 
 CONTRACT = {key for key, _why in bga_timeline.ANNOTATION_CONTRACT}
-EMITTED_CATEGORIES = {bga_timeline.CATEGORY_PLANE1,
-                      bga_timeline.CATEGORY_PLANE2,
-                      bga_timeline.CATEGORY_RUN,
-                      bga_timeline.CATEGORY_FAILED}
+EMITTED_CATEGORIES = {
+    bga_timeline.CATEGORY_PLANE1,
+    bga_timeline.CATEGORY_PLANE2,
+    bga_timeline.CATEGORY_RUN,
+    bga_timeline.CATEGORY_FAILED,
+}
 
 
 @needs_node
 class TestEveryQuestionNamesEmittedVocabulary:
-
     def test_every_debug_key_is_in_the_contract(self):
         unknown = {}
         for question in _questions():
@@ -85,7 +88,8 @@ class TestEveryQuestionNamesEmittedVocabulary:
         assert unknown == {}, (
             f"question(s) selecting an annotation key the emitter never "
             f"writes - `extract_arg` returns null and the question returns "
-            f"nothing, silently: {unknown}")
+            f"nothing, silently: {unknown}"
+        )
 
     def test_no_question_still_uses_the_chrome_arg_namespace(self):
         """The exact defect, named so it cannot come back quietly.
@@ -97,7 +101,8 @@ class TestEveryQuestionNamesEmittedVocabulary:
         assert offenders == [], (
             f"{offenders} select `args.<key>`, which is the legacy Chrome "
             f"converter's namespace; a TrackEvent debug annotation is "
-            f"`debug.<key>`")
+            f"`debug.<key>`"
+        )
 
     def test_every_key_is_carried_by_the_plane_the_question_scopes_to(self):
         """`UX-321`'s per-scope guard, and the survivor it was filed
@@ -120,20 +125,19 @@ class TestEveryQuestionNamesEmittedVocabulary:
 
         wrong = {}
         for question in _questions():
-            scoped = _categories(question["sql"]) - {
-                bga_timeline.CATEGORY_FAILED}
+            scoped = _categories(question["sql"]) - {bga_timeline.CATEGORY_FAILED}
             if not scoped:
                 continue
             for key in _arg_keys(question["sql"]):
                 carried = set(scopes_of(key))
                 if scoped & carried:
                     continue
-                wrong.setdefault(question["id"], []).append(
-                    (key, sorted(scoped), sorted(carried)))
+                wrong.setdefault(question["id"], []).append((key, sorted(scoped), sorted(carried)))
         assert wrong == {}, (
             f"question(s) reading a key the plane they filter on does not "
             f"carry - the query is structurally dead and says nothing about "
-            f"it: {wrong}")
+            f"it: {wrong}"
+        )
 
     def test_every_category_is_one_the_emitter_emits(self):
         unknown = {}
@@ -141,8 +145,7 @@ class TestEveryQuestionNamesEmittedVocabulary:
             missing = _categories(question["sql"]) - EMITTED_CATEGORIES
             if missing:
                 unknown[question["id"]] = sorted(missing)
-        assert unknown == {}, (
-            f"question(s) scoping by a category no slice carries: {unknown}")
+        assert unknown == {}, f"question(s) scoping by a category no slice carries: {unknown}"
 
     def test_a_question_that_scopes_by_plane_uses_glob(self):
         """A slice may carry two categories.
@@ -153,27 +156,27 @@ class TestEveryQuestionNamesEmittedVocabulary:
         the questions about resources and time.
         """
         for question in _questions():
-            for bad in re.findall(r"category\s*=\s*'([a-z0-9-]+)'",
-                                  question["sql"]):
+            for bad in re.findall(r"category\s*=\s*'([a-z0-9-]+)'", question["sql"]):
                 pytest.fail(
                     f"{question['id']} matches category with `= '{bad}'`; a "
-                    f"slice may carry more than one, so this must be `glob`")
+                    f"slice may carry more than one, so this must be `glob`"
+                )
 
     def test_every_counter_track_named_is_one_the_emitter_creates(self):
         """`UX-717` widened the set past one: `HOST_COUNTERS`' own
         labels, so a question naming `host cores busy` stops failing
         this clause for being right."""
         emitted = {bga_timeline.CONCURRENCY_COUNTER} | {
-            label for _key, label, _unit, _scale in bga_timeline.HOST_COUNTERS}
+            label for _key, label, _unit, _scale in bga_timeline.HOST_COUNTERS
+        }
         for question in _questions():
             names = re.findall(r"t\.name\s*=\s*'([^']+)'", question["sql"])
-            for group in re.findall(r"t\.name\s+in\s*\(([^)]+)\)",
-                                    question["sql"], re.I):
+            for group in re.findall(r"t\.name\s+in\s*\(([^)]+)\)", question["sql"], re.I):
                 names += re.findall(r"'([^']+)'", group)
             for name in names:
                 assert name in emitted, (
-                    f"{question['id']} selects counter track {name!r}; the "
-                    f"emitter creates {sorted(emitted)}")
+                    f"{question['id']} selects counter track {name!r}; the emitter creates {sorted(emitted)}"
+                )
 
     def test_the_flow_questions_join_the_flow_table(self):
         """`UX-309`'s edges are `flow` rows, not timestamp proximity."""
@@ -216,21 +219,22 @@ class TestTheTraceDictionaryIsTheOneDocumentedPlace:
         assert missing == set(), (
             f"emitted annotation key(s) documented nowhere: "
             f"{sorted(missing)}. A key nobody wrote down is a key a query "
-            f"cannot be written against on purpose")
+            f"cannot be written against on purpose"
+        )
 
     def test_it_documents_nothing_the_emitter_does_not_write(self):
         documented, _text = self._documented()
         extra = documented - CONTRACT
         assert extra == set(), (
             f"documented key(s) the emitter never writes: {sorted(extra)}. A "
-            f"reader would build a query on them and get nothing back")
+            f"reader would build a query on them and get nothing back"
+        )
 
     #: The dictionary's spelling of each emitted scope. The emitter's
     #: names are its categories, and a reader scopes a query by them -
     #: so the two vocabularies are held equal rather than each held to
     #: itself (`UX-321`).
-    SCOPE_NAMES = {"Plane 1": "bst-builder", "Plane 2": "native-process",
-                   "run": "bst-invocation"}
+    SCOPE_NAMES = {"Plane 1": "bst-builder", "Plane 2": "native-process", "run": "bst-invocation"}
 
     def test_every_key_says_which_plane_it_rides(self):
         rows = self._key_rows()
@@ -242,7 +246,8 @@ class TestTheTraceDictionaryIsTheOneDocumentedPlace:
                 assert one in self.SCOPE_NAMES, (
                     f"`{key}` rides {one!r}; a key rides one or more of "
                     f"{sorted(self.SCOPE_NAMES)} and a reader scopes their "
-                    f"query by them")
+                    f"query by them"
+                )
 
     def test_the_documented_scopes_are_the_emitted_ones(self):
         """`UX-321`'s per-scope membership, held in both directions.
@@ -255,17 +260,17 @@ class TestTheTraceDictionaryIsTheOneDocumentedPlace:
         from tools.bga_timeline import scopes_of
 
         for key, plane in self._key_rows():
-            documented = tuple(self.SCOPE_NAMES[part.strip()]
-                               for part in plane.split(","))
+            documented = tuple(self.SCOPE_NAMES[part.strip()] for part in plane.split(","))
             assert set(documented) == set(scopes_of(key)), (
-                f"`{key}` is documented as riding {documented} and the "
-                f"emitter puts it on {scopes_of(key)}")
+                f"`{key}` is documented as riding {documented} and the emitter puts it on {scopes_of(key)}"
+            )
 
     def test_the_stability_rule_is_written_down(self):
         _documented, text = self._documented()
         assert "rename is a break" in text, (
             "the dictionary does not say that renaming a key breaks saved "
-            "queries, which is the whole reason it is a contract")
+            "queries, which is the whole reason it is a contract"
+        )
 
     def test_the_categories_and_the_counter_are_documented_too(self):
         _documented, text = self._documented()
@@ -293,8 +298,7 @@ class TestTheEmittedTraceCarriesWhatTheQuestionsScopeBy:
             out = tmp / "trace.gz"
             bga_timeline.render(str(snapshot), str(out))
             raw = gzip.open(out, "rb").read()
-            packets = [v for f, w, v in _fields(raw)
-                       if f == trackevent.TRACE_PACKET and w == 2]
+            packets = [v for f, w, v in _fields(raw) if f == trackevent.TRACE_PACKET and w == 2]
             names, used = {}, {}
             for packet in packets:
                 for field, _w, value in _fields(packet):
@@ -328,16 +332,17 @@ class TestTheEmittedTraceCarriesWhatTheQuestionsScopeBy:
         it. The run-identity instant is the third: it belongs to
         neither plane, and leaving it uncategorised is how a partition
         stops being one."""
-        planes = (decoded.get(bga_timeline.CATEGORY_PLANE1, 0)
-                  + decoded.get(bga_timeline.CATEGORY_PLANE2, 0)
-                  + decoded.get(bga_timeline.CATEGORY_RUN, 0))
+        planes = (
+            decoded.get(bga_timeline.CATEGORY_PLANE1, 0)
+            + decoded.get(bga_timeline.CATEGORY_PLANE2, 0)
+            + decoded.get(bga_timeline.CATEGORY_RUN, 0)
+        )
         sys.path.insert(0, str(REPO / "tests/unit"))
         from test_the_timeline_speaks_perfetto import _snapshot
 
         tmp = pathlib.Path(tempfile.mkdtemp())
         try:
-            result = bga_timeline.render(str(_snapshot(tmp)),
-                                         str(tmp / "t.gz"))
+            result = bga_timeline.render(str(_snapshot(tmp)), str(tmp / "t.gz"))
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
         assert planes == result["slices"], (planes, result["slices"])

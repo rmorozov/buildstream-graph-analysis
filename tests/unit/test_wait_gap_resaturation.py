@@ -26,6 +26,7 @@ Both fixes must preserve every existing `P1-30`/`P1-31`/`P1-32`/`P1-39`
 test's own behavior unchanged (see those test files - not duplicated
 here) and I4 (Sigma attribution == H) exactly.
 """
+
 import json
 
 from bga import analyze_run
@@ -36,12 +37,15 @@ from bga.ingest.models import AttributionCategory, NormalizedTask, Resource, Tas
 def _task(uid, ready_us, start_us, finish_us, resources=(Resource.PROCESS,), attempt=0, task_kind=TaskKind.BUILD):
     return NormalizedTask(
         task_key=TaskKey(uid, task_kind, "BUILD", attempt),
-        ready_us=ready_us, start_us=start_us, finish_us=finish_us,
+        ready_us=ready_us,
+        start_us=start_us,
+        finish_us=finish_us,
         resources=list(resources),
     )
 
 
 # --- Fix 1: re-saturation within a gap's remainder ----------------------
+
 
 def test_resource_wait_reports_a_second_segment_for_re_saturation():
     """waiting.bst is ready at 0, starts at 300: holder_a saturates
@@ -117,20 +121,43 @@ def test_end_to_end_re_saturation_produces_two_resource_wait_segments_and_identi
     }
     trace = {
         "spans": [
-            {"task_key": "trigger.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 0,
-             "resources": [], "primary_resource": None},
-            {"task_key": "holder_a.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 100,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "holder_b.bst|BUILD|BUILD|0", "ts_us": 200, "dur_us": 100,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "waiting.bst|BUILD|BUILD|0", "ts_us": 300, "dur_us": 100,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
+            {
+                "task_key": "trigger.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 0,
+                "resources": [],
+                "primary_resource": None,
+            },
+            {
+                "task_key": "holder_a.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 100,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "holder_b.bst|BUILD|BUILD|0",
+                "ts_us": 200,
+                "dur_us": 100,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "waiting.bst|BUILD|BUILD|0",
+                "ts_us": 300,
+                "dur_us": 100,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
         ],
         "phases": [],
     }
     run_context = {
-        "trace_epsilon_us": 10, "wall_start_us": 0, "wall_end_us": 400,
-        "resource_capacities": {"PROCESS": 1}, "max_jobs": 2,
+        "trace_epsilon_us": 10,
+        "wall_start_us": 0,
+        "wall_end_us": 400,
+        "resource_capacities": {"PROCESS": 1},
+        "max_jobs": 2,
     }
     (run_dir / "run-context.json").write_text(json.dumps(run_context))
     (run_dir / "graph.json").write_text(json.dumps(graph))
@@ -142,8 +169,12 @@ def test_end_to_end_re_saturation_produces_two_resource_wait_segments_and_identi
     total = sum(
         result.attribution.get(k, 0)
         for k in (
-            "execution_on_chain_us", "dependency_wait_us", "resource_wait_us",
-            "scheduler_wait_us", "idle_us", "retry_wait_us",
+            "execution_on_chain_us",
+            "dependency_wait_us",
+            "resource_wait_us",
+            "scheduler_wait_us",
+            "idle_us",
+            "retry_wait_us",
         )
     )
     assert result.attribution["resource_wait_us"] == 200  # both RESOURCE_WAIT segments, 100us each
@@ -153,6 +184,7 @@ def test_end_to_end_re_saturation_produces_two_resource_wait_segments_and_identi
 
 
 # --- Fix 2: retry gaps with no other real predecessor -------------------
+
 
 def test_retry_gap_resource_contention_is_detected_not_swallowed_by_retry_wait():
     """attempt0 finishes at 50000. attempt1 (retry) is ready at 150000
@@ -218,17 +250,34 @@ def test_end_to_end_retry_gap_with_contention_and_identity_holds(tmp_path):
     }
     trace = {
         "spans": [
-            {"task_key": "a.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 50000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "holder.bst|BUILD|BUILD|0", "ts_us": 50000, "dur_us": 50000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "a.bst|BUILD|BUILD|1", "ts_us": 150000, "dur_us": 50000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
+            {
+                "task_key": "a.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 50000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "holder.bst|BUILD|BUILD|0",
+                "ts_us": 50000,
+                "dur_us": 50000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "a.bst|BUILD|BUILD|1",
+                "ts_us": 150000,
+                "dur_us": 50000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
         ],
         "phases": [],
     }
     run_context = {
-        "trace_epsilon_us": 50000, "wall_start_us": 0, "wall_end_us": 200000,
+        "trace_epsilon_us": 50000,
+        "wall_start_us": 0,
+        "wall_end_us": 200000,
         "resource_capacities": {"PROCESS": 1},
     }
     (run_dir / "run-context.json").write_text(json.dumps(run_context))
@@ -241,8 +290,12 @@ def test_end_to_end_retry_gap_with_contention_and_identity_holds(tmp_path):
     total = sum(
         result.attribution.get(k, 0)
         for k in (
-            "execution_on_chain_us", "dependency_wait_us", "resource_wait_us",
-            "scheduler_wait_us", "idle_us", "retry_wait_us",
+            "execution_on_chain_us",
+            "dependency_wait_us",
+            "resource_wait_us",
+            "scheduler_wait_us",
+            "idle_us",
+            "retry_wait_us",
         )
     )
     assert result.attribution["resource_wait_us"] == 50000

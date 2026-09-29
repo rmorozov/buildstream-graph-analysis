@@ -30,6 +30,7 @@ task's own Required Fix, so the budget asserted here is the JSON
 report `format_json` already builds - the browser-free half of the
 same size claim, banded the same way UX-529's `DATA_BUDGETS` is.
 """
+
 import json
 import random
 
@@ -50,8 +51,12 @@ _STRUCTURAL_KINDS = ("import", "stack")
 #: The six categories I4's exact sum is over (Part 12.1) - the same
 #: constant `test_attribution_identity_across_topologies.py` names.
 _TASK_HORIZON_KEYS = (
-    "execution_on_chain_us", "dependency_wait_us", "resource_wait_us",
-    "scheduler_wait_us", "idle_us", "retry_wait_us",
+    "execution_on_chain_us",
+    "dependency_wait_us",
+    "resource_wait_us",
+    "scheduler_wait_us",
+    "idle_us",
+    "retry_wait_us",
 )
 
 #: `(elements at most, report JSON bytes at most)`, largest class last -
@@ -71,7 +76,8 @@ def _budget_for(elements):
             return budget
     raise AssertionError(
         f"{elements:,} elements is past every class in DATA_BUDGETS; "
-        f"decide a bound for that size rather than inheriting one")
+        f"decide a bound for that size rather than inheriting one"
+    )
 
 
 def _generate(seed):
@@ -91,31 +97,34 @@ def _generate(seed):
     def mod(layer, index):
         return f"layer{layer:02d}/mod{index:03d}.bst"
 
-    elements = [{"uid": "toolchain.bst", "cache_key": "tc",
-                "requested_target": False, "element_kind": "import"}]
+    elements = [{"uid": "toolchain.bst", "cache_key": "tc", "requested_target": False, "element_kind": "import"}]
     dependencies = []
     for layer in range(layers):
         for index in range(width):
             uid = mod(layer, index)
             structural = rng.random() < structural_share
             kind = rng.choice(_STRUCTURAL_KINDS) if structural else rng.choice(_KINDS)
-            elements.append({"uid": uid, "cache_key": f"k{(layer * width + index) % 100:02d}",
-                             "requested_target": False, "element_kind": kind})
-            dependencies.append({"predecessor": "toolchain.bst", "successor": uid,
-                                 "dependency_type": "build"})
+            elements.append(
+                {
+                    "uid": uid,
+                    "cache_key": f"k{(layer * width + index) % 100:02d}",
+                    "requested_target": False,
+                    "element_kind": kind,
+                }
+            )
+            dependencies.append({"predecessor": "toolchain.bst", "successor": uid, "dependency_type": "build"})
             if layer == 0:
                 continue
             k = min(deps_per_module, width)
             preds = rng.sample(range(width), k) if mesh else [index % width]
             for pred_index in preds:
                 dtype = "runtime" if rng.random() < runtime_share else "build"
-                dependencies.append({"predecessor": mod(layer - 1, pred_index),
-                                     "successor": uid, "dependency_type": dtype})
-    elements.append({"uid": "all.bst", "cache_key": "all",
-                     "requested_target": True, "element_kind": "stack"})
+                dependencies.append(
+                    {"predecessor": mod(layer - 1, pred_index), "successor": uid, "dependency_type": dtype}
+                )
+    elements.append({"uid": "all.bst", "cache_key": "all", "requested_target": True, "element_kind": "stack"})
     for index in range(width):
-        dependencies.append({"predecessor": mod(layers - 1, index),
-                             "successor": "all.bst", "dependency_type": "build"})
+        dependencies.append({"predecessor": mod(layers - 1, index), "successor": "all.bst", "dependency_type": "build"})
 
     durations = {}
     for element in elements:
@@ -128,25 +137,34 @@ def _generate(seed):
     placement = schedule(elements, dependencies, durations, builders)
     horizon = max(start + dur for start, dur in placement.values())
     spans = sorted(
-        ({"task_key": f"{uid}|BUILD|BUILD|0", "ts_us": placement[uid][0],
-          "dur_us": placement[uid][1], "resources": ["PROCESS"],
-          "primary_resource": "PROCESS"} for uid in placement),
-        key=lambda s: (s["ts_us"], s["task_key"]))
+        (
+            {
+                "task_key": f"{uid}|BUILD|BUILD|0",
+                "ts_us": placement[uid][0],
+                "dur_us": placement[uid][1],
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            }
+            for uid in placement
+        ),
+        key=lambda s: (s["ts_us"], s["task_key"]),
+    )
     loading_us, resolving_us = 900_000, 1_100_000
     run_context = {
         "trace_epsilon_us": 50_000,
         "resource_capacities": {"PROCESS": builders, "DOWNLOAD": 10, "UPLOAD": 4},
-        "max_jobs": builders, "native_max_jobs": 4,
+        "max_jobs": builders,
+        "native_max_jobs": 4,
         "native_max_jobs_source": "parsed_from_invocation",
         "host_cpu_count": builders,
         "wall_clock": {"start_us": 0, "end_us": horizon + loading_us + resolving_us},
         "pipeline_overhead": [
             {"phase": "Loading elements", "elapsed_us": loading_us},
-            {"phase": "Resolving elements", "elapsed_us": resolving_us}],
+            {"phase": "Resolving elements", "elapsed_us": resolving_us},
+        ],
         "run_identity": {"manifest_hash": f"seed-{seed}", "targets": ["all.bst"]},
     }
-    graph = {"elements": elements, "dependencies": dependencies,
-             "run_identity_hash": f"seed-{seed}"}
+    graph = {"elements": elements, "dependencies": dependencies, "run_identity_hash": f"seed-{seed}"}
     trace = {"run_identity_hash": f"seed-{seed}", "spans": spans, "phases": []}
     return (run_context, graph, trace), len(elements)
 
@@ -187,13 +205,12 @@ def _assert_invariants_hold(analyzer, result, n, seed):
     durations = [t.finish_us - t.start_us for t in result.normalized_tasks]
     if durations:
         assert t_infinity_observed >= max(durations), (
-            f"{ctx}: I3 violated - T-infinity,observed={t_infinity_observed} "
-            f"< max observed duration={max(durations)}")
+            f"{ctx}: I3 violated - T-infinity,observed={t_infinity_observed} < max observed duration={max(durations)}"
+        )
 
     total = sum(result.attribution.get(k, 0) for k in _TASK_HORIZON_KEYS)
     assert total == h, f"{ctx}: I4 violated - attribution sum={total} != H={h}"
-    negative = {k: result.attribution[k] for k in _TASK_HORIZON_KEYS
-               if result.attribution.get(k, 0) < 0}
+    negative = {k: result.attribution[k] for k in _TASK_HORIZON_KEYS if result.attribution.get(k, 0) < 0}
     assert not negative, f"{ctx}: I5 violated - negative attribution {negative}"
 
     gates = result.confidence["hard_gates"]
@@ -223,14 +240,12 @@ def _assert_invariants_hold(analyzer, result, n, seed):
     findings = compute_findings(result)
     unresolved = [f["id"] for f in findings if f.get("reader") is None]
     assert not unresolved, (
-        f"{ctx}: finding(s) whose provenance does not resolve (no "
-        f"registered FINDING_READERS entry): {unresolved}")
+        f"{ctx}: finding(s) whose provenance does not resolve (no registered FINDING_READERS entry): {unresolved}"
+    )
 
     budget = _budget_for(n)
     size = len(format_json(result).encode())
-    assert size <= budget, (
-        f"{ctx}: report JSON is {size:,} B, over the {n}-element "
-        f"class budget of {budget:,} B")
+    assert size <= budget, f"{ctx}: report JSON is {size:,} B, over the {n}-element class budget of {budget:,} B"
 
 
 @pytest.mark.parametrize("seed", range(SEEDS))
@@ -251,5 +266,4 @@ def test_determinism_holds_across_generated_shapes(tmp_path, seed):
     topology, _n = _generate(seed)
     run_dir = _write_run(tmp_path, f"det-{seed}", topology)
     report = run_determinism_check(run_dir, n=3)
-    assert report["deterministic"], (
-        f"seed={seed}: I11 violated - {report['mismatches']}")
+    assert report["deterministic"], f"seed={seed}: I11 violated - {report['mismatches']}"

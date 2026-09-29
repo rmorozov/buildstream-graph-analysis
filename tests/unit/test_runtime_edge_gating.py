@@ -17,6 +17,7 @@ this file, which is exactly why the defect survived four audit rounds
 including a 1202-element scale probe. These tests exist as much to give
 the suite that shape as to pin the behaviour.
 """
+
 import networkx as nx
 
 from bga.ingest.models import DependencyEdge, Element, Graph
@@ -28,10 +29,7 @@ def _graph(edges):
     uids = sorted({u for e in edges for u in e[:2]})
     return Graph(
         elements=[Element(uid=u) for u in uids],
-        dependencies=[
-            DependencyEdge(predecessor=p, successor=s, dependency_type=t)
-            for p, s, t in edges
-        ],
+        dependencies=[DependencyEdge(predecessor=p, successor=s, dependency_type=t) for p, s, t in edges],
     )
 
 
@@ -106,7 +104,9 @@ def test_deferrability_uses_the_full_graph():
     tasks = {
         uid: NormalizedTask(
             task_key=TaskKey(element_uid=uid, task_kind=TaskKind.BUILD, phase="EXECUTION"),
-            ready_us=0, start_us=0, finish_us=1_000_000,
+            ready_us=0,
+            start_us=0,
+            finish_us=1_000_000,
         )
         for uid in ("a.bst", "b.bst", "c.bst", "d.bst")
     }

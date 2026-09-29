@@ -24,6 +24,7 @@ The audit the Required Fix asks for - "one pass over the module for any
 other `[:N]` taken before a group-by" - is this file's last class: the
 three remaining slices, each with what it is taken over.
 """
+
 import pathlib
 import sys
 
@@ -65,12 +66,12 @@ def _log(element, key, staging, commands, total, configure=None):
 #: "max" as well as from "first seen".
 _TREE = (
     # element      key         staging cmds total configure
-    ("twice.bst", "aaaaaaa1",       1,   20,   22,        9),
-    ("twice.bst", "aaaaaaa2",       1,   20,   22,        8),
-    ("biggest.bst", "bbbbbbbb",     1,   20,   22,       12),
-    ("second.bst", "cccccccc",      1,   20,   22,        7),
-    ("third.bst", "dddddddd",       1,   20,   22,        6),
-    ("fourth.bst", "eeeeeeee",      1,   20,   22,        5),
+    ("twice.bst", "aaaaaaa1", 1, 20, 22, 9),
+    ("twice.bst", "aaaaaaa2", 1, 20, 22, 8),
+    ("biggest.bst", "bbbbbbbb", 1, 20, 22, 12),
+    ("second.bst", "cccccccc", 1, 20, 22, 7),
+    ("third.bst", "dddddddd", 1, 20, 22, 6),
+    ("fourth.bst", "eeeeeeee", 1, 20, 22, 5),
 )
 
 
@@ -80,7 +81,8 @@ def _tree(tmp_path):
         directory = root / "p" / element.removesuffix(".bst")
         directory.mkdir(parents=True, exist_ok=True)
         (directory / f"{key}-build.20260818-115322.log").write_text(
-            _log(element, key, staging, commands, total, configure))
+            _log(element, key, staging, commands, total, configure)
+        )
     return root
 
 
@@ -103,13 +105,12 @@ class TestTheConfigureTaxNamesFourDistinctElements:
         # that reintroduced the defect and left this green.
         named = title.split("paid most by ", 1)[1].split(". Elements", 1)[0]
         payers = [name.strip() for name in named.split(",")]
-        assert len(payers) == PAYERS_NAMED, (
-            f"the sentence named {len(payers)} payers, not {PAYERS_NAMED}: "
-            f"{payers}")
+        assert len(payers) == PAYERS_NAMED, f"the sentence named {len(payers)} payers, not {PAYERS_NAMED}: {payers}"
         assert len(payers) == len(set(payers)), (
             f"a payer is named twice: {payers}. The rows are per log, and "
             f"an element built twice in the kept history had one row per "
-            f"build")
+            f"build"
+        )
 
     def test_the_fourth_real_payer_is_not_pushed_out(self, tmp_path):
         """The cost of the duplicate, and the reason it matters.
@@ -120,8 +121,8 @@ class TestTheConfigureTaxNamesFourDistinctElements:
         report = build_report(scan_log_tree(str(_tree(tmp_path))))
         title = _finding(report, "configure-tax")["title"]
         assert "fourth.bst" not in title, (
-            "the fixture's fifth-ranked element reached the sentence, so "
-            "the ranking is not the one this asserts")
+            "the fixture's fifth-ranked element reached the sentence, so the ranking is not the one this asserts"
+        )
         for element in ("twice.bst", "biggest.bst", "second.bst", "third.bst"):
             assert element in title, (title, element)
 
@@ -132,15 +133,15 @@ class TestTheConfigureTaxNamesFourDistinctElements:
         `twice.bst` second rather than first and would look right on any
         fixture where the duplicate's rows happen to be large.
         """
-        rows = [{"element": "twice.bst", "configure_us": 9},
-                {"element": "twice.bst", "configure_us": 8},
-                {"element": "biggest.bst", "configure_us": 12}]
-        assert top_distinct_payers(rows, "configure_us") == [
-            "twice.bst", "biggest.bst"]
+        rows = [
+            {"element": "twice.bst", "configure_us": 9},
+            {"element": "twice.bst", "configure_us": 8},
+            {"element": "biggest.bst", "configure_us": 12},
+        ]
+        assert top_distinct_payers(rows, "configure_us") == ["twice.bst", "biggest.bst"]
 
     def test_it_names_at_most_four(self):
-        rows = [{"element": f"e{n}.bst", "configure_us": 100 - n}
-                for n in range(10)]
+        rows = [{"element": f"e{n}.bst", "configure_us": 100 - n} for n in range(10)]
         assert len(top_distinct_payers(rows, "configure_us")) == PAYERS_NAMED
 
 
@@ -153,15 +154,14 @@ class TestTheDeveloperTaxToo:
         assert len(names) == len(set(names)), (
             f"sandbox_tax ranks per log, so {names} names an element once "
             f"per build - the same defect UX-409 filed against the "
-            f"configure tax, in the ranking its Out of Scope cleared")
+            f"configure tax, in the ranking its Out of Scope cleared"
+        )
 
     def test_the_text_report_names_each_element_once(self, tmp_path):
         text = format_report_text(build_report(scan_log_tree(str(_tree(tmp_path)))))
         block = text.split("Who paid it", 1)[1].split("\n\n", 1)[0]
-        listed = [line.split()[0] for line in block.splitlines()[1:]
-                  if line.strip()]
-        assert len(listed) == len(set(listed)), (
-            f"the text report lists an element twice: {listed}")
+        listed = [line.split()[0] for line in block.splitlines()[1:] if line.strip()]
+        assert len(listed) == len(set(listed)), f"the text report lists an element twice: {listed}"
 
 
 class TestEveryOtherSliceIsTakenOverElements:
@@ -177,21 +177,19 @@ class TestEveryOtherSliceIsTakenOverElements:
     #: `source: the list each slice is taken over`, and why it is one
     #: row per element.
     SLICES = {
-        "top_payers (sandbox tax)":
-            "grouped per element by `top_distinct_payers` since `UX-409`",
-        "views['elements']":
-            "built one row per element by the two-plane join",
-        "finding['elements']":
-            "a redundancy finding's own element list, already distinct",
+        "top_payers (sandbox tax)": "grouped per element by `top_distinct_payers` since `UX-409`",
+        "views['elements']": "built one row per element by the two-plane join",
+        "finding['elements']": "a redundancy finding's own element list, already distinct",
     }
 
     def test_the_audit_is_recorded(self):
         assert len(self.SLICES) == 3, (
             "the module gained or lost a bounded ranking; say what the new "
-            "one is taken over before changing this number")
+            "one is taken over before changing this number"
+        )
 
     def test_the_helper_is_the_one_place_that_groups(self):
         source = (REPO / "tools/bst_cache_logs.py").read_text(encoding="utf-8")
         assert source.count("def top_distinct_payers") == 1, (
-            "two group-by implementations is how the two rankings came to "
-            "disagree in the first place")
+            "two group-by implementations is how the two rankings came to disagree in the first place"
+        )

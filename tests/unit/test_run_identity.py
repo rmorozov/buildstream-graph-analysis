@@ -7,6 +7,7 @@ directory), matching tests/unit/test_confidence_gates.py's own pattern -
 run identity affects confidence (provenance_score, a new
 run_identity_consistent hard gate), not a separate enforcement layer.
 """
+
 import json
 
 from bga import BuildEfficiencyAnalyzer
@@ -18,7 +19,8 @@ def _write_run_dir(tmp_path, name="run", run_context_extra=None, graph_extra=Non
     run_context = {
         "trace_epsilon_us": 1000,
         "wall_clock": {"start_us": 0, "end_us": 50000},
-        "max_jobs": 2, "resource_capacities": {"PROCESS": 2},
+        "max_jobs": 2,
+        "resource_capacities": {"PROCESS": 2},
         **(run_context_extra or {}),
     }
     graph = {
@@ -27,8 +29,15 @@ def _write_run_dir(tmp_path, name="run", run_context_extra=None, graph_extra=Non
         **(graph_extra or {}),
     }
     trace = {
-        "spans": [{"task_key": "a.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 50000,
-                    "resources": ["PROCESS"], "primary_resource": "PROCESS"}],
+        "spans": [
+            {
+                "task_key": "a.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 50000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            }
+        ],
         "phases": [],
         **(trace_extra or {}),
     }

@@ -15,6 +15,7 @@ pattern `mapTable`'s record branch already had to unlearn), so
 `is_leaf`/`element_kind`/`observed_critical` were flagged quantities
 with no filter. `leaf_analysis` declares none and was never at fault.
 """
+
 import pathlib
 import re
 import sys
@@ -86,12 +87,13 @@ def scale_tables(tmp_path_factory, browser):
 def test_a_capped_table_filters_every_declared_quantity_column(scale_tables):
     capped = [t for t in scale_tables if t["badge"] and CAPPED_BADGE.match(t["badge"])]
     assert capped, "no table crossed the row cap on the scale export"
-    violations = [(t["section"], t["badge"], c["key"], c["quantity"])
-                  for t in capped for c in t["columns"]
-                  if c["quantity"] and not c["filtered"]]
-    assert not violations, (
-        f"a capped table sorts a declared-quantity column with no "
-        f"filter (§3d): {violations}")
+    violations = [
+        (t["section"], t["badge"], c["key"], c["quantity"])
+        for t in capped
+        for c in t["columns"]
+        if c["quantity"] and not c["filtered"]
+    ]
+    assert not violations, f"a capped table sorts a declared-quantity column with no filter (§3d): {violations}"
 
 
 if __name__ == "__main__":  # pragma: no cover

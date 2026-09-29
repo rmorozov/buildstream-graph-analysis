@@ -249,9 +249,10 @@ def pseudonymize_identifier(value, key, pmap):
         return value
     if "|" in value:
         head, *rest = value.split("|")
-        return "|".join([pseudonymize_identifier(head, key, pmap)] + [
-            part if _TASK_WORD.fullmatch(part) else pseudonymize_identifier(part, key, pmap)
-            for part in rest])
+        return "|".join(
+            [pseudonymize_identifier(head, key, pmap)]
+            + [part if _TASK_WORD.fullmatch(part) else pseudonymize_identifier(part, key, pmap) for part in rest]
+        )
     if value.endswith(_BST_SUFFIX) or f"{_BST_SUFFIX}{_JUNCTION_SEP}" in value:
         return pseudonymize_element_path(value, key, pmap)
     url = _URL.fullmatch(value)
@@ -267,13 +268,14 @@ def pseudonymize_identifier(value, key, pmap):
 def _path(value, key, pmap):
     segments = value.split(_PATH_SEP)
     last = len(segments) - 1
-    return _PATH_SEP.join(_segment(seg, "file" if i == last else "directory", key, pmap)
-                          for i, seg in enumerate(segments))
+    return _PATH_SEP.join(
+        _segment(seg, "file" if i == last else "directory", key, pmap) for i, seg in enumerate(segments)
+    )
 
 
 def _segment(segment, cls, key, pmap):
     lead = "." if segment.startswith(".") else ""
-    stem, ext = segment[len(lead):], ""
+    stem, ext = segment[len(lead) :], ""
     shaped = _EXTENSION.fullmatch(stem) if cls == "file" else None
     if shaped:
         stem, ext = shaped.groups()
@@ -290,7 +292,7 @@ def rekey_hash(value, key, pmap):
     while len(out) < len(value):
         out += _digest(key, "hash", value, extend).hex()
         extend += 1
-    out = out[:len(value)]
+    out = out[: len(value)]
     pmap.add(out, f"hash\0{value}")
     return out
 
@@ -305,7 +307,9 @@ def pseudonymize_toolchain(value, key, pmap):
 
 _PUBLIC_MACRO = re.compile(r"CMAKE_[A-Z0-9_]+|BUILD_SHARED_LIBS|BUILD_TESTING|NDEBUG|_GNU_SOURCE|_FORTIFY_SOURCE")
 _CMAKE_TYPES = frozenset({"PATH", "FILEPATH", "STRING", "BOOL", "INTERNAL"})
-_PUBLIC_VALUES = frozenset({"ON", "OFF", "TRUE", "FALSE", "YES", "NO", "Release", "Debug", "RelWithDebInfo", "MinSizeRel"})
+_PUBLIC_VALUES = frozenset(
+    {"ON", "OFF", "TRUE", "FALSE", "YES", "NO", "Release", "Debug", "RelWithDebInfo", "MinSizeRel"}
+)
 #: `g[0-3]?` is a bounded 4-way enum, not a captured value - no tool key needed.
 #: Bare `-j` carries no digits either; `-j<digits>` is its own check below,
 #: keyed to argv[0] (UX-1089: it bypassed that key on every binary).
@@ -327,7 +331,9 @@ _LEADING_ENV = re.compile(r"[A-Z_][A-Z0-9_]*=.*", re.S)
 _CREDENTIAL_NAME = re.compile(
     r"token|secret|password|passwd|key|auth|credential|cookie|session"
     r"|pat|bearer|apikey|private_key|signing"
-    r"|otp|pin|passcode|mfa|totp", re.I)
+    r"|otp|pin|passcode|mfa|totp",
+    re.I,
+)
 #: A numeric value drops by default (UX-1088: pseudonymizing an
 #: unrecognized secret still puts it in the map). Two things can keep
 #: one: a `-D`/env name on `_MACRO_SAFE_NAMES` (any binary), or a flag
@@ -350,39 +356,147 @@ _DROPPED = "<dropped>"
 
 def _credential_shaped(value):
     return bool(value) and bool(
-        _TOKEN_PREFIX.match(value) or _AUTH_SCHEME.fullmatch(value) or _HIGH_ENTROPY.fullmatch(value))
+        _TOKEN_PREFIX.match(value) or _AUTH_SCHEME.fullmatch(value) or _HIGH_ENTROPY.fullmatch(value)
+    )
+
 
 #: The only flag names a rebuilt command keeps verbatim, on any `argv[0]`;
 #: any other name becomes an `m-` pseudonym behind its dashes (6.6, 6.11).
-PUBLIC_FLAGS = frozenset([
-    # long options: cmake, make, ninja, meson, configure, the GNU toolchain
-    "--build", "--install", "--target", "--config", "--parallel", "--prefix", "--libdir",
-    "--bindir", "--includedir", "--datadir", "--sysconfdir", "--localstatedir", "--host",
-    "--help", "--version", "--verbose", "--quiet", "--silent", "--jobs", "--keep-going",
-    "--output", "--sysroot", "--as-needed", "--no-as-needed", "--whole-archive",
-    "--no-whole-archive", "--start-group", "--end-group", "--gc-sections", "--build-id",
-    "--hash-style", "--eh-frame-hdr", "--enable-shared", "--disable-shared",
-    "--enable-static", "--disable-static", "--with-pic", "--buildtype", "--wrap-mode",
-    "--switch", "--cyan", "--green", "--red", "--blue", "--magenta", "--bold",
-    "--progress-dir", "--progress-num", "--mode", "--tag", "--preserve-dup-deps",
-    # single-dash words: gcc, cc1, collect2, ld
-    "-std", "-quiet", "-version", "-dumpdir", "-dumpbase", "-dumpbase-ext", "-imultiarch",
-    "-isystem", "-iquote", "-idirafter", "-include", "-print-sysroot", "-nostdlib",
-    "-nostdinc", "-nostartfiles", "-pie", "-no-pie", "-plugin", "-plugin-opt", "-soname",
-    "-rpath", "-dynamic-linker", "-export-dynamic", "-auxbase", "-auxbase-strip",
-    # -f, -m, -W families
-    "-fPIC", "-fpic", "-fPIE", "-fpie", "-flto", "-fno-lto", "-fcommon", "-fno-common",
-    "-fexceptions", "-fno-exceptions", "-frtti", "-fno-rtti", "-fopenmp", "-fvisibility",
-    "-fdiagnostics-color", "-fasynchronous-unwind-tables", "-fcf-protection",
-    "-fstack-clash-protection", "-fstack-protector", "-fstack-protector-strong",
-    "-fstack-protector-all", "-fno-omit-frame-pointer", "-fomit-frame-pointer",
-    "-fno-plt", "-fdebug-prefix-map", "-ffile-prefix-map", "-fmacro-prefix-map",
-    "-ffunction-sections", "-fdata-sections", "-fno-strict-aliasing", "-fwrapv",
-    "-march", "-mtune", "-mcpu", "-m32", "-m64", "-mfpu", "-mfloat-abi", "-mabi",
-    "-Wall", "-Wextra", "-Werror", "-Wpedantic", "-Wformat", "-Wformat-security",
-    "-Wno-error", "-Wshadow", "-Wconversion", "-Wno-unused-parameter",
-    "-Wno-unused-variable", "-Wno-deprecated-declarations", "-Wunused",
-])
+PUBLIC_FLAGS = frozenset(
+    [
+        # long options: cmake, make, ninja, meson, configure, the GNU toolchain
+        "--build",
+        "--install",
+        "--target",
+        "--config",
+        "--parallel",
+        "--prefix",
+        "--libdir",
+        "--bindir",
+        "--includedir",
+        "--datadir",
+        "--sysconfdir",
+        "--localstatedir",
+        "--host",
+        "--help",
+        "--version",
+        "--verbose",
+        "--quiet",
+        "--silent",
+        "--jobs",
+        "--keep-going",
+        "--output",
+        "--sysroot",
+        "--as-needed",
+        "--no-as-needed",
+        "--whole-archive",
+        "--no-whole-archive",
+        "--start-group",
+        "--end-group",
+        "--gc-sections",
+        "--build-id",
+        "--hash-style",
+        "--eh-frame-hdr",
+        "--enable-shared",
+        "--disable-shared",
+        "--enable-static",
+        "--disable-static",
+        "--with-pic",
+        "--buildtype",
+        "--wrap-mode",
+        "--switch",
+        "--cyan",
+        "--green",
+        "--red",
+        "--blue",
+        "--magenta",
+        "--bold",
+        "--progress-dir",
+        "--progress-num",
+        "--mode",
+        "--tag",
+        "--preserve-dup-deps",
+        # single-dash words: gcc, cc1, collect2, ld
+        "-std",
+        "-quiet",
+        "-version",
+        "-dumpdir",
+        "-dumpbase",
+        "-dumpbase-ext",
+        "-imultiarch",
+        "-isystem",
+        "-iquote",
+        "-idirafter",
+        "-include",
+        "-print-sysroot",
+        "-nostdlib",
+        "-nostdinc",
+        "-nostartfiles",
+        "-pie",
+        "-no-pie",
+        "-plugin",
+        "-plugin-opt",
+        "-soname",
+        "-rpath",
+        "-dynamic-linker",
+        "-export-dynamic",
+        "-auxbase",
+        "-auxbase-strip",
+        # -f, -m, -W families
+        "-fPIC",
+        "-fpic",
+        "-fPIE",
+        "-fpie",
+        "-flto",
+        "-fno-lto",
+        "-fcommon",
+        "-fno-common",
+        "-fexceptions",
+        "-fno-exceptions",
+        "-frtti",
+        "-fno-rtti",
+        "-fopenmp",
+        "-fvisibility",
+        "-fdiagnostics-color",
+        "-fasynchronous-unwind-tables",
+        "-fcf-protection",
+        "-fstack-clash-protection",
+        "-fstack-protector",
+        "-fstack-protector-strong",
+        "-fstack-protector-all",
+        "-fno-omit-frame-pointer",
+        "-fomit-frame-pointer",
+        "-fno-plt",
+        "-fdebug-prefix-map",
+        "-ffile-prefix-map",
+        "-fmacro-prefix-map",
+        "-ffunction-sections",
+        "-fdata-sections",
+        "-fno-strict-aliasing",
+        "-fwrapv",
+        "-march",
+        "-mtune",
+        "-mcpu",
+        "-m32",
+        "-m64",
+        "-mfpu",
+        "-mfloat-abi",
+        "-mabi",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-Wpedantic",
+        "-Wformat",
+        "-Wformat-security",
+        "-Wno-error",
+        "-Wshadow",
+        "-Wconversion",
+        "-Wno-unused-parameter",
+        "-Wno-unused-variable",
+        "-Wno-deprecated-declarations",
+        "-Wunused",
+    ]
+)
 
 
 def rebuild_command(cmd, key, pmap, public_binaries, counts=None):
@@ -437,7 +551,7 @@ def rebuild_command(cmd, key, pmap, public_binaries, counts=None):
 
 def _pseudonymize_flag(flag, key, pmap):
     dashes = "--" if flag.startswith("--") else "-"
-    return dashes + pseudonymize(flag[len(dashes):], "macro", key, pmap)
+    return dashes + pseudonymize(flag[len(dashes) :], "macro", key, pmap)
 
 
 def _space_credential(word, following):
@@ -498,8 +612,7 @@ def _dash_d_argument(word, key, pmap, counts):
     if kind is not None:
         kind = kind if kind in _CMAKE_TYPES else pseudonymize(kind, "macro", key, pmap)
     mode = _CREDENTIAL_MODE if credential else macro_safe
-    return (f"-D{name}{'' if kind is None else ':' + kind}"
-            f"{_assigned(assigned, key, pmap, counts, mode)}")
+    return f"-D{name}{'' if kind is None else ':' + kind}{_assigned(assigned, key, pmap, counts, mode)}"
 
 
 def _flag_argument(word, key, pmap, counts, binary):
@@ -513,8 +626,11 @@ def _flag_argument(word, key, pmap, counts, binary):
         return rendered + _assigned(equals + assigned, key, pmap, counts, _CREDENTIAL_MODE)
     named = _NAMED_FLAG.fullmatch(word)
     if named and named.group(2):
-        return (named.group(1) + pseudonymize(named.group(2), "macro", key, pmap)
-                + _assigned(named.group(3), key, pmap, counts))
+        return (
+            named.group(1)
+            + pseudonymize(named.group(2), "macro", key, pmap)
+            + _assigned(named.group(3), key, pmap, counts)
+        )
     if equals:
         # A short flag (`-j`, `-l`, `-O`) too narrow for `_NAMED_FLAG`'s
         # lookahead to catch glued with `=` (UX-1089 verifier: it fell
@@ -572,15 +688,14 @@ def check_fingerprint(key, expected_fingerprint):
     if actual != expected_fingerprint:
         raise FingerprintMismatch(
             f"map key fingerprint {actual} does not match the bundle's "
-            f"{expected_fingerprint}; this map belongs to a different project")
+            f"{expected_fingerprint}; this map belongs to a different project"
+        )
 
 
 #: Any prefix a pseudonym-shaped token can start with, longest run of its
 #: own alphabet kept greedily - free text has no other delimiter to lean on.
 _TOKEN_RE = re.compile(
-    "(?<![A-Za-z0-9_])(?:"
-    + "|".join(re.escape(p) for p in CLASS_PREFIXES.values())
-    + ")[A-Za-z0-9_-]+"
+    "(?<![A-Za-z0-9_])(?:" + "|".join(re.escape(p) for p in CLASS_PREFIXES.values()) + ")[A-Za-z0-9_-]+"
 )
 
 

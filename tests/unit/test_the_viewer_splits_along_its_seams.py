@@ -35,6 +35,7 @@ the import graph, that the graph has no re-export form the walker
 cannot see, and that no module has grown back past the size that
 started this.
 """
+
 import pathlib
 import re
 
@@ -50,8 +51,7 @@ LINE_CEILING = 1_500
 
 
 def _modules():
-    return sorted(path.name for path in VIEWER.iterdir()
-                  if path.suffix == ".js")
+    return sorted(path.name for path in VIEWER.iterdir() if path.suffix == ".js")
 
 
 def _imports(name):
@@ -63,20 +63,17 @@ def _imports(name):
 
 
 class TestNoModuleIsTooLongToRead:
-
     def test_every_viewer_module_is_under_the_ceiling(self):
-        over = {name: len((VIEWER / name).read_text(
-                    encoding="utf-8").splitlines())
-                for name in _modules()}
+        over = {name: len((VIEWER / name).read_text(encoding="utf-8").splitlines()) for name in _modules()}
         over = {name: n for name, n in over.items() if n > LINE_CEILING}
         assert over == {}, (
             f"viewer module(s) over UX-337's {LINE_CEILING}-line ceiling: "
             f"{over}. This is the condition the item was filed for - two "
-            f"files holding half the viewer between them")
+            f"files holding half the viewer between them"
+        )
 
 
 class TestTheOrderTheExportInlinesIn:
-
     def test_every_module_comes_after_everything_it_imports(self):
         """The premise `_inline_module` rests on, asserted directly.
 
@@ -97,7 +94,8 @@ class TestTheOrderTheExportInlinesIn:
         assert wrong == [], (
             f"the export's module order is not a dependency order: {wrong}. "
             f"Every one of these is a `ReferenceError` in the concatenated "
-            f"blob, which is UX-199 exactly")
+            f"blob, which is UX-199 exactly"
+        )
 
     def test_the_order_reaches_every_module_app_js_depends_on(self):
         import tools.bga_view as view
@@ -111,9 +109,7 @@ class TestTheOrderTheExportInlinesIn:
             reachable.add(name)
             frontier.extend(_imports(name))
         missing = sorted(reachable - set(order))
-        assert missing == [], (
-            f"module(s) the viewer imports that the export never inlines: "
-            f"{missing}")
+        assert missing == [], f"module(s) the viewer imports that the export never inlines: {missing}"
 
     def test_the_order_names_each_module_once(self):
         import tools.bga_view as view
@@ -121,8 +117,8 @@ class TestTheOrderTheExportInlinesIn:
         order = view._module_order()
         repeated = sorted({name for name in order if order.count(name) > 1})
         assert repeated == [], (
-            f"module(s) inlined twice: {repeated}. Every top-level "
-            f"declaration in them would be redeclared in one scope")
+            f"module(s) inlined twice: {repeated}. Every top-level declaration in them would be redeclared in one scope"
+        )
 
     def test_everything_inlined_is_also_served(self):
         """The export is not the only consumer of these files.
@@ -133,15 +129,11 @@ class TestTheOrderTheExportInlinesIn:
         """
         import tools.bga_view as view
 
-        unserved = [name for name in view._module_order()
-                    if name not in view.ASSETS]
-        assert unserved == [], (
-            f"module(s) the export inlines that `bga view` will not serve: "
-            f"{unserved}")
+        unserved = [name for name in view._module_order() if name not in view.ASSETS]
+        assert unserved == [], f"module(s) the export inlines that `bga view` will not serve: {unserved}"
 
 
 class TestNoImportFormTheWalkerCannotSee:
-
     @pytest.mark.parametrize("name", _modules())
     def test_the_module_re_exports_nothing(self, name):
         """`export * from` / `export { a };` are invisible to the walk.
@@ -156,11 +148,10 @@ class TestNoImportFormTheWalkerCannotSee:
         assert found == [], (
             f"{name} re-exports: {found}. `_module_order` walks `import` "
             f"lines and cannot see this, and `_inline_module` leaves it in "
-            f"the concatenated blob verbatim")
+            f"the concatenated blob verbatim"
+        )
 
     @pytest.mark.parametrize("name", _modules())
     def test_every_import_names_a_module_that_exists(self, name):
-        missing = [needed for needed in _imports(name)
-                   if not (VIEWER / needed).exists()]
-        assert missing == [], (
-            f"{name} imports module(s) that are not there: {missing}")
+        missing = [needed for needed in _imports(name) if not (VIEWER / needed).exists()]
+        assert missing == [], f"{name} imports module(s) that are not there: {missing}"

@@ -24,6 +24,7 @@ upstream's own `.proto` files - it records each file's sha256 - and the
 guard holds `trackevent.py`'s constants against it. Two copies of one
 fact, one of them derived from the schema rather than from memory.
 """
+
 import gzip
 import hashlib
 import json
@@ -64,12 +65,10 @@ def _raw(processes=6, elements=2):
         # that redefines every name it meets.
         cmd = f"cc -c part{index % 3}.c"
         start = 1000.0 + index * 0.1
-        lines.append(f"START pid={pid} ppid=1 ts={start:.6f} "
-                     f"element={element} cmd={cmd}\n")
+        lines.append(f"START pid={pid} ppid=1 ts={start:.6f} element={element} cmd={cmd}\n")
         if index == processes - 1:
-            continue          # no observed exit - an instant, not a bar
-        lines.append(f"END pid={pid} ppid=1 ts={start + 0.5:.6f} "
-                     f"element={element} cmd={cmd}\n")
+            continue  # no observed exit - an instant, not a bar
+        lines.append(f"END pid={pid} ppid=1 ts={start + 0.5:.6f} element={element} cmd={cmd}\n")
     return "".join(lines)
 
 
@@ -108,12 +107,12 @@ def _fields(buf):
             value, index = _varint(buf, index)
         elif wire == 2:
             length, index = _varint(buf, index)
-            value = buf[index:index + length]
+            value = buf[index : index + length]
             index += length
         elif wire == 1:
-            value, index = buf[index:index + 8], index + 8
+            value, index = buf[index : index + 8], index + 8
         elif wire == 5:
-            value, index = buf[index:index + 4], index + 4
+            value, index = buf[index : index + 4], index + 4
         else:
             raise AssertionError(f"unknown wire type {wire} at byte {index}")
         yield field, wire, value
@@ -121,10 +120,8 @@ def _fields(buf):
 
 def decode(path):
     """Tracks, slices and instants, read back out of the bytes."""
-    raw = (gzip.open(path, "rb").read() if str(path).endswith(".gz")
-           else open(path, "rb").read())
-    packets = [value for field, wire, value in _fields(raw)
-               if field == trackevent.TRACE_PACKET and wire == 2]
+    raw = gzip.open(path, "rb").read() if str(path).endswith(".gz") else open(path, "rb").read()
+    packets = [value for field, wire, value in _fields(raw) if field == trackevent.TRACE_PACKET and wire == 2]
     tracks, slices, instants, names, open_stacks = {}, [], [], {}, {}
     flags = []
     for packet in packets:
@@ -179,15 +176,26 @@ def decode(path):
                 open_stacks.setdefault(track, []).append((timestamp, iid))
             elif kind == trackevent.TYPE_SLICE_END:
                 start, started_as = open_stacks[track].pop()
-                slices.append({"track": track, "name": names.get(started_as),
-                               "start_ns": start, "end_ns": timestamp,
-                               "dur_ns": timestamp - start})
+                slices.append(
+                    {
+                        "track": track,
+                        "name": names.get(started_as),
+                        "start_ns": start,
+                        "end_ns": timestamp,
+                        "dur_ns": timestamp - start,
+                    }
+                )
             elif kind == trackevent.TYPE_INSTANT:
-                instants.append({"track": track, "name": names.get(iid),
-                                 "ts": timestamp})
-    return {"packets": len(packets), "tracks": tracks, "slices": slices,
-            "instants": instants, "names": names, "flags": flags,
-            "unclosed": {k: v for k, v in open_stacks.items() if v}}
+                instants.append({"track": track, "name": names.get(iid), "ts": timestamp})
+    return {
+        "packets": len(packets),
+        "tracks": tracks,
+        "slices": slices,
+        "instants": instants,
+        "names": names,
+        "flags": flags,
+        "unclosed": {k: v for k, v in open_stacks.items() if v},
+    }
 
 
 @pytest.fixture(scope="module")
@@ -196,8 +204,7 @@ def rendered(tmp_path_factory):
     snapshot = _snapshot(tmp)
     out = tmp / DEFAULT_OUTPUT[FORMAT_TRACKEVENT]
     result = render(str(snapshot), str(out))
-    return {"snapshot": snapshot, "path": out, "result": result,
-            "trace": decode(out)}
+    return {"snapshot": snapshot, "path": out, "result": result, "trace": decode(out)}
 
 
 class TestTheWireFormatIsTheOneUpstreamDeclares:
@@ -212,114 +219,80 @@ class TestTheWireFormatIsTheOneUpstreamDeclares:
     def test_every_constant_matches_the_schema(self, upstream):
         expected = {
             ("trace.proto", "Trace", "packet"): trackevent.TRACE_PACKET,
-            ("trace_packet.proto", "TracePacket", "timestamp"):
-                trackevent.PACKET_TIMESTAMP,
-            ("trace_packet.proto", "TracePacket", "trusted_packet_sequence_id"):
-                trackevent.PACKET_SEQUENCE_ID,
-            ("trace_packet.proto", "TracePacket", "track_event"):
-                trackevent.PACKET_TRACK_EVENT,
-            ("trace_packet.proto", "TracePacket", "interned_data"):
-                trackevent.PACKET_INTERNED_DATA,
-            ("trace_packet.proto", "TracePacket", "sequence_flags"):
-                trackevent.PACKET_SEQUENCE_FLAGS,
-            ("trace_packet.proto", "TracePacket", "track_descriptor"):
-                trackevent.PACKET_TRACK_DESCRIPTOR,
-            ("trace_packet.proto", "SequenceFlags",
-             "SEQ_INCREMENTAL_STATE_CLEARED"):
-                trackevent.SEQ_INCREMENTAL_STATE_CLEARED,
-            ("trace_packet.proto", "SequenceFlags",
-             "SEQ_NEEDS_INCREMENTAL_STATE"):
-                trackevent.SEQ_NEEDS_INCREMENTAL_STATE,
-            ("track_event.proto", "TrackEvent", "category_iids"):
-                trackevent.EVENT_CATEGORY_IIDS,
+            ("trace_packet.proto", "TracePacket", "timestamp"): trackevent.PACKET_TIMESTAMP,
+            ("trace_packet.proto", "TracePacket", "trusted_packet_sequence_id"): trackevent.PACKET_SEQUENCE_ID,
+            ("trace_packet.proto", "TracePacket", "track_event"): trackevent.PACKET_TRACK_EVENT,
+            ("trace_packet.proto", "TracePacket", "interned_data"): trackevent.PACKET_INTERNED_DATA,
+            ("trace_packet.proto", "TracePacket", "sequence_flags"): trackevent.PACKET_SEQUENCE_FLAGS,
+            ("trace_packet.proto", "TracePacket", "track_descriptor"): trackevent.PACKET_TRACK_DESCRIPTOR,
+            (
+                "trace_packet.proto",
+                "SequenceFlags",
+                "SEQ_INCREMENTAL_STATE_CLEARED",
+            ): trackevent.SEQ_INCREMENTAL_STATE_CLEARED,
+            (
+                "trace_packet.proto",
+                "SequenceFlags",
+                "SEQ_NEEDS_INCREMENTAL_STATE",
+            ): trackevent.SEQ_NEEDS_INCREMENTAL_STATE,
+            ("track_event.proto", "TrackEvent", "category_iids"): trackevent.EVENT_CATEGORY_IIDS,
             ("track_event.proto", "TrackEvent", "type"): trackevent.EVENT_TYPE,
-            ("track_event.proto", "TrackEvent", "name_iid"):
-                trackevent.EVENT_NAME_IID,
-            ("track_event.proto", "TrackEvent", "track_uuid"):
-                trackevent.EVENT_TRACK_UUID,
-            ("track_event.proto", "TrackEvent", "counter_value"):
-                trackevent.EVENT_COUNTER_VALUE,
-            ("track_event.proto", "Type", "TYPE_SLICE_BEGIN"):
-                trackevent.TYPE_SLICE_BEGIN,
-            ("track_event.proto", "Type", "TYPE_SLICE_END"):
-                trackevent.TYPE_SLICE_END,
-            ("track_event.proto", "Type", "TYPE_INSTANT"):
-                trackevent.TYPE_INSTANT,
-            ("track_event.proto", "Type", "TYPE_COUNTER"):
-                trackevent.TYPE_COUNTER,
-            ("track_event.proto", "EventName", "iid"):
-                trackevent.EVENT_NAME_IID_FIELD,
-            ("track_event.proto", "EventName", "name"):
-                trackevent.EVENT_NAME_NAME,
-            ("track_descriptor.proto", "TrackDescriptor", "uuid"):
-                trackevent.TRACK_UUID,
-            ("track_descriptor.proto", "TrackDescriptor", "name"):
-                trackevent.TRACK_NAME,
-            ("track_descriptor.proto", "TrackDescriptor", "process"):
-                trackevent.TRACK_PROCESS,
-            ("track_descriptor.proto", "TrackDescriptor", "thread"):
-                trackevent.TRACK_THREAD,
-            ("track_descriptor.proto", "TrackDescriptor", "parent_uuid"):
-                trackevent.TRACK_PARENT_UUID,
-            ("process_descriptor.proto", "ProcessDescriptor", "pid"):
-                trackevent.PROCESS_PID,
-            ("process_descriptor.proto", "ProcessDescriptor", "process_name"):
-                trackevent.PROCESS_NAME,
-            ("thread_descriptor.proto", "ThreadDescriptor", "pid"):
-                trackevent.THREAD_PID,
-            ("thread_descriptor.proto", "ThreadDescriptor", "tid"):
-                trackevent.THREAD_TID,
-            ("thread_descriptor.proto", "ThreadDescriptor", "thread_name"):
-                trackevent.THREAD_NAME,
-            ("interned_data.proto", "InternedData", "event_names"):
-                trackevent.INTERNED_EVENT_NAMES,
+            ("track_event.proto", "TrackEvent", "name_iid"): trackevent.EVENT_NAME_IID,
+            ("track_event.proto", "TrackEvent", "track_uuid"): trackevent.EVENT_TRACK_UUID,
+            ("track_event.proto", "TrackEvent", "counter_value"): trackevent.EVENT_COUNTER_VALUE,
+            ("track_event.proto", "Type", "TYPE_SLICE_BEGIN"): trackevent.TYPE_SLICE_BEGIN,
+            ("track_event.proto", "Type", "TYPE_SLICE_END"): trackevent.TYPE_SLICE_END,
+            ("track_event.proto", "Type", "TYPE_INSTANT"): trackevent.TYPE_INSTANT,
+            ("track_event.proto", "Type", "TYPE_COUNTER"): trackevent.TYPE_COUNTER,
+            ("track_event.proto", "EventName", "iid"): trackevent.EVENT_NAME_IID_FIELD,
+            ("track_event.proto", "EventName", "name"): trackevent.EVENT_NAME_NAME,
+            ("track_descriptor.proto", "TrackDescriptor", "uuid"): trackevent.TRACK_UUID,
+            ("track_descriptor.proto", "TrackDescriptor", "name"): trackevent.TRACK_NAME,
+            ("track_descriptor.proto", "TrackDescriptor", "process"): trackevent.TRACK_PROCESS,
+            ("track_descriptor.proto", "TrackDescriptor", "thread"): trackevent.TRACK_THREAD,
+            ("track_descriptor.proto", "TrackDescriptor", "parent_uuid"): trackevent.TRACK_PARENT_UUID,
+            ("process_descriptor.proto", "ProcessDescriptor", "pid"): trackevent.PROCESS_PID,
+            ("process_descriptor.proto", "ProcessDescriptor", "process_name"): trackevent.PROCESS_NAME,
+            ("thread_descriptor.proto", "ThreadDescriptor", "pid"): trackevent.THREAD_PID,
+            ("thread_descriptor.proto", "ThreadDescriptor", "tid"): trackevent.THREAD_TID,
+            ("thread_descriptor.proto", "ThreadDescriptor", "thread_name"): trackevent.THREAD_NAME,
+            ("interned_data.proto", "InternedData", "event_names"): trackevent.INTERNED_EVENT_NAMES,
             # UX-308: annotations, categories, and the two interning
             # tables they need.
-            ("track_event.proto", "TrackEvent", "debug_annotations"):
-                trackevent.EVENT_DEBUG_ANNOTATIONS,
-            ("track_event.proto", "EventCategory", "iid"):
-                trackevent.EVENT_CATEGORY_IID_FIELD,
-            ("track_event.proto", "EventCategory", "name"):
-                trackevent.EVENT_CATEGORY_NAME,
-            ("debug_annotation.proto", "DebugAnnotation", "name_iid"):
-                trackevent.ANNOTATION_NAME_IID,
-            ("debug_annotation.proto", "DebugAnnotation", "int_value"):
-                trackevent.ANNOTATION_INT_VALUE,
-            ("debug_annotation.proto", "DebugAnnotation", "string_value"):
-                trackevent.ANNOTATION_STRING_VALUE,
-            ("debug_annotation.proto", "DebugAnnotationName", "iid"):
-                trackevent.DEBUG_ANNOTATION_NAME_IID_FIELD,
-            ("debug_annotation.proto", "DebugAnnotationName", "name"):
-                trackevent.DEBUG_ANNOTATION_NAME_NAME,
-            ("interned_data.proto", "InternedData", "event_categories"):
-                trackevent.INTERNED_EVENT_CATEGORIES,
-            ("interned_data.proto", "InternedData", "debug_annotation_names"):
-                trackevent.INTERNED_DEBUG_ANNOTATION_NAMES,
+            ("track_event.proto", "TrackEvent", "debug_annotations"): trackevent.EVENT_DEBUG_ANNOTATIONS,
+            ("track_event.proto", "EventCategory", "iid"): trackevent.EVENT_CATEGORY_IID_FIELD,
+            ("track_event.proto", "EventCategory", "name"): trackevent.EVENT_CATEGORY_NAME,
+            ("debug_annotation.proto", "DebugAnnotation", "name_iid"): trackevent.ANNOTATION_NAME_IID,
+            ("debug_annotation.proto", "DebugAnnotation", "int_value"): trackevent.ANNOTATION_INT_VALUE,
+            ("debug_annotation.proto", "DebugAnnotation", "string_value"): trackevent.ANNOTATION_STRING_VALUE,
+            ("debug_annotation.proto", "DebugAnnotationName", "iid"): trackevent.DEBUG_ANNOTATION_NAME_IID_FIELD,
+            ("debug_annotation.proto", "DebugAnnotationName", "name"): trackevent.DEBUG_ANNOTATION_NAME_NAME,
+            ("interned_data.proto", "InternedData", "event_categories"): trackevent.INTERNED_EVENT_CATEGORIES,
+            (
+                "interned_data.proto",
+                "InternedData",
+                "debug_annotation_names",
+            ): trackevent.INTERNED_DEBUG_ANNOTATION_NAMES,
             # UX-309: flows. Both `fixed64`, which is a different wire
             # type from every other number pinned here.
-            ("track_event.proto", "TrackEvent", "flow_ids"):
-                trackevent.EVENT_FLOW_IDS,
-            ("track_event.proto", "TrackEvent", "terminating_flow_ids"):
-                trackevent.EVENT_TERMINATING_FLOW_IDS,
+            ("track_event.proto", "TrackEvent", "flow_ids"): trackevent.EVENT_FLOW_IDS,
+            ("track_event.proto", "TrackEvent", "terminating_flow_ids"): trackevent.EVENT_TERMINATING_FLOW_IDS,
             # UX-311: lane order. `sibling_order_rank` is ignored on a
             # process track unless the root descriptor asks for it,
             # which is what the second pair pins.
-            ("track_descriptor.proto", "TrackDescriptor",
-             "sibling_order_rank"): trackevent.TRACK_SIBLING_ORDER_RANK,
-            ("track_descriptor.proto", "TrackDescriptor", "process_ordering"):
-                trackevent.TRACK_PROCESS_ORDERING,
-            ("track_descriptor.proto", "ProcessOrdering",
-             "PROCESS_ORDERING_EXPLICIT"): trackevent.PROCESS_ORDERING_EXPLICIT,
+            ("track_descriptor.proto", "TrackDescriptor", "sibling_order_rank"): trackevent.TRACK_SIBLING_ORDER_RANK,
+            ("track_descriptor.proto", "TrackDescriptor", "process_ordering"): trackevent.TRACK_PROCESS_ORDERING,
+            (
+                "track_descriptor.proto",
+                "ProcessOrdering",
+                "PROCESS_ORDERING_EXPLICIT",
+            ): trackevent.PROCESS_ORDERING_EXPLICIT,
             # UX-310: the counter descriptor, which is what turns
             # `TYPE_COUNTER` from a reserved constant into a graph.
-            ("track_descriptor.proto", "TrackDescriptor", "counter"):
-                trackevent.TRACK_COUNTER,
-            ("counter_descriptor.proto", "CounterDescriptor", "unit"):
-                trackevent.COUNTER_UNIT,
-            ("counter_descriptor.proto", "CounterDescriptor", "unit_name"):
-                trackevent.COUNTER_UNIT_NAME,
-            ("counter_descriptor.proto", "Unit", "UNIT_COUNT"):
-                trackevent.UNIT_COUNT,
+            ("track_descriptor.proto", "TrackDescriptor", "counter"): trackevent.TRACK_COUNTER,
+            ("counter_descriptor.proto", "CounterDescriptor", "unit"): trackevent.COUNTER_UNIT,
+            ("counter_descriptor.proto", "CounterDescriptor", "unit_name"): trackevent.COUNTER_UNIT_NAME,
+            ("counter_descriptor.proto", "Unit", "UNIT_COUNT"): trackevent.UNIT_COUNT,
         }
         wrong = []
         for (proto, block, field), ours in expected.items():
@@ -329,10 +302,8 @@ class TestTheWireFormatIsTheOneUpstreamDeclares:
         assert wrong == [], wrong
         # Non-vacuity: the table above must cover what the module pins,
         # or a constant could drift with nothing noticing.
-        pinned = {name for name in dir(trackevent)
-                  if name.isupper() and not name.startswith("WIRE_")}
-        assert len(expected) >= len(pinned) - 1, (
-            f"{len(pinned)} constants pinned, {len(expected)} checked")
+        pinned = {name for name in dir(trackevent) if name.isupper() and not name.startswith("WIRE_")}
+        assert len(expected) >= len(pinned) - 1, f"{len(pinned)} constants pinned, {len(expected)} checked"
 
     def test_the_fixture_says_where_it_came_from(self, upstream):
         assert "perfetto" in upstream["source"]
@@ -343,9 +314,14 @@ class TestTheWireFormatIsTheOneUpstreamDeclares:
         """The one encoding rule everything else rests on, against
         vectors worked by hand: base 128, low group first, high bit set
         on every group but the last."""
-        for value, encoded in ((0, b"\x00"), (1, b"\x01"), (127, b"\x7f"),
-                               (128, b"\x80\x01"), (300, b"\xac\x02"),
-                               (16384, b"\x80\x80\x01")):
+        for value, encoded in (
+            (0, b"\x00"),
+            (1, b"\x01"),
+            (127, b"\x7f"),
+            (128, b"\x80\x01"),
+            (300, b"\xac\x02"),
+            (16384, b"\x80\x80\x01"),
+        ):
             assert trackevent.varint(value) == encoded, value
         # A length-delimited field is tag, length, bytes - and the tag
         # is (field << 3 | 2).
@@ -353,7 +329,6 @@ class TestTheWireFormatIsTheOneUpstreamDeclares:
 
 
 class TestTheTraceSaysWhatTheCaptureSaw:
-
     def test_both_planes_are_in_it(self, rendered):
         result = rendered["result"]
         assert result["planes"] == ["1", "2"]
@@ -377,8 +352,7 @@ class TestTheTraceSaysWhatTheCaptureSaw:
         assert rendered["trace"]["unclosed"] == {}
         assert rendered["trace"]["slices"], "no slices at all"
 
-    def test_the_plane_2_slices_are_the_processes_the_report_counted(
-            self, rendered, tmp_path):
+    def test_the_plane_2_slices_are_the_processes_the_report_counted(self, rendered, tmp_path):
         """The acceptance test's equality: what the trace draws is what
         the published report counted, element by element - asserted, not
         eyeballed."""
@@ -395,7 +369,7 @@ class TestTheTraceSaysWhatTheCaptureSaw:
             track = tracks[track_uuid]
             parent = tracks.get(track["parent"]) if track["parent"] else None
             name = (parent or track)["name"] or ""
-            return name[len("native: "):] if name.startswith("native: ") else None
+            return name[len("native: ") :] if name.startswith("native: ") else None
 
         drawn = {}
         for event in rendered["trace"]["slices"] + rendered["trace"]["instants"]:
@@ -408,8 +382,7 @@ class TestTheTraceSaysWhatTheCaptureSaw:
     def test_a_process_with_no_observed_exit_is_an_instant(self, rendered):
         """`UX-188`'s rule, carried over: never a zero-width bar and
         never a fabricated end."""
-        instants = [entry for entry in rendered["trace"]["instants"]
-                    if "no observed exit" in (entry["name"] or "")]
+        instants = [entry for entry in rendered["trace"]["instants"] if "no observed exit" in (entry["name"] or "")]
         assert len(instants) == 1, rendered["trace"]["instants"]
         # The other instant is `UX-311`'s run-identity marker, which is
         # a fact about the run rather than a process.
@@ -428,7 +401,8 @@ class TestTheTraceSaysWhatTheCaptureSaw:
         assert len(slices) + len(instants) > len(names), (
             f"{len(slices)} slices and {len(instants)} instants over "
             f"{len(names)} names - this fixture does not repeat a name, so "
-            "it cannot show interning at all")
+            "it cannot show interning at all"
+        )
         for entry in slices:
             assert entry["name"], entry
 
@@ -460,21 +434,20 @@ class TestTheTraceSaysWhatTheCaptureSaw:
         the traced process must land *inside* the element's build task,
         which is the only thing the alignment is for."""
         tracks = rendered["trace"]["tracks"]
-        build = [s for s in rendered["trace"]["slices"]
-                 if (s["name"] or "").startswith("work-a.bst")]
+        build = [s for s in rendered["trace"]["slices"] if (s["name"] or "").startswith("work-a.bst")]
         assert build, "no Plane 1 build slice for the anchor element"
-        native = [s for s in rendered["trace"]["slices"]
-                  if (tracks[tracks[s["track"]]["parent"]]["name"] or "")
-                  == "native: work-a.bst"]
+        native = [
+            s
+            for s in rendered["trace"]["slices"]
+            if (tracks[tracks[s["track"]]["parent"]]["name"] or "") == "native: work-a.bst"
+        ]
         assert native, "no Plane 2 slice for the anchor element"
         task = build[0]
         for entry in native:
-            assert task["start_ns"] <= entry["start_ns"] <= task["end_ns"], (
-                task, entry)
+            assert task["start_ns"] <= entry["start_ns"] <= task["end_ns"], (task, entry)
 
 
 class TestTheBytesAreStable:
-
     def test_the_same_input_twice_is_the_same_trace(self, tmp_path):
         """The acceptance test's digest clause. Gzip stamps a
         modification time into its header, so the comparison is of the
@@ -490,7 +463,6 @@ class TestTheBytesAreStable:
 
 
 class TestTheLegacyPathIsStillThere:
-
     def test_chrome_json_is_still_written_on_request(self, tmp_path):
         """`chrome://tracing` users, and any pipeline that already parses
         the JSON. The item keeps it as the compatibility path, which
@@ -502,8 +474,7 @@ class TestTheLegacyPathIsStillThere:
         events = json.loads(out.read_text(encoding="utf-8"))
         assert any(event.get("ph") == "X" for event in events)
 
-    def test_the_two_formats_place_a_process_at_the_same_instant(
-            self, tmp_path):
+    def test_the_two_formats_place_a_process_at_the_same_instant(self, tmp_path):
         """One number decides whether the planes line up, and both
         formats reach it through the same function. Measured here rather
         than trusted: the same process, the same microsecond."""
@@ -513,15 +484,18 @@ class TestTheLegacyPathIsStillThere:
         render(str(snapshot), str(chrome_path), fmt=FORMAT_CHROME)
         render(str(snapshot), str(trace_path), fmt=FORMAT_TRACKEVENT)
 
-        chrome = {event["name"]: (event["ts"], event["dur"])
-                  for event in json.loads(chrome_path.read_text())
-                  if event.get("ph") == "X"}
+        chrome = {
+            event["name"]: (event["ts"], event["dur"])
+            for event in json.loads(chrome_path.read_text())
+            if event.get("ph") == "X"
+        }
         trace = decode(trace_path)
         tracks = trace["tracks"]
-        native = {s["name"]: (s["start_ns"] / 1000, s["dur_ns"] / 1000)
-                  for s in trace["slices"]
-                  if (tracks[tracks[s["track"]]["parent"]]["name"] or "")
-                  .startswith("native: ")}
+        native = {
+            s["name"]: (s["start_ns"] / 1000, s["dur_ns"] / 1000)
+            for s in trace["slices"]
+            if (tracks[tracks[s["track"]]["parent"]]["name"] or "").startswith("native: ")
+        }
         assert native, "no Plane 2 slices in the TrackEvent trace"
         assert native == {k: v for k, v in chrome.items() if k in native}
 
@@ -563,7 +537,6 @@ STREAM_RSS_CEILING_MB = 120.0
 
 
 class TestTheEmitterStreams:
-
     def test_the_bytes_are_on_disk_before_the_writer_is_closed(self, tmp_path):
         """The discriminating clause. `Trace` is `repeated TracePacket`,
         so a packet is complete the moment it is written and the file is
@@ -582,7 +555,8 @@ class TestTheEmitterStreams:
                 midway = path.stat().st_size
         assert midway > 0, (
             "nothing had reached the file after 10,000 slices - the writer "
-            "is holding the trace rather than streaming it")
+            "is holding the trace rather than streaming it"
+        )
         writer.close()
         assert path.stat().st_size > midway
         assert len(decode(path)["slices"]) == 20_000
@@ -591,10 +565,12 @@ class TestTheEmitterStreams:
         snapshot = _snapshot(tmp_path, raw=_raw(processes=40_000, elements=20))
         out = tmp_path / "big.perfetto-trace.gz"
         done = subprocess.run(
-            [sys.executable, "-c", _MEASURE % {
-                "repo": str(REPO), "snapshot": str(snapshot),
-                "output": str(out)}],
-            capture_output=True, text=True, cwd=REPO, timeout=900)
+            [sys.executable, "-c", _MEASURE % {"repo": str(REPO), "snapshot": str(snapshot), "output": str(out)}],
+            capture_output=True,
+            text=True,
+            cwd=REPO,
+            timeout=900,
+        )
         assert done.returncode == 0, done.stderr[-3000:]
         measured = json.loads(done.stdout.strip().splitlines()[-1])
         assert measured["slices"] >= 40_000, measured

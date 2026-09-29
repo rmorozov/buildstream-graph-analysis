@@ -30,6 +30,7 @@ draws as `4.5 s` and 0.0642 as `6.4%`.
 `configure_phase.note` is the caveat that makes the share a floor, and
 it belongs on `UX-346`'s door rather than in the middle of the figures.
 """
+
 import pathlib
 import sys
 
@@ -72,8 +73,7 @@ def browser():
 def booted(browser, tmp_path_factory):
     """`macro_micro` - the one committed fixture with a Plane 2 report
     beside its run (`UX-359` is why the whole snapshot is copied)."""
-    uri = pages.export_uri(pages.FIXTURES["macro_micro"],
-                           tmp_path_factory.mktemp("u370"))
+    uri = pages.export_uri(pages.FIXTURES["macro_micro"], tmp_path_factory.mktemp("u370"))
     return browser.measure(uri, _LOOK, 1440, 900)
 
 
@@ -90,8 +90,8 @@ class TestTheAnalysisCarriesWhatPlaneTwoMeasured:
         `report.json` and nothing else, so a number left in
         `plane2.json` is a number no reader of the page can reach."""
         assert _report().get(key), (
-            f"{key} is not in analyze/v4 - it is in the Plane 2 report "
-            f"beside the run, which the viewer never loads")
+            f"{key} is not in analyze/v4 - it is in the Plane 2 report beside the run, which the viewer never loads"
+        )
 
     def test_every_measured_element_and_binary_has_a_row(self):
         """A projection into this document's shape, not a copy of the
@@ -105,18 +105,20 @@ class TestTheAnalysisCarriesWhatPlaneTwoMeasured:
         import json
 
         rows = _report()["binary_cost"]
-        native = json.loads(
-            (pages.FIXTURES["macro_micro"].parent / "plane2.json")
-            .read_text(encoding="utf-8"))["binary_cost"]
+        native = json.loads((pages.FIXTURES["macro_micro"].parent / "plane2.json").read_text(encoding="utf-8"))[
+            "binary_cost"
+        ]
         expected = {
             (element, entry["binary"])
-            for element, cost in native.items() if cost.get("available")
+            for element, cost in native.items()
+            if cost.get("available")
             for ranking in ("by_count", "by_cpu")
-            for entry in cost.get(ranking) or []}
+            for entry in cost.get(ranking) or []
+        }
         published = {(row["element"], row["binary"]) for row in rows}
         assert published == expected, (
-            f"missing {sorted(expected - published)[:5]}, "
-            f"invented {sorted(published - expected)[:5]}")
+            f"missing {sorted(expected - published)[:5]}, invented {sorted(published - expected)[:5]}"
+        )
 
     def test_the_numbers_are_the_source_s_numbers(self):
         """Up to one unit conversion. Plane 2 publishes wall-clock in
@@ -128,17 +130,20 @@ class TestTheAnalysisCarriesWhatPlaneTwoMeasured:
         has one."""
         import json
 
-        native = json.loads(
-            (pages.FIXTURES["macro_micro"].parent / "plane2.json")
-            .read_text(encoding="utf-8"))["binary_cost"]
-        by_cpu = {(element, entry["binary"]): entry
-                  for element, cost in native.items() if cost.get("available")
-                  for entry in cost.get("by_cpu") or []}
+        native = json.loads((pages.FIXTURES["macro_micro"].parent / "plane2.json").read_text(encoding="utf-8"))[
+            "binary_cost"
+        ]
+        by_cpu = {
+            (element, entry["binary"]): entry
+            for element, cost in native.items()
+            if cost.get("available")
+            for entry in cost.get("by_cpu") or []
+        }
         checked = 0
         for row in _report()["binary_cost"]:
             source = by_cpu.get((row["element"], row["binary"]))
             if not source:
-                continue                    # ranked by count alone
+                continue  # ranked by count alone
             assert row["cpu_us"] == source["cpu_us"], row
             assert row["cpu_share"] == source["cpu_share"], row
             assert row["calls"] == source["count"], row
@@ -175,8 +180,8 @@ class TestTheNumbersReachTheReader:
     @pytest.mark.parametrize("key", PUBLISHED)
     def test_each_one_is_a_section_on_the_page(self, booted, key):
         assert key in booted["sections"], (
-            f"{key} draws no section; measured before this item: no "
-            f"section matched `binar|configure`")
+            f"{key} draws no section; measured before this item: no section matched `binar|configure`"
+        )
 
     def test_the_configure_cost_is_on_the_page_in_both_axes(self, booted):
         """The round's question, answered: what does configuring cost,
@@ -184,19 +189,15 @@ class TestTheNumbersReachTheReader:
         quantities, so 4,481,317 us reads as seconds."""
         report = _report()
         share = report["configure_phase"]["configure_share"]
-        assert f"{share * 100:.1f}%" in booted["text"], (
-            f"the configure share ({share * 100:.1f}%) is not on the page")
-        assert "4.5 s" in booted["text"], (
-            "the configure CPU does not render as a duration")
+        assert f"{share * 100:.1f}%" in booted["text"], f"the configure share ({share * 100:.1f}%) is not on the page"
+        assert "4.5 s" in booted["text"], "the configure CPU does not render as a duration"
 
     def test_the_frequency_half_is_on_the_page(self, booted):
         """`by_binary` is the count per binary for the whole run - the
         "how often" the question asks for."""
         counts = _report()["by_binary"]
         top = max(counts, key=counts.get)
-        assert str(counts[top]) in booted["text"], (
-            f"{top} ran {counts[top]} times and the count is not on the "
-            f"page")
+        assert str(counts[top]) in booted["text"], f"{top} ran {counts[top]} times and the count is not on the page"
         assert len(counts) >= 5, counts
 
     def test_the_caveat_is_published_with_the_number(self, booted):
@@ -206,8 +207,7 @@ class TestTheNumbersReachTheReader:
         assert note.strip(), "configure_phase publishes no note"
         assert "floor" in note.lower(), note
         head = " ".join(note.split()[:6])
-        assert head in booted["text"], (
-            f"the note is published and not rendered: {head!r}")
+        assert head in booted["text"], f"the note is published and not rendered: {head!r}"
 
 
 if __name__ == "__main__":  # pragma: no cover

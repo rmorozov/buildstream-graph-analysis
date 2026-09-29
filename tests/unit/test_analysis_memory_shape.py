@@ -12,6 +12,7 @@ processes with no observed exit. That shape exercises the one path
 where nothing can be freed during pairing (every START stays pending),
 which is exactly the wrong shape to measure a pairing optimisation on.
 """
+
 import json
 import os
 import subprocess
@@ -97,7 +98,10 @@ def _analyze_in_subprocess(log_path, patch=""):
     """
     completed = subprocess.run(
         [sys.executable, "-c", _ANALYZE.format(patch=patch), log_path],
-        cwd=REPO_ROOT, capture_output=True, text=True, check=True,
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
     )
     return json.loads(completed.stdout.strip().splitlines()[-1])
 
@@ -130,10 +134,26 @@ class TestThePairingReleasesAsItGoes:
 
     def test_a_consuming_pair_empties_the_list_it_was_given(self):
         events = [
-            {"event": "START", "pid": 2, "ppid": 1, "ts": 1.0, "element": "a.bst",
-             "invocation": None, "cmd": "/bin/true", "src": "hook"},
-            {"event": "END", "pid": 2, "ppid": 1, "ts": 2.0, "element": "a.bst",
-             "invocation": None, "cmd": "/bin/true", "src": "hook"},
+            {
+                "event": "START",
+                "pid": 2,
+                "ppid": 1,
+                "ts": 1.0,
+                "element": "a.bst",
+                "invocation": None,
+                "cmd": "/bin/true",
+                "src": "hook",
+            },
+            {
+                "event": "END",
+                "pid": 2,
+                "ppid": 1,
+                "ts": 2.0,
+                "element": "a.bst",
+                "invocation": None,
+                "cmd": "/bin/true",
+                "src": "hook",
+            },
         ]
         records = tracer.pair_events(list(events), consume=False)
         assert len(records) == 1 and not records[0]["open"]
@@ -147,8 +167,16 @@ class TestThePairingReleasesAsItGoes:
     def test_the_default_leaves_its_input_alone(self):
         """Every other caller passes a list it still wants."""
         events = [
-            {"event": "START", "pid": 3, "ppid": 1, "ts": 1.0, "element": "a.bst",
-             "invocation": None, "cmd": "/bin/true", "src": "hook"},
+            {
+                "event": "START",
+                "pid": 3,
+                "ppid": 1,
+                "ts": 1.0,
+                "element": "a.bst",
+                "invocation": None,
+                "cmd": "/bin/true",
+                "src": "hook",
+            },
         ]
         tracer.pair_events(events)
         assert len(events) == 1 and events[0]["pid"] == 3
@@ -159,6 +187,7 @@ class TestTheOpensPassStreamsToo:
         """UX-168 left a `handle.read()` under a comment claiming it
         streamed. Both readers take the handle now, so making the
         string-taking entry points fatal must not break the analysis."""
+
         def refuse(*_args, **_kwargs):
             raise AssertionError("the analysis built a whole-file string")
 
@@ -169,19 +198,20 @@ class TestTheOpensPassStreamsToo:
         assert tracer.load_and_summarize(str(log))["process_count"] == 40
 
     def test_the_streaming_opens_reader_agrees_with_the_string_one(self):
-        text = "\n".join([
-            "START pid=2 ppid=1 ts=1.0 element=a.bst cmd=/usr/bin/cc",
-            "OPENS pid=2 element=a.bst inv=none unique=3 dropped=1",
-            "/usr/include/stdio.h",
-            "/usr/include/stdlib.h",
-            "/usr/lib/libc.so",
-            "END pid=2 ppid=1 ts=2.0 element=a.bst cmd=/usr/bin/cc",
-        ])
+        text = "\n".join(
+            [
+                "START pid=2 ppid=1 ts=1.0 element=a.bst cmd=/usr/bin/cc",
+                "OPENS pid=2 element=a.bst inv=none unique=3 dropped=1",
+                "/usr/include/stdio.h",
+                "/usr/include/stdlib.h",
+                "/usr/lib/libc.so",
+                "END pid=2 ppid=1 ts=2.0 element=a.bst cmd=/usr/bin/cc",
+            ]
+        )
         streamed = tracer.parse_open_lines(iter(text.split("\n")))
         whole = tracer.parse_open_records(text)
         assert streamed == whole
-        assert streamed["a.bst"]["paths"] == {
-            "/usr/include/stdio.h", "/usr/include/stdlib.h", "/usr/lib/libc.so"}
+        assert streamed["a.bst"]["paths"] == {"/usr/include/stdio.h", "/usr/include/stdlib.h", "/usr/lib/libc.so"}
         assert streamed["a.bst"]["dropped"] == 1
 
     def test_a_block_cut_short_stops_at_the_next_record(self):
@@ -195,13 +225,15 @@ class TestTheOpensPassStreamsToo:
         This is the pre-UX-169 reader's behaviour too - the streaming
         rewrite has to keep it.
         """
-        text = "\n".join([
-            "OPENS pid=2 element=a.bst inv=none unique=5 dropped=0",
-            "/usr/include/stdio.h",
-            "START pid=3 ppid=1 ts=9.0 element=b.bst cmd=/usr/bin/ld",
-            "END pid=3 ppid=1 ts=9.5 element=b.bst cmd=/usr/bin/ld",
-            "/stray/path/from/nowhere",
-        ])
+        text = "\n".join(
+            [
+                "OPENS pid=2 element=a.bst inv=none unique=5 dropped=0",
+                "/usr/include/stdio.h",
+                "START pid=3 ppid=1 ts=9.0 element=b.bst cmd=/usr/bin/ld",
+                "END pid=3 ppid=1 ts=9.5 element=b.bst cmd=/usr/bin/ld",
+                "/stray/path/from/nowhere",
+            ]
+        )
         parsed = tracer.parse_open_lines(iter(text.split("\n")))
         assert parsed["a.bst"]["paths"] == {"/usr/include/stdio.h"}, (
             "the dead block kept counting past the records that followed it"
@@ -209,12 +241,14 @@ class TestTheOpensPassStreamsToo:
         assert tracer.parse_open_records(text) == parsed
 
     def test_a_header_arriving_mid_block_ends_the_previous_one(self):
-        text = "\n".join([
-            "OPENS pid=2 element=a.bst inv=none unique=4 dropped=0",
-            "/one",
-            "OPENS pid=3 element=b.bst inv=none unique=1 dropped=0",
-            "/two",
-        ])
+        text = "\n".join(
+            [
+                "OPENS pid=2 element=a.bst inv=none unique=4 dropped=0",
+                "/one",
+                "OPENS pid=3 element=b.bst inv=none unique=1 dropped=0",
+                "/two",
+            ]
+        )
         parsed = tracer.parse_open_lines(iter(text.split("\n")))
         assert parsed["a.bst"]["paths"] == {"/one"}
         assert parsed["b.bst"]["paths"] == {"/two"}

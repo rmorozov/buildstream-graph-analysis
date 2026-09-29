@@ -10,6 +10,7 @@ No network and no aarch64 host needed: everything here is table shape
 and script text, the same class of guard the existing x86_64 pin tests
 already run unconditionally.
 """
+
 import pathlib
 import re
 
@@ -32,8 +33,7 @@ class TestTheStoreFetchAarch64Group:
         group = nix_store_fetch.host_arch("aarch64")
 
         assert group["interpreter_dir"].endswith("-glibc-2.40-224/lib")
-        assert group["interpreter_dir"] != nix_store_fetch.host_arch("x86_64")[
-            "interpreter_dir"]
+        assert group["interpreter_dir"] != nix_store_fetch.host_arch("x86_64")["interpreter_dir"]
 
     def test_an_unrelated_arch_is_still_refused(self):
         """The refusal `nix_store_fetch.host_arch`'s docstring names -
@@ -44,8 +44,7 @@ class TestTheStoreFetchAarch64Group:
 
 class TestTheToolchainAarch64Group:
     def test_the_same_three_packages_are_pinned(self):
-        assert set(nix_toolchain.pins("aarch64")) == set(
-            nix_toolchain.pins("x86_64"))
+        assert set(nix_toolchain.pins("aarch64")) == set(nix_toolchain.pins("x86_64"))
 
     def test_each_root_is_a_store_path_carrying_its_declared_version(self):
         for name, pin in nix_toolchain.pins("aarch64").items():
@@ -59,10 +58,8 @@ class TestTheToolchainAarch64Group:
         aarch64 = nix_toolchain.pins("aarch64")
         x86_64 = nix_toolchain.pins("x86_64")
 
-        assert {n: p["version"] for n, p in aarch64.items()} == {
-            n: p["version"] for n, p in x86_64.items()}
-        assert {p["store_path"] for p in aarch64.values()} != {
-            p["store_path"] for p in x86_64.values()}
+        assert {n: p["version"] for n, p in aarch64.items()} == {n: p["version"] for n, p in x86_64.items()}
+        assert {p["store_path"] for p in aarch64.values()} != {p["store_path"] for p in x86_64.values()}
 
 
 class TestTheStagerReadsTheLoaderFromThePin:
@@ -74,11 +71,9 @@ class TestTheStagerReadsTheLoaderFromThePin:
         text = STAGER.read_text()
 
         assert "$PINNED_LOADER" in text
-        pinned_lookups = [line for line in text.splitlines()
-                          if "INTERPRETER_DIR" in line and "ld-linux" in line]
+        pinned_lookups = [line for line in text.splitlines() if "INTERPRETER_DIR" in line and "ld-linux" in line]
         assert pinned_lookups == []
 
     def test_the_loader_flag_answers_the_pinned_groups_own_name(self, capsys):
-        assert nix_store_fetch.main(
-            ["unused", "--arch", "aarch64", "--loader"]) == 0
+        assert nix_store_fetch.main(["unused", "--arch", "aarch64", "--loader"]) == 0
         assert capsys.readouterr().out.strip() == "ld-linux-aarch64.so.1"

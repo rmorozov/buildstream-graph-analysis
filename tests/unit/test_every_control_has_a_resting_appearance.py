@@ -44,6 +44,7 @@ constraint and that refusal stands: no transition, no shadow, nothing
 that needs a server. A control that looks like the page it is in
 requires no animation.
 """
+
 import collections
 import json
 import pathlib
@@ -64,8 +65,7 @@ from tests.browser import NO_BROWSER, Browser, find_chrome
 
 chrome = find_chrome()
 needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
-needs_node = pytest.mark.skipif(shutil.which("node") is None,
-                                reason="node is not installed")
+needs_node = pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
 
 MACRO = REPO / "tests/fixtures/macro_micro/run"
 
@@ -143,11 +143,13 @@ def _primary_per_chapter(uri, opened):
 @pytest.fixture(scope="module")
 def drawn(tmp_path_factory):
     """Every button's computed appearance, on two pages, one browser."""
-    if chrome is None or shutil.which("node") is None:    # pragma: no cover
+    if chrome is None or shutil.which("node") is None:  # pragma: no cover
         pytest.skip(NO_BROWSER)
     scale = scale_run(tmp_path_factory.mktemp("scale"))
-    pages = {"macro_micro": export_uri(MACRO, tmp_path_factory.mktemp("macro")),
-             "scale": export_uri(scale, tmp_path_factory.mktemp("page"))}
+    pages = {
+        "macro_micro": export_uri(MACRO, tmp_path_factory.mktemp("macro")),
+        "scale": export_uri(scale, tmp_path_factory.mktemp("page")),
+    }
     with Browser(chrome) as opened:
         yield {name: _looks(uri, opened) for name, uri in pages.items()}
 
@@ -155,7 +157,6 @@ def drawn(tmp_path_factory):
 @needs_browser
 @needs_node
 class TestNoControlIsTheBrowsers:
-
     def test_the_pages_really_have_controls(self, drawn):
         """A page that drew none would pass every clause below."""
         for name, looks in drawn.items():
@@ -193,15 +194,14 @@ class TestNoControlIsTheBrowsers:
             assert len(seen) <= len(GRADES), (
                 f"{name}: {len(seen)} distinct control appearances, over the "
                 f"{len(GRADES)} grades §6d names: "
-                f"{json.dumps(sorted(seen), indent=1)[:900]}")
+                f"{json.dumps(sorted(seen), indent=1)[:900]}"
+            )
 
     def test_every_grade_is_actually_used(self, drawn):
         """A grade nothing draws is a rule nobody reads - the same
         emptiness `UX-306` holds the hint table to."""
-        keyed = {(one[0], one[1], one[2]) for looks in drawn.values()
-                 for one in looks}
-        unused = sorted(name for name, look in GRADES.items()
-                        if look not in keyed)
+        keyed = {(one[0], one[1], one[2]) for looks in drawn.values() for one in looks}
+        unused = sorted(name for name, look in GRADES.items() if look not in keyed)
         assert unused == [], unused
 
     def test_no_control_animates_or_casts_a_shadow(self, drawn):
@@ -209,8 +209,7 @@ class TestNoControlIsTheBrowsers:
         gave controls a resting appearance and spent nothing on motion.
         """
         for name, looks in drawn.items():
-            moving = [one for one in looks
-                      if one[6] not in ("0s", "0s, 0s", "") or one[7] != "none"]
+            moving = [one for one in looks if one[6] not in ("0s", "0s, 0s", "") or one[7] != "none"]
             assert moving == [], (name, moving[:2])
 
     def test_at_most_one_primary_control_per_chapter(self, tmp_path_factory):
@@ -218,8 +217,10 @@ class TestNoControlIsTheBrowsers:
         this - a chapter with no runnable next step wears no primary
         rather than a promoted lesser control."""
         scale = scale_run(tmp_path_factory.mktemp("primary-scale"))
-        pages = {"macro_micro": export_uri(MACRO, tmp_path_factory.mktemp("primary-macro")),
-                 "scale": export_uri(scale, tmp_path_factory.mktemp("primary-page"))}
+        pages = {
+            "macro_micro": export_uri(MACRO, tmp_path_factory.mktemp("primary-macro")),
+            "scale": export_uri(scale, tmp_path_factory.mktemp("primary-page")),
+        }
         with Browser(chrome) as opened:
             for name, uri in pages.items():
                 counts = _primary_per_chapter(uri, opened)
@@ -233,7 +234,9 @@ class TestNoControlIsTheBrowsers:
 #: `path-more` is excluded on purpose: it reveals once and hides
 #: itself rather than toggling back, so it is not this shape.
 DISCLOSURE_BUTTONS = (
-    "button.collapse", "button.json-toggle", "button.chapter-open",
+    "button.collapse",
+    "button.json-toggle",
+    "button.chapter-open",
     "button.twin-toggle",
 )
 
@@ -266,11 +269,12 @@ def disclosures(tmp_path_factory):
     `@needs_node` already skip every test that would request this
     fixture, so a second `NO_BROWSER` site would count nothing new."""
     scale = scale_run(tmp_path_factory.mktemp("scale-834"))
-    pages = {"macro_micro": export_uri(MACRO, tmp_path_factory.mktemp("macro-834")),
-             "scale": export_uri(scale, tmp_path_factory.mktemp("page-834"))}
+    pages = {
+        "macro_micro": export_uri(MACRO, tmp_path_factory.mktemp("macro-834")),
+        "scale": export_uri(scale, tmp_path_factory.mktemp("page-834")),
+    }
     with Browser(chrome) as opened:
-        yield {name: json.loads(opened.observe(uri, DISCLOSURE_JS)["value"])
-               for name, uri in pages.items()}
+        yield {name: json.loads(opened.observe(uri, DISCLOSURE_JS)["value"]) for name, uri in pages.items()}
 
 
 @needs_browser
@@ -286,7 +290,7 @@ class TestDisclosuresAndLinksAreLegible:
             for sel in DISCLOSURE_BUTTONS:
                 state = found.get(sel)
                 if state is None:
-                    continue    # not every page carries every control
+                    continue  # not every page carries every control
                 assert state["before"] in ("true", "false"), (name, sel, state)
                 assert state["after"] != state["before"], (name, sel, state)
                 assert state["restored"] == state["before"], (name, sel, state)
@@ -324,13 +328,12 @@ def _rgb(hexvalue):
     hexvalue = hexvalue.lstrip("#")
     if len(hexvalue) == 3:
         hexvalue = "".join(c * 2 for c in hexvalue)
-    r, g, b = (int(hexvalue[i:i + 2], 16) for i in (0, 2, 4))
+    r, g, b = (int(hexvalue[i : i + 2], 16) for i in (0, 2, 4))
     return f"rgb({r}, {g}, {b})"
 
 
 _CSS = _ROOT.read_text(encoding="utf-8")
-_TOKENS = {"dark": _root_tokens(_CSS),
-           "light": _root_tokens(_CSS, "@media (prefers-color-scheme: light)")}
+_TOKENS = {"dark": _root_tokens(_CSS), "light": _root_tokens(_CSS, "@media (prefers-color-scheme: light)")}
 
 #: The three looks a `select` or text `input` renders in today, keyed
 #: on (background, border-style, border-radius) - border color is
@@ -380,17 +383,17 @@ CHECKBOX_JS = """
 def form_reads(tmp_path_factory):
     """`{scheme: {page: {"forms": [...], "checkboxes": [...]}}}` -
     `golden` and `macro_micro`, light and dark, one browser."""
-    if chrome is None or shutil.which("node") is None:    # pragma: no cover
+    if chrome is None or shutil.which("node") is None:  # pragma: no cover
         pytest.skip(NO_BROWSER)
     uris = fixture_pages(tmp_path_factory, prefix="forms")
     out = {}
     with Browser(chrome) as opened:
         for scheme in ("light", "dark"):
             out[scheme] = {
-                name: {key: [tuple(row) for row in json.loads(
-                    opened.observe(uri, js, scheme=scheme)["value"])]
-                       for key, js in (("forms", FORM_JS),
-                                       ("checkboxes", CHECKBOX_JS))}
+                name: {
+                    key: [tuple(row) for row in json.loads(opened.observe(uri, js, scheme=scheme)["value"])]
+                    for key, js in (("forms", FORM_JS), ("checkboxes", CHECKBOX_JS))
+                }
                 for name, uri in uris.items()
             }
     return out
@@ -399,8 +402,7 @@ def form_reads(tmp_path_factory):
 @pytest.fixture(scope="module")
 def forms(form_reads):
     """`{scheme: {page: [(name, background, border-style, radius), ...]}}`."""
-    return {scheme: {page: reads["forms"] for page, reads in pages_.items()}
-            for scheme, pages_ in form_reads.items()}
+    return {scheme: {page: reads["forms"] for page, reads in pages_.items()} for scheme, pages_ in form_reads.items()}
 
 
 @needs_browser
@@ -424,9 +426,9 @@ class TestEverySelectAndTextInputRests:
         for scheme, pages_ in forms.items():
             named = set(FORM_LOOKS[scheme].values())
             for page, rows in pages_.items():
-                stray = sorted((name, bg, style, radius)
-                                for name, bg, style, radius in rows
-                                if (bg, style, radius) not in named)
+                stray = sorted(
+                    (name, bg, style, radius) for name, bg, style, radius in rows if (bg, style, radius) not in named
+                )
                 assert stray == [], (scheme, page, stray)
 
     def test_the_preset_view_wears_the_form_control_look(self, forms):
@@ -435,8 +437,7 @@ class TestEverySelectAndTextInputRests:
         for scheme, pages_ in forms.items():
             wanted = FORM_LOOKS[scheme]["form-control"]
             for page, rows in pages_.items():
-                found = {name: (bg, style, radius)
-                         for name, bg, style, radius in rows}
+                found = {name: (bg, style, radius) for name, bg, style, radius in rows}
                 preset = [name for name in found if "preset-view" in name]
                 assert preset, (scheme, page, sorted(found))
                 for name in preset:
@@ -447,8 +448,7 @@ class TestEverySelectAndTextInputRests:
         `UX-369`'s own claim, checked rather than assumed."""
         for scheme, pages_ in forms.items():
             for page, rows in pages_.items():
-                found = {name: (bg, style, radius)
-                         for name, bg, style, radius in rows}
+                found = {name: (bg, style, radius) for name, bg, style, radius in rows}
                 top_n = [v for k, v in found.items() if "top-n" in k]
                 preset = [v for k, v in found.items() if "preset-view" in k]
                 if top_n and preset:

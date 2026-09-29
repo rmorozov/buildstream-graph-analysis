@@ -34,6 +34,7 @@ Chrome does (`width: 50%;`), measured rather than assumed. That is the
 third instrument defect in three rounds (`UX-235`, `UX-262`), and
 `UX-264` is the argument about the 25 copies of it.
 """
+
 import pathlib
 import re
 
@@ -63,6 +64,7 @@ _ENTRY_MODULES = ("app.js", "perfetto_page.js")
 def _imports(path):
     """The viewer modules one module imports, by relative path."""
     import re
+
     source = path.read_text(encoding="utf-8")
     return re.findall(r'from\s+"\./([A-Za-z0-9_]+\.js)"', source)
 
@@ -72,15 +74,19 @@ class TestNothingWritesAStyleAttribute:
         offenders = {}
         for path in sorted(VIEWER.glob("*.js")):
             code = _code(path.read_text(encoding="utf-8"))
-            hits = [n + 1 for n, line in enumerate(code.splitlines())
-                    if re.search(r'setAttribute\(\s*["\']style["\']', line)]
+            hits = [
+                n + 1
+                for n, line in enumerate(code.splitlines())
+                if re.search(r'setAttribute\(\s*["\']style["\']', line)
+            ]
             if hits:
                 offenders[path.name] = hits
         assert offenders == {}, (
             f"a style *attribute* is inline style and the viewer's own CSP "
             f"refuses it, so the declaration never applies: {offenders}. Use "
             f"`el.style.prop = ...`, or `el.style.setProperty(...)` for a "
-            f"custom property (UX-263).")
+            f"custom property (UX-263)."
+        )
 
     def test_no_served_page_carries_inline_style(self):
         """Every page, not one. `UX-266`: this used to read
@@ -126,14 +132,14 @@ class TestNoPageRunsAnInlineScript:
         assert offenders == {}, (
             f"inline <script> in {offenders}. The server sends "
             f"`default-src 'self'`, which refuses it - the page loads and "
-            f"does nothing at all (UX-266).")
+            f"does nothing at all (UX-266)."
+        )
 
     def test_every_page_still_runs_something(self):
         """The other direction, and the one that matters: a page with
         no script at all would also pass the ban above. Each served
         page names the module that drives it."""
-        expected = {"index.html": "app.js",
-                    "perfetto.html": "perfetto_page.js"}
+        expected = {"index.html": "app.js", "perfetto.html": "perfetto_page.js"}
         for name, module in expected.items():
             html = (VIEWER / name).read_text(encoding="utf-8")
             assert f'src="{module}"' in html, f"{name} no longer loads {module}"
@@ -145,8 +151,8 @@ class TestNoPageRunsAnInlineScript:
         # property being defended.
         redirect = (VIEWER / "sql.html").read_text(encoding="utf-8")
         assert "<script" not in redirect and 'http-equiv="refresh"' in redirect, (
-            "sql.html neither runs a module nor redirects, so it is the "
-            "blank page this clause exists to catch")
+            "sql.html neither runs a module nor redirects, so it is the blank page this clause exists to catch"
+        )
 
     def test_every_page_script_is_served(self):
         """A module the server does not list is a 404, which is the
@@ -169,8 +175,8 @@ class TestNoPageRunsAnInlineScript:
         # nothing said why.
         assets = server.split("ASSETS = (", 1)[1].split("\n)", 1)[0]
         assert assets.count("\n") > 20, (
-            "the ASSETS slice stops early again; it is reading part of the "
-            "tuple and will report the rest as missing")
+            "the ASSETS slice stops early again; it is reading part of the tuple and will report the rest as missing"
+        )
         wanted, seen = list(_ENTRY_MODULES), set()
         while wanted:
             module = wanted.pop()
@@ -178,8 +184,8 @@ class TestNoPageRunsAnInlineScript:
                 continue
             seen.add(module)
             assert f'"{module}"' in assets, (
-                f"{module} is imported by a served page and is not in "
-                f"ASSETS - the browser 404s on it and the page dies")
+                f"{module} is imported by a served page and is not in ASSETS - the browser 404s on it and the page dies"
+            )
             wanted.extend(_imports(VIEWER / module))
         # The traversal has to have gone somewhere: an import regex that
         # matched nothing would leave this checking three names.
@@ -191,16 +197,19 @@ class TestNoPageRunsAnInlineScript:
         # `UX-337`: `bar` - and `fill.style.width` with it - moved to
         # `primitives.js`, the module the chapters sit on. The
         # encodings are what this defends, not the filename.
-        code = _code("\n".join(
-            (VIEWER / name).read_text(encoding="utf-8")
-            for name in ("views.js", "element.js", "decision.js",
-                         "primitives.js")))
-        for expected in ("fill.style.width", "box.style.flexGrow",
-                         "row.style.paddingLeft",
-                         'bar.style.setProperty("--w"'):
-            assert expected in code, (
-                f"{expected} is gone - the width channel it carries is not "
-                f"drawn any more (UX-263)")
+        code = _code(
+            "\n".join(
+                (VIEWER / name).read_text(encoding="utf-8")
+                for name in ("views.js", "element.js", "decision.js", "primitives.js")
+            )
+        )
+        for expected in (
+            "fill.style.width",
+            "box.style.flexGrow",
+            "row.style.paddingLeft",
+            'bar.style.setProperty("--w"',
+        ):
+            assert expected in code, f"{expected} is gone - the width channel it carries is not drawn any more (UX-263)"
 
 
 class TestThePolicyItselfStaysStrict:
@@ -214,7 +223,8 @@ class TestThePolicyItselfStaysStrict:
         assert "unsafe-inline" not in SERVER, (
             "the CSP was relaxed rather than the page fixed. The report "
             "renders element names and paths from a build; UX-263 chose "
-            "CSSOM over weakening the policy")
+            "CSSOM over weakening the policy"
+        )
         assert "unsafe-eval" not in SERVER
 
 
@@ -241,7 +251,8 @@ class TestTheShimAgreesWithTheBrowser:
         assert "styleFor" in shim, (
             "the shared DOM shim no longer reflects `.style` writes into the "
             "style attribute, so it reports success where a browser refuses "
-            "(UX-263)")
+            "(UX-263)"
+        )
         assert "node.attrs.style" in shim
 
     def test_no_harness_carries_the_swallowing_stub(self):
@@ -253,8 +264,7 @@ class TestTheShimAgreesWithTheBrowser:
         # than Python docstrings. Ninth and tenth instance of a grep
         # finding its own argument (`UX-239`); named rather than
         # papered over with a looser pattern.
-        arguing = {"test_the_page_obeys_its_own_policy.py",
-                   "test_the_dom_shim_is_one_instrument.py"}
+        arguing = {"test_the_page_obeys_its_own_policy.py", "test_the_dom_shim_is_one_instrument.py"}
         for path in sorted((REPO / "tests/unit").glob("*.py")):
             if path.name in arguing:
                 continue
@@ -291,11 +301,14 @@ console.log(JSON.stringify({width: a.attrs.style, flexGrow: b.attrs.style,
   custom: c.attrs.style, two: d.attrs.style, empty: e.attrs.style ?? null}));
 """
         import os
+
         done = subprocess.run(
             [node, "--input-type=module", "-e", script],
-            capture_output=True, text=True, timeout=60,
-            env={**os.environ,
-                 "BGA_DOM_SHIM": (REPO / "tests/dom_shim.mjs").as_uri()})
+            capture_output=True,
+            text=True,
+            timeout=60,
+            env={**os.environ, "BGA_DOM_SHIM": (REPO / "tests/dom_shim.mjs").as_uri()},
+        )
         assert done.returncode == 0, done.stderr
         assert json.loads(done.stdout) == {
             "width": "width: 50%;",

@@ -41,6 +41,7 @@ reads. A field a consumer has to resolve through a second list is a
 field the consumer stops resolving, which is the defect above stated
 as a rule.
 """
+
 import pathlib
 import sys
 
@@ -94,8 +95,7 @@ def timeline_page(tmp_path_factory):
     that measured only those would read zero and call it right. That is
     how the first pass at this measurement nearly went.
     """
-    return pages.export_uri(pages.WITH_TIMELINE,
-                            tmp_path_factory.mktemp("u368-wt"))
+    return pages.export_uri(pages.WITH_TIMELINE, tmp_path_factory.mktemp("u368-wt"))
 
 
 def _published(fixture):
@@ -116,13 +116,13 @@ class TestTheMappingReachesTheFinding:
             # `trace_query` is its first - what the button opens.
             declared = TRACE_QUERIES[finding["id"]]
             assert finding.get("trace_query") == declared[0], (
-                f"{finding['id']} carries {finding.get('trace_query')!r} and "
-                f"the table says {declared!r}")
-            assert finding.get("trace_queries") == (
-                list(declared) if len(declared) > 1 else None), (
+                f"{finding['id']} carries {finding.get('trace_query')!r} and the table says {declared!r}"
+            )
+            assert finding.get("trace_queries") == (list(declared) if len(declared) > 1 else None), (
                 f"{finding['id']} carries "
                 f"{finding.get('trace_queries')!r} for its other grains "
-                f"and the table says {declared!r}")
+                f"and the table says {declared!r}"
+            )
 
     def test_a_finding_nothing_answers_says_so_rather_than_guessing(self):
         """`UX-321`: null is published, not omitted, and no query is
@@ -137,41 +137,38 @@ class TestTheMappingReachesTheFinding:
             assert finding["trace_query"] is None, (
                 f"{finding['id']} is not in the table and carries "
                 f"{finding['trace_query']!r} - a guessed query is worse "
-                f"than none")
+                f"than none"
+            )
 
 
 @needs_browser
 @pytest.mark.medium
 class TestTheButtonIsDrawnWhereTheFindingIs:
-    def test_the_findings_that_earn_a_button_get_one(self, browser,
-                                                     timeline_page):
+    def test_the_findings_that_earn_a_button_get_one(self, browser, timeline_page):
         """The defect, as a page. Zero before this item, over a capture
         whose handoff button works."""
         from bga.provenance import TRACE_QUERIES
 
-        earned = [f["id"] for f in _published(pages.WITH_TIMELINE)
-                  if f["id"] in TRACE_QUERIES]
+        earned = [f["id"] for f in _published(pages.WITH_TIMELINE) if f["id"] in TRACE_QUERIES]
         out = browser.measure(timeline_page, _LOOK, 1440, 900)
         assert out["handoff"], (
             "this fixture's handoff button is missing, so a count of "
             "zero investigate boxes would be the dead-control rule "
-            "rather than this defect")
+            "rather than this defect"
+        )
         assert out["count"] >= len(earned), (
-            f"{out['count']} Investigate boxes for {len(earned)} findings "
-            f"the table answers: {earned}")
+            f"{out['count']} Investigate boxes for {len(earned)} findings the table answers: {earned}"
+        )
 
-    def test_the_queries_differ_between_findings(self, browser,
-                                                 timeline_page):
+    def test_the_queries_differ_between_findings(self, browser, timeline_page):
         """The other direction, so the fix cannot be a decoration. One
         query pasted onto every finding passes a "has a query" clause
         and helps nobody."""
         out = browser.measure(timeline_page, _LOOK, 1440, 900)
         assert len(set(out["queries"])) > 1, out["queries"]
-        assert len(set(out["sql"])) > 1, (
-            "every Investigate box carries the same SQL")
+        assert len(set(out["sql"])) > 1, "every Investigate box carries the same SQL"
 
-    def test_an_element_scoped_query_names_this_run_s_element(
-            self, browser, timeline_page):
+    def test_an_element_scoped_query_names_this_run_s_element(self, browser, timeline_page):
         """`UX-369`'s substitution, reached from a finding. A query
         that takes an element gets the finding's own first element;
         one that does not is left alone rather than given a name its
@@ -180,45 +177,44 @@ class TestTheButtonIsDrawnWhereTheFindingIs:
         import subprocess
 
         out = browser.measure(timeline_page, _LOOK, 1440, 900)
-        takes = json.loads(subprocess.run(
-            [__import__("shutil").which("node"), "--input-type=module", "-e",
-             'const q = await import("./bga/viewer/questions.js");'
-             "console.log(JSON.stringify(q.QUESTIONS.filter(q.takesElement)"
-             "  .map((x) => x.id)));"],
-            capture_output=True, text=True, cwd=str(REPO),
-            timeout=60).stdout)
-        scoped = [(q, e, s) for q, e, s in
-                  zip(out["queries"], out["elements"], out["sql"])
-                  if q in takes]
+        takes = json.loads(
+            subprocess.run(
+                [
+                    __import__("shutil").which("node"),
+                    "--input-type=module",
+                    "-e",
+                    'const q = await import("./bga/viewer/questions.js");'
+                    "console.log(JSON.stringify(q.QUESTIONS.filter(q.takesElement)"
+                    "  .map((x) => x.id)));",
+                ],
+                capture_output=True,
+                text=True,
+                cwd=str(REPO),
+                timeout=60,
+            ).stdout
+        )
+        scoped = [(q, e, s) for q, e, s in zip(out["queries"], out["elements"], out["sql"]) if q in takes]
         assert scoped, f"no element-scoped query is reachable: {out['queries']}"
         for query, element, sql in scoped:
             assert element, f"{query} takes an element and was given none"
             assert f"'{element}'" in sql, (query, element)
-        for query, element, sql in zip(out["queries"], out["elements"],
-                                       out["sql"]):
-            assert "= ''" not in sql, (
-                f"{query} renders an empty substitution - a query that "
-                f"runs and returns nothing")
+        for query, element, sql in zip(out["queries"], out["elements"], out["sql"]):
+            assert "= ''" not in sql, f"{query} renders an empty substitution - a query that runs and returns nothing"
             if query not in takes:
-                assert not element, (
-                    f"{query} does not ask about an element and was given "
-                    f"{element!r}")
+                assert not element, f"{query} does not ask about an element and was given {element!r}"
 
     @pytest.mark.parametrize("label", sorted(pages.FIXTURES))
-    def test_no_timeline_still_means_no_button(self, browser,
-                                               tmp_path_factory, label):
+    def test_no_timeline_still_means_no_button(self, browser, tmp_path_factory, label):
         """`UX-194`'s dead-control rule, unbroken by this item: the
         query exists on the finding either way, and the button does not
         appear where there is nothing to open."""
-        uri = pages.export_uri(pages.FIXTURES[label],
-                               tmp_path_factory.mktemp(f"u368-{label}"))
+        uri = pages.export_uri(pages.FIXTURES[label], tmp_path_factory.mktemp(f"u368-{label}"))
         out = browser.measure(uri, _LOOK, 1440, 900)
         assert not out["handoff"], f"{label} unexpectedly has a timeline"
         assert out["count"] == 0, out["queries"]
-        assert any(f.get("trace_query")
-                   for f in _published(pages.FIXTURES[label])), (
-            "the finding should still carry its query - the button is "
-            "what is conditional, not the mapping")
+        assert any(f.get("trace_query") for f in _published(pages.FIXTURES[label])), (
+            "the finding should still carry its query - the button is what is conditional, not the mapping"
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

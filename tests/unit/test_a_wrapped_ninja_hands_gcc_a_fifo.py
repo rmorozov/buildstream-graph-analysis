@@ -1,6 +1,7 @@
 """UX-1006: behind the token-holding wrapper, ninja passes MAKEFLAGS to
 gcc untouched, and gcc's lto1 deadlocks on a raw blocking fd pair - so an
 old ninja's element gets a `fifo:` path, which lto1 opens non-blocking."""
+
 import os
 
 from tests.unit.test_a_compiler_lto_shim_fills_the_box import BIND_DST, _bst_args, _makeflags_value
@@ -22,10 +23,17 @@ def _argv(tmp_path, monkeypatch, make_version):
     read_fd, write_fd = os.pipe()
     try:
         return build_shim_argv(
-            real_bwrap=fake, bst_args=_bst_args("git-minimal"), bind_src=bind_src,
-            bind_dst=BIND_DST, preload_so=f"{BIND_DST}/hook.so",
-            trace_log=f"{BIND_DST}/trace.log", jobserver_fd=read_fd, element_kind="meson",
-            ninja_probe=probe_ninja(fake, [], None), wrapper_dir=str(wrappers))
+            real_bwrap=fake,
+            bst_args=_bst_args("git-minimal"),
+            bind_src=bind_src,
+            bind_dst=BIND_DST,
+            preload_so=f"{BIND_DST}/hook.so",
+            trace_log=f"{BIND_DST}/trace.log",
+            jobserver_fd=read_fd,
+            element_kind="meson",
+            ninja_probe=probe_ninja(fake, [], None),
+            wrapper_dir=str(wrappers),
+        )
     finally:
         os.close(read_fd)
         os.close(write_fd)

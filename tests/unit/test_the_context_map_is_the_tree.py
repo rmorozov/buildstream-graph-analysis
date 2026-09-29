@@ -18,6 +18,7 @@ A map that is confidently wrong exactly where confidence was requested
 costs more than no map. So it is checked against the tree, both
 directions.
 """
+
 import argparse
 import functools
 import pathlib
@@ -29,7 +30,6 @@ import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 GUIDE = REPO / "docs/contributing/fixing-guide.md"
-CLOSED = REPO / "docs/backlog/scenarios/closed.md"
 
 #: `UX-780`: a citation with no `(open)` beside it reads as closed.
 #: `UX-786`: a slash group (`UX-698/699/787`) shares its `UX-` prefix
@@ -55,15 +55,14 @@ def _map_paths(text, tracked=None):
     opening = set(MAP_ENTRY_PATH.findall(text))
     roots = sorted({rel.split("/", 1)[0] for rel in tracked if "/" in rel})
     alternation = "|".join(re.escape(root) for root in roots)
-    mid_line = set(re.findall(
-        rf"(?<![\w./-])((?:{alternation})/[\w./-]+)", text))
+    mid_line = set(re.findall(rf"(?<![\w./-])((?:{alternation})/[\w./-]+)", text))
     return opening | mid_line
+
 
 # Modules small enough or private enough that naming each one would make
 # the map longer without making it more useful. Each is *reachable* -
 # `bga/__init__.py` is not a place anyone needs directing to.
-NOT_ON_THE_MAP = {"bga/__init__.py", "tools/__init__.py",
-                  "tools/native_trace/__init__.py"}
+NOT_ON_THE_MAP = {"bga/__init__.py", "tools/__init__.py", "tools/native_trace/__init__.py"}
 
 # `UX-573`: what `tools/` and `bga/viewer/` are made of. The walk was
 # `tools/*.py` non-recursively, so `hook.c`, `spine.c`, `trackevent.py`
@@ -72,9 +71,11 @@ NOT_ON_THE_MAP = {"bga/__init__.py", "tools/__init__.py",
 # `UX-746`: `.github/workflows/` was on no root at all, so the walk
 # never reached it in either direction - two of its four files shipped
 # with no document naming either.
-MAPPED_SUFFIXES = {"tools/": (".py", ".c", ".h", ".sh"),
-                   "bga/viewer/": (".js", ".html", ".css"),
-                   ".github/workflows/": (".yml",)}
+MAPPED_SUFFIXES = {
+    "tools/": (".py", ".c", ".h", ".sh"),
+    "bga/viewer/": (".js", ".html", ".css"),
+    ".github/workflows/": (".yml",),
+}
 
 # `UX-274`: the guard above globbed `bga/` and `tools/` and nothing else,
 # so the map's **Tests and docs** block was unguarded prose from the day
@@ -146,11 +147,9 @@ def _format_row():
     The map's only capability vocabulary. Everything left of the ` - `
     is the list; the description after it is prose.
     """
-    rows = [line for line in _map_text().splitlines()
-            if line.startswith(FORMAT_ROW)]
-    assert len(rows) == 1, (
-        f"section 6 should carry exactly one `{FORMAT_ROW}` row: {rows}")
-    listed = rows[0][len(FORMAT_ROW):].split(" - ", 1)[0]
+    rows = [line for line in _map_text().splitlines() if line.startswith(FORMAT_ROW)]
+    assert len(rows) == 1, f"section 6 should carry exactly one `{FORMAT_ROW}` row: {rows}"
+    listed = rows[0][len(FORMAT_ROW) :].split(" - ", 1)[0]
     return [word.strip() for word in listed.split(",") if word.strip()]
 
 
@@ -163,8 +162,7 @@ def _command_rows():
     keyed by its heading rather than by a line prefix.
     """
     section = _section_six()
-    assert COMMAND_HEADING in section, (
-        f"section 6 has no command block: {COMMAND_HEADING}")
+    assert COMMAND_HEADING in section, f"section 6 has no command block: {COMMAND_HEADING}"
     fence = section.split(COMMAND_HEADING, 1)[1].split("```")[1]
     rows = {}
     for line in fence.split("\n", 1)[1].splitlines():
@@ -182,7 +180,7 @@ def _row_for(text, path):
     if start is None:
         return None
     row = [lines[start]]
-    for line in lines[start + 1:]:
+    for line in lines[start + 1 :]:
         if not line.strip() or not line[:1].isspace():
             break
         row.append(line)
@@ -199,7 +197,7 @@ def _tools_population():
     for rel in sorted(_tracked()):
         if not (rel.startswith("tools/dev_") and rel.endswith(".py")):
             continue
-        module = importlib.import_module("tools." + rel[len("tools/"):-len(".py")])
+        module = importlib.import_module("tools." + rel[len("tools/") : -len(".py")])
         tools = getattr(module, "TOOLS", None)
         if tools:
             out.append((rel, sorted(tools)))
@@ -271,13 +269,11 @@ def _path_lists(text):
 #: §6 writes `cold/structural analysis` and `.bga/runs`, which are
 #: English and a directory a build makes, not entries in a list.
 PATH_ROOTS = ("bga/", "tools/", "tests/", "docs/", "examples/")
-PATH_SUFFIXES = (".py", ".c", ".h", ".sh", ".js", ".mjs", ".html", ".css",
-                 ".json", ".md", ".toml", ".yml")
+PATH_SUFFIXES = (".py", ".c", ".h", ".sh", ".js", ".mjs", ".html", ".css", ".json", ".md", ".toml", ".yml")
 
 
 def _looks_like_a_path(word):
-    return bool(re.fullmatch(r"[\w./-]+", word)) and (
-        word.startswith(PATH_ROOTS) or word.endswith(PATH_SUFFIXES))
+    return bool(re.fullmatch(r"[\w./-]+", word)) and (word.startswith(PATH_ROOTS) or word.endswith(PATH_SUFFIXES))
 
 
 @functools.lru_cache(maxsize=1)
@@ -290,8 +286,7 @@ def _tracked() -> tuple[str, ...]:
     tree's. That defect landed and was fixed twice in round 83, and
     this walk is the widest one in the suite.
     """
-    out = subprocess.run(["git", "ls-files"], cwd=REPO, check=True,
-                         capture_output=True, text=True).stdout
+    out = subprocess.run(["git", "ls-files"], cwd=REPO, check=True, capture_output=True, text=True).stdout
     return tuple(out.splitlines())
 
 
@@ -318,8 +313,9 @@ def _real_modules(tracked: Optional[tuple[str, ...]] = None):
                 modules.add(rel)
         elif rel.startswith("bga/") and rel.count("/") == 1 and rel.endswith(".py"):
             modules.add(rel)
-        elif (rel.count("/") == 2 and rel.startswith("bga/")
-              and rel.endswith(".py") and not rel.endswith("/__init__.py")):
+        elif (
+            rel.count("/") == 2 and rel.startswith("bga/") and rel.endswith(".py") and not rel.endswith("/__init__.py")
+        ):
             # The package's own `__init__.py` is reachable from its row;
             # what needs a row of its own is each module beside it.
             modules.add(rel)
@@ -336,8 +332,7 @@ def _real_test_entries(root=REPO):
     entries = set()
     for path in sorted((root / "tests").iterdir()):
         rel = path.relative_to(root).as_posix()
-        if (rel in NOT_IN_TESTS or path.name in BUILD_ARTEFACTS
-                or path.name.startswith(".")):
+        if rel in NOT_IN_TESTS or path.name in BUILD_ARTEFACTS or path.name.startswith("."):
             continue
         entries.add(rel + "/" if path.is_dir() else rel)
     return entries
@@ -350,8 +345,7 @@ def _stale(names):
 
 def _named(text, name):
     """The map names an entry if it names the path or its basename."""
-    return (name in text
-            or name.rstrip("/").split("/")[-1].removesuffix(".py") in text)
+    return name in text or name.rstrip("/").split("/")[-1].removesuffix(".py") in text
 
 
 def _file_statuses():
@@ -362,8 +356,7 @@ def _file_statuses():
     sys.path.insert(0, str(REPO))
     from tools.dev_close_task import file_statuses, status_marker
 
-    return {num: status_marker(line) for num, (_name, line) in
-            file_statuses().items() if line}
+    return {num: status_marker(line) for num, (_name, line) in file_statuses().items() if line}
 
 
 def _names_the_module(text, rel):
@@ -393,11 +386,10 @@ class TestTheMapNamesTheTree:
         """A module nobody is pointed at is one every session
         rediscovers - which is the cost the map exists to remove."""
         text = _map_text()
-        missing = sorted(name for name in _real_modules()
-                         if not _names_the_module(text, name))
+        missing = sorted(name for name in _real_modules() if not _names_the_module(text, name))
         assert missing == [], (
-            f"module(s) the context map does not mention: {missing}. "
-            f"docs/contributing/fixing-guide.md section 6.")
+            f"module(s) the context map does not mention: {missing}. docs/contributing/fixing-guide.md section 6."
+        )
 
     def test_the_walk_finds_each_population_it_claims_to_walk(self):
         """`UX-573`'s vacuity clause: a walk that finds no files passes
@@ -406,20 +398,21 @@ class TestTheMapNamesTheTree:
         walk added, so the set shrinking is a failure and not a green."""
         modules = _real_modules()
         assert modules, "the walk found nothing at all"
-        for name in ("tools/native_trace/hook.c",       # C, one level down
-                     "tools/native_trace/trackevent.py",
-                     "tools/dev_run.sh",                # shell
-                     "bga/viewer/views.js",
-                     "bga/viewer/perfetto.html",
-                     "bga/viewer/style.css",
-                     "bga/report/rate.py",              # `UX-631`: inside
-                     "bga/floors/observed.py",         # a `bga/` package
-                     ".github/workflows/ci.yml"):      # `UX-746`
+        for name in (
+            "tools/native_trace/hook.c",  # C, one level down
+            "tools/native_trace/trackevent.py",
+            "tools/dev_run.sh",  # shell
+            "bga/viewer/views.js",
+            "bga/viewer/perfetto.html",
+            "bga/viewer/style.css",
+            "bga/report/rate.py",  # `UX-631`: inside
+            "bga/floors/observed.py",  # a `bga/` package
+            ".github/workflows/ci.yml",
+        ):  # `UX-746`
             assert name in modules, f"the walk does not reach {name}"
-        assert not [m for m in modules if m.startswith("bga/") and
-                    m.endswith("/") and m not in MAPPED_SUFFIXES], (
-            f"a `bga/` package is still standing in for its files: "
-            f"{sorted(m for m in modules if m.endswith('/'))}")
+        assert not [m for m in modules if m.startswith("bga/") and m.endswith("/") and m not in MAPPED_SUFFIXES], (
+            f"a `bga/` package is still standing in for its files: {sorted(m for m in modules if m.endswith('/'))}"
+        )
 
     def test_a_module_is_named_by_its_own_row_and_not_by_a_word(self):
         """`UX-631`'s clause. The rule was a substring of the whole map,
@@ -428,19 +421,15 @@ class TestTheMapNamesTheTree:
         `generated`, on a row about release notes. A word that is not on
         the module's directory's row answers nothing."""
         assert not _names_the_module(
-            "tools/bga_release_notes.py  a release body, generated from "
-            "the closed rows", "bga/report/rate.py")
-        assert not _names_the_module(
-            "bga/provenance.py  why each claim is made",
-            "bga/validation/provenance.py")
-        assert not _names_the_module(
-            "bga/report/   text, json, ci_comment", "bga/report/text.py"), (
-            "a filename is named without its suffix")
+            "tools/bga_release_notes.py  a release body, generated from the closed rows", "bga/report/rate.py"
+        )
+        assert not _names_the_module("bga/provenance.py  why each claim is made", "bga/validation/provenance.py")
+        assert not _names_the_module("bga/report/   text, json, ci_comment", "bga/report/text.py"), (
+            "a filename is named without its suffix"
+        )
         # Two packages hold a `models.py`; one row cannot answer for both.
-        assert not _names_the_module(
-            "bga/ingest/   loader.py, models.py", "bga/structural/models.py")
-        assert _names_the_module(
-            "bga/report/   text.py, rate.py", "bga/report/rate.py")
+        assert not _names_the_module("bga/ingest/   loader.py, models.py", "bga/structural/models.py")
+        assert _names_the_module("bga/report/   text.py, rate.py", "bga/report/rate.py")
         assert _names_the_module("bga/report/rate.py", "bga/report/rate.py")
         # A directory has no filename, so the empty tail must not match
         # every row - found by mutating the walk back to directories.
@@ -477,11 +466,9 @@ class TestTheMapNamesTheTree:
         text = _map_text()
         named = _map_paths(text)
         stale = sorted(
-            path for path in named
-            if not (REPO / path.rstrip("/")).exists()
-            and not (REPO / path.rstrip("/")).is_dir())
-        assert stale == [], (
-            f"the context map names path(s) that do not exist: {stale}")
+            path for path in named if not (REPO / path.rstrip("/")).exists() and not (REPO / path.rstrip("/")).is_dir()
+        )
+        assert stale == [], f"the context map names path(s) that do not exist: {stale}"
 
     def test_the_helper_reads_any_top_level_name(self):
         """`UX-945`'s own falsification: every entry in the guide today
@@ -505,26 +492,24 @@ class TestTheMapNamesTheTree:
         """`UX-274`: the half the guard did not cover. The two harnesses
         this axis runs on were absent for the rounds that built them."""
         text = _map_text()
-        missing = sorted(name for name in _real_test_entries()
-                         if not _named(text, name))
+        missing = sorted(name for name in _real_test_entries() if not _named(text, name))
         assert missing == [], (
             f"entr(y/ies) directly under tests/ the context map does not "
-            f"mention: {missing}. docs/contributing/fixing-guide.md §6.")
+            f"mention: {missing}. docs/contributing/fixing-guide.md §6."
+        )
 
     def test_the_exemption_list_names_only_real_paths(self):
         """An exemption for something that no longer exists silently
         widens the check it is an exception to."""
         names = NOT_IN_TESTS | NOT_ON_THE_MAP
-        assert _stale(names) == [], (
-            f"exemption(s) for no such path: {_stale(names)}")
+        assert _stale(names) == [], f"exemption(s) for no such path: {_stale(names)}"
 
     def test_the_existence_check_would_still_catch_a_stale_entry(self):
         """`NOT_IN_TESTS` is empty today, so the clause above passes on
         an empty set and says nothing about the check. This one keeps it
         honest: `UX-512` moved the one entry it had into
         `BUILD_ARTEFACTS`, and the source-path rule outlived it."""
-        assert _stale(NOT_IN_TESTS | {"tests/no-such-thing"}) == [
-            "tests/no-such-thing"]
+        assert _stale(NOT_IN_TESTS | {"tests/no-such-thing"}) == ["tests/no-such-thing"]
 
     def test_a_build_artefact_is_exempt_whether_or_not_it_is_there(self, tmp_path):
         """The acceptance, as a guard: the entry set is the same with
@@ -565,12 +550,13 @@ class TestTheMapNamesTheTree:
         # One optional adjective between the number and the noun: the
         # first draft matched `218 files` and missed `the 233 closed
         # rows` two lines below it, which is half a guard.
-        counted = [m for m in re.findall(
-            r"(?<![\w-])[~]?[\d,]{2,}\s+(?:[a-z-]+\s+)?[a-z]+\b", text)
-            if m not in NOT_A_COUNT]
+        counted = [
+            m for m in re.findall(r"(?<![\w-])[~]?[\d,]{2,}\s+(?:[a-z-]+\s+)?[a-z]+\b", text) if m not in NOT_A_COUNT
+        ]
         assert counted == [], (
             f"the context map states counted figure(s) nothing checks: "
-            f"{counted}. Name the thing, not how many of it there are.")
+            f"{counted}. Name the thing, not how many of it there are."
+        )
 
     def test_the_test_layout_is_not_from_the_first_week(self):
         """The specific claim that motivated this, pinned so it cannot
@@ -585,21 +571,20 @@ class TestTheMapNamesTheTree:
         its own status was Not Started, and the row described the
         ambition rather than the file. An open id may still appear,
         spelled `(open)` beside it."""
-        closed = set(re.findall(r"UX-\d+", CLOSED.read_text(encoding="utf-8")))
+        from tools.dev_close_task import closed_rows
+
+        closed = set(re.findall(r"UX-\d+", "\n".join(closed_rows())))
         text = _map_text()
         bare = []
         for cluster in CITATION.finditer(text):
-            line = (text[:cluster.start()].rsplit("\n", 1)[-1]
-                    + text[cluster.start():].split("\n", 1)[0])
+            line = text[: cluster.start()].rsplit("\n", 1)[-1] + text[cluster.start() :].split("\n", 1)[0]
             for part in ID_IN_CITATION.finditer(cluster.group()):
                 num, marker = part.groups()
                 cited = f"UX-{num}"
                 if cited in closed or marker:
                     continue
                 bare.append(f"{cited} in {line.strip()!r}")
-        assert bare == [], (
-            f"§6 cites open id(s) with no `(open)` marker: {bare}. "
-            f"docs/contributing/fixing-guide.md §6.")
+        assert bare == [], f"§6 cites open id(s) with no `(open)` marker: {bare}. docs/contributing/fixing-guide.md §6."
 
     def test_every_open_label_names_a_row_that_is_still_open(self):
         """`UX-867`: the clause above catches a bare id with no marker;
@@ -622,7 +607,8 @@ class TestTheMapNamesTheTree:
         assert stale == [], (
             f"§6 marks id(s) `(open)` whose own Status line reads Done, "
             f"or that name no task file: {stale}. "
-            f"docs/contributing/fixing-guide.md §6.")
+            f"docs/contributing/fixing-guide.md §6."
+        )
 
 
 class TestTheMapsCapabilitiesDerive:
@@ -638,12 +624,8 @@ class TestTheMapsCapabilitiesDerive:
         format a reader finds here and `bga` refuses is the `csv`
         defect with the sign flipped."""
         _commands, formats = _registry()
-        unknown = sorted(word for word in _format_row()
-                         if word not in formats
-                         and word not in PROSE_IN_A_PATH_LIST)
-        assert unknown == [], (
-            f"§6's `--format` row names choice(s) `bga/cli.py` does not "
-            f"declare: {unknown}")
+        unknown = sorted(word for word in _format_row() if word not in formats and word not in PROSE_IN_A_PATH_LIST)
+        assert unknown == [], f"§6's `--format` row names choice(s) `bga/cli.py` does not declare: {unknown}"
 
     def test_every_registered_format_is_on_the_map(self):
         """The other direction, and the one a new renderer trips: a
@@ -651,9 +633,7 @@ class TestTheMapsCapabilitiesDerive:
         a capability every session rediscovers."""
         _commands, formats = _registry()
         missing = sorted(set(formats) - set(_format_row()))
-        assert missing == [], (
-            f"`--format` choice(s) §6 does not name: {missing}. "
-            f"docs/contributing/fixing-guide.md §6.")
+        assert missing == [], f"`--format` choice(s) §6 does not name: {missing}. docs/contributing/fixing-guide.md §6."
 
     def test_the_registry_is_a_non_empty_population(self):
         """The vacuity floor for both directions above: an empty
@@ -680,17 +660,13 @@ class TestTheMapsCapabilitiesDerive:
         naming rule; this asks the naming rule.
         """
         row = "--format " + ", ".join(_format_row())
-        answered = sorted(name for name in _real_modules()
-                          if _names_the_module(row, name))
-        answered += sorted(name for name in _real_test_entries()
-                           if _named(row, name))
-        assert answered == [], (
-            f"the `--format` row would answer a path question: {answered}")
+        answered = sorted(name for name in _real_modules() if _names_the_module(row, name))
+        answered += sorted(name for name in _real_test_entries() if _named(row, name))
+        assert answered == [], f"the `--format` row would answer a path question: {answered}"
         # The floor: the check can say yes. Under `UX-631`'s rule a
         # one-line row cannot answer for a module, so without this the
         # clause is green whatever the row says.
-        assert _names_the_module(row + "\nbga/report/  rate.py",
-                                 "bga/report/rate.py")
+        assert _names_the_module(row + "\nbga/report/  rate.py", "bga/report/rate.py")
 
     def test_a_bare_word_among_paths_is_a_claim_the_registry_answers(self):
         """`UX-573`'s `csv`, as a direction. A comma list of paths with
@@ -702,11 +678,11 @@ class TestTheMapsCapabilitiesDerive:
             f"{word!r} in {line!r}"
             for line, _paths, bare in _path_lists(_map_text())
             for word in bare
-            if word not in commands and word not in formats
-            and word not in PROSE_IN_A_PATH_LIST)
+            if word not in commands and word not in formats and word not in PROSE_IN_A_PATH_LIST
+        )
         assert offenders == [], (
-            f"the map lists word(s) among paths that `bga` registers as "
-            f"neither a command nor a format: {offenders}")
+            f"the map lists word(s) among paths that `bga` registers as neither a command nor a format: {offenders}"
+        )
 
     def test_the_path_list_scan_reads_a_non_empty_population(self):
         """The vacuity floor `UX-573` asks for: a scan finding no list
@@ -715,20 +691,20 @@ class TestTheMapsCapabilitiesDerive:
         lists = _path_lists(_map_text())
         assert len(lists) >= 5, [line for line, _, _ in lists]
         assert any("help_format.py" in line for line, _, _ in lists), (
-            "the scan no longer reaches the `bga/progress.py` list")
+            "the scan no longer reaches the `bga/progress.py` list"
+        )
 
     def test_the_scan_stops_at_a_description_rather_than_reading_it(self):
         """`prune` and `analysis` are English, not list members. A scan
         that read to the end of the line would demand a reason for
         every adjective in §6."""
-        line = ("bga/report/   text.py, json.py, ci_comment.py - renderers, "
-                "no analysis")
+        line = "bga/report/   text.py, json.py, ci_comment.py - renderers, no analysis"
         lists = _path_lists(line)
         assert len(lists) == 1, lists
         assert lists[0][2] == [], lists[0][2]
         assert _path_lists("bga/a.py, bga/b.py, the @last aliases, prune") == [
-            ("bga/a.py, bga/b.py, the @last aliases, prune",
-             ["bga/a.py", "bga/b.py"], [])]
+            ("bga/a.py, bga/b.py, the @last aliases, prune", ["bga/a.py", "bga/b.py"], [])
+        ]
 
     def test_a_slash_alone_does_not_make_a_path(self):
         """The false positives this scan had on its first run: §6 says
@@ -738,8 +714,7 @@ class TestTheMapsCapabilitiesDerive:
         assert not _looks_like_a_path(".bga/runs")
         assert _looks_like_a_path("bga/structural/")
         assert _looks_like_a_path("help_format.py")
-        assert _path_lists("bga/structural/  cold/structural analysis, "
-                           "networkx-based") == []
+        assert _path_lists("bga/structural/  cold/structural analysis, networkx-based") == []
 
     def test_an_unregistered_bare_word_in_a_path_list_is_seen(self):
         """The allowlist is empty, so the clause above passes on an
@@ -747,16 +722,14 @@ class TestTheMapsCapabilitiesDerive:
         honest: a word in neither registry is found where `csv` sat."""
         line = "bga/report/   text.py, json.py, parquet, ci_comment.py"
         commands, formats = _registry()
-        bare = [word for _line, _paths, words in _path_lists(line)
-                for word in words]
+        bare = [word for _line, _paths, words in _path_lists(line) for word in words]
         assert bare == ["parquet"], bare
         assert "parquet" not in commands and "parquet" not in formats
 
     def test_each_prose_exemption_carries_a_reason(self):
         """An allowlist entry with no reason is a hole nobody argued
         for, and the next session cannot tell it from an oversight."""
-        empty = sorted(word for word, why in PROSE_IN_A_PATH_LIST.items()
-                       if not why or not why.strip())
+        empty = sorted(word for word, why in PROSE_IN_A_PATH_LIST.items() if not why or not why.strip())
         assert empty == [], f"exemption(s) with no reason: {empty}"
 
 
@@ -773,26 +746,25 @@ class TestTheMapNamesEveryCommand:
         missing = sorted(set(commands) - set(_command_rows()))
         assert missing == [], (
             f"command(s) `bga` registers and section 6 does not name: "
-            f"{missing}. docs/contributing/fixing-guide.md section 6.")
+            f"{missing}. docs/contributing/fixing-guide.md section 6."
+        )
 
     def test_every_command_the_map_names_is_registered(self):
         """The other direction: a row for a command `bga` refuses sends
         a reader to a place for a thing that is not there."""
         commands, _formats = _registry()
         unknown = sorted(set(_command_rows()) - set(commands))
-        assert unknown == [], (
-            f"section 6's command block names row(s) `bga` does not "
-            f"register: {unknown}")
+        assert unknown == [], f"section 6's command block names row(s) `bga` does not register: {unknown}"
 
     def test_each_command_row_says_where_the_command_lives(self):
         """A name on its own answers no question. The row is the map's
         whole point, so the second column is a path in this tree."""
-        bad = sorted(f"{name} -> {where!r}"
-                     for name, where in _command_rows().items()
-                     if not _looks_like_a_path(where)
-                     or not (REPO / where.rstrip("/")).exists())
-        assert bad == [], (
-            f"section 6 command row(s) pointing at no path here: {bad}")
+        bad = sorted(
+            f"{name} -> {where!r}"
+            for name, where in _command_rows().items()
+            if not _looks_like_a_path(where) or not (REPO / where.rstrip("/")).exists()
+        )
+        assert bad == [], f"section 6 command row(s) pointing at no path here: {bad}"
 
     def test_the_command_block_is_a_non_empty_population(self):
         """The vacuity floor for both directions: an empty block passes
@@ -822,17 +794,14 @@ class TestTheMapNamesEachToolsToolPrices:
             for tool in tools:
                 if not re.search(rf"(?<![\w-]){re.escape(tool)}(?![\w-])", row):
                     missing.append(f"{tool} in {rel}'s row")
-        assert missing == [], (
-            f"TOOLS key(s) a §6 row does not name: {missing}. "
-            f"docs/contributing/fixing-guide.md §6.")
+        assert missing == [], f"TOOLS key(s) a §6 row does not name: {missing}. docs/contributing/fixing-guide.md §6."
 
 
 class TestTheStreamsAreNamed:
     """`§1`'s "pick the highest-priority 🔴 row" is right for a feature
     and wrong for an audit, which has no row until it has been done."""
 
-    STREAMS = ("design", "audit", "feature", "fix", "documentation",
-               "refactor", "review", "release")
+    STREAMS = ("design", "audit", "feature", "fix", "documentation", "refactor", "review", "release")
 
     def test_every_stream_this_repository_runs_is_described(self):
         text = GUIDE.read_text(encoding="utf-8")
@@ -847,8 +816,7 @@ class TestTheStreamsAreNamed:
         body = text.split("## 6a. Which kind of session is this?", 1)[1]
         body = body.split("\n## ", 1)[0]
         for stream in self.STREAMS:
-            row = next((line for line in body.splitlines()
-                        if f"**{stream}**" in line), None)
+            row = next((line for line in body.splitlines() if f"**{stream}**" in line), None)
             assert row is not None, stream
             cells = [c.strip() for c in row.strip().strip("|").split("|")]
             assert len(cells) == 4, f"{stream}: {cells}"
@@ -860,23 +828,18 @@ class TestTheStreamsAreNamed:
         text = GUIDE.read_text(encoding="utf-8")
         section = text.split("## 1. How to pick a task", 1)[1]
         section = section.split("\n## ", 1)[0]
-        steps = [line for line in section.splitlines()
-                 if line[:2] in ("1.", "2.", "3.", "4.", "5.")]
+        steps = [line for line in section.splitlines() if line[:2] in ("1.", "2.", "3.", "4.", "5.")]
         assert steps, "section 1 has no numbered steps"
-        assert "6a" in steps[0], (
-            f"the first thing section 1 says is not which stream this is: "
-            f"{steps[0]!r}")
+        assert "6a" in steps[0], f"the first thing section 1 says is not which stream this is: {steps[0]!r}"
         row = next((i for i, s in enumerate(steps) if "🔴" in s), None)
-        assert row is not None and row > 0, (
-            "picking a backlog row is still the first step")
+        assert row is not None and row > 0, "picking a backlog row is still the first step"
 
     def test_the_verification_discipline_is_not_per_stream(self):
         """The part that works is the part that must not fragment."""
         body = GUIDE.read_text(encoding="utf-8")
         body = body.split("## 6a. Which kind of session is this?", 1)[1]
         body = body.split("\n## ", 1)[0]
-        assert "does not vary by stream" in body, (
-            "section 6a does not say the discipline is shared")
+        assert "does not vary by stream" in body, "section 6a does not say the discipline is shared"
 
 
 if __name__ == "__main__":  # pragma: no cover

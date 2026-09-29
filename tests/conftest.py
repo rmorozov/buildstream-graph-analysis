@@ -30,6 +30,7 @@ by reason; at the end of the session two things are checked:
 Making `jsonschema` a hard dependency was the other option and is
 declined: it is a dev tool and stays one. The claim gets honest instead.
 """
+
 import collections
 import os
 import pathlib
@@ -44,8 +45,7 @@ from tiers import LARGE, MEDIUM
 # relative `import "./tests/dom_shim.mjs"` resolves against whatever
 # directory that test happened to choose. Published here, inherited by
 # every subprocess, and independent of cwd.
-os.environ["BGA_DOM_SHIM"] = (
-    pathlib.Path(__file__).resolve().parent / "dom_shim.mjs").as_uri()
+os.environ["BGA_DOM_SHIM"] = (pathlib.Path(__file__).resolve().parent / "dom_shim.mjs").as_uri()
 
 # UX-238: which tier each collected test is in.
 #
@@ -63,7 +63,7 @@ def pytest_collection_modifyitems(config, items):
     for item in items:
         try:
             relative = pathlib.Path(item.fspath).relative_to(root).as_posix()
-        except ValueError:                              # pragma: no cover
+        except ValueError:  # pragma: no cover
             continue
         if relative in _LARGE:
             item.add_marker(pytest.mark.large)
@@ -71,6 +71,7 @@ def pytest_collection_modifyitems(config, items):
             item.add_marker(pytest.mark.medium)
         else:
             item.add_marker(pytest.mark.small)
+
 
 # Every skip reason this suite is known to produce: what each one means,
 # and **the largest count it has been measured at**. A reason not in
@@ -93,7 +94,9 @@ def pytest_collection_modifyitems(config, items):
 KNOWN_SKIP_REASONS = {
     "not a dev environment by its own account (BGA_EXPECT_DEV is unset)": (
         "the dev-extras canary, which only asserts where the environment "
-        "claims to be a dev environment (CI sets BGA_EXPECT_DEV)", 0),
+        "claims to be a dev environment (CI sets BGA_EXPECT_DEV)",
+        0,
+    ),
     # Round 43 gave this reason a second file and twelve more skips.
     # `UX-312`'s first clause loads the emitted trace with Perfetto's
     # own reader instead of this repository's decoder, which is the
@@ -115,36 +118,38 @@ KNOWN_SKIP_REASONS = {
     # there is nothing to read. 0 on this container and on
     # `ubuntu-latest`, both of which have one; the wording is a module
     # constant in that file so this census can read it without running.
-    "no host toolchain to clone a sysroot off": (
-        "a host with no gcc cannot answer where a file class came from", 0),
+    # `UX-1116`: the sanitizer run needs libasan next to the C compiler.
+    # 0 here and on `ubuntu-latest`, whose gcc ships it.
+    "no sanitizer runtime (libasan) for the C compiler": (
+        "a compiler without libasan cannot build the hook under ASan",
+        0,
+    ),
+    "no host toolchain to clone a sysroot off": ("a host with no gcc cannot answer where a file class came from", 0),
     # `UX-925`: the pin's own mutations need something of this host
     # to stage *over* the pin, and the closure to stage it into.
     # All three read 0 here and on `ubuntu-latest`, which have a
     # gcc and a staged tree; a runner with neither skips 3.
-    "the toolchain closure isn't staged": (
-        "the closure is fetched by the stager, not committed", 0),
-    "no host gcc to stage over the pin": (
-        "the shim mutation needs a second driver to put over it", 0),
-    "this host resolves no cc1plus to stage over the pin": (
-        "the helper mutation needs a host cc1plus to read back", 0),
-    "trace_processor_shell is not installed": (
-        "Perfetto's shell is an optional local tool, not a dependency", 16),
+    "the toolchain closure isn't staged": ("the closure is fetched by the stager, not committed", 0),
+    "no host gcc to stage over the pin": ("the shim mutation needs a second driver to put over it", 0),
+    "this host resolves no cc1plus to stage over the pin": ("the helper mutation needs a host cc1plus to read back", 0),
+    "trace_processor_shell is not installed": ("Perfetto's shell is an optional local tool, not a dependency", 16),
     # UX-1009: staging the pinned buildbox closure downloads ~70 MiB
     # from cache.nixos.org, which the suite does not do by default.
     # 1 here (opt-in via BGA_TEST_NIX_NETWORK=1) and on any runner that
     # does not set it.
-    "downloads the pinned buildbox closure from cache.nixos.org - set "
-    "BGA_TEST_NIX_NETWORK=1": (
-        "a network fetch is not something this suite does by default", 1),
+    "downloads the pinned buildbox closure from cache.nixos.org - set BGA_TEST_NIX_NETWORK=1": (
+        "a network fetch is not something this suite does by default",
+        1,
+    ),
     # `UX-637`: the reachability clause refuses to answer from a
     # history that stops at a boundary. Measured on this session's own
     # checkout, which was shallow until `git fetch --unshallow`: 1.
     # 0 on CI, which sets `fetch-depth: 0` - held by a clause of its
     # own, so this cannot go quiet there.
-    "this checkout is shallow, so its history stops at a boundary and "
-    "reachability here is not the tree's answer": (
-        "a shallow clone's history is truncated, not wrong - so the "
-        "clause declines rather than concluding", 1),
+    "this checkout is shallow, so its history stops at a boundary and reachability here is not the tree's answer": (
+        "a shallow clone's history is truncated, not wrong - so the clause declines rather than concluding",
+        1,
+    ),
     # `UX-597`'s four release-tag clauses read `git tag --list v*`. A
     # clone made without tags has none, so they gate rather than pass
     # vacuously. Measured on a `--no-tags` clone of this tree: 4 - the
@@ -154,7 +159,9 @@ KNOWN_SKIP_REASONS = {
     # are present, which is CI (`fetch-tags: true`) and any full clone.
     "this checkout carries no release tag, so there is nothing to read; "
     "CI fetches them (the clause below holds that)": (
-        "release tags are refs, not tree content - a clone can lack them", 4),
+        "release tags are refs, not tree content - a clone can lack them",
+        4,
+    ),
     # UX-313 reads the committed dual-plane capture of `examples/06` to
     # show that every element leaves a record whose exit was never
     # observed - the fact that makes the reorder window the whole record
@@ -168,45 +175,45 @@ KNOWN_SKIP_REASONS = {
     # capture happens to exist. 3 -> 5.
     "the example capture is not in this clone (UX-189)": (
         "the capture archive is deliberately not shipped; the clauses "
-        "that read it say so rather than passing on an empty tree", 5),
-    "node is not installed": (
-        "the viewer guards need node; CI has it", 0),
+        "that read it say so rather than passing on an empty tree",
+        5,
+    ),
+    "node is not installed": ("the viewer guards need node; CI has it", 0),
     # UX-257's geometry guards. Declared so that "no browser here" is
     # a fact the census reports rather than a silence.
     "no chrome/chromium for the geometry guards (set BGA_CHROME)": (
         "UX-257 drives a real Chrome over CDP; where there is none, the "
-        "geometric claims are unguarded and this says so", 12),
+        "geometric claims are unguarded and this says so",
+        12,
+    ),
     # UX-247's freshness guard reads `git log` for one document. A
     # shallow checkout has no commit that touched it, and "we could not
     # check" must not read as "checked and found nothing".
     "the clone has no history for this file (a shallow checkout)": (
         "UX-247 compares a document's own Verification Log date against "
-        "when git last changed it; a depth-1 clone cannot answer that", 0),
+        "when git last changed it; a depth-1 clone cannot answer that",
+        0,
+    ),
     # `UX-314` asks for port 8080 by name, because it is one of exactly
     # two plain-http origins ui.perfetto.dev's CSP will fetch from. A
     # developer machine often has something there already, and the
     # guard binds the port to find out rather than trusting an
     # exception `bga view` handles for itself.
-    "port 8080 is in use on this machine": (
-        "UX-314's friendly-port arm, where the port is already taken", 0),
-    "jsonschema is not installed - `pip install -e '.[dev]'`": (
-        "schema validation is a dev extra", 0),
+    "port 8080 is in use on this machine": ("UX-314's friendly-port arm, where the port is already taken", 0),
+    "jsonschema is not installed - `pip install -e '.[dev]'`": ("schema validation is a dev extra", 0),
     # UX-933: the same shape one round later. `zstandard` reads the
     # `zstd` NARs a store closure is made of (UX-927); it is in `dev`
     # and in `nix`, so this never fires where the extras are installed,
     # and the canary beside the clauses reds instead wherever
     # `BGA_EXPECT_DEV` says the extras are claimed.
-    "zstandard is not installed - `pip install -e '.[dev]'`": (
-        "reading a `zstd` NAR is a dev extra", 0),
-    "buildstream is not installed": (
-        "the bst-dependent guards run in the bst-* CI jobs", 0),
+    "zstandard is not installed - `pip install -e '.[dev]'`": ("reading a `zstd` NAR is a dev extra", 0),
+    "buildstream is not installed": ("the bst-dependent guards run in the bst-* CI jobs", 0),
     # UX-213's real-capture arm. These three were undeclared until the
     # census asked: they are legitimate - a guard that also runs against
     # a real capture skips that arm where the capture is absent, and its
     # committed-fixture arm still runs - but nothing had ever named
     # them, which is precisely what the census is for.
-    "no real capture here": (
-        "UX-213's second arm, where examples/06's capture is absent", 19),
+    "no real capture here": ("UX-213's second arm, where examples/06's capture is absent", 19),
     # Round 43's four trace guards adopted this string. Their
     # *properties* are checked on committed fixtures that a clone has;
     # what skips here is the arithmetic only `examples/06`'s gitignored
@@ -234,45 +241,45 @@ KNOWN_SKIP_REASONS = {
     # the census while `-rs` lists it, and two of these seven files
     # have one. Reading a census off `-rs` gives a different number in
     # both directions.
-    "no real capture in this tree": (
-        "UX-213's second arm, where examples/06's capture is absent", 15),
-    "the examples/06 capture is not here": (
-        "UX-213's second arm, where examples/06's capture is absent", 10),
+    "no real capture in this tree": ("UX-213's second arm, where examples/06's capture is absent", 15),
+    "the examples/06 capture is not here": ("UX-213's second arm, where examples/06's capture is absent", 10),
     # `UX-572`: the same absence, with the path in it. "in this tree"
     # named no tree, and the tree it meant was a linked worktree, which
     # never has an ignored capture. Measured at 3 in a tree without it
     # (`-rs`, the file's three real-capture clauses).
     "no real capture at examples/06-macro-micro-optimization/"
     ".bga/runs/20260821T170127Z, in this tree or the checkout "
-    "it was linked from": (
-        "UX-213's second arm, saying which path was missing", 3),
+    "it was linked from": ("UX-213's second arm, saying which path was missing", 3),
     # The seven CI's `test` job produces and a dev container does not.
     # Every one of them is "the tool is not installed on this runner",
     # and every one of them has a job that *does* install it: the
     # `bst-smoke`, `bst-tests`, `bst-examples` and `installed-capture`
     # jobs exist so these arms run somewhere. Counts measured on the
     # `test (3.11)` job of PR #137.
-    "bst not found on PATH": (
-        "the bst-dependent arm; the bst-* CI jobs install it and run it", 2),
+    "bst not found on PATH": ("the bst-dependent arm; the bst-* CI jobs install it and run it", 2),
     "bst not found on PATH - see docs/spec/ingestion-pipeline.md": (
-        "the bst-dependent arm; the bst-* CI jobs install it and run it", 12),
-    "bst and/or buildstream-plugins not available - "
-    "see docs/spec/ingestion-pipeline.md": (
-        "the bst-dependent arm; the bst-* CI jobs install it and run it", 1),
-    "bst/bwrap/bga not all found on PATH - "
-    "see docs/spec/ingestion-pipeline.md": (
-        "the full-capture arm; `installed-capture` is where it runs", 2),
-    "bst/bwrap/busybox not all found on PATH - "
-    "see docs/spec/ingestion-pipeline.md": (
+        "the bst-dependent arm; the bst-* CI jobs install it and run it",
+        12,
+    ),
+    "bst and/or buildstream-plugins not available - see docs/spec/ingestion-pipeline.md": (
+        "the bst-dependent arm; the bst-* CI jobs install it and run it",
+        1,
+    ),
+    "bst/bwrap/bga not all found on PATH - see docs/spec/ingestion-pipeline.md": (
+        "the full-capture arm; `installed-capture` is where it runs",
+        2,
+    ),
+    "bst/bwrap/busybox not all found on PATH - see docs/spec/ingestion-pipeline.md": (
         "`UX-465`'s generated-project arm; busybox is the static shell the "
-        "generated project stages, as examples/stage_runtimes.sh does", 2),
-    "bst/bwrap/cc not all found on PATH - "
-    "see docs/spec/ingestion-pipeline.md": (
-        "the full-capture arm; `installed-capture` is where it runs", 6),
-    "bwrap not on PATH": (
-        "the sandbox arm; the bst-* CI jobs provide bwrap and run it", 5),
-    "bwrap/cc not both on PATH": (
-        "the sandbox arm; the bst-* CI jobs provide bwrap and run it", 8),
+        "generated project stages, as examples/stage_runtimes.sh does",
+        2,
+    ),
+    "bst/bwrap/cc not all found on PATH - see docs/spec/ingestion-pipeline.md": (
+        "the full-capture arm; `installed-capture` is where it runs",
+        6,
+    ),
+    "bwrap not on PATH": ("the sandbox arm; the bst-* CI jobs provide bwrap and run it", 5),
+    "bwrap/cc not both on PATH": ("the sandbox arm; the bst-* CI jobs provide bwrap and run it", 8),
     # `UX-405`'s shim guard reaches `install_bwrap_shim`, which writes a
     # shim that *falls back* to the real `bwrap` and refuses when there
     # is none, before it reaches anything it is about. It declared a C
@@ -281,7 +288,9 @@ KNOWN_SKIP_REASONS = {
     # CI rather than by this census, because the census only sees a
     # skip that happens. Measured on `test (3.11)` of PR #181: 1.
     "no bwrap for the capture's shim to fall back to": (
-        "the sandbox arm; the bst-* CI jobs provide bwrap and run it", 1),
+        "the sandbox arm; the bst-* CI jobs provide bwrap and run it",
+        1,
+    ),
     # `UX-402`'s journey walks the documented commands over a copy of
     # `examples/06`, so it needs all three: a `bst` to build with, a
     # `bwrap` to build in, and the staged toolchain
@@ -305,13 +314,14 @@ KNOWN_SKIP_REASONS = {
     "the duration is a tracer's and not this pipeline's; UX-524's "
     "coverage job runs +20% and a bare bound would read the instrument": (
         "the 1500-element timing bound; it runs wherever no tracer is "
-        "attached, which is every job but the coverage one", 1),
-
+        "attached, which is every job but the coverage one",
+        1,
+    ),
     "the journey needs bst, bwrap and example 06's staged toolchain "
     "(files/toolchain, written by generate_sources.py)": (
-        "UX-402's whole-journey arm; it runs where bst, bwrap and the "
-        "staged toolchain are all present", 24),
-
+        "UX-402's whole-journey arm; it runs where bst, bwrap and the staged toolchain are all present",
+        24,
+    ),
     # `UX-449`. Everything below was **found by the static scan in
     # `tests/skip_reasons.py`**, not by a run: eighteen reasons written
     # into the suite that this dictionary had never heard of, on a tree
@@ -334,10 +344,11 @@ KNOWN_SKIP_REASONS = {
     # that turns out to be wrong is the census doing its job, and is a
     # measurement to correct rather than a reason not to declare - the
     # staged-toolchain row below is the first one corrected.
-    "bst or a staged runtime is missing": (
-        "the capture chain needs both, and reports which is absent", 0),
+    "bst or a staged runtime is missing": ("the capture chain needs both, and reports which is absent", 0),
     "examples/01 is not staged - run examples/stage_runtimes.sh": (
-        "example 01's runtime is generated, not committed (`UX-189`)", 0),
+        "example 01's runtime is generated, not committed (`UX-189`)",
+        0,
+    ),
     # `UX-925`: 20 with the closure unstaged - 14 from
     # `test_the_toolchain_axis_is_pinned.py`, 3 each from
     # `test_the_sysroot_declares_both_axes.py` and
@@ -347,70 +358,64 @@ KNOWN_SKIP_REASONS = {
     # that witnesses them is `bst-tests`' last step (`ci.yml:1182`), the
     # whole suite after `stage_cpp_toolchain.sh` - skipped while that
     # job's earlier `bst` step is red, which `UX-939` clears.
-    "examples/05-cmake-cpp-toolchain's toolchain isn't staged - run "
-    "stage_cpp_toolchain.sh first": (
-        "example 05's toolchain is generated, not committed", 20),
+    "examples/05-cmake-cpp-toolchain's toolchain isn't staged - run stage_cpp_toolchain.sh first": (
+        "example 05's toolchain is generated, not committed",
+        20,
+    ),
     "examples/06 is not staged - run examples/stage_cpp_toolchain.sh": (
-        "example 06's toolchain is generated, not committed", 0),
-    "golden has no Plane 2 sibling to lose": (
-        "a fixture-shape gate: the clause needs a run with both planes", 0),
-    "jq not found on PATH": (
-        "the docs' own examples pipe through jq; it is not a dependency", 0),
-    "no C compiler on PATH": (
-        "the LD_PRELOAD hook and the spine's fixtures are compiled here", 0),
+        "example 06's toolchain is generated, not committed",
+        0,
+    ),
+    "golden has no Plane 2 sibling to lose": ("a fixture-shape gate: the clause needs a run with both planes", 0),
+    "jq not found on PATH": ("the docs' own examples pipe through jq; it is not a dependency", 0),
+    "no C compiler on PATH": ("the LD_PRELOAD hook and the spine's fixtures are compiled here", 0),
     "no PATH": (
         "the doctor's remedy text is about resolving a command, so an "
-        "environment with no PATH at all has nothing to assert", 0),
-    "no block declares a join destination": (
-        "a payload-shape gate over the committed fixtures", 0),
+        "environment with no PATH at all has nothing to assert",
+        0,
+    ),
+    "no block declares a join destination": ("a payload-shape gate over the committed fixtures", 0),
     "no bulk tree in this checkout - examples/README.md says how to make one": (
         "`UX-462`'s clause needs the generated tree the guide tells a "
-        "reader to make; the root `.gitignore` keeps it out of a clone", 0),
+        "reader to make; the root `.gitignore` keeps it out of a clone",
+        0,
+    ),
     "no busybox on PATH to exercise a static binary with": (
-        "the static-binary blind spot needs a real static binary", 0),
-    "no snapshot store in this checkout": (
-        "a store is written by a capture and `UX-189` keeps it out of "
-        "a clone", 0),
+        "the static-binary blind spot needs a real static binary",
+        0,
+    ),
+    "no snapshot store in this checkout": ("a store is written by a capture and `UX-189` keeps it out of a clone", 0),
     # `UX-514`'s two arms. Exactly one fires: the pair reads
     # `capture-ref-policy:` out of the workflow and each clause skips
     # when the *other* policy is declared. Both are `pytest.skip()` in
     # a test body, which the census hook cannot see (it counts
     # `setup`-phase skips), so both are measured at 0 - `-rs` shows one.
-    "the workflow declares `advanced`": (
-        "the pinned-policy arm, skipped where the workflow says "
-        "`advanced`", 0),
-    "the workflow declares `pinned`": (
-        "the advanced-policy arm, skipped where the workflow says "
-        "`pinned`", 0),
-    "this fixture's evidence carries no structured value": (
-        "a payload-shape gate over the committed fixtures", 0),
-    "this fixture's findings name no elements": (
-        "a payload-shape gate over the committed fixtures", 0),
-    "this host exposes no /proc/meminfo": (
-        "the host sampler reads Linux's own files", 0),
-    "this host has no /proc/stat": (
-        "the host sampler reads Linux's own files", 0),
-    "this run published no joint-saving signal": (
-        "a payload-shape gate over the committed fixtures", 0),
-    "this run rendered no anchored section": (
-        "a geometry gate: the page has to have drawn one first", 0),
-    "this run rendered no rail": (
-        "a geometry gate: the page has to have drawn one first", 0),
+    "the workflow declares `advanced`": ("the pinned-policy arm, skipped where the workflow says `advanced`", 0),
+    "the workflow declares `pinned`": ("the advanced-policy arm, skipped where the workflow says `pinned`", 0),
+    "this fixture's evidence carries no structured value": ("a payload-shape gate over the committed fixtures", 0),
+    "this fixture's findings name no elements": ("a payload-shape gate over the committed fixtures", 0),
+    "this host exposes no /proc/meminfo": ("the host sampler reads Linux's own files", 0),
+    "this host has no /proc/stat": ("the host sampler reads Linux's own files", 0),
+    "this run published no joint-saving signal": ("a payload-shape gate over the committed fixtures", 0),
+    "this run rendered no anchored section": ("a geometry gate: the page has to have drawn one first", 0),
+    "this run rendered no rail": ("a geometry gate: the page has to have drawn one first", 0),
     "tomllib is 3.11+; CI's packaging job covers this everywhere": (
-        "the one reason here that names its own coverage elsewhere", 0),
+        "the one reason here that names its own coverage elsewhere",
+        0,
+    ),
     # `UX-588`: never taken while the floor is 3.9. It exists so the
     # PEP 604 clause retires itself the day the floor moves, rather
     # than passing on a check that no longer applies.
-    "the floor has moved to 3.10; PEP 604 is allowed": (
-        "the floor guard's own retirement, unreachable at >=3.9", 0),
+    "the floor has moved to 3.10; PEP 604 is allowed": ("the floor guard's own retirement, unreachable at >=3.9", 0),
     # `UX-764`: the commit-body cap's population is `origin/main..HEAD`,
     # the same one CI reads (`ci.yml:642`). A checkout without that
     # remote-tracking ref (CI's own `test` job among them - it never
     # fetches `origin/main`) cannot read the range, and "could not read
     # it" must not report as "read it and found nothing".
     "origin/main does not resolve in this checkout": (
-        "the commit-body population reads `origin/main..HEAD`; a "
-        "checkout without that ref cannot answer", 0),
+        "the commit-body population reads `origin/main..HEAD`; a checkout without that ref cannot answer",
+        0,
+    ),
 }
 
 # One file going quiet is what this exists to catch, and it is also the
@@ -451,7 +456,8 @@ def census_complaints(census, known=None, cap=MAX_PER_REASON):
                 f"{count} test(s) skipped for a reason this suite has never "
                 f"declared: {reason!r}. Add it to KNOWN_SKIP_REASONS in "
                 f"tests/conftest.py with what it means and what it was "
-                f"measured at, or stop skipping.")
+                f"measured at, or stop skipping."
+            )
             continue
         # A declared reason carries the count it was measured at; the
         # bound is that plus one file's worth of headroom, so growth in
@@ -465,7 +471,8 @@ def census_complaints(census, known=None, cap=MAX_PER_REASON):
                 f"than the {allowed} this suite allows it "
                 f"({measured} measured + {cap} headroom). That is a whole "
                 f"guard file going quiet, which is exactly what a green run "
-                f"must not be able to hide.")
+                f"must not be able to hide."
+            )
     return complaints
 
 

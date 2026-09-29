@@ -23,6 +23,7 @@ evidence rather than prose: the guards below re-resolve every path
 against the payload and compare the quoted value to what is there, which
 is the half a resolve-only check cannot see.
 """
+
 import argparse
 import json
 
@@ -40,8 +41,13 @@ from bga.report.text import format_compare_text
 
 
 def _span(uid, ts, dur):
-    return {"task_key": f"{uid}|BUILD|BUILD|0", "ts_us": ts, "dur_us": dur,
-            "resources": ["PROCESS"], "primary_resource": "PROCESS"}
+    return {
+        "task_key": f"{uid}|BUILD|BUILD|0",
+        "ts_us": ts,
+        "dur_us": dur,
+        "resources": ["PROCESS"],
+        "primary_resource": "PROCESS",
+    }
 
 
 def _run(directory, durations, end, deps=()):
@@ -53,24 +59,34 @@ def _run(directory, durations, end, deps=()):
     the culprits without moving the verdict they explain.
     """
     directory.mkdir(parents=True)
-    (directory / "run-context.json").write_text(json.dumps({
-        "trace_epsilon_us": 1000, "max_jobs": 2,
-        "resource_capacities": {"PROCESS": 2},
-        "wall_clock": {"start_us": 0, "end_us": end}}))
-    (directory / "graph.json").write_text(json.dumps({
-        "elements": [{"uid": uid} for uid in durations],
-        "dependencies": [{"predecessor": a, "successor": b} for a, b in deps]}))
-    (directory / "trace.json").write_text(json.dumps({
-        "spans": [_span(uid, i * 100_000, dur)
-                  for i, (uid, dur) in enumerate(durations.items())],
-        "phases": []}))
+    (directory / "run-context.json").write_text(
+        json.dumps(
+            {
+                "trace_epsilon_us": 1000,
+                "max_jobs": 2,
+                "resource_capacities": {"PROCESS": 2},
+                "wall_clock": {"start_us": 0, "end_us": end},
+            }
+        )
+    )
+    (directory / "graph.json").write_text(
+        json.dumps(
+            {
+                "elements": [{"uid": uid} for uid in durations],
+                "dependencies": [{"predecessor": a, "successor": b} for a, b in deps],
+            }
+        )
+    )
+    (directory / "trace.json").write_text(
+        json.dumps(
+            {"spans": [_span(uid, i * 100_000, dur) for i, (uid, dur) in enumerate(durations.items())], "phases": []}
+        )
+    )
     return directory
 
 
-BEFORE = {"big.bst": 10_000, "mid.bst": 10_000, "small.bst": 10_000,
-          "saver.bst": 40_000, "tiny.bst": 20_000}
-AFTER = {"big.bst": 70_000, "mid.bst": 40_000, "small.bst": 20_000,
-         "saver.bst": 10_000, "tiny.bst": 60_000}
+BEFORE = {"big.bst": 10_000, "mid.bst": 10_000, "small.bst": 10_000, "saver.bst": 40_000, "tiny.bst": 20_000}
+AFTER = {"big.bst": 70_000, "mid.bst": 40_000, "small.bst": 20_000, "saver.bst": 10_000, "tiny.bst": 60_000}
 
 
 @pytest.fixture
@@ -81,8 +97,7 @@ def regressed(tmp_path):
     outcome records a ranking mutation that could not fail against a
     fixture with one row per group.
     """
-    return compare_runs(_run(tmp_path / "baseline", BEFORE, 420_000),
-                        _run(tmp_path / "candidate", AFTER, 460_000))
+    return compare_runs(_run(tmp_path / "baseline", BEFORE, 420_000), _run(tmp_path / "candidate", AFTER, 460_000))
 
 
 @pytest.fixture
@@ -91,11 +106,9 @@ def banded(tmp_path):
     own spread is wider than the fixed rule - so `DEFAULT_BAND_K`, not
     `_SIGNIFICANCE_PCT`, is the constant the verdict fired on."""
     baseline = _run(tmp_path / "baseline", BEFORE, 435_000)
-    others = [_run(tmp_path / f"b{n}", BEFORE, end) for n, end in
-              enumerate((425_000, 430_000, 440_000, 445_000))]
+    others = [_run(tmp_path / f"b{n}", BEFORE, end) for n, end in enumerate((425_000, 430_000, 440_000, 445_000))]
     candidate = _run(tmp_path / "candidate", AFTER, 460_000)
-    return compare_runs(baseline, candidate,
-                        baseline_runs=[baseline, *others])
+    return compare_runs(baseline, candidate, baseline_runs=[baseline, *others])
 
 
 @pytest.fixture
@@ -106,11 +119,9 @@ def widened(tmp_path):
     `_SIGNIFICANCE_PCT` and the band's own `k` is not the rule at all.
     """
     baseline = _run(tmp_path / "baseline", BEFORE, 435_000)
-    others = [_run(tmp_path / f"b{n}", BEFORE, end) for n, end in
-              enumerate((435_000, 435_001, 434_999))]
+    others = [_run(tmp_path / f"b{n}", BEFORE, end) for n, end in enumerate((435_000, 435_001, 434_999))]
     candidate = _run(tmp_path / "candidate", AFTER, 460_000)
-    return compare_runs(baseline, candidate,
-                        baseline_runs=[baseline, *others])
+    return compare_runs(baseline, candidate, baseline_runs=[baseline, *others])
 
 
 def _paths(record):
@@ -119,13 +130,16 @@ def _paths(record):
 
 def _args():
     return argparse.Namespace(
-        fail_on_regression=False, fail_on_efficiency_regression=False,
-        min_efficiency=None, fail_on_inefficient_additions=False,
-        max_addition_stretch=None, regression_threshold=None)
+        fail_on_regression=False,
+        fail_on_efficiency_regression=False,
+        min_efficiency=None,
+        fail_on_inefficient_additions=False,
+        max_addition_stretch=None,
+        regression_threshold=None,
+    )
 
 
 class TestTheVerdictNamesWhatItJudged:
-
     def test_the_fixture_actually_regresses(self, regressed):
         """A chain guard on a comparison that came out `improved` would
         assert about a sentence nobody disputes."""
@@ -142,15 +156,13 @@ class TestTheVerdictNamesWhatItJudged:
         record = verdict_provenance(banded)
 
         assert banded.baseline_band is not None
-        assert {"baseline_band.n", "baseline_band.low_us",
-                "baseline_band.high_us"} <= set(_paths(record))
+        assert {"baseline_band.n", "baseline_band.low_us", "baseline_band.high_us"} <= set(_paths(record))
 
     def test_and_omits_the_band_paths_when_there_was_no_band(self, regressed):
         """`UX-249`'s rule about absence: a reference resolving to
         nothing reads as a published field, and this run has no band."""
         assert regressed.baseline_band is None
-        assert not [p for p in _paths(verdict_provenance(regressed))
-                    if p.startswith("baseline_band")]
+        assert not [p for p in _paths(verdict_provenance(regressed)) if p.startswith("baseline_band")]
 
 
 class TestTheCulpritsAreInTheChain:
@@ -162,16 +174,18 @@ class TestTheCulpritsAreInTheChain:
         cited = [p for p in _paths(record) if "element_uid=" in p]
 
         assert [p.split("element_uid=")[1].split("]")[0] for p in cited] == [
-            "big.bst", "tiny.bst", "mid.bst", "small.bst"]
+            "big.bst",
+            "tiny.bst",
+            "mid.bst",
+            "small.bst",
+        ]
 
     def test_and_by_how_much(self, regressed):
         record = verdict_provenance(regressed)
         by_path = {e["path"]: e["value"] for e in record["evidence"]}
 
-        assert by_path[
-            "element_deltas.rows[element_uid=big.bst].delta_us"] == 60_000
-        assert by_path[
-            "element_deltas.rows[element_uid=tiny.bst].delta_us"] == 40_000
+        assert by_path["element_deltas.rows[element_uid=big.bst].delta_us"] == 60_000
+        assert by_path["element_deltas.rows[element_uid=tiny.bst].delta_us"] == 40_000
 
     def test_the_element_that_shrank_is_not_a_culprit(self, regressed):
         """`saver.bst` moved 30ms - more than two of the cited four -
@@ -186,13 +200,12 @@ class TestTheCulpritsAreInTheChain:
 
         assert by_path["element_deltas.counts.grew"] == 4
 
-    def test_the_citation_is_capped_and_the_count_says_by_how_much(
-            self, tmp_path):
+    def test_the_citation_is_capped_and_the_count_says_by_how_much(self, tmp_path):
         before = {f"e{n}.bst": 10_000 for n in range(12)}
         after = {uid: 10_000 + 1_000 * n for n, uid in enumerate(before)}
         comparison = compare_runs(
-            _run(tmp_path / "baseline", before, 1_110_000),
-            _run(tmp_path / "candidate", after, 1_200_000))
+            _run(tmp_path / "baseline", before, 1_110_000), _run(tmp_path / "candidate", after, 1_200_000)
+        )
         record = verdict_provenance(comparison)
         by_path = {e["path"]: e["value"] for e in record["evidence"]}
 
@@ -207,8 +220,7 @@ class TestEveryReferenceResolvesInTheDocumentItNames:
     numbers is worse, so both halves are checked."""
 
     @pytest.mark.parametrize("name", ["regressed", "banded", "widened"])
-    def test_the_paths_walk_compare_v2_and_quote_it_correctly(
-            self, name, request):
+    def test_the_paths_walk_compare_v2_and_quote_it_correctly(self, name, request):
         comparison = request.getfixturevalue(name)
         document = comparison.to_dict()
         record = verdict_provenance(comparison)
@@ -224,8 +236,7 @@ class TestEveryReferenceResolvesInTheDocumentItNames:
         arithmetic ran behind it, so there is nothing to publish - and a
         record built anyway would quote a verdict that was withheld."""
         baseline = _run(tmp_path / "baseline", BEFORE, 420_000)
-        comparison = compare_runs(
-            baseline, _run(tmp_path / "candidate", AFTER, 460_000))
+        comparison = compare_runs(baseline, _run(tmp_path / "candidate", AFTER, 460_000))
         comparison.verdict_kind = "not_comparable"
 
         assert verdict_provenance(comparison) is None
@@ -236,17 +247,13 @@ class TestTheRuleIsReadLiveRatherThanCopied:
     against a literal, because the literal is what the constant holds
     today. Only moving the constant tells a citation from a copy."""
 
-    def test_moving_the_band_width_moves_the_published_rule(
-            self, tmp_path, monkeypatch):
+    def test_moving_the_band_width_moves_the_published_rule(self, tmp_path, monkeypatch):
         baseline = _run(tmp_path / "baseline", BEFORE, 435_000)
-        others = [_run(tmp_path / f"b{n}", BEFORE, end) for n, end in
-                  enumerate((425_000, 430_000, 440_000, 445_000))]
+        others = [_run(tmp_path / f"b{n}", BEFORE, end) for n, end in enumerate((425_000, 430_000, 440_000, 445_000))]
         candidate = _run(tmp_path / "candidate", AFTER, 460_000)
 
         def rule(k):
-            comparison = compare_runs(baseline, candidate,
-                                      baseline_runs=[baseline, *others],
-                                      band_k=k)
+            comparison = compare_runs(baseline, candidate, baseline_runs=[baseline, *others], band_k=k)
             return verdict_provenance(comparison)["rule"]
 
         assert rule(DEFAULT_BAND_K)["name"] == "DEFAULT_BAND_K"
@@ -254,8 +261,7 @@ class TestTheRuleIsReadLiveRatherThanCopied:
         assert rule(1.5)["threshold"] == 1.5
         assert "1.5x scaled MAD" in rule(1.5)["sentence"]
 
-    def test_a_widened_band_names_the_rule_that_actually_fired(
-            self, widened):
+    def test_a_widened_band_names_the_rule_that_actually_fired(self, widened):
         """The case a copied constant gets wrong. The band is derived,
         comes out narrower than the fixed percentage, and `widen_band`
         replaces it - after which `DEFAULT_BAND_K` is not what the
@@ -266,16 +272,14 @@ class TestTheRuleIsReadLiveRatherThanCopied:
         assert record["rule"]["name"] == "_SIGNIFICANCE_PCT"
         assert "widened" in record["rule"]["sentence"]
 
-    def test_moving_the_fixed_percentage_moves_the_comment(
-            self, tmp_path, monkeypatch):
+    def test_moving_the_fixed_percentage_moves_the_comment(self, tmp_path, monkeypatch):
         from bga import compare as compare_mod
 
         baseline = _run(tmp_path / "baseline", BEFORE, 420_000)
         candidate = _run(tmp_path / "candidate", AFTER, 460_000)
 
         def comment():
-            return render_ci_comment(
-                compare_runs(baseline, candidate), _args())
+            return render_ci_comment(compare_runs(baseline, candidate), _args())
 
         assert "`_SIGNIFICANCE_PCT` = `1`" in comment()
         monkeypatch.setattr(compare_mod, "_SIGNIFICANCE_PCT", 7)
@@ -285,14 +289,12 @@ class TestTheRuleIsReadLiveRatherThanCopied:
 
 
 class TestTheSurfacesQuoteTheRecordAndInventNothing:
-
     def test_the_ci_comment_publishes_every_reference(self, banded):
         record = verdict_provenance(banded)
         comment = render_ci_comment(banded, _args())
 
         assert record["rule"]["sentence"] in comment
-        assert (f"`{record['rule']['name']}` = "
-                f"`{record['rule']['threshold']}`") in comment
+        assert (f"`{record['rule']['name']}` = `{record['rule']['threshold']}`") in comment
         for entry in record["evidence"]:
             assert f"`{entry['path']}` = {entry['value']}" in comment
 
@@ -313,8 +315,7 @@ class TestTheSurfacesQuoteTheRecordAndInventNothing:
         text = format_compare_text(regressed)
 
         assert f"Why: {record['rule']['sentence']}" in text
-        assert (f"Rule: {record['rule']['name']} = "
-                f"{record['rule']['threshold']}") in text
+        assert (f"Rule: {record['rule']['name']} = {record['rule']['threshold']}") in text
 
     def test_the_terminal_prints_no_raw_field_path(self, regressed):
         """`UX-121`'s rule holds for this surface too: the text report

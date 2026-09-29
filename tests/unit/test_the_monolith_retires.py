@@ -28,6 +28,7 @@ migration's guard is equality, and `summarize` is implemented as a
 fold over the list, so the two paths are one code path with two
 callers rather than two implementations that have to be kept level.
 """
+
 import json
 import pathlib
 import subprocess
@@ -43,6 +44,7 @@ from tools import bst_native_build_tracer as tracer
 
 MACRO_MICRO = REPO / "tests/fixtures/macro_micro"
 
+
 # One process per line pair, with a parent, a sandbox and a measurable
 # exit: the shape `bga capture` writes. Small - this file is about what
 # the report contains, and `test_analysis_memory_shape.py` is where the
@@ -54,11 +56,12 @@ def _trace(path, processes=400, elements=8):
             inv = f"inv-{index % elements}"
             pid = 1000 + index
             cmd = f"/usr/bin/cc1plus -c file{index}.c -o file{index}.o"
-            handle.write(f"START pid={pid} ppid=1000 ts={1000.0 + index} "
-                         f"element={element} inv={inv} cmd={cmd}\n")
-            handle.write(f"END pid={pid} ppid=1000 ts={1000.5 + index} "
-                         f"element={element} inv={inv} utime_us={9000 + index} "
-                         f"stime_us=1000 max_rss_kb={4096 + index} cmd={cmd}\n")
+            handle.write(f"START pid={pid} ppid=1000 ts={1000.0 + index} element={element} inv={inv} cmd={cmd}\n")
+            handle.write(
+                f"END pid={pid} ppid=1000 ts={1000.5 + index} "
+                f"element={element} inv={inv} utime_us={9000 + index} "
+                f"stime_us=1000 max_rss_kb={4096 + index} cmd={cmd}\n"
+            )
 
 
 @pytest.fixture(scope="module")
@@ -69,7 +72,6 @@ def report(tmp_path_factory):
 
 
 class TestTheReportIsTheReductions:
-
     def test_it_does_not_carry_the_records(self, report):
         """The item's headline, and the one clause a reader of a
         gigabyte capture cares about."""
@@ -80,14 +82,20 @@ class TestTheReportIsTheReductions:
         """Non-vacuity: a report that dropped the aggregates too would
         pass the clause above and be useless. These are the keys every
         published number is computed from."""
-        for key in ("cpu_time", "peak_memory", "per_element_parallelism",
-                    "binary_cost", "configure_phase", "stream_coverage",
-                    "by_element", "max_concurrency"):
+        for key in (
+            "cpu_time",
+            "peak_memory",
+            "per_element_parallelism",
+            "binary_cost",
+            "configure_phase",
+            "stream_coverage",
+            "by_element",
+            "max_concurrency",
+        ):
             assert report.get(key), key
         assert report["cpu_time"]["per_element"], "no per-element CPU"
 
-    def test_the_document_is_smaller_than_what_it_dropped(
-            self, report, tmp_path):
+    def test_the_document_is_smaller_than_what_it_dropped(self, report, tmp_path):
         """The item's measurement, reproduced at this file's scale
         rather than quoted: the record list was the document.
 
@@ -104,7 +112,8 @@ class TestTheReportIsTheReductions:
         assert records > reductions * 5, (
             f"records {records} B against reductions {reductions} B - the "
             "list was not the bulk of the document, so this fixture is not "
-            "measuring what the item measured")
+            "measuring what the item measured"
+        )
 
     def test_it_stamps_the_shape_it_is(self, report):
         assert report["schema"] == plane2.SCHEMA == "plane2/v3"
@@ -121,9 +130,17 @@ class TestAnOlderStoreStillReads:
 
     def test_it_is_inventoried_as_read_and_never_written(self):
         assert contracts.superseded() == [
-            "analyze/v2", "analyze/v3", "analyze/v4", "analyze/v5",
-            "blast/v1", "compare/v1", "correlate/v1", "host/v1",
-            "plane2/v1", "plane2/v2"]
+            "analyze/v2",
+            "analyze/v3",
+            "analyze/v4",
+            "analyze/v5",
+            "blast/v1",
+            "compare/v1",
+            "correlate/v1",
+            "host/v1",
+            "plane2/v1",
+            "plane2/v2",
+        ]
         assert "plane2/v1" in contracts.ids()
         assert plane2.SCHEMA in contracts.ids()
 
@@ -146,31 +163,50 @@ class TestAnOlderStoreStillReads:
         path.write_text(json.dumps(report), encoding="utf-8")
         assert tracer.load_saved_report(str(path)) is not None
         legacy = tmp_path / "legacy.json"
-        legacy.write_text(json.dumps(
-            {"process_count": 1, "matched_count": 1, "by_binary": {"cc": 1},
-             "by_element": {"a.bst": 1}, "processes": [{"pid": 1}]}),
-            encoding="utf-8")
+        legacy.write_text(
+            json.dumps(
+                {
+                    "process_count": 1,
+                    "matched_count": 1,
+                    "by_binary": {"cc": 1},
+                    "by_element": {"a.bst": 1},
+                    "processes": [{"pid": 1}],
+                }
+            ),
+            encoding="utf-8",
+        )
         assert tracer.load_saved_report(str(legacy)) is not None
 
 
 class TestTheAnalysisSaysWhichShapeItRead:
-
     def test_the_two_plane_run_publishes_its_plane2_source(self):
         done = subprocess.run(
-            [sys.executable, "-m", "bga.cli", "analyze",
-             str(MACRO_MICRO / "run"), "--plane2",
-             str(MACRO_MICRO / "plane2.json"), "--format", "json"],
-            capture_output=True, text=True, cwd=REPO, timeout=300)
+            [
+                sys.executable,
+                "-m",
+                "bga.cli",
+                "analyze",
+                str(MACRO_MICRO / "run"),
+                "--plane2",
+                str(MACRO_MICRO / "plane2.json"),
+                "--format",
+                "json",
+            ],
+            capture_output=True,
+            text=True,
+            cwd=REPO,
+            timeout=300,
+        )
         assert done.returncode == 0, done.stderr[-2000:]
         document = json.loads(done.stdout)
         source = (document.get("plane2_coverage") or {}).get("source")
         assert source, "the payload does not say which Plane 2 shape it read"
-        assert source["schema"] in ("plane2/v1", "plane2/v2",
-                                   "plane2/v3"), source
+        assert source["schema"] in ("plane2/v1", "plane2/v2", "plane2/v3"), source
         assert source["records_embedded"] is False, (
             "the committed fixture carries no record list - it has not for "
             "many rounds, which is the item's own evidence that nothing "
-            "reads one")
+            "reads one"
+        )
 
     def test_the_contract_declares_it(self):
         from bga import schemas
@@ -202,10 +238,20 @@ class TestTheAnswersAreKnown:
     @staticmethod
     def _records():
         def record(pid, cmd, start, end, cpu, rss):
-            return {"pid": pid, "ppid": 1, "element": "one.bst",
-                    "invocation": "inv-1", "cmd": cmd, "start_ts": start,
-                    "end_ts": end, "duration_s": end - start, "open": False,
-                    "cpu_us": cpu, "max_rss_kb": rss}
+            return {
+                "pid": pid,
+                "ppid": 1,
+                "element": "one.bst",
+                "invocation": "inv-1",
+                "cmd": cmd,
+                "start_ts": start,
+                "end_ts": end,
+                "duration_s": end - start,
+                "open": False,
+                "cpu_us": cpu,
+                "max_rss_kb": rss,
+            }
+
         return [
             record(2, "/usr/bin/cc1 -c a.c", 0.0, 2.0, 1_000_000, 4096),
             record(3, "/usr/bin/cc1 -c c.c", 1.0, 3.0, 2_000_000, 8192),
@@ -256,8 +302,7 @@ class TestTheFoldAndTheListAgree:
             fold.add(record)
         by_fold = fold.report()
 
-        assert json.dumps(by_list, sort_keys=True, default=str) == json.dumps(
-            by_fold, sort_keys=True, default=str)
+        assert json.dumps(by_list, sort_keys=True, default=str) == json.dumps(by_fold, sort_keys=True, default=str)
         # Non-vacuity: an empty report would satisfy the equality above.
         assert by_list["process_count"] == 600
         assert len(by_list["cpu_time"]["per_element"]) == 12

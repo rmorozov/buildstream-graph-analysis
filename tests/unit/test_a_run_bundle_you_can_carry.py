@@ -15,6 +15,7 @@ instead of half-reading, which is what the per-member contract version
 buys: a bundle from a newer `bga` is recognised, named and declined with
 nothing written.
 """
+
 import gzip
 import io
 import json
@@ -87,30 +88,30 @@ def far(tmp_path_factory):
 def _repack(source, destination, manifest=None, drop=(), extra=()):
     """Rewrite a bundle - the only way to forge one a newer `bga` wrote."""
     with tarfile.open(source, mode="r:gz") as original:
-        entries = [(info, original.extractfile(info).read())
-                   for info in original.getmembers()]
+        entries = [(info, original.extractfile(info).read()) for info in original.getmembers()]
     if manifest is not None:
         payload = json.dumps(manifest).encode("utf-8")
-        entries = [(info, payload) if info.name == bundle.MANIFEST_NAME
-                   else (info, data) for info, data in entries]
+        entries = [(info, payload) if info.name == bundle.MANIFEST_NAME else (info, data) for info, data in entries]
         for info, _data in entries:
             if info.name == bundle.MANIFEST_NAME:
                 info.size = len(payload)
     entries = [(info, data) for info, data in entries if info.name not in drop]
-    with open(destination, "wb") as raw, gzip.GzipFile(fileobj=raw, mode="wb", mtime=0) as compressed, \
-            tarfile.open(fileobj=compressed, mode="w") as archive:
-            for info, data in entries:
-                info.size = len(data)
-                archive.addfile(info, io.BytesIO(data))
-            for name, data in extra:
-                info = tarfile.TarInfo(name)
-                info.size = len(data)
-                archive.addfile(info, io.BytesIO(data))
+    with (
+        open(destination, "wb") as raw,
+        gzip.GzipFile(fileobj=raw, mode="wb", mtime=0) as compressed,
+        tarfile.open(fileobj=compressed, mode="w") as archive,
+    ):
+        for info, data in entries:
+            info.size = len(data)
+            archive.addfile(info, io.BytesIO(data))
+        for name, data in extra:
+            info = tarfile.TarInfo(name)
+            info.size = len(data)
+            archive.addfile(info, io.BytesIO(data))
     return destination
 
 
 class TestTheBundleIsTheCaptureAndNotJustRun:
-
     def test_every_layout_member_that_exists_travels(self, snapshot, tmp_path):
         """The defect in one line: `run/` alone loses Plane 2.
 
@@ -119,16 +120,17 @@ class TestTheBundleIsTheCaptureAndNotJustRun:
         """
         path, manifest = bundle.export(snapshot, str(tmp_path / "b.tar.gz"))
         packed = {member["path"] for member in manifest["members"]}
-        expected = {relative for relative, presence, _contract
-                    in bundle._layout_relative()
-                    if presence != run_store.DERIVED and relative in CAPTURE}
+        expected = {
+            relative
+            for relative, presence, _contract in bundle._layout_relative()
+            if presence != run_store.DERIVED and relative in CAPTURE
+        }
         assert packed == expected
         beside_run = {p for p in packed if not p.startswith("run/")}
         assert "plane2.json" in beside_run and "host-samples.jsonl" in beside_run
         with tarfile.open(path) as archive:
             names = set(archive.getnames())
-        assert names == {bundle.MANIFEST_NAME} | {
-            bundle.MEMBER_PREFIX + p for p in expected}
+        assert names == {bundle.MANIFEST_NAME} | {bundle.MEMBER_PREFIX + p for p in expected}
 
     def test_derived_members_do_not_travel(self, snapshot, tmp_path):
         """`DERIVED` means absent costs nothing. `.size` would arrive
@@ -137,21 +139,17 @@ class TestTheBundleIsTheCaptureAndNotJustRun:
         packed = {member["path"] for member in manifest["members"]}
         assert packed.isdisjoint(DERIVED_FILES)
 
-    def test_the_manifest_names_each_members_contract_version(
-            self, snapshot, tmp_path):
+    def test_the_manifest_names_each_members_contract_version(self, snapshot, tmp_path):
         _path, manifest = bundle.export(snapshot, str(tmp_path / "b.tar.gz"))
-        contracts = {member["path"]: member["contract"]
-                     for member in manifest["members"]}
+        contracts = {member["path"]: member["contract"] for member in manifest["members"]}
         assert contracts["run/graph.json"] == "graph/v9"
         assert contracts["plane2.json"] == "plane2/v3"
         assert contracts["host-samples.jsonl"] == "host-samples/v1"
-        assert contracts["build.log"] is None, (
-            "a member with no contract must say so rather than borrow one")
+        assert contracts["build.log"] is None, "a member with no contract must say so rather than borrow one"
         assert manifest["schema"] == bundle.SCHEMA
         assert manifest["bga_version"]
 
-    def test_a_fresh_capture_is_not_refused_by_its_own_bga(
-            self, snapshot, tmp_path, far):
+    def test_a_fresh_capture_is_not_refused_by_its_own_bga(self, snapshot, tmp_path, far):
         """The regression this item measured while it was built.
 
         `readable_contracts()` was `contracts.ids() | superseded()`, and
@@ -166,18 +164,15 @@ class TestTheBundleIsTheCaptureAndNotJustRun:
 
 
 class TestTheSwitchSaysWhatItLeftOut:
-
-    def test_no_plane2_drops_the_plane2_members_and_records_it(
-            self, snapshot, tmp_path):
-        _path, manifest = bundle.export(
-            snapshot, str(tmp_path / "b.tar.gz"), include_plane2=False)
+    def test_no_plane2_drops_the_plane2_members_and_records_it(self, snapshot, tmp_path):
+        _path, manifest = bundle.export(snapshot, str(tmp_path / "b.tar.gz"), include_plane2=False)
         packed = {member["path"] for member in manifest["members"]}
         assert not any(bundle.is_plane2(p) for p in packed)
-        assert set(manifest["excluded"]) == {
-            "plane2.json", "plane2-resource.json"}
+        assert set(manifest["excluded"]) == {"plane2.json", "plane2-resource.json"}
         assert "host-samples.jsonl" in packed, (
             "host sampling is not the Plane 2 capture and is small; "
-            "dropping it would make the far report quieter for nothing")
+            "dropping it would make the far report quieter for nothing"
+        )
 
     def test_everything_ships_by_default(self, snapshot, tmp_path):
         _path, manifest = bundle.export(snapshot, str(tmp_path / "b.tar.gz"))
@@ -186,9 +181,7 @@ class TestTheSwitchSaysWhatItLeftOut:
 
 
 class TestTheFarSideRefusesRatherThanHalfReads:
-
-    def test_a_newer_bundle_format_is_refused_by_name(
-            self, snapshot, tmp_path, far):
+    def test_a_newer_bundle_format_is_refused_by_name(self, snapshot, tmp_path, far):
         path, manifest = bundle.export(snapshot, str(tmp_path / "b.tar.gz"))
         manifest["schema"] = "bundle-manifest/v2"
         manifest["bga_version"] = "9.9.9"
@@ -199,8 +192,7 @@ class TestTheFarSideRefusesRatherThanHalfReads:
         assert "9.9.9" in str(error.value)
         assert run_store.list_snapshots(far) == []
 
-    def test_a_member_contract_this_bga_cannot_read_is_refused(
-            self, snapshot, tmp_path, far):
+    def test_a_member_contract_this_bga_cannot_read_is_refused(self, snapshot, tmp_path, far):
         path, manifest = bundle.export(snapshot, str(tmp_path / "b.tar.gz"))
         for member in manifest["members"]:
             if member["path"] == "run/graph.json":
@@ -210,11 +202,10 @@ class TestTheFarSideRefusesRatherThanHalfReads:
             bundle.load(forged, far)
         assert "graph/v10" in str(error.value)
         assert run_store.list_snapshots(far) == [], (
-            "a refusal that had already written half the members is the "
-            "half-read this item exists to prevent")
+            "a refusal that had already written half the members is the half-read this item exists to prevent"
+        )
 
-    def test_a_declared_member_that_escapes_the_directory_is_refused(
-            self, snapshot, tmp_path, far):
+    def test_a_declared_member_that_escapes_the_directory_is_refused(self, snapshot, tmp_path, far):
         """The traversal case, and it has to be *declared* to reach the
         clause under test.
 
@@ -225,55 +216,53 @@ class TestTheFarSideRefusesRatherThanHalfReads:
         """
         path, manifest = bundle.export(snapshot, str(tmp_path / "b.tar.gz"))
         manifest["members"].append(
-            {"path": "../../escaped.json", "presence": "conditional",
-             "contract": None, "bytes": 2})
-        forged = _repack(path, str(tmp_path / "escape.tar.gz"), manifest,
-                         extra=[(bundle.MEMBER_PREFIX + "../../escaped.json",
-                                 b"{}")])
+            {"path": "../../escaped.json", "presence": "conditional", "contract": None, "bytes": 2}
+        )
+        forged = _repack(
+            path,
+            str(tmp_path / "escape.tar.gz"),
+            manifest,
+            extra=[(bundle.MEMBER_PREFIX + "../../escaped.json", b"{}")],
+        )
         with pytest.raises(bundle.BundleError) as error:
             bundle.load(forged, far)
         assert "escapes the snapshot directory" in str(error.value)
-        assert not os.path.exists(
-            os.path.join(os.path.dirname(os.path.dirname(far)),
-                         "escaped.json"))
+        assert not os.path.exists(os.path.join(os.path.dirname(os.path.dirname(far)), "escaped.json"))
 
-    def test_an_entry_outside_the_member_prefix_is_refused_as_such(
-            self, snapshot, tmp_path, far):
+    def test_an_entry_outside_the_member_prefix_is_refused_as_such(self, snapshot, tmp_path, far):
         """And the refusal names the prefix, so deleting that clause and
         falling through to the membership check reddens this."""
         path, _manifest = bundle.export(snapshot, str(tmp_path / "b.tar.gz"))
-        forged = _repack(path, str(tmp_path / "loose.tar.gz"),
-                         extra=[("escaped.json", b"{}")])
+        forged = _repack(path, str(tmp_path / "loose.tar.gz"), extra=[("escaped.json", b"{}")])
         with pytest.raises(bundle.BundleError) as error:
             bundle.load(forged, far)
         assert bundle.MEMBER_PREFIX in str(error.value)
         assert "is not a file under" in str(error.value)
 
-    def test_a_directory_entry_under_the_prefix_is_refused(
-            self, snapshot, tmp_path, far):
+    def test_a_directory_entry_under_the_prefix_is_refused(self, snapshot, tmp_path, far):
         """Only regular files are unpacked. A dir (or a symlink) entry
         is how an archive writes somewhere it did not declare."""
         path, _manifest = bundle.export(snapshot, str(tmp_path / "b.tar.gz"))
         with tarfile.open(path, mode="r:gz") as original:
-            entries = [(info, original.extractfile(info).read())
-                       for info in original.getmembers()]
+            entries = [(info, original.extractfile(info).read()) for info in original.getmembers()]
         forged = str(tmp_path / "dir.tar.gz")
-        with open(forged, "wb") as raw, gzip.GzipFile(fileobj=raw, mode="wb", mtime=0) as compressed, \
-                tarfile.open(fileobj=compressed, mode="w") as archive:
-                for info, data in entries:
-                    archive.addfile(info, io.BytesIO(data))
-                directory = tarfile.TarInfo(bundle.MEMBER_PREFIX + "sub")
-                directory.type = tarfile.DIRTYPE
-                archive.addfile(directory)
+        with (
+            open(forged, "wb") as raw,
+            gzip.GzipFile(fileobj=raw, mode="wb", mtime=0) as compressed,
+            tarfile.open(fileobj=compressed, mode="w") as archive,
+        ):
+            for info, data in entries:
+                archive.addfile(info, io.BytesIO(data))
+            directory = tarfile.TarInfo(bundle.MEMBER_PREFIX + "sub")
+            directory.type = tarfile.DIRTYPE
+            archive.addfile(directory)
         with pytest.raises(bundle.BundleError) as error:
             bundle.load(forged, far)
         assert "is not a file under" in str(error.value)
 
-    def test_a_manifest_naming_a_member_the_archive_lacks_is_refused(
-            self, snapshot, tmp_path, far):
+    def test_a_manifest_naming_a_member_the_archive_lacks_is_refused(self, snapshot, tmp_path, far):
         path, _manifest = bundle.export(snapshot, str(tmp_path / "b.tar.gz"))
-        forged = _repack(path, str(tmp_path / "short.tar.gz"),
-                         drop=(bundle.MEMBER_PREFIX + "plane2.json",))
+        forged = _repack(path, str(tmp_path / "short.tar.gz"), drop=(bundle.MEMBER_PREFIX + "plane2.json",))
         with pytest.raises(bundle.BundleError) as error:
             bundle.load(forged, far)
         assert "plane2.json" in str(error.value)
@@ -287,16 +276,13 @@ class TestTheFarSideRefusesRatherThanHalfReads:
 
 
 class TestTheStampIsTheCapturesIdentity:
-
-    def test_the_stamp_is_preserved_rather_than_reassigned(
-            self, snapshot, tmp_path, far):
+    def test_the_stamp_is_preserved_rather_than_reassigned(self, snapshot, tmp_path, far):
         path, _manifest = bundle.export(snapshot, str(tmp_path / "b.tar.gz"))
         target, loaded = bundle.load(path, far)
         assert os.path.basename(target) == STAMP
         assert loaded["stamp"] == STAMP
 
-    def test_the_same_bundle_loads_twice_without_complaint(
-            self, snapshot, tmp_path, far):
+    def test_the_same_bundle_loads_twice_without_complaint(self, snapshot, tmp_path, far):
         """Identical contents under one stamp is a re-send, not a
         collision - refusing it would make `scp` twice an error."""
         path, _manifest = bundle.export(snapshot, str(tmp_path / "b.tar.gz"))
@@ -304,18 +290,17 @@ class TestTheStampIsTheCapturesIdentity:
         target, _again = bundle.load(path, far)
         assert os.path.basename(target) == STAMP
 
-    def test_a_different_capture_under_the_same_stamp_is_refused(
-            self, snapshot, tmp_path, far):
+    def test_a_different_capture_under_the_same_stamp_is_refused(self, snapshot, tmp_path, far):
         path, _manifest = bundle.export(snapshot, str(tmp_path / "b.tar.gz"))
         bundle.load(path, far)
-        _write(os.path.join(run_store.runs_dir(far), STAMP),
-               "run/graph.json", '{"schema": "graph/v9", "changed": true}')
+        _write(
+            os.path.join(run_store.runs_dir(far), STAMP), "run/graph.json", '{"schema": "graph/v9", "changed": true}'
+        )
         with pytest.raises(bundle.BundleError) as error:
             bundle.load(path, far)
         assert "run/graph.json" in str(error.value)
 
-    def test_the_host_manifest_arrives_byte_identical(
-            self, snapshot, tmp_path, far):
+    def test_the_host_manifest_arrives_byte_identical(self, snapshot, tmp_path, far):
         """`UX-186`'s cross-host refusal lives in `run-context.json`. A
         format that rewrote it would turn that refusal off by accident,
         which is the one way this row could do harm."""
@@ -329,9 +314,7 @@ class TestTheStampIsTheCapturesIdentity:
 
 
 class TestTheCommandIsWired:
-
-    def test_export_then_load_round_trips_through_the_cli(
-            self, snapshot, project, tmp_path, far, monkeypatch, capsys):
+    def test_export_then_load_round_trips_through_the_cli(self, snapshot, project, tmp_path, far, monkeypatch, capsys):
         from bga.cli import main
 
         out = str(tmp_path / "carry.tar.gz")
@@ -343,8 +326,7 @@ class TestTheCommandIsWired:
         printed = capsys.readouterr().out
         assert STAMP in printed and "bga analyze @last" in printed
 
-    def test_a_refused_bundle_exits_two_and_says_why(
-            self, snapshot, project, tmp_path, far, monkeypatch, capsys):
+    def test_a_refused_bundle_exits_two_and_says_why(self, snapshot, project, tmp_path, far, monkeypatch, capsys):
         from bga.cli import main
 
         path, manifest = bundle.export(snapshot, str(tmp_path / "b.tar.gz"))

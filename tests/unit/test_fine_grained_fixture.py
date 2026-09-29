@@ -11,6 +11,7 @@ variant holding the same translation units in one element.
 Shape only — the numbers live in `UX-0120`'s verification log, because
 they need a real `bst build` and this tier does not.
 """
+
 import os
 import re
 
@@ -30,7 +31,8 @@ def _depends(element_path):
 
 def _siblings():
     return sorted(
-        name for name in os.listdir(os.path.join(PROJECT, "elements"))
+        name
+        for name in os.listdir(os.path.join(PROJECT, "elements"))
         if name.startswith("tiny-") and name.endswith(".bst")
     )
 
@@ -45,8 +47,7 @@ def test_every_sibling_declares_the_identical_dependency_set():
     """The detector groups by exact parent set - a merge only makes sense
     where the graph would not notice. One sibling with an extra edge
     silently drops the group below the two-member floor."""
-    sets = {tuple(_depends(os.path.join(PROJECT, "elements", name)))
-            for name in _siblings()}
+    sets = {tuple(_depends(os.path.join(PROJECT, "elements", name))) for name in _siblings()}
 
     assert len(sets) == 1, sets
     assert sets == {("bulk.bst", "toolchain.bst")}
@@ -73,8 +74,7 @@ def test_the_generator_makes_enough_files_to_be_measurable():
     about."""
     import importlib.util
 
-    spec = importlib.util.spec_from_file_location(
-        "generate_bulk", os.path.join(PROJECT, "generate_bulk.py"))
+    spec = importlib.util.spec_from_file_location("generate_bulk", os.path.join(PROJECT, "generate_bulk.py"))
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
 
@@ -85,10 +85,7 @@ def test_the_merged_variant_holds_the_same_units_in_one_element():
     """The projection is checked against this, so it has to be the same
     work - a merged variant that quietly dropped a unit would make the
     merge look cheaper than it is."""
-    merged_elements = sorted(
-        name for name in os.listdir(os.path.join(MERGED, "elements"))
-        if name.startswith("tiny")
-    )
+    merged_elements = sorted(name for name in os.listdir(os.path.join(MERGED, "elements")) if name.startswith("tiny"))
     assert merged_elements == ["tiny-merged.bst"]
 
     sources = sorted(os.listdir(os.path.join(MERGED, "files", "src", "tiny-merged")))
@@ -98,8 +95,9 @@ def test_the_merged_variant_holds_the_same_units_in_one_element():
 def test_the_merged_variant_shares_the_siblings_dependency_set():
     """Merging changes the element count, not what the sandbox stages -
     otherwise the before/after timing would be measuring two things."""
-    assert _depends(os.path.join(MERGED, "elements", "tiny-merged.bst")) == \
-        _depends(os.path.join(PROJECT, "elements", "tiny-1.bst"))
+    assert _depends(os.path.join(MERGED, "elements", "tiny-merged.bst")) == _depends(
+        os.path.join(PROJECT, "elements", "tiny-1.bst")
+    )
 
 
 def test_the_two_projects_do_not_share_a_buildstream_name():
@@ -121,8 +119,5 @@ def test_each_project_builds_everything_through_one_target(root):
     element missing from it is an element the fixture does not exercise."""
     with open(os.path.join(root, "elements", "all.bst")) as handle:
         body = handle.read()
-    expected = sorted(
-        name for name in os.listdir(os.path.join(root, "elements"))
-        if name.startswith("tiny-")
-    )
+    expected = sorted(name for name in os.listdir(os.path.join(root, "elements")) if name.startswith("tiny-"))
     assert sorted(re.findall(r"^- (tiny-\S+\.bst)$", body, re.M)) == expected

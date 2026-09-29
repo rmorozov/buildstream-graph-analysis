@@ -168,6 +168,7 @@ ones to run today (`UX-139`).
 | [`audits/optimization-walkthrough-04.md`](audits/optimization-walkthrough-04.md) | the retired `sleep N` proxy walkthrough, kept for provenance |
 | [`audits/planted-defect-walk-round-72.md`](audits/planted-defect-walk-round-72.md) | three defects **chosen first**, generated into real projects, and how far the front door gets each reader towards the planted answer (`UX-468`) |
 | [`audits/perf-snapshot-view-2026-09-28.md`](audits/perf-snapshot-view-2026-09-28.md) | bga's **own** cost after the build and before the page: the tail's four analyzer runs, a quadratic closure, silent phases, measured at 74, 1,202 and 5,002 elements (`UX-1072`..`UX-1081`) |
+| [`audits/quality-gates-2026-09-29.md`](audits/quality-gates-2026-09-29.md) | the gates themselves: CI's 56-minute PR path and where it goes, the push gate's markdown scan, what the suite guards and what no check covers (`UX-1108`..`UX-1122`) |
 | [`audits/perf-analyze-profile-2026-09-28.md`](audits/perf-analyze-profile-2026-09-28.md) | `bga analyze` after round 150, per stage: graph-only 4.00 s against Plane 1 7.06 s at 5,002 elements; the blast radius decode is 332 of 469 MB (`UX-1106`) |
 
 ## Specification and contracts
@@ -335,6 +336,7 @@ The rounds themselves:
 [148](audits/round-148.md) ·
 [149](audits/round-149.md) ·
 [150](audits/round-150.md) ·
+[151](audits/round-151.md) ·
 [the guard census of round 64](audits/guard-census-round-64.md)
 
 ## Backlog

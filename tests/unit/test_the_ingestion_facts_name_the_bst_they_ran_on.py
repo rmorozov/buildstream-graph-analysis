@@ -10,6 +10,7 @@ The version comes from the guard now: `test_bst_extract_run.py`'s
 claim as a quotation and name what superseded it - each named `bga`
 module is read here, so the correction cannot name a fiction.
 """
+
 import re
 from pathlib import Path
 
@@ -28,7 +29,8 @@ DOC = REPO / "docs" / "spec" / "ingestion-pipeline.md"
 # The "Last exercised on `bst` <version>, <date>" line the headings carry.
 EXERCISED = re.compile(
     r"\*\*Last exercised on `bst` (?P<version>[0-9]+(?:\.[0-9]+)*(?:, [0-9]+(?:\.[0-9]+)*)*), "
-    r"(?P<date>\d{4}-\d{2}-\d{2})\.\*\*")
+    r"(?P<date>\d{4}-\d{2}-\d{2})\.\*\*"
+)
 
 # `element_kind` as a value that is read, not as a fragment of a longer
 # name: `by_element_kind_phase` in bga/floors/cold.py is a *task* kind
@@ -51,8 +53,8 @@ def _fact(number: int) -> str:
     text = _doc()
     start = re.search(rf"^{number}\. \*\*", text, re.M)
     assert start, f"fact {number} not found"
-    end = re.search(rf"^(?:{number + 1}\. |## )", text[start.end():], re.M)
-    block = text[start.start():start.end() + (end.start() if end else len(text))]
+    end = re.search(rf"^(?:{number + 1}\. |## )", text[start.end() :], re.M)
+    block = text[start.start() : start.end() + (end.start() if end else len(text))]
     return re.sub(r"\s+", " ", block)
 
 
@@ -62,13 +64,15 @@ def _unquoted(block: str) -> str:
 
 # --- the version is the guard's, not the prose's -------------------------
 
+
 def test_both_facts_headings_say_which_bst_they_were_last_exercised_on():
     hits = EXERCISED.findall(_doc())
     headings = re.findall(r"^## Empirically confirmed facts.*$", _doc(), re.M)
     assert len(headings) == 2, headings
     assert len(hits) == len(headings), (
         f"{len(headings)} facts headings, {len(hits)} 'Last exercised on' "
-        f"lines - every facts section names the bst it last ran against")
+        f"lines - every facts section names the bst it last ran against"
+    )
     assert len(set(hits)) == 1, f"the sections disagree: {hits}"
 
 
@@ -86,16 +90,18 @@ def test_the_documented_version_is_the_one_the_binary_reports():
     assert bst_version() in versions, (
         f"the document says it was last exercised on bst "
         f"{', '.join(versions)}; this binary reports {bst_version()}. "
-        f"Re-run the bst tier here and add the version to the line.")
+        f"Re-run the bst tier here and add the version to the line."
+    )
 
 
 # --- fact 9: element_kind is read now ------------------------------------
 
+
 def test_fact_9_no_longer_claims_element_kind_is_unread():
     assert "not read by any analysis consumer" not in _unquoted(_fact(9)), (
         "fact 9 asserts element_kind is read by no analysis consumer, "
-        "outside of the quotation that supersedes it - but "
-        + ", ".join(_fact_9_modules()) + " all read it")
+        "outside of the quotation that supersedes it - but " + ", ".join(_fact_9_modules()) + " all read it"
+    )
 
 
 def _fact_9_modules():
@@ -104,8 +110,8 @@ def _fact_9_modules():
 
 def test_fact_9_names_what_superseded_its_old_claim():
     assert "stopped being true" in _fact(9), (
-        "fact 9 keeps its old claim as a quotation; it must also say what "
-        "superseded it, the way UX-88 corrected fact 5")
+        "fact 9 keeps its old claim as a quotation; it must also say what superseded it, the way UX-88 corrected fact 5"
+    )
 
 
 def test_every_module_fact_9_names_really_reads_element_kind():
@@ -115,22 +121,26 @@ def test_every_module_fact_9_names_really_reads_element_kind():
         path = REPO / module
         assert path.is_file(), f"fact 9 names {module}, which does not exist"
         assert ELEMENT_KIND_READ.search(path.read_text()), (
-            f"fact 9 names {module} as reading `element_kind`; it does not")
+            f"fact 9 names {module} as reading `element_kind`; it does not"
+        )
 
 
 # --- fact 11: the query-cache cost is measured now ------------------------
+
 
 def test_fact_11_no_longer_claims_query_cache_is_dropped_entirely():
     assert "dropped by the ingestion pipeline entirely" not in _unquoted(_fact(11)), (
         "fact 11 asserts the Query cache activity is dropped entirely, "
         "outside of the quotation that supersedes it - but P4-14 landed "
-        "`pipeline_overhead`")
+        "`pipeline_overhead`"
+    )
 
 
 def test_fact_11_names_what_superseded_its_old_claim():
     assert "stopped being true" in _fact(11), (
         "fact 11 keeps its old claim as a quotation; it must also say what "
-        "superseded it, the way UX-88 corrected fact 5")
+        "superseded it, the way UX-88 corrected fact 5"
+    )
 
 
 def test_fact_11_names_the_pipeline_overhead_that_replaced_it():

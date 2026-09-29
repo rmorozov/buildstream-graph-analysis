@@ -22,7 +22,7 @@ Outcome is written.
 | what a make target or dev tool does | `sed -n 1,25p tools/dev_touching.py` (any of them) — the docstring is capped at 25 lines (`UX-497`) |
 | which tier a test file is in, and why | `grep -n "<file>" tests/tiers.py` |
 | every skip the suite can take, as written | `python3 -m pytest tests/ --co -q 2>/dev/null \| tail -1` then `tests/skip_reasons.py` |
-| the round that filed or closed an item | `grep -n "UX-<n>" docs/backlog/scenarios/README.md docs/backlog/scenarios/closed.md` |
+| the round that filed or closed an item | `grep -rn "UX-<n>" docs/backlog/scenarios/README.md docs/backlog/scenarios/closed/` |
 
 Four rules that keep the lookups cheap:
 

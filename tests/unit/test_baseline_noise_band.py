@@ -17,6 +17,7 @@ band from 3.00s to 40.64s - at which point it misses a real +15%
 regression - while the median±3·MAD band is unchanged and still catches
 it.
 """
+
 import pytest
 
 from bga.compare import (
@@ -157,9 +158,18 @@ def test_the_band_is_serialized_for_ci_consumers():
 
 
 def test_a_comparison_without_a_band_serializes_none():
-    assert ComparisonResult(
-        baseline_run_id="a", candidate_run_id="b",
-        baseline_metrics={}, candidate_metrics={}, deltas={},
-        baseline_confidence=1.0, candidate_confidence=1.0,
-        attribution_deltas={}, verdict="improved", low_confidence=False,
-    ).to_dict()["baseline_band"] is None
+    assert (
+        ComparisonResult(
+            baseline_run_id="a",
+            candidate_run_id="b",
+            baseline_metrics={},
+            candidate_metrics={},
+            deltas={},
+            baseline_confidence=1.0,
+            candidate_confidence=1.0,
+            attribution_deltas={},
+            verdict="improved",
+            low_confidence=False,
+        ).to_dict()["baseline_band"]
+        is None
+    )

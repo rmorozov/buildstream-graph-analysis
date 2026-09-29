@@ -24,6 +24,7 @@ reference does not carry is **recorded** (`UX-503`); a `stale` runner
 verdict needs two runs too (`UX-508`); and an entry is the **median of
 that file's last readings**, whose top it must beat (`UX-496`).
 """
+
 import argparse
 import collections
 import json
@@ -106,6 +107,7 @@ CI_DRIFT_FACTOR = 1.5
 #: `--record` accumulates the rest.
 CI_DRIFT_SECONDS = 5.0
 
+
 def over_gate(seconds, expected):
     """Both `CI_DRIFT_FACTOR` and `CI_DRIFT_SECONDS`, on one reading.
 
@@ -114,8 +116,7 @@ def over_gate(seconds, expected):
     it applies) - shared here so `adopt`'s step check (`UX-803`) and
     `against`'s per-row check cannot silently disagree about the rule.
     """
-    return (expected > 0 and seconds > CI_DRIFT_FACTOR * expected
-            and seconds - expected >= CI_DRIFT_SECONDS)
+    return expected > 0 and seconds > CI_DRIFT_FACTOR * expected and seconds - expected >= CI_DRIFT_SECONDS
 
 
 #: `UX-442`: how many **consecutive** runs a file must exceed both gates
@@ -225,6 +226,7 @@ def population_size(population):
     population.
     """
     from tools import dev_close_task, dev_touching
+
     if population == "tests_tree":
         return len(dev_touching.test_files())
     if population == "backlog":
@@ -240,8 +242,7 @@ def population_for(times):
     on - the two never separately drift the way `adopt` alone used to,
     leaving `population` at its last `record` while `files` moved on.
     """
-    return {name: population_size(population)
-            for name, population in POPULATION_CLASS.items() if name in times}
+    return {name: population_size(population) for name, population in POPULATION_CLASS.items() if name in times}
 
 
 def file_of(classname):
@@ -330,8 +331,8 @@ def confirm(rows, python=None):
     for row in rows:
         name, seconds, was, _now = row
         alone = alone_seconds(name, python)
-        if alone is None:                                # pragma: no cover
-            kept.append(row)                             # cannot confirm
+        if alone is None:  # pragma: no cover
+            kept.append(row)  # cannot confirm
             continue
         if RANK[tier_for(alone)] > RANK[was]:
             kept.append((name, alone, was, tier_for(alone)))
@@ -352,11 +353,13 @@ def alone_seconds(name, python=None):
         environment = dict(os.environ, PYTEST_XDIST="")
         try:
             done = subprocess.run(
-                [python or sys.executable, "-m", "pytest", name, "-q", "-p",
-                 "no:xdist", f"--junitxml={report}"],
-                cwd=str(REPO), env=environment, capture_output=True,
-                timeout=CONFIRM_TIMEOUT_S)
-        except (OSError, subprocess.SubprocessError):    # pragma: no cover
+                [python or sys.executable, "-m", "pytest", name, "-q", "-p", "no:xdist", f"--junitxml={report}"],
+                cwd=str(REPO),
+                env=environment,
+                capture_output=True,
+                timeout=CONFIRM_TIMEOUT_S,
+            )
+        except (OSError, subprocess.SubprocessError):  # pragma: no cover
             return None
         # Only pytest's "tests ran" codes carry a measurement: 0 all
         # passed, 1 some failed - both mean the bodies executed and were
@@ -367,14 +370,13 @@ def alone_seconds(name, python=None):
         # confirms by failing.
         if done.returncode not in (0, 1):
             return None
-        if not report.is_file():                         # pragma: no cover
+        if not report.is_file():  # pragma: no cover
             return None
         try:
             root = ET.parse(report).getroot()
-        except ET.ParseError:                            # pragma: no cover
+        except ET.ParseError:  # pragma: no cover
             return None
-    return sum(float(case.get("time") or 0.0)
-               for case in root.iter("testcase"))
+    return sum(float(case.get("time") or 0.0) for case in root.iter("testcase"))
 
 
 def spread(times, reference):
@@ -394,8 +396,7 @@ def spread(times, reference):
     on purpose.
     """
     known = reference.get("files") or {}
-    by_name = {name: times[name] / known[name] for name in known
-               if times.get(name) and known[name] > 0}
+    by_name = {name: times[name] / known[name] for name in known if times.get(name) and known[name] > 0}
     if len(by_name) < 4:
         return None
     # `UX-476`: the median is taken over `shift_population` - the same
@@ -411,13 +412,15 @@ def spread(times, reference):
     ratios = sorted(by_name.values())
     normalised = [ratio / middle for ratio in ratios]
     quarter = len(normalised) // 4
-    return {"files": len(normalised),
-            "shift_files": len(shift_population(by_name, known)),
-            "shift": round(middle, 3),
-            "min": round(normalised[0], 3),
-            "p25": round(normalised[quarter], 3),
-            "p75": round(normalised[-1 - quarter], 3),
-            "max": round(normalised[-1], 3)}
+    return {
+        "files": len(normalised),
+        "shift_files": len(shift_population(by_name, known)),
+        "shift": round(middle, 3),
+        "min": round(normalised[0], 3),
+        "p25": round(normalised[quarter], 3),
+        "p75": round(normalised[-1 - quarter], 3),
+        "max": round(normalised[-1], 3),
+    }
 
 
 def samples_for(times, reference, shift=None):
@@ -435,8 +438,7 @@ def samples_for(times, reference, shift=None):
     """
     before = reference.get("samples") or {}
     known = reference.get("files") or {}
-    ratios = {name: times[name] / known[name] for name in known
-              if times.get(name) and known[name] > 0}
+    ratios = {name: times[name] / known[name] for name in known if times.get(name) and known[name] > 0}
     if len(shift_population(ratios, known)) < SHIFT_MIN_FILES:
         # No population to place the old readings on this run's clock
         # with. A list nobody can rebase is worse than one reading, so
@@ -462,17 +464,19 @@ def record(times, source="unknown", reference=None):
     """
     document = {
         "measured_on": source,
-        "note": ("UX-420: CI's own per-file totals, so a later CI run "
-                 "can be read against CI rather than against the floors in "
-                 "tests/tiers.py, which describe a developer machine. "
-                 "UX-496: `files` is the median of `samples`, that file's "
-                 f"last {CI_REFERENCE_SAMPLES} readings on this document's "
-                 "clock, newest last - not one run's number. "
-                 f"Refresh from a CI run's {CI_CANDIDATE_ARTIFACT} "
-                 f"artifact, or the log of its {CI_CANDIDATE_JOB} job, "
-                 f"which is this same tool's --record taken on "
-                 f"the runner whose clock this document is in - not from "
-                 f"a local --record (UX-418, UX-447)."),
+        "note": (
+            "UX-420: CI's own per-file totals, so a later CI run "
+            "can be read against CI rather than against the floors in "
+            "tests/tiers.py, which describe a developer machine. "
+            "UX-496: `files` is the median of `samples`, that file's "
+            f"last {CI_REFERENCE_SAMPLES} readings on this document's "
+            "clock, newest last - not one run's number. "
+            f"Refresh from a CI run's {CI_CANDIDATE_ARTIFACT} "
+            f"artifact, or the log of its {CI_CANDIDATE_JOB} job, "
+            f"which is this same tool's --record taken on "
+            f"the runner whose clock this document is in - not from "
+            f"a local --record (UX-418, UX-447)."
+        ),
         "files": {},
     }
     kept = samples_for(times, reference or {})
@@ -480,8 +484,7 @@ def record(times, source="unknown", reference=None):
     # middles lets one excursion raise the bar a later run is judged
     # against - with two readings it sets it halfway. The gate reports
     # only *too slow*, so the lower middle is the conservative side.
-    document["files"] = {name: round(statistics.median_low(kept[name]), 2)
-                         for name in sorted(times)}
+    document["files"] = {name: round(statistics.median_low(kept[name]), 2) for name in sorted(times)}
     document["samples"] = {name: kept[name] for name in sorted(times)}
     saw = spread(times, reference or {})
     if saw:
@@ -512,8 +515,7 @@ def _next_sample(name, known, before, reading, shift):
         return seen, False
     normalised = round(reading / shift, 2)
     prior = seen[-1] if name in known and seen else None
-    if (prior is not None and over_gate(prior, known[name])
-            and over_gate(normalised, known[name])):
+    if prior is not None and over_gate(prior, known[name]) and over_gate(normalised, known[name]):
         return [normalised], True
     return seen + [normalised], False
 
@@ -533,8 +535,7 @@ def readings_of(candidate):
     and one reading is better than none.
     """
     samples = candidate.get("samples") or {}
-    return {name: (samples.get(name) or [seconds])[-1]
-            for name, seconds in (candidate.get("files") or {}).items()}
+    return {name: (samples.get(name) or [seconds])[-1] for name, seconds in (candidate.get("files") or {}).items()}
 
 
 def adopt(reference, candidate):
@@ -579,8 +580,7 @@ def adopt(reference, candidate):
     run's own samples last carried is a step - the samples restart at
     it instead of joining the window, and the name lands in `adopted`.
     """
-    perf_added = {key: candidate[key] for key in PERF_KEYS
-                  if key not in reference and key in candidate}
+    perf_added = {key: candidate[key] for key in PERF_KEYS if key not in reference and key in candidate}
     known = reference.get("files") or {}
     times = readings_of(candidate)
     # `UX-924`: the shift stays **median against median**. It is a
@@ -590,8 +590,7 @@ def adopt(reference, candidate):
     # 0.9713, so reading-against-median buys 0.01 % and moves a
     # threshold. Only the number that enters `samples` changes.
     medians = candidate.get("files") or {}
-    ratios = {name: medians[name] / known[name] for name in known
-              if medians.get(name) and known[name] > 0}
+    ratios = {name: medians[name] / known[name] for name in known if medians.get(name) and known[name] > 0}
     if not ratios:
         if not perf_added:
             return reference, {}
@@ -605,8 +604,7 @@ def adopt(reference, candidate):
         document = dict(reference)
         document.update(perf_added)
         return document, perf_added
-    added = {name: round(seconds / shift, 2)
-             for name, seconds in times.items() if name not in known}
+    added = {name: round(seconds / shift, 2) for name, seconds in times.items() if name not in known}
     # `UX-496`: and a reading for every name it *does* carry, on the
     # reference's clock. This is where the samples come from - a
     # wholesale `--record` happened twice in the reference's whole
@@ -624,36 +622,29 @@ def adopt(reference, candidate):
     #: the median.
     stepped = set()
     for name in {**known, **added}:
-        seen, is_step = _next_sample(name, known, before, times.get(name),
-                                     shift)
+        seen, is_step = _next_sample(name, known, before, times.get(name), shift)
         if is_step:
             stepped.add(name)
-        kept[name] = (seen or [known.get(name, added.get(name))]
-                      )[-CI_REFERENCE_SAMPLES:]
+        kept[name] = (seen or [known.get(name, added.get(name))])[-CI_REFERENCE_SAMPLES:]
     for name, seconds in added.items():
         kept[name] = [seconds]
     document = dict(reference)
     document.update(perf_added)
     document["samples"] = {name: kept[name] for name in sorted(kept)}
-    document["files"] = {
-        name: round(statistics.median_low(kept[name]), 2)
-        for name in sorted(kept)}
+    document["files"] = {name: round(statistics.median_low(kept[name]), 2) for name in sorted(kept)}
     # `UX-955`: `times` is this run's own tree, so a name it samples
     # gets its `population` rewritten the same call it gets a `files`
     # reading - `record`'s own write, reused, rather than the two
     # drifting apart the way `population` used to sit at its last
     # `record` while `files` kept moving under `adopt` alone.
-    document["population"] = {**(reference.get("population") or {}),
-                              **population_for(times)}
+    document["population"] = {**(reference.get("population") or {}), **population_for(times)}
     # Which rows are *not* from the recording run `measured_on` names,
     # accumulated over adoptions and dropped by the next wholesale
     # `record` - a reader comparing two rows deserves to know one of
     # them was placed on this clock by division rather than measured on
     # it. `stepped` joins the same field (UX-803): a restarted file's
     # one sample is exactly as far from `measured_on` as an added row's.
-    document["adopted"] = sorted(
-        (set(reference.get("adopted") or []) & set(known) | set(added))
-        | stepped)
+    document["adopted"] = sorted((set(reference.get("adopted") or []) & set(known) | set(added)) | stepped)
     return document, {**added, **perf_added}
 
 
@@ -671,8 +662,7 @@ def shift_population(ratios, known):
 
 def shift_of(ratios, known):
     """The run's shift: the median ratio among files worth measuring."""
-    return statistics.median(ratios[name]
-                             for name in shift_population(ratios, known))
+    return statistics.median(ratios[name] for name in shift_population(ratios, known))
 
 
 def shift_spread(ratios, known):
@@ -715,8 +705,7 @@ def against(times, reference):
     one level up - `UX-442`.
     """
     known = reference.get("files") or {}
-    ratios = {name: times[name] / known[name] for name in known
-              if times.get(name) and known[name] > 0}
+    ratios = {name: times[name] / known[name] for name in known if times.get(name) and known[name] > 0}
     if not ratios:
         return "empty", None, []
     shift = shift_of(ratios, known)
@@ -750,8 +739,7 @@ def against(times, reference):
         if population and was:
             expected *= population_size(population) / was
         seen = band.get(name) or []
-        if (over_gate(times[name], expected)
-                and (not seen or times[name] > max(seen) * shift)):
+        if over_gate(times[name], expected) and (not seen or times[name] > max(seen) * shift):
             rows.append((name, times[name], known[name], ratio / shift))
     # A file with no reference at all is checked by nothing, which is
     # the silence this whole item is about - but only where there is
@@ -763,8 +751,7 @@ def against(times, reference):
     for name, seconds in times.items():
         if name not in known and seconds >= floor:
             rows.append((name, seconds, None, None))
-    return ("drift" if rows else "ok"), shift, sorted(
-        rows, key=lambda row: -row[1])
+    return ("drift" if rows else "ok"), shift, sorted(rows, key=lambda row: -row[1])
 
 
 def carried(path):
@@ -792,7 +779,7 @@ def carried(path):
     if not isinstance(runs, list):
         return []
     out = []
-    for one in runs[:CI_DRIFT_RUNS - 1]:
+    for one in runs[: CI_DRIFT_RUNS - 1]:
         if isinstance(one, dict):
             out.append(dict(one))
         elif isinstance(one, list):
@@ -814,10 +801,13 @@ def carry(path, readings, source, history, shift=None, shifts=()):
     """
     runs = [dict(readings)] + [dict(one) for one in history]
     seen = ([shift] if shift is not None else []) + list(shifts)
-    pathlib.Path(path).write_text(json.dumps(
-        {"runs": runs[:CI_DRIFT_RUNS - 1], "measured_on": source,
-         "shifts": seen[:CI_DRIFT_RUNS - 1]},
-        indent=2) + "\n", encoding="utf-8")
+    pathlib.Path(path).write_text(
+        json.dumps(
+            {"runs": runs[: CI_DRIFT_RUNS - 1], "measured_on": source, "shifts": seen[: CI_DRIFT_RUNS - 1]}, indent=2
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
 
 def shifted(path):
@@ -835,8 +825,7 @@ def shifted(path):
     seen = held.get("shifts")
     if not isinstance(seen, list):
         return []
-    return [value for value in seen[:CI_DRIFT_RUNS - 1]
-            if isinstance(value, (int, float))]
+    return [value for value in seen[: CI_DRIFT_RUNS - 1] if isinstance(value, (int, float))]
 
 
 def out_of_band(shift, before):
@@ -849,8 +838,7 @@ def out_of_band(shift, before):
     """
     if len(before) < CI_DRIFT_RUNS - 1:
         return False
-    return all(not IMAGE_BAND[0] <= one <= IMAGE_BAND[1]
-               for one in [shift] + list(before))
+    return all(not IMAGE_BAND[0] <= one <= IMAGE_BAND[1] for one in [shift] + list(before))
 
 
 #: `UX-557`: the diff was read and the selector cannot discriminate on
@@ -886,20 +874,20 @@ def explained_by(base):
     # downgrade every row to `unexplained` precisely when the evidence
     # is missing, silencing the gate on a failed fetch. Measured: a
     # `--base nope/nothing` returned `set()` before this check.
-    resolved = subprocess.run(["git", "rev-parse", "--verify", "--quiet",
-                               f"{base}^{{commit}}"],
-                              capture_output=True, text=True, cwd=REPO)
+    resolved = subprocess.run(
+        ["git", "rev-parse", "--verify", "--quiet", f"{base}^{{commit}}"], capture_output=True, text=True, cwd=REPO
+    )
     if resolved.returncode != 0:
         return None
     try:
         from tools import dev_touching
+
         # `census=False`: `UX-522` unions in the guards a diff can
         # never name, and this asks the opposite question - what does
         # this diff *account for*. A census guard runs whatever the
         # diff is, so counting it here would make every reported file
         # explained by every branch.
-        chosen, why = dev_touching.select(
-            dev_touching.changed_files(base), census=False)
+        chosen, why = dev_touching.select(dev_touching.changed_files(base), census=False)
         if "*" in why:
             # `dev_touching`'s shared-harness fallback: `conftest.py` or
             # `tiers.py` changed, so `select` returns the **whole
@@ -922,7 +910,7 @@ def explained_by(base):
             # evidence, and a row with no cause evidence is reported.
             return NO_CAUSE_FILTER
         return set(chosen)
-    except Exception:                                # pragma: no cover
+    except Exception:  # pragma: no cover
         return None
 
 
@@ -1048,9 +1036,10 @@ def ledger_rows(waiting, confirmed, run_id):
     """
     entries = [(name, ratio, False) for name, _s, _w, ratio in waiting]
     entries += [(name, ratio, True) for name, _s, _w, ratio in confirmed]
-    return [{"file": name, "run_id": run_id, "shift": round(ratio, 3),
-             "confirmed": is_confirmed}
-            for name, ratio, is_confirmed in entries]
+    return [
+        {"file": name, "run_id": run_id, "shift": round(ratio, 3), "confirmed": is_confirmed}
+        for name, ratio, is_confirmed in entries
+    ]
 
 
 def annotation(summary, path=ANNOTATION_FILE, title="tier drift"):
@@ -1070,8 +1059,7 @@ def annotation(summary, path=ANNOTATION_FILE, title="tier drift"):
     reads only up to the first newline. `title` distinguishes a second
     gate reusing this route (`UX-702`) from this one in the same job.
     """
-    said = (summary.replace("%", "%25")
-            .replace("\r", "%0D").replace("\n", "%0A"))
+    said = summary.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
     return f"::error file={path},title={title}::{said}"
 
 
@@ -1084,15 +1072,13 @@ def _against(times, path, args):
         # step that runs later can print it into the log tail - which
         # is all some readers of a run ever get.
         if args.summary:
-            pathlib.Path(args.summary).write_text(summary + "\n",
-                                                  encoding="utf-8")
+            pathlib.Path(args.summary).write_text(summary + "\n", encoding="utf-8")
         # `UX-691`: every return, including the runs that named nothing
         # - an empty candidate is what tells the adopt job this run
         # reached the gate at all, the same reason `carry` above writes
         # on a clean run too.
         if args.flake_ledger:
-            pathlib.Path(args.flake_ledger).write_text(
-                json.dumps(ledger, indent=2) + "\n", encoding="utf-8")
+            pathlib.Path(args.flake_ledger).write_text(json.dumps(ledger, indent=2) + "\n", encoding="utf-8")
         # `UX-621`: and, on a red return only, where a reader without
         # the log body still gets it. A green gate annotating would be a
         # failure annotation on a passing run.
@@ -1100,22 +1086,27 @@ def _against(times, path, args):
             print(annotation(summary))
         return code
 
-    reference = (json.loads(path.read_text(encoding="utf-8"))
-                 if path.is_file() else {})
+    reference = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
     # Absent and present-but-unrecorded are the same state: nothing to
     # compare against. The committed file starts in the second, so a
     # document can name the path while it is still waiting for its first
     # run - and either way the step says so rather than passing quietly,
     # which would make it a guard that cannot fail (rot 4).
     if not (reference.get("files") or {}):
-        print(f"{path} holds no recorded numbers yet, so nothing is being "
-              f"checked. The document below is this run's own numbers; "
-              f"the adopt job publishes it (UX-997), and the next run "
-              f"compares against it (UX-420).", file=sys.stderr)
+        print(
+            f"{path} holds no recorded numbers yet, so nothing is being "
+            f"checked. The document below is this run's own numbers; "
+            f"the adopt job publishes it (UX-997), and the next run "
+            f"compares against it (UX-420).",
+            file=sys.stderr,
+        )
         print(json.dumps(record(times, args.source), indent=2))
-        return done(0, f"{path.name} holds no recorded numbers yet, so "
-                       f"none of the {len(times)} file(s) this run "
-                       f"measured were checked.")
+        return done(
+            0,
+            f"{path.name} holds no recorded numbers yet, so "
+            f"none of the {len(times)} file(s) this run "
+            f"measured were checked.",
+        )
     verdict, shift, rows = against(times, reference)
     where = reference.get("measured_on", "unknown")
     # `UX-442`. Read before anything is printed and written before
@@ -1128,20 +1119,25 @@ def _against(times, path, args):
         # `UX-476`: the reading as well as the name. `repeated` decides
         # on agreement and on the diff; the readings are what let the
         # message show the series a reader has to judge.
-        over = {name: round(ratio, 2)
-                for name, _s, was, ratio in rows if was is not None}
-        carry(args.carry, over, args.source, history or [],
-              shift=None if shift is None else round(shift, 3),
-              shifts=before)
+        over = {name: round(ratio, 2) for name, _s, was, ratio in rows if was is not None}
+        carry(
+            args.carry,
+            over,
+            args.source,
+            history or [],
+            shift=None if shift is None else round(shift, 3),
+            shifts=before,
+        )
     if verdict == "empty":
-        print(f"{path} names none of the {len(times)} file(s) this run "
-              f"measured, so it cannot be a reference for it. Re-record "
-              f"with --record - from CI's own "
-              f"{CI_CANDIDATE_ARTIFACT} artifact or its "
-              f"{CI_CANDIDATE_JOB} job's log, not from this machine.",
-              file=sys.stderr)
-        return done(2, f"{path.name} names none of the {len(times)} "
-                       f"file(s) this run measured.")
+        print(
+            f"{path} names none of the {len(times)} file(s) this run "
+            f"measured, so it cannot be a reference for it. Re-record "
+            f"with --record - from CI's own "
+            f"{CI_CANDIDATE_ARTIFACT} artifact or its "
+            f"{CI_CANDIDATE_JOB} job's log, not from this machine.",
+            file=sys.stderr,
+        )
+        return done(2, f"{path.name} names none of the {len(times)} file(s) this run measured.")
     if verdict == "stale":
         # `UX-508`: one reading of a runner is not evidence about the
         # runner, the same way one reading of a file was not evidence
@@ -1153,43 +1149,53 @@ def _against(times, path, args):
         # *whole* of `_against` - so the `unexplained` path raised
         # `NameError` on every run that did not take this branch.
         # `UX-508` shipped that and CI found it (run 33578729472).
-        readings_so_far = ", ".join(f"x{one:.2f}"
-                                    for one in [shift] + list(before))
-        opening = (f"this run is x{shift:.2f} the reference recorded on "
-                   f"{where}, outside the "
-                   f"{IMAGE_BAND[0]}-{IMAGE_BAND[1]} band.")
+        readings_so_far = ", ".join(f"x{one:.2f}" for one in [shift] + list(before))
+        opening = (
+            f"this run is x{shift:.2f} the reference recorded on "
+            f"{where}, outside the "
+            f"{IMAGE_BAND[0]}-{IMAGE_BAND[1]} band."
+        )
         if agreed:
-            print(f"{opening} So were the run(s) behind it ({readings_so_far}). "
-                  f"That is the whole runner moving, not one file drifting - "
-                  f"re-record and publish (`dev_records.py publish`, not a "
-                  f"local `--record`) from {CI_CANDIDATE_ARTIFACT} or its "
-                  f"{CI_CANDIDATE_JOB} job's log, not the per-file numbers.",
-                  file=sys.stderr)
-            return done(1, f"{len(times)} file(s) measured against "
-                           f"{path.name} ({where}), this run x{shift:.2f} "
-                           f"- outside the band, and so were the run(s) "
-                           f"behind it ({readings_so_far}).")
-        print(f"{opening} The run(s) behind it read "
-              f"{readings_so_far or 'nothing'}, so this is one runner's "
-              f"afternoon "
-              f"until the next run agrees (UX-508). Nothing is being "
-              f"failed on it.", file=sys.stderr)
-        return done(0, f"{len(times)} file(s) measured against "
-                       f"{path.name} ({where}), this run x{shift:.2f} "
-                       f"- outside the band; the run(s) behind it read "
-                       f"{readings_so_far or 'nothing'}, so nothing was "
-                       f"failed on it.")
+            print(
+                f"{opening} So were the run(s) behind it ({readings_so_far}). "
+                f"That is the whole runner moving, not one file drifting - "
+                f"re-record and publish (`dev_records.py publish`, not a "
+                f"local `--record`) from {CI_CANDIDATE_ARTIFACT} or its "
+                f"{CI_CANDIDATE_JOB} job's log, not the per-file numbers.",
+                file=sys.stderr,
+            )
+            return done(
+                1,
+                f"{len(times)} file(s) measured against "
+                f"{path.name} ({where}), this run x{shift:.2f} "
+                f"- outside the band, and so were the run(s) "
+                f"behind it ({readings_so_far}).",
+            )
+        print(
+            f"{opening} The run(s) behind it read "
+            f"{readings_so_far or 'nothing'}, so this is one runner's "
+            f"afternoon "
+            f"until the next run agrees (UX-508). Nothing is being "
+            f"failed on it.",
+            file=sys.stderr,
+        )
+        return done(
+            0,
+            f"{len(times)} file(s) measured against "
+            f"{path.name} ({where}), this run x{shift:.2f} "
+            f"- outside the band; the run(s) behind it read "
+            f"{readings_so_far or 'nothing'}, so nothing was "
+            f"failed on it.",
+        )
     known = reference.get("files") or {}
-    ratios = {name: times[name] / known[name] for name in known
-              if times.get(name) and known[name] > 0}
+    ratios = {name: times[name] / known[name] for name in known if times.get(name) and known[name] > 0}
     behind, iqr = shift_spread(ratios, known)
     # The shift's own precision, printed on every run so a later round
     # has the series `UX-423` could not size a band from with one.
-    estimate = (f"x{shift:.2f} from {behind} file(s) over "
-                f"{SHIFT_FLOOR_S:g}s"
-                + (f", IQR {iqr:.2f}" if iqr is not None else ""))
-    line = (f"{len(times)} file(s) measured against {path.name} "
-            f"({where}), this run {estimate}")
+    estimate = f"x{shift:.2f} from {behind} file(s) over {SHIFT_FLOOR_S:g}s" + (
+        f", IQR {iqr:.2f}" if iqr is not None else ""
+    )
+    line = f"{len(times)} file(s) measured against {path.name} ({where}), this run {estimate}"
     if verdict == "ok":
         if not args.quiet:
             print(f"tiers ok: {line}")
@@ -1204,17 +1210,19 @@ def _against(times, path, args):
         if base_history:
             based, rows = based_rows(rows, base_history[0])
         else:
-            print(f"{args.base_carry}: no carry from the base branch's "
-                  f"own runs reachable, so a file crossing the gates "
-                  f"here is read as this branch's until one is "
-                  f"(UX-803).", file=sys.stderr)
+            print(
+                f"{args.base_carry}: no carry from the base branch's "
+                f"own runs reachable, so a file crossing the gates "
+                f"here is read as this branch's until one is "
+                f"(UX-803).",
+                file=sys.stderr,
+            )
     explained = explained_by(args.base)
     if explained is NO_CAUSE_FILTER:
         # `UX-557`: the line is the gate's published sentence, and a
         # reader must not read an unfiltered report as a filtered one.
         line += f" [no cause filter: {NO_CAUSE_FILTER}]"
-    confirmed, unexplained, waiting, recorded = repeated(
-        rows, history, explained)
+    confirmed, unexplained, waiting, recorded = repeated(rows, history, explained)
     ledger[:] = ledger_rows(waiting, confirmed, args.run_id)
 
     def say(row):
@@ -1222,8 +1230,9 @@ def _against(times, path, args):
         # above, so every row reaching here has a number to be read
         # against.
         name, seconds, was, ratio = row
-        return (f"  {name}  {seconds:.1f}s  against {was:.1f}s recorded, "
-                f"x{ratio:.2f} after this run's x{shift:.2f} shift")
+        return (
+            f"  {name}  {seconds:.1f}s  against {was:.1f}s recorded, x{ratio:.2f} after this run's x{shift:.2f} shift"
+        )
 
     def readings(row):
         """The series behind a row, newest first, as `x1.66, x1.78`."""
@@ -1234,9 +1243,12 @@ def _against(times, path, args):
         # Not a failure and not silence. One sample does not separate a
         # file that got slower from a file that had a slow afternoon,
         # and the run that saw it is the only place to say so.
-        print(f"{len(waiting)} file(s) over both gates on this run only, "
-              f"and {CI_DRIFT_RUNS} consecutive runs are what reports "
-              f"(UX-442):", file=sys.stderr)
+        print(
+            f"{len(waiting)} file(s) over both gates on this run only, "
+            f"and {CI_DRIFT_RUNS} consecutive runs are what reports "
+            f"(UX-442):",
+            file=sys.stderr,
+        )
         for row in waiting:
             print(say(row), file=sys.stderr)
     if unexplained:
@@ -1244,50 +1256,63 @@ def _against(times, path, args):
         # run compares against the same recording run, so agreement
         # across runs is evidence about the *record* as much as about
         # the file, and nothing in the diff names this one.
-        named = ("with no cause filter applied (UX-557)"
-                 if explained is NO_CAUSE_FILTER else
-                 "with nothing in this branch's diff that names them "
-                 "(UX-476)")
-        print(f"\n{len(unexplained)} file(s) over both gates on "
-              f"{CI_DRIFT_RUNS} consecutive runs, {named}:",
-              file=sys.stderr)
+        named = (
+            "with no cause filter applied (UX-557)"
+            if explained is NO_CAUSE_FILTER
+            else "with nothing in this branch's diff that names them (UX-476)"
+        )
+        print(
+            f"\n{len(unexplained)} file(s) over both gates on {CI_DRIFT_RUNS} consecutive runs, {named}:",
+            file=sys.stderr,
+        )
         for row in unexplained:
             print(f"{say(row)}   readings: {readings(row)}", file=sys.stderr)
-        cause = ("no cause filter could be applied to this diff, so "
-                 "these rows carry agreement and nothing else"
-                 if explained is NO_CAUSE_FILTER else
-                 f"`git diff {args.base}` touches neither these files "
-                 f"nor anything they name")
-        print(f"\nEvery run is read against the one recording run, so "
-              f"agreeing runs are evidence the reference entry is "
-              f"unrepresentative as much as evidence the file got slower "
-              f"- and {cause}. If the readings above agree with "
-              f"each other, refresh the reference from this run's "
-              f"{CI_CANDIDATE_ARTIFACT} artifact; if they do not, it is "
-              f"one runner's afternoon and the next run will say so. "
-              f"Either way this is not a failure.", file=sys.stderr)
+        cause = (
+            "no cause filter could be applied to this diff, so these rows carry agreement and nothing else"
+            if explained is NO_CAUSE_FILTER
+            else f"`git diff {args.base}` touches neither these files nor anything they name"
+        )
+        print(
+            f"\nEvery run is read against the one recording run, so "
+            f"agreeing runs are evidence the reference entry is "
+            f"unrepresentative as much as evidence the file got slower "
+            f"- and {cause}. If the readings above agree with "
+            f"each other, refresh the reference from this run's "
+            f"{CI_CANDIDATE_ARTIFACT} artifact; if they do not, it is "
+            f"one runner's afternoon and the next run will say so. "
+            f"Either way this is not a failure.",
+            file=sys.stderr,
+        )
     if recorded:
         # `UX-503`. Not a failure: the reference does not describe this
         # file yet, so there is no number it is slower *than*. The run
         # that meets it is the run that measures it, and `--record` has
         # already written that measurement into this run's candidate.
-        print(f"\n{len(recorded)} file(s) over "
-              f"{tiers.MEDIUM_FLOOR_S:g}s that the reference does not "
-              f"carry yet - measured here, not judged (UX-503):",
-              file=sys.stderr)
+        print(
+            f"\n{len(recorded)} file(s) over "
+            f"{tiers.MEDIUM_FLOOR_S:g}s that the reference does not "
+            f"carry yet - measured here, not judged (UX-503):",
+            file=sys.stderr,
+        )
         for row in recorded:
             print(f"  {row[0]}  {row[1]:.1f}s", file=sys.stderr)
-        print(f"The adopt job publishes this run's {CI_CANDIDATE_ARTIFACT} "
-              f"artifact (or its {CI_CANDIDATE_JOB} job's log) to give "
-              f"them a reference entry; the run after that judges them "
-              f"for drift like every other file.", file=sys.stderr)
+        print(
+            f"The adopt job publishes this run's {CI_CANDIDATE_ARTIFACT} "
+            f"artifact (or its {CI_CANDIDATE_JOB} job's log) to give "
+            f"them a reference entry; the run after that judges them "
+            f"for drift like every other file.",
+            file=sys.stderr,
+        )
     if based:
         # `UX-803`. Not a failure: the base branch's own last run read
         # this file past the gates too, so the excursion is the base's
         # and not this diff's - the refresh below is main's to make.
-        print(f"\n{len(based)} file(s) over both gates that the base "
-              f"branch's own last run also read past them - the base's, "
-              f"not this branch's (UX-803):", file=sys.stderr)
+        print(
+            f"\n{len(based)} file(s) over both gates that the base "
+            f"branch's own last run also read past them - the base's, "
+            f"not this branch's (UX-803):",
+            file=sys.stderr,
+        )
         for row in based:
             print(say(row), file=sys.stderr)
     if not confirmed:
@@ -1295,30 +1320,36 @@ def _against(times, path, args):
             print(f"tiers ok: {line}")
         return done(0, f"tiers ok: {line}")
     print(line, file=sys.stderr)
-    print(f"{len(confirmed)} file(s) slower than CI's own record of them:",
-          file=sys.stderr)
+    print(f"{len(confirmed)} file(s) slower than CI's own record of them:", file=sys.stderr)
     for row in confirmed:
         print(say(row), file=sys.stderr)
     if history is None:
-        print("\nThis run was given no --carry, so one sample decided it. "
-              "CI restores and saves one; a local run has no series to "
-              "read (UX-442).", file=sys.stderr)
-    print(f"\nMake it faster, or - if it is meant to cost this - refresh "
-          f"and publish the reference (`dev_records.py publish`, "
-          f"UX-997), which is how it stays true rather than becoming an "
-          f"alarm nobody reads, from this run's {CI_CANDIDATE_ARTIFACT} "
-          f"artifact, its {CI_CANDIDATE_JOB} job's log, or this file's "
-          f"printed seconds divided by the shift above; `--record` on your "
-          f"own machine writes the wrong clock (UX-418, UX-447).",
-          file=sys.stderr)
+        print(
+            "\nThis run was given no --carry, so one sample decided it. "
+            "CI restores and saves one; a local run has no series to "
+            "read (UX-442).",
+            file=sys.stderr,
+        )
+    print(
+        f"\nMake it faster, or - if it is meant to cost this - refresh "
+        f"and publish the reference (`dev_records.py publish`, "
+        f"UX-997), which is how it stays true rather than becoming an "
+        f"alarm nobody reads, from this run's {CI_CANDIDATE_ARTIFACT} "
+        f"artifact, its {CI_CANDIDATE_JOB} job's log, or this file's "
+        f"printed seconds divided by the shift above; `--record` on your "
+        f"own machine writes the wrong clock (UX-418, UX-447).",
+        file=sys.stderr,
+    )
     # The seconds too, not only the names: diagnosing round 75's own
     # red run needed "16.0s against 9.9s recorded" and the tail carried
     # neither, so the job log had to be fetched anyway - which is the
     # errand `UX-491` exists to remove.
-    return done(1, f"{line}, and {len(confirmed)} file(s) slower than "
-                   f"{path.name} records: "
-                   + "; ".join(f"{row[0]} {row[1]:.1f}s against {row[2]:.1f}s "
-                               f"recorded, x{row[3]:.2f}" for row in confirmed))
+    return done(
+        1,
+        f"{line}, and {len(confirmed)} file(s) slower than "
+        f"{path.name} records: "
+        + "; ".join(f"{row[0]} {row[1]:.1f}s against {row[2]:.1f}s recorded, x{row[3]:.2f}" for row in confirmed),
+    )
 
 
 def _adopt(candidate):
@@ -1330,28 +1361,31 @@ def _adopt(candidate):
     step costs everybody's attention.
     """
     if not candidate.is_file():
-        print(f"{candidate}: no candidate document to adopt from - the run "
-              f"that would have written it did not reach its record step",
-              file=sys.stderr)
+        print(
+            f"{candidate}: no candidate document to adopt from - the run "
+            f"that would have written it did not reach its record step",
+            file=sys.stderr,
+        )
         return 0
-    reference = (json.loads(CI_REFERENCE.read_text(encoding="utf-8"))
-                 if CI_REFERENCE.is_file() else {})
-    document, added = adopt(reference,
-                            json.loads(candidate.read_text(encoding="utf-8")))
+    reference = json.loads(CI_REFERENCE.read_text(encoding="utf-8")) if CI_REFERENCE.is_file() else {}
+    document, added = adopt(reference, json.loads(candidate.read_text(encoding="utf-8")))
     if document == reference:
-        print(f"{CI_REFERENCE.name} is unchanged by this run - it shares no "
-              f"file with the candidate, or the shift between them is "
-              f"outside {IMAGE_BAND[0]}-{IMAGE_BAND[1]}")
+        print(
+            f"{CI_REFERENCE.name} is unchanged by this run - it shares no "
+            f"file with the candidate, or the shift between them is "
+            f"outside {IMAGE_BAND[0]}-{IMAGE_BAND[1]}"
+        )
         return 0
-    CI_REFERENCE.write_text(json.dumps(document, indent=2) + "\n",
-                            encoding="utf-8")
+    CI_REFERENCE.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
     # `UX-496`: a run with nothing new to add still leaves a reading on
     # every file it measured, and that is the point - the entry gets to
     # be more than one afternoon without anyone deciding anything.
-    grew = sum(1 for name, seen in (document.get("samples") or {}).items()
-               if len(seen) > len((reference.get("samples") or {}).get(name, [])))
-    print(f"adopted {len(added)} new file(s) into {CI_REFERENCE.name} and "
-          f"left a reading on {grew}, on its own clock:")
+    grew = sum(
+        1
+        for name, seen in (document.get("samples") or {}).items()
+        if len(seen) > len((reference.get("samples") or {}).get(name, []))
+    )
+    print(f"adopted {len(added)} new file(s) into {CI_REFERENCE.name} and left a reading on {grew}, on its own clock:")
     for name, seconds in sorted(added.items()):
         print(f"  {name}  {seconds:.2f}s")
     return 0
@@ -1367,101 +1401,146 @@ def _adopt_flake(candidate):
     double-counting the same run's excursion.
     """
     if not candidate.is_file():
-        print(f"{candidate}: no candidate document to adopt from - the run "
-              f"that would have written it did not reach the ledger step",
-              file=sys.stderr)
+        print(
+            f"{candidate}: no candidate document to adopt from - the run "
+            f"that would have written it did not reach the ledger step",
+            file=sys.stderr,
+        )
         return 0
-    document = (json.loads(FLAKE_LEDGER.read_text(encoding="utf-8"))
-               if FLAKE_LEDGER.is_file() else {"entries": [], "declared": {}})
+    document = (
+        json.loads(FLAKE_LEDGER.read_text(encoding="utf-8"))
+        if FLAKE_LEDGER.is_file()
+        else {"entries": [], "declared": {}}
+    )
     entries = document.get("entries") or []
     seen = {(row.get("file"), row.get("run_id")) for row in entries}
-    added = [row for row in json.loads(candidate.read_text(encoding="utf-8"))
-             if (row.get("file"), row.get("run_id")) not in seen]
+    added = [
+        row
+        for row in json.loads(candidate.read_text(encoding="utf-8"))
+        if (row.get("file"), row.get("run_id")) not in seen
+    ]
     if not added:
-        print(f"{FLAKE_LEDGER.name} already carries every excursion this "
-              f"run reported")
+        print(f"{FLAKE_LEDGER.name} already carries every excursion this run reported")
         return 0
     document["entries"] = entries + added
-    FLAKE_LEDGER.write_text(json.dumps(document, indent=2) + "\n",
-                            encoding="utf-8")
+    FLAKE_LEDGER.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
     print(f"appended {len(added)} excursion(s) to {FLAKE_LEDGER.name}:")
     for row in added:
-        print(f"  {row['file']}  run {row['run_id']}  x{row['shift']:.2f}  "
-              f"confirmed={row['confirmed']}")
+        print(f"  {row['file']}  run {row['run_id']}  x{row['shift']:.2f}  confirmed={row['confirmed']}")
     return 0
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("report", nargs="?",
-                        help="a pytest --junitxml report. Optional only "
-                             "with --adopt, which reads a recorded "
-                             "document rather than a report")
-    parser.add_argument("--quiet", action="store_true",
-                        help="print nothing when there is no drift")
-    parser.add_argument("--base", metavar="REF", default=None,
-                        help="the ref this branch is diffed against, so a "
-                             "reported file can be checked for a cause in "
-                             "the diff (UX-476). Without it, agreement "
-                             "across runs decides alone, which is what "
-                             "UX-442 did.")
-    parser.add_argument("--record", metavar="PATH", nargs="?", const="-",
-                        help="write this report as the CI reference "
-                             "(`-` prints it), instead of checking. CI "
-                             "runs this and uploads the result as the "
-                             f"{CI_CANDIDATE_ARTIFACT} artifact and prints it in "
-                             f"the {CI_CANDIDATE_JOB} job; that is "
-                             "what to commit, because a local run writes "
-                             "this machine's clock and not CI's")
-    parser.add_argument("--adopt", metavar="CANDIDATE",
-                        help=f"merge the rows {CI_REFERENCE.name} does not "
-                             f"carry yet out of a recorded document (a "
-                             f"{CI_CANDIDATE_ARTIFACT} artifact) into it, "
-                             f"on the reference's own clock, and touch no "
-                             f"entry it already holds (UX-503)")
-    parser.add_argument("--adopt-flake", metavar="CANDIDATE",
-                        help=f"append the excursions a {FLAKE_LEDGER_ARTIFACT} "
-                             f"candidate holds to {FLAKE_LEDGER.name}, "
-                             f"skipping any (file, run id) it already has "
-                             f"(UX-691)")
-    parser.add_argument("--no-confirm", action="store_true",
-                        help="report what the parallel report said, "
-                             "without re-running each named file alone "
-                             "to check it against the floors' own "
-                             "quantity (UX-455)")
-    parser.add_argument("--against", metavar="PATH", nargs="?",
-                        const=str(CI_REFERENCE),
-                        help="check against a CI reference rather than "
-                             "against the floors - the only comparison "
-                             "that means anything on a foreign runner")
-    parser.add_argument("--carry", metavar="PATH",
-                        help=f"where this run's excursions are left for the "
-                             f"next one; a file is reported only after "
-                             f"{CI_DRIFT_RUNS} consecutive runs find it "
-                             f"(UX-442). Without it one sample decides")
-    parser.add_argument("--base-carry", metavar="PATH", default=None,
-                        help="the base branch's own last --carry, restored "
-                             "under its own cache key on a PR run where "
-                             "--carry reads this branch's instead; a file "
-                             "it already read past both gates is reported "
-                             "as the base's, not this diff's (UX-803)")
-    parser.add_argument("--summary", metavar="PATH", default=None,
-                        help="write --against's own summary line here, for "
-                             "a step that runs later to print (UX-491).")
-    parser.add_argument("--annotate", action="store_true",
-                        help="on a red --against, print the same line as a "
-                             "check-run annotation - the one route to a "
-                             "reader who cannot fetch the log (UX-621).")
-    parser.add_argument("--source", default="unknown",
-                        help="what produced this report, recorded with it")
-    parser.add_argument("--flake-ledger", metavar="PATH", default=None,
-                        help=f"with --against, write this run's excursions "
-                             f"(waiting and confirmed rows) as a "
-                             f"{FLAKE_LEDGER_ARTIFACT} candidate, for "
-                             f"--adopt-flake to append (UX-691)")
-    parser.add_argument("--run-id", default="unknown",
-                        help="this run's id, recorded on each flake-ledger "
-                             "row it writes (UX-691)")
+    parser.add_argument(
+        "report",
+        nargs="?",
+        help="a pytest --junitxml report. Optional only "
+        "with --adopt, which reads a recorded "
+        "document rather than a report",
+    )
+    parser.add_argument("--quiet", action="store_true", help="print nothing when there is no drift")
+    parser.add_argument(
+        "--base",
+        metavar="REF",
+        default=None,
+        help="the ref this branch is diffed against, so a "
+        "reported file can be checked for a cause in "
+        "the diff (UX-476). Without it, agreement "
+        "across runs decides alone, which is what "
+        "UX-442 did.",
+    )
+    parser.add_argument(
+        "--record",
+        metavar="PATH",
+        nargs="?",
+        const="-",
+        help="write this report as the CI reference "
+        "(`-` prints it), instead of checking. CI "
+        "runs this and uploads the result as the "
+        f"{CI_CANDIDATE_ARTIFACT} artifact and prints it in "
+        f"the {CI_CANDIDATE_JOB} job; that is "
+        "what to commit, because a local run writes "
+        "this machine's clock and not CI's",
+    )
+    parser.add_argument(
+        "--adopt",
+        metavar="CANDIDATE",
+        help=f"merge the rows {CI_REFERENCE.name} does not "
+        f"carry yet out of a recorded document (a "
+        f"{CI_CANDIDATE_ARTIFACT} artifact) into it, "
+        f"on the reference's own clock, and touch no "
+        f"entry it already holds (UX-503)",
+    )
+    parser.add_argument(
+        "--adopt-flake",
+        metavar="CANDIDATE",
+        help=f"append the excursions a {FLAKE_LEDGER_ARTIFACT} "
+        f"candidate holds to {FLAKE_LEDGER.name}, "
+        f"skipping any (file, run id) it already has "
+        f"(UX-691)",
+    )
+    parser.add_argument(
+        "--no-confirm",
+        action="store_true",
+        help="report what the parallel report said, "
+        "without re-running each named file alone "
+        "to check it against the floors' own "
+        "quantity (UX-455)",
+    )
+    parser.add_argument(
+        "--against",
+        metavar="PATH",
+        nargs="?",
+        const=str(CI_REFERENCE),
+        help="check against a CI reference rather than "
+        "against the floors - the only comparison "
+        "that means anything on a foreign runner",
+    )
+    parser.add_argument(
+        "--carry",
+        metavar="PATH",
+        help=f"where this run's excursions are left for the "
+        f"next one; a file is reported only after "
+        f"{CI_DRIFT_RUNS} consecutive runs find it "
+        f"(UX-442). Without it one sample decides",
+    )
+    parser.add_argument(
+        "--base-carry",
+        metavar="PATH",
+        default=None,
+        help="the base branch's own last --carry, restored "
+        "under its own cache key on a PR run where "
+        "--carry reads this branch's instead; a file "
+        "it already read past both gates is reported "
+        "as the base's, not this diff's (UX-803)",
+    )
+    parser.add_argument(
+        "--summary",
+        metavar="PATH",
+        default=None,
+        help="write --against's own summary line here, for a step that runs later to print (UX-491).",
+    )
+    parser.add_argument(
+        "--annotate",
+        action="store_true",
+        help="on a red --against, print the same line as a "
+        "check-run annotation - the one route to a "
+        "reader who cannot fetch the log (UX-621).",
+    )
+    parser.add_argument("--source", default="unknown", help="what produced this report, recorded with it")
+    parser.add_argument(
+        "--flake-ledger",
+        metavar="PATH",
+        default=None,
+        help=f"with --against, write this run's excursions "
+        f"(waiting and confirmed rows) as a "
+        f"{FLAKE_LEDGER_ARTIFACT} candidate, for "
+        f"--adopt-flake to append (UX-691)",
+    )
+    parser.add_argument(
+        "--run-id", default="unknown", help="this run's id, recorded on each flake-ledger row it writes (UX-691)"
+    )
     args = parser.parse_args(argv)
 
     if args.adopt_flake:
@@ -1472,18 +1551,15 @@ def main(argv=None):
         parser.error("a junit report is required without --adopt")
     times = measured(args.report)
     if not times:
-        print(f"{args.report}: no testcase named a file under {REPO} - "
-              f"this step measured nothing", file=sys.stderr)
+        print(f"{args.report}: no testcase named a file under {REPO} - this step measured nothing", file=sys.stderr)
         return 2
     if args.record:
         # The reference being replaced, read only for the spread it lets
         # this run state about itself. It is CI_REFERENCE wherever the
         # new one is written: the prior is what CI last recorded, not
         # whatever happens to sit at the output path.
-        prior = (json.loads(CI_REFERENCE.read_text(encoding="utf-8"))
-                 if CI_REFERENCE.is_file() else {})
-        document = (json.dumps(record(times, args.source, prior), indent=2)
-                    + "\n")
+        prior = json.loads(CI_REFERENCE.read_text(encoding="utf-8")) if CI_REFERENCE.is_file() else {}
+        document = json.dumps(record(times, args.source, prior), indent=2) + "\n"
         if args.record == "-":
             print(document, end="")
         else:
@@ -1494,8 +1570,10 @@ def main(argv=None):
         return _against(times, pathlib.Path(args.against), args)
 
     found = drift(times)
-    line = (f"{len(times)} file(s) measured against the declared floors "
-            f"(medium {tiers.MEDIUM_FLOOR_S}s, large {tiers.LARGE_FLOOR_S}s)")
+    line = (
+        f"{len(times)} file(s) measured against the declared floors "
+        f"(medium {tiers.MEDIUM_FLOOR_S}s, large {tiers.LARGE_FLOOR_S}s)"
+    )
     cleared = []
     if found and not args.no_confirm:
         # `UX-455`. The report above is a `-n auto` run and the floors
@@ -1507,27 +1585,32 @@ def main(argv=None):
         # Printed on a green run too. A file the parallel report accused
         # and the confirmation cleared is the finding `UX-455` was filed
         # on, and it is about the reader's runner rather than their diff.
-        print(f"{len(cleared)} file(s) over a floor in the parallel report "
-              f"and under it measured alone - not drift:", file=sys.stderr)
+        print(
+            f"{len(cleared)} file(s) over a floor in the parallel report and under it measured alone - not drift:",
+            file=sys.stderr,
+        )
         for name, parallel, alone in cleared:
-            print(f"  {name}  {parallel:.1f}s under -n auto, "
-                  f"{alone:.1f}s alone", file=sys.stderr)
+            print(f"  {name}  {parallel:.1f}s under -n auto, {alone:.1f}s alone", file=sys.stderr)
     if not found:
         if not args.quiet:
             print(f"tiers ok: {line}")
         return 0
     print(line, file=sys.stderr)
-    print(f"{len(found)} file(s) measured above the tier tests/tiers.py "
-          f"lists them in:", file=sys.stderr)
+    print(f"{len(found)} file(s) measured above the tier tests/tiers.py lists them in:", file=sys.stderr)
     for name, seconds, was, now in found:
-        print(f"  {name}  {seconds:.1f}s  listed {was}, measured {now}"
-              + ("" if args.no_confirm else " (alone, single process)"),
-              file=sys.stderr)
-    print("\nMove each in tests/tiers.py with the seconds above, or make "
-          "it faster. The seconds are already the quantity the floors are "
-          "in - each named file was re-run by itself in one process, "
-          "because the report this parsed is a `-n auto` run and the "
-          "floors are not (UX-455).", file=sys.stderr)
+        print(
+            f"  {name}  {seconds:.1f}s  listed {was}, measured {now}"
+            + ("" if args.no_confirm else " (alone, single process)"),
+            file=sys.stderr,
+        )
+    print(
+        "\nMove each in tests/tiers.py with the seconds above, or make "
+        "it faster. The seconds are already the quantity the floors are "
+        "in - each named file was re-run by itself in one process, "
+        "because the report this parsed is a `-n auto` run and the "
+        "floors are not (UX-455).",
+        file=sys.stderr,
+    )
     return 1
 
 

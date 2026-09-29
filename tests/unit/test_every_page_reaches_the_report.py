@@ -30,6 +30,7 @@ button fail.
 The sweep runs over the **served set** rather than a list, so a page
 added later is covered by construction.
 """
+
 import pathlib
 import re
 
@@ -57,24 +58,20 @@ class TestEveryServedPageIsInTheDocument:
         which is the property a hand-written list would not have."""
         pages = _served_pages()
         assert HOME in pages, pages
-        assert len(pages) >= 3, (
-            f"only {pages} are served as HTML; this guard was written when "
-            f"there were three")
+        assert len(pages) >= 3, f"only {pages} are served as HTML; this guard was written when there were three"
 
     @pytest.mark.parametrize("page", [p for p in _served_pages() if p != HOME])
     def test_it_reaches_the_report_in_one_click(self, page):
         text = (VIEWER / page).read_text(encoding="utf-8")
         links = re.findall(r'href="([^"]+)"', text)
-        assert HOME in links, (
-            f"{page} links to {sorted(set(links))} and never home")
+        assert HOME in links, f"{page} links to {sorted(set(links))} and never home"
 
     @pytest.mark.parametrize("page", [p for p in _served_pages() if p != HOME])
     def test_the_link_says_where_it_goes(self, page):
         """Not "back": the reader may have arrived from a bookmark, and
         a browser already has a Back button."""
         text = (VIEWER / page).read_text(encoding="utf-8")
-        found = re.search(r'<a href="index\.html"[^>]*>(.*?)</a>', text,
-                          re.S)
+        found = re.search(r'<a href="index\.html"[^>]*>(.*?)</a>', text, re.S)
         assert found, f"{page} has no home link to read"
         label = re.sub(r"\s+", " ", found.group(1)).strip().lower()
         assert "report" in label, f"{page}'s home link reads {label!r}"
@@ -100,16 +97,15 @@ class TestTheHandoffFallbackIsBesideTheButton:
         assert 'id="open"' in body, "the button is not in the row"
         assert 'id="deep"' in body, "the fallback link is not in the row"
         assert body.index('id="open"') < body.index('id="deep"'), (
-            "the fallback comes first, so a reader who has not pressed the "
-            "button is offered two doors")
+            "the fallback comes first, so a reader who has not pressed the button is offered two doors"
+        )
 
     def test_it_uses_the_same_breakpoint_as_the_header(self):
         css = (VIEWER / "style.css").read_text(encoding="utf-8")
         handoff = css.split(".handoff {", 1)
         assert len(handoff) == 2, "the row has no rule"
         after = handoff[1]
-        assert "@media (max-width: 60rem)" in after, (
-            "the hand-off row does not stack at `UX-272`'s breakpoint")
+        assert "@media (max-width: 60rem)" in after, "the hand-off row does not stack at `UX-272`'s breakpoint"
 
     def test_the_fallback_still_reads_as_a_fallback(self):
         """`UX-282` item 2: the primary path is the button. The line is
@@ -117,8 +113,7 @@ class TestTheHandoffFallbackIsBesideTheButton:
         did not work."""
         text = (VIEWER / "perfetto.html").read_text(encoding="utf-8")
         row = re.search(r'<div class="handoff">(.*?)</div>', text, re.S)
-        assert "Nothing opened?" in row.group(1), (
-            "the fallback no longer says it is one")
+        assert "Nothing opened?" in row.group(1), "the fallback no longer says it is one"
 
 
 if __name__ == "__main__":  # pragma: no cover

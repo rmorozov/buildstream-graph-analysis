@@ -18,6 +18,7 @@ styleguide audit found with no bounding control at all were `UX-1037`'s
 own finding; its shrink-only list is empty since, each path's bound
 named in the styleguide.
 """
+
 import json
 import pathlib
 import subprocess
@@ -31,6 +32,7 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 GOLDEN = REPO / "tests/fixtures/golden/mixed_task_kinds"
 MACRO_MICRO = REPO / "tests/fixtures/macro_micro/run"
 
+
 #: The heuristic the styleguide audit's own walker used to tell a
 #: *data-keyed* map (values you'd never enumerate in `properties`) from
 #: a small fixed-property object: many keys, or keys shaped like an
@@ -38,8 +40,7 @@ MACRO_MICRO = REPO / "tests/fixtures/macro_micro/run"
 def _looks_data_keyed(mapping: dict) -> bool:
     if len(mapping) > 20:
         return True
-    return any('/' in k or '.bst' in k or '|' in k or (k[:1].isdigit())
-               for k in mapping if isinstance(k, str))
+    return any('/' in k or '.bst' in k or '|' in k or (k[:1].isdigit()) for k in mapping if isinstance(k, str))
 
 
 #: `UX-1037`: growing containers with no bounding control. Shrink-only:
@@ -55,9 +56,12 @@ _UNBOUNDED_GROWERS_AT_CLOSE = 0
 
 def _analyze(run) -> dict:
     done = subprocess.run(
-        [sys.executable, "-m", "bga.cli", "analyze", str(run),
-         "--format", "json"],
-        capture_output=True, text=True, cwd=REPO, timeout=300)
+        [sys.executable, "-m", "bga.cli", "analyze", str(run), "--format", "json"],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=300,
+    )
     assert done.returncode == 0, done.stderr[-4000:]
     return json.loads(done.stdout)
 
@@ -77,9 +81,11 @@ def large_plane1(tmp_path_factory):
     into = tmp_path_factory.mktemp("xl")
     run = into / "xl"
     subprocess.run(
-        [sys.executable, "-m", "bga.cli", "gen-synthetic", str(run),
-         "--seed", "1", "--layers", "20", "--width", "200"],
-        check=True, capture_output=True, cwd=REPO)
+        [sys.executable, "-m", "bga.cli", "gen-synthetic", str(run), "--seed", "1", "--layers", "20", "--width", "200"],
+        check=True,
+        capture_output=True,
+        cwd=REPO,
+    )
     return _analyze(run)
 
 
@@ -116,8 +122,7 @@ class _Walker:
         elif isinstance(value, dict):
             props = node.get("properties")
             addl = node.get("additionalProperties")
-            data_keyed = isinstance(addl, dict) and (
-                _looks_data_keyed(value) or not isinstance(props, dict))
+            data_keyed = isinstance(addl, dict) and (_looks_data_keyed(value) or not isinstance(props, dict))
             if data_keyed:
                 self._check_container(node, path, len(value))
                 for sub in value.values():
@@ -136,19 +141,15 @@ class _Walker:
                     # itself instead of a row `items` the table may not
                     # have (`parallelism.levels[].elements`).
                     for spec in node.get(schemas.COLUMNS) or ():
-                        if isinstance(spec, dict) and spec.get("key") == key \
-                                and schemas.GROWS in spec:
+                        if isinstance(spec, dict) and spec.get("key") == key and schemas.GROWS in spec:
                             break
                     else:
                         # Only a *container* (a list, or a data-keyed
                         # map) is this guard's concern - `bga:grows`
                         # and the rest of the unit census (`UX-343`)
                         # own a bare scalar's declaration.
-                        if isinstance(sub, list) or (
-                                isinstance(sub, dict)
-                                and _looks_data_keyed(sub)):
-                            self.undeclared.append(f"{path}.{key}" if path
-                                                   else key)
+                        if isinstance(sub, list) or (isinstance(sub, dict) and _looks_data_keyed(sub)):
+                            self.undeclared.append(f"{path}.{key}" if path else key)
                     continue
                 self.walk(sub, child, f"{path}.{key}" if path else key)
 
@@ -177,22 +178,17 @@ def _walk_payload(payload: dict) -> _Walker:
     return walker
 
 
-@pytest.mark.parametrize("fixture_name",
-                         ["small_plane1", "small_two_plane", "large_plane1"])
+@pytest.mark.parametrize("fixture_name", ["small_plane1", "small_two_plane", "large_plane1"])
 class TestEveryContainerIsDeclared:
     def test_no_undeclared_container(self, fixture_name, request):
         payload = request.getfixturevalue(fixture_name)
         walker = _walk_payload(payload)
-        assert walker.undeclared == [], (
-            f"{fixture_name}: undeclared container(s): "
-            f"{sorted(walker.undeclared)}")
+        assert walker.undeclared == [], f"{fixture_name}: undeclared container(s): {sorted(walker.undeclared)}"
 
     def test_no_fixed_container_exceeds_its_cap(self, fixture_name, request):
         payload = request.getfixturevalue(fixture_name)
         walker = _walk_payload(payload)
-        assert walker.over_cap == [], (
-            f"{fixture_name}: container(s) over their declared maxItems: "
-            f"{walker.over_cap}")
+        assert walker.over_cap == [], f"{fixture_name}: container(s) over their declared maxItems: {walker.over_cap}"
 
 
 class TestTheUnboundedGrowersListIsShrinkOnly:
@@ -200,7 +196,8 @@ class TestTheUnboundedGrowersListIsShrinkOnly:
         assert len(KNOWN_UNBOUNDED_GROWERS) <= _UNBOUNDED_GROWERS_AT_CLOSE, (
             "KNOWN_UNBOUNDED_GROWERS grew past its recorded size - a new "
             "unbound grower needs a person's decision (UX-1037), not a "
-            "silent addition")
+            "silent addition"
+        )
 
     def test_every_named_path_is_still_unbound(self):
         """A path leaves the list once it is bounded - it does not sit

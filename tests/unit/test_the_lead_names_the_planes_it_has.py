@@ -36,6 +36,7 @@ So the renderer publishes what it already knew and threw away:
 `render` returns `planes` - `["1"]` or `["1", "2"]` - and
 `run.trace_planes` carries it to the page.
 """
+
 import pathlib
 import sys
 
@@ -88,11 +89,9 @@ def booted(tmp_path_factory):
     no trace, a Plane 1 trace, and a trace with both planes.
     """
     made = pages.pages(tmp_path_factory, "planes")
-    made["with_timeline"] = pages.export_uri(
-        pages.WITH_TIMELINE, tmp_path_factory.mktemp("planes-p1"))
+    made["with_timeline"] = pages.export_uri(pages.WITH_TIMELINE, tmp_path_factory.mktemp("planes-p1"))
     both = pages.two_plane_snapshot(tmp_path_factory.mktemp("planes-src"))
-    made["two_plane"] = pages.export_uri(
-        both, tmp_path_factory.mktemp("planes-p12"))
+    made["two_plane"] = pages.export_uri(both, tmp_path_factory.mktemp("planes-p12"))
     return made
 
 
@@ -103,16 +102,14 @@ class TestTheRendererPublishesWhatItRendered:
         from tools import bga_view
 
         run = pages.two_plane_snapshot(tmp_path)
-        trace, planes, _losses, _tracks = bga_view.trace_with_planes(
-            str(run))
+        trace, planes, _losses, _tracks = bga_view.trace_with_planes(str(run))
         assert trace, "the constructed two-plane snapshot renders nothing"
         assert planes == ["1", "2"], planes
 
     def test_a_plane_one_capture_renders_one(self):
         from tools import bga_view
 
-        trace, planes, _losses, _tracks = bga_view.trace_with_planes(
-            str(pages.WITH_TIMELINE))
+        trace, planes, _losses, _tracks = bga_view.trace_with_planes(str(pages.WITH_TIMELINE))
         assert trace, "the committed Plane 1 capture renders nothing"
         assert planes == ["1"], planes
 
@@ -159,17 +156,17 @@ class TestTheAbsenceSentenceIsNotThePredicate:
 
         from tools import bga_timeline, bga_view
 
-        source = (inspect.getsource(bga_view.trace_render)
-                  + inspect.getsource(bga_timeline.render))
+        source = inspect.getsource(bga_view.trace_render) + inspect.getsource(bga_timeline.render)
         assert "PLANE2_NAME" not in source and "plane2.json" not in source, (
             "the render path now reads the Plane 2 report; if that is "
-            "deliberate, this file's whole argument needs restating")
+            "deliberate, this file's whole argument needs restating"
+        )
         assert "RAW_LOG_NAME" in source or "raw" in source, (
             "the render path no longer mentions the raw log it branches "
-            "on - which is the fact `trace_planes` is derived from")
+            "on - which is the fact `trace_planes` is derived from"
+        )
 
-    def test_absence_reads_the_report_and_not_the_raw_log_alone(
-            self, tmp_path):
+    def test_absence_reads_the_report_and_not_the_raw_log_alone(self, tmp_path):
         """The other half of the same claim, at the boundary: dropping
         the raw log from a snapshot with no report changes nothing about
         the absence sentence, because it was never reading it."""
@@ -178,15 +175,13 @@ class TestTheAbsenceSentenceIsNotThePredicate:
         run = pages.two_plane_snapshot(tmp_path)
         before = plane2.absence(str(run))
         (run.parent / "plane2.log.gz").unlink()
-        assert plane2.absence(str(run)) == before, (
-            "the absence sentence moved when only the raw log did")
+        assert plane2.absence(str(run)) == before, "the absence sentence moved when only the raw log did"
 
 
 @needs_browser
 @pytest.mark.medium
 class TestTheLeadNamesWhatTheReaderWillFind:
-    def test_two_planes_are_promised_only_where_there_are_two(
-            self, browser, booted):
+    def test_two_planes_are_promised_only_where_there_are_two(self, browser, booted):
         out = browser.measure(booted["two_plane"], _LOOK, 1440, 900)
         assert out["exists"], "no lead sentence on the two-plane page"
         assert out["planes"] == "1+2", out
@@ -198,13 +193,11 @@ class TestTheLeadNamesWhatTheReaderWillFind:
         over a Plane 1 trace and used to promise process lanes."""
         out = browser.measure(booted["with_timeline"], _LOOK, 1440, 900)
         assert out["planes"] == "1", out
-        assert _PROMISES_PLANE2 not in out["text"], (
-            f"a Plane 1 trace still promises Plane 2's lanes: {out['text']}")
+        assert _PROMISES_PLANE2 not in out["text"], f"a Plane 1 trace still promises Plane 2's lanes: {out['text']}"
         assert _DENIES_PLANE2 in out["text"], out["text"]
 
     @pytest.mark.parametrize("label", sorted(pages.FIXTURES))
-    def test_no_trace_claims_nothing_lands_in_one(self, browser, booted,
-                                                  label):
+    def test_no_trace_claims_nothing_lands_in_one(self, browser, booted, label):
         """The third shape, and the one the first draft of this fix got
         wrong: branching on the planes alone left the old "lands in this
         run's trace" opener on two captures that have no trace at all.
@@ -213,8 +206,8 @@ class TestTheLeadNamesWhatTheReaderWillFind:
         assert out["planes"] == "none", out
         assert _PROMISES_PLANE2 not in out["text"], out["text"]
         assert _LANDS_IN_A_TRACE not in out["text"], (
-            f"{label} has no timeline and the lead says something lands "
-            f"in its trace: {out['text']}")
+            f"{label} has no timeline and the lead says something lands in its trace: {out['text']}"
+        )
         assert "no timeline to open here" in out["text"], out["text"]
 
 
@@ -232,8 +225,7 @@ class TestTheThreeShapesAreThree:
             seen[label] = (out["planes"], out["text"])
         planes = [value[0] for value in seen.values()]
         assert sorted(planes) == ["1", "1+2", "none"], seen
-        assert len({value[1] for value in seen.values()}) == 3, (
-            "two of the three trace states render the same sentence")
+        assert len({value[1] for value in seen.values()}) == 3, "two of the three trace states render the same sentence"
 
 
 if __name__ == "__main__":  # pragma: no cover

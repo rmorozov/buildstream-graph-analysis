@@ -37,6 +37,7 @@ data-argv: "bga blast core.bst tests/fixtures/macro_micro/run"
 `controls.js:commandLine` is the one control all three sites call, which
 is what stops the third from drifting again.
 """
+
 import json
 import os
 import pathlib
@@ -53,8 +54,10 @@ sys.path.insert(0, str(REPO))
 node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 
-FIXTURES = {"golden": REPO / "tests/fixtures/golden/mixed_task_kinds",
-            "macro_micro": REPO / "tests/fixtures/macro_micro/run"}
+FIXTURES = {
+    "golden": REPO / "tests/fixtures/golden/mixed_task_kinds",
+    "macro_micro": REPO / "tests/fixtures/macro_micro/run",
+}
 
 _PROBE = r"""
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
@@ -137,32 +140,34 @@ def _probe(label):
     from tools.bga_view import payloads
 
     scratch = pathlib.Path(tempfile.mkdtemp())
-    (scratch / "p.json").write_text(
-        json.dumps(payloads(str(FIXTURES[label]))["report.json"]))
-    (scratch / "s.json").write_text(
-        json.dumps({name: schemas.schema(name) for name in schemas.names()}))
+    (scratch / "p.json").write_text(json.dumps(payloads(str(FIXTURES[label]))["report.json"]))
+    (scratch / "s.json").write_text(json.dumps({name: schemas.schema(name) for name in schemas.names()}))
     done = subprocess.run(
         [node, "--input-type=module", "-e", _PROBE],
-        capture_output=True, text=True, cwd=REPO, timeout=120,
-        env={**os.environ,
-             "BGA_DOM_SHIM": (REPO / "tests/dom_shim.mjs").as_uri(),
-             "BGA_VIEWER": (REPO / "tests/viewer.mjs").as_uri(),
-             "BGA_PAYLOAD": str(scratch / "p.json"),
-             "BGA_SCHEMAS": str(scratch / "s.json")})
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=120,
+        env={
+            **os.environ,
+            "BGA_DOM_SHIM": (REPO / "tests/dom_shim.mjs").as_uri(),
+            "BGA_VIEWER": (REPO / "tests/viewer.mjs").as_uri(),
+            "BGA_PAYLOAD": str(scratch / "p.json"),
+            "BGA_SCHEMAS": str(scratch / "s.json"),
+        },
+    )
     assert done.returncode == 0, done.stderr
     return json.loads(done.stdout)
 
 
 class TestTheShapeIsDeclared:
-
     def test_argv_carries_the_command_hint(self):
         """Declared, not guessed. A scalar array is argv because the
         schema said so - `["cmake", "ninja"]` is the same measured
         shape and is genuinely a list."""
         from bga import schemas
 
-        argv = schemas.schema(schemas.ANALYZE)["properties"]["next_steps"][
-            "items"]["properties"]["argv"]
+        argv = schemas.schema(schemas.ANALYZE)["properties"]["next_steps"]["items"]["properties"]["argv"]
         assert argv.get(schemas.COMMAND) == "shell", argv
 
     def test_the_hint_only_fires_on_a_scalar_array(self):
@@ -176,8 +181,7 @@ class TestTheShapeIsDeclared:
             for path, node in _walk(document, name):
                 if not isinstance(node, dict) or schemas.COMMAND not in node:
                     continue
-                assert node.get("type") == "array", (
-                    f"{path} declares {schemas.COMMAND} and is not an array")
+                assert node.get("type") == "array", f"{path} declares {schemas.COMMAND} and is not an array"
 
 
 def _walk(node, path):
@@ -195,7 +199,6 @@ def _walk(node, path):
 @needs_node
 @pytest.mark.parametrize("label", sorted(FIXTURES))
 class TestEverySiteDrawsTheSameCommand:
-
     def test_the_table_cell_is_a_monospace_command(self, label):
         """The defect, at the site that had it."""
         seen = _probe(label)
@@ -210,8 +213,7 @@ class TestEverySiteDrawsTheSameCommand:
         against the payload's own join, so it cannot pass by the cell
         happening to be empty."""
         seen = _probe(label)
-        drawn = {seen["sites"][site]["text"]
-                 for site in ("table", "control")}
+        drawn = {seen["sites"][site]["text"] for site in ("table", "control")}
         listed = {command["listed"] for command in seen["commands"]}
         assert not (drawn & listed), sorted(drawn & listed)
         joined = {command["joined"] for command in seen["commands"]}
@@ -226,7 +228,7 @@ class TestEverySiteDrawsTheSameCommand:
         assert button["copies"] == "command", button
 
     def test_all_three_sites_draw_the_same_element(self, label):
-        """"One control" as a property of the rendered page.
+        """ "One control" as a property of the rendered page.
 
         Read out of the DOM each section really builds, not out of its
         source: a text scan cannot tell a `copy-step` in code from one
@@ -234,13 +236,12 @@ class TestEverySiteDrawsTheSameCommand:
         matched a comment in `structured.js` and failed for it.
         """
         seen = _probe(label)
-        drawn = {site: seen["sites"][site]
-                 for site in ("table", "control", "blast", "decision")
-                 if seen["sites"].get(site)}
+        drawn = {
+            site: seen["sites"][site] for site in ("table", "control", "blast", "decision") if seen["sites"].get(site)
+        }
         assert "error" not in json.dumps(drawn), drawn
         assert len(drawn) == 4, sorted(drawn)
-        shapes = {(one["tag"].lower(), one["cls"], one["argv"] == one["text"])
-                  for one in drawn.values()}
+        shapes = {(one["tag"].lower(), one["cls"], one["argv"] == one["text"]) for one in drawn.values()}
         assert shapes == {("code", "next-command", True)}, (shapes, drawn)
 
     def test_the_two_sections_keep_their_copy_button(self, label):
@@ -259,8 +260,7 @@ class TestEverySiteDrawsTheSameCommand:
 class TestOneControlNotThree:
     """The drift this item is really about: three sites, one control."""
 
-    SITES = ("bga/viewer/structured.js", "bga/viewer/decision.js",
-             "bga/viewer/views.js")
+    SITES = ("bga/viewer/structured.js", "bga/viewer/decision.js", "bga/viewer/views.js")
 
     def test_every_site_calls_the_shared_control(self):
         for site in self.SITES:
@@ -273,9 +273,9 @@ class TestOneControlNotThree:
         A command control living there could not be imported here
         without reordering the export."""
         order = (REPO / "tests/viewer.mjs").read_text(encoding="utf-8")
-        modules = [line.split('viewer/')[1].split('"')[0]
-                   for line in order.splitlines()
-                   if line.startswith("export * from")]
+        modules = [
+            line.split('viewer/')[1].split('"')[0] for line in order.splitlines() if line.startswith("export * from")
+        ]
         assert modules.index("controls.js") < modules.index("structured.js")
         assert modules.index("controls.js") < modules.index("decision.js")
         assert modules.index("controls.js") < modules.index("views.js")

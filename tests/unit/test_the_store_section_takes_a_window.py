@@ -26,6 +26,7 @@ sentence that says it is a window and the control that opens the rest -
 `UX-419`'s badge, one drawing over. A window that does not say how deep
 it goes is §3a's defect, so they are the point rather than the residue.
 """
+
 import json
 import pathlib
 import shutil
@@ -116,8 +117,7 @@ _SHOW_ALL = r"""
 def _project(into, count):
     """A project whose store holds `count` analysable snapshots."""
     into.mkdir(parents=True, exist_ok=True)
-    (into / "project.conf").write_text("name: p\nmin-version: 2.0\n",
-                                       encoding="utf-8")
+    (into / "project.conf").write_text("name: p\nmin-version: 2.0\n", encoding="utf-8")
     last = None
     for n in range(1, count + 1):
         run = into / ".bga" / "runs" / f"2026{n:04d}01T000000Z" / "run"
@@ -158,8 +158,7 @@ def stores(browser, tmp_path_factory):
             "cli_aggregate": store_aggregate_payload(store_listing(project)),
             "store_bytes": len(json.dumps(store).encode()),
         }
-        httpd, url = serve(str(run), port=0,
-                           documents=dict(payloads(str(run))))
+        httpd, url = serve(str(run), port=0, documents=dict(payloads(str(run))))
         threading.Thread(target=httpd.serve_forever, daemon=True).start()
         time.sleep(0.3)
         try:
@@ -179,18 +178,16 @@ class TestThePageCostsTheSameAtAHundredAsAtTwelve:
     def test_the_picker_offers_the_window_and_not_the_store(self, stores):
         for count in (AT_THE_WINDOW, PAST_IT):
             offered = stores[count]["page"]["options"]
-            assert offered == AT_THE_WINDOW, (
-                f"N={count}: the run picker offers {offered} runs")
+            assert offered == AT_THE_WINDOW, f"N={count}: the run picker offers {offered} runs"
 
     def test_the_drawing_and_its_twin_are_the_same_size(self, stores):
         small, big = stores[AT_THE_WINDOW]["page"], stores[PAST_IT]["page"]
         for measure in ("rows", "marks"):
             assert big[measure] == small[measure], (
-                f"{measure}: {big[measure]} at {PAST_IT} snapshots against "
-                f"{small[measure]} at {AT_THE_WINDOW}")
+                f"{measure}: {big[measure]} at {PAST_IT} snapshots against {small[measure]} at {AT_THE_WINDOW}"
+            )
 
-    def test_the_section_grows_by_its_own_sentence_and_nothing_else(
-            self, stores):
+    def test_the_section_grows_by_its_own_sentence_and_nothing_else(self, stores):
         """Not "the same", which would be a window that hides that it is
         one. Two nodes - the sentence and the control that opens the
         rest - and the clause names them rather than allowing a
@@ -199,17 +196,17 @@ class TestThePageCostsTheSameAtAHundredAsAtTwelve:
         assert big["nodes"] - small["nodes"] == 2, (
             f"{big['nodes']} nodes at {PAST_IT} against {small['nodes']} at "
             f"{AT_THE_WINDOW}; the difference should be the window's own "
-            f"sentence and its button")
+            f"sentence and its button"
+        )
         assert big["window"], "the window says nothing about itself"
 
     def test_it_says_which_runs_it_is_drawing(self, stores):
         big = stores[PAST_IT]["page"]
-        assert f"last {AT_THE_WINDOW} of {PAST_IT}" in big["heading"], (
-            big["heading"])
+        assert f"last {AT_THE_WINDOW} of {PAST_IT}" in big["heading"], big["heading"]
         small = stores[AT_THE_WINDOW]["page"]
         assert "last" not in small["heading"], (
-            f"a store the page holds entire calls itself a window: "
-            f"{small['heading']}")
+            f"a store the page holds entire calls itself a window: {small['heading']}"
+        )
         assert not small["window"], small["window"]
 
 
@@ -222,15 +219,12 @@ class TestTheRestAreReachable:
         out = stores[PAST_IT]["shown_all"]
         assert out["pressed"], "no control offers the rest of the store"
         assert out["all"] == PAST_IT, out
-        assert out["rows"] == PAST_IT, (
-            f"the twin lists {out['rows']} rows after 'show all'")
+        assert out["rows"] == PAST_IT, f"the twin lists {out['rows']} rows after 'show all'"
         assert out["hidden"], "the control is still offering what it gave"
 
     def test_a_stamp_past_the_window_can_be_typed(self, stores):
-        assert stores[PAST_IT]["page"]["typed"] == 1, (
-            "no way to open a run the menu does not list")
-        assert stores[AT_THE_WINDOW]["page"]["typed"] == 0, (
-            "a store the menu holds entire still offers a text box")
+        assert stores[PAST_IT]["page"]["typed"] == 1, "no way to open a run the menu does not list"
+        assert stores[AT_THE_WINDOW]["page"]["typed"] == 0, "a store the menu holds entire still offers a text box"
 
 
 @pytest.mark.large
@@ -249,14 +243,14 @@ class TestTheDocumentsAreWindowedAtTheSource:
         assert len(store["snapshots"]) == AT_THE_WINDOW
         assert store["shown"] == AT_THE_WINDOW
         assert store["count"] == PAST_IT, (
-            "the windowed document forgot how big the store is, so the "
-            "page cannot say what it is a window of")
-        assert stores[PAST_IT]["store_bytes"] < 2 * stores[
-            AT_THE_WINDOW]["store_bytes"], (
+            "the windowed document forgot how big the store is, so the page cannot say what it is a window of"
+        )
+        assert stores[PAST_IT]["store_bytes"] < 2 * stores[AT_THE_WINDOW]["store_bytes"], (
             f"store.json is {stores[PAST_IT]['store_bytes']} B at "
             f"{PAST_IT} snapshots against "
             f"{stores[AT_THE_WINDOW]['store_bytes']} B at "
-            f"{AT_THE_WINDOW}")
+            f"{AT_THE_WINDOW}"
+        )
 
     def test_the_window_keeps_the_latest_runs(self, stores):
         """The *last* twelve. A window over the oldest runs would meet
@@ -264,7 +258,8 @@ class TestTheDocumentsAreWindowedAtTheSource:
         store = stores[PAST_IT]["store"]
         whole = stores[PAST_IT]["whole"]
         assert [row["stamp"] for row in store["snapshots"]] == [
-            row["stamp"] for row in whole["snapshots"][-AT_THE_WINDOW:]]
+            row["stamp"] for row in whole["snapshots"][-AT_THE_WINDOW:]
+        ]
 
     def test_the_aggregate_caps_its_stamps(self, stores):
         from bga.store_aggregate import STAMPS_MAX
@@ -273,13 +268,12 @@ class TestTheDocumentsAreWindowedAtTheSource:
         classes = aggregate["host_classes"]
         assert classes, aggregate
         for entry in classes:
-            assert len(entry["stamps"]) <= STAMPS_MAX, (
-                f"{entry.get('host_class')} names {len(entry['stamps'])} "
-                f"runs")
+            assert len(entry["stamps"]) <= STAMPS_MAX, f"{entry.get('host_class')} names {len(entry['stamps'])} runs"
             assert entry["stamps_total"] == PAST_IT, entry["stamps_total"]
         assert aggregate["snapshots"] == PAST_IT, (
             "the CLI's aggregate is over the whole store, and the cap is "
-            "on the stamp list rather than on the population")
+            "on the stamp list rather than on the population"
+        )
 
     def test_the_two_windows_are_the_same_number(self):
         """`element.js` windows the sparklines and `bga_view` windows the
@@ -289,11 +283,11 @@ class TestTheDocumentsAreWindowedAtTheSource:
         from tools.bga_view import STORE_WINDOW
 
         source = (REPO / "bga/viewer/element.js").read_text(encoding="utf-8")
-        history = int(source.split("HISTORY_POINTS_MAX = ", 1)[1]
-                      .split(";", 1)[0].strip())
+        history = int(source.split("HISTORY_POINTS_MAX = ", 1)[1].split(";", 1)[0].strip())
         assert history == STORE_WINDOW, (
             f"the store window is {STORE_WINDOW} and the history window "
-            f"{history}; one of them is not 'the last dozen runs'")
+            f"{history}; one of them is not 'the last dozen runs'"
+        )
         assert STORE_WINDOW == AT_THE_WINDOW
 
 

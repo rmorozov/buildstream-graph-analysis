@@ -32,6 +32,7 @@ completed green, which is `UX-107`'s rule ("nobody could look" must not
 read as "looked and found nothing") broken at the loudest possible
 place.
 """
+
 import os
 import pathlib
 import shutil
@@ -73,15 +74,14 @@ class TestThePathsTheBuildInherits:
                 assert os.path.isabs(scratch), (
                     f"the capture's scratch is {scratch!r}; every path "
                     "derived from it - the shim directory on PATH, the bind "
-                    "source - is then relative to whichever process reads it")
+                    "source - is then relative to whichever process reads it"
+                )
         finally:
             os.chdir(here)
 
-    @pytest.mark.skipif(shutil.which("cc") is None
-                        and shutil.which("gcc") is None, reason=NO_CC)
+    @pytest.mark.skipif(shutil.which("cc") is None and shutil.which("gcc") is None, reason=NO_CC)
     @pytest.mark.skipif(shutil.which("bwrap") is None, reason=NO_BWRAP)
-    def test_every_path_the_build_inherits_is_absolute(self, tmp_path,
-                                                       monkeypatch):
+    def test_every_path_the_build_inherits_is_absolute(self, tmp_path, monkeypatch):
         """The real environment, from a real relative invocation.
 
         No `bst` and no sandbox: the wrapped command is `true`, and the
@@ -112,29 +112,25 @@ class TestThePathsTheBuildInherits:
                 # and is gone by the time this function returns, so a
                 # check afterwards would be checking a deleted path.
                 first = (env or {}).get("PATH", "").split(os.pathsep)[0]
-                seen["shim_exists"] = os.path.isfile(
-                    os.path.join(first, "bwrap"))
-                seen["hook_exists"] = os.path.isfile(os.path.join(
-                    (env or {}).get("BST_TRACE_BIND_SRC", ""), "hook.so"))
+                seen["shim_exists"] = os.path.isfile(os.path.join(first, "bwrap"))
+                seen["hook_exists"] = os.path.isfile(os.path.join((env or {}).get("BST_TRACE_BIND_SRC", ""), "hook.so"))
                 return _Finished()
             return real_popen(cmd, cwd=cwd, env=env, **kwargs)
 
-        monkeypatch.setattr(
-            "tools.bst_native_build_tracer.subprocess.Popen", spy)
+        monkeypatch.setattr("tools.bst_native_build_tracer.subprocess.Popen", spy)
 
         here = os.getcwd()
         os.chdir(tmp_path)
         try:
-            code = run_traced_build(
-                "proj", ["true"], str(tmp_path / "raw.log"))
+            code = run_traced_build("proj", ["true"], str(tmp_path / "raw.log"))
         finally:
             os.chdir(here)
         assert code == 0
         assert seen, "the build was never spawned, so nothing was measured"
 
         assert os.path.isabs(seen["cwd"]), (
-            f"the build runs with cwd={seen['cwd']!r}; a relative cwd is the "
-            "same class of defect one argument over")
+            f"the build runs with cwd={seen['cwd']!r}; a relative cwd is the same class of defect one argument over"
+        )
 
         # The shim goes on the *front* of PATH, so the entry under test
         # is the one this capture added rather than the host's.
@@ -143,19 +139,19 @@ class TestThePathsTheBuildInherits:
             f"PATH begins with {prepended!r}. A relative PATH entry "
             "resolves against each process's own working directory, and "
             "buildbox-casd chdirs away - which is how a capture traces 0 "
-            "of 87 processes and exits 0")
+            "of 87 processes and exits 0"
+        )
         assert seen["shim_exists"], (
             f"{prepended} is absolute but held no bwrap shim when the build "
             "was spawned, so the PATH entry points somewhere that cannot "
-            "intercept the sandbox")
+            "intercept the sandbox"
+        )
 
         bind = seen["env"]["BST_TRACE_BIND_SRC"]
         assert os.path.isabs(bind), (
-            f"BST_TRACE_BIND_SRC is {bind!r}; the shim reads it after bst "
-            "has moved, so a relative value binds nothing")
-        assert seen["hook_exists"], (
-            f"{bind} is absolute but held no hook.so when the build was "
-            "spawned")
+            f"BST_TRACE_BIND_SRC is {bind!r}; the shim reads it after bst has moved, so a relative value binds nothing"
+        )
+        assert seen["hook_exists"], f"{bind} is absolute but held no hook.so when the build was spawned"
 
 
 class TestACaptureThatSawNothingSaysSo:
@@ -165,23 +161,25 @@ class TestACaptureThatSawNothingSaysSo:
         said = format_untraced_build_warning(0, 9)
         assert said, (
             "a build that ran 9 sandbox tasks and traced 0 processes has "
-            "no second plane, and used to print a confident report anyway")
+            "no second plane, and used to print a confident report anyway"
+        )
         assert "9 sandbox" in said, (
-            "the warning states what it counted; a warning with no number "
-            "cannot be checked by the person reading it")
+            "the warning states what it counted; a warning with no number cannot be checked by the person reading it"
+        )
         assert "--diagnose" in said, (
-            "and what to run next - `UX-147`'s rule that the failing user "
-            "is told what would answer the question")
+            "and what to run next - `UX-147`'s rule that the failing user is told what would answer the question"
+        )
 
     def test_nothing_launched_a_sandbox_is_a_result_not_a_failure(self):
         assert format_untraced_build_warning(0, 0) is None, (
-            "a fully cached build legitimately traces nothing; warning "
-            "there would train the reader to ignore this")
+            "a fully cached build legitimately traces nothing; warning there would train the reader to ignore this"
+        )
 
     def test_no_plane_one_log_is_cannot_say(self):
         assert format_untraced_build_warning(0, None) is None, (
             "without a Plane 1 log there is no count to compare against, "
-            "and `UX-308`'s rule is that absence is stated, not guessed")
+            "and `UX-308`'s rule is that absence is stated, not guessed"
+        )
 
     def test_a_capture_that_saw_processes_says_nothing(self):
         assert format_untraced_build_warning(87, 9) is None

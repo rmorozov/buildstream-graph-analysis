@@ -35,6 +35,7 @@ ci.yml                     d['schema'], d.get('signals')
 real-project-capture.yml   json.load(...)["members"], m["run_dir"]
 ```
 """
+
 import pathlib
 import re
 
@@ -75,7 +76,7 @@ def _published():
         try:
             node = schemas.schema(contract)
         except KeyError:
-            continue    # superseded ids keep an id and no body
+            continue  # superseded ids keep an id and no body
         names.update((node or {}).get("properties", {}))
     return names
 
@@ -135,8 +136,7 @@ def _findings():
             for number, line in block:
                 code = _code(line)
                 keys = {key for _, key in _LITERAL_KEY.findall(code)}
-                keys.update(key for _, key in _QUOTED.findall(code)
-                            if key in published)
+                keys.update(key for _, key in _QUOTED.findall(code) if key in published)
                 for key in sorted(keys):
                     found.append((path.name, number, key, line.strip()))
     return found
@@ -152,8 +152,7 @@ def _ids_outside_comments():
     ids = contracts.ids()
     found = []
     for path in WORKFLOWS:
-        for number, line in enumerate(
-                path.read_text(encoding="utf-8").splitlines(), 1):
+        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
             code = _code(line)
             for contract in ids:
                 if contract in code:
@@ -168,9 +167,12 @@ class TestNoWorkflowNamesAPayloadsKeys:
         walk finds no JSON-parsing step at all, the instrument has
         stopped reaching the thing it guards."""
         assert len(WORKFLOWS) >= 2, [p.name for p in WORKFLOWS]
-        parsing = [path.name for path in WORKFLOWS
-                   for block in _run_blocks(path.read_text(encoding="utf-8"))
-                   if any(_PARSES.search(_code(line)) for _, line in block)]
+        parsing = [
+            path.name
+            for path in WORKFLOWS
+            for block in _run_blocks(path.read_text(encoding="utf-8"))
+            if any(_PARSES.search(_code(line)) for _, line in block)
+        ]
         assert parsing, "no workflow step parses JSON - has the walk broken?"
 
     def test_no_parsing_step_names_a_key_itself(self):
@@ -179,8 +181,8 @@ class TestNoWorkflowNamesAPayloadsKeys:
         assert bad == [], (
             "a workflow step names the keys of a document this repository "
             "produces; the producing module publishes them:\n"
-            + "\n".join(f"  {name}:{line}  {key!r}  in  {text}"
-                        for name, line, key, text in bad))
+            + "\n".join(f"  {name}:{line}  {key!r}  in  {text}" for name, line, key, text in bad)
+        )
 
     def test_no_step_spells_a_contract_id(self):
         """`UX-288`'s half, at the file's scale rather than the block's:
@@ -190,8 +192,8 @@ class TestNoWorkflowNamesAPayloadsKeys:
         assert bad == [], (
             "a workflow names a published contract id; read it from the "
             "package or the tree, as the packaging step does:\n"
-            + "\n".join(f"  {name}:{line}  {cid}  in  {text}"
-                        for name, line, cid, text in bad))
+            + "\n".join(f"  {name}:{line}  {cid}  in  {text}" for name, line, cid, text in bad)
+        )
 
 
 class TestTheIndirectionsExist:
@@ -221,13 +223,18 @@ class TestTheIndirectionsExist:
         from tools.bst_baseline_set import trend_order
 
         document = tmp_path / "set.json"
-        document.write_text(json.dumps({"members": [
-            {"run_dir": "/runs/newest"},
-            {"run_dir": "/runs/middle"},
-            {"run_dir": "/runs/oldest"},
-        ]}))
-        assert trend_order(str(document)) == [
-            "/runs/oldest", "/runs/middle", "/runs/newest"]
+        document.write_text(
+            json.dumps(
+                {
+                    "members": [
+                        {"run_dir": "/runs/newest"},
+                        {"run_dir": "/runs/middle"},
+                        {"run_dir": "/runs/oldest"},
+                    ]
+                }
+            )
+        )
+        assert trend_order(str(document)) == ["/runs/oldest", "/runs/middle", "/runs/newest"]
 
 
 if __name__ == "__main__":  # pragma: no cover

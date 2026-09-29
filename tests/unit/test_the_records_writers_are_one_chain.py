@@ -8,6 +8,7 @@ publish` is totally ordered by the transitive `needs` closure, so at
 most one is ever pending, and a writer needing a writer still runs past
 a skipped one (`!cancelled()` or `always()`).
 """
+
 import pathlib
 
 import yaml
@@ -59,7 +60,7 @@ def test_every_writer_is_ordered_after_every_other_writer():
     names = sorted(writers)
     for i, a in enumerate(names):
         ancestors_a = _ancestors(a, jobs)
-        for b in names[i + 1:]:
+        for b in names[i + 1 :]:
             ancestors_b = _ancestors(b, jobs)
             assert b in ancestors_a or a in ancestors_b, (a, b)
 

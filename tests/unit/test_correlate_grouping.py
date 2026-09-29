@@ -23,6 +23,7 @@ Measured on a real dual-plane capture of `examples/06` taken for this
 task (bst 2.7.0, `--builders 4 --max-jobs 4`, cache cleared): 48 lines
 before, 21 after, with `core.bst` still leading on its own.
 """
+
 from bga.correlate import (
     _SERIALIZATION_NOTABLE_S,
     ElementJoin,
@@ -36,11 +37,17 @@ from bga.correlate import (
 
 # --- the materiality bar ------------------------------------------------
 
+
 def _joined(**kwargs) -> ElementJoin:
     base = dict(
-        element="lib-a.bst", declared=True, on_critical_path=True,
-        critical_path_share=0.09, potential_saving_us=3_000_000,
-        saving_share=0.082, cores_busy=1.74, cpu_coverage=0.81,
+        element="lib-a.bst",
+        declared=True,
+        on_critical_path=True,
+        critical_path_share=0.09,
+        potential_saving_us=3_000_000,
+        saving_share=0.082,
+        cores_busy=1.74,
+        cpu_coverage=0.81,
     )
     base.update(kwargs)
     return ElementJoin(**base)
@@ -53,17 +60,14 @@ def _ids(joined) -> list:
 def test_a_tenth_of_a_second_of_ranlib_is_not_a_finding():
     """The real numbers from the capture: `ranlib`, one process, 0.2s,
     inside an element whose whole realizable saving is 3.0s."""
-    assert 'serialization-point' not in _ids(
-        _joined(serial_binary={"binary": "ranlib", "wall_us": 200000})
-    )
+    assert 'serialization-point' not in _ids(_joined(serial_binary={"binary": "ranlib", "wall_us": 200000}))
 
 
 def test_a_real_serialization_point_still_reports():
     """The rule is not switched off - a single process holding a
     meaningful share of an element is exactly what it exists to name."""
     assert 'serialization-point' in _ids(
-        _joined(potential_saving_us=60_000_000,
-                serial_binary={"binary": "ld", "wall_us": 12000000})
+        _joined(potential_saving_us=60_000_000, serial_binary={"binary": "ld", "wall_us": 12000000})
     )
 
 
@@ -73,12 +77,10 @@ def test_the_bar_is_relative_as_well_as_absolute():
     absolute backstop. 4s of `ld` inside an element worth 900s is 0.4% -
     below the 1% share - and is not the next thing to do."""
     assert 'serialization-point' not in _ids(
-        _joined(potential_saving_us=900_000_000,
-                serial_binary={"binary": "ld", "wall_us": 4000000})
+        _joined(potential_saving_us=900_000_000, serial_binary={"binary": "ld", "wall_us": 4000000})
     )
     assert 'serialization-point' in _ids(
-        _joined(potential_saving_us=900_000_000,
-                serial_binary={"binary": "ld", "wall_us": 20000000})
+        _joined(potential_saving_us=900_000_000, serial_binary={"binary": "ld", "wall_us": 20000000})
     )
 
 
@@ -87,12 +89,17 @@ def test_the_absolute_backstop_holds_when_saving_was_never_evaluated():
     measured - including when there is no saving to take a share of."""
     assert _SERIALIZATION_NOTABLE_S == 1.0
     assert 'serialization-point' not in _ids(
-        _joined(potential_saving_us=0, saving_share=None, cores_busy=0.5,
-                serial_binary={"binary": "ranlib", "wall_us": 200000})
+        _joined(
+            potential_saving_us=0,
+            saving_share=None,
+            cores_busy=0.5,
+            serial_binary={"binary": "ranlib", "wall_us": 200000},
+        )
     )
 
 
 # --- range collapsing ---------------------------------------------------
+
 
 def test_a_range_reads_as_one_number_when_the_group_agrees():
     """Two identical numbers are one number. Printing `1.7-1.7` implies
@@ -111,24 +118,22 @@ def test_an_empty_population_collapses_to_nothing_rather_than_zero():
 
 # --- naming a group -----------------------------------------------------
 
+
 def test_a_run_of_sibling_names_contracts():
-    assert _name_elements(
-        ["lib-a.bst", "lib-b.bst", "lib-c.bst", "lib-d.bst", "lib-e.bst", "lib-f.bst"]
-    ) == "lib-a.bst..lib-f.bst"
+    assert (
+        _name_elements(["lib-a.bst", "lib-b.bst", "lib-c.bst", "lib-d.bst", "lib-e.bst", "lib-f.bst"])
+        == "lib-a.bst..lib-f.bst"
+    )
 
 
 def test_unrelated_names_are_listed_in_full():
     """The contraction must not invent a family. `core`/`app`/`codegen`
     share nothing, so all three are named."""
-    assert _name_elements(["app.bst", "codegen.bst", "core.bst"]) == (
-        "app.bst, codegen.bst, core.bst"
-    )
+    assert _name_elements(["app.bst", "codegen.bst", "core.bst"]) == ("app.bst, codegen.bst, core.bst")
 
 
 def test_a_run_and_an_outsider_keep_both_forms():
-    assert _name_elements(
-        ["app.bst", "lib-a.bst", "lib-b.bst", "lib-c.bst"]
-    ) == "app.bst, lib-a.bst..lib-c.bst"
+    assert _name_elements(["app.bst", "lib-a.bst", "lib-b.bst", "lib-c.bst"]) == "app.bst, lib-a.bst..lib-c.bst"
 
 
 def test_two_elements_are_never_contracted():
@@ -139,12 +144,13 @@ def test_two_elements_are_never_contracted():
 
 # --- grouping -----------------------------------------------------------
 
+
 def _entry(name, ids, **facts):
     base = {
         "element": name,
-        "recommendations": [{"id": i, "severity": "high", "text": f"{i} for {name}"}
-                            for i in ids],
-        "cpu_coverage": 0.81, "critical_path_share": 0.09,
+        "recommendations": [{"id": i, "severity": "high", "text": f"{i} for {name}"} for i in ids],
+        "cpu_coverage": 0.81,
+        "critical_path_share": 0.09,
         "potential_saving_us": 3_000_000,
     }
     base.update(facts)
@@ -152,10 +158,12 @@ def _entry(name, ids, **facts):
 
 
 def test_identical_finding_sets_form_one_group():
-    groups = _grouped_blocks([
-        _entry("lib-a.bst", ["already-compute-bound", "cpu-concentration"]),
-        _entry("lib-b.bst", ["already-compute-bound", "cpu-concentration"]),
-    ])
+    groups = _grouped_blocks(
+        [
+            _entry("lib-a.bst", ["already-compute-bound", "cpu-concentration"]),
+            _entry("lib-b.bst", ["already-compute-bound", "cpu-concentration"]),
+        ]
+    )
     assert len(groups) == 1
     assert groups[0][0] == ["lib-a.bst", "lib-b.bst"]
 
@@ -164,11 +172,13 @@ def test_a_different_finding_set_is_a_different_group():
     """`core.bst` carries `pinned-to-one-job` and the libs do not. That
     is the whole distinction the report exists to surface, so it must
     survive grouping."""
-    groups = _grouped_blocks([
-        _entry("core.bst", ["pinned-to-one-job", "cpu-concentration"]),
-        _entry("lib-a.bst", ["already-compute-bound", "cpu-concentration"]),
-        _entry("lib-b.bst", ["already-compute-bound", "cpu-concentration"]),
-    ])
+    groups = _grouped_blocks(
+        [
+            _entry("core.bst", ["pinned-to-one-job", "cpu-concentration"]),
+            _entry("lib-a.bst", ["already-compute-bound", "cpu-concentration"]),
+            _entry("lib-b.bst", ["already-compute-bound", "cpu-concentration"]),
+        ]
+    )
     assert [g[0] for g in groups] == [["core.bst"], ["lib-a.bst", "lib-b.bst"]]
 
 
@@ -176,11 +186,13 @@ def test_grouping_never_reorders_what_leads():
     """The list arrives ranked by Plane 1 impact and a group takes the
     position of its strongest member, so the first block is still the
     first element."""
-    groups = _grouped_blocks([
-        _entry("lib-a.bst", ["already-compute-bound"]),
-        _entry("core.bst", ["pinned-to-one-job"]),
-        _entry("lib-b.bst", ["already-compute-bound"]),
-    ])
+    groups = _grouped_blocks(
+        [
+            _entry("lib-a.bst", ["already-compute-bound"]),
+            _entry("core.bst", ["pinned-to-one-job"]),
+            _entry("lib-b.bst", ["already-compute-bound"]),
+        ]
+    )
     assert groups[0][0] == ["lib-a.bst", "lib-b.bst"]
     assert groups[1][0] == ["core.bst"]
 
@@ -195,40 +207,50 @@ def test_a_single_element_group_renders_exactly_as_before():
 def test_a_group_header_carries_the_impact_the_findings_no_longer_do():
     header = _group_header(
         ["lib-a.bst", "lib-b.bst"],
-        [_entry("lib-a.bst", ["x"], critical_path_share=0.09,
-                potential_saving_us=3_000_000),
-         _entry("lib-b.bst", ["x"], critical_path_share=0.06,
-                potential_saving_us=2_000_000)],
+        [
+            _entry("lib-a.bst", ["x"], critical_path_share=0.09, potential_saving_us=3_000_000),
+            _entry("lib-b.bst", ["x"], critical_path_share=0.06, potential_saving_us=2_000_000),
+        ],
     )
     assert header == (
-        "lib-a.bst, lib-b.bst (2 elements, 6-9% of the critical path each, "
-        "2.0-3.0s apiece, 5.0s together):"
+        "lib-a.bst, lib-b.bst (2 elements, 6-9% of the critical path each, 2.0-3.0s apiece, 5.0s together):"
     )
 
 
 # --- end to end ---------------------------------------------------------
 
+
 def _result(actionable):
     return {
-        "elements": actionable, "actionable": actionable, "restructuring": [],
-        "attribution_unreliable": False, "attribution_partial": False,
-        "ranking": {"metric": "realizable_saving_us", "degenerate": False,
-                    "tied_saving_us": None},
-        "coverage": {"joined_elements": len(actionable), "plane1_elements": len(actionable),
-                     "plane2_elements": len(actionable), "plane1_only_with_impact": [],
-                     "undeclared_plane2_elements": [], "aggregating_dependency_pairs": 0},
+        "elements": actionable,
+        "actionable": actionable,
+        "restructuring": [],
+        "attribution_unreliable": False,
+        "attribution_partial": False,
+        "ranking": {"metric": "realizable_saving_us", "degenerate": False, "tied_saving_us": None},
+        "coverage": {
+            "joined_elements": len(actionable),
+            "plane1_elements": len(actionable),
+            "plane2_elements": len(actionable),
+            "plane1_only_with_impact": [],
+            "undeclared_plane2_elements": [],
+            "aggregating_dependency_pairs": 0,
+        },
         "note": "n/a",
     }
 
 
 def test_the_grouped_block_states_the_range_not_one_members_number():
     entries = [
-        _entry(name, ["already-compute-bound", "cpu-concentration"],
-               cores_busy=cores,
-               dominant_binary={"binary": "cc1plus", "cpu_share": share,
-                                "count": 5, "cpu_us": 3_000_000})
+        _entry(
+            name,
+            ["already-compute-bound", "cpu-concentration"],
+            cores_busy=cores,
+            dominant_binary={"binary": "cc1plus", "cpu_share": share, "count": 5, "cpu_us": 3_000_000},
+        )
         for name, cores, share in (
-            ("lib-a.bst", 1.74, 0.76), ("lib-b.bst", 1.35, 0.72),
+            ("lib-a.bst", 1.74, 0.76),
+            ("lib-b.bst", 1.35, 0.72),
         )
     ]
     text = format_correlation(_result(entries))
@@ -243,10 +265,7 @@ def test_a_finding_whose_figures_do_not_generalize_keeps_its_own_words():
     `redundant-operation` names other elements; averaging either would
     say something the measurement does not. The block gets longer rather
     than wronger."""
-    entries = [
-        _entry(name, ["peak-memory"], peak_rss_bytes=2_000_000)
-        for name in ("lib-a.bst", "lib-b.bst")
-    ]
+    entries = [_entry(name, ["peak-memory"], peak_rss_bytes=2_000_000) for name in ("lib-a.bst", "lib-b.bst")]
     text = format_correlation(_result(entries))
     assert "peak-memory for lib-a.bst" in text
 
@@ -265,8 +284,6 @@ def test_the_overflow_line_counts_elements_not_groups():
     of twelve is one block. The overflow must still say how many
     *elements* were withheld, or a reader cannot tell whether the list is
     complete."""
-    entries = [
-        _entry(f"solo-{i}.bst", [f"finding-{i}"]) for i in range(12)
-    ]
+    entries = [_entry(f"solo-{i}.bst", [f"finding-{i}"]) for i in range(12)]
     text = format_correlation(_result(entries))
     assert "(+4 more elements with findings, see --format json)" in text

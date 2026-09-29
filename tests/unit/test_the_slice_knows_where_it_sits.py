@@ -25,6 +25,7 @@ put every unanalysed task at the graph's root, which is a claim rather
 than a gap - `UX-308`'s rule, and the reason `_plane1_annotations`
 filters on `is not None` rather than on truthiness.
 """
+
 import json
 import pathlib
 import sys
@@ -49,8 +50,7 @@ STRUCTURAL = ("depth", "on_critical_path", "downstream_count")
 
 
 def _analysis(tmp_path, **payload):
-    (tmp_path / "analyze.json").write_text(json.dumps(payload),
-                                           encoding="utf-8")
+    (tmp_path / "analyze.json").write_text(json.dumps(payload), encoding="utf-8")
     return str(tmp_path)
 
 
@@ -58,11 +58,10 @@ class TestTheStructureIsReadFromTheAnalysis:
     def test_all_three_come_back(self, tmp_path):
         snapshot = _analysis(
             tmp_path,
-            elements={"unweighted_depth": {"a.bst": 2},
-                      "downstream_count": {"a.bst": 7}},
-            element_join=[{"element": "a.bst", "on_critical_path": True}])
-        assert element_structure(snapshot)["a.bst"] == {
-            "depth": 2, "downstream_count": 7, "on_critical_path": True}
+            elements={"unweighted_depth": {"a.bst": 2}, "downstream_count": {"a.bst": 7}},
+            element_join=[{"element": "a.bst", "on_critical_path": True}],
+        )
+        assert element_structure(snapshot)["a.bst"] == {"depth": 2, "downstream_count": 7, "on_critical_path": True}
 
     def test_a_snapshot_without_an_analysis_says_nothing(self, tmp_path):
         assert element_structure(str(tmp_path)) == {}
@@ -71,8 +70,7 @@ class TestTheStructureIsReadFromTheAnalysis:
         """An older `analyze.json` with no `element_join` still gives
         depth - the keys are independent, and demanding all three would
         lose two facts to the absence of a third."""
-        snapshot = _analysis(
-            tmp_path, elements={"unweighted_depth": {"a.bst": 1}})
+        snapshot = _analysis(tmp_path, elements={"unweighted_depth": {"a.bst": 1}})
         assert element_structure(snapshot) == {"a.bst": {"depth": 1}}
 
     def test_an_unreadable_analysis_does_not_raise(self, tmp_path):
@@ -90,10 +88,14 @@ class TestASliceCarriesIt:
             assert key in named, f"{key} is on no Plane 1 slice"
 
     def test_a_slice_carries_the_three(self):
-        args = dict(_plane1_annotations(
-            self._event(), {"a.bst": "cmake"}, "SUCCESS",
-            {"a.bst": {"depth": 3, "on_critical_path": True,
-                       "downstream_count": 9}}))
+        args = dict(
+            _plane1_annotations(
+                self._event(),
+                {"a.bst": "cmake"},
+                "SUCCESS",
+                {"a.bst": {"depth": 3, "on_critical_path": True, "downstream_count": 9}},
+            )
+        )
         assert args["depth"] == 3
         assert args["on_critical_path"] is True
         assert args["downstream_count"] == 9
@@ -102,10 +104,11 @@ class TestASliceCarriesIt:
         """The root of the graph and an element off the critical path
         are both real answers, and both are falsy - which is why the
         emitter filters on `is not None`."""
-        args = dict(_plane1_annotations(
-            self._event(), {}, None,
-            {"a.bst": {"depth": 0, "on_critical_path": False,
-                       "downstream_count": 0}}))
+        args = dict(
+            _plane1_annotations(
+                self._event(), {}, None, {"a.bst": {"depth": 0, "on_critical_path": False, "downstream_count": 0}}
+            )
+        )
         assert args["depth"] == 0
         assert args["on_critical_path"] is False
         assert args["downstream_count"] == 0
@@ -115,11 +118,11 @@ class TestASliceCarriesIt:
         for key in STRUCTURAL:
             assert key not in args, (
                 f"{key} written for an element nobody analysed - a depth of 0 "
-                f"there puts every unanalysed task at the graph's root")
+                f"there puts every unanalysed task at the graph's root"
+            )
 
     def test_an_element_the_analysis_missed_gets_none_of_them(self):
-        args = dict(_plane1_annotations(
-            self._event("b.bst"), {}, None, {"a.bst": {"depth": 1}}))
+        args = dict(_plane1_annotations(self._event("b.bst"), {}, None, {"a.bst": {"depth": 1}}))
         assert "depth" not in args
 
 
@@ -133,23 +136,23 @@ class TestTheRunSaysBothFactors:
     def _context(self, tmp_path, **fields):
         (tmp_path / "run").mkdir(exist_ok=True)
         (tmp_path / "run" / "run-context.json").write_text(
-            json.dumps(dict({"run_identity": {"scheduler": {"builders": 4}}},
-                            **fields)), encoding="utf-8")
+            json.dumps(dict({"run_identity": {"scheduler": {"builders": 4}}}, **fields)), encoding="utf-8"
+        )
         return str(tmp_path)
 
     def test_both_factors_ride_the_run_slice(self, tmp_path):
-        identity = run_identity(self._context(
-            tmp_path, native_max_jobs=8,
-            native_max_jobs_source="resolved_from_graph"))
+        identity = run_identity(
+            self._context(tmp_path, native_max_jobs=8, native_max_jobs_source="resolved_from_graph")
+        )
         assert identity["builders"] == 4
         assert identity["native_max_jobs"] == 8
 
     def test_the_number_says_where_it_came_from(self, tmp_path):
         """`UX-377` gave it three tiers and `UX-357`'s rule is that a
         published number names the rule that produced it."""
-        identity = run_identity(self._context(
-            tmp_path, native_max_jobs=8,
-            native_max_jobs_source="parsed_from_invocation"))
+        identity = run_identity(
+            self._context(tmp_path, native_max_jobs=8, native_max_jobs_source="parsed_from_invocation")
+        )
         assert identity["native_max_jobs_source"] == "parsed_from_invocation"
 
     def test_a_capture_that_established_neither_says_neither(self, tmp_path):
@@ -162,8 +165,7 @@ class TestTheRunSaysBothFactors:
         implementation here is how the trace and the report come to
         disagree about the number the whole capacity chain is keyed on -
         so an unexpected value is copied through, not corrected."""
-        identity = run_identity(self._context(
-            tmp_path, native_max_jobs=999, native_max_jobs_source="whatever"))
+        identity = run_identity(self._context(tmp_path, native_max_jobs=999, native_max_jobs_source="whatever"))
         assert identity["native_max_jobs"] == 999
         assert identity["native_max_jobs_source"] == "whatever"
 
@@ -184,16 +186,15 @@ class TestTheDocumentationAndTheLibraryKeepUp:
         finds. The library gets one question that groups on `depth`."""
         text = QUESTIONS.read_text(encoding="utf-8")
         assert "graph-levels" in text, "no question asks about the levels"
-        assert "debug.depth" in text, (
-            "the new keys are documented and no canned query reads one")
+        assert "debug.depth" in text, "the new keys are documented and no canned query reads one"
 
     def test_that_question_scopes_itself_to_plane_one(self):
         """`UX-308`'s correction: these ride Plane 1 only, and a query
         that did not say so would match Plane 2 slices on a key they do
         not have and return zero rows in silence."""
         text = QUESTIONS.read_text(encoding="utf-8")
-        block = text[text.index('id: "graph-levels"'):]
-        block = block[:block.index("},")]
+        block = text[text.index('id: "graph-levels"') :]
+        block = block[: block.index("},")]
         assert "bst-builder" in block, block[:400]
 
 

@@ -35,6 +35,7 @@ clause is the one below that asserts the document is **byte-identical**
 after going back, and the second hardest is that the export carries no
 focus machinery at all.
 """
+
 import json
 import os
 import re
@@ -61,7 +62,8 @@ MACRO = REPO / "tests" / "fixtures" / "macro_micro" / "run"
 
 
 def _js(body):
-    source = """
+    source = (
+        """
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
 globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
 _installDocument();
@@ -76,11 +78,17 @@ const all = (n, pred, out = []) => {
 };
 const text = (n) => !n ? "" : ((n.children ?? []).length
   ? (n._text ?? "") + n.children.map(text).join("") : (n._text ?? ""));
-""" + body
+"""
+        + body
+    )
     result = subprocess.run(
         [node, "--input-type=module", "-e", source],
-        capture_output=True, text=True, cwd=REPO, timeout=90,
-        env=dict(os.environ, BGA_DOM_SHIM=SHIM))
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=90,
+        env=dict(os.environ, BGA_DOM_SHIM=SHIM),
+    )
     assert result.returncode == 0, result.stderr[-3000:]
     return json.loads(result.stdout)
 
@@ -89,20 +97,24 @@ const text = (n) => !n ? "" : ((n.children ?? []).length
 # 1. Counting, and what it counts.
 # --------------------------------------------------------------------------
 
+
 @needs_node
 class TestTheDepthIsCounted:
     """`shapeOf` is the whole of §3a.1's arithmetic, and §3a is careful
     that it is arithmetic: counting is not analysis. Known answers, so a
     change to the walk has to change these."""
 
-    @pytest.mark.parametrize("value,expected", [
-        ([1, 2, 3], {"levels": 1, "rows": 3}),
-        ([{"a": 1}, {"a": 2}], {"levels": 2, "rows": 2}),
-        ({"x": [{"y": [1]}]}, {"levels": 4, "rows": 1}),
-        ({}, {"levels": 1, "rows": 0}),
-        (7, {"levels": 0, "rows": 0}),
-        (None, {"levels": 0, "rows": 0}),
-    ])
+    @pytest.mark.parametrize(
+        "value,expected",
+        [
+            ([1, 2, 3], {"levels": 1, "rows": 3}),
+            ([{"a": 1}, {"a": 2}], {"levels": 2, "rows": 2}),
+            ({"x": [{"y": [1]}]}, {"levels": 4, "rows": 1}),
+            ({}, {"levels": 1, "rows": 0}),
+            (7, {"levels": 0, "rows": 0}),
+            (None, {"levels": 0, "rows": 0}),
+        ],
+    )
     def test_known_shapes(self, value, expected):
         out = _js(f"""
 const {{ shapeOf }} = await import("./bga/viewer/shapes.js");
@@ -122,6 +134,7 @@ console.log(JSON.stringify([depthSentence([1, 2, 3]), depthSentence([{a: 1}]),
 # --------------------------------------------------------------------------
 # 2. No scroll container inside another.
 # --------------------------------------------------------------------------
+
 
 def _parse(css):
     """`[(selector, {property: value})]` in source order, comments gone."""
@@ -196,8 +209,8 @@ class TestNestedScrollboxesAreGone:
         decls = cascade("main .map-table")
         assert decls is not None, "no `main .map-table` rule at all"
         assert "max-height" not in decls and "overflow-y" not in decls, (
-            "the nested scrollbox is back: a `.map-table` with its own "
-            f"vertical scroll is the field defect ({decls})")
+            f"the nested scrollbox is back: a `.map-table` with its own vertical scroll is the field defect ({decls})"
+        )
 
     def test_a_later_rule_is_the_one_that_counts(self):
         """The mechanism, on a sheet this test builds.
@@ -208,20 +221,23 @@ class TestNestedScrollboxesAreGone:
         merge stops merging, and it is the round-45 evasion in the form
         a guard can keep.
         """
-        css = ("main .map-table { overflow-y: visible; }\n"
-               "main .other { color: red; }\n"
-               "main .map-table { overflow-y: auto; max-height: 20rem; }\n")
-        assert _merge(_parse(css), "main .map-table") == {
-            "overflow-y": "auto", "max-height": "20rem"}, (
+        css = (
+            "main .map-table { overflow-y: visible; }\n"
+            "main .other { color: red; }\n"
+            "main .map-table { overflow-y: auto; max-height: 20rem; }\n"
+        )
+        assert _merge(_parse(css), "main .map-table") == {"overflow-y": "auto", "max-height": "20rem"}, (
             "the first rule won, so an appended scroll rule is invisible - "
             "which is exactly how round 45 restored the scrollbox with "
-            "every clause green")
+            "every clause green"
+        )
 
     def test_only_the_outermost_table_scrolls(self):
         rule = cascade("main table table")
         assert rule, (
             "nothing stops a table inside a table's cell from having its "
-            "own sideways scroll - the second box in the chain")
+            "own sideways scroll - the second box in the chain"
+        )
         assert rule.get("overflow") == "visible", rule
 
 
@@ -235,12 +251,14 @@ class TestTheBootedPageHasOneScrollBoxPerChain:
             assert worst <= 1, (
                 f"{page}: a scroll container is {worst} deep inside another "
                 f"- the wheel goes to the inner one and the outer never "
-                f"moves. Chains: {out['scrollChains']}")
+                f"moves. Chains: {out['scrollChains']}"
+            )
 
 
 # --------------------------------------------------------------------------
 # 3. Every fold on the real pages says how deep it goes.
 # --------------------------------------------------------------------------
+
 
 def _shape_of(value):
     """`shapeOf`, in Python, so the walk checks the page against the
@@ -286,8 +304,7 @@ class TestEveryFoldStatesItsDepth:
         for page, out in booted.items():
             for fold in out["folds"]:
                 levels, rows = int(fold["levels"]), int(fold["rows"])
-                want = (f"{levels} level{'' if levels == 1 else 's'}, "
-                        f"{rows} row{'' if rows == 1 else 's'}")
+                want = f"{levels} level{'' if levels == 1 else 's'}, {rows} row{'' if rows == 1 else 's'}"
                 assert want in fold["summary"], (page, want, fold["summary"])
 
     def test_the_numbers_are_the_folded_value_s_actual_shape(self, booted):
@@ -308,14 +325,13 @@ class TestEveryFoldStatesItsDepth:
                 assert int(fold["levels"]) == want["levels"], (page, path, fold)
                 assert int(fold["rows"]) == want["rows"], (page, path, fold)
                 checked += 1
-        assert checked >= 10, (
-            f"only {checked} folds resolved against the payload - the walk "
-            f"is checking almost nothing")
+        assert checked >= 10, f"only {checked} folds resolved against the payload - the walk is checking almost nothing"
 
 
 # --------------------------------------------------------------------------
 # 4. Focus: opening, going back, and the fragment.
 # --------------------------------------------------------------------------
+
 
 @needs_node
 def _row_cap():
@@ -336,9 +352,7 @@ class TestANestedTableOpensInFocus:
         counts and nothing else. A file somebody scrolls, prints and
         attaches has nothing to rearrange."""
         for page, out in booted.items():
-            assert out["expands"] == [], (
-                f"{page}'s export carries {len(out['expands'])} expand "
-                f"controls")
+            assert out["expands"] == [], f"{page}'s export carries {len(out['expands'])} expand controls"
 
     def test_a_served_page_offers_it_where_the_rule_says(self, served):
         """`structured.js`: `nested || total > TABLE_OPENS_BOUNDED_ABOVE`.
@@ -358,13 +372,14 @@ class TestANestedTableOpensInFocus:
             report = payloads(str(pages.FIXTURES[page]))["report.json"]
             for path in out["expands"]:
                 if "." in path:
-                    continue                # nested: the first half
+                    continue  # nested: the first half
                 rows = report.get(path)
                 assert isinstance(rows, list) and len(rows) > bound, (
                     f"{page}: {path!r} is a top-level table of "
                     f"{len(rows) if isinstance(rows, list) else '?'} rows "
                     f"and offers a focus control; the rule is nested or "
-                    f"longer than {bound}")
+                    f"longer than {bound}"
+                )
 
     def test_opening_gives_the_table_the_column_and_a_way_back(self, served):
         for page, out in served.items():
@@ -373,12 +388,11 @@ class TestANestedTableOpensInFocus:
             assert opened["hasTable"] >= 1, (page, opened)
             assert opened["crumb"].startswith("← "), (page, opened)
             assert opened["crumb"] != "← the report", (
-                f"{page}: the breadcrumb does not name the section it came "
-                f"from ({opened['crumb']})")
+                f"{page}: the breadcrumb does not name the section it came from ({opened['crumb']})"
+            )
             # The rest of the report stands behind it - every section,
             # except the one that *is* the thing expanded.
-            assert opened["behind"] == opened["sections"] - opened["inFocus"], (
-                page, opened)
+            assert opened["behind"] == opened["sections"] - opened["inFocus"], (page, opened)
 
     def test_no_row_of_the_opened_table_is_inside_a_scrollbox(self, served):
         """The field defect, inverted into the guard: the reason a
@@ -386,17 +400,17 @@ class TestANestedTableOpensInFocus:
         a box inside a box. In focus there is one container, and it is
         the page."""
         for page, out in served.items():
-            assert out["opened"]["chainsInFocus"] == [] or max(
-                out["opened"]["chainsInFocus"]) <= 1, (page, out["opened"])
+            assert out["opened"]["chainsInFocus"] == [] or max(out["opened"]["chainsInFocus"]) <= 1, (
+                page,
+                out["opened"],
+            )
 
     def test_going_back_leaves_the_document_byte_identical(self, served):
         """The round-24 argument, made checkable. An overlay could not
         promise this; a section that moves a node and puts it back can,
         and "we put it back" is not a measurement."""
         for page, out in served.items():
-            assert out["restored"], (
-                f"{page}: the document differs after going back - focus "
-                f"left something behind")
+            assert out["restored"], f"{page}: the document differs after going back - focus left something behind"
             assert out["stillFocused"] is None, page
             assert out["behindAfter"] == 0, page
 
@@ -406,11 +420,8 @@ class TestANestedTableOpensInFocus:
         writer of the hash and this has to be the hash a reader would
         copy - not a second call to `captureView`."""
         for page, out in served.items():
-            assert f"tf={out['opened']['which']}" in out["captured"], (
-                page, out["captured"])
-            assert "tf=" not in out["afterHash"], (
-                f"{page}: going back left the table in the link "
-                f"({out['afterHash']})")
+            assert f"tf={out['opened']['which']}" in out["captured"], (page, out["captured"])
+            assert "tf=" not in out["afterHash"], f"{page}: going back left the table in the link ({out['afterHash']})"
 
     def test_a_pasted_link_opens_the_table_again(self):
         """The other direction, in one module instance. It cannot be
@@ -494,6 +505,7 @@ console.log(JSON.stringify({ opened,
 # --------------------------------------------------------------------------
 # The harness.
 # --------------------------------------------------------------------------
+
 
 def _probe_source():
     source = (REPO / "tests/unit/test_a_report_you_can_navigate.py").read_text()
@@ -604,19 +616,24 @@ def _boot(run_dir, tmp, protocol, tail, extra_helpers=""):
     view.export(str(run), str(page))
     html = page.read_text(encoding="utf-8")
     module = tmp / "inline.mjs"
-    module.write_text(
-        view.inflated_module(html),
-        encoding="utf-8")
+    module.write_text(view.inflated_module(html), encoding="utf-8")
     probe = tmp / "probe.mjs"
-    probe.write_text(
-        _probe_source().split("const report =", 1)[0]
-        + extra_helpers + _HELPERS + tail, encoding="utf-8")
+    probe.write_text(_probe_source().split("const report =", 1)[0] + extra_helpers + _HELPERS + tail, encoding="utf-8")
     result = subprocess.run(
-        [node, str(probe)], capture_output=True, text=True, cwd=REPO,
+        [node, str(probe)],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
         timeout=180,
-        env=dict(os.environ, PAGE=str(page), MOD=str(module),
-                 PROTOCOL=protocol, BGA_DOM_SHIM=SHIM,
-                 VIEWSTATE=str(VIEWER / "viewstate.js")))
+        env=dict(
+            os.environ,
+            PAGE=str(page),
+            MOD=str(module),
+            PROTOCOL=protocol,
+            BGA_DOM_SHIM=SHIM,
+            VIEWSTATE=str(VIEWER / "viewstate.js"),
+        ),
+    )
     assert result.returncode == 0, result.stderr[-4000:]
     out = json.loads(result.stdout)
     assert out["error"] is None, out["error"]

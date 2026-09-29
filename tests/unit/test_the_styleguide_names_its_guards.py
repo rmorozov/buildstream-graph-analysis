@@ -20,6 +20,7 @@ are parsed - a paragraph naming a section is not a row.
 **This file is excluded from its own scan.** It quotes section ids to
 report them, so scanning it would make every row cite its own reader.
 """
+
 import collections
 import functools
 import pathlib
@@ -60,18 +61,18 @@ SELF = pathlib.Path(__file__).name
 def _tracked():
     """Paths git has. `UX-577`: a glob walks the checkout, and the main
     checkout holds `.claude/worktrees/<agent>/` - a whole second tree."""
-    out = subprocess.run(["git", "ls-files"], cwd=REPO, check=True,
-                         capture_output=True, text=True).stdout
+    out = subprocess.run(["git", "ls-files"], cwd=REPO, check=True, capture_output=True, text=True).stdout
     return frozenset(out.splitlines())
 
 
 def _unit_tests():
     """Tracked and still on disk - a file deleted but not yet committed
     is gone from the scan and named by the row check, not a traceback."""
-    return sorted(one for one in _tracked()
-                  if re.fullmatch(r"tests/unit/[^/]+\.py", one)
-                  and not one.endswith("/" + SELF)
-                  and (REPO / one).exists())
+    return sorted(
+        one
+        for one in _tracked()
+        if re.fullmatch(r"tests/unit/[^/]+\.py", one) and not one.endswith("/" + SELF) and (REPO / one).exists()
+    )
 
 
 def _cited(paths):
@@ -113,10 +114,11 @@ def _markdown_texts(tracked):
     A tracked file deleted but not committed is skipped, the same
     reading `_unit_tests` takes of one. Keyed on `tracked` alone, so
     a caller that rewrites a file it already listed clears this."""
-    return tuple((rel, (REPO / rel).read_text(encoding="utf-8",
-                                              errors="replace"))
-                 for rel in sorted(tracked)
-                 if rel.endswith(".md") and (REPO / rel).exists())
+    return tuple(
+        (rel, (REPO / rel).read_text(encoding="utf-8", errors="replace"))
+        for rel in sorted(tracked)
+        if rel.endswith(".md") and (REPO / rel).exists()
+    )
 
 
 @functools.lru_cache(maxsize=1)
@@ -126,8 +128,7 @@ def _citing_texts(tracked):
     instead of nine saved 8 % - the regex over 13.1 MB was. A
     document with no `§` in it cannot match `CITATION`, and 286 of
     1,148 have one: 3.6 MB."""
-    return tuple((rel, text) for rel, text in _markdown_texts(tracked)
-                 if "§" in text)
+    return tuple((rel, text) for rel, text in _markdown_texts(tracked) if "§" in text)
 
 
 def _cites_own_id(path, ids, tracked):
@@ -146,8 +147,7 @@ def _cites_own_id(path, ids, tracked):
     name = _display_name(path)
     rel = path.relative_to(REPO).as_posix()
     for alias in {name, name.replace("-", " ")}:
-        cite = re.compile(r"(?<![\w-])" + re.escape(alias)
-                          + r"(?:\.md)?`?\s*§([0-9]+[a-z]?)")
+        cite = re.compile(r"(?<![\w-])" + re.escape(alias) + r"(?:\.md)?`?\s*§([0-9]+[a-z]?)")
         for other, text in _citing_texts(tracked):
             if other == rel or alias not in text:
                 continue
@@ -170,8 +170,7 @@ def _process_documents():
     # `UX-911`: over the texts read once above, so no document in
     # `_PROCESS_DIRS` is read here and again by `_cites_own_id`.
     for rel, text in _markdown_texts(tracked):
-        if not (rel.startswith(_PROCESS_DIRS)
-                or (rel.startswith(".claude/skills/") and rel.endswith("/SKILL.md"))):
+        if not (rel.startswith(_PROCESS_DIRS) or (rel.startswith(".claude/skills/") and rel.endswith("/SKILL.md"))):
             continue
         path = REPO / rel
         total = len(re.findall(r"^#{2,3} ", text, re.M))
@@ -179,16 +178,14 @@ def _process_documents():
         if not total or len(numbered) < 2 or len(numbered) / total < 0.5:
             continue
         candidates.append((path, frozenset(numbered)))
-    return frozenset(path for path, ids in candidates
-                      if _cites_own_id(path, ids, tracked))
+    return frozenset(path for path, ids in candidates if _cites_own_id(path, ids, tracked))
 
 
 def _table():
     """`{section: (guards, note)}` from §7's rows, in document order."""
     text = STYLEGUIDE.read_text(encoding="utf-8")
-    body = text[text.index("\n## 7. Enforcement"):]
-    return {section: (frozenset(GUARD.findall(guards)), note.strip())
-            for section, guards, note in ROW.findall(body)}
+    body = text[text.index("\n## 7. Enforcement") :]
+    return {section: (frozenset(GUARD.findall(guards)), note.strip()) for section, guards, note in ROW.findall(body)}
 
 
 def _ambiguous():
@@ -210,8 +207,7 @@ def _ambiguous():
         name = _display_name(doc)
         for section in _sections(doc):
             owners[section].add(name)
-    return frozenset((section, tuple(sorted(names)))
-                      for section, names in owners.items() if len(names) > 1)
+    return frozenset((section, tuple(sorted(names))) for section, names in owners.items() if len(names) > 1)
 
 
 #: `_ambiguous()`, measured the day `UX-771` widened the population to
@@ -219,17 +215,19 @@ def _ambiguous():
 #: fine - a new id, or an id gaining or losing an owner, is exactly
 #: the collision this guard exists to catch, so it fails naming the
 #: pair rather than silently widening the set it compares against.
-KNOWN_AMBIGUOUS = frozenset({
-    ("1", ("decompose", "fixing-guide", "style-guide", "styleguide", "verify")),
-    ("2", ("decompose", "fixing-guide", "style-guide", "styleguide", "verify")),
-    ("3", ("decompose", "fixing-guide", "style-guide", "styleguide", "verify")),
-    ("4", ("decompose", "fixing-guide", "style-guide", "styleguide", "verify")),
-    ("4a", ("fixing-guide", "styleguide")),
-    ("5", ("decompose", "fixing-guide", "style-guide", "styleguide", "verify")),
-    ("6", ("fixing-guide", "style-guide", "styleguide", "verify")),
-    ("6a", ("fixing-guide", "styleguide")),
-    ("7", ("fixing-guide", "style-guide", "styleguide", "verify")),
-})
+KNOWN_AMBIGUOUS = frozenset(
+    {
+        ("1", ("decompose", "fixing-guide", "style-guide", "styleguide", "verify")),
+        ("2", ("decompose", "fixing-guide", "style-guide", "styleguide", "verify")),
+        ("3", ("decompose", "fixing-guide", "style-guide", "styleguide", "verify")),
+        ("4", ("decompose", "fixing-guide", "style-guide", "styleguide", "verify")),
+        ("4a", ("fixing-guide", "styleguide")),
+        ("5", ("decompose", "fixing-guide", "style-guide", "styleguide", "verify")),
+        ("6", ("fixing-guide", "style-guide", "styleguide", "verify")),
+        ("6a", ("fixing-guide", "styleguide")),
+        ("7", ("fixing-guide", "style-guide", "styleguide", "verify")),
+    }
+)
 
 
 class TestTheIdSpaceGrowsNoSilentCollision:
@@ -249,7 +247,8 @@ class TestTheIdSpaceGrowsNoSilentCollision:
             f"document joined the population - update KNOWN_AMBIGUOUS "
             f"or give the section a number none of "
             f"{sorted(_display_name(d) for d in _process_documents())} "
-            f"already uses")
+            f"already uses"
+        )
 
     def test_the_known_set_is_not_stale(self):
         """The other direction: a retired id, or an owner that no
@@ -257,8 +256,8 @@ class TestTheIdSpaceGrowsNoSilentCollision:
         collision hide underneath it."""
         gone = KNOWN_AMBIGUOUS - _ambiguous()
         assert gone == set(), (
-            f"{sorted(gone)} no longer matches an id's live owner set "
-            f"- shrink or update `KNOWN_AMBIGUOUS` to match")
+            f"{sorted(gone)} no longer matches an id's live owner set - shrink or update `KNOWN_AMBIGUOUS` to match"
+        )
 
     def test_the_population_is_the_five_documents_this_widened_to(self):
         """`UX-771`: the heading shape alone is not enough. `directions.
@@ -267,8 +266,7 @@ class TestTheIdSpaceGrowsNoSilentCollision:
         `review` and its neighbor `self-review` stay out; `verify` and
         `decompose` are named at ids they do number, and join in."""
         names = {_display_name(d) for d in _process_documents()}
-        assert names == {"styleguide", "fixing-guide", "style-guide",
-                          "verify", "decompose"}, sorted(names)
+        assert names == {"styleguide", "fixing-guide", "style-guide", "verify", "decompose"}, sorted(names)
 
     def test_self_review_cannot_stand_in_for_review(self, tmp_path):
         """A verifier found `_cites_own_id`'s alias match unbounded on
@@ -289,11 +287,9 @@ class TestTheIdSpaceGrowsNoSilentCollision:
             _citing_texts.cache_clear()
 
         rewrite("See self-review §3 for detail.\n")
-        assert not _cites_own_id(review, ids, tracked), (
-            "self-review §3 pulled review into the population")
+        assert not _cites_own_id(review, ids, tracked), "self-review §3 pulled review into the population"
         rewrite("See review §3 for detail.\n")
-        assert _cites_own_id(review, ids, tracked), (
-            "a genuine review §3 did not pull review in")
+        assert _cites_own_id(review, ids, tracked), "a genuine review §3 did not pull review in"
 
 
 class TestTheTableIsTheGuide:
@@ -302,13 +298,14 @@ class TestTheTableIsTheGuide:
         assert sections == set(table), (
             "§7's table and the guide's headings disagree; "
             f"sections with no row: {sorted(sections - set(table))}; "
-            f"rows for no section: {sorted(set(table) - sections)}")
+            f"rows for no section: {sorted(set(table) - sections)}"
+        )
 
     def test_a_row_with_no_guard_gives_a_reason(self):
-        bare = [section for section, (guards, note) in _table().items()
-                if not guards and all(ch in "-— " for ch in note)]
-        assert not bare, (
-            f"these rows name no guard and give no reason: {sorted(bare)}")
+        bare = [
+            section for section, (guards, note) in _table().items() if not guards and all(ch in "-— " for ch in note)
+        ]
+        assert not bare, f"these rows name no guard and give no reason: {sorted(bare)}"
 
     def test_every_named_guard_exists_and_cites_its_section(self):
         broken = []
@@ -337,24 +334,24 @@ class TestTheTableIsHeldToTheScan:
                 continue
             listed = table[section][0]
             if files - listed:
-                wrong.append(f"§{section} is cited by {sorted(files - listed)}, "
-                             "and its row does not name them")
+                wrong.append(f"§{section} is cited by {sorted(files - listed)}, and its row does not name them")
             if listed - files:
-                wrong.append(f"§{section}'s row names {sorted(listed - files)}, "
-                             "which no longer cite it")
+                wrong.append(f"§{section}'s row names {sorted(listed - files)}, which no longer cite it")
         for section, (listed, _) in sorted(table.items()):
             if section not in named and listed and section not in cited:
-                wrong.append(f"§{section}'s row names {sorted(listed)} and "
-                             "nothing cites it")
+                wrong.append(f"§{section}'s row names {sorted(listed)} and nothing cites it")
         assert not wrong, "\n".join(wrong)
 
     def test_a_row_is_named_exactly_when_the_scan_cannot_attribute_it(self):
         named = {section for section, _ in _ambiguous()}
-        wrong = [f"§{section}" for section, (_, note) in _table().items()
-                 if (NAMED in note.split(";")[0]) != (section in named)]
+        wrong = [
+            f"§{section}"
+            for section, (_, note) in _table().items()
+            if (NAMED in note.split(";")[0]) != (section in named)
+        ]
         assert not wrong, (
-            f"these rows disagree with the ids the fixing guide also "
-            f"numbers ({sorted(named)}): {sorted(wrong)}")
+            f"these rows disagree with the ids the fixing guide also numbers ({sorted(named)}): {sorted(wrong)}"
+        )
 
     def test_a_cited_section_exists_in_a_document_that_numbers_sections(self):
         """`UX-771`: the population is `_process_documents()`, derived -
@@ -362,9 +359,7 @@ class TestTheTableIsHeldToTheScan:
         known = set()
         for doc in _process_documents():
             known |= set(_sections(doc))
-        stray = {section: sorted(files)
-                 for section, files in _cited(_unit_tests()).items()
-                 if section not in known}
+        stray = {section: sorted(files) for section, files in _cited(_unit_tests()).items() if section not in known}
         assert not stray, f"cited, and no such section: {stray}"
 
     def test_the_scan_reads_something(self):
@@ -381,38 +376,28 @@ class TestTheCountedFiguresDerive:
         """§3 said "default 20" and no constant had that value."""
         text = STYLEGUIDE.read_text(encoding="utf-8")
         start = text.index("- **Row cap by default.**")
-        bullet = text[start:text.index("\n- ", start)]
-        names = [one for one in re.findall(r"`([A-Za-z_][A-Za-z_0-9]*)`", bullet)
-                 if one.isidentifier()]
+        bullet = text[start : text.index("\n- ", start)]
+        names = [one for one in re.findall(r"`([A-Za-z_][A-Za-z_0-9]*)`", bullet) if one.isidentifier()]
         assert names, "the row-cap rule names no constant"
         for name in names:
-            found = subprocess.run(["git", "grep", "-q", name, "--",
-                                    "bga/viewer"], cwd=REPO)
-            assert found.returncode == 0, (
-                f"the row-cap rule names {name}, and the viewer has no such "
-                "identifier")
+            found = subprocess.run(["git", "grep", "-q", name, "--", "bga/viewer"], cwd=REPO)
+            assert found.returncode == 0, f"the row-cap rule names {name}, and the viewer has no such identifier"
         # A section reference is not a number, and the grouped `1,202` is
         # the dated population. A loose integer is the "default 20" the
         # item removed - there was no constant with that value.
-        loose = re.findall(r"(?<![\d,])\d{1,3}(?![\d,])",
-                           re.sub(r"§[0-9][a-g]?", "", bullet))
-        assert not loose, (
-            f"the row-cap rule restates {loose} rather than naming a constant")
+        loose = re.findall(r"(?<![\d,])\d{1,3}(?![\d,])", re.sub(r"§[0-9][a-g]?", "", bullet))
+        assert not loose, f"the row-cap rule restates {loose} rather than naming a constant"
 
     def test_the_module_count_derives(self):
         """§6b said twenty-one viewer modules; git says otherwise."""
         text = STYLEGUIDE.read_text(encoding="utf-8")
-        section = text[text.index("\n## 6b."):text.index("\n## 6c.")]
-        modules = [one for one in _tracked()
-                   if re.fullmatch(r"bga/viewer/[^/]+\.js", one)]
-        factories = [one for one in modules
-                     if 'el("table"' in (REPO / one).read_text(encoding="utf-8")]
-        for count, what in ((len(modules), "viewer modules"),
-                            (len(factories), "modules that construct a table")):
+        section = text[text.index("\n## 6b.") : text.index("\n## 6c.")]
+        modules = [one for one in _tracked() if re.fullmatch(r"bga/viewer/[^/]+\.js", one)]
+        factories = [one for one in modules if 'el("table"' in (REPO / one).read_text(encoding="utf-8")]
+        for count, what in ((len(modules), "viewer modules"), (len(factories), "modules that construct a table")):
             row = re.search(rf"^(\d+) +{re.escape(what)}$", section, re.M)
             assert row, f"§6b states no count of {what}"
-            assert int(row.group(1)) == count, (
-                f"§6b says {row.group(1)} {what}; git ls-files says {count}")
+            assert int(row.group(1)) == count, f"§6b says {row.group(1)} {what}; git ls-files says {count}"
 
 
 def test_the_scan_reads_the_tree_once(monkeypatch):
@@ -467,11 +452,13 @@ def test_the_scan_reads_the_tree_once(monkeypatch):
     assert reads, "the scan opened no document at all"
     assert max(reads.values()) == 1, (
         f"{sum(reads.values())} reads over {len(reads)} documents, worst "
-        f"{max(reads.values())} - a document is read once per session")
+        f"{max(reads.values())} - a document is read once per session"
+    )
     assert passes["over"] < len(reads), (
         f"{passes['over']} citation passes over {len(reads)} documents - "
         "a candidate scans only the documents carrying both a section "
-        "mark and its own name")
+        "mark and its own name"
+    )
 
 
 if __name__ == "__main__":  # pragma: no cover

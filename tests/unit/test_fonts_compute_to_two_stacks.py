@@ -8,6 +8,7 @@ the page.
 onto form controls, close both. This file boots the golden export and
 walks every rendered element's computed `font-family`.
 """
+
 import pathlib
 import shutil
 import sys

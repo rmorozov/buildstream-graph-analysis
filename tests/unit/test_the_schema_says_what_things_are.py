@@ -31,6 +31,7 @@ The name-sniffing reproduction below keeps the original two names
 deliberately — it asserts what `guessQuantity` does with a *name*, and
 needs no schema node at all.
 """
+
 import json
 import os
 import shutil
@@ -45,9 +46,9 @@ needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 
 
 def _js(script):
-    result = subprocess.run([node, "--input-type=module", "-e", script],
-                            capture_output=True, text=True, cwd=os.getcwd(),
-                            timeout=60)
+    result = subprocess.run(
+        [node, "--input-type=module", "-e", script], capture_output=True, text=True, cwd=os.getcwd(), timeout=60
+    )
     assert result.returncode == 0, result.stderr
     return json.loads(result.stdout)
 
@@ -57,15 +58,16 @@ class TestTheTwoLiveWrongnesses:
     """Fixtures now, per the acceptance."""
 
     def test_a_nested_byte_count_renders_as_one(self):
-        out = _js('''
+        out = _js(
+            '''
           const {{ quantity, quantityFor, childNode }} =
             await import("./tests/viewer.mjs");
           const envelope = {};
           console.log(JSON.stringify(
             quantity(512 * 1024 * 1024, quantityFor(
               childNode(envelope, "host_memory_bytes"), "host_memory_bytes"))));
-        '''.format(json.dumps(
-            schemas.schema(schemas.CORRELATE)["properties"]["memory_envelope"])))
+        '''.format(json.dumps(schemas.schema(schemas.CORRELATE)["properties"]["memory_envelope"]))
+        )
         assert out == "512.0 MiB", out
 
     def test_a_declared_share_is_shown_as_a_percentage(self):
@@ -74,14 +76,15 @@ class TestTheTwoLiveWrongnesses:
         clause was written for - a 0..100 value multiplied by 100 again
         - is now unreachable by construction, because there is no
         0..100 member left to declare."""
-        out = _js('''
+        out = _js(
+            '''
           const {{ quantity, quantityFor, childNode }} =
             await import("./tests/viewer.mjs");
           const util = {};
           console.log(JSON.stringify(quantity(0.42, quantityFor(
             childNode(util, "useful_share"), "useful_share"))));
-        '''.format(json.dumps(
-            schemas.schema(schemas.ANALYZE)["properties"]["utilisation"])))
+        '''.format(json.dumps(schemas.schema(schemas.ANALYZE)["properties"]["utilisation"]))
+        )
         assert out == "42.0%", out
 
     def test_without_the_schema_node_the_guess_is_still_wrong(self):
@@ -103,7 +106,8 @@ class TestTheTwoLiveWrongnesses:
         over the run, and it arrived on the page as
         "1.603977885512677" - fifteen digits of a number measured to
         two. Whole counts, which are all the others, are untouched."""
-        out = _js('''
+        out = _js(
+            '''
           const {{ quantity, quantityFor, childNode }} =
             await import("./tests/viewer.mjs");
           const block = {};
@@ -114,9 +118,8 @@ class TestTheTwoLiveWrongnesses:
             quantity(4, quantityFor(childNode(block, "builders"),
                                     "builders")),
           ]));
-        '''.format(json.dumps(
-            schemas.schema(schemas.ANALYZE)["properties"]
-            ["capacity_recommendation"])))
+        '''.format(json.dumps(schemas.schema(schemas.ANALYZE)["properties"]["capacity_recommendation"]))
+        )
         # `UX-341`: `cores_busy` is one measurement with one unit now.
         # `capacity_recommendation` declared it `count` while the four
         # element-level copies of the same figure declared `ratio`.
@@ -138,8 +141,7 @@ class TestTheSchemasCarryTheNestedSemantics:
         util = schemas.schema(schemas.ANALYZE)["properties"]["utilisation"]
         assert util["properties"]["useful_share"][schemas.QUANTITY] == "share"
         envelope = schemas.schema(schemas.CORRELATE)["properties"]["memory_envelope"]
-        assert envelope["properties"]["host_memory_bytes"][schemas.QUANTITY] \
-            == "bytes"
+        assert envelope["properties"]["host_memory_bytes"][schemas.QUANTITY] == "bytes"
 
     def test_the_declared_shapes_are_ones_a_run_publishes(self):
         """UX-220: the failure this file was pinned to for four rounds.
@@ -154,15 +156,14 @@ class TestTheSchemasCarryTheNestedSemantics:
 
     def test_the_deltas_members_say_what_they_are(self):
         deltas = schemas.schema(schemas.COMPARE)["properties"]["deltas"]
-        assert deltas["properties"]["total_duration_us"][schemas.QUANTITY] \
-            == "duration_us"
+        assert deltas["properties"]["total_duration_us"][schemas.QUANTITY] == "duration_us"
         assert deltas[schemas.DIRECTION] == "lower_is_better"
 
     def test_a_nested_typo_is_refused(self):
         with pytest.raises(ValueError, match="furlongs"):
-            schemas._document("x/v1", "x", {"a": "object"}, "d",
-                              hints={"a": {"properties": {
-                                  "b": {schemas.QUANTITY: "furlongs"}}}})
+            schemas._document(
+                "x/v1", "x", {"a": "object"}, "d", hints={"a": {"properties": {"b": {schemas.QUANTITY: "furlongs"}}}}
+            )
 
     def test_the_findings_item_shape_is_declared(self):
         findings = schemas.schema(schemas.ANALYZE)["properties"]["findings"]
@@ -173,26 +174,21 @@ class TestTheSchemasCarryTheNestedSemantics:
 
 class TestColumnsAreObjects:
     def test_a_column_entry_may_declare_itself(self):
-        columns = schemas.schema(schemas.COMPARE)["properties"]["mismatches"][
-            schemas.COLUMNS]
-        assert any(isinstance(c, dict) and c.get("sortable") is False
-                   for c in columns)
+        columns = schemas.schema(schemas.COMPARE)["properties"]["mismatches"][schemas.COLUMNS]
+        assert any(isinstance(c, dict) and c.get("sortable") is False for c in columns)
 
     def test_a_bad_quantity_in_a_column_is_refused(self):
         with pytest.raises(ValueError, match="furlongs"):
-            schemas._document("x/v1", "x", {"a": "array"}, "d",
-                              hints={"a": {schemas.COLUMNS: [
-                                  {"key": "b", "quantity": "furlongs"}]}})
+            schemas._document(
+                "x/v1", "x", {"a": "array"}, "d", hints={"a": {schemas.COLUMNS: [{"key": "b", "quantity": "furlongs"}]}}
+            )
 
     def test_a_column_object_without_a_key_is_refused(self):
         with pytest.raises(ValueError, match="key"):
-            schemas._document("x/v1", "x", {"a": "array"}, "d",
-                              hints={"a": {schemas.COLUMNS: [{"title": "B"}]}})
+            schemas._document("x/v1", "x", {"a": "array"}, "d", hints={"a": {schemas.COLUMNS: [{"title": "B"}]}})
 
     def test_plain_names_still_parse(self):
-        document = schemas._document(
-            "x/v1", "x", {"a": "array"}, "d",
-            hints={"a": {schemas.COLUMNS: ["b", "c"]}})
+        document = schemas._document("x/v1", "x", {"a": "array"}, "d", hints={"a": {schemas.COLUMNS: ["b", "c"]}})
         assert document["properties"]["a"][schemas.COLUMNS] == ["b", "c"]
 
     @needs_node
@@ -248,8 +244,10 @@ class TestTheVerdictIsAValue:
         payload = json.loads(buffer.getvalue())
         assert payload["verdict_kind"] in schemas.VERDICT_KINDS
         # The sentence and the enum must agree about which branch ran.
-        assert payload["verdict"].replace(" ", "_") == payload["verdict_kind"] \
+        assert (
+            payload["verdict"].replace(" ", "_") == payload["verdict_kind"]
             or payload["verdict_kind"] == "no_significant_change"
+        )
 
     def test_absence_is_not_read_as_not_comparable(self):
         """A `ComparisonResult` built by something other than the
@@ -278,8 +276,7 @@ class TestTheVerdictIsAValue:
 class TestDescriptionsAreThePopovers:
     @needs_node
     def test_a_described_field_carries_its_schema_text(self):
-        overhead = schemas.schema(schemas.ANALYZE)["properties"][
-            "pipeline_overhead"]
+        overhead = schemas.schema(schemas.ANALYZE)["properties"]["pipeline_overhead"]
         description = overhead["properties"]["total_us"]["description"]
         out = _js(f'''
           const {{ renderPairs }} = await import("./tests/viewer.mjs");

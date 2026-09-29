@@ -11,6 +11,7 @@ a mixed-case flag name, and a lowercase `a=b` wrongly eaten as an env
 prefix. Mutation: drop the credential check and the numeric token
 travels.
 """
+
 import collections
 
 from bga import anonymize as anon
@@ -75,8 +76,7 @@ def test_a_non_credential_numeric_macro_keeps_its_value(tmp_path):
 def test_the_review_counts_each_credential_drop(tmp_path):
     pmap = _pmap(tmp_path)
     counts = collections.Counter()
-    anon.rebuild_command(
-        "cmake -DAPI_TOKEN=12345678 --token=x PASSWORD=hunter2", KEY, pmap, frozenset(), counts)
+    anon.rebuild_command("cmake -DAPI_TOKEN=12345678 --token=x PASSWORD=hunter2", KEY, pmap, frozenset(), counts)
     assert counts["F credential"] == 3
 
 
@@ -156,4 +156,3 @@ def test_the_signing_name_alone_drops_a_value_too_short_to_be_shaped(tmp_path):
     pmap = _pmap(tmp_path)
     rebuilt = anon.rebuild_command("cmake -DSIGNINGNONCE=1234", KEY, pmap, frozenset())
     assert rebuilt.endswith("=<dropped>")
-

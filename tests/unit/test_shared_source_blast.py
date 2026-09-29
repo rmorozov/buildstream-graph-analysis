@@ -13,6 +13,7 @@ elements whose files changed rebuild. The same monorepo consumed two
 ways differs by an order of magnitude, and the `.bst` files say which
 way it is consumed.
 """
+
 import json
 import os
 import shutil
@@ -32,16 +33,14 @@ def _project(tmp_path, elements):
     """A project directory of `.bst` files and nothing else."""
     project = tmp_path / "proj"
     (project / "elements").mkdir(parents=True)
-    (project / "project.conf").write_text(
-        "name: blast\nmin-version: 2.0\nelement-path: elements\n")
+    (project / "project.conf").write_text("name: blast\nmin-version: 2.0\nelement-path: elements\n")
     for name, body in elements.items():
         (project / "elements" / name).write_text(body)
     return str(project)
 
 
 def _git_element(url, directory, depends=()):
-    lines = ["kind: manual", "sources:", "- kind: git",
-             f"  url: {url}", f"  directory: {directory}", "  ref: 0" * 0]
+    lines = ["kind: manual", "sources:", "- kind: git", f"  url: {url}", f"  directory: {directory}", "  ref: 0" * 0]
     lines = [line for line in lines if line]
     if depends:
         lines.append("depends:")
@@ -75,15 +74,13 @@ class TestOneRepositoryConsumedTwoWays:
 
     def test_a_shared_git_url_blasts_every_consumer(self, tmp_path):
         libs, downstream, kinds = self._graph()
-        elements = {uid: _git_element(self.MONO, f"src/{uid[:-4]}", ["core.bst"])
-                    for uid in libs}
+        elements = {uid: _git_element(self.MONO, f"src/{uid[:-4]}", ["core.bst"]) for uid in libs}
         elements["core.bst"] = _local_element("files/core")
         elements["app.bst"] = _local_element("files/app", libs)
         project = _project(tmp_path, elements)
 
         inventory = build_source_inventory(project, sorted(elements))
-        rows = sources.resource_blast(inventory, downstream, kinds,
-                                      dict.fromkeys(kinds, 100000000))
+        rows = sources.resource_blast(inventory, downstream, kinds, dict.fromkeys(kinds, 100000000))
         assert len(rows) == 1, rows
         row = rows[0]
         assert row["identity"] == "gitlab.example.com/org/monorepo"
@@ -101,8 +98,7 @@ class TestOneRepositoryConsumedTwoWays:
 
     def test_the_same_repo_as_local_paths_blasts_per_directory(self, tmp_path):
         libs, downstream, kinds = self._graph()
-        elements = {uid: _local_element(f"files/src/{uid[:-4]}", ["core.bst"])
-                    for uid in libs}
+        elements = {uid: _local_element(f"files/src/{uid[:-4]}", ["core.bst"]) for uid in libs}
         elements["core.bst"] = _local_element("files/core")
         elements["app.bst"] = _local_element("files/app", libs)
         project = _project(tmp_path, elements)
@@ -118,14 +114,12 @@ class TestOneRepositoryConsumedTwoWays:
 
     def test_the_headline_fires_only_when_one_repo_dominates(self, tmp_path):
         libs, downstream, kinds = self._graph()
-        elements = {uid: _git_element(self.MONO, f"src/{uid[:-4]}", ["core.bst"])
-                    for uid in libs}
+        elements = {uid: _git_element(self.MONO, f"src/{uid[:-4]}", ["core.bst"]) for uid in libs}
         elements["core.bst"] = _local_element("files/core")
         elements["app.bst"] = _local_element("files/app", libs)
         project = _project(tmp_path, elements)
         inventory = build_source_inventory(project, sorted(elements))
-        rows = sources.resource_blast(inventory, downstream, kinds,
-                                      dict.fromkeys(kinds, 3600000000))
+        rows = sources.resource_blast(inventory, downstream, kinds, dict.fromkeys(kinds, 3600000000))
 
         # 7 of 8 elements is most of the graph.
         headline = sources.monorepo_headline(rows, element_count=8)
@@ -164,17 +158,18 @@ class TestTheInventoryNamesWhatItCannotRead:
         junctions that *are* checked out; this is the other half.
         """
         project = _project(tmp_path, {"local.bst": _local_element("files/x")})
-        inventory = build_source_inventory(
-            project, ["local.bst", "sub.bst:remote.bst"])
+        inventory = build_source_inventory(project, ["local.bst", "sub.bst:remote.bst"])
         assert "local.bst" in inventory["elements"]
         assert "sub.bst:remote.bst" not in inventory["elements"]
-        assert "not checked out here" in \
-            " ".join(inventory["unreadable"]["sub.bst:remote.bst"])
+        assert "not checked out here" in " ".join(inventory["unreadable"]["sub.bst:remote.bst"])
 
     def test_an_unreadable_stanza_is_named(self, tmp_path):
-        project = _project(tmp_path, {
-            "odd.bst": "kind: manual\nsources:\n- kind: mystery\n  spelling: wrong\n",
-        })
+        project = _project(
+            tmp_path,
+            {
+                "odd.bst": "kind: manual\nsources:\n- kind: mystery\n  spelling: wrong\n",
+            },
+        )
         inventory = build_source_inventory(project, ["odd.bst"])
         assert inventory["elements"] == {}
         assert "mystery" in " ".join(inventory["unreadable"]["odd.bst"])
@@ -186,24 +181,25 @@ class TestTheInventoryNamesWhatItCannotRead:
 
 
 class TestUrlIdentity:
-    @pytest.mark.parametrize("url", [
-        "https://gitlab.example.com/org/monorepo.git",
-        "https://gitlab.example.com/org/monorepo",
-        "git@gitlab.example.com:org/monorepo.git",
-        "ssh://git@gitlab.example.com/org/monorepo.git",
-        "https://gitlab.example.com/org/monorepo/",
-    ])
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "https://gitlab.example.com/org/monorepo.git",
+            "https://gitlab.example.com/org/monorepo",
+            "git@gitlab.example.com:org/monorepo.git",
+            "ssh://git@gitlab.example.com/org/monorepo.git",
+            "https://gitlab.example.com/org/monorepo/",
+        ],
+    )
     def test_one_repository_has_one_identity(self, url):
         """Two spellings reported separately would halve the blast."""
         assert sources.normalize_url(url) == "gitlab.example.com/org/monorepo"
 
     def test_a_port_is_not_a_path(self):
-        assert sources.normalize_url("ssh://git@host:2222/org/repo.git") == \
-            "host:2222/org/repo"
+        assert sources.normalize_url("ssh://git@host:2222/org/repo.git") == "host:2222/org/repo"
 
     def test_different_repositories_stay_different(self):
-        assert sources.normalize_url("https://host/org/one") != \
-            sources.normalize_url("https://host/org/two")
+        assert sources.normalize_url("https://host/org/one") != sources.normalize_url("https://host/org/two")
 
 
 class TestItReachesTheReport:
@@ -220,16 +216,26 @@ class TestItReachesTheReport:
     def _analyze(self, run, extra=()):
         return subprocess.run(
             [sys.executable, "-m", "bga.cli", "analyze", str(run), *extra],
-            capture_output=True, text=True, cwd=REPO_ROOT, check=True,
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
+            check=True,
         ).stdout
 
     def test_a_run_with_a_shared_resource_prints_the_table(self, tmp_path):
-        shared = {"kind": "git", "identity": "host/org/mono", "declared":
-                  "https://host/org/mono.git", "keying": "ref", "staged_at": "src/lib"}
-        inventory = sources.build_inventory({
-            "lib.bst": [dict(shared, staged_at="src/lib")],
-            "extra.bst": [dict(shared, staged_at="src/extra")],
-        })
+        shared = {
+            "kind": "git",
+            "identity": "host/org/mono",
+            "declared": "https://host/org/mono.git",
+            "keying": "ref",
+            "staged_at": "src/lib",
+        }
+        inventory = sources.build_inventory(
+            {
+                "lib.bst": [dict(shared, staged_at="src/lib")],
+                "extra.bst": [dict(shared, staged_at="src/extra")],
+            }
+        )
         text = self._analyze(self._run_dir(tmp_path, inventory))
         assert "Shared Sources" in text
         assert "host/org/mono" in text
@@ -237,13 +243,20 @@ class TestItReachesTheReport:
         assert "not wall clock" in text
 
     def test_the_json_carries_the_same_rows(self, tmp_path):
-        shared = {"kind": "git", "identity": "host/org/mono", "declared":
-                  "https://host/org/mono.git", "keying": "ref", "staged_at": None}
-        inventory = sources.build_inventory({
-            "lib.bst": [shared], "extra.bst": [shared],
-        })
-        payload = json.loads(self._analyze(self._run_dir(tmp_path, inventory),
-                                           ["--format", "json"]))
+        shared = {
+            "kind": "git",
+            "identity": "host/org/mono",
+            "declared": "https://host/org/mono.git",
+            "keying": "ref",
+            "staged_at": None,
+        }
+        inventory = sources.build_inventory(
+            {
+                "lib.bst": [shared],
+                "extra.bst": [shared],
+            }
+        )
+        payload = json.loads(self._analyze(self._run_dir(tmp_path, inventory), ["--format", "json"]))
         rows = payload["resource_blast"]["rows"]
         assert [row["identity"] for row in rows] == ["host/org/mono"]
         assert rows[0]["direct_elements"] == ["extra.bst", "lib.bst"]
@@ -257,11 +270,19 @@ class TestItReachesTheReport:
         assert "resource_blast" not in payload
 
     def test_a_run_whose_project_shares_nothing_says_nothing(self, tmp_path):
-        inventory = sources.build_inventory({
-            "lib.bst": [{"kind": "local", "identity": "files/lib",
-                         "declared": "files/lib", "keying": "content",
-                         "staged_at": None}],
-        })
+        inventory = sources.build_inventory(
+            {
+                "lib.bst": [
+                    {
+                        "kind": "local",
+                        "identity": "files/lib",
+                        "declared": "files/lib",
+                        "keying": "content",
+                        "staged_at": None,
+                    }
+                ],
+            }
+        )
         text = self._analyze(self._run_dir(tmp_path, inventory))
         assert "Shared Sources" not in text
 
@@ -270,22 +291,34 @@ class TestTheRenderersAgree:
     def _result(self, rows, headline=None):
         class _Result:
             pass
+
         result = _Result()
         result.resource_blast = {
-            'rows': rows, 'element_count': 10, 'headline': headline,
+            'rows': rows,
+            'element_count': 10,
+            'headline': headline,
             'unreadable': {},
         }
         return result
 
     def test_an_unmeasured_row_says_so_rather_than_zero(self):
         from bga.report.text import _format_resource_blast
-        rows = [{
-            "kind": "git", "identity": "host/repo", "keying": "ref",
-            "direct_elements": ["a.bst", "b.bst"], "direct_count": 2,
-            "blast_elements": ["a.bst", "b.bst"], "blast_count": 2,
-            "by_element_kind": {"manual": 2}, "measured_us": None,
-            "measured_elements": 0, "staged_at": [],
-        }]
+
+        rows = [
+            {
+                "kind": "git",
+                "identity": "host/repo",
+                "keying": "ref",
+                "direct_elements": ["a.bst", "b.bst"],
+                "direct_count": 2,
+                "blast_elements": ["a.bst", "b.bst"],
+                "blast_count": 2,
+                "by_element_kind": {"manual": 2},
+                "measured_us": None,
+                "measured_elements": 0,
+                "staged_at": [],
+            }
+        ]
         text = "\n".join(_format_resource_blast(self._result(rows)))
         assert "unmeasured" in text
         assert " 0s" not in text
@@ -312,7 +345,9 @@ def test_a_real_extraction_writes_the_inventory(tmp_path):
     log = tmp_path / "build.log"
     proc = subprocess.run(
         ["bst", "-C", FIXTURE_PROJECT, "--no-colors", "build", "app.bst"],
-        capture_output=True, text=True, env=isolated_bst_env(tmp_path),
+        capture_output=True,
+        text=True,
+        env=isolated_bst_env(tmp_path),
     )
     log.write_text(proc.stdout + proc.stderr)
 
@@ -325,10 +360,15 @@ def test_a_real_extraction_writes_the_inventory(tmp_path):
 
     inventory = json.loads((out / "sources.json").read_text())
     assert inventory["schema"] == sources.SCHEMA
-    assert inventory["elements"]["base.bst"] == [{
-        "kind": "local", "identity": "files/base", "declared": "files/base",
-        "keying": "content", "staged_at": None,
-    }]
+    assert inventory["elements"]["base.bst"] == [
+        {
+            "kind": "local",
+            "identity": "files/base",
+            "declared": "files/base",
+            "keying": "content",
+            "staged_at": None,
+        }
+    ]
     # UX-182 changed this deliberately. The junctioned element's sources
     # used to be reported `unreadable`, which was honest but useless on
     # exactly the projects the monorepo question comes from - they keep
@@ -336,10 +376,15 @@ def test_a_real_extraction_writes_the_inventory(tmp_path):
     # here, so the subproject is on disk and gets read; its
     # content-keyed path is namespaced to the junction, because
     # `files/libfoo` means a different directory in each project.
-    assert inventory["elements"]["subproj-junction.bst:libfoo.bst"] == [{
-        "kind": "local", "identity": "subproj-junction.bst:files/libfoo",
-        "declared": "files/libfoo", "keying": "content", "staged_at": None,
-    }]
+    assert inventory["elements"]["subproj-junction.bst:libfoo.bst"] == [
+        {
+            "kind": "local",
+            "identity": "subproj-junction.bst:files/libfoo",
+            "declared": "files/libfoo",
+            "keying": "content",
+            "staged_at": None,
+        }
+    ]
     assert inventory["unreadable"] == {}
 
 

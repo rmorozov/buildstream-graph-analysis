@@ -21,6 +21,7 @@ Measured, on the two runs the item names:
 At 1,202 elements the payload is 21x the page, which is Direction 7's
 own test of whether the viewer stayed thin.
 """
+
 import base64
 import gzip
 import json
@@ -30,6 +31,7 @@ import re
 import shutil
 import subprocess
 import sys
+import urllib.parse
 
 import pytest
 
@@ -958,7 +960,7 @@ COMMITTED_EXPORTS = [
     # `bga:grows` and the containers it declares; golden carries none of
     # it as data. 505,154 B measured. Review (#295) and `UX-1037`: +2,919
     # B, all source. 508,073 B measured; 510,000 keeps headroom.
-    ("golden", GOLDEN, 510_000),                       #  508,073 B
+    ("golden", GOLDEN, 510_000),  #  508,073 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -1148,7 +1150,7 @@ COMMITTED_EXPORTS = [
     # 10,829 B, all source; `UX-1031`'s 13,745 B of contract as golden's
     # note above. 565,462 B measured. Review (#295) and `UX-1037`:
     # +2,919 B, all source. 568,381 B measured; 570,500 keeps headroom.
-    ("macro_micro", MACRO_MICRO, 570_500),             #  568,381 B
+    ("macro_micro", MACRO_MICRO, 570_500),  #  568,381 B
 ]
 
 
@@ -1160,9 +1162,15 @@ def _embedded(path):
     report as *page* - which is the half with the budget.
     """
     text = pathlib.Path(path).read_text(encoding="utf-8")
-    return sum(len(found) for found in re.findall(
-        r'<script type="application/(?:json|octet-stream)"[^>]*>(.*?)'
-        r'</script>', text, re.S))
+    return sum(
+        len(found)
+        for found in re.findall(
+            r'<script type="application/(?:json|octet-stream)"[^>]*>(.*?)'
+            r'</script>',
+            text,
+            re.S,
+        )
+    )
 
 
 @pytest.fixture
@@ -1197,9 +1205,8 @@ class TestItNeedsNothingButItself:
         text = exported[0].read_text()
         text += view.inflated_module(text)
         for url in re.findall(r'(?:src|href)="([^"]+)"', text):
-            assert url.startswith(("#", "data:", "mailto:")) or \
-                url.startswith("https://ui.perfetto.dev"), (
-                    f"{url} would have to be fetched")
+            perfetto = urllib.parse.urlsplit(url)[:2] == ("https", "ui.perfetto.dev")
+            assert url.startswith(("#", "data:", "mailto:")) or perfetto, f"{url} would have to be fetched"
 
     def test_no_relative_module_import_survives(self, exported):
         """A browser refuses a relative `import` over `file://`, so the
@@ -1215,8 +1222,7 @@ class TestItNeedsNothingButItself:
         found = set(re.findall(r'id="bga-([a-z]+)"', exported[0].read_text()))
         assert {"report", "schemas", "run"} <= found, found
 
-    def test_the_blocks_are_named_the_way_the_loader_looks_them_up(
-            self, exported):
+    def test_the_blocks_are_named_the_way_the_loader_looks_them_up(self, exported):
         """The one that bit: `payloads()` keys by *url*
         (`report.json`), the loader looks up by *name* (`bga-report`).
         Getting it wrong is silent — the block is simply never found and
@@ -1227,8 +1233,7 @@ class TestItNeedsNothingButItself:
         assert 'id="bga-report"' in text
         assert 'id="bga-report.json"' not in text
 
-    def test_a_payload_containing_a_script_tag_cannot_end_the_block(
-            self, snapshot, tmp_path, monkeypatch):
+    def test_a_payload_containing_a_script_tag_cannot_end_the_block(self, snapshot, tmp_path, monkeypatch):
         """An element named after an html file is not hypothetical, and
         a `</script>` anywhere in a payload would end the block early -
         everything after it becoming markup.
@@ -1240,10 +1245,18 @@ class TestItNeedsNothingButItself:
         """
         import tools.bga_view as view
 
-        monkeypatch.setattr(view, "payloads", lambda run, **_kw: {
-            "report.json": {"schema": "analyze/v2", "section": None,
-                            "run_id": "a</script><script>alert(1)</script>",
-                            "total_duration_us": 1}})
+        monkeypatch.setattr(
+            view,
+            "payloads",
+            lambda run, **_kw: {
+                "report.json": {
+                    "schema": "analyze/v2",
+                    "section": None,
+                    "run_id": "a</script><script>alert(1)</script>",
+                    "total_duration_us": 1,
+                }
+            },
+        )
         path = tmp_path / "r.html"
         view.export(str(snapshot / "run"), str(path))
         text = path.read_text()
@@ -1251,8 +1264,9 @@ class TestItNeedsNothingButItself:
         assert "alert(1)</script>" not in text, "the block was ended early"
         assert "<\\/script>" in text, "nothing was escaped"
         block = re.search(r'id="bga-report">(.*?)</script>', text)
-        assert json.loads(block.group(1).replace("<\\/", "</"))["run_id"] == \
-            "a</script><script>alert(1)</script>", "the payload was mangled"
+        assert json.loads(block.group(1).replace("<\\/", "</"))["run_id"] == "a</script><script>alert(1)</script>", (
+            "the payload was mangled"
+        )
 
 
 @needs_node
@@ -1262,9 +1276,9 @@ class TestItRendersTheSameThing:
 
     def _render_export(self, path):
         script = _EXPORT_HARNESS % json.dumps(str(path))
-        result = subprocess.run([node, "--input-type=module", "-e", script],
-                                capture_output=True, text=True,
-                                cwd=os.getcwd(), timeout=90)
+        result = subprocess.run(
+            [node, "--input-type=module", "-e", script], capture_output=True, text=True, cwd=os.getcwd(), timeout=90
+        )
         assert result.returncode == 0, result.stderr
         return json.loads(result.stdout)
 
@@ -1273,8 +1287,7 @@ class TestItRendersTheSameThing:
         assert "findings" in rendered["sections"], rendered["sections"]
         assert rendered["severities"], "no severity reached the page"
 
-    def test_it_renders_what_the_served_page_renders(
-            self, exported, snapshot, tmp_path):
+    def test_it_renders_what_the_served_page_renders(self, exported, snapshot, tmp_path):
         """Same payload, same schema, same renderer - so same output.
         A second renderer would show up here as a difference.
 
@@ -1298,15 +1311,11 @@ class TestItRendersTheSameThing:
         # `file:` URL rather than as a relative one.
         viewer_url = pathlib.Path(os.getcwd(), "tests", "viewer.mjs").as_uri()
         script_path = tmp_path / "served_harness.mjs"
-        script_path.write_text(_SERVED_HARNESS % (
-            json.dumps(payload), json.dumps(schema), json.dumps(viewer_url)))
-        served = subprocess.run(
-            [node, str(script_path)],
-            capture_output=True, text=True, cwd=os.getcwd(), timeout=90)
+        script_path.write_text(_SERVED_HARNESS % (json.dumps(payload), json.dumps(schema), json.dumps(viewer_url)))
+        served = subprocess.run([node, str(script_path)], capture_output=True, text=True, cwd=os.getcwd(), timeout=90)
         assert served.returncode == 0, served.stderr
 
-        assert self._render_export(exported[0])["sections"] == \
-            json.loads(served.stdout)["sections"]
+        assert self._render_export(exported[0])["sections"] == json.loads(served.stdout)["sections"]
 
 
 class TestTheTimeline:
@@ -1314,8 +1323,11 @@ class TestTheTimeline:
         """So the Perfetto button works from `file://`: `fetch` handles
         `data:` URLs, and the handshake never needed a server."""
         text = exported[0].read_text()
-        block = re.search(r'id="bga-trace">"(data:application/gzip;base64,'
-                          r'([A-Za-z0-9+/=]+))"', text)
+        block = re.search(
+            r'id="bga-trace">"(data:application/gzip;base64,'
+            r'([A-Za-z0-9+/=]+))"',
+            text,
+        )
         assert block, "no inline trace"
         # `UX-298`: a Perfetto trace, not a JSON array. `Trace` is
         # `repeated TracePacket packet = 1`, so the first byte of the
@@ -1323,8 +1335,7 @@ class TestTheTimeline:
         assert gzip.decompress(base64.b64decode(block.group(2)))[:1] == b"\x0a"
         assert exported[1]["has_timeline"] is True
 
-    def test_a_run_without_one_says_so_rather_than_shipping_a_dead_button(
-            self, tmp_path):
+    def test_a_run_without_one_says_so_rather_than_shipping_a_dead_button(self, tmp_path):
         from tools.bga_view import export
 
         run = tmp_path / "run"
@@ -1343,12 +1354,10 @@ class TestTheTimeline:
         from bga import plane2
 
         assert result["omitted"] == plane2.NOT_CAPTURED, result["omitted"]
-        run_block = re.search(r'id="bga-run">(.*?)</script>',
-                              (tmp_path / "r.html").read_text())
+        run_block = re.search(r'id="bga-run">(.*?)</script>', (tmp_path / "r.html").read_text())
         assert json.loads(run_block.group(1))["has_timeline"] is False
 
-    def test_an_oversized_timeline_is_dropped_and_the_reason_recorded(
-            self, snapshot, tmp_path, monkeypatch):
+    def test_an_oversized_timeline_is_dropped_and_the_reason_recorded(self, snapshot, tmp_path, monkeypatch):
         """Recorded, not silent: the report is still worth having, and
         a user who wanted the timeline needs to know where it went."""
         import tools.bga_view as view
@@ -1411,22 +1420,20 @@ class TestNoRecordCarriesAPopulationTwice:
 
         return payloads(str(run))["report.json"].get("provenance") or []
 
-    @pytest.mark.parametrize("label,run", [(l, r) for l, r, _b
-                                           in COMMITTED_EXPORTS])
+    @pytest.mark.parametrize("label,run", [(l, r) for l, r, _b in COMMITTED_EXPORTS])
     def test_no_evidence_row_carries_a_container(self, label, run):
         carried = []
         for record in self._records(run):
             for row in record.get("evidence") or []:
                 if isinstance(row.get("value"), (dict, list)):
-                    carried.append((record["claim"], row["path"],
-                                    len(json.dumps(row["value"]))))
+                    carried.append((record["claim"], row["path"], len(json.dumps(row["value"]))))
         assert carried == [], (
             f"{label}: provenance row(s) carrying a whole container - the "
             f"record cites this document and a copy publishes that "
-            f"population twice (UX-483): {carried}")
+            f"population twice (UX-483): {carried}"
+        )
 
-    @pytest.mark.parametrize("label,run", [(l, r) for l, r, _b
-                                           in COMMITTED_EXPORTS])
+    @pytest.mark.parametrize("label,run", [(l, r) for l, r, _b in COMMITTED_EXPORTS])
     def test_no_evidence_value_is_bigger_than_a_number(self, label, run):
         """The size half, which catches by weight what the shape clause
         catches by type - a very long *string* is not a container and is
@@ -1442,25 +1449,23 @@ class TestNoRecordCarriesAPopulationTwice:
         assert heavy == [], (
             f"{label}: evidence value(s) over {self.EVIDENCE_VALUE_MAX_B} B; "
             f"the widest one measured when this was written was 18 B: "
-            f"{heavy}")
+            f"{heavy}"
+        )
 
-    @pytest.mark.parametrize("label,run", [(l, r) for l, r, _b
-                                           in COMMITTED_EXPORTS])
-    def test_no_single_record_weighs_what_a_population_weighs(
-            self, label, run):
+    @pytest.mark.parametrize("label,run", [(l, r) for l, r, _b in COMMITTED_EXPORTS])
+    def test_no_single_record_weighs_what_a_population_weighs(self, label, run):
         """Counting rather than reading: no clause here knows which
         paths the claims cite, only that no one record grew to the size
         of the thing it is supposed to be citing."""
-        heavy = sorted(
-            ((len(json.dumps(record)), record["claim"])
-             for record in self._records(run)), reverse=True)
+        heavy = sorted(((len(json.dumps(record)), record["claim"]) for record in self._records(run)), reverse=True)
         assert heavy, f"{label}: the report publishes no provenance at all"
         size, claim = heavy[0]
         assert size <= self.RECORD_MAX_B, (
             f"{label}: the `{claim}` record is {size:,} B, over the "
             f"{self.RECORD_MAX_B:,} this is kept to. The largest measured "
             f"when this was written was 1,077 B, and the one population "
-            f"UX-479 inlined added 4,955 B to a single record")
+            f"UX-479 inlined added 4,955 B to a single record"
+        )
 
     def test_a_cited_container_is_thinned_rather_than_dropped(self):
         """The other direction, so the rule is a distinction and not a
@@ -1470,15 +1475,11 @@ class TestNoRecordCarriesAPopulationTwice:
         something rather than nothing."""
         from bga import provenance
 
-        document = {"elements": {"blast_radius": {
-            f"e{i}.bst": {"downstream_count": i} for i in range(40)}}}
-        assert isinstance(
-            provenance.resolve(document, "elements.blast_radius"), dict)
+        document = {"elements": {"blast_radius": {f"e{i}.bst": {"downstream_count": i} for i in range(40)}}}
+        assert isinstance(provenance.resolve(document, "elements.blast_radius"), dict)
         # Through `record` itself, with a claim whose only path is that
         # map - the real builder, not a re-implementation of its rule.
-        provenance._CLAIMS["probe-483"] = (
-            ("elements.blast_radius",),
-            provenance._unconditional("probe"), ())
+        provenance._CLAIMS["probe-483"] = (("elements.blast_radius",), provenance._unconditional("probe"), ())
         try:
             built = provenance.record({}, "probe-483", "finding", document)
         finally:
@@ -1558,13 +1559,19 @@ class TestTheSizeDiscipline:
         html = open(exported[0], encoding="utf-8").read()
         # Every `<script type="application/json">` block and the trace
         # blob are *data*. What is left is the page.
-        page = re.sub(r"<script[^>]*type=\"application/(json|octet-stream)\"[^>]*>"
-                      r".*?</script>", "", html, flags=re.S)
+        page = re.sub(
+            r"<script[^>]*type=\"application/(json|octet-stream)\"[^>]*>"
+            r".*?</script>",
+            "",
+            html,
+            flags=re.S,
+        )
         assert len(page) < PAGE_BUDGET_B, (
             f"the exported page is {len(page)} B with its data removed - "
             f"that is a structural change, not a feature. Check "
             f"`test_the_page_is_the_modules_and_nothing_else` and "
-            f"`test_no_module_looks_like_a_vendored_library` first.")
+            f"`test_no_module_looks_like_a_vendored_library` first."
+        )
 
     def test_no_module_looks_like_a_vendored_library(self):
         """What the byte ceiling was a proxy for, measured directly.
@@ -1580,20 +1587,17 @@ class TestTheSizeDiscipline:
 
         offenders = []
         for name in view._module_order():
-            source = open(os.path.join(view.ASSET_DIR, name),
-                          encoding="utf-8").read()
+            source = open(os.path.join(view.ASSET_DIR, name), encoding="utf-8").read()
             lines = source.splitlines() or [""]
             longest = max(len(line) for line in lines)
-            commented = sum(1 for line in lines
-                            if line.lstrip().startswith(("//", "/*", "*")))
+            commented = sum(1 for line in lines if line.lstrip().startswith(("//", "/*", "*")))
             if longest > 400:
                 offenders.append(f"{name}: a {longest}-character line")
             if len(source) > 4_000 and commented / len(lines) < 0.05:
-                offenders.append(
-                    f"{name}: {commented}/{len(lines)} commented lines")
+                offenders.append(f"{name}: {commented}/{len(lines)} commented lines")
         assert offenders == [], (
-            f"these do not look like the hand-written modules this page is "
-            f"supposed to be: {offenders}")
+            f"these do not look like the hand-written modules this page is supposed to be: {offenders}"
+        )
 
     @staticmethod
     def _weigh(tmp_path):
@@ -1611,11 +1615,19 @@ class TestTheSizeDiscipline:
         out = tmp_path / "big.html"
         view.export(str(run), str(out))
         html = out.read_text(encoding="utf-8")
-        page = re.sub(r"<script[^>]*type=\"application/(json|octet-stream)\"[^>]*>"
-                      r".*?</script>", "", html, flags=re.S)
+        page = re.sub(
+            r"<script[^>]*type=\"application/(json|octet-stream)\"[^>]*>"
+            r".*?</script>",
+            "",
+            html,
+            flags=re.S,
+        )
         schemas = re.search(
             r'<script type="application/json" id="bga-schemas">(.*?)'
-            r"</script>", html, re.S).group(1)
+            r"</script>",
+            html,
+            re.S,
+        ).group(1)
         # `UX-342`: the schemas are apparatus, not this run's data -
         # identical for every run of a given contract set, so they sit
         # beside the modules and the stylesheet rather than beside the
@@ -1634,12 +1646,14 @@ class TestTheSizeDiscipline:
 
         data = 0
         for kind, ident, block in re.findall(
-                r'<script[^>]*type="application/(json|octet-stream)"[^>]*'
-                r'id="bga-([a-z-]+)"[^>]*>(.*?)</script>', html, re.S):
+            r'<script[^>]*type="application/(json|octet-stream)"[^>]*'
+            r'id="bga-([a-z-]+)"[^>]*>(.*?)</script>',
+            html,
+            re.S,
+        ):
             if ident == "schemas":
                 continue
-            data += len(gzip.decompress(base64.b64decode(block))
-                        if kind == "octet-stream" else block.encode("utf-8"))
+            data += len(gzip.decompress(base64.b64decode(block)) if kind == "octet-stream" else block.encode("utf-8"))
         return len(page), len(schemas), data
 
     def test_only_one_number_bounds_the_page(self, tmp_path):
@@ -1669,21 +1683,20 @@ class TestTheSizeDiscipline:
             f"the ratio clause permits a page of {implied:,.0f} B while "
             f"PAGE_BUDGET_B permits {PAGE_BUDGET_B:,} B - the ratio is "
             f"the real ceiling again, and it is the one nobody wrote "
-            f"down. Raise it or lower PAGE_BUDGET_B; do not leave two")
+            f"down. Raise it or lower PAGE_BUDGET_B; do not leave two"
+        )
 
-        source = inspect.getsource(
-            TestTheSizeDiscipline
-            .test_the_data_dwarfs_the_page_on_a_report_worth_measuring)
+        source = inspect.getsource(TestTheSizeDiscipline.test_the_data_dwarfs_the_page_on_a_report_worth_measuring)
         claim = source.split("assert run_data", 1)[1].split(", (", 1)[0]
         assert "code" not in claim, (
             f"the ratio asserts against the measured page again "
             f"({claim.strip()!r}). On a fixture whose data is fixed by "
             f"construction that is an absolute page bound wearing a "
             f"ratio's name - assert against PAGE_BUDGET_B, which is the "
-            f"page's one number")
+            f"page's one number"
+        )
 
-    def test_the_data_dwarfs_the_page_on_a_report_worth_measuring(
-            self, tmp_path):
+    def test_the_data_dwarfs_the_page_on_a_report_worth_measuring(self, tmp_path):
         """Direction 7's sentence, on a report the sentence is about.
 
         The small fixtures invert it and always did - on `examples/06`
@@ -1877,7 +1890,8 @@ class TestTheSizeDiscipline:
             f"count: it is prose, and it grows when the schema says "
             f"more. If the page is what moved, "
             f"`test_the_page_is_a_backstop_away_from_where_it_is` is the "
-            f"clause that owns that")
+            f"clause that owns that"
+        )
 
     def test_the_page_is_the_modules_and_nothing_else(self, exported):
         """What the ceiling is really guarding: that the page is the
@@ -1888,21 +1902,25 @@ class TestTheSizeDiscipline:
         import tools.bga_view as view
 
         html = open(exported[0], encoding="utf-8").read()
-        page = re.sub(r"<script[^>]*type=\"application/(json|octet-stream)\"[^>]*>"
-                      r".*?</script>", "", html, flags=re.S)
+        page = re.sub(
+            r"<script[^>]*type=\"application/(json|octet-stream)\"[^>]*>"
+            r".*?</script>",
+            "",
+            html,
+            flags=re.S,
+        )
         # `UX-1052`: the modules as the page carries them - gzipped.
         accounted = len(view._module_blocks(view._viewer_module()))
-        accounted += len(view._uncommented_css(
-            open(os.path.join(view.ASSET_DIR, "style.css"),
-                 encoding="utf-8").read()))
-        accounted += len(open(os.path.join(view.ASSET_DIR, "index.html"),
-                              encoding="utf-8").read())
+        accounted += len(
+            view._uncommented_css(open(os.path.join(view.ASSET_DIR, "style.css"), encoding="utf-8").read())
+        )
+        accounted += len(open(os.path.join(view.ASSET_DIR, "index.html"), encoding="utf-8").read())
         # The export rewrites the page around those bytes, so an exact
         # equality would be asserting the glue. Anything the modules do
         # not account for is what this is looking for.
         assert len(page) - accounted < 4_000, (
-            f"{len(page) - accounted} B of the page comes from neither "
-            f"the modules nor the stylesheet")
+            f"{len(page) - accounted} B of the page comes from neither the modules nor the stylesheet"
+        )
 
     def test_the_page_itself_stays_within_its_budget(self, exported):
         """`UX-287`: the half of the size a run cannot change.
@@ -1942,12 +1960,10 @@ class TestTheSizeDiscipline:
             path = tmp_path / f"{label}.html"
             result = export(str(run), str(path))
             fixed[label] = result["bytes"] - _embedded(path)
-        assert len(set(fixed.values())) == 1, (
-            f"the page is not run-independent: {fixed}")
+        assert len(set(fixed.values())) == 1, f"the page is not run-independent: {fixed}"
 
     @pytest.mark.parametrize("label,run,bound", COMMITTED_EXPORTS)
-    def test_each_committed_run_exports_within_its_stated_bound(
-            self, label, run, bound, tmp_path):
+    def test_each_committed_run_exports_within_its_stated_bound(self, label, run, bound, tmp_path):
         """`UX-287`'s acceptance: the bound is asserted against a run
         whose size is representative, and it is stated *for that run*.
 
@@ -1967,7 +1983,8 @@ class TestTheSizeDiscipline:
         assert result["bytes"] < bound, (
             f"{label} exports {result['bytes']} B from a "
             f"{len(os.path.abspath(run))}-character run path, over its "
-            f"stated {bound} B - see the note above on what the path costs")
+            f"stated {bound} B - see the note above on what the path costs"
+        )
         assert result["over_budget"] is False
 
     def test_the_data_is_the_documents_and_the_schemas(self, exported):
@@ -1983,7 +2000,10 @@ class TestTheSizeDiscipline:
         html = open(exported[0], encoding="utf-8").read()
         blocks = re.findall(
             r"<script[^>]*type=\"application/(json|octet-stream)\"[^>]*>"
-            r"(.*?)</script>", html, flags=re.S)
+            r"(.*?)</script>",
+            html,
+            flags=re.S,
+        )
         assert blocks, "no data blocks - the export stopped embedding"
         for kind, block in blocks:
             # Every one parses as JSON, in whichever form it arrived
@@ -1994,30 +2014,42 @@ class TestTheSizeDiscipline:
             else:
                 json.loads(block)
         data = sum(len(block) for _kind, block in blocks)
-        page = re.sub(r"<script[^>]*type=\"application/(json|octet-stream)\"[^>]*>"
-                      r".*?</script>", "", html, flags=re.S)
+        page = re.sub(
+            r"<script[^>]*type=\"application/(json|octet-stream)\"[^>]*>"
+            r".*?</script>",
+            "",
+            html,
+            flags=re.S,
+        )
         assert len(html) - len(page) - data < 4_000, (
-            f"{len(html) - len(page) - data} B of embedded data is not one "
-            f"of the JSON documents the page renders")
+            f"{len(html) - len(page) - data} B of embedded data is not one of the JSON documents the page renders"
+        )
 
-    def test_a_file_over_budget_is_reported_not_refused(
-            self, snapshot, tmp_path, monkeypatch):
+    def test_a_file_over_budget_is_reported_not_refused(self, snapshot, tmp_path, monkeypatch):
         import tools.bga_view as view
 
         monkeypatch.setattr(view, "EXPORT_BUDGET_B", 100)
         result = view.export(str(snapshot / "run"), str(tmp_path / "r.html"))
         assert result["over_budget"] is True
-        assert os.path.exists(tmp_path / "r.html"), (
-            "it refused to write a report the user asked for")
+        assert os.path.exists(tmp_path / "r.html"), "it refused to write a report the user asked for"
 
 
 class TestTheCommandLine:
     def test_it_writes_the_file_and_says_where(self, snapshot, tmp_path):
         path = tmp_path / "out.html"
         result = subprocess.run(
-            [sys.executable, "-c",
-             "from bga.cli import main; raise SystemExit(main({!r}))".format(["view", str(snapshot / "run"), "--export", str(path)])],
-            capture_output=True, text=True, cwd=os.getcwd(), timeout=120)
+            [
+                sys.executable,
+                "-c",
+                "from bga.cli import main; raise SystemExit(main({!r}))".format(
+                    ["view", str(snapshot / "run"), "--export", str(path)]
+                ),
+            ],
+            capture_output=True,
+            text=True,
+            cwd=os.getcwd(),
+            timeout=120,
+        )
         assert result.returncode == 0, result.stderr
         assert path.exists()
         assert json.loads(result.stdout)["bytes"] == path.stat().st_size
@@ -2031,15 +2063,13 @@ class TestTheCommandLine:
 
         monkeypatch.setattr(view.http.server, "ThreadingHTTPServer", refuse)
         monkeypatch.setattr(view.webbrowser, "open", refuse)
-        assert view.main([str(snapshot / "run"), "--export",
-                          str(tmp_path / "r.html")]) == 0
+        assert view.main([str(snapshot / "run"), "--export", str(tmp_path / "r.html")]) == 0
 
 
 class TestTheCiWiring:
     def test_the_ci_docs_teach_attaching_it(self):
         text = open("docs/guides/ci-comment.md", encoding="utf-8").read()
-        assert "--export" in text, (
-            "the CI page posts the comment but never mentions the artifact")
+        assert "--export" in text, "the CI page posts the comment but never mentions the artifact"
 
     # UX-735: +/-20% around the guide's stated KiB. Wide enough that a
     # comment, a contract field, or the embedded run path moving by a
@@ -2056,12 +2086,11 @@ class TestTheCiWiring:
         from tools.bga_view import export
 
         text = open("docs/guides/ci-comment.md", encoding="utf-8").read()
-        match = re.search(
-            r"tests/fixtures/macro_micro/run.*?\*\*(\d+) KiB\*\*",
-            text, re.S)
+        match = re.search(r"tests/fixtures/macro_micro/run.*?\*\*(\d+) KiB\*\*", text, re.S)
         assert match, (
             "the guide no longer names the macro_micro fixture beside "
-            "a KiB figure - UX-735's sentence moved or was reworded")
+            "a KiB figure - UX-735's sentence moved or was reworded"
+        )
         stated_kib = int(match.group(1))
 
         result = export(MACRO_MICRO, str(tmp_path / "ci-comment.html"))
@@ -2072,7 +2101,8 @@ class TestTheCiWiring:
             f"docs/guides/ci-comment.md states {stated_kib} KiB for "
             f"{MACRO_MICRO}, but export() measures {result['bytes']} B "
             f"= {measured_kib:.1f} KiB, outside the "
-            f"+/-{self.EXPORT_SIZE_BAND:.0%} band")
+            f"+/-{self.EXPORT_SIZE_BAND:.0%} band"
+        )
 
 
 _COMMON_SHIM = """
@@ -2099,7 +2129,9 @@ function collect(root) {
 
 # The export is run the way a browser runs it: its own inline module,
 # its own inline JSON blocks, no filesystem beyond the one file.
-_EXPORT_HARNESS = _COMMON_SHIM + """
+_EXPORT_HARNESS = (
+    _COMMON_SHIM
+    + """
 import { readFileSync } from "node:fs";
 import { gunzipSync } from "node:zlib";
 const html = readFileSync(%s, "utf-8");
@@ -2140,8 +2172,11 @@ const schemas = await mod.load("schemas");
 mod.render(payload, schemas[payload.schema], root);
 console.log(JSON.stringify(collect(root)));
 """
+)
 
-_SERVED_HARNESS = _COMMON_SHIM + """
+_SERVED_HARNESS = (
+    _COMMON_SHIM
+    + """
 const payload = %s, schema = %s;
 globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
 _installDocument({ getElementById: () => makeNode("div") });
@@ -2150,6 +2185,7 @@ const root = makeNode("main");
 mod.render(payload, schema, root);
 console.log(JSON.stringify(collect(root)));
 """
+)
 
 
 if __name__ == "__main__":  # pragma: no cover

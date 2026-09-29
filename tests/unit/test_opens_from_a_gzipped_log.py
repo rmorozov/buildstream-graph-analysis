@@ -4,6 +4,7 @@ after the process pass had already gone through `_open_maybe_gzipped`
 so on a real capture the second pass read deflate bytes and silently
 found no `OPENS` block at all.
 """
+
 import gzip
 
 from tools.bst_native_build_tracer import load_and_summarize
@@ -29,6 +30,5 @@ def test_opens_captured_is_the_same_plain_or_gzipped(tmp_path):
 
     assert gz_report["opens_captured"] == plain_report["opens_captured"]
     assert gz_report["opens_captured"] == {
-        "a.bst": {"paths": 2, "dropped": 0, "processes": 1,
-                  "windows": 1, "relative": 0, "dirfd": 0},
+        "a.bst": {"paths": 2, "dropped": 0, "processes": 1, "windows": 1, "relative": 0, "dirfd": 0},
     }

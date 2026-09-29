@@ -27,6 +27,7 @@ reintroduce by hand and easy to miss without a fixture-driven test
 (tests/unit/test_bwrap_shim.py exercises real captured bwrap argv from
 UX-11's own prototype run).
 """
+
 import contextlib
 import fnmatch
 import json
@@ -60,29 +61,76 @@ from typing import Optional
 # reported* rather than silently believed.
 _THREE_ARG_FLAGS = {"--overlay"}
 _TWO_ARG_FLAGS = {
-    "--bind", "--bind-try", "--dev-bind", "--dev-bind-try",
-    "--ro-bind", "--ro-bind-try", "--bind-fd", "--ro-bind-fd",
-    "--file", "--bind-data", "--ro-bind-data", "--symlink",
-    "--setenv", "--chmod",
+    "--bind",
+    "--bind-try",
+    "--dev-bind",
+    "--dev-bind-try",
+    "--ro-bind",
+    "--ro-bind-try",
+    "--bind-fd",
+    "--ro-bind-fd",
+    "--file",
+    "--bind-data",
+    "--ro-bind-data",
+    "--symlink",
+    "--setenv",
+    "--chmod",
 }
 _ONE_ARG_FLAGS = {
-    "--args", "--argv0", "--userns", "--userns2", "--pidns",
-    "--uid", "--gid", "--hostname", "--chdir", "--unsetenv",
-    "--lock-file", "--sync-fd", "--remount-ro", "--exec-label",
-    "--file-label", "--proc", "--dev", "--tmpfs", "--mqueue", "--dir",
-    "--seccomp", "--add-seccomp-fd", "--block-fd", "--userns-block-fd",
-    "--info-fd", "--json-status-fd", "--cap-add", "--cap-drop",
-    "--perms", "--size",
+    "--args",
+    "--argv0",
+    "--userns",
+    "--userns2",
+    "--pidns",
+    "--uid",
+    "--gid",
+    "--hostname",
+    "--chdir",
+    "--unsetenv",
+    "--lock-file",
+    "--sync-fd",
+    "--remount-ro",
+    "--exec-label",
+    "--file-label",
+    "--proc",
+    "--dev",
+    "--tmpfs",
+    "--mqueue",
+    "--dir",
+    "--seccomp",
+    "--add-seccomp-fd",
+    "--block-fd",
+    "--userns-block-fd",
+    "--info-fd",
+    "--json-status-fd",
+    "--cap-add",
+    "--cap-drop",
+    "--perms",
+    "--size",
     # post-0.9.0
-    "--overlay-src", "--tmp-overlay", "--ro-overlay",
+    "--overlay-src",
+    "--tmp-overlay",
+    "--ro-overlay",
 }
 _ZERO_ARG_FLAGS = {
-    "--help", "--version", "--unshare-all", "--share-net",
-    "--unshare-user", "--unshare-user-try", "--unshare-ipc",
-    "--unshare-pid", "--unshare-net", "--unshare-uts",
-    "--unshare-cgroup", "--unshare-cgroup-try",
-    "--disable-userns", "--assert-userns-disabled",
-    "--clearenv", "--new-session", "--die-with-parent", "--as-pid-1",
+    "--help",
+    "--version",
+    "--unshare-all",
+    "--share-net",
+    "--unshare-user",
+    "--unshare-user-try",
+    "--unshare-ipc",
+    "--unshare-pid",
+    "--unshare-net",
+    "--unshare-uts",
+    "--unshare-cgroup",
+    "--unshare-cgroup-try",
+    "--disable-userns",
+    "--assert-userns-disabled",
+    "--clearenv",
+    "--new-session",
+    "--die-with-parent",
+    "--as-pid-1",
     # post-0.9.0
     "--level-prefix",
 }
@@ -139,13 +187,13 @@ def split_bwrap_args(args: list[str]) -> tuple[list[str], list[str]]:
     while i < n:
         arg = args[i]
         if arg in _THREE_ARG_FLAGS:
-            opts.extend(args[i:i + 4])
+            opts.extend(args[i : i + 4])
             i += 4
         elif arg in _TWO_ARG_FLAGS:
-            opts.extend(args[i:i + 3])
+            opts.extend(args[i : i + 3])
             i += 3
         elif arg in _ONE_ARG_FLAGS:
-            opts.extend(args[i:i + 2])
+            opts.extend(args[i : i + 2])
             i += 2
         elif arg in _ZERO_ARG_FLAGS or arg.startswith("--"):
             opts.append(arg)
@@ -225,8 +273,7 @@ def parse_element_max_jobs(opts: list[str]) -> Optional[int]:
     fact that a `notparallel` pin (`-j1`, or meson's bare `1`) really
     is. `None` when neither shape matches (no `-j` at all)."""
     for i, opt in enumerate(opts):
-        if (opt == "--setenv" and i + 2 < len(opts)
-                and opts[i + 1] in _JOB_SETENV_VARS):
+        if opt == "--setenv" and i + 2 < len(opts) and opts[i + 1] in _JOB_SETENV_VARS:
             value = opts[i + 2]
             match = _JOB_FLAG_RE.search(value)
             if match:
@@ -238,8 +285,7 @@ def parse_element_max_jobs(opts: list[str]) -> Optional[int]:
     return None
 
 
-def jobserver_decision(element_max_jobs: Optional[int],
-                       project_max_jobs: Optional[int]) -> str:
+def jobserver_decision(element_max_jobs: Optional[int], project_max_jobs: Optional[int]) -> str:
     """UX-842: `pinned` (`-j1` - no injection at all), `joined` (`-jK`
     equal to the project's own `max-jobs`, no `-j` entry at all, or the
     project's `max-jobs` itself unknown - `project_max_jobs_unknown`),
@@ -264,8 +310,7 @@ _MAKE_LIKE_KINDS = frozenset({"make", "autotools"})
 _NINJA_CAPABLE_KINDS = frozenset({"cmake", "meson"})
 
 
-def compiler_safe_auth(auth_value: str, sandbox_fifo_path: Optional[str],
-                       make_below_44: bool) -> Optional[str]:
+def compiler_safe_auth(auth_value: str, sandbox_fifo_path: Optional[str], make_below_44: bool) -> Optional[str]:
     """UX-878: the `MAKEFLAGS` auth an *unwrapped* native jobserver
     client (gcc's lto-wrapper, cargo) reads directly - unlike `ninja`/
     `ld.*`/`mold`, no shell wrapper stands between it and the string bga
@@ -299,8 +344,7 @@ def _ninja_aware_env(ninja_probe, wrappers_dir, auth_value, base_policy):
     return [("JOBS", ""), ("MAKEFLAGS", auth_value)], [], base_policy
 
 
-def kind_job_env(kind, auth_value, ninja_probe=None, wrappers_dir=None,
-                 jobs_present=None):
+def kind_job_env(kind, auth_value, ninja_probe=None, wrappers_dir=None, jobs_present=None):
     """The `(setenv_pairs, unsetenv_vars, policy)` this element's kind
     gets, applied only for a `joined`/`capped_pending` decision.
     `ninja_probe` is `{"available", "jobserver_client"}` or `None` (not
@@ -356,32 +400,28 @@ def ninja_is_client(version: Optional[str], helptext: str) -> bool:
     """UX-843/UX-1001: a help text naming the jobserver, or a version at or
     past the first release that ships the client (1.13.0)."""
     match = _NINJA_VERSION_RE.match((version or "").strip())
-    by_version = bool(match) and \
-        (int(match.group(1)), int(match.group(2))) >= _NINJA_CLIENT_MIN_VERSION
+    by_version = bool(match) and (int(match.group(1)), int(match.group(2))) >= _NINJA_CLIENT_MIN_VERSION
     return by_version or parse_ninja_help(helptext)
 
 
-def _probe_tool_version(real_bwrap: str, opts: list[str], tool: str,
-                        timeout: float) -> subprocess.CompletedProcess:
+def _probe_tool_version(real_bwrap: str, opts: list[str], tool: str, timeout: float) -> subprocess.CompletedProcess:
     """The one `<tool> --version` subprocess call site `probe_ninja` and
     `probe_make` (UX-874) both use - a second sandbox-tool probe is a
     new caller of the same forced S603 (UX-843), not a new finding."""
     version = subprocess.run(
-        [real_bwrap, *opts, tool, "--version"],
-        capture_output=True, text=True, timeout=timeout, check=False)
+        [real_bwrap, *opts, tool, "--version"], capture_output=True, text=True, timeout=timeout, check=False
+    )
     return version
 
 
-def probe_ninja(real_bwrap: str, opts: list[str], cache_path: Optional[str],
-                timeout: float = 5.0) -> dict:
+def probe_ninja(real_bwrap: str, opts: list[str], cache_path: Optional[str], timeout: float = 5.0) -> dict:
     """UX-843: `ninja --version` then `--help`, run through this same
     sandbox argv with the trailing command replaced - once per capture,
     cached at `cache_path` beside the FIFO. Never raises: a probe that
     cannot run just means no ninja client, the safer of the two guesses.
     """
     if cache_path:
-        with contextlib.suppress(OSError, ValueError), \
-                open(cache_path, encoding="utf-8") as handle:
+        with contextlib.suppress(OSError, ValueError), open(cache_path, encoding="utf-8") as handle:
             return json.load(handle)
     result = {"available": False, "version": None, "jobserver_client": None}
     try:
@@ -390,15 +430,13 @@ def probe_ninja(real_bwrap: str, opts: list[str], cache_path: Optional[str],
             result["available"] = True
             result["version"] = version.stdout.strip()
             helptext = subprocess.run(
-                [real_bwrap, *opts, "ninja", "--help"],
-                capture_output=True, text=True, timeout=timeout, check=False)
-            result["jobserver_client"] = ninja_is_client(
-                result["version"], helptext.stdout + helptext.stderr)
+                [real_bwrap, *opts, "ninja", "--help"], capture_output=True, text=True, timeout=timeout, check=False
+            )
+            result["jobserver_client"] = ninja_is_client(result["version"], helptext.stdout + helptext.stderr)
     except (OSError, subprocess.TimeoutExpired):
         pass
     if cache_path:
-        with contextlib.suppress(OSError), \
-                open(cache_path, "w", encoding="utf-8") as handle:
+        with contextlib.suppress(OSError), open(cache_path, "w", encoding="utf-8") as handle:
             json.dump(result, handle)
     return result
 
@@ -419,8 +457,7 @@ def style_for_make_version(make_version_output: Optional[str]) -> str:
     return "fifo" if version >= _MAKE_JOBSERVER_AUTH_MIN_VERSION else "fd"
 
 
-def probe_make(real_bwrap: str, opts: list[str], cache_path: Optional[str],
-               timeout: float = 5.0) -> dict:
+def probe_make(real_bwrap: str, opts: list[str], cache_path: Optional[str], timeout: float = 5.0) -> dict:
     """UX-874: `make --version` run through this same sandbox argv -
     `probe_ninja`'s own shape, cached at `cache_path`
     (`_make_probe_cache_path`: per element, not per capture -
@@ -429,8 +466,7 @@ def probe_make(real_bwrap: str, opts: list[str], cache_path: Optional[str],
     cannot run just means an absent sandbox make, exactly
     `style_for_make_version`'s own "fd" case."""
     if cache_path:
-        with contextlib.suppress(OSError, ValueError), \
-                open(cache_path, encoding="utf-8") as handle:
+        with contextlib.suppress(OSError, ValueError), open(cache_path, encoding="utf-8") as handle:
             return json.load(handle)
     result = {"available": False, "version": None}
     try:
@@ -441,14 +477,12 @@ def probe_make(real_bwrap: str, opts: list[str], cache_path: Optional[str],
     except (OSError, subprocess.TimeoutExpired):
         pass
     if cache_path:
-        with contextlib.suppress(OSError), \
-                open(cache_path, "w", encoding="utf-8") as handle:
+        with contextlib.suppress(OSError), open(cache_path, "w", encoding="utf-8") as handle:
             json.dump(result, handle)
     return result
 
 
-def _make_probe_cache_path(jobserver_path: Optional[str],
-                           element: Optional[str]) -> Optional[str]:
+def _make_probe_cache_path(jobserver_path: Optional[str], element: Optional[str]) -> Optional[str]:
     """UX-874 (verifier): `ninja_probe.json`'s own cache is shared by
     the whole capture (one `dirname(BST_TRACE_JOBSERVER)`, set once in
     `run_traced_build`) - real for ninja (one generator per build) but
@@ -492,8 +526,7 @@ _FD_DIRECT_POLICIES = frozenset({"cmake_meson"})
 _AUTH_OVERRIDE_STYLES = frozenset({"fd", "fifo", "off", "flto"})
 
 
-def resolve_auth_override(auth_map_str: Optional[str],
-                          element: Optional[str]) -> Optional[str]:
+def resolve_auth_override(auth_map_str: Optional[str], element: Optional[str]) -> Optional[str]:
     """`BST_TRACE_JOBSERVER_AUTH_MAP`'s own serialization -
     `style:glob[,glob];style:glob...` (`bga capture run
     --jobserver-auth-override`, UX-879) - resolved against one element
@@ -536,15 +569,18 @@ def _forced_auth(override: str, auth_value: str, ctx: dict) -> Optional[str]:
     if override == "fifo" and "fifo:" not in auth_value:
         host_fifo = _compiler_safe_fifo_host(ctx["pool"], ctx.get("element"))
         if host_fifo is not None:
-            sandbox_fifo_path = _sandbox_fifo_path(
-                ctx["bind_src"], ctx["bind_dst"], host_fifo)
+            sandbox_fifo_path = _sandbox_fifo_path(ctx["bind_src"], ctx["bind_dst"], host_fifo)
             return f"--jobserver-auth=fifo:{sandbox_fifo_path}"
     return auth_value
 
 
-def sandbox_make_auth_style(element_kind: Optional[str], real_bwrap: str,
-                            opts: list[str], cache_path: Optional[str],
-                            kind_probe: Optional[dict] = None) -> str:
+def sandbox_make_auth_style(
+    element_kind: Optional[str],
+    real_bwrap: str,
+    opts: list[str],
+    cache_path: Optional[str],
+    kind_probe: Optional[dict] = None,
+) -> str:
     """UX-874/UX-877: this element's own sandbox `make --version`,
     probed through the real bwrap - `"fd"` when the sandbox make can't
     parse `fifo:` (absent, unparseable, or below 4.4), `"fifo"`
@@ -559,8 +595,12 @@ def sandbox_make_auth_style(element_kind: Optional[str], real_bwrap: str,
     host already resolved stands, never widened by this probe."""
     kind_probe = kind_probe or {}
     pairs, _unsets, policy = kind_job_env(
-        element_kind, "fifo:sentinel", kind_probe.get("ninja_probe"),
-        kind_probe.get("wrappers_dir"), kind_probe.get("jobs_present"))
+        element_kind,
+        "fifo:sentinel",
+        kind_probe.get("ninja_probe"),
+        kind_probe.get("wrappers_dir"),
+        kind_probe.get("jobs_present"),
+    )
     makeflags_injected = any(var == "MAKEFLAGS" for var, _ in pairs)
     if not makeflags_injected or policy not in _MAKE_CONSUMER_POLICIES:
         return "fifo"
@@ -591,8 +631,7 @@ def _setenv_value(opts: list[str], name: str) -> Optional[str]:
     return None
 
 
-def _wrapper_mount(opts: list[str], wrapper_dir: str, bind_dst: str,
-                   caps: Optional[dict] = None) -> list[str]:
+def _wrapper_mount(opts: list[str], wrapper_dir: str, bind_dst: str, caps: Optional[dict] = None) -> list[str]:
     """UX-846: the wrappers bound read-only ahead of BuildStream's own
     `PATH` (bwrap: the last `--setenv` wins outright, measured), with
     the ledger path and the cap the wrapper reads. `caps` (PLR0913's
@@ -641,8 +680,11 @@ def _wrapper_mount(opts: list[str], wrapper_dir: str, bind_dst: str,
             mount += ["--ro-bind", override_dir, operator_dst]
             path_head = f"{operator_dst}:{path_head}"
     mount += [
-        "--setenv", "PATH", f"{path_head}:{bst_path}",
-        "--setenv", "BST_TRACE_JOBSERVER_LEDGER",
+        "--setenv",
+        "PATH",
+        f"{path_head}:{bst_path}",
+        "--setenv",
+        "BST_TRACE_JOBSERVER_LEDGER",
         os.path.join(bind_dst, "jobserver_ledger.jsonl"),
     ]
     if caps.get("wrapper_cap"):
@@ -705,8 +747,7 @@ def _compiler_safe_fifo_host(pool: dict, element: Optional[str]) -> Optional[str
     return pool.get("fifo") or os.environ.get("BST_TRACE_JOBSERVER")
 
 
-def _compiler_safe_makeflags(auth_value: str, policy: str, opts: list[str],
-                             ctx: dict) -> Optional[str]:
+def _compiler_safe_makeflags(auth_value: str, policy: str, opts: list[str], ctx: dict) -> Optional[str]:
     """UX-878: `auth_value` narrowed through `compiler_safe_auth` for the
     policies an unwrapped compiler/cargo actually reads
     (`_COMPILER_SAFE_POLICIES`); every other policy - `make` included -
@@ -736,19 +777,16 @@ def _compiler_safe_makeflags(auth_value: str, policy: str, opts: list[str],
     if host_fifo is None or real_bwrap is None:
         return auth_value
     sandbox_fifo_path = _sandbox_fifo_path(ctx["bind_src"], ctx["bind_dst"], host_fifo)
-    cache_path = _make_probe_cache_path(
-        os.environ.get("BST_TRACE_JOBSERVER"), ctx.get("element"))
+    cache_path = _make_probe_cache_path(os.environ.get("BST_TRACE_JOBSERVER"), ctx.get("element"))
     probe = probe_make(real_bwrap, opts, cache_path)
-    make_below_44 = bool(probe.get("available")) and \
-        style_for_make_version(probe.get("version")) == "fd"
+    make_below_44 = bool(probe.get("available")) and style_for_make_version(probe.get("version")) == "fd"
     safe = compiler_safe_auth(auth_value, sandbox_fifo_path, make_below_44)
     if safe is None and policy in _FD_DIRECT_POLICIES:
         return auth_value
     return safe
 
 
-def _jobserver_injection(opts: list[str], binds: tuple, decision: str,
-                         pool: dict, kind_context: dict) -> list[str]:
+def _jobserver_injection(opts: list[str], binds: tuple, decision: str, pool: dict, kind_context: dict) -> list[str]:
     """`build_shim_argv`'s own jobserver branch, split out to keep its
     complexity under the baseline's cap. `binds` is `(bind_src,
     bind_dst)`, kept as one param for PLR0913's cap. `pool` is `{fd,
@@ -776,23 +814,35 @@ def _jobserver_injection(opts: list[str], binds: tuple, decision: str,
     # already opened its own fd (fd style) or left only the path set
     # (fifo style).
     if proxy_active:
-        auth_value = (f"--jobserver-auth={proxy_fd},{proxy_fd}"
-                     if proxy_fd is not None
-                     else f"--jobserver-auth=fifo:{_sandbox_fifo_path(bind_src, bind_dst, proxy_fifo)}")
+        auth_value = (
+            f"--jobserver-auth={proxy_fd},{proxy_fd}"
+            if proxy_fd is not None
+            else f"--jobserver-auth=fifo:{_sandbox_fifo_path(bind_src, bind_dst, proxy_fifo)}"
+        )
     else:
-        auth_value = (f"--jobserver-auth={fd},{fd}" if fd is not None
-                     else f"--jobserver-auth=fifo:{_sandbox_fifo_path(bind_src, bind_dst, fifo)}")
+        auth_value = (
+            f"--jobserver-auth={fd},{fd}"
+            if fd is not None
+            else f"--jobserver-auth=fifo:{_sandbox_fifo_path(bind_src, bind_dst, fifo)}"
+        )
     # UX-843/UX-859: the per-kind table - a kind not in it gets nothing
     # (`unknown_kind`) unless its own sandbox env carries `JOBS`
     # (`jobs_env`); cmake/meson and a `jobs_env` kind both consult the
     # ninja probe.
     pairs, unsets, policy = kind_job_env(
-        kind_context.get("element_kind"), auth_value,
-        kind_context.get("ninja_probe"), kind_context.get("wrappers_dir"),
-        jobs_present=recipe_promise(opts))
-    ctx = {"bind_src": bind_src, "bind_dst": bind_dst, "pool": pool,
-          "real_bwrap": kind_context.get("real_bwrap"),
-          "element": kind_context.get("element")}
+        kind_context.get("element_kind"),
+        auth_value,
+        kind_context.get("ninja_probe"),
+        kind_context.get("wrappers_dir"),
+        jobs_present=recipe_promise(opts),
+    )
+    ctx = {
+        "bind_src": bind_src,
+        "bind_dst": bind_dst,
+        "pool": pool,
+        "real_bwrap": kind_context.get("real_bwrap"),
+        "element": kind_context.get("element"),
+    }
     # UX-879: a per-element override takes precedence over the
     # auto/compiler_safe/downgrade path below - matched, it forces the
     # style outright and `_compiler_safe_makeflags` never runs. UX-882:
@@ -809,8 +859,7 @@ def _jobserver_injection(opts: list[str], binds: tuple, decision: str,
         # that survives the sandbox boundary - `None` scrubs it outright
         # rather than hand a raw fd to a deep grandchild that cannot use
         # it.
-        safe_auth = _compiler_safe_makeflags(
-            auth_value, policy, opts, ctx=ctx)
+        safe_auth = _compiler_safe_makeflags(auth_value, policy, opts, ctx=ctx)
     if safe_auth != auth_value:
         pairs = [pair for pair in pairs if pair[0] != "MAKEFLAGS"]
         if safe_auth is not None:
@@ -832,15 +881,20 @@ def _jobserver_injection(opts: list[str], binds: tuple, decision: str,
     # decides which tools this directory covers before the build.
     wrapper_dir = kind_context.get("wrappers_dir")
     if wrapper_dir is not None and auth_injected:
-        tokens += _wrapper_mount(opts, wrapper_dir, bind_dst, caps={
-            "wrapper_cap": kind_context.get("wrapper_cap"),
-            "lto_cap": kind_context.get("lto_cap"),
-            "flto_active": override == "flto",
-            # UX-881: an operator's own wrapper directory and its mode,
-            # carried straight through from `main` (never re-derived here).
-            "wrapper_dir_override": kind_context.get("wrapper_dir_override"),
-            "wrapper_mode": kind_context.get("wrapper_mode"),
-        })
+        tokens += _wrapper_mount(
+            opts,
+            wrapper_dir,
+            bind_dst,
+            caps={
+                "wrapper_cap": kind_context.get("wrapper_cap"),
+                "lto_cap": kind_context.get("lto_cap"),
+                "flto_active": override == "flto",
+                # UX-881: an operator's own wrapper directory and its mode,
+                # carried straight through from `main` (never re-derived here).
+                "wrapper_dir_override": kind_context.get("wrapper_dir_override"),
+                "wrapper_mode": kind_context.get("wrapper_mode"),
+            },
+        )
     return tokens
 
 
@@ -904,9 +958,15 @@ def build_shim_argv(
     """
     opts, cmd = split_bwrap_args(bst_args)
     injected = [
-        "--bind", bind_src, bind_dst,
-        "--setenv", "LD_PRELOAD", preload_so,
-        "--setenv", "BST_TRACE_LOG", trace_log,
+        "--bind",
+        bind_src,
+        bind_dst,
+        "--setenv",
+        "LD_PRELOAD",
+        preload_so,
+        "--setenv",
+        "BST_TRACE_LOG",
+        trace_log,
     ]
     element = extract_element_name(opts)
     if element is not None:
@@ -936,15 +996,22 @@ def build_shim_argv(
     # must not override it.
     decision = jobserver_decision(parse_element_max_jobs(opts), project_max_jobs)
     injected += _jobserver_injection(
-        opts, (bind_src, bind_dst), decision,
-        pool={"fd": jobserver_fd, "fifo": jobserver_fifo,
-             "proxy_fd": proxy_fd, "proxy_fifo": proxy_fifo},
-        kind_context={"element_kind": element_kind, "ninja_probe": ninja_probe,
-                     "wrappers_dir": wrapper_dir, "wrapper_cap": wrapper_cap,
-                     "real_bwrap": real_bwrap, "element": element,
-                     "lto_cap": lto_cap,
-                     "wrapper_dir_override": wrapper_dir_override,
-                     "wrapper_mode": wrapper_mode})
+        opts,
+        (bind_src, bind_dst),
+        decision,
+        pool={"fd": jobserver_fd, "fifo": jobserver_fifo, "proxy_fd": proxy_fd, "proxy_fifo": proxy_fifo},
+        kind_context={
+            "element_kind": element_kind,
+            "ninja_probe": ninja_probe,
+            "wrappers_dir": wrapper_dir,
+            "wrapper_cap": wrapper_cap,
+            "real_bwrap": real_bwrap,
+            "element": element,
+            "lto_cap": lto_cap,
+            "wrapper_dir_override": wrapper_dir_override,
+            "wrapper_mode": wrapper_mode,
+        },
+    )
     # UX-106: the ptrace spine, prepended to the sandboxed command so it
     # becomes the parent of everything BuildStream asked to run - which
     # is what makes every descendant its own tracee, and so traceable
@@ -1031,8 +1098,9 @@ def record_argv(log_path: str, argv: list[str], limit: int) -> bool:
         return False
 
 
-def spine_for_element(policy: Optional[str], census_path: Optional[str],
-                      element: Optional[str], spine: Optional[str]) -> Optional[str]:
+def spine_for_element(
+    policy: Optional[str], census_path: Optional[str], element: Optional[str], spine: Optional[str]
+) -> Optional[str]:
     """UX-113: whether *this* element's sandbox gets the ptrace spine.
 
     The spine and the census were built in the same round and never
@@ -1058,19 +1126,20 @@ def spine_for_element(policy: Optional[str], census_path: Optional[str],
     if not spine or policy != "auto":
         return spine
     if element is None:
-        return spine                       # name unrecoverable - trace it
+        return spine  # name unrecoverable - trace it
     try:
         with open(census_path, encoding="utf-8") as handle:
             verdicts = json.load(handle)
     except (OSError, ValueError, TypeError):
-        return spine                       # no census to consult - trace it
+        return spine  # no census to consult - trace it
     if element not in verdicts:
-        return spine                       # unassessed - trace it
+        return spine  # unassessed - trace it
     return spine if verdicts[element] else None
 
 
-def record_invocation(log_path: Optional[str], invocation_id: int,
-                      dir_tag: Optional[str], spine_traced: bool = False) -> bool:
+def record_invocation(
+    log_path: Optional[str], invocation_id: int, dir_tag: Optional[str], spine_traced: bool = False
+) -> bool:
     """UX-56: one line per sandbox - `{id, started_at, dir_tag}`.
 
     `started_at` is `CLOCK_REALTIME` on the host, deliberately not the
@@ -1089,17 +1158,23 @@ def record_invocation(log_path: Optional[str], invocation_id: int,
     if not log_path:
         return False
     try:
-        line = json.dumps({
-            "invocation_id": invocation_id,
-            "started_at": time.time(),
-            "dir_tag": dir_tag,
-            # UX-113: what the spine policy decided for this sandbox.
-            # Recorded rather than inferred from whether spine records
-            # appeared: an element that ran no processes and one the
-            # policy skipped look identical in the trace, and only one of
-            # them is a coverage gap.
-            "spine_traced": spine_traced,
-        }, sort_keys=True) + "\n"
+        line = (
+            json.dumps(
+                {
+                    "invocation_id": invocation_id,
+                    "started_at": time.time(),
+                    "dir_tag": dir_tag,
+                    # UX-113: what the spine policy decided for this sandbox.
+                    # Recorded rather than inferred from whether spine records
+                    # appeared: an element that ran no processes and one the
+                    # policy skipped look identical in the trace, and only one of
+                    # them is a coverage gap.
+                    "spine_traced": spine_traced,
+                },
+                sort_keys=True,
+            )
+            + "\n"
+        )
         fd = os.open(log_path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
         try:
             os.write(fd, line.encode("utf-8"))
@@ -1110,10 +1185,13 @@ def record_invocation(log_path: Optional[str], invocation_id: int,
         return False
 
 
-def record_jobserver_decision(log_path: Optional[str], opts: list[str],
-                              element: Optional[str],
-                              project_max_jobs: Optional[int],
-                              kind_context: Optional[dict] = None) -> bool:
+def record_jobserver_decision(
+    log_path: Optional[str],
+    opts: list[str],
+    element: Optional[str],
+    project_max_jobs: Optional[int],
+    kind_context: Optional[dict] = None,
+) -> bool:
     """UX-842/UX-843: one JSON line per sandbox - `{element, max_jobs,
     decision, kind, policy}` - beside the FIFO in the capture scratch.
     When the shim could not name the element (`extract_element_name`
@@ -1134,9 +1212,12 @@ def record_jobserver_decision(log_path: Optional[str], opts: list[str],
         policy = None
         if decision != JOBSERVER_PINNED:
             _pairs, _unsets, policy = kind_job_env(
-                element_kind, "--jobserver-auth=0,0",
-                kind_context.get("ninja_probe"), kind_context.get("wrappers_dir"),
-                jobs_present=recipe_promise(opts))
+                element_kind,
+                "--jobserver-auth=0,0",
+                kind_context.get("ninja_probe"),
+                kind_context.get("wrappers_dir"),
+                jobs_present=recipe_promise(opts),
+            )
         name, unresolved = element, False
         if name is None:
             unresolved = True
@@ -1146,8 +1227,13 @@ def record_jobserver_decision(log_path: Optional[str], opts: list[str],
                     break
             if name is None and element_max_jobs is not None:
                 name = f"-j{element_max_jobs}"
-        record = {"element": name, "max_jobs": element_max_jobs,
-                 "decision": decision, "kind": element_kind, "policy": policy}
+        record = {
+            "element": name,
+            "max_jobs": element_max_jobs,
+            "decision": decision,
+            "kind": element_kind,
+            "policy": policy,
+        }
         if unresolved:
             record["element_unresolved"] = True
         line = json.dumps(record, sort_keys=True) + "\n"
@@ -1161,13 +1247,18 @@ def record_jobserver_decision(log_path: Optional[str], opts: list[str],
         return False
 
 
-def record_diagnostics(log_path: Optional[str], received: list[str],
-                       exec_argv: list[str], real_bwrap: str,
-                       element: Optional[str], spine: Optional[str],
-                       injected: bool,
-                       stderr_path: Optional[str] = None,
-                       jobserver_fifo_host: Optional[str] = None,
-                       jobserver_fifo_sandbox: Optional[str] = None) -> bool:
+def record_diagnostics(
+    log_path: Optional[str],
+    received: list[str],
+    exec_argv: list[str],
+    real_bwrap: str,
+    element: Optional[str],
+    spine: Optional[str],
+    injected: bool,
+    stderr_path: Optional[str] = None,
+    jobserver_fifo_host: Optional[str] = None,
+    jobserver_fifo_sandbox: Optional[str] = None,
+) -> bool:
     """UX-146: one line per invocation, holding both argvs.
 
     A capture that fails tells the user `buildbox-run failed with
@@ -1393,8 +1484,9 @@ ADMISSION_BROKER_DIR_ENV = "BST_TRACE_ADMISSION_BROKER_DIR"
 _ADMISSION_BROKER_TIMEOUT_S = 5.0
 
 
-def _admitted_via_broker(broker_dir: Optional[str], element: Optional[str],
-                         pid: int, timeout_s: float = _ADMISSION_BROKER_TIMEOUT_S) -> bool:
+def _admitted_via_broker(
+    broker_dir: Optional[str], element: Optional[str], pid: int, timeout_s: float = _ADMISSION_BROKER_TIMEOUT_S
+) -> bool:
     """UX-1005 track C: ask the `AdmissionBroker` for a ranked grant
     through this element's own FIFO, rather than reading the raw global
     pool directly - `False` (never blocking past `timeout_s`) when there
@@ -1411,10 +1503,8 @@ def _admitted_via_broker(broker_dir: Optional[str], element: Optional[str],
         return False
     try:
         requests_path = os.path.join(broker_dir, "requests.jsonl")
-        with contextlib.suppress(OSError), \
-                open(requests_path, "a", encoding="utf-8") as handle:
-            handle.write(json.dumps(
-                {"element": element, "pid": pid, "t": time.time()}) + "\n")
+        with contextlib.suppress(OSError), open(requests_path, "a", encoding="utf-8") as handle:
+            handle.write(json.dumps({"element": element, "pid": pid, "t": time.time()}) + "\n")
         deadline = time.time() + timeout_s
         while True:
             remaining = deadline - time.time()
@@ -1435,8 +1525,7 @@ def _admitted_via_broker(broker_dir: Optional[str], element: Optional[str],
         os.close(fd)
 
 
-def _record_admission_wait(ledger_path: Optional[str], element: Optional[str],
-                           wait_us: int) -> None:
+def _record_admission_wait(ledger_path: Optional[str], element: Optional[str], wait_us: int) -> None:
     """One `admission_wait` row per sandbox - keyed by `element` directly
     (the shim always knows its own), unlike a wrapper's `acquire`/
     `release` rows which need a pid map. `ledger.py`'s
@@ -1444,8 +1533,7 @@ def _record_admission_wait(ledger_path: Optional[str], element: Optional[str],
     fails the build, the same posture every other ledger append takes."""
     if not ledger_path:
         return
-    row = {"event": "admission_wait", "element": element,
-          "pid": os.getpid(), "wait_us": wait_us, "t": time.time()}
+    row = {"event": "admission_wait", "element": element, "pid": os.getpid(), "wait_us": wait_us, "t": time.time()}
     try:
         with open(ledger_path, "a", encoding="utf-8") as handle:
             handle.write(json.dumps(row) + "\n")
@@ -1453,10 +1541,13 @@ def _record_admission_wait(ledger_path: Optional[str], element: Optional[str],
         pass
 
 
-def run_admitted(real_bwrap: str, argv: list[str],
-                 exec_args: tuple[Optional[str], Optional[str]],
-                 pool: tuple[str, Optional[str]],
-                 ledger: tuple[Optional[str], Optional[str]]) -> int:
+def run_admitted(
+    real_bwrap: str,
+    argv: list[str],
+    exec_args: tuple[Optional[str], Optional[str]],
+    pool: tuple[str, Optional[str]],
+    ledger: tuple[Optional[str], Optional[str]],
+) -> int:
     """UX-1005 track B/C: a real token gates this sandbox before it
     starts - so the pool's own size, not `--builders`, bounds how many
     `bwrap`s run at once. `pool` is `(pool_path, broker_dir)`: a
@@ -1500,10 +1591,13 @@ def run_admitted(real_bwrap: str, argv: list[str],
     return exit_like(status)
 
 
-def _dispatch(real_bwrap: str, argv: list[str],
-             exec_args: tuple[Optional[str], Optional[str]],
-             jobserver_active: bool,
-             admission_ctx: tuple[str, Optional[str]]) -> int:
+def _dispatch(
+    real_bwrap: str,
+    argv: list[str],
+    exec_args: tuple[Optional[str], Optional[str]],
+    jobserver_active: bool,
+    admission_ctx: tuple[str, Optional[str]],
+) -> int:
     """`main`'s own exec dispatch, split out (with `_exec_or_run`) to
     keep its statement count under the baseline's cap: admission
     (`run_admitted`) only when `BST_TRACE_ADMISSION_POOL` is set *and*
@@ -1519,9 +1613,13 @@ def _dispatch(real_bwrap: str, argv: list[str],
     if admission_pool and jobserver_active:
         bind_src, element = admission_ctx
         ledger_path = os.path.join(bind_src, "jobserver_ledger.jsonl")
-        return run_admitted(real_bwrap, argv, exec_args,
-                            (admission_pool, os.environ.get(ADMISSION_BROKER_DIR_ENV)),
-                            (ledger_path, element))
+        return run_admitted(
+            real_bwrap,
+            argv,
+            exec_args,
+            (admission_pool, os.environ.get(ADMISSION_BROKER_DIR_ENV)),
+            (ledger_path, element),
+        )
     return _exec_or_run(real_bwrap, argv, stderr_path, proxy_done_path)
 
 
@@ -1566,8 +1664,7 @@ def _project_max_jobs_env() -> Optional[int]:
         return None
 
 
-def _element_proxy_paths(element: Optional[str],
-                         pinned: bool) -> tuple[Optional[str], Optional[str]]:
+def _element_proxy_paths(element: Optional[str], pinned: bool) -> tuple[Optional[str], Optional[str]]:
     """UX-849: `(proxy_fifo, done_path)` when `BST_TRACE_PROXY_DIR` names
     a proxy the tracer pre-created for this element, else `(None,
     None)` - the shim binds the global FIFO as today. `pinned` (Direction
@@ -1602,8 +1699,7 @@ def _resolve_proxy_auth(proxy_fifo: Optional[str]) -> tuple[Optional[int], Optio
     return _open_inheritable_rdwr(proxy_fifo), None
 
 
-def _downgrade_fifo_to_fd_if_sandbox_make_rejects_it(
-        probe: dict, cache_path: Optional[str], pool: dict) -> dict:
+def _downgrade_fifo_to_fd_if_sandbox_make_rejects_it(probe: dict, cache_path: Optional[str], pool: dict) -> dict:
     """UX-874/UX-877: `pool` (`{fd, fifo, proxy_fd, proxy_fifo}`)
     unchanged unless the request is `fifo` (a `fifo` entry present) and
     this element's own sandbox make - probed once, cached at
@@ -1618,9 +1714,10 @@ def _downgrade_fifo_to_fd_if_sandbox_make_rejects_it(
     """
     if pool.get("fifo") is None and pool.get("proxy_fifo") is None:
         return pool
-    if sandbox_make_auth_style(
-            probe["element_kind"], probe["real_bwrap"], probe["opts"], cache_path,
-            kind_probe=probe) != "fd":
+    if (
+        sandbox_make_auth_style(probe["element_kind"], probe["real_bwrap"], probe["opts"], cache_path, kind_probe=probe)
+        != "fd"
+    ):
         return pool
     downgraded = dict(pool)
     if pool.get("fifo") is not None:
@@ -1644,8 +1741,7 @@ def _narrow_jobserver_to_sandbox_make(probe: dict, pinned: bool, pool: dict) -> 
     for a pinned element - nothing is injected for it either way."""
     if pinned:
         return pool
-    cache_path = _make_probe_cache_path(
-        os.environ.get("BST_TRACE_JOBSERVER"), probe["element"])
+    cache_path = _make_probe_cache_path(os.environ.get("BST_TRACE_JOBSERVER"), probe["element"])
     return _downgrade_fifo_to_fd_if_sandbox_make_rejects_it(probe, cache_path, pool)
 
 
@@ -1687,8 +1783,7 @@ def _annotation_style(element: Optional[str]) -> Optional[str]:
     return style if style in _AUTH_OVERRIDE_STYLES else None
 
 
-def _resolve_kind_and_probe(element, jobserver_fd, jobserver_fifo,
-                            project_max_jobs, real_bwrap):
+def _resolve_kind_and_probe(element, jobserver_fd, jobserver_fifo, project_max_jobs, real_bwrap):
     """UX-843/UX-859: `{element_kind, ninja_probe, wrappers_dir}` for
     `main` - pulled out of it (a dict, not a tuple, so both call sites
     in `main` pass it straight through as one argument) so the mode's
@@ -1708,10 +1803,13 @@ def _resolve_kind_and_probe(element, jobserver_fd, jobserver_fifo,
     is consulted."""
     element_kind = _element_kind_env(element)
     wrappers_dir = os.environ.get("BST_TRACE_WRAPPER_DIR")
-    base = {"element_kind": element_kind, "ninja_probe": None,
-           "wrappers_dir": wrappers_dir,
-           "wrapper_dir_override": os.environ.get("BST_TRACE_WRAPPER_DIR_OVERRIDE"),
-           "wrapper_mode": os.environ.get("BST_TRACE_WRAPPER_MODE")}
+    base = {
+        "element_kind": element_kind,
+        "ninja_probe": None,
+        "wrappers_dir": wrappers_dir,
+        "wrapper_dir_override": os.environ.get("BST_TRACE_WRAPPER_DIR_OVERRIDE"),
+        "wrapper_mode": os.environ.get("BST_TRACE_WRAPPER_MODE"),
+    }
     active = jobserver_fd is not None or jobserver_fifo is not None
     if not active:
         return base
@@ -1723,8 +1821,7 @@ def _resolve_kind_and_probe(element, jobserver_fd, jobserver_fifo,
     if decision == JOBSERVER_PINNED:
         return base
     jobserver_path = os.environ.get("BST_TRACE_JOBSERVER")
-    cache_path = (os.path.join(os.path.dirname(jobserver_path), "ninja_probe.json")
-                 if jobserver_path else None)
+    cache_path = os.path.join(os.path.dirname(jobserver_path), "ninja_probe.json") if jobserver_path else None
     base["ninja_probe"] = probe_ninja(real_bwrap, opts, cache_path)
     return base
 
@@ -1751,14 +1848,14 @@ def main() -> int:
     # process invoking `bwrap` while the shim directory is on PATH -
     # raised KeyError onto buildbox-run's swallowed stderr and produced
     # the same unexplained `returncode 1`.
-    required = ("BST_TRACE_BIND_SRC", "BST_TRACE_BIND_DST",
-                "BST_TRACE_PRELOAD_SO", "BST_TRACE_LOG_DST")
+    required = ("BST_TRACE_BIND_SRC", "BST_TRACE_BIND_DST", "BST_TRACE_PRELOAD_SO", "BST_TRACE_LOG_DST")
     missing = [name for name in required if name not in os.environ]
     if missing:
         sys.stderr.write(
             f"bga: this is bga's bwrap shim, invoked without {missing[0]} - so it "
             f"is not being run by a bga capture. Falling through to the real "
-            f"bwrap at {real_bwrap}.\n")
+            f"bwrap at {real_bwrap}.\n"
+        )
         try:
             os.execv(real_bwrap, [real_bwrap, *sys.argv[1:]])
         except OSError as error:
@@ -1792,7 +1889,9 @@ def main() -> int:
         os.environ.get("BST_TRACE_SPINE"),
     )
     record_invocation(
-        os.environ.get("BST_TRACE_INVOCATION_LOG"), invocation_id, element,
+        os.environ.get("BST_TRACE_INVOCATION_LOG"),
+        invocation_id,
+        element,
         spine_traced=bool(spine),
     )
     # UX-146: the bisection a user cannot otherwise perform. With this
@@ -1807,11 +1906,13 @@ def main() -> int:
     # UX-846 (another track): a bind-mounted `PATH` of token-holding
     # wrappers - `_resolve_kind_and_probe` reads only whether it is set,
     # to choose the ninja policy; this shim does not create or size them.
-    kind_context = _resolve_kind_and_probe(
-        element, jobserver_fd, jobserver_fifo, project_max_jobs, real_bwrap)
+    kind_context = _resolve_kind_and_probe(element, jobserver_fd, jobserver_fifo, project_max_jobs, real_bwrap)
     record_jobserver_decision(
-        os.environ.get("BST_TRACE_JOBSERVER_DECISIONS"), sys.argv[1:],
-        element, project_max_jobs, kind_context=kind_context,
+        os.environ.get("BST_TRACE_JOBSERVER_DECISIONS"),
+        sys.argv[1:],
+        element,
+        project_max_jobs,
+        kind_context=kind_context,
     )
     # UX-849: a plan-active sandbox binds its own proxy and, only then,
     # marks `proxy_done_path` when it exits - a build with no `--plan`
@@ -1821,44 +1922,54 @@ def main() -> int:
     # follows `BST_TRACE_JOBSERVER_AUTH`, the coordinator's fix: GNU
     # Make 4.3 (this box, CI) rejects `fifo:` outright.
     opts_now, _cmd_now = split_bwrap_args(sys.argv[1:])
-    pinned_now = jobserver_decision(
-        parse_element_max_jobs(opts_now), project_max_jobs) == JOBSERVER_PINNED
+    pinned_now = jobserver_decision(parse_element_max_jobs(opts_now), project_max_jobs) == JOBSERVER_PINNED
     proxy_fifo_host, proxy_done_path = _element_proxy_paths(element, pinned_now)
     proxy_fd, proxy_fifo = _resolve_proxy_auth(proxy_fifo_host)
     # UX-874: the host chose `fifo:` from *its own* `make --version`
     # (jobserver_auth_style, UX-841) - narrowed here, per element.
     jobserver_pool = _narrow_jobserver_to_sandbox_make(
-        {"element": element, "element_kind": kind_context["element_kind"],
-         "real_bwrap": real_bwrap, "opts": opts_now,
-         "ninja_probe": kind_context["ninja_probe"],
-         "wrappers_dir": kind_context["wrappers_dir"],
-         "jobs_present": _setenv_value(opts_now, "JOBS") is not None}, pinned_now,
-        pool={"fd": jobserver_fd, "fifo": jobserver_fifo,
-             "proxy_fd": proxy_fd, "proxy_fifo": proxy_fifo})
+        {
+            "element": element,
+            "element_kind": kind_context["element_kind"],
+            "real_bwrap": real_bwrap,
+            "opts": opts_now,
+            "ninja_probe": kind_context["ninja_probe"],
+            "wrappers_dir": kind_context["wrappers_dir"],
+            "jobs_present": _setenv_value(opts_now, "JOBS") is not None,
+        },
+        pinned_now,
+        pool={"fd": jobserver_fd, "fifo": jobserver_fifo, "proxy_fd": proxy_fd, "proxy_fifo": proxy_fifo},
+    )
     jobserver_fd, jobserver_fifo = jobserver_pool["fd"], jobserver_pool["fifo"]
     proxy_fd, proxy_fifo = jobserver_pool["proxy_fd"], jobserver_pool["proxy_fifo"]
     if inject:
-        argv = build_shim_argv(real_bwrap, sys.argv[1:], bind_src, bind_dst,
-                               preload_so, trace_log,
-                               invocation_id=invocation_id,
-                               # UX-106: the in-sandbox path of the ptrace
-                               # spine, or absent. Read from this shim's own
-                               # environment, which `run_traced_build` sets -
-                               # the same channel `BST_TRACE_PRELOAD_SO`
-                               # already uses.
-                               spine=spine,
-                               jobserver_fd=jobserver_fd,
-                               jobserver_fifo=jobserver_fifo,
-                               project_max_jobs=project_max_jobs,
-                               element_kind=kind_context["element_kind"],
-                               ninja_probe=kind_context["ninja_probe"],
-                               wrapper_dir=kind_context["wrappers_dir"],
-                               wrapper_cap=os.environ.get("BST_TRACE_WRAPPER_CAP"),
-                               proxy_fd=proxy_fd,
-                               proxy_fifo=proxy_fifo,
-                               lto_cap=os.environ.get("BST_TRACE_LTO_CAP"),
-                               wrapper_dir_override=kind_context["wrapper_dir_override"],
-                               wrapper_mode=kind_context["wrapper_mode"])
+        argv = build_shim_argv(
+            real_bwrap,
+            sys.argv[1:],
+            bind_src,
+            bind_dst,
+            preload_so,
+            trace_log,
+            invocation_id=invocation_id,
+            # UX-106: the in-sandbox path of the ptrace
+            # spine, or absent. Read from this shim's own
+            # environment, which `run_traced_build` sets -
+            # the same channel `BST_TRACE_PRELOAD_SO`
+            # already uses.
+            spine=spine,
+            jobserver_fd=jobserver_fd,
+            jobserver_fifo=jobserver_fifo,
+            project_max_jobs=project_max_jobs,
+            element_kind=kind_context["element_kind"],
+            ninja_probe=kind_context["ninja_probe"],
+            wrapper_dir=kind_context["wrappers_dir"],
+            wrapper_cap=os.environ.get("BST_TRACE_WRAPPER_CAP"),
+            proxy_fd=proxy_fd,
+            proxy_fifo=proxy_fifo,
+            lto_cap=os.environ.get("BST_TRACE_LTO_CAP"),
+            wrapper_dir_override=kind_context["wrapper_dir_override"],
+            wrapper_mode=kind_context["wrapper_mode"],
+        )
     else:
         argv = [real_bwrap, *sys.argv[1:]]
         proxy_done_path = None
@@ -1877,24 +1988,33 @@ def main() -> int:
             stderr_path = None  # a diagnostic must never fail a build
 
     fifo_host = _active_jobserver_fifo(
-        {"fd": jobserver_fd, "fifo": jobserver_fifo,
-         "proxy_fd": proxy_fd, "proxy_fifo": proxy_fifo})
-    fifo_sandbox = (_sandbox_fifo_path(bind_src, bind_dst, fifo_host)
-                    if fifo_host else None)
-    record_diagnostics(diagnostics_path, list(sys.argv[1:]),
-                       argv, real_bwrap, element, spine, inject,
-                       stderr_path=stderr_path,
-                       jobserver_fifo_host=fifo_host,
-                       jobserver_fifo_sandbox=fifo_sandbox)
+        {"fd": jobserver_fd, "fifo": jobserver_fifo, "proxy_fd": proxy_fd, "proxy_fifo": proxy_fifo}
+    )
+    fifo_sandbox = _sandbox_fifo_path(bind_src, bind_dst, fifo_host) if fifo_host else None
+    record_diagnostics(
+        diagnostics_path,
+        list(sys.argv[1:]),
+        argv,
+        real_bwrap,
+        element,
+        spine,
+        inject,
+        stderr_path=stderr_path,
+        jobserver_fifo_host=fifo_host,
+        jobserver_fifo_sandbox=fifo_sandbox,
+    )
 
     # UX-1005 track B: admission only when the jobserver is active.
-    return _dispatch(real_bwrap, argv, (stderr_path, proxy_done_path),
-                     jobserver_fd is not None or jobserver_fifo is not None,
-                     (bind_src, element))
+    return _dispatch(
+        real_bwrap,
+        argv,
+        (stderr_path, proxy_done_path),
+        jobserver_fd is not None or jobserver_fifo is not None,
+        (bind_src, element),
+    )
 
 
-def _exec_or_run(real_bwrap: str, argv: list[str], stderr_path: Optional[str],
-                 proxy_done_path: Optional[str]) -> int:
+def _exec_or_run(real_bwrap: str, argv: list[str], stderr_path: Optional[str], proxy_done_path: Optional[str]) -> int:
     """`main`'s own exec dispatch, split out to keep its branching under
     the baseline's cap: `--diagnose` tees (`run_teed`), a proxy-bound
     sandbox forks so its `.done` marker can be written after it exits
@@ -1911,9 +2031,7 @@ def _exec_or_run(real_bwrap: str, argv: list[str], stderr_path: Optional[str],
         except OSError as error:
             # Falling through to the plain exec is the safe direction: a
             # capture that cannot tee is still a capture.
-            sys.stderr.write(
-                f"bga: could not tee this sandbox's stderr ({error}); "
-                f"running it without the record.\n")
+            sys.stderr.write(f"bga: could not tee this sandbox's stderr ({error}); running it without the record.\n")
 
     # UX-849: a proxy-bound sandbox is forked, not `execv`'d, so the
     # `.done` marker below can be written once it actually exits - the
@@ -1931,7 +2049,8 @@ def _exec_or_run(real_bwrap: str, argv: list[str], stderr_path: Optional[str],
         # naming the binary and what the kernel said.
         sys.stderr.write(
             f"bga: could not exec the real bwrap at {real_bwrap}: {error}\n"
-            f"bga: set BST_TRACE_REAL_BWRAP if it lives somewhere else.\n")
+            f"bga: set BST_TRACE_REAL_BWRAP if it lives somewhere else.\n"
+        )
         return 127
     return 1  # unreachable if execv succeeds
 

@@ -23,6 +23,7 @@ The host manifest travels inside `run-context.json` untouched, so
 `UX-186`'s cross-host refusal arrives on the far machine intact. A format
 that rewrote it would turn that refusal off by accident.
 """
+
 import codecs
 import collections
 import decimal
@@ -68,13 +69,12 @@ def _layout_relative() -> list[tuple[str, str, Optional[str]]]:
     Derived from `run_store.CAPTURE_LAYOUT` so the bundle cannot fall
     behind the directory it packs.
     """
-    prefix = (f"{run_store.STORE_DIRNAME}/{run_store.RUNS_DIRNAME}/"
-              f"{_STAMP_TOKEN}/")
+    prefix = f"{run_store.STORE_DIRNAME}/{run_store.RUNS_DIRNAME}/{_STAMP_TOKEN}/"
     rows = []
     for path, presence, contract, _what in run_store.CAPTURE_LAYOUT:
         if not path.startswith(prefix) or path.endswith("/"):
             continue
-        rows.append((path[len(prefix):], presence, contract))
+        rows.append((path[len(prefix) :], presence, contract))
     return rows
 
 
@@ -88,8 +88,7 @@ def is_plane2(relative: str) -> bool:
     return os.path.basename(relative).startswith("plane2")
 
 
-def members(snapshot: str, include_plane2: bool = True
-            ) -> tuple[list[dict], list[str]]:
+def members(snapshot: str, include_plane2: bool = True) -> tuple[list[dict], list[str]]:
     """What this snapshot would ship, and what the switch left out.
 
     `DERIVED` rows never ship (see the module docstring). A `REQUIRED`
@@ -107,12 +106,14 @@ def members(snapshot: str, include_plane2: bool = True
         if not include_plane2 and is_plane2(relative):
             excluded.append(relative)
             continue
-        packed.append({
-            "path": relative,
-            "presence": presence,
-            "contract": contract,
-            "bytes": os.path.getsize(source),
-        })
+        packed.append(
+            {
+                "path": relative,
+                "presence": presence,
+                "contract": contract,
+                "bytes": os.path.getsize(source),
+            }
+        )
     return packed, excluded
 
 
@@ -125,19 +126,16 @@ def readable_contracts() -> set:
     the registry did not know `graph/v9`, `trace/v9` or `run-context/v9`
     and the first real bundle was refused for carrying all three.
     """
-    return (set(contracts.ids()) | set(contracts.superseded())
-            | set(contracts.reads()))
+    return set(contracts.ids()) | set(contracts.superseded()) | set(contracts.reads())
 
 
-def manifest_for(snapshot: str, include_plane2: bool = True,
-                 now: Optional[datetime] = None) -> dict:
+def manifest_for(snapshot: str, include_plane2: bool = True, now: Optional[datetime] = None) -> dict:
     packed, excluded = members(snapshot, include_plane2)
     return {
         "schema": SCHEMA,
         "bga_version": __version__,
         "stamp": os.path.basename(os.path.normpath(snapshot)),
-        "packed_at": (now or datetime.now(timezone.utc)).strftime(
-            "%Y-%m-%dT%H:%M:%SZ"),
+        "packed_at": (now or datetime.now(timezone.utc)).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "members": packed,
         "excluded": excluded,
     }
@@ -170,8 +168,7 @@ def neutral_tarinfo(arcname: str, size: int) -> tarfile.TarInfo:
     return info
 
 
-def anonymized_manifest(manifest: dict, key: bytes, pmap: "anonymize.PseudonymMap",
-                        junctions: tuple = ()) -> dict:
+def anonymized_manifest(manifest: dict, key: bytes, pmap: "anonymize.PseudonymMap", junctions: tuple = ()) -> dict:
     """`manifest`, with the fields 6.9 names as identifying dropped or
     pseudonymized: `stamp` through `anonymize.pseudonymize` (the stamp is
     a directory name, `.bga/runs/<stamp>/`), `packed_at` removed outright
@@ -181,8 +178,7 @@ def anonymized_manifest(manifest: dict, key: bytes, pmap: "anonymize.PseudonymMa
     holding the secret.
     """
     transformed = dict(manifest)
-    transformed["stamp"] = anonymize.pseudonymize(
-        manifest["stamp"], "directory", key, pmap)
+    transformed["stamp"] = anonymize.pseudonymize(manifest["stamp"], "directory", key, pmap)
     transformed.pop("packed_at", None)
     transformed["key_fingerprint"] = anonymize.key_fingerprint(key)
     if junctions:
@@ -199,9 +195,9 @@ def anonymized_output() -> str:
     return "bga-bundle.tar.gz"
 
 
-def export(snapshot: str, output: Optional[str] = None,
-           include_plane2: bool = True,
-           now: Optional[datetime] = None) -> tuple[str, dict]:
+def export(
+    snapshot: str, output: Optional[str] = None, include_plane2: bool = True, now: Optional[datetime] = None
+) -> tuple[str, dict]:
     """Write one archive holding this snapshot's capture-layout members.
 
     Returns the path written and the manifest inside it.
@@ -211,16 +207,18 @@ def export(snapshot: str, output: Optional[str] = None,
     manifest = manifest_for(snapshot, include_plane2, now)
     if not manifest["members"]:
         raise BundleError(
-            f"{snapshot} holds none of the files the capture-layout "
-            f"contract names, so there is nothing to carry")
+            f"{snapshot} holds none of the files the capture-layout contract names, so there is nothing to carry"
+        )
     destination = output or default_output(manifest["stamp"])
 
     payload = json.dumps(manifest, indent=2, sort_keys=True).encode("utf-8")
     # `mtime=0` so the same snapshot packs to the same bytes twice;
     # a bundle a user diffs against a re-export should be equal.
-    with open(destination, "wb") as raw, \
-            gzip.GzipFile(fileobj=raw, mode="wb", mtime=0) as compressed, \
-            tarfile.open(fileobj=compressed, mode="w") as archive:
+    with (
+        open(destination, "wb") as raw,
+        gzip.GzipFile(fileobj=raw, mode="wb", mtime=0) as compressed,
+        tarfile.open(fileobj=compressed, mode="w") as archive,
+    ):
         info = tarfile.TarInfo(MANIFEST_NAME)
         info.size = len(payload)
         archive.addfile(info, io.BytesIO(payload))
@@ -234,12 +232,14 @@ def export(snapshot: str, output: Optional[str] = None,
 
 
 #: `anonymized-bundle.md` 6.2: the class F paths a grammar rebuilds; every other F is dropped.
-_COMMAND_PATHS = frozenset({
-    ("plane2/v3", "redundant_operations[].example_cmd"),
-    ("plane2/v3", "redundant_operations[].signature"),
-    ("plane2/v3", "stream_coverage.cpu_disagreements[].cmd"),
-    ("tail/v1", "phases[].calls[].verb"),
-})
+_COMMAND_PATHS = frozenset(
+    {
+        ("plane2/v3", "redundant_operations[].example_cmd"),
+        ("plane2/v3", "redundant_operations[].signature"),
+        ("plane2/v3", "stream_coverage.cpu_disagreements[].cmd"),
+        ("tail/v1", "phases[].calls[].verb"),
+    }
+)
 
 #: The class D paths holding a hostname; every other host fact is kept (section 8).
 _HOSTNAME_PATHS = frozenset({("run-context/v9", "host")})
@@ -314,8 +314,7 @@ def _rewrite(node: dict, value, pattern: str, leaf, rename):
                 renamed = rename(placeholder[1:-1], name)
                 if renamed is _DROP_ENTRY:
                     continue
-                out[renamed] = _rewrite(
-                    node[placeholder], item, _join(pattern, placeholder), leaf, rename)
+                out[renamed] = _rewrite(node[placeholder], item, _join(pattern, placeholder), leaf, rename)
         return out
     if isinstance(value, list):
         return [_rewrite(node["[]"], item, pattern + "[]", leaf, rename) for item in value]
@@ -325,13 +324,18 @@ def _rewrite(node: dict, value, pattern: str, leaf, rename):
 class _Anonymizer:
     """One export's walk: the values it rewrote, per class, and what it kept verbatim."""
 
-    def __init__(self, key: bytes, pmap: "anonymize.PseudonymMap", public: frozenset = frozenset(),
-                public_junctions: frozenset = frozenset()):
+    def __init__(
+        self,
+        key: bytes,
+        pmap: "anonymize.PseudonymMap",
+        public: frozenset = frozenset(),
+        public_junctions: frozenset = frozenset(),
+    ):
         self.key, self.pmap, self.public = key, _Recording(pmap), public
         self.public_junctions = public_junctions
         self.counts: collections.Counter = collections.Counter()
         self.kept: set = set()
-        self.times: dict = {}                    # clock -> earliest instant, in µs
+        self.times: dict = {}  # clock -> earliest instant, in µs
         self.origins: dict = {}
         self.policy = ""
 
@@ -348,6 +352,7 @@ class _Anonymizer:
 
     def collect(self, policy: str, node: dict, value, pattern: str = "") -> None:
         """The first pass: the earliest instant on each clock, so one origin shifts them all."""
+
         def leaf(klass, pattern, value):
             if klass == "H":
                 clock, per_unit = self._axis(pattern)
@@ -355,14 +360,16 @@ class _Anonymizer:
                 if clock not in self.times or instant < self.times[clock]:
                     self.times[clock] = instant
             return value
+
         self.policy = policy
         _rewrite(node, value, pattern, leaf, lambda _klass, name: name)
 
     def rewrite(self, policy: str, node: dict, value, pattern: str = ""):
         if not self.origins:
-            self.origins = {clock: t.to_integral_value(decimal.ROUND_FLOOR)
-                            - CANONICAL_ORIGIN_US.get(clock, 0)
-                            for clock, t in self.times.items()}
+            self.origins = {
+                clock: t.to_integral_value(decimal.ROUND_FLOOR) - CANONICAL_ORIGIN_US.get(clock, 0)
+                for clock, t in self.times.items()
+            }
         self.policy = policy
         return _rewrite(node, value, pattern, self._leaf, self._rename)
 
@@ -380,8 +387,7 @@ class _Anonymizer:
         if head == "B":
             return self._public(klass[2:], value)
         hostname = head == "D" and (self.policy, pattern) in _HOSTNAME_PATHS
-        if head == "C" or (head == "D" and not hostname) or (
-                head == "A" and not isinstance(value, str)):
+        if head == "C" or (head == "D" and not hostname) or (head == "A" and not isinstance(value, str)):
             if isinstance(value, str):
                 self.kept.add(value)
             return value
@@ -429,7 +435,8 @@ class _Anonymizer:
         """Rebuilt through the bare map: an argument is not a known name, so
         it joins no dictionary; the words kept verbatim join the review."""
         rebuilt = anonymize.rebuild_command(
-            value, self.key, self.pmap.pmap, disclosure.VOCABULARIES["binary"].allowed, self.counts)
+            value, self.key, self.pmap.pmap, disclosure.VOCABULARIES["binary"].allowed, self.counts
+        )
         if isinstance(value, str) and isinstance(rebuilt, str):
             words = {w.split("=")[0] for w in value.split()}
             self.kept.update(w.split("=")[0] for w in rebuilt.split() if w.split("=")[0] in words)
@@ -483,12 +490,13 @@ def _stream(source: str, policy: str, trie: dict, walk: "_Anonymizer", target: s
     one document a line, written record by record to a new 0600 `target`."""
     dumps = functools.partial(json.dumps, ensure_ascii=False)
     stack: list = []  # per open container: [closer, children written]
-    with open(os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600),
-              "w", encoding="utf-8", newline="") as out:
+    with open(os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "w", encoding="utf-8", newline="") as out:
+
         def item():
             if stack and stack[-1][0] == "]":
                 out.write(", " if stack[-1][1] else "")
                 stack[-1][1] += 1
+
         documents = 0
         for event in _events(source, trie):
             kind = event[0]
@@ -520,8 +528,20 @@ def _stream(source: str, policy: str, trie: dict, walk: "_Anonymizer", target: s
 def _public_words() -> frozenset:
     """Schema keys, vocabulary and layout names: a legitimate bundle holds
     them, so a name equal to one is scanned only as its whole value."""
-    phrases = {SCHEMA, MANIFEST_NAME, MEMBER_PREFIX, "key_fingerprint", "bga_version",
-               "stamp", "members", "excluded", "presence", "contract", "bytes", "path"}
+    phrases = {
+        SCHEMA,
+        MANIFEST_NAME,
+        MEMBER_PREFIX,
+        "key_fingerprint",
+        "bga_version",
+        "stamp",
+        "members",
+        "excluded",
+        "presence",
+        "contract",
+        "bytes",
+        "path",
+    }
     for policy in disclosure.POLICIES.values():
         phrases.update(pattern.replace("[]", "") for pattern in policy)
         phrases.update(step for pattern in policy for step in pattern.replace("[]", "").split("."))
@@ -541,8 +561,11 @@ def _public_words() -> frozenset:
 def residue_dictionary(originals) -> set:
     """6.2: every original of `RESIDUE_MIN` or more characters, less the public words."""
     public = _public_words()
-    return {o for o in originals if isinstance(o, str) and len(o) >= RESIDUE_MIN
-            and not o.isdigit() and o.lower() not in public}
+    return {
+        o
+        for o in originals
+        if isinstance(o, str) and len(o) >= RESIDUE_MIN and not o.isdigit() and o.lower() not in public
+    }
 
 
 #: A residue token or word-boundary span, case-folded, any Unicode script
@@ -565,8 +588,7 @@ def _residue_index(dictionary) -> tuple[dict, dict, int]:
     variants, public = {}, _public_words()
     for token in dictionary:
         low = _fold(token)
-        for form in {low, re.sub(r"[-_.]", "", low),
-                     *(re.sub(r"[-_.]", sep, low) for sep in "-_.")}:
+        for form in {low, re.sub(r"[-_.]", "", low), *(re.sub(r"[-_.]", sep, low) for sep in "-_.")}:
             if form == low or (len(form) >= RESIDUE_MIN and form not in public):
                 variants.setdefault(form, token)
     single = {f: t for f, t in variants.items() if not re.search(r"[-_.]", f)}
@@ -620,8 +642,7 @@ def residue(archive: str, dictionary) -> list[str]:
     # gzip.open, not "r|gz": tarfile inflates a whole 10 KiB block at once, however compressible
     with gzip.open(archive, "rb") as raw, tarfile.open(fileobj=raw, mode="r|") as tar:
         for info in tar:
-            fields = [info.name, info.uname, info.gname, info.linkname,
-                      *map(str, info.pax_headers.values())]
+            fields = [info.name, info.uname, info.gname, info.linkname, *map(str, info.pax_headers.values())]
             handle = tar.extractfile(info)
             decoder = codecs.getincrementaldecoder("utf-8")("replace")
             text, found = _fold("\n" + "\n".join(fields) + "\n"), set()
@@ -644,44 +665,44 @@ def _pack(manifest: dict, sources: dict, scratch: str) -> str:
     file; a member file in `scratch` is removed once packed."""
     target = os.path.join(scratch, "bundle.tar.gz")
     body = json.dumps(manifest, indent=2, sort_keys=True).encode("utf-8")
-    with open(os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "wb") as raw, \
-            gzip.GzipFile(filename="", fileobj=raw, mode="wb", mtime=0) as compressed, \
-            tarfile.open(fileobj=compressed, mode="w", format=tarfile.USTAR_FORMAT) as archive:
+    with (
+        open(os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "wb") as raw,
+        gzip.GzipFile(filename="", fileobj=raw, mode="wb", mtime=0) as compressed,
+        tarfile.open(fileobj=compressed, mode="w", format=tarfile.USTAR_FORMAT) as archive,
+    ):
         archive.addfile(neutral_tarinfo(MANIFEST_NAME, len(body)), io.BytesIO(body))
         for relative, source in sources.items():
             with open(source, "rb") as handle:
-                archive.addfile(neutral_tarinfo(MEMBER_PREFIX + relative,
-                                                os.fstat(handle.fileno()).st_size), handle)
+                archive.addfile(neutral_tarinfo(MEMBER_PREFIX + relative, os.fstat(handle.fileno()).st_size), handle)
             if os.path.dirname(source) == scratch:
                 os.remove(source)
     return target
 
 
-def review_screen(destination: str, manifest: dict, dropped: list,
-                  walk: _Anonymizer, dictionary: set) -> str:
+def review_screen(destination: str, manifest: dict, dropped: list, walk: _Anonymizer, dictionary: set) -> str:
     """6.8's one screen: what was substituted, what travels verbatim, what was dropped."""
     counts = " · ".join(f"{k} {v}" for k, v in sorted(walk.counts.items())) or "none"
     kept = sorted(walk.kept)
-    return "\n".join([
-        f"Anonymized bundle {destination}: {plural(len(manifest['members']), 'member')}",
-        f"  members: {', '.join(m['path'] for m in manifest['members'])}",
-        f"  dropped: {', '.join(dropped) or 'none'}",
-        f"  values rewritten, per class: {counts}",
-        f"  kept verbatim ({len(kept)}): {', '.join(kept) or 'none'}",
-        f"  residue scan: clean over {plural(len(dictionary), 'dictionary token')}; "
-        f"a tripwire, blind to a name it never held",
-        "  the graph's shape alone can identify a project (anonymized-bundle.md 6.5)",
-        f"  key fingerprint {manifest['key_fingerprint']}; the map stays on this machine",
-    ])
+    return "\n".join(
+        [
+            f"Anonymized bundle {destination}: {plural(len(manifest['members']), 'member')}",
+            f"  members: {', '.join(m['path'] for m in manifest['members'])}",
+            f"  dropped: {', '.join(dropped) or 'none'}",
+            f"  values rewritten, per class: {counts}",
+            f"  kept verbatim ({len(kept)}): {', '.join(kept) or 'none'}",
+            f"  residue scan: clean over {plural(len(dictionary), 'dictionary token')}; "
+            f"a tripwire, blind to a name it never held",
+            "  the graph's shape alone can identify a project (anonymized-bundle.md 6.5)",
+            f"  key fingerprint {manifest['key_fingerprint']}; the map stays on this machine",
+        ]
+    )
 
 
 def _untreated() -> list[str]:
-    return [relative for relative, _presence, _contract in _layout_relative()
-            if relative not in disclosure.TREATMENTS]
+    return [relative for relative, _presence, _contract in _layout_relative() if relative not in disclosure.TREATMENTS]
 
 
-def _anonymized_members(snapshot: str, packed: list, walk: _Anonymizer, scratch: str
-                        ) -> tuple[list, dict, list]:
+def _anonymized_members(snapshot: str, packed: list, walk: _Anonymizer, scratch: str) -> tuple[list, dict, list]:
     """Every packed member by its treatment: `(shipped, sources, dropped)`,
     each transformed one rewritten into `scratch`. Every gap and instant
     first, so one gap refuses the whole export and one origin per clock
@@ -708,7 +729,8 @@ def _anonymized_members(snapshot: str, packed: list, walk: _Anonymizer, scratch:
     if refused:
         raise BundleError(
             f"{plural(len(refused), 'value path')} the disclosure policy does not "
-            f"clear, so nothing was written:\n  " + "\n  ".join(refused))
+            f"clear, so nothing was written:\n  " + "\n  ".join(refused)
+        )
     if errors:
         raise errors[0]
     for index, (relative, (policy, trie)) in enumerate(tries.items()):
@@ -724,15 +746,22 @@ def _approved(archive: str, walk: _Anonymizer, review: Callable[[set], bool]) ->
     dictionary = residue_dictionary(walk.pmap.originals)
     hits = residue(archive, dictionary)
     if hits:
-        raise BundleError("the residue scan found original names in the decoded "
-                          "archive, so nothing was written:\n  " + "\n  ".join(hits))
+        raise BundleError(
+            "the residue scan found original names in the decoded "
+            "archive, so nothing was written:\n  " + "\n  ".join(hits)
+        )
     if not review(dictionary):
         raise BundleError("the owner did not approve the review; nothing was written")
 
 
-def export_anonymized(snapshot: str, key: bytes, pmap: "anonymize.PseudonymMap",
-                      output: Optional[str] = None,
-                      *, approve: Callable[[str], bool]) -> tuple[str, dict]:
+def export_anonymized(
+    snapshot: str,
+    key: bytes,
+    pmap: "anonymize.PseudonymMap",
+    output: Optional[str] = None,
+    *,
+    approve: Callable[[str], bool],
+) -> tuple[str, dict]:
     """Every member walked by its `disclosure` treatment and policy, packed
     with neutral metadata (6.9), residue-scanned decoded, then shown to
     `approve`; nothing is written, map included, unless it returns true.
@@ -743,13 +772,15 @@ def export_anonymized(snapshot: str, key: bytes, pmap: "anonymize.PseudonymMap",
         raise BundleError(f"{snapshot} is not a snapshot directory")
     untreated = _untreated()
     if untreated:
-        raise BundleError(f"{plural(len(untreated), 'capture-layout row')} with no "
-                          f"anonymized treatment: {', '.join(untreated)}; nothing was written")
+        raise BundleError(
+            f"{plural(len(untreated), 'capture-layout row')} with no "
+            f"anonymized treatment: {', '.join(untreated)}; nothing was written"
+        )
     manifest = manifest_for(snapshot)
     if not manifest["members"]:
         raise BundleError(
-            f"{snapshot} holds none of the files the capture-layout "
-            f"contract names, so there is nothing to carry")
+            f"{snapshot} holds none of the files the capture-layout contract names, so there is nothing to carry"
+        )
     # UX-1065: the project the snapshot sits under (`<project>/.bga/runs/<stamp>`),
     # so a declared public junction's config is read without a second argument.
     project = os.path.dirname(os.path.dirname(os.path.dirname(snapshot)))
@@ -761,14 +792,16 @@ def export_anonymized(snapshot: str, key: bytes, pmap: "anonymize.PseudonymMap",
     walk = _Anonymizer(key, pmap, public, frozenset(declared))
     destination = output or anonymized_output()
     # beside the destination, so publishing is one rename on one file system
-    scratch = tempfile.mkdtemp(prefix=".bga-bundle-",
-                               dir=os.path.dirname(os.path.abspath(destination)))
+    scratch = tempfile.mkdtemp(prefix=".bga-bundle-", dir=os.path.dirname(os.path.abspath(destination)))
     try:
         shipped, sources, dropped = _anonymized_members(snapshot, manifest["members"], walk, scratch)
         anon_manifest = anonymized_manifest(dict(manifest, members=shipped), key, walk.pmap, tuple(junctions))
         archive = _pack(anon_manifest, sources, scratch)
-        _approved(archive, walk, lambda dictionary: approve(review_screen(
-            destination, anon_manifest, dropped, walk, dictionary)))
+        _approved(
+            archive,
+            walk,
+            lambda dictionary: approve(review_screen(destination, anon_manifest, dropped, walk, dictionary)),
+        )
         # UX-1086: the map published atomically before the archive, so a
         # failed map write never leaves an unresolvable bundle behind.
         os.makedirs(os.path.dirname(pmap.path) or ".", exist_ok=True)
@@ -786,15 +819,15 @@ def read_manifest(bundle: str) -> dict:
             handle = archive.extractfile(MANIFEST_NAME)
             if handle is None:
                 raise BundleError(
-                    f"{bundle} has no {MANIFEST_NAME}, so it is not a bga "
-                    f"bundle. `bga bundle --export` writes one.")
+                    f"{bundle} has no {MANIFEST_NAME}, so it is not a bga bundle. `bga bundle --export` writes one."
+                )
             manifest = json.loads(handle.read().decode("utf-8"))
     except tarfile.TarError as error:
         raise BundleError(f"{bundle} is not a readable archive: {error}") from error
     except KeyError:
         raise BundleError(
-            f"{bundle} has no {MANIFEST_NAME}, so it is not a bga bundle. "
-            f"`bga bundle --export` writes one.") from None
+            f"{bundle} has no {MANIFEST_NAME}, so it is not a bga bundle. `bga bundle --export` writes one."
+        ) from None
     if not isinstance(manifest, dict):
         raise BundleError(f"{bundle}'s {MANIFEST_NAME} is not an object")
     return manifest
@@ -812,22 +845,26 @@ def check_readable(manifest: dict) -> None:
         raise BundleError(
             f"this bundle is {schema!r} and this bga reads {SCHEMA!r}. It was "
             f"packed by bga {manifest.get('bga_version', 'unknown')}; upgrade "
-            f"to read it.")
+            f"to read it."
+        )
     readable = readable_contracts()
-    unknown = sorted({
-        member.get("contract") for member in manifest.get("members", ())
-        if member.get("contract") and member.get("contract") not in readable
-    })
+    unknown = sorted(
+        {
+            member.get("contract")
+            for member in manifest.get("members", ())
+            if member.get("contract") and member.get("contract") not in readable
+        }
+    )
     if unknown:
         raise BundleError(
             f"this bundle carries {plural(len(unknown), 'contract')} this bga does not read: "
             f"{', '.join(unknown)}. It was packed by bga "
             f"{manifest.get('bga_version', 'unknown')}; upgrade to read it. "
-            f"Nothing was written.")
+            f"Nothing was written."
+        )
 
 
-def _safe_members(archive: tarfile.TarFile, manifest: dict
-                  ) -> list[tarfile.TarInfo]:
+def _safe_members(archive: tarfile.TarFile, manifest: dict) -> list[tarfile.TarInfo]:
     """The archive's own entries for the manifest's members.
 
     Read back from the archive rather than trusted from the manifest: a
@@ -840,31 +877,30 @@ def _safe_members(archive: tarfile.TarFile, manifest: dict
         if info.name == MANIFEST_NAME:
             continue
         if not info.isfile() or not info.name.startswith(MEMBER_PREFIX):
-            raise BundleError(
-                f"{info.name} is not a file under {MEMBER_PREFIX}; refusing "
-                f"to unpack this bundle")
-        relative = info.name[len(MEMBER_PREFIX):]
+            raise BundleError(f"{info.name} is not a file under {MEMBER_PREFIX}; refusing to unpack this bundle")
+        relative = info.name[len(MEMBER_PREFIX) :]
         if os.path.isabs(relative) or ".." in relative.split("/"):
             raise BundleError(f"{info.name} escapes the snapshot directory")
         if relative not in declared:
             raise BundleError(
                 f"{relative} is in the archive and not in its manifest; "
-                f"refusing to unpack a bundle that does not describe itself")
+                f"refusing to unpack a bundle that does not describe itself"
+            )
         found[relative] = info
     missing = sorted(declared - set(found))
     if missing:
         raise BundleError(
             f"the manifest names {plural(len(missing), 'member')} the archive does "
-            f"not hold ({', '.join(missing[:4])}); refusing to half-load it")
+            f"not hold ({', '.join(missing[:4])}); refusing to half-load it"
+        )
     return [found[path] for path in sorted(found)]
 
 
-def _differs(target: str, archive: tarfile.TarFile,
-             infos: list[tarfile.TarInfo]) -> list[str]:
+def _differs(target: str, archive: tarfile.TarFile, infos: list[tarfile.TarInfo]) -> list[str]:
     """The members already on disk under this stamp whose bytes differ."""
     changed = []
     for info in infos:
-        relative = info.name[len(MEMBER_PREFIX):]
+        relative = info.name[len(MEMBER_PREFIX) :]
         existing = os.path.join(target, relative)
         if not os.path.isfile(existing):
             changed.append(relative)
@@ -903,11 +939,12 @@ def load(bundle: str, project: str) -> tuple[str, dict]:
                     f"{plural(len(changed), 'member')} differ "
                     f"({', '.join(changed[:4])}). Two different captures "
                     f"cannot share one identity; move or delete the existing "
-                    f"one. Nothing was written.")
+                    f"one. Nothing was written."
+                )
         os.makedirs(run_store.runs_dir(project), exist_ok=True)
         run_store.ensure_store_ignored(project)
         for info in infos:
-            relative = info.name[len(MEMBER_PREFIX):]
+            relative = info.name[len(MEMBER_PREFIX) :]
             destination = os.path.join(target, relative)
             os.makedirs(os.path.dirname(destination), exist_ok=True)
             handle = archive.extractfile(info)
@@ -920,7 +957,6 @@ def describe(manifest: dict) -> dict[str, int]:
     """The counts the two commands print, so both say the same thing."""
     return {
         "members": len(manifest.get("members", ())),
-        "bytes": sum(member.get("bytes", 0)
-                     for member in manifest.get("members", ())),
+        "bytes": sum(member.get("bytes", 0) for member in manifest.get("members", ())),
         "excluded": len(manifest.get("excluded", ())),
     }

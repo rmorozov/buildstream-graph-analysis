@@ -7,6 +7,7 @@ mode augment|replace]` threads through `BST_TRACE_WRAPPER_DIR_OVERRIDE`/
 harness. `TestTheTranslation` is the pure-unit half, on
 `_translate_capture_wrapper_dir` (`bga/cli.py`).
 """
+
 import os
 
 from tests.unit.test_bwrap_shim import _fake_bwrap_with_make
@@ -14,8 +15,17 @@ from tools.native_trace.bwrap_shim import build_shim_argv
 
 BIND_DST = "/tmp/.bst-native-trace"
 _CMAKE_BST_ARGS = [
-    "--unshare-pid", "--dir", "core.bst", "--chdir", "core.bst",
-    "--setenv", "JOBS", "-j4", "sh", "-c", "cmake --build .",
+    "--unshare-pid",
+    "--dir",
+    "core.bst",
+    "--chdir",
+    "core.bst",
+    "--setenv",
+    "JOBS",
+    "-j4",
+    "sh",
+    "-c",
+    "cmake --build .",
 ]
 
 
@@ -26,10 +36,16 @@ def _build(real_bwrap, tmp_path, monkeypatch, **extra):
     read_fd, write_fd = os.pipe()
     try:
         argv = build_shim_argv(
-            real_bwrap=real_bwrap, bst_args=_CMAKE_BST_ARGS,
-            bind_src=bind_src, bind_dst=BIND_DST,
-            preload_so=f"{BIND_DST}/hook.so", trace_log=f"{BIND_DST}/trace.log",
-            jobserver_fd=read_fd, element_kind="cmake", **extra)
+            real_bwrap=real_bwrap,
+            bst_args=_CMAKE_BST_ARGS,
+            bind_src=bind_src,
+            bind_dst=BIND_DST,
+            preload_so=f"{BIND_DST}/hook.so",
+            trace_log=f"{BIND_DST}/trace.log",
+            jobserver_fd=read_fd,
+            element_kind="cmake",
+            **extra,
+        )
         return argv, read_fd
     finally:
         os.close(write_fd)
@@ -56,8 +72,7 @@ class TestAugmentIsTheDefault:
     """No `wrapper_mode` named at all - `_wrapper_mount`'s own default."""
 
     def test_no_override_mounts_only_the_shipped_directory(self, tmp_path, monkeypatch):
-        fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker",
-                                     BIND_DST, "4.4")
+        fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker", BIND_DST, "4.4")
         wrapper_dir = str(tmp_path / "wrappers")
 
         argv, read_fd = _build(fake, tmp_path, monkeypatch, wrapper_dir=wrapper_dir)
@@ -68,14 +83,18 @@ class TestAugmentIsTheDefault:
             os.close(read_fd)
 
     def test_an_operator_dir_augments_and_goes_first_on_path(self, tmp_path, monkeypatch):
-        fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker",
-                                     BIND_DST, "4.4")
+        fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker", BIND_DST, "4.4")
         wrapper_dir = str(tmp_path / "wrappers")
         operator_dir = str(tmp_path / "operator-wrappers")
 
         argv, read_fd = _build(
-            fake, tmp_path, monkeypatch, wrapper_dir=wrapper_dir,
-            wrapper_dir_override=operator_dir, wrapper_mode="augment")
+            fake,
+            tmp_path,
+            monkeypatch,
+            wrapper_dir=wrapper_dir,
+            wrapper_dir_override=operator_dir,
+            wrapper_mode="augment",
+        )
         try:
             dsts = _ro_bind_dsts(argv)
             # Two mounts: the operator's directory AND the shipped one.
@@ -90,14 +109,11 @@ class TestAugmentIsTheDefault:
             os.close(read_fd)
 
     def test_augment_is_also_the_default_with_no_mode_named(self, tmp_path, monkeypatch):
-        fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker",
-                                     BIND_DST, "4.4")
+        fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker", BIND_DST, "4.4")
         wrapper_dir = str(tmp_path / "wrappers")
         operator_dir = str(tmp_path / "operator-wrappers")
 
-        argv, read_fd = _build(
-            fake, tmp_path, monkeypatch, wrapper_dir=wrapper_dir,
-            wrapper_dir_override=operator_dir)
+        argv, read_fd = _build(fake, tmp_path, monkeypatch, wrapper_dir=wrapper_dir, wrapper_dir_override=operator_dir)
         try:
             assert len(_ro_bind_dsts(argv)) == 2
             assert _path_value(argv).split(":")[0] != SHIPPED_DST
@@ -107,14 +123,18 @@ class TestAugmentIsTheDefault:
 
 class TestReplace:
     def test_replace_mounts_only_the_operator_directory(self, tmp_path, monkeypatch):
-        fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker",
-                                     BIND_DST, "4.4")
+        fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker", BIND_DST, "4.4")
         wrapper_dir = str(tmp_path / "wrappers")
         operator_dir = str(tmp_path / "operator-wrappers")
 
         argv, read_fd = _build(
-            fake, tmp_path, monkeypatch, wrapper_dir=wrapper_dir,
-            wrapper_dir_override=operator_dir, wrapper_mode="replace")
+            fake,
+            tmp_path,
+            monkeypatch,
+            wrapper_dir=wrapper_dir,
+            wrapper_dir_override=operator_dir,
+            wrapper_mode="replace",
+        )
         try:
             dsts = _ro_bind_dsts(argv)
             assert dsts == [SHIPPED_DST]  # bound at the shipped mount point
@@ -129,17 +149,20 @@ class TestReplaceDropsTheShippedFltoSubdir:
     """UX-881's design: `replace` loses the shipped `flto/` subdir too -
     the operator's directory is theirs to populate."""
 
-    def test_flto_active_replace_never_adds_the_shipped_flto_subdir(
-            self, tmp_path, monkeypatch):
+    def test_flto_active_replace_never_adds_the_shipped_flto_subdir(self, tmp_path, monkeypatch):
         monkeypatch.setenv("BST_TRACE_JOBSERVER_AUTH_MAP", "flto:core*")
-        fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker",
-                                     BIND_DST, "4.3")
+        fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker", BIND_DST, "4.3")
         wrapper_dir = str(tmp_path / "wrappers")
         operator_dir = str(tmp_path / "operator-wrappers")
 
         argv, read_fd = _build(
-            fake, tmp_path, monkeypatch, wrapper_dir=wrapper_dir,
-            wrapper_dir_override=operator_dir, wrapper_mode="replace")
+            fake,
+            tmp_path,
+            monkeypatch,
+            wrapper_dir=wrapper_dir,
+            wrapper_dir_override=operator_dir,
+            wrapper_mode="replace",
+        )
         try:
             flto_subdir = os.path.join(SHIPPED_DST, "flto")
             assert flto_subdir not in (_path_value(argv) or "").split(":")
@@ -148,6 +171,7 @@ class TestReplaceDropsTheShippedFltoSubdir:
 
 
 # --- pure unit: bga/cli.py's _translate_capture_wrapper_dir ---------------
+
 
 class TestTheTranslation:
     def setup_method(self):
@@ -159,22 +183,18 @@ class TestTheTranslation:
     def test_wrapper_dir_sets_the_env_and_is_stripped_from_argv(self):
         from bga.cli import _translate_capture_wrapper_dir
 
-        argv = ["capture", "run", "proj", "out.json", "--wrapper-dir", "/my/wrappers",
-               "--", "bst", "build"]
+        argv = ["capture", "run", "proj", "out.json", "--wrapper-dir", "/my/wrappers", "--", "bst", "build"]
         translated = _translate_capture_wrapper_dir(argv)
 
         assert os.environ["BST_TRACE_WRAPPER_DIR_OVERRIDE"] == "/my/wrappers"
         assert "--wrapper-dir" not in translated
         assert "/my/wrappers" not in translated
-        assert translated == ["capture", "run", "proj", "out.json",
-                              "--", "bst", "build"]
+        assert translated == ["capture", "run", "proj", "out.json", "--", "bst", "build"]
 
     def test_wrapper_dir_mode_sets_the_env_and_is_stripped(self):
         from bga.cli import _translate_capture_wrapper_dir
 
-        argv = ["capture", "run", "proj", "out.json",
-               "--wrapper-dir", "/my/wrappers",
-               "--wrapper-dir-mode", "replace"]
+        argv = ["capture", "run", "proj", "out.json", "--wrapper-dir", "/my/wrappers", "--wrapper-dir-mode", "replace"]
         translated = _translate_capture_wrapper_dir(argv)
 
         assert os.environ["BST_TRACE_WRAPPER_MODE"] == "replace"
@@ -184,8 +204,7 @@ class TestTheTranslation:
     def test_equals_form_is_also_read(self):
         from bga.cli import _translate_capture_wrapper_dir
 
-        argv = ["capture", "run", "proj", "out.json",
-               "--wrapper-dir=/x/wrappers", "--wrapper-dir-mode=augment"]
+        argv = ["capture", "run", "proj", "out.json", "--wrapper-dir=/x/wrappers", "--wrapper-dir-mode=augment"]
         _translate_capture_wrapper_dir(argv)
 
         assert os.environ["BST_TRACE_WRAPPER_DIR_OVERRIDE"] == "/x/wrappers"

@@ -33,6 +33,7 @@ The two clauses are one rule (styleguide §4c) and this file holds both:
 a control's label names its scope, and every action is acknowledged
 where the finger is.
 """
+
 import pathlib
 import sys
 
@@ -50,7 +51,8 @@ needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
 
 #: Press the rail's pair and report the document's state at each step,
 #: against opening every chapter by hand as the reference.
-_FOLDS = """
+_FOLDS = (
+    """
 (() => {
   // `UX-399`: this file's claim is that two routes reach the *same
   // document*, so it measures the fully laid-out one. With
@@ -59,7 +61,9 @@ _FOLDS = """
   // reported heights 264 px apart while opening exactly the same
   // sections. The clause that catches a real regression is the same
   // either way; what the estimate adds is a difference that is not one.
-  """ + pages.FULL_LAYOUT_JS + """
+  """
+    + pages.FULL_LAYOUT_JS
+    + """
   const state = () => ({
     height: document.documentElement.scrollHeight,
     open: document.querySelectorAll(
@@ -98,6 +102,7 @@ _FOLDS = """
   return { landed, expanded, collapsed, byHand, roundTrip };
 })()
 """
+)
 
 #: Press one rendered instance of every copy control and report whether
 #: its own text moved. The *class* is the population: a fifth copy
@@ -149,8 +154,7 @@ def booted(tmp_path_factory):
 @pytest.mark.medium
 @pytest.mark.parametrize("label", sorted(pages.FIXTURES))
 class TestExpandAllExpandsWhatThePageFolds:
-    def test_the_page_is_folded_when_the_reader_lands(
-            self, browser, booted, label):
+    def test_the_page_is_folded_when_the_reader_lands(self, browser, booted, label):
         """The precondition. If the page stopped folding, every clause
         below would pass while measuring nothing - `expanded` would
         equal `landed` because both are the whole document."""
@@ -167,7 +171,8 @@ class TestExpandAllExpandsWhatThePageFolds:
         expanded, by_hand = out["expanded"], out["byHand"]
         assert expanded["height"] == by_hand["height"], (
             f"{label}: \"Expand all\" reaches {expanded['height']}px; "
-            f"opening every chapter by hand reaches {by_hand['height']}px")
+            f"opening every chapter by hand reaches {by_hand['height']}px"
+        )
         assert expanded["open"] == expanded["chapters"], expanded
         assert expanded["shownSections"] == expanded["sections"], expanded
 
@@ -180,7 +185,8 @@ class TestExpandAllExpandsWhatThePageFolds:
         assert out["roundTrip"] == out["expanded"], (
             f"{label}: collapse-then-expand does not return to the "
             f"expanded page\n  expanded:  {out['expanded']}\n"
-            f"  roundtrip: {out['roundTrip']}")
+            f"  roundtrip: {out['roundTrip']}"
+        )
 
     def test_collapse_all_shuts_both_layers(self, browser, booted, label):
         """The other half of the symmetry, measured rather than assumed:
@@ -189,9 +195,7 @@ class TestExpandAllExpandsWhatThePageFolds:
         out = browser.measure(booted[label], _FOLDS, 1440, 900)
         collapsed = out["collapsed"]
         assert collapsed["collapsed"] == collapsed["sections"], collapsed
-        assert collapsed["open"] == 1, (
-            f"{label}: {collapsed['open']} chapters are still open after "
-            f"\"Collapse all\"")
+        assert collapsed["open"] == 1, f"{label}: {collapsed['open']} chapters are still open after \"Collapse all\""
         assert collapsed["height"] < out["expanded"]["height"], collapsed
 
     def test_the_decision_chapter_never_shuts(self, browser, booted, label):
@@ -221,11 +225,10 @@ class TestEveryCopyControlSaysItFired:
         out = browser.measure(booted[label], _COPIES, 1440, 900)
         silent = [row for row in out if row["verdict"] == "silent"]
         assert silent == [], (
-            f"{label}: copy control(s) that write to the clipboard and "
-            f"leave no trace on the page: {silent}")
+            f"{label}: copy control(s) that write to the clipboard and leave no trace on the page: {silent}"
+        )
 
-    def test_every_class_has_a_rendered_instance_to_press(
-            self, browser, booted, label):
+    def test_every_class_has_a_rendered_instance_to_press(self, browser, booted, label):
         """Otherwise the clause above is satisfied by a page where no
         copy control renders at all."""
         out = browser.measure(booted[label], _COPIES, 1440, 900)
@@ -262,9 +265,7 @@ class TestTheAcknowledgementGoesBackToWhatItSays:
         out = browser.measure(booted[label], self._RESTORE, 1440, 900)
         assert "skipped" not in out, out
         assert out["during"] != out["before"], out
-        assert out["after"] == out["before"], (
-            f"{label}: the label did not come back to the count it "
-            f"carries: {out}")
+        assert out["after"] == out["before"], f"{label}: the label did not come back to the count it carries: {out}"
         assert "row" in out["before"], out
 
 
@@ -327,8 +328,7 @@ _FOCUS = """
 @pytest.fixture(scope="module")
 def pressed(browser, booted):
     """`{label: the drive's reading}` - one press per fixture, once."""
-    return {label: browser.measure(booted[label], _FOCUS, 1440, 900)
-            for label in sorted(pages.FIXTURES)}
+    return {label: browser.measure(booted[label], _FOCUS, 1440, 900) for label in sorted(pages.FIXTURES)}
 
 
 @needs_browser
@@ -357,17 +357,17 @@ class TestFocusAnswersWhereTheHandIs:
         assert "skipped" not in out, out
         assert out["after"]["panelExists"], out
         assert out["before"]["buttonY"] > 10_000, (
-            f"{label}: the button is at {out['before']['buttonY']} px - too "
-            f"near the top for this to measure a journey")
+            f"{label}: the button is at {out['before']['buttonY']} px - too near the top for this to measure a journey"
+        )
         assert out["after"]["panelInViewport"], (
             f"{label}: Focus pressed at {out['before']['buttonY']} px left "
             f"the investigation out of the viewport, at scrollY "
-            f"{out['after']['scrollY']}")
+            f"{out['after']['scrollY']}"
+        )
 
     def test_the_bar_that_clears_it_comes_too(self, pressed, label):
         """The way back is beside the answer, not where the click was."""
-        assert pressed[label]["after"]["barInViewport"], (
-            label, pressed[label]["after"])
+        assert pressed[label]["after"]["barInViewport"], (label, pressed[label]["after"])
 
     def test_the_focus_button_says_it_is_pressed(self, pressed, label):
         """`aria-pressed`, both because a toggle owes a screen reader one
@@ -378,8 +378,7 @@ class TestFocusAnswersWhereTheHandIs:
 
     def test_the_mark_controls_say_it_too(self, pressed, label):
         """The three beside it, which carried no state at all."""
-        assert pressed[label]["mark"] == ["false", "true"], (
-            label, pressed[label]["mark"])
+        assert pressed[label]["mark"] == ["false", "true"], (label, pressed[label]["mark"])
 
     def test_unfocusing_still_restores_the_document(self, pressed, label):
         """`UX-228`'s invariant, which a state attribute is exactly the
@@ -389,8 +388,7 @@ class TestFocusAnswersWhereTheHandIs:
         `test_focus_is_an_investigation.py` holds the same claim over a
         synthetic root that has **no focus buttons in it**, so it cannot
         see this attribute either way. This one boots the page."""
-        assert pressed[label]["restored"], (
-            f"{label}: focus then unfocus left #report changed")
+        assert pressed[label]["restored"], f"{label}: focus then unfocus left #report changed"
 
 
 #: `UX-536`: three of the four controls the census found saying less
@@ -437,8 +435,7 @@ _SAYS = r"""
 @pytest.fixture(scope="module")
 def census(browser, booted):
     """One drive per fixture, once."""
-    return {label: browser.measure(booted[label], _SAYS, 1440, 900)
-            for label in sorted(pages.FIXTURES)}
+    return {label: browser.measure(booted[label], _SAYS, 1440, 900) for label in sorted(pages.FIXTURES)}
 
 
 @needs_browser
@@ -458,16 +455,16 @@ class TestTheControlsSayWhatTheyDo:
 
     def test_no_collapse_button_is_unnamed(self, census, label):
         out = census[label]
-        assert out["collapse"] > 20, out          # the walk found them
+        assert out["collapse"] > 20, out  # the walk found them
         assert out["unnamed"] == 0, (
-            f"{label}: {out['unnamed']} of {out['collapse']} collapse "
-            f"buttons have no accessible name")
+            f"{label}: {out['unnamed']} of {out['collapse']} collapse buttons have no accessible name"
+        )
 
     def test_no_collapse_button_is_a_submit(self, census, label):
         """`type` defaults to `submit`, which is a different control."""
         assert census[label]["notButton"] == 0, (
-            f"{label}: {census[label]['notButton']} of "
-            f"{census[label]['collapse']} default to type=submit")
+            f"{label}: {census[label]['notButton']} of {census[label]['collapse']} default to type=submit"
+        )
 
     def test_one_preference_is_one_state(self, census, label):
         """One click on any Markdown box moves all of them - and moves
@@ -476,23 +473,21 @@ class TestTheControlsSayWhatTheyDo:
         out = census[label]
         assert out["boxes"] > 10, out
         assert out["checkedAfterOneClick"] == out["boxes"], (
-            f"{label}: one click checked {out['checkedAfterOneClick']} of "
-            f"{out['boxes']} boxes")
+            f"{label}: one click checked {out['checkedAfterOneClick']} of {out['boxes']} boxes"
+        )
         assert out["promisingMarkdown"] == out["boxes"], (
             f"{label}: {out['promisingMarkdown']} of {out['boxes']} copy "
-            f"controls promise Markdown after the box was ticked")
+            f"controls promise Markdown after the box was ticked"
+        )
 
-    def test_the_accelerators_are_announced_where_they_act(
-            self, census, label):
+    def test_the_accelerators_are_announced_where_they_act(self, census, label):
         """`[` and `]` step the rail and were written down nowhere."""
         out = census[label]
         assert out["keys"] and "[" in out["keys"] and "]" in out["keys"], (
-            f"{label}: the step controls carry no accelerator hint: "
-            f"{out['keys']!r}")
+            f"{label}: the step controls carry no accelerator hint: {out['keys']!r}"
+        )
         labels = " ".join(filter(None, out["stepLabels"]))
-        assert "[" in labels and "]" in labels, (
-            f"{label}: neither step control names its key: "
-            f"{out['stepLabels']}")
+        assert "[" in labels and "]" in labels, f"{label}: neither step control names its key: {out['stepLabels']}"
 
 
 if __name__ == "__main__":  # pragma: no cover

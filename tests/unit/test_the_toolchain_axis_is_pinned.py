@@ -16,6 +16,7 @@ What a mixture would look like is checked as its own clause. A host
 `gcc`, its own internal tree, or `/usr/include` staged beside the pin
 links and means nothing, and only the read-back notices.
 """
+
 import os
 import pathlib
 import re
@@ -75,7 +76,6 @@ def _replace(path, contents=None, source=None):
 
 
 class TestThePinIsDeclared:
-
     def test_each_root_is_a_store_path_carrying_its_declared_version(self):
         """The name is not what identifies a store path - the channel
         carries four `gcc-14.3.0` paths, one per architecture, and
@@ -88,8 +88,7 @@ class TestThePinIsDeclared:
             assert pin["axis"] == "toolchain", name
 
     def test_no_two_packages_claim_the_same_binary(self):
-        claimed = [path for pin in nix_toolchain.pins().values()
-                   for path in pin["binaries"]]
+        claimed = [path for pin in nix_toolchain.pins().values() for path in pin["binaries"]]
 
         assert sorted(set(claimed)) == sorted(claimed)
 
@@ -103,16 +102,13 @@ class TestThePinIsDeclared:
     def test_the_stager_stages_no_host_toolchain_binary(self):
         """Read out of the script's own axis array, so putting one back
         reddens here rather than quietly shipping a host compiler."""
-        block = re.search(r"^TOOLCHAIN_BINARIES=\((.*?)^\)", STAGER.read_text(),
-                          re.DOTALL | re.MULTILINE)
+        block = re.search(r"^TOOLCHAIN_BINARIES=\((.*?)^\)", STAGER.read_text(), re.DOTALL | re.MULTILINE)
 
         assert block, "stage_cpp_toolchain.sh no longer declares the array"
-        assert [word for word in block.group(1).split()
-                if word.startswith("/")] == []
+        assert [word for word in block.group(1).split() if word.startswith("/")] == []
 
 
 class TestTheFiveParametersAreDerivedFromTheClosure:
-
     def test_a_tree_with_no_pinned_gcc_is_not_read_as_pinned(self, tmp_path):
         """A `/nix/store` under the tree is not a pinned toolchain -
         the `make` pins put one there. The declared root decides, and
@@ -127,13 +123,13 @@ class TestTheFiveParametersAreDerivedFromTheClosure:
     @staticmethod
     def _skeleton(root, pins):
         """The five mark files, under the declared store paths."""
-        for path in (pins["gcc"]["store_path"]
-                     + "/libexec/gcc/x86_64-unknown-linux-gnu/14.3.0/cc1",
-                     pins["gcc"]["store_path"]
-                     + "/lib/gcc/x86_64-unknown-linux-gnu/14.3.0/libgcc.a",
-                     "/nix/store/bbb-gcc-14.3.0-lib/lib/libstdc++.so",
-                     pins["binutils"]["store_path"] + "/bin/ld.bfd",
-                     "/nix/store/ccc-glibc-2.40-224/lib/crt1.o"):
+        for path in (
+            pins["gcc"]["store_path"] + "/libexec/gcc/x86_64-unknown-linux-gnu/14.3.0/cc1",
+            pins["gcc"]["store_path"] + "/lib/gcc/x86_64-unknown-linux-gnu/14.3.0/libgcc.a",
+            "/nix/store/bbb-gcc-14.3.0-lib/lib/libstdc++.so",
+            pins["binutils"]["store_path"] + "/bin/ld.bfd",
+            "/nix/store/ccc-glibc-2.40-224/lib/crt1.o",
+        ):
             made = pathlib.Path(root + path)
             made.parent.mkdir(parents=True, exist_ok=True)
             made.touch()
@@ -144,10 +140,8 @@ class TestTheFiveParametersAreDerivedFromTheClosure:
 
         found = nix_toolchain.prefixes(str(tmp_path))
 
-        assert sorted(found) == sorted(row["name"]
-                                       for row in nix_toolchain.PREFIXES)
-        assert all(path is not None and path.startswith(str(tmp_path))
-                   for path in found.values()), found
+        assert sorted(found) == sorted(row["name"] for row in nix_toolchain.PREFIXES)
+        assert all(path is not None and path.startswith(str(tmp_path)) for path in found.values()), found
 
     def test_a_prefix_whose_mark_is_gone_is_none_and_never_empty(self, tmp_path):
         """The mutation. `-B` at a directory holding no `as` falls back
@@ -175,8 +169,7 @@ class TestTheFiveParametersAreDerivedFromTheClosure:
         assert exit_code == 1
         assert "binutils" in capsys.readouterr().err
 
-    def test_the_shims_flags_name_the_sandbox_not_the_staging_tree(self,
-                                                                   tmp_path):
+    def test_the_shims_flags_name_the_sandbox_not_the_staging_tree(self, tmp_path):
         """The shim is written on the staging host and read inside the
         sandbox, where the staged tree *is* `/`. A shim carrying the
         staging tree's own absolute paths names nothing there, and
@@ -185,8 +178,7 @@ class TestTheFiveParametersAreDerivedFromTheClosure:
         self._skeleton(str(tmp_path), pins)
         params = tp.parameters(str(tmp_path))
 
-        text = tp.shim_text(nix_toolchain.driver_target("/", "gcc"),
-                            tp.reroot(params, "/"))
+        text = tp.shim_text(nix_toolchain.driver_target("/", "gcc"), tp.reroot(params, "/"))
 
         assert str(tmp_path) not in text, text
         assert text.count("-B/nix/store/") == 5
@@ -195,7 +187,6 @@ class TestTheFiveParametersAreDerivedFromTheClosure:
 
 @staged_only
 class TestTheStagedTreeCarriesThePinAndNothingElse:
-
     def test_every_toolchain_version_is_the_one_declared(self):
         assert sysroot_manifest.divergences(str(SYSROOT)) == []
 
@@ -221,9 +212,13 @@ class TestTheStagedTreeCarriesThePinAndNothingElse:
         """The mixture clause. Each of these is a path the host
         compiler reached and the pin does not, and a build that found
         both would link and mean nothing."""
-        for absent in ("usr/include", "usr/lib/gcc", "usr/libexec/gcc",
-                       "usr/lib/x86_64-linux-gnu/crt1.o",
-                       "usr/share/cmake-3.28"):
+        for absent in (
+            "usr/include",
+            "usr/lib/gcc",
+            "usr/libexec/gcc",
+            "usr/lib/x86_64-linux-gnu/crt1.o",
+            "usr/share/cmake-3.28",
+        ):
             assert not (SYSROOT / absent).exists(), absent
 
     def test_each_driver_is_a_shim_that_execs_the_pins_own_binary(self):
@@ -232,8 +227,7 @@ class TestTheStagedTreeCarriesThePinAndNothingElse:
 
             assert text.startswith("#!/bin/sh\n"), name
             assert "exec '/nix/store/" in text, name
-            assert text.split("exec '")[1].startswith(
-                nix_toolchain.pins()["gcc"]["store_path"] + "/bin/" + execs), name
+            assert text.split("exec '")[1].startswith(nix_toolchain.pins()["gcc"]["store_path"] + "/bin/" + execs), name
 
     def test_each_other_pinned_binary_is_a_link_into_its_store_path(self):
         for package, pin in sorted(nix_toolchain.pins().items()):
@@ -244,10 +238,8 @@ class TestTheStagedTreeCarriesThePinAndNothingElse:
                 link = SYSROOT / path.lstrip("/")
 
                 assert link.is_symlink(), path
-                assert not os.readlink(link).startswith("/"), \
-                    f"{path} is absolute, so it dangles on the staging host"
-                assert os.path.realpath(link).startswith(
-                    str(SYSROOT) + pin["store_path"]), (package, path)
+                assert not os.readlink(link).startswith("/"), f"{path} is absolute, so it dangles on the staging host"
+                assert os.path.realpath(link).startswith(str(SYSROOT) + pin["store_path"]), (package, path)
 
 
 @staged_only
@@ -265,11 +257,9 @@ class TestAHostToolchainStagedOverThePinReddens:
         host = shutil.which("gcc")
         if host is None:
             pytest.skip("no host gcc to stage over the pin")
-        _replace(os.path.join(clone, "usr/bin/gcc"),
-                 source=os.path.realpath(host))
+        _replace(os.path.join(clone, "usr/bin/gcc"), source=os.path.realpath(host))
 
-        assert [name for name, _target
-                in nix_toolchain.shim_divergences(clone)] == ["gcc"]
+        assert [name for name, _target in nix_toolchain.shim_divergences(clone)] == ["gcc"]
         assert nix_toolchain.main([clone, "--check-shims"]) == 1
 
     def test_a_shim_pointed_at_the_host_driver_is_read_too(self, clone):
@@ -277,24 +267,20 @@ class TestAHostToolchainStagedOverThePinReddens:
         every flag in place - and one word of its `exec` line changed."""
         shim = os.path.join(clone, "usr/bin/g++")
         text = pathlib.Path(shim).read_text()
-        _replace(shim, contents=text.replace(
-            "exec '" + nix_toolchain.pins()["gcc"]["store_path"], "exec '/usr"))
+        _replace(shim, contents=text.replace("exec '" + nix_toolchain.pins()["gcc"]["store_path"], "exec '/usr"))
 
-        assert [name for name, _target
-                in nix_toolchain.shim_divergences(clone)] == ["g++"]
+        assert [name for name, _target in nix_toolchain.shim_divergences(clone)] == ["g++"]
 
     def test_a_host_helper_over_the_pins_is_read_too(self, clone):
         """`cc1plus` is not on `PATH` and no element names it, so
         nothing but a probe of its own would notice."""
         pinned = sysroot_manifest.helper_path(clone, "cc1plus")
-        host = subprocess.run(["gcc", "-print-prog-name=cc1plus"],
-                              capture_output=True, text=True).stdout.strip()
+        host = subprocess.run(["gcc", "-print-prog-name=cc1plus"], capture_output=True, text=True).stdout.strip()
         if not os.path.isabs(host):
             pytest.skip("this host resolves no cc1plus to stage over the pin")
         _replace(pinned, source=host)
 
-        assert "cc1plus" in [row[1]
-                             for row in sysroot_manifest.divergences(clone)]
+        assert "cc1plus" in [row[1] for row in sysroot_manifest.divergences(clone)]
 
     def test_a_closure_whose_binutils_is_gone_stops_answering(self, clone):
         """Not `-B` at an empty directory - `-B` at a directory that is
@@ -307,11 +293,12 @@ class TestAHostToolchainStagedOverThePinReddens:
 
 @staged_only
 class TestTheRuntimeAxisDidNotMove:
-
     def test_its_rows_are_what_UX_914_left(self):
-        rows = {(row["name"], row["origin"], row["version"])
-                for row in sysroot_manifest.components()
-                if row["axis"] == "runtime"}
+        rows = {
+            (row["name"], row["origin"], row["version"])
+            for row in sysroot_manifest.components()
+            if row["axis"] == "runtime"
+        }
 
         assert rows == RUNTIME_ROWS
 
@@ -327,8 +314,9 @@ class TestTheRuntimeAxisDidNotMove:
         and the closure's 2.40 loads the pin and everything the pin
         links. Reading one for the other is how a runtime row would
         move without anything saying so."""
-        target = os.path.realpath(sysroot_manifest.nix_store_fetch.sysroot_lib_dir(
-            str(SYSROOT), sysroot_manifest.nix_store_fetch.host_arch()))
+        target = os.path.realpath(
+            sysroot_manifest.nix_store_fetch.sysroot_lib_dir(str(SYSROOT), sysroot_manifest.nix_store_fetch.host_arch())
+        )
         closure = nix_toolchain.glibc_store_path(str(SYSROOT))
 
         assert closure is not None

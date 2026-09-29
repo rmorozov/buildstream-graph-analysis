@@ -20,6 +20,7 @@ UX-272  the header is 92px at 1440 and 134px at 390: 0.1-0.2 screens of
         not because it is where the space goes.
 ```
 """
+
 import os
 import pathlib
 import re
@@ -39,8 +40,7 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 # `UX-450` added a fourth: the section walk left `app.js` for
 # `sections.js`, and `liftedCriticalPath`'s caller went with it.
 APP_MODULES = ("app.js", "sections.js", "format.js", "structured.js", "pairs.js")
-APP = "\n".join((REPO / "bga/viewer" / _name).read_text(encoding="utf-8")
-                for _name in APP_MODULES)
+APP = "\n".join((REPO / "bga/viewer" / _name).read_text(encoding="utf-8") for _name in APP_MODULES)
 NAV = (REPO / "bga/viewer/nav.js").read_text(encoding="utf-8")
 CSS = (REPO / "bga/viewer/style.css").read_text(encoding="utf-8")
 node = shutil.which("node")
@@ -48,12 +48,17 @@ needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 
 
 def _run(script):
-    done = subprocess.run([node, "--input-type=module", "-e", script],
-                          capture_output=True, text=True, cwd=REPO, timeout=60,
-                          env={**os.environ, "BGA_DOM_SHIM":
-                               (REPO / "tests/dom_shim.mjs").as_uri()})
+    done = subprocess.run(
+        [node, "--input-type=module", "-e", script],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=60,
+        env={**os.environ, "BGA_DOM_SHIM": (REPO / "tests/dom_shim.mjs").as_uri()},
+    )
     assert done.returncode == 0, done.stderr
     import json
+
     return json.loads(done.stdout)
 
 
@@ -95,7 +100,7 @@ def _media_blocks(query):
                 if depth == 0:
                     break
             i += 1
-        bodies.append(_declarations(CSS[start:i + 1]))
+        bodies.append(_declarations(CSS[start : i + 1]))
         at = i
 
 
@@ -122,15 +127,14 @@ class TestALongValueIsTruncatedAndASentenceIsNot:
         out = _run(_TEXT)
         assert out["copy_text"]["tag"] == "details", out
         assert out["copy_text"]["kept"] == 400, (
-            "the full value is not carried on the cell, so a reader who "
-            "opens it does not get what was measured")
+            "the full value is not carried on the cell, so a reader who opens it does not get what was measured"
+        )
 
     def test_a_declared_explanation_is_never_truncated(self):
         """The half that matters: hiding a caveat by default is how a
         reader stops seeing it."""
         out = _run(_TEXT)
-        for name in ("capacity_model_note", "resource_wait_us",
-                     "anything_note"):
+        for name in ("capacity_model_note", "resource_wait_us", "anything_note"):
             assert out[name]["tag"] == "span", f"{name} was truncated"
 
     def test_a_short_value_is_left_alone(self):
@@ -145,8 +149,7 @@ class TestALongValueIsTruncatedAndASentenceIsNot:
     def test_every_exemption_carries_a_reason(self):
         block = APP.split("export const EXPLANATIONS = {", 1)[1]
         block = block.split("\n};", 1)[0]
-        entries = re.findall(r"(\w+):\s*\"(.*?)\"(?:\s*\+\s*\"(.*?)\")*", block,
-                             re.S)
+        entries = re.findall(r"(\w+):\s*\"(.*?)\"(?:\s*\+\s*\"(.*?)\")*", block, re.S)
         assert len(entries) >= 4, block
         for entry in entries:
             reason = "".join(part for part in entry[1:] if part)
@@ -168,8 +171,8 @@ class TestTheCriticalPathIsItsOwnSection:
         block = APP.split("export function liftedCriticalPath", 1)[1]
         block = block.split("\n}", 1)[0]
         assert "renderTable(" in block, (
-            "the lifted view uses buildTable, so it is a cell rather than a "
-            "section and nothing can link to it")
+            "the lifted view uses buildTable, so it is a cell rather than a section and nothing can link to it"
+        )
 
     def test_a_run_without_a_path_renders_nothing_rather_than_an_empty_box(self):
         assert "if (!Array.isArray(rows) || !rows.length) return null;" in APP
@@ -187,8 +190,8 @@ class TestTheRailNestsRatherThanGrowingAColumn:
         builder = NAV.split("for (const key of members) {", 1)[1]
         builder = builder.split("nav.append(list);", 1)[0]
         assert "subsections(section, doc)" in builder, (
-            "the rail no longer builds its second level, so it is flat "
-            "again (UX-271)")
+            "the rail no longer builds its second level, so it is flat again (UX-271)"
+        )
         assert "item.append(inner)" in builder
 
     def test_the_nested_list_is_bounded_and_says_what_it_hid(self):
@@ -206,7 +209,8 @@ class TestTheRailNestsRatherThanGrowingAColumn:
         assert "UX-271" in NAV
         assert "third column" in NAV, (
             "the declined alternative is no longer recorded, so it will be "
-            "re-proposed without the measurement against it")
+            "re-proposed without the measurement against it"
+        )
 
     def test_the_grid_still_has_two_content_columns(self):
         """The measurement behind the refusal: a third column would
@@ -230,19 +234,18 @@ class TestTheHeaderIsOneRowWhereThereIsRoom:
     """
 
     def test_it_is_one_column_of_identity(self):
-        block = "\n".join(re.findall(
-            r"body\[data-has-toc\] > header\s*\{([^}]*)\}", CSS))
+        block = "\n".join(re.findall(r"body\[data-has-toc\] > header\s*\{([^}]*)\}", CSS))
         assert "display: block" in block, block
         assert "grid-template-areas" not in block, (
             "the header is laying out columns again - §2b.2 says it carries "
-            "identity only, and the second column existed for the actions")
+            "identity only, and the second column existed for the actions"
+        )
 
     def test_the_actions_have_their_own_band(self):
         """They did not disappear: `UX-198`'s fallback link and
         `UX-314`'s download sentence are still on the page, in the group
         with the control they explain."""
-        assert "body[data-has-toc] > .actions-group" in CSS, (
-            "the actions group has no place in the layout")
+        assert "body[data-has-toc] > .actions-group" in CSS, "the actions group has no place in the layout"
 
     def test_the_sticky_offset_follows_the_header_it_offsets(self):
         """Measured in Chromium after `UX-317`: 92px at 1440x900, 134px
@@ -251,16 +254,15 @@ class TestTheHeaderIsOneRowWhereThereIsRoom:
         the narrow width."""
         blocks = _media_blocks("(max-width: 60rem)")
         assert any("--head" in b for b in blocks), (
-            "`--head` does not change with the header's height, so an anchor "
-            "lands under the heading at 390px")
+            "`--head` does not change with the header's height, so an anchor lands under the heading at 390px"
+        )
 
     def test_nothing_was_removed_from_the_page(self):
         html = (REPO / "bga/viewer/index.html").read_text(encoding="utf-8")
-        for slot in ("run-name", "run-path", "run-producer", "actions",
-                     "actions-fallback", "actions-download"):
+        for slot in ("run-name", "run-path", "run-producer", "actions", "actions-fallback", "actions-download"):
             assert f'id="{slot}"' in html, (
-                f"{slot} left the page - each is there for a filed reason "
-                f"(UX-255, UX-198, UX-314)")
+                f"{slot} left the page - each is there for a filed reason (UX-255, UX-198, UX-314)"
+            )
 
 
 if __name__ == "__main__":  # pragma: no cover

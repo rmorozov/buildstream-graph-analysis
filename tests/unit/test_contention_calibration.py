@@ -10,6 +10,7 @@ per-task durations at the swept capacity, and leave any task with fewer
 than 2 real calibration points on tier 1's own fixed, uncalibrated
 duration - exactly what these tests verify.
 """
+
 from bga.ingest.models import (
     Graph,
     NormalizedTask,
@@ -45,12 +46,16 @@ def _span(uid, dur_us, kind=TaskKind.BUILD, phase="BUILD"):
 def _task(uid, dur_us, dependencies=(), kind=TaskKind.BUILD, phase="BUILD"):
     return NormalizedTask(
         task_key=TaskKey(uid, kind, phase, 0),
-        ready_us=0, start_us=0, finish_us=dur_us,
-        dependencies=list(dependencies), resources=[Resource.PROCESS],
+        ready_us=0,
+        start_us=0,
+        finish_us=dur_us,
+        dependencies=list(dependencies),
+        resources=[Resource.PROCESS],
     )
 
 
 # --- build_contention_calibration ---------------------------------------
+
 
 def test_build_calibration_groups_by_element_kind_phase_across_runs():
     run4 = _hist_run(4, [_span("core.bst", 100000)])
@@ -87,6 +92,7 @@ def test_build_calibration_keeps_tasks_from_different_runs_separate_by_element()
 
 # --- _interpolate_calibrated_duration ------------------------------------
 
+
 def test_interpolate_exact_match_at_calibrated_capacity():
     duration, extrapolated = _interpolate_calibrated_duration([(4, 100000), (8, 150000)], 4)
     assert duration == 100000
@@ -119,13 +125,15 @@ def test_interpolate_averages_duplicate_capacity_points():
     calibration key deliberately excludes attempt) collapse to their
     average before interpolating."""
     duration, extrapolated = _interpolate_calibrated_duration(
-        [(4, 100000), (4, 120000), (8, 200000)], 4,
+        [(4, 100000), (4, 120000), (8, 200000)],
+        4,
     )
     assert duration == 110000
     assert extrapolated is False
 
 
 # --- ReplayScheduler.capacity_sweep(contention_calibration=...) --------
+
 
 def test_sweep_without_calibration_reproduces_tier_1_unchanged():
     """None (the default) - no contention_model key on any sweep entry,
@@ -156,7 +164,10 @@ def test_sweep_with_calibration_shows_real_degradation_not_a_flat_plateau():
     }
 
     result = scheduler.capacity_sweep(
-        "PROCESS", min_capacity=4, max_capacity=8, step=4,
+        "PROCESS",
+        min_capacity=4,
+        max_capacity=8,
+        step=4,
         contention_calibration=calibration,
     )
 
@@ -182,7 +193,10 @@ def test_sweep_calibration_flags_extrapolated_capacities():
     calibration = {("core.bst", "BUILD", "BUILD"): [(4, 100000), (8, 150000)]}
 
     result = scheduler.capacity_sweep(
-        "PROCESS", min_capacity=2, max_capacity=10, step=8,  # samples capacity=2 and capacity=10
+        "PROCESS",
+        min_capacity=2,
+        max_capacity=10,
+        step=8,  # samples capacity=2 and capacity=10
         contention_calibration=calibration,
     )
 
@@ -201,7 +215,9 @@ def test_sweep_calibration_requires_two_distinct_capacities_not_just_two_points(
     calibration = {("core.bst", "BUILD", "BUILD"): [(4, 90000), (4, 110000)]}  # same capacity twice
 
     result = scheduler.capacity_sweep(
-        "PROCESS", min_capacity=4, max_capacity=4,
+        "PROCESS",
+        min_capacity=4,
+        max_capacity=4,
         contention_calibration=calibration,
     )
 

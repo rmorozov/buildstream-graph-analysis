@@ -21,6 +21,7 @@ The two invariants these guards exist for:
   still ranked and still in the horizon. A ranking that quietly drops
   what the reader dismissed is one they cannot check.
 """
+
 import json
 import os
 import shutil
@@ -99,15 +100,15 @@ const snapshot = (root) => JSON.stringify(root, (k, v) =>
 
 
 def _js(body):
-    result = subprocess.run([node, "--input-type=module", "-e", _SHIM + body],
-                            capture_output=True, text=True, cwd=REPO, timeout=60)
+    result = subprocess.run(
+        [node, "--input-type=module", "-e", _SHIM + body], capture_output=True, text=True, cwd=REPO, timeout=60
+    )
     assert result.returncode == 0, result.stderr
     return json.loads(result.stdout)
 
 
 @needs_node
 class TestFocusDimsAndNeverRemoves:
-
     def test_only_the_other_elements_are_dimmed(self):
         out = _js('''
           const f = await import("./bga/viewer/focus.js");
@@ -185,7 +186,6 @@ class TestFocusDimsAndNeverRemoves:
 
 @needs_node
 class TestMarksAnnotateAndNeverFilter:
-
     def test_a_mark_lands_on_every_occurrence(self):
         out = _js('''
           const f = await import("./bga/viewer/focus.js");
@@ -254,7 +254,6 @@ class TestMarksAnnotateAndNeverFilter:
 
 @needs_node
 class TestBothTravelInTheFragment:
-
     def test_focus_round_trips(self):
         out = _js('''
           const f = await import("./bga/viewer/focus.js");
@@ -338,19 +337,16 @@ class TestBothTravelInTheFragment:
         guard that fired on the explanation would be rewarding silence
         about the decision.
         """
-        source = open(os.path.join(REPO, "bga/viewer/focus.js"),
-                      encoding="utf-8").read()
-        code = "\n".join(line for line in source.splitlines()
-                         if not line.lstrip().startswith("//"))
+        source = open(os.path.join(REPO, "bga/viewer/focus.js"), encoding="utf-8").read()
+        code = "\n".join(line for line in source.splitlines() if not line.lstrip().startswith("//"))
         for banned in ("localStorage", "sessionStorage", "indexedDB"):
             assert banned not in code, (
-                f"{banned} remembers for one reader on one browser; the "
-                f"fragment is the channel these two travel in")
+                f"{banned} remembers for one reader on one browser; the fragment is the channel these two travel in"
+            )
 
 
 @needs_node
 class TestTheControlsAreOnEveryElement:
-
     def test_each_element_section_offers_focus_and_the_three_marks(self):
         out = _js('''
           const v = await import("./tests/viewer.mjs");

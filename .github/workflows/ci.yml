@@ -20,6 +20,12 @@ env:
   BST_VERSION: "2.8.1"
   BST_PLUGINS_VERSION: "2.8.0"
 
+# `UX-1108`: a newer push to a PR cancels its older run; a push to main
+# groups on its own run id, so its adopt jobs are never cancelled.
+concurrency:
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   # `UX-956`: `docs_only` is true only for a pull request whose every
   # path is docs (`tools/dev_docs_only.py`, stdlib only, so no install);
@@ -128,40 +134,8 @@ jobs:
       - name: Lint
         run: make lint
 
-      # UX-238: the small tier is the inner loop's tier, and its value is
-      # that it stays fast. Nothing stops a slow test landing in it -
-      # it is the *default*, so a new file joins it silently - which is
-      # why the budget is enforced here rather than trusted.
-      #
-      # UX-363: re-measured 2026-08-29 across all four interpreters -
-      # 17.3-25.9s on this step; 31s was the bound. Round 66 met a
-      # slower runner still (29s on 3.9, run 33303144837) and the bound
-      # is 32s. It is sized so that one *large* file landing in the
-      # UX-421: this is a BACKSTOP, not a budget. It catches a hang and
-      # nothing finer. A wall-clock step timeout cannot separate a
-      # runner four seconds slower than its siblings from a fifteen-
-      # second file in the default tier - round 66 proved it, with 3.9
-      # killed at 30s while 3.10, 3.11 and 3.12 passed the same step on
-      # the same commit. The job it used to claim belongs to the
-      # "Tiers match CI's own record of them" step below, which divides
-      # the runner out first and names the file. Keep in step with
-      # SMALL_TIER_BACKSTOP_S in tests/tiers.py.
-      # `UX-618`: it writes the junit too, so "The failing tests, named"
-      # has something to read. This step is the one that fails most, and
-      # until now a failure here left the namer with no file at all -
-      # every red backstop cost a bisect against a log tail. The later
-      # `Test` step overwrites this junit when it runs, which is what the
-      # drift gate wants; when the backstop fails, `Test` is skipped and
-      # this junit is the record that survives.
-      #
-      # `UX-743`: 120 -> 300. The step measured 66-87s across the four
-      # jobs of run 34054287865; 120 was sized against a 29s reading
-      # from round 66, and the suite has doubled since.
-      - name: Test (small tier, with a backstop)
-        run: |
-          timeout 300 make test-small \
-            PYTEST_ARGS="--junitxml=${{ runner.temp }}/junit.xml"
-
+      # `UX-1111`: no small-tier backstop step - pytest-timeout (`timeout` in
+      # pyproject.toml) fails a hung test by name inside the run below.
       # UX-420: one interpreter writes a report, because one is enough
       # to read this runner against its own past and four would be four
       # references to keep true.
@@ -465,6 +439,8 @@ jobs:
       # and the diff-touches-`bga/analyzer.py` gate both live inside the
       # tool, reading the diff `origin/<default>` fetched above.
       - name: The analyzer's wall clock and RSS, against CI's own record
+        # `UX-1121`: on a PR a verdict of the runner's speed reports, never fails.
+        continue-on-error: ${{ github.event_name == 'pull_request' }}
         run: |
           python tools/dev_perf_ratchet.py --against tests/ci_reference.json \
             --carry "${{ runner.temp }}/perf_carry.json" \
@@ -481,6 +457,21 @@ jobs:
           path: ${{ runner.temp }}/perf_carry.json
           key: perf-carry-${{ github.ref }}-${{ github.run_id }}
         if: always() && matrix.python-version == '3.12'
+
+      # `UX-1121`: on a PR both timing gates report; a notice per summary line.
+      - name: The timing gates' verdicts, reported
+        if: always() && matrix.python-version == '3.12' && github.event_name == 'pull_request'
+        run: |
+          for gate in tier_gate perf_gate; do
+            summary="${{ runner.temp }}/$gate.txt"
+            if [ ! -s "$summary" ]; then
+              echo "::notice::$gate: the gate wrote no summary"
+              continue
+            fi
+            while IFS= read -r line; do
+              echo "::notice::$gate: $line"
+            done < "$summary"
+          done
 
       - name: Upload it, so refreshing the reference needs no scrolling
         if: always() && matrix.python-version == '3.12'
@@ -534,12 +525,12 @@ jobs:
       # partition guard's regex stopped at the first `timeout` in this
       # file. SMALL_TIER_BACKSTOP_1P_S in tests/tiers.py.
       #
-      # `UX-743`: 120 -> 900, and no longer equal to the step above.
-      # All four jobs of run 34054287865 were killed at 120 with no
-      # test failure recorded - single process now costs 2.95x the
-      # parallel run, which one shared number could not sit above.
+      # `UX-743`: 120 -> 900. All four jobs of run 34054287865 were
+      # killed at 120 with no test failure recorded.
+      # `UX-1111`: push only; the timeout stays for a hang in collection.
       - name: Test (small tier, single process)
         run: PYTEST_XDIST= timeout 900 make test-small
+        if: github.event_name == 'push'
 
       # `UX-943`: what the adopt jobs read - every step of this cell
       # passed, the drift gate's excepted. Written only when true.
@@ -549,8 +540,9 @@ jobs:
           PY: ${{ matrix.python-version }}
         run: echo "clean_${PY//./}=true" >> "$GITHUB_OUTPUT"
 
+      # `UX-1121`: a PR reports it (below); timing.yml holds the daily verdict.
       - name: The drift gate's red, raised
-        if: always() && steps.drift.outcome == 'failure'
+        if: always() && steps.drift.outcome == 'failure' && github.event_name != 'pull_request'
         run: |
           cat "${{ runner.temp }}/tier_gate.txt" \
             || echo "the gate step wrote no summary."
@@ -819,8 +811,11 @@ jobs:
   # on a change, same as the two jobs it follows.
   area-pages-publish:
     needs: [touch-map-adopt, flake-ledger-adopt]
+    # `UX-1115`: a skipped adopt satisfies `!cancelled()`; a red suite must not publish.
     if: >-
       !cancelled()
+      && needs.touch-map-adopt.result == 'success'
+      && needs.flake-ledger-adopt.result == 'success'
       && github.event_name == 'push'
       && github.ref == format('refs/heads/{0}',
                               github.event.repository.default_branch)
@@ -1160,8 +1155,9 @@ jobs:
     # that genuinely exercises the sandbox, not just an import). It exists
     # to de-risk before investing in a fuller real-build CI job/example
     # projects: if this doesn't work, that job needs a different design.
+    # `UX-1109`: nothing here reads `test`'s output, so it starts beside it.
     runs-on: ubuntu-latest
-    needs: [changes, test]
+    needs: [changes]
     if: needs.changes.outputs.docs_only != 'true'
     steps:
       - uses: actions/checkout@v7
@@ -1223,7 +1219,7 @@ jobs:
     # A single Python version is enough - this job is about the bst seam,
     # not about interpreter compatibility, which the `test` matrix covers.
     runs-on: ubuntu-latest
-    needs: [changes, test, bst-smoke]
+    needs: [changes, bst-smoke]
     if: needs.changes.outputs.docs_only != 'true'
     steps:
       - uses: actions/checkout@v7
@@ -1359,7 +1355,7 @@ jobs:
     # names that range beside it. Its exact figures - store paths
     # staged, elements per report - leave as notices from the UX-941 step.
     runs-on: ubuntu-latest
-    needs: [changes, test, bst-smoke]
+    needs: [changes, bst-smoke]
     if: needs.changes.outputs.docs_only != 'true'
     steps:
       - uses: actions/checkout@v7
@@ -1814,6 +1810,8 @@ jobs:
             giant.bst "$OUT/capture-auto.txt"
 
       - name: Calibrate the runner's width and run the pinned 2x2 arm (UX-1004)
+        # `UX-1110`: gates nothing, so a PR pays for it only under the `jobserver` label.
+        if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'jobserver')
         run: |
           set -euo pipefail
           PROJ=examples/11-serial-giant

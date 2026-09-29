@@ -29,6 +29,7 @@ seed at all:
 Neither is a defect in `bga`; both are the seed being wrong in a way
 only a walk could see.
 """
+
 import gzip
 import json
 import os
@@ -45,12 +46,14 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 def _bga(*argv, cwd=None, expect=0):
     done = subprocess.run(
         [sys.executable, "-m", "bga.cli", *argv],
-        capture_output=True, text=True, cwd=str(cwd or REPO), timeout=300,
-        env={**os.environ, "PYTHONPATH": str(REPO)})
+        capture_output=True,
+        text=True,
+        cwd=str(cwd or REPO),
+        timeout=300,
+        env={**os.environ, "PYTHONPATH": str(REPO)},
+    )
     if expect is not None:
-        assert done.returncode == expect, (argv, done.returncode,
-                                           done.stdout[-1500:],
-                                           done.stderr[-1500:])
+        assert done.returncode == expect, (argv, done.returncode, done.stdout[-1500:], done.stderr[-1500:])
     return done
 
 
@@ -82,8 +85,7 @@ class TestTheSeedIsAStore:
         for snapshot in (seed / ".bga" / "runs").iterdir():
             assert (snapshot / "build.log").is_file(), snapshot
             assert (snapshot / "plane2.log.gz").is_file(), snapshot
-            for name in ("graph.json", "trace.json", "run-context.json",
-                         "sources.json"):
+            for name in ("graph.json", "trace.json", "run-context.json", "sources.json"):
                 assert (snapshot / "run" / name).is_file(), (snapshot, name)
 
     def test_the_plane_2_log_parses_to_records(self, seed):
@@ -97,23 +99,23 @@ class TestTheSeedIsAStore:
         with gzip.open(newest / "plane2.log.gz", "rt") as handle:
             records = list(stream_records(iter(parse_trace_lines(handle))))
         assert len(records) >= 10, (
-            "the seed's Plane 2 log parses to almost nothing - check the "
-            "`pid`/`ppid`/`ts` field order", len(records))
-        assert all(r.get("element") for r in records), (
-            "a record carries no element, so the two planes cannot align")
+            "the seed's Plane 2 log parses to almost nothing - check the `pid`/`ppid`/`ts` field order",
+            len(records),
+        )
+        assert all(r.get("element") for r in records), "a record carries no element, so the two planes cannot align"
 
     def test_the_wrapped_log_gives_every_element_its_own_span(self, seed):
         """The second defect the first draft had: one cache key for all
         of them, and fourteen elements became three spans."""
         newest = sorted((seed / ".bga" / "runs").iterdir())[-1]
-        graph = json.loads(
-            (newest / "run" / "graph.json").read_text(encoding="utf-8"))
+        graph = json.loads((newest / "run" / "graph.json").read_text(encoding="utf-8"))
         log = (newest / "build.log").read_text(encoding="utf-8")
         keys = set(re.findall(r"\]\[([0-9a-f]{8})\]\[\s*build:", log))
         assert len(keys) == len(graph["elements"]), (
-            "the wrapped log does not give each element its own cache "
-            "key, so their spans collapse into one another",
-            len(keys), len(graph["elements"]))
+            "the wrapped log does not give each element its own cache key, so their spans collapse into one another",
+            len(keys),
+            len(graph["elements"]),
+        )
 
 
 class TestTheWalkTheReadmePromises:
@@ -140,8 +142,7 @@ class TestTheWalkTheReadmePromises:
         """`UX-171`'s inventory, seeded - without it `blast` says "this
         run carries no source inventory" and the reader is back at a
         dead end."""
-        done = _bga("blast", "https://example.invalid/shared-toolchain.git",
-                    "@last", cwd=seed)
+        done = _bga("blast", "https://example.invalid/shared-toolchain.git", "@last", cwd=seed)
         assert "Sourced directly by" in done.stdout, done.stdout
         assert "Nothing matched" not in done.stdout, done.stdout
 
@@ -151,8 +152,7 @@ class TestTheWalkTheReadmePromises:
         out = tmp_path / "timeline.pftrace.gz"
         done = _bga("timeline", "@last", "-o", str(out), cwd=seed)
         report = json.loads(done.stdout.strip().splitlines()[-1])
-        assert report["planes"] == ["1", "2"], (
-            "the seed's timeline is not both planes", report)
+        assert report["planes"] == ["1", "2"], ("the seed's timeline is not both planes", report)
         assert report["anchor"], "the two planes did not align on an element"
         assert report["slices"] > 10, report
 
@@ -167,8 +167,7 @@ class TestTheWalkTheReadmePromises:
         """The third friction, and the one that reproduced on the
         *committed* capture too - see the class below."""
         newest = sorted((seed / ".bga" / "runs").iterdir())[-1]
-        done = _bga("capture", "report", str(newest / "plane2.log.gz"),
-                    cwd=seed)
+        done = _bga("capture", "report", str(newest / "plane2.log.gz"), cwd=seed)
         assert "Native Build Trace" in done.stdout, done.stdout
 
 
@@ -192,8 +191,7 @@ class TestTheMissingLogNamesItsOwnCause:
 
     def test_a_run_directory_is_told_to_try_its_parent(self):
         """The case the old message was written for, kept."""
-        done = _bga("timeline", "tests/fixtures/golden/mixed_task_kinds",
-                    "-o", os.devnull, expect=None)
+        done = _bga("timeline", "tests/fixtures/golden/mixed_task_kinds", "-o", os.devnull, expect=None)
         assert done.returncode != 0
         assert "run* directory" in done.stderr, done.stderr
         assert "try " in done.stderr
@@ -209,15 +207,15 @@ class TestTheMissingLogNamesItsOwnCause:
         assert "this capture kept none" in done.stderr, done.stderr
         assert "try its parent" not in done.stderr, (
             "still sending the reader up a directory from a snapshot",
-            done.stderr)
+            done.stderr,
+        )
 
     def test_neither_shape_says_so(self, tmp_path):
         empty = tmp_path / "not-a-capture"
         empty.mkdir()
         done = _bga("timeline", str(empty), "-o", os.devnull, expect=None)
         assert done.returncode != 0
-        assert "neither a snapshot directory nor a run directory" in \
-            done.stderr, done.stderr
+        assert "neither a snapshot directory nor a run directory" in done.stderr, done.stderr
 
     def test_the_three_messages_are_actually_different(self, tmp_path):
         """The positive control. Three branches that produced one
@@ -228,12 +226,10 @@ class TestTheMissingLogNamesItsOwnCause:
         empty = tmp_path / "nothing"
         empty.mkdir()
         said = {
-            _bga("timeline", target, "-o", os.devnull,
-                 expect=None).stderr.strip()
-            for target in ("tests/fixtures/golden/mixed_task_kinds",
-                           str(snapshot), str(empty))}
-        assert len(said) == 3, ("two of the three cases print the same "
-                                "sentence", said)
+            _bga("timeline", target, "-o", os.devnull, expect=None).stderr.strip()
+            for target in ("tests/fixtures/golden/mixed_task_kinds", str(snapshot), str(empty))
+        }
+        assert len(said) == 3, ("two of the three cases print the same sentence", said)
 
 
 class TestAGzippedRawLogIsARawLog:
@@ -270,8 +266,7 @@ class TestAGzippedRawLogIsARawLog:
     #: inventing one. The seed's own log is guarded above and is
     #: present everywhere, so the fix is never unguarded; what these
     #: add is the same answer on a capture nobody wrote for this test.
-    REAL = REPO / ("examples/06-macro-micro-optimization/.bga/runs/"
-                   "20260821T170127Z/plane2.log.gz")
+    REAL = REPO / ("examples/06-macro-micro-optimization/.bga/runs/20260821T170127Z/plane2.log.gz")
     ABSENT = "the example capture is not in this clone (UX-189)"
 
     @pytest.mark.skipif(not REAL.exists(), reason=ABSENT)
@@ -291,8 +286,7 @@ class TestAGzippedRawLogIsARawLog:
         renamed.write_bytes(self.REAL.read_bytes())
         first = _bga("capture", "report", str(plain)).stdout
         second = _bga("capture", "report", str(renamed)).stdout
-        assert first.splitlines()[3] == second.splitlines()[3], (
-            first.splitlines()[3], second.splitlines()[3])
+        assert first.splitlines()[3] == second.splitlines()[3], (first.splitlines()[3], second.splitlines()[3])
 
     def test_the_seed_covers_this_where_the_capture_does_not(self, seed):
         """The clause that runs everywhere, so the two above skipping in

@@ -3,6 +3,7 @@ number behind it. This reads the paragraph that replaced that prose and
 asserts it still carries what makes it a measurement rather than an
 adjective: a percentage, a host class, a date, and a budget verdict.
 """
+
 import pathlib
 import re
 
@@ -30,20 +31,16 @@ def test_the_paragraph_exists():
 
 
 def test_it_names_a_percentage():
-    assert PERCENT.search(_paragraph()), (
-        "the overhead paragraph names no percentage - it is prose again")
+    assert PERCENT.search(_paragraph()), "the overhead paragraph names no percentage - it is prose again"
 
 
 def test_it_names_a_host_class():
-    assert HOST_CLASS.search(_paragraph()), (
-        "the overhead paragraph names no host class")
+    assert HOST_CLASS.search(_paragraph()), "the overhead paragraph names no host class"
 
 
 def test_it_names_a_date():
-    assert ISO_DATE.search(_paragraph()), (
-        "the overhead paragraph is undated")
+    assert ISO_DATE.search(_paragraph()), "the overhead paragraph is undated"
 
 
 def test_it_states_which_arms_fit_the_budget():
-    assert BUDGET.search(_paragraph()), (
-        "the overhead paragraph never says whether the arms fit the budget")
+    assert BUDGET.search(_paragraph()), "the overhead paragraph never says whether the arms fit the budget"

@@ -10,6 +10,7 @@ from the *description*: `bga`'s own subcommands pass a single sentence
 that should wrap to the terminal, while the tool parsers pass a short
 pre-formatted block whose line breaks are deliberate.
 """
+
 import argparse
 
 # Wide enough for the longest flag in this CLI to share its line, narrow

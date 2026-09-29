@@ -10,6 +10,7 @@ ten-element artificial dependency chain, printed
 `Bottlenecks Identified: 5` for the five chained libraries that *were*
 the answer.
 """
+
 from bga.report.text import format_text
 
 
@@ -50,10 +51,12 @@ def _long_path_result():
         _detail("app.bst", 4_200_000, 0.14),
         _detail("all.bst", 0, 0.0, kind="stack", structural=True),
     ]
-    return _Result(signals={
-        "critical_path_length": len(path),
-        "critical_path_detail": detail,
-    })
+    return _Result(
+        signals={
+            "critical_path_length": len(path),
+            "critical_path_detail": detail,
+        }
+    )
 
 
 def test_long_critical_path_is_printed_not_withheld():
@@ -79,10 +82,12 @@ def test_structural_elements_on_the_path_are_tagged_not_hidden():
 
 def test_short_critical_path_keeps_the_one_line_arrow_form():
     path = ["core.bst", "lib-a.bst", "app.bst"]
-    result = _Result(signals={
-        "critical_path_length": len(path),
-        "critical_path_detail": [_detail(uid, 1_000_000, 0.33) for uid in path],
-    })
+    result = _Result(
+        signals={
+            "critical_path_length": len(path),
+            "critical_path_detail": [_detail(uid, 1_000_000, 0.33) for uid in path],
+        }
+    )
     out = format_text(result, section="graph")
     assert "Path: core.bst → lib-a.bst → app.bst" in out
 
@@ -99,22 +104,26 @@ def test_long_path_without_detail_still_prints_the_chain():
 
 
 def test_choke_points_are_named():
-    result = _Result(structural={
-        "metrics": {"num_elements": 11, "num_edges": 34, "max_depth": 9},
-        "bottleneck": {"choke_points": ["lib-a.bst", "lib-b.bst", "lib-c.bst"]},
-        "parallelism": {},
-    })
+    result = _Result(
+        structural={
+            "metrics": {"num_elements": 11, "num_edges": 34, "max_depth": 9},
+            "bottleneck": {"choke_points": ["lib-a.bst", "lib-b.bst", "lib-c.bst"]},
+            "parallelism": {},
+        }
+    )
     out = format_text(result, section="graph")
     assert "Bottlenecks Identified: 3 - lib-a.bst, lib-b.bst, lib-c.bst" in out
 
 
 def test_choke_point_overflow_is_stated_not_silently_dropped():
     choke_points = [f"lib-{i}.bst" for i in range(12)]
-    result = _Result(structural={
-        "metrics": {"num_elements": 20, "num_edges": 40, "max_depth": 9},
-        "bottleneck": {"choke_points": choke_points},
-        "parallelism": {},
-    })
+    result = _Result(
+        structural={
+            "metrics": {"num_elements": 20, "num_edges": 40, "max_depth": 9},
+            "bottleneck": {"choke_points": choke_points},
+            "parallelism": {},
+        }
+    )
     out = format_text(result, section="graph")
     assert "Bottlenecks Identified: 12 - " in out
     assert "(+4 more, see --format json)" in out

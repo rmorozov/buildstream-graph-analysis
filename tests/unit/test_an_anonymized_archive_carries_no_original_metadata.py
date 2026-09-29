@@ -8,6 +8,7 @@ or drops the manifest fields that name a machine or a capture. Member
 contents are `UX-1062`'s guard; the members here are the least that
 clears its disclosure policy.
 """
+
 import os
 import tarfile
 
@@ -55,8 +56,7 @@ def key_and_map(project):
     return key, pmap
 
 
-def test_the_anonymized_archive_and_manifest_carry_no_original_metadata(
-        snapshot, key_and_map, tmp_path, monkeypatch):
+def test_the_anonymized_archive_and_manifest_carry_no_original_metadata(snapshot, key_and_map, tmp_path, monkeypatch):
     key, pmap = key_and_map
     # `tarfile.add()` would stamp the *real* mtime/uid/gid of the files
     # this test wrote; overriding `TarInfo.gettarinfo` proves the
@@ -90,8 +90,7 @@ def test_the_anonymized_archive_and_manifest_carry_no_original_metadata(
         assert STAMP not in info.name
 
 
-def test_the_default_anonymized_name_carries_no_stamp(
-        snapshot, key_and_map, tmp_path, monkeypatch):
+def test_the_default_anonymized_name_carries_no_stamp(snapshot, key_and_map, tmp_path, monkeypatch):
     key, pmap = key_and_map
     monkeypatch.chdir(tmp_path)
     path, _manifest = bundle.export_anonymized(snapshot, key, pmap, approve=_yes)

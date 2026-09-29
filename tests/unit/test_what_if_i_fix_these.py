@@ -25,6 +25,7 @@ published `makespan_after_us` differs from the naive
 so a drawing that summed savings would disagree with the payload on
 every bar, not just in principle.
 """
+
 import json
 import os
 import shutil
@@ -60,16 +61,20 @@ const href = (n) => n.href ?? n.attrs.href ?? "";
 def report():
     """The committed golden fixture, analyzed through the real CLI."""
     proc = subprocess.run(
-        [sys.executable, "-m", "bga.cli", "analyze", GOLDEN,
-         "--format", "json", "--diagnostics"],
-        capture_output=True, text=True, cwd=REPO)
+        [sys.executable, "-m", "bga.cli", "analyze", GOLDEN, "--format", "json", "--diagnostics"],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+    )
     assert proc.returncode == 0, proc.stderr
     return json.loads(proc.stdout)
 
 
 @pytest.fixture(scope="module")
 def drawn(report):
-    script = _SHIM + f'''
+    script = (
+        _SHIM
+        + f'''
       const {{ renderHorizon }} = await import("./tests/viewer.mjs");
       const section = renderHorizon({json.dumps(report)});
       if (section === null) {{ console.log(JSON.stringify(null)); }}
@@ -102,19 +107,19 @@ def drawn(report):
         }}));
       }}
     '''
-    result = subprocess.run([node, "--input-type=module", "-e", script],
-                            capture_output=True, text=True, cwd=REPO, timeout=60)
+    )
+    result = subprocess.run(
+        [node, "--input-type=module", "-e", script], capture_output=True, text=True, cwd=REPO, timeout=60
+    )
     assert result.returncode == 0, result.stderr
     return json.loads(result.stdout)
 
 
 @needs_node
 class TestEveryWidthIsAPublishedMakespan:
-
     def test_one_row_per_published_step_plus_now(self, report, drawn):
         steps = report["optimization_horizon"]
-        assert len(drawn["rows"]) == len(steps) + 1, (
-            "one row per step, plus the run as it stands")
+        assert len(drawn["rows"]) == len(steps) + 1, "one row per step, plus the run as it stands"
 
     def test_the_first_row_is_the_run_as_it_stands(self, report, drawn):
         now = drawn["rows"][0]
@@ -140,8 +145,7 @@ class TestEveryWidthIsAPublishedMakespan:
             width = _decl(row["style"], "--w")
             assert width.endswith("%"), row
             drawn_pct = float(width.rstrip("%"))
-            assert drawn_pct == pytest.approx(
-                (int(row["makespan"]) / total) * 100), row
+            assert drawn_pct == pytest.approx((int(row["makespan"]) / total) * 100), row
 
     def test_a_width_is_never_a_sum_of_savings(self, report, drawn):
         """The mutation this fixture discriminates: on every step the
@@ -150,14 +154,12 @@ class TestEveryWidthIsAPublishedMakespan:
         steps = report["optimization_horizon"]
         for step, row in zip(steps, drawn["rows"][1:]):
             naive = total - step["cumulative_saving_us"]
-            assert step["makespan_after_us"] != naive, (
-                "fixture no longer discriminates; pick another")
+            assert step["makespan_after_us"] != naive, "fixture no longer discriminates; pick another"
             assert row["makespan"] != str(naive), row
 
 
 @needs_node
 class TestTheDrawingNamesWhatEntersThePath:
-
     def test_entering_is_exactly_the_payloads(self, report, drawn):
         steps = report["optimization_horizon"]
         for step, row in zip(steps, drawn["rows"][1:]):
@@ -165,8 +167,7 @@ class TestTheDrawingNamesWhatEntersThePath:
 
     def test_the_fixture_has_a_step_that_enters(self, report):
         """Otherwise the guard above passes over four empty lists."""
-        entering = [s for s in report["optimization_horizon"]
-                    if s.get("entering")]
+        entering = [s for s in report["optimization_horizon"] if s.get("entering")]
         assert entering, "the fixture must have at least one entering element"
 
     def test_entering_elements_link_to_their_sections(self, drawn):
@@ -184,7 +185,6 @@ class TestTheDrawingNamesWhatEntersThePath:
 
 @needs_node
 class TestTheTotalIsPublishedValuesOnly:
-
     def test_the_total_reads_the_last_steps_cumulative_saving(self, report, drawn):
         last = report["optimization_horizon"][-1]
         assert drawn["total"]["cumulative"] == str(last["cumulative_saving_us"])
@@ -217,17 +217,26 @@ class TestTheTotalIsPublishedValuesOnly:
         payload = {
             "total_duration_us": 100,
             "optimization_horizon": [
-                {"element_uid": "a.bst", "saving_us": 10,
-                 "makespan_after_us": 90, "cumulative_saving_us": 10,
-                 "entering": []},
-                {"element_uid": "b.bst", "saving_us": 10,
-                 "makespan_after_us": 85, "cumulative_saving_us": 15,
-                 "entering": []},
+                {
+                    "element_uid": "a.bst",
+                    "saving_us": 10,
+                    "makespan_after_us": 90,
+                    "cumulative_saving_us": 10,
+                    "entering": [],
+                },
+                {
+                    "element_uid": "b.bst",
+                    "saving_us": 10,
+                    "makespan_after_us": 85,
+                    "cumulative_saving_us": 15,
+                    "entering": [],
+                },
             ],
         }
-        assert sum(s["saving_us"] for s in
-                   payload["optimization_horizon"]) == 20
-        script = _SHIM + f'''
+        assert sum(s["saving_us"] for s in payload["optimization_horizon"]) == 20
+        script = (
+            _SHIM
+            + f'''
           const {{ renderHorizon }} = await import("./tests/viewer.mjs");
           const section = renderHorizon({json.dumps(payload)});
           const total = all(section,
@@ -237,9 +246,10 @@ class TestTheTotalIsPublishedValuesOnly:
             text: text(total),
           }}));
         '''
-        result = subprocess.run([node, "--input-type=module", "-e", script],
-                                capture_output=True, text=True, cwd=REPO,
-                                timeout=60)
+        )
+        result = subprocess.run(
+            [node, "--input-type=module", "-e", script], capture_output=True, text=True, cwd=REPO, timeout=60
+        )
         assert result.returncode == 0, result.stderr
         out = json.loads(result.stdout)
         assert out["cumulative"] == "15", out
@@ -248,15 +258,18 @@ class TestTheTotalIsPublishedValuesOnly:
 
 @needs_node
 class TestAbsenceStaysAbsent:
-
     @staticmethod
     def _render(payload):
-        script = _SHIM + f'''
+        script = (
+            _SHIM
+            + f'''
           const {{ renderHorizon }} = await import("./tests/viewer.mjs");
           console.log(JSON.stringify(renderHorizon({json.dumps(payload)}) === null));
         '''
-        result = subprocess.run([node, "--input-type=module", "-e", script],
-                                capture_output=True, text=True, cwd=REPO, timeout=60)
+        )
+        result = subprocess.run(
+            [node, "--input-type=module", "-e", script], capture_output=True, text=True, cwd=REPO, timeout=60
+        )
         assert result.returncode == 0, result.stderr
         return json.loads(result.stdout)
 
@@ -265,14 +278,19 @@ class TestAbsenceStaysAbsent:
 
     def test_no_total_renders_nothing(self):
         """Without a denominator there is no honest width to draw."""
-        assert self._render({"optimization_horizon": [
-            {"element_uid": "a.bst", "makespan_after_us": 5,
-             "saving_us": 1, "cumulative_saving_us": 1}]}) is True
+        assert (
+            self._render(
+                {
+                    "optimization_horizon": [
+                        {"element_uid": "a.bst", "makespan_after_us": 5, "saving_us": 1, "cumulative_saving_us": 1}
+                    ]
+                }
+            )
+            is True
+        )
 
     def test_an_empty_horizon_renders_nothing(self):
-        assert self._render(
-            {"total_duration_us": 1000,
-             "optimization_horizon": []}) is True
+        assert self._render({"total_duration_us": 1000, "optimization_horizon": []}) is True
 
 
 def _decl(style, name):
@@ -296,21 +314,20 @@ class TestTheTableStays:
 
     def test_the_horizon_still_declares_its_columns(self):
         from bga import schemas
+
         # `UX-344`: a key of the document, where it was a member of
         # `signals`.
-        horizon = schemas.schema(schemas.ANALYZE)[
-            "properties"]["optimization_horizon"]
+        horizon = schemas.schema(schemas.ANALYZE)["properties"]["optimization_horizon"]
         assert schemas.COLUMNS in horizon, (
-            "the table is the fold-out beneath the drawing and must keep "
-            "its column declaration")
+            "the table is the fold-out beneath the drawing and must keep its column declaration"
+        )
 
     def test_the_drawing_did_not_replace_the_payload_section(self):
-        source = open(os.path.join(REPO, "bga/viewer/app.js"),
-                      encoding="utf-8").read()
+        source = open(os.path.join(REPO, "bga/viewer/app.js"), encoding="utf-8").read()
         assert "renderHorizon" in source
         # The generic schema dispatch still renders `signals`; the
         # drawing is appended, never substituted for it.
         assert "delete payload.signals" not in source
         assert "optimization_horizon" not in source, (
-            "app.js must not special-case the horizon key - the drawing "
-            "lives in views.js and the table stays generic")
+            "app.js must not special-case the horizon key - the drawing lives in views.js and the table stays generic"
+        )

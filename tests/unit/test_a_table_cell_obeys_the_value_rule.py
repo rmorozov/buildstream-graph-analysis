@@ -38,6 +38,7 @@ third is the one worth naming: an array of objects reached
 Object]`, which carries strictly less information than the JSON it was
 meant to improve on.
 """
+
 import json
 import os
 import pathlib
@@ -57,20 +58,23 @@ needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 # declares it, so they read all three; pointing them at `app.js` alone
 # would have quietly stopped seeing the constants they defend.
 APP_MODULES = ("app.js", "format.js", "structured.js", "pairs.js")
-APP = "\n".join((REPO / "bga/viewer" / _name).read_text(encoding="utf-8")
-                for _name in APP_MODULES)
+APP = "\n".join((REPO / "bga/viewer" / _name).read_text(encoding="utf-8") for _name in APP_MODULES)
 
 # Values that reach a cell in the real report, each the shape of a
 # defect the round measured.
 SHAPES = {
-    "leaves_detail": {f"e{i}.bst": {"element_kind": "stack",
-                                    "is_structural_kind": True,
-                                    "is_potentially_deferrable": False}
-                      for i in range(40)},
+    "leaves_detail": {
+        f"e{i}.bst": {"element_kind": "stack", "is_structural_kind": True, "is_potentially_deferrable": False}
+        for i in range(40)
+    },
     "high_fanin_elements": [[f"e{i}.bst", 8 - i % 5] for i in range(12)],
-    "rule": {"name": "CHAIN_BOUND_RATIO", "threshold": 0.9,
-             "comparison": ">=", "observed_path": "headline.chain_share",
-             "sentence": "the chain binds"},
+    "rule": {
+        "name": "CHAIN_BOUND_RATIO",
+        "threshold": 0.9,
+        "comparison": ">=",
+        "observed_path": "headline.chain_share",
+        "sentence": "the chain binds",
+    },
     "leaves": [f"layer10/mod{i:03d}.bst" for i in range(60)],
     "objects": [{"a": 1, "b": 2}, {"a": 3, "b": 4}, {"a": 5, "b": 6}],
 }
@@ -131,10 +135,14 @@ console.log(JSON.stringify({
 
 def _cells(rows):
     script = _HARNESS % json.dumps(rows)
-    done = subprocess.run([node, "--input-type=module", "-e", script],
-                          capture_output=True, text=True, cwd=REPO, timeout=60,
-                          env={**os.environ, "BGA_DOM_SHIM":
-                               (REPO / "tests/dom_shim.mjs").as_uri()})
+    done = subprocess.run(
+        [node, "--input-type=module", "-e", script],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=60,
+        env={**os.environ, "BGA_DOM_SHIM": (REPO / "tests/dom_shim.mjs").as_uri()},
+    )
     assert done.returncode == 0, done.stderr
     return json.loads(done.stdout)
 
@@ -146,11 +154,8 @@ class TestNoCellStringifiesItsOwnStructure:
         """The defect, per shape. A `{`-then-`}` cell is `JSON.stringify`
         reaching the reader."""
         drawn = _cells([{"key": name, "value": SHAPES[name]}])
-        dumped = [t for t in drawn["text"]
-                  if t.strip().startswith(("{\"", "[{"))]
-        assert dumped == [], (
-            f"{name}: cell(s) still rendering raw JSON: "
-            f"{[d[:80] for d in dumped]}")
+        dumped = [t for t in drawn["text"] if t.strip().startswith(("{\"", "[{"))]
+        assert dumped == [], f"{name}: cell(s) still rendering raw JSON: {[d[:80] for d in dumped]}"
 
     @pytest.mark.parametrize("name", sorted(SHAPES))
     def test_no_cell_says_object_object(self, name):
@@ -191,8 +196,7 @@ class TestTheCellStaysACell:
         compare and what they copy."""
         drawn = _cells([{"key": "rule", "value": SHAPES["rule"]}])
         raws = [r for r in drawn["raw"] if r]
-        assert any(r.startswith("{") and "CHAIN_BOUND_RATIO" in r
-                   for r in raws), raws
+        assert any(r.startswith("{") and "CHAIN_BOUND_RATIO" in r for r in raws), raws
         assert not any("<" in r for r in raws), raws
 
 
@@ -213,8 +217,8 @@ class TestTheNestingIsBounded:
         deep = {"a": {"b": {"c": {"d": {"e": {"f": {"g": 1, "h": 2}}}}}}}
         drawn = _cells([{"key": "deep", "value": deep}])
         assert drawn["table_depth"] <= self.NESTING_BOUND, (
-            f"tables nest {drawn['table_depth']} deep inside a cell, against "
-            f"a bound of {self.NESTING_BOUND}")
+            f"tables nest {drawn['table_depth']} deep inside a cell, against a bound of {self.NESTING_BOUND}"
+        )
 
     def test_the_module_still_declares_the_bound_this_guard_defends(self):
         """And the other direction, so the two cannot drift silently:
@@ -224,7 +228,8 @@ class TestTheNestingIsBounded:
         assert declared == self.NESTING_BOUND, (
             f"app.js declares CELL_NEST_LIMIT = {declared} and this guard "
             f"defends {self.NESTING_BOUND}. If the bound moved on purpose, "
-            f"move it here too and say why in the task file.")
+            f"move it here too and say why in the task file."
+        )
 
     def test_the_limit_still_shows_what_is_behind_it(self):
         """Bounded is not hidden: past the limit the value folds with

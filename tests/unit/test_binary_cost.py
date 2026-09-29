@@ -17,6 +17,7 @@ cannot fix.
 Everything is computed from records already captured, so this is a
 missing analysis rather than a missing measurement.
 """
+
 from tools.bst_native_build_tracer import compute_binary_cost
 
 
@@ -32,10 +33,9 @@ def _p(element, cmd, cpu_us=None, duration_s=None):
 def test_the_expensive_binary_outranks_the_frequent_one():
     """The real inversion: many cheap invocations against few expensive
     ones."""
-    records = (
-        [_p("a.bst", "/bin/sh -c x", cpu_us=1_000, duration_s=0.1)] * 2000
-        + [_p("a.bst", "/usr/libexec/cc1plus -O2", cpu_us=5_000_000, duration_s=6.0)] * 10
-    )
+    records = [_p("a.bst", "/bin/sh -c x", cpu_us=1_000, duration_s=0.1)] * 2000 + [
+        _p("a.bst", "/usr/libexec/cc1plus -O2", cpu_us=5_000_000, duration_s=6.0)
+    ] * 10
 
     result = compute_binary_cost(records)["a.bst"]
 

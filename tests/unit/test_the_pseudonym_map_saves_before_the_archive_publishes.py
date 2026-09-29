@@ -6,6 +6,7 @@ onto the real path *before* the archive's own rename onto the
 destination. An injected failure during the map write must leave both
 the destination and the prior map untouched.
 """
+
 import json
 import os
 import pathlib

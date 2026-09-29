@@ -20,8 +20,7 @@ logger = logging.getLogger(__name__)
 #: `UX-539` used `int.bit_count()`, which is **3.10+**, and
 #: `requires-python` is `>=3.9` - bound once at import so the fast path
 #: stays a method call on the interpreters that have it.
-_popcount = getattr(int, "bit_count", None) or (
-    lambda value: bin(value).count("1"))
+_popcount = getattr(int, "bit_count", None) or (lambda value: bin(value).count("1"))
 
 
 def build_element_graph(
@@ -107,18 +106,18 @@ def compute_in_out_degree(
 def compute_unweighted_depth(graph: Graph) -> dict[str, int]:
     """
     Compute unweighted depth for all elements (Part 5.3, 14.2).
-    
+
     Depth is the longest path (in edges) from any source to the element.
     Sources have depth 0.
-    
+
     Uses topological order via Kahn's algorithm.
-    
+
     Args:
         graph: Input graph
-        
+
     Returns:
         Dict mapping element uid to unweighted depth
-        
+
     Raises:
         ValueError: If the graph contains a cycle
     """
@@ -170,16 +169,16 @@ def compute_weighted_depth(
 ) -> dict[str, int]:
     """
     Compute weighted depth for all elements.
-    
+
     Weighted depth is the longest path (in duration) from any source.
-    
+
     Args:
         graph: Input graph
         task_durations: Dict mapping element uid to duration in microseconds
-        
+
     Returns:
         Dict mapping element uid to weighted depth (earliest finish time)
-        
+
     Raises:
         ValueError: If the graph contains a cycle
     """
@@ -210,20 +209,19 @@ def compute_weighted_depth(
             # Successor can start when all predecessors finish
             earliest_start = current_finish
             earliest_finish[successor] = max(
-                earliest_finish[successor],
-                earliest_start + task_durations.get(successor, 0)
+                earliest_finish[successor], earliest_start + task_durations.get(successor, 0)
             )
 
             in_degree[successor] -= 1
             if in_degree[successor] == 0:
                 queue.append(successor)
-    
+
     # Check for cycles
     if processed_count != len(graph.elements):
         unprocessed = [elem.uid for elem in graph.elements if elem.uid not in earliest_finish]
         logger.error("Cycle detected involving elements: %s", ', '.join(unprocessed))
         raise AnalysisError(f"Graph contains a cycle involving elements: {', '.join(unprocessed)}")
-    
+
     return earliest_finish
 
 
@@ -379,32 +377,32 @@ def compute_downstream_count(graph: Graph) -> dict[str, int]:
 def find_terminal_elements(graph: Graph) -> set[str]:
     """
     Find terminal elements (elements with no successors).
-    
+
     Used for leaf classification (Part 24).
-    
+
     Args:
         graph: Input graph
-        
+
     Returns:
         Set of terminal element UIDs
     """
     _, successors = build_element_graph(graph)
-    
+
     terminals = set()
     for elem in graph.elements:
         if elem.uid not in successors or not successors[elem.uid]:
             terminals.add(elem.uid)
-    
+
     return terminals
 
 
 def find_requested_targets(graph: Graph) -> set[str]:
     """
     Find requested target elements.
-    
+
     Args:
         graph: Input graph
-        
+
     Returns:
         Set of requested target element UIDs
     """
@@ -417,48 +415,48 @@ def compute_reverse_reachability_from_targets(
 ) -> set[str]:
     """
     Compute elements reachable from any requested target (Part 24.2).
-    
+
     Uses reverse reachability from targets.
-    
+
     Args:
         graph: Input graph
         targets: Set of target element UIDs (defaults to requested_target elements)
-        
+
     Returns:
         Set of element UIDs reachable from targets
     """
     if targets is None:
         targets = find_requested_targets(graph)
-    
+
     if not targets:
         return set()
-    
+
     predecessors, _ = build_element_graph(graph)
     reachable = set(targets)
     queue = deque(targets)
-    
+
     while queue:
         current = queue.popleft()
         for pred in predecessors.get(current, []):
             if pred not in reachable:
                 reachable.add(pred)
                 queue.append(pred)
-    
+
     return reachable
 
 
 def compute_dominators(graph: Graph, start_elements: Optional[set[str]] = None) -> dict[str, set[str]]:
     """
     Compute dominators for all elements (Part 5.3).
-    
+
     An element A dominates B if every path from sources to B goes through A.
-    
+
     Uses iterative dataflow algorithm.
-    
+
     Args:
         graph: Input graph
         start_elements: Source elements (defaults to elements with in_degree 0)
-        
+
     Returns:
         Dict mapping element uid to its set of dominators
     """
@@ -487,7 +485,7 @@ def compute_dominators(graph: Graph, start_elements: Optional[set[str]] = None) 
             temp_in_degree[successor] -= 1
             if temp_in_degree[successor] == 0:
                 queue.append(successor)
-    
+
     # Iterative dominator computation
     changed = True
     while changed:
@@ -495,23 +493,23 @@ def compute_dominators(graph: Graph, start_elements: Optional[set[str]] = None) 
         for elem_uid in topo_order:
             if elem_uid in start_elements:
                 continue
-            
+
             preds = predecessors.get(elem_uid, [])
             if not preds:
                 continue
-            
+
             # Intersection of all predecessor dominators
             new_dom = set(dom.get(preds[0], {preds[0]}))
             for pred in preds[1:]:
                 new_dom &= dom.get(pred, {pred})
-            
+
             # Add self
             new_dom.add(elem_uid)
-            
+
             if elem_uid not in dom or dom[elem_uid] != new_dom:
                 dom[elem_uid] = new_dom
                 changed = True
-    
+
     return dom
 
 
@@ -559,10 +557,7 @@ def compute_element_stage_durations(
             heads[uid] = max(heads.get(uid, 0), task.dur_us)
         else:
             works[uid] = max(works.get(uid, 0), task.dur_us)
-    return {
-        uid: (heads.get(uid, 0), works.get(uid, 0))
-        for uid in set(heads) | set(works)
-    }
+    return {uid: (heads.get(uid, 0), works.get(uid, 0)) for uid in set(heads) | set(works)}
 
 
 def compute_critical_path(
@@ -606,75 +601,70 @@ def compute_critical_path(
     heads = head_durations or {}
     predecessors, successors = build_element_graph(graph, exclude_dependency_types={"runtime"})
     in_degree, _ = compute_in_out_degree(graph, exclude_dependency_types={"runtime"})
-    
+
     # earliest_finish[elem] = earliest time elem can finish
     earliest_finish: dict[str, int] = {}
     # predecessor_on_critical[elem] = predecessor that determines earliest finish
     pred_on_critical: dict[str, Optional[str]] = {}
-    
+
     # Topological sort with earliest finish computation
     queue = deque()
     for elem_uid, deg in in_degree.items():
         if deg == 0:
-            earliest_finish[elem_uid] = (
-                heads.get(elem_uid, 0) + task_durations.get(elem_uid, 0)
-            )
+            earliest_finish[elem_uid] = heads.get(elem_uid, 0) + task_durations.get(elem_uid, 0)
             pred_on_critical[elem_uid] = None
             queue.append(elem_uid)
-    
+
     temp_in_degree = dict(in_degree)
     topo_order = []
-    
+
     while queue:
         current = queue.popleft()
         topo_order.append(current)
-        
+
         for succ in successors.get(current, []):
             # Update earliest finish for successor
             # max(head(succ), finish(pred)) + work(succ) - monotone in
             # finish(pred), so the incremental maximum below still finds
             # the true maximum over all predecessors.
-            potential_finish = (
-                max(heads.get(succ, 0), earliest_finish[current])
-                + task_durations.get(succ, 0)
-            )
-            
+            potential_finish = max(heads.get(succ, 0), earliest_finish[current]) + task_durations.get(succ, 0)
+
             if succ not in earliest_finish or potential_finish > earliest_finish[succ]:
                 earliest_finish[succ] = potential_finish
                 pred_on_critical[succ] = current
-            
+
             temp_in_degree[succ] -= 1
             if temp_in_degree[succ] == 0:
                 queue.append(succ)
-    
+
     if not earliest_finish:
         return (0, [])
-    
+
     # Find the terminal element with maximum finish time
     critical_length = 0
     critical_end = None
-    
+
     for elem_uid in earliest_finish:
         # Check if this is a terminal element
         terminal = elem_uid not in successors or not successors[elem_uid]
         if terminal and earliest_finish[elem_uid] > critical_length:
             critical_length = earliest_finish[elem_uid]
             critical_end = elem_uid
-    
+
     # If no terminal found, use maximum overall
     if critical_end is None:
         critical_length = max(earliest_finish.values())
         critical_end = max(earliest_finish, key=earliest_finish.get)
-    
+
     # Reconstruct critical path by backtracking
     critical_path = []
     current = critical_end
     while current is not None:
         critical_path.append(current)
         current = pred_on_critical.get(current)
-    
+
     critical_path.reverse()
-    
+
     return (critical_length, critical_path)
 
 
@@ -705,7 +695,7 @@ def compute_slack(
     """
     predecessors, successors = build_element_graph(graph, exclude_dependency_types={"runtime"})
     in_degree, _ = compute_in_out_degree(graph, exclude_dependency_types={"runtime"})
-    
+
     # Compute earliest start times
     earliest_start: dict[str, int] = {}
     queue = deque()
@@ -713,43 +703,43 @@ def compute_slack(
         if deg == 0:
             earliest_start[elem_uid] = 0
             queue.append(elem_uid)
-    
+
     temp_in_degree = dict(in_degree)
     topo_order = []
-    
+
     while queue:
         current = queue.popleft()
         topo_order.append(current)
-        
+
         for succ in successors.get(current, []):
             potential_start = earliest_start[current] + task_durations.get(current, 0)
             if succ not in earliest_start:
                 earliest_start[succ] = potential_start
             else:
                 earliest_start[succ] = max(earliest_start[succ], potential_start)
-            
+
             temp_in_degree[succ] -= 1
             if temp_in_degree[succ] == 0:
                 queue.append(succ)
-    
+
     # Compute latest start times (reverse pass)
     latest_start: dict[str, int] = {}
-    
+
     # Initialize terminal elements
     for elem_uid in reversed(topo_order):
         if elem_uid not in successors or not successors[elem_uid]:
             latest_start[elem_uid] = critical_path_length - task_durations.get(elem_uid, 0)
-    
+
     # Backward pass
     for elem_uid in reversed(topo_order):
         if elem_uid not in latest_start:
             latest_start[elem_uid] = float('inf')
-        
+
         for succ in successors.get(elem_uid, []):
             if succ in latest_start:
                 potential_latest = latest_start[succ] - task_durations.get(elem_uid, 0)
                 latest_start[elem_uid] = min(latest_start[elem_uid], potential_latest)
-    
+
     # Compute slack
     slack = {}
     for elem_uid in earliest_start:
@@ -757,7 +747,7 @@ def compute_slack(
             slack[elem_uid] = latest_start[elem_uid] - earliest_start[elem_uid]
         else:
             slack[elem_uid] = 0
-    
+
     return slack
 
 
@@ -881,35 +871,29 @@ def compute_optimization_horizon(
     on_path = set(path)
     horizon: list[dict] = []
     for _step in range(max(0, steps)):
-        candidates = [
-            uid for uid in path
-            if remaining.get(uid) and uid not in excluded
-        ]
+        candidates = [uid for uid in path if remaining.get(uid) and uid not in excluded]
         if not candidates:
             break
-        savings = compute_realizable_savings(
-            graph, remaining, sorted(candidates, key=lambda u: -remaining[u])
-        )
+        savings = compute_realizable_savings(graph, remaining, sorted(candidates, key=lambda u: -remaining[u]))
         best = max(savings, key=lambda u: savings[u], default=None)
         if best is None or savings[best] <= 0:
             break
         remaining[best] = 0
         makespan, path = compute_critical_path(graph, remaining)
-        entering = [
-            uid for uid in path
-            if uid not in on_path and remaining.get(uid) and uid not in excluded
-        ]
+        entering = [uid for uid in path if uid not in on_path and remaining.get(uid) and uid not in excluded]
         on_path |= set(path)
-        horizon.append({
-            'element_uid': best,
-            'saving_us': savings[best],
-            'makespan_after_us': int(makespan),
-            'cumulative_saving_us': int(baseline - makespan),
-            # UX-74: the latent heavies. Sorted by their own duration,
-            # because "which of these should I care about" is a size
-            # question at the moment they appear.
-            'entering': sorted(entering, key=lambda u: -remaining[u]),
-        })
+        horizon.append(
+            {
+                'element_uid': best,
+                'saving_us': savings[best],
+                'makespan_after_us': int(makespan),
+                'cumulative_saving_us': int(baseline - makespan),
+                # UX-74: the latent heavies. Sorted by their own duration,
+                # because "which of these should I care about" is a size
+                # question at the moment they appear.
+                'entering': sorted(entering, key=lambda u: -remaining[u]),
+            }
+        )
     return horizon
 
 
@@ -996,11 +980,11 @@ def analyze_graph(
 ) -> dict:
     """
     Perform comprehensive graph analysis.
-    
+
     Args:
         graph: Input graph
         tasks: List of normalized tasks
-        
+
     Returns:
         Dict containing all graph metrics
     """
@@ -1025,10 +1009,12 @@ def analyze_graph(
     reachable_from_targets = compute_reverse_reachability_from_targets(graph)
     dominators = compute_dominators(graph)
     critical_path_length, critical_path = compute_critical_path(
-        graph, work_durations, head_durations=head_durations,
+        graph,
+        work_durations,
+        head_durations=head_durations,
     )
     slack = compute_slack(graph, task_durations, critical_path_length)
-    
+
     return {
         'graph': graph,
         'in_degree': in_degree,

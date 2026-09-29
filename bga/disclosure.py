@@ -17,6 +17,7 @@ the fallback for one it may not (a `b-` pseudonym, or `None`: refuse).
 every class B value its vocabulary refuses, and the whole member for a
 contract version with no policy. Transforming values is `UX-1062`'s.
 """
+
 import re
 from collections.abc import Iterator
 from typing import Any, NamedTuple, Optional
@@ -38,8 +39,8 @@ CLASSES = {
 
 
 class Vocabulary(NamedTuple):
-    allowed: Any                 # a frozenset of values, or a compiled pattern
-    fallback: Optional[str]      # "b-" pseudonym prefix, or None: refuse
+    allowed: Any  # a frozenset of values, or a compiled pattern
+    fallback: Optional[str]  # "b-" pseudonym prefix, or None: refuse
 
     def admits(self, value: Any) -> bool:
         if not isinstance(value, str):
@@ -49,53 +50,227 @@ class Vocabulary(NamedTuple):
         return value in self.allowed
 
 
-_BINARIES = frozenset(["sh", "bash", "dash", "env", "make", "gmake", "cmake", "ctest", "cpack", "ninja", "meson", "samu", "cc", "c++", "gcc", "g++", "cpp", "clang", "clang++", "cc1", "cc1plus", "cc1obj", "lto1", "lto-wrapper", "collect2", "as", "ld", "ld.bfd", "ld.gold", "ld.lld", "lld", "ar", "ranlib", "nm", "strip", "objcopy", "objdump", "readelf", "python", "python3", "perl", "install", "cp", "mv", "rm", "ln", "mkdir", "rmdir", "chmod", "cat", "sed", "awk", "gawk", "grep", "egrep", "fgrep", "tr", "sort", "uniq", "head", "tail", "cut", "find", "xargs", "touch", "tar", "gzip", "xz", "bzip2", "patch", "diff", "cmp", "wc", "date", "basename", "dirname", "mktemp", "expr", "test", "true", "false", "uname", "pkg-config", "pkgconf", "libtool", "autoconf", "automake", "autoreconf", "aclocal", "m4", "configure", "config.status", "bison", "flex", "yacc", "lex", "rustc", "cargo", "go", "javac", "java", "bst", "bwrap", "buildbox-run", "buildbox-casd"])
-_TOOLS = frozenset(["bst", "bwrap", "buildbox-run", "buildbox-casd", "cc", "c++", "gcc", "g++", "clang", "clang++", "ld", "make", "cmake", "ninja", "meson", "python3"])
+_BINARIES = frozenset(
+    [
+        "sh",
+        "bash",
+        "dash",
+        "env",
+        "make",
+        "gmake",
+        "cmake",
+        "ctest",
+        "cpack",
+        "ninja",
+        "meson",
+        "samu",
+        "cc",
+        "c++",
+        "gcc",
+        "g++",
+        "cpp",
+        "clang",
+        "clang++",
+        "cc1",
+        "cc1plus",
+        "cc1obj",
+        "lto1",
+        "lto-wrapper",
+        "collect2",
+        "as",
+        "ld",
+        "ld.bfd",
+        "ld.gold",
+        "ld.lld",
+        "lld",
+        "ar",
+        "ranlib",
+        "nm",
+        "strip",
+        "objcopy",
+        "objdump",
+        "readelf",
+        "python",
+        "python3",
+        "perl",
+        "install",
+        "cp",
+        "mv",
+        "rm",
+        "ln",
+        "mkdir",
+        "rmdir",
+        "chmod",
+        "cat",
+        "sed",
+        "awk",
+        "gawk",
+        "grep",
+        "egrep",
+        "fgrep",
+        "tr",
+        "sort",
+        "uniq",
+        "head",
+        "tail",
+        "cut",
+        "find",
+        "xargs",
+        "touch",
+        "tar",
+        "gzip",
+        "xz",
+        "bzip2",
+        "patch",
+        "diff",
+        "cmp",
+        "wc",
+        "date",
+        "basename",
+        "dirname",
+        "mktemp",
+        "expr",
+        "test",
+        "true",
+        "false",
+        "uname",
+        "pkg-config",
+        "pkgconf",
+        "libtool",
+        "autoconf",
+        "automake",
+        "autoreconf",
+        "aclocal",
+        "m4",
+        "configure",
+        "config.status",
+        "bison",
+        "flex",
+        "yacc",
+        "lex",
+        "rustc",
+        "cargo",
+        "go",
+        "javac",
+        "java",
+        "bst",
+        "bwrap",
+        "buildbox-run",
+        "buildbox-casd",
+    ]
+)
+_TOOLS = frozenset(
+    [
+        "bst",
+        "bwrap",
+        "buildbox-run",
+        "buildbox-casd",
+        "cc",
+        "c++",
+        "gcc",
+        "g++",
+        "clang",
+        "clang++",
+        "ld",
+        "make",
+        "cmake",
+        "ninja",
+        "meson",
+        "python3",
+    ]
+)
 _TOOL = "|".join(sorted(map(re.escape, _TOOLS), key=len, reverse=True))
 _DISTRO = r"\((?:Ubuntu|Debian|GCC|Red Hat|Fedora|SUSE|Alpine|Arch Linux)[^()]*\)"
-_ELEMENT_KINDS = frozenset(["import", "manual", "stack", "compose", "filter", "junction", "link", "script", "autotools", "cmake", "make", "meson", "pip", "distutils", "setuptools", "qmake", "makemaker", "modulebuild"])
+_ELEMENT_KINDS = frozenset(
+    [
+        "import",
+        "manual",
+        "stack",
+        "compose",
+        "filter",
+        "junction",
+        "link",
+        "script",
+        "autotools",
+        "cmake",
+        "make",
+        "meson",
+        "pip",
+        "distutils",
+        "setuptools",
+        "qmake",
+        "makemaker",
+        "modulebuild",
+    ]
+)
 
 VOCABULARIES = {
     "binary": Vocabulary(_BINARIES, "b-"),
     "tool": Vocabulary(_TOOLS, "b-"),
-    "toolchain": Vocabulary(re.compile(
-        rf"(?:(?:{_TOOL})(?: {_DISTRO})? |bubblewrap )?\d[\w.~+-]*"), "b-"),
+    "toolchain": Vocabulary(re.compile(rf"(?:(?:{_TOOL})(?: {_DISTRO})? |bubblewrap )?\d[\w.~+-]*"), "b-"),
     "element_kind": Vocabulary(_ELEMENT_KINDS, None),
     "source_kind": Vocabulary(frozenset(KEYING_BY_KIND), None),
     # "url" is written by no producer; the `one_source_many_elements` fixture holds it.
     "keying": Vocabulary(frozenset(KEYING_BY_KIND.values()) | {"unknown", "url"}, None),
     "dependency_type": Vocabulary(frozenset({"build", "runtime", "all"}), None),
     "status": Vocabulary(frozenset({"SUCCESS", "FAILURE", "SKIPPED"}), None),
-    "resource": Vocabulary(frozenset(
-        {"PROCESS", "DOWNLOAD", "UPLOAD", "CACHE", "OTHER"}), None),
-    "action": Vocabulary(frozenset(
-        {"build", "fetch", "pull", "push", "track", "source-push"}), None),
-    "tail_phase": Vocabulary(frozenset(
-        {"before the build", "run directory", "Plane 2 report", "raw log gzip",
-         "analyze", "element slice", "compare", "store size", "timeline"}), None),
+    "resource": Vocabulary(frozenset({"PROCESS", "DOWNLOAD", "UPLOAD", "CACHE", "OTHER"}), None),
+    "action": Vocabulary(frozenset({"build", "fetch", "pull", "push", "track", "source-push"}), None),
+    "tail_phase": Vocabulary(
+        frozenset(
+            {
+                "before the build",
+                "run directory",
+                "Plane 2 report",
+                "raw log gzip",
+                "analyze",
+                "element slice",
+                "compare",
+                "store size",
+                "timeline",
+            }
+        ),
+        None,
+    ),
     "tail_stage": Vocabulary(frozenset({"before", "after"}), None),
-    "phase": Vocabulary(frozenset(
-        {"cache_cleanup", "Loading elements", "Resolving elements",
-         "Initializing remote caches", "Query cache"}), None),
-    "provenance": Vocabulary(frozenset(
-        {"cas_walk", "not_walked", "absent", "budget_exceeded",
-         "operator_declared", "parsed_from_invocation", "resolved_from_graph",
-         "log_timestamp", "file_mtime", "env:BGA_REQUESTED_AT",
-         "gitlab_ci:CI_PIPELINE_CREATED_AT", "no_request_instant",
-         "no_start_instant", "request_after_start", "start_not_an_instant"}),
-        None),
+    "phase": Vocabulary(
+        frozenset(
+            {"cache_cleanup", "Loading elements", "Resolving elements", "Initializing remote caches", "Query cache"}
+        ),
+        None,
+    ),
+    "provenance": Vocabulary(
+        frozenset(
+            {
+                "cas_walk",
+                "not_walked",
+                "absent",
+                "budget_exceeded",
+                "operator_declared",
+                "parsed_from_invocation",
+                "resolved_from_graph",
+                "log_timestamp",
+                "file_mtime",
+                "env:BGA_REQUESTED_AT",
+                "gitlab_ci:CI_PIPELINE_CREATED_AT",
+                "no_request_instant",
+                "no_start_instant",
+                "request_after_start",
+                "start_not_an_instant",
+            }
+        ),
+        None,
+    ),
     "schema": Vocabulary(re.compile(r"[a-z0-9-]+/v\d+"), None),
     "producer": Vocabulary(frozenset({"bga"}), None),
     "version": Vocabulary(re.compile(r"\d+(?:\.\d+)*(?:[.+-][\w.]+)?"), None),
     "clock": Vocabulary(frozenset({"CLOCK_MONOTONIC"}), None),
     "coverage": Vocabulary(frozenset({"spine+hook", "spine-only", "hook-only"}), None),
     "spine_policy": Vocabulary(frozenset({"off", "auto", "on", "always"}), None),
-    "parallelism_finding": Vocabulary(frozenset(
-        {"pinned_to_one_job", "underachieved_requested_jobs"}), None),
+    "parallelism_finding": Vocabulary(frozenset({"pinned_to_one_job", "underachieved_requested_jobs"}), None),
     "jobserver_auth": Vocabulary(frozenset({"fd", "fifo"}), None),
     "jobserver_mode": Vocabulary(frozenset({"off", "auto", "n"}), None),
-    "artifact_weight_source": Vocabulary(frozenset(
-        {"cas_walk", "ref_absent", "incomplete", "budget_exceeded"}), None),
+    "artifact_weight_source": Vocabulary(frozenset({"cas_walk", "ref_absent", "incomplete", "budget_exceeded"}), None),
 }
 
 _PER_ELEMENT = "{A}"
@@ -235,11 +410,39 @@ POLICIES = {
         "wall_at_start": "H",
         "monotonic_at_start": "H",
         "t": "H",
-        **dict.fromkeys(("cached_kb", "cores", "cpu_busy_cores", "load1", "mem_available_kb", "mem_free_kb", "mem_total_kb", "net_rx_bytes", "net_tx_bytes", "pgmajfault", "pswpin", "pswpout", "swap_free_kb", "swap_total_kb"), "C"),
+        **dict.fromkeys(
+            (
+                "cached_kb",
+                "cores",
+                "cpu_busy_cores",
+                "load1",
+                "mem_available_kb",
+                "mem_free_kb",
+                "mem_total_kb",
+                "net_rx_bytes",
+                "net_tx_bytes",
+                "pgmajfault",
+                "pswpin",
+                "pswpout",
+                "swap_free_kb",
+                "swap_total_kb",
+            ),
+            "C",
+        ),
     },
     "plane2/v3": {
         "schema": "B:schema",
-        **dict.fromkeys(("matched_count", "max_concurrency", "open_count", "process_count", "wall_span_s", "wrapped_command_exit_code"), "C"),
+        **dict.fromkeys(
+            (
+                "matched_count",
+                "max_concurrency",
+                "open_count",
+                "process_count",
+                "wall_span_s",
+                "wrapped_command_exit_code",
+            ),
+            "C",
+        ),
         "open_records_note": "F",
         "static_binary_disclaimer": "F",
         "by_binary.{B:binary}": "C",
@@ -255,8 +458,7 @@ POLICIES = {
         f"binary_cost.{_PER_ELEMENT}.measured_cpu_us": "C",
         f"binary_cost.{_PER_ELEMENT}.by_count[].binary": "B:binary",
         f"binary_cost.{_PER_ELEMENT}.by_count[].count": "C",
-        **{f"binary_cost.{_PER_ELEMENT}.by_cpu[].{key}": "C" for key in (
-            "count", "cpu_share", "cpu_us", "wall_s")},
+        **{f"binary_cost.{_PER_ELEMENT}.by_cpu[].{key}": "C" for key in ("count", "cpu_share", "cpu_us", "wall_s")},
         f"binary_cost.{_PER_ELEMENT}.by_cpu[].binary": "B:binary",
         f"binary_cost.{_PER_ELEMENT}.single_process_costs[].binary": "B:binary",
         f"binary_cost.{_PER_ELEMENT}.single_process_costs[].cpu_us": "C",
@@ -266,28 +468,58 @@ POLICIES = {
         "configure_phase.configure_share": "C",
         "configure_phase.total_cpu_us": "C",
         "configure_phase.note": "F",
-        **{f"configure_phase.per_element.{_PER_ELEMENT}.{key}": "C" for key in (
-            "build_cpu_us", "build_processes", "configure_cpu_us",
-            "configure_processes", "configure_share", "coverage", "measured",
-            "unmeasured")},
-        **{f"cpu_time.{key}": "C" for key in (
-            "available", "measured_processes", "spine_sourced_processes",
-            "total_cpu_us", "unmeasured_processes")},
+        **{
+            f"configure_phase.per_element.{_PER_ELEMENT}.{key}": "C"
+            for key in (
+                "build_cpu_us",
+                "build_processes",
+                "configure_cpu_us",
+                "configure_processes",
+                "configure_share",
+                "coverage",
+                "measured",
+                "unmeasured",
+            )
+        },
+        **{
+            f"cpu_time.{key}": "C"
+            for key in (
+                "available",
+                "measured_processes",
+                "spine_sourced_processes",
+                "total_cpu_us",
+                "unmeasured_processes",
+            )
+        },
         "cpu_time.note": "F",
-        **{f"cpu_time.per_element.{_PER_ELEMENT}.{key}": "C" for key in (
-            "children_cpu_us", "coverage", "cpu_per_wall_second", "cpu_us",
-            "measured", "unmeasured", "wall_span_s")},
+        **{
+            f"cpu_time.per_element.{_PER_ELEMENT}.{key}": "C"
+            for key in (
+                "children_cpu_us",
+                "coverage",
+                "cpu_per_wall_second",
+                "cpu_us",
+                "measured",
+                "unmeasured",
+                "wall_span_s",
+            )
+        },
         "declared_vs_used.available": "C",
         "declared_vs_used.note": "F",
-        **{f"declared_vs_used.opens_coverage.{key}": "C" for key in (
-            "elements_considered", "elements_fully_covered", "processes",
-            "hook_covered_processes")},
-        **{f"declared_vs_used.{block}[].{key}": "A"
-           for block in ("unused_candidates", "used", "aggregating_dependencies")
-           for key in ("element", "dependency")},
-        **{f"declared_vs_used.{block}[].{key}": "C"
-           for block in ("unused_candidates", "used", "aggregating_dependencies")
-           for key in ("opened_files", "staged_files")},
+        **{
+            f"declared_vs_used.opens_coverage.{key}": "C"
+            for key in ("elements_considered", "elements_fully_covered", "processes", "hook_covered_processes")
+        },
+        **{
+            f"declared_vs_used.{block}[].{key}": "A"
+            for block in ("unused_candidates", "used", "aggregating_dependencies")
+            for key in ("element", "dependency")
+        },
+        **{
+            f"declared_vs_used.{block}[].{key}": "C"
+            for block in ("unused_candidates", "used", "aggregating_dependencies")
+            for key in ("opened_files", "staged_files")
+        },
         "declared_vs_used.unused_candidates[].evidence": "F",
         "declared_vs_used.aggregating_dependencies[].reason": "F",
         "declared_vs_used.uncovered_elements[].element": "A",
@@ -295,9 +527,17 @@ POLICIES = {
         "declared_vs_used.skipped[].element": "A",
         "declared_vs_used.skipped[].dependency": "A",
         "declared_vs_used.skipped[].reason": "F",
-        **{f"element_attribution.{key}": "C" for key in (
-            "attributed_share", "largest_bucket_processes", "recognized_processes",
-            "reliable", "tagged_processes", "unattributed_processes")},
+        **{
+            f"element_attribution.{key}": "C"
+            for key in (
+                "attributed_share",
+                "largest_bucket_processes",
+                "recognized_processes",
+                "reliable",
+                "tagged_processes",
+                "unattributed_processes",
+            )
+        },
         "element_attribution.largest_bucket": "A",
         "element_attribution.unresolved_bucket": "A",
         "element_attribution.recognized_elements[]": "A",
@@ -309,26 +549,38 @@ POLICIES = {
         "invocation_correlation.intervals_used": "C",
         "invocation_correlation.relabelled_processes": "C",
         "invocation_correlation.resolved.{C}": "A",
-        **{f"opens_captured.{_PER_ELEMENT}.{key}": "C" for key in (
-            "dropped", "paths", "processes", "windows", "relative", "dirfd")},
+        **{
+            f"opens_captured.{_PER_ELEMENT}.{key}": "C"
+            for key in ("dropped", "paths", "processes", "windows", "relative", "dirfd")
+        },
         "peak_memory.available": "C",
         "peak_memory.note": "F",
-        **{f"peak_memory.per_element.{_PER_ELEMENT}.{key}": "C" for key in (
-            "measured", "peak_rss_kb", "unmeasured")},
+        **{f"peak_memory.per_element.{_PER_ELEMENT}.{key}": "C" for key in ("measured", "peak_rss_kb", "unmeasured")},
         "per_element_parallelism[].element": "A",
         "per_element_parallelism[].findings[]": "B:parallelism_finding",
         "per_element_parallelism[].unclassified_binaries.{B:binary}": "C",
-        **{f"per_element_parallelism[].{key}": "C" for key in (
-            "achieved_vs_requested", "mean_work_concurrency",
-            "peak_work_concurrency", "requested_jobs", "resolved_jobs",
-            "jobs_denominator", "work_process_count",
-            "work_process_lifetime_s", "work_span_s")},
+        **{
+            f"per_element_parallelism[].{key}": "C"
+            for key in (
+                "achieved_vs_requested",
+                "mean_work_concurrency",
+                "peak_work_concurrency",
+                "requested_jobs",
+                "resolved_jobs",
+                "jobs_denominator",
+                "work_process_count",
+                "work_process_lifetime_s",
+                "work_span_s",
+            )
+        },
         "redundant_operations[].elements[]": "A",
         "redundant_operations[].worst_element": "A",
         "redundant_operations[].example_cmd": "F",
         "redundant_operations[].signature": "F",
-        **{f"redundant_operations[].{key}": "C" for key in (
-            "max_element_duration_s", "occurrence_count", "total_duration_s")},
+        **{
+            f"redundant_operations[].{key}": "C"
+            for key in ("max_element_duration_s", "occurrence_count", "total_duration_s")
+        },
         "redundant_operations_coverage.excluded_element_command_blocks": "C",
         "redundant_operations_coverage.excluded_unresolved_only": "C",
         "redundant_operations_coverage.findings_cap": "C",
@@ -340,10 +592,20 @@ POLICIES = {
         "resource_pressure.note": "F",
         "resource_pressure.measured": "C",
         "resource_pressure.unmeasured": "C",
-        **{f"resource_pressure.per_element.{_PER_ELEMENT}.{key}": "C" for key in (
-            "read_bytes", "written_bytes", "major_faults", "minor_faults",
-            "voluntary_switches", "involuntary_switches", "measured",
-            "unmeasured", "coverage")},
+        **{
+            f"resource_pressure.per_element.{_PER_ELEMENT}.{key}": "C"
+            for key in (
+                "read_bytes",
+                "written_bytes",
+                "major_faults",
+                "minor_faults",
+                "voluntary_switches",
+                "involuntary_switches",
+                "measured",
+                "unmeasured",
+                "coverage",
+            )
+        },
         "process_outcomes.available": "C",
         "process_outcomes.note": "F",
         "process_outcomes.unknown": "C",
@@ -369,19 +631,29 @@ POLICIES = {
         f"static_census.per_element.{_PER_ELEMENT}.static_executables[]": "A",
         f"static_census.per_element.{_PER_ELEMENT}.staged_by_dependencies.{{A}}[]": "A",
         "stream_coverage.by_coverage.{B:coverage}": "C",
-        **{f"stream_coverage.{key}": "C" for key in (
-            "cpu_disagreement_count", "cpu_from_spine_only",
-            "cpu_reconciled_processes", "exec_chains_collapsed", "fork_only_exits",
-            "opens_coverage", "opens_covered_processes", "processes",
-            "unmatched_ends")},
+        **{
+            f"stream_coverage.{key}": "C"
+            for key in (
+                "cpu_disagreement_count",
+                "cpu_from_spine_only",
+                "cpu_reconciled_processes",
+                "exec_chains_collapsed",
+                "fork_only_exits",
+                "opens_coverage",
+                "opens_covered_processes",
+                "processes",
+                "unmatched_ends",
+            )
+        },
         "stream_coverage.note": "F",
-        **{f"stream_coverage.cpu_aggregate.{key}": "C" for key in (
-            "processes", "spine_cpu_us", "hook_cpu_us", "delta_us", "delta_pct")},
+        **{
+            f"stream_coverage.cpu_aggregate.{key}": "C"
+            for key in ("processes", "spine_cpu_us", "hook_cpu_us", "delta_us", "delta_pct")
+        },
         "stream_coverage.cpu_disagreements[].pid": "C",
         "stream_coverage.cpu_disagreements[].element": "A",
         "stream_coverage.cpu_disagreements[].cmd": "F",
-        **{f"stream_coverage.cpu_disagreements[].{key}": "C" for key in (
-            "spine_cpu_us", "hook_cpu_us", "delta_us")},
+        **{f"stream_coverage.cpu_disagreements[].{key}": "C" for key in ("spine_cpu_us", "hook_cpu_us", "delta_us")},
     },
     "plane2-resource.json": {
         "cores_busy": "C",
@@ -434,7 +706,7 @@ TREATMENTS = {
 
 
 class Gap(NamedTuple):
-    path: str                    # "" is the whole member
+    path: str  # "" is the whole member
     reason: str
 
     def __str__(self) -> str:
@@ -444,10 +716,13 @@ class Gap(NamedTuple):
 def layout_members() -> dict:
     """`{snapshot-relative member: contract}`, from `CAPTURE_LAYOUT`."""
     from .run_store import CAPTURE_LAYOUT, RUNS_DIRNAME, STORE_DIRNAME
+
     prefix = f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/"
-    return {path[len(prefix):]: contract
-            for path, _presence, contract, _what in CAPTURE_LAYOUT
-            if path.startswith(prefix) and not path.endswith("/")}
+    return {
+        path[len(prefix) :]: contract
+        for path, _presence, contract, _what in CAPTURE_LAYOUT
+        if path.startswith(prefix) and not path.endswith("/")
+    }
 
 
 def policy_key(member: str, contract: Optional[str]) -> str:
@@ -484,8 +759,7 @@ def _vocabulary(klass: str) -> Optional[Vocabulary]:
 
 def _refused(klass: str, value: Any) -> bool:
     vocab = _vocabulary(klass)
-    return (vocab is not None and value is not None and vocab.fallback is None
-            and not vocab.admits(value))
+    return vocab is not None and value is not None and vocab.fallback is None and not vocab.admits(value)
 
 
 #: A class-C *key* names a number (a pid, a signal, an exit status), not a
@@ -504,9 +778,9 @@ def _key_refused(klass: str, key: Any) -> bool:
 
 
 class Step(NamedTuple):
-    node: Optional[dict]         # None: the policy does not name the key
+    node: Optional[dict]  # None: the policy does not name the key
     path: str
-    name: str                    # the literal key, or its `{...}` placeholder
+    name: str  # the literal key, or its `{...}` placeholder
     gaps: list
 
 
@@ -519,8 +793,9 @@ def step(node: dict, key: str, path: str) -> Step:
     if placeholder is None:
         return Step(None, where, key, [Gap(where, "not named by the policy")])
     refused = _key_refused(placeholder[1:-1], key)
-    return Step(node[placeholder], where, placeholder,
-                [Gap(where, f"key {key!r} is not on its allowlist")] if refused else [])
+    return Step(
+        node[placeholder], where, placeholder, [Gap(where, f"key {key!r} is not on its allowlist")] if refused else []
+    )
 
 
 def _walk_map(node: dict, value: dict, path: str) -> Iterator[Gap]:

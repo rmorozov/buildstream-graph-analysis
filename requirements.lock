@@ -22,6 +22,8 @@ dill==0.4.1
     # via pylint
 execnet==2.1.2
     # via pytest-xdist
+hypothesis==6.168.3
+    # via bga (pyproject.toml)
 iniconfig==2.3.0
     # via pytest
 isort==9.0.2
@@ -64,8 +66,11 @@ pytest==9.1.1
     # via
     #   bga (pyproject.toml)
     #   pytest-cov
+    #   pytest-timeout
     #   pytest-xdist
 pytest-cov==7.1.0
+    # via bga (pyproject.toml)
+pytest-timeout==2.4.0
     # via bga (pyproject.toml)
 pytest-xdist==3.8.0
     # via bga (pyproject.toml)
@@ -85,6 +90,8 @@ ruff==0.16.8
     # via bga (pyproject.toml)
 sly==0.5
     # via py-walk
+sortedcontainers==2.4.0
+    # via hypothesis
 tomli==2.4.1
     # via application-properties
 tomlkit==0.15.1

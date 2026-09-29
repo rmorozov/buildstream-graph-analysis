@@ -13,6 +13,7 @@ The three ways it could go quiet, and the clause for each:
 - the assessability rule stops excluding what it cannot judge, so a
   boolean field is reported as reached or dropped on a coincidence.
 """
+
 import json
 import pathlib
 import shutil
@@ -28,8 +29,7 @@ WITH_TIMELINE = REPO / "tests/fixtures/with_timeline"
 @pytest.fixture(scope="module")
 def emitted(tmp_path_factory):
     """The vocabulary and carriers of a real emitted trace."""
-    trace, complaint = census.emit_trace(
-        WITH_TIMELINE, tmp_path_factory.mktemp("trace"))
+    trace, complaint = census.emit_trace(WITH_TIMELINE, tmp_path_factory.mktemp("trace"))
     assert trace is not None, complaint
     return census.decode(trace)
 
@@ -69,7 +69,8 @@ class TestTheTraceSideIsReallyRead:
         assert {"slice", "track", "flow", "debug-annotation"} <= used
         assert "counter" not in used, (
             "this fixture carries no Plane 2, so a counter here means the "
-            "carrier detection is reporting something it did not read")
+            "carrier detection is reporting something it did not read"
+        )
 
 
 class TestTheCaptureSideSplitsFieldsFromData:
@@ -77,8 +78,7 @@ class TestTheCaptureSideSplitsFieldsFromData:
         """`binary_cost` is keyed by element uid - data. `wall_clock`'s
         keys are the schema. Collapsing both would count elements as
         fields; collapsing neither would report one field per element."""
-        document = {"binary_cost": {"a.bst": 1, "b.bst": 2},
-                    "wall_clock": {"start_us": 0, "end_us": 9}}
+        document = {"binary_cost": {"a.bst": 1, "b.bst": 2}, "wall_clock": {"start_us": 0, "end_us": 9}}
         paths = set(census.fields(document))
 
         assert "binary_cost.{}" in paths
@@ -150,9 +150,7 @@ class TestAValueIsCreditedToOneFieldOrToNone:
     """
 
     def test_two_fields_with_one_value_set_are_both_reported_shared(self):
-        matched = {"a.field": frozenset({"X", "Y"}),
-                   "b.field": frozenset({"X", "Y"}),
-                   "c.field": frozenset({"X", "Z"})}
+        matched = {"a.field": frozenset({"X", "Y"}), "b.field": frozenset({"X", "Y"}), "c.field": frozenset({"X", "Z"})}
         same = census.indistinguishable(matched)
         assert same == {"a.field": ["b.field"], "b.field": ["a.field"]}, same
 
@@ -160,8 +158,7 @@ class TestAValueIsCreditedToOneFieldOrToNone:
         matched = {"a.field": frozenset({"X"}), "b.field": frozenset({"Y"})}
         assert census.indistinguishable(matched) == {}
 
-    def test_the_two_queue_capture_names_the_collision_UX_469_declared(
-            self, tmp_path):
+    def test_the_two_queue_capture_names_the_collision_UX_469_declared(self, tmp_path):
         """The row's own case, end to end. `primary_resource` is
         carried and `resources[]` is not, and no artifact says which -
         so the census says it cannot tell them apart, and `DECLINED`
@@ -169,11 +166,9 @@ class TestAValueIsCreditedToOneFieldOrToNone:
         report, _vocab = self._two_queue(tmp_path)
         shared = dict(report.get("1", {}).get("shared", []))
         assert "trace.spans[].primary_resource" in shared, report.get("1")
-        assert "trace.spans[].resources[]" in (
-            shared["trace.spans[].primary_resource"]), shared
+        assert "trace.spans[].resources[]" in (shared["trace.spans[].primary_resource"]), shared
 
-    def test_a_declined_field_still_counts_as_a_collision_partner(
-            self, tmp_path, monkeypatch):
+    def test_a_declined_field_still_counts_as_a_collision_partner(self, tmp_path, monkeypatch):
         """The defect this row is about, in one clause. With
         `resources[]` declared away, skipping it would leave
         `primary_resource` reading a clean `reached` - the declaration
@@ -181,11 +176,9 @@ class TestAValueIsCreditedToOneFieldOrToNone:
         monkeypatch.setattr(census, "DECLINED", {})
         report, _vocab = self._two_queue(tmp_path)
         with_none = {f for f, _d in report.get("1", {}).get("shared", [])}
-        assert {"trace.spans[].primary_resource",
-                "trace.spans[].resources[]"} <= with_none, with_none
+        assert {"trace.spans[].primary_resource", "trace.spans[].resources[]"} <= with_none, with_none
 
-    def test_a_reached_field_says_which_carrier_brought_its_values(
-            self, tmp_path):
+    def test_a_reached_field_says_which_carrier_brought_its_values(self, tmp_path):
         """The second axis. `reached` on its own cannot be checked by a
         reader; the site can - so the site has to be the **real** one
         and not a shape the message happens to have. `element_kind`'s
@@ -197,16 +190,12 @@ class TestAValueIsCreditedToOneFieldOrToNone:
         for field, detail in reached.items():
             assert " via " in detail, (field, detail)
         kinds = reached.get("graph.elements[].element_kind")
-        assert kinds and kinds.endswith(
-            "via debug-annotation:element_kind"), kinds
+        assert kinds and kinds.endswith("via debug-annotation:element_kind"), kinds
 
-    def test_the_vocabulary_maps_a_value_to_where_it_arrived(self,
-                                                             tmp_path):
+    def test_the_vocabulary_maps_a_value_to_where_it_arrived(self, tmp_path):
         _report, vocabulary = self._two_queue(tmp_path)
-        assert vocabulary["PROCESS"] == frozenset(
-            {"debug-annotation:resource"}), vocabulary.get("PROCESS")
-        assert "category" in vocabulary["bst-builder"], vocabulary.get(
-            "bst-builder")
+        assert vocabulary["PROCESS"] == frozenset({"debug-annotation:resource"}), vocabulary.get("PROCESS")
+        assert "category" in vocabulary["bst-builder"], vocabulary.get("bst-builder")
 
     def _two_queue(self, tmp_path):
         """A capture whose spans hold **two** resources.
@@ -252,10 +241,8 @@ class TestADeclinedFieldIsDeclaredAndNotJustAbsent:
     under its own verdict rather than quietly dropped from the count.
     """
 
-    def test_a_declined_field_is_never_reached_or_dropped(self,
-                                                          tmp_path_factory):
-        trace, complaint = census.emit_trace(
-            WITH_TIMELINE, tmp_path_factory.mktemp("declined"))
+    def test_a_declined_field_is_never_reached_or_dropped(self, tmp_path_factory):
+        trace, complaint = census.emit_trace(WITH_TIMELINE, tmp_path_factory.mktemp("declined"))
         assert trace is not None, complaint
         vocabulary, _used = census.decode(trace)
         report = census.coverage(WITH_TIMELINE, vocabulary)
@@ -264,9 +251,7 @@ class TestADeclinedFieldIsDeclaredAndNotJustAbsent:
         for buckets in report.values():
             for verdict in ("reached", "dropped", "unassessable"):
                 for field, _detail in buckets.get(verdict, []):
-                    assert field not in census.DECLINED, (
-                        f"{field} is declared declined and is reported "
-                        f"{verdict}")
+                    assert field not in census.DECLINED, f"{field} is declared declined and is reported {verdict}"
             seen |= {f for f, _why in buckets.get("declined", [])}
 
         assert seen, "no declined field was reported at all"
@@ -274,8 +259,7 @@ class TestADeclinedFieldIsDeclaredAndNotJustAbsent:
     def test_every_reason_says_who_decided_it(self):
         for field, why in census.DECLINED.items():
             assert len(why) > 40, (field, why)
-            assert "UX-" in why, (
-                f"{field}'s reason names no item that decided it: {why}")
+            assert "UX-" in why, f"{field}'s reason names no item that decided it: {why}"
 
     def test_the_declared_paths_are_paths_a_capture_really_holds(self):
         """A declaration keyed on a path nothing writes is a
@@ -295,8 +279,7 @@ class TestADeclinedFieldIsDeclaredAndNotJustAbsent:
         assert "trace.spans[].resources[]" in held
         assert "graph.elements[].cache_key" in held
         unseen = {f for f in census.DECLINED if f not in held}
-        assert unseen == {f for f in census.DECLINED
-                          if f.startswith("plane2.static_census.")}, unseen
+        assert unseen == {f for f in census.DECLINED if f.startswith("plane2.static_census.")}, unseen
 
 
 class TestTheCensusOverTheCommittedCaptures:
@@ -328,7 +311,8 @@ class TestTheCensusOverTheCommittedCaptures:
         assert "1" in planes
         assert "2" not in planes, (
             "a committed capture now carries Plane 2 records *and* a log - "
-            "UX-466 stage 3 is reachable from a clone, so re-point this")
+            "UX-466 stage 3 is reachable from a clone, so re-point this"
+        )
 
     def test_two_carriers_are_exercised_by_nothing_a_clone_has(self):
         """Counters are Plane 2's, and no committed capture that can

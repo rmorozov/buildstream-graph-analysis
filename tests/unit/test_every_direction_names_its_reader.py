@@ -15,6 +15,7 @@ guesswork, and a guessed role id is worse than an absent one — the
 round history already tells that story. The guard starts at UX-227,
 which is where the convention starts.
 """
+
 import re
 from pathlib import Path
 
@@ -37,7 +38,8 @@ _RANGE = re.compile(r"UX-0*(\d+)`\.\.`UX-0*(\d+)")
 #: not the shape (`landed as A..B`) that is a fixed historical record.
 _RANGE_OPEN = re.compile(
     r"UX-0*(\d+)`\.\.`UX-0*(\d+)` (?:are|is|remain|remains)"
-    r"(?: still)? open")
+    r"(?: still)? open"
+)
 
 
 def _ids_in(text):
@@ -76,7 +78,7 @@ def _direction_sections():
         if not head.group(0).startswith("## Direction "):
             continue
         end = heads[i + 1].start() if i + 1 < len(heads) else len(text)
-        out.append(text[head.start():end])
+        out.append(text[head.start() : end])
     return out
 
 
@@ -93,15 +95,16 @@ def _statuses():
 
 def _filing_numbers():
     """Every filed item number, from the files `git` tracks."""
-    return {int(re.match(r"UX-0*(\d+)-", path.name).group(1))
-            for path in _task_files()}
+    return {int(re.match(r"UX-0*(\d+)-", path.name).group(1)) for path in _task_files()}
 
 
 def _closed_filings():
     """The subset whose own header line carries the closed marker."""
-    return {int(re.match(r"UX-0*(\d+)-", path.name).group(1))
-            for path in _task_files()
-            if "**Status:** 🟢" in path.read_text().split("\n## ", 1)[0]}
+    return {
+        int(re.match(r"UX-0*(\d+)-", path.name).group(1))
+        for path in _task_files()
+        if "**Status:** 🟢" in path.read_text().split("\n## ", 1)[0]
+    }
 
 
 def _task_files():
@@ -116,7 +119,6 @@ def _tagged_task_files():
 
 
 class TestTheRoleModelIsReadable:
-
     def test_it_defines_the_roles_the_lines_reference(self):
         assert _role_ids() == {f"R{n}" for n in range(1, 9)}, _role_ids()
 
@@ -129,13 +131,12 @@ class TestTheRoleModelIsReadable:
 
 
 class TestEveryDirectionNamesItsReader:
-
     def test_each_one_carries_a_serves_line(self):
-        missing = [section.splitlines()[0] for section in _direction_sections()
-                   if "**Serves:**" not in section]
+        missing = [section.splitlines()[0] for section in _direction_sections() if "**Serves:**" not in section]
         assert missing == [], (
             f"a direction that does not say whose problem it solves is how "
-            f"four roles went unserved for twenty-six rounds: {missing}")
+            f"four roles went unserved for twenty-six rounds: {missing}"
+        )
 
     def test_each_serves_line_names_a_role_the_model_defines(self):
         known = _role_ids()
@@ -167,11 +168,10 @@ class TestEveryDirectionSaysWhereItStands:
 
     def test_each_one_carries_a_status_line(self):
         walked = {heading for heading, _ in _statuses()}
-        missing = [section.splitlines()[0] for section in _direction_sections()
-                   if section.splitlines()[0] not in walked]
-        assert missing == [], (
-            f"a direction with no status reads as landed whichever it is: "
-            f"{missing}")
+        missing = [
+            section.splitlines()[0] for section in _direction_sections() if section.splitlines()[0] not in walked
+        ]
+        assert missing == [], f"a direction with no status reads as landed whichever it is: {missing}"
 
     def test_the_status_line_is_near_the_top(self):
         """Beside `Serves:`, where a reader meets it before the argument."""
@@ -193,18 +193,18 @@ class TestEveryDirectionSaysWhereItStands:
             rest = status.split("**Status:**", 1)[1].strip()
             if not rest.startswith("partial"):
                 continue
-            remainder = rest[len("partial"):]
+            remainder = rest[len("partial") :]
             if not (_ITEM.search(remainder) or "declin" in remainder):
                 bare.append(f"{heading}: {rest[:80]}")
         assert bare == [], (
-            "a `partial` states what remains as a filed id or a decline, "
-            f"or the tail is silent again: {bare}")
+            f"a `partial` states what remains as a filed id or a decline, or the tail is silent again: {bare}"
+        )
 
     def test_a_declined_status_says_why(self):
         for heading, status in _statuses():
             rest = status.split("**Status:**", 1)[1].strip()
             if rest.startswith("declined"):
-                assert len(rest[len("declined"):].strip(" —-")) >= 20, heading
+                assert len(rest[len("declined") :].strip(" —-")) >= 20, heading
 
     def test_a_partial_is_not_wholly_made_of_closed_filings(self):
         """Derived, so the status cannot go stale the way the sentences
@@ -216,11 +216,10 @@ class TestEveryDirectionSaysWhereItStands:
             rest = status.split("**Status:**", 1)[1].strip()
             if not rest.startswith("partial"):
                 continue
-            named = _ids_in(rest[len("partial"):])
+            named = _ids_in(rest[len("partial") :])
             if named and named <= closed:
                 stale.append(f"{heading}: {sorted(named)} are all closed")
-        assert stale == [], (
-            f"a `partial` whose whole remainder has landed: {stale}")
+        assert stale == [], f"a `partial` whose whole remainder has landed: {stale}"
 
     def test_a_range_called_open_names_no_closed_filing(self):
         """`UX-748`: a range's two endpoints are not the range. `684`
@@ -232,16 +231,11 @@ class TestEveryDirectionSaysWhereItStands:
         filed = _filing_numbers()
         wrong = []
         for heading, status in _statuses():
-            for lo, hi in ((int(a), int(b))
-                           for a, b in _RANGE_OPEN.findall(status)):
-                landed = sorted(n for n in filed
-                                 if lo <= n <= hi and n in closed)
+            for lo, hi in ((int(a), int(b)) for a, b in _RANGE_OPEN.findall(status)):
+                landed = sorted(n for n in filed if lo <= n <= hi and n in closed)
                 if landed:
-                    wrong.append(
-                        f"{heading}: UX-{lo}..UX-{hi} called open already "
-                        f"has closed {landed}")
-        assert wrong == [], (
-            f"a range called open has a closed filing inside it: {wrong}")
+                    wrong.append(f"{heading}: UX-{lo}..UX-{hi} called open already has closed {landed}")
+        assert wrong == [], f"a range called open has a closed filing inside it: {wrong}"
 
     def test_a_landed_status_names_only_closed_filings(self):
         """The other direction, and the one that keeps `landed` cheap to
@@ -267,28 +261,25 @@ class TestEveryDirectionSaysWhereItStands:
     def test_the_statuses_are_not_all_one_word(self):
         """A blanket `landed` would satisfy every claim above. The
         document's own tails are what makes this true today."""
-        words = {status.split("**Status:**", 1)[1].strip().split()[0]
-                 for _, status in _statuses()}
+        words = {status.split("**Status:**", 1)[1].strip().split()[0] for _, status in _statuses()}
         assert len(words) >= 2, words
 
     def test_the_walk_finds_every_direction_the_document_argues(self):
         """A guard over an empty population passes vacuously, and the
         `## Direction N` numbering runs 1-20 out of order (20 argued in
         round 117)."""
-        numbered = {int(re.match(r"## Direction (\d+)", section).group(1))
-                    for section in _direction_sections()}
+        numbered = {int(re.match(r"## Direction (\d+)", section).group(1)) for section in _direction_sections()}
         assert numbered == set(range(1, 21)), sorted(numbered)
 
 
 class TestEveryNewFilingNamesItsReader:
-
     def test_each_carries_a_serves_field(self):
-        missing = [p.name for p in _tagged_task_files()
-                   if "Serves:" not in p.read_text().split("\n\n", 2)[0]
-                   + p.read_text().split("\n\n", 2)[1]]
-        assert missing == [], (
-            f"filings from UX-{FIRST_TAGGED} carry `Serves:` in their header "
-            f"line: {missing}")
+        missing = [
+            p.name
+            for p in _tagged_task_files()
+            if "Serves:" not in p.read_text().split("\n\n", 2)[0] + p.read_text().split("\n\n", 2)[1]
+        ]
+        assert missing == [], f"filings from UX-{FIRST_TAGGED} carry `Serves:` in their header line: {missing}"
 
     def test_each_names_a_role_the_model_defines(self):
         for path in _tagged_task_files():
@@ -297,7 +288,7 @@ class TestEveryNewFilingNamesItsReader:
             assert named <= _role_ids(), (path.name, named - _role_ids())
 
     def test_the_query_the_role_model_promised_works(self):
-        """"Which filings serve role R?" answered by reading the header
+        """ "Which filings serve role R?" answered by reading the header
         line, which is the whole point of the convention.
 
         The first draft of this guard asked for R6 and passed - on
@@ -345,19 +336,17 @@ class TestEveryNewFilingNamesItsReader:
         for path in _tagged_task_files():
             for line in path.read_text().splitlines():
                 if "**Serves:**" in line:
-                    served.update(
-                        re.findall(r"\bR\d+\b", line.split("**Serves:**")[1]))
+                    served.update(re.findall(r"\bR\d+\b", line.split("**Serves:**")[1]))
                     break
-        unserved = sorted(_role_ids() - served,
-                          key=lambda r: int(r[1:]))
+        unserved = sorted(_role_ids() - served, key=lambda r: int(r[1:]))
         assert unserved == [], (
             f"the set of roles with no filing since UX-{FIRST_TAGGED} changed "
             f"to {unserved}. That is the role model earning its file - update "
-            f"roles.md's table in the same commit (fixing guide, item 7).")
+            f"roles.md's table in the same commit (fixing guide, item 7)."
+        )
 
 
 class TestTheConventionIsWrittenDown:
-
     def test_the_fixing_guide_asks_the_question(self):
         guide = (REPO / "docs/contributing/fixing-guide.md").read_text()
         assert "roles.md" in guide

@@ -15,6 +15,7 @@ The disagreement is not hypothetical, and the case that exposes it is
 the exact one the band view exists to teach — `UX-170`'s disputed
 region, silently re-litigated by a dot.
 """
+
 import pytest
 
 from bga import schemas
@@ -49,8 +50,7 @@ class TestTheTwoChainsDisagreed:
         On this pair it said `regressed`; compare says the set cannot
         support the claim."""
         band = _band()
-        old_answer = ("regressed" if band["high_us"] < 150.0
-                      else "improved" if band["low_us"] > 150.0 else "within_band")
+        old_answer = "regressed" if band["high_us"] < 150.0 else "improved" if band["low_us"] > 150.0 else "within_band"
         assert old_answer == "regressed"
         assert classify_against_band(150.0, band) == "within_observed_range"
         assert old_answer != classify_against_band(150.0, band)
@@ -59,8 +59,7 @@ class TestTheTwoChainsDisagreed:
         """End to end, through the function the listing actually calls."""
         from tools.bga_snapshot import _mark_verdicts
 
-        rows = [{"total_duration_us": d}
-                for d in DISPUTED_BASELINES + [150.0]]
+        rows = [{"total_duration_us": d} for d in DISPUTED_BASELINES + [150.0]]
         _mark_verdicts(rows)
         assert rows[-1]["verdict_kind"] == "within_observed_range"
 
@@ -73,23 +72,20 @@ class TestTheTwoChainsDisagreed:
         from bga import compare
         from tools import bga_snapshot
 
-        assert "classify_against_band" in inspect.getsource(
-            bga_snapshot._mark_verdicts)
+        assert "classify_against_band" in inspect.getsource(bga_snapshot._mark_verdicts)
         assert "classify_against_band(" in inspect.getsource(
-            compare._compare_results if hasattr(compare, "_compare_results")
-            else compare)
+            compare._compare_results if hasattr(compare, "_compare_results") else compare
+        )
 
 
 class TestTheVocabularyIsClosed:
     def test_the_store_emits_only_declared_kinds(self):
         from tools.bga_snapshot import _mark_verdicts
 
-        rows = [{"total_duration_us": d}
-                for d in (100, 100, 100, 100, 200, 150, 90, 101, 400)]
+        rows = [{"total_duration_us": d} for d in (100, 100, 100, 100, 200, 150, 90, 101, 400)]
         _mark_verdicts(rows)
         for row in rows:
-            assert row["verdict_kind"] is None \
-                or row["verdict_kind"] in schemas.VERDICT_KINDS, row
+            assert row["verdict_kind"] is None or row["verdict_kind"] in schemas.VERDICT_KINDS, row
 
     def test_within_band_is_gone(self):
         """It was a sixth value that existed only in the store."""
@@ -113,14 +109,13 @@ class TestTheVocabularyIsClosed:
     def test_the_store_rows_publish_the_same_enum(self):
         rows = schemas.schema(schemas.STORE)["properties"]["snapshots"]
         declared = rows["items"]["properties"]["verdict_kind"]
-        assert set(declared["enum"]) == set(
-            schemas.schema(schemas.COMPARE)["properties"]["verdict_kind"]["enum"])
+        assert set(declared["enum"]) == set(schemas.schema(schemas.COMPARE)["properties"]["verdict_kind"]["enum"])
 
     def test_the_enum_is_the_constant_not_a_second_list(self):
         source = open("bga/schemas.py", encoding="utf-8").read()
         assert source.count('"enum": list(VERDICT_KINDS) + [None]') == 2, (
-            "the closed set is spelled out somewhere instead of built "
-            "from VERDICT_KINDS")
+            "the closed set is spelled out somewhere instead of built from VERDICT_KINDS"
+        )
 
     def test_a_real_store_listing_validates_against_its_own_schema(self, tmp_path):
         """The round-trip the Required Fix asks for, on rows the code
@@ -146,8 +141,8 @@ class TestTheStyleSheetFollowedTheVocabulary:
         css = open("bga/viewer/style.css", encoding="utf-8").read()
         styled = set(re.findall(r"\.verdict-([a-z_]+)", css))
         assert styled <= set(schemas.VERDICT_KINDS), (
-            f"styles a verdict kind nothing publishes: "
-            f"{styled - set(schemas.VERDICT_KINDS)}")
+            f"styles a verdict kind nothing publishes: {styled - set(schemas.VERDICT_KINDS)}"
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

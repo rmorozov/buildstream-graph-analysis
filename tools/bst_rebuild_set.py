@@ -83,9 +83,7 @@ def rebuild_set(graph: dict, cuts: Iterable[str]) -> list[str]:
     known = {element["uid"] for element in graph["elements"]}
     missing = sorted(set(cuts) - known)
     if missing:
-        raise KeyError(
-            "cut elements not present in the graph: " + ", ".join(missing)
-        )
+        raise KeyError("cut elements not present in the graph: " + ", ".join(missing))
 
     successors = build_successors(graph["dependencies"])
 
@@ -101,9 +99,7 @@ def rebuild_set(graph: dict, cuts: Iterable[str]) -> list[str]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(
-        description=HELP, formatter_class=argparse.RawDescriptionHelpFormatter
-    )
+    parser = argparse.ArgumentParser(description=HELP, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("graph_json", help="graph.json from tools/bst_show_to_graph.py.")
     parser.add_argument(
         "--cut",

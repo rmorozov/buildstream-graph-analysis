@@ -6,6 +6,7 @@ no field, is a clause nobody can pay and nothing said so.
 
 holds: rules.md#an-acceptance-test-names-where-its-reading-is-taken-or-files-unpayable-with-a-reason-from-ux-938
 """
+
 import pathlib
 import shutil
 import subprocess
@@ -38,23 +39,27 @@ def _plant(into, uid, header_line):
             break
     target = into / f"UX-{uid:04d}-a-planted-row.md"
     target.write_text("".join(lines), encoding="utf-8")
-    row = (f"| UX-{uid} | [a planted row](UX-{uid:04d}-a-planted-row.md) | "
-          "guards | Medium | a test | 🔴 Not Started |\n")
+    row = f"| UX-{uid} | [a planted row](UX-{uid:04d}-a-planted-row.md) | guards | Medium | a test | 🔴 Not Started |\n"
     with (into / "README.md").open("a", encoding="utf-8") as index:
         index.write(row)
     return target
 
 
 def _check(into):
-    return subprocess.run([sys.executable, str(TOOL), "--check", "--scenarios", str(into)],
-                          capture_output=True, text=True)
+    return subprocess.run(
+        [sys.executable, str(TOOL), "--check", "--scenarios", str(into)], capture_output=True, text=True
+    )
 
 
 class TestAPlantedRowWithNoReadingReds:
     def test_names_the_row(self, tmp_path):
         into = _sandbox(tmp_path)
-        _plant(into, 9001, "**Priority:** Medium | **Status:** \U0001f534 Not Started | "
-              "**Topic:** guards | **Area:** tools | **Shape:** mechanical\n")
+        _plant(
+            into,
+            9001,
+            "**Priority:** Medium | **Status:** \U0001f534 Not Started | "
+            "**Topic:** guards | **Area:** tools | **Shape:** mechanical\n",
+        )
         run = _check(into)
         assert run.returncode == 1
         assert "UX-9001: no Reading field" in run.stdout, run.stdout
@@ -63,21 +68,28 @@ class TestAPlantedRowWithNoReadingReds:
 class TestARunnerJobNotInCiYmlReds:
     def test_names_the_row(self, tmp_path):
         into = _sandbox(tmp_path)
-        _plant(into, 9002, "**Priority:** Medium | **Status:** \U0001f534 Not Started | "
-              "**Topic:** guards | **Area:** tools | **Shape:** mechanical | "
-              "**Reading:** runner:no-such-job\n")
+        _plant(
+            into,
+            9002,
+            "**Priority:** Medium | **Status:** \U0001f534 Not Started | "
+            "**Topic:** guards | **Area:** tools | **Shape:** mechanical | "
+            "**Reading:** runner:no-such-job\n",
+        )
         run = _check(into)
         assert run.returncode == 1
-        assert ("UX-9002: runner job 'no-such-job' is not under ci.yml's "
-               "jobs:" in run.stdout), run.stdout
+        assert "UX-9002: runner job 'no-such-job' is not under ci.yml's jobs:" in run.stdout, run.stdout
 
 
 class TestAnUnpayableWithNoReasonReds:
     def test_names_the_row(self, tmp_path):
         into = _sandbox(tmp_path)
-        _plant(into, 9003, "**Priority:** Medium | **Status:** \U0001f534 Not Started | "
-              "**Topic:** guards | **Area:** tools | **Shape:** mechanical | "
-              "**Reading:** unpayable:\n")
+        _plant(
+            into,
+            9003,
+            "**Priority:** Medium | **Status:** \U0001f534 Not Started | "
+            "**Topic:** guards | **Area:** tools | **Shape:** mechanical | "
+            "**Reading:** unpayable:\n",
+        )
         run = _check(into)
         assert run.returncode == 1
         assert "UX-9003: 'unpayable:' names no reason" in run.stdout, run.stdout

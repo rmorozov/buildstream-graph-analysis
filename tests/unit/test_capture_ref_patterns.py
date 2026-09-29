@@ -8,6 +8,7 @@ documented `git fetch` that matches no ref that exists. Prose that
 describes a generated name needs what the counts got: a test that reads
 the generator.
 """
+
 import re
 from pathlib import Path
 
@@ -42,10 +43,9 @@ def _run_ref_template() -> str:
 def _example_ref() -> str:
     """One concrete name the workflow would really publish."""
     ref = _run_ref_template()
-    for name, value in (("SHORT_REF", "953683fb"), ("REF_MODE", "incremental"),
-                        ("BUILDERS", "4"), ("MAX_JOBS", "4")):
+    for name, value in (("SHORT_REF", "953683fb"), ("REF_MODE", "incremental"), ("BUILDERS", "4"), ("MAX_JOBS", "4")):
         ref = ref.replace("${" + name + "}", value)
-    ref = re.sub(r"\$\{\{.*?\}\}", "32223468993", ref)   # github.run_id
+    ref = re.sub(r"\$\{\{.*?\}\}", "32223468993", ref)  # github.run_id
     assert "$" not in ref, f"unsubstituted variable in {ref}"
     return ref
 
@@ -68,7 +68,7 @@ def _ref_shape() -> "re.Pattern":
     template = re.sub(r"^captures/[^/]+/", "captures/${PROJECT}/", template)
     parts, last = [], 0
     for match in VARIABLE.finditer(template):
-        parts.append(re.escape(template[last:match.start()]))
+        parts.append(re.escape(template[last : match.start()]))
         parts.append(SEGMENT)
         last = match.end()
     parts.append(re.escape(template[last:]))
@@ -87,16 +87,18 @@ INSTRUCTION_DOCS = ("docs/guides", "docs/spec", "README.md")
 
 
 def _documented_patterns():
-    candidates = sorted(REPO.joinpath("docs/guides").rglob("*.md")) \
-        + sorted(REPO.joinpath("docs/spec").rglob("*.md")) \
+    candidates = (
+        sorted(REPO.joinpath("docs/guides").rglob("*.md"))
+        + sorted(REPO.joinpath("docs/spec").rglob("*.md"))
         + [REPO / "README.md"]
+    )
     for path in candidates:
         for raw in DOC_PATTERN.findall(path.read_text(errors="replace")):
             token = raw.rstrip("'\"`,.);:")
             if token.startswith(POINTER_REFS):
                 continue
-            if "/" not in token[len("captures/"):]:
-                continue          # `captures/<project>` alone, not a ref name
+            if "/" not in token[len("captures/") :]:
+                continue  # `captures/<project>` alone, not a ref name
             yield path.relative_to(REPO), token
 
 

@@ -8,6 +8,7 @@ bounded at `TABLE_OPENS_BOUNDED_ABOVE` while every hidden card kept its
 button. This is `renderFindings` itself, in the shim: the claim is
 about the document the renderer produces, not a rendered browser page.
 """
+
 import json
 import os
 import pathlib
@@ -89,9 +90,12 @@ process.stdout.write(JSON.stringify({
 def measured():
     result = subprocess.run(
         [node, "--input-type=module", "-e", _SCRIPT],
-        capture_output=True, text=True, cwd=REPO, timeout=60,
-        env=dict(os.environ, BGA_REPO=str(REPO),
-                 BGA_DOM_SHIM=str(REPO / "tests" / "dom_shim.mjs")))
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=60,
+        env=dict(os.environ, BGA_REPO=str(REPO), BGA_DOM_SHIM=str(REPO / "tests" / "dom_shim.mjs")),
+    )
     assert result.returncode == 0, result.stderr[-3000:]
     return json.loads(result.stdout.strip().splitlines()[-1])
 
@@ -101,8 +105,7 @@ class TestTheFoldBoundsControlsToo:
     def test_one_finding_is_never_hidden(self, measured):
         assert measured["one"] == 1
 
-    def test_forty_and_a_hundred_and_twenty_carry_the_same_controls(
-            self, measured):
+    def test_forty_and_a_hundred_and_twenty_carry_the_same_controls(self, measured):
         """The class the item names: at 40 and at 120 findings, the
         interactive descendants materialised before expansion are
         equal - the population past the bound is a shell, not a hidden
@@ -113,7 +116,6 @@ class TestTheFoldBoundsControlsToo:
         assert measured["afterFragment"] == measured["before120"] + 1
         assert measured["others"] == 0
 
-    def test_show_all_hydrates_every_finding_once_in_source_order(
-            self, measured):
+    def test_show_all_hydrates_every_finding_once_in_source_order(self, measured):
         assert measured["showAllControls"] == 120
         assert measured["showAllOrder"] == [f"f{i}" for i in range(120)]

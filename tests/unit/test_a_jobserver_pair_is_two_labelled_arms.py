@@ -1,5 +1,6 @@
 """UX-905: `tools/jobserver_arms.py` reads width at equal work, and refuses
 a pair whose arms are mislabelled or whose mode never ran."""
+
 import json
 
 from tools import jobserver_arms
@@ -7,12 +8,14 @@ from tools import jobserver_arms
 
 def _report(jobserver=None, decisions=(), peak=2, work=530):
     return {
-        "jobserver": jobserver, "jobserver_auth": "fifo" if jobserver else None,
+        "jobserver": jobserver,
+        "jobserver_auth": "fifo" if jobserver else None,
         "jobserver_pool": {"ceiling": jobserver} if jobserver else None,
         "jobserver_decisions": list(decisions),
         "wall_span_s": 100.0,
-        "per_element_parallelism": [{"element": "giant.bst", "peak_work_concurrency": peak,
-                                     "requested_jobs": 2, "work_process_count": work}],
+        "per_element_parallelism": [
+            {"element": "giant.bst", "peak_work_concurrency": peak, "requested_jobs": 2, "work_process_count": work}
+        ],
     }
 
 
@@ -31,13 +34,11 @@ def test_a_true_pair_reads_both_widths_and_passes(tmp_path, capsys):
 
 
 def test_an_auto_arm_with_no_mode_is_not_a_pair():
-    assert jobserver_arms.arms(_report(), _report())["problems"] == [
-        "the auto arm ran no jobserver"]
+    assert jobserver_arms.arms(_report(), _report())["problems"] == ["the auto arm ran no jobserver"]
 
 
 def test_an_auto_arm_that_decided_nothing_is_not_a_pair():
-    assert jobserver_arms.arms(_report(), _report(4))["problems"] == [
-        "the auto arm recorded no per-sandbox decision"]
+    assert jobserver_arms.arms(_report(), _report(4))["problems"] == ["the auto arm recorded no per-sandbox decision"]
 
 
 def test_swapped_arms_are_named(tmp_path):

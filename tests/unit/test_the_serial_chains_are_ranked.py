@@ -18,6 +18,7 @@ the three fixtures here has the shape, though `macro_micro`'s
 where a chain sailing through a join instead of ending there first
 showed.
 """
+
 import json
 import os
 import pathlib
@@ -67,9 +68,11 @@ SERIAL_CHAINS_JS = r"""
 
 def _analyze(run):
     proc = subprocess.run(
-        [sys.executable, "-m", "bga.cli", "analyze", run,
-         "--format", "json", "--diagnostics"],
-        capture_output=True, text=True, cwd=REPO)
+        [sys.executable, "-m", "bga.cli", "analyze", run, "--format", "json", "--diagnostics"],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+    )
     assert proc.returncode == 0, proc.stderr
     return json.loads(proc.stdout)
 
@@ -113,8 +116,7 @@ class TestTheSerialChainsAreRanked:
         _assert_ranked(chains, _graph_for(ACBC))
         # The chain the fixture is named for - `lib0` through `lib3` -
         # wins on duration and covers the whole path (`wall_share` 1.0).
-        assert chains[0]["members"] == ["lib0.bst", "lib1.bst",
-                                        "lib2.bst", "lib3.bst"]
+        assert chains[0]["members"] == ["lib0.bst", "lib1.bst", "lib2.bst", "lib3.bst"]
         assert chains[0]["wall_share"] == 1.0
         # Today's `longest_serial_chain` is `['lib0.bst']` - length 1,
         # because `lib0.bst` is the only root and it branches on its
@@ -157,8 +159,7 @@ class TestTheSerialChainsAreRanked:
         G = nx.DiGraph()
         G.add_edges_from([("A", "C"), ("B", "C"), ("C", "D"), ("D", "E")])
         edg = ElementDependencyGraph(G=G)
-        sa = StructuralAnalyzer(edg, tasks={},
-                                element_durations=dict.fromkeys(G.nodes(), 1))
+        sa = StructuralAnalyzer(edg, tasks={}, element_durations=dict.fromkeys(G.nodes(), 1))
         chains = sa._find_serial_chains()
         members = sorted(tuple(c.members) for c in chains)
         assert members == [("A", "C"), ("B", "C"), ("C", "D", "E")]
@@ -170,8 +171,7 @@ class TestTheSerialChainsAreRanked:
         assert set(shared) == {"C"}
         for chain_list in shared.values():
             for members in chain_list:
-                assert "C" in (members[0], members[-1]), (
-                    f"C is interior to {members}")
+                assert "C" in (members[0], members[-1]), f"C is interior to {members}"
 
 
 @pytest.fixture(scope="module")

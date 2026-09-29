@@ -5,6 +5,7 @@ Reuses `test_a_run_red_for_another_reason_adopts_nothing`'s replay
 engine (`_jobs`, `_Expr`, `_holds`, `_status`, `_matrix_cells`) rather
 than a second parser for the same expression language.
 """
+
 import pathlib
 import re
 import sys
@@ -40,15 +41,21 @@ def _is_make_test_variant(step):
 
 
 def _pr_context(version):
-    return {"matrix": {"python-version": version},
-            "github": {"event_name": "pull_request", "ref": "refs/pull/1/merge",
-                       "event": {"repository": {"default_branch": "main"}}}}
+    return {
+        "matrix": {"python-version": version},
+        "github": {
+            "event_name": "pull_request",
+            "ref": "refs/pull/1/merge",
+            "event": {"repository": {"default_branch": "main"}},
+        },
+    }
 
 
 def _push_context(version):
-    return {"matrix": {"python-version": version},
-            "github": {"event_name": "push", "ref": "refs/heads/main",
-                       "event": {"repository": {"default_branch": "main"}}}}
+    return {
+        "matrix": {"python-version": version},
+        "github": {"event_name": "push", "ref": "refs/heads/main", "event": {"repository": {"default_branch": "main"}}},
+    }
 
 
 #: `UX-995`: deliberately push-only. Named, not matched by a substring
@@ -60,6 +67,8 @@ PUSH_ONLY_STEPS = (
     "Test (with a coverage-derived touching map)",
     "This run's touching map, for adopting",
     "Upload it, so the adopt job can merge it",
+    # `UX-1111`: a PR's hang is pytest-timeout's, inside its one suite run.
+    "Test (small tier, single process)",
 )
 
 
@@ -68,15 +77,15 @@ def test_the_push_matrix_equals_pyprojects_classifiers():
     push = sorted(_matrix_cells(jobs, {"event_name": "push"}), key=_version_key)
     assert push == _classifiers(), (
         f"push runs {push}, pyproject.toml declares {_classifiers()} - a "
-        f"pull request's own cell must stay one of the classifiers")
+        f"pull request's own cell must stay one of the classifiers"
+    )
 
 
 def test_the_pull_request_matrix_is_the_newest_classifier_alone():
     jobs = _jobs()
     push = _matrix_cells(jobs, {"event_name": "push"})
     pr = _matrix_cells(jobs, {"event_name": "pull_request"})
-    assert pr == [max(push, key=_version_key)], (
-        f"pull_request runs {pr}, not the newest of {push} alone")
+    assert pr == [max(push, key=_version_key)], f"pull_request runs {pr}, not the newest of {push} alone"
 
 
 def test_exactly_one_make_test_step_holds_per_event_and_cell():
@@ -86,10 +95,8 @@ def test_exactly_one_make_test_step_holds_per_event_and_cell():
     variants = [s for s in jobs["test"]["steps"] if _is_make_test_variant(s)]
     for event in ("push", "pull_request"):
         for version in _matrix_cells(jobs, {"event_name": event}):
-            context = {"matrix": {"python-version": version},
-                       "github": {"event_name": event}}
-            holding = [s["name"] for s in variants
-                       if _holds(s.get("if"), context, _status(["success"]))]
+            context = {"matrix": {"python-version": version}, "github": {"event_name": event}}
+            holding = [s["name"] for s in variants if _holds(s.get("if"), context, _status(["success"]))]
             assert len(holding) == 1, (event, version, holding)
 
 
@@ -117,10 +124,20 @@ def test_every_pull_request_step_moves_to_the_cell_it_keeps():
         if _is_make_test_variant(step) or step.get("name") in PUSH_ONLY_STEPS:
             continue
         condition = step.get("if")
-        held_on_push = any(_holds(condition, _push_context(v), _status(["success"]))
-                           for v in push)
+        held_on_push = any(_holds(condition, _push_context(v), _status(["success"])) for v in push)
         if not held_on_push:
             continue
         assert _holds(condition, _pr_context(newest), _status(["success"])), (
             f"{step.get('name')!r} holds on some push cell but not on "
-            f"(pull_request, {newest!r}), and it is not in PUSH_ONLY_STEPS")
+            f"(pull_request, {newest!r}), and it is not in PUSH_ONLY_STEPS"
+        )
+
+
+def test_the_single_process_small_tier_runs_on_push_only():
+    """`UX-1111`: named in `PUSH_ONLY_STEPS`, which exempts it above - so
+    its own `if:` is read here, per event."""
+    (step,) = [s for s in _jobs()["test"]["steps"] if s.get("name") == "Test (small tier, single process)"]
+    newest = max(_classifiers(), key=_version_key)
+    ok = _status(["success"])
+    assert not _holds(step.get("if"), _pr_context(newest), ok), step.get("if")
+    assert _holds(step.get("if"), _push_context(newest), ok), step.get("if")

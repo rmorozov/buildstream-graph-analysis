@@ -18,6 +18,7 @@ that was already computed, and every verdict is taken from the same predicate `b
 compare`'s exit code calls — never recomputed from a threshold spelled out a second
 time. If this file and the exit code ever disagree, that is a bug in this file.
 """
+
 from typing import Optional
 
 from ..compare import (
@@ -74,43 +75,64 @@ def _gate_rows(comparison, args) -> list[dict]:
     marginal = getattr(comparison, 'marginal_efficiency', None)
     limit = getattr(args, 'max_addition_stretch', None) or DEFAULT_MAX_ADDITION_STRETCH
     if not marginal_on:
-        rows.append({'gate': 'Marginal efficiency', 'status': 'not requested',
-                     'why': '`--fail-on-inefficient-additions` not passed'})
+        rows.append(
+            {
+                'gate': 'Marginal efficiency',
+                'status': 'not requested',
+                'why': '`--fail-on-inefficient-additions` not passed',
+            }
+        )
     elif marginal is None:
-        rows.append({
-            'gate': 'Marginal efficiency', 'status': 'not applied',
-            'why': 'this change added no elements with measured work, so there is '
-                   'nothing to judge — an empty check, not a pass',
-        })
+        rows.append(
+            {
+                'gate': 'Marginal efficiency',
+                'status': 'not applied',
+                'why': 'this change added no elements with measured work, so there is '
+                'nothing to judge — an empty check, not a pass',
+            }
+        )
     elif marginal['stretch'] > limit:
-        rows.append({
-            'gate': 'Marginal efficiency', 'status': 'FAIL',
-            'why': f"{_s(marginal['added_critical_path_us'])} of the "
-                   f"{_s(marginal['added_work_us'])} this change added landed on the "
-                   f"critical path (stretch {marginal['stretch']:.2f} > {limit:.2f})",
-        })
+        rows.append(
+            {
+                'gate': 'Marginal efficiency',
+                'status': 'FAIL',
+                'why': f"{_s(marginal['added_critical_path_us'])} of the "
+                f"{_s(marginal['added_work_us'])} this change added landed on the "
+                f"critical path (stretch {marginal['stretch']:.2f} > {limit:.2f})",
+            }
+        )
     else:
-        rows.append({
-            'gate': 'Marginal efficiency', 'status': 'pass',
-            'why': f"{_s(marginal['added_work_us'])} added, "
-                   f"{_s(marginal['added_critical_path_us'])} of it on the critical "
-                   f"path (stretch {marginal['stretch']:.2f} ≤ {limit:.2f})",
-        })
+        rows.append(
+            {
+                'gate': 'Marginal efficiency',
+                'status': 'pass',
+                'why': f"{_s(marginal['added_work_us'])} added, "
+                f"{_s(marginal['added_critical_path_us'])} of it on the critical "
+                f"path (stretch {marginal['stretch']:.2f} ≤ {limit:.2f})",
+            }
+        )
 
     signal = getattr(comparison, 'efficiency_gate_signal', None) or {}
     drop_on = getattr(args, 'fail_on_efficiency_regression', False)
     floor_on = getattr(args, 'min_efficiency', None) is not None
     if not drop_on and not floor_on:
-        rows.append({'gate': 'Whole-build efficiency', 'status': 'not requested',
-                     'why': 'neither `--fail-on-efficiency-regression` nor '
-                            '`--min-efficiency` passed'})
+        rows.append(
+            {
+                'gate': 'Whole-build efficiency',
+                'status': 'not requested',
+                'why': 'neither `--fail-on-efficiency-regression` nor `--min-efficiency` passed',
+            }
+        )
     elif signal.get('gates_not_applied'):
         runs = ' and '.join(signal.get('missing_occupancy_in') or [])
-        rows.append({
-            'gate': 'Whole-build efficiency', 'status': 'not applied',
-            'why': f"the {runs} run has no `occupancy_share` signal, so there is "
-                   f"nothing to gate on — an unevaluated check, not a pass",
-        })
+        rows.append(
+            {
+                'gate': 'Whole-build efficiency',
+                'status': 'not applied',
+                'why': f"the {runs} run has no `occupancy_share` signal, so there is "
+                f"nothing to gate on — an unevaluated check, not a pass",
+            }
+        )
     else:
         floor = getattr(args, 'min_efficiency', None)
         below = floor_on and efficiency_below_floor(comparison, floor)
@@ -118,38 +140,55 @@ def _gate_rows(comparison, args) -> list[dict]:
         occupancy = (comparison.candidate_metrics or {}).get('occupancy_share')
         delta = (comparison.deltas or {}).get('occupancy_share')
         if below:
-            rows.append({'gate': 'Whole-build efficiency', 'status': 'FAIL',
-                         'why': f"occupancy {occupancy:.0%} is below the "
-                                f"{floor:.0%} floor"})
+            rows.append(
+                {
+                    'gate': 'Whole-build efficiency',
+                    'status': 'FAIL',
+                    'why': f"occupancy {occupancy:.0%} is below the {floor:.0%} floor",
+                }
+            )
         elif dropped:
-            rows.append({'gate': 'Whole-build efficiency', 'status': 'FAIL',
-                         'why': f"occupancy fell {_pct_points(delta)} to "
-                                f"{occupancy:.0%}"})
+            rows.append(
+                {
+                    'gate': 'Whole-build efficiency',
+                    'status': 'FAIL',
+                    'why': f"occupancy fell {_pct_points(delta)} to {occupancy:.0%}",
+                }
+            )
         else:
-            rows.append({'gate': 'Whole-build efficiency', 'status': 'pass',
-                         'why': f"occupancy {occupancy:.0%} ({_pct_points(delta)})"})
+            rows.append(
+                {
+                    'gate': 'Whole-build efficiency',
+                    'status': 'pass',
+                    'why': f"occupancy {occupancy:.0%} ({_pct_points(delta)})",
+                }
+            )
 
     regression_on = getattr(args, 'fail_on_regression', False)
     if not regression_on:
-        rows.append({'gate': 'Wall-clock regression', 'status': 'not requested',
-                     'why': '`--fail-on-regression` not passed'})
+        rows.append(
+            {'gate': 'Wall-clock regression', 'status': 'not requested', 'why': '`--fail-on-regression` not passed'}
+        )
     else:
         threshold = getattr(args, 'regression_threshold', None)
         failed = regression_gate_failed(
-            comparison, threshold,
-            against_band=bool(getattr(args, 'band_from_class', None)))
+            comparison, threshold, against_band=bool(getattr(args, 'band_from_class', None))
+        )
         baseline_total = (comparison.baseline_metrics or {}).get('total_duration_us')
         delta = (comparison.deltas or {}).get('total_duration_us')
         pct = (delta / baseline_total * 100) if (baseline_total and delta is not None) else None
         # The band itself is stated once, above the table. Repeating it
         # here would cost a row and say nothing new; what belongs in the
         # cell is which side of it this build landed on.
-        rows.append({
-            'gate': 'Wall-clock regression',
-            'status': 'FAIL' if failed else 'pass',
-            'why': (f"{_signed_s(delta)}" + (f" ({pct:+.1f}%)" if pct is not None else ""))
-                   + (" — outside " if failed else " — within ") + _band_name(comparison),
-        })
+        rows.append(
+            {
+                'gate': 'Wall-clock regression',
+                'status': 'FAIL' if failed else 'pass',
+                'why': (f"{_signed_s(delta)}" + (f" ({pct:+.1f}%)" if pct is not None else ""))
+                + (" — outside " if failed else " — within ")
+                + _band_name(comparison),
+            }
+        )
     return rows
 
 
@@ -165,17 +204,21 @@ def _band_reason(comparison) -> str:
     if not band:
         shortfall = getattr(comparison, 'baseline_band_shortfall', None)
         if shortfall:
-            return (f"judged against the fixed 1% rule — "
-                    f"baseline {plural(shortfall['supplied'], 'run')} supplied, "
-                    f"{shortfall['required']} required for a measured band")
+            return (
+                f"judged against the fixed 1% rule — "
+                f"baseline {plural(shortfall['supplied'], 'run')} supplied, "
+                f"{shortfall['required']} required for a measured band"
+            )
         return "judged against the fixed 1% rule (no baseline set supplied)"
     if band.get('widened_to_fixed_pct'):
-        return (f"band from baseline {plural(band['n'], 'run')}, widened to the fixed 1% "
-                f"rule: {_s(band['low_us'])} .. {_s(band['high_us'])}"
-                + _band_members(comparison))
-    return (f"band from baseline {plural(band['n'], 'run')}: {_s(band['low_us'])} .. "
-            f"{_s(band['high_us'])} (median ±{band['k']:g}× scaled MAD)"
-            + _band_members(comparison))
+        return (
+            f"band from baseline {plural(band['n'], 'run')}, widened to the fixed 1% "
+            f"rule: {_s(band['low_us'])} .. {_s(band['high_us'])}" + _band_members(comparison)
+        )
+    return (
+        f"band from baseline {plural(band['n'], 'run')}: {_s(band['low_us'])} .. "
+        f"{_s(band['high_us'])} (median ±{band['k']:g}× scaled MAD)" + _band_members(comparison)
+    )
 
 
 def _band_members(comparison) -> str:
@@ -218,8 +261,7 @@ def _element_table(comparison, never_read: Optional[dict]) -> list[str]:
     added = diff.get('new') or []
     moved = diff.get('moved_onto_critical_path') or []
     if not added and not moved:
-        return ["**Elements** — this change added none and moved none onto the "
-                "critical path."]
+        return ["**Elements** — this change added none and moved none onto the critical path."]
 
     lines = ["**Elements this change added or moved**", ""]
     header = "| Element | Duration | Critical path |"
@@ -229,14 +271,15 @@ def _element_table(comparison, never_read: Optional[dict]) -> list[str]:
         divider += " --- |"
     lines += [header, divider]
 
-    rows = (
-        [(e['element_uid'], e['duration_us'],
-          'yes — new on the path' if e['on_critical_path']
-          else 'no — absorbed by existing parallelism', 'new')
-         for e in added]
-        + [(e['element_uid'], e['duration_us'], 'yes — moved onto the path', 'moved')
-           for e in moved]
-    )
+    rows = [
+        (
+            e['element_uid'],
+            e['duration_us'],
+            'yes — new on the path' if e['on_critical_path'] else 'no — absorbed by existing parallelism',
+            'new',
+        )
+        for e in added
+    ] + [(e['element_uid'], e['duration_us'], 'yes — moved onto the path', 'moved') for e in moved]
     for uid, duration_us, path, _kind in rows[:_MAX_ROWS]:
         row = f"| `{uid}` | {_s(duration_us)} | {path} |"
         if never_read is not None:
@@ -244,13 +287,13 @@ def _element_table(comparison, never_read: Optional[dict]) -> list[str]:
             row += f" {', '.join(f'`{d}`' for d in deps) if deps else '—'} |"
         lines.append(row)
     if len(rows) > _MAX_ROWS:
-        lines.append(f"| … {len(rows) - _MAX_ROWS} more | | |"
-                     + (" |" if never_read is not None else ""))
+        lines.append(f"| … {len(rows) - _MAX_ROWS} more | | |" + (" |" if never_read is not None else ""))
 
     lines.append("")
     if never_read is None:
-        lines.append("_No Plane 2 capture for the candidate run, so the "
-                     "declared-but-never-read column is absent — not empty._")
+        lines.append(
+            "_No Plane 2 capture for the candidate run, so the declared-but-never-read column is absent — not empty._"
+        )
     return lines
 
 
@@ -277,12 +320,9 @@ def _why_block(comparison) -> list[str]:
     lines.append(rule['sentence'])
     lines.append("")
     if rule.get("name"):
-        lines.append(
-            f"Rule `{rule['name']}` = `{rule['threshold']}` "
-            f"({rule.get('module', '')}).")
+        lines.append(f"Rule `{rule['name']}` = `{rule['threshold']}` ({rule.get('module', '')}).")
         lines.append("")
-    refs = [entry for entry in (record.get("evidence") or [])
-            if entry.get("resolved")]
+    refs = [entry for entry in (record.get("evidence") or []) if entry.get("resolved")]
     if refs:
         lines += ["| Field | Value |", "| --- | --- |"]
         for entry in refs:
@@ -291,7 +331,8 @@ def _why_block(comparison) -> list[str]:
         lines.append(
             f"<sub>Paths are into the candidate run's "
             f"`{record.get('document', 'analyze/v1')}`; "
-            f"`bga analyze RUN --explain` prints the same chain.</sub>")
+            f"`bga analyze RUN --explain` prints the same chain.</sub>"
+        )
         lines.append("")
     lines += ["</details>", ""]
     return lines
@@ -323,19 +364,22 @@ def _verdict_why_block(comparison) -> list[str]:
     if not record:
         return []
     rule = record.get('rule') or {}
-    lines = [f"<details><summary>Why the verdict is "
-             f"{(comparison.verdict_kind or '').upper()}</summary>", "",
-             rule.get('sentence', ''), ""]
+    lines = [
+        f"<details><summary>Why the verdict is {(comparison.verdict_kind or '').upper()}</summary>",
+        "",
+        rule.get('sentence', ''),
+        "",
+    ]
     if rule.get('name'):
-        lines += [f"Rule `{rule['name']}` = `{rule['threshold']}` "
-                  f"({rule.get('module', '')}). Paths are into this "
-                  f"comparison's own `{record.get('document', 'compare/v2')}`:",
-                  ""]
-    refs = [entry for entry in (record.get('evidence') or [])
-            if entry.get('resolved')]
+        lines += [
+            f"Rule `{rule['name']}` = `{rule['threshold']}` "
+            f"({rule.get('module', '')}). Paths are into this "
+            f"comparison's own `{record.get('document', 'compare/v2')}`:",
+            "",
+        ]
+    refs = [entry for entry in (record.get('evidence') or []) if entry.get('resolved')]
     if refs:
-        lines += [" · ".join(f"`{entry['path']}` = {entry['value']}"
-                             for entry in refs), ""]
+        lines += [" · ".join(f"`{entry['path']}` = {entry['value']}" for entry in refs), ""]
     lines += ["</details>", ""]
     return lines
 
@@ -355,7 +399,8 @@ def _cache_line(comparison) -> list[str]:
         wasted = churn.get('wasted_rebuild_us')
         return [
             f"**Cache** — {plural(churned, 'element')} changed cache key between the two "
-            f"runs" + (f", {_s(wasted)} of rebuild attributable to the change" if wasted else "")
+            f"runs"
+            + (f", {_s(wasted)} of rebuild attributable to the change" if wasted else "")
             + f"; {rebuilt} rebuilt in both runs regardless.",
         ]
     return [
@@ -372,8 +417,7 @@ def _instance_stamp(comparison) -> str:
     tell a stale comment from a fresh one.
     """
     parts = []
-    for label, key in (("baseline", 'baseline_run_instance'),
-                       ("candidate", 'candidate_run_instance')):
+    for label, key in (("baseline", 'baseline_run_instance'), ("candidate", 'candidate_run_instance')):
         instance = getattr(comparison, key, None) or {}
         started = instance.get('started_at')
         parts.append(f"{label} {started}" if started else f"{label} (no start time)")
@@ -394,7 +438,9 @@ def render_ci_comment(comparison, args, native_report: Optional[dict] = None) ->
     # pastes this comment into a document should not import a lint error.
     lines = [MARKER, "", "### Build efficiency", ""]
 
-    headline = f"**{comparison.verdict.upper()}** — wall-clock {_s(baseline_total)} → {_s(candidate.get('total_duration_us'))}"
+    headline = (
+        f"**{comparison.verdict.upper()}** — wall-clock {_s(baseline_total)} → {_s(candidate.get('total_duration_us'))}"
+    )
     if delta_total is not None:
         headline += f" ({_signed_s(delta_total)}"
         headline += f", {pct:+.1f}%)" if pct is not None else ")"

@@ -5,6 +5,7 @@ because `make lint` was not in the gate, so the lint failure skipped the
 whole 3.9-3.12 matrix. `lint` is now a prerequisite of `test`, so a
 lint-red tree never reaches the `.gate-covered` write. Asserted through
 `make -n test` - the gate's own recipe, printed, no suite run."""
+
 import pathlib
 import subprocess
 
@@ -14,8 +15,7 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 def _dry_run_test():
     """The commands `make test` would run, in order, without running
     them - `-n` prints the recipe for `.PHONY` `test` and its prereqs."""
-    done = subprocess.run(["make", "-n", "test"], cwd=REPO,
-                          capture_output=True, text=True)
+    done = subprocess.run(["make", "-n", "test"], cwd=REPO, capture_output=True, text=True)
     assert done.returncode == 0, done.stderr
     return done.stdout.splitlines()
 

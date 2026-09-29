@@ -12,6 +12,7 @@ These fixtures reproduce that at two scales and show the marginal metric
 does not move: the numbers in `test_the_marginal_gate_is_scale_invariant`
 are the evidence for the default threshold.
 """
+
 import json
 import subprocess
 import sys
@@ -22,12 +23,14 @@ EXIT_OK = 0
 EXIT_EFFICIENCY_REGRESSION = 5
 
 D = 4_000_000  # one element's duration
-B = 4          # builders
+B = 4  # builders
 
 
 def _run_bga(args):
     return subprocess.run(
-        [sys.executable, "-m", "bga.cli"] + args, capture_output=True, text=True,
+        [sys.executable, "-m", "bga.cli"] + args,
+        capture_output=True,
+        text=True,
     )
 
 
@@ -36,29 +39,43 @@ def _write_run(tmp_path, name, elements, deps, spans, builders=B):
     run_dir.mkdir()
     identity = {"manifest_hash": "shape-fixture", "targets": list(elements)}
     end = max(start + dur for _, start, dur in spans)
-    (run_dir / "run-context.json").write_text(json.dumps({
-        "trace_epsilon_us": 1000,
-        "resource_capacities": {"PROCESS": builders},
-        "run_identity": identity,
-        "wall_clock": {"start_us": 0, "end_us": end},
-    }))
-    (run_dir / "graph.json").write_text(json.dumps({
-        "elements": [{"uid": uid, "requested_target": True} for uid in elements],
-        "dependencies": [
-            {"predecessor": a, "successor": b, "dependency_type": "build"}
-            for a, b in deps
-        ],
-        "run_identity_hash": identity["manifest_hash"],
-    }))
-    (run_dir / "trace.json").write_text(json.dumps({
-        "run_identity_hash": identity["manifest_hash"],
-        "spans": [
-            {"task_key": f"{uid}|BUILD|BUILD|0", "ts_us": start, "dur_us": dur,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"}
-            for uid, start, dur in spans
-        ],
-        "phases": [],
-    }))
+    (run_dir / "run-context.json").write_text(
+        json.dumps(
+            {
+                "trace_epsilon_us": 1000,
+                "resource_capacities": {"PROCESS": builders},
+                "run_identity": identity,
+                "wall_clock": {"start_us": 0, "end_us": end},
+            }
+        )
+    )
+    (run_dir / "graph.json").write_text(
+        json.dumps(
+            {
+                "elements": [{"uid": uid, "requested_target": True} for uid in elements],
+                "dependencies": [{"predecessor": a, "successor": b, "dependency_type": "build"} for a, b in deps],
+                "run_identity_hash": identity["manifest_hash"],
+            }
+        )
+    )
+    (run_dir / "trace.json").write_text(
+        json.dumps(
+            {
+                "run_identity_hash": identity["manifest_hash"],
+                "spans": [
+                    {
+                        "task_key": f"{uid}|BUILD|BUILD|0",
+                        "ts_us": start,
+                        "dur_us": dur,
+                        "resources": ["PROCESS"],
+                        "primary_resource": "PROCESS",
+                    }
+                    for uid, start, dur in spans
+                ],
+                "phases": [],
+            }
+        )
+    )
     return run_dir
 
 
@@ -66,9 +83,7 @@ def _shape(n, add=None):
     """`n` independent elements off one root, packed onto B builders."""
     elements = ["root.bst"] + [f"e{i}.bst" for i in range(n)]
     deps = [("root.bst", f"e{i}.bst") for i in range(n)]
-    spans = [("root.bst", 0, D)] + [
-        (f"e{i}.bst", D + (i // B) * D, D) for i in range(n)
-    ]
+    spans = [("root.bst", 0, D)] + [(f"e{i}.bst", D + (i // B) * D, D) for i in range(n)]
     tail = D + ((n + B - 1) // B) * D
     if add == "good":
         # Two more, filling spare slots in the existing waves.
@@ -189,13 +204,26 @@ def test_the_marginal_gate_is_scale_invariant(tmp_path):
 def test_the_gate_passes_a_good_add_and_fails_a_bad_one(tmp_path):
     base, good, bad = _trio(tmp_path, 10)
 
-    assert _run_bga([
-        "compare", str(base), str(good), "--fail-on-inefficient-additions",
-    ]).returncode == EXIT_OK
+    assert (
+        _run_bga(
+            [
+                "compare",
+                str(base),
+                str(good),
+                "--fail-on-inefficient-additions",
+            ]
+        ).returncode
+        == EXIT_OK
+    )
 
-    failed = _run_bga([
-        "compare", str(base), str(bad), "--fail-on-inefficient-additions",
-    ])
+    failed = _run_bga(
+        [
+            "compare",
+            str(base),
+            str(bad),
+            "--fail-on-inefficient-additions",
+        ]
+    )
     assert failed.returncode == EXIT_EFFICIENCY_REGRESSION
     assert "Marginal efficiency gate FAILED" in failed.stderr
     assert "g.bst, h.bst" in failed.stderr
@@ -206,12 +234,22 @@ def test_the_gate_still_fails_the_bad_add_where_the_whole_build_gate_goes_blind(
     passes it, the marginal gate provably does not."""
     base, _good, bad = _trio(tmp_path, 1200)
 
-    whole_build = _run_bga([
-        "compare", str(base), str(bad), "--fail-on-efficiency-regression",
-    ])
-    marginal = _run_bga([
-        "compare", str(base), str(bad), "--fail-on-inefficient-additions",
-    ])
+    whole_build = _run_bga(
+        [
+            "compare",
+            str(base),
+            str(bad),
+            "--fail-on-efficiency-regression",
+        ]
+    )
+    marginal = _run_bga(
+        [
+            "compare",
+            str(base),
+            str(bad),
+            "--fail-on-inefficient-additions",
+        ]
+    )
 
     assert whole_build.returncode == EXIT_OK
     assert marginal.returncode == EXIT_EFFICIENCY_REGRESSION
@@ -223,9 +261,14 @@ def test_an_empty_check_says_so_rather_than_reporting_green(tmp_path):
     base, _good, _bad = _trio(tmp_path, 10)
     twin = _write_run(tmp_path, "base10-twin", *_shape(10))
 
-    result = _run_bga([
-        "compare", str(base), str(twin), "--fail-on-inefficient-additions",
-    ])
+    result = _run_bga(
+        [
+            "compare",
+            str(base),
+            str(twin),
+            "--fail-on-inefficient-additions",
+        ]
+    )
 
     assert result.returncode == EXIT_OK
     assert "Marginal gate not applied" in result.stderr

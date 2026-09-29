@@ -11,6 +11,7 @@ The threshold is derived from the measured toll distribution, never
 chosen. These tests cover both what that means when the distribution can
 decide and what it must do when it cannot.
 """
+
 from bga.correlate import _merge_candidates, _split_candidates
 
 
@@ -22,11 +23,14 @@ class _Edge:
 
 
 def _cache_logs(*payers):
-    return {'sandbox_tax': {'top_payers': [
-        {'element': element, 'toll_us': toll, 'total_us': total,
-         'toll_share': toll / total}
-        for element, toll, total in payers
-    ]}}
+    return {
+        'sandbox_tax': {
+            'top_payers': [
+                {'element': element, 'toll_us': toll, 'total_us': total, 'toll_share': toll / total}
+                for element, toll, total in payers
+            ]
+        }
+    }
 
 
 # --- the criterion -----------------------------------------------------
@@ -42,20 +46,23 @@ def _cache_logs(*payers):
 
 # --- merge candidates ---------------------------------------------------
 
+
 def test_siblings_paying_an_outlying_toll_are_a_merge_candidate():
     """The too-fine signature: several elements with the same parents,
     each spending more of its time on staging than this project's own
     distribution calls normal."""
     cache_logs = _cache_logs(
-        ("tiny-a.bst", 3_000_000, 5_000_000),   # 60% toll: more setup than build
-        ("tiny-b.bst", 3_000_000, 5_000_000),   # 60%
-        ("big.bst", 2_000_000, 200_000_000),    # 1%
+        ("tiny-a.bst", 3_000_000, 5_000_000),  # 60% toll: more setup than build
+        ("tiny-b.bst", 3_000_000, 5_000_000),  # 60%
+        ("big.bst", 2_000_000, 200_000_000),  # 1%
         ("other.bst", 1_000_000, 100_000_000),  # 1%
-        ("more.bst", 1_000_000, 100_000_000),   # 1%
+        ("more.bst", 1_000_000, 100_000_000),  # 1%
     )
     edges = [
-        _Edge("base.bst", "tiny-a.bst"), _Edge("base.bst", "tiny-b.bst"),
-        _Edge("base.bst", "big.bst"), _Edge("base.bst", "other.bst"),
+        _Edge("base.bst", "tiny-a.bst"),
+        _Edge("base.bst", "tiny-b.bst"),
+        _Edge("base.bst", "big.bst"),
+        _Edge("base.bst", "other.bst"),
         _Edge("base.bst", "more.bst"),
     ]
     findings = _merge_candidates(edges, cache_logs, None, None)
@@ -78,13 +85,13 @@ def test_elements_with_different_parents_are_not_siblings():
         ("more.bst", 1_000_000, 100_000_000),
     )
     edges = [
-        _Edge("base-x.bst", "tiny-a.bst"), _Edge("base-y.bst", "tiny-b.bst"),
-        _Edge("base.bst", "big.bst"), _Edge("base.bst", "other.bst"),
+        _Edge("base-x.bst", "tiny-a.bst"),
+        _Edge("base-y.bst", "tiny-b.bst"),
+        _Edge("base.bst", "big.bst"),
+        _Edge("base.bst", "other.bst"),
         _Edge("base.bst", "more.bst"),
     ]
-    assert [f['id'] for f in _merge_candidates(edges, cache_logs, None, None)] == [
-        'merge-not-indicated'
-    ]
+    assert [f['id'] for f in _merge_candidates(edges, cache_logs, None, None)] == ['merge-not-indicated']
 
 
 def test_a_large_share_of_a_tiny_element_is_arithmetic_not_a_finding():
@@ -92,17 +99,14 @@ def test_a_large_share_of_a_tiny_element_is_arithmetic_not_a_finding():
     reason, and the same floor applies here: 90% of 0.4s is not a
     finding."""
     cache_logs = _cache_logs(
-        ("tiny-a.bst", 400_000, 440_000),   # 91% of 0.44s
+        ("tiny-a.bst", 400_000, 440_000),  # 91% of 0.44s
         ("tiny-b.bst", 400_000, 440_000),
         ("big.bst", 2_000_000, 200_000_000),
         ("other.bst", 1_000_000, 100_000_000),
         ("more.bst", 1_000_000, 100_000_000),
     )
-    edges = [_Edge("base.bst", name) for name in
-             ("tiny-a.bst", "tiny-b.bst", "big.bst", "other.bst", "more.bst")]
-    assert [f['id'] for f in _merge_candidates(edges, cache_logs, None, None)] == [
-        'merge-not-indicated'
-    ]
+    edges = [_Edge("base.bst", name) for name in ("tiny-a.bst", "tiny-b.bst", "big.bst", "other.bst", "more.bst")]
+    assert [f['id'] for f in _merge_candidates(edges, cache_logs, None, None)] == ['merge-not-indicated']
 
 
 def test_nothing_firing_says_how_far_from_the_line_the_project_is():
@@ -111,16 +115,18 @@ def test_nothing_firing_says_how_far_from_the_line_the_project_is():
     would make a merge worth its cache cost. Silence would leave a
     reader unable to tell that from a check that did not run."""
     cache_logs = _cache_logs(
-        ("a.bst", 0, 5_000_000), ("b.bst", 0, 5_000_000),
-        ("c.bst", 0, 5_000_000), ("d.bst", 1_000_000, 6_000_000),
+        ("a.bst", 0, 5_000_000),
+        ("b.bst", 0, 5_000_000),
+        ("c.bst", 0, 5_000_000),
+        ("d.bst", 1_000_000, 6_000_000),
     )
     edges = [_Edge("base.bst", name) for name in ("a.bst", "b.bst", "c.bst", "d.bst")]
     findings = _merge_candidates(edges, cache_logs, None, None)
     assert [f['id'] for f in findings] == ['merge-not-indicated']
     assert "largest tax share is 17%" in findings[0]['title']
     assert "toll" not in findings[0]['title'], (
-        "UX-138/UX-154: one concept, one name - the rendered text says "
-        "sandbox tax everywhere, including here")
+        "UX-138/UX-154: one concept, one name - the rendered text says sandbox tax everywhere, including here"
+    )
 
 
 def test_no_plane3_report_means_no_merge_half_at_all():
@@ -129,6 +135,7 @@ def test_no_plane3_report_means_no_merge_half_at_all():
 
 
 # --- split candidates ---------------------------------------------------
+
 
 def _analysis(path, durations, horizon):
     # `UX-344`: `critical_path_detail` is a key of the document and the
@@ -144,12 +151,13 @@ def test_a_dominant_element_with_real_internal_parallelism_is_named():
     """The too-coarse signature, measured on the real capture:
     `cmake-stage1.bst` holds 44% of the critical path and runs 7.50
     concurrent work processes inside one element."""
-    analysis = _analysis(["big.bst", "small.bst"],
-                         {"big.bst": 44, "small.bst": 5}, 100)
-    native = {'per_element_parallelism': [
-        {'element': 'big.bst', 'mean_work_concurrency': 7.5, 'work_process_count': 4586},
-        {'element': 'small.bst', 'mean_work_concurrency': 6.0, 'work_process_count': 10},
-    ]}
+    analysis = _analysis(["big.bst", "small.bst"], {"big.bst": 44, "small.bst": 5}, 100)
+    native = {
+        'per_element_parallelism': [
+            {'element': 'big.bst', 'mean_work_concurrency': 7.5, 'work_process_count': 4586},
+            {'element': 'small.bst', 'mean_work_concurrency': 6.0, 'work_process_count': 10},
+        ]
+    }
     findings = _split_candidates(analysis, native)
     assert [f['elements'] for f in findings] == [['big.bst']]
     assert findings[0]['severity'] == 'info'
@@ -165,21 +173,26 @@ def test_a_serial_element_is_not_a_split_candidate():
     an element already running one process at a time has no internal
     parallelism to expose."""
     analysis = _analysis(["big.bst"], {"big.bst": 90}, 100)
-    native = {'per_element_parallelism': [
-        {'element': 'big.bst', 'mean_work_concurrency': 1.0, 'work_process_count': 900},
-    ]}
+    native = {
+        'per_element_parallelism': [
+            {'element': 'big.bst', 'mean_work_concurrency': 1.0, 'work_process_count': 900},
+        ]
+    }
     assert _split_candidates(analysis, native) == []
 
 
 def test_a_parallel_element_off_the_critical_path_is_not_one_either():
     analysis = _analysis(["other.bst"], {"big.bst": 90, "other.bst": 90}, 100)
-    native = {'per_element_parallelism': [
-        {'element': 'big.bst', 'mean_work_concurrency': 8.0, 'work_process_count': 900},
-    ]}
+    native = {
+        'per_element_parallelism': [
+            {'element': 'big.bst', 'mean_work_concurrency': 8.0, 'work_process_count': 900},
+        ]
+    }
     assert _split_candidates(analysis, native) == []
 
 
 # --- UX-120: the projection is a floor, and says so -----------------------
+
 
 def _run_with_siblings(tmp_path):
     """Two sub-second siblings off one parent, each mostly staging.
@@ -192,41 +205,54 @@ def _run_with_siblings(tmp_path):
 
     elements = ["base.bst", "tiny-a.bst", "tiny-b.bst"]
     identity = {"manifest_hash": "granularity-fixture", "targets": elements}
-    spans = [("base.bst", 0, 1_000_000),
-             ("tiny-a.bst", 1_000_000, 5_000_000),
-             ("tiny-b.bst", 1_000_000, 5_000_000)]
+    spans = [("base.bst", 0, 1_000_000), ("tiny-a.bst", 1_000_000, 5_000_000), ("tiny-b.bst", 1_000_000, 5_000_000)]
     run_dir = tmp_path / "run"
     run_dir.mkdir()
-    (run_dir / "run-context.json").write_text(json.dumps({
-        "trace_epsilon_us": 1000,
-        # One builder: with two, the two siblings already overlap and
-        # shortening one changes no makespan at all - the projection is
-        # then exactly 0 for a merge that would really delete a staging,
-        # which is the same floor-not-estimate property this file's last
-        # test is about, arriving from the other direction.
-        "resource_capacities": {"PROCESS": 1},
-        "run_identity": identity,
-        "wall_clock": {"start_us": 0, "end_us": 6_000_000},
-    }))
-    (run_dir / "graph.json").write_text(json.dumps({
-        "elements": [{"uid": uid, "requested_target": True} for uid in elements],
-        "dependencies": [
-            {"predecessor": "base.bst", "successor": "tiny-a.bst",
-             "dependency_type": "build"},
-            {"predecessor": "base.bst", "successor": "tiny-b.bst",
-             "dependency_type": "build"},
-        ],
-        "run_identity_hash": identity["manifest_hash"],
-    }))
-    (run_dir / "trace.json").write_text(json.dumps({
-        "run_identity_hash": identity["manifest_hash"],
-        "spans": [
-            {"task_key": f"{uid}|BUILD|BUILD|0", "ts_us": start, "dur_us": dur,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"}
-            for uid, start, dur in spans
-        ],
-        "phases": [],
-    }))
+    (run_dir / "run-context.json").write_text(
+        json.dumps(
+            {
+                "trace_epsilon_us": 1000,
+                # One builder: with two, the two siblings already overlap and
+                # shortening one changes no makespan at all - the projection is
+                # then exactly 0 for a merge that would really delete a staging,
+                # which is the same floor-not-estimate property this file's last
+                # test is about, arriving from the other direction.
+                "resource_capacities": {"PROCESS": 1},
+                "run_identity": identity,
+                "wall_clock": {"start_us": 0, "end_us": 6_000_000},
+            }
+        )
+    )
+    (run_dir / "graph.json").write_text(
+        json.dumps(
+            {
+                "elements": [{"uid": uid, "requested_target": True} for uid in elements],
+                "dependencies": [
+                    {"predecessor": "base.bst", "successor": "tiny-a.bst", "dependency_type": "build"},
+                    {"predecessor": "base.bst", "successor": "tiny-b.bst", "dependency_type": "build"},
+                ],
+                "run_identity_hash": identity["manifest_hash"],
+            }
+        )
+    )
+    (run_dir / "trace.json").write_text(
+        json.dumps(
+            {
+                "run_identity_hash": identity["manifest_hash"],
+                "spans": [
+                    {
+                        "task_key": f"{uid}|BUILD|BUILD|0",
+                        "ts_us": start,
+                        "dur_us": dur,
+                        "resources": ["PROCESS"],
+                        "primary_resource": "PROCESS",
+                    }
+                    for uid, start, dur in spans
+                ],
+                "phases": [],
+            }
+        )
+    )
     return run_dir
 
 
@@ -243,8 +269,10 @@ def _merge_finding(tmp_path):
         ("tiny-b.bst", 3_000_000, 5_000_000),
     )
     findings = _merge_candidates(
-        analyzer.graph.dependencies, cache_logs,
-        analyzer.normalized_tasks, analyzer.run_context,
+        analyzer.graph.dependencies,
+        cache_logs,
+        analyzer.normalized_tasks,
+        analyzer.run_context,
     )
     return next(f for f in findings if f['id'] == 'merge-candidate')
 
@@ -297,12 +325,14 @@ def test_no_user_facing_renderer_says_toll():
         tree = ast.parse(path.read_text())
         docstrings = set()
         for node in ast.walk(tree):
-            if isinstance(node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef,
-                                 ast.ClassDef)):
+            if isinstance(node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
                 body = getattr(node, "body", None)
-                if (body and isinstance(body[0], ast.Expr)
-                        and isinstance(body[0].value, ast.Constant)
-                        and isinstance(body[0].value.value, str)):
+                if (
+                    body
+                    and isinstance(body[0], ast.Expr)
+                    and isinstance(body[0].value, ast.Constant)
+                    and isinstance(body[0].value.value, str)
+                ):
                     docstrings.add(id(body[0].value))
         for node in ast.walk(tree):
             if not isinstance(node, ast.Constant) or not isinstance(node.value, str):
@@ -314,7 +344,5 @@ def test_no_user_facing_renderer_says_toll():
             if text in ("toll", "toll_us", "toll_share", "toll_s"):
                 continue
             if "toll" in text.replace("toll_us", "").replace("toll_share", ""):
-                offenders.append(
-                    f"{path.relative_to(root)}:{node.lineno}: {text.strip()[:80]}")
-    assert offenders == [], (
-        "user-facing 'toll' left after UX-138's sweep:\n  " + "\n  ".join(offenders))
+                offenders.append(f"{path.relative_to(root)}:{node.lineno}: {text.strip()[:80]}")
+    assert offenders == [], "user-facing 'toll' left after UX-138's sweep:\n  " + "\n  ".join(offenders)

@@ -28,6 +28,7 @@ The first is a problem, the second is not, and the third is the
 reader's own flag. `UX-156`'s rule — absence is stated, not implied —
 applied to the plane.
 """
+
 import contextlib
 import io
 import json
@@ -77,25 +78,23 @@ def snapshot(tmp_path):
 
 
 class TestTheTerminalAndThePageAgree:
-
     def test_plane2_coverage_is_byte_identical(self, snapshot):
         """The acceptance test, and the help's promise made checkable."""
         run = snapshot / "run"
-        terminal = json.dumps(_terminal(run).get("plane2_coverage"),
-                              sort_keys=True)
-        page = json.dumps(payloads(str(run))["report.json"].get(
-            "plane2_coverage"), sort_keys=True)
+        terminal = json.dumps(_terminal(run).get("plane2_coverage"), sort_keys=True)
+        page = json.dumps(payloads(str(run))["report.json"].get("plane2_coverage"), sort_keys=True)
         assert terminal == page, (
             f"analyze and view publish different Plane 2 coverage for one "
-            f"run:\n  analyze: {terminal}\n  view:    {page}")
+            f"run:\n  analyze: {terminal}\n  view:    {page}"
+        )
         assert terminal != "null", (
             "both publish nothing, so the clause is vacuous - the fixture "
-            "has a plane2.json beside it and both readers should find it")
+            "has a plane2.json beside it and both readers should find it"
+        )
 
     def test_the_absence_sentence_is_the_same_one(self, snapshot):
         run = snapshot / "run"
-        assert (_terminal(run).get("plane2_absence")
-                == payloads(str(run))["report.json"].get("plane2_absence"))
+        assert _terminal(run).get("plane2_absence") == payloads(str(run))["report.json"].get("plane2_absence")
 
     def test_one_discovery_function_serves_both(self):
         """The mechanism, not just its result: two copies of a policy is
@@ -103,28 +102,34 @@ class TestTheTerminalAndThePageAgree:
         source = (REPO / "tools/bga_view.py").read_text(encoding="utf-8")
         assert "plane2_shape.attachable(run)" in source, (
             "the viewer no longer routes through bga.plane2.attachable; a "
-            "second copy of the discovery is exactly what UX-329 was")
+            "second copy of the discovery is exactly what UX-329 was"
+        )
         cli = (REPO / "bga/cli.py").read_text(encoding="utf-8")
         assert "plane2_shape.attachable(" in cli
 
 
 class TestAnalyzeFindsTheSibling:
-
     def test_it_attaches_without_being_told(self, snapshot):
         assert _terminal(snapshot / "run").get("plane2_coverage"), (
-            "`bga analyze` on a snapshot with a Plane 2 report beside it "
-            "still publishes nothing - the UX-329 defect")
+            "`bga analyze` on a snapshot with a Plane 2 report beside it still publishes nothing - the UX-329 defect"
+        )
 
     def test_an_explicit_plane2_still_wins(self, snapshot, tmp_path):
         """The override has to keep overriding: a caller naming a report
         means that report, not the one the store happens to hold."""
         other = tmp_path / "other.json"
-        other.write_text(json.dumps({
-            "by_element": {}, "per_element_parallelism": [],
-            "cpu_time": {"per_element": {}},
-            "declared_vs_used": {"unused_candidates": []},
-            "stream_coverage": {"processes": 7, "opens_coverage": 0.5},
-        }), encoding="utf-8")
+        other.write_text(
+            json.dumps(
+                {
+                    "by_element": {},
+                    "per_element_parallelism": [],
+                    "cpu_time": {"per_element": {}},
+                    "declared_vs_used": {"unused_candidates": []},
+                    "stream_coverage": {"processes": 7, "opens_coverage": 0.5},
+                }
+            ),
+            encoding="utf-8",
+        )
         coverage = _terminal(snapshot / "run", "--plane2", str(other))
         assert coverage["plane2_coverage"]["processes"] == 7
 
@@ -140,7 +145,6 @@ class TestAnalyzeFindsTheSibling:
 
 
 class TestTheThreeAbsencesAreThreeSentences:
-
     def test_never_captured(self):
         assert plane2.absence(str(GOLDEN)) == plane2.NOT_CAPTURED
 
@@ -155,15 +159,14 @@ class TestTheThreeAbsencesAreThreeSentences:
         """The mutation this file exists for is collapsing them, and a
         clause that only checked "a sentence is printed" would not see
         it."""
-        sentences = {plane2.NOT_CAPTURED, plane2.CAPTURED_NO_RAW_LOG,
-                     plane2.DECLINED}
+        sentences = {plane2.NOT_CAPTURED, plane2.CAPTURED_NO_RAW_LOG, plane2.DECLINED}
         assert len(sentences) == 3, (
-            "two of the three absence sentences are the same string, which "
-            "is the defect UX-329 was filed for")
+            "two of the three absence sentences are the same string, which is the defect UX-329 was filed for"
+        )
         assert "not captured" in plane2.NOT_CAPTURED
         assert "was captured" in plane2.CAPTURED_NO_RAW_LOG, (
-            "the captured-but-no-log sentence no longer says the plane was "
-            "captured, which is the half a reader needs")
+            "the captured-but-no-log sentence no longer says the plane was captured, which is the half a reader needs"
+        )
 
     def test_the_terminal_prints_it(self, snapshot):
         assert plane2.CAPTURED_NO_RAW_LOG in _text(snapshot / "run")

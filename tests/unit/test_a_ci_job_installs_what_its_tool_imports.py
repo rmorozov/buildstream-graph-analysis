@@ -9,6 +9,7 @@ tool imports a third-party module sits after a `pip install` step in
 the same job. The import walk follows the tool's own `tools/` imports
 (`dev_touch_map` reaches `defusedxml` through `dev_tier_drift`).
 """
+
 import ast
 import importlib.util
 import pathlib
@@ -35,8 +36,7 @@ def _is_stdlib(root):
     origin = spec.origin or ""
     if origin in ("built-in", "frozen"):
         return True
-    return (origin.startswith(sysconfig.get_paths()["stdlib"])
-            and "site-packages" not in origin)
+    return origin.startswith(sysconfig.get_paths()["stdlib"]) and "site-packages" not in origin
 
 
 def third_party_imports(tool, seen=None):
@@ -81,24 +81,27 @@ def _tool_steps():
 
 
 def test_the_population_is_not_empty():
-    needing = [(job, tool) for job, tool, _ in _tool_steps()
-               if third_party_imports(tool)]
+    needing = [(job, tool) for job, tool, _ in _tool_steps() if third_party_imports(tool)]
     assert len(needing) >= 3, (
-        f"only {needing} run a tool with a third-party import; the three "
-        "adopt jobs are what this guard was filed on")
+        f"only {needing} run a tool with a third-party import; the three adopt jobs are what this guard was filed on"
+    )
 
 
 def test_the_walk_follows_a_tool_into_the_tool_it_imports():
     assert "defusedxml" in third_party_imports("dev_touch_map"), (
         "dev_touch_map reaches defusedxml through dev_tier_drift; a walk "
-        "that stops at the first file passes the job that failed")
+        "that stops at the first file passes the job that failed"
+    )
 
 
 def test_every_job_running_a_tool_installs_what_it_imports():
-    bare = [(job, tool, sorted(third_party_imports(tool)))
-            for job, tool, installed in _tool_steps()
-            if not installed and third_party_imports(tool)]
+    bare = [
+        (job, tool, sorted(third_party_imports(tool)))
+        for job, tool, installed in _tool_steps()
+        if not installed and third_party_imports(tool)
+    ]
     assert not bare, (
         "job(s) run a tool on a bare interpreter: "
         f"{bare} - a pip install step must come first; the adopt jobs were "
-        "red on ModuleNotFoundError from 2026-09-08 to 2026-09-12")
+        "red on ModuleNotFoundError from 2026-09-08 to 2026-09-12"
+    )

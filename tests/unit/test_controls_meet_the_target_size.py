@@ -12,6 +12,7 @@ file does not require it of. Boots the golden export, once with a fine
 pointer and once under touch emulation (`UX-1022`'s `Browser.measure
 coarse=True`).
 """
+
 import pathlib
 import shutil
 import sys
@@ -69,8 +70,7 @@ def golden(tmp_path_factory):
 
 
 def _under(controls, bound):
-    return [c for c in controls if not c["sentence"]
-            and min(c["w"], c["h"]) < bound - 0.01]
+    return [c for c in controls if not c["sentence"] and min(c["w"], c["h"]) < bound - 0.01]
 
 
 @needs_browser
@@ -78,8 +78,8 @@ def test_every_control_is_24x24_with_a_fine_pointer(browser, golden):
     controls = browser.measure(golden, _SCAN)
     under = _under(controls, FINE_MIN)
     assert under == [], (
-        f"{len(under)} control(s) under {FINE_MIN}x{FINE_MIN}px "
-        f"with a fine pointer: {under[:5]} (styleguide §6e.7)")
+        f"{len(under)} control(s) under {FINE_MIN}x{FINE_MIN}px with a fine pointer: {under[:5]} (styleguide §6e.7)"
+    )
 
 
 @needs_browser
@@ -88,4 +88,5 @@ def test_every_control_is_44x44_under_a_coarse_pointer(browser, golden):
     under = _under(controls, COARSE_MIN)
     assert under == [], (
         f"{len(under)} control(s) under {COARSE_MIN}x{COARSE_MIN}px "
-        f"under a coarse pointer: {under[:5]} (styleguide §6e.7)")
+        f"under a coarse pointer: {under[:5]} (styleguide §6e.7)"
+    )

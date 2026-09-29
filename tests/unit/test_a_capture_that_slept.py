@@ -16,6 +16,7 @@ nothing about the run looking wrong.
 Suspend is **simulated**, not performed: the seam is the clock pair the
 wrapper records, so a test injects a drift rather than closing a lid.
 """
+
 import json
 import os
 import shutil
@@ -31,9 +32,11 @@ GOLDEN = "tests/fixtures/golden/mixed_task_kinds"
 
 def _bga(args):
     return subprocess.run(
-        [sys.executable, "-c",
-         f"from bga.cli import main; raise SystemExit(main({args!r}))"],
-        capture_output=True, text=True, cwd=os.getcwd())
+        [sys.executable, "-c", f"from bga.cli import main; raise SystemExit(main({args!r}))"],
+        capture_output=True,
+        text=True,
+        cwd=os.getcwd(),
+    )
 
 
 def _slept_run(tmp_path, name, seconds):
@@ -42,8 +45,7 @@ def _slept_run(tmp_path, name, seconds):
     shutil.copytree(GOLDEN, run)
     os.remove(run / "expected_output.json")
     context = json.loads((run / "run-context.json").read_text())
-    outcome = dict(context.get("build_outcome") or
-                   {"failed_elements": [], "failed_count": 0, "interrupted": False})
+    outcome = dict(context.get("build_outcome") or {"failed_elements": [], "failed_count": 0, "interrupted": False})
     if seconds:
         outcome["suspended"] = {"suspended_seconds": seconds}
     context["build_outcome"] = outcome
@@ -60,7 +62,7 @@ class TestTheTwoClocks:
     def test_wall_running_ahead_of_monotonic_is_a_suspend(self):
         """The signature: the machine was off for the difference."""
         start = {"wall": 1000.0, "monotonic": 500.0}
-        end = {"wall": 4600.0, "monotonic": 1400.0}   # 3600s wall, 900s awake
+        end = {"wall": 4600.0, "monotonic": 1400.0}  # 3600s wall, 900s awake
         assert suspend.slept(start, end) == {"suspended_seconds": 2700.0}
 
     def test_a_small_drift_is_ntp_not_a_lid(self):
@@ -68,7 +70,7 @@ class TestTheTwoClocks:
         the threshold has to sit above that and below the shortest
         suspend a lid can produce."""
         start = {"wall": 1000.0, "monotonic": 500.0}
-        end = {"wall": 4602.0, "monotonic": 4100.0}   # 2s of slew over an hour
+        end = {"wall": 4602.0, "monotonic": 4100.0}  # 2s of slew over an hour
         assert suspend.slept(start, end) is None
 
     def test_a_backwards_wall_clock_step_is_not_a_suspend(self):
@@ -111,11 +113,9 @@ class TestTheWrapperRecordsThePair:
         bst.chmod(0o755)
         log = tmp_path / "build.log"
         with open(log, "w", encoding="utf-8") as handle:
-            run_wrapped(str(tmp_path), [str(bst), "build", "--max-jobs", "4"],
-                        handle, inhibit=True)
+            run_wrapped(str(tmp_path), [str(bst), "build", "--max-jobs", "4"], handle, inhibit=True)
 
-        executing = [line for line in log.read_text().splitlines()
-                     if "Executing command:" in line]
+        executing = [line for line in log.read_text().splitlines() if "Executing command:" in line]
         assert len(executing) == 1
         assert "--max-jobs 4" in executing[0]
         assert "systemd-inhibit" not in executing[0]
@@ -130,37 +130,43 @@ class TestTheWrapperRecordsThePair:
 
 class TestTheInhibitors:
     def test_both_layers_wrap_the_command_when_present(self, monkeypatch):
-        monkeypatch.setattr(suspend, "available", lambda: {
-            "systemd-inhibit": "/usr/bin/systemd-inhibit",
-            "gnome-session-inhibit": "/usr/bin/gnome-session-inhibit",
-        })
+        monkeypatch.setattr(
+            suspend,
+            "available",
+            lambda: {
+                "systemd-inhibit": "/usr/bin/systemd-inhibit",
+                "gnome-session-inhibit": "/usr/bin/gnome-session-inhibit",
+            },
+        )
         argv = suspend.inhibit_argv(["bst", "build", "all.bst"])
-        assert argv[:4] == ["/usr/bin/systemd-inhibit", "--what=sleep:shutdown",
-                            "--why=bga capture", "--who=bga"]
+        assert argv[:4] == ["/usr/bin/systemd-inhibit", "--what=sleep:shutdown", "--why=bga capture", "--who=bga"]
         assert argv[4:7] == ["/usr/bin/gnome-session-inhibit", "--inhibit", "idle"]
         assert argv[-3:] == ["bst", "build", "all.bst"]
 
     def test_a_headless_machine_gets_the_half_that_applies(self, monkeypatch):
-        monkeypatch.setattr(suspend, "available", lambda: {
-            "systemd-inhibit": "/usr/bin/systemd-inhibit",
-            "gnome-session-inhibit": None,
-        })
+        monkeypatch.setattr(
+            suspend,
+            "available",
+            lambda: {
+                "systemd-inhibit": "/usr/bin/systemd-inhibit",
+                "gnome-session-inhibit": None,
+            },
+        )
         argv = suspend.inhibit_argv(["bst", "build"])
         assert "gnome-session-inhibit" not in " ".join(argv)
         assert argv[0] == "/usr/bin/systemd-inhibit"
 
     def test_a_machine_with_neither_says_so_and_runs_anyway(self, monkeypatch):
-        monkeypatch.setattr(suspend, "available", lambda: {
-            "systemd-inhibit": None, "gnome-session-inhibit": None})
+        monkeypatch.setattr(suspend, "available", lambda: {"systemd-inhibit": None, "gnome-session-inhibit": None})
         assert suspend.inhibit_argv(["bst", "build"]) == ["bst", "build"]
         notice = suspend.unavailable_notice()
         assert notice and "Running anyway" in notice
         assert "detected either way" in notice
 
     def test_no_notice_when_an_inhibitor_exists(self, monkeypatch):
-        monkeypatch.setattr(suspend, "available", lambda: {
-            "systemd-inhibit": "/usr/bin/systemd-inhibit",
-            "gnome-session-inhibit": None})
+        monkeypatch.setattr(
+            suspend, "available", lambda: {"systemd-inhibit": "/usr/bin/systemd-inhibit", "gnome-session-inhibit": None}
+        )
         assert suspend.unavailable_notice() is None
 
     def test_the_flag_is_on_both_capture_commands(self):
@@ -178,7 +184,8 @@ class TestTheRunSaysItSlept:
         assert context.suspension == {"suspended_seconds": 2700.0}
         assert context.incomplete_reason == "suspended", (
             "UX-156's grammar is what makes analyze banner it and compare "
-            "refuse - a third reason must feed the same accessor")
+            "refuse - a third reason must feed the same accessor"
+        )
 
     def test_a_normal_run_is_still_complete(self, tmp_path):
         from bga.ingest.loader import load_run_context
@@ -194,14 +201,22 @@ class TestTheRunSaysItSlept:
         assert "45 minutes" in rendered, "the reader is told how much time was lost"
         assert "--inhibit" in rendered, (
             "the sentence must name the fix - the reader has a capture they "
-            "cannot use and the next question is what to do differently")
+            "cannot use and the next question is what to do differently"
+        )
         assert "DID NOT FINISH" in rendered
 
     def test_compare_refuses_the_verdict(self, tmp_path):
-        payload = json.loads(_bga([
-            "compare", str(_slept_run(tmp_path, "a", 0)),
-            str(_slept_run(tmp_path, "b", 2700.0)), "--format", "json",
-        ]).stdout)
+        payload = json.loads(
+            _bga(
+                [
+                    "compare",
+                    str(_slept_run(tmp_path, "a", 0)),
+                    str(_slept_run(tmp_path, "b", 2700.0)),
+                    "--format",
+                    "json",
+                ]
+            ).stdout
+        )
         assert payload["verdict"].startswith("not comparable")
         assert "spans a suspend" in payload["verdict"]
 
@@ -218,9 +233,14 @@ class TestTheRunSaysItSlept:
         assert "interrupted" not in prose.lower()
 
     def test_the_gate_fails_closed(self, tmp_path):
-        result = _bga(["compare", str(_slept_run(tmp_path, "a", 0)),
-                       str(_slept_run(tmp_path, "b", 2700.0)),
-                       "--fail-on-regression"])
+        result = _bga(
+            [
+                "compare",
+                str(_slept_run(tmp_path, "a", 0)),
+                str(_slept_run(tmp_path, "b", 2700.0)),
+                "--fail-on-regression",
+            ]
+        )
         assert result.returncode == 6, result.stderr
 
 
@@ -229,14 +249,13 @@ class TestDoctorSuggestsIt:
         from tools import bga_doctor
 
         monkeypatch.setattr(bga_doctor.shutil, "which", lambda _name: None)
-        assert bga_doctor.check_sleep_policy() is None, (
-            "a machine with no systemctl has no sleep policy to warn about")
+        assert bga_doctor.check_sleep_policy() is None, "a machine with no systemctl has no sleep policy to warn about"
 
     def test_it_warns_rather_than_fails(self):
         from tools import bga_doctor
 
         found = bga_doctor.check_sleep_policy()
-        if found is not None:   # this container has systemd
+        if found is not None:  # this container has systemd
             assert found["status"] in ("ok", "warn")
             if found["status"] == "warn":
                 assert "--inhibit" in found["remedy"]

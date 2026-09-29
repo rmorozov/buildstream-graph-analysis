@@ -34,6 +34,7 @@ convention at the shape a copied-from-the-one-above question would
 bring back, in the file where it happened and in whatever file is
 next.
 """
+
 import json
 import pathlib
 import re
@@ -66,10 +67,10 @@ GLUED_SINGLE = (re.compile(r"""' \s*\+$"""), re.compile(r"""^'[ ]"""))
 
 def _questions():
     """The library, as data, read by running the module it lives in."""
-    script = ('const { QUESTIONS } = await import("./bga/viewer/questions.js");'
-              'console.log(JSON.stringify(QUESTIONS));')
-    done = subprocess.run([node, "--input-type=module", "-e", script],
-                          capture_output=True, text=True, cwd=REPO, timeout=60)
+    script = 'const { QUESTIONS } = await import("./bga/viewer/questions.js");console.log(JSON.stringify(QUESTIONS));'
+    done = subprocess.run(
+        [node, "--input-type=module", "-e", script], capture_output=True, text=True, cwd=REPO, timeout=60
+    )
     assert done.returncode == 0, done.stderr
     return json.loads(done.stdout)
 
@@ -95,7 +96,6 @@ def _sources():
 
 @needs_node
 class TestNoQuestionSaysAnythingTwice:
-
     def test_no_prose_field_carries_a_doubled_space(self):
         doubled = {}
         for question in _questions():
@@ -104,8 +104,8 @@ class TestNoQuestionSaysAnythingTwice:
                 if isinstance(value, str) and re.search(r"  ", value):
                     doubled.setdefault(question["id"], []).append(field)
         assert not doubled, (
-            "a canned question renders a doubled space, which is what "
-            f"UX-315 fixed in 13 of 13 of them: {doubled}")
+            f"a canned question renders a doubled space, which is what UX-315 fixed in 13 of 13 of them: {doubled}"
+        )
 
     def test_the_sql_is_not_held_to_that_rule(self):
         """The exclusion is deliberate, so it is stated rather than implied."""
@@ -113,11 +113,11 @@ class TestNoQuestionSaysAnythingTwice:
         assert indented, (
             "no query indents its own text any more. If the SQL was "
             "reformatted, PROSE_FIELDS may now be able to include it - "
-            "check, rather than deleting this clause.")
+            "check, rather than deleting this clause."
+        )
 
 
 class TestTheShapeThatCausedItIsGone:
-
     def test_no_shipped_module_glues_two_spaces_together(self):
         sites = {}
         for path in _sources():
@@ -127,13 +127,16 @@ class TestTheShapeThatCausedItIsGone:
         assert not sites, (
             "a string literal ending in a space is concatenated with one "
             "beginning in a space - the shape UX-315 removed from 49 sites "
-            f"in questions.js: {sites}")
+            f"in questions.js: {sites}"
+        )
 
     def test_the_search_covers_the_tree_it_claims_to(self):
         """A scan of nothing passes. This says what it actually read."""
         scanned = list(_sources())
         assert len(scanned) > 80, (
             f"the shape scan read only {len(scanned)} files; it was written "
-            "against 105 and a pass over a near-empty list means nothing")
+            "against 105 and a pass over a near-empty list means nothing"
+        )
         assert any(p.name == "questions.js" for p in scanned), (
-            "the file the defect was found in is not in the scanned set")
+            "the file the defect was found in is not in the scanned set"
+        )

@@ -10,6 +10,7 @@ an earlier draft assumed the object-wrapped shape, a real bug caught
 only once the real end-to-end combined-mode test tried to actually
 parse a real Plane 1 output file.
 """
+
 import pytest
 
 from tools.native_trace_to_chrome_trace import (
@@ -22,14 +23,19 @@ from tools.native_trace_to_chrome_trace import (
 
 def _record(pid, cmd, start_ts, end_ts, open_=False, element="core.bst"):
     return {
-        "pid": pid, "ppid": 1, "element": element, "cmd": cmd,
-        "start_ts": start_ts, "end_ts": end_ts,
+        "pid": pid,
+        "ppid": 1,
+        "element": element,
+        "cmd": cmd,
+        "start_ts": start_ts,
+        "end_ts": end_ts,
         "duration_s": (end_ts - start_ts) if end_ts is not None else None,
         "open": open_,
     }
 
 
 # --- assign_element_pids --------------------------------------------------
+
 
 def test_assign_element_pids_never_uses_pid_1():
     """pid: 1 is reserved for Plane 1's own "the BuildStream invocation"
@@ -51,6 +57,7 @@ def test_assign_element_pids_one_per_distinct_element():
 
 
 # --- build_standalone_chrome_trace ----------------------------------------
+
 
 def test_standalone_empty_records():
     assert build_standalone_chrome_trace([]) == []
@@ -101,10 +108,16 @@ def test_standalone_normalizes_timestamps_to_start_near_zero():
 
 # --- compute_clock_offset_us -----------------------------------------------
 
+
 def _plane1_element_b_event(element, ts_us):
     return {
-        "name": f"{element} [build log]", "cat": "bst-builder", "ph": "B",
-        "ts": ts_us, "pid": 1, "tid": 2, "args": {"action": "build", "element": element},
+        "name": f"{element} [build log]",
+        "cat": "bst-builder",
+        "ph": "B",
+        "ts": ts_us,
+        "pid": 1,
+        "tid": 2,
+        "args": {"action": "build", "element": element},
     }
 
 
@@ -148,6 +161,7 @@ def test_compute_offset_uses_earliest_plane2_start_for_the_anchor_element():
 
 
 # --- build_combined_chrome_trace -------------------------------------------
+
 
 def test_combined_preserves_plane1_events_unmodified():
     plane1_events = [_plane1_element_b_event("core.bst", 5_000_000.0)]

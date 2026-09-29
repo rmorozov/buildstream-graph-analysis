@@ -6,6 +6,7 @@ SCHEDULER_WAIT/IDLE look superficially similar ("the critical path
 wasn't running") but have three completely different real fixes, each
 precisely defined in spec Part 11 but never surfaced in the report.
 """
+
 import json
 
 import pytest
@@ -31,9 +32,14 @@ def test_hints_by_key_covers_every_real_attribution_dict_key():
     json actually use (confirmed against bga/analyzer.py's
     _compute_attribution) must all resolve to a hint."""
     real_keys = {
-        'execution_on_chain_us', 'dependency_wait_us', 'resource_wait_us',
-        'scheduler_wait_us', 'idle_us', 'retry_wait_us',
-        'untracked_head_us', 'untracked_tail_us',
+        'execution_on_chain_us',
+        'dependency_wait_us',
+        'resource_wait_us',
+        'scheduler_wait_us',
+        'idle_us',
+        'retry_wait_us',
+        'untracked_head_us',
+        'untracked_tail_us',
     }
     assert real_keys == set(ATTRIBUTION_CATEGORY_HINTS_BY_KEY.keys())
 
@@ -63,14 +69,34 @@ def dependency_wait_dominant_result(tmp_path):
         elements=[("root.bst", False), ("a.bst", True), ("b.bst", True), ("c.bst", True)],
         dependencies=[("root.bst", "a.bst"), ("root.bst", "b.bst"), ("root.bst", "c.bst")],
         spans=[
-            {"task_key": "root.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 10000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "b.bst|BUILD|BUILD|0", "ts_us": 10000, "dur_us": 5000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "c.bst|BUILD|BUILD|0", "ts_us": 10000, "dur_us": 5000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "a.bst|BUILD|BUILD|0", "ts_us": 100000, "dur_us": 10000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
+            {
+                "task_key": "root.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 10000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "b.bst|BUILD|BUILD|0",
+                "ts_us": 10000,
+                "dur_us": 5000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "c.bst|BUILD|BUILD|0",
+                "ts_us": 10000,
+                "dur_us": 5000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "a.bst|BUILD|BUILD|0",
+                "ts_us": 100000,
+                "dur_us": 10000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
         ],
     )
     analyzer = BuildEfficiencyAnalyzer(run_dir)
@@ -97,12 +123,15 @@ def test_json_attribution_hints_present_without_changing_attribution_field(depen
     data = json.loads(format_json(dependency_wait_dominant_result))
     # Existing field untouched - same keys/values as before this fix.
     assert set(data["attribution"].keys()) == {
-        'execution_on_chain_us', 'dependency_wait_us', 'resource_wait_us',
-        'scheduler_wait_us', 'idle_us', 'retry_wait_us',
-        'untracked_head_us', 'untracked_tail_us',
+        'execution_on_chain_us',
+        'dependency_wait_us',
+        'resource_wait_us',
+        'scheduler_wait_us',
+        'idle_us',
+        'retry_wait_us',
+        'untracked_head_us',
+        'untracked_tail_us',
     }
     assert all(isinstance(v, int) for v in data["attribution"].values())
     # New, additive sibling key.
-    assert data["attribution_hints"]["dependency_wait_us"] == (
-        ATTRIBUTION_CATEGORY_HINTS_BY_KEY["dependency_wait_us"]
-    )
+    assert data["attribution_hints"]["dependency_wait_us"] == (ATTRIBUTION_CATEGORY_HINTS_BY_KEY["dependency_wait_us"])

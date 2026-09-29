@@ -22,6 +22,7 @@ below is the half that holds that distinction - a key spelled like a
 duration and declared a `count` keeps every token it has, because
 there the suffix is telling the reader something true and surprising.
 """
+
 import json
 import os
 import pathlib
@@ -39,8 +40,10 @@ sys.path.insert(0, str(REPO / "tests"))
 from browser import NO_BROWSER, Browser, find_chrome
 from pages import snapshot_copy
 
-FIXTURES = {"golden": REPO / "tests/fixtures/golden/mixed_task_kinds",
-            "macro_micro": REPO / "tests/fixtures/macro_micro/run"}
+FIXTURES = {
+    "golden": REPO / "tests/fixtures/golden/mixed_task_kinds",
+    "macro_micro": REPO / "tests/fixtures/macro_micro/run",
+}
 chrome = find_chrome()
 node = shutil.which("node")
 needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
@@ -160,10 +163,17 @@ console.log(JSON.stringify(cases.map(([key, kind]) => v.title(key, kind))));
 def _run(script, env):
     done = subprocess.run(
         [node, "--input-type=module", "-e", script],
-        capture_output=True, text=True, cwd=REPO, timeout=120,
-        env={**os.environ,
-             "BGA_DOM_SHIM": (REPO / "tests/dom_shim.mjs").as_uri(),
-             "BGA_VIEWER": (REPO / "tests/viewer.mjs").as_uri(), **env})
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=120,
+        env={
+            **os.environ,
+            "BGA_DOM_SHIM": (REPO / "tests/dom_shim.mjs").as_uri(),
+            "BGA_VIEWER": (REPO / "tests/viewer.mjs").as_uri(),
+            **env,
+        },
+    )
     assert done.returncode == 0, done.stderr[-2000:]
     return json.loads(done.stdout)
 
@@ -174,12 +184,9 @@ def _declared(label):
     from tools.bga_view import payloads
 
     scratch = pathlib.Path(tempfile.mkdtemp())
-    (scratch / "payload.json").write_text(
-        json.dumps(payloads(str(FIXTURES[label]))["report.json"]))
-    (scratch / "schemas.json").write_text(
-        json.dumps({name: schemas.schema(name) for name in schemas.names()}))
-    return _run(_CENSUS, {"BGA_PAYLOAD": str(scratch / "payload.json"),
-                          "BGA_SCHEMAS": str(scratch / "schemas.json")})
+    (scratch / "payload.json").write_text(json.dumps(payloads(str(FIXTURES[label]))["report.json"]))
+    (scratch / "schemas.json").write_text(json.dumps({name: schemas.schema(name) for name in schemas.names()}))
+    return _run(_CENSUS, {"BGA_PAYLOAD": str(scratch / "payload.json"), "BGA_SCHEMAS": str(scratch / "schemas.json")})
 
 
 @pytest.fixture(scope="module")
@@ -206,8 +213,7 @@ def pages(tmp_path_factory):
 @pytest.mark.medium
 @pytest.mark.parametrize("label", sorted(FIXTURES))
 class TestNoLabelPrintsWhatItsValueCarries:
-    def test_no_rendered_label_ends_in_a_unit_its_quantity_carries(
-            self, browser, pages, label):
+    def test_no_rendered_label_ends_in_a_unit_its_quantity_carries(self, browser, pages, label):
         """The acceptance, on the shape a reader is handed. Every
         rendered term and column header, against what the payload
         declares that key to be."""
@@ -228,8 +234,8 @@ class TestNoLabelPrintsWhatItsValueCarries:
                 if token and item["label"].lower().endswith(f" {token}"):
                     bad.append((item["label"], item["key"], quantity))
         assert bad == [], (
-            f"{label}: {len(bad)} label(s) print a unit their declared "
-            f"quantity already carries: {sorted(set(bad))[:8]}")
+            f"{label}: {len(bad)} label(s) print a unit their declared quantity already carries: {sorted(set(bad))[:8]}"
+        )
 
     def test_the_labels_are_still_labels(self, browser, pages, label):
         """The other direction. Trimming a token off a key must not
@@ -247,8 +253,7 @@ class TestNoLabelPrintsWhatItsValueCarries:
         # sentence. A floor is a floor, not a claim that no section
         # ever merges; what it is here for is the rule above silently
         # dropping terms, and 190 still catches that.
-        assert len(drawn) >= 190, (
-            f"{label}: only {len(drawn)} labelled terms on the page")
+        assert len(drawn) >= 190, f"{label}: only {len(drawn)} labelled terms on the page"
 
 
 @needs_node
@@ -259,20 +264,15 @@ class TestTheRuleIsTheDeclaration:
     label."""
 
     def test_the_suffix_comes_off_the_quantity_that_accounts_for_it(self):
-        cases = [["execution_on_chain_us", "duration_us"],
-                 ["peak_rss_bytes", "bytes"],
-                 ["useful_share", "share"]]
-        assert _run(_TITLES, {"BGA_CASES": json.dumps(cases)}) == [
-            "Execution on chain", "Peak rss", "Useful"]
+        cases = [["execution_on_chain_us", "duration_us"], ["peak_rss_bytes", "bytes"], ["useful_share", "share"]]
+        assert _run(_TITLES, {"BGA_CASES": json.dumps(cases)}) == ["Execution on chain", "Peak rss", "Useful"]
 
     def test_a_key_that_only_looks_like_a_duration_keeps_its_suffix(self):
         """`_us` on a `count` is not a unit the value spells - the
         number renders as `1204`, and a label reading "Retries" where
         the key is `retries_us` would hide a real oddity."""
-        cases = [["retries_us", "count"], ["window_us", "ratio"],
-                 ["depth_bytes", "count"]]
-        assert _run(_TITLES, {"BGA_CASES": json.dumps(cases)}) == [
-            "Retries us", "Window us", "Depth bytes"]
+        cases = [["retries_us", "count"], ["window_us", "ratio"], ["depth_bytes", "count"]]
+        assert _run(_TITLES, {"BGA_CASES": json.dumps(cases)}) == ["Retries us", "Window us", "Depth bytes"]
 
     def test_a_count_and_a_ratio_keep_their_word(self):
         """The other half of the table's rule, and the one a later
@@ -280,25 +280,22 @@ class TestTheRuleIsTheDeclaration:
         are quantities whose *rendered value* spells no unit - `1204`
         and `1.50x` - so the word in the label is the only thing
         saying what the number is."""
-        cases = [["process_count", "count"], ["retry_count", "count"],
-                 ["inefficiency_ratio", "ratio"]]
-        assert _run(_TITLES, {"BGA_CASES": json.dumps(cases)}) == [
-            "Process count", "Retry count", "Inefficiency ratio"]
+        cases = [["process_count", "count"], ["retry_count", "count"], ["inefficiency_ratio", "ratio"]]
+        assert _run(_TITLES, {"BGA_CASES": json.dumps(cases)}) == ["Process count", "Retry count", "Inefficiency ratio"]
 
     def test_a_key_with_no_quantity_is_untouched(self):
         """Which is every label the page draws beside a sentence
         rather than a number."""
         cases = [["idle_us", None], ["total_bytes", None]]
-        assert _run(_TITLES, {"BGA_CASES": json.dumps(cases)}) == [
-            "Idle us", "Total bytes"]
+        assert _run(_TITLES, {"BGA_CASES": json.dumps(cases)}) == ["Idle us", "Total bytes"]
 
     def test_a_key_the_trim_would_empty_keeps_its_label(self):
         """No key in either fixture is only its own suffix, and an
         empty `<dt>` is worse than an ugly one - so the fallback is
         asserted directly rather than left to a payload to discover."""
-        drawn = _run(_TITLES, {"BGA_CASES": json.dumps(
-            [["_us", "duration_us"], ["_bytes", "bytes"],
-             ["us", "duration_us"]])})
+        drawn = _run(
+            _TITLES, {"BGA_CASES": json.dumps([["_us", "duration_us"], ["_bytes", "bytes"], ["us", "duration_us"]])}
+        )
         assert all(name.strip() for name in drawn), drawn
         # The one without a leading underscore is not a suffix at all,
         # and comes through untouched.

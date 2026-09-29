@@ -5,6 +5,7 @@ an unknown pseudonym-shaped token is listed rather than dropped, and a
 foreign map is refused. Mutation: skip the fingerprint check, and the
 foreign map resolves to wrong names.
 """
+
 from bga import anonymize as anon
 
 
@@ -50,6 +51,7 @@ def test_a_foreign_map_is_refused_on_fingerprint_mismatch(tmp_path):
     pmap_b.save()
 
     import pytest
+
     with pytest.raises(anon.FingerprintMismatch):
         anon.check_fingerprint(key_b, fingerprint_a)
 

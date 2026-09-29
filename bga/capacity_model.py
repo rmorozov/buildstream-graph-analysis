@@ -21,6 +21,7 @@ scaled by `(CV_a^2 + CV_s^2) / 2`. Plain M/M/c would assume an
 exponential service time that the store can measure and contradict,
 which is the shape `UX-129` calls worse than a refusal.
 """
+
 import statistics
 from typing import Optional
 
@@ -35,44 +36,30 @@ MICROSECONDS_PER_DAY = 86_400_000_000
 # the arithmetic touches them, and `render` prints the sentence under
 # the number - so the two cannot describe the model differently.
 ASSUMPTIONS = {
-    "arrival_rate_declared":
-        "The arrival rate is the one you passed. bga measures no "
-        "arrival rate: a store records when builds ran.",
-    "arrivals_poisson":
-        "Arrivals are Poisson - independent, memoryless, at a constant "
-        "long-run rate, squared coefficient of variation 1. Nothing "
-        "here measures that: a request instant is recorded where a CI "
-        "system offers one, but no store carries enough of them yet.",
-    "whole_arrival_stream":
-        "This store holds more than one host class, and each model "
-        "below sends the whole arrival stream to builders of its own "
-        "class. A fleet that splits the stream waits less than this.",
-    "service_is_the_store":
-        "The service-time distribution is this store's finished runs "
-        "on this host class - what the fleet builds is assumed to be "
-        "what this store built.",
-    "finished_runs_only":
-        "A failed, interrupted or suspended capture is not a sample "
-        "and is excluded from the service time.",
-    "service_general":
-        "The service time is not assumed exponential. The M/M/c wait "
-        "is scaled by (CV_a^2 + CV_s^2)/2 - Allen-Cunneen - which is "
-        "an approximation, exact at one builder and asymptotically.",
-    "servers_interchangeable":
-        "The builders are interchangeable, and a build holds one of "
-        "them for its whole duration.",
-    "steady_state":
-        "A long-run average of a system at equilibrium. A morning "
-        "burst against an idle afternoon is not this number.",
-    "fifo_no_priority":
-        "One queue, first come first served: no priorities, no "
-        "batching, no reordering.",
-    "per_host_class":
-        "Modelled per host class and never across them - durations "
-        "are not scaled between machines.",
-    "littles_law":
-        "The queue length is Little's law on the wait above: "
-        "Lq = arrival rate x wait.",
+    "arrival_rate_declared": "The arrival rate is the one you passed. bga measures no "
+    "arrival rate: a store records when builds ran.",
+    "arrivals_poisson": "Arrivals are Poisson - independent, memoryless, at a constant "
+    "long-run rate, squared coefficient of variation 1. Nothing "
+    "here measures that: a request instant is recorded where a CI "
+    "system offers one, but no store carries enough of them yet.",
+    "whole_arrival_stream": "This store holds more than one host class, and each model "
+    "below sends the whole arrival stream to builders of its own "
+    "class. A fleet that splits the stream waits less than this.",
+    "service_is_the_store": "The service-time distribution is this store's finished runs "
+    "on this host class - what the fleet builds is assumed to be "
+    "what this store built.",
+    "finished_runs_only": "A failed, interrupted or suspended capture is not a sample "
+    "and is excluded from the service time.",
+    "service_general": "The service time is not assumed exponential. The M/M/c wait "
+    "is scaled by (CV_a^2 + CV_s^2)/2 - Allen-Cunneen - which is "
+    "an approximation, exact at one builder and asymptotically.",
+    "servers_interchangeable": "The builders are interchangeable, and a build holds one of "
+    "them for its whole duration.",
+    "steady_state": "A long-run average of a system at equilibrium. A morning "
+    "burst against an idle afternoon is not this number.",
+    "fifo_no_priority": "One queue, first come first served: no priorities, no batching, no reordering.",
+    "per_host_class": "Modelled per host class and never across them - durations are not scaled between machines.",
+    "littles_law": "The queue length is Little's law on the wait above: Lq = arrival rate x wait.",
 }
 
 
@@ -128,22 +115,28 @@ def service_time(samples: list[float]) -> dict:
 
 
 def _answer(name: str, value, quantity: str, assumed: _Assumed) -> dict:
-    return {"name": name, "value": value, "quantity": quantity,
-            "assumes": list(assumed.ids)}
+    return {"name": name, "value": value, "quantity": quantity, "assumes": list(assumed.ids)}
 
 
-def _class_model(label: str, samples: list[float], builders: int,
-                 arrivals_per_day: float, mixed: bool) -> dict:
+def _class_model(label: str, samples: list[float], builders: int, arrivals_per_day: float, mixed: bool) -> dict:
     """One host class's utilization and waiting, or why there is none."""
-    entry = {"host_class": label, "runs": len(samples), "service": None,
-             "answers": [], "shortfall": None, "refusal": None}
+    entry = {
+        "host_class": label,
+        "runs": len(samples),
+        "service": None,
+        "answers": [],
+        "shortfall": None,
+        "refusal": None,
+    }
     if len(samples) < MIN_BASELINE_RUNS:
         entry["shortfall"] = {
-            "have": len(samples), "need": MIN_BASELINE_RUNS,
+            "have": len(samples),
+            "need": MIN_BASELINE_RUNS,
             "sentence": (
                 f"{len(samples)} finished {plural(len(samples), 'run')} on {label}: "
                 f"{MIN_BASELINE_RUNS} are needed before a service time "
-                f"means anything, so this class is not modelled."),
+                f"means anything, so this class is not modelled."
+            ),
         }
         return entry
 
@@ -163,8 +156,7 @@ def _class_model(label: str, samples: list[float], builders: int,
     rate_us = arrivals_per_day / MICROSECONDS_PER_DAY
     load = rate_us * service["mean_us"]
     utilization = load / builders
-    entry["answers"].append(
-        _answer("utilization", utilization, "share", base))
+    entry["answers"].append(_answer("utilization", utilization, "share", base))
 
     if utilization >= 1:
         entry["refusal"] = {
@@ -175,7 +167,8 @@ def _class_model(label: str, samples: list[float], builders: int,
                 f"{load:.2f} builders and there are {builders}: the "
                 f"queue grows without bound, so no wait is published. "
                 f"A finite one would be a number about a system that "
-                f"does not reach equilibrium."),
+                f"does not reach equilibrium."
+            ),
         }
         return entry
 
@@ -186,8 +179,7 @@ def _class_model(label: str, samples: list[float], builders: int,
     wait.on("fifo_no_priority")
     # Allen-Cunneen: the M/M/c wait, corrected for a service time the
     # store measured rather than one the formula wished for.
-    mmc_wait_us = (erlang_c(builders, load)
-                   / (builders / service["mean_us"] - rate_us))
+    mmc_wait_us = erlang_c(builders, load) / (builders / service["mean_us"] - rate_us)
     wait.on("service_general")
     wait_us = mmc_wait_us * (1.0 + service["cv2"]) / 2.0
     entry["answers"].append(_answer("wait_us", wait_us, "duration_us", wait))
@@ -196,8 +188,7 @@ def _class_model(label: str, samples: list[float], builders: int,
     for name in wait.ids:
         queue.on(name)
     queue.on("littles_law")
-    entry["answers"].append(
-        _answer("queue_length", rate_us * wait_us, "count", queue))
+    entry["answers"].append(_answer("queue_length", rate_us * wait_us, "count", queue))
     return entry
 
 
@@ -223,9 +214,7 @@ def model(listing: dict, builders: int, arrivals_per_day: float) -> dict:
         by_class.setdefault(label, []).append(row["total_duration_us"])
 
     mixed = len(by_class) > 1
-    classes = [_class_model(label, by_class[label], builders,
-                            arrivals_per_day, mixed)
-               for label in sorted(by_class)]
+    classes = [_class_model(label, by_class[label], builders, arrivals_per_day, mixed) for label in sorted(by_class)]
     document = {
         # `UX-613`: first key, so a consumer reading the head of a
         # truncated document learns what it is before it interprets
@@ -248,7 +237,8 @@ def model(listing: dict, builders: int, arrivals_per_day: float) -> dict:
                 f"classes ({names}). A queue over a mix of machines is a "
                 f"queue over two service times, so no fleet-wide number "
                 f"is published: each class below is modelled as if it "
-                f"served the whole stream."),
+                f"served the whole stream."
+            ),
         }
     return document
 
@@ -274,8 +264,7 @@ _UNITS = {
 def _wrapped(prefix: str, body: str, indent: str) -> list[str]:
     import textwrap
 
-    return textwrap.wrap(body, width=72, initial_indent=prefix,
-                         subsequent_indent=indent) or [prefix.rstrip()]
+    return textwrap.wrap(body, width=72, initial_indent=prefix, subsequent_indent=indent) or [prefix.rstrip()]
 
 
 def render(document: dict) -> list[str]:
@@ -286,12 +275,15 @@ def render(document: dict) -> list[str]:
     it - eleven sentences repeated under three numbers is a printout
     nobody reads, and an assumption nobody reads is not published.
     """
-    lines = [f"Store: {document.get('project')}",
-             f"  {plural(document['builders'], 'builder')}, "
-             f"{plural(document['arrivals_per_day'], 'build', shown=format(document['arrivals_per_day'], 'g'))}/day"]
+    lines = [
+        f"Store: {document.get('project')}",
+        f"  {plural(document['builders'], 'builder')}, "
+        f"{plural(document['arrivals_per_day'], 'build', shown=format(document['arrivals_per_day'], 'g'))}/day",
+    ]
     if document.get("excluded_runs"):
-        lines.append(f"  {plural(document['excluded_runs'], 'run')} excluded: "
-                     f"not a finished build, so not a service time")
+        lines.append(
+            f"  {plural(document['excluded_runs'], 'run')} excluded: not a finished build, so not a service time"
+        )
     for entry in document.get("host_classes") or []:
         lines += ["", f"  {entry['host_class']} - {plural(entry['runs'], 'run')}"]
         if entry.get("shortfall"):
@@ -301,24 +293,22 @@ def render(document: dict) -> list[str]:
         lines.append(
             f"    Service time: mean {service['mean_us'] / 1e6:.1f}s, "
             f"sd {service['stdev_us'] / 1e6:.1f}s, "
-            f"CV^2 {service['cv2']:.2f}, n={service['samples']}")
+            f"CV^2 {service['cv2']:.2f}, n={service['samples']}"
+        )
         for answer in entry["answers"]:
             label, form = _UNITS[answer["name"]]
             shown = form(answer["value"]).format(builders=plural(document["builders"], "builder"))
             lines.append(f"    {label}: {shown}")
-            lines += _wrapped("      assumes ", ", ".join(answer["assumes"]),
-                              "              ")
+            lines += _wrapped("      assumes ", ", ".join(answer["assumes"]), "              ")
         if entry.get("refusal"):
             lines += _wrapped("    ", entry["refusal"]["sentence"], "    ")
     used = _used(document)
     if used:
-        lines += ["", "  Assumptions, each named above by the numbers that "
-                      "rest on it:"]
+        lines += ["", "  Assumptions, each named above by the numbers that rest on it:"]
         for name in used:
             lines += _wrapped(f"    {name}: ", ASSUMPTIONS[name], "      ")
     if document.get("refusal"):
-        lines += ["", ""] + _wrapped("  ", document["refusal"]["sentence"],
-                                     "  ")
+        lines += ["", ""] + _wrapped("  ", document["refusal"]["sentence"], "  ")
     return lines
 
 

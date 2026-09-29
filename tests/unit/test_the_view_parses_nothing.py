@@ -42,6 +42,7 @@ were measured against a worktree at the pre-change commit, sharing one
 generated fixture with the tree here, so the two columns differ in the
 code and in nothing else.
 """
+
 import json
 import os
 import pathlib
@@ -74,8 +75,7 @@ def _write_monolith(path, records):
     too big to hold, and a fixture that had to hold it to write it would
     be making the same mistake it is here to catch.
     """
-    per_element = {f"el-{i}.bst": {"cpu_us": 1000 + i, "processes": 3}
-                   for i in range(200)}
+    per_element = {f"el-{i}.bst": {"cpu_us": 1000 + i, "processes": 3} for i in range(200)}
     peaks = {f"el-{i}.bst": {"peak_rss_bytes": 1024 * (i + 1)} for i in range(200)}
     with open(path, "w", encoding="utf-8") as handle:
         handle.write("{\n")
@@ -86,13 +86,18 @@ def _write_monolith(path, records):
         handle.write(f' "stream_coverage": {{"processes": {records}}},\n')
         handle.write(' "processes": [\n')
         for i in range(records):
-            record = {"pid": 1000 + i, "ppid": 1000,
-                      "binary": "/usr/bin/cc1plus",
-                      "argv": ["cc1plus", f"-o/build/obj/{i}.o",
-                               f"/src/file{i}.c"],
-                      "element": f"el-{i % 200}.bst", "start_ts": i * 10,
-                      "end_ts": i * 10 + 9, "cpu_us": 9000,
-                      "peak_rss_bytes": 4096, "inv": f"inv-{i % 64}"}
+            record = {
+                "pid": 1000 + i,
+                "ppid": 1000,
+                "binary": "/usr/bin/cc1plus",
+                "argv": ["cc1plus", f"-o/build/obj/{i}.o", f"/src/file{i}.c"],
+                "element": f"el-{i % 200}.bst",
+                "start_ts": i * 10,
+                "end_ts": i * 10 + 9,
+                "cpu_us": 9000,
+                "peak_rss_bytes": 4096,
+                "inv": f"inv-{i % 64}",
+            }
             handle.write(("  " if i == 0 else " ,") + json.dumps(record) + "\n")
         handle.write(" ]\n}\n")
 
@@ -110,9 +115,7 @@ def store(tmp_path_factory):
         (snapshot / "run" / "expected_output.json").unlink(missing_ok=True)
         # A wrapped log, so a timeline is *offered* - the point being
         # that offering one must not cost what building one costs.
-        (snapshot / "build.log").write_text(
-            "[--:--:--][][   main:core activity  ] START   Build\n",
-            encoding="utf-8")
+        (snapshot / "build.log").write_text("[--:--:--][][   main:core activity  ] START   Build\n", encoding="utf-8")
     _write_monolith(runs / BIG_STAMP / "plane2.json", BIG_RUN_RECORDS)
     return root
 
@@ -169,13 +172,16 @@ def _startup(run):
     """
     done = subprocess.run(
         [sys.executable, "-c", _MEASURE % {"repo": str(REPO), "run": str(run)}],
-        capture_output=True, text=True, cwd=REPO, timeout=600)
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=600,
+    )
     assert done.returncode == 0, done.stderr[-3000:]
     return json.loads(done.stdout.strip().splitlines()[-1])
 
 
 class TestStartupDoesNotPayForWhatItServes:
-
     def test_the_big_run_reaches_a_socket_inside_both_ceilings(self, store):
         """The acceptance test's first clause, on the generated run."""
         out = _startup(store / ".bga/runs" / BIG_STAMP / "run")
@@ -187,10 +193,8 @@ class TestStartupDoesNotPayForWhatItServes:
         by a faster machine; this cannot be met by anything but not
         reading the file."""
         out = _startup(store / ".bga/runs" / BIG_STAMP / "run")
-        touched = [path for path in out["opened"]
-                   if os.path.basename(path) == "plane2.json"]
-        assert touched == [], (
-            f"startup opened the Plane 2 monolith: {touched}")
+        touched = [path for path in out["opened"] if os.path.basename(path) == "plane2.json"]
+        assert touched == [], f"startup opened the Plane 2 monolith: {touched}"
 
     def test_a_neighbour_pays_nothing_for_the_big_run(self, store):
         """The acceptance test's last clause, and the measurement that
@@ -199,8 +203,7 @@ class TestStartupDoesNotPayForWhatItServes:
         out = _startup(store / ".bga/runs" / SMALL_STAMP / "run")
         assert out["peak_rss_bytes"] < RSS_CEILING_MB, out
         assert out["seconds"] < SECONDS_CEILING, out
-        assert [p for p in out["opened"]
-                if os.path.basename(p) == "plane2.json"] == [], out["opened"]
+        assert [p for p in out["opened"] if os.path.basename(p) == "plane2.json"] == [], out["opened"]
 
     def test_the_published_analysis_is_what_gets_served(self, store):
         """Direction 15's first rule, end to end: what the capture wrote
@@ -214,17 +217,20 @@ class TestStartupDoesNotPayForWhatItServes:
         plausible.
         """
         snapshot = store / ".bga/runs" / BIG_STAMP
-        published = {"schema": "analyze/v2", "run_id": "published-by-capture",
-                     "total_duration_us": 1234, "section": None}
-        (snapshot / "analyze.json").write_text(json.dumps(published),
-                                               encoding="utf-8")
+        published = {
+            "schema": "analyze/v2",
+            "run_id": "published-by-capture",
+            "total_duration_us": 1234,
+            "section": None,
+        }
+        (snapshot / "analyze.json").write_text(json.dumps(published), encoding="utf-8")
         try:
             from tools.bga_view import payloads
+
             served = payloads(str(snapshot / "run"))["report.json"]
             assert served["run_id"] == "published-by-capture", served
             out = _startup(snapshot / "run")
-            assert [p for p in out["opened"]
-                    if os.path.basename(p) == "plane2.json"] == [], out["opened"]
+            assert [p for p in out["opened"] if os.path.basename(p) == "plane2.json"] == [], out["opened"]
             assert out["peak_rss_bytes"] < RSS_CEILING_MB, out
         finally:
             (snapshot / "analyze.json").unlink()
@@ -234,6 +240,4 @@ class TestStartupDoesNotPayForWhatItServes:
         (build nothing at startup): the button is offered from a file
         test, and the bytes are rendered when they are asked for."""
         out = _startup(store / ".bga/runs" / BIG_STAMP / "run")
-        assert not [p for p in out["opened"]
-                    if p.endswith("timeline.json") or p.endswith(".json.gz")], \
-            out["opened"]
+        assert not [p for p in out["opened"] if p.endswith("timeline.json") or p.endswith(".json.gz")], out["opened"]

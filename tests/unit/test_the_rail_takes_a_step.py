@@ -34,6 +34,7 @@ times `decision`. The cursor below is what fixes it, and
 `test_two_presses_move_two_sections` is what would catch it coming
 back.
 """
+
 import pathlib
 import sys
 
@@ -147,8 +148,7 @@ _KEYS = """(async () => {
 def uri(tmp_path_factory):
     if find_chrome() is None:
         pytest.skip(NO_BROWSER)
-    return pages.export_uri(pages.FIXTURES["macro_micro"],
-                            tmp_path_factory.mktemp("stepper"))
+    return pages.export_uri(pages.FIXTURES["macro_micro"], tmp_path_factory.mktemp("stepper"))
 
 
 @pytest.fixture(scope="module")
@@ -185,7 +185,8 @@ class TestTheStepFollowsTheDeclaredOrder:
         every clause below is off by one - which is what CI measured."""
         assert walked["marked"], (
             "no section carried `data-current` after two seconds; the walk "
-            "below measured the from-nowhere rule, not the order")
+            "below measured the from-nowhere rule, not the order"
+        )
 
     def test_next_walks_the_order_the_page_declares(self, walked):
         """Not the DOM's accident - `UX-235`'s order, via the rail.
@@ -195,10 +196,15 @@ class TestTheStepFollowsTheDeclaredOrder:
         labels once now, not the section too - so `evidence` moves up
         one step rather than the walk losing a step.
         """
-        assert walked["order"][:7] == ["#decision", "#evidence",
-                                       "#overview", "#findings", "#headline",
-                                       "#next_steps", "#blast"], (
-            walked["order"][:7])
+        assert walked["order"][:7] == [
+            "#decision",
+            "#evidence",
+            "#overview",
+            "#findings",
+            "#headline",
+            "#next_steps",
+            "#blast",
+        ], walked["order"][:7]
         assert walked["forward"] == walked["order"][1:7], walked["forward"]
 
     def test_two_presses_move_two_sections(self, walked):
@@ -222,8 +228,7 @@ class TestTheStepFollowsTheDeclaredOrder:
         A reader who has reached the end of a report has not asked to
         start it again - and the Falsification asks for exactly this.
         """
-        assert walked["stopped"] == walked["order"][-1], (
-            walked["stopped"], walked["order"][-1])
+        assert walked["stopped"] == walked["order"][-1], (walked["stopped"], walked["order"][-1])
 
 
 @pytest.mark.skipif(find_chrome() is None, reason=NO_BROWSER)
@@ -266,8 +271,7 @@ def labels(tmp_path_factory):
         pytest.skip(NO_BROWSER)
     booted = pages.pages(tmp_path_factory, "rail-labels")
     with Browser(find_chrome()) as browser:
-        return {label: browser.measure(uri, _LABELS, 1440, 900)
-                for label, uri in booted.items()}
+        return {label: browser.measure(uri, _LABELS, 1440, 900) for label, uri in booted.items()}
 
 
 @pytest.mark.skipif(find_chrome() is None, reason=NO_BROWSER)
@@ -291,7 +295,8 @@ class TestARailEntryNamesOneDestination:
         out = labels[label]
         assert out["collisions"] == [], (
             f"{label}: {len(out['collisions'])} rail label(s) on more than "
-            f"one destination, of {out['entries']}: {out['collisions']}")
+            f"one destination, of {out['entries']}: {out['collisions']}"
+        )
 
     def test_the_rail_was_actually_read(self, labels, label):
         """So an empty rail cannot pass the clause above."""

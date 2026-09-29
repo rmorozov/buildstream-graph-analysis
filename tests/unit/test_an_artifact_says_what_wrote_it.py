@@ -15,6 +15,7 @@ golden snapshot drops `producer` for the same reason it drops
 `run_instance`, and a dropped field with nothing else checking it is a
 field that silently stops being written.
 """
+
 import json
 import pathlib
 
@@ -54,9 +55,7 @@ class TestTheStampIsWritten:
 
         context = json.loads((synthetic_run / "run-context.json").read_text())
         recorded = producer.contracts_of(context)
-        assert "sources/v1" in recorded, (
-            "the run directory's own on-disk contract is missing from the "
-            "set it recorded")
+        assert "sources/v1" in recorded, "the run directory's own on-disk contract is missing from the set it recorded"
         assert "analyze/v4" in recorded
 
     def test_the_published_document_records_it_too(self):
@@ -66,9 +65,11 @@ class TestTheStampIsWritten:
 
         fixture = REPO / "tests/fixtures/golden/mixed_task_kinds"
         out = subprocess.run(
-            [sys.executable, "-m", "bga.cli", "analyze", str(fixture),
-             "--format", "json"],
-            capture_output=True, text=True, cwd=REPO)
+            [sys.executable, "-m", "bga.cli", "analyze", str(fixture), "--format", "json"],
+            capture_output=True,
+            text=True,
+            cwd=REPO,
+        )
         assert out.returncode == 0, out.stderr
         from bga import producer
 
@@ -92,7 +93,8 @@ class TestTheStampIsWritten:
         assert "producer" in refresh.MACHINE_KEYS, (
             f"no committed analysis drops the stamp any more - if that is "
             f"deliberate this test is what should change, not this "
-            f"comment: {refresh.MACHINE_KEYS}")
+            f"comment: {refresh.MACHINE_KEYS}"
+        )
 
 
 class TestTheAbsenceHasAName:
@@ -114,8 +116,7 @@ class TestTheAbsenceHasAName:
         from bga import producer
 
         absent = producer.contracts_of({})
-        empty = producer.contracts_of(
-            {"producer": {"tool": "bga", "version": "9.9.9", "contracts": []}})
+        empty = producer.contracts_of({"producer": {"tool": "bga", "version": "9.9.9", "contracts": []}})
         assert absent is None
         assert empty == []
         assert absent != empty
@@ -123,14 +124,12 @@ class TestTheAbsenceHasAName:
     def test_a_malformed_stamp_reads_as_absent_rather_than_as_data(self):
         from bga import producer
 
-        for junk in ({"producer": "0.1.0"}, {"producer": []},
-                     {"producer": None}, None, "not a dict"):
+        for junk in ({"producer": "0.1.0"}, {"producer": []}, {"producer": None}, None, "not a dict"):
             assert producer.read(junk) is None, junk
 
 
 class TestProvenanceNeverBreaksACapture:
-    def test_a_failure_to_enumerate_leaves_the_artifact_usable(self,
-                                                               monkeypatch):
+    def test_a_failure_to_enumerate_leaves_the_artifact_usable(self, monkeypatch):
         """The same rule `add_host_manifest` follows: a run directory
         that could not describe itself is still a run directory."""
         from bga import producer
@@ -141,15 +140,13 @@ class TestProvenanceNeverBreaksACapture:
         monkeypatch.setattr(producer, "stamp", explode)
         artifact = {"wall_clock": {"start_us": 0}}
         producer.add(artifact)
-        assert artifact == {"wall_clock": {"start_us": 0}}, (
-            "a failed stamp left debris in the artifact")
+        assert artifact == {"wall_clock": {"start_us": 0}}, "a failed stamp left debris in the artifact"
 
     def test_the_stamp_goes_in_beside_the_host_manifest(self):
         """Both are provenance about the same capture, added by the
         same helper, at the same point - so a run directory that has one
         has the other."""
-        common = (REPO / "tools/_run_context_common.py").read_text(
-            encoding="utf-8")
+        common = (REPO / "tools/_run_context_common.py").read_text(encoding="utf-8")
         assert "def add_producer(" in common
         for name in ("tools/bst_extract_run.py", "tools/bst_run_context.py"):
             text = (REPO / name).read_text(encoding="utf-8")

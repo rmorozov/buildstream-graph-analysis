@@ -6,6 +6,7 @@ direct `detect_large_serialization_points` calls - see
 are all correctly threaded through and surfaced in both JSON and text
 output.
 """
+
 import json
 
 from bga import BuildEfficiencyAnalyzer
@@ -26,28 +27,40 @@ def _write_run_dir(tmp_path, name, builders, host_cpu_count, element_max_jobs):
     # _with_filler helper).
     elements = [{"uid": f"filler_{i}.bst", "requested_target": False} for i in range(4)]
     spans = [
-        {"task_key": f"filler_{i}.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 100,
-         "resources": ["PROCESS"], "primary_resource": "PROCESS"}
+        {
+            "task_key": f"filler_{i}.bst|BUILD|BUILD|0",
+            "ts_us": 0,
+            "dur_us": 100,
+            "resources": ["PROCESS"],
+            "primary_resource": "PROCESS",
+        }
         for i in range(4)
     ]
     for uid, spec in element_max_jobs.items():
         max_jobs, notparallel = spec if isinstance(spec, tuple) else (spec, None)
-        elements.append({
-            "uid": uid, "requested_target": True,
-            "max_jobs": max_jobs, "notparallel": notparallel,
-        })
-        spans.append({
-            "task_key": f"{uid}|BUILD|BUILD|0", "ts_us": 0, "dur_us": 10000,
-            "resources": ["PROCESS"], "primary_resource": "PROCESS",
-        })
+        elements.append(
+            {
+                "uid": uid,
+                "requested_target": True,
+                "max_jobs": max_jobs,
+                "notparallel": notparallel,
+            }
+        )
+        spans.append(
+            {
+                "task_key": f"{uid}|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 10000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            }
+        )
 
     graph = {
         "elements": elements,
         # UX-31: a pinned element only matters if something waits behind
         # it, so every candidate gets one real downstream dependent.
-        "dependencies": [
-            {"predecessor": uid, "successor": "filler_0.bst"} for uid in element_max_jobs
-        ],
+        "dependencies": [{"predecessor": uid, "successor": "filler_0.bst"} for uid in element_max_jobs],
     }
     trace = {"spans": spans, "phases": []}
     (run_dir / "run-context.json").write_text(json.dumps(run_context))
@@ -70,7 +83,10 @@ def test_a_pinned_element_fires_through_the_real_call_site(tmp_path):
     Confirms `Element.max_jobs`/`Element.notparallel` are threaded from
     graph.json through the analyzer into both JSON and text output."""
     result = _analyze(
-        tmp_path, "run", builders=4, host_cpu_count=4,
+        tmp_path,
+        "run",
+        builders=4,
+        host_cpu_count=4,
         element_max_jobs={"core.bst": (1, True), "lib-a.bst": (4, None)},
     )
 
@@ -78,8 +94,7 @@ def test_a_pinned_element_fires_through_the_real_call_site(tmp_path):
     assert len(risks) == 1
     # UX-289: one record per element, carrying the two numbers that
     # used to be published as separate maps keyed by the same uid.
-    assert [e["element_uid"]
-            for e in risks[0]["pinned_elements"]] == ["core.bst"]
+    assert [e["element_uid"] for e in risks[0]["pinned_elements"]] == ["core.bst"]
     assert risks[0]["pinned_elements"][0]["max_jobs"] == 1
     assert risks[0]["notparallel"] is True
     assert risks[0]["typical_max_jobs"] == 4
@@ -94,7 +109,10 @@ def test_builders_one_real_run_produces_no_risk(tmp_path):
     call site: builders=1 makes concurrent dispatch impossible
     regardless of how the elements are configured."""
     result = _analyze(
-        tmp_path, "run", builders=1, host_cpu_count=4,
+        tmp_path,
+        "run",
+        builders=1,
+        host_cpu_count=4,
         element_max_jobs={"llvm1.bst": 4, "llvm2.bst": 4},
     )
 
@@ -103,7 +121,10 @@ def test_builders_one_real_run_produces_no_risk(tmp_path):
 
 def test_only_one_override_real_run_produces_no_risk(tmp_path):
     result = _analyze(
-        tmp_path, "run", builders=4, host_cpu_count=4,
+        tmp_path,
+        "run",
+        builders=4,
+        host_cpu_count=4,
         element_max_jobs={"llvm1.bst": 4},
     )
 

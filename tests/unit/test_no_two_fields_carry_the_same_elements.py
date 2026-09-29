@@ -27,6 +27,7 @@ against 134 on that run. The membership was the third copy; the split
 was information, and it is published now as `deferral_risk` on each
 leaf, which the tool had always computed and always dropped.
 """
+
 import json
 import pathlib
 import re
@@ -123,9 +124,12 @@ def _per_element_measures(found):
         match = re.match(r"^element_join\[\d+\]\.(.+)$", path)
         if match:
             rows[match.group(1)] += 1
-    return {path for path in found
-            for match in [re.match(r"^element_join\[\d+\]\.(.+)$", path)]
-            if match and rows[match.group(1)] > 1}
+    return {
+        path
+        for path in found
+        for match in [re.match(r"^element_join\[\d+\]\.(.+)$", path)]
+        if match and rows[match.group(1)] > 1
+    }
 
 
 def _is_an_edge(path):
@@ -170,6 +174,8 @@ def _is_a_fan_in_measure(path):
     already excuses twice.
     """
     return bool(re.match(r"^elements\.fan_in\.[\w./-]+\.bst\.direct$", path))
+
+
 def _is_a_two_hop_chain(path, members):
     """`UX-830`'s `bottleneck.serial_chains[].members` at length 2 is
     the same coincidence `_is_an_edge` already excuses, one field over:
@@ -218,9 +224,11 @@ def _clashes(payload):
     re-add is caught here too.
     """
     everyone = frozenset((payload.get("elements") or {}).get("element_durations") or {})
-    found = {name: members
-             for name, members in sorted(_populations(payload).items())
-             if len(members) >= 2 and members != everyone}
+    found = {
+        name: members
+        for name, members in sorted(_populations(payload).items())
+        if len(members) >= 2 and members != everyone
+    }
     # UX-329: and the per-element measures `element_join` publishes, for
     # the reason the full population is excluded above - see
     # `_per_element_measures`.
@@ -257,8 +265,7 @@ def _populations(node, path="", found=None):
         if node and all(_is_uid(v) for v in node):
             found[path] = frozenset(node)
         # a list of records that name an element each
-        uids = [v.get("element_uid") for v in node
-                if isinstance(v, dict) and _is_uid(v.get("element_uid"))]
+        uids = [v.get("element_uid") for v in node if isinstance(v, dict) and _is_uid(v.get("element_uid"))]
         if uids and len(uids) == len(node):
             found[path] = frozenset(uids)
         for at, value in enumerate(node):
@@ -270,7 +277,11 @@ def _populations(node, path="", found=None):
 def payload():
     done = subprocess.run(
         [sys.executable, "-m", "bga.cli", "analyze", str(RUN), "--format", "json"],
-        capture_output=True, text=True, cwd=REPO, timeout=180)
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=180,
+    )
     assert done.returncode == 0, done.stderr[-2000:]
     return json.loads(done.stdout)
 
@@ -282,8 +293,8 @@ class TestEachPopulationIsPublishedOnce:
         says which one a reader should believe if they disagree."""
         assert _clashes(payload) == [], (
             "field(s) publishing the same selection twice - one is a copy, "
-            "the other is the place it belongs:\n  "
-            + "\n  ".join(_clashes(payload)))
+            "the other is the place it belongs:\n  " + "\n  ".join(_clashes(payload))
+        )
 
     def test_the_check_would_see_a_planted_duplicate(self, payload):
         """The positive control. Both exclusions above - the full
@@ -294,13 +305,9 @@ class TestEachPopulationIsPublishedOnce:
         was filed for, in the half of the document the exclusions do not
         cover."""
         planted = json.loads(json.dumps(payload))
-        planted["critical_path"] = [
-            entry["element_uid"]
-            for entry in planted["critical_path_detail"]]
-        assert len(planted["critical_path"]) >= 2, (
-            "the run's path is too short for the plant to mean anything")
-        assert any("critical_path`" in clash
-                   for clash in _clashes(planted)), _clashes(planted)
+        planted["critical_path"] = [entry["element_uid"] for entry in planted["critical_path_detail"]]
+        assert len(planted["critical_path"]) >= 2, "the run's path is too short for the plant to mean anything"
+        assert any("critical_path`" in clash for clash in _clashes(planted)), _clashes(planted)
 
     def test_the_narrative_exclusion_is_bounded(self, payload):
         """`_is_narrative` excuses `findings[...]`, so this pins what it
@@ -308,26 +315,24 @@ class TestEachPopulationIsPublishedOnce:
         payload stopped publishing them the exclusion would still be
         there, silently covering nothing, and the docstring explaining
         it would be describing a document that no longer exists."""
-        named = [name for name in _populations(payload)
-                 if _is_narrative(name)]
+        named = [name for name in _populations(payload) if _is_narrative(name)]
         assert named, "no finding names any element - the exclusion is dead"
         assert any(name.endswith(".elements") for name in named), named
-
 
     def test_the_per_element_exclusion_is_bounded(self, payload):
         """`UX-329`'s exclusion is derived, so this pins that it derives
         something - and that it does not cover `element_join` whole."""
-        found = {name: members
-                 for name, members in _populations(payload).items()
-                 if len(members) >= 2}
+        found = {name: members for name, members in _populations(payload).items() if len(members) >= 2}
         measures = _per_element_measures(found)
         assert measures, (
             "nothing under element_join is a per-element measure any more, "
             "so the exclusion covers nothing and its docstring describes a "
-            "payload that no longer exists")
+            "payload that no longer exists"
+        )
         under_join = {n for n in found if n.startswith("element_join[")}
         assert measures < under_join or not (under_join - measures), (
-            "the exclusion is not a subset of what element_join publishes")
+            "the exclusion is not a subset of what element_join publishes"
+        )
 
     def test_a_duplicate_on_one_element_row_is_still_caught(self, payload):
         """The positive control for `UX-329`'s exclusion. It excuses a
@@ -336,21 +341,16 @@ class TestEachPopulationIsPublishedOnce:
         planted = json.loads(json.dumps(payload))
         path = planted["critical_path_detail"]
         assert len(path) >= 2, "the run's path is too short to plant with"
-        planted["element_join"][0]["copied_critical_path"] = [
-            entry["element_uid"] for entry in path]
-        planted["critical_path"] = [
-            entry["element_uid"] for entry in path]
-        assert any("copied_critical_path" in clash
-                   for clash in _clashes(planted)), _clashes(planted)
+        planted["element_join"][0]["copied_critical_path"] = [entry["element_uid"] for entry in path]
+        planted["critical_path"] = [entry["element_uid"] for entry in path]
+        assert any("copied_critical_path" in clash for clash in _clashes(planted)), _clashes(planted)
 
     def test_the_exclusion_is_not_a_hole(self, payload):
         """The full population is excluded in `_clashes`, so this
         asserts it is genuinely the full population and not an empty set
         that would silently excuse everything."""
         everyone = frozenset((payload.get("elements") or {}).get("element_durations") or {})
-        assert len(everyone) >= 4, (
-            f"the run has {len(everyone)} elements, too few for the "
-            f"exclusion to mean anything")
+        assert len(everyone) >= 4, f"the run has {len(everyone)} elements, too few for the exclusion to mean anything"
 
     def test_the_removed_fields_are_gone(self, payload):
         """Named, so re-adding one is a decision rather than a slip."""
@@ -375,8 +375,7 @@ class TestWhatReplacedThem:
 
         path = schemas.critical_path_uids(payload)
         assert path, "the critical path is unreachable"
-        assert path == [e["element_uid"]
-                        for e in payload["critical_path_detail"]]
+        assert path == [e["element_uid"] for e in payload["critical_path_detail"]]
 
     def test_a_v1_document_is_still_readable(self):
         """`bga` reads its own past output (`UX-249`) and `bga compare`
@@ -398,8 +397,7 @@ class TestWhatReplacedThem:
         assert points, "no choke points on this run"
         counts = [entry["downstream_count"] for entry in points]
         assert counts == sorted(counts, reverse=True), counts
-        assert schemas.choke_point_uids(payload["bottleneck"]) == [
-            entry["element_uid"] for entry in points]
+        assert schemas.choke_point_uids(payload["bottleneck"]) == [entry["element_uid"] for entry in points]
 
     def test_a_v1_bottleneck_is_still_readable(self):
         """Same reason as the critical path above: a v1 document names
@@ -407,13 +405,11 @@ class TestWhatReplacedThem:
         them."""
         from bga import schemas
 
-        assert schemas.choke_point_uids(
-            {"choke_points": ["a.bst", "b.bst"]}) == ["a.bst", "b.bst"]
+        assert schemas.choke_point_uids({"choke_points": ["a.bst", "b.bst"]}) == ["a.bst", "b.bst"]
 
     def test_each_leaf_carries_its_risk(self, payload):
         """The information the split used to carry, now on the record."""
-        detail = ((payload.get("leaf_analysis") or {})
-                  .get("leaves_detail") or {})
+        detail = (payload.get("leaf_analysis") or {}).get("leaves_detail") or {}
         assert detail, "no leaves on this run"
         assert all("deferral_risk" in leaf for leaf in detail.values())
 

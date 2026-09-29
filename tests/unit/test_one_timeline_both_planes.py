@@ -12,6 +12,7 @@ silently, and composing the three commands took invented paths.
 So these guards are mostly about the *route*, not the arithmetic - the
 merge itself is `UX-24`'s and already tested.
 """
+
 import gzip
 import json
 import os
@@ -39,9 +40,11 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 
 def _bga(args, cwd=None):
     return subprocess.run(
-        [sys.executable, "-c",
-         f"from bga.cli import main; raise SystemExit(main({args!r}))"],
-        capture_output=True, text=True, cwd=cwd or os.getcwd())
+        [sys.executable, "-c", f"from bga.cli import main; raise SystemExit(main({args!r}))"],
+        capture_output=True,
+        text=True,
+        cwd=cwd or os.getcwd(),
+    )
 
 
 def _snapshot(tmp_path, with_raw=True, compressed=True):
@@ -71,16 +74,14 @@ class TestTheWrongFileIsRefused:
         result = _bga(["native-to-chrome", "standalone", str(report), str(out)])
         assert result.returncode == 2, result.stdout
         assert "not empty" in result.stderr
-        assert "plane2.json" in result.stderr, (
-            "the message should name the mistake a user actually makes")
+        assert "plane2.json" in result.stderr, "the message should name the mistake a user actually makes"
 
     def test_an_empty_file_still_passes(self, tmp_path):
         """A different claim: a capture that traced nothing really did
         produce no events, and refusing it would refuse a truth."""
         empty = tmp_path / "empty.log"
         empty.write_text("")
-        result = _bga(["native-to-chrome", "standalone", str(empty),
-                       str(tmp_path / "out.json")])
+        result = _bga(["native-to-chrome", "standalone", str(empty), str(tmp_path / "out.json")])
         assert result.returncode == 0, result.stderr
 
     def test_a_real_raw_log_passes(self, tmp_path):
@@ -100,8 +101,7 @@ class TestTheConvertersLeaveStdoutAlone:
     def test_native_to_chrome(self, tmp_path):
         raw = tmp_path / "trace.log"
         raw.write_text(_RAW)
-        result = _bga(["native-to-chrome", "standalone", str(raw),
-                       str(tmp_path / "out.json")])
+        result = _bga(["native-to-chrome", "standalone", str(raw), str(tmp_path / "out.json")])
         assert result.stdout == "", result.stdout
         assert "Wrote" in result.stderr
 
@@ -126,7 +126,8 @@ class TestSnapshotsKeepTheRawLog:
 
         assert RAW_LOG_NAME == EXPECTED == "plane2.log.gz", (
             "the writer and the reader must agree on the name, and nothing "
-            "else in the codebase would notice if they stopped")
+            "else in the codebase would notice if they stopped"
+        )
 
     def test_it_compresses_in_place(self, tmp_path):
         from tools.bga_snapshot import _compress_raw_log
@@ -147,7 +148,7 @@ class TestSnapshotsKeepTheRawLog:
 
         snapshot = tmp_path / "snap"
         snapshot.mkdir()
-        _compress_raw_log(str(snapshot))   # must not raise
+        _compress_raw_log(str(snapshot))  # must not raise
 
 
 class TestTheOneCommand:
@@ -165,10 +166,8 @@ class TestTheOneCommand:
         assert result["planes"] == ["1", "2"]
         assert result["anchor"] == "work-a.bst"
         events = json.loads(out.read_text())
-        groups = {event["args"]["name"] for event in events
-                  if event.get("name") == "process_name"}
-        assert any(name.startswith("native:") for name in groups), (
-            f"no Plane 2 lane group in {groups}")
+        groups = {event["args"]["name"] for event in events if event.get("name") == "process_name"}
+        assert any(name.startswith("native:") for name in groups), f"no Plane 2 lane group in {groups}"
 
     def test_it_reads_an_uncompressed_raw_log_too(self, tmp_path):
         """A capture whose compression failed keeps the plain file, and
@@ -179,8 +178,7 @@ class TestTheOneCommand:
         result = render(str(snapshot), str(tmp_path / "t.json"))
         assert result["planes"] == ["1", "2"]
 
-    def test_without_a_raw_log_it_renders_plane_1_and_says_what_is_missing(
-            self, tmp_path):
+    def test_without_a_raw_log_it_renders_plane_1_and_says_what_is_missing(self, tmp_path):
         from tools.bga_timeline import FORMAT_CHROME, describe, render
 
         snapshot = _snapshot(tmp_path, with_raw=False)
@@ -204,15 +202,15 @@ class TestTheOneCommand:
             "START pid=1 ppid=0 ts=100.0 element=short.bst cmd=cc\n"
             "END pid=1 ppid=0 ts=100.5 element=short.bst cmd=cc\n"
             "START pid=2 ppid=0 ts=100.0 element=long.bst cmd=cc\n"
-            "END pid=2 ppid=0 ts=180.0 element=long.bst cmd=cc\n")
+            "END pid=2 ppid=0 ts=180.0 element=long.bst cmd=cc\n"
+        )
         assert pick_anchor(str(raw)) == "long.bst"
 
     def test_an_explicit_anchor_wins(self, tmp_path):
         from tools.bga_timeline import render
 
         snapshot = _snapshot(tmp_path)
-        result = render(str(snapshot), str(tmp_path / "t.json"),
-                        anchor_element="work-a.bst")
+        result = render(str(snapshot), str(tmp_path / "t.json"), anchor_element="work-a.bst")
         assert result["anchor"] == "work-a.bst"
 
     def test_a_run_directory_is_refused_with_the_fix(self, tmp_path):
@@ -236,8 +234,7 @@ class TestTheOneCommand:
         assert f"try {snapshot}" in said, said
 
     def test_stdout_carries_only_the_machine_summary(self, tmp_path):
-        result = _bga(["timeline", str(_snapshot(tmp_path)),
-                       "-o", str(tmp_path / "t.json")])
+        result = _bga(["timeline", str(_snapshot(tmp_path)), "-o", str(tmp_path / "t.json")])
         assert result.returncode == 0, result.stderr
         payload = json.loads(result.stdout)
         assert payload["planes"] == ["1", "2"]

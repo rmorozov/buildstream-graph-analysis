@@ -22,6 +22,7 @@ Three layers:
    against a real BuildStream 2.7.0 + buildstream-plugins install; see
    the task file's Verification Log for that real run's output.
 """
+
 import json
 import shutil
 import subprocess
@@ -41,6 +42,7 @@ FIXTURE_PROJECT = Path(__file__).resolve().parents[1] / "fixtures" / "bst_show_p
 BST_AVAILABLE = shutil.which("bst") is not None
 try:
     import buildstream_plugins  # noqa: F401
+
     BUILDSTREAM_PLUGINS_AVAILABLE = True
 except ImportError:
     BUILDSTREAM_PLUGINS_AVAILABLE = False
@@ -59,15 +61,14 @@ def _git_commit_all(path, message, env=None):
 
 # --- Pure unit tests: _read_ref_storage -----------------------------------
 
+
 def test_read_ref_storage_defaults_to_inline_when_absent(tmp_path):
     (tmp_path / "project.conf").write_text("name: t\nmin-version: 2.0\n")
     assert _read_ref_storage(str(tmp_path)) == "inline"
 
 
 def test_read_ref_storage_reads_project_refs_value(tmp_path):
-    (tmp_path / "project.conf").write_text(
-        "name: t\nmin-version: 2.0\nref-storage: project.refs\n"
-    )
+    (tmp_path / "project.conf").write_text("name: t\nmin-version: 2.0\nref-storage: project.refs\n")
     assert _read_ref_storage(str(tmp_path)) == "project.refs"
 
 
@@ -78,6 +79,7 @@ def test_read_ref_storage_fails_loudly_without_project_conf(tmp_path):
 
 # --- Pure unit tests: _check_project_refs_strict --------------------------
 
+
 def test_strict_fails_when_ref_storage_is_not_project_refs(tmp_path):
     (tmp_path / "project.conf").write_text("name: t\nmin-version: 2.0\n")
     with pytest.raises(RuntimeError, match="ref-storage: project.refs"):
@@ -85,26 +87,20 @@ def test_strict_fails_when_ref_storage_is_not_project_refs(tmp_path):
 
 
 def test_strict_fails_when_project_refs_file_is_missing(tmp_path):
-    (tmp_path / "project.conf").write_text(
-        "name: t\nmin-version: 2.0\nref-storage: project.refs\n"
-    )
+    (tmp_path / "project.conf").write_text("name: t\nmin-version: 2.0\nref-storage: project.refs\n")
     with pytest.raises(RuntimeError, match="no project.refs file exists"):
         _check_project_refs_strict(str(tmp_path))
 
 
 def test_strict_fails_when_not_a_git_repository(tmp_path):
-    (tmp_path / "project.conf").write_text(
-        "name: t\nmin-version: 2.0\nref-storage: project.refs\n"
-    )
+    (tmp_path / "project.conf").write_text("name: t\nmin-version: 2.0\nref-storage: project.refs\n")
     (tmp_path / "project.refs").write_text("projects: {}\n")
     with pytest.raises(RuntimeError, match="not a git repository"):
         _check_project_refs_strict(str(tmp_path))
 
 
 def test_strict_fails_when_project_refs_has_uncommitted_changes(tmp_path):
-    (tmp_path / "project.conf").write_text(
-        "name: t\nmin-version: 2.0\nref-storage: project.refs\n"
-    )
+    (tmp_path / "project.conf").write_text("name: t\nmin-version: 2.0\nref-storage: project.refs\n")
     (tmp_path / "project.refs").write_text("projects: {}\n")
     _git_init(tmp_path)
     _git_commit_all(tmp_path, "init")
@@ -115,9 +111,7 @@ def test_strict_fails_when_project_refs_has_uncommitted_changes(tmp_path):
 
 
 def test_strict_succeeds_when_project_refs_is_clean(tmp_path):
-    (tmp_path / "project.conf").write_text(
-        "name: t\nmin-version: 2.0\nref-storage: project.refs\n"
-    )
+    (tmp_path / "project.conf").write_text("name: t\nmin-version: 2.0\nref-storage: project.refs\n")
     content = b"projects: {}\n"
     (tmp_path / "project.refs").write_bytes(content)
     _git_init(tmp_path)
@@ -130,9 +124,7 @@ def test_strict_ignores_uncommitted_changes_to_other_files(tmp_path):
     """Only project.refs itself matters - an unrelated dirty file must
     not trip --strict (that's exactly the imprecision --strict is meant
     to improve on relative to the existing whole-tree dirty check)."""
-    (tmp_path / "project.conf").write_text(
-        "name: t\nmin-version: 2.0\nref-storage: project.refs\n"
-    )
+    (tmp_path / "project.conf").write_text("name: t\nmin-version: 2.0\nref-storage: project.refs\n")
     (tmp_path / "project.refs").write_text("projects: {}\n")
     _git_init(tmp_path)
     _git_commit_all(tmp_path, "init")
@@ -144,6 +136,7 @@ def test_strict_ignores_uncommitted_changes_to_other_files(tmp_path):
 
 # --- Real, bst-gated end-to-end: inline-storage fixture must fail loudly --
 
+
 @pytest.mark.bst
 @pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/spec/ingestion-pipeline.md")
 def test_strict_fails_loudly_for_the_inline_storage_fixture(tmp_path):
@@ -151,7 +144,8 @@ def test_strict_fails_loudly_for_the_inline_storage_fixture(tmp_path):
     log_path = tmp_path / "build.log"
     proc = subprocess.run(
         ["bst", "-C", str(FIXTURE_PROJECT), "--no-colors", "build", "app.bst"],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
         env=isolated_bst_env(tmp_path),
     )
     log_path.write_text(proc.stdout + proc.stderr)
@@ -174,7 +168,8 @@ def test_non_strict_extraction_of_inline_fixture_has_no_provenance_field(tmp_pat
     log_path = tmp_path / "build.log"
     proc = subprocess.run(
         ["bst", "-C", str(FIXTURE_PROJECT), "--no-colors", "build", "app.bst"],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
         env=isolated_bst_env(tmp_path),
     )
     log_path.write_text(proc.stdout + proc.stderr)
@@ -190,6 +185,7 @@ def test_non_strict_extraction_of_inline_fixture_has_no_provenance_field(tmp_pat
 
 
 # --- Real, bst + buildstream-plugins-gated: full project.refs lifecycle --
+
 
 @pytest.mark.bst
 @pytest.mark.skipif(
@@ -226,7 +222,10 @@ def test_real_project_refs_lifecycle_clean_then_dirtied(tmp_path):
 
     subprocess.run(
         ["bst", "-C", str(project), "--no-colors", "source", "track", "thing.bst"],
-        capture_output=True, text=True, env=env, check=True,
+        capture_output=True,
+        text=True,
+        env=env,
+        check=True,
     )
     _git_init(project, env=env)
     _git_commit_all(project, "init with project.refs", env=env)
@@ -234,7 +233,9 @@ def test_real_project_refs_lifecycle_clean_then_dirtied(tmp_path):
     build_log = tmp_path / "build.log"
     proc = subprocess.run(
         ["bst", "-C", str(project), "--no-colors", "build", "thing.bst"],
-        capture_output=True, text=True, env=env,
+        capture_output=True,
+        text=True,
+        env=env,
     )
     build_log.write_text(proc.stdout + proc.stderr)
 
@@ -256,9 +257,11 @@ def test_real_project_refs_lifecycle_clean_then_dirtied(tmp_path):
     subprocess.run(["git", "commit", "-q", "-m", "second"], cwd=srcrepo, check=True, env=env)
     subprocess.run(
         ["bst", "-C", str(project), "--no-colors", "source", "track", "thing.bst"],
-        capture_output=True, text=True, env=env, check=True,
+        capture_output=True,
+        text=True,
+        env=env,
+        check=True,
     )
 
-    with bst_env(tmp_path / "home"), pytest.raises(
-            RuntimeError, match="project.refs.*uncommitted changes"):
+    with bst_env(tmp_path / "home"), pytest.raises(RuntimeError, match="project.refs.*uncommitted changes"):
         extract_run(str(project), str(build_log), str(tmp_path / "run2"), strict=True)

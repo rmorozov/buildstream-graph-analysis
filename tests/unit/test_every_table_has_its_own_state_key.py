@@ -33,6 +33,7 @@ macro_micro (11)        40             40  {}
 synthetic  (1,202)      38             38  {}
 ```
 """
+
 import json
 import os
 import pathlib
@@ -54,7 +55,11 @@ needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 def payload():
     done = subprocess.run(
         ["python", "-m", "bga.cli", "analyze", str(RUN), "--format", "json"],
-        capture_output=True, text=True, cwd=REPO, timeout=180)
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=180,
+    )
     assert done.returncode == 0, done.stderr[-2000:]
     document = json.loads(done.stdout)
     return _long_enough_to_filter(document)
@@ -89,12 +94,12 @@ def _long_enough_to_filter(document):
     leaves = (document.get("leaf_analysis") or {}).get("leaves_detail")
     assert isinstance(leaves, dict) and leaves, (
         "the run no longer publishes leaf_analysis.leaves_detail, which is "
-        "the nested table this guard pads to reach the filter row")
+        "the nested table this guard pads to reach the filter row"
+    )
     sample = next(iter(leaves.values()))
     padded = dict(leaves)
     for index in range(_row_cap() + 5 - len(padded)):
-        padded[f"padding-{index}.bst"] = (
-            dict(sample) if isinstance(sample, dict) else sample)
+        padded[f"padding-{index}.bst"] = dict(sample) if isinstance(sample, dict) else sample
     document["leaf_analysis"]["leaves_detail"] = padded
     return document
 
@@ -150,22 +155,27 @@ console.log(JSON.stringify({
 
 def _page(payload):
     import tempfile
+
     scratch = tempfile.mkdtemp()
     try:
         run = pathlib.Path(scratch, "payload.json")
         run.write_text(json.dumps(payload), encoding="utf-8")
         doc = pathlib.Path(scratch, "schema.json")
-        doc.write_text(json.dumps(schemas.schema(schemas.ANALYZE)),
-                       encoding="utf-8")
+        doc.write_text(json.dumps(schemas.schema(schemas.ANALYZE)), encoding="utf-8")
         script = _HARNESS % {
             "app": (REPO / "tests/viewer.mjs").as_uri(),
             "viewstate": (REPO / "bga/viewer/viewstate.js").as_uri(),
-            "payload": json.dumps(str(run)), "schema": json.dumps(str(doc))}
-        done = subprocess.run([node, "--input-type=module", "-e", script],
-                              capture_output=True, text=True, cwd=REPO,
-                              timeout=120,
-                              env={**os.environ, "BGA_DOM_SHIM":
-                                   (REPO / "tests/dom_shim.mjs").as_uri()})
+            "payload": json.dumps(str(run)),
+            "schema": json.dumps(str(doc)),
+        }
+        done = subprocess.run(
+            [node, "--input-type=module", "-e", script],
+            capture_output=True,
+            text=True,
+            cwd=REPO,
+            timeout=120,
+            env={**os.environ, "BGA_DOM_SHIM": (REPO / "tests/dom_shim.mjs").as_uri()},
+        )
         assert done.returncode == 0, done.stderr[-3000:]
         return json.loads(done.stdout)
     finally:
@@ -182,8 +192,8 @@ class TestEveryTableIsAddressable:
                 repeated[key] = repeated.get(key, 1) + 1
             seen.add(key)
         assert repeated == {}, (
-            f"{len(drawn['keys'])} tables, {drawn['distinct']} distinct keys; "
-            f"table(s) sharing one: {repeated}")
+            f"{len(drawn['keys'])} tables, {drawn['distinct']} distinct keys; table(s) sharing one: {repeated}"
+        )
 
     def test_the_page_really_has_nested_tables(self, payload):
         """The claim above is empty on a page with no nesting, and this
@@ -193,16 +203,15 @@ class TestEveryTableIsAddressable:
         drawn = _page(payload)
         nested = [key for key in drawn["keys"] if "." in key]
         assert len(nested) >= 5, (
-            f"only {len(nested)} nested tables on this run; the fixture no "
-            f"longer exercises what this guard is about")
+            f"only {len(nested)} nested tables on this run; the fixture no longer exercises what this guard is about"
+        )
         assert drawn["tables"] >= 20, drawn["tables"]
 
     def test_a_nested_table_is_named_by_where_it_sits(self, payload):
         """Not `value`. The key a reader sees in a pasted link should
         say which table it filtered."""
         drawn = _page(payload)
-        assert "value" not in drawn["keys"], (
-            "a table is still keyed by the generic column name it sits in")
+        assert "value" not in drawn["keys"], "a table is still keyed by the generic column name it sits in"
         for key in drawn["keys"]:
             if "." in key:
                 assert not key.endswith(".value"), key
@@ -214,8 +223,7 @@ class TestEveryTableIsAddressable:
         drawn = _page(payload)
         trip = drawn["roundTrip"]
         assert trip, "no nested table carried a filter box to test with"
-        assert trip["names_the_table"], (
-            f"filtering `{trip['key']}` captured `{trip['captured']}`")
+        assert trip["names_the_table"], f"filtering `{trip['key']}` captured `{trip['captured']}`"
 
 
 if __name__ == "__main__":  # pragma: no cover

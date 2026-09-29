@@ -12,6 +12,7 @@ captured value.
 Mutation: drop the `binary in _MAKE_LIKE_BINARIES` check in the glued
 `-j` branch, and `curl -j123456` keeps its digits again.
 """
+
 from bga import anonymize as anon
 
 KEY = bytes(range(32))

@@ -10,6 +10,7 @@ freedesktop-sdk runs with one `examples/06` run among them produced
 
 a confident verdict over a band containing a foreign project.
 """
+
 from bga.cache_trend import _subject, _subject_label, build_trend, format_trend_text
 
 
@@ -20,11 +21,18 @@ class _Context:
 
 def _row(name, subject, hit=0.7, built=25, cached=65):
     return {
-        'run': name, 'subject': subject, 'run_id': 'abc',
-        'run_mode': 'incremental', 'total_duration_us': 1_000_000,
-        'hit_share': hit, 'built_elements': built, 'cached_elements': cached,
-        'transfer_us': None, 'transfer_per_artifact_us': None,
-        'rebuild_us': 1_000_000, 'churn': None,
+        'run': name,
+        'subject': subject,
+        'run_id': 'abc',
+        'run_mode': 'incremental',
+        'total_duration_us': 1_000_000,
+        'hit_share': hit,
+        'built_elements': built,
+        'cached_elements': cached,
+        'transfer_us': None,
+        'transfer_per_artifact_us': None,
+        'rebuild_us': 1_000_000,
+        'churn': None,
     }
 
 
@@ -34,10 +42,15 @@ EXAMPLE = ('examples/06-macro-micro-optimization', ('all.bst',))
 
 class TestWhatASeriesIsOf:
     def test_the_subject_is_the_project_and_its_targets(self):
-        subject = _subject(_Context({
-            'project_identity': '.', 'targets': ['components/libxml2.bst'],
-            'project_git_commit': '953683fb',
-        }))
+        subject = _subject(
+            _Context(
+                {
+                    'project_identity': '.',
+                    'targets': ['components/libxml2.bst'],
+                    'project_git_commit': '953683fb',
+                }
+            )
+        )
 
         assert subject == FDSDK
 
@@ -46,14 +59,24 @@ class TestWhatASeriesIsOf:
         `project_git_commit`. Keying on it here would refuse every trend
         that spans commits - which is the only kind of cache-health trend
         there is."""
-        one = _subject(_Context({
-            'project_identity': '.', 'targets': ['t.bst'],
-            'project_git_commit': 'aaaaaaaa',
-        }))
-        two = _subject(_Context({
-            'project_identity': '.', 'targets': ['t.bst'],
-            'project_git_commit': 'bbbbbbbb',
-        }))
+        one = _subject(
+            _Context(
+                {
+                    'project_identity': '.',
+                    'targets': ['t.bst'],
+                    'project_git_commit': 'aaaaaaaa',
+                }
+            )
+        )
+        two = _subject(
+            _Context(
+                {
+                    'project_identity': '.',
+                    'targets': ['t.bst'],
+                    'project_git_commit': 'bbbbbbbb',
+                }
+            )
+        )
 
         assert one == two
 
@@ -68,26 +91,32 @@ class TestWhatASeriesIsOf:
 
 class TestABandIsNotComputedOverUnlikeThings:
     def test_a_foreign_project_in_the_series_withholds_the_verdict(self):
-        trend = build_trend([
-            _row('a/run', FDSDK), _row('b/run', FDSDK),
-            _row('c/run', EXAMPLE, hit=0.0, built=11, cached=0),
-            _row('d/run', FDSDK),
-        ])
+        trend = build_trend(
+            [
+                _row('a/run', FDSDK),
+                _row('b/run', FDSDK),
+                _row('c/run', EXAMPLE, hit=0.0, built=11, cached=0),
+                _row('d/run', FDSDK),
+            ]
+        )
 
         assert trend['heterogeneous'] is not None
         assert trend['findings'] == []
         # The rows survive - each is a real reading of its own run, and
         # only the band was cross-run.
-        assert [row['run'] for row in trend['runs']] == [
-            'a/run', 'b/run', 'c/run', 'd/run']
+        assert [row['run'] for row in trend['runs']] == ['a/run', 'b/run', 'c/run', 'd/run']
         # ...and one reason is given, not two.
         assert trend['insufficient_window'] is None
 
     def test_and_the_report_names_which_run_is_the_odd_one(self):
-        trend = build_trend([
-            _row('a/run', FDSDK), _row('b/run', FDSDK),
-            _row('c/run', EXAMPLE), _row('d/run', FDSDK),
-        ])
+        trend = build_trend(
+            [
+                _row('a/run', FDSDK),
+                _row('b/run', FDSDK),
+                _row('c/run', EXAMPLE),
+                _row('d/run', FDSDK),
+            ]
+        )
         text = format_trend_text(trend)
 
         assert "NOT COMPARABLE" in text
@@ -105,10 +134,14 @@ class TestABandIsNotComputedOverUnlikeThings:
         """A single run with no recorded identity cannot be confirmed to
         belong, so it is not counted as agreeing - but neither is it
         treated as a second subject, because absent is not different."""
-        trend = build_trend([
-            _row('a/run', FDSDK), _row('b/run', None),
-            _row('c/run', FDSDK), _row('d/run', FDSDK),
-        ])
+        trend = build_trend(
+            [
+                _row('a/run', FDSDK),
+                _row('b/run', None),
+                _row('c/run', FDSDK),
+                _row('d/run', FDSDK),
+            ]
+        )
 
         assert trend['heterogeneous'] is None
 

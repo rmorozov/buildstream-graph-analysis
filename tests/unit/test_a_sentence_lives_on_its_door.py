@@ -35,6 +35,7 @@ golden       10,423 px    2,303          249  (10.8%)          12 / 86
 macro_micro  20,393 px    4,478          403  ( 9.0%)          18 / 146
 ```
 """
+
 import pathlib
 import sys
 
@@ -47,8 +48,10 @@ from pages import snapshot_copy
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
-FIXTURES = {"golden": REPO / "tests/fixtures/golden/mixed_task_kinds",
-            "macro_micro": REPO / "tests/fixtures/macro_micro/run"}
+FIXTURES = {
+    "golden": REPO / "tests/fixtures/golden/mixed_task_kinds",
+    "macro_micro": REPO / "tests/fixtures/macro_micro/run",
+}
 
 chrome = find_chrome()
 needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
@@ -71,8 +74,7 @@ def _declared_inline():
             if schemas.INLINE in node:
                 found.setdefault(key, node[schemas.INLINE])
             for name, sub in node.items():
-                walk(sub, name if name not in
-                     ("properties", "items", "additionalProperties") else key)
+                walk(sub, name if name not in ("properties", "items", "additionalProperties") else key)
         elif isinstance(node, list):
             for sub in node:
                 walk(sub, key)
@@ -89,10 +91,8 @@ class TestTheContractSaysWhichSentencesStayInline:
     def test_every_declaration_names_one_of_the_two_reasons(self):
         from bga import schemas
 
-        wrong = {key: reason for key, reason in _declared_inline().items()
-                 if reason not in schemas.INLINE_REASONS}
-        assert wrong == {}, (
-            f"a `bga:inline` outside {schemas.INLINE_REASONS}: {wrong}")
+        wrong = {key: reason for key, reason in _declared_inline().items() if reason not in schemas.INLINE_REASONS}
+        assert wrong == {}, f"a `bga:inline` outside {schemas.INLINE_REASONS}: {wrong}"
 
     def test_every_declaration_has_a_sentence_to_keep_inline(self):
         """`bga:inline` on a node with no `description` renders nothing
@@ -234,29 +234,28 @@ class TestThePageIsThisRunsNumbers:
         assert share <= MAX_NOTE_SHARE, (
             f"{label}: {out['shownWords']} of {out['totalWords']} words "
             f"({share:.0%}) are the schema's own sentences, against a bound "
-            f"of {MAX_NOTE_SHARE:.0%}")
+            f"of {MAX_NOTE_SHARE:.0%}"
+        )
 
-    def test_only_a_declared_exception_renders_beside_its_value(
-            self, browser, pages, label):
+    def test_only_a_declared_exception_renders_beside_its_value(self, browser, pages, label):
         out = browser.measure(pages[label], _PAGE, width=1440, height=900)
         assert out["described"] > 0, f"{label} describes nothing at all"
         assert out["shownUndeclared"] == [], (
-            f"{label}: sentences on screen with no `bga:inline` behind "
-            f"them: {sorted(set(out['shownUndeclared']))[:8]}")
+            f"{label}: sentences on screen with no `bga:inline` behind them: {sorted(set(out['shownUndeclared']))[:8]}"
+        )
         assert sorted(set(out["shownKeys"])) == sorted(set(out["inlineKeys"])), (
-            label, out["shownKeys"], out["inlineKeys"])
+            label,
+            out["shownKeys"],
+            out["inlineKeys"],
+        )
 
-    def test_every_key_that_renders_inline_is_declared_in_the_contract(
-            self, browser, pages, label):
+    def test_every_key_that_renders_inline_is_declared_in_the_contract(self, browser, pages, label):
         declared = _declared_inline()
         out = browser.measure(pages[label], _PAGE, width=1440, height=900)
         stray = sorted({key for key in out["inlineKeys"] if key not in declared})
-        assert stray == [], (
-            f"{label}: the page renders these inline and the contract does "
-            f"not declare them: {stray}")
+        assert stray == [], f"{label}: the page renders these inline and the contract does not declare them: {stray}"
 
-    def test_a_declared_exception_really_does_render_inline(
-            self, browser, pages, label):
+    def test_a_declared_exception_really_does_render_inline(self, browser, pages, label):
         """The other direction, and the one a page that ignored the
         hint entirely would pass without: every declared key this page
         actually draws has its sentence on screen."""
@@ -265,10 +264,10 @@ class TestThePageIsThisRunsNumbers:
         drawn = {key for key in out["describedKeys"] if key in declared}
         assert drawn, (
             f"{label}: none of the {len(declared)} declared exceptions is on "
-            f"this page - the clause below is measuring nothing")
+            f"this page - the clause below is measuring nothing"
+        )
         missing = sorted(drawn - set(out["shownKeys"]))
-        assert missing == [], (
-            f"{label}: declared inline and behind a door anyway: {missing}")
+        assert missing == [], f"{label}: declared inline and behind a door anyway: {missing}"
 
     def test_a_declared_exception_carries_no_door(self, browser, pages, label):
         """The `?` is the affordance for a sentence that is not here.
@@ -280,8 +279,7 @@ class TestThePageIsThisRunsNumbers:
         # .py`'s now; this clause only holds a door existing at all.
         assert out["doors"] > 0, (label, out["doors"])
 
-    def test_every_door_on_the_page_opens_its_own_sentence(
-            self, browser, pages, label):
+    def test_every_door_on_the_page_opens_its_own_sentence(self, browser, pages, label):
         """The acceptance test's own phrasing: every sentence taken
         from beside a value is reachable from its block's one door.
         Walked, not sampled - 29 doors on one page and 39 on the
@@ -291,10 +289,9 @@ class TestThePageIsThisRunsNumbers:
         assert out["doors"] > 20, (label, out["doors"])
         assert out["noSentence"] == [], (label, out["noSentence"][:8])
         assert out["openBeforeClick"] == [], (
-            f"{label}: a closed door already showing its sentence: "
-            f"{out['openBeforeClick'][:8]}")
-        assert out["doesNotOpen"] == [], (
-            f"{label}: a door that opens nothing: {out['doesNotOpen'][:8]}")
+            f"{label}: a closed door already showing its sentence: {out['openBeforeClick'][:8]}"
+        )
+        assert out["doesNotOpen"] == [], f"{label}: a door that opens nothing: {out['doesNotOpen'][:8]}"
 
     def test_the_door_opens_and_shuts_what_it_says(self, browser, pages, label):
         """The defect, held: `hidden` was true and the sentence was
@@ -304,8 +301,7 @@ class TestThePageIsThisRunsNumbers:
         out = browser.measure(pages[label], _DOOR, width=1440, height=900)
         assert not out.get("none"), f"{label} has no door at all"
         assert out["text"] > 0, out
-        assert out["closed"] == {"display": "none", "height": 0,
-                                 "expanded": "false"}, out
+        assert out["closed"] == {"display": "none", "height": 0, "expanded": "false"}, out
         assert out["open"]["display"] == "inline", out
         assert out["open"]["height"] > 0, out
         assert out["shut"]["display"] == "none", out

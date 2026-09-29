@@ -30,6 +30,7 @@ only place `architecture.md` says how many chapters the viewer has.
 That is also why nothing contradicted it for three reviews - there
 were no rows to count against the word.
 """
+
 import json
 import os
 import pathlib
@@ -48,9 +49,20 @@ needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 #: The prose spells small numbers as words, which is the house style and
 #: not something a guard should force a document to give up. Only as far
 #: as a chapter list could plausibly reach.
-WORDS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6,
-         "seven": 7, "eight": 8, "nine": 9, "ten": 10, "eleven": 11,
-         "twelve": 12}
+WORDS = {
+    "one": 1,
+    "two": 2,
+    "three": 3,
+    "four": 4,
+    "five": 5,
+    "six": 6,
+    "seven": 7,
+    "eight": 8,
+    "nine": 9,
+    "ten": 10,
+    "eleven": 11,
+    "twelve": 12,
+}
 
 #: "…into eight chapters, each named for…" - the claim, in the shape the
 #: document makes it. Digits admitted too, so a later edit that writes
@@ -77,8 +89,12 @@ def _module():
     """
     done = subprocess.run(
         [node, "--input-type=module", "-e", _COUNT],
-        capture_output=True, text=True, cwd=REPO, timeout=60,
-        env={**os.environ, "MOD": CHAPTERS_JS.as_uri()})
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=60,
+        env={**os.environ, "MOD": CHAPTERS_JS.as_uri()},
+    )
     assert done.returncode == 0, done.stderr[-2000:]
     return json.loads(done.stdout)
 
@@ -90,14 +106,13 @@ def _claimed():
     assert found, (
         "architecture.md no longer says how many chapters the viewer "
         "groups the document into - if the sentence moved, this guard "
-        "has to move with it rather than pass silently")
+        "has to move with it rather than pass silently"
+    )
     word = found.group(1)
     number = WORDS.get(word.lower())
     if number is None and word.isdigit():
         number = int(word)
-    assert number is not None, (
-        f"the count reads {word!r}, which is neither a digit nor one of "
-        f"{sorted(WORDS)}")
+    assert number is not None, f"the count reads {word!r}, which is neither a digit nor one of {sorted(WORDS)}"
     return number, found.group(0)
 
 
@@ -107,8 +122,8 @@ class TestTheProseCountsWhatTheModuleHolds:
         claimed, sentence = _claimed()
         actual = _module()
         assert claimed == actual["count"], (
-            f"architecture.md says {sentence!r}; `chapters.js` exports "
-            f"{actual['count']}: {actual['ids']}")
+            f"architecture.md says {sentence!r}; `chapters.js` exports {actual['count']}: {actual['ids']}"
+        )
 
     def test_the_sentence_is_still_there_to_read(self):
         """The instrument. `_claimed` asserts the sentence exists, and

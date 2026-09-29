@@ -21,6 +21,7 @@ must be matched on its **end**, because Plane 1's timestamps lag the
 events they describe, and an element may host **several** sandboxes, so
 resolving one must not strike its element from the others.
 """
+
 import os
 
 from tools.bst_native_build_tracer import (
@@ -67,18 +68,14 @@ def test_a_sandbox_longer_than_its_span_still_matches():
 def test_the_interval_discriminates_where_the_start_alone_cannot():
     """Two spans opening together, one short and one long. A start
     instant is inside both; the end separates them."""
-    spans = [{"element": "short.bst", "start": 0.0, "end": 10.0},
-             {"element": "long.bst", "start": 0.0, "end": 600.0}]
+    spans = [{"element": "short.bst", "start": 0.0, "end": 10.0}, {"element": "long.bst", "start": 0.0, "end": 600.0}]
 
     assert correlate_invocations(_inv((1, 1.0)), spans)["ambiguous"] == ["1"]
-    assert correlate_invocations(
-        _inv((1, 1.0)), spans, durations={"1": 500.0}
-    )["resolved"] == {"1": "long.bst"}
+    assert correlate_invocations(_inv((1, 1.0)), spans, durations={"1": 500.0})["resolved"] == {"1": "long.bst"}
 
 
 def test_what_cannot_be_deduced_is_reported_not_guessed():
-    spans = [{"element": "a.bst", "start": 0.0, "end": 20.0},
-             {"element": "b.bst", "start": 0.0, "end": 20.0}]
+    spans = [{"element": "a.bst", "start": 0.0, "end": 20.0}, {"element": "b.bst", "start": 0.0, "end": 20.0}]
 
     result = correlate_invocations(_inv((1, 1.0)), spans, durations={"1": 5.0})
 
@@ -95,9 +92,7 @@ def test_one_element_may_host_several_sandboxes():
     under-resolve, it attributes to the wrong element."""
     spans = [{"element": "bison.bst", "start": 0.0, "end": 100.0}]
 
-    result = correlate_invocations(
-        _inv((1, 10.0), (2, 50.0)), spans, durations={"1": 5.0, "2": 5.0}
-    )
+    result = correlate_invocations(_inv((1, 10.0), (2, 50.0)), spans, durations={"1": 5.0, "2": 5.0})
 
     assert result["resolved"] == {"1": "bison.bst", "2": "bison.bst"}
 
@@ -132,9 +127,7 @@ def test_whether_intervals_were_available_is_reported():
     spans = [{"element": "a.bst", "start": 0.0, "end": 10.0}]
 
     assert correlate_invocations(_inv((1, 1.0)), spans)["intervals_used"] is False
-    assert correlate_invocations(
-        _inv((1, 1.0)), spans, durations={"1": 1.0}
-    )["intervals_used"] is True
+    assert correlate_invocations(_inv((1, 1.0)), spans, durations={"1": 1.0})["intervals_used"] is True
 
 
 # --- sandbox durations ---------------------------------------------------
@@ -319,33 +312,39 @@ class TestRunDirImpliesTheLogItIsExtractedFrom:
 
         monkeypatch.setattr(tracer, "run_traced_build", fake_build)
         import tools.bst_extract_run as extractor
+
         monkeypatch.setattr(extractor, "extract_run", fake_extract)
 
-        argv = ["run", *extra_argv, str(tmp_path / "proj"),
-                str(tmp_path / "report.json"), "--", "bst", "build", "all.bst"]
+        argv = [
+            "run",
+            *extra_argv,
+            str(tmp_path / "proj"),
+            str(tmp_path / "report.json"),
+            "--",
+            "bst",
+            "build",
+            "all.bst",
+        ]
         assert tracer.main(argv) == 0
         return captured
 
-    def test_asking_for_a_run_directory_captures_the_plane_1_log(
-            self, tmp_path, monkeypatch):
-        captured = self._run(
-            tmp_path, monkeypatch, ["--run-dir", str(tmp_path / "run")])
+    def test_asking_for_a_run_directory_captures_the_plane_1_log(self, tmp_path, monkeypatch):
+        captured = self._run(tmp_path, monkeypatch, ["--run-dir", str(tmp_path / "run")])
 
         assert captured["wrapped_log_path"], "no Plane 1 log was captured"
         assert captured["extracted"][0] == captured["wrapped_log_path"], (
-            "the run directory was extracted from a different log than the "
-            "one this build captured")
+            "the run directory was extracted from a different log than the one this build captured"
+        )
         assert captured["extracted"][1] == str(tmp_path / "run")
         assert os.path.isdir(tmp_path / "run"), (
             "extraction was attempted and did not survive - the tracer reports "
-            "that as a warning, so asserting only the call would pass on it")
+            "that as a warning, so asserting only the call would pass on it"
+        )
 
     def test_a_named_log_is_the_one_used(self, tmp_path, monkeypatch):
         named = str(tmp_path / "plane1.log")
 
-        captured = self._run(tmp_path, monkeypatch,
-                             ["--run-dir", str(tmp_path / "run"),
-                              "--wrapped-log", named])
+        captured = self._run(tmp_path, monkeypatch, ["--run-dir", str(tmp_path / "run"), "--wrapped-log", named])
 
         assert captured["wrapped_log_path"] == named
         assert captured["extracted"][0] == named

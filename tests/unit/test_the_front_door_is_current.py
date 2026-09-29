@@ -19,6 +19,7 @@ architecture is put on the door: what `bga --help` lists and what
 `schemas` publishes are the two inventories, and both are checked
 against the two front-door documents.
 """
+
 import pathlib
 import re
 
@@ -87,20 +88,16 @@ class TestTheDoorNamesTheTool:
         """These are the twelve things `bga <x>` does. A reader who
         never opens `cli.md` should still know they exist."""
         front = _front_door_text()
-        missing = sorted(name for name in _subcommands()
-                         if not any(_mentions(t, name) for t in front.values()))
-        assert missing == [], (
-            f"subcommand(s) named in no front-door document: {missing}. "
-            f"README.md or docs/README.md.")
+        missing = sorted(name for name in _subcommands() if not any(_mentions(t, name) for t in front.values()))
+        assert missing == [], f"subcommand(s) named in no front-door document: {missing}. README.md or docs/README.md."
 
     def test_a_deliberately_absent_alias_is_still_documented(self):
         """The exemption above is a decision, not a hiding place."""
         guide = (REPO / CLI_GUIDE).read_text(encoding="utf-8")
-        undocumented = sorted(name for name in NOT_ON_THE_FRONT_DOOR
-                              if not _mentions(guide, name))
+        undocumented = sorted(name for name in NOT_ON_THE_FRONT_DOOR if not _mentions(guide, name))
         assert undocumented == [], (
-            f"alias(es) exempt from the front door and absent from "
-            f"{CLI_GUIDE} too: {undocumented}")
+            f"alias(es) exempt from the front door and absent from {CLI_GUIDE} too: {undocumented}"
+        )
 
     def test_the_exemption_list_names_only_real_aliases(self):
         """An exemption for a command that no longer exists silently
@@ -115,23 +112,23 @@ class TestTheDoorNamesTheTool:
 
         front = _front_door_text()
         missing = sorted(
-            name for name in tools_dispatch.TOOL_ALIASES
-            if name not in NOT_ON_THE_FRONT_DOOR
-            and not any(_mentions(t, name) for t in front.values()))
+            name
+            for name in tools_dispatch.TOOL_ALIASES
+            if name not in NOT_ON_THE_FRONT_DOOR and not any(_mentions(t, name) for t in front.values())
+        )
         assert missing == [], (
-            f"alias(es) neither at the front door nor listed in "
-            f"NOT_ON_THE_FRONT_DOOR with a reason: {missing}")
+            f"alias(es) neither at the front door nor listed in NOT_ON_THE_FRONT_DOOR with a reason: {missing}"
+        )
 
 
 class TestTheDoorNamesWhatItEmits:
-    """"What can this thing emit" is a question a reader has before
+    """ "What can this thing emit" is a question a reader has before
     they have a run, and `docs/README.md` is where they ask it."""
 
     def test_every_published_schema_is_reachable_from_the_docs_index(self):
         text = (REPO / "docs/README.md").read_text(encoding="utf-8")
         missing = [name for name in _published_schemas() if name not in text]
-        assert missing == [], (
-            f"published schema(s) docs/README.md does not name: {missing}")
+        assert missing == [], f"published schema(s) docs/README.md does not name: {missing}"
 
     def test_the_index_names_no_schema_the_code_does_not_publish(self):
         """The other direction. A retired id left in the index sends a
@@ -147,16 +144,13 @@ class TestTheDoorNamesWhatItEmits:
         published = set(_published_schemas()) | set(contracts.reads())
         named = set(re.findall(r"`([a-z][a-z-]*/v\d+)`", text))
         stale = sorted(named - published)
-        assert stale == [], (
-            f"docs/README.md names schema(s) nothing publishes: {stale}")
+        assert stale == [], f"docs/README.md names schema(s) nothing publishes: {stale}"
 
     def test_the_index_says_how_to_read_a_contract(self):
         """The ids alone are a list; `--schema` is what makes them
         usable without opening `bga/schemas.py`."""
         text = (REPO / "docs/README.md").read_text(encoding="utf-8")
-        assert "--schema" in text, (
-            "docs/README.md lists the schema ids without saying how to "
-            "print one")
+        assert "--schema" in text, "docs/README.md lists the schema ids without saying how to print one"
 
 
 if __name__ == "__main__":  # pragma: no cover

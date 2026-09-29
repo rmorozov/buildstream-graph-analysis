@@ -50,6 +50,7 @@ and any page state a boot does not reach - a filter typed, a fold
 opened, a hand-off clicked. This is the boot, on two runs, in two
 shapes.
 """
+
 import pathlib
 import shutil
 import sys
@@ -71,15 +72,13 @@ MACRO = REPO / "tests/fixtures/macro_micro/run"
 
 chrome = find_chrome()
 needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
-needs_node = pytest.mark.skipif(shutil.which("node") is None,
-                                reason="node is not installed")
+needs_node = pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
 
 #: The Issues-panel codes this item closed. Named rather than "no
 #: issues at all": a browser version that grows a new advisory must
 #: redden the round it appears in, in a guard that says which advisory
 #: - not this one, silently, for a reason nobody can read.
-FORM_ISSUES = ("FormEmptyIdAndNameAttributesForInputError",
-               "FormLabelHasNeitherForNorNestedInput")
+FORM_ISSUES = ("FormEmptyIdAndNameAttributesForInputError", "FormLabelHasNeitherForNorNestedInput")
 
 #: Console levels that are a defect. `warning` is not: a browser warns
 #: about deprecations on its own schedule, and a guard that fails on
@@ -107,7 +106,7 @@ def _boot(run_dir, out_dir, make=snapshot_copy):
 @pytest.fixture(scope="module")
 def observed(tmp_path_factory):
     """`{page name: observation}` for six boots, one browser."""
-    if chrome is None or shutil.which("node") is None:    # pragma: no cover
+    if chrome is None or shutil.which("node") is None:  # pragma: no cover
         pytest.skip(NO_BROWSER)
     servers, urls = [], {}
     # `UX-438`: the third run is `macro_micro` with transfer spans in
@@ -118,11 +117,12 @@ def observed(tmp_path_factory):
     # that both has a Pipeline Summary and moved artifacts, and neither
     # fixture has both. A guard whose setup excludes what it tests
     # passes whatever the thing under test does.
-    for name, run, make in (("golden", GOLDEN, snapshot_copy),
-                            ("macro_micro", MACRO, snapshot_copy),
-                            ("transfer", MACRO, transfer_run)):
-        exported, served, httpd = _boot(run, tmp_path_factory.mktemp(name),
-                                        make)
+    for name, run, make in (
+        ("golden", GOLDEN, snapshot_copy),
+        ("macro_micro", MACRO, snapshot_copy),
+        ("transfer", MACRO, transfer_run),
+    ):
+        exported, served, httpd = _boot(run, tmp_path_factory.mktemp(name), make)
         servers.append(httpd)
         urls[f"{name} exported"] = exported
         urls[f"{name} served"] = served
@@ -139,8 +139,7 @@ def observed(tmp_path_factory):
 
 
 def _errors(observation):
-    return [entry for entry in observation["console"]
-            if entry["level"] in BAD_LEVELS]
+    return [entry for entry in observation["console"] if entry["level"] in BAD_LEVELS]
 
 
 @needs_browser
@@ -153,8 +152,7 @@ class TestTheConsoleStaysClean:
         """
         for name, got in observed.items():
             bad = _errors(got)
-            assert not bad, (name, [f"{e['source']}: {e['text'][:200]}"
-                                    for e in bad])
+            assert not bad, (name, [f"{e['source']}: {e['text'][:200]}" for e in bad])
 
     def test_no_page_violates_its_own_policy(self, observed):
         """`securitypolicyviolation`, collected in the page.
@@ -178,8 +176,7 @@ class TestTheConsoleStaysClean:
         drawing from reaching for it again.
         """
         for name, got in observed.items():
-            attrs = [v for v in got["csp"]
-                     if "style" in (v.get("directive") or "")]
+            attrs = [v for v in got["csp"] if "style" in (v.get("directive") or "")]
             assert not attrs, (name, attrs)
 
     def test_no_payload_is_discovered_by_failing_to_fetch_it(self, observed):
@@ -198,10 +195,14 @@ class TestTheConsoleStaysClean:
             # Reading the text alone made this clause blind to exactly
             # half the regression it is named for - found by mutation,
             # not by review.
-            probes = [f"{e['text']} {e['url']}" for e in _errors(got)
-                      if any(word in f"{e['text']} {e['url']}" for word in
-                             ("compare.json", "store.json",
-                              "store-aggregate.json", "favicon.ico"))]
+            probes = [
+                f"{e['text']} {e['url']}"
+                for e in _errors(got)
+                if any(
+                    word in f"{e['text']} {e['url']}"
+                    for word in ("compare.json", "store.json", "store-aggregate.json", "favicon.ico")
+                )
+            ]
             assert not probes, (name, probes)
 
     def test_no_number_renders_from_a_guess(self, observed):
@@ -218,8 +219,7 @@ class TestTheConsoleStaysClean:
         Chrome deprecation cannot redden the round it ships in.
         """
         for name, got in observed.items():
-            guessed = [e["text"] for e in got["console"]
-                       if "has no bga:quantity" in e["text"]]
+            guessed = [e["text"] for e in got["console"] if "has no bga:quantity" in e["text"]]
             assert not guessed, (name, sorted(set(guessed))[:8])
 
     def test_every_form_control_has_an_identity(self, observed):
@@ -242,21 +242,18 @@ class TestTheInstrumentCanSee:
     guard like this dies quietly.
     """
 
-    def test_it_reports_a_console_error_that_is_there(self, observed,
-                                                      tmp_path_factory):
+    def test_it_reports_a_console_error_that_is_there(self, observed, tmp_path_factory):
         out = tmp_path_factory.mktemp("positive")
         exported, served, httpd = _boot(GOLDEN, out)
         try:
             with Browser(chrome) as opened:
-                got = opened.observe(
-                    exported, 'console.error("UX-334 positive control"), 1')
+                got = opened.observe(exported, 'console.error("UX-334 positive control"), 1')
         finally:
             httpd.shutdown()
         texts = [e["text"] for e in _errors(got)]
         assert any("UX-334 positive control" in t for t in texts), texts
 
-    def test_it_reports_a_browser_log_line_that_is_there(self, observed,
-                                                        tmp_path_factory):
+    def test_it_reports_a_browser_log_line_that_is_there(self, observed, tmp_path_factory):
         """The third channel, and the one with no other witness.
 
         A 404 on a subresource is reported by the *browser*, not by the
@@ -270,18 +267,13 @@ class TestTheInstrumentCanSee:
         exported, served, httpd = _boot(GOLDEN, out)
         try:
             with Browser(chrome) as opened:
-                got = opened.observe(
-                    served,
-                    'fetch("ux-334-no-such-payload.json").then(() => 1,'
-                    ' () => 1)')
+                got = opened.observe(served, 'fetch("ux-334-no-such-payload.json").then(() => 1, () => 1)')
         finally:
             httpd.shutdown()
-        network = [f"{e['text']} {e['url']}" for e in _errors(got)
-                   if "ux-334-no-such-payload" in e["url"]]
+        network = [f"{e['text']} {e['url']}" for e in _errors(got) if "ux-334-no-such-payload" in e["url"]]
         assert network, [e["text"] for e in got["console"]]
 
-    def test_it_reports_a_policy_violation_that_is_there(self, observed,
-                                                        tmp_path_factory):
+    def test_it_reports_a_policy_violation_that_is_there(self, observed, tmp_path_factory):
         """The served page, and an inline style set the way the fix
         stopped setting it. If this passes and the clauses above pass,
         the page is clean; if this fails, they prove nothing."""
@@ -289,11 +281,8 @@ class TestTheInstrumentCanSee:
         exported, served, httpd = _boot(GOLDEN, out)
         try:
             with Browser(chrome) as opened:
-                got = opened.observe(
-                    served,
-                    'document.body.setAttribute("style", "color: red"), 1')
+                got = opened.observe(served, 'document.body.setAttribute("style", "color: red"), 1')
         finally:
             httpd.shutdown()
         directives = [v.get("directive") for v in got["csp"]]
-        assert any("style" in (d or "") for d in directives), (
-            got["csp"], _errors(got))
+        assert any("style" in (d or "") for d in directives), (got["csp"], _errors(got))

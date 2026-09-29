@@ -5,6 +5,7 @@ element failed to compile and four never ran. Of course it was faster.
 The extraction knew - `run-context.json` carried `build_outcome` - and
 the verdict, the analysis banner and the baseline choice all ignored it.
 """
+
 import json
 
 from bga.compare import (
@@ -24,23 +25,31 @@ class _Result:
 
 
 def _failed_violation(elements, built=0, scheduled=7, cached=6):
-    return {'type': 'build_failed', 'failed_count': len(elements),
-            'failed_elements': list(elements),
-            'built_count': built, 'scheduled_count': scheduled,
-            # UX-164 item 3: how many of the rest were cache hits rather
-            # than losses.
-            'cached_count': cached}
+    return {
+        'type': 'build_failed',
+        'failed_count': len(elements),
+        'failed_elements': list(elements),
+        'built_count': built,
+        'scheduled_count': scheduled,
+        # UX-164 item 3: how many of the rest were cache hits rather
+        # than losses.
+        'cached_count': cached,
+    }
 
 
 class TestTheDetailComesOffTheViolation:
     def test_it_reads_names_and_counts(self):
-        detail = _build_failure_detail(
-            "candidate", _Result([_failed_violation(["lib-d.bst"])]))
-        assert detail == {'run': 'candidate', 'failed_elements': ['lib-d.bst'],
-                          'built': 0, 'scheduled': 7, 'cached': 6,
-                          'interrupted': False,
-                          # UX-185: the third way to be incomplete.
-                          'suspended': None}
+        detail = _build_failure_detail("candidate", _Result([_failed_violation(["lib-d.bst"])]))
+        assert detail == {
+            'run': 'candidate',
+            'failed_elements': ['lib-d.bst'],
+            'built': 0,
+            'scheduled': 7,
+            'cached': 6,
+            'interrupted': False,
+            # UX-185: the third way to be incomplete.
+            'suspended': None,
+        }
 
     def test_a_capture_with_no_queue_summary_yields_no_counts(self):
         """`build_outcome` predates `queue_summary` on some captures, and a
@@ -59,23 +68,28 @@ class TestTheDetailComesOffTheViolation:
         summary silently returns None on every real run - which is how the
         first version of this dropped the clause everywhere."""
         from bga.analyzer import AnalysisResult
+
         assert not hasattr(AnalysisResult, 'run_context')
 
 
 class TestTheVerdictRefuses:
     def _comparison(self, **kwargs):
-        details = kwargs.pop('details', [
-            {'run': 'candidate', 'failed_elements': ['lib-d.bst'],
-             'built': 0, 'scheduled': 7, 'cached': 6}])
+        details = kwargs.pop(
+            'details', [{'run': 'candidate', 'failed_elements': ['lib-d.bst'], 'built': 0, 'scheduled': 7, 'cached': 6}]
+        )
         base = dict(
-            baseline_confidence=1.0, candidate_confidence=1.0,
-            attribution_deltas={}, low_confidence=False,
-            baseline_run_id="b", candidate_run_id="c",
+            baseline_confidence=1.0,
+            candidate_confidence=1.0,
+            attribution_deltas={},
+            low_confidence=False,
+            baseline_run_id="b",
+            candidate_run_id="c",
             baseline_metrics={'total_duration_us': 40_150_000},
             candidate_metrics={'total_duration_us': 13_800_000},
             deltas={'total_duration_us': -26_350_000},
             verdict=f"not comparable ({_describe_build_failures(details)})",
-            failed_runs=['candidate'], failed_run_details=details,
+            failed_runs=['candidate'],
+            failed_run_details=details,
         )
         base.update(kwargs)
         return ComparisonResult(**base)
@@ -103,17 +117,19 @@ class TestTheVerdictRefuses:
 
     def test_a_healthy_comparison_keeps_the_single_line_form(self):
         healthy = ComparisonResult(
-            baseline_confidence=1.0, candidate_confidence=1.0,
-            attribution_deltas={}, low_confidence=False,
-            baseline_run_id="b", candidate_run_id="c",
+            baseline_confidence=1.0,
+            candidate_confidence=1.0,
+            attribution_deltas={},
+            low_confidence=False,
+            baseline_run_id="b",
+            candidate_run_id="c",
             baseline_metrics={'total_duration_us': 40_150_000},
             candidate_metrics={'total_duration_us': 13_800_000},
             deltas={'total_duration_us': -26_350_000},
             verdict="improved",
         )
         text = format_compare_text(healthy)
-        assert any(ln.startswith("Verdict: IMPROVED  (total duration")
-                   for ln in text.splitlines())
+        assert any(ln.startswith("Verdict: IMPROVED  (total duration") for ln in text.splitlines())
         assert "Not a verdict" not in text
 
 
@@ -127,29 +143,43 @@ class TestEndToEndThroughTheRealComparison:
     over real run directories instead.
     """
 
-    _CONTEXT = {"trace_epsilon_us": 1000, "wall_start_us": 0,
-                "wall_end_us": 200000, "max_jobs": 2,
-                "resource_capacities": {"PROCESS": 2}}
+    _CONTEXT = {
+        "trace_epsilon_us": 1000,
+        "wall_start_us": 0,
+        "wall_end_us": 200000,
+        "max_jobs": 2,
+        "resource_capacities": {"PROCESS": 2},
+    }
 
     def _run_dir(self, tmp_path, name, dur, failed=()):
         run_dir = tmp_path / name
         run_dir.mkdir(parents=True)
         context = dict(self._CONTEXT)
-        context["build_outcome"] = {"failed_elements": list(failed),
-                                    "failed_count": len(failed)}
-        context["queue_summary"] = {"build": {"processed": 0 if failed else 2,
-                                              "skipped": 5, "failed": len(failed)}}
+        context["build_outcome"] = {"failed_elements": list(failed), "failed_count": len(failed)}
+        context["queue_summary"] = {"build": {"processed": 0 if failed else 2, "skipped": 5, "failed": len(failed)}}
         (run_dir / "run-context.json").write_text(json.dumps(context))
-        (run_dir / "graph.json").write_text(json.dumps(
-            {"elements": [{"uid": "a.bst"}], "dependencies": []}))
-        (run_dir / "trace.json").write_text(json.dumps({"spans": [{
-            "task_key": "a.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": dur,
-            "resources": ["PROCESS"], "primary_resource": "PROCESS"}],
-            "phases": []}))
+        (run_dir / "graph.json").write_text(json.dumps({"elements": [{"uid": "a.bst"}], "dependencies": []}))
+        (run_dir / "trace.json").write_text(
+            json.dumps(
+                {
+                    "spans": [
+                        {
+                            "task_key": "a.bst|BUILD|BUILD|0",
+                            "ts_us": 0,
+                            "dur_us": dur,
+                            "resources": ["PROCESS"],
+                            "primary_resource": "PROCESS",
+                        }
+                    ],
+                    "phases": [],
+                }
+            )
+        )
         return run_dir
 
     def test_a_failed_candidate_refuses_instead_of_reporting_improved(self, tmp_path):
         from bga.compare import compare_runs
+
         baseline = self._run_dir(tmp_path, "baseline", 40_000)
         candidate = self._run_dir(tmp_path, "candidate", 4_000, failed=["lib-d.bst"])
 
@@ -163,6 +193,7 @@ class TestEndToEndThroughTheRealComparison:
         """The control: the refusal must come from the failure, not from
         the shape of the fixture."""
         from bga.compare import compare_runs
+
         baseline = self._run_dir(tmp_path, "baseline", 40_000)
         candidate = self._run_dir(tmp_path, "candidate", 4_000)
 
@@ -170,6 +201,7 @@ class TestEndToEndThroughTheRealComparison:
 
     def test_a_failed_baseline_refuses_too(self, tmp_path):
         from bga.compare import compare_runs
+
         baseline = self._run_dir(tmp_path, "baseline", 40_000, failed=["core.bst"])
         candidate = self._run_dir(tmp_path, "candidate", 4_000)
 
@@ -181,6 +213,7 @@ class TestEndToEndThroughTheRealComparison:
     def test_the_counts_survive_the_whole_path(self, tmp_path):
         """analyzer -> violation -> detail -> verdict, on real inputs."""
         from bga.compare import compare_runs
+
         baseline = self._run_dir(tmp_path, "baseline", 40_000)
         candidate = self._run_dir(tmp_path, "candidate", 4_000, failed=["lib-d.bst"])
 
@@ -195,9 +228,9 @@ class TestTheBaselineChoiceSkipsWreckage:
     def _snapshot(self, tmp_path, name, failed=()):
         run = tmp_path / name / "run"
         run.mkdir(parents=True)
-        (run / "run-context.json").write_text(json.dumps(
-            {"build_outcome": {"failed_elements": list(failed),
-                               "failed_count": len(failed)}}))
+        (run / "run-context.json").write_text(
+            json.dumps({"build_outcome": {"failed_elements": list(failed), "failed_count": len(failed)}})
+        )
         return str(tmp_path / name)
 
     def test_a_failed_snapshot_is_recognised(self, tmp_path):

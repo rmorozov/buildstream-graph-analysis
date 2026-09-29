@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-366 (the bound whose guard stays green), UX-318 (the folds that carry the nested tables) | **Serves:** anyone pressing "All rows" on a table whose cells fold | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** test_two_row_selectors_became_one.py, test_all_rows_means_all_rows.py · inferred r149
+
 ## Motivation
 
 The user's report: `resource_blast` at Top 25 is right; "All rows"

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Found by:** UX-400's sweep, first run | **Serves:** anyone navigating a two-plane report | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 [`bga/viewer/chapters.js`](../../../bga/viewer/chapters.js) says of the

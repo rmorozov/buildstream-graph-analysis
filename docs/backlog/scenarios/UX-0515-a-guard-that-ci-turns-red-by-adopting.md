@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-496` (samples), `UX-503` (the adopt step that first wrote them) | **Found by:** round 76, running the suite on the merge base | **Serves:** the next round, which would meet a red `main` and spend its first hour deciding whose it is | **Topic:** guards
 
+**Guard:** test_a_slow_file_says_which_file.py
+
 ## Motivation
 
 `origin/main` is red, and no human commit made it so:

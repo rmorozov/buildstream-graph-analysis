@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-34 (which filtered structural elements out of this ranking - the filtering is right, what is being ranked is not) | **Topic:** analysis
 
+**Guard:** test_sensitivity_ranking.py · inferred r149
+
 ## Motivation
 
 `bga analyze` on a real capture of `examples/06-macro-micro-optimization` (11 elements, 39.57s wall):

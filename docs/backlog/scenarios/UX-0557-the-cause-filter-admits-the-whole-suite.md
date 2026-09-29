@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-476 (which built the filter), UX-442 (the carry), UX-524 (the map) | **Serves:** the round whose PR the gate reddens | **Topic:** guards | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-476` added `--base` to the tier-drift gate so a reported file needs

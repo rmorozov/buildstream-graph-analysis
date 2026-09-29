@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-286 (the chapter pass that took over), UX-235 (the acceptance it supersedes) | **Serves:** the maintainers | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** test_the_ordering_authority_is_one_place.py · inferred r149
+
 ## Motivation
 
 Round 40's verification mutated `root.prepend(decision)` to

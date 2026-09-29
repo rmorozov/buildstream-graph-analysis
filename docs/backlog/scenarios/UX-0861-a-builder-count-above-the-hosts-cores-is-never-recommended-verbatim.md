@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-116 | **Found by:** round 120, the user (a 16-core, 32 GB host, `--builders 16 --jobserver auto`) | **Serves:** R5 (a recommendation the operator can apply as read) | **Topic:** analysis | **Area:** bga | **Shape:** judgement
 
+**Guard:** test_capacity_recommendation.py
+
 ## Motivation
 
 `compute_capacity_recommendation` (`bga/correlate.py`) takes the

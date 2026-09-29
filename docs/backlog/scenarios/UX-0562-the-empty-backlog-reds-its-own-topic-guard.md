@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-232 (the liveness split), UX-359 (which wrote the clause) | **Found by:** round 81's final `make test` | **Serves:** every round that closes its last open row | **Topic:** guards
 
+**Guard:** test_docs_links_and_commands.py
+
 ## Motivation
 
 Round 81 closed the last open row. The suite then reds on a guard that

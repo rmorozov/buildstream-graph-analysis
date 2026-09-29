@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-211 (URL state), UX-642 (which measured it and declined it) | **Found by:** round 87, track D, while guarding the fold round trip | **Serves:** anyone who opens a fold and copies the link | **Topic:** viewer
 
+**Guard:** test_the_rail_takes_a_step.py, test_the_fragment_keeps_up_with_the_fold.py, test_a_fold_stays_open_in_the_link.py · inferred r149
+
 ## Motivation
 
 `wireViewState` writes the fragment on the bubbling `click`. A

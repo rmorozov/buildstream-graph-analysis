@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-501 (the derived index), UX-239 (the module tree) | **Serves:** the session doing impact analysis or a test plan without rescanning 682 files | **Topic:** docs | **Area:** tools | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 ```text

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-605 (which measured it), UX-336 (which set the bound) | **Serves:** the session whose one-module edit runs a third of the suite | **Topic:** guards
 
+**Guard:** test_the_loop_stays_fast.py · inferred r149
+
 ## Motivation
 
 `UX-605` capped the touching map and, measuring what remained, found

@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-874 | **Found by:** round 123, the user (a cmake element whose sandbox-built cmake runs /usr/sysroot/bin/make, GNU Make 4.4 on the host) | **Serves:** R2 (an explicit --jobserver-auth fifo still narrows for a cmake element's own make) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement
 
+**Guard:** test_bwrap_shim.py
+
 ## Motivation
 
 `UX-874`'s `sandbox_make_auth_style` narrows `fifo` to `fd` only

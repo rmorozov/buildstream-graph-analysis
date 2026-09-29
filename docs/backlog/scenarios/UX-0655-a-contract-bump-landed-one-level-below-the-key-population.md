@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-628, UX-636 (which built the key population and walked its register to zero) | **Found by:** architecture review 16 | **Serves:** anyone reading an `analyze/v6` payload against the prose that describes it | **Topic:** docs
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-628` replaced the contract guard's population — ids became keys —

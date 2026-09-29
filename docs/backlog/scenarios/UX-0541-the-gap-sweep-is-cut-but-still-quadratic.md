@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-539` (the sweep this is the remainder of), `UX-531` (the round that measured the term) | **Found by:** `UX-539`, measuring its own close | **Serves:** anyone analysing a monorepo | **Topic:** analysis | **Area:** bga/attribution
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-539` replaced the per-gap interval sweep with one cursor and cut

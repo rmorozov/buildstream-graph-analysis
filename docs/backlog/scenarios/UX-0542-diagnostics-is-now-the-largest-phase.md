@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-539` (the round whose profile this is), `UX-531` | **Found by:** `UX-539`'s profile, after its own two terms went | **Serves:** anyone analysing a monorepo | **Topic:** analysis | **Area:** bga/diagnostics
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-531` and `UX-539` between them took `bga analyze` at 4,002

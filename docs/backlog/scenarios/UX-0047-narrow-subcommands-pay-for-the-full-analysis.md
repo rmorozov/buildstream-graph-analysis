@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-42 (independent, but fixing either alone already helps - see below) | **Topic:** analysis | **Area:** bga
 
+**Guard:** test_section_stage_gating.py · inferred r149
+
 ## Motivation
 
 Round-2 scale probe, 1202-element run. Every section subcommand costs what the full report costs:

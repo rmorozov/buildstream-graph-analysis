@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** none (pairs naturally with `UX-01`, but is independently useful on a single run) | **Topic:** analysis
 
+**Guard:** test_report_key_findings.py · inferred r149
+
 ## Motivation
 
 Filed while brainstorming `bga`'s main user scenarios, specifically the question the next work session will need answered repeatedly: "have we optimized this build enough to stop iterating?"

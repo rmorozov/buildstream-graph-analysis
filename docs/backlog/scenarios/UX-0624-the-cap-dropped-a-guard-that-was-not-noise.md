@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-605 (the cap), UX-522 (the census set), UX-336 (the selector) | **Found by:** round 85, by the contracts track paying for it | **Serves:** a track adding a declared key | **Topic:** guards | **Area:** tools
 
+**Guard:** test_every_number_says_what_it_is.py
+
 ## Motivation
 
 `UX-605` capped a coverage-map entry at 25 files, because CI's adopted

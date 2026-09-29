@@ -504,6 +504,27 @@ pairing for every merged row from round 103 on.
 | 148 | implementer | opus | root-cause the tier-gate red on #298 (researcher-style) | 77892 | — | — | --dist load splits test_the_page_conforms_to_its_sections.py; its module fixture rebuilds per worker | — |
 | 148 | implementer | sonnet | measure --dist loadgroup for UX-1105 (rejected) | 82500 | — | — | file 25.8s -> 6.7s, full suite 515s -> 774s: rejected | — |
 | 148 | implementer | opus | UX-1105, the sections page built once across workers | unknown | — | — | file alone 27.9s -> 14.7-17.2s junit sum at -n 4 --dist load | the lock alone moved nothing: a waiting worker is charged its wait |
+| 149 | architect | opus | UX-1090 UX-1091 | 33k | 8 | 1 m | shaped | none reported |
+| 149 | architect | opus | UX-1092 | 27k | 9 | 1 m | shaped | none reported |
+| 149 | architect | opus | UX-938 UX-1041 | 50k | 19 | 2 m | shaped | none reported |
+| 149 | architect | opus | UX-1093 | 53k | 21 | 7 m | shaped; race not reproduced in 28 runs | none reported |
+| 149 | architect | opus | sweep r149 | 23k | 5 | 1 m | 3 tracks, 2 lines dropped | none reported |
+| 149 | implementer | sonnet | UX-998 sweep A | 172k | 347 | 44 m | merged | load avg 50-63 from 11 parallel tracks |
+| 149 | implementer | sonnet | UX-955 | 116k | 90 | 44 m | merged | make lint past 120s under load |
+| 149 | implementer | sonnet | UX-1090 | 132k | 165 | 43 m | held (unadopted size cells), merged after fix-up a | dev_records fetch refused in worktree; 7 failures reported that did not reproduce |
+| 149 | implementer | sonnet | UX-998 sweep C | 159k | 141 | 44 m | merged; 5 files needed tiers rows | load avg 55-62 |
+| 149 | implementer | sonnet | UX-1091 | 243k | 541 | 47 m | merged | make lint timed out at 120/500/900s under load |
+| 149 | implementer | sonnet | UX-950 | 181k | 282 | 69 m | merged | full suite unfinished in-session under load |
+| 149 | implementer | opus | UX-1092 | 132k | 93 | 52 m | merged | selector 27 min under load; worktree refused compound git |
+| 149 | implementer | opus | UX-1041 | 102k | 92 | 52 m | merged | classifier refused heredoc/pipe/make lint forms ~8 times |
+| 149 | implementer | opus | UX-1093 | 80k | 69 | 52 m | merged | pkill -f matched own shell |
+| 149 | implementer | opus | UX-998 sweep B | 85k | 52 | 60 m | merged; font-weight half narrowed | worktree refused compound commands |
+| 149 | implementer | sonnet | UX-938 | 194k | 179 | 67 m | merged | rules.md at 80-line cap with zero slack |
+| 149 | verifier | sonnet | UX-955 UX-1090 UX-1091 UX-998 sweeps A C | 121k | 97 | 24 m | 4 MERGE, 1 HOLD (UX-1090 sizes) | concurrent checkout raced a background run |
+| 149 | verifier | sonnet | UX-950 UX-1041 UX-1092 UX-1093 UX-998 sweep B | 111k | 88 | 21 m | 5 MERGE; 1 of 8 backfill samples wrong | make lint pyright past 180s |
+| 149 | verifier | sonnet | UX-938 | 74k | 54 | 9 m | MERGE; UX-1014 Reading wrong | pyright shadow gave a false new finding |
+| 149 | integrator | opus | round 149 | 161k | 116 | 57 m | 11 merges, 5 fix-ups, suite 10088 passed 2 expected red | merge=union reopened 12 swept bookkeeping lines |
+| 149 | general-purpose | opus | architecture review 30 (UX-1102), the cadence guard at 29 > 25 | 160k | 55 | 18 m | complete; five bookkeeping lines, no task file, nothing fixed | two guards held one README sentence to two inventories, both green |
 | 150 | architect | opus | architect: UX-1073, UX-1078 | 52k | 13 | 2.5 m | shaped both; Unify route (Ruslan) for UX-1073 | — |
 | 150 | implementer | sonnet | implementer: UX-1074 | 686k | 256 | 95.4 m | merged, VERIFIED | verifier found 184 s guard, fixed to 1 s plus memory guard |
 | 150 | implementer | sonnet | implementer: UX-1079, UX-1076 | 130k | 114 | 33.4 m | merged, VERIFIED | ru_maxrss carried across exec red the push gate |
@@ -534,7 +555,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the five hundred and five rows already say: a researcher that reads a document
+What the five hundred and twenty-six rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

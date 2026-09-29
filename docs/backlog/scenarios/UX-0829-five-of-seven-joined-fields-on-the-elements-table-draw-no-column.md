@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-681 (fan-in joined), UX-382 (the join), UX-808 (§1b's last instance) | **Found by:** round 115, the design review | **Serves:** R2 and R3 reading one element's row | **Topic:** viewer | **Area:** bga-viewer | **Shape:** judgement
 
+**Guard:** test_the_merge_carries_every_field.py
+
 ## Motivation
 
 `structured.js:1457` marks the `elements` table `data-joined` with what

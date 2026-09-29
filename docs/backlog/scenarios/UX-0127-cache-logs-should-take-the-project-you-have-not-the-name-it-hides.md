@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-91 (done — this is its front door) | **Topic:** cli
 
+**Guard:** test_cache_logs.py · inferred r149
+
 Post-MVP polish, direction: simplify the user scenarios.
 
 ## Motivation

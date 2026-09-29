@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-874, UX-876 | **Found by:** round 124, the user (a `kind: cmake` element building ninja 1.10.2 with a relocatable GCC-13 cross toolchain, glibc 2.17, invoked by absolute path) | **Serves:** R2 (a cmake/ninja element's LTO link completes under the trace jobserver) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** mechanical
 
+**Guard:** test_the_lto_link_survives_the_jobserver.py
+
 ## Motivation
 
 bga builds a make jobserver (a FIFO) and injects its auth into the

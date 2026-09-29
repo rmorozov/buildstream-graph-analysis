@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-29 (auto-extract native_max_jobs from the wrapped log), UX-31 (the resolved per-element max-jobs) | **Serves:** anyone who runs `bga snapshot` without extra flags | **Topic:** capture | **Area:** tools
 
+**Guard:** test_one_resolved_max_jobs.py · inferred r149
+
 ## Motivation
 
 Native `max-jobs` is what reaches `make -jN` inside a sandbox. It is the

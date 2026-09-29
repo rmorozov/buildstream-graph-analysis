@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-217 (the evidence it carries), UX-115 (the CI comment renderer) | **Topic:** viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The report ends its life in a pull request, a chat message or a ticket,

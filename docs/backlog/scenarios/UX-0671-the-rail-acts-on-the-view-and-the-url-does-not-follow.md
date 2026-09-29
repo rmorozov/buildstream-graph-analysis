@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-647 (the view-state writer), UX-648 | **Serves:** anyone sharing "Copy link to this view" | **Topic:** viewer | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 ```text

@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-874, UX-878, UX-879, UX-882 | **Blocks:** UX-910 | **Found by:** round 132 — `11-serial-giant` reads `peak 2` under `auto` on six consecutive CI pairs, and the capture's own warning says why | **Serves:** every example and every real project whose sandbox ships GNU Make 4.3 | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Decomposition
 
 surfaces: `tools/native_trace/bwrap_shim.py` (`_FD_DIRECT_POLICIES`,

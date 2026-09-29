@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-171 (the inventory this extends), UX-172 (the query that inherits it) | **Topic:** analysis
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 UX-171 declares junction-prefixed elements `unreadable` — honest, and

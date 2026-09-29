@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Found by:** UX-400's sweep, first run | **Serves:** anyone whose run is big enough for the page to be long | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** test_the_report_has_two_panes.py · inferred r149
+
 ## Motivation
 
 `UX-367` set the volume budget and `UX-262` made a long table open

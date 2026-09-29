@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-91 (Plane 3 phases), UX-45 (Plane 2 CPU per process) | **Topic:** analysis | **Area:** tools
 
+**Guard:** test_cache_logs.py, test_native_build_tracer.py · inferred r149
+
 Direction 3, item 3 — see
 [`design/directions.md`](../../design/directions.md).
 

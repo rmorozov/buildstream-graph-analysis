@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Serves:** a reader deciding whether to trust the document around the number | **Topic:** docs
 
+**Guard:** test_a_counted_figure_is_derived.py · inferred r149
+
 ## Motivation
 
 Architecture review 12, checklist item 3. Each is a *count* a reader

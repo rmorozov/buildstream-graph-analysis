@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the snapshot and view performance audit on `39d89d4` (2026-09-28) | **Serves:** R1, R5 | **Topic:** capture | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_opens_from_a_gzipped_log.py
+
 ## Motivation
 
 `load_and_summarize` opens the log through `_open_maybe_gzipped`

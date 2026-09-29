@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-511 (which set the dated-label shape), UX-195, UX-529 (which bounded the export's data half) | **Serves:** the CI author deciding whether to upload the artifact | **Topic:** docs | **Shape:** bounded | **Area:** tools
 
+**Guard:** test_the_report_you_can_attach.py · inferred r149
+
 ## Motivation
 
 Architecture review 18, checklist item 4. `docs/guides/ci-comment.md`

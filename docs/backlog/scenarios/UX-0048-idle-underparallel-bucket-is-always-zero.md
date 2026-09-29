@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-36 (which correctly relabelled these buckets as occupancy - this is about which bucket the time lands in, not what the unit is) | **Topic:** analysis
 
+**Guard:** test_idle_bucket_split.py · inferred r149
+
 ## Motivation
 
 The utilisation block splits idle capacity two ways, and the split is the whole reason the block is actionable:

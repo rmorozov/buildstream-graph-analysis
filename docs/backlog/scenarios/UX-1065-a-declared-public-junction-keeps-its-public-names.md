@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-1062 | **Found by:** the 2026-09-27 brainstorm with the owner ([`anonymized-bundle.md`](../../design/anonymized-bundle.md)), section 5 | **Serves:** anyone sharing a private capture with an outside reader | **Topic:** store | **Area:** bga | **Shape:** mechanical
 
+**Guard:** test_a_public_junction_keeps_only_public_names.py
+
 ## Motivation
 
 Knowing an element is freedesktop-sdk's `gcc.bst` is worth more than

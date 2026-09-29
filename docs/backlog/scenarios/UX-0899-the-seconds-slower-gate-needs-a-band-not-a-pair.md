@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-898 (the class), UX-234 (the store as a distribution), the baseline set | **Found by:** the 2026-09-20 rollout brief ([`continuous-build-improvement.md`](../../design/continuous-build-improvement.md), section 1) — the owner wants the review gate to say seconds, not only the diff-only verdict | **Serves:** R4 (the gate), R6 (a contributor who will read the verdict) | **Topic:** analysis | **Area:** bga | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The gate the tool ships for a growing project judges the diff alone

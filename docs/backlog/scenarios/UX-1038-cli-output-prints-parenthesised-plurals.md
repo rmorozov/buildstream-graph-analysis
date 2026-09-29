@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-1020 | **Found by:** UX-1020's own sweep | **Serves:** R1 | **Topic:** cli | **Area:** tools | **Shape:** bounded
 
+**Guard:** test_blast_query_and_kinds.py, test_the_band_comes_from_the_class.py, test_a_capture_names_its_physical_cores.py, test_a_cli_plural_is_chosen_by_count.py · inferred r149
+
 ## Motivation
 
 `UX-1020` chose plurals by count on the page and left the rest. Outside

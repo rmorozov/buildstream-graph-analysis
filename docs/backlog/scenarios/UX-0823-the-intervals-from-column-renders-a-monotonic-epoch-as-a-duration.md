@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-676 (the interval tables), UX-675 (the host series) | **Found by:** round 115, the design review | **Serves:** R5 reading an idle window | **Topic:** analysis | **Area:** bga | **Shape:** judgement
 
+**Guard:** test_the_cores_were_or_were_not_binding.py · inferred r149
+
 ## Motivation
 
 `_INTERVAL_COLUMNS` (`bga/schemas.py:1756`) publishes `start_us` under

@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-501 (the derived counts), UX-336 (the helper) | **Found by:** round 84, three times | **Serves:** the session filing a row | **Topic:** guards | **Area:** tools
 
+**Guard:** test_a_counted_figure_is_derived.py · inferred r149
+
 ## Motivation
 
 `dev_close_task.py --check --write` derives `architecture.md`'s file

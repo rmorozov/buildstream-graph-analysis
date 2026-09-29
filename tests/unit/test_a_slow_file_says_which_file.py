@@ -877,10 +877,12 @@ class TestEachComparisonRunsWhereItMeansSomething:
         have passed it.
         """
         text = self.WORKFLOW.read_text(encoding="utf-8")
+        # `\s` after `--record` (`UX-950`): `--record-run` is a
+        # different flag and must not match.
         recording = [step
                      for job in yaml.safe_load(text)["jobs"].values()
                      for step in job.get("steps") or []
-                     if "--record" in (step.get("run") or "")]
+                     if re.search(r"--record\s", step.get("run") or "")]
         assert len(recording) == 1, (
             f"{len(recording)} CI steps record a timing reference; the "
             f"reference is per runner-and-interpreter, so this needs a "
@@ -2393,9 +2395,12 @@ class TestTheRecordStepDoesNotBuryTheFailure:
 
     @classmethod
     def _recording(cls):
-        """The step that runs `--record`, and the path it records to."""
+        """The step that runs `--record`, and the path it records to.
+
+        `\\s` after `--record` (`UX-950`): `dev_flake_census.py
+        --record-run` is a different flag and must not match."""
         found = [(name, body) for name, body in cls._steps().items()
-                 if "--record" in body]
+                 if re.search(r"--record\s", body)]
         assert len(found) == 1, (
             f"{len(found)} CI steps record the timings, so which one this "
             f"item is about is a guess: {[name for name, _ in found]}")

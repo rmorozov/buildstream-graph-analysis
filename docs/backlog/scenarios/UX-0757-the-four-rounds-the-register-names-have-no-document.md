@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-744 (the register and its waiver), UX-666 (the guard) | **Serves:** the reader who cannot see what rounds 99..102 launched | **Topic:** docs | **Area:** unassigned | **Shape:** bounded
 
+**Guard:** test_a_run_is_priced.py, test_the_round_history_names_every_audit.py · inferred r149
+
 ## Motivation
 
 `UX-744` built the register and extended `UX-666`'s guard to read it.

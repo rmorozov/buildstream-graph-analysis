@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-297 (the pass this sits on top of) | **Serves:** R1 | **Topic:** capture
 
+**Guard:** test_the_record_list_is_the_floor.py · inferred r149
+
 ## Motivation
 
 `UX-297` closed with parsing and pairing as one pass, and the

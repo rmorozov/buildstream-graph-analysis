@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-522 (the census half), UX-503 (the adopt route the map reuses) | **Serves:** the session that wants `test-touching` to be a gate | **Topic:** guards | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `dev_touching.py` selects by grep — a test file that names the

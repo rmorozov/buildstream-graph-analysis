@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-665 (the census) | **Found by:** round 115, the design review | **Serves:** the walk and the design review, which drove 28 tables by hand this round | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_a_new_control_class_lands_declared.py
+
 ## Motivation
 
 `tools/dev_page_census.py` prints sections, rail, controls, drawings

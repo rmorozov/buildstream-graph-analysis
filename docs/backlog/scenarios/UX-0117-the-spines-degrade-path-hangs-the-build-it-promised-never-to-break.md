@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-106 (done — this is its S1) | **Topic:** capture
 
+**Guard:** test_process_spine.py · inferred r149
+
 ## Motivation
 
 `spine.c`'s error path inverts its own contract. On `degrade("cont-failed")`

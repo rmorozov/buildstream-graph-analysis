@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done (documented + demonstrated for real) | **Depends on:** none | **Topic:** analysis
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The user's own hypothesis, going into `examples/05-cmake-cpp-toolchain` (a second, more realistic round of UX-05's optimization walkthrough - real C/C++ compiled through CMake + GNU Make, not `sleep N`): BuildStream's own scheduling concurrency (`--builders`) and each native build system's *own* internal parallelism (`make -jN`, propagated per-element) both consume the same physical CPU cores, with no coordination between them - meaning "optimal build configuration" is a genuine multi-factor optimization problem, not a single knob. Asked to brainstorm whether this is erroneous, and to prove it with facts.

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-343 (one contract version), UX-610 (which grew it) | **Found by:** architecture review 15 | **Serves:** a consumer validating a document it wrote yesterday | **Topic:** contracts | **Area:** bga
 
+**Guard:** test_the_verdict_record_is_a_published_key.py · inferred r149
+
 ## Motivation
 
 `UX-610` took `_COMPARE_REQUIRED` from 13 keys to 14, so

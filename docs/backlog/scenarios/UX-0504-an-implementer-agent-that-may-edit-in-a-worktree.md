@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-498 (the tracks it would run), UX-501 (the index it must not touch) | **Serves:** the orchestrating session that has two independent tracks and one context window | **Topic:** guards
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `decompose` §3 defines a track as something that runs in its own

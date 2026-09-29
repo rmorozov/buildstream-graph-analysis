@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-590 (which measured it), UX-607 (which blocks it) | **Serves:** every session reading fixing guide §6 to find where a thing lives | **Topic:** docs
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-590` held §6's `--format` row against the writer registry both

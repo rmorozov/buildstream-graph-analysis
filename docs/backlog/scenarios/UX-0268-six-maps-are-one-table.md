@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-267 | **Serves:** R1 and R3 | **Topic:** viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Nobody asked for this one; it came out of measuring the report to

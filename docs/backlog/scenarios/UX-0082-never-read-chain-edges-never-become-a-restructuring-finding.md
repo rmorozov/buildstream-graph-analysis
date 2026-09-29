@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-46, UX-74 (both done) | **Topic:** analysis
 
+**Guard:** test_restructuring_synthesis.py · inferred r149
+
 ## Motivation
 
 On `examples/06`'s baseline — the project built to be walked through a

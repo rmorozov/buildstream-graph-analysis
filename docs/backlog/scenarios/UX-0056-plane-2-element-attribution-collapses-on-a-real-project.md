@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done (guard + correlation) | **Depends on:** `UX-23` (which introduced the tag), `UX-51` (which made it a join key) | **Topic:** capture
 
+**Guard:** test_invocation_correlation.py · inferred r149
+
 ## Investigation, 2026-08-17: what the argv and the process tree rule out
 
 `UX-58` shipped the argv capture this task said it needed, and the answer

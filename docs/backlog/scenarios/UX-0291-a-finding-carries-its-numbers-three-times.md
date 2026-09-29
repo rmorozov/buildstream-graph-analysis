@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-288 | **Serves:** R5 and R7 — the payload consumers | **Topic:** contracts
 
+**Guard:** test_a_number_has_one_carrier.py · inferred r149
+
 ## Motivation
 
 Found by `UX-288`'s guard, which sweeps the payload for two fields

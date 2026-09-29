@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** none | **Topic:** cli
 
+**Guard:** test_compare.py · inferred r149
+
 ## Motivation
 
 Filed while brainstorming `bga`'s main user scenarios against its current documentation and CLI, specifically the "iterative optimization loop" scenario the project is about to exercise for real: build a project, run `bga analyze`, make one change intended to improve efficiency, rebuild, run `bga analyze` again, and decide whether it actually helped.

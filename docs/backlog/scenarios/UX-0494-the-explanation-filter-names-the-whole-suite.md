@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-476` built it; `UX-488` is the run that exposed it | **Found by:** round 73, driving PR #191 to green | **Serves:** the contributor whose unrelated branch goes red on one runner's slow afternoon | **Topic:** guards | **Area:** tools
 
+**Guard:** test_a_slow_file_says_which_file.py · inferred r149
+
 ## Motivation
 
 `UX-476` gave the tier-drift gate a second axis: a file over both gates

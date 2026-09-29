@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-630 (which built the inventory and the guard) | **Found by:** round 86, measured by UX-630's track and left unfiled by it | **Serves:** anyone driving a Plane 2 or Plane 3 capture by hand, or debugging one that behaved unexpectedly | **Topic:** docs
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-630` documented every `BGA_*` name and wrote a guard that scans

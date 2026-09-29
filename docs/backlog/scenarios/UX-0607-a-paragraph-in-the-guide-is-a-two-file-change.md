@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-584 (the derived figure), UX-590, UX-603 (both blocked by it) | **Found by:** round 84, twice in one round by two tracks | **Serves:** anyone adding a paragraph to the fixing guide | **Topic:** docs
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-584` derives `docs/contributing/fixing-guide.md`'s size into a

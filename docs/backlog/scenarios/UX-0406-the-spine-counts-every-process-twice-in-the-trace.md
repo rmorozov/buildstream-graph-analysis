@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-310 (the counter it un-closes), UX-368 (the queries it feeds wrong numbers) | **Serves:** anyone who takes the handoff and believes a number | **Topic:** capture | **Area:** tools
 
+**Guard:** test_one_process_is_one_slice.py · inferred r149
+
 ## Motivation
 
 With `--trace-spine=on` the round-64 capture (813 processes) emits

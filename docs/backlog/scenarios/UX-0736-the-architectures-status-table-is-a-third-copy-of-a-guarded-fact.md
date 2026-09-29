@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-131 (which guarded the first two copies), UX-657 (its priority twin), UX-88 | **Serves:** every reader who takes the architecture's history table as current | **Topic:** guards | **Shape:** judgement | **Area:** tools
 
+**Guard:** test_docs_links_and_commands.py · inferred r149
+
 ## Motivation
 
 Architecture review 18, checklist item 1. `UX-131` fixed one fact

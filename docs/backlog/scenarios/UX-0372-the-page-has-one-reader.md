@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-231 (every direction names its reader), UX-353 (the roles table), UX-365 (the finding that claims the superlative) | **Serves:** the build engineer, the CI owner and the module author, who currently share one page | **Topic:** viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The round asked whether the report should show the biggest problem *per

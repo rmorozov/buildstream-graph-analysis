@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-189 (the archive branches), UX-122 (stale refs nothing catches) | **Serves:** the reader who clicks, or counts | **Topic:** docs | **Area:** unassigned | **Shape:** bounded
 
+**Guard:** test_docs_links_and_commands.py, test_the_register_is_terse.py · inferred r149
+
 ## Motivation
 
 Two unguarded sentences, both found by running a command against them.

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** Direction 15, UX-167 (the prune keep-set), UX-188 (raw-log retention), UX-234 (the aggregate that should see sizes) | **Serves:** R1, R5, R7 | **Topic:** store
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 One field snapshot now weighs ~2 GB. Five of them are a laptop's

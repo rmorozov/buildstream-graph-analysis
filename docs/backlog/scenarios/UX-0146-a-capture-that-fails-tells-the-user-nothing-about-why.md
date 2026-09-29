@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-11 (the interception), UX-125 (`bga doctor`, which checks the environment and not the capture) | **Topic:** capture
 
+**Guard:** none — no guard named at close
+
 Filed from a real user report, not from an audit: `bst build` succeeds,
 `bga snapshot -- bst build <element>` fails with
 `buildbox-run failed with returncode 1`, and **with `--trace-opens` off

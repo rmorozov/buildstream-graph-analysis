@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-479, UX-681 | **Serves:** R2 who owns the toolchain and wants out of the noise; R3 reading the ranking | **Topic:** analysis | **Shape:** judgement
 
+**Guard:** test_help_is_short.py, test_bst_show_to_graph.py, test_the_foundation_tier_is_declared.py, test_bst_extract_run.py · inferred r149
+
 ## Motivation
 
 ```text

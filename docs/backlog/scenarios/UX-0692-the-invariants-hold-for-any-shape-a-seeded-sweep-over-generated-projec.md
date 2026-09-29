@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-465 (a project from a topology spec), UX-567 (the invariant guards), UX-367 (the volume budget) | **Serves:** R8 trusting the report on a graph nobody fixtured | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** test_the_invariants_hold_for_any_shape.py, test_attribution_identity_across_topologies.py · inferred r149
+
 ## Motivation
 
 The suite has no randomized test: every guard runs on the committed

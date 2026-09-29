@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-214 (one verdict vocabulary), UX-203 (the compare payload the page already loads), UX-215 | **Topic:** analysis
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `bga compare` answers *"this build got slower"*. The next question is

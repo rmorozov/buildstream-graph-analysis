@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-1062 | **Found by:** the owner's implementation review on #298 (2026-09-28), finding 1 | **Serves:** anyone sharing a private capture with an outside reader | **Topic:** store | **Area:** bga | **Shape:** mechanical
 
+**Guard:** test_a_command_line_credential_is_dropped.py
+
 ## Motivation
 
 `rebuild_command()` sends `-D...` assignments through `_assigned()` and

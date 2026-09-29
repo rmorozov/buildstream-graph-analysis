@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-524 (the adopted touching map), UX-605 (an over-wide map entry is not a selection), UX-624 (the last module to join the set) | **Found by:** round 87, by CI on the round's first commit | **Serves:** anyone whose branch cannot go green through no fault of its own | **Topic:** guards
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `main` is red. `b7cdd5f` — "CI: adopt the touching map this run

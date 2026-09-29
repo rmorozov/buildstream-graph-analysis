@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-677 (the advice), UX-739 (the price), UX-808 (one row per element) | **Found by:** round 115, the design review | **Serves:** R5 setting max-jobs across a large project | **Topic:** viewer | **Area:** bga-viewer | **Shape:** judgement
 
+**Guard:** test_the_max_jobs_advice_is_one_level.py · inferred r149
+
 ## Motivation
 
 On the walk capture (3 elements) the advice is folded like every

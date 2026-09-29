@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-88 (the last correction to this document) | **Serves:** whoever meets a `bst` output line the parser does not | **Topic:** docs
 
+**Guard:** test_bst_extract_run.py, test_the_ingestion_facts_name_the_bst_they_ran_on.py · inferred r149
+
 ## Motivation
 
 `docs/spec/ingestion-pipeline.md` is a 2026-08-14 log of "empirically

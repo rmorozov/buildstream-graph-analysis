@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Serves:** every round that closes a row with a note naming a command | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The documented closing call in `CLAUDE.md` passes the note as one

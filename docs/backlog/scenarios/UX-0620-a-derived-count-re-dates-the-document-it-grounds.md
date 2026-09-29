@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-247 (the log's rule), UX-233 (the count in the opening), UX-604 (the window this sits beside) | **Found by:** round 85, with `main` red | **Serves:** every session that runs the suite on a fresh clone | **Topic:** guards
 
+**Guard:** test_a_counted_figure_is_derived.py, test_the_verification_log_is_true.py · inferred r149
+
 ## Motivation
 
 **`main` is red.** A clean checkout of `5343bd6` fails:

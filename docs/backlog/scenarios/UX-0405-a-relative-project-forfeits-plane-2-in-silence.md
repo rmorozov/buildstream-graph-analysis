@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-155 (the cwd lesson this module already recorded once), UX-376 (the census that should have refused) | **Serves:** R1, on the first capture they ever run | **Topic:** capture | **Area:** tools
 
+**Guard:** test_a_capture_finds_its_own_shim.py · inferred r149
+
 ## Motivation
 
 Round 64's walk ran the documented shape from the repo root:

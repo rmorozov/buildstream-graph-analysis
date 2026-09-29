@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-193 (view-hints v1), UX-190 (the schemas), Direction 7 second iteration | **Topic:** viewer | **Area:** bga
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The external review's P0, verified line by line in round 22: the

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-171 (the numbers the page reads), Direction 6 (the argument it condenses) | **Topic:** docs
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The user's framing, verbatim: *"if i am not mistaken buildstream is

@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-155 (the scratch whose lifecycle this fixes), UX-126 (snapshot) | **Topic:** capture
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The user's real sessions are now multi-hour captures on a big project.

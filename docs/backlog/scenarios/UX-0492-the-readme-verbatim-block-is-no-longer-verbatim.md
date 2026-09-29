@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-475` changed the sentence | **Found by:** architecture review 10 | **Serves:** the outside reader whose first sight of `bga` is a block that says "verbatim" and is not | **Topic:** docs
 
+**Guard:** test_the_readme_block_is_the_real_output.py, test_the_front_door_is_current.py, test_docs_examples.py, test_the_real_project_block_is_dated.py, test_capture_ref_patterns.py · inferred r149
+
 ## Motivation
 
 `README.md`'s **On a real project** section introduces its block as

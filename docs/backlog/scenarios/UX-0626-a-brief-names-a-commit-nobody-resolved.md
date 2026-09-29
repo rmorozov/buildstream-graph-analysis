@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-510 (the brief names its base), UX-614 (the track verifies it) | **Found by:** round 85, by the UX-621 track refusing to trust it | **Serves:** a track given a base | **Topic:** guards
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Round 85's brief for `UX-621` named its base as commit `2a7d1b8`.

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-199 (the navigation it regroups), UX-201 (the schema vocabulary it extends), UX-207 (the ordering it assumes) | **Topic:** viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The CLI and README frame `bga` around questions — *"what should I

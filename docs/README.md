@@ -227,6 +227,7 @@ appended to instead of superseded:
 | [`audits/agent-runs.md`](audits/agent-runs.md) | what each subagent run cost — tokens, tool calls, wall clock — and its own friction line, one row per run, so a model and a report shape are chosen from numbers (`UX-666`) |
 | [audits/mutation.md](https://github.com/rmorozov/buildstream-graph-analysis/blob/records/docs/audits/mutation.md) | the weekly mutation run's survivors — a mutant the touched modules' own guards did not kill, one dated section per run. A survivor is a filing, not a failure (`UX-703`); gitignored since `UX-997` T2 — `tools/dev_records.py fetch` writes it locally, `refs/heads/records` carries it |
 | [`audits/round-register.md`](audits/round-register.md) | which rounds happened and when, derived from the committed union — every round document, the ledger's round column and every round a task file names, never `git log` — dated by the document's own dateline; only the one next round, still without its document, is held out of it (`UX-744`, `UX-782`, `UX-926`) |
+| [`audits/retro-2026-09-28.md`](audits/retro-2026-09-28.md) | the first weekly retro (`UX-999`) — the week's findings by class, main's CI history, three `optimization` proposals |
 
 The rounds themselves:
 
@@ -332,6 +333,7 @@ The rounds themselves:
 [146](audits/round-146.md) ·
 [147](audits/round-147.md) ·
 [148](audits/round-148.md) ·
+[149](audits/round-149.md) ·
 [150](audits/round-150.md) ·
 [the guard census of round 64](audits/guard-census-round-64.md)
 

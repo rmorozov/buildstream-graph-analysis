@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-01` (run comparison), `UX-02` (efficiency score - the natural gating metric) | **Topic:** cli | **Area:** bga
 
+**Guard:** test_compare.py · inferred r149
+
 ## Motivation
 
 Filed while brainstorming `bga`'s main user scenarios. A natural extension of `UX-01`: once two runs can be compared, a CI pipeline needs a way to *act* on that comparison automatically (fail the pipeline, post a warning) rather than a human reading `bga compare`'s report every time. Confirmed against `bga/cli.py`'s exit-code contract (`docs/guides/cli.md`'s own Exit Codes section: 0/1/2/3, all about ingestion/analysis failure, none about a *regression* in the analyzed build itself) - there is currently no way to make `bga` itself signal "this PR made the build worse" to a CI system's pass/fail gate.

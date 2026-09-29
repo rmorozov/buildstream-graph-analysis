@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-464` (T1 is the positive case; the negative case is a fixture too) · reads `UX-460`'s registry | **Found by:** round 72, thread 2 of the audit — whether the conclusions and the representation of graph shape really support an optimization judgement | **Serves:** the reader who acts on a structural finding that would have fired on any graph | **Topic:** analysis
 
+**Guard:** test_the_journey_has_an_answer_key.py
+
 ## Motivation
 
 `FINDING_READERS` gives the graph-owner two findings, `mesh-graph` and

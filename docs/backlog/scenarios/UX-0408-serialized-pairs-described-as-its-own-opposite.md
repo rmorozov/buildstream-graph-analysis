@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-341 (the declared-description discipline this slipped past) | **Serves:** anyone reading the batching section on the page | **Topic:** contracts
 
+**Guard:** test_one_sentence_for_one_key.py · inferred r149
+
 ## Motivation
 
 The computation (`bga/structural/batching.py:96-101`) collects pairs

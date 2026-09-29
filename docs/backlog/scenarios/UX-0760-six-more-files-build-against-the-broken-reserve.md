@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-755 (the mechanism and the fix's shape) | **Serves:** the session that runs `make test` on a container with a large disk and little free space | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** test_spine_ground_truth.py, test_interrupted_capture.py, test_stale_casd.py, test_snapshot.py, test_bst_show_to_graph.py, test_doctor.py, test_element_kind_heuristics.py, test_the_printed_sentences_are_contracts.py, test_the_journey_has_an_answer_key.py, test_native_build_tracer.py, test_dual_plane_capture.py, test_blast_ranking_discriminates.py, test_shared_source_blast.py, test_a_generated_project_builds.py, test_bst_checkout_cost.py, test_bst_extract_run.py, test_stream_merge.py · inferred r149
+
 ## Motivation
 
 `UX-755` established the mechanism — BuildStream sizes its 5% cache

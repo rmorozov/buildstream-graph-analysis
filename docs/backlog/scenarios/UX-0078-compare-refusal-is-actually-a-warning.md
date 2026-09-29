@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Topic:** cli
 
+**Guard:** test_compare_mismatch_refusal.py · inferred r149
+
 ## Motivation
 
 `README.md:165` promises "a refusal if the two runs don't look like the

@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-843, UX-846 | **Found by:** round 117, Direction 20 | **Serves:** R4 (the number round 112 asked for) | **Topic:** capture | **Area:** tools | **Shape:** judgement
 
+**Guard:** test_the_examples_build.py
+
 ## Motivation
 
 Round 112 declined the mode because examples/06's wall did not move

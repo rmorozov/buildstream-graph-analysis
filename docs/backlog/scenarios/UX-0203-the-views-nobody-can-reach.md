@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-196 (the views), UX-193 (the command), UX-150 (the wheel-guard precedent) | **Topic:** viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Round 22's verification of the viewer landing found three gaps the

@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-123 (done — these are its edges), UX-106 | **Topic:** capture
 
+**Guard:** test_process_spine.py · inferred r149
+
 ## Motivation
 
 Three small residuals from round 13's re-review, none data-corrupting

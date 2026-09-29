@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-240 (the skills), UX-241 (the cadence), UX-505 (the rules card as entry point) | **Found by:** architecture review 17, by needing the skill and not finding it named | **Serves:** the session the cadence guard has just stopped | **Topic:** docs | **Area:** tools | **Shape:** judgement
 
+**Guard:** test_the_review_has_a_cadence.py · inferred r149
+
 ## Motivation
 
 The cadence guard reddens a round's CI and says:

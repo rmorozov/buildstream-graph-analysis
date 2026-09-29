@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-588 (the floor's guard) | **Serves:** the contributor deciding whether their interpreter will do | **Topic:** docs
 
+**Guard:** test_the_floor_is_stated_where_it_is_read.py · inferred r149
+
 ## Motivation
 
 Architecture review 14, item 4 — what shipped that no document names:

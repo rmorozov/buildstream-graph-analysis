@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-845, UX-851 | **Found by:** round 120, the user (a 16-core, 32 GB host, `--builders 16 --jobserver auto`) | **Serves:** R5 (an llvm-sized element takes the cores the other builders leave idle) | **Topic:** capture | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_the_pool_follows_the_machine.py
+
 ## Motivation
 
 `auto` sizes the ceiling as cores minus `--builders` (`bga/cli.py`,

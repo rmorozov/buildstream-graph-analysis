@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-202 (the finding renderer), UX-207 (the decision the findings support) | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Every finding already carries a structured `evidence` dict. Measured on

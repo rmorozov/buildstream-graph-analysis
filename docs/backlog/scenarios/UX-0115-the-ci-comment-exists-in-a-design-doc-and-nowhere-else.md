@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-79 (marginal gate + element diff), UX-96 (baseline helper), UX-75 (findings as data) | **Topic:** cli
 
+**Guard:** test_ci_comment.py · inferred r149
+
 ## Motivation
 
 `design/directions.md` has carried a sketch of "what a good CI comment

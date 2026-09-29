@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-171 (shares the weighting), UX-156/UX-164 (the honest-counting precedent) | **Topic:** analysis
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The user's first sentence, taken literally: *blast analysis doesn't

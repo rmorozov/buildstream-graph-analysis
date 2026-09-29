@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-782 | **Found by:** `main` went red on `test_a_documents_dateline_matches_its_own_first_commit[130]` the moment #249 was squash-merged, with no branch ever seeing it | **Serves:** every round document merged across a UTC midnight, which is every round whose PR lands late | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-782`'s guard asks whether a round document's own dateline matches

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-305 (the conformance checklist), UX-320 | **Serves:** the session that touches the page and reads §7 to find its guard | **Topic:** docs
 
+**Guard:** test_the_styleguide_names_its_guards.py, test_the_mapping_is_law.py · inferred r149
+
 ## Motivation
 
 Thirty-one guard files enforce the styleguide (539 passed, 8 skipped

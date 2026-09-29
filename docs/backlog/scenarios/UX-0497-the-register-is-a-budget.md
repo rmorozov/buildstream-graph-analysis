@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Serves:** every session, on every file it reads; the maintainer's subscription | **Topic:** guards
 
+**Guard:** test_the_register_is_terse.py, test_the_agent_configuration_holds.py
+
 ## Motivation
 
 Round 74 measured what a session reads and writes:

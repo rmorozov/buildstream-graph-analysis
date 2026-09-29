@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-692 (the sweep that found it), UX-53 (the single duration definition), UX-110 | **Serves:** anyone whose build has a fast element, and every figure computed from a segment width | **Topic:** analysis | **Shape:** judgement | **Area:** bga
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-692`'s seeded sweep found this on its **first generated shapes**,

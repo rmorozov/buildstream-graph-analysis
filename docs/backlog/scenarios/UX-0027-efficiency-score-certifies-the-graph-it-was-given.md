@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** — (UX-02 defines the score this changes; UX-39 is the CI-facing consequence) | **Topic:** analysis | **Area:** bga
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Real repro, `examples/06-macro-micro-optimization` (filed with this task; built for exactly this purpose), 4-core host, `bst --builders 4 --max-jobs 4 build all.bst`. The project is mis-optimized in three one-line ways: six independent libraries declared as a six-deep dependency chain, an unused `codegen.bst` build-dep on five of them, and `notparallel: True` on the heaviest element. The `optimized/` sibling fixes all three and changes nothing else.

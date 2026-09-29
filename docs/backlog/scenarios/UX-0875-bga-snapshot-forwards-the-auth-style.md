@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-856, UX-841 | **Found by:** round 122, the user (a make-kind element from a tar source, GNU Make 4.4 on the host) | **Serves:** R4 (the snapshot entry point can force the auth style capture run already can) | **Topic:** capture | **Area:** tools | **Shape:** bounded
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `bga capture run` exposes `--jobserver-auth {fd,fifo,auto}`

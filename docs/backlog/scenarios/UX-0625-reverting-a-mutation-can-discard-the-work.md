@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-560 (the track's recovery), UX-614 (the base check) | **Found by:** round 85, by the UX-621 track paying for it | **Serves:** a track falsifying its own guard | **Topic:** guards
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 **Corrected round 85, by measurement — the filed text is kept below.**

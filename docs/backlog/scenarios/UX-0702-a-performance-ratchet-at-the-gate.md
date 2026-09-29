@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-531 (the superlinear analyzer), UX-418 (the reference method) | **Serves:** R8 reading whether a round made `bga analyze` slower on the largest capture, which nothing today records | **Topic:** guards | **Area:** unassigned | **Shape:** bounded
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-531` measured `bga analyze` superlinear in elements; the page pays

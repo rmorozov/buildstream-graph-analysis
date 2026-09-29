@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-22 (done - this corrects the field it captures) | **Topic:** capture
 
+**Guard:** test_bst_show_to_graph.py, test_serialization_points.py, test_serialization_point_integration.py · inferred r149
+
 ## Motivation
 
 `UX-22` shipped per-element `max-jobs` capture (`tools/bst_show_to_graph.py::_parse_max_jobs`, via `bst show`'s `%{public}`) plus a `serialization_point_risks` diagnostic. Its own docstring records the empirical work behind picking that field: `variables: max-jobs:` in an element body is rejected as a protected-variable redefinition, `%{vars}`'s `max-jobs` always reports the project default, so `public: bst: max-jobs:` was chosen as "the real mechanism".

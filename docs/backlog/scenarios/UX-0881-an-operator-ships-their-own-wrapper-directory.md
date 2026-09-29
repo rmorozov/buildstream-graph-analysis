@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-880 | **Found by:** round 126 + the user (toolchains built in-sandbox with custom prefixes — the compiler is invoked by absolute path, which PATH-shadowing cannot reach; and the user already runs their own clang-shim pattern) | **Serves:** R2 (a project whose compilers live at custom prefixes still gets the jobserver's effect) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** bounded
 
+**Guard:** test_the_cost_row_is_derived_from_the_selector.py, test_an_operator_wrapper_dir_is_mounted.py · inferred r149
+
 ## Motivation
 
 `JOBSERVER_WRAPPERS_DIR` is derived from `__file__` and hardcoded

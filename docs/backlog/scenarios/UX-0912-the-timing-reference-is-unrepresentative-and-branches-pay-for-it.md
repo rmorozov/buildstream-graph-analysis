@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-442, UX-476, UX-503, UX-803 | **Found by:** round 132 — one `test (3.11)` run reported four files whose records the runner disagrees with, none named by the diff | **Serves:** every branch charged for a cost `main` carries | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
+**Guard:** test_the_size_ledger_only_shrinks.py · inferred r149
+
 ## What the gate actually costs, measured 2026-09-21
 
 The tier gate is not a nuisance on the side of the run. It **suppresses

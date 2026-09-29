@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-205 | **Serves:** R1 and R7 — filtering a table taller than the screen | **Topic:** viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Reported: *"also search box is buried in the bottom of sections - let's

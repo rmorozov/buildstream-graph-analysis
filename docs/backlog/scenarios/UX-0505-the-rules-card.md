@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-497 (the register it is written in) | **Serves:** every session's first read; the maintainer's subscription | **Topic:** docs
 
+**Guard:** test_a_guard_reads_only_what_a_clone_has.py · inferred r149
+
 ## Motivation
 
 The fixing guide is "read this first, every session" and it is 34,113

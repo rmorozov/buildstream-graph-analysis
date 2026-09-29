@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-510 (a track's brief names the base it will get) | **Found by:** round 84, by three of seven tracks independently | **Serves:** every round that runs tracks in parallel | **Topic:** guards
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 A worktree-isolated track is branched from the **default branch**, not

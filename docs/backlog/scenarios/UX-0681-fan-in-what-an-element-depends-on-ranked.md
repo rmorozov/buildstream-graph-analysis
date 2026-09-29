@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-479 (blast for elements), UX-407 (never-read edges) | **Serves:** R2 minimising incoming dependencies, R3 spotting the suspicious fan-in | **Topic:** analysis | **Shape:** judgement
 
+**Guard:** test_what_an_element_pulls_in.py · inferred r149
+
 ## Motivation
 
 ```text

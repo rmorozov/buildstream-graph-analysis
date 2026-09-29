@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Topic:** cli
 
+**Guard:** test_tools_dispatch.py · inferred r149
+
 ## Motivation
 
 Every capture/conversion alias — `bga wrap`, `bga extract`, `bga capture`,

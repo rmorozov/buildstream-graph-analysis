@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-682 (expected rebuild cost), UX-477 (the cold verdict's rule) | **Serves:** R3 showing evidence, R8 reading it | **Topic:** analysis | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The cold build has a verdict — chain-bound / scheduler-bound /

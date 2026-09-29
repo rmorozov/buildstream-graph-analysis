@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-70` (done — which introduced the regression below) | **Topic:** analysis
 
+**Guard:** test_headline_points_at_the_time.py, test_report_key_findings.py · inferred r149
+
 ## Motivation
 
 `Key Findings` on round 9's real capture is 21 lines, of which 13 are

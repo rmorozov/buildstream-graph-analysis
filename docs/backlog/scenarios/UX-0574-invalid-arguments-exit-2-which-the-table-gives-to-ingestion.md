@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-186 (the refusal grammar and its codes) | **Serves:** the CI owner branching on an exit code | **Topic:** cli | **Area:** bga
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 ```text

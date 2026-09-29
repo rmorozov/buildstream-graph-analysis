@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Serves:** anyone reading a cache-logs finding | **Topic:** analysis | **Area:** tools
 
+**Guard:** test_a_finding_names_four_payers.py, test_cache_logs.py · inferred r149
+
 ## Motivation
 
 Round 64's Plane 3 pass over 79 kept logs:

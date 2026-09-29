@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-207 (the claims), UX-190 (the contract discipline), UX-215 (the precedent) | **Serves:** R1, R4, R8 — and every secondhand reader | **Topic:** contracts
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Direction 8's anchor. The pattern round 24 named — *the analysis

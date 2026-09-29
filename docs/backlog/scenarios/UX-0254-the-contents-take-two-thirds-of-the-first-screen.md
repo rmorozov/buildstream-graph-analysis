@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Fixed & Verified | **Depends on:** — | **Serves:** R1 first — the reader who opened the report to find out what to fix | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Reported from a real run, and reproduced on `main` at `0.2.0` rather

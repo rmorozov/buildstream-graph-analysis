@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-693 (the rule set), UX-418 (the reference method) | **Serves:** the implementing session, whose gate is zero-tolerance for a new finding from the first commit and never asks it to fix an old one first | **Topic:** guards | **Area:** tools | **Shape:** bounded
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Every stronger tool finds signal today's gate cannot see, and none of

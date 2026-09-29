@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §6e.5 | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
 
+**Guard:** test_every_control_has_a_resting_appearance.py, test_static_census.py
+
 ## Motivation
 
 §6a's "one primary action per view" row was never decided, and §6d's four grades have no primary one. The first command's copy in "What should I run next?" is the page's one next step and looks like every other button.

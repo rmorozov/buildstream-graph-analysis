@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the second styleguide audit (2026-09-27), Ruslan's question on #297 | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
 
+**Guard:** test_the_page_obeys_its_own_policy.py
+
 ## Motivation
 
 Measured on `main` at `814a2db8`, `python3 -m tools.bga_view

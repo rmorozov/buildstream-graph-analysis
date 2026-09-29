@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-843 | **Found by:** round 118, UX-843's verifier | **Serves:** R4 (a cmake element joins the jobserver the way its generator can) | **Topic:** guards | **Area:** tools | **Shape:** bounded
 
+**Guard:** test_bwrap_shim.py · inferred r149
+
 ## Motivation
 
 `UX-843`'s `probe_ninja` runs the sandbox's own `ninja --version` and

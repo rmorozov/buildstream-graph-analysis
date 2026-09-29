@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-201 (the rule this is the gap in), UX-341 (which reduces the vocabulary those declarations use) | **Serves:** every payload consumer, and the viewer's own fallback | **Topic:** contracts
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-201`'s rule is *declared beats guessed*, and `quantityFor` still

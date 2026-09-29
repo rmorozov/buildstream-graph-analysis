@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-213 (guards that only guard one machine), UX-257 (the geometry instrument), UX-495 (the browser family's CI spread) | **Found by:** round 87, by CI going red on a documentation-only commit | **Serves:** anyone whose branch is reddened by a guard measuring the runner rather than the page | **Topic:** guards
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `test_the_sections_are_still_as_tall_as_their_content` asserts that

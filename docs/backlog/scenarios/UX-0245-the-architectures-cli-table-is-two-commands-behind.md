@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** — | **Serves:** R8 and anyone pricing a change against the document that describes the system | **Topic:** docs
 
+**Guard:** test_the_architecture_names_the_commands.py · inferred r149
+
 ## Motivation
 
 Found by review 1 (`UX-241`,

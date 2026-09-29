@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-264` (the shared shim), `UX-219` and `UX-254` (two defects this shape has already produced), `UX-523` (found it again) | **Serves:** the next round that adds a standard DOM call to the viewer | **Topic:** guards | **Area:** bga/viewer
 
+**Guard:** test_buttons_that_know_why.py, test_a_report_you_can_navigate.py, test_the_views_that_draw.py, test_focus_is_an_investigation.py, test_the_dom_shim_is_one_instrument.py · inferred r149
+
 ## Motivation
 
 `UX-264` replaced twenty-five hand-built `document` objects with one

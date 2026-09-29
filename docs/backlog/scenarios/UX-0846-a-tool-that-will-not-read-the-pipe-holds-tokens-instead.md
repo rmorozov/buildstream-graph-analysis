@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-843 | **Found by:** round 117, Direction 20 | **Serves:** R4 (links stop oversubscribing under the mode) | **Topic:** capture | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_a_held_tool_returns_its_tokens.py
+
 ## Motivation
 
 `ld.lld` 18 sizes `--threads` to every core, gold and mold likewise,

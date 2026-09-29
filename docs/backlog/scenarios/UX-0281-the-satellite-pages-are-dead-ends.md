@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-199 | **Serves:** R1 and R7 — who follow a link and then want back | **Topic:** viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Reported: *"sql.html doesn't have backlink to main page."* Checked

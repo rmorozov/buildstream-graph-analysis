@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-298 (the timeline speaks Perfetto natively), UX-309 (the arrows that answer "why did this start now"), UX-310 (the counters), UX-312 (the canned question library) | **Serves:** anyone who took the chrome trace to Perfetto and ran a canned query | **Topic:** capture
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `bga timeline` emits two formats. Measured on the same snapshot:

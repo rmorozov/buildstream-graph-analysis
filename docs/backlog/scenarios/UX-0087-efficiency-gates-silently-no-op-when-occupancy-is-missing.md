@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-39, UX-40 (both done) | **Topic:** analysis | **Area:** bga
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Both efficiency gates read `occupancy_ratio` from the two runs; if

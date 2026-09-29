@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Found by:** round 73, five consecutive red `bst-examples` runs on PR #191 | **Serves:** the round that trusts a green suite and a guard that reads the workflow, and ships a CI step that has never once reached its own last line | **Topic:** guards
 
+**Guard:** test_ci_builds_a_generated_project.py
+
 ## Motivation
 
 `UX-473` added the `bst-examples` step that generates a failing

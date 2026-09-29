@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-199 (the anchors), UX-205 (the filters), UX-208 (the top-N presets) | **Topic:** viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `nav.js`'s own comment sells the section ids as something that

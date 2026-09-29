@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-231 (the Serves lines it indexes) | **Serves:** the maintainers — every role, indirectly | **Topic:** docs
 
+**Guard:** test_six_seams_round_21_found.py · inferred r149
+
 ## Motivation
 
 The user's observation, measured: the scenarios README is ~890 lines

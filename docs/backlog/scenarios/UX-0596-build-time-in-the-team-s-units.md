@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-230 (a price on a chosen set), UX-581 | **Serves:** R8, the engineering lead funding infrastructure | **Topic:** analysis
 
+**Guard:** test_help_is_short.py · inferred r149
+
 ## Motivation
 
 Direction 9's third argued step, and R8's half of it. Headline and

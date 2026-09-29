@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-171/UX-172 (the surfaces), UX-164 (the paste-and-go precedent) | **Topic:** analysis
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Round 19, live, on the monorepo fixture. The report prints:

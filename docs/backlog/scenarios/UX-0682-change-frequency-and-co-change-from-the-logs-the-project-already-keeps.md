@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-92 (cache effectiveness, blocked at stage 3), UX-479 (weighted blast) | **Serves:** R2 and R3 — split, consolidate, or leave alone, decided on evidence | **Topic:** analysis | **Shape:** judgement
 
+**Guard:** test_change_frequency_reads_the_kept_logs.py · inferred r149
+
 ## Motivation
 
 The advice "keep your blast radius under a threshold" leads to a

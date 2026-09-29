@@ -4,8 +4,7 @@ Every rule this repository holds a session to, one line each, with the
 guard that catches it and the [fixing guide](fixing-guide.md) section
 that argues it. **Read the guide's paragraph for the rule you are about
 to break, not the whole guide** — it is ~60 KB because every rule carries
-the incident that produced it, and the incidents are why the rules are
-trusted (`UX-505`). One exception: `CLAUDE.md`'s Register table's fourth row, the code-comment cap, is a convention rather than a guarded rule here — a comment's length is not its register (`UX-764`).
+the incident that produced it, and the incidents are why the rules are trusted (`UX-505`). One exception: `CLAUDE.md`'s Register table's fourth row, the code-comment cap, is a convention rather than a guarded rule here — a comment's length is not its register (`UX-764`).
 
 ## Working a task — §2
 
@@ -30,6 +29,7 @@ trusted (`UX-505`). One exception: `CLAUDE.md`'s Register table's fourth row, th
 | `make test-touching` while you work; the tier when it is wider | `test_the_loop_stays_fast.py` — the selector, not that you ran it |
 | `make push-check` before a push, CI on the pull request before a merge - the newest Python alone (`UX-995`). A tier is a selector | `.claude/hooks/gate-covers-push.sh` — covers the commit you push, not the branch you ran it on (`UX-762`); `make push-check` writes its marker only on green (`UX-948`) |
 | Both status markers, same commit; the counts are derived | `test_docs_links_and_commands.py` |
+| A task file carries one `**Guard:**` line under its header: its test file(s), or `none — <reason>` (`UX-1092`) | `test_every_task_declares_its_guard.py` |
 | A number or mechanism you moved: annotate the file asserting it | `tools/dev_close_task.py --figures`, held by `test_the_loop_stays_fast.py` |
 | A renamed or removed published key bumps its schema version | `test_output_schemas.py` |
 | A key entering `required` under a live id bumps it too | `test_a_required_set_grew_under_an_unchanged_id.py` |
@@ -38,6 +38,7 @@ trusted (`UX-505`). One exception: `CLAUDE.md`'s Register table's fourth row, th
 | Architecture or spec made wrong? Same commit | `test_the_documents_keep_up_with_the_contracts.py` |
 | Documentation you are not writing now: file the row first | `test_documentation_debt_has_a_door.py` |
 | Acceptance test still failing? 🟡 with what is blocking, and stop | — |
+| An Acceptance Test names where its reading is taken, or files unpayable with a reason (from `UX-938`) | `tools/dev_close_task.py --check`'s `reading_problems()`, held by `test_a_clause_names_where_its_reading_is_taken.py` |
 
 ## Committing — §4, §4a
 
@@ -61,8 +62,6 @@ trusted (`UX-505`). One exception: `CLAUDE.md`'s Register table's fourth row, th
 | Never touch `docs/spec/specification.md` outside Part 32's registry | `test_the_spec_outside_part_32_is_read_only.py` |
 | **Never let an instrument read a proxy for the thing it names** | `test_the_agent_configuration_holds.py` — the `measure` skill states the three questions; asking them is judgement |
 | Exact integer arithmetic for anything invariant-related | — |
-
-The proxy rule is the one this repository breaks most — about thirty sightings across twenty-six items, in four shapes. §5 names all four with a worked example each; read it before writing a guard.
 
 ## Which kind of session is this? — §6a
 

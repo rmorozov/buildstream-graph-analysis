@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-126 (snapshot), UX-113 (the census), UX-155 (scratch, whose store this sizes) | **Topic:** capture | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The first real deployment is a project big enough that one capture is

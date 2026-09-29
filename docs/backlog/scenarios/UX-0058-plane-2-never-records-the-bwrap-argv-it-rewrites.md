@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** — (blocks `UX-56`'s real fix) | **Topic:** capture
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-56` established that Plane 2's element tag comes from bwrap's `--dir`

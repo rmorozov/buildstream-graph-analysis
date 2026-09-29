@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the snapshot and view performance audit on `39d89d4` (2026-09-28) | **Serves:** R5, R1 | **Topic:** capture | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_the_key_set_reads_the_builds_options.py
+
 ## Motivation
 
 Before `bst build` starts, the tracer runs `bst show --format

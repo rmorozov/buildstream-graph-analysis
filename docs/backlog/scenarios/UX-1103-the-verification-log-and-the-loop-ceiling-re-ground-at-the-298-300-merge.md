@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-1064, UX-1073, UX-1101 | **Found by:** round 150 | **Serves:** whoever reads `architecture.md`'s Verification Log or the selector ceiling next | **Topic:** contracts | **Area:** bga | **Shape:** mechanical
 
+**Guard:** test_the_verification_log_is_true.py, test_the_loop_stays_fast.py, test_the_tail_travels_anonymized.py
+
 ## Motivation
 
 Merging `origin/main` (#298, eaaeda85) into round 150 reddened two

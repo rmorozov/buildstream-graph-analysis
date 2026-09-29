@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-689 (the rule), UX-815 (landed before this, the anchor rule) | **Found by:** round 114, `UX-815`'s Out of Scope | **Serves:** the reader pricing a change to the analysis; the session finishing `UX-689` | **Topic:** docs | **Area:** bga | **Shape:** mechanical
 
+**Guard:** test_docs_links_and_commands.py
+
 ## Motivation
 
 After `UX-815`, the mechanism prose left in `docs/design/architecture.md`

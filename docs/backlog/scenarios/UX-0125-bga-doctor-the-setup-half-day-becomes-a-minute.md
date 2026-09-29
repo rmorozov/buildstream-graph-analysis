@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-105 (the census, reused as one check) | **Topic:** cli
 
+**Guard:** test_doctor.py · inferred r149
+
 Post-MVP polish, direction: simplify the user scenarios. The MVP bar
 (round 12) is "following only the documentation"; this task attacks the
 part of the path the documentation cannot smooth — the environment.

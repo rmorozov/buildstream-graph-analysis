@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-762, UX-885 | **Blocks:** — | **Found by:** round 138 — Ruslan in the project thread, 2026-09-23 08:42 and 08:43 | **Serves:** every track that pushes a `claude/*` branch from a shared 4-core box | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** test_the_gate_covers_the_pushed_commit.py
+
 ## Motivation
 
 The owner's question, 2026-09-23 08:42: "do we really need full suits on

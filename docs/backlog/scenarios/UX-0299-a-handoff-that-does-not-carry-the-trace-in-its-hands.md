@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-198 (the transport it re-thresholds), UX-298 (the artifact), UX-195 (the export rule it amends) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The tab-to-tab handoff fetches the whole trace into the report

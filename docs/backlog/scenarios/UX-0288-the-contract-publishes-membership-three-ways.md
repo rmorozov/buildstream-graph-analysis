@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-268 | **Serves:** R5 and R7 — the payload consumers — and every reader of the page | **Topic:** contracts
 
+**Guard:** test_no_two_fields_carry_the_same_elements.py · inferred r149
+
 ## Motivation
 
 Filed from Direction 14. Measured on the 1,202-element synthetic run,

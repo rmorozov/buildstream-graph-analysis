@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-736 (the widened guard) | **Found by:** round 109, retro-verifying round 100 | **Serves:** the reader of a status row for a task that does not exist | **Topic:** docs | **Area:** unassigned | **Shape:** mechanical
 
+**Guard:** test_docs_links_and_commands.py
+
 ## Motivation
 
 `tests/unit/test_docs_links_and_commands.py`'s

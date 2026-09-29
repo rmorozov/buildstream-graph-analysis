@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-694 (the baseline), UX-705 (the burn-down, whose pass condition this defeats) | **Serves:** the session merging a track it did not watch | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-705`'s Acceptance Test says a batch passes when **"no new finding

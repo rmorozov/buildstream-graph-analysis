@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-151, UX-152, UX-153, UX-149, UX-155 (the fixes these debts trail) | **Topic:** capture | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The round-16 review verified UX-147..155 as landed and collected the

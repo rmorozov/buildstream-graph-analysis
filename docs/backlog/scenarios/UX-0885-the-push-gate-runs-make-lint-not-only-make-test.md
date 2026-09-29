@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** round 125 (PR #235's test matrix went red on a `make lint` PyMarkdown finding the local push gate had passed — the gate covers `make test`, which writes `.gate-covered`, but not `make lint`, so a lint-clean-locally-but-not-in-CI blob still pushed) | **Serves:** the pipeline (a push that CI will fail on lint is caught before the push, not after) | **Topic:** guards | **Area:** tools-dev | **Shape:** judgement
 
+**Guard:** test_the_push_gate_includes_lint.py · inferred r149
+
 ## Motivation
 
 The push hook blocks a sha whose `make test` gate did not run

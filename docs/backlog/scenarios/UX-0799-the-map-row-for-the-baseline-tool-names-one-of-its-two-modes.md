@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-697 (the pyright mode), UX-780 (the same row shape, one row over) | **Found by:** review 21, round 110 | **Serves:** the reader of §6 choosing which tool prices a finding | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** test_the_context_map_is_the_tree.py, test_the_baseline_only_shrinks.py · inferred r149
+
 ## Motivation
 
 ```console

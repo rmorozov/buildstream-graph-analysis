@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-567 (the I6 gate), UX-566 (the advisory map) | **Serves:** anyone reading `confidence.hard_gates` to decide whether a run is trustworthy | **Topic:** contracts
 
+**Guard:** test_the_hard_gates_are_named.py · inferred r149
+
 ## Motivation
 
 Architecture review 14 measured the gate list against the Part that

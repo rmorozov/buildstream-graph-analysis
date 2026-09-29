@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-211 (the fragment channel), UX-216 (the element object) | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-211` put the *view* in the link — filters, thresholds, sort,

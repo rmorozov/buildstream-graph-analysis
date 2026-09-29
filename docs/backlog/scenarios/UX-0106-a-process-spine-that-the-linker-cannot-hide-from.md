@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done (reopened by round 12, closed by UX-144) | **Depends on:** UX-105 (the ground-truth census), UX-11/UX-23/UX-56 (the shim chain, all done) | **Topic:** capture | **Area:** tools/native_trace
 
+**Guard:** test_process_spine.py · inferred r149
+
 Direction 4's core — the mechanism argument and the alternatives table
 (acct, CN_PROC, eBPF, polling, fanotify — each weighed and rejected)
 live in [`design/directions.md`](../../design/directions.md).

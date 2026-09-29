@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-394 (the cross-run controls, filed at two runs), UX-316 (the store exhibit) | **Serves:** the CI owner whose store holds a hundred runs | **Topic:** viewer
 
+**Guard:** test_the_store_section_takes_a_window.py, test_the_report_you_can_attach.py · inferred r149
+
 ## Motivation
 
 A store of N copies of the ex06 snapshot, served by `bga view`:

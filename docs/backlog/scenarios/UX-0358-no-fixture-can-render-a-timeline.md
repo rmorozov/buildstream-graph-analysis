@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-298 (the timeline speaks Perfetto), UX-299 (a handoff that carries the trace), UX-348 (the two capabilities, made visible) | **Serves:** every future round that has to believe the Perfetto handoff works | **Topic:** guards
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-348` moved the Perfetto handoff up the page, gave it a lead

@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-341 (one unit per dimension), UX-215 (the element object) | **Serves:** a reader following a role to the payload that answers it | **Topic:** docs
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Found by review 5, checklist item 2 - *the review asks whether the

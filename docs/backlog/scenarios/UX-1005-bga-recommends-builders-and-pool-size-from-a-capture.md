@@ -1,6 +1,8 @@
 # UX-1005: bga recommends a builder count and a pool size from a capture, and the critical path gets the next token
 
-**Priority:** High | **Status:** 🟡 In Progress | **Depends on:** UX-1004, UX-1003 | **Found by:** Ruslan on the jobserver batch thread (2026-09-24): whether to oversubscribe BuildStream's builders or native `max-jobs` depends on graph shape and the machine, and there is no rule for it | **Serves:** R5, R4 (a single-machine deployment sized from its own readings) | **Topic:** analysis | **Area:** unassigned | **Shape:** judgement
+**Priority:** High | **Status:** 🟡 In Progress | **Depends on:** UX-1004, UX-1003 | **Found by:** Ruslan on the jobserver batch thread (2026-09-24): whether to oversubscribe BuildStream's builders or native `max-jobs` depends on graph shape and the machine, and there is no rule for it | **Serves:** R5, R4 (a single-machine deployment sized from its own readings) | **Topic:** analysis | **Area:** unassigned | **Shape:** judgement | **Reading:** container
+
+**Guard:** test_the_admission_broker_ranks_by_slack.py · inferred r149
 
 ## Motivation
 

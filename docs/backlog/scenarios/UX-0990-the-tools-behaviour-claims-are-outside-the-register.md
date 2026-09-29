@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-940 | **Blocks:** — | **Found by:** round 138 — enumerating `bga/`'s versioned claims for `UX-940` | **Serves:** whoever reads a BuildStream behaviour claim in the capture tools and has to decide whether it still holds on the pinned binary | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_the_register_is_terse.py · inferred r149
+
 ## Motivation
 
 `UX-940` put every BuildStream behaviour claim in `bga/` into

@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-288 | **Serves:** R1 and R7 | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** test_one_table_many_views.py · inferred r149
+
 ## Motivation
 
 Filed from Direction 14, and the half of it the reader sees.

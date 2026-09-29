@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Found by:** architecture review 7, checklist item 4 | **Serves:** anyone with more than one snapshot in a store | **Topic:** docs
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-394` gave the served page a run selector: `bga view` builds any

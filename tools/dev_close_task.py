@@ -36,8 +36,13 @@ sys.path.insert(0, str(REPO / "tools"))
 import _close_task_checks as checks
 
 SCENARIOS = REPO / "docs/backlog/scenarios"
+TESTS_ROOT = REPO / "tests"
 INDEX = SCENARIOS / "README.md"
 CLOSED = SCENARIOS / "closed.md"
+#: UX-938: fixed at import, unlike `REPO` - a test that monkeypatches
+#: `REPO` to a synthetic repo (`UX-935`) has no `.github` of its own,
+#: and the CI job list is this repository's, not a sandbox's.
+CI_YML = pathlib.Path(__file__).resolve().parents[1] / ".github/workflows/ci.yml"
 
 #: `UX-497`'s budget, printed under the skeleton so a session sees it
 #: while writing rather than when the guard reds. One copy:
@@ -693,6 +698,77 @@ def with_shape(text, shape):
     return text
 
 
+#: UX-938: the environment whose reading settles a clause - the
+#: development container, a named `ci.yml` job, an owner's machine, or
+#: filed unpayable with the reason. The value runs to end of line, so
+#: `owner:` and `unpayable:` may carry spaces.
+_READING = re.compile(r"\*\*Reading:\*\*\s*(.+)")
+_READING_HEADER = re.compile(r"\s*\|\s*\*\*Reading:\*\*.*")
+#: UX-938 is the first row this convention applies from (`UX-497`'s
+#: precedent: a cap dates from the row that added it, not backfilled).
+READING_FROM = 938
+
+
+def header_reading(text):
+    """The `**Reading:** ...` a task file declares, from its first 8 lines."""
+    found = _READING.search("\n".join(text.splitlines()[:8]))
+    return found.group(1).strip() if found else None
+
+
+def with_reading(text, reading):
+    """The header line carrying `**Reading:** reading`, replaced or appended."""
+    lines = text.splitlines(keepends=True)
+    for i, line in enumerate(lines[:8]):
+        if line.startswith("**Priority:**"):
+            body = _READING_HEADER.sub("", line.rstrip("\n"))
+            lines[i] = f"{body} | **Reading:** {reading}\n"
+            return "".join(lines)
+    return text
+
+
+def ci_jobs():
+    """The top-level job names under `jobs:` in `ci.yml`."""
+    text = CI_YML.read_text(encoding="utf-8")
+    body = text.split("\njobs:\n", 1)[1]
+    return set(re.findall(r"^  ([a-z][\w-]*):$", body, re.M))
+
+
+def reading_problems():
+    """UX-938: an open row at `UX-938` or later names a takeable reading.
+
+    `container`, a `runner:<job>` under `ci.yml`'s `jobs:`, an
+    `owner:<machine>` naming one, or `unpayable:<reason>` naming one -
+    anything else, including no field at all, reds.
+    """
+    jobs = ci_jobs()
+    found = []
+    for number in open_uids():
+        if number < READING_FROM:
+            continue
+        try:
+            path = task_file(f"UX-{number}")
+        except SystemExit:
+            continue
+        reading = header_reading(path.read_text(encoding="utf-8"))
+        if reading is None:
+            found.append(f"UX-{number}: no Reading field")
+        elif reading == "container":
+            pass
+        elif reading.startswith("runner:"):
+            job = reading[len("runner:"):].strip()
+            if job not in jobs:
+                found.append(f"UX-{number}: runner job {job!r} is not "
+                            "under ci.yml's jobs:")
+        elif reading.startswith("owner:") or reading.startswith("unpayable:"):
+            _, _, rest = reading.partition(":")
+            if not rest.strip():
+                found.append(f"UX-{number}: {reading!r} names no reason")
+        else:
+            found.append(f"UX-{number}: Reading {reading!r} names neither "
+                        "an environment nor a reason")
+    return found
+
+
 def open_uids():
     text = INDEX.read_text(encoding="utf-8") if INDEX.exists() else ""
     return [int(m.group(1)) for line in text.splitlines()
@@ -744,6 +820,10 @@ CHECKS = (
      "Decomposition", lambda: decomposition_problems()),
     ("every id names one task file, and its heading names that id",
      lambda: checks.id_problems(SCENARIOS, REPO)),
+    ("every open row at UX-938 or later names where its Acceptance "
+     "Test's reading is taken", lambda: reading_problems()),
+    ("every task file names its guard, and the guard exists (UX-1092)",
+     lambda: checks.guard_problems(SCENARIOS, TESTS_ROOT)),
 )
 
 

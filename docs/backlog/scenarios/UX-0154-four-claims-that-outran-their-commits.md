@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-136, UX-138, UX-141 (the logs this corrects) | **Topic:** docs
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The round-15 review diffed round 14's landings against what their logs

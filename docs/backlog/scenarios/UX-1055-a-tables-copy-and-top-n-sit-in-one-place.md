@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-1042 | **Found by:** UX-1042's guard (round 143), styleguide §3l | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** bounded
 
+**Guard:** test_pointer_travel_is_a_budget.py, test_the_page_has_a_volume_budget.py · inferred r149
+
 ## Motivation
 
 UX-1042's placement clause, every chapter open, offset read against the

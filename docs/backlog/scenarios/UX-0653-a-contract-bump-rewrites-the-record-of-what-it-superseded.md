@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-247 (which built the log this rewrites) | **Found by:** architecture review 16 | **Serves:** anyone reading the verification log to find out what was checked, and when | **Topic:** docs
 
+**Guard:** test_the_verification_log_is_true.py, test_the_process_documents_derive_their_figures.py, test_no_document_serves_a_retired_contract.py · inferred r149
+
 ## Motivation
 
 `architecture.md`'s Verification Log is a stack of dated records: each

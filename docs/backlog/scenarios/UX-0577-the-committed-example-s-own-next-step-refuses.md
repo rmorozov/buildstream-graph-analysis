@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-78 (the run-mode refusal), UX-330 (the planted store) | **Serves:** the stranger who follows the README's second command | **Topic:** store | **Area:** bga
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `examples/06-macro-micro-optimization/.bga/runs/` holds a cold run

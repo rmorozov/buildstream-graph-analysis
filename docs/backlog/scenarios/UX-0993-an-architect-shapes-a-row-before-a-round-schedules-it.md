@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-706 | **Blocks:** UX-994 | **Found by:** round 139 — Ruslan in the project thread, 2026-09-23 14:44, answering the workflow review ([doc](https://claude.ai/code/artifact/7f65768e-b4bb-405a-b3e1-90a672a249f5)) | **Serves:** every round's planning, and the implementer tracks a judgement row never reaches | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** test_the_agent_configuration_holds.py
+
 ## Motivation
 
 Judgement rows go to the orchestrating session, which also sequences,

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-537` (the document half, closed), `UX-264` (the shared shim), `UX-235` and `UX-262` (two defects this shape produced) | **Found by:** `UX-537`, whose scope was the document | **Serves:** the round that trusts a shim | **Topic:** guards
 
+**Guard:** test_one_click_from_investigation.py, test_the_arrows_say_why_now.py, test_focus_is_an_investigation.py · inferred r149
+
 ## Motivation
 
 `UX-537` moved all 54 hand-built `document` objects onto the shared

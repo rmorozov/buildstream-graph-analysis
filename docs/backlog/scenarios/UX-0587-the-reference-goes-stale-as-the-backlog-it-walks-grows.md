@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-420 (the reference), UX-488 (the re-record), UX-496 (one run bakes in one sample), UX-503 (the adopt job) | **Found by:** round 83's own CI, blocking PR #200 | **Serves:** every round that files rows | **Topic:** guards
 
+**Guard:** test_docs_links_and_commands.py
+
 ## Motivation
 
 Round 83's second CI run reddened `test (3.11)` on the tier-drift gate,

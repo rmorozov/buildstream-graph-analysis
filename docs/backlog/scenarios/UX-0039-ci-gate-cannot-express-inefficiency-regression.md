@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-01, UX-02, UX-03 (all done - this changes what the gate they built measures), UX-27 (the metric it needs), UX-40 (the confidence rule that currently disables it) | **Topic:** analysis | **Area:** bga
 
+**Guard:** test_efficiency_gate.py, test_efficiency_gate_exit_codes.py · inferred r149
+
 ## Motivation
 
 `UX-03`'s gate is deliberately single-metric: `regression_exceeds_threshold` compares `total_duration_us` against `_SIGNIFICANCE_PCT = 1`. Its own docstring argues the choice well - "did the build get slower" is the natural top-level question, and reusing the verdict's own metric means the gate fires exactly when a human reading the report would agree.

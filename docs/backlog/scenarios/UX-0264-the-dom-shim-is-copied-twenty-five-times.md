@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-263 | **Serves:** all, through every viewer guard | **Topic:** guards
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Every viewer guard boots the shipped modules against a hand-rolled DOM

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-324 (the refuse-before-writing precedent) | **Serves:** R1, on a mistyped path | **Topic:** capture | **Area:** tools
 
+**Guard:** test_a_project_flag_names_a_project.py · inferred r149
+
 ## Motivation
 
 Found through the round-64 walker's own mistyped relative path: with

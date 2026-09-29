@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-288 (the one-population rule), UX-285 (the grouping that moved without merging) | **Serves:** anyone reading the run's identity, or the rail | **Topic:** viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The duplication census over the cold export (35 tables, 338 distinct

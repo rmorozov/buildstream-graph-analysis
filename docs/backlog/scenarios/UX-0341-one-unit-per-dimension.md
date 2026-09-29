@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-201 (the schema says what things are), UX-215 (which added `kilobytes` deliberately) | **Serves:** every payload consumer, and the reader comparing two numbers | **Topic:** contracts
 
+**Guard:** test_golden.py · inferred r149
+
 ## Motivation
 
 `QUANTITIES` has nine members and three of the dimensions it covers are

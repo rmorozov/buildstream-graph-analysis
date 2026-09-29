@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-91 (Plane 3 exists) | **Topic:** analysis | **Area:** tools
 
+**Guard:** test_cache_logs.py · inferred r149
+
 Direction 3, item 1 (first half) — see
 [`design/directions.md`](../../design/directions.md).
 

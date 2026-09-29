@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-239 (the context map this sits under) | **Serves:** every session's first ten minutes | **Topic:** docs
 
+**Guard:** test_the_agent_configuration_holds.py
+
 ## Motivation
 
 The context map (fixing guide §6) says which directory owns what and

@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Found by:** round 70, scoping `UX-433` against `UX-368`'s rule | **Serves:** the reader who has picked an element and wants to know what it is made of | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** test_the_build_pivots_by_program.py, test_the_provenance_names_its_rule.py · inferred r149
+
 ## Motivation
 
 `UX-433` built the pivot — cpu, wall and peak RSS per **program**, on

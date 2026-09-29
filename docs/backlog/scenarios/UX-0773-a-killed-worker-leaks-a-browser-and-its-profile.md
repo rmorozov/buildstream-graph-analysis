@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Serves:** the session whose next `make test` reds on disk, on a tree nobody touched | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** test_a_killed_browser_does_not_outlive_the_worker.py
+
 ## Motivation
 
 `tests/browser.py` keeps one Chrome per worker per session in

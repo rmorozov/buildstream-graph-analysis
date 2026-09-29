@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-694 (the baseline, whose second half this is), UX-418 (the reference method) | **Found by:** round 95, splitting UX-694 into two tracks | **Serves:** the refactor stream (`UX-695`), which reads the top row of this ledger and today has no ledger to read | **Topic:** guards | **Area:** unassigned | **Shape:** bounded
 
+**Guard:** test_the_size_ledger_only_shrinks.py, test_the_context_map_is_the_tree.py · inferred r149
+
 ## Motivation
 
 `UX-694` landed the baseline: 299 findings by identity over `bga/`,

@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the snapshot and view performance audit on `39d89d4` (2026-09-28) | **Serves:** anyone opening a run of a few thousand elements | **Topic:** analysis | **Area:** bga | **Shape:** mechanical
 
+**Guard:** test_reachability_is_one_closure.py
+
 ## Motivation
 
 `compute_reachability` (`bga/graph/edg.py:219`) builds a `set` per

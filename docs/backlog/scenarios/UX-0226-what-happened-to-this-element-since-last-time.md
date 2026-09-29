@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-215 (the per-element row), UX-221 (per-element deltas), UX-203 (the store the trend already reads) | **Topic:** viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The loop ends on a question the tool does not answer:

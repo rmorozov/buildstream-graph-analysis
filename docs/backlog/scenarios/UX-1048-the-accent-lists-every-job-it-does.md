@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the second styleguide audit (2026-09-27), styleguide §4.2, §4.7, §6e.5, §2d | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `grep -n 'var(--accent' bga/viewer/style.css` at `814a2db8`:

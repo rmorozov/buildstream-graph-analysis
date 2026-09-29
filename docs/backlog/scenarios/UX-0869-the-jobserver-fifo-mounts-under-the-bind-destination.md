@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-841, UX-846 | **Found by:** round 121, the user (a real project under a junction, GNU Make 4.4 on the host) | **Serves:** R2 (a cmake element builds under the mode on a project that is not under /tmp) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** mechanical
 
+**Guard:** test_bwrap_shim.py
+
 ## Motivation
 
 `open_jobserver` makes the FIFO under the trace's bind dir, which lives

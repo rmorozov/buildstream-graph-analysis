@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-202 (the overview it compresses), UX-204 (the investigate transport the actions ride) | **Topic:** viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The round-23 external review's verdict, confirmed against the code:

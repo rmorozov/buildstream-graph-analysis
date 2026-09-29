@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-206 (whose acceptance these were), UX-202 | **Topic:** guards
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Round 21's dominant finding was guards that cannot fail. Round 23's

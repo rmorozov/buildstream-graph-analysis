@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-618 (which would have named them), UX-418 (the backstop) | **Found by:** round 84, on three consecutive commits | **Serves:** every session whose PR goes red for no reason it can find | **Topic:** guards
 
+**Guard:** test_the_loop_stays_fast.py · inferred r149
+
 ## Motivation
 
 **Round 85 corrected this filing. Two of its four evidence lines were

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-226 (the sparkline this generalizes), UX-205 (the thresholds the strip drives), UX-234 (the published percentiles) | **Serves:** R1, R7 | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The user's second and fourth asks, adopted by styleguide §2: series

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-707 (the rebuild count) | **Serves:** the orchestrating session, whose live context is what every rebuild re-buys | **Topic:** docs | **Area:** tools | **Shape:** judgement
 
+**Guard:** test_the_agent_configuration_holds.py · inferred r149
+
 ## Motivation
 
 Round 94 attributed this session's tokens to the tools whose results

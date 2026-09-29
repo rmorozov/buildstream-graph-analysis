@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** — (independent, touches `UX-20`'s existing code) | **Topic:** analysis
 
+**Guard:** test_batch_zero_savings_filtering.py, test_golden.py · inferred r149
+
 ## Motivation
 
 Found in the same real walkthrough as `UX-25` (`bga analyze` against a fresh real `examples/05-cmake-cpp-toolchain` capture). Real output from `UX-20`'s batch/map-reduce reporting:

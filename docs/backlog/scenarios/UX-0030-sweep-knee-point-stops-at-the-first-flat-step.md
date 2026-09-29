@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Topic:** analysis | **Area:** bga/replay
 
+**Guard:** test_sweep_knee_point.py · inferred r149
+
 ## Motivation
 
 `bga sweep` exists to answer "how many builders is enough?" - `README.md` says so in those words. Real run, `examples/05-cmake-cpp-toolchain` captured at `--builders 4 --max-jobs 4` on a 4-core host:

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-09` | **Topic:** analysis
 
+**Guard:** test_capacity_model_note.py · inferred r149
+
 ## Motivation
 
 `bga/floors/capacity.py:54-77`'s `compute_capacity_lower_bound` computes `LB = max_p(work_us // capacity_p)` over each non-exclusive resource, where `capacity["PROCESS"]` comes from `resource_capacities.PROCESS` (`tools/bst_extract_run.py:325`, `= builders`). This is a correct, defensible implementation of spec Part 16's own LB definition - it's not a math bug. But `UX-09` proved that "PROCESS capacity" as `bga` models it (BuildStream's own element-dispatch limit) and "real host CPU capacity" (what actually gates a `make -jN` process's speed) are two different things that can diverge sharply - and the report never says which one `LB`/`Certified Headroom` is measured against.

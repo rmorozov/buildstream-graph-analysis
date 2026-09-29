@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-712 (the ledger), UX-418 (`--shrink`'s shape) | **Found by:** round 109, retro-verifying round 102 | **Serves:** the refactor that shrinks a function and cannot bank it | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
+**Guard:** test_the_size_ledger_only_shrinks.py · inferred r149
+
 ## Motivation
 
 `tools/dev_sizes.py` `do_adopt` computes the merged reference, then

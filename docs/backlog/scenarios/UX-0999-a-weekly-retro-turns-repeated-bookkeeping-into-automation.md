@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-998 | **Blocks:** — | **Found by:** round 139 — Ruslan in the project thread, 2026-09-23 15:11: "for any kind of bureaucracy automation is always is right way to solve the problem" | **Serves:** every later round, through the bookkeeping it no longer files | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The run ledger's friction column is free prose: 276 of 350 rows fit none

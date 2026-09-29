@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-1068 | **Found by:** the owner's #298 re-review at 156d7436, finding 1 | **Serves:** anyone sharing a private capture with an outside reader | **Topic:** store | **Area:** bga | **Shape:** mechanical
 
+**Guard:** none — named test_a_short_numeric_credential_pseudonymizes.py, absent from tests/
+
 ## Motivation
 
 `_value()` keeps every digit-only value of at most six characters

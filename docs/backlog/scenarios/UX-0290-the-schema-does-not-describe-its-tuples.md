@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-201 | **Serves:** R7 and R8 — reading a column header | **Topic:** contracts | **Area:** bga/viewer
 
+**Guard:** test_the_structural_block_is_reachable.py · inferred r149
+
 ## Motivation
 
 `structural.bottleneck.high_fanin_elements` is `[["app.bst", 8], …]` —

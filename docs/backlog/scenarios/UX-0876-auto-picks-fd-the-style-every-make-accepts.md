@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-841, UX-874 | **Found by:** round 123, the user (a cmake element whose sandbox-built cmake runs /usr/sysroot/bin/make, GNU Make 4.4 on the host) | **Serves:** R2 (a project builds under --jobserver auto whatever makes its sandboxes ship) | **Topic:** capture | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_the_jobserver_fifo_has_a_lifecycle.py
+
 ## Motivation
 
 `jobserver_auth_style("auto")` picks `fifo:` from the **host**

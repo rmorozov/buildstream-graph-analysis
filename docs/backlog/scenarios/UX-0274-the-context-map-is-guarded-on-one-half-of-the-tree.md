@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-239 | **Serves:** the maintainers | **Topic:** guards
 
+**Guard:** test_the_context_map_is_the_tree.py, test_the_front_door_is_current.py · inferred r149
+
 ## Motivation
 
 Found by review 2 (`UX-241`), and it is `UX-239` recurring in the half

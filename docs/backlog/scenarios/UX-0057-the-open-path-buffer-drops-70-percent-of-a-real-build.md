@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-46` (which introduced the buffer and the `dropped` counter that made this answerable) | **Topic:** capture
 
+**Guard:** test_open_window_flush.py · inferred r149
+
 ## Motivation
 
 Round 5 recorded the hook's per-process path budget as an open question,

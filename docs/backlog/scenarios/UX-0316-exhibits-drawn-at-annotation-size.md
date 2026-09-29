@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-303 (the drawings), styleguide §2a | **Serves:** R1, R3 | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The field pass, verbatim: the blast-radius distribution "is good as

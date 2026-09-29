@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-1069 | **Found by:** the owner's #298 re-review at 156d7436, finding 2 | **Serves:** anyone sharing a private capture with an outside reader | **Topic:** store | **Area:** bga | **Shape:** mechanical
 
+**Guard:** test_the_residue_scan_matches_non_ascii_identifiers.py
+
 ## Motivation
 
 `bundle._WORD = re.compile(r"[a-z0-9]+")`, so `_residue_hits()` cannot

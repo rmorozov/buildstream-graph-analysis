@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-1069 | **Found by:** the architect shaping UX-1069 (2026-09-28) | **Serves:** anyone sharing a large private capture | **Topic:** store | **Area:** bga | **Shape:** judgement
 
+**Guard:** test_the_residue_scan_is_linear.py
+
 ## Motivation
 
 On a 5,000-record plane2 profile, `residue` took 1.8 s of a 2.8 s

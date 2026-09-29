@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-164, UX-166, UX-168 (the landings these trail) | **Topic:** store
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Small, each demonstrated or traced by the round-18 review; none

@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the snapshot and view performance audit on `39d89d4` (2026-09-28) | **Serves:** R5, R1 | **Topic:** capture | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_the_snapshot_tail_analyzes_once.py
+
 ## Motivation
 
 After the build, `_analyze` (`tools/bga_snapshot.py:815`) runs

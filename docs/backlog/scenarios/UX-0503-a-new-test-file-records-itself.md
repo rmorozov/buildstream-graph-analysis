@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-420 (the reference), UX-447 (the refresh route), UX-449 | **Serves:** the session that adds a guard and does not want a second commit for it | **Topic:** guards | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Rounds 66-73, counted from the log:

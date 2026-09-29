@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-199 (a report you can find your way around), UX-374 (the page renames the reader's elements) | **Found by:** round 87, by the owner not knowing where a rail entry led | **Serves:** anyone navigating by the rail rather than by scrolling | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** test_the_rail_says_what_the_heading_says.py · inferred r149
+
 ## Motivation
 
 The rail labels a destination with one string and the destination

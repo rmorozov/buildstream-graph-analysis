@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** none; `UX-466` named the gap and declined to guess at it | **Found by:** round 72, closing `UX-466` stage 3 | **Serves:** the round that wants a signal the hook could already have produced and has no way to know it | **Topic:** capture | **Area:** tools
 
+**Guard:** test_the_capability_census_discriminates.py · inferred r149
+
 ## Motivation
 
 `UX-466` asked three questions and answered two. Its stage 3 was

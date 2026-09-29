@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-847, UX-846 | **Found by:** round 131, [`docs/design/in-step-parallelism.md`](../../design/in-step-parallelism.md) §6 item 2 — reading the ledger to file it showed the timestamp is already on disk, which the document did not know | **Serves:** R2 (the recipe author asking how wide their element actually ran, and when) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement
 
+**Guard:** test_a_per_element_width_series_keeps_its_clock.py
+
 ## Motivation
 
 The jobserver publishes one width series for the whole pool

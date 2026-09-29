@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-193 (the shell), UX-201 (the semantics it leans on), Direction 7 second iteration | **Topic:** viewer
 
+**Guard:** test_golden.py · inferred r149
+
 ## Motivation
 
 The external review's product-level observation, adopted whole: the

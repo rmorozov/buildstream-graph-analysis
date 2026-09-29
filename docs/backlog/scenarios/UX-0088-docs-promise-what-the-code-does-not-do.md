@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-78 (the one behavioral item, filed separately) | **Topic:** docs | **Area:** bga
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 A full claims-vs-reality audit (round 10) checked every substantive

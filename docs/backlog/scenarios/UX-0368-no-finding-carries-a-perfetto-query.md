@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-229 (why bga believes what it believes), UX-312 (the canned question library), UX-348 (the handoff) | **Serves:** anyone who reads a finding and wants to see it in the trace | **Topic:** viewer | **Area:** bga
 
+**Guard:** test_buttons_that_know_why.py · inferred r149
+
 ## Motivation
 
 The tool's distinguishing claim is that it hands a build to Perfetto

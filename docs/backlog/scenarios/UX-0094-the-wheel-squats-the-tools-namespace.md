@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-77 (done) | **Topic:** cli | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 UX-77's fix chose the packaging option its own task file argued

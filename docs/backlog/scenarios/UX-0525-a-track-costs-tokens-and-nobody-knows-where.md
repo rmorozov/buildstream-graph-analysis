@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-504 (the implementer whose runs these are), UX-500 (the measurement round it joins) | **Serves:** the maintainer's subscription | **Topic:** docs | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Round 75 ran three implementer tracks and recorded, for the first

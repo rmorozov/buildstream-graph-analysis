@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-465` stages 1–2 and 4 (a project whose defect is a parameter) · reads `UX-467`'s answer key | **Found by:** round 72, thread 3 of the audit — whether the README and guides flow really lets you spot a real build efficiency problem | **Serves:** the reader who follows the front door end to end and arrives somewhere other than the problem | **Topic:** docs
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Rounds 58, 60 and 69 each walked `bga snapshot → bga view → Perfetto`

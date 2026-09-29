@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-336 (`dev_close_task`, which edits the counts today) | **Serves:** two sessions on one slate; the orchestrator who merges them | **Topic:** docs | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Every track collides on the same lines: the `N scenarios: **M open**`

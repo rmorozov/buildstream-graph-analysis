@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-159 (the phase lines this refines), UX-168/UX-169 (the long analyses this narrates) | **Topic:** cli
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Field feedback, first deployment on big captures: *"some bga commands

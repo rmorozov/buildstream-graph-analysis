@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-223 (the jump box becomes a command palette), UX-640 (which fixed the rail's half) | **Found by:** round 87, track B, from the seam it did not cross | **Serves:** anyone who reaches a section through the palette | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** test_the_rail_says_what_the_heading_says.py · inferred r149
+
 ## Motivation
 
 `UX-640` gave the rail one label authority: an entry now reads what

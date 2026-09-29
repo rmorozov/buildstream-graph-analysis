@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 70, `UX-429` adding four lines to `structured.js` | **Serves:** the next round that adds anything to the viewer's two largest modules | **Topic:** guards | **Area:** bga/viewer
 
+**Guard:** test_the_console_stays_clean.py · inferred r149
+
 ## Motivation
 
 `UX-337` split the viewer along its seams and set a 1,500-line ceiling

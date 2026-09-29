@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-652 (the log's unit), UX-669 (the exclusion) | **Serves:** every round that merges a track and closes a row | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** test_the_verification_log_is_true.py · inferred r149
+
 ## Motivation
 
 `test_nothing_landed_after_the_commit_the_entry_credits` excuses a

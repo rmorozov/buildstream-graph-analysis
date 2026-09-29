@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Serves:** the audit loop itself | **Topic:** guards
 
+**Guard:** test_the_tiers_are_a_partition.py · inferred r149
+
 ## Motivation
 
 The falsify ritual (mutate the mechanism, watch the guard go red,

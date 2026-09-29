@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-33 (the always-print rule this revisits), UX-168 (the synthetic scale fixture this renders) | **Topic:** analysis
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Field feedback: *"let's check that our reports in different formats

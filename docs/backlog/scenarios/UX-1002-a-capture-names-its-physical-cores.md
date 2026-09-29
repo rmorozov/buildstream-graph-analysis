@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-905 | **Found by:** Ruslan on the jobserver batch thread (2026-09-24): the 4-core gain should be measurable, and on `11-serial-giant` twice the busy cores bought `giant.bst` about 7% | **Serves:** R4, R5 (a host class is cores and threads per core, not `nproc`) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement
 
+**Guard:** test_a_capture_names_its_physical_cores.py
+
 ## Motivation
 
 `giant.bst` on the 4-vCPU runner, 2026-09-21 (job 106314552412):

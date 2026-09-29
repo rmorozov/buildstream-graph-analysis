@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-285 | **Serves:** R1 and R7 — reading top to bottom before they know what they want | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** test_the_report_has_chapters.py · inferred r149
+
 ## Motivation
 
 Filed from Direction 13, which was argued from a proposal to make every

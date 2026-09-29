@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-650 (the round that found the count wrong and fixed only the code) | **Serves:** the reader deciding whether chaptering belongs in the schema, on a figure that is 44% low | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** test_the_report_has_chapters.py, test_a_counted_figure_is_derived.py, test_the_process_documents_derive_their_figures.py, test_the_verification_log_is_true.py, test_a_reader_role_demotes.py · inferred r149
+
 ## Motivation
 
 Two documents say nine. The count is thirteen, and the repository

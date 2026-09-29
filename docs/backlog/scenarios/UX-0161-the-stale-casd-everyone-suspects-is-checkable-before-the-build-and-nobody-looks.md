@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-147 (whose item 2 this completes), UX-149 (the probe with the structural blind spot) | **Topic:** capture | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 UX-147 deferred its stale-daemon detection (recorded as a deviation),

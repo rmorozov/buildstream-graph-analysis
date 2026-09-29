@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-248 (the contract set a release records), UX-241 (the review it consumes) | **Serves:** R4 and R8 — who pin something and need to know when it moved | **Topic:** docs
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Direction 10's argument, made operational. Measured today:

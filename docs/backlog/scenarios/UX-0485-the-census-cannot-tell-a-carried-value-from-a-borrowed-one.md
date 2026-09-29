@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** `UX-466` built the census; `UX-469` walked into the limit | **Found by:** round 73, closing `UX-469` | **Serves:** the round that reads a `reached` verdict and believes a field has a carrier of its own | **Topic:** contracts | **Area:** tools
 
+**Guard:** test_every_skip_reason_is_declared.py, test_the_trace_census_reads_both_ends.py · inferred r149
+
 ## Motivation
 
 `tools/dev_trace_coverage.py` matches **values**: a field is `reached`

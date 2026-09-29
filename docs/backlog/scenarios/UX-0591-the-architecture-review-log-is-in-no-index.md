@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-241 (the review cadence), UX-583 (the round history guard) | **Serves:** the reader looking for what the last architecture review decided | **Topic:** docs
 
+**Guard:** test_the_round_history_names_every_audit.py · inferred r149
+
 ## Motivation
 
 `docs/audits/architecture-review.md` is 45,132 B and thirteen reviews

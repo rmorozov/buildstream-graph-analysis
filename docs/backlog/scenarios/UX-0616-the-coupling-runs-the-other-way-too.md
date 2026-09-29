@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-607 (which fixed one direction and measured this one) | **Found by:** round 84, by the track that fixed the forward direction | **Serves:** anyone adding a paragraph to the rules card | **Topic:** docs
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-607` bucketed the *guide's* size to a 10 KB width, taking its

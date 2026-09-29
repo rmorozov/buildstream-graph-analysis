@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Fixed & Verified | **Depends on:** — | **Serves:** every session, human or LLM, in its first minute | **Topic:** docs
 
+**Guard:** test_the_context_map_is_the_tree.py · inferred r149
+
 ## Motivation
 
 `docs/contributing/fixing-guide.md` section 6 is titled *"Where things

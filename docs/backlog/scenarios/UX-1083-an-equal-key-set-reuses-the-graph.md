@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-1082 | **Found by:** the snapshot and view performance audit on `39d89d4` (2026-09-28) | **Serves:** R5, R8 | **Topic:** capture | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_an_equal_key_set_reuses_the_graph.py
+
 ## Motivation
 
 After every build `extract_run` runs `bst show --deps all` for

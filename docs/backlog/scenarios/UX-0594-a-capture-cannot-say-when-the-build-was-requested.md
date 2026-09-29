@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-234 (the store as a distribution), UX-581 | **Serves:** R6, the contributor waiting on a verdict | **Topic:** capture
 
+**Guard:** test_help_is_short.py · inferred r149
+
 ## Motivation
 
 Direction 9's first argued step, and the reason R6 is the one role

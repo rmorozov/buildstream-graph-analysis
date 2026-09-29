@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-215 (the join it renders), UX-208 (the affordance it repairs), UX-199 (anchors) | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 **Clause 1 is a live defect, and it is mine.** `UX-208` gave every row

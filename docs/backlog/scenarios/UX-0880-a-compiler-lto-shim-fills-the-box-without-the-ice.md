@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-878, UX-879 | **Found by:** round 125's Standing + the user (a pinned ≤4.2.1 element that *does* LTO on the cross-gcc-13 still ICEs under a forced `fd` — round 125's documented caveat) | **Serves:** R2 (an element that does GCC LTO fills the pool under the jobserver without crashing lto-wrapper) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** bounded
 
+**Guard:** test_a_run_is_priced.py, test_a_compiler_lto_shim_fills_the_box.py · inferred r149
+
 ## Motivation
 
 UX-879 lets the operator force `fd` on a pinned ≤4.2.1 element so it fills

@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-126 (snapshot's auto-compare), UX-78 (the refusal grammar this extends) | **Topic:** analysis
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Round 16 reproduced the exact session the user is about to have — a

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-367 (the per-class bound table), UX-830 (which last moved it) | **Found by:** review 23 | **Serves:** anyone reading §3e's table for "what is the current bound" rather than its history | **Topic:** viewer | **Area:** bga-viewer | **Shape:** judgement
 
+**Guard:** test_the_page_has_a_volume_budget.py
+
 ## Motivation
 
 `docs/design/styleguide.md`'s §3e carries two reference tables ("to 50

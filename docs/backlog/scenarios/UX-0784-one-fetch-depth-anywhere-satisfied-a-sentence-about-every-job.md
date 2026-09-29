@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-781 (the clause this extends), UX-637 (the sweep) | **Serves:** the round whose gate is green on four jobs and red on the fifth | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** test_a_guard_that_reads_history_declares_its_depth.py
+
 ## Motivation
 
 `UX-781` fixed `ci.yml`'s base-diff step and shipped with a Deviation

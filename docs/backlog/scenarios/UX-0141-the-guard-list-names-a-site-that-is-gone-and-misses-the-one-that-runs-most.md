@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-128, UX-130 (done — this is their seam) | **Topic:** guards
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 UX-130 deleted UX-128's `initial` restart site (SEIZE has no

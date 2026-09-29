@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-670 (which measured it) | **Serves:** anyone who clicks a rail entry into a nested block | **Topic:** viewer | **Shape:** judgement | **Area:** bga/viewer
 
+**Guard:** test_a_rail_click_lands_on_its_section.py · inferred r149
+
 ## Motivation
 
 Two of the rail's targets are not sections. Measured on

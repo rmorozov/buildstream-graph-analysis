@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-83 (Plane 2 into capacity advice), UX-104 (memory envelope), UX-14 (the contention caveat), UX-31 (pinning detection) | **Topic:** analysis
 
+**Guard:** test_capacity_recommendation.py · inferred r149
+
 ## Motivation
 
 UX-09 — the question `examples/05` was built for, in the first week of

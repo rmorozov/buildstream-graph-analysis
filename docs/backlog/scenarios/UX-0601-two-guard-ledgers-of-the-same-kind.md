@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-582 (§7's ledger), UX-585 (the card's markers) | **Serves:** the next session asked to add a rule and its guard | **Topic:** docs
 
+**Guard:** test_the_process_documents_derive_their_figures.py, test_a_guard_ledger_names_its_link.py · inferred r149
+
 ## Motivation
 
 Round 83 built the same thing twice, three days apart in the same

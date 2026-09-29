@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-91 (the multi-build log tree), UX-92 (invalidation roots); UX-93 sharpens the cause labels | **Topic:** analysis | **Area:** tools
 
+**Guard:** test_cache_logs.py · inferred r149
+
 Direction 3, item 2 — see
 [`design/directions.md`](../../design/directions.md).
 

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-233 (the log), UX-582 (the same shape, found twice) | **Serves:** the round whose log entry says nothing and passes | **Topic:** guards
 
+**Guard:** test_the_verification_log_is_true.py · inferred r149
+
 ## Motivation
 
 `test_the_verification_log_is_true.py::test_the_entry_says_what_it_was_grounded_in`

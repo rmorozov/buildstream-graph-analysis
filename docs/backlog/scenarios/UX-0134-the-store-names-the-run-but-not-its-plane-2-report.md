@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-126 (the store), UX-51 (`bga correlate`) | **Topic:** store | **Area:** bga
 
+**Guard:** none — no guard named at close
+
 Filed while revising the docs after `UX-126` landed, from the sentence
 the CLI reference could not write without an apology.
 

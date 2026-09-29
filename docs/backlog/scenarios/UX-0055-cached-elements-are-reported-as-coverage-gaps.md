@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-54` (done — which gave `bga` the build-outcome signal this fix needs) | **Topic:** analysis
 
+**Guard:** test_run_mode_and_cached_coverage.py · inferred r149
+
 ## Motivation
 
 Found in round 6, on the first successful real capture of a real

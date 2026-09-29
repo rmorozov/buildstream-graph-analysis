@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-274 (the guard), UX-491/UX-476 (the sentences) | **Serves:** the reader who trusts a guarded sentence because it is guarded | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** test_the_context_map_is_the_tree.py · inferred r149
+
 ## Motivation
 
 `UX-274`'s third clause put a guard on the context map so it would

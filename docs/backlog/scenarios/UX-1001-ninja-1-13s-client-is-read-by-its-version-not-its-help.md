@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-843, UX-846, UX-878 | **Found by:** `UX-905`'s fdsdk auto arm (run 35965495279, 2026-09-24): `Found ninja-1.13.2 at /tmp/.bst-native-trace/wrappers/ninja`, then `lto-wrapper: warning: using serial compilation of 16 LTRANS jobs` on every git-minimal link, and a stall there | **Serves:** R2, R5 (a meson element on a current ninja joins the pool instead of starving it) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement
 
+**Guard:** test_a_ninja_client_is_read_by_version.py
+
 ## Motivation
 
 `probe_ninja` and the wrapper's own check both call ninja a client only

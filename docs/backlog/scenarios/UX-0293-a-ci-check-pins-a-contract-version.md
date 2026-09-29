@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-276 | **Serves:** R8 — whoever has to trust a green build | **Topic:** guards
 
+**Guard:** test_a_check_does_not_pin_a_contract.py · inferred r149
+
 ## Motivation
 
 `UX-288` moved `analyze/v1` to `analyze/v2`. That was the point of the

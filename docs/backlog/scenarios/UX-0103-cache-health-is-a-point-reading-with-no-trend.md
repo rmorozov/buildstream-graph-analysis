@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done — with one deviation from the acceptance's arithmetic, recorded below | **Depends on:** UX-92 (per-run accounting), UX-96 (the baseline/refs fetch helper), UX-93 (honest churn labels first) | **Topic:** store | **Area:** bga
 
+**Guard:** test_cache_trend.py · inferred r149
+
 Direction 3, item 4 — and the trend stage UX-92 explicitly deferred.
 See [`design/directions.md`](../../design/directions.md).
 

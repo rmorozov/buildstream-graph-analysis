@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** `UX-535` (whose refresh carried the drift), `UX-302` (the golden snapshot's rule) | **Found by:** `UX-535`, refreshing the fixture for a contract bump | **Serves:** the round that reads a fixture diff to check its own change | **Topic:** guards | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `tools/dev_refresh_analysis.differences()` loads both sides with

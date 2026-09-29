@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-598 (the distributions published), UX-343 (their quantities) | **Found by:** round 115, the design review | **Serves:** R3 reading a graph's shape; the owner asking for deciles | **Topic:** analysis | **Area:** bga | **Shape:** judgement
 
+**Guard:** test_one_unit_per_dimension.py, test_a_distribution_twin_draws_every_mark.py · inferred r149
+
 ## Motivation
 
 `analyzer.distribution()` publishes `n, min, max, deciles p10..p90, p95,

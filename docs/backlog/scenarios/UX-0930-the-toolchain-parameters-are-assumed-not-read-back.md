@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-914 | **Blocks:** UX-925 | **Found by:** `UX-925` — its `-B`/`--sysroot` route names a silent-fallback hazard and owes two readings | **Serves:** every example, and the comparison class a `variant` dimension names | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_the_toolchain_parameters_are_read_back.py
+
 ## Motivation
 
 `UX-925` proposes not relocating the pinned toolchain but

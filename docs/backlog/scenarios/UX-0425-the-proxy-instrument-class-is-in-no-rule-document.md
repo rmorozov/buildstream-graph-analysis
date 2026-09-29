@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 67, a backlog-wide sweep run while filing `UX-423` | **Serves:** the next contributor, before they build the instrument rather than after | **Topic:** docs
 
+**Guard:** test_docs_links_and_commands.py, test_the_agent_configuration_holds.py
+
 ## Motivation
 
 A sweep of `docs/backlog/scenarios/` (423 files), `tests/`, `tools/`,

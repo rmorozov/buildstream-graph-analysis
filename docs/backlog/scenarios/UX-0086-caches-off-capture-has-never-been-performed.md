@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-81 (done), UX-55 (done) | **Topic:** capture | **Area:** bga
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Round 9's honest gap, still open and still admitted in three documents:

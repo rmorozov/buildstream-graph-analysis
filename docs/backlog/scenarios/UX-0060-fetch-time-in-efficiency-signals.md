@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-53` (done — which made the duration definition single, and made this the remaining question) | **Topic:** analysis
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Two tasks have now stopped at the same line and declined to cross it.

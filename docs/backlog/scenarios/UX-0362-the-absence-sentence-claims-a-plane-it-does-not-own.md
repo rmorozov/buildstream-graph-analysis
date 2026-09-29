@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-329 (the absence grammar, split), UX-358 (the fixture that found it) | **Serves:** anyone reading a Plane 1 capture's report | **Topic:** viewer | **Area:** bga
 
+**Guard:** test_the_handoff_has_a_fixture.py
+
 ## Motivation
 
 `UX-329` split the Plane 2 absence into three sentences so a reader

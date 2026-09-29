@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-136 (ci-comment's YAML must teach the current flow before it becomes the landing page) | **Topic:** docs
 
+**Guard:** none — no guard named at close
+
 Docs polish round (round 14); full navigation assessment in
 [`round-14`](../../audits/round-14.md).
 

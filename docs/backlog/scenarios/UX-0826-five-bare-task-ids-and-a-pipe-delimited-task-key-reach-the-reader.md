@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-669 (the rule), UX-824 (the guard) | **Found by:** round 115, the design review | **Serves:** every reader of a finding | **Topic:** analysis | **Area:** bga | **Shape:** mechanical
 
+**Guard:** test_a_shadowed_checkout_warns_at_startup.py, test_capacity_recommendation.py · inferred r149
+
 ## Motivation
 
 Four sentences in the analysis carry a task id in parentheses and one

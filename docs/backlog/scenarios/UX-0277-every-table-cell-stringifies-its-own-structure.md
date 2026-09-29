@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-267 | **Serves:** R1, R7, R8 — everyone who reads the report | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** test_a_table_cell_obeys_the_value_rule.py · inferred r149
+
 ## Motivation
 
 Reported from a real report, three ways: *"there still json output like in

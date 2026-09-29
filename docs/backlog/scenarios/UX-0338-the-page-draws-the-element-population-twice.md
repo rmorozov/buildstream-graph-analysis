@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-289 (one element table, many presets — this is its unfinished half), UX-215 (the join that added the second table), UX-329 (which made it visible) | **Serves:** R1 — whoever reads the page | **Topic:** viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-289` settled it: **one element table, many presets.** `UX-215`

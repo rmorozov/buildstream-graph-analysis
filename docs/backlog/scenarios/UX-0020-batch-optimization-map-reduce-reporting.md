@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** none | **Topic:** analysis
 
+**Guard:** test_batch_opportunities.py, test_replay.py, test_report_sensitivity.py · inferred r149
+
 ## Motivation
 
 Raised by the user: `bga`'s report concentrates on *one* critical path per run. On a large graph, fixing the single reported bottleneck, re-running `bga analyze`, discovering the *next* bottleneck (which may have been sitting at nearly the same criticality all along, on a different branch), and repeating, could mean many slow iterations - when several independent bottlenecks could often be identified and fixed together in one batch (a "map" over independent findings, then a "reduce" - one combined re-analysis) rather than serially.

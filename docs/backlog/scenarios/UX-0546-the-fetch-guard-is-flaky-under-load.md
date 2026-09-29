@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-521` (which landed the file this round), `UX-538` and `UX-543` (the same species elsewhere) | **Found by:** `UX-530` and `UX-535`, independently | **Serves:** the implementing session, which must be able to believe a red | **Topic:** guards
 
+**Guard:** test_native_build_tracer.py · inferred r149
+
 ## Motivation
 
 `test_the_handoff_says_whether_perfetto_fetched.py` landed this round

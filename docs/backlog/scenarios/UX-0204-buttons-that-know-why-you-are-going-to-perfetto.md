@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-198 (the transport this rides on), UX-194 (the questions it grows), UX-201 (the finding shapes it reads) | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The external review's investigation thesis, adopted: the viewer's

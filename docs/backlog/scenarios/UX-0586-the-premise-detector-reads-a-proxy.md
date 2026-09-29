@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-508 (the process bands), UX-403 (the text-scan shape) | **Serves:** the round that reads the process bands | **Topic:** guards | **Area:** tools
 
+**Guard:** test_the_premise_is_a_declared_field.py, test_the_register_is_terse.py · inferred r149
+
 ## Motivation
 
 ```text

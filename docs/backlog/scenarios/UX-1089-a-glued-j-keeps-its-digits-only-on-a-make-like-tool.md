@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-1084 | **Found by:** the owner's #298 re-review at 76f2179e, finding 2 | **Serves:** anyone sharing a private capture with an outside reader | **Topic:** store | **Area:** bga | **Shape:** mechanical
 
+**Guard:** test_a_glued_j_keeps_its_digits_only_on_a_make_like_tool.py
+
 ## Motivation
 
 `_KEPT_FLAG = ... j\d* ...` accepts a glued `-j<digits>` on any

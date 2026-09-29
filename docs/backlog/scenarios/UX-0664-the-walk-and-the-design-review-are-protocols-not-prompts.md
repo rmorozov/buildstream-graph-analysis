@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-240 (procedures as skills), UX-499 | **Serves:** the orchestrating session paying for an audit | **Topic:** docs
 
+**Guard:** test_the_skills_point_at_the_guides.py
+
 ## Motivation
 
 Rounds 45, 63, 64, 77 and 87 each ran an outsider walk from a prompt

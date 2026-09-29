@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-397 (the JS-dependency decision) | **Serves:** the session editing a viewer module, which today has no linter of any kind | **Topic:** viewer | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** test_the_report_you_can_attach.py, test_the_page_has_a_volume_budget.py · inferred r149
+
 ## Motivation
 
 `bga/viewer/*.js` (12,906 lines, 5 modules over 1,000) has never been

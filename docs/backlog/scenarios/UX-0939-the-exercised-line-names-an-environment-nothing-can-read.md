@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-571 | **Blocks:** — | **Found by:** round 136 — CI's BuildStream moved to 2.8.1 and `bst-tests` went red on `#264`, on `main` and on every open branch, and no session could produce the second reading the line asks for | **Serves:** every branch whose CI runs the bst tier, and the next round that meets a red nobody can measure away | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
+**Guard:** test_the_pinned_bst_is_the_documented_one.py · inferred r149
+
 ## Motivation
 
 `docs/spec/ingestion-pipeline.md` carries the same line twice, once

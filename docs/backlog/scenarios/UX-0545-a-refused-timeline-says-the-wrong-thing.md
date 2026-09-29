@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-530` (which fixed the degraded case), `UX-194` (the dead-control rule), `UX-321` (an absence is a fact to publish) | **Found by:** `UX-530`, whose scope was the degradation | **Serves:** anyone whose capture is over a ceiling | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-530` gave the export a ladder: over a ceiling it carries

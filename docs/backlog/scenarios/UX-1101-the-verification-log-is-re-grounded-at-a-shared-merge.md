@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-1073, UX-1078 | **Found by:** round 150, the integrator's merge seam | **Serves:** whoever reads `architecture.md`'s Verification Log next | **Topic:** contracts | **Area:** bga | **Shape:** mechanical
 
+**Guard:** test_the_verification_log_is_true.py
+
 ## Motivation
 
 UX-1073's own entry credited `d101955`, a commit that does not carry

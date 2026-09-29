@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-64`, `UX-66` (done — which introduced the unresolved bucket this now mistakes for an element) | **Topic:** capture | **Area:** tools
 
+**Guard:** test_redundancy_scoring.py · inferred r149
+
 ## Motivation
 
 `detect_redundant_operations` (`UX-23`) is the one Plane 2 producer that

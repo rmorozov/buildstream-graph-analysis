@@ -206,10 +206,10 @@ class TestTheSelectorRunsBeforeTheCommit:
         test is the decision, which is the part with the mutations."""
         module = _selector_hook()
         ran = []
-        module.selection = lambda: (
+        module.selection = lambda repo: (
             ["tests/unit/test_the_register_is_terse.py"], {})
-        module.selector_is_green = lambda files: (ran.append(files),
-                                                  (False, "planted"))[1]
+        module.selector_is_green = lambda files, repo: (ran.append(files),
+                                                        (False, "planted"))[1]
         return module, ran
 
 
@@ -729,6 +729,29 @@ class TestTheSubagentsAreWellFormed:
         assert "falsify" in body.lower() or "mutation" in body.lower(), (
             "a verifier for this repository that never asks whether a new "
             "guard can fail is checking the wrong thing")
+
+    def test_the_verifier_runs_dev_sizes_check(self):
+        """`r140` bookkeeping: a hand-typed size row passed the verifier
+        once and was held once this round because nothing ran the
+        guard that would have caught it."""
+        body = (AGENTS / "verifier.md").read_text(encoding="utf-8")
+        assert "dev_sizes.py --check" in body, (
+            "verifier.md does not name dev_sizes.py --check, so a "
+            "hand-typed size row passes it")
+
+    def test_the_implementer_runs_the_whole_suite_at_n2(self):
+        """`r140` bookkeeping: `dev_touching.py` selecting the whole
+        suite is a signal to run it, not a licence to hand-pick a
+        subset - two tracks missed three regressions that way."""
+        body = " ".join(
+            (AGENTS / "implementer.md").read_text(encoding="utf-8").split())
+        assert "run the whole suite at" in body and "-n 2" in body, (
+            "implementer.md does not say to run the whole suite at -n 2 "
+            "when dev_touching.py selects it, so a hand-picked subset "
+            "is still an option")
+        assert "never a hand-picked subset" in body, (
+            "implementer.md drops the prohibition on a hand-picked "
+            "subset when dev_touching.py selects everything")
 
     def test_the_researcher_is_told_to_name_what_it_could_not_find(self):
         """Silence reading as "there is none" is how a false premise
@@ -1912,3 +1935,145 @@ class TestATooLongToolResultGoesToAFile:
         text = (SKILLS / "orient/SKILL.md").read_text(encoding="utf-8")
         block = text.split("over a screen", 1)[1][:400]
         assert "head" in block and "grep" in block, block
+
+
+@pytest.fixture(scope="module")
+def _two_trees(tmp_path_factory):
+    """`(main, linked, hook, elsewhere)`: a repo, a `git worktree add` of
+    it, the hook copied under a non-repo home, and a non-repo cwd - so
+    neither the process cwd nor the hook's own path names a checkout."""
+    import shutil
+
+    base = tmp_path_factory.mktemp("worktree-limits")
+    main, linked = base / "main", base / "linked"
+    home, elsewhere = base / "home/.claude/hooks", base / "elsewhere"
+    home.mkdir(parents=True)
+    elsewhere.mkdir()
+    git = ["git", "-c", "user.name=t", "-c", "user.email=t@t"]
+    subprocess.run([*git, "init", "-q", str(main)], check=True)
+    subprocess.run([*git, "-C", str(main), "commit", "-q", "--allow-empty",
+                    "-m", "x"], check=True)
+    subprocess.run([*git, "-C", str(main), "worktree", "add", "-q",
+                    str(linked)], check=True)
+    for name in ("agent_worktree_limits.py", "gate_covers_push.py",
+                 "no_bulk_add.py", "agent-worktree-limits.sh"):
+        shutil.copy(HOOKS / name, home / name)
+    return main, linked, home / "agent_worktree_limits.py", elsewhere
+
+
+def _limits(trees, cwd, command):
+    """`(exit code, stderr)` for the copied hook, run from a non-repo."""
+    _main, _linked, hook, elsewhere = trees
+    done = subprocess.run(
+        [sys.executable, str(hook)], cwd=elsewhere, capture_output=True,
+        text=True, timeout=30,
+        input=json.dumps({"cwd": str(cwd), "tool_input": {"command": command}}))
+    return done.returncode, done.stderr
+
+
+class TestAWorktreeCannotRepointTheInstallOrStartTheSweep:
+    """`UX-1041`: round 142's verifiers repointed the shared `bga` and
+    orphaned ~400 sweep processes; a brief said not to. The hook
+    refuses both from a linked worktree and nowhere else."""
+
+    BANNED = (
+        "pip install -e .",
+        "pip3 install --editable .",
+        "python3 -m pip install -e .",
+        "uv pip install -e .",
+        "make test",
+        "make test-touching",
+        "make test-tiers",
+        "make push-check",
+        "make lint && make test",
+        "PYTEST_XDIST= make test",
+        "python3 tools/dev_touching.py",
+        "tools/dev_touching.py --base HEAD",
+    )
+
+    @pytest.mark.parametrize("command", BANNED)
+    def test_a_linked_worktree_is_refused(self, _two_trees, command):
+        code, said = _limits(_two_trees, _two_trees[1], command)
+        assert code == 2, (command, code, said)
+        assert "UX-1041" in said, said
+
+    @pytest.mark.parametrize("command", BANNED)
+    def test_the_main_checkout_is_not(self, _two_trees, command):
+        code, said = _limits(_two_trees, _two_trees[0], command)
+        assert code == 0, (command, code, said)
+
+    @pytest.mark.parametrize("command", (
+        "pip install ruff",
+        "python3 tools/dev_touching.py --spread",
+        "python3 tools/dev_touching.py --base HEAD --list",
+        "python3 tools/dev_touching.py --base HEAD --why",
+        "python3 tools/dev_touching.py --size",
+        "cat > /tmp/m.txt <<'EOF'\nmake test\npip install -e .\nEOF",
+        "echo 'make test'",
+        "make lint",
+        "make test-small",
+        "python3 -m pytest tests/unit/test_x.py",
+    ))
+    def test_a_linked_worktree_keeps_everything_else(self, _two_trees,
+                                                     command):
+        code, said = _limits(_two_trees, _two_trees[1], command)
+        assert code == 0, (command, code, said)
+
+    def test_a_cwd_in_no_repository_is_allowed(self, _two_trees):
+        code, said = _limits(_two_trees, _two_trees[3], "make test")
+        assert code == 0, (code, said)
+
+    def test_the_declared_entry_blocks(self, _two_trees, monkeypatch):
+        # The declared entry's copy, from a non-repo cwd: only the
+        # payload's cwd names a checkout, even when this suite runs in one.
+        monkeypatch.chdir(_two_trees[3])
+        entry = _two_trees[2].with_name("agent-worktree-limits.sh")
+        done = subprocess.run([str(entry)], capture_output=True, text=True,
+                              timeout=30, input=json.dumps({
+                                  "cwd": str(_two_trees[1]),
+                                  "tool_input": {"command": "make test"}}))
+        assert done.returncode == 2, (done.returncode, done.stderr)
+
+    def test_settings_declares_it_on_bash(self):
+        held = json.loads(SETTINGS.read_text(encoding="utf-8"))
+        commands = [h["command"] for m in held["hooks"]["PreToolUse"]
+                    if m.get("matcher") == "Bash" for h in m["hooks"]]
+        assert any("agent-worktree-limits.sh" in c for c in commands), commands
+
+    @pytest.mark.parametrize("brief", ("implementer.md", "verifier.md"))
+    def test_the_briefs_select_the_way_the_hook_allows(self, brief,
+                                                       _two_trees):
+        """A track's brief names the one selector the hook lets through,
+        and the pytest run at `-n 2` it feeds."""
+        body = " ".join(
+            (AGENTS / brief).read_text(encoding="utf-8").split())
+        selector = re.search(r"`(python3 tools/dev_touching\.py [^`]*)`",
+                             body)
+        assert selector and "--list" in selector.group(1), (
+            f"{brief} names no `dev_touching.py ... --list` selector")
+        assert "python3 -m pytest -n 2" in body, (
+            f"{brief} does not run the selection at -n 2")
+        code, said = _limits(_two_trees, _two_trees[1], selector.group(1))
+        assert code == 0, (brief, selector.group(1), said)
+
+
+class TestTheSelectorJudgesThePayloadsCwd:
+    """`UX-1041` absorbs r140's fail-open line: the selector resolved the
+    process cwd - the main checkout - for every worktree commit."""
+
+    def test_it_resolves_the_payloads_repository(self, _two_trees, tmp_path):
+        module = _selector_hook()
+        held = os.getcwd()
+        os.chdir(tmp_path)
+        try:
+            got = module.repo_root({"cwd": str(_two_trees[1])})
+        finally:
+            os.chdir(held)
+        assert got is not None and got.resolve() == _two_trees[1].resolve()
+
+    def test_a_payload_cwd_in_no_repository_allows(self, _two_trees):
+        module, ran = TestTheSelectorRunsBeforeTheCommit._hook_that_always_reds()
+        with _payload({"cwd": str(_two_trees[3]),
+                       "tool_input": {"command": "git commit -m x"}}):
+            assert module.main() == 0
+        assert ran == [], "the selector ran for a cwd in no repository"

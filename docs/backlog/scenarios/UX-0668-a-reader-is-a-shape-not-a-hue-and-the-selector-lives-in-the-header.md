@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-372 (the reader select), UX-643 (the role demotes), UX-305 | **Serves:** R1..R5, the readers the select names | **Topic:** viewer | **Shape:** judgement
 
+**Guard:** test_apparatus_in_its_place.py, test_the_page_has_a_reader.py · inferred r149
+
 ## Motivation
 
 ```text

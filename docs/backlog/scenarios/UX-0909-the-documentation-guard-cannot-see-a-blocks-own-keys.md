@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-628, UX-655, UX-866 | **Found by:** architecture review 25 (2026-09-20) — `UX-891` added five `floors` keys to `analyze/v6` and no clause went red, because the walk that defines the guard's population never descends into a top-level object | **Serves:** R1 and R3, who read `floors` and `attribution` before anything else in the report and have only the documents to read them by | **Topic:** guards | **Area:** bga | **Shape:** judgement
 
+**Guard:** test_the_documents_keep_up_with_the_contracts.py
+
 ## Motivation
 
 `tests/unit/test_the_documents_keep_up_with_the_contracts.py` is the

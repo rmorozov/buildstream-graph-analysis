@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the snapshot and view performance audit on `39d89d4` (2026-09-28) | **Serves:** R5 | **Topic:** capture | **Area:** tools | **Shape:** bounded
 
+**Guard:** test_the_tails_buildstream_calls_are_measured.py, test_the_tail_says_what_it_is_doing.py, test_the_snapshot_records_its_tail.py, test_the_tail_travels_anonymized.py · inferred r149
+
 ## Motivation
 
 Before the build, `bga snapshot` starts BuildStream up to three times

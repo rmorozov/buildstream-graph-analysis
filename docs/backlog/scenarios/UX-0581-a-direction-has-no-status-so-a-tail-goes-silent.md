@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-231 (the Serves line every direction carries) | **Serves:** the reader deciding what is still open at direction level | **Topic:** docs
 
+**Guard:** test_every_direction_names_its_reader.py · inferred r149
+
 ## Motivation
 
 Every direction's decomposition landed (every id 🟢), and the

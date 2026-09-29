@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-442 (the two-run rule it copies), UX-503 | **Serves:** the branch whose CI is red because one runner was fast | **Topic:** guards | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Round 75's fourth push went red on `test (3.11)` with nothing in its

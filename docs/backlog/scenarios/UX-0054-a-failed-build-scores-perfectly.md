@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** — (pre-existing; `UX-39`/`UX-03` made it consequential by putting a gate on top of the score) | **Topic:** analysis
 
+**Guard:** test_build_failure_visibility.py · inferred r149
+
 ## Motivation
 
 Found in round 6, on a real `freedesktop-sdk` capture taken on a

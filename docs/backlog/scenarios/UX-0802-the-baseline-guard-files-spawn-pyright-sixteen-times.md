@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-697 (pyright in the baseline), UX-694 (the baseline's guards), UX-503 | **Found by:** round 110, PR #218's tier-drift gate on `test (3.11)` | **Serves:** R8 reading a red drift gate on a file whose claim did not change | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_the_baseline_only_shrinks.py, test_forced_stays_named_past_commit.py
+
 ## Motivation
 
 ```console

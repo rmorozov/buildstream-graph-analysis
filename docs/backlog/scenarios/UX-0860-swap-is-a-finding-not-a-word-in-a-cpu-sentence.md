@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-676 | **Found by:** round 120, the user (a 16-core, 32 GB host, `--builders 16 --jobserver auto`) | **Serves:** R5 (the build swapped from here to here, and these elements were running) | **Topic:** analysis | **Area:** bga | **Shape:** judgement
 
+**Guard:** test_memory_envelope.py
+
 ## Motivation
 
 The capture samples `pswpin`/`pswpout` every tick into

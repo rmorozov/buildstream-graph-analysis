@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-370 (Plane 2's frequency and time reach the page), UX-379 (the third block) | **Serves:** anyone reading the report in a browser | **Topic:** viewer
 
+**Guard:** test_one_table_many_views.py · inferred r149
+
 ## Motivation
 
 `UX-370` moved `by_binary`, `binary_cost` and `configure_phase` into

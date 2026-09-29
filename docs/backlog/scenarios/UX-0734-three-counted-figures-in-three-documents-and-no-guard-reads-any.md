@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-549 (which built the sweep these three join), UX-569, UX-576 | **Serves:** the next reader who takes one of these numbers as arithmetic | **Topic:** docs | **Shape:** judgement | **Area:** tools
 
+**Guard:** test_a_counted_figure_is_derived.py, test_the_contract_names_its_vocabulary.py · inferred r149
+
 ## Motivation
 
 Architecture review 18, checklist item 3. Three documents state a

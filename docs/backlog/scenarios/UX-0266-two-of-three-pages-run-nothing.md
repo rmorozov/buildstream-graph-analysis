@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-263 | **Serves:** R1, and R2 through the timeline | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Reported from a real run: *"i've found a problem on sql.html page — let's

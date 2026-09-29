@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 69, running the question library against a two-plane capture | **Serves:** anyone asking which *program* their build spends its time and memory in | **Topic:** viewer
 
+**Guard:** test_the_questions_ask_what_the_trace_answers.py, test_a_finding_reaches_the_timeline.py · inferred r149
+
 ## Motivation
 
 The question a reader wants of Plane 2 is a pivot: **cpu, memory and

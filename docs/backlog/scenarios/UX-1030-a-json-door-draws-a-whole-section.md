@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §3k | **Serves:** R1, R5 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** bounded
 
+**Guard:** test_the_mapping_is_law.py, test_every_step_past_a_bound_is_bounded.py · inferred r149
+
 ## Motivation
 
 Measured on the 4,002-element run (`bga gen-synthetic --seed 1 --layers 20 --width 200 --store --runs 30`), exported, 1440x900, every chapter open, then every step control pressed.

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-775 (the isolation and its counting guard), UX-760 | **Found by:** round 110, the gate's bst tier on a shared machine | **Serves:** R8 reading a red gate on a machine whose disk casd cannot size | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_bst_show_to_graph.py
+
 ## Motivation
 
 ```console

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — (independent) | **Topic:** analysis
 
+**Guard:** test_hard_gate_violation_detail.py · inferred r149
+
 ## Motivation
 
 Found during a real hands-on walkthrough of the current CLI against a fresh real capture of `examples/05-cmake-cpp-toolchain` (`bst --builders 4 build all.bst`, extracted via `tools/bst_run_wrapped.py` + `tools/bst_extract_run.py`, analyzed via `bga analyze`) - not hypothetical. Real output included:

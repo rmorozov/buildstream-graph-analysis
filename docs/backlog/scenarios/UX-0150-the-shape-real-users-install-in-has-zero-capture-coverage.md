@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-77 (the packaging job this extends) | **Topic:** guards
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The first real external deployment installs `bga` from a repo checkout

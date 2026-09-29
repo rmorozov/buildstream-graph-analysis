@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-910 | **Blocks:** — | **Found by:** architecture review 26 (2026-09-23) — `UX-910` replaced the step's wall-ordering check with `check_jobserver_width.py`, and the example's own README still argues for the check it removed | **Serves:** whoever reads why `bst-examples` passes or fails on `11-serial-giant` | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-910` removed the `awk ... auto < off` step and asserted on width

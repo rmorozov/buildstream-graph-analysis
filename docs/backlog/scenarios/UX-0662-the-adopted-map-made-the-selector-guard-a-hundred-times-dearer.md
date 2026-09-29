@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-524 (the adoption mechanism), UX-420 (the drift gate that caught it), UX-605 (the cap on what a map may select) | **Found by:** round 89, by CI going red on a PR whose own diff did not touch the selector | **Serves:** anyone whose branch goes red for a cost the base branch introduced | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `8751a7e` on `main` — *"CI: adopt the touching map this run measured

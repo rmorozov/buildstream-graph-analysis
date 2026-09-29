@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-454 (the defect this reproduces), UX-336 (the helper) | **Found by:** architecture review 15 | **Serves:** anyone reading a task file's status | **Topic:** guards | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `STATUS_WORDS` names four words. The tree uses five: `🔴 Open` entered

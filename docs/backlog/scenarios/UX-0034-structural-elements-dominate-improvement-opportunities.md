@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-20 (done - this is a ranking/filtering fix to the list it added), P4-12 (`STRUCTURAL_ELEMENT_KINDS`), UX-25 (the same tagging, already applied elsewhere) | **Topic:** analysis
 
+**Guard:** test_structural_opportunity_filtering.py · inferred r149
+
 ## Motivation
 
 Real run, `examples/06-macro-micro-optimization` baseline:

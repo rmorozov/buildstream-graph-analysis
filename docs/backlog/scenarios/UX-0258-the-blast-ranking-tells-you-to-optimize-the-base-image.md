@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Fixed & Verified | **Depends on:** — | **Serves:** R1, who acts on the ranking; R3, who knows which of it the graph forbids | **Topic:** analysis | **Area:** bga
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Reported from a real project and reproduced on a 1,202-element run.

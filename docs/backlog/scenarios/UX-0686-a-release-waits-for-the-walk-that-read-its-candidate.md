@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-251 (releases as contract states), UX-685 | **Serves:** R8 cutting a release; the reader who installs it | **Topic:** docs | **Shape:** bounded
 
+**Guard:** test_a_release_records_a_contract_state.py · inferred r149
+
 ## Motivation
 
 ```text

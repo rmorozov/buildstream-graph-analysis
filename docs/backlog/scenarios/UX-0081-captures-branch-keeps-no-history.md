@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Topic:** capture | **Area:** bga
 
+**Guard:** test_compare_mismatch_refusal.py · inferred r149
+
 ## Motivation
 
 `captures/fdsdk-latest` is a single-commit orphan branch, **force-pushed

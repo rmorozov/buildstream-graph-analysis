@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-470` measured it | **Found by:** round 73, `tools/dev_plane_capability.py` | **Serves:** the reader whose slow element is a static binary, for whom Plane 2's I/O and fault columns are empty and nothing says why | **Topic:** capture
 
+**Guard:** test_a_spine_record_carries_what_the_hook_would_have.py · inferred r149
+
 ## Motivation
 
 `UX-379` gave the hook six `rusage` fields it was already reading —

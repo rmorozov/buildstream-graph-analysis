@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-846, UX-843 | **Found by:** round 128, the user (a `kind: cmake`/`meson` element whose recipe is `ninja -v -j ${JOBS} -C _builddir` — the `-j` literal, `JOBS` a bare count — crashed `ninja: fatal: invalid -j parameter` under `--jobserver auto`) | **Serves:** R2 (a project builds under the jobserver whatever shape its ninja recipe writes `-j`) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** bounded
 
+**Guard:** test_the_ninja_wrapper_owns_the_j_flag.py · inferred r149
+
 ## Motivation
 
 For a ninja-capable element with the UX-846 wrapper mounted,

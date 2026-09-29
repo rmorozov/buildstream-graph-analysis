@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-1077 | **Found by:** the snapshot and view performance audit on `39d89d4` (2026-09-28) | **Serves:** R5, R8 | **Topic:** capture | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_the_snapshot_records_its_tail.py
+
 ## Motivation
 
 The capture budget is 15-25% of time and resources (2026-09-20),

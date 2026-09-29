@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-195 | **Found by:** round 120, the user (a 16-core, 32 GB host, `--builders 16 --jobserver auto`) | **Serves:** R1 (a closed twin is closed) | **Topic:** viewer | **Area:** bga-viewer | **Shape:** mechanical
 
+**Guard:** test_a_drawing_is_graded.py
+
 ## Motivation
 
 `exhibitTwin` sets `table.hidden = true` and its guard passes, but

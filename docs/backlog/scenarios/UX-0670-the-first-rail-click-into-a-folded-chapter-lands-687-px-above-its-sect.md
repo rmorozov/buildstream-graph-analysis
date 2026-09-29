@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-399 (`content-visibility: auto`), UX-534 (Focus scrolls) | **Serves:** anyone who clicks a rail entry | **Topic:** viewer | **Shape:** judgement
 
+**Guard:** test_a_rail_click_lands_on_its_section.py · inferred r149
+
 ## Motivation
 
 ```text

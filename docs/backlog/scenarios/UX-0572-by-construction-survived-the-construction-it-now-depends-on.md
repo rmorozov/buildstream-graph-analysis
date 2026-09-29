@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-406 (the emit-time join that made it true), UX-530 | **Serves:** the reader of the trace dictionary | **Topic:** docs | **Area:** tools
 
+**Guard:** test_every_skip_reason_is_declared.py, test_the_equality_names_its_join.py, test_one_process_is_one_slice.py · inferred r149
+
 ## Motivation
 
 `docs/spec/trace-dictionary.md:96` and the comment at

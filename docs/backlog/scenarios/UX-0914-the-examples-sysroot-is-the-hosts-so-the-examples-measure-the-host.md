@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-913 | **Blocks:** UX-910 | **Found by:** round 132 — `UX-913`'s scrub chain starts at "the sandbox's `make` is the host's", and no row owned that | **Serves:** every example, and every reading taken from one | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `examples/stage_cpp_toolchain.sh` builds the sysroot that examples

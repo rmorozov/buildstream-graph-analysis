@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Found by:** UX-403's guard census | **Serves:** the edit-run loop | **Topic:** guards | **Area:** tools
 
+**Guard:** test_the_report_has_chapters.py · inferred r149
+
 ## Motivation
 
 `UX-403`'s census mutated one guard per family and watched it go red.

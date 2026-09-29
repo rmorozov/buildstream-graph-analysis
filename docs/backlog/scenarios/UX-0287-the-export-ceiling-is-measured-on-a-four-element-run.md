@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-195 | **Serves:** R8 — who attaches the file to a ticket | **Topic:** guards
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Found while measuring what `UX-277` cost. It cost 743 bytes. What the

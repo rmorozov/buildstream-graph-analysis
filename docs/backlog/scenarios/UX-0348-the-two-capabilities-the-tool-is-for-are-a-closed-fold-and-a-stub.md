@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-298 (the timeline speaks Perfetto), UX-312 (the canned question library), UX-172 (bga blast) | **Serves:** the reader who came for the thing this tool does that others do not | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Two things distinguish this tool: it hands a build's two planes to

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-234 (which names this as its own filing), UX-339 (the sweep), UX-594 | **Serves:** R5, the capacity operator | **Topic:** store
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-234` landed the aggregate fact-base — min/median/p95/max/MAD per

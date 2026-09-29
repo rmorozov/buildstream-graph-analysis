@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-374 (the page renames the reader's elements and programs), UX-216 (every element is one object) | **Serves:** anyone searching the page for an element they built | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** test_the_contract_names_its_vocabulary.py, test_the_page_keeps_the_names_it_was_given.py, test_a_task_uid_is_not_a_label.py, test_the_viewer_splits_along_its_seams.py · inferred r149
+
 ## Motivation
 
 `UX-374` fixed the sections that renamed the reader's elements. One

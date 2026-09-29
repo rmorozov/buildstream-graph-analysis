@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-691 (the ledger this reads) | **Found by:** round 109, retro-verifying round 102's unverified tracks | **Serves:** the round that expects the third excursion to name a file and gets silence | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_a_file_with_three_excursions_has_a_filed_task.py
+
 ## Motivation
 
 `tools/dev_flake_census.py`'s `filed()` is a substring search over

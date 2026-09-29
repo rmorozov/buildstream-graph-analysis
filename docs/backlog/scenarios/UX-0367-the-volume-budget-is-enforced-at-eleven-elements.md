@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-360 (the volume budget), UX-187 (a report you can read at four thousand elements) | **Serves:** anyone whose project is bigger than the fixtures | **Topic:** viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-360` gave the page two budgets and a guard that holds them. The

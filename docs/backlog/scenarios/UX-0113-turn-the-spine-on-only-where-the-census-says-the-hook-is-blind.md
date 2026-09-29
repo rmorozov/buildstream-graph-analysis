@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-105 (the census), UX-106 (the spine), UX-112 (the honest price) | **Topic:** capture
 
+**Guard:** test_spine_auto_policy.py · inferred r149
+
 ## Motivation
 
 The spine and the census were built in the same round and never

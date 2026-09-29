@@ -760,7 +760,7 @@ jobs:
   # `push` to the default branch, and every refusal exits 0, for the
   # same reason as the two adopt jobs above - `UX-934`'s red included.
   flake-ledger-adopt:
-    needs: test
+    needs: [test, touch-map-adopt]
     # `UX-943`: from a run red at the drift step or nowhere - its rows
     # are that step's excursions; a red anywhere else adopts nothing.
     if: >-
@@ -798,6 +798,14 @@ jobs:
           python tools/dev_tier_drift.py --adopt-flake flake_ledger.candidate.json
           if git diff --quiet -- tests/flake_ledger.json; then
             echo "the ledger already carries every excursion this run reported"
+            exit 0
+          fi
+          python tools/dev_records.py publish
+      - name: Record this run toward per_run's N (UX-950)
+        run: |
+          python tools/dev_flake_census.py --record-run ${{ github.run_id }}
+          if git diff --quiet -- tests/flake_ledger.json; then
+            echo "this run is already recorded"
             exit 0
           fi
           python tools/dev_records.py publish

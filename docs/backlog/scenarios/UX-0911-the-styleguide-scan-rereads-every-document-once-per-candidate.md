@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-771, UX-803 | **Found by:** round 132 — the tier-drift gate reddened `test (3.11)` on `claude/project-thread-ukafz5` for a file the branch does not touch | **Serves:** every branch whose CI is red for a cost `main` already carries | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_the_styleguide_names_its_guards.py
+
 ## Motivation
 
 `tests/unit/test_the_styleguide_names_its_guards.py` is recorded in

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the snapshot and view performance audit on `39d89d4` (2026-09-28) | **Serves:** R5 | **Topic:** capture | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_the_open_paths_are_interned.py
+
 ## Motivation
 
 `parse_open_lines` (`tools/bst_native_build_tracer.py:2672`) keeps a

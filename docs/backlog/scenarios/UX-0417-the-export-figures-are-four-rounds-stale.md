@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Found by:** architecture review 7, checklist item 3 | **Serves:** anyone deciding whether to attach a report | **Topic:** docs
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Checklist item 3 — *is any figure invalidated?* — against

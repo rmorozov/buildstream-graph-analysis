@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 72, asked for tracing from the heuristics in `bga analyze` to the tests and examples that cover them | **Serves:** the round that adds a heuristic and has no way to tell whether anything exercises it | **Topic:** guards
 
+**Guard:** test_every_finding_reaches_a_fixture.py
+
 ## Motivation
 
 `FINDING_READERS` is the registry of what `bga analyze` can conclude —

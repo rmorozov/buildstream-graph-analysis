@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-500 (the measurement this changes the odds of), UX-336 (`dev_touching`) | **Serves:** the implementing session, at the commit it is about to make | **Topic:** guards | **Area:** tools
 
+**Guard:** test_the_agent_configuration_holds.py
+
 ## Motivation
 
 Round 75 ran `UX-500`'s Regime A and recorded why the cheap gate did

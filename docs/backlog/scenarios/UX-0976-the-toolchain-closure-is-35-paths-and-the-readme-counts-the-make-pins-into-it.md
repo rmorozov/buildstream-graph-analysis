@@ -1,6 +1,8 @@
 # UX-976: the toolchain closure is 35 store paths, and the examples README counts the two make pins into it
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-925 | **Blocks:** — | **Found by:** architecture review 26 (2026-09-23) — `nix_closure --plan` over `nix_toolchain.roots()` totals 35, and `examples/README.md:117` says 37 | **Serves:** whoever sizes the examples' download from the README | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
+**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-925 | **Blocks:** — | **Found by:** architecture review 26 (2026-09-23) — `nix_closure --plan` over `nix_toolchain.roots()` totals 35, and `examples/README.md:117` says 37 | **Serves:** whoever sizes the examples' download from the README | **Topic:** docs | **Area:** unassigned | **Shape:** judgement | **Reading:** container
+
+**Guard:** none — open, no guard named yet
 
 ## Motivation
 

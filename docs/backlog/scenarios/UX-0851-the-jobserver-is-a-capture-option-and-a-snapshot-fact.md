@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-841 | **Found by:** round 117, Direction 20 | **Serves:** R4 (the mode travels with the run) | **Topic:** contracts | **Area:** tools | **Shape:** judgement
 
+**Guard:** test_the_snapshot_records_the_jobserver.py
+
 ## Motivation
 
 `--jobserver N` is a tracer flag and `jobserver: N|null` a report

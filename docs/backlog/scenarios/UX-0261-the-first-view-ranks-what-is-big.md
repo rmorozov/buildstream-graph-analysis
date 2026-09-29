@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-258, UX-259 | **Serves:** R1 — the whole point of the first screen | **Topic:** viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-258` fixes the ranking's *content*. This is what the first screen

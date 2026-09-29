@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-336 (the parallel run these numbers are under), UX-359 (the page fixture every browser guard measures) | **Serves:** every `make test`; the implementing session's gate | **Topic:** guards | **Area:** bga/viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Where the suite's seconds go, read from CI's own reference:

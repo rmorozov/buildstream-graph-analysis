@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-105 (measure the static-binary blind spot), UX-113 (--trace-spine=auto, guided by the census) | **Serves:** anyone whose project builds its own host tools | **Topic:** capture | **Area:** tools
 
+**Guard:** test_the_census_says_what_it_could_not_see.py · inferred r149
+
 ## Motivation
 
 `bga snapshot` runs `--trace-spine=auto`. `auto` asks the census whether

@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-341 (one unit per dimension), UX-201 (the schema says what things are) | **Serves:** anyone reading the signals block, and every consumer of `analyze/v3` | **Topic:** contracts
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The page prints this, on the `macro_micro` fixture, in the signals

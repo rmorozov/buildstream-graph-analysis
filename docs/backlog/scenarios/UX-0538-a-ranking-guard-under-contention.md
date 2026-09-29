@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-489` (the answer key's ranking margin), `UX-455` (the contention artefact, one guard earlier) | **Serves:** the round that runs parallel tracks on one machine | **Topic:** guards
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `test_the_journey_has_an_answer_key.py::test_the_first_thing_to_fix_is_core`

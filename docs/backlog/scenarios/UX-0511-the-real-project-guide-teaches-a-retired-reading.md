@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-492` (the same block, on the front door) | **Found by:** round 75, auditing `UX-492`'s block line by line | **Serves:** the reader who follows the README's link and gets the same stale output with prose built on it | **Topic:** docs
 
+**Guard:** test_the_real_project_block_is_dated.py · inferred r149
+
 ## Motivation
 
 `UX-492` dated the README's real-project block and named the one

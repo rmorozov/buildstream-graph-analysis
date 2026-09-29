@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done — 413 MB → 204 MB, report byte-identical | **Depends on:** UX-168 (which measured this and could not fix it from the reader) | **Topic:** capture
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-168` was filed against the trace *reader* — "analysis slurps the

@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Found by:** round 71, asked why CI does not simply apply a fixed 1.25x or 1.5x ratio per tier | **Serves:** the contributor whose PR is stopped by a gate whose tolerance nobody has checked against the noise it is meant to tolerate | **Topic:** guards
 
+**Guard:** test_emphasis_is_a_budget.py · inferred r149
+
 ## Motivation
 
 `CI_DRIFT_FACTOR = 1.5` is how much slower than its own CI record a

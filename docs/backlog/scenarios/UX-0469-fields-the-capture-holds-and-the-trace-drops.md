@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-466` measured it; nothing blocks the fix | **Found by:** round 72, `tools/dev_trace_coverage.py` over a generated two-plane capture | **Serves:** the reader who opens the trace to ask which tasks were waiting on DOWNLOAD and cannot filter for them | **Topic:** contracts
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-466`'s census reads a capture's own JSON and the bytes

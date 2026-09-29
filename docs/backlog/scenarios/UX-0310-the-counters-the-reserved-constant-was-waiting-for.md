@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-298 (which reserved `TYPE_COUNTER`), UX-297 (the streaming pass that computes them) | **Serves:** R1, R5 | **Topic:** capture | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-298` pinned `TYPE_COUNTER = 4` with the comment "reserved

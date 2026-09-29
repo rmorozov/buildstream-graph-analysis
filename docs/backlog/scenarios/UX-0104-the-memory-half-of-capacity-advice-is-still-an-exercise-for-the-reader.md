@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-63 (measured per-task memory), UX-21 (the memory guard's threshold), UX-83 (the Plane 2 plumbing into analyze) | **Topic:** analysis
 
+**Guard:** test_memory_envelope.py · inferred r149
+
 Direction 3, item 5 — see
 [`design/directions.md`](../../design/directions.md).
 

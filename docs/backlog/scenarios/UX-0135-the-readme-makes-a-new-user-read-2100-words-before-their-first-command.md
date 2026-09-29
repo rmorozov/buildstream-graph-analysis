@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-125/UX-126 (the flow it should lead with — both done) | **Topic:** docs
 
+**Guard:** none — no guard named at close
+
 Docs polish round (round 14): simple, concise, consistent. The full
 fresh-eyes read this and its siblings (`UX-136`..`UX-141`) come from is
 in [`round-14`](../../audits/round-14.md).

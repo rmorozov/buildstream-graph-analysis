@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-254 | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Requested: *"header is too long, let's shrink it by moving some of the

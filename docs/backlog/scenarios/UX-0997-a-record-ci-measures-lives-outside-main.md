@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-503, UX-524, UX-691, UX-934, UX-943 | **Blocks:** — | **Found by:** round 139 — Ruslan in the project thread, 2026-09-23 14:44, answering the workflow review ([doc](https://claude.ai/code/artifact/7f65768e-b4bb-405a-b3e1-90a672a249f5)) | **Serves:** every branch that inherits main, and every commit on main that should have CI | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_no_workflow_pushes_to_the_default_branch.py, test_a_run_names_the_records_it_read.py
+
 ## Motivation
 
 89 of the last 300 first-parent commits on main are CI adopt or append

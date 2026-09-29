@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the second styleguide audit (2026-09-27), styleguide §3l, §6e.2 | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** bounded
 
+**Guard:** test_a_sections_controls_sit_together.py, test_the_page_has_a_volume_budget.py · inferred r149
+
 ## Motivation
 
 Measured on `main` at `814a2db8` on three pages with **both planes**: `macro_micro` (11 elements), and `bga gen-synthetic <d> --store --seed 1` (`--layers 6 --width 12`, 74 elements; `--layers 20 --width 60`, 1,202) with `bga capture report --json <snapshot>/plane2.log --project-dir <d> > <snapshot>/plane2.json`, each exported by `python3 -m tools.bga_view <snapshot>/run --export` and booted through `tests/browser.py` at 1440x900 and 390x844. The x-centre of each control over every rendered section, every chapter open:

@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-146 (the diagnostics this sharpens) | **Topic:** capture
 
+**Guard:** none — no guard named at close
+
 Filed against the same real Ubuntu 24.04 field failure as UX-146
 (`bst build` works; `bga snapshot` fails with `buildbox-run failed
 with returncode 1`, opens and spine off), which round 15 could not

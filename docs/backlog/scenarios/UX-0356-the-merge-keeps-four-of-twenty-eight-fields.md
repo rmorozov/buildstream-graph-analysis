@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-215 (publish the join), UX-338 (never draw one population twice), UX-289 (one element table) | **Serves:** anyone who opens the report to find out what to change | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Round 55 asked the user's question — *does everything the JSON holds

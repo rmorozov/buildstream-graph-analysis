@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-689 (the rule), UX-810 (the tools page it joins) | **Found by:** round 114, `UX-810`'s Out of Scope | **Serves:** the reader pricing a change to the capture path; the session finishing `UX-689` | **Topic:** docs | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_docs_links_and_commands.py
+
 ## Motivation
 
 The largest chapter left in `docs/design/architecture.md` is the

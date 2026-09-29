@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 67, a red `test (3.11)` on PR #185 that a re-run turned green | **Serves:** every contributor, at the point CI tells them something is wrong | **Topic:** guards
 
+**Guard:** test_a_slow_file_says_which_file.py
+
 ## Motivation
 
 `UX-420` armed `tools/dev_tier_drift.py --check` in CI. Its first

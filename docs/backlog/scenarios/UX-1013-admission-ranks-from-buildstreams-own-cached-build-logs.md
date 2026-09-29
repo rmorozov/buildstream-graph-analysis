@@ -1,6 +1,8 @@
 # UX-1013: admission ranks from BuildStream's own cached build logs when bga never captured the project
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-1005 | **Found by:** Ruslan on the Graviton thread (2026-09-25), on ranking admission with no previous capture | **Serves:** R4, R5 | **Topic:** capture | **Area:** tools | **Shape:** judgement
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-1005 | **Found by:** Ruslan on the Graviton thread (2026-09-25), on ranking admission with no previous capture | **Serves:** R4, R5 | **Topic:** capture | **Area:** tools | **Shape:** judgement | **Reading:** runner:bst-examples
+
+**Guard:** none — open, no guard named yet
 
 ## Motivation
 

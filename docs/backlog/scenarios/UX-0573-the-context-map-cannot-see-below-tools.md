@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-239 (the map and its guard) | **Serves:** the session that greps §6 for the hook and finds nothing | **Topic:** guards
 
+**Guard:** test_the_context_map_is_the_tree.py · inferred r149
+
 ## Motivation
 
 `test_the_context_map_is_the_tree.py::_real_modules` globs `tools/*.py`

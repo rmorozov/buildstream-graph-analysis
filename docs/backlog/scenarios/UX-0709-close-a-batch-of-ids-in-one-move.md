@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-336 (the close tool), UX-501 (derived counts) | **Serves:** the orchestrator closing a merged batch, which today runs one command per id and re-derives the counts each time | **Topic:** guards | **Area:** tools | **Shape:** bounded
 
+**Guard:** test_the_loop_stays_fast.py, test_a_batch_closes_in_one_move.py · inferred r149
+
 ## Motivation
 
 `dev_close_task.py UX-NNN --move --note "…"` closes one id; a batch of

@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-296 (the rule that the view parses nothing), UX-389 and UX-407 (payload added since, with no refresh path) | **Serves:** anyone reading a run captured by an older `bga` | **Topic:** viewer
 
+**Guard:** test_the_report_you_can_attach.py · inferred r149
+
 ## Motivation
 
 The same cold run, opened two ways:

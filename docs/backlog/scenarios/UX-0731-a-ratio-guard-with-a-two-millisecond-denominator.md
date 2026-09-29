@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-551 (wall clock is a property of the machine), UX-716 (the neighbouring decay) | **Serves:** the round whose gate goes red on a green tree | **Topic:** guards | **Shape:** judgement | **Area:** tools
 
+**Guard:** test_graph_performance.py · inferred r149
+
 ## Motivation
 
 `test_performance_scales_subquadratically` reds intermittently on a

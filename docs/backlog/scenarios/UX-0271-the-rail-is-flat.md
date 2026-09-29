@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-254 | **Serves:** R1 | **Topic:** viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Requested: *"maybe we generally need to rethink navigation and bring

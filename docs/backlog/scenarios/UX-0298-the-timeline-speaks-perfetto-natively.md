@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** Direction 15, UX-188 (the timeline it succeeds), UX-297 (the stream that feeds it) | **Serves:** R1, R2 | **Topic:** capture | **Area:** tools
 
+**Guard:** test_the_real_reader_agrees.py · inferred r149
+
 ## Motivation
 
 The user's proposal, adopted by Direction 15 rule 3: the event

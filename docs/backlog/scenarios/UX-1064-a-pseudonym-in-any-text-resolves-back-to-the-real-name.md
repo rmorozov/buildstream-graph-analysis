@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-1061 | **Found by:** the 2026-09-27 brainstorm with the owner ([`anonymized-bundle.md`](../../design/anonymized-bundle.md)), section 4 | **Serves:** anyone sharing a private capture with an outside reader | **Topic:** cli | **Area:** bga | **Shape:** mechanical
 
+**Guard:** test_a_pseudonym_resolves_back.py
+
 ## Motivation
 
 The owner asked to understand which internal elements a reader means

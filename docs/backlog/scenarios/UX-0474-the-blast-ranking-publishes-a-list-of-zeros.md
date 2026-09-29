@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-467` found it and `tests/unit/test_the_shape_conclusions_have_a_negative_case.py` pins its precondition | **Found by:** round 72, `UX-467`'s answer key over the T1 fixture | **Serves:** the local-optimizer told which three elements to fix first, by a quantity that is zero for all three | **Topic:** analysis | **Area:** bga
 
+**Guard:** test_the_shape_conclusions_have_a_negative_case.py
+
 ## Motivation
 
 On `tests/fixtures/shared_base_wide` — a shared base with six

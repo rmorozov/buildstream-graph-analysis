@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-286 (the report reads in chapters) | **Serves:** anyone reading the architecture to learn what the viewer does | **Topic:** docs
 
+**Guard:** test_the_architecture_names_the_commands.py · inferred r149
+
 ## Motivation
 
 Found by review 5, checklist item 1 - *open the module the chapter

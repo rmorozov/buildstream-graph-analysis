@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-77 (the capture-branch convention this documents around) | **Topic:** docs
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Field feedback: *"it's not very comfortable to clone our repo and get

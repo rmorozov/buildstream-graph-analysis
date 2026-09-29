@@ -18,6 +18,7 @@ import dev_close_task as close_task
 TASK = ("# UX-1: a row\n\n"
         "**Priority:** Medium | **Status:** 🔴 Not Started | "
         "**Topic:** guards | **Area:** tools | **Shape:** judgement\n\n"
+        "**Guard:** none — a fixture row\n\n"
         "## Motivation\n\n{line}\n")
 README = ("# Index\n\n"
           "7 scenarios: **7 open**, 0 closed.\n\n"

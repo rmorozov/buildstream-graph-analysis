@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-698 (the defusedxml import), UX-503 / UX-524 / UX-691 (the three adopt jobs) | **Found by:** round 114, main's own CI after PR #222 | **Serves:** the default branch, whose tier reference, touching map and flake ledger stopped adopting on 2026-09-08 | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
+**Guard:** test_a_ci_job_installs_what_its_tool_imports.py
+
 ## Motivation
 
 `UX-698` made `tools/dev_tier_drift.py` and `tools/dev_junit_tail.py`

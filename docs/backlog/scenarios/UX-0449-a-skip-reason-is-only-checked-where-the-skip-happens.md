@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 70, four red CI jobs on a suite that was green locally | **Serves:** the contributor whose new guard skips for a reason nobody declared, who finds out from CI rather than from `make test` | **Topic:** guards
 
+**Guard:** test_the_graph_shape_query_answers.py, test_every_skip_reason_is_declared.py · inferred r149
+
 ## Motivation
 
 The skip census (`tests/conftest.py`) is the instrument that stops a

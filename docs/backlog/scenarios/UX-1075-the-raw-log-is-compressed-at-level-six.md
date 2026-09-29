@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the snapshot and view performance audit on `39d89d4` (2026-09-28) | **Serves:** R5 | **Topic:** capture | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_the_raw_log_compression_level.py
+
 ## Motivation
 
 `_compress_raw_log` (`tools/bga_snapshot.py:367`) calls `gzip.open`

@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the snapshot and view performance audit on `39d89d4` (2026-09-28) | **Serves:** R1, R5 | **Topic:** cli | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_the_tail_says_what_it_is_doing.py
+
 ## Motivation
 
 After `bst` exits only three phases draw a ticker (census, artifact

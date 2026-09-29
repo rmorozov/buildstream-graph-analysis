@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-467` found it; the fixture is `topologies.linear_chain` | **Found by:** round 72, `UX-467`'s negative case | **Serves:** the graph-owner told their chain is a mesh, and that savings are capped by "the next chain" when there is only one | **Topic:** analysis | **Area:** bga
 
+**Guard:** test_the_shape_conclusions_have_a_negative_case.py
+
 ## Motivation
 
 `linear_chain(n=5)` is the least mesh-like graph that exists: five

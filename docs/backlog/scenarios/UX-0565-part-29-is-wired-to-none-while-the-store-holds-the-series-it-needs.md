@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-234 (the store as a distribution), UX-92 | **Serves:** R3, the CI owner asking how stable an element's duration is | **Topic:** analysis | **Area:** bga
 
+**Guard:** test_part_29_reads_the_store_it_has.py, test_no_level_carries_nothing.py · inferred r149
+
 ## Motivation
 
 ```text

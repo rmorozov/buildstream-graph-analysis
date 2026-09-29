@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-294 (the acceptance the passage narrates), UX-511 (dated or derived), UX-340 (the module graph instrument) | **Found by:** architecture review 17, checklist item 3 | **Serves:** a reader of the architecture's viewer chapter, counting modules | **Topic:** docs | **Area:** bga/viewer | **Shape:** judgement
 
+**Guard:** test_the_viewer_modules_have_a_home.py, test_the_verification_log_is_true.py · inferred r149
+
 ## Motivation
 
 `docs/design/architecture.md:1465`:

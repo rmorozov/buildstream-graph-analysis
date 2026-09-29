@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 72, `UX-468`'s planted walk — a six-element strict chain was diagnosed "scheduler-bound, not chain-bound" | **Serves:** the graph-owner whose build really is a chain and is told the time is going somewhere other than the chain | **Topic:** analysis | **Area:** bga
 
+**Guard:** test_the_shape_conclusions_have_a_negative_case.py
+
 ## Motivation
 
 `diagnose()` is the branch every consumer reads (`UX-207`):

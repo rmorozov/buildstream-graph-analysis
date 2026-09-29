@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-143 (item 1 reopened), UX-130 (the SEIZE semantics) | **Topic:** capture
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 UX-143's log claims: *"`detach_signal(wstatus)`, named once and used by

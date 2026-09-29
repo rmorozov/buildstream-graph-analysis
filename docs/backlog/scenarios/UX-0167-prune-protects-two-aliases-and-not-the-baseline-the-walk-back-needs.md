@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-159 (prune), UX-156 (the walk-back whose input this guards) | **Topic:** store
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `prune`'s protection is `list_runs()[-2:]` plus a config `baseline`

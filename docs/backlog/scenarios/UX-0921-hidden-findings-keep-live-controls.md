@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-413 (card populations open bounded) | **Found by:** round 130 design review | **Serves:** R1, R4 and assistive-technology users reading a report with many findings | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement
 
+**Guard:** test_every_population_at_zero_one_and_many.py, test_findings_carry_their_evidence.py, test_buttons_that_know_why.py, test_the_report_you_can_attach.py, test_a_fold_bounds_its_interactive_descendants.py · inferred r149
+
 ## Motivation
 
 `boundCards` caps the visible finding cards at 40, but hides complete cards

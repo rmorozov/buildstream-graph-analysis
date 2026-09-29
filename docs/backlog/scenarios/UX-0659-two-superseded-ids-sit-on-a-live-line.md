@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-651 (which brought the block under a guard and left this outside it), UX-353 (the retired-id rule) | **Found by:** round 89, track U, while building UX-651's retired-line clauses | **Serves:** anyone reading Part 32's opening block to find out which Plane 2 contract bga writes | **Topic:** contracts
 
+**Guard:** test_the_documents_keep_up_with_the_contracts.py · inferred r149
+
 ## Motivation
 
 `UX-651` put Part 32's opening block under a guard: every id the

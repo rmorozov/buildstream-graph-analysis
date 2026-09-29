@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — (a cross-cutting audit, not a feature) | **Topic:** analysis | **Area:** bga
 
+**Guard:** test_cache_trend_series_subject.py, test_report_consistency.py · inferred r149
+
 ## Motivation
 
 `bga` prints six report surfaces across three planes — `analyze` (and

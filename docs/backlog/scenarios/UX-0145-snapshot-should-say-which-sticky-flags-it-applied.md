@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-126 (done — these are its surprise edges) | **Topic:** cli
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Three small edges from round 14's verification of the new loop, none

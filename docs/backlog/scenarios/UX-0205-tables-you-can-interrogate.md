@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-199 (between-sections navigation; this is within-section), UX-201 (the column metadata this uses), UX-187 (the scale that demands it) | **Topic:** viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Confirmed in round 22: tables sort (numeric-aware) and nothing else —

@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-643 (whose Outcome it is) | **Found by:** architecture review 16, running `make test` on `a5030a4` | **Serves:** anyone whose branch cannot go green through no fault of its own | **Topic:** guards
 
+**Guard:** test_the_register_is_terse.py
+
 ## Motivation
 
 `make test` on the review's base is red on a clause that has nothing to

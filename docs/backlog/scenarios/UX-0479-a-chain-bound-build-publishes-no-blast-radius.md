@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 72, `UX-468`'s planted walk 2 | **Serves:** the recipe-author who owns the element every other element waits for, and is shown three elements that are worth nothing to fix | **Topic:** analysis | **Area:** bga
 
+**Guard:** test_a_chain_bound_build_still_has_a_blast_radius.py, test_the_report_you_can_attach.py · inferred r149
+
 ## Motivation
 
 `UX-468` generated a project whose whole defect is one fat shared base:

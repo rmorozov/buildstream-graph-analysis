@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-234 (the feature), UX-203 (the CI installed-mode lesson this extends) | **Serves:** R1, R5, R7 | **Topic:** store | **Area:** bga
 
+**Guard:** test_no_absolute_tools_import_survives.py · inferred r149
+
 ## Motivation
 
 Round 45's stranger walk, friction 2: `bga snapshot --aggregate` —

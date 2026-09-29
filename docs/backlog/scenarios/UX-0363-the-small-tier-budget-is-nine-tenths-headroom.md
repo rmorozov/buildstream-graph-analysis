@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-238 (the tiers), UX-336 (the last re-tier) | **Serves:** anyone whose slow test file lands in the default tier | **Topic:** guards
 
+**Guard:** test_the_tiers_are_a_partition.py, test_a_control_acts_on_what_it_names.py · inferred r149
+
 ## Motivation
 
 `UX-238` made the small tier's wall clock the guard against a slow file

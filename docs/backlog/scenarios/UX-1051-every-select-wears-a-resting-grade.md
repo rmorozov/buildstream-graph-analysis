@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the second styleguide audit (2026-09-27), styleguide §6d, §4.5 | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical
 
+**Guard:** test_every_control_has_a_resting_appearance.py
+
 ## Motivation
 
 Measured on `main` at `814a2db8`, booted through `tests/browser.py` at

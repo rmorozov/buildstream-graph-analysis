@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-116 | **Serves:** R5 and R7 — the two who consume `analyze/v1` rather than reading it | **Topic:** contracts
 
+**Guard:** test_the_capacity_answer_is_published.py · inferred r149
+
 ## Motivation
 
 Found while documenting the block for `UX-242`, whose Required Fix

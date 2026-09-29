@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-252 (the generated release body) | **Serves:** anyone answering "what changed between the bga I installed and the one I have" | **Topic:** contracts | **Area:** bga
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Architecture review 12. `CHANGELOG.md` opens with *"What changed

@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-1053 | **Found by:** the second styleguide audit (2026-09-27), styleguide §3e, §3f | **Serves:** R1, R4 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** bounded
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `test_the_page_has_a_volume_budget.py` measures `golden`,

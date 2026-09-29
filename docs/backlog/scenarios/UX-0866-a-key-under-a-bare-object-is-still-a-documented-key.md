@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-858, UX-838 | **Found by:** round 120, review 24 | **Serves:** R4 (the guide names every flag and key the capture writes) | **Topic:** docs | **Area:** bga | **Shape:** mechanical
 
+**Guard:** test_the_documents_keep_up_with_the_contracts.py
+
 ## Motivation
 
 `UX-858` added `--jobserver-seed N` to `bga capture run` and `seed` to

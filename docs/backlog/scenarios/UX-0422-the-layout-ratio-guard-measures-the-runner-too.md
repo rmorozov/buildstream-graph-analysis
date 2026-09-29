@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 66, a red `test (3.12)` on PR #183 | **Serves:** every contributor, at the point CI tells them something is wrong | **Topic:** guards
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `test_the_browser_is_the_library.py::test_the_layout_cost_stops_tracking_the_document`

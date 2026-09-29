@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Found by:** round 71, going to add the missing `tests/ci_reference.json` rows for the round's four new files | **Serves:** the contributor who is told to refresh the reference and cannot fetch the thing to refresh from | **Topic:** guards | **Area:** tools
 
+**Guard:** test_the_candidate_reaches_a_log.py, test_the_served_handoff_counts_its_edges.py · inferred r149
+
 ## Motivation
 
 `UX-427` built the refresh route on purpose: CI writes the refreshed

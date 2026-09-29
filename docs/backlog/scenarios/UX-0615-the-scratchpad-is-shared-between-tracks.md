@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-614 (the same launch step) | **Found by:** round 84, by the track it happened to | **Serves:** a round running tracks in parallel | **Topic:** guards
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Tracks run in isolated worktrees and share one scratchpad directory.

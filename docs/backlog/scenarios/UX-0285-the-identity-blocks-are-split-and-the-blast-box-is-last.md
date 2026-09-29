@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-207 | **Serves:** R1 and R7 — reading top-down, and asking a question mid-read | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** test_the_order_the_page_has.py, test_the_page_has_geometry.py · inferred r149
+
 ## Motivation
 
 Reported: *"run info and run instance info could be placed somewhere at

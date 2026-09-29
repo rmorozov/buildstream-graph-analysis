@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-869, UX-871, UX-856 | **Found by:** round 121, the user (a real project under a junction, GNU Make 4.4 on the host) | **Serves:** R4 (the snapshot entry point with the jobserver on runs in CI, on a junction) | **Topic:** capture | **Area:** tools | **Shape:** judgement
 
+**Guard:** test_the_examples_build.py
+
 ## Motivation
 
 Every jobserver-on CI step runs `bga capture run` or the tracer

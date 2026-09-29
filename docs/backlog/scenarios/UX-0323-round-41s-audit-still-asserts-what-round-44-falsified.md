@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Serves:** R2 — whoever reads an audit to find out what was true | **Topic:** docs
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `docs/audits/round-41.md`, line 86, unqualified:

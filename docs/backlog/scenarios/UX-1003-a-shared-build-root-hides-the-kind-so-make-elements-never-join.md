@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-859, UX-884 | **Found by:** `UX-905`'s fdsdk pair (off 35957674792, auto 35970752554, 2026-09-24) - 21 of 25 auto-arm sandboxes read `unknown_kind` | **Serves:** R2, R5 (an auto arm on a real project changes the sandboxes it names) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 freedesktop-sdk sets `build-root: /buildstream-build`, so `--dir` names

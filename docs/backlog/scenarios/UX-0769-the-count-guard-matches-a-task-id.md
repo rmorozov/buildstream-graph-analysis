@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Serves:** the branch whose CI reds on a figure nobody wrote | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** test_the_process_documents_derive_their_figures.py
+
 ## Motivation
 
 `UX-503` and `UX-471` removed two counts from the agent documents

@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-522 (the census set), UX-645 (the census floor) | **Serves:** anyone whose inner loop is `make test-touching` | **Topic:** guards | **Shape:** mechanical | **Area:** tools
 
+**Guard:** test_the_context_map_is_the_tree.py
+
 ## Motivation
 
 `census_set()`'s docstring names three archetypes of the class, and

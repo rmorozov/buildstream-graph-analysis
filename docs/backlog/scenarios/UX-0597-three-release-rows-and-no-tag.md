@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-251 (a release is a contract state), UX-581 | **Serves:** anyone trying to check out a release this repository claims to have made | **Topic:** docs
 
+**Guard:** test_a_release_records_a_contract_state.py, test_every_skip_reason_is_declared.py · inferred r149
+
 ## Motivation
 
 Direction 10's item 5. Measured in round 83:

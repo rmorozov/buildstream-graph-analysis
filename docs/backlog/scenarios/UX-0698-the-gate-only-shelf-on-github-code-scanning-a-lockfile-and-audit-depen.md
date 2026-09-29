@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-693 (the local shelves first) | **Serves:** R8 reading a red gate that a hosted tool raised, and the user who wants the heavier analyses without a slower inner loop | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `.github/workflows/` has `ci.yml` and `real-project-capture.yml`; no

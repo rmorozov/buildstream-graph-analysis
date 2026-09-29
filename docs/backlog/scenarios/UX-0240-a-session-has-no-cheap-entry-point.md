@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-238 (the tiers a skill would name), UX-239 (the map and the streams it would carry) | **Serves:** the maintainers, and every agent session | **Topic:** docs
 
+**Guard:** test_docs_links_and_commands.py
+
 ## Motivation
 
 The user's proposal: skill files, so an agent's interaction with the

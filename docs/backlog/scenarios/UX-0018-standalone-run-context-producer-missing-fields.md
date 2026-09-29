@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-12`, `UX-15` | **Topic:** capture | **Area:** tools
 
+**Guard:** test_run_context_common.py, test_bst_run_context.py, test_bst_extract_run.py, test_bst_extract_run_strict.py, test_bst_checkout_cost.py · inferred r149
+
 ## Motivation
 
 Raised by an external review, checking whether `UX-12`/`UX-15`'s new fields are available consistently across `bga`'s documented ingestion paths, not just the one path most recently touched.

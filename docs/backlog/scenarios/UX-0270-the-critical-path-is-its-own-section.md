@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** — | **Serves:** R1 | **Topic:** viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Requested: *"i propose moving critical path elements into a separate

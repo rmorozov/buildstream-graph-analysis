@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Serves:** the maintainer deciding what the spec still promises | **Topic:** analysis
 
+**Guard:** test_a_retired_state_is_declared.py · inferred r149
+
 ## Motivation
 
 Spec Part 8.2 (`specification.md:625-632`) and Part 42's "Holder

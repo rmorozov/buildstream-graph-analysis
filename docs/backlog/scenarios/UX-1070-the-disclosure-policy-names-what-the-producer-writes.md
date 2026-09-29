@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-1060 | **Found by:** a researcher checking #298's review findings (2026-09-28) | **Serves:** anyone sharing a private capture with an outside reader | **Topic:** contracts | **Area:** bga | **Shape:** mechanical
 
+**Guard:** test_the_disclosure_policy_names_what_the_producer_writes.py
+
 ## Motivation
 
 A `plane2.json` from the current producer (compiled hook and spine, a

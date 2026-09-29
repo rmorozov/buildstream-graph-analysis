@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-691 | **Found by:** round 109, retro-verifying round 102 | **Serves:** the CI adopt run that already carries three real entries | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_the_flake_ledger_grows_from_the_drift_gate.py
+
 ## Motivation
 
 `tools/dev_tier_drift.py` `_adopt_flake` promises append-not-replace:

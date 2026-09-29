@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-392 (the filters), UX-393 (the navigation), UX-396 (the drawings gap) | **Serves:** R2, and every reader of a seven-screen report | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** test_the_page_has_a_volume_budget.py, test_the_browser_is_the_library.py, test_a_control_acts_on_what_it_names.py, test_the_report_you_can_attach.py · inferred r149
+
 ## Motivation
 
 Round 64 answered "how does the page grow without importing

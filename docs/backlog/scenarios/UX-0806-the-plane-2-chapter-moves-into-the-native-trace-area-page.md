@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-689 (the rule and the first area), UX-688 (the generated pages) | **Found by:** round 111, `UX-689`'s first track | **Serves:** the reader pricing a change to the tracer; the session restructuring without losing a sentence | **Topic:** docs | **Area:** tools-native_trace | **Shape:** mechanical
 
+**Guard:** test_docs_links_and_commands.py
+
 ## Motivation
 
 `UX-689` plans one area per track, each track a `UX-689:` commit. The

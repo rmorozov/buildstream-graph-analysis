@@ -232,6 +232,18 @@ def population_size(population):
     raise ValueError(population)
 
 
+def population_for(times):
+    """`{name: current size}` for each `POPULATION_CLASS` name in `times`.
+
+    `UX-955`: shared by `record` and `adopt`, so whichever call last
+    wrote a name's `files` entry also wrote the tree size it was read
+    on - the two never separately drift the way `adopt` alone used to,
+    leaving `population` at its last `record` while `files` moved on.
+    """
+    return {name: population_size(population)
+            for name, population in POPULATION_CLASS.items() if name in times}
+
+
 def file_of(classname):
     """The test file a junit `classname` came from, or None.
 
@@ -478,9 +490,7 @@ def record(times, source="unknown", reference=None):
     # its count is the population these two entries are recorded
     # against - not the CI checkout's, which a local `--record` never
     # sees anyway (`UX-418`).
-    document["population"] = {name: population_size(population)
-                              for name, population in POPULATION_CLASS.items()
-                              if name in times}
+    document["population"] = population_for(times)
     return document
 
 
@@ -628,6 +638,13 @@ def adopt(reference, candidate):
     document["files"] = {
         name: round(statistics.median_low(kept[name]), 2)
         for name in sorted(kept)}
+    # `UX-955`: `times` is this run's own tree, so a name it samples
+    # gets its `population` rewritten the same call it gets a `files`
+    # reading - `record`'s own write, reused, rather than the two
+    # drifting apart the way `population` used to sit at its last
+    # `record` while `files` kept moving under `adopt` alone.
+    document["population"] = {**(reference.get("population") or {}),
+                              **population_for(times)}
     # Which rows are *not* from the recording run `measured_on` names,
     # accumulated over adoptions and dropped by the next wholesale
     # `record` - a reader comparing two rows deserves to know one of

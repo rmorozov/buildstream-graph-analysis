@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-389 (the same disease, plane2 blocks), UX-401 (the census that would have caught it) | **Serves:** R1 and R8 — the reader deciding what to restructure | **Topic:** analysis
 
+**Guard:** test_no_two_fields_carry_the_same_elements.py, test_the_report_you_can_attach.py · inferred r149
+
 ## Motivation
 
 Round 64 walked example 06 against its `optimized/` answer key. The

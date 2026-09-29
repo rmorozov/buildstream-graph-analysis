@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-694 (the ledger) | **Serves:** the session that opens a round and has no refactor to pick because none is filed | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** test_report_key_findings.py, test_part_29_reads_the_store_it_has.py, test_what_an_element_pulls_in.py, test_why_bga_believes_what_it_believes.py, test_a_committed_analysis_matches_the_analyzer.py, test_the_report_has_chapters.py, test_the_command_table_is_the_cli.py, test_compare.py · inferred r149
+
 ## Motivation
 
 §6a says what a refactor is and §6 how a round picks work; neither

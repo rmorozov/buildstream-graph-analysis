@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-381 (the capture directory contract), UX-516 (the CI owner's page) | **Serves:** the CI owner reading how the weekly capture works | **Topic:** docs
 
+**Guard:** test_the_capture_doc_reads_its_workflow.py · inferred r149
+
 ## Motivation
 
 `docs/design/capture-workflow.md` against

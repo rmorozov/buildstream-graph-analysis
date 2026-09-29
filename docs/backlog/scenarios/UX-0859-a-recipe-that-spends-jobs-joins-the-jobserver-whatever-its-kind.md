@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-843, UX-846 | **Found by:** round 120, the user (a 16-core, 32 GB host, `--builders 16 --jobserver auto`) | **Serves:** R2 (a manual element calling `cmake --build ${JOBS}` by hand builds under the mode like a cmake one) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** mechanical
 
+**Guard:** test_bwrap_shim.py
+
 ## Motivation
 
 `kind_job_env` (`tools/native_trace/bwrap_shim.py`) knows make,

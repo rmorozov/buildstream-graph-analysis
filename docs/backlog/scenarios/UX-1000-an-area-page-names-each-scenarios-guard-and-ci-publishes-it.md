@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-996, UX-997 | **Blocks:** — | **Found by:** round 139 — Ruslan in the project thread, 2026-09-23 17:34: "original idea was to use these docs for test plan coverage assessments as scenarios"; he chose both halves on the decision card at 17:35 | **Serves:** whoever assesses an area's test plan, and reads it on GitHub rather than from a checkout | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
+**Guard:** none — named test_absent.py, absent from tests/
+
 ## Motivation
 
 `UX-996` stopped committing `docs/backlog/areas/*.md`; `dev_close_task.py

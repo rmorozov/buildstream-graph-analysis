@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-674 (the flow layout), UX-753 (the guard that found it) | **Serves:** the reader of an exhibit axis whose labels silently stop being protected | **Topic:** viewer | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `exhibitAxis` decides flow layout from `EDGE_MARKS.has(tick.name)`

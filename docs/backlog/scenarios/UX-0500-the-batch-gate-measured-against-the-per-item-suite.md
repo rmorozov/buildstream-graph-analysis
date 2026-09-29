@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-426 (the loop that admits it is unmeasured), UX-498 (the batch plan that names the items) | **Serves:** the implementing session's wall clock; the maintainer's subscription | **Topic:** docs
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-426` wrote the per-item loop and refused to promote it because

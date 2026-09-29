@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-841 | **Found by:** round 117, Direction 20 | **Serves:** R4 (a build whose elements alternate compile-bound and link-bound) | **Topic:** capture | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_the_pool_follows_the_machine.py
+
 ## Motivation
 
 `N-1` tokens written once cannot follow a build; `make -l` reads

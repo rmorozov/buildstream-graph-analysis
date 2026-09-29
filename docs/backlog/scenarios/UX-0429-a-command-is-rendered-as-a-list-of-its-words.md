@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Found by:** round 69, an outside walk of `bga snapshot` → `bga view` → Perfetto | **Serves:** every reader who is handed a command and expected to run it | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** test_the_contract_names_its_vocabulary.py, test_the_viewer_splits_along_its_seams.py, test_a_command_renders_as_a_command.py · inferred r149
+
 ## Motivation
 
 The page's "What should I run next?" control is a three-row table whose

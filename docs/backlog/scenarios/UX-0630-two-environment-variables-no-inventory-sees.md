@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-326 (the tool's sentences are contracts) | **Found by:** architecture review 15 | **Serves:** anyone trying to find out what changes bga's output | **Topic:** docs | **Area:** bga
 
+**Guard:** test_the_context_map_is_the_tree.py · inferred r149
+
 ## Motivation
 
 Two environment variables landed this window, both input surfaces:

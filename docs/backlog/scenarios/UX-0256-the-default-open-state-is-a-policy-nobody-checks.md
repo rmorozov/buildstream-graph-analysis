@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** — | **Serves:** R1, and every future change to the viewer | **Topic:** guards | **Area:** bga/viewer
 
+**Guard:** test_the_page_opens_the_way_it_says.py · inferred r149
+
 ## Motivation
 
 The user asked for *"a checker if everything is really collapsed by

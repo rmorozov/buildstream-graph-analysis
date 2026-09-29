@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-72 (done) | **Topic:** analysis | **Area:** bga
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 On `examples/06`'s baseline, `bga correlate`'s "What to do next" prints

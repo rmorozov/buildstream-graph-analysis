@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Topic:** guards
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The round-11 status table rendered broken in GitHub's viewer: the

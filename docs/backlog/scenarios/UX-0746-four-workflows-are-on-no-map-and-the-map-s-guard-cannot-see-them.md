@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-239 (the context map), UX-573 (the last time the map's walk was too narrow to notice) | **Serves:** the low-context session told not to re-derive where things live | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `fixing-guide.md` §6 is headed *"Where things live (context map — don't

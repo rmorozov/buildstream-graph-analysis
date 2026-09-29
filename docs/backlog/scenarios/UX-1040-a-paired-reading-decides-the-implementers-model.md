@@ -1,6 +1,8 @@
 # UX-1040: a paired reading decides whether implementers move to opus at low effort
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-1039 | **Found by:** round 143 — the workflow review Ruslan accepted 2026-09-27 07:53 | **Serves:** every round's implementer spend | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-1039 | **Found by:** round 143 — the workflow review Ruslan accepted 2026-09-27 07:53 | **Serves:** every round's implementer spend | **Topic:** guards | **Area:** unassigned | **Shape:** judgement | **Reading:** container
+
+**Guard:** none — open, no guard named yet
 
 ## Motivation
 

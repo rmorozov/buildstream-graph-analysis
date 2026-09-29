@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-211 | **Serves:** R1 and R7 | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** test_every_table_has_its_own_state_key.py · inferred r149
+
 ## Motivation
 
 Found while measuring `UX-289`. `UX-211` keys every table's view state

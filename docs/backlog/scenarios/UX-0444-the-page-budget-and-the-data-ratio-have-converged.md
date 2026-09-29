@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Found by:** round 70, landing `UX-434` — the corrected query did not fit | **Serves:** every later round, which cannot add a sentence to the page without choosing between two ceilings nobody has compared | **Topic:** guards
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 **Filed on a misreading, and the misreading is the first thing this

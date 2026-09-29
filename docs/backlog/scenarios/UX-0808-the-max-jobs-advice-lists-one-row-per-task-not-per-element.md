@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-677 (the advice) | **Found by:** round 112, a fresh two-plane capture of `examples/06` taken to price the advice (`UX-739`) | **Serves:** R4 and R5 reading the recommendation table | **Topic:** analysis | **Area:** bga | **Shape:** bounded
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `_max_jobs_advice` (`bga/cli.py`) hands `compute_max_jobs_advice`

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-573 (the map that walks the tree git has), UX-274 | **Serves:** every session that reads fixing guide §6 to find where a thing lives | **Topic:** guards
 
+**Guard:** test_the_context_map_is_the_tree.py · inferred r149
+
 ## Motivation
 
 `UX-573` found fixing guide §6 crediting `bga/report/` with a `csv`

@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** `UX-476` wrote `explained_by`; `UX-336` put `tiers.py` in the shared-harness list | **Found by:** round 75, refreshing a reference entry CI had just reported | **Serves:** the round re-tiering a file, which is the one time these two guards are red for no reason of its own | **Topic:** guards
 
+**Guard:** test_a_slow_file_says_which_file.py · inferred r149
+
 ## Motivation
 
 `explained_by(base)` answers "is there anything in this branch's diff

@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-914 | **Blocks:** UX-913 | **Found by:** round 133 — Ruslan split `UX-913`'s remedy into a fast unblock and a corner-case row (2026-09-21); this is the fast one | **Serves:** every example whose element joins the jobserver | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
+**Guard:** test_the_staged_make_is_the_pinned_one.py · inferred r149
+
 ## Motivation
 
 `UX-913`'s scrub chain begins at one reading:

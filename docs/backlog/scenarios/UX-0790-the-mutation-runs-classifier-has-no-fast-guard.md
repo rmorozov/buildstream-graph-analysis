@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-703 | **Found by:** round 109, retro-verifying round 102 | **Serves:** the weekly run whose survivor count is the only number anyone reads | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_the_weekly_mutation_run_names_its_survivors.py
+
 ## Motivation
 
 `tools/dev_mutation.py`'s `_CAUGHT = {"killed"}` decides what counts

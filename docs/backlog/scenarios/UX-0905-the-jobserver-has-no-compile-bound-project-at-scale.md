@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-848 (the compile-bound example), UX-857 (`11-serial-giant`) | **Found by:** the 2026-09-20 rollout thread — the owner's own LLVM element is the target case and is blocked behind a ninja integration problem on their project, so the evaluation needs a project this repository can run | **Serves:** R5 and R4 (the mode's value, measured at a scale that can show it), R2 | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Direction 20's bar is that the mode is supported when a compile-bound

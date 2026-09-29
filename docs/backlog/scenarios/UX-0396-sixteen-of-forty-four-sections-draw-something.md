@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-303 (the shape before the rows), UX-361 (two new shapes), UX-350 (the shape channel), UX-306 (the visual contract) | **Serves:** anyone scanning the report for where the time went | **Topic:** viewer | **Area:** bga
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The user asked whether every piece of data that could carry a visual

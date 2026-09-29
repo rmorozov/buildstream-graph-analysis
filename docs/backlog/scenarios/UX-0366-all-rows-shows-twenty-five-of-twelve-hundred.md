@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-289 (one element table, many presets), UX-349 (the table tools scale with the table) | **Serves:** anyone whose project has more than 25 elements | **Topic:** viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Measured on the 1,202-element synthetic run (`bga gen-synthetic

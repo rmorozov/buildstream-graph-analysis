@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-337 (the 1,500-line ceiling), UX-829 (the sixth preset) | **Found by:** round 116, the batch gate | **Serves:** the next viewer change, which lands under the ceiling instead of on it | **Topic:** viewer | **Area:** bga-viewer | **Shape:** mechanical
 
+**Guard:** test_the_viewer_splits_along_its_seams.py
+
 ## Motivation
 
 `UX-829`'s sixth preset put `bga/viewer/structured.js` at 1,502 lines,

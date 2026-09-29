@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-193 (the shell these views live in), UX-170 (the band), UX-171 (the blast table), UX-103 (cache-trend) | **Topic:** viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Direction 7's scenario list, filed as the second wave once UX-193's

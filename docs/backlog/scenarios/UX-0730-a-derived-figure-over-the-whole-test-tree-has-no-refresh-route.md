@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-716 (the same class, in the timing mechanism), UX-662 (which retires the map's readers), UX-336 (the selector) | **Serves:** every round that adds a test file, and the branch that pays for it | **Topic:** guards | **Shape:** bounded | **Area:** tools
 
+**Guard:** test_the_selector_carries_the_census.py, test_docs_links_and_commands.py, test_the_loop_stays_fast.py, test_a_counted_figure_is_derived.py, test_a_guard_ledger_names_its_link.py, test_a_guard_that_reads_history_declares_its_depth.py, test_every_invariant_has_a_guard.py, test_every_part_has_a_guard.py, test_the_environment_surface_is_an_inventory.py, test_the_process_documents_derive_their_figures.py, test_the_python_floor_is_a_guard.py, test_the_roles_table_names_who_serves_it.py, test_the_round_history_names_every_audit.py, test_the_styleguide_names_its_guards.py, test_the_tiers_are_a_partition.py, test_the_touching_map_is_measured.py · inferred r149
+
 ## Motivation
 
 Round 98 went red on CI across four Pythons and three shas, with the

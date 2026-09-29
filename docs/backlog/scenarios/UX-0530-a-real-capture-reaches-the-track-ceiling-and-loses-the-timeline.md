@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-430 (the ceiling), UX-406 (the spine double-count that halves the room) | **Serves:** anyone capturing a C++ project with a few hundred processes per element | **Topic:** capture | **Area:** bga/viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 ```text

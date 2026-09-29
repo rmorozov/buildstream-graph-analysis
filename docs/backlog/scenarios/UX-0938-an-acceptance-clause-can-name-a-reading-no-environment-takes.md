@@ -1,6 +1,8 @@
 # UX-938: an acceptance clause can name a reading that no environment in this project ever takes, and nothing says so until the round that owes it
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-762 | **Blocks:** — | **Found by:** round 137 — `UX-925`'s clause asked for every example figure to be re-derived, and the container that closed it has neither `bst` nor `bwrap`, so the clause could not have been paid by the session it was written for | **Serves:** every clause that asks for a reading, and every round that reports one unpaid | **Topic:** guards | **Area:** tools | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-762 | **Blocks:** — | **Found by:** round 137 — `UX-925`'s clause asked for every example figure to be re-derived, and the container that closed it has neither `bst` nor `bwrap`, so the clause could not have been paid by the session it was written for | **Serves:** every clause that asks for a reading, and every round that reports one unpaid | **Topic:** guards | **Area:** tools | **Shape:** mechanical | **Reading:** container
+
+**Guard:** test_a_derived_figure_is_printed_not_committed.py · inferred r149
 
 ## Motivation
 
@@ -115,4 +117,84 @@ The first mutation is the one that discriminates against the cheap
 fix: a convention written only in `CLAUDE.md`, with no property
 reading it, passes every sentence above and changes nothing.
 
-## Outcome
+## Decision
+
+The `architect`, round 149, at `c324f250`.
+
+```text
+Route:     the convention half: a header field `**Reading:** container | runner:<ci job> |
+           owner:<machine> | unpayable:<reason>` and a ninth --check property, reading_problems():
+           an open row at UX-938 or later with no field, a `runner:<job>` not under ci.yml `jobs:`,
+           or `unpayable:` with no reason reds. The retrieval half is paid already: bst-examples'
+           "UX-941 structural figures as notices" step runs `if: always()`; no ci.yml change
+Rejected:  the convention in prose only - nothing reads it, the row's own mutation
+           scanning Acceptance text for bst/bwrap/runner - a plausibility proxy
+           a new ::notice:: step - duplicates UX-941's
+           a grandfather set - a committed list; backfill the headers instead
+Files:     tools/dev_close_task.py; docs/contributing/rules.md (one row); the header of each open
+           row at UX-938 or later; tests/unit/test_a_clause_names_where_its_reading_is_taken.py (new)
+Guard:     the new file on a tmp --scenarios copy: a planted open row with no Reading reds naming
+           its id; runner:no-such-job reds; unpayable: with no reason reds; a row below UX-938
+           passes; the real tree reports 0
+Mutation:  reading_problems returns [] -> planted row reds; drop the jobs lookup -> no-such-job
+           reds. Mutations 2 and 3 (empty notice, always() removed) redden
+           test_the_examples_clock_is_a_spread.py::TestTheNoticeStep; apply once, paste the red
+Class:     bookkeeping (cap lifted for r149)
+Split:     one track, parallel with UX-1041
+Question:  none
+```
+
+## Outcome (round 149) — 🟢 Done
+
+**Premise:** held — `--check` read eight properties and none asked
+whether a clause's reading was takeable; an unpayable clause and a
+paid one were indistinguishable.
+
+### The gap, measured
+
+```text
+$ python3 tools/dev_close_task.py --check
+  ...
+0 problem(s) over 8 propert(y/ies), 1023 backlog row(s)
+```
+
+A planted open row naming a reading no environment takes passed clean.
+
+### After
+
+```text
+$ python3 tools/dev_close_task.py --check
+  ok    every open row at UX-938 or later names where its Acceptance
+        Test's reading is taken
+0 problem(s) over 9 propert(y/ies), 1023 backlog row(s)
+```
+
+`reading_problems()` is the ninth property. Every open row at UX-938 or
+later got a `**Reading:**` header field (22 rows; `UX-1010`/`UX-1014`
+`owner:CodSpeed Graviton` (`UX-1014`: and an x86 16-core host), `UX-975`/`UX-1013` `runner:bst-examples`,
+the rest `container`). The retrieval half was already paid by
+`UX-941`'s `if: always()` notice step - no `ci.yml` change here.
+
+### Mutations verified red and reverted (2)
+
+| # | mutation | reddened |
+|---|---|---|
+| A1 | `reading_problems` returns `[]` early | 3 planted clauses (no field, bad runner, empty unpayable) |
+| A2 | the `runner:` job-membership check replaced with `if False:` | the bad-runner clause only |
+
+### Deviation from the Required Fix
+
+`rules.md`'s new row pushed the card to 81 lines against `UX-497`'s
+80-line cap; the floating sentence below the proxy-rule row duplicated
+`fixing-guide.md` §5 verbatim, so it was dropped rather than the new
+row. `ci_jobs()` reads a fixed `CI_YML` path rather than the
+monkeypatchable `REPO`, since `UX-935`'s synthetic-repo test has no
+`.github` of its own. `test_a_derived_figure_is_printed_not_committed.py`'s UX-9801-9805
+fixture rows gained `**Reading:** container`, or the new property broke
+that item's own green `--check`.
+
+```text
+$ make lint          exit 0
+$ python3 tools/dev_close_task.py --check   0 problem(s) over 9 propert(y/ies)
+$ python3 tools/dev_sizes.py --check        sizes ok: 151 file(s) measured
+```

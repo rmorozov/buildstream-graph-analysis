@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-232 (which made the taxonomy a closed set), UX-507 (which classified the topic-less rows) | **Found by:** round 89, filing UX-657 and being refused a topic the index already prints | **Serves:** anyone filing a row and choosing what to put in its Topic cell | **Topic:** guards | **Area:** tools
 
+**Guard:** test_docs_links_and_commands.py, test_the_loop_stays_fast.py, test_the_fast_check_holds_what_the_suite_holds.py · inferred r149
+
 ## Motivation
 
 `UX-232` made the topic a **closed set** so the index could be counted.

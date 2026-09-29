@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-402 (the journey with an answer key), UX-664 (the walk skill), UX-665 (the page census) | **Serves:** R8 deciding whether the tool is in shape; the implementing session that gets a guard, not a transcript | **Topic:** guards | **Shape:** bounded
 
+**Guard:** test_a_scenario_is_named_by_its_seed.py · inferred r149
+
 ## Motivation
 
 Hand exploration finds a problem almost every time, and the suite

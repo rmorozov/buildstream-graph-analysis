@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-281 (the satellite pages are dead ends), UX-199 (a report you can find your way around), UX-369 (the substitution) | **Serves:** anyone following the handoff out of the report | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The viewer ships three pages:

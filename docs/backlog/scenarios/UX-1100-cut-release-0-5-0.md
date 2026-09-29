@@ -1,6 +1,8 @@
 # UX-1100: cut release 0.5.0 once the next features are in
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-1078 | **Found by:** round 150, UX-1078's new `tail/v1` contract (2026-09-28) | **Serves:** R8 | **Topic:** contracts | **Area:** bga | **Shape:** judgement
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-1078 | **Found by:** round 150, UX-1078's new `tail/v1` contract (2026-09-28) | **Serves:** R8 | **Topic:** contracts | **Area:** bga | **Shape:** judgement | **Reading:** container
+
+**Guard:** test_a_release_records_a_contract_state.py
 
 ## Motivation
 

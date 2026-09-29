@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-139, UX-192 (pasted-output honesty) | **Serves:** R1 | **Topic:** docs | **Area:** bga
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Walk friction 14. The README's quick-start block says the

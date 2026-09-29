@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-556 (which wrote the sentence), UX-584 (which required the process layer's figures to be derived or dated) | **Found by:** round 89, track Y, when adding a line to Part 32 moved both figures | **Serves:** anyone following item 12 to the sentence it points at | **Topic:** docs | **Shape:** judgement
 
+**Guard:** test_the_process_documents_derive_their_figures.py · inferred r149
+
 ## Motivation
 
 `fixing-guide.md` item 12 carries two line numbers in one sentence:

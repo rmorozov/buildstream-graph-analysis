@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-46` (which added the call), `UX-107` (which widened the element set it runs over) | **Found by:** round 77, field report — *"at the end of bga snapshot, bst list contents takes considerable time on big projects"* | **Serves:** anyone capturing a project with more than a handful of elements | **Topic:** capture | **Area:** tools
 
+**Guard:** test_the_contents_read_is_one_call.py · inferred r149
+
 ## Motivation
 
 `read_artifact_contents` (`tools/bst_native_build_tracer.py:3312`) runs

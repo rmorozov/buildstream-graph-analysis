@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-75 (the published-contract precedent), UX-171 (`sources/v1`, the one output that already does this) | **Topic:** contracts | **Area:** bga
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Field feedback: *"our analyze schema and other schemas evolved

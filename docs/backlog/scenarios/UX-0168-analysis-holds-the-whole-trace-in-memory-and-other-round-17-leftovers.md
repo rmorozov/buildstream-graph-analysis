@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done — the census, the store and all six one-liners; the memory headline it was filed for was met by `UX-169`, which also corrects this file's figures | **Depends on:** UX-157/UX-148/UX-160 (the landings these trail) | **Topic:** capture
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The round-17 review's remaining-sharp-edges list, filed so the

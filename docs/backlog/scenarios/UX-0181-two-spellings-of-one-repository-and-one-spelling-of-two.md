@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-171 (`normalize_url` and the identity model) | **Topic:** analysis
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `normalize_url` exists so a blast is not halved by two spellings of

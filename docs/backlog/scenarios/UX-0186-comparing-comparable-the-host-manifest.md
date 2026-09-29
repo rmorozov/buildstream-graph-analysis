@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-78 (the refusal grammar), UX-151 (the fingerprint precedent), UX-92 (which measured how much host noise matters) | **Topic:** capture
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Field feedback: *"generally we can compare builds only built on

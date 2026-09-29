@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-131 (which guarded the status column), UX-387 (one reading of a property, not two) | **Found by:** round 89, checking the rows round 88 wrote | **Serves:** anyone who sorts the backlog by priority to decide what to do next | **Topic:** guards | **Area:** tools
 
+**Guard:** test_docs_links_and_commands.py · inferred r149
+
 ## Motivation
 
 A row states its item's priority; so does the item's own header line.

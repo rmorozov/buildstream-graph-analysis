@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-426 (the loop this gives a first step) | **Serves:** the implementing session, before its first edit; the round that wants two sessions on one slate | **Topic:** docs
 
+**Guard:** test_the_agent_configuration_holds.py
+
 ## Motivation
 
 The house procedure goes filing → code → guard → falsify → close, and

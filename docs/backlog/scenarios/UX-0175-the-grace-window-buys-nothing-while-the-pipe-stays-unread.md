@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-163 (the lifecycle this completes), UX-157 (the salvage it protects) | **Topic:** capture | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 UX-163 raised the SIGINT grace to 300s so a big build's graceful stop

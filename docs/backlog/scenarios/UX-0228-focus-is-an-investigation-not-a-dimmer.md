@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-222 (the focus state), UX-216 (the element object), UX-227 (the explanation it reuses) | **Serves:** R1, R2 | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-222` built focus as visual state: one element held, the rest

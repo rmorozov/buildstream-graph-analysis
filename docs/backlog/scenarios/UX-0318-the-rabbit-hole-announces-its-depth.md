@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-277 (the nesting cap), UX-205 (the tables), styleguide §3a | **Serves:** R1, R2 | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Three field reports, one mechanism. Tables nest several levels deep

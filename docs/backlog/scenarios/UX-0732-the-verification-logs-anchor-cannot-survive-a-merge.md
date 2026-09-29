@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-652 (which made the anchor a commit), UX-604, UX-247 | **Serves:** every round that runs a track touching the architecture document | **Topic:** guards | **Shape:** judgement | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `test_nothing_landed_after_the_commit_the_entry_credits` anchors on

@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done (tier 1 + tier 2 both implemented) | **Depends on:** `UX-09` | **Topic:** analysis
 
+**Guard:** test_cli_subcommands.py, test_contention_calibration.py · inferred r149
+
 ## Motivation
 
 `ReplayScheduler` (`bga/replay/scheduler.py`) replays every task using its fixed, already-observed `duration_us` (`Task.duration_us`, line 29; consumed at line 280) - a real duration recorded under *one specific* `(builders, max-jobs)` configuration. `bga sweep --resource PROCESS` (`capacity_sweep`, lines 390+) re-simulates that same fixed-duration task set across a range of `PROCESS` capacities (i.e. sweeping `builders`) and reports a predicted `T_C` curve, normalized improvement, and a diminishing-returns "knee point" (`docs/guides/cli.md`'s own description).

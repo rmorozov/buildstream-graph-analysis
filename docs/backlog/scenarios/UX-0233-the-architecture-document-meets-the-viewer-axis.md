@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-190 (the contracts it inventories), UX-232 (the hygiene sibling) | **Serves:** the maintainers; R8 when the big refactor is priced | **Topic:** docs
 
+**Guard:** test_the_documents_keep_up_with_the_contracts.py · inferred r149
+
 ## Motivation
 
 The user's observation: *we frequently forget to update architecture

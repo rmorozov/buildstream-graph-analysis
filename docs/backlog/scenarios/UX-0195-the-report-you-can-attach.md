@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-193 (the page this exports), UX-115 (the CI journey this joins) | **Topic:** viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Direction 7's second delivery mode: the same page, as a file.

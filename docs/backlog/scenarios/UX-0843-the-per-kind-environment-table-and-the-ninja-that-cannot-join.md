@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-842 | **Found by:** round 117, Direction 20 | **Serves:** R4 (cmake and meson elements join instead of resetting the jobserver) | **Topic:** capture | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_bwrap_shim.py
+
 ## Motivation
 
 cmake and meson run `cmake --build … -- ${JOBS}` and

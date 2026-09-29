@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-234 (host classes), UX-250 (the contract-move refusal) | **Found by:** the 2026-09-20 rollout brief ([`continuous-build-improvement.md`](../../design/continuous-build-improvement.md), section 1) — CI will keep bundles under build numbers whose form already separates nightly (`27.0.0.<seq>`) from review (`27.0.999.<seq>`) | **Serves:** R4 (a gate that compares like with like), R5 and R7 (an aggregate that is not two populations averaged) | **Topic:** contracts | **Area:** bga | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `bga` already refuses to blend host classes: a store spanning two of

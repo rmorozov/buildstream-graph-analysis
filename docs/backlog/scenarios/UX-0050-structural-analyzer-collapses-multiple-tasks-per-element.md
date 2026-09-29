@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** — (pre-existing; `UX-44` is what made it consequential and visible) | **Topic:** analysis
 
+**Guard:** test_element_duration_aggregation.py · inferred r149
+
 ## Motivation
 
 Found by the cross-check sweep `docs/design/directions.md` named as its own un-run item: comparing quantities that are computed independently and ought to agree. Two of them disagree, on a real capture:

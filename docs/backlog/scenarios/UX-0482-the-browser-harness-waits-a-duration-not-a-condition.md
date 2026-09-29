@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 73, PR #191 — a store guard reported 40 sections on its first boot and 47 on its second, in one run, on both interpreters | **Serves:** the contributor whose PR is red on a page the tool renders correctly | **Topic:** guards
 
+**Guard:** test_one_bad_row_costs_one_section.py
+
 ## Motivation
 
 `tests/cdp.mjs` navigated and then slept:

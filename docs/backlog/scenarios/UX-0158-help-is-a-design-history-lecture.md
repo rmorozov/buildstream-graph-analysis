@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-135/UX-137 (the same concision pass, which stopped at the docs) | **Topic:** cli | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The docs corpus was cut 3,128 → 2,203 lines for concision (UX-135..

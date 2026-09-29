@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the snapshot and view performance audit on `39d89d4` (2026-09-28) | **Serves:** R5, R1 | **Topic:** analysis | **Area:** bga | **Shape:** judgement
 
+**Guard:** test_compare_reads_published_analyses.py
+
 ## Motivation
 
 `compare_runs` (`bga/compare.py:1320`) calls `analyze` on both runs

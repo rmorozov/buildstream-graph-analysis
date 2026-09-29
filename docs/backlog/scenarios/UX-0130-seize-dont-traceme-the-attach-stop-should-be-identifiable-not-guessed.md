@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-118 (done — this is what its fix revealed) | **Topic:** capture
 
+**Guard:** test_process_spine.py · inferred r149
+
 ## Motivation
 
 UX-118 fixed the re-injected attach-SIGSTOP by *guessing* which SIGSTOP

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-887 | **Found by:** round 129, the 2026-09-18 audit session's closing note (never filed at the time): `dev_env_check.py` landed with ruff as its only pinned binary, while `dev_baseline.py` spawns bare `pyright` too, and the PATH advice the check prints fixes one binary by reordering the whole toolchain | **Serves:** the pipeline (the gate runs on the versions the readings were taken on) | **Topic:** guards | **Area:** tools-dev | **Shape:** judgement
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-887` built the pre-gate check around one binary. `dev_baseline.py`

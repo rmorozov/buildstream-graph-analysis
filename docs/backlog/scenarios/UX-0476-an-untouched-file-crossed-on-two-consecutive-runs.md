@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 72, driving PR #191 to green — the drift gate named a file no commit on the branch touches, twice in a row | **Serves:** the contributor whose PR is red for a file they did not write, and whose only offered remedy is to re-record a reference they have no reason to distrust | **Topic:** guards | **Area:** tools
 
+**Guard:** test_a_slow_file_says_which_file.py
+
 ## Motivation
 
 `UX-458` closed one round ago on this conclusion, and named its own

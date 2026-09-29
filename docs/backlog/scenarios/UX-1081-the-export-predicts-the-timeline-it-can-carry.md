@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the snapshot and view performance audit on `39d89d4` (2026-09-28) | **Serves:** R1 | **Topic:** viewer | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_the_export_renders_one_timeline.py
+
 ## Motivation
 
 `export`'s degradation ladder (`tools/bga_view.py:1310`) renders the

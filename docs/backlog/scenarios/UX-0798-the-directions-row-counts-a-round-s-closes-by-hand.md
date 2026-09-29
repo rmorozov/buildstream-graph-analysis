@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-583 (the round-history link guard), UX-772 | **Found by:** review 21, round 110 | **Serves:** the reader of `directions.md` deciding what a round did | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** test_the_round_history_names_every_audit.py · inferred r149
+
 ## Motivation
 
 ```console

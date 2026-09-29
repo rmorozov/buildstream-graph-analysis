@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-842, UX-870 | **Found by:** round 121, UX-870's verifier | **Serves:** R2 (a `bst build --deps all t.bst` capture reads its kinds and its max-jobs) | **Topic:** capture | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_the_kinds_read_carries_the_options.py
+
 ## Motivation
 
 `_cmd_target` (`UX-842`) takes the first token after the subcommand

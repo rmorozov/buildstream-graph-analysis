@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** none | **Topic:** capture | **Area:** tools
 
+**Guard:** test_run_identity.py, test_bst_extract_run.py
+
 ## Motivation
 
 Found while using `bga compare` for real on UX-05's baseline vs. `optimized/` example projects (`examples/04-critical-path-optimization` and `examples/04-critical-path-optimization/optimized` - two genuinely different BuildStream projects, different `elements/`, different element counts, living as sibling directories inside the same git repository/commit). Both runs' extracted `run-context.json` reported the **exact same** `run_identity.manifest_hash`:

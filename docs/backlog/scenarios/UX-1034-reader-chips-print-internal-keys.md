@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the styleguide audit (2026-09-26, PR #294), styleguide §4g.3 | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** bounded
 
+**Guard:** test_a_reader_never_sees_the_register.py, test_the_page_has_a_volume_budget.py · inferred r149
+
 ## Motivation
 
 Measured on `main` at `98ab850`: `python3 -m tools.bga_view <run> --export` on `macro_micro` and `golden`, booted in Chromium at 1440x900 and 390x844. Section headings read "What this capture supports **R4**"; §4g.3 says no internal key reaches the reader.

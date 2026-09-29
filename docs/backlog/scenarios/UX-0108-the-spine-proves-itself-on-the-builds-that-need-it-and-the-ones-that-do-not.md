@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done — the budget decided: `--trace-spine` stays opt-in | **Depends on:** UX-106, UX-107 | **Topic:** capture | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 Direction 4, validation — see
 [`design/directions.md`](../../design/directions.md).
 

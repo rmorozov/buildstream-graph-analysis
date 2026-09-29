@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done - real `tools/bst_native_build_tracer.py`, real `LD_PRELOAD` + `bwrap` shim, real CLI verified against `examples/05-cmake-cpp-toolchain` (see Implementation) | **Depends on:** `UX-09` (the joint-optimization finding this directly follows from) | **Topic:** capture | **Area:** tools/native_trace
 
+**Guard:** test_bwrap_shim.py, test_native_build_tracer.py, test_bst_extract_run.py, test_bst_extract_run_strict.py, test_bst_checkout_cost.py · inferred r149
+
 ## Motivation
 
 The user's own proposed direction, following `UX-09`'s confirmation that `--builders` and native `max-jobs` genuinely compete for the same CPU cores with no coordination: since `bga` currently has zero visibility into what happens *inside* a single element's "Running commands" span (BuildStream logs exactly one START/SUCCESS pair per element regardless of how many `make -jN`/`ninja` sub-processes ran inside it), a real, separate tool is needed to analyze the native build system's *own* behavior within one element - is its internal parallelism actually being used well, or is a `make -j8` inside a `cmake` element secretly running mostly serial (bad internal dependency graph), or badly thrashing against sibling elements' own compiles (`UX-09`'s oversubscription finding, made visible per-element rather than only in aggregate wall-clock)?

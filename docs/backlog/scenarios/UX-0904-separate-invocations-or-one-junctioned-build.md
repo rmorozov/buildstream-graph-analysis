@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-903 (the variants that make N), P4-15 / `bst_checkout_cost.py` (the precedent) | **Found by:** the 2026-09-20 rollout thread — the owner names this as one of the questions bga should answer: do the variants need separate CI builds, or are they worth embedding in one BuildStream invocation through junctions | **Serves:** R5 (the fleet that runs N of them), R3 (whose graph the junction changes), R4 and R6 (the latency of a verdict) | **Topic:** analysis | **Area:** bga | **Shape:** judgement
 
+**Guard:** none — open, no guard named yet
+
 ## Motivation
 
 A pipeline that builds four variants runs four BuildStream invocations,

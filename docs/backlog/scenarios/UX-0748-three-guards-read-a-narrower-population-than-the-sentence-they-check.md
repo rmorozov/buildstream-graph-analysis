@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-231 (the direction statuses), UX-511 (a dated block), UX-549 (a derived count) | **Serves:** the reader who trusts a guarded sentence because it is guarded | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** test_every_direction_names_its_reader.py, test_the_verification_log_is_true.py, test_a_pasted_guide_block_is_fresh_or_dated.py · inferred r149
+
 ## Motivation
 
 Review 19 found three drifted sentences that each sit **inside** a

@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-207 (the first screen is a decision), UX-261 (the first view leads with what to do) | **Serves:** anyone opening the report to find the biggest lever | **Topic:** analysis | **Area:** bga
 
+**Guard:** test_attribution_hints.py, test_report_key_findings.py · inferred r149
+
 ## Motivation
 
 Walked as an outsider: open the report, read the findings, act on the

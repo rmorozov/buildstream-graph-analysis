@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-299` (the size threshold and the deep link), `UX-314` (the fetchability check), `UX-282` (the fallback beside the button) | **Found by:** round 77, field report — *"bga view definitely misses some progress when open timeline in perfetto is clicked on big captures — I waited several minutes before it opened"* | **Serves:** the reader of a big capture, staring at two tabs that both say nothing | **Topic:** viewer
 
+**Guard:** test_the_report_you_can_attach.py · inferred r149
+
 ## Motivation
 
 `bga view` copies a trace through the page up to a published threshold

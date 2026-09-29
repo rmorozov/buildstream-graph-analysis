@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-762, UX-948 | **Blocks:** — | **Found by:** round 139 — a live push from a track's worktree, always blocked | **Serves:** every track that runs `make push-check` in a worktree and then pushes | **Topic:** guards | **Area:** unassigned | **Shape:** mechanical
 
+**Guard:** test_the_gate_covers_the_pushed_commit.py
+
 ## Motivation
 
 `.claude/hooks/gate_covers_push.py`'s `repo_root()` calls `git

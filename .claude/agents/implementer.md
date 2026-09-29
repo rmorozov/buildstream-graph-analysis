@@ -60,6 +60,10 @@ measured, the mutation table — because the task file is not a shared
 file and those three are pasted output, not judgement. The deviation
 line is the orchestrator's.
 
+The task file's `**Guard:**` line, under its header, is yours too: name
+the test file(s) your guard lives in, or `none — <reason>`. `--check`
+refuses a missing line or a name absent from `tests/` (`UX-1092`).
+
 ## What shape you are handed
 
 A task's header carries `**Shape:**`, derived by `dev_close_task.py
@@ -184,7 +188,12 @@ mkdir -p "<the scratchpad path you were given>/$(basename "$PWD")"
    bga.cli` — otherwise it resolves to the session's install, not your
    copy (`UX-728`); `bga` warns at startup when it can tell the two
    apart.
-4. `make test-touching` while you work.
+4. While you work, select with `python3 tools/dev_touching.py --base
+   <your base> --list` and run `python3 -m pytest -n 2 -q` on the files
+   it prints. When it selects the whole suite, run the whole suite at
+   `-n 2`, never a hand-picked subset. `make test-touching` and a bare
+   `dev_touching.py` are the session's: the worktree hook refuses them
+   (`UX-1041`).
 5. **Mutate every new guard** and watch it go red — the `falsify`
    skill. A guard nobody mutated is a guard nobody knows can fail. Then
    revert the mutation and confirm green. Revert **from the copy the

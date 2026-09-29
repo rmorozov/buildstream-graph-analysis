@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-551 (the rule these two figures predate) | **Serves:** the newcomer budgeting a run from a number measured on someone else's afternoon | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
 
+**Guard:** test_docs_links_and_commands.py · inferred r149
+
 ## Motivation
 
 The README's install block prints two bare durations:

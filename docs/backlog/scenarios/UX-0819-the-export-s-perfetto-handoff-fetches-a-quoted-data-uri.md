@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-299 (the handoff carries the trace), UX-314 (the fetchable rule) | **Found by:** round 114, walk seed 3 | **Serves:** R1 opening the timeline from an export | **Topic:** viewer | **Area:** bga-viewer | **Shape:** judgement
 
+**Guard:** test_the_perfetto_handoff.py · inferred r149
+
 ## Motivation
 
 The export inlines the trace as a JSON string —

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-156 (the incompleteness grammar this reuses), UX-110 (the timestamp-agreement machinery) | **Topic:** capture
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Field feedback: *"there also can be scenario with computer going to

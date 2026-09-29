@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-81 (done) | **Topic:** store | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 UX-81 delivered exactly what it promised: per-run refs, three

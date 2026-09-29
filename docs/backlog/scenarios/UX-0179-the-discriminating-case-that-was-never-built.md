@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-173 (the guard this makes real), UX-176 (the standard it fails) | **Topic:** guards
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 UX-173's acceptance named its one discriminating case precisely: *"a

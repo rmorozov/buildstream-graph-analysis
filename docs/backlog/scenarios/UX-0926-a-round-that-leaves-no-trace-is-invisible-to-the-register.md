@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-666, UX-744, UX-757 | **Blocks:** — | **Found by:** round 135 — `UX-914` closed and shipped with no round document and `make test` stayed green; rounds 132 and 133 had already done the same, and round 134 was caught only because it happened to have priced an agent | **Serves:** every later round, which reads a round's record instead of its code | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
+**Guard:** test_a_run_is_priced.py · inferred r149
+
 ## Motivation
 
 `UX-666` was filed on exactly this silence and its guard says so.

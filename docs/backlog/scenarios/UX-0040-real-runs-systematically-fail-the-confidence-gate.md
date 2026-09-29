@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-03 (the gate), UX-10 (which introduced the real wall-clock horizon this interacts with) | **Topic:** analysis
 
+**Guard:** test_confidence_pipeline_overhead.py · inferred r149
+
 ## Motivation
 
 `bga compare --fail-on-regression` fails **open** when either run's confidence is below `_CONFIDENCE_HIGH = 0.8` (`bga/compare.py` → `low_confidence`, `bga/cli.py::_compare_exit_code`). That is a defensible design: do not fail a pipeline on data you do not trust.

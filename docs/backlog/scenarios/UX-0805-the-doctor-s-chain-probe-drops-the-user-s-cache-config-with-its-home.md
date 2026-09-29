@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-755 (the absolute-valued reserve, for the tests), UX-149 (the chain probe) | **Found by:** round 111, the gate on a box 13.5 GB from full | **Serves:** R8 reading `bga doctor` on a host whose free space is under 5 % of the volume | **Topic:** capture | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_doctor.py
+
 ## Motivation
 
 ```console

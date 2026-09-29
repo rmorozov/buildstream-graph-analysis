@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-522, UX-943 | **Blocks:** — | **Found by:** round 138 — Ruslan, 2026-09-23: "for docs only changes i also propose making lighter ci gate" | **Serves:** every docs-only pull request, which waits on four interpreters and three `bst` jobs | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
+**Guard:** test_a_docs_only_diff_runs_its_guards.py
+
 ## Motivation
 
 Every pull request runs `test` on four Pythons, then `bst-smoke`,

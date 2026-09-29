@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-675 (the cores series), UX-377 (resolved max-jobs), UX-48 (idle split) | **Serves:** R4 first, R2 and R3 through the elements each interval names | **Topic:** analysis | **Shape:** judgement
 
+**Guard:** test_the_cores_were_or_were_not_binding.py · inferred r149
+
 ## Motivation
 
 The CI owner's question has a short answer and a long one, and the

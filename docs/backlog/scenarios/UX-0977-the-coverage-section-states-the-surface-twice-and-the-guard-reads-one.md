@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-909 | **Blocks:** — | **Found by:** architecture review 26 (2026-09-23) — `UX-899` moved `cli.md:1085` from 562 to 563 because a guard made it, and `:1099` fourteen lines below still says 562 | **Serves:** whoever reads `cli.md`'s coverage section to learn how far the documentation guard reaches | **Topic:** guards | **Area:** unassigned | **Shape:** mechanical
 
+**Guard:** test_the_documents_keep_up_with_the_contracts.py
+
 ## Motivation
 
 `UX-909`'s Outcome: "both figures in it (`562 keys`, `0 undocumented

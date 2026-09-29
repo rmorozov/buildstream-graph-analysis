@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** `UX-507` (which emptied it), `UX-132` (the rule) | **Found by:** review 11, question 3 | **Serves:** the round that reads `UX-501` to learn what the derivation does and takes its 223 as current | **Topic:** docs
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-501`'s Outcome states the bucket as a fact about the tree:

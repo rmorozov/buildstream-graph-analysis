@@ -95,3 +95,48 @@ def id_problems(scenarios: pathlib.Path, repo: pathlib.Path):
                             f"filename says UX-{number}"
                             + (f"; UX-{said} is {other}" if other else ""))
     return problems
+
+
+#: `UX-1092`: one `**Guard:**` line above a task's first heading - test
+#: files by name, or `none — <reason>`.
+_GUARD_LINE = re.compile(r"^\*\*Guard:\*\*[ \t]*(.*)$", re.M)
+_GUARD_NAME = re.compile(r"\btest_\w+\.py\b")
+_GUARD_NONE = re.compile(r"none\b[\s—–:-]*(.*)$")
+
+
+def present_guards(tests_root: pathlib.Path):
+    """Every `test_*.py` basename under `tests_root`."""
+    return {p.name for p in tests_root.rglob("test_*.py")}
+
+
+def header_guard(text):
+    """`(names, reason)` from the `**Guard:**` line - `([], reason)` for
+    `none — <reason>` - or `None` when the preamble carries none."""
+    found = _GUARD_LINE.search(text.split("\n## ", 1)[0])
+    if not found:
+        return None
+    value = found.group(1).strip()
+    none = _GUARD_NONE.match(value)
+    if none:
+        return [], none.group(1).strip()
+    return list(dict.fromkeys(_GUARD_NAME.findall(value))), ""
+
+
+def guard_problems(scenarios: pathlib.Path, tests_root: pathlib.Path):
+    """A task file with no `**Guard:**` line, `none` with no reason, or a
+    named file absent under `tests_root`."""
+    present, problems = present_guards(tests_root), []
+    for path in sorted(scenarios.glob("UX-*.md")):
+        if not _FILE_ID.match(path.name):
+            continue
+        guard = header_guard(path.read_text(encoding="utf-8"))
+        if guard is None:
+            problems.append(f"{path.name}: no **Guard:** line above its "
+                            "first heading")
+            continue
+        if guard == ([], ""):
+            problems.append(f"{path.name}: **Guard:** names no test_*.py "
+                            "and gives no `none — <reason>`")
+        problems += [f"{path.name}: **Guard:** {name} is absent from tests/"
+                     for name in guard[0] if name not in present]
+    return problems

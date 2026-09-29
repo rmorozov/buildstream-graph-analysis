@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-699 (the linter that ships without this), UX-340 (`dev_js_deps`, the module graph already derived) | **Serves:** the session deleting viewer code and wanting to know what nothing reads | **Topic:** guards | **Shape:** bounded | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-699` set out to find dead viewer exports with

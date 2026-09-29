@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** none | **Topic:** analysis | **Area:** bga
 
+**Guard:** test_total_duration_wall_clock.py · inferred r149
+
 ## Motivation
 
 Found while extracting real `examples/05-cmake-cpp-toolchain` builds (see `UX-09`) through `bga`. That project's `toolchain.bst` stages a ~268MB real gcc/g++/cmake/make sysroot into every element's sandbox (`kind: import`, see `examples/stage_cpp_toolchain.sh`) - a real, substantial per-element sandbox-staging cost, much larger than examples 01-04's tiny busybox-based sandboxes. This surfaced a real gap between what `bga` reports as `Total Duration` and the build's actual wall-clock time.

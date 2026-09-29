@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-259 (the machinery and the rule) | **Serves:** R1 and R2 — "is this element unusual?" is the question both ask | **Topic:** contracts
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The brainstorm Direction 11 asked for, scoped by its own rule rather

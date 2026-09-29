@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-350 (the shape channel, built), UX-303 (sparklines and density strips), UX-316 (drawing grades) | **Serves:** anyone deciding, at a glance, where a build's time actually goes | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-350` built §2 and the census moved: one sparkline and zero strips

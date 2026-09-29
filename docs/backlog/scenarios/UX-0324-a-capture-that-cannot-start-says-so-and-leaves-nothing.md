@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-125 (doctor's check this reuses), UX-157 (the leaves-nothing rule) | **Serves:** R1 — the first-run experience | **Topic:** capture
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Round 45's stranger walk, friction 1: on a machine without `bst`,

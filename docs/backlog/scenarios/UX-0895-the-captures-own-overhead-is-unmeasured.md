@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the 2026-09-20 rollout brief ([`continuous-build-improvement.md`](../../design/continuous-build-improvement.md), section 6) — the owner's budget for capture is 15-25% of time and resources, and the repository publishes no overhead figure at all | **Serves:** R4 and R5 (whether Plane 2 can run on every review build), R1 (what a local `bga snapshot` costs) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement
 
+**Guard:** test_the_overhead_paragraph_names_its_measurement.py · inferred r149
+
 ## Motivation
 
 The rollout wants Plane 2 on every build type inside a 15-25% budget.

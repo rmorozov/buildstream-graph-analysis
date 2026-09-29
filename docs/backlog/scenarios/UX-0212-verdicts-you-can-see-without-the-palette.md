@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-203 (the trend dots it re-encodes) | **Topic:** viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The trend chart encodes `verdict_kind` purely as a fill color — a

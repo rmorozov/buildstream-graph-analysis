@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** `UX-541` (the measurement that found it) | **Found by:** `UX-541`, answering its own reader question | **Serves:** anyone who has to price a spec clause | **Topic:** contracts
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Spec Part 8.2 requires `blocking_tasks` — the time-weighted set of

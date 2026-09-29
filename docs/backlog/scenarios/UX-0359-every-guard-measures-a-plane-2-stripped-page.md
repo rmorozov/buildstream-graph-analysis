@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-329 (the terminal and the viewer agree about Plane 2), UX-347 (the distance budget) | **Serves:** every budget, census and geometry assertion in the suite | **Topic:** guards | **Area:** bga/viewer
 
+**Guard:** test_a_capture_that_cannot_start.py, test_the_printed_sentences_are_contracts.py, test_the_guards_measure_the_page.py · inferred r149
+
 ## Motivation
 
 Every browser guard in the repository sets its page up the same way:

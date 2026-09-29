@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-712 | **Found by:** round 109, retro-verifying round 102 | **Serves:** the run where pylint dies and the duplicate count reads zero | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_the_size_ledger_only_shrinks.py
+
 ## Motivation
 
 `tools/dev_sizes.py` `duplicate_blocks` raises `PylintFailure` when

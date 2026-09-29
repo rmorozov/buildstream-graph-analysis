@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-927 | **Blocks:** — | **Found by:** the sequencing thread, reading `UX-927`'s guard against `UX-213`'s rule | **Serves:** anyone running the suite from a plain `pip install -e .`, and the census that has to believe a skip | **Topic:** guards | **Area:** unassigned | **Shape:** bounded
 
+**Guard:** test_the_staged_closure_is_complete.py, test_every_skip_reason_is_declared.py
+
 ## Motivation
 
 `UX-927` added a guard whose `zstd` clauses import `zstandard`

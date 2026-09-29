@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-1069 | **Found by:** the owner's #298 re-review at 156d7436, finding 3 | **Serves:** anyone sharing a private capture with an outside reader | **Topic:** store | **Area:** bga | **Shape:** mechanical
 
+**Guard:** test_the_pseudonym_map_saves_before_the_archive_publishes.py
+
 ## Motivation
 
 `export_anonymized()` runs `os.replace(archive, destination)` before

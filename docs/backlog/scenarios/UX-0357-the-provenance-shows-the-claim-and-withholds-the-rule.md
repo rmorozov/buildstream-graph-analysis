@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-229 (publish why bga believes what it believes) | **Serves:** the reviewer who has to decide whether to trust a number before acting on it | **Topic:** viewer | **Area:** bga/viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-229` published the tool's reasoning: for every claim, the rule that

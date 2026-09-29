@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-857, UX-905 | **Found by:** round 132 — `bst-examples` is red on `main` at `395ebdc0` and at `6e410ab7`, both times on the same step, so every branch inherits it; `UX-857`'s own step comment pre-authorised the remedy | **Serves:** every round whose CI is red for a reason its diff did not cause | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_the_examples_build.py
+
 ## Motivation
 
 `UX-857` added an ordering check to the `11-serial-giant` CI step: run

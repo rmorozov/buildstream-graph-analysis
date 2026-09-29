@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done (reopened by round 12, closed by UX-120) | **Depends on:** UX-99 (the toll measurement), UX-82 (the replay-projection pattern) | **Topic:** analysis | **Area:** bga
 
+**Guard:** test_granularity.py · inferred r149
+
 Direction 3, item 1 (second half) — see
 [`design/directions.md`](../../design/directions.md).
 

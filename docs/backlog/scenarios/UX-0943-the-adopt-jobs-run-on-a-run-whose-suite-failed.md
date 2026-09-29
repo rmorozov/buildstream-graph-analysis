@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-503, UX-524, UX-691, UX-934 | **Blocks:** — | **Found by:** round 136 — the merge thread reading `98c387bc`'s checks while `UX-934` was worked | **Serves:** every branch that inherits a record the default branch adopted from a run nothing vouched for | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
+**Guard:** test_the_review_has_a_cadence.py, test_a_run_red_for_another_reason_adopts_nothing.py · inferred r149
+
 ## Motivation
 
 All three adopt jobs are `needs: test` with `if: always() && ...`, and

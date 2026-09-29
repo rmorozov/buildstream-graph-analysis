@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-879, UX-880 | **Found by:** round 125 Out of Scope + the user ("maybe i can mark some packages by hand for bga to utilize jobserver") | **Serves:** R2 (an element carries its own jobserver policy in the project, not in the operator's command line) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** bounded
 
+**Guard:** test_a_public_annotation_sets_the_auth_style.py · inferred r149
+
 ## Motivation
 
 UX-879/UX-880 set the per-element auth style with a `--jobserver-auth-override`

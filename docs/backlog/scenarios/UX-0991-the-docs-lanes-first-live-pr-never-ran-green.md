@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-956 | **Blocks:** — | **Found by:** round 139 — PR #277, CI job 107184948186 on `2fb11985` | **Serves:** every docs-only pull request the lane is meant to spare the full matrix | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
+**Guard:** test_a_docs_only_diff_runs_its_guards.py · inferred r149
+
 ## Motivation
 
 `UX-956` built a light `docs-lane` job. Its first live PR (#277) never

@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-104 (memory-aware capacity advice), UX-243 (the memory envelope reaches no reader) | **Serves:** anyone whose build died and does not know why | **Topic:** capture | **Area:** tools
 
+**Guard:** test_the_host_was_asked.py · inferred r149
+
 ## Motivation
 
 bga talks about swap more than almost anything else. Its own sentences,

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** the role model (`../../design/roles.md`) | **Serves:** all roles, by making their coverage visible | **Topic:** docs
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Round 27 wrote the role model: eight roles, their interests, the

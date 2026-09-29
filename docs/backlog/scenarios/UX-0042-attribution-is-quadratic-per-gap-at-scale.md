@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** — (P1-16/P1-21 did earlier performance work on different functions) | **Topic:** analysis | **Area:** bga/attribution
 
+**Guard:** test_resource_saturation_timeline.py · inferred r149
+
 ## Motivation
 
 Round-2 scale probe. A 1202-element run - roughly a six-minute real build - takes **68 seconds** to analyze:

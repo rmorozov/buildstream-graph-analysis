@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-203 (the trend that grew the second chain), UX-201 (the enum it should share), UX-190 | **Topic:** contracts
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Round 23's verification found the trend's verdict colouring is a

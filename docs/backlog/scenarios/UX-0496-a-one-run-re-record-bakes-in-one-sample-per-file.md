@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-488` did the re-record; `UX-494` let the gate speak; `UX-458` closed the factor with a starting value | **Found by:** round 73, driving PR #191 to green | **Serves:** the round whose gate is red on a file nobody touched, and cannot tell a stale reference entry from a real regression | **Topic:** guards | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-488` refreshed `tests/ci_reference.json` wholesale from one CI run,

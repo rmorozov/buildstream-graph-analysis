@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-250 (the two-run case, done) | **Serves:** R7 and R5 — the two who read a distribution rather than a pair | **Topic:** contracts | **Area:** bga
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `UX-250` gave the two-run case its answer: `bga compare` refuses when a

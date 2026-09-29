@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 70, one red in a full `-n auto` run with nothing wrong | **Serves:** every later round, which would otherwise learn to re-run this guard | **Topic:** guards
 
+**Guard:** test_the_host_was_asked.py
+
 ## Motivation
 
 `test_the_host_was_asked.py::test_it_stamps_the_traces_own_clock`

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-312 (the class it survives from), UX-308 (the contract it mis-reads) | **Serves:** R1, R2 | **Topic:** viewer | **Area:** tools
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Round 44's verification ran seventeen mutations and all seventeen

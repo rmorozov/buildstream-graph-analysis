@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-878 | **Found by:** round 126 (the clean path off the scrub is make 4.4 + fifo, but nothing tells the operator that the element they are staring at is the one that would benefit) | **Serves:** R2 (an operator migrating make version by version is told which elements the migration unblocks) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** bounded
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 UX-878 scrubs a compiler-driving kind on a sandbox make <4.4 (safe against

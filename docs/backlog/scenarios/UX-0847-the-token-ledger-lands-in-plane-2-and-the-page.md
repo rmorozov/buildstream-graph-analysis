@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-845, UX-846 | **Found by:** round 117, Direction 20 | **Serves:** R4 and R5 (was the pool or the graph the bound) | **Topic:** analysis | **Area:** bga | **Shape:** judgement
 
+**Guard:** test_the_token_ledger_has_two_shares.py
+
 ## Motivation
 
 Every acquire and release under the mode is a timed event no plane

@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-226 (the decision this promotes), UX-203 (the store rows it leans on) | **Serves:** R1, R2 | **Topic:** viewer | **Area:** bga
 
+**Guard:** test_the_view_parses_nothing.py, test_which_elements_caused_the_regression.py · inferred r149
+
 ## Motivation
 
 The field showstopper, reproduced and measured this round: a real

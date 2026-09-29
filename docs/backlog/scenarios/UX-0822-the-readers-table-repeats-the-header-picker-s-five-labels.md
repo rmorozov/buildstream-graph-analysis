@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-668 (the picker in the header), UX-372 (the section after the decision) | **Found by:** round 115, the design review | **Serves:** anyone landing on the decision | **Topic:** viewer | **Area:** bga-viewer | **Shape:** bounded
 
+**Guard:** test_the_rail_takes_a_step.py, test_the_rail_and_the_jump_box_write_the_anchor.py, test_every_skip_reason_is_declared.py, test_the_readers_are_drawn_once.py · inferred r149
+
 ## Motivation
 
 `readers` (`chapters.js:86`, after `decision`) draws a table — Reader /

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-597 (which made step 8 real), UX-252 (do not write a third copy) | **Found by:** round 86, proposed by the repository's owner | **Serves:** anyone reading this project's releases on GitHub rather than in the tree | **Topic:** docs
 
+**Guard:** test_a_release_records_a_contract_state.py · inferred r149
+
 ## Motivation
 
 Step 8 of the release guide is one line — *"Tag `v<version>` on the

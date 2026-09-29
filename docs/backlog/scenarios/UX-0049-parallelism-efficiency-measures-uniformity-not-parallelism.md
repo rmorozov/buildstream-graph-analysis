@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-41 (done - which made the widths correct, and this visible) | **Topic:** analysis
 
+**Guard:** test_width_uniformity.py · inferred r149
+
 ## Motivation
 
 `bga/structural/analyzer.py::compute_parallelism_profile`:

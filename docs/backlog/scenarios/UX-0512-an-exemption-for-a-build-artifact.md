@@ -2,6 +2,8 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Found by:** round 75, an `implementer` track following `UX-508`'s own advice | **Serves:** the round that clears bytecode before a same-length mutation and reads the result as a flake | **Topic:** guards
 
+**Guard:** test_the_context_map_is_the_tree.py · inferred r149
+
 ## Motivation
 
 `tests/unit/test_the_context_map_is_the_tree.py` exempts

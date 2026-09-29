@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-679, UX-841 | **Found by:** round 117, Direction 20 | **Serves:** R2 (an element pinned for a build-system defect keeps its pin) | **Topic:** capture | **Area:** tools | **Shape:** mechanical
 
+**Guard:** test_bwrap_shim.py
+
 ## Motivation
 
 `examples/06`'s `core.bst` is `notparallel: True`, and `UX-679`'s

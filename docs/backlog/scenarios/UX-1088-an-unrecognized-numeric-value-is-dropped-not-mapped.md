@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-1084 | **Found by:** the owner's #298 re-review at 76f2179e, finding 1 | **Serves:** anyone sharing a private capture with an outside reader | **Topic:** store | **Area:** bga | **Shape:** mechanical
 
+**Guard:** test_an_otp_or_pin_value_is_dropped_not_mapped.py, test_a_command_line_credential_is_dropped.py
+
 ## Motivation
 
 UX-1084's tests assert `--otp=123456` and `--pin=1234` are absent from

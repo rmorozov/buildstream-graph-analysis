@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** Direction 6 (the argument), UX-168 (`read_element_yaml`, the reader this reuses) | **Topic:** analysis
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Filed from the real user's request, round 18: in a monorepo consumed

@@ -1029,6 +1029,18 @@ MEDIUM = (
     "tests/unit/test_the_viewer_js_ships_compressed.py",               #  1.5s
     # `UX-1044`: 2.91 / 2.80 / 2.85s.
     "tests/unit/test_a_chapter_fold_has_one_place_and_one_label.py",   #  2.9s
+    # r149 sweep C: BOOTS_A_BROWSER, tightened, reads these five as
+    # browser guards - medium by construction. `--durations=0`, one process.
+    # 0.98 / 0.86s: under the floor, listed for the browser it boots.
+    "tests/unit/test_an_absence_is_one_sentence.py",                   #  0.9s
+    # 6.58 / 6.91s.
+    "tests/unit/test_labels_are_sentence_case.py",                     #  6.7s
+    # 1.50 / 1.44s.
+    "tests/unit/test_one_disclosure_glyph_pair.py",                    #  1.5s
+    # 1.39 / 1.35s.
+    "tests/unit/test_one_door_per_block.py",                           #  1.4s
+    # 8.60 / 8.75s.
+    "tests/unit/test_the_rail_and_the_jump_box_write_the_anchor.py",   #  8.7s
     # Round 147, tiered on the merged tree: three single-process runs
     # alone each (setup+call+teardown).
     # `UX-1083`: 4.17 / 4.08 / 4.23s.

@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-803, UX-912 | **Found by:** round 135 — `UX-912`'s cache-scoping half, read against `actions/cache` v6's own source instead of its log lines; filed as UX-922 and renumbered, because #254 took that id 40 minutes earlier (`UX-920`'s shape, third occurrence) | **Serves:** every pull request charged for an excursion `main` already carries | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
+**Guard:** test_a_slow_file_says_which_file.py · inferred r149
+
 ## Motivation
 
 `UX-912` narrowed `UX-803`'s dead base carry to "cache scoping and

@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-388 (the absence vocabulary), UX-723 (which measured it) | **Serves:** anyone who wants a Plane 1 capture, and every reader of a run that has an empty Plane 2 | **Topic:** capture | **Shape:** judgement | **Area:** bga
 
+**Guard:** test_an_empty_plane_two_says_so.py · inferred r149
+
 ## Motivation
 
 `bga snapshot` has `--no-trace-opens` and `--trace-spine {off,on,auto}`,

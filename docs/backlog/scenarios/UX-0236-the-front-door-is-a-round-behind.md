@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-233 (the architecture half, done) | **Serves:** R1 and R8 first — the two who arrive without context | **Topic:** docs
 
+**Guard:** test_the_front_door_is_current.py, test_the_documents_keep_up_with_the_contracts.py · inferred r149
+
 ## Motivation
 
 `UX-233` fixed the architecture document and the spec's contract table.

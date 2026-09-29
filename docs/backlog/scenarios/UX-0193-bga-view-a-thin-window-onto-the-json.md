@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** Direction 7 (the argument), UX-190 (the schemas this renders) | **Topic:** viewer
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 The user's request, round 21: the reports have outgrown the terminal —

@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-388 (which absence it is), UX-724 (the text report's half) | **Found by:** round 114, walk seed 3 | **Serves:** R1 reading `bga correlate` after an incremental build | **Topic:** analysis | **Area:** bga | **Shape:** judgement
 
+**Guard:** test_element_attribution_reliability.py, test_the_journey_has_an_answer_key.py · inferred r149
+
 ## Motivation
 
 On seed 3's incremental capture (examples/08, everything cached, 0

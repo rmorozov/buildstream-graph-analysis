@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Found by:** round 69, `bst-tests` red on PR #188 with a diff that touches no analysis code | **Serves:** anyone who reads "the first thing to fix" and expects the same answer twice | **Topic:** analysis | **Area:** bga/diagnostics
 
+**Guard:** test_the_journey_has_an_answer_key.py · inferred r149
+
 ## Motivation
 
 `bst-tests` failed on `984e4c5`:

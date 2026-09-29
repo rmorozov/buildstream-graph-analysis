@@ -27,9 +27,12 @@ same function.
    asked; **Out of Scope** is what was refused; the **Acceptance Test**
    is how it was to be proven.
 2. Run the Acceptance Test command verbatim. Paste what it printed.
-3. Run `python tools/dev_touching.py --base <the track's base> --loud`, then
-   `make lint` — `make test-touching` diffs the working tree against `HEAD`
-   and sees nothing once the track's commit is `HEAD`.
+3. Select with `python3 tools/dev_touching.py --base <the track's base>
+   --list` and run `python3 -m pytest -n 2 -q` on the files it prints —
+   the whole suite at `-n 2` when it selects everything; a bare
+   `dev_touching.py` or `make test-touching` is the sweep, which the
+   worktree hook refuses (`UX-1041`). Then `make lint` and
+   `python3 tools/dev_sizes.py --check`.
 4. Read the diff (`git diff main...HEAD`) against the Required Fix.
 
 **Retrospective** — a track already merged, read after the fact

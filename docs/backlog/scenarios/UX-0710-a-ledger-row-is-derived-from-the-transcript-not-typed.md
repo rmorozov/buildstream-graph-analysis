@@ -2,6 +2,8 @@
 
 **Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-525 (the transcript reader), UX-666 (the ledger) | **Serves:** the session that types a row from the harness's usage line and gets the tokens right and the wall wrong, or the reverse | **Topic:** docs | **Area:** tools | **Shape:** bounded
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 Every row in `docs/audits/agent-runs.md` was typed from the

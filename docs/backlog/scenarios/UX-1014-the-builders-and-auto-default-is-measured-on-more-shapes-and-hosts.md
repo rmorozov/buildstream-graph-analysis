@@ -1,6 +1,8 @@
 # UX-1014: the "safe cap plus auto" default is measured on more shapes and hosts before it is anyone's default
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-1005 | **Found by:** Ruslan on the Graviton thread (2026-09-25): "we found sane default solution and further we need more experiments, scenarios and data" | **Serves:** R4, R5 | **Topic:** capture | **Area:** tools | **Shape:** judgement
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-1005 | **Found by:** Ruslan on the Graviton thread (2026-09-25): "we found sane default solution and further we need more experiments, scenarios and data" | **Serves:** R4, R5 | **Topic:** capture | **Area:** tools | **Shape:** judgement | **Reading:** owner:CodSpeed Graviton and an x86 16-core host
+
+**Guard:** none — open, no guard named yet
 
 ## Motivation
 

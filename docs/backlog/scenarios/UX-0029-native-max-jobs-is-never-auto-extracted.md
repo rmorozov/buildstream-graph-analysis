@@ -2,6 +2,8 @@
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-12, UX-18 (both done) | **Topic:** capture
 
+**Guard:** none — no guard named at close
+
 ## Motivation
 
 `bga`'s capacity guards - `UX-12`'s oversubscription check, `UX-16`'s `max-jobs=0` sentinel resolution, `UX-17`'s `UtilizationAnalyzer` delegation, `UX-21`'s memory guard - all key off `run_context.native_max_jobs`. That field is populated only when the operator passes `--native-max-jobs N` to `tools/bst_extract_run.py` (or `tools/bst_run_context.py`) by hand; `tools/_run_context_common.py` documents it as "purely operator-supplied".

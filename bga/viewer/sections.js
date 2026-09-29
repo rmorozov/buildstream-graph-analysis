@@ -131,7 +131,8 @@ export function renderFindings(findings, investigate = null, node = undefined) {
         finding.title ?? finding.id ?? ""));
     // UX-921: `_hydrate` appends the rest once; a second call no-ops.
     article._hydrate = () => {
-      article.append(
+      // UX-1136: native `append` prints a null child as the text "null"; `el` skips it.
+      article.append(...[
         ...detail.map((line) => el("p", { class: "detail muted" }, line)),
         // UX-216: a finding names elements; each is a link to that
         // element's own section, and carries `data-element` so the
@@ -159,7 +160,8 @@ export function renderFindings(findings, investigate = null, node = undefined) {
         // payload that does not carry it.
         finding.copy_text
           ? copyButton(el, finding.copy_text, {}, "finding")
-          : null);
+          : null,
+      ].filter((child) => child !== null && child !== undefined));
       article._hydrate = null;
     };
     if (index < bound) article._hydrate();

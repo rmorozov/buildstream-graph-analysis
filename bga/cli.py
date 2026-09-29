@@ -507,6 +507,7 @@ def _builder_pool_recommendation(analyzer, result) -> dict:
         host_cpu_count,
         critical_path_max_jobs,
         calibrated_cores=int(calibrated_cores) if calibrated_cores else None,
+        memory=_peak_rss_and_host_memory(analyzer.read_host_samples(), getattr(result, 'plane2_report', None)),
     )
 
 
@@ -774,6 +775,15 @@ def _builder_pool_text_lines(recommendation: dict) -> list[str]:
             f"  Ready-set width: {wide} - wider than the safe cap only with "
             "admission (BGA_ADMISSION=1), not yet measured faster",
         ]
+    bound = recommendation.get('memory_bound')
+    if bound:
+        gb = 1e9
+        fit = bound['fit_jobs']
+        lines[0] += (
+            f" - memory-bound: {bound['element']} peaks {bound['peak_bytes'] / gb:.1f} GB per job x "
+            f"{bound['pool_size']} = {bound['peak_bytes'] * bound['pool_size'] / gb:.1f} GB > "
+            f"{bound['host_memory_bytes'] / gb:.0f} GB; auto withholds past {fit} jobs, --jobserver {fit} pins it"
+        )
     lines.append(f"Pool size: {recommendation['pool_size']}, from {recommendation['pool_reading']}")
     lines.append("")
     return lines

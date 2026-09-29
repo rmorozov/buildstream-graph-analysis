@@ -1282,6 +1282,7 @@ def compute_builder_pool_recommendation(
     host_cpu_count: Optional[int],
     critical_path_max_jobs: Optional[int],
     calibrated_cores: Optional[int] = None,
+    memory: Optional[tuple] = None,
 ) -> dict:
     """UX-1005 track A: a builder count and a pool size, each with the
     reading it came from.
@@ -1303,6 +1304,11 @@ def compute_builder_pool_recommendation(
     otherwise `host_cpu_count`, labelled uncalibrated rather than
     presented as the same reading.
 
+    **Memory (UX-1134).** `memory` is `(peak_rss_bytes per element, host
+    MemTotal bytes)`; when the largest per-job peak x `pool_size` exceeds
+    host memory a `memory_bound` entry names the element and the job count
+    that fits.
+
     `{}` with no ready-set width or host core count - a recommendation
     needs both.
     """
@@ -1318,8 +1324,21 @@ def compute_builder_pool_recommendation(
             f"host_cpu_count ({host_cpu_count}) - no calibrated knee supplied "
             "via $BGA_CALIBRATED_CORES, so this is uncalibrated"
         )
+    memory_bound = None
+    peaks, host_memory = memory or (None, None)
+    if peaks and host_memory:
+        element, peak = max(peaks.items(), key=lambda item: item[1])
+        if peak > 0 and peak * pool_size > host_memory:
+            memory_bound = {
+                'element': element,
+                'peak_bytes': peak,
+                'pool_size': pool_size,
+                'host_memory_bytes': host_memory,
+                'fit_jobs': max(1, host_memory // peak),
+            }
     return {
         'ready_set_width': ready_set_width,
+        'memory_bound': memory_bound,
         'ready_set_reading': "the replay's ready-set width",
         'safe_builder_cap': safe_cap,
         'critical_path_max_jobs': critical_path_max_jobs,

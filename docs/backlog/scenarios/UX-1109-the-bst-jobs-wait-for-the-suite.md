@@ -2,7 +2,7 @@
 
 **Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** quality gates audit (`docs/audits/quality-gates-2026-09-29.md`, 2026-09-29) | **Serves:** anyone waiting on a PR to go green | **Topic:** guards | **Area:** tools | **Shape:** mechanical | **Reading:** runner:bst-examples
 
-**Guard:** none — named test_the_bst_jobs_start_beside_the_suite.py, absent from tests/
+**Guard:** test_the_bst_jobs_start_beside_the_suite.py
 
 ## Motivation
 
@@ -43,3 +43,41 @@ Moving any step between jobs.
 `needs` and refuses `test` in either. Mutation: put `test` back in
 `bst-examples`' needs; it reddens. The Outcome carries the first three PR
 runs' walls against the 3,350 s median.
+
+## Outcome
+
+### The gap, measured
+
+```text
+$ python3 -c "_ancestors(n, jobs) for the three bst jobs"   (base 438740ac)
+A-ci-base.yml {'bst-smoke': ['changes', 'test'], 'bst-tests': ['bst-smoke', 'changes', 'test'], 'bst-examples': ['bst-smoke', 'changes', 'test']}
+```
+
+### The close, measured
+
+```text
+$ same, on the branch
+ci.yml {'bst-smoke': ['changes'], 'bst-tests': ['bst-smoke', 'changes'], 'bst-examples': ['bst-smoke', 'changes']}
+$ the 12 named ci.yml guards + UX-1108's + this file + newest-python + generated-project, -n 2
+300 passed in 26.68s
+```
+
+None of the three jobs reads `needs.test` or downloads an artifact (parsed:
+`'needs.test' in json.dumps(job)` and `download-artifact` both False). The
+first three PR runs' walls against 3,350 s are not read yet: nothing is pushed
+from a track.
+
+### Mutations verified red and reverted (3)
+
+| # | mutation | reddened |
+|---|---|---|
+| A | `test` back in `bst-smoke`'s needs only | 3 failed: `test_no_bst_job_waits_for_the_suite[*]` |
+| B | `test` back in `bst-examples`' needs | 1 failed: `[bst-examples]` |
+| C | `bst-tests` needs `[bst-smoke]` (loses direct `changes`) | 1 failed: `test_every_bst_job_still_skips_on_a_docs_only_diff[bst-tests]` |
+
+C was green on a first draft that read `changes` off the transitive closure;
+the `needs` context holds direct needs only, so the check reads `_needs`.
+Restored from a copy: 7 passed.
+
+**Deviation (Decision over Required Fix):** `bst-smoke` also drops `test`, as
+the Decision routes; the Required Fix's "keeps its own place" would save 0 s.

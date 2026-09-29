@@ -1166,8 +1166,9 @@ jobs:
     # that genuinely exercises the sandbox, not just an import). It exists
     # to de-risk before investing in a fuller real-build CI job/example
     # projects: if this doesn't work, that job needs a different design.
+    # `UX-1109`: nothing here reads `test`'s output, so it starts beside it.
     runs-on: ubuntu-latest
-    needs: [changes, test]
+    needs: [changes]
     if: needs.changes.outputs.docs_only != 'true'
     steps:
       - uses: actions/checkout@v7
@@ -1229,7 +1230,7 @@ jobs:
     # A single Python version is enough - this job is about the bst seam,
     # not about interpreter compatibility, which the `test` matrix covers.
     runs-on: ubuntu-latest
-    needs: [changes, test, bst-smoke]
+    needs: [changes, bst-smoke]
     if: needs.changes.outputs.docs_only != 'true'
     steps:
       - uses: actions/checkout@v7
@@ -1365,7 +1366,7 @@ jobs:
     # names that range beside it. Its exact figures - store paths
     # staged, elements per report - leave as notices from the UX-941 step.
     runs-on: ubuntu-latest
-    needs: [changes, test, bst-smoke]
+    needs: [changes, bst-smoke]
     if: needs.changes.outputs.docs_only != 'true'
     steps:
       - uses: actions/checkout@v7

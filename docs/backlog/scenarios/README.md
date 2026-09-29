@@ -47,6 +47,16 @@ task file, which is the only place it ever lived twice.
 | UX-1100 | [cut release 0.5.0 once the next features are in](UX-1100-cut-release-0-5-0.md) | contracts | Medium | R8 | 🔴 Not Started |
 | UX-1106 | [blast radius decodes every element's downstream set to sum durations over it](UX-1106-blast-radius-sums-durations-off-the-bitset.md) | analysis | High | anyone opening a run of a few thousand elements | 🔴 Not Started |
 | UX-1107 | [the export's anchor breaks a tie by set order](UX-1107-the-exports-anchor-breaks-a-tie-by-set-order.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1108 | [a superseded pull request run keeps burning its runner minutes](UX-1108-ci-cancels-a-superseded-pr-run.md) | guards | High | the implementing session, whose next push waits behind its last one | 🔴 Not Started |
+| UX-1109 | [the bst jobs wait for the suite and use nothing it produced](UX-1109-the-bst-jobs-wait-for-the-suite.md) | guards | High | anyone waiting on a PR to go green | 🔴 Not Started |
+| UX-1110 | [the width calibration runs on every pull request and gates nothing](UX-1110-the-width-calibration-runs-on-every-pr.md) | capture | High | the jobserver line, whose reading keeps its schedule while PRs stop paying for it | 🔴 Not Started |
+| UX-1111 | [the small tier runs three times on every pull request](UX-1111-the-small-tier-runs-three-times-per-pr.md) | guards | Medium | the implementing session | 🔴 Not Started |
+| UX-1112 | [the push gate re-lints ten megabytes of markdown the diff never touched](UX-1112-the-push-gate-relints-all-markdown.md) | guards | High | the implementing session, which pays the push gate on every push | 🔴 Not Started |
+| UX-1113 | [the gate runs whichever ruff and pyright are first on PATH, not the locked ones](UX-1113-the-gate-runs-the-tools-on-path-not-the-lock.md) | guards | High | anyone whose push gate reds on a clean tree | 🔴 Not Started |
+| UX-1114 | [a fresh session starts shallow and without the locked dependencies](UX-1114-a-fresh-session-starts-shallow-and-unlocked.md) | guards | Medium | every thread that opens a new container | 🔴 Not Started |
+| UX-1115 | [the area pages publish from a run whose suite failed](UX-1115-the-area-pages-publish-from-a-red-run.md) | guards | Medium | anyone reading the area pages on the records branch | 🔴 Not Started |
+| UX-1116 | [the LD_PRELOAD hook is built with no warnings and never runs under a sanitizer](UX-1116-the-hook-is-built-without-warnings.md) | capture | High | anyone whose build runs with the hook loaded into every process | 🔴 Not Started |
+| UX-1117 | [the scheduler-log parser is tested only on the logs someone thought to write](UX-1117-the-log-parser-has-no-property-tests.md) | capture | Medium | anyone whose BuildStream version prints a line the fixtures never held | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

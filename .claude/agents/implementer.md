@@ -41,7 +41,7 @@ neither of them meant to change:
 
 ```text
 docs/backlog/scenarios/README.md      the row (the counts are derived, never committed)
-docs/backlog/scenarios/closed.md      the closed row
+docs/backlog/scenarios/closed.md      the closed row (in closed/NNNN.md; `closed_rows()` reads them)
 tests/tiers.py                        a new file's tier
 tests/ci_reference.json               a new file's CI seconds
 ```

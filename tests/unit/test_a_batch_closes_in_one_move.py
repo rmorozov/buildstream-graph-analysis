@@ -59,7 +59,7 @@ class TestABatchClosesInOneMove:
         assert done.returncode == 0, done.stdout + done.stderr
 
         readme = (scenarios / "README.md").read_text(encoding="utf-8")
-        closed = (scenarios / "closed.md").read_text(encoding="utf-8")
+        closed = "\n".join(close_task.closed_rows(scenarios))
         for uid, slug in ids:
             assert f"| {uid} |" not in readme, f"{uid} still in the open table"
             assert f"| {uid} |" in closed, f"{uid} missing from closed.md"
@@ -90,7 +90,7 @@ class TestABatchClosesInOneMove:
         assert (scenarios / "README.md").read_bytes() == before, (
             "a refused batch still wrote to the index")
         assert f"| {ids[0][0]} |" not in (
-            scenarios / "closed.md").read_text(encoding="utf-8"), (
+            "\n".join(close_task.closed_rows(scenarios))), (
             "the first id closed before the batch was refused")
 
     def test_the_same_id_twice_is_refused_not_closed_twice(self, tmp_path):
@@ -100,6 +100,6 @@ class TestABatchClosesInOneMove:
                     "--scenarios", str(scenarios))
         assert done.returncode != 0
         assert uid in done.stderr
-        closed = (scenarios / "closed.md").read_text(encoding="utf-8")
+        closed = "\n".join(close_task.closed_rows(scenarios))
         assert closed.count(f"| {uid} |") == 0, (
             "a repeated id wrote a closed row before being refused")

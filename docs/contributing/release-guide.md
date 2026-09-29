@@ -124,7 +124,7 @@ version and freezes the row below it with its digest (step 3).
    it is the part worth reading.
 6. **Generate the body**: `bga release-notes <from> <to>` emits the
    closed rows between two markers, grouped by topic. Do not hand-write
-   it — the narrative already exists in `closed.md` and a third copy
+   it — the narrative already exists in the closed rows (`closed_rows()`) and a third copy
    would drift (`UX-252`).
 7. **Carry the review's open findings.** Any finding the review filed
    that is still open is named in the head, so "we knew" is on the

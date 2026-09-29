@@ -63,6 +63,7 @@ def backlog(tmp_path):
     into.mkdir()
     for path in SCENARIOS.glob("*.md"):
         shutil.copy(path, into / path.name)
+    shutil.copytree(SCENARIOS / "closed", into / "closed")
     return into
 
 
@@ -91,7 +92,8 @@ class TestItReadsTheWholeBacklog:
         """Flipping the *row* rather than the file is the same defect
         from the other side, and a check that only looked one way would
         pass half of them."""
-        closed = backlog / "closed.md"
+        closed = next(path for path in close.closed_files(backlog)
+                      if "\n| UX-382 |" in path.read_text(encoding="utf-8"))
         text = closed.read_text(encoding="utf-8")
         row = next(line for line in text.splitlines()
                    if line.startswith("| UX-382 |"))
@@ -141,7 +143,8 @@ class TestItReadsTheWholeBacklog:
         carries the overwhelming majority of the rows, so a reader that
         skipped it would be checking a rounding error."""
         names = [path.name for path in close.backlog_files()]
-        assert names == ["README.md", "closed.md"]
+        assert names[0] == "README.md" and len(names) > 2
+        assert names[1:] == sorted(names[1:])
         rows = close.table_statuses()
         assert len(rows) > 100, (
             f"only {len(rows)} row(s) read - the closed half is missing")
@@ -212,7 +215,7 @@ class TestTheScopeFlagIsHonoured:
     def test_the_readers_follow_the_flag(self, backlog, monkeypatch):
         (backlog / "README.md").write_text("| UX-9001 | x | 🔴 |\n",
                                            encoding="utf-8")
-        (backlog / "closed.md").write_text("", encoding="utf-8")
+        shutil.rmtree(backlog / "closed")
         monkeypatch.setattr(close, "SCENARIOS", backlog)
         monkeypatch.setattr(close, "INDEX", backlog / "README.md")
         monkeypatch.setattr(close, "CLOSED", backlog / "closed.md")

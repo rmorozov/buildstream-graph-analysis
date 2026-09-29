@@ -168,7 +168,8 @@ class TestTheSelectorStillSelects:
     # `UX-1073`'s reuse guard names `bga.cli`: median 38, p90 59, max 173 over 648.
     # `UX-1103`: #298's UX-1064 and #300's UX-1073 each name `bga.cli`; merged: median 38, p90 61, max 174 over 677.
     # `UX-1083`'s review test names the tracer and `bst_extract_run`: median 38, p90 62, max 174 over 679.
-    CEILING = {"median": 38, "p90": 62, "max": 174}
+    # `UX-1120`'s census member adds one file to every selection: median 39, p90 63, max 175 over 697.
+    CEILING = {"median": 39, "p90": 63, "max": 175}
     POPULATION_FLOOR = 60
     #: `UX-645`: **13 census + 14 of your own**. The census floor is
     #: inside this bound because those files run - the figure is what
@@ -207,8 +208,10 @@ class TestTheSelectorStillSelects:
     #: Same arithmetic: 45 -> 46; `WIDE` unchanged at 46.
     #: `UX-996` moved it 32 -> 33 (its guard walks every tracked `.md`).
     #: Same arithmetic: 46 -> 47.
-    HANDFUL = 47
-    CENSUS_FLOOR = 33
+    #: `UX-1120` moved it 33 -> 34 (its guard walks every tracked `.py`).
+    #: Same arithmetic: 47 -> 48.
+    HANDFUL = 48
+    CENSUS_FLOOR = 34
 
     # Wide because the module's name is how a test invokes it, not
     # because the selector is wrong. `UX-606` argued each one.
@@ -693,7 +696,7 @@ class TestTheIndexIsDerivedNotMerged:
                   for line in table.splitlines() if line.startswith("| ")
                   and not line.startswith("| Topic")]
         rows = (len(close_task.row_ids(close_task.INDEX))
-                + len(close_task.row_ids(close_task.CLOSED)))
+                + len(close_task.closed_ids()))
         assert sum(totals) == rows, (
             f"the topic table accounts for {sum(totals)} of {rows} rows")
 

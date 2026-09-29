@@ -536,10 +536,12 @@ class TestTheReleaseConsumesTheWalk:
         the day it closes; that it sits in exactly one of them is the
         claim - a filing in neither was lost, and one in both is a row
         the move left behind."""
+        from tools.dev_close_task import closed_rows
         from tools.dev_scenario import audits_documents, is_walk_report
 
-        indexes = {name: (REPO / f"docs/backlog/scenarios/{name}").read_text(
-            encoding="utf-8") for name in ("README.md", "closed.md")}
+        indexes = {"README.md": (REPO / "docs/backlog/scenarios/README.md")
+                   .read_text(encoding="utf-8"),
+                   "closed rows": "\n".join(closed_rows())}
         filed = set()
         for _, text in audits_documents():
             if is_walk_report(text):

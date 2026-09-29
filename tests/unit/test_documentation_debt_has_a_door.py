@@ -179,8 +179,10 @@ class TestADeferralNamesWhereItWent:
         # check read only the open half, so the three rows reddened it
         # on the day they were *done* (round 37). "Has a row" is the
         # claim; which file the row is in is the index's business.
-        index = "".join((SCENARIOS / name).read_text(encoding="utf-8")
-                        for name in ("README.md", "closed.md"))
+        from tools.dev_close_task import closed_rows
+
+        index = ((SCENARIOS / "README.md").read_text(encoding="utf-8")
+                 + "\n".join(closed_rows()))
         wrong = []
         for mechanism, item in ROUND_28_INSTANCES.items():
             filings = [p for p in _filings()

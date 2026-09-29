@@ -77,7 +77,7 @@ and `test_the_process_documents_derive_their_figures.py` reads it:
 
 ```text
 docs/backlog/scenarios/README.md    the row (the counts are derived - below)
-docs/backlog/scenarios/closed.md    the closed row
+docs/backlog/scenarios/closed.md    the closed row (chunks in closed/NNNN.md)
 tests/tiers.py                      a new file's tier
 tests/ci_reference.json             a new file's CI seconds
 ```

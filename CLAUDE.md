@@ -66,7 +66,7 @@ and `git log`, never in a comment or docstring. Numbers, not narrative.
 bga/            analysis, report, schemas · bga/viewer/  the page's modules
 tools/          capture, the LD_PRELOAD hook, the spine, dev helpers
 tests/unit/     one file per item, named for its claim
-docs/backlog/scenarios/   one file per task; README.md open, closed.md closed
+docs/backlog/scenarios/   one file per task; README.md open, closed/ closed
 Fixing guide §6 is the full map. Don't re-derive it.
 ```
 

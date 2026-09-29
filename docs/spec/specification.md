@@ -1892,7 +1892,7 @@ which document a reader should trust instead.
 | 37.1 | `bga floors RUN --cold` and `--allow-partial-cold` | `bga floors --help`. `--cold` needs `--history-dir PATH` (repeatable, Part 15.2) to report anything but `unavailable`, and 37.1 never names that flag |
 | 38 | eleven upper-case report chapters | what `bga analyze` prints, from `bga/report/text.py` - nine chapters with different names, one of them (`CPU Utilisation`) conditional. `docs/guides/what-the-viewer-answers.md` is the page's equivalent |
 | 39 | a `bga/` module tree | the tree, and fixing guide §6's context map over it, held equal by `tests/unit/test_the_context_map_is_the_tree.py`. Part 39 names forty modules; thirteen exist. `bga/structural/` is a package it never mentions |
-| 40 | a milestone plan, M0 onward | `docs/backlog/scenarios/README.md` and `closed.md` - the open and closed rows, whose counts are derived |
+| 40 | a milestone plan, M0 onward | `docs/backlog/scenarios/README.md` and the `closed/` chunks `closed.md` links - the open and closed rows, whose counts are derived |
 
 Part 38's chapter names, Part 39's module names and Part 40's milestone
 ids are therefore **not identifiers to grep for**: a name that appears

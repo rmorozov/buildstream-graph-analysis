@@ -131,6 +131,7 @@ CENSUS = (
     "tests/unit/test_one_factory_builds_every_table.py",
     "tests/unit/test_the_agent_configuration_holds.py",
     "tests/unit/test_the_canned_prose_reads_as_written.py",
+    "tests/unit/test_the_closed_index_reads_as_one.py",
     # `UX-718`: 18 modules already named in its own docstring make it
     # grep-reachable for those; a *new* module is not. Reddened all
     # four CI jobs on `44d211f`, quiet at 104 files locally.

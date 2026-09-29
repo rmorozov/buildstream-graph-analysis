@@ -37,8 +37,8 @@ import { renderCulprits, renderElementHistory, renderHorizon,
 import { renderDecision, renderProvenanceRecords, renderInvestigation } from "./decision.js";
 import { anchor, collapsible, toc, scrollspy, stepper, runSelector,
          jumpTargets, matches, paletteResults } from "./nav.js";
-import { applyRole, chapters, fileInChapter, revealAndLand,
-         setAllOpen } from "./chapters.js";
+import { applyFolds, applyRole, chapters, fileInChapter, foldSnapshot,
+         revealAndLand, setAllOpen } from "./chapters.js";
 // UX-302: the second of §1's two deliberate raw-JSON sites - the one
 // the reader asks for, per section, because pasting a section into an
 // issue is what people do with a report.
@@ -232,7 +232,7 @@ export function wireJumpBox(nav, root, payload, context = {}) {
     if (key) {
       const next = joinHash(key, splitHash(location.hash).query);
       if (window.history?.replaceState) {
-        window.history.replaceState(null, "", next || " ");
+        window.history.replaceState(window.history.state, "", next || " ");
       } else {
         location.hash = next;
       }
@@ -1114,12 +1114,30 @@ async function boot() {
       // `content-visibility`'s estimate by the time this fires.
       return node ? revealAndLand(node) : null;
     };
+    const fragment = (event) => event?.target?.closest?.("a[href^=\"#\"]")
+      ?.getAttribute?.("href");
+    // UX-1056: capture phase, so the snapshot precedes nav.js's own reveal.
     document.addEventListener?.("click", (event) => {
-      const href = event?.target?.closest?.("a[href^=\"#\"]")
-        ?.getAttribute?.("href");
+      if (fragment(event)?.length > 1 && window.history?.replaceState) {
+        // Chrome's own restore lands after popstate and overrides it.
+        window.history.scrollRestoration = "manual";
+        window.history.replaceState({ ...window.history.state,
+          folds: foldSnapshot(root),
+          scrollY: window.scrollY }, "");
+      }
+    }, true);
+    document.addEventListener?.("click", (event) => {
+      const href = fragment(event);
       if (href && href.length > 1) revealAnchor(href.slice(1));
     });
+    window.addEventListener?.("popstate", (event) => {
+      const saved = event.state;
+      if (!Array.isArray(saved?.folds)) return;
+      applyFolds(root, saved.folds);
+      window.scrollTo?.(0, saved.scrollY ?? 0);
+    });
     window.addEventListener?.("hashchange", () => {
+      if (window.history?.state?.folds) return; // popstate restored this entry.
       const built = openElement(splitHash(location.hash).anchor);
       revealAnchor(splitHash(location.hash).anchor);
       // The browser has already decided there was nothing to scroll to,

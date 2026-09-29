@@ -556,6 +556,20 @@ export function setOpen(box, open) {
   return box;
 }
 
+/** `UX-1056`: the open chapters by `data-chapter`, for `applyFolds`. */
+export function foldSnapshot(root) {
+  return [...(root?.querySelectorAll?.("section.chapter") ?? [])]
+    .filter(isOpen).map((box) => box.getAttribute("data-chapter"));
+}
+
+/** Open exactly the chapters `ids` names; the toggle-less first stays. */
+export function applyFolds(root, ids) {
+  for (const box of root?.querySelectorAll?.("section.chapter") ?? []) {
+    if (!box.querySelector?.("[data-chapter-open]")) continue;
+    setOpen(box, ids.includes(box.getAttribute("data-chapter")));
+  }
+}
+
 /**
  * Open or shut **every** chapter that has a control.
  *

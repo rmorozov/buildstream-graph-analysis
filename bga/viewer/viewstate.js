@@ -296,7 +296,7 @@ export function wireViewState(root, { location: where, history: past,
     const { anchor } = splitHash(where?.hash ?? "");
     const next = joinHash(anchor, query);
     if ((where?.hash ?? "") === next) return next;
-    if (past?.replaceState) past.replaceState(null, "", next || " ");
+    if (past?.replaceState) past.replaceState(past.state ?? null, "", next || " ");
     else if (where) where.hash = next;
     return next;
   };

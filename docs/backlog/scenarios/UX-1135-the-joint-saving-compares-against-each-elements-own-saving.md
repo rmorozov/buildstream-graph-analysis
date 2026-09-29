@@ -65,7 +65,7 @@ with `sum_of_individual_us 23050000` = the horizon's steps summed, while `bga wh
 **Close measured.** Same command after the fix:
 
 ```text
-Together, the top 3 are worth 23.1s (50% of the build) - more than the 16.1s they are worth one at a time - codegen.bst pays off only once core.bst is fixed, so work them in the order listed
+Together, the top 3 are worth 23.1s (50% of the build) - more than the 16.1s alone: codegen.bst pays off after core.bst
 ```
 
 `sum_of_individual_us 16050000` = 12.050 + 0.000 + 4.000, the three `bga whatif --element` savings; `relation compound`, `savings_add False`. The golden `mixed_task_kinds` stays `add` (11000 = 11000). Guard: 4 passed.
@@ -77,3 +77,5 @@ Together, the top 3 are worth 23.1s (50% of the build) - more than the 16.1s the
 | `sum_us = sum(step["saving_us"] for step in steps)` (the horizon steps again) | compound, overlap, whatif-agrees | 3 failed, 1 passed |
 | `elif joint_us > sum_us:` (above/below swapped) | compound, overlap, whatif-agrees | 3 failed, 1 passed |
 | reverted from the copy | - | 4 passed |
+
+Deviation: the compound sentence as first written put `macro_micro`'s run chapter at 13.0 screens alone and 13.1 in the suite, at 390x844 against a 13.0 budget (`test_the_chain_folds_and_clicks_are_counted.py`); shortened to the line above, `change` back from 12.1 to under 12.0 and `run` within budget.

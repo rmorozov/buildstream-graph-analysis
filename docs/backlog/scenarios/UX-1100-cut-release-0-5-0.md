@@ -74,3 +74,5 @@ including `test_the_increment_matches_the_kind`. The selector names 718
 files on this diff (the version moves the tree), so it was not run whole.
 
 walk: [`walk-seed-4.md`](../../audits/walk-seed-4.md) on `74aa14f2`, 2 match and 1 partial of 3; its one blocking finding filed and closed as `UX-1135` before the cut. The three `TestEveryVersionedReleaseIsTagged` clauses red until `v0.5.0` is tagged on this commit (Ruslan's, release guide step 8).
+
+Mutation: none - the cut writes no guard; `test_the_increment_matches_the_kind` already reddens on a wrong kind.

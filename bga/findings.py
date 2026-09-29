@@ -1584,10 +1584,8 @@ def _outlook_findings(result: AnalysisResult) -> list[dict]:
             later = [uid for uid in joint.get('worth_more_after') or [] if uid in elements] or elements[1:]
             earlier = elements[: elements.index(later[0])] or elements[:1]
             relation = (
-                f"more than the {sum_us / 1e6:.1f}s they are worth one at a time - "
-                f"{_and(later)} {'pays' if len(later) == 1 else 'pay'} off only once "
-                f"{_and(earlier)} {'is' if len(earlier) == 1 else 'are'} fixed, "
-                f"so work them in the order listed"
+                f"more than the {sum_us / 1e6:.1f}s alone: {_and(later)} "
+                f"{'pays' if len(later) == 1 else 'pay'} off after {_and(earlier)}"
             )
         findings.append(
             _finding(

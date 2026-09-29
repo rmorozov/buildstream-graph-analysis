@@ -1529,9 +1529,14 @@ def compute_jobserver_shares(ledger_rows: list, capacity: Optional[int]) -> tupl
 
 def jobserver_verdict(joined: str, peak: Optional[int], max_jobs: Optional[int]) -> Optional[str]:
     """UX-1012: `drew` only when joined and the peak width exceeded the
-    element's own `max-jobs`; `yes` alone is the offer. `pinned`, `held`
-    and `unknown_kind` read as themselves and never `drew`; `None` when
-    a joined element has no peak or no `max-jobs` to set it against."""
+    element's own `max-jobs`; `yes` alone is the offer. `held` reads as
+    itself; `None` when a joined element has no peak or no `max-jobs`.
+    UX-1008: `pinned`/`unknown_kind` with a peak over `max-jobs + 1`
+    read `outside the pool`; the rest read as themselves."""
+    if joined in ("pinned", "unknown_kind"):
+        if peak is not None and max_jobs is not None and peak > max_jobs + 1:
+            return "outside the pool"
+        return joined
     if joined != "yes":
         return joined
     if peak is None or max_jobs is None:
@@ -1545,6 +1550,7 @@ def compute_jobserver_per_element(
     tokens_by_element: Optional[dict] = None,
     peak_by_element: Optional[dict] = None,
     admission_wait_by_element: Optional[dict] = None,
+    project_max_jobs: Optional[int] = None,
 ) -> dict:
     """UX-847: per-element `joined` (yes/pinned/held/unknown_kind) and
     the wrapper's own held-token stats, keyed by every element Plane 1
@@ -1589,6 +1595,8 @@ def compute_jobserver_per_element(
         held_stats = tokens_by_element.get(uid) or {}
         peak = peak_by_element.get(uid)
         max_jobs = (decision_row or {}).get("max_jobs")
+        if max_jobs is None:
+            max_jobs = project_max_jobs
         per_element[uid] = {
             "joined": joined,
             "peak_work_concurrency": peak,
@@ -1630,6 +1638,7 @@ def compute_jobserver_block(
         tokens_by_element,
         peak_by_element=peak_by_element,
         admission_wait_by_element=admission_wait_by_element_from_ledger(native_report.get("jobserver_ledger") or []),
+        project_max_jobs=native_report.get("project_max_jobs"),
     )
     return {
         "mode": pool.get("mode"),

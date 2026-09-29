@@ -23,7 +23,7 @@ def _native_report():
         "per_element_parallelism": [
             {"element": "giant.bst", "peak_work_concurrency": 16},
             {"element": "level.bst", "peak_work_concurrency": 8},
-            {"element": "pinned.bst", "peak_work_concurrency": 3},
+            {"element": "pinned.bst", "peak_work_concurrency": 2},
             {"element": "admitted.bst", "peak_work_concurrency": 1},
         ],
         "jobserver_tokens_by_element": {},

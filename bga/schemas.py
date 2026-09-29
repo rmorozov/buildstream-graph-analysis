@@ -5265,9 +5265,12 @@ _ANALYZE_HINTS["jobserver"] = {
                         "not drawn when joined at a peak "
                         "no wider than `max-jobs`; pinned, "
                         "held and unknown_kind repeat "
-                        "`joined` and never read drew; null "
-                        "when joined with no peak or no "
-                        "`max-jobs` to compare."
+                        "`joined` and never read drew; "
+                        "outside the pool when pinned or "
+                        "unknown_kind and the peak "
+                        "exceeded `max-jobs` + 1 (UX-1008); "
+                        "null when joined with no peak or "
+                        "no `max-jobs` to compare."
                     },
                     "admission_wait_us": {
                         QUANTITY: "duration_us",

@@ -1252,7 +1252,7 @@ def _render_pipeline_overhead_section(result: AnalysisResult, section, by_kind, 
 
 
 # UX-1012: the draws first, then the offers; the rest read as their `joined`.
-_JOBSERVER_VERDICT_RANK = ("drew", "offered, not drawn", None, "held", "pinned", "unknown_kind")
+_JOBSERVER_VERDICT_RANK = ("drew", "outside the pool", "offered, not drawn", None, "held", "pinned", "unknown_kind")
 _JOBSERVER_ROWS = 20
 
 

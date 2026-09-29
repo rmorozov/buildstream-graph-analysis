@@ -1,5 +1,5 @@
 {
-  "paths": [".claude/hooks", "bga", "tools"],
+  "paths": ["bga/correlate.py", "bga/schemas.py"],
   "files": {
     ".claude/hooks/agent_worktree_limits.py": {"duplicate_blocks": 0, "file_lines": 128, "longest_function": 23},
     ".claude/hooks/gate_covers_push.py": {"duplicate_blocks": 1, "file_lines": 168, "longest_function": 28},
@@ -22,7 +22,7 @@
     "bga/cli.py": {"duplicate_blocks": 0, "file_lines": 3418, "longest_function": 246},
     "bga/compare.py": {"duplicate_blocks": 0, "file_lines": 1665, "longest_function": 281},
     "bga/contracts.py": {"duplicate_blocks": 0, "file_lines": 178, "longest_function": 26},
-    "bga/correlate.py": {"duplicate_blocks": 0, "file_lines": 2915, "longest_function": 210},
+    "bga/correlate.py": {"duplicate_blocks": 0, "file_lines": 2924, "longest_function": 210},
     "bga/diagnostics/__init__.py": {"duplicate_blocks": 0, "file_lines": 31, "longest_function": 0},
     "bga/diagnostics/analyzer.py": {"duplicate_blocks": 2, "file_lines": 1205, "longest_function": 119},
     "bga/disclosure.py": {"duplicate_blocks": 3, "file_lines": 846, "longest_function": 16},
@@ -65,7 +65,7 @@
     "bga/report/text.py": {"duplicate_blocks": 0, "file_lines": 1967, "longest_function": 258},
     "bga/run_store.py": {"duplicate_blocks": 1, "file_lines": 833, "longest_function": 78},
     "bga/schema_hints.py": {"duplicate_blocks": 0, "file_lines": 531, "longest_function": 164},
-    "bga/schemas.py": {"duplicate_blocks": 0, "file_lines": 6776, "longest_function": 62},
+    "bga/schemas.py": {"duplicate_blocks": 0, "file_lines": 6779, "longest_function": 62},
     "bga/sources.py": {"duplicate_blocks": 0, "file_lines": 527, "longest_function": 84},
     "bga/store_aggregate.py": {"duplicate_blocks": 0, "file_lines": 698, "longest_function": 140},
     "bga/structural/__init__.py": {"duplicate_blocks": 0, "file_lines": 27, "longest_function": 0},

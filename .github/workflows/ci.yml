@@ -527,9 +527,10 @@ jobs:
       #
       # `UX-743`: 120 -> 900. All four jobs of run 34054287865 were
       # killed at 120 with no test failure recorded.
+      # Round 152: 900 -> 1200, 3.6x the 333s run 36527886347 took on 3.9.
       # `UX-1111`: push only; the timeout stays for a hang in collection.
       - name: Test (small tier, single process)
-        run: PYTEST_XDIST= timeout 900 make test-small
+        run: PYTEST_XDIST= timeout 1200 make test-small
         if: github.event_name == 'push'
 
       # `UX-943`: what the adopt jobs read - every step of this cell

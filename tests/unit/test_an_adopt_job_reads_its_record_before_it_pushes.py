@@ -69,7 +69,8 @@ def test_a_publishing_job_reads_the_branch_it_adopts_onto_first(name):
         for i, s in enumerate(lines)
         if re.search(
             r"dev_(tier_drift|touch_map)\.py --adopt"
-            r"|dev_area_pages\.py --out",
+            r"|dev_area_pages\.py --out"
+            r"|dev_red_ledger\.py --from-pr",
             s,
         )
     )

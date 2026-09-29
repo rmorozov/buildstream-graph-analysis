@@ -35,6 +35,7 @@ EITHER = {
     "tier-reference-adopt",
     "touch-map-adopt",
     "flake-ledger-adopt",
+    "red-ledger-adopt",
     "area-pages-publish",
     "agent-config",
     "packaging",

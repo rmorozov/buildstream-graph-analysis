@@ -1054,6 +1054,9 @@ button.describe {
   vertical-align: super;
 }
 button.describe:hover, button.describe[aria-expanded="true"] { color: var(--fg); }
+/* UX-1137: the block's door is the `dl`'s first child, so it takes a row of its own
+   rather than the first term's cell, which pushed every pair one cell over. */
+.pairs > button.describe { grid-column: 1 / -1; justify-self: start; margin-left: 0; }
 .description {
   font-size: var(--font-small); color: var(--muted);
   display: block; margin-top: var(--space-1);

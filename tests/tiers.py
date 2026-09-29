@@ -1049,6 +1049,8 @@ MEDIUM = (
     "tests/unit/test_one_door_per_block.py",  #  1.4s
     # `UX-1136`: 1.43s over its four tests, one process.
     "tests/unit/test_a_finding_card_prints_no_null.py",  #  1.4s
+    # `UX-1137`: 1.09s over its four tests, one process.
+    "tests/unit/test_a_pair_list_keeps_its_pairs_on_one_row.py",  #  1.1s
     # 8.60 / 8.75s.
     "tests/unit/test_the_rail_and_the_jump_box_write_the_anchor.py",  #  8.7s
     # Round 147, tiered on the merged tree: three single-process runs

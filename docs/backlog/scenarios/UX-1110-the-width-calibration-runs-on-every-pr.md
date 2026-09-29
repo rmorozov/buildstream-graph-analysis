@@ -26,7 +26,7 @@ Rejected:  `schedule`/`workflow_dispatch` on ci.yml (every job would run); a sep
 Files:     .github/workflows/ci.yml; tests/unit/test_the_calibration_runs_off_the_pr_path.py
 Guard:     evaluates the step's `if:` for a PR without the label (false), with it (true), and a push to main (true)
 Mutation:  drop the `if:` - reddens
-Class:     optimization - 1,332 s median per PR run of bst-examples
+Class:     optimization - 1,332 s median per PR run of bst-examples (the job's recorded spread is 620-964s)
 Split:     CI track. Keep the step name exactly (test_the_runners_width_is_calibrated.py:88-94 slices by it). A re-run reuses the old payload, so adding the label needs a fresh push
 ```
 

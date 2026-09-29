@@ -19,11 +19,11 @@ Architect, round 151 (2026-09-29):
 
 ```text
 Route:     `bst-smoke`, `bst-tests` and `bst-examples` drop `test` from `needs`: smoke needs [changes], the other two [changes, bst-smoke]. None reads anything `test` produces (no download-artifact, no needs.test.outputs, no carry restore)
-Rejected:  the row's "bst-smoke keeps its own place" - bst-smoke needs `test` (ci.yml:1164), so the bst jobs would still wait and save 0 s; the deviation goes in the Outcome
+Rejected:  the row's "bst-smoke keeps its own place" - bst-smoke needs `test` (ci.yml:1164), so the bst jobs (spread 620-964s) would still wait and save 0 s; the deviation goes in the Outcome
 Files:     .github/workflows/ci.yml; tests/unit/test_the_bst_jobs_start_beside_the_suite.py
 Guard:     `test` is not in the transitive `needs` closure of bst-smoke, bst-tests or bst-examples (the `_ancestors` shape of test_the_records_writers_are_one_chain.py)
 Mutation:  put `test` back into bst-smoke's needs only - a direct-needs guard stays green, this one reddens
-Class:     optimization - the bst jobs start after ~40 s instead of ~1,340 s (estimate from medians)
+Class:     optimization - the bst jobs start after ~40 s instead of ~1,340 s (estimate from medians; the job's recorded spread is 620-964s)
 Split:     CI track, after 1108
 ```
 

@@ -2,7 +2,7 @@
 
 **Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-925 | **Blocks:** — | **Found by:** architecture review 26 (2026-09-23) — `nix_closure --plan` over `nix_toolchain.roots()` totals 35, and `examples/README.md:117` says 37 | **Serves:** whoever sizes the examples' download from the README | **Topic:** docs | **Area:** unassigned | **Shape:** judgement | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** none — wording row, acceptance is the greps
 
 ## Motivation
 
@@ -38,6 +38,10 @@ or 37 for the staged tree with the two `make` pins named. Derive it
 from `nix_closure --plan`'s total line, the only source that prints
 it.
 
+## Decision
+
+Route: rewrite examples/README.md's two `apt-get install -y build-essential cmake` blocks to say build-essential is for the hook and spine, and that the toolchain comes from the pin; for the 37-path sentence name the population without a number: fetched as one closure (`python3 -m tools.nix_closure --plan` prints its size), plus the two make pins (tools/nix_store_fetch.py) as single NARs. UX-975 also corrects the two ci.yml comments (the ones matching `copy from` and `THIS runner's own`) - comments only; dropping cmake from apt-get lines is a separate bst-examples reading and is not done here. Rejected: writing 35 (repeats the drift at the next pin bump, UX-996); a narinfo-fetching guard (Out of Scope). Guard: none new - wording rows; acceptance is the greps. Class: product.
+
 ## Out of Scope
 
 The dated records above. The `420 MiB` beside it (438654496 bytes is
@@ -50,3 +54,16 @@ narinfos.
 that replaces it names the population it counts.
 
 ## Outcome
+
+Gap: `grep -n "37-path" examples/README.md` printed line 117.
+
+Close:
+
+```text
+$ grep -n "37-path" examples/README.md
+$                                   # nothing
+```
+
+The sentence now reads: "fetched from `cache.nixos.org` as one closure (`python3 -m tools.nix_closure --plan` prints its size), plus the two make pins (`tools/nix_store_fetch.py`) as single NARs" - no number, so a pin bump does not drift it.
+
+Mutation table: none, no new guard (wording row).

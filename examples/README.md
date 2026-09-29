@@ -114,8 +114,9 @@ declares, per package, which axis it is on, whether it is pinned or
 host-staged, and what version this repository says it is.
 
 The **toolchain axis is entirely pinned** (`UX-925`): gcc, binutils and
-cmake are fetched from `cache.nixos.org` as one 37-path closure and
-staged at their own `/nix/store/<hash>` prefixes, content-addresses
+cmake are fetched from `cache.nixos.org` as one closure (`python3 -m tools.nix_closure --plan`
+prints its size), plus the two make pins (`tools/nix_store_fetch.py`) as
+single NARs, and staged at their own `/nix/store/<hash>` prefixes, content-addresses
 intact. Nothing is relocated, because a nix gcc is no more relocatable
 than Ubuntu's - the *invocation* moves instead, through five `-B`
 prefixes and a `--sysroot` baked into a PATH shim at `/usr/bin/gcc`

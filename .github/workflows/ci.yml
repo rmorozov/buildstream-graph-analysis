@@ -1889,6 +1889,58 @@ jobs:
 
           python3 "$PROJ/check_jobserver_decision.py" "$OUT/plane2.json" "$JUNCTIONED_ELEMENT"
 
+      - name: Build + capture 14-two-giants (UX-1132)
+        # Two independent giants, each on its own chain: both must build
+        # wider than one job at once. `giant_lines 1800` keeps the job's budget.
+        run: |
+          set -euo pipefail
+          PROJ=examples/14-two-giants
+          OUT=artifacts/14-two-giants
+          mkdir -p "$OUT"
+          rm -rf ~/.cache/buildstream ~/.local/share/buildstream
+          bga capture run --run-dir "$OUT/run-off" --jobserver off \
+            "$PROJ" "$OUT/plane2-off.json" -- bst --option giant_lines 1800 build all.bst
+          python3 examples/check_shape_property.py two-giants "$OUT/plane2-off.json" \
+            "$OUT/run-off/trace.json" giant-a.bst giant-b.bst | tee "$OUT/property.txt"
+
+      - name: Build + capture 15-wide-chain (UX-1132)
+        # A chain of wide elements: each link must build wider than one job.
+        run: |
+          set -euo pipefail
+          PROJ=examples/15-wide-chain
+          OUT=artifacts/15-wide-chain
+          mkdir -p "$OUT"
+          rm -rf ~/.cache/buildstream ~/.local/share/buildstream
+          bga capture run --run-dir "$OUT/run-off" --jobserver off \
+            "$PROJ" "$OUT/plane2-off.json" -- bst --option unit_lines 1800 build all.bst
+          python3 examples/check_shape_property.py wide-chain "$OUT/plane2-off.json" \
+            wide-1.bst wide-2.bst wide-3.bst wide-4.bst | tee "$OUT/property.txt"
+
+      - name: Build + capture 16-memory-bound-giant (UX-1132)
+        # Under `auto`, so the pool's PSI memory counter is live; the
+        # property is the giant's peak RSS per job (80000 lines: ~549 MB
+        # measured standalone, floored at 200).
+        run: |
+          set -euo pipefail
+          PROJ=examples/16-memory-bound-giant
+          OUT=artifacts/16-memory-bound-giant
+          mkdir -p "$OUT"
+          rm -rf ~/.cache/buildstream ~/.local/share/buildstream
+          bga capture run --run-dir "$OUT/run-auto" --jobserver auto \
+            "$PROJ" "$OUT/plane2-auto.json" -- bst --option mem_lines 80000 build all.bst
+          python3 examples/check_shape_property.py memory-giant "$OUT/plane2-auto.json" \
+            giant.bst 200 | tee "$OUT/property.txt"
+
+      - name: UX-1132 shape properties as notices
+        # Below the noisy builds, whatever they did: annotations are what a session reads.
+        if: always()
+        run: |
+          for shape in 14-two-giants 15-wide-chain 16-memory-bound-giant; do
+            f="artifacts/$shape/property.txt"
+            if [ -s "$f" ]; then echo "::notice title=UX-1132 $shape::$(head -c 400 "$f")"
+            else echo "::warning title=UX-1132 $shape::no property line - the build or its check did not run"; fi
+          done
+
       - name: Upload real-build artifacts
         if: always()
         uses: actions/upload-artifact@v7

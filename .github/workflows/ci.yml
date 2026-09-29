@@ -134,40 +134,8 @@ jobs:
       - name: Lint
         run: make lint
 
-      # UX-238: the small tier is the inner loop's tier, and its value is
-      # that it stays fast. Nothing stops a slow test landing in it -
-      # it is the *default*, so a new file joins it silently - which is
-      # why the budget is enforced here rather than trusted.
-      #
-      # UX-363: re-measured 2026-08-29 across all four interpreters -
-      # 17.3-25.9s on this step; 31s was the bound. Round 66 met a
-      # slower runner still (29s on 3.9, run 33303144837) and the bound
-      # is 32s. It is sized so that one *large* file landing in the
-      # UX-421: this is a BACKSTOP, not a budget. It catches a hang and
-      # nothing finer. A wall-clock step timeout cannot separate a
-      # runner four seconds slower than its siblings from a fifteen-
-      # second file in the default tier - round 66 proved it, with 3.9
-      # killed at 30s while 3.10, 3.11 and 3.12 passed the same step on
-      # the same commit. The job it used to claim belongs to the
-      # "Tiers match CI's own record of them" step below, which divides
-      # the runner out first and names the file. Keep in step with
-      # SMALL_TIER_BACKSTOP_S in tests/tiers.py.
-      # `UX-618`: it writes the junit too, so "The failing tests, named"
-      # has something to read. This step is the one that fails most, and
-      # until now a failure here left the namer with no file at all -
-      # every red backstop cost a bisect against a log tail. The later
-      # `Test` step overwrites this junit when it runs, which is what the
-      # drift gate wants; when the backstop fails, `Test` is skipped and
-      # this junit is the record that survives.
-      #
-      # `UX-743`: 120 -> 300. The step measured 66-87s across the four
-      # jobs of run 34054287865; 120 was sized against a 29s reading
-      # from round 66, and the suite has doubled since.
-      - name: Test (small tier, with a backstop)
-        run: |
-          timeout 300 make test-small \
-            PYTEST_ARGS="--junitxml=${{ runner.temp }}/junit.xml"
-
+      # `UX-1111`: no small-tier backstop step - pytest-timeout (`timeout` in
+      # pyproject.toml) fails a hung test by name inside the run below.
       # UX-420: one interpreter writes a report, because one is enough
       # to read this runner against its own past and four would be four
       # references to keep true.
@@ -540,12 +508,12 @@ jobs:
       # partition guard's regex stopped at the first `timeout` in this
       # file. SMALL_TIER_BACKSTOP_1P_S in tests/tiers.py.
       #
-      # `UX-743`: 120 -> 900, and no longer equal to the step above.
-      # All four jobs of run 34054287865 were killed at 120 with no
-      # test failure recorded - single process now costs 2.95x the
-      # parallel run, which one shared number could not sit above.
+      # `UX-743`: 120 -> 900. All four jobs of run 34054287865 were
+      # killed at 120 with no test failure recorded.
+      # `UX-1111`: push only; the timeout stays for a hang in collection.
       - name: Test (small tier, single process)
         run: PYTEST_XDIST= timeout 900 make test-small
+        if: github.event_name == 'push'
 
       # `UX-943`: what the adopt jobs read - every step of this cell
       # passed, the drift gate's excepted. Written only when true.

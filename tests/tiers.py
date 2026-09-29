@@ -219,7 +219,7 @@ CENSUS = (
 # a wall-clock step budget cannot separate *a runner four seconds
 # slower than its siblings* from *a fifteen-second file in the default
 # tier*, and by round 67 its window was a second wide either side. It
-# is now `SMALL_TIER_BACKSTOP_S`, a hang-catcher, and the per-file rule
+# became a hang-catcher (`UX-1111`: pytest-timeout), and the per-file rule
 # below does the job it was doing.
 #
 # `UX-420` gave CI the other half - `tests/ci_reference.json`, one full
@@ -419,7 +419,7 @@ def recorded():
 # for two different reasons and the bound cannot tell them apart.
 #
 # The table above is kept as the record of what was measured. It is no
-# longer what sizes anything - see `SMALL_TIER_BACKSTOP_S` below.
+# longer what sizes anything - see `SMALL_TIER_BACKSTOP_1P_S` below.
 #
 # The extremes of all three runs above, which is the whole population
 # these constants have. Named by the job that produced each, not
@@ -457,8 +457,8 @@ def recorded():
 # `-n auto` pay more, so an estimate extrapolated from the local ratio
 # over-predicted CI at 200-260s. The lesson is the file's own: a ratio
 # measured on one machine is not a measurement of another.
-SMALL_TIER_CI_SLOW_S = 89.0       # parallel, `-n auto`, slowest seen (3.12)
-SMALL_TIER_CI_FAST_S = 66.0       # parallel, fastest seen (3.11)
+# `UX-1111` retired the parallel step, and its two figures with it
+# (89.0 slowest, 66.0 fastest); pytest-timeout catches its hang now.
 SMALL_TIER_CI_SLOW_1P_S = 154.0   # single process, slowest seen (3.12)
 SMALL_TIER_CI_FAST_1P_S = 125.0   # single process, fastest seen (3.11)
 
@@ -492,14 +492,14 @@ SMALL_TIER_POPULATION_FILES = 326  # small-tier files at `b1b664b`
 # 120 because the two steps then differed by a second; on CI the single-
 # process step now costs 1.75x the parallel one, so one number cannot
 # sit several times above both. 300 is 3.4x the measured 89s; 900 is
-# 5.8x the measured 154s.
+# 5.8x the measured 154s. `UX-1111` retired the 300: the parallel step
+# is gone, and `timeout = 300` in pyproject.toml is per test.
 #
 # **What actually catches a large file in the default tier** is
 # `tools/dev_tier_drift.py --against`, run in CI on the 3.11 job. It
 # compares each file to CI's own recorded seconds with the run's median
 # shift divided out, so a slow runner is not read as a slow file - and
 # it names the file, which a timeout never could.
-SMALL_TIER_BACKSTOP_S = 300.0     # the `-n auto` step's timeout
 SMALL_TIER_BACKSTOP_1P_S = 900.0  # the single-process step's timeout
 
 # The sizing this replaced, kept because it is the argument `UX-421`

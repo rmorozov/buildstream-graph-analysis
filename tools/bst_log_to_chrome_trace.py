@@ -288,9 +288,9 @@ class WrapperTraceConverter:
         }
 
     def parse_timestamp(self, ts_str):
-        """Parses '2026-07-20 23:09:12,331' into epoch microseconds."""
+        """Parses the wrapper's UTC stamp '2026-07-20 23:09:12,331' into epoch microseconds."""
         try:
-            dt = datetime.strptime(ts_str, "%Y-%m-%d %H:%M:%S,%f")
+            dt = datetime.strptime(ts_str, "%Y-%m-%d %H:%M:%S,%f").replace(tzinfo=timezone.utc)
             return int(dt.timestamp() * 1_000_000)
         except ValueError:
             return None

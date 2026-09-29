@@ -71,6 +71,21 @@ def version_verdict(reported, lock_text):
     return line, bad
 
 
+def refuse_off_lock(pyright_from):
+    """Print the versions run; 2 when one is off the lock, else 0.
+
+    Pyright is not spawned under `--pyright-from` (UX-802), so not read.
+    """
+    spawned = ("ruff",) if pyright_from else ("ruff", "pyright")
+    line, mismatches = version_verdict(
+        reported_versions(spawned), dev_env_check.LOCK.read_text(encoding="utf-8"))
+    print(f"tools: {line}", file=sys.stderr)
+    if not mismatches:
+        return 0
+    print("error: not the locked tools - refusing to judge: " + "; ".join(mismatches))
+    return 2
+
+
 def ruff_findings(root, paths, families):
     cmd = [sys.executable, "-m", "ruff", "check", *[str(p) for p in paths],
            "--select", ",".join(sorted(families)),
@@ -523,9 +538,7 @@ def main(argv=None):
     parser.add_argument("--baseline", type=pathlib.Path, default=DEFAULT_BASELINE)
     parser.add_argument("--root", type=pathlib.Path, default=REPO)
     parser.add_argument("--paths", nargs="+", default=None)
-    # UX-802: a ruff/bandit-only caller (a test clause, mostly) pays a
-    # whole pyright pass it never reads a diagnostic from - read its
-    # `pyright_findings` shape from a fixture instead of spawning it.
+    # UX-802: a ruff-only caller reads pyright's shape from a fixture.
     parser.add_argument("--pyright-from", type=pathlib.Path, default=None,
                          help="read pyright_findings' shape from PATH instead "
                               "of spawning pyright")
@@ -533,14 +546,8 @@ def main(argv=None):
     if sum((args.write, args.check, args.shrink)) != 1:
         parser.error("exactly one of --write, --check, --shrink")
 
-    spawned = ("ruff",) if args.pyright_from is not None else ("ruff", "pyright")
-    line, mismatches = version_verdict(
-        reported_versions(spawned), dev_env_check.LOCK.read_text(encoding="utf-8"))
-    print(f"tools: {line}", file=sys.stderr)
-    if mismatches:
-        print("error: not the locked tools - refusing to judge: "
-              + "; ".join(mismatches))
-        return 2
+    if refused := refuse_off_lock(args.pyright_from is not None):
+        return refused
     paths = args.paths or list(DEFAULT_PATHS)
     producers = dict(TOOLS)
     if args.pyright_from is not None:

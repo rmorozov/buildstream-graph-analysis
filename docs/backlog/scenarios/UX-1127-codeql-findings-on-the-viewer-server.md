@@ -1,6 +1,6 @@
 # UX-1127: the viewer's pre-flight echoes any header list, and CodeQL reads the asset path as the request's
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-198 | **Found by:** CodeQL on PR #301 (`a49e34a3`), Ruslan took it (2026-09-29 08:51) | **Serves:** anyone running `bga view` on a shared host | **Topic:** viewer | **Area:** tools | **Shape:** judgement | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-198 | **Found by:** round 151, CodeQL on PR #301 (`a49e34a3`), Ruslan took it (2026-09-29 08:51) | **Serves:** anyone running `bga view` on a shared host | **Topic:** viewer | **Area:** tools | **Shape:** judgement | **Reading:** container
 
 **Guard:** test_the_perfetto_handoff.py
 
@@ -23,7 +23,7 @@ Journey: `bga view` serving a trace to Perfetto's pre-flight.
 ## Required Fix
 
 Echo the header list only when it is RFC 9110 tokens and commas; open
-an asset through a table keyed by `ASSETS`; match the Perfetto URL by
+an asset by the name a table keyed by `ASSETS` returns; match the Perfetto URL by
 scheme and host.
 
 ## Out of Scope
@@ -54,4 +54,6 @@ Mutation table:
 | the echo drops `_HEADER_LIST.fullmatch(asked)` | `test_the_perfetto_handoff.py` | 1 failed / 9 |
 | `_HEADER_LIST` = `.+` | same | 4 failed / 9 |
 
-Deviation: the `blast.py` alert stays for a dismissal, not a fix.
+Deviation: the `blast.py` alert stays for a dismissal, not a fix. A table of
+full paths froze `ASSET_DIR` at import and broke the tests that repoint it,
+so the table holds names and the directory is read per request.

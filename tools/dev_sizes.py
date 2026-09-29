@@ -94,7 +94,9 @@ def duplicate_blocks(root, paths, files):
     those against `module_index` rather than the filesystem."""
     root = pathlib.Path(root).resolve()
     dotted, bare = module_index(root, files)
-    cmd = ["pylint", "--disable=all", "--enable=duplicate-code", "--output-format=json", *paths]
+    # pylint's R0801 grouping depends on file order, and a directory walks in the filesystem's order.
+    ordered = sorted(path.relative_to(root).as_posix() for path in files)
+    cmd = ["pylint", "--disable=all", "--enable=duplicate-code", "--output-format=json", *ordered]
     run = subprocess.run(cmd, cwd=root, capture_output=True, text=True, check=False)
     if run.returncode not in PYLINT_OK_CODES:
         raise PylintFailure(f"pylint exited {run.returncode}: {run.stderr.strip()}")

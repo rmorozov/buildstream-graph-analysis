@@ -183,3 +183,17 @@ class TestABrokenPylintIsAFailureNotZeroDuplicates:
         result = _run(tmp_path, reference, "--adopt")
         assert result.returncode == 2
         assert "pylint did not print JSON" in result.stdout
+
+
+class TestPylintReadsTheFilesInOneOrder:
+    """`UX-1126`: R0801's grouping follows file order, so a directory's walk order moved a cell on CI."""
+
+    def test_pylint_is_handed_the_sorted_files_not_the_directory(self, tmp_path, monkeypatch):
+        for name in ("pkg/z.py", "pkg/a.py", "pkg/sub/m.py"):
+            _write(tmp_path / name, SMALL)
+        argv = tmp_path / "argv.txt"
+        bin_dir = _fake_pylint(tmp_path, f'#!/bin/sh\nprintf "%s\\n" "$@" > {argv}\necho "[]"\n')
+        monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
+        assert _run(tmp_path, tmp_path / "reference.json", "--adopt").returncode == 0
+        files = [a for a in argv.read_text().splitlines() if not a.startswith("--")]
+        assert files == ["pkg/a.py", "pkg/sub/m.py", "pkg/z.py"]

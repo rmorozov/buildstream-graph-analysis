@@ -19,7 +19,12 @@ from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from typing import Optional
 
-from bga.graph.edg import build_element_graph, compute_in_out_degree, element_order
+from bga.graph.edg import (
+    ReachabilitySets,
+    build_element_graph,
+    compute_in_out_degree,
+    element_order,
+)
 from bga.ingest.models import Graph, NormalizedTask, TaskKind
 
 logger = logging.getLogger(__name__)
@@ -686,8 +691,11 @@ class DiagnosticsAnalyzer:
             # count (two elements with the same downstream_count but very
             # different real downstream workloads must not report the same
             # weighted_duration).
-            downstream_uids = reachable_downstream.get(elem_uid, [])
-            weighted_duration = sum(element_durations.get(uid, 0) for uid in downstream_uids)
+            if isinstance(reachable_downstream, ReachabilitySets):
+                weighted_duration = reachable_downstream.weighted_sum(elem_uid, element_durations)
+            else:
+                downstream_uids = reachable_downstream.get(elem_uid, [])
+                weighted_duration = sum(element_durations.get(uid, 0) for uid in downstream_uids)
 
             # Check if leaf (no downstream)
             is_leaf = downstream_count == 0

@@ -2,7 +2,7 @@
 
 **Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** round 150, Ruslan's review of PR #300 and the post-fix `bga analyze` profile (2026-09-28) | **Serves:** anyone opening a run of a few thousand elements | **Topic:** analysis | **Area:** bga | **Shape:** mechanical | **Reading:** container
 
-**Guard:** none — named test_blast_radius_reads_the_bitset.py, absent from tests/
+**Guard:** tests/unit/test_blast_radius_reads_the_bitset.py
 
 ## Motivation
 
@@ -57,3 +57,27 @@ and the `ReachabilitySets` has decoded no set after
 ranks as today. Mutation: restore `sum(... for uid in
 reachable_downstream.get(elem_uid, []))`, and the decoded-set count
 (1,202) reddens.
+
+## Outcome
+
+Gap measured (`bga analyze DIR --format json`, best of 3, no Plane 2 report, 3 runs each, base = HEAD's `bga/`):
+
+```text
+gen-synthetic --layers 20 --width 60 --seed 1 (1,202 el)   base 1.48 s   new 1.28 s
+gen-synthetic --layers 40 --width 125 --seed 1 (5,002 el)  base 8.37 s   new 7.85 s
+```
+
+Close measured: `analyze.json` byte-identical to the base on both runs
+(`cmp`; sha256 `44295516...8d6c5c` at 1,202, `be6d3af4...c15c292` at 5,002).
+The 14 s to 8 s of the profile also carried its Plane 2 report; here the
+gain is 0.5 s. Peak RSS was not separated: the measuring wrapper read a
+cumulative children maximum (127 MB at 5,002, both variants).
+
+Mutations (`pytest tests/unit/test_blast_radius_reads_the_bitset.py`):
+
+| mutation | red | count |
+|---|---|---|
+| `isinstance(..., ReachabilitySets)` -> `False` (decode-and-sum restored) | the 4 input classes and the synthetic run (decoded-set count) | 5 failed, 1 passed |
+| byte table adds `w[base]` instead of `w[base + low]` | every test that sums | 6 failed |
+
+Unmutated: 6 passed.

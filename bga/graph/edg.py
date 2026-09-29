@@ -244,6 +244,7 @@ class ReachabilitySets(Mapping):
         self._index = index
         self._bits = bits
         self._cache: dict[str, frozenset] = {}
+        self._tables: Optional[tuple[Mapping, list[list[int]]]] = None
 
     def __getitem__(self, uid):
         cached = self._cache.get(uid)
@@ -268,6 +269,32 @@ class ReachabilitySets(Mapping):
         """The size of `self[uid]` without decoding it (UX-1074)."""
         i = self._index.get(uid)
         return 0 if i is None else _popcount(self._bits[i])
+
+    def weighted_sum(self, uid: str, weights: Mapping) -> int:
+        """`sum(weights.get(u, 0) for u in self[uid])` off the mask, no
+        decode (UX-1106): per-byte lookup tables, built once per weight map.
+        """
+        i = self._index.get(uid)
+        if i is None:
+            return 0
+        if self._tables is None or self._tables[0] is not weights:
+            self._tables = (weights, self._byte_tables(weights))
+        tables = self._tables[1]
+        mask = self._bits[i]
+        data = mask.to_bytes((mask.bit_length() + 7) // 8, 'little')
+        return sum(tables[k][b] for k, b in enumerate(data) if b)
+
+    def _byte_tables(self, weights: Mapping) -> list[list[int]]:
+        w = [weights.get(u, 0) for u in self._order]
+        w.extend([0] * (-len(w) % 8))
+        tables = []
+        for base in range(0, len(w), 8):
+            t = [0] * 256
+            for b in range(1, 256):
+                low = (b & -b).bit_length() - 1
+                t[b] = t[b & (b - 1)] + w[base + low]
+            tables.append(t)
+        return tables
 
 
 def _reachability_closure(graph: Graph) -> tuple[ReachabilitySets, ReachabilitySets]:

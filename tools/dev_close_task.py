@@ -738,12 +738,18 @@ def declared_shape(text):
 
 
 def with_shape(text, shape):
-    """The header line carrying `**Shape:** shape`, replaced or appended."""
+    """The header line carrying `**Shape:** shape`, replaced in place, else before Reading, else appended."""
     lines = text.splitlines(keepends=True)
     for i, line in enumerate(lines[:8]):
         if line.startswith("**Priority:**"):
-            body = _SHAPE_HEADER.sub("", line.rstrip("\n"))
-            lines[i] = f"{body} | **Shape:** {shape}\n"
+            body = line.rstrip("\n")
+            field = f" | **Shape:** {shape}"
+            if _SHAPE_HEADER.search(body):
+                lines[i] = _SHAPE_HEADER.sub(field, body) + "\n"
+            elif " | **Reading:**" in body:
+                lines[i] = body.replace(" | **Reading:**", field + " | **Reading:**", 1) + "\n"
+            else:
+                lines[i] = body + field + "\n"
             return "".join(lines)
     return text
 

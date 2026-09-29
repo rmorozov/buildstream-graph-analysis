@@ -47,9 +47,9 @@ def _ancestors(name, jobs, seen=None):
     return seen
 
 
-def test_the_workflow_has_the_four_writers():
+def test_the_workflow_has_the_five_writers():
     """A parse that found nothing would pass every check below."""
-    assert len(_writers()) == 4, sorted(_writers())
+    assert len(_writers()) == 5, sorted(_writers())
 
 
 def test_every_writer_is_ordered_after_every_other_writer():

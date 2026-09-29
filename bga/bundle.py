@@ -37,6 +37,7 @@ import shutil
 import tarfile
 import tempfile
 import unicodedata
+import zlib
 from collections.abc import Callable
 from datetime import datetime, timezone
 from typing import Optional
@@ -55,6 +56,9 @@ MANIFEST_NAME = "bundle.json"
 MEMBER_PREFIX = "capture/"
 
 _STAMP_TOKEN = "<stamp>"
+
+#: What `load_tree` takes for a bundle: `export`'s and `export_anonymized`'s names alike.
+TREE_SUFFIX = "bga-bundle.tar.gz"
 
 
 class BundleError(Exception):
@@ -859,7 +863,7 @@ def read_manifest(bundle: str) -> dict:
                     f"{bundle} has no {MANIFEST_NAME}, so it is not a bga bundle. `bga bundle --export` writes one."
                 )
             manifest = json.loads(handle.read().decode("utf-8"))
-    except tarfile.TarError as error:
+    except (tarfile.TarError, EOFError, zlib.error) as error:
         raise BundleError(f"{bundle} is not a readable archive: {error}") from error
     except KeyError:
         raise BundleError(
@@ -952,6 +956,35 @@ def _differs(target: str, archive: tarfile.TarFile, infos: list[tarfile.TarInfo]
     return changed
 
 
+def _stamp_of(manifest: dict) -> str:
+    stamp = manifest.get("stamp")
+    if not stamp or os.path.isabs(stamp) or "/" in stamp or ".." in stamp:
+        raise BundleError(f"the bundle's stamp is not a directory name: {stamp!r}")
+    return stamp
+
+
+def _members_of(bundle: str, archive: tarfile.TarFile, manifest: dict) -> list[tarfile.TarInfo]:
+    """`_safe_members`, with a truncated archive refused by its file name."""
+    try:
+        return _safe_members(archive, manifest)
+    except (tarfile.TarError, EOFError, zlib.error) as error:
+        raise BundleError(f"{bundle} is truncated or corrupt ({error}); refusing to half-load it") from error
+
+
+def _refuse_a_different_capture(project: str, stamp: str, target: str, archive, infos) -> None:
+    if not os.path.exists(target):
+        return
+    changed = _differs(target, archive, infos)
+    if changed:
+        raise BundleError(
+            f"{project} already holds snapshot {stamp} and "
+            f"{plural(len(changed), 'member')} differ "
+            f"({', '.join(changed[:4])}). Two different captures "
+            f"cannot share one identity; move or delete the existing "
+            f"one. Nothing was written."
+        )
+
+
 def load(bundle: str, project: str) -> tuple[str, dict]:
     """Unpack into this project's store under the bundle's own stamp.
 
@@ -961,23 +994,11 @@ def load(bundle: str, project: str) -> tuple[str, dict]:
     """
     manifest = read_manifest(bundle)
     check_readable(manifest)
-    stamp = manifest.get("stamp")
-    if not stamp or os.path.isabs(stamp) or "/" in stamp or ".." in stamp:
-        raise BundleError(f"the bundle's stamp is not a directory name: {stamp!r}")
-
+    stamp = _stamp_of(manifest)
     target = os.path.join(run_store.runs_dir(project), stamp)
     with tarfile.open(bundle, mode="r:gz") as archive:
-        infos = _safe_members(archive, manifest)
-        if os.path.exists(target):
-            changed = _differs(target, archive, infos)
-            if changed:
-                raise BundleError(
-                    f"{project} already holds snapshot {stamp} and "
-                    f"{plural(len(changed), 'member')} differ "
-                    f"({', '.join(changed[:4])}). Two different captures "
-                    f"cannot share one identity; move or delete the existing "
-                    f"one. Nothing was written."
-                )
+        infos = _members_of(bundle, archive, manifest)
+        _refuse_a_different_capture(project, stamp, target, archive, infos)
         os.makedirs(run_store.runs_dir(project), exist_ok=True)
         run_store.ensure_store_ignored(project)
         for info in infos:
@@ -988,6 +1009,57 @@ def load(bundle: str, project: str) -> tuple[str, dict]:
             with open(destination, "wb") as out:
                 out.write(handle.read())
     return target, manifest
+
+
+def bundles_under(root: str) -> list[str]:
+    """Every bundle file under `root`, at any depth, in path order."""
+    found = []
+    for directory, _subdirs, files in os.walk(root):
+        found.extend(os.path.join(directory, name) for name in files if name.endswith(TREE_SUFFIX))
+    return sorted(found)
+
+
+def _check(bundle: str, project: str) -> tuple[str, dict]:
+    """Everything `load` would refuse, read without writing."""
+    manifest = read_manifest(bundle)
+    check_readable(manifest)
+    stamp = _stamp_of(manifest)
+    target = os.path.join(run_store.runs_dir(project), stamp)
+    try:
+        with tarfile.open(bundle, mode="r:gz") as archive:
+            infos = _members_of(bundle, archive, manifest)
+            _refuse_a_different_capture(project, stamp, target, archive, infos)
+    except (tarfile.TarError, EOFError, zlib.error) as error:
+        raise BundleError(f"{bundle} is truncated or corrupt ({error}); refusing to half-load it") from error
+    return stamp, manifest
+
+
+def load_tree(root: str, project: str) -> list[tuple[str, dict]]:
+    """Load every bundle under `root`, or none: all are checked first.
+
+    Idempotent, so a nightly can run it over a growing tree: a stamp
+    already held with the same bytes is rewritten unchanged.
+    """
+    if not os.path.isdir(root):
+        raise BundleError(f"{root} is not a directory")
+    paths = bundles_under(root)
+    if not paths:
+        raise BundleError(f"no *{TREE_SUFFIX} under {root}. Nothing was written.")
+    refusals, seen = [], {}
+    for path in paths:
+        try:
+            stamp, manifest = _check(path, project)
+        except BundleError as error:
+            refusals.append(str(error) if path in str(error) else f"{path}: {error}")
+            continue
+        if stamp in seen and seen[stamp][1] != manifest:
+            refusals.append(f"{path}: snapshot {stamp} is also {seen[stamp][0]}, with different contents")
+        seen.setdefault(stamp, (path, manifest))
+    if refusals:
+        raise BundleError(
+            f"{plural(len(refusals), 'bundle')} refused, so nothing was written:\n  " + "\n  ".join(refusals)
+        )
+    return [load(path, project) for path in paths]
 
 
 def describe(manifest: dict) -> dict[str, int]:

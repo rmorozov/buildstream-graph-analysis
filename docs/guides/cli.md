@@ -331,6 +331,49 @@ small.tar.gz` line the command prints after the `left out` line, and the
 `plane2.json, plane2.log.gz, plane2-resource.json` on a capture holding
 all three.
 
+**A directory tree of bundles is a store** (`UX-900`) — the shape CI
+keeps them in, one directory per build number. Every file under it
+named `*bga-bundle.tar.gz` is a bundle, at any depth; anything else is
+ignored. Two ways in, one loader, one refusal:
+
+```console
+$ bga snapshot --list --bundles ci
+2 snapshots in ci:
+  20260901T100000Z       2.0K  @prev
+  20260902T100000Z       1.4K  @last
+  total                  3.4K
+$ bga bundle --load ci
+Loaded 2 bundles from ci into /home/me/myproject/.bga/runs
+  20260901T100000Z
+  20260902T100000Z
+  read them with: bga snapshot --list, or in place: bga snapshot --list --bundles ci
+```
+
+*Kept, not current* — 2026-09-29, the two `same_build_twice_*` fixture
+runs exported into `ci/100/` and `ci/101/` beside a stray `console.log`;
+the tree is built by hand, so nothing here re-runs it. Cuts: the
+`--load` store path is shortened to a project's. The guard is
+`tests/unit/test_a_tree_of_bundles_is_a_store.py`.
+
+`--bundles DIR` goes with `--list`, `--aggregate` or `--capacity`, reads
+the tree into a temporary copy and deletes it on exit — nothing is
+added to the project's store. `--load DIR` materialises the runs into
+the store, and is idempotent: a nightly can run it over a growing tree,
+because a stamp already held with the same bytes is a re-send. The
+trade is disk against repetition: on `tests/fixtures/same_build_twice_*`
+the tree is 1,824 bytes and the store it becomes 3,466, which `--load`
+keeps and `--bundles` holds only while it runs. Every bundle is checked
+before any is written, so one bad bundle refuses the whole tree, by name:
+
+```console
+$ bga snapshot --aggregate --bundles ci
+Error: 1 bundle refused, so nothing was written:
+  ci/102/20260903T100000Z.bga-bundle.tar.gz is not a readable archive: Compressed file ended before the end-of-stream marker was reached
+```
+
+*Kept, not current* — 2026-09-29, the same tree with a 300-byte cut of
+one bundle added as `ci/102/`. Cuts: none.
+
 **`--resolve` rewrites pseudonyms back to real names, on this machine
 only** (`UX-1064`) — a fourth mode of the same mutually-exclusive group,
 for reading a reply that quotes an anonymized bundle's element names:
@@ -1471,6 +1514,7 @@ reads it as one:
 ```bash
 bga snapshot --aggregate                 # text
 bga snapshot --aggregate --format json   # a `store-aggregate/v1` document
+bga snapshot --aggregate --bundles ci    # the same, over a tree of bundles (UX-900)
 ```
 
 ```text

@@ -569,6 +569,12 @@ def create_parser() -> argparse.ArgumentParser:
         default="text",
         help="JSON for --list/--aggregate instead of text.",
     )
+    parser.add_argument(
+        "--bundles",
+        metavar="DIR",
+        default=None,
+        help="Read --list/--aggregate/--capacity from a tree of bundles.",
+    )
     # UX-159: the store had a size warning and no way to act on it.
     # A subcommand rather than a flag, because it deletes.
     parser.add_argument(
@@ -659,6 +665,9 @@ def main(argv: Optional[list[str]] = None) -> int:
         # deep and none of them should learn about argv. `progress`
         # reads it fresh on every ticker.
         os.environ["BGA_NO_PROGRESS"] = "1"
+
+    if args.bundles is not None:
+        return _read_bundles(args)
 
     project = args.project or run_store.project_root()
     if project is None:
@@ -1630,17 +1639,44 @@ def _tail_cell(row: dict) -> str:
     return f"  {lead}bga {tail / 1e6:.1f}s"
 
 
-def _list(project: str, as_json: bool = False) -> int:
+def _read_bundles(args: argparse.Namespace) -> int:
+    """`UX-900`: a tree of bundles read as a store, from a copy deleted on exit."""
+    import shutil
+    import tempfile
+
+    from bga import bundle
+
+    if args.capacity is None and not args.aggregate and not args.list:
+        print("Error: --bundles reads a store: pass --list, --aggregate or --capacity N,RATE.", file=sys.stderr)
+        return 2
+    project = tempfile.mkdtemp(prefix="bga-bundles-")
+    try:
+        try:
+            bundle.load_tree(args.bundles, project)
+        except bundle.BundleError as error:
+            print(f"Error: {error}", file=sys.stderr)
+            return 2
+        if args.capacity is not None:
+            return _capacity(project, args.capacity, args.format)
+        if args.aggregate:
+            return _aggregate(project, blend=args.blend, as_json=args.format == "json")
+        return _list(project, as_json=args.format == "json", where=args.bundles)
+    finally:
+        shutil.rmtree(project, ignore_errors=True)
+
+
+def _list(project: str, as_json: bool = False, where: Optional[str] = None) -> int:
     """Everything on disk, with the aliases resolution would give it."""
     listing = store_listing(project)
     if as_json:
         print(json.dumps(listing, indent=2))
         return 0
 
+    where = where or project
     if not listing["snapshots"]:
-        print(f"No snapshots in {project}. `bga snapshot -- bst build TARGET` takes one.")
+        print(f"No snapshots in {where}. `bga snapshot -- bst build TARGET` takes one.")
         return 0
-    print(f"{plural(listing['count'], 'snapshot')} in {project}:")
+    print(f"{plural(listing['count'], 'snapshot')} in {where}:")
     for row in listing["snapshots"]:
         if not row["has_run"] and row["started"] is False:
             # UX-324: the build was never launched. Saying "produced no

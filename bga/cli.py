@@ -1929,6 +1929,14 @@ def _bundle_load(args: argparse.Namespace, bundle_mod) -> int:
             file=sys.stderr,
         )
         return 2
+    if os.path.isdir(args.load):
+        # UX-900: a tree of bundles, as CI keeps them; all checked before any is written.
+        loaded = bundle_mod.load_tree(args.load, project)
+        print(f"Loaded {plural(len(loaded), 'bundle')} from {args.load} into {run_store.runs_dir(project)}")
+        for _target, manifest in loaded:
+            print(f"  {manifest['stamp']}")
+        print(f"  read them with: bga snapshot --list, or in place: bga snapshot --list --bundles {args.load}")
+        return 0
     target, manifest = bundle_mod.load(args.load, project)
     counts = bundle_mod.describe(manifest)
     print(f"Loaded snapshot {manifest['stamp']} into {target}")
@@ -2661,7 +2669,7 @@ def _add_bundle_subcommand(subparsers) -> None:
     # switches that already read and write a project's own store.
     bundle_parser = subparsers.add_parser(
         'bundle',
-        usage='bga bundle --export STAMP [-o FILE] | --load FILE | --resolve --key-fingerprint FP',
+        usage='bga bundle --export STAMP [-o FILE] | --load FILE|DIR | --resolve --key-fingerprint FP',
         help='Pack a capture into one file, load one, or resolve pseudonyms.',
         description='Pack one snapshot\'s whole capture - the run directory and the '
         'Plane 2 report, raw trace, host samples and analysis beside it - '
@@ -2673,7 +2681,11 @@ def _add_bundle_subcommand(subparsers) -> None:
     )
     bundle_group = bundle_parser.add_mutually_exclusive_group(required=True)
     bundle_group.add_argument('--export', metavar='STAMP', help='Snapshot to pack: a stamp, @last/@prev, or a path.')
-    bundle_group.add_argument('--load', metavar='FILE', help='Bundle to unpack into this project\'s store.')
+    bundle_group.add_argument(
+        '--load',
+        metavar='FILE|DIR',
+        help='Bundle to unpack into this project\'s store, or a directory\ntree of them: all or none.',
+    )
     bundle_group.add_argument(
         '--resolve', action='store_true', help='Rewrite pseudonyms read from stdin back to real names.'
     )

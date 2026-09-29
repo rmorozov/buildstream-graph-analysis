@@ -57,6 +57,11 @@ task file, which is the only place it ever lived twice.
 | UX-1115 | [the area pages publish from a run whose suite failed](UX-1115-the-area-pages-publish-from-a-red-run.md) | guards | Medium | anyone reading the area pages on the records branch | 🔴 Not Started |
 | UX-1116 | [the LD_PRELOAD hook is built with no warnings and never runs under a sanitizer](UX-1116-the-hook-is-built-without-warnings.md) | capture | High | anyone whose build runs with the hook loaded into every process | 🔴 Not Started |
 | UX-1117 | [the scheduler-log parser is tested only on the logs someone thought to write](UX-1117-the-log-parser-has-no-property-tests.md) | capture | Medium | anyone whose BuildStream version prints a line the fixtures never held | 🔴 Not Started |
+| UX-1118 | [nothing formats the code, so layout is argued in review](UX-1118-nothing-formats-the-code.md) | guards | Medium | the implementing session and every reviewer | 🔴 Not Started |
+| UX-1119 | [docstrings follow no convention a tool can read](UX-1119-docstrings-follow-no-convention.md) | guards | Low | the reader of `bga/` | 🔴 Not Started |
+| UX-1120 | [the closed index is one 729 KB file the markdown lint reads superlinearly](UX-1120-the-closed-index-is-one-large-file.md) | guards | Medium | the implementing session, which pays the full markdown scan | 🔴 Not Started |
+| UX-1121 | [timing gates red pull requests for the runner's speed](UX-1121-timing-gates-red-prs-for-the-runner.md) | guards | High | the implementing session, whose PR reds for a file it never touched | 🔴 Not Started |
+| UX-1122 | [a guard never retires, so every gate is paid on every pull request forever](UX-1122-a-guard-never-retires.md) | guards | High | Ruslan, who decides what the per-PR path costs | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

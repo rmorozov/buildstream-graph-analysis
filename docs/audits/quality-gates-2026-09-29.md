@@ -249,7 +249,8 @@ strength of an `inferred` line, confirm it: 43% of the map is a model's reading 
 ## 8. Proposed rows
 
 Filed as UX-1108..UX-1117: C1 1108, C2 1109, C3 1110, C4 1111, S1 1112, S3 1113, S4 1114,
-D3 1115, G2 1116, G1 1117. The rest are drafts awaiting a pick.
+D3 1115, G2 1116, G1 1117; and, at Ruslan's pick (2026-09-29), L1 1118, L2 1119, S2 1120,
+D2 1121, D1 1122. The rest are drafts.
 
 Speed — local:
 

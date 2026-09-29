@@ -439,6 +439,8 @@ jobs:
       # and the diff-touches-`bga/analyzer.py` gate both live inside the
       # tool, reading the diff `origin/<default>` fetched above.
       - name: The analyzer's wall clock and RSS, against CI's own record
+        # `UX-1121`: on a PR a verdict of the runner's speed reports, never fails.
+        continue-on-error: ${{ github.event_name == 'pull_request' }}
         run: |
           python tools/dev_perf_ratchet.py --against tests/ci_reference.json \
             --carry "${{ runner.temp }}/perf_carry.json" \
@@ -455,6 +457,21 @@ jobs:
           path: ${{ runner.temp }}/perf_carry.json
           key: perf-carry-${{ github.ref }}-${{ github.run_id }}
         if: always() && matrix.python-version == '3.12'
+
+      # `UX-1121`: on a PR both timing gates report; a notice per summary line.
+      - name: The timing gates' verdicts, reported
+        if: always() && matrix.python-version == '3.12' && github.event_name == 'pull_request'
+        run: |
+          for gate in tier_gate perf_gate; do
+            summary="${{ runner.temp }}/$gate.txt"
+            if [ ! -s "$summary" ]; then
+              echo "::notice::$gate: the gate wrote no summary"
+              continue
+            fi
+            while IFS= read -r line; do
+              echo "::notice::$gate: $line"
+            done < "$summary"
+          done
 
       - name: Upload it, so refreshing the reference needs no scrolling
         if: always() && matrix.python-version == '3.12'
@@ -523,8 +540,9 @@ jobs:
           PY: ${{ matrix.python-version }}
         run: echo "clean_${PY//./}=true" >> "$GITHUB_OUTPUT"
 
+      # `UX-1121`: a PR reports it (below); timing.yml holds the daily verdict.
       - name: The drift gate's red, raised
-        if: always() && steps.drift.outcome == 'failure'
+        if: always() && steps.drift.outcome == 'failure' && github.event_name != 'pull_request'
         run: |
           cat "${{ runner.temp }}/tier_gate.txt" \
             || echo "the gate step wrote no summary."

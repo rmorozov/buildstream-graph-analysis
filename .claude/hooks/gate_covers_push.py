@@ -24,6 +24,7 @@ so it is not total. Rounds 103-105's 41-push channel mix is not
 recoverable from committed material, but at least one used this
 covered channel (`UX-767`); CI is the real backstop regardless.
 """
+
 import json
 import os
 import pathlib
@@ -59,8 +60,7 @@ def repo_root(payload=None):
             os.stat(start)
         except OSError:
             start = None
-    done = subprocess.run(["git", "rev-parse", "--show-toplevel"],
-                          capture_output=True, text=True, cwd=start)
+    done = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True, cwd=start)
     if done.returncode == 0 and done.stdout.strip():
         return pathlib.Path(done.stdout.strip())
     return pathlib.Path(__file__).resolve().parents[2]
@@ -83,22 +83,20 @@ def is_real_push(command):
             continue
         if at_command_start and word == "git":
             rest = []
-            for operand in words[index + 1:]:
+            for operand in words[index + 1 :]:
                 if operand in SEPARATORS:
                     break
                 rest.append(operand)
             if rest and rest[0] == "push":
                 args = rest[1:]
-                if (not NON_PUSH_FLAGS.intersection(args)
-                        and not any(a.startswith(":") for a in args)):
+                if not NON_PUSH_FLAGS.intersection(args) and not any(a.startswith(":") for a in args):
                     return True
         at_command_start = False
     return False
 
 
 def head_sha(root):
-    done = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root,
-                          capture_output=True, text=True)
+    done = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, capture_output=True, text=True)
     return done.stdout.strip() if done.returncode == 0 else None
 
 
@@ -129,9 +127,11 @@ not a record anyone can find later - name the row that authorises
 this push ahead of the gate.
 """
 
-BYPASS = ("GATE BYPASSED by {escape}={reason}: pushing {head}, uncovered "
-          "by any green `make push-check`. Holds for every push in this shell "
-          "until {escape} is unset.\n")
+BYPASS = (
+    "GATE BYPASSED by {escape}={reason}: pushing {head}, uncovered "
+    "by any green `make push-check`. Holds for every push in this shell "
+    "until {escape} is unset.\n"
+)
 
 
 def main():
@@ -156,9 +156,11 @@ def main():
             return 0
         sys.stderr.write(BAD_REASON.format(escape=ESCAPE, reason=reason, head=head))
         return 2
-    sys.stderr.write(MESSAGE.format(
-        head=head, marker=MARKER_NAME, escape=ESCAPE,
-        covered=covered or "no commit - no suite has passed yet"))
+    sys.stderr.write(
+        MESSAGE.format(
+            head=head, marker=MARKER_NAME, escape=ESCAPE, covered=covered or "no commit - no suite has passed yet"
+        )
+    )
     return 2
 
 

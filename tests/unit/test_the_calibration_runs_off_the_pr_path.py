@@ -4,6 +4,7 @@ it only under the `jobserver` label; a push to main always does.
 The step's `if:` is evaluated with the replay engine of
 `test_a_run_red_for_another_reason_adopts_nothing`.
 """
+
 import pathlib
 import sys
 
@@ -24,20 +25,25 @@ def _step():
 
 
 def _pr(*labels):
-    return {"event_name": "pull_request", "ref": "refs/pull/7/merge",
-            "event": {"pull_request": {"labels": [{"name": n} for n in labels]}}}
+    return {
+        "event_name": "pull_request",
+        "ref": "refs/pull/7/merge",
+        "event": {"pull_request": {"labels": [{"name": n} for n in labels]}},
+    }
 
 
 PUSH = {"event_name": "push", "ref": "refs/heads/main", "event": {}}
 
 
-@pytest.mark.parametrize("github, runs", [
-    pytest.param(_pr(), False, id="pr-without-a-label"),
-    pytest.param(_pr("documentation"), False, id="pr-with-another-label"),
-    pytest.param(_pr("documentation", "jobserver"), True, id="pr-with-jobserver"),
-    pytest.param(PUSH, True, id="push-to-main"),
-])
+@pytest.mark.parametrize(
+    "github, runs",
+    [
+        pytest.param(_pr(), False, id="pr-without-a-label"),
+        pytest.param(_pr("documentation"), False, id="pr-with-another-label"),
+        pytest.param(_pr("documentation", "jobserver"), True, id="pr-with-jobserver"),
+        pytest.param(PUSH, True, id="push-to-main"),
+    ],
+)
 def test_the_calibration_runs_where_it_is_read(github, runs):
     condition = _step().get("if")
-    assert _holds(condition, {"github": github}, _status(["success"])) is runs, (
-        github["event_name"], condition)
+    assert _holds(condition, {"github": github}, _status(["success"])) is runs, (github["event_name"], condition)

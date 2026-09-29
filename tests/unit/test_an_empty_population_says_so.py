@@ -35,6 +35,7 @@ would be the opposite error. What decides which is which is the
 *contract*: a declared collection with nothing in it is an empty
 population; a scalar with no value is not and never was a section.
 """
+
 import json
 import os
 import pathlib
@@ -103,8 +104,12 @@ console.log(JSON.stringify({
 def probed():
     result = subprocess.run(
         [node, "--input-type=module", "-e", _PROBE],
-        capture_output=True, text=True, cwd=REPO, timeout=60,
-        env=dict(os.environ, BGA_DOM_SHIM=str(REPO / "tests" / "dom_shim.mjs")))
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=60,
+        env=dict(os.environ, BGA_DOM_SHIM=str(REPO / "tests" / "dom_shim.mjs")),
+    )
     assert result.returncode == 0, result.stderr[-3000:]
     return json.loads(result.stdout)
 
@@ -133,8 +138,8 @@ class TestAnEmptyPopulationIsRendered:
         of those two items; this clause is what stops it coming back.
         """
         assert not probed["emptyList"]["sentence"], (
-            "the schema sentence is beside the heading again, which is "
-            "the rule UX-346 and UX-317 landed against")
+            "the schema sentence is beside the heading again, which is the rule UX-346 and UX-317 landed against"
+        )
 
     def test_the_rail_can_see_it(self, probed):
         """`data-empty` is what `nav.js` reads to mark the entry.
@@ -174,9 +179,9 @@ class TestAbsentStaysAbsent:
     def test_a_key_the_schema_does_not_declare_renders_nothing(self, probed):
         assert probed["undeclared"] is False, (
             "with no schema node there is nothing to say the key is a "
-            "population, so an empty value is not evidence of one")
+            "population, so an empty value is not evidence of one"
+        )
 
     def test_a_populated_section_is_unchanged_and_unmarked(self, probed):
         assert probed["populated"]
-        assert probed["populatedIsNotMarked"] is False, (
-            "a section with rows must not carry the empty mark")
+        assert probed["populatedIsNotMarked"] is False, "a section with rows must not carry the empty mark"

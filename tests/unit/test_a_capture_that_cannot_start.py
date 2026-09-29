@@ -21,6 +21,7 @@ Three things are held here, and the second is the one with teeth:
   build produced no elements" is a claim about a build that *ran*, and
   it sends the reader to look at their project instead of their machine.
 """
+
 import os
 import pathlib
 import shutil
@@ -40,14 +41,14 @@ from tools.bga_snapshot import build_ever_started, why_the_build_cannot_start
 # and everything after them means the process existed.
 NEVER_STARTED = (
     "[wrapper][2026-08-27 08:16:19,570] INFO: Executing command: bst build all.bst\n"
-    "[wrapper][2026-08-27 08:16:19,570] INFO: bga-clocks start wall=1 monotonic=2\n")
-INTERRUPTED = NEVER_STARTED + (
-    "[wrapper][2026-08-27 08:16:20,000] INFO: Stopping the build after "
-    "KeyboardInterrupt\n")
+    "[wrapper][2026-08-27 08:16:19,570] INFO: bga-clocks start wall=1 monotonic=2\n"
+)
+INTERRUPTED = NEVER_STARTED + ("[wrapper][2026-08-27 08:16:20,000] INFO: Stopping the build after KeyboardInterrupt\n")
 RAN_AND_FAILED = NEVER_STARTED + (
     "[wrapper][2026-08-27 08:16:20,000] INFO: Error loading project\n"
     "[wrapper][2026-08-27 08:16:21,000] INFO: bga-clocks end wall=3 monotonic=4\n"
-    "[wrapper][2026-08-27 08:16:21,000] INFO: Return code: 255\n")
+    "[wrapper][2026-08-27 08:16:21,000] INFO: Return code: 255\n"
+)
 
 
 def _tree(root: pathlib.Path):
@@ -79,23 +80,29 @@ def _snapshot(project, *argv, without_bst=True):
         # found on. `/usr/bin:/bin` rather than an empty PATH, because
         # the capture needs a shell and an empty one is a different bug.
         env["PATH"] = "/usr/bin:/bin"
-    return subprocess.run([sys.executable, "-m", "bga.cli", "snapshot", *argv],
-                          capture_output=True, text=True, cwd=str(project),
-                          env=env, timeout=300)
+    return subprocess.run(
+        [sys.executable, "-m", "bga.cli", "snapshot", *argv],
+        capture_output=True,
+        text=True,
+        cwd=str(project),
+        env=env,
+        timeout=300,
+    )
 
 
 class TestTheRefusal:
-
     def test_it_refuses_before_anything_exists(self, project):
         done = _snapshot(project, "--", "bst", "build", "all.bst")
         assert done.returncode == 2, (done.stdout, done.stderr)
         assert "Traceback (most recent call last)" not in done.stderr, (
-            "the raw FileNotFoundError is back:\n" + done.stderr)
+            "the raw FileNotFoundError is back:\n" + done.stderr
+        )
         assert "bst is not on PATH" in done.stderr
         assert "bga doctor" in done.stderr, (
             "the refusal does not point at the command that diagnoses the "
             "machine, which is the whole reason it is a sentence and not a "
-            "traceback")
+            "traceback"
+        )
 
     def test_it_writes_nothing_at_all(self, project):
         """The clause with teeth. `UX-157`'s rule, extended to the phase
@@ -112,14 +119,15 @@ class TestTheRefusal:
         assert after == before, (
             f"the refusal left {sorted(set(after) - set(before))} behind. "
             "Every one of those is debris that then has to be described, "
-            "resolved and pruned - which is the second half of UX-324.")
+            "resolved and pruned - which is the second half of UX-324."
+        )
 
     def test_a_machine_that_can_build_is_not_refused(self, monkeypatch):
         """The negative: this must not become a check that always fires."""
-        monkeypatch.setattr(shutil, "which",
-                            lambda name: "/usr/bin/bst" if name == "bst" else None)
-        monkeypatch.setattr(subprocess, "run", lambda *a, **k: subprocess.
-                            CompletedProcess(a, 0, stdout="2.1.0\n", stderr=""))
+        monkeypatch.setattr(shutil, "which", lambda name: "/usr/bin/bst" if name == "bst" else None)
+        monkeypatch.setattr(
+            subprocess, "run", lambda *a, **k: subprocess.CompletedProcess(a, 0, stdout="2.1.0\n", stderr="")
+        )
         assert why_the_build_cannot_start(["bst", "build", "all.bst"]) is None
 
     def test_a_non_bst_command_is_checked_too(self):
@@ -128,18 +136,19 @@ class TestTheRefusal:
 
 
 class TestNeverStartedIsNotProducedNothing:
-
-    @pytest.mark.parametrize("log,started", [
-        (NEVER_STARTED, False),
-        (INTERRUPTED, True),
-        (RAN_AND_FAILED, True),
-    ])
+    @pytest.mark.parametrize(
+        "log,started",
+        [
+            (NEVER_STARTED, False),
+            (INTERRUPTED, True),
+            (RAN_AND_FAILED, True),
+        ],
+    )
     def test_the_wrapper_log_says_which(self, tmp_path, log, started):
         (tmp_path / "build.log").write_text(log)
         assert build_ever_started(str(tmp_path)) is started
 
-    def test_a_snapshot_with_no_log_answers_unknown_rather_than_guessing(
-            self, tmp_path):
+    def test_a_snapshot_with_no_log_answers_unknown_rather_than_guessing(self, tmp_path):
         """`None`, not `False`. A directory with no wrapped log reads
         exactly like a build that never ran, and claiming the latter is
         the same overreach as the sentence this replaced."""
@@ -160,7 +169,8 @@ class TestNeverStartedIsNotProducedNothing:
         assert "the build never started" in done.stdout, done.stdout
         assert "produced no elements" not in done.stdout, (
             "a build that never launched is still described as one that ran "
-            "and produced nothing - the two are different problems")
+            "and produced nothing - the two are different problems"
+        )
 
     def test_a_build_that_ran_and_produced_nothing_still_says_so(self, project):
         """The other side, so the fix is a distinction and not a rename."""
@@ -172,7 +182,6 @@ class TestNeverStartedIsNotProducedNothing:
 
 
 class TestTheStoreAgreesWithItself:
-
     def _store(self, project, *, debris=True, healthy=True):
         runs = project / ".bga" / "runs"
         if debris:
@@ -192,12 +201,9 @@ class TestTheStoreAgreesWithItself:
         with pytest.raises(run_store.StoreError) as error:
             run_store.resolve_snapshot("@20260827T0816", start=str(project))
         message = str(error.value)
-        assert "20260827T081619Z" in message, (
-            f"the refusal does not name the snapshot `--list` shows: {message}")
-        assert "no snapshot in" not in message, (
-            f"still denying a directory that exists: {message}")
-        assert "20260827T090000Z" in message, (
-            "the refusal does not say which snapshot *would* resolve")
+        assert "20260827T081619Z" in message, f"the refusal does not name the snapshot `--list` shows: {message}"
+        assert "no snapshot in" not in message, f"still denying a directory that exists: {message}"
+        assert "20260827T090000Z" in message, "the refusal does not say which snapshot *would* resolve"
 
     def test_with_no_healthy_run_the_refusal_names_the_debris(self, project):
         self._store(project, healthy=False)

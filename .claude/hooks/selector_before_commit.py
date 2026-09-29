@@ -24,6 +24,7 @@ seven minutes and can fail on contention is a hook somebody deletes,
 so the wide selection is reported and left for `make test` to run
 deliberately.
 """
+
 import json
 import os
 import pathlib
@@ -48,11 +49,11 @@ def repo_root(payload=None):
     start = (payload or {}).get("cwd")
     if start is not None and not os.path.isdir(start):
         return None
-    done = subprocess.run(["git", "rev-parse", "--show-toplevel"],
-                          capture_output=True, text=True, cwd=start)
+    done = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True, cwd=start)
     if done.returncode == 0 and done.stdout.strip():
         return pathlib.Path(done.stdout.strip())
     return None if start is not None else pathlib.Path(__file__).resolve().parents[2]
+
 
 #: The escape hatch, and it is a real one: a commit whose *content* is
 #: the fix to a red guard cannot make that guard green before it lands.
@@ -71,7 +72,7 @@ def is_git_commit(command):
             start = True
             continue
         if start and word == "git":
-            rest = words[index + 1:]
+            rest = words[index + 1 :]
             for operand in rest:
                 if operand in SEPARATORS:
                     break
@@ -110,11 +111,13 @@ def selector_is_green(files, repo):
     """`(ok, report)` from running exactly `files`."""
     try:
         done = subprocess.run(
-            [sys.executable, "-m", "pytest", *files, "-q", "-x", "-n", "auto",
-             "--no-header"],
-            cwd=repo, capture_output=True, text=True, timeout=TIMEOUT_S,
-            env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1",
-                 "BGA_TIER_ANY": "1"})
+            [sys.executable, "-m", "pytest", *files, "-q", "-x", "-n", "auto", "--no-header"],
+            cwd=repo,
+            capture_output=True,
+            text=True,
+            timeout=TIMEOUT_S,
+            env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1", "BGA_TIER_ANY": "1"},
+        )
     except subprocess.TimeoutExpired:
         # Not a red guard: an answer that did not arrive. Blocking on it
         # would make a loaded machine unable to commit at all.

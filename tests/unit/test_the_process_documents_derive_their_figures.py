@@ -22,6 +22,7 @@ finds it. The scan reads **sentences**, and not the word `one` - "one
 file per claim" is idiomatic, and banning it bans what these documents
 are for.
 """
+
 import functools
 import json
 import math
@@ -49,10 +50,27 @@ SPEC = REPO / "docs/spec/specification.md"
 
 #: How these documents spell a count. `one` is deliberately absent -
 #: see the module docstring.
-WORDS = {2: "two", 3: "three", 4: "four", 5: "five", 6: "six", 7: "seven",
-         8: "eight", 9: "nine", 10: "ten", 11: "eleven", 12: "twelve",
-         13: "thirteen", 14: "fourteen", 15: "fifteen", 16: "sixteen",
-         17: "seventeen", 18: "eighteen", 19: "nineteen", 20: "twenty"}
+WORDS = {
+    2: "two",
+    3: "three",
+    4: "four",
+    5: "five",
+    6: "six",
+    7: "seven",
+    8: "eight",
+    9: "nine",
+    10: "ten",
+    11: "eleven",
+    12: "twelve",
+    13: "thirteen",
+    14: "fourteen",
+    15: "fifteen",
+    16: "sixteen",
+    17: "seventeen",
+    18: "eighteen",
+    19: "nineteen",
+    20: "twenty",
+}
 
 _NUMBER = "|".join(WORDS.values())
 _NOUN = r"(?:file|test|contract)s?"
@@ -63,31 +81,35 @@ _NOUN = r"(?:file|test|contract)s?"
 COUNT = re.compile(
     rf"(?<!more than )(?<!fewer than )(?<!over )(?<!under )(?<!up to )"
     rf"(?<!at most )\b(\d[\d,]*|{_NUMBER})[\s-]+(?:[a-z]+[\s-]+)?{_NOUN}\b",
-    re.I)
+    re.I,
+)
 
 #: What makes a count legal without deriving it: it is pinned to a
 #: moment, so it was never a claim about now.
 PINNED = re.compile(
     r"UX-\d+|\bround(?:s)? \d+|\b\d{4}-\d{2}-\d{2}"
-    r"|`(?:make|python3?|pytest|git|bga) [^`]*`", re.I)
+    r"|`(?:make|python3?|pytest|git|bga) [^`]*`",
+    re.I,
+)
 
 
 @functools.lru_cache(maxsize=1)
 def _tracked():
     """`UX-577`: git's list, never a glob - the checkout holds
     `.claude/worktrees/<agent>/`, a second copy of the whole tree."""
-    out = subprocess.run(["git", "ls-files"], cwd=REPO, check=True,
-                         capture_output=True, text=True).stdout
+    out = subprocess.run(["git", "ls-files"], cwd=REPO, check=True, capture_output=True, text=True).stdout
     return tuple(out.splitlines())
 
 
 def _population():
     """The documents that steer a session: the skills, the agents and
     the contributing guides."""
-    return [one for one in _tracked()
-            if (re.fullmatch(r"\.claude/.+\.md", one)
-                or re.fullmatch(r"docs/contributing/[^/]+\.md", one))
-            and (REPO / one).exists()]
+    return [
+        one
+        for one in _tracked()
+        if (re.fullmatch(r"\.claude/.+\.md", one) or re.fullmatch(r"docs/contributing/[^/]+\.md", one))
+        and (REPO / one).exists()
+    ]
 
 
 def _sentences(text):
@@ -112,8 +134,7 @@ PARAGRAPH = 1024
 #: states `0 KB` - and the figure is a reading decision (start at the card),
 #: which turns on the ratio and not on a value. So the resolution is a
 #: factor of the size: one order of magnitude, sqrt(10) each way.
-ORDERS = {1: "an order of magnitude", 2: "two orders of magnitude",
-          3: "three orders of magnitude"}
+ORDERS = {1: "an order of magnitude", 2: "two orders of magnitude", 3: "three orders of magnitude"}
 
 
 def _orders(small, large):
@@ -149,8 +170,7 @@ _KB = re.compile(r"~?\d[\d,]*\s*KB\b")
 #: Named three ways, and the first draft of this had only two: a third
 #: copy writing `the fixing guide is 40 KB` was not seen, because
 #: `the guide` does not match `the fixing guide`.
-_ABOUT_THE_GUIDE = re.compile(
-    r"\bfixing[- ]guide\b|\bthe (?:whole )?guide\b|\bthis file\b", re.I)
+_ABOUT_THE_GUIDE = re.compile(r"\bfixing[- ]guide\b|\bthe (?:whole )?guide\b|\bthis file\b", re.I)
 
 
 #: `UX-616`: a sentence about the rules card. `this file` is not here -
@@ -192,8 +212,7 @@ def _registry_sentence():
     than dropping the number.
     """
     lines = SPEC.read_text(encoding="utf-8").splitlines()
-    found = [n for n, line in enumerate(lines, 1)
-             if "written but not printable" in line]
+    found = [n for n, line in enumerate(lines, 1) if "written but not printable" in line]
     if len(found) != 1:
         raise AssertionError(f"{len(found)} lines match, not one: {found}")
     return found[0]
@@ -206,8 +225,7 @@ def _live_contracts():
 def _pinning_clause():
     """§3.7's first sentence - what a consumer is told to pin. The rest
     of the item is history and keeps its own (superseded) literals."""
-    item = GUIDE.read_text(encoding="utf-8").split(
-        "\n7. **If your fix renames", 1)[1]
+    item = GUIDE.read_text(encoding="utf-8").split("\n7. **If your fix renames", 1)[1]
     return item.split("are what a consumer pins", 1)[0]
 
 
@@ -234,13 +252,11 @@ def _derived():
             f"this file is ~{guide_kb} KB",
             f"`{schemas.ANALYZE}`, `{schemas.COMPARE}` and `{schemas.BLAST}`",
             f"the sentence is at line {_registry_sentence()}",
-            "Part 32 spans {}-{}".format(*_part_32())],
-        "docs/contributing/release-guide.md": [
-            f"summary of {WORDS[len(_live_contracts())]} live contracts"],
-        "docs/contributing/style-guide.md": [
-            f"{WORDS[enforced].capitalize()} of the rules below close with"],
-        "docs/README.md": [
-            f"{WORDS[named_here].capitalize()} of them are enforced by"],
+            "Part 32 spans {}-{}".format(*_part_32()),
+        ],
+        "docs/contributing/release-guide.md": [f"summary of {WORDS[len(_live_contracts())]} live contracts"],
+        "docs/contributing/style-guide.md": [f"{WORDS[enforced].capitalize()} of the rules below close with"],
+        "docs/README.md": [f"{WORDS[named_here].capitalize()} of them are enforced by"],
         ".claude/skills/decompose/SKILL.md": [f"{shared} files are shared"],
         ".claude/agents/implementer.md": [f"{shared} files are shared"],
     }
@@ -254,8 +270,7 @@ class TestTheFiguresAreDerived:
     def test_the_document_carries_the_derived_sentence(self, rel):
         text = " ".join((REPO / rel).read_text(encoding="utf-8").split())
         missing = [one for one in _derived()[rel] if one not in text]
-        assert not missing, (
-            f"{rel} does not carry the figure the tree gives: {missing}")
+        assert not missing, f"{rel} does not carry the figure the tree gives: {missing}"
 
     def test_the_guide_pins_a_version_that_is_not_superseded(self):
         """§3.7 told a consumer to pin `analyze/v2`, which `schemas.py`
@@ -266,13 +281,12 @@ class TestTheFiguresAreDerived:
         assert named, "the versioning rule names no contract id"
         stale = named & set(contracts.superseded())
         assert not stale, (
-            f"the rule tells a consumer to pin {sorted(stale)}, which "
-            f"`bga/schemas.py` lists as superseded")
+            f"the rule tells a consumer to pin {sorted(stale)}, which `bga/schemas.py` lists as superseded"
+        )
 
     def test_the_scan_reads_something(self):
         """Every clause here passes on an empty population."""
-        assert len(_population()) >= 10, (
-            f"the process layer is {len(_population())} documents")
+        assert len(_population()) >= 10, f"the process layer is {len(_population())} documents"
         # A count, not the count - restating 4 here is the defect above.
         assert len(_shared_paths()) >= 2, _shared_paths()
         assert _live_contracts(), "no live contract ids"
@@ -295,18 +309,17 @@ class TestNoBareCountSurvives:
                 if any(one in sentence for one in allowed):
                     continue
                 bare.append(f"{rel}: {found.group(0)!r} in {sentence[:90]!r}")
-        assert not bare, (
-            "these count a population the tree changes, and nothing "
-            "derives or dates them:\n" + "\n".join(bare))
+        assert not bare, "these count a population the tree changes, and nothing derives or dates them:\n" + "\n".join(
+            bare
+        )
 
     def test_the_ban_reads_a_non_empty_population(self):
         """A scan over nothing bans nothing. The corpus is the claim."""
-        sentences = [one for rel in _population()
-                     for one in _sentences(
-                         (REPO / rel).read_text(encoding="utf-8"))]
+        sentences = [one for rel in _population() for one in _sentences((REPO / rel).read_text(encoding="utf-8"))]
         assert len(sentences) > 400, f"the corpus is {len(sentences)} sentences"
         assert sum(bool(COUNT.search(one)) for one in sentences) > 5, (
-            "the pattern matches nothing in the corpus it is meant to read")
+            "the pattern matches nothing in the corpus it is meant to read"
+        )
 
 
 class TestTheGuidesSizeCostsOneFile:
@@ -328,7 +341,8 @@ class TestTheGuidesSizeCostsOneFile:
             assert row in text, (
                 f"{name} does not carry {row!r}, the guide's size as "
                 "`dev_touching.size_figure()` derives it. Run "
-                "`python3 tools/dev_touching.py --size --write`.")
+                "`python3 tools/dev_touching.py --size --write`."
+            )
 
     def test_the_document_is_what_the_tool_would_write(self):
         """The drift direction: a figure that was current and is not,
@@ -336,8 +350,8 @@ class TestTheGuidesSizeCostsOneFile:
         for name in dev_touching.SIZE_SITES:
             text = (REPO / name).read_text(encoding="utf-8")
             assert dev_touching.write_size_figure(text) == text, (
-                f"{name} carries a stale copy of the guide's size. Run "
-                "`python3 tools/dev_touching.py --size --write`.")
+                f"{name} carries a stale copy of the guide's size. Run `python3 tools/dev_touching.py --size --write`."
+            )
 
     def test_no_third_document_states_the_guides_size(self):
         """The shape, not the two instances. A size claim about the
@@ -346,28 +360,27 @@ class TestTheGuidesSizeCostsOneFile:
         derived, copies = _derived(), []
         for rel in _size_population():
             allowed = derived.get(rel, ())
-            for sentence in _sentences(
-                    (REPO / rel).read_text(encoding="utf-8")):
-                if not (_KB.search(sentence) and _ABOUT_THE_GUIDE.search(
-                        sentence)):
+            for sentence in _sentences((REPO / rel).read_text(encoding="utf-8")):
+                if not (_KB.search(sentence) and _ABOUT_THE_GUIDE.search(sentence)):
                     continue
                 if any(one in " ".join(sentence.split()) for one in allowed):
                     continue
                 copies.append(f"{rel}: {sentence[:90]!r}")
         assert copies == [], (
             "these state the fixing guide's size and nothing derives it, "
-            "so a paragraph in the guide becomes an edit here too:\n"
-            + "\n".join(copies))
+            "so a paragraph in the guide becomes an edit here too:\n" + "\n".join(copies)
+        )
 
     def test_the_scan_finds_the_copies_that_do_exist(self):
         """A scan matching nothing bans nothing. The two derived
         sentences are what it has to see."""
-        found = {rel for rel in _size_population()
-                 for sentence in _sentences(
-                     (REPO / rel).read_text(encoding="utf-8"))
-                 if _KB.search(sentence) and _ABOUT_THE_GUIDE.search(sentence)}
-        assert found == {"docs/contributing/rules.md",
-                         "docs/contributing/fixing-guide.md"}, sorted(found)
+        found = {
+            rel
+            for rel in _size_population()
+            for sentence in _sentences((REPO / rel).read_text(encoding="utf-8"))
+            if _KB.search(sentence) and _ABOUT_THE_GUIDE.search(sentence)
+        }
+        assert found == {"docs/contributing/rules.md", "docs/contributing/fixing-guide.md"}, sorted(found)
 
     def test_the_scan_reaches_the_day_one_summary(self):
         """`CLAUDE.md` is the third copy this is guarding against - it
@@ -383,26 +396,24 @@ class TestTheGuidesSizeCostsOneFile:
 #: (`UX-584`) reading equals `UX-238`'s; it asserts the guide's copy of
 #: `UX-238`'s reading has not drifted from what `Makefile` still says.
 _MAKEFILE_TIER = re.compile(r"#\s+(small|medium|large)\s+\d+\s+files\s+([\d.]+)s")
-_GUIDE_TIER = re.compile(
-    r"small\s+([\d.]+)s,\s*medium\s+([\d.]+)s,\s*large\s+([\d.]+)s")
+_GUIDE_TIER = re.compile(r"small\s+([\d.]+)s,\s*medium\s+([\d.]+)s,\s*large\s+([\d.]+)s")
 
 
 class TestTheGuideQuotesTheMakefilesReading:
     def test_the_transcription_matches_the_source(self):
         makefile = (REPO / "Makefile").read_text(encoding="utf-8")
-        source = {m.group(1): m.group(2)
-                  for m in _MAKEFILE_TIER.finditer(makefile)}
+        source = {m.group(1): m.group(2) for m in _MAKEFILE_TIER.finditer(makefile)}
         assert source.keys() == {"small", "medium", "large"}, (
-            f"Makefile:30-32 no longer names all three tiers: {source}")
+            f"Makefile:30-32 no longer names all three tiers: {source}"
+        )
         flat = " ".join(GUIDE.read_text(encoding="utf-8").split())
         match = _GUIDE_TIER.search(flat)
-        assert match, ("fixing-guide.md no longer quotes a small/medium/"
-                       "large reading for `UX-238`")
-        quoted = {"small": match.group(1), "medium": match.group(2),
-                  "large": match.group(3)}
+        assert match, "fixing-guide.md no longer quotes a small/medium/large reading for `UX-238`"
+        quoted = {"small": match.group(1), "medium": match.group(2), "large": match.group(3)}
         assert quoted == source, (
             f"fixing-guide.md quotes {quoted} as Makefile:30-32's reading; "
-            f"Makefile:30-32 now says {source} - update the quote (`UX-765`)")
+            f"Makefile:30-32 now says {source} - update the quote (`UX-765`)"
+        )
 
 
 class TestTheCardsSizeCostsNoFile:
@@ -422,7 +433,8 @@ class TestTheCardsSizeCostsNoFile:
         assert high - size >= PARAGRAPH, (
             f"{mover} is {size:,} B; the stated relation moves at "
             f"{high:,} B, so only {high - size:,} B of prose fit before "
-            f"docs/contributing/fixing-guide.md must change too")
+            f"docs/contributing/fixing-guide.md must change too"
+        )
 
     @pytest.mark.parametrize("mover", ["rules", "guide"])
     def test_the_relation_band_is_what_bought_the_headroom(self, mover):
@@ -432,7 +444,8 @@ class TestTheCardsSizeCostsNoFile:
         low, high = _relation_band(mover)
         assert high - low > PARAGRAPH, (
             f"the guide states one relation over [{low:,}, {high:,}) B of "
-            f"{mover}, a {high - low:,} B band a paragraph can cross")
+            f"{mover}, a {high - low:,} B band a paragraph can cross"
+        )
 
     def test_no_document_states_the_cards_size(self):
         """The shape, not the one instance. Any size in KB in a sentence
@@ -441,28 +454,30 @@ class TestTheCardsSizeCostsNoFile:
         to exempt, because the relation carries no absolute."""
         copies = []
         for rel in _size_population():
-            for sentence in _sentences(
-                    (REPO / rel).read_text(encoding="utf-8")):
+            for sentence in _sentences((REPO / rel).read_text(encoding="utf-8")):
                 flat = " ".join(sentence.split())
                 if _KB.search(flat) and _ABOUT_THE_CARD.search(flat):
                     copies.append(f"{rel}: {flat[:90]!r}")
         assert copies == [], (
             "these state the rules card's size, so a paragraph in the "
-            "card becomes an edit here too; state the relation:\n"
-            + "\n".join(copies))
+            "card becomes an edit here too; state the relation:\n" + "\n".join(copies)
+        )
 
     def test_the_scan_catches_the_sentence_that_was_there(self):
         """A scan matching nothing bans nothing, and the corpus it reads
         is now empty by construction. The control is the sentence this
         item removed from the guide."""
-        was = ("**Start at [`rules.md`](rules.md)** - every rule below as "
-               "one line with its guard, 5 KB against this file's ~40 KB.")
+        was = (
+            "**Start at [`rules.md`](rules.md)** - every rule below as "
+            "one line with its guard, 5 KB against this file's ~40 KB."
+        )
         assert _KB.search(was) and _ABOUT_THE_CARD.search(was)
         assert {"docs/contributing/fixing-guide.md", "CLAUDE.md"} <= {
-            rel for rel in _size_population()
-            for sentence in _sentences(
-                (REPO / rel).read_text(encoding="utf-8"))
-            if _ABOUT_THE_CARD.search(" ".join(sentence.split()))}
+            rel
+            for rel in _size_population()
+            for sentence in _sentences((REPO / rel).read_text(encoding="utf-8"))
+            if _ABOUT_THE_CARD.search(" ".join(sentence.split()))
+        }
 
 
 def _without_task_ids(text: str) -> str:
@@ -481,23 +496,20 @@ class TestTheCountNoDecisionReadsIsGone:
 
     def test_the_verify_skill_no_longer_counts_the_reference(self):
         rows = len(json.loads(dev_records.load("tests/ci_reference.json"))["files"])
-        text = _without_task_ids(
-            (REPO / ".claude/skills/verify/SKILL.md").read_text(
-                encoding="utf-8"))
+        text = _without_task_ids((REPO / ".claude/skills/verify/SKILL.md").read_text(encoding="utf-8"))
         assert not _states_the_number(text, rows), (
             f"the verify skill states the reference's row count ({rows}); the "
             f"default branch adopts a new row on its own (`UX-503`), so the "
-            f"figure moves without anyone deciding anything")
+            f"figure moves without anyone deciding anything"
+        )
 
     def test_the_researcher_no_longer_counts_the_backlog(self):
-        files = [one for one in _tracked()
-                 if one.startswith("docs/backlog/scenarios/UX-")]
-        text = _without_task_ids(
-            (REPO / ".claude/agents/researcher.md").read_text(
-                encoding="utf-8"))
+        files = [one for one in _tracked() if one.startswith("docs/backlog/scenarios/UX-")]
+        text = _without_task_ids((REPO / ".claude/agents/researcher.md").read_text(encoding="utf-8"))
         assert not _states_the_number(text, len(files)), (
             f"the researcher states the backlog's size ({len(files)}); it "
-            f"moves on every filing and steers no decision (`UX-471`)")
+            f"moves on every filing and steers no decision (`UX-471`)"
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

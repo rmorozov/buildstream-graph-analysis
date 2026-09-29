@@ -25,6 +25,7 @@ The census found a second file with no reader on its first run -
 half-admits ("nothing on a read path requires this"). It is declared
 below against `UX-452` rather than deleted here.
 """
+
 import builtins
 import contextlib
 import gzip
@@ -70,34 +71,43 @@ SAMPLES = 3
 #: purpose - it is the one value in this fixture that the trace's
 #: `int64` counter cannot carry unscaled, so a `MILLI` that went missing
 #: would round it to 1 and the equality below would still hold.
-HEADER = {"schema": "host-samples/v1", "interval_s": INTERVAL_S,
-          "clock": "CLOCK_MONOTONIC", "wall_at_start": 1787331688.483485,
-          "monotonic_at_start": MONOTONIC_AT_START,
-          "mem_total_kb": 16461068, "swap_total_kb": 2097148,
-          "available": True}
+HEADER = {
+    "schema": "host-samples/v1",
+    "interval_s": INTERVAL_S,
+    "clock": "CLOCK_MONOTONIC",
+    "wall_at_start": 1787331688.483485,
+    "monotonic_at_start": MONOTONIC_AT_START,
+    "mem_total_kb": 16461068,
+    "swap_total_kb": 2097148,
+    "available": True,
+}
 
 
 def _samples():
-    return [{"mem_free_kb": 11773444 - index * 1000,
-             "mem_available_kb": 15534476 - index * 20000,
-             "cached_kb": 3689664,
-             "swap_free_kb": 2097148 - index * 512,
-             "pswpin": index, "pswpout": 2 * index,
-             "pgmajfault": 39076 + 7 * index,
-             "cpu_busy_cores": 1.375 + index * 0.5,
-             "cores": 8, "load1": 4.25 + index,
-             "t": MONOTONIC_AT_START + INTERVAL_S * index}
-            for index in range(SAMPLES)]
+    return [
+        {
+            "mem_free_kb": 11773444 - index * 1000,
+            "mem_available_kb": 15534476 - index * 20000,
+            "cached_kb": 3689664,
+            "swap_free_kb": 2097148 - index * 512,
+            "pswpin": index,
+            "pswpout": 2 * index,
+            "pgmajfault": 39076 + 7 * index,
+            "cpu_busy_cores": 1.375 + index * 0.5,
+            "cores": 8,
+            "load1": 4.25 + index,
+            "t": MONOTONIC_AT_START + INTERVAL_S * index,
+        }
+        for index in range(SAMPLES)
+    ]
 
 
 #: Two processes under one element, enough for the Plane 2 lanes and the
 #: concurrency series to exist - the census needs `plane2.log.gz` to have
 #: a consumer that reads it rather than one that finds it empty.
 RAW = [
-    "START pid=2 ppid=1 ts=1787331691.3 element=codegen.bst inv=a src=hook "
-    "cmd=cc1",
-    "START pid=3 ppid=2 ts=1787331692.0 element=codegen.bst inv=a src=hook "
-    "cmd=cc2",
+    "START pid=2 ppid=1 ts=1787331691.3 element=codegen.bst inv=a src=hook cmd=cc1",
+    "START pid=3 ppid=2 ts=1787331692.0 element=codegen.bst inv=a src=hook cmd=cc2",
     "END pid=3 ppid=2 ts=1787331695.0 element=codegen.bst inv=a src=hook "
     "exit=0 utime=0.5 stime=0.1 maxrss_kb=1024 cmd=cc2",
     "END pid=2 ppid=1 ts=1787331698.1 element=codegen.bst inv=a src=hook "
@@ -109,26 +119,23 @@ RAW = [
 #: Keyed by path relative to the store, so a file moving is a change
 #: this list has to be told about.
 NO_CONSUMER_DECLARED = {
-    ".gitignore":
-        "written for git, not for a `bga` reader (`UX-189`). Its consumer "
-        "is the clone that does not ship the capture archive.",
-    "runs/<stamp>/capture-context.txt":
-        "prose for a person. The capture layout's own row says `Never "
-        "parsed`, which is a decision rather than a gap (`UX-146`).",
+    ".gitignore": "written for git, not for a `bga` reader (`UX-189`). Its consumer "
+    "is the clone that does not ship the capture archive.",
+    "runs/<stamp>/capture-context.txt": "prose for a person. The capture layout's own row says `Never "
+    "parsed`, which is a decision rather than a gap (`UX-146`).",
 }
 
 #: Capture-layout file rows this fixture does not carry, with the reason.
 #: Without this the census could shrink to one file and stay green.
 NOT_IN_THE_FIXTURE = {
-    "runs/<stamp>/run/chrome_trace.json":
-        "`UX-452`: the extraction stopped writing it, so a capture taken "
-        "now has none. The layout still names it as `derived` because a "
-        "capture taken before that item has one and still satisfies the "
-        "contract - and because `bga timeline --format chrome` renders "
-        "the same shape on demand. This is the entry that used to be in "
-        "`NO_CONSUMER_DECLARED`: a file with no consumer became a file "
-        "with no writer, which is the only way that list gets shorter "
-        "without the census being weakened.",
+    "runs/<stamp>/run/chrome_trace.json": "`UX-452`: the extraction stopped writing it, so a capture taken "
+    "now has none. The layout still names it as `derived` because a "
+    "capture taken before that item has one and still satisfies the "
+    "contract - and because `bga timeline --format chrome` renders "
+    "the same shape on demand. This is the entry that used to be in "
+    "`NO_CONSUMER_DECLARED`: a file with no consumer became a file "
+    "with no writer, which is the only way that list gets shorter "
+    "without the census being weakened.",
 }
 
 
@@ -141,9 +148,7 @@ def _store(into) -> pathlib.Path:
     """
     project = pathlib.Path(into) / "project"
     (project / "elements").mkdir(parents=True)
-    (project / "project.conf").write_text(
-        "name: census\nmin-version: 2.0\nelement-path: elements\n",
-        encoding="utf-8")
+    (project / "project.conf").write_text("name: census\nmin-version: 2.0\nelement-path: elements\n", encoding="utf-8")
     run_store.write_config(str(project), {"trace_spine": "auto"})
 
     snapshot = pathlib.Path(run_store.store_dir(str(project))) / "runs"
@@ -164,20 +169,14 @@ def _store(into) -> pathlib.Path:
             out.write(json.dumps(row) + "\n")
     with gzip.open(snapshot / "plane2.log.gz", "wt", encoding="utf-8") as out:
         out.write("\n".join(RAW) + "\n")
-    report = json.loads(
-        (REPO / "tests/fixtures/macro_micro/plane2.json").read_text(
-            encoding="utf-8"))
-    (snapshot / "plane2.json").write_text(json.dumps(report),
-                                          encoding="utf-8")
-    run_store.write_resource_profile(
-        str(snapshot / run_store.RESOURCE_NAME), report)
+    report = json.loads((REPO / "tests/fixtures/macro_micro/plane2.json").read_text(encoding="utf-8"))
+    (snapshot / "plane2.json").write_text(json.dumps(report), encoding="utf-8")
+    run_store.write_resource_profile(str(snapshot / run_store.RESOURCE_NAME), report)
     (snapshot / "element-slice.json").write_text(
-        json.dumps({"elements": ["all.bst"], "elements_considered": 11,
-                    "bounded_at": 400}), encoding="utf-8")
-    (snapshot / "capture-context.txt").write_text(
-        "captured by the consumer census\n", encoding="utf-8")
-    (snapshot / run_store.SIZE_CACHE_NAME).write_text(
-        json.dumps({"bytes": 0, "signature": "x"}), encoding="utf-8")
+        json.dumps({"elements": ["all.bst"], "elements_considered": 11, "bounded_at": 400}), encoding="utf-8"
+    )
+    (snapshot / "capture-context.txt").write_text("captured by the consumer census\n", encoding="utf-8")
+    (snapshot / run_store.SIZE_CACHE_NAME).write_text(json.dumps({"bytes": 0, "signature": "x"}), encoding="utf-8")
     return snapshot
 
 
@@ -195,15 +194,11 @@ def _readers(snapshot, scratch):
     project = str(pathlib.Path(snapshot).parents[2])
     run = str(pathlib.Path(snapshot) / "run")
     return {
-        "bga timeline": lambda: render(str(snapshot),
-                                       str(scratch / "t.pftrace"), quiet=True),
-        "bga view --export": lambda: view.export(run,
-                                                 str(scratch / "r.html")),
+        "bga timeline": lambda: render(str(snapshot), str(scratch / "t.pftrace"), quiet=True),
+        "bga view --export": lambda: view.export(run, str(scratch / "r.html")),
         "bga view (payloads)": lambda: view.payloads(run),
         "bga analyze": lambda: cli.main(["analyze", run, "--format", "json"]),
-        "bga blast": lambda: cli.main(["blast", "all.bst", run,
-                                       "--project", str(FIXTURE),
-                                       "-f", "json"]),
+        "bga blast": lambda: cli.main(["blast", "all.bst", run, "--project", str(FIXTURE), "-f", "json"]),
         "bga correlate": lambda: cli.main(["correlate", run, "-f", "json"]),
         "the store listing": lambda: snapshot_tool.store_listing(project),
         "the store's settings": lambda: run_store.read_config(project),
@@ -252,13 +247,18 @@ def census(tmp_path_factory):
 
     root = os.path.realpath(store)
     present = sorted(
-        os.path.relpath(os.path.join(where, name), root)
-        for where, _dirs, names in os.walk(root) for name in names)
-    read = {os.path.relpath(path, root) for path in opened
-            if path.startswith(root + os.sep)}
-    return {"snapshot": snapshot, "store": store, "scratch": scratch,
-            "present": present, "read": read, "failed": failed,
-            "readers": sorted(_readers(snapshot, scratch))}
+        os.path.relpath(os.path.join(where, name), root) for where, _dirs, names in os.walk(root) for name in names
+    )
+    read = {os.path.relpath(path, root) for path in opened if path.startswith(root + os.sep)}
+    return {
+        "snapshot": snapshot,
+        "store": store,
+        "scratch": scratch,
+        "present": present,
+        "read": read,
+        "failed": failed,
+        "readers": sorted(_readers(snapshot, scratch)),
+    }
 
 
 def _generic(path):
@@ -276,46 +276,51 @@ class TestTheCensusCanSeeAnything:
     def test_every_reader_ran_clean(self, census):
         assert census["failed"] == {}, (
             f"a reader that raised opens nothing after the raise, so the "
-            f"census would report its files unread: {census['failed']}")
+            f"census would report its files unread: {census['failed']}"
+        )
 
     def test_the_fixture_carries_every_file_the_layout_names(self, census):
-        rows = {_generic(path.split("/", 1)[1])
-                for path in run_store.layout_paths() if not path.endswith("/")}
+        rows = {_generic(path.split("/", 1)[1]) for path in run_store.layout_paths() if not path.endswith("/")}
         have = {_generic(path) for path in census["present"]}
         missing = sorted(rows - have - set(NOT_IN_THE_FIXTURE))
         assert missing == [], (
             f"the capture layout names {len(rows)} files and this fixture "
             f"has {len(have)}; a census over a fixture missing rows passes "
-            f"by having nothing to check: {missing}")
+            f"by having nothing to check: {missing}"
+        )
 
 
 class TestEveryCapturedFileHasAConsumer:
-
     def test_nothing_in_the_capture_is_written_and_never_read(self, census):
-        unread = sorted(path for path in census["present"]
-                        if path not in census["read"]
-                        and _generic(path) not in NO_CONSUMER_DECLARED)
+        unread = sorted(
+            path
+            for path in census["present"]
+            if path not in census["read"] and _generic(path) not in NO_CONSUMER_DECLARED
+        )
         assert unread == [], (
             f"{len(unread)} file(s) in the capture that no reader opens. "
             f"Readers asked: {', '.join(census['readers'])}. This is the "
             f"gap `UX-437` was filed on, one level earlier than `UX-401`'s "
-            f"published-key census: {unread}")
+            f"published-key census: {unread}"
+        )
 
     def test_the_host_samples_are_among_the_files_that_are_read(self, census):
         read = {_generic(path) for path in census["read"]}
         assert f"runs/<stamp>/{HOST_SAMPLES_NAME}" in read, (
             f"{HOST_SAMPLES_NAME} is written by every capture and opened by "
-            f"no reader - the state `UX-437` found after eight rounds")
+            f"no reader - the state `UX-437` found after eight rounds"
+        )
 
     def test_every_declared_exemption_is_still_unread(self, census):
         """A declaration that has quietly become true again is a comment
         claiming a defect that no longer exists."""
-        stale = sorted(path for path in census["present"]
-                       if _generic(path) in NO_CONSUMER_DECLARED
-                       and path in census["read"])
+        stale = sorted(
+            path for path in census["present"] if _generic(path) in NO_CONSUMER_DECLARED and path in census["read"]
+        )
         assert stale == [], (
             f"declared as having no consumer, and now read: {stale}. Delete "
-            f"the entry in NO_CONSUMER_DECLARED rather than leaving it.")
+            f"the entry in NO_CONSUMER_DECLARED rather than leaving it."
+        )
 
 
 @pytest.fixture(scope="module")
@@ -327,17 +332,13 @@ def drawn(census):
 
 
 class TestTheHostSeriesReachesTheTrace:
-
     def _tracks(self, drawn):
-        return {entry["name"]: uuid
-                for uuid, entry in drawn["trace"]["counters"].items()}
+        return {entry["name"]: uuid for uuid, entry in drawn["trace"]["counters"].items()}
 
     def test_each_sampled_field_is_a_counter_track_with_its_unit(self, drawn):
-        counters = {entry["name"]: entry
-                    for entry in drawn["trace"]["counters"].values()}
+        counters = {entry["name"]: entry for entry in drawn["trace"]["counters"].values()}
         for _key, label, unit, _scale in HOST_COUNTERS:
-            assert label in counters, (
-                f"{label} is sampled and not drawn: {sorted(counters)}")
+            assert label in counters, f"{label} is sampled and not drawn: {sorted(counters)}"
             assert counters[label]["unit_name"] == unit, counters[label]
 
     def test_the_kilobyte_fields_are_published_in_bytes(self, drawn):
@@ -349,11 +350,9 @@ class TestTheHostSeriesReachesTheTrace:
         for sample in drawn["trace"]["samples"]:
             values.setdefault(sample["track"], []).append(sample["value"])
         drawn_mem = values[tracks["host memory available"]]
-        assert drawn_mem == [row["mem_available_kb"] * 1024
-                             for row in _samples()], drawn_mem
+        assert drawn_mem == [row["mem_available_kb"] * 1024 for row in _samples()], drawn_mem
 
-    def test_the_samples_sit_inside_the_build_they_were_taken_during(
-            self, census, drawn):
+    def test_the_samples_sit_inside_the_build_they_were_taken_during(self, census, drawn):
         """Not on `CLOCK_MONOTONIC`, which is a number of seconds since
         this machine booted and means nothing beside a slice.
 
@@ -364,21 +363,17 @@ class TestTheHostSeriesReachesTheTrace:
         Plane 1 slice sits in.
         """
         window = json.loads(
-            (pathlib.Path(census["snapshot"]) / "run"
-             / "run-context.json").read_text(encoding="utf-8"))["wall_clock"]
+            (pathlib.Path(census["snapshot"]) / "run" / "run-context.json").read_text(encoding="utf-8")
+        )["wall_clock"]
         tracks = self._tracks(drawn)
-        stamps = sorted(sample["ts"] for sample in drawn["trace"]["samples"]
-                        if sample["track"] == tracks["host swap free"])
+        stamps = sorted(
+            sample["ts"] for sample in drawn["trace"]["samples"] if sample["track"] == tracks["host swap free"]
+        )
         assert len(stamps) == SAMPLES, stamps
-        outside = [at for at in stamps
-                   if not (window["start_us"] * 1000 <= at
-                           <= window["end_us"] * 1000)]
-        assert outside == [], (
-            f"host samples outside the build's own wall clock "
-            f"{window}: {outside}")
+        outside = [at for at in stamps if not (window["start_us"] * 1000 <= at <= window["end_us"] * 1000)]
+        assert outside == [], f"host samples outside the build's own wall clock {window}: {outside}"
         assert stamps[0] == int(round(HEADER["wall_at_start"] * 1e9)), stamps
-        spacing = [(later - earlier) / 1e9
-                   for earlier, later in zip(stamps, stamps[1:])]
+        spacing = [(later - earlier) / 1e9 for earlier, later in zip(stamps, stamps[1:])]
         assert spacing == [INTERVAL_S] * (SAMPLES - 1), spacing
 
     def test_the_cumulative_totals_are_drawn_as_they_were_sampled(self, drawn):
@@ -386,10 +381,10 @@ class TestTheHostSeriesReachesTheTrace:
         as anything else would be inventing a number the capture never
         took - the trace dictionary says which three are cumulative."""
         tracks = self._tracks(drawn)
-        faults = [sample["value"] for sample in drawn["trace"]["samples"]
-                  if sample["track"] == tracks["host major faults"]]
-        assert sorted(faults) == [row["pgmajfault"] for row in _samples()], (
-            faults)
+        faults = [
+            sample["value"] for sample in drawn["trace"]["samples"] if sample["track"] == tracks["host major faults"]
+        ]
+        assert sorted(faults) == [row["pgmajfault"] for row in _samples()], faults
 
     def test_the_fractional_cpu_series_survives_an_int64_counter(self, drawn):
         """`UX-675`: `counter_value` is an `int64` and cores busy is a
@@ -398,10 +393,10 @@ class TestTheHostSeriesReachesTheTrace:
         sample lands as 1 instead of 1.375 - 37 % of a core, on the one
         series the item exists to make readable."""
         tracks = self._tracks(drawn)
-        busy = sorted(sample["value"] for sample in drawn["trace"]["samples"]
-                      if sample["track"] == tracks["host cores busy"])
-        assert busy == sorted(int(round(row["cpu_busy_cores"] * 1000))
-                              for row in _samples()), busy
+        busy = sorted(
+            sample["value"] for sample in drawn["trace"]["samples"] if sample["track"] == tracks["host cores busy"]
+        )
+        assert busy == sorted(int(round(row["cpu_busy_cores"] * 1000)) for row in _samples()), busy
 
     def test_the_result_counts_the_two_populations_apart(self, drawn):
         """`counters` is `UX-310`'s concurrency series and `UX-430`'s
@@ -409,12 +404,9 @@ class TestTheHostSeriesReachesTheTrace:
         it would leave that guard comparing something else."""
         result = drawn["result"]
         assert result["host_counters"] == SAMPLES * len(HOST_COUNTERS), result
-        assert result["counters"] == len(
-            list(drawn["trace"]["samples"])) - \
-            result["host_counters"], result
+        assert result["counters"] == len(list(drawn["trace"]["samples"])) - result["host_counters"], result
 
-    def test_a_capture_with_no_host_samples_draws_no_host_track(
-            self, census, tmp_path):
+    def test_a_capture_with_no_host_samples_draws_no_host_track(self, census, tmp_path):
         """The item's own acceptance mutation, as a clause: delete the
         file and the series is gone rather than fabricated."""
         bare = tmp_path / "bare"
@@ -435,12 +427,10 @@ class TestTheSummarySaysWhichItHas:
     def _lines(self, snapshot, out):
         from tools.bga_timeline import describe
 
-        return describe(render(str(snapshot), str(out), quiet=True),
-                        str(out)).splitlines()
+        return describe(render(str(snapshot), str(out), quiet=True), str(out)).splitlines()
 
     def test_it_names_the_series_when_there_are_some(self, census):
-        text = "\n".join(self._lines(census["snapshot"],
-                                     census["scratch"] / "say.pftrace"))
+        text = "\n".join(self._lines(census["snapshot"], census["scratch"] / "say.pftrace"))
         assert "host counters" in text, text
         for _key, label, _unit, _scale in HOST_COUNTERS:
             assert label in text, text

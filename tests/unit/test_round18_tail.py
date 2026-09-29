@@ -4,6 +4,7 @@ Each was demonstrated or traced by the review; none reopens its parent.
 The first is the user-visible one - it breaks the paste-and-go property
 UX-164 had just built.
 """
+
 import os
 
 import pytest
@@ -75,27 +76,32 @@ class TestTheConfigFileIsSelectedByExistence:
         monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
         return home
 
-    def test_buildstream2_without_a_cachedir_does_not_fall_through(
-            self, tmp_path, monkeypatch):
+    def test_buildstream2_without_a_cachedir_does_not_fall_through(self, tmp_path, monkeypatch):
         """The corner: bst reads `buildstream2.conf` and takes its XDG
         default; falling through would answer with the other file's
         `cachedir`, a directory bst is not using."""
-        self._config(tmp_path, monkeypatch, {
-            "buildstream2.conf": "scheduler:\n  builders: 4\n",
-            "buildstream.conf": "cachedir: /somewhere/else\n",
-        })
-        assert tracer.buildstream_cache_dir() == \
-            str(tmp_path / "cache" / "buildstream")
+        self._config(
+            tmp_path,
+            monkeypatch,
+            {
+                "buildstream2.conf": "scheduler:\n  builders: 4\n",
+                "buildstream.conf": "cachedir: /somewhere/else\n",
+            },
+        )
+        assert tracer.buildstream_cache_dir() == str(tmp_path / "cache" / "buildstream")
 
     def test_buildstream2_with_a_cachedir_still_wins(self, tmp_path, monkeypatch):
-        self._config(tmp_path, monkeypatch, {
-            "buildstream2.conf": "cachedir: /two\n",
-            "buildstream.conf": "cachedir: /one\n",
-        })
+        self._config(
+            tmp_path,
+            monkeypatch,
+            {
+                "buildstream2.conf": "cachedir: /two\n",
+                "buildstream.conf": "cachedir: /one\n",
+            },
+        )
         assert tracer.buildstream_cache_dir() == "/two"
 
-    def test_only_the_older_file_is_read_when_it_is_the_only_one(
-            self, tmp_path, monkeypatch):
+    def test_only_the_older_file_is_read_when_it_is_the_only_one(self, tmp_path, monkeypatch):
         self._config(tmp_path, monkeypatch, {"buildstream.conf": "cachedir: /one\n"})
         assert tracer.buildstream_cache_dir() == "/one"
 
@@ -108,9 +114,7 @@ class TestOneNumberHasOneSource:
         which is the recorded source; a second spelling of the same
         number is how a drift finding starts.
         """
-        source = open(
-            os.path.join(REPO_ROOT, "tools", "bst_extract_run.py"),
-            encoding="utf-8").read()
+        source = open(os.path.join(REPO_ROOT, "tools", "bst_extract_run.py"), encoding="utf-8").read()
         assert '"built_count": counts["processed"]' not in source
         assert '"cached_count": counts["skipped"]' not in source
 

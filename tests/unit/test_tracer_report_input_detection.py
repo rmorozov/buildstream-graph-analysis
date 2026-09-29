@@ -7,6 +7,7 @@ exit)` and exiting 0, in the same format it uses for a real answer.
 report is the artifact most sessions actually keep, and there was no way
 to re-render it at all.
 """
+
 import json
 
 import pytest
@@ -76,6 +77,7 @@ def test_report_subcommand_renders_a_saved_json_report(tmp_path, capsys):
     path = tmp_path / "native.json"
     path.write_text(json.dumps(_SAVED_REPORT))
     import sys
+
     argv = sys.argv
     sys.argv = ["bst_native_build_tracer.py", "report", str(path)]
     try:
@@ -93,6 +95,7 @@ def test_report_subcommand_exits_nonzero_on_a_wrong_file(tmp_path, capsys):
     path = tmp_path / "junk.txt"
     path.write_text("nope\n")
     import sys
+
     argv = sys.argv
     sys.argv = ["bst_native_build_tracer.py", "report", str(path)]
     try:
@@ -109,10 +112,19 @@ def test_an_option_after_the_positionals_is_a_usage_error(tmp_path, capsys):
     import sys
 
     from tools.bst_native_build_tracer import main
+
     argv = sys.argv
     sys.argv = [
-        "bst_native_build_tracer.py", "run", "PROJ", "OUT",
-        "--wrapped-log", "/tmp/x", "--", "bst", "build", "all.bst",
+        "bst_native_build_tracer.py",
+        "run",
+        "PROJ",
+        "OUT",
+        "--wrapped-log",
+        "/tmp/x",
+        "--",
+        "bst",
+        "build",
+        "all.bst",
     ]
     try:
         with pytest.raises(SystemExit) as excinfo:

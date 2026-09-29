@@ -25,6 +25,7 @@ already uses elsewhere in this codebase. A structural best-case
 estimate, not a claim about what any real optimization would actually
 achieve.
 """
+
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any
@@ -39,6 +40,7 @@ class BatchGroup:
     """A set of mutually-independent high-sensitivity elements (no
     pairwise ancestor/descendant relationship in the dependency graph)
     - the real "map" grouping this module produces."""
+
     elements: list[str]
     baseline_makespan_us: int
     combined_makespan_us: int
@@ -55,6 +57,7 @@ class BatchOpportunities:
     """UX-20's own map-reduce result over a candidate set of high-
     sensitivity elements (typically `compute_sensitivity`'s own
     `top_opportunities`)."""
+
     groups: list[BatchGroup]
     serialized_pairs: list[tuple[str, str]]
 
@@ -67,7 +70,8 @@ def _are_independent(a: str, b: str, reachable_downstream: Mapping[str, set]) ->
 
 
 def _partition_into_independent_groups(
-    candidates: list[str], reachable_downstream: Mapping[str, set],
+    candidates: list[str],
+    reachable_downstream: Mapping[str, set],
 ) -> tuple[list[list[str]], list[tuple[str, str]]]:
     """Greedy antichain partition over `candidates` (caller supplies
     them in most-impactful-first order): each candidate joins the first
@@ -97,7 +101,7 @@ def _partition_into_independent_groups(
     serialized_pairs: list[tuple[str, str]] = [
         (a, b)
         for i, a in enumerate(candidates)
-        for b in candidates[i + 1:]
+        for b in candidates[i + 1 :]
         if not _are_independent(a, b, reachable_downstream)
     ]
     return groups, serialized_pairs
@@ -127,10 +131,7 @@ def compute_batch_opportunities(
 
     groups: list[BatchGroup] = []
     for raw_group in raw_groups:
-        task_keys = [
-            (element, element_to_task_key[element])
-            for element in raw_group if element in element_to_task_key
-        ]
+        task_keys = [(element, element_to_task_key[element]) for element in raw_group if element in element_to_task_key]
         if len(task_keys) < 2:
             # A "batch" of fewer than 2 real, resolvable tasks isn't a
             # map-reduce grouping opportunity - nothing to combine.
@@ -138,23 +139,27 @@ def compute_batch_opportunities(
 
         combined_overrides = {task_key: 0 for _, task_key in task_keys}
         combined_makespan_us = replay_scheduler.replay(
-            priority_rule=priority_rule, duration_overrides=combined_overrides,
+            priority_rule=priority_rule,
+            duration_overrides=combined_overrides,
         ).makespan_us
 
         individual_savings_us: dict[str, int] = {}
         for element, task_key in task_keys:
             solo_makespan_us = replay_scheduler.replay(
-                priority_rule=priority_rule, duration_overrides={task_key: 0},
+                priority_rule=priority_rule,
+                duration_overrides={task_key: 0},
             ).makespan_us
             individual_savings_us[element] = max(0, baseline_makespan_us - solo_makespan_us)
 
-        groups.append(BatchGroup(
-            elements=[element for element, _ in task_keys],
-            baseline_makespan_us=baseline_makespan_us,
-            combined_makespan_us=combined_makespan_us,
-            combined_savings_us=max(0, baseline_makespan_us - combined_makespan_us),
-            individual_savings_us=individual_savings_us,
-        ))
+        groups.append(
+            BatchGroup(
+                elements=[element for element, _ in task_keys],
+                baseline_makespan_us=baseline_makespan_us,
+                combined_makespan_us=combined_makespan_us,
+                combined_savings_us=max(0, baseline_makespan_us - combined_makespan_us),
+                individual_savings_us=individual_savings_us,
+            )
+        )
 
     return BatchOpportunities(groups=groups, serialized_pairs=serialized_pairs)
 

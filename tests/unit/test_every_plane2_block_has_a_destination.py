@@ -30,6 +30,7 @@ what makes the declaration binding - and it reads the blocks off a real
 committed report rather than off the list, so the next block added to
 the capture arrives with no entry and fails here.
 """
+
 import json
 import os
 import pathlib
@@ -55,10 +56,13 @@ def report():
 @pytest.fixture(scope="module")
 def payload():
     done = subprocess.run(
-        [sys.executable, "-m", "bga.cli", "analyze", str(RUN),
-         "--format", "json"],
-        capture_output=True, text=True, cwd=REPO, timeout=180,
-        env=dict(os.environ, PYTHONPATH=str(REPO)))
+        [sys.executable, "-m", "bga.cli", "analyze", str(RUN), "--format", "json"],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=180,
+        env=dict(os.environ, PYTHONPATH=str(REPO)),
+    )
     assert done.returncode == 0, done.stderr[-3000:]
     return json.loads(done.stdout)
 
@@ -82,13 +86,13 @@ class TestTheInventoryCoversTheReport:
         exactly how `commands_not_observed` became the fifteenth
         terminal-only block.
         """
-        missing = sorted(set(report) - set(plane2.DESTINATIONS)
-                         - {"schema", plane2.RECORDS_KEY})
+        missing = sorted(set(report) - set(plane2.DESTINATIONS) - {"schema", plane2.RECORDS_KEY})
         assert missing == [], (
             f"{len(missing)} Plane 2 block(s) with no declared "
             f"destination: {missing}. Say where each one goes - a "
             f"payload key, a join field, or terminal-only with the "
-            f"reason - in `bga/plane2.py`")
+            f"reason - in `bga/plane2.py`"
+        )
 
     def test_the_inventory_names_nothing_the_report_lacks(self, report):
         """The other direction: a stale entry is a lie about the capture.
@@ -97,10 +101,8 @@ class TestTheInventoryCoversTheReport:
         it to the hook and this fixture predates the rusage fields, so
         it is declared and absent here.
         """
-        stale = sorted(set(plane2.DESTINATIONS) - set(report)
-                       - {"resource_pressure"})
-        assert stale == [], (
-            f"declared destinations for blocks no capture writes: {stale}")
+        stale = sorted(set(plane2.DESTINATIONS) - set(report) - {"resource_pressure"})
+        assert stale == [], f"declared destinations for blocks no capture writes: {stale}"
 
     def test_every_destination_is_one_of_three(self):
         kinds = {kind for kind, _where, _why in plane2.DESTINATIONS.values()}
@@ -118,8 +120,8 @@ class TestTheInventoryCoversTheReport:
                 continue
             assert not where, (block, where)
             assert len(why.split()) >= 12, (
-                f"`{block}` is declared terminal-only with a reason of "
-                f"{len(why.split())} words: {why!r}")
+                f"`{block}` is declared terminal-only with a reason of {len(why.split())} words: {why!r}"
+            )
 
 
 class TestTheDeclaredDestinationsAreReal:
@@ -138,8 +140,7 @@ class TestTheDeclaredDestinationsAreReal:
                 continue
             if _resolve(payload, where) is None:
                 unresolved.append(f"{block} -> {where}")
-        assert unresolved == [], (
-            f"declared to reach the payload and did not: {unresolved}")
+        assert unresolved == [], f"declared to reach the payload and did not: {unresolved}"
 
     def test_every_join_destination_is_a_field_of_a_row(self, payload):
         rows = payload.get("element_join") or []
@@ -148,9 +149,7 @@ class TestTheDeclaredDestinationsAreReal:
         for block, (kind, where, _why) in plane2.DESTINATIONS.items():
             if kind != plane2.JOIN:
                 continue
-            assert where in fields, (
-                f"`{block}` is declared to land on `element_join[].{where}`, "
-                f"which no row carries")
+            assert where in fields, f"`{block}` is declared to land on `element_join[].{where}`, which no row carries"
 
 
 class TestTheCaptureSaysWhatItCouldSee:
@@ -172,7 +171,8 @@ class TestTheCaptureSaysWhatItCouldSee:
             assert key in coverage, (
                 f"`{key}` still reaches no browser - it answers "
                 f"\"{self.ASKED[key]}\", which changes how every number "
-                f"under it is read")
+                f"under it is read"
+            )
 
     def test_the_spine_policy_is_the_one_this_capture_ran(self, payload):
         """Not a placeholder: this fixture's spine really was off.
@@ -181,8 +181,7 @@ class TestTheCaptureSaysWhatItCouldSee:
         looking at the hook's floor, and until now the page could not
         tell them so.
         """
-        assert payload["plane2_coverage"]["spine_policy"] == {
-            "policy": "off", "sandboxes": 9, "spine_traced": 0}
+        assert payload["plane2_coverage"]["spine_policy"] == {"policy": "off", "sandboxes": 9, "spine_traced": 0}
 
     def test_the_two_caveats_travel_with_what_they_qualify(self, payload):
         """A number whose caveat stayed behind is the same defect."""
@@ -198,8 +197,7 @@ class TestTheCaptureSaysWhatItCouldSee:
         about.
         """
         report = json.loads(REPORT.read_text(encoding="utf-8"))
-        assert payload["plane2_coverage"]["wall_span_us"] == round(
-            report["wall_span_s"] * 1_000_000)
+        assert payload["plane2_coverage"]["wall_span_us"] == round(report["wall_span_s"] * 1_000_000)
 
     def test_the_census_leaves_its_per_element_working_behind(self, payload):
         """`UX-288`, on a map that would be the element population again.
@@ -218,7 +216,6 @@ class TestTheCaptureSaysWhatItCouldSee:
         Absent is not empty: a capture that never ran the census must
         not gain a census key saying nothing.
         """
-        assert plane2.coverage_additions({"process_count": 7}) == {
-            "process_count": 7}
+        assert plane2.coverage_additions({"process_count": 7}) == {"process_count": 7}
         assert plane2.coverage_additions({}) == {}
         assert plane2.coverage_additions(None) == {}

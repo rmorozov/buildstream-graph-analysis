@@ -12,6 +12,7 @@ tree - stronger than a refusal scoped to the bundles the export happens
 to build, because that bundle is not the only one `_module_order` can
 return.
 """
+
 import collections
 import pathlib
 import sys
@@ -51,11 +52,11 @@ class TestNoTwoModulesShareATopLevelName:
 
     def test_no_name_has_two_owners(self):
         owners = _owners()
-        collisions = {name: sorted(set(mods)) for name, mods in owners.items()
-                      if len(set(mods)) > 1}
+        collisions = {name: sorted(set(mods)) for name, mods in owners.items() if len(set(mods)) > 1}
         assert collisions == {}, (
             f"top-level name(s) declared by more than one viewer module, "
-            f"which the export would concatenate into one: {collisions}")
+            f"which the export would concatenate into one: {collisions}"
+        )
 
     def test_the_known_collision_is_closed(self):
         """`drawings.js:108` and `perfetto_page.js:57` both declared

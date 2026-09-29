@@ -12,6 +12,7 @@ exception to the rule it states.
 
 holds: rules.md#a-merged-implementer-row-is-read-by-a-verifier-first-a-hold-isnt-lifted-until-answered-or-declined-in-the-task-file
 """
+
 import pathlib
 import re
 import sys
@@ -69,16 +70,19 @@ def unpaired(runs=None):
     the same round but named a different task does not count."""
     runs = dev_process_bands.ledger_runs(LEDGER) if runs is None else runs
     by_round = _verifier_ids_by_round(runs)
-    return [(round_, task_id, task) for round_, task_id, task
-            in merged_track_rows(runs)
-            if task_id is None or task_id not in by_round.get(round_, set())]
+    return [
+        (round_, task_id, task)
+        for round_, task_id, task in merged_track_rows(runs)
+        if task_id is None or task_id not in by_round.get(round_, set())
+    ]
 
 
 def test_the_population_is_not_trivial():
     population = merged_track_rows()
     assert len(population) >= 2, (
         "a guard over an empty or single-row population passes whatever "
-        f"the ledger does; the real ledger gives {population}")
+        f"the ledger does; the real ledger gives {population}"
+    )
 
 
 def test_every_merged_track_from_the_floor_on_is_paired():
@@ -87,4 +91,5 @@ def test_every_merged_track_from_the_floor_on_is_paired():
         f"merged implementer row(s) with no same-round verifier row "
         f"naming their id: {missing} - the row does not merge until "
         "the verifier's finding is answered, or the task file records "
-        "why it was declined (fixing-guide.md §3)")
+        "why it was declined (fixing-guide.md §3)"
+    )

@@ -16,6 +16,7 @@ run rather than the wordmark); the version line joined the footer.
 This is what keeps it there: a header over budget, or a path back in
 its text, reddens here rather than at the next design review.
 """
+
 import os
 import pathlib
 import shutil
@@ -72,21 +73,16 @@ def measured(request, browser, tmp_path_factory):
     from - `run.run`'s value, read the same way `app.js` reads it."""
     into = tmp_path_factory.mktemp(f"u828-{request.param}")
     uri = pages.export_uri(pages.FIXTURES[request.param], into)
-    run_path = os.path.abspath(
-        into / "snapshot" / pages.FIXTURES[request.param].name)
-    return {width: browser.measure(uri, _MEASURE, width=width, height=height)
-            for width, height in WIDTHS}, run_path
+    run_path = os.path.abspath(into / "snapshot" / pages.FIXTURES[request.param].name)
+    return {width: browser.measure(uri, _MEASURE, width=width, height=height) for width, height in WIDTHS}, run_path
 
 
 @needs_browser
 class TestTheHeaderKeepsItsBudget:
     def test_the_height_is_within_budget_at_both_widths(self, measured):
         out, _ = measured
-        over = {w: r["header_px"] for w, r in out.items()
-                if r["header_px"] > HEADER_BUDGET_PX}
-        assert not over, (
-            f"the header is over its {HEADER_BUDGET_PX}px budget "
-            f"(§3i) at: {over}")
+        over = {w: r["header_px"] for w, r in out.items() if r["header_px"] > HEADER_BUDGET_PX}
+        assert not over, f"the header is over its {HEADER_BUDGET_PX}px budget (§3i) at: {over}"
 
     def test_it_stays_sticky(self, measured):
         out, _ = measured
@@ -94,25 +90,19 @@ class TestTheHeaderKeepsItsBudget:
 
     def test_the_path_is_absent_from_the_header_text(self, measured):
         out, run_path = measured
-        leaked = {w: r["headerText"] for w, r in out.items()
-                  if run_path in r["headerText"]}
-        assert not leaked, (
-            f"the run's absolute path is back in the header's text: "
-            f"{leaked}")
+        leaked = {w: r["headerText"] for w, r in out.items() if run_path in r["headerText"]}
+        assert not leaked, f"the run's absolute path is back in the header's text: {leaked}"
 
-    def test_the_path_is_in_run_instance_and_the_heading_title(
-            self, measured):
+    def test_the_path_is_in_run_instance_and_the_heading_title(self, measured):
         out, run_path = measured
         for width, row in out.items():
             assert row["headingTitle"] == run_path, (width, row)
-            assert row["runInstanceText"] is not None, (
-                f"no run_instance section at {width}")
+            assert row["runInstanceText"] is not None, f"no run_instance section at {width}"
             assert run_path in row["runInstanceText"], (width, row)
 
 
 @needs_browser
-def test_a_long_run_name_still_fits_the_budget_on_a_phone(
-        browser, tmp_path_factory):
+def test_a_long_run_name_still_fits_the_budget_on_a_phone(browser, tmp_path_factory):
     """`UX-1047`: neither committed fixture's name is wide enough to
     force the h1 onto its own row - this one's is, deliberately, so a
     regression that drops `#run-name`'s truncation reds here."""

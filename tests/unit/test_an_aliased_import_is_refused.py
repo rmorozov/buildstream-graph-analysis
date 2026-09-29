@@ -6,6 +6,7 @@ whole decision panel as `ReferenceError: headingOf is not defined` -
 and renamed three locals to get out of it. The refusal is what tells
 the next round it must.
 """
+
 import pathlib
 import re
 import subprocess
@@ -46,8 +47,7 @@ class TestTheExportRefusesOne:
         monkeypatch.setattr("tools.bga_view.ASSET_DIR", str(tmp_path))
         return "mod.js"
 
-    def test_an_aliased_module_raises_naming_the_module_and_the_alias(
-            self, tmp_path, monkeypatch):
+    def test_an_aliased_module_raises_naming_the_module_and_the_alias(self, tmp_path, monkeypatch):
         name = self._asset(tmp_path, monkeypatch, ALIASED + "export const q = 1;\n")
         with pytest.raises(RuntimeError) as raised:
             _inline_module(name)
@@ -72,9 +72,8 @@ class TestTheTreeItProtects:
         vacuity a mutation of this file found."""
         bundle = _module_order("app.js")
         offenders = {
-            name: _aliased_imports(
-                (REPO / "bga/viewer" / name).read_text(encoding="utf-8"))
-            for name in bundle}
+            name: _aliased_imports((REPO / "bga/viewer" / name).read_text(encoding="utf-8")) for name in bundle
+        }
         assert len(offenders) == len(bundle) >= 20
         assert {"decision.js", "format.js"} <= set(offenders)
         assert {n: a for n, a in offenders.items() if a} == {}
@@ -91,14 +90,19 @@ class TestTheRefusalReachesTheCaller:
             source = (REPO / "bga/viewer" / module).read_text(encoding="utf-8")
             if module == "decision.js":
                 # the planter reads the live import, so a name added to it does not unplant it
-                source = re.sub(r"(import \{[^}]*\bheading)\b(?! as)([^}]*\} from \"\./format\.js\")",
-                                r"\1 as headingOf\2", source, count=1)
+                source = re.sub(
+                    r"(import \{[^}]*\bheading)\b(?! as)([^}]*\} from \"\./format\.js\")",
+                    r"\1 as headingOf\2",
+                    source,
+                    count=1,
+                )
                 assert "headingOf" in source, "the alias was not planted"
             (viewer / module).write_text(source, encoding="utf-8")
-        script = (f"import sys; sys.path.insert(0, {str(REPO)!r});\n"
-                  f"import tools.bga_view as v; v.ASSET_DIR = {str(viewer)!r};\n"
-                  "v._inline_module('decision.js')\n")
-        done = subprocess.run([sys.executable, "-c", script],
-                              capture_output=True, text=True)
+        script = (
+            f"import sys; sys.path.insert(0, {str(REPO)!r});\n"
+            f"import tools.bga_view as v; v.ASSET_DIR = {str(viewer)!r};\n"
+            "v._inline_module('decision.js')\n"
+        )
+        done = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True)
         assert done.returncode != 0
         assert "decision.js" in done.stderr and "headingOf" in done.stderr

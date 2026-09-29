@@ -29,6 +29,7 @@ wall clock using one element that appears in both. Given no
 capture actually traced - the one whose span is least sensitive to a
 small alignment error.
 """
+
 import argparse
 import contextlib
 import gzip
@@ -114,10 +115,13 @@ PLANE2_ANNOTATIONS = (
     # at a glance - while the uid is the identity the rest of the tool
     # joins on. A question that parsed a label would be reading the
     # presentation to recover the data.
-    ("element", "the BuildStream element this belongs to - the task it is "
-                "for on Plane 1, the sandbox the process ran in on Plane 2. "
-                "The same uid on both, which is what lets one query join "
-                "them"),
+    (
+        "element",
+        "the BuildStream element this belongs to - the task it is "
+        "for on Plane 1, the sandbox the process ran in on Plane 2. "
+        "The same uid on both, which is what lets one query join "
+        "them",
+    ),
     # `UX-433`: the key a **pivot** needs. `s.name` is the whole command
     # line - 14,424 near-unique strings on the audited capture - so
     # `group by s.name` yields one row per invocation and never one per
@@ -135,67 +139,100 @@ PLANE2_ANNOTATIONS = (
     # executable path is short and low-cardinality - a build uses tens of
     # distinct programs against tens of thousands of command lines - so
     # it interns almost for free. Measured in this item's Outcome.
-    ("exe", "the program this process ran, argv stripped - the path as it "
-            "was exec'd, so `/usr/bin/cc` and a compiler's own `cc1` stay "
-            "different programs. What to pivot on when the question is "
-            "which *program* the build spends its time in"),
-    ("src", "which mechanism recorded it: `hook` (the LD_PRELOAD hook, "
-            "loaded at exec) or `spine` (the ptrace supervisor)"),
-    ("cpu_us", "CPU microseconds this process itself used, from its own "
-               "`getrusage` at exit or the spine's read at the exit-stop"),
-    ("max_rss_kb", "peak resident kilobytes of this process alone - never "
-                   "summed with another's, which never held it at the same "
-                   "moment"),
-    ("exit_status", "how it ended, in the spine's own vocabulary: a "
-                    "decimal exit code, or `signal:N` for a process the "
-                    "kernel killed. The hook cannot see one - its "
-                    "destructor runs before the process has a status, and "
-                    "not at all when it is killed - so a hook-only record "
-                    "carries no key rather than a zero"),
-    ("exec_chain", "how many `execve`s this one record collapses - a shell "
-                   "that exec'd a compiler is one process and two commands"),
+    (
+        "exe",
+        "the program this process ran, argv stripped - the path as it "
+        "was exec'd, so `/usr/bin/cc` and a compiler's own `cc1` stay "
+        "different programs. What to pivot on when the question is "
+        "which *program* the build spends its time in",
+    ),
+    (
+        "src",
+        "which mechanism recorded it: `hook` (the LD_PRELOAD hook, loaded at exec) or `spine` (the ptrace supervisor)",
+    ),
+    (
+        "cpu_us",
+        "CPU microseconds this process itself used, from its own "
+        "`getrusage` at exit or the spine's read at the exit-stop",
+    ),
+    (
+        "max_rss_kb",
+        "peak resident kilobytes of this process alone - never "
+        "summed with another's, which never held it at the same "
+        "moment",
+    ),
+    (
+        "exit_status",
+        "how it ended, in the spine's own vocabulary: a "
+        "decimal exit code, or `signal:N` for a process the "
+        "kernel killed. The hook cannot see one - its "
+        "destructor runs before the process has a status, and "
+        "not at all when it is killed - so a hook-only record "
+        "carries no key rather than a zero",
+    ),
+    (
+        "exec_chain",
+        "how many `execve`s this one record collapses - a shell that exec'd a compiler is one process and two commands",
+    ),
     # `UX-379`: the three axes the same `getrusage` call already
     # carried. Per process, like `cpu_us` and `max_rss_kb` beside them.
-    ("read_bytes", "block-layer bytes this process read - what reached the "
-                   "device, so a read served from the page cache is 0 and a "
-                   "large figure is genuinely disk"),
-    ("written_bytes", "block-layer bytes this process wrote, on the same "
-                      "terms as `read_bytes`"),
-    ("major_faults", "page faults this process had to go to disk for - the "
-                     "signal a memory-starved host produces"),
-    ("involuntary_switches", "times the run queue preempted this process "
-                             "while it still had work. Rises with "
-                             "oversubscription rather than with work, which "
-                             "is what separates a contended build from a "
-                             "busy one"),
+    (
+        "read_bytes",
+        "block-layer bytes this process read - what reached the "
+        "device, so a read served from the page cache is 0 and a "
+        "large figure is genuinely disk",
+    ),
+    ("written_bytes", "block-layer bytes this process wrote, on the same terms as `read_bytes`"),
+    ("major_faults", "page faults this process had to go to disk for - the signal a memory-starved host produces"),
+    (
+        "involuntary_switches",
+        "times the run queue preempted this process "
+        "while it still had work. Rises with "
+        "oversubscription rather than with work, which "
+        "is what separates a contended build from a "
+        "busy one",
+    ),
 )
 
 PLANE1_ANNOTATIONS = (
-    ("element", "the BuildStream element this belongs to - the task it is "
-                "for on Plane 1, the sandbox the process ran in on Plane 2. "
-                "The same uid on both, which is what lets one query join "
-                "them"),
-    ("element_kind", "its kind from the run's own graph (`cmake`, `import`, "
-                     "`manual`, ...), or `unknown` where the capture "
-                     "recorded none"),
-    ("task_type", "what the scheduler was doing: `build`, `fetch`, `pull`, "
-                  "`push`, `track`"),
-    ("outcome", "the status BuildStream's log closed the task with - "
-                "`SUCCESS`, `FAILURE`, `CACHED` or `SKIPPED`. The cache "
-                "outcome is the last two, and only where the log states it"),
+    (
+        "element",
+        "the BuildStream element this belongs to - the task it is "
+        "for on Plane 1, the sandbox the process ran in on Plane 2. "
+        "The same uid on both, which is what lets one query join "
+        "them",
+    ),
+    (
+        "element_kind",
+        "its kind from the run's own graph (`cmake`, `import`, "
+        "`manual`, ...), or `unknown` where the capture "
+        "recorded none",
+    ),
+    ("task_type", "what the scheduler was doing: `build`, `fetch`, `pull`, `push`, `track`"),
+    (
+        "outcome",
+        "the status BuildStream's log closed the task with - "
+        "`SUCCESS`, `FAILURE`, `CACHED` or `SKIPPED`. The cache "
+        "outcome is the last two, and only where the log states it",
+    ),
     # `UX-380`: where the element sits, not only what it is. Every one
     # of these is published by the analyzer and read here rather than
     # recomputed - a second implementation is how the timeline and the
     # report come to disagree about one element.
-    ("depth", "how far down the dependency graph this element sits - the "
-              "longest path in edges from a source, which is the level "
-              "`parallelism.levels` decomposes the build by. Absent where the "
-              "snapshot carries no analysis"),
-    ("on_critical_path", "whether this element is on the chain that sets the "
-                         "build's finish time. The set every finding in the "
-                         "report is ranked against"),
-    ("downstream_count", "how many elements rebuild when this one changes - "
-                         "its blast radius in elements"),
+    (
+        "depth",
+        "how far down the dependency graph this element sits - the "
+        "longest path in edges from a source, which is the level "
+        "`parallelism.levels` decomposes the build by. Absent where the "
+        "snapshot carries no analysis",
+    ),
+    (
+        "on_critical_path",
+        "whether this element is on the chain that sets the "
+        "build's finish time. The set every finding in the "
+        "report is ranked against",
+    ),
+    ("downstream_count", "how many elements rebuild when this one changes - its blast radius in elements"),
     # `UX-469`: **which queue** the task occupied. `attribution`'s
     # `resource_wait_us` is "time work was ready and the capacity to run
     # it was not free" over the whole build, and the report cannot say
@@ -203,13 +240,16 @@ PLANE1_ANNOTATIONS = (
     # scheduler has several, with separate limits. Every slice carried
     # the plane it came from and nothing about the queue, so that
     # question died at the report's edge.
-    ("resource", "the scheduler resource this task held while it ran - "
-                 "`PROCESS` for a build slot, `DOWNLOAD` for a fetch or "
-                 "pull, `UPLOAD` for a push, `CACHE` for a cache query. "
-                 "BuildStream limits each separately, so this is the queue "
-                 "`attribution.resource_wait_us` is time spent waiting in - "
-                 "which that figure, summed over every queue at once, "
-                 "cannot name"),
+    (
+        "resource",
+        "the scheduler resource this task held while it ran - "
+        "`PROCESS` for a build slot, `DOWNLOAD` for a fetch or "
+        "pull, `UPLOAD` for a push, `CACHE` for a cache query. "
+        "BuildStream limits each separately, so this is the queue "
+        "`attribution.resource_wait_us` is time spent waiting in - "
+        "which that figure, summed over every queue at once, "
+        "cannot name",
+    ),
 )
 
 # The one category, and the one already-pinned constant it earns
@@ -283,8 +323,7 @@ def _plane2_annotations(record: dict):
         "major_faults": record.get("major_faults"),
         "involuntary_switches": record.get("involuntary_switches"),
     }
-    return [(key, values[key]) for key, _ in PLANE2_ANNOTATIONS
-            if values[key] is not None]
+    return [(key, values[key]) for key, _ in PLANE2_ANNOTATIONS if values[key] is not None]
 
 
 # The one value that means "this process succeeded". `spine.c` writes
@@ -419,8 +458,7 @@ def element_structure(snapshot: str) -> dict:
         uid = row.get("element")
         if uid and row.get("on_critical_path") is not None:
             joined = True
-            structure.setdefault(uid, {})["on_critical_path"] = bool(
-                row["on_critical_path"])
+            structure.setdefault(uid, {})["on_critical_path"] = bool(row["on_critical_path"])
     if joined:
         return structure
     # `UX-431`: the join is Plane 2's table, and a Plane 1 capture has
@@ -612,9 +650,11 @@ def jobserver_pool_series(snapshot: Optional[str]) -> list[tuple]:
             report = json.load(handle)
     except (OSError, ValueError):
         return []
-    return [(row["t_us"], row["pool"]) for row in report.get("jobserver_ledger") or []
-            if isinstance(row, dict) and "action" in row
-            and "t_us" in row and "pool" in row]
+    return [
+        (row["t_us"], row["pool"])
+        for row in report.get("jobserver_ledger") or []
+        if isinstance(row, dict) and "action" in row and "t_us" in row and "pool" in row
+    ]
 
 
 def jobserver_element_series(snapshot: Optional[str]) -> dict:
@@ -637,8 +677,7 @@ def jobserver_element_series(snapshot: Optional[str]) -> dict:
     for element, record in (report.get("jobserver_tokens_by_element") or {}).items():
         points = (record or {}).get("tokens_held_series")
         if points:
-            series[element] = [(row[0], row[1]) for row in points
-                               if isinstance(row, (list, tuple)) and len(row) == 2]
+            series[element] = [(row[0], row[1]) for row in points if isinstance(row, (list, tuple)) and len(row) == 2]
     return series
 
 
@@ -738,8 +777,7 @@ IDENTITY_ANNOTATIONS = (
     ("project", "the project identity the run was captured under"),
     ("targets", "the elements `bst build` was asked for"),
     ("manifest_hash", "the run identity hash two runs are compared by"),
-    ("project_git_commit", "the commit the project was at, where it is a "
-                           "git checkout"),
+    ("project_git_commit", "the commit the project was at, where it is a git checkout"),
     ("bga_version", "the version of `bga` that wrote this trace"),
     ("bst_version", "the BuildStream the capture ran against"),
     ("host_cpu_model", "the CPU the build ran on, from the host manifest"),
@@ -755,21 +793,29 @@ IDENTITY_ANNOTATIONS = (
     # because run-context/v9's `max_jobs` means `builders` - the two
     # would sit side by side here saying the same thing under different
     # names.
-    ("native_max_jobs", "the per-element concurrency the native build "
-                        "systems ran with - `bst --max-jobs`, or what the "
-                        "graph resolved `%{max-jobs}` to. Absent where the "
-                        "capture could establish neither"),
-    ("native_max_jobs_source", "which of the three the number came from - "
-                               "`operator_declared`, "
-                               "`parsed_from_invocation` or "
-                               "`resolved_from_graph`"),
-    ("incomplete_reason", "why this run is not a measurement - `failed`, "
-                          "`interrupted` or `suspended`. Absent on a run "
-                          "that finished, which is the only thing its "
-                          "absence means"),
+    (
+        "native_max_jobs",
+        "the per-element concurrency the native build "
+        "systems ran with - `bst --max-jobs`, or what the "
+        "graph resolved `%{max-jobs}` to. Absent where the "
+        "capture could establish neither",
+    ),
+    (
+        "native_max_jobs_source",
+        "which of the three the number came from - "
+        "`operator_declared`, "
+        "`parsed_from_invocation` or "
+        "`resolved_from_graph`",
+    ),
+    (
+        "incomplete_reason",
+        "why this run is not a measurement - `failed`, "
+        "`interrupted` or `suspended`. Absent on a run "
+        "that finished, which is the only thing its "
+        "absence means",
+    ),
     ("anchor_element", "the element the two planes were aligned on"),
-    ("plane_offset_us", "the single offset that alignment applied, in "
-                        "microseconds"),
+    ("plane_offset_us", "the single offset that alignment applied, in microseconds"),
     ("lane_order", "the rule the element lanes are ordered by"),
 )
 
@@ -791,8 +837,7 @@ ANNOTATION_SCOPES = {
 
 def scopes_of(key: str) -> tuple:
     """Which scopes carry `key`, in the order the scopes are declared."""
-    return tuple(scope for scope, keys in ANNOTATION_SCOPES.items()
-                 if any(name == key for name, _ in keys))
+    return tuple(scope for scope, keys in ANNOTATION_SCOPES.items() if any(name == key for name, _ in keys))
 
 
 def _one_contract():
@@ -859,8 +904,7 @@ def run_identity(snapshot: str) -> dict:
         "host_cpu_count": manifest.get("cpu_count"),
         # UX-341: the manifest is `host/v2`, in bytes. An older
         # capture is normalised on the way in.
-        "host_memory_bytes": hostinfo.normalised(
-            manifest or {}).get("memory_bytes"),
+        "host_memory_bytes": hostinfo.normalised(manifest or {}).get("memory_bytes"),
         "kernel_release": manifest.get("kernel_release"),
         "distro_id": manifest.get("distro_id"),
         "builders": scheduler.get("builders"),
@@ -896,15 +940,16 @@ def identity_annotations(snapshot: str, anchor, offset_us):
     from bga import __version__
 
     values = dict(run_identity(snapshot))
-    values.update({
-        "run": os.path.basename(os.path.normpath(snapshot)) or None,
-        "bga_version": __version__,
-        "anchor_element": anchor,
-        "plane_offset_us": None if offset_us is None else int(round(offset_us)),
-        "lane_order": LANE_ORDER_RULE,
-    })
-    return [(key, values.get(key)) for key, _ in IDENTITY_ANNOTATIONS
-            if values.get(key) is not None]
+    values.update(
+        {
+            "run": os.path.basename(os.path.normpath(snapshot)) or None,
+            "bga_version": __version__,
+            "anchor_element": anchor,
+            "plane_offset_us": None if offset_us is None else int(round(offset_us)),
+            "lane_order": LANE_ORDER_RULE,
+        }
+    )
+    return [(key, values.get(key)) for key, _ in IDENTITY_ANNOTATIONS if values.get(key) is not None]
 
 
 def identity_track_name(reason) -> str:
@@ -948,10 +993,8 @@ FLOW_EXEC = "parent"
 LOSS_NO_TASK = "no_task"
 LOSS_OUT_OF_ORDER = "out_of_order"
 FLOW_LOSS_REASONS = {
-    LOSS_NO_TASK: "one end built nothing in this run (cached, or built "
-                  "earlier), so there is no slice to draw from",
-    LOSS_OUT_OF_ORDER: "the two slices do not begin in the dependency's "
-                       "order, so an arrow would point the wrong way",
+    LOSS_NO_TASK: "one end built nothing in this run (cached, or built earlier), so there is no slice to draw from",
+    LOSS_OUT_OF_ORDER: "the two slices do not begin in the dependency's order, so an arrow would point the wrong way",
 }
 
 
@@ -1128,8 +1171,7 @@ def _plane2_flows(records, first_flow_id):
     flows = {}
     flow_id = first_flow_id
     for record in records:
-        parent_key = (record.get("invocation"), record.get("element"),
-                      record.get("ppid"))
+        parent_key = (record.get("invocation"), record.get("element"), record.get("ppid"))
         if record.get("ppid") is None or parent_key[2] == record["pid"]:
             continue
         parent = None
@@ -1148,9 +1190,9 @@ def _plane2_flows(records, first_flow_id):
     return flows, flow_id
 
 
-def _plane1_annotations(event: dict, kinds: dict, outcome,
-                        structure: Optional[dict] = None,
-                        resources: Optional[dict] = None) -> list:
+def _plane1_annotations(
+    event: dict, kinds: dict, outcome, structure: Optional[dict] = None, resources: Optional[dict] = None
+) -> list:
     args = event.get("args") or {}
     element = args.get("element")
     # `UX-380`: where this element sits, not only what it is. Absent
@@ -1168,12 +1210,9 @@ def _plane1_annotations(event: dict, kinds: dict, outcome,
         "downstream_count": place.get("downstream_count"),
         # `UX-469`: keyed by the task, not the element - one element's
         # fetch and its build hold different slots.
-        "resource": (resources or {}).get(
-            (element, str(args.get("action") or "").upper())),
+        "resource": (resources or {}).get((element, str(args.get("action") or "").upper())),
     }
-    return [(key, values[key]) for key, _ in PLANE1_ANNOTATIONS
-            if values[key] is not None]
-
+    return [(key, values[key]) for key, _ in PLANE1_ANNOTATIONS if values[key] is not None]
 
 
 def _no_wrapped_log(snapshot: str) -> str:
@@ -1198,19 +1237,22 @@ def _no_wrapped_log(snapshot: str) -> str:
             f"wrapped BuildStream log the build wrote, and this capture "
             f"kept none. A snapshot taken by `bga snapshot -- bst build "
             f"...` has one; a run directory imported or generated on its "
-            f"own does not, and there is no timeline to draw from it.")
+            f"own does not, and there is no timeline to draw from it."
+        )
     if os.path.exists(os.path.join(snapshot, "graph.json")):
         # A run directory. The old message's case, and still its advice.
         parent = os.path.dirname(os.path.abspath(snapshot)) or "."
         return (
             f"{snapshot}: no {WRAPPED_LOG_NAME} here. This looks like a "
             f"*run* directory (it has a `graph.json`); `bga timeline` "
-            f"renders the snapshot directory around it - try {parent}.")
+            f"renders the snapshot directory around it - try {parent}."
+        )
     return (
         f"{snapshot}: no {WRAPPED_LOG_NAME} here, and no `run/` or "
         f"`graph.json` either - this is neither a snapshot directory nor "
         f"a run directory. `bga timeline` renders the directory `bga "
-        f"snapshot` created.")
+        f"snapshot` created."
+    )
 
 
 def _raw_log(snapshot: str) -> Optional[str]:
@@ -1223,9 +1265,11 @@ def _raw_log(snapshot: str) -> Optional[str]:
 
 
 def _open_raw(path: str):
-    return (gzip.open(path, "rt", encoding="utf-8", errors="ignore")
-            if path.endswith(".gz")
-            else open(path, encoding="utf-8", errors="ignore"))
+    return (
+        gzip.open(path, "rt", encoding="utf-8", errors="ignore")
+        if path.endswith(".gz")
+        else open(path, encoding="utf-8", errors="ignore")
+    )
 
 
 def pick_anchor(raw_log: str) -> Optional[str]:
@@ -1269,8 +1313,7 @@ def element_spans(raw_log: str) -> dict:
 
     spans = {}
     with _open_raw(raw_log) as handle:
-        for _record in _folding_spans(
-                stream_records(stream_trace_events(handle)), spans):
+        for _record in _folding_spans(stream_records(stream_trace_events(handle)), spans):
             pass
     return spans
 
@@ -1280,8 +1323,7 @@ def _folding_spans(records, spans: dict):
     for record in records:
         element = record.get("element")
         start, end = record.get("start_ts"), record.get("end_ts")
-        if (element and element != "unknown" and start is not None
-                and end is not None):
+        if element and element != "unknown" and start is not None and end is not None:
             entry = spans.get(element)
             if entry is None:
                 spans[element] = {"longest": end - start, "earliest": start}
@@ -1303,8 +1345,8 @@ def _plane2_pass(raw_log: str):
     spans = {}
     with _open_raw(raw_log) as handle:
         ordered = sorted(
-            _folding_spans(stream_records(stream_trace_events(handle)), spans),
-            key=lambda record: record["start_ts"])
+            _folding_spans(stream_records(stream_trace_events(handle)), spans), key=lambda record: record["start_ts"]
+        )
     return spans, merge_record_streams(ordered)
 
 
@@ -1382,8 +1424,7 @@ def _plane1_start_us(plane1_events) -> float:
     trace rather than at zero, so it sits with the run it describes on
     whatever window the UI opens on rather than off the left edge.
     """
-    stamps = [event["ts"] for event in plane1_events
-              if event.get("ph") in ("B", "E") and event.get("ts") is not None]
+    stamps = [event["ts"] for event in plane1_events if event.get("ph") in ("B", "E") and event.get("ts") is not None]
     return min(stamps) if stamps else 0.0
 
 
@@ -1399,16 +1440,24 @@ def _plane1_offset_us(plane1_events, spans, anchor_element) -> float:
     from .native_trace_to_chrome_trace import compute_clock_offset_us
 
     earliest = spans[anchor_element]["earliest"]
-    return compute_clock_offset_us(
-        plane1_events,
-        [{"element": anchor_element, "start_ts": earliest}],
-        anchor_element)
+    return compute_clock_offset_us(plane1_events, [{"element": anchor_element, "start_ts": earliest}], anchor_element)
 
 
-def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
-                      kinds=None, edges=(), snapshot=None, structure=None,
-                      only_element=None, resources=None, tracks_only=False,
-                      records=None):
+def _write_trackevent(
+    plane1_events,
+    raw_log,
+    spans,
+    anchor_element,
+    output,
+    kinds=None,
+    edges=(),
+    snapshot=None,
+    structure=None,
+    only_element=None,
+    resources=None,
+    tracks_only=False,
+    records=None,
+):
     """The trace, packet by packet - nothing accumulates but the rows.
 
     Plane 1 is a handful of tasks and goes in first from the list the
@@ -1430,8 +1479,7 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
     """
     from .native_trace.trackevent import TrackEventWriter
 
-    offset_us = (_plane1_offset_us(plane1_events, spans, anchor_element)
-                 if anchor_element else 0.0)
+    offset_us = _plane1_offset_us(plane1_events, spans, anchor_element) if anchor_element else 0.0
     kinds = kinds or {}
     resources = resources or {}
     outcomes = _plane1_outcomes(plane1_events)
@@ -1455,21 +1503,22 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
         # so `trace_processor` selects it like any other slice.
         reason = None
         if snapshot is not None:
-            identity = identity_annotations(snapshot, anchor_element,
-                                            offset_us)
+            identity = identity_annotations(snapshot, anchor_element, offset_us)
             reason = dict(identity).get("incomplete_reason")
-            identity_track = trace.process_track(
-                identity_track_name(reason), pid=IDENTITY_TRACK_PID, rank=0)
+            identity_track = trace.process_track(identity_track_name(reason), pid=IDENTITY_TRACK_PID, rank=0)
             if not tracks_only:
                 start_us = _plane1_start_us(plane1_events)
-                trace.instant(int(round(start_us * NS_PER_US)), identity_track,
-                              identity_track_name(reason), annotations=identity,
-                              categories=(CATEGORY_RUN,))
+                trace.instant(
+                    int(round(start_us * NS_PER_US)),
+                    identity_track,
+                    identity_track_name(reason),
+                    annotations=identity,
+                    categories=(CATEGORY_RUN,),
+                )
 
         # Plane 1: one lane, one thread track per task tid, which is
         # the convention `bst_log_to_chrome_trace` already writes.
-        plane1_track = trace.process_track("Plane 1: BuildStream", pid=1,
-                                           rank=1)
+        plane1_track = trace.process_track("Plane 1: BuildStream", pid=1, rank=1)
 
         host_tracks = {}
         host_points = 0
@@ -1493,11 +1542,9 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
                     continue
                 track = host_tracks.get(label)
                 if track is None:
-                    track = host_tracks[label] = trace.counter_track(
-                        label, parent=plane1_track, unit_name=unit)
+                    track = host_tracks[label] = trace.counter_track(label, parent=plane1_track, unit_name=unit)
                 if not tracks_only:
-                    trace.counter(int(round(at_us * NS_PER_US)),
-                                  track, int(round(value * scale)))
+                    trace.counter(int(round(at_us * NS_PER_US)), track, int(round(value * scale)))
                 host_points += 1
 
         # UX-847: the dynamic pool's own record, drawn the same way -
@@ -1507,7 +1554,8 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
             track = host_tracks.get("jobserver pool")
             if track is None:
                 track = host_tracks["jobserver pool"] = trace.counter_track(
-                    "jobserver pool", parent=plane1_track, unit_name="tokens")
+                    "jobserver pool", parent=plane1_track, unit_name="tokens"
+                )
             if not tracks_only:
                 trace.counter(int(round(t_us * NS_PER_US)), track, int(pool))
             host_points += 1
@@ -1519,8 +1567,7 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
             label = f"jobserver tokens: {element}"
             track = host_tracks.get(label)
             if track is None:
-                track = host_tracks[label] = trace.counter_track(
-                    label, parent=plane1_track, unit_name="tokens")
+                track = host_tracks[label] = trace.counter_track(label, parent=plane1_track, unit_name="tokens")
             for t_us, tokens in points:
                 if not tracks_only:
                     trace.counter(int(round(t_us * NS_PER_US)), track, int(tokens))
@@ -1538,31 +1585,39 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
             track = threads.get(tid)
             if track is None:
                 track = threads[tid] = trace.thread_track(
-                    names.get(tid) or f"tid {tid}", parent=plane1_track,
-                    pid=1, tid=tid)
+                    names.get(tid) or f"tid {tid}", parent=plane1_track, pid=1, tid=tid
+                )
             if tracks_only:
                 continue
             timestamp = int(round(event["ts"] * NS_PER_US))
             if phase == "B":
                 sources, sinks = plane1_flows.get(id(event), ((), ()))
                 trace.slice_begin(
-                    timestamp, track, event.get("name") or "task",
-                    annotations=_plane1_annotations(
-                        event, kinds, outcomes.get(id(event)), structure,
-                        resources),
+                    timestamp,
+                    track,
+                    event.get("name") or "task",
+                    annotations=_plane1_annotations(event, kinds, outcomes.get(id(event)), structure, resources),
                     categories=(CATEGORY_PLANE1,),
-                    flows=sources, terminating_flows=sinks)
+                    flows=sources,
+                    terminating_flows=sinks,
+                )
             else:
                 trace.slice_end(timestamp, track)
 
         if not raw_log:
-            return {"packets": trace.packets, "slices": trace.slices,
-                    "tracks": trace.tracks, "flows": flow_count,
-                    "flow_losses": accounting, "incomplete_reason": reason,
-                    "lane_order": LANE_ORDER_RULE, "counters": 0,
-                    "counter_peak": None,
-                    "host_counters": host_points,
-                    "host_series": sorted(host_tracks)}
+            return {
+                "packets": trace.packets,
+                "slices": trace.slices,
+                "tracks": trace.tracks,
+                "flows": flow_count,
+                "flow_losses": accounting,
+                "incomplete_reason": reason,
+                "lane_order": LANE_ORDER_RULE,
+                "counters": 0,
+                "counter_peak": None,
+                "host_counters": host_points,
+                "host_series": sorted(host_tracks),
+            }
 
         # Plane 2: one process lane per element, one thread lane per
         # traced pid inside it.
@@ -1573,10 +1628,8 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
         # sorted-name index so a lane's identity does not move when a
         # run's timings do.
         ranked = sorted(spans, key=lambda name: (-spans[name]["longest"], name))
-        element_rank = {element: index + 2
-                        for index, element in enumerate(ranked)}
-        element_pid = {element: index + 2
-                       for index, element in enumerate(sorted(spans))}
+        element_rank = {element: index + 2 for index, element in enumerate(ranked)}
+        element_pid = {element: index + 2 for index, element in enumerate(sorted(spans))}
         lanes = {}
         # `UX-297`: the events stream; the records are still sorted
         # by start before they are drawn, and that is deliberate.
@@ -1622,29 +1675,23 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
         # build's counter.
         source = records
         if only_element is not None:
-            records = [record for record in records
-                       if record.get("element") == only_element]
+            records = [record for record in records if record.get("element") == only_element]
         # `UX-1081`'s review: the same records give the same flows and
         # series; `source` rides in the value so its `id` stays its own.
         _source, plane2_flows, next_flow, series = _shared(
             ("plane2-derived", id(source), only_element, next_flow),
-            lambda: (source, *_plane2_flows(records, next_flow),
-                     concurrency_series(records)))
+            lambda: (source, *_plane2_flows(records, next_flow), concurrency_series(records)),
+        )
         flow_count = next_flow - 1
         # `UX-310`: the series, folded from the records already in
         # hand and hung off the Plane 1 lane so it graphs above the
         # build rather than inside one element's group.
         counter_track = None
         if series:
-            counter_track = trace.counter_track(
-                CONCURRENCY_COUNTER, parent=plane1_track,
-                unit_name=CONCURRENCY_UNIT)
+            counter_track = trace.counter_track(CONCURRENCY_COUNTER, parent=plane1_track, unit_name=CONCURRENCY_UNIT)
             if not tracks_only:
                 for timestamp, value in series:
-                    trace.counter(
-                        int(round(timestamp * 1e6 * NS_PER_US
-                                  + offset_us * NS_PER_US)),
-                        counter_track, value)
+                    trace.counter(int(round(timestamp * 1e6 * NS_PER_US + offset_us * NS_PER_US)), counter_track, value)
         for record in records:
             element = record.get("element") or "unknown"
             pid = element_pid.get(element)
@@ -1655,23 +1702,19 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
                 # `UX-311`: the kind in the label, so a lane says
                 # what sort of element it is without a lookup.
                 kind = kinds.get(element)
-                label = (f"native: {element} ({kind})" if kind
-                         else f"native: {element}")
+                label = f"native: {element} ({kind})" if kind else f"native: {element}"
                 lane = lanes[element] = {
-                    "track": trace.process_track(
-                        label, pid=pid,
-                        rank=element_rank.get(element, len(element_rank) + 2)),
+                    "track": trace.process_track(label, pid=pid, rank=element_rank.get(element, len(element_rank) + 2)),
                     "threads": {},
                 }
             thread = lane["threads"].get(record["pid"])
             if thread is None:
                 thread = lane["threads"][record["pid"]] = trace.thread_track(
-                    f"pid {record['pid']}", parent=lane["track"],
-                    pid=pid, tid=record["pid"])
+                    f"pid {record['pid']}", parent=lane["track"], pid=pid, tid=record["pid"]
+                )
             if tracks_only:
                 continue
-            start_ns = int(round(record["start_ts"] * 1e6 * NS_PER_US
-                                 + offset_us * NS_PER_US))
+            start_ns = int(round(record["start_ts"] * 1e6 * NS_PER_US + offset_us * NS_PER_US))
             # `UX-333`: the whole command, and nothing beside it.
             #
             # `UX-308` trimmed this to 120 characters and put the
@@ -1699,27 +1742,40 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
             if record["open"] or record["end_ts"] is None:
                 # No observed exit. An instant, never a zero-width
                 # bar and never a fabricated end (`UX-188`).
-                trace.instant(start_ns, thread,
-                              f"{name} (no observed exit)",
-                              annotations=annotations,
-                              categories=categories,
-                              flows=sources, terminating_flows=sinks)
+                trace.instant(
+                    start_ns,
+                    thread,
+                    f"{name} (no observed exit)",
+                    annotations=annotations,
+                    categories=categories,
+                    flows=sources,
+                    terminating_flows=sinks,
+                )
                 continue
-            end_ns = int(round(record["end_ts"] * 1e6 * NS_PER_US
-                               + offset_us * NS_PER_US))
-            trace.slice_begin(start_ns, thread, name,
-                              annotations=annotations,
-                              categories=categories,
-                              flows=sources, terminating_flows=sinks)
+            end_ns = int(round(record["end_ts"] * 1e6 * NS_PER_US + offset_us * NS_PER_US))
+            trace.slice_begin(
+                start_ns,
+                thread,
+                name,
+                annotations=annotations,
+                categories=categories,
+                flows=sources,
+                terminating_flows=sinks,
+            )
             trace.slice_end(max(end_ns, start_ns), thread)
-        return {"packets": trace.packets, "slices": trace.slices,
-                "tracks": trace.tracks, "flows": flow_count,
-                "flow_losses": accounting, "incomplete_reason": reason,
-                "lane_order": LANE_ORDER_RULE,
-                "counters": len(series),
-                "counter_peak": max((v for _t, v in series), default=None),
-                "host_counters": host_points,
-                "host_series": sorted(host_tracks)}
+        return {
+            "packets": trace.packets,
+            "slices": trace.slices,
+            "tracks": trace.tracks,
+            "flows": flow_count,
+            "flow_losses": accounting,
+            "incomplete_reason": reason,
+            "lane_order": LANE_ORDER_RULE,
+            "counters": len(series),
+            "counter_peak": max((v for _t, v in series), default=None),
+            "host_counters": host_points,
+            "host_series": sorted(host_tracks),
+        }
 
 
 #: `UX-430`: what a caller may ask the timeline to leave out.
@@ -1770,11 +1826,16 @@ def _spans_and_records(raw: Optional[str], fmt: str):
     return element_spans(raw), None
 
 
-def render(snapshot: str, output: Optional[str],
-           anchor_element: Optional[str] = None, quiet: bool = False,
-           fmt: str = FORMAT_TRACKEVENT, planes: str = PLANES_BOTH,
-           only_element: Optional[str] = None,
-           tracks_only: bool = False) -> dict:
+def render(
+    snapshot: str,
+    output: Optional[str],
+    anchor_element: Optional[str] = None,
+    quiet: bool = False,
+    fmt: str = FORMAT_TRACKEVENT,
+    planes: str = PLANES_BOTH,
+    only_element: Optional[str] = None,
+    tracks_only: bool = False,
+) -> dict:
     """Write the timeline. Returns what went into it, for the caller to say.
 
     `quiet` for a caller rendering into a scratch path it will delete -
@@ -1795,8 +1856,7 @@ def render(snapshot: str, output: Optional[str],
     from .native_trace_to_chrome_trace import main as merge_main
 
     if fmt not in FORMATS:
-        raise ValueError(f"unknown timeline format {fmt!r}; "
-                         f"expected one of {', '.join(FORMATS)}")
+        raise ValueError(f"unknown timeline format {fmt!r}; expected one of {', '.join(FORMATS)}")
 
     wrapped = os.path.join(snapshot, WRAPPED_LOG_NAME)
     if not os.path.exists(wrapped):
@@ -1809,7 +1869,9 @@ def render(snapshot: str, output: Optional[str],
         # file, so a shared block converts Plane 1 once.
         plane1_events = (
             _shared(("plane1", wrapped), lambda: _plane1_events(wrapped, plane1))
-            if fmt == FORMAT_TRACKEVENT else _plane1_events(wrapped, plane1))
+            if fmt == FORMAT_TRACKEVENT
+            else _plane1_events(wrapped, plane1)
+        )
 
         raw = _raw_log(snapshot)
         # `UX-430`: asked for Plane 1 alone, the raw log is simply not
@@ -1817,30 +1879,38 @@ def render(snapshot: str, output: Optional[str],
         # one shape of Plane-1-only trace rather than two.
         narrowed = None
         if planes == PLANE1_ONLY and raw is not None:
-            narrowed = ("Plane 1 only, because --planes 1 was asked for. "
-                        "The process lanes are what the track count grows "
-                        "with; this run's raw log is still beside the "
-                        "snapshot")
+            narrowed = (
+                "Plane 1 only, because --planes 1 was asked for. "
+                "The process lanes are what the track count grows "
+                "with; this run's raw log is still beside the "
+                "snapshot"
+            )
             raw = None
         spans, records = _spans_and_records(raw, fmt)
         anchor = anchor_element or choose_anchor(spans, plane1_events)
 
         if fmt == FORMAT_TRACKEVENT:
             written = _write_trackevent(
-                plane1_events, raw if anchor else None, spans, anchor, output,
-                kinds=_shared(("kinds", snapshot),
-                              lambda: element_kinds(snapshot)),
-                edges=_shared(("edges", snapshot),
-                              lambda: dependency_edges(snapshot)),
+                plane1_events,
+                raw if anchor else None,
+                spans,
+                anchor,
+                output,
+                kinds=_shared(("kinds", snapshot), lambda: element_kinds(snapshot)),
+                edges=_shared(("edges", snapshot), lambda: dependency_edges(snapshot)),
                 snapshot=snapshot,
-                structure=_shared(("structure", snapshot),
-                                  lambda: element_structure(snapshot)),
-                resources=_shared(("resources", snapshot),
-                                  lambda: task_resources(snapshot)),
-                only_element=only_element, tracks_only=tracks_only,
-                records=records)
-            result = {"planes": ["1", "2"] if (raw and anchor) else ["1"],
-                      "anchor": anchor, "raw_log": raw, "format": fmt}
+                structure=_shared(("structure", snapshot), lambda: element_structure(snapshot)),
+                resources=_shared(("resources", snapshot), lambda: task_resources(snapshot)),
+                only_element=only_element,
+                tracks_only=tracks_only,
+                records=records,
+            )
+            result = {
+                "planes": ["1", "2"] if (raw and anchor) else ["1"],
+                "anchor": anchor,
+                "raw_log": raw,
+                "format": fmt,
+            }
             result.update(written)
             if narrowed:
                 result["omitted"] = narrowed
@@ -1849,7 +1919,8 @@ def render(snapshot: str, output: Optional[str],
             if raw and not anchor:
                 result["omitted"] = (
                     "the Plane 2 capture attributes no span to an element, so "
-                    "there is nothing to align the two planes on")
+                    "there is nothing to align the two planes on"
+                )
             return result
 
         if output is None:
@@ -1860,18 +1931,22 @@ def render(snapshot: str, output: Optional[str],
 
         if raw is None:
             shutil.copyfile(plane1, output)
-            return {"planes": ["1"], "anchor": None, "raw_log": None,
-                    "format": fmt, **_chrome_counts(output)}
+            return {"planes": ["1"], "anchor": None, "raw_log": None, "format": fmt, **_chrome_counts(output)}
 
         if anchor is None:
             # A raw log with no element-attributed span: the merge has
             # nothing to align on, so Plane 1 alone is the honest output.
             shutil.copyfile(plane1, output)
-            return {"planes": ["1"], "anchor": None, "raw_log": raw,
-                    "format": fmt, **_chrome_counts(output),
-                    "omitted": "the Plane 2 capture attributes no span to an "
-                               "element, so there is nothing to align the two "
-                               "planes on"}
+            return {
+                "planes": ["1"],
+                "anchor": None,
+                "raw_log": raw,
+                "format": fmt,
+                **_chrome_counts(output),
+                "omitted": "the Plane 2 capture attributes no span to an "
+                "element, so there is nothing to align the two "
+                "planes on",
+            }
 
         # `combined` reads an uncompressed log; decompress into scratch.
         source = raw
@@ -1880,12 +1955,10 @@ def render(snapshot: str, output: Optional[str],
             with _open_raw(raw) as handle, open(source, "w", encoding="utf-8") as out:
                 shutil.copyfileobj(handle, out, length=1024 * 1024)
 
-        code = merge_main(["combined", plane1, source, output,
-                           "--anchor-element", anchor], quiet=quiet)
+        code = merge_main(["combined", plane1, source, output, "--anchor-element", anchor], quiet=quiet)
         if code:
             raise RuntimeError(f"merging Plane 2 failed (exit {code})")
-        return {"planes": ["1", "2"], "anchor": anchor, "raw_log": raw,
-                "format": fmt, **_chrome_counts(output)}
+        return {"planes": ["1", "2"], "anchor": anchor, "raw_log": raw, "format": fmt, **_chrome_counts(output)}
     finally:
         shutil.rmtree(scratch, ignore_errors=True)
 
@@ -1912,7 +1985,8 @@ CHROME_COST = (
     "This format carries slices only - no flows and no counters - so "
     "the queries that read them (`waited-on-flow`, `concurrency-curve`, "
     "`were-the-cores-busy`) return nothing. `--format trackevent` "
-    "carries all three.")
+    "carries all three."
+)
 
 
 def _chrome_counts(output: str) -> dict:
@@ -1926,11 +2000,10 @@ def _chrome_counts(output: str) -> dict:
     try:
         with open(output, encoding="utf-8") as handle:
             events = json.load(handle)
-    except (OSError, ValueError):                        # pragma: no cover
+    except (OSError, ValueError):  # pragma: no cover
         return {}
     rows = events.get("traceEvents") if isinstance(events, dict) else events
-    slices = sum(1 for event in (rows or [])
-                 if isinstance(event, dict) and event.get("ph") in ("X", "B"))
+    slices = sum(1 for event in (rows or []) if isinstance(event, dict) and event.get("ph") in ("X", "B"))
     return {"slices": slices, "flows": 0, "counters": 0}
 
 
@@ -1959,36 +2032,39 @@ def _flow_accounting_lines(result: dict) -> list[str]:
 def describe(result: dict, output: str) -> str:
     lines = []
     if result["planes"] == ["1", "2"]:
-        lines.append(f"Wrote both planes to {output}, aligned on "
-                     f"{result['anchor']}.")
+        lines.append(f"Wrote both planes to {output}, aligned on {result['anchor']}.")
     else:
         lines.append(f"Wrote Plane 1 to {output}.")
         lines.append(
-            "  Plane 2 is not in it: " + (
+            "  Plane 2 is not in it: "
+            + (
                 result.get("omitted")
                 or "this snapshot kept no raw trace log. `bga snapshot` keeps "
-                   "one by default; a capture taken with --no-keep-raw, or "
-                   "before UX-188, has only the processed report."))
+                "one by default; a capture taken with --no-keep-raw, or "
+                "before UX-188, has only the processed report."
+            )
+        )
     if result.get("format") == FORMAT_CHROME:
         # `UX-395`: the two zeroes are *printed*, not omitted. A row a
         # summary leaves out is a row a reader assumes was fine.
-        lines.append(f"  {result.get('slices', 0)} slices, "
-                     f"{result.get('flows', 0)} flows, "
-                     f"{result.get('counters', 0)} counters.")
+        lines.append(
+            f"  {result.get('slices', 0)} slices, {result.get('flows', 0)} flows, {result.get('counters', 0)} counters."
+        )
         lines.append(f"  {CHROME_COST}")
-        lines.append("  Open it with Perfetto (https://ui.perfetto.dev) or "
-                     "chrome://tracing.")
+        lines.append("  Open it with Perfetto (https://ui.perfetto.dev) or chrome://tracing.")
     else:
         # `chrome://tracing` is deliberately not offered here: it reads
         # the JSON shape, not this one, and naming a viewer that will
         # refuse the file is the kind of dead offer `UX-194` fixed.
-        lines.append(f"  {result.get('slices', 0)} slices, "
-                     f"{result.get('flows', 0)} flows, "
-                     f"{result.get('counters', 0)} counters on "
-                     f"{result.get('tracks', 0)} tracks. Open it with "
-                     "Perfetto (https://ui.perfetto.dev), which reads this "
-                     "format natively; `bga timeline --format chrome` writes "
-                     "the legacy JSON for chrome://tracing.")
+        lines.append(
+            f"  {result.get('slices', 0)} slices, "
+            f"{result.get('flows', 0)} flows, "
+            f"{result.get('counters', 0)} counters on "
+            f"{result.get('tracks', 0)} tracks. Open it with "
+            "Perfetto (https://ui.perfetto.dev), which reads this "
+            "format natively; `bga timeline --format chrome` writes "
+            "the legacy JSON for chrome://tracing."
+        )
         # `UX-437`: the host series, named here and not folded into the
         # counter total above, because it answers a different question -
         # what the machine was doing - and because a capture that has
@@ -1996,26 +2072,34 @@ def describe(result: dict, output: str) -> str:
         # was drawn (`UX-395`'s rule about printed zeroes).
         series_names = result.get("host_series") or ()
         if series_names:
-            lines.append(f"  {result.get('host_counters', 0)} host counters on "
-                         f"{len(series_names)} tracks: "
-                         f"{', '.join(series_names)}.")
+            lines.append(
+                f"  {result.get('host_counters', 0)} host counters on "
+                f"{len(series_names)} tracks: "
+                f"{', '.join(series_names)}."
+            )
         else:
-            lines.append(f"  No host series: this snapshot has no "
-                         f"{HOST_SAMPLES_NAME}. `bga snapshot` writes one; "
-                         f"a capture taken before `UX-378` has none.")
+            lines.append(
+                f"  No host series: this snapshot has no "
+                f"{HOST_SAMPLES_NAME}. `bga snapshot` writes one; "
+                f"a capture taken before `UX-378` has none."
+            )
         # `UX-430`: the track count is what the viewer spends, and the
         # byte budget cannot see it - measured on the seeded scale run,
         # 16,832 tracks in 486 KB, an eighth of the byte bound. So the
         # narrowing that reduces it is named here rather than left for
         # the reader to find in `--help` after the file will not open.
         if result.get("only_element"):
-            lines.append(f"  Plane 2 narrowed to {result['only_element']}: "
-                         f"its lanes, its exec arrows and its share of the "
-                         f"counter, and no other element's.")
+            lines.append(
+                f"  Plane 2 narrowed to {result['only_element']}: "
+                f"its lanes, its exec arrows and its share of the "
+                f"counter, and no other element's."
+            )
         elif "2" in (result.get("planes") or ()):
-            lines.append("  `--planes 1` leaves the process lanes out and "
-                         "`--only-element` keeps one element's, if this is "
-                         "more rows than Perfetto will draw.")
+            lines.append(
+                "  `--planes 1` leaves the process lanes out and "
+                "`--only-element` keeps one element's, if this is "
+                "more rows than Perfetto will draw."
+            )
     # `UX-431`: after the totals, whatever the graph's edges became. The
     # chrome format drops flows entirely (`UX-395`), so this is where a
     # reader who ran the default command is told - and it is printed on
@@ -2029,43 +2113,60 @@ def main(argv: Optional[list[str]] = None) -> int:
     from bga.help_format import CompactRawHelp
 
     parser = argparse.ArgumentParser(
-        prog="bga timeline", description=HELP,
+        prog="bga timeline",
+        description=HELP,
         formatter_class=lambda prog: CompactRawHelp(prog),
     )
     parser.add_argument(
-        "run", nargs="?", default="@last",
-        help="The snapshot to render; `@last` by default, same alias grammar "
-             "as every other command.")
+        "run",
+        nargs="?",
+        default="@last",
+        help="The snapshot to render; `@last` by default, same alias grammar as every other command.",
+    )
     parser.add_argument(
-        "-o", "--output", default=None, metavar="PATH",
-        help="Where to write the trace. Defaults to `timeline.json` inside "
-             "the snapshot.")
+        "-o",
+        "--output",
+        default=None,
+        metavar="PATH",
+        help="Where to write the trace. Defaults to `timeline.json` inside the snapshot.",
+    )
     parser.add_argument(
-        "--anchor-element", default=None, metavar="ELEMENT",
-        help="Align the two planes on this element instead of the "
-             "longest-running one Plane 2 traced.")
+        "--anchor-element",
+        default=None,
+        metavar="ELEMENT",
+        help="Align the two planes on this element instead of the longest-running one Plane 2 traced.",
+    )
     parser.add_argument(
-        "--planes", default=PLANES_BOTH, choices=list(PLANE_CHOICES),
+        "--planes",
+        default=PLANES_BOTH,
+        choices=list(PLANE_CHOICES),
         help="`both` (the default) draws Plane 1's element spans and "
-             "Plane 2's process lanes. `1` leaves the process lanes out - "
-             "Perfetto draws a row per track and the process lanes are "
-             "where the count grows, so this is what to reach for when a "
-             "big capture will not open (UX-430).")
+        "Plane 2's process lanes. `1` leaves the process lanes out - "
+        "Perfetto draws a row per track and the process lanes are "
+        "where the count grows, so this is what to reach for when a "
+        "big capture will not open (UX-430).",
+    )
     parser.add_argument(
-        "--only-element", default=None, metavar="ELEMENT",
+        "--only-element",
+        default=None,
+        metavar="ELEMENT",
         help="Keep Plane 2's lanes for this element alone. Its slices, its "
-             "exec-chain arrows and the concurrency counter all narrow "
-             "together, so the counter reads this element rather than the "
-             "whole build.")
+        "exec-chain arrows and the concurrency counter all narrow "
+        "together, so the counter reads this element rather than the "
+        "whole build.",
+    )
     parser.add_argument(
-        "--format", default=FORMAT_TRACKEVENT, choices=list(FORMATS),
+        "--format",
+        default=FORMAT_TRACKEVENT,
+        choices=list(FORMATS),
         help="`trackevent` (the default) writes Perfetto's own protobuf "
-             "trace, gzipped and written as a stream, with the dependency "
-             "flows and the concurrency counters in it. `chrome` writes the "
-             "legacy Chrome JSON - slices only, no flows and no counters, so "
-             "the queries that read them return nothing - "
-             "for `chrome://tracing` and for a pipeline "
-             "that already parses it (UX-298).")
+        "trace, gzipped and written as a stream, with the dependency "
+        "flows and the concurrency counters in it. `chrome` writes the "
+        "legacy Chrome JSON - slices only, no flows and no counters, so "
+        "the queries that read them return nothing - "
+        "for `chrome://tracing` and for a pipeline "
+        "that already parses it (UX-298).",
+    )
     args = parser.parse_args(argv)
 
     from bga import run_store
@@ -2075,17 +2176,23 @@ def main(argv: Optional[list[str]] = None) -> int:
     # what it says. Reaching for `resolve_snapshot` directly made an
     # explicit path an error, which is not the store's grammar.
     try:
-        snapshot = (run_store.resolve_snapshot(args.run, run_store.project_root())
-                    if run_store.is_alias(args.run) else args.run)
+        snapshot = (
+            run_store.resolve_snapshot(args.run, run_store.project_root()) if run_store.is_alias(args.run) else args.run
+        )
     except Exception as error:
         print(f"Error: {error}", file=sys.stderr)
         return 2
 
     output = args.output or os.path.join(snapshot, DEFAULT_OUTPUT[args.format])
     try:
-        result = render(snapshot, output, anchor_element=args.anchor_element,
-                        fmt=args.format, planes=args.planes,
-                        only_element=args.only_element)
+        result = render(
+            snapshot,
+            output,
+            anchor_element=args.anchor_element,
+            fmt=args.format,
+            planes=args.planes,
+            only_element=args.only_element,
+        )
     except (FileNotFoundError, RuntimeError) as error:
         print(f"Error: {error}", file=sys.stderr)
         return 2

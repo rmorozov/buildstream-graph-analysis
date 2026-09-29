@@ -9,6 +9,7 @@ The verdict is *consumed*, never re-derived: two independently-derived
 capacity formulas comparing the same real inputs is the divergence
 `UX-17` was resolved to avoid.
 """
+
 from bga.analyzer import BuildEfficiencyAnalyzer
 from bga.ingest.models import AttributionCategory, RunContext
 from bga.report._shared import (
@@ -42,7 +43,7 @@ def test_an_under_provisioned_run_still_gets_the_original_advice():
 
 
 def test_a_run_whose_capacity_checks_did_not_run_says_so():
-    """"The checks found nothing" and "the checks could not run" are
+    """ "The checks found nothing" and "the checks could not run" are
     different, and advice conditioned on the second as if it were the
     first is the failure this task is about."""
     hint = resolve_attribution_hint(_RESOURCE_WAIT, _verdict(checks_ran=False))
@@ -77,6 +78,7 @@ def test_every_category_still_has_a_hint():
 
 
 # --- the verdict the resolver consumes -----------------------------------
+
 
 def _analyzer(builders, native_max_jobs=None, host_cpu_count=None):
     analyzer = BuildEfficiencyAnalyzer()

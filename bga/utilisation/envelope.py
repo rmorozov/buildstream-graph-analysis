@@ -61,9 +61,7 @@ def wall_samples(read: dict) -> list[dict]:
         at = sample.get("t")
         if at is None or sample.get("cpu_busy_cores") is None:
             continue
-        out.append(dict(sample,
-                        at_us=int(round((float(wall) + float(at)
-                                         - float(start)) * 1e6))))
+        out.append(dict(sample, at_us=int(round((float(wall) + float(at) - float(start)) * 1e6))))
     return out
 
 
@@ -80,13 +78,17 @@ def intervals(samples: list[dict]) -> list[dict]:
         span_us = later["at_us"] - earlier["at_us"]
         if span_us <= 0:
             continue
-        out.append({"start_us": earlier["at_us"], "end_us": later["at_us"],
-                    "duration_us": span_us,
-                    "busy_cores": later["cpu_busy_cores"],
-                    "cores": later.get("cores"),
-                    "load1": later.get("load1"),
-                    "swapped_out": (later.get("pswpout") or 0)
-                    - (earlier.get("pswpout") or 0)})
+        out.append(
+            {
+                "start_us": earlier["at_us"],
+                "end_us": later["at_us"],
+                "duration_us": span_us,
+                "busy_cores": later["cpu_busy_cores"],
+                "cores": later.get("cores"),
+                "load1": later.get("load1"),
+                "swapped_out": (later.get("pswpout") or 0) - (earlier.get("pswpout") or 0),
+            }
+        )
     return out
 
 
@@ -108,8 +110,7 @@ def _ready_and_waiting(window: dict, tasks: list[dict]) -> dict:
             ready.append(task["element"])
         if start <= task["finish_us"] < end:
             finished.append(task["element"])
-    return {"building": sorted(set(building)), "ready": sorted(set(ready)),
-            "finished": sorted(set(finished))}
+    return {"building": sorted(set(building)), "ready": sorted(set(ready)), "finished": sorted(set(finished))}
 
 
 #: `UX-676`: the canned question each row points at, and the token its
@@ -132,11 +133,12 @@ def _row(window: dict, run: dict, binding: float) -> dict:
     rather than unpacked into six parameters."""
     who = _ready_and_waiting(window, run["tasks"])
     idle = max(0.0, binding - window["busy_cores"])
-    waiting = sorted({name for element in who["finished"]
-                      for name in run["successors"].get(element, ())}
-                     - set(who["building"]))
+    waiting = sorted(
+        {name for element in who["finished"] for name in run["successors"].get(element, ())} - set(who["building"])
+    )
     row = {
-        "start_us": window["start_us"], "end_us": window["end_us"],
+        "start_us": window["start_us"],
+        "end_us": window["end_us"],
         # `UX-823`: the reader's "when" - an offset from the run's start.
         # `start_us` stays for the Perfetto bounds; a wall-clock base
         # rendered as a duration read "497003.7 h".
@@ -144,8 +146,7 @@ def _row(window: dict, run: dict, binding: float) -> dict:
         "duration_us": window["duration_us"],
         "busy_cores": window["busy_cores"],
         "capacity_cores": binding,
-        "busy_share": (round(window["busy_cores"] / binding, 3)
-                       if binding else None),
+        "busy_share": (round(window["busy_cores"] / binding, 3) if binding else None),
         "lost_core_seconds": round(idle * window["duration_us"] / 1e6, 3),
         "load1": window["load1"],
         # `UX-860`: the other half of `overcommitted`'s own test - a
@@ -156,15 +157,12 @@ def _row(window: dict, run: dict, binding: float) -> dict:
         # builder ran them - there is no lane id in `trace/v9` - so the
         # column is the concurrent set against `builders`, and each
         # element's own `max-jobs` beside it (`UX-377`).
-        "building": [{"element": name,
-                      "max_jobs": run["max_jobs"].get(name)}
-                     for name in who["building"]],
+        "building": [{"element": name, "max_jobs": run["max_jobs"].get(name)} for name in who["building"]],
         "ready_not_dispatched": who["ready"],
         "just_finished": who["finished"],
         "successors_waiting": waiting,
         "trace_query": ROW_QUERY,
-        "trace_bounds": {"start_ns": window["start_us"] * 1000,
-                         "end_ns": window["end_us"] * 1000},
+        "trace_bounds": {"start_ns": window["start_us"] * 1000, "end_ns": window["end_us"] * 1000},
     }
     return row
 
@@ -180,32 +178,40 @@ def compute(samples: dict, run: dict) -> dict:
     """
     series = wall_samples(samples)
     if len(series) < 2:
-        return {"available": False, "absence":
-                "this capture has fewer than two host CPU samples - "
-                "`cpu_busy_cores` is a rate over a gap, and one reading "
-                "is not a gap (`UX-675`)"}
+        return {
+            "available": False,
+            "absence": "this capture has fewer than two host CPU samples - "
+            "`cpu_busy_cores` is a rate over a gap, and one reading "
+            "is not a gap (`UX-675`)",
+        }
     cores = series[-1].get("cores")
-    configured = ((run.get("builders") or 0)
-                  * (run.get("native_max_jobs") or 0)) or None
-    binding = min(x for x in (configured, cores) if x) if (configured or cores) \
-        else None
+    configured = ((run.get("builders") or 0) * (run.get("native_max_jobs") or 0)) or None
+    binding = min(x for x in (configured, cores) if x) if (configured or cores) else None
     if not binding:
-        return {"available": False, "absence":
-                "this capture records neither a core count nor "
-                "`builders x max-jobs`, so there is no capacity to read "
-                "the series against"}
+        return {
+            "available": False,
+            "absence": "this capture records neither a core count nor "
+            "`builders x max-jobs`, so there is no capacity to read "
+            "the series against",
+        }
     windows = intervals(series)
     if run.get("started_us") is None:
-        run = {**run, "started_us": min((t["start_us"] for t in run["tasks"]),
-                                          default=windows[0]["start_us"] if windows else 0)}
+        run = {
+            **run,
+            "started_us": min((t["start_us"] for t in run["tasks"]), default=windows[0]["start_us"] if windows else 0),
+        }
     busy = [window["busy_cores"] for window in windows]
-    under = [window for window in windows
-             if binding - window["busy_cores"] >= IDLE_CORES_FLOOR
-             and any(_ready_and_waiting(window, run["tasks"])[kind]
-                     for kind in ("building", "ready"))]
-    over = [window for window in windows
-            if (window["load1"] is not None and cores
-                and window["load1"] > cores) or window["swapped_out"] > 0]
+    under = [
+        window
+        for window in windows
+        if binding - window["busy_cores"] >= IDLE_CORES_FLOOR
+        and any(_ready_and_waiting(window, run["tasks"])[kind] for kind in ("building", "ready"))
+    ]
+    over = [
+        window
+        for window in windows
+        if (window["load1"] is not None and cores and window["load1"] > cores) or window["swapped_out"] > 0
+    ]
     spent = sum(window["duration_us"] for window in windows) or 1
     envelope = {
         "available": True,
@@ -218,10 +224,8 @@ def compute(samples: dict, run: dict) -> dict:
         "busy_cores_p95": percentile(busy, 95),
         "busy_share_p50": round(percentile(busy, 50) / binding, 3),
         "busy_share_p95": round(percentile(busy, 95) / binding, 3),
-        "underutilized_share": round(
-            sum(window["duration_us"] for window in under) / spent, 3),
-        "overcommitted_share": round(
-            sum(window["duration_us"] for window in over) / spent, 3),
+        "underutilized_share": round(sum(window["duration_us"] for window in under) / spent, 3),
+        "overcommitted_share": round(sum(window["duration_us"] for window in over) / spent, 3),
     }
     envelope["verdict"] = _verdict(envelope)
     envelope["headline"] = _headline(envelope)
@@ -229,8 +233,7 @@ def compute(samples: dict, run: dict) -> dict:
     return {
         "envelope": envelope,
         "underutilized_intervals": _table(under, run, binding, rank),
-        "overcommitted_intervals": _table(over, run, binding,
-                                          ("busy_cores", True)),
+        "overcommitted_intervals": _table(over, run, binding, ("busy_cores", True)),
     }
 
 
@@ -257,15 +260,21 @@ def _headline(envelope: dict) -> str:
     busy, cap = envelope["busy_cores_p95"], envelope["capacity_cores"]
     share = round(100 * envelope["busy_share_p50"])
     if envelope["verdict"] == "overcommitted":
-        return (f"The host was overcommitted for "
-                f"{round(100 * envelope['overcommitted_share'])}% of the "
-                f"build - load above {envelope['cores']} cores or pages "
-                f"written to swap. More builders will make it slower.")
+        return (
+            f"The host was overcommitted for "
+            f"{round(100 * envelope['overcommitted_share'])}% of the "
+            f"build - load above {envelope['cores']} cores or pages "
+            f"written to swap. More builders will make it slower."
+        )
     if envelope["verdict"] == "binding":
-        return (f"Cores were the binding resource: busy reached {busy} of "
-                f"{cap} and sat at {share}% of it. More cores, or less "
-                f"work, is the only thing that shortens this build.")
-    return (f"Cores were not the binding resource: busy peaked at {busy} of "
-            f"{cap} and sat at {share}% of it, with "
-            f"{round(100 * envelope['underutilized_share'])}% of the build "
-            f"holding an idle core while there was work to run.")
+        return (
+            f"Cores were the binding resource: busy reached {busy} of "
+            f"{cap} and sat at {share}% of it. More cores, or less "
+            f"work, is the only thing that shortens this build."
+        )
+    return (
+        f"Cores were not the binding resource: busy peaked at {busy} of "
+        f"{cap} and sat at {share}% of it, with "
+        f"{round(100 * envelope['underutilized_share'])}% of the build "
+        f"holding an idle core while there was work to run."
+    )

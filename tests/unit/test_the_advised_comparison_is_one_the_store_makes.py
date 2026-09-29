@@ -5,6 +5,7 @@
 whenever the run sat in a store, so a store holding one cold run and
 one incremental run advised the one pair it will not make.
 """
+
 import contextlib
 import io
 import json
@@ -72,7 +73,6 @@ def _last_run(project):
 
 
 class TestTheStoreDecidesWhetherThePairIsAdvised:
-
     def test_a_matched_pair_is_advised_and_runs(self, tmp_path, monkeypatch):
         project = _store(tmp_path, INCREMENTAL, INCREMENTAL)
         step = _steps(_last_run(project))["compare-with-the-run-before"]
@@ -80,13 +80,11 @@ class TestTheStoreDecidesWhetherThePairIsAdvised:
         monkeypatch.chdir(project)
         assert _run(step["argv"][1:]) == EXIT_OK
 
-    def test_a_mismatched_pair_is_the_refusal_this_guards(self, tmp_path,
-                                                          monkeypatch):
+    def test_a_mismatched_pair_is_the_refusal_this_guards(self, tmp_path, monkeypatch):
         """The gap itself: `@prev @last` on a cold+incremental store."""
         project = _store(tmp_path, COLD, INCREMENTAL)
         monkeypatch.chdir(project)
-        assert _run(["compare", "@prev", "@last"]) == \
-            EXIT_CODES["mismatched runs"]
+        assert _run(["compare", "@prev", "@last"]) == EXIT_CODES["mismatched runs"]
 
     def test_a_mismatched_pair_is_not_advised(self, tmp_path):
         project = _store(tmp_path, COLD, INCREMENTAL)
@@ -94,21 +92,19 @@ class TestTheStoreDecidesWhetherThePairIsAdvised:
         assert "compare-with-the-run-before" not in offered, (
             f"`compare @prev @last` exits "
             f"{EXIT_CODES['mismatched runs']} on this store and is still "
-            f"advised; got {sorted(offered)}")
+            f"advised; got {sorted(offered)}"
+        )
         assert "compare-with-a-run-that-pairs" not in offered, (
-            "no run in this store shares @last's mode, so there is no pair "
-            "to name")
+            "no run in this store shares @last's mode, so there is no pair to name"
+        )
 
-    def test_the_run_that_would_pair_is_named_and_runs(self, tmp_path,
-                                                       monkeypatch):
+    def test_the_run_that_would_pair_is_named_and_runs(self, tmp_path, monkeypatch):
         project = _store(tmp_path, INCREMENTAL, COLD, INCREMENTAL)
         step = _steps(_last_run(project))["compare-with-a-run-that-pairs"]
-        assert step["argv"] == [
-            "bga", "compare", "@20260901T000000Z", "@last"], step["argv"]
+        assert step["argv"] == ["bga", "compare", "@20260901T000000Z", "@last"], step["argv"]
         assert "full" in step["reason"] and "incremental" in step["reason"]
         monkeypatch.chdir(project)
-        assert _run(step["argv"][1:]) == EXIT_OK, (
-            "the advised pair must be one the store makes")
+        assert _run(step["argv"][1:]) == EXIT_OK, "the advised pair must be one the store makes"
 
     def test_an_unknown_mode_is_not_a_mismatch(self, tmp_path):
         """`_check_run_modes`' rule: `unknown` is not guessed into
@@ -138,8 +134,7 @@ class TestTheGuideAdvisesWhatTheSeedStoreCanRun:
         store = tmp_path / "bga-demo"
         assert _run(["gen-synthetic", "--store", str(store)]) == EXIT_OK
         monkeypatch.chdir(store)
-        commands = [line.split() for line in self._block().splitlines()
-                    if line.strip().startswith("bga ")]
+        commands = [line.split() for line in self._block().splitlines() if line.strip().startswith("bga ")]
         assert commands, "the block advises no command"
         for argv in commands:
             argv = [word.replace(DEMO_PATH, str(store)) for word in argv[1:]]
@@ -148,22 +143,17 @@ class TestTheGuideAdvisesWhatTheSeedStoreCanRun:
                 continue
             assert _run(argv) == EXIT_OK, f"`bga {' '.join(argv)}` did not"
 
-    def test_the_advised_commands_are_the_ones_the_tool_prints(
-            self, tmp_path, monkeypatch):
+    def test_the_advised_commands_are_the_ones_the_tool_prints(self, tmp_path, monkeypatch):
         """So the block cannot drift into a set of commands that happen
         to exit 0 but are not the advice."""
         store = tmp_path / "bga-demo"
         assert _run(["gen-synthetic", "--store", str(store)]) == EXIT_OK
         monkeypatch.chdir(store)
-        printed = {
-            " ".join(step["argv"]).replace(str(store), DEMO_PATH)
-            for step in _steps("@last").values()
-        }
-        quoted = {line.strip() for line in self._block().splitlines()
-                  if line.strip().startswith("bga ")}
+        printed = {" ".join(step["argv"]).replace(str(store), DEMO_PATH) for step in _steps("@last").values()}
+        quoted = {line.strip() for line in self._block().splitlines() if line.strip().startswith("bga ")}
         assert quoted == printed, (
-            f"the guide quotes {sorted(quoted - printed)} the tool does not "
-            f"print, and omits {sorted(printed - quoted)}")
+            f"the guide quotes {sorted(quoted - printed)} the tool does not print, and omits {sorted(printed - quoted)}"
+        )
 
 
 if __name__ == "__main__":

@@ -13,6 +13,7 @@ independent derivations agreeing is worth more than one, and it is the
 only way to catch a contract that is stamped by a string literal
 nobody bound to a `SCHEMA` constant.
 """
+
 import pathlib
 import re
 
@@ -48,8 +49,7 @@ def _scanned():
     for root in ("bga", "tools"):
         for path in sorted((REPO / root).rglob("*.py")):
             for match in _LITERAL.finditer(path.read_text(encoding="utf-8")):
-                found.setdefault(match.group(1), set()).add(
-                    path.relative_to(REPO).as_posix())
+                found.setdefault(match.group(1), set()).add(path.relative_to(REPO).as_posix())
     return {k: v for k, v in found.items() if k not in NOT_OURS}
 
 
@@ -63,7 +63,8 @@ class TestTheInventoryIsComplete:
 
         assert len(contracts.ids()) > len(contracts.printable()), (
             "the inventory has stopped covering anything the registry "
-            "does not; either a contract was lost or one was promoted")
+            "does not; either a contract was lost or one was promoted"
+        )
         # `UX-341` put five more shapes here: the four documents whose
         # units it renamed, and `host/v1`. All five are read and never
         # written, which is exactly the state this list is for.
@@ -78,11 +79,23 @@ class TestTheInventoryIsComplete:
         # archive a bundle is, and no command prints it.
         # `UX-641` added `analyze/v5`, for the same reason again.
         assert contracts.unprintable() == [
-            "analyze/v2", "analyze/v3", "analyze/v4", "analyze/v5",
-            "blast/v1", "bundle-manifest/v1", "capture-layout/v1",
-            "compare/v1", "correlate/v1", "host-samples/v1", "host/v1",
-            "host/v2", "plane2/v1", "plane2/v2", "plane2/v3",
-            "sources/v1"]
+            "analyze/v2",
+            "analyze/v3",
+            "analyze/v4",
+            "analyze/v5",
+            "blast/v1",
+            "bundle-manifest/v1",
+            "capture-layout/v1",
+            "compare/v1",
+            "correlate/v1",
+            "host-samples/v1",
+            "host/v1",
+            "host/v2",
+            "plane2/v1",
+            "plane2/v2",
+            "plane2/v3",
+            "sources/v1",
+        ]
 
     def test_a_retired_shape_is_inventoried_as_one(self):
         """`UX-297`: the Plane 2 monolith is read and never written.
@@ -96,9 +109,17 @@ class TestTheInventoryIsComplete:
         from bga import contracts
 
         assert contracts.superseded() == [
-            "analyze/v2", "analyze/v3", "analyze/v4", "analyze/v5",
-            "blast/v1", "compare/v1", "correlate/v1", "host/v1",
-            "plane2/v1", "plane2/v2"]
+            "analyze/v2",
+            "analyze/v3",
+            "analyze/v4",
+            "analyze/v5",
+            "blast/v1",
+            "compare/v1",
+            "correlate/v1",
+            "host/v1",
+            "plane2/v1",
+            "plane2/v2",
+        ]
         assert "plane2/v1" in contracts.ids()
         assert "plane2/v1" not in contracts.printable()
 
@@ -111,16 +132,15 @@ class TestTheInventoryIsComplete:
         assert missing == [], (
             f"contract id(s) stamped in the source and absent from "
             f"bga.contracts.inventory(): "
-            f"{ {name: sorted(_scanned()[name]) for name in missing} }")
+            f"{ {name: sorted(_scanned()[name]) for name in missing} }"
+        )
 
     def test_the_inventory_names_nothing_the_source_does_not(self):
         """The other direction: a retired contract still declared."""
         from bga import contracts
 
         stale = sorted(set(contracts.ids()) - set(_scanned()))
-        assert stale == [], (
-            f"bga.contracts.inventory() names contract(s) no source file "
-            f"stamps: {stale}")
+        assert stale == [], f"bga.contracts.inventory() names contract(s) no source file stamps: {stale}"
 
     def test_every_contract_names_what_owns_it(self):
         from bga import contracts
@@ -144,8 +164,7 @@ class TestTheInventoryIsComplete:
 
 
 class TestTheDerivationIsNotAList:
-    def test_a_new_module_declaring_a_schema_joins_without_being_listed(
-            self, tmp_path, monkeypatch=None):
+    def test_a_new_module_declaring_a_schema_joins_without_being_listed(self, tmp_path, monkeypatch=None):
         """The property that makes this different from what it replaced.
 
         A hand-kept union covers the contracts someone remembered; this
@@ -174,21 +193,20 @@ class TestTheDerivationIsNotAList:
         # how a shared-state race presents.
         home = pathlib.Path(str(tmp_path)) / "probe"
         home.mkdir()
-        (home / "zz_probe_contract.py").write_text(
-            'SCHEMA = "probe/v3"\n', encoding="utf-8")
+        (home / "zz_probe_contract.py").write_text('SCHEMA = "probe/v3"\n', encoding="utf-8")
         bga.__path__.append(str(home))
         try:
             assert "probe/v3" in contracts.ids(), (
-                "a module declaring SCHEMA did not join the inventory - "
-                "the derivation is not deriving")
+                "a module declaring SCHEMA did not join the inventory - the derivation is not deriving"
+            )
             assert contracts.inventory()["probe/v3"] == "bga.zz_probe_contract"
         finally:
             bga.__path__.remove(str(home))
             sys.modules.pop("bga.zz_probe_contract", None)
 
         assert "probe/v3" not in contracts.ids(), (
-            "the probe outlived its file, so the inventory is cached and "
-            "this test would pass against a stale answer")
+            "the probe outlived its file, so the inventory is cached and this test would pass against a stale answer"
+        )
 
     def test_the_probe_never_touches_the_checked_out_package(self, tmp_path):
         """The clause that keeps the fix above from being undone.
@@ -205,11 +223,10 @@ class TestTheDerivationIsNotAList:
 
         package = pathlib.Path(bga.__path__[0])
         before = sorted(entry.name for entry in package.iterdir())
-        self.test_a_new_module_declaring_a_schema_joins_without_being_listed(
-            tmp_path)
+        self.test_a_new_module_declaring_a_schema_joins_without_being_listed(tmp_path)
         assert sorted(entry.name for entry in package.iterdir()) == before, (
-            "the derivation probe wrote into the checked-out package - "
-            "under -n auto every other worker sees it")
+            "the derivation probe wrote into the checked-out package - under -n auto every other worker sees it"
+        )
         assert "probe/v3" not in contracts.ids()
 
 

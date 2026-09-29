@@ -27,6 +27,7 @@ the document that tells a contributor which artifact to download. A
 rename that touches one of them is what the item's acceptance test asks
 to redden.
 """
+
 import pathlib
 import re
 import sys
@@ -51,7 +52,8 @@ def test_the_workflow_uploads_the_artifact_the_tool_names():
     assert drift.CI_CANDIDATE_ARTIFACT in uploaded, (
         f"`ci.yml` uploads {sorted(uploaded)} and the drift tool's advice "
         f"names `{drift.CI_CANDIDATE_ARTIFACT}` - a contributor following "
-        f"the message would look for an artifact this run does not have")
+        f"the message would look for an artifact this run does not have"
+    )
 
 
 def test_the_document_names_the_same_artifact():
@@ -61,7 +63,8 @@ def test_the_document_names_the_same_artifact():
     assert drift.CI_CANDIDATE_ARTIFACT in text, (
         f"the verify skill does not name `{drift.CI_CANDIDATE_ARTIFACT}`, "
         f"so the route from a red drift step to a committed reference is "
-        f"in no document again")
+        f"in no document again"
+    )
 
 
 def test_the_document_says_not_to_record_locally():
@@ -74,7 +77,8 @@ def test_the_document_says_not_to_record_locally():
     assert "--record" in section and "UX-418" in section, section[-400:]
     assert re.search(r"[Dd]o not run `--record` locally", section), (
         "the skill does not warn against recording locally - which is "
-        "what a reader does when told to re-record and not from where")
+        "what a reader does when told to re-record and not from where"
+    )
 
 
 def _advice_expressions():
@@ -106,14 +110,13 @@ def _advice_expressions():
         if isinstance(node.func, ast.Name) and node.func.id == "print":
             candidates = list(node.args)
         else:
-            candidates = [kw.value for kw in node.keywords
-                          if kw.arg in ("help", "note")]
+            candidates = [kw.value for kw in node.keywords if kw.arg in ("help", "note")]
         for argument in candidates:
-
             text = "".join(
-                part.value for part in ast.walk(argument)
-                if isinstance(part, ast.Constant)
-                and isinstance(part.value, str))
+                part.value
+                for part in ast.walk(argument)
+                if isinstance(part, ast.Constant) and isinstance(part.value, str)
+            )
             if "--record" in text:
                 found.append((argument, text))
     # And the `note` a written reference carries, which is a dict value
@@ -128,9 +131,8 @@ def _advice_expressions():
             if not (isinstance(key, ast.Constant) and key.value == "note"):
                 continue
             text = "".join(
-                part.value for part in ast.walk(value)
-                if isinstance(part, ast.Constant)
-                and isinstance(part.value, str))
+                part.value for part in ast.walk(value) if isinstance(part, ast.Constant) and isinstance(part.value, str)
+            )
             if "--record" in text:
                 found.append((value, text))
     return found
@@ -149,14 +151,15 @@ def test_the_tool_says_where_from_wherever_it_says_re_record():
     advice = _advice_expressions()
     assert len(advice) >= 4, (
         f"{len(advice)} `--record` message(s) found; the tool had four "
-        f"when UX-447 landed, so this scan is reading less than it did")
+        f"when UX-447 landed, so this scan is reading less than it did"
+    )
     for node, text in advice:
-        names = {part.id for part in ast.walk(node)
-                 if isinstance(part, ast.Name)}
+        names = {part.id for part in ast.walk(node) if isinstance(part, ast.Name)}
         assert "CI_CANDIDATE_ARTIFACT" in names, (
             f"this message tells a reader to re-record without saying from "
             f"what, which is the state UX-447 was filed on:\n  "
-            f"{text.strip()[:120]}")
+            f"{text.strip()[:120]}"
+        )
         # `UX-457`: and the second door. The artifact is the right
         # document and the wrong host for a reader behind an egress
         # policy that refuses GitHub's blob storage - a message naming
@@ -165,9 +168,11 @@ def test_the_tool_says_where_from_wherever_it_says_re_record():
         assert "CI_CANDIDATE_JOB" in names, (
             f"this message names the artifact and not the job whose log "
             f"carries the same bytes, so a reader who cannot download it "
-            f"is told nothing (UX-457):\n  {text.strip()[:120]}")
+            f"is told nothing (UX-457):\n  {text.strip()[:120]}"
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover
     import pytest
+
     raise SystemExit(pytest.main([__file__, "-v"]))

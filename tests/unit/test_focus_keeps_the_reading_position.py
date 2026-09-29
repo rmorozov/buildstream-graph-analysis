@@ -16,6 +16,7 @@ breadcrumb, and compares a DOM dump. Scroll position is not in the DOM
 and the shim has no layout, so this guard is a real browser and the
 same button twice.
 """
+
 import pathlib
 import shutil
 import sys
@@ -60,7 +61,10 @@ _SETTLE_JS = """
   });
 """
 
-_TWO_PRESSES = """(async () => {""" + _SETTLE_JS + """
+_TWO_PRESSES = (
+    """(async () => {"""
+    + _SETTLE_JS
+    + """
   const height = () => document.documentElement.scrollHeight;
   const deepGet = (deep) =>
     () => [window.scrollY, Math.round(deep.getBoundingClientRect().top)];
@@ -135,6 +139,7 @@ _TWO_PRESSES = """(async () => {""" + _SETTLE_JS + """
         getComputedStyle(document.documentElement).fontSize),
   };
 })()"""
+)
 
 
 @pytest.fixture(scope="module")
@@ -180,7 +185,9 @@ class TestTheReaderComesBackToWhereTheyWere:
         """The mechanism, asserted so a page that stopped hiding
         sections cannot pass the clause below for free."""
         assert two_presses["focusedHeight"] * 4 < two_presses["startHeight"], (
-            two_presses["startHeight"], two_presses["focusedHeight"])
+            two_presses["startHeight"],
+            two_presses["focusedHeight"],
+        )
 
     def test_the_reader_moved_inside_focus(self, two_presses):
         """The clause the two below stand on. Without it the browser's
@@ -193,9 +200,8 @@ class TestTheReaderComesBackToWhereTheyWere:
         Acceptance Test's tolerance."""
         moved = abs(two_presses["endY"] - two_presses["startY"])
         assert moved <= two_presses["viewport"], (
-            f"{moved}px of displacement, "
-            f"{two_presses['startY']} -> {two_presses['endY']}"
-            f"{_settle_note(two_presses)}")
+            f"{moved}px of displacement, {two_presses['startY']} -> {two_presses['endY']}{_settle_note(two_presses)}"
+        )
 
     def test_the_table_is_back_on_the_same_screen(self, two_presses):
         """The offset is a number; this is the reading position. A page
@@ -205,7 +211,8 @@ class TestTheReaderComesBackToWhereTheyWere:
         assert moved <= two_presses["viewport"], (
             f"the table moved {moved}px within the viewport, "
             f"{two_presses['startTop']} -> {two_presses['endTop']}"
-            f"{_settle_note(two_presses)}")
+            f"{_settle_note(two_presses)}"
+        )
 
     def test_entering_focus_scrolls_the_table_to_the_top(self, two_presses):
         """At the top, not merely on screen.
@@ -219,8 +226,8 @@ class TestTheReaderComesBackToWhereTheyWere:
         assert two_presses["focusedTop"] is not None, two_presses
         assert two_presses["head"] > 0, two_presses["head"]
         assert 0 <= two_presses["focusedTop"] <= two_presses["head"] + 16, (
-            f"{two_presses['focusedTop']}, {two_presses['head']}"
-            f"{_settle_note(two_presses, 'focusedSettleTimedOut')}")
+            f"{two_presses['focusedTop']}, {two_presses['head']}{_settle_note(two_presses, 'focusedSettleTimedOut')}"
+        )
 
 
 @pytest.mark.skipif(find_chrome() is None, reason=NO_BROWSER)
@@ -230,15 +237,12 @@ class TestTheControlSaysWhichStateItIsIn:
 
     def test_the_label_changes_when_focus_is_entered(self, two_presses):
         assert two_presses["label"].startswith("Expand"), two_presses["label"]
-        assert two_presses["focusedLabel"].startswith("Collapse"), (
-            two_presses["label"], two_presses["focusedLabel"])
-        assert two_presses["endLabel"] == two_presses["label"], (
-            two_presses["label"], two_presses["endLabel"])
+        assert two_presses["focusedLabel"].startswith("Collapse"), (two_presses["label"], two_presses["focusedLabel"])
+        assert two_presses["endLabel"] == two_presses["label"], (two_presses["label"], two_presses["endLabel"])
 
     def test_the_button_says_it_is_pressed(self, two_presses):
         assert two_presses["pressed"] is None, two_presses["pressed"]
-        assert two_presses["focusedPressed"] == "true", (
-            two_presses["focusedPressed"])
+        assert two_presses["focusedPressed"] == "true", two_presses["focusedPressed"]
         assert two_presses["endPressed"] is None, two_presses["endPressed"]
 
 
@@ -293,12 +297,12 @@ def _delayed_layout_script(use_settle):
     untouched settles too."""
     script = _TWO_PRESSES.replace(
         "if (!deep) return { found: false, buttons: buttons.length };",
-        "if (!deep) return { found: false, buttons: buttons.length };"
-        + _ARM_DELAYED_REFLOW)
+        "if (!deep) return { found: false, buttons: buttons.length };" + _ARM_DELAYED_REFLOW,
+    )
     if not use_settle:
         script = script.replace(
-            "const settled = await settleReading(deepGet(deep));",
-            "const settled = " + _FIXED_SLEEP_READ + ";")
+            "const settled = await settleReading(deepGet(deep));", "const settled = " + _FIXED_SLEEP_READ + ";"
+        )
     return script
 
 
@@ -313,8 +317,7 @@ def _measure_delayed(tmp_path_factory, label, use_settle):
     time.sleep(0.3)
     try:
         with Browser(find_chrome()) as opened:
-            return opened.measure(
-                url, _delayed_layout_script(use_settle), 1440, 900)
+            return opened.measure(url, _delayed_layout_script(use_settle), 1440, 900)
     finally:
         httpd.shutdown()
 
@@ -330,12 +333,12 @@ class TestTheSettleWaitsOutADelayedReflow:
         moved = abs(result["endTop"] - result["startTop"])
         assert result["endSettleTimedOut"] is False, result
         assert moved <= result["viewport"], (
-            f"the table moved {moved}px within the viewport, "
-            f"{result['startTop']} -> {result['endTop']}")
+            f"the table moved {moved}px within the viewport, {result['startTop']} -> {result['endTop']}"
+        )
 
     def test_the_fixed_sleep_reds(self, tmp_path_factory, can_drive_a_page):
         result = _measure_delayed(tmp_path_factory, "focus-scroll-fixed", False)
         moved = abs(result["endTop"] - result["startTop"])
         assert moved > result["viewport"], (
-            "the fixed 60ms sleep read the table settled - the "
-            f"guard's delayed page did not exercise it: {result}")
+            f"the fixed 60ms sleep read the table settled - the guard's delayed page did not exercise it: {result}"
+        )

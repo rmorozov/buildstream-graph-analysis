@@ -14,6 +14,7 @@ given a step of its own, and `p, li > p, dd {max-width: 72ch}` so a
 line stays a line. This file is the guard: distinct computed sizes,
 `h3` against `h2`, and no prose box wider than its own 72ch.
 """
+
 import pathlib
 import shutil
 import sys
@@ -30,8 +31,7 @@ MACRO_MICRO = REPO / "tests/fixtures/macro_micro/run"
 
 chrome = find_chrome()
 needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
-needs_node = pytest.mark.skipif(shutil.which("node") is None,
-                                 reason="node is not installed")
+needs_node = pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
 
 #: The scale itself (styleguide §4f). A guard against the rule, not
 #: against today's stylesheet - a fifth value anywhere fails this.
@@ -128,24 +128,25 @@ _PROSE_SCAN = """
 @needs_browser
 class TestTheScaleHasFourSteps:
     @pytest.mark.parametrize("page", ["golden", "macro_micro"])
-    def test_distinct_computed_sizes_at_most_four(self, browser, page,
-                                                   request):
+    def test_distinct_computed_sizes_at_most_four(self, browser, page, request):
         url = request.getfixturevalue(page)
         sizes = browser.measure(url, _SIZE_SCAN, width=1440, height=900)
         assert len(sizes) <= SCALE_STEPS, (
             f"{len(sizes)} distinct computed font sizes on {page}: "
             f"{sorted(sizes)} - §4f's scale is {SCALE_STEPS} steps "
-            f"(UX-674)")
+            f"(UX-674)"
+        )
 
     def test_every_h3_is_smaller_than_every_h2(self, browser, golden):
         out = browser.measure(golden, _HEADING_SCAN, width=1440, height=900)
         assert out["h2"] and out["h3"], (
-            "no h2/h3 on the golden page - this claim needs both to exist "
-            f"to mean anything: {out}")
+            f"no h2/h3 on the golden page - this claim needs both to exist to mean anything: {out}"
+        )
         assert max(out["h3"]) < min(out["h2"]), (
             f"an h3 ({max(out['h3'])}px) is at or above an h2 "
             f"({min(out['h2'])}px) - the unstyled UA default (1.17em) is "
-            f"back (UX-674)")
+            f"back (UX-674)"
+        )
 
     @pytest.mark.parametrize("page", ["golden", "macro_micro"])
     def test_no_prose_box_exceeds_its_own_72ch(self, browser, page, request):
@@ -155,7 +156,8 @@ class TestTheScaleHasFourSteps:
             f"{len(hits)} prose box(es) wider than their own computed "
             f"max-width on {page}: {hits[:5]} - `p, li > p, dd "
             f"{{max-width: 72ch}}` (styleguide §4f) is not reaching them "
-            f"(UX-674)")
+            f"(UX-674)"
+        )
 
 
 class TestTheScaleIsDeclared:
@@ -163,24 +165,23 @@ class TestTheScaleIsDeclared:
 
     def test_the_stylesheet_names_four_tokens(self):
         css = (REPO / "bga/viewer/style.css").read_text(encoding="utf-8")
-        for token in ("--font-h1", "--font-h2", "--font-body",
-                      "--font-small"):
+        for token in ("--font-h1", "--font-h2", "--font-body", "--font-small"):
             assert f"{token}:" in css, (
                 f"{token} is not declared in style.css - §4f's scale is "
                 "four named steps, not four numbers picked ad hoc "
-                "(UX-674)")
+                "(UX-674)"
+            )
 
     def test_the_72ch_rule_is_declared(self):
         css = (REPO / "bga/viewer/style.css").read_text(encoding="utf-8")
-        assert "max-width: 72ch" in css, (
-            "no selector sets max-width: 72ch - styleguide §4f's line "
-            "budget (UX-674)")
+        assert "max-width: 72ch" in css, "no selector sets max-width: 72ch - styleguide §4f's line budget (UX-674)"
 
     def test_the_skip_reason_is_declared(self):
         conftest = (REPO / "tests/conftest.py").read_text(encoding="utf-8")
         assert NO_BROWSER in conftest, (
             "the no-browser skip is not in the census, so these guards can "
-            "go quiet on every machine and the suite stays green (UX-235)")
+            "go quiet on every machine and the suite stays green (UX-235)"
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

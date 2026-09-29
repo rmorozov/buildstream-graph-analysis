@@ -17,6 +17,7 @@ itself rather than the producer's jargon leaking into a sentence, so
 item 4 narrows around that one `data-key="schema"` term rather than
 the word `schema` outright.
 """
+
 import pathlib
 import re
 import sys
@@ -92,8 +93,8 @@ def _rejected_synonyms(guide):
 
 
 _REJECTED_SYNONYM = re.compile(
-    r"\b(" + "|".join(re.escape(w) for w in _rejected_synonyms(_STYLEGUIDE)) + r")\b",
-    re.IGNORECASE)
+    r"\b(" + "|".join(re.escape(w) for w in _rejected_synonyms(_STYLEGUIDE)) + r")\b", re.IGNORECASE
+)
 
 #: The one heading where "build" names the analyzer's own software
 #: build, not the run - the matrix's own exception, §6e.2.
@@ -147,9 +148,7 @@ class TestAReaderNeverSeesTheRegister:
     def test_item_4_no_register_word_outside_the_schema_version_term(self, measured):
         cells = measured["cells"]
         assert cells, measured["label"]
-        bad = [c for c in cells
-              if _REGISTER_WORD.search(c["text"])
-              and not (c["tag"] == "DT" and c["key"] == "schema")]
+        bad = [c for c in cells if _REGISTER_WORD.search(c["text"]) and not (c["tag"] == "DT" and c["key"] == "schema")]
         assert bad == [], (measured["label"], bad)
 
     def test_no_reader_id_in_rendered_text(self, measured):
@@ -163,6 +162,5 @@ class TestAReaderNeverSeesTheRegister:
         a rejected synonym for the same concept."""
         headings = measured["headings"]
         assert headings, measured["label"]
-        bad = [h for h in headings if _REJECTED_SYNONYM.search(h)
-              and not _NOT_THE_RUN_CONCEPT.search(h)]
+        bad = [h for h in headings if _REJECTED_SYNONYM.search(h) and not _NOT_THE_RUN_CONCEPT.search(h)]
         assert bad == [], (measured["label"], bad)

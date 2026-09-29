@@ -10,6 +10,7 @@ published objects, every value it shows resolves to the field it cites,
 and **unfocusing leaves the document byte-identical to never-focused**,
 compared by serialisation rather than by eye.
 """
+
 import json
 import os
 import shutil
@@ -28,17 +29,25 @@ needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 
 def _report(run=GOLDEN):
     result = subprocess.run(
-        [sys.executable, "-c",
-         "from bga.cli import main; raise SystemExit(main({!r}))".format(["analyze", run, "--format", "json", "--diagnostics"])],
-        capture_output=True, text=True, cwd=os.getcwd())
+        [
+            sys.executable,
+            "-c",
+            "from bga.cli import main; raise SystemExit(main({!r}))".format(
+                ["analyze", run, "--format", "json", "--diagnostics"]
+            ),
+        ],
+        capture_output=True,
+        text=True,
+        cwd=os.getcwd(),
+    )
     assert result.returncode == 0, result.stderr
     return json.loads(result.stdout)
 
 
 def _node(script):
-    result = subprocess.run([node, "--input-type=module", "-e", script],
-                            capture_output=True, text=True,
-                            cwd=os.getcwd(), timeout=60)
+    result = subprocess.run(
+        [node, "--input-type=module", "-e", script], capture_output=True, text=True, cwd=os.getcwd(), timeout=60
+    )
     assert result.returncode == 0, result.stderr
     return json.loads(result.stdout)
 
@@ -51,9 +60,11 @@ def payload():
 @needs_node
 class TestTheEvidenceIsAssembled:
     def _panel(self, payload, uid, store=None):
-        return _node(_PANEL.replace("__PAYLOAD__", json.dumps(payload))
-                            .replace("__UID__", json.dumps(uid))
-                            .replace("__STORE__", json.dumps(store)))
+        return _node(
+            _PANEL.replace("__PAYLOAD__", json.dumps(payload))
+            .replace("__UID__", json.dumps(uid))
+            .replace("__STORE__", json.dumps(store))
+        )
 
     def test_the_four_groups_the_item_names(self, payload):
         out = self._panel(payload, payload["critical_path_detail"][0]["element_uid"])
@@ -61,58 +72,49 @@ class TestTheEvidenceIsAssembled:
 
     def test_every_value_resolves_to_the_field_it_cites(self, payload):
         wrong = []
-        for row in self._panel(payload,
-                               payload["critical_path_detail"][0]["element_uid"])["rows"]:
+        for row in self._panel(payload, payload["critical_path_detail"][0]["element_uid"])["rows"]:
             if not row["field"]:
                 continue
             found = provenance.resolve(payload, row["field"])
             if found is provenance.UNRESOLVED:
                 wrong.append(f"{row['field']} does not resolve")
             elif str(found) != row["raw"]:
-                wrong.append(f"{row['field']}: shows {row['raw']!r}, "
-                             f"payload has {found!r}")
+                wrong.append(f"{row['field']}: shows {row['raw']!r}, payload has {found!r}")
         assert wrong == [], wrong
 
     def test_the_chain_neighbours_are_the_published_order(self, payload):
         chain = [e["element_uid"] for e in payload["critical_path_detail"]]
         assert len(chain) >= 3, chain
         out = self._panel(payload, chain[1])
-        relations = {row["label"]: row["text"] for row in out["rows"]
-                     if row["group"] == "relationships"}
+        relations = {row["label"]: row["text"] for row in out["rows"] if row["group"] == "relationships"}
         assert relations["Waits on (chain)"] == chain[0]
         assert relations["Blocks (chain)"] == chain[2]
 
     def test_an_absent_plane_says_so_rather_than_going_quiet(self, payload):
-        """"Plane 2 saw nothing" and "Plane 2 was not run" are
+        """ "Plane 2 saw nothing" and "Plane 2 was not run" are
         different facts; a list of only what exists collapses them."""
         out = self._panel(payload, payload["critical_path_detail"][0]["element_uid"])
-        evidence = {row["label"]: row["text"] for row in out["rows"]
-                    if row["group"] == "evidence"}
+        evidence = {row["label"]: row["text"] for row in out["rows"] if row["group"] == "evidence"}
         assert evidence["Plane 2 (sandbox)"] == "not in this document"
 
-    def test_an_element_the_document_does_not_know_measures_nothing(
-            self, payload):
+    def test_an_element_the_document_does_not_know_measures_nothing(self, payload):
         """The evidence group still renders - saying *where it looked
         and found nothing* is the point - but nothing measured appears
         under "why it matters"."""
         out = self._panel(payload, "ghost.bst")
-        assert "why" not in out["groups"], (
-            "an unknown element got measured evidence from somewhere")
-        presence = [row["present"] for row in out["rows"]
-                    if row["group"] == "evidence" and row["present"]]
+        assert "why" not in out["groups"], "an unknown element got measured evidence from somewhere"
+        presence = [row["present"] for row in out["rows"] if row["group"] == "evidence" and row["present"]]
         assert set(presence) == {"false"}, presence
 
     def test_every_presence_row_says_where_it_looked(self, payload):
         """A path that resolves means present, and one that does not
         means absent - checked against the payload rather than trusted,
         so a row cannot say "yes" about a document it is not in."""
-        for row in self._panel(payload,
-                               payload["critical_path_detail"][0]["element_uid"])["rows"]:
+        for row in self._panel(payload, payload["critical_path_detail"][0]["element_uid"])["rows"]:
             if not row["source"]:
                 continue
             found = provenance.resolve(payload, row["source"])
-            assert (found is not provenance.UNRESOLVED) == \
-                (row["present"] == "true"), row
+            assert (found is not provenance.UNRESOLVED) == (row["present"] == "true"), row
 
 
 @needs_node
@@ -121,10 +123,8 @@ class TestUnfocusRestoresTheDocument:
         """The item's own acceptance, by serialisation compare rather
         than by eye: focus, unfocus, and the tree must be what it was."""
         out = _node(_ROUNDTRIP.replace("__PAYLOAD__", json.dumps(payload)))
-        assert out["before"] == out["after"], (
-            "focus left something behind in the document")
-        assert out["during"] != out["before"], (
-            "focusing changed nothing, so the compare proves nothing")
+        assert out["before"] == out["after"], "focus left something behind in the document"
+        assert out["during"] != out["before"], "focusing changed nothing, so the compare proves nothing"
 
     def test_the_panel_is_keyed_by_the_role_that_removes_it(self, payload):
         """Everything focus adds carries `data-role`, and the refresh
@@ -146,8 +146,8 @@ class TestTheExportStaysAPlainDocument:
         html = out.read_text(encoding="utf-8")
         assert 'data-role="focus-investigation"' not in html
         assert "renderInvestigation" in view.inflated_module(html), (
-            "the renderer itself should still ship - the served page "
-            "needs it, and the export is one file")
+            "the renderer itself should still ship - the served page needs it, and the export is one file"
+        )
 
 
 _PANEL = """

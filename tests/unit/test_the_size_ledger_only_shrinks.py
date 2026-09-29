@@ -3,6 +3,7 @@
 A temporary package and a temporary reference file, so these mutate
 sizes without touching the real `tests/quality_reference.json`.
 """
+
 import json
 import os
 import pathlib
@@ -17,13 +18,14 @@ SMALL = "def f():\n    return 1\n"
 #: Eight distinct-looking statements - pylint's `duplicate-code` needs
 #: this many matching lines before it reports anything (measured: four
 #: identical assignments plus a return did not trigger it, here).
-BODY = ("    a = 1\n    b = 2\n    c = 3\n    d = 4\n"
-        "    e = 5\n    g = 6\n    h = 7\n    return a + b + c + d + e + g + h\n")
+BODY = (
+    "    a = 1\n    b = 2\n    c = 3\n    d = 4\n"
+    "    e = 5\n    g = 6\n    h = 7\n    return a + b + c + d + e + g + h\n"
+)
 
 
 def _run(root, reference, *flags):
-    cmd = [sys.executable, str(TOOL), "--root", str(root), "--paths", "pkg",
-           "--reference", str(reference), *flags]
+    cmd = [sys.executable, str(TOOL), "--root", str(root), "--paths", "pkg", "--reference", str(reference), *flags]
     return subprocess.run(cmd, capture_output=True, text=True, check=False)
 
 

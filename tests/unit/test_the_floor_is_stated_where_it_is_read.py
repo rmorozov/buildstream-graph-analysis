@@ -10,6 +10,7 @@ Both figures are read, never typed: the floor from `pyproject.toml` and
 the matrix from `.github/workflows/ci.yml`. Raising one and leaving the
 prose is what this reddens on.
 """
+
 import ast
 import pathlib
 import re
@@ -40,8 +41,7 @@ def _matrix():
     text = CI.read_text(encoding="utf-8")
     found = re.search(r"python-version:\s*\$\{\{\s*fromJSON\(([^)]*)\)", text)
     assert found, f"{CI.name} declares no python-version matrix"
-    versions = {tuple(int(part) for part in one.split("."))
-                for one in re.findall(r"\d+\.\d+", found.group(1))}
+    versions = {tuple(int(part) for part in one.split(".")) for one in re.findall(r"\d+\.\d+", found.group(1))}
     return [f"{major}.{minor}" for major, minor in sorted(versions)]
 
 
@@ -64,7 +64,8 @@ def test_the_matrix_runs_the_floor_it_enforces():
     assert matrix, "the matrix is empty"
     assert min(matrix, key=lambda v: tuple(map(int, v.split(".")))) == _floor(), (
         f"pyproject.toml declares >={_floor()} and the CI matrix runs "
-        f"{matrix}; the floor is enforced by whichever job is lowest")
+        f"{matrix}; the floor is enforced by whichever job is lowest"
+    )
 
 
 @pytest.mark.parametrize("path", STATES_THE_FLOOR)
@@ -74,11 +75,12 @@ def test_the_document_states_the_declared_floor(path):
     floor, matrix = _floor(), _matrix()
     named = _versions_named(path)
     assert floor in named, (
-        f"pyproject.toml declares requires-python >={floor}, and {path} "
-        f"states {named or 'no Python version at all'}")
+        f"pyproject.toml declares requires-python >={floor}, and {path} states {named or 'no Python version at all'}"
+    )
     assert _states_the_range(path, matrix[0], matrix[-1]), (
         f"the CI matrix runs {matrix[0]}-{matrix[-1]} and {path} does not "
-        f"state that range, so the prose can drift off the matrix")
+        f"state that range, so the prose can drift off the matrix"
+    )
 
 
 def _string_literals(path):
@@ -86,16 +88,19 @@ def _string_literals(path):
     tree = ast.parse(path.read_text(encoding="utf-8"), str(path))
     skip = set()
     for node in ast.walk(tree):
-        if isinstance(node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef,
-                             ast.ClassDef)) and node.body:
+        if isinstance(node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and node.body:
             first = node.body[0]
-            if (isinstance(first, ast.Expr)
-                    and isinstance(first.value, ast.Constant)
-                    and isinstance(first.value.value, str)):
+            if (
+                isinstance(first, ast.Expr)
+                and isinstance(first.value, ast.Constant)
+                and isinstance(first.value.value, str)
+            ):
                 skip.add(id(first.value))
-    return [node.value for node in ast.walk(tree)
-            if isinstance(node, ast.Constant) and isinstance(node.value, str)
-            and id(node) not in skip]
+    return [
+        node.value
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Constant) and isinstance(node.value, str) and id(node) not in skip
+    ]
 
 
 def test_the_floor_and_the_matrix_are_read_and_not_typed():
@@ -104,10 +109,8 @@ def test_the_floor_and_the_matrix_are_read_and_not_typed():
     with itself. Docstrings are exempt - they are prose about it."""
     assert re.fullmatch(r"\d+\.\d+", _floor()), _floor()
     assert len(_matrix()) >= 2, _matrix()
-    typed = [one for one in _string_literals(pathlib.Path(__file__))
-             if _floor() in one]
-    assert typed == [], (
-        f"this file writes the floor {_floor()} as a literal: {typed}")
+    typed = [one for one in _string_literals(pathlib.Path(__file__)) if _floor() in one]
+    assert typed == [], f"this file writes the floor {_floor()} as a literal: {typed}"
 
 
 def test_a_document_naming_another_floor_is_not_accepted(tmp_path):
@@ -119,5 +122,4 @@ def test_a_document_naming_another_floor_is_not_accepted(tmp_path):
     wrong.write_text("Needs Python 3.8 or newer; CI runs 3.8-3.11.\n")
     named = re.findall(r"Python \*{0,2}(\d+\.\d+)", wrong.read_text())
     assert named == ["3.8"], named
-    assert _floor() not in named, (
-        "the probe document happens to state the real floor")
+    assert _floor() not in named, "the probe document happens to state the real floor"

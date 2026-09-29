@@ -8,6 +8,7 @@ mirror. Read against `tests/fixtures/macro_micro`, which is example 06:
 and moves one of its Required Fix's columns. The corrections are what
 the clauses below assert - see the task file's Outcome.
 """
+
 import pathlib
 import sys
 
@@ -31,8 +32,7 @@ def _finding(finding_id: str) -> dict:
     from bga.findings import compute_findings
 
     result = BuildEfficiencyAnalyzer().analyze(FIXTURE)
-    return next(item for item in compute_findings(result)
-                if item["id"] == finding_id)
+    return next(item for item in compute_findings(result) if item["id"] == finding_id)
 
 
 def _join_row(uid: str) -> dict:
@@ -45,20 +45,17 @@ def _join_row(uid: str) -> dict:
     result = BuildEfficiencyAnalyzer().analyze(FIXTURE)
     result.plane2_report = json.loads(PLANE2.read_text(encoding="utf-8"))
     document = build_document(result)
-    return next(row for row in document["element_join"]
-                if row["element"] == uid)
+    return next(row for row in document["element_join"] if row["element"] == uid)
 
 
 @pytest.fixture(scope="module")
 def rows():
     _context, graph, _trace = load_all(FIXTURE)
-    kinds = {element.uid: (element.element_kind or "unknown")
-             for element in graph.elements}
+    kinds = {element.uid: (element.element_kind or "unknown") for element in graph.elements}
     return compute_fan_in(graph, kinds, STRUCTURAL_ELEMENT_KINDS)
 
 
 class TestTheClosureIsNotTheEdgeList:
-
     def test_the_widest_gap_between_direct_and_transitive(self, rows):
         """`all.bst` names one dependency and pulls in ten - the case
         that tells a closure from an edge count.
@@ -75,8 +72,7 @@ class TestTheClosureIsNotTheEdgeList:
         """The discriminating pair the fixture does offer: `lib-a` is in
         `lib-f`'s closure and not among its edges."""
         _context, graph, _trace = load_all(FIXTURE)
-        direct = {edge.predecessor for edge in graph.dependencies
-                  if edge.successor == "lib-f.bst"}
+        direct = {edge.predecessor for edge in graph.dependencies if edge.successor == "lib-f.bst"}
         assert "lib-a.bst" not in direct
         assert rows["lib-f.bst"]["direct_count"] == 4
         assert rows["lib-f.bst"]["transitive_count"] == 8
@@ -99,7 +95,6 @@ class TestTheClosureIsNotTheEdgeList:
 
 
 class TestTheGateIsTheDominatorAndNotTheDependency:
-
     def test_the_gate_of_app_is_the_root_and_not_core(self, rows):
         """The item's Acceptance Test says "the dominator of app.bst is
         core.bst". It is not, and the graph says why: `app.bst` depends
@@ -109,8 +104,7 @@ class TestTheGateIsTheDominatorAndNotTheDependency:
         """
         assert rows["app.bst"]["immediate_dominator"] == "toolchain.bst"
         _context, graph, _trace = load_all(FIXTURE)
-        assert "core.bst" in {edge.predecessor for edge in graph.dependencies
-                              if edge.successor == "app.bst"}
+        assert "core.bst" in {edge.predecessor for edge in graph.dependencies if edge.successor == "app.bst"}
 
     def test_a_root_has_no_gate(self, rows):
         """`None`, not itself: an element does not wait on itself, and
@@ -118,31 +112,26 @@ class TestTheGateIsTheDominatorAndNotTheDependency:
         one place a reader looks for the top of the graph."""
         assert rows["toolchain.bst"]["immediate_dominator"] is None
 
-    def test_the_gate_is_trivial_on_this_graph_and_that_is_recorded(
-            self, rows):
+    def test_the_gate_is_trivial_on_this_graph_and_that_is_recorded(self, rows):
         """Every element here gates on `toolchain.bst`, because it is
         the only root. Asserted rather than glossed: the column is
         correct and says almost nothing on a single-root graph, and a
         reader of this fixture should not conclude otherwise from a
         clause that only checked one element.
         """
-        gates = {row["immediate_dominator"] for uid, row in rows.items()
-                 if row["immediate_dominator"] is not None}
+        gates = {row["immediate_dominator"] for uid, row in rows.items() if row["immediate_dominator"] is not None}
         assert gates == {"toolchain.bst", "app.bst"}, gates
 
 
 class TestTheRankingKeepsTheBlastRules:
-
-    def test_the_largest_fan_in_is_excluded_for_being_structural(
-            self, rows):
+    def test_the_largest_fan_in_is_excluded_for_being_structural(self, rows):
         """`UX-76`, mirrored. `all.bst` has the widest closure in the
         graph and is a `stack`: a stack depends on everything *on
         purpose*, and "it pulls in ten things" is a fact about the graph
         rather than a task. Excluded from the ranking, never from the
         rows."""
         assert rows["all.bst"]["is_structural_kind"] is True
-        assert rows["all.bst"]["transitive_count"] == max(
-            row["transitive_count"] for row in rows.values())
+        assert rows["all.bst"]["transitive_count"] == max(row["transitive_count"] for row in rows.values())
         assert "all.bst" not in top_fan_in(rows)
         assert "all.bst" in rows
 
@@ -157,11 +146,17 @@ class TestTheRankingKeepsTheBlastRules:
         five and the clause still passed. A graph of leaves is where
         the rule is the only thing keeping the ranking empty.
         """
-        leaves = {f"m{index}.bst": {
-            "direct_count": 0, "transitive_count": 0,
-            "immediate_dominator": None, "element_kind": "manual",
-            "is_structural_kind": False, "is_foundation": False}
-            for index in range(6)}
+        leaves = {
+            f"m{index}.bst": {
+                "direct_count": 0,
+                "transitive_count": 0,
+                "immediate_dominator": None,
+                "element_kind": "manual",
+                "is_structural_kind": False,
+                "is_foundation": False,
+            }
+            for index in range(6)
+        }
         assert top_fan_in(leaves) == []
 
     def test_the_ranking_is_by_closure_descending(self, rows):
@@ -180,9 +175,14 @@ class TestTheReadShareIsOnTheJoinRowAndNotHere:
 
     def test_the_map_carries_no_plane_two_column(self, rows):
         assert set(rows["lib-f.bst"]) == {
-            "direct_count", "direct", "transitive_count",
-            "immediate_dominator", "element_kind", "is_structural_kind",
-            "is_foundation"}
+            "direct_count",
+            "direct",
+            "transitive_count",
+            "immediate_dominator",
+            "element_kind",
+            "is_structural_kind",
+            "is_foundation",
+        }
 
     def test_the_share_is_of_what_plane_two_could_assess(self):
         """Not of the declared edge count. `app.bst` names eight
@@ -215,9 +215,12 @@ class TestTheReadShareIsOnTheJoinRowAndNotHere:
         """
         from bga.correlate import _plane2_view
 
-        view = _plane2_view({
-            "cpu_time": {"per_element": {"lone.bst": {"cpu_us": 5}}},
-            "declared_vs_used": {"used": [], "unused_candidates": []}})
+        view = _plane2_view(
+            {
+                "cpu_time": {"per_element": {"lone.bst": {"cpu_us": 5}}},
+                "declared_vs_used": {"used": [], "unused_candidates": []},
+            }
+        )
         assert "lone.bst" in view
         assert view["lone.bst"].get("dependency_read_share") is None
         assert view["lone.bst"].get("assessed_dependencies") is None
@@ -289,11 +292,9 @@ class TestTheDirectListIsCappedAndNamed:
 
         names = [f"p{index:04d}.bst" for index in range(1004)]
         graph = Graph(
-            elements=[Element(uid="successor.bst")]
-                     + [Element(uid=name) for name in names],
-            dependencies=[DependencyEdge(predecessor=name,
-                                         successor="successor.bst")
-                         for name in names])
+            elements=[Element(uid="successor.bst")] + [Element(uid=name) for name in names],
+            dependencies=[DependencyEdge(predecessor=name, successor="successor.bst") for name in names],
+        )
         rows = compute_fan_in(graph, {}, set())
         row = rows["successor.bst"]
         assert row["direct_count"] == 1004

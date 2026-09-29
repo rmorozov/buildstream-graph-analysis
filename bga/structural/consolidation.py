@@ -13,6 +13,7 @@ consumed together" signal - and flags groups with no existing `kind:
 stack` element whose own dependencies exactly match the group, as
 candidates worth considering for consolidation under one.
 """
+
 from collections import defaultdict
 
 from bga.graph.edg import build_element_graph, element_order
@@ -46,9 +47,7 @@ def find_consolidation_candidates(graph: Graph) -> list[dict]:
     # Existing `stack` elements' own dependency sets - a group already
     # covered by one of these (exact match) needs no advisory.
     existing_stack_dep_sets = {
-        frozenset(predecessors.get(uid, []))
-        for uid, kind in element_kind_by_uid.items()
-        if kind == "stack"
+        frozenset(predecessors.get(uid, [])) for uid, kind in element_kind_by_uid.items() if kind == "stack"
     }
 
     candidates = []
@@ -57,10 +56,12 @@ def find_consolidation_candidates(graph: Graph) -> list[dict]:
             continue
         if frozenset(uids) in existing_stack_dep_sets:
             continue
-        candidates.append({
-            "elements": sorted(uids),
-            "shared_consumers": sorted(consumers),
-        })
+        candidates.append(
+            {
+                "elements": sorted(uids),
+                "shared_consumers": sorted(consumers),
+            }
+        )
 
     order = element_order(graph)
     candidates.sort(key=lambda c: (-len(c["elements"]), sorted(order[u] for u in c["elements"])))

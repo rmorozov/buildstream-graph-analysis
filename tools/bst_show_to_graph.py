@@ -61,6 +61,7 @@ those come from the real invocation's own environment/config, not from
 `bst show`), and wiring this together with the trace-side converter
 into one convenience command.
 """
+
 import argparse
 import json
 import subprocess
@@ -75,9 +76,10 @@ from bga import progress
 RECORD_SEP = "\x1e"  # ASCII Record Separator - between elements
 FIELD_SEP = "\x1f"  # ASCII Unit Separator - between fields of one element
 
-_FORMAT = FIELD_SEP.join(
-    ["%{name}", "%{key}", "%{kind}", "%{build-deps}", "%{runtime-deps}", "%{public}", "%{vars}"]
-) + RECORD_SEP
+_FORMAT = (
+    FIELD_SEP.join(["%{name}", "%{key}", "%{kind}", "%{build-deps}", "%{runtime-deps}", "%{public}", "%{vars}"])
+    + RECORD_SEP
+)
 
 # UX-1080: the same bound the pre-build key-set `bst show` already uses
 # (`UX-842`/`UX-1011`). Measured here at 11.21s/1,201 elements and
@@ -113,8 +115,7 @@ def _parse_yaml_mapping(raw: str) -> dict:
         import yaml
     except ImportError as e:
         raise RuntimeError(
-            "per-element max-jobs capture requires PyYAML "
-            "(pip install -e '.[bst]', which now includes pyyaml)"
+            "per-element max-jobs capture requires PyYAML (pip install -e '.[bst]', which now includes pyyaml)"
         ) from e
     try:
         data = yaml.safe_load(raw) or {}
@@ -207,8 +208,7 @@ def _parse_max_jobs(public_raw: str) -> Optional[int]:
         import yaml
     except ImportError as e:
         raise RuntimeError(
-            "per-element max-jobs capture requires PyYAML "
-            "(pip install -e '.[bst]', which now includes pyyaml)"
+            "per-element max-jobs capture requires PyYAML (pip install -e '.[bst]', which now includes pyyaml)"
         ) from e
     try:
         data = yaml.safe_load(public_raw) or {}
@@ -249,8 +249,7 @@ def run_bst_show(
     # reports that as the element's `max_jobs` - which is not what the
     # build ran at. Measured: a cold capture under `bst --max-jobs 2
     # build` ran `make -j2` in five sandboxes and its graph said 4.
-    cmd = [bst_bin, *(bst_options or []),
-           "show", "--deps", "all", "--format", _FORMAT, *targets]
+    cmd = [bst_bin, *(bst_options or []), "show", "--deps", "all", "--format", _FORMAT, *targets]
     # UX-183: on a large project this is minutes inside one phase line,
     # and there is nothing to count - `bst` is a subprocess and its
     # stdout is the payload, not a progress stream. Elapsed seconds are
@@ -261,8 +260,7 @@ def run_bst_show(
     # makes the wait pollable at all, and it removes the pipe-buffer
     # deadlock that a project with thousands of elements could otherwise
     # reach while nothing is draining stdout.
-    with tempfile.TemporaryFile() as out, tempfile.TemporaryFile() as err, \
-            progress.timed_call(cmd) as call:
+    with tempfile.TemporaryFile() as out, tempfile.TemporaryFile() as err, progress.timed_call(cmd) as call:
         proc = subprocess.Popen(cmd, cwd=project_dir, stdout=out, stderr=err)
         tick = progress.ticker("bst show")
         started = time.monotonic()
@@ -302,14 +300,10 @@ def run_bst_show(
         stderr = err.read().decode("utf-8", errors="replace")
     if timed_out:
         raise RuntimeError(
-            f"bst show timed out after {timeout:.0f}s for targets {list(targets)} - "
-            f"nothing was extracted"
+            f"bst show timed out after {timeout:.0f}s for targets {list(targets)} - nothing was extracted"
         )
     if proc.returncode != 0:
-        raise RuntimeError(
-            f"bst show failed (exit {proc.returncode}) for targets {list(targets)}: "
-            f"{stderr.strip()}"
-        )
+        raise RuntimeError(f"bst show failed (exit {proc.returncode}) for targets {list(targets)}: {stderr.strip()}")
     return stdout
 
 
@@ -331,37 +325,37 @@ def build_graph(stdout: str, targets: Sequence[str]) -> dict:
             print(f"warning: skipping malformed bst show record: {fields!r}", file=sys.stderr)
             continue
 
-        name, key, kind, build_deps_raw, runtime_deps_raw, public_raw, vars_raw = (
-            f.strip() for f in fields
-        )
+        name, key, kind, build_deps_raw, runtime_deps_raw, public_raw, vars_raw = (f.strip() for f in fields)
         if not name or name in seen_uids:
             continue
         seen_uids.add(name)
 
-        elements.append({
-            "uid": name,
-            "cache_key": key or None,
-            "requested_target": name in requested,
-            # Real, *resolved* per-element `max-jobs` (UX-31, correcting
-            # UX-22's own capture route) - what this element's native
-            # build system was actually given, read from `%{vars}`. See
-            # _parse_effective_max_jobs.
-            "max_jobs": _parse_effective_max_jobs(vars_raw, public_raw),
-            # UX-31: BuildStream's real per-element parallelism control.
-            # True/False/None (absent) - carried separately from the
-            # resolved number because it is the *cause*, and "pinned to
-            # one job on purpose" is a different fact from "the project
-            # default happens to be 1".
-            "notparallel": _parse_notparallel(vars_raw),
-            # BuildStream's own plugin kind (%{kind}, Since: 2.6 - confirmed
-            # against a real BuildStream 2.7.0 install: e.g. "import",
-            # "manual", "junction", "autotools"). Not part of graph/v9's
-            # spec-mandated minimal schema (Part 32.2's JSON example is
-            # illustrative, not exhaustive - dependency_type is an existing
-            # precedent for the same kind of additive extension) - bga
-            # doesn't act on it yet, see P4-12 for planned heuristics.
-            "element_kind": kind or None,
-        })
+        elements.append(
+            {
+                "uid": name,
+                "cache_key": key or None,
+                "requested_target": name in requested,
+                # Real, *resolved* per-element `max-jobs` (UX-31, correcting
+                # UX-22's own capture route) - what this element's native
+                # build system was actually given, read from `%{vars}`. See
+                # _parse_effective_max_jobs.
+                "max_jobs": _parse_effective_max_jobs(vars_raw, public_raw),
+                # UX-31: BuildStream's real per-element parallelism control.
+                # True/False/None (absent) - carried separately from the
+                # resolved number because it is the *cause*, and "pinned to
+                # one job on purpose" is a different fact from "the project
+                # default happens to be 1".
+                "notparallel": _parse_notparallel(vars_raw),
+                # BuildStream's own plugin kind (%{kind}, Since: 2.6 - confirmed
+                # against a real BuildStream 2.7.0 install: e.g. "import",
+                # "manual", "junction", "autotools"). Not part of graph/v9's
+                # spec-mandated minimal schema (Part 32.2's JSON example is
+                # illustrative, not exhaustive - dependency_type is an existing
+                # precedent for the same kind of additive extension) - bga
+                # doesn't act on it yet, see P4-12 for planned heuristics.
+                "element_kind": kind or None,
+            }
+        )
 
         build_deps = set(_parse_dep_list(build_deps_raw))
         runtime_deps = set(_parse_dep_list(runtime_deps_raw))
@@ -388,8 +382,7 @@ def extract_graph(
     that build rather than a fresh resolution. Empty for a graph
     extracted without a build behind it, which is the same thing it
     always did."""
-    stdout = run_bst_show(project_dir, targets, bst_bin=bst_bin,
-                          bst_options=bst_options)
+    stdout = run_bst_show(project_dir, targets, bst_bin=bst_bin, bst_options=bst_options)
     return build_graph(stdout, targets)
 
 
@@ -399,13 +392,15 @@ def main() -> int:
     )
     parser.add_argument("project_dir", help="Path to the BuildStream project directory.")
     parser.add_argument(
-        "targets", nargs="+",
+        "targets",
+        nargs="+",
         help="Element(s) actually passed to the real bst build/show invocation "
-             "being analyzed - these are marked requested_target: true.",
+        "being analyzed - these are marked requested_target: true.",
     )
     parser.add_argument("output_json", help="Path to write graph.json to.")
     parser.add_argument(
-        "--bst-bin", default="bst",
+        "--bst-bin",
+        default="bst",
         help="Path to the bst executable (default: bst, resolved via PATH).",
     )
     args = parser.parse_args()

@@ -29,6 +29,7 @@ The clauses below run the two shipped queries rather than reading them -
 against a SQLite `slice` table, the same instrument `UX-434` built, so
 the pivot is exercised where CI can run it.
 """
+
 import json
 import pathlib
 import shutil
@@ -53,32 +54,29 @@ needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 #: A toolchain's worth, and deliberately two that share a basename
 #: family - `cc` and `cc1` are what the path-versus-basename decision is
 #: about, and a fixture without them cannot show it.
-PROGRAMS = ("/usr/bin/cc", "/usr/lib/gcc/x86_64-linux-gnu/12/cc1",
-            "/usr/bin/ld", "/bin/sh")
+PROGRAMS = ("/usr/bin/cc", "/usr/lib/gcc/x86_64-linux-gnu/12/cc1", "/usr/bin/ld", "/bin/sh")
 
 
 @pytest.fixture(scope="module")
 def trace(tmp_path_factory):
     into = tmp_path_factory.mktemp("pivot")
-    snapshot = pages.scale_two_plane_snapshot(into, per_element=4,
-                                              programs=PROGRAMS)
+    snapshot = pages.scale_two_plane_snapshot(into, per_element=4, programs=PROGRAMS)
     out = into / "two.pftrace"
     render(str(snapshot), str(out))
     return decode(out)
 
 
 class TestTheExecutableIsOnEverySlice:
-
     def test_the_key_is_declared(self):
         assert "exe" in dict(PLANE2_ANNOTATIONS), (
-            "no annotation names an executable, so no query can pivot on "
-            "one - which is the whole of UX-433")
+            "no annotation names an executable, so no query can pivot on one - which is the whole of UX-433"
+        )
 
     def test_argv_is_stripped_and_the_path_is_not(self):
         assert _executable("/usr/bin/cc -c f0.c -o f0.o") == "/usr/bin/cc"
         assert _executable("/usr/lib/gcc/12/cc1") == "/usr/lib/gcc/12/cc1", (
-            "the path was reduced to a basename, so `cc` and `cc1` under "
-            "different prefixes can no longer be told apart")
+            "the path was reduced to a basename, so `cc` and `cc1` under different prefixes can no longer be told apart"
+        )
 
     def test_a_record_with_no_command_carries_no_key(self):
         """Absent, not empty - the rule every annotation beside it
@@ -87,34 +85,33 @@ class TestTheExecutableIsOnEverySlice:
         assert _executable(None) is None
 
     def test_every_process_slice_carries_it(self, trace):
-        processes = [event for event in trace["events"]
-                     if any("native-process" in category
-                            for category in event["categories"])]
+        processes = [
+            event for event in trace["events"] if any("native-process" in category for category in event["categories"])
+        ]
         assert processes, "the fixture rendered no Plane 2 slices"
-        missing = [event["name"] for event in processes
-                   if "exe" not in event["args"]]
+        missing = [event["name"] for event in processes if "exe" not in event["args"]]
         assert missing == [], missing[:3]
         assert {event["args"]["exe"] for event in processes} == set(PROGRAMS)
 
     def test_it_is_not_the_slice_name(self, trace):
         """The defect restated: the name is the command line, which is
         why grouping by it answers per invocation."""
-        processes = [event for event in trace["events"]
-                     if any("native-process" in category
-                            for category in event["categories"])]
+        processes = [
+            event for event in trace["events"] if any("native-process" in category for category in event["categories"])
+        ]
         names = {event["name"] for event in processes}
         exes = {event["args"]["exe"] for event in processes}
         assert len(names) > len(exes) * 3, (
             f"{len(names)} distinct slice names against {len(exes)} "
-            f"programs - this fixture no longer shows the two apart")
+            f"programs - this fixture no longer shows the two apart"
+        )
 
 
 def _library():
-    script = ('const { QUESTIONS } = await import("./bga/viewer/questions.js");'
-              'console.log(JSON.stringify(QUESTIONS));')
-    done = subprocess.run([node, "--input-type=module", "-e", script],
-                          capture_output=True, text=True, cwd=REPO,
-                          timeout=120)
+    script = 'const { QUESTIONS } = await import("./bga/viewer/questions.js");console.log(JSON.stringify(QUESTIONS));'
+    done = subprocess.run(
+        [node, "--input-type=module", "-e", script], capture_output=True, text=True, cwd=REPO, timeout=120
+    )
     assert done.returncode == 0, done.stderr
     return {entry["id"]: entry for entry in json.loads(done.stdout)}
 
@@ -123,15 +120,13 @@ def _db(rows):
     """A `slice` table with Plane 2's annotations, and `extract_arg`."""
     args = {}
     db = sqlite3.connect(":memory:")
-    db.create_function("extract_arg", 2,
-                       lambda set_id, key: args.get(set_id, {}).get(key))
-    db.execute("create table slice (id integer, arg_set_id integer, "
-               "dur integer, depth integer, name text, category text)")
+    db.create_function("extract_arg", 2, lambda set_id, key: args.get(set_id, {}).get(key))
+    db.execute(
+        "create table slice (id integer, arg_set_id integer, dur integer, depth integer, name text, category text)"
+    )
     for index, (element, exe, command, dur, cpu, rss) in enumerate(rows):
-        args[index] = {"debug.element": element, "debug.exe": exe,
-                       "debug.cpu_us": cpu, "debug.max_rss_kb": rss}
-        db.execute("insert into slice values (?,?,?,?,?,?)",
-                   (index, index, dur, 0, command, "bga,native-process"))
+        args[index] = {"debug.element": element, "debug.exe": exe, "debug.cpu_us": cpu, "debug.max_rss_kb": rss}
+        db.execute("insert into slice values (?,?,?,?,?,?)", (index, index, dur, 0, command, "bga,native-process"))
     return db
 
 
@@ -139,20 +134,15 @@ def _db(rows):
 #: answered per invocation would give four rows where the pivot gives
 #: two, and `max()` over RSS is a different number from `sum()`.
 ROWS = [
-    ("a.bst", "/usr/bin/cc", "/usr/bin/cc -c f0.c", 1_000_000_000,
-     500_000, 1024),
-    ("a.bst", "/usr/bin/cc", "/usr/bin/cc -c f1.c", 3_000_000_000,
-     900_000, 4096),
-    ("b.bst", "/usr/bin/ld", "/usr/bin/ld -o out", 2_000_000_000,
-     100_000, 2048),
-    ("b.bst", "/usr/bin/cc", "/usr/bin/cc -c f2.c", 1_000_000_000,
-     200_000, 512),
+    ("a.bst", "/usr/bin/cc", "/usr/bin/cc -c f0.c", 1_000_000_000, 500_000, 1024),
+    ("a.bst", "/usr/bin/cc", "/usr/bin/cc -c f1.c", 3_000_000_000, 900_000, 4096),
+    ("b.bst", "/usr/bin/ld", "/usr/bin/ld -o out", 2_000_000_000, 100_000, 2048),
+    ("b.bst", "/usr/bin/cc", "/usr/bin/cc -c f2.c", 1_000_000_000, 200_000, 512),
 ]
 
 
 @needs_node
 class TestThePivotAnswersPerProgram:
-
     def _run(self, qid, element=None):
         sql = _library()[qid]["sql"].rstrip().rstrip(";")
         if element is not None:
@@ -163,7 +153,8 @@ class TestThePivotAnswersPerProgram:
         answer = self._run("cost-by-executable")
         assert len(answer) == 2, (
             f"{len(answer)} rows for two programs over four invocations - "
-            f"the pivot is answering per invocation again: {answer}")
+            f"the pivot is answering per invocation again: {answer}"
+        )
         assert [row[0] for row in answer] == ["/usr/bin/cc", "/usr/bin/ld"]
 
     def test_the_runs_and_the_seconds_are_summed(self):
@@ -197,7 +188,8 @@ class TestThePivotAnswersPerProgram:
         answer = self._run("executables-in-element", "a.bst")
         assert [row[0] for row in answer] == ["/usr/bin/cc"], (
             f"the element-scoped pivot is answering per invocation, or "
-            f"reaching outside the element it was aimed at: {answer}")
+            f"reaching outside the element it was aimed at: {answer}"
+        )
         assert answer[0][1] == 2, f"two invocations, one program: {answer}"
 
     def test_a_slice_with_no_executable_is_not_a_program(self):

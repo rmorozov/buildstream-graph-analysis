@@ -22,6 +22,7 @@ Two decisions these guards exist to hold:
   has it missing from a list that exists. Those are different facts and
   the reader is told which.
 """
+
 import json
 import os
 import shutil
@@ -51,8 +52,9 @@ const text = (n) => (n.children ?? []).reduce(
 
 
 def _js(body):
-    result = subprocess.run([node, "--input-type=module", "-e", _SHIM + body],
-                            capture_output=True, text=True, cwd=REPO, timeout=60)
+    result = subprocess.run(
+        [node, "--input-type=module", "-e", _SHIM + body], capture_output=True, text=True, cwd=REPO, timeout=60
+    )
     assert result.returncode == 0, result.stderr
     return json.loads(result.stdout)
 
@@ -66,13 +68,15 @@ def _snapshot(stamp, elements, verdict="improved"):
 
 
 def _element(uid, duration, on_path=True):
-    return {"element_uid": uid, "duration_us": duration,
-            "share_of_path": 0.5 if on_path else None,
-            "on_critical_path": on_path}
+    return {
+        "element_uid": uid,
+        "duration_us": duration,
+        "share_of_path": 0.5 if on_path else None,
+        "on_critical_path": on_path,
+    }
 
 
 class TestTheSliceIsWrittenAtCaptureTime:
-
     @pytest.fixture
     def written(self, tmp_path):
         from tools.bga_snapshot import read_element_slice, write_element_slice
@@ -103,6 +107,7 @@ class TestTheSliceIsWrittenAtCaptureTime:
 
     def test_the_bound_is_stated_in_the_slice(self, written):
         from tools.bga_snapshot import SLICE_ELEMENTS_MAX
+
         write, _ = written
         assert write["bounded_at"] == SLICE_ELEMENTS_MAX
         assert len(write["elements"]) <= SLICE_ELEMENTS_MAX
@@ -121,18 +126,16 @@ class TestTheSliceIsWrittenAtCaptureTime:
     def test_reading_is_one_small_file_and_not_an_analysis(self):
         """The `UX-203` constraint, asserted against the source: the
         store is rebuilt on every page load, for every snapshot."""
-        source = open(os.path.join(REPO, "tools", "bga_snapshot.py"),
-                      encoding="utf-8").read()
+        source = open(os.path.join(REPO, "tools", "bga_snapshot.py"), encoding="utf-8").read()
         body = source.split("def read_element_slice", 1)[1].split("\ndef ", 1)[0]
         for banned in ("analyze(", "BuildEfficiencyAnalyzer"):
             assert banned not in body, (
-                f"read_element_slice must not {banned} - it runs once per "
-                f"snapshot on every bga view")
+                f"read_element_slice must not {banned} - it runs once per snapshot on every bga view"
+            )
 
 
 @needs_node
 class TestTheHistoryIsDrawnFromPublishedValues:
-
     def test_a_falling_series_draws_its_points(self):
         store = _store(
             _snapshot("a", [_element("core.bst", 12100000)]),
@@ -215,14 +218,12 @@ class TestTheHistoryIsDrawnFromPublishedValues:
           console.log(JSON.stringify(all(block,
             (n) => n.attrs["data-marker"]).map((n) => n.attrs["data-marker"])));
         ''')
-        assert out == [schemas.VERDICT_MARKERS["regressed"],
-                       schemas.VERDICT_MARKERS["improved"]]
+        assert out == [schemas.VERDICT_MARKERS["regressed"], schemas.VERDICT_MARKERS["improved"]]
 
     def test_without_a_schema_every_point_is_a_plain_circle(self):
         """Not a guessed shape: a page with no contract to read draws
         the neutral one rather than inventing a vocabulary."""
-        store = _store(_snapshot("a", [_element("core.bst", 10)],
-                                 verdict="regressed"))
+        store = _store(_snapshot("a", [_element("core.bst", 10)], verdict="regressed"))
         out = _js(f'''
           const {{ renderElementHistory }} = await import("./tests/viewer.mjs");
           const block = renderElementHistory({json.dumps(store)}, "core.bst");
@@ -234,7 +235,6 @@ class TestTheHistoryIsDrawnFromPublishedValues:
 
 @needs_node
 class TestAbsenceIsStatedNeverDrawn:
-
     def test_an_element_with_no_history_says_so(self):
         store = _store(_snapshot("a", [_element("other.bst", 100)]))
         out = _js(f'''
@@ -291,30 +291,30 @@ class TestAbsenceIsStatedNeverDrawn:
 
 
 class TestTheStoreDeclaresIt:
-
     def test_the_snapshot_rows_declare_elements(self):
         from bga import schemas
-        items = (schemas.schema(schemas.STORE)["properties"]["snapshots"]
-                 ["items"]["properties"])
+
+        items = schemas.schema(schemas.STORE)["properties"]["snapshots"]["items"]["properties"]
         assert "elements" in items, sorted(items)
         assert set(items) >= {"total_duration_us", "cache_hit_rate", "bytes"}
 
     def test_the_slice_declares_an_element_column(self):
         from bga import schemas
-        elements = (schemas.schema(schemas.STORE)["properties"]["snapshots"]
-                    ["items"]["properties"]["elements"])
+
+        elements = schemas.schema(schemas.STORE)["properties"]["snapshots"]["items"]["properties"]["elements"]
         roles = [column.get("role") for column in elements[schemas.COLUMNS]]
         assert "element" in roles
 
     def test_the_share_says_why_it_can_be_absent(self):
         """Zero would read as "on the path and costing nothing"."""
         from bga import schemas
-        sentence = schemas.description(
-            schemas.STORE, "snapshots[].elements[].share_of_path")
+
+        sentence = schemas.description(schemas.STORE, "snapshots[].elements[].share_of_path")
         assert "not on it" in sentence, sentence
 
     def test_null_and_empty_are_documented_as_different(self):
         """The two absences the drawing keeps apart."""
         from bga import schemas
+
         sentence = schemas.description(schemas.STORE, "snapshots[].elements")
         assert "null" in sentence and "empty list" in sentence, sentence

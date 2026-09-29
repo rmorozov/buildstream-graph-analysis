@@ -128,10 +128,9 @@ def _attach_resource_blast(run_dir, analyzer, result) -> None:
     # where it prints it. `UX-341`: in microseconds, as published; this
     # divided by 1e6 to feed a `measured_seconds` nothing else spoke.
     from bga.graph.edg import compute_element_durations
-    durations = compute_element_durations(
-        getattr(analyzer, 'normalized_tasks', []) or [])
-    rows = sources_module.resource_blast(
-        inventory, downstream, element_kinds, durations)
+
+    durations = compute_element_durations(getattr(analyzer, 'normalized_tasks', []) or [])
+    rows = sources_module.resource_blast(inventory, downstream, element_kinds, durations)
     result.resource_blast = {
         'rows': rows,
         'element_count': len(graph.elements),
@@ -218,13 +217,10 @@ def _attach_plane2_capacity(args: argparse.Namespace, analyzer, result) -> None:
         with open(path, encoding='utf-8') as handle:
             native_report = json.load(handle)
     except (OSError, json.JSONDecodeError) as exc:
-        print(f"Warning: --plane2 {path} could not be read ({exc}); "
-              "continuing without it", file=sys.stderr)
+        print(f"Warning: --plane2 {path} could not be read ({exc}); continuing without it", file=sys.stderr)
         return
     context = getattr(analyzer, 'run_context', None)
-    host_cpu_count = getattr(context, 'host_cpu_count', None) or getattr(
-        context, 'cpu_budget', None
-    )
+    host_cpu_count = getattr(context, 'host_cpu_count', None) or getattr(context, 'cpu_budget', None)
     result.plane2_capacity = summarize_plane2_capacity(native_report, host_cpu_count)
     # UX-202: how much of the build Plane 2 actually saw, published
     # rather than left in the native report. The evidence header states
@@ -240,7 +236,8 @@ def _attach_plane2_capacity(args: argparse.Namespace, analyzer, result) -> None:
     # capture actually has.
     if result.plane2_coverage:
         result.plane2_coverage = dict(
-            result.plane2_coverage, source=plane2_shape.provenance(native_report),
+            result.plane2_coverage,
+            source=plane2_shape.provenance(native_report),
             # `UX-389`: and the rest of the capture's own identity.
             # Whether the ptrace spine ran, how many processes were
             # traced, how long the hook was watching, which elements
@@ -249,7 +246,8 @@ def _attach_plane2_capacity(args: argparse.Namespace, analyzer, result) -> None:
             # terminal and nothing else. They belong here rather than
             # in six sections of their own: this is the block a reader
             # already opens to ask how much of the build Plane 2 saw.
-            **plane2_shape.coverage_additions(native_report))
+            **plane2_shape.coverage_additions(native_report),
+        )
     # UX-215: the report keeps the Plane 2 report itself, so the JSON
     # renderer can publish the per-element join from the same function
     # `bga correlate` calls. Held rather than joined here because the
@@ -264,9 +262,8 @@ def _attach_plane2_capacity(args: argparse.Namespace, analyzer, result) -> None:
     run_dir = getattr(analyzer, 'run_dir', None) or directory
     if run_dir:
         plane2_shape.apply_resolved_widths(
-            native_report,
-            plane2_shape.resolved_widths(
-                os.path.join(str(run_dir), 'graph.json')))
+            native_report, plane2_shape.resolved_widths(os.path.join(str(run_dir), 'graph.json'))
+        )
     result.plane2_report = native_report
     # UX-891: the one floor in this report divided by the machine's
     # cores rather than by the scheduler's builder slots. Published
@@ -282,16 +279,14 @@ def _attach_plane2_capacity(args: argparse.Namespace, analyzer, result) -> None:
     result.memory_envelope = compute_memory_envelope(
         native_report,
         getattr(context, 'max_jobs', None),
-        mb_to_bytes(getattr(context, 'memory_budget_mb', None)
-                    or getattr(context, 'host_memory_mb', None)),
+        mb_to_bytes(getattr(context, 'memory_budget_mb', None) or getattr(context, 'host_memory_mb', None)),
     )
     # UX-116: and the sentence that intersects them. Every constraint on
     # the joint (builders x max-jobs) choice is now a measured number in
     # this one capture; what was missing was the intersection. Run only
     # here, because the knee costs a capacity sweep and the whole block
     # is gated on Plane 2 being in hand anyway.
-    result.capacity_recommendation = _capacity_recommendation(
-        analyzer, result, context, native_report)
+    result.capacity_recommendation = _capacity_recommendation(analyzer, result, context, native_report)
     _finish_capacity_recommendation(analyzer, result, native_report)
 
 
@@ -315,8 +310,7 @@ def _finish_capacity_recommendation(analyzer, result, native_report: dict) -> No
     floors = getattr(result, 'floors', None)
     note = (floors or {}).get('capacity_model_note') or ''
     if floors is not None and UNMODELED_AXIS_CLAUSE in note:
-        floors['capacity_model_note'] = note.replace(
-            UNMODELED_AXIS_CLAUSE, MODELLED_AXIS_CLAUSE, 1)
+        floors['capacity_model_note'] = note.replace(UNMODELED_AXIS_CLAUSE, MODELLED_AXIS_CLAUSE, 1)
     # UX-677: per-element `max-jobs`, on the same document - not a new
     # contract id. Joins `UX-675`'s raw host CPU series (present on
     # every capture) directly to each element's BUILD span; per-element
@@ -330,25 +324,28 @@ def _finish_capacity_recommendation(analyzer, result, native_report: dict) -> No
         from bga.correlate import price_max_jobs_advice
 
         advice = price_max_jobs_advice(
-            advice, getattr(analyzer, 'normalized_tasks', None) or [],
+            advice,
+            getattr(analyzer, 'normalized_tasks', None) or [],
             getattr(analyzer, 'run_context', None),
-            (native_report or {}).get('binary_cost'))
+            (native_report or {}).get('binary_cost'),
+        )
         result.capacity_recommendation['max_jobs_advice'] = advice
 
 
 def _peak_rss_and_host_memory(
-    host_samples: Optional[dict], native_report: Optional[dict],
+    host_samples: Optional[dict],
+    native_report: Optional[dict],
 ) -> tuple[Optional[dict], Optional[int]]:
     """UX-677/UX-678's shared inputs: measured peak RSS per element and
     the host's measured RAM (`host-samples`, not an operator-declared
     budget). `(None, None)` when either half is missing.
     """
-    per_element = ((native_report or {}).get('peak_memory') or {}).get(
-        'per_element') or {}
-    peak_rss_bytes = {uid: converted
-                       for uid, entry in per_element.items()
-                       if (converted := kb_to_bytes(
-                           entry.get('peak_rss_kb'))) is not None}
+    per_element = ((native_report or {}).get('peak_memory') or {}).get('per_element') or {}
+    peak_rss_bytes = {
+        uid: converted
+        for uid, entry in per_element.items()
+        if (converted := kb_to_bytes(entry.get('peak_rss_kb'))) is not None
+    }
     mem_total_kb = (host_samples or {}).get('header', {}).get('mem_total_kb')
     if not peak_rss_bytes or not mem_total_kb:
         return None, None
@@ -375,27 +372,30 @@ def _max_jobs_advice(analyzer, native_report: dict) -> dict:
     graph = getattr(analyzer, 'graph', None)
     if not host_samples or not graph:
         return {}
-    tasks = [{"element": task.task_key.element_uid,
-              "start_us": task.start_us, "finish_us": task.finish_us}
-             for task in getattr(analyzer, 'normalized_tasks', []) or []
-             if task.task_key.task_kind == TaskKind.BUILD]
+    tasks = [
+        {"element": task.task_key.element_uid, "start_us": task.start_us, "finish_us": task.finish_us}
+        for task in getattr(analyzer, 'normalized_tasks', []) or []
+        if task.task_key.task_kind == TaskKind.BUILD
+    ]
     max_jobs = {element.uid: element.max_jobs for element in graph.elements}
-    peak_rss_bytes, host_memory_bytes = _peak_rss_and_host_memory(
-        host_samples, native_report)
+    peak_rss_bytes, host_memory_bytes = _peak_rss_and_host_memory(host_samples, native_report)
     # UX-847: the shim's own pin reading (UX-842), not a re-derivation -
     # a pinned element's advice row refuses rather than guesses a number.
     pinned_elements = {
-        row["element"] for row in (native_report or {}).get("jobserver_decisions") or []
-        if row.get("decision") == "pinned" and row.get("element")}
+        row["element"]
+        for row in (native_report or {}).get("jobserver_decisions") or []
+        if row.get("decision") == "pinned" and row.get("element")
+    }
     return compute_max_jobs_advice(
-        host_samples, tasks, max_jobs,
+        host_samples,
+        tasks,
+        max_jobs,
         memory=(peak_rss_bytes, host_memory_bytes),
         pinned_elements=pinned_elements,
     )
 
 
-def _capacity_recommendation(analyzer, result, context,
-                             native_report: Optional[dict] = None) -> dict:
+def _capacity_recommendation(analyzer, result, context, native_report: Optional[dict] = None) -> dict:
     """UX-116: the knee, the CPU draw, the memory ceiling and the host,
     intersected.
 
@@ -425,12 +425,15 @@ def _capacity_recommendation(analyzer, result, context,
     # UX-678: the same measured peak RSS and host RAM `_max_jobs_advice`
     # reads, so the sweep can check its own replayed concurrency against
     # memory rather than leave that to `_memory_allows`'s top-N sum.
-    peak_rss_bytes, host_memory_bytes = _peak_rss_and_host_memory(
-        analyzer.read_host_samples(), native_report)
+    peak_rss_bytes, host_memory_bytes = _peak_rss_and_host_memory(analyzer.read_host_samples(), native_report)
     try:
         sweep = analyzer.replay_scheduler.capacity_sweep(
-            resource='PROCESS', min_capacity=1, max_capacity=top, step=1,
-            peak_rss_bytes=peak_rss_bytes, host_memory_bytes=host_memory_bytes,
+            resource='PROCESS',
+            min_capacity=1,
+            max_capacity=top,
+            step=1,
+            peak_rss_bytes=peak_rss_bytes,
+            host_memory_bytes=host_memory_bytes,
         )
     except (AttributeError, ValueError) as exc:
         logger.info("UX-116: no capacity sweep available (%s)", exc)
@@ -453,8 +456,7 @@ def _capacity_recommendation(analyzer, result, context,
     sweep_memory_cap = (sweep.memory_knee_points or {}).get('PROCESS')
     if sweep_memory_cap is not None:
         recommendation['sweep_memory_builders'] = sweep_memory_cap
-        recommendation['sweep_binding'] = (
-            sweep.binding_constraints or {}).get('PROCESS')
+        recommendation['sweep_binding'] = (sweep.binding_constraints or {}).get('PROCESS')
     return recommendation
 
 
@@ -501,7 +503,9 @@ def _builder_pool_recommendation(analyzer, result) -> dict:
     )
     calibrated_cores = os.environ.get(_CALIBRATED_CORES_ENV)
     return compute_builder_pool_recommendation(
-        ready_set_width, host_cpu_count, critical_path_max_jobs,
+        ready_set_width,
+        host_cpu_count,
+        critical_path_max_jobs,
         calibrated_cores=int(calibrated_cores) if calibrated_cores else None,
     )
 
@@ -536,7 +540,9 @@ def _unbounded_builders_projection(analyzer) -> dict:
         return {}
     try:
         sweep = scheduler.capacity_sweep(
-            resource='PROCESS', min_capacity=current, max_capacity=unbounded,
+            resource='PROCESS',
+            min_capacity=current,
+            max_capacity=unbounded,
             step=unbounded - current,
         )
     except (AttributeError, ValueError) as exc:
@@ -553,9 +559,7 @@ def _unbounded_builders_projection(analyzer) -> dict:
         'wall_us_after': sweep.sweeps[-1]['makespan_us'],
         'builders_before': current,
         'builders_after': unbounded,
-        'assumption': (
-            "staging and wait per element unchanged, workers never queue"
-        ),
+        'assumption': ("staging and wait per element unchanged, workers never queue"),
     }
 
 
@@ -599,10 +603,7 @@ def _compiler_offload_projection(result) -> dict:
     return {
         'wall_us_before': path_us,
         'wall_us_after': remaining_us,
-        'assumption': (
-            "zero agent wall per remote compile, clamped to each "
-            "element's own wall - an upper bound"
-        ),
+        'assumption': ("zero agent wall per remote compile, clamped to each element's own wall - an upper bound"),
     }
 
 
@@ -648,6 +649,7 @@ def _resolve_admission_wait(args: argparse.Namespace) -> dict:
     except (OSError, json.JSONDecodeError):
         return {}
     from .normalize.timestamps import admission_wait_by_element_from_ledger
+
     return admission_wait_by_element_from_ledger(native_report.get('jobserver_ledger') or [])
 
 
@@ -719,9 +721,13 @@ def _produce_analysis_output(args: argparse.Namespace, section: Optional[str]) -
         return format_json(result, section=section, by_kind=by_kind)
     elif args.format == 'csv':
         return format_csv(result)
-    text = format_text(result, section=section, by_kind=by_kind,
-                       full_sections=_full_sections(args),
-                       explain=getattr(args, 'explain', False))
+    text = format_text(
+        result,
+        section=section,
+        by_kind=by_kind,
+        full_sections=_full_sections(args),
+        explain=getattr(args, 'explain', False),
+    )
     return _with_builder_pool_text(text, result)
 
 
@@ -757,8 +763,7 @@ def _builder_pool_text_lines(recommendation: dict) -> list[str]:
     """The builder and pool lines, each with the reading it came from;
     the default is the safe cap under `--jobserver auto` (UX-1005)."""
     safe_cap = recommendation.get('safe_builder_cap')
-    wide = (f"{recommendation['ready_set_width']}, from "
-            f"{recommendation['ready_set_reading']}")
+    wide = f"{recommendation['ready_set_width']}, from {recommendation['ready_set_reading']}"
     if safe_cap is None:
         lines = [f"Builders (ready-set width): {wide}"]
     else:
@@ -769,9 +774,7 @@ def _builder_pool_text_lines(recommendation: dict) -> list[str]:
             f"  Ready-set width: {wide} - wider than the safe cap only with "
             "admission (BGA_ADMISSION=1), not yet measured faster",
         ]
-    lines.append(
-        f"Pool size: {recommendation['pool_size']}, from {recommendation['pool_reading']}"
-    )
+    lines.append(f"Pool size: {recommendation['pool_size']}, from {recommendation['pool_reading']}")
     lines.append("")
     return lines
 
@@ -785,10 +788,7 @@ _FULL_SECTION_FLAGS = {
 
 
 def _full_sections(args: argparse.Namespace) -> frozenset:
-    return frozenset(
-        name for attribute, name in _FULL_SECTION_FLAGS.items()
-        if getattr(args, attribute, False)
-    )
+    return frozenset(name for attribute, name in _FULL_SECTION_FLAGS.items() if getattr(args, attribute, False))
 
 
 def _produce_sweep_output(args: argparse.Namespace) -> str:
@@ -811,8 +811,7 @@ def _produce_sweep_output(args: argparse.Namespace) -> str:
         logger.info("Loaded calibration %s for UX-14 tier 2 contention modeling", plural(len(calibration_runs), "run"))
         contention_calibration = build_contention_calibration(calibration_runs, args.resource)
         raw_capacities = [
-            (hist_context.resource_capacities or {}).get(args.resource)
-            for hist_context, _g, _t in calibration_runs
+            (hist_context.resource_capacities or {}).get(args.resource) for hist_context, _g, _t in calibration_runs
         ]
         calibration_capacities = sorted({cap for cap in raw_capacities if cap is not None})
 
@@ -832,7 +831,8 @@ def _produce_sweep_output(args: argparse.Namespace) -> str:
         # above the memory-feasible capacity is a recommendation to swap.
         memory_envelope = getattr(holder, 'memory_envelope', {})
         peak_rss_bytes, host_memory_bytes = _peak_rss_and_host_memory(
-            analyzer.read_host_samples(), getattr(holder, 'plane2_report', None))
+            analyzer.read_host_samples(), getattr(holder, 'plane2_report', None)
+        )
 
     sweep_result = analyzer.replay_scheduler.capacity_sweep(
         resource=args.resource,
@@ -845,24 +845,29 @@ def _produce_sweep_output(args: argparse.Namespace) -> str:
     )
 
     if args.format == 'json':
-        return json.dumps({
-            # UX-339: the id, first, like every other document this tool
-            # prints. It had none, so a consumer could not version-check
-            # the one answer `R5` comes here for.
-            'schema': schemas.SWEEP,
-            'resource': args.resource,
-            'sweeps': sweep_result.sweeps,
-            'knee_points': sweep_result.knee_points,
-            'monotonicity_violations': sweep_result.monotonicity_violations,
-            'capacity_model_caveat': SWEEP_CAPACITY_MODEL_CAVEAT,
-            'calibration_capacities': calibration_capacities,
-            # UX-678: absent (both `{}`) unless `--plane2` supplied both
-            # a measured peak RSS per element and a host memory total.
-            'memory_knee_points': sweep_result.memory_knee_points,
-            'binding_constraints': sweep_result.binding_constraints,
-        }, indent=2, default=str)
+        return json.dumps(
+            {
+                # UX-339: the id, first, like every other document this tool
+                # prints. It had none, so a consumer could not version-check
+                # the one answer `R5` comes here for.
+                'schema': schemas.SWEEP,
+                'resource': args.resource,
+                'sweeps': sweep_result.sweeps,
+                'knee_points': sweep_result.knee_points,
+                'monotonicity_violations': sweep_result.monotonicity_violations,
+                'capacity_model_caveat': SWEEP_CAPACITY_MODEL_CAVEAT,
+                'calibration_capacities': calibration_capacities,
+                # UX-678: absent (both `{}`) unless `--plane2` supplied both
+                # a measured peak RSS per element and a host memory total.
+                'memory_knee_points': sweep_result.memory_knee_points,
+                'binding_constraints': sweep_result.binding_constraints,
+            },
+            indent=2,
+            default=str,
+        )
     return format_sweep_text(
-        args.resource, sweep_result,
+        args.resource,
+        sweep_result,
         calibration_capacities=calibration_capacities,
         plane2_capacity=plane2_capacity,
         memory_envelope=memory_envelope,
@@ -905,14 +910,16 @@ def _memory_envelope_delta(args: argparse.Namespace) -> dict:
                 native_report = json.load(handle)
             run_context, _graph, _trace = load_all(Path(run_dir))
         except (OSError, json.JSONDecodeError, ValueError) as exc:
-            print(f"Warning: --{label}-plane2 {plane2_path} could not be used ({exc}); "
-                  "continuing without the memory note", file=sys.stderr)
+            print(
+                f"Warning: --{label}-plane2 {plane2_path} could not be used ({exc}); "
+                "continuing without the memory note",
+                file=sys.stderr,
+            )
             return {}
         envelopes[label] = compute_memory_envelope(
             native_report,
             getattr(run_context, 'max_jobs', None),
-            mb_to_bytes(getattr(run_context, 'memory_budget_mb', None)
-                        or getattr(run_context, 'host_memory_mb', None)),
+            mb_to_bytes(getattr(run_context, 'memory_budget_mb', None) or getattr(run_context, 'host_memory_mb', None)),
         )
 
     baseline_at = (envelopes['baseline'] or {}).get('at_observed_builders')
@@ -924,10 +931,7 @@ def _memory_envelope_delta(args: argparse.Namespace) -> dict:
         'baseline_envelope_bytes': baseline_at['envelope_bytes'],
         'candidate_envelope_bytes': candidate_at['envelope_bytes'],
         'delta_bytes': delta,
-        'delta_share': (
-            delta / baseline_at['envelope_bytes']
-            if baseline_at['envelope_bytes'] else None
-        ),
+        'delta_share': (delta / baseline_at['envelope_bytes'] if baseline_at['envelope_bytes'] else None),
         'candidate_fits': candidate_at['fits'],
         'host_memory_bytes': envelopes['candidate'].get('host_memory_bytes'),
         'note': (
@@ -946,13 +950,15 @@ def _produce_compare_output(args: argparse.Namespace):
     so _execute_compare_and_write's regression gate (UX-03) can inspect
     it without re-running the whole comparison a second time."""
     comparison = compare_runs(
-        Path(args.baseline), Path(args.candidate),
+        Path(args.baseline),
+        Path(args.candidate),
         baseline_runs=[Path(p) for p in (getattr(args, 'baseline_run', None) or [])],
         band_k=getattr(args, 'band_k', None) or DEFAULT_BAND_K,
         baseline_plane2=getattr(args, 'baseline_plane2', None),
         candidate_plane2=getattr(args, 'candidate_plane2', None),
         reanalyse=getattr(args, 'reanalyse', False),
-        capacity=args.capacity, verbose=args.verbose,
+        capacity=args.capacity,
+        verbose=args.verbose,
     )
     # UX-87: stamped before serialization so `--format json` carries it -
     # a CI consumer must be able to tell "the efficiency gate passed"
@@ -971,15 +977,15 @@ def _produce_compare_output(args: argparse.Namespace):
     comparison.memory_envelope_delta = _memory_envelope_delta(args)
 
     if args.format == 'json':
-        output = json.dumps(schemas.stamp(comparison.to_dict(), schemas.COMPARE),
-                            indent=2, default=str)
+        output = json.dumps(schemas.stamp(comparison.to_dict(), schemas.COMPARE), indent=2, default=str)
     elif args.format == 'ci-comment':
         # UX-115: render-only. Everything it prints was computed above;
         # the gate verdicts come from the same predicates
         # `_compare_exit_code` calls, so the comment and the exit code
         # cannot disagree.
         output = render_ci_comment(
-            comparison, args,
+            comparison,
+            args,
             native_report=_load_native_report(getattr(args, 'native_report', None)),
         )
     else:
@@ -1012,9 +1018,7 @@ def _print_missing_input_hint(run_dir: Path) -> None:
     """
     graph_present = (run_dir / 'graph.json').exists()
     trace_present = (run_dir / 'trace.json').exists()
-    run_context_present = (
-        (run_dir / 'run-context.json').exists() or (run_dir / 'run_context.json').exists()
-    )
+    run_context_present = (run_dir / 'run-context.json').exists() or (run_dir / 'run_context.json').exists()
     if not (graph_present or trace_present or run_context_present):
         return
 
@@ -1027,11 +1031,12 @@ def _print_missing_input_hint(run_dir: Path) -> None:
     if not graph_present:
         missing.append(("graph.json", "bga graph-from-show <project_dir> <targets...> graph.json"))
     if not trace_present:
-        missing.append((
-            "trace.json",
-            "bga log-to-chrome <log> trace-chrome.json"
-            " && bga chrome-to-trace trace-chrome.json trace.json",
-        ))
+        missing.append(
+            (
+                "trace.json",
+                "bga log-to-chrome <log> trace-chrome.json && bga chrome-to-trace trace-chrome.json trace.json",
+            )
+        )
     if not run_context_present:
         missing.append(("run-context.json", "bga run-context <log> run-context.json"))
     if not missing:
@@ -1163,7 +1168,6 @@ EXIT_CODE_SIGNAL_UNAVAILABLE = EXIT_SIGNAL_UNAVAILABLE
 EXIT_CODE_BAND_UNAVAILABLE = EXIT_BAND_UNAVAILABLE
 
 
-
 def _resolve_band_from_class(args: argparse.Namespace) -> Optional[int]:
     """UX-899: fill `--baseline-run` from the candidate's own class.
 
@@ -1221,7 +1225,9 @@ def _resolve_band_from_class(args: argparse.Namespace) -> Optional[int]:
 
     declared = run_store.declared_class(candidate)
     selected = run_store.runs_of_class(
-        project, declared, window,
+        project,
+        declared,
+        window,
         exclude=(candidate, str(Path(args.baseline).resolve())),
     )
     if len(selected) < MIN_BASELINE_RUNS:
@@ -1254,12 +1260,10 @@ def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
     block a pipeline on a possibly-noisy signal - the same reasoning
     _CONFIDENCE_HIGH already gates comparison.low_confidence on."""
     efficiency_gate_on = (
-        getattr(args, 'fail_on_efficiency_regression', False)
-        or getattr(args, 'min_efficiency', None) is not None
+        getattr(args, 'fail_on_efficiency_regression', False) or getattr(args, 'min_efficiency', None) is not None
     )
     marginal_gate_on = getattr(args, 'fail_on_inefficient_additions', False)
-    if (not getattr(args, 'fail_on_regression', False)
-            and not efficiency_gate_on and not marginal_gate_on):
+    if not getattr(args, 'fail_on_regression', False) and not efficiency_gate_on and not marginal_gate_on:
         return 0
 
     # UX-54: checked before the low-confidence fail-open, and failing
@@ -1280,8 +1284,7 @@ def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
         detail = comparison.failed_run_details or []
         named = "; ".join(
             f"{d['run']}: {', '.join(d['failed_elements'][:3]) or 'unnamed element'}"
-            + (f" ({d['built']} of {d['scheduled']} scheduled elements built)"
-               if d['scheduled'] is not None else "")
+            + (f" ({d['built']} of {d['scheduled']} scheduled elements built)" if d['scheduled'] is not None else "")
             for d in detail
         ) or " and ".join(comparison.failed_runs)
         print(
@@ -1300,8 +1303,7 @@ def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
     # The comparison itself still printed, with its caveat: looking is
     # fine, gating is not.
     host_comparison = getattr(comparison, 'host_comparison', None) or {}
-    if (host_comparison.get('status') == 'different'
-            and not getattr(args, 'allow_cross_host', False)):
+    if host_comparison.get('status') == 'different' and not getattr(args, 'allow_cross_host', False):
         differing = ", ".join(host_comparison.get('differing') or []) or "host"
         print(
             f"Cross-host gate FAILED: baseline and candidate were measured on "
@@ -1323,13 +1325,11 @@ def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
     # myself" by that word since UX-234, and one word for one act is
     # worth more than symmetry with the flag above.
     class_comparison = getattr(comparison, 'build_class_comparison', None) or {}
-    if (class_comparison.get('status') == 'different'
-            and not getattr(args, 'blend', False)):
-        baseline_class = (getattr(comparison, 'baseline_run_instance', None)
-                          or {}).get('build_class')
-        candidate_class = (getattr(comparison, 'candidate_run_instance', None)
-                           or {}).get('build_class')
+    if class_comparison.get('status') == 'different' and not getattr(args, 'blend', False):
+        baseline_class = (getattr(comparison, 'baseline_run_instance', None) or {}).get('build_class')
+        candidate_class = (getattr(comparison, 'candidate_run_instance', None) or {}).get('build_class')
         from .buildclass import label as _class_label
+
         print(
             f"Mixed build class gate FAILED: baseline declares "
             f"{_class_label(baseline_class)} and candidate declares "
@@ -1361,13 +1361,14 @@ def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
         # message hardcoding "--fail-on-regression" would be wrong for a
         # pipeline that only asked for the efficiency one.
         requested = [
-            flag for flag, on in (
+            flag
+            for flag, on in (
                 ('--fail-on-regression', getattr(args, 'fail_on_regression', False)),
-                ('--fail-on-efficiency-regression',
-                 getattr(args, 'fail_on_efficiency_regression', False)),
+                ('--fail-on-efficiency-regression', getattr(args, 'fail_on_efficiency_regression', False)),
                 ('--min-efficiency', getattr(args, 'min_efficiency', None) is not None),
                 ('--fail-on-inefficient-additions', marginal_gate_on),
-            ) if on
+            )
+            if on
         ]
         print(
             f"Warning: {'/'.join(requested)} not applied - at least one run's "
@@ -1454,12 +1455,14 @@ def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
                 file=sys.stderr,
             )
             return EXIT_CODE_EFFICIENCY_REGRESSION
-        if getattr(args, 'fail_on_efficiency_regression', False) and \
-                efficiency_regression_exceeds_threshold(comparison, args.max_efficiency_drop):
+        if getattr(args, 'fail_on_efficiency_regression', False) and efficiency_regression_exceeds_threshold(
+            comparison, args.max_efficiency_drop
+        ):
             baseline = comparison.baseline_metrics.get('occupancy_share')
             candidate = comparison.candidate_metrics.get('occupancy_share')
             threshold_desc = (
-                f"{args.max_efficiency_drop}pp" if args.max_efficiency_drop is not None
+                f"{args.max_efficiency_drop}pp"
+                if args.max_efficiency_drop is not None
                 else f"the default {_EFFICIENCY_DROP_PP}pp"
             )
             print(
@@ -1476,14 +1479,14 @@ def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
         return 0
 
     against_band = bool(getattr(args, 'band_from_class', None))
-    if regression_gate_failed(comparison, args.regression_threshold,
-                              against_band=against_band):
+    if regression_gate_failed(comparison, args.regression_threshold, against_band=against_band):
         threshold_desc = (
             # UX-899: the band the gate was actually judged against, not
             # a percentage it did not read.
             f"the band from {plural(comparison.baseline_band['n'], 'run')} of its class"
             if against_band and comparison.baseline_band
-            else f"{args.regression_threshold}%" if args.regression_threshold is not None
+            else f"{args.regression_threshold}%"
+            if args.regression_threshold is not None
             else "the default significance threshold"
         )
         print(
@@ -1521,8 +1524,7 @@ def _execute_compare_and_write(args: argparse.Namespace) -> int:
     # so `run` and `./run` refuse identically.
     if Path(args.baseline).resolve() == Path(args.candidate).resolve():
         print(
-            f"Error: baseline and candidate are the same run "
-            f"({Path(args.baseline).resolve()}) - nothing to compare.",
+            f"Error: baseline and candidate are the same run ({Path(args.baseline).resolve()}) - nothing to compare.",
             file=sys.stderr,
         )
         return EXIT_CODE_MISMATCHED_RUNS
@@ -1632,10 +1634,8 @@ def cmd_whatif(args: argparse.Namespace) -> int:
         return 2
     analyzer = BuildEfficiencyAnalyzer(verbose=getattr(args, 'verbose', False))
     analyzer.load(Path(run_dir))
-    document = project(analyzer.analyze(Path(run_dir)), analyzer.graph,
-                       args.element or [])
-    output = (json.dumps(document, indent=2, default=str)
-              if args.format == 'json' else "\n".join(render(document)))
+    document = project(analyzer.analyze(Path(run_dir)), analyzer.graph, args.element or [])
+    output = json.dumps(document, indent=2, default=str) if args.format == 'json' else "\n".join(render(document))
     if getattr(args, 'output', None):
         with open(args.output, 'w', encoding='utf-8') as handle:
             handle.write(output + "\n")
@@ -1664,18 +1664,18 @@ def cmd_blast(args: argparse.Namespace) -> int:
         return 2
     project = args.project or project_root() or "."
     try:
-        answer = blast(run_dir, args.target, project_dir=project,
-                       measure=not getattr(args, 'no_cost', False))
+        answer = blast(run_dir, args.target, project_dir=project, measure=not getattr(args, 'no_cost', False))
     except (FileNotFoundError, ValueError) as error:
         # UX-178: an existing directory that is not a run - the likeliest
         # slip is `<snapshot>/` where `<snapshot>/run` was meant - used to
         # be a raw traceback, while `analyze` on the same directory prints
         # a sentence. Same treatment, and the exit code UX-172 documented.
-        print(f"Error: {run_dir} is not a run directory ({error}). "
-              f"A snapshot's run directory is `<snapshot>/run`.", file=sys.stderr)
+        print(
+            f"Error: {run_dir} is not a run directory ({error}). A snapshot's run directory is `<snapshot>/run`.",
+            file=sys.stderr,
+        )
         return 2
-    output = (format_blast_json(answer) if args.format == 'json'
-              else format_blast_text(answer))
+    output = format_blast_json(answer) if args.format == 'json' else format_blast_text(answer)
     if getattr(args, 'output', None):
         with open(args.output, 'w', encoding='utf-8') as handle:
             handle.write(output + "\n")
@@ -1704,10 +1704,7 @@ def cmd_cache_trend(args: argparse.Namespace) -> int:
         print(f"Error: {error}", file=sys.stderr)
         return 1
 
-    output = (
-        json.dumps(trend, indent=2) if args.format == 'json'
-        else format_trend_text(trend)
-    )
+    output = json.dumps(trend, indent=2) if args.format == 'json' else format_trend_text(trend)
     if getattr(args, 'output', None):
         with open(args.output, 'w', encoding='utf-8') as handle:
             handle.write(output + '\n')
@@ -1779,6 +1776,7 @@ def cmd_correlate(args: argparse.Namespace) -> int:
         analyzer = _make_analyzer(args)
         result = analyzer.analyze(Path(args.directory))
         from bga.report.json import format_json
+
         analysis = json.loads(format_json(result))
         # UX-82: the tasks and run context let the join *replay* the
         # observed run with never-read gating edges removed, instead of
@@ -1794,10 +1792,13 @@ def cmd_correlate(args: argparse.Namespace) -> int:
                 with open(args.cache_logs, encoding='utf-8') as handle:
                     cache_logs = json.load(handle)
             except (OSError, json.JSONDecodeError) as exc:
-                print(f"Warning: --cache-logs {args.cache_logs} could not be read "
-                      f"({exc}); continuing without it", file=sys.stderr)
+                print(
+                    f"Warning: --cache-logs {args.cache_logs} could not be read ({exc}); continuing without it",
+                    file=sys.stderr,
+                )
         joined = correlate(
-            analysis, native_report,
+            analysis,
+            native_report,
             tasks=getattr(analyzer, 'normalized_tasks', None),
             run_context=getattr(analyzer, 'run_context', None),
             cache_logs=cache_logs,
@@ -1807,8 +1808,7 @@ def cmd_correlate(args: argparse.Namespace) -> int:
             # UX-215: stamped, so the document says what it is - the
             # same treatment the other four outputs have had since
             # UX-190, and what makes `bga view` able to serve it.
-            return json.dumps(schemas.stamp(joined, schemas.CORRELATE),
-                              indent=2)
+            return json.dumps(schemas.stamp(joined, schemas.CORRELATE), indent=2)
         return format_correlation(joined)
 
     return _execute_and_write(args, produce)
@@ -1903,14 +1903,14 @@ def _bundle_export(args: argparse.Namespace, bundle_mod) -> int:
     if os.path.isdir(token):
         snapshot = token
     else:
-        snapshot = run_store.resolve_snapshot(
-            token if run_store.is_alias(token) else "@" + token.lstrip("@"))
-    path, manifest = bundle_mod.export(
-        snapshot, args.output, include_plane2=not args.no_plane2)
+        snapshot = run_store.resolve_snapshot(token if run_store.is_alias(token) else "@" + token.lstrip("@"))
+    path, manifest = bundle_mod.export(snapshot, args.output, include_plane2=not args.no_plane2)
     counts = bundle_mod.describe(manifest)
     print(f"Wrote {path}")
-    print(f"  snapshot {manifest['stamp']}: {plural(counts['members'], 'member')}, "
-          f"{run_store.human_bytes(counts['bytes'])} before compression")
+    print(
+        f"  snapshot {manifest['stamp']}: {plural(counts['members'], 'member')}, "
+        f"{run_store.human_bytes(counts['bytes'])} before compression"
+    )
     if manifest["excluded"]:
         # The switch says what it left out, and the manifest records it,
         # so `--load` can say so on the far machine too.
@@ -1924,19 +1924,18 @@ def _bundle_load(args: argparse.Namespace, bundle_mod) -> int:
 
     project = run_store.project_root()
     if project is None:
-        print("Error: no BuildStream project here to load into (no "
-              "project.conf in this directory or any parent).",
-              file=sys.stderr)
+        print(
+            "Error: no BuildStream project here to load into (no project.conf in this directory or any parent).",
+            file=sys.stderr,
+        )
         return 2
     target, manifest = bundle_mod.load(args.load, project)
     counts = bundle_mod.describe(manifest)
     print(f"Loaded snapshot {manifest['stamp']} into {target}")
-    print(f"  {plural(counts['members'], 'member')}, packed by bga "
-          f"{manifest.get('bga_version', 'unknown')}")
+    print(f"  {plural(counts['members'], 'member')}, packed by bga {manifest.get('bga_version', 'unknown')}")
     # `.get`, not `[]`: this manifest came off someone else's machine.
     if manifest.get("excluded"):
-        print(f"  packed without: {', '.join(manifest['excluded'])} - "
-              f"sections reading those will say they are absent")
+        print(f"  packed without: {', '.join(manifest['excluded'])} - sections reading those will say they are absent")
     print("  read it with: bga analyze @last")
     return 0
 
@@ -1947,14 +1946,14 @@ def _bundle_resolve(args: argparse.Namespace) -> int:
     from . import anonymize, run_store
 
     if not args.key_fingerprint:
-        print("Error: --resolve requires --key-fingerprint (the bundle's, "
-              "from its manifest).", file=sys.stderr)
+        print("Error: --resolve requires --key-fingerprint (the bundle's, from its manifest).", file=sys.stderr)
         return 2
     project = run_store.project_root()
     if project is None:
-        print("Error: no BuildStream project here to resolve against (no "
-              "project.conf in this directory or any parent).",
-              file=sys.stderr)
+        print(
+            "Error: no BuildStream project here to resolve against (no project.conf in this directory or any parent).",
+            file=sys.stderr,
+        )
         return 2
     key = anonymize.load_or_create_key(project)
     try:
@@ -1966,8 +1965,10 @@ def _bundle_resolve(args: argparse.Namespace) -> int:
     resolved, unknown = anonymize.resolve_text(sys.stdin.read(), pmap)
     print(resolved, end="")
     if unknown:
-        print(f"\nUnresolved pseudonym-shaped tokens ({plural(len(unknown), 'token')}): "
-              f"{', '.join(unknown)}", file=sys.stderr)
+        print(
+            f"\nUnresolved pseudonym-shaped tokens ({plural(len(unknown), 'token')}): {', '.join(unknown)}",
+            file=sys.stderr,
+        )
     return 0
 
 
@@ -1989,56 +1990,53 @@ def _add_common_arguments(
     subparser.add_argument(
         'directory',
         type=str,
-        help='Path to the BuildStream run directory (e.g., ~/.buildstream/cache/artifacts/run-<uuid>).'
+        help='Path to the BuildStream run directory (e.g., ~/.buildstream/cache/artifacts/run-<uuid>).',
     )
     # UX-187: the long sections are folded in the middle by default. The
     # flags are on every analyze-shaped command because the sections are:
     # `bga graph` renders the critical path too.
     subparser.add_argument(
-        '--full-path', action='store_true',
-        help='Print every element of the critical path, not just its two ends.'
+        '--full-path', action='store_true', help='Print every element of the critical path, not just its two ends.'
     )
     subparser.add_argument(
-        '--full-sources', action='store_true',
-        help='Print every shared-source row, not just the widest.'
+        '--full-sources', action='store_true', help='Print every shared-source row, not just the widest.'
     )
     # UX-229: the chain behind each claim, on demand. Off by default
     # because the report is a decision and the chain is what a reader
     # asks for after doubting one - the same reason `--diagnostics` is
     # opt-in.
     subparser.add_argument(
-        '--explain', action='store_true',
-        help='Under each claim, print its evidence fields, the rule that fired '
-             'and the query that deepens it.'
+        '--explain',
+        action='store_true',
+        help='Under each claim, print its evidence fields, the rule that fired and the query that deepens it.',
     )
 
     subparser.add_argument(
-        '-f', '--format',
+        '-f',
+        '--format',
         type=str,
         choices=['text', 'json', 'csv'],
         default='text',
-        help='Output format: text (human-readable), json (machine-readable), csv (attribution data). Default: text.'
+        help='Output format: text (human-readable), json (machine-readable), csv (attribution data). Default: text.',
     )
 
-    subparser.add_argument(
-        '-o', '--output',
-        type=str,
-        help='Write output to PATH instead of stdout.'
-    )
+    subparser.add_argument('-o', '--output', type=str, help='Write output to PATH instead of stdout.')
 
     subparser.add_argument(
-        '-c', '--capacity',
+        '-c',
+        '--capacity',
         type=int,
         default=None,
         metavar='N',
-        help='Override system resource capacity (affects LB and replay calculations). Default: auto-detect from run-context.'
+        help='Override system resource capacity (affects LB and replay calculations). Default: auto-detect from run-context.',
     )
 
     if include_replay:
         subparser.add_argument(
-            '-r', '--replay',
+            '-r',
+            '--replay',
             action='store_true',
-            help='Replay the run under the chosen heuristic for a feasible makespan (T_C). A counterfactual model, not a claim of optimality.'
+            help='Replay the run under the chosen heuristic for a feasible makespan (T_C). A counterfactual model, not a claim of optimality.',
         )
 
         subparser.add_argument(
@@ -2046,7 +2044,7 @@ def _add_common_arguments(
             type=str,
             choices=['lpt', 'spt', 'fifo', 'depth'],
             default='lpt',
-            help='Scheduling heuristic for replay. Options: lpt (Longest Processing Time), spt (Shortest Processing Time), fifo (First In First Out), depth (Dependency Depth). Default: lpt.'
+            help='Scheduling heuristic for replay. Options: lpt (Longest Processing Time), spt (Shortest Processing Time), fifo (First In First Out), depth (Dependency Depth). Default: lpt.',
         )
 
     if include_diagnostics:
@@ -2054,31 +2052,32 @@ def _add_common_arguments(
             '--plane2',
             type=str,
             metavar='NATIVE_REPORT.json',
-            help='Plane 2 report for this run. A snapshot\'s is found anyway.'
+            help='Plane 2 report for this run. A snapshot\'s is found anyway.',
         )
         # UX-329: the way to decline the sibling, so that "not attached"
         # is something a reader can ask for and see, rather than the
         # silent default it used to be.
         subparser.add_argument(
-            '--no-plane2', action='store_true',
-            help='Ignore that report, and say the analysis declined it.')
+            '--no-plane2', action='store_true', help='Ignore that report, and say the analysis declined it.'
+        )
         subparser.add_argument(
-            '-d', '--diagnostics',
+            '-d',
+            '--diagnostics',
             action='store_true',
-            help='Enable advanced diagnostics (blast radius, criticality probability, wall-clock shares). Adds computation time.'
+            help='Enable advanced diagnostics (blast radius, criticality probability, wall-clock shares). Adds computation time.',
         )
 
     if include_cold:
         subparser.add_argument(
             '--cold',
             action='store_true',
-            help='Enable the advisory cold structural floor (T-infinity,cold, Part 15). Requires --history-dir to produce anything but "unavailable".'
+            help='Enable the advisory cold structural floor (T-infinity,cold, Part 15). Requires --history-dir to produce anything but "unavailable".',
         )
 
         subparser.add_argument(
             '--allow-partial-cold',
             action='store_true',
-            help='With --cold: publish a partial, low-confidence cold floor when an element on the cold path has no historical duration, rather than none at all.'
+            help='With --cold: publish a partial, low-confidence cold floor when an element on the cold path has no historical duration, rather than none at all.',
         )
 
         subparser.add_argument(
@@ -2086,28 +2085,14 @@ def _add_common_arguments(
             action='append',
             default=[],
             metavar='PATH',
-            help='Path to a prior run directory to use as cold-floor duration history (Part 15.2). Repeatable. Only consulted with --cold.'
+            help='Path to a prior run directory to use as cold-floor duration history (Part 15.2). Repeatable. Only consulted with --cold.',
         )
 
-    subparser.add_argument(
-        '-v', '--verbose',
-        action='store_true',
-        help='Verbose (DEBUG) logging.'
-    )
+    subparser.add_argument('-v', '--verbose', action='store_true', help='Verbose (DEBUG) logging.')
 
-    subparser.add_argument(
-        '-q', '--quiet',
-        action='store_true',
-        help='Errors only.'
-    )
+    subparser.add_argument('-q', '--quiet', action='store_true', help='Errors only.')
 
-    subparser.add_argument(
-        '--log-file',
-        type=str,
-        default=None,
-        metavar='PATH',
-        help='Also write logs to PATH.'
-    )
+    subparser.add_argument('--log-file', type=str, default=None, metavar='PATH', help='Also write logs to PATH.')
 
 
 class _UsageErrorParser(argparse.ArgumentParser):
@@ -2130,6 +2115,7 @@ class _CompactSubParser(_UsageErrorParser):
 
 def _tool_help() -> str:
     from .tools_dispatch import format_tool_help
+
     return format_tool_help()
 
 
@@ -2147,16 +2133,13 @@ def _snapshot_completer(prefix, parsed_args, **_kwargs):
 
         project = run_store.project_root()
         if project is None:
-            return [alias for alias in ("@last", "@prev")
-                    if alias.startswith(prefix)]
+            return [alias for alias in ("@last", "@prev") if alias.startswith(prefix)]
         # `os.path.basename` via `Path`: this module does not import
         # `os`, and reaching for it here failed silently inside the
         # broad `except` below - the exact dead-TAB-with-no-explanation
         # this completer's own docstring warns about.
-        stamps = ["@" + Path(snapshot).name
-                  for snapshot in run_store.list_runs(project)]
-        return [candidate for candidate in ["@last", "@prev"] + stamps
-                if candidate.startswith(prefix)]
+        stamps = ["@" + Path(snapshot).name for snapshot in run_store.list_runs(project)]
+        return [candidate for candidate in ["@last", "@prev"] + stamps if candidate.startswith(prefix)]
     except Exception:
         return []
 
@@ -2165,17 +2148,17 @@ def _element_completer(prefix, parsed_args, **_kwargs):
     """Element names, for `bga blast`, from the project's own files."""
     try:
         from .tools_dispatch import _import_tool
-        discover_element_names = _import_tool(
-            "tools.bst_native_build_tracer").discover_element_names
+
+        discover_element_names = _import_tool("tools.bst_native_build_tracer").discover_element_names
 
         project = getattr(parsed_args, "project", None)
         if project is None:
             from . import run_store
+
             project = run_store.project_root()
         if project is None:
             return []
-        return [name for name in discover_element_names(project)
-                if name.startswith(prefix)]
+        return [name for name in discover_element_names(project) if name.startswith(prefix)]
     except Exception:
         return []
 
@@ -2189,8 +2172,7 @@ def _attach_run_completers(parser) -> None:
     without a second edit, and the two cannot disagree about which
     arguments those are.
     """
-    completable = set(_RUN_DIRECTORY_ARGS) | set(_RUN_DIRECTORY_LIST_ARGS) \
-        | set(_PLANE2_ARGS) | {"run"}
+    completable = set(_RUN_DIRECTORY_ARGS) | set(_RUN_DIRECTORY_LIST_ARGS) | set(_PLANE2_ARGS) | {"run"}
     for action in parser._actions:
         if getattr(action, "choices", None) and hasattr(action.choices, "keys"):
             for subparser in action.choices.values():
@@ -2251,7 +2233,7 @@ def _add_graph_subcommand(subparsers) -> None:
         '--by-kind',
         action='store_true',
         help='Also show per-kind aggregate stats (count, total and average\n'
-             'observed duration), grouped by BuildStream element kind.'
+        'observed duration), grouped by BuildStream element kind.',
     )
     graph_parser.set_defaults(func=cmd_graph)
 
@@ -2264,7 +2246,7 @@ def _add_floors_subcommand(subparsers) -> None:
         # UX-220: what a floor *is* comes from the schema, so `--help`
         # and the report cannot end up explaining it two ways.
         description='Report certified/advisory floors (Parts 14-17) - matches spec Part 37.1\'s "bga floors RUN [--cold] [--allow-partial-cold]". '
-                    + schemas.description(schemas.ANALYZE, 'floors'),
+        + schemas.description(schemas.ANALYZE, 'floors'),
     )
     _add_common_arguments(floors_parser, include_cold=True)
     floors_parser.set_defaults(func=cmd_floors)
@@ -2288,45 +2270,58 @@ def _add_sweep_subcommand(subparsers) -> None:
         help='Capacity sweep for one resource.',
         description='Sweep capacity for one resource across a range and report predicted T_C, normalized improvement, and the knee point.',
     )
+    sweep_parser.add_argument('directory', type=str, help='Path to the BuildStream run directory.')
     sweep_parser.add_argument(
-        'directory', type=str,
-        help='Path to the BuildStream run directory.'
-    )
-    sweep_parser.add_argument(
-        '--plane2', type=str, metavar='NATIVE_REPORT.json',
+        '--plane2',
+        type=str,
+        metavar='NATIVE_REPORT.json',
         help='Plane 2 report for this same run: the knee line then says how\n'
-             'many cores were measured busy, not just how many were asked for.'
+        'many cores were measured busy, not just how many were asked for.',
     )
     sweep_parser.add_argument(
-        '--resource', type=str, default='PROCESS',
-        help='Resource to sweep (e.g. PROCESS, DOWNLOAD, UPLOAD). Default: PROCESS.'
+        '--resource',
+        type=str,
+        default='PROCESS',
+        help='Resource to sweep (e.g. PROCESS, DOWNLOAD, UPLOAD). Default: PROCESS.',
     )
     sweep_parser.add_argument(
-        '--min-capacity', type=int, default=1, metavar='N',
-        help='Minimum capacity to test. Default: 1.'
+        '--min-capacity', type=int, default=1, metavar='N', help='Minimum capacity to test. Default: 1.'
     )
     sweep_parser.add_argument(
-        '--max-capacity', type=int, default=None, metavar='N',
-        help='Maximum capacity to test. Default: number of tasks.'
+        '--max-capacity',
+        type=int,
+        default=None,
+        metavar='N',
+        help='Maximum capacity to test. Default: number of tasks.',
     )
     sweep_parser.add_argument(
-        '--step', type=int, default=1, metavar='N',
-        help='Increment between tested capacities. Default: 1.'
+        '--step', type=int, default=1, metavar='N', help='Increment between tested capacities. Default: 1.'
     )
     sweep_parser.add_argument(
-        '--calibration-dir', action='append', default=[], metavar='PATH',
+        '--calibration-dir',
+        action='append',
+        default=[],
+        metavar='PATH',
         help='A run directory captured at a different value of the swept\n'
-             'resource, for duration calibration. Repeatable; 2+ enables\n'
-             'interpolation.'
+        'resource, for duration calibration. Repeatable; 2+ enables\n'
+        'interpolation.',
     )
     sweep_parser.add_argument(
-        '-f', '--format', type=str, choices=['text', 'json'], default='text',
-        help='Output format: text (human-readable), json (machine-readable). Default: text.'
+        '-f',
+        '--format',
+        type=str,
+        choices=['text', 'json'],
+        default='text',
+        help='Output format: text (human-readable), json (machine-readable). Default: text.',
     )
     sweep_parser.add_argument('-o', '--output', type=str, help='Write output to PATH instead of stdout.')
     sweep_parser.add_argument(
-        '-c', '--capacity', type=int, default=None, metavar='N',
-        help='Override system resource capacity for resources not being swept. Default: auto-detect from run-context.'
+        '-c',
+        '--capacity',
+        type=int,
+        default=None,
+        metavar='N',
+        help='Override system resource capacity for resources not being swept. Default: auto-detect from run-context.',
     )
     sweep_parser.add_argument('-v', '--verbose', action='store_true', help='Verbose (DEBUG) logging.')
     sweep_parser.add_argument('-q', '--quiet', action='store_true', help='Errors only.')
@@ -2362,9 +2357,9 @@ def _add_correlate_subcommand(subparsers) -> None:
         'correlate',
         help="Join a Plane 1 run with a Plane 2 native trace report and say what to fix",
         description='Join this run\'s whole-project analysis with a native (Plane 2) trace report '
-                    'of the same build, on element UID. Answers what neither plane can alone: '
-                    'whether the elements dominating the critical path are genuinely compute-bound '
-                    'or just badly parallelized (docs/backlog/scenarios/UX-51 - not spec-mandated).',
+        'of the same build, on element UID. Answers what neither plane can alone: '
+        'whether the elements dominating the critical path are genuinely compute-bound '
+        'or just badly parallelized (docs/backlog/scenarios/UX-51 - not spec-mandated).',
     )
     # `directory` (Plane 1) comes from _add_common_arguments; only the
     # Plane 2 artifact is specific to this command.
@@ -2384,13 +2379,18 @@ def _add_correlate_subcommand(subparsers) -> None:
                 'Default: text. No csv - the join has no tabular form.'
             )
     correlate_parser.add_argument(
-        '--cache-logs', default=None, metavar='PATH',
+        '--cache-logs',
+        default=None,
+        metavar='PATH',
         help="A Plane 3 report (`bga cache-logs --format json`) for the same\n"
-        "             project, supplying the per-element sandbox tax."
+        "             project, supplying the per-element sandbox tax.",
     )
     correlate_parser.add_argument(
-        'native_report', type=str, nargs='?', default=None,
-        help='Path to the JSON report written by `bga capture run` (Plane 2).'
+        'native_report',
+        type=str,
+        nargs='?',
+        default=None,
+        help='Path to the JSON report written by `bga capture run` (Plane 2).',
     )
     correlate_parser.set_defaults(func=cmd_correlate)
 
@@ -2400,41 +2400,52 @@ def _add_blast_subcommand(subparsers) -> None:
         'blast',
         help="What rebuilds if I touch this repository, path or element?",
         description='Answer the blast-radius question from whichever end you have '
-                    'it: a git url (every element sourcing that repository - the '
-                    'monorepo case, where one ref decides them all), a file or '
-                    'directory (the elements whose `local` sources stage it), or an '
-                    'element name (its downstream closure). Reports the direct '
-                    'elements, the closure split into kinds that build and kinds '
-                    'that assemble, and the measured cost from the named run. '
-                    'A question, not a gate: always exits 0.',
+        'it: a git url (every element sourcing that repository - the '
+        'monorepo case, where one ref decides them all), a file or '
+        'directory (the elements whose `local` sources stage it), or an '
+        'element name (its downstream closure). Reports the direct '
+        'elements, the closure split into kinds that build and kinds '
+        'that assemble, and the measured cost from the named run. '
+        'A question, not a gate: always exits 0.',
     )
     blast_parser.add_argument(
-        'target', metavar='TARGET',
+        'target',
+        metavar='TARGET',
         help='A git url, a path in the project, or an element name. Resolved in\n'
-             'that order, and the answer says which reading it used.'
+        'that order, and the answer says which reading it used.',
     )
     blast_parser.add_argument(
-        'run', nargs='?', default='@last', metavar='RUN',
-        help='The run to measure against; `@last` by default, same alias grammar\n'
-             'as every other command.'
+        'run',
+        nargs='?',
+        default='@last',
+        metavar='RUN',
+        help='The run to measure against; `@last` by default, same alias grammar\nas every other command.',
     )
     blast_parser.add_argument(
-        '--project', default=None, metavar='PATH',
-        help='The project a relative path is resolved against. Defaults to the\n'
-             'enclosing BuildStream project.'
+        '--project',
+        default=None,
+        metavar='PATH',
+        help='The project a relative path is resolved against. Defaults to the\nenclosing BuildStream project.',
     )
     blast_parser.add_argument(
-        '--no-cost', action='store_true',
+        '--no-cost',
+        action='store_true',
         help='Skip the measured rebuild time. The rest of the answer comes from\n'
-             'the graph and the source inventory alone, which on a large project\n'
-             'is the difference between a lookup and a full analysis.'
+        'the graph and the source inventory alone, which on a large project\n'
+        'is the difference between a lookup and a full analysis.',
     )
     blast_parser.add_argument(
-        '-f', '--format', choices=['text', 'json'], default='text',
-        help='Output format: text (human-readable), json (machine-readable).'
+        '-f',
+        '--format',
+        choices=['text', 'json'],
+        default='text',
+        help='Output format: text (human-readable), json (machine-readable).',
     )
     blast_parser.add_argument(
-        '-o', '--output', default=None, help='Write output to PATH instead of stdout.',
+        '-o',
+        '--output',
+        default=None,
+        help='Write output to PATH instead of stdout.',
     )
     blast_parser.set_defaults(func=cmd_blast)
 
@@ -2444,26 +2455,30 @@ def _add_whatif_subcommand(subparsers) -> None:
         'whatif',
         help="What would the build drop to if I fixed these?",
         description='Project the build for a chosen set of fixes: one '
-                    'longest-path recompute with each named element zeroed, '
-                    'never a sum of their individual savings (which is wrong '
-                    'the moment two share a chain). "Fixed" means instant, '
-                    'over this run\'s measured durations - an upper bound, '
-                    'not a forecast. A question, not a gate: always exits 0.',
+        'longest-path recompute with each named element zeroed, '
+        'never a sum of their individual savings (which is wrong '
+        'the moment two share a chain). "Fixed" means instant, '
+        'over this run\'s measured durations - an upper bound, '
+        'not a forecast. A question, not a gate: always exits 0.',
     )
     whatif_parser.add_argument(
-        'run', nargs='?', default='@last', metavar='RUN',
-        help='The run to project over; `@last` by default.'
+        'run', nargs='?', default='@last', metavar='RUN', help='The run to project over; `@last` by default.'
     )
     whatif_parser.add_argument(
-        '--element', action='append', default=[], metavar='UID',
-        help='An element to treat as fixed. Repeatable.'
+        '--element', action='append', default=[], metavar='UID', help='An element to treat as fixed. Repeatable.'
     )
     whatif_parser.add_argument(
-        '-f', '--format', choices=['text', 'json'], default='text',
-        help='Output format: text (human-readable), json (machine-readable).'
+        '-f',
+        '--format',
+        choices=['text', 'json'],
+        default='text',
+        help='Output format: text (human-readable), json (machine-readable).',
     )
     whatif_parser.add_argument(
-        '-o', '--output', default=None, help='Write output to PATH instead of stdout.',
+        '-o',
+        '--output',
+        default=None,
+        help='Write output to PATH instead of stdout.',
     )
     whatif_parser.set_defaults(func=cmd_whatif)
 
@@ -2473,25 +2488,33 @@ def _add_cache_trend_subcommand(subparsers) -> None:
         'cache-trend',
         help="Is the cache getting worse? A series of runs, not a pair",
         description='Read a chronological series of run directories and report the '
-                    'cache reading of each - hit ratio, transfer seconds, churn '
-                    'against its predecessor - plus a finding when the newest run '
-                    'leaves the band its trailing window describes '
-                    '(docs/backlog/scenarios/UX-0103 - not spec-mandated). In CI the '
-                    'series comes from `bga baseline`. The noise model is the one '
-                    '`bga compare --baseline-run` uses; there is deliberately not a '
-                    'second one.',
+        'cache reading of each - hit ratio, transfer seconds, churn '
+        'against its predecessor - plus a finding when the newest run '
+        'leaves the band its trailing window describes '
+        '(docs/backlog/scenarios/UX-0103 - not spec-mandated). In CI the '
+        'series comes from `bga baseline`. The noise model is the one '
+        '`bga compare --baseline-run` uses; there is deliberately not a '
+        'second one.',
     )
     cache_trend_parser.add_argument(
-        'run_dirs', nargs='+', metavar='RUN',
+        'run_dirs',
+        nargs='+',
+        metavar='RUN',
         help='Run directories, oldest first. Order is the caller\'s to know:\n'
-             'nothing in a run records which build came before it.'
+        'nothing in a run records which build came before it.',
     )
     cache_trend_parser.add_argument(
-        '-f', '--format', choices=['text', 'json'], default='text',
-        help='Output format: text (human-readable), json (machine-readable).'
+        '-f',
+        '--format',
+        choices=['text', 'json'],
+        default='text',
+        help='Output format: text (human-readable), json (machine-readable).',
     )
     cache_trend_parser.add_argument(
-        '-o', '--output', default=None, help='Write output to PATH instead of stdout.',
+        '-o',
+        '--output',
+        default=None,
+        help='Write output to PATH instead of stdout.',
     )
     cache_trend_parser.set_defaults(func=cmd_cache_trend)
 
@@ -2502,112 +2525,130 @@ def _add_compare_subcommand(subparsers) -> None:
         usage='bga compare [options] BASELINE CANDIDATE',
         help='Compare two runs and report a verdict.',
         description='Compare a baseline run against a candidate run: signed deltas in certified floors, '
-                    'efficiency score, and attribution, plus an improved/regressed/no-significant-change '
-                    'verdict gated on confidence and graph comparability (docs/backlog/scenarios/UX-01 - not spec-mandated).',
+        'efficiency score, and attribution, plus an improved/regressed/no-significant-change '
+        'verdict gated on confidence and graph comparability (docs/backlog/scenarios/UX-01 - not spec-mandated).',
     )
     compare_parser.add_argument('baseline', type=str, help='Path to the baseline (before) run directory.')
     compare_parser.add_argument('candidate', type=str, help='Path to the candidate (after) run directory.')
     compare_parser.add_argument(
-        '-f', '--format', type=str, choices=['text', 'json', 'ci-comment'],
+        '-f',
+        '--format',
+        type=str,
+        choices=['text', 'json', 'ci-comment'],
         default='text',
-        help='Output format. Default: text.'
+        help='Output format. Default: text.',
     )
     compare_parser.add_argument(
-        '--native-report', type=str, default=None, metavar='PATH',
-        help='Candidate Plane 2 report (adds unused-dependency detail).'
+        '--native-report',
+        type=str,
+        default=None,
+        metavar='PATH',
+        help='Candidate Plane 2 report (adds unused-dependency detail).',
     )
     compare_parser.add_argument('-o', '--output', type=str, help='Write output to PATH instead of stdout.')
     compare_parser.add_argument(
-        '-c', '--capacity', type=int, default=None, metavar='N',
-        help='Override resource capacity for both runs.'
+        '-c', '--capacity', type=int, default=None, metavar='N', help='Override resource capacity for both runs.'
     )
     compare_parser.add_argument(
-        '--fail-on-inefficient-additions', action='store_true',
-        help='CI gate: fail on inefficiently added work.'
+        '--fail-on-inefficient-additions', action='store_true', help='CI gate: fail on inefficiently added work.'
     )
     compare_parser.add_argument(
-        '--max-addition-stretch', type=float, default=DEFAULT_MAX_ADDITION_STRETCH,
+        '--max-addition-stretch',
+        type=float,
+        default=DEFAULT_MAX_ADDITION_STRETCH,
         metavar='RATIO',
-        help='Threshold for the addition gate.'
+        help='Threshold for the addition gate.',
     )
     compare_parser.add_argument(
-        '--allow-mismatch', action='store_true',
-        help='Compare even if the runs are not comparable.'
+        '--allow-mismatch', action='store_true', help='Compare even if the runs are not comparable.'
     )
     compare_parser.add_argument(
-        '--allow-cross-host', action='store_true',
+        '--allow-cross-host',
+        action='store_true',
         help='UX-186: let the CI gates pass on runs measured on different '
-             'machines. For a farm of uniform runners, opted into once.'
+        'machines. For a farm of uniform runners, opted into once.',
     )
     compare_parser.add_argument(
-        '--blend', action='store_true',
+        '--blend',
+        action='store_true',
         help='UX-898/UX-903: let the CI gates pass on runs declaring '
-             'different build types or variants. The same word `bga '
-             'snapshot --aggregate` already uses for taking a mixed claim '
-             'yourself.'
+        'different build types or variants. The same word `bga '
+        'snapshot --aggregate` already uses for taking a mixed claim '
+        'yourself.',
     )
     compare_parser.add_argument('-v', '--verbose', action='store_true', help='Verbose (DEBUG) logging.')
     compare_parser.add_argument('-q', '--quiet', action='store_true', help='Errors only.')
     compare_parser.add_argument('--log-file', type=str, default=None, metavar='PATH', help='Also write logs to PATH.')
     compare_parser.add_argument(
-        '--fail-on-regression', action='store_true',
-        help=f'CI gate: exit {EXIT_CODE_REGRESSION} if slower.'
+        '--fail-on-regression', action='store_true', help=f'CI gate: exit {EXIT_CODE_REGRESSION} if slower.'
     )
     compare_parser.add_argument(
-        '--fail-on-efficiency-regression', action='store_true',
-        help=f'CI gate: exit {EXIT_CODE_EFFICIENCY_REGRESSION} if less efficient.'
+        '--fail-on-efficiency-regression',
+        action='store_true',
+        help=f'CI gate: exit {EXIT_CODE_EFFICIENCY_REGRESSION} if less efficient.',
     )
     compare_parser.add_argument(
-        '--max-efficiency-drop', type=float, default=None, metavar='PP',
-        help='Occupancy drop allowed, in percentage points.'
+        '--max-efficiency-drop',
+        type=float,
+        default=None,
+        metavar='PP',
+        help='Occupancy drop allowed, in percentage points.',
     )
     compare_parser.add_argument(
-        '--min-efficiency', type=float, default=None, metavar='RATIO',
-        help=f'CI gate: exit {EXIT_CODE_EFFICIENCY_REGRESSION} below RATIO occupancy.'
+        '--min-efficiency',
+        type=float,
+        default=None,
+        metavar='RATIO',
+        help=f'CI gate: exit {EXIT_CODE_EFFICIENCY_REGRESSION} below RATIO occupancy.',
     )
     compare_parser.add_argument(
-        '--require-efficiency-signal', action='store_true',
-        help=f'Exit {EXIT_CODE_SIGNAL_UNAVAILABLE} if the signal is missing.'
+        '--require-efficiency-signal',
+        action='store_true',
+        help=f'Exit {EXIT_CODE_SIGNAL_UNAVAILABLE} if the signal is missing.',
     )
     compare_parser.add_argument(
-        '--baseline-run', action='append', metavar='PATH',
-        help='Extra baseline run; repeat to form a noise band.'
+        '--baseline-run', action='append', metavar='PATH', help='Extra baseline run; repeat to form a noise band.'
     )
     compare_parser.add_argument(
-        '--band-k', type=float, default=DEFAULT_BAND_K, metavar='K',
-        help='Noise-band width, in scaled-MAD units.'
+        '--band-k', type=float, default=DEFAULT_BAND_K, metavar='K', help='Noise-band width, in scaled-MAD units.'
     )
     compare_parser.add_argument(
-        '--band-from-class', nargs='?', type=int, default=None,
-        const=DEFAULT_BAND_WINDOW, metavar='N',
+        '--band-from-class',
+        nargs='?',
+        type=int,
+        default=None,
+        const=DEFAULT_BAND_WINDOW,
+        metavar='N',
         help=f'Band from the last N (default {DEFAULT_BAND_WINDOW}) store runs '
-             f'of the candidate\'s own class; exit {EXIT_CODE_BAND_UNAVAILABLE} '
-             f'below {MIN_BASELINE_RUNS}.'
+        f'of the candidate\'s own class; exit {EXIT_CODE_BAND_UNAVAILABLE} '
+        f'below {MIN_BASELINE_RUNS}.',
     )
     # UX-104 item 2: a memory *note*, not a gate. Two flags rather than
     # one because the envelope is a fact about a run and the two runs are
     # independent captures - inferring the baseline's Plane 2 report from
     # the candidate's would be comparing a run against itself.
     compare_parser.add_argument(
-        '--baseline-plane2', default=None, metavar='PATH',
-        help='Baseline Plane 2 report (adds memory detail).'
+        '--baseline-plane2', default=None, metavar='PATH', help='Baseline Plane 2 report (adds memory detail).'
     )
     compare_parser.add_argument(
-        '--candidate-plane2', default=None, metavar='PATH',
+        '--candidate-plane2',
+        default=None,
+        metavar='PATH',
         help='UX-104: the candidate run\'s Plane 2 report. See --baseline-plane2.',
     )
     compare_parser.add_argument(
-        '--reanalyse', action='store_true',
-        help='Analyze both runs, never reading a published analyze.json.'
+        '--reanalyse', action='store_true', help='Analyze both runs, never reading a published analyze.json.'
     )
     compare_parser.add_argument(
-        '--fail-on-low-confidence', action='store_true',
-        help=f'CI gate: exit {EXIT_CODE_REGRESSION} on low confidence.'
+        '--fail-on-low-confidence', action='store_true', help=f'CI gate: exit {EXIT_CODE_REGRESSION} on low confidence.'
     )
     compare_parser.add_argument(
-        '--regression-threshold', type=float, default=None, metavar='PCT',
+        '--regression-threshold',
+        type=float,
+        default=None,
+        metavar='PCT',
         help='Percentage-point threshold for --fail-on-regression (default: the\n'
-             'same 1%% significance rule the verdict uses).'
+        'same 1%% significance rule the verdict uses).',
     )
     compare_parser.set_defaults(func=cmd_compare)
 
@@ -2620,38 +2661,40 @@ def _add_bundle_subcommand(subparsers) -> None:
     # switches that already read and write a project's own store.
     bundle_parser = subparsers.add_parser(
         'bundle',
-        usage='bga bundle --export STAMP [-o FILE] | --load FILE | '
-              '--resolve --key-fingerprint FP',
+        usage='bga bundle --export STAMP [-o FILE] | --load FILE | --resolve --key-fingerprint FP',
         help='Pack a capture into one file, load one, or resolve pseudonyms.',
         description='Pack one snapshot\'s whole capture - the run directory and the '
-                    'Plane 2 report, raw trace, host samples and analysis beside it - '
-                    'into a single archive to carry to another machine, and load one '
-                    'back into this project\'s store under its own stamp. Each member '
-                    'carries its contract version, so a bundle from a newer bga is '
-                    'refused rather than half-read. --resolve rewrites pseudonyms read '
-                    'from stdin back to real names, entirely on this machine.',
+        'Plane 2 report, raw trace, host samples and analysis beside it - '
+        'into a single archive to carry to another machine, and load one '
+        'back into this project\'s store under its own stamp. Each member '
+        'carries its contract version, so a bundle from a newer bga is '
+        'refused rather than half-read. --resolve rewrites pseudonyms read '
+        'from stdin back to real names, entirely on this machine.',
     )
     bundle_group = bundle_parser.add_mutually_exclusive_group(required=True)
+    bundle_group.add_argument('--export', metavar='STAMP', help='Snapshot to pack: a stamp, @last/@prev, or a path.')
+    bundle_group.add_argument('--load', metavar='FILE', help='Bundle to unpack into this project\'s store.')
     bundle_group.add_argument(
-        '--export', metavar='STAMP',
-        help='Snapshot to pack: a stamp, @last/@prev, or a path.')
-    bundle_group.add_argument(
-        '--load', metavar='FILE',
-        help='Bundle to unpack into this project\'s store.')
-    bundle_group.add_argument(
-        '--resolve', action='store_true',
-        help='Rewrite pseudonyms read from stdin back to real names.')
+        '--resolve', action='store_true', help='Rewrite pseudonyms read from stdin back to real names.'
+    )
     bundle_parser.add_argument(
-        '-o', '--output', metavar='FILE', default=None,
-        help='Where to write the bundle. Default: <stamp>.bga-bundle.tar.gz.')
+        '-o',
+        '--output',
+        metavar='FILE',
+        default=None,
+        help='Where to write the bundle. Default: <stamp>.bga-bundle.tar.gz.',
+    )
     bundle_parser.add_argument(
-        '--no-plane2', action='store_true',
-        help='Leave the Plane 2 capture out. Says what it omitted, and\n'
-             'the manifest records it so --load says so too.')
+        '--no-plane2',
+        action='store_true',
+        help='Leave the Plane 2 capture out. Says what it omitted, and\nthe manifest records it so --load says so too.',
+    )
     bundle_parser.add_argument(
-        '--key-fingerprint', metavar='FP', default=None,
-        help='With --resolve: the bundle\'s key fingerprint (from its\n'
-             'manifest); refused on mismatch.')
+        '--key-fingerprint',
+        metavar='FP',
+        default=None,
+        help='With --resolve: the bundle\'s key fingerprint (from its\nmanifest); refused on mismatch.',
+    )
     bundle_parser.set_defaults(func=cmd_bundle)
 
 
@@ -2695,22 +2738,18 @@ def create_parser() -> argparse.ArgumentParser:
             # UX-67: the aliases are listed here rather than registered as
             # argparse subcommands, because registering them would import
             # every tool to build the parser - on every `bga analyze`.
-            _tool_help() + "\n\n"
-            "See docs/guides/cli.md for detailed usage examples and workflows."
+            _tool_help() + "\n\nSee docs/guides/cli.md for detailed usage examples and workflows."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
     parser.add_argument(
-        '--version',
-        action='version',
-        version=f'%(prog)s {__version__}',
-        help='Show program version and exit'
+        '--version', action='version', version=f'%(prog)s {__version__}', help='Show program version and exit'
     )
 
     subparsers = parser.add_subparsers(
-        dest='command', metavar='COMMAND', help='Available commands',
-        parser_class=_CompactSubParser)
+        dest='command', metavar='COMMAND', help='Available commands', parser_class=_CompactSubParser
+    )
     # UX-191: completion offers the aliases too - see
     # `_command_completer`. Attached rather than registered, so the
     # parser stays exactly as cheap to build as it was.
@@ -2810,11 +2849,13 @@ _EMITS_NO_CONTRACT = {}
 #: command -> id mapping cannot answer it. First match wins, and the
 #: order is the order the flags are declared.
 _SCHEMA_BY_FLAG = {
-    "snapshot": (("--aggregate", schemas.STORE_AGGREGATE),
-                 # `UX-613`: three documents now, and the model is the
-                 # one whose flag carries a value.
-                 ("--capacity", schemas.CAPACITY_MODEL),
-                 ("--list", schemas.STORE)),
+    "snapshot": (
+        ("--aggregate", schemas.STORE_AGGREGATE),
+        # `UX-613`: three documents now, and the model is the
+        # one whose flag carries a value.
+        ("--capacity", schemas.CAPACITY_MODEL),
+        ("--list", schemas.STORE),
+    ),
 }
 
 
@@ -2892,7 +2933,9 @@ def _capture_builders(wrapped_cmd: list) -> Optional[int]:
 
 
 def resolve_jobserver_ceiling(
-    value: str, wrapped_cmd: list, cpu_count: Optional[int] = None,
+    value: str,
+    wrapped_cmd: list,
+    cpu_count: Optional[int] = None,
 ) -> tuple[Optional[str], Optional[int], Optional[int]]:
     """`bga capture --jobserver auto|N|off` (UX-851) -> `(mode, ceiling,
     seed)`, the tracer's own `--jobserver N` never sees `auto`/`off`.
@@ -2942,8 +2985,7 @@ def set_jobserver_mode_env(mode: Optional[str]) -> None:
     os.environ['BGA_JOBSERVER_MODE'] = mode or 'off'
 
 
-def _jobserver_argv_tokens(mode: Optional[str], ceiling: Optional[int],
-                           seed: Optional[int], eq: bool) -> list:
+def _jobserver_argv_tokens(mode: Optional[str], ceiling: Optional[int], seed: Optional[int], eq: bool) -> list:
     """UX-858: the `--jobserver`/`--jobserver-seed` tokens a resolved
     mode translates to - `[]` for `off`, `=`-joined when `eq` (the
     `--jobserver=N` spelling). Split out of `_translate_capture_jobserver`
@@ -2988,7 +3030,7 @@ def _translate_capture_jobserver(argv: list) -> list:
     rest = argv[2:]
     if '--' in rest:
         split = rest.index('--')
-        tracer_args, wrapped_cmd = rest[:split], rest[split + 1:]
+        tracer_args, wrapped_cmd = rest[:split], rest[split + 1 :]
         has_sep = True
     else:
         tracer_args, wrapped_cmd = rest, []
@@ -3040,7 +3082,7 @@ def _translate_capture_jobserver_auth_override(argv: list) -> list:
     rest = argv[2:]
     if '--' in rest:
         split = rest.index('--')
-        tracer_args, wrapped_cmd = rest[:split], rest[split + 1:]
+        tracer_args, wrapped_cmd = rest[:split], rest[split + 1 :]
         has_sep = True
     else:
         tracer_args, wrapped_cmd = rest, []
@@ -3080,7 +3122,7 @@ def _translate_capture_lto_cap(argv: list) -> list:
     rest = argv[2:]
     if '--' in rest:
         split = rest.index('--')
-        tracer_args, wrapped_cmd = rest[:split], rest[split + 1:]
+        tracer_args, wrapped_cmd = rest[:split], rest[split + 1 :]
         has_sep = True
     else:
         tracer_args, wrapped_cmd = rest, []
@@ -3122,7 +3164,7 @@ def _translate_capture_wrapper_dir(argv: list) -> list:
     rest = argv[2:]
     if '--' in rest:
         split = rest.index('--')
-        tracer_args, wrapped_cmd = rest[:split], rest[split + 1:]
+        tracer_args, wrapped_cmd = rest[:split], rest[split + 1 :]
         has_sep = True
     else:
         tracer_args, wrapped_cmd = rest, []
@@ -3206,11 +3248,11 @@ def _refuse_schema(command, argv) -> int:
         answerable += [f"{name} {flag}" for flag, _ in pairs]
     lines = [f"Error: `--schema` is available on {', '.join(sorted(answerable))}."]
     if command in _SCHEMA_BY_FLAG:
-        offered = ", ".join(f"`--{f.lstrip('-')}`"
-                            for f, _ in _SCHEMA_BY_FLAG[command])
+        offered = ", ".join(f"`--{f.lstrip('-')}`" for f, _ in _SCHEMA_BY_FLAG[command])
         lines.append(
             f"  `bga {command}` prints a document only with {offered}; "
-            f"without one it writes a run directory and prints a report.")
+            f"without one it writes a run directory and prints a report."
+        )
     elif command and contracts.CONTRACT_ID.match(command):
         # UX-328: `bga --schema analyze/v2` is the form `docs/README.md`
         # promised and this tool never had. Saying "analyze/v2 produces
@@ -3219,18 +3261,20 @@ def _refuse_schema(command, argv) -> int:
         owner = _command_emitting(command)
         lines.append(
             f"  `{command}` is a contract id, not a command. "
-            + (f"Ask the command that emits it: `bga {owner} --schema`."
-               if owner else
-               "It is written into a run directory rather than printed, "
-               "so no command prints its contract."))
+            + (
+                f"Ask the command that emits it: `bga {owner} --schema`."
+                if owner
+                else "It is written into a run directory rather than printed, so no command prints its contract."
+            )
+        )
     elif command in _EMITS_NO_CONTRACT:
         lines.append(
             f"  `bga {command} --format json` prints "
             f"{_EMITS_NO_CONTRACT[command]}, and that document carries no "
-            f"schema id yet - so there is no contract to print. UX-339.")
+            f"schema id yet - so there is no contract to print. UX-339."
+        )
     else:
-        lines.append(f"  {command or 'no command'} produces no versioned "
-                     f"JSON output.")
+        lines.append(f"  {command or 'no command'} produces no versioned JSON output.")
     print("\n".join(lines), file=sys.stderr)
     return 2
 
@@ -3337,6 +3381,7 @@ def _run(argv: Optional[list[str]] = None) -> int:
     raw_argv = _translate_capture_wrapper_dir(raw_argv)
 
     from .tools_dispatch import dispatch
+
     tool_exit = dispatch(raw_argv)
     if tool_exit is not None:
         return tool_exit

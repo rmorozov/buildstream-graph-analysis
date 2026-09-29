@@ -17,6 +17,7 @@ element exactly *one* task, where max and sum coincide. Real captures
 never do: every element has at least a FETCH and a BUILD. These tests
 exist to give the suite the shape that would have caught it.
 """
+
 import json
 import subprocess
 import sys
@@ -51,9 +52,7 @@ def test_task_order_does_not_change_the_result():
     fetch = _task("core.bst", TaskKind.FETCH, 500_000)
     build = _task("core.bst", TaskKind.BUILD, 3_000_000)
 
-    assert compute_element_durations([fetch, build]) == compute_element_durations(
-        [build, fetch]
-    )
+    assert compute_element_durations([fetch, build]) == compute_element_durations([build, fetch])
 
 
 def test_a_fetch_longer_than_the_build_still_yields_the_longest_task():
@@ -105,9 +104,10 @@ def multi_kind_report():
     which is the only checked-in fixture whose elements each have
     several task kinds (9 BUILD, 8 TRACK, 7 FETCH across 9 elements)."""
     result = subprocess.run(
-        [sys.executable, "-m", "bga.cli", "analyze", "-d",
-         "tests/fixtures/synthetic_multi_subproject", "-f", "json"],
-        capture_output=True, text=True, check=True,
+        [sys.executable, "-m", "bga.cli", "analyze", "-d", "tests/fixtures/synthetic_multi_subproject", "-f", "json"],
+        capture_output=True,
+        text=True,
+        check=True,
     )
     return json.loads(result.stdout)
 
@@ -115,16 +115,12 @@ def multi_kind_report():
 def test_sensitivity_critical_path_agrees_with_t_infinity(multi_kind_report):
     """UX-52's acceptance criterion, on a fixture with more than one task
     per element. Before UX-53 this read 144_500_000 against 118_000_000."""
-    assert (
-        multi_kind_report["sensitivity"]["critical_path_us"]
-        == multi_kind_report["floors"]["t_infinity_observed"]
-    )
+    assert multi_kind_report["sensitivity"]["critical_path_us"] == multi_kind_report["floors"]["t_infinity_observed"]
 
 
 def test_critical_path_length_agrees_with_the_named_path(multi_kind_report):
     assert multi_kind_report["graph_metrics"]["critical_path_length"] == len(
-        [e["element_uid"]
-         for e in multi_kind_report["critical_path_detail"]]
+        [e["element_uid"] for e in multi_kind_report["critical_path_detail"]]
     )
 
 

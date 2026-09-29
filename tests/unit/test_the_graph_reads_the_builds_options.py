@@ -2,6 +2,7 @@
 build's own graph-affecting `bst` global options - `-o variant b` builds
 graph variant B, not the default - and a reused one is only ever B's.
 """
+
 import json
 import os
 import shutil
@@ -26,14 +27,41 @@ _LOG = (
 
 # --- Which options reach `bst show` (hermetic) ----------------------------
 
+
 def test_only_the_graph_affecting_options_are_kept_in_order():
-    cmd = ["bst", "--no-colors", "--max-jobs", "3", "-o", "variant", "b",
-           "--log-file", "-o", "--config", "c.yml", "-C", "sub", "--strict",
-           "--directory=sub2", "--builders", "2", "build", "app.bst"]
+    cmd = [
+        "bst",
+        "--no-colors",
+        "--max-jobs",
+        "3",
+        "-o",
+        "variant",
+        "b",
+        "--log-file",
+        "-o",
+        "--config",
+        "c.yml",
+        "-C",
+        "sub",
+        "--strict",
+        "--directory=sub2",
+        "--builders",
+        "2",
+        "build",
+        "app.bst",
+    ]
     opts = tracer._bst_global_options(cmd)[0]
     assert mod._graph_affecting_options(opts) == [
-        "-o", "variant", "b", "--config", "c.yml", "-C", "sub", "--strict",
-        "--directory=sub2"]
+        "-o",
+        "variant",
+        "b",
+        "--config",
+        "c.yml",
+        "-C",
+        "sub",
+        "--strict",
+        "--directory=sub2",
+    ]
 
 
 def test_extract_run_hands_the_options_to_bst_show_with_one_max_jobs(tmp_path, monkeypatch):
@@ -41,30 +69,60 @@ def test_extract_run_hands_the_options_to_bst_show_with_one_max_jobs(tmp_path, m
 
     def _fake(project_dir, targets, bst_bin="bst", bst_options=None):
         calls.append(list(bst_options or []))
-        return {"elements": [{"uid": "app.bst", "cache_key": "k", "requested_target": True,
-                              "max_jobs": 2, "notparallel": None, "element_kind": "manual"}],
-                "dependencies": []}
+        return {
+            "elements": [
+                {
+                    "uid": "app.bst",
+                    "cache_key": "k",
+                    "requested_target": True,
+                    "max_jobs": 2,
+                    "notparallel": None,
+                    "element_kind": "manual",
+                }
+            ],
+            "dependencies": [],
+        }
 
     monkeypatch.setattr(mod, "extract_graph", _fake)
     cmd = ["bst", "--max-jobs", "2", "-o", "variant", "b", "build", "app.bst"]
     log = tmp_path / "build.log"
     log.write_text(_LOG.format(cmd=" ".join(cmd)))
-    mod.extract_run(str(tmp_path), str(log), str(tmp_path / "run"), log_format="wrapped",
-                    bst_global_options=tracer._bst_global_options(cmd)[0])
+    mod.extract_run(
+        str(tmp_path),
+        str(log),
+        str(tmp_path / "run"),
+        log_format="wrapped",
+        bst_global_options=tracer._bst_global_options(cmd)[0],
+    )
     assert calls == [["-o", "variant", "b", "--max-jobs", "2"]]
 
 
 # --- Real bst, two variants (bst-marked) ----------------------------------
 
+
 def _option_aware_graph(global_opts):
     """An independent `bst <opts> show --deps all`: the element set, each
     key, and every (predecessor, successor) pair."""
     import yaml
+
     proc = subprocess.run(
-        ["bst", *global_opts, "--no-colors", "show", "--deps", "all", "--format",
-         "%{name}\x1e%{key}\x1e%{build-deps}\x1e%{runtime-deps}\x1d", "app.bst"],
-        cwd=FIXTURE_PROJECT, capture_output=True, text=True, check=True,
-        stdin=subprocess.DEVNULL)
+        [
+            "bst",
+            *global_opts,
+            "--no-colors",
+            "show",
+            "--deps",
+            "all",
+            "--format",
+            "%{name}\x1e%{key}\x1e%{build-deps}\x1e%{runtime-deps}\x1d",
+            "app.bst",
+        ],
+        cwd=FIXTURE_PROJECT,
+        capture_output=True,
+        text=True,
+        check=True,
+        stdin=subprocess.DEVNULL,
+    )
     elements, edges = {}, set()
     for record in proc.stdout.split("\x1d"):
         if not record.strip():
@@ -79,8 +137,10 @@ def _option_aware_graph(global_opts):
 def _graph_of(run_dir):
     with open(os.path.join(run_dir, "graph.json"), encoding="utf-8") as f:
         graph = json.load(f)
-    return ({e["uid"]: e["cache_key"] for e in graph["elements"]},
-            {(d["predecessor"], d["successor"]) for d in graph["dependencies"]})
+    return (
+        {e["uid"]: e["cache_key"] for e in graph["elements"]},
+        {(d["predecessor"], d["successor"]) for d in graph["dependencies"]},
+    )
 
 
 @pytest.mark.bst
@@ -98,10 +158,14 @@ def test_each_variant_captures_its_own_graph_and_reuses_only_its_own(tmp_path):
         run_dir = str(tmp_path / name)
         tracer.run_traced_build(FIXTURE_PROJECT, cmd, raw_log, wrapped_log_path=wrapped_log)
         summary = mod.extract_run(
-            FIXTURE_PROJECT, wrapped_log, run_dir, log_format="wrapped",
+            FIXTURE_PROJECT,
+            wrapped_log,
+            run_dir,
+            log_format="wrapped",
             cache_key_set=tracer.read_cache_key_set_from_plane1_log(wrapped_log),
             bst_global_options=tracer._bst_global_options(cmd)[0],
-            baseline_run_dir=baseline)
+            baseline_run_dir=baseline,
+        )
         return summary, run_dir
 
     with bst_env(tmp_path / "home"):

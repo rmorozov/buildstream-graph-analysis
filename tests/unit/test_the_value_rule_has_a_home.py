@@ -24,6 +24,7 @@ later round moves without it. Both directions are checked: every
 constant this rule rests on is named, and every constant named still
 exists in the module.
 """
+
 import pathlib
 import re
 
@@ -55,8 +56,7 @@ def _chapter():
 
 def _exported_constants():
     """What the viewer actually exports as a number."""
-    source = "\n".join((REPO / "bga/viewer" / name).read_text(encoding="utf-8")
-                       for name in VIEWER_MODULES)
+    source = "\n".join((REPO / "bga/viewer" / name).read_text(encoding="utf-8") for name in VIEWER_MODULES)
     return dict(re.findall(r"^export const ([A-Z_]+) = (\d+);", source, re.M))
 
 
@@ -66,31 +66,30 @@ class TestTheRuleIsWhereASchemaAuthorReads:
         assert "width, not depth" in chapter, (
             "the architecture's viewer chapter describes the view-hints and "
             "not what becomes of a field's value - the rule UX-267 shipped "
-            "governs every object- or array-valued field in every schema")
+            "governs every object- or array-valued field in every schema"
+        )
 
     def test_it_names_all_three_renderings(self):
         """A rule with one branch described is a rule a reader will
         guess the rest of."""
         chapter = _chapter().lower()
         for rendering in ("inline", "table", "fold"):
-            assert rendering in chapter, (
-                f"the value rule is stated without naming the {rendering!r} "
-                f"case")
+            assert rendering in chapter, f"the value rule is stated without naming the {rendering!r} case"
 
     def test_it_says_depth_is_not_the_criterion(self):
         """The half a reader gets wrong on their own: nesting looks like
         the obvious criterion and is not the one."""
         assert "Depth is deliberately not the criterion" in _chapter(), (
-            "the chapter states the rule without saying what it is a rule "
-            "*instead of*")
+            "the chapter states the rule without saying what it is a rule *instead of*"
+        )
 
 
 class TestTheThresholdsAreNamedAndNotCopied:
     @pytest.mark.parametrize("constant", THRESHOLDS)
     def test_the_chapter_names_the_constant(self, constant):
         assert constant in _chapter(), (
-            f"the value rule is stated without naming {constant}, so a "
-            f"reader cannot find the threshold it rests on")
+            f"the value rule is stated without naming {constant}, so a reader cannot find the threshold it rests on"
+        )
 
     @pytest.mark.parametrize("constant", THRESHOLDS)
     def test_the_constant_exists(self, constant):
@@ -98,8 +97,8 @@ class TestTheThresholdsAreNamedAndNotCopied:
         no longer exports is worse than one that repeated the number,
         because it reads as checkable and is not."""
         assert constant in _exported_constants(), (
-            f"the architecture names {constant}, which {VIEWER_MODULES} "
-            f"does not export as a number")
+            f"the architecture names {constant}, which {VIEWER_MODULES} does not export as a number"
+        )
 
     def test_the_chapter_does_not_restate_the_numbers(self):
         """The reason clause 2 asked for names: a copied number is a
@@ -109,14 +108,14 @@ class TestTheThresholdsAreNamedAndNotCopied:
         which would fail on `UX-267` and on round 36."""
         chapter = _chapter()
         restated = [
-            phrase for phrase in re.findall(
-                r"\b(\d+)\s+(?:fields?|items?|entries|characters?|chars?)\b",
-                chapter)
+            phrase
+            for phrase in re.findall(r"\b(\d+)\s+(?:fields?|items?|entries|characters?|chars?)\b", chapter)
             if phrase in set(_exported_constants().values())
         ]
         assert restated == [], (
             f"the chapter restates threshold value(s) {restated} that the "
-            f"exported constants already carry - name the constant instead")
+            f"exported constants already carry - name the constant instead"
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

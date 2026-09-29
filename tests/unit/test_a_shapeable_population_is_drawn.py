@@ -48,6 +48,7 @@ There is no per-finding magnitude to rank, and inventing one would be
 the page doing analysis (`UX-193`'s rule that the page chooses
 nothing).
 """
+
 import json
 import os
 import pathlib
@@ -80,17 +81,19 @@ SHAPES = {
         "`UX-361`'s instrument: eight published buckets of a published "
         "total, summing to it exactly (43,200,000 + 2,717,000 + 216,000 "
         "= 46,133,000 = `total_duration_us`), so the page lays out "
-        "numbers it was handed."),
+        "numbers it was handed.",
+    ),
     "blast_radius_distribution": (
         "density strip",
-        "`UX-303`'s instrument, declared by `bga:distribution` since "
-        "`UX-260` published the percentiles."),
+        "`UX-303`'s instrument, declared by `bga:distribution` since `UX-260` published the percentiles.",
+    ),
     "fan_in_distribution": (
         "density strip",
         "`UX-681`'s mirror of the row above, declared by "
         "`bga:distribution` the same way and drawn by the same "
         "control - one instrument over two populations, which is why "
-        "the mirror cost no new shape."),
+        "the mirror cost no new shape.",
+    ),
     "by_binary": (
         None,
         "A ranked map - one call count per binary name. `UX-411` "
@@ -101,7 +104,8 @@ SHAPES = {
         "everywhere - a sortable table with a Top-N preset, a filter "
         "and `columnStrip` as its annotation-grade shape. A second "
         "answer to an answered question is what `UX-305`'s emphasis "
-        "budget forbids. See RANKED_MAP below."),
+        "budget forbids. See RANKED_MAP below.",
+    ),
     "wall_clock_share_us": (
         None,
         "The same shape as `by_binary` - one duration per task uid, "
@@ -109,7 +113,8 @@ SHAPES = {
         "`UX-411` closed as a decision, not as a fifth shape. The "
         "population grows with the payload rather than with the run, "
         "so a drawn bar per key is unbounded by construction, which "
-        "is the volume `UX-360`'s budget exists to prevent."),
+        "is the volume `UX-360`'s budget exists to prevent.",
+    ),
 }
 
 
@@ -169,10 +174,13 @@ def _quantities(value, node):
 def shapeable():
     """`{section: (count, quantity)}` for the fixture's own payload."""
     done = subprocess.run(
-        [sys.executable, "-m", "bga.cli", "analyze", str(RUN),
-         "--format", "json"],
-        capture_output=True, text=True, cwd=REPO, timeout=180,
-        env=dict(os.environ, PYTHONPATH=str(REPO)))
+        [sys.executable, "-m", "bga.cli", "analyze", str(RUN), "--format", "json"],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=180,
+        env=dict(os.environ, PYTHONPATH=str(REPO)),
+    )
     assert done.returncode == 0, done.stderr[-3000:]
     payload = json.loads(done.stdout)
     properties = schemas.schema(schemas.ANALYZE)["properties"]
@@ -196,13 +204,14 @@ class TestTheCensusIsTheAnswer:
         assert unanswered == [], (
             f"{len(unanswered)} section(s) publish one quantity over "
             f"{POPULATION_FLOOR}+ values and neither draw nor say why: "
-            f"{[(k, shapeable[k]) for k in unanswered]}")
+            f"{[(k, shapeable[k]) for k in unanswered]}"
+        )
 
     def test_the_census_names_nothing_that_is_not_shapeable(self, shapeable):
         stale = sorted(set(SHAPES) - set(shapeable))
         assert stale == [], (
-            f"the census answers for sections that no longer publish a "
-            f"single-quantity population: {stale}")
+            f"the census answers for sections that no longer publish a single-quantity population: {stale}"
+        )
 
     def test_a_section_with_no_shape_says_why(self):
         for key, (instrument, why) in SHAPES.items():
@@ -211,7 +220,8 @@ class TestTheCensusIsTheAnswer:
             assert len(why.split()) >= 15, (
                 f"`{key}` is recorded as having no shape in {len(why.split())} "
                 f"words: {why!r}. The two-state answer is only worth having "
-                f"if the second state is a reason")
+                f"if the second state is a reason"
+            )
 
     def test_the_four_instruments_are_the_four_that_exist(self):
         """No fifth shape landed here, which is the Out of Scope.
@@ -221,10 +231,8 @@ class TestTheCensusIsTheAnswer:
         the decision's guard as well as the item's: a fifth name
         appearing here without that reasoning being revisited fails.
         """
-        drawn = {instrument for instrument, _why in SHAPES.values()
-                 if instrument}
-        assert drawn <= {"sparkline", "density strip", "decomposition",
-                         "interval"}, drawn
+        drawn = {instrument for instrument, _why in SHAPES.values() if instrument}
+        assert drawn <= {"sparkline", "density strip", "decomposition", "interval"}, drawn
 
     def test_the_ranked_maps_are_decided_rather_than_pending(self):
         """`UX-411` closes as a decision, and a decision that is not
@@ -238,9 +246,7 @@ class TestTheCensusIsTheAnswer:
             instrument, why = SHAPES[key]
             assert instrument is None, (key, instrument)
             assert "UX-411" in why, why
-            assert "needs a fifth shape" not in why, (
-                f"`{key}`'s reason still defers the decision UX-411 made: "
-                f"{why!r}")
+            assert "needs a fifth shape" not in why, f"`{key}`'s reason still defers the decision UX-411 made: {why!r}"
 
 
 class TestFindingsCannotTakeTheShapeTheFilingNames:
@@ -248,21 +254,25 @@ class TestFindingsCannotTakeTheShapeTheFilingNames:
 
     def test_a_finding_has_no_magnitude_to_rank(self, shapeable):
         done = subprocess.run(
-            [sys.executable, "-m", "bga.cli", "analyze", str(RUN),
-             "--format", "json"],
-            capture_output=True, text=True, cwd=REPO, timeout=180,
-            env=dict(os.environ, PYTHONPATH=str(REPO)))
+            [sys.executable, "-m", "bga.cli", "analyze", str(RUN), "--format", "json"],
+            capture_output=True,
+            text=True,
+            cwd=REPO,
+            timeout=180,
+            env=dict(os.environ, PYTHONPATH=str(REPO)),
+        )
         findings = json.loads(done.stdout)["findings"]
         assert len(findings) > 5, len(findings)
-        with_share = [f["id"] for f in findings
-                      if (f.get("evidence") or {}).get("share") is not None]
+        with_share = [f["id"] for f in findings if (f.get("evidence") or {}).get("share") is not None]
         assert len(with_share) < len(findings) / 2, (
             f"most findings now carry a share ({with_share}), so the "
             f"filing's density-strip proposal may be buildable after all "
-            f"- re-open UX-396 rather than leaving this clause green")
+            f"- re-open UX-396 rather than leaving this clause green"
+        )
         assert "findings" not in shapeable, (
             "`findings` now publishes one quantity over its whole "
-            "population, which is the premise this clause records as false")
+            "population, which is the premise this clause records as false"
+        )
 
 
 @pytest.fixture(scope="module")
@@ -295,10 +305,8 @@ class TestThePageDrawsWhatTheCensusSays:
     """A census nothing checks against the page is a comment."""
 
     def test_every_declared_instrument_is_on_the_page(self, drawn):
-        missing = [key for key, (instrument, _why) in SHAPES.items()
-                   if instrument and not drawn.get(key)]
-        assert missing == [], (
-            f"the census says these draw and the page does not: {missing}")
+        missing = [key for key, (instrument, _why) in SHAPES.items() if instrument and not drawn.get(key)]
+        assert missing == [], f"the census says these draw and the page does not: {missing}"
 
     def test_the_wall_clock_question_draws_its_answer(self, drawn):
         """`attribution` is the one this item gave a shape.
@@ -306,9 +314,7 @@ class TestThePageDrawsWhatTheCensusSays:
         It is the section that asks where the wall clock went, and it
         was eight numbers in a list.
         """
-        assert drawn.get("attribution"), (
-            "the section named `Where did the wall-clock go?` draws "
-            "nothing again")
+        assert drawn.get("attribution"), "the section named `Where did the wall-clock go?` draws nothing again"
 
     def test_a_section_recorded_as_shapeless_stays_undrawn(self, drawn):
         """The other direction: the census is not a wish list.
@@ -317,8 +323,7 @@ class TestThePageDrawsWhatTheCensusSays:
         mean the two disagree, and the census is what a later round
         reads.
         """
-        wrong = [key for key, (instrument, _why) in SHAPES.items()
-                 if instrument is None and drawn.get(key)]
+        wrong = [key for key, (instrument, _why) in SHAPES.items() if instrument is None and drawn.get(key)]
         assert wrong == [], (
-            f"{wrong} draw something the census says they cannot - "
-            f"update the census, or the reason is now wrong")
+            f"{wrong} draw something the census says they cannot - update the census, or the reason is now wrong"
+        )

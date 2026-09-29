@@ -17,6 +17,7 @@ No test *assertions* live here - only fixture construction (Part 36.1's
 assertions are the consuming tasks' job: P3-03 through P3-09 and various
 P1-*/P2-* acceptance tests).
 """
+
 import json
 from pathlib import Path
 from typing import Optional
@@ -38,8 +39,12 @@ def _dependency(predecessor: str, successor: str, dependency_type: str = "build"
 
 
 def _span(
-    uid: str, start_us: int, dur_us: int,
-    kind: str = "BUILD", phase: str = "BUILD", attempt: int = 0,
+    uid: str,
+    start_us: int,
+    dur_us: int,
+    kind: str = "BUILD",
+    phase: str = "BUILD",
+    attempt: int = 0,
     resources: tuple[str, ...] = ("PROCESS",),
 ) -> dict:
     return {
@@ -52,7 +57,8 @@ def _span(
 
 
 def _run_context(
-    wall_end_us: int, max_jobs: int = 8,
+    wall_end_us: int,
+    max_jobs: int = 8,
     resource_capacities: Optional[dict[str, int]] = None,
     trace_epsilon_us: int = 1000,
 ) -> RunContext:
@@ -71,8 +77,11 @@ def _run_context(
 
 
 def _build(
-    elements: list[dict], dependencies: list[dict], spans: list[dict],
-    wall_end_us: int, max_jobs: int = 8,
+    elements: list[dict],
+    dependencies: list[dict],
+    spans: list[dict],
+    wall_end_us: int,
+    max_jobs: int = 8,
     resource_capacities: Optional[dict[str, int]] = None,
 ) -> Topology:
     graph = {"elements": elements, "dependencies": dependencies}
@@ -87,18 +96,17 @@ def _duration_for(uid: str, default_us: int, durations: Optional[dict[str, int]]
 
 # --- Topology factories (Part 36.1) ---
 
+
 def linear_chain(
-    n: int = 3, duration_us: int = 10000,
+    n: int = 3,
+    duration_us: int = 10000,
     durations: Optional[dict[str, int]] = None,
     requested_target_last: bool = True,
 ) -> Topology:
     """elem0 -> elem1 -> ... -> elem(n-1), each depending only on its
     immediate predecessor, run strictly sequentially."""
     uids = [f"elem{i}.bst" for i in range(n)]
-    elements = [
-        _element(uid, requested_target=requested_target_last and i == n - 1)
-        for i, uid in enumerate(uids)
-    ]
+    elements = [_element(uid, requested_target=requested_target_last and i == n - 1) for i, uid in enumerate(uids)]
     dependencies = [_dependency(uids[i - 1], uids[i]) for i in range(1, n)]
 
     spans = []
@@ -132,7 +140,9 @@ def diamond(duration_us: int = 10000, durations: Optional[dict[str, int]] = None
 
 
 def fan_in(
-    n: int = 4, duration_us: int = 10000, durations: Optional[dict[str, int]] = None,
+    n: int = 4,
+    duration_us: int = 10000,
+    durations: Optional[dict[str, int]] = None,
 ) -> Topology:
     """n independent predecessors converging on one successor."""
     pred_uids = [f"pred{i}.bst" for i in range(n)]
@@ -150,7 +160,9 @@ def fan_in(
 
 
 def fan_out(
-    n: int = 4, duration_us: int = 10000, durations: Optional[dict[str, int]] = None,
+    n: int = 4,
+    duration_us: int = 10000,
+    durations: Optional[dict[str, int]] = None,
 ) -> Topology:
     """one predecessor, n independent successors (all requested targets)."""
     source = "source.bst"
@@ -177,7 +189,9 @@ def multiple_equal_predecessors(duration_us: int = 10000) -> Topology:
     depth wins)."""
     shallow, deep_pre, deep, target = "shallow.bst", "deep_pre.bst", "deep.bst", "target.bst"
     elements = [
-        _element(shallow), _element(deep_pre), _element(deep),
+        _element(shallow),
+        _element(deep_pre),
+        _element(deep),
         _element(target, requested_target=True),
     ]
     dependencies = [
@@ -196,7 +210,8 @@ def multiple_equal_predecessors(duration_us: int = 10000) -> Topology:
 
 
 def deep_unequal_predecessors(
-    duration_us: int = 10000, chain_length: int = 3,
+    duration_us: int = 10000,
+    chain_length: int = 3,
     shallow_us: Optional[int] = None,
 ) -> Topology:
     """target depends on a shallow predecessor that finishes early and a
@@ -215,9 +230,7 @@ def deep_unequal_predecessors(
     chain_uids = [f"deep{i}.bst" for i in range(chain_length)]
     target = "target.bst"
 
-    elements = [_element(shallow)] + [_element(uid) for uid in chain_uids] + [
-        _element(target, requested_target=True)
-    ]
+    elements = [_element(shallow)] + [_element(uid) for uid in chain_uids] + [_element(target, requested_target=True)]
     dependencies = [_dependency(chain_uids[i - 1], chain_uids[i]) for i in range(1, chain_length)]
     dependencies.append(_dependency(shallow, target))
     dependencies.append(_dependency(chain_uids[-1], target))
@@ -232,12 +245,13 @@ def deep_unequal_predecessors(
     start = max(t, shallow_dur)
     spans.append(_span(target, start, target_dur))
 
-    return _build(elements, dependencies, spans,
-                  wall_end_us=start + target_dur, max_jobs=2)
+    return _build(elements, dependencies, spans, wall_end_us=start + target_dur, max_jobs=2)
 
 
 def independent_branches(
-    n: int = 2, chain_length: int = 3, duration_us: int = 10000,
+    n: int = 2,
+    chain_length: int = 3,
+    duration_us: int = 10000,
 ) -> Topology:
     """n fully disconnected linear chains sharing no dependencies -
     each branch's last element is a requested target."""
@@ -271,8 +285,10 @@ def graph_with_terminal_and_nonterminal_tasks(duration_us: int = 10000) -> Topol
     orphan, orphan_child = "orphan.bst", "orphan_child.bst"
 
     elements = [
-        _element(dep), _element(target, requested_target=True),
-        _element(orphan), _element(orphan_child),
+        _element(dep),
+        _element(target, requested_target=True),
+        _element(orphan),
+        _element(orphan_child),
     ]
     dependencies = [
         _dependency(dep, target),
@@ -293,9 +309,14 @@ def graph_with_terminal_and_nonterminal_tasks(duration_us: int = 10000) -> Topol
 # --- finding it is for is named in its docstring, and the census
 # --- (`tools/dev_finding_coverage.py`) is what says whether it worked.
 
+
 def shared_base_wide(
-    dependents: int = 6, base_us: int = 200_000, heavy_us: int = 6_000_000,
-    tie_ratio: float = 0.97, lanes: int = 2, base_kind: str = "import",
+    dependents: int = 6,
+    base_us: int = 200_000,
+    heavy_us: int = 6_000_000,
+    tie_ratio: float = 0.97,
+    lanes: int = 2,
+    base_kind: str = "import",
 ) -> Topology:
     """T1: one structural base, N dependents of unequal weight.
 
@@ -352,19 +373,18 @@ def shared_base_wide(
     uids = [f"mod{i}.bst" for i in range(dependents)]
     lane_free = [base_us] * lanes
     for i, uid in enumerate(uids):
-        elements.append(dict(_element(uid, requested_target=True),
-                             element_kind="manual"))
+        elements.append(dict(_element(uid, requested_target=True), element_kind="manual"))
         dependencies.append(_dependency(base, uid))
         lane = lane_free.index(min(lane_free))
         duration = int(heavy_us * weights[i])
         spans.append(_span(uid, lane_free[lane], duration))
         lane_free[lane] += duration
-    return _build(elements, dependencies, spans,
-                  wall_end_us=max(lane_free), max_jobs=lanes)
+    return _build(elements, dependencies, spans, wall_end_us=max(lane_free), max_jobs=lanes)
 
 
 def one_source_many_elements(
-    elements: int = 4, duration_us: int = 4_000_000,
+    elements: int = 4,
+    duration_us: int = 4_000_000,
     url: str = "https://example.invalid/mono.git",
 ) -> tuple[Topology, dict]:
     """T2: one repository sourced by N elements.
@@ -376,8 +396,7 @@ def one_source_many_elements(
     `write_run_dir(..., sources=...)`.
     """
     uids = [f"pkg{i}.bst" for i in range(elements)]
-    els = [dict(_element(uid, requested_target=True), element_kind="manual")
-           for uid in uids]
+    els = [dict(_element(uid, requested_target=True), element_kind="manual") for uid in uids]
     spans: list[dict] = []
     t = 0
     for uid in uids:
@@ -386,15 +405,16 @@ def one_source_many_elements(
     topology = _build(els, [], spans, wall_end_us=t, max_jobs=1)
     inventory = {
         "schema": "sources/v1",
-        "elements": {uid: [{"kind": "git", "identity": url, "keying": "url"}]
-                     for uid in uids},
+        "elements": {uid: [{"kind": "git", "identity": url, "keying": "url"}] for uid in uids},
         "unreadable": {},
     }
     return topology, inventory
 
 
 def ample_capacity(
-    elements: int = 8, capacity: int = 16, duration_us: int = 3_000_000,
+    elements: int = 8,
+    capacity: int = 16,
+    duration_us: int = 3_000_000,
     stagger_us: int = 100_000,
 ) -> Topology:
     """T3: capacity above demand, so nothing ever queues.
@@ -416,18 +436,21 @@ def ample_capacity(
     findings this one is published beside have something to rank.
     """
     uids = [f"task{i}.bst" for i in range(elements)]
-    els = [dict(_element(uid, requested_target=True), element_kind="manual")
-           for uid in uids]
-    spans = [_span(uid, 0, duration_us + i * stagger_us)
-             for i, uid in enumerate(uids)]
-    return _build(els, [], spans,
-                  wall_end_us=duration_us + (elements - 1) * stagger_us,
-                  max_jobs=capacity,
-                  resource_capacities={"PROCESS": capacity})
+    els = [dict(_element(uid, requested_target=True), element_kind="manual") for uid in uids]
+    spans = [_span(uid, 0, duration_us + i * stagger_us) for i, uid in enumerate(uids)]
+    return _build(
+        els,
+        [],
+        spans,
+        wall_end_us=duration_us + (elements - 1) * stagger_us,
+        max_jobs=capacity,
+        resource_capacities={"PROCESS": capacity},
+    )
 
 
 def the_same_build_twice(
-    chain: int = 4, duration_us: int = 2_000_000,
+    chain: int = 4,
+    duration_us: int = 2_000_000,
 ) -> tuple[Topology, Topology]:
     """T4: `(cold, incremental)` over one graph.
 
@@ -440,10 +463,10 @@ def the_same_build_twice(
     elements produced a span and in that one count.
     """
     uids = [f"lib{i}.bst" for i in range(chain)]
-    els = [dict(_element(uid, cache_key=f"cachekey{i}",
-                         requested_target=(i == chain - 1)),
-                element_kind="manual")
-           for i, uid in enumerate(uids)]
+    els = [
+        dict(_element(uid, cache_key=f"cachekey{i}", requested_target=(i == chain - 1)), element_kind="manual")
+        for i, uid in enumerate(uids)
+    ]
     dependencies = [_dependency(uids[i - 1], uids[i]) for i in range(1, chain)]
 
     def one_run(built: list[str], skipped: int) -> Topology:
@@ -452,8 +475,7 @@ def the_same_build_twice(
         for uid in built:
             spans.append(_span(uid, t, duration_us))
             t += duration_us
-        run_context, graph, trace = _build(
-            els, dependencies, spans, wall_end_us=t, max_jobs=1)
+        run_context, graph, trace = _build(els, dependencies, spans, wall_end_us=t, max_jobs=1)
         run_context["queue_summary"] = {
             "build": {"processed": len(built), "skipped": skipped, "failed": 0},
         }
@@ -463,8 +485,10 @@ def the_same_build_twice(
 
 
 def a_build_that_pulls(
-    chain: int = 4, pulled: int = 3,
-    pull_us: int = 1_000_000, build_us: int = 9_000_000,
+    chain: int = 4,
+    pulled: int = 3,
+    pull_us: int = 1_000_000,
+    build_us: int = 9_000_000,
 ) -> Topology:
     """T6: a build most of whose elements came off a remote cache.
 
@@ -508,23 +532,21 @@ def a_build_that_pulls(
     the same hole one edge over, and is `UX-481`.
     """
     uids = [f"lib{i}.bst" for i in range(chain)]
-    els = [dict(_element(uid, cache_key=f"cachekey{i}",
-                         requested_target=(i == chain - 1)),
-                element_kind="manual")
-           for i, uid in enumerate(uids)]
+    els = [
+        dict(_element(uid, cache_key=f"cachekey{i}", requested_target=(i == chain - 1)), element_kind="manual")
+        for i, uid in enumerate(uids)
+    ]
     dependencies = [_dependency(uids[i - 1], uids[i]) for i in range(1, chain)]
 
     spans, t = [], 0
     for uid in uids[:pulled]:
-        spans.append(_span(uid, t, pull_us, kind="PULL", phase="PULL",
-                           resources=("DOWNLOAD",)))
+        spans.append(_span(uid, t, pull_us, kind="PULL", phase="PULL", resources=("DOWNLOAD",)))
         t += pull_us
     for uid in uids[pulled:]:
         spans.append(_span(uid, t, build_us))
         t += build_us
 
-    run_context, graph, trace = _build(
-        els, dependencies, spans, wall_end_us=t, max_jobs=1)
+    run_context, graph, trace = _build(els, dependencies, spans, wall_end_us=t, max_jobs=1)
     run_context["queue_summary"] = {
         "build": {"processed": chain - pulled, "skipped": pulled, "failed": 0},
         "pull": {"processed": pulled, "skipped": 0, "failed": 0},
@@ -534,9 +556,13 @@ def a_build_that_pulls(
 
 # --- Helpers for tests that consume the above ---
 
+
 def a_chain_beside_a_crowd(
-    chain: int = 4, crowd: int = 6, chain_us: int = 2_000_000,
-    crowd_us: int = 3_000_000, lanes: int = 2,
+    chain: int = 4,
+    crowd: int = 6,
+    chain_us: int = 2_000_000,
+    crowd_us: int = 3_000_000,
+    lanes: int = 2,
 ) -> Topology:
     """T7: the one shape a blast-radius *ranking* is worth reading on.
 
@@ -580,8 +606,7 @@ def a_chain_beside_a_crowd(
 
     uids = [f"lib{i}.bst" for i in range(chain)]
     for i, uid in enumerate(uids):
-        elements.append(dict(_element(uid, requested_target=(i == chain - 1)),
-                             element_kind="cmake"))
+        elements.append(dict(_element(uid, requested_target=(i == chain - 1)), element_kind="cmake"))
         if i:
             dependencies.append(_dependency(uids[i - 1], uid))
     at = 0
@@ -594,18 +619,17 @@ def a_chain_beside_a_crowd(
     lane_free = [at] + [chain_us] * (lanes - 1)
     for i in range(crowd):
         uid = f"app{i}.bst"
-        elements.append(dict(_element(uid, requested_target=True),
-                             element_kind="manual"))
+        elements.append(dict(_element(uid, requested_target=True), element_kind="manual"))
         dependencies.append(_dependency(uids[0], uid))
         lane = lane_free.index(min(lane_free))
         spans.append(_span(uid, lane_free[lane], crowd_us))
         lane_free[lane] += crowd_us
-    return _build(elements, dependencies, spans,
-                  wall_end_us=max(lane_free), max_jobs=lanes)
+    return _build(elements, dependencies, spans, wall_end_us=max(lane_free), max_jobs=lanes)
 
 
-def write_run_dir(tmp_path: Path, topology: Topology, name: str = "run",
-                  sources: Optional[dict] = None, indent: Optional[int] = None) -> Path:
+def write_run_dir(
+    tmp_path: Path, topology: Topology, name: str = "run", sources: Optional[dict] = None, indent: Optional[int] = None
+) -> Path:
     """Write a `(run_context, graph, trace)` topology to disk in the
     run-context.json/graph.json/trace.json layout `bga.ingest.loader`
     expects, and return the run directory path.
@@ -628,8 +652,10 @@ def write_run_dir(tmp_path: Path, topology: Topology, name: str = "run",
 
 
 def blast_radius_disagrees_with_horizon(
-    hub_us: int = 1_000_000, heavy_us: int = 100_000_000,
-    leaf_us: int = 5_000_000, leaves: int = 3,
+    hub_us: int = 1_000_000,
+    heavy_us: int = 100_000_000,
+    leaf_us: int = 5_000_000,
+    leaves: int = 3,
 ) -> Topology:
     """`UX-440`: the shape where the document's two ranked lists invert.
 
@@ -653,15 +679,12 @@ def blast_radius_disagrees_with_horizon(
     """
     hub, heavy = "hub.bst", "heavy.bst"
     leaf_uids = [f"leaf{i}.bst" for i in range(leaves)]
-    elements = ([_element(hub)]
-                + [_element(uid, requested_target=True)
-                   for uid in [heavy] + leaf_uids])
+    elements = [_element(hub)] + [_element(uid, requested_target=True) for uid in [heavy] + leaf_uids]
     dependencies = [_dependency(hub, uid) for uid in [heavy] + leaf_uids]
     spans = [_span(hub, 0, hub_us)]
     spans += [_span(heavy, hub_us, heavy_us)]
     spans += [_span(uid, hub_us, leaf_us) for uid in leaf_uids]
-    return _build(elements, dependencies, spans,
-                  wall_end_us=hub_us + heavy_us, max_jobs=8)
+    return _build(elements, dependencies, spans, wall_end_us=hub_us + heavy_us, max_jobs=8)
 
 
 def build_analyzer(tmp_path: Path, topology: Topology, name: str = "run", **kwargs) -> BuildEfficiencyAnalyzer:
@@ -699,8 +722,7 @@ def covering_set() -> dict[str, tuple[Topology, Optional[dict]]]:
     factory call - `one_source_many_elements` returns an inventory
     beside its topology, and `the_same_build_twice` returns a pair."""
     built: dict[str, tuple[Topology, Optional[dict]]] = {
-        name: (factory(), sources)
-        for name, (factory, sources) in COVERING_SET.items()
+        name: (factory(), sources) for name, (factory, sources) in COVERING_SET.items()
     }
     topology, inventory = one_source_many_elements()
     built["one_source_many_elements"] = (topology, inventory)
@@ -717,12 +739,11 @@ def write_covering_set(root: Path) -> list[Path]:
     for name, (topology, sources) in sorted(covering_set().items()):
         directory = root / name
         directory.mkdir(parents=True, exist_ok=True)
-        written.append(write_run_dir(directory, topology, name="run",
-                                     sources=sources, indent=2))
+        written.append(write_run_dir(directory, topology, name="run", sources=sources, indent=2))
     return written
 
 
-if __name__ == "__main__":                               # pragma: no cover
+if __name__ == "__main__":  # pragma: no cover
     import sys
 
     if "--write" not in sys.argv[1:]:

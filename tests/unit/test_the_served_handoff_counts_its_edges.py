@@ -25,6 +25,7 @@ held by `test_the_arrows_say_why_now.py::TestTheLostEdgesAreAccountedFor`,
 and a guard that read the export would have passed before this item as
 well as after it.
 """
+
 import builtins
 import gzip
 import json
@@ -59,12 +60,12 @@ def served_run_json(run):
     # fetch below simply times out.
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     try:
-        with urllib.request.urlopen(url.rstrip("/") + "/run.json",
-                                    timeout=30) as response:
+        with urllib.request.urlopen(url.rstrip("/") + "/run.json", timeout=30) as response:
             return json.loads(response.read().decode("utf-8"))
     finally:
         httpd.shutdown()
         httpd.server_close()
+
 
 #: The one committed capture with a real raw Plane 2 log beside a build
 #: log and a graph - which is what makes the "never opens it" clause
@@ -77,8 +78,8 @@ FLOW_LOSS_REASONS = ("no_task", "out_of_order")
 
 
 needs_capture = pytest.mark.skipif(
-    not (CAPTURE / "build.log").is_file(),
-    reason="the example capture is not in this clone (UX-189)")
+    not (CAPTURE / "build.log").is_file(), reason="the example capture is not in this clone (UX-189)"
+)
 
 
 def _opened(fn, root):
@@ -117,7 +118,6 @@ def _opened(fn, root):
 
 @needs_capture
 class TestTheServedRunCarriesTheAccounting:
-
     def test_the_served_payload_has_it(self):
         """The gap, closed. Before this item the key was simply absent
         from the served `run.json` and `questions.js` drew nothing -
@@ -126,8 +126,8 @@ class TestTheServedRunCarriesTheAccounting:
         run = served_run_json(CAPTURE / "run")
         assert run.get("has_timeline") is True, run.get("has_timeline")
         assert "trace_flow_losses" in run, (
-            "the served run.json has no edge accounting, so the hand-off "
-            f"section draws nothing: {sorted(run)}")
+            f"the served run.json has no edge accounting, so the hand-off section draws nothing: {sorted(run)}"
+        )
 
     def test_it_is_the_same_accounting_the_render_publishes(self, tmp_path):
         """Two ways of computing one fact, held equal.
@@ -137,11 +137,11 @@ class TestTheServedRunCarriesTheAccounting:
         render's own numbers on the same capture.
         """
         served = served_run_json(CAPTURE / "run")["trace_flow_losses"]
-        rendered = render(str(CAPTURE), str(tmp_path / "t.pftrace"),
-                          quiet=True)["flow_losses"]
+        rendered = render(str(CAPTURE), str(tmp_path / "t.pftrace"), quiet=True)["flow_losses"]
         assert served == rendered, (
             f"the served page and the render disagree about what the "
-            f"graph's edges became: served {served}, rendered {rendered}")
+            f"graph's edges became: served {served}, rendered {rendered}"
+        )
 
     def test_the_identity_holds_on_the_served_numbers(self):
         """`UX-431`'s property, re-asserted where it now travels: drawn
@@ -168,8 +168,8 @@ class TestTheStartupPathStillDoesNotRenderTheTrace:
     def test_the_accounting_never_opens_the_raw_plane_two_log(self):
         opened = _opened(lambda: flow_accounting(str(CAPTURE)), CAPTURE)
         assert not [p for p in opened if "plane2.log" in p], (
-            f"the cheap accounting opened the raw Plane 2 log, which is "
-            f"the read UX-296 moved off this path: {opened}")
+            f"the cheap accounting opened the raw Plane 2 log, which is the read UX-296 moved off this path: {opened}"
+        )
         assert "build.log" in opened, opened
         assert any(p.endswith("graph.json") for p in opened), opened
 
@@ -180,12 +180,11 @@ class TestTheStartupPathStillDoesNotRenderTheTrace:
         If the render did not open the raw log either, "the cheap path
         avoids it" would be true and meaningless.
         """
-        opened = _opened(
-            lambda: render(str(CAPTURE), str(tmp_path / "t.pftrace"),
-                           quiet=True), CAPTURE)
+        opened = _opened(lambda: render(str(CAPTURE), str(tmp_path / "t.pftrace"), quiet=True), CAPTURE)
         assert [p for p in opened if "plane2.log" in p], (
             f"the full render did not open the raw Plane 2 log either, so "
-            f"the clause above distinguishes nothing: {opened}")
+            f"the clause above distinguishes nothing: {opened}"
+        )
 
 
 @needs_capture
@@ -194,8 +193,7 @@ def test_the_wrapper_resolves_the_snapshot_the_way_has_timeline_does():
     `has_timeline`, and both walk up to the snapshot. Passing the
     snapshot itself would find no `run/` and answer for the wrong
     capture - silently, since the failure mode is `None`."""
-    assert timeline_flow_accounting(str(CAPTURE / "run")) == \
-        flow_accounting(str(CAPTURE))
+    assert timeline_flow_accounting(str(CAPTURE / "run")) == flow_accounting(str(CAPTURE))
 
 
 def test_a_capture_with_no_build_log_answers_none(tmp_path):

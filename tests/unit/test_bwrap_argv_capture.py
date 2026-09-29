@@ -10,6 +10,7 @@ Bounded on purpose: a real build spawns one bwrap per element task and
 thousands on a large project, while identifying *which option carries the
 element* needs a handful.
 """
+
 import json
 import os
 
@@ -79,9 +80,7 @@ def test_the_recorded_argv_is_the_one_buildstream_generated(tmp_path):
 
     log = tmp_path / "argv.jsonl"
     record_argv(str(log), ARGV, 8)
-    rewritten = build_shim_argv(
-        "/usr/bin/bwrap", ARGV, "/src", "/dst", "/dst/hook.so", "/dst/trace.log"
-    )
+    rewritten = build_shim_argv("/usr/bin/bwrap", ARGV, "/src", "/dst", "/dst/hook.so", "/dst/trace.log")
 
     recorded = json.loads(log.read_text().strip())["argv"]
     assert recorded == ARGV
@@ -102,11 +101,20 @@ def test_a_real_captured_argv_carries_the_element_only_via_the_build_root(tmp_pa
     mechanism outside the argv entirely.
     """
     real = [
-        "--bind", "/root/.cache/buildstream/cas/staging/cas-tmpdir2wnYto", "/",
-        "--dir", "buildstream/dep-usage-example/base.bst",
-        "--chdir", "buildstream/dep-usage-example/base.bst",
-        "--setenv", "PWD", "/buildstream/dep-usage-example/base.bst",
-        "sh", "-c", "-e", "cmake -B_builddir",
+        "--bind",
+        "/root/.cache/buildstream/cas/staging/cas-tmpdir2wnYto",
+        "/",
+        "--dir",
+        "buildstream/dep-usage-example/base.bst",
+        "--chdir",
+        "buildstream/dep-usage-example/base.bst",
+        "--setenv",
+        "PWD",
+        "/buildstream/dep-usage-example/base.bst",
+        "sh",
+        "-c",
+        "-e",
+        "cmake -B_builddir",
     ]
     log = tmp_path / "argv.jsonl"
     record_argv(str(log), real, 8)

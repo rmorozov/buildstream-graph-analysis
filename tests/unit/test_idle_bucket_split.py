@@ -19,6 +19,7 @@ A task is *pending* over `[ready_us, start_us)`, where `ready_us` is a
 real `max(finish(predecessors))` computed in bga/normalize/timestamps.py.
 Idle capacity in a slice with something pending is `UNDERPARALLEL`.
 """
+
 from bga.utilisation import CPUAccounting, CPUBucket, UtilizationAnalyzer
 
 
@@ -35,9 +36,7 @@ def _interval(task_key, ready_us, start_us, end_us):
 
 def _analyze(task_intervals, effective_cpus, wall_clock_us):
     analyzer = UtilizationAnalyzer(
-        cpu_accounting=CPUAccounting(
-            effective_cpus=effective_cpus, accounting_method="cgroup"
-        ),
+        cpu_accounting=CPUAccounting(effective_cpus=effective_cpus, accounting_method="cgroup"),
         wall_clock_us=wall_clock_us,
     )
     return analyzer.analyze(task_intervals=task_intervals, occupancy_segments=[])
@@ -91,11 +90,8 @@ def test_waiting_with_no_free_capacity_is_not_underparallel():
     saturation, not underparallelism. More builders would not help.
     """
     result = _analyze(
-        [
-            _interval(f"run{i}", 0, 0, 10_000_000) for i in range(4)
-        ] + [
-            _interval(f"wait{i}", 0, 10_000_000, 20_000_000) for i in range(4)
-        ],
+        [_interval(f"run{i}", 0, 0, 10_000_000) for i in range(4)]
+        + [_interval(f"wait{i}", 0, 10_000_000, 20_000_000) for i in range(4)],
         effective_cpus=4,
         wall_clock_us=20_000_000,
     )
@@ -129,10 +125,7 @@ def test_underparallel_never_exceeds_total_idle():
         wall_clock_us=1_000_000,
     )
 
-    idle = (
-        result.buckets[CPUBucket.IDLE_NO_TASKS]
-        + result.buckets[CPUBucket.IDLE_UNDERPARALLEL]
-    )
+    idle = result.buckets[CPUBucket.IDLE_NO_TASKS] + result.buckets[CPUBucket.IDLE_UNDERPARALLEL]
     assert result.buckets[CPUBucket.IDLE_UNDERPARALLEL] <= idle
     assert result.buckets[CPUBucket.IDLE_NO_TASKS] >= 0
 

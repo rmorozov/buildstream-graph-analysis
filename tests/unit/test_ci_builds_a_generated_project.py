@@ -14,6 +14,7 @@ these clauses assert the *pieces that make the step do its job* - the
 generator, the capture, the census, and the `--also` that joins them -
 rather than the step's name.
 """
+
 import pathlib
 
 import yaml
@@ -42,7 +43,8 @@ class TestTheStepIsThereAndDoesTheWork:
         assert _the_step() is not None, (
             "no step in bst-examples runs tools/dev_finding_coverage.py - "
             "UX-473 is what put it there, and without it the two findings "
-            "only a generated build reaches are checked by nothing")
+            "only a generated build reaches are checked by nothing"
+        )
 
     def test_it_generates_a_project_first(self):
         """A census over nothing is a census that prints the same number
@@ -97,22 +99,21 @@ class TestTheStepIsThereAndDoesTheWork:
         not as the claim.
         """
         run = _the_step()["run"]
-        snapshot = next((line for line in run.splitlines()
-                         if "bga snapshot" in line), "")
+        snapshot = next((line for line in run.splitlines() if "bga snapshot" in line), "")
         assert snapshot, run
         # The command and its handler may be split across a continuation,
         # so the test is over the joined body rather than the one line.
         joined = run.replace("\\\n", " ")
-        handled = next((line for line in joined.splitlines()
-                        if "bga snapshot" in line), "")
+        handled = next((line for line in joined.splitlines() if "bga snapshot" in line), "")
         assert "|| status=$?" in handled, (
             "the snapshot's exit status is not captured, so a `-e` shell "
             "- which is what the runner gives every `run:` block - ends "
-            "the step on the build this step exists to make fail: "
-            + handled)
+            "the step on the build this step exists to make fail: " + handled
+        )
         assert "$status" in run, (
             "the captured status is never printed, so a reader of the "
-            "log cannot tell a failing build from a broken step")
+            "log cannot tell a failing build from a broken step"
+        )
         assert "set -uo pipefail" in run, run
 
     def test_it_prints_rather_than_gating_on_a_bound(self):
@@ -157,8 +158,6 @@ class TestTheCensusCanBeToldAboutARunOutsideTheTree:
         the flag). If the pair stops being declared, a committed
         capture now produces one and the step's justification has
         changed; the other two are not this step's to reach."""
-        assert set(census.UNREACHABLE) == {
-            "build-failed", "failed-task-time", "swap-observed",
-            "artifact-weight"}
+        assert set(census.UNREACHABLE) == {"build-failed", "failed-task-time", "swap-observed", "artifact-weight"}
         for name in census.UNREACHABLE:
             assert name in FINDING_READERS, name

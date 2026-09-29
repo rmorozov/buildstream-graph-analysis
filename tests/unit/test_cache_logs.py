@@ -17,6 +17,7 @@ certified floor.
 The fixture below is a real bst 2.7.0 log, trimmed - not a hand-invented
 format.
 """
+
 import json
 import os
 import shutil
@@ -74,10 +75,9 @@ def log_tree(tmp_path):
 
 # --- parsing ------------------------------------------------------------
 
+
 def test_a_real_log_yields_its_phases_and_their_durations(log_tree):
-    record = parse_element_log(
-        str(log_tree / "my-project" / "core" / "84331b67-build.20260818-115322.log")
-    )
+    record = parse_element_log(str(log_tree / "my-project" / "core" / "84331b67-build.20260818-115322.log"))
     assert record["element"] == "core.bst"
     assert record["cache_key"] == "84331b67"
     assert record["action"] == "build"
@@ -94,9 +94,7 @@ def test_a_real_log_yields_its_phases_and_their_durations(log_tree):
 def test_the_enclosing_activity_is_the_total_not_a_phase(log_tree):
     """`Build` encloses every other activity, so counting it among them
     would double the element's time."""
-    record = parse_element_log(
-        str(log_tree / "my-project" / "core" / "84331b67-build.20260818-115322.log")
-    )
+    record = parse_element_log(str(log_tree / "my-project" / "core" / "84331b67-build.20260818-115322.log"))
     assert "Build" not in [p["name"] for p in record["phases"]]
     assert sum(p["duration_us"] for p in record["phases"]) == record["total_us"]
 
@@ -105,9 +103,7 @@ def test_another_elements_status_line_is_not_this_elements_phase(log_tree):
     """A build log contains STATUS lines about *dependencies* being
     staged. Attributing `toolchain.bst`'s line to `core.bst` would
     invent a phase."""
-    record = parse_element_log(
-        str(log_tree / "my-project" / "core" / "84331b67-build.20260818-115322.log")
-    )
+    record = parse_element_log(str(log_tree / "my-project" / "core" / "84331b67-build.20260818-115322.log"))
     assert all("toolchain" not in p["name"] for p in record["phases"])
 
 
@@ -115,9 +111,7 @@ def test_a_command_wrapped_across_lines_is_rejoined(log_tree):
     """Truncating at the backslash would make two genuinely different
     `cmake` invocations compare equal, which is exactly the false match
     that would make the repeated-operation report worthless."""
-    record = parse_element_log(
-        str(log_tree / "my-project" / "core" / "84331b67-build.20260818-115322.log")
-    )
+    record = parse_element_log(str(log_tree / "my-project" / "core" / "84331b67-build.20260818-115322.log"))
     assert record["commands"] == [
         'cmake -B_builddir -H"." \\ -DCMAKE_INSTALL_PREFIX:PATH="/usr"',
         "cmake --build _builddir -- ${JOBS}",
@@ -128,11 +122,10 @@ def test_a_tools_own_reported_timing_is_kept_and_labelled(log_tree):
     """cmake measured its own configure step. That is a real number and
     is kept - but as `self_timed`, never mixed in with the phases, since
     nothing in the log timed it for us."""
-    record = parse_element_log(
-        str(log_tree / "my-project" / "core" / "84331b67-build.20260818-115322.log")
-    )
+    record = parse_element_log(str(log_tree / "my-project" / "core" / "84331b67-build.20260818-115322.log"))
     assert {t["what"]: t["duration_us"] for t in record["self_timed"]} == {
-        "Configuring": 800_000, "Generating": 0,
+        "Configuring": 800_000,
+        "Generating": 0,
     }
 
 
@@ -192,20 +185,27 @@ def test_the_clock_is_recorded_as_written_as_well_as_parsed(log_tree):
     offset. The parsed value is only comparable against logs from the
     same machine, so the literal string is kept beside it rather than
     the parse being the only record."""
-    record = parse_element_log(
-        str(log_tree / "my-project" / "core" / "84331b67-build.20260818-115322.log")
-    )
+    record = parse_element_log(str(log_tree / "my-project" / "core" / "84331b67-build.20260818-115322.log"))
     assert record["started_at"] == "18-08-2026 11:53:22"
     assert record["started_us"] is not None
 
 
 # --- reports ------------------------------------------------------------
 
+
 def _record(element, commands):
     return {
-        "element": element, "action": "build", "commands": commands,
-        "project": "p", "cache_key": "k", "total_us": 1, "phases": [],
-        "self_timed": [], "started_at": None, "started_us": 0, "path": element,
+        "element": element,
+        "action": "build",
+        "commands": commands,
+        "project": "p",
+        "cache_key": "k",
+        "total_us": 1,
+        "phases": [],
+        "self_timed": [],
+        "started_at": None,
+        "started_us": 0,
+        "path": element,
     }
 
 
@@ -257,6 +257,7 @@ def test_the_text_report_renders(log_tree):
 
 # --- against real logs this machine actually has ------------------------
 
+
 @pytest.mark.bst
 @pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/spec/ingestion-pipeline.md")
 def test_a_real_buildstream_log_tree_parses(tmp_path):
@@ -276,13 +277,12 @@ def test_a_real_buildstream_log_tree_parses(tmp_path):
 
     home = tmp_path / "home"
     home.mkdir()
-    project = (
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        + "/fixtures/bst_show_project"
-    )
+    project = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/fixtures/bst_show_project"
     proc = subprocess.run(
         ["bst", "-C", project, "--no-colors", "build", "app.bst"],
-        capture_output=True, text=True, env=isolated_bst_env(home),
+        capture_output=True,
+        text=True,
+        env=isolated_bst_env(home),
     )
     assert proc.returncode == 0, proc.stderr[-2000:]
 
@@ -310,6 +310,7 @@ def test_a_real_buildstream_log_tree_parses(tmp_path):
 
 # --- UX-99: the sandbox tax --------------------------------------------
 
+
 def test_the_toll_and_the_work_are_split_per_element(log_tree):
     """`REAL_LOG` is a real bst 2.7.0 log and it already carries the
     split: 2s staging dependencies, 14s running commands, 1s caching the
@@ -331,7 +332,9 @@ def test_the_project_wide_tax_is_the_headline(log_tree):
     assert tax["work_us"] == 14_000_000
     assert tax["build_logs"] == 1
     assert [p["phase"] for p in tax["by_phase"]] == [
-        "Staging dependencies", "Caching artifact", "Staging sources",
+        "Staging dependencies",
+        "Caching artifact",
+        "Staging sources",
     ]
 
 
@@ -389,14 +392,12 @@ def test_the_top_payer_is_ranked_by_toll_seconds_not_by_share(tmp_path):
 
     root = tmp_path / "logs"
     for element, key, staging, commands, total in (
-        ("tiny.bst", "aaaaaaaa", 9, 1, 10),   # 90% toll, 9s
+        ("tiny.bst", "aaaaaaaa", 9, 1, 10),  # 90% toll, 9s
         ("big.bst", "bbbbbbbb", 40, 50, 90),  # 44% toll, 40s
     ):
         directory = root / "p" / element.removesuffix(".bst")
         directory.mkdir(parents=True)
-        (directory / f"{key}-build.20260818-115322.log").write_text(
-            _log(element, key, staging, commands, total)
-        )
+        (directory / f"{key}-build.20260818-115322.log").write_text(_log(element, key, staging, commands, total))
 
     payers = sandbox_tax(scan_log_tree(str(root)))["top_payers"]
     assert [p["element"] for p in payers] == ["big.bst", "tiny.bst"]
@@ -413,6 +414,7 @@ def test_the_tax_renders_in_the_text_report(log_tree):
 
 
 # --- UX-102: the configure tax, from one plane and from two -------------
+
 
 def test_the_self_reported_configure_time_is_totalled(log_tree):
     """`REAL_LOG` carries cmake's own `-- Configuring done (0.8s)` and
@@ -456,14 +458,21 @@ def test_the_two_planes_are_shown_side_by_side_and_never_summed(log_tree):
     publishes both per element and adds neither to the other."""
     from tools.bst_cache_logs import build_report
 
-    native = {"configure_phase": {
-        "available": True,
-        "per_element": {"core.bst": {
-            "configure_cpu_us": 650_000, "build_cpu_us": 7_000_000,
-            "configure_processes": 36, "build_processes": 40,
-            "configure_share": 0.085, "coverage": 0.81,
-        }},
-    }}
+    native = {
+        "configure_phase": {
+            "available": True,
+            "per_element": {
+                "core.bst": {
+                    "configure_cpu_us": 650_000,
+                    "build_cpu_us": 7_000_000,
+                    "configure_processes": 36,
+                    "build_processes": 40,
+                    "configure_share": 0.085,
+                    "coverage": 0.81,
+                }
+            },
+        }
+    }
     report = build_report(scan_log_tree(str(log_tree)), native_report=native)
     row = report["configure_views"]["elements"][0]
     assert row["element"] == "core.bst"
@@ -480,14 +489,21 @@ def test_traced_configure_work_with_no_self_report_is_named(log_tree):
     self-report blindest."""
     from tools.bst_cache_logs import build_report
 
-    native = {"configure_phase": {
-        "available": True,
-        "per_element": {"auto.bst": {
-            "configure_cpu_us": 30_000_000, "build_cpu_us": 5_000_000,
-            "configure_processes": 900, "build_processes": 100,
-            "configure_share": 0.857, "coverage": 0.9,
-        }},
-    }}
+    native = {
+        "configure_phase": {
+            "available": True,
+            "per_element": {
+                "auto.bst": {
+                    "configure_cpu_us": 30_000_000,
+                    "build_cpu_us": 5_000_000,
+                    "configure_processes": 900,
+                    "build_processes": 100,
+                    "configure_share": 0.857,
+                    "coverage": 0.9,
+                }
+            },
+        }
+    }
     views = build_report(scan_log_tree(str(log_tree)), native_report=native)["configure_views"]
     assert views["elements_without_a_self_report"] == 1
     assert views["elements"][0]["self_report_missing"] is True
@@ -536,6 +552,7 @@ def test_a_configure_share_below_the_bar_is_not_a_finding(tmp_path):
 
 # --- UX-101: the longitudinal ranking ------------------------------------
 
+
 def _tax_tree(tmp_path, builds):
     """`builds` is a list of (element, key, seconds, stamp) tuples."""
     root = tmp_path / "logs"
@@ -559,12 +576,15 @@ def test_the_ranking_is_by_total_seconds_across_the_tree(tmp_path):
     first, which rebuilds monthly. Total is what says so."""
     from tools.bst_cache_logs import developer_tax
 
-    root = _tax_tree(tmp_path, [
-        ("heavy.bst", "aaaa0001", 30, "20260818-160000"),   # once, 30s
-        ("frequent.bst", "eeee0001", 20, "20260818-160100"),
-        ("frequent.bst", "eeee0002", 20, "20260818-160200"),
-        ("frequent.bst", "eeee0003", 20, "20260818-160300"),
-    ])
+    root = _tax_tree(
+        tmp_path,
+        [
+            ("heavy.bst", "aaaa0001", 30, "20260818-160000"),  # once, 30s
+            ("frequent.bst", "eeee0001", 20, "20260818-160100"),
+            ("frequent.bst", "eeee0002", 20, "20260818-160200"),
+            ("frequent.bst", "eeee0003", 20, "20260818-160300"),
+        ],
+    )
     ranking = developer_tax(scan_log_tree(str(root)))['ranking']
     assert [row['element'] for row in ranking] == ["frequent.bst", "heavy.bst"]
     assert ranking[0]['total_us'] == 60_000_000
@@ -576,10 +596,13 @@ def test_an_unchanged_key_rebuild_keeps_ux93s_label(tmp_path):
     project one, and the tax breakdown must not blur that back."""
     from tools.bst_cache_logs import developer_tax
 
-    root = _tax_tree(tmp_path, [
-        ("a.bst", "aaaa0001", 5, "20260818-160000"),
-        ("a.bst", "aaaa0001", 5, "20260818-160100"),
-    ])
+    root = _tax_tree(
+        tmp_path,
+        [
+            ("a.bst", "aaaa0001", 5, "20260818-160000"),
+            ("a.bst", "aaaa0001", 5, "20260818-160100"),
+        ],
+    )
     causes = developer_tax(scan_log_tree(str(root)))['ranking'][0]['causes']
     assert causes == {'unchanged_key': 1, 'own_key_changed': 0, 'rooted_upstream': 0}
 
@@ -592,12 +615,15 @@ def test_without_a_graph_an_upstream_cause_is_not_invented(tmp_path):
     in silently."""
     from tools.bst_cache_logs import developer_tax
 
-    root = _tax_tree(tmp_path, [
-        ("dep.bst", "dddd0001", 5, "20260818-160000"),
-        ("dep.bst", "dddd0002", 5, "20260818-160100"),
-        ("app.bst", "eeee0001", 5, "20260818-160010"),
-        ("app.bst", "eeee0002", 5, "20260818-160110"),
-    ])
+    root = _tax_tree(
+        tmp_path,
+        [
+            ("dep.bst", "dddd0001", 5, "20260818-160000"),
+            ("dep.bst", "dddd0002", 5, "20260818-160100"),
+            ("app.bst", "eeee0001", 5, "20260818-160010"),
+            ("app.bst", "eeee0002", 5, "20260818-160110"),
+        ],
+    )
     tax = developer_tax(scan_log_tree(str(root)))
     assert 'rooted_upstream' not in tax['causes_available']
     app = next(row for row in tax['ranking'] if row['element'] == 'app.bst')
@@ -610,12 +636,15 @@ def test_with_a_graph_the_upstream_root_is_named(tmp_path):
     it."""
     from tools.bst_cache_logs import developer_tax
 
-    root = _tax_tree(tmp_path, [
-        ("dep.bst", "dddd0001", 5, "20260818-160000"),
-        ("dep.bst", "dddd0002", 5, "20260818-160100"),
-        ("app.bst", "eeee0001", 5, "20260818-160010"),
-        ("app.bst", "eeee0002", 7, "20260818-160110"),
-    ])
+    root = _tax_tree(
+        tmp_path,
+        [
+            ("dep.bst", "dddd0001", 5, "20260818-160000"),
+            ("dep.bst", "dddd0002", 5, "20260818-160100"),
+            ("app.bst", "eeee0001", 5, "20260818-160010"),
+            ("app.bst", "eeee0002", 7, "20260818-160110"),
+        ],
+    )
     tax = developer_tax(
         scan_log_tree(str(root)),
         dependencies=[{"predecessor": "dep.bst", "successor": "app.bst"}],
@@ -634,11 +663,14 @@ def test_the_build_count_is_a_lower_bound_and_says_so(tmp_path):
     count would be a number this data cannot produce."""
     from tools.bst_cache_logs import developer_tax
 
-    root = _tax_tree(tmp_path, [
-        ("a.bst", "aaaa0001", 5, "20260818-160000"),
-        ("a.bst", "aaaa0002", 5, "20260818-160100"),
-        ("b.bst", "bbbb0001", 5, "20260818-160010"),
-    ])
+    root = _tax_tree(
+        tmp_path,
+        [
+            ("a.bst", "aaaa0001", 5, "20260818-160000"),
+            ("a.bst", "aaaa0002", 5, "20260818-160100"),
+            ("b.bst", "bbbb0001", 5, "20260818-160010"),
+        ],
+    )
     tax = developer_tax(scan_log_tree(str(root)))
     assert tax['builds_lower_bound'] == 2
     assert tax['build_logs'] == 3
@@ -651,9 +683,7 @@ def test_a_short_window_is_declared_weak_rather_than_withheld(tmp_path):
     suppressed."""
     from tools.bst_cache_logs import developer_tax
 
-    root = _tax_tree(tmp_path, [
-        ("a.bst", f"aaaa000{i}", 5, f"20260818-1600{i:02d}") for i in range(3)
-    ])
+    root = _tax_tree(tmp_path, [("a.bst", f"aaaa000{i}", 5, f"20260818-1600{i:02d}") for i in range(3)])
     assert developer_tax(scan_log_tree(str(root)))['weak_window'] is True
 
 
@@ -715,8 +745,7 @@ class TestTheProjectDirectoryIsTheObviousArgument:
         assert not is_project_dir(str(tmp_path))
         assert project_name_from_dir(str(tmp_path)) is None
 
-    def test_a_project_directory_renders_that_projects_report(
-            self, project_dir, log_tree, monkeypatch, capsys):
+    def test_a_project_directory_renders_that_projects_report(self, project_dir, log_tree, monkeypatch, capsys):
         """The Motivation's whole point: `bga cache-logs PROJECT` used to
         report "nothing to report on" about a project whose logs sit two
         directories away, because the positional was the *log root*."""
@@ -778,8 +807,7 @@ class TestDiscoveryIsTheToolsJob:
 
 
 class TestTheWrongArgumentRedirects:
-    def test_a_project_with_no_logs_names_what_was_derived_and_where(
-            self, tmp_path, log_tree, monkeypatch, capsys):
+    def test_a_project_with_no_logs_names_what_was_derived_and_where(self, tmp_path, log_tree, monkeypatch, capsys):
         """UX-127 item 3. "Nothing to report on" is a confidently wrong
         answer when the tool looked in the right place for the wrong
         name - and the user has no way to tell those apart."""
@@ -798,8 +826,7 @@ class TestTheWrongArgumentRedirects:
         assert "The tree holds: my-project" in err
         assert "--list" in err
 
-    def test_an_empty_tree_says_no_build_has_written_here(
-            self, tmp_path, monkeypatch, capsys):
+    def test_an_empty_tree_says_no_build_has_written_here(self, tmp_path, monkeypatch, capsys):
         empty = tmp_path / "cache" / "buildstream" / "logs"
         empty.mkdir(parents=True)
         monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
@@ -836,8 +863,7 @@ class TestThePlane2ReportTakesASnapshotNameToo:
                 json.dump({"by_element": {}, "configure_phase": {}}, handle)
         return project, snapshot
 
-    def test_an_alias_names_the_snapshots_report(
-            self, tmp_path, log_tree, monkeypatch, capsys):
+    def test_an_alias_names_the_snapshots_report(self, tmp_path, log_tree, monkeypatch, capsys):
         project, snapshot = self._project_with_a_snapshot(tmp_path)
         monkeypatch.setenv("XDG_CACHE_HOME", str(log_tree.parent))
         (log_tree.parent / "buildstream").mkdir(exist_ok=True)
@@ -848,8 +874,7 @@ class TestThePlane2ReportTakesASnapshotNameToo:
 
         assert "my-project" in capsys.readouterr().out
 
-    def test_an_alias_with_no_report_fails_by_name_not_as_a_missing_file(
-            self, tmp_path, monkeypatch, capsys):
+    def test_an_alias_with_no_report_fails_by_name_not_as_a_missing_file(self, tmp_path, monkeypatch, capsys):
         project, _snapshot = self._project_with_a_snapshot(tmp_path, with_plane2=False)
         monkeypatch.chdir(project)
 
@@ -861,7 +886,6 @@ class TestThePlane2ReportTakesASnapshotNameToo:
         project, snapshot = self._project_with_a_snapshot(tmp_path)
         monkeypatch.chdir(tmp_path)
 
-        assert main([str(project), "--native-report",
-                     os.path.join(snapshot, "plane2.json")]) == 1
+        assert main([str(project), "--native-report", os.path.join(snapshot, "plane2.json")]) == 1
 
         assert "no plane2.json" not in capsys.readouterr().err

@@ -20,6 +20,7 @@ Two things are computed here, from data already captured:
 The end-to-end numbers quoted below are from real `examples/06` builds
 run for this task with a real bst 2.7.0, not from fixtures.
 """
+
 from bga.cache_effectiveness import (
     HEALTHY_HIT_RATIO,
     POOR_HIT_RATIO,
@@ -55,12 +56,17 @@ class _Graph:
 
 # --- accounting ---------------------------------------------------------
 
+
 def test_the_real_capture_numbers():
     """The acceptance test's own figures, from the published fdsdk
     capture: 65 cached, 25 built."""
     accounting = compute_cache_accounting(
-        _Ctx({"build": {"processed": 25, "skipped": 65, "failed": 0},
-              "fetch": {"processed": 0, "skipped": 90, "failed": 0}}),
+        _Ctx(
+            {
+                "build": {"processed": 25, "skipped": 65, "failed": 0},
+                "fetch": {"processed": 0, "skipped": 90, "failed": 0},
+            }
+        ),
     )
     assert accounting["built_elements"] == 25
     assert accounting["cached_elements"] == 65
@@ -90,8 +96,7 @@ def test_the_target_closure_is_accounted_separately():
     the critical-path walk, which excludes them correctly for a
     different question - because shipping a target requires them."""
     graph = _Graph(
-        [_Elem("app.bst", "k1", requested_target=True),
-         _Elem("lib.bst", "k2"), _Elem("unrelated.bst", "k3")],
+        [_Elem("app.bst", "k1", requested_target=True), _Elem("lib.bst", "k2"), _Elem("unrelated.bst", "k3")],
         [_Dep("lib.bst", "app.bst")],
     )
 
@@ -105,15 +110,18 @@ def test_the_target_closure_is_accounted_separately():
             self.task_key = _Key(uid)
 
     accounting = compute_cache_accounting(
-        _Ctx({"build": {"processed": 1, "skipped": 2}}), graph, [_Task("app.bst")],
+        _Ctx({"build": {"processed": 1, "skipped": 2}}),
+        graph,
+        [_Task("app.bst")],
     )
     closure = accounting["target_closure"]
-    assert closure["elements"] == 2          # app + lib, not the unrelated one
+    assert closure["elements"] == 2  # app + lib, not the unrelated one
     assert closure["built"] == 1
     assert closure["cached"] == 1
 
 
 # --- the finding --------------------------------------------------------
+
 
 class _Result:
     def __init__(self, cache, run_mode=None):
@@ -130,9 +138,7 @@ class _Result:
 def _cache_finding(hit_share, run_mode=None, **extra):
     cache = {"hit_share": hit_share, "built_elements": 10, "cached_elements": 90}
     cache.update(extra)
-    return findings_by_id(
-        compute_findings(_Result(cache, run_mode=run_mode))
-    ).get("cache-hit-ratio")
+    return findings_by_id(compute_findings(_Result(cache, run_mode=run_mode))).get("cache-hit-ratio")
 
 
 def test_a_healthy_cache_is_still_reported():
@@ -189,8 +195,17 @@ def test_no_ratio_means_no_finding():
 
 # --- churn and invalidation roots ---------------------------------------
 
-def _churn(baseline, candidate, deps, built, durations=None, baseline_built=(),
-           candidate_run_mode="incremental", baseline_run_mode="incremental"):
+
+def _churn(
+    baseline,
+    candidate,
+    deps,
+    built,
+    durations=None,
+    baseline_built=(),
+    candidate_run_mode="incremental",
+    baseline_run_mode="incremental",
+):
     """UX-93 gave this call three preconditions. The defaults here are
     the case the original tests were written against and still describe:
     two incremental runs whose baseline rebuilt nothing, i.e. every
@@ -200,7 +215,8 @@ def _churn(baseline, candidate, deps, built, durations=None, baseline_built=(),
         [_Elem(u, k) for u, k in baseline.items()],
         [_Elem(u, k) for u, k in candidate.items()],
         [_Dep(p, s) for p, s in deps],
-        set(built), durations or dict.fromkeys(built, 1000000),
+        set(built),
+        durations or dict.fromkeys(built, 1000000),
         baseline_built=None if baseline_built is None else set(baseline_built),
         candidate_run_mode=candidate_run_mode,
         baseline_run_mode=baseline_run_mode,
@@ -210,8 +226,7 @@ def _churn(baseline, candidate, deps, built, durations=None, baseline_built=(),
 def test_nothing_changed_means_no_churn_and_no_roots():
     """Measured for real: `examples/06` built twice with caches on
     reported 0 churn, 0 changed keys, across 11 comparable elements."""
-    result = _churn({"a.bst": "k1", "b.bst": "k2"},
-                    {"a.bst": "k1", "b.bst": "k2"}, [("a.bst", "b.bst")], built=[])
+    result = _churn({"a.bst": "k1", "b.bst": "k2"}, {"a.bst": "k1", "b.bst": "k2"}, [("a.bst", "b.bst")], built=[])
     assert result["churned_count"] == 0
     assert result["changed_keys"] == 0
     assert result["invalidation_roots"] == []
@@ -221,8 +236,7 @@ def test_a_rebuild_with_an_unchanged_key_is_churn():
     """The definition is not a judgement call: the key covers the
     element and everything it depends on, so an identical key means the
     artifact it produced already existed."""
-    result = _churn({"a.bst": "k1"}, {"a.bst": "k1"}, [], built=["a.bst"],
-                    durations={"a.bst": 5_000_000})
+    result = _churn({"a.bst": "k1"}, {"a.bst": "k1"}, [], built=["a.bst"], durations={"a.bst": 5_000_000})
     assert result["churned_elements"] == ["a.bst"]
     assert result["wasted_rebuild_us"] == 5_000_000
 
@@ -250,15 +264,15 @@ def test_two_independent_changes_are_two_roots():
     result = _churn(
         {"a.bst": "1", "b.bst": "1", "c.bst": "1"},
         {"a.bst": "2", "b.bst": "2", "c.bst": "1"},
-        [], built=["a.bst", "b.bst"],
+        [],
+        built=["a.bst", "b.bst"],
     )
     assert [r["element_uid"] for r in result["invalidation_roots"]] == ["a.bst", "b.bst"]
 
 
 def test_an_element_only_one_side_has_is_skipped_rather_than_guessed():
     """An element the baseline never had cannot have churned."""
-    result = _churn({"a.bst": "1"}, {"a.bst": "1", "new.bst": "9"}, [],
-                    built=["new.bst"])
+    result = _churn({"a.bst": "1"}, {"a.bst": "1", "new.bst": "9"}, [], built=["new.bst"])
     assert result["comparable_elements"] == 1
     assert result["churned_count"] == 0
     assert result["invalidation_roots"] == []
@@ -270,6 +284,7 @@ def test_no_comparable_keys_produces_no_block():
 
 # --- UX-93: churn is a claim about an artifact that was there to serve --
 
+
 def test_a_caches_off_candidate_gets_no_churn_verdict_at_all():
     """Round 11's first false accusation, in one line: two deliberate
     full rebuilds of the same project, caches cleared between them - the
@@ -277,8 +292,7 @@ def test_a_caches_off_candidate_gets_no_churn_verdict_at_all():
     rebuilt with an unchanged cache key, costing 36.5s ... that time
     bought nothing"*. It bought the entire build.
     """
-    result = _churn({"a.bst": "k1"}, {"a.bst": "k1"}, [], built=["a.bst"],
-                    candidate_run_mode="full")
+    result = _churn({"a.bst": "k1"}, {"a.bst": "k1"}, [], built=["a.bst"], candidate_run_mode="full")
     assert result["applicable"] is False
     assert result["reason"] == "candidate_run_is_full"
     assert "churned_elements" not in result
@@ -294,8 +308,9 @@ def test_a_caches_off_baseline_cannot_support_either_verdict():
     rebuilt everything, so every unchanged-key rebuild in the candidate
     also appears in the baseline. Reporting that as a retention failure
     would be as wrong as reporting it as waste."""
-    result = _churn({"a.bst": "k1"}, {"a.bst": "k1"}, [], built=["a.bst"],
-                    baseline_built=["a.bst"], baseline_run_mode="full")
+    result = _churn(
+        {"a.bst": "k1"}, {"a.bst": "k1"}, [], built=["a.bst"], baseline_built=["a.bst"], baseline_run_mode="full"
+    )
     assert result["applicable"] is False
     assert result["reason"] == "baseline_run_is_full"
 
@@ -316,7 +331,9 @@ def test_both_runs_rebuilding_the_same_key_is_a_retention_finding():
     result = _churn(
         {"cut.bst": "k1", "kept.bst": "k2"},
         {"cut.bst": "k1", "kept.bst": "k2"},
-        [], built=["cut.bst"], baseline_built=["cut.bst"],
+        [],
+        built=["cut.bst"],
+        baseline_built=["cut.bst"],
         durations={"cut.bst": 4_604_200_000},
     )
     assert result["rebuilt_in_both_elements"] == ["cut.bst"]
@@ -330,8 +347,9 @@ def test_the_baseline_had_it_cached_so_it_is_still_waste():
     """The case the original wording is true for, kept exactly: the
     baseline skipped this element, the candidate rebuilt it, and the key
     says nothing it depends on changed."""
-    result = _churn({"a.bst": "k1"}, {"a.bst": "k1"}, [], built=["a.bst"],
-                    baseline_built=[], durations={"a.bst": 5_000_000})
+    result = _churn(
+        {"a.bst": "k1"}, {"a.bst": "k1"}, [], built=["a.bst"], baseline_built=[], durations={"a.bst": 5_000_000}
+    )
     assert result["churned_elements"] == ["a.bst"]
     assert result["wasted_rebuild_us"] == 5_000_000
     assert result["rebuilt_in_both_elements"] == []
@@ -342,8 +360,7 @@ def test_an_unmeasured_baseline_declines_rather_than_guesses():
     indistinguishable. `compare` already refuses to guess the candidate's
     built set for exactly this reason; this is the same rule on the other
     side of the same call."""
-    result = _churn({"a.bst": "k1"}, {"a.bst": "k1"}, [], built=["a.bst"],
-                    baseline_built=None)
+    result = _churn({"a.bst": "k1"}, {"a.bst": "k1"}, [], built=["a.bst"], baseline_built=None)
     assert result["applicable"] is False
     assert result["reason"] == "baseline_built_set_not_measured"
 
@@ -356,7 +373,8 @@ def test_invalidation_roots_still_work_on_a_genuine_incremental_pair():
     result = _churn(
         {"core.bst": "old", "lib.bst": "l1"},
         {"core.bst": "new", "lib.bst": "l2"},
-        [("core.bst", "lib.bst")], built=["core.bst", "lib.bst"],
+        [("core.bst", "lib.bst")],
+        built=["core.bst", "lib.bst"],
         baseline_built=[],
     )
     assert [r["element_uid"] for r in result["invalidation_roots"]] == ["core.bst"]

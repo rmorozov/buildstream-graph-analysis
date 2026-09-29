@@ -30,6 +30,7 @@ it existed; the sentence is now a module constant that both import. What
 is left to guard is that it still describes what the code selects for -
 which no equality between two copies could ever have caught.
 """
+
 import os
 import pathlib
 import re
@@ -59,10 +60,9 @@ class TestTheSentenceDescribesWhatTheCodeSelects:
         """
         source = TEXT_REPORT.read_text(encoding="utf-8")
         assert "schemas.SERIALIZED_PAIRS_MEANING" in source, (
-            "the terminal caption is its own string again; the two said "
-            "opposite things for as long as that was true")
-        assert _serialized_pairs_node()["description"] == (
-            schemas.SERIALIZED_PAIRS_MEANING)
+            "the terminal caption is its own string again; the two said opposite things for as long as that was true"
+        )
+        assert _serialized_pairs_node()["description"] == (schemas.SERIALIZED_PAIRS_MEANING)
 
     def test_it_says_the_order_is_forced(self):
         """The sentence's whole content, and the defect inverted.
@@ -76,7 +76,8 @@ class TestTheSentenceDescribesWhatTheCodeSelects:
         assert "not independently batchable" in said, said
         assert "nothing forcing" not in said, (
             "the description is the negation of what the computation "
-            "selects for - the exact sentence UX-408 was filed on")
+            "selects for - the exact sentence UX-408 was filed on"
+        )
 
     def test_the_computation_still_selects_the_dependent_pairs(self):
         """The premise the sentence rests on.
@@ -87,13 +88,13 @@ class TestTheSentenceDescribesWhatTheCodeSelects:
         again and nothing about the two strings would notice.
         """
         source = BATCHING.read_text(encoding="utf-8")
-        block = re.search(
-            r"serialized_pairs[^\n]*=\s*\[(.*?)\n    \]", source, re.S)
+        block = re.search(r"serialized_pairs[^\n]*=\s*\[(.*?)\n    \]", source, re.S)
         assert block, "serialized_pairs is no longer built as a list here"
         assert "if not _are_independent" in block.group(1), (
             "the filter no longer selects the pairs that are NOT "
             "independent, so the description this item corrected is "
-            f"describing something else: {block.group(1)[:200]}")
+            f"describing something else: {block.group(1)[:200]}"
+        )
 
 
 class TestTheCaptionATerminalPrints:
@@ -105,13 +106,15 @@ class TestTheCaptionATerminalPrints:
 
     def test_the_rendered_caption_carries_the_sentence(self):
         done = subprocess.run(
-            [sys.executable, "-m", "bga.cli", "analyze",
-             str(REPO / "tests/fixtures/macro_micro/run")],
-            capture_output=True, text=True, cwd=REPO, timeout=120,
-            env=dict(os.environ, PYTHONPATH=str(REPO)))
+            [sys.executable, "-m", "bga.cli", "analyze", str(REPO / "tests/fixtures/macro_micro/run")],
+            capture_output=True,
+            text=True,
+            cwd=REPO,
+            timeout=120,
+            env=dict(os.environ, PYTHONPATH=str(REPO)),
+        )
         assert done.returncode == 0, done.stderr[-2000:]
-        line = next((row for row in done.stdout.splitlines()
-                     if row.strip().startswith("Serialized (")), None)
+        line = next((row for row in done.stdout.splitlines() if row.strip().startswith("Serialized (")), None)
         assert line, "the fixture no longer prints a serialized-pairs line"
         # The caption opens the sentence mid-line, so it lower-cases the
         # first letter and keeps everything else.

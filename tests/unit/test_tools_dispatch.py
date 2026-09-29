@@ -10,6 +10,7 @@ The two properties that matter here are in tension, so both are pinned:
 the tools must be reachable through `bga`, and they must remain runnable
 directly, unchanged.
 """
+
 import subprocess
 import sys
 
@@ -111,7 +112,8 @@ def test_the_alias_reaches_the_tool_through_the_real_cli():
     """End to end through `bga`, not through the dispatcher directly."""
     result = subprocess.run(
         [sys.executable, "-m", "bga.cli", "extract", "--help"],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     )
 
     assert result.returncode == 0
@@ -123,7 +125,8 @@ def test_the_tool_is_still_runnable_directly():
     take one away."""
     result = subprocess.run(
         [sys.executable, "-m", "tools.bst_extract_run", "--help"],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     )
 
     assert result.returncode == 0

@@ -8,6 +8,7 @@ narrow but frequently-rebuilt element can cost more than a wide, rarely
 rebuilt one. These tests pin the ranking, the two co-change findings,
 and the payload's absence rule.
 """
+
 from bga.correlate import (
     correlate,
     expected_rebuild_cost,
@@ -30,20 +31,27 @@ def _change_frequency(elements, co_change=(), builds_lower_bound=30):
 
 # --- expected rebuild cost ----------------------------------------------
 
+
 def test_frequent_narrow_element_outranks_rare_wide_one():
     """lib-a (blast 4, weighted 40s) rebuilds 30 times; codegen (blast
     20, weighted 400s) rebuilds twice. 30 * 40s = 1200s beats 2 * 400s =
     800s despite codegen's five-times-larger blast."""
-    analysis = {'elements': {'blast_radius': {
-        'lib-a.bst': {'downstream_count': 4, 'weighted_duration_us': 40_000_000},
-        'codegen.bst': {'downstream_count': 20, 'weighted_duration_us': 400_000_000},
-    }}}
-    cache_logs = {'change_frequency': _change_frequency([
-        {'element': 'lib-a.bst', 'rebuilds': 30, 'unchanged_key_rebuilds': 0,
-         'unchanged_key_share': 0.0},
-        {'element': 'codegen.bst', 'rebuilds': 2, 'unchanged_key_rebuilds': 0,
-         'unchanged_key_share': 0.0},
-    ])}
+    analysis = {
+        'elements': {
+            'blast_radius': {
+                'lib-a.bst': {'downstream_count': 4, 'weighted_duration_us': 40_000_000},
+                'codegen.bst': {'downstream_count': 20, 'weighted_duration_us': 400_000_000},
+            }
+        }
+    }
+    cache_logs = {
+        'change_frequency': _change_frequency(
+            [
+                {'element': 'lib-a.bst', 'rebuilds': 30, 'unchanged_key_rebuilds': 0, 'unchanged_key_share': 0.0},
+                {'element': 'codegen.bst', 'rebuilds': 2, 'unchanged_key_rebuilds': 0, 'unchanged_key_share': 0.0},
+            ]
+        )
+    }
 
     rows = expected_rebuild_cost(analysis, cache_logs)
 
@@ -59,39 +67,49 @@ def test_key_absent_without_change_frequency():
 
 
 def test_key_present_and_a_list_with_change_frequency():
-    analysis = _analysis(blast={
-        'lib-a.bst': {'downstream_count': 4, 'weighted_duration_us': 40_000_000},
-    })
-    cache_logs = {'change_frequency': _change_frequency([
-        {'element': 'lib-a.bst', 'rebuilds': 30, 'unchanged_key_rebuilds': 0,
-         'unchanged_key_share': 0.0},
-    ])}
+    analysis = _analysis(
+        blast={
+            'lib-a.bst': {'downstream_count': 4, 'weighted_duration_us': 40_000_000},
+        }
+    )
+    cache_logs = {
+        'change_frequency': _change_frequency(
+            [
+                {'element': 'lib-a.bst', 'rebuilds': 30, 'unchanged_key_rebuilds': 0, 'unchanged_key_share': 0.0},
+            ]
+        )
+    }
 
     result = correlate(analysis, _native(), cache_logs=cache_logs)
 
-    assert result['expected_rebuild_cost'] == [{
-        'element': 'lib-a.bst', 'rebuilds': 30, 'weighted_blast_us': 40_000_000,
-        'expected_cost_us': 1_200_000_000, 'blast_count': 4,
-        'is_foundation': False,
-    }]
+    assert result['expected_rebuild_cost'] == [
+        {
+            'element': 'lib-a.bst',
+            'rebuilds': 30,
+            'weighted_blast_us': 40_000_000,
+            'expected_cost_us': 1_200_000_000,
+            'blast_count': 4,
+            'is_foundation': False,
+        }
+    ]
 
 
 # --- consolidate-by-co-change --------------------------------------------
 
+
 def test_consolidate_fires_on_a_full_share_pair_with_a_common_consumer():
-    cache_logs = {'change_frequency': _change_frequency(
-        elements=[
-            {'element': 'pair-x.bst', 'rebuilds': 12, 'unchanged_key_rebuilds': 0,
-             'unchanged_key_share': 0.0},
-            {'element': 'pair-y.bst', 'rebuilds': 13, 'unchanged_key_rebuilds': 0,
-             'unchanged_key_share': 0.0},
-        ],
-        co_change=[
-            {'a': 'pair-x.bst', 'b': 'pair-y.bst', 'co_rebuilds': 12,
-             'share_of_a': 1.0, 'share_of_b': 12 / 13},
-        ],
-        builds_lower_bound=13,
-    )}
+    cache_logs = {
+        'change_frequency': _change_frequency(
+            elements=[
+                {'element': 'pair-x.bst', 'rebuilds': 12, 'unchanged_key_rebuilds': 0, 'unchanged_key_share': 0.0},
+                {'element': 'pair-y.bst', 'rebuilds': 13, 'unchanged_key_rebuilds': 0, 'unchanged_key_share': 0.0},
+            ],
+            co_change=[
+                {'a': 'pair-x.bst', 'b': 'pair-y.bst', 'co_rebuilds': 12, 'share_of_a': 1.0, 'share_of_b': 12 / 13},
+            ],
+            builds_lower_bound=13,
+        )
+    }
     edges = [_Edge('pair-x.bst', 'consumer.bst'), _Edge('pair-y.bst', 'consumer.bst')]
 
     findings = find_granularity_findings({}, {}, cache_logs, dependencies=edges)
@@ -105,21 +123,21 @@ def test_consolidate_fires_on_a_full_share_pair_with_a_common_consumer():
 
 
 def test_consolidate_does_not_fire_when_a_third_element_consumes_pair_x_alone():
-    cache_logs = {'change_frequency': _change_frequency(
-        elements=[
-            {'element': 'pair-x.bst', 'rebuilds': 12, 'unchanged_key_rebuilds': 0,
-             'unchanged_key_share': 0.0},
-            {'element': 'pair-y.bst', 'rebuilds': 13, 'unchanged_key_rebuilds': 0,
-             'unchanged_key_share': 0.0},
-        ],
-        co_change=[
-            {'a': 'pair-x.bst', 'b': 'pair-y.bst', 'co_rebuilds': 12,
-             'share_of_a': 1.0, 'share_of_b': 12 / 13},
-        ],
-        builds_lower_bound=13,
-    )}
+    cache_logs = {
+        'change_frequency': _change_frequency(
+            elements=[
+                {'element': 'pair-x.bst', 'rebuilds': 12, 'unchanged_key_rebuilds': 0, 'unchanged_key_share': 0.0},
+                {'element': 'pair-y.bst', 'rebuilds': 13, 'unchanged_key_rebuilds': 0, 'unchanged_key_share': 0.0},
+            ],
+            co_change=[
+                {'a': 'pair-x.bst', 'b': 'pair-y.bst', 'co_rebuilds': 12, 'share_of_a': 1.0, 'share_of_b': 12 / 13},
+            ],
+            builds_lower_bound=13,
+        )
+    }
     edges = [
-        _Edge('pair-x.bst', 'consumer.bst'), _Edge('pair-y.bst', 'consumer.bst'),
+        _Edge('pair-x.bst', 'consumer.bst'),
+        _Edge('pair-y.bst', 'consumer.bst'),
         _Edge('pair-x.bst', 'only-x-consumer.bst'),
     ]
 
@@ -133,19 +151,18 @@ def test_consolidate_does_not_fire_for_two_leaves_with_no_consumer_at_all():
     compare equal, so "neither is consumed alone" needs its own
     non-empty check - two co-changing leaves nobody consumes are unused,
     not consumed together."""
-    cache_logs = {'change_frequency': _change_frequency(
-        elements=[
-            {'element': 'pair-x.bst', 'rebuilds': 12, 'unchanged_key_rebuilds': 0,
-             'unchanged_key_share': 0.0},
-            {'element': 'pair-y.bst', 'rebuilds': 13, 'unchanged_key_rebuilds': 0,
-             'unchanged_key_share': 0.0},
-        ],
-        co_change=[
-            {'a': 'pair-x.bst', 'b': 'pair-y.bst', 'co_rebuilds': 12,
-             'share_of_a': 1.0, 'share_of_b': 12 / 13},
-        ],
-        builds_lower_bound=13,
-    )}
+    cache_logs = {
+        'change_frequency': _change_frequency(
+            elements=[
+                {'element': 'pair-x.bst', 'rebuilds': 12, 'unchanged_key_rebuilds': 0, 'unchanged_key_share': 0.0},
+                {'element': 'pair-y.bst', 'rebuilds': 13, 'unchanged_key_rebuilds': 0, 'unchanged_key_share': 0.0},
+            ],
+            co_change=[
+                {'a': 'pair-x.bst', 'b': 'pair-y.bst', 'co_rebuilds': 12, 'share_of_a': 1.0, 'share_of_b': 12 / 13},
+            ],
+            builds_lower_bound=13,
+        )
+    }
 
     findings = find_granularity_findings({}, {}, cache_logs, dependencies=[])
 
@@ -154,24 +171,24 @@ def test_consolidate_does_not_fire_for_two_leaves_with_no_consumer_at_all():
 
 # --- split-by-co-change ----------------------------------------------------
 
+
 def test_split_fires_for_two_consumer_groups_that_never_co_rebuild():
-    cache_logs = {'change_frequency': _change_frequency(
-        elements=[
-            {'element': 'a1.bst', 'rebuilds': 5, 'unchanged_key_rebuilds': 0,
-             'unchanged_key_share': 0.0},
-            {'element': 'a2.bst', 'rebuilds': 5, 'unchanged_key_rebuilds': 0,
-             'unchanged_key_share': 0.0},
-            {'element': 'b1.bst', 'rebuilds': 4, 'unchanged_key_rebuilds': 0,
-             'unchanged_key_share': 0.0},
-        ],
-        co_change=[
-            {'a': 'a1.bst', 'b': 'a2.bst', 'co_rebuilds': 5,
-             'share_of_a': 1.0, 'share_of_b': 1.0},
-        ],
-        builds_lower_bound=5,
-    )}
+    cache_logs = {
+        'change_frequency': _change_frequency(
+            elements=[
+                {'element': 'a1.bst', 'rebuilds': 5, 'unchanged_key_rebuilds': 0, 'unchanged_key_share': 0.0},
+                {'element': 'a2.bst', 'rebuilds': 5, 'unchanged_key_rebuilds': 0, 'unchanged_key_share': 0.0},
+                {'element': 'b1.bst', 'rebuilds': 4, 'unchanged_key_rebuilds': 0, 'unchanged_key_share': 0.0},
+            ],
+            co_change=[
+                {'a': 'a1.bst', 'b': 'a2.bst', 'co_rebuilds': 5, 'share_of_a': 1.0, 'share_of_b': 1.0},
+            ],
+            builds_lower_bound=5,
+        )
+    }
     edges = [
-        _Edge('base.bst', 'a1.bst'), _Edge('base.bst', 'a2.bst'),
+        _Edge('base.bst', 'a1.bst'),
+        _Edge('base.bst', 'a2.bst'),
         _Edge('base.bst', 'b1.bst'),
     ]
 
@@ -186,25 +203,23 @@ def test_split_fires_for_two_consumer_groups_that_never_co_rebuild():
 
 
 def test_split_does_not_fire_when_one_row_joins_the_groups():
-    cache_logs = {'change_frequency': _change_frequency(
-        elements=[
-            {'element': 'a1.bst', 'rebuilds': 5, 'unchanged_key_rebuilds': 0,
-             'unchanged_key_share': 0.0},
-            {'element': 'a2.bst', 'rebuilds': 5, 'unchanged_key_rebuilds': 0,
-             'unchanged_key_share': 0.0},
-            {'element': 'b1.bst', 'rebuilds': 4, 'unchanged_key_rebuilds': 0,
-             'unchanged_key_share': 0.0},
-        ],
-        co_change=[
-            {'a': 'a1.bst', 'b': 'a2.bst', 'co_rebuilds': 5,
-             'share_of_a': 1.0, 'share_of_b': 1.0},
-            {'a': 'a2.bst', 'b': 'b1.bst', 'co_rebuilds': 4,
-             'share_of_a': 0.8, 'share_of_b': 1.0},
-        ],
-        builds_lower_bound=5,
-    )}
+    cache_logs = {
+        'change_frequency': _change_frequency(
+            elements=[
+                {'element': 'a1.bst', 'rebuilds': 5, 'unchanged_key_rebuilds': 0, 'unchanged_key_share': 0.0},
+                {'element': 'a2.bst', 'rebuilds': 5, 'unchanged_key_rebuilds': 0, 'unchanged_key_share': 0.0},
+                {'element': 'b1.bst', 'rebuilds': 4, 'unchanged_key_rebuilds': 0, 'unchanged_key_share': 0.0},
+            ],
+            co_change=[
+                {'a': 'a1.bst', 'b': 'a2.bst', 'co_rebuilds': 5, 'share_of_a': 1.0, 'share_of_b': 1.0},
+                {'a': 'a2.bst', 'b': 'b1.bst', 'co_rebuilds': 4, 'share_of_a': 0.8, 'share_of_b': 1.0},
+            ],
+            builds_lower_bound=5,
+        )
+    }
     edges = [
-        _Edge('base.bst', 'a1.bst'), _Edge('base.bst', 'a2.bst'),
+        _Edge('base.bst', 'a1.bst'),
+        _Edge('base.bst', 'a2.bst'),
         _Edge('base.bst', 'b1.bst'),
     ]
 

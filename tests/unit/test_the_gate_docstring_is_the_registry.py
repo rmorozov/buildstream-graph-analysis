@@ -15,6 +15,7 @@ here, because the docstring is neither. This reads the docstring's
 block against that same population, both directions and in order. The
 population is the analyzer's own output, never a list restated here.
 """
+
 import ast
 import pathlib
 import re
@@ -47,7 +48,7 @@ def _docstring_gates():
     if not header:
         return None
     listed = []
-    for line in doc[header.end():].splitlines()[1:]:
+    for line in doc[header.end() :].splitlines()[1:]:
         if not line.startswith("    "):
             break
         listed.extend(line.split())
@@ -80,18 +81,24 @@ class TestTheListIsReadable:
         assert len(live) >= 4 and live.keys() == stored.keys(), (
             "the two runs do not publish the same gate keys, or the "
             "fixture broke - every claim below would pass vacuously",
-            sorted(live), sorted(stored))
+            sorted(live),
+            sorted(stored),
+        )
 
     def test_the_docstring_block_parses_to_gate_shaped_names(self):
         listed = _docstring_gates()
         assert listed, (
             "bga/validation/invariants.py's docstring has no `Hard "
             "gates ...:` header with an indented block under it; the "
-            "list this holds to the registry is gone", listed)
+            "list this holds to the registry is gone",
+            listed,
+        )
         odd = [tok for tok in listed if not KEY.match(tok)]
         assert not odd, (
             "the docstring's hard-gate block holds a token that is not "
-            "a bare gate key - prose has leaked into the list", odd)
+            "a bare gate key - prose has leaked into the list",
+            odd,
+        )
 
 
 class TestTheDocstringIsThePublishedSet:
@@ -104,7 +111,9 @@ class TestTheDocstringIsThePublishedSet:
         assert not unnamed, (
             "a hard gate is published and bga/validation/invariants.py's "
             "module docstring does not name it - this is UX-609's defect "
-            "arriving again", unnamed)
+            "arriving again",
+            unnamed,
+        )
 
     def test_the_docstring_names_no_gate_a_run_does_not_publish(self):
         live, stored = _published()
@@ -113,7 +122,9 @@ class TestTheDocstringIsThePublishedSet:
         assert not stale, (
             "bga/validation/invariants.py's module docstring names a "
             "hard gate no run publishes; the line outlived its gate",
-            stale, sorted(live))
+            stale,
+            sorted(live),
+        )
 
     def test_the_list_is_in_the_order_the_code_writes_them(self):
         """The docstring says "in written order", which is the
@@ -121,9 +132,10 @@ class TestTheDocstringIsThePublishedSet:
         against the literal without re-sorting either."""
         live, _ = _published()
         assert _docstring_gates() == list(live), (
-            "bga/validation/invariants.py's module docstring lists the "
-            "gates in an order no run writes them in",
-            _docstring_gates(), list(live))
+            "bga/validation/invariants.py's module docstring lists the gates in an order no run writes them in",
+            _docstring_gates(),
+            list(live),
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

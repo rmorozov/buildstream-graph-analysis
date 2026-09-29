@@ -17,6 +17,7 @@ JSON - see generate_fixture.py for the full pipeline.
 Everything here is deterministic (no randomness, fixed durations) so the
 fixture is reproducible and stable in CI.
 """
+
 import hashlib
 from datetime import datetime, timedelta
 
@@ -150,8 +151,7 @@ def simulate_schedule():
                     deps.discard(k)
         elif not started_this_round and not_started:
             raise RuntimeError(
-                f"scheduling deadlock: {sorted(not_started)} never became ready "
-                "(check ELEMENTS for a dependency cycle)"
+                f"scheduling deadlock: {sorted(not_started)} never became ready (check ELEMENTS for a dependency cycle)"
             )
 
     schedule.sort(key=lambda t: (t["start_s"], t["uid"], t["kind"]))
@@ -181,11 +181,13 @@ def generate_wrapper_log(schedule, base_dt: datetime) -> str:
     """
     events = []  # (time_s, line_text)
     events.append((0.0, f"[wrapper][{_format_ts(base_dt, 0.0)}] INFO: Executing command: bst build app.bst"))
-    events.append((
-        0.05,
-        f"[wrapper][{_format_ts(base_dt, 0.05)}] INFO: Starting scheduler, "
-        f"Maximum Build Tasks: {MAX_JOBS}, Maximum Fetch Tasks: {CAPACITIES['DOWNLOAD']}",
-    ))
+    events.append(
+        (
+            0.05,
+            f"[wrapper][{_format_ts(base_dt, 0.05)}] INFO: Starting scheduler, "
+            f"Maximum Build Tasks: {MAX_JOBS}, Maximum Fetch Tasks: {CAPACITIES['DOWNLOAD']}",
+        )
+    )
 
     for task in schedule:
         uid, kind = task["uid"], task["kind"]
@@ -195,23 +197,29 @@ def generate_wrapper_log(schedule, base_dt: datetime) -> str:
 
         if (uid, kind) in DROPPED_TASKS:
             # Deliberately no START line - see DROPPED_TASKS docstring above.
-            events.append((
-                task["finish_s"],
-                f"[wrapper][{_format_ts(base_dt, task['finish_s'])}] INFO: "
-                f"[{_elapsed_str(task['finish_s'])}][{h}][   {action}:{uid}] CACHED {msg}",
-            ))
+            events.append(
+                (
+                    task["finish_s"],
+                    f"[wrapper][{_format_ts(base_dt, task['finish_s'])}] INFO: "
+                    f"[{_elapsed_str(task['finish_s'])}][{h}][   {action}:{uid}] CACHED {msg}",
+                )
+            )
             continue
 
-        events.append((
-            task["start_s"],
-            f"[wrapper][{_format_ts(base_dt, task['start_s'])}] INFO: "
-            f"[{_elapsed_str(task['start_s'])}][{h}][   {action}:{uid}] START {msg}",
-        ))
-        events.append((
-            task["finish_s"],
-            f"[wrapper][{_format_ts(base_dt, task['finish_s'])}] INFO: "
-            f"[{_elapsed_str(task['finish_s'])}][{h}][   {action}:{uid}] SUCCESS {msg}",
-        ))
+        events.append(
+            (
+                task["start_s"],
+                f"[wrapper][{_format_ts(base_dt, task['start_s'])}] INFO: "
+                f"[{_elapsed_str(task['start_s'])}][{h}][   {action}:{uid}] START {msg}",
+            )
+        )
+        events.append(
+            (
+                task["finish_s"],
+                f"[wrapper][{_format_ts(base_dt, task['finish_s'])}] INFO: "
+                f"[{_elapsed_str(task['finish_s'])}][{h}][   {action}:{uid}] SUCCESS {msg}",
+            )
+        )
 
     end_time = max(t["finish_s"] for t in schedule) + 1.0
     events.append((end_time, f"[wrapper][{_format_ts(base_dt, end_time)}] INFO: Return code: 0"))
@@ -225,11 +233,13 @@ def build_graph_dict():
     elements = []
     dependencies = []
     for uid, info in sorted(ELEMENTS.items()):
-        elements.append({
-            "uid": uid,
-            "cache_key": hashlib.sha256(uid.encode()).hexdigest()[:16],
-            "requested_target": uid == REQUESTED_TARGET,
-        })
+        elements.append(
+            {
+                "uid": uid,
+                "cache_key": hashlib.sha256(uid.encode()).hexdigest()[:16],
+                "requested_target": uid == REQUESTED_TARGET,
+            }
+        )
         for dep_uid in info["deps"]:
             dependencies.append({"predecessor": dep_uid, "successor": uid, "dependency_type": "build"})
     return {"elements": elements, "dependencies": dependencies}

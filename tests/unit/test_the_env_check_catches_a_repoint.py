@@ -5,6 +5,7 @@ shadow the ruff-only check passed) and node (absent, and off the
 declared major). The functions are pure, so this guards the logic
 without a broken environment; `main`'s I/O is the thin shell around
 them."""
+
 import pathlib
 
 from tools.dev_env_check import (
@@ -69,8 +70,7 @@ class TestThePinIsReadFromTheLockfile:
         that is not anchored to the line start reads the tool's name out
         of another package's provenance and answers with that package's
         version."""
-        assert pinned_version("nodeenv==1.10.0\n    # via pyright\n",
-                              "pyright") is None
+        assert pinned_version("nodeenv==1.10.0\n    # via pyright\n", "pyright") is None
 
     def test_no_line_for_the_tool_is_none(self):
         assert pinned_version("anyio==4.0\nsix==1.16\n", "ruff") is None
@@ -167,6 +167,5 @@ class TestEveryCheckedBinaryHasAPinToCheckAgainst:
         """Not that the file exists - that the reading finds something
         in it. A pin file can be present and say nothing about the tool,
         which is the cheaper question this repository calls a proxy."""
-        blank = [t for t, c in TOOLS.items()
-                 if not c.pin(pathlib.Path(c.source).read_text())]
+        blank = [t for t, c in TOOLS.items() if not c.pin(pathlib.Path(c.source).read_text())]
         assert blank == [], f"row(s) whose pin file carries no pin: {blank}"

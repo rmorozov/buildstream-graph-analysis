@@ -14,6 +14,7 @@ round-135..144.md, agent-runs.md   all citations reachable
 Scoped from round 142 on, per that census, not from the first clean
 round (135): the item that filed this asked for "at least 142".
 """
+
 import functools
 import pathlib
 import re
@@ -45,8 +46,7 @@ def _round_number(path):
 
 
 def _git(*argv):
-    done = subprocess.run(("git",) + argv, capture_output=True, text=True,
-                          cwd=REPO, timeout=60)
+    done = subprocess.run(("git",) + argv, capture_output=True, text=True, cwd=REPO, timeout=60)
     return done.returncode, done.stdout.strip()
 
 
@@ -78,8 +78,7 @@ def round_citations():
 def agent_runs_citations():
     """`{lineno: {citation, ...}}` for rows whose round >= FIRST_CLEAN_ROUND."""
     found = {}
-    for lineno, line in enumerate(
-            AGENT_RUNS.read_text(encoding="utf-8").splitlines(), start=1):
+    for lineno, line in enumerate(AGENT_RUNS.read_text(encoding="utf-8").splitlines(), start=1):
         match = AGENT_RUNS_ROW.match(line)
         if not match or int(match.group(1)) < FIRST_CLEAN_ROUND:
             continue
@@ -106,15 +105,14 @@ def _unreachable():
 
 
 class TestACommitCitationReachesHead:
-
     def test_round_documents_from_142_cite_only_reachable_commits(self):
         if _shallow():
             pytest.skip(
                 "this checkout is shallow, so its history stops at a "
-                "boundary and reachability here is not the tree's answer")
+                "boundary and reachability here is not the tree's answer"
+            )
         bad = [f"{where} {sha}" for where, sha in _unreachable()]
-        assert bad == [], (
-            f"commit citation(s) no clone of this branch can reach: {bad}")
+        assert bad == [], f"commit citation(s) no clone of this branch can reach: {bad}"
 
     def test_the_population_is_not_empty(self):
         """Non-vacuity: round 142 alone carries multiple citations."""

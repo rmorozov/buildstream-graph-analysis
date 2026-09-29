@@ -10,6 +10,7 @@ In CI the likeliest way to feed `compare` two unrelated runs is an
 artifact-path bug, so the pipeline would have reported "your build got
 slower" when the truth was "your job is comparing the wrong things".
 """
+
 import json
 import subprocess
 import sys
@@ -20,7 +21,9 @@ EXIT_MISMATCHED_RUNS = 6
 
 def _run_bga(args):
     return subprocess.run(
-        [sys.executable, "-m", "bga.cli"] + args, capture_output=True, text=True,
+        [sys.executable, "-m", "bga.cli"] + args,
+        capture_output=True,
+        text=True,
     )
 
 
@@ -40,25 +43,39 @@ def _write_run(tmp_path, name, uids, run_mode=None):
         # UX-55's own field, as `bst_extract_run` records it.
         context["queue_summary"] = {
             "build": (
-                {"processed": len(uids), "skipped": 0} if run_mode == "full"
+                {"processed": len(uids), "skipped": 0}
+                if run_mode == "full"
                 else {"processed": 1, "skipped": len(uids) - 1}
             )
         }
     (run_dir / "run-context.json").write_text(json.dumps(context))
-    (run_dir / "graph.json").write_text(json.dumps({
-        "elements": [{"uid": uid, "requested_target": True} for uid in uids],
-        "dependencies": [],
-        "run_identity_hash": identity["manifest_hash"],
-    }))
-    (run_dir / "trace.json").write_text(json.dumps({
-        "run_identity_hash": identity["manifest_hash"],
-        "spans": [
-            {"task_key": f"{uid}|BUILD|BUILD|0", "ts_us": start, "dur_us": dur,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"}
-            for uid, start, dur in spans
-        ],
-        "phases": [],
-    }))
+    (run_dir / "graph.json").write_text(
+        json.dumps(
+            {
+                "elements": [{"uid": uid, "requested_target": True} for uid in uids],
+                "dependencies": [],
+                "run_identity_hash": identity["manifest_hash"],
+            }
+        )
+    )
+    (run_dir / "trace.json").write_text(
+        json.dumps(
+            {
+                "run_identity_hash": identity["manifest_hash"],
+                "spans": [
+                    {
+                        "task_key": f"{uid}|BUILD|BUILD|0",
+                        "ts_us": start,
+                        "dur_us": dur,
+                        "resources": ["PROCESS"],
+                        "primary_resource": "PROCESS",
+                    }
+                    for uid, start, dur in spans
+                ],
+                "phases": [],
+            }
+        )
+    )
     return run_dir
 
 
@@ -94,9 +111,14 @@ def test_the_gate_cannot_mistake_a_mismatch_for_a_regression(tmp_path):
     mismatched pair used to exit 4, the same code as a real regression."""
     baseline, candidate = _unrelated_pair(tmp_path)
 
-    result = _run_bga([
-        "compare", str(baseline), str(candidate), "--fail-on-regression",
-    ])
+    result = _run_bga(
+        [
+            "compare",
+            str(baseline),
+            str(candidate),
+            "--fail-on-regression",
+        ]
+    )
 
     assert result.returncode == EXIT_MISMATCHED_RUNS
 
@@ -107,9 +129,14 @@ def test_allow_mismatch_restores_the_comparison(tmp_path):
     silent."""
     baseline, candidate = _unrelated_pair(tmp_path)
 
-    result = _run_bga([
-        "compare", str(baseline), str(candidate), "--allow-mismatch",
-    ])
+    result = _run_bga(
+        [
+            "compare",
+            str(baseline),
+            str(candidate),
+            "--allow-mismatch",
+        ]
+    )
 
     assert result.returncode == EXIT_OK
     assert "Verdict:" in result.stdout
@@ -134,7 +161,10 @@ def test_a_caches_off_run_against_an_incremental_one_is_refused(tmp_path):
     is that finding given teeth."""
     baseline = _write_run(tmp_path, "nightly", ["a.bst", "b.bst", "c.bst"], run_mode="full")
     candidate = _write_run(
-        tmp_path, "precommit", ["a.bst", "b.bst", "c.bst"], run_mode="incremental",
+        tmp_path,
+        "precommit",
+        ["a.bst", "b.bst", "c.bst"],
+        run_mode="incremental",
     )
 
     result = _run_bga(["compare", str(baseline), str(candidate)])
@@ -147,9 +177,16 @@ def test_mismatches_are_structured_in_the_json_report(tmp_path):
     """A consumer keys on `check`, not on prose."""
     baseline, candidate = _unrelated_pair(tmp_path)
 
-    result = _run_bga([
-        "compare", str(baseline), str(candidate), "--allow-mismatch", "--format", "json",
-    ])
+    result = _run_bga(
+        [
+            "compare",
+            str(baseline),
+            str(candidate),
+            "--allow-mismatch",
+            "--format",
+            "json",
+        ]
+    )
 
     assert result.returncode == EXIT_OK
     payload = json.loads(result.stdout)
@@ -174,10 +211,17 @@ def test_too_few_baseline_runs_names_what_is_missing(tmp_path):
     extra = _write_run(tmp_path, "b1", uids)
     candidate = _write_run(tmp_path, "cand", uids)
 
-    result = _run_bga([
-        "compare", str(baseline), str(candidate),
-        "--baseline-run", str(baseline), "--baseline-run", str(extra),
-    ])
+    result = _run_bga(
+        [
+            "compare",
+            str(baseline),
+            str(candidate),
+            "--baseline-run",
+            str(baseline),
+            "--baseline-run",
+            str(extra),
+        ]
+    )
 
     assert result.returncode == EXIT_OK
     assert "No noise band: baseline 2 runs supplied, 3 required" in result.stdout
@@ -189,10 +233,17 @@ def test_the_shortfall_is_structured_in_the_json_report(tmp_path):
     baseline = _write_run(tmp_path, "b0", uids)
     candidate = _write_run(tmp_path, "cand", uids)
 
-    result = _run_bga([
-        "compare", str(baseline), str(candidate),
-        "--baseline-run", str(baseline), "--format", "json",
-    ])
+    result = _run_bga(
+        [
+            "compare",
+            str(baseline),
+            str(candidate),
+            "--baseline-run",
+            str(baseline),
+            "--format",
+            "json",
+        ]
+    )
 
     payload = json.loads(result.stdout)
     assert payload["baseline_band_shortfall"] == {"supplied": 1, "required": 3}
@@ -201,15 +252,13 @@ def test_the_shortfall_is_structured_in_the_json_report(tmp_path):
 
 # --- UX-114: the band's own refusal carries the same code ---------------
 
+
 def _cross_mode_band(tmp_path):
     """An incremental band and a full candidate - what `bga baseline
     --candidate` builds when a cold capture is fed to the incremental
     set, which is exactly how round 12 hit this."""
     uids = ["a.bst", "b.bst", "c.bst"]
-    band = [
-        _write_run(tmp_path, f"band{i}", uids, run_mode="incremental")
-        for i in range(3)
-    ]
+    band = [_write_run(tmp_path, f"band{i}", uids, run_mode="incremental") for i in range(3)]
     candidate = _write_run(tmp_path, "cold", uids, run_mode="full")
     return band, candidate
 
@@ -226,8 +275,7 @@ def test_a_cross_mode_band_member_is_not_comparable_not_a_usage_error(tmp_path):
     band, candidate = _cross_mode_band(tmp_path)
 
     result = _run_bga(
-        ["compare", str(band[0]), str(candidate)]
-        + [arg for run in band for arg in ("--baseline-run", str(run))]
+        ["compare", str(band[0]), str(candidate)] + [arg for run in band for arg in ("--baseline-run", str(run))]
     )
 
     assert result.returncode == EXIT_MISMATCHED_RUNS, result.stderr
@@ -240,12 +288,10 @@ def test_the_band_refusal_names_the_run_mode_check(tmp_path):
     band, candidate = _cross_mode_band(tmp_path)
 
     result = _run_bga(
-        ["compare", str(band[0]), str(candidate)]
-        + [arg for run in band for arg in ("--baseline-run", str(run))]
+        ["compare", str(band[0]), str(candidate)] + [arg for run in band for arg in ("--baseline-run", str(run))]
     )
 
-    assert "a noise band may only be built from runs of the same kind" \
-        in result.stderr
+    assert "a noise band may only be built from runs of the same kind" in result.stderr
     assert str(band[0]) in result.stderr
 
 

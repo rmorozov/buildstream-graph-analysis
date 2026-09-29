@@ -14,6 +14,7 @@ The scale run and the served pages are built once per module
 (`page_uris`), not once per test: `scale_run` alone costs ~3.5s
 (`tests/pages.py`).
 """
+
 import json
 import pathlib
 import sys
@@ -46,12 +47,12 @@ def browser():
 @pytest.fixture(scope="module")
 def page_uris(tmp_path_factory):
     """`{label: uri}` for every page the inventory covers, built once."""
-    uris = {label: pages.export_uri(fixture,
-                                     tmp_path_factory.mktemp(f"labels-{label}"))
-            for label, fixture in pages.FIXTURES.items()}
+    uris = {
+        label: pages.export_uri(fixture, tmp_path_factory.mktemp(f"labels-{label}"))
+        for label, fixture in pages.FIXTURES.items()
+    }
     scale = pages.scale_run(tmp_path_factory.mktemp("labels-scale"))
-    uris["scale"] = pages.export_uri(
-        scale, tmp_path_factory.mktemp("labels-scale-page"))
+    uris["scale"] = pages.export_uri(scale, tmp_path_factory.mktemp("labels-scale-page"))
     httpd, served = strings.served_uris(pages.WITH_TIMELINE)
     uris.update(served)
     yield uris
@@ -61,32 +62,27 @@ def page_uris(tmp_path_factory):
 
 @needs_browser
 class TestEveryLabelIsSentenceCase:
-
     @pytest.mark.parametrize("label", LABELS)
-    def test_every_rendered_label_is_listed_and_cased(
-            self, browser, page_uris, label):
+    def test_every_rendered_label_is_listed_and_cased(self, browser, page_uris, label):
         rows = strings.rows_for(browser, label, page_uris[label])
         missing = [r for r in rows if (r["role"], r["text"]) not in _KNOWN]
         assert not missing, (
             f"{label} renders a label the inventory does not carry: "
             f"{missing[:5]} - add it to docs/design/rendered-strings.json "
-            f"(python3 tools/dev_rendered_strings.py --write)")
-        uncased = [r for r in rows
-                   if _EXCEPTION[(r["role"], r["text"])] is None
-                   and not strings.is_sentence_case(r["text"])]
+            f"(python3 tools/dev_rendered_strings.py --write)"
+        )
+        uncased = [
+            r for r in rows if _EXCEPTION[(r["role"], r["text"])] is None and not strings.is_sentence_case(r["text"])
+        ]
         assert not uncased, f"{label} renders not-sentence-case: {uncased}"
 
     @pytest.mark.parametrize("label", LABELS)
-    def test_no_parenthesised_plural_reaches_the_page(
-            self, browser, page_uris, label):
-        body = browser.measure(page_uris[label],
-                                '(() => document.body.innerText)()')
-        assert "(s)" not in body, (
-            f"{label} still spells a plural `(s)` rather than choosing it "
-            f"by count")
+    def test_no_parenthesised_plural_reaches_the_page(self, browser, page_uris, label):
+        body = browser.measure(page_uris[label], '(() => document.body.innerText)()')
+        assert "(s)" not in body, f"{label} still spells a plural `(s)` rather than choosing it by count"
 
     def test_no_text_transform_on_words(self):
         css = (REPO / "bga/viewer/style.css").read_text()
         assert "text-transform" not in css, (
-            "a case rule belongs to the string that is rendered, not to "
-            "the stylesheet (UX-1020)")
+            "a case rule belongs to the string that is rendered, not to the stylesheet (UX-1020)"
+        )

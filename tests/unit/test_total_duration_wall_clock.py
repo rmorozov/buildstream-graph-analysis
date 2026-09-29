@@ -13,6 +13,7 @@ session (run-context.json's own wall_clock field) was 7.6s - a real
 import dependency) invisible to the headline number, and consequently to
 `bga compare`'s verdict too.
 """
+
 import json
 
 from bga import BuildEfficiencyAnalyzer
@@ -24,9 +25,7 @@ def _write_run_dir(tmp_path, name, run_context, elements, dependencies, spans):
     run_dir.mkdir()
     graph = {
         "elements": [{"uid": uid, "requested_target": is_target} for uid, is_target in elements],
-        "dependencies": [
-            {"predecessor": pred, "successor": succ} for pred, succ in dependencies
-        ],
+        "dependencies": [{"predecessor": pred, "successor": succ} for pred, succ in dependencies],
     }
     trace = {"spans": spans, "phases": []}
     (run_dir / "run-context.json").write_text(json.dumps(run_context))
@@ -43,8 +42,13 @@ def _write_run_dir(tmp_path, name, run_context, elements, dependencies, spans):
 _ELEMENTS = [("a.bst", True)]
 _DEPENDENCIES: list = []
 _SPANS = [
-    {"task_key": "a.bst|BUILD|BUILD|0", "ts_us": 3000, "dur_us": 5000,
-     "resources": ["PROCESS"], "primary_resource": "PROCESS"},
+    {
+        "task_key": "a.bst|BUILD|BUILD|0",
+        "ts_us": 3000,
+        "dur_us": 5000,
+        "resources": ["PROCESS"],
+        "primary_resource": "PROCESS",
+    },
 ]
 
 
@@ -60,8 +64,12 @@ def _run_context(wall_start_us, wall_end_us):
 
 def _analyze(tmp_path, name, wall_start_us, wall_end_us):
     run_dir = _write_run_dir(
-        tmp_path, name, _run_context(wall_start_us, wall_end_us),
-        _ELEMENTS, _DEPENDENCIES, _SPANS,
+        tmp_path,
+        name,
+        _run_context(wall_start_us, wall_end_us),
+        _ELEMENTS,
+        _DEPENDENCIES,
+        _SPANS,
     )
     analyzer = BuildEfficiencyAnalyzer(run_dir)
     analyzer.load()
@@ -111,10 +119,20 @@ def test_compare_verdict_reflects_a_real_wall_clock_only_regression(tmp_path):
     `bga compare` reported "no significant change" here since it only
     ever saw the identical horizon."""
     baseline_dir = _write_run_dir(
-        tmp_path, "baseline", _run_context(0, 6000), _ELEMENTS, _DEPENDENCIES, _SPANS,
+        tmp_path,
+        "baseline",
+        _run_context(0, 6000),
+        _ELEMENTS,
+        _DEPENDENCIES,
+        _SPANS,
     )
     candidate_dir = _write_run_dir(
-        tmp_path, "candidate", _run_context(0, 10000), _ELEMENTS, _DEPENDENCIES, _SPANS,
+        tmp_path,
+        "candidate",
+        _run_context(0, 10000),
+        _ELEMENTS,
+        _DEPENDENCIES,
+        _SPANS,
     )
     comparison = compare_runs(baseline_dir, candidate_dir)
     assert comparison.deltas["total_duration_us"] == 4000

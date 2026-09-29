@@ -16,6 +16,8 @@ against a real build and so passes or fails on the coin; this one
 builds the tie directly, which is what makes it able to fail for the
 right reason.
 """
+
+import ast
 import pathlib
 import sys
 
@@ -52,11 +54,10 @@ def tied_pair(first_on_path=True, second_on_path=False):
 
 class TestATieIsBrokenByWhatTheBuildWaitsFor:
     def test_the_critical_path_element_ranks_first(self):
-        order = ranked(tied_pair(), {"core.bst": 10_000_000,
-                                     "codegen.bst": 3_000_000})
+        order = ranked(tied_pair(), {"core.bst": 10_000_000, "codegen.bst": 3_000_000})
         assert order[0] == "core.bst", (
-            f"tied on count and weighted duration, and the element the "
-            f"build waits for did not rank first: {order}")
+            f"tied on count and weighted duration, and the element the build waits for did not rank first: {order}"
+        )
 
     def test_the_input_order_does_not_decide_it(self):
         """The defect, reproduced: reversing the input must not reverse
@@ -64,8 +65,7 @@ class TestATieIsBrokenByWhatTheBuildWaitsFor:
         durations = {"core.bst": 10_000_000, "codegen.bst": 3_000_000}
         forward = ranked(tied_pair(), durations)
         backward = ranked(list(reversed(tied_pair())), durations)
-        assert forward == backward, (
-            f"the order depends on the input order: {forward} vs {backward}")
+        assert forward == backward, f"the order depends on the input order: {forward} vs {backward}"
 
     def test_the_uid_is_the_last_word(self):
         """Two elements alike in everything still have one order."""
@@ -96,9 +96,15 @@ class TestTheRankingCodeIsTheOneThatShips:
     def test_compute_blast_radius_uses_this_function(self):
         """The ordering has one home, so these clauses cannot pass while
         the shipped path ties by chance."""
-        source = (REPO / "bga/diagnostics/analyzer.py").read_text(
-            encoding="utf-8")
-        assert "order_blast_radius(results, element_durations," in source, (
+        tree = ast.parse((REPO / "bga/diagnostics/analyzer.py").read_text(encoding="utf-8"))
+        shipped = next(n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name == "compute_blast_radius")
+        calls = [
+            [a.id for a in n.args[:2] if isinstance(a, ast.Name)]
+            for n in ast.walk(shipped)
+            if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == "order_blast_radius"
+        ]
+        assert ["results", "element_durations"] in calls, (
             "compute_blast_radius no longer calls order_blast_radius, so "
             "every clause in this file is measuring something the tool "
-            "does not run")
+            "does not run"
+        )

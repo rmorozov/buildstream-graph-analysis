@@ -25,6 +25,7 @@ track's tokens; red prints everything, and `--loud` always does.
 Trailing args pass through to pytest, so `-n 2` overrides this
 module's own `-n auto`.
 """
+
 import argparse
 import functools
 import os
@@ -39,8 +40,14 @@ TESTS = REPO / "tests"
 # A change to one of these is a change to everything, and pretending
 # otherwise would make the selector quietly wrong on exactly the days it
 # matters most.
-EVERYTHING = ("tests/conftest.py", "tests/tiers.py", "pyproject.toml",
-              "Makefile", "tests/support/", "tests/dom_shim.mjs")
+EVERYTHING = (
+    "tests/conftest.py",
+    "tests/tiers.py",
+    "pyproject.toml",
+    "Makefile",
+    "tests/support/",
+    "tests/dom_shim.mjs",
+)
 
 
 # `UX-605`: an entry naming more test files than the selector's own
@@ -74,8 +81,7 @@ def touch_map():
     try:
         import json
 
-        return json.loads((TESTS / "touch_map.json").read_text(
-            encoding="utf-8"))
+        return json.loads((TESTS / "touch_map.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return {}
 
@@ -99,6 +105,7 @@ def census_set():
     """
     sys.path.insert(0, str(TESTS))
     import tiers
+
     return [f for f in tiers.CENSUS if (REPO / f).exists()]
 
 
@@ -119,8 +126,8 @@ def changed_files(base=None, staged=False):
     files = [line for line in out.stdout.splitlines() if line.strip()]
     if not staged:
         untracked = subprocess.run(
-            ["git", "ls-files", "--others", "--exclude-standard"],
-            capture_output=True, text=True, cwd=REPO)
+            ["git", "ls-files", "--others", "--exclude-standard"], capture_output=True, text=True, cwd=REPO
+        )
         files += [line for line in untracked.stdout.splitlines() if line.strip()]
     return sorted(set(files))
 
@@ -149,8 +156,7 @@ def tokens_for(path: str):
         # a guard about skip reasons. A false edge in `--why` is worse
         # than a missing one: it says the selector saw something it did
         # not.
-        if path.startswith(("bga/", "tools/")) and "_" in stem \
-                and not stem.startswith("__"):
+        if path.startswith(("bga/", "tools/")) and "_" in stem and not stem.startswith("__"):
             tokens.add(stem)
     else:
         tokens.add(pathlib.Path(path).name)
@@ -173,14 +179,12 @@ def import_pattern(path: str):
     # The optional group is the `from bga import contracts, schemas`
     # form: 25 of those edges hung on which name was written first.
     return r"from\s+{}\s+import\s+\(?\s*(?:[\w\s,]*?,\s*)?{}\b".format(
-        re.escape(".".join(p.parent.parts)), re.escape(p.stem))
+        re.escape(".".join(p.parent.parts)), re.escape(p.stem)
+    )
 
 
 def test_files():
-    return sorted(
-        str(p.relative_to(REPO))
-        for p in TESTS.rglob("test_*.py")
-        if "__pycache__" not in p.parts)
+    return sorted(str(p.relative_to(REPO)) for p in TESTS.rglob("test_*.py") if "__pycache__" not in p.parts)
 
 
 @functools.cache
@@ -212,13 +216,12 @@ def select(changed, census=True):
     width figure because those files run, and `naming(...)` below is
     the other half, for the questions that are about the change.
     """
-    everything = [c for c in changed
-                  if any(c == e or c.startswith(e) for e in EVERYTHING)]
+    everything = [c for c in changed if any(c == e or c.startswith(e) for e in EVERYTHING)]
     if everything:
         return sorted(test_files()), {"*": f"shared harness changed: {everything}"}
 
     chosen, why = {}, {}
-    for name in (census_set() if census else ()):
+    for name in census_set() if census else ():
         chosen[name] = True
         why.setdefault(name, []).append("census")
     for path in changed:
@@ -288,8 +291,7 @@ def spread():
         raise RuntimeError("the touch map is empty; there is no population")
     # UX-770: no median - 94 modules straddle 37/38, so the figure was a
     # tie-break over a directory other tests write into mid-run.
-    return {"min": sizes[0], "max": sizes[-1],
-            "modules": len(sizes), "files": len(test_files())}
+    return {"min": sizes[0], "max": sizes[-1], "modules": len(sizes), "files": len(test_files())}
 
 
 def figure(values=None):
@@ -351,25 +353,20 @@ def _rewrite_sites(sites, row, rewrite, write):
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--base", default=None,
-                        help="diff against this ref instead of HEAD")
-    parser.add_argument("--list", action="store_true",
-                        help="print the selected files and exit")
-    parser.add_argument("--why", action="store_true",
-                        help="print what selected each file")
-    parser.add_argument("--staged", action="store_true",
-                        help="select from the staged diff, not the desk")
-    parser.add_argument("--loud", action="store_true",
-                        help="print pytest's output even when it passes")
-    parser.add_argument("--spread", action="store_true",
-                        help="print what a one-module diff selects, over "
-                             "every module the map names - never written "
-                             "(UX-996)")
-    parser.add_argument("--size", action="store_true",
-                        help="print the guide's stated size")
-    parser.add_argument("--write", action="store_true",
-                        help="with --size, put that figure in the documents "
-                             "that state it")
+    parser.add_argument("--base", default=None, help="diff against this ref instead of HEAD")
+    parser.add_argument("--list", action="store_true", help="print the selected files and exit")
+    parser.add_argument("--why", action="store_true", help="print what selected each file")
+    parser.add_argument("--staged", action="store_true", help="select from the staged diff, not the desk")
+    parser.add_argument("--loud", action="store_true", help="print pytest's output even when it passes")
+    parser.add_argument(
+        "--spread",
+        action="store_true",
+        help="print what a one-module diff selects, over every module the map names - never written (UX-996)",
+    )
+    parser.add_argument("--size", action="store_true", help="print the guide's stated size")
+    parser.add_argument(
+        "--write", action="store_true", help="with --size, put that figure in the documents that state it"
+    )
     args, rest = parser.parse_known_args(argv)
 
     if args.spread:
@@ -382,9 +379,11 @@ def main(argv=None) -> int:
 
     changed = changed_files(args.base, staged=args.staged)
     if not changed:
-        print("Nothing changed against HEAD - `make test-touching` has "
-              "nothing to select. Run `make test-small` for the tier.",
-              file=sys.stderr)
+        print(
+            "Nothing changed against HEAD - `make test-touching` has "
+            "nothing to select. Run `make test-small` for the tier.",
+            file=sys.stderr,
+        )
         return 0
 
     selected, why = select(changed)
@@ -393,11 +392,13 @@ def main(argv=None) -> int:
         # `UX-645`: read off the naming half, not the whole selection.
         # The census floor made this unreachable - a module no test
         # names still selects 11 files and reported as a pass.
-        print(f"No test file names any of {len(changed)} changed file(s):\n  "
-              + "\n  ".join(changed)
-              + "\n\nThat is a finding, not a pass: run `make test-small`, and "
-                "if the change really has no guard, that is what to fix.",
-              file=sys.stderr)
+        print(
+            f"No test file names any of {len(changed)} changed file(s):\n  "
+            + "\n  ".join(changed)
+            + "\n\nThat is a finding, not a pass: run `make test-small`, and "
+            "if the change really has no guard, that is what to fix.",
+            file=sys.stderr,
+        )
         if not selected:
             return 0
 
@@ -407,12 +408,16 @@ def main(argv=None) -> int:
         # files - the answer existed and no reader could reach it.
         for name in selected:
             print(f"{name}\n    <- {why.get(name, why.get('*'))}")
-        print(f"({len(selected) - len(named)} of {len(selected)} are the "
-              f"census floor, the same under every module - UX-645)",
-              file=sys.stderr)
+        print(
+            f"({len(selected) - len(named)} of {len(selected)} are the "
+            f"census floor, the same under every module - UX-645)",
+            file=sys.stderr,
+        )
         for module, size in sorted(wide_entries().items()):
-            print(f"(map entry for {module} ignored: {size} files, over the "
-                  f"{MAP_ENTRY_CAP} bound - UX-605)", file=sys.stderr)
+            print(
+                f"(map entry for {module} ignored: {size} files, over the {MAP_ENTRY_CAP} bound - UX-605)",
+                file=sys.stderr,
+            )
         return 0
     if args.list:
         print("\n".join(selected))
@@ -421,22 +426,23 @@ def main(argv=None) -> int:
     argv = [sys.executable, "-m", "pytest", *selected, "-q", "-n", "auto", *rest]
     env = {**os.environ, "BGA_TIER_ANY": "1"}
     if args.loud:
-        print(f"{len(selected)} test file(s) name the {len(changed)} changed "
-              f"file(s); running them.", file=sys.stderr)
+        print(f"{len(selected)} test file(s) name the {len(changed)} changed file(s); running them.", file=sys.stderr)
         return subprocess.call(argv, cwd=REPO, env=env)
     done = subprocess.run(argv, cwd=REPO, env=env, capture_output=True, text=True)
     if done.returncode:
         # Red is the case a reader needs whole; only green is summarised.
-        print(f"{len(selected)} test file(s) name the {len(changed)} changed "
-              f"file(s); running them.", file=sys.stderr)
+        print(f"{len(selected)} test file(s) name the {len(changed)} changed file(s); running them.", file=sys.stderr)
         sys.stdout.write(done.stdout)
         sys.stderr.write(done.stderr)
         return done.returncode
     # `UX-645`: the two populations, so the count is not read as if it
     # were all about the diff.
-    print(f"{len(selected)} file(s) selected "
-          f"({len(selected) - len(named)} census + {len(named)} naming the "
-          f"change) · {last_line(done.stdout)}", file=sys.stderr)
+    print(
+        f"{len(selected)} file(s) selected "
+        f"({len(selected) - len(named)} census + {len(named)} naming the "
+        f"change) · {last_line(done.stdout)}",
+        file=sys.stderr,
+    )
     return 0
 
 

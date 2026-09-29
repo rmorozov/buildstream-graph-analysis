@@ -31,6 +31,7 @@ becomes instant, over this run's measured durations, with nothing else
 about the build assumed to change. It is an upper bound, not a
 forecast, and the payload says so.
 """
+
 from collections.abc import Sequence
 
 from . import schemas
@@ -110,26 +111,39 @@ def _sum_of_individual(graph, durations, selected) -> int:
 
 def _refusals(graph, durations, selected) -> list[dict]:
     if not selected:
-        return [{"check": "empty_selection",
-                 "elements": [],
-                 "sentence": "No elements selected: that is not a question "
-                             "about this build, and a makespan beside it "
-                             "would read as an answer."}]
-    known = {getattr(element, 'uid', element)
-             for element in (getattr(graph, 'elements', None) or [])}
+        return [
+            {
+                "check": "empty_selection",
+                "elements": [],
+                "sentence": "No elements selected: that is not a question "
+                "about this build, and a makespan beside it "
+                "would read as an answer.",
+            }
+        ]
+    known = {getattr(element, 'uid', element) for element in (getattr(graph, 'elements', None) or [])}
     known |= set(durations)
     unknown = [uid for uid in selected if uid not in known]
     if unknown:
-        return [{"check": "unknown_element", "elements": unknown,
-                 "sentence": f"Not in this run's graph: {', '.join(unknown)}. "
-                             f"A subset quietly missing a member projects a "
-                             f"different question from the one asked."}]
+        return [
+            {
+                "check": "unknown_element",
+                "elements": unknown,
+                "sentence": f"Not in this run's graph: {', '.join(unknown)}. "
+                f"A subset quietly missing a member projects a "
+                f"different question from the one asked.",
+            }
+        ]
     unmeasured = [uid for uid in selected if not durations.get(uid)]
     if unmeasured:
-        return [{"check": "no_measured_duration", "elements": unmeasured,
-                 "sentence": f"No measured duration: {', '.join(unmeasured)}. "
-                             f"Zeroing an unmeasured element is a guess about "
-                             f"a number nobody took, not a projection."}]
+        return [
+            {
+                "check": "no_measured_duration",
+                "elements": unmeasured,
+                "sentence": f"No measured duration: {', '.join(unmeasured)}. "
+                f"Zeroing an unmeasured element is a guess about "
+                f"a number nobody took, not a projection.",
+            }
+        ]
     return []
 
 
@@ -145,7 +159,8 @@ def render(document: dict) -> list[str]:
         lines.append(
             f"  Makespan {projected['baseline_makespan_us'] / 1e6:.3f}s -> "
             f"{projected['makespan_after_us'] / 1e6:.3f}s "
-            f"(saves {projected['joint_saving_us'] / 1e6:.3f}s)")
+            f"(saves {projected['joint_saving_us'] / 1e6:.3f}s)"
+        )
         if projected["sum_of_individual_us"] != projected["joint_saving_us"]:
             # Not "they share a chain": the sum can also be *larger*
             # than the joint figure when the elements sit on parallel
@@ -157,7 +172,8 @@ def render(document: dict) -> list[str]:
                 f"{projected['sum_of_individual_us'] / 1e6:.3f}s, which is "
                 f"not what they are worth together "
                 f"({projected['joint_saving_us'] / 1e6:.3f}s) - what one "
-                f"fix is worth depends on the others.")
+                f"fix is worth depends on the others."
+            )
         lines.extend(_in_your_units(projected))
         lines.append(f"  {document['convention']}")
     return lines
@@ -177,6 +193,7 @@ def _in_your_units(projected: dict) -> list[str]:
         # from having supplied no rate at all.
         return [f"  In your units: not applied: {supplied['error']}"]
     saving_us = projected["joint_saving_us"]
-    return [f"  In your units: saves {saving_us / 1e6:.3f}s = "
-            f"{rate.phrase(saving_us, supplied)}",
-            f"    {rate.preamble(supplied)}"]
+    return [
+        f"  In your units: saves {saving_us / 1e6:.3f}s = {rate.phrase(saving_us, supplied)}",
+        f"    {rate.preamble(supplied)}",
+    ]

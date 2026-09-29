@@ -7,6 +7,7 @@ to "bga" itself (never the root logger) - child loggers propagate up to it
 by default, so setting "bga"'s level here is sufficient to control every
 module without touching each one individually.
 """
+
 import logging
 import sys
 from typing import Optional

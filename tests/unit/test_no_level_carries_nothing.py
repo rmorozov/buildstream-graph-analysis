@@ -35,6 +35,7 @@ the item said so: `findings[].evidence.steps[].entering[]` is four real
 relations and stays at seven on `macro_micro`. The bounds below are the
 measured shape with room to move, so a level that comes back reddens.
 """
+
 import pathlib
 
 import pytest
@@ -43,8 +44,10 @@ from bga import schemas
 from bga.report.json import _measure_shape
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-FIXTURES = {"golden": REPO / "tests/fixtures/golden/mixed_task_kinds",
-            "macro_micro": REPO / "tests/fixtures/macro_micro/run"}
+FIXTURES = {
+    "golden": REPO / "tests/fixtures/golden/mixed_task_kinds",
+    "macro_micro": REPO / "tests/fixtures/macro_micro/run",
+}
 
 #: What the shape was when this item was filed, and the bound each
 #: fixture is held to now. Measured after the lift: 0.398 and 0.533.
@@ -162,7 +165,8 @@ class TestTheNamespacesAreGone:
         document = _document(label)
         assert "signals" not in document and "structural" not in document, (
             f"{label}: {sorted(set(document) & {'signals', 'structural'})} is "
-            f"back - a level that holds only other levels")
+            f"back - a level that holds only other levels"
+        )
 
     def test_every_table_they_held_is_still_published(self, label):
         """Lifting is not dropping. Every table either stands on its own
@@ -179,9 +183,7 @@ class TestTheNamespacesAreGone:
         # A table the run has nothing to say about is absent by design -
         # the run-dependent list is where that is declared.
         unexplained = sorted(set(missing) - set(schemas.ANALYZE_RUN_DEPENDENT_KEYS))
-        assert not unexplained, (
-            f"{label}: {unexplained} was published under a namespace and is "
-            f"published nowhere now")
+        assert not unexplained, f"{label}: {unexplained} was published under a namespace and is published nowhere now"
 
     def test_the_element_population_is_one_key_rather_than_six(self, label):
         """Lifting is not scattering. The six maps keyed by element uid
@@ -193,14 +195,13 @@ class TestTheNamespacesAreGone:
         document = _document(label)
         elements = document.get("elements") or {}
         assert elements, f"{label}: no element population at all"
-        loose = [name for name in schemas.ELEMENT_POPULATION
-                 if name in document]
+        loose = [name for name in schemas.ELEMENT_POPULATION if name in document]
         assert loose == [], (
-            f"{label}: {loose} is a key of the document; the element "
-            f"population is published as `elements`, once")
+            f"{label}: {loose} is a key of the document; the element population is published as `elements`, once"
+        )
         assert set(schemas.ELEMENT_KEYED) <= set(elements), (
-            f"{label}: `elements` is missing "
-            f"{sorted(set(schemas.ELEMENT_KEYED) - set(elements))}")
+            f"{label}: `elements` is missing {sorted(set(schemas.ELEMENT_KEYED) - set(elements))}"
+        )
 
 
 @pytest.mark.parametrize("label", sorted(FIXTURES))
@@ -229,7 +230,8 @@ class TestNoMapIsKeyedByDataItCannotDescribe:
         assert not sorted(set(undeclared)), (
             f"{label}: map(s) keyed by a uid the schema cannot name, with no "
             f"`additionalProperties` to say what a value is: "
-            f"{sorted(set(undeclared))}")
+            f"{sorted(set(undeclared))}"
+        )
 
     def test_no_finding_republishes_the_element_population(self, label):
         """`findings[].evidence.blast_radius` was `elements.blast_radius`
@@ -238,12 +240,16 @@ class TestNoMapIsKeyedByDataItCannotDescribe:
         the golden report for the sake of it."""
         document = _document(label)
         uids = set((document.get("elements") or {}).get("element_durations") or {})
-        repeated = [key for finding in document.get("findings") or []
-                    for key, value in (finding.get("evidence") or {}).items()
-                    if isinstance(value, dict) and set(value) & uids]
+        repeated = [
+            key
+            for finding in document.get("findings") or []
+            for key, value in (finding.get("evidence") or {}).items()
+            if isinstance(value, dict) and set(value) & uids
+        ]
         assert not repeated, (
             f"{label}: findings[].evidence.{repeated} is keyed by element "
-            f"uid - the population is published once, in `elements`")
+            f"uid - the population is published once, in `elements`"
+        )
 
 
 @pytest.mark.parametrize("label", sorted(FIXTURES))
@@ -254,28 +260,34 @@ class TestTheDocumentKnowsItsOwnShape:
         document = _document(label)
         published = document["document_shape"]
         leaves, depth, path, deeper = _measure_shape(document)
-        assert (published["leaves"], published["deepest_depth"],
-                published["deeper_than_three"]) == (leaves, depth, deeper), (
+        assert (published["leaves"], published["deepest_depth"], published["deeper_than_three"]) == (
+            leaves,
+            depth,
+            deeper,
+        ), (
             f"{label}: the document says {published} and measures "
             f"{{'leaves': {leaves}, 'deepest_depth': {depth}, "
-            f"'deeper_than_three': {deeper}}}")
+            f"'deeper_than_three': {deeper}}}"
+        )
         assert published["deepest_path"] == path, (
-            f"{label}: deepest published {published['deepest_path']!r}, "
-            f"measured {path!r}")
+            f"{label}: deepest published {published['deepest_path']!r}, measured {path!r}"
+        )
 
     def test_the_deepest_leaf_is_where_the_item_left_it(self, label):
         document = _document(label)
         assert document["document_shape"]["deepest_depth"] <= DEEPEST[label], (
             f"{label}: {document['document_shape']['deepest_path']} is "
             f"{document['document_shape']['deepest_depth']} levels down, "
-            f"against {DEEPEST[label]}")
+            f"against {DEEPEST[label]}"
+        )
 
     def test_fewer_leaves_are_deeper_than_three(self, label):
         was, bound = DEEPER_THAN_THREE[label]
         share = _document(label)["document_shape"]["deeper_than_three_share"]
         assert share <= bound, (
             f"{label}: {share:.3f} of leaves are deeper than three levels, "
-            f"against a bound of {bound} (it was {was} when UX-344 was filed)")
+            f"against a bound of {bound} (it was {was} when UX-344 was filed)"
+        )
 
 
 @pytest.mark.parametrize("label", sorted(FIXTURES))
@@ -286,9 +298,7 @@ class TestOneRecordPerClaim:
         assert len(claims) == len(set(claims)), f"{label}: repeated {claims}"
         expected = {finding["id"] for finding in document.get("findings") or []}
         expected.add("diagnosis")
-        assert set(claims) == expected, (
-            f"{label}: published {sorted(set(claims))}, claims made "
-            f"{sorted(expected)}")
+        assert set(claims) == expected, f"{label}: published {sorted(set(claims))}, claims made {sorted(expected)}"
 
     def test_no_claim_carries_a_copy_of_its_chain(self, label):
         """The three copies this item removed: every finding, the
@@ -301,8 +311,7 @@ class TestOneRecordPerClaim:
                 found.append(".".join(path))
 
         _walk(document, None, [], visit)
-        assert not found, (
-            f"{label}: a nested `provenance` is back on {found[:4]}")
+        assert not found, f"{label}: a nested `provenance` is back on {found[:4]}"
 
     def test_every_id_a_claim_carries_resolves_into_it(self, label):
         from bga import provenance

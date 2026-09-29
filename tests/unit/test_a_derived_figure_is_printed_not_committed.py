@@ -10,6 +10,7 @@ spread are printed where a reader needs them, and `docs/backlog/areas/`
 regenerated. `closed.md` gets `merge=union` (`.gitattributes`): every
 pair of closes collides on its last row, and union keeps both.
 """
+
 import pathlib
 import re
 import shutil
@@ -28,74 +29,72 @@ import dev_close_task as close_task
 #: The backlog itself is excluded: `closed.md` and a task file quote a
 #: past measurement verbatim, as history (`UX-769`), and `docs/audits/`
 #: round documents do the same.
-_EXTRA = ("docs/design/architecture.md", "docs/backlog/scenarios/README.md",
-         "CLAUDE.md")
+_EXTRA = ("docs/design/architecture.md", "docs/backlog/scenarios/README.md", "CLAUDE.md")
 
-SENTENCE_RE = re.compile(r"^\d+ scenarios: \*\*\d+ open\*\*, \d+ closed\.$",
-                         re.M)
-TOPIC_TABLE_RE = re.compile(r"^\| Topic \| Open \| Total \|\n\|[-| ]+\|\n"
-                            r"(?:\|.*\n)+", re.M)
+SENTENCE_RE = re.compile(r"^\d+ scenarios: \*\*\d+ open\*\*, \d+ closed\.$", re.M)
+TOPIC_TABLE_RE = re.compile(
+    r"^\| Topic \| Open \| Total \|\n\|[-| ]+\|\n"
+    r"(?:\|.*\n)+",
+    re.M,
+)
 BACKLOG_COUNT_RE = re.compile(r"\d+ `docs/backlog/(?:scenarios|tasks)/` files")
 SPREAD_FIGURE_RE = re.compile(r"\d+-\d+ of \d+ test files")
 
 
 def _population():
-    out = subprocess.run(["git", "ls-files"], cwd=REPO, check=True,
-                         capture_output=True, text=True).stdout.splitlines()
-    return [REPO / p for p in out
-            if (re.fullmatch(r"\.claude/.+\.md", p)
-                or re.fullmatch(r"docs/contributing/[^/]+\.md", p)
-                or p in _EXTRA)]
+    out = subprocess.run(["git", "ls-files"], cwd=REPO, check=True, capture_output=True, text=True).stdout.splitlines()
+    return [
+        REPO / p
+        for p in out
+        if (re.fullmatch(r"\.claude/.+\.md", p) or re.fullmatch(r"docs/contributing/[^/]+\.md", p) or p in _EXTRA)
+    ]
 
 
 def _hits(pattern):
-    return [p for p in _population()
-            if pattern.search(p.read_text(encoding="utf-8"))]
+    return [p for p in _population() if pattern.search(p.read_text(encoding="utf-8"))]
 
 
 class TestNoTrackedDocumentCommitsADerivedFigure:
-
     def test_the_population_is_not_empty(self):
         assert len(_population()) >= 10, _population()
 
     def test_no_counts_sentence(self):
         assert _hits(SENTENCE_RE) == [], (
-            "the counts sentence is committed; `dev_close_task.py "
-            f"--counts` prints it: {_hits(SENTENCE_RE)}")
+            f"the counts sentence is committed; `dev_close_task.py --counts` prints it: {_hits(SENTENCE_RE)}"
+        )
 
     def test_no_topic_table(self):
         assert _hits(TOPIC_TABLE_RE) == [], (
-            "the topic table is committed; `dev_close_task.py --counts` "
-            f"prints it: {_hits(TOPIC_TABLE_RE)}")
+            f"the topic table is committed; `dev_close_task.py --counts` prints it: {_hits(TOPIC_TABLE_RE)}"
+        )
 
     def test_no_backlog_count(self):
-        assert _hits(BACKLOG_COUNT_RE) == [], (
-            "architecture.md's backlog count is committed: "
-            f"{_hits(BACKLOG_COUNT_RE)}")
+        assert _hits(BACKLOG_COUNT_RE) == [], f"architecture.md's backlog count is committed: {_hits(BACKLOG_COUNT_RE)}"
 
     def test_no_spread_figure(self):
         assert _hits(SPREAD_FIGURE_RE) == [], (
-            "the touch-map spread is committed; `dev_touching.py "
-            f"--spread` prints it: {_hits(SPREAD_FIGURE_RE)}")
+            f"the touch-map spread is committed; `dev_touching.py --spread` prints it: {_hits(SPREAD_FIGURE_RE)}"
+        )
 
 
 class TestAreaPagesAreNeverCommitted:
-
     def test_git_ls_files_carries_no_area_page(self):
-        out = subprocess.run(["git", "ls-files", "docs/backlog/areas"],
-                             cwd=REPO, check=True, capture_output=True,
-                             text=True).stdout
+        out = subprocess.run(
+            ["git", "ls-files", "docs/backlog/areas"], cwd=REPO, check=True, capture_output=True, text=True
+        ).stdout
         assert out == "", f"a committed area page survives: {out}"
 
 
 class TestCountsPrintsTheDerivation:
-
     def test_counts_prints_index_header(self):
         sentence, table = close_task.index_header()
         done = subprocess.run(
-            [sys.executable, str(REPO / "tools/dev_close_task.py"),
-             "--counts"], cwd=REPO, capture_output=True, text=True,
-            timeout=60)
+            [sys.executable, str(REPO / "tools/dev_close_task.py"), "--counts"],
+            cwd=REPO,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
         assert done.returncode == 0, done.stdout + done.stderr
         assert sentence in done.stdout, done.stdout
         assert table in done.stdout, done.stdout
@@ -104,17 +103,18 @@ class TestCountsPrintsTheDerivation:
 #: The task file this item introduces, so two branches can each close a
 #: real (Outcome-carrying) row without depending on the live backlog's
 #: current open table - a non-adjacent pair, by row index.
-_TASK = ("# UX-{n}: a batch row\n\n"
-        "**Priority:** Low | **Status:** \U0001f534 Not Started | "
-        "**Serves:** nobody | **Topic:** guards | **Shape:** judgement | "
-        "**Reading:** container\n\n"
-        "**Guard:** none — a fixture row\n\n"
-        "## Outcome\n\nmeasured.\n")
+_TASK = (
+    "# UX-{n}: a batch row\n\n"
+    "**Priority:** Low | **Status:** \U0001f534 Not Started | "
+    "**Serves:** nobody | **Topic:** guards | **Shape:** judgement | "
+    "**Reading:** container\n\n"
+    "**Guard:** none — a fixture row\n\n"
+    "## Outcome\n\nmeasured.\n"
+)
 
 
 def _git(repo, *argv, check=True):
-    return subprocess.run(["git", *argv], cwd=repo, check=check,
-                          capture_output=True, text=True)
+    return subprocess.run(["git", *argv], cwd=repo, check=check, capture_output=True, text=True)
 
 
 def _scratch_repo(tmp_path):
@@ -125,32 +125,43 @@ def _scratch_repo(tmp_path):
     scenarios.mkdir(parents=True)
     rows = []
     for n in (9801, 9802, 9803, 9804, 9805):
-        (scenarios / f"UX-{n}-a-batch-row.md").write_text(
-            _TASK.format(n=n), encoding="utf-8")
-        rows.append(f"| UX-{n} | [a batch row](UX-{n}-a-batch-row.md) | "
-                    f"guards | Low | — | \U0001f534 |")
-    (scenarios / "README.md").write_text(
-        "# Index\n\n## Open scenarios\n\n" + "\n".join(rows) + "\n",
-        encoding="utf-8")
+        (scenarios / f"UX-{n}-a-batch-row.md").write_text(_TASK.format(n=n), encoding="utf-8")
+        rows.append(f"| UX-{n} | [a batch row](UX-{n}-a-batch-row.md) | guards | Low | — | \U0001f534 |")
+    (scenarios / "README.md").write_text("# Index\n\n## Open scenarios\n\n" + "\n".join(rows) + "\n", encoding="utf-8")
     (scenarios / "closed").mkdir()
     (scenarios / "closed/0001.md").write_text(
-        "# Closed\n\n| UX-1 | done row | guards | Low | — | "
-        "\U0001f7e2 Done — x | [UX-1](../UX-1.md) |\n", encoding="utf-8")
+        "# Closed\n\n| UX-1 | done row | guards | Low | — | \U0001f7e2 Done — x | [UX-1](../UX-1.md) |\n",
+        encoding="utf-8",
+    )
     shutil.copyfile(REPO / ".gitattributes", repo / ".gitattributes")
-    for argv in (["init", "-q", "-b", "main"],
-                 ["config", "user.email", "a@b"],
-                 ["config", "user.name", "a"],
-                 ["add", "-f", "docs", ".gitattributes"],
-                 ["commit", "-qm", "base"]):
+    for argv in (
+        ["init", "-q", "-b", "main"],
+        ["config", "user.email", "a@b"],
+        ["config", "user.name", "a"],
+        ["add", "-f", "docs", ".gitattributes"],
+        ["commit", "-qm", "base"],
+    ):
         _git(repo, *argv)
     return repo, scenarios
 
 
 def _move(scenarios, uid, note):
     return subprocess.run(
-        [sys.executable, str(REPO / "tools/dev_close_task.py"), uid,
-         "--move", "--note", note, "--scenarios", str(scenarios)],
-        cwd=scenarios, capture_output=True, text=True, timeout=60)
+        [
+            sys.executable,
+            str(REPO / "tools/dev_close_task.py"),
+            uid,
+            "--move",
+            "--note",
+            note,
+            "--scenarios",
+            str(scenarios),
+        ],
+        cwd=scenarios,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
 
 
 class TestTwoClosesMergeCleanly:
@@ -180,12 +191,16 @@ class TestTwoClosesMergeCleanly:
         assert merged.returncode == 0, merged.stdout + merged.stderr
 
         checked = subprocess.run(
-            [sys.executable, str(REPO / "tools/dev_close_task.py"),
-             "--check", "--scenarios", str(scenarios)],
-            cwd=repo, capture_output=True, text=True, timeout=60)
+            [sys.executable, str(REPO / "tools/dev_close_task.py"), "--check", "--scenarios", str(scenarios)],
+            cwd=repo,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
         assert checked.returncode == 0, checked.stdout + checked.stderr
 
 
 if __name__ == "__main__":  # pragma: no cover
     import pytest
+
     raise SystemExit(pytest.main([__file__, "-v"]))

@@ -15,6 +15,7 @@ nothing to signal it).
 
 holds: rules.md#a-renamed-or-removed-published-key-bumps-its-schema-version
 """
+
 import json
 import os
 import shutil
@@ -39,12 +40,12 @@ from bga import schemas
 # it; a contributor's bare venv does not, and still gets the honest skip.
 try:
     import jsonschema
-except ImportError:                      # pragma: no cover - the point
+except ImportError:  # pragma: no cover - the point
     jsonschema = None
 
 needs_jsonschema = pytest.mark.skipif(
-    jsonschema is None,
-    reason="jsonschema is not installed - `pip install -e '.[dev]'`")
+    jsonschema is None, reason="jsonschema is not installed - `pip install -e '.[dev]'`"
+)
 
 GOLDEN = "tests/fixtures/golden/mixed_task_kinds"
 
@@ -58,19 +59,21 @@ def test_the_dev_extras_are_actually_here():
     skip line nobody counts.
     """
     if not os.environ.get("BGA_EXPECT_DEV"):
-        pytest.skip("not a dev environment by its own account "
-                    "(BGA_EXPECT_DEV is unset)")
+        pytest.skip("not a dev environment by its own account (BGA_EXPECT_DEV is unset)")
     assert jsonschema is not None, (
         "BGA_EXPECT_DEV is set, so this environment claims the dev extras, "
         "but `jsonschema` is missing and every schema guard in this module "
-        "just skipped. `pip install -e '.[dev]'`.")
+        "just skipped. `pip install -e '.[dev]'`."
+    )
 
 
 def _bga(args):
     return subprocess.run(
-        [sys.executable, "-c",
-         f"from bga.cli import main; raise SystemExit(main({args!r}))"],
-        capture_output=True, text=True, cwd=os.getcwd())
+        [sys.executable, "-c", f"from bga.cli import main; raise SystemExit(main({args!r}))"],
+        capture_output=True,
+        text=True,
+        cwd=os.getcwd(),
+    )
 
 
 def _two_runs(tmp_path):
@@ -89,13 +92,11 @@ class TestEveryPayloadDeclaresItsShape:
 
     def test_compare(self, tmp_path):
         baseline, candidate = _two_runs(tmp_path)
-        payload = json.loads(
-            _bga(["compare", baseline, candidate, "--format", "json"]).stdout)
+        payload = json.loads(_bga(["compare", baseline, candidate, "--format", "json"]).stdout)
         assert payload["schema"] == schemas.COMPARE
 
     def test_blast(self):
-        payload = json.loads(_bga(
-            ["blast", "base.bst", GOLDEN, "--format", "json", "--no-cost"]).stdout)
+        payload = json.loads(_bga(["blast", "base.bst", GOLDEN, "--format", "json", "--no-cost"]).stdout)
         assert payload["schema"] == schemas.BLAST
 
     def test_the_version_is_the_first_key(self):
@@ -108,12 +109,15 @@ class TestEveryPayloadDeclaresItsShape:
 
 @needs_jsonschema
 class TestTheSwitchPrintsTheSchema:
-    @pytest.mark.parametrize("command,name", [
-        ("analyze", schemas.ANALYZE),
-        ("compare", schemas.COMPARE),
-        ("blast", schemas.BLAST),
-        ("floors", schemas.ANALYZE),
-    ])
+    @pytest.mark.parametrize(
+        "command,name",
+        [
+            ("analyze", schemas.ANALYZE),
+            ("compare", schemas.COMPARE),
+            ("blast", schemas.BLAST),
+            ("floors", schemas.ANALYZE),
+        ],
+    )
     def test_it_prints_and_exits_zero(self, command, name):
         result = _bga([command, "--schema"])
         assert result.returncode == 0, result.stderr
@@ -142,13 +146,11 @@ class TestTheRoundTrip:
 
     def test_compare_output_validates_against_its_own_schema(self, tmp_path):
         baseline, candidate = _two_runs(tmp_path)
-        payload = json.loads(
-            _bga(["compare", baseline, candidate, "--format", "json"]).stdout)
+        payload = json.loads(_bga(["compare", baseline, candidate, "--format", "json"]).stdout)
         jsonschema.validate(payload, json.loads(_bga(["compare", "--schema"]).stdout))
 
     def test_blast_output_validates_against_its_own_schema(self):
-        payload = json.loads(_bga(
-            ["blast", "base.bst", GOLDEN, "--format", "json", "--no-cost"]).stdout)
+        payload = json.loads(_bga(["blast", "base.bst", GOLDEN, "--format", "json", "--no-cost"]).stdout)
         jsonschema.validate(payload, json.loads(_bga(["blast", "--schema"]).stdout))
 
     def test_a_section_projection_validates_too(self):
@@ -211,18 +213,27 @@ class TestTheSchemaCannotBeLoosenedToPass:
 
     def test_compares_schema_requires_every_key_it_emits(self, tmp_path):
         baseline, candidate = _two_runs(tmp_path)
-        payload = json.loads(
-            _bga(["compare", baseline, candidate, "--format", "json"]).stdout)
+        payload = json.loads(_bga(["compare", baseline, candidate, "--format", "json"]).stdout)
         schema = schemas.schema(schemas.COMPARE)
         required = set(schema["required"])
         # Keys that are genuinely conditional are listed here, named, so
         # the exemption is a decision rather than an omission.
         conditional = {
-            "host_comparison", "baseline_run_instance", "candidate_run_instance",
-            "memory_envelope_delta", "comparability_warning", "baseline_band",
-            "baseline_band_shortfall", "element_diff", "marginal_efficiency",
-            "cache_churn", "failed_run_details", "efficiency_gate_evaluated",
-            "efficiency_gate_signal", "baseline_confidence", "candidate_confidence",
+            "host_comparison",
+            "baseline_run_instance",
+            "candidate_run_instance",
+            "memory_envelope_delta",
+            "comparability_warning",
+            "baseline_band",
+            "baseline_band_shortfall",
+            "element_diff",
+            "marginal_efficiency",
+            "cache_churn",
+            "failed_run_details",
+            "efficiency_gate_evaluated",
+            "efficiency_gate_signal",
+            "baseline_confidence",
+            "candidate_confidence",
         }
         # `UX-629`: the third state. A key the emitter always writes is
         # not conditional and calling it that would be a lie - it is
@@ -233,20 +244,21 @@ class TestTheSchemaCannotBeLoosenedToPass:
         always_written = set(schema.get("bga:always_written", ()))
         assert not always_written & required, (
             f"{sorted(always_written & required)} is both required and "
-            f"declared always-written; the annotation then says nothing")
-        unguarded = sorted(set(payload) - required - conditional
-                           - always_written)
+            f"declared always-written; the annotation then says nothing"
+        )
+        unguarded = sorted(set(payload) - required - conditional - always_written)
         assert not unguarded, (
             f"compare emits {unguarded}, which the schema neither requires nor "
             f"names as conditional - so removing one would break a consumer "
-            f"and pass every test here.")
+            f"and pass every test here."
+        )
 
     def test_blasts_schema_requires_every_key_it_emits(self):
-        payload = json.loads(_bga(
-            ["blast", "base.bst", GOLDEN, "--format", "json", "--no-cost"]).stdout)
+        payload = json.loads(_bga(["blast", "base.bst", GOLDEN, "--format", "json", "--no-cost"]).stdout)
         required = set(schemas.schema(schemas.BLAST)["required"])
         assert not sorted(set(payload) - required), (
-            "every key `bga blast` emits is unconditional and should be required")
+            "every key `bga blast` emits is unconditional and should be required"
+        )
 
 
 @needs_jsonschema
@@ -261,7 +273,8 @@ class TestTheFullReportKeepsItsKeys:
         missing = [key for key in schemas.ANALYZE_FULL_KEYS if key not in payload]
         assert not missing, (
             f"`bga analyze --format json` no longer emits {missing}. If that is "
-            f"deliberate, bump the schema version and update ANALYZE_FULL_KEYS.")
+            f"deliberate, bump the schema version and update ANALYZE_FULL_KEYS."
+        )
 
     def test_the_pin_describes_the_real_output(self):
         """And the other direction, so the pin cannot rot into a list of
@@ -275,18 +288,20 @@ class TestTheFullReportKeepsItsKeys:
         # `UX-344`: and a third list. Lifting `signals` turned one
         # always-present key into fourteen, four of which depend on what
         # the run has rather than on which planes were captured.
-        pinned = (set(schemas.ANALYZE_FULL_KEYS)
-                  | set(schemas.ANALYZE_PLANE2_KEYS)
-                  | set(schemas.ANALYZE_RUN_DEPENDENT_KEYS))
+        pinned = (
+            set(schemas.ANALYZE_FULL_KEYS) | set(schemas.ANALYZE_PLANE2_KEYS) | set(schemas.ANALYZE_RUN_DEPENDENT_KEYS)
+        )
         unpinned = sorted(set(payload) - pinned)
         assert not unpinned, (
             f"new top-level key(s) {unpinned} - add them to ANALYZE_FULL_KEYS "
             f"(or ANALYZE_PLANE2_KEYS if conditional; an addition does not "
             f"bump the version) and to _ANALYZE_OPTIONAL so the schema types "
-            f"them.")
+            f"them."
+        )
         assert "plane2_absence" in payload, (
             "the single-plane fixture publishes no absence sentence, so this "
-            "clause is no longer exercising the conditional half")
+            "clause is no longer exercising the conditional half"
+        )
 
 
 @needs_jsonschema

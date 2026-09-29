@@ -1,5 +1,6 @@
 """UX-905: `tools/hang_witness.py` names the processes, the FIFOs they hold and
 the pool's unread tokens once the host goes quiet - read off a real FIFO."""
+
 import os
 import subprocess
 import sys
@@ -17,7 +18,8 @@ def held_pool(tmp_path):
     fd = os.open(path, os.O_RDWR | os.O_NONBLOCK)
     os.write(fd, b"+++")
     child = subprocess.Popen(
-        [sys.executable, "-c", f"import os,time; os.open({str(path)!r}, os.O_RDWR); time.sleep(30)"])
+        [sys.executable, "-c", f"import os,time; os.open({str(path)!r}, os.O_RDWR); time.sleep(30)"]
+    )
     try:
         for _ in range(100):
             rows = [r for r in hang_witness.process_rows() if r["pid"] == child.pid]

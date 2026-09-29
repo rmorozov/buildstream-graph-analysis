@@ -26,6 +26,7 @@ written down rather than implied. The version floor is read from
 `pyproject.toml`, so raising `requires-python` retires the rows it
 makes moot instead of leaving them to be deleted by hand.
 """
+
 import ast
 import pathlib
 import re
@@ -84,7 +85,6 @@ def _attribute_uses(path):
 
 
 class TestNothingReachesPastTheFloor:
-
     def test_the_floor_is_the_one_pyproject_declares(self):
         """The instrument first: a regex that stopped matching would
         make every clause below vacuous."""
@@ -93,7 +93,8 @@ class TestNothingReachesPastTheFloor:
         assert (major, minor) <= sys.version_info[:2], (
             f"pyproject declares {major}.{minor}, which is newer than the "
             f"interpreter running this suite - the scan below would pass "
-            f"by being asked nothing")
+            f"by being asked nothing"
+        )
 
     def test_no_source_file_uses_a_name_newer_than_it(self):
         """The clause `UX-539` needed and nothing had.
@@ -112,22 +113,22 @@ class TestNothingReachesPastTheFloor:
                         f"{path.relative_to(REPO).as_posix()}:{line} uses "
                         f"`.{name}()` ({what}), which needs Python "
                         f"{added[0]}.{added[1]}; pyproject declares "
-                        f"{floor[0]}.{floor[1]}")
+                        f"{floor[0]}.{floor[1]}"
+                    )
         assert offenders == [], (
             "a source file reaches past the Python this package claims to "
             "run on; every local interpreter here is newer, so CI's oldest "
-            "matrix job is the only thing that sees it:\n  "
-            + "\n  ".join(offenders))
+            "matrix job is the only thing that sees it:\n  " + "\n  ".join(offenders)
+        )
 
     def test_the_table_would_have_caught_the_one_that_shipped(self):
         """The reproduction, because the clause above is now green and
         cannot show what it was for. `bit_count` is in the table at
         3.10 and the floor is 3.9, so the pair discriminates."""
-        assert ("bit_count", (3, 10)) in [
-            (name, added) for name, added, _what in NEWER_THAN_THE_FLOOR]
+        assert ("bit_count", (3, 10)) in [(name, added) for name, added, _what in NEWER_THAN_THE_FLOOR]
         assert _floor() < (3, 10), (
-            "the floor has reached 3.10, so bit_count is fine now and this "
-            "reproduction should be retired with its row")
+            "the floor has reached 3.10, so bit_count is fine now and this reproduction should be retired with its row"
+        )
 
     def test_a_name_at_or_below_the_floor_is_not_flagged(self):
         """The other direction. Without this the clause above passes by
@@ -135,10 +136,10 @@ class TestNothingReachesPastTheFloor:
         to prove it does not - it is called in 48 places and would
         light up every one of them if the floor comparison were
         dropped."""
-        assert any(_attribute_uses(path).get("splitlines")
-                   for path in _sources()), (
+        assert any(_attribute_uses(path).get("splitlines") for path in _sources()), (
             "no source calls `.splitlines()`, so the control row proves "
-            "nothing - pick another name that is actually used")
+            "nothing - pick another name that is actually used"
+        )
         floor = _floor()
         assert floor >= (3, 0), floor
 

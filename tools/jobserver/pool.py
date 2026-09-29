@@ -5,6 +5,7 @@ for): `cpu_sampler`/`pid_to_element_reader` below are the tracer's own
 `/proc` and raw-log readers, bound here by the tracer at import time
 rather than imported, so the pool never reaches back for them.
 """
+
 import array
 import errno
 import fcntl
@@ -98,9 +99,7 @@ def open_jobserver(n: int, scratch: str, seed: Optional[int] = None) -> tuple[st
     if readable[0] != tokens:
         os.close(fd)
         os.remove(path)
-        raise RuntimeError(
-            f"jobserver FIFO {path} holds {readable[0]} readable bytes "
-            f"after seeding {tokens}")
+        raise RuntimeError(f"jobserver FIFO {path} holds {readable[0]} readable bytes after seeding {tokens}")
     return path, fd, tokens
 
 
@@ -246,9 +245,14 @@ class PoolController:
     tokens on its own; see `audit_leaks` for the liveness test.
     """
 
-    def __init__(self, fd: int, ceiling: int, capacity: Optional[int] = None,
-                 ledger_path: Optional[str] = None,
-                 psi_paths: Optional[dict] = None):
+    def __init__(
+        self,
+        fd: int,
+        ceiling: int,
+        capacity: Optional[int] = None,
+        ledger_path: Optional[str] = None,
+        psi_paths: Optional[dict] = None,
+    ):
         """`psi_paths` (UX-850's own arg-count cap, `Broker`'s `scratch`
         one class up): `{"cpu": path, "memory": path}`, both optional -
         `None`/absent resolves to the real `/proc/pressure/*` file, so a
@@ -321,9 +325,14 @@ class PoolController:
                 return False
             raise
 
-    def _handle_overload(self, busy_cores: float, psi_some10: Optional[float],
-                          psi_over: bool, psi_mem10: Optional[float] = None,
-                          psi_mem_over: bool = False) -> tuple[str, str]:
+    def _handle_overload(
+        self,
+        busy_cores: float,
+        psi_some10: Optional[float],
+        psi_over: bool,
+        psi_mem10: Optional[float] = None,
+        psi_mem_over: bool = False,
+    ) -> tuple[str, str]:
         """`busy_cores`/PSI is over the bound - withdraw one token, unless
         the pool is already empty (the verifier's floor edge: nothing to
         read, so no attempt is made and no move is counted). UX-850:
@@ -354,9 +363,9 @@ class PoolController:
             return "add", f"busy {busy_cores}<capacity-1, streak 2"
         return "hold", f"busy {busy_cores}<capacity-1, streak {self._below_streak}"
 
-    def tick(self, busy_cores: Optional[float] = None,
-             psi_some10: Optional[float] = None,
-             psi_mem10: Optional[float] = None) -> dict:
+    def tick(
+        self, busy_cores: Optional[float] = None, psi_some10: Optional[float] = None, psi_mem10: Optional[float] = None
+    ) -> dict:
         """One control step - the whole decision, callable directly by
         the guard with a scripted `(busy_cores, psi_some10, psi_mem10)`
         triple, or by `run()` with all three left `None` to read `/proc`."""
@@ -371,8 +380,7 @@ class PoolController:
             psi_over = psi_some10 is not None and psi_some10 > self.psi_bound
             psi_mem_over = psi_mem10 is not None and psi_mem10 > self.memory_psi_bound
             if busy_cores > self.capacity or psi_over or psi_mem_over:
-                action, reason = self._handle_overload(
-                    busy_cores, psi_some10, psi_over, psi_mem10, psi_mem_over)
+                action, reason = self._handle_overload(busy_cores, psi_some10, psi_over, psi_mem10, psi_mem_over)
             elif busy_cores < self.capacity - 1:
                 action, reason = self._handle_underload(busy_cores)
             else:
@@ -382,9 +390,15 @@ class PoolController:
             self.moves += 1
             if action == "withdraw" and psi_mem_over:
                 self.memory_psi_withdraws += 1
-        row = {"t_us": int(time.time() * 1_000_000), "busy_cores": busy_cores,
-               "psi_some10": psi_some10, "psi_mem10": psi_mem10,
-               "pool": self.pool, "action": action, "reason": reason}
+        row = {
+            "t_us": int(time.time() * 1_000_000),
+            "busy_cores": busy_cores,
+            "psi_some10": psi_some10,
+            "psi_mem10": psi_mem10,
+            "pool": self.pool,
+            "action": action,
+            "reason": reason,
+        }
         if self.ledger_path:
             with open(self.ledger_path, "a", encoding="utf-8") as handle:
                 handle.write(json.dumps(row, separators=(",", ":")) + "\n")
@@ -412,8 +426,7 @@ class PoolController:
                 os.write(self.fd, b"+" * tokens)
             except OSError:
                 continue
-            row = {"event": "leaked", "tool": tool, "pid": pid,
-                  "tokens": tokens, "t": time.time()}
+            row = {"event": "leaked", "tool": tool, "pid": pid, "tokens": tokens, "t": time.time()}
             with open(self.ledger_path, "a", encoding="utf-8") as ledger:
                 ledger.write(json.dumps(row, separators=(",", ":")) + "\n")
             leaked_rows.append(row)
@@ -474,9 +487,14 @@ class Broker:
     scan in front of it for the real capture.
     """
 
-    def __init__(self, global_fd: int, proxy_fds: dict, plan: dict,
-                 ledger_path: Optional[str] = None,
-                 scratch: Optional[dict] = None):
+    def __init__(
+        self,
+        global_fd: int,
+        proxy_fds: dict,
+        plan: dict,
+        ledger_path: Optional[str] = None,
+        scratch: Optional[dict] = None,
+    ):
         """`scratch` (UX-849's own arg-count cap, the `kind_context`
         shape `_resolve_kind_and_probe` already uses one module over):
         `{"decisions": path, "proxies_dir": path, "peak_rss": {element:
@@ -531,8 +549,7 @@ class Broker:
         peak = self.peak_rss.get(element)
         return median_peak if peak is None else peak
 
-    def _memory_gate(self, element: str, grant_n: int,
-                      mem_available: Optional[int]) -> int:
+    def _memory_gate(self, element: str, grant_n: int, mem_available: Optional[int]) -> int:
         """UX-850/853: `grant_n` if granting it still fits under
         `MemAvailable` once every *running* element's own peak RSS times
         its held tokens (`reserved`) is set aside first, else 0 and a
@@ -545,16 +562,23 @@ class Broker:
             return grant_n
         median_peak = statistics.median(self.peak_rss.values())
         candidate_peak = self._peak_for(element, median_peak)
-        reserved = sum(self._peak_for(running, median_peak)
-                       * (1 + self.granted[running])
-                       for running in self.running)  # +1 each: implicit
+        reserved = sum(
+            self._peak_for(running, median_peak) * (1 + self.granted[running]) for running in self.running
+        )  # +1 each: implicit
         if mem_available - reserved - candidate_peak * grant_n >= 0:
             return grant_n
         self.memory_withheld += 1
-        self._log({"event": "memory_withheld", "element": element,
-                   "tokens": grant_n, "mem_available": mem_available,
-                   "peak_rss": candidate_peak, "reserved": reserved,
-                   "t": time.time()})
+        self._log(
+            {
+                "event": "memory_withheld",
+                "element": element,
+                "tokens": grant_n,
+                "mem_available": mem_available,
+                "peak_rss": candidate_peak,
+                "reserved": reserved,
+                "t": time.time(),
+            }
+        )
         return 0
 
     def _cap_for(self, element: str) -> Optional[int]:
@@ -597,16 +621,14 @@ class Broker:
             os.write(self.global_fd, b"+" * drained)
             self.granted[element] = max(0, self.granted[element] - drained)
             self.drains += 1
-            self._log({"event": "drain", "element": element,
-                       "tokens": drained, "t": time.time()})
+            self._log({"event": "drain", "element": element, "tokens": drained, "t": time.time()})
         leaked = self.granted[element]
         if leaked > 0:
             os.write(self.global_fd, b"+" * leaked)
             self.granted[element] = 0
             self.leaks += 1
             self.tokens_refilled += leaked
-            self._log({"event": "leaked", "element": element, "pid": None,
-                       "tokens": leaked, "t": time.time()})
+            self._log({"event": "leaked", "element": element, "pid": None, "tokens": leaked, "t": time.time()})
 
     def _drain_global(self) -> int:
         moved = 0
@@ -643,8 +665,7 @@ class Broker:
                 os.write(fd, b"+" * tokens)
                 self.leaks += 1
                 self.tokens_refilled += tokens
-                self._log({"event": "leaked", "element": element, "pid": pid,
-                           "tokens": tokens, "t": time.time()})
+                self._log({"event": "leaked", "element": element, "pid": pid, "tokens": tokens, "t": time.time()})
             else:
                 try:
                     os.write(self.global_fd, b"+" * tokens)
@@ -652,8 +673,9 @@ class Broker:
                     continue
                 self.leaks += 1
                 self.tokens_refilled += tokens
-                self._log({"event": "leaked", "tool": tool, "pid": pid,
-                           "tokens": tokens, "element": None, "t": time.time()})
+                self._log(
+                    {"event": "leaked", "tool": tool, "pid": pid, "tokens": tokens, "element": None, "t": time.time()}
+                )
 
     def tick(self, pid_to_element: Optional[dict] = None) -> None:
         """One control step: whatever is readable on the global FIFO
@@ -667,12 +689,10 @@ class Broker:
         moved = self._drain_global()
         if moved == 0:
             return
-        order = sorted((self.running & self.proxy_fds.keys()),
-                       key=lambda element: (self.slack_for(element), element))
+        order = sorted((self.running & self.proxy_fds.keys()), key=lambda element: (self.slack_for(element), element))
         # UX-850: read once per tick, not per element - `MemAvailable`
         # moves on the host's own clock, not the broker's ordering.
-        mem_available = (read_mem_available_bytes(self.meminfo_path)
-                         if self.peak_rss else None)
+        mem_available = read_mem_available_bytes(self.meminfo_path) if self.peak_rss else None
         remaining = moved
         for element in order:
             if remaining <= 0:
@@ -689,8 +709,7 @@ class Broker:
             self.granted[element] += grant_n
             self.grants += 1
             remaining -= grant_n
-            self._log({"event": "grant", "element": element,
-                       "tokens": grant_n, "t": time.time()})
+            self._log({"event": "grant", "element": element, "tokens": grant_n, "t": time.time()})
         if remaining > 0:
             # No running element in the plan could take the rest (every
             # proxy at its cap, or nothing running yet) - hand it back
@@ -705,7 +724,7 @@ class Broker:
                 lines = handle.readlines()
         except OSError:
             return
-        for line in lines[self._decisions_read:]:
+        for line in lines[self._decisions_read :]:
             line = line.strip()
             if not line:
                 continue
@@ -728,7 +747,7 @@ class Broker:
         for name in names:
             if not name.endswith(".done"):
                 continue
-            element = name[:-len(".done")]
+            element = name[: -len(".done")]
             if element not in self._done_seen:
                 self._done_seen.add(element)
                 self.note_done(element)
@@ -794,8 +813,9 @@ class AdmissionBroker:
     times out and falls back to the raw global FIFO on its own.
     """
 
-    def __init__(self, global_fd: int, proxy_fds: dict, plan: dict,
-                 requests_path: str, ledger_path: Optional[str] = None):
+    def __init__(
+        self, global_fd: int, proxy_fds: dict, plan: dict, requests_path: str, ledger_path: Optional[str] = None
+    ):
         self.global_fd = global_fd
         self.proxy_fds = dict(proxy_fds)
         self.plan = dict(plan)
@@ -825,7 +845,7 @@ class AdmissionBroker:
                 lines = handle.readlines()
         except OSError:
             return
-        for line in lines[self._requests_read:]:
+        for line in lines[self._requests_read :]:
             line = line.strip()
             if not line:
                 continue
@@ -836,8 +856,7 @@ class AdmissionBroker:
             element, pid = row.get("element"), row.get("pid")
             if element is None or pid is None:
                 continue
-            self._pending.append({"element": element, "pid": pid,
-                                  "t": row.get("t", 0.0)})
+            self._pending.append({"element": element, "pid": pid, "t": row.get("t", 0.0)})
         self._requests_read = len(lines)
 
     def _drain_global(self) -> int:
@@ -864,9 +883,7 @@ class AdmissionBroker:
         remaining = self._drain_global()
         if remaining <= 0:
             return
-        order = sorted(self._pending,
-                       key=lambda request: (self.slack_for(request["element"]),
-                                            request["t"]))
+        order = sorted(self._pending, key=lambda request: (self.slack_for(request["element"]), request["t"]))
         granted = []
         for request in order:
             if remaining <= 0:
@@ -878,8 +895,9 @@ class AdmissionBroker:
             remaining -= 1
             self.grants += 1
             granted.append(request)
-            self._log({"event": "admission_grant", "element": request["element"],
-                       "pid": request["pid"], "t": time.time()})
+            self._log(
+                {"event": "admission_grant", "element": request["element"], "pid": request["pid"], "t": time.time()}
+            )
         for request in granted:
             self._pending.remove(request)
         if remaining > 0:

@@ -23,6 +23,7 @@ Two guards already read this document and neither read the workflow:
 yml comes from `test_capture_ref_patterns.py`, which has parsed the
 same file since `UX-122` - one guard's idea of where the workflow is.
 """
+
 import pathlib
 import re
 import sys
@@ -44,8 +45,7 @@ CELL_NAME = re.compile(r"`([A-Za-z0-9._/-]+)`")
 CRON = re.compile(r'-\s*cron:\s*"([^"]+)"')
 #: A top-level key of the `on:` block - `push`, `schedule`, ...
 TRIGGER = re.compile(r"^  (\w+):", re.M)
-DAYS = ("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday",
-        "Saturday")
+DAYS = ("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")
 #: Every cadence the derivation below can produce. A word in this list
 #: that no cron produces must not appear in the sentence either -
 #: that is the half which catches a *dropped* cron.
@@ -54,11 +54,12 @@ CADENCES = ("daily", "weekly", "monthly")
 
 # --- the workflow half: what the yml actually says -------------------
 
+
 def _workflow_files() -> set:
     """Every name the workflow writes under `capture/`."""
     text = WORKFLOW.read_text(encoding="utf-8")
-    names = {token[len("capture/"):] for token in CAPTURE_PATH.findall(text)}
-    return names - {""}          # the bare `capture/` directory itself
+    names = {token[len("capture/") :] for token in CAPTURE_PATH.findall(text)}
+    return names - {""}  # the bare `capture/` directory itself
 
 
 def _on_block() -> str:
@@ -80,7 +81,7 @@ def _schedule_block() -> str:
     block = _on_block()
     assert "\n  schedule:\n" in block, "the workflow has no `schedule:` list"
     tail = block.split("\n  schedule:\n", 1)[1]
-    lines = []                   # up to the next key at the same indent
+    lines = []  # up to the next key at the same indent
     for line in tail.splitlines():
         if line.strip() and not line.startswith("    "):
             break
@@ -105,7 +106,7 @@ def _cadence(cron: str) -> tuple[str, Optional[str], str]:
     raise AssertionError(
         f"cron `{cron}` is neither weekly, monthly nor daily - the "
         "document's sentence needs a word this guard cannot derive"
-        )
+    )
 
 
 def _triggers() -> set:
@@ -113,6 +114,7 @@ def _triggers() -> set:
 
 
 # --- the document half: the subject, never the argument --------------
+
 
 def _trigger_sentence() -> str:
     """The first paragraph of `## Reproducing`. The paragraphs after it
@@ -141,23 +143,20 @@ def _table_files() -> set:
 
 # --- the guards ------------------------------------------------------
 
-class TestTheContentsTableIsTheWorkflowsFileList:
 
+class TestTheContentsTableIsTheWorkflowsFileList:
     def test_it_names_every_file_the_workflow_writes(self):
         missing = sorted(_workflow_files() - _table_files())
         assert missing == [], (
-            "the workflow writes these under `capture/` and the contents "
-            f"table names none of them: {missing}")
+            f"the workflow writes these under `capture/` and the contents table names none of them: {missing}"
+        )
 
     def test_it_names_nothing_the_workflow_does_not_write(self):
         extra = sorted(_table_files() - _workflow_files())
-        assert extra == [], (
-            "the contents table promises files no longer written to "
-            f"`capture/`: {extra}")
+        assert extra == [], f"the contents table promises files no longer written to `capture/`: {extra}"
 
 
 class TestTheTriggerSentenceIsTheScheduleBlock:
-
     def test_it_names_every_cron(self):
         sentence = _trigger_sentence()
         for cron in _crons():
@@ -166,8 +165,8 @@ class TestTheTriggerSentenceIsTheScheduleBlock:
                 if token is None:
                     continue
                 assert token in sentence, (
-                    f"cron `{cron}` runs {cadence} at {clock}; the trigger sentence does "
-                    f"not say `{token}`:\n{sentence}")
+                    f"cron `{cron}` runs {cadence} at {clock}; the trigger sentence does not say `{token}`:\n{sentence}"
+                )
 
     def test_it_claims_no_cadence_the_workflow_lacks(self):
         """The half that catches a *removed* cron: the sentence would
@@ -178,8 +177,8 @@ class TestTheTriggerSentenceIsTheScheduleBlock:
             if cadence in real:
                 continue
             assert cadence not in sentence, (
-                f"the trigger sentence claims a {cadence} run; the workflow's "
-                f"schedule has {sorted(_crons())}")
+                f"the trigger sentence claims a {cadence} run; the workflow's schedule has {sorted(_crons())}"
+            )
 
     def test_it_names_every_trigger_the_workflow_has(self):
         """`and on nothing else` is a claim about the whole `on:` block,
@@ -187,11 +186,11 @@ class TestTheTriggerSentenceIsTheScheduleBlock:
         sentence = _trigger_sentence()
         for trigger in sorted(_triggers()):
             if trigger == "schedule":
-                continue          # named by its cadence, checked above
+                continue  # named by its cadence, checked above
             assert trigger in sentence, (
                 f"`{trigger}` is a trigger of this workflow and the sentence "
                 "that says what triggers it does not mention it"
-                )
+            )
 
 
 class TestTheDerivationWouldCatchTheDriftItWasWrittenFor:

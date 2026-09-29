@@ -4,6 +4,7 @@ Covers the P1-03 fix: a linear, single-task-kind-per-element dependency
 chain (no TRACK/FETCH/BUILD split, so no intra-element sequencing gap -
 that residual is P1-19's scope) must produce exact attribution identity.
 """
+
 import json
 
 from bga import analyze_run
@@ -32,12 +33,27 @@ def _write_run_dir(tmp_path):
     }
     trace = {
         "spans": [
-            {"task_key": "a.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 150000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "b.bst|BUILD|BUILD|0", "ts_us": 150000, "dur_us": 150000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "c.bst|BUILD|BUILD|0", "ts_us": 300000, "dur_us": 150000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
+            {
+                "task_key": "a.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 150000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "b.bst|BUILD|BUILD|0",
+                "ts_us": 150000,
+                "dur_us": 150000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "c.bst|BUILD|BUILD|0",
+                "ts_us": 300000,
+                "dur_us": 150000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
         ],
         "phases": [],
     }
@@ -65,8 +81,12 @@ def test_zero_wait_serialized_chain_attribution_is_exact(tmp_path):
     total = sum(
         result.attribution.get(k, 0)
         for k in (
-            "execution_on_chain_us", "dependency_wait_us", "resource_wait_us",
-            "scheduler_wait_us", "idle_us", "retry_wait_us",
+            "execution_on_chain_us",
+            "dependency_wait_us",
+            "resource_wait_us",
+            "scheduler_wait_us",
+            "idle_us",
+            "retry_wait_us",
         )
     )
     assert total == h

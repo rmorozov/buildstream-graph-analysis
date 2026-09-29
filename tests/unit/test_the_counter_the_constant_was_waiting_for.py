@@ -45,6 +45,7 @@ after           2,877   361,521 B     61,561 B
 One packet per sample plus one for the track: 25.1 B a sample
 uncompressed, 6.3 B compressed.
 """
+
 import gzip
 import hashlib
 import pathlib
@@ -77,8 +78,7 @@ from tools.bst_native_build_tracer import (
 )
 from tools.native_trace import trackevent
 
-CAPTURE_RUN = ("examples/06-macro-micro-optimization/.bga/runs/"
-               "20260821T170127Z")
+CAPTURE_RUN = "examples/06-macro-micro-optimization/.bga/runs/20260821T170127Z"
 
 
 def _capture_roots():
@@ -92,8 +92,8 @@ def _capture_roots():
     roots = [REPO]
     try:
         common = subprocess.run(
-            ["git", "rev-parse", "--git-common-dir"], cwd=str(REPO),
-            capture_output=True, text=True, timeout=30).stdout.strip()
+            ["git", "rev-parse", "--git-common-dir"], cwd=str(REPO), capture_output=True, text=True, timeout=30
+        ).stdout.strip()
     except (OSError, subprocess.SubprocessError):
         common = ""
     if common:
@@ -115,12 +115,12 @@ REAL_CAPTURE = next((path for path in SEARCHED if path.is_dir()), SEARCHED[0])
 #
 # The reason names the path (`UX-572`): "in this tree" did not say
 # *which* tree, and the tree it meant was the one that never has it.
-NO_CAPTURE = ("no real capture at examples/06-macro-micro-optimization/"
-              ".bga/runs/20260821T170127Z, in this tree or the checkout "
-              "it was linked from")
-needs_real_capture = pytest.mark.skipif(
-    not REAL_CAPTURE.is_dir(), reason=NO_CAPTURE)
-
+NO_CAPTURE = (
+    "no real capture at examples/06-macro-micro-optimization/"
+    ".bga/runs/20260821T170127Z, in this tree or the checkout "
+    "it was linked from"
+)
+needs_real_capture = pytest.mark.skipif(not REAL_CAPTURE.is_dir(), reason=NO_CAPTURE)
 
 
 GOLDEN = REPO / "tests/fixtures/golden/mixed_task_kinds"
@@ -133,15 +133,11 @@ _SHAPED = [
     "START pid=2 ppid=1 ts=1000.0 element=e.bst inv=a src=spine cmd=sh",
     "START pid=3 ppid=1 ts=1000.1 element=e.bst inv=a src=spine cmd=cc0",
     "START pid=4 ppid=1 ts=1000.2 element=e.bst inv=a src=spine cmd=cc1",
-    "END pid=4 ppid=1 ts=1000.4 element=e.bst inv=a src=spine exit=0 "
-    "utime=0.01 stime=0.01 maxrss_kb=1024 cmd=cc1",
+    "END pid=4 ppid=1 ts=1000.4 element=e.bst inv=a src=spine exit=0 utime=0.01 stime=0.01 maxrss_kb=1024 cmd=cc1",
     "START pid=5 ppid=1 ts=1000.4 element=e.bst inv=a src=spine cmd=cc2",
-    "END pid=3 ppid=1 ts=1000.5 element=e.bst inv=a src=spine exit=0 "
-    "utime=0.01 stime=0.01 maxrss_kb=1024 cmd=cc0",
-    "END pid=5 ppid=1 ts=1000.7 element=e.bst inv=a src=spine exit=0 "
-    "utime=0.01 stime=0.01 maxrss_kb=1024 cmd=cc2",
-    "END pid=2 ppid=1 ts=1000.9 element=e.bst inv=a src=spine exit=0 "
-    "utime=0.01 stime=0.01 maxrss_kb=2048 cmd=sh",
+    "END pid=3 ppid=1 ts=1000.5 element=e.bst inv=a src=spine exit=0 utime=0.01 stime=0.01 maxrss_kb=1024 cmd=cc0",
+    "END pid=5 ppid=1 ts=1000.7 element=e.bst inv=a src=spine exit=0 utime=0.01 stime=0.01 maxrss_kb=1024 cmd=cc2",
+    "END pid=2 ppid=1 ts=1000.9 element=e.bst inv=a src=spine exit=0 utime=0.01 stime=0.01 maxrss_kb=2048 cmd=sh",
     "START pid=6 ppid=1 ts=1000.8 element=e.bst inv=a src=spine cmd=never",
 ]
 
@@ -169,8 +165,7 @@ def _shaped_snapshot(tmp_path):
 
 def _records(path=REAL_CAPTURE / "plane2.log.gz"):
     with gzip.open(path, "rt", errors="ignore") as handle:
-        return sorted(stream_records(stream_trace_events(handle)),
-                      key=lambda record: record["start_ts"])
+        return sorted(stream_records(stream_trace_events(handle)), key=lambda record: record["start_ts"])
 
 
 def _snapshot(tmp_path):
@@ -210,8 +205,7 @@ def decode(path):
                         elif inner == trackevent.COUNTER_UNIT_NAME:
                             unit_name = payload.decode("utf-8")
             if unit is not None or unit_name is not None:
-                counters[uuid] = {"name": name, "unit": unit,
-                                  "unit_name": unit_name}
+                counters[uuid] = {"name": name, "unit": unit, "unit_name": unit_name}
         if body is None:
             continue
         kind = track = value_seen = None
@@ -223,8 +217,7 @@ def decode(path):
             elif field == trackevent.EVENT_COUNTER_VALUE:
                 value_seen = value
         if kind == trackevent.TYPE_COUNTER:
-            samples.append({"track": track, "ts": timestamp,
-                            "value": value_seen})
+            samples.append({"track": track, "ts": timestamp, "value": value_seen})
     return {"counters": counters, "samples": samples}
 
 
@@ -236,8 +229,7 @@ def rendered(tmp_path_factory):
     snapshot = _snapshot(tmp)
     out = tmp / DEFAULT_OUTPUT[FORMAT_TRACKEVENT]
     result = render(str(snapshot), str(out))
-    return {"snapshot": snapshot, "path": out, "result": result,
-            "trace": decode(out)}
+    return {"snapshot": snapshot, "path": out, "result": result, "trace": decode(out)}
 
 
 class TestTheSeriesAndTheScalarAgree:
@@ -249,28 +241,43 @@ class TestTheSeriesAndTheScalarAgree:
 
     def test_a_hand_folded_window_matches_the_series(self):
         """Four processes worked by hand, against the fold."""
-        records = list(stream_records(iter(parse_trace_lines([
-            "START pid=2 ppid=1 ts=10.0 element=e.bst inv=a cmd=a",
-            "START pid=3 ppid=1 ts=11.0 element=e.bst inv=a cmd=b",
-            "END pid=3 ppid=1 ts=12.0 element=e.bst inv=a utime=0.1 stime=0.1",
-            "START pid=4 ppid=1 ts=11.5 element=e.bst inv=a cmd=c",
-            "END pid=4 ppid=1 ts=13.0 element=e.bst inv=a utime=0.1 stime=0.1",
-            "END pid=2 ppid=1 ts=14.0 element=e.bst inv=a utime=0.1 stime=0.1",
-        ]))))
+        records = list(
+            stream_records(
+                iter(
+                    parse_trace_lines(
+                        [
+                            "START pid=2 ppid=1 ts=10.0 element=e.bst inv=a cmd=a",
+                            "START pid=3 ppid=1 ts=11.0 element=e.bst inv=a cmd=b",
+                            "END pid=3 ppid=1 ts=12.0 element=e.bst inv=a utime=0.1 stime=0.1",
+                            "START pid=4 ppid=1 ts=11.5 element=e.bst inv=a cmd=c",
+                            "END pid=4 ppid=1 ts=13.0 element=e.bst inv=a utime=0.1 stime=0.1",
+                            "END pid=2 ppid=1 ts=14.0 element=e.bst inv=a utime=0.1 stime=0.1",
+                        ]
+                    )
+                )
+            )
+        )
         series = concurrency_series(records, windows=0)
-        assert series == [(10.0, 1), (11.0, 2), (11.5, 3), (12.0, 2),
-                          (13.0, 1), (14.0, 0)]
+        assert series == [(10.0, 1), (11.0, 2), (11.5, 3), (12.0, 2), (13.0, 1), (14.0, 0)]
 
     def test_a_start_exactly_as_another_ends_is_never_two(self):
         """The tie rule, taken from `compute_max_concurrency` rather
         than re-decided - a series that disagreed with the scalar about
         a tie would be a second answer to one question."""
-        records = list(stream_records(iter(parse_trace_lines([
-            "START pid=2 ppid=1 ts=1.0 element=e.bst inv=a cmd=first",
-            "END pid=2 ppid=1 ts=2.0 element=e.bst inv=a utime=0.1 stime=0.1",
-            "START pid=3 ppid=1 ts=2.0 element=e.bst inv=a cmd=second",
-            "END pid=3 ppid=1 ts=3.0 element=e.bst inv=a utime=0.1 stime=0.1",
-        ]))))
+        records = list(
+            stream_records(
+                iter(
+                    parse_trace_lines(
+                        [
+                            "START pid=2 ppid=1 ts=1.0 element=e.bst inv=a cmd=first",
+                            "END pid=2 ppid=1 ts=2.0 element=e.bst inv=a utime=0.1 stime=0.1",
+                            "START pid=3 ppid=1 ts=2.0 element=e.bst inv=a cmd=second",
+                            "END pid=3 ppid=1 ts=3.0 element=e.bst inv=a utime=0.1 stime=0.1",
+                        ]
+                    )
+                )
+            )
+        )
         series = concurrency_series(records, windows=0)
         assert max(value for _ts, value in series) == 1
         assert compute_max_concurrency(records) == 1
@@ -278,11 +285,19 @@ class TestTheSeriesAndTheScalarAgree:
     def test_an_open_record_is_excluded_from_the_curve_too(self):
         """It is excluded from the peak because its end is unknown; a
         curve that included it would be inventing one."""
-        records = list(stream_records(iter(parse_trace_lines([
-            "START pid=2 ppid=1 ts=1.0 element=e.bst inv=a cmd=never-exits",
-            "START pid=3 ppid=1 ts=1.5 element=e.bst inv=a cmd=ordinary",
-            "END pid=3 ppid=1 ts=2.5 element=e.bst inv=a utime=0.1 stime=0.1",
-        ]))))
+        records = list(
+            stream_records(
+                iter(
+                    parse_trace_lines(
+                        [
+                            "START pid=2 ppid=1 ts=1.0 element=e.bst inv=a cmd=never-exits",
+                            "START pid=3 ppid=1 ts=1.5 element=e.bst inv=a cmd=ordinary",
+                            "END pid=3 ppid=1 ts=2.5 element=e.bst inv=a utime=0.1 stime=0.1",
+                        ]
+                    )
+                )
+            )
+        )
         assert max(v for _t, v in concurrency_series(records, windows=0)) == 1
 
 
@@ -326,8 +341,7 @@ class TestTheFiguresOnTheRealCapture:
         assert entry["name"] == CONCURRENCY_COUNTER
         assert entry["unit_name"] == CONCURRENCY_UNIT
         assert entry["unit"] == trackevent.UNIT_COUNT
-        assert not any("rss" in (e["name"] or "").lower()
-                       for e in counters.values())
+        assert not any("rss" in (e["name"] or "").lower() for e in counters.values())
         stamps = [sample["ts"] for sample in rendered["trace"]["samples"]]
         assert stamps == sorted(stamps)
         assert len(stamps) == rendered["result"]["counters"] == 538
@@ -383,14 +397,13 @@ class TestTheSameClaimsOnACommittedFixture:
         records = _shaped_records()
         series = concurrency_series(records)
         assert series
-        assert max(value for _ts, value in series) == \
-            compute_max_concurrency(records) == 3
+        assert max(value for _ts, value in series) == compute_max_concurrency(records) == 3
 
     def test_the_open_record_is_out_of_both(self):
         records = _shaped_records()
         assert any(record["open"] for record in records), (
-            "the fixture no longer has an open record, so the exclusion "
-            "clause tests nothing")
+            "the fixture no longer has an open record, so the exclusion clause tests nothing"
+        )
         assert max(v for _t, v in concurrency_series(records, windows=0)) == 3
 
     def test_the_tie_is_resolved_the_scalars_way(self):
@@ -406,8 +419,7 @@ class TestTheSameClaimsOnACommittedFixture:
             series = concurrency_series(records, windows=windows)
             assert max(v for _t, v in series) == 3, windows
 
-    def test_the_trace_carries_one_counter_track_and_no_memory_one(
-            self, tmp_path):
+    def test_the_trace_carries_one_counter_track_and_no_memory_one(self, tmp_path):
         snapshot = _shaped_snapshot(tmp_path)
         out = tmp_path / "trace.gz"
         result = render(str(snapshot), str(out))
@@ -417,15 +429,13 @@ class TestTheSameClaimsOnACommittedFixture:
         assert entry["name"] == CONCURRENCY_COUNTER
         assert entry["unit_name"] == CONCURRENCY_UNIT
         assert entry["unit"] == trackevent.UNIT_COUNT
-        assert not any("rss" in (e["name"] or "").lower()
-                       for e in trace["counters"].values())
+        assert not any("rss" in (e["name"] or "").lower() for e in trace["counters"].values())
         assert result["counter_peak"] == 3
         stamps = [sample["ts"] for sample in trace["samples"]]
         assert stamps == sorted(stamps)
         assert len(stamps) == result["counters"] > 0
 
-    def test_a_flow_of_samples_costs_one_packet_each(self, tmp_path,
-                                                     monkeypatch):
+    def test_a_flow_of_samples_costs_one_packet_each(self, tmp_path, monkeypatch):
         import tools.bga_timeline as timeline
 
         snapshot = _shaped_snapshot(tmp_path)

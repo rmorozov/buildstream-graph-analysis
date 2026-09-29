@@ -11,6 +11,7 @@ Makespan-vs-capacity is a staircase, not a smooth decay: makespan only
 drops when capacity crosses a real width in the graph, so a flat step
 between two useful levels is the normal shape.
 """
+
 from bga.ingest.models import NormalizedTask, RunContext, TaskKey, TaskKind
 from bga.replay.scheduler import ReplayScheduler
 
@@ -18,7 +19,9 @@ from bga.replay.scheduler import ReplayScheduler
 def _task(uid, dur_us):
     return NormalizedTask(
         task_key=TaskKey(uid, TaskKind.BUILD, "BUILD", 0),
-        ready_us=0, start_us=0, finish_us=dur_us,
+        ready_us=0,
+        start_us=0,
+        finish_us=dur_us,
     )
 
 
@@ -33,7 +36,9 @@ def _staircase_scheduler():
 
 def _sweep(min_capacity=1, max_capacity=8):
     return _staircase_scheduler().capacity_sweep(
-        resource="PROCESS", min_capacity=min_capacity, max_capacity=max_capacity,
+        resource="PROCESS",
+        min_capacity=min_capacity,
+        max_capacity=max_capacity,
     )
 
 

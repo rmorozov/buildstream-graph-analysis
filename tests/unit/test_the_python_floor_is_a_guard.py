@@ -9,6 +9,7 @@ PEP 604 unions are a *runtime* TypeError on 3.9, not a syntax error, so
 `ast.parse(..., feature_version=(3, 9))` does not see them. This walks
 the annotations instead, which is where they are.
 """
+
 import ast
 import pathlib
 import re
@@ -30,10 +31,8 @@ def _floor():
 
 
 def _tracked_python():
-    out = subprocess.run(["git", "ls-files", "--", "*.py"], cwd=REPO,
-                         check=True, capture_output=True, text=True).stdout
-    return [REPO / one for one in out.splitlines()
-            if one.split("/", 1)[0] in SCANNED]
+    out = subprocess.run(["git", "ls-files", "--", "*.py"], cwd=REPO, check=True, capture_output=True, text=True).stdout
+    return [REPO / one for one in out.splitlines() if one.split("/", 1)[0] in SCANNED]
 
 
 def _pep604_annotations(path):
@@ -45,8 +44,11 @@ def _pep604_annotations(path):
     source = path.read_text(encoding="utf-8")
     tree = ast.parse(source, str(path))
     for node in ast.walk(tree):
-        if (isinstance(node, ast.ImportFrom) and node.module == "__future__"
-                and any(a.name == "annotations" for a in node.names)):
+        if (
+            isinstance(node, ast.ImportFrom)
+            and node.module == "__future__"
+            and any(a.name == "annotations" for a in node.names)
+        ):
             return []
     lines = source.splitlines()
     found = []
@@ -54,8 +56,8 @@ def _pep604_annotations(path):
         annotations = []
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             annotations = [node.returns] + [
-                a.annotation for a in
-                (node.args.args + node.args.kwonlyargs + node.args.posonlyargs)]
+                a.annotation for a in (node.args.args + node.args.kwonlyargs + node.args.posonlyargs)
+            ]
         elif isinstance(node, ast.AnnAssign):
             annotations = [node.annotation]
         for annotation in annotations:
@@ -63,8 +65,7 @@ def _pep604_annotations(path):
                 continue
             for inner in ast.walk(annotation):
                 if isinstance(inner, ast.BinOp) and isinstance(inner.op, ast.BitOr):
-                    found.append((inner.lineno,
-                                  lines[inner.lineno - 1].strip()))
+                    found.append((inner.lineno, lines[inner.lineno - 1].strip()))
     return found
 
 
@@ -76,13 +77,15 @@ def test_no_annotation_needs_a_newer_python_than_the_floor():
     """`UX-588`'s clause. PEP 604 lands in 3.10; the floor is 3.9."""
     if _floor() >= (3, 10):
         pytest.skip("the floor has moved to 3.10; PEP 604 is allowed")
-    offenders = [f"{path.relative_to(REPO)}:{line}: {text}"
-                 for path in _tracked_python()
-                 for line, text in _pep604_annotations(path)]
+    offenders = [
+        f"{path.relative_to(REPO)}:{line}: {text}"
+        for path in _tracked_python()
+        for line, text in _pep604_annotations(path)
+    ]
     assert offenders == [], (
         "PEP 604 unions (`X | Y`) are a TypeError on the declared floor "
-        f"{_floor()}; write Optional[X]/Union[X, Y]:\n  "
-        + "\n  ".join(offenders))
+        f"{_floor()}; write Optional[X]/Union[X, Y]:\n  " + "\n  ".join(offenders)
+    )
 
 
 def test_the_scan_reads_files(self=None):

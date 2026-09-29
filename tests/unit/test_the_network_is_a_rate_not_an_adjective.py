@@ -21,6 +21,7 @@ finding's own sentence, and in the `source` the block carries, because a
 number whose scope is wrong by an unknown factor is worse unlabelled
 than absent.
 """
+
 import pathlib
 import shutil
 import subprocess
@@ -67,8 +68,8 @@ OVERLAPPING = [
 
 def _accounting(tasks=OVERLAPPING, bytes_read=None, duration_us=60_000_000):
     return compute_cache_accounting(
-        _Ctx(SUMMARY), graph=None, tasks=tasks,
-        total_duration_us=duration_us, network_bytes=bytes_read)
+        _Ctx(SUMMARY), graph=None, tasks=tasks, total_duration_us=duration_us, network_bytes=bytes_read
+    )
 
 
 def _finding(accounting):
@@ -87,8 +88,7 @@ class TestTheWindowIsAUnionNotASum:
         assert accounting['transfer_window_us'] == 15_000_000
 
     def test_disjoint_spans_add(self):
-        spans = [_Task('DOWNLOAD', 0, 2_000_000),
-                 _Task('UPLOAD', 10_000_000, 13_000_000)]
+        spans = [_Task('DOWNLOAD', 0, 2_000_000), _Task('UPLOAD', 10_000_000, 13_000_000)]
         assert _transfer_window_us(spans) == 5_000_000
 
     def test_a_run_with_no_transfer_has_no_window(self):
@@ -100,26 +100,25 @@ class TestTheRateIsPublishedWhenBytesAre:
     def test_bytes_over_the_window(self):
         """150 MiB over 15s is 10 MiB/s, and the arithmetic is the whole
         claim - no modelling between the counter and the number."""
-        accounting = _accounting(bytes_read={'rx_bytes': 100 * MIB,
-                                             'tx_bytes': 50 * MIB})
+        accounting = _accounting(bytes_read={'rx_bytes': 100 * MIB, 'tx_bytes': 50 * MIB})
         assert accounting['transfer_bytes'] == {
-            'rx': 100 * MIB, 'tx': 50 * MIB, 'total': 150 * MIB,
-            'source': 'host_counters'}
-        assert accounting['transfer_rate_bytes_per_s'] == pytest.approx(
-            10 * MIB, rel=1e-9)
+            'rx': 100 * MIB,
+            'tx': 50 * MIB,
+            'total': 150 * MIB,
+            'source': 'host_counters',
+        }
+        assert accounting['transfer_rate_bytes_per_s'] == pytest.approx(10 * MIB, rel=1e-9)
 
     def test_halving_the_bytes_halves_the_rate_and_moves_no_share(self):
         """The mutation the row names. The two numbers answer different
         questions and must not move together."""
         full = _accounting(bytes_read={'rx_bytes': 100 * MIB, 'tx_bytes': 50 * MIB})
         half = _accounting(bytes_read={'rx_bytes': 50 * MIB, 'tx_bytes': 25 * MIB})
-        assert half['transfer_rate_bytes_per_s'] == pytest.approx(
-            full['transfer_rate_bytes_per_s'] / 2)
+        assert half['transfer_rate_bytes_per_s'] == pytest.approx(full['transfer_rate_bytes_per_s'] / 2)
         assert half['transfer_share'] == full['transfer_share']
 
     def test_the_finding_names_the_rate_and_its_scope(self):
-        finding = _finding(_accounting(bytes_read={'rx_bytes': 100 * MIB,
-                                                   'tx_bytes': 50 * MIB}))
+        finding = _finding(_accounting(bytes_read={'rx_bytes': 100 * MIB, 'tx_bytes': 50 * MIB}))
         assert '10.0M/s' in finding['title']
         assert 'upper bound' in finding['title']
         assert finding['evidence']['transfer_bytes'] == 150 * MIB
@@ -138,8 +137,7 @@ class TestNoBytesIsNoRate:
     def test_removing_the_byte_key_removes_the_clause(self):
         """Not a zero and not a `0.0B/s` - the sentence loses its
         second half rather than gaining a false one."""
-        with_bytes = _finding(_accounting(bytes_read={'rx_bytes': MIB,
-                                                      'tx_bytes': 0}))
+        with_bytes = _finding(_accounting(bytes_read={'rx_bytes': MIB, 'tx_bytes': 0}))
         without = _finding(_accounting())
         assert '/s' in with_bytes['title']
         assert '/s' not in without['title']
@@ -153,8 +151,7 @@ class TestNoBytesIsNoRate:
     def test_no_transfer_span_means_no_division(self):
         """The row's second mutation: zero the transfer seconds and
         there is no rate, rather than a division by zero."""
-        accounting = _accounting(tasks=[_Task('PROCESS', 0, 5)],
-                                 bytes_read={'rx_bytes': MIB, 'tx_bytes': MIB})
+        accounting = _accounting(tasks=[_Task('PROCESS', 0, 5)], bytes_read={'rx_bytes': MIB, 'tx_bytes': MIB})
         assert 'transfer_window_us' not in accounting
         assert 'transfer_rate_bytes_per_s' not in accounting
 
@@ -165,15 +162,16 @@ class TestTheCommittedCaptureCarriesIt:
 
     def test_the_pull_fixture_prints_a_rate(self):
         out = subprocess.run(
-            [sys.executable, "-m", "bga.cli", "analyze",
-             "tests/fixtures/a_build_that_pulls/run"],
-            capture_output=True, text=True, check=True).stdout
+            [sys.executable, "-m", "bga.cli", "analyze", "tests/fixtures/a_build_that_pulls/run"],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout
         line = [ln for ln in out.splitlines() if "artifact transfer" in ln]
         assert line and "/s" in line[0], out
         assert "upper bound" in line[0]
 
-    def test_the_same_capture_without_counters_prints_what_it_did_before(
-            self, tmp_path):
+    def test_the_same_capture_without_counters_prints_what_it_did_before(self, tmp_path):
         """The row's own acceptance test, on the capture that can
         actually show it: the *same* run with its host-samples series
         removed prints the transfer line exactly as it printed before
@@ -184,7 +182,10 @@ class TestTheCommittedCaptureCarriesIt:
         (copied / "host-samples.jsonl").unlink()
         out = subprocess.run(
             [sys.executable, "-m", "bga.cli", "analyze", str(copied / "run")],
-            capture_output=True, text=True, check=True).stdout
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout
         line = [ln for ln in out.splitlines() if "artifact transfer" in ln]
         assert line, out
         assert line[0].endswith("rather than making them")
@@ -198,14 +199,26 @@ class TestTheTrendGainsTheSeries:
         from bga.cache_trend import build_trend, format_trend_text
 
         rows = [
-            {'run': 'a/run', 'hit_share': 0.8, 'built_elements': 2,
-             'cached_elements': 8, 'transfer_us': 3_000_000,
-             'transfer_per_artifact_us': 375_000,
-             'transfer_rate_bytes_per_s': 40 * MIB, 'churn': None},
-            {'run': 'b/run', 'hit_share': 0.8, 'built_elements': 2,
-             'cached_elements': 8, 'transfer_us': 24_000_000,
-             'transfer_per_artifact_us': 3_000_000,
-             'transfer_rate_bytes_per_s': 5 * MIB, 'churn': None},
+            {
+                'run': 'a/run',
+                'hit_share': 0.8,
+                'built_elements': 2,
+                'cached_elements': 8,
+                'transfer_us': 3_000_000,
+                'transfer_per_artifact_us': 375_000,
+                'transfer_rate_bytes_per_s': 40 * MIB,
+                'churn': None,
+            },
+            {
+                'run': 'b/run',
+                'hit_share': 0.8,
+                'built_elements': 2,
+                'cached_elements': 8,
+                'transfer_us': 24_000_000,
+                'transfer_per_artifact_us': 3_000_000,
+                'transfer_rate_bytes_per_s': 5 * MIB,
+                'churn': None,
+            },
         ]
         out = format_trend_text(build_trend(rows))
         assert 'rate' in out
@@ -216,12 +229,19 @@ class TestTheTrendGainsTheSeries:
         draw a cliff where a capture simply predates the field."""
         from bga.cache_trend import build_trend, format_trend_text
 
-        rows = [{'run': 'a/run', 'hit_share': 0.8, 'built_elements': 2,
-                 'cached_elements': 8, 'transfer_us': 3_000_000,
-                 'transfer_per_artifact_us': 375_000,
-                 'transfer_rate_bytes_per_s': None, 'churn': None}]
-        row_line = [ln for ln in format_trend_text(build_trend(rows)).splitlines()
-                    if ln.startswith('a/run')]
+        rows = [
+            {
+                'run': 'a/run',
+                'hit_share': 0.8,
+                'built_elements': 2,
+                'cached_elements': 8,
+                'transfer_us': 3_000_000,
+                'transfer_per_artifact_us': 375_000,
+                'transfer_rate_bytes_per_s': None,
+                'churn': None,
+            }
+        ]
+        row_line = [ln for ln in format_trend_text(build_trend(rows)).splitlines() if ln.startswith('a/run')]
         assert row_line, 'the run did not render'
         assert '/s' not in row_line[0], row_line[0]
 
@@ -243,8 +263,7 @@ class TestTheCountersComeOffTheHost:
         """A local `buildbox-casd` is on the other end of most loopback
         traffic; counting its 900 bytes here would report ten times the
         130 that actually crossed a wire."""
-        assert sum_net_dev(self.NET_DEV) == {
-            'net_rx_bytes': 130, 'net_tx_bytes': 90}
+        assert sum_net_dev(self.NET_DEV) == {'net_rx_bytes': 130, 'net_tx_bytes': 90}
 
     def test_the_live_host_parses(self):
         """The constructed file above is only worth something if the
@@ -252,19 +271,19 @@ class TestTheCountersComeOffTheHost:
         assert set(read_net_sample()) == {'net_rx_bytes', 'net_tx_bytes'}
 
     def test_a_series_is_its_last_reading_less_its_first(self):
-        read = {'samples': [
-            {'t': 1.0, 'net_rx_bytes': 1000, 'net_tx_bytes': 10},
-            {'t': 3.0, 'net_rx_bytes': 1500, 'net_tx_bytes': 40},
-            {'t': 5.0, 'net_rx_bytes': 4000, 'net_tx_bytes': 110},
-        ]}
-        assert network_bytes(read) == {
-            'rx_bytes': 3000, 'tx_bytes': 100, 'span_s': 4.0}
+        read = {
+            'samples': [
+                {'t': 1.0, 'net_rx_bytes': 1000, 'net_tx_bytes': 10},
+                {'t': 3.0, 'net_rx_bytes': 1500, 'net_tx_bytes': 40},
+                {'t': 5.0, 'net_rx_bytes': 4000, 'net_tx_bytes': 110},
+            ]
+        }
+        assert network_bytes(read) == {'rx_bytes': 3000, 'tx_bytes': 100, 'span_s': 4.0}
 
     def test_one_sample_is_nothing_to_subtract(self):
         """A build too short to be sampled twice moved an unknown
         amount, not zero."""
-        assert network_bytes(
-            {'samples': [{'t': 1.0, 'net_rx_bytes': 1, 'net_tx_bytes': 2}]}) == {}
+        assert network_bytes({'samples': [{'t': 1.0, 'net_rx_bytes': 1, 'net_tx_bytes': 2}]}) == {}
 
     def test_a_series_older_than_the_counters_is_empty(self):
         assert network_bytes({'samples': [{'t': 1.0}, {'t': 3.0}]}) == {}
@@ -272,9 +291,10 @@ class TestTheCountersComeOffTheHost:
     def test_a_counter_that_went_backwards_is_not_negative_traffic(self):
         """An interface reset or removed mid-build, which is a gap in
         the reading rather than bytes flowing the other way."""
-        read = {'samples': [
-            {'t': 1.0, 'net_rx_bytes': 9000, 'net_tx_bytes': 9000},
-            {'t': 3.0, 'net_rx_bytes': 10, 'net_tx_bytes': 20},
-        ]}
-        assert network_bytes(read) == {
-            'rx_bytes': 0, 'tx_bytes': 0, 'span_s': 2.0}
+        read = {
+            'samples': [
+                {'t': 1.0, 'net_rx_bytes': 9000, 'net_tx_bytes': 9000},
+                {'t': 3.0, 'net_rx_bytes': 10, 'net_tx_bytes': 20},
+            ]
+        }
+        assert network_bytes(read) == {'rx_bytes': 0, 'tx_bytes': 0, 'span_s': 2.0}

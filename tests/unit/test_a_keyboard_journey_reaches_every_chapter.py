@@ -19,6 +19,7 @@ never clicked into has no real window focus, so neither `Tab` nor
 a button's native "Enter activates the focused control", measured empty
 without them on this Chromium).
 """
+
 import pathlib
 import re
 import sys
@@ -44,6 +45,7 @@ VIEWER = REPO / "bga" / "viewer"
 # 1. The rule, read once and asserted against reverting to `button` alone.
 # --------------------------------------------------------------------------
 
+
 class TestOneFocusVisibleRuleCoversEveryFocusableClass:
     """The Acceptance Test's own mutation: "scope the ring back to
     `button`, and the link stop reds" - held here on the source, and
@@ -51,24 +53,20 @@ class TestOneFocusVisibleRuleCoversEveryFocusableClass:
 
     def _rule(self):
         css = (VIEWER / "style.css").read_text(encoding="utf-8")
-        match = re.search(
-            r"([^\n{]*:focus-visible[^{]*)\{([^}]*outline[^}]*)\}", css)
+        match = re.search(r"([^\n{]*:focus-visible[^{]*)\{([^}]*outline[^}]*)\}", css)
         assert match, "no :focus-visible rule with an outline in style.css"
         return match.group(1), match.group(2)
 
     def test_the_selector_names_every_focusable_class(self):
         selector, _ = self._rule()
-        classes = {part.strip().split(":focus-visible")[0]
-                   for part in selector.split(",")}
-        assert classes == {"a", "button", "input", "select", "summary",
-                           "[tabindex]"}, classes
+        classes = {part.strip().split(":focus-visible")[0] for part in selector.split(",")}
+        assert classes == {"a", "button", "input", "select", "summary", "[tabindex]"}, classes
 
     def test_only_one_rule_sets_the_ring(self):
         """Two rules that could disagree is the defect a single
         selector list exists to rule out."""
         css = (VIEWER / "style.css").read_text(encoding="utf-8")
-        assert len(re.findall(r":focus-visible[^{]*\{[^}]*outline",
-                              css)) == 1, css
+        assert len(re.findall(r":focus-visible[^{]*\{[^}]*outline", css)) == 1, css
 
 
 # --------------------------------------------------------------------------
@@ -105,10 +103,16 @@ _READ_ACTIVE = r"""
 #: Every walk starts at the document's top: `scrollspy`'s landing
 #: `scrollIntoView` moves Chrome's sequential-focus starting point to the
 #: marked link, so an unanchored first `Tab` skips what sits above it.
-_START_AT_THE_TOP = [{"wait": 100}, {"read": (
-    '(() => { const b = document.body; b.setAttribute("tabindex", "-1"); '
-    'b.focus({preventScroll: true}); b.removeAttribute("tabindex"); '
-    'return null; })()')}]
+_START_AT_THE_TOP = [
+    {"wait": 100},
+    {
+        "read": (
+            '(() => { const b = document.body; b.setAttribute("tabindex", "-1"); '
+            'b.focus({preventScroll: true}); b.removeAttribute("tabindex"); '
+            'return null; })()'
+        )
+    },
+]
 
 
 #: A generous, named cap on how many `Tab`s from the top it takes to
@@ -207,17 +211,15 @@ def fresh_journey(tmp_path_factory):
 
 @needs_browser
 class TestTheFirstTabFromAFreshLoadStartsAtTheTop:
-    def test_the_first_tab_lands_on_the_first_focusable_in_document_order(
-            self, fresh_journey):
+    def test_the_first_tab_lands_on_the_first_focusable_in_document_order(self, fresh_journey):
         ids, first_focusable, trace = fresh_journey
         assert ids, "no chapters on the rail - nothing to walk"
         first_stop = {k: trace[0][k] for k in ("tag", "cls", "dataToc")}
         assert first_stop == first_focusable, (
-            f"the first Tab landed on {first_stop}, not the first "
-            f"focusable in document order, {first_focusable}")
+            f"the first Tab landed on {first_stop}, not the first focusable in document order, {first_focusable}"
+        )
 
-    def test_a_forward_walk_reaches_every_chapter_decide_first(
-            self, fresh_journey):
+    def test_a_forward_walk_reaches_every_chapter_decide_first(self, fresh_journey):
         ids, _, trace = fresh_journey
         stops = [row["chapterOpen"] for row in trace if row["chapterOpen"]]
         assert stops == ids, (stops, ids)
@@ -233,19 +235,18 @@ def _hold_on(chapter):
         f'a.getAttribute("data-toc-chapter") === {chapter!r}) {{ '
         'window.__bgaHeld = true; addEventListener("keydown", (e) => { '
         'if (e.key === "Tab") e.preventDefault(); }, true); } '
-        'return null; })()')
+        'return null; })()'
+    )
 
 
 @needs_browser
 class TestEnterOpensTheFoldEnterReached:
-    def test_enter_on_a_reached_fold_opens_its_chapter(self, journey,
-                                                       tmp_path_factory):
+    def test_enter_on_a_reached_fold_opens_its_chapter(self, journey, tmp_path_factory):
         """`UX-1093`: `Tab` until the first closed fold `journey` found,
         then `Enter` - one walk in a fresh load, not a stop count carried
         over from another."""
         ids, trace = journey
-        fold = next(row["chapterOpen"] for row in trace
-                    if row["chapterOpen"] and row["expanded"] == "false")
+        fold = next(row["chapterOpen"] for row in trace if row["chapterOpen"] and row["expanded"] == "false")
         into = tmp_path_factory.mktemp("u1016-enter")
         uri = pages.export_uri(MACRO, into)
         with Browser(chrome) as browser:
@@ -258,8 +259,7 @@ class TestEnterOpensTheFoldEnterReached:
             steps.append({"read": _READ_ACTIVE})
             before, after = browser.journey(uri, steps, 1440, 900)[-2:]
         assert len(ids) > 1, ids
-        assert before["chapterOpen"] == fold, (
-            f"the walk did not end on {fold}'s fold in {TAB_CAP} Tabs: {before}")
+        assert before["chapterOpen"] == fold, f"the walk did not end on {fold}'s fold in {TAB_CAP} Tabs: {before}"
         assert before["expanded"] == "false", before
         assert after["expanded"] == "true", after
 
@@ -268,6 +268,7 @@ class TestEnterOpensTheFoldEnterReached:
 # 3. Every focusable *class* the rule names shows the ring for real -
 #    the mutation's own clause, driven rather than argued from the CSS.
 # --------------------------------------------------------------------------
+
 
 @needs_browser
 class TestEveryFocusableClassShowsTheRingForReal:
@@ -311,8 +312,8 @@ class TestEveryFocusableClassShowsTheRingForReal:
 #: precondition; `TestEnterOpensTheFoldEnterReached` is what already
 #: holds "opens it with Enter" as its own claim.
 _OPEN_EVERY_CHAPTER = (
-    '(() => { for (const b of document.querySelectorAll('
-    '"button.chapter-open")) b.click(); return null; })()')
+    '(() => { for (const b of document.querySelectorAll("button.chapter-open")) b.click(); return null; })()'
+)
 
 _READ_EXPAND = r"""
 (() => {
@@ -356,8 +357,7 @@ class TestEscapeLeavesTableFocusAndReturnsFocus:
                 steps.append({"read": _READ_EXPAND})
             trace = browser.journey(served_url, steps, 1440, 900)[2:]
         at = next((i for i, row in enumerate(trace) if row["expand"]), None)
-        assert at is not None, "no data-expand control reached in " \
-            f"{self.CAP} tabs with every chapter open"
+        assert at is not None, f"no data-expand control reached in {self.CAP} tabs with every chapter open"
         opener_path = trace[at]["expand"]
 
         with Browser(chrome) as browser:
@@ -369,11 +369,10 @@ class TestEscapeLeavesTableFocusAndReturnsFocus:
             steps.append({"read": _READ_EXPAND})
             steps.append({"key": "Escape"})
             steps.append({"read": _READ_EXPAND})
-            before, entered, after = browser.journey(
-                served_url, steps, 1440, 900)[2:]
+            before, entered, after = browser.journey(served_url, steps, 1440, 900)[2:]
         assert before["expand"] == opener_path, before
         assert entered["tf"] == opener_path, entered
         assert after["tf"] is None, after
         assert after["expand"] == opener_path, (
-            "Escape did not return focus to the control that opened "
-            f"table focus: {after}")
+            f"Escape did not return focus to the control that opened table focus: {after}"
+        )

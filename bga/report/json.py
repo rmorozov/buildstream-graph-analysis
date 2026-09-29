@@ -1,4 +1,5 @@
 """JSON report formatting (Part 32.4/37)."""
+
 import json as _json
 from typing import Optional
 
@@ -34,8 +35,7 @@ def _lift(data: dict, block: dict, renames: Optional[dict] = None) -> None:
     for key, value in block.items():
         name = (renames or {}).get(key, key)
         if name in data:
-            raise ValueError(
-                f"lifting {key!r} would overwrite the document's {name!r}")
+            raise ValueError(f"lifting {key!r} would overwrite the document's {name!r}")
         data[name] = value
 
 
@@ -143,30 +143,37 @@ def _binary_rows(binary_cost):
     for element, cost in sorted((binary_cost or {}).items()):
         if not isinstance(cost, dict) or not cost.get('available'):
             continue
-        calls = {entry.get('binary'): entry.get('count')
-                 for entry in cost.get('by_count') or []}
+        calls = {entry.get('binary'): entry.get('count') for entry in cost.get('by_count') or []}
         seen = set()
         for entry in cost.get('by_cpu') or []:
             binary = entry.get('binary')
             seen.add(binary)
             wall_s = entry.get('wall_s')
-            rows.append({
-                'element': element,
-                'binary': binary,
-                'calls': entry.get('count', calls.get(binary)),
-                'cpu_us': entry.get('cpu_us'),
-                'cpu_share': entry.get('cpu_share'),
-                'wall_us': (round(wall_s * 1_000_000)
-                            if isinstance(wall_s, (int, float)) else None),
-            })
+            rows.append(
+                {
+                    'element': element,
+                    'binary': binary,
+                    'calls': entry.get('count', calls.get(binary)),
+                    'cpu_us': entry.get('cpu_us'),
+                    'cpu_share': entry.get('cpu_share'),
+                    'wall_us': (round(wall_s * 1_000_000) if isinstance(wall_s, (int, float)) else None),
+                }
+            )
         # A binary ranked by count and not by CPU is a cheap one that
         # ran often - the process-storm shape, and the half of the
         # question a CPU ranking alone cannot answer.
         for binary, count in calls.items():
             if binary not in seen:
-                rows.append({'element': element, 'binary': binary,
-                             'calls': count, 'cpu_us': None,
-                             'cpu_share': None, 'wall_us': None})
+                rows.append(
+                    {
+                        'element': element,
+                        'binary': binary,
+                        'calls': count,
+                        'cpu_us': None,
+                        'cpu_share': None,
+                        'wall_us': None,
+                    }
+                )
     return rows
 
 
@@ -174,6 +181,7 @@ def _binary_rows(binary_cost):
 # body; each function below is the one section it used to inline, kept
 # in the order `_SECTIONS` walks. Every gate and comment is unmoved -
 # only the boundary between sections is now a function call.
+
 
 def _add_header(data, result, section, by_kind):
     data['run_id'] = result.run_id
@@ -233,8 +241,7 @@ def _add_findings(data, result, section, by_kind):
     # across that boundary is to publish the string and have the
     # page copy it rather than word it.
     for finding in findings or []:
-        finding['copy_text'] = finding_copy_text(
-            finding, result, data['next_steps'])
+        finding['copy_text'] = finding_copy_text(finding, result, data['next_steps'])
 
 
 def _add_floors(data, result, section, by_kind):
@@ -374,9 +381,7 @@ def _add_signals(data, result, section, by_kind):
         if signals_data:
             # `UX-344`: the element population first, because it comes
             # out of the block that is then lifted around it.
-            elements = {key: signals_data.pop(key)
-                        for key in schemas.ELEMENT_POPULATION
-                        if key in signals_data}
+            elements = {key: signals_data.pop(key) for key in schemas.ELEMENT_POPULATION if key in signals_data}
             if elements:
                 data['elements'] = elements
             _lift(data, signals_data)
@@ -387,8 +392,7 @@ def _add_structural(data, result, section, by_kind):
         # `UX-724`: 0 rebuilt means no tasks to run structural analysis
         # over, so this returns `{}` - publish the declared-empty shape
         # `ANALYZE_FULL_KEYS` promises rather than dropping all seven.
-        structural = result.structural or {
-            key: {} for key in STRUCTURAL_ALWAYS_PRESENT_KEYS}
+        structural = result.structural or {key: {} for key in STRUCTURAL_ALWAYS_PRESENT_KEYS}
         _lift(data, structural, _STRUCTURAL_RENAMES)
 
 
@@ -428,7 +432,12 @@ def _add_timestamp_agreement(data, result, section, by_kind):
 
 
 def _add_element_kind_summary(data, result, section, by_kind):
-    if section in (None, 'graph') and by_kind and hasattr(result, 'element_kind_summary') and result.element_kind_summary:
+    if (
+        section in (None, 'graph')
+        and by_kind
+        and hasattr(result, 'element_kind_summary')
+        and result.element_kind_summary
+    ):
         data['element_kind_summary'] = result.element_kind_summary
 
 
@@ -455,10 +464,12 @@ def _add_plane2_join(data, result, section, by_kind):
         # restructuring finding carries its replay rather than a
         # null projection.
         joined = _correlate(
-            data, native_report,
+            data,
+            native_report,
             tasks=getattr(result, 'normalized_tasks', None),
-            run_context=getattr(result, 'run_context', None))
-    except Exception:                       # pragma: no cover
+            run_context=getattr(result, 'run_context', None),
+        )
+    except Exception:  # pragma: no cover
         # A join that cannot be computed must not cost the reader
         # the analysis - `UX-83`'s rule for the Plane 2 path, and
         # the reason `--plane2` is a warning rather than a failure
@@ -508,9 +519,7 @@ def _add_plane2_join(data, result, section, by_kind):
         data['binary_cost'] = rows
     phase = native_report.get('configure_phase')
     if phase:
-        data['configure_phase'] = {
-            key: value for key, value in phase.items()
-            if key != 'per_element'}
+        data['configure_phase'] = {key: value for key, value in phase.items() if key != 'per_element'}
 
     # `UX-383`: the three blocks `UX-370` left in the terminal.
     #
@@ -531,11 +540,10 @@ def _add_plane2_join(data, result, section, by_kind):
     # and `UX-346`'s door is what puts a sentence in front of a
     # reader about to add two numbers that cannot be added.
     for key, keep in (
-            ('cpu_time', ('total_cpu_us', 'measured_processes',
-                          'unmeasured_processes',
-                          'spine_sourced_processes')),
-            ('peak_memory', ()),
-            ('resource_pressure', ('measured', 'unmeasured'))):
+        ('cpu_time', ('total_cpu_us', 'measured_processes', 'unmeasured_processes', 'spine_sourced_processes')),
+        ('peak_memory', ()),
+        ('resource_pressure', ('measured', 'unmeasured')),
+    ):
         run_level = _run_level(native_report.get(key), keep)
         if run_level:
             data[key] = run_level
@@ -555,11 +563,10 @@ def _add_jobserver_block(data, result, section, by_kind):
         return
     from bga.correlate import compute_jobserver_block
 
-    elements = sorted({task.task_key.element_uid
-                       for task in getattr(result, 'normalized_tasks', None) or []})
+    elements = sorted({task.task_key.element_uid for task in getattr(result, 'normalized_tasks', None) or []})
     block = compute_jobserver_block(
-        native_report, elements,
-        tokens_by_element=native_report.get('jobserver_tokens_by_element'))
+        native_report, elements, tokens_by_element=native_report.get('jobserver_tokens_by_element')
+    )
     if block:
         data['jobserver'] = block
 
@@ -660,8 +667,7 @@ def build_document(result: AnalysisResult, section: Optional[str] = None, by_kin
     return schemas.stamp(data, schemas.ANALYZE)
 
 
-def format_json(result: AnalysisResult, section: Optional[str] = None,
-                by_kind: bool = False) -> str:
+def format_json(result: AnalysisResult, section: Optional[str] = None, by_kind: bool = False) -> str:
     """The document, serialized.
 
     `UX-229` split the two: the text renderer's `--explain` needs the
@@ -670,5 +676,4 @@ def format_json(result: AnalysisResult, section: Optional[str] = None,
     that had to parse its sibling's output to get there would be exactly
     the kind of re-derivation this codebase keeps deleting.
     """
-    return _json.dumps(build_document(result, section=section, by_kind=by_kind),
-                       indent=2, default=str)
+    return _json.dumps(build_document(result, section=section, by_kind=by_kind), indent=2, default=str)

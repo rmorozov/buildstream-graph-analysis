@@ -18,6 +18,7 @@ ground truth rather than a golden file. The 5,002-element scale reading
 is a measurement, in the task file's Outcome - too slow for a guard
 that runs every suite; this file stays under `~15s` at 1,202.
 """
+
 import random
 import tracemalloc
 from collections import deque
@@ -90,13 +91,23 @@ def _synth_graph(layers, width, seed):
     rng = random.Random(seed)
     elements, dependencies = _synth_build_graph(layers, width, rng)
     return Graph(
-        elements=[Element(uid=e["uid"], cache_key=e.get("cache_key"),
-                           requested_target=e.get("requested_target", False),
-                           element_kind=e.get("element_kind"))
-                  for e in elements],
-        dependencies=[DependencyEdge(predecessor=d["predecessor"], successor=d["successor"],
-                                      dependency_type=d.get("dependency_type", "build"))
-                      for d in dependencies],
+        elements=[
+            Element(
+                uid=e["uid"],
+                cache_key=e.get("cache_key"),
+                requested_target=e.get("requested_target", False),
+                element_kind=e.get("element_kind"),
+            )
+            for e in elements
+        ],
+        dependencies=[
+            DependencyEdge(
+                predecessor=d["predecessor"],
+                successor=d["successor"],
+                dependency_type=d.get("dependency_type", "build"),
+            )
+            for d in dependencies
+        ],
     )
 
 
@@ -104,8 +115,7 @@ INPUT_CLASSES = {
     "chain": lambda tmp_path: _graph_from_topology(tmp_path, topologies.linear_chain(n=14), "chain"),
     "wide_layer": lambda tmp_path: _graph_from_topology(tmp_path, topologies.shared_base_wide(), "wide"),
     "diamond": lambda tmp_path: _graph_from_topology(tmp_path, topologies.diamond(), "diamond"),
-    "disconnected": lambda tmp_path: _graph_from_topology(
-        tmp_path, topologies.independent_branches(n=3), "disc"),
+    "disconnected": lambda tmp_path: _graph_from_topology(tmp_path, topologies.independent_branches(n=3), "disc"),
     "cycle_and_disconnected": lambda tmp_path: _cycle_and_disconnected_graph(),
 }
 
@@ -120,9 +130,7 @@ def test_the_bitset_closure_matches_the_old_set_closure(tmp_path, name):
     for uid in ref_down:
         assert new_down[uid] == ref_down[uid], f"downstream({uid})"
         assert new_up[uid] == ref_up[uid], f"upstream({uid})"
-    assert edg.compute_downstream_count(graph) == {
-        uid: len(s) for uid, s in ref_down.items()
-    }
+    assert edg.compute_downstream_count(graph) == {uid: len(s) for uid, s in ref_down.items()}
 
 
 def test_matches_at_1202_elements():
@@ -171,8 +179,7 @@ def test_the_closure_is_a_bitset_not_a_python_set_per_element():
     tracemalloc.stop()
 
     assert bitset_peak < reference_peak * 0.5, (
-        f"bitset build peaked at {bitset_peak} bytes, not under half "
-        f"the set-based reference's {reference_peak} bytes"
+        f"bitset build peaked at {bitset_peak} bytes, not under half the set-based reference's {reference_peak} bytes"
     )
 
 

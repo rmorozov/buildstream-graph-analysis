@@ -14,6 +14,7 @@ measure without reddening here, which is what `make` alone had
 The script's two axis arrays are parsed out of it rather than copied,
 so widening what the examples stage reddens this by itself.
 """
+
 import os
 import pathlib
 import re
@@ -28,8 +29,7 @@ SYSROOT = REPO / "examples/05-cmake-cpp-toolchain/files/toolchain"
 
 
 def _axis_block(name):
-    block = re.search(rf"^{name}=\((.*?)^\)", STAGER.read_text(),
-                      re.DOTALL | re.MULTILINE)
+    block = re.search(rf"^{name}=\((.*?)^\)", STAGER.read_text(), re.DOTALL | re.MULTILINE)
     assert block, f"stage_cpp_toolchain.sh no longer declares {name}=(...)"
     return block.group(1)
 
@@ -47,8 +47,7 @@ def _axis_helpers(name):
     then had no owner while the class below said every one had
     (`rmorozov` on #257). The *name* is literal in the source, so it is
     what the declaration is checked against."""
-    return set(re.findall(r"-print-prog-name=([A-Za-z0-9_+.-]+)\)",
-                          _axis_block(name)))
+    return set(re.findall(r"-print-prog-name=([A-Za-z0-9_+.-]+)\)", _axis_block(name)))
 
 
 class TestTheDeclarationCoversWhatIsStaged:
@@ -60,10 +59,8 @@ class TestTheDeclarationCoversWhatIsStaged:
         helper either table adds without a declaration reddens here,
         and one declared but reachable from neither reddens too."""
         staged = _axis_helpers("RUNTIME_BINARIES") | _axis_helpers("TOOLCHAIN_BINARIES")
-        pinned = {name for row in nix_toolchain.pins().values()
-                  for name in row.get("helpers", ())}
-        declared = {name for row in sysroot_manifest.components()
-                    for name in row.get("helpers", ())}
+        pinned = {name for row in nix_toolchain.pins().values() for name in row.get("helpers", ())}
+        declared = {name for row in sysroot_manifest.components() for name in row.get("helpers", ())}
 
         assert pinned, "the pin declares no gcc-internal helper any more"
         assert staged | pinned == declared
@@ -75,8 +72,7 @@ class TestTheDeclarationCoversWhatIsStaged:
         row."""
         if not os.path.isdir(os.path.join(SYSROOT, "nix", "store")):
             pytest.skip("the toolchain closure isn't staged")
-        for name in {one for row in nix_toolchain.pins().values()
-                     for one in row.get("helpers", ())}:
+        for name in {one for row in nix_toolchain.pins().values() for one in row.get("helpers", ())}:
             assert sysroot_manifest.helper_path(str(SYSROOT), name), name
 
     def test_each_helper_names_its_own_flag_and_stream(self):
@@ -97,27 +93,26 @@ class TestTheDeclarationCoversWhatIsStaged:
         nothing stages is a stale row, and only the pinned names are
         allowed to be absent from the arrays (the script pins those)."""
         staged = _axis_array("RUNTIME_BINARIES") | _axis_array("TOOLCHAIN_BINARIES")
-        claimed = [path for row in sysroot_manifest.components()
-                   for path in row["binaries"]]
-        pinned = {path for row in sysroot_manifest.components()
-                  if row["origin"] == "pinned" for path in row["binaries"]}
+        claimed = [path for row in sysroot_manifest.components() for path in row["binaries"]]
+        pinned = {
+            path for row in sysroot_manifest.components() if row["origin"] == "pinned" for path in row["binaries"]
+        }
 
         assert sorted(set(claimed)) == sorted(claimed), "a path is claimed twice"
         assert staged - set(claimed) == set(), "staged but undeclared"
         assert set(claimed) - staged == pinned, "declared but not staged"
 
     def test_each_scripts_axis_agrees_with_the_axis_declared_for_it(self):
-        for array, axis in (("RUNTIME_BINARIES", "runtime"),
-                            ("TOOLCHAIN_BINARIES", "toolchain")):
-            declared = {path for row in sysroot_manifest.components()
-                        if row["axis"] == axis for path in row["binaries"]}
+        for array, axis in (("RUNTIME_BINARIES", "runtime"), ("TOOLCHAIN_BINARIES", "toolchain")):
+            declared = {
+                path for row in sysroot_manifest.components() if row["axis"] == axis for path in row["binaries"]
+            }
 
             assert _axis_array(array) <= declared, array
 
     def test_both_axes_are_named_and_neither_is_empty(self):
         rows = sysroot_manifest.components()
-        axes = {axis: [row["name"] for row in rows if row["axis"] == axis]
-                for axis in sysroot_manifest.AXES}
+        axes = {axis: [row["name"] for row in rows if row["axis"] == axis] for axis in sysroot_manifest.AXES}
 
         assert {row["axis"] for row in rows} == set(sysroot_manifest.AXES)
         assert all(axes.values()), axes
@@ -139,8 +134,7 @@ class TestTheDeclarationCoversWhatIsStaged:
         linker and cmake (UX-925). `glibc-pinned` is the closure's own
         glibc, which no table names as a root - it arrives through
         gcc's `References`."""
-        pinned = {row["name"]: row for row in sysroot_manifest.components()
-                  if row["origin"] == "pinned"}
+        pinned = {row["name"]: row for row in sysroot_manifest.components() if row["origin"] == "pinned"}
         paths = nix_store_fetch.host_arch()["paths"]
         toolchain = nix_toolchain.pins()
 
@@ -157,9 +151,7 @@ class TestTheDeclarationCoversWhatIsStaged:
         """`UX-925`'s own claim, in one line. A toolchain package
         reappearing as `host` is a staging host deciding what the
         examples compile with, which is what the row closed."""
-        origins = {row["name"]: row["origin"]
-                   for row in sysroot_manifest.components()
-                   if row["axis"] == "toolchain"}
+        origins = {row["name"]: row["origin"] for row in sysroot_manifest.components() if row["axis"] == "toolchain"}
 
         assert origins, "the toolchain axis has no rows at all"
         assert set(origins.values()) == {"pinned"}, origins
@@ -167,8 +159,7 @@ class TestTheDeclarationCoversWhatIsStaged:
     def test_the_default_make_belongs_to_the_44_pin(self):
         """`/usr/bin/make` is in neither axis array (the script pins it),
         so nothing else would notice it losing an owner."""
-        owners = [row["name"] for row in sysroot_manifest.components()
-                  if "/usr/bin/make" in row["binaries"]]
+        owners = [row["name"] for row in sysroot_manifest.components() if "/usr/bin/make" in row["binaries"]]
 
         assert owners == ["make-4.4"], owners
 
@@ -201,13 +192,11 @@ class TestTheDeclarationCoversWhatIsStaged:
             "cmake version 3.28.3": "3.28.3",
             "GNU ld (GNU Binutils for Ubuntu) 2.42": "2.42",
             "env (GNU coreutils) 9.4": "9.4",
-            "GNU C Library (Ubuntu GLIBC 2.39-0ubuntu8.7) stable release "
-            "version 2.39.": "2.39",
+            "GNU C Library (Ubuntu GLIBC 2.39-0ubuntu8.7) stable release version 2.39.": "2.39",
             "GNU Make 4.4.1": "4.4.1",
         }
 
-        read = {line: sysroot_manifest.declared_version_token(line)
-                for line in lines}
+        read = {line: sysroot_manifest.declared_version_token(line) for line in lines}
 
         assert read == lines
 
@@ -231,8 +220,7 @@ class TestTheStagedSysrootMatchesItsDeclaration:
         directory, and all nineteen rows read `did not run`."""
         here = os.path.relpath(SYSROOT, os.getcwd())
 
-        assert sysroot_manifest.measure(here) == \
-            sysroot_manifest.measure(str(SYSROOT))
+        assert sysroot_manifest.measure(here) == sysroot_manifest.measure(str(SYSROOT))
 
     def test_every_probeable_row_really_ran(self):
         """A probe that cannot exec records its own error string, which
@@ -241,5 +229,6 @@ class TestTheStagedSysrootMatchesItsDeclaration:
         different fixes."""
         measured = sysroot_manifest.measure(str(SYSROOT))
 
-        assert not [name for name, version in measured.items()
-                    if "did not run" in version or version.startswith("exit ")], measured
+        assert not [
+            name for name, version in measured.items() if "did not run" in version or version.startswith("exit ")
+        ], measured

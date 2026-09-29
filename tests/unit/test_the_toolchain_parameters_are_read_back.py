@@ -20,6 +20,7 @@ multiarch libdir's start files and `libstdc++.so*`, copied by name;
 the two header classes' own `-H` closures, copied exactly - not the
 whole trees those live in.
 """
+
 import os
 import pathlib
 import re
@@ -40,14 +41,11 @@ NO_TOOLCHAIN = "no host toolchain to clone a sysroot off"
 # The fixture is cloned off this host's own toolchain, so in a clone
 # with no compiler installed there is nothing to read and the file
 # skips rather than failing (UX-213's rule).
-pytestmark = pytest.mark.skipif(
-    not HOST_HEADERS.exists() or shutil.which("gcc") is None,
-    reason=NO_TOOLCHAIN)
+pytestmark = pytest.mark.skipif(not HOST_HEADERS.exists() or shutil.which("gcc") is None, reason=NO_TOOLCHAIN)
 
 
 def _ask_host(*argv):
-    result = subprocess.run(["gcc", *argv], capture_output=True, text=True,
-                            timeout=60)
+    result = subprocess.run(["gcc", *argv], capture_output=True, text=True, timeout=60)
     return result.stdout.strip()
 
 
@@ -67,11 +65,11 @@ def _clone(real: pathlib.Path, dest: pathlib.Path) -> None:
     for flags in ("-al", "-a"):
         if dest.exists():
             shutil.rmtree(dest)
-        done = subprocess.run(["cp", flags, str(real), str(dest)],
-                              capture_output=True, text=True)
+        done = subprocess.run(["cp", flags, str(real), str(dest)], capture_output=True, text=True)
         if done.returncode == 0:
             return
     pytest.skip(NO_TOOLCHAIN)
+
 
 #: The multiarch libdir's start files and the dev symlink `libstdc++`
 #: travels as, out of the 715 MB tree they sit in (`UX-944`).
@@ -90,10 +88,13 @@ def _header_closure(driver: str, language: str, name: str) -> list:
     payload counts: `tp._header_path` excludes a depth-1 `. .` line
     the same way, for a reading neither function has seen on this
     host but both refuse to read as a path regardless."""
-    result = subprocess.run([driver, "-fno-canonical-system-headers", "-E",
-                             "-H", "-x", language, "-", "-o", os.devnull],
-                            input=f"#include <{name}>\n", capture_output=True,
-                            text=True, timeout=60)
+    result = subprocess.run(
+        [driver, "-fno-canonical-system-headers", "-E", "-H", "-x", language, "-", "-o", os.devnull],
+        input=f"#include <{name}>\n",
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
     found = []
     for line in result.stderr.splitlines():
         match = re.match(r"^\.+ (/.*)$", line)
@@ -185,8 +186,7 @@ class TestTheFixtureCannotBuildTheWrongTree:
     own basename, where every mark globs to zero. Forced here rather
     than left to the runner's filesystem."""
 
-    def test_the_retry_does_not_copy_into_what_the_first_attempt_left(
-            self, tmp_path):
+    def test_the_retry_does_not_copy_into_what_the_first_attempt_left(self, tmp_path):
         source = tmp_path / "source" / "13"
         source.mkdir(parents=True)
         (source / "libgcc.a").touch()
@@ -202,7 +202,6 @@ class TestTheFixtureCannotBuildTheWrongTree:
 
 
 class TestEveryClassAnswersFromTheStagedTree:
-
     def test_the_check_passes_on_a_tree_that_carries_all_seven(self, mini):
         exit_code = tp.main([mini, "--check"])
 
@@ -219,8 +218,7 @@ class TestEveryClassAnswersFromTheStagedTree:
         measured = tp.measure(mini)
 
         assert not tp.is_pinned(mini)
-        assert {name: owner
-                for name, (_path, owner) in measured.items()} == tp.declared(mini)
+        assert {name: owner for name, (_path, owner) in measured.items()} == tp.declared(mini)
 
     def test_the_two_toolchains_declare_the_same_classes_differently(self):
         """The flip `UX-925` predicted and measured: Ubuntu packages
@@ -232,24 +230,20 @@ class TestEveryClassAnswersFromTheStagedTree:
             assert name in tp.declared("/", pinned=True)
             assert name not in tp.declared("/", pinned=False)
 
-    def test_a_header_reads_the_search_path_not_its_realpath(self,
-                                                             mini_symlinked):
+    def test_a_header_reads_the_search_path_not_its_realpath(self, mini_symlinked):
         """The staged tree is what the sandbox mounts, so the question
         is which parameter reached the header - not where its bytes
         finally live once a symlink is followed."""
         row = next(one for one in tp.CLASSES if one["name"] == "gcc-headers")
         path = tp.resolve(mini_symlinked, row)
 
-        assert path.startswith(mini_symlinked), \
-            "the probe answered with the host copy the symlink points at"
+        assert path.startswith(mini_symlinked), "the probe answered with the host copy the symlink points at"
 
-    def test_a_pinned_closure_keeps_its_start_files_under_glibc(self,
-                                                                tmp_path):
+    def test_a_pinned_closure_keeps_its_start_files_under_glibc(self, tmp_path):
         """`UX-925`'s closure puts `crt1.o` in **glibc's** store path
         and `libgcc.a` in gcc's, so a `/usr/lib/*` glob alone writes a
         `-B` short of the tree - the silent case."""
-        for path in ("nix/store/aaa-glibc-2.40/lib/crt1.o",
-                     "nix/store/bbb-gcc-14.3.0/lib/gcc/x86_64/14/libgcc.a"):
+        for path in ("nix/store/aaa-glibc-2.40/lib/crt1.o", "nix/store/bbb-gcc-14.3.0/lib/gcc/x86_64/14/libgcc.a"):
             made = tmp_path / path
             made.parent.mkdir(parents=True)
             made.touch()
@@ -257,8 +251,7 @@ class TestEveryClassAnswersFromTheStagedTree:
         found = tp.parameters(str(tmp_path))["prefixes"]
 
         assert found["crt1"] == f"{tmp_path}/nix/store/aaa-glibc-2.40/lib/"
-        assert found["libgcc"] == (
-            f"{tmp_path}/nix/store/bbb-gcc-14.3.0/lib/gcc/x86_64/14/")
+        assert found["libgcc"] == (f"{tmp_path}/nix/store/bbb-gcc-14.3.0/lib/gcc/x86_64/14/")
 
     def test_a_relative_dest_reads_the_same_as_an_absolute_one(self, mini):
         """A relative `dest` makes relative `-B` flags, whose relative
@@ -271,8 +264,7 @@ class TestEveryClassAnswersFromTheStagedTree:
         found = tp.parameters(mini)["prefixes"]
 
         assert sorted(found) == ["cc1", "crt1", "libgcc"]
-        assert all(path is not None and path.startswith(mini)
-                   for path in found.values())
+        assert all(path is not None and path.startswith(mini) for path in found.values())
 
 
 class TestAParameterShortOfTheTreeReadsTheHost:
@@ -285,32 +277,31 @@ class TestAParameterShortOfTheTreeReadsTheHost:
     def _short(mini, empty):
         """The shim's flags with the exec prefix pointed at a directory
         holding no `cc1`, rather than at the tree's own."""
-        return [flag if "libexec" not in flag else f"-B{empty}{os.sep}"
-                for flag in tp.flags_for(tp.parameters(mini))]
+        return [flag if "libexec" not in flag else f"-B{empty}{os.sep}" for flag in tp.flags_for(tp.parameters(mini))]
 
     def test_a_b_at_an_empty_directory_reads_the_hosts_cc1(self, mini, tmp_path):
         empty = tmp_path / "no-cc1-here"
         empty.mkdir()
 
-        path, owner = tp.measure(mini, self._short(mini, empty),
-                                 driver_root="/")["exec-prefix"]
+        path, owner = tp.measure(mini, self._short(mini, empty), driver_root="/")["exec-prefix"]
 
         assert owner != tp.TOOLCHAIN, "the empty -B was answered from the tree"
         assert path is not None and not path.startswith(mini)
-        assert "exec-prefix" not in tp.UNREADABLE_HERE, \
+        assert "exec-prefix" not in tp.UNREADABLE_HERE, (
             "a class a parameter names is never excused for answering the host"
+        )
 
-    def test_that_same_invocation_exits_zero_and_says_nothing(self, mini,
-                                                              tmp_path):
+    def test_that_same_invocation_exits_zero_and_says_nothing(self, mini, tmp_path):
         empty = tmp_path / "no-cc1-here"
         empty.mkdir()
 
-        result = subprocess.run(["gcc", f"-B{empty}{os.sep}",
-                                 "-print-prog-name=cc1"],
-                                capture_output=True, text=True, timeout=60)
+        result = subprocess.run(
+            ["gcc", f"-B{empty}{os.sep}", "-print-prog-name=cc1"], capture_output=True, text=True, timeout=60
+        )
 
-        assert result.returncode == 0 and result.stderr == "", \
+        assert result.returncode == 0 and result.stderr == "", (
             "gcc now reports an unusable -B, and this guard has less to prove"
+        )
 
     def test_the_check_reds_on_it_and_not_before(self, mini, tmp_path):
         empty = tmp_path / "no-cc1-here"
@@ -318,8 +309,7 @@ class TestAParameterShortOfTheTreeReadsTheHost:
         whole = tp.flags_for(tp.parameters(mini))
 
         before = tp.divergences(mini, tp.measure(mini, whole, driver_root="/"))
-        after = tp.divergences(mini, tp.measure(mini, self._short(mini, empty),
-                                                driver_root="/"))
+        after = tp.divergences(mini, tp.measure(mini, self._short(mini, empty), driver_root="/"))
 
         assert "exec-prefix" not in [row[0] for row in before]
         assert "exec-prefix" in [row[0] for row in after]
@@ -332,14 +322,12 @@ class TestOnlyAClassNoParameterReachesIsExcused:
     exactly the same state and is not excused."""
 
     def test_the_declared_class_warns_rather_than_reds(self, mini):
-        outside = {"name": "cxx-headers", "owner": tp.SYSROOT,
-                   "driver": "g++", "ask": ("header", "vector")}
+        outside = {"name": "cxx-headers", "owner": tp.SYSROOT, "driver": "g++", "ask": ("header", "vector")}
         measured = dict(tp.measure(mini))
         measured["cxx-headers"] = ("/usr/include/c++/13/vector", tp.MOUNTED)
 
         assert tp.divergences(mini, measured) == []
-        assert [name for name, _path
-                in tp.unreadable_here(mini, measured)] == ["cxx-headers"]
+        assert [name for name, _path in tp.unreadable_here(mini, measured)] == ["cxx-headers"]
         assert outside["name"] in tp.UNREADABLE_HERE
 
     def test_an_undeclared_class_in_the_same_state_reds(self, mini):
@@ -347,8 +335,7 @@ class TestOnlyAClassNoParameterReachesIsExcused:
         cc1 = tp.measure(mini)["exec-prefix"][0].replace(mini, "")
         measured["exec-prefix"] = (cc1, tp.MOUNTED)
 
-        assert [row[0] for row in tp.divergences(mini, measured)] == \
-            ["exec-prefix"]
+        assert [row[0] for row in tp.divergences(mini, measured)] == ["exec-prefix"]
         assert tp.unreadable_here(mini, measured) == []
 
 
@@ -357,8 +344,7 @@ class TestTheClassifierNormalizesFirst:
     string starts with the gcc libdir and reads as the toolchain's.
     The file is the target's."""
 
-    def test_the_raw_answer_starts_inside_the_toolchains_own_directory(self,
-                                                                       mini):
+    def test_the_raw_answer_starts_inside_the_toolchains_own_directory(self, mini):
         """Asked with no parameters at all, which is how the driver
         answers before a shim gets near it."""
         raw = _ask_host("-print-file-name=crt1.o")
@@ -370,8 +356,7 @@ class TestTheClassifierNormalizesFirst:
         """Without the `-B` that names the multiarch directory, so the
         answer comes back with the hops rather than resolved by the
         flag - which is how a driver at its own prefix answers."""
-        flags = [flag for flag in tp.flags_for(tp.parameters(mini))
-                 if "x86_64" not in flag or "gcc" in flag]
+        flags = [flag for flag in tp.flags_for(tp.parameters(mini)) if "x86_64" not in flag or "gcc" in flag]
         path, owner = tp.measure(mini, flags)["start-files"]
 
         assert ".." not in path
@@ -379,7 +364,6 @@ class TestTheClassifierNormalizesFirst:
 
 
 class TestTheShim:
-
     def test_it_is_shell_only(self, mini):
         text = tp.shim_text("/nix/store/h-gcc/bin/gcc", tp.parameters(mini))
 
@@ -388,14 +372,15 @@ class TestTheShim:
             assert absent not in text, f"{absent} is not in the sandbox"
 
     def test_it_execs_rather_than_forks(self, mini):
-        lines = [line for line in tp.shim_text("/x/gcc",
-                                               tp.parameters(mini)).splitlines()
-                 if line and not line.startswith("#")]
+        lines = [
+            line
+            for line in tp.shim_text("/x/gcc", tp.parameters(mini)).splitlines()
+            if line and not line.startswith("#")
+        ]
 
         assert len(lines) == 1 and lines[0].startswith("exec ")
 
-    def test_it_hands_the_driver_every_parameter_and_the_argv(self, mini,
-                                                              tmp_path):
+    def test_it_hands_the_driver_every_parameter_and_the_argv(self, mini, tmp_path):
         driver = tmp_path / "driver"
         driver.write_text('#!/bin/sh\nprintf "%s\\n" "$@"\n')
         driver.chmod(0o755)
@@ -403,8 +388,9 @@ class TestTheShim:
         shim.write_text(tp.shim_text(str(driver), tp.parameters(mini)))
         shim.chmod(0o755)
 
-        passed = subprocess.run([str(shim), "-c", "x.c"], capture_output=True,
-                                text=True, timeout=60).stdout.splitlines()
+        passed = subprocess.run(
+            [str(shim), "-c", "x.c"], capture_output=True, text=True, timeout=60
+        ).stdout.splitlines()
 
         assert passed[-2:] == ["-c", "x.c"]
         assert passed[:-2] == tp.flags_for(tp.parameters(mini))
@@ -413,8 +399,9 @@ class TestTheShim:
         """UX-918's trap, read off the stager's own axis arrays rather
         than a copy of them."""
         staged = _staged_names()
-        assert "dirname" not in staged and "basename" not in staged, \
+        assert "dirname" not in staged and "basename" not in staged, (
             "the stager now stages coreutils - this guard has nothing to prove"
+        )
         bin_dir = tmp_path / "staged-bin"
         bin_dir.mkdir()
         for name in sorted(staged):
@@ -428,24 +415,19 @@ class TestTheShim:
         shim.write_text(tp.shim_text(str(driver), tp.parameters(mini)))
         shim.chmod(0o755)
 
-        result = subprocess.run([str(shim)], capture_output=True, text=True,
-                                timeout=60, env={"PATH": str(bin_dir)})
+        result = subprocess.run([str(shim)], capture_output=True, text=True, timeout=60, env={"PATH": str(bin_dir)})
 
         assert result.returncode == 0 and result.stdout == "OK", result.stderr
 
 
 class TestAPrefixIsNeverWrittenAtNothing:
-
-    def test_a_tree_with_no_cc1_refuses_to_write_a_shim(self, tmp_path,
-                                                        capsys):
+    def test_a_tree_with_no_cc1_refuses_to_write_a_shim(self, tmp_path, capsys):
         exit_code = tp.main([str(tmp_path), "--shim", "gcc"])
 
         assert exit_code == 1
         assert "cc1" in capsys.readouterr().err
 
-    def test_a_check_with_no_driver_names_it_instead_of_raising(self,
-                                                                tmp_path,
-                                                                capsys):
+    def test_a_check_with_no_driver_names_it_instead_of_raising(self, tmp_path, capsys):
         """`stage_cpp_toolchain.sh` runs `--check` as a hard `exit 1`,
         so its stderr is the diagnosis the staging operator reads."""
         exit_code = tp.main([str(tmp_path), "--check"])
@@ -469,7 +451,6 @@ def _staged_names():
     for array in ("RUNTIME_BINARIES", "TOOLCHAIN_BINARIES"):
         block = re.search(rf"^{array}=\((.*?)^\)", text, re.DOTALL | re.MULTILINE)
         assert block, f"stage_cpp_toolchain.sh no longer declares {array}=(...)"
-        names |= {pathlib.PurePosixPath(word).name
-                  for word in block.group(1).split() if word.startswith("/")}
+        names |= {pathlib.PurePosixPath(word).name for word in block.group(1).split() if word.startswith("/")}
     assert names, "no absolute paths read out of the stager's axis arrays"
     return names

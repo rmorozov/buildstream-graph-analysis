@@ -5,6 +5,7 @@ and graph comparability. Pure reporting on top of two independent,
 already-correct single-run analyses (bga/analyzer.py) - no new
 analysis algorithm.
 """
+
 import json
 import shutil
 import subprocess
@@ -34,14 +35,20 @@ def _write_run_dir(run_dir, run_context, elements, spans, dependencies=None):
 
 def _span(uid, ts, dur, kind="BUILD", phase="BUILD"):
     return {
-        "task_key": f"{uid}|{kind}|{phase}|0", "ts_us": ts, "dur_us": dur,
-        "resources": ["PROCESS"], "primary_resource": "PROCESS",
+        "task_key": f"{uid}|{kind}|{phase}|0",
+        "ts_us": ts,
+        "dur_us": dur,
+        "resources": ["PROCESS"],
+        "primary_resource": "PROCESS",
     }
 
 
 _RUN_CONTEXT = {
-    "trace_epsilon_us": 1000, "wall_start_us": 0, "wall_end_us": 200000,
-    "max_jobs": 2, "resource_capacities": {"PROCESS": 2},
+    "trace_epsilon_us": 1000,
+    "wall_start_us": 0,
+    "wall_end_us": 200000,
+    "max_jobs": 2,
+    "resource_capacities": {"PROCESS": 2},
 }
 
 
@@ -118,13 +125,15 @@ def test_mismatched_topologies_trigger_comparability_warning(tmp_path):
     element UIDs) must be flagged as possibly-not-comparable, not
     silently diffed as if they were the same project."""
     baseline_dir = _write_run_dir(
-        tmp_path / "baseline", _RUN_CONTEXT,
+        tmp_path / "baseline",
+        _RUN_CONTEXT,
         elements=["a.bst", "b.bst"],
         dependencies=[{"predecessor": "a.bst", "successor": "b.bst"}],
         spans=[_span("a.bst", 0, 10000), _span("b.bst", 10000, 10000)],
     )
     candidate_dir = _write_run_dir(
-        tmp_path / "candidate", _RUN_CONTEXT,
+        tmp_path / "candidate",
+        _RUN_CONTEXT,
         elements=["x.bst", "y.bst", "z.bst", "w.bst"],
         dependencies=[
             {"predecessor": "x.bst", "successor": "y.bst"},
@@ -132,8 +141,10 @@ def test_mismatched_topologies_trigger_comparability_warning(tmp_path):
             {"predecessor": "z.bst", "successor": "w.bst"},
         ],
         spans=[
-            _span("x.bst", 0, 5000), _span("y.bst", 5000, 5000),
-            _span("z.bst", 10000, 5000), _span("w.bst", 15000, 5000),
+            _span("x.bst", 0, 5000),
+            _span("y.bst", 5000, 5000),
+            _span("z.bst", 10000, 5000),
+            _span("w.bst", 15000, 5000),
         ],
     )
 
@@ -156,6 +167,7 @@ def test_attribution_deltas_cover_every_category_present_in_either_run(tmp_path)
 
 # --- CLI-level: --format json round-trips through jq, exit codes -------
 
+
 @pytest.fixture
 def cli_run_dirs(tmp_path):
     baseline_dir = _chain_run_dir(tmp_path, "baseline", a_dur=10000, b_dur=10000)
@@ -167,7 +179,9 @@ def test_cli_compare_exits_zero_regardless_of_verdict(cli_run_dirs):
     baseline_dir, candidate_dir = cli_run_dirs
     proc = subprocess.run(
         [sys.executable, "-m", "bga.cli", "compare", str(baseline_dir), str(candidate_dir)],
-        capture_output=True, text=True, cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        cwd=REPO_ROOT,
     )
     assert proc.returncode == 0, proc.stderr
     assert "Verdict: IMPROVED" in proc.stdout
@@ -177,7 +191,9 @@ def test_cli_compare_missing_directory_exits_one(cli_run_dirs):
     _baseline_dir, candidate_dir = cli_run_dirs
     proc = subprocess.run(
         [sys.executable, "-m", "bga.cli", "compare", "/nonexistent-run-dir", str(candidate_dir)],
-        capture_output=True, text=True, cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        cwd=REPO_ROOT,
     )
     assert proc.returncode == 1
 
@@ -187,18 +203,26 @@ def test_cli_compare_json_round_trips_through_jq(cli_run_dirs):
     baseline_dir, candidate_dir = cli_run_dirs
     proc = subprocess.run(
         [sys.executable, "-m", "bga.cli", "compare", str(baseline_dir), str(candidate_dir), "--format", "json"],
-        capture_output=True, text=True, cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        cwd=REPO_ROOT,
     )
     assert proc.returncode == 0, proc.stderr
 
     verdict = subprocess.run(
-        ["jq", "-r", ".verdict"], input=proc.stdout, capture_output=True, text=True,
+        ["jq", "-r", ".verdict"],
+        input=proc.stdout,
+        capture_output=True,
+        text=True,
     )
     assert verdict.returncode == 0
     assert verdict.stdout.strip() == "improved"
 
     delta = subprocess.run(
-        ["jq", "-r", ".deltas.total_duration_us"], input=proc.stdout, capture_output=True, text=True,
+        ["jq", "-r", ".deltas.total_duration_us"],
+        input=proc.stdout,
+        capture_output=True,
+        text=True,
     )
     assert delta.returncode == 0
     assert delta.stdout.strip() == "-5000"
@@ -244,7 +268,9 @@ def _golden_variant_dir(tmp_path, name, app_dur_us):
 def _run_compare_cli(baseline_dir, candidate_dir, *extra_args):
     return subprocess.run(
         [sys.executable, "-m", "bga.cli", "compare", str(baseline_dir), str(candidate_dir), *extra_args],
-        capture_output=True, text=True, cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        cwd=REPO_ROOT,
     )
 
 
@@ -317,12 +343,17 @@ def test_custom_regression_threshold_can_pass_a_small_regression_the_default_wou
     assert default_proc.returncode == 4, default_proc.stderr
 
     lenient_proc = _run_compare_cli(
-        baseline_dir, candidate_dir, "--fail-on-regression", "--regression-threshold", "5",
+        baseline_dir,
+        candidate_dir,
+        "--fail-on-regression",
+        "--regression-threshold",
+        "5",
     )
     assert lenient_proc.returncode == 0, lenient_proc.stderr
 
 
 # --- UX-93: the churn verdict's preconditions, wired end to end --------
+
 
 def _cache_run_dir(tmp_path, name, *, keys, built, queue_summary):
     """A run directory carrying cache keys and a Pipeline Summary, which
@@ -330,17 +361,23 @@ def _cache_run_dir(tmp_path, name, *, keys, built, queue_summary):
     summary says whether the cache was even in play."""
     run_dir = tmp_path / name
     run_dir.mkdir(parents=True)
-    (run_dir / "graph.json").write_text(json.dumps({
-        "elements": [{"uid": uid, "cache_key": key} for uid, key in keys.items()],
-        "dependencies": [],
-    }))
-    (run_dir / "trace.json").write_text(json.dumps({
-        "spans": [_span(uid, i * 100000, 100000) for i, uid in enumerate(sorted(built))],
-        "phases": [],
-    }))
-    (run_dir / "run-context.json").write_text(json.dumps(
-        {**_RUN_CONTEXT, "queue_summary": queue_summary}
-    ))
+    (run_dir / "graph.json").write_text(
+        json.dumps(
+            {
+                "elements": [{"uid": uid, "cache_key": key} for uid, key in keys.items()],
+                "dependencies": [],
+            }
+        )
+    )
+    (run_dir / "trace.json").write_text(
+        json.dumps(
+            {
+                "spans": [_span(uid, i * 100000, 100000) for i, uid in enumerate(sorted(built))],
+                "phases": [],
+            }
+        )
+    )
+    (run_dir / "run-context.json").write_text(json.dumps({**_RUN_CONTEXT, "queue_summary": queue_summary}))
     return run_dir
 
 
@@ -370,10 +407,8 @@ def test_an_incremental_pair_that_rebuilt_the_same_element_reads_as_retention(tm
     "bought nothing"."""
     keys = {"a.bst": "k1", "b.bst": "k2"}
     comparison = compare_runs(
-        _cache_run_dir(tmp_path, "base", keys=keys, built=["a.bst"],
-                       queue_summary=_INCREMENTAL),
-        _cache_run_dir(tmp_path, "cand", keys=keys, built=["a.bst"],
-                       queue_summary=_INCREMENTAL),
+        _cache_run_dir(tmp_path, "base", keys=keys, built=["a.bst"], queue_summary=_INCREMENTAL),
+        _cache_run_dir(tmp_path, "cand", keys=keys, built=["a.bst"], queue_summary=_INCREMENTAL),
     )
     churn = comparison.cache_churn
     assert churn["rebuilt_in_both_elements"] == ["a.bst"]
@@ -387,10 +422,8 @@ def test_an_element_the_baseline_had_cached_is_still_churn(tmp_path):
     3.3s, unchanged wording."""
     keys = {"a.bst": "k1", "b.bst": "k2"}
     comparison = compare_runs(
-        _cache_run_dir(tmp_path, "base", keys=keys, built=[],
-                       queue_summary=_INCREMENTAL),
-        _cache_run_dir(tmp_path, "cand", keys=keys, built=["a.bst"],
-                       queue_summary=_INCREMENTAL),
+        _cache_run_dir(tmp_path, "base", keys=keys, built=[], queue_summary=_INCREMENTAL),
+        _cache_run_dir(tmp_path, "cand", keys=keys, built=["a.bst"], queue_summary=_INCREMENTAL),
     )
     churn = comparison.cache_churn
     assert churn["churned_elements"] == ["a.bst"]

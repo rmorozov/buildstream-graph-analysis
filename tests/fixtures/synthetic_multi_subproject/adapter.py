@@ -16,6 +16,7 @@ way to recover it here is via the phase message text, using the same
 PHASE_MESSAGE mapping the fixture generator used to write the synthetic
 log in the first place (build_model.MESSAGE_TO_KIND).
 """
+
 import re
 
 from tests.fixtures.synthetic_multi_subproject.build_model import MESSAGE_TO_KIND
@@ -68,13 +69,15 @@ def chrome_events_to_bga_spans(events):
             continue
 
         resource = _KIND_TO_RESOURCE[kind]
-        spans.append({
-            "task_key": f"{element}|{kind}|{kind}|0",
-            "ts_us": int(start_ts),
-            "dur_us": int(end_ts) - int(start_ts),
-            "resources": [resource],
-            "primary_resource": resource,
-        })
+        spans.append(
+            {
+                "task_key": f"{element}|{kind}|{kind}|0",
+                "ts_us": int(start_ts),
+                "dur_us": int(end_ts) - int(start_ts),
+                "resources": [resource],
+                "primary_resource": resource,
+            }
+        )
 
     spans.sort(key=lambda s: (s["ts_us"], s["task_key"]))
     return spans, dropped_names

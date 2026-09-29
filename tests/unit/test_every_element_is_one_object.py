@@ -18,6 +18,7 @@ resolution, not presence: every `#element-…` href in the document must
 name an id the same document carries, and it is checked by resolving
 all of them.
 """
+
 import json
 import os
 import shutil
@@ -30,13 +31,10 @@ from bga import schemas
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 GOLDEN = os.path.join(REPO, "tests", "fixtures", "golden", "mixed_task_kinds")
-REAL = os.path.join(
-    REPO, "examples", "06-macro-micro-optimization", ".bga", "runs",
-    "20260821T170127Z")
+REAL = os.path.join(REPO, "examples", "06-macro-micro-optimization", ".bga", "runs", "20260821T170127Z")
 node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
-has_capture = pytest.mark.skipif(
-    not os.path.isdir(REAL), reason="the examples/06 capture is not here")
+has_capture = pytest.mark.skipif(not os.path.isdir(REAL), reason="the examples/06 capture is not here")
 
 
 def _report(run=GOLDEN, plane2=None):
@@ -55,9 +53,9 @@ def _report(run=GOLDEN, plane2=None):
 
 
 def _node(script, timeout=120):
-    result = subprocess.run([node, "--input-type=module", "-e", script],
-                            capture_output=True, text=True, cwd=REPO,
-                            timeout=timeout)
+    result = subprocess.run(
+        [node, "--input-type=module", "-e", script], capture_output=True, text=True, cwd=REPO, timeout=timeout
+    )
     assert result.returncode == 0, result.stderr
     return json.loads(result.stdout)
 
@@ -90,12 +88,12 @@ class TestEveryElementLinkResolves:
         assert out["element_links"] > 0, "no element link was rendered at all"
         assert out["unresolvable"] == [], (
             f"{len(out['unresolvable'])} of {out['distinct']} element "
-            f"anchors resolve to nothing: {out['unresolvable'][:4]}")
+            f"anchors resolve to nothing: {out['unresolvable'][:4]}"
+        )
 
     @has_capture
     def test_on_the_real_capture(self):
-        out = _render(_report(os.path.join(REAL, "run"),
-                              os.path.join(REAL, "plane2.json")))
+        out = _render(_report(os.path.join(REAL, "run"), os.path.join(REAL, "plane2.json")))
         assert out["element_links"] > 0
         assert out["unresolvable"] == [], out["unresolvable"][:4]
 
@@ -121,7 +119,8 @@ class TestEveryElementLinkResolves:
             'const uids = ["core.bst", "sub/dir:thing.bst", "a b.bst", '
             '"my_lib.bst", "x"];'
             'console.log(JSON.stringify(uids.map((u) => '
-            '  [a.cssId(u), v.elementAnchor(u)])));')
+            '  [a.cssId(u), v.elementAnchor(u)])));'
+        )
         for link, target in out:
             assert link == target, (link, target)
 
@@ -140,8 +139,7 @@ class TestTheElementIsAnObject:
         section becoming a second analysis."""
         payload = _report()
         out = _render(payload)
-        detail = {e["element_uid"]: e for e in
-                  payload["critical_path_detail"]}
+        detail = {e["element_uid"]: e for e in payload["critical_path_detail"]}
         checked = 0
         for section in out["element_sections"]:
             entry = detail.get(section["element"])
@@ -162,27 +160,26 @@ class TestTheElementIsAnObject:
         assert with_places, "no element section cross-references anything"
         for section in with_places:
             assert not any(k.startswith("element-") for k in section["where"]), (
-                "an element section should not list itself")
+                "an element section should not list itself"
+            )
 
     def test_a_finding_that_names_an_element_shows_on_its_section(self):
         payload = _report()
-        named = {uid for finding in payload["findings"]
-                 for uid in (finding.get("elements") or [])}
+        named = {uid for finding in payload["findings"] for uid in (finding.get("elements") or [])}
         if not named:
             pytest.skip("this fixture's findings name no elements")
         out = _render(payload)
         sections = {s["element"]: s for s in out["element_sections"]}
-        assert any(sections.get(uid, {}).get("findings")
-                   for uid in named), (
-            "no element section carries the finding that names it")
+        assert any(sections.get(uid, {}).get("findings") for uid in named), (
+            "no element section carries the finding that names it"
+        )
 
     @has_capture
     def test_the_plane2_half_reaches_the_section(self):
         """`UX-215`'s join is what lets this section answer "is it
         compute-bound or badly built" - the whole reason that item came
         first."""
-        payload = _report(os.path.join(REAL, "run"),
-                          os.path.join(REAL, "plane2.json"))
+        payload = _report(os.path.join(REAL, "run"), os.path.join(REAL, "plane2.json"))
         out = _render(payload)
         fields = {f for s in out["element_sections"] for f in s["fields"]}
         assert "cores_busy" in fields, sorted(fields)
@@ -197,16 +194,13 @@ class TestItStaysASectionAndStaysBounded:
         print, `filter: grayscale`, or a pasted anchor. Asserted as an
         absence, because the whole value of the decision is that
         nothing was added."""
-        source = open(os.path.join(REPO, "bga/viewer/views.js"),
-                      encoding="utf-8").read()
-        css = open(os.path.join(REPO, "bga/viewer/style.css"),
-                   encoding="utf-8").read()
+        source = open(os.path.join(REPO, "bga/viewer/views.js"), encoding="utf-8").read()
+        css = open(os.path.join(REPO, "bga/viewer/style.css"), encoding="utf-8").read()
         # Not `z-index`: the sticky table header has used one since
         # `UX-205` and it is not an overlay. What is banned is the
         # thing that takes the element out of the document - a modal,
         # or a panel pinned to the viewport.
-        for banned in ("dialog", "showModal", "position: fixed",
-                       "position:fixed"):
+        for banned in ("dialog", "showModal", "position: fixed", "position:fixed"):
             assert banned not in source, f"{banned} is overlay machinery"
             assert banned not in css, f"{banned} is overlay machinery"
 
@@ -261,7 +255,9 @@ function make(tag) {
 _installDocument();
 """
 
-_HARNESS = _SHIM + """
+_HARNESS = (
+    _SHIM
+    + """
 const app = await import("./tests/viewer.mjs");
 const views = await import("./tests/viewer.mjs");
 const nav = await import("./bga/viewer/nav.js");
@@ -320,6 +316,7 @@ console.log(JSON.stringify({
   element_sections: sections,
 }));
 """
+)
 
 
 if __name__ == "__main__":  # pragma: no cover

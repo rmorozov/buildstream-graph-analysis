@@ -17,6 +17,7 @@ into a tmp dir on every run and diffs it against these checked-in copies,
 so drift between the model and the checked-in fixture fails loudly instead
 of silently.
 """
+
 import json
 import sys
 from datetime import datetime
@@ -51,12 +52,8 @@ def build_fixture():
 
     spans, dropped_names = adapter.chrome_events_to_bga_spans(chrome_events)
 
-    invocation_start = min(
-        e["ts"] for e in chrome_events if e.get("cat") == "bst-invocation" and e.get("ph") == "B"
-    )
-    invocation_end = max(
-        e["ts"] for e in chrome_events if e.get("cat") == "bst-invocation" and e.get("ph") == "E"
-    )
+    invocation_start = min(e["ts"] for e in chrome_events if e.get("cat") == "bst-invocation" and e.get("ph") == "B")
+    invocation_end = max(e["ts"] for e in chrome_events if e.get("cat") == "bst-invocation" and e.get("ph") == "E")
 
     run_context = {
         "trace_epsilon_us": 50000,

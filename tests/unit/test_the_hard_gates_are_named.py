@@ -19,6 +19,7 @@ directions, and reads the table's `Part 33.1's line` column against
 33.1's own fenced blocks. The population is the analyzer's own output,
 never a list restated here.
 """
+
 import pathlib
 import re
 import sys
@@ -44,9 +45,9 @@ def _registry_rows():
     """
     text = SPEC.read_text(encoding="utf-8")
     start = text.index(ROW)
-    note = text[start:text.index("\n---\n", start)]
+    note = text[start : text.index("\n---\n", start)]
     head = note.index("| `hard_gates` key |")
-    table = note[head:note.index("\n\n", head)]
+    table = note[head : note.index("\n\n", head)]
     rows = []
     for line in table.splitlines()[2:]:
         cells = [c.strip() for c in line.split("|")[1:-1]]
@@ -62,7 +63,7 @@ def _part_33_1_quantities():
     """
     text = SPEC.read_text(encoding="utf-8")
     start = text.index("## 33.1 Hard Gates")
-    section = text[start:text.index("\n## 33.2", start)]
+    section = text[start : text.index("\n## 33.2", start)]
     fenced = "\n".join(re.findall(r"```text\n(.*?)```", section, re.S))
     return re.findall(r"^([a-z_]+)\s*==", fenced, re.M)
 
@@ -92,23 +93,28 @@ class TestTheRegistryIsThePublishedSet:
         assert len(live) >= 4 and live.keys() == stored.keys(), (
             "the two runs do not publish the same gate keys, or the "
             "fixture broke - every claim below would pass vacuously",
-            sorted(live), sorted(stored))
+            sorted(live),
+            sorted(stored),
+        )
 
     def test_every_published_gate_has_a_registry_row(self):
         live, stored = _published()
         recorded = {key for key, _, _ in _registry_rows()}
         unnamed = sorted((live.keys() | stored.keys()) - recorded)
         assert not unnamed, (
-            "a hard gate is published and Part 32.7.5 does not name it - "
-            "this is UX-602's defect arriving again", unnamed)
+            "a hard gate is published and Part 32.7.5 does not name it - this is UX-602's defect arriving again",
+            unnamed,
+        )
 
     def test_every_registry_row_names_a_published_gate(self):
         live, stored = _published()
         recorded = {key for key, _, _ in _registry_rows()}
         stale = sorted(recorded - (live.keys() | stored.keys()))
         assert not stale, (
-            "Part 32.7.5 records a hard gate no run publishes; the row "
-            "outlived its gate", stale, sorted(live))
+            "Part 32.7.5 records a hard gate no run publishes; the row outlived its gate",
+            stale,
+            sorted(live),
+        )
 
     def test_the_rows_are_in_the_order_the_code_writes_them(self):
         """32.7.5 says "in the order the code writes them", which is the
@@ -116,7 +122,9 @@ class TestTheRegistryIsThePublishedSet:
         live, _ = _published()
         assert [key for key, _, _ in _registry_rows()] == list(live), (
             "32.7.5's rows are not in the published order",
-            [key for key, _, _ in _registry_rows()], list(live))
+            [key for key, _, _ in _registry_rows()],
+            list(live),
+        )
 
 
 class TestTheRowsSayWhichFourPart331States:
@@ -125,21 +133,23 @@ class TestTheRowsSayWhichFourPart331States:
 
     def test_the_named_column_is_exactly_part_33_1s_blocks(self):
         quantities = _part_33_1_quantities()
-        assert quantities, (
-            "33.1's fenced blocks parsed to nothing; the column below "
-            "would match an empty set")
+        assert quantities, "33.1's fenced blocks parsed to nothing; the column below would match an empty set"
         claimed = []
         for key, cell, _ in _registry_rows():
             if cell == NOT_NAMED:
                 continue
             match = re.match(r"`([a-z_]+)\s*==", cell)
             assert match, (
-                "32.7.5's `Part 33.1's line` cell is neither `-` nor an "
-                "expression Part 33.1 could contain", key, cell)
+                "32.7.5's `Part 33.1's line` cell is neither `-` nor an expression Part 33.1 could contain",
+                key,
+                cell,
+            )
             claimed.append(match.group(1))
         assert claimed == quantities, (
             "32.7.5's 33.1 column is not Part 33.1's own list, in order",
-            claimed, quantities)
+            claimed,
+            quantities,
+        )
 
     def test_each_named_row_quotes_the_line_for_its_own_gate(self):
         """Without this the column could be 33.1's four list against the
@@ -150,8 +160,10 @@ class TestTheRowsSayWhichFourPart331States:
                 continue
             quantity = re.match(r"`([a-z_]+)", cell).group(1)
             assert key.startswith(quantity), (
-                "32.7.5 quotes a Part 33.1 line beside a gate it is not "
-                "the line for", key, cell)
+                "32.7.5 quotes a Part 33.1 line beside a gate it is not the line for",
+                key,
+                cell,
+            )
 
     def test_each_omitted_gate_cites_the_invariant_that_carries_it(self):
         """A gate 33.1 does not state is only defensible because Part 34
@@ -161,10 +173,14 @@ class TestTheRowsSayWhichFourPart331States:
                 continue
             assert re.fullmatch(r"I\d+", invariant), (
                 "a gate Part 33.1 omits must name its Part 34 invariant",
-                key, invariant)
+                key,
+                invariant,
+            )
             assert f"## {invariant} " in SPEC.read_text(encoding="utf-8"), (
                 "32.7.5 cites an invariant Part 34 does not state",
-                key, invariant)
+                key,
+                invariant,
+            )
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -5,6 +5,7 @@ each writer downstream of `test` must name a success it can read.
 Read two ways: the Decision's static clause per writer, and a replay of
 every writer's `if:` in `needs` order with `test` red.
 """
+
 import pathlib
 import sys
 
@@ -23,8 +24,7 @@ def _reads_a_success(job):
     condition = " ".join(str(job.get("if") or "").split())
     jobs = _jobs()
     chain = [j for j in _needs(job) if j == "test" or "test" in _ancestors(j, jobs)]
-    return (any(f"needs.{j}.result == 'success'" in condition for j in chain)
-            or "needs.test.outputs.clean_" in condition)
+    return any(f"needs.{j}.result == 'success'" in condition for j in chain) or "needs.test.outputs.clean_" in condition
 
 
 def test_every_writer_needs_the_suite():
@@ -48,8 +48,7 @@ def _replay(test_outputs, test_result="failure", forced=None):
     ran = []
     for name in order:
         results = [needs[need]["result"] for need in _needs(jobs[name])]
-        runs = _holds(jobs[name].get("if"), {"needs": needs, "github": MAIN},
-                      _status(results))
+        runs = _holds(jobs[name].get("if"), {"needs": needs, "github": MAIN}, _status(results))
         needs[name] = {"result": forced.get(name, "success" if runs else "skipped")}
         if runs:
             ran.append(name)
@@ -73,6 +72,5 @@ def test_a_green_push_publishes_the_pages():
 
 
 def test_a_failed_ledger_append_publishes_no_pages():
-    ran = _replay(dict.fromkeys(CLEAN, "true"), test_result="success",
-                  forced={"flake-ledger-adopt": "failure"})
+    ran = _replay(dict.fromkeys(CLEAN, "true"), test_result="success", forced={"flake-ledger-adopt": "failure"})
     assert "touch-map-adopt" in ran and "area-pages-publish" not in ran, ran

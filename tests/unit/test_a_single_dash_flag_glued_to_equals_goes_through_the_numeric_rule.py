@@ -11,6 +11,7 @@ now splits at the first `=` like every long-form flag, before the
 plain-glued fallback.
 Mutation: drop the `if equals:` branch, and `-j=123456` maps again.
 """
+
 from bga import anonymize as anon
 
 KEY = bytes(range(32))

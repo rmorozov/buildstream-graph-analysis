@@ -14,6 +14,7 @@ to the round number of its last true catch; no such record exists yet,
 so by default only "needs owner" and "confirm inferred" appear. It
 proposes; nothing moves without a row, and nothing is deleted.
 """
+
 import argparse
 import json
 import pathlib
@@ -66,34 +67,34 @@ def guard_map(scenarios=SCENARIOS):
 
 
 def current_round(audits=REPO / "docs/audits"):
-    rounds = [int(m.group(1)) for p in audits.glob("round-*.md")
-              if (m := re.fullmatch(r"round-(\d+)\.md", p.name))]
+    rounds = [int(m.group(1)) for p in audits.glob("round-*.md") if (m := re.fullmatch(r"round-(\d+)\.md", p.name))]
     return max(rounds, default=0)
 
 
 def table(rows, n):
-    lines = [f"| file | seconds | owner task(s) | last catch (N={n}) | proposal |",
-             "|---|---|---|---|---|"]
+    lines = [f"| file | seconds | owner task(s) | last catch (N={n}) | proposal |", "|---|---|---|---|---|"]
     for path, seconds, owners, last, proposal in rows:
-        lines.append(f"| {path} | {seconds} | {', '.join(owners) or '-'} | "
-                     f"{'round ' + str(last) if last is not None else 'unrecorded'}"
-                     f" | {proposal} |")
+        lines.append(
+            f"| {path} | {seconds} | {', '.join(owners) or '-'} | "
+            f"{'round ' + str(last) if last is not None else 'unrecorded'}"
+            f" | {proposal} |"
+        )
     return "\n".join(lines)
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
-    parser.add_argument("--n", type=int, default=10,
-                        help="rounds a guard may go without a catch")
-    parser.add_argument("--catches", type=pathlib.Path,
-                        help="JSON {test path: round of its last catch}")
+    parser.add_argument("--n", type=int, default=10, help="rounds a guard may go without a catch")
+    parser.add_argument("--catches", type=pathlib.Path, help="JSON {test path: round of its last catch}")
     args = parser.parse_args(argv)
     prices = json.loads(dev_records.load(REFERENCE))["files"]
     catches = json.loads(args.catches.read_text()) if args.catches else {}
     rows = proposals(prices, guard_map(), catches, current_round(), args.n)
     print(table(rows, args.n))
-    print(f"\n{len(rows)} of {len(prices)} files proposed; "
-          f"{sum(row[1] for row in rows):.0f} of {sum(prices.values()):.0f} CPU-s")
+    print(
+        f"\n{len(rows)} of {len(prices)} files proposed; "
+        f"{sum(row[1] for row in rows):.0f} of {sum(prices.values()):.0f} CPU-s"
+    )
     return 0
 
 

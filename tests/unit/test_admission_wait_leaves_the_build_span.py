@@ -1,13 +1,13 @@
 """UX-1005 track B: `subtract_admission_wait` moves a BUILD span's start
 later by the shim's own recorded wait, finish held fixed - this
 module's own contract (`bga/normalize/timestamps.py`'s docstring)."""
+
 from bga.ingest.models import TaskKey, TaskKind, TaskSpan
 from bga.normalize.timestamps import subtract_admission_wait
 
 
 def _span(uid, kind, ts_us, dur_us):
-    return TaskSpan(task_key=TaskKey(uid, kind, kind.value, 0),
-                    ts_us=ts_us, dur_us=dur_us)
+    return TaskSpan(task_key=TaskKey(uid, kind, kind.value, 0), ts_us=ts_us, dur_us=dur_us)
 
 
 def test_the_wait_leaves_the_build_span():

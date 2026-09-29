@@ -21,6 +21,7 @@ next round would otherwise re-derive from the capture list.
 `UX-354` is why this reads the workflow at all: a workflow nothing reads
 drifts, twice found by a red pull request rather than by the suite.
 """
+
 import pathlib
 import re
 
@@ -40,7 +41,8 @@ BINDS = re.compile(r"(?<![$\w])FDSDK_REF\s*[:=]")
 #: The env fallback: what a `schedule:` run actually captures.
 FALLBACK = re.compile(
     r"FDSDK_REF:\s*\$\{\{\s*github\.event\.inputs\.fdsdk_ref\s*\|\|\s*"
-    r"'([0-9a-f]{40})'\s*\}\}")
+    r"'([0-9a-f]{40})'\s*\}\}"
+)
 
 
 def _text():
@@ -55,10 +57,8 @@ def _input_block():
     is not mistaken for this one's. `UX-354`'s own lesson, one level
     down: say which part of the document is the subject."""
     lines = _text().splitlines()
-    start = next(i for i, line in enumerate(lines)
-                 if line.strip() == "fdsdk_ref:")
-    end = next(i for i in range(start + 1, len(lines))
-               if re.match(r"^      \w+:", lines[i]))
+    start = next(i for i, line in enumerate(lines) if line.strip() == "fdsdk_ref:")
+    end = next(i for i in range(start + 1, len(lines)) if re.match(r"^      \w+:", lines[i]))
     return "\n".join(lines[start:end])
 
 
@@ -70,8 +70,7 @@ def declared_policy():
 
 
 def _env_fallback_line():
-    line = next((one for one in _text().splitlines()
-                 if one.strip().startswith("FDSDK_REF:")), None)
+    line = next((one for one in _text().splitlines() if one.strip().startswith("FDSDK_REF:")), None)
     assert line, "the workflow no longer sets FDSDK_REF"
     return line
 
@@ -116,8 +115,8 @@ class TestThePolicyIsDeclaredWhereThePinIs:
         fallback = re.findall(r"[0-9a-f]{40}", _env_fallback_line())
         assert fallback, _env_fallback_line()
         assert set(fallback) == {default.group(1)}, (
-            f"dispatch captures {default.group(1)[:8]}, a cron captures "
-            f"{[one[:8] for one in fallback]}")
+            f"dispatch captures {default.group(1)[:8]}, a cron captures {[one[:8] for one in fallback]}"
+        )
 
 
 class TestThePolicyAndTheMechanismAgree:
@@ -131,7 +130,8 @@ class TestThePolicyAndTheMechanismAgree:
         moving = [one for one in ref_bindings() if not FALLBACK.fullmatch(one)]
         assert not moving, (
             "`capture-ref-policy: pinned`, but something other than the "
-            "dispatch input decides the ref:\n  " + "\n  ".join(moving))
+            "dispatch input decides the ref:\n  " + "\n  ".join(moving)
+        )
 
     def test_an_advanced_ref_has_something_that_moves_it(self):
         """The other direction, and the one that makes the word cost
@@ -145,16 +145,16 @@ class TestThePolicyAndTheMechanismAgree:
             "`capture-ref-policy: advanced`, but the only binding of the "
             "ref is the dispatch input or one literal - a `schedule:` "
             "trigger supplies no inputs, so every cron still captures the "
-            "one hardcoded commit:\n  " + "\n  ".join(ref_bindings()))
+            "one hardcoded commit:\n  " + "\n  ".join(ref_bindings())
+        )
 
     def test_the_comment_says_what_the_choice_costs(self):
         """`UX-92` was deferred four times on a wait that cannot end. The
         pin's comment is where that is written down, so the fifth
         re-check reads it instead of re-deriving it from the ref list."""
         block = _input_block()
-        assert "UX-92" in block, (
-            "the pin no longer names the gate it makes impossible")
+        assert "UX-92" in block, "the pin no longer names the gate it makes impossible"
 
 
-if __name__ == "__main__":                       # pragma: no cover
+if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(pytest.main([__file__, "-v"]))

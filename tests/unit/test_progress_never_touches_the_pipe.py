@@ -9,6 +9,7 @@ So the interesting tests here are the negative ones. Progress that
 draws correctly on a TTY is worth a few assertions; progress that
 cannot reach a pipe, a log file, or stdout is worth the rest of them.
 """
+
 import io
 import json
 import os
@@ -82,7 +83,8 @@ class TestWhatReachesANonTerminal:
         text = log.read_text()
         assert "\r" not in text
         assert text == "Analyzing the captured trace...\n", (
-            "a redirected stderr must carry the phase lines and nothing else")
+            "a redirected stderr must carry the phase lines and nothing else"
+        )
 
     def test_the_phase_lines_are_unconditional(self):
         """`UX-159`'s behaviour is what the piped case still gets - the
@@ -110,8 +112,8 @@ class TestWhatATerminalSees:
         tick.step(45)
         tick.done()
         assert stream.getvalue().endswith("\r"), (
-            "the cursor is left at column 0 with the line blanked, so the "
-            "phase's own summary starts on a clean row")
+            "the cursor is left at column 0 with the line blanked, so the phase's own summary starts on a clean row"
+        )
         assert stream.getvalue().rstrip("\r").endswith(" ")
 
     def test_redraws_are_throttled(self, monkeypatch):
@@ -122,8 +124,7 @@ class TestWhatATerminalSees:
         tick = progress.ticker("pairing processes", stream=stream)
         for i in range(10000):
             tick.step(i)
-        assert stream.getvalue().count("\r") < 20, (
-            f"{stream.getvalue().count(chr(13))} redraws for 10,000 steps")
+        assert stream.getvalue().count("\r") < 20, f"{stream.getvalue().count(chr(13))} redraws for 10,000 steps"
 
     def test_the_line_never_wraps(self, monkeypatch):
         monkeypatch.delenv("BGA_NO_PROGRESS", raising=False)
@@ -132,8 +133,7 @@ class TestWhatATerminalSees:
         tick.step(1)
         assert max(len(part) for part in stream.getvalue().split("\r")) <= 72
 
-    def test_a_terminal_that_goes_away_does_not_take_the_run_with_it(
-            self, monkeypatch, tmp_path):
+    def test_a_terminal_that_goes_away_does_not_take_the_run_with_it(self, monkeypatch, tmp_path):
         monkeypatch.delenv("BGA_NO_PROGRESS", raising=False)
 
         class Broken(_FakeTTY):
@@ -141,7 +141,7 @@ class TestWhatATerminalSees:
                 raise OSError("terminal closed")
 
         tick = progress.ticker("census", stream=Broken())
-        tick.step(1)   # must not raise
+        tick.step(1)  # must not raise
         tick.done()
 
     def test_the_context_manager_clears_on_an_exception(self, monkeypatch):
@@ -151,7 +151,6 @@ class TestWhatATerminalSees:
             tick.step(3)
             raise ValueError("boom")
         assert stream.getvalue().endswith("\r")
-
 
 
 def _store(tmp_path, snapshots=("20260101T000000Z", "20260102T000000Z")):
@@ -196,29 +195,36 @@ class TestStdoutIsUntouched:
         env.pop("BGA_FORCE_PROGRESS", None)
         env.update(env_extra)
         return subprocess.run(
-            [sys.executable, "-c",
-             "import os, sys\n"
-             "os.chdir(sys.argv[1])\n"
-             "from bga.cli import main\n"
-             f"raise SystemExit(main({argv!r}))", cwd or os.getcwd()],
-            capture_output=True, env=env, cwd=os.getcwd())
+            [
+                sys.executable,
+                "-c",
+                f"import os, sys\nos.chdir(sys.argv[1])\nfrom bga.cli import main\nraise SystemExit(main({argv!r}))",
+                cwd or os.getcwd(),
+            ],
+            capture_output=True,
+            env=env,
+            cwd=os.getcwd(),
+        )
 
     def _analyze(self, env_extra):
         env = dict(os.environ, **env_extra)
         return subprocess.run(
-            [sys.executable, "-c",
-             "from bga.cli import main; raise SystemExit(main("
-             f"['analyze', {GOLDEN!r}, '--format', 'json']))"],
-            capture_output=True, env=env, cwd=os.getcwd())
+            [
+                sys.executable,
+                "-c",
+                f"from bga.cli import main; raise SystemExit(main(['analyze', {GOLDEN!r}, '--format', 'json']))",
+            ],
+            capture_output=True,
+            env=env,
+            cwd=os.getcwd(),
+        )
 
     def test_forcing_progress_on_actually_draws(self, tmp_path):
         """The precondition the old test lacked. Without this, every
         assertion below is about two runs that both drew nothing."""
         project = _store(tmp_path)
-        on = self._run(["snapshot", "--list"], {"BGA_FORCE_PROGRESS": "1"},
-                       str(project))
-        off = self._run(["snapshot", "--list"], {"BGA_NO_PROGRESS": "1"},
-                        str(project))
+        on = self._run(["snapshot", "--list"], {"BGA_FORCE_PROGRESS": "1"}, str(project))
+        off = self._run(["snapshot", "--list"], {"BGA_NO_PROGRESS": "1"}, str(project))
         assert on.returncode == off.returncode == 0, on.stderr
         assert on.stderr, "forcing progress on drew nothing - the comparison below would be vacuous"
         assert b"\r" in on.stderr, "a ticker redraws in place; this is not one"
@@ -226,12 +232,9 @@ class TestStdoutIsUntouched:
 
     def test_stdout_is_identical_while_progress_is_drawn(self, tmp_path):
         project = _store(tmp_path)
-        on = self._run(["snapshot", "--list"], {"BGA_FORCE_PROGRESS": "1"},
-                       str(project))
-        off = self._run(["snapshot", "--list"], {"BGA_NO_PROGRESS": "1"},
-                        str(project))
-        assert on.stdout == off.stdout, (
-            "stdout differs depending on whether progress was drawn")
+        on = self._run(["snapshot", "--list"], {"BGA_FORCE_PROGRESS": "1"}, str(project))
+        off = self._run(["snapshot", "--list"], {"BGA_NO_PROGRESS": "1"}, str(project))
+        assert on.stdout == off.stdout, "stdout differs depending on whether progress was drawn"
         assert b"\r" not in on.stdout
 
     def test_the_off_switch_beats_the_force_switch(self):
@@ -240,16 +243,14 @@ class TestStdoutIsUntouched:
         matter what else is set."""
         from bga import progress
 
-        with mock.patch.dict(os.environ,
-                             {"BGA_FORCE_PROGRESS": "1", "BGA_NO_PROGRESS": "1"}):
+        with mock.patch.dict(os.environ, {"BGA_FORCE_PROGRESS": "1", "BGA_NO_PROGRESS": "1"}):
             assert progress.enabled(_FakeTTY()) is False
 
     def test_the_json_bytes_are_identical_with_progress_on_and_off(self):
         with_progress = self._analyze({})
         without = self._analyze({"BGA_NO_PROGRESS": "1"})
         assert with_progress.returncode == without.returncode == 0
-        assert with_progress.stdout == without.stdout, (
-            "stdout differs depending on whether progress was drawn")
+        assert with_progress.stdout == without.stdout, "stdout differs depending on whether progress was drawn"
 
     def test_stdout_is_valid_json_the_way_a_pipeline_reads_it(self):
         """`| jq .` in the form this suite can assert: stdout parses on
@@ -265,21 +266,24 @@ class TestTheProgressPointsAreWired:
     """Which phases carry a ticker is a decision, and a decision that
     silently regresses to none is the failure this catches."""
 
-    @pytest.mark.parametrize("module,label", [
-        ("tools/bst_native_build_tracer.py", "parsing trace"),
-        ("tools/bst_native_build_tracer.py", "census"),
-        ("tools/bst_native_build_tracer.py", "pairing processes"),
-        ("tools/bst_show_to_graph.py", "bst show"),
-        ("bga/run_store.py", "measuring the store"),
-    ])
+    @pytest.mark.parametrize(
+        "module,label",
+        [
+            ("tools/bst_native_build_tracer.py", "parsing trace"),
+            ("tools/bst_native_build_tracer.py", "census"),
+            ("tools/bst_native_build_tracer.py", "pairing processes"),
+            ("tools/bst_show_to_graph.py", "bst show"),
+            ("bga/run_store.py", "measuring the store"),
+        ],
+    )
     def test_the_long_phase_has_a_ticker(self, module, label):
         # Whitespace-normalised: a ticker whose arguments wrap over two
         # lines is the same wiring, and a guard that cares about the
         # line break is a guard about formatting.
         source = " ".join(open(module, encoding="utf-8").read().split())
-        assert f'progress.ticker( "{label}"' in source or \
-               f'progress.ticker("{label}"' in source, (
-            f"{module} no longer narrates `{label}`")
+        assert f'progress.ticker( "{label}"' in source or f'progress.ticker("{label}"' in source, (
+            f"{module} no longer narrates `{label}`"
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -23,6 +23,7 @@ green (it reads `.right`, blind to what the padding leaves room for).
 every text change; `test_no_title_line_overlaps_the_toggle` is the
 clause that would have caught the miss.
 """
+
 import pathlib
 import sys
 
@@ -139,8 +140,7 @@ def booted(tmp_path_factory):
 @pytest.mark.medium
 @pytest.mark.parametrize("label", LABELS)
 @pytest.mark.parametrize("width,height", [(1440, 900), (390, 844)])
-def test_the_json_toggle_offset_is_stable(browser, booted, label, width,
-                                          height):
+def test_the_json_toggle_offset_is_stable(browser, booted, label, width, height):
     out = browser.measure(booted[label], _SCAN, width, height)
     assert out, f"{label} rendered no section with both a heading and a toggle"
     offsets = [row["offset"] for row in out]
@@ -150,7 +150,8 @@ def test_the_json_toggle_offset_is_stable(browser, booted, label, width,
         f"the head's right edge ranges {min(offsets):.1f}-{max(offsets):.1f}px "
         f"(spread {spread:.1f}px > {OFFSET_SPREAD_PX}px, styleguide §3l): "
         f"{sorted(out, key=lambda r: r['offset'])[:3]} .. "
-        f"{sorted(out, key=lambda r: r['offset'])[-3:]}")
+        f"{sorted(out, key=lambda r: r['offset'])[-3:]}"
+    )
 
 
 @needs_browser
@@ -158,12 +159,11 @@ def test_the_json_toggle_offset_is_stable(browser, booted, label, width,
 @pytest.mark.parametrize("label", LABELS)
 @pytest.mark.parametrize("width,height", [(1440, 900), (390, 844)])
 @pytest.mark.parametrize("zoom", [False, True], ids=["normal", "zoom40"])
-def test_no_title_line_overlaps_the_toggle(browser, booted, label, width,
-                                           height, zoom):
-    script = _OVERLAP_SCAN_TEMPLATE.replace(
-        "__ZOOM__", _ZOOM_JS if zoom else "")
+def test_no_title_line_overlaps_the_toggle(browser, booted, label, width, height, zoom):
+    script = _OVERLAP_SCAN_TEMPLATE.replace("__ZOOM__", _ZOOM_JS if zoom else "")
     hits = browser.measure(booted[label], script, width, height)
     assert hits == [], (
         f"{label} at {width}x{height}{' zoomed to 40px root' if zoom else ''}"
         f": {len(hits)} section(s) whose wrapped title overlaps the toggle "
-        f"(styleguide §3l): {hits[:3]}")
+        f"(styleguide §3l): {hits[:3]}"
+    )

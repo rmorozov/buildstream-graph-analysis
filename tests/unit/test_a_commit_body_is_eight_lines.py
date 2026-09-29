@@ -5,6 +5,7 @@ against this repository's history, which changes under it. What the
 history *is* used for is the one thing a synthetic body cannot show:
 that the rule was measured on a real population before it shipped.
 """
+
 import pathlib
 import subprocess
 import sys
@@ -25,11 +26,14 @@ class TestTheCounter:
     def test_blank_lines_are_free(self):
         assert len(tool.body_lines("one\n\n\ntwo\n\n")) == 2
 
-    @pytest.mark.parametrize("footer", (
-        "Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>",
-        "Claude-Session: https://claude.ai/code/session_x",
-        "Signed-off-by: Someone <a@b.c>",
-    ))
+    @pytest.mark.parametrize(
+        "footer",
+        (
+            "Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>",
+            "Claude-Session: https://claude.ai/code/session_x",
+            "Signed-off-by: Someone <a@b.c>",
+        ),
+    )
     def test_the_pinned_footer_does_not_count(self, footer):
         """`UX-696`'s acceptance clause names this: the harness appends
         the footer, so counting it would spend two of the eight lines on
@@ -42,27 +46,30 @@ class TestTheCounter:
     def test_the_cap_is_the_number_claude_md_states(self):
         register = (REPO / "CLAUDE.md").read_text(encoding="utf-8")
         assert f"≤ {tool.CAP} lines" in register, (
-            f"CLAUDE.md does not state a {tool.CAP}-line commit body, so "
-            f"the tool and the register are two numbers")
+            f"CLAUDE.md does not state a {tool.CAP}-line commit body, so the tool and the register are two numbers"
+        )
 
 
 class TestCIRunsIt:
     def test_the_workflow_calls_the_tool(self):
-        assert "tools/dev_commit_bodies.py" in WORKFLOW.read_text(
-            encoding="utf-8"), (
-            "nothing in CI runs the commit-body check, so the register's "
-            "row is stated and unread again")
+        assert "tools/dev_commit_bodies.py" in WORKFLOW.read_text(encoding="utf-8"), (
+            "nothing in CI runs the commit-body check, so the register's row is stated and unread again"
+        )
 
     def test_the_tool_exits_nonzero_when_it_finds_one(self, tmp_path):
         """The half that makes the step a gate. A tool that reports and
         exits 0 is a `UX-491` log line, not a check."""
         repo = tmp_path / "r"
         repo.mkdir()
-        env = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t",
-               "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t",
-               "PATH": "/usr/bin:/bin", "HOME": str(tmp_path)}
-        run = lambda *a: subprocess.run(a, cwd=repo, env=env, check=True,
-                                        capture_output=True)
+        env = {
+            "GIT_AUTHOR_NAME": "t",
+            "GIT_AUTHOR_EMAIL": "t@t",
+            "GIT_COMMITTER_NAME": "t",
+            "GIT_COMMITTER_EMAIL": "t@t",
+            "PATH": "/usr/bin:/bin",
+            "HOME": str(tmp_path),
+        }
+        run = lambda *a: subprocess.run(a, cwd=repo, env=env, check=True, capture_output=True)
         run("git", "init", "-q", "-b", "main")
         (repo / "a").write_text("1")
         run("git", "add", "a")
@@ -73,26 +80,36 @@ class TestCIRunsIt:
         body = "\n".join(f"line {i}" for i in range(tool.CAP + 1))
         run("git", "commit", "-qm", f"subject\n\n{body}")
         out = subprocess.run(
-            [sys.executable, str(REPO / "tools/dev_commit_bodies.py"),
-             "base-ref"], cwd=repo, env=env, capture_output=True, text=True)
+            [sys.executable, str(REPO / "tools/dev_commit_bodies.py"), "base-ref"],
+            cwd=repo,
+            env=env,
+            capture_output=True,
+            text=True,
+        )
         assert out.returncode == 1, out.stdout
         assert "over the" in out.stdout
 
-    @pytest.mark.parametrize("email, code, word", [
-        ("49699333+dependabot[bot]@users.noreply.github.com", 0, "1 by a GitHub App"),
-        ("dependabot@example.com", 1, "over the"),
-    ])
-    def test_an_app_s_generated_body_is_skipped_and_counted(
-            self, tmp_path, email, code, word):
+    @pytest.mark.parametrize(
+        "email, code, word",
+        [
+            ("49699333+dependabot[bot]@users.noreply.github.com", 0, "1 by a GitHub App"),
+            ("dependabot@example.com", 1, "over the"),
+        ],
+    )
+    def test_an_app_s_generated_body_is_skipped_and_counted(self, tmp_path, email, code, word):
         """`UX-811`: Dependabot's 75-line release notes are the pull
         request's record, not a body; a person with the same body is."""
         repo = tmp_path / "r"
         repo.mkdir()
-        env = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t",
-               "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t",
-               "PATH": "/usr/bin:/bin", "HOME": str(tmp_path)}
-        run = lambda *a, **kw: subprocess.run(
-            a, cwd=repo, env={**env, **kw}, check=True, capture_output=True)
+        env = {
+            "GIT_AUTHOR_NAME": "t",
+            "GIT_AUTHOR_EMAIL": "t@t",
+            "GIT_COMMITTER_NAME": "t",
+            "GIT_COMMITTER_EMAIL": "t@t",
+            "PATH": "/usr/bin:/bin",
+            "HOME": str(tmp_path),
+        }
+        run = lambda *a, **kw: subprocess.run(a, cwd=repo, env={**env, **kw}, check=True, capture_output=True)
         run("git", "init", "-q", "-b", "main")
         (repo / "a").write_text("1")
         run("git", "add", "a")
@@ -101,11 +118,14 @@ class TestCIRunsIt:
         (repo / "a").write_text("2")
         run("git", "add", "a")
         body = "\n".join(f"line {i}" for i in range(tool.CAP + 1))
-        run("git", "commit", "-qm", f"Bump the group\n\n{body}",
-            GIT_AUTHOR_EMAIL=email)
+        run("git", "commit", "-qm", f"Bump the group\n\n{body}", GIT_AUTHOR_EMAIL=email)
         out = subprocess.run(
-            [sys.executable, str(REPO / "tools/dev_commit_bodies.py"),
-             "base-ref"], cwd=repo, env=env, capture_output=True, text=True)
+            [sys.executable, str(REPO / "tools/dev_commit_bodies.py"), "base-ref"],
+            cwd=repo,
+            env=env,
+            capture_output=True,
+            text=True,
+        )
         assert out.returncode == code, out.stdout
         assert word in out.stdout
 
@@ -117,11 +137,15 @@ class TestCIRunsIt:
         """
         repo = tmp_path / "r"
         repo.mkdir()
-        env = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t",
-               "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t",
-               "PATH": "/usr/bin:/bin", "HOME": str(tmp_path)}
-        run = lambda *a: subprocess.run(a, cwd=repo, env=env, check=True,
-                                        capture_output=True)
+        env = {
+            "GIT_AUTHOR_NAME": "t",
+            "GIT_AUTHOR_EMAIL": "t@t",
+            "GIT_COMMITTER_NAME": "t",
+            "GIT_COMMITTER_EMAIL": "t@t",
+            "PATH": "/usr/bin:/bin",
+            "HOME": str(tmp_path),
+        }
+        run = lambda *a: subprocess.run(a, cwd=repo, env=env, check=True, capture_output=True)
         run("git", "init", "-q", "-b", "main")
         (repo / "a").write_text("1")
         run("git", "add", "a")
@@ -132,8 +156,12 @@ class TestCIRunsIt:
             run("git", "add", "a")
             run("git", "commit", "-qm", f"subject {i}\n\nline one")
         out = subprocess.run(
-            [sys.executable, str(REPO / "tools/dev_commit_bodies.py"),
-             "base-ref"], cwd=repo, env=env, capture_output=True, text=True)
+            [sys.executable, str(REPO / "tools/dev_commit_bodies.py"), "base-ref"],
+            cwd=repo,
+            env=env,
+            capture_output=True,
+            text=True,
+        )
         assert out.returncode == 0, out.stdout
         assert "3 of 3 commit(s)" in out.stdout, out.stdout
 
@@ -142,19 +170,26 @@ class TestCIRunsIt:
         is worse than no gate, so `check=True` is load-bearing."""
         repo = tmp_path / "r"
         repo.mkdir()
-        env = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t",
-               "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t",
-               "PATH": "/usr/bin:/bin", "HOME": str(tmp_path)}
-        run = lambda *a: subprocess.run(a, cwd=repo, env=env, check=True,
-                                        capture_output=True)
+        env = {
+            "GIT_AUTHOR_NAME": "t",
+            "GIT_AUTHOR_EMAIL": "t@t",
+            "GIT_COMMITTER_NAME": "t",
+            "GIT_COMMITTER_EMAIL": "t@t",
+            "PATH": "/usr/bin:/bin",
+            "HOME": str(tmp_path),
+        }
+        run = lambda *a: subprocess.run(a, cwd=repo, env=env, check=True, capture_output=True)
         run("git", "init", "-q", "-b", "main")
         (repo / "a").write_text("1")
         run("git", "add", "a")
         run("git", "commit", "-qm", "base")
         out = subprocess.run(
-            [sys.executable, str(REPO / "tools/dev_commit_bodies.py"),
-             "origin/does-not-exist"], cwd=repo, env=env,
-            capture_output=True, text=True)
+            [sys.executable, str(REPO / "tools/dev_commit_bodies.py"), "origin/does-not-exist"],
+            cwd=repo,
+            env=env,
+            capture_output=True,
+            text=True,
+        )
         assert out.returncode != 0, out.stdout
 
     def test_a_body_within_the_cap_exits_zero(self, tmp_path):
@@ -162,11 +197,15 @@ class TestCIRunsIt:
         tool that fails whatever it reads."""
         repo = tmp_path / "r"
         repo.mkdir()
-        env = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t",
-               "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t",
-               "PATH": "/usr/bin:/bin", "HOME": str(tmp_path)}
-        run = lambda *a: subprocess.run(a, cwd=repo, env=env, check=True,
-                                        capture_output=True)
+        env = {
+            "GIT_AUTHOR_NAME": "t",
+            "GIT_AUTHOR_EMAIL": "t@t",
+            "GIT_COMMITTER_NAME": "t",
+            "GIT_COMMITTER_EMAIL": "t@t",
+            "PATH": "/usr/bin:/bin",
+            "HOME": str(tmp_path),
+        }
+        run = lambda *a: subprocess.run(a, cwd=repo, env=env, check=True, capture_output=True)
         run("git", "init", "-q", "-b", "main")
         (repo / "a").write_text("1")
         run("git", "add", "a")
@@ -176,8 +215,12 @@ class TestCIRunsIt:
         run("git", "add", "a")
         run("git", "commit", "-qm", "subject\n\nline one\nline two")
         out = subprocess.run(
-            [sys.executable, str(REPO / "tools/dev_commit_bodies.py"),
-             "base-ref"], cwd=repo, env=env, capture_output=True, text=True)
+            [sys.executable, str(REPO / "tools/dev_commit_bodies.py"), "base-ref"],
+            cwd=repo,
+            env=env,
+            capture_output=True,
+            text=True,
+        )
         assert out.returncode == 0, out.stdout
 
 

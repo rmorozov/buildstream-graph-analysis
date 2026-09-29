@@ -4,6 +4,7 @@ The mechanics held - round 17 verified the refusal, the banner, the
 walk-back and exit 6 live. The words around them had three defects, two
 observed in the same session.
 """
+
 import json
 import os
 
@@ -52,20 +53,22 @@ class TestTheReplayHintNamesThePairActuallyCompared:
         # Real stamps, not the "01"/"02" shorthand the tests above use:
         # the alias grammar takes `@<stamp-prefix>` of at least four
         # characters, so a paste is only a paste against a real name.
-        first, _skipped, third = self._store(tmp_path, [
-            "20260820T120000Z", "20260820T130000Z", "20260820T140000Z"])
+        first, _skipped, third = self._store(tmp_path, ["20260820T120000Z", "20260820T130000Z", "20260820T140000Z"])
         baseline_ref, candidate_ref = _compare_refs(first, third).split()
-        assert os.path.realpath(resolve_alias(baseline_ref, str(tmp_path))) == \
-            os.path.realpath(os.path.join(first, "run"))
-        assert os.path.realpath(resolve_alias(candidate_ref, str(tmp_path))) == \
-            os.path.realpath(os.path.join(third, "run"))
+        assert os.path.realpath(resolve_alias(baseline_ref, str(tmp_path))) == os.path.realpath(
+            os.path.join(first, "run")
+        )
+        assert os.path.realpath(resolve_alias(candidate_ref, str(tmp_path))) == os.path.realpath(
+            os.path.join(third, "run")
+        )
 
     def test_the_hint_never_names_a_snapshot_that_was_not_compared(self, tmp_path):
         first, skipped, third = self._store(tmp_path, ["01", "02", "03"])
         refs = _compare_refs(first, third)
         assert "@prev" not in refs, (
             "@prev is the skipped snapshot here - naming it sends the user "
-            "back to the comparison this feature just refused")
+            "back to the comparison this feature just refused"
+        )
         assert os.path.basename(skipped) not in refs.replace("@01", "")
 
 
@@ -76,9 +79,9 @@ class TestNumberAgreement:
     def _snapshot(self, tmp_path, name, failed=("x.bst",)):
         run = tmp_path / name / "run"
         run.mkdir(parents=True)
-        (run / "run-context.json").write_text(json.dumps(
-            {"build_outcome": {"failed_elements": list(failed),
-                               "failed_count": len(failed)}}))
+        (run / "run-context.json").write_text(
+            json.dumps({"build_outcome": {"failed_elements": list(failed), "failed_count": len(failed)}})
+        )
         return str(tmp_path / name)
 
     def _walkback(self, tmp_path, unhealthy):
@@ -90,6 +93,7 @@ class TestNumberAgreement:
         renders the sentence.
         """
         from tools.bga_snapshot import _healthy_baseline, _walkback_notice
+
         (tmp_path / "project.conf").write_text("name: x\n")
         runs = tmp_path / ".bga" / "runs"
         healthy = runs / "00" / "run"
@@ -130,9 +134,18 @@ class TestCacheHitsAreNotCasualties:
         assert _count_clause({"built": None, "cached": None}) is None
 
     def test_the_refusal_no_longer_says_scheduled(self):
-        text = _describe_build_failures([{
-            "run": "candidate", "failed_elements": ["lib-d.bst"],
-            "built": 0, "cached": 6, "scheduled": 7, "interrupted": False}])
+        text = _describe_build_failures(
+            [
+                {
+                    "run": "candidate",
+                    "failed_elements": ["lib-d.bst"],
+                    "built": 0,
+                    "cached": 6,
+                    "scheduled": 7,
+                    "interrupted": False,
+                }
+            ]
+        )
         assert "0 built, 6 already cached" in text
         assert "of 7 scheduled" not in text
 
@@ -142,11 +155,19 @@ class TestCacheHitsAreNotCasualties:
         class _Result:
             run_id = "r"
             total_duration_us = 1_000_000
-            violations = [{"type": "build_failed", "failed_count": 1,
-                           "failed_elements": ["lib-d.bst"],
-                           "built_count": 0, "cached_count": 6,
-                           "scheduled_count": 7, "interrupted": False}]
+            violations = [
+                {
+                    "type": "build_failed",
+                    "failed_count": 1,
+                    "failed_elements": ["lib-d.bst"],
+                    "built_count": 0,
+                    "cached_count": 6,
+                    "scheduled_count": 7,
+                    "interrupted": False,
+                }
+            ]
             floors = {}
+
             def __getattr__(self, name):
                 return None
 

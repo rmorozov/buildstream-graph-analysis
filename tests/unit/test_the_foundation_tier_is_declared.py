@@ -21,6 +21,7 @@ ranking` and `core.bst` leads. `tests/fixtures/foundation_declared`
 mirror. Undeclared, `foundation-candidates` names the widest
 non-structural, non-declared reach instead.
 """
+
 import contextlib
 import io
 import json
@@ -48,9 +49,13 @@ def _finding(run_dir, finding_id):
 
 
 def _entry(count, kind="cmake", structural=False, foundation=False):
-    return {"downstream_count": count, "element_kind": kind,
-            "is_structural_kind": structural, "is_foundation": foundation,
-            "weighted_duration_us": count * 1000}
+    return {
+        "downstream_count": count,
+        "element_kind": kind,
+        "is_structural_kind": structural,
+        "is_foundation": foundation,
+        "weighted_duration_us": count * 1000,
+    }
 
 
 def _rank(blast, distribution=None):
@@ -61,7 +66,8 @@ def _rank(blast, distribution=None):
 
     result = R()
     result.signals = {
-        "blast_radius": blast, "top_blast_radius": list(blast),
+        "blast_radius": blast,
+        "top_blast_radius": list(blast),
         "blast_radius_distribution": distribution,
     }
     return findings._ranking_findings(result, chain_bound=False)
@@ -102,8 +108,8 @@ class TestExampleSix:
         project = tmp_path / "proj"
         (project / "elements").mkdir(parents=True)
         (project / "project.conf").write_text(
-            "name: p\nmin-version: 2.0\nelement-path: elements\n"
-            "variables:\n  bga-foundation: a.bst,not-in-graph.bst\n")
+            "name: p\nmin-version: 2.0\nelement-path: elements\nvariables:\n  bga-foundation: a.bst,not-in-graph.bst\n"
+        )
         log = tmp_path / "build.log"
         log.write_text("Targets:       a.bst\n")
 
@@ -114,8 +120,8 @@ class TestExampleSix:
 
         out = tmp_path / "out"
         summary = extractor.extract_run(
-            str(project), str(log), str(out),
-            log_format="raw", start_time="2026-08-14T00:00:00+00:00")
+            str(project), str(log), str(out), log_format="raw", start_time="2026-08-14T00:00:00+00:00"
+        )
 
         assert any("not-in-graph.bst" in w for w in summary["warnings"])
         graph = json.loads((out / "graph.json").read_text())
@@ -143,21 +149,26 @@ class TestSyntheticGraphShapeMirrorsTheKindException:
     bound and only reaches `blast-radius-reach`."""
 
     def test_a_declared_non_structural_element_does_not_lead(self):
-        found = _rank({
-            "toolchain.bst": _entry(900, "cmake", foundation=True),
-            "core.bst": _entry(700, "cmake"),
-            "app.bst": _entry(300, "cmake"),
-        })
+        found = _rank(
+            {
+                "toolchain.bst": _entry(900, "cmake", foundation=True),
+                "core.bst": _entry(700, "cmake"),
+                "app.bst": _entry(300, "cmake"),
+            }
+        )
         ranking = next(f for f in found if f["id"] == "blast-radius-ranking")
         assert "toolchain.bst" not in ranking["elements"], (
-            "a declared foundation element is still ranked as something to fix")
+            "a declared foundation element is still ranked as something to fix"
+        )
         assert ranking["elements"][0] == "core.bst"
 
     def test_it_is_reported_in_its_own_tier_with_its_figure(self):
-        found = _rank({
-            "toolchain.bst": _entry(900, "cmake", foundation=True),
-            "core.bst": _entry(700, "cmake"),
-        })
+        found = _rank(
+            {
+                "toolchain.bst": _entry(900, "cmake", foundation=True),
+                "core.bst": _entry(700, "cmake"),
+            }
+        )
         tier = next(f for f in found if f["id"] == "blast-radius-foundation")
         assert tier["elements"] == ["toolchain.bst"]
         assert "900" in tier["title"]
@@ -167,10 +178,12 @@ class TestSyntheticGraphShapeMirrorsTheKindException:
     def test_a_declared_structural_kind_reports_as_foundation_not_structural(self):
         """`UX-683`: the declaration is a stronger claim than the kind
         guess, so it wins the report even where both would apply."""
-        found = _rank({
-            "base.bst": _entry(900, "import", structural=True, foundation=True),
-            "core.bst": _entry(700, "cmake"),
-        })
+        found = _rank(
+            {
+                "base.bst": _entry(900, "import", structural=True, foundation=True),
+                "core.bst": _entry(700, "cmake"),
+            }
+        )
         ids = [f["id"] for f in found]
         assert "blast-radius-foundation" in ids
         assert "blast-radius-structural" not in ids
@@ -180,24 +193,41 @@ class TestSyntheticGraphShapeMirrorsTheKindException:
     def test_undeclared_the_discovery_names_it(self):
         """The kind exemption misses a `cmake` toolchain; discovery
         proposes it as a candidate rather than silently ranking it."""
-        distribution = {"n": 10, "min": 0, "max": 900, "is_flat": False,
-                        "deciles": {"p10": 0, "p50": 100, "p90": 500}, "p95": 600}
-        found = _rank({
-            "toolchain.bst": _entry(900, "cmake"),
-            "core.bst": _entry(300, "cmake"),
-        }, distribution)
+        distribution = {
+            "n": 10,
+            "min": 0,
+            "max": 900,
+            "is_flat": False,
+            "deciles": {"p10": 0, "p50": 100, "p90": 500},
+            "p95": 600,
+        }
+        found = _rank(
+            {
+                "toolchain.bst": _entry(900, "cmake"),
+                "core.bst": _entry(300, "cmake"),
+            },
+            distribution,
+        )
         candidates = next(f for f in found if f["id"] == "foundation-candidates")
         assert "toolchain.bst" in candidates["elements"]
         assert "declare or dismiss" in candidates["title"]
-        assert "core.bst" not in candidates["elements"], (
-            "300 is under the p95 threshold and should not be proposed")
+        assert "core.bst" not in candidates["elements"], "300 is under the p95 threshold and should not be proposed"
 
     def test_a_declared_element_is_never_proposed_as_a_candidate(self):
-        distribution = {"n": 10, "min": 0, "max": 900, "is_flat": False,
-                        "deciles": {"p10": 0, "p50": 100, "p90": 500}, "p95": 600}
-        found = _rank({
-            "toolchain.bst": _entry(900, "cmake", foundation=True),
-        }, distribution)
+        distribution = {
+            "n": 10,
+            "min": 0,
+            "max": 900,
+            "is_flat": False,
+            "deciles": {"p10": 0, "p50": 100, "p90": 500},
+            "p95": 600,
+        }
+        found = _rank(
+            {
+                "toolchain.bst": _entry(900, "cmake", foundation=True),
+            },
+            distribution,
+        )
         assert not [f for f in found if f["id"] == "foundation-candidates"]
 
     def test_no_distribution_no_candidates(self):
@@ -212,10 +242,8 @@ class TestTheSchemaGainsTheField:
     def test_blast_radius_and_fan_in_publish_is_foundation(self):
         from bga import schemas
 
-        blast = schemas.schema(schemas.ANALYZE)["properties"]["elements"][
-            "properties"]["blast_radius"]
-        fan_in = schemas.schema(schemas.ANALYZE)["properties"]["elements"][
-            "properties"]["fan_in"]
+        blast = schemas.schema(schemas.ANALYZE)["properties"]["elements"]["properties"]["blast_radius"]
+        fan_in = schemas.schema(schemas.ANALYZE)["properties"]["elements"]["properties"]["fan_in"]
         assert "is_foundation" in blast["additionalProperties"]["properties"]
         assert "is_foundation" in fan_in["additionalProperties"]["properties"]
 
@@ -228,11 +256,15 @@ class TestTheGraphModelCarriesTheDeclaration:
 
         with tempfile.TemporaryDirectory() as tmp:
             path = pathlib.Path(tmp) / "graph.json"
-            path.write_text(json.dumps({
-                "elements": [{"uid": "a.bst"}, {"uid": "b.bst"}],
-                "dependencies": [],
-                "foundation": ["a.bst"],
-            }))
+            path.write_text(
+                json.dumps(
+                    {
+                        "elements": [{"uid": "a.bst"}, {"uid": "b.bst"}],
+                        "dependencies": [],
+                        "foundation": ["a.bst"],
+                    }
+                )
+            )
             graph = load_graph(path)
         assert graph.foundation == frozenset({"a.bst"})
 

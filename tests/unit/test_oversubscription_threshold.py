@@ -9,6 +9,7 @@ the only measured data this repo has about when oversubscription actually
 costs time, so the threshold is calibrated against it and these tests
 assert that calibration directly rather than asserting a constant.
 """
+
 from bga.analyzer import BuildEfficiencyAnalyzer
 from bga.ingest.models import RunContext
 
@@ -26,6 +27,7 @@ def _violation_types(builders, native_max_jobs, cores, cpu_budget=None):
 
 
 # --- UX-09's real 4-core measurements -------------------------------------
+
 
 def test_the_measured_best_configuration_is_not_flagged():
     """4 builders x 4 max-jobs = 16 potential processes on 4 cores was
@@ -49,6 +51,7 @@ def test_builders_beyond_cores_is_flagged_separately():
 
 # --- the host-size defect itself ------------------------------------------
 
+
 def test_a_large_host_below_one_process_per_core_is_not_called_oversubscribed():
     """The core defect. 8 builders x 5 max-jobs = 40 potential processes
     on a 64-core host is *under* one process per core, and the old bar
@@ -67,16 +70,17 @@ def test_sensitivity_no_longer_depends_on_host_size():
     (`4 * min(cores, 8)`) stopped growing at 8 cores."""
     for cores in (4, 8, 16, 32, 64):
         # 16x the cores - past the ratio UX-09 measured as slower.
-        assert "resource_oversubscription" in _violation_types(
-            4, 4 * cores, cores=cores
-        ), f"16x cores not flagged at {cores} cores"
+        assert "resource_oversubscription" in _violation_types(4, 4 * cores, cores=cores), (
+            f"16x cores not flagged at {cores} cores"
+        )
         # 4x the cores - the ratio UX-09 measured as optimal.
-        assert "resource_oversubscription" not in _violation_types(
-            4, cores, cores=cores
-        ), f"4x cores wrongly flagged at {cores} cores"
+        assert "resource_oversubscription" not in _violation_types(4, cores, cores=cores), (
+            f"4x cores wrongly flagged at {cores} cores"
+        )
 
 
 # --- preserved behaviour from UX-15/UX-16 ---------------------------------
+
 
 def test_declared_cpu_budget_still_governs_over_detected_cores():
     """UX-15: an operator's declared budget, not raw detection, is the
@@ -92,12 +96,12 @@ def test_max_jobs_zero_sentinel_is_still_resolved_not_treated_as_missing():
     check must still run."""
     analyzer = BuildEfficiencyAnalyzer()
     analyzer.run_context = RunContext(
-        resource_capacities={"PROCESS": 16}, native_max_jobs=0, host_cpu_count=4,
+        resource_capacities={"PROCESS": 16},
+        native_max_jobs=0,
+        host_cpu_count=4,
     )
     analyzer._check_process_oversubscription()
-    oversub = next(
-        v for v in analyzer.violations if v["type"] == "resource_oversubscription"
-    )
+    oversub = next(v for v in analyzer.violations if v["type"] == "resource_oversubscription")
     assert oversub["native_max_jobs"] == 4  # min(4, 8), not 0
     assert oversub["native_max_jobs_was_auto"] is True
 
@@ -109,12 +113,12 @@ def test_undersubscription_still_reported_for_a_genuinely_idle_host():
 def test_violation_carries_the_ratio_and_the_buildstream_default_as_context():
     analyzer = BuildEfficiencyAnalyzer()
     analyzer.run_context = RunContext(
-        resource_capacities={"PROCESS": 8}, native_max_jobs=8, host_cpu_count=4,
+        resource_capacities={"PROCESS": 8},
+        native_max_jobs=8,
+        host_cpu_count=4,
     )
     analyzer._check_process_oversubscription()
-    oversub = next(
-        v for v in analyzer.violations if v["type"] == "resource_oversubscription"
-    )
+    oversub = next(v for v in analyzer.violations if v["type"] == "resource_oversubscription")
     assert oversub["demand_ratio"] == 16.0
     assert oversub["oversubscription_ceiling"] == 32.0
     # Still reported, but as context rather than as the bar.

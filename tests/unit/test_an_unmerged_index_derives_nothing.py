@@ -6,6 +6,7 @@ mid-merge is the file count plus two per conflict. The quiet case is
 `--check` (`UX-996`: read-only throughout) must refuse rather than
 print "0 problem(s)" over a git index it cannot answer for.
 """
+
 import pathlib
 import subprocess
 import sys
@@ -15,22 +16,24 @@ sys.path.insert(0, str(REPO / "tools"))
 
 import dev_close_task as close_task
 
-TASK = ("# UX-1: a row\n\n"
-        "**Priority:** Medium | **Status:** 🔴 Not Started | "
-        "**Topic:** guards | **Area:** tools | **Shape:** judgement\n\n"
-        "**Guard:** none — a fixture row\n\n"
-        "## Motivation\n\n{line}\n")
-README = ("# Index\n\n"
-          "7 scenarios: **7 open**, 0 closed.\n\n"
-          "| Topic | Open | Total |\n|---|---|---|\n| guards | 7 | 7 |\n\n"
-          "| UX-1 | a row | guards | Medium | x | 🔴 Not Started |\n")
-ARCHITECTURE = ("It counts 3 `docs/backlog/scenarios/` files and "
-                "0 `docs/backlog/tasks/` files.\n\n## Chapter\n")
+TASK = (
+    "# UX-1: a row\n\n"
+    "**Priority:** Medium | **Status:** 🔴 Not Started | "
+    "**Topic:** guards | **Area:** tools | **Shape:** judgement\n\n"
+    "**Guard:** none — a fixture row\n\n"
+    "## Motivation\n\n{line}\n"
+)
+README = (
+    "# Index\n\n"
+    "7 scenarios: **7 open**, 0 closed.\n\n"
+    "| Topic | Open | Total |\n|---|---|---|\n| guards | 7 | 7 |\n\n"
+    "| UX-1 | a row | guards | Medium | x | 🔴 Not Started |\n"
+)
+ARCHITECTURE = "It counts 3 `docs/backlog/scenarios/` files and 0 `docs/backlog/tasks/` files.\n\n## Chapter\n"
 
 
 def _git(repo, *argv, check=True):
-    return subprocess.run(["git", *argv], cwd=repo, check=check,
-                          capture_output=True, text=True)
+    return subprocess.run(["git", *argv], cwd=repo, check=check, capture_output=True, text=True)
 
 
 def _mid_merge(tmp_path):
@@ -46,14 +49,16 @@ def _mid_merge(tmp_path):
     task.write_text(TASK.format(line="base"), encoding="utf-8")
     (scenarios / "README.md").write_text(README, encoding="utf-8")
     (scenarios / "closed.md").write_text("# Closed\n", encoding="utf-8")
-    (repo / "docs/backlog/areas/tools.md").write_text("stale\n",
-                                                      encoding="utf-8")
-    (repo / "docs/design/architecture.md").write_text(ARCHITECTURE,
-                                                      encoding="utf-8")
-    for argv in (["init", "-q", "-b", "main"],
-                 ["config", "user.email", "a@b"], ["config", "user.name", "a"],
-                 ["add", "-f", "docs"], ["commit", "-qm", "base"],
-                 ["checkout", "-qb", "other"]):
+    (repo / "docs/backlog/areas/tools.md").write_text("stale\n", encoding="utf-8")
+    (repo / "docs/design/architecture.md").write_text(ARCHITECTURE, encoding="utf-8")
+    for argv in (
+        ["init", "-q", "-b", "main"],
+        ["config", "user.email", "a@b"],
+        ["config", "user.name", "a"],
+        ["add", "-f", "docs"],
+        ["commit", "-qm", "base"],
+        ["checkout", "-qb", "other"],
+    ):
         _git(repo, *argv)
     task.write_text(TASK.format(line="theirs"), encoding="utf-8")
     _git(repo, "commit", "-qam", "theirs")
@@ -77,20 +82,17 @@ def _snapshot(repo):
     """`{path: bytes}` for every tracked-directory file - `UX-996`:
     nothing `--check` reads is ever written, so nothing here should
     move either way."""
-    return {p.relative_to(repo).as_posix(): p.read_bytes()
-            for p in sorted((repo / "docs").rglob("*")) if p.is_file()}
+    return {p.relative_to(repo).as_posix(): p.read_bytes() for p in sorted((repo / "docs").rglob("*")) if p.is_file()}
 
 
 class TestAnUnmergedIndexIsRefused:
-
     def test_the_fixture_is_the_inflated_count(self, tmp_path):
         """Three files, one of them at three stages: git lists five."""
         repo = _mid_merge(tmp_path)
         listed = _git(repo, "ls-files", "docs/backlog/scenarios").stdout
         assert len(listed.splitlines()) == 5, listed
 
-    def test_check_refuses_mid_merge(
-            self, tmp_path, monkeypatch, capsys):
+    def test_check_refuses_mid_merge(self, tmp_path, monkeypatch, capsys):
         repo = _mid_merge(tmp_path)
         _pointed_at(repo, monkeypatch)
         before = _snapshot(repo)
@@ -102,11 +104,9 @@ class TestAnUnmergedIndexIsRefused:
         assert code not in (0, None), "`--check` read from a mid-merge index"
         assert "unmerged" in err and "UX-0001-a-row.md" in err, err
         assert len(err.strip().splitlines()) == 1, err
-        assert _snapshot(repo) == before, (
-            "`--check` changed a file while the index was unmerged")
+        assert _snapshot(repo) == before, "`--check` changed a file while the index was unmerged"
 
-    def test_a_staged_resolution_checks_as_before(
-            self, tmp_path, monkeypatch, capsys):
+    def test_a_staged_resolution_checks_as_before(self, tmp_path, monkeypatch, capsys):
         repo = _mid_merge(tmp_path)
         _git(repo, "add", "docs/backlog/scenarios/UX-0001-a-row.md")
         _pointed_at(repo, monkeypatch)
@@ -115,5 +115,4 @@ class TestAnUnmergedIndexIsRefused:
         captured = capsys.readouterr()
         assert "unmerged" not in captured.err, captured.err
         assert code == 0, captured.out + captured.err
-        assert _snapshot(repo) == before, (
-            "`--check` wrote a file once the index was staged")
+        assert _snapshot(repo) == before, "`--check` wrote a file once the index was staged"

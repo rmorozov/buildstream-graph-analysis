@@ -15,6 +15,7 @@ carried `Status: FAILURE` into the chrome trace's End events. It was
 dropped at the next hop, and no fixture in this repository contained a
 failed task, so nothing could notice.
 """
+
 import argparse
 
 from bga.compare import ComparisonResult
@@ -100,9 +101,7 @@ def test_a_recorded_clean_build_is_distinguishable_from_an_unrecorded_one():
 
 
 def test_recorded_failures_are_read_back():
-    context = RunContext(
-        build_outcome={"failed_elements": ["core.bst"], "failed_count": 1}
-    )
+    context = RunContext(build_outcome={"failed_elements": ["core.bst"], "failed_count": 1})
 
     assert context.failed_elements == ["core.bst"]
 
@@ -112,10 +111,15 @@ def test_recorded_failures_are_read_back():
 
 def _comparison(**kwargs):
     defaults = dict(
-        baseline_run_id="b", candidate_run_id="c",
-        baseline_metrics={}, candidate_metrics={}, deltas={},
-        baseline_confidence=1.0, candidate_confidence=1.0,
-        attribution_deltas={}, verdict="no significant change",
+        baseline_run_id="b",
+        candidate_run_id="c",
+        baseline_metrics={},
+        candidate_metrics={},
+        deltas={},
+        baseline_confidence=1.0,
+        candidate_confidence=1.0,
+        attribution_deltas={},
+        verdict="no significant change",
         low_confidence=False,
     )
     defaults.update(kwargs)
@@ -123,9 +127,13 @@ def _comparison(**kwargs):
 
 
 def _args(**kwargs):
-    defaults = dict(fail_on_regression=True, fail_on_efficiency_regression=False,
-                    min_efficiency=None, fail_on_low_confidence=False,
-                    regression_threshold=None)
+    defaults = dict(
+        fail_on_regression=True,
+        fail_on_efficiency_regression=False,
+        min_efficiency=None,
+        fail_on_low_confidence=False,
+        regression_threshold=None,
+    )
     defaults.update(kwargs)
     return argparse.Namespace(**defaults)
 

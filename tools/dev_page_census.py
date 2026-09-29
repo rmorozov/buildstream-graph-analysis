@@ -16,6 +16,7 @@ drives one instance per class it names; this tool drives nothing -
 chapters and folds are opened by attribute, not by click, so a table
 behind one is not missed.
 """
+
 import argparse
 import json
 import pathlib
@@ -30,8 +31,7 @@ from tests.browser import NO_BROWSER, Browser, find_chrome
 #: Attributes whose *name* (not value) marks a control's kind when it
 #: carries no class - `data-step="top"` and `data-step="next"` are the
 #: same kind of button, three copies of a stepper.
-_ROLE_ATTRS = ("data-step", "data-collapse", "data-all", "data-toc-chapter",
-              "data-run-jump", "data-fold", "type")
+_ROLE_ATTRS = ("data-step", "data-collapse", "data-all", "data-toc-chapter", "data-run-jump", "data-fold", "type")
 
 CENSUS_JS = r"""
 (() => {

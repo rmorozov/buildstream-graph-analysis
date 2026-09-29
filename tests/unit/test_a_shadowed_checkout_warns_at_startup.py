@@ -6,6 +6,7 @@ three cases below are three clauses of `_maybe_warn_wrong_checkout`:
 warn on a real mismatch, stay silent when cwd and import agree, stay
 silent when cwd is not a checkout of this repository at all.
 """
+
 import subprocess
 import sys
 from pathlib import Path
@@ -15,16 +16,16 @@ REPO = Path(__file__).resolve().parents[2]
 # Forces the module under test to load from REPO regardless of cwd, so
 # a fixture cwd that also carries the marker files (needed to look like
 # a checkout) cannot shadow the real package with its own empty stub.
-_SCRIPT = (
-    "import sys; sys.path.insert(0, sys.argv[1]); "
-    "import bga.cli as c; sys.exit(c.main(['--version']))"
-)
+_SCRIPT = "import sys; sys.path.insert(0, sys.argv[1]); import bga.cli as c; sys.exit(c.main(['--version']))"
 
 
 def _run_from(cwd: Path) -> str:
     proc = subprocess.run(
         [sys.executable, "-c", _SCRIPT, str(REPO)],
-        cwd=cwd, capture_output=True, text=True, timeout=30,
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+        timeout=30,
     )
     assert proc.stdout.strip() == "bga 0.4.1", proc.stdout + proc.stderr
     return proc.stderr

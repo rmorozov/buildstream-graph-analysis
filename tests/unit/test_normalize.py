@@ -6,6 +6,7 @@ genuine violation (Part 3.3) - and start-clamp preserves finish
 (Part 3.4). All pure-function tests against hand-built TaskSpan/
 DependencyEdge objects, no run-dir/JSON fixture needed.
 """
+
 from bga.ingest.models import DependencyEdge, Graph, Resource, TaskKey, TaskKind, TaskSpan
 from bga.normalize.timestamps import (
     clamp_task_starts,
@@ -18,12 +19,16 @@ from bga.normalize.timestamps import (
 
 def _span(uid, ts_us, dur_us, kind=TaskKind.BUILD, phase="BUILD"):
     return TaskSpan(
-        task_key=TaskKey(uid, kind, phase, 0), ts_us=ts_us, dur_us=dur_us,
-        resources=[Resource.PROCESS], primary_resource=Resource.PROCESS,
+        task_key=TaskKey(uid, kind, phase, 0),
+        ts_us=ts_us,
+        dur_us=dur_us,
+        resources=[Resource.PROCESS],
+        primary_resource=Resource.PROCESS,
     )
 
 
 # --- Quantization (Part 3.2) ---
+
 
 def test_exact_multiple_is_unchanged():
     assert quantize_timestamp(100000, 50000) == 100000
@@ -48,6 +53,7 @@ def test_timestamp_past_half_epsilon_rounds_to_next_grid_point():
 
 
 # --- P2-07: integer-only quantization, documented tie policy ---
+
 
 def test_exact_tie_rounds_up_not_bankers_rounding():
     """125000 is exactly halfway between grid points 100000 and 150000
@@ -75,6 +81,7 @@ def test_quantize_uses_no_float_division():
     on the other (confirmed by a real CI failure on 3.9/3.10: an empty
     `operators` set, not a false pass)."""
     import dis
+
     opnames = set()
     binary_op_args = set()
     for instr in dis.get_instructions(quantize_timestamp):
@@ -95,6 +102,7 @@ def test_quantize_matches_round_half_up_reference_across_a_range():
     only in the *test*, not the code under test) across a wide range of
     values and epsilons, including exact ties and near-ties on both
     sides, to catch any off-by-one in the integer derivation."""
+
     def reference_round_half_up(ts_us, epsilon_us):
         quotient, remainder = divmod(ts_us, epsilon_us)
         if 2 * remainder >= epsilon_us:
@@ -109,6 +117,7 @@ def test_quantize_matches_round_half_up_reference_across_a_range():
 
 
 # --- Ready times (Part 7) ---
+
 
 def test_ready_time_is_max_finish_of_predecessors():
     spans = [_span("a.bst", 0, 10000), _span("b.bst", 0, 20000), _span("c.bst", 30000, 5000)]
@@ -129,6 +138,7 @@ def test_no_predecessors_ready_at_own_start():
 
 # --- Ordering violations (Part 3.3): small gap absorbed by quantization
 # vs. genuine violation ---
+
 
 def test_small_negative_gap_absorbed_by_quantization_is_not_a_violation():
     """a.bst finishes at 100010, b.bst starts at 99990 - both quantize
@@ -165,6 +175,7 @@ def test_large_negative_gap_is_a_genuine_ordering_violation():
 # and from validate_ordering's own detection above - this is about the
 # clamp step's own missing invariant check, independent of how ready_us
 # was derived) ---
+
 
 def test_genuine_ordering_violation_excludes_task_instead_of_negative_duration():
     """Same fixture as test_large_negative_gap_is_a_genuine_ordering_violation:
@@ -224,11 +235,14 @@ def test_normalized_task_rejects_negative_duration_at_construction():
     with pytest.raises(ValueError):
         NormalizedTask(
             task_key=TaskKey("a.bst", TaskKind.BUILD, "BUILD", 0),
-            ready_us=100000, start_us=100000, finish_us=30000,
+            ready_us=100000,
+            start_us=100000,
+            finish_us=30000,
         )
 
 
 # --- Start-clamp preserves finish (Part 3.4) ---
+
 
 def test_clamp_moves_start_to_ready_time_finish_unchanged():
     """b.bst's declared start (5000) is before its real ready time
@@ -288,6 +302,7 @@ def test_dependencies_field_maps_to_predecessors_own_build_task():
 # TRACK/FETCH task's start get clamped past its own (earlier, real)
 # finish, producing a negative duration (I5 violation) and a false
 # ordering violation, on any element with more than one task kind. ---
+
 
 def test_successor_non_build_task_is_not_gated_by_predecessor():
     """b.bst's TRACK task starts and finishes entirely before a.bst's

@@ -2,6 +2,7 @@
 not all 1,300 files (154 s); a `.pymarkdown.json` change lints everything.
 Run in a scratch repo: the Makefile's own docs line, with `origin/main` a ref
 there."""
+
 import os
 import pathlib
 import re
@@ -17,24 +18,30 @@ CLEAN = "# B\n\ntext\n"
 
 
 def _git(root, *args):
-    subprocess.run(["git", "-C", str(root), "-c", "user.email=t@example.com",
-                    "-c", "user.name=t", *args], check=True,
-                   capture_output=True, text=True)
+    subprocess.run(
+        ["git", "-C", str(root), "-c", "user.email=t@example.com", "-c", "user.name=t", *args],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
 
 
 def _docs_line(tool=None):
     body = (REPO / "Makefile").read_text(encoding="utf-8")
     line = re.search(r"^push-check:.*\n((?:\t.*\n)+)", body, re.M).group(1)
     line = next(ln for ln in line.splitlines() if "dev_lint_docs" in ln)
-    return line.strip().replace("tools/dev_lint_docs.py", str(tool or TOOL)) \
-                       .replace("python3", sys.executable).replace("$$", "$")
+    return (
+        line.strip()
+        .replace("tools/dev_lint_docs.py", str(tool or TOOL))
+        .replace("python3", sys.executable)
+        .replace("$$", "$")
+    )
 
 
 @pytest.fixture
 def scratch(tmp_path):
     (tmp_path / "docs").mkdir()
-    (tmp_path / ".pymarkdown.json").write_bytes(
-        (REPO / ".pymarkdown.json").read_bytes())
+    (tmp_path / ".pymarkdown.json").write_bytes((REPO / ".pymarkdown.json").read_bytes())
     (tmp_path / "docs" / "a.md").write_text(BROKEN)
     (tmp_path / "docs" / "b.md").write_text(CLEAN)
     _git(tmp_path, "init", "-q", "-b", "main")
@@ -45,14 +52,13 @@ def scratch(tmp_path):
 
 
 def _gate(root, tool=None):
-    return subprocess.run(_docs_line(tool), shell=True, cwd=root,
-                          capture_output=True, text=True,
-                          env=dict(os.environ)).returncode
+    return subprocess.run(
+        _docs_line(tool), shell=True, cwd=root, capture_output=True, text=True, env=dict(os.environ)
+    ).returncode
 
 
 def _select(root, *args):
-    out = subprocess.run([sys.executable, str(TOOL), *args], cwd=root,
-                         capture_output=True, text=True).stdout
+    out = subprocess.run([sys.executable, str(TOOL), *args], cwd=root, capture_output=True, text=True).stdout
     return sorted(n for n in out.split("\0") if n)
 
 
@@ -72,15 +78,17 @@ class TestThePushGateLintsWhatChanged:
 
     def test_the_fixture_is_broken_when_scanned(self, scratch):
         run = subprocess.run(
-            [sys.executable, "-m", "pymarkdown", "--config", ".pymarkdown.json",
-             "scan", "docs/a.md"], cwd=scratch, capture_output=True, text=True)
+            [sys.executable, "-m", "pymarkdown", "--config", ".pymarkdown.json", "scan", "docs/a.md"],
+            cwd=scratch,
+            capture_output=True,
+            text=True,
+        )
         assert run.returncode != 0
 
     def test_touching_the_config_lints_everything(self, scratch):
         cfg = scratch / ".pymarkdown.json"
         cfg.write_text(cfg.read_text() + "\n")
-        assert _select(scratch, "--base", "origin/main") == [
-            "docs/a.md", "docs/b.md"]
+        assert _select(scratch, "--base", "origin/main") == ["docs/a.md", "docs/b.md"]
         assert _gate(scratch) != 0
 
     def test_a_rename_lints_the_new_name(self, scratch):

@@ -14,6 +14,7 @@ collapsed to 0.0 regardless of what the resampling actually found. The
 same mismatch made `observed_critical` always False too (`self.critical_path`
 is also a set of element UIDs). Both fixed to key by `elem_uid`.
 """
+
 import json
 
 from bga import BuildEfficiencyAnalyzer
@@ -28,12 +29,17 @@ def _write_diamond_run_dir(tmp_path):
     run_dir = tmp_path / "run"
     run_dir.mkdir()
     run_context = {
-        "trace_epsilon_us": 1000, "wall_start_us": 0, "wall_end_us": 200000,
-        "max_jobs": 2, "resource_capacities": {"PROCESS": 2},
+        "trace_epsilon_us": 1000,
+        "wall_start_us": 0,
+        "wall_end_us": 200000,
+        "max_jobs": 2,
+        "resource_capacities": {"PROCESS": 2},
     }
     graph = {
         "elements": [
-            {"uid": "root.bst"}, {"uid": "a.bst"}, {"uid": "b.bst"},
+            {"uid": "root.bst"},
+            {"uid": "a.bst"},
+            {"uid": "b.bst"},
             {"uid": "merge.bst", "requested_target": True},
         ],
         "dependencies": [
@@ -45,14 +51,34 @@ def _write_diamond_run_dir(tmp_path):
     }
     trace = {
         "spans": [
-            {"task_key": "root.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 10000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "a.bst|BUILD|BUILD|0", "ts_us": 10000, "dur_us": 50000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "b.bst|BUILD|BUILD|0", "ts_us": 10000, "dur_us": 49000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "merge.bst|BUILD|BUILD|0", "ts_us": 60000, "dur_us": 10000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
+            {
+                "task_key": "root.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 10000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "a.bst|BUILD|BUILD|0",
+                "ts_us": 10000,
+                "dur_us": 50000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "b.bst|BUILD|BUILD|0",
+                "ts_us": 10000,
+                "dur_us": 49000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "merge.bst|BUILD|BUILD|0",
+                "ts_us": 60000,
+                "dur_us": 10000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
         ],
         "phases": [],
     }
@@ -165,5 +191,5 @@ def test_the_element_mapping_is_derived_once_not_per_sample(tmp_path, monkeypatc
     samples = diagnostics_module.DiagnosticsAnalyzer.DEFAULT_MC_SAMPLES
     assert calls, "the mapping was never derived - the seam is not on the path"
     assert len(calls) == 1, (
-        f"the task->element mapping was derived {len(calls)} times for "
-        f"{samples} samples; Part 41.2 asks for once")
+        f"the task->element mapping was derived {len(calls)} times for {samples} samples; Part 41.2 asks for once"
+    )

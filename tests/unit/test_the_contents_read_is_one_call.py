@@ -33,6 +33,7 @@ safe and lossy - it would downgrade every element sharing a group with
 one bad name. Hence the per-element retry, and hence the clause that
 holds it.
 """
+
 import pathlib
 import subprocess
 import sys
@@ -64,14 +65,13 @@ class _Bst:
         self.calls.append(asked)
         if any(name in self.unresolvable for name in asked):
             return subprocess.CompletedProcess(
-                argv, 255, stdout="",
-                stderr="Could not find element ... in elements directory")
+                argv, 255, stdout="", stderr="Could not find element ... in elements directory"
+            )
         out = []
         for name in asked:
             out.append(f"  {name}:")
             out += [f"\t{path}" for path in sorted(self.staged.get(name, ()))]
-        return subprocess.CompletedProcess(argv, 0, stdout="\n".join(out) + "\n",
-                                           stderr="")
+        return subprocess.CompletedProcess(argv, 0, stdout="\n".join(out) + "\n", stderr="")
 
 
 STAGED = {
@@ -107,7 +107,8 @@ class TestTheElementsAreAskedForTogether:
         got = _read(monkeypatch, bst, elements)
         assert bst.calls == [elements], (
             f"{len(bst.calls)} call(s) for 3 elements - the cost is per "
-            f"invocation, so this is the 10.8x this item measured")
+            f"invocation, so this is the 10.8x this item measured"
+        )
         assert got == {
             "core.bst": {"/usr/include/core.hpp", "/usr/lib/libcore.a"},
             "lib-a.bst": {"/usr/include/lib-a.hpp"},
@@ -125,8 +126,7 @@ class TestTheElementsAreAskedForTogether:
             alone.update(_read(monkeypatch, _Bst(STAGED), [element]))
         assert batched == alone
 
-    def test_a_long_list_is_chunked_rather_than_one_enormous_call(
-            self, monkeypatch):
+    def test_a_long_list_is_chunked_rather_than_one_enormous_call(self, monkeypatch):
         """`LIST_CONTENTS_CHUNK` bounds what is held in memory. The
         invocation count still collapses - 500 elements is 3 calls, not
         500 - which is the property that matters."""
@@ -149,8 +149,7 @@ class TestAHeadingIsTheRecordSeparator:
         assert "/usr/include/lib-a.hpp" not in got["core.bst"]
         assert "/usr/include/core.hpp" not in got["lib-a.bst"]
 
-    def test_a_staged_path_ending_in_a_colon_does_not_open_a_record(
-            self, monkeypatch):
+    def test_a_staged_path_ending_in_a_colon_does_not_open_a_record(self, monkeypatch):
         """A heading is recognised by naming an element that was asked
         for, not by its trailing colon - so a file called `weird:` stays
         a file."""
@@ -169,22 +168,18 @@ class TestAFailedGroupIsRetriedElementByElement:
 
     def test_a_bad_name_does_not_cost_its_group(self, monkeypatch):
         bst = _Bst(STAGED, unresolvable={"gone.bst"})
-        got = _read(monkeypatch, bst,
-                    ["core.bst", "gone.bst", "lib-a.bst"])
+        got = _read(monkeypatch, bst, ["core.bst", "gone.bst", "lib-a.bst"])
         assert got["core.bst"] == {"/usr/include/core.hpp", "/usr/lib/libcore.a"}
         assert got["lib-a.bst"] == {"/usr/include/lib-a.hpp"}
         assert got["gone.bst"] == set(), "the unreadable element lost its key"
 
-    def test_the_retry_is_one_call_per_element_of_that_group_only(
-            self, monkeypatch):
+    def test_the_retry_is_one_call_per_element_of_that_group_only(self, monkeypatch):
         """The fallback pays the old cost, and only when something is
         wrong. One failed batch of three is 1 + 3 calls, not 3 for every
         group in the run."""
         bst = _Bst(STAGED, unresolvable={"gone.bst"})
         _read(monkeypatch, bst, ["core.bst", "gone.bst", "lib-a.bst"])
-        assert bst.calls == [
-            ["core.bst", "gone.bst", "lib-a.bst"],
-            ["core.bst"], ["gone.bst"], ["lib-a.bst"]]
+        assert bst.calls == [["core.bst", "gone.bst", "lib-a.bst"], ["core.bst"], ["gone.bst"], ["lib-a.bst"]]
 
     def test_a_healthy_run_never_falls_back(self, monkeypatch):
         """The clause that keeps the one above from being free: if the
@@ -195,5 +190,5 @@ class TestAFailedGroupIsRetriedElementByElement:
         assert len(bst.calls) == 1, bst.calls
 
 
-if __name__ == "__main__":                       # pragma: no cover
+if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(pytest.main([__file__, "-v"]))

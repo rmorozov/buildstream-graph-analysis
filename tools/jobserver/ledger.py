@@ -6,6 +6,7 @@ from inputs the tracer already had to read (the wrapper probe, the raw
 log's pid map) rather than re-read here - this module imports stdlib
 only, never the tracer or `bga`.
 """
+
 import json
 import os
 import statistics
@@ -105,9 +106,9 @@ def _width_series(events: list, end_us: Optional[int] = None) -> tuple:
     and counted as open either way.
     """
     ordered = sorted(
-        ((int(float(t) * 1_000_000), event, pid, tokens)
-         for event, pid, t, tokens in events if t is not None),
-        key=lambda row: row[0])
+        ((int(float(t) * 1_000_000), event, pid, tokens) for event, pid, t, tokens in events if t is not None),
+        key=lambda row: row[0],
+    )
     held: dict = {}
     series: list = []
     for t_us, event, pid, tokens in ordered:
@@ -125,9 +126,11 @@ def _width_series(events: list, end_us: Optional[int] = None) -> tuple:
 
 
 def summarize_jobserver_tokens_by_element(
-        ledger_rows: list, pid_to_element: dict,
-        tool_pids_by_element: Optional[dict] = None,
-        element_end_us: Optional[dict] = None) -> tuple:
+    ledger_rows: list,
+    pid_to_element: dict,
+    tool_pids_by_element: Optional[dict] = None,
+    element_end_us: Optional[dict] = None,
+) -> tuple:
     """UX-847: `tokens_by_element`'s raw rows, reduced to what
     `analyze/v6`'s per-element table reads - `({element: {...}},
     unmapped)`, the shape `report["jobserver_tokens_by_element"]`
@@ -151,21 +154,17 @@ def summarize_jobserver_tokens_by_element(
     by_element: dict = {}
     for element in sorted(set(raw) | set(tool_pids)):
         events = raw.get(element) or []
-        acquired = [tokens for event, _pid, _t, tokens in events
-                    if event == "acquire"]
-        wrapped_pids = {pid for event, pid, _t, _tokens in events
-                        if event == "acquire"}
+        acquired = [tokens for event, _pid, _t, tokens in events if event == "acquire"]
+        wrapped_pids = {pid for event, pid, _t, _tokens in events if event == "acquire"}
         tools = tool_pids.get(element)
         record: dict = {
             "tokens_held_p50": statistics.median(acquired) if acquired else None,
             "tokens_held_max": max(acquired) if acquired else None,
             # The wrapped share, as a number, the way `UX-891` publishes
             # `lb_cpu_coverage`. `None` where the tools are unknown.
-            "tokens_series_coverage": (
-                len(wrapped_pids & tools) / len(tools) if tools else None),
+            "tokens_series_coverage": (len(wrapped_pids & tools) / len(tools) if tools else None),
         }
-        series, open_intervals = _width_series(
-            events, (element_end_us or {}).get(element))
+        series, open_intervals = _width_series(events, (element_end_us or {}).get(element))
         # Absent rather than empty: a zero-width series reads as an
         # element that held nothing, and a row with no `t` at all is a
         # row this series cannot be built from - the scalars above
@@ -269,8 +268,7 @@ def _jobserver_pool_block(capture: dict) -> Optional[dict]:
     leaks, tokens_refilled = 0, 0
     psi_memory_withdraws, memory_withheld = 0, 0
     if capture["jobserver_pool_mode"] == "dynamic" and jobserver_ledger_path:
-        moves, pool_min, pool_max = summarize_jobserver_ledger(
-            jobserver_ledger_path, jobserver)
+        moves, pool_min, pool_max = summarize_jobserver_ledger(jobserver_ledger_path, jobserver)
         if os.path.exists(jobserver_ledger_path):
             leaks, tokens_refilled = summarize_jobserver_leaks(jobserver_ledger_path)
         if psi_withdraw_counter:
@@ -283,12 +281,17 @@ def _jobserver_pool_block(capture: dict) -> Optional[dict]:
     else:
         moves, pool_min, pool_max = 0, jobserver_seed, jobserver_seed
     pool = {
-        "mode": capture["jobserver_pool_mode"], "ceiling": jobserver,
-        "seed": jobserver_seed, "capacity": capture["capacity"], "moves": moves,
-        "pool_min": pool_min, "pool_max": pool_max,
+        "mode": capture["jobserver_pool_mode"],
+        "ceiling": jobserver,
+        "seed": jobserver_seed,
+        "capacity": capture["capacity"],
+        "moves": moves,
+        "pool_min": pool_min,
+        "pool_max": pool_max,
         "psi_present": os.path.exists(_PSI_CPU_PATH),
         "controller_stopped": controller_stopped,
-        "leaks": leaks, "tokens_refilled": tokens_refilled,
+        "leaks": leaks,
+        "tokens_refilled": tokens_refilled,
     }
     if plan_path and broker_status_path and os.path.exists(broker_status_path):
         with open(broker_status_path, encoding="utf-8") as handle:
@@ -326,8 +329,7 @@ def report_block(capture: dict) -> dict:
         "jobserver_auth": capture["jobserver_auth"],
         "jobserver_pool": _jobserver_pool_block(capture),
         "jobserver_admission_pool": _admission_pool_block(capture.get("admission_status_path")),
-        "jobserver_kinds_read": (
-            capture["element_kinds_present"] if jobserver else None),
+        "jobserver_kinds_read": (capture["element_kinds_present"] if jobserver else None),
         "jobserver_decisions": read_jobserver_decisions(capture["jobserver_decisions_path"]),
         "jobserver_wrappers": capture["jobserver_wrappers"],
     }
@@ -335,8 +337,8 @@ def report_block(capture: dict) -> dict:
         ledger_rows = read_jobserver_ledger(jobserver_ledger_path)
         block["jobserver_ledger"] = ledger_rows
         by_element, unmapped = summarize_jobserver_tokens_by_element(
-            ledger_rows, capture.get("pid_to_element") or {},
-            capture.get("tool_pids"), capture.get("element_ends"))
+            ledger_rows, capture.get("pid_to_element") or {}, capture.get("tool_pids"), capture.get("element_ends")
+        )
         block["jobserver_tokens_by_element"] = by_element
         block["jobserver_tokens_unmapped"] = unmapped
     return block

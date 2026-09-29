@@ -29,6 +29,7 @@ n 44      min 1ms    max 6.02s   is_flat false
 and on the 4-element golden run: **no distribution at all**, which is
 `UX-234`'s refusal rather than deciles over four numbers.
 """
+
 import math
 import pathlib
 
@@ -51,14 +52,17 @@ def big_run(tmp_path_factory):
     trace = json.loads((run / "trace.json").read_text())
     for i in range(40):
         uid = f"mod{i:03d}.bst"
-        graph["elements"].append(
-            {"uid": uid, "cache_key": f"k-{i}", "requested_target": False})
-        graph["dependencies"].append(
-            {"predecessor": "base.bst", "successor": uid})
+        graph["elements"].append({"uid": uid, "cache_key": f"k-{i}", "requested_target": False})
+        graph["dependencies"].append({"predecessor": "base.bst", "successor": uid})
         trace["spans"].append(
-            {"task_key": f"{uid}|BUILD|BUILD|0", "ts_us": 6000,
-             "dur_us": int(1000 * (1.25 ** i)), "resources": ["PROCESS"],
-             "primary_resource": "PROCESS"})
+            {
+                "task_key": f"{uid}|BUILD|BUILD|0",
+                "ts_us": 6000,
+                "dur_us": int(1000 * (1.25**i)),
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            }
+        )
     (run / "graph.json").write_text(json.dumps(graph))
     (run / "trace.json").write_text(json.dumps(trace))
     return run
@@ -101,8 +105,7 @@ class TestTheSplitIsADecision:
         it is not just prose. Each name maps to a published key."""
         from bga.analyzer import DISTRIBUTED_QUANTITIES
 
-        assert set(DISTRIBUTED_QUANTITIES) == {
-            "blast_radius", "element_duration", "sandbox_tax", "process_count"}
+        assert set(DISTRIBUTED_QUANTITIES) == {"blast_radius", "element_duration", "sandbox_tax", "process_count"}
 
 
 class TestDurationCarriesItsScale:
@@ -138,8 +141,7 @@ class TestTheCrossPlaneQuantities:
         be read as the population."""
         from bga.correlate import _scale_of
 
-        payers = {"sandbox_tax": {
-            "top_payers": [{"toll_us": i * 1000} for i in range(1, 21)]}}
+        payers = {"sandbox_tax": {"top_payers": [{"toll_us": i * 1000} for i in range(1, 21)]}}
         shape = _scale_of(payers, {})["sandbox_tax_distribution"]
         assert shape["n"] == 20, shape
         assert shape["min"] == 1000 and shape["max"] == 20000
@@ -147,16 +149,14 @@ class TestTheCrossPlaneQuantities:
     def test_the_process_shape_reads_plane_2(self):
         from bga.correlate import _scale_of
 
-        native = {"per_element_parallelism":
-                  [{"work_process_count": i} for i in range(1, 31)]}
+        native = {"per_element_parallelism": [{"work_process_count": i} for i in range(1, 31)]}
         shape = _scale_of({}, native)["process_count_distribution"]
         assert shape["n"] == 30 and shape["deciles"]["p50"] == 15, shape
 
     def test_too_few_payers_refuses(self):
         from bga.correlate import _scale_of
 
-        assert _scale_of(
-            {"sandbox_tax": {"top_payers": [{"toll_us": 1}]}}, {}) == {}
+        assert _scale_of({"sandbox_tax": {"top_payers": [{"toll_us": 1}]}}, {}) == {}
 
 
 class TestThereIsOneStatistic:
@@ -169,17 +169,17 @@ class TestThereIsOneStatistic:
 
         correlate = (REPO / "bga/correlate.py").read_text(encoding="utf-8")
         assert "from .analyzer import distribution" in correlate, (
-            "correlate computes its own distribution instead of reusing the "
-            "one every other quantity uses (UX-260)")
+            "correlate computes its own distribution instead of reusing the one every other quantity uses (UX-260)"
+        )
 
     def test_the_refused_quantities_publish_no_shape(self, big_run):
         """The other direction: a `no` that quietly became a `yes`."""
         signals = _signals(big_run)
-        for refused in ("critical_path_share", "confidence", "coverage",
-                        "efficiency_score", "wall_clock"):
+        for refused in ("critical_path_share", "confidence", "coverage", "efficiency_score", "wall_clock"):
             assert f"{refused}_distribution" not in signals, (
                 f"{refused} grew a distribution that UNDISTRIBUTED_QUANTITIES "
-                f"argues against - change the argument or drop the field")
+                f"argues against - change the argument or drop the field"
+            )
 
 
 if __name__ == "__main__":  # pragma: no cover

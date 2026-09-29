@@ -8,6 +8,7 @@ first line is
 `Executing command: bst --builders 4 --max-jobs 4 build all.bst`, and
 `EXEC_CMD_RE` already matched it for the trace side.
 """
+
 import json
 
 from tools._run_context_common import (
@@ -17,10 +18,7 @@ from tools._run_context_common import (
 )
 from tools.bst_log_to_chrome_trace import WrapperTraceConverter
 
-_EXEC_LINE = (
-    "[wrapper][2026-08-16 18:22:59,383] INFO: Executing command: "
-    "bst --builders 4 --max-jobs 4 build all.bst"
-)
+_EXEC_LINE = "[wrapper][2026-08-16 18:22:59,383] INFO: Executing command: bst --builders 4 --max-jobs 4 build all.bst"
 
 
 def _converter_for(line):
@@ -82,13 +80,17 @@ def test_run_context_loader_round_trips_the_provenance(tmp_path):
     from bga.ingest.loader import load_run_context
 
     path = tmp_path / "run-context.json"
-    path.write_text(json.dumps({
-        "trace_epsilon_us": 50000,
-        "resource_capacities": {"PROCESS": 4},
-        "native_max_jobs": 4,
-        "native_max_jobs_source": NATIVE_MAX_JOBS_PARSED_FROM_INVOCATION,
-        "host_cpu_count": 4,
-    }))
+    path.write_text(
+        json.dumps(
+            {
+                "trace_epsilon_us": 50000,
+                "resource_capacities": {"PROCESS": 4},
+                "native_max_jobs": 4,
+                "native_max_jobs_source": NATIVE_MAX_JOBS_PARSED_FROM_INVOCATION,
+                "host_cpu_count": 4,
+            }
+        )
+    )
     run_context = load_run_context(str(path))
     assert run_context.native_max_jobs == 4
     assert run_context.native_max_jobs_source == NATIVE_MAX_JOBS_PARSED_FROM_INVOCATION
@@ -115,7 +117,9 @@ def test_note_stays_clean_when_the_checks_did_run():
 
     analyzer = BuildEfficiencyAnalyzer()
     analyzer.run_context = RunContext(
-        resource_capacities={"PROCESS": 4}, native_max_jobs=4, host_cpu_count=8,
+        resource_capacities={"PROCESS": 4},
+        native_max_jobs=4,
+        host_cpu_count=8,
     )
     analyzer._check_process_oversubscription()
     assert analyzer.capacity_check_skipped_inputs == []

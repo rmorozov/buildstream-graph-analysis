@@ -41,6 +41,7 @@ the clone's own directories cannot see it - `UX-485`'s first draft
 rested four clauses on `/tmp/ux469/.bga/runs/...` and passed. Those are
 read where they provably reach the filesystem, and only there.
 """
+
 import ast
 import os
 import pathlib
@@ -89,10 +90,28 @@ KERNEL_ROOTS = ("/proc", "/sys", "/dev")
 # rule as `_compared_not_opened`'s, in the other direction. `"/tmp/x"`
 # in a `subprocess` argv is a value the test never opens, and the
 # argument list of `pathlib.Path`, `open` or `os.path.*` is not.
-PATH_CALLS = frozenset({
-    "Path", "PosixPath", "open", "join", "exists", "isdir", "isfile",
-    "is_dir", "is_file", "read_text", "read_bytes", "listdir", "iterdir",
-    "glob", "rglob", "stat", "realpath", "abspath"})
+PATH_CALLS = frozenset(
+    {
+        "Path",
+        "PosixPath",
+        "open",
+        "join",
+        "exists",
+        "isdir",
+        "isfile",
+        "is_dir",
+        "is_file",
+        "read_text",
+        "read_bytes",
+        "listdir",
+        "iterdir",
+        "glob",
+        "rglob",
+        "stat",
+        "realpath",
+        "abspath",
+    }
+)
 
 # What makes an untracked citation acceptable: the file also reads
 # something a clone has. `tests/fixtures/` is where this repository keeps
@@ -110,15 +129,11 @@ ABSENCE_PROBES = ("'exists'", "'isdir'", "'is_dir'", "'is_file'")
 # nothing and the check below passes on every file for the wrong reason.
 # `TestTheCheckItselfDiscriminates` caught exactly that on this guard's
 # first run, which is what those two tests are for.
-PATH_LITERAL = re.compile(
-    r"""["']((?:""" + "|".join(re.escape(root) for root in ROOTS)
-    + r""")[\w./-]+)["']""")
+PATH_LITERAL = re.compile(r"""["']((?:""" + "|".join(re.escape(root) for root in ROOTS) + r""")[\w./-]+)["']""")
 
 
 def _tracked():
-    out = subprocess.run(
-        ["git", "ls-files", "-z"], cwd=REPO, capture_output=True, text=True,
-        check=True).stdout
+    out = subprocess.run(["git", "ls-files", "-z"], cwd=REPO, capture_output=True, text=True, check=True).stdout
     files = {name for name in out.split("\0") if name}
     # A directory is "tracked" if anything under it is.
     directories = set()
@@ -130,8 +145,7 @@ def _tracked():
 
 
 def _test_files():
-    return sorted(p for p in (REPO / "tests").rglob("*.py")
-                  if "__pycache__" not in p.parts)
+    return sorted(p for p in (REPO / "tests").rglob("*.py") if "__pycache__" not in p.parts)
 
 
 def _joined_paths(text):
@@ -164,8 +178,7 @@ def _joined_paths(text):
         name = getattr(node.func, "attr", None) or getattr(node.func, "id", "")
         if name != "join":
             continue
-        parts = [arg.value for arg in node.args
-                 if isinstance(arg, ast.Constant) and isinstance(arg.value, str)]
+        parts = [arg.value for arg in node.args if isinstance(arg, ast.Constant) and isinstance(arg.value, str)]
         if len(parts) < 2:
             continue
         joined = "/".join(part.strip("/") for part in parts)
@@ -324,14 +337,12 @@ def _cited_paths(path):
     # see. Not filtered by `WRITTEN_NOT_READ`: a join that builds a
     # path under `tmp_path` has a non-constant first argument, so it
     # never reaches `ROOTS` in the first place.
-    return ((cited | _joined_paths(text) | _absolute_paths(text))
-            - _compared_not_opened(text))
+    return (cited | _joined_paths(text) | _absolute_paths(text)) - _compared_not_opened(text)
 
 
 def _over_source(source, check):
     """Run a file-level check over a source string, for the checks below."""
-    handle = tempfile.NamedTemporaryFile(
-        "w", suffix=".py", delete=False, encoding="utf-8")
+    handle = tempfile.NamedTemporaryFile("w", suffix=".py", delete=False, encoding="utf-8")
     with handle:
         handle.write(source)
     try:
@@ -352,11 +363,13 @@ def _untracked_but_present(cited, tracked):
     what makes the same existence trigger serve both scans.
     """
     return sorted(
-        name for name in cited
+        name
+        for name in cited
         if name not in tracked
         and not any(part in name for part in NOT_DATA)
         and not name.startswith(KERNEL_ROOTS)
-        and (REPO / name).exists())
+        and (REPO / name).exists()
+    )
 
 
 def _rests_only_on_untracked(path, tracked):
@@ -366,8 +379,7 @@ def _rests_only_on_untracked(path, tracked):
     risky = _untracked_but_present(cited, tracked)
     if not risky:
         return []
-    if any(name.startswith(COMMITTED_DATA) and name in tracked
-           for name in cited):
+    if any(name.startswith(COMMITTED_DATA) and name in tracked for name in cited):
         return []
     if _guards_absence(text):
         return []
@@ -382,14 +394,12 @@ class TestEveryPathAGuardNamesIsInTheClone:
             risky = _rests_only_on_untracked(path, tracked)
             if not risky:
                 continue
-            offenders.append(
-                f"{path.relative_to(REPO)} -> {risky} (and no committed "
-                f"fixture beside it)")
+            offenders.append(f"{path.relative_to(REPO)} -> {risky} (and no committed fixture beside it)")
         assert offenders == [], (
             "test(s) whose only data is a path git does not track. It "
             "exists on this machine and will not exist in a clone, so they "
-            "pass here and fail in CI before an assertion runs:\n  "
-            + "\n  ".join(offenders))
+            "pass here and fail in CI before an assertion runs:\n  " + "\n  ".join(offenders)
+        )
 
     def test_the_files_that_use_a_real_capture_as_extra_coverage_are_allowed(self):
         """`UX-213`'s rule, from the other side: four guards name the
@@ -407,20 +417,24 @@ class TestEveryPathAGuardNamesIsInTheClone:
         instead of trusting a local green.
         """
         tracked = _tracked()
-        pairs = [p for p in _test_files()
-                 if _untracked_but_present(_cited_paths(p), tracked)
-                 and any(n.startswith(COMMITTED_DATA) and n in tracked
-                         for n in _cited_paths(p))]
+        pairs = [
+            p
+            for p in _test_files()
+            if _untracked_but_present(_cited_paths(p), tracked)
+            and any(n.startswith(COMMITTED_DATA) and n in tracked for n in _cited_paths(p))
+        ]
         if not pairs:
-            candidates = [p for p in _test_files()
-                          if any(n.startswith("examples/") and ".bga" in n
-                                 for n in _cited_paths(p))]
+            candidates = [
+                p for p in _test_files() if any(n.startswith("examples/") and ".bga" in n for n in _cited_paths(p))
+            ]
             assert candidates, (
                 "no test names a capture under a snapshot store at all, so "
-                "the exemption is dead code - remove it or re-point it")
+                "the exemption is dead code - remove it or re-point it"
+            )
             pytest.skip(
                 f"no local capture to exempt: {len(candidates)} test file(s) "
-                f"name one and none is present in this checkout")
+                f"name one and none is present in this checkout"
+            )
         assert pairs
 
     def test_the_snapshot_store_is_the_case_this_was_filed_on(self):
@@ -431,16 +445,18 @@ class TestEveryPathAGuardNamesIsInTheClone:
         if not store.exists():
             pytest.skip("no snapshot store in this checkout")
         assert store.read_text(encoding="utf-8").rstrip().endswith("*"), (
-            "the snapshot store no longer ignores everything, which is the "
-            "premise this guard rests on")
+            "the snapshot store no longer ignores everything, which is the premise this guard rests on"
+        )
 
     def test_the_replacement_fixture_is_tracked(self):
         """And the fixture the two round-37 guards moved onto is."""
         tracked = _tracked()
-        for name in ("tests/fixtures/macro_micro/run/run-context.json",
-                     "tests/fixtures/macro_micro/run/graph.json",
-                     "tests/fixtures/macro_micro/run/trace.json",
-                     "tests/fixtures/macro_micro/plane2.json"):
+        for name in (
+            "tests/fixtures/macro_micro/run/run-context.json",
+            "tests/fixtures/macro_micro/run/graph.json",
+            "tests/fixtures/macro_micro/run/trace.json",
+            "tests/fixtures/macro_micro/plane2.json",
+        ):
             assert name in tracked, f"{name} is not tracked"
 
 
@@ -448,11 +464,10 @@ class TestTheCheckItselfDiscriminates:
     """A path checker that matches nothing passes everywhere."""
 
     def test_it_finds_the_paths_that_are_there(self):
-        cited = _cited_paths(
-            REPO / "tests/unit/test_the_journey_reaches_what_if.py")
+        cited = _cited_paths(REPO / "tests/unit/test_the_journey_reaches_what_if.py")
         assert "tests/fixtures/macro_micro/run" in cited, (
-            f"the extractor found no fixture path in a file that names one: "
-            f"{sorted(cited)}")
+            f"the extractor found no fixture path in a file that names one: {sorted(cited)}"
+        )
 
     def test_it_reads_a_path_assembled_from_join_fragments(self):
         """The hole round 43 walked into.
@@ -466,13 +481,14 @@ class TestTheCheckItselfDiscriminates:
         source = (
             'import os\n'
             'X = os.path.join(REPO, "examples", "06-macro-micro-optimization",'
-            ' ".bga", "runs", "20260821T170127Z", "plane2.log.gz")\n')
+            ' ".bga", "runs", "20260821T170127Z", "plane2.log.gz")\n'
+        )
         assert not PATH_LITERAL.search(source), (
-            "the regex now reads this on its own, so this test no longer "
-            "shows what the join walk is for")
+            "the regex now reads this on its own, so this test no longer shows what the join walk is for"
+        )
         assert _joined_paths(source) == {
-            "examples/06-macro-micro-optimization/.bga/runs/"
-            "20260821T170127Z/plane2.log.gz"}
+            "examples/06-macro-micro-optimization/.bga/runs/20260821T170127Z/plane2.log.gz"
+        }
 
     def test_the_join_walk_ignores_a_join_that_builds_nothing(self):
         """Two fragments that are not a repository path, and a join
@@ -484,48 +500,44 @@ class TestTheCheckItselfDiscriminates:
     def test_a_skipif_on_the_paths_absence_is_the_other_way_to_be_safe(self):
         """A clause that skips when the capture is gone does not fail in
         a clone, which is the whole property this guard secures."""
-        assert _guards_absence(
-            'import os, pytest\n'
-            'M = pytest.mark.skipif(not os.path.exists(P), reason="gone")\n')
-        assert _guards_absence(
-            'import pytest\n'
-            'M = pytest.mark.skipif(not CAPTURE.is_dir(), reason="gone")\n')
+        assert _guards_absence('import os, pytest\nM = pytest.mark.skipif(not os.path.exists(P), reason="gone")\n')
+        assert _guards_absence('import pytest\nM = pytest.mark.skipif(not CAPTURE.is_dir(), reason="gone")\n')
 
     def test_a_skipif_about_something_else_does_not_count(self):
         """`node is None` says nothing about whether the capture is
         here, and must not buy a file an exemption."""
         assert not _guards_absence(
-            'import pytest, shutil\n'
-            'M = pytest.mark.skipif(shutil.which("node") is None, reason="x")\n')
+            'import pytest, shutil\nM = pytest.mark.skipif(shutil.which("node") is None, reason="x")\n'
+        )
         assert not _guards_absence('x = 1\n')
 
     def test_a_path_only_ever_compared_as_text_is_not_a_citation(self):
         """`UX-462`. The gitignore-membership assertion, in miniature:
         the literal reaches no filesystem call, so whether it exists on
         this machine cannot change the outcome."""
-        source = ('with open(".gitignore") as handle:\n'
-                  '    ignored = handle.read()\n'
-                  'assert "examples/09-fine-grained-siblings/files/bulk/"'
-                  ' in ignored\n')
+        source = (
+            'with open(".gitignore") as handle:\n'
+            '    ignored = handle.read()\n'
+            'assert "examples/09-fine-grained-siblings/files/bulk/"'
+            ' in ignored\n'
+        )
         assert PATH_LITERAL.search(source), (
             "the extractor no longer reads this literal at all, so this "
-            "test no longer shows what the comparison filter is for")
-        assert "examples/09-fine-grained-siblings/files/bulk" not in \
-            _cited_paths_of(source)
+            "test no longer shows what the comparison filter is for"
+        )
+        assert "examples/09-fine-grained-siblings/files/bulk" not in _cited_paths_of(source)
 
     def test_a_path_compared_on_one_line_and_opened_on_another_still_counts(self):
         """Every occurrence, not any. A file that also opens the path
         depends on it, and the comparison must not buy it an exemption."""
-        source = ('assert "tests/fixtures/macro_micro/run" in ignored\n'
-                  'open("tests/fixtures/macro_micro/run")\n')
+        source = 'assert "tests/fixtures/macro_micro/run" in ignored\nopen("tests/fixtures/macro_micro/run")\n'
         assert "tests/fixtures/macro_micro/run" in _cited_paths_of(source)
 
     def test_the_filter_does_not_swallow_a_different_path(self):
         """Two literals, one compared and one opened. Only the compared
         one is dropped - a filter keyed on the file rather than on the
         literal would clear both."""
-        source = ('assert "docs/spec/specification.md" in text\n'
-                  'open("tests/fixtures/macro_micro/run")\n')
+        source = 'assert "docs/spec/specification.md" in text\nopen("tests/fixtures/macro_micro/run")\n'
         cited = _cited_paths_of(source)
         assert "docs/spec/specification.md" not in cited
         assert "tests/fixtures/macro_micro/run" in cited
@@ -536,12 +548,11 @@ class TestTheCheckItselfDiscriminates:
         untracked to mis-report, so this **skips with the reason**."""
         bulk = REPO / "examples/09-fine-grained-siblings/files/bulk"
         if not bulk.is_dir():
-            pytest.skip(
-                "no bulk tree in this checkout - examples/README.md says "
-                "how to make one")
+            pytest.skip("no bulk tree in this checkout - examples/README.md says how to make one")
         target = REPO / "tests/unit/test_fine_grained_fixture.py"
-        assert "examples/09-fine-grained-siblings/files/bulk" not in \
-            _untracked_but_present(_cited_paths(target), _tracked())
+        assert "examples/09-fine-grained-siblings/files/bulk" not in _untracked_but_present(
+            _cited_paths(target), _tracked()
+        )
 
     def test_dev_records_load_is_not_a_citation(self):
         """`UX-997` T2's one recognised route: a call to the shared,
@@ -553,19 +564,17 @@ class TestTheCheckItselfDiscriminates:
     def test_a_direct_read_beside_the_loader_still_counts(self):
         """The escape is per line, not per file: the loader's presence
         elsewhere must not launder a different line's direct read."""
-        source = ('X = dev_records.load("tests/ci_reference.json")\n'
-                  'Y = (REPO / "tests/ci_reference.json").read_text()\n')
+        source = 'X = dev_records.load("tests/ci_reference.json")\nY = (REPO / "tests/ci_reference.json").read_text()\n'
         assert "tests/ci_reference.json" in _cited_paths_of(source)
 
     def test_it_would_have_flagged_the_original(self):
         """The literal that shipped, checked against the tree."""
-        original = ("examples/06-macro-micro-optimization/"
-                    ".bga/runs/20260821T170127Z/run")
-        assert PATH_LITERAL.search(f'"{original}"'), (
-            "the extractor does not recognise the path this was filed on")
+        original = "examples/06-macro-micro-optimization/.bga/runs/20260821T170127Z/run"
+        assert PATH_LITERAL.search(f'"{original}"'), "the extractor does not recognise the path this was filed on"
         assert original not in _tracked(), (
             "the snapshot store is tracked now, so this check no longer "
-            "demonstrates anything - re-point it at a real ignored path")
+            "demonstrates anything - re-point it at a real ignored path"
+        )
 
 
 class TestAnAbsolutePathOutsideTheCloneIsSeen:
@@ -574,47 +583,40 @@ class TestAnAbsolutePathOutsideTheCloneIsSeen:
     trigger. The scan is narrowed by position instead: read only where
     the literal reaches the filesystem."""
 
-    DRAFT = ('import pathlib\n'
-             'TWO_QUEUE = pathlib.Path('
-             '"/tmp/ux469/.bga/runs/20260901T161438Z")\n')
+    DRAFT = 'import pathlib\nTWO_QUEUE = pathlib.Path("/tmp/ux469/.bga/runs/20260901T161438Z")\n'
 
     def test_the_draft_that_walked_into_the_hole_is_read(self):
         """`UX-485`'s first draft, verbatim. The prefix scan cannot see
         it at all, which is why this walk exists."""
         assert not PATH_LITERAL.search(self.DRAFT), (
             "the prefix scan now reads an absolute path on its own, so this "
-            "test no longer shows what the absolute walk is for")
-        assert _absolute_paths(self.DRAFT) == {
-            "/tmp/ux469/.bga/runs/20260901T161438Z"}
+            "test no longer shows what the absolute walk is for"
+        )
+        assert _absolute_paths(self.DRAFT) == {"/tmp/ux469/.bga/runs/20260901T161438Z"}
 
-    def test_an_absolute_path_that_is_here_and_untracked_is_reported(
-            self, tmp_path):
+    def test_an_absolute_path_that_is_here_and_untracked_is_reported(self, tmp_path):
         """The dangerous class: a capture no clone has."""
         capture = tmp_path / "ux469/.bga/runs/20260901T161438Z"
         capture.mkdir(parents=True)
         source = f'import pathlib\nX = pathlib.Path("{capture}")\n'
-        assert _untracked_but_present(
-            _cited_paths_of(source), _tracked()) == [str(capture)]
+        assert _untracked_but_present(_cited_paths_of(source), _tracked()) == [str(capture)]
 
-    def test_an_absolute_path_that_exists_nowhere_is_not_reported(
-            self, tmp_path):
+    def test_an_absolute_path_that_exists_nowhere_is_not_reported(self, tmp_path):
         """`UX-276`'s trigger, unchanged: a path no machine has cannot
         fail on one machine and pass on another. The fixture a test
         creates and then reads is this case."""
         absent = tmp_path / "ux469/.bga/runs/20260901T161438Z"
-        assert _untracked_but_present(
-            _cited_paths_of(f'import pathlib\nX = pathlib.Path("{absent}")\n'),
-            _tracked()) == []
+        assert (
+            _untracked_but_present(_cited_paths_of(f'import pathlib\nX = pathlib.Path("{absent}")\n'), _tracked()) == []
+        )
 
-    def test_an_absolute_string_in_an_argv_is_a_value_not_a_read(
-            self, tmp_path):
+    def test_an_absolute_string_in_an_argv_is_a_value_not_a_read(self, tmp_path):
         """`test_tracer_report_input_detection.py` passes `/tmp/x` as the
         misplaced option of a usage-error test and never opens it. The
         file exists on this machine; the clause cannot notice."""
         option = tmp_path / "x"
         option.write_text("", encoding="utf-8")
-        source = ('ARGV = ["tracer", "run", "P", "O", "--wrapped-log", '
-                  f'"{option}", "--", "bst", "build"]\n')
+        source = f'ARGV = ["tracer", "run", "P", "O", "--wrapped-log", "{option}", "--", "bst", "build"]\n'
         assert str(option) in source and option.exists()
         assert _absolute_paths(source) == set()
 
@@ -633,11 +635,8 @@ class TestAnAbsolutePathOutsideTheCloneIsSeen:
         line that falls back to the fixture."""
         built = tmp_path / "out"
         built.mkdir()
-        assert _cited_paths_of(
-            'import pathlib\nX = pathlib.Path(tmp_path / "out")\n') == set()
-        assert _absolute_paths(
-            f'import pathlib\nX = pathlib.Path("{built}") '
-            'if REAL else tmp_path\n') == set()
+        assert _cited_paths_of('import pathlib\nX = pathlib.Path(tmp_path / "out")\n') == set()
+        assert _absolute_paths(f'import pathlib\nX = pathlib.Path("{built}") if REAL else tmp_path\n') == set()
 
     def test_a_committed_fixture_beside_it_is_still_the_escape(self, tmp_path):
         """`UX-213`'s rule reaches the absolute case unchanged: extra
@@ -646,13 +645,9 @@ class TestAnAbsolutePathOutsideTheCloneIsSeen:
         capture = tmp_path / "runs/20260901T161438Z"
         capture.mkdir(parents=True)
         alone = f'import pathlib\nX = pathlib.Path("{capture}")\n'
-        beside = alone + ('Y = open("tests/fixtures/macro_micro/'
-                          'plane2.json")\n')
-        assert _over_source(
-            alone, lambda p: _rests_only_on_untracked(p, tracked)
-        ) == [str(capture)]
-        assert _over_source(
-            beside, lambda p: _rests_only_on_untracked(p, tracked)) == []
+        beside = alone + ('Y = open("tests/fixtures/macro_micro/plane2.json")\n')
+        assert _over_source(alone, lambda p: _rests_only_on_untracked(p, tracked)) == [str(capture)]
+        assert _over_source(beside, lambda p: _rests_only_on_untracked(p, tracked)) == []
 
     def test_a_skipif_on_its_existence_is_still_the_escape(self, tmp_path):
         """The other way to be safe: the clause does not run in a clone
@@ -660,11 +655,12 @@ class TestAnAbsolutePathOutsideTheCloneIsSeen:
         tracked = _tracked()
         capture = tmp_path / "runs/20260901T161438Z"
         capture.mkdir(parents=True)
-        source = ('import pathlib, pytest\n'
-                  f'X = pathlib.Path("{capture}")\n'
-                  'M = pytest.mark.skipif(not X.exists(), reason="gone")\n')
-        assert _over_source(
-            source, lambda p: _rests_only_on_untracked(p, tracked)) == []
+        source = (
+            'import pathlib, pytest\n'
+            f'X = pathlib.Path("{capture}")\n'
+            'M = pytest.mark.skipif(not X.exists(), reason="gone")\n'
+        )
+        assert _over_source(source, lambda p: _rests_only_on_untracked(p, tracked)) == []
 
     def test_the_relative_scan_still_reads_what_it_read(self, tmp_path):
         """Both scans in one file. A committed relative path and an
@@ -673,8 +669,8 @@ class TestAnAbsolutePathOutsideTheCloneIsSeen:
         capture = tmp_path / "runs/20260901T161438Z"
         capture.mkdir(parents=True)
         cited = _cited_paths_of(
-            f'import pathlib\nX = pathlib.Path("{capture}")\n'
-            'Y = open("tests/fixtures/macro_micro/plane2.json")\n')
+            f'import pathlib\nX = pathlib.Path("{capture}")\nY = open("tests/fixtures/macro_micro/plane2.json")\n'
+        )
         assert cited == {str(capture), "tests/fixtures/macro_micro/plane2.json"}
 
 
@@ -694,8 +690,7 @@ class TestThePopulationScaledEntryIsNormalised:
         reference["population"] = {THIS_FILE: population}
         return reference
 
-    def test_a_population_that_grew_with_the_seconds_is_not_drift(
-            self, monkeypatch):
+    def test_a_population_that_grew_with_the_seconds_is_not_drift(self, monkeypatch):
         reference = self._reference(16.7, population=496)
         monkeypatch.setattr(drift, "population_size", lambda _pop: 992)
         times = dict(tiers.recorded())
@@ -703,8 +698,7 @@ class TestThePopulationScaledEntryIsNormalised:
         verdict, _shift, rows = drift.against(times, reference)
         assert verdict == "ok", rows
 
-    def test_the_same_jump_with_no_population_growth_is_still_drift(
-            self, monkeypatch):
+    def test_the_same_jump_with_no_population_growth_is_still_drift(self, monkeypatch):
         reference = self._reference(16.7, population=496)
         monkeypatch.setattr(drift, "population_size", lambda _pop: 496)
         times = dict(tiers.recorded())
@@ -713,8 +707,7 @@ class TestThePopulationScaledEntryIsNormalised:
         assert verdict == "drift", rows
         assert rows[0][0] == THIS_FILE
 
-    def test_a_reference_with_no_population_field_reads_as_it_always_did(
-            self, monkeypatch):
+    def test_a_reference_with_no_population_field_reads_as_it_always_did(self, monkeypatch):
         """A document `UX-716` never wrote to still gets the raw,
         unscaled comparison - the feature must not need a migration to
         avoid crashing on last round's reference."""

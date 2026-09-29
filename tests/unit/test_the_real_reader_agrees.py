@@ -48,6 +48,7 @@ refuses that host (and `get.perfetto.dev`) at the CONNECT stage, so it
 cannot be done from here and is left recorded rather than quietly
 dropped.
 """
+
 import gzip
 import json
 import pathlib
@@ -76,8 +77,7 @@ GOLDEN = REPO / "tests/fixtures/golden/mixed_task_kinds"
 # have run - and the skip census counted the other half as "the tool is
 # absent". Where to get one is in this module's docstring, which is
 # where a reader who hits the skip will look.
-needs_trace_processor = pytest.mark.skipif(
-    trace_processor.shell() is None, reason=trace_processor.REASON)
+needs_trace_processor = pytest.mark.skipif(trace_processor.shell() is None, reason=trace_processor.REASON)
 
 
 def _shell():
@@ -95,29 +95,38 @@ class TestTheGateIsOneGate:
         fake.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
         fake.chmod(fake.stat().st_mode | stat.S_IEXEC)
         found = subprocess.run(
-            [sys.executable, "-c",
-             "import sys; sys.path.insert(0, sys.argv[1]);"
-             " import trace_processor; print(trace_processor.shell() or '')",
-             str(REPO / "tests")],
-            capture_output=True, text=True,
+            [
+                sys.executable,
+                "-c",
+                "import sys; sys.path.insert(0, sys.argv[1]);"
+                " import trace_processor; print(trace_processor.shell() or '')",
+                str(REPO / "tests"),
+            ],
+            capture_output=True,
+            text=True,
             # `PATH` emptied, so `which` cannot be what finds it.
-            env={"BGA_TRACE_PROCESSOR": str(fake), "PATH": "/nonexistent"})
+            env={"BGA_TRACE_PROCESSOR": str(fake), "PATH": "/nonexistent"},
+        )
         assert found.stdout.strip() == str(fake), found
 
-    def test_a_named_binary_that_is_not_executable_is_not_the_gate(
-            self, tmp_path):
+    def test_a_named_binary_that_is_not_executable_is_not_the_gate(self, tmp_path):
         """Named is not enough: a path that cannot be run would skip
         every clause with a message saying the tool is missing, which is
         true of the file and misleading about the machine."""
         named = tmp_path / "not-executable"
         named.write_text("", encoding="utf-8")
         found = subprocess.run(
-            [sys.executable, "-c",
-             "import sys; sys.path.insert(0, sys.argv[1]);"
-             " import trace_processor; print(trace_processor.shell() or '')",
-             str(REPO / "tests")],
-            capture_output=True, text=True,
-            env={"BGA_TRACE_PROCESSOR": str(named), "PATH": "/nonexistent"})
+            [
+                sys.executable,
+                "-c",
+                "import sys; sys.path.insert(0, sys.argv[1]);"
+                " import trace_processor; print(trace_processor.shell() or '')",
+                str(REPO / "tests"),
+            ],
+            capture_output=True,
+            text=True,
+            env={"BGA_TRACE_PROCESSOR": str(named), "PATH": "/nonexistent"},
+        )
         assert found.stdout.strip() == "", found
 
     def test_both_families_ask_the_same_question(self):
@@ -127,8 +136,7 @@ class TestTheGateIsOneGate:
         # a scan that matched its own assertion would fail on the tree
         # it is meant to pass on.
         needle = "shutil.which(" + '"trace_processor' + '_shell")'
-        for name in ("test_the_real_reader_agrees.py",
-                     "test_the_perfetto_handoff.py"):
+        for name in ("test_the_real_reader_agrees.py", "test_the_perfetto_handoff.py"):
             source = (REPO / "tests/unit" / name).read_text(encoding="utf-8")
             assert "import trace_processor" in source, name
             assert needle not in source, f"{name} spells the gate itself again"
@@ -138,8 +146,7 @@ class TestTheGateIsOneGate:
 # each kind to disagree about: two elements with a dependency between
 # them, a process that failed, one killed by a signal, one with no
 # observed exit, and a command longer than the 120-character name.
-LONG_CMD = ("cc -c " + "-I/usr/include/deeply/nested/path " * 5
-            + "the-tail-that-tells-them-apart.c")
+LONG_CMD = "cc -c " + "-I/usr/include/deeply/nested/path " * 5 + "the-tail-that-tells-them-apart.c"
 
 _LOG = """[wrapper][2026-08-21 12:00:00,000] INFO: Executing command: bst build all.bst
 [wrapper][2026-08-21 12:00:00,100] INFO: [00:00:00][aaaaaaaa][   build:base.bst] START Building
@@ -165,8 +172,7 @@ def _raw():
         "END pid=2 ppid=1 ts=1001.0 element=base.bst inv=a src=spine exit=0 "
         "utime=0.05 stime=0.02 maxrss_kb=8192 cmd=sh",
         f"START pid=2 ppid=1 ts=1002.0 element=app.bst inv=b cmd={LONG_CMD}",
-        f"END pid=2 ppid=1 ts=1003.0 element=app.bst inv=b utime=0.5 stime=0.1 "
-        f"maxrss_kb=65536 cmd={LONG_CMD}",
+        f"END pid=2 ppid=1 ts=1003.0 element=app.bst inv=b utime=0.5 stime=0.1 maxrss_kb=65536 cmd={LONG_CMD}",
         "START pid=3 ppid=1 ts=1003.5 element=app.bst inv=b cmd=cc never-exits.c",
     ]
     return "\n".join(lines) + "\n"
@@ -174,27 +180,31 @@ def _raw():
 
 _GRAPH = {
     "elements": [
-        {"uid": "base.bst", "cache_key": "k1", "requested_target": False,
-         "element_kind": "cmake"},
-        {"uid": "app.bst", "cache_key": "k2", "requested_target": True,
-         "element_kind": "autotools"},
+        {"uid": "base.bst", "cache_key": "k1", "requested_target": False, "element_kind": "cmake"},
+        {"uid": "app.bst", "cache_key": "k2", "requested_target": True, "element_kind": "autotools"},
     ],
-    "dependencies": [{"predecessor": "base.bst", "successor": "app.bst",
-                      "dependency_type": "build"}],
+    "dependencies": [{"predecessor": "base.bst", "successor": "app.bst", "dependency_type": "build"}],
     "run_identity_hash": "real-reader-fixture",
 }
 
 _CONTEXT = {
-    "run_identity": {"manifest_hash": "hash-abc",
-                     "project_identity": "examples/real-reader",
-                     "targets": ["all.bst"], "project_git_commit": "c0ffee",
-                     "scheduler": {"builders": 5}},
-    "host_manifest": {"schema": "host/v1", "cpu_model": "Test CPU",
-                      "cpu_count": 6, "memory_mb": 8192,
-                      "kernel_release": "9.9.9", "distro_id": "test 1",
-                      "toolchain": {"bst": "2.7.0"}},
-    "build_outcome": {"failed_elements": [], "failed_count": 0,
-                      "interrupted": False},
+    "run_identity": {
+        "manifest_hash": "hash-abc",
+        "project_identity": "examples/real-reader",
+        "targets": ["all.bst"],
+        "project_git_commit": "c0ffee",
+        "scheduler": {"builders": 5},
+    },
+    "host_manifest": {
+        "schema": "host/v1",
+        "cpu_model": "Test CPU",
+        "cpu_count": 6,
+        "memory_mb": 8192,
+        "kernel_release": "9.9.9",
+        "distro_id": "test 1",
+        "toolchain": {"bst": "2.7.0"},
+    },
+    "build_outcome": {"failed_elements": [], "failed_count": 0, "interrupted": False},
 }
 
 
@@ -204,13 +214,11 @@ def _build(tmp, outcome=None, name="20260821T120000Z"):
     (snapshot / "build.log").write_text(_LOG, encoding="utf-8")
     shutil.copytree(GOLDEN, snapshot / "run")
     (snapshot / "run" / "expected_output.json").unlink(missing_ok=True)
-    (snapshot / "run" / "graph.json").write_text(json.dumps(_GRAPH),
-                                                 encoding="utf-8")
+    (snapshot / "run" / "graph.json").write_text(json.dumps(_GRAPH), encoding="utf-8")
     context = json.loads(json.dumps(_CONTEXT))
     if outcome is not None:
         context["build_outcome"] = outcome
-    (snapshot / "run" / "run-context.json").write_text(json.dumps(context),
-                                                       encoding="utf-8")
+    (snapshot / "run" / "run-context.json").write_text(json.dumps(context), encoding="utf-8")
     with gzip.open(snapshot / "plane2.log.gz", "wt", encoding="utf-8") as out:
         out.write(_raw())
     trace = tmp / f"{name}.perfetto-trace.gz"
@@ -229,17 +237,15 @@ def queried(tmp_path_factory):
     # clause takes the union of the two rather than pretending one
     # capture carries everything.
     _s2, stopped, _r2 = _build(
-        tmp, outcome={"failed_elements": [], "failed_count": 0,
-                      "interrupted": True},
-        name="20260822T090000Z")
+        tmp, outcome={"failed_elements": [], "failed_count": 0, "interrupted": True}, name="20260822T090000Z"
+    )
 
     def ask(sql, path=None):
         """One query, as rows of dicts. Perfetto's own SQL, its own
         reader - which is the point of this file."""
         done = subprocess.run(
-            [shell, "-q", "/dev/stdin", str(path or trace)],
-                              input=sql, capture_output=True, text=True,
-                              timeout=180)
+            [shell, "-q", "/dev/stdin", str(path or trace)], input=sql, capture_output=True, text=True, timeout=180
+        )
         assert done.returncode == 0, done.stderr
         lines = [line for line in done.stdout.strip().splitlines() if line]
         if not lines:
@@ -253,13 +259,11 @@ def queried(tmp_path_factory):
             rows.append(dict(zip(header, cells)))
         return rows
 
-    return {"result": result, "ask": ask, "trace": trace,
-            "stopped": stopped}
+    return {"result": result, "ask": ask, "trace": trace, "stopped": stopped}
 
 
 @needs_trace_processor
 class TestPerfettosOwnReaderAgrees:
-
     def test_it_loads_at_all(self, queried):
         """The clause `UX-298` could not write. A trace the emitter is
         happy with and the reader refuses is the failure mode this
@@ -277,17 +281,17 @@ class TestPerfettosOwnReaderAgrees:
             "       extract_arg(i.arg_set_id,'debug.element') as sink "
             "from flow f join slice o on o.id=f.slice_out "
             "join slice i on i.id=f.slice_in "
-            "where extract_arg(o.arg_set_id,'debug.element') is not null;")
-        assert {(r["source"], r["sink"]) for r in rows} == \
-            {("base.bst", "app.bst")}
+            "where extract_arg(o.arg_set_id,'debug.element') is not null;"
+        )
+        assert {(r["source"], r["sink"]) for r in rows} == {("base.bst", "app.bst")}
 
     def test_the_exec_chain_arrows_are_parent_to_child(self, queried):
         rows = queried["ask"](
             "select o.name as source, i.name as sink "
             "from flow f join slice o on o.id=f.slice_out "
-            "join slice i on i.id=f.slice_in where o.name = 'sh';")
-        assert sorted(r["sink"] for r in rows) == \
-            ["cc bad.c", "cc killed.c", "cc ok.c"]
+            "join slice i on i.id=f.slice_in where o.name = 'sh';"
+        )
+        assert sorted(r["sink"] for r in rows) == ["cc bad.c", "cc killed.c", "cc ok.c"]
 
     def test_every_contract_key_resolves_through_extract_arg(self, queried):
         """`UX-308` asserted this through the in-repo decoder and
@@ -295,10 +299,8 @@ class TestPerfettosOwnReaderAgrees:
         proven here: each key appears in `args` as `debug.<key>`."""
         seen = set()
         for path in (None, queried["stopped"]):
-            rows = queried["ask"](
-                "select distinct key from args where key like 'debug.%';",
-                path)
-            seen |= {row["key"][len("debug."):] for row in rows}
+            rows = queried["ask"]("select distinct key from args where key like 'debug.%';", path)
+            seen |= {row["key"][len("debug.") :] for row in rows}
         documented = {key for key, _ in ANNOTATION_CONTRACT}
         assert documented - seen == set(), documented - seen
         assert seen - documented == set(), seen - documented
@@ -313,34 +315,32 @@ class TestPerfettosOwnReaderAgrees:
         is the point, because that is what a reader scanning a lane
         sees.
         """
-        rows = queried["ask"](
-            "select length(s.name) as name_len from slice s "
-            f"where s.name like '%{LONG_CMD[-20:]}';")
-        assert rows, ("the long command produced no slice findable by "
-                      "its own argv tail")
+        rows = queried["ask"](f"select length(s.name) as name_len from slice s where s.name like '%{LONG_CMD[-20:]}';")
+        assert rows, "the long command produced no slice findable by its own argv tail"
         assert int(rows[0]["name_len"]) == len(LONG_CMD) > 120
 
     def test_the_dropped_annotation_is_really_gone(self, queried):
         """The other half of a declared break: a query still reading
         `debug.cmd` must find nothing rather than something stale."""
         rows = queried["ask"](
-            "select count(*) as n from slice s where "
-            "extract_arg(s.arg_set_id,'debug.cmd') is not null;")
-        assert int(rows[0]["n"]) == 0, (
-            "`debug.cmd` is still emitted - the string is paid for twice")
+            "select count(*) as n from slice s where extract_arg(s.arg_set_id,'debug.cmd') is not null;"
+        )
+        assert int(rows[0]["n"]) == 0, "`debug.cmd` is still emitted - the string is paid for twice"
 
     def test_the_failed_processes_are_selectable(self, queried):
         rows = queried["ask"](
             "select s.name as name from slice s "
             "where extract_arg(s.arg_set_id,'debug.exit_status') "
-            "not in ('0') order by name;")
+            "not in ('0') order by name;"
+        )
         assert [r["name"] for r in rows] == ["cc bad.c", "cc killed.c"]
 
     def test_the_counter_track_is_a_counter_with_a_unit(self, queried):
         rows = queried["ask"](
             "select t.name as name, t.unit as unit, count(c.id) as samples, "
             "max(c.value) as peak from counter_track t "
-            "left join counter c on c.track_id = t.id group by t.id;")
+            "left join counter c on c.track_id = t.id group by t.id;"
+        )
         assert len(rows) == 1, rows
         assert rows[0]["name"] == CONCURRENCY_COUNTER
         assert rows[0]["unit"] == "count"
@@ -354,7 +354,8 @@ class TestPerfettosOwnReaderAgrees:
             "extract_arg(s.arg_set_id,'debug.host_cpu_count') as cpus, "
             "extract_arg(s.arg_set_id,'debug.bst_version') as bst "
             "from slice s "
-            "where extract_arg(s.arg_set_id,'debug.run') is not null;")
+            "where extract_arg(s.arg_set_id,'debug.run') is not null;"
+        )
         assert len(rows) == 1, rows
         assert rows[0]["run"] == "20260821T120000Z"
         assert rows[0]["project"] == "examples/real-reader"
@@ -362,8 +363,7 @@ class TestPerfettosOwnReaderAgrees:
         assert rows[0]["bst"] == "2.7.0"
 
     def test_the_lanes_carry_the_rank_the_writer_gave_them(self, queried):
-        rows = queried["ask"](
-            "select distinct key from args where key = 'sibling_order_rank';")
+        rows = queried["ask"]("select distinct key from args where key = 'sibling_order_rank';")
         assert rows, "the ordering hint did not survive the reader"
 
     def test_time_by_element_kind_is_a_question_it_can_answer(self, queried):
@@ -372,19 +372,21 @@ class TestPerfettosOwnReaderAgrees:
             "select extract_arg(s.arg_set_id,'debug.element_kind') as kind, "
             "count(*) as tasks from slice s "
             "where extract_arg(s.arg_set_id,'debug.element') is not null "
-            "group by kind order by kind;")
+            "group by kind order by kind;"
+        )
         assert {r["kind"] for r in rows} == {"autotools", "cmake"}
         assert sum(int(r["tasks"]) for r in rows) == 2
 
-    def test_an_interrupted_run_says_so_where_the_reader_can_see_it(
-            self, queried):
+    def test_an_interrupted_run_says_so_where_the_reader_can_see_it(self, queried):
         """`UX-311`'s honesty clause, through Perfetto's own SQL: the
         reason is an annotation *and* the track's name."""
         rows = queried["ask"](
             "select s.name as name, "
             "extract_arg(s.arg_set_id,'debug.incomplete_reason') as reason "
             "from slice s where extract_arg(s.arg_set_id,'debug.run') "
-            "is not null;", queried["stopped"])
+            "is not null;",
+            queried["stopped"],
+        )
         assert len(rows) == 1, rows
         assert rows[0]["reason"] == "interrupted"
         assert "interrupted" in rows[0]["name"]

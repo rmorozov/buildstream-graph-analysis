@@ -34,6 +34,7 @@ Both reasons a finding can be missing are named, because a shorter list
 reads as a cleaner build — which is `UX-73`'s own argument for the two
 exclusion counts that were already there.
 """
+
 import json
 import pathlib
 import sys
@@ -59,19 +60,26 @@ def _records(signatures, seconds=1.0, elements=("a.bst", "b.bst")):
     out = []
     for index in range(signatures):
         for element in elements:
-            out.append({
-                "element": element, "cmd": f"cc -c file{index}.c",
-                "open": False, "start_ts": 0.0, "end_ts": seconds,
-                "duration_s": seconds, "pid": index, "src": "hook",
-                "invocation": "1", "exec_chain": 1,
-            })
+            out.append(
+                {
+                    "element": element,
+                    "cmd": f"cc -c file{index}.c",
+                    "open": False,
+                    "start_ts": 0.0,
+                    "end_ts": seconds,
+                    "duration_s": seconds,
+                    "pid": index,
+                    "src": "hook",
+                    "invocation": "1",
+                    "exec_chain": 1,
+                }
+            )
     return out
 
 
 class TestThePopulationIsBounded:
     def test_more_signatures_than_the_cap_are_cut_to_it(self):
-        findings, coverage = detect_redundant_operations(
-            _records(REDUNDANCY_FINDINGS_MAX + 60))
+        findings, coverage = detect_redundant_operations(_records(REDUNDANCY_FINDINGS_MAX + 60))
         assert len(findings) == REDUNDANCY_FINDINGS_MAX
         assert coverage["findings_cap"] == REDUNDANCY_FINDINGS_MAX
         assert coverage["omitted_beyond_cap"] == 60
@@ -85,8 +93,7 @@ class TestThePopulationIsBounded:
             findings, _ = detect_redundant_operations(_records(signatures))
             lengths.add(len(findings))
             assert len(findings) <= REDUNDANCY_FINDINGS_MAX, signatures
-        assert lengths == {5, REDUNDANCY_FINDINGS_MAX}, (
-            f"the list is not bounded by the cap: {sorted(lengths)}")
+        assert lengths == {5, REDUNDANCY_FINDINGS_MAX}, f"the list is not bounded by the cap: {sorted(lengths)}"
 
     def test_a_short_list_is_not_capped_and_says_so(self):
         findings, coverage = detect_redundant_operations(_records(5))
@@ -122,27 +129,27 @@ class TestTheFloorStaysADisplayThresholdAndSaysSo:
     states that it does."""
 
     def test_a_sub_floor_finding_is_still_stored(self):
-        findings, coverage = detect_redundant_operations(
-            _records(3, seconds=_REDUNDANCY_MIN_SECONDS / 10))
+        findings, coverage = detect_redundant_operations(_records(3, seconds=_REDUNDANCY_MIN_SECONDS / 10))
         assert len(findings) == 3, (
             "the display floor was applied to the contract, which silently "
-            "changes every element's redundancy_count in correlate")
+            "changes every element's redundancy_count in correlate"
+        )
         assert coverage["display_floor_seconds"] == _REDUNDANCY_MIN_SECONDS
 
     def test_the_contract_says_the_list_holds_what_the_terminal_hides(self):
         _findings, coverage = detect_redundant_operations(_records(3))
         note = coverage["note"]
         assert "display_floor_seconds" in note, (
-            "nothing tells a reader of the JSON that it holds findings the "
-            "terminal will not show")
+            "nothing tells a reader of the JSON that it holds findings the terminal will not show"
+        )
         assert "redundancy_count" in note
 
     def test_the_cap_still_bounds_a_list_full_of_small_findings(self):
         """The cap is the bound, and it works whatever the floor does -
         which is why it is the half that had to land."""
         findings, coverage = detect_redundant_operations(
-            _records(REDUNDANCY_FINDINGS_MAX + 30,
-                     seconds=_REDUNDANCY_MIN_SECONDS / 10))
+            _records(REDUNDANCY_FINDINGS_MAX + 30, seconds=_REDUNDANCY_MIN_SECONDS / 10)
+        )
         assert len(findings) == REDUNDANCY_FINDINGS_MAX
         assert coverage["omitted_beyond_cap"] == 30
         assert coverage["total_findings"] == REDUNDANCY_FINDINGS_MAX + 30
@@ -150,8 +157,7 @@ class TestTheFloorStaysADisplayThresholdAndSaysSo:
 
 class TestEveryFindingSaysHowWideItIs:
     def test_a_finding_carries_its_element_count(self):
-        findings, _ = detect_redundant_operations(
-            _records(1, elements=("a.bst", "b.bst", "c.bst")))
+        findings, _ = detect_redundant_operations(_records(1, elements=("a.bst", "b.bst", "c.bst")))
         assert findings[0]["element_count"] == 3
         # `UX-384` removed the list this used to be checked against;
         # the count is now the only place the width is published, which
@@ -169,7 +175,8 @@ class TestTheCommittedCaptureIsUnchangedByThis:
         findings = stored.get("redundant_operations") or []
         assert 0 < len(findings) <= REDUNDANCY_FINDINGS_MAX, (
             f"{len(findings)} findings - this fixture no longer discriminates "
-            f"between 'the cap did nothing' and 'the cap dropped everything'")
+            f"between 'the cap did nothing' and 'the cap dropped everything'"
+        )
 
     def test_the_fixture_is_why_the_floor_did_not_move(self):
         """Not a regression guard - a record of the measurement that
@@ -178,18 +185,17 @@ class TestTheCommittedCaptureIsUnchangedByThis:
         display floor, and `correlate` counts every one of them."""
         stored = json.loads(FIXTURE.read_text(encoding="utf-8"))
         findings = stored.get("redundant_operations") or []
-        below = [f for f in findings
-                 if f["max_element_duration_s"] < _REDUNDANCY_MIN_SECONDS]
+        below = [f for f in findings if f["max_element_duration_s"] < _REDUNDANCY_MIN_SECONDS]
         assert len(below) >= len(findings) // 2, (
             f"only {len(below)} of {len(findings)} findings are below the "
             f"display floor; the argument for keeping the floor in the "
             f"renderer rested on that being most of them, and it should be "
-            f"re-made rather than assumed")
+            f"re-made rather than assumed"
+        )
         source = (REPO / "bga/correlate.py").read_text(encoding="utf-8")
-        assert "redundancy_count" in source and (
-            'native_report.get("redundant_operations")' in source), (
-            "correlate no longer iterates every finding, which is half the "
-            "reason the floor stayed where it is")
+        assert "redundancy_count" in source and ('native_report.get("redundant_operations")' in source), (
+            "correlate no longer iterates every finding, which is half the reason the floor stayed where it is"
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

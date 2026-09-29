@@ -4,6 +4,7 @@
 without carrying the raw key lines. Pure - fed pasted `bst show` output,
 never a live binary.
 """
+
 from tools import bst_native_build_tracer as tracer
 
 _TWO_LINES = (
@@ -28,9 +29,7 @@ def test_many_lines_are_order_independent():
     """The two `bst show` runs this guards do not promise the same
     resolution order - only the same key set."""
     forward = tracer.hash_cache_key_lines(_TWO_LINES)
-    backward = tracer.hash_cache_key_lines(
-        "\n".join(reversed(_TWO_LINES.strip().splitlines())) + "\n"
-    )
+    backward = tracer.hash_cache_key_lines("\n".join(reversed(_TWO_LINES.strip().splitlines())) + "\n")
     assert forward == backward
     assert forward["elements"] == 2
 

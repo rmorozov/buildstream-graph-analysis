@@ -27,6 +27,7 @@ against `nx.descendants`/`nx.ancestors` below, and the interval sweep
 against `test_resource_saturation_timeline.py`'s naive transcription of
 the algorithm it replaced.
 """
+
 import pathlib
 import sys
 
@@ -104,15 +105,15 @@ class TestChokePointsQueryTheGraphOncePerEdge:
         assert queries <= budget, (
             f"{links} diamonds: {queries} adjacency queries for "
             f"{G.number_of_nodes()} nodes and {G.number_of_edges()} edges "
-            f"(budget {budget}) - the walk is following the nodes again")
+            f"(budget {budget}) - the walk is following the nodes again"
+        )
 
     def test_doubling_the_graph_does_not_quadruple_the_queries(self):
         """The clause the one above cannot supply: a budget scaled by
         `V+E` still passes if the constant merely happens to fit."""
         small = _bottlenecks(_diamond_chain(20))[1]
         large = _bottlenecks(_diamond_chain(40))[1]
-        assert large <= 2.5 * small, (
-            f"20 diamonds took {small} queries and 40 took {large}")
+        assert large <= 2.5 * small, f"20 diamonds took {small} queries and 40 took {large}"
 
     def test_the_queries_are_not_zero_and_the_signal_is_not_empty(self):
         """Non-vacuity: a bound met by doing nothing is not a bound."""
@@ -163,10 +164,12 @@ class _CountingSlices(list):
 
 def _task(uid, ready_us, start_us, finish_us):
     return NormalizedTask(
-        task_key=TaskKey(element_uid=uid, task_kind=TaskKind.BUILD,
-                         phase="EXECUTION"),
-        ready_us=ready_us, start_us=start_us, finish_us=finish_us,
-        resources=[PROCESS])
+        task_key=TaskKey(element_uid=uid, task_kind=TaskKind.BUILD, phase="EXECUTION"),
+        ready_us=ready_us,
+        start_us=start_us,
+        finish_us=finish_us,
+        resources=[PROCESS],
+    )
 
 
 def _one_short_saturation_then_noise(tail):
@@ -182,16 +185,14 @@ def _one_short_saturation_then_noise(tail):
 
 def _slices_inspected(tail):
     tasks = _one_short_saturation_then_noise(tail)
-    analyzer = BlameChainAnalyzer(
-        tasks, resource_capacity={PROCESS: 1}, max_jobs=1)
+    analyzer = BlameChainAnalyzer(tasks, resource_capacity={PROCESS: 1}, max_jobs=1)
     analyzer._build_resource_timelines()
     counters = []
     for timeline in analyzer._resource_timelines.values():
         counter = _CountingSlices(timeline.active_keys)
         object.__setattr__(timeline, "active_keys", counter)
         counters.append(counter)
-    saturated, holder_info = analyzer.classify_resource_wait(
-        tasks[0], {}, {PROCESS: 1}, 0, 10000)
+    saturated, holder_info = analyzer.classify_resource_wait(tasks[0], {}, {PROCESS: 1}, 0, 10000)
     return sum(c.reads for c in counters), saturated, holder_info
 
 
@@ -204,7 +205,8 @@ class TestTheGapSweepStopsWhereItsCallersStop:
         many = _slices_inspected(200)[0]
         assert few == many, (
             f"5 later change points inspected {few} slices and 200 "
-            f"inspected {many} - the sweep is covering the window again")
+            f"inspected {many} - the sweep is covering the window again"
+        )
 
     def test_the_count_is_a_small_constant(self):
         """The clause that keeps the one above from passing on a pair of
@@ -218,8 +220,7 @@ class TestTheGapSweepStopsWhereItsCallersStop:
         _reads, saturated, holder_info = _slices_inspected(200)
         assert saturated is True
         assert holder_info["explained_us"] == 10
-        assert list(holder_info["blocking_tasks"]) == [
-            "h.bst|BUILD|EXECUTION|0"]
+        assert list(holder_info["blocking_tasks"]) == ["h.bst|BUILD|EXECUTION|0"]
 
 
 def _resaturating_gap(runs):
@@ -241,8 +242,7 @@ class TestTheHolderMapIsBuiltOnlyForTheSegmentThatIsKept:
 
     def _built(self, runs):
         tasks = _resaturating_gap(runs)
-        analyzer = BlameChainAnalyzer(
-            tasks, resource_capacity={PROCESS: 1}, max_jobs=1)
+        analyzer = BlameChainAnalyzer(tasks, resource_capacity={PROCESS: 1}, max_jobs=1)
         analyzer._build_resource_timelines()
         built = []
         real = analyzer._build_holder_info
@@ -253,18 +253,17 @@ class TestTheHolderMapIsBuiltOnlyForTheSegmentThatIsKept:
 
         analyzer._build_holder_info = counting
         segments, info = analyzer._classify_wait_gap(tasks[0], 0, 10000)
-        resource = [s for s in segments
-                    if s[0] is AttributionCategory.RESOURCE_WAIT]
+        resource = [s for s in segments if s[0] is AttributionCategory.RESOURCE_WAIT]
         return built, resource, info
 
     def test_many_saturated_segments_build_one_holder_map(self):
         built, resource, _info = self._built(8)
         assert len(resource) > 1, (
-            f"the fixture produced {len(resource)} resource-wait segments, "
-            f"so it cannot tell the two behaviours apart")
+            f"the fixture produced {len(resource)} resource-wait segments, so it cannot tell the two behaviours apart"
+        )
         assert len(built) == 1, (
-            f"{len(resource)} resource-wait segments built {len(built)} "
-            f"holder maps; only the first is ever returned")
+            f"{len(resource)} resource-wait segments built {len(built)} holder maps; only the first is ever returned"
+        )
 
     def test_the_one_built_is_the_one_returned(self):
         """Non-vacuity: building none would satisfy nothing, and

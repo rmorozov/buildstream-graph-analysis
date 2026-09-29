@@ -4,6 +4,7 @@ own FIFO, following `cpu_busy_cores` and PSI at 250ms rather than
 drives `tick()` directly with a scripted `(busy_cores, psi)` series
 against a real FIFO, never the daemon thread.
 """
+
 import array
 import fcntl
 import json
@@ -27,12 +28,14 @@ def _controller(tmp_path, ceiling=4, capacity=4, psi_path=None, seed=None, **kwa
     # arg-count cap folded this into `psi_paths` - kept as a `psi_path`
     # kwarg here so every existing call site stays unchanged.
     psi_path = psi_path or str(tmp_path / "no-psi")
-    pc = tracer.PoolController(fd, ceiling, capacity=capacity,
-                               ledger_path=ledger,
-                               psi_paths={"cpu": psi_path,
-                                         "memory": str(tmp_path / "no-memory-psi"),
-                                         "seed": seed},
-                               **kwargs)
+    pc = tracer.PoolController(
+        fd,
+        ceiling,
+        capacity=capacity,
+        ledger_path=ledger,
+        psi_paths={"cpu": psi_path, "memory": str(tmp_path / "no-memory-psi"), "seed": seed},
+        **kwargs,
+    )
     return pc, path, fd, ledger
 
 
@@ -102,8 +105,7 @@ class TestTheTwoSampleHysteresisHoldsOnAnOscillatingSeries:
         for busy in series:
             pc.tick(busy_cores=busy)
         actions = {row["action"] for row in _rows(ledger)}
-        assert "add" not in actions, (
-            "the oscillation never held low for two consecutive samples")
+        assert "add" not in actions, "the oscillation never held low for two consecutive samples"
         pc.stop()
         tracer.close_jobserver(path, fd)
 
@@ -185,9 +187,9 @@ class TestStopActuallyWaitsForTheThread:
 
     def test_a_slow_tick_in_flight_is_still_caught_by_the_second_join(self, tmp_path):
         path, fd, tokens = tracer.open_jobserver(4, str(tmp_path))
-        pc = tracer.PoolController(fd, 4, capacity=4,
-                                   psi_paths={"cpu": str(tmp_path / "no-psi"),
-                                              "memory": str(tmp_path / "no-memory-psi")})
+        pc = tracer.PoolController(
+            fd, 4, capacity=4, psi_paths={"cpu": str(tmp_path / "no-psi"), "memory": str(tmp_path / "no-memory-psi")}
+        )
 
         def slow_fake_sample():
             time.sleep(1.5)  # longer than the first join (interval_s + 1.0 = 1.25s)
@@ -208,8 +210,9 @@ class TestAHostWithPSIReadsItsOwnFile:
 
     def test_the_hosts_avg10_over_the_bound_withdraws(self, tmp_path):
         psi = tmp_path / "pressure-cpu"
-        psi.write_text("some avg10=19.31 avg60=12.00 avg300=8.00 total=1\n"
-                       "full avg10=0.00 avg60=0.00 avg300=0.00 total=0\n")
+        psi.write_text(
+            "some avg10=19.31 avg60=12.00 avg300=8.00 total=1\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=0\n"
+        )
         pc, path, fd, ledger = _controller(tmp_path, psi_path=str(psi))
         assert pc.psi_present
         row = pc.tick(busy_cores=0.5)
@@ -226,12 +229,11 @@ class TestThePoolGrowsTowardTheMachineNotItsOpeningSeed:
 
     def test_ten_idle_ticks_grow_the_pool_from_a_zero_seed(self, tmp_path):
         from bga.cli import resolve_jobserver_ceiling
-        mode, ceiling, seed = resolve_jobserver_ceiling(
-            'auto', ['bst', 'build', '--builders', '16'], cpu_count=16)
+
+        mode, ceiling, seed = resolve_jobserver_ceiling('auto', ['bst', 'build', '--builders', '16'], cpu_count=16)
         assert (mode, ceiling, seed) == ('auto', 16, 0)
 
-        pc, path, fd, ledger = _controller(tmp_path, ceiling=ceiling,
-                                           capacity=ceiling, seed=seed)
+        pc, path, fd, ledger = _controller(tmp_path, ceiling=ceiling, capacity=ceiling, seed=seed)
         assert pc.pool == 0
         readings = [pc.tick(busy_cores=0.1)["pool"] for _ in range(10)]
         assert readings == sorted(readings), "never shrinks on an idle series"

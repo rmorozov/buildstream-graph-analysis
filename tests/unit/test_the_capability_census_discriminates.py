@@ -17,6 +17,7 @@ The four ways it could go quiet, and the clause for each:
 - one of the verdicts becomes unreachable, so the census has only one
   thing it can say.
 """
+
 import pathlib
 import shutil
 import sys
@@ -33,8 +34,8 @@ from tools import dev_plane_capability as capability
 #: Skipped rather than passed vacuously - the same gate every other
 #: module that builds the hook uses.
 needs_cc = pytest.mark.skipif(
-    shutil.which("cc") is None and shutil.which("gcc") is None,
-    reason="no C compiler on PATH")
+    shutil.which("cc") is None and shutil.which("gcc") is None, reason="no C compiler on PATH"
+)
 
 pytestmark = needs_cc
 
@@ -58,8 +59,7 @@ class TestTheProbeReallyMovesWhatItClaims:
         # Every one of these is a field the hook records, so the census
         # never judges it - which is exactly why they are the honest
         # test of whether the probe does anything at all.
-        assert {"ru_utime", "ru_maxrss", "ru_minflt", "ru_oublock",
-                "ru_nvcsw"} <= moved, sorted(moved)
+        assert {"ru_utime", "ru_maxrss", "ru_minflt", "ru_oublock", "ru_nvcsw"} <= moved, sorted(moved)
 
     def test_the_probe_reaches_the_block_layer(self, tmp_path):
         """`ru_inblock` is the one that needs `O_DIRECT`: a read served
@@ -71,11 +71,9 @@ class TestTheProbeReallyMovesWhatItClaims:
 
 
 class TestTheNameMapIsHeldToTheRecord:
-
     def test_a_map_claiming_a_key_no_record_carries_is_refused(self):
         with pytest.raises(SystemExit) as raised:
-            capability._check_map("probe", {"ru_utime": "cpu_seconds"},
-                                  {"utime", "stime"})
+            capability._check_map("probe", {"ru_utime": "cpu_seconds"}, {"utime", "stime"})
         assert "cpu_seconds" in str(raised.value)
 
     def test_the_shipped_map_passes_against_a_real_record(self, report):
@@ -83,25 +81,24 @@ class TestTheNameMapIsHeldToTheRecord:
         capability._check_map("plane 2", capability.RUSAGE_KEYS, carried)
 
     def test_no_recorded_field_is_ever_reported_a_gap(self, report):
-        recorded = {f for f, key in capability.RUSAGE_KEYS.items()
-                    if key is not None}
-        reported = {f for f, verdict, _d in report["plane2"]
-                    if verdict == "gap"}
+        recorded = {f for f, key in capability.RUSAGE_KEYS.items() if key is not None}
+        reported = {f for f, verdict, _d in report["plane2"] if verdict == "gap"}
         assert not recorded & reported, sorted(recorded & reported)
 
 
 class TestTheRecordKindsAreKindsAndNotPaths:
-
     def test_a_path_line_is_not_a_record_kind(self):
         """The `OPENS` record is followed by the paths it recorded, one
         per line. Reading the first token of every line called 35
         `.pyc` files Plane 2 record kinds on this module's first run."""
-        kinds = capability._kinds([
-            "START pid=1 element=a.bst cmd=/bin/sh",
-            "OPENS pid=1 element=a.bst unique=2 dropped=0 part=0",
-            "/usr/lib/python3.11/enum.py",
-            "/etc/hostname",
-        ])
+        kinds = capability._kinds(
+            [
+                "START pid=1 element=a.bst cmd=/bin/sh",
+                "OPENS pid=1 element=a.bst unique=2 dropped=0 part=0",
+                "/usr/lib/python3.11/enum.py",
+                "/etc/hostname",
+            ]
+        )
         assert sorted(kinds) == ["OPENS", "START"]
 
     def test_the_real_run_finds_the_three_the_hook_writes(self, report):
@@ -128,10 +125,10 @@ class TestBothVerdictsAreReachable:
             f"a gap is reported again. UX-487 closed the four the spine "
             f"could reach and declined `rchar`/`wchar`, so a new one is "
             f"either a field that stopped being recorded or a plane that "
-            f"grew a capability: {verdicts}")
+            f"grew a capability: {verdicts}"
+        )
 
-    def test_a_field_that_stops_being_recorded_comes_back_as_a_gap(
-            self, tmp_path, monkeypatch):
+    def test_a_field_that_stops_being_recorded_comes_back_as_a_gap(self, tmp_path, monkeypatch):
         """The discriminating half, and the reason the clause above can
         assert *no* gaps without going quiet. `minflt` is recorded, so
         the census says `recorded`; with the map no longer claiming a
@@ -140,11 +137,11 @@ class TestBothVerdictsAreReachable:
         patched[("stat", "minflt")] = None
         monkeypatch.setattr(capability, "PROC_KEYS", patched)
         after = capability.census(str(tmp_path))
-        gaps = {name for name, verdict, _d in (after["plane3"] or [])
-                if verdict == "gap"}
+        gaps = {name for name, verdict, _d in (after["plane3"] or []) if verdict == "gap"}
         assert gaps == {"/proc/<pid>/stat:minflt"}, (
             f"a field the record no longer carries was not reported as a "
-            f"gap, so the census cannot find one at all: {gaps}")
+            f"gap, so the census cannot find one at all: {gaps}"
+        )
 
     def test_the_hook_interposes_the_open_family_and_nothing_else(self, report):
         """What the hook can see about a process is what it interposes,
@@ -153,5 +150,4 @@ class TestBothVerdictsAreReachable:
         seventh arriving has to come and change this line - the
         capability side of the census is the half no emitted artifact
         states."""
-        assert report["interposed"] == ["chdir", "fchdir", "open", "open64",
-                                        "openat", "openat64"], report["interposed"]
+        assert report["interposed"] == ["chdir", "fchdir", "open", "open64", "openat", "openat64"], report["interposed"]

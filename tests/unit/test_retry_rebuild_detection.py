@@ -20,6 +20,7 @@ earlier historical run - the same signal `bga.floors.cold` already keys
 its historical duration lookups by (Part 15.2 priority 1), so no new
 ingest schema field was needed.
 """
+
 import json
 
 from bga import BuildEfficiencyAnalyzer
@@ -31,11 +32,14 @@ from bga.utilisation.detection import compute_rebuild_tasks, compute_retry_tasks
 def _task(uid, kind, phase, attempt, start_us=0, finish_us=10000):
     return NormalizedTask(
         task_key=TaskKey(element_uid=uid, task_kind=TaskKind(kind), phase=phase, attempt=attempt),
-        ready_us=start_us, start_us=start_us, finish_us=finish_us,
+        ready_us=start_us,
+        start_us=start_us,
+        finish_us=finish_us,
     )
 
 
 # --- Unit tests: compute_retry_tasks (pure function) ---
+
 
 def test_non_final_attempt_is_a_retry():
     tasks = [
@@ -78,6 +82,7 @@ def test_different_phase_is_a_separate_group():
 
 
 # --- Unit tests: compute_rebuild_tasks (pure function) ---
+
 
 def _graph(elements):
     return Graph(elements=[Element(uid=uid, cache_key=cache_key) for uid, cache_key in elements])
@@ -131,8 +136,11 @@ def test_non_build_task_is_never_a_rebuild():
 # --- End-to-end tests: wired through BuildEfficiencyAnalyzer ---
 
 _RUN_CONTEXT = {
-    "trace_epsilon_us": 1000, "wall_start_us": 0, "wall_end_us": 200000,
-    "max_jobs": 2, "resource_capacities": {"PROCESS": 2},
+    "trace_epsilon_us": 1000,
+    "wall_start_us": 0,
+    "wall_end_us": 200000,
+    "max_jobs": 2,
+    "resource_capacities": {"PROCESS": 2},
 }
 
 
@@ -151,8 +159,11 @@ def _write_run_dir(run_dir, elements, spans):
 
 def _span(uid, ts, dur, kind="BUILD", phase="BUILD", attempt=0):
     return {
-        "task_key": f"{uid}|{kind}|{phase}|{attempt}", "ts_us": ts, "dur_us": dur,
-        "resources": ["PROCESS"], "primary_resource": "PROCESS",
+        "task_key": f"{uid}|{kind}|{phase}|{attempt}",
+        "ts_us": ts,
+        "dur_us": dur,
+        "resources": ["PROCESS"],
+        "primary_resource": "PROCESS",
     }
 
 

@@ -30,6 +30,7 @@ implicit int-conversion dunders - passing one where the wrong wrapper
 silent substitution. Unwrap explicitly (.value) only where a plain
 value is genuinely needed.
 """
+
 from dataclasses import dataclass
 from typing import Optional, Union
 
@@ -41,6 +42,7 @@ class Certified:
     (int microseconds), or a derived ratio of certified quantities, e.g.
     efficiency_score = lb / total_duration_us (UX-02, a float 0.0-1.0) -
     still "proven, not guessed" even though it's not itself a duration."""
+
     value: Union[int, float]
 
 
@@ -49,6 +51,7 @@ class Advisory:
     """A value derived from historical/estimated data (Part 15 cold
     floor) - may be unresolved (value=None). Never a substitute for a
     Certified value."""
+
     value: Optional[int]
 
 
@@ -56,6 +59,7 @@ class Advisory:
 class Measured:
     """A value computed directly from this run's own observed trace
     data (Parts 11-13 attribution/occupancy)."""
+
     value: int
 
 

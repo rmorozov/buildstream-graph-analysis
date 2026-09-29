@@ -1,5 +1,6 @@
 """`UX-1109`: the bst jobs read nothing `test` produces, so none of them
 waits for it - not directly, and not through another job's `needs`."""
+
 import pathlib
 import sys
 

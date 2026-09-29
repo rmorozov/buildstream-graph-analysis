@@ -23,6 +23,7 @@ The formatting constants are here for the same reason: a terminal line
 that says "GB" divides by one number, named once, rather than by
 `1024 / 1024` written out at nine call sites.
 """
+
 from typing import Optional
 
 #: Bytes in a kibibyte, mebibyte, gibibyte. Binary, because that is

@@ -20,6 +20,7 @@ path. So the page asks for the headers - a `HEAD`, reading no trace
 bytes - at the moment the reader asks for the timeline, and picks the
 transport from `Content-Length`.
 """
+
 import json
 import os
 import re
@@ -133,17 +134,23 @@ REFUSED = "http://127.0.0.1:8000/"
 
 def _click(size, inline_max=INLINE_MAX, here=FETCHABLE):
     result = subprocess.run(
-        [node, "--input-type=module", "-e",
-         _HARNESS % {"size": size, "inline_max": inline_max,
-                     "here": json.dumps(here)}],
-        capture_output=True, text=True, cwd=REPO, timeout=90)
+        [
+            node,
+            "--input-type=module",
+            "-e",
+            _HARNESS % {"size": size, "inline_max": inline_max, "here": json.dumps(here)},
+        ],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=90,
+    )
     assert result.returncode == 0, result.stderr[-3000:]
     return json.loads(result.stdout.strip().splitlines()[-1])
 
 
 @needs_node
 class TestTheTransportIsChosenBySize:
-
     def test_a_big_trace_is_fetched_by_perfetto_not_carried(self):
         """The acceptance test's first clause. Over the threshold the
         page navigates the opened tab to the deep link, and **no byte of
@@ -175,8 +182,7 @@ class TestTheTransportIsChosenBySize:
         that and name both ways out - not open a tab onto a refusal.
         """
         out = _click(size=INLINE_MAX * 3, here=REFUSED)
-        assert out["navigated"] == [], (
-            "navigated to a deep link Perfetto's CSP will refuse")
+        assert out["navigated"] == [], "navigated to a deep link Perfetto's CSP will refuse"
         assert out["posted"] == 0, "posted a trace over the threshold"
         assert out["closed"] >= 1, "left a blank Perfetto tab open"
         bodies = [call for call in out["fetches"] if call["method"] != "HEAD"]
@@ -225,14 +231,11 @@ class TestTheTransportIsChosenBySize:
 
 
 class TestTheThresholdIsOneNumber:
-
-    def test_the_server_publishes_it_rather_than_the_page_repeating_it(
-            self, tmp_path):
+    def test_the_server_publishes_it_rather_than_the_page_repeating_it(self, tmp_path):
         from tools.bga_view import TRACE_BUDGET_B, serve
 
         run = tmp_path / "run"
-        shutil.copytree(os.path.join(REPO, "tests/fixtures/golden/mixed_task_kinds"),
-                        run)
+        shutil.copytree(os.path.join(REPO, "tests/fixtures/golden/mixed_task_kinds"), run)
         (run / "expected_output.json").unlink(missing_ok=True)
         httpd, _url = serve(str(run), port=0, with_trace=False)
         try:
@@ -244,35 +247,30 @@ class TestTheThresholdIsOneNumber:
     def test_the_page_keeps_no_copy_of_it(self):
         """Two copies of one number is how they drift. The viewer may
         name the field, and may not name the value."""
-        source = open(os.path.join(REPO, "bga/viewer/app.js"),
-                      encoding="utf-8").read()
+        source = open(os.path.join(REPO, "bga/viewer/app.js"), encoding="utf-8").read()
         assert "trace_inline_max_bytes" in source
-        wired = source[source.index("export function wireTheHandoff"):]
-        wired = wired[:wired.index("\n}\n")]
+        wired = source[source.index("export function wireTheHandoff") :]
+        wired = wired[: wired.index("\n}\n")]
         assert not re.search(r"\b4\s*\*\s*1024\s*\*\s*1024\b", wired), wired
         assert str(4 * 1024 * 1024) not in wired, wired
 
     def test_it_is_argued_where_it_is_defined(self):
-        source = open(os.path.join(REPO, "tools/bga_view.py"),
-                      encoding="utf-8").read()
-        head = source[:source.index("TRACE_BUDGET_B = ")]
-        reason = head[head.rindex("# The trace is the one part"):]
+        source = open(os.path.join(REPO, "tools/bga_view.py"), encoding="utf-8").read()
+        head = source[: source.index("TRACE_BUDGET_B = ")]
+        reason = head[head.rindex("# The trace is the one part") :]
         for word in ("postMessage", "data:", "UX-299", "4.2x"):
             assert word in reason, word
 
 
 class TestTheExportSaysWhatToRunInstead:
-
-    def test_an_over_threshold_export_carries_the_command_not_the_trace(
-            self, tmp_path, monkeypatch):
+    def test_an_over_threshold_export_carries_the_command_not_the_trace(self, tmp_path, monkeypatch):
         """The export half of the same threshold. A `data:` URL of
         gigabytes is not an attachment; the page says the size and names
         the command that serves it instead - the blast box's pattern."""
         import tools.bga_view as view
 
         run = tmp_path / "run"
-        shutil.copytree(os.path.join(REPO, "tests/fixtures/golden/mixed_task_kinds"),
-                        run)
+        shutil.copytree(os.path.join(REPO, "tests/fixtures/golden/mixed_task_kinds"), run)
         (run / "expected_output.json").unlink(missing_ok=True)
         # `UX-364` widened the export's seam from `trace_bytes` to
         # `trace_with_planes`, which returns the bytes *and* which
@@ -280,14 +278,14 @@ class TestTheExportSaysWhatToRunInstead:
         # delegates here; the export no longer calls it, so faking it
         # would fake nothing. Same blob, same threshold, same claims.
         monkeypatch.setattr(
-            view, "trace_with_planes",
+            view,
+            "trace_with_planes",
             # `UX-530`: and `planes`, because the export now renders
             # again narrowed before it refuses. This blob is over the
             # byte ceiling at either grain, so both steps refuse and the
             # claim below is the one it always was.
-            lambda _run, planes=None: (
-                b"\x1f\x8b" + b"x" * (view.TRACE_BUDGET_B * 2),
-                ["1", "2"], None, 0))
+            lambda _run, planes=None: (b"\x1f\x8b" + b"x" * (view.TRACE_BUDGET_B * 2), ["1", "2"], None, 0),
+        )
 
         path = tmp_path / "report.html"
         result = view.export(str(run), str(path))
@@ -295,8 +293,7 @@ class TestTheExportSaysWhatToRunInstead:
 
         assert result["over_budget"] is False
         assert 'id="bga-trace"' not in text, "the trace was inlined anyway"
-        payload = json.loads(
-            re.search(r'id="bga-run">(.*?)</script>', text, re.S).group(1))
+        payload = json.loads(re.search(r'id="bga-run">(.*?)</script>', text, re.S).group(1))
         assert payload["has_timeline"] is False
         assert "MiB" in payload["timeline_omitted"]
         recipe = payload["timeline_recipe"]
@@ -316,20 +313,22 @@ class TestTheExportSaysWhatToRunInstead:
             "[wrapper][2026-08-21 12:00:00,100] INFO: [00:00:00][aaaaaaaa][   build:work-a.bst] START Building\n"
             "[wrapper][2026-08-21 12:00:03,100] INFO: [00:00:03][aaaaaaaa][   build:work-a.bst] SUCCESS Building\n"
             "[wrapper][2026-08-21 12:00:03,200] INFO: Return code: 0\n",
-            encoding="utf-8")
-        shutil.copytree(os.path.join(REPO, "tests/fixtures/golden/mixed_task_kinds"),
-                        snapshot / "run")
+            encoding="utf-8",
+        )
+        shutil.copytree(os.path.join(REPO, "tests/fixtures/golden/mixed_task_kinds"), snapshot / "run")
         (snapshot / "run" / "expected_output.json").unlink(missing_ok=True)
         import gzip
+
         with gzip.open(snapshot / "plane2.log.gz", "wt", encoding="utf-8") as handle:
-            handle.write("START pid=101 ppid=1 ts=1000.000000 element=work-a.bst cmd=cc -c main.c\n"
-                         "END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c\n")
+            handle.write(
+                "START pid=101 ppid=1 ts=1000.000000 element=work-a.bst cmd=cc -c main.c\n"
+                "END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c\n"
+            )
 
         path = tmp_path / "small.html"
         export(str(snapshot / "run"), str(path))
         text = path.read_text(encoding="utf-8")
         assert 'id="bga-trace"' in text
-        payload = json.loads(
-            re.search(r'id="bga-run">(.*?)</script>', text, re.S).group(1))
+        payload = json.loads(re.search(r'id="bga-run">(.*?)</script>', text, re.S).group(1))
         assert payload["has_timeline"] is True
         assert "timeline_recipe" not in payload

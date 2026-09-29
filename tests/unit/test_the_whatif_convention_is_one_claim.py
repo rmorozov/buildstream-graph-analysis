@@ -30,6 +30,7 @@ at 72 columns, so any phrase long enough to matter can wrap and read as
 absent. A guard that repeated that mistake would report the convention
 missing on the day someone reflowed a paragraph.
 """
+
 import pathlib
 import re
 
@@ -84,18 +85,14 @@ class TestTheClaimTravelsWithTheNumber:
         """The convention is published with every answer, so a consumer
         that never reads a document still has it."""
         missing = [p for p in CLAIMS[claim] if p not in _convention()]
-        assert missing == [], (
-            f"`bga/whatif.py`'s CONVENTION no longer carries "
-            f"{claim!r}: {missing} absent")
+        assert missing == [], f"`bga/whatif.py`'s CONVENTION no longer carries {claim!r}: {missing} absent"
 
     @pytest.mark.parametrize("claim", sorted(CLAIMS))
     def test_the_guide_carries_it(self, claim):
         """And the reader who learns the command from the guide has it
         before they ever run it."""
         missing = [p for p in CLAIMS[claim] if p not in _guide_section()]
-        assert missing == [], (
-            f"docs/guides/cli.md's whatif section no longer carries "
-            f"{claim!r}: {missing} absent")
+        assert missing == [], f"docs/guides/cli.md's whatif section no longer carries {claim!r}: {missing} absent"
 
 
 class TestTheReasoningHasAHome:
@@ -106,15 +103,14 @@ class TestTheReasoningHasAHome:
     def _chapter(self):
         text = ARCHITECTURE.read_text(encoding="utf-8")
         marker = "## What a projection is, and why it is a bound"
-        assert marker in text, (
-            "architecture.md records no reasoning behind the what-if bound")
+        assert marker in text, "architecture.md records no reasoning behind the what-if bound"
         return _flat(text.split(marker, 1)[1].split("\n## ", 1)[0])
 
     def test_it_says_a_sum_is_wrong(self):
         chapter = self._chapter()
         assert "never a sum" in chapter or "not a sum" in chapter, (
-            "the chapter does not say the projection is not a sum of "
-            "per-element savings")
+            "the chapter does not say the projection is not a sum of per-element savings"
+        )
 
     def test_it_gives_both_directions(self):
         """One direction is a rule of thumb; two is the reason the
@@ -124,17 +120,15 @@ class TestTheReasoningHasAHome:
         chapter = self._chapter()
         for phrase in ("same chain", "different chains", "maximum"):
             assert phrase in chapter, (
-                f"the chapter omits {phrase!r} - it states one direction "
-                f"of the joint-saving arithmetic, not both")
+                f"the chapter omits {phrase!r} - it states one direction of the joint-saving arithmetic, not both"
+            )
 
     def test_it_is_measured_rather_than_asserted(self):
         """`UX-74`'s figures, because a claim about arithmetic that
         carries no numbers is the kind a reader has to take on faith."""
         chapter = self._chapter()
         for figure in ("1569.8", "2605.8"):
-            assert figure in chapter, (
-                f"the chapter argues the arithmetic without {figure}s, "
-                f"the measurement UX-74 made")
+            assert figure in chapter, f"the chapter argues the arithmetic without {figure}s, the measurement UX-74 made"
 
 
 class TestTheGuardDoesNotRepeatTheFilingsMistake:
@@ -143,8 +137,7 @@ class TestTheGuardDoesNotRepeatTheFilingsMistake:
         item was filed on - `git grep` for the phrase returned nothing
         while the guide carried it, hard-wrapped."""
         wrapped = "with nothing else assumed to change - an upper bound, not a\nforecast."
-        assert "upper bound, not a forecast" not in wrapped, (
-            "the fixture is no longer wrapped, so it tests nothing")
+        assert "upper bound, not a forecast" not in wrapped, "the fixture is no longer wrapped, so it tests nothing"
         assert "upper bound, not a forecast" in _flat(wrapped)
 
 

@@ -6,6 +6,7 @@ the listed codes are the registry's, `bga/cli.py`'s own constants are
 the registry's, and a bad flag really exits the code the row for
 invalid arguments carries.
 """
+
 import re
 import subprocess
 import sys
@@ -24,7 +25,7 @@ def _exit_code_rows() -> dict[int, str]:
     start = lines.index("## Exit Codes")
     rows: dict[int, str] = {}
     code = None
-    for line in lines[start + 1:]:
+    for line in lines[start + 1 :]:
         if line.startswith("## "):
             break
         m = _ROW.match(line)
@@ -69,7 +70,9 @@ def test_a_bad_flag_exits_the_code_the_row_for_invalid_arguments_carries(tmp_pat
 
     result = subprocess.run(
         [sys.executable, "-m", "bga.cli", "analyze", "--bogus", str(tmp_path)],
-        capture_output=True, text=True, cwd=REPO,
+        capture_output=True,
+        text=True,
+        cwd=REPO,
     )
     assert "unrecognized arguments: --bogus" in result.stderr
     assert result.returncode == documented, result.stderr

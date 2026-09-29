@@ -63,6 +63,7 @@ into the rail - and the group returns to **exactly** its resting
 height in the refused state, which is why the bounds below are
 unchanged rather than raised.
 """
+
 import json
 import pathlib
 import shutil
@@ -81,8 +82,7 @@ from pages import snapshot_copy
 
 chrome = find_chrome()
 needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
-needs_node = pytest.mark.skipif(shutil.which("node") is None,
-                                reason="node is not installed")
+needs_node = pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
 
 FIXTURE = REPO / "tests/fixtures/with_timeline/run"
 
@@ -150,7 +150,7 @@ def can_drive_a_page():
     asked in one place, is `UX-321`'s rule and it applies to the
     fixtures as much as to the clauses.
     """
-    if chrome is None or shutil.which("node") is None:    # pragma: no cover
+    if chrome is None or shutil.which("node") is None:  # pragma: no cover
         pytest.skip(NO_BROWSER)
 
 
@@ -165,8 +165,7 @@ def served(tmp_path_factory, can_drive_a_page):
     time.sleep(0.3)
     try:
         with Browser(chrome) as opened:
-            yield lambda w, h: json.loads(
-                opened.observe(url, MEASURE, width=w, height=h)["value"])
+            yield lambda w, h: json.loads(opened.observe(url, MEASURE, width=w, height=h)["value"])
     finally:
         httpd.shutdown()
 
@@ -227,8 +226,7 @@ def refused(tmp_path_factory, can_drive_a_page):
     time.sleep(0.3)
     try:
         with Browser(chrome) as opened:
-            yield lambda w, h: json.loads(
-                opened.observe(url, REFUSED, width=w, height=h)["value"])
+            yield lambda w, h: json.loads(opened.observe(url, REFUSED, width=w, height=h)["value"])
     finally:
         httpd.shutdown()
         httpd.server_close()
@@ -247,15 +245,15 @@ class TestTheRefusalIsBoundedToo:
         """
         seen = refused(width, height)
         assert not seen["hidden"], (
-            f"{width}x{height}: the hand-off did not refuse, so nothing "
-            f"below measures the refused state: {seen}")
+            f"{width}x{height}: the hand-off did not refuse, so nothing below measures the refused state: {seen}"
+        )
         assert seen["chars"] >= REFUSAL_MIN_CHARS, (
             f"{width}x{height}: the banner holds {seen['chars']} "
             f"characters, under the {REFUSAL_MIN_CHARS} this item measured "
-            f"- it is showing something shorter than the refusal")
+            f"- it is showing something shorter than the refusal"
+        )
 
-    def test_the_group_holds_its_resting_bound_while_refused(
-            self, refused, width, height):
+    def test_the_group_holds_its_resting_bound_while_refused(self, refused, width, height):
         """The third bullet of the item, and the reason the numbers in
         `BOUND_PX` did not move: the group is bounded in the mode *and*
         the state where it was largest, by the sentence leaving it
@@ -265,14 +263,14 @@ class TestTheRefusalIsBoundedToo:
             f"{width}x{height}: refused, the hand-off group is "
             f"{seen['group']['h']}px, over the {BOUND_PX[(width, height)]}px "
             f"the resting state is bounded at - the refusal is being drawn "
-            f"in the rail again")
+            f"in the rail again"
+        )
         share = 100.0 * seen["group"]["h"] / seen["rail"]["h"]
         assert share <= BOUND_SHARE[(width, height)], (
-            f"{width}x{height}: refused, {share:.1f}% of the rail, over "
-            f"{BOUND_SHARE[(width, height)]}%")
+            f"{width}x{height}: refused, {share:.1f}% of the rail, over {BOUND_SHARE[(width, height)]}%"
+        )
 
-    def test_the_sentence_is_not_written_into_the_rail(
-            self, refused, width, height):
+    def test_the_sentence_is_not_written_into_the_rail(self, refused, width, height):
         """Where it went, asserted structurally rather than by width.
 
         A width alone could be met by a banner inside the rail that
@@ -283,56 +281,55 @@ class TestTheRefusalIsBoundedToo:
         seen = refused(width, height)
         assert not seen["inTheRail"], (
             f"{width}x{height}: the refusal banner is inside nav.toc, so "
-            f"it is back in the rail's column whatever it measures")
+            f"it is back in the rail's column whatever it measures"
+        )
         assert seen["banner"]["w"] >= REFUSAL_MIN_W[(width, height)], (
             f"{width}x{height}: the banner is {seen['banner']['w']}px, "
             f"under the {REFUSAL_MIN_W[(width, height)]}px measured - it is "
-            f"in a narrower track than the content band")
+            f"in a narrower track than the content band"
+        )
 
-    def test_the_rail_says_nothing_it_has_no_room_for(
-            self, refused, width, height):
+    def test_the_rail_says_nothing_it_has_no_room_for(self, refused, width, height):
         """Exactly one of the two holds the state. Both would be the
         same sentence twice - `UX-371`, the page's repeated text - and
         the rail's copy is the one that does not fit."""
         seen = refused(width, height)
         assert seen["line"] == "", (
-            f"{width}x{height}: the rail's status line still carries "
-            f"{seen['line']!r} while the banner has the refusal")
+            f"{width}x{height}: the rail's status line still carries {seen['line']!r} while the banner has the refusal"
+        )
 
 
 @needs_browser
 @needs_node
 @pytest.mark.parametrize("width,height", sorted(BOUND_PX))
 class TestTheGroupIsBoundedWhereItIsLargest:
-
-    def test_the_served_page_really_unhides_a_fallback(
-            self, served, width, height):
+    def test_the_served_page_really_unhides_a_fallback(self, served, width, height):
         """The whole point. A run where neither fallback showed would
         make every bound below a measurement of the export, which is
         the defect this item is."""
         seen = served(width, height)
-        shown = [name for name, box in seen["routes"].items()
-                 if box and not box["hidden"] and box["h"] > 0]
+        shown = [name for name, box in seen["routes"].items() if box and not box["hidden"] and box["h"] > 0]
         assert shown, (
             f"neither fallback is visible served - this guard would then "
             f"be measuring the export, which is what it exists to stop: "
-            f"{seen['routes']}")
+            f"{seen['routes']}"
+        )
 
     def test_the_group_is_under_its_height_bound(self, served, width, height):
         seen = served(width, height)
         assert seen["group"]["h"] <= BOUND_PX[(width, height)], (
             f"{width}x{height}: the hand-off group is "
             f"{seen['group']['h']}px, over the {BOUND_PX[(width, height)]}px "
-            f"this item bounds it at")
+            f"this item bounds it at"
+        )
 
-    def test_the_group_is_under_its_share_of_the_rail(
-            self, served, width, height):
+    def test_the_group_is_under_its_share_of_the_rail(self, served, width, height):
         """The field report's own unit: how much of the rail it takes."""
         seen = served(width, height)
         share = 100.0 * seen["group"]["h"] / seen["rail"]["h"]
         assert share <= BOUND_SHARE[(width, height)], (
-            f"{width}x{height}: {share:.1f}% of the rail, over "
-            f"{BOUND_SHARE[(width, height)]}%")
+            f"{width}x{height}: {share:.1f}% of the rail, over {BOUND_SHARE[(width, height)]}%"
+        )
 
     def test_no_fallback_is_a_block_of_prose(self, served, width, height):
         """What the height is spent on, not just how much.
@@ -344,4 +341,5 @@ class TestTheGroupIsBoundedWhereItIsLargest:
         seen = served(width, height)
         blocks = set(seen["blocks"])
         assert not blocks & {"actions-fallback", "actions-download"}, (
-            f"{width}x{height}: a fallback renders as a block: {blocks}")
+            f"{width}x{height}: a fallback renders as a block: {blocks}"
+        )

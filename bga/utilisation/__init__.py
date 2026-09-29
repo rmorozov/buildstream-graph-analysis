@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 class CPUBucket(Enum):
     """CPU utilization buckets from Part 30.2."""
+
     USEFUL = "useful"
     IDLE_NO_TASKS = "idle_no_tasks"
     IDLE_UNDERPARALLEL = "idle_underparallel"
@@ -33,36 +34,39 @@ class CPUBucket(Enum):
 class CPUAccounting:
     """
     CPU accounting configuration from run-context/v9 (Part 32.1).
-    
+
     Contains information about CPU capacity and accounting method.
     """
+
     effective_cpus: Optional[float] = None
     cgroup_quota_us: Optional[int] = None  # CPU quota in microseconds per second
     cgroup_period_us: Optional[int] = None  # CPU period in microseconds
     accounting_method: Optional[str] = None  # "cgroup", "procfs", "estimated"
-    
+
 
 @dataclass
 class CPUInterval:
     """
     One interval of CPU utilization.
-    
+
     Represents CPU usage over a time span.
     """
+
     start_us: int
     end_us: int
     active_tasks: list[str]  # Task keys running in this interval
     cpu_usage_us: int  # CPU time consumed in this interval
     bucket: CPUBucket = CPUBucket.UNTRACKED
-    
+
 
 @dataclass
 class UtilizationResult:
     """
     Complete CPU utilization analysis result.
-    
+
     Implements the utilization axis from Part 30.
     """
+
     # Capacity metrics - None when no real CPU-accounting measurement
     # source is available (P1-33: `effective_cpus` used to fall back to a
     # fabricated 1.0/builders-derived value; None here means genuinely
@@ -180,13 +184,13 @@ class UtilizationResult:
 class UtilizationAnalyzer:
     """
     CPU utilization analyzer implementing Part 30 and M4.
-    
+
     Analyzes CPU usage patterns, detects oversubscription,
     and provides bucket-based attribution.
     """
-    
+
     RECONCILIATION_TOLERANCE_SHARE = 0.02  # Part 33.3: 2% tolerance
-    
+
     def __init__(
         self,
         cpu_accounting: Optional[CPUAccounting] = None,
@@ -244,27 +248,25 @@ class UtilizationAnalyzer:
         # effective_cpus - a scheduling parameter (builders) is still
         # never a valid source (P1-33's own rule, unchanged).
         self.cpu_accounting_available = self.effective_cpus is not None
-        self.capacity_cpu_us = (
-            int(self.effective_cpus * wall_clock_us) if self.cpu_accounting_available else None
-        )
-        
+        self.capacity_cpu_us = int(self.effective_cpus * wall_clock_us) if self.cpu_accounting_available else None
+
         # Analysis state
         self.intervals: list[CPUInterval] = []
         self._task_intervals: list[dict] = []
         self.buckets: dict[CPUBucket, int] = dict.fromkeys(CPUBucket, 0)
         self.max_observed_concurrency = 0
-        
+
         # Reconciliation state
         self.total_accounted_us = 0
         self.unaccounted_us = 0
         self.reconciliation_error_share = 0.0
-        
+
         # Idle/high utilization periods
-        
+
         # Oversubscription analysis
         self.potential_oversubscription = False
         self.oversubscription_evidence = "INSUFFICIENT_EVIDENCE"
-        
+
     def _compute_effective_cpus(self) -> tuple[Optional[float], Optional[str]]:
         """
         Compute effective CPU count (Part 30.1) and which real source it
@@ -299,8 +301,7 @@ class UtilizationAnalyzer:
             return self.cpu_accounting.effective_cpus, "measured"
 
         # Try to derive from cgroup quota
-        if (self.cpu_accounting.cgroup_quota_us is not None and
-            self.cpu_accounting.cgroup_period_us is not None):
+        if self.cpu_accounting.cgroup_quota_us is not None and self.cpu_accounting.cgroup_period_us is not None:
             quota = self.cpu_accounting.cgroup_quota_us
             period = self.cpu_accounting.cgroup_period_us
             if period > 0:
@@ -312,7 +313,7 @@ class UtilizationAnalyzer:
             return float(self.host_cpu_count), "detected_host_cpu_count"
 
         return None, None
-    
+
     def analyze(
         self,
         task_intervals: list[dict],
@@ -349,15 +350,15 @@ class UtilizationAnalyzer:
 
         # Compute bucket totals
         self._compute_bucket_totals()
-        
+
         # Check for oversubscription (Part 30.3)
         self._analyze_oversubscription(oversubscription_violation)
-        
+
         # Reconcile totals (Part 33.3)
         self._reconcile()
-        
+
         return self._build_result()
-    
+
     def _build_cpu_intervals(
         self,
         task_intervals: list[dict],
@@ -376,7 +377,7 @@ class UtilizationAnalyzer:
             start_us = interval.get("start_us", 0)
             end_us = interval.get("end_us", 0)
             cpu_usage_us = interval.get("cpu_usage_us", 0)
-            
+
             # Determine bucket
             if task_key in retry_tasks:
                 bucket = CPUBucket.WASTED_RETRY
@@ -384,7 +385,7 @@ class UtilizationAnalyzer:
                 bucket = CPUBucket.WASTED_REBUILD
             else:
                 bucket = CPUBucket.USEFUL
-            
+
             cpu_interval = CPUInterval(
                 start_us=start_us,
                 end_us=end_us,
@@ -393,20 +394,18 @@ class UtilizationAnalyzer:
                 bucket=bucket,
             )
             self.intervals.append(cpu_interval)
-            
+
             # Track max concurrency
             concurrency = len(interval.get("concurrent_tasks", [task_key]))
-            self.max_observed_concurrency = max(
-                self.max_observed_concurrency, concurrency
-            )
-    
+            self.max_observed_concurrency = max(self.max_observed_concurrency, concurrency)
+
     def _compute_bucket_totals(self) -> None:
         """Compute total CPU-microseconds per bucket."""
         self.buckets = dict.fromkeys(CPUBucket, 0)
-        
+
         for interval in self.intervals:
             self.buckets[interval.bucket] += interval.cpu_usage_us
-        
+
         # Add idle CPU time
         idle_cpu_us = self._compute_idle_cpu_time()
 
@@ -460,9 +459,7 @@ class UtilizationAnalyzer:
         if not pending_windows:
             return 0
 
-        running_windows = [
-            (i.start_us, i.end_us) for i in self.intervals if i.end_us > i.start_us
-        ]
+        running_windows = [(i.start_us, i.end_us) for i in self.intervals if i.end_us > i.start_us]
 
         # Boundaries come from the data, not from `[0, wall_clock_us]`:
         # task timestamps are absolute (real captures carry epoch
@@ -493,7 +490,7 @@ class UtilizationAnalyzer:
         # sweep marginally larger; capping keeps the bucket from
         # exceeding the idle it is a portion of.
         return int(min(underparallel_us, idle_cpu_us))
-    
+
     def _compute_idle_cpu_time(self) -> int:
         """
         Compute idle CPU time.
@@ -505,12 +502,10 @@ class UtilizationAnalyzer:
         """
         if not self.cpu_accounting_available:
             return 0
-        total_active_cpu = sum(
-            interval.cpu_usage_us for interval in self.intervals
-        )
+        total_active_cpu = sum(interval.cpu_usage_us for interval in self.intervals)
         idle_cpu_us = max(0, self.capacity_cpu_us - total_active_cpu)
         return idle_cpu_us
-    
+
     def _analyze_oversubscription(self, oversubscription_violation: Optional[dict] = None) -> None:
         """
         Analyze potential CPU oversubscription (Part 30.3).
@@ -580,7 +575,7 @@ class UtilizationAnalyzer:
         # If only configuration suggests oversubscription but no observed evidence
         if config_oversubscription and not observed_evidence:
             self.oversubscription_evidence = "LOW"
-    
+
     def _reconcile(self) -> None:
         """
         Reconcile CPU buckets with capacity (Part 33.3).
@@ -614,17 +609,17 @@ class UtilizationAnalyzer:
 
             if self.reconciliation_error_share > self.RECONCILIATION_TOLERANCE_SHARE:
                 logger.warning(
-                    "CPU reconciliation error %.2f%% exceeds %.2f%% tolerance "
-                    "(accounted=%dus, capacity=%dus)",
+                    "CPU reconciliation error %.2f%% exceeds %.2f%% tolerance (accounted=%dus, capacity=%dus)",
                     self.reconciliation_error_share * 100.0,
                     self.RECONCILIATION_TOLERANCE_SHARE * 100.0,
-                    self.total_accounted_us, self.capacity_cpu_us,
+                    self.total_accounted_us,
+                    self.capacity_cpu_us,
                 )
                 self.buckets[CPUBucket.UNTRACKED] = self.unaccounted_us
         else:
             self.reconciliation_error_share = 0.0
             self.unaccounted_us = 0
-    
+
     def _build_result(self) -> UtilizationResult:
         """Build the final UtilizationResult."""
         return UtilizationResult(

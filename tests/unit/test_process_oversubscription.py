@@ -9,6 +9,7 @@ Before this fix, neither the real native `--max-jobs` value nor the
 host's CPU core count was captured anywhere in run-context.json, so
 `bga` had no input data to even ask this question.
 """
+
 import json
 
 from bga import BuildEfficiencyAnalyzer
@@ -23,8 +24,13 @@ def _write_run_dir(tmp_path, name, run_context):
     }
     trace = {
         "spans": [
-            {"task_key": "a.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 1000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
+            {
+                "task_key": "a.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 1000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
         ],
         "phases": [],
     }
@@ -48,7 +54,9 @@ def _run_context(builders, native_max_jobs=None, host_cpu_count=None):
 
 def _analyze(tmp_path, name, builders, native_max_jobs=None, host_cpu_count=None):
     run_dir = _write_run_dir(
-        tmp_path, name, _run_context(builders, native_max_jobs, host_cpu_count),
+        tmp_path,
+        name,
+        _run_context(builders, native_max_jobs, host_cpu_count),
     )
     analyzer = BuildEfficiencyAnalyzer(run_dir)
     analyzer.load()

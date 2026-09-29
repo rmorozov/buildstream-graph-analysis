@@ -14,6 +14,7 @@ retry, following the same "real classifier, wired into the actual
 segment-construction path" pattern P1-01/P1-02/P1-20 established for
 RESOURCE_WAIT/SCHEDULER_WAIT.
 """
+
 import json
 
 from bga import analyze_run
@@ -36,6 +37,7 @@ def _analyzer(tasks):
 
 
 # --- _retry_predecessor: direct unit tests -----------------------------
+
 
 def test_retry_predecessor_found_for_second_attempt():
     attempt0 = _task("a.bst", TaskKind.BUILD, "BUILD", 0, 0, 0, 100000)
@@ -87,6 +89,7 @@ def test_retry_predecessor_picks_the_immediately_preceding_attempt():
 
 # --- _classify_wait_gap: fallback classification -----------------------
 
+
 def test_wait_gap_for_retry_task_defaults_to_retry_wait_not_dependency_wait():
     attempt0 = _task("a.bst", TaskKind.BUILD, "BUILD", 0, 0, 0, 100000)
     attempt1 = _task("a.bst", TaskKind.BUILD, "BUILD", 1, 100000, 150000, 200000)
@@ -110,17 +113,13 @@ def test_wait_gap_for_non_retry_task_still_defaults_to_dependency_wait():
 
 # --- End-to-end: full pipeline via analyze_run --------------------------
 
+
 def _write_run_dir(tmp_path, run_context, elements, dependencies, spans):
     run_dir = tmp_path / "run"
     run_dir.mkdir()
     graph = {
-        "elements": [
-            {"uid": uid, "requested_target": is_target}
-            for uid, is_target in elements
-        ],
-        "dependencies": [
-            {"predecessor": pred, "successor": succ} for pred, succ in dependencies
-        ],
+        "elements": [{"uid": uid, "requested_target": is_target} for uid, is_target in elements],
+        "dependencies": [{"predecessor": pred, "successor": succ} for pred, succ in dependencies],
     }
     trace = {"spans": spans, "phases": []}
     (run_dir / "run-context.json").write_text(json.dumps(run_context))
@@ -133,8 +132,12 @@ def _attribution_total(result):
     return sum(
         result.attribution.get(k, 0)
         for k in (
-            "execution_on_chain_us", "dependency_wait_us", "resource_wait_us",
-            "scheduler_wait_us", "idle_us", "retry_wait_us",
+            "execution_on_chain_us",
+            "dependency_wait_us",
+            "resource_wait_us",
+            "scheduler_wait_us",
+            "idle_us",
+            "retry_wait_us",
         )
     )
 
@@ -151,7 +154,9 @@ def test_end_to_end_retry_gap_produces_nonzero_retry_wait_and_identity_holds(tmp
     run_dir = _write_run_dir(
         tmp_path,
         run_context={
-            "trace_epsilon_us": 50000, "wall_start_us": 0, "wall_end_us": 200000,
+            "trace_epsilon_us": 50000,
+            "wall_start_us": 0,
+            "wall_end_us": 200000,
         },
         elements=[("a.bst", True)],
         dependencies=[],
@@ -176,7 +181,9 @@ def test_end_to_end_no_retries_produces_zero_retry_wait(tmp_path):
     run_dir = _write_run_dir(
         tmp_path,
         run_context={
-            "trace_epsilon_us": 50000, "wall_start_us": 0, "wall_end_us": 100000,
+            "trace_epsilon_us": 50000,
+            "wall_start_us": 0,
+            "wall_end_us": 100000,
         },
         elements=[("a.bst", False), ("b.bst", True)],
         dependencies=[("a.bst", "b.bst")],
@@ -202,7 +209,9 @@ def test_end_to_end_retry_attempt_execution_itself_appears_on_chain(tmp_path):
     run_dir = _write_run_dir(
         tmp_path,
         run_context={
-            "trace_epsilon_us": 50000, "wall_start_us": 0, "wall_end_us": 200000,
+            "trace_epsilon_us": 50000,
+            "wall_start_us": 0,
+            "wall_end_us": 200000,
         },
         elements=[("a.bst", True)],
         dependencies=[],

@@ -24,6 +24,7 @@ macro_micro (11)               33                                      0
 synthetic  (1,202)             26                                      0
 ```
 """
+
 import json
 import os
 import pathlib
@@ -44,8 +45,7 @@ needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 # and a sweep over whatever happens to be declared would pass on a
 # schema that described nothing.
 DESCRIBED = {
-    "bottleneck": ("choke_points", "high_fanin_elements",
-                   "high_fanout_elements"),
+    "bottleneck": ("choke_points", "high_fanin_elements", "high_fanout_elements"),
     "sensitivity": ("top_opportunities",),
     "batch_opportunities": ("serialized_pairs",),
 }
@@ -55,7 +55,11 @@ DESCRIBED = {
 def payload():
     done = subprocess.run(
         ["python", "-m", "bga.cli", "analyze", str(RUN), "--format", "json"],
-        capture_output=True, text=True, cwd=REPO, timeout=180)
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=180,
+    )
     assert done.returncode == 0, done.stderr[-2000:]
     return json.loads(done.stdout)
 
@@ -96,21 +100,26 @@ console.log(JSON.stringify({
 
 def _structural(payload):
     import tempfile
+
     scratch = tempfile.mkdtemp()
     try:
         run = pathlib.Path(scratch, "payload.json")
         run.write_text(json.dumps(payload), encoding="utf-8")
         doc = pathlib.Path(scratch, "schema.json")
-        doc.write_text(json.dumps(schemas.schema(schemas.ANALYZE)),
-                       encoding="utf-8")
+        doc.write_text(json.dumps(schemas.schema(schemas.ANALYZE)), encoding="utf-8")
         script = _HARNESS % {
             "app": (REPO / "tests/viewer.mjs").as_uri(),
-            "payload": json.dumps(str(run)), "schema": json.dumps(str(doc))}
-        done = subprocess.run([node, "--input-type=module", "-e", script],
-                              capture_output=True, text=True, cwd=REPO,
-                              timeout=120,
-                              env={**os.environ, "BGA_DOM_SHIM":
-                                   (REPO / "tests/dom_shim.mjs").as_uri()})
+            "payload": json.dumps(str(run)),
+            "schema": json.dumps(str(doc)),
+        }
+        done = subprocess.run(
+            [node, "--input-type=module", "-e", script],
+            capture_output=True,
+            text=True,
+            cwd=REPO,
+            timeout=120,
+            env={**os.environ, "BGA_DOM_SHIM": (REPO / "tests/dom_shim.mjs").as_uri()},
+        )
         assert done.returncode == 0, done.stderr[-3000:]
         return json.loads(done.stdout)
     finally:
@@ -124,8 +133,7 @@ class TestTheSchemaDescribesItsTuples:
         for block, fields in DESCRIBED.items():
             inside = properties.get(block) or {}
             for field in fields:
-                declared = ((inside.get("properties") or {}).get(field)
-                            or {}).get(schemas.COLUMNS)
+                declared = ((inside.get("properties") or {}).get(field) or {}).get(schemas.COLUMNS)
                 if not declared:
                     missing.append(f"{block}.{field}")
         assert missing == [], f"undeclared: {missing}"
@@ -140,8 +148,7 @@ class TestTheSchemaDescribesItsTuples:
         for block, fields in DESCRIBED.items():
             inside = properties.get(block) or {}
             for field in fields:
-                for column in (((inside.get("properties") or {}).get(field)
-                                or {}).get(schemas.COLUMNS) or []):
+                for column in ((inside.get("properties") or {}).get(field) or {}).get(schemas.COLUMNS) or []:
                     if not column.get("title"):
                         bare.append(f"{block}.{field}.{column.get('key')}")
         assert bare == [], f"column(s) with no title: {bare}"
@@ -154,8 +161,7 @@ class TestTheSchemaDescribesItsTuples:
         for block, fields in DESCRIBED.items():
             inside = properties.get(block) or {}
             for field in fields:
-                columns = (((inside.get("properties") or {}).get(field)
-                            or {}).get(schemas.COLUMNS) or [])
+                columns = ((inside.get("properties") or {}).get(field) or {}).get(schemas.COLUMNS) or []
                 roles = [c.get("role") for c in columns]
                 assert "element" in roles, f"{block}.{field} names no element"
 
@@ -164,8 +170,7 @@ class TestTheSchemaDescribesItsTuples:
 class TestTheBlockIsReachable:
     def test_the_section_has_links_out_of_it(self, payload):
         drawn = _structural(payload)
-        assert drawn["links_out"] > 0, (
-            "the graph-shape sections still carry no route to an element")
+        assert drawn["links_out"] > 0, "the graph-shape sections still carry no route to an element"
 
     def test_every_element_table_in_it_carries_the_route(self, payload):
         """Not "some link exists somewhere" - each element table earns
@@ -180,8 +185,7 @@ class TestTheBlockIsReachable:
     def test_no_header_names_a_position(self, payload):
         """`UX-290`'s acceptance. `#1`, `#2`, `C0` and `Key` name where a
         value sits in a data structure rather than what it measures."""
-        positional = [h for h in drawn_headers(payload)
-                      if h in ("#1", "#2", "#3", "C0", "C1", "Key")]
+        positional = [h for h in drawn_headers(payload) if h in ("#1", "#2", "#3", "C0", "C1", "Key")]
         assert positional == [], f"positional header(s): {positional}"
 
     def test_a_described_column_carries_its_description(self, payload):
@@ -191,7 +195,8 @@ class TestTheBlockIsReachable:
         titled = dict(drawn["described"])
         assert titled, "no column in those sections carries a tooltip"
         assert any("downstream" in text.lower() for text in titled.values()), (
-            f"the choke-point column's sentence is not among {titled}")
+            f"the choke-point column's sentence is not among {titled}"
+        )
 
 
 def drawn_headers(payload):

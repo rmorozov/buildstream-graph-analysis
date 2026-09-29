@@ -31,6 +31,7 @@ was dropped, which `TestNothingWasLostInTheReorder` is here to hold:
 the cheapest way to make a list open with an action is to delete the
 entries that are not one.
 """
+
 import pathlib
 import re
 import sys
@@ -79,15 +80,15 @@ class TestTheListOpensWithAnAction:
         assert severities[0] in ACTIONABLE, (
             f"{label} opens with {severities[0]!r} "
             f"({found[0].get('id')!r}) while {severities.count('high')} "
-            f"actionable finding(s) wait below it")
+            f"actionable finding(s) wait below it"
+        )
 
     def test_no_finding_disclaims_itself_above_an_action(self, label):
         """The sharper half of the same reading. `cache-hit-ratio` said
         of itself that a 0% hit ratio "is the intent rather than a
         finding" - and was the first thing in the list of findings."""
         found = _findings(label)
-        actions = [i for i, f in enumerate(found)
-                   if f.get("severity") in ACTIONABLE]
+        actions = [i for i, f in enumerate(found) if f.get("severity") in ACTIONABLE]
         if not actions:
             pytest.skip(f"{label} publishes no actionable finding")
         # Above the **first** action, not above every one. Several
@@ -103,7 +104,8 @@ class TestTheListOpensWithAnAction:
             assert index > actions[0], (
                 f"{label}: {finding.get('id')!r} says it is not a finding "
                 f"and sits at {index}, above the first action at "
-                f"{actions[0]}")
+                f"{actions[0]}"
+            )
 
 
 @pytest.mark.parametrize("label", sorted(pages.FIXTURES))
@@ -114,33 +116,31 @@ class TestASuperlativeNamesItsPopulation:
         measured and stops."""
         bad = []
         for finding in _findings(label):
-            title = (finding.get("title") or "")
+            title = finding.get("title") or ""
             lowered = title.lower()
             for word in SUPERLATIVES:
                 at = lowered.find(word)
                 if at < 0:
                     continue
-                rest = lowered[at + len(word):].lstrip()
+                rest = lowered[at + len(word) :].lstrip()
                 # What it is biggest *of* - the first word after the
                 # superlative, up to the colon that ends the label.
                 scope = rest.split(":")[0].strip()
                 if not scope or scope.split()[0] in UNSCOPED:
                     bad.append((finding.get("id"), title[:70]))
-        assert bad == [], (
-            f"{label}: superlative(s) naming no population: {bad}")
+        assert bad == [], f"{label}: superlative(s) naming no population: {bad}"
 
     def test_the_scoped_superlative_still_says_it(self, label):
         """The other direction, so the fix cannot be deleting the word.
         A report with a wait-category finding says which category won."""
         titles = [(f.get("id"), f.get("title") or "") for f in _findings(label)]
-        waits = [t for i, t in titles if i in ("wait-category",
-                                               "execution-bound")]
+        waits = [t for i, t in titles if i in ("wait-category", "execution-bound")]
         if not waits:
             pytest.skip(f"{label} publishes no wait-category finding")
         for title in waits:
             assert re.search(r"biggest wait category", title, re.I), (
-                f"{label}: the wait-category finding no longer says what it "
-                f"is the biggest of: {title!r}")
+                f"{label}: the wait-category finding no longer says what it is the biggest of: {title!r}"
+            )
 
 
 class TestNothingWasLostInTheReorder:
@@ -163,16 +163,18 @@ class TestNothingWasLostInTheReorder:
         blocking facts - if this run has any - stay above them."""
         found = _findings(label)
         order = {f.get("id"): i for i, f in enumerate(found)}
-        actions = [i for i, f in enumerate(found)
-                   if f.get("severity") in ACTIONABLE
-                   and f.get("id") not in ("build-failed", "failed-task-time")]
+        actions = [
+            i
+            for i, f in enumerate(found)
+            if f.get("severity") in ACTIONABLE and f.get("id") not in ("build-failed", "failed-task-time")
+        ]
         if not actions:
             pytest.skip(f"{label} publishes no actionable finding")
         for context in ("cache-hit-ratio", "confidence"):
             if context in order:
                 assert order[context] > min(actions), (
-                    f"{label}: {context!r} is at {order[context]}, above the "
-                    f"first action at {min(actions)}")
+                    f"{label}: {context!r} is at {order[context]}, above the first action at {min(actions)}"
+                )
 
     def test_a_failed_build_still_leads(self):
         """`UX-54`, which this item had to not break: a capture whose
@@ -189,9 +191,11 @@ class TestNothingWasLostInTheReorder:
         assert blocking < context, (
             "the run's blocking facts no longer precede its description; "
             "UX-54's failed build would be reported after the numbers it "
-            "invalidates")
+            "invalidates"
+        )
         assert "UX-54" in inspect.getsource(module._run_blocking_findings), (
-            "the blocking half no longer carries the reason it is first")
+            "the blocking half no longer carries the reason it is first"
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -17,6 +17,7 @@ means the trace cannot answer; an error means the question is malformed.
 A harness that reported them the same way would have told round 69 that
 fourteen questions were fine.
 """
+
 import json
 import os
 import subprocess
@@ -86,51 +87,52 @@ def trace(tmp_path):
 
 
 def run(stub, trace, mode, tmp_path, element=None):
-    argv = [sys.executable, str(TOOL), str(trace), "--format", "json",
-            "--fetch-into", str(tmp_path / "cache")]
+    argv = [sys.executable, str(TOOL), str(trace), "--format", "json", "--fetch-into", str(tmp_path / "cache")]
     if element:
         argv += ["--element", element]
     # The real environment, plus the stub ahead of it: the tool reads
     # the question library by running `node`, so a stripped PATH tests
     # nothing about the tool and everything about the fixture.
     done = subprocess.run(
-        argv, capture_output=True, text=True, cwd=REPO, timeout=300,
-        env={**os.environ, "PATH": f"{stub.parent}:{os.environ['PATH']}",
-             "STUB_MODE": mode, "BGA_TRACE_PROCESSOR": str(stub)})
-    assert done.stdout.strip(), (
-        f"the tool printed nothing; exit {done.returncode}, "
-        f"stderr: {done.stderr[-400:]}")
+        argv,
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=300,
+        env={
+            **os.environ,
+            "PATH": f"{stub.parent}:{os.environ['PATH']}",
+            "STUB_MODE": mode,
+            "BGA_TRACE_PROCESSOR": str(stub),
+        },
+    )
+    assert done.stdout.strip(), f"the tool printed nothing; exit {done.returncode}, stderr: {done.stderr[-400:]}"
     return done
 
 
 class TestEmptyAndBrokenAreDifferentFindings:
-    def test_a_question_that_answers_nothing_is_reported_empty(
-            self, stub, trace, tmp_path):
+    def test_a_question_that_answers_nothing_is_reported_empty(self, stub, trace, tmp_path):
         done = run(stub, trace, "empty", tmp_path)
         assert done.returncode == 0, done.stderr
         seen = json.loads(done.stdout)
-        assert seen["errors"] == [], (
-            f"an empty answer was reported as an error: {seen['errors']}")
+        assert seen["errors"] == [], f"an empty answer was reported as an error: {seen['errors']}"
         assert len(seen["empty"]) == seen["questions"], (
-            f"only {len(seen['empty'])} of {seen['questions']} reported empty")
+            f"only {len(seen['empty'])} of {seen['questions']} reported empty"
+        )
 
-    def test_a_question_the_reader_refuses_is_reported_broken(
-            self, stub, trace, tmp_path):
+    def test_a_question_the_reader_refuses_is_reported_broken(self, stub, trace, tmp_path):
         done = run(stub, trace, "error", tmp_path)
         seen = json.loads(done.stdout)
-        assert seen["empty"] == [], (
-            f"a refused query was reported as empty: {seen['empty']}")
+        assert seen["empty"] == [], f"a refused query was reported as empty: {seen['empty']}"
         assert len(seen["errors"]) == seen["questions"]
-        assert done.returncode == 1, (
-            "a refused query must fail the command; got "
-            f"{done.returncode}")
+        assert done.returncode == 1, f"a refused query must fail the command; got {done.returncode}"
 
     def test_the_two_do_not_share_an_exit_code(self, stub, trace, tmp_path):
         empty = run(stub, trace, "empty", tmp_path).returncode
         broken = run(stub, trace, "error", tmp_path).returncode
         assert empty != broken, (
-            f"empty and refused both exit {empty} - the distinction this "
-            f"tool exists to make is invisible to a caller")
+            f"empty and refused both exit {empty} - the distinction this tool exists to make is invisible to a caller"
+        )
 
 
 class TestTheQuestionsAreAskedOfThisCapture:
@@ -140,8 +142,7 @@ class TestTheQuestionsAreAskedOfThisCapture:
         assert "graph-levels" in ids and "peak-rss" in ids
         assert len(ids) == len(set(ids)) == seen["questions"]
 
-    def test_the_element_placeholder_is_filled_from_the_trace(
-            self, stub, trace, tmp_path):
+    def test_the_element_placeholder_is_filled_from_the_trace(self, stub, trace, tmp_path):
         """`UX-369`'s rule reaches the harness.
 
         The stub emits a `NO-SUBSTITUTION` row for any query still
@@ -150,12 +151,10 @@ class TestTheQuestionsAreAskedOfThisCapture:
         nothing.
         """
         seen = json.loads(run(stub, trace, "rows", tmp_path).stdout)
-        blank = [row["id"] for row in seen["results"]
-                 if (row["first"] or {}).get("element") == "NO-SUBSTITUTION"]
+        blank = [row["id"] for row in seen["results"] if (row["first"] or {}).get("element") == "NO-SUBSTITUTION"]
         assert not blank, f"asked with an unfilled placeholder: {blank}"
 
-    def test_the_pick_prefers_an_element_that_waited(
-            self, stub, trace, tmp_path):
+    def test_the_pick_prefers_an_element_that_waited(self, stub, trace, tmp_path):
         """Two of the three element-taking questions ask what it waited
         for, so the root - which waits for nothing - answers them empty
         however long it ran. Both wrong picks were made while writing
@@ -164,9 +163,9 @@ class TestTheQuestionsAreAskedOfThisCapture:
         seen = json.loads(run(stub, trace, "rows", tmp_path).stdout)
         assert seen["element"] == "core.bst", (
             f"picked {seen['element']!r}; a pick that ignores whether the "
-            f"element waited reports answerable questions as empty")
+            f"element waited reports answerable questions as empty"
+        )
 
     def test_an_explicit_element_wins(self, stub, trace, tmp_path):
-        seen = json.loads(
-            run(stub, trace, "rows", tmp_path, element="other.bst").stdout)
+        seen = json.loads(run(stub, trace, "rows", tmp_path, element="other.bst").stdout)
         assert seen["element"] == "other.bst"

@@ -14,6 +14,7 @@ one is drawn (exhibit grade), the sentence span itself otherwise. The
 two composed figures `views.js` draws directly (the compare band, the
 store trend) always carry a twin, so their route is always it.
 """
+
 import json
 import os
 import shutil
@@ -35,7 +36,8 @@ SHIM = str(REPO / "tests" / "dom_shim.mjs")
 
 
 def _js(body):
-    source = """
+    source = (
+        """
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
 globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
 _installDocument();
@@ -47,11 +49,17 @@ const all = (n, pred, out = []) => {
 };
 const text = (n) => !n ? "" : ((n.children ?? []).length
   ? (n._text ?? "") + n.children.map(text).join("") : (n._text ?? ""));
-""" + body
+"""
+        + body
+    )
     result = subprocess.run(
         [node, "--input-type=module", "-e", source],
-        capture_output=True, text=True, cwd=REPO, timeout=90,
-        env=dict(os.environ, BGA_DOM_SHIM=SHIM))
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=90,
+        env=dict(os.environ, BGA_DOM_SHIM=SHIM),
+    )
     return result
 
 
@@ -82,30 +90,38 @@ console.log(JSON.stringify({
 class TestEveryDrawingsBuilderNamesAndRoutesIt:
     """One call per shape, both grades - `drawings.js`'s five builders."""
 
-    @pytest.mark.parametrize("call,grade", [
-        ('sparkline([4, 1, 9, 3, 7], { unit: "level", grade: "GRADE" })',
-         "annotation"),
-        ('sparkline([4, 1, 9, 3, 7], { unit: "level", grade: "GRADE" })',
-         "exhibit"),
-        ('strip({ n: 11, min: 0, max: 100, deciles: { p50: 25 }, p95: 90 }, '
-         '{ grade: "GRADE" })', "annotation"),
-        ('strip({ n: 11, min: 0, max: 100, deciles: { p50: 25 }, p95: 90 }, '
-         '{ grade: "GRADE" })', "exhibit"),
-        ('columnStrip([3, 1, 9, 4, 2, 8, 5], { grade: "GRADE" })',
-         "annotation"),
-        ('decomposition([{ key: "a", label: "a", value: 3 }, '
-         '{ key: "b", label: "b", value: 1 }], '
-         '{ total: 4, grade: "GRADE" })', "annotation"),
-        ('decomposition([{ key: "a", label: "a", value: 3 }, '
-         '{ key: "b", label: "b", value: 1 }], '
-         '{ total: 4, grade: "GRADE" })', "exhibit"),
-        ('interval([{ key: "a", label: "a", value: 0.3 }, '
-         '{ key: "b", label: "b", value: 0.8 }], { grade: "GRADE" })',
-         "annotation"),
-        ('interval([{ key: "a", label: "a", value: 0.3 }, '
-         '{ key: "b", label: "b", value: 0.8 }], { grade: "GRADE" })',
-         "exhibit"),
-    ])
+    @pytest.mark.parametrize(
+        "call,grade",
+        [
+            ('sparkline([4, 1, 9, 3, 7], { unit: "level", grade: "GRADE" })', "annotation"),
+            ('sparkline([4, 1, 9, 3, 7], { unit: "level", grade: "GRADE" })', "exhibit"),
+            ('strip({ n: 11, min: 0, max: 100, deciles: { p50: 25 }, p95: 90 }, { grade: "GRADE" })', "annotation"),
+            ('strip({ n: 11, min: 0, max: 100, deciles: { p50: 25 }, p95: 90 }, { grade: "GRADE" })', "exhibit"),
+            ('columnStrip([3, 1, 9, 4, 2, 8, 5], { grade: "GRADE" })', "annotation"),
+            (
+                'decomposition([{ key: "a", label: "a", value: 3 }, '
+                '{ key: "b", label: "b", value: 1 }], '
+                '{ total: 4, grade: "GRADE" })',
+                "annotation",
+            ),
+            (
+                'decomposition([{ key: "a", label: "a", value: 3 }, '
+                '{ key: "b", label: "b", value: 1 }], '
+                '{ total: 4, grade: "GRADE" })',
+                "exhibit",
+            ),
+            (
+                'interval([{ key: "a", label: "a", value: 0.3 }, '
+                '{ key: "b", label: "b", value: 0.8 }], { grade: "GRADE" })',
+                "annotation",
+            ),
+            (
+                'interval([{ key: "a", label: "a", value: 0.3 }, '
+                '{ key: "b", label: "b", value: 0.8 }], { grade: "GRADE" })',
+                "exhibit",
+            ),
+        ],
+    )
     def test_the_name_is_the_sentence_and_the_route_resolves(self, call, grade):
         out = _ok(f"""
 const mod = await import("./bga/viewer/drawings.js");
@@ -152,29 +168,41 @@ class TestEveryPlottedValueReachesTheRoute:
     keeps (`stripTicks` drops labels that would collide), so the route
     has to carry the full set even where the sentence does not."""
 
-    @pytest.mark.parametrize("call,grade", [
-        ('sparkline([4, 1, 9, 3, 7], { unit: "level", grade: "GRADE" })',
-         "annotation"),
-        ('sparkline([4, 1, 9, 3, 7], { unit: "level", grade: "GRADE" })',
-         "exhibit"),
-        # A payload with nine deciles present: `stripTicks` keeps only
-        # the labels that fit, so the sentence (built from `labelled`)
-        # drops several of them even though `stripSvg` still ticks them.
-        ('strip({ n: 11, min: 0, max: 100, '
-         'deciles: { p10: 5, p20: 12, p30: 18, p40: 22, p50: 25, p60: 40, '
-         'p70: 55, p80: 70, p90: 85 }, p95: 90, p99: 97 }, '
-         '{ grade: "GRADE" })', "annotation"),
-        ('strip({ n: 11, min: 0, max: 100, '
-         'deciles: { p10: 5, p20: 12, p30: 18, p40: 22, p50: 25, p60: 40, '
-         'p70: 55, p80: 70, p90: 85 }, p95: 90, p99: 97 }, '
-         '{ grade: "GRADE" })', "exhibit"),
-        ('decomposition([{ key: "a", label: "a", value: 3 }, '
-         '{ key: "b", label: "b", value: 1 }], '
-         '{ total: 4, grade: "GRADE" })', "annotation"),
-        ('interval([{ key: "a", label: "a", value: 0.3 }, '
-         '{ key: "b", label: "b", value: 0.8 }], { grade: "GRADE" })',
-         "annotation"),
-    ])
+    @pytest.mark.parametrize(
+        "call,grade",
+        [
+            ('sparkline([4, 1, 9, 3, 7], { unit: "level", grade: "GRADE" })', "annotation"),
+            ('sparkline([4, 1, 9, 3, 7], { unit: "level", grade: "GRADE" })', "exhibit"),
+            # A payload with nine deciles present: `stripTicks` keeps only
+            # the labels that fit, so the sentence (built from `labelled`)
+            # drops several of them even though `stripSvg` still ticks them.
+            (
+                'strip({ n: 11, min: 0, max: 100, '
+                'deciles: { p10: 5, p20: 12, p30: 18, p40: 22, p50: 25, p60: 40, '
+                'p70: 55, p80: 70, p90: 85 }, p95: 90, p99: 97 }, '
+                '{ grade: "GRADE" })',
+                "annotation",
+            ),
+            (
+                'strip({ n: 11, min: 0, max: 100, '
+                'deciles: { p10: 5, p20: 12, p30: 18, p40: 22, p50: 25, p60: 40, '
+                'p70: 55, p80: 70, p90: 85 }, p95: 90, p99: 97 }, '
+                '{ grade: "GRADE" })',
+                "exhibit",
+            ),
+            (
+                'decomposition([{ key: "a", label: "a", value: 3 }, '
+                '{ key: "b", label: "b", value: 1 }], '
+                '{ total: 4, grade: "GRADE" })',
+                "annotation",
+            ),
+            (
+                'interval([{ key: "a", label: "a", value: 0.3 }, '
+                '{ key: "b", label: "b", value: 0.8 }], { grade: "GRADE" })',
+                "annotation",
+            ),
+        ],
+    )
     def test_every_drawn_mark_is_in_the_route(self, call, grade):
         out = _ok(f"""
 const mod = await import("./bga/viewer/drawings.js");
@@ -193,17 +221,26 @@ class TestElementHistorysSparklineNamesAndRoutesItself:
     node naming every run, so a middle point stays reachable."""
 
     def test_a_history_with_points_is_named_and_routed_to_every_run(self):
-        store = {"schema": "store/v1", "snapshots": [
-            {"stamp": "a", "verdict_kind": None,
-             "elements": [{"element_uid": "elt", "duration_us": 1_000_000,
-                          "on_critical_path": True}]},
-            {"stamp": "b", "verdict_kind": None,
-             "elements": [{"element_uid": "elt", "duration_us": 5_000_000,
-                          "on_critical_path": True}]},
-            {"stamp": "c", "verdict_kind": "regressed",
-             "elements": [{"element_uid": "elt", "duration_us": 2_000_000,
-                          "on_critical_path": False}]},
-        ]}
+        store = {
+            "schema": "store/v1",
+            "snapshots": [
+                {
+                    "stamp": "a",
+                    "verdict_kind": None,
+                    "elements": [{"element_uid": "elt", "duration_us": 1_000_000, "on_critical_path": True}],
+                },
+                {
+                    "stamp": "b",
+                    "verdict_kind": None,
+                    "elements": [{"element_uid": "elt", "duration_us": 5_000_000, "on_critical_path": True}],
+                },
+                {
+                    "stamp": "c",
+                    "verdict_kind": "regressed",
+                    "elements": [{"element_uid": "elt", "duration_us": 2_000_000, "on_critical_path": False}],
+                },
+            ],
+        }
         out = _ok(f"""
 const mod = await import("./tests/viewer.mjs");
 const block = mod.renderElementHistory({json.dumps(store)}, "elt", null);
@@ -235,11 +272,16 @@ class TestTheTwoComposedFiguresAlwaysHaveATwinAsTheirRoute:
     Both always carry a twin, exhibit-only in name alone."""
 
     def test_the_band_names_itself_and_routes_to_its_twin(self):
-        compare = {"baseline_band": {"band_low_us": 100, "band_high_us": 200,
-                                     "observed_low_us": 80,
-                                     "observed_high_us": 260,
-                                     "runs": [90, 150, 250]},
-                   "candidate": {"total_duration_us": 230}}
+        compare = {
+            "baseline_band": {
+                "band_low_us": 100,
+                "band_high_us": 200,
+                "observed_low_us": 80,
+                "observed_high_us": 260,
+                "runs": [90, 150, 250],
+            },
+            "candidate": {"total_duration_us": 230},
+        }
         out = _ok(f"""
 const mod = await import("./tests/viewer.mjs");
 const block = mod.renderBand({json.dumps(compare)});
@@ -258,17 +300,38 @@ console.log(JSON.stringify({{
         assert out["routeIsTwin"], out
 
     def test_the_store_trend_names_itself_and_routes_to_its_twin(self):
-        store = {"schema": "store/v1", "project": "/p", "count": 3,
-                 "total_bytes": 6,
-                 "snapshots": [
-                     {"stamp": "a", "bytes": 1, "alias": None, "has_run": True,
-                      "incomplete_reason": None, "total_duration_us": 1000},
-                     {"stamp": "b", "bytes": 2, "alias": "@prev",
-                      "has_run": True, "incomplete_reason": None,
-                      "total_duration_us": 3000},
-                     {"stamp": "c", "bytes": 3, "alias": "@last",
-                      "has_run": True, "incomplete_reason": None,
-                      "total_duration_us": 2000}]}
+        store = {
+            "schema": "store/v1",
+            "project": "/p",
+            "count": 3,
+            "total_bytes": 6,
+            "snapshots": [
+                {
+                    "stamp": "a",
+                    "bytes": 1,
+                    "alias": None,
+                    "has_run": True,
+                    "incomplete_reason": None,
+                    "total_duration_us": 1000,
+                },
+                {
+                    "stamp": "b",
+                    "bytes": 2,
+                    "alias": "@prev",
+                    "has_run": True,
+                    "incomplete_reason": None,
+                    "total_duration_us": 3000,
+                },
+                {
+                    "stamp": "c",
+                    "bytes": 3,
+                    "alias": "@last",
+                    "has_run": True,
+                    "incomplete_reason": None,
+                    "total_duration_us": 2000,
+                },
+            ],
+        }
         out = _ok(f"""
 const mod = await import("./tests/viewer.mjs");
 const block = mod.renderTrend({json.dumps(store)});
@@ -333,17 +396,17 @@ def _boot(run_dir, tmp):
     view.export(str(run), str(page))
     html = page.read_text(encoding="utf-8")
     module = tmp / "inline.mjs"
-    module.write_text(
-        view.inflated_module(html),
-        encoding="utf-8")
+    module.write_text(view.inflated_module(html), encoding="utf-8")
     probe = tmp / "probe.mjs"
-    probe.write_text(_probe_source().split("const report =", 1)[0] + _TAIL,
-                     encoding="utf-8")
+    probe.write_text(_probe_source().split("const report =", 1)[0] + _TAIL, encoding="utf-8")
     result = subprocess.run(
-        [node, str(probe)], capture_output=True, text=True, cwd=REPO,
+        [node, str(probe)],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
         timeout=180,
-        env=dict(os.environ, PAGE=str(page), MOD=str(module),
-                 PROTOCOL="file:", BGA_DOM_SHIM=SHIM))
+        env=dict(os.environ, PAGE=str(page), MOD=str(module), PROTOCOL="file:", BGA_DOM_SHIM=SHIM),
+    )
     assert result.returncode == 0, result.stderr[-4000:]
     out = json.loads(result.stdout)
     assert out["error"] is None, out["error"]

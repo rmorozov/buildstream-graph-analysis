@@ -18,6 +18,7 @@ three commands a reader runs in order.
 panel keeps the steps, the section becomes one link to it, and
 `follows_from` renders as the target section's own question.
 """
+
 import pathlib
 import sys
 
@@ -88,8 +89,9 @@ def read(browser, tmp_path_factory):
     """Both committed fixtures: `golden` publishes two steps and
     `macro_micro` three, so the link's count is read against two
     different populations rather than one."""
-    return {label: browser.measure(uri, _READ, 1440, 900)
-            for label, uri in pages.pages(tmp_path_factory, "u669").items()}
+    return {
+        label: browser.measure(uri, _READ, 1440, 900) for label, uri in pages.pages(tmp_path_factory, "u669").items()
+    }
 
 
 @pytest.fixture(scope="module")
@@ -118,7 +120,7 @@ class TestTheRunbookIsDeclaredAndNotSniffed:
         text = (REPO / "bga" / "viewer" / "format.js").read_text()
         assert 'export const RUNBOOK = "bga:runbook";' in text
         start = text.index("export function hintsOf(")
-        assert "RUNBOOK" in text[start:start + 600]
+        assert "RUNBOOK" in text[start : start + 600]
 
     def test_no_other_section_is_declared_a_runbook(self):
         """One shape, one member. `constraints` and `findings[].evidence`
@@ -126,16 +128,16 @@ class TestTheRunbookIsDeclaredAndNotSniffed:
         runnable - a second runbook would be a mapping, not a shape."""
         from bga import schemas
 
-        wearing = [key for key, hint in schemas._ANALYZE_HINTS.items()
-                   if isinstance(hint, dict) and hint.get(schemas.RUNBOOK)]
+        wearing = [
+            key for key, hint in schemas._ANALYZE_HINTS.items() if isinstance(hint, dict) and hint.get(schemas.RUNBOOK)
+        ]
         assert wearing == ["next_steps"]
 
 
 @needs_browser
 class TestTheSectionIsALinkAndNotASecondCopy:
     def test_the_section_holds_no_table(self, read):
-        assert {label: page["section"]["tables"] for label, page in read.items()} \
-            == {"golden": 0, "macro_micro": 0}
+        assert {label: page["section"]["tables"] for label, page in read.items()} == {"golden": 0, "macro_micro": 0}
 
     def test_the_section_lists_no_step(self, read):
         """Panel and section never both list `[data-step]`."""
@@ -147,10 +149,10 @@ class TestTheSectionIsALinkAndNotASecondCopy:
         """The label is pasted, not recomputed: a clause that built the
         sentence the way the renderer builds it would pass on two
         matching mistakes."""
-        assert {label: [one["text"] for one in page["section"]["links"]]
-                for label, page in read.items()} == {
+        assert {label: [one["text"] for one in page["section"]["links"]] for label, page in read.items()} == {
             "golden": ["2 steps, in the decision panel"],
-            "macro_micro": ["3 steps, in the decision panel"]}
+            "macro_micro": ["3 steps, in the decision panel"],
+        }
         for label, page in read.items():
             links = page["section"]["links"]
             assert [one["href"] for one in links] == ["#decision"], label
@@ -165,21 +167,18 @@ class TestTheSectionIsALinkAndNotASecondCopy:
         runbook - and so did counting `critical_path_detail`, which
         reaches this section through a chapter renderer instead.
         `provenance` is on both fixtures and goes through the branch."""
-        assert {label: page["control_table"] for label, page in read.items()} \
-            == {"golden": 1, "macro_micro": 1}
+        assert {label: page["control_table"] for label, page in read.items()} == {"golden": 1, "macro_micro": 1}
 
 
 @needs_browser
 class TestEachStepIsWhyThenCommandThenCitation:
     def test_the_panel_lists_every_published_step(self, read, declared):
         for label, page in read.items():
-            assert [step["id"] for step in page["panel"]["steps"]] \
-                == [step["id"] for step in declared[label]], label
+            assert [step["id"] for step in page["panel"]["steps"]] == [step["id"] for step in declared[label]], label
 
     def test_each_step_carries_exactly_one_command(self, read):
         for label, page in read.items():
-            assert [step["commands"] for step in page["panel"]["steps"]] \
-                == [1] * len(page["panel"]["steps"]), label
+            assert [step["commands"] for step in page["panel"]["steps"]] == [1] * len(page["panel"]["steps"]), label
 
     def test_each_step_carries_one_in_page_link_that_resolves(self, read):
         for label, page in read.items():

@@ -14,6 +14,7 @@ descending finds the nested rows, and reading the tbody's children misses
 the held ones. The merge is one family that answers both, and this file
 is where that is checked - the shape neither track had a fixture for.
 """
+
 import json
 import os
 import pathlib
@@ -33,7 +34,8 @@ needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 #: two readings produced a number.
 OUTER, INNER, SHOWN = 12, 5, 4
 
-_PROBE = r"""
+_PROBE = (
+    r"""
 const shim = await import(process.env.BGA_DOM_SHIM);
 shim.installDocument();
 const t = await import(process.env.BGA_TABLES);
@@ -82,17 +84,26 @@ out.afterTheBound = {
     td.getAttribute("data-raw")).filter((v) => v === "999").length,
 };
 console.log(JSON.stringify(out));
-""".replace("__OUTER__", str(OUTER)).replace("__INNER__", str(INNER)).replace("__SHOWN__", str(SHOWN))
+""".replace("__OUTER__", str(OUTER))
+    .replace("__INNER__", str(INNER))
+    .replace("__SHOWN__", str(SHOWN))
+)
 
 
 @pytest.fixture(scope="module")
 def probed():
     done = subprocess.run(
         [node, "--input-type=module", "-e", _PROBE],
-        capture_output=True, text=True, cwd=REPO, timeout=120,
-        env={**os.environ,
-             "BGA_DOM_SHIM": (REPO / "tests/dom_shim.mjs").as_uri(),
-             "BGA_TABLES": (REPO / "bga/viewer/tables.js").as_uri()})
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=120,
+        env={
+            **os.environ,
+            "BGA_DOM_SHIM": (REPO / "tests/dom_shim.mjs").as_uri(),
+            "BGA_TABLES": (REPO / "bga/viewer/tables.js").as_uri(),
+        },
+    )
     assert done.returncode == 0, done.stderr
     return json.loads(done.stdout)
 
@@ -100,7 +111,6 @@ def probed():
 @needs_node
 @pytest.mark.small
 class TestOneSelectorAnswersBothClaims:
-
     def test_the_nested_rows_are_never_this_tables_rows(self, probed):
         """`UX-532`. `querySelectorAll` would read
         OUTER * (1 + INNER) here."""

@@ -6,6 +6,7 @@ guards `compiler_safe_auth` (pure) and its `_jobserver_injection` call
 site (integration, through `build_shim_argv`), reusing
 `tests/unit/test_bwrap_shim.py`'s own fake-bwrap-with-make harness.
 """
+
 import os
 
 from tests.unit.test_bwrap_shim import _fake_bwrap_with_make, _fake_real_bwrap
@@ -17,26 +18,32 @@ from tools.native_trace.bwrap_shim import (
 
 BIND_DST = "/tmp/.bst-native-trace"
 _CMAKE_BST_ARGS = [
-    "--unshare-pid", "--dir", "core.bst", "--chdir", "core.bst",
-    "--setenv", "JOBS", "-j4", "sh", "-c", "cmake --build .",
+    "--unshare-pid",
+    "--dir",
+    "core.bst",
+    "--chdir",
+    "core.bst",
+    "--setenv",
+    "JOBS",
+    "-j4",
+    "sh",
+    "-c",
+    "cmake --build .",
 ]
 
 
 # --- pure unit: compiler_safe_auth ------------------------------------------
 
+
 def test_an_fd_auth_with_no_sub_4_4_make_is_rewritten_to_fifo():
-    safe = compiler_safe_auth(
-        "--jobserver-auth=7,7", "/tmp/.bst-native-trace/jobserver",
-        make_below_44=False)
+    safe = compiler_safe_auth("--jobserver-auth=7,7", "/tmp/.bst-native-trace/jobserver", make_below_44=False)
 
     assert safe == "--jobserver-auth=fifo:/tmp/.bst-native-trace/jobserver"
     assert "7,7" not in safe
 
 
 def test_an_fd_auth_with_a_sub_4_4_make_is_scrubbed():
-    safe = compiler_safe_auth(
-        "--jobserver-auth=7,7", "/tmp/.bst-native-trace/jobserver",
-        make_below_44=True)
+    safe = compiler_safe_auth("--jobserver-auth=7,7", "/tmp/.bst-native-trace/jobserver", make_below_44=True)
 
     assert safe is None
 
@@ -44,8 +51,8 @@ def test_an_fd_auth_with_a_sub_4_4_make_is_scrubbed():
 def test_a_fifo_auth_stands_whatever_make_below_44_says():
     for make_below_44 in (True, False):
         safe = compiler_safe_auth(
-            "--jobserver-auth=fifo:/tmp/.bst-native-trace/jobserver",
-            "/tmp/.bst-native-trace/jobserver", make_below_44)
+            "--jobserver-auth=fifo:/tmp/.bst-native-trace/jobserver", "/tmp/.bst-native-trace/jobserver", make_below_44
+        )
 
         assert safe == "--jobserver-auth=fifo:/tmp/.bst-native-trace/jobserver"
 
@@ -56,6 +63,7 @@ def test_a_fifo_auth_stands_whatever_make_below_44_says():
 # would have been opened from (`open_jobserver_fd`) - the recovery
 # channel `_compiler_safe_makeflags` falls back to once the fd style has
 # already consumed the FIFO entry out of `pool`.
+
 
 def _fake_bwrap_make_absent(path, marker):
     """`make --version` fails (exit 127) - no sandbox make at all, the
@@ -73,12 +81,10 @@ def _makeflags_value(argv):
 def _setenv_values(argv, name):
     """Every value bga's argv sets `name` to, in order (bwrap takes the
     last). `["-j4", ""]` means the recipe's own JOBS then bga's override."""
-    return [argv[i + 2] for i in range(len(argv) - 2)
-            if argv[i] == "--setenv" and argv[i + 1] == name]
+    return [argv[i + 2] for i in range(len(argv) - 2) if argv[i] == "--setenv" and argv[i + 1] == name]
 
 
-def _build_cmake_with_fd(real_bwrap, tmp_path, monkeypatch, element_kind="cmake",
-                         **extra):
+def _build_cmake_with_fd(real_bwrap, tmp_path, monkeypatch, element_kind="cmake", **extra):
     bind_src = str(tmp_path / "host-trace-dir")
     os.makedirs(bind_src, exist_ok=True)
     jobserver_path = os.path.join(bind_src, "jobserver")
@@ -86,10 +92,16 @@ def _build_cmake_with_fd(real_bwrap, tmp_path, monkeypatch, element_kind="cmake"
     read_fd, write_fd = os.pipe()
     try:
         argv = build_shim_argv(
-            real_bwrap=real_bwrap, bst_args=_CMAKE_BST_ARGS,
-            bind_src=bind_src, bind_dst=BIND_DST,
-            preload_so=f"{BIND_DST}/hook.so", trace_log=f"{BIND_DST}/trace.log",
-            jobserver_fd=read_fd, element_kind=element_kind, **extra)
+            real_bwrap=real_bwrap,
+            bst_args=_CMAKE_BST_ARGS,
+            bind_src=bind_src,
+            bind_dst=BIND_DST,
+            preload_so=f"{BIND_DST}/hook.so",
+            trace_log=f"{BIND_DST}/trace.log",
+            jobserver_fd=read_fd,
+            element_kind=element_kind,
+            **extra,
+        )
         return argv, read_fd
     finally:
         os.close(write_fd)
@@ -111,8 +123,7 @@ def test_cmake_fd_with_make_absent_is_rewritten_to_fifo(tmp_path, monkeypatch):
 
 
 def test_cmake_fd_with_make_4_4_is_rewritten_to_fifo(tmp_path, monkeypatch):
-    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker",
-                                 BIND_DST, "4.4")
+    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker", BIND_DST, "4.4")
 
     argv, read_fd = _build_cmake_with_fd(fake, tmp_path, monkeypatch)
     try:
@@ -123,8 +134,7 @@ def test_cmake_fd_with_make_4_4_is_rewritten_to_fifo(tmp_path, monkeypatch):
         os.close(read_fd)
 
 
-def test_cmake_fd_with_make_4_3_keeps_the_auth_without_the_flto_shims(
-        tmp_path, monkeypatch):
+def test_cmake_fd_with_make_4_3_keeps_the_auth_without_the_flto_shims(tmp_path, monkeypatch):
     """UX-913 replaced the scrub this class used to assert. `make` is the
     MAKEFLAGS consumer here and a direct child, so the fd is valid for it
     and the auth stands, with `JOBS` emptied (a jobserver survives to
@@ -133,12 +143,10 @@ def test_cmake_fd_with_make_4_3_keeps_the_auth_without_the_flto_shims(
     `examples/stage_cpp_toolchain.sh:36` does not stage - mounting them
     for every cmake element failed `examples/06` with exit 255 (run
     35610762079). An element that also drives LTO takes the override."""
-    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker",
-                                 BIND_DST, "4.3")
+    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker", BIND_DST, "4.3")
     wrapper_dir = str(tmp_path / "wrappers")
 
-    argv, read_fd = _build_cmake_with_fd(
-        fake, tmp_path, monkeypatch, wrapper_dir=wrapper_dir)
+    argv, read_fd = _build_cmake_with_fd(fake, tmp_path, monkeypatch, wrapper_dir=wrapper_dir)
     try:
         assert _makeflags_value(argv) == f"--jobserver-auth={read_fd},{read_fd}"
         assert "--ro-bind" in argv
@@ -149,15 +157,13 @@ def test_cmake_fd_with_make_4_3_keeps_the_auth_without_the_flto_shims(
         os.close(read_fd)
 
 
-def test_cmake_fd_with_make_4_3_and_no_wrapper_dir_still_keeps_the_auth(
-        tmp_path, monkeypatch):
+def test_cmake_fd_with_make_4_3_and_no_wrapper_dir_still_keeps_the_auth(tmp_path, monkeypatch):
     """The boundary the class above hides: with no wrapper directory to
     mount there are no shims, and the auth still stands. That is the
     honest reading - a capture with no wrapper directory has no LTO
     defusal, which `UX-884`'s row owns, not a reason to take make's
     jobserver away."""
-    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker",
-                                 BIND_DST, "4.3")
+    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker", BIND_DST, "4.3")
 
     argv, read_fd = _build_cmake_with_fd(fake, tmp_path, monkeypatch)
     try:
@@ -171,8 +177,7 @@ def test_cmake_fifo_style_passes_through_unchanged(tmp_path, monkeypatch):
     """The auth is already `fifo:` (no downgrade fired, e.g. sandbox make
     stayed 4.4) - `compiler_safe_auth`'s own no-op branch, reached
     through the real call site rather than asserted in isolation."""
-    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker",
-                                 BIND_DST, "4.4")
+    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker", BIND_DST, "4.4")
     bind_src = str(tmp_path / "host-trace-dir")
     os.makedirs(bind_src)
     fifo_path = os.path.join(bind_src, "jobserver")
@@ -180,25 +185,29 @@ def test_cmake_fifo_style_passes_through_unchanged(tmp_path, monkeypatch):
     monkeypatch.delenv("BST_TRACE_JOBSERVER", raising=False)
 
     argv = build_shim_argv(
-        real_bwrap=fake, bst_args=_CMAKE_BST_ARGS,
-        bind_src=bind_src, bind_dst=BIND_DST,
-        preload_so=f"{BIND_DST}/hook.so", trace_log=f"{BIND_DST}/trace.log",
-        jobserver_fifo=fifo_path, element_kind="cmake")
+        real_bwrap=fake,
+        bst_args=_CMAKE_BST_ARGS,
+        bind_src=bind_src,
+        bind_dst=BIND_DST,
+        preload_so=f"{BIND_DST}/hook.so",
+        trace_log=f"{BIND_DST}/trace.log",
+        jobserver_fifo=fifo_path,
+        element_kind="cmake",
+    )
 
     assert _makeflags_value(argv) == f"--jobserver-auth=fifo:{BIND_DST}/jobserver"
 
 
 # --- one input class for cargo ----------------------------------------------
 
+
 def test_cargo_fd_with_make_4_3_is_also_scrubbed(tmp_path, monkeypatch):
     """UX-878's Out of Scope: cargo's own jobserver client is unverified
     in the field, so it gets the same conservative policy as cmake/meson
     - locked here rather than widened without a live check."""
-    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker",
-                                 BIND_DST, "4.3")
+    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker", BIND_DST, "4.3")
 
-    argv, read_fd = _build_cmake_with_fd(fake, tmp_path, monkeypatch,
-                                         element_kind="cargo")
+    argv, read_fd = _build_cmake_with_fd(fake, tmp_path, monkeypatch, element_kind="cargo")
     try:
         assert "MAKEFLAGS" not in argv
         assert not any("--jobserver-auth" in tok for tok in argv)
@@ -215,6 +224,7 @@ def test_cargo_fd_with_make_4_3_is_also_scrubbed(tmp_path, monkeypatch):
 # `BST_TRACE_PROXY_DIR` + the element rather than fall through to the
 # *global* `BST_TRACE_JOBSERVER`, a different FIFO the proxy exists
 # specifically not to be.
+
 
 def _build_cmake_with_proxy(real_bwrap, tmp_path, monkeypatch, **extra):
     """A proxy active in `fd` style (`BST_TRACE_JOBSERVER_AUTH=fd`, the
@@ -234,23 +244,27 @@ def _build_cmake_with_proxy(real_bwrap, tmp_path, monkeypatch, **extra):
     monkeypatch.setenv("BST_TRACE_JOBSERVER", global_fifo_path)
 
     proxy_fd, proxy_fifo = _resolve_proxy_auth(proxy_fifo_path)
-    assert proxy_fifo is None and proxy_fd is not None, (
-        "fd style discards the path - the exact gap this test guards")
+    assert proxy_fifo is None and proxy_fd is not None, "fd style discards the path - the exact gap this test guards"
     try:
         argv = build_shim_argv(
-            real_bwrap=real_bwrap, bst_args=_CMAKE_BST_ARGS,
-            bind_src=bind_src, bind_dst=BIND_DST,
-            preload_so=f"{BIND_DST}/hook.so", trace_log=f"{BIND_DST}/trace.log",
-            proxy_fd=proxy_fd, proxy_fifo=proxy_fifo, element_kind="cmake", **extra)
+            real_bwrap=real_bwrap,
+            bst_args=_CMAKE_BST_ARGS,
+            bind_src=bind_src,
+            bind_dst=BIND_DST,
+            preload_so=f"{BIND_DST}/hook.so",
+            trace_log=f"{BIND_DST}/trace.log",
+            proxy_fd=proxy_fd,
+            proxy_fifo=proxy_fifo,
+            element_kind="cmake",
+            **extra,
+        )
         return argv
     finally:
         os.close(proxy_fd)
 
 
-def test_cmake_proxy_under_fd_style_rewrites_to_the_proxys_own_fifo(
-        tmp_path, monkeypatch):
-    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker",
-                                 BIND_DST, "4.4")
+def test_cmake_proxy_under_fd_style_rewrites_to_the_proxys_own_fifo(tmp_path, monkeypatch):
+    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker", BIND_DST, "4.4")
 
     argv = _build_cmake_with_proxy(fake, tmp_path, monkeypatch)
 
@@ -259,12 +273,10 @@ def test_cmake_proxy_under_fd_style_rewrites_to_the_proxys_own_fifo(
     assert "global-jobserver" not in value
 
 
-def test_cmake_proxy_under_fd_style_with_sub_4_4_make_keeps_the_proxy_auth(
-        tmp_path, monkeypatch):
+def test_cmake_proxy_under_fd_style_with_sub_4_4_make_keeps_the_proxy_auth(tmp_path, monkeypatch):
     """UX-913 on the proxy path: the element must keep the *proxy's* own
     fd, not fall back to the global FIFO the proxy exists not to be."""
-    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker",
-                                 BIND_DST, "4.3")
+    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker", BIND_DST, "4.3")
 
     argv = _build_cmake_with_proxy(fake, tmp_path, monkeypatch)
 
@@ -275,13 +287,13 @@ def test_cmake_proxy_under_fd_style_with_sub_4_4_make_keeps_the_proxy_auth(
 
 # --- non-regression: a pure make/autotools element is untouched ------------
 
+
 def test_a_make_kind_element_keeps_its_raw_fd_auth(tmp_path, monkeypatch):
     """UX-874's own narrowing tests guard the downgrade itself; this
     guards that UX-878's new layer never reaches a `make`-kind element at
     all - its MAKEFLAGS consumer is make itself, a direct child, for
     which the fd is valid (Required Fix)."""
-    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker",
-                                 BIND_DST, "4.3")
+    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker", BIND_DST, "4.3")
     bind_src = str(tmp_path / "host-trace-dir")
     os.makedirs(bind_src, exist_ok=True)
     monkeypatch.setenv("BST_TRACE_JOBSERVER", os.path.join(bind_src, "jobserver"))
@@ -289,11 +301,14 @@ def test_a_make_kind_element_keeps_its_raw_fd_auth(tmp_path, monkeypatch):
     try:
         argv = build_shim_argv(
             real_bwrap=fake,
-            bst_args=["--unshare-pid", "--dir", "core.bst", "--chdir", "core.bst",
-                     "sh", "-c", "make"],
-            bind_src=bind_src, bind_dst=BIND_DST,
-            preload_so=f"{BIND_DST}/hook.so", trace_log=f"{BIND_DST}/trace.log",
-            jobserver_fd=read_fd, element_kind="make")
+            bst_args=["--unshare-pid", "--dir", "core.bst", "--chdir", "core.bst", "sh", "-c", "make"],
+            bind_src=bind_src,
+            bind_dst=BIND_DST,
+            preload_so=f"{BIND_DST}/hook.so",
+            trace_log=f"{BIND_DST}/trace.log",
+            jobserver_fd=read_fd,
+            element_kind="make",
+        )
 
         value = _makeflags_value(argv)
         assert value == f"--jobserver-auth={read_fd},{read_fd}"

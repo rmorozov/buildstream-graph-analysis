@@ -26,6 +26,7 @@ to notice the prose - the population is the module's own `*_BUDGET*`
 attributes, read from the imported module rather than from its text, so
 a constant added with any spelling is in it.
 """
+
 import pathlib
 import re
 import sys
@@ -60,8 +61,7 @@ def _table_rows():
     """
     text = CLI.read_text(encoding="utf-8")
     body = text.split("Four ceilings", 1)[1].split("\n\n", 3)[1]
-    return {match.group(1): match.group(0)
-            for match in re.finditer(r"^\| `(\w+)` \|.*$", body, re.M)}
+    return {match.group(1): match.group(0) for match in re.finditer(r"^\| `(\w+)` \|.*$", body, re.M)}
 
 
 def test_every_budget_constant_is_declared_a_ceiling():
@@ -77,7 +77,8 @@ def test_every_budget_constant_is_declared_a_ceiling():
     assert undeclared == [], (
         f"bound(s) this module exports that `CEILINGS` does not declare: "
         f"{undeclared}. Every bound on the hand-off has to be in that "
-        f"tuple, because the reader-facing table is checked against it")
+        f"tuple, because the reader-facing table is checked against it"
+    )
 
 
 def test_every_declared_ceiling_has_a_row_a_reader_can_find():
@@ -86,16 +87,15 @@ def test_every_declared_ceiling_has_a_row_a_reader_can_find():
     assert missing == [], (
         f"ceiling(s) with no row in docs/guides/cli.md: {missing} - which "
         f"is the state UX-446 was filed on, where a refusal quotes a "
-        f"number no document has")
+        f"number no document has"
+    )
 
 
 def test_the_table_names_no_bound_that_does_not_exist():
     """The other direction, so a bound deleted in code leaves a row a
     reader would go looking for."""
     extra = sorted(set(_table_rows()) - set(_declared()))
-    assert extra == [], (
-        f"docs/guides/cli.md's ceilings table names {extra}, which is not "
-        f"a declared ceiling any more")
+    assert extra == [], f"docs/guides/cli.md's ceilings table names {extra}, which is not a declared ceiling any more"
 
 
 def test_each_row_carries_the_remedy_its_registry_entry_names():
@@ -108,10 +108,12 @@ def test_each_row_carries_the_remedy_its_registry_entry_names():
         assert flag in tracks, (
             f"the tracks row does not name `{flag}`, so a reader whose "
             f"export refused for tracks is told a number and no action: "
-            f"{tracks}")
+            f"{tracks}"
+        )
     assert "drawn" in tracks, (
         "the tracks row does not say the flags narrow what is *drawn* - "
-        "which is the distinction from the two byte bounds above it")
+        "which is the distinction from the two byte bounds above it"
+    )
 
 
 def test_the_styleguide_no_longer_says_there_is_only_one():
@@ -121,12 +123,14 @@ def test_the_styleguide_no_longer_says_there_is_only_one():
     text = STYLEGUIDE.read_text(encoding="utf-8")
     section = text.split("## 3g.", 1)[1].split("\n## ", 1)[0]
     assert "the only bound the Perfetto handoff has" not in section, (
-        "styleguide §3g still opens on the claim UX-430 falsified")
+        "styleguide §3g still opens on the claim UX-430 falsified"
+    )
     assert "UX-446" in section, (
-        "§3g does not say where its rule was applied, so a reader of the "
-        "rule cannot find the table it produced")
+        "§3g does not say where its rule was applied, so a reader of the rule cannot find the table it produced"
+    )
 
 
 if __name__ == "__main__":  # pragma: no cover
     import pytest
+
     raise SystemExit(pytest.main([__file__, "-v"]))

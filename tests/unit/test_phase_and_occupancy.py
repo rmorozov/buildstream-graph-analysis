@@ -20,6 +20,7 @@ task needed to test in the first place.
 Occupancy tests (Part 4, Part 36.7) exercise bga.occupancy.sweep's pure
 functions directly on hand-built NormalizedTask lists.
 """
+
 import json
 
 from bga import BuildEfficiencyAnalyzer
@@ -38,11 +39,10 @@ def _write_run_dir(tmp_path, name, elements, dependencies, spans, phases, max_jo
     run_dir = tmp_path / name
     run_dir.mkdir()
     run_context = {
-        "trace_epsilon_us": 1000, "wall_clock": {"start_us": 0, "end_us": 200000},
+        "trace_epsilon_us": 1000,
+        "wall_clock": {"start_us": 0, "end_us": 200000},
         "max_jobs": max_jobs,
-        "resource_capacities": (
-            {"PROCESS": max_jobs} if resource_capacities is None else resource_capacities
-        ),
+        "resource_capacities": ({"PROCESS": max_jobs} if resource_capacities is None else resource_capacities),
     }
     graph = {
         "elements": [{"uid": uid, "requested_target": is_target} for uid, is_target in elements],
@@ -64,10 +64,19 @@ def _segments_for(run_dir):
 
 def test_phase_overlapping_execution_keeps_category_and_gets_tagged(tmp_path):
     run_dir = _write_run_dir(
-        tmp_path, "exec",
-        elements=[("a.bst", True)], dependencies=[],
-        spans=[{"task_key": "a.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 20000,
-                "resources": ["PROCESS"], "primary_resource": "PROCESS"}],
+        tmp_path,
+        "exec",
+        elements=[("a.bst", True)],
+        dependencies=[],
+        spans=[
+            {
+                "task_key": "a.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 20000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            }
+        ],
         phases=[{"name": "cache_cleanup", "ts_us": 5000, "dur_us": 5000}],
     )
     segments = _segments_for(run_dir)
@@ -86,16 +95,29 @@ def test_phase_overlapping_dependency_wait_keeps_category_and_gets_tagged(tmp_pa
     # no capacity evidence at all is the honest scenario that actually
     # falls through to DEPENDENCY_WAIT's "no evidence" default.
     run_dir = _write_run_dir(
-        tmp_path, "depwait",
-        elements=[("a.bst", False), ("b.bst", True)], dependencies=[("a.bst", "b.bst")],
+        tmp_path,
+        "depwait",
+        elements=[("a.bst", False), ("b.bst", True)],
+        dependencies=[("a.bst", "b.bst")],
         spans=[
-            {"task_key": "a.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 20000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "b.bst|BUILD|BUILD|0", "ts_us": 50000, "dur_us": 20000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
+            {
+                "task_key": "a.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 20000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "b.bst|BUILD|BUILD|0",
+                "ts_us": 50000,
+                "dur_us": 20000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
         ],
         phases=[{"name": "cache_cleanup", "ts_us": 20000, "dur_us": 30000}],
-        max_jobs=None, resource_capacities={},
+        max_jobs=None,
+        resource_capacities={},
     )
     segments = _segments_for(run_dir)
     dep_segs = [s for s in segments if s.category == AttributionCategory.DEPENDENCY_WAIT]
@@ -108,16 +130,32 @@ def test_phase_overlapping_resource_wait_keeps_category_and_gets_tagged(tmp_path
     the sole PROCESS slot until 150000 - a genuine RESOURCE_WAIT gap,
     same shape as test_wait_gap_classification.py's reproduction."""
     run_dir = _write_run_dir(
-        tmp_path, "reswait",
+        tmp_path,
+        "reswait",
         elements=[("a.bst", False), ("b.bst", False), ("c.bst", True)],
         dependencies=[("a.bst", "c.bst")],
         spans=[
-            {"task_key": "a.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 50000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "b.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 150000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "c.bst|BUILD|BUILD|0", "ts_us": 150000, "dur_us": 20000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
+            {
+                "task_key": "a.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 50000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "b.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 150000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "c.bst|BUILD|BUILD|0",
+                "ts_us": 150000,
+                "dur_us": 20000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
         ],
         phases=[{"name": "resource_wait_phase", "ts_us": 100000, "dur_us": 20000}],
     )
@@ -132,13 +170,25 @@ def test_phase_overlapping_idle_keeps_category_and_gets_tagged(tmp_path):
     with real dead time between them - the gap is IDLE (Part 11: "no
     recognized work explains the interval")."""
     run_dir = _write_run_dir(
-        tmp_path, "idle",
-        elements=[("a.bst", True), ("b.bst", True)], dependencies=[],
+        tmp_path,
+        "idle",
+        elements=[("a.bst", True), ("b.bst", True)],
+        dependencies=[],
         spans=[
-            {"task_key": "a.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 10000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "b.bst|BUILD|BUILD|0", "ts_us": 30000, "dur_us": 10000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
+            {
+                "task_key": "a.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 10000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "b.bst|BUILD|BUILD|0",
+                "ts_us": 30000,
+                "dur_us": 10000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
         ],
         phases=[{"name": "gap_phase", "ts_us": 15000, "dur_us": 5000}],
     )
@@ -157,7 +207,9 @@ def test_multiple_overlapping_phases_all_recorded_as_annotations():
     required), but the full annotation list itself must be complete."""
     task = NormalizedTask(
         task_key=TaskKey("a.bst", TaskKind.BUILD, "BUILD", 0),
-        ready_us=0, start_us=0, finish_us=20000,
+        ready_us=0,
+        start_us=0,
+        finish_us=20000,
     )
     phases = [
         PhaseSpan(name="load", ts_us=0, dur_us=10000),
@@ -171,7 +223,9 @@ def test_multiple_overlapping_phases_all_recorded_as_annotations():
 def test_non_overlapping_phase_is_not_annotated():
     task = NormalizedTask(
         task_key=TaskKey("a.bst", TaskKind.BUILD, "BUILD", 0),
-        ready_us=0, start_us=0, finish_us=10000,
+        ready_us=0,
+        start_us=0,
+        finish_us=10000,
     )
     phases = [PhaseSpan(name="later_phase", ts_us=20000, dur_us=5000)]
     analyzer = BlameChainAnalyzer(normalized_tasks=[task], phase_spans=phases)
@@ -184,7 +238,9 @@ def test_non_overlapping_phase_is_not_annotated():
 def _task(uid, start_us, finish_us, resources=(Resource.PROCESS,)):
     return NormalizedTask(
         task_key=TaskKey(uid, TaskKind.BUILD, "BUILD", 0),
-        ready_us=start_us, start_us=start_us, finish_us=finish_us,
+        ready_us=start_us,
+        start_us=start_us,
+        finish_us=finish_us,
         resources=list(resources),
     )
 

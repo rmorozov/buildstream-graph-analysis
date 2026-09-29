@@ -29,6 +29,7 @@ sentence is now derived here like the other five.
 Properties` is true in all three" was a count from when three outputs
 were published and `bga/schemas.py` defines eight.
 """
+
 import functools
 import json
 import pathlib
@@ -57,8 +58,7 @@ QUESTIONS_JS = REPO / "bga/viewer/questions.js"
 RUN = REPO / "tests/fixtures/macro_micro/run"
 STYLEGUIDE = REPO / "docs/design/styleguide.md"
 AGENT_RUNS = REPO / "docs/audits/agent-runs.md"
-VOCABULARY_GUARD = (
-    REPO / "tests/unit/test_the_contract_names_its_vocabulary.py")
+VOCABULARY_GUARD = REPO / "tests/unit/test_the_contract_names_its_vocabulary.py"
 
 #: How these documents spell a count, derived from the writer's own
 #: `count_word` so the two cannot drift (`UX-752`).
@@ -75,7 +75,7 @@ def _emitted_block():
     """`docs/README.md`'s "What it emits" section, subject only."""
     text = INDEX.read_text(encoding="utf-8")
     start = text.index("## What it emits")
-    return text[start:text.index("\n## ", start + 4)]
+    return text[start : text.index("\n## ", start + 4)]
 
 
 def _inventory_chapter():
@@ -84,8 +84,7 @@ def _inventory_chapter():
 
 
 def _inventory_rows():
-    return re.findall(r"^\| `([a-z][a-z0-9-]*/v\d+)` \|",
-                      _inventory_chapter(), re.M)
+    return re.findall(r"^\| `([a-z][a-z0-9-]*/v\d+)` \|", _inventory_chapter(), re.M)
 
 
 def _questions():
@@ -112,7 +111,8 @@ class TestTheIndexCountsWhatItReadsAndNeverWrites:
         assert f"{word} of those are only ever *read*" in block, (
             f"the block should say '{word} of those are only ever read'; "
             f"`contracts.superseded()` is {len(contracts.superseded())}",
-            block[-1200:])
+            block[-1200:],
+        )
 
     def test_the_printable_count_beside_it_is_the_printable_set(self):
         """`The other eight` on the next line, held to the same rule -
@@ -121,8 +121,8 @@ class TestTheIndexCountsWhatItReadsAndNeverWrites:
         block = _flat(_emitted_block())
         word = WORDS[len(contracts.printable())]
         assert f"The other {word} each have a command" in block, (
-            f"the block should say 'The other {word}'; "
-            f"`contracts.printable()` is {len(contracts.printable())}")
+            f"the block should say 'The other {word}'; `contracts.printable()` is {len(contracts.printable())}"
+        )
 
 
 def _spec_contract_block():
@@ -130,7 +130,7 @@ def _spec_contract_block():
     Part. Bounded so a count elsewhere in the file cannot satisfy it."""
     text = SPEC.read_text(encoding="utf-8")
     start = text.index("| output | schema | printed by |")
-    return text[start:text.index("\n# Part 33")]
+    return text[start : text.index("\n# Part 33")]
 
 
 def _spec_contract_rows():
@@ -165,10 +165,10 @@ class TestTheArchitectureCountsItsOwnTable:
     def test_the_written_not_printable_count_is_derived(self):
         written = set(contracts.unprintable()) - set(contracts.superseded())
         word = WORDS[len(written)]
-        assert f"{word.capitalize()} rows are written but not printable" \
-            in _flat(_inventory_chapter()), (
-                f"the chapter should say '{word.capitalize()} rows are "
-                f"written but not printable'; the set is {sorted(written)}")
+        assert f"{word.capitalize()} rows are written but not printable" in _flat(_inventory_chapter()), (
+            f"the chapter should say '{word.capitalize()} rows are "
+            f"written but not printable'; the set is {sorted(written)}"
+        )
 
     def test_the_read_never_written_rows_are_the_last_ones(self):
         """The other half of the old sentence's error: it said *last*
@@ -176,13 +176,15 @@ class TestTheArchitectureCountsItsOwnTable:
         rows = _inventory_rows()
         retired = contracts.superseded()
         word = WORDS[len(retired)]
-        assert f"The last {word} go one further" in _flat(
-            _inventory_chapter()), (
-            f"the chapter should say 'The last {word} go one further'")
-        assert set(rows[-len(retired):]) == set(retired), (
+        assert f"The last {word} go one further" in _flat(_inventory_chapter()), (
+            f"the chapter should say 'The last {word} go one further'"
+        )
+        assert set(rows[-len(retired) :]) == set(retired), (
             "the last rows of the inventory are not the read-never-written "
             "ones, so the sentence points at the wrong end of the table",
-            rows[-len(retired):], retired)
+            rows[-len(retired) :],
+            retired,
+        )
 
     def test_the_rows_before_them_are_the_written_not_printable_ones(self):
         rows = _inventory_rows()
@@ -190,8 +192,10 @@ class TestTheArchitectureCountsItsOwnTable:
         start = len(rows) - len(contracts.superseded()) - len(written)
         end = len(rows) - len(contracts.superseded())
         assert set(rows[start:end]) == written, (
-            "the rows above the retired ones are not the written-but-not-"
-            "printable set", rows[start:end], sorted(written))
+            "the rows above the retired ones are not the written-but-not-printable set",
+            rows[start:end],
+            sorted(written),
+        )
 
 
 class TestTheSpecCountsItsOwnTable:
@@ -208,25 +212,27 @@ class TestTheSpecCountsItsOwnTable:
     def test_the_written_not_printable_count_is_derived(self):
         written = set(contracts.unprintable()) - set(contracts.superseded())
         word = WORDS[len(written)]
-        assert (f"The {word} above the retired rows are **written but not "
-                f"printable**") in _flat(_spec_contract_block()), (
-            f"Part 32 should say 'The {word} above the retired rows'; "
-            f"the set is {sorted(written)}")
+        assert (f"The {word} above the retired rows are **written but not printable**") in _flat(
+            _spec_contract_block()
+        ), f"Part 32 should say 'The {word} above the retired rows'; the set is {sorted(written)}"
 
     def test_they_really_are_above_the_retired_rows(self):
         """The other half of the error: *last* of a class four rows
         follow. Read off the table, not off the sentence."""
         rows = _spec_contract_rows()
-        retired, written = set(contracts.superseded()), (
-            set(contracts.unprintable()) - set(contracts.superseded()))
+        retired, written = set(contracts.superseded()), (set(contracts.unprintable()) - set(contracts.superseded()))
         tail = [one for row in rows[-4:] for one in row]
         assert set(tail) == retired, (
-            "the last rows of Part 32's table are not the retired ones, so "
-            "the sentence points at the wrong end", tail, sorted(retired))
-        above = [one for row in rows[-4 - len(written):-4] for one in row]
+            "the last rows of Part 32's table are not the retired ones, so the sentence points at the wrong end",
+            tail,
+            sorted(retired),
+        )
+        above = [one for row in rows[-4 - len(written) : -4] for one in row]
         assert set(above) == written, (
-            "the rows above the retired ones are not the written-but-not-"
-            "printable set", above, sorted(written))
+            "the rows above the retired ones are not the written-but-not-printable set",
+            above,
+            sorted(written),
+        )
 
     def test_the_versioning_rule_counts_the_schemas_it_describes(self):
         """`UX-566`: the seventh copy, `specification.md:1714`. "So
@@ -237,16 +243,18 @@ class TestTheSpecCountsItsOwnTable:
         from bga import schemas
 
         defined = sorted(schemas._SCHEMAS)
-        lacking = [one for one in defined
-                   if schemas.schema(one).get("additionalProperties") is not True]
+        lacking = [one for one in defined if schemas.schema(one).get("additionalProperties") is not True]
         assert not lacking, (
-            "the sentence claims additionalProperties for every schema and "
-            "these do not set it", lacking)
+            "the sentence claims additionalProperties for every schema and these do not set it",
+            lacking,
+        )
         word = WORDS[len(defined)]
-        assert (f"`additionalProperties` is true in all {word} schemas "
-                f"`bga/schemas.py` defines") in _flat(_spec_contract_block()), (
+        assert (f"`additionalProperties` is true in all {word} schemas `bga/schemas.py` defines") in _flat(
+            _spec_contract_block()
+        ), (
             f"Part 32.5 should say 'true in all {word} schemas "
-            f"`bga/schemas.py` defines'; it defines {len(defined)}: {defined}")
+            f"`bga/schemas.py` defines'; it defines {len(defined)}: {defined}"
+        )
 
 
 class TestTheChangelogCountsThePublishedSet:
@@ -254,13 +262,13 @@ class TestTheChangelogCountsThePublishedSet:
     opening sentence said twelve."""
 
     def test_the_opening_sentence_counts_the_contracts(self):
-        head = _flat(
-            CHANGELOG.read_text(encoding="utf-8").split("\n## ", 1)[0])
+        head = _flat(CHANGELOG.read_text(encoding="utf-8").split("\n## ", 1)[0])
         word = WORDS[len(contracts.ids())]
         assert f"{word} published contracts" in head, (
             f"CHANGELOG.md's opening should say '{word} published "
             f"contracts'; `contracts.ids()` is {len(contracts.ids())}",
-            head[:600])
+            head[:600],
+        )
 
 
 class TestTheFrontDoorCountsTheCannedQuestions:
@@ -269,28 +277,34 @@ class TestTheFrontDoorCountsTheCannedQuestions:
 
     def test_the_front_door_counts_the_library(self):
         word = WORDS[len(_questions())]
-        assert f"sorts all {word} canned questions" in _flat(
-            README.read_text(encoding="utf-8")), (
-            f"README.md should say 'sorts all {word} canned questions'; "
-            f"questions.js exports {len(_questions())}")
+        assert f"sorts all {word} canned questions" in _flat(README.read_text(encoding="utf-8")), (
+            f"README.md should say 'sorts all {word} canned questions'; questions.js exports {len(_questions())}"
+        )
 
     def test_the_guide_counts_the_same_library(self):
         """The document the sentence points at, so the two cannot drift
         apart again in the other direction."""
         word = WORDS[len(_questions())]
-        assert f"serves {word} questions" in _flat(
-            GUIDE.read_text(encoding="utf-8")), (
-            f"the guide should say '`bga view` serves {word} questions'")
+        assert f"serves {word} questions" in _flat(GUIDE.read_text(encoding="utf-8")), (
+            f"the guide should say '`bga view` serves {word} questions'"
+        )
 
-    @pytest.mark.skipif(shutil.which("node") is None,
-                        reason="node is not installed")
+    @pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
     def test_node_agrees_on_the_count(self):
         """The parse above is a text scan; this is the module itself."""
         out = subprocess.run(
-            [shutil.which("node"), "--input-type=module", "-e",
-             'const q = await import("./bga/viewer/questions.js");'
-             'console.log(JSON.stringify(q.QUESTIONS.map((x) => x.id)));'],
-            capture_output=True, text=True, cwd=str(REPO), timeout=60)
+            [
+                shutil.which("node"),
+                "--input-type=module",
+                "-e",
+                'const q = await import("./bga/viewer/questions.js");'
+                'console.log(JSON.stringify(q.QUESTIONS.map((x) => x.id)));',
+            ],
+            capture_output=True,
+            text=True,
+            cwd=str(REPO),
+            timeout=60,
+        )
         assert out.returncode == 0, out.stderr
         assert json.loads(out.stdout) == _questions()
 
@@ -309,21 +323,22 @@ class TestTheGuidesEvidenceBlockIsTheReport:
     def _block():
         text = GUIDE.read_text(encoding="utf-8")
         start = text.index("Measured on `tests/fixtures/macro_micro/run`")
-        return text[start:text.index("```", text.index("```", start) + 3)]
+        return text[start : text.index("```", text.index("```", start) + 3)]
 
     def test_the_section_count_is_the_reports(self):
         report = self._report()
-        assert f"report.json {len(report)} top-level sections" in _flat(
-            self._block()), (
-                f"the block should count {len(report)} top-level sections")
+        assert f"report.json {len(report)} top-level sections" in _flat(self._block()), (
+            f"the block should count {len(report)} top-level sections"
+        )
 
     def test_the_element_join_shape_is_the_reports(self):
         rows = self._report()["element_join"]
         widths = {len(row) for row in rows}
         assert len(widths) == 1, f"element_join rows differ in width: {widths}"
-        assert f"{len(rows)} elements, {widths.pop()} keys each" \
-            in _flat(self._block()), (
-                "the block should count the element_join rows and their keys")
+        assert f"{len(rows)} elements, {widths.pop()} keys each" in _flat(self._block()), (
+            "the block should count the element_join rows and their keys"
+        )
+
 
 # --- `UX-576`: every sentence that counts the question library --------------
 #
@@ -345,46 +360,69 @@ ELEMENT_TOKEN = "{element}"
 #: Read as a count when spelled or written bare. `one` is left out
 #: because in prose it is the pronoun - "what lets one query join them"
 #: - and never a count of this library.
-COUNT_WORD = re.compile(r"^(?:" + "|".join(WORDS[n] for n in range(2, 31))
-                        + r"|\d{1,3})$", re.I)
+COUNT_WORD = re.compile(r"^(?:" + "|".join(WORDS[n] for n in range(2, 31)) + r"|\d{1,3})$", re.I)
 
 #: The words a count may reach its noun through. Anything else ends the
 #: phrase, which is what keeps "renaming one silently breaks a query"
 #: out of the population.
 MODIFIER = frozenset(
-    ["of", "the", "its", "all", "canned", "shipped", "paste-ready", "perfettosql", "other", "more", "remaining", "library", "current", "existing", "only", "same", "whole", "entire", "new", "these", "those", "sql"])
+    [
+        "of",
+        "the",
+        "its",
+        "all",
+        "canned",
+        "shipped",
+        "paste-ready",
+        "perfettosql",
+        "other",
+        "more",
+        "remaining",
+        "library",
+        "current",
+        "existing",
+        "only",
+        "same",
+        "whole",
+        "entire",
+        "new",
+        "these",
+        "those",
+        "sql",
+    ]
+)
 
 NOUN = re.compile(r"\b(?:questions?|quer(?:y|ies))\b", re.I)
 
 #: What makes a passage one about *this* library rather than about
 #: questions in general. A file in `ABOUT_THE_LIBRARY` has no other
 #: subject, so every count in it is one of these.
-LIBRARY = ("canned", "questions.js", "question library", "query library",
-           "PerfettoSQL", "perfetto.html")
-ABOUT_THE_LIBRARY = ("bga/viewer/questions.js",
-                     "tools/dev_perfetto_queries.py",
-                     "docs/guides/what-the-viewer-answers.md")
+LIBRARY = ("canned", "questions.js", "question library", "query library", "PerfettoSQL", "perfetto.html")
+ABOUT_THE_LIBRARY = (
+    "bga/viewer/questions.js",
+    "tools/dev_perfetto_queries.py",
+    "docs/guides/what-the-viewer-answers.md",
+)
 
 #: Dated findings: each is true of the library as it was in the round
 #: named, and rewriting one would delete a measurement. Every entry is
 #: asserted to still be present, so the list cannot rot.
 HISTORICAL = {
-    ("docs/design/architecture.md", "All six questions"):
-        "UX-312's review entry, dated 2026-08-26: the library had six",
-    ("docs/design/directions.md", "four of six canned queries"):
-        "round 43's review of those same six",
-    ("docs/design/styleguide.md", "thirteen queries"):
-        "styleguide 4d, headed '(round 58)' - and the next clause, that "
-        "the page fills all three with `core.bst`, is what UX-369 fixed",
-    ("bga/viewer/questions.js", "all six queries"):
-        "UX-210 to UX-308, the rounds that comment is about",
-    ("bga/viewer/questions.js", "four of the six queries"):
-        "the same six, in the same comment",
-    ("bga/viewer/questions.js", "thirteen queries"):
-        "UX-348's measurement of the exported section, 216 px and four "
-        "`details`, taken when it was filed",
-    ("tools/dev_perfetto_queries.py", "the fourteen shipped questions"):
-        "round 69 - UX-432's Outcome ran 14, 2 empty, 0 errors",
+    (
+        "docs/design/architecture.md",
+        "All six questions",
+    ): "UX-312's review entry, dated 2026-08-26: the library had six",
+    ("docs/design/directions.md", "four of six canned queries"): "round 43's review of those same six",
+    ("docs/design/styleguide.md", "thirteen queries"): "styleguide 4d, headed '(round 58)' - and the next clause, that "
+    "the page fills all three with `core.bst`, is what UX-369 fixed",
+    ("bga/viewer/questions.js", "all six queries"): "UX-210 to UX-308, the rounds that comment is about",
+    ("bga/viewer/questions.js", "four of the six queries"): "the same six, in the same comment",
+    ("bga/viewer/questions.js", "thirteen queries"): "UX-348's measurement of the exported section, 216 px and four "
+    "`details`, taken when it was filed",
+    (
+        "tools/dev_perfetto_queries.py",
+        "the fourteen shipped questions",
+    ): "round 69 - UX-432's Outcome ran 14, 2 empty, 0 errors",
 }
 
 
@@ -395,8 +433,7 @@ def _strip(token):
 @functools.lru_cache(maxsize=1)
 def _tracked():
     """The paths git has, as a set. Not the paths on disk."""
-    out = subprocess.run(["git", "ls-files"], cwd=REPO, check=True,
-                         capture_output=True, text=True).stdout
+    out = subprocess.run(["git", "ls-files"], cwd=REPO, check=True, capture_output=True, text=True).stdout
     return frozenset(out.splitlines())
 
 
@@ -407,9 +444,10 @@ def _counted_files():
     historical record - a task file's pasted measurement is a dated fact
     and is never rewritten."""
     paths = sorted(REPO.glob("*.md")) + [
-        p for p in sorted(REPO.glob("docs/**/*.md"))
-        if not p.relative_to(REPO).as_posix().startswith(
-            ("docs/backlog/", "docs/audits/"))]
+        p
+        for p in sorted(REPO.glob("docs/**/*.md"))
+        if not p.relative_to(REPO).as_posix().startswith(("docs/backlog/", "docs/audits/"))
+    ]
     paths += sorted(REPO.glob(".claude/**/*.md"))
     paths += sorted(REPO.glob("tools/*.py")) + sorted(REPO.glob("bga/**/*.js"))
     # `UX-577`: a glob walks whatever the checkout happens to hold - and a
@@ -427,26 +465,22 @@ def _count_phrases(path):
     about = path.relative_to(REPO).as_posix() in ABOUT_THE_LIBRARY
     found = []
     for match in NOUN.finditer(flat):
-        window = flat[max(0, match.start() - 400):match.end() + 200]
-        if not about and not any(one.lower() in window.lower()
-                                 for one in LIBRARY):
+        window = flat[max(0, match.start() - 400) : match.end() + 200]
+        if not about and not any(one.lower() in window.lower() for one in LIBRARY):
             continue
         chain = []
-        for token in reversed(flat[max(0, match.start() - 70):
-                                   match.start()].split()):
+        for token in reversed(flat[max(0, match.start() - 70) : match.start()].split()):
             # A bracket ends it: "(round 58) The query library" is a
             # heading's number, not the phrase's.
             if set("()[]") & set(token):
                 break
-            if not (COUNT_WORD.match(_strip(token))
-                    or _strip(token) in MODIFIER):
+            if not (COUNT_WORD.match(_strip(token)) or _strip(token) in MODIFIER):
                 break
             chain.append(token)
         chain.reverse()
         if not any(COUNT_WORD.match(_strip(one)) for one in chain):
             continue
-        found.append((" ".join(chain + [match.group(0)]),
-                      flat[max(0, match.start() - 120):match.end() + 160]))
+        found.append((" ".join(chain + [match.group(0)]), flat[max(0, match.start() - 120) : match.end() + 160]))
     return found
 
 
@@ -464,13 +498,11 @@ def _question_blocks():
 
 
 def _takes_element():
-    return sorted(one for one, block in _question_blocks().items()
-                  if ELEMENT_TOKEN in block)
+    return sorted(one for one, block in _question_blocks().items() if ELEMENT_TOKEN in block)
 
 
 def _chrome_blind():
-    return sorted(one for one, block in _question_blocks().items()
-                  if re.search(r"^    reads: ", block, re.M))
+    return sorted(one for one, block in _question_blocks().items() if re.search(r"^    reads: ", block, re.M))
 
 
 def _guide_question_tables():
@@ -479,8 +511,7 @@ def _guide_question_tables():
     text = GUIDE.read_text(encoding="utf-8")
     body = text.split("## The canned questions", 1)[1].split("\n## ", 1)[0]
     needs, rest = body.split("**Does not need Perfetto", 1)
-    return (re.findall(r"^\| `([a-z-]+)` \|", needs, re.M),
-            re.findall(r"^\| `([a-z-]+)` \|", rest, re.M))
+    return (re.findall(r"^\| `([a-z-]+)` \|", needs, re.M), re.findall(r"^\| `([a-z-]+)` \|", rest, re.M))
 
 
 def _derived_sentences():
@@ -495,27 +526,20 @@ def _derived_sentences():
         "README.md": [f"sorts all {WORDS[total]} canned questions"],
         "docs/guides/cli.md": [
             f"— {WORDS[total]} paste-ready PerfettoSQL queries",
-            f"{head} canned questions genuinely need the trip; "
-            f"{other} are sharper"],
+            f"{head} canned questions genuinely need the trip; {other} are sharper",
+        ],
         "docs/guides/what-the-viewer-answers.md": [
             f"serves {WORDS[total]} questions",
-            f"{head} questions genuinely require the trip. The other "
-            f"{other} are"],
-        ".claude/skills/measure/SKILL.md": [
-            f"Runs all {WORDS[total]} questions in "
-            f"`bga/viewer/questions.js`"],
-        "tools/dev_perfetto_queries.py": [
-            f"Two of the {WORDS[len(_takes_element())]} questions taking an "
-            f"element"],
-        "bga/viewer/questions.js": [
-            f"{WORDS[len(_takes_element())].capitalize()} of the "
-            f"{WORDS[total]} questions do"],
+            f"{head} questions genuinely require the trip. The other {other} are",
+        ],
+        ".claude/skills/measure/SKILL.md": [f"Runs all {WORDS[total]} questions in `bga/viewer/questions.js`"],
+        "tools/dev_perfetto_queries.py": [f"Two of the {WORDS[len(_takes_element())]} questions taking an element"],
+        "bga/viewer/questions.js": [f"{WORDS[len(_takes_element())].capitalize()} of the {WORDS[total]} questions do"],
     }
 
 
 def _derived_pairs():
-    return [(rel, one) for rel, many in _derived_sentences().items()
-            for one in many]
+    return [(rel, one) for rel, many in _derived_sentences().items() for one in many]
 
 
 class TestEverySentenceThatCountsTheQuestionsIsDerived:
@@ -529,7 +553,8 @@ class TestEverySentenceThatCountsTheQuestionsIsDerived:
             f"{rel} should say {sentence!r}: questions.js exports "
             f"{len(_questions())}, the guide sorts "
             f"{[len(one) for one in _guide_question_tables()]} and "
-            f"{ELEMENT_TOKEN} is in {_takes_element()}")
+            f"{ELEMENT_TOKEN} is in {_takes_element()}"
+        )
 
     def test_the_two_tables_sort_the_whole_library(self):
         """The split sentences above are only derived if the tables they
@@ -537,7 +562,8 @@ class TestEverySentenceThatCountsTheQuestionsIsDerived:
         needs, rest = _guide_question_tables()
         assert sorted(needs + rest) == sorted(_questions()), (
             "the guide's two tables and questions.js disagree",
-            sorted(set(needs + rest) ^ set(_questions())))
+            sorted(set(needs + rest) ^ set(_questions())),
+        )
 
     def test_the_chrome_cost_names_the_queries_it_counts(self):
         """The other shape the fix allows: name the ids. Both copies of
@@ -546,14 +572,13 @@ class TestEverySentenceThatCountsTheQuestionsIsDerived:
         three."""
         blind = _chrome_blind()
         assert len(blind) == 3, (
-            "both chrome-cost sentences say 'three of the canned questions' "
-            "and this many entries declare `reads:`", blind)
+            "both chrome-cost sentences say 'three of the canned questions' and this many entries declare `reads:`",
+            blind,
+        )
         for path in (QUESTIONS_JS, TIMELINE):
             flat = _flat(path.read_text(encoding="utf-8"))
             missing = [one for one in blind if f"`{one}`" not in flat]
-            assert not missing, (
-                f"{path.name} counts the chrome-blind queries without "
-                f"naming these", missing)
+            assert not missing, (f"{path.name} counts the chrome-blind queries without naming these", missing)
 
     def test_every_historical_phrase_is_still_there(self):
         """`HISTORICAL` is an exemption list, and an exemption nothing
@@ -561,21 +586,23 @@ class TestEverySentenceThatCountsTheQuestionsIsDerived:
         for (rel, phrase), why in sorted(HISTORICAL.items()):
             flat = _flat((REPO / rel).read_text(encoding="utf-8"))
             assert phrase in flat, (
-                f"{rel} no longer says {phrase!r}, so its exemption ({why}) "
-                f"is stale - drop the entry")
+                f"{rel} no longer says {phrase!r}, so its exemption ({why}) is stale - drop the entry"
+            )
 
     def test_the_sweep_reads_the_sentences_it_is_for(self):
         """A sweep that finds nothing passes. This is the floor: every
         derived sentence and every historical one is in the population
         the sweep actually walks."""
-        seen = {(path.relative_to(REPO).as_posix(), phrase)
-                for path in _counted_files()
-                for phrase, _ in _count_phrases(path)}
+        seen = {
+            (path.relative_to(REPO).as_posix(), phrase)
+            for path in _counted_files()
+            for phrase, _ in _count_phrases(path)
+        }
         for rel, sentence in _derived_pairs() + sorted(HISTORICAL):
-            assert any(this == rel and (that in sentence or sentence in that)
-                       for this, that in seen), (
-                f"the sweep does not see {rel}'s {sentence!r}, so nothing "
-                f"holds it", sorted(one for one in seen if one[0] == rel))
+            assert any(this == rel and (that in sentence or sentence in that) for this, that in seen), (
+                f"the sweep does not see {rel}'s {sentence!r}, so nothing holds it",
+                sorted(one for one in seen if one[0] == rel),
+            )
 
     def test_every_counted_sentence_is_accounted_for(self):
         """The sweep itself. Every "N ... questions" phrase in `docs/`,
@@ -589,25 +616,28 @@ class TestEverySentenceThatCountsTheQuestionsIsDerived:
             for phrase, window in _count_phrases(path):
                 if any(phrase in one for one in derived.get(rel, ())):
                     continue
-                if any(this == rel and that in phrase
-                       for this, that in HISTORICAL):
+                if any(this == rel and that in phrase for this, that in HISTORICAL):
                     continue
                 named = {one for one in ids if f"`{one}`" in window}
-                values = {int(one) if one.isdigit() else
-                          next(k for k, v in WORDS.items() if v == one)
-                          for one in (_strip(one) for one in phrase.split())
-                          if COUNT_WORD.match(one)}
+                values = {
+                    int(one) if one.isdigit() else next(k for k, v in WORDS.items() if v == one)
+                    for one in (_strip(one) for one in phrase.split())
+                    if COUNT_WORD.match(one)
+                }
                 if values and values <= {total, len(named)}:
                     continue
                 unaccounted.append(
                     f"{rel}: {phrase!r} counts {sorted(values)}; the library "
-                    f"serves {total} and the sentence names {sorted(named)}")
-        assert not unaccounted, (
-            "these sentences count the question library and nothing derives "
-            "them:\n" + "\n".join(unaccounted))
+                    f"serves {total} and the sentence names {sorted(named)}"
+                )
+        assert not unaccounted, "these sentences count the question library and nothing derives them:\n" + "\n".join(
+            unaccounted
+        )
+
 
 # --- `UX-734`: three counted figures, each in its own document, none
 # read by a guard before now.
+
 
 @functools.lru_cache(maxsize=1)
 def _vocabulary_guard_module():
@@ -617,8 +647,7 @@ def _vocabulary_guard_module():
     would be a second instrument for the one fact it already answers."""
     import importlib.util
 
-    spec = importlib.util.spec_from_file_location(
-        "_vocabulary_guard", VOCABULARY_GUARD)
+    spec = importlib.util.spec_from_file_location("_vocabulary_guard", VOCABULARY_GUARD)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -634,21 +663,21 @@ class TestTheStyleguideCountsItsOwnVocabulary:
     def test_the_hint_count_is_the_documented_table(self):
         documented = _vocabulary_guard_module()._documented()
         word = WORDS[len(documented)]
-        assert (f"{word.capitalize()} hints, and this table is the one "
-                f"place they are all written") in _flat(
-                    STYLEGUIDE.read_text(encoding="utf-8")), (
+        assert (f"{word.capitalize()} hints, and this table is the one place they are all written") in _flat(
+            STYLEGUIDE.read_text(encoding="utf-8")
+        ), (
             f"styleguide.md's §1a should open '{word.capitalize()} hints, "
             f"and this table is the one place they are all written'; the "
-            f"table has {len(documented)} rows: {sorted(documented)}")
+            f"table has {len(documented)} rows: {sorted(documented)}"
+        )
 
 
 def _agent_run_rows():
     """`docs/audits/agent-runs.md`'s own table rows - every table line
     after the `|---|` separator, header excluded."""
     lines = AGENT_RUNS.read_text(encoding="utf-8").splitlines()
-    start = next(i for i, line in enumerate(lines)
-                if line.startswith("|---"))
-    return [line for line in lines[start + 1:] if line.startswith("| ")]
+    start = next(i for i, line in enumerate(lines) if line.startswith("|---"))
+    return [line for line in lines[start + 1 :] if line.startswith("| ")]
 
 
 class TestTheAuditLedgerCountsItsOwnRows:
@@ -660,10 +689,9 @@ class TestTheAuditLedgerCountsItsOwnRows:
     def test_the_summary_counts_the_table_rows(self):
         rows = _agent_run_rows()
         word = WORDS[len(rows)]
-        assert f"What the {word} rows already say" in _flat(
-            AGENT_RUNS.read_text(encoding="utf-8")), (
-            f"agent-runs.md should say 'What the {word} rows already "
-            f"say'; the table has {len(rows)} rows")
+        assert f"What the {word} rows already say" in _flat(AGENT_RUNS.read_text(encoding="utf-8")), (
+            f"agent-runs.md should say 'What the {word} rows already say'; the table has {len(rows)} rows"
+        )
 
 
 def _spec_parts():
@@ -686,12 +714,13 @@ class TestTheIndexCountsTheSpecsOwnRanges:
 
     def test_the_part_and_invariant_ranges_are_derived(self):
         parts, invariants = _spec_parts(), _spec_invariants()
-        assert (f"Parts {parts[0]}-{parts[-1]}, invariants "
-                f"`I{invariants[0]}`-`I{invariants[-1]}`") in _flat(
-                    INDEX.read_text(encoding="utf-8")), (
+        assert (f"Parts {parts[0]}-{parts[-1]}, invariants `I{invariants[0]}`-`I{invariants[-1]}`") in _flat(
+            INDEX.read_text(encoding="utf-8")
+        ), (
             f"docs/README.md should say 'Parts {parts[0]}-{parts[-1]}, "
             f"invariants `I{invariants[0]}`-`I{invariants[-1]}`'; the spec "
-            f"has Parts {parts} and invariants {invariants}")
+            f"has Parts {parts} and invariants {invariants}"
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

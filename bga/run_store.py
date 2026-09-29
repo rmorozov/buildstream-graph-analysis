@@ -18,6 +18,7 @@ identity, and no new comparability rule. An explicit path keeps working
 everywhere it worked before, and a directory that happens to be a run
 directory is still one.
 """
+
 import json
 import os
 import re
@@ -144,11 +145,7 @@ def list_snapshots(project: str) -> list[str]:
     root = runs_dir(project)
     if not os.path.isdir(root):
         return []
-    return [
-        os.path.join(root, name)
-        for name in sorted(os.listdir(root))
-        if os.path.isdir(os.path.join(root, name))
-    ]
+    return [os.path.join(root, name) for name in sorted(os.listdir(root)) if os.path.isdir(os.path.join(root, name))]
 
 
 def has_run(snapshot: str) -> bool:
@@ -227,8 +224,7 @@ def declared_class(run_dir: str) -> Optional[dict]:
     return None
 
 
-def runs_of_class(project: str, declared: Optional[dict], window: int,
-                  exclude: tuple = ()) -> list[str]:
+def runs_of_class(project: str, declared: Optional[dict], window: int, exclude: tuple = ()) -> list[str]:
     """The `window` most recent runs in this store declaring `declared`.
 
     `UX-899`: the population a noise band is drawn from is the
@@ -272,8 +268,7 @@ def read_resource_profile(snapshot: str) -> dict:
     import json
 
     try:
-        with open(os.path.join(snapshot, RESOURCE_NAME),
-                  encoding="utf-8") as handle:
+        with open(os.path.join(snapshot, RESOURCE_NAME), encoding="utf-8") as handle:
             profile = json.load(handle)
     except (OSError, ValueError):
         return {}
@@ -375,10 +370,13 @@ def resolve_snapshot(token: str, start: Optional[str] = None) -> str:
         incomplete = [os.path.basename(s) for s in list_snapshots(project)]
         raise StoreError(
             f"{token} names a snapshot and {project} has "
-            + (f"{len(incomplete)} whose build produced no run directory "
-               f"({', '.join(incomplete[-4:])}) - `bga snapshot --list` "
-               f"shows them."
-               if incomplete else "none yet.")
+            + (
+                f"{len(incomplete)} whose build produced no run directory "
+                f"({', '.join(incomplete[-4:])}) - `bga snapshot --list` "
+                f"shows them."
+                if incomplete
+                else "none yet."
+            )
             + " `bga snapshot -- bst build TARGET` takes one."
         )
 
@@ -409,8 +407,7 @@ def resolve_snapshot(token: str, start: Optional[str] = None) -> str:
         # `list_runs` - deliberately, because an alias resolves only to a
         # capture that produced one - and the difference between the two
         # lists is exactly what the reader is looking at.
-        debris = [os.path.basename(s) for s in list_snapshots(project)
-                  if os.path.basename(s).startswith(name)]
+        debris = [os.path.basename(s) for s in list_snapshots(project) if os.path.basename(s).startswith(name)]
         if debris:
             raise StoreError(
                 f"{name!r} names {plural(len(debris), 'snapshot')} in {project} with "
@@ -425,8 +422,7 @@ def resolve_snapshot(token: str, start: Optional[str] = None) -> str:
         )
     if len(matches) > 1:
         raise StoreError(
-            f"{name!r} matches {len(matches)} snapshots: "
-            f"{', '.join(os.path.basename(s) for s in matches)}"
+            f"{name!r} matches {len(matches)} snapshots: {', '.join(os.path.basename(s) for s in matches)}"
         )
     return matches[0]
 
@@ -612,9 +608,6 @@ def store_size_bytes(project: str) -> int:
     return sum(snapshot_size_bytes(s) for s in list_snapshots(project))
 
 
-
-
-
 # `UX-381`: the capture directory as a stated contract.
 #
 # Every published `bga` command line names a path inside `.bga/`, and
@@ -650,98 +643,178 @@ OWNED = ("host-samples/v1",)
 # Presence, as three words rather than a boolean, because "not there"
 # has three different meanings in this directory and a consumer that
 # cannot tell them apart cannot tell a broken capture from a cheap one.
-REQUIRED = "required"          # absent means the capture is unusable
-CONDITIONAL = "conditional"    # absent means that option was off
-DERIVED = "derived"            # absent means nothing; it is rebuilt on demand
+REQUIRED = "required"  # absent means the capture is unusable
+CONDITIONAL = "conditional"  # absent means that option was off
+DERIVED = "derived"  # absent means nothing; it is rebuilt on demand
 
 CAPTURE_LAYOUT = (
     # (path relative to the project, presence, contract, what it is)
-    (f"{STORE_DIRNAME}/", REQUIRED, None,
-     "the project-local store. Everything below is "
-     "relative to it; `bga` creates it on the first capture."),
-    (f"{STORE_DIRNAME}/.gitignore", DERIVED, None,
-     "written once so a clone does not ship the capture archive. "
-     "Absent only in a store made before that was written; the "
-     "next capture writes it."),
-    (f"{STORE_DIRNAME}/{CONFIG_NAME}", CONDITIONAL, None,
-     "the store's own settings, written when one is set. Absent means "
-     "every setting is at its default."),
-    (f"{STORE_DIRNAME}/{SCRATCH_DIRNAME}/", DERIVED, None,
-     "`bga`'s scratch: the `$PATH` shim, the compiled hook and spine, "
-     "and unnamed intermediates. Never read across "
-     "captures; safe to delete."),
-    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/", REQUIRED, None,
-     "one directory per capture, named by UTC stamp. `@last` and "
-     "`@prev` resolve by listing it, so its ordering is part of the "
-     "contract: the names sort chronologically as strings."),
-    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/", REQUIRED, None,
-     "one capture: the snapshot `bga snapshot --list` enumerates and "
-     "`@last` names. The stamp is UTC and sorts chronologically as a "
-     "string, which is what makes the listing an ordering."),
-    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{RUN_SUBDIR}/", REQUIRED, None,
-     "the run directory - the unit every published command line takes "
-     "a path to. Absent on a build that failed before any element "
-     "completed, which is a capture with nothing to "
-     "analyse rather than a corrupt one."),
-    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{RUN_SUBDIR}/graph.json", REQUIRED, "graph/v9",
-     "the declared element graph, from `bst show`."),
-    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{RUN_SUBDIR}/trace.json", REQUIRED, "trace/v9",
-     "the scheduler's own spans and phases - Plane 1."),
-    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{RUN_SUBDIR}/run-context.json", REQUIRED,
-     "run-context/v9",
-     "what the run was: identity, host manifest (`host/v2` inside it), "
-     "scheduler configuration, and the resolved `native_max_jobs`."),
-    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{RUN_SUBDIR}/chrome_trace.json", DERIVED,
-     None,
-     "the Plane 1 trace in the legacy Chrome JSON shape. Present only "
-     "on a capture taken before extraction stopped writing it: it was "
-     "written for a person to drag into perfetto.dev, a later census "
-     "measured that no reader opens it, and `bga timeline --format chrome` "
-     "renders the same shape on demand from `trace.json`. Safe to "
-     "delete; nothing rewrites it."),
-    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{RUN_SUBDIR}/sources.json", CONDITIONAL,
-     "sources/v1",
-     "the source inventory, read by `bga blast`. Absent "
-     "means the capture could not resolve the project's sources, and "
-     "`blast` says so rather than reporting an empty inventory."),
-    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{PLANE2_NAME}", CONDITIONAL, "plane2/v3",
-     "the Plane 2 report - what ran inside the sandboxes. Absent on a "
-     "capture taken without Plane 2, and every Plane 2 section of "
-     "every output is then absent rather than empty."),
-    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{RAW_LOG_NAME}", CONDITIONAL, None,
-     "the raw per-process trace the report was folded from, gzipped. "
-     "`bga timeline` renders from this; absent means no timeline, "
-     "which is a different absence from no report."),
-    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{RESOURCE_NAME}", CONDITIONAL, None,
-     "the two capacity scalars, beside the report so the aggregator "
-     "never opens the big file for them. Absent where the "
-     "report is."),
-    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{HOST_SAMPLES_NAME}", CONDITIONAL,
-     "host-samples/v1",
-     "the host's memory, swap and CPU while the build ran, one JSON "
-     "per line. Absent on a capture taken before that was recorded "
-     "or with sampling unavailable."),
-    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{ANALYSIS_NAME}", CONDITIONAL, "analyze/v6",
-     "the analysis this capture published, so `bga view` renders "
-     "rather than re-deriving. Absent means the viewer "
-     "parses the run itself, and the trace carries no graph structure."),
-    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{TAIL_NAME}", CONDITIONAL, "tail/v1",
-     "wall and peak RSS of each phase bga ran after the build, and the "
-     "build's own wall. `complete: false` is a tail that was interrupted; "
-     "a phase that did not run has no row."),
-    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/build.log", CONDITIONAL, None,
-     "the wrapped BuildStream log, kept because its first line records "
-     "the real invocation. `bga timeline` needs it and "
-     "refuses without it."),
-    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/element-slice.json", CONDITIONAL, None,
-     "which elements the capture was asked for, where it was asked "
-     "for a slice rather than the whole project."),
-    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/capture-context.txt", CONDITIONAL, None,
-     "what the capture did and why, in prose - the diagnostics "
-     "`UX-146` writes. Never parsed."),
-    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{SIZE_CACHE_NAME}", DERIVED, None,
-     "a cached size for this snapshot, so `--list` does not walk every "
-     "run. Rebuilt when the tree signature changes; safe to delete."),
+    (
+        f"{STORE_DIRNAME}/",
+        REQUIRED,
+        None,
+        "the project-local store. Everything below is relative to it; `bga` creates it on the first capture.",
+    ),
+    (
+        f"{STORE_DIRNAME}/.gitignore",
+        DERIVED,
+        None,
+        "written once so a clone does not ship the capture archive. "
+        "Absent only in a store made before that was written; the "
+        "next capture writes it.",
+    ),
+    (
+        f"{STORE_DIRNAME}/{CONFIG_NAME}",
+        CONDITIONAL,
+        None,
+        "the store's own settings, written when one is set. Absent means every setting is at its default.",
+    ),
+    (
+        f"{STORE_DIRNAME}/{SCRATCH_DIRNAME}/",
+        DERIVED,
+        None,
+        "`bga`'s scratch: the `$PATH` shim, the compiled hook and spine, "
+        "and unnamed intermediates. Never read across "
+        "captures; safe to delete.",
+    ),
+    (
+        f"{STORE_DIRNAME}/{RUNS_DIRNAME}/",
+        REQUIRED,
+        None,
+        "one directory per capture, named by UTC stamp. `@last` and "
+        "`@prev` resolve by listing it, so its ordering is part of the "
+        "contract: the names sort chronologically as strings.",
+    ),
+    (
+        f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/",
+        REQUIRED,
+        None,
+        "one capture: the snapshot `bga snapshot --list` enumerates and "
+        "`@last` names. The stamp is UTC and sorts chronologically as a "
+        "string, which is what makes the listing an ordering.",
+    ),
+    (
+        f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{RUN_SUBDIR}/",
+        REQUIRED,
+        None,
+        "the run directory - the unit every published command line takes "
+        "a path to. Absent on a build that failed before any element "
+        "completed, which is a capture with nothing to "
+        "analyse rather than a corrupt one.",
+    ),
+    (
+        f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{RUN_SUBDIR}/graph.json",
+        REQUIRED,
+        "graph/v9",
+        "the declared element graph, from `bst show`.",
+    ),
+    (
+        f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{RUN_SUBDIR}/trace.json",
+        REQUIRED,
+        "trace/v9",
+        "the scheduler's own spans and phases - Plane 1.",
+    ),
+    (
+        f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{RUN_SUBDIR}/run-context.json",
+        REQUIRED,
+        "run-context/v9",
+        "what the run was: identity, host manifest (`host/v2` inside it), "
+        "scheduler configuration, and the resolved `native_max_jobs`.",
+    ),
+    (
+        f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{RUN_SUBDIR}/chrome_trace.json",
+        DERIVED,
+        None,
+        "the Plane 1 trace in the legacy Chrome JSON shape. Present only "
+        "on a capture taken before extraction stopped writing it: it was "
+        "written for a person to drag into perfetto.dev, a later census "
+        "measured that no reader opens it, and `bga timeline --format chrome` "
+        "renders the same shape on demand from `trace.json`. Safe to "
+        "delete; nothing rewrites it.",
+    ),
+    (
+        f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{RUN_SUBDIR}/sources.json",
+        CONDITIONAL,
+        "sources/v1",
+        "the source inventory, read by `bga blast`. Absent "
+        "means the capture could not resolve the project's sources, and "
+        "`blast` says so rather than reporting an empty inventory.",
+    ),
+    (
+        f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{PLANE2_NAME}",
+        CONDITIONAL,
+        "plane2/v3",
+        "the Plane 2 report - what ran inside the sandboxes. Absent on a "
+        "capture taken without Plane 2, and every Plane 2 section of "
+        "every output is then absent rather than empty.",
+    ),
+    (
+        f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{RAW_LOG_NAME}",
+        CONDITIONAL,
+        None,
+        "the raw per-process trace the report was folded from, gzipped. "
+        "`bga timeline` renders from this; absent means no timeline, "
+        "which is a different absence from no report.",
+    ),
+    (
+        f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{RESOURCE_NAME}",
+        CONDITIONAL,
+        None,
+        "the two capacity scalars, beside the report so the aggregator "
+        "never opens the big file for them. Absent where the "
+        "report is.",
+    ),
+    (
+        f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{HOST_SAMPLES_NAME}",
+        CONDITIONAL,
+        "host-samples/v1",
+        "the host's memory, swap and CPU while the build ran, one JSON "
+        "per line. Absent on a capture taken before that was recorded "
+        "or with sampling unavailable.",
+    ),
+    (
+        f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{ANALYSIS_NAME}",
+        CONDITIONAL,
+        "analyze/v6",
+        "the analysis this capture published, so `bga view` renders "
+        "rather than re-deriving. Absent means the viewer "
+        "parses the run itself, and the trace carries no graph structure.",
+    ),
+    (
+        f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{TAIL_NAME}",
+        CONDITIONAL,
+        "tail/v1",
+        "wall and peak RSS of each phase bga ran after the build, and the "
+        "build's own wall. `complete: false` is a tail that was interrupted; "
+        "a phase that did not run has no row.",
+    ),
+    (
+        f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/build.log",
+        CONDITIONAL,
+        None,
+        "the wrapped BuildStream log, kept because its first line records "
+        "the real invocation. `bga timeline` needs it and "
+        "refuses without it.",
+    ),
+    (
+        f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/element-slice.json",
+        CONDITIONAL,
+        None,
+        "which elements the capture was asked for, where it was asked for a slice rather than the whole project.",
+    ),
+    (
+        f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/capture-context.txt",
+        CONDITIONAL,
+        None,
+        "what the capture did and why, in prose - the diagnostics `UX-146` writes. Never parsed.",
+    ),
+    (
+        f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{SIZE_CACHE_NAME}",
+        DERIVED,
+        None,
+        "a cached size for this snapshot, so `--list` does not walk every "
+        "run. Rebuilt when the tree signature changes; safe to delete.",
+    ),
 )
 
 

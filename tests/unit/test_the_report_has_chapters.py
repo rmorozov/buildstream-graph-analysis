@@ -24,6 +24,7 @@ item makes two kinds of claim:
 - *That grouping costs no height* is a pixel claim, and lives with the
   other pixel claims in `test_the_page_has_geometry.py`.
 """
+
 import functools
 import json
 import os
@@ -118,10 +119,13 @@ def _late():
     probe = tmp / "probe.mjs"
     probe.write_text(_LATE_PROBE, encoding="utf-8")
     done = subprocess.run(
-        [node, str(probe)], capture_output=True, text=True, cwd=REPO, timeout=60,
-        env=dict(os.environ,
-                 BGA_DOM_SHIM=str(REPO / "tests/dom_shim.mjs"),
-                 MOD=str(CHAPTERS_JS)))
+        [node, str(probe)],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=60,
+        env=dict(os.environ, BGA_DOM_SHIM=str(REPO / "tests/dom_shim.mjs"), MOD=str(CHAPTERS_JS)),
+    )
     assert done.returncode == 0, done.stderr[-2000:]
     return json.loads(done.stdout)
 
@@ -132,11 +136,18 @@ def _group(sections):
     probe = tmp / "probe.mjs"
     probe.write_text(_PROBE, encoding="utf-8")
     done = subprocess.run(
-        [node, str(probe)], capture_output=True, text=True, cwd=REPO, timeout=60,
-        env=dict(os.environ,
-                 BGA_DOM_SHIM=str(REPO / "tests/dom_shim.mjs"),
-                 MOD=str(CHAPTERS_JS),
-                 SECTIONS=json.dumps(sections)))
+        [node, str(probe)],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=60,
+        env=dict(
+            os.environ,
+            BGA_DOM_SHIM=str(REPO / "tests/dom_shim.mjs"),
+            MOD=str(CHAPTERS_JS),
+            SECTIONS=json.dumps(sections),
+        ),
+    )
     assert done.returncode == 0, done.stderr[-2000:]
     return json.loads(done.stdout)
 
@@ -197,16 +208,18 @@ def _boot_chapters_uncached(inventory=None, source=GOLDEN):
     view.export(str(run), str(page))
     html = page.read_text(encoding="utf-8")
     module = tmp / "inline.mjs"
-    module.write_text(
-        view.inflated_module(html),
-        encoding="utf-8")
+    module.write_text(view.inflated_module(html), encoding="utf-8")
     probe = tmp / "probe.mjs"
     source = (REPO / "tests/unit/test_a_report_you_can_navigate.py").read_text()
-    probe.write_text(source.split('_PROBE = r"""', 1)[1].rsplit('"""', 1)[0]
-                     + CHAPTER_TAIL, encoding="utf-8")
+    probe.write_text(source.split('_PROBE = r"""', 1)[1].rsplit('"""', 1)[0] + CHAPTER_TAIL, encoding="utf-8")
     done = subprocess.run(
-        [node, str(probe)], capture_output=True, text=True, cwd=REPO, timeout=90,
-        env=dict(os.environ, PAGE=str(page), MOD=str(module), PROTOCOL="file:"))
+        [node, str(probe)],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=90,
+        env=dict(os.environ, PAGE=str(page), MOD=str(module), PROTOCOL="file:"),
+    )
     assert done.returncode == 0, done.stderr[-2000:]
     return json.loads(done.stdout.strip().splitlines()[-1])
 
@@ -250,7 +263,6 @@ console.log(JSON.stringify({
 
 @needs_node
 class TestTheReportHasChapters:
-
     def test_the_page_is_grouped_into_six_to_eight_chapters(self):
         """The acceptance test's first clause, on the booted page."""
         out = _boot_chapters()
@@ -265,12 +277,11 @@ class TestTheReportHasChapters:
         assert out["all"], "the page rendered no sections at all"
         homeless = [key for key, chapter in out["all"] if not chapter]
         assert homeless == [], f"{homeless} are in no chapter"
-        assert out["loose"] == [], (
-            f"{out['loose']} sit beside the chapters rather than inside one")
+        assert out["loose"] == [], f"{out['loose']} sit beside the chapters rather than inside one"
         counted = sum(len(chapter["members"]) for chapter in out["chapters"])
         assert counted == len(out["all"]), (
-            f"{counted} members across chapters, {len(out['all'])} sections "
-            f"on the page - a section is in two chapters")
+            f"{counted} members across chapters, {len(out['all'])} sections on the page - a section is in two chapters"
+        )
 
     @pytest.mark.parametrize("fixture", sorted(FIXTURES))
     def test_nothing_falls_through_to_everything_else(self, fixture):
@@ -316,7 +327,8 @@ class TestTheReportHasChapters:
         two = {key for key, _ in _boot_chapters(source=MACRO_MICRO)["all"]}
         assert {"restructuring", "binary_cost"} <= two - one, (
             f"the two-plane fixture adds {sorted(two - one)}, which does "
-            f"not include the sections this leg was added for")
+            f"not include the sections this leg was added for"
+        )
 
     def test_each_chapter_is_a_named_landmark(self):
         """Item 2's other half: navigation moves chapter to chapter, and
@@ -346,8 +358,7 @@ class TestTheReportHasChapters:
         # `UX-344`: and `document_shape`, which says how deep the
         # document itself turned out to be - a fact about the artifact,
         # like the producer stamp above it.
-        assert out["chapters"][-1]["members"] == [
-            "summary", "run_instance", "producer", "document_shape"]
+        assert out["chapters"][-1]["members"] == ["summary", "run_instance", "producer", "document_shape"]
 
     def test_the_blast_control_sits_with_the_table_it_answers(self):
         """`UX-285`'s other outcome. The chapter's declared order puts
@@ -362,8 +373,7 @@ class TestTheReportHasChapters:
         # `UX-348`: the export draws the same `blast` section the served
         # page does - with the published command instead of the search
         # box - so the key no longer says "offline".
-        assert members.index("blast") == members.index(
-            "resource_blast") + 1, members
+        assert members.index("blast") == members.index("resource_blast") + 1, members
 
 
 @needs_node
@@ -378,8 +388,7 @@ class TestASectionTheTableDoesNotName:
 
     def test_an_unknown_section_lands_where_its_rail_says(self):
         out = _group([["findings", "decide"], ["newcomer", "prove"]])
-        home = {member: box["chapter"]
-                for box in out for member in box["members"]}
+        home = {member: box["chapter"] for box in out for member in box["members"]}
         assert home["newcomer"] == "believe", home
 
     def test_the_two_capacity_blocks_share_a_chapter(self):
@@ -394,17 +403,14 @@ class TestASectionTheTableDoesNotName:
         on the booted export because the recommendation needs a Plane 2
         report the golden fixture does not carry.
         """
-        out = _group([["capacity_verdict", "prove"],
-                      ["capacity_recommendation", "act"]])
-        home = {member: box["chapter"]
-                for box in out for member in box["members"]}
+        out = _group([["capacity_verdict", "prove"], ["capacity_recommendation", "act"]])
+        home = {member: box["chapter"] for box in out for member in box["members"]}
         assert home["capacity_recommendation"] == home["capacity_verdict"], home
         assert home["capacity_verdict"] == "machine", home
 
     def test_an_unknown_section_with_no_rail_is_visible_not_lost(self):
         out = _group([["findings", "decide"], ["newcomer", None]])
-        home = {member: box["chapter"]
-                for box in out for member in box["members"]}
+        home = {member: box["chapter"] for box in out for member in box["members"]}
         assert home["newcomer"] == "more", home
 
     def test_a_block_built_later_joins_its_chapter(self):
@@ -415,19 +421,16 @@ class TestASectionTheTableDoesNotName:
         out = _late()
         assert out["loose"] == [], f"{out['loose']} ended up outside a chapter"
         assert out["home"] == "elements", out
-        assert out["last"] == "run", (
-            "the identity chapter no longer closes the document")
+        assert out["last"] == "run", "the identity chapter no longer closes the document"
 
     def test_grouping_twice_changes_nothing(self):
         """`UX-278` files an element block into its chapter long after
         `boot` grouped the document, which calls this again on a
         document that is already grouped."""
-        sections = [["findings", "decide"], ["producer", "raw"],
-                    ["element-a-bst", None]]
+        sections = [["findings", "decide"], ["producer", "raw"], ["element-a-bst", None]]
         once = _group(sections)
         assert [box["chapter"] for box in once] == ["decide", "elements", "run"]
-        assert [box["members"] for box in once] == [
-            ["findings"], ["element-a-bst"], ["producer"]]
+        assert [box["members"] for box in once] == [["findings"], ["element-a-bst"], ["producer"]]
 
 
 # The same run-with-an-inventory `UX-285`'s order guard uses: four
@@ -436,14 +439,10 @@ class TestASectionTheTableDoesNotName:
 SHARED_MONOREPO = {
     "schema": "sources/v1",
     "elements": {
-        "lib.bst": [{"kind": "git", "identity": "example.com/org/mono",
-                     "keying": "ref", "staged_at": "src/lib"}],
-        "app.bst": [{"kind": "git", "identity": "example.com/org/mono",
-                     "keying": "ref", "staged_at": "src/app"}],
-        "extra.bst": [{"kind": "git", "identity": "example.com/org/mono",
-                       "keying": "ref", "staged_at": "src/extra"}],
-        "base.bst": [{"kind": "local", "identity": "files/base",
-                      "keying": "content"}],
+        "lib.bst": [{"kind": "git", "identity": "example.com/org/mono", "keying": "ref", "staged_at": "src/lib"}],
+        "app.bst": [{"kind": "git", "identity": "example.com/org/mono", "keying": "ref", "staged_at": "src/app"}],
+        "extra.bst": [{"kind": "git", "identity": "example.com/org/mono", "keying": "ref", "staged_at": "src/extra"}],
+        "base.bst": [{"kind": "local", "identity": "files/base", "keying": "content"}],
     },
     "unreadable": {},
 }

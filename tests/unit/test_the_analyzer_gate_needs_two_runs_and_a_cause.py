@@ -14,6 +14,7 @@ All synthetic: the real reading is CI's own clock and does not travel
 here (Out of Scope), so every case below is a fabricated
 `/usr/bin/time -v` report or a pinned diff, never a live `bga analyze`.
 """
+
 import pathlib
 import sys
 
@@ -41,8 +42,7 @@ _TIME_V = """\
 
 def _report(tmp_path, name, wall, kb, cmd="bga analyze"):
     path = tmp_path / name
-    path.write_text(_TIME_V.format(cmd=cmd, wall=wall, kb=kb),
-                    encoding="utf-8")
+    path.write_text(_TIME_V.format(cmd=cmd, wall=wall, kb=kb), encoding="utf-8")
     return path
 
 
@@ -87,40 +87,37 @@ class TestTheMarginIsAbsoluteNotARatio:
     def test_a_huge_ratio_under_the_margin_is_not_over(self):
         # 0.02s -> 0.09s is x4.5, and 0.07s added - nowhere near 5s.
         wall_over, _rss = ratchet.exceeded(
-            {"analyze_wall_s": 0.09, "analyze_rss_mb": 600.0},
-            {"analyze_wall_s": 0.02, "analyze_rss_mb": 600.0})
+            {"analyze_wall_s": 0.09, "analyze_rss_mb": 600.0}, {"analyze_wall_s": 0.02, "analyze_rss_mb": 600.0}
+        )
         assert wall_over is False
 
     def test_a_tiny_ratio_over_the_margin_is_over(self):
         # x1.02 on 300s is a ratio nobody would flag; 6s is real.
         wall_over, _rss = ratchet.exceeded(
-            {"analyze_wall_s": 306.0, "analyze_rss_mb": 600.0},
-            {"analyze_wall_s": 300.0, "analyze_rss_mb": 600.0})
+            {"analyze_wall_s": 306.0, "analyze_rss_mb": 600.0}, {"analyze_wall_s": 300.0, "analyze_rss_mb": 600.0}
+        )
         assert wall_over is True
 
     def test_rss_margin_is_megabytes_not_a_fraction(self):
         _wall, rss_over = ratchet.exceeded(
-            {"analyze_wall_s": 10.0, "analyze_rss_mb": 10100.0},
-            {"analyze_wall_s": 10.0, "analyze_rss_mb": 10000.0})
-        assert rss_over is True   # +100 MB clears the 50 MB margin
+            {"analyze_wall_s": 10.0, "analyze_rss_mb": 10100.0}, {"analyze_wall_s": 10.0, "analyze_rss_mb": 10000.0}
+        )
+        assert rss_over is True  # +100 MB clears the 50 MB margin
         _wall, rss_over = ratchet.exceeded(
-            {"analyze_wall_s": 10.0, "analyze_rss_mb": 620.0},
-            {"analyze_wall_s": 10.0, "analyze_rss_mb": 600.0})
+            {"analyze_wall_s": 10.0, "analyze_rss_mb": 620.0}, {"analyze_wall_s": 10.0, "analyze_rss_mb": 600.0}
+        )
         assert rss_over is False  # +20 MB does not
 
 
 def test_an_unrecorded_axis_reports_nothing():
     """`UX-503`'s shape, on a scalar: the run that meets a key the
     reference does not carry yet has nothing to be slower than."""
-    wall_over, rss_over = ratchet.exceeded(
-        {"analyze_wall_s": 50.0, "analyze_rss_mb": 5000.0}, {})
+    wall_over, rss_over = ratchet.exceeded({"analyze_wall_s": 50.0, "analyze_rss_mb": 5000.0}, {})
     assert wall_over is None and rss_over is None
 
 
 def test_one_axis_can_be_bootstrapped_while_the_other_is_not():
-    wall_over, rss_over = ratchet.exceeded(
-        {"analyze_wall_s": 50.0, "analyze_rss_mb": 5000.0},
-        {"analyze_wall_s": 10.0})
+    wall_over, rss_over = ratchet.exceeded({"analyze_wall_s": 50.0, "analyze_rss_mb": 5000.0}, {"analyze_wall_s": 10.0})
     assert wall_over is True
     assert rss_over is None
 
@@ -156,17 +153,13 @@ class TestTheDiffHasToNameTheAnalyzer:
         assert ratchet.touches_analyzer(None) is None
 
     def test_the_diff_names_the_analyzer(self, monkeypatch):
-        monkeypatch.setattr(dev_touching, "changed_files",
-                            lambda base: [ratchet.ANALYZER_FILE])
-        monkeypatch.setattr(ratchet.subprocess, "run",
-                            lambda *a, **k: type("R", (), {"returncode": 0})())
+        monkeypatch.setattr(dev_touching, "changed_files", lambda base: [ratchet.ANALYZER_FILE])
+        monkeypatch.setattr(ratchet.subprocess, "run", lambda *a, **k: type("R", (), {"returncode": 0})())
         assert ratchet.touches_analyzer("HEAD") is True
 
     def test_the_diff_names_something_else(self, monkeypatch):
-        monkeypatch.setattr(dev_touching, "changed_files",
-                            lambda base: ["bga/report.py"])
-        monkeypatch.setattr(ratchet.subprocess, "run",
-                            lambda *a, **k: type("R", (), {"returncode": 0})())
+        monkeypatch.setattr(dev_touching, "changed_files", lambda base: ["bga/report.py"])
+        monkeypatch.setattr(ratchet.subprocess, "run", lambda *a, **k: type("R", (), {"returncode": 0})())
         assert ratchet.touches_analyzer("HEAD") is False
 
 
@@ -175,8 +168,7 @@ def test_the_reference_carries_the_two_keys_beside_the_files():
     a flat map (`CLAUDE.md`), so these two scalars sit beside `files`,
     not instead of it."""
     reference = {"files": {"a.py": 1.0}}
-    candidate = {"files": {"a.py": 1.0}, "analyze_wall_s": 12.0,
-                "analyze_rss_mb": 700.0}
+    candidate = {"files": {"a.py": 1.0}, "analyze_wall_s": 12.0, "analyze_rss_mb": 700.0}
     document, added = drift.adopt(reference, candidate)
     assert document["analyze_wall_s"] == 12.0
     assert document["analyze_rss_mb"] == 700.0
@@ -189,8 +181,7 @@ def test_adopt_never_rewrites_an_entry_it_already_has():
     already carries a reading is not silently replaced by whatever a
     run measured."""
     reference = {"files": {"a.py": 1.0}, "analyze_wall_s": 9.0}
-    candidate = {"files": {"a.py": 1.0}, "analyze_wall_s": 999.0,
-                "analyze_rss_mb": 700.0}
+    candidate = {"files": {"a.py": 1.0}, "analyze_wall_s": 999.0, "analyze_rss_mb": 700.0}
     document, added = drift.adopt(reference, candidate)
     assert document["analyze_wall_s"] == 9.0
     assert document["analyze_rss_mb"] == 700.0
@@ -201,8 +192,7 @@ def test_the_keys_are_adopted_even_with_no_file_population_to_shift_by():
     """The two scalars have no per-file shift to be divided by, so
     they must not be dropped just because the file population could
     not supply one."""
-    document, added = drift.adopt({}, {"analyze_wall_s": 12.0,
-                                       "analyze_rss_mb": 700.0})
+    document, added = drift.adopt({}, {"analyze_wall_s": 12.0, "analyze_rss_mb": 700.0})
     assert added == {"analyze_wall_s": 12.0, "analyze_rss_mb": 700.0}
     assert document["analyze_wall_s"] == 12.0
 
@@ -213,16 +203,15 @@ def test_the_workflow_asks_the_ratchet_for_an_annotation():
     `dev_tier_drift`'s does (`test_a_slow_file_says_which_file.py`'s own
     `test_the_workflow_asks_the_gate_for_one` - kept from reading this
     step by name only, since both tools share the `--against` flag)."""
-    steps = [step.get("run") or ""
-             for job in yaml.safe_load(
-                 WORKFLOW.read_text(encoding="utf-8"))["jobs"].values()
-             for step in job.get("steps") or []
-             if "dev_perf_ratchet.py" in (step.get("run") or "")
-             and "--against" in (step.get("run") or "")]
+    steps = [
+        step.get("run") or ""
+        for job in yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))["jobs"].values()
+        for step in job.get("steps") or []
+        if "dev_perf_ratchet.py" in (step.get("run") or "") and "--against" in (step.get("run") or "")
+    ]
     assert steps, "no CI step checks the analyzer gate"
     for script in steps:
-        assert "--annotate" in script, (
-            f"the analyzer gate runs without --annotate: {script!r}")
+        assert "--annotate" in script, f"the analyzer gate runs without --annotate: {script!r}"
 
 
 def _test_job_steps():
@@ -238,15 +227,18 @@ def test_the_ci_steps_are_gated_to_the_3_12_runner():
     same reading (`fixing-guide` §5's "an instrument that runs more
     than it needs to"). `UX-995` moved the timing role onto 3.12."""
     steps = _test_job_steps()
-    perf_related = [step for step in steps
-                    if "perf_analyze" in (step.get("run") or "")
-                    or "perf_export" in (step.get("run") or "")
-                    or "dev_perf_ratchet.py" in (step.get("run") or "")]
+    perf_related = [
+        step
+        for step in steps
+        if "perf_analyze" in (step.get("run") or "")
+        or "perf_export" in (step.get("run") or "")
+        or "dev_perf_ratchet.py" in (step.get("run") or "")
+    ]
     assert perf_related, "no CI step in the `test` job touches the fixture"
     for step in perf_related:
         assert step.get("if", "").find("3.12") != -1, (
-            f"{step.get('name')!r} is not gated to the 3.12 runner: "
-            f"if: {step.get('if')!r}")
+            f"{step.get('name')!r} is not gated to the 3.12 runner: if: {step.get('if')!r}"
+        )
 
 
 def test_the_ratchet_never_runs_inside_make_test():

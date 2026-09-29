@@ -10,6 +10,7 @@ and a new file inherits `small` for free. What that buys has to be paid
 for by guards on three things: the lists name real files, the tiers
 partition the suite, and the default tier stays fast.
 """
+
 import pathlib
 import re
 import subprocess
@@ -30,8 +31,7 @@ from tools import dev_tier_drift as drift
 
 
 def _test_files():
-    return {p.relative_to(REPO).as_posix()
-            for p in (REPO / "tests").rglob("test_*.py")}
+    return {p.relative_to(REPO).as_posix() for p in (REPO / "tests").rglob("test_*.py")}
 
 
 class TestTheListsNameRealFiles:
@@ -41,8 +41,7 @@ class TestTheListsNameRealFiles:
         silently becomes small."""
         listed = set(tiers.LARGE) | set(tiers.MEDIUM)
         missing = sorted(listed - _test_files())
-        assert missing == [], (
-            f"tests/tiers.py names file(s) that do not exist: {missing}")
+        assert missing == [], f"tests/tiers.py names file(s) that do not exist: {missing}"
 
     def test_no_file_is_in_two_tiers(self):
         both = sorted(set(tiers.LARGE) & set(tiers.MEDIUM))
@@ -74,7 +73,8 @@ class TestTheListsNameRealFiles:
 #: match both the tokenised and the raw-text shapes.
 BOOTS_A_BROWSER = re.compile(
     r"from\s+tests\s*\.\s*browser\s+import|from\s+browser\s+import"
-    r"|find_chrome\s*\(")
+    r"|find_chrome\s*\("
+)
 
 
 def _code(path):
@@ -102,10 +102,13 @@ def _code(path):
     try:
         import io
         import tokenize as _tokenize
-        kept = [tok.string for tok in
-                _tokenize.generate_tokens(io.StringIO(source).readline)
-                if tok.type not in (_tokenize.STRING, _tokenize.COMMENT)]
-    except Exception:                                  # pragma: no cover
+
+        kept = [
+            tok.string
+            for tok in _tokenize.generate_tokens(io.StringIO(source).readline)
+            if tok.type not in (_tokenize.STRING, _tokenize.COMMENT)
+        ]
+    except Exception:  # pragma: no cover
         return source
     return " ".join(kept)
 
@@ -121,23 +124,19 @@ class TestNothingSlowByConstructionIsSmall:
         """
         listed = set(tiers.LARGE) | set(tiers.MEDIUM)
         small = sorted(
-            path for path in _test_files()
-            if BOOTS_A_BROWSER.search(_code(REPO / path))
-            and path not in listed)
+            path for path in _test_files() if BOOTS_A_BROWSER.search(_code(REPO / path)) and path not in listed
+        )
         assert small == [], (
             f"{len(small)} file(s) boot a real browser from the small "
             f"tier: {small}. Measure each with `--durations=0` and list "
-            f"it in tests/tiers.py")
+            f"it in tests/tiers.py"
+        )
 
     def test_the_rule_has_something_to_check(self):
         """A pattern that stopped matching would empty the clause above
         and pass forever."""
-        found = [path for path in _test_files()
-                 if BOOTS_A_BROWSER.search(
-                     (REPO / path).read_text(encoding="utf-8"))]
-        assert len(found) > 20, (
-            f"only {len(found)} browser guards found; the pattern has "
-            f"stopped matching the harness")
+        found = [path for path in _test_files() if BOOTS_A_BROWSER.search((REPO / path).read_text(encoding="utf-8"))]
+        assert len(found) > 20, f"only {len(found)} browser guards found; the pattern has stopped matching the harness"
 
 
 class TestTheTiersPartitionTheSuite:
@@ -157,30 +156,42 @@ class TestTheTiersPartitionTheSuite:
         target = tiers.LARGE[0]
         for marker, expected in (("large", True), ("small", False)):
             out = subprocess.run(
-                [sys.executable, "-m", "pytest", target, "-m", marker,
-                 "--collect-only", "-q", "-p", "no:cacheprovider"],
-                capture_output=True, text=True, cwd=REPO)
-            collected = re.search(r"(\d+)/(\d+) tests collected", out.stdout) \
-                or re.search(r"(\d+) tests? collected", out.stdout)
+                [
+                    sys.executable,
+                    "-m",
+                    "pytest",
+                    target,
+                    "-m",
+                    marker,
+                    "--collect-only",
+                    "-q",
+                    "-p",
+                    "no:cacheprovider",
+                ],
+                capture_output=True,
+                text=True,
+                cwd=REPO,
+            )
+            collected = re.search(r"(\d+)/(\d+) tests collected", out.stdout) or re.search(
+                r"(\d+) tests? collected", out.stdout
+            )
             got = bool(collected and int(collected.group(1)))
             assert got is expected, (
-                f"{target} under -m {marker}: expected "
-                f"{'tests' if expected else 'nothing'}, got {out.stdout[-300:]}")
+                f"{target} under -m {marker}: expected {'tests' if expected else 'nothing'}, got {out.stdout[-300:]}"
+            )
 
 
 class TestTheDefaultTierStaysFast:
     #: `UX-363`: (what the workflow line looks like, the constant it
     #: has to equal). `UX-1111` retired the parallel step's pair.
-    STEPS = ((r"PYTEST_XDIST= timeout (\d+) make test-small",
-              "SMALL_TIER_BACKSTOP_1P_S"),)
+    STEPS = ((r"PYTEST_XDIST= timeout (\d+) make test-small", "SMALL_TIER_BACKSTOP_1P_S"),)
 
     @staticmethod
     def _workflow():
         return (REPO / ".github/workflows/ci.yml").read_text(encoding="utf-8")
 
     @pytest.mark.parametrize("pattern,constant", STEPS)
-    def test_ci_enforces_the_budget_the_table_declares(self, pattern,
-                                                       constant):
+    def test_ci_enforces_the_budget_the_table_declares(self, pattern, constant):
         """The budget is a timeout in CI rather than a wall-clock
         assertion in a test: timing a suite from inside itself is the
         kind of guard that goes flaky and then gets muted. What is
@@ -192,8 +203,7 @@ class TestTheDefaultTierStaysFast:
         guarded by nothing and could drift from the table freely.
         """
         workflow = self._workflow()
-        assert "make test-small" in workflow, (
-            "CI does not run the small tier, so its budget is unenforced")
+        assert "make test-small" in workflow, "CI does not run the small tier, so its budget is unenforced"
         budget = re.search(pattern, workflow)
         assert budget, f"no small-tier step matching {pattern!r}, so no budget"
         declared = getattr(tiers, constant)
@@ -205,25 +215,26 @@ class TestTheDefaultTierStaysFast:
         # `timeout` takes whole seconds, so a fractional budget is not a
         # near-miss to be tolerated but a number CI cannot express.
         assert declared == int(declared), (
-            f"{constant} is {declared}s, and a CI `timeout` is whole "
-            f"seconds - there is no workflow line this can equal")
+            f"{constant} is {declared}s, and a CI `timeout` is whole seconds - there is no workflow line this can equal"
+        )
         assert int(budget.group(1)) == declared, (
             f"CI budgets {budget.group(1)}s, tests/tiers.py declares "
-            f"{declared}s as {constant} - two copies of one number")
+            f"{declared}s as {constant} - two copies of one number"
+        )
 
     def test_the_small_tier_runs_once_in_the_workflow(self):
         """`UX-1111`: the parallel backstop step is retired; a second
         `make test-small` line would be a step no constant sizes."""
-        lines = [line for line in self._workflow().splitlines()
-                 if re.search(r"\bmake test-small\b", line)
-                 and not line.lstrip().startswith("#")]
+        lines = [
+            line
+            for line in self._workflow().splitlines()
+            if re.search(r"\bmake test-small\b", line) and not line.lstrip().startswith("#")
+        ]
         assert len(lines) == 1, lines
         assert "PYTEST_XDIST= timeout" in lines[0], lines[0]
 
-    @pytest.mark.parametrize("slowest,backstop", (
-        ("SMALL_TIER_CI_SLOW_1P_S", "SMALL_TIER_BACKSTOP_1P_S"),))
-    def test_each_backstop_is_far_above_normal_running(self, slowest,
-                                                       backstop):
+    @pytest.mark.parametrize("slowest,backstop", (("SMALL_TIER_CI_SLOW_1P_S", "SMALL_TIER_BACKSTOP_1P_S"),))
+    def test_each_backstop_is_far_above_normal_running(self, slowest, backstop):
         """`UX-421` retired `UX-363`'s inequality:
 
             measured  <  budget  <  measured + LARGE_FLOOR_S
@@ -247,10 +258,11 @@ class TestTheDefaultTierStaysFast:
         assert bound >= slow * 3, (
             f"{backstop} is {bound}s against a slowest-seen {slow}s. A "
             f"backstop that close to normal running is a budget again, "
-            f"and UX-421 is the record of why that does not work")
+            f"and UX-421 is the record of why that does not work"
+        )
         assert bound == int(bound), (
-            f"{backstop} is {bound}s, and a CI `timeout` is whole "
-            f"seconds - there is no workflow line this can equal")
+            f"{backstop} is {bound}s, and a CI `timeout` is whole seconds - there is no workflow line this can equal"
+        )
 
     def test_the_backstops_were_sized_on_this_tree(self):
         """The clause above compares two hand-maintained numbers, so it
@@ -272,7 +284,8 @@ class TestTheDefaultTierStaysFast:
             f"{tiers.SMALL_TIER_POPULATION_FILES} the backstops were sized "
             f"on. Re-read SMALL_TIER_CI_SLOW_1P_S off a CI run's "
             f"single-process step, re-size its backstop, and set "
-            f"SMALL_TIER_POPULATION_FILES to what you measured on")
+            f"SMALL_TIER_POPULATION_FILES to what you measured on"
+        )
 
     def test_the_per_file_rule_is_what_catches_a_large_file_now(self):
         """The half the backstop gave up, held somewhere it works.
@@ -285,10 +298,8 @@ class TestTheDefaultTierStaysFast:
         it is checked here against the real rule rather than asserted
         about a timeout.
         """
-        reference = {f"tests/unit/test_small_{index}.py": 0.4
-                     for index in range(60)}
-        reference.update({f"tests/unit/test_real_{index}.py": 6.0
-                          for index in range(30)})
+        reference = {f"tests/unit/test_small_{index}.py": 0.4 for index in range(60)}
+        reference.update({f"tests/unit/test_real_{index}.py": 6.0 for index in range(30)})
         times = dict(reference)
         # One small file grows past the large floor - the exact event
         # the budget existed for - while the whole runner is 30% slower,
@@ -321,11 +332,9 @@ class TestTheDefaultTierStaysFast:
         are 20s now because at that size the arithmetic is legible in
         the fixture; it is not what makes the clause discriminate.
         """
-        reference = {f"tests/unit/test_real_{index}.py": 20.0
-                     for index in range(30)}
+        reference = {f"tests/unit/test_real_{index}.py": 20.0 for index in range(30)}
         for factor in (30.0 / 19.0, 1.3, 1.0):
-            times = {name: seconds * factor
-                     for name, seconds in reference.items()}
+            times = {name: seconds * factor for name, seconds in reference.items()}
             verdict, _shift, rows = drift.against(times, {"files": reference})
             assert (verdict, rows) == ("ok", []), (factor, verdict, rows)
 
@@ -358,9 +367,7 @@ class TestTheCensusKnowsItWasFiltered:
     def _session(markexpr, monkeypatch):
         import conftest
 
-        monkeypatch.setattr(
-            conftest, "_SKIPS",
-            {"a reason nobody declared": 40}, raising=False)
+        monkeypatch.setattr(conftest, "_SKIPS", {"a reason nobody declared": 40}, raising=False)
 
         class _Option:
             keyword = None
@@ -386,15 +393,14 @@ class TestTheCensusKnowsItWasFiltered:
         return session.exitstatus
 
     def test_a_tier_run_does_not_assert_a_whole_suite_census(self, monkeypatch):
-        assert self._session("small", monkeypatch) == 0, (
-            "a filtered run reported a whole-suite census")
+        assert self._session("small", monkeypatch) == 0, "a filtered run reported a whole-suite census"
 
     def test_an_unfiltered_run_still_does(self, monkeypatch):
         """The other direction, and the one that makes the first mean
         something: the same planted tally must fail a full run."""
         assert self._session("", monkeypatch) == 1, (
-            "the census stopped firing on a full run - the gate is not a "
-            "gate, it is an off switch")
+            "the census stopped firing on a full run - the gate is not a gate, it is an off switch"
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

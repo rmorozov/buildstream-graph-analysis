@@ -34,6 +34,7 @@ this file **builds it** from the committed generator, which is
 byte-reproducible from its seed - the run is not a tracked path, but the
 thing that makes it is.
 """
+
 import json
 import os
 import pathlib
@@ -53,7 +54,11 @@ needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 def _analyze(run):
     done = subprocess.run(
         ["python", "-m", "bga.cli", "analyze", str(run), "--format", "json"],
-        capture_output=True, text=True, cwd=REPO, timeout=300)
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=300,
+    )
     assert done.returncode == 0, done.stderr[-2000:]
     return json.loads(done.stdout)
 
@@ -69,7 +74,11 @@ def scale(tmp_path_factory):
     out = tmp_path_factory.mktemp("scale") / "run"
     done = subprocess.run(
         ["python", "-m", "tools.gen_synthetic_scale_run", str(out)],
-        capture_output=True, text=True, cwd=REPO, timeout=600)
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=600,
+    )
     assert done.returncode == 0, done.stderr[-2000:]
     return _analyze(out)
 
@@ -146,22 +155,27 @@ console.log(JSON.stringify({
 
 def _follow(payload):
     import tempfile
+
     scratch = tempfile.mkdtemp()
     try:
         run = pathlib.Path(scratch, "payload.json")
         run.write_text(json.dumps(payload), encoding="utf-8")
         doc = pathlib.Path(scratch, "schema.json")
-        doc.write_text(json.dumps(schemas.schema(schemas.ANALYZE)),
-                       encoding="utf-8")
+        doc.write_text(json.dumps(schemas.schema(schemas.ANALYZE)), encoding="utf-8")
         script = _HARNESS % {
             "app": (REPO / "tests/viewer.mjs").as_uri(),
             "views": (REPO / "tests/viewer.mjs").as_uri(),
-            "payload": json.dumps(str(run)), "schema": json.dumps(str(doc))}
-        done = subprocess.run([node, "--input-type=module", "-e", script],
-                              capture_output=True, text=True, cwd=REPO,
-                              timeout=300,
-                              env={**os.environ, "BGA_DOM_SHIM":
-                                   (REPO / "tests/dom_shim.mjs").as_uri()})
+            "payload": json.dumps(str(run)),
+            "schema": json.dumps(str(doc)),
+        }
+        done = subprocess.run(
+            [node, "--input-type=module", "-e", script],
+            capture_output=True,
+            text=True,
+            cwd=REPO,
+            timeout=300,
+            env={**os.environ, "BGA_DOM_SHIM": (REPO / "tests/dom_shim.mjs").as_uri()},
+        )
         assert done.returncode == 0, done.stderr[-3000:]
         return json.loads(done.stdout)
     finally:
@@ -178,7 +192,8 @@ class TestAtScale:
         assert drawn["elements"] > 1_000, drawn["elements"]
         assert drawn["eager_blocks"] < drawn["elements"] / 10, (
             f"{drawn['eager_blocks']} blocks for {drawn['elements']} elements "
-            f"- the cap is not capping, so this run cannot see the defect")
+            f"- the cap is not capping, so this run cannot see the defect"
+        )
 
     def test_the_cap_leaves_elements_with_no_block_of_their_own(self, scale):
         """The state the cap creates, and it is right (`UX-187`): most
@@ -195,26 +210,23 @@ class TestAtScale:
         """
         drawn = _follow(scale)
         assert drawn["deep_element"], (
-            "every element already has a block, so this run cannot exercise "
-            "the on-demand path at all")
+            "every element already has a block, so this run cannot exercise the on-demand path at all"
+        )
         assert drawn["deep_had_a_block_before"] is False
 
     def test_following_every_dead_anchor_resolves_it(self, scale):
         drawn = _follow(scale)
         assert drawn["unresolvable"] == [], drawn["unresolvable"]
         assert drawn["built_on_demand"] == drawn["dead_before"]
-        assert drawn["dead_after"] == 0, (
-            f"{drawn['dead_after']} anchors still resolve to nothing")
+        assert drawn["dead_after"] == 0, f"{drawn['dead_after']} anchors still resolve to nothing"
 
     def test_an_element_no_ranking_reaches_can_still_be_inspected(self, scale):
         """The other 1,178. The last key of the element table is not on
         the path, not a top action and not a finding - and it opens."""
         drawn = _follow(scale)
         assert drawn["deep_element"], "no element is outside the cap"
-        assert drawn["deep_rows"] >= 3, (
-            f"{drawn['deep_element']} opened with {drawn['deep_rows']} facts")
-        assert drawn["empty_note"] == 0, (
-            "an element with facts was told it has none")
+        assert drawn["deep_rows"] >= 3, f"{drawn['deep_element']} opened with {drawn['deep_rows']} facts"
+        assert drawn["empty_note"] == 0, "an element with facts was told it has none"
 
     def test_opening_the_same_element_twice_is_one_block(self, scale):
         assert _follow(scale)["deep_is_idempotent"]
@@ -233,8 +245,8 @@ class TestOnTheCommittedRun:
         one that matters."""
         drawn = _follow(small)
         assert drawn["dead_before"] == 0, (
-            "the committed run now has dead anchors too, so the note in "
-            "this file's docstring is out of date")
+            "the committed run now has dead anchors too, so the note in this file's docstring is out of date"
+        )
 
 
 @needs_node
@@ -273,18 +285,24 @@ console.log(JSON.stringify({
 
 def _follow_uid(payload, uid):
     import tempfile
+
     scratch = tempfile.mkdtemp()
     try:
         run = pathlib.Path(scratch, "payload.json")
         run.write_text(json.dumps(payload), encoding="utf-8")
-        script = _ONE % {"views": (REPO / "tests/viewer.mjs").as_uri(),
-                         "payload": json.dumps(str(run)),
-                         "uid": json.dumps(uid)}
-        done = subprocess.run([node, "--input-type=module", "-e", script],
-                              capture_output=True, text=True, cwd=REPO,
-                              timeout=120,
-                              env={**os.environ, "BGA_DOM_SHIM":
-                                   (REPO / "tests/dom_shim.mjs").as_uri()})
+        script = _ONE % {
+            "views": (REPO / "tests/viewer.mjs").as_uri(),
+            "payload": json.dumps(str(run)),
+            "uid": json.dumps(uid),
+        }
+        done = subprocess.run(
+            [node, "--input-type=module", "-e", script],
+            capture_output=True,
+            text=True,
+            cwd=REPO,
+            timeout=120,
+            env={**os.environ, "BGA_DOM_SHIM": (REPO / "tests/dom_shim.mjs").as_uri()},
+        )
         assert done.returncode == 0, done.stderr[-3000:]
         return json.loads(done.stdout)
     finally:

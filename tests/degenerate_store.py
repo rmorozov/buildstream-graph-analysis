@@ -23,6 +23,7 @@ readers use this - the shim guards feed `damaged()` straight to the
 renderers, and the browser walk serves it - so neither can drift into
 testing a different degeneracy from the other.
 """
+
 import copy
 
 #: Why each shape is here. The names are what the guards parametrize
@@ -37,7 +38,7 @@ def damaged(store, shape="null_row"):
     make every later assertion in the same test a measurement of this
     function instead of of the page.
     """
-    if shape not in SHAPES:                              # pragma: no cover
+    if shape not in SHAPES:  # pragma: no cover
         raise ValueError(f"{shape}: not one of {SHAPES}")
     copied = copy.deepcopy(store)
     rows = list(copied.get("snapshots") or [])

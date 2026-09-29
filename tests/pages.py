@@ -35,6 +35,7 @@ is why the copy is still made rather than exporting in place.
 `test_the_guards_measure_the_page.py` holds the two to the same
 rendering.
 """
+
 import json
 import os
 import pathlib
@@ -147,8 +148,7 @@ def two_plane_snapshot(into) -> pathlib.Path:
     snapshot = pathlib.Path(into) / "20260821T120000Z"
     snapshot.mkdir(parents=True, exist_ok=True)
     (snapshot / "build.log").write_text(_WRAPPED_LOG, encoding="utf-8")
-    shutil.copytree(FIXTURES["golden"], snapshot / "run",
-                    ignore=_IGNORED, dirs_exist_ok=True)
+    shutil.copytree(FIXTURES["golden"], snapshot / "run", ignore=_IGNORED, dirs_exist_ok=True)
     (snapshot / "run" / _DROPPED).unlink(missing_ok=True)
     with gzip.open(snapshot / "plane2.log.gz", "wt") as handle:
         handle.write(_RAW_PLANE2)
@@ -172,9 +172,12 @@ def scale_run(into, name="scale", shape=()) -> pathlib.Path:
     import sys
 
     run = pathlib.Path(into) / name
-    subprocess.run([sys.executable, "-m", "bga.cli", "gen-synthetic",
-                    str(run), "--seed", "1", *shape],
-                   check=True, capture_output=True, cwd=str(REPO))
+    subprocess.run(
+        [sys.executable, "-m", "bga.cli", "gen-synthetic", str(run), "--seed", "1", *shape],
+        check=True,
+        capture_output=True,
+        cwd=str(REPO),
+    )
     return run
 
 
@@ -200,23 +203,39 @@ def two_plane_run(into, shape=(), name="both") -> pathlib.Path:
     from bga import run_store
 
     project = pathlib.Path(into) / name
-    subprocess.run([sys.executable, "-m", "bga.cli", "gen-synthetic",
-                    str(project), "--seed", "1", "--store", "--runs", "2",
-                    *shape], check=True, capture_output=True, cwd=str(REPO))
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "bga.cli",
+            "gen-synthetic",
+            str(project),
+            "--seed",
+            "1",
+            "--store",
+            "--runs",
+            "2",
+            *shape,
+        ],
+        check=True,
+        capture_output=True,
+        cwd=str(REPO),
+    )
     snapshot = pathlib.Path(run_store.list_runs(str(project))[-1])
     raw = pathlib.Path(into) / f"{name}-plane2.log"
     with gzip.open(snapshot / run_store.RAW_LOG_NAME, "rb") as packed:
         raw.write_bytes(packed.read())
     report = subprocess.run(
-        [sys.executable, "-m", "bga.cli", "capture", "report", "--json",
-         "--project-dir", str(project), str(raw)],
-        check=True, capture_output=True, cwd=str(REPO))
+        [sys.executable, "-m", "bga.cli", "capture", "report", "--json", "--project-dir", str(project), str(raw)],
+        check=True,
+        capture_output=True,
+        cwd=str(REPO),
+    )
     (snapshot / run_store.PLANE2_NAME).write_bytes(report.stdout)
     return snapshot / run_store.RUN_SUBDIR
 
 
-def scale_two_plane_snapshot(into, per_element=12,
-                             programs=("cc",)) -> pathlib.Path:
+def scale_two_plane_snapshot(into, per_element=12, programs=("cc",)) -> pathlib.Path:
     """`UX-430`: the scale run, wrapped as a two-plane **snapshot**.
 
     `scale_run` gives 1,202 elements as a run directory; a timeline needs
@@ -252,36 +271,31 @@ def scale_two_plane_snapshot(into, per_element=12,
 
     def stamp(seconds):
         whole = int(seconds)
-        return (f"2026-08-21 12:{whole // 60:02d}:{whole % 60:02d},"
-                f"{int((seconds - whole) * 1000):03d}")
+        return f"2026-08-21 12:{whole // 60:02d}:{whole % 60:02d},{int((seconds - whole) * 1000):03d}"
 
-    lines = [f"[wrapper][{stamp(0)}] INFO: Executing command: bst build "
-             f"all.bst"]
+    lines = [f"[wrapper][{stamp(0)}] INFO: Executing command: bst build all.bst"]
     raw, pid = [], 100
     for index, uid in enumerate(elements):
         # One second each, laid end to end. The *shape* of the timeline
         # is not what this fixture is for - the population is.
         start, end = 1.0 + index, 1.9 + index
         digest = f"{index:08x}"
-        lines.append(f"[wrapper][{stamp(start)}] INFO: [00:00:00][{digest}]"
-                     f"[   build:{uid}] START Building")
-        lines.append(f"[wrapper][{stamp(end)}] INFO: [00:00:00][{digest}]"
-                     f"[   build:{uid}] SUCCESS Building")
+        lines.append(f"[wrapper][{stamp(start)}] INFO: [00:00:00][{digest}][   build:{uid}] START Building")
+        lines.append(f"[wrapper][{stamp(end)}] INFO: [00:00:00][{digest}][   build:{uid}] SUCCESS Building")
         for child in range(per_element):
             pid += 1
             began = 1000.0 + index + child / 100.0
             program = programs[(index + child) % len(programs)]
             command = f"{program} -c f{child}.c"
-            raw.append(f"START pid={pid} ppid=1 ts={began:.6f} element={uid} "
-                       f"inv=inv-{index} src=spine cmd={command}\n")
-            raw.append(f"END pid={pid} ppid=1 ts={began + 0.05:.6f} "
-                       f"element={uid} inv=inv-{index} src=spine exit=0 "
-                       f"utime=0.01 stime=0.01 maxrss_kb=1024 "
-                       f"cmd={command}\n")
-    lines.append(f"[wrapper][{stamp(2.0 + len(elements))}] INFO: Return "
-                 f"code: 0")
-    (snapshot / "build.log").write_text("\n".join(lines) + "\n",
-                                        encoding="utf-8")
+            raw.append(f"START pid={pid} ppid=1 ts={began:.6f} element={uid} inv=inv-{index} src=spine cmd={command}\n")
+            raw.append(
+                f"END pid={pid} ppid=1 ts={began + 0.05:.6f} "
+                f"element={uid} inv=inv-{index} src=spine exit=0 "
+                f"utime=0.01 stime=0.01 maxrss_kb=1024 "
+                f"cmd={command}\n"
+            )
+    lines.append(f"[wrapper][{stamp(2.0 + len(elements))}] INFO: Return code: 0")
+    (snapshot / "build.log").write_text("\n".join(lines) + "\n", encoding="utf-8")
     with gzip.open(snapshot / "plane2.log.gz", "wt", encoding="utf-8") as out:
         out.write("".join(raw))
     return snapshot
@@ -310,14 +324,18 @@ def shared_resource_run(into, resources=60) -> pathlib.Path:
         uids = [row["uid"] for row in json.load(handle)["elements"]]
     elements: dict = {}
     for index in range(resources):
-        at = index % 5      # the five widest closures, so every blast folds
+        at = index % 5  # the five widest closures, so every blast folds
         for uid in (uids[at], uids[at + 1]):
             elements.setdefault(uid, []).append(
-                {"kind": "git", "identity": f"host/org/repo-{index:02d}",
-                 "declared": f"https://host/org/repo-{index:02d}.git",
-                 "keying": "ref", "staged_at": None})
-    (run / "sources.json").write_text(
-        json.dumps(sources.build_inventory(elements)), encoding="utf-8")
+                {
+                    "kind": "git",
+                    "identity": f"host/org/repo-{index:02d}",
+                    "declared": f"https://host/org/repo-{index:02d}.git",
+                    "keying": "ref",
+                    "staged_at": None,
+                }
+            )
+    (run / "sources.json").write_text(json.dumps(sources.build_inventory(elements)), encoding="utf-8")
     return run
 
 
@@ -349,8 +367,7 @@ def shared_resource_uri(into, resources=60, name="folded.html") -> str:
 #: Injected into a copy rather than added to the fixture: the committed
 #: runs are the population a dozen other guards state numbers about,
 #: and moving one to close a schema gap would move those too.
-TRANSFER_SPANS = (("PULL", "DOWNLOAD", 4_000_000),
-                  ("PUSH", "UPLOAD", 1_500_000))
+TRANSFER_SPANS = (("PULL", "DOWNLOAD", 4_000_000), ("PUSH", "UPLOAD", 1_500_000))
 
 
 def transfer_run(fixture, into) -> pathlib.Path:
@@ -370,10 +387,16 @@ def transfer_run(fixture, into) -> pathlib.Path:
     first = min(span["ts_us"] for span in spans)
     element = spans[0]["task_key"].split("|", 1)[0]
     for index, (kind, resource, duration) in enumerate(TRANSFER_SPANS):
-        spans.append({"task_key": f"{element}|{kind}|{kind}|{index}",
-                      "ts_us": first, "dur_us": duration,
-                      "resources": [resource], "primary_resource": resource,
-                      "status": "SUCCESS"})
+        spans.append(
+            {
+                "task_key": f"{element}|{kind}|{kind}|{index}",
+                "ts_us": first,
+                "dur_us": duration,
+                "resources": [resource],
+                "primary_resource": resource,
+                "status": "SUCCESS",
+            }
+        )
     trace.write_text(json.dumps(doc), encoding="utf-8")
     return run
 
@@ -388,8 +411,7 @@ def snapshot_copy(fixture, into) -> pathlib.Path:
     """
     fixture = pathlib.Path(fixture)
     snapshot = pathlib.Path(into) / "snapshot"
-    shutil.copytree(fixture.parent, snapshot, ignore=_IGNORED,
-                    dirs_exist_ok=True)
+    shutil.copytree(fixture.parent, snapshot, ignore=_IGNORED, dirs_exist_ok=True)
     run = snapshot / fixture.name
     (run / _DROPPED).unlink(missing_ok=True)
     return run
@@ -423,11 +445,10 @@ def pages(tmp_path_factory, prefix="page", labels=None) -> dict:
     The whole of what most guards' `pages` fixture did, so the next one
     inherits the fix rather than the idiom that needed it.
     """
-    chosen = FIXTURES if labels is None else {
-        label: FIXTURES[label] for label in labels}
-    return {label: export_uri(fixture,
-                              tmp_path_factory.mktemp(f"{prefix}-{label}"))
-            for label, fixture in chosen.items()}
+    chosen = FIXTURES if labels is None else {label: FIXTURES[label] for label in labels}
+    return {
+        label: export_uri(fixture, tmp_path_factory.mktemp(f"{prefix}-{label}")) for label, fixture in chosen.items()
+    }
 
 
 def in_place_uri(fixture, into, name="report.html") -> str:

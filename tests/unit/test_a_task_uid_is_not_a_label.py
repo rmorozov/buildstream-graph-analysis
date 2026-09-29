@@ -23,6 +23,7 @@ its keys are - the page cannot tell `a.bst|BUILD|BUILD|0` from a binary
 called that without being told, and a viewer that guessed would be the
 name-sniffing `UX-201` removed.
 """
+
 import json
 import os
 import pathlib
@@ -61,8 +62,12 @@ console.log(JSON.stringify({
 def split():
     done = subprocess.run(
         [node, "--input-type=module", "-e", _SPLIT],
-        capture_output=True, text=True, cwd=REPO, timeout=60,
-        env=dict(os.environ, BGA_DOM_SHIM=str(REPO / "tests" / "dom_shim.mjs")))
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=60,
+        env=dict(os.environ, BGA_DOM_SHIM=str(REPO / "tests" / "dom_shim.mjs")),
+    )
     assert done.returncode == 0, done.stderr[-2000:]
     return json.loads(done.stdout)
 
@@ -73,7 +78,8 @@ class TestTheContractSaysWhatTheKeysAre:
         assert node.get(schemas.KEYED_BY) == schemas.KEYED_BY_TASK_UID, (
             "the page cannot tell a task uid from a binary name without "
             "being told; a viewer that guessed would be the name-sniffing "
-            "UX-201 removed")
+            "UX-201 removed"
+        )
 
 
 @needs_node
@@ -130,9 +136,9 @@ class TestOnTheRealPage:
         assert seen["found"], "the fixture no longer renders the section"
         assert seen["rows"] > 1, seen
         assert seen["composites"] == 0, (
-            f"{seen['composites']} of {seen['rows']} labels still show the "
-            f"pipe-delimited uid")
+            f"{seen['composites']} of {seen['rows']} labels still show the pipe-delimited uid"
+        )
         assert all("|" in key for key in seen["keys"]), (
-            "the composite must survive as the row's identity - a retry "
-            "and a fetch of one element are different rows")
+            "the composite must survive as the row's identity - a retry and a fetch of one element are different rows"
+        )
         assert seen["firstLabel"].startswith("codegen.bst"), seen["firstLabel"]

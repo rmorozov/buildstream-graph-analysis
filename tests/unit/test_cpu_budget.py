@@ -13,6 +13,7 @@ run's configuration appropriate" is operator intent, not raw hardware
 detection - see docs/backlog/scenarios/UX-0015-declared-cpu-budget-overrides-host-
 detection.md for the full evidence.
 """
+
 import json
 
 from bga import BuildEfficiencyAnalyzer
@@ -27,8 +28,13 @@ def _write_run_dir(tmp_path, name, run_context):
     }
     trace = {
         "spans": [
-            {"task_key": "a.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 1000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
+            {
+                "task_key": "a.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 1000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
         ],
         "phases": [],
     }
@@ -63,7 +69,12 @@ def test_declared_budget_governs_instead_of_detected_host_count(tmp_path):
     much smaller declared budget, since that's the constraint the
     operator actually cares about respecting."""
     result = _analyze(
-        tmp_path, "run", builders=8, native_max_jobs=8, host_cpu_count=32, cpu_budget=4,
+        tmp_path,
+        "run",
+        builders=8,
+        native_max_jobs=8,
+        host_cpu_count=32,
+        cpu_budget=4,
     )
     assert "resource_oversubscription" in _violation_types(result)
     violation = next(v for v in result.violations if v["type"] == "resource_oversubscription")
@@ -86,7 +97,12 @@ def test_declared_budget_can_clear_a_config_that_would_be_flagged_on_raw_host_co
     > 32) - proof the budget is actually driving the comparison, not
     just being recorded alongside it."""
     result = _analyze(
-        tmp_path, "run", builders=4, native_max_jobs=5, host_cpu_count=4, cpu_budget=16,
+        tmp_path,
+        "run",
+        builders=4,
+        native_max_jobs=5,
+        host_cpu_count=4,
+        cpu_budget=16,
     )
     types = _violation_types(result)
     assert "resource_oversubscription" not in types
@@ -111,7 +127,12 @@ def test_budget_exceeding_detected_host_capacity_is_itself_flagged(tmp_path):
     provide is a real, distinct signal - the budget itself is
     unrealistic here - not something to silently accept."""
     result = _analyze(
-        tmp_path, "run", builders=1, native_max_jobs=1, host_cpu_count=4, cpu_budget=16,
+        tmp_path,
+        "run",
+        builders=1,
+        native_max_jobs=1,
+        host_cpu_count=4,
+        cpu_budget=16,
     )
     assert "cpu_budget_exceeds_host_capacity" in _violation_types(result)
     violation = next(v for v in result.violations if v["type"] == "cpu_budget_exceeds_host_capacity")
@@ -121,7 +142,12 @@ def test_budget_exceeding_detected_host_capacity_is_itself_flagged(tmp_path):
 
 def test_budget_within_detected_host_capacity_is_not_flagged_as_unrealistic(tmp_path):
     result = _analyze(
-        tmp_path, "run", builders=4, native_max_jobs=4, host_cpu_count=32, cpu_budget=8,
+        tmp_path,
+        "run",
+        builders=4,
+        native_max_jobs=4,
+        host_cpu_count=32,
+        cpu_budget=8,
     )
     assert "cpu_budget_exceeds_host_capacity" not in _violation_types(result)
 
@@ -132,7 +158,12 @@ def test_capacity_model_note_names_the_declared_budget_not_the_host(tmp_path):
     claim when a declared budget, not real hardware, is what governed
     the check."""
     result = _analyze(
-        tmp_path, "run", builders=8, native_max_jobs=8, host_cpu_count=32, cpu_budget=4,
+        tmp_path,
+        "run",
+        builders=8,
+        native_max_jobs=8,
+        host_cpu_count=32,
+        cpu_budget=4,
     )
     note = result.floors.get("capacity_model_note")
     assert "declared CPU budget of 4 cores" in note

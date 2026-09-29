@@ -26,6 +26,7 @@ bga:presets  bga:quantity   bga:question      bga:rail
 bga:role     bga:series     bga:severity
 ```
 """
+
 import re
 from pathlib import Path
 
@@ -41,8 +42,9 @@ FORMAT = REPO / "bga" / "viewer" / "format.js"
 
 def _emitted():
     """Every `bga:` hint the schema modules name."""
-    return {hint for path in (SCHEMAS, HINTS)
-            for hint in re.findall(r'"(bga:[\w-]+)"', path.read_text(encoding="utf-8"))}
+    return {
+        hint for path in (SCHEMAS, HINTS) for hint in re.findall(r'"(bga:[\w-]+)"', path.read_text(encoding="utf-8"))
+    }
 
 
 def _documented():
@@ -54,15 +56,13 @@ def _documented():
 
 def _declared_in_format():
     """Every `bga:` key `format.js` binds a constant to."""
-    return set(re.findall(r'^(?:export )?const \w+ = "(bga:[\w-]+)";',
-                          FORMAT.read_text(encoding="utf-8"), re.M))
+    return set(re.findall(r'^(?:export )?const \w+ = "(bga:[\w-]+)";', FORMAT.read_text(encoding="utf-8"), re.M))
 
 
 def _format_opening():
     """`format.js`'s opening comment, unwrapped to one line."""
     head = FORMAT.read_text(encoding="utf-8").split("*/", 1)[0]
-    return " ".join(re.sub(r"^\s*/?\*+ ?", "", line)
-                    for line in head.splitlines())
+    return " ".join(re.sub(r"^\s*/?\*+ ?", "", line) for line in head.splitlines())
 
 
 class TestEveryHintIsDocumentedOnce:
@@ -74,13 +74,15 @@ class TestEveryHintIsDocumentedOnce:
         assert not missing, (
             f"emitted by `bga/schemas.py` and documented nowhere: {missing}. "
             f"A hint whose meaning lives only in the code is a seam nobody "
-            f"outside this repository can read.")
+            f"outside this repository can read."
+        )
 
     def test_every_documented_hint_is_emitted(self):
         stale = sorted(_documented() - _emitted())
         assert not stale, (
             f"documented in §1a and emitted by nothing: {stale}. A table "
-            f"naming a hint that does not exist is worse than no table.")
+            f"naming a hint that does not exist is worse than no table."
+        )
 
     def test_each_row_says_what_it_declares_and_who_reads_it(self):
         """Three columns, all filled. A row with an empty cell is a
@@ -101,25 +103,25 @@ class TestTheModuleSaysHowManyItDeclares:
     now carries are derived here, so neither can age unnoticed."""
 
     def test_the_count_of_keys_the_module_declares(self):
-        said = re.search(r"the (\d+) `bga:` hint keys this module declares",
-                         _format_opening())
+        said = re.search(r"the (\d+) `bga:` hint keys this module declares", _format_opening())
         assert said, (
             "format.js's opening paragraph no longer states how many "
-            "`bga:` hint keys it declares, in the words this guard reads")
+            "`bga:` hint keys it declares, in the words this guard reads"
+        )
         assert int(said.group(1)) == len(_declared_in_format()), (
             f"format.js says it declares {said.group(1)} `bga:` hint keys "
             f"and declares {len(_declared_in_format())}: "
-            f"{sorted(_declared_in_format())}")
+            f"{sorted(_declared_in_format())}"
+        )
 
     def test_the_size_of_the_vocabulary_it_is_part_of(self):
-        said = re.search(r"\(of the (\d+) `bga/schemas\.py` emits\)",
-                         _format_opening())
+        said = re.search(r"\(of the (\d+) `bga/schemas\.py` emits\)", _format_opening())
         assert said, (
-            "format.js's opening paragraph no longer states the size of "
-            "the emitted vocabulary its keys are drawn from")
+            "format.js's opening paragraph no longer states the size of the emitted vocabulary its keys are drawn from"
+        )
         assert int(said.group(1)) == len(_emitted()), (
-            f"format.js says the schemas emit {said.group(1)} hints and "
-            f"they emit {len(_emitted())}")
+            f"format.js says the schemas emit {said.group(1)} hints and they emit {len(_emitted())}"
+        )
 
     def test_the_keys_it_declares_are_drawn_from_that_vocabulary(self):
         """The sentence's `of the 19` is a subset claim, not only a
@@ -127,7 +129,8 @@ class TestTheModuleSaysHowManyItDeclares:
         invented = sorted(_declared_in_format() - _emitted())
         assert not invented, (
             f"declared in format.js and emitted by nothing: {invented}. "
-            f"A renderer reading a key no schema writes draws nothing.")
+            f"A renderer reading a key no schema writes draws nothing."
+        )
 
 
 class TestTheGuideIsRoutedTo:
@@ -140,15 +143,15 @@ class TestTheGuideIsRoutedTo:
         mutation that repointed exactly that passed a clause matching
         the display text."""
         text = INDEX.read_text(encoding="utf-8")
-        assert "](design/styleguide.md)" in text, (
-            "the docs index does not link the visual contract")
+        assert "](design/styleguide.md)" in text, "the docs index does not link the visual contract"
 
     def test_the_two_style_guides_name_each_other(self):
         assert "design/styleguide.md" in DOCS.read_text(encoding="utf-8"), (
-            "the documentation style guide does not name its sibling")
-        assert "contributing/style-guide.md" in VISUAL.read_text(
-            encoding="utf-8"), (
-            "the visual contract does not name its sibling")
+            "the documentation style guide does not name its sibling"
+        )
+        assert "contributing/style-guide.md" in VISUAL.read_text(encoding="utf-8"), (
+            "the visual contract does not name its sibling"
+        )
 
     def test_the_fixing_guide_routes_a_page_change(self):
         text = FIXING.read_text(encoding="utf-8")

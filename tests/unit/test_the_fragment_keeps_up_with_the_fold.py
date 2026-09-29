@@ -22,6 +22,7 @@ document's listener is called, and only *then* is `open` flipped, the
 way a summary's activation does it. A writer that has finished by the
 end of the dispatch cannot see it.
 """
+
 import json
 import pathlib
 import shutil
@@ -85,15 +86,14 @@ _FOLD = r"""(async () => {
 @pytest.fixture(scope="module")
 def folded(tmp_path_factory):
     """Both fixtures, served - where round 87 measured the lag."""
-    if chrome is None or node is None:                   # pragma: no cover
+    if chrome is None or node is None:  # pragma: no cover
         pytest.skip(NO_BROWSER)
     from tools.bga_view import serve
 
     out = {}
     with Browser(chrome) as opened:
         for label, fixture in pages.FIXTURES.items():
-            run = pages.snapshot_copy(
-                fixture, tmp_path_factory.mktemp(f"fold-{label}"))
+            run = pages.snapshot_copy(fixture, tmp_path_factory.mktemp(f"fold-{label}"))
             httpd, url = serve(str(run), port=0)
             threading.Thread(target=httpd.serve_forever, daemon=True).start()
             time.sleep(0.3)
@@ -132,8 +132,7 @@ class TestTheFragmentNamesThatFold:
         was dispatched, and a bubbling listener on the document would
         never have run."""
         for label, out in folded.items():
-            assert _open_set(out["afterUnclicked"]) == [
-                out["opened"], out["unclicked"]], (label, out)
+            assert _open_set(out["afterUnclicked"]) == [out["opened"], out["unclicked"]], (label, out)
 
 
 #: The timing, without a browser. The document's listener is called -
@@ -202,9 +201,9 @@ console.log(JSON.stringify({ duringTheDispatch, stillDuring, afterTheTurn,
 
 @pytest.fixture(scope="module")
 def timing():
-    done = subprocess.run([node, "--input-type=module", "-e", _TIMING],
-                          capture_output=True, text=True, cwd=str(REPO),
-                          timeout=120)
+    done = subprocess.run(
+        [node, "--input-type=module", "-e", _TIMING], capture_output=True, text=True, cwd=str(REPO), timeout=120
+    )
     assert done.returncode == 0, done.stderr
     return json.loads(done.stdout)
 
@@ -229,8 +228,7 @@ class TestTheWriteOutlivesTheDispatch:
         """The other half of the Required Fix: `toggle` does not bubble,
         so a fold nothing clicked was invisible to a delegating root."""
         assert timing["heardToggle"] == 1, timing
-        assert _open_set(timing["afterToggle"]) == [
-            "evidence", "utilisation.buckets"], timing
+        assert _open_set(timing["afterToggle"]) == ["evidence", "utilisation.buckets"], timing
 
 
 if __name__ == "__main__":  # pragma: no cover

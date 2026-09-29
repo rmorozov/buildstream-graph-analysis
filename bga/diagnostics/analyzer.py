@@ -29,10 +29,11 @@ logger = logging.getLogger(__name__)
 class WallClockShare:
     """
     Wall-clock share attribution for a task (Part 20).
-    
+
     share(t) = ∫ execution(t) 1/n(τ) dτ
     where n(τ) = number of concurrently executing tasks at time τ
     """
+
     task_key: str
     execution_duration_us: int
     wall_clock_share_us: float  # Marginal share of active wall time
@@ -43,15 +44,16 @@ class WallClockShare:
 class ReadyQueueMetrics:
     """
     Ready queue depth metrics over time (Part 21).
-    
+
     Tracks tasks that are dependency-ready, resource-ready, but not executing.
     """
+
     average_depth: float
     peak_depth: int
     time_with_nonzero_queue_us: int
     total_horizon_us: int
     queue_depth_timeline: list[tuple[int, int, int]] = field(default_factory=list)  # (start, end, depth)
-    
+
     @property
     def nonzero_fraction(self) -> float:
         """Fraction of time with non-zero ready queue."""
@@ -64,25 +66,26 @@ class ReadyQueueMetrics:
 class BlastRadiusResult:
     """
     Blast radius analysis for an element/task (Part 25).
-    
+
     reachable_downstream_count using reverse reachability.
     """
+
     element_uid: str
     downstream_count: int  # Number of downstream elements
     downstream_weighted_duration_us: int  # Sum of downstream task durations
     is_leaf: bool  # Whether this is a leaf element
     is_on_critical_path: bool  # Whether on observed critical path
     is_required_by_target: bool  # Whether reachable from requested targets
-    
+
     @property
     def risk_score(self) -> int:
         """Simple risk score = downstream_count × is_on_critical_path."""
         return self.downstream_count if self.is_on_critical_path else 0
 
 
-def order_blast_radius(results: list["BlastRadiusResult"],
-                       element_durations: dict[str, int],
-                       order: Optional[dict[str, int]] = None) -> None:
+def order_blast_radius(
+    results: list["BlastRadiusResult"], element_durations: dict[str, int], order: Optional[dict[str, int]] = None
+) -> None:
     """Rank blast-radius results in place, with a **total** order.
 
     `UX-173` chose the key: what a change to each element would cost,
@@ -118,26 +121,35 @@ def order_blast_radius(results: list["BlastRadiusResult"],
     """
     position = order or {}
     if any(r.downstream_weighted_duration_us for r in results):
-        results.sort(key=lambda x: (-x.downstream_weighted_duration_us,
-                                    -x.downstream_count,
-                                    -x.risk_score,
-                                    -element_durations.get(x.element_uid, 0),
-                                    position.get(x.element_uid, len(position)),
-                                    x.element_uid))
+        results.sort(
+            key=lambda x: (
+                -x.downstream_weighted_duration_us,
+                -x.downstream_count,
+                -x.risk_score,
+                -element_durations.get(x.element_uid, 0),
+                position.get(x.element_uid, len(position)),
+                x.element_uid,
+            )
+        )
     else:
-        results.sort(key=lambda x: (-x.downstream_count,
-                                    -x.risk_score,
-                                    position.get(x.element_uid, len(position)),
-                                    x.element_uid))
+        results.sort(
+            key=lambda x: (
+                -x.downstream_count,
+                -x.risk_score,
+                position.get(x.element_uid, len(position)),
+                x.element_uid,
+            )
+        )
 
 
 @dataclass
 class CriticalityProbability:
     """
     Monte-Carlo criticality probability for an element (Part 26).
-    
+
     P(element appears on longest path) under duration perturbations.
     """
+
     element_uid: str
     probability: float  # 0.0 to 1.0
     observed_critical: bool  # Whether on observed critical path
@@ -150,9 +162,10 @@ class CriticalityProbability:
 class FetchBuildOverlap:
     """
     Fetch/Build overlap analysis (Part 28).
-    
+
     Measures temporal overlap between FETCH and BUILD phases.
     """
+
     fetch_start_us: int
     fetch_end_us: int
     build_start_us: int
@@ -161,11 +174,11 @@ class FetchBuildOverlap:
     fetch_only_prefix_us: int  # Time with only fetch operations
     build_only_suffix_us: int  # Time with only build operations
     overlap_fraction: float = 0.0  # overlap / total_active_time
-    
+
     def __post_init__(self):
         if self.__dict__.get('_computed', False):
             return
-        
+
         total_active = max(self.build_end_us, self.fetch_end_us) - min(self.fetch_start_us, self.build_start_us)
         if total_active > 0:
             object.__setattr__(self, 'overlap_fraction', self.overlap_us / total_active)
@@ -177,9 +190,10 @@ class FetchBuildOverlap:
 class DurationVariability:
     """
     Duration variability statistics (Part 29).
-    
+
     Computed across historical runs for task classes.
     """
+
     task_class: str  # e.g., "BUILD", "FETCH"
     mean_us: float
     median_us: float
@@ -189,7 +203,7 @@ class DurationVariability:
     coefficient_of_variation: float  # std_dev / mean
     sample_count: int
     high_variability_warning: bool = False
-    
+
     def __post_init__(self):
         # High CV warning threshold
         if self.coefficient_of_variation > 0.3:  # 30% CV threshold
@@ -200,9 +214,10 @@ class DurationVariability:
 class LeafAnalysis:
     """
     Advanced leaf analysis result (Part 24).
-    
+
     Identifies leaf elements that are potentially deferrable.
     """
+
     element_uid: str
     is_leaf: bool  # Terminal in element graph
     is_on_blame_chain: bool
@@ -210,7 +225,7 @@ class LeafAnalysis:
     is_reachable_from_target: bool
     is_potentially_deferrable: bool  # Leaf AND not reachable from target
     recommendation: Optional[str] = None  # Deferral recommendation if applicable
-    
+
     def __post_init__(self):
         if self.is_leaf and not self.is_reachable_from_target:
             object.__setattr__(self, 'is_potentially_deferrable', True)
@@ -225,47 +240,49 @@ class DiagnosticsResult:
     """
     Complete advanced diagnostics result (M5).
     """
+
     # Wall-clock share
     wall_clock_shares: list[WallClockShare] = field(default_factory=list)
     total_active_wall_time_us: int = 0
-    
+
     # Ready queue
     ready_queue: Optional[ReadyQueueMetrics] = None
-    
+
     # Blast radius
     blast_radius: list[BlastRadiusResult] = field(default_factory=list)
     top_blast_radius_elements: list[BlastRadiusResult] = field(default_factory=list)
-    
+
     # Criticality probability
     criticality_probabilities: list[CriticalityProbability] = field(default_factory=list)
     high_criticality_elements: list[CriticalityProbability] = field(default_factory=list)
-    
+
     # Fetch/build overlap
     fetch_build_overlap: Optional[FetchBuildOverlap] = None
-    
+
     # Duration variability (requires historical data)
     duration_variability: list[DurationVariability] = field(default_factory=list)
-    
+
     # Leaf analysis
     leaf_analysis: list[LeafAnalysis] = field(default_factory=list)
     deferrable_leaves: list[LeafAnalysis] = field(default_factory=list)
-    
+
     # Churn × blast radius (requires historical churn data)
     churn_blast_radius: dict[str, float] = field(default_factory=dict)
-    
+
     def to_dict(self) -> dict:
         """Convert to analysis/v9 compatible dictionary."""
         return {
             "wall_clock_share": {
-                "shares": [{"task_key": s.task_key, "share_us": s.wall_clock_share_us} 
-                          for s in self.wall_clock_shares],
+                "shares": [{"task_key": s.task_key, "share_us": s.wall_clock_share_us} for s in self.wall_clock_shares],
                 "total_active_us": self.total_active_wall_time_us,
             },
             "ready_queue": {
                 "average_depth": self.ready_queue.average_depth if self.ready_queue else None,
                 "peak_depth": self.ready_queue.peak_depth if self.ready_queue else None,
                 "nonzero_fraction": self.ready_queue.nonzero_fraction if self.ready_queue else None,
-            } if self.ready_queue else None,
+            }
+            if self.ready_queue
+            else None,
             "blast_radius": [
                 {
                     "element_uid": br.element_uid,
@@ -289,7 +306,9 @@ class DiagnosticsResult:
                 "fetch_prefix_us": self.fetch_build_overlap.fetch_only_prefix_us,
                 "build_suffix_us": self.fetch_build_overlap.build_only_suffix_us,
                 "fraction": self.fetch_build_overlap.overlap_fraction,
-            } if self.fetch_build_overlap else None,
+            }
+            if self.fetch_build_overlap
+            else None,
             "duration_variability": [
                 {
                     "task_class": dv.task_class,
@@ -306,7 +325,8 @@ class DiagnosticsResult:
                         "deferrable": la.is_potentially_deferrable,
                         "recommendation": la.recommendation,
                     }
-                    for la in self.leaf_analysis if la.is_leaf
+                    for la in self.leaf_analysis
+                    if la.is_leaf
                 ],
                 "deferrable_count": len(self.deferrable_leaves),
             },
@@ -326,15 +346,15 @@ def element_uids_of(task_durations: dict[str, int]) -> list[str]:
 class DiagnosticsAnalyzer:
     """
     Advanced diagnostics analyzer implementing M5.
-    
+
     Provides high-value structural diagnostics based on established primitives.
     All diagnostics are deterministic (except Monte-Carlo which uses seeded RNG).
     """
-    
+
     DEFAULT_MC_SAMPLES = 200
     DEFAULT_PERTURBATION_PCT = 0.1
     MC_RANDOM_SEED = 42  # Deterministic Monte-Carlo
-    
+
     def __init__(
         self,
         normalized_tasks: list[object],
@@ -345,7 +365,7 @@ class DiagnosticsAnalyzer:
     ):
         """
         Initialize diagnostics analyzer.
-        
+
         Args:
             normalized_tasks: List of normalized task objects
             graph_analysis: Graph analysis results from EDG analyzer
@@ -358,23 +378,21 @@ class DiagnosticsAnalyzer:
         self.blame_chain = set(blame_chain or [])
         self.critical_path = set(critical_path or [])
         self.slack = slack or {}
-        
+
         # Extract graph data for structural analysis
         self.graph = graph_analysis.get('graph', {}) if graph_analysis else {}
         self.predecessors = graph_analysis.get('predecessors', {}) if graph_analysis else {}
         self.successors = graph_analysis.get('successors', {}) if graph_analysis else {}
-        
+
         # Build task maps
-        self.task_map: dict[str, object] = {
-            str(t.task_key): t for t in self.tasks
-        }
-        
+        self.task_map: dict[str, object] = {str(t.task_key): t for t in self.tasks}
+
         # Element-level maps
         self.element_tasks: dict[str, list[str]] = defaultdict(list)
         for task in self.tasks:
             elem_uid = task.task_key.element_uid
             self.element_tasks[elem_uid].append(str(task.task_key))
-        
+
         # Extract element durations from graph_analysis for perturbed critical path computation
         self._element_durations = graph_analysis.get('task_durations', {}) if graph_analysis else {}
 
@@ -390,7 +408,8 @@ class DiagnosticsAnalyzer:
         # _estimate_ready_count can enumerate the actual ready-but-not-
         # started candidates at a given instant, not just their count.
         self._tasks_sorted_by_ready: list[NormalizedTask] = sorted(
-            self.tasks, key=lambda t: t.ready_us,
+            self.tasks,
+            key=lambda t: t.ready_us,
         )
 
         # Per-resource occupancy arrays (P2-10): sorted start_us/finish_us
@@ -402,71 +421,73 @@ class DiagnosticsAnalyzer:
         self._resource_starts: dict[str, list[int]] = defaultdict(list)
         self._resource_finishes: dict[str, list[int]] = defaultdict(list)
         for t in self.tasks:
-            for resource in (t.resources or []):
+            for resource in t.resources or []:
                 key = resource.value if hasattr(resource, 'value') else str(resource)
                 self._resource_starts[key].append(t.start_us)
                 self._resource_finishes[key].append(t.finish_us)
         for key in self._resource_starts:
             self._resource_starts[key].sort()
             self._resource_finishes[key].sort()
-    
+
     def compute_wall_clock_shares(self) -> list[WallClockShare]:
         """
         Compute wall-clock share for each task (Part 20).
-        
+
         share(t) = ∫ execution(t) 1/n(τ) dτ
         where n(τ) = concurrent task count at time τ
-        
+
         Uses sweep-line algorithm over task intervals.
         """
         if not self.tasks:
             return []
-        
+
         # Build events: (timestamp, +1 for start/-1 for end, task_key)
         events = []
         for task in self.tasks:
             task_key = str(task.task_key)
             events.append((task.start_us, 1, task_key))
             events.append((task.finish_us, -1, task_key))
-        
+
         # Sort by timestamp, ends before starts at same time
         events.sort(key=lambda x: (x[0], x[1]))
-        
+
         # Sweep to compute concurrent count at each point
         shares: dict[str, float] = defaultdict(float)
         active_tasks: set[str] = set()
         prev_time = events[0][0] if events else 0
-        
+
         for timestamp, delta, task_key in events:
             # Process interval from prev_time to timestamp
             if timestamp > prev_time and active_tasks:
                 concurrent_count = len(active_tasks)
                 interval_duration = timestamp - prev_time
                 share_per_task = interval_duration / concurrent_count
-                
+
                 for active_task in active_tasks:
                     shares[active_task] += share_per_task
-            
+
             # Update active set
             if delta > 0:
                 active_tasks.add(task_key)
             else:
                 active_tasks.discard(task_key)
-            
+
             prev_time = timestamp
-        
+
         # Build result objects
         result = []
         for task in self.tasks:
             task_key = str(task.task_key)
-            result.append(WallClockShare(
-                task_key=task_key,
-                execution_duration_us=task.dur_us,
-                wall_clock_share_us=shares.get(task_key, 0.0),
-            ))
-        
+            result.append(
+                WallClockShare(
+                    task_key=task_key,
+                    execution_duration_us=task.dur_us,
+                    wall_clock_share_us=shares.get(task_key, 0.0),
+                )
+            )
+
         return result
-    
+
     def compute_ready_queue_metrics(
         self,
         occupancy_segments: list[dict],
@@ -474,9 +495,9 @@ class DiagnosticsAnalyzer:
     ) -> ReadyQueueMetrics:
         """
         Compute ready queue depth metrics (Part 21).
-        
+
         Ready queue = tasks that are dependency-ready, resource-ready, but not executing.
-        
+
         Args:
             occupancy_segments: Occupancy step function segments
             resource_capacities: Resource capacity limits
@@ -488,42 +509,42 @@ class DiagnosticsAnalyzer:
                 time_with_nonzero_queue_us=0,
                 total_horizon_us=0,
             )
-        
+
         resource_capacities = resource_capacities or {}
-        
+
         # For each segment, estimate ready queue depth
         # Simplified: assume tasks become ready immediately after predecessors finish
         # Full implementation would track detailed task states
-        
+
         timeline = []
         total_weighted_depth = 0
         total_duration = 0
         max_depth = 0
         nonzero_time = 0
-        
+
         for seg in occupancy_segments:
             start_us = seg.get('start_us', 0)
             end_us = seg.get('end_us', 0)
             active_tasks = seg.get('active_tasks', set())
             duration = end_us - start_us
-            
+
             if duration <= 0:
                 continue
-            
+
             # Estimate ready queue: tasks whose deps are done but not yet started
             # This is a simplified heuristic
             ready_count = self._estimate_ready_count(start_us, active_tasks, resource_capacities)
-            
+
             timeline.append((start_us, end_us, ready_count))
             total_weighted_depth += ready_count * duration
             total_duration += duration
             max_depth = max(max_depth, ready_count)
-            
+
             if ready_count > 0:
                 nonzero_time += duration
-        
+
         avg_depth = total_weighted_depth / total_duration if total_duration > 0 else 0.0
-        
+
         return ReadyQueueMetrics(
             average_depth=avg_depth,
             peak_depth=max_depth,
@@ -531,7 +552,7 @@ class DiagnosticsAnalyzer:
             total_horizon_us=total_duration,
             queue_depth_timeline=timeline,
         )
-    
+
     def _estimate_ready_count(
         self,
         time_us: int,
@@ -618,7 +639,7 @@ class DiagnosticsAnalyzer:
         same discipline `_resource_available_at`
         (bga/attribution/blame_chain.py) already uses for the same
         question elsewhere."""
-        for resource in (task.resources or []):
+        for resource in task.resources or []:
             key = resource.value if hasattr(resource, 'value') else str(resource)
             capacity = resource_capacities.get(key)
             if capacity is None:
@@ -626,11 +647,11 @@ class DiagnosticsAnalyzer:
             if self._resource_occupancy_at(key, time_us) >= capacity:
                 return False
         return True
-    
+
     def compute_blast_radius(self) -> list[BlastRadiusResult]:
         """
         Compute blast radius for all elements (Part 25).
-        
+
         Uses reverse reachability from graph analysis.
         """
         downstream_counts = self.graph_analysis.get('downstream_count', {})
@@ -677,16 +698,18 @@ class DiagnosticsAnalyzer:
             # Check if required by target (reachable from requested targets)
             # If no targets specified, assume all are required
             is_required = elem_uid in reachable_from_targets or not reachable_from_targets
-            
-            results.append(BlastRadiusResult(
-                element_uid=elem_uid,
-                downstream_count=downstream_count,
-                downstream_weighted_duration_us=weighted_duration,
-                is_leaf=is_leaf,
-                is_on_critical_path=elem_on_cp,
-                is_required_by_target=is_required,
-            ))
-        
+
+            results.append(
+                BlastRadiusResult(
+                    element_uid=elem_uid,
+                    downstream_count=downstream_count,
+                    downstream_weighted_duration_us=weighted_duration,
+                    is_leaf=is_leaf,
+                    is_on_critical_path=elem_on_cp,
+                    is_required_by_target=is_required,
+                )
+            )
+
         # UX-173: ranked by what a change to each element would *cost*,
         # not by how many names it touches. A stack with 40 elements
         # below it and a compiler with 6 are not the same risk, and the
@@ -715,11 +738,12 @@ class DiagnosticsAnalyzer:
         # Negated keys and an ascending sort rather than `reverse=True`,
         # because `reverse` would also reverse the uid and make the last
         # key descending for no reason.
-        order_blast_radius(results, element_durations,
-                           element_order(self.graph) if isinstance(self.graph, Graph) else None)
-        
+        order_blast_radius(
+            results, element_durations, element_order(self.graph) if isinstance(self.graph, Graph) else None
+        )
+
         return results
-    
+
     def compute_criticality_probability(
         self,
         num_samples: int = DEFAULT_MC_SAMPLES,
@@ -727,9 +751,9 @@ class DiagnosticsAnalyzer:
     ) -> list[CriticalityProbability]:
         """
         Compute Monte-Carlo criticality probability (Part 26).
-        
+
         Perturbs task durations and recomputes critical path multiple times.
-        
+
         Args:
             num_samples: Number of Monte-Carlo samples (default 200)
             perturbation_pct: Duration perturbation percentage (default ±10%)
@@ -741,9 +765,7 @@ class DiagnosticsAnalyzer:
         rng = random.Random(self.MC_RANDOM_SEED)
 
         # Get base durations
-        base_durations: dict[str, int] = {
-            str(t.task_key): t.dur_us for t in self.tasks
-        }
+        base_durations: dict[str, int] = {str(t.task_key): t.dur_us for t in self.tasks}
 
         # Track critical path appearances
         critical_counts: dict[str, int] = defaultdict(int)
@@ -774,8 +796,7 @@ class DiagnosticsAnalyzer:
         element_of_task = element_uids_of(base_durations)
         base_us = list(base_durations.values())
         sources = [uid for uid, deg in in_degree.items() if deg == 0]
-        has_successors = frozenset(
-            uid for uid, succs in successors.items() if succs)
+        has_successors = frozenset(uid for uid, succs in successors.items() if succs)
 
         for _ in range(num_samples):
             # Perturb durations, straight into the element aggregate the
@@ -796,8 +817,12 @@ class DiagnosticsAnalyzer:
             # approximation. Returns element UIDs (critical path is
             # defined on the element graph, Part 24.1), not task keys.
             perturbed_cp = self._compute_perturbed_critical_path(
-                elem_durations, predecessors, successors, in_degree,
-                sources, has_successors,
+                elem_durations,
+                predecessors,
+                successors,
+                in_degree,
+                sources,
+                has_successors,
             )
 
             for elem_uid_on_path in perturbed_cp:
@@ -815,7 +840,7 @@ class DiagnosticsAnalyzer:
             # samples actually landed on this element's critical path.
             count = critical_counts.get(elem_uid, 0)
             probability = count / num_samples if num_samples > 0 else 0.0
-            
+
             # Get observed slack
             obs_slack = self.slack.get(task_key, 0)
 
@@ -825,18 +850,20 @@ class DiagnosticsAnalyzer:
             # which silently made this always False regardless of the
             # element's real observed criticality.
             obs_critical = elem_uid in self.critical_path
-            
-            results.append(CriticalityProbability(
-                element_uid=elem_uid,
-                probability=probability,
-                observed_critical=obs_critical,
-                observed_slack_us=obs_slack,
-                samples=num_samples,
-                perturbation_pct=perturbation_pct,
-            ))
-        
+
+            results.append(
+                CriticalityProbability(
+                    element_uid=elem_uid,
+                    probability=probability,
+                    observed_critical=obs_critical,
+                    observed_slack_us=obs_slack,
+                    samples=num_samples,
+                    perturbation_pct=perturbation_pct,
+                )
+            )
+
         return results
-    
+
     def _compute_perturbed_critical_path(
         self,
         elem_durations: dict[str, int],
@@ -865,79 +892,79 @@ class DiagnosticsAnalyzer:
             queue.append(elem_uid)
 
         temp_in_degree = dict(in_degree)
-        
+
         while queue:
             current = queue.popleft()
-            
+
             for succ in successors.get(current, []):
                 potential_finish = earliest_finish[current] + elem_durations.get(succ, 0)
-                
+
                 if succ not in earliest_finish or potential_finish > earliest_finish[succ]:
                     earliest_finish[succ] = potential_finish
                     pred_on_critical[succ] = current
-                
+
                 temp_in_degree[succ] -= 1
                 if temp_in_degree[succ] == 0:
                     queue.append(succ)
-        
+
         if not earliest_finish:
             return set()
-        
+
         # Find terminal with maximum finish time
         critical_length = 0
         critical_end = None
-        
+
         for elem_uid, finish in earliest_finish.items():
             if elem_uid not in has_successors and finish > critical_length:
                 critical_length = finish
                 critical_end = elem_uid
-        
+
         if critical_end is None:
             critical_length = max(earliest_finish.values())
             critical_end = max(earliest_finish, key=earliest_finish.get)
-        
+
         # Reconstruct critical path
         critical_path = []
         current = critical_end
         while current is not None:
             critical_path.append(current)
             current = pred_on_critical.get(current)
-        
+
         return set(critical_path)
-    
+
     def compute_fetch_build_overlap(self) -> Optional[FetchBuildOverlap]:
         """
         Compute fetch/build overlap analysis (Part 28).
-        
+
         Measures temporal overlap between FETCH and BUILD task kinds.
         """
         if not self.tasks:
             return None
-        
+
         # Separate FETCH and BUILD tasks
         fetch_tasks = [t for t in self.tasks if t.task_key.task_kind == TaskKind.FETCH]
         build_tasks = [t for t in self.tasks if t.task_key.task_kind == TaskKind.BUILD]
-        
+
         if not fetch_tasks or not build_tasks:
             return None
-        
+
         # Compute fetch interval
         fetch_start = min(t.start_us for t in fetch_tasks)
         fetch_end = max(t.finish_us for t in fetch_tasks)
-        
+
         # Compute build interval
         build_start = min(t.start_us for t in build_tasks)
         build_end = max(t.finish_us for t in build_tasks)
-        
+
         # Compute overlap
         overlap_start = max(fetch_start, build_start)
         overlap_end = min(fetch_end, build_end)
         overlap_us = max(0, overlap_end - overlap_start)
-        
+
         # Compute exclusive intervals
         fetch_only_prefix = max(0, overlap_start - fetch_start)
         build_only_suffix = max(0, build_end - overlap_end)
-        
+
         return FetchBuildOverlap(
             fetch_start_us=fetch_start,
             fetch_end_us=fetch_end,
@@ -947,16 +974,16 @@ class DiagnosticsAnalyzer:
             fetch_only_prefix_us=fetch_only_prefix,
             build_only_suffix_us=build_only_suffix,
         )
-    
+
     def compute_leaf_analysis(
         self,
         requested_targets: Optional[set[str]] = None,
     ) -> list[LeafAnalysis]:
         """
         Compute advanced leaf analysis (Part 24).
-        
+
         Identifies leaf elements and their deferrability.
-        
+
         Args:
             requested_targets: Set of requested target element UIDs
         """
@@ -978,9 +1005,7 @@ class DiagnosticsAnalyzer:
         # anything in self.task_map), so this translation via task_map is
         # correct here.
         blame_chain_element_uids = {
-            self.task_map[tk].task_key.element_uid
-            for tk in self.blame_chain
-            if self.task_map.get(tk)
+            self.task_map[tk].task_key.element_uid for tk in self.blame_chain if self.task_map.get(tk)
         }
         # self.critical_path is already a set of element UIDs (see
         # compute_blast_radius's identical note) - compared directly,
@@ -993,7 +1018,7 @@ class DiagnosticsAnalyzer:
             on_blame_chain = elem_uid in blame_chain_element_uids
             on_critical_path = elem_uid in self.critical_path
             is_reachable = elem_uid in reachable_from_targets
-            
+
             # Compute deferrability
             is_potentially_deferrable = is_leaf and not is_reachable
             recommendation = None
@@ -1001,66 +1026,70 @@ class DiagnosticsAnalyzer:
                 recommendation = "Consider deferring or decoupling from main build"
             else:
                 recommendation = "Required by target or not a leaf"
-            
-            results.append(LeafAnalysis(
-                element_uid=elem_uid,
-                is_leaf=is_leaf,
-                is_on_blame_chain=on_blame_chain,
-                is_on_critical_path=on_critical_path,
-                is_reachable_from_target=is_reachable,
-                is_potentially_deferrable=is_potentially_deferrable,
-                recommendation=recommendation,
-            ))
-        
+
+            results.append(
+                LeafAnalysis(
+                    element_uid=elem_uid,
+                    is_leaf=is_leaf,
+                    is_on_blame_chain=on_blame_chain,
+                    is_on_critical_path=on_critical_path,
+                    is_reachable_from_target=is_reachable,
+                    is_potentially_deferrable=is_potentially_deferrable,
+                    recommendation=recommendation,
+                )
+            )
+
         return results
-    
+
     def compute_duration_variability(
         self,
         historical_durations: Optional[dict[str, list[int]]] = None,
     ) -> list[DurationVariability]:
         """
         Compute duration variability statistics (Part 29).
-        
+
         Requires historical duration data from previous runs.
-        
+
         Args:
             historical_durations: Dict mapping task_class to list of durations
         """
         if not historical_durations:
             return []
-        
+
         results = []
         for task_class, durations in historical_durations.items():
             if not durations:
                 continue
-            
+
             sorted_dur = sorted(durations)
             n = len(sorted_dur)
-            
+
             mean_us = sum(durations) / n
             median_us = sorted_dur[n // 2]
             p50_us = sorted_dur[int(n * 0.50)]
             p75_us = sorted_dur[int(n * 0.75)]
             p95_us = sorted_dur[int(n * 0.95)]
-            
+
             # Compute coefficient of variation
             variance = sum((d - mean_us) ** 2 for d in durations) / n
-            std_dev = variance ** 0.5
+            std_dev = variance**0.5
             cv = std_dev / mean_us if mean_us > 0 else 0.0
-            
-            results.append(DurationVariability(
-                task_class=task_class,
-                mean_us=mean_us,
-                median_us=median_us,
-                p50_us=p50_us,
-                p75_us=p75_us,
-                p95_us=p95_us,
-                coefficient_of_variation=cv,
-                sample_count=n,
-            ))
-        
+
+            results.append(
+                DurationVariability(
+                    task_class=task_class,
+                    mean_us=mean_us,
+                    median_us=median_us,
+                    p50_us=p50_us,
+                    p75_us=p75_us,
+                    p95_us=p95_us,
+                    coefficient_of_variation=cv,
+                    sample_count=n,
+                )
+            )
+
         return results
-    
+
     def run_full_diagnostics(
         self,
         occupancy_segments: Optional[list[dict]] = None,
@@ -1070,57 +1099,55 @@ class DiagnosticsAnalyzer:
     ) -> DiagnosticsResult:
         """
         Run complete M5 diagnostics suite.
-        
+
         Args:
             occupancy_segments: Occupancy step function segments
             resource_capacities: Resource capacity configuration
             requested_targets: Requested build targets
             historical_durations: Historical duration data for variability analysis
-            
+
         Returns:
             DiagnosticsResult with all computed metrics
         """
         result = DiagnosticsResult()
-        
+
         # Wall-clock share (Part 20)
         shares = self.compute_wall_clock_shares()
         result.wall_clock_shares = shares
         result.total_active_wall_time_us = sum(s.execution_duration_us for s in shares)
-        
+
         # Ready queue (Part 21)
         if occupancy_segments:
             result.ready_queue = self.compute_ready_queue_metrics(
                 occupancy_segments,
                 resource_capacities,
             )
-        
+
         # Blast radius (Part 25)
         blast_results = self.compute_blast_radius()
         result.blast_radius = blast_results
         result.top_blast_radius_elements = blast_results[:10]  # Top 10
-        
+
         # Criticality probability (Part 26)
         crit_probs = self.compute_criticality_probability()
         result.criticality_probabilities = crit_probs
-        result.high_criticality_elements = [
-            cp for cp in crit_probs if cp.probability >= 0.5
-        ]
-        
+        result.high_criticality_elements = [cp for cp in crit_probs if cp.probability >= 0.5]
+
         # Fetch/build overlap (Part 28)
         result.fetch_build_overlap = self.compute_fetch_build_overlap()
-        
+
         # Duration variability (Part 29)
         result.duration_variability = self.compute_duration_variability(historical_durations)
-        
+
         # Leaf analysis (Part 24)
         leaf_results = self.compute_leaf_analysis(requested_targets)
         result.leaf_analysis = leaf_results
         result.deferrable_leaves = [la for la in leaf_results if la.is_potentially_deferrable]
-        
+
         # Churn × blast radius (would require historical churn data)
         # Placeholder for future implementation
         result.churn_blast_radius = {}
-        
+
         return result
 
 
@@ -1137,7 +1164,7 @@ def analyze_diagnostics(
 ) -> DiagnosticsResult:
     """
     Convenience function to run full diagnostics analysis.
-    
+
     Args:
         normalized_tasks: List of normalized task objects
         graph_analysis: Graph analysis results
@@ -1148,7 +1175,7 @@ def analyze_diagnostics(
         resource_capacities: Resource capacities
         requested_targets: Requested build targets
         historical_durations: Historical data for variability
-        
+
     Returns:
         DiagnosticsResult with complete M5 analysis
     """
@@ -1159,7 +1186,7 @@ def analyze_diagnostics(
         critical_path=critical_path,
         slack=slack,
     )
-    
+
     result = analyzer.run_full_diagnostics(
         occupancy_segments=occupancy_segments,
         resource_capacities=resource_capacities,

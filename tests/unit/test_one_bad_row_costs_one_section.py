@@ -43,6 +43,7 @@ containment clauses are therefore browser-only and skip where there is
 no Chrome; the absence-stating clauses run on the shim, where the
 renderers can be fed directly.
 """
+
 import json
 import os
 import pathlib
@@ -71,8 +72,7 @@ needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
 
 def _project(tmp_path, count=3):
     """A project whose store holds `count` analysable snapshots."""
-    (tmp_path / "project.conf").write_text("name: p\nmin-version: 2.0\n",
-                                           encoding="utf-8")
+    (tmp_path / "project.conf").write_text("name: p\nmin-version: 2.0\n", encoding="utf-8")
     runs = []
     for n in range(1, count + 1):
         run = tmp_path / ".bga" / "runs" / f"2026010{n}T000000Z" / "run"
@@ -113,12 +113,15 @@ def _renderers(store, tmp_path):
     """Feed a store straight to the two renderers that indexed its rows."""
     path = tmp_path / "store.json"
     path.write_text(json.dumps(store), encoding="utf-8")
-    script = _RENDERERS % {"views": (REPO / "tests/viewer.mjs").as_uri(),
-                           "store": json.dumps(str(path))}
-    done = subprocess.run([node, "--input-type=module", "-e", script],
-                          capture_output=True, text=True, cwd=REPO, timeout=120,
-                          env={**os.environ, "BGA_DOM_SHIM":
-                               (REPO / "tests/dom_shim.mjs").as_uri()})
+    script = _RENDERERS % {"views": (REPO / "tests/viewer.mjs").as_uri(), "store": json.dumps(str(path))}
+    done = subprocess.run(
+        [node, "--input-type=module", "-e", script],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=120,
+        env={**os.environ, "BGA_DOM_SHIM": (REPO / "tests/dom_shim.mjs").as_uri()},
+    )
     assert done.returncode == 0, done.stderr[-3000:]
     return json.loads(done.stdout)
 
@@ -129,8 +132,7 @@ def healthy_store(tmp_path_factory):
 
     run = _project(tmp_path_factory.mktemp("store"))
     store = store_payload(str(run))
-    assert store and len(store.get("snapshots") or []) >= 2, (
-        "the fixture project produced no store to damage")
+    assert store and len(store.get("snapshots") or []) >= 2, "the fixture project produced no store to damage"
     return store
 
 
@@ -139,24 +141,20 @@ class TestTheRenderersStateTheAbsence:
     """The half a DOM can answer, on every shape the fixture offers."""
 
     @pytest.mark.parametrize("shape", SHAPES)
-    def test_no_renderer_throws_on_a_row_it_cannot_read(
-            self, shape, healthy_store, tmp_path):
+    def test_no_renderer_throws_on_a_row_it_cannot_read(self, shape, healthy_store, tmp_path):
         out = _renderers(damaged(healthy_store, shape), tmp_path)
         assert out["threw"] is None, (shape, out["threw"])
 
-    def test_the_trend_says_how_many_rows_it_could_not_read(
-            self, healthy_store, tmp_path):
+    def test_the_trend_says_how_many_rows_it_could_not_read(self, healthy_store, tmp_path):
         """Counted and stated, not silently dropped: a trend over 3 of 4
         snapshots that presents itself as a trend over 4 is the quiet
         wrong this states instead."""
         out = _renderers(damaged(healthy_store, "null_row"), tmp_path)
         assert out["trend"], "the trend did not render at all"
         assert out["trend"]["unreadable"] == "1", out["trend"]
-        assert "1 row in this store could not be read and is not drawn" \
-            in out["trend"]["text"], out["trend"]["text"]
+        assert "1 row in this store could not be read and is not drawn" in out["trend"]["text"], out["trend"]["text"]
 
-    def test_the_history_names_the_damage_rather_than_the_wrong_reason(
-            self, healthy_store, tmp_path):
+    def test_the_history_names_the_damage_rather_than_the_wrong_reason(self, healthy_store, tmp_path):
         """Three absences, not two. "It has not been on the critical
         path" is a true sentence about a healthy store and a misleading
         one about a damaged store - it sends the reader to look at the
@@ -212,7 +210,7 @@ def _boot(run, store, browser):
 
 @pytest.fixture(scope="module")
 def booted(tmp_path_factory, healthy_store):
-    if chrome is None or node is None:                   # pragma: no cover
+    if chrome is None or node is None:  # pragma: no cover
         pytest.skip(NO_BROWSER)
     run = _project(tmp_path_factory.mktemp("boot"))
     with Browser(chrome) as opened:
@@ -226,20 +224,20 @@ def booted(tmp_path_factory, healthy_store):
 @needs_node
 class TestOneBadRowCostsOneSection:
     def test_the_damaged_store_does_not_refuse_the_page(self, booted):
-        assert booted["damaged"]["value"]["refused"] is None, (
-            booted["damaged"]["value"]["refused"])
+        assert booted["damaged"]["value"]["refused"] is None, booted["damaged"]["value"]["refused"]
 
     def test_it_renders_every_section_the_healthy_store_renders(self, booted):
         """The measurement the item turns on: 0 sections before, and the
         *same* count as the healthy boot after. Equal rather than
         "some", because a fix that dropped six sections quietly would
         satisfy "did not collapse"."""
-        assert booted["damaged"]["value"]["sections"] == \
-            booted["healthy"]["value"]["sections"], (
-                booted["damaged"]["value"], booted["healthy"]["value"])
+        assert booted["damaged"]["value"]["sections"] == booted["healthy"]["value"]["sections"], (
+            booted["damaged"]["value"],
+            booted["healthy"]["value"],
+        )
         assert booted["healthy"]["value"]["sections"] > 20, (
-            "the healthy boot renders almost nothing, so the equality "
-            "above is not saying what it looks like")
+            "the healthy boot renders almost nothing, so the equality above is not saying what it looks like"
+        )
 
     def test_no_section_had_to_be_contained(self, booted):
         """Containment is the net, not the fix. Both boots draw every
@@ -275,8 +273,7 @@ class TestTheLoadFailureIsStillAPageFailure:
     and no guard reads is a distinction the next round deletes.
     """
 
-    def test_an_unparseable_report_refuses_the_page_and_says_which(
-            self, tmp_path_factory, healthy_store):
+    def test_an_unparseable_report_refuses_the_page_and_says_which(self, tmp_path_factory, healthy_store):
         from tools.bga_view import payloads, serve
 
         run = _project(tmp_path_factory.mktemp("unparseable"))
@@ -298,7 +295,9 @@ class TestTheLoadFailureIsStillAPageFailure:
         time.sleep(0.3)
         try:
             with Browser(chrome) as opened:
-                got = opened.observe(url, """(() => {
+                got = opened.observe(
+                    url,
+                    """(() => {
                   const root = document.getElementById("report");
                   const page = root.querySelector("[data-page-failed]");
                   return {
@@ -306,19 +305,22 @@ class TestTheLoadFailureIsStillAPageFailure:
                     sectionCards:
                       root.querySelectorAll("[data-section-failed]").length,
                   };
-                })()""")
+                })()""",
+                )
         finally:
             httpd.shutdown()
 
         value = got["value"]
         assert value["page"], (
             "a report that will not render produced no page-wide refusal - "
-            "containment swallowed the one failure that should stop the page")
+            "containment swallowed the one failure that should stop the page"
+        )
         assert "Could not load this run" in value["page"], value["page"]
         assert value["sectionCards"] == 0, (
             "the load failure was reported as a section's failure, which "
             "tells the reader one section is missing when the answer is "
-            "that none of them could be drawn")
+            "that none of them could be drawn"
+        )
 
 
 @needs_browser
@@ -353,14 +355,12 @@ class TestTheContainmentItselfWorks:
         source = views.read_text(encoding="utf-8")
         anchor = "export function renderOverview(payload) {"
         assert anchor in source, "renderOverview moved; re-anchor the probe"
-        views.write_text(source.replace(
-            anchor,
-            anchor + '\n  throw new TypeError("UX-335 containment probe");',
-            1), encoding="utf-8")
+        views.write_text(
+            source.replace(anchor, anchor + '\n  throw new TypeError("UX-335 containment probe");', 1), encoding="utf-8"
+        )
         return assets
 
-    def test_a_throwing_renderer_loses_its_section_and_says_so(
-            self, tmp_path_factory, healthy_store, monkeypatch):
+    def test_a_throwing_renderer_loses_its_section_and_says_so(self, tmp_path_factory, healthy_store, monkeypatch):
         import tools.bga_view as view
 
         tmp = tmp_path_factory.mktemp("throw")
@@ -368,26 +368,19 @@ class TestTheContainmentItselfWorks:
         # In this process only: the server reads `ASSET_DIR` at request
         # time, and every other xdist worker is a process of its own
         # still reading the real directory.
-        monkeypatch.setattr(view, "ASSET_DIR",
-                            str(self._assets_with_a_throwing_renderer(tmp)))
+        monkeypatch.setattr(view, "ASSET_DIR", str(self._assets_with_a_throwing_renderer(tmp)))
         with Browser(chrome) as opened:
             got = _boot(run, healthy_store, opened)
 
         value = got["value"]
-        assert value["refused"] is None, (
-            "the page still refuses as a whole, so containment did not "
-            "contain")
-        assert [card["section"] for card in value["failed"]] == ["overview"], \
-            value["failed"]
-        assert value["sections"] > 20, (
-            "the rest of the report went with it", value)
+        assert value["refused"] is None, "the page still refuses as a whole, so containment did not contain"
+        assert [card["section"] for card in value["failed"]] == ["overview"], value["failed"]
+        assert value["sections"] > 20, ("the rest of the report went with it", value)
         # The card names the *payload*, because the section is the
         # consequence and the document is the cause - a reader told only
         # "overview failed" has nowhere to go next.
         [card] = value["failed"]
         assert card["payload"] == "report.json", card
-        errors = [e["text"] for e in got["console"]
-                  if e["level"] in ("error", "assert")]
+        errors = [e["text"] for e in got["console"] if e["level"] in ("error", "assert")]
         assert any("UX-335 containment probe" in t for t in errors), errors
-        assert any('section "overview" failed on report.json' in t
-                   for t in errors), errors
+        assert any('section "overview" failed on report.json' in t for t in errors), errors

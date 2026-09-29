@@ -15,6 +15,7 @@ thrown away. Attribution deliberately still counts a failed attempt as
 a proof obligation rather than a re-bucketing — so the report states the
 waste instead of silently reclassifying it.
 """
+
 from bga.ingest.models import NormalizedTask, TaskKey, TaskKind, TaskSpan
 from bga.validation.invariants import compute_confidence
 
@@ -22,15 +23,24 @@ from bga.validation.invariants import compute_confidence
 def _task(uid, dur_us, status=None):
     return NormalizedTask(
         task_key=TaskKey(element_uid=uid, task_kind=TaskKind.BUILD, phase="EXECUTION"),
-        ready_us=0, start_us=0, finish_us=dur_us, status=status,
+        ready_us=0,
+        start_us=0,
+        finish_us=dur_us,
+        status=status,
     )
 
 
 def _confidence(tasks, floors):
     conf, violations = compute_confidence(
-        normalized_tasks=tasks, run_context=None, trace=None, graph=None,
-        violations=[], attribution_segments=[], graph_analysis={},
-        attribution={}, floors=floors,
+        normalized_tasks=tasks,
+        run_context=None,
+        trace=None,
+        graph=None,
+        violations=[],
+        attribution_segments=[],
+        graph_analysis={},
+        attribution={},
+        floors=floors,
     )
     return conf, violations
 
@@ -42,8 +52,7 @@ def test_i3_fires_when_the_floor_is_shorter_than_one_task():
     """A floor below a single observed task claims a schedule that cannot
     exist: no amount of capacity makes one task finish sooner than it
     did."""
-    _, violations = _confidence([_task("a.bst", 10_000_000)],
-                                {"t_infinity_observed": 5_000_000})
+    _, violations = _confidence([_task("a.bst", 10_000_000)], {"t_infinity_observed": 5_000_000})
 
     assert [v["invariant"] for v in violations] == ["I3"]
     assert violations[0]["longest_task_us"] == 10_000_000
@@ -52,8 +61,7 @@ def test_i3_fires_when_the_floor_is_shorter_than_one_task():
 def test_i3_is_satisfied_by_the_current_definition():
     """The per-element duration *is* the longest task, and the chain
     contains that element, so this holds by construction today."""
-    _, violations = _confidence([_task("a.bst", 10_000_000)],
-                                {"t_infinity_observed": 10_000_000})
+    _, violations = _confidence([_task("a.bst", 10_000_000)], {"t_infinity_observed": 10_000_000})
 
     assert not violations
 
@@ -77,8 +85,7 @@ def _event(ph, ts, status=None):
     args = {"action": "build", "element": "app.bst"}
     if status is not None:
         args["Status"] = status
-    return {"name": "app.bst [build]", "cat": "bst-builder", "ph": ph,
-            "ts": ts, "pid": 1, "tid": 100, "args": args}
+    return {"name": "app.bst [build]", "cat": "bst-builder", "ph": ph, "ts": ts, "pid": 1, "tid": 100, "args": args}
 
 
 # --- per-span status -----------------------------------------------------
@@ -87,7 +94,9 @@ def _event(ph, ts, status=None):
 def test_a_span_carries_its_terminal_status():
     span = TaskSpan(
         task_key=TaskKey(element_uid="a.bst", task_kind=TaskKind.BUILD, phase="EXECUTION"),
-        ts_us=0, dur_us=1000, status="FAILURE",
+        ts_us=0,
+        dur_us=1000,
+        status="FAILURE",
     )
 
     assert span.failed is True
@@ -98,7 +107,8 @@ def test_an_unrecorded_status_is_not_a_failure():
     be read as having failed - nor as having succeeded."""
     span = TaskSpan(
         task_key=TaskKey(element_uid="a.bst", task_kind=TaskKind.BUILD, phase="EXECUTION"),
-        ts_us=0, dur_us=1000,
+        ts_us=0,
+        dur_us=1000,
     )
 
     assert span.status is None
@@ -106,8 +116,7 @@ def test_an_unrecorded_status_is_not_a_failure():
 
 
 def test_failed_work_is_measured_and_published():
-    tasks = [_task("a.bst", 5_000_000, status="FAILURE"),
-             _task("b.bst", 3_000_000, status="SUCCESS")]
+    tasks = [_task("a.bst", 5_000_000, status="FAILURE"), _task("b.bst", 3_000_000, status="SUCCESS")]
 
     confidence, _ = _confidence(tasks, {})
 
@@ -126,7 +135,8 @@ def test_the_converter_records_the_status_it_read():
     from tools.chrome_trace_to_bga_trace import chrome_events_to_bga_spans
 
     events = [
-        _event("B", 1000), _event("E", 5000, status="FAILURE"),
+        _event("B", 1000),
+        _event("E", 5000, status="FAILURE"),
     ]
 
     spans, _ = chrome_events_to_bga_spans(events)

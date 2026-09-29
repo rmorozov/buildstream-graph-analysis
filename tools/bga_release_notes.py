@@ -21,6 +21,7 @@ count is what both ledgers already record.
 
     bga release-notes --from 238 --to 250
 """
+
 import argparse
 import pathlib
 import re
@@ -35,8 +36,7 @@ SCENARIOS = REPO / "docs/backlog/scenarios"
 # The order topics appear in a release body. A reader scanning for
 # "what changed for me" wants the contract and CLI news first and the
 # process news last; alphabetical would bury `contracts` under `cli`.
-TOPIC_ORDER = ("contracts", "cli", "analysis", "capture", "viewer",
-               "store", "guards", "docs")
+TOPIC_ORDER = ("contracts", "cli", "analysis", "capture", "viewer", "store", "guards", "docs")
 
 _ID = re.compile(r"UX-(\d+)")
 _TOPIC = re.compile(r"\*\*Topic:\*\*\s*(\w+)")
@@ -46,8 +46,7 @@ def _rows():
     """Every closed row, in file order — which is the order they closed."""
     rows = []
     for line in dev_close_task.closed_rows():
-        cells = [cell.strip() for cell in
-                 re.split(r"(?<!\\)\|", line.strip().strip("|"))]
+        cells = [cell.strip() for cell in re.split(r"(?<!\\)\|", line.strip().strip("|"))]
         if len(cells) < 6:
             continue
         rows.append({"id": cells[0], "summary": cells[1], "link": cells[5]})
@@ -85,7 +84,8 @@ def render(start: int, end: int) -> str:
     if not 0 <= start <= end <= len(rows):
         raise ValueError(
             f"marker range {start}..{end} does not fit {len(rows)} closed "
-            f"rows - markers are closed-row counts, not item numbers")
+            f"rows - markers are closed-row counts, not item numbers"
+        )
     window = rows[start:end]
     if not window:
         return "No scenarios closed between these markers.\n"
@@ -94,10 +94,8 @@ def render(start: int, end: int) -> str:
     for row in window:
         grouped.setdefault(_topic(row["id"]), []).append(row)
 
-    ordered = ([topic for topic in TOPIC_ORDER if topic in grouped]
-               + sorted(set(grouped) - set(TOPIC_ORDER)))
-    lines = [f"{len(window)} scenarios closed "
-             f"(closed-row markers {start} → {end}).", ""]
+    ordered = [topic for topic in TOPIC_ORDER if topic in grouped] + sorted(set(grouped) - set(TOPIC_ORDER))
+    lines = [f"{len(window)} scenarios closed (closed-row markers {start} → {end}).", ""]
     for topic in ordered:
         lines.append(f"**{topic}**")
         lines.append("")
@@ -109,13 +107,18 @@ def render(start: int, end: int) -> str:
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(
-        prog="bga release-notes",
-        description="Generate a release's body from the closed backlog rows.")
-    parser.add_argument("--from", dest="start", type=int, required=True,
-                        help="Closed-row marker of the previous release.")
-    parser.add_argument("--to", dest="end", type=int, default=None,
-                        help="Closed-row marker of this release "
-                             "(default: every row there is now).")
+        prog="bga release-notes", description="Generate a release's body from the closed backlog rows."
+    )
+    parser.add_argument(
+        "--from", dest="start", type=int, required=True, help="Closed-row marker of the previous release."
+    )
+    parser.add_argument(
+        "--to",
+        dest="end",
+        type=int,
+        default=None,
+        help="Closed-row marker of this release (default: every row there is now).",
+    )
     args = parser.parse_args(argv)
     end = args.end if args.end is not None else len(_rows())
     try:

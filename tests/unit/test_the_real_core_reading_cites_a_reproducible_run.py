@@ -6,6 +6,7 @@ cites is a case the script still handles and the workflow can still
 select - a renamed or deleted leg reddens even though the run itself
 never will.
 """
+
 import pathlib
 import re
 
@@ -34,7 +35,7 @@ def _script_legs():
     removed arm reddens this rather than a second literal."""
     text = SCRIPT.read_text(encoding="utf-8")
     start = text.index("case $MODE in")
-    block = text[start:text.index("esac", start)]
+    block = text[start : text.index("esac", start)]
     legs = set()
     for match in re.finditer(r"^\s*([a-z0-9|]+)\)", block, re.M):
         pattern = match.group(1)
@@ -45,22 +46,19 @@ def _script_legs():
 
 
 def test_the_paragraph_exists():
-    assert ANCHOR in DIRECTIONS.read_text(encoding="utf-8"), (
-        "Direction 20's real-core reading has moved or was removed")
+    assert ANCHOR in DIRECTIONS.read_text(encoding="utf-8"), "Direction 20's real-core reading has moved or was removed"
 
 
 def test_it_names_a_run_id():
     assert RUN_ID.search(_paragraph()), (
-        "the real-core reading names no `run <id>` - it would be a "
-        "measurement with no way back to what produced it")
+        "the real-core reading names no `run <id>` - it would be a measurement with no way back to what produced it"
+    )
 
 
 def test_it_names_the_procedure_that_reproduces_it():
     para = _paragraph()
-    assert "graviton_arms.sh" in para, (
-        "the reading names no script - not reproducible from the prose alone")
-    assert "codspeed-probe.yml" in para, (
-        "the reading names no workflow - nothing says how the script is invoked")
+    assert "graviton_arms.sh" in para, "the reading names no script - not reproducible from the prose alone"
+    assert "codspeed-probe.yml" in para, "the reading names no workflow - nothing says how the script is invoked"
 
 
 def test_every_leg_it_cites_is_one_the_script_still_handles():
@@ -69,8 +67,8 @@ def test_every_leg_it_cites_is_one_the_script_still_handles():
     handled = _script_legs()
     missing = sorted(cited - handled)
     assert missing == [], (
-        f"the reading cites leg(s) {missing} that graviton_arms.sh's own "
-        f"case arms no longer handle: {sorted(handled)}")
+        f"the reading cites leg(s) {missing} that graviton_arms.sh's own case arms no longer handle: {sorted(handled)}"
+    )
 
 
 def test_the_workflow_selects_its_leg_from_the_matrix_not_a_literal():
@@ -81,4 +79,5 @@ def test_the_workflow_selects_its_leg_from_the_matrix_not_a_literal():
     assert "graviton_arms.sh" in text
     assert re.search(r"graviton_arms\.sh\s+\$\{\{\s*matrix\.leg\s*\}\}", text), (
         "the workflow's Arms step no longer passes matrix.leg through - "
-        "a leg the reading names could be one the job never runs")
+        "a leg the reading names could be one the job never runs"
+    )

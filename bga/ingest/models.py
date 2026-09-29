@@ -26,6 +26,7 @@ STRUCTURAL_ELEMENT_KINDS = frozenset({"junction", "import", "filter", "compose",
 
 class TaskKind(Enum):
     """Task kinds as defined in Part 5.2."""
+
     TRACK = "TRACK"
     PULL = "PULL"
     FETCH = "FETCH"
@@ -36,6 +37,7 @@ class TaskKind(Enum):
 
 class Resource(Enum):
     """Resources as defined in Part 31.2."""
+
     PROCESS = "PROCESS"
     DOWNLOAD = "DOWNLOAD"
     UPLOAD = "UPLOAD"
@@ -45,6 +47,7 @@ class Resource(Enum):
 
 class AttributionCategory(Enum):
     """Measured attribution categories from Part 11."""
+
     EXECUTION_ON_CHAIN = "EXECUTION_ON_CHAIN"
     DEPENDENCY_WAIT = "DEPENDENCY_WAIT"
     RESOURCE_WAIT = "RESOURCE_WAIT"
@@ -59,9 +62,10 @@ class AttributionCategory(Enum):
 class RunContext:
     """
     run-context/v9 schema from Part 32.1.
-    
+
     Contains metadata about the CI run being analyzed.
     """
+
     trace_epsilon_us: int = 50000  # Default 50ms
     wall_start_us: Optional[int] = None
     wall_end_us: Optional[int] = None
@@ -352,9 +356,10 @@ class RunContext:
 class Element:
     """
     Element from graph/v9 schema (Part 32.2).
-    
+
     Represents a BuildStream element.
     """
+
     uid: str
     cache_key: Optional[str] = None
     requested_target: bool = False
@@ -385,29 +390,30 @@ class Element:
 class TaskKey:
     """
     Task identifier as defined in Part 5.2.
-    
+
     Format: element_uid|task_kind|phase|attempt
     """
+
     element_uid: str
     task_kind: TaskKind
     phase: str
     attempt: int = 0
-    
+
     def __str__(self) -> str:
         return f"{self.element_uid}|{self.task_kind.value}|{self.phase}|{self.attempt}"
-    
+
     @classmethod
     def from_string(cls, s: str) -> 'TaskKey':
         """Parse a task key string."""
         parts = s.split('|')
         if len(parts) < 3:
             raise ValueError(f"Invalid task key format: {s}")
-        
+
         element_uid = parts[0]
         task_kind = TaskKind(parts[1]) if parts[1] in [k.value for k in TaskKind] else TaskKind.OTHER
         phase = parts[2]
         attempt = int(parts[3]) if len(parts) > 3 else 0
-        
+
         return cls(element_uid=element_uid, task_kind=task_kind, phase=phase, attempt=attempt)
 
 
@@ -415,9 +421,10 @@ class TaskKey:
 class TaskSpan:
     """
     Task span from trace/v9 schema (Part 32.3).
-    
+
     Represents one task execution interval.
     """
+
     task_key: TaskKey
     ts_us: int  # Start timestamp in microseconds
     dur_us: int  # Duration in microseconds
@@ -447,13 +454,14 @@ class TaskSpan:
 class PhaseSpan:
     """
     Phase span from trace/v9 schema (Part 32.3).
-    
+
     Represents a background phase interval (annotation only).
     """
+
     name: str
     ts_us: int
     dur_us: int
-    
+
     @property
     def finish_us(self) -> int:
         """Finish timestamp in microseconds."""
@@ -464,9 +472,10 @@ class PhaseSpan:
 class DependencyEdge:
     """
     Dependency edge in the Element Dependency Graph.
-    
+
     Represents: predecessor -> successor
     """
+
     predecessor: str  # element uid
     successor: str  # element uid
     dependency_type: str = "build"  # "build" or "runtime"
@@ -476,9 +485,10 @@ class DependencyEdge:
 class Graph:
     """
     graph/v9 schema from Part 32.2.
-    
+
     Contains elements and their dependencies.
     """
+
     elements: list[Element] = field(default_factory=list)
     dependencies: list[DependencyEdge] = field(default_factory=list)
     # UX-683: the declared foundation tier - uids validated against
@@ -497,8 +507,7 @@ class Graph:
     # UX-1074: the shared bitset reachability closure, built once and
     # cached here so `compute_reachability`'s five call sites share it -
     # never serialized (excluded from repr/eq).
-    reachability_closure_cache: Optional[Any] = field(
-        default=None, repr=False, compare=False)
+    reachability_closure_cache: Optional[Any] = field(default=None, repr=False, compare=False)
 
 
 @dataclass
@@ -508,6 +517,7 @@ class Trace:
 
     Contains task spans and phase spans.
     """
+
     spans: list[TaskSpan] = field(default_factory=list)
     phases: list[PhaseSpan] = field(default_factory=list)
     # Run-identity manifest hash (I8, P1-37) - see RunContext.run_identity.
@@ -518,9 +528,10 @@ class Trace:
 class NormalizedTask:
     """
     Normalized task after timestamp quantization and clamping.
-    
+
     Part 3.2-3.4 describe normalization rules.
     """
+
     task_key: TaskKey
     ready_us: int  # When task became dependency-ready
     start_us: int  # When task actually started (may be clamped)
@@ -560,7 +571,7 @@ class NormalizedTask:
     def dur_us(self) -> int:
         """Duration in microseconds (may differ from original due to clamping)."""
         return self.finish_us - self.start_us
-    
+
     @property
     def wait_us(self) -> int:
         """Wait time (dependency wait) in microseconds."""
@@ -571,9 +582,10 @@ class NormalizedTask:
 class OccupancySegment:
     """
     One segment of the occupancy step function (Part 4.1).
-    
+
     Represents [start_us, end_us) with a specific set of active tasks.
     """
+
     start_us: int
     end_us: int
     active_tasks: set[str]  # Set of task keys
@@ -584,9 +596,10 @@ class OccupancySegment:
 class AnalysisResult:
     """
     analysis/v9 schema from Part 32.4.
-    
+
     The complete output of the analyzer.
     """
+
     attribution: dict = field(default_factory=dict)
     occupancy: dict = field(default_factory=dict)
     timeline: dict = field(default_factory=dict)

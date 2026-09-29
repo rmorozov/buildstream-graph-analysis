@@ -7,6 +7,7 @@ is asserted through them and never by poking `write_text` directly.
 
 holds: rules.md#a-drift-you-notice-is-a-line-anything-else-a-row
 """
+
 import pathlib
 import sys
 
@@ -22,8 +23,7 @@ def repo(tmp_path):
     """A fake tree: one real path an open line may point at, and the
     scenarios directory a `promoted` status is checked against."""
     (tmp_path / "docs" / "backlog" / "scenarios").mkdir(parents=True)
-    (tmp_path / "docs" / "backlog" / "scenarios" / "UX-0001-fake.md").write_text(
-        "# UX-1\n", encoding="utf-8")
+    (tmp_path / "docs" / "backlog" / "scenarios" / "UX-0001-fake.md").write_text("# UX-1\n", encoding="utf-8")
     (tmp_path / "CLAUDE.md").write_text("real\n", encoding="utf-8")
     return tmp_path
 
@@ -38,8 +38,7 @@ def paths(repo, ledger):
     return bk.Paths(ledger, repo)
 
 
-GOOD = ("- r140 · open · figure · `CLAUDE.md` · a stale figure · "
-       "`dev_round_register.py --check`")
+GOOD = "- r140 · open · figure · `CLAUDE.md` · a stale figure · `dev_round_register.py --check`"
 
 
 class TestMalformedLines:
@@ -49,8 +48,7 @@ class TestMalformedLines:
         assert len(entries) == 1
 
     def test_a_command_with_no_backticks_is_named(self, repo):
-        bad = ("- r140 · open · figure · `CLAUDE.md` · a stale figure · "
-              "dev_round_register.py --check")
+        bad = "- r140 · open · figure · `CLAUDE.md` · a stale figure · dev_round_register.py --check"
         entries, problems = bk.parse_entries(bad)
         assert entries == []
         assert len(problems) == 1
@@ -64,8 +62,7 @@ class TestMalformedLines:
 
 class TestDuplicateKeys:
     def test_two_lines_one_key_fails(self, repo):
-        other = ("- r140 · open · count · `CLAUDE.md` · a stale figure · "
-                "`dev_impact.py --check`")
+        other = "- r140 · open · count · `CLAUDE.md` · a stale figure · `dev_impact.py --check`"
         problems = bk.validate(GOOD + "\n" + other, repo_root=repo)
         assert any("duplicates" in p for p in problems)
 
@@ -87,12 +84,14 @@ class TestOpenLinePath:
 class TestSweepSurvival:
     #: three other lines resolved at rounds after r1's filing - three
     #: distinct sweeps survived by the still-open line.
-    THREE_SWEEPS = "\n".join([
-        "- r1 · open · figure · `CLAUDE.md` · a stale figure · `x`",
-        "- r1 · swept r2 UX-1 · figure · `CLAUDE.md` · b · `x`",
-        "- r1 · swept r3 UX-1 · figure · `CLAUDE.md` · c · `x`",
-        "- r1 · swept r4 UX-1 · figure · `CLAUDE.md` · d · `x`",
-    ])
+    THREE_SWEEPS = "\n".join(
+        [
+            "- r1 · open · figure · `CLAUDE.md` · a stale figure · `x`",
+            "- r1 · swept r2 UX-1 · figure · `CLAUDE.md` · b · `x`",
+            "- r1 · swept r3 UX-1 · figure · `CLAUDE.md` · c · `x`",
+            "- r1 · swept r4 UX-1 · figure · `CLAUDE.md` · d · `x`",
+        ]
+    )
 
     def test_no_open_line_past_three_sweeps(self, repo):
         problems = bk.validate(self.THREE_SWEEPS, repo_root=repo)
@@ -117,8 +116,7 @@ class TestPromotedNamesATaskFile:
 
 class TestAdd:
     def test_it_round_trips(self, ledger, paths):
-        finding = bk.Finding("CLAUDE.md", "a stale figure",
-                             "dev_round_register.py")
+        finding = bk.Finding("CLAUDE.md", "a stale figure", "dev_round_register.py")
         line = bk.add(finding, "figure", 140, paths=paths, new_class=True)
         entries, problems = bk.parse_entries(ledger.read_text(encoding="utf-8"))
         assert problems == []
@@ -129,12 +127,10 @@ class TestAdd:
 
     def test_it_refuses_an_unknown_class(self, paths):
         with pytest.raises(ValueError, match="unknown class"):
-            bk.add(bk.Finding("CLAUDE.md", "x", "y"), "newclass", 140,
-                  paths=paths)
+            bk.add(bk.Finding("CLAUDE.md", "x", "y"), "newclass", 140, paths=paths)
 
     def test_a_registered_class_needs_no_flag(self, ledger, paths):
-        bk.add(bk.Finding("CLAUDE.md", "x", "y"), "figure", 140, paths=paths,
-              new_class=True)
+        bk.add(bk.Finding("CLAUDE.md", "x", "y"), "figure", 140, paths=paths, new_class=True)
         bk.add(bk.Finding("CLAUDE.md", "x2", "y2"), "figure", 141, paths=paths)
         entries, _ = bk.parse_entries(ledger.read_text(encoding="utf-8"))
         assert len(entries) == 2

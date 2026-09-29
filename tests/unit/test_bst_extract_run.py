@@ -10,6 +10,7 @@ Two layers, matching tests/unit/test_bst_show_to_graph.py's convention:
    real log itself (not a checked-in sample) - skipped whenever `bst`
    isn't on PATH.
 """
+
 import json
 import shutil
 import subprocess
@@ -48,6 +49,7 @@ def bst_version() -> Optional[str]:
 
 # --- Pure unit tests -----------------------------------------------------
 
+
 def test_parse_targets_single():
     assert _parse_targets("app.bst") == ["app.bst"]
 
@@ -62,6 +64,7 @@ def test_git_consistency_note_none_for_non_git_directory(tmp_path):
 
 
 # --- _compute_run_identity (P1-37) ---------------------------------------
+
 
 def test_run_identity_is_deterministic_for_identical_inputs(tmp_path):
     scheduler = {"builders": 4, "fetchers": 10, "pushers": 4}
@@ -89,10 +92,16 @@ def test_run_identity_target_order_does_not_matter(tmp_path):
 
 def test_run_identity_changes_with_scheduler_config(tmp_path):
     a = _compute_run_identity(
-        str(tmp_path), ["app.bst"], {"builders": 4, "fetchers": 10, "pushers": 4}, None,
+        str(tmp_path),
+        ["app.bst"],
+        {"builders": 4, "fetchers": 10, "pushers": 4},
+        None,
     )
     b = _compute_run_identity(
-        str(tmp_path), ["app.bst"], {"builders": 2, "fetchers": 10, "pushers": 4}, None,
+        str(tmp_path),
+        ["app.bst"],
+        {"builders": 2, "fetchers": 10, "pushers": 4},
+        None,
     )
     assert a["manifest_hash"] != b["manifest_hash"]
 
@@ -101,7 +110,10 @@ def test_run_identity_changes_with_project_refs_provenance(tmp_path):
     scheduler = {"builders": 4, "fetchers": 10, "pushers": 4}
     a = _compute_run_identity(str(tmp_path), ["app.bst"], scheduler, None)
     b = _compute_run_identity(
-        str(tmp_path), ["app.bst"], scheduler, {"path": "project.refs", "sha256": "deadbeef"},
+        str(tmp_path),
+        ["app.bst"],
+        scheduler,
+        {"path": "project.refs", "sha256": "deadbeef"},
     )
     assert a["manifest_hash"] != b["manifest_hash"]
 
@@ -219,11 +231,17 @@ def test_extract_run_fails_loudly_without_a_targets_line(tmp_path):
     log.write_text("nothing resembling a buildstream log here\n")
 
     with pytest.raises(RuntimeError, match="Targets"):
-        extract_run(str(FIXTURE_PROJECT), str(log), str(tmp_path / "out"),
-                    log_format="raw", start_time="2026-08-14T00:00:00+00:00")
+        extract_run(
+            str(FIXTURE_PROJECT),
+            str(log),
+            str(tmp_path / "out"),
+            log_format="raw",
+            start_time="2026-08-14T00:00:00+00:00",
+        )
 
 
 # --- Real end-to-end test --------------------------------------------------
+
 
 @pytest.mark.bst
 @pytest.mark.skipif(not BST_AVAILABLE, reason=BST_SKIP_REASON)
@@ -234,7 +252,6 @@ def test_the_bst_version_these_facts_ran_under_is_printed():
     print(f"UX-571 bst version exercised: {version}")
 
 
-
 @pytest.mark.bst
 @pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/spec/ingestion-pipeline.md")
 def test_real_end_to_end_extraction_produces_a_complete_bga_ready_run(tmp_path):
@@ -242,7 +259,8 @@ def test_real_end_to_end_extraction_produces_a_complete_bga_ready_run(tmp_path):
 
     proc = subprocess.run(
         ["bst", "-C", str(FIXTURE_PROJECT), "--no-colors", "build", "app.bst"],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
         env=isolated_bst_env(tmp_path),
     )
     log_path.write_text(proc.stdout + proc.stderr)
@@ -264,7 +282,10 @@ def test_real_end_to_end_extraction_produces_a_complete_bga_ready_run(tmp_path):
     run_context = json.loads((out_dir / "run-context.json").read_text())
 
     assert {e["uid"] for e in graph["elements"]} == {
-        "base.bst", "base2.bst", "subproj-junction.bst:libfoo.bst", "app.bst",
+        "base.bst",
+        "base2.bst",
+        "subproj-junction.bst:libfoo.bst",
+        "app.bst",
     }
     assert any(e["uid"] == "app.bst" and e["requested_target"] for e in graph["elements"])
     assert len(trace["spans"]) > 0
@@ -283,6 +304,7 @@ def test_real_end_to_end_extraction_produces_a_complete_bga_ready_run(tmp_path):
 
     # The whole point: zero manual editing before bga can consume it.
     from bga import analyze_run
+
     result = analyze_run(out_dir)
     assert result is not None
     assert result.run_id == manifest_hash
@@ -323,7 +345,8 @@ def test_different_target_lists_produce_different_requested_targets(tmp_path):
         log_path = tmp_path / f"{out_name}.log"
         proc = subprocess.run(
             ["bst", "-C", str(FIXTURE_PROJECT), "--no-colors", "build"] + targets,
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
             env=isolated_bst_env(tmp_path),
         )
         log_path.write_text(proc.stdout + proc.stderr)
@@ -362,12 +385,16 @@ def test_pipeline_overhead_extracted_from_a_real_cached_rebuild(tmp_path):
     # First build populates the cache.
     subprocess.run(
         ["bst", "-C", str(FIXTURE_PROJECT), "--no-colors", "build", "app.bst"],
-        capture_output=True, text=True, env=env,
+        capture_output=True,
+        text=True,
+        env=env,
     )
     # Second build is fully cached - this is the log we extract from.
     proc = subprocess.run(
         ["bst", "-C", str(FIXTURE_PROJECT), "--no-colors", "build", "app.bst"],
-        capture_output=True, text=True, env=env,
+        capture_output=True,
+        text=True,
+        env=env,
     )
     log_path = tmp_path / "cached_rebuild.log"
     log_path.write_text(proc.stdout + proc.stderr)
@@ -386,6 +413,7 @@ def test_pipeline_overhead_extracted_from_a_real_cached_rebuild(tmp_path):
 
     from bga import analyze_run
     from bga.report.text import format_text
+
     result = analyze_run(out_dir)
     assert "Pipeline Overhead" in format_text(result)
 
@@ -415,9 +443,7 @@ def _extracted(tmp_path):
     """
     from tools.bst_show_to_graph import FIELD_SEP, RECORD_SEP
 
-    graph = json.loads(
-        (REPO / "tests/fixtures/with_timeline/run/graph.json").read_text(
-            encoding="utf-8"))
+    graph = json.loads((REPO / "tests/fixtures/with_timeline/run/graph.json").read_text(encoding="utf-8"))
     deps = {}
     for edge in graph["dependencies"]:
         deps.setdefault(edge["successor"], []).append(edge["predecessor"])
@@ -426,25 +452,23 @@ def _extracted(tmp_path):
         uid = element["uid"]
         listed = deps.get(uid)
         rendered = "[]" if not listed else "\n".join(f"- {d}" for d in listed)
-        records.append(FIELD_SEP.join([
-            uid, element["cache_key"], element["element_kind"], rendered,
-            "[]", "{}", "{}"]))
-    (tmp_path / "show.txt").write_text(
-        RECORD_SEP.join(records) + RECORD_SEP, encoding="utf-8")
+        records.append(FIELD_SEP.join([uid, element["cache_key"], element["element_kind"], rendered, "[]", "{}", "{}"]))
+    (tmp_path / "show.txt").write_text(RECORD_SEP.join(records) + RECORD_SEP, encoding="utf-8")
     fake = tmp_path / "bst"
-    fake.write_text(f'#!/bin/sh\ncat "{tmp_path / "show.txt"}"\n',
-                    encoding="utf-8")
+    fake.write_text(f'#!/bin/sh\ncat "{tmp_path / "show.txt"}"\n', encoding="utf-8")
     fake.chmod(0o755)
 
     project = tmp_path / "project"
     (project / "elements").mkdir(parents=True)
-    (project / "project.conf").write_text(
-        "name: t\nmin-version: 2.0\nelement-path: elements\n",
-        encoding="utf-8")
+    (project / "project.conf").write_text("name: t\nmin-version: 2.0\nelement-path: elements\n", encoding="utf-8")
     out = tmp_path / "snapshot" / "run"
     summary = extract_run(
-        str(project), str(REPO / "tests/fixtures/with_timeline/build.log"),
-        str(out), bst_bin=str(fake), log_format="auto")
+        str(project),
+        str(REPO / "tests/fixtures/with_timeline/build.log"),
+        str(out),
+        bst_bin=str(fake),
+        log_format="auto",
+    )
     assert summary["elements"] == 11 and summary["spans"] == 11, summary
     return out
 
@@ -461,8 +485,7 @@ class TestTheExtractionKeepsNoLegacyTrace:
 
     def test_one_extraction_writes_exactly_four_files(self, tmp_path):
         out = _extracted(tmp_path)
-        assert {p.name for p in out.iterdir()} == EXTRACTED, sorted(
-            p.name for p in out.iterdir())
+        assert {p.name for p in out.iterdir()} == EXTRACTED, sorted(p.name for p in out.iterdir())
 
     def test_the_legacy_shape_is_still_one_command_away(self, tmp_path):
         """The half that makes the removal a move rather than a loss.
@@ -472,8 +495,7 @@ class TestTheExtractionKeepsNoLegacyTrace:
         second would be a capability quietly dropped.
         """
         out = _extracted(tmp_path)
-        shutil.copy(REPO / "tests/fixtures/with_timeline/build.log",
-                    out.parent / "build.log")
+        shutil.copy(REPO / "tests/fixtures/with_timeline/build.log", out.parent / "build.log")
         rendered = tmp_path / "legacy.json"
         from tools.bga_timeline import render
 
@@ -483,4 +505,5 @@ class TestTheExtractionKeepsNoLegacyTrace:
         assert {e.get("ph") for e in events} & {"B", "E"}, (
             "the rendered file is not the legacy Chrome shape - the "
             "on-demand route this item relies on does not produce what "
-            "the extraction used to write")
+            "the extraction used to write"
+        )

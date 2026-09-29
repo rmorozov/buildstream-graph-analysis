@@ -12,6 +12,7 @@ the new `serialize_batch_opportunities` report-shape helper
 (`bga/structural/batching.py`) and in `bga/report/text.py`'s rendering
 of it.
 """
+
 from bga.structural.batching import BatchGroup, BatchOpportunities, serialize_batch_opportunities
 
 
@@ -37,7 +38,8 @@ def _real_group(elements, baseline_us, combined_us):
 
 def test_zero_savings_group_is_moved_out_of_groups():
     batch_result = BatchOpportunities(
-        groups=[_zero_group(["lib-a.bst", "lib-b.bst"])], serialized_pairs=[],
+        groups=[_zero_group(["lib-a.bst", "lib-b.bst"])],
+        serialized_pairs=[],
     )
 
     serialized = serialize_batch_opportunities(batch_result)
@@ -48,7 +50,8 @@ def test_zero_savings_group_is_moved_out_of_groups():
 
 def test_genuine_nonzero_savings_group_still_reported_in_groups():
     batch_result = BatchOpportunities(
-        groups=[_real_group(["app.bst", "extra.bst"], 10_000_000, 6_000_000)], serialized_pairs=[],
+        groups=[_real_group(["app.bst", "extra.bst"], 10_000_000, 6_000_000)],
+        serialized_pairs=[],
     )
 
     serialized = serialize_batch_opportunities(batch_result)
@@ -86,6 +89,7 @@ def test_no_groups_at_all_produces_empty_lists_not_missing_keys():
 
 # --- text-report rendering --------------------------------------------
 
+
 def _render_batch_section(batch_opportunities):
     """Exercises the same rendering path `format_text` uses for the
     batch_opportunities block, via a real (mostly-empty)
@@ -94,11 +98,14 @@ def _render_batch_section(batch_opportunities):
     from bga.ingest.models import AnalysisResult
     from bga.report.text import format_text
 
-    result = AnalysisResult(run_id="test-run", structural={
-        "metrics": {"num_elements": 2, "num_edges": 1, "max_depth": 1},
-        "sensitivity": {"top_opportunities": [], "total_improvable_time_us": 0, "best_case_speedup": 1.0},
-        "batch_opportunities": batch_opportunities,
-    })
+    result = AnalysisResult(
+        run_id="test-run",
+        structural={
+            "metrics": {"num_elements": 2, "num_edges": 1, "max_depth": 1},
+            "sensitivity": {"top_opportunities": [], "total_improvable_time_us": 0, "best_case_speedup": 1.0},
+            "batch_opportunities": batch_opportunities,
+        },
+    )
     return format_text(result)
 
 
@@ -118,13 +125,15 @@ def test_text_report_omits_zero_savings_group_and_names_the_count():
 
 def test_text_report_still_shows_a_genuine_savings_group():
     batch_opportunities = {
-        "groups": [{
-            "elements": ["app.bst", "extra.bst"],
-            "baseline_makespan_us": 10_000_000,
-            "combined_makespan_us": 6_000_000,
-            "combined_savings_us": 4_000_000,
-            "individual_savings_us": {"app.bst": 0, "extra.bst": 0},
-        }],
+        "groups": [
+            {
+                "elements": ["app.bst", "extra.bst"],
+                "baseline_makespan_us": 10_000_000,
+                "combined_makespan_us": 6_000_000,
+                "combined_savings_us": 4_000_000,
+                "individual_savings_us": {"app.bst": 0, "extra.bst": 0},
+            }
+        ],
         "omitted_zero_savings_groups": [],
         "serialized_pairs": [],
     }

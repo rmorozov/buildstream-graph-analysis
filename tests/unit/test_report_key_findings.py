@@ -4,6 +4,7 @@ blast-radius/criticality elements, certified headroom in plain language),
 plus a confidence/violations block that was previously entirely missing
 from text output (only reachable via --format json).
 """
+
 import json
 from pathlib import Path
 
@@ -45,9 +46,7 @@ def _write_run_dir(tmp_path, run_context, elements, dependencies, spans):
     run_dir.mkdir()
     graph = {
         "elements": [{"uid": uid, "requested_target": is_target} for uid, is_target in elements],
-        "dependencies": [
-            {"predecessor": pred, "successor": succ} for pred, succ in dependencies
-        ],
+        "dependencies": [{"predecessor": pred, "successor": succ} for pred, succ in dependencies],
     }
     trace = {"spans": spans, "phases": []}
     (run_dir / "run-context.json").write_text(json.dumps(run_context))
@@ -71,19 +70,41 @@ def analyzed_result(tmp_path):
         # through to DEPENDENCY_WAIT, the deliberate dominant category
         # this fixture is designed to produce.
         run_context={
-            "trace_epsilon_us": 1000, "wall_start_us": 0, "wall_end_us": 110000,
+            "trace_epsilon_us": 1000,
+            "wall_start_us": 0,
+            "wall_end_us": 110000,
         },
         elements=[("root.bst", False), ("a.bst", True), ("b.bst", True), ("c.bst", True)],
         dependencies=[("root.bst", "a.bst"), ("root.bst", "b.bst"), ("root.bst", "c.bst")],
         spans=[
-            {"task_key": "root.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 10000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "b.bst|BUILD|BUILD|0", "ts_us": 10000, "dur_us": 5000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "c.bst|BUILD|BUILD|0", "ts_us": 10000, "dur_us": 5000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "a.bst|BUILD|BUILD|0", "ts_us": 100000, "dur_us": 10000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
+            {
+                "task_key": "root.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 10000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "b.bst|BUILD|BUILD|0",
+                "ts_us": 10000,
+                "dur_us": 5000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "c.bst|BUILD|BUILD|0",
+                "ts_us": 10000,
+                "dur_us": 5000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "a.bst|BUILD|BUILD|0",
+                "ts_us": 100000,
+                "dur_us": 10000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
         ],
     )
     analyzer = BuildEfficiencyAnalyzer(run_dir, run_diagnostics=True)
@@ -118,8 +139,7 @@ def test_text_report_sections_render_in_the_declared_order():
     # no pipeline overhead, no occupancy stats) - enough must render to
     # make the order claim worth checking at all.
     assert len(positions) >= 8, f"too few sections rendered: {positions}"
-    assert positions == sorted(positions), (
-        f"sections rendered out of the declared order: {positions}")
+    assert positions == sorted(positions), f"sections rendered out of the declared order: {positions}"
 
 
 def test_key_findings_names_the_correct_dominant_wait_category(analyzed_result):
@@ -185,6 +205,7 @@ def test_key_findings_shows_certified_headroom_in_plain_language(analyzed_result
 
 # --- UX-02: efficiency_score --------------------------------------------
 
+
 def test_efficiency_score_matches_lb_over_horizon(analyzed_result):
     """This fixture has a real DEPENDENCY_WAIT gap, so LB < horizon -
     exact formula check against independently-recomputed floors."""
@@ -228,10 +249,7 @@ def test_fully_packed_high_confidence_run_scores_high_with_no_caveat():
     assert result.confidence["primary"] >= 0.8
     output = format_text(result)
     key_findings_section = output.split("Certified Floors:")[0]
-    assert (
-        "Efficiency Score: 1.00 (scheduling is near the certified floor for this graph"
-        in key_findings_section
-    )
+    assert "Efficiency Score: 1.00 (scheduling is near the certified floor for this graph" in key_findings_section
     assert "low-confidence" not in key_findings_section
 
 
@@ -271,10 +289,20 @@ def test_violations_are_listed_one_line_each(tmp_path):
         elements=[("a.bst", False), ("b.bst", True)],
         dependencies=[("a.bst", "b.bst")],
         spans=[
-            {"task_key": "a.bst|BUILD|BUILD|0", "ts_us": 50000, "dur_us": 50000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "b.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 10000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
+            {
+                "task_key": "a.bst|BUILD|BUILD|0",
+                "ts_us": 50000,
+                "dur_us": 50000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "b.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 10000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
         ],
     )
     analyzer = BuildEfficiencyAnalyzer(run_dir)

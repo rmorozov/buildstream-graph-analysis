@@ -6,6 +6,7 @@ avg10` is over `JOBSERVER_POOL_MEMORY_PSI_BOUND`, the same way the CPU
 bound already does. Real FIFOs and real (fake, scripted) files
 throughout - never a mock of either reader.
 """
+
 import json
 import os
 
@@ -61,20 +62,30 @@ class TestTheBrokerWithholdsByPlannedPeak:
         # threshold = PEAK * 3 = 3072 kB exactly; 3000 kB is short.
         meminfo = _meminfo(tmp_path, 3000)
         broker, _global_fd, proxy_fds, ledger = _broker(
-            tmp_path, ["a"], {"a": 10}, peak_rss={"a": PEAK}, meminfo_path=meminfo)
+            tmp_path, ["a"], {"a": 10}, peak_rss={"a": PEAK}, meminfo_path=meminfo
+        )
         broker.note_running("a", max_jobs=3)
         broker.tick()
         assert _readable(proxy_fds["a"]) == 0, "3000 kB is short of the 3072 kB threshold"
         rows = [row for row in _rows(ledger) if row["event"] == "memory_withheld"]
-        assert rows == [{"event": "memory_withheld", "element": "a", "tokens": 2,
-                         "mem_available": 3000 * 1024, "peak_rss": PEAK,
-                         "reserved": PEAK, "t": rows[0]["t"]}]
+        assert rows == [
+            {
+                "event": "memory_withheld",
+                "element": "a",
+                "tokens": 2,
+                "mem_available": 3000 * 1024,
+                "peak_rss": PEAK,
+                "reserved": PEAK,
+                "t": rows[0]["t"],
+            }
+        ]
         assert broker.memory_withheld == 1
 
     def test_above_the_bound_grants(self, tmp_path):
         meminfo = _meminfo(tmp_path, 3200)  # 3,276,800 B >= PEAK * 3
         broker, _global_fd, proxy_fds, ledger = _broker(
-            tmp_path, ["a"], {"a": 10}, peak_rss={"a": PEAK}, meminfo_path=meminfo)
+            tmp_path, ["a"], {"a": 10}, peak_rss={"a": PEAK}, meminfo_path=meminfo
+        )
         broker.note_running("a", max_jobs=3)
         broker.tick()
         assert _readable(proxy_fds["a"]) == 2, "3200 kB clears the 3072 kB threshold"
@@ -82,8 +93,7 @@ class TestTheBrokerWithholdsByPlannedPeak:
 
     def test_a_plan_without_peak_rss_withholds_nothing(self, tmp_path):
         meminfo = _meminfo(tmp_path, 1)  # a starved host - would withhold if read at all
-        broker, _global_fd, proxy_fds, ledger = _broker(
-            tmp_path, ["a"], {"a": 10}, peak_rss={}, meminfo_path=meminfo)
+        broker, _global_fd, proxy_fds, ledger = _broker(tmp_path, ["a"], {"a": 10}, peak_rss={}, meminfo_path=meminfo)
         broker.note_running("a", max_jobs=3)
         broker.tick()
         assert _readable(proxy_fds["a"]) == 2, "no peak_rss entry - the gate is a no-op"
@@ -93,7 +103,8 @@ class TestTheBrokerWithholdsByPlannedPeak:
         meminfo = _meminfo(tmp_path, 16_000_000)  # generous - still not enough
         huge_peak = 16_000_000 * 1024 * 1024  # far past any MemAvailable above
         broker, _global_fd, proxy_fds, ledger = _broker(
-            tmp_path, ["a"], {"a": 10}, peak_rss={"a": huge_peak}, meminfo_path=meminfo)
+            tmp_path, ["a"], {"a": 10}, peak_rss={"a": huge_peak}, meminfo_path=meminfo
+        )
         broker.note_running("a", max_jobs=3)
         broker.tick()
         assert _readable(proxy_fds["a"]) == 0, "runs on its implicit token only"
@@ -104,7 +115,8 @@ class TestTheBrokerWithholdsByPlannedPeak:
         meminfo = tmp_path / "meminfo"
         meminfo.write_text("MemTotal:       16000000 kB\nMemAvailable:   3000 kB\n")
         broker, global_fd, proxy_fds, _ledger = _broker(
-            tmp_path, ["a"], {"a": 10}, peak_rss={"a": PEAK}, meminfo_path=str(meminfo))
+            tmp_path, ["a"], {"a": 10}, peak_rss={"a": PEAK}, meminfo_path=str(meminfo)
+        )
         broker.note_running("a", max_jobs=3)
         broker.tick()
         assert _readable(proxy_fds["a"]) == 0, "withheld this tick"
@@ -121,17 +133,25 @@ class TestTheBrokerWithholdsByPlannedPeak:
         # reserved plus a's own PEAK increment is 4*PEAK, over the bound.
         meminfo = _meminfo(tmp_path, 3500)
         broker, _global_fd, proxy_fds, ledger = _broker(
-            tmp_path, ["a", "b"], {"a": 10, "b": 5},
-            peak_rss={"a": PEAK, "b": PEAK}, meminfo_path=meminfo, ceiling=3)
+            tmp_path, ["a", "b"], {"a": 10, "b": 5}, peak_rss={"a": PEAK, "b": PEAK}, meminfo_path=meminfo, ceiling=3
+        )
         broker.note_running("a", max_jobs=2)
         broker.note_running("b", max_jobs=2)
         broker.tick()
         assert _readable(proxy_fds["b"]) == 1, "granted first - least slack"
         assert _readable(proxy_fds["a"]) == 0, "withheld - b's token now counts"
         rows = [row for row in _rows(ledger) if row["event"] == "memory_withheld"]
-        assert rows == [{"event": "memory_withheld", "element": "a", "tokens": 1,
-                         "mem_available": 3500 * 1024, "peak_rss": PEAK,
-                         "reserved": 3 * PEAK, "t": rows[0]["t"]}]
+        assert rows == [
+            {
+                "event": "memory_withheld",
+                "element": "a",
+                "tokens": 1,
+                "mem_available": 3500 * 1024,
+                "peak_rss": PEAK,
+                "reserved": 3 * PEAK,
+                "t": rows[0]["t"],
+            }
+        ]
 
     def test_an_idle_elements_implicit_token_counts_in_the_sum(self, tmp_path):
         # idle never takes a token this tick (its cap room is 0) but its
@@ -140,17 +160,30 @@ class TestTheBrokerWithholdsByPlannedPeak:
         # sum is 4*PEAK and a is withheld.
         meminfo = _meminfo(tmp_path, 3500)
         broker, _global_fd, proxy_fds, ledger = _broker(
-            tmp_path, ["a", "idle"], {"a": 10, "idle": 5},
-            peak_rss={"a": PEAK, "idle": PEAK}, meminfo_path=meminfo, ceiling=3)
+            tmp_path,
+            ["a", "idle"],
+            {"a": 10, "idle": 5},
+            peak_rss={"a": PEAK, "idle": PEAK},
+            meminfo_path=meminfo,
+            ceiling=3,
+        )
         broker.note_running("a", max_jobs=3)
         broker.note_running("idle", max_jobs=1)  # cap 0 - never itself granted
         broker.tick()
         assert _readable(proxy_fds["idle"]) == 0, "no cap room - never reached the gate"
         assert _readable(proxy_fds["a"]) == 0, "idle's implicit token pushed it over"
         rows = [row for row in _rows(ledger) if row["event"] == "memory_withheld"]
-        assert rows == [{"event": "memory_withheld", "element": "a", "tokens": 2,
-                         "mem_available": 3500 * 1024, "peak_rss": PEAK,
-                         "reserved": 2 * PEAK, "t": rows[0]["t"]}]
+        assert rows == [
+            {
+                "event": "memory_withheld",
+                "element": "a",
+                "tokens": 2,
+                "mem_available": 3500 * 1024,
+                "peak_rss": PEAK,
+                "reserved": 2 * PEAK,
+                "t": rows[0]["t"],
+            }
+        ]
 
     def test_an_unplanned_running_element_counts_at_the_median(self, tmp_path):
         # peak_rss names a (PEAK) and c (3*PEAK, not running - only
@@ -161,17 +194,30 @@ class TestTheBrokerWithholdsByPlannedPeak:
         # would have cleared it at 3*PEAK.
         meminfo = _meminfo(tmp_path, 3906)
         broker, _global_fd, proxy_fds, ledger = _broker(
-            tmp_path, ["a", "b"], {"a": 10, "b": 20},
-            peak_rss={"a": PEAK, "c": 3 * PEAK}, meminfo_path=meminfo, ceiling=4)
+            tmp_path,
+            ["a", "b"],
+            {"a": 10, "b": 20},
+            peak_rss={"a": PEAK, "c": 3 * PEAK},
+            meminfo_path=meminfo,
+            ceiling=4,
+        )
         broker.note_running("a", max_jobs=3)
         broker.note_running("b", max_jobs=1)  # cap 0 - never itself granted
         broker.tick()
         assert _readable(proxy_fds["b"]) == 0, "no cap room - never reached the gate"
         assert _readable(proxy_fds["a"]) == 0, "b's median-valued token pushed it over"
         rows = [row for row in _rows(ledger) if row["event"] == "memory_withheld"]
-        assert rows == [{"event": "memory_withheld", "element": "a", "tokens": 2,
-                         "mem_available": 3906 * 1024, "peak_rss": PEAK,
-                         "reserved": 3 * PEAK, "t": rows[0]["t"]}]
+        assert rows == [
+            {
+                "event": "memory_withheld",
+                "element": "a",
+                "tokens": 2,
+                "mem_available": 3906 * 1024,
+                "peak_rss": PEAK,
+                "reserved": 3 * PEAK,
+                "t": rows[0]["t"],
+            }
+        ]
 
 
 class TestThePoolReadsMemoryPSI:
@@ -180,9 +226,12 @@ class TestThePoolReadsMemoryPSI:
         assert tokens == ceiling - 1
         ledger = str(tmp_path / "ledger.jsonl")
         pc = tracer.PoolController(
-            fd, ceiling, capacity=capacity, ledger_path=ledger,
-            psi_paths={"cpu": str(tmp_path / "no-cpu-psi"),
-                      "memory": psi_memory_path or str(tmp_path / "no-mem-psi")})
+            fd,
+            ceiling,
+            capacity=capacity,
+            ledger_path=ledger,
+            psi_paths={"cpu": str(tmp_path / "no-cpu-psi"), "memory": psi_memory_path or str(tmp_path / "no-mem-psi")},
+        )
         return pc, path, fd, ledger
 
     def test_absent_does_nothing(self, tmp_path):
@@ -194,8 +243,9 @@ class TestThePoolReadsMemoryPSI:
 
     def test_present_under_the_bound_does_nothing(self, tmp_path):
         psi_mem = tmp_path / "pressure-memory"
-        psi_mem.write_text("some avg10=4.00 avg60=2.00 avg300=1.00 total=1\n"
-                           "full avg10=0.00 avg60=0.00 avg300=0.00 total=0\n")
+        psi_mem.write_text(
+            "some avg10=4.00 avg60=2.00 avg300=1.00 total=1\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=0\n"
+        )
         pc, path, fd, _ledger = self._controller(tmp_path, psi_memory_path=str(psi_mem))
         assert pc.psi_memory_present
         row = pc.tick(busy_cores=0.5)
@@ -204,8 +254,9 @@ class TestThePoolReadsMemoryPSI:
 
     def test_present_over_the_bound_withdraws(self, tmp_path):
         psi_mem = tmp_path / "pressure-memory"
-        psi_mem.write_text("some avg10=22.50 avg60=10.00 avg300=5.00 total=1\n"
-                           "full avg10=0.00 avg60=0.00 avg300=0.00 total=0\n")
+        psi_mem.write_text(
+            "some avg10=22.50 avg60=10.00 avg300=5.00 total=1\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=0\n"
+        )
         pc, path, fd, ledger = self._controller(tmp_path, psi_memory_path=str(psi_mem))
         row = pc.tick(busy_cores=0.5)  # cores alone would not trigger overload
         assert row["action"] == "withdraw"
@@ -222,10 +273,16 @@ def test_count_memory_psi_withdraws_reads_the_ledger_it_writes_beside(tmp_path):
     this reader against the same ledger `Broker` and `PoolController`
     both write to - it must not count a CPU-PSI or busy withdraw."""
     ledger = tmp_path / "ledger.jsonl"
-    ledger.write_text("\n".join(json.dumps(row) for row in [
-        {"action": "withdraw", "reason": "memory psi 15.0>10.0"},
-        {"action": "withdraw", "reason": "psi 15.0>10.0"},
-        {"action": "withdraw", "reason": "busy 5.0>capacity 4"},
-        {"action": "hold", "reason": "memory psi 15.0>10.0"},
-    ]) + "\n")
+    ledger.write_text(
+        "\n".join(
+            json.dumps(row)
+            for row in [
+                {"action": "withdraw", "reason": "memory psi 15.0>10.0"},
+                {"action": "withdraw", "reason": "psi 15.0>10.0"},
+                {"action": "withdraw", "reason": "busy 5.0>capacity 4"},
+                {"action": "hold", "reason": "memory psi 15.0>10.0"},
+            ]
+        )
+        + "\n"
+    )
     assert tracer.count_memory_psi_withdraws(str(ledger)) == 1

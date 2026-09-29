@@ -5,6 +5,7 @@ the `resource_capacities` parameter `compute_ready_queue_metrics` accepts
 was never actually consulted, so the metric could never distinguish
 "nothing was ready" from "work was ready but resource-starved".
 """
+
 from bga.diagnostics.analyzer import DiagnosticsAnalyzer
 from bga.ingest.models import NormalizedTask, Resource, TaskKey, TaskKind
 

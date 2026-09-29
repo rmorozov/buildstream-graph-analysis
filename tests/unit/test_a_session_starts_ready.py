@@ -1,6 +1,7 @@
 """UX-1114: the SessionStart hook unshallows and installs the lock, once,
 never in a linked worktree, and never fails the session. The installer
 is a stub for pip; `git fetch --unshallow` really runs on a scratch clone."""
+
 import importlib.util
 import pathlib
 import subprocess
@@ -12,8 +13,7 @@ sys.path.insert(0, str(REPO / "tools"))
 
 
 def _load():
-    spec = importlib.util.spec_from_file_location(
-        "session_start", HOOKS / "session_start.py")
+    spec = importlib.util.spec_from_file_location("session_start", HOOKS / "session_start.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -21,8 +21,8 @@ def _load():
 
 def _git(cwd, *args):
     return subprocess.run(
-        ["git", "-c", "user.name=t", "-c", "user.email=t@t", *args],
-        cwd=cwd, check=True, capture_output=True, text=True).stdout.strip()
+        ["git", "-c", "user.name=t", "-c", "user.email=t@t", *args], cwd=cwd, check=True, capture_output=True, text=True
+    ).stdout.strip()
 
 
 class Stub:
@@ -63,12 +63,10 @@ def test_a_shallow_clone_is_unshallowed_and_a_second_run_does_nothing(tmp_path):
     clone = _shallow_clone(tmp_path)
     assert _is_shallow(clone)
     stub = Stub()
-    first = _load().start(clone, installer=stub, installed=lambda n: "1",
-                          bga_ok=True)
+    first = _load().start(clone, installer=stub, installed=lambda n: "1", bga_ok=True)
     assert not _is_shallow(clone)
     assert "unshallowed" in first
-    second = _load().start(clone, installer=stub, installed=lambda n: "1",
-                           bga_ok=True)
+    second = _load().start(clone, installer=stub, installed=lambda n: "1", bga_ok=True)
     assert second == "session start: nothing to do"
     assert stub.pip == []
 
@@ -76,8 +74,7 @@ def test_a_shallow_clone_is_unshallowed_and_a_second_run_does_nothing(tmp_path):
 def test_a_missing_locked_package_runs_the_lock_install(tmp_path):
     clone = _shallow_clone(tmp_path)
     stub = Stub()
-    line = _load().start(clone, installer=stub, installed=lambda n: None,
-                         bga_ok=True)
+    line = _load().start(clone, installer=stub, installed=lambda n: None, bga_ok=True)
     assert "installed the lock" in line
     assert [c[-2:] for c in stub.pip] == [["-r", "requirements.lock"]]
 
@@ -87,8 +84,7 @@ def test_a_linked_worktree_does_nothing(tmp_path):
     linked = tmp_path / "linked"
     _git(clone, "worktree", "add", "-q", str(linked))
     stub = Stub()
-    line = _load().start(linked, installer=stub, installed=lambda n: None,
-                         bga_ok=False)
+    line = _load().start(linked, installer=stub, installed=lambda n: None, bga_ok=False)
     assert line == ""
     assert stub.pip == []
     assert _is_shallow(clone)
@@ -100,16 +96,19 @@ def test_a_raising_installer_still_returns_a_line(tmp_path):
     def boom(cmd, cwd):
         raise OSError("no network")
 
-    line = _load().start(clone, installer=boom, installed=lambda n: None,
-                         bga_ok=False)
+    line = _load().start(clone, installer=boom, installed=lambda n: None, bga_ok=False)
     assert line.startswith("session start: skipped")
 
 
 def test_the_shell_entry_exits_zero_outside_a_repo(tmp_path):
-    done = subprocess.run([str(HOOKS / "session-start.sh")], cwd=tmp_path,
-                          env={"PATH": "/usr/bin:/bin", "PYTHONPATH": str(REPO), "CLAUDE_PROJECT_DIR":
-                               str(tmp_path)},
-                          capture_output=True, text=True, timeout=60)
+    done = subprocess.run(
+        [str(HOOKS / "session-start.sh")],
+        cwd=tmp_path,
+        env={"PATH": "/usr/bin:/bin", "PYTHONPATH": str(REPO), "CLAUDE_PROJECT_DIR": str(tmp_path)},
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
     assert done.returncode == 0
 
 

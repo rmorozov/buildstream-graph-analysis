@@ -20,6 +20,7 @@ inside its profile, a `PF_UNIX` path capped at ~104 bytes, and
 port in every other guard failed every time here once nested under
 it. A short root of our own making stays under that ceiling.
 """
+
 import glob
 import os
 import pathlib
@@ -82,25 +83,23 @@ def isolated_tmp(monkeypatch):
 
 
 def _launch_and_kill(where):
-    script = _LAUNCH_AND_SIGKILL.format(
-        tests_dir=str(REPO / "tests"), binary=CHROME)
+    script = _LAUNCH_AND_SIGKILL.format(tests_dir=str(REPO / "tests"), binary=CHROME)
     done = subprocess.run(
-        [sys.executable, "-c", script], env=dict(os.environ, TMPDIR=str(where)),
-        capture_output=True, text=True, timeout=60)
+        [sys.executable, "-c", script],
+        env=dict(os.environ, TMPDIR=str(where)),
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
     lines = done.stdout.strip().splitlines()
     profile = lines[-1] if lines else ""
-    assert profile, (
-        f"launcher printed no profile (code {done.returncode}): "
-        f"{done.stderr[-500:]}")
-    assert done.returncode < 0, (
-        f"launcher exited {done.returncode}, not by signal - the case "
-        f"this guard is about")
+    assert profile, f"launcher printed no profile (code {done.returncode}): {done.stderr[-500:]}"
+    assert done.returncode < 0, f"launcher exited {done.returncode}, not by signal - the case this guard is about"
     return profile
 
 
 @needs_browser
 class TestAKilledBrowserDoesNotOutliveTheWorker:
-
     #: `UX-783`: whether this worker already holds `UX-523`'s shared
     #: browser. It decides whether the second entry makes a root of its
     #: own or returns early reusing one - and the sweep must happen
@@ -111,14 +110,15 @@ class TestAKilledBrowserDoesNotOutliveTheWorker:
     @pytest.mark.parametrize("reusing", [False, True])
     def test_a_second_entry_sweeps_the_first(self, isolated_tmp, reusing):
         import browser as module
+
         module._close_shared()
         try:
             if reusing:
                 with Browser(CHROME):
                     pass
                 assert module._SHARED, (
-                    "the reuse case needs a live shared browser and has "
-                    "none - this parameter would repeat the other")
+                    "the reuse case needs a live shared browser and has none - this parameter would repeat the other"
+                )
 
             before = len(_profiles(isolated_tmp))
             profile = _launch_and_kill(isolated_tmp)
@@ -126,30 +126,30 @@ class TestAKilledBrowserDoesNotOutliveTheWorker:
             # The positive control: without it, "gone afterwards" would
             # be satisfied by a launcher that never leaked anything.
             assert os.path.isdir(profile), (
-                "the killed launcher's own profile is gone already - "
-                "nothing here for a sweep to prove itself against")
+                "the killed launcher's own profile is gone already - nothing here for a sweep to prove itself against"
+            )
             left = _pids_using(profile)
             assert left, (
                 "no process names the leaked profile - reparenting did "
                 "not happen the way this guard assumes, so it would "
-                "prove nothing")
+                "prove nothing"
+            )
             during = len(_profiles(isolated_tmp))
             assert during == before + 1, f"before={before} during={during}"
 
             with Browser(CHROME) as second:
-                assert not os.path.isdir(profile), (
-                    f"a second Browser entry left {profile} behind")
+                assert not os.path.isdir(profile), f"a second Browser entry left {profile} behind"
                 assert not _pids_using(profile), (
-                    f"a second Browser entry left {_pids_using(profile)} "
-                    f"still using {profile}")
+                    f"a second Browser entry left {_pids_using(profile)} still using {profile}"
+                )
                 # A reused entry makes no root; a fresh one makes
                 # exactly its own. Counting a fixed +1 is what tied
                 # this clause to the order the worker happened to run.
                 own = 0 if second._reused else 1
                 after = len(_profiles(isolated_tmp))
                 assert after == before + own, (
-                    f"reusing={reusing} second._reused={second._reused}: "
-                    f"expected before={before}+{own}, got {after}")
+                    f"reusing={reusing} second._reused={second._reused}: expected before={before}+{own}, got {after}"
+                )
         finally:
             # An entry becomes `_SHARED` and would otherwise outlive the
             # `with`, still running when `isolated_tmp` removes its root

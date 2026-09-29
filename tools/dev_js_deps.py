@@ -25,6 +25,7 @@ this would need a real one, and the failure would be loud because
 
 See the `derive` skill for the procedure this serves.
 """
+
 import argparse
 import json
 import pathlib
@@ -41,18 +42,16 @@ BEFORE_REGEX = set("(,=:[!&|?{};+-*%<>~^\n") | {""}
 
 DECLARATION = re.compile(
     r"^(?:export\s+)?(?:async\s+)?"
-    r"(?:function\s+(\w+)|(?:const|let|var|class)\s+(\w+))")
+    r"(?:function\s+(\w+)|(?:const|let|var|class)\s+(\w+))"
+)
 COMMENT_LINE = re.compile(r"^\s*(//|/\*|\*)")
-IMPORT = re.compile(r"""^[ \t]*import\s.*?from\s+["']\./([\w.-]+)["'];?""",
-                    re.M | re.S)
+IMPORT = re.compile(r"""^[ \t]*import\s.*?from\s+["']\./([\w.-]+)["'];?""", re.M | re.S)
 # Unlike `IMPORT`, run over raw text: `strip_comments` blanks a string's
 # body wholesale (see below), which would erase the module path this
 # also needs. Every import in `bga/viewer` is a destructured relative
 # one (`UX-742` checked), so the bare-name and namespace forms are not
 # handled - a module that grew one would need this widened, loudly.
-IMPORT_NAMED = re.compile(
-    r"""^[ \t]*import\s*\{(?P<names>.*?)\}\s*from\s+["']\./(?P<mod>[\w.-]+)["'];?""",
-    re.M | re.S)
+IMPORT_NAMED = re.compile(r"""^[ \t]*import\s*\{(?P<names>.*?)\}\s*from\s+["']\./(?P<mod>[\w.-]+)["'];?""", re.M | re.S)
 
 
 def strip_comments(source: str) -> str:
@@ -67,14 +66,14 @@ def strip_comments(source: str) -> str:
     """
     out, i, n, previous = [], 0, len(source), ""
     while i < n:
-        char, pair = source[i], source[i:i + 2]
+        char, pair = source[i], source[i : i + 2]
         if pair == "//":
             while i < n and source[i] != "\n":
                 i += 1
             continue
         if pair == "/*":
             i += 2
-            while i < n and source[i:i + 2] != "*/":
+            while i < n and source[i : i + 2] != "*/":
                 i += 1
             i, _ = i + 2, out.append(" ")
             continue
@@ -108,7 +107,7 @@ def _template(source: str, i: int, out: list) -> int:
         if source[i] == "\\":
             i += 2
             continue
-        if source[i:i + 2] == "${":
+        if source[i : i + 2] == "${":
             out.append(" ")
             i += 2
             start, braces = i, 1
@@ -118,7 +117,7 @@ def _template(source: str, i: int, out: list) -> int:
                 elif source[i] == "}":
                     braces -= 1
                 i += 1
-            out.append(strip_comments(source[start:i - 1]))
+            out.append(strip_comments(source[start : i - 1]))
             out.append(" ")
             continue
         if source[i] == "`":
@@ -155,8 +154,7 @@ def declarations(path):
     up attached to the wrong function.
     """
     lines = pathlib.Path(path).read_text(encoding="utf-8").splitlines()
-    found = [(m.group(1) or m.group(2), i)
-             for i, line in enumerate(lines) if (m := DECLARATION.match(line))]
+    found = [(m.group(1) or m.group(2), i) for i, line in enumerate(lines) if (m := DECLARATION.match(line))]
     if not found:
         return []
     first = found[0][1]
@@ -169,9 +167,15 @@ def declarations(path):
     blocks = []
     for k, (start, name) in enumerate(starts):
         end = starts[k + 1][0] if k + 1 < len(starts) else len(lines)
-        blocks.append({"name": name, "start": start + 1, "end": end,
-                       "exported": lines[found[k][1]].startswith("export "),
-                       "text": "\n".join(lines[start:end])})
+        blocks.append(
+            {
+                "name": name,
+                "start": start + 1,
+                "end": end,
+                "exported": lines[found[k][1]].startswith("export "),
+                "text": "\n".join(lines[start:end]),
+            }
+        )
     return blocks
 
 
@@ -182,10 +186,8 @@ def imports_of(path):
 
 def graph(directory):
     """Every module in `directory` and what it imports."""
-    modules = sorted(p.name for p in pathlib.Path(directory).iterdir()
-                     if p.suffix == ".js")
-    return {name: imports_of(pathlib.Path(directory) / name)
-            for name in modules}
+    modules = sorted(p.name for p in pathlib.Path(directory).iterdir() if p.suffix == ".js")
+    return {name: imports_of(pathlib.Path(directory) / name) for name in modules}
 
 
 def order(directory, entry="app.js"):
@@ -218,7 +220,7 @@ def cycles(directory):
         if colour.get(name) == "done":
             return
         if colour.get(name) == "open":
-            found.append(path[path.index(name):] + [name])
+            found.append(path[path.index(name) :] + [name])
             return
         colour[name] = "open"
         for needed in edges.get(name, ()):
@@ -243,8 +245,7 @@ def imported_symbols(directory):
     for path in sorted(pathlib.Path(directory).glob("*.js")):
         text = path.read_text(encoding="utf-8")
         for m in IMPORT_NAMED.finditer(text):
-            names = {n.strip().split(" as ")[0].strip()
-                     for n in m.group("names").split(",") if n.strip()}
+            names = {n.strip().split(" as ")[0].strip() for n in m.group("names").split(",") if n.strip()}
             used.setdefault(m.group("mod"), set()).update(names)
     return used
 
@@ -253,8 +254,7 @@ def _own_source(root):
     """This module's path within `root`, or None when it is outside it
     (a guard's throwaway tree)."""
     try:
-        return pathlib.Path(__file__).resolve().relative_to(
-            pathlib.Path(root).resolve()).as_posix()
+        return pathlib.Path(__file__).resolve().relative_to(pathlib.Path(root).resolve()).as_posix()
     except ValueError:
         return None
 
@@ -287,11 +287,11 @@ def dead_exports(directory, root=REPO):
     anywhere names.
     """
     directory = pathlib.Path(directory)
-    exports = {path.name: {b["name"] for b in declarations(path) if b["exported"]}
-              for path in sorted(directory.glob("*.js"))}
+    exports = {
+        path.name: {b["name"] for b in declarations(path) if b["exported"]} for path in sorted(directory.glob("*.js"))
+    }
     used = imported_symbols(directory)
-    candidates = [(mod, name) for mod, names in exports.items()
-                 for name in sorted(names - used.get(mod, set()))]
+    candidates = [(mod, name) for mod, names in exports.items() for name in sorted(names - used.get(mod, set()))]
     if not candidates:
         return {}
 
@@ -299,6 +299,7 @@ def dead_exports(directory, root=REPO):
     # `UX-687`'s list, not a second `git ls-files`: one call, one
     # baselined finding, and the same answer on a clone (`UX-742`).
     from tools.dev_finding_coverage import tracked_paths
+
     tracked = sorted(tracked_paths(root))
     texts = {}
     own_source = _own_source(root)
@@ -313,9 +314,8 @@ def dead_exports(directory, root=REPO):
     own_of = {name: f"{own_dir}/{mod}" for mod, name in candidates}
     # One pass per file over every candidate at once - `UX-742` measured
     # a pattern-per-candidate version at 39 s; this at under 2.
-    combined = re.compile(
-        r"\b(" + "|".join(re.escape(n) for n in own_of) + r")\b")
-    hits = dict.fromkeys(own_of, -1)   # the declaration itself, subtracted once
+    combined = re.compile(r"\b(" + "|".join(re.escape(n) for n in own_of) + r")\b")
+    hits = dict.fromkeys(own_of, -1)  # the declaration itself, subtracted once
     for text in texts.values():
         for m in combined.finditer(text):
             hits[m.group(1)] += 1
@@ -329,7 +329,9 @@ def dead_exports(directory, root=REPO):
 
 PARAMETERS = re.compile(
     r"^(?:export\s+)?(?:async\s+)?(?:function\s+\w+\s*|"
-    r"(?:const|let|var)\s+\w+\s*=\s*(?:async\s*)?)\((.*?)\)", re.S)
+    r"(?:const|let|var)\s+\w+\s*=\s*(?:async\s*)?)\((.*?)\)",
+    re.S,
+)
 
 
 def bound_names(text: str):
@@ -378,11 +380,13 @@ def crossings(path, groups):
     # neither sortable against a group name nor readable in the label -
     # the partial grouping this tool exists to answer produced both
     # (`UX-747`).
-    return {"unplaced": unplaced,
-            "crossings": {f"{a or UNPLACED} <- {b}": sorted(v)
-                          for (a, b), v in sorted(
-                              needed.items(),
-                              key=lambda kv: (kv[0][0] or "", kv[0][1]))}}
+    return {
+        "unplaced": unplaced,
+        "crossings": {
+            f"{a or UNPLACED} <- {b}": sorted(v)
+            for (a, b), v in sorted(needed.items(), key=lambda kv: (kv[0][0] or "", kv[0][1]))
+        },
+    }
 
 
 def _report_dead(directory, as_json):
@@ -401,25 +405,20 @@ def _report_dead(directory, as_json):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
-        description=__doc__.split("\n\n")[0],
-        formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--order", metavar="DIR",
-                        help="the order the export inlines DIR's modules in")
-    parser.add_argument("--graph", metavar="DIR",
-                        help="every module and what it imports, plus cycles")
-    parser.add_argument("--declarations", metavar="FILE",
-                        help="FILE's top-level declarations and their spans")
-    parser.add_argument("--crossings", metavar="FILE",
-                        help="which symbols would cross a proposed cut of FILE")
-    parser.add_argument("--dead-exports", metavar="DIR",
-                        help="DIR's exports nothing else in the tree reads")
-    parser.add_argument("--groups", metavar="JSON",
-                        help="the proposed grouping: {group: [names]}, a file "
-                             "or a literal. Required by --crossings")
-    parser.add_argument("--entry", default="app.js",
-                        help="the module --order walks from (default app.js)")
-    parser.add_argument("--json", action="store_true",
-                        help="machine-readable output")
+        description=__doc__.split("\n\n")[0], formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument("--order", metavar="DIR", help="the order the export inlines DIR's modules in")
+    parser.add_argument("--graph", metavar="DIR", help="every module and what it imports, plus cycles")
+    parser.add_argument("--declarations", metavar="FILE", help="FILE's top-level declarations and their spans")
+    parser.add_argument("--crossings", metavar="FILE", help="which symbols would cross a proposed cut of FILE")
+    parser.add_argument("--dead-exports", metavar="DIR", help="DIR's exports nothing else in the tree reads")
+    parser.add_argument(
+        "--groups",
+        metavar="JSON",
+        help="the proposed grouping: {group: [names]}, a file or a literal. Required by --crossings",
+    )
+    parser.add_argument("--entry", default="app.js", help="the module --order walks from (default app.js)")
+    parser.add_argument("--json", action="store_true", help="machine-readable output")
     args = parser.parse_args(argv)
 
     if args.order:
@@ -448,8 +447,7 @@ def main(argv=None):
     if args.declarations:
         blocks = declarations(args.declarations)
         if args.json:
-            print(json.dumps([{k: v for k, v in b.items() if k != "text"}
-                              for b in blocks]))
+            print(json.dumps([{k: v for k, v in b.items() if k != "text"} for b in blocks]))
         else:
             for b in blocks:
                 mark = "export" if b["exported"] else "     "
@@ -478,8 +476,7 @@ def main(argv=None):
     if args.dead_exports:
         return _report_dead(args.dead_exports, args.json)
 
-    parser.error("nothing asked for: try --order, --graph, --declarations, "
-                 "--crossings or --dead-exports")
+    parser.error("nothing asked for: try --order, --graph, --declarations, --crossings or --dead-exports")
 
 
 if __name__ == "__main__":

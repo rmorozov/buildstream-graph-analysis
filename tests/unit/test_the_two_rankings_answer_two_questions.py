@@ -34,6 +34,7 @@ What is left to guard is what is actually true of each list on its own -
 that each is ordered by the key its own sentence names - which is the
 property `UX-439` established and the one a reordering breaks.
 """
+
 import pathlib
 import sys
 
@@ -44,15 +45,18 @@ sys.path.insert(0, str(REPO))
 
 from tests.fixtures import topologies as topo
 
-FIXTURES = {"golden": REPO / "tests/fixtures/golden/mixed_task_kinds",
-            "macro_micro": REPO / "tests/fixtures/macro_micro/run"}
+FIXTURES = {
+    "golden": REPO / "tests/fixtures/golden/mixed_task_kinds",
+    "macro_micro": REPO / "tests/fixtures/macro_micro/run",
+}
 
 
 def _rankings(signals):
     """`(top_blast_radius, optimization_horizon)` as two uid lists."""
-    return (list(signals.get("top_blast_radius") or []),
-            [step["element_uid"]
-             for step in (signals.get("optimization_horizon") or [])])
+    return (
+        list(signals.get("top_blast_radius") or []),
+        [step["element_uid"] for step in (signals.get("optimization_horizon") or [])],
+    )
 
 
 def _fixture_signals(label):
@@ -63,14 +67,11 @@ def _fixture_signals(label):
 
 
 def _analysed(tmp_path):
-    analyzer = topo.build_analyzer(
-        tmp_path, topo.blast_radius_disagrees_with_horizon(),
-        run_diagnostics=True)
+    analyzer = topo.build_analyzer(tmp_path, topo.blast_radius_disagrees_with_horizon(), run_diagnostics=True)
     return analyzer.analyze().signals
 
 
 class TestTheyAreTwoQuestions:
-
     def test_an_ordinary_build_inverts_them(self, tmp_path):
         """The counterexample, pinned.
 
@@ -82,11 +83,11 @@ class TestTheyAreTwoQuestions:
         assert "hub.bst" in blast and "heavy.bst" in blast, blast
         assert "hub.bst" in horizon and "heavy.bst" in horizon, horizon
         assert blast.index("hub.bst") < blast.index("heavy.bst"), (
-            f"blast radius should lead with the element everything "
-            f"depends on: {blast}")
+            f"blast radius should lead with the element everything depends on: {blast}"
+        )
         assert horizon.index("heavy.bst") < horizon.index("hub.bst"), (
-            f"the horizon should lead with the element worth the most "
-            f"to fix: {horizon}")
+            f"the horizon should lead with the element worth the most to fix: {horizon}"
+        )
 
     def test_the_pair_the_lists_disagree_about_is_in_both(self, tmp_path):
         """Otherwise the clause above is about a non-overlap, and
@@ -94,8 +95,8 @@ class TestTheyAreTwoQuestions:
         blast, horizon = _rankings(_analysed(tmp_path))
         overlap = [uid for uid in horizon if uid in blast]
         assert len(overlap) >= 2, (
-            f"the two lists share fewer than two elements, so no "
-            f"disagreement between them is expressible: {overlap}")
+            f"the two lists share fewer than two elements, so no disagreement between them is expressible: {overlap}"
+        )
 
 
 class TestEachListIsOrderedByItsOwnKey:
@@ -116,9 +117,7 @@ class TestEachListIsOrderedByItsOwnKey:
         """A sequence whose cumulative total went down would mean a
         later fix undid an earlier one, which the projection cannot
         express - and is what an ordering bug here would look like."""
-        totals = [step["cumulative_saving_us"]
-                  for step in (_fixture_signals(label).get(
-                      "optimization_horizon") or [])]
+        totals = [step["cumulative_saving_us"] for step in (_fixture_signals(label).get("optimization_horizon") or [])]
         assert totals == sorted(totals), totals
 
     def test_the_blast_ranking_is_ordered_by_what_it_says(self, tmp_path):
@@ -129,8 +128,7 @@ class TestEachListIsOrderedByItsOwnKey:
         records = signals.get("blast_radius") or {}
         ranked_by = signals.get("blast_radius_ranked_by")
         assert ranked_by in ("measured-rebuild-time", "element-count"), ranked_by
-        field = ("weighted_duration_us"
-                 if ranked_by == "measured-rebuild-time" else "downstream_count")
+        field = "weighted_duration_us" if ranked_by == "measured-rebuild-time" else "downstream_count"
         keys = [records[uid][field] for uid in blast if uid in records]
         assert len(keys) == len(blast), (blast, sorted(records))
         assert keys == sorted(keys, reverse=True), list(zip(blast, keys))
@@ -144,15 +142,15 @@ class TestEachSentenceSendsTheReaderToTheOther:
     def test_the_blast_ranking_names_the_horizon(self):
         from bga import schemas
 
-        said = schemas.schema(schemas.ANALYZE)["properties"]["elements"][
-            "properties"]["top_blast_radius"]["description"]
+        said = schemas.schema(schemas.ANALYZE)["properties"]["elements"]["properties"]["top_blast_radius"][
+            "description"
+        ]
         assert "optimization_horizon" in said, said
         assert "disagree" in said, said
 
     def test_the_horizon_names_the_blast_ranking(self):
         from bga import schemas
 
-        said = schemas.schema(
-            schemas.ANALYZE)["properties"]["optimization_horizon"]["description"]
+        said = schemas.schema(schemas.ANALYZE)["properties"]["optimization_horizon"]["description"]
         assert "top_blast_radius" in said, said
         assert "different order" in said, said

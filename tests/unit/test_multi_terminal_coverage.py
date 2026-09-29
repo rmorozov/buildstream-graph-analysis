@@ -24,6 +24,7 @@ Two fully independent elements (no shared dependency, each its own
     IDLE segment - previously idle_us was always silently 0, because no
     code anywhere ever produced an IDLE segment for any scenario.
 """
+
 import json
 
 from bga import analyze_run
@@ -45,8 +46,13 @@ def _write_run_dir(tmp_path, spans, wall_end, elements=("x.bst", "y.bst")):
     }
     trace = {
         "spans": [
-            {"task_key": f"{uid}|BUILD|BUILD|0", "ts_us": start, "dur_us": dur,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"}
+            {
+                "task_key": f"{uid}|BUILD|BUILD|0",
+                "ts_us": start,
+                "dur_us": dur,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            }
             for uid, start, dur in spans
         ],
         "phases": [],
@@ -61,8 +67,12 @@ def _attribution_total(result):
     return sum(
         result.attribution.get(k, 0)
         for k in (
-            "execution_on_chain_us", "dependency_wait_us", "resource_wait_us",
-            "scheduler_wait_us", "idle_us", "retry_wait_us",
+            "execution_on_chain_us",
+            "dependency_wait_us",
+            "resource_wait_us",
+            "scheduler_wait_us",
+            "idle_us",
+            "retry_wait_us",
         )
     )
 
@@ -75,9 +85,7 @@ def test_independent_terminal_nested_within_the_other(tmp_path):
     already covers. Sigma == H holds because it's genuinely all covered
     by y, not because x was silently dropped.
     """
-    run_dir = _write_run_dir(
-        tmp_path, spans=[("x.bst", 0, 100000), ("y.bst", 0, 200000)], wall_end=300000
-    )
+    run_dir = _write_run_dir(tmp_path, spans=[("x.bst", 0, 100000), ("y.bst", 0, 200000)], wall_end=300000)
     result = analyze_run(run_dir)
     h = result.occupancy["horizon_us"]
     assert h == 200000
@@ -92,9 +100,7 @@ def test_independent_terminal_extending_horizon_now_covered(tmp_path):
     the genuine 100000us dead time between them ([100000, 200000)) is
     attributed as IDLE rather than silently vanishing from the sum.
     """
-    run_dir = _write_run_dir(
-        tmp_path, spans=[("x.bst", 0, 100000), ("y.bst", 200000, 200000)], wall_end=400000
-    )
+    run_dir = _write_run_dir(tmp_path, spans=[("x.bst", 0, 100000), ("y.bst", 200000, 200000)], wall_end=400000)
     result = analyze_run(run_dir)
     h = result.occupancy["horizon_us"]
     assert h == 400000
@@ -111,9 +117,7 @@ def test_independent_terminals_running_concurrently_do_not_double_count(tmp_path
     contribute a segment for their own full span, and the [50000, 150000)
     overlap would be double-counted, inflating Sigma past H.
     """
-    run_dir = _write_run_dir(
-        tmp_path, spans=[("x.bst", 0, 150000), ("y.bst", 50000, 150000)], wall_end=200000
-    )
+    run_dir = _write_run_dir(tmp_path, spans=[("x.bst", 0, 150000), ("y.bst", 50000, 150000)], wall_end=200000)
     result = analyze_run(run_dir)
     h = result.occupancy["horizon_us"]
     assert h == 200000

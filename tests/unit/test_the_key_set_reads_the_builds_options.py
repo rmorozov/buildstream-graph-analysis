@@ -3,6 +3,7 @@ Plane 1 `Pipeline` block instead of a second, option-blind `bst show` -
 so it reflects the options this build actually ran with, and the
 snapshot's pre-build window issues no extra `bst` invocation.
 """
+
 import os
 import shutil
 import subprocess
@@ -26,20 +27,19 @@ _NO_BLOCK_LOG = (
 
 _UNRESOLVED_LOG = (
     "[wrapper][2026-01-01 00:00:00,000] INFO: Pipeline\n"
-    "[wrapper][2026-01-01 00:00:00,000] INFO:  no reference "
-    + "?" * 64 + " app.bst \n"
+    "[wrapper][2026-01-01 00:00:00,000] INFO:  no reference " + "?" * 64 + " app.bst \n"
     "[wrapper][2026-01-01 00:00:00,001] INFO: " + "=" * 79 + "\n"
 )
 
 
 # --- Pure parsing (hermetic, no bst) --------------------------------------
 
+
 def test_the_real_fixtures_pipeline_block_is_read():
     """`tests/fixtures/with_timeline/build.log` is a real captured Plane
     1 log with 11 elements in its `Pipeline` block."""
     result = tracer.read_cache_key_set_from_plane1_log(PLANE1_FIXTURE)
-    assert result == {"sha256": "713ad6804e90d04a698116f917639600cb860b7998ed459bc5f77c069d621ce2",
-                       "elements": 11}
+    assert result == {"sha256": "713ad6804e90d04a698116f917639600cb860b7998ed459bc5f77c069d621ce2", "elements": 11}
 
 
 def test_a_missing_file_is_unread():
@@ -71,14 +71,12 @@ def test_none_path_is_unread():
 
 # --- The snapshot's pre-build window (hermetic: run_traced_build faked) --
 
+
 def _fake_bst(tmp_path):
     """Records every argv it is called with, one line per call."""
     script = tmp_path / "fake-bst"
     argv_file = tmp_path / "argv.txt"
-    script.write_text(
-        "#!/bin/sh\n"
-        f'echo "$@" >> "{argv_file}"\n'
-    )
+    script.write_text(f"#!/bin/sh\necho \"$@\" >> \"{argv_file}\"\n")
     script.chmod(0o755)
     return str(script), argv_file
 
@@ -103,13 +101,24 @@ def _run_main(tmp_path, monkeypatch, fake_bst, wrapped_log_text):
 
     monkeypatch.setattr(tracer, "run_traced_build", fake_run_traced_build)
 
-    rc = tracer.main([
-        "run", "--raw-log", str(raw_log), "--wrapped-log", str(wrapped_log),
-        str(tmp_path), str(output),
-        "--", fake_bst, "build", "app.bst",
-    ])
+    rc = tracer.main(
+        [
+            "run",
+            "--raw-log",
+            str(raw_log),
+            "--wrapped-log",
+            str(wrapped_log),
+            str(tmp_path),
+            str(output),
+            "--",
+            fake_bst,
+            "build",
+            "app.bst",
+        ]
+    )
     assert rc == 0
     import json
+
     with open(output, encoding="utf-8") as f:
         return json.load(f)
 
@@ -145,11 +154,14 @@ def test_a_report_without_a_pipeline_block_carries_an_unread_key_set(tmp_path, m
 
 # --- Real bst, two variants (bst-marked) ----------------------------------
 
+
 def _bst_show_key_set(project_dir, global_opts, target):
     proc = subprocess.run(
-        ["bst", *global_opts, "--no-colors", "show", "--format",
-         "%{name} %{full-key}", target],
-        cwd=project_dir, capture_output=True, text=True, check=True,
+        ["bst", *global_opts, "--no-colors", "show", "--format", "%{name} %{full-key}", target],
+        cwd=project_dir,
+        capture_output=True,
+        text=True,
+        check=True,
     )
     return tracer.hash_cache_key_lines(proc.stdout)
 

@@ -3,6 +3,7 @@
 Split out of `bga/schemas.py` (`UX-1031`) to hold that file's size cell;
 `bga.schemas` re-exports every name here.
 """
+
 from .findings import READERS
 from .plural import plural
 
@@ -23,7 +24,7 @@ from .plural import plural
 # JSON Schema ignores unknown keywords, so annotated documents validate
 # exactly as before. `UX-190`'s rules apply unchanged: adding a hint is
 # an addition, changing what one *means* is a version bump.
-QUANTITY = "bga:quantity"        # how to format the number
+QUANTITY = "bga:quantity"  # how to format the number
 # UX-209: the question a section answers, so the heading, the TOC and
 # the text renderer name it the same way. Silent -> the viewer falls
 # back to `title(key)`.
@@ -51,8 +52,7 @@ ROLES = ("element",)
 # a second list of verdict kinds living in JavaScript is a vocabulary
 # waiting to diverge from this one.
 MARKERS = "bga:markers"
-MARKER_SHAPES = ("circle", "circle-open", "triangle-up", "triangle-down",
-                 "diamond", "square")
+MARKER_SHAPES = ("circle", "circle-open", "triangle-up", "triangle-down", "diamond", "square")
 # `within_observed_range` reuses the circle, opened: it is the "the set
 # cannot support the claim" answer - an undecided no-change rather than
 # a fourth direction - and the shape should say so.
@@ -89,9 +89,9 @@ VERDICT_MARKERS = {
 INLINE = "bga:inline"
 INLINE_REASONS = ("name", "caveat")
 
-SEVERITY = "bga:severity"          # this array carries findings
-COLUMNS = "bga:columns"            # column order for an array of objects
-DIRECTION = "bga:direction"        # what the sign of a delta means
+SEVERITY = "bga:severity"  # this array carries findings
+COLUMNS = "bga:columns"  # column order for an array of objects
+DIRECTION = "bga:direction"  # what the sign of a delta means
 
 # UX-303 (styleguide §2): a value that *is* a shape renders as its
 # shape first and its numbers second.
@@ -143,8 +143,8 @@ RUNBOOK = "bga:runbook"
 # Direction 7 in the declaration rather than in a comment: the page
 # does not choose the parts, does not compute a remainder, and does not
 # pick an axis from the data.
-DECOMPOSITION = "bga:decomposition"   # a published total, in published parts
-INTERVAL = "bga:interval"             # published values on one axis
+DECOMPOSITION = "bga:decomposition"  # a published total, in published parts
+INTERVAL = "bga:interval"  # published values on one axis
 # Below this a series is a sentence. Stated here because the page and
 # the guards must agree on it, and `UX-273`'s rule is that a threshold
 # lives in one place.
@@ -193,7 +193,7 @@ PRESETS = "bga:presets"
 #: growing with the run of which 4 undeclared).
 GROWS = "bga:grows"
 
-KEYED_BY = "bga:keyed_by"          # what the map's own keys are
+KEYED_BY = "bga:keyed_by"  # what the map's own keys are
 
 #: The one value `KEYED_BY` takes today. A task uid is
 #: `element|kind|phase|attempt` (`bga/ingest/models.py`'s `TaskKey`), and
@@ -223,7 +223,7 @@ KEYED_BY_TASK_UID = "task_uid"
 #: run at all. So the hint is not a description, and declaring where it
 #: lives is what lets the page draw both on one row without sniffing a
 #: key named `<something>_hints`.
-COMMAND = "bga:command"            # a scalar array that is one command line
+COMMAND = "bga:command"  # a scalar array that is one command line
 EXPLAINED_BY = "bga:explained_by"
 
 PRESET_DIRECTIONS = ("asc", "desc")
@@ -245,14 +245,14 @@ PRESET_COLUMNS_MAX = 8
 # was written under. The renderer still knows the retired spellings
 # (`bga/viewer/format.js`); no schema may declare one.
 QUANTITIES = (
-    "duration_us",   # microseconds; render as a human duration
-    "bytes",         # UX-201/UX-215: not megabytes, not kilobytes -
-                     # calling a KiB count `bytes` is wrong by 1024x,
-                     # which is why the conversion happens at the input
-                     # boundary in `bga/units.py` and not in a renderer
-    "share",         # 0..1; render as a percentage
+    "duration_us",  # microseconds; render as a human duration
+    "bytes",  # UX-201/UX-215: not megabytes, not kilobytes -
+    # calling a KiB count `bytes` is wrong by 1024x,
+    # which is why the conversion happens at the input
+    # boundary in `bga/units.py` and not in a renderer
+    "share",  # 0..1; render as a percentage
     "count",
-    "ratio",         # unbounded; render as a multiplier
+    "ratio",  # unbounded; render as a multiplier
     # `UX-613`: events per unit time, and the *only* addition since
     # `UX-341` closed the set. Argued against the rule rather than
     # added beside it: a rate has dimension T-1, which none of the five
@@ -307,12 +307,10 @@ def _check_grows(document: str, key: str, hint: dict) -> None:
         return
     if grows is not False and not (isinstance(grows, str) and grows.strip()):
         raise ValueError(
-            f"{document}.{key}: {GROWS}={grows!r} must be a non-empty "
-            f"string naming what it grows with, or False")
+            f"{document}.{key}: {GROWS}={grows!r} must be a non-empty string naming what it grows with, or False"
+        )
     if grows is False and not isinstance(hint.get("maxItems"), int):
-        raise ValueError(
-            f"{document}.{key}: {GROWS} is False with no maxItems - a "
-            f"fixed container states its bound")
+        raise ValueError(f"{document}.{key}: {GROWS} is False with no maxItems - a fixed container states its bound")
 
 
 def _check_hint(document: str, key: str, hint: dict) -> None:
@@ -326,13 +324,10 @@ def _check_hint(document: str, key: str, hint: dict) -> None:
     # complete against it - an unknown rail would silently drop a
     # section out of every group.
     if (rail := hint.get(RAIL)) is not None and rail not in RAILS:
-        raise ValueError(
-            f"{document}.{key}: {RAIL}={rail!r} is not one of "
-            f"{', '.join(RAILS)}")
+        raise ValueError(f"{document}.{key}: {RAIL}={rail!r} is not one of {', '.join(RAILS)}")
     question = hint.get(QUESTION)
     if question is not None and not str(question).strip().endswith("?"):
-        raise ValueError(
-            f"{document}.{key}: {QUESTION}={question!r} is not a question")
+        raise ValueError(f"{document}.{key}: {QUESTION}={question!r} is not a question")
     # UX-212: a marker map must cover the vocabulary it claims to draw
     # and must draw each kind differently - a map that assigns two
     # verdicts the same shape is a colour-only encoding again, wearing
@@ -343,78 +338,66 @@ def _check_hint(document: str, key: str, hint: dict) -> None:
             raise ValueError(f"{document}.{key}: {MARKERS} must be a mapping")
         unknown = set(markers) - set(VERDICT_KINDS)
         if unknown:
-            raise ValueError(
-                f"{document}.{key}: {MARKERS} names {sorted(unknown)}, which "
-                f"is not a verdict kind")
+            raise ValueError(f"{document}.{key}: {MARKERS} names {sorted(unknown)}, which is not a verdict kind")
         missing = set(VERDICT_KINDS) - set(markers)
         if missing:
-            raise ValueError(
-                f"{document}.{key}: {MARKERS} has no shape for "
-                f"{sorted(missing)}")
-        bad = [shape for shape in markers.values()
-               if shape not in MARKER_SHAPES]
+            raise ValueError(f"{document}.{key}: {MARKERS} has no shape for {sorted(missing)}")
+        bad = [shape for shape in markers.values() if shape not in MARKER_SHAPES]
         if bad:
             raise ValueError(
                 f"{document}.{key}: {MARKERS} {plural(len(bad), 'shape')} "
                 f"{sorted(bad)} not one "
-                f"of {', '.join(MARKER_SHAPES)}")
+                f"of {', '.join(MARKER_SHAPES)}"
+            )
         if len(set(markers.values())) != len(markers):
             raise ValueError(
                 f"{document}.{key}: {MARKERS} gives two verdict kinds the "
-                f"same shape, which is a colour-only encoding again")
+                f"same shape, which is a colour-only encoding again"
+            )
     # UX-289: a preset a renderer could not act on is worse than none -
     # it names a view in the rail and then draws the unfiltered wall.
     presets = hint.get(PRESETS)
     if presets is not None:
         if not isinstance(presets, (list, tuple)) or not presets:
-            raise ValueError(
-                f"{document}.{key}: {PRESETS} must be a non-empty list")
+            raise ValueError(f"{document}.{key}: {PRESETS} must be a non-empty list")
         names = []
         for preset in presets:
             if not isinstance(preset, dict):
-                raise ValueError(f"{document}.{key}: {PRESETS} entry is not a "
-                                 f"mapping: {preset!r}")
+                raise ValueError(f"{document}.{key}: {PRESETS} entry is not a mapping: {preset!r}")
             name = preset.get("name")
             if not name or not isinstance(name, str):
-                raise ValueError(
-                    f"{document}.{key}: {PRESETS} entry has no name")
+                raise ValueError(f"{document}.{key}: {PRESETS} entry has no name")
             names.append(name)
             if "from" in preset and "where" in preset:
                 raise ValueError(
                     f"{document}.{key}: preset {name!r} says both `from` and "
-                    f"`where` - two ways of choosing rows are two answers")
+                    f"`where` - two ways of choosing rows are two answers"
+                )
             where = preset.get("where")
-            if where is not None and (not isinstance(where, dict)
-                                      or "column" not in where
-                                      or "equals" not in where):
-                raise ValueError(
-                    f"{document}.{key}: preset {name!r} `where` must be "
-                    f"{{column, equals}}")
+            if where is not None and (not isinstance(where, dict) or "column" not in where or "equals" not in where):
+                raise ValueError(f"{document}.{key}: preset {name!r} `where` must be {{column, equals}}")
             columns = preset.get("columns")
             if not columns or not isinstance(columns, (list, tuple)):
-                raise ValueError(
-                    f"{document}.{key}: preset {name!r} names no columns")
+                raise ValueError(f"{document}.{key}: preset {name!r} names no columns")
             if len(columns) > PRESET_COLUMNS_MAX:
                 raise ValueError(
                     f"{document}.{key}: preset {name!r} shows {len(columns)} "
                     f"columns; the point of a preset is that it shows fewer "
-                    f"than {PRESET_COLUMNS_MAX}")
+                    f"than {PRESET_COLUMNS_MAX}"
+                )
             sort = preset.get("sort")
             if sort is not None:
                 if not isinstance(sort, dict) or "column" not in sort:
-                    raise ValueError(
-                        f"{document}.{key}: preset {name!r} `sort` must name "
-                        f"a column")
+                    raise ValueError(f"{document}.{key}: preset {name!r} `sort` must name a column")
                 if sort.get("direction", "desc") not in PRESET_DIRECTIONS:
                     raise ValueError(
                         f"{document}.{key}: preset {name!r} sorts "
                         f"{sort.get('direction')!r}, not one of "
-                        f"{', '.join(PRESET_DIRECTIONS)}")
+                        f"{', '.join(PRESET_DIRECTIONS)}"
+                    )
             question = preset.get("question")
             if question is not None and not str(question).strip().endswith("?"):
-                raise ValueError(
-                    f"{document}.{key}: preset {name!r} question "
-                    f"{question!r} is not a question")
+                raise ValueError(f"{document}.{key}: preset {name!r} question {question!r} is not a question")
             # `UX-338`: the columns without which this view has no
             # answer. A preset whose *subject* the run does not carry
             # is not offered - "there are no choke points" and "this
@@ -429,33 +412,30 @@ def _check_hint(document: str, key: str, hint: dict) -> None:
             # "some column is present" rule keeps offering it.
             requires = preset.get("requires")
             if requires is not None:
-                if (not isinstance(requires, (list, tuple)) or not requires
-                        or not all(isinstance(name_, str)
-                                   for name_ in requires)):
+                if (
+                    not isinstance(requires, (list, tuple))
+                    or not requires
+                    or not all(isinstance(name_, str) for name_ in requires)
+                ):
                     raise ValueError(
-                        f"{document}.{key}: preset {name!r} `requires` must "
-                        f"be a non-empty list of column names")
-                missing = [name_ for name_ in requires
-                           if name_ not in columns]
+                        f"{document}.{key}: preset {name!r} `requires` must be a non-empty list of column names"
+                    )
+                missing = [name_ for name_ in requires if name_ not in columns]
                 if missing:
                     raise ValueError(
                         f"{document}.{key}: preset {name!r} requires "
                         f"{missing} which it does not show - a view cannot "
-                        f"depend on a column it does not draw")
+                        f"depend on a column it does not draw"
+                    )
         if len(set(names)) != len(names):
-            raise ValueError(
-                f"{document}.{key}: two presets share a name: {names}")
+            raise ValueError(f"{document}.{key}: two presets share a name: {names}")
     _check_grows(document, key, hint)
     quantity = hint.get(QUANTITY)
     if quantity is not None and quantity not in QUANTITIES:
-        raise ValueError(
-            f"{document}.{key}: {QUANTITY}={quantity!r} is not one of "
-            f"{', '.join(QUANTITIES)}")
+        raise ValueError(f"{document}.{key}: {QUANTITY}={quantity!r} is not one of {', '.join(QUANTITIES)}")
     direction = hint.get(DIRECTION)
     if direction is not None and direction not in DIRECTIONS:
-        raise ValueError(
-            f"{document}.{key}: {DIRECTION}={direction!r} is not one of "
-            f"{', '.join(DIRECTIONS)}")
+        raise ValueError(f"{document}.{key}: {DIRECTION}={direction!r} is not one of {', '.join(DIRECTIONS)}")
     columns = hint.get(COLUMNS)
     if columns is not None:
         # UX-201: v2 entries are objects - {key, title, quantity,
@@ -469,23 +449,21 @@ def _check_hint(document: str, key: str, hint: dict) -> None:
             if isinstance(column, str):
                 continue
             if not isinstance(column, dict) or "key" not in column:
-                raise ValueError(
-                    f"{document}.{key}: every {COLUMNS} entry is a name or "
-                    f"an object with a `key`")
-            if column.get("quantity") is not None \
-                    and column["quantity"] not in QUANTITIES:
+                raise ValueError(f"{document}.{key}: every {COLUMNS} entry is a name or an object with a `key`")
+            if column.get("quantity") is not None and column["quantity"] not in QUANTITIES:
                 raise ValueError(
                     f"{document}.{key}.{column['key']}: quantity "
                     f"{column['quantity']!r} is not one of "
-                    f"{', '.join(QUANTITIES)}")
+                    f"{', '.join(QUANTITIES)}"
+                )
             # UX-208: a column may say what its values *are*, which is
             # what earns the rows a generic Inspect. Closed, for the
             # same reason quantities are: a role a renderer cannot act
             # on is a promise nothing keeps.
             if column.get("role") is not None and column["role"] not in ROLES:
                 raise ValueError(
-                    f"{document}.{key}.{column['key']}: role "
-                    f"{column['role']!r} is not one of {', '.join(ROLES)}")
+                    f"{document}.{key}.{column['key']}: role {column['role']!r} is not one of {', '.join(ROLES)}"
+                )
 
     # UX-201: hints resolve *recursively*. The renderer walks the schema
     # node alongside the value, so a nested property carries its own
@@ -511,6 +489,7 @@ def _distribution(quantity: str, noun: str, description: str) -> dict:
     reached the reader as bare numbers. The count is a count; everything
     else is the quantity the population is of.
     """
+
     # `UX-220`: a declared quantity carries a sentence. Generated rather
     # than written out twenty-six times, because "the 30th percentile of
     # this population" is the same sentence with a number in it, and
@@ -520,27 +499,33 @@ def _distribution(quantity: str, noun: str, description: str) -> dict:
         return {QUANTITY: quantity, "description": f"The {what} {noun}."}
 
     def rank(step):
-        return {QUANTITY: quantity,
-                "description": f"The {step}th percentile {noun}."}
+        return {QUANTITY: quantity, "description": f"The {step}th percentile {noun}."}
 
     return {
-        DISTRIBUTION: "n", QUANTITY: quantity, "description": description,
+        DISTRIBUTION: "n",
+        QUANTITY: quantity,
+        "description": description,
         "properties": {
             "n": {
                 QUANTITY: "count",
                 "description": "How many values the percentiles are over. A "
-                               "strip without its population is a picture of "
-                               "an opinion."},
-            "min": extreme("smallest"), "max": extreme("largest"),
-            "p95": rank(95), "p99": rank(99),
-            "mean": {QUANTITY: quantity,
-                     "description": f"The mean {noun}; on a heavy tail the "
-                                    "mark that most needs the median beside "
-                                    "it, which is why the sentence stays on "
-                                    "the median."},
+                "strip without its population is a picture of "
+                "an opinion.",
+            },
+            "min": extreme("smallest"),
+            "max": extreme("largest"),
+            "p95": rank(95),
+            "p99": rank(99),
+            "mean": {
+                QUANTITY: quantity,
+                "description": f"The mean {noun}; on a heavy tail the "
+                "mark that most needs the median beside "
+                "it, which is why the sentence stays on "
+                "the median.",
+            },
             "deciles": {
                 "description": "The nine deciles, nearest-rank.",
-                "properties": {f"p{step}": rank(step)
-                               for step in range(10, 100, 10)}},
+                "properties": {f"p{step}": rank(step) for step in range(10, 100, 10)},
+            },
         },
     }

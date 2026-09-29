@@ -66,8 +66,7 @@ def _element_artifact_task(
             continue
         uid = span.task_key.element_uid
         held = best.get(uid)
-        if held is None or _ARTIFACT_TASK_KINDS.index(kind) < \
-                _ARTIFACT_TASK_KINDS.index(held[0].task_key.task_kind):
+        if held is None or _ARTIFACT_TASK_KINDS.index(kind) < _ARTIFACT_TASK_KINDS.index(held[0].task_key.task_kind):
             best[uid] = (span, q_finish)
     return best
 
@@ -93,8 +92,7 @@ def _element_build_finish(normalized_spans: list[tuple[TaskSpan, int, int]]) -> 
     every caller reads it as "when could a dependent start", which is
     what it has always meant and now answers on a cache hit too.
     """
-    return {uid: finish
-            for uid, (_span, finish) in _element_artifact_task(normalized_spans).items()}
+    return {uid: finish for uid, (_span, finish) in _element_artifact_task(normalized_spans).items()}
 
 
 def quantize_timestamp(ts_us: int, epsilon_us: int) -> int:
@@ -158,8 +156,7 @@ def spans_below_resolution(spans, epsilon_us: int = 50000) -> list[str]:
     for span in spans:
         if span.finish_us <= span.ts_us:
             continue
-        if quantize_timestamp(span.ts_us, epsilon_us) == \
-                quantize_timestamp(span.finish_us, epsilon_us):
+        if quantize_timestamp(span.ts_us, epsilon_us) == quantize_timestamp(span.finish_us, epsilon_us):
             erased.append(str(span.task_key))
     return erased
 
@@ -188,8 +185,7 @@ def subtract_admission_wait(
             adjusted.append(span)
             continue
         wait_us = min(wait_us, span.dur_us)
-        adjusted.append(dataclasses.replace(
-            span, ts_us=span.ts_us + wait_us, dur_us=span.dur_us - wait_us))
+        adjusted.append(dataclasses.replace(span, ts_us=span.ts_us + wait_us, dur_us=span.dur_us - wait_us))
     return adjusted
 
 
@@ -199,25 +195,25 @@ def normalize_timestamps(
 ) -> list[tuple[TaskSpan, int, int]]:
     """
     Normalize timestamps for all task spans (Part 3.2).
-    
+
     Applies quantization to start and finish timestamps.
-    
+
     Args:
         spans: List of task spans
         epsilon_us: Quantization epsilon in microseconds (default 50ms)
-        
+
     Returns:
         List of tuples: (original_span, quantized_start, quantized_finish)
     """
     normalized = []
-    
+
     for span in spans:
         # Quantize start and finish independently
         q_start = quantize_timestamp(span.ts_us, epsilon_us)
         q_finish = quantize_timestamp(span.finish_us, epsilon_us)
-        
+
         normalized.append((span, q_start, q_finish))
-    
+
     return normalized
 
 
@@ -280,9 +276,7 @@ def compute_ready_times(
 
         preds = predecessors.get(element_uid) if span.task_key.task_kind == TaskKind.BUILD else None
         if preds:
-            pred_finish_times = [
-                element_build_finish[pred] for pred in preds if pred in element_build_finish
-            ]
+            pred_finish_times = [element_build_finish[pred] for pred in preds if pred in element_build_finish]
             ready_times[task_key_str] = max(pred_finish_times) if pred_finish_times else q_start
         else:
             # No predecessors (or not a BUILD task) - ready at own start time
@@ -343,17 +337,22 @@ def validate_ordering(
         if pred_finish is not None and succ_start is not None and pred_finish > succ_start:
             logger.debug(
                 "Ordering violation: %s finishes at %d after %s starts at %d (gap %dus)",
-                dep.predecessor, pred_finish, dep.successor, succ_start,
+                dep.predecessor,
+                pred_finish,
+                dep.successor,
+                succ_start,
                 succ_start - pred_finish,
             )
-            violations.append({
-                'type': 'ordering_violation',
-                'predecessor': dep.predecessor,
-                'successor': dep.successor,
-                'predecessor_finish': pred_finish,
-                'successor_start': succ_start,
-                'gap_us': succ_start - pred_finish,  # Negative means violation
-            })
+            violations.append(
+                {
+                    'type': 'ordering_violation',
+                    'predecessor': dep.predecessor,
+                    'successor': dep.successor,
+                    'predecessor_finish': pred_finish,
+                    'successor_start': succ_start,
+                    'gap_us': succ_start - pred_finish,  # Negative means violation
+                }
+            )
 
     return violations
 
@@ -416,8 +415,7 @@ def clamp_task_starts(
     # (12000000)` - the same under-constraint this comment warns about,
     # one edge over from the one `UX-60` closed.
     build_task_by_element: dict[str, str] = {
-        uid: str(span.task_key)
-        for uid, (span, _finish) in _element_artifact_task(normalized_spans).items()
+        uid: str(span.task_key) for uid, (span, _finish) in _element_artifact_task(normalized_spans).items()
     }
     # UX-60: an element's own FETCH, which its BUILD must wait for.
     # BuildStream cannot run build commands before the element's sources
@@ -442,8 +440,7 @@ def clamp_task_starts(
     for dep_edge in graph.dependencies:
         if dep_edge.dependency_type == "runtime":
             continue
-        build_gating_predecessors.setdefault(
-            dep_edge.successor, []).append(dep_edge.predecessor)
+        build_gating_predecessors.setdefault(dep_edge.successor, []).append(dep_edge.predecessor)
 
     result = []
     violations = []
@@ -457,7 +454,10 @@ def clamp_task_starts(
         if clamped_start > q_start:
             logger.debug(
                 "Clamped start of %s: %d -> %d (ready at %d)",
-                task_key_str, q_start, clamped_start, ready_us,
+                task_key_str,
+                q_start,
+                clamped_start,
+                ready_us,
             )
 
         # Finish time is immutable
@@ -468,17 +468,23 @@ def clamp_task_starts(
                 "Excluding %s: clamping start to ready time (%d) would produce "
                 "a negative-duration task (raw span %d..%d, ready %d) - a genuine "
                 "ordering violation, not quantization noise. See violations list.",
-                task_key_str, clamped_start, q_start, q_finish, ready_us,
+                task_key_str,
+                clamped_start,
+                q_start,
+                q_finish,
+                ready_us,
             )
-            violations.append({
-                'type': 'clamp_negative_duration',
-                'task_key': task_key_str,
-                'ready_us': ready_us,
-                'raw_start_us': q_start,
-                'raw_finish_us': q_finish,
-                'clamped_start_us': clamped_start,
-                'clamped_finish_us': clamped_finish,
-            })
+            violations.append(
+                {
+                    'type': 'clamp_negative_duration',
+                    'task_key': task_key_str,
+                    'ready_us': ready_us,
+                    'raw_start_us': q_start,
+                    'raw_finish_us': q_finish,
+                    'clamped_start_us': clamped_start,
+                    'clamped_finish_us': clamped_finish,
+                }
+            )
             continue
 
         # Get build-gating dependencies for this task from the graph
@@ -487,22 +493,23 @@ def clamp_task_starts(
             own_fetch = fetch_task_by_element.get(span.task_key.element_uid)
             if own_fetch:
                 deps.append(own_fetch)
-        for predecessor in build_gating_predecessors.get(
-                span.task_key.element_uid, ()):
+        for predecessor in build_gating_predecessors.get(span.task_key.element_uid, ()):
             pred_key = build_task_by_element.get(predecessor)
             if pred_key:
                 deps.append(pred_key)
 
-        result.append(NormalizedTask(
-            task_key=span.task_key,
-            ready_us=ready_us,
-            start_us=clamped_start,
-            finish_us=clamped_finish,
-            dependencies=deps,
-            resources=span.resources,
-            primary_resource=span.primary_resource,
-            status=span.status,  # UX-62
-        ))
+        result.append(
+            NormalizedTask(
+                task_key=span.task_key,
+                ready_us=ready_us,
+                start_us=clamped_start,
+                finish_us=clamped_finish,
+                dependencies=deps,
+                resources=span.resources,
+                primary_resource=span.primary_resource,
+                status=span.status,  # UX-62
+            )
+        )
 
     return result, violations
 
@@ -523,9 +530,9 @@ def admission_wait_by_element_from_ledger(ledger_rows: list) -> dict:
     return totals
 
 
-def normalize_trace(trace: Trace, graph: Graph, epsilon_us: int = 50000,
-                    admission_wait_by_element: Optional[dict] = None
-                    ) -> tuple[list[NormalizedTask], list[dict]]:
+def normalize_trace(
+    trace: Trace, graph: Graph, epsilon_us: int = 50000, admission_wait_by_element: Optional[dict] = None
+) -> tuple[list[NormalizedTask], list[dict]]:
     """
     Full trace normalization pipeline (Part 3).
 
@@ -549,20 +556,21 @@ def normalize_trace(trace: Trace, graph: Graph, epsilon_us: int = 50000,
     spans = subtract_admission_wait(trace.spans, admission_wait_by_element)
     # Step 1: Quantize timestamps
     normalized_spans = normalize_timestamps(spans, epsilon_us)
-    
+
     # Step 2: Compute ready times
     ready_times = compute_ready_times(normalized_spans, graph.dependencies)
-    
+
     # Step 3: Validate ordering
     violations = validate_ordering(normalized_spans, graph.dependencies, ready_times)
-    
+
     # Step 4: Clamp starts to ready times
     normalized_tasks, clamp_violations = clamp_task_starts(normalized_spans, ready_times, graph)
     violations = violations + clamp_violations
 
     logger.info(
         "Normalized %d tasks (%d ordering violations)",
-        len(normalized_tasks), len(violations),
+        len(normalized_tasks),
+        len(violations),
     )
 
     return normalized_tasks, violations

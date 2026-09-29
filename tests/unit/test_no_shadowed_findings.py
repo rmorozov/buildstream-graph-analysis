@@ -15,6 +15,7 @@ regression happened the first time.
 These tests are cheap and they fail loudly the moment a convenience copy
 reappears - which is the only reason they exist.
 """
+
 import ast
 
 from bga import findings

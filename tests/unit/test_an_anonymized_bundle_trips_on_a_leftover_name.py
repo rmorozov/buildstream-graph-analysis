@@ -5,6 +5,7 @@ Every fixture capture under `tests/fixtures/` is packed by
 source path or target name of the fixture survives, and the bundle
 loads. The refusals are each driven by one planted fault.
 """
+
 import json
 import os
 import pathlib
@@ -68,8 +69,7 @@ def _export(tmp_path, fixture, edit=None, approve=lambda screen: True):
 
 def _decoded(path: str) -> dict:
     with tarfile.open(path, mode="r:gz") as archive:
-        return {info.name: archive.extractfile(info).read().decode("utf-8")
-                for info in archive.getmembers()}
+        return {info.name: archive.extractfile(info).read().decode("utf-8") for info in archive.getmembers()}
 
 
 def _names(fixture: str) -> set:
@@ -88,8 +88,7 @@ def _names(fixture: str) -> set:
 
 
 def _found(names, text: str) -> list:
-    return sorted(n for n in names if re.search(
-        rf"(?<![A-Za-z0-9]){re.escape(n)}(?![A-Za-z0-9])", text))
+    return sorted(n for n in names if re.search(rf"(?<![A-Za-z0-9]){re.escape(n)}(?![A-Za-z0-9])", text))
 
 
 @pytest.mark.parametrize("fixture", CAPTURES)
@@ -117,21 +116,22 @@ def _private_toolchain(document):
 
 
 def test_a_private_tool_exports_as_a_b_pseudonym(tmp_path):
-    path, _manifest, pmap = _export(tmp_path, "macro_micro", {
-        "plane2.json": _private_tool, "run-context.json": _private_toolchain})
+    path, _manifest, pmap = _export(
+        tmp_path, "macro_micro", {"plane2.json": _private_tool, "run-context.json": _private_toolchain}
+    )
     decoded = _decoded(path)
     assert "acme" not in "\n".join(decoded.values()).lower()
     by_binary = json.loads(decoded["capture/plane2.json"])["by_binary"]
     private = [b for b in by_binary if b.startswith("b-")]
     assert [pmap.resolve(b) for b in private] == ["binary\0acme-codegen"]
     toolchain = json.loads(decoded["capture/run/run-context.json"])["host_manifest"]["toolchain"]
-    assert {k: v for k, v in toolchain.items() if k.startswith("b-")} == {
-        private[0]: f"{private[0]} 4.2.1"}
+    assert {k: v for k, v in toolchain.items() if k.startswith("b-")} == {private[0]: f"{private[0]} 4.2.1"}
 
 
 def _plant(uid):
     def change(document):
         document["host_manifest"]["cpu_model"] = f"Xeon {uid} edition"
+
     return change
 
 
@@ -143,8 +143,12 @@ def test_a_uid_planted_in_a_kept_string_trips_the_residue_scan(tmp_path):
 
 
 def test_a_layout_row_with_no_treatment_refuses(tmp_path, monkeypatch):
-    row = (f"{run_store.STORE_DIRNAME}/{run_store.RUNS_DIRNAME}/<stamp>/notes.txt",
-           run_store.CONDITIONAL, None, "a member added with no treatment")
+    row = (
+        f"{run_store.STORE_DIRNAME}/{run_store.RUNS_DIRNAME}/<stamp>/notes.txt",
+        run_store.CONDITIONAL,
+        None,
+        "a member added with no treatment",
+    )
     monkeypatch.setattr(run_store, "CAPTURE_LAYOUT", run_store.CAPTURE_LAYOUT + (row,))
     with pytest.raises(bundle.BundleError, match="notes.txt"):
         _export(tmp_path, "macro_micro")
@@ -154,6 +158,7 @@ def test_a_layout_row_with_no_treatment_refuses(tmp_path, monkeypatch):
 def test_an_unnamed_path_refuses_the_whole_export(tmp_path):
     def codename(document):
         document["codename"] = "falcon"
+
     with pytest.raises(bundle.BundleError, match="run/graph.json: codename"):
         _export(tmp_path, "macro_micro", {"graph.json": codename})
     assert not (tmp_path / "out.tar.gz").exists()
@@ -165,6 +170,7 @@ def test_nothing_is_written_until_the_owner_approves(tmp_path):
     def refuse(screen):
         screens.append(screen)
         return False
+
     with pytest.raises(bundle.BundleError, match="did not approve"):
         _export(tmp_path, "macro_micro", approve=refuse)
     assert not (tmp_path / "out.tar.gz").exists()
@@ -180,7 +186,8 @@ def test_documents_are_rewritten_in_place_and_times_shift_to_zero(tmp_path):
     graph = json.loads(decoded["capture/run/graph.json"])
     original = json.loads(_source("macro_micro", "graph.json").read_text(encoding="utf-8"))
     assert [e["uid"] for e in graph["elements"]] == [
-        anonymize.pseudonymize_identifier(e["uid"], KEY, pmap) for e in original["elements"]]
+        anonymize.pseudonymize_identifier(e["uid"], KEY, pmap) for e in original["elements"]
+    ]
     trace = json.loads(decoded["capture/run/trace.json"])
     source = json.loads(_source("macro_micro", "trace.json").read_text(encoding="utf-8"))
     assert [s["dur_us"] for s in trace["spans"]] == [s["dur_us"] for s in source["spans"]]
@@ -188,24 +195,29 @@ def test_documents_are_rewritten_in_place_and_times_shift_to_zero(tmp_path):
     wall = [context["wall_clock"]["start_us"], *(s["ts_us"] for s in trace["spans"])]
     assert min(wall) == bundle.CANONICAL_ORIGIN_US["wall"]
     real = json.loads(_source("macro_micro", "run-context.json").read_text(encoding="utf-8"))
-    assert (context["wall_clock"]["end_us"] - context["wall_clock"]["start_us"]
-            == real["wall_clock"]["end_us"] - real["wall_clock"]["start_us"])
+    assert (
+        context["wall_clock"]["end_us"] - context["wall_clock"]["start_us"]
+        == real["wall_clock"]["end_us"] - real["wall_clock"]["start_us"]
+    )
 
 
 def test_host_samples_shift_on_their_own_clock_and_keep_every_delta(tmp_path):
     path, _manifest, _pmap = _export(tmp_path, "host_cpu")
     lines = _decoded(path)["capture/host-samples.jsonl"].splitlines()
     shifted = [json.loads(line) for line in lines]
-    real = [json.loads(line) for line in
-            _source("host_cpu", "host-samples.jsonl").read_text(encoding="utf-8").splitlines()]
+    real = [
+        json.loads(line) for line in _source("host_cpu", "host-samples.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
     header, first = shifted[0], shifted[1]
     assert 0 <= header["wall_at_start"] - CANONICAL_S < 1 and 0 <= header["monotonic_at_start"] < 1
     assert first["t"] - header["monotonic_at_start"] == pytest.approx(
-        real[1]["t"] - real[0]["monotonic_at_start"], abs=1e-9)
+        real[1]["t"] - real[0]["monotonic_at_start"], abs=1e-9
+    )
 
 
 def test_an_anonymized_analysis_still_has_a_start_at_the_canonical_origin(tmp_path):
     from bga.analyzer import analyze_run
+
     path, _manifest, _pmap = _export(tmp_path, "macro_micro")
     target, _loaded = bundle.load(path, str(tmp_path / "far"))
     instance = analyze_run(pathlib.Path(target) / "run").run_instance
@@ -224,8 +236,9 @@ def test_a_private_long_flag_travels_as_a_pseudonym_on_any_binary(tmp_path):
     path, _manifest, pmap = _export(tmp_path, "macro_micro", {"plane2.json": _private_flags})
     decoded = _decoded(path)
     assert "acme" not in "\n".join(decoded.values()).lower()
-    public, private = (op["example_cmd"].split() for op in
-                       json.loads(decoded["capture/plane2.json"])["redundant_operations"][:2])
+    public, private = (
+        op["example_cmd"].split() for op in json.loads(decoded["capture/plane2.json"])["redundant_operations"][:2]
+    )
     assert public[0] == "cc1plus" and private[0].startswith("b-")
     for words in (public, private):
         flag = words[1].split("=")[0]

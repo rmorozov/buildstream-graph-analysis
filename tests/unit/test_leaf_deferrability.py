@@ -14,6 +14,7 @@ reproducing the exact bug this fix was supposed to have already closed.
 Fixed by populating `requested_targets` from the graph's own
 `requested_target`-marked elements before calling `analyze_diagnostics`.
 """
+
 import json
 
 from bga import BuildEfficiencyAnalyzer
@@ -23,16 +24,15 @@ def _write_run_dir(tmp_path, elements, dependencies, spans):
     run_dir = tmp_path / "run"
     run_dir.mkdir()
     run_context = {
-        "trace_epsilon_us": 50000, "wall_start_us": 0, "wall_end_us": 300000,
-        "max_jobs": len(elements), "resource_capacities": {"PROCESS": len(elements)},
+        "trace_epsilon_us": 50000,
+        "wall_start_us": 0,
+        "wall_end_us": 300000,
+        "max_jobs": len(elements),
+        "resource_capacities": {"PROCESS": len(elements)},
     }
     graph = {
-        "elements": [
-            {"uid": uid, "requested_target": is_target} for uid, is_target in elements
-        ],
-        "dependencies": [
-            {"predecessor": pred, "successor": succ} for pred, succ in dependencies
-        ],
+        "elements": [{"uid": uid, "requested_target": is_target} for uid, is_target in elements],
+        "dependencies": [{"predecessor": pred, "successor": succ} for pred, succ in dependencies],
     }
     trace = {"spans": spans, "phases": []}
     (run_dir / "run-context.json").write_text(json.dumps(run_context))
@@ -42,7 +42,7 @@ def _write_run_dir(tmp_path, elements, dependencies, spans):
 
 
 def test_leaf_reachable_from_target_is_not_deferrable(tmp_path):
-    """"Leaf" here is defined (consistently with edg.py's terminal-element
+    """ "Leaf" here is defined (consistently with edg.py's terminal-element
     convention used elsewhere in the codebase) as downstream_count == 0 -
     nothing depends on it - which makes a requested target that nothing
     else consumes a leaf in its own right. root.bst (requested_target=True,
@@ -65,12 +65,27 @@ def test_leaf_reachable_from_target_is_not_deferrable(tmp_path):
         ],
         dependencies=[("padding.bst", "root.bst")],
         spans=[
-            {"task_key": "root.bst|BUILD|BUILD|0", "ts_us": 50000, "dur_us": 50000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "padding.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 50000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "unrelated-leaf.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 50000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
+            {
+                "task_key": "root.bst|BUILD|BUILD|0",
+                "ts_us": 50000,
+                "dur_us": 50000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "padding.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 50000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "unrelated-leaf.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 50000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
         ],
     )
     analyzer = BuildEfficiencyAnalyzer(run_dir)
@@ -104,10 +119,20 @@ def test_no_requested_targets_treats_everything_as_reachable(tmp_path):
         elements=[("a.bst", False), ("b.bst", False)],
         dependencies=[],
         spans=[
-            {"task_key": "a.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 50000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "b.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 50000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
+            {
+                "task_key": "a.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 50000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "b.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 50000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
         ],
     )
     analyzer = BuildEfficiencyAnalyzer(run_dir)

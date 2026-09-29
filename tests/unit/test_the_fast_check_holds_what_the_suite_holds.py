@@ -27,6 +27,7 @@ So this file holds the two halves the repair rests on: that the tool
 and the suite are one implementation rather than two agreeing readings,
 and that `--check` says what it looked at.
 """
+
 import pathlib
 import re
 import shutil
@@ -46,8 +47,8 @@ TOOL = REPO / "tools/dev_close_task.py"
 
 def _run(scenarios):
     return subprocess.run(
-        [sys.executable, str(TOOL), "--check", "--scenarios", str(scenarios)],
-        capture_output=True, text=True)
+        [sys.executable, str(TOOL), "--check", "--scenarios", str(scenarios)], capture_output=True, text=True
+    )
 
 
 @pytest.fixture
@@ -70,9 +71,7 @@ def backlog(tmp_path):
 def _flip(path, frm="🟢 Done", to="🔴 Not Started"):
     text = path.read_text(encoding="utf-8")
     assert f"**Status:** {frm}" in text, (path.name, frm)
-    path.write_text(
-        text.replace(f"**Status:** {frm}", f"**Status:** {to}", 1),
-        encoding="utf-8")
+    path.write_text(text.replace(f"**Status:** {frm}", f"**Status:** {to}", 1), encoding="utf-8")
 
 
 class TestItReadsTheWholeBacklog:
@@ -80,25 +79,23 @@ class TestItReadsTheWholeBacklog:
         """The defect, reproduced. `UX-382` is the item round 61 hit,
         and its row lives in `closed.md` - the half `--check` could not
         see."""
-        _flip(backlog / "UX-0382-the-element-entity-has-two-shapes-"
-                        "sharing-one-attribute.md")
+        _flip(backlog / "UX-0382-the-element-entity-has-two-shapes-sharing-one-attribute.md")
         result = _run(backlog)
         assert result.returncode == 1, (
-            "--check passed a tree whose closed row and task file "
-            f"disagree:\n{result.stdout}")
+            f"--check passed a tree whose closed row and task file disagree:\n{result.stdout}"
+        )
         assert "UX-382" in result.stdout
 
     def test_it_is_symmetric(self, backlog):
         """Flipping the *row* rather than the file is the same defect
         from the other side, and a check that only looked one way would
         pass half of them."""
-        closed = next(path for path in close.closed_files(backlog)
-                      if "\n| UX-382 |" in path.read_text(encoding="utf-8"))
+        closed = next(
+            path for path in close.closed_files(backlog) if "\n| UX-382 |" in path.read_text(encoding="utf-8")
+        )
         text = closed.read_text(encoding="utf-8")
-        row = next(line for line in text.splitlines()
-                   if line.startswith("| UX-382 |"))
-        closed.write_text(text.replace(row, row.replace("🟢", "🔴"), 1),
-                          encoding="utf-8")
+        row = next(line for line in text.splitlines() if line.startswith("| UX-382 |"))
+        closed.write_text(text.replace(row, row.replace("🟢", "🔴"), 1), encoding="utf-8")
         result = _run(backlog)
         assert result.returncode == 1, result.stdout
         assert "UX-382" in result.stdout
@@ -119,23 +116,18 @@ class TestItReadsTheWholeBacklog:
         `UX-382` file is used because it is a closed row, which is the
         half that was not read.
         """
-        path = (backlog / "UX-0382-the-element-entity-has-two-shapes-"
-                          "sharing-one-attribute.md")
+        path = backlog / "UX-0382-the-element-entity-has-two-shapes-sharing-one-attribute.md"
         text = path.read_text(encoding="utf-8")
         assert "**Topic:**" in text, path.name
-        path.write_text(
-            re.sub(r"\*\*Topic:\*\* [a-z-]+", "**Topic:** process", text,
-                   count=1),
-            encoding="utf-8")
+        path.write_text(re.sub(r"\*\*Topic:\*\* [a-z-]+", "**Topic:** process", text, count=1), encoding="utf-8")
         result = _run(backlog)
         # The property by name from `CHECKS`, not the exit code: another
         # property failing would satisfy a returncode assert while this
         # one said `ok`.
-        what = next(name for name, run in close.CHECKS
-                    if "topic_disagreements" in run.__code__.co_names)
+        what = next(name for name, run in close.CHECKS if "topic_disagreements" in run.__code__.co_names)
         assert f"FAIL  {what}" in result.stdout, (
-            "--check passed a task file declaring a topic outside "
-            f"TOPIC_ORDER:\n{result.stdout}")
+            f"--check passed a task file declaring a topic outside TOPIC_ORDER:\n{result.stdout}"
+        )
         assert path.name in result.stdout, result.stdout
 
     def test_it_reads_both_halves_of_the_backlog(self):
@@ -146,8 +138,7 @@ class TestItReadsTheWholeBacklog:
         assert names[0] == "README.md" and len(names) > 2
         assert names[1:] == sorted(names[1:])
         rows = close.table_statuses()
-        assert len(rows) > 100, (
-            f"only {len(rows)} row(s) read - the closed half is missing")
+        assert len(rows) > 100, f"only {len(rows)} row(s) read - the closed half is missing"
 
 
 class TestOneImplementationNotTwo:
@@ -155,14 +146,14 @@ class TestOneImplementationNotTwo:
     one property by two readings is how they came to disagree."""
 
     def test_the_suite_imports_the_tools_readers(self):
-        source = (REPO / "tests/unit/test_docs_links_and_commands.py"
-                  ).read_text(encoding="utf-8")
+        source = (REPO / "tests/unit/test_docs_links_and_commands.py").read_text(encoding="utf-8")
         assert "from tools.dev_close_task import" in source, (
-            "the guard has its own reader again, which is the "
-            "arrangement `UX-387` was filed about")
+            "the guard has its own reader again, which is the arrangement `UX-387` was filed about"
+        )
 
     def test_both_answer_the_same_on_the_real_tree(self):
         from tests.unit import test_docs_links_and_commands as guard
+
         assert guard._table_statuses is close.table_statuses
         assert guard._file_statuses is close.file_statuses
         assert close.status_disagreements() == []
@@ -187,22 +178,17 @@ class TestItSaysWhatItChecked:
     def test_every_property_is_named_in_the_output(self, backlog):
         result = _run(backlog)
         for what, _run_it in close.CHECKS:
-            assert what in result.stdout, (
-                f"`--check` holds {what!r} and does not say so:\n"
-                f"{result.stdout}")
+            assert what in result.stdout, f"`--check` holds {what!r} and does not say so:\n{result.stdout}"
 
     def test_the_count_of_properties_is_reported(self, backlog):
         result = _run(backlog)
         assert f"{len(close.CHECKS)} propert" in result.stdout, result.stdout
 
     def test_a_failure_names_the_property_it_broke(self, backlog):
-        _flip(backlog / "UX-0382-the-element-entity-has-two-shapes-"
-                        "sharing-one-attribute.md")
+        _flip(backlog / "UX-0382-the-element-entity-has-two-shapes-sharing-one-attribute.md")
         result = _run(backlog)
-        line = next((line for line in result.stdout.splitlines()
-                     if "FAIL" in line), None)
-        assert line is not None, (
-            f"a failing property is not marked as such:\n{result.stdout}")
+        line = next((line for line in result.stdout.splitlines() if "FAIL" in line), None)
+        assert line is not None, f"a failing property is not marked as such:\n{result.stdout}"
         assert close.CHECKS[0][0] in line, line
 
 
@@ -213,8 +199,7 @@ class TestTheScopeFlagIsHonoured:
     clause above rests on this working."""
 
     def test_the_readers_follow_the_flag(self, backlog, monkeypatch):
-        (backlog / "README.md").write_text("| UX-9001 | x | 🔴 |\n",
-                                           encoding="utf-8")
+        (backlog / "README.md").write_text("| UX-9001 | x | 🔴 |\n", encoding="utf-8")
         shutil.rmtree(backlog / "closed")
         monkeypatch.setattr(close, "SCENARIOS", backlog)
         monkeypatch.setattr(close, "INDEX", backlog / "README.md")

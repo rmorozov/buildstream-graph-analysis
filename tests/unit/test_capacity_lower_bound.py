@@ -18,6 +18,7 @@ alongside this task since leaving it broken would mean the "fix" itself
 produced an invariant-violating result; the fix only changes the
 resource-requirement lookup, not replay's scheduling algorithm/heuristics.
 """
+
 import json
 
 from bga import BuildEfficiencyAnalyzer
@@ -45,20 +46,33 @@ def test_lb_reflects_download_bottleneck_not_just_process(tmp_path):
     real DOWNLOAD bound.
     """
     run_context = {
-        "trace_epsilon_us": 50000, "wall_start_us": 0, "wall_end_us": 500000,
-        "max_jobs": 4, "resource_capacities": {"PROCESS": 4, "DOWNLOAD": 1},
+        "trace_epsilon_us": 50000,
+        "wall_start_us": 0,
+        "wall_end_us": 500000,
+        "max_jobs": 4,
+        "resource_capacities": {"PROCESS": 4, "DOWNLOAD": 1},
     }
     elements = [(f"e{i}.bst", i == 0) for i in range(5)]
     spans = []
     for i in range(5):
-        spans.append({
-            "task_key": f"e{i}.bst|FETCH|FETCH|0", "ts_us": i * 20000, "dur_us": 80000,
-            "resources": ["DOWNLOAD"], "primary_resource": "DOWNLOAD",
-        })
-        spans.append({
-            "task_key": f"e{i}.bst|BUILD|BUILD|0", "ts_us": 400000 + i * 10000, "dur_us": 10000,
-            "resources": ["PROCESS"], "primary_resource": "PROCESS",
-        })
+        spans.append(
+            {
+                "task_key": f"e{i}.bst|FETCH|FETCH|0",
+                "ts_us": i * 20000,
+                "dur_us": 80000,
+                "resources": ["DOWNLOAD"],
+                "primary_resource": "DOWNLOAD",
+            }
+        )
+        spans.append(
+            {
+                "task_key": f"e{i}.bst|BUILD|BUILD|0",
+                "ts_us": 400000 + i * 10000,
+                "dur_us": 10000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            }
+        )
     run_dir = _write_run_dir(tmp_path, run_context, elements, spans)
 
     analyzer = BuildEfficiencyAnalyzer(run_dir)
@@ -84,16 +98,29 @@ def test_exclusive_resource_forces_full_serialization_floor(tmp_path):
     resources cannot overlap at all, so LB must reflect the full summed
     duration, not work_us // 2."""
     run_context = {
-        "trace_epsilon_us": 50000, "wall_start_us": 0, "wall_end_us": 300000,
-        "max_jobs": 4, "resource_capacities": {"PROCESS": 4, "CACHE": 2},
+        "trace_epsilon_us": 50000,
+        "wall_start_us": 0,
+        "wall_end_us": 300000,
+        "max_jobs": 4,
+        "resource_capacities": {"PROCESS": 4, "CACHE": 2},
         "exclusive_resources": ["CACHE"],
     }
     elements = [("a.bst", True), ("b.bst", False)]
     spans = [
-        {"task_key": "a.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 100000,
-         "resources": ["CACHE"], "primary_resource": "CACHE"},
-        {"task_key": "b.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 100000,
-         "resources": ["CACHE"], "primary_resource": "CACHE"},
+        {
+            "task_key": "a.bst|BUILD|BUILD|0",
+            "ts_us": 0,
+            "dur_us": 100000,
+            "resources": ["CACHE"],
+            "primary_resource": "CACHE",
+        },
+        {
+            "task_key": "b.bst|BUILD|BUILD|0",
+            "ts_us": 0,
+            "dur_us": 100000,
+            "resources": ["CACHE"],
+            "primary_resource": "CACHE",
+        },
     ]
     run_dir = _write_run_dir(tmp_path, run_context, elements, spans)
 
@@ -110,15 +137,28 @@ def test_single_process_fixture_unchanged(tmp_path):
     """Regression guard: a fixture using only PROCESS must produce the
     same LB the old PROCESS-only formula would give."""
     run_context = {
-        "trace_epsilon_us": 50000, "wall_start_us": 0, "wall_end_us": 200000,
-        "max_jobs": 2, "resource_capacities": {"PROCESS": 2},
+        "trace_epsilon_us": 50000,
+        "wall_start_us": 0,
+        "wall_end_us": 200000,
+        "max_jobs": 2,
+        "resource_capacities": {"PROCESS": 2},
     }
     elements = [("a.bst", True), ("b.bst", False)]
     spans = [
-        {"task_key": "a.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 100000,
-         "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-        {"task_key": "b.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 100000,
-         "resources": ["PROCESS"], "primary_resource": "PROCESS"},
+        {
+            "task_key": "a.bst|BUILD|BUILD|0",
+            "ts_us": 0,
+            "dur_us": 100000,
+            "resources": ["PROCESS"],
+            "primary_resource": "PROCESS",
+        },
+        {
+            "task_key": "b.bst|BUILD|BUILD|0",
+            "ts_us": 0,
+            "dur_us": 100000,
+            "resources": ["PROCESS"],
+            "primary_resource": "PROCESS",
+        },
     ]
     run_dir = _write_run_dir(tmp_path, run_context, elements, spans)
 

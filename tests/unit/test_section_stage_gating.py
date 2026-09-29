@@ -15,6 +15,7 @@ assert both halves: the stage really is skipped (otherwise the fix is a
 no-op that happens to be fast for some other reason), *and* every
 section renders exactly what it rendered before.
 """
+
 import json
 
 import pytest
@@ -81,14 +82,10 @@ def test_full_analyze_still_computes_attribution(tmp_path, topology, monkeypatch
         ("diagnostics", "_compute_attribution"),
     ],
 )
-def test_sections_skip_stages_they_do_not_render(
-    tmp_path, topology, monkeypatch, section, skipped
-):
+def test_sections_skip_stages_they_do_not_render(tmp_path, topology, monkeypatch, section, skipped):
     analyzer = _analyzer(tmp_path, topology)
     called = []
-    monkeypatch.setattr(
-        type(analyzer), skipped, lambda self, *a, **k: called.append(1) or {}
-    )
+    monkeypatch.setattr(type(analyzer), skipped, lambda self, *a, **k: called.append(1) or {})
 
     analyzer.analyze(section=section)
 
@@ -127,9 +124,7 @@ def test_section_output_is_unchanged_by_gating(tmp_path, section, topology_name)
     def _without_instance(rendered):
         for directory in directories:
             rendered = rendered.replace(directory, "<run>")
-        return "\n".join(
-            line for line in rendered.splitlines() if not line.startswith("Instance: ")
-        )
+        return "\n".join(line for line in rendered.splitlines() if not line.startswith("Instance: "))
 
     assert _without_instance(format_text(gated, section=section)) == _without_instance(
         format_text(full, section=section)

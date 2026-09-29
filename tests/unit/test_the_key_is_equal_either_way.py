@@ -5,6 +5,7 @@ tree never took: `bst show --format '%{name} %{full-key}'` over the
 fixture project with a clean host environment and with everything the
 mode could leak, diffed.
 """
+
 import re
 import subprocess
 from pathlib import Path
@@ -48,7 +49,11 @@ def _full_keys(env_extra: dict, tmp_path) -> dict:
     env = isolated_bst_env(tmp_path / "home", **env_extra)
     result = subprocess.run(
         ["bst", "show", "--format", "%{name} %{full-key}", "app.bst"],
-        cwd=PROJECT, capture_output=True, text=True, env=env, timeout=120,
+        cwd=PROJECT,
+        capture_output=True,
+        text=True,
+        env=env,
+        timeout=120,
     )
     assert result.returncode == 0, result.stderr[-2000:]
     keys = {}
@@ -65,7 +70,11 @@ def _env_field(env_extra: dict, tmp_path) -> str:
     env = isolated_bst_env(tmp_path / "home", **env_extra)
     result = subprocess.run(
         ["bst", "show", "--format", "%{name} %{env}", "app.bst"],
-        cwd=PROJECT, capture_output=True, text=True, env=env, timeout=120,
+        cwd=PROJECT,
+        capture_output=True,
+        text=True,
+        env=env,
+        timeout=120,
     )
     assert result.returncode == 0, result.stderr[-2000:]
     return result.stdout
@@ -85,8 +94,7 @@ def test_the_key_is_equal_with_and_without_the_mode_environment(tmp_path):
         f"construction for this element."
     )
     assert clean.keys() == leaking.keys(), (
-        "the two `bst show` runs resolved a different element set: "
-        f"{sorted(clean)} vs {sorted(leaking)}"
+        f"the two `bst show` runs resolved a different element set: {sorted(clean)} vs {sorted(leaking)}"
     )
 
 
@@ -99,6 +107,5 @@ def test_the_shipped_kinds_env_does_not_embed_a_host_value(tmp_path):
     leaked = _env_field(_leaking_env(), tmp_path)
     for name in (*_JOBSERVER_ENV, *_bst_trace_names()):
         assert name not in leaked, (
-            f"{name} appears in the fixture's %{{env}} - a host value "
-            f"reached BuildStream's composed environment"
+            f"{name} appears in the fixture's %{{env}} - a host value reached BuildStream's composed environment"
         )

@@ -1,6 +1,7 @@
 """UX-1119: docstrings follow the Google convention through the baseline
 (`bga/`, `tools/`, `.claude/hooks/`; `tests/` stays out). D205/D209/D212 are
 off: 1,226 layout hits that conflict with the house register."""
+
 import json
 import pathlib
 import re
@@ -11,13 +12,7 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "tools"))
 import dev_baseline
 
-MISSING_ARG = (
-    "def f(a, b):\n"
-    '    """Add.\n\n'
-    "    Args:\n"
-    "        a: the first.\n"
-    '    """\n'
-    "    return a + b\n")
+MISSING_ARG = "def f(a, b):\n    \"\"\"Add.\n\n    Args:\n        a: the first.\n    \"\"\"\n    return a + b\n"
 
 
 def _section():
@@ -30,15 +25,26 @@ def _check(root, source):
     pkg.mkdir()
     (pkg / "m.py").write_text(source, encoding="utf-8")
     (root / "pyright.json").write_text("[]", encoding="utf-8")
-    (root / "pyproject.toml").write_text(
-        "[tool.ruff.lint.pydocstyle]" + _section(), encoding="utf-8")
-    (root / "baseline.json").write_text(
-        '{"families": [], "findings": []}\n', encoding="utf-8")
+    (root / "pyproject.toml").write_text("[tool.ruff.lint.pydocstyle]" + _section(), encoding="utf-8")
+    (root / "baseline.json").write_text('{"families": [], "findings": []}\n', encoding="utf-8")
     return subprocess.run(
-        [sys.executable, str(REPO / "tools" / "dev_baseline.py"), "--check",
-         "--root", str(root), "--paths", "pkg", "--baseline",
-         str(root / "baseline.json"), "--pyright-from", str(root / "pyright.json")],
-        capture_output=True, text=True, check=False)
+        [
+            sys.executable,
+            str(REPO / "tools" / "dev_baseline.py"),
+            "--check",
+            "--root",
+            str(root),
+            "--paths",
+            "pkg",
+            "--baseline",
+            str(root / "baseline.json"),
+            "--pyright-from",
+            str(root / "pyright.json"),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
 
 
 class TestDocstringsFollowOneConvention:
@@ -60,7 +66,7 @@ class TestDocstringsFollowOneConvention:
         assert "new: ruff D417" in done.stdout
 
     def test_the_same_function_documented_whole_is_clean(self, tmp_path):
-        done = _check(tmp_path, MISSING_ARG.replace(
-            "        a: the first.\n",
-            "        a: the first.\n        b: the second.\n"))
+        done = _check(
+            tmp_path, MISSING_ARG.replace("        a: the first.\n", "        a: the first.\n        b: the second.\n")
+        )
         assert done.returncode == 0, done.stdout + done.stderr

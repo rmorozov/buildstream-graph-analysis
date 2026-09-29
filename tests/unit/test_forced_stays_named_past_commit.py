@@ -2,6 +2,7 @@
 
 Mirrors `test_the_baseline_only_shrinks.py`'s temporary-package harness.
 """
+
 import os
 import pathlib
 import shutil
@@ -11,9 +12,7 @@ import sys
 REPO = pathlib.Path(__file__).resolve().parents[2]
 TOOL = REPO / "tools" / "dev_baseline.py"
 
-VIOLATION = ("import subprocess\n\n\n"
-             "def f():\n"
-             "    subprocess.run(cmd, shell=True)\n")
+VIOLATION = "import subprocess\n\n\ndef f():\n    subprocess.run(cmd, shell=True)\n"
 
 
 def _pyright_fixture(root):
@@ -49,9 +48,19 @@ def _minimal_bin(root):
 def _run(root, baseline, *flags):
     run_env = dict(os.environ)
     run_env["PATH"] = str(_minimal_bin(root))
-    cmd = [sys.executable, str(TOOL), "--root", str(root), "--paths", "pkg",
-           "--baseline", str(baseline), "--pyright-from", str(_pyright_fixture(root)),
-           *flags]
+    cmd = [
+        sys.executable,
+        str(TOOL),
+        "--root",
+        str(root),
+        "--paths",
+        "pkg",
+        "--baseline",
+        str(baseline),
+        "--pyright-from",
+        str(_pyright_fixture(root)),
+        *flags,
+    ]
     return subprocess.run(cmd, capture_output=True, text=True, check=False, env=run_env)
 
 
@@ -61,15 +70,12 @@ def _write(path, text):
 
 
 def _git(root, *args):
-    return subprocess.run(["git", "-C", str(root), *args],
-                          capture_output=True, text=True, check=True)
+    return subprocess.run(["git", "-C", str(root), *args], capture_output=True, text=True, check=True)
 
 
 def _force_and_commit(tmp_path, baseline, reason, message):
-    assert _run(tmp_path, baseline, "--write", "--force",
-                "--reason", reason).returncode == 0
-    _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t",
-         "commit", "-q", "-am", message)
+    assert _run(tmp_path, baseline, "--write", "--force", "--reason", reason).returncode == 0
+    _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t", "commit", "-q", "-am", message)
 
 
 class TestTheMinimalBinHasNoPyright:
@@ -87,10 +93,8 @@ class TestForcedStaysNamedPastCommit:
         _write(module, "def f():\n    return 1\n")
         assert _run(tmp_path, baseline, "--write").returncode == 0
         _git(tmp_path, "init", "-q")
-        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t",
-             "add", "-A")
-        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t",
-             "commit", "-q", "-m", "baseline")
+        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t", "add", "-A")
+        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t", "commit", "-q", "-m", "baseline")
         _write(module, VIOLATION)
         _force_and_commit(tmp_path, baseline, "UX-1", "UX-1 forces a finding")
         # Before this row: `--check` here printed only
@@ -119,13 +123,10 @@ class TestForcedStaysNamedPastCommit:
         _write(module, "def f():\n    return 1\n")
         assert _run(tmp_path, baseline, "--write").returncode == 0
         _git(tmp_path, "init", "-q")
-        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t",
-             "add", "-A")
-        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t",
-             "commit", "-q", "-m", "baseline")
+        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t", "add", "-A")
+        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t", "commit", "-q", "-m", "baseline")
         _write(module, VIOLATION)
-        assert _run(tmp_path, baseline, "--write", "--force",
-                    "--reason", "UX-1").returncode == 0
+        assert _run(tmp_path, baseline, "--write", "--force", "--reason", "UX-1").returncode == 0
         check = _run(tmp_path, baseline, "--check")
         assert check.returncode == 1, check.stdout
         assert "authorised by UX-1, red until committed" in check.stdout
@@ -142,10 +143,8 @@ class TestForcedStaysNamedPastCommit:
         _write(old, "def f():\n    return 1\n")
         assert _run(tmp_path, baseline, "--write").returncode == 0
         _git(tmp_path, "init", "-q")
-        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t",
-             "add", "-A")
-        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t",
-             "commit", "-q", "-m", "baseline")
+        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t", "add", "-A")
+        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t", "commit", "-q", "-m", "baseline")
         _write(old, VIOLATION)
         _force_and_commit(tmp_path, baseline, "UX-OLD", "UX-OLD forces a finding")
         _write(new, VIOLATION)

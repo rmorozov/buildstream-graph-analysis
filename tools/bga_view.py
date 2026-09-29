@@ -23,6 +23,7 @@ paths it serves, no directory listing, no write method, and every
 served file resolved and re-checked against the run root so a symlink
 or a `..` cannot walk out.
 """
+
 import argparse
 import base64
 import contextlib
@@ -51,6 +52,7 @@ the terminal can never disagree about what a run says.
 Local only: 127.0.0.1, an ephemeral port, and no path outside the run.
 """
 
+
 def _asset_dir() -> str:
     """Where the page's files are, from a checkout *and* from a wheel.
 
@@ -70,71 +72,85 @@ ASSET_DIR = _asset_dir()
 
 # The only paths this server answers. Everything else is 404 - there is
 # no directory listing and no fall-through to the filesystem.
-ASSETS = ("index.html", "app.js", "style.css", "views.js", "focus.js",
-          # `UX-337`: the primitives the viewer chapters share, in a
-          # module below all of them. Served as well as inlined - the
-          # served page loads real ES modules and would 404 on it.
-          "primitives.js",
-          # `UX-337`: the two chapters `views.js` grew too long to hold,
-          # and the two `app.js` did - the schema hints and formatters,
-          # and the machinery that turns a value into an interrogable
-          # table.
-          "element.js", "decision.js", "format.js", "structured.js",
-          # UX-194: the Perfetto handoff and the canned-SQL page.
-          # `UX-266`: each page's script is a *file*. They were inline
-          # `<script type="module">` blocks, which the server's own
-          # `default-src 'self'` refuses - `sql.html` rendered nothing
-          # and `perfetto.html`'s button had no listener.
-          "perfetto.html", "perfetto.js", "perfetto_page.js",
-          # `UX-373`: `sql.html` is a redirect to `perfetto.html`, whose
-          # second half it used to be. Still served, because the URL is
-          # published and older exports point at it.
-          "sql.html",
-          # UX-199: navigation, and the questions as data so the export
-          # can inline what it used to strip.
-          "nav.js", "questions.js",
-          # UX-204: the link-builder the investigate buttons read, and
-          # `perfetto.html` renders its list from `questions.js` rather
-          # than carrying a copy - so the page needs it served too.
-          # `UX-373` moved that list off `sql.html`.
-          "trace_context.js",
-          # `UX-450`: the section walk, split out of `app.js` when that
-          # file sat exactly on `UX-337`'s 1,500-line ceiling. Served
-          # as well as inlined, because `bga view` fetches the modules
-          # one by one and an unserved import is a page that never
-          # boots - which is what `test_everything_inlined_is_also_
-          # served` caught when this list was missed.
-          "sections.js",
-          # UX-205: the filters, thresholds and copy helpers; UX-268's pairs.
-          "tables.js", "pairs.js",
-          # UX-211: the view state that travels in the fragment.
-          "viewstate.js",
-          # UX-286: the chapters the document is grouped into. Left out
-          # of this tuple the page 404s on the import and renders
-          # nothing at all - measured, in Chromium, on a served run -
-          # which is why the guard over this list now follows every
-          # import from each entry module rather than naming three.
-          "chapters.js",
-          # UX-302: the style guide's §1 dispatch table, and the "view
-          # as JSON" toggle that is one of its two deliberate raw-JSON
-          # sites. Served as well as inlined: a served page imports
-          # these by URL, and a module missing from this tuple 404s and
-          # takes the whole boot with it.
-          "shapes.js", "rawjson.js",
-          # UX-303: §2's two drawings, which import nothing and take
-          # their formatter - so they are a module of their own rather
-          # than more of `views.js`.
-          "drawings.js",
-          # UX-318: opening one nested or capped table full width. Its
-          # own module because it imports nothing and both `app.js` and
-          # `viewstate.js` need it - which would be a cycle anywhere
-          # else.
-          "tablefocus.js",
-          # UX-334: `name`/`id` for every form control the page builds,
-          # and `for` on the labels beside them. Imports nothing, and
-          # `views.js` uses it - which `app.js` could not have provided
-          # without the cycle its own note forbids.
-          "controls.js")
+ASSETS = (
+    "index.html",
+    "app.js",
+    "style.css",
+    "views.js",
+    "focus.js",
+    # `UX-337`: the primitives the viewer chapters share, in a
+    # module below all of them. Served as well as inlined - the
+    # served page loads real ES modules and would 404 on it.
+    "primitives.js",
+    # `UX-337`: the two chapters `views.js` grew too long to hold,
+    # and the two `app.js` did - the schema hints and formatters,
+    # and the machinery that turns a value into an interrogable
+    # table.
+    "element.js",
+    "decision.js",
+    "format.js",
+    "structured.js",
+    # UX-194: the Perfetto handoff and the canned-SQL page.
+    # `UX-266`: each page's script is a *file*. They were inline
+    # `<script type="module">` blocks, which the server's own
+    # `default-src 'self'` refuses - `sql.html` rendered nothing
+    # and `perfetto.html`'s button had no listener.
+    "perfetto.html",
+    "perfetto.js",
+    "perfetto_page.js",
+    # `UX-373`: `sql.html` is a redirect to `perfetto.html`, whose
+    # second half it used to be. Still served, because the URL is
+    # published and older exports point at it.
+    "sql.html",
+    # UX-199: navigation, and the questions as data so the export
+    # can inline what it used to strip.
+    "nav.js",
+    "questions.js",
+    # UX-204: the link-builder the investigate buttons read, and
+    # `perfetto.html` renders its list from `questions.js` rather
+    # than carrying a copy - so the page needs it served too.
+    # `UX-373` moved that list off `sql.html`.
+    "trace_context.js",
+    # `UX-450`: the section walk, split out of `app.js` when that
+    # file sat exactly on `UX-337`'s 1,500-line ceiling. Served
+    # as well as inlined, because `bga view` fetches the modules
+    # one by one and an unserved import is a page that never
+    # boots - which is what `test_everything_inlined_is_also_
+    # served` caught when this list was missed.
+    "sections.js",
+    # UX-205: the filters, thresholds and copy helpers; UX-268's pairs.
+    "tables.js",
+    "pairs.js",
+    # UX-211: the view state that travels in the fragment.
+    "viewstate.js",
+    # UX-286: the chapters the document is grouped into. Left out
+    # of this tuple the page 404s on the import and renders
+    # nothing at all - measured, in Chromium, on a served run -
+    # which is why the guard over this list now follows every
+    # import from each entry module rather than naming three.
+    "chapters.js",
+    # UX-302: the style guide's §1 dispatch table, and the "view
+    # as JSON" toggle that is one of its two deliberate raw-JSON
+    # sites. Served as well as inlined: a served page imports
+    # these by URL, and a module missing from this tuple 404s and
+    # takes the whole boot with it.
+    "shapes.js",
+    "rawjson.js",
+    # UX-303: §2's two drawings, which import nothing and take
+    # their formatter - so they are a module of their own rather
+    # than more of `views.js`.
+    "drawings.js",
+    # UX-318: opening one nested or capped table full width. Its
+    # own module because it imports nothing and both `app.js` and
+    # `viewstate.js` need it - which would be a cycle anywhere
+    # else.
+    "tablefocus.js",
+    # UX-334: `name`/`id` for every form control the page builds,
+    # and `for` on the labels beside them. Imports nothing, and
+    # `views.js` uses it - which `app.js` could not have provided
+    # without the cycle its own note forbids.
+    "controls.js",
+)
 
 # The trace, served gzipped. Perfetto sniffs gzip itself, so the
 # compressed bytes cross the postMessage boundary unchanged - measured
@@ -173,14 +189,13 @@ def _capture(argv: list[str]) -> dict:
     with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
         try:
             code = main(argv)
-        except SystemExit as exit_code:      # argparse's own exits
+        except SystemExit as exit_code:  # argparse's own exits
             code = exit_code.code
     text = out.getvalue()
     if not text.strip():
         printed = err.getvalue().strip()
         reason = printed.splitlines()[-1].removeprefix("Error: ") if printed else None
-        raise RuntimeError(
-            reason or f"`bga {' '.join(argv)}` printed nothing (exit {code})")
+        raise RuntimeError(reason or f"`bga {' '.join(argv)}` printed nothing (exit {code})")
     return json.loads(text)
 
 
@@ -258,8 +273,7 @@ def published_analysis(run: str) -> Optional[dict]:
     """
     from bga import run_store
 
-    path = os.path.join(os.path.dirname(os.path.abspath(run)),
-                        run_store.ANALYSIS_NAME)
+    path = os.path.join(os.path.dirname(os.path.abspath(run)), run_store.ANALYSIS_NAME)
     try:
         with open(path, encoding="utf-8") as handle:
             document = json.load(handle)
@@ -307,8 +321,7 @@ ANALYSIS_FROM_VIEW = "view"
 
 def _contract_heads(names) -> dict[str, str]:
     """`{"analyze": "analyze/v4"}` - the newest version of each contract."""
-    return {name.rsplit("/v", 1)[0]: name
-            for name in sorted(names or ()) if "/v" in name}
+    return {name.rsplit("/v", 1)[0]: name for name in sorted(names or ()) if "/v" in name}
 
 
 def analysis_source(stored: Optional[dict], reanalysed: bool) -> dict:
@@ -329,22 +342,20 @@ def analysis_source(stored: Optional[dict], reanalysed: bool) -> dict:
     if theirs is not None:
         old = _contract_heads(theirs)
         moved = sorted(
-            [f"{old[name]} \u2192 {mine[name]}"
-             for name in set(old) & set(mine) if old[name] != mine[name]]
-            + [f"{mine[name]} (new)" for name in set(mine) - set(old)])
+            [f"{old[name]} \u2192 {mine[name]}" for name in set(old) & set(mine) if old[name] != mine[name]]
+            + [f"{mine[name]} (new)" for name in set(mine) - set(old)]
+        )
     declared = set(schemas.ANALYZE_FULL_KEYS)
     return {
         "source": ANALYSIS_FROM_VIEW if reanalysed else ANALYSIS_FROM_CAPTURE,
-        "stored_producer": producer.version_of(stored)
-        if stored is not None else None,
+        "stored_producer": producer.version_of(stored) if stored is not None else None,
         "this_build": producer.version_of({"producer": producer.stamp()}),
         "contracts_moved": moved,
         "sections_declared": len(declared),
         "sections_absent": sorted(declared - set(stored or {})),
         # Stale is the *producer* comparison and nothing else: an
         # unstamped capture cannot be shown to agree with this build.
-        "stale": bool(not reanalysed and stored is not None
-                      and (theirs is None or moved)),
+        "stale": bool(not reanalysed and stored is not None and (theirs is None or moved)),
         "reanalyse": "bga view RUN --reanalyse",
     }
 
@@ -369,12 +380,12 @@ def _offered(documents: dict[str, dict]) -> list[str]:
     means a payload added later joins the manifest with no edit here,
     and a payload that failed to build is absent from both at once.
     """
-    return sorted(name[:-len(".json")] if name.endswith(".json") else name
-                  for name in documents)
+    return sorted(name[: -len(".json")] if name.endswith(".json") else name for name in documents)
 
 
-def payloads(run: str, baseline: Optional[str] = None,
-             reanalyse: bool = False, notes: Optional[dict] = None) -> dict[str, dict]:
+def payloads(
+    run: str, baseline: Optional[str] = None, reanalyse: bool = False, notes: Optional[dict] = None
+) -> dict[str, dict]:
     """Everything the page renders, keyed by the url it is served at.
 
     A refusal is data, not an error: `bga compare` exits 6 on runs it
@@ -445,8 +456,7 @@ def payloads(run: str, baseline: Optional[str] = None,
 STORE_WINDOW = 12
 
 
-def store_payload(run: str, window: Optional[int] = STORE_WINDOW
-                  ) -> Optional[dict]:
+def store_payload(run: str, window: Optional[int] = STORE_WINDOW) -> Optional[dict]:
     """`store/v1` for the project this run belongs to, or None.
 
     `UX-196`'s store trend. Through `bga_snapshot.store_listing`, which
@@ -528,8 +538,7 @@ def blast_answer(run: str, target: str) -> dict:
     # and the measured half is the whole UX-168/169 pipeline. The
     # payload says `measured: false`, which is the honest answer, and
     # `bga blast` on the command line still measures by default.
-    return schemas.stamp(
-        blast(run, target, project_dir=project, measure=False), schemas.BLAST)
+    return schemas.stamp(blast(run, target, project_dir=project, measure=False), schemas.BLAST)
 
 
 def has_timeline(run: str) -> bool:
@@ -588,8 +597,7 @@ def trace_file(run: str, destination: str) -> Optional[str]:
     return (trace_render(run, destination) or {}).get("path")
 
 
-def trace_render(run: str, destination: str,
-                 planes: Optional[str] = None) -> Optional[dict]:
+def trace_render(run: str, destination: str, planes: Optional[str] = None) -> Optional[dict]:
     """`render`'s own result for this run, plus `path`. `None` on refusal.
 
     `UX-364`: the renderer already reports **which planes it put in the
@@ -610,8 +618,7 @@ def trace_render(run: str, destination: str,
     snapshot = os.path.dirname(os.path.abspath(run))
     try:
         with progress.timed("timeline", say="bga view: rendering the timeline"):
-            result = render(snapshot, destination, quiet=True,
-                            planes=planes or PLANES_BOTH)
+            result = render(snapshot, destination, quiet=True, planes=planes or PLANES_BOTH)
     except (FileNotFoundError, RuntimeError, OSError):
         return None
     return dict(result or {}, path=destination)
@@ -636,8 +643,7 @@ def predicted_tracks(run: str, planes: Optional[str] = None) -> Optional[int]:
 
     snapshot = os.path.dirname(os.path.abspath(run))
     try:
-        result = render(snapshot, None, quiet=True,
-                        planes=planes or PLANES_BOTH, tracks_only=True)
+        result = render(snapshot, None, quiet=True, planes=planes or PLANES_BOTH, tracks_only=True)
     except (FileNotFoundError, RuntimeError, OSError):
         return None
     return (result or {}).get("tracks")
@@ -677,13 +683,16 @@ def trace_with_planes(run: str, planes: Optional[str] = None):
     """
     scratch = tempfile.mkdtemp(prefix="bga-view-")
     try:
-        rendered = trace_render(run, os.path.join(scratch, "timeline.json.gz"),
-                                planes=planes)
+        rendered = trace_render(run, os.path.join(scratch, "timeline.json.gz"), planes=planes)
         if rendered is None:
             return None, None, None, None
         with open(rendered["path"], "rb") as handle:
-            return (handle.read(), list(rendered.get("planes") or []),
-                    rendered.get("flow_losses"), rendered.get("tracks"))
+            return (
+                handle.read(),
+                list(rendered.get("planes") or []),
+                rendered.get("flow_losses"),
+                rendered.get("tracks"),
+            )
     except OSError:
         return None, None, None, None
     finally:
@@ -713,8 +722,7 @@ def schemas_payload(documents: Optional[dict[str, dict]] = None) -> dict:
     """
     from bga import schemas
 
-    names = schemas.names() if documents is None else _declared_schemas(
-        documents, set(schemas.names()))
+    names = schemas.names() if documents is None else _declared_schemas(documents, set(schemas.names()))
     return {name: schemas.schema(name) for name in sorted(names)}
 
 
@@ -884,12 +892,13 @@ TIMELINE_NOT_ASKED_FOR = (
     "This file was exported with `with_trace=False`, so no timeline was "
     "rendered for it. That is the flag and not the run: whatever Plane 2 "
     "this capture kept is untouched beside it, and exporting again "
-    "without the flag carries the timeline.")
+    "without the flag carries the timeline."
+)
 
 #: The residual: asked for, Plane 2 present, and nothing came back.
 TIMELINE_DID_NOT_RENDER = (
-    "This run's Plane 2 log is beside it, but the timeline could not be "
-    "rendered from it, so there is none to carry.")
+    "This run's Plane 2 log is beside it, but the timeline could not be rendered from it, so there is none to carry."
+)
 
 #: `UX-446`: **every ceiling the hand-off has, declared once.**
 #:
@@ -909,24 +918,36 @@ TIMELINE_DID_NOT_RENDER = (
 #: beyond them. A fourth bound in a fourth unit reddens on the first of
 #: those before anyone has to notice the document.
 CEILINGS = (
-    ("EXPORT_BUDGET_B", "bytes",
-     "nothing - it is said and not enforced. A report that large is "
-     "still your report; the note tells you an attachment may not "
-     "survive it"),
-    ("TRACE_BUDGET_B", "bytes",
-     "nothing you have to do - the trace is left out and the page says "
-     "which bound it hit. `bga timeline` renders one beside the "
-     "snapshot"),
-    ("TRACE_TRACK_BUDGET", "tracks",
-     "nothing, for an export: `UX-530` renders again with `--planes 1` "
-     "and the page says it did. `bga timeline --planes 1` or "
-     "`--only-element` narrow what is drawn rather than what is "
-     "carried, and `--only-element` is the one an export cannot pick "
-     "for you"),
-    ("PAGE_BUDGET_B", "bytes",
-     "nothing - it bounds the viewer this tool writes, never your run. "
-     "`bga view --export` prints the page and data halves apart, and a "
-     "release is held to it before it ships"),
+    (
+        "EXPORT_BUDGET_B",
+        "bytes",
+        "nothing - it is said and not enforced. A report that large is "
+        "still your report; the note tells you an attachment may not "
+        "survive it",
+    ),
+    (
+        "TRACE_BUDGET_B",
+        "bytes",
+        "nothing you have to do - the trace is left out and the page says "
+        "which bound it hit. `bga timeline` renders one beside the "
+        "snapshot",
+    ),
+    (
+        "TRACE_TRACK_BUDGET",
+        "tracks",
+        "nothing, for an export: `UX-530` renders again with `--planes 1` "
+        "and the page says it did. `bga timeline --planes 1` or "
+        "`--only-element` narrow what is drawn rather than what is "
+        "carried, and `--only-element` is the one an export cannot pick "
+        "for you",
+    ),
+    (
+        "PAGE_BUDGET_B",
+        "bytes",
+        "nothing - it bounds the viewer this tool writes, never your run. "
+        "`bga view --export` prints the page and data halves apart, and a "
+        "release is held to it before it ships",
+    ),
 )
 
 
@@ -934,8 +955,7 @@ CEILINGS = (
 # wrapped. `.*?` under `re.S` so a `{ a, b }` list broken across lines is
 # still one match - `UX-202` wrapped one and reintroduced UX-199's
 # export defect, which is why this is shared rather than written twice.
-_IMPORT_RE = re.compile(r"""^[ \t]*import\s.*?from\s+["']\./([\w.-]+)["'];?""",
-                        re.M | re.S)
+_IMPORT_RE = re.compile(r"""^[ \t]*import\s.*?from\s+["']\./([\w.-]+)["'];?""", re.M | re.S)
 
 
 #: `UX-721`: a renamed binding inside an `import`'s own clause. The
@@ -1006,7 +1026,8 @@ def _inline_module(name: str) -> str:
             f"carry it: the modules concatenate into one scope, the "
             f"`import` line is dropped, and the alias resolves to a name "
             f"nothing declares. Use the imported name unaliased and "
-            f"rename the local that clashes with it.")
+            f"rename the local that clashes with it."
+        )
     # Removed with the same expression `_module_order` walks, over the
     # whole text rather than line by line: an `import { a, b }` list
     # wrapped across two lines matched neither half of the old
@@ -1017,8 +1038,8 @@ def _inline_module(name: str) -> str:
     # the right line of the original module.
     text = _IMPORT_RE.sub(lambda m: "\n" * m.group(0).count("\n"), text)
     return "\n".join(
-        re.sub(r"^export\s+(?=(function|const|let|class|async)\b)", "", line)
-        for line in _uncommented(text))
+        re.sub(r"^export\s+(?=(function|const|let|class|async)\b)", "", line) for line in _uncommented(text)
+    )
 
 
 #: `UX-1052`: the export's viewer module travels gzipped, like a large
@@ -1058,18 +1079,21 @@ def _module_blocks(script: str) -> str:
     the module is page, and every page/data split reads that type.
     `mtime=0` so one tree exports one page.
     """
-    packed = base64.b64encode(gzip.compress(
-        script.encode("utf-8"), 9, mtime=0)).decode()
-    return (f'<script type="application/gzip" id="{MODULE_BLOCK_ID}">'
-            f'{packed}</script>\n'
-            f'<script type="module">\n{_MODULE_LOADER}\n</script>')
+    packed = base64.b64encode(gzip.compress(script.encode("utf-8"), 9, mtime=0)).decode()
+    return (
+        f'<script type="application/gzip" id="{MODULE_BLOCK_ID}">'
+        f'{packed}</script>\n'
+        f'<script type="module">\n{_MODULE_LOADER}\n</script>'
+    )
 
 
 def inflated_module(page: str) -> str:
     """The viewer module an exported `page` runs, inflated - its source."""
     found = re.search(
         rf'<script type="application/gzip" id="{MODULE_BLOCK_ID}">'
-        r'([^<]*)</script>', page)
+        r'([^<]*)</script>',
+        page,
+    )
     if found is None:
         raise ValueError(f"no {MODULE_BLOCK_ID} block: not an export's page")
     return gzip.decompress(base64.b64decode(found.group(1))).decode("utf-8")
@@ -1113,9 +1137,9 @@ def _uncommented(text: str):
 # an operator, a keyword or an opening bracket. After an identifier, a
 # number or a closing bracket it is division instead.
 _VALUE_MAY_FOLLOW = frozenset("=(,:[!&|?{};+-*%~^<>\n")
-_KEYWORDS_BEFORE_REGEX = frozenset((
-    "return", "typeof", "instanceof", "in", "of", "new", "delete", "void",
-    "case", "do", "else", "yield", "await"))
+_KEYWORDS_BEFORE_REGEX = frozenset(
+    ("return", "typeof", "instanceof", "in", "of", "new", "delete", "void", "case", "do", "else", "yield", "await")
+)
 
 
 def _comment_spans(text: str):
@@ -1127,8 +1151,8 @@ def _comment_spans(text: str):
     and a regex literal.
     """
     i, n = 0, len(text)
-    prev = ""          # last significant character of code
-    word = ""          # last identifier, for `return /re/`
+    prev = ""  # last significant character of code
+    word = ""  # last identifier, for `return /re/`
     while i < n:
         char = text[i]
         if char in "\"'":
@@ -1145,8 +1169,7 @@ def _comment_spans(text: str):
             end = n if end < 0 else end + 2
             yield i, end
             i = end
-        elif char == "/" and (not prev or prev in _VALUE_MAY_FOLLOW
-                              or word in _KEYWORDS_BEFORE_REGEX):
+        elif char == "/" and (not prev or prev in _VALUE_MAY_FOLLOW or word in _KEYWORDS_BEFORE_REGEX):
             i, prev, word = _close_regex(text, i), "/", ""
         else:
             if not char.isspace():
@@ -1181,7 +1204,7 @@ def _close_regex(text: str, i: int) -> int:
         elif char == "/" and not in_class:
             return i + 1
         elif char == "\n":
-            return i          # unterminated: it was division after all
+            return i  # unterminated: it was division after all
         i += 1
     return i
 
@@ -1243,8 +1266,7 @@ def _uncomment_js(text: str) -> str:
         out.append("\n" * text.count("\n", start, end))
         at = end
     out.append(text[at:])
-    return "\n".join(
-        line for line in "".join(out).splitlines() if line.strip())
+    return "\n".join(line for line in "".join(out).splitlines() if line.strip())
 
 
 def _uncommented_css(text: str) -> str:
@@ -1260,9 +1282,7 @@ def _uncommented_css(text: str) -> str:
 
     Measured on round 23's stylesheet: 12,004 B become 10,765 B.
     """
-    return "\n".join(
-        line.rstrip() for line in re.sub(r"/\*.*?\*/", "", text, flags=re.S)
-        .splitlines() if line.strip())
+    return "\n".join(line.rstrip() for line in re.sub(r"/\*.*?\*/", "", text, flags=re.S).splitlines() if line.strip())
 
 
 def _degradation_steps():
@@ -1277,13 +1297,10 @@ def _degradation_steps():
     """
     from .bga_timeline import PLANE1_ONLY, PLANES_BOTH
 
-    return ((PLANES_BOTH, None),
-            (PLANE1_ONLY, "`--planes 1`, which leaves Plane 2's process "
-                          "lanes out"))
+    return ((PLANES_BOTH, None), (PLANE1_ONLY, "`--planes 1`, which leaves Plane 2's process lanes out"))
 
 
-def _over_track_ceiling(tracks: Optional[int],
-                        trace: Optional[bytes] = None) -> Optional[str]:
+def _over_track_ceiling(tracks: Optional[int], trace: Optional[bytes] = None) -> Optional[str]:
     """The track-ceiling refusal, or `None`. `trace`, when a render has
     already happened, adds the byte size so the reader can see the two
     ceilings disagree; `UX-1081`'s pre-render check has no bytes yet and
@@ -1296,12 +1313,13 @@ def _over_track_ceiling(tracks: Optional[int],
     """
     if (tracks or 0) <= TRACE_TRACK_BUDGET:
         return None
-    sentence = (f"the timeline draws {tracks:,} tracks, over this export's "
-                f"{TRACE_TRACK_BUDGET:,}-track ceiling - Perfetto draws a "
-                f"row per track")
+    sentence = (
+        f"the timeline draws {tracks:,} tracks, over this export's "
+        f"{TRACE_TRACK_BUDGET:,}-track ceiling - Perfetto draws a "
+        f"row per track"
+    )
     if trace is not None:
-        sentence += (f", and the byte size ({len(trace) / 1048576:.1f} MiB) "
-                    f"is well inside its own ceiling")
+        sentence += f", and the byte size ({len(trace) / 1048576:.1f} MiB) is well inside its own ceiling"
     return sentence
 
 
@@ -1311,14 +1329,15 @@ def _over_a_ceiling(trace: bytes, tracks: Optional[int]) -> Optional[str]:
     sends the reader to compress something that is not the cost.
     """
     if len(trace) * 4 / 3 > TRACE_BUDGET_B:
-        return (f"the timeline is {len(trace) / 1048576:.1f} MiB "
-                f"compressed, over this export's "
-                f"{TRACE_BUDGET_B / 1048576:.0f} MiB ceiling for it")
+        return (
+            f"the timeline is {len(trace) / 1048576:.1f} MiB "
+            f"compressed, over this export's "
+            f"{TRACE_BUDGET_B / 1048576:.0f} MiB ceiling for it"
+        )
     return _over_track_ceiling(tracks, trace)
 
 
-def export(run: str, path: str, with_trace: bool = True,
-           reanalyse: bool = False) -> dict:
+def export(run: str, path: str, with_trace: bool = True, reanalyse: bool = False) -> dict:
     """Write one self-contained file. Returns what went into it."""
     # `payloads()` keys documents by the *url* they are served at, so
     # they arrive as "report.json". The inline blocks are keyed by name
@@ -1328,23 +1347,26 @@ def export(run: str, path: str, with_trace: bool = True,
     # which works when served and fails on `file://` - so the export
     # looks fine everywhere except where it is used.
     notes: dict = {}
-    documents = {name[:-len(".json")] if name.endswith(".json") else name: body
-                 for name, body in payloads(run, reanalyse=reanalyse, notes=notes)
-                 .items()}
+    documents = {
+        name[: -len(".json")] if name.endswith(".json") else name: body
+        for name, body in payloads(run, reanalyse=reanalyse, notes=notes).items()
+    }
     # `UX-342`: after the payloads and before the manifest - it has to
     # see what is being embedded, and `_offered` has to see it.
     documents["schemas"] = schemas_payload(documents)
-    documents["run"] = {"run": os.path.abspath(run),
-                        "name": os.path.basename(os.path.abspath(run)),
-                        # `UX-533`: which analysis is inlined above.
-                        "analysis": analysis_note(run, reanalyse),
-                        # UX-334: the same manifest the server
-                        # publishes. An export inlines every payload it
-                        # has, so `load` never reaches the network here
-                        # - but the page reads one key either way, and
-                        # a key that exists on one side only is a key
-                        # that gets tested on one side only.
-                        "payloads": _offered(documents)}
+    documents["run"] = {
+        "run": os.path.abspath(run),
+        "name": os.path.basename(os.path.abspath(run)),
+        # `UX-533`: which analysis is inlined above.
+        "analysis": analysis_note(run, reanalyse),
+        # UX-334: the same manifest the server
+        # publishes. An export inlines every payload it
+        # has, so `load` never reaches the network here
+        # - but the page reads one key either way, and
+        # a key that exists on one side only is a key
+        # that gets tested on one side only.
+        "payloads": _offered(documents),
+    }
     if notes.get("comparison_unavailable"):
         # `UX-725`: the band's own absence, said once on the page - not
         # the two lines `bga compare` printed while `payloads()` built
@@ -1376,17 +1398,18 @@ def export(run: str, path: str, with_trace: bool = True,
                     refusals.append(precheck)
                     tried.append(narrowing or "the whole timeline")
                     continue
-                trace, trace_planes, flow_losses, trace_tracks = trace_with_planes(
-                    run, planes=step)
+                trace, trace_planes, flow_losses, trace_tracks = trace_with_planes(run, planes=step)
                 if trace is None:
                     break
                 refusal = _over_a_ceiling(trace, trace_tracks)
                 if refusal is None:
                     fitted = True
                     if refusals:
-                        degraded = (f"The whole timeline did not fit - "
-                                    f"{refusals[0]} - so this file carries "
-                                    f"{narrowing}: {trace_tracks:,} tracks.")
+                        degraded = (
+                            f"The whole timeline did not fit - "
+                            f"{refusals[0]} - so this file carries "
+                            f"{narrowing}: {trace_tracks:,} tracks."
+                        )
                     break
                 refusals.append(refusal)
                 tried.append(narrowing or "the whole timeline")
@@ -1394,8 +1417,7 @@ def export(run: str, path: str, with_trace: bool = True,
             # Every step tried and none fitted. The reader is owed each
             # number, not only the last: a refusal naming one narrowing
             # it never tried is what this item was filed on.
-            omitted = "; ".join(f"{what} - {why}"
-                                for what, why in zip(tried, refusals))
+            omitted = "; ".join(f"{what} - {why}" for what, why in zip(tried, refusals))
             ceiling_refused = True
     if trace is None and omitted is None:
         # UX-329: which absence, from `bga.plane2` - the same sentence
@@ -1414,18 +1436,17 @@ def export(run: str, path: str, with_trace: bool = True,
         # cannot carry - and, since `UX-430`, the two flags that make it
         # smaller in the unit that was actually exceeded.
         documents["run"]["timeline_recipe"] = {
-            "command": f"bga view {os.path.dirname(os.path.abspath(run))} "
-                       f"--perfetto",
+            "command": f"bga view {os.path.dirname(os.path.abspath(run))} --perfetto",
             "note": "That serves this run and hands the timeline to "
-                    "Perfetto over a deep link, which streams it from the "
-                    "server instead of copying it through the page. "
-                    "`bga timeline` writes the same trace to a file if "
-                    "you would rather open it yourself, and "
-                    "`--planes 1` or `--only-element ELEMENT` write a "
-                    "smaller one: the process lanes are where the track "
-                    "count grows. `--only-element` is the one this "
-                    "export cannot take for you - it needs the element "
-                    "you are investigating.",
+            "Perfetto over a deep link, which streams it from the "
+            "server instead of copying it through the page. "
+            "`bga timeline` writes the same trace to a file if "
+            "you would rather open it yourself, and "
+            "`--planes 1` or `--only-element ELEMENT` write a "
+            "smaller one: the process lanes are where the track "
+            "count grows. `--only-element` is the one this "
+            "export cannot take for you - it needs the element "
+            "you are investigating.",
         }
         trace = None
     documents["run"]["has_timeline"] = trace is not None
@@ -1467,29 +1488,26 @@ def export(run: str, path: str, with_trace: bool = True,
         if len(body) > DATA_COMPACT_MIN_B:
             # `UX-529`: base64 has no `<`, so the escape above is moot
             # and the block cannot be ended early at all.
-            packed = base64.b64encode(gzip.compress(
-                json.dumps(document).encode("utf-8"), 9)).decode()
-            blocks.append('<script type="application/octet-stream" '
-                          f'id="bga-{name}-gz">{packed}</script>')
+            packed = base64.b64encode(gzip.compress(json.dumps(document).encode("utf-8"), 9)).decode()
+            blocks.append(f'<script type="application/octet-stream" id="bga-{name}-gz">{packed}</script>')
             continue
-        blocks.append(
-            f'<script type="application/json" id="bga-{name}">{body}</script>')
+        blocks.append(f'<script type="application/json" id="bga-{name}">{body}</script>')
     if trace is not None:
         encoded = base64.b64encode(trace).decode()
         blocks.append(
-            '<script type="application/json" id="bga-trace">'
-            f'"data:application/gzip;base64,{encoded}"</script>')
+            f'<script type="application/json" id="bga-trace">"data:application/gzip;base64,{encoded}"</script>'
+        )
 
-    page = page.replace('<link rel="stylesheet" href="style.css">',
-                        f"<style>\n{style}\n</style>")
-    page = page.replace('<script type="module" src="app.js"></script>',
-                        "\n".join(blocks) + "\n" + _module_blocks(script))
-    # Nothing may remain that would reach the network from a file:// page.
-    page = page.replace('<a href="report.json">report.json</a> ·\n     '
-                        '<a href="schemas.json">schemas.json</a>',
-                        "Everything it needs is in this file.")
+    page = page.replace('<link rel="stylesheet" href="style.css">', f"<style>\n{style}\n</style>")
     page = page.replace(
-        '<a href="perfetto.html">Questions to ask it</a>', "")
+        '<script type="module" src="app.js"></script>', "\n".join(blocks) + "\n" + _module_blocks(script)
+    )
+    # Nothing may remain that would reach the network from a file:// page.
+    page = page.replace(
+        '<a href="report.json">report.json</a> ·\n     <a href="schemas.json">schemas.json</a>',
+        "Everything it needs is in this file.",
+    )
+    page = page.replace('<a href="perfetto.html">Questions to ask it</a>', "")
 
     with open(path, "w", encoding="utf-8") as handle:
         handle.write(page)
@@ -1497,10 +1515,15 @@ def export(run: str, path: str, with_trace: bool = True,
     size = os.path.getsize(path)
     # `UX-1052`: the two halves apart - the page is bounded, the data scales.
     data = sum(len(block.encode("utf-8")) for block in blocks)
-    return {"path": os.path.abspath(path), "bytes": size,
-            "page_bytes": size - data, "data_bytes": data,
-            "has_timeline": trace is not None, "omitted": omitted,
-            "over_budget": size > EXPORT_BUDGET_B}
+    return {
+        "path": os.path.abspath(path),
+        "bytes": size,
+        "page_bytes": size - data,
+        "data_bytes": data,
+        "has_timeline": trace is not None,
+        "omitted": omitted,
+        "over_budget": size > EXPORT_BUDGET_B,
+    }
 
 
 class _Handler(http.server.BaseHTTPRequestHandler):
@@ -1536,7 +1559,7 @@ class _Handler(http.server.BaseHTTPRequestHandler):
         target = self.sibling_runs.get(wanted or "")
         if not wanted or not target or os.path.abspath(target) == self.run_root:
             return self.documents
-        with (self.sibling_lock or contextlib.nullcontext()):
+        with self.sibling_lock or contextlib.nullcontext():
             built = self.sibling_documents.get(wanted)
             if built is None:
                 built = dict(payloads(target))
@@ -1548,16 +1571,20 @@ class _Handler(http.server.BaseHTTPRequestHandler):
                 for shared in ("store.json", "store-aggregate.json"):
                     if shared in self.documents:
                         built.setdefault(shared, self.documents[shared])
-                built.setdefault("run.json", dict(
-                    self.documents.get("run.json") or {},
-                    run=os.path.abspath(target),
-                    name=os.path.basename(os.path.abspath(target)),
-                    payloads=_offered(built),
-                    # A trace belongs to the snapshot this server was
-                    # started on; offering one for a run it is not
-                    # serving would be the dead affordance `UX-194`
-                    # ruled out.
-                    has_timeline=False))
+                built.setdefault(
+                    "run.json",
+                    dict(
+                        self.documents.get("run.json") or {},
+                        run=os.path.abspath(target),
+                        name=os.path.basename(os.path.abspath(target)),
+                        payloads=_offered(built),
+                        # A trace belongs to the snapshot this server was
+                        # started on; offering one for a run it is not
+                        # serving would be the dead affordance `UX-194`
+                        # ruled out.
+                        has_timeline=False,
+                    ),
+                )
                 self.sibling_documents[wanted] = built
             return built
 
@@ -1598,8 +1625,7 @@ class _Handler(http.server.BaseHTTPRequestHandler):
             # with its own type rather than Content-Encoding, because
             # the page hands the *compressed bytes* to Perfetto - a
             # transparently-decoding fetch would undo the win.
-            return self._send(200, "application/gzip", self.blobs[path],
-                              cors=True)
+            return self._send(200, "application/gzip", self.blobs[path], cors=True)
         if path == TRACE_STATUS_NAME:
             return self._trace_status()
         if path == TRACE_NAME and getattr(self, "trace_run", None):
@@ -1641,8 +1667,8 @@ class _Handler(http.server.BaseHTTPRequestHandler):
         # rendering gigabytes would put the whole cost back on the path
         # this item took it off.
         offered = self.path is not None and (
-            path in self.blobs
-            or (path == TRACE_NAME and getattr(self, "trace_run", None)))
+            path in self.blobs or (path == TRACE_NAME and getattr(self, "trace_run", None))
+        )
         if not offered:
             return self._refuse(404, f"{path}: not served")
         if self.headers.get("Origin") != PERFETTO_ORIGIN:
@@ -1670,8 +1696,7 @@ class _Handler(http.server.BaseHTTPRequestHandler):
         self.send_header("Access-Control-Max-Age", "600")
         # The answer depends on the request's `Origin`, so a cache that
         # ignored it could serve the grant to a page that has none.
-        self.send_header("Vary", "Origin, Access-Control-Request-Headers, "
-                         "Access-Control-Request-Private-Network")
+        self.send_header("Vary", "Origin, Access-Control-Request-Headers, Access-Control-Request-Private-Network")
         self.end_headers()
 
     def _blast(self, raw):
@@ -1728,14 +1753,14 @@ class _Handler(http.server.BaseHTTPRequestHandler):
             if cls.trace_path is None:
                 if cls.trace_scratch is None:
                     cls.trace_scratch = tempfile.mkdtemp(prefix="bga-serve-")
-                cls.trace_path = trace_file(
-                    cls.trace_run,
-                    os.path.join(cls.trace_scratch, TRACE_NAME)) or ""
+                cls.trace_path = trace_file(cls.trace_run, os.path.join(cls.trace_scratch, TRACE_NAME)) or ""
         if not cls.trace_path:
             return self._refuse(
-                404, f"{TRACE_NAME}: this snapshot has a build log but no "
-                     f"timeline could be rendered from it - `bga timeline "
-                     f"{os.path.dirname(cls.trace_run)}` says why")
+                404,
+                f"{TRACE_NAME}: this snapshot has a build log but no "
+                f"timeline could be rendered from it - `bga timeline "
+                f"{os.path.dirname(cls.trace_run)}` says why",
+            )
         try:
             size = os.path.getsize(cls.trace_path)
             handle = open(cls.trace_path, "rb")
@@ -1791,8 +1816,7 @@ class _Handler(http.server.BaseHTTPRequestHandler):
                 body = handle.read()
         except OSError:
             return self._refuse(404, f"{name}: missing")
-        kinds = {".html": "text/html", ".js": "text/javascript",
-                 ".css": "text/css"}
+        kinds = {".html": "text/html", ".js": "text/javascript", ".css": "text/css"}
         kind = kinds.get(os.path.splitext(name)[1], "application/octet-stream")
         self._send(200, f"{kind}; charset=utf-8", body)
 
@@ -1813,8 +1837,7 @@ class _Handler(http.server.BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(length))
         # A local viewer has no business being framed or sniffed.
         self.send_header("X-Content-Type-Options", "nosniff")
-        self.send_header("Content-Security-Policy",
-                         "default-src 'self'; frame-ancestors 'none'")
+        self.send_header("Content-Security-Policy", "default-src 'self'; frame-ancestors 'none'")
         # `UX-198`: the `?url=` deep link has Perfetto fetch the trace
         # from this server, which is a cross-origin read and needs an
         # allow header. Granted on the trace blob **only**, and only to
@@ -1833,8 +1856,7 @@ class _Handler(http.server.BaseHTTPRequestHandler):
         self.end_headers()
 
     def _refuse(self, code, why):
-        self._send(code, "application/json; charset=utf-8",
-                   json.dumps({"error": why}).encode())
+        self._send(code, "application/json; charset=utf-8", json.dumps({"error": why}).encode())
 
 
 class _Server(http.server.ThreadingHTTPServer):
@@ -1862,19 +1884,21 @@ class _Server(http.server.ThreadingHTTPServer):
                 handler.trace_scratch = handler.trace_path = None
 
 
-def serve(run: str, port: int = 0,
-          documents: Optional[dict[str, dict]] = None,
-          with_trace: bool = True,
-          baseline: Optional[str] = None,
-          reanalyse: bool = False):
+def serve(
+    run: str,
+    port: int = 0,
+    documents: Optional[dict[str, dict]] = None,
+    with_trace: bool = True,
+    baseline: Optional[str] = None,
+    reanalyse: bool = False,
+):
     """A started server on 127.0.0.1. The caller closes it.
 
     Returns `(httpd, url)`. Port 0 means the kernel picks one, so two
     `bga view`s never collide and nothing is left listening on a
     predictable port.
     """
-    documents = dict(documents if documents is not None
-                     else payloads(run, baseline, reanalyse))
+    documents = dict(documents if documents is not None else payloads(run, baseline, reanalyse))
     documents.setdefault("schemas.json", schemas_payload())
 
     store = store_payload(run)
@@ -1903,30 +1927,33 @@ def serve(run: str, port: int = 0,
     # socket on the field capture.
     offered = bool(with_trace) and has_timeline(run)
 
-    documents.setdefault("run.json", {
-        "run": os.path.abspath(run),
-        "name": os.path.basename(os.path.abspath(run)),
-        # UX-334: which optional payloads exist, so the page stops
-        # asking the network. `compare`, `store` and `store-aggregate`
-        # are each absent on a perfectly ordinary run, and the page
-        # learned that by fetching them and catching the 404 - three
-        # red lines in every console on every boot, which is three
-        # lines of noise a real error has to be spotted among. The
-        # server already knows the answer here; it just never said it.
-        "payloads": _offered(documents),
-        # `UX-533`: which analysis is behind `report.json` - the stored
-        # one this capture published, or this build's.
-        "analysis": analysis_note(run, reanalyse),
-        # So the page can offer the button only when there is something
-        # behind it - a dead "Open in Perfetto" is worse than none.
-        "has_timeline": offered,
-        # UX-299: the threshold above which the trace is fetched by
-        # Perfetto rather than copied through this page. The *size* is
-        # not here, and cannot be: knowing it means rendering the
-        # trace, which `UX-296` moved off the startup path. The page
-        # asks for the headers when the user asks for the timeline.
-        "trace_inline_max_bytes": TRACE_BUDGET_B,
-    })
+    documents.setdefault(
+        "run.json",
+        {
+            "run": os.path.abspath(run),
+            "name": os.path.basename(os.path.abspath(run)),
+            # UX-334: which optional payloads exist, so the page stops
+            # asking the network. `compare`, `store` and `store-aggregate`
+            # are each absent on a perfectly ordinary run, and the page
+            # learned that by fetching them and catching the 404 - three
+            # red lines in every console on every boot, which is three
+            # lines of noise a real error has to be spotted among. The
+            # server already knows the answer here; it just never said it.
+            "payloads": _offered(documents),
+            # `UX-533`: which analysis is behind `report.json` - the stored
+            # one this capture published, or this build's.
+            "analysis": analysis_note(run, reanalyse),
+            # So the page can offer the button only when there is something
+            # behind it - a dead "Open in Perfetto" is worse than none.
+            "has_timeline": offered,
+            # UX-299: the threshold above which the trace is fetched by
+            # Perfetto rather than copied through this page. The *size* is
+            # not here, and cannot be: knowing it means rendering the
+            # trace, which `UX-296` moved off the startup path. The page
+            # asks for the headers when the user asks for the timeline.
+            "trace_inline_max_bytes": TRACE_BUDGET_B,
+        },
+    )
 
     # `UX-443`: and what the graph's edges became - the third reader of
     # `UX-431`'s accounting, after the terminal and the export.
@@ -1949,18 +1976,29 @@ def serve(run: str, port: int = 0,
     # selector absent rather than empty.
     from bga.run_store import RUN_SUBDIR
 
-    siblings = {row["stamp"]: os.path.join(row["path"], RUN_SUBDIR)
-                for row in ((store or {}).get("snapshots") or [])
-                if row.get("has_run") and row.get("path")}
-    handler = type("_BoundHandler", (_Handler,),
-                   {"documents": documents, "blobs": {},
-                    "sibling_runs": siblings, "sibling_documents": {},
-                    "sibling_lock": threading.Lock(),
-                    "trace_run": os.path.abspath(run) if offered else None,
-                    "trace_scratch": None, "trace_path": None,
-                    "trace_lock": threading.Lock(),
-                    "trace_served": 0, "trace_served_bytes": 0,
-                    "run_root": os.path.abspath(run)})
+    siblings = {
+        row["stamp"]: os.path.join(row["path"], RUN_SUBDIR)
+        for row in ((store or {}).get("snapshots") or [])
+        if row.get("has_run") and row.get("path")
+    }
+    handler = type(
+        "_BoundHandler",
+        (_Handler,),
+        {
+            "documents": documents,
+            "blobs": {},
+            "sibling_runs": siblings,
+            "sibling_documents": {},
+            "sibling_lock": threading.Lock(),
+            "trace_run": os.path.abspath(run) if offered else None,
+            "trace_scratch": None,
+            "trace_path": None,
+            "trace_lock": threading.Lock(),
+            "trace_served": 0,
+            "trace_served_bytes": 0,
+            "run_root": os.path.abspath(run),
+        },
+    )
     httpd = _Server(("127.0.0.1", port), handler)
     return httpd, landing_url(httpd.server_address[1])
 
@@ -1993,37 +2031,49 @@ def main(argv: Optional[list[str]] = None) -> int:
     from bga.help_format import CompactRawHelp
 
     parser = argparse.ArgumentParser(
-        prog="bga view", description=HELP,
-        formatter_class=lambda prog: CompactRawHelp(prog))
+        prog="bga view", description=HELP, formatter_class=lambda prog: CompactRawHelp(prog)
+    )
     parser.add_argument(
-        "run", nargs="?", default="@last",
-        help="The run to open; `@last` by default, same alias grammar as "
-             "every other command.")
+        "run",
+        nargs="?",
+        default="@last",
+        help="The run to open; `@last` by default, same alias grammar as every other command.",
+    )
     parser.add_argument(
-        "--port", type=int, default=0, metavar="N",
-        help="Listen on this port instead of one the kernel picks.")
+        "--port", type=int, default=0, metavar="N", help="Listen on this port instead of one the kernel picks."
+    )
     parser.add_argument(
-        "--export", default=None, metavar="PATH",
+        "--export",
+        default=None,
+        metavar="PATH",
         help="Write one self-contained HTML file instead of serving: the "
-             "same page with this run's payloads inlined. No port, no "
-             "network - for a CI artifact, or for \"send me your report\".")
+        "same page with this run's payloads inlined. No port, no "
+        "network - for a CI artifact, or for \"send me your report\".",
+    )
     parser.add_argument(
-        "--perfetto", action="store_true",
+        "--perfetto",
+        action="store_true",
         help="Skip the report and hand this run's timeline straight to "
-             "ui.perfetto.dev. Tab to tab - nothing is uploaded.")
+        "ui.perfetto.dev. Tab to tab - nothing is uploaded.",
+    )
     parser.add_argument(
-        "--no-browser", action="store_true",
-        help="Print the url instead of opening it - for a remote shell, or "
-             "when you want to curl the payloads.")
+        "--no-browser",
+        action="store_true",
+        help="Print the url instead of opening it - for a remote shell, or when you want to curl the payloads.",
+    )
     parser.add_argument(
-        "--reanalyse", action="store_true",
+        "--reanalyse",
+        action="store_true",
         help="Analyse the run with *this* build instead of serving the "
-             "analysis its capture published. The stored file is read, "
-             "never written - it is what the CI comment quotes.")
+        "analysis its capture published. The stored file is read, "
+        "never written - it is what the CI comment quotes.",
+    )
     parser.add_argument(
-        "--compare", default=None, metavar="BASELINE",
-        help="Draw the band against this run instead of the one before "
-             "RUN in the same store. Same alias grammar.")
+        "--compare",
+        default=None,
+        metavar="BASELINE",
+        help="Draw the band against this run instead of the one before RUN in the same store. Same alias grammar.",
+    )
     args = parser.parse_args(argv)
 
     from bga import run_store
@@ -2046,34 +2096,39 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     if args.export:
         try:
-            written = export(run, args.export,
-                             reanalyse=args.reanalyse)
-        except (OSError, RuntimeError, ValueError,
-                json.JSONDecodeError) as error:
+            written = export(run, args.export, reanalyse=args.reanalyse)
+        except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as error:
             print(f"Error: {error}", file=sys.stderr)
             return 2
         size = written["bytes"]
-        print(f"Wrote {written['path']} ({size / 1024:.0f} KiB: page "
-              f"{written['page_bytes'] / 1024:.0f} KiB, data "
-              f"{written['data_bytes'] / 1024:.0f} KiB). Open it with "
-              f"a browser - it needs no server and no network.",
-              file=sys.stderr)
+        print(
+            f"Wrote {written['path']} ({size / 1024:.0f} KiB: page "
+            f"{written['page_bytes'] / 1024:.0f} KiB, data "
+            f"{written['data_bytes'] / 1024:.0f} KiB). Open it with "
+            f"a browser - it needs no server and no network.",
+            file=sys.stderr,
+        )
         if written["omitted"]:
-            print(f"  No Perfetto timeline in it: "
-                  f"{written['omitted'].rstrip('.')}. `bga timeline` "
-                  f"renders one beside the snapshot.", file=sys.stderr)
+            print(
+                f"  No Perfetto timeline in it: "
+                f"{written['omitted'].rstrip('.')}. `bga timeline` "
+                f"renders one beside the snapshot.",
+                file=sys.stderr,
+            )
         if written["over_budget"]:
             # Said, not enforced: a report that large is still the
             # user's report, and refusing to write it would help nobody.
-            print(f"  Note: {size / 1048576:.1f} MiB is over the "
-                  f"{EXPORT_BUDGET_B / 1048576:.0f} MiB an attachment "
-                  f"usually survives.", file=sys.stderr)
+            print(
+                f"  Note: {size / 1048576:.1f} MiB is over the "
+                f"{EXPORT_BUDGET_B / 1048576:.0f} MiB an attachment "
+                f"usually survives.",
+                file=sys.stderr,
+            )
         print(json.dumps(written))
         return 0
 
     try:
-        httpd, url = serve(run, port=args.port, baseline=baseline,
-                           reanalyse=args.reanalyse)
+        httpd, url = serve(run, port=args.port, baseline=baseline, reanalyse=args.reanalyse)
     except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as error:
         print(f"Error: {error}", file=sys.stderr)
         return 2
@@ -2082,12 +2137,14 @@ def main(argv: Optional[list[str]] = None) -> int:
     # UX-296: what the server *offers*, not what it has already built -
     # the timeline is rendered when Perfetto fetches it, and asking for
     # `--perfetto` is exactly the case where that happens a moment later.
-    if args.perfetto and not (httpd.RequestHandlerClass.blobs
-                              or httpd.RequestHandlerClass.trace_run):
-        print("Error: this run has no timeline to hand over. `bga snapshot` "
-              "keeps the raw Plane 2 log by default; a capture taken with "
-              "--no-keep-raw, or before UX-188, has only the processed "
-              "report.", file=sys.stderr)
+    if args.perfetto and not (httpd.RequestHandlerClass.blobs or httpd.RequestHandlerClass.trace_run):
+        print(
+            "Error: this run has no timeline to hand over. `bga snapshot` "
+            "keeps the raw Plane 2 log by default; a capture taken with "
+            "--no-keep-raw, or before UX-188, has only the processed "
+            "report.",
+            file=sys.stderr,
+        )
         httpd.server_close()
         return 7
 
@@ -2099,25 +2156,31 @@ def main(argv: Optional[list[str]] = None) -> int:
     # one-click route at all, and the page can only say so after the
     # reader has clicked.
     if args.port not in PERFETTO_FETCHABLE_PORTS:
-        print(f"  ui.perfetto.dev may not fetch from this port, so a trace "
-              f"over {TRACE_BUDGET_B // 1048576} MiB has no one-click "
-              f"handoff. Re-run with --port 8080 for that, or save the "
-              f"trace and drag it in.", file=sys.stderr)
+        print(
+            f"  ui.perfetto.dev may not fetch from this port, so a trace "
+            f"over {TRACE_BUDGET_B // 1048576} MiB has no one-click "
+            f"handoff. Re-run with --port 8080 for that, or save the "
+            f"trace and drag it in.",
+            file=sys.stderr,
+        )
     if args.perfetto:
         # The handshake needs the server alive while the tab fetches the
         # trace, which is why this does not exit as soon as the browser
         # is launched.
-        print("  The tab fetches the trace from here, so leave this running "
-              "until Perfetto has it - then Ctrl-C.", file=sys.stderr)
+        print(
+            "  The tab fetches the trace from here, so leave this running until Perfetto has it - then Ctrl-C.",
+            file=sys.stderr,
+        )
     else:
-        print("  Ctrl-C to stop. Nothing outside this run is reachable, and "
-              "nothing is listening beyond localhost.", file=sys.stderr)
+        print(
+            "  Ctrl-C to stop. Nothing outside this run is reachable, and nothing is listening beyond localhost.",
+            file=sys.stderr,
+        )
     if not args.no_browser:
         # In a thread: `webbrowser.open` can block on a cold browser
         # start, and the server should already be answering when the tab
         # arrives.
-        threading.Thread(target=webbrowser.open, args=(landing,),
-                         daemon=True).start()
+        threading.Thread(target=webbrowser.open, args=(landing,), daemon=True).start()
 
     try:
         httpd.serve_forever()

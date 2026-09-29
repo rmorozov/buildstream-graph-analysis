@@ -20,6 +20,7 @@ assert the failing case without a fifty-second file existing to produce
 it. The real run is in CI; what is checked here is that the rule reads
 the floors, names the file, and can fail.
 """
+
 import functools
 import json
 import pathlib
@@ -45,6 +46,7 @@ import dev_records  # `dev_records` imports its sibling `tools/` modules bare
 #: applies, read here so the two guards cannot disagree about one file.
 def _boots_a_browser(name):
     from tests.unit import test_the_tiers_are_a_partition as partition
+
     path = pathlib.Path(__file__).resolve().parents[2] / name
     return bool(partition.BOOTS_A_BROWSER.search(partition._code(path)))
 
@@ -60,7 +62,6 @@ def _excused_in_medium(name, seconds):
     return _boots_a_browser(name) and seconds < tiers.LARGE_FLOOR_S
 
 
-
 def _pin_the_diff(monkeypatch, files):
     """Pin the branch diff `explained_by` reads, instead of the tree's.
 
@@ -73,6 +74,7 @@ def _pin_the_diff(monkeypatch, files):
     in, so two clauses were red for no reason of their own.
     """
     from tools import dev_touching
+
     monkeypatch.setattr(dev_touching, "changed_files", lambda base: list(files))
 
 
@@ -105,14 +107,15 @@ def _report(tmp_path, rows):
     """A junit report with `{file: seconds}`, in pytest's own shape."""
     cases = []
     for name, seconds in rows.items():
-        dotted = name[:-len(".py")].replace("/", ".")
-        cases.append(f'<testcase classname="{dotted}.TestThing" '
-                     f'name="test_one" time="{seconds}" />')
+        dotted = name[: -len(".py")].replace("/", ".")
+        cases.append(f'<testcase classname="{dotted}.TestThing" name="test_one" time="{seconds}" />')
     path = tmp_path / "junit.xml"
     path.write_text(
         '<?xml version="1.0" encoding="utf-8"?><testsuites>'
         f'<testsuite name="pytest">{"".join(cases)}</testsuite>'
-        "</testsuites>", encoding="utf-8")
+        "</testsuites>",
+        encoding="utf-8",
+    )
     return path
 
 
@@ -139,9 +142,10 @@ class TestTheReportIsReadTheWayPytestWritesIt:
         dotted = small_file()[:-3].replace("/", ".")
         path.write_text(
             "<testsuites><testsuite>"
-            + "".join(f'<testcase classname="{dotted}.T" name="t{i}" '
-                      f'time="0.5" />' for i in range(4))
-            + "</testsuite></testsuites>", encoding="utf-8")
+            + "".join(f'<testcase classname="{dotted}.T" name="t{i}" time="0.5" />' for i in range(4))
+            + "</testsuite></testsuites>",
+            encoding="utf-8",
+        )
         assert drift.measured(path) == pytest.approx({small_file(): 2.0})
 
 
@@ -166,10 +170,8 @@ class TestTheReferenceIsReadableAndComplete:
 
     def test_every_listed_file_carries_the_measurement_that_placed_it(self):
         reference = tiers.recorded()
-        missing = [name for name in (*tiers.LARGE, *tiers.MEDIUM)
-                   if name not in reference]
-        assert missing == [], (
-            f"{missing} are listed with no measured seconds beside them")
+        missing = [name for name in (*tiers.LARGE, *tiers.MEDIUM) if name not in reference]
+        assert missing == [], f"{missing} are listed with no measured seconds beside them"
 
     def test_the_record_agrees_with_the_tier_it_is_in(self):
         """The lists and their own numbers, checked against each other -
@@ -186,30 +188,33 @@ class TestTheReferenceIsReadableAndComplete:
         reds: construction says "not small", never "any tier will do".
         """
         reference = tiers.recorded()
-        wrong = {name: reference[name] for name in tiers.LARGE
-                 if drift.tier_for(reference[name]) != "large"}
-        wrong.update({name: reference[name] for name in tiers.MEDIUM
-                      if drift.tier_for(reference[name]) != "medium"
-                      and not _excused_in_medium(name, reference[name])})
-        assert wrong == {}, (
-            f"listed in one tier and recorded in another: {wrong}")
+        wrong = {name: reference[name] for name in tiers.LARGE if drift.tier_for(reference[name]) != "large"}
+        wrong.update(
+            {
+                name: reference[name]
+                for name in tiers.MEDIUM
+                if drift.tier_for(reference[name]) != "medium" and not _excused_in_medium(name, reference[name])
+            }
+        )
+        assert wrong == {}, f"listed in one tier and recorded in another: {wrong}"
 
     def test_the_browser_exception_does_not_reach_above_the_large_floor(self):
         """The exception's own bound, asked of the function the guard
         above actually calls. A browser guard is excused below
         `LARGE_FLOOR_S` and never at or past it - construction says
         "not small", never "any tier will do"."""
-        browser_files = [name for name in tiers.MEDIUM
-                         if _boots_a_browser(name)]
-        assert browser_files, (
-            "no browser guard sits in MEDIUM - this checks nothing")
+        browser_files = [name for name in tiers.MEDIUM if _boots_a_browser(name)]
+        assert browser_files, "no browser guard sits in MEDIUM - this checks nothing"
         name = browser_files[0]
         assert _excused_in_medium(name, tiers.LARGE_FLOOR_S - 0.001), (
-            f"{name} under the large floor is the case UX-783 excuses")
+            f"{name} under the large floor is the case UX-783 excuses"
+        )
         assert not _excused_in_medium(name, tiers.LARGE_FLOOR_S), (
-            f"{name} at LARGE_FLOOR_S is a wrong list, not an excuse")
+            f"{name} at LARGE_FLOOR_S is a wrong list, not an excuse"
+        )
         assert not _excused_in_medium(name, tiers.LARGE_FLOOR_S + 10), (
-            f"{name} ten seconds past the large floor is still excused")
+            f"{name} ten seconds past the large floor is still excused"
+        )
 
 
 class TestItFailsNamingTheFile:
@@ -223,8 +228,7 @@ class TestItFailsNamingTheFile:
         assert [row[0] for row in found] == [small_file()], found
         assert found[0][2:] == ("small", "medium"), found
 
-    def test_the_message_carries_the_name_and_the_seconds(self, tmp_path,
-                                                          capsys):
+    def test_the_message_carries_the_name_and_the_seconds(self, tmp_path, capsys):
         """`--no-confirm`, because the seconds here are fabricated.
 
         `UX-455` made the floors branch re-run each accused file by
@@ -280,15 +284,15 @@ class TestItCannotPassOverNothing:
 
     def test_an_empty_report_is_an_error_not_a_pass(self, tmp_path):
         path = tmp_path / "junit.xml"
-        path.write_text("<testsuites><testsuite /></testsuites>",
-                        encoding="utf-8")
+        path.write_text("<testsuites><testsuite /></testsuites>", encoding="utf-8")
         assert drift.main([str(path)]) == 2
 
     def test_a_report_of_unresolvable_names_is_an_error(self, tmp_path):
         path = tmp_path / "junit.xml"
-        path.write_text('<testsuites><testsuite><testcase '
-                        'classname="nope.Test" name="t" time="99" />'
-                        "</testsuite></testsuites>", encoding="utf-8")
+        path.write_text(
+            '<testsuites><testsuite><testcase classname="nope.Test" name="t" time="99" /></testsuite></testsuites>',
+            encoding="utf-8",
+        )
         assert drift.main([str(path)]) == 2
 
 
@@ -316,8 +320,7 @@ class TestCiIsReadAgainstItsOwnRecord:
         """Rot 2. A new image shifts every file together, and per file
         that reads as drift everywhere. The median goes out first."""
         reference = self._ref(dict(tiers.recorded()))
-        moved = {name: seconds * factor
-                 for name, seconds in tiers.recorded().items()}
+        moved = {name: seconds * factor for name, seconds in tiers.recorded().items()}
         verdict, shift, rows = drift.against(moved, reference)
         assert verdict == "ok", (verdict, rows[:3])
         assert shift == pytest.approx(factor)
@@ -326,8 +329,7 @@ class TestCiIsReadAgainstItsOwnRecord:
         """And past the band it stops naming files, because naming them
         would name the wrong thing."""
         reference = self._ref(dict(tiers.recorded()))
-        moved = {name: seconds * 3
-                 for name, seconds in tiers.recorded().items()}
+        moved = {name: seconds * 3 for name, seconds in tiers.recorded().items()}
         verdict, _shift, rows = drift.against(moved, reference)
         assert verdict == "stale", verdict
         assert rows == [], rows
@@ -346,8 +348,7 @@ class TestCiIsReadAgainstItsOwnRecord:
         reference = self._ref(dict(tiers.recorded()))
         victim = tiers.LARGE[0]
         for image in (1.0, 1.3):
-            times = {name: seconds * image
-                     for name, seconds in tiers.recorded().items()}
+            times = {name: seconds * image for name, seconds in tiers.recorded().items()}
             times[victim] *= drift.CI_DRIFT_FACTOR + 0.5
             verdict, _shift, rows = drift.against(times, reference)
             assert verdict == "drift", (image, verdict)
@@ -361,8 +362,7 @@ class TestCiIsReadAgainstItsOwnRecord:
         times["tests/unit/test_a_slow_file_says_which_file.py"] = 30.0
         verdict, _shift, rows = drift.against(times, reference)
         assert verdict == "drift", verdict
-        assert [(row[0], row[2]) for row in rows] == [
-            ("tests/unit/test_a_slow_file_says_which_file.py", None)], rows
+        assert [(row[0], row[2]) for row in rows] == [("tests/unit/test_a_slow_file_says_which_file.py", None)], rows
 
     def test_a_new_fast_file_needs_no_entry(self):
         """The proportionate half of rot 1: every PR adding a test would
@@ -377,22 +377,19 @@ class TestCiIsReadAgainstItsOwnRecord:
         """A reference naming nothing this run measured is not a
         reference for it, and comparing against it would be the
         pass-over-nothing this file exists to prevent."""
-        verdict, _shift, rows = drift.against(
-            dict(tiers.recorded()), self._ref({"tests/unit/nope.py": 1.0}))
+        verdict, _shift, rows = drift.against(dict(tiers.recorded()), self._ref({"tests/unit/nope.py": 1.0}))
         assert (verdict, rows) == ("empty", []), (verdict, rows)
 
     def test_recording_says_where_it_came_from(self, tmp_path):
         times = dict(tiers.recorded())
         report = _report(tmp_path, times)
         out = tmp_path / "ref.json"
-        assert drift.main([str(report), "--record", str(out),
-                           "--source", "a named runner"]) == 0
+        assert drift.main([str(report), "--record", str(out), "--source", "a named runner"]) == 0
         written = json.loads(out.read_text(encoding="utf-8"))
         assert written["measured_on"] == "a named runner"
         assert set(written["files"]) == set(times)
 
-    def test_the_prior_is_the_committed_reference_not_the_output_path(
-            self, tmp_path):
+    def test_the_prior_is_the_committed_reference_not_the_output_path(self, tmp_path):
         """`UX-515`: the mechanism that turned `main` red had no clause
         at all. `--record` reads `tests/ci_reference.json` as the
         document it replaces - for the spread it states about itself,
@@ -404,12 +401,11 @@ class TestCiIsReadAgainstItsOwnRecord:
         whether or not the committed reference carries `samples`."""
         times = dict(tiers.recorded())
         out = tmp_path / "ref.json"
-        assert drift.main([str(_report(tmp_path, times)), "--record",
-                           str(out)]) == 0
+        assert drift.main([str(_report(tmp_path, times)), "--record", str(out)]) == 0
         written = json.loads(out.read_text(encoding="utf-8"))
         assert "spread" in written, (
-            "the recording states no spread, so it read no prior - "
-            "`--record` is not reading tests/ci_reference.json")
+            "the recording states no spread, so it read no prior - `--record` is not reading tests/ci_reference.json"
+        )
 
     def test_a_first_recording_round_trips(self, tmp_path):
         """`UX-515`. This used to run `--record` and read the result
@@ -426,8 +422,7 @@ class TestCiIsReadAgainstItsOwnRecord:
         times = dict(tiers.recorded())
         report = _report(tmp_path, times)
         out = tmp_path / "ref.json"
-        out.write_text(json.dumps(drift.record(times, "a named runner")),
-                       encoding="utf-8")
+        out.write_text(json.dumps(drift.record(times, "a named runner")), encoding="utf-8")
         assert drift.main([str(report), "--against", str(out)]) == 0
 
     def test_a_recording_against_a_prior_carries_its_readings(self, tmp_path):
@@ -449,16 +444,16 @@ class TestCiIsReadAgainstItsOwnRecord:
         run_two[slower] = times[slower] * 6
 
         second = drift.record(run_two, "run two", first)
-        assert second["samples"][slower] == [
-            round(times[slower] * 2, 2), round(times[slower] * 6, 2)], (
-            "the readings were not carried and rebased by the shift")
+        assert second["samples"][slower] == [round(times[slower] * 2, 2), round(times[slower] * 6, 2)], (
+            "the readings were not carried and rebased by the shift"
+        )
         assert second["files"][slower] == round(times[slower] * 2, 2), (
             "one slow run set the bar a later run is judged against, "
-            "which is the single-sample reference UX-496 removed")
+            "which is the single-sample reference UX-496 removed"
+        )
 
     @pytest.mark.parametrize("shape", ["absent", "unrecorded"])
-    def test_the_step_says_so_rather_than_passing_over_no_reference(
-            self, tmp_path, capsys, shape):
+    def test_the_step_says_so_rather_than_passing_over_no_reference(self, tmp_path, capsys, shape):
         """Rot 4, and the one that would make this a guard that cannot
         fail. With nothing to compare against, the step prints the
         document to commit and says nothing is being checked - it does
@@ -477,18 +472,16 @@ class TestCiIsReadAgainstItsOwnRecord:
         """It is either waiting for its first CI run or it has real
         numbers - and if it has them, they came from a runner rather
         than from somebody's laptop, which is the whole point."""
-        held = json.loads(
-            drift.CI_REFERENCE.read_text(encoding="utf-8"))
+        held = json.loads(drift.CI_REFERENCE.read_text(encoding="utf-8"))
         assert "files" in held, held.keys()
         if held["files"]:
             assert "github" in held.get("measured_on", "").lower(), (
                 f"the reference was recorded on {held.get('measured_on')!r}, "
                 f"which is not the runner - see UX-418's outcome for the "
-                f"three ways a developer machine's seconds fail here")
+                f"three ways a developer machine's seconds fail here"
+            )
         else:
-            assert held.get("bootstrap"), (
-                "an empty reference with no note reads as a bug rather "
-                "than as a state")
+            assert held.get("bootstrap"), "an empty reference with no note reads as a bug rather than as a state"
 
     def test_a_refreshed_reference_carries_the_spread_it_saw(self):
         """Rot 3's other half, and `CI_DRIFT_FACTOR`'s only route to
@@ -497,8 +490,7 @@ class TestCiIsReadAgainstItsOwnRecord:
         from its peers between two CI runs, and only a refresh can see
         it. So the refresh writes it down."""
         first = self._ref(dict(tiers.recorded()))
-        times = {name: seconds * 1.2
-                 for name, seconds in tiers.recorded().items()}
+        times = {name: seconds * 1.2 for name, seconds in tiers.recorded().items()}
         victim = tiers.MEDIUM[0]
         times[victim] *= 2.0
         second = drift.record(times, "a runner, later", first)
@@ -506,8 +498,7 @@ class TestCiIsReadAgainstItsOwnRecord:
         assert second["spread"]["max"] == pytest.approx(2.0, abs=0.05)
         assert second["spread"]["files"] == len(first["files"])
 
-    def test_the_first_record_states_no_spread_rather_than_a_made_up_one(
-            self):
+    def test_the_first_record_states_no_spread_rather_than_a_made_up_one(self):
         """With nothing to compare against there is no spread, and a
         1.0 written in its place would read as a measurement."""
         assert "spread" not in drift.record(dict(tiers.recorded()), "a runner")
@@ -535,13 +526,9 @@ class TestTheShiftIsEstimatedWhereARatioMeansSomething:
 
     def _pair(self, small_ratio, big_ratio=1.0, smalls=200, bigs=40):
         """A reference and a run where the two size classes disagree."""
-        reference = {f"tests/unit/test_tiny_{i}.py": 0.05
-                     for i in range(smalls)}
-        reference.update({f"tests/unit/test_big_{i}.py": 8.0
-                          for i in range(bigs)})
-        times = {name: seconds * (small_ratio if "tiny" in name else
-                                  big_ratio)
-                 for name, seconds in reference.items()}
+        reference = {f"tests/unit/test_tiny_{i}.py": 0.05 for i in range(smalls)}
+        reference.update({f"tests/unit/test_big_{i}.py": 8.0 for i in range(bigs)})
+        times = {name: seconds * (small_ratio if "tiny" in name else big_ratio) for name, seconds in reference.items()}
         return times, {"files": reference}
 
     def test_a_crowd_of_tiny_files_does_not_set_the_shift(self):
@@ -552,8 +539,8 @@ class TestTheShiftIsEstimatedWhereARatioMeansSomething:
         times, reference = self._pair(small_ratio=1.6, big_ratio=1.0)
         _verdict, shift, _rows = drift.against(times, reference)
         assert shift == pytest.approx(1.0), (
-            f"shift {shift:.3f} - the tiny files outvoted the ones that "
-            f"carry the runner's speed")
+            f"shift {shift:.3f} - the tiny files outvoted the ones that carry the runner's speed"
+        )
 
     def test_the_files_that_carry_the_runner_do_set_it(self):
         """The other direction, so the fix is a distinction and not a
@@ -569,9 +556,10 @@ class TestTheShiftIsEstimatedWhereARatioMeansSomething:
         reference = {f"tests/unit/test_big_{i}.py": 8.0 for i in range(40)}
         reference["tests/unit/test_was_tiny.py"] = 0.05
         times = dict.fromkeys(reference, 8.0)
-        times["tests/unit/test_was_tiny.py"] = 30.0     # x600, and small
+        times["tests/unit/test_was_tiny.py"] = 30.0  # x600, and small
         assert "tests/unit/test_was_tiny.py" not in drift.shift_population(
-            {n: times[n] / reference[n] for n in reference}, reference)
+            {n: times[n] / reference[n] for n in reference}, reference
+        )
 
     def test_a_suite_with_too_few_big_files_keeps_its_estimator(self):
         """A median of four ratios is worse than a median of four
@@ -583,16 +571,14 @@ class TestTheShiftIsEstimatedWhereARatioMeansSomething:
         ratios = dict.fromkeys(reference, 1.2)
         assert len(drift.shift_population(ratios, reference)) == len(reference)
 
-    def test_the_run_reports_the_precision_of_its_own_shift(self, tmp_path,
-                                                            capsys):
+    def test_the_run_reports_the_precision_of_its_own_shift(self, tmp_path, capsys):
         """`UX-420` sized a threshold on one sample and its first armed
         run named thirty-one files on an unchanged suite. A later round
         can only do better with a series, so every run prints the
         population and spread behind its shift."""
         times = dict(tiers.recorded())
         reference = tmp_path / "ref.json"
-        reference.write_text(json.dumps(drift.record(times, "a runner")),
-                             encoding="utf-8")
+        reference.write_text(json.dumps(drift.record(times, "a runner")), encoding="utf-8")
         report = _report(tmp_path, times)
         assert drift.main([str(report), "--against", str(reference)]) == 0
         said = capsys.readouterr()
@@ -607,8 +593,8 @@ class TestTheShiftIsEstimatedWhereARatioMeansSomething:
         source = pathlib.Path(drift.__file__).read_text(encoding="utf-8")
         assert "UX-423" in source
         assert "4.208" in source, (
-            "the noise measurement that sized this is not in the file, so "
-            "the next round cannot re-check the choice")
+            "the noise measurement that sized this is not in the file, so the next round cannot re-check the choice"
+        )
 
 
 class TestTheFirstArmedRunIsTheRegressionSuite:
@@ -633,9 +619,19 @@ class TestTheFirstArmedRunIsTheRegressionSuite:
     #: something - and they carry the whole claim anyway, because the
     #: largest addition in the entire report is the first row's 2.4s.
     REPORTED = (
-        (5.9, 4.3), (4.4, 3.1), (3.8, 2.7), (1.9, 1.2), (1.3, 0.5),
-        (1.1, 0.7), (1.0, 0.7), (0.7, 0.4), (0.6, 0.4), (0.5, 0.3),
-        (0.4, 0.2), (0.3, 0.2))
+        (5.9, 4.3),
+        (4.4, 3.1),
+        (3.8, 2.7),
+        (1.9, 1.2),
+        (1.3, 0.5),
+        (1.1, 0.7),
+        (1.0, 0.7),
+        (0.7, 0.4),
+        (0.6, 0.4),
+        (0.5, 0.3),
+        (0.4, 0.2),
+        (0.3, 0.2),
+    )
 
     #: The run's own median shift, as the step reported it.
     SHIFT = 0.82
@@ -651,8 +647,7 @@ class TestTheFirstArmedRunIsTheRegressionSuite:
             name = f"tests/unit/test_steady_{index}.py"
             reference[name] = 1.0 + index * 0.05
             times[name] = reference[name] * self.SHIFT
-        return times, drift.record(reference and
-                                   dict(reference.items()))
+        return times, drift.record(reference and dict(reference.items()))
 
     def test_the_replay_really_is_that_run(self):
         """The premise. If the synthetic run's median is not the shift
@@ -666,9 +661,7 @@ class TestTheFirstArmedRunIsTheRegressionSuite:
         difference and not a tautology."""
         times, held = self._that_run()
         known = held["files"]
-        loud = [name for name in known
-                if times[name] / known[name] / self.SHIFT
-                > drift.CI_DRIFT_FACTOR]
+        loud = [name for name in known if times[name] / known[name] / self.SHIFT > drift.CI_DRIFT_FACTOR]
         assert len(loud) == len(self.REPORTED), len(loud)
 
     def test_the_rule_that_also_counts_seconds_reports_none(self):
@@ -746,14 +739,14 @@ class TestTheThreeFailuresAreTheRegressionSuite:
 
     #: `tests/tiers.py`'s comment block, as ratios. The distortion is
     #: per file, which is the whole finding - so it is applied per file.
-    OUTLIERS = {"tests/unit/test_output_schemas.py": 1.61,
-                "tests/unit/test_marginal_efficiency_gate.py": 1.73}
+    OUTLIERS = {"tests/unit/test_output_schemas.py": 1.61, "tests/unit/test_marginal_efficiency_gate.py": 1.73}
     MEDIAN_SHIFT = 1.05
 
     def _a_ci_run(self):
         """The developer machine's record, distorted the way CI was."""
-        return {name: seconds * self.OUTLIERS.get(name, self.MEDIAN_SHIFT)
-                for name, seconds in tiers.recorded().items()}
+        return {
+            name: seconds * self.OUTLIERS.get(name, self.MEDIAN_SHIFT) for name, seconds in tiers.recorded().items()
+        }
 
     def test_the_two_outliers_are_still_files_in_the_lists(self):
         """If either is renamed this class silently stops replaying
@@ -784,11 +777,10 @@ class TestTheThreeFailuresAreTheRegressionSuite:
         neighbours."""
         on_ci = self._a_ci_run()
         by_seconds = sorted(on_ci, key=on_ci.get, reverse=True)
-        recorded_order = sorted(tiers.recorded(),
-                                key=tiers.recorded().get, reverse=True)
+        recorded_order = sorted(tiers.recorded(), key=tiers.recorded().get, reverse=True)
         assert by_seconds != recorded_order, (
-            "the replayed distortion did not reorder anything, so this "
-            "clause is not replaying failure 3")
+            "the replayed distortion did not reorder anything, so this clause is not replaying failure 3"
+        )
         verdict, _shift, rows = drift.against(on_ci, drift.record(on_ci))
         assert (verdict, rows) == ("ok", []), (verdict, rows[:3])
 
@@ -811,19 +803,19 @@ class TestEachComparisonRunsWhereItMeansSomething:
 
     def test_one_command_runs_the_suite_and_reads_its_report(self):
         text = self.MAKEFILE.read_text(encoding="utf-8")
-        assert "test-tiers:" in text, (
-            "no target runs the drift check, so nothing does")
+        assert "test-tiers:" in text, "no target runs the drift check, so nothing does"
         target = text.split("test-tiers:", 1)[1].split("\n\n", 1)[0]
         assert "--junitxml=" in target, target
         assert "tools/dev_tier_drift.py" in target, target
-        assert ".PHONY:" in text and "test-tiers" in text.split(
-            ".PHONY:", 1)[1].splitlines()[0], "test-tiers is not phony"
+        assert ".PHONY:" in text and "test-tiers" in text.split(".PHONY:", 1)[1].splitlines()[0], (
+            "test-tiers is not phony"
+        )
 
     def test_it_costs_a_parse_and_not_a_second_suite(self):
-        for text, where in ((self.MAKEFILE.read_text(encoding="utf-8"),
-                             "test-tiers:"),
-                            (self.WORKFLOW.read_text(encoding="utf-8"),
-                             "--against")):
+        for text, where in (
+            (self.MAKEFILE.read_text(encoding="utf-8"), "test-tiers:"),
+            (self.WORKFLOW.read_text(encoding="utf-8"), "--against"),
+        ):
             step = text.split(where, 1)[1].split("\n\n", 1)[0]
             assert "pytest" not in step, (where, step)
 
@@ -845,24 +837,25 @@ class TestEachComparisonRunsWhereItMeansSomething:
         the `--against` step's script. It passed for a step it never
         read. Adding a third step with neither flag is what surfaced it.
         """
-        steps = [step.get("run") or ""
-                 for job in yaml.safe_load(self.WORKFLOW.read_text(
-                     encoding="utf-8"))["jobs"].values()
-                 for step in job.get("steps") or []
-                 if "dev_tier_drift.py" in (step.get("run") or "")]
+        steps = [
+            step.get("run") or ""
+            for job in yaml.safe_load(self.WORKFLOW.read_text(encoding="utf-8"))["jobs"].values()
+            for step in job.get("steps") or []
+            if "dev_tier_drift.py" in (step.get("run") or "")
+        ]
         assert steps, "CI runs no drift check at all"
         for script in steps:
             assert [flag for flag in self.MODES if flag in script], (
                 f"a CI step reads the developer floors: {script.strip()!r} "
-                f"- see UX-418's outcome for the three ways that fails")
+                f"- see UX-418's outcome for the three ways that fails"
+            )
         assert any("--against" in script for script in steps), (
-            "no CI step compares this run against the reference, so the "
-            "comparison UX-420 built is not running anywhere")
+            "no CI step compares this run against the reference, so the comparison UX-420 built is not running anywhere"
+        )
 
     def test_ci_writes_the_report_the_step_reads(self):
         text = self.WORKFLOW.read_text(encoding="utf-8")
-        assert "--junitxml=" in text, (
-            "no CI step writes a junit report, so the check reads nothing")
+        assert "--junitxml=" in text, "no CI step writes a junit report, so the check reads nothing"
 
     def test_one_interpreter_records_so_there_is_one_reference(self):
         """Four jobs would be four references to keep true, which is the
@@ -879,19 +872,21 @@ class TestEachComparisonRunsWhereItMeansSomething:
         text = self.WORKFLOW.read_text(encoding="utf-8")
         # `\s` after `--record` (`UX-950`): `--record-run` is a
         # different flag and must not match.
-        recording = [step
-                     for job in yaml.safe_load(text)["jobs"].values()
-                     for step in job.get("steps") or []
-                     if re.search(r"--record\s", step.get("run") or "")]
+        recording = [
+            step
+            for job in yaml.safe_load(text)["jobs"].values()
+            for step in job.get("steps") or []
+            if re.search(r"--record\s", step.get("run") or "")
+        ]
         assert len(recording) == 1, (
             f"{len(recording)} CI steps record a timing reference; the "
             f"reference is per runner-and-interpreter, so this needs a "
-            f"decision")
-        assert all(
-            "matrix.python-version ==" in str(step.get("if", ""))
-            for step in recording), (
+            f"decision"
+        )
+        assert all("matrix.python-version ==" in str(step.get("if", "")) for step in recording), (
             "the recording step is not pinned to one interpreter, so the "
-            "reference it writes depends on which job got there first")
+            "reference it writes depends on which job got there first"
+        )
 
     def test_every_job_keeps_a_junit_to_name_its_failures(self):
         """`UX-554`: the clause above no longer counts junits, so this
@@ -900,7 +895,8 @@ class TestEachComparisonRunsWhereItMeansSomething:
         text = self.WORKFLOW.read_text(encoding="utf-8")
         assert text.count("--junitxml=") >= 3, (
             f"only {text.count('--junitxml=')} CI step(s) write a junit; a "
-            f"job without one cannot name what failed (UX-554)")
+            f"job without one cannot name what failed (UX-554)"
+        )
 
 
 class TestAnExcursionMustRepeat:
@@ -938,8 +934,7 @@ class TestAnExcursionMustRepeat:
         for name in over:
             times[name] = times[name] * 2
         reference = tmp_path / "ref.json"
-        reference.write_text(json.dumps(drift.record(dict(tiers.recorded()))),
-                             encoding="utf-8")
+        reference.write_text(json.dumps(drift.record(dict(tiers.recorded()))), encoding="utf-8")
         argv = [str(_report(tmp_path, times)), "--against", str(reference)]
         if carry:
             argv += ["--carry", str(tmp_path / "carry.json")]
@@ -947,30 +942,29 @@ class TestAnExcursionMustRepeat:
         said = capsys.readouterr()
         return code, said.out + said.err
 
-    def test_only_the_file_two_runs_agree_on_is_reported(self, tmp_path,
-                                                         capsys):
+    def test_only_the_file_two_runs_agree_on_is_reported(self, tmp_path, capsys):
         """The acceptance test. `FLAKY` is over the gates on runs 1 and
         3 with a clean run between; `STEADY` is over on 2 and 3. Only
         `STEADY` has drifted, and only `STEADY` is reported."""
         first, _said = self._run(tmp_path, capsys, [self.FLAKY])
         second, _said = self._run(tmp_path, capsys, [self.STEADY])
-        third, said = self._run(tmp_path, capsys,
-                                [self.STEADY, self.FLAKY])
+        third, said = self._run(tmp_path, capsys, [self.STEADY, self.FLAKY])
         assert (first, second) == (0, 0), (
-            f"a single run over the gates failed the build ({first}, "
-            f"{second}); that is the red UX-442 was filed for")
+            f"a single run over the gates failed the build ({first}, {second}); that is the red UX-442 was filed for"
+        )
         assert third == 1, (
             f"{self.STEADY} was over the gates on two consecutive runs "
-            f"and nothing reported it - the rule now hides real drift")
+            f"and nothing reported it - the rule now hides real drift"
+        )
         reported = said.split("slower than CI's own record", 1)[1]
         assert self.STEADY in reported, reported
         assert self.FLAKY not in reported, (
             f"{self.FLAKY} recovered on run 2 and excursed again on run "
             f"3. Two excursions are not two *consecutive* excursions, "
-            f"and the run between is what says so")
+            f"and the run between is what says so"
+        )
 
-    def test_a_clean_run_between_them_breaks_the_chain(self, tmp_path,
-                                                       capsys):
+    def test_a_clean_run_between_them_breaks_the_chain(self, tmp_path, capsys):
         """The half that needs the carry written on runs that find
         nothing. An excursion, a run with nothing over the gates, then
         the same excursion again is two excursions and not two
@@ -981,10 +975,10 @@ class TestAnExcursionMustRepeat:
         assert clean == 0, said
         assert third == 0, (
             "a run that found nothing left the previous run's finding in "
-            "the carry, so an excursion either side of it confirmed")
+            "the carry, so an excursion either side of it confirmed"
+        )
 
-    def test_the_run_that_only_saw_it_once_still_says_so(self, tmp_path,
-                                                        capsys):
+    def test_the_run_that_only_saw_it_once_still_says_so(self, tmp_path, capsys):
         """Not a failure and not silence. A gate that swallows the first
         sample entirely would leave the second red with no history a
         reader could see."""
@@ -992,24 +986,20 @@ class TestAnExcursionMustRepeat:
         assert self.FLAKY in said and "UX-442" in said, said
         assert f"{drift.CI_DRIFT_RUNS} consecutive runs" in said, said
 
-    def test_a_branch_with_no_history_reports_nothing(self, tmp_path,
-                                                      capsys):
+    def test_a_branch_with_no_history_reports_nothing(self, tmp_path, capsys):
         """The cost, asserted rather than described: the first run of a
         branch has nothing to agree with, so it cannot report. A cache
         that failed to restore lands in the same state, which is why an
         unreadable carry is an empty history and not an error."""
         (tmp_path / "carry.json").write_text("not json", encoding="utf-8")
         code, _said = self._run(tmp_path, capsys, [self.STEADY])
-        assert code == 0, (
-            "an unreadable carry failed the build over its own absence")
-        assert [sorted(one) for one in
-                drift.carried(tmp_path / "carry.json")] == [
-            [self.STEADY]], (
+        assert code == 0, "an unreadable carry failed the build over its own absence"
+        assert [sorted(one) for one in drift.carried(tmp_path / "carry.json")] == [[self.STEADY]], (
             "the unreadable carry was not replaced by this run's finding, "
-            "so the next run has nothing to agree with either")
+            "so the next run has nothing to agree with either"
+        )
 
-    def test_without_a_carry_one_sample_still_decides(self, tmp_path,
-                                                     capsys):
+    def test_without_a_carry_one_sample_still_decides(self, tmp_path, capsys):
         """The rule needs memory, and a run given none has to say which
         rule it applied. Silently passing would turn a forgotten flag
         into a gate that cannot fail."""
@@ -1032,21 +1022,20 @@ class TestAnExcursionMustRepeat:
         # clause is about. What agreement decides *with* a readable
         # diff is `TestAgreementIsNotEvidenceOnItsOwn` below.
         assert drift.repeated([row], both) == ([row], [], [], []), (
-            "a file every run behind this one found was not confirmed")
+            "a file every run behind this one found was not confirmed"
+        )
         assert drift.repeated([row], gap) == ([], [], [row], []), (
-            "one run in the history was enough to confirm, so the rule "
-            "is 'ever' rather than 'consecutively'")
+            "one run in the history was enough to confirm, so the rule is 'ever' rather than 'consecutively'"
+        )
 
-    def test_the_history_is_bounded_by_the_constant(self, tmp_path,
-                                                    capsys):
+    def test_the_history_is_bounded_by_the_constant(self, tmp_path, capsys):
         """`CI_DRIFT_RUNS` is the whole rule, so the file it writes must
         not quietly accumulate a longer one - a carry holding every run
         a branch ever had would confirm on agreement with a fortnight
         ago."""
         for _ in range(4):
             self._run(tmp_path, capsys, [self.STEADY])
-        held = json.loads((tmp_path / "carry.json").read_text(
-            encoding="utf-8"))
+        held = json.loads((tmp_path / "carry.json").read_text(encoding="utf-8"))
         assert len(held["runs"]) == drift.CI_DRIFT_RUNS - 1, held["runs"]
 
 
@@ -1075,35 +1064,28 @@ class TestABaseExcursionIsReportedNotFailed:
         a branch run both at 50s - reported as the base's, exit 0, and
         never reaching the branch's own no-carry auto-confirm."""
         reference = tmp_path / "ref.json"
-        reference.write_text(json.dumps(self._reference(2.4)),
-                             encoding="utf-8")
+        reference.write_text(json.dumps(self._reference(2.4)), encoding="utf-8")
         base_carry = self._base_carry(tmp_path, round(50.0 / 2.4, 2))
         times = dict(tiers.recorded())
         times[self.NAME] = 50.0
-        argv = [str(_report(tmp_path, times)), "--against", str(reference),
-                "--base-carry", str(base_carry)]
+        argv = [str(_report(tmp_path, times)), "--against", str(reference), "--base-carry", str(base_carry)]
         code = drift.main(argv)
         said = capsys.readouterr().err
         assert code == 0, said
         assert "the base's" in said, said
         assert self.NAME in said, said
 
-    def test_a_file_base_never_read_slow_still_fails(self, tmp_path,
-                                                     capsys):
+    def test_a_file_base_never_read_slow_still_fails(self, tmp_path, capsys):
         """The clause names one file, not every excursion - a base
         carry that never saw this file over the gates leaves it to the
         ordinary rule (no --carry, so one sample decides, `UX-442`)."""
         reference = tmp_path / "ref.json"
-        reference.write_text(json.dumps(self._reference(2.4)),
-                             encoding="utf-8")
+        reference.write_text(json.dumps(self._reference(2.4)), encoding="utf-8")
         base_carry = self._base_carry(tmp_path, 1.02)  # a different file
-        base_carry.write_text(json.dumps(
-            {"runs": [{"tests/unit/test_not_this_one.py": 1.02}]}),
-            encoding="utf-8")
+        base_carry.write_text(json.dumps({"runs": [{"tests/unit/test_not_this_one.py": 1.02}]}), encoding="utf-8")
         times = dict(tiers.recorded())
         times[self.NAME] = 50.0
-        argv = [str(_report(tmp_path, times)), "--against", str(reference),
-                "--base-carry", str(base_carry)]
+        argv = [str(_report(tmp_path, times)), "--against", str(reference), "--base-carry", str(base_carry)]
         code = drift.main(argv)
         said = capsys.readouterr().err
         assert code == 1, said
@@ -1113,20 +1095,22 @@ class TestABaseExcursionIsReportedNotFailed:
         """`UX-803`'s Required Fix: a main carry not reachable from a PR
         run says so, rather than silently deciding either way."""
         reference = tmp_path / "ref.json"
-        reference.write_text(json.dumps(self._reference(2.4)),
-                             encoding="utf-8")
+        reference.write_text(json.dumps(self._reference(2.4)), encoding="utf-8")
         times = dict(tiers.recorded())
         times[self.NAME] = 50.0
-        argv = [str(_report(tmp_path, times)), "--against", str(reference),
-                "--base-carry", str(tmp_path / "missing.json")]
+        argv = [
+            str(_report(tmp_path, times)),
+            "--against",
+            str(reference),
+            "--base-carry",
+            str(tmp_path / "missing.json"),
+        ]
         code = drift.main(argv)
         said = capsys.readouterr().err
         assert code == 1, said
         assert "no carry from the base branch's own runs reachable" in said
 
-
-    def test_a_base_carry_equal_to_this_runs_own_excuses_everything(
-            self, tmp_path, capsys):
+    def test_a_base_carry_equal_to_this_runs_own_excuses_everything(self, tmp_path, capsys):
         """`UX-923`: the cost of restoring the default branch's carry
         *on* the default branch, where the base key and the own key are
         one series.
@@ -1140,29 +1124,24 @@ class TestABaseExcursionIsReportedNotFailed:
         `TestCiSuppliesTheMemoryTheRuleNeeds`.
         """
         reference = tmp_path / "ref.json"
-        reference.write_text(json.dumps(self._reference(2.4)),
-                             encoding="utf-8")
+        reference.write_text(json.dumps(self._reference(2.4)), encoding="utf-8")
         times = dict(tiers.recorded())
         times[self.NAME] = 50.0
         report = str(_report(tmp_path, times))
         own = tmp_path / "own_carry.json"
-        drift.carry(own, {self.NAME: round(50.0 / 2.4, 2)},
-                    "github-actions", [], shift=1.0)
+        drift.carry(own, {self.NAME: round(50.0 / 2.4, 2)}, "github-actions", [], shift=1.0)
         argv = [report, "--against", str(reference), "--carry", str(own)]
         alone = drift.main(list(argv))
         said = capsys.readouterr().err
-        assert alone == 1, (
-            f"the agreeing run did not confirm on its own, so this "
-            f"clause measures nothing: {said}")
+        assert alone == 1, f"the agreeing run did not confirm on its own, so this clause measures nothing: {said}"
         base = tmp_path / "base_carry.json"
         base.write_text(own.read_text(encoding="utf-8"), encoding="utf-8")
-        drift.carry(own, {self.NAME: round(50.0 / 2.4, 2)},
-                    "github-actions", [], shift=1.0)
+        drift.carry(own, {self.NAME: round(50.0 / 2.4, 2)}, "github-actions", [], shift=1.0)
         with_base = drift.main(argv + ["--base-carry", str(base)])
         said = capsys.readouterr().err
         assert with_base == 0 and "the base's" in said, (
-            f"expected the self-equal base carry to excuse the row it "
-            f"just confirmed: exit {with_base}: {said}")
+            f"expected the self-equal base carry to excuse the row it just confirmed: exit {with_base}: {said}"
+        )
 
 
 class TestAgreementIsNotEvidenceOnItsOwn:
@@ -1193,11 +1172,11 @@ class TestAgreementIsNotEvidenceOnItsOwn:
     def test_the_untouched_file_is_not_confirmed(self):
         """The acceptance test's clause. The diff explains nothing, so
         two agreeing runs report and do not fail."""
-        confirmed, unexplained, waiting, _new = drift.repeated(
-            [self.ROW], self.HISTORY, explained=set())
+        confirmed, unexplained, waiting, _new = drift.repeated([self.ROW], self.HISTORY, explained=set())
         assert confirmed == [], (
             "a file nothing in the diff names was confirmed as drift on "
-            "two runs read against one record - which is UX-476's defect")
+            "two runs read against one record - which is UX-476's defect"
+        )
         assert unexplained == [self.ROW], (unexplained, waiting)
 
     def test_a_file_the_diff_names_is_still_confirmed(self):
@@ -1205,11 +1184,10 @@ class TestAgreementIsNotEvidenceOnItsOwn:
         than a wider gate. `UX-418`'s defect - a real tier change
         shipping unseen - stays caught, because a real tier change has a
         cause in the diff."""
-        confirmed, unexplained, _waiting, _new = drift.repeated(
-            [self.ROW], self.HISTORY, explained={self.NAME})
+        confirmed, unexplained, _waiting, _new = drift.repeated([self.ROW], self.HISTORY, explained={self.NAME})
         assert confirmed == [self.ROW], (
-            "a file the diff touches was not confirmed, so a real tier "
-            "change would ship unseen (UX-418)")
+            "a file the diff touches was not confirmed, so a real tier change would ship unseen (UX-418)"
+        )
         assert unexplained == []
 
     def test_a_base_that_does_not_resolve_is_no_evidence_at_all(self, monkeypatch):
@@ -1222,15 +1200,15 @@ class TestAgreementIsNotEvidenceOnItsOwn:
         assert drift.explained_by("nope/nothing") is None, (
             "an unresolvable base read as a diff that explains nothing, "
             "so a failed fetch turns the gate off rather than falling "
-            "back to agreement")
+            "back to agreement"
+        )
         assert drift.explained_by(None) is None
         # The base that *does* resolve, against a diff this clause owns
         # rather than the developer's (`UX-513`).
         _pin_the_diff(monkeypatch, ["bga/report/text.py"])
         assert isinstance(drift.explained_by("HEAD"), set)
 
-    def test_a_selector_that_names_everything_is_no_explanation(
-            self, monkeypatch):
+    def test_a_selector_that_names_everything_is_no_explanation(self, monkeypatch):
         """`UX-494`: the defect this whole mechanism shipped with.
 
         `dev_touching.select` returns the entire suite under the single
@@ -1257,22 +1235,25 @@ class TestAgreementIsNotEvidenceOnItsOwn:
         reintroduced.
         """
         from tools import dev_touching
-        monkeypatch.setattr(dev_touching, "changed_files",
-                            lambda base: ["tests/conftest.py"])
+
+        monkeypatch.setattr(dev_touching, "changed_files", lambda base: ["tests/conftest.py"])
         chosen, why = dev_touching.select(["tests/conftest.py"])
         assert "*" in why and len(chosen) > 100, (
             "the shared-harness fallback no longer reports itself as "
-            "'*', so explained_by cannot detect it and UX-494 is back")
+            "'*', so explained_by cannot detect it and UX-494 is back"
+        )
 
         answer = drift.explained_by("HEAD")
         assert answer is drift.NO_CAUSE_FILTER, (
             "the whole-suite fallback was read as a diff that names "
             "every test file, so every excursion reads as caused by "
-            "the branch and the gate confirms on one sample (UX-494)")
+            "the branch and the gate confirms on one sample (UX-494)"
+        )
         assert answer is not None, (
             "`None` is 'the diff could not be read', and `repeated` "
             "confirms on it - the shared-harness case must not share "
-            "that verdict (UX-557)")
+            "that verdict (UX-557)"
+        )
 
     def test_no_cause_filter_reports_rather_than_failing(self):
         """`UX-557`. The whole point: a row that agreed across the
@@ -1285,10 +1266,11 @@ class TestAgreementIsNotEvidenceOnItsOwn:
         no filter could run there is no such evidence.
         """
         confirmed, unexplained, waiting, _new = drift.repeated(
-            [self.ROW], self.HISTORY, explained=drift.NO_CAUSE_FILTER)
+            [self.ROW], self.HISTORY, explained=drift.NO_CAUSE_FILTER
+        )
         assert confirmed == [], (
-            "an agreed row with no cause filter still fails the build, "
-            "so the gate confirms on agreement alone (UX-557)")
+            "an agreed row with no cause filter still fails the build, so the gate confirms on agreement alone (UX-557)"
+        )
         assert unexplained == [self.ROW], (unexplained, waiting)
 
     def test_an_unreadable_diff_confirms_on_agreement_alone(self):
@@ -1296,13 +1278,11 @@ class TestAgreementIsNotEvidenceOnItsOwn:
         checkout, a failed fetch. Then the gate is exactly what UX-442
         left, because a gate that went quiet over its own missing
         evidence would be worse than one that reports."""
-        confirmed, unexplained, _waiting, _new = drift.repeated(
-            [self.ROW], self.HISTORY, explained=None)
+        confirmed, unexplained, _waiting, _new = drift.repeated([self.ROW], self.HISTORY, explained=None)
         assert confirmed == [self.ROW], confirmed
         assert unexplained == []
 
-    def test_the_readings_are_carried_so_the_message_can_show_them(
-            self, tmp_path):
+    def test_the_readings_are_carried_so_the_message_can_show_them(self, tmp_path):
         """The series is what a reader judges: two runs agreeing at
         x1.78 and x1.66 against a record of 12.6s say the record is the
         odd one out, and two wild readings say the runner is. The tool
@@ -1312,20 +1292,17 @@ class TestAgreementIsNotEvidenceOnItsOwn:
         # What the *next* run restores is this run's reading, and the
         # series it then shows is that one under its own.
         assert drift.carried(path) == [{self.NAME: 1.66}]
-        assert drift.series(self.NAME, 1.51, drift.carried(path)) == [
-            1.51, 1.66]
+        assert drift.series(self.NAME, 1.51, drift.carried(path)) == [1.51, 1.66]
         assert drift.series(self.NAME, 1.66, self.HISTORY) == [1.66, 1.78]
 
-    def test_a_carry_from_before_this_change_still_remembers(self,
-                                                             tmp_path):
+    def test_a_carry_from_before_this_change_still_remembers(self, tmp_path):
         """CI restores a cache written by the previous run, which on the
         commit this lands in was written in the old shape. Names with no
         readings, rather than a discarded memory: a run that lost its
         history would confirm nothing and the gate would go quiet for
         one run."""
         path = tmp_path / "carry.json"
-        path.write_text(json.dumps({"runs": [[self.NAME]]}),
-                        encoding="utf-8")
+        path.write_text(json.dumps({"runs": [[self.NAME]]}), encoding="utf-8")
         held = drift.carried(path)
         assert [sorted(one) for one in held] == [[self.NAME]]
         assert drift.series(self.NAME, 1.66, held) == [1.66]
@@ -1370,21 +1347,18 @@ class TestANewFileRecordsItselfRatherThanFailing:
 
     def _reference(self, tmp_path):
         path = tmp_path / "ref.json"
-        path.write_text(json.dumps(drift.record(dict(tiers.recorded()))),
-                        encoding="utf-8")
+        path.write_text(json.dumps(drift.record(dict(tiers.recorded()))), encoding="utf-8")
         return path
 
     def _run(self, tmp_path, capsys, times, carry=True):
-        argv = [str(_report(tmp_path, times)),
-                "--against", str(self._reference(tmp_path))]
+        argv = [str(_report(tmp_path, times)), "--against", str(self._reference(tmp_path))]
         if carry:
             argv += ["--carry", str(tmp_path / "carry.json")]
         code = drift.main(argv)
         said = capsys.readouterr()
         return code, said.out + said.err
 
-    def test_the_first_run_meeting_a_new_file_is_green(self, tmp_path,
-                                                       capsys):
+    def test_the_first_run_meeting_a_new_file_is_green(self, tmp_path, capsys):
         """The acceptance test's first half. One medium-tier file the
         reference has never seen, and the run that measures it passes."""
         times = dict(tiers.recorded())
@@ -1393,7 +1367,8 @@ class TestANewFileRecordsItselfRatherThanFailing:
         assert code == 0, (
             f"the run that first measured {self.NEW} failed over the "
             f"reference not carrying it yet - which is UX-503's defect:\n"
-            f"{said}")
+            f"{said}"
+        )
 
     def test_the_run_after_it_lands_is_green_too(self, tmp_path, capsys):
         """The run that actually reported it. A file absent from the
@@ -1408,7 +1383,8 @@ class TestANewFileRecordsItselfRatherThanFailing:
         assert second == 0, (
             f"the second run confirmed {self.NEW} as slower than a "
             f"reference entry it does not have - two runs agreeing about "
-            f"nothing is not evidence (UX-503):\n{said}")
+            f"nothing is not evidence (UX-503):\n{said}"
+        )
 
     def test_it_is_printed_rather_than_passed_over(self, tmp_path, capsys):
         """Green is not the same as silent. A file nothing judges has to
@@ -1420,8 +1396,7 @@ class TestANewFileRecordsItselfRatherThanFailing:
         assert self.NEW in said, said
         assert "does not carry yet" in said, said
 
-    def test_a_file_the_reference_holds_still_reds_on_the_second_run(
-            self, tmp_path, capsys):
+    def test_a_file_the_reference_holds_still_reds_on_the_second_run(self, tmp_path, capsys):
         """The acceptance test's second half, and the reason this is a
         distinction and not a wider gate. `UX-418`'s defect - a real tier
         change shipping unseen - stays caught."""
@@ -1434,11 +1409,11 @@ class TestANewFileRecordsItselfRatherThanFailing:
         assert second == 1, (
             f"{victim} was over both gates on two consecutive runs and "
             f"the run passed - UX-503 widened the gate instead of "
-            f"narrowing what it judges:\n{said}")
+            f"narrowing what it judges:\n{said}"
+        )
         assert victim in said.split("slower than CI's own record", 1)[1]
 
-    def test_a_recorded_file_that_vanished_is_not_a_new_file(
-            self, tmp_path, capsys):
+    def test_a_recorded_file_that_vanished_is_not_a_new_file(self, tmp_path, capsys):
         """The third class, and the one a rename produces. The old name
         is in the reference and not in this run; the new name is in this
         run and not in the reference. Neither is drift, and reading the
@@ -1448,11 +1423,12 @@ class TestANewFileRecordsItselfRatherThanFailing:
         gone = tiers.LARGE[0]
         times[self.NEW] = times.pop(gone)
         code, said = self._run(tmp_path, capsys, times)
-        assert code == 0, (f"a rename reddened the drift step:\n{said}")
+        assert code == 0, f"a rename reddened the drift step:\n{said}"
         assert gone not in said, (
             f"{gone} is in the reference and not in this run, and the "
             f"step named it anyway - a file this run did not measure "
-            f"cannot have drifted:\n{said}")
+            f"cannot have drifted:\n{said}"
+        )
 
     def test_the_split_happens_before_the_drift_decision(self):
         """`repeated` directly, because the exit code above would pass
@@ -1460,17 +1436,15 @@ class TestANewFileRecordsItselfRatherThanFailing:
         also a green run, and would red on the next one. The bucket is
         the claim."""
         absent = (self.NEW, 30.0, None, None)
-        present = ("tests/unit/test_emphasis_is_a_budget.py", 16.9,
-                   12.58, 1.66)
+        present = ("tests/unit/test_emphasis_is_a_budget.py", 16.9, 12.58, 1.66)
         history = [{present[0]: 1.78}]
-        confirmed, unexplained, waiting, recorded = drift.repeated(
-            [absent, present], history, explained={present[0]})
+        confirmed, unexplained, waiting, recorded = drift.repeated([absent, present], history, explained={present[0]})
         assert recorded == [absent], (
             "a file with no reference entry reached the drift decision, "
             "where the only verdicts are 'slower than' a number it does "
-            "not have (UX-503)")
-        assert (confirmed, unexplained, waiting) == ([present], [], []), (
-            confirmed, unexplained, waiting)
+            "not have (UX-503)"
+        )
+        assert (confirmed, unexplained, waiting) == ([present], [], []), (confirmed, unexplained, waiting)
 
 
 class TestTheReferenceAdoptsWhatItDoesNotCarry:
@@ -1490,8 +1464,7 @@ class TestTheReferenceAdoptsWhatItDoesNotCarry:
     def _pair(self, image=1.0, extra=None):
         """A reference, and a candidate taken `image` times its clock."""
         reference = drift.record(dict(tiers.recorded()), "the recording run")
-        times = {name: seconds * image
-                 for name, seconds in tiers.recorded().items()}
+        times = {name: seconds * image for name, seconds in tiers.recorded().items()}
         times.update(extra or {})
         return reference, drift.record(times, "a later run")
 
@@ -1501,13 +1474,12 @@ class TestTheReferenceAdoptsWhatItDoesNotCarry:
         unjudgeable against it for as long as the entry stood - the
         cross-clock comparison UX-418 ruled out, arriving through the
         back door."""
-        reference, candidate = self._pair(image=1.3,
-                                          extra={self.NEW: 40.0 * 1.3})
+        reference, candidate = self._pair(image=1.3, extra={self.NEW: 40.0 * 1.3})
         document, added = drift.adopt(reference, candidate)
         assert set(added) == {self.NEW}, added
         assert added[self.NEW] == pytest.approx(40.0, rel=0.02), (
-            f"the candidate's own seconds were written in: {added} - the "
-            f"reference now mixes two clocks (UX-418)")
+            f"the candidate's own seconds were written in: {added} - the reference now mixes two clocks (UX-418)"
+        )
         assert document["files"][self.NEW] == added[self.NEW]
 
     def test_an_entry_the_reference_holds_is_never_rewritten(self):
@@ -1516,22 +1488,21 @@ class TestTheReferenceAdoptsWhatItDoesNotCarry:
         what it now costs, and that is UX-447's human decision - this
         step only adds names nothing has ever recorded."""
         victim = tiers.LARGE[0]
-        reference, candidate = self._pair(extra={victim: 300.0,
-                                                 self.NEW: 40.0})
+        reference, candidate = self._pair(extra={victim: 300.0, self.NEW: 40.0})
         document, added = drift.adopt(reference, candidate)
         assert set(added) == {self.NEW}, added
         assert document["files"][victim] == reference["files"][victim], (
             f"{victim} tripled in the candidate and the adopt step moved "
             f"its reference entry - the gate can now raise its own "
-            f"ceiling with nobody deciding to (UX-447)")
+            f"ceiling with nobody deciding to (UX-447)"
+        )
 
     def test_a_candidate_from_another_machine_is_refused(self):
         """`against`'s `stale`, at write time. A candidate three times
         the reference is not this runner, and rows divided by a shift
         outside `IMAGE_BAND` would be placed on a clock that is about to
         be replaced wholesale."""
-        reference, candidate = self._pair(image=3.0,
-                                          extra={self.NEW: 40.0 * 3})
+        reference, candidate = self._pair(image=3.0, extra={self.NEW: 40.0 * 3})
         document, added = drift.adopt(reference, candidate)
         assert added == {}, added
         assert document == reference
@@ -1562,8 +1533,11 @@ class TestTheReferenceAdoptsWhatItDoesNotCarry:
         document, added = drift.adopt(reference, candidate)
         assert added == {}, added
         assert document["files"].keys() == reference["files"].keys()
-        grew = [name for name, seen in document["samples"].items()
-                if len(seen) > len((reference.get("samples") or {}).get(name, []))]
+        grew = [
+            name
+            for name, seen in document["samples"].items()
+            if len(seen) > len((reference.get("samples") or {}).get(name, []))
+        ]
         assert grew, "no file gained a reading, so the entry stays one sample"
 
     def test_the_adopted_rows_say_they_were_adopted(self):
@@ -1576,8 +1550,7 @@ class TestTheReferenceAdoptsWhatItDoesNotCarry:
         assert document["adopted"] == [self.NEW], document["adopted"]
         assert "adopted" not in drift.record(dict(tiers.recorded()))
 
-    def test_a_run_with_no_candidate_is_not_a_failure(self, tmp_path,
-                                                      capsys):
+    def test_a_run_with_no_candidate_is_not_a_failure(self, tmp_path, capsys):
         """`always()` puts this job on runs whose `test` job died before
         the record step. A bookkeeping job reddening the default branch
         over a missing artifact buys nothing."""
@@ -1617,19 +1590,19 @@ class TestAStepRestartsTheSamples:
         second, agreeing with the one before it, restarts the window."""
         reference = self._reference([2.41, 2.39, 2.41, 2.41])
         after_one, _added = drift.adopt(reference, self._candidate(50.0))
-        assert after_one["samples"][self.NAME] == [
-            2.41, 2.39, 2.41, 2.41, 50.0], after_one["samples"][self.NAME]
-        assert after_one["files"][self.NAME] == pytest.approx(2.41), (
-            "one push over the gates already moved the median")
+        assert after_one["samples"][self.NAME] == [2.41, 2.39, 2.41, 2.41, 50.0], after_one["samples"][self.NAME]
+        assert after_one["files"][self.NAME] == pytest.approx(2.41), "one push over the gates already moved the median"
         after_two, _added = drift.adopt(after_one, self._candidate(50.0))
         assert after_two["samples"][self.NAME] == [50.0], (
             f"a second consecutive main run over the gates did not "
-            f"restart the window: {after_two['samples'][self.NAME]}")
+            f"restart the window: {after_two['samples'][self.NAME]}"
+        )
         assert after_two["files"][self.NAME] == 50.0
         assert self.NAME in after_two["adopted"], (
             "a restarted file's one sample is exactly as far from "
             "measured_on as an added row's, and adopted is where that "
-            "is stated (UX-803's Required Fix)")
+            "is stated (UX-803's Required Fix)"
+        )
 
     def test_a_single_reading_only_appends(self):
         """The discriminator: one main run over the gates, with nothing
@@ -1638,8 +1611,7 @@ class TestAStepRestartsTheSamples:
         cannot erase four good ones."""
         reference = self._reference([2.41, 2.39, 2.41, 2.41])
         after_one, _added = drift.adopt(reference, self._candidate(50.0))
-        assert after_one["samples"][self.NAME] == [
-            2.41, 2.39, 2.41, 2.41, 50.0]
+        assert after_one["samples"][self.NAME] == [2.41, 2.39, 2.41, 2.41, 50.0]
         assert self.NAME not in (after_one.get("adopted") or [])
 
 
@@ -1681,10 +1653,8 @@ class TestTheReadingAdoptedIsTheRunsOwn:
         carried copies come from."""
         reference = drift.record(dict(tiers.recorded()))
         reference["files"][self.NAME] = self.RECORDED
-        reference["samples"][self.NAME] = [
-            self.RECORDED] * drift.CI_REFERENCE_SAMPLES
-        times = {name: round(seconds * self.SHIFT, 2)
-                 for name, seconds in tiers.recorded().items()}
+        reference["samples"][self.NAME] = [self.RECORDED] * drift.CI_REFERENCE_SAMPLES
+        times = {name: round(seconds * self.SHIFT, 2) for name, seconds in tiers.recorded().items()}
         times[self.NAME] = self.READ
         return reference, drift.record(times, "run 35664785880", reference)
 
@@ -1693,14 +1663,11 @@ class TestTheReadingAdoptedIsTheRunsOwn:
         the replayed candidate does not hold 6.28 beside its real
         13.28, this class is replaying something else."""
         _reference, candidate = self._that_run()
-        assert candidate["spread"]["shift"] == pytest.approx(
-            self.SHIFT, abs=0.005), candidate["spread"]["shift"]
+        assert candidate["spread"]["shift"] == pytest.approx(self.SHIFT, abs=0.005), candidate["spread"]["shift"]
         assert candidate["files"][self.NAME] == pytest.approx(6.28), (
-            f"the log's candidate reads 6.28 here: "
-            f"{candidate['files'][self.NAME]}")
-        assert candidate["samples"][self.NAME] == [
-            6.28, 6.28, 6.28, 6.28, self.READ], (
-            candidate["samples"][self.NAME])
+            f"the log's candidate reads 6.28 here: {candidate['files'][self.NAME]}"
+        )
+        assert candidate["samples"][self.NAME] == [6.28, 6.28, 6.28, 6.28, self.READ], candidate["samples"][self.NAME]
 
     def test_the_acceptance_case(self):
         """The reading lands in the window, and the run after it - over
@@ -1709,20 +1676,18 @@ class TestTheReadingAdoptedIsTheRunsOwn:
         first time."""
         reference, candidate = self._that_run()
         after_one, _added = drift.adopt(reference, candidate)
-        assert after_one["samples"][self.NAME][-1] == pytest.approx(
-            self.ON_THIS_CLOCK, abs=0.01), (
+        assert after_one["samples"][self.NAME][-1] == pytest.approx(self.ON_THIS_CLOCK, abs=0.01), (
             f"the run read {self.READ}s and the window took "
             f"{after_one['samples'][self.NAME][-1]} - the entry is "
-            f"adopting its own committed number back (UX-924)")
-        assert after_one["files"][self.NAME] == self.RECORDED, (
-            "one reading is not meant to move a five-wide median")
-        times = {name: round(seconds * self.SHIFT, 2)
-                 for name, seconds in tiers.recorded().items()}
+            f"adopting its own committed number back (UX-924)"
+        )
+        assert after_one["files"][self.NAME] == self.RECORDED, "one reading is not meant to move a five-wide median"
+        times = {name: round(seconds * self.SHIFT, 2) for name, seconds in tiers.recorded().items()}
         times[self.NAME] = self.READ
-        after_two, _added = drift.adopt(
-            after_one, drift.record(times, "the run after it", after_one))
-        assert after_two["samples"][self.NAME] == [pytest.approx(
-            self.ON_THIS_CLOCK, abs=0.02)], after_two["samples"][self.NAME]
+        after_two, _added = drift.adopt(after_one, drift.record(times, "the run after it", after_one))
+        assert after_two["samples"][self.NAME] == [pytest.approx(self.ON_THIS_CLOCK, abs=0.02)], after_two["samples"][
+            self.NAME
+        ]
         assert self.NAME in after_two["adopted"]
 
     def test_the_three_numbers_a_window_offers_are_told_apart(self):
@@ -1732,19 +1697,17 @@ class TestTheReadingAdoptedIsTheRunsOwn:
         this run's own seconds."""
         reference = drift.record(dict(tiers.recorded()))
         reference["files"][self.NAME] = self.RECORDED
-        reference["samples"][self.NAME] = [
-            self.RECORDED] * drift.CI_REFERENCE_SAMPLES
+        reference["samples"][self.NAME] = [self.RECORDED] * drift.CI_REFERENCE_SAMPLES
         candidate = drift.record(dict(tiers.recorded()), "a run at 1.0")
         candidate["files"][self.NAME] = 7.0
         candidate["samples"][self.NAME] = [9.0, 5.0, 6.0, 7.0, self.READ]
-        assert statistics.median_low(
-            candidate["samples"][self.NAME]) == candidate["files"][self.NAME]
+        assert statistics.median_low(candidate["samples"][self.NAME]) == candidate["files"][self.NAME]
         after, _added = drift.adopt(reference, candidate)
-        assert after["samples"][self.NAME][-1] == pytest.approx(
-            self.READ, abs=0.05), (
+        assert after["samples"][self.NAME][-1] == pytest.approx(self.READ, abs=0.05), (
             f"7.0 is the candidate's own median and 9.0 its oldest "
             f"reading; the window took "
-            f"{after['samples'][self.NAME][-1]}")
+            f"{after['samples'][self.NAME][-1]}"
+        )
 
     def test_a_candidate_with_no_samples_keeps_its_files(self):
         """Every document written before `UX-496` is that shape, and
@@ -1754,8 +1717,7 @@ class TestTheReadingAdoptedIsTheRunsOwn:
         candidate["files"][self.NAME] = 7.0
         del candidate["samples"]
         after, _added = drift.adopt(reference, candidate)
-        assert after["samples"][self.NAME][-1] == pytest.approx(7.0,
-                                                               abs=0.05)
+        assert after["samples"][self.NAME][-1] == pytest.approx(7.0, abs=0.05)
 
     def test_the_shift_is_still_the_medians_and_not_the_readings(self):
         """`UX-924`'s stated fork. This candidate's `files` sit at the
@@ -1768,13 +1730,13 @@ class TestTheReadingAdoptedIsTheRunsOwn:
         times = dict(tiers.recorded())
         times[small_file()] = 40.0
         candidate = drift.record(times, "a run at 1.0")
-        candidate["samples"] = {name: [seconds * 2]
-                                for name, seconds in times.items()}
+        candidate["samples"] = {name: [seconds * 2] for name, seconds in times.items()}
         _document, added = drift.adopt(reference, candidate)
         assert added[small_file()] == pytest.approx(80.0, abs=0.05), (
             f"the new row landed at {added[small_file()]}s, so the shift "
             f"was estimated on the readings (2.0) and not on the "
-            f"medians (1.0)")
+            f"medians (1.0)"
+        )
 
 
 class TestTheRunnerVerdictNeedsASeriesToo:
@@ -1804,16 +1766,13 @@ class TestTheRunnerVerdictNeedsASeriesToo:
 
     def _reference(self, tmp_path):
         path = tmp_path / "ref.json"
-        path.write_text(json.dumps(drift.record(dict(tiers.recorded()))),
-                        encoding="utf-8")
+        path.write_text(json.dumps(drift.record(dict(tiers.recorded()))), encoding="utf-8")
         return path
 
     def _run(self, tmp_path, capsys, image, carry=True):
         """One CI run on a runner `image` times the reference's clock."""
-        times = {name: seconds * image
-                 for name, seconds in tiers.recorded().items()}
-        argv = [str(_report(tmp_path, times)),
-                "--against", str(self._reference(tmp_path))]
+        times = {name: seconds * image for name, seconds in tiers.recorded().items()}
+        argv = [str(_report(tmp_path, times)), "--against", str(self._reference(tmp_path))]
         if carry:
             argv += ["--carry", str(tmp_path / "carry.json")]
         code = drift.main(argv)
@@ -1824,18 +1783,14 @@ class TestTheRunnerVerdictNeedsASeriesToo:
     #: the direction the real failure came from.
     FAST = 0.5
 
-    def test_one_fast_runner_does_not_fail_the_build(self, tmp_path,
-                                                     capsys):
+    def test_one_fast_runner_does_not_fail_the_build(self, tmp_path, capsys):
         """The acceptance test's first half, and the red this item was
         filed on."""
         code, said = self._run(tmp_path, capsys, self.FAST)
-        assert code == 0, (
-            f"one runner outside the band failed the build - the red "
-            f"UX-508 was filed for:\n{said}")
+        assert code == 0, f"one runner outside the band failed the build - the red UX-508 was filed for:\n{said}"
         assert "one runner's afternoon" in said, said
 
-    def test_two_agreeing_runs_still_say_the_reference_is_stale(
-            self, tmp_path, capsys):
+    def test_two_agreeing_runs_still_say_the_reference_is_stale(self, tmp_path, capsys):
         """The other half, so this is a distinction and not a wider
         gate. A reference that really has stopped describing the runner
         must still be reported, or `UX-420`'s comparison is off."""
@@ -1843,12 +1798,11 @@ class TestTheRunnerVerdictNeedsASeriesToo:
         second, said = self._run(tmp_path, capsys, self.FAST)
         assert first == 0, first
         assert second == 1, (
-            f"two consecutive runs agreed the reference does not "
-            f"describe this runner and nothing reported it:\n{said}")
+            f"two consecutive runs agreed the reference does not describe this runner and nothing reported it:\n{said}"
+        )
         assert "re-record" in said, said
 
-    def test_a_runner_that_recovers_breaks_the_chain(self, tmp_path,
-                                                    capsys):
+    def test_a_runner_that_recovers_breaks_the_chain(self, tmp_path, capsys):
         """`UX-442`'s rule, on this quantity: two excursions with a
         normal run between them are not two consecutive ones, and only
         a carry written on the quiet run says so."""
@@ -1857,11 +1811,10 @@ class TestTheRunnerVerdictNeedsASeriesToo:
         third, said = self._run(tmp_path, capsys, self.FAST)
         assert ordinary == 0, ordinary
         assert third == 0, (
-            f"the run between them was inside the band, so this is one "
-            f"excursion and not two in a row:\n{said}")
+            f"the run between them was inside the band, so this is one excursion and not two in a row:\n{said}"
+        )
 
-    def test_without_a_carry_one_sample_still_decides(self, tmp_path,
-                                                     capsys):
+    def test_without_a_carry_one_sample_still_decides(self, tmp_path, capsys):
         """`UX-442` left this shape deliberately and it holds here: a
         gate that went quiet because a flag was forgotten would be worse
         than one that reports."""
@@ -1874,13 +1827,13 @@ class TestTheRunnerVerdictNeedsASeriesToo:
         the wrong reason - a run that failed to write its shift also
         never confirms, and would look like the fix working."""
         import tempfile
+
         with tempfile.TemporaryDirectory() as where:
             path = pathlib.Path(where) / "carry.json"
             drift.carry(path, {}, "probe", [], shift=0.58, shifts=[])
             assert drift.shifted(path) == [0.58], drift.shifted(path)
             assert drift.out_of_band(0.55, [0.58]) is True
-            assert drift.out_of_band(0.55, []) is False, (
-                "a run with no memory confirmed on its own reading")
+            assert drift.out_of_band(0.55, []) is False, "a run with no memory confirmed on its own reading"
             assert drift.out_of_band(1.0, [0.58]) is False
 
     def test_a_carry_from_before_this_change_has_no_shifts(self):
@@ -1888,10 +1841,10 @@ class TestTheRunnerVerdictNeedsASeriesToo:
         this lands in was written without the key. No memory rather than
         a crash, and the run after it decides alone."""
         import tempfile
+
         with tempfile.TemporaryDirectory() as where:
             path = pathlib.Path(where) / "carry.json"
-            path.write_text(json.dumps({"runs": [{}], "measured_on": "old"}),
-                            encoding="utf-8")
+            path.write_text(json.dumps({"runs": [{}], "measured_on": "old"}), encoding="utf-8")
             assert drift.shifted(path) == []
 
 
@@ -1928,8 +1881,7 @@ class TestEveryBranchOfTheMessageIsReached:
 
     def _run(self, tmp_path, capsys, times, base=None, carry=True):
         reference = tmp_path / "ref.json"
-        reference.write_text(json.dumps(drift.record(dict(tiers.recorded()))),
-                             encoding="utf-8")
+        reference.write_text(json.dumps(drift.record(dict(tiers.recorded()))), encoding="utf-8")
         argv = [str(_report(tmp_path, times)), "--against", str(reference)]
         if carry:
             argv += ["--carry", str(tmp_path / "carry.json")]
@@ -1969,7 +1921,8 @@ class TestEveryBranchOfTheMessageIsReached:
         assert "nothing in this branch's diff that names them" in said, said
         assert "readings:" in said, (
             "the readings series never printed, so `readings()` - and the "
-            "module-level `series()` it calls - was not executed")
+            "module-level `series()` it calls - was not executed"
+        )
         assert "x2.0" in said or "x1.9" in said, said
 
     def test_the_confirmed_message_prints(self, tmp_path, capsys):
@@ -2040,8 +1993,7 @@ class TestTheSpreadIsTheShiftTheGateUses:
     def _mixed(self):
         times = dict(tiers.recorded())
         # Outnumber the recorded files, or both medians land on 1.0.
-        times.update({f"tests/unit/test_tiny_{i}.py": 0.05
-                      for i in range(2 * len(times))})
+        times.update({f"tests/unit/test_tiny_{i}.py": 0.05 for i in range(2 * len(times))})
         return times
 
     def test_the_recorded_shift_is_the_gates_own(self):
@@ -2061,13 +2013,15 @@ class TestTheSpreadIsTheShiftTheGateUses:
         assert round(over_everything, 3) != round(gate, 3), (
             f"the fixture cannot tell the two medians apart "
             f"({over_everything} vs {gate}), so this clause proves "
-            f"nothing about which one `spread` takes")
+            f"nothing about which one `spread` takes"
+        )
         saw = drift.spread(times, reference)
         assert saw["shift"] == round(gate, 3), (
             f"the spread's shift is {saw['shift']} and the one `against` "
             f"divides by is {round(gate, 3)}, so the history "
             f"accumulating in the reference describes a quantity the "
-            f"gate never applies (UX-476)")
+            f"gate never applies (UX-476)"
+        )
 
     def test_it_says_how_many_files_voted_on_that_shift(self):
         """`files` and `shift_files` are different numbers, and the
@@ -2079,8 +2033,7 @@ class TestTheSpreadIsTheShiftTheGateUses:
         saw = drift.spread(times, reference)
         known = reference["files"]
         ratios = {n: times[n] / known[n] for n in known if known[n] > 0}
-        assert saw["shift_files"] == len(
-            drift.shift_population(ratios, known))
+        assert saw["shift_files"] == len(drift.shift_population(ratios, known))
         assert saw["shift_files"] < saw["files"], saw
 
 
@@ -2101,7 +2054,8 @@ class TestCiSuppliesTheMemoryTheRuleNeeds:
         step = text.split("--against", 1)[1].split("\n\n", 1)[0]
         assert "--carry" in step, (
             f"CI's drift step has no run-to-run memory, so one sample "
-            f"decides it again - which is UX-442 undone: {step!r}")
+            f"decides it again - which is UX-442 undone: {step!r}"
+        )
 
     def test_the_drift_step_is_given_the_branchs_base(self):
         """`UX-476`: without `--base` the step confirms on agreement
@@ -2110,7 +2064,8 @@ class TestCiSuppliesTheMemoryTheRuleNeeds:
         step = text.split("--against", 1)[1].split("\n\n", 1)[0]
         assert "--base" in step, (
             f"CI's drift step is given no base, so two runs against one "
-            f"record decide it again - UX-476 undone: {step!r}")
+            f"record decide it again - UX-476 undone: {step!r}"
+        )
 
     def test_the_base_is_fetched_before_the_step_reads_it(self):
         """The checkout is shallow. A base that does not resolve makes
@@ -2118,36 +2073,30 @@ class TestCiSuppliesTheMemoryTheRuleNeeds:
         agreement - loud rather than silent, but not what the step is
         for."""
         text = self._text()
-        assert "git fetch" in text and "default_branch" in text, (
-            "nothing fetches the base the drift step diffs against")
+        assert "git fetch" in text and "default_branch" in text, "nothing fetches the base the drift step diffs against"
 
     def test_the_carry_is_restored_and_saved_around_it(self):
         text = self._text()
         path = re.search(r'--carry "([^"]+)"', text).group(1)
-        for action, why in (("cache/restore",
-                             "nothing restores it, so every run is a first "
-                             "run and the gate never reports"),
-                            ("cache/save",
-                             "nothing saves it, so this run's finding is "
-                             "thrown away with the runner")):
-            steps = [block for block in text.split("      - ")
-                     if action in block and path in block]
+        for action, why in (
+            ("cache/restore", "nothing restores it, so every run is a first run and the gate never reports"),
+            ("cache/save", "nothing saves it, so this run's finding is thrown away with the runner"),
+        ):
+            steps = [block for block in text.split("      - ") if action in block and path in block]
             assert steps, f"{action}: {why}"
 
     def test_the_save_runs_when_the_step_reported(self):
         """The run worth remembering is the one that just failed, and
         a save gated on success would forget exactly it."""
         text = self._text()
-        save = [block for block in text.split("      - ")
-                if "cache/save" in block][0]
+        save = [block for block in text.split("      - ") if "cache/save" in block][0]
         # The step's own `if:`, not the block - the comment introducing
         # the next step says "always()" too, and reading the block let
         # this clause pass a mutation that removed the gate (R9).
-        gate = [line for line in save.splitlines()
-                if line.startswith("        if:")]
+        gate = [line for line in save.splitlines() if line.startswith("        if:")]
         assert gate and "always()" in gate[0], (
-            "the carry is saved only on a green run, so a reported file "
-            "cannot be confirmed by the run after it")
+            "the carry is saved only on a green run, so a reported file cannot be confirmed by the run after it"
+        )
 
     def test_a_branch_reads_its_own_series(self):
         """Two branches sharing a carry would confirm one branch's
@@ -2170,11 +2119,12 @@ class TestCiSuppliesTheMemoryTheRuleNeeds:
         """
         jobs = yaml.safe_load(self._text())["jobs"]
         cache_steps = [
-            step for job in jobs.values() for step in job.get("steps") or []
+            step
+            for job in jobs.values()
+            for step in job.get("steps") or []
             if str(step.get("uses", "")).startswith("actions/cache")
         ]
-        carry_steps = [step for step in cache_steps
-                       if "-carry-" in str(step.get("with", {}).get("key", ""))]
+        carry_steps = [step for step in cache_steps if "-carry-" in str(step.get("with", {}).get("key", ""))]
         assert carry_steps, "no cache step carries a *-carry- key"
         for step in carry_steps:
             key = step["with"]["key"]
@@ -2185,29 +2135,35 @@ class TestCiSuppliesTheMemoryTheRuleNeeds:
                 # `github.ref`; the family's own-branch save step below
                 # still covers every entry it can restore.
                 continue
-            assert "github.ref" in key, (
-                f"the carry cache key {key!r} does not name the branch")
-        families = sorted({re.match(r"(\S+-carry-)", step["with"]["key"]).group(1)
-                           for step in carry_steps})
+            assert "github.ref" in key, f"the carry cache key {key!r} does not name the branch"
+        families = sorted({re.match(r"(\S+-carry-)", step["with"]["key"]).group(1) for step in carry_steps})
         assert set(families) >= {"tier-carry-", "perf-carry-"}, (
             f"expected at least the tier-carry- and perf-carry- families, "
-            f"found {families} - a family the workflow no longer names")
+            f"found {families} - a family the workflow no longer names"
+        )
         for family in families:
-            saves = [step for step in carry_steps
-                     if str(step["uses"]).startswith("actions/cache/save")
-                     and step["with"]["key"].startswith(family)]
+            saves = [
+                step
+                for step in carry_steps
+                if str(step["uses"]).startswith("actions/cache/save") and step["with"]["key"].startswith(family)
+            ]
             assert saves, f"{family!r}: no cache/save step carries this key"
             for step in saves:
                 assert "always()" in str(step.get("if", "")), (
                     f"{family!r}'s save step does not run under always(), "
                     f"so a red run's carry - the one worth remembering - "
-                    f"is never saved")
+                    f"is never saved"
+                )
 
     def _carry_steps(self):
         jobs = yaml.safe_load(self._text())["jobs"]
-        return [step for job in jobs.values() for step in job.get("steps") or []
-                if str(step.get("uses", "")).startswith("actions/cache")
-                and "-carry-" in str(step.get("with", {}).get("key", ""))]
+        return [
+            step
+            for job in jobs.values()
+            for step in job.get("steps") or []
+            if str(step.get("uses", "")).startswith("actions/cache")
+            and "-carry-" in str(step.get("with", {}).get("key", ""))
+        ]
 
     def test_a_restore_asks_for_the_version_its_save_wrote(self):
         """`UX-923`: the key is not what decides whether a restore hits.
@@ -2232,8 +2188,7 @@ class TestCiSuppliesTheMemoryTheRuleNeeds:
         saved = {}
         for step in steps:
             if str(step["uses"]).startswith("actions/cache/save"):
-                saved.setdefault(step["with"]["key"].split("-carry-")[0],
-                                 set()).add(step["with"]["path"])
+                saved.setdefault(step["with"]["key"].split("-carry-")[0], set()).add(step["with"]["path"])
         assert saved, "no cache/save step carries a *-carry- key"
         for step in steps:
             if str(step["uses"]).startswith("actions/cache/save"):
@@ -2244,7 +2199,8 @@ class TestCiSuppliesTheMemoryTheRuleNeeds:
                 f"{step['with']['path']!r}, which no {family}-carry- save "
                 f"writes - the cache version is a hash of that path, so "
                 f"this restore cannot hit whatever its key matches "
-                f"(UX-923); saves write {sorted(saved.get(family, ()))}")
+                f"(UX-923); saves write {sorted(saved.get(family, ()))}"
+            )
 
     def test_the_base_carry_is_placed_by_a_step_that_can_place_it(self):
         """`UX-923`: `extractTar` is `tar -xf <archive> -P -C
@@ -2262,23 +2218,26 @@ class TestCiSuppliesTheMemoryTheRuleNeeds:
         """
         text = self._text()
         base = re.search(r'--base-carry "([^"]+)"', text).group(1)
-        steps = [step for job in yaml.safe_load(text)["jobs"].values()
-                 for step in job.get("steps") or []]
-        assert not [step for step in steps
-                    if str(step.get("uses", "")).startswith("actions/cache")
-                    and str(step.get("with", {}).get("path", "")) == base], (
+        steps = [step for job in yaml.safe_load(text)["jobs"].values() for step in job.get("steps") or []]
+        assert not [
+            step
+            for step in steps
+            if str(step.get("uses", "")).startswith("actions/cache")
+            and str(step.get("with", {}).get("path", "")) == base
+        ], (
             f"a cache step names {base} as its path, which restores "
             f"nothing there - the archive's members carry the path they "
-            f"were saved from (UX-923)")
+            f"were saved from (UX-923)"
+        )
         # Not the gate step itself: `--base-carry <path>` names the path
         # too, and reading the whole job let this clause pass a mutation
         # that deleted the only step placing the file.
-        placing = [step for step in steps
-                   if base in str(step.get("run", ""))
-                   and "--base-carry" not in str(step.get("run", ""))]
-        assert placing, (
-            f"nothing in the job produces {base}, so --base-carry reads "
-            f"a file that is never written")
+        placing = [
+            step
+            for step in steps
+            if base in str(step.get("run", "")) and "--base-carry" not in str(step.get("run", ""))
+        ]
+        assert placing, f"nothing in the job produces {base}, so --base-carry reads a file that is never written"
 
     def test_the_base_carrys_arrival_is_said_below_the_gate(self):
         """`UX-923`: and where a session can read it.
@@ -2297,36 +2256,45 @@ class TestCiSuppliesTheMemoryTheRuleNeeds:
         """
         text = self._text()
         base = re.search(r'--base-carry "([^"]+)"', text).group(1)
-        steps = [step for job in yaml.safe_load(text)["jobs"].values()
-                 for step in job.get("steps") or []]
-        gate = [i for i, step in enumerate(steps)
-                if "dev_tier_drift.py" in str(step.get("run", ""))
-                and "--against" in str(step.get("run", ""))]
-        saying = [i for i, step in enumerate(steps)
-                  if base in str(step.get("run", ""))
-                  and "::notice::" in str(step.get("run", ""))]
+        steps = [step for job in yaml.safe_load(text)["jobs"].values() for step in job.get("steps") or []]
+        gate = [
+            i
+            for i, step in enumerate(steps)
+            if "dev_tier_drift.py" in str(step.get("run", "")) and "--against" in str(step.get("run", ""))
+        ]
+        saying = [
+            i
+            for i, step in enumerate(steps)
+            if base in str(step.get("run", "")) and "::notice::" in str(step.get("run", ""))
+        ]
         assert gate and saying, (
             "no step says whether the base carry arrived, so the only "
-            "witness is a log line no session can read (UX-923)")
+            "witness is a log line no session can read (UX-923)"
+        )
         assert min(saying) > min(gate), (
             "the base carry's arrival is announced above the gate, "
             "which is outside the 5,000-line window the jobs API "
-            "returns - unreadable, the same as not saying it (UX-923)")
+            "returns - unreadable, the same as not saying it (UX-923)"
+        )
         for step in (steps[i] for i in saying):
             assert "always()" in str(step.get("if", "")), (
                 f"{step['name']!r} does not run under always(), so a "
                 f"run the gate failed never says whether the carry it "
-                f"read arrived")
-        own = [i for i, step in enumerate(steps)
-               if "github.ref }}-${{ github.run_id" in
-               str(step.get("with", {}).get("key", ""))
-               and "tier-carry-" in str(step.get("with", {}).get("key", ""))]
-        cross = [i for i, step in enumerate(steps)
-                 if "tier-carry-refs/heads/" in
-                 str(step.get("with", {}).get("key", ""))]
+                f"read arrived"
+            )
+        own = [
+            i
+            for i, step in enumerate(steps)
+            if "github.ref }}-${{ github.run_id" in str(step.get("with", {}).get("key", ""))
+            and "tier-carry-" in str(step.get("with", {}).get("key", ""))
+        ]
+        cross = [
+            i for i, step in enumerate(steps) if "tier-carry-refs/heads/" in str(step.get("with", {}).get("key", ""))
+        ]
         assert own and cross and min(cross) < min(own), (
             "the base-branch restore runs after the branch's own, so a "
-            "hit overwrites this branch's carry with the base's (UX-923)")
+            "hit overwrites this branch's carry with the base's (UX-923)"
+        )
 
     def test_the_default_branch_does_not_excuse_itself(self):
         """`UX-923`: on the default branch the two keys are one series,
@@ -2349,7 +2317,8 @@ class TestCiSuppliesTheMemoryTheRuleNeeds:
             assert "github.ref !=" in gate and "default_branch" in gate, (
                 f"{step['name']!r} restores the default branch's own "
                 f"carry on the default branch itself, where it excuses "
-                f"every row agreement would confirm (UX-923): if {gate!r}")
+                f"every row agreement would confirm (UX-923): if {gate!r}"
+            )
 
 
 class TestTheRecordStepDoesNotBuryTheFailure:
@@ -2386,8 +2355,7 @@ class TestTheRecordStepDoesNotBuryTheFailure:
                 steps[name] = []
             elif name is not None and line.startswith("      - "):
                 name = None
-            elif name is not None and (line.startswith("        ")
-                                       or not line.strip()):
+            elif name is not None and (line.startswith("        ") or not line.strip()):
                 steps[name].append(line)
             elif name is not None:
                 name = None
@@ -2399,36 +2367,34 @@ class TestTheRecordStepDoesNotBuryTheFailure:
 
         `\\s` after `--record` (`UX-950`): `dev_flake_census.py
         --record-run` is a different flag and must not match."""
-        found = [(name, body) for name, body in cls._steps().items()
-                 if re.search(r"--record\s", body)]
+        found = [(name, body) for name, body in cls._steps().items() if re.search(r"--record\s", body)]
         assert len(found) == 1, (
             f"{len(found)} CI steps record the timings, so which one this "
-            f"item is about is a guess: {[name for name, _ in found]}")
+            f"item is about is a guess: {[name for name, _ in found]}"
+        )
         name, body = found[0]
         # Quoted, because the path CI records to contains a space
         # inside `${{ runner.temp }}` and `\S+` stops at it.
-        argument = re.search(r'--record\s+("[^"]*"|\S+)',
-                             body).group(1).strip('"')
+        argument = re.search(r'--record\s+("[^"]*"|\S+)', body).group(1).strip('"')
         return name, body, argument
 
-    def test_a_recorded_run_prints_a_line_and_not_the_document(self,
-                                                               tmp_path,
-                                                               capsys):
+    def test_a_recorded_run_prints_a_line_and_not_the_document(self, tmp_path, capsys):
         """The measurement the rest of this class rests on. Both modes,
         same report, counted - because "writes a file" is only worth
         asserting in CI if it is what shortens the log."""
         report = _report(tmp_path, dict(tiers.recorded()))
-        assert drift.main([str(report), "--record",
-                           str(tmp_path / "ref.json")]) == 0
+        assert drift.main([str(report), "--record", str(tmp_path / "ref.json")]) == 0
         to_a_file = capsys.readouterr().out.splitlines()
         assert drift.main([str(report), "--record", "-"]) == 0
         to_the_log = capsys.readouterr().out.splitlines()
         assert len(to_a_file) <= 2, (
             f"recording to a file printed {len(to_a_file)} lines; the "
-            f"whole point is that the failure above it stays readable")
+            f"whole point is that the failure above it stays readable"
+        )
         assert len(to_the_log) > 50, (
             f"recording to stdout printed {len(to_the_log)} lines, so the "
-            f"two modes no longer differ and this guard decides nothing")
+            f"two modes no longer differ and this guard decides nothing"
+        )
 
     def test_ci_records_to_a_file(self):
         name, _body, argument = self._recording()
@@ -2436,11 +2402,13 @@ class TestTheRecordStepDoesNotBuryTheFailure:
             f"the {name!r} step dumps the whole reference to stdout again. "
             f"It runs after the suite, so on a red the document is the "
             f"tail of the log and the failing assertion is not - which is "
-            f"the two reds UX-441 was filed for")
+            f"the two reds UX-441 was filed for"
+        )
         assert "${{ runner.temp }}" in argument, (
             f"the {name!r} step records to {argument!r}, which is inside "
             f"the checkout - a workspace the next step and check-clean "
-            f"both read")
+            f"both read"
+        )
 
     def test_it_still_runs_when_the_suite_fails(self):
         """The half `UX-427` chose and this item must not undo: gating
@@ -2448,18 +2416,19 @@ class TestTheRecordStepDoesNotBuryTheFailure:
         name, body, _argument = self._recording()
         assert "always()" in body, (
             f"the {name!r} step no longer runs on a red, so the runs a "
-            f"refresh most wants are the ones that record nothing")
+            f"refresh most wants are the ones that record nothing"
+        )
 
     def test_the_document_is_still_a_click_away(self):
         """Writing it to a file and stopping there would not shorten the
         log, it would delete the record - which is `UX-427` undone."""
         _name, _body, argument = self._recording()
-        uploads = [body for body in self._steps().values()
-                   if "upload-artifact" in body and argument in body]
+        uploads = [body for body in self._steps().values() if "upload-artifact" in body and argument in body]
         assert uploads, (
             f"nothing uploads {argument!r}, so the timings are written "
             f"into a runner that is thrown away and UX-427's step now "
-            f"records for nobody")
+            f"records for nobody"
+        )
 
     def test_the_log_says_where_the_document_went(self):
         """The cost of taking it out of the log. The tool's own advice
@@ -2468,14 +2437,17 @@ class TestTheRecordStepDoesNotBuryTheFailure:
         Now it is an artifact, so the step has to name it - otherwise
         the reader is left with advice and no numbers."""
         _name, body, _argument = self._recording()
-        uploaded = [re.search(r"\n          name: (\S+)", other).group(1)
-                    for other in self._steps().values()
-                    if "upload-artifact" in other]
+        uploaded = [
+            re.search(r"\n          name: (\S+)", other).group(1)
+            for other in self._steps().values()
+            if "upload-artifact" in other
+        ]
         assert uploaded, "no artifact is uploaded at all"
         assert any(name in body for name in uploaded), (
             f"the recording step's own output never names any of "
             f"{uploaded}, so a reader following 're-record with --record' "
-            f"has nowhere to get this run's numbers from")
+            f"has nowhere to get this run's numbers from"
+        )
 
 
 class TestTheFailureNameIsTheLastThingInTheLog:
@@ -2507,17 +2479,18 @@ class TestTheFailureNameIsTheLastThingInTheLog:
 
     @classmethod
     def _jobs(cls):
-        return yaml.safe_load(
-            cls.WORKFLOW.read_text(encoding="utf-8"))["jobs"]
+        return yaml.safe_load(cls.WORKFLOW.read_text(encoding="utf-8"))["jobs"]
 
     @classmethod
     def _naming_steps(cls):
         """`{job: [index, ...]}` for every step that names the failures."""
         found = {}
         for job, body in cls._jobs().items():
-            where = [index
-                     for index, step in enumerate(body.get("steps") or [])
-                     if cls.NAMES_THEM in str(step.get("run", ""))]
+            where = [
+                index
+                for index, step in enumerate(body.get("steps") or [])
+                if cls.NAMES_THEM in str(step.get("run", ""))
+            ]
             if where:
                 found[job] = where
         return found
@@ -2529,36 +2502,41 @@ class TestTheFailureNameIsTheLastThingInTheLog:
         jobs, naming = self._jobs(), self._naming_steps()
         assert naming, (
             f"no job runs {self.NAMES_THEM}, so UX-554's step is gone and "
-            f"there is no failure name for this rule to keep last")
+            f"there is no failure name for this rule to keep last"
+        )
         for job, where in naming.items():
             steps = jobs[job]["steps"]
             assert len(where) == 1, (
-                f"job {job!r} names the failures at steps {where}; which "
-                f"one has to be last is then a guess")
-            after = [step.get("name") or step.get("uses")
-                     for step in steps[where[0] + 1:]]
+                f"job {job!r} names the failures at steps {where}; which one has to be last is then a guess"
+            )
+            after = [step.get("name") or step.get("uses") for step in steps[where[0] + 1 :]]
             assert not after, (
                 f"job {job!r} runs {len(after)} step(s) after the one that "
                 f"names the failing tests: {after}. On a red 3.11 run the "
                 f"reference document alone is ~400 lines, so the name is "
-                f"out of reach of a log tail - UX-558")
+                f"out of reach of a log tail - UX-558"
+            )
 
     @classmethod
     def _a_red_junit(cls, path, rows):
         """A junit in CI's shape: every file timed, one real failure."""
-        cases = [f'<testcase classname="{name[:-3].replace("/", ".")}'
-                 f'.TestThing" name="test_one" time="{seconds}" />'
-                 for name, seconds in rows.items()]
+        cases = [
+            f'<testcase classname="{name[:-3].replace("/", ".")}.TestThing" name="test_one" time="{seconds}" />'
+            for name, seconds in rows.items()
+        ]
         cases.append(
             '<testcase classname="tests.unit.test_the_server_knows'
             '_whether_the_trace_was_fetched.TestIt" '
             f'name="{cls.RED_ID}" time="0.02">'
             '<failure message="AssertionError: 0 == 1">body</failure>'
-            "</testcase>")
+            "</testcase>"
+        )
         path.write_text(
             '<?xml version="1.0" encoding="utf-8"?><testsuites>'
             f'<testsuite name="pytest" failures="1" tests="{len(cases)}">'
-            f'{"".join(cases)}</testsuite></testsuites>', encoding="utf-8")
+            f'{"".join(cases)}</testsuite></testsuites>',
+            encoding="utf-8",
+        )
         return path
 
     @classmethod
@@ -2587,30 +2565,27 @@ class TestTheFailureNameIsTheLastThingInTheLog:
         log = []
         for _name, script in self._the_red_path():
             if "git fetch" in script:
-                continue                      # the network, not the log
-            script = re.sub(r"\$\{\{\s*runner\.temp\s*\}\}", str(tmp_path),
-                            script)
+                continue  # the network, not the log
+            script = re.sub(r"\$\{\{\s*runner\.temp\s*\}\}", str(tmp_path), script)
             # `UX-995`: `--source` is now derived, not typed, so the
             # replay has to fill in the cell this red path simulates.
-            script = re.sub(r"\$\{\{\s*matrix\.python-version\s*\}\}",
-                            "3.12", script)
+            script = re.sub(r"\$\{\{\s*matrix\.python-version\s*\}\}", "3.12", script)
             # `python` is not a name every environment binds; the
             # workflow's own runner does.
-            script = re.sub(r"(?m)^(\s*)python ", rf"\1{sys.executable} ",
-                            script)
-            done = subprocess.run(["bash", "-c", script], cwd=REPO,
-                                  capture_output=True, text=True, timeout=300)
+            script = re.sub(r"(?m)^(\s*)python ", rf"\1{sys.executable} ", script)
+            done = subprocess.run(["bash", "-c", script], cwd=REPO, capture_output=True, text=True, timeout=300)
             log.extend((done.stdout + done.stderr).splitlines())
         assert len(log) > 200, (
             f"the replayed red path printed {len(log)} lines, so 'inside "
             f"the last {self.TAIL_LINES}' is true of any order at all and "
-            f"this clause decides nothing")
-        tail = log[-self.TAIL_LINES:]
+            f"this clause decides nothing"
+        )
+        tail = log[-self.TAIL_LINES :]
         assert any(self.RED_ID in line for line in tail), (
             f"the failing id is not in the last {self.TAIL_LINES} of "
             f"{len(log)} lines; a reader with the log and not the artifact "
-            f"cannot name what failed. The tail is:\n"
-            + "\n".join(tail[:8]))
+            f"cannot name what failed. The tail is:\n" + "\n".join(tail[:8])
+        )
 
 
 class TestTheToolIsRunnable:
@@ -2618,7 +2593,11 @@ class TestTheToolIsRunnable:
         report = _report(tmp_path, {**tiers.recorded(), small_file(): 0.2})
         done = subprocess.run(
             [sys.executable, "tools/dev_tier_drift.py", str(report)],
-            capture_output=True, text=True, cwd=REPO, timeout=60)
+            capture_output=True,
+            text=True,
+            cwd=REPO,
+            timeout=60,
+        )
         assert done.returncode == 0, done.stderr
         assert "tiers ok" in done.stdout, done.stdout
         # The boundaries, printed whether or not anything drifted: they
@@ -2652,15 +2631,13 @@ class TestTheGateLineReachesALogTail:
 
     OFF = "tests/unit/test_the_page_has_geometry.py"
 
-    def _run(self, tmp_path, capsys, times, reference=None, carry=None,
-             tag="s"):
+    def _run(self, tmp_path, capsys, times, reference=None, carry=None, tag="s"):
         ref = tmp_path / f"ref-{tag}.json"
-        ref.write_text(json.dumps(
-            drift.record(dict(tiers.recorded())) if reference is None
-            else reference), encoding="utf-8")
+        ref.write_text(
+            json.dumps(drift.record(dict(tiers.recorded())) if reference is None else reference), encoding="utf-8"
+        )
         summary = tmp_path / f"gate-{tag}.txt"
-        argv = [str(_report(tmp_path, times)), "--against", str(ref),
-                "--summary", str(summary)]
+        argv = [str(_report(tmp_path, times)), "--against", str(ref), "--summary", str(summary)]
         if carry:
             argv += ["--carry", str(carry)]
         code = drift.main(argv)
@@ -2668,62 +2645,50 @@ class TestTheGateLineReachesALogTail:
         return code, summary
 
     def _scaled(self, factor, flaky=1.0):
-        times = {name: seconds * factor
-                 for name, seconds in tiers.recorded().items()}
+        times = {name: seconds * factor for name, seconds in tiers.recorded().items()}
         times[self.OFF] = times[self.OFF] * flaky
         return times
 
-    def test_an_unrecorded_reference_still_leaves_a_line(self, tmp_path,
-                                                         capsys):
-        code, summary = self._run(tmp_path, capsys, self._scaled(1.0),
-                                  reference={}, tag="blank")
+    def test_an_unrecorded_reference_still_leaves_a_line(self, tmp_path, capsys):
+        code, summary = self._run(tmp_path, capsys, self._scaled(1.0), reference={}, tag="blank")
         assert code == 0
         assert "holds no recorded numbers yet" in summary.read_text()
 
-    def test_a_reference_naming_nothing_still_leaves_a_line(self, tmp_path,
-                                                            capsys):
+    def test_a_reference_naming_nothing_still_leaves_a_line(self, tmp_path, capsys):
         code, summary = self._run(
-            tmp_path, capsys, self._scaled(1.0), tag="none",
-            reference={"measured_on": "elsewhere",
-                       "files": {"tests/unit/test_not_here.py": 1.0}})
+            tmp_path,
+            capsys,
+            self._scaled(1.0),
+            tag="none",
+            reference={"measured_on": "elsewhere", "files": {"tests/unit/test_not_here.py": 1.0}},
+        )
         assert code == 2
         assert "names none of the" in summary.read_text()
 
-    def test_a_stale_runner_with_no_memory_still_leaves_a_line(self,
-                                                              tmp_path,
-                                                              capsys):
-        code, summary = self._run(tmp_path, capsys, self._scaled(3.0),
-                                  carry=tmp_path / "carry-one.json",
-                                  tag="stale1")
+    def test_a_stale_runner_with_no_memory_still_leaves_a_line(self, tmp_path, capsys):
+        code, summary = self._run(tmp_path, capsys, self._scaled(3.0), carry=tmp_path / "carry-one.json", tag="stale1")
         assert code == 0
         said = summary.read_text()
         assert "outside the band" in said and "nothing was failed" in said
 
-    def test_a_stale_runner_that_repeated_still_leaves_a_line(self,
-                                                              tmp_path,
-                                                              capsys):
+    def test_a_stale_runner_that_repeated_still_leaves_a_line(self, tmp_path, capsys):
         carry = tmp_path / "carry-two.json"
         times = self._scaled(3.0)
         self._run(tmp_path, capsys, times, carry=carry, tag="stale2a")
-        code, summary = self._run(tmp_path, capsys, times, carry=carry,
-                                  tag="stale2b")
+        code, summary = self._run(tmp_path, capsys, times, carry=carry, tag="stale2b")
         assert code == 1
         said = summary.read_text()
         assert "outside the band" in said and "so were the run(s)" in said
 
     def test_an_ok_run_still_leaves_a_line(self, tmp_path, capsys):
-        code, summary = self._run(tmp_path, capsys, self._scaled(1.0),
-                                  tag="ok")
+        code, summary = self._run(tmp_path, capsys, self._scaled(1.0), tag="ok")
         assert code == 0
         assert summary.read_text().startswith("tiers ok: ")
 
-    def test_a_file_waiting_for_a_second_run_still_leaves_a_line(self,
-                                                                 tmp_path,
-                                                                 capsys):
-        code, summary = self._run(tmp_path, capsys,
-                                  self._scaled(1.0, flaky=2.0),
-                                  carry=tmp_path / "carry-wait.json",
-                                  tag="wait")
+    def test_a_file_waiting_for_a_second_run_still_leaves_a_line(self, tmp_path, capsys):
+        code, summary = self._run(
+            tmp_path, capsys, self._scaled(1.0, flaky=2.0), carry=tmp_path / "carry-wait.json", tag="wait"
+        )
         assert code == 0
         assert summary.read_text().startswith("tiers ok: ")
 
@@ -2731,31 +2696,25 @@ class TestTheGateLineReachesALogTail:
         carry = tmp_path / "carry-red.json"
         times = self._scaled(1.0, flaky=2.0)
         self._run(tmp_path, capsys, times, carry=carry, tag="red-a")
-        code, summary = self._run(tmp_path, capsys, times, carry=carry,
-                                  tag="red-b")
+        code, summary = self._run(tmp_path, capsys, times, carry=carry, tag="red-b")
         assert code == 1
         said = summary.read_text()
         assert "file(s) measured against" in said
         assert self.OFF in said, said
 
-    def test_the_line_carries_the_shift_the_gate_printed(self, tmp_path,
-                                                         capsys):
+    def test_the_line_carries_the_shift_the_gate_printed(self, tmp_path, capsys):
         """The pairing `UX-488` could not make: the printed shift and
         the recorded spread must be the same run's, so the line has to
         carry a shift at all."""
-        code, summary = self._run(tmp_path, capsys, self._scaled(1.3),
-                                  tag="shift")
+        code, summary = self._run(tmp_path, capsys, self._scaled(1.3), tag="shift")
         assert code == 0
-        assert re.search(r"this run x1\.3\d", summary.read_text()), (
-            summary.read_text())
+        assert re.search(r"this run x1\.3\d", summary.read_text()), summary.read_text()
 
     def test_no_summary_asked_for_writes_no_file(self, tmp_path, capsys):
         """`--summary` is opt-in: a local run leaves nothing behind."""
         ref = tmp_path / "ref-opt.json"
-        ref.write_text(json.dumps(drift.record(dict(tiers.recorded()))),
-                       encoding="utf-8")
-        assert drift.main([str(_report(tmp_path, self._scaled(1.0))),
-                           "--against", str(ref)]) == 0
+        ref.write_text(json.dumps(drift.record(dict(tiers.recorded()))), encoding="utf-8")
+        assert drift.main([str(_report(tmp_path, self._scaled(1.0))), "--against", str(ref)]) == 0
         capsys.readouterr()
         assert not list(tmp_path.glob("gate-*.txt"))
 
@@ -2791,8 +2750,7 @@ class TestAReferenceEntryIsMoreThanOneSample:
     def _grown(self, readings):
         """A reference that has seen `readings` of each named file, the
         rest of the suite steady so every run's shift is 1.0."""
-        steady = {f"tests/unit/test_steady_{i}.py": 2.0 + i * 0.5
-                  for i in range(30)}
+        steady = {f"tests/unit/test_steady_{i}.py": 2.0 + i * 0.5 for i in range(30)}
         document = None
         for run in range(len(next(iter(readings.values())))):
             times = dict(steady)
@@ -2804,8 +2762,8 @@ class TestAReferenceEntryIsMoreThanOneSample:
         document, _ = self._grown({self.BAD: [12.8, 8.19, 12.81, 13.62]})
         assert document["samples"][self.BAD] == [12.8, 8.19, 12.81, 13.62]
         assert document["files"][self.BAD] == 12.8, (
-            f"the entry is {document['files'][self.BAD]}, so the outlier is "
-            f"still what a later run is read against")
+            f"the entry is {document['files'][self.BAD]}, so the outlier is still what a later run is read against"
+        )
 
     def test_one_excursion_does_not_set_the_entry(self):
         document, _ = self._grown({self.SPIKE: [15.66, 15.52, 36.34, 15.22]})
@@ -2824,8 +2782,7 @@ class TestAReferenceEntryIsMoreThanOneSample:
         """And the other direction, which is what the clause above must
         not cost: a file whose readings sit inside a few per cent and
         which now doubles is a change, and reports."""
-        steady = {f"tests/unit/test_steady_{i}.py": 2.0 + i * 0.5
-                  for i in range(30)}
+        steady = {f"tests/unit/test_steady_{i}.py": 2.0 + i * 0.5 for i in range(30)}
         document = None
         for run in range(4):
             document = drift.record(dict(steady), f"run{run}", document)
@@ -2842,14 +2799,15 @@ class TestAReferenceEntryIsMoreThanOneSample:
     def test_a_carried_reading_is_put_on_this_runs_clock(self):
         """A list that mixed two runners' clocks is `UX-418`'s defect
         inside a key. The rebase is the shift between the documents."""
-        steady = {f"tests/unit/test_steady_{i}.py": 2.0 + i * 0.5
-                  for i in range(30)}
+        steady = {f"tests/unit/test_steady_{i}.py": 2.0 + i * 0.5 for i in range(30)}
         first = drift.record(dict(steady), "run0")
         slower = {name: seconds * 2.0 for name, seconds in steady.items()}
         second = drift.record(slower, "run1", first)
         seen = second["samples"]["tests/unit/test_steady_29.py"]
-        assert seen == [round(steady["tests/unit/test_steady_29.py"] * 2.0, 2),
-                        round(slower["tests/unit/test_steady_29.py"], 2)], seen
+        assert seen == [
+            round(steady["tests/unit/test_steady_29.py"] * 2.0, 2),
+            round(slower["tests/unit/test_steady_29.py"], 2),
+        ], seen
 
     def test_a_shift_no_population_supports_drops_the_carried_readings(self):
         """`SHIFT_MIN_FILES` exists because a median over a handful is
@@ -2857,15 +2815,13 @@ class TestAReferenceEntryIsMoreThanOneSample:
         so it is dropped rather than multiplied by a guess."""
         thin = {"tests/unit/test_a.py": 10.0, "tests/unit/test_b.py": 2.0}
         first = drift.record(dict(thin), "run0")
-        second = drift.record({"tests/unit/test_a.py": 30.0,
-                               "tests/unit/test_b.py": 2.0}, "run1", first)
+        second = drift.record({"tests/unit/test_a.py": 30.0, "tests/unit/test_b.py": 2.0}, "run1", first)
         assert second["samples"]["tests/unit/test_a.py"] == [30.0]
 
     def test_adopt_leaves_a_reading_on_a_file_it_did_not_add(self):
         """Where the samples actually come from: two wholesale records
         in the reference's whole history, against one adopt per merge."""
-        steady = {f"tests/unit/test_steady_{i}.py": 2.0 + i * 0.5
-                  for i in range(30)}
+        steady = {f"tests/unit/test_steady_{i}.py": 2.0 + i * 0.5 for i in range(30)}
         reference = drift.record(dict(steady), "recorded")
         document, added = drift.adopt(reference, drift.record(dict(steady), "ci"))
         assert added == {}
@@ -2896,14 +2852,11 @@ class TestTheVerdictSurvivesWithoutTheLogBody:
 
     OFF = "tests/unit/test_the_page_has_geometry.py"
 
-    def _run(self, tmp_path, capsys, times, carry=None, annotate=True,
-             tag="a"):
+    def _run(self, tmp_path, capsys, times, carry=None, annotate=True, tag="a"):
         ref = tmp_path / f"ref-{tag}.json"
-        ref.write_text(json.dumps(drift.record(dict(tiers.recorded()))),
-                       encoding="utf-8")
+        ref.write_text(json.dumps(drift.record(dict(tiers.recorded()))), encoding="utf-8")
         summary = tmp_path / f"gate-{tag}.txt"
-        argv = [str(_report(tmp_path, times)), "--against", str(ref),
-                "--summary", str(summary)]
+        argv = [str(_report(tmp_path, times)), "--against", str(ref), "--summary", str(summary)]
         if carry:
             argv += ["--carry", str(carry)]
         if annotate:
@@ -2916,32 +2869,28 @@ class TestTheVerdictSurvivesWithoutTheLogBody:
         carry = tmp_path / "carry.json"
         times = dict(tiers.recorded())
         times[self.OFF] = times[self.OFF] * 2.0
-        self._run(tmp_path, capsys, times, carry=carry, annotate=annotate,
-                  tag="a")
-        return self._run(tmp_path, capsys, times, carry=carry,
-                         annotate=annotate, tag="b")
+        self._run(tmp_path, capsys, times, carry=carry, annotate=annotate, tag="a")
+        return self._run(tmp_path, capsys, times, carry=carry, annotate=annotate, tag="b")
 
     @staticmethod
     def _annotations(out):
-        return [line for line in out.splitlines()
-                if line.startswith("::error")]
+        return [line for line in out.splitlines() if line.startswith("::error")]
 
-    def test_a_red_gate_says_why_where_the_api_can_read_it(self, tmp_path,
-                                                           capsys):
+    def test_a_red_gate_says_why_where_the_api_can_read_it(self, tmp_path, capsys):
         code, summary, out = self._red(tmp_path, capsys)
         assert code == 1, (code, summary.read_text())
         line = summary.read_text().strip()
         assert self.OFF in line, (
             f"the gate wrote {line!r}, which names no file - so the clause "
-            f"below would pass over a verdict that says nothing")
+            f"below would pass over a verdict that says nothing"
+        )
         found = self._annotations(out)
         assert len(found) == 1, out
         # The gate's own sentence, not a second one computed here (§5).
         message = found[0].split("::", 2)[2].replace("%25", "%")
         assert message == line, (message, line)
 
-    def test_the_annotation_names_the_document_to_act_on(self, tmp_path,
-                                                         capsys):
+    def test_the_annotation_names_the_document_to_act_on(self, tmp_path, capsys):
         """An `::error` with no `file=` is attributed to `.github` at the
         workflow's own line, which is where the unreadable "Process
         completed with exit code 1." already sits."""
@@ -2950,18 +2899,17 @@ class TestTheVerdictSurvivesWithoutTheLogBody:
         assert code == 1 and len(found) == 1, (code, out)
         assert f"file={drift.ANNOTATION_FILE}" in found[0], found[0]
         assert (REPO / drift.ANNOTATION_FILE).is_file(), (
-            f"{drift.ANNOTATION_FILE} is not a path in this tree, so the "
-            f"annotation points nowhere a reader can open")
+            f"{drift.ANNOTATION_FILE} is not a path in this tree, so the annotation points nowhere a reader can open"
+        )
 
     def test_a_green_gate_annotates_nothing(self, tmp_path, capsys):
         """A failure annotation on a passing run is an alarm nobody
         reads, which is the state this route exists to leave."""
-        code, summary, out = self._run(tmp_path, capsys,
-                                       dict(tiers.recorded()), tag="ok")
+        code, summary, out = self._run(tmp_path, capsys, dict(tiers.recorded()), tag="ok")
         assert code == 0
         assert summary.read_text().startswith("tiers ok: "), (
-            "the green path never reached a return, so 'no annotation' is "
-            "true of a run that decided nothing")
+            "the green path never reached a return, so 'no annotation' is true of a run that decided nothing"
+        )
         assert not self._annotations(out), out
 
     def test_the_route_is_opt_in(self, tmp_path, capsys):
@@ -2980,14 +2928,15 @@ class TestTheVerdictSurvivesWithoutTheLogBody:
         assert "%25" in made and "%0A" in made and "%0D" in made, made
 
     def test_the_workflow_asks_the_gate_for_one(self):
-        steps = [step.get("run") or ""
-                 for job in yaml.safe_load(
-                     (REPO / ".github/workflows/ci.yml").read_text(
-                         encoding="utf-8"))["jobs"].values()
-                 for step in job.get("steps") or []
-                 if "--against" in (step.get("run") or "")]
+        steps = [
+            step.get("run") or ""
+            for job in yaml.safe_load((REPO / ".github/workflows/ci.yml").read_text(encoding="utf-8"))["jobs"].values()
+            for step in job.get("steps") or []
+            if "--against" in (step.get("run") or "")
+        ]
         assert steps, "no CI step runs the gate, so nothing is annotated"
         for script in steps:
             assert "--annotate" in script, (
                 f"the gate runs without --annotate: {script.strip()!r} - a "
-                f"red run reaches an API client as 'exit code 1' again")
+                f"red run reaches an API client as 'exit code 1' again"
+            )

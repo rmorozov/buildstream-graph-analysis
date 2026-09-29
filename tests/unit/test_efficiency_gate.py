@@ -11,6 +11,7 @@ captures of an unchanged project on one real runner spread 1.0pp of
 occupancy (and 7.4% of wall-clock - more than seven times the duration
 gate's own default, which is why that gate fires on noise).
 """
+
 from bga.compare import (
     _EFFICIENCY_DROP_PP,
     ComparisonResult,
@@ -25,18 +26,24 @@ def _comparison(baseline_occupancy, candidate_occupancy):
     baseline = {"occupancy_share": baseline_occupancy, "total_duration_us": 26_000_000}
     candidate = {"occupancy_share": candidate_occupancy, "total_duration_us": 26_000_000}
     deltas = {
-        k: (None if candidate[k] is None or baseline[k] is None else candidate[k] - baseline[k])
-        for k in baseline
+        k: (None if candidate[k] is None or baseline[k] is None else candidate[k] - baseline[k]) for k in baseline
     }
     return ComparisonResult(
-        baseline_run_id="b", candidate_run_id="c",
-        baseline_metrics=baseline, candidate_metrics=candidate, deltas=deltas,
-        baseline_confidence=1.0, candidate_confidence=1.0,
-        attribution_deltas={}, verdict="no significant change", low_confidence=False,
+        baseline_run_id="b",
+        candidate_run_id="c",
+        baseline_metrics=baseline,
+        candidate_metrics=candidate,
+        deltas=deltas,
+        baseline_confidence=1.0,
+        candidate_confidence=1.0,
+        attribution_deltas={},
+        verdict="no significant change",
+        low_confidence=False,
     )
 
 
 # --- the real measured cases ---------------------------------------------
+
 
 def test_real_macro_micro_regression_fires():
     """The real pair: a well-shaped build reverted to a chained one.
@@ -65,6 +72,7 @@ def test_the_default_leaves_real_headroom_over_the_measured_noise():
 
 # --- the property the gate exists for -------------------------------------
 
+
 def test_well_parallelized_added_work_does_not_fire():
     """Real measurement: two more fan-out libraries added to the same
     project took wall-clock from 25.98s to 26.64s (+2.5%, which the
@@ -79,6 +87,7 @@ def test_serialized_added_work_does_fire():
 
 
 # --- knobs and edges ------------------------------------------------------
+
 
 def test_an_explicit_threshold_overrides_the_default():
     assert efficiency_regression_exceeds_threshold(_comparison(0.600, 0.590), max_drop_pp=0.5)
@@ -95,6 +104,7 @@ def test_a_missing_metric_never_fabricates_a_verdict():
 
 
 # --- the absolute floor ---------------------------------------------------
+
 
 def test_the_floor_is_a_property_of_the_candidate_alone():
     """No baseline is consulted - which is what makes it usable on a

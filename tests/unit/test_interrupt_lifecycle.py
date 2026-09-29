@@ -12,6 +12,7 @@ before, extraction after. They are the phases UX-159 gave announcement
 lines precisely because they take minutes, which makes them exactly where
 someone who has waited three hours presses Ctrl-C.
 """
+
 import os
 
 from tools.bst_native_build_tracer import format_post_build_interrupt
@@ -28,8 +29,7 @@ class TestThePostBuildNotice:
         log.write_text("x")
         report = tmp_path / "plane2.json"
         report.write_text("{}")
-        text = format_post_build_interrupt(str(report), str(log),
-                                           str(tmp_path / "run"), str(tmp_path))
+        text = format_post_build_interrupt(str(report), str(log), str(tmp_path / "run"), str(tmp_path))
         assert "Already on disk" in text
         assert str(log) in text and str(report) in text
 
@@ -38,8 +38,7 @@ class TestThePostBuildNotice:
         log, and round 17's user was told none of that."""
         log = tmp_path / "build.log"
         log.write_text("x")
-        text = format_post_build_interrupt(None, str(log),
-                                           str(tmp_path / "run"), str(tmp_path))
+        text = format_post_build_interrupt(None, str(log), str(tmp_path / "run"), str(tmp_path))
         assert "bga extract --format wrapped" in text
         assert str(log) in text
         assert str(tmp_path / "run") in text
@@ -60,8 +59,7 @@ class TestThePostBuildNotice:
         assert "build itself completed" in text
 
     def test_a_missing_log_offers_no_command_it_cannot_honour(self, tmp_path):
-        text = format_post_build_interrupt(None, str(tmp_path / "gone.log"),
-                                           str(tmp_path / "run"), str(tmp_path))
+        text = format_post_build_interrupt(None, str(tmp_path / "gone.log"), str(tmp_path / "run"), str(tmp_path))
         assert "bga extract" not in text
 
 
@@ -93,7 +91,10 @@ class TestTheGraceWindow:
 
         class _Proc:
             pid = os.getpid()
-            def __init__(self, dies): self.dies, self.waits = dies, 0
+
+            def __init__(self, dies):
+                self.dies, self.waits = dies, 0
+
             def wait(self, timeout=None):
                 self.waits += 1
                 if self.waits > self.dies:
@@ -113,6 +114,7 @@ class TestTheGraceWindow:
         class _Proc:
             pid = os.getpid()
             waits = 0
+
             def wait(self, timeout=None):
                 self.waits += 1
                 if self.waits > 1:
@@ -133,13 +135,12 @@ class TestEveryPhaseConverts:
         import inspect
 
         from tools import bst_native_build_tracer as tracer
+
         source = inspect.getsource(tracer.main)
-        assert source.count("except KeyboardInterrupt:") >= 2, (
-            "both the pre-build and post-build windows need one")
+        assert source.count("except KeyboardInterrupt:") >= 2, "both the pre-build and post-build windows need one"
         assert "Interrupted before the build started" in source
 
-    def test_the_post_build_region_is_inside_a_handler(self, tmp_path, capsys,
-                                                       monkeypatch):
+    def test_the_post_build_region_is_inside_a_handler(self, tmp_path, capsys, monkeypatch):
         """UX-176: through a seam, not by reading the source.
 
         The previous version compared two `source.index()` positions,
@@ -159,15 +160,24 @@ class TestEveryPhaseConverts:
             raise KeyboardInterrupt
 
         monkeypatch.setattr(tracer, "load_and_summarize", interrupt_during_analysis)
-        monkeypatch.setattr(tracer, "run_traced_build",
-                            lambda *a, **k: (0, str(log), False))
-        monkeypatch.setattr(_sys, "argv", [
-            "bga-capture", "run", "--wrapped-log", str(log),
-            str(tmp_path), str(tmp_path / "out.json"),
-            "--", "bst", "build", "a.bst",
-        ])
+        monkeypatch.setattr(tracer, "run_traced_build", lambda *a, **k: (0, str(log), False))
+        monkeypatch.setattr(
+            _sys,
+            "argv",
+            [
+                "bga-capture",
+                "run",
+                "--wrapped-log",
+                str(log),
+                str(tmp_path),
+                str(tmp_path / "out.json"),
+                "--",
+                "bst",
+                "build",
+                "a.bst",
+            ],
+        )
         code = tracer.main()
         captured = capsys.readouterr()
         assert code == 130, f"the post-build interrupt did not convert: {captured.err}"
-        assert "Interrupted after the build" in captured.err or \
-            "Interrupted again" in captured.err, captured.err
+        assert "Interrupted after the build" in captured.err or "Interrupted again" in captured.err, captured.err

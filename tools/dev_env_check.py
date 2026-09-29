@@ -9,6 +9,7 @@ it runs the interpreter's own and refuses a version off the lock.
 Decisions are pure so the guard tests them without a broken env; `main`
 does the I/O.
 """
+
 import collections
 import pathlib
 import re
@@ -81,7 +82,8 @@ _NODE = (
     "node is missing, or is not the major `.node-version` declares - every "
     "`shutil.which(\"node\")` guard under tests/unit skips silently when it "
     "is absent. Select it with your version manager (`use-node-{pinned}` on "
-    "the dev container), never by prepending a directory to PATH.")
+    "the dev container), never by prepending a directory to PATH."
+)
 
 Check = collections.namedtuple("Check", "source pin report hint")
 
@@ -101,7 +103,10 @@ def _imported_bga_file():
     it."""
     done = subprocess.run(
         [sys.executable, "-c", "import bga; print(bga.__file__)"],
-        cwd=tempfile.gettempdir(), capture_output=True, text=True)
+        cwd=tempfile.gettempdir(),
+        capture_output=True,
+        text=True,
+    )
     return done.stdout.strip() if done.returncode == 0 else None
 
 
@@ -112,8 +117,7 @@ def _reported(tool):
     binary = shutil.which(tool)
     if binary is None:
         return None
-    done = subprocess.run([binary, "--version"], capture_output=True,
-                          text=True)
+    done = subprocess.run([binary, "--version"], capture_output=True, text=True)
     return TOOLS[tool].report(done.stdout) if done.returncode == 0 else None
 
 
@@ -124,7 +128,8 @@ def main():
         problems.append(
             f"`import bga` resolves to {bga_file!r}, not under {REPO}. A "
             "worktree `pip install -e .` repointed the shared install - "
-            f"restore it: `pip install -e {REPO}` (no `-e .` from a worktree).")
+            f"restore it: `pip install -e {REPO}` (no `-e .` from a worktree)."
+        )
 
     seen = {}
     for tool, check in TOOLS.items():
@@ -135,8 +140,8 @@ def main():
         if not version_ok(reported, pinned):
             problems.append(
                 f"`{tool} --version` on PATH is {reported!r}, pinned is "
-                f"{pinned!r} ({check.source.name}). "
-                + check.hint.format(tool=tool, pinned=pinned))
+                f"{pinned!r} ({check.source.name}). " + check.hint.format(tool=tool, pinned=pinned)
+            )
 
     if problems:
         sys.stderr.write("env check failed:\n- " + "\n- ".join(problems) + "\n")

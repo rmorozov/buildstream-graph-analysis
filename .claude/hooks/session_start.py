@@ -8,6 +8,7 @@ requirements.lock` when `missing_locked` names a package; `pip install
 -e . --no-deps` only when `bga` will not import. Prints one line and
 always exits 0. The installer is injected so the tests never run pip.
 """
+
 import importlib.metadata
 import importlib.util
 import os
@@ -22,16 +23,14 @@ sys.path.insert(0, str(HERE))
 from agent_worktree_limits import is_linked_worktree
 
 GIT = shutil.which("git") or "git"
-LOCK_CMD = [sys.executable, "-m", "pip", "install", "--ignore-installed",
-            "PyYAML", "-r", "requirements.lock"]
+LOCK_CMD = [sys.executable, "-m", "pip", "install", "--ignore-installed", "PyYAML", "-r", "requirements.lock"]
 EDITABLE_CMD = [sys.executable, "-m", "pip", "install", "-e", ".", "--no-deps"]
 
 
 def missing_locked(lock_text, installed):
     """`==` pins in the lock that `installed(name)` (a version or None)
     lacks - presence only, so a version drift never reinstalls."""
-    names = re.findall(r"^([A-Za-z0-9][A-Za-z0-9._-]*)==", lock_text or "",
-                       re.MULTILINE)
+    names = re.findall(r"^([A-Za-z0-9][A-Za-z0-9._-]*)==", lock_text or "", re.MULTILINE)
     return [n for n in names if installed(n) is None]
 
 
@@ -43,8 +42,7 @@ def _installed(name):
 
 
 def _is_shallow(root):
-    done = subprocess.run([GIT, "rev-parse", "--is-shallow-repository"],
-                          cwd=root, capture_output=True, text=True)
+    done = subprocess.run([GIT, "rev-parse", "--is-shallow-repository"], cwd=root, capture_output=True, text=True)
     return done.stdout.strip() == "true"
 
 

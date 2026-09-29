@@ -10,6 +10,7 @@ Two layers:
    environment; see pyproject.toml's `bst` optional extra and
    docs/spec/ingestion-pipeline.md for how to install them locally).
 """
+
 import json
 import os
 import shutil
@@ -40,6 +41,7 @@ def _record(name, key, build_deps, runtime_deps, kind="import", public="", varia
 
 # --- Pure parser tests ------------------------------------------------
 
+
 def test_parse_dep_list_empty():
     assert _parse_dep_list("[]") == []
     assert _parse_dep_list("") == []
@@ -60,17 +62,25 @@ def test_parse_dep_list_multiple_with_embedded_newline():
 def test_build_graph_marks_requested_target():
     stdout = _record("app.bst", "abc123", "[]", "[]", kind="manual") + RECORD_SEP
     graph = build_graph(stdout, targets=["app.bst"])
-    assert graph["elements"] == [{
-        "uid": "app.bst", "cache_key": "abc123", "requested_target": True,
-        # UX-31 added `notparallel` alongside the existing max_jobs.
-        "max_jobs": None, "notparallel": None, "element_kind": "manual",
-    }]
+    assert graph["elements"] == [
+        {
+            "uid": "app.bst",
+            "cache_key": "abc123",
+            "requested_target": True,
+            # UX-31 added `notparallel` alongside the existing max_jobs.
+            "max_jobs": None,
+            "notparallel": None,
+            "element_kind": "manual",
+        }
+    ]
 
 
 def test_build_graph_captures_element_kind():
     stdout = (
-        _record("sub.bst", "k1", "[]", "[]", kind="junction") + RECORD_SEP
-        + _record("app.bst", "k2", "[]", "[]", kind="autotools") + RECORD_SEP
+        _record("sub.bst", "k1", "[]", "[]", kind="junction")
+        + RECORD_SEP
+        + _record("app.bst", "k2", "[]", "[]", kind="autotools")
+        + RECORD_SEP
     )
     graph = build_graph(stdout, targets=[])
     kinds = {e["uid"]: e["element_kind"] for e in graph["elements"]}
@@ -91,8 +101,7 @@ def test_build_graph_empty_cache_key_becomes_null():
 
 def test_build_graph_build_dep_type():
     stdout = (
-        _record("base.bst", "k1", "[]", "[]") + RECORD_SEP
-        + _record("app.bst", "k2", "- base.bst", "[]") + RECORD_SEP
+        _record("base.bst", "k1", "[]", "[]") + RECORD_SEP + _record("app.bst", "k2", "- base.bst", "[]") + RECORD_SEP
     )
     graph = build_graph(stdout, targets=["app.bst"])
     assert graph["dependencies"] == [
@@ -102,8 +111,7 @@ def test_build_graph_build_dep_type():
 
 def test_build_graph_runtime_only_dep_type():
     stdout = (
-        _record("lib.bst", "k1", "[]", "[]") + RECORD_SEP
-        + _record("app.bst", "k2", "[]", "- lib.bst") + RECORD_SEP
+        _record("lib.bst", "k1", "[]", "[]") + RECORD_SEP + _record("app.bst", "k2", "[]", "- lib.bst") + RECORD_SEP
     )
     graph = build_graph(stdout, targets=["app.bst"])
     assert graph["dependencies"] == [
@@ -117,8 +125,10 @@ def test_build_graph_dep_in_both_lists_is_reported_as_build():
     element - build/all collapses to "build" (a strict superset of
     what "runtime" alone constrains), not two separate edges."""
     stdout = (
-        _record("lib.bst", "k1", "[]", "[]") + RECORD_SEP
-        + _record("app.bst", "k2", "- lib.bst", "- lib.bst") + RECORD_SEP
+        _record("lib.bst", "k1", "[]", "[]")
+        + RECORD_SEP
+        + _record("app.bst", "k2", "- lib.bst", "- lib.bst")
+        + RECORD_SEP
     )
     graph = build_graph(stdout, targets=["app.bst"])
     assert graph["dependencies"] == [
@@ -151,6 +161,7 @@ def test_build_graph_skips_record_with_wrong_field_count():
 
 # --- Per-element max-jobs capture (UX-22) ------------------------------
 
+
 def test_parse_max_jobs_absent_is_none():
     """The element doesn't override max-jobs - the real, common case.
     `bst.split-rules`-only content, no `max-jobs` key at all."""
@@ -173,11 +184,16 @@ def test_build_graph_captures_resolved_max_jobs_from_vars():
     `notparallel: True` reports `max-jobs: 1` while its siblings report
     the project default."""
     stdout = (
-        _record("normal.bst", "k1", "[]", "[]", variables="max-jobs: 4\n") + RECORD_SEP
+        _record("normal.bst", "k1", "[]", "[]", variables="max-jobs: 4\n")
+        + RECORD_SEP
         + _record(
-            "pinned.bst", "k2", "[]", "[]",
+            "pinned.bst",
+            "k2",
+            "[]",
+            "[]",
             variables="max-jobs: 1\nnotparallel: True\n",
-        ) + RECORD_SEP
+        )
+        + RECORD_SEP
     )
     graph = build_graph(stdout, targets=[])
     by_uid = {e["uid"]: e for e in graph["elements"]}
@@ -192,9 +208,16 @@ def test_build_graph_falls_back_to_public_max_jobs_when_vars_absent():
     an older captured graph.json keeps meaning what it meant - BuildStream
     itself never reads that key, so it cannot describe a real build, but
     silently changing what an existing capture means would be worse."""
-    stdout = _record(
-        "legacy.bst", "k1", "[]", "[]", public="bst:\n  max-jobs: 16\n",
-    ) + RECORD_SEP
+    stdout = (
+        _record(
+            "legacy.bst",
+            "k1",
+            "[]",
+            "[]",
+            public="bst:\n  max-jobs: 16\n",
+        )
+        + RECORD_SEP
+    )
     graph = build_graph(stdout, targets=[])
     assert graph["elements"][0]["max_jobs"] == 16
 
@@ -206,6 +229,7 @@ def test_parse_notparallel_distinguishes_unset_from_false():
 
 
 # --- Real end-to-end test against a live `bst` binary ------------------
+
 
 @pytest.mark.bst
 @pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/spec/ingestion-pipeline.md")
@@ -236,8 +260,10 @@ def test_real_bst_show_against_fixture_project(tmp_path):
     # dependency's own element is `kind: import` too (subproj/elements/libfoo.bst).
     kinds = {e["uid"]: e["element_kind"] for e in graph["elements"]}
     assert kinds == {
-        "base.bst": "import", "base2.bst": "import",
-        "subproj-junction.bst:libfoo.bst": "import", "app.bst": "import",
+        "base.bst": "import",
+        "base2.bst": "import",
+        "subproj-junction.bst:libfoo.bst": "import",
+        "app.bst": "import",
     }
 
     # UX-31/UX-84: `max_jobs` is the *effective, resolved* figure - what
@@ -305,7 +331,10 @@ def test_real_graph_output_loads_into_bga(tmp_path):
 
     loaded = load_graph(output_json)
     assert {e.uid for e in loaded.elements} == {
-        "base.bst", "base2.bst", "subproj-junction.bst:libfoo.bst", "app.bst",
+        "base.bst",
+        "base2.bst",
+        "subproj-junction.bst:libfoo.bst",
+        "app.bst",
     }
     assert any(d.dependency_type == "runtime" for d in loaded.dependencies)
     assert any(d.dependency_type == "build" for d in loaded.dependencies)

@@ -9,6 +9,7 @@ arm names a real staged alias, and that
 `check_jobserver_width.check_switch` reads the report rather than
 re-deriving the style it is supposed to be checking.
 """
+
 import importlib.util
 import json
 import sys
@@ -24,8 +25,7 @@ ELEMENTS = REPO_ROOT / "examples" / "11-serial-giant" / "elements"
 
 
 def _width_check_module():
-    path = (REPO_ROOT / "examples" / "11-serial-giant"
-            / "check_jobserver_width.py")
+    path = REPO_ROOT / "examples" / "11-serial-giant" / "check_jobserver_width.py"
     spec = importlib.util.spec_from_file_location("_width_check", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -44,9 +44,7 @@ def _row(element, version, style):
 
 
 def _passing_rows():
-    return [_row(element, version + ".1", style)
-            for element, (version, style)
-            in WIDTH_CHECK.SWITCH_ARMS.items()]
+    return [_row(element, version + ".1", style) for element, (version, style) in WIDTH_CHECK.SWITCH_ARMS.items()]
 
 
 def _run(tmp_path, rows):
@@ -61,22 +59,24 @@ class TestEachArmNamesAStagedAlias:
     pin stages is an arm that silently falls through to `/usr/bin`."""
 
     def test_every_arm_selects_a_directory_a_pin_stages(self):
-        staged = {str(Path(nix_store_fetch.alias_path(name)).parent)
-                  for name in nix_store_fetch.PINS["x86_64"]["paths"]}
+        staged = {
+            str(Path(nix_store_fetch.alias_path(name)).parent) for name in nix_store_fetch.PINS["x86_64"]["paths"]
+        }
 
         for element in WIDTH_CHECK.SWITCH_ARMS:
-            parsed = yaml.safe_load(
-                (ELEMENTS / element).read_text(encoding="utf-8"))
+            parsed = yaml.safe_load((ELEMENTS / element).read_text(encoding="utf-8"))
             first = parsed["environment"]["PATH"].split(":")[0]
             assert first in staged, (
-                f"{element} leads its PATH with {first!r}, which "
-                f"nix_store_fetch stages nothing at: {sorted(staged)}")
+                f"{element} leads its PATH with {first!r}, which nix_store_fetch stages nothing at: {sorted(staged)}"
+            )
 
     def test_the_two_arms_do_not_select_the_same_make(self):
-        leads = {element: yaml.safe_load(
-            (ELEMENTS / element).read_text(encoding="utf-8")
-        )["environment"]["PATH"].split(":")[0]
-            for element in WIDTH_CHECK.SWITCH_ARMS}
+        leads = {
+            element: yaml.safe_load((ELEMENTS / element).read_text(encoding="utf-8"))["environment"]["PATH"].split(":")[
+                0
+            ]
+            for element in WIDTH_CHECK.SWITCH_ARMS
+        }
 
         assert len(set(leads.values())) == len(leads), leads
 
@@ -85,16 +85,13 @@ class TestEachArmNamesAStagedAlias:
         the two rows above, and would then be checked against `fd`
         while running a make that speaks `fifo`."""
         for element, (version, _style) in WIDTH_CHECK.SWITCH_ARMS.items():
-            parsed = yaml.safe_load(
-                (ELEMENTS / element).read_text(encoding="utf-8"))
+            parsed = yaml.safe_load((ELEMENTS / element).read_text(encoding="utf-8"))
             lead = parsed["environment"]["PATH"].split(":")[0]
             series = version.split()[-1]
-            assert Path(lead).name == series, (
-                f"{element} expects {version} but selects {lead}")
+            assert Path(lead).name == series, f"{element} expects {version} but selects {lead}"
 
     def test_both_arms_are_built(self):
-        depends = yaml.safe_load(
-            (ELEMENTS / "all.bst").read_text(encoding="utf-8"))["depends"]
+        depends = yaml.safe_load((ELEMENTS / "all.bst").read_text(encoding="utf-8"))["depends"]
 
         assert set(WIDTH_CHECK.SWITCH_ARMS) <= set(depends), depends
 
@@ -106,8 +103,7 @@ class TestTheCheckReadsTheReport:
     def test_both_arms_on_one_make_is_refused(self, tmp_path):
         """The defect the row exists to end: one staged make, so the
         switch has one live branch and the capture proves nothing."""
-        rows = [_row(element, "GNU Make 4.4.1", "fifo")
-                for element in WIDTH_CHECK.SWITCH_ARMS]
+        rows = [_row(element, "GNU Make 4.4.1", "fifo") for element in WIDTH_CHECK.SWITCH_ARMS]
 
         error = _run(tmp_path, rows)
 
@@ -151,10 +147,8 @@ class TestTheCheckReadsTheReport:
         """Two tables, one fact: the check's expectations and the pin
         table have to move together or CI asserts a series nothing
         stages."""
-        pinned = {name.split("-", 1)[1]
-                  for name in nix_store_fetch.PINS["x86_64"]["paths"]}
-        expected = {version.split()[-1]
-                    for version, _style in WIDTH_CHECK.SWITCH_ARMS.values()}
+        pinned = {name.split("-", 1)[1] for name in nix_store_fetch.PINS["x86_64"]["paths"]}
+        expected = {version.split()[-1] for version, _style in WIDTH_CHECK.SWITCH_ARMS.values()}
 
         assert expected == pinned
 

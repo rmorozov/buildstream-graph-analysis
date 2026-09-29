@@ -10,6 +10,7 @@ run-context/v9 shape from a real BuildStream log. Centralizing the
 shared piece here means a future addition to one reaches both instead of
 requiring a second, easy-to-forget edit.
 """
+
 import contextlib
 import os
 import sys
@@ -78,8 +79,7 @@ def typical_resolved_max_jobs(graph: dict) -> Optional[int]:
     a `bst` too old to have `max-jobs` in `%{vars}` - reported as absent
     rather than guessed, as everything in this module is.
     """
-    values = [element.get("max_jobs") for element in (graph or {}).get(
-        "elements", [])]
+    values = [element.get("max_jobs") for element in (graph or {}).get("elements", [])]
     resolved = [value for value in values if isinstance(value, int)]
     return max(resolved) if resolved else None
 
@@ -219,12 +219,10 @@ def add_cache_capacity(run_context: dict, with_usage: bool = False) -> None:
     from bga import cache_capacity
 
     with contextlib.suppress(Exception):
-        run_context["cache_capacity"] = cache_capacity.collect(
-            with_usage=with_usage)
+        run_context["cache_capacity"] = cache_capacity.collect(with_usage=with_usage)
 
 
-def add_artifact_weights(run_context: dict, project_name: Optional[str],
-                         graph: Optional[dict]) -> None:
+def add_artifact_weights(run_context: dict, project_name: Optional[str], graph: Optional[dict]) -> None:
     """UX-907: what each element's artifact weighs, exactly.
 
     Same best-effort rule as `add_cache_capacity` above, and the same
@@ -238,14 +236,13 @@ def add_artifact_weights(run_context: dict, project_name: Optional[str],
     cachedir = (run_context.get("cache_capacity") or {}).get("cachedir")
     if not cachedir or not project_name or not graph:
         return
-    elements = [(element.get("uid"), element.get("cache_key"))
-                for element in graph.get("elements") or []
-                if element.get("uid")]
+    elements = [
+        (element.get("uid"), element.get("cache_key")) for element in graph.get("elements") or [] if element.get("uid")
+    ]
     if not elements:
         return
     with contextlib.suppress(Exception):
-        run_context["artifact_weights"] = artifact_weight.weigh_elements(
-            cachedir, project_name, elements)
+        run_context["artifact_weights"] = artifact_weight.weigh_elements(cachedir, project_name, elements)
 
 
 #: `UX-898`/`UX-903`: the declaration flags, written once. Both
@@ -255,19 +252,20 @@ def add_artifact_weights(run_context: dict, project_name: Optional[str],
 _BUILD_TYPE_HELP = (
     "What kind of build this was - night, review, guard, or whatever else "
     "the pipeline declares. Free text; two runs declaring different types "
-    "are not one population (UX-898). Defaults to $BGA_BUILD_TYPE.")
+    "are not one population (UX-898). Defaults to $BGA_BUILD_TYPE."
+)
 _VARIANT_HELP = (
     "A named dimension of what this build did - arch=aarch64, "
     "sanitizer=address, coverage=on. Repeatable, because several are true "
     "at once (UX-903). Defaults to $BGA_BUILD_VARIANT, which takes the "
-    "same pairs comma-separated.")
+    "same pairs comma-separated."
+)
 
 
 def add_build_class_arguments(parser) -> None:
     """`--build-type` and `--variant` on a run-context producer."""
     parser.add_argument("--build-type", default=None, help=_BUILD_TYPE_HELP)
-    parser.add_argument("--variant", action="append", default=None,
-                        metavar="NAME=VALUE", help=_VARIANT_HELP)
+    parser.add_argument("--variant", action="append", default=None, metavar="NAME=VALUE", help=_VARIANT_HELP)
 
 
 def build_class_from_args(args) -> Optional[tuple]:
@@ -285,9 +283,7 @@ def build_class_from_args(args) -> Optional[tuple]:
         return None
 
 
-def add_build_class(run_context: dict,
-                    build_type: Optional[str] = None,
-                    variant: Optional[dict] = None) -> None:
+def add_build_class(run_context: dict, build_type: Optional[str] = None, variant: Optional[dict] = None) -> None:
     """UX-898/UX-903: what this build was - its type and its variant.
 
     Declared, never guessed. The type says when and why the build ran
@@ -309,8 +305,7 @@ def add_build_class(run_context: dict,
         kind = build_type or os.environ.get("BGA_BUILD_TYPE")
         dimensions = dict(variant or {})
         if not dimensions:
-            dimensions = buildclass.parse_variant_env(
-                os.environ.get("BGA_BUILD_VARIANT"))
+            dimensions = buildclass.parse_variant_env(os.environ.get("BGA_BUILD_VARIANT"))
         declared = buildclass.declare(kind, dimensions)
         if declared:
             run_context["build_class"] = declared
@@ -336,7 +331,9 @@ def add_producer(run_context: dict) -> None:
 
 
 def add_memory_capacity_fields(
-    run_context: dict, memory_budget_mb: int = None, estimated_job_memory_mb: int = None,
+    run_context: dict,
+    memory_budget_mb: int = None,
+    estimated_job_memory_mb: int = None,
 ) -> None:
     """Mutates `run_context` in place, adding `memory_budget_mb`/
     `estimated_job_memory_mb` (UX-21) - both purely operator-supplied,

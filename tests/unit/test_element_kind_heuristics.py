@@ -15,6 +15,7 @@ Two layers, matching tests/unit/test_bst_show_to_graph.py's convention:
    tests/unit/test_report_key_findings.py) exercising the actual
    analysis/report wiring deterministically.
 """
+
 import json
 import shutil
 import subprocess
@@ -57,6 +58,7 @@ def test_real_fixture_has_four_diverse_element_kinds(tmp_path):
 # listings, so the structural-kind tag's presence/absence is exercised
 # on real ranking output, not just the raw signal dict. -----------------
 
+
 def _write_run_dir(tmp_path):
     run_dir = tmp_path / "run"
     run_dir.mkdir()
@@ -73,12 +75,27 @@ def _write_run_dir(tmp_path):
     }
     trace = {
         "spans": [
-            {"task_key": "root.bst|BUILD|BUILD|0", "ts_us": 0, "dur_us": 10000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "manual.bst|BUILD|BUILD|0", "ts_us": 10000, "dur_us": 20000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
-            {"task_key": "a.bst|BUILD|BUILD|0", "ts_us": 10000, "dur_us": 5000,
-             "resources": ["PROCESS"], "primary_resource": "PROCESS"},
+            {
+                "task_key": "root.bst|BUILD|BUILD|0",
+                "ts_us": 0,
+                "dur_us": 10000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "manual.bst|BUILD|BUILD|0",
+                "ts_us": 10000,
+                "dur_us": 20000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
+            {
+                "task_key": "a.bst|BUILD|BUILD|0",
+                "ts_us": 10000,
+                "dur_us": 5000,
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            },
         ],
         "phases": [],
     }
@@ -135,10 +152,9 @@ def test_blast_radius_signal_carries_kind_and_structural_flag(analyzed_result):
 # not in the ranking, and named in the report.
 def _ranked_rows(text):
     lines = text.split("\n")
-    start = next(i for i, line in enumerate(lines)
-                 if line.lstrip().startswith("Where the time is"))
+    start = next(i for i, line in enumerate(lines) if line.lstrip().startswith("Where the time is"))
     rows = []
-    for line in lines[start + 1:]:
+    for line in lines[start + 1 :]:
         if not line.startswith("    "):
             break
         rows.append(line)
@@ -168,8 +184,7 @@ def test_key_findings_tags_structural_top_element_but_not_real_work_one(analyzed
     assert "root.bst" not in ranked
     # `UX-258`'s other half, asserted rather than left to the absence
     # above: it is *reported*, with its reach, as the graph's shape.
-    assert ("Reaching most of the graph by design: root.bst (2 downstream)"
-            in key_findings)
+    assert "Reaching most of the graph by design: root.bst (2 downstream)" in key_findings
     # Wherever any line does mention these elements, a structural tag
     # must never be attached to the one that does real work.
     assert "manual.bst [structural" not in key_findings
@@ -183,6 +198,7 @@ def test_leaf_analysis_detail_carries_kind_and_structural_flag(analyzed_result):
 
 
 # --- `bga graph --by-kind` (P4-12 Direction 3) ---------------------------
+
 
 def test_by_kind_absent_from_text_report_by_default(analyzed_result):
     output = format_text(analyzed_result, section="graph")
@@ -227,14 +243,16 @@ def test_cli_graph_by_kind_end_to_end(tmp_path):
     run_dir = _write_run_dir(tmp_path)
     proc = subprocess.run(
         [sys.executable, "-m", "bga.cli", "graph", str(run_dir), "--by-kind"],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     )
     assert proc.returncode == 0, proc.stderr
     assert "By Element Kind:" in proc.stdout
 
     proc_default = subprocess.run(
         [sys.executable, "-m", "bga.cli", "graph", str(run_dir)],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     )
     assert proc_default.returncode == 0, proc_default.stderr
     assert "By Element Kind:" not in proc_default.stdout

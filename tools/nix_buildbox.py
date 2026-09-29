@@ -16,6 +16,7 @@ workflow: the store path is then declared and tested exactly like
 `nix_toolchain.TOOLCHAIN_PINS`, rather than living only as a CI YAML
 string no unit test reads.
 """
+
 import argparse
 import os
 import platform
@@ -29,8 +30,7 @@ from tools import nix_closure
 BUILDBOX_PINS = {
     "aarch64": {
         "version": "1.4.7",
-        "store_path": ("/nix/store/adhcidhjjrgih5hhfqcnddi5pz1flcsz"
-                       "-buildbox-1.4.7"),
+        "store_path": ("/nix/store/adhcidhjjrgih5hhfqcnddi5pz1flcsz-buildbox-1.4.7"),
     },
 }
 
@@ -43,7 +43,8 @@ def pin(arch=None) -> dict:
         raise SystemExit(
             f"nix_buildbox: no pinned buildbox for {arch!r} "
             f"(pinned: {', '.join(sorted(BUILDBOX_PINS))}) - x86_64's "
-            f"BuildStream wheel bundles its own (UX-1009)")
+            f"BuildStream wheel bundles its own (UX-1009)"
+        )
     return BUILDBOX_PINS[arch]
 
 
@@ -71,9 +72,7 @@ def link(dest: str, arch=None) -> str:
 
 def stage(dest: str, arch=None, cache_dir=None) -> str:
     """The pinned closure under `dest`; only `/` runs (absolute interp)."""
-    nix_closure.stage_closure(
-        dest, [pin(arch)["store_path"]],
-        cache_dir or nix_closure.default_cache_dir())
+    nix_closure.stage_closure(dest, [pin(arch)["store_path"]], cache_dir or nix_closure.default_cache_dir())
     return link(dest, arch)
 
 

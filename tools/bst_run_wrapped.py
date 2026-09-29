@@ -28,6 +28,7 @@ The command must start with "bst " (matches bst_log_to_chrome_trace.py's
 own is_bst detection) for the resulting log to parse as a real BuildStream
 invocation under --format wrapped.
 """
+
 import argparse
 import contextlib
 import os
@@ -197,6 +198,7 @@ def shutdown_build_group(proc, emit=None, grace: Optional[float] = None) -> bool
     rather than absent-by-nature, and a caller that says "N of M
     scheduled" should say why it cannot instead (`UX-163` item 3).
     """
+
     def say(message):
         if emit is not None:
             emit(message)
@@ -208,9 +210,11 @@ def shutdown_build_group(proc, emit=None, grace: Optional[float] = None) -> bool
     # pipe unread for the whole window.
     if drain_until_exit(proc, time.monotonic() + grace, say):
         return True
-    say(f"the build did not stop within {grace:g}s of SIGINT - sending "
+    say(
+        f"the build did not stop within {grace:g}s of SIGINT - sending "
         f"SIGTERM. bst's closing summary may be lost; set "
-        f"{SIGINT_GRACE_ENV} higher if this project needs longer.")
+        f"{SIGINT_GRACE_ENV} higher if this project needs longer."
+    )
     signal_build_group(proc, signal.SIGTERM)
     try:
         proc.wait(timeout=30)
@@ -228,13 +232,11 @@ def shutdown_build_group(proc, emit=None, grace: Optional[float] = None) -> bool
 # UX-185: the marker the extractor reads back. A wrapper INFO line
 # rather than a side file, so a log a user kept still carries it.
 CLOCK_MARKER = "bga-clocks"
-CLOCK_RE = re.compile(
-    r"bga-clocks (start|end) wall=([0-9.]+) monotonic=([0-9.]+)")
+CLOCK_RE = re.compile(r"bga-clocks (start|end) wall=([0-9.]+) monotonic=([0-9.]+)")
 
 
 def _clock_line(which: str, pair: dict) -> str:
-    return (f"{CLOCK_MARKER} {which} wall={pair['wall']:.6f} "
-            f"monotonic={pair['monotonic']:.6f}")
+    return f"{CLOCK_MARKER} {which} wall={pair['wall']:.6f} monotonic={pair['monotonic']:.6f}"
 
 
 def read_clock_pairs(log_path: str) -> dict:
@@ -259,8 +261,7 @@ def read_clock_pairs(log_path: str) -> dict:
     return pairs
 
 
-def run_wrapped(project_dir: str, cmd: list, out_f, env=None,
-                inhibit: bool = False) -> int:
+def run_wrapped(project_dir: str, cmd: list, out_f, env=None, inhibit: bool = False) -> int:
     """`env`: UX-24 - when given, replaces the subprocess's own
     environment entirely (matching `subprocess.Popen`'s own semantics),
     instead of always inheriting this process's environment unmodified.
@@ -343,9 +344,11 @@ def run_wrapped(project_dir: str, cmd: list, out_f, env=None,
         # is missing instead of just missing it" was UX-163's own wording
         # for this, and it reached the tests and nothing else.
         if not shutdown_build_group(proc, emit=emit):
-            emit("bst was escalated before it could print its closing "
-                 "summary - this run has no queue_summary, so the "
-                 "built/cached counts are unavailable rather than zero.")
+            emit(
+                "bst was escalated before it could print its closing "
+                "summary - this run has no queue_summary, so the "
+                "built/cached counts are unavailable rather than zero."
+            )
         raise
 
     emit(_clock_line("end", suspend.clocks()))
@@ -357,7 +360,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("project_dir", help="Path to the BuildStream project directory (cwd for the command).")
     parser.add_argument("output_log", help="Path to write the wrapped-format log to.")
-    parser.add_argument("cmd", nargs=argparse.REMAINDER, help="The bst command to run, e.g. -- bst --builders 2 build all.bst.")
+    parser.add_argument(
+        "cmd", nargs=argparse.REMAINDER, help="The bst command to run, e.g. -- bst --builders 2 build all.bst."
+    )
     args = parser.parse_args()
 
     cmd = args.cmd

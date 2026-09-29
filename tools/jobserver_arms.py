@@ -9,6 +9,7 @@ is not a pair.
 
     python3 -m tools.jobserver_arms OFF_REPORT AUTO_REPORT
 """
+
 import json
 import sys
 from collections import Counter
@@ -36,33 +37,37 @@ def arms(off, auto):
     rows = []
     for element in sorted(set(off_rows) | set(auto_rows)):
         o, a = off_rows.get(element, {}), auto_rows.get(element, {})
-        rows.append({
-            "element": element,
-            "off_peak": o.get("peak_work_concurrency"),
-            "auto_peak": a.get("peak_work_concurrency"),
-            "requested": o.get("requested_jobs"),
-            "off_work": o.get("work_process_count"),
-            "auto_work": a.get("work_process_count"),
-        })
-    decisions = Counter((d.get("decision"), d.get("policy"))
-                        for d in auto.get("jobserver_decisions") or [])
+        rows.append(
+            {
+                "element": element,
+                "off_peak": o.get("peak_work_concurrency"),
+                "auto_peak": a.get("peak_work_concurrency"),
+                "requested": o.get("requested_jobs"),
+                "off_work": o.get("work_process_count"),
+                "auto_work": a.get("work_process_count"),
+            }
+        )
+    decisions = Counter((d.get("decision"), d.get("policy")) for d in auto.get("jobserver_decisions") or [])
     return {
-        "problems": problems, "rows": rows,
+        "problems": problems,
+        "rows": rows,
         "decisions": sorted(decisions.items(), key=lambda kv: -kv[1]),
-        "pool": auto.get("jobserver_pool"), "auth": auto.get("jobserver_auth"),
+        "pool": auto.get("jobserver_pool"),
+        "auth": auto.get("jobserver_auth"),
         "wall_s": (off.get("wall_span_s"), auto.get("wall_span_s")),
     }
 
 
 def render(reading):
-    out = [f"{'element':<52} {'req':>3} {'off peak':>8} {'auto peak':>9}"
-           f" {'off work':>8} {'auto work':>9}"]
+    out = [f"{'element':<52} {'req':>3} {'off peak':>8} {'auto peak':>9} {'off work':>8} {'auto work':>9}"]
     for r in reading["rows"]:
-        out.append(f"{r['element']:<52} {r['requested'] or '?':>3}"
-                   f" {r['off_peak'] if r['off_peak'] is not None else '-':>8}"
-                   f" {r['auto_peak'] if r['auto_peak'] is not None else '-':>9}"
-                   f" {r['off_work'] if r['off_work'] is not None else '-':>8}"
-                   f" {r['auto_work'] if r['auto_work'] is not None else '-':>9}")
+        out.append(
+            f"{r['element']:<52} {r['requested'] or '?':>3}"
+            f" {r['off_peak'] if r['off_peak'] is not None else '-':>8}"
+            f" {r['auto_peak'] if r['auto_peak'] is not None else '-':>9}"
+            f" {r['off_work'] if r['off_work'] is not None else '-':>8}"
+            f" {r['auto_work'] if r['auto_work'] is not None else '-':>9}"
+        )
     out.append(f"auth: {reading['auth']}  pool: {json.dumps(reading['pool'], sort_keys=True)}")
     for (decision, policy), count in reading["decisions"]:
         out.append(f"decision {decision} policy {policy}: {count}")

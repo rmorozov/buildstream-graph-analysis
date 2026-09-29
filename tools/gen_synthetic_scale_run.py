@@ -184,9 +184,7 @@ def build_graph(layers, width, rng):
                 # UX-52: a deterministic minority of layer-to-layer edges
                 # are `runtime`, which do not gate build scheduling.
                 edge_ordinal = layer * width + index + pred_index
-                dependency_type = (
-                    "runtime" if edge_ordinal % RUNTIME_EDGE_EVERY == 0 else "build"
-                )
+                dependency_type = "runtime" if edge_ordinal % RUNTIME_EDGE_EVERY == 0 else "build"
                 dependencies.append(
                     {
                         "predecessor": mod(layer - 1, pred_index),
@@ -273,12 +271,12 @@ def _wrapped_log(placement, durations, started, builders):
     `Maximum ... Tasks:` headers carry the capacities, and one
     START/SUCCESS pair per element carries the schedule.
     """
-    lines = [f"[wrapper][{_stamp(started)}] INFO: Executing command: "
-             f"bst build all.bst",
-             f"[wrapper][{_stamp(started)}] INFO: Maximum Build Tasks: "
-             f"{builders}",
-             f"[wrapper][{_stamp(started)}] INFO: Maximum Fetch Tasks: 10",
-             f"[wrapper][{_stamp(started)}] INFO: Maximum Push Tasks: 4"]
+    lines = [
+        f"[wrapper][{_stamp(started)}] INFO: Executing command: bst build all.bst",
+        f"[wrapper][{_stamp(started)}] INFO: Maximum Build Tasks: {builders}",
+        f"[wrapper][{_stamp(started)}] INFO: Maximum Fetch Tasks: 10",
+        f"[wrapper][{_stamp(started)}] INFO: Maximum Push Tasks: 4",
+    ]
     events = []
     for uid, (start_us, _dur) in placement.items():
         events.append((start_us, 0, "START", uid))
@@ -292,10 +290,10 @@ def _wrapped_log(placement, durations, started, builders):
         # wrong.
         lines.append(
             f"[wrapper][{_stamp(when)}] INFO: [{_elapsed(offset_us)}]"
-            f"[{_cache_key(uid)}][   build:{uid}] {kind} Building")
+            f"[{_cache_key(uid)}][   build:{uid}] {kind} Building"
+        )
     last = max(start + durations[uid] for uid, (start, _) in placement.items())
-    lines.append(f"[wrapper][{_stamp(started + timedelta(microseconds=last))}] "
-                 f"INFO: Return code: 0")
+    lines.append(f"[wrapper][{_stamp(started + timedelta(microseconds=last))}] INFO: Return code: 0")
     return "\n".join(lines) + "\n"
 
 
@@ -338,53 +336,59 @@ def _plane2_records(placement, durations, started, rng):
         # of Plane 2 exists to measure, and a seed where they coincide
         # would show a reader a tax of zero.
         end = begin + max(durations[uid] / 1e6 * 0.92, 0.000_001)
-        cmd = (f"/usr/bin/cc -DNDEBUG -I/usr/include -O2 -g -pipe "
-               f"-c -o {uid[:-4]}.o {uid[:-4]}.c")
+        cmd = f"/usr/bin/cc -DNDEBUG -I/usr/include -O2 -g -pipe -c -o {uid[:-4]}.o {uid[:-4]}.c"
         # `pid`, `ppid`, `ts` first and in that order: the parser reads
         # them positionally and drops any line that does not open with
         # them. Getting this wrong writes a log that looks right and
         # parses to nothing, which is how the first draft of this seed
         # produced a timeline with no Plane 2 in it.
         tail = f"element={uid} inv=inv-{pid} src=spine"
-        lines.append(
-            f"START pid={pid} ppid=1 ts={begin:.6f} {tail} cmd={cmd}\n")
+        lines.append(f"START pid={pid} ppid=1 ts={begin:.6f} {tail} cmd={cmd}\n")
         lines.append(
             f"END pid={pid} ppid=1 ts={end:.6f} {tail} exit=0 "
             f"utime={rng.uniform(0.05, 0.9):.3f} "
             f"stime={rng.uniform(0.01, 0.2):.3f} "
-            f"maxrss_kb={rng.randrange(2048, 262144)} cmd={cmd}\n")
+            f"maxrss_kb={rng.randrange(2048, 262144)} cmd={cmd}\n"
+        )
     return "".join(lines)
 
 
-def _write_run(directory, elements, dependencies, placement, durations,
-               builders, run_id):
+def _write_run(directory, elements, dependencies, placement, durations, builders, run_id):
     """The three files a run directory is, factored out of `main`."""
     horizon = max(start + dur for start, dur in placement.values())
     spans = sorted(
-        ({"task_key": f"{uid}|BUILD|BUILD|0",
-          "ts_us": placement[uid][0], "dur_us": placement[uid][1],
-          "resources": ["PROCESS"], "primary_resource": "PROCESS"}
-         for uid in placement),
-        key=lambda s: (s["ts_us"], s["task_key"]))
+        (
+            {
+                "task_key": f"{uid}|BUILD|BUILD|0",
+                "ts_us": placement[uid][0],
+                "dur_us": placement[uid][1],
+                "resources": ["PROCESS"],
+                "primary_resource": "PROCESS",
+            }
+            for uid in placement
+        ),
+        key=lambda s: (s["ts_us"], s["task_key"]),
+    )
     loading_us, resolving_us = 900_000, 1_100_000
     directory.mkdir(parents=True, exist_ok=True)
-    (directory / "graph.json").write_text(json.dumps(
-        {"elements": elements, "dependencies": dependencies,
-         "run_identity_hash": run_id}, indent=1))
-    (directory / "trace.json").write_text(json.dumps(
-        {"run_identity_hash": run_id, "spans": spans, "phases": []}, indent=1))
+    (directory / "graph.json").write_text(
+        json.dumps({"elements": elements, "dependencies": dependencies, "run_identity_hash": run_id}, indent=1)
+    )
+    (directory / "trace.json").write_text(
+        json.dumps({"run_identity_hash": run_id, "spans": spans, "phases": []}, indent=1)
+    )
     run_context = {
         "trace_epsilon_us": 50_000,
-        "resource_capacities": {"PROCESS": builders, "DOWNLOAD": 10,
-                                "UPLOAD": 4},
-        "max_jobs": builders, "native_max_jobs": 4,
+        "resource_capacities": {"PROCESS": builders, "DOWNLOAD": 10, "UPLOAD": 4},
+        "max_jobs": builders,
+        "native_max_jobs": 4,
         "native_max_jobs_source": "parsed_from_invocation",
         "host_cpu_count": builders,
-        "wall_clock": {"start_us": 0,
-                       "end_us": horizon + loading_us + resolving_us},
+        "wall_clock": {"start_us": 0, "end_us": horizon + loading_us + resolving_us},
         "pipeline_overhead": [
             {"phase": "Loading elements", "elapsed_us": loading_us},
-            {"phase": "Resolving elements", "elapsed_us": resolving_us}],
+            {"phase": "Resolving elements", "elapsed_us": resolving_us},
+        ],
         "run_identity": {"manifest_hash": run_id, "targets": ["all.bst"]},
     }
     add_producer(run_context)
@@ -409,7 +413,8 @@ def _plant_store(output, args):
         "# it, which is the honest state of a no-BuildStream seed.\n"
         "name: bga-seed\n"
         "element-path: elements\n"
-        "min-version: 2.0\n")
+        "min-version: 2.0\n"
+    )
     runs_root = output / ".bga" / "runs"
     planted = []
     for index in range(args.runs):
@@ -425,8 +430,9 @@ def _plant_store(output, args):
         stamp = started.strftime(STORE_STAMP)
         snapshot = runs_root / stamp
         snapshot.mkdir(parents=True, exist_ok=True)
-        _write_run(snapshot / "run", elements, dependencies, placement,
-                   durations, args.builders, f"{args.run_id}-{index}")
+        _write_run(
+            snapshot / "run", elements, dependencies, placement, durations, args.builders, f"{args.run_id}-{index}"
+        )
         # `UX-330`: without this, `bga blast` on the seed says "this run
         # carries no source inventory" and the reader is back at a dead
         # end - so the seed carries one. Two of the elements share a
@@ -434,10 +440,8 @@ def _plant_store(output, args):
         # you that a change to a shared source rebuilds more than the
         # element you were thinking about.
         _write_sources(snapshot / "run", elements)
-        (snapshot / "build.log").write_text(
-            _wrapped_log(placement, durations, started, args.builders))
-        with gzip.open(snapshot / "plane2.log.gz", "wt",
-                       encoding="utf-8") as out:
+        (snapshot / "build.log").write_text(_wrapped_log(placement, durations, started, args.builders))
+        with gzip.open(snapshot / "plane2.log.gz", "wt", encoding="utf-8") as out:
             out.write(_plane2_records(placement, durations, started, rng))
         planted.append(snapshot)
     (output / ".bga" / "tmp").mkdir(exist_ok=True)
@@ -450,17 +454,22 @@ def _write_sources(directory, elements):
     for index, element in enumerate(sorted(e["uid"] for e in elements)):
         if element.endswith(".bst") and index % 7 == 3:
             # The interesting case: several elements off one repository.
-            inventory[element] = [{
-                "kind": "git", "identity": shared, "declared": shared,
-                "keying": "ref", "staged_at": None}]
+            inventory[element] = [
+                {"kind": "git", "identity": shared, "declared": shared, "keying": "ref", "staged_at": None}
+            ]
         else:
-            inventory[element] = [{
-                "kind": "local", "identity": f"files/{element[:-4]}",
-                "declared": f"files/{element[:-4]}", "keying": "content",
-                "staged_at": None}]
-    (directory / "sources.json").write_text(json.dumps(
-        {"schema": "sources/v1", "elements": inventory, "unreadable": []},
-        indent=1))
+            inventory[element] = [
+                {
+                    "kind": "local",
+                    "identity": f"files/{element[:-4]}",
+                    "declared": f"files/{element[:-4]}",
+                    "keying": "content",
+                    "staged_at": None,
+                }
+            ]
+    (directory / "sources.json").write_text(
+        json.dumps({"schema": "sources/v1", "elements": inventory, "unreadable": []}, indent=1)
+    )
 
 
 def _durations(elements, rng):
@@ -474,8 +483,7 @@ def _durations(elements, rng):
             # different edge case and not the one this fixture is for.
             durations[uid] = 1
         else:
-            durations[uid] = int(
-                rng.uniform(MIN_DURATION_S, MAX_DURATION_S) * 1_000_000)
+            durations[uid] = int(rng.uniform(MIN_DURATION_S, MAX_DURATION_S) * 1_000_000)
     return durations
 
 
@@ -493,19 +501,22 @@ def main():
         "the three files or ingestion rejects the directory.",
     )
     parser.add_argument(
-        "--store", action="store_true",
+        "--store",
+        action="store_true",
         help="UX-330: plant a whole store rather than one run directory - "
-             "a project root, two snapshots, and per snapshot the wrapped "
-             "log and Plane 2 records that `timeline` and `capture report` "
-             "need. This is the no-BuildStream seed the README's quick "
-             "start points at; it defaults to a small graph, because a "
-             "seed is for reading.",
+        "a project root, two snapshots, and per snapshot the wrapped "
+        "log and Plane 2 records that `timeline` and `capture report` "
+        "need. This is the no-BuildStream seed the README's quick "
+        "start points at; it defaults to a small graph, because a "
+        "seed is for reading.",
     )
     parser.add_argument(
-        "--runs", type=int, default=STORE_RUNS,
+        "--runs",
+        type=int,
+        default=STORE_RUNS,
         help=f"With --store: how many snapshots to plant (default "
-             f"{STORE_RUNS}). Two is the minimum that makes `@prev`, "
-             f"`compare` and the trend answer at all.",
+        f"{STORE_RUNS}). Two is the minimum that makes `@prev`, "
+        f"`compare` and the trend answer at all.",
     )
     args = parser.parse_args()
 
@@ -514,8 +525,7 @@ def main():
         # seed wants a graph a reader can hold in their head. Only the
         # ones left at their default are replaced, so `--store --width 40`
         # still means what it says.
-        for name, small in (("layers", STORE_LAYERS), ("width", STORE_WIDTH),
-                            ("builders", STORE_BUILDERS)):
+        for name, small in (("layers", STORE_LAYERS), ("width", STORE_WIDTH), ("builders", STORE_BUILDERS)):
             if getattr(args, name) == globals()[f"DEFAULT_{name.upper()}"]:
                 setattr(args, name, small)
         planted = _plant_store(args.output, args)

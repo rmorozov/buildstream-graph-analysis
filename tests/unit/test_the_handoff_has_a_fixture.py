@@ -47,6 +47,7 @@ stops, and the clauses below assert both directions - a page with a
 timeline denies none, a page without one says so - because either
 alone is satisfied by a page that never mentions a timeline at all.
 """
+
 import pathlib
 import sys
 
@@ -118,8 +119,7 @@ def booted(tmp_path_factory):
     """The three captures, exported. `WITH_TIMELINE` is the one that
     renders a timeline; the other two are the absence path."""
     made = pages.pages(tmp_path_factory, "handoff")
-    made["with_timeline"] = pages.export_uri(
-        pages.WITH_TIMELINE, tmp_path_factory.mktemp("handoff-timeline"))
+    made["with_timeline"] = pages.export_uri(pages.WITH_TIMELINE, tmp_path_factory.mktemp("handoff-timeline"))
     return made
 
 
@@ -131,15 +131,16 @@ class TestTheFixtureCanRenderATimeline:
         assert wrapped.is_file(), (
             f"{wrapped} is gone; `bga timeline` renders from the wrapped "
             f"BuildStream log and there is no other committed capture "
-            f"that has one")
+            f"that has one"
+        )
 
     def test_the_timeline_renders(self):
         import tools.bga_view as view
 
         rendered = view.trace_bytes(str(pages.WITH_TIMELINE))
         assert rendered is not None, (
-            "`bga timeline` refuses on the one fixture that is supposed "
-            "to render; the handoff is unexercisable again")
+            "`bga timeline` refuses on the one fixture that is supposed to render; the handoff is unexercisable again"
+        )
         assert len(rendered) > 1000, len(rendered)
 
     def test_the_committed_page_fixtures_still_cannot(self):
@@ -150,11 +151,8 @@ class TestTheFixtureCanRenderATimeline:
         moved."""
         import tools.bga_view as view
 
-        able = [label for label, fixture in pages.FIXTURES.items()
-                if view.trace_bytes(str(fixture)) is not None]
-        assert able == [], (
-            f"{able} can render a timeline now; this file's absence half "
-            f"is measuring the wrong fixtures")
+        able = [label for label, fixture in pages.FIXTURES.items() if view.trace_bytes(str(fixture)) is not None]
+        assert able == [], f"{able} can render a timeline now; this file's absence half is measuring the wrong fixtures"
 
 
 @needs_browser
@@ -164,13 +162,11 @@ class TestTheHandoffRendersWhereThereIsATrace:
         """The clause four rounds of review could not check."""
         out = browser.measure(booted["with_timeline"], _LOOK, 1440, 900)
         assert out["inDom"], out
-        assert out["height"], (
-            f"`#perfetto` is in the DOM and renders no box: {out}")
+        assert out["height"], f"`#perfetto` is in the DOM and renders no box: {out}"
         assert out["actionsHidden"] is False, out
         assert out["traceScript"], out
 
-    def test_the_absence_is_stated_and_claims_only_its_own_plane(
-            self, browser, booted):
+    def test_the_absence_is_stated_and_claims_only_its_own_plane(self, browser, booted):
         """`UX-362`, and the pair is the point.
 
         This capture has Plane 1 and no Plane 2, so the page states the
@@ -188,9 +184,9 @@ class TestTheHandoffRendersWhereThereIsATrace:
         assert out["height"], "the button does not render on this capture"
         assert out["absence"] == "NOT_CAPTURED", (
             "the Plane 2 absence is no longer stated on a capture that has "
-            "no Plane 2 - the honest half went with the wrong one")
-        assert out["denials"] == [], (
-            f"this page renders a timeline and denies one: {out['denials']}")
+            "no Plane 2 - the honest half went with the wrong one"
+        )
+        assert out["denials"] == [], f"this page renders a timeline and denies one: {out['denials']}"
 
     def test_the_label_says_what_the_press_does(self, browser, booted):
         out = browser.measure(booted["with_timeline"], _LOOK, 1440, 900)
@@ -208,19 +204,15 @@ class TestTheAbsenceRendersWhereThereIsNone:
     def test_the_button_does_not_render(self, browser, booted, label):
         out = browser.measure(booted[label], _LOOK, 1440, 900)
         assert out["inDom"], "the button left the document entirely"
-        assert not out["height"], (
-            f"{label}: `#perfetto` renders a box on a run with no "
-            f"timeline: {out}")
+        assert not out["height"], f"{label}: `#perfetto` renders a box on a run with no timeline: {out}"
         assert out["actionsHidden"] is True, out
         assert not out["traceScript"], out
 
-    def test_the_absence_is_stated_and_says_which_one(
-            self, browser, booted, label):
+    def test_the_absence_is_stated_and_says_which_one(self, browser, booted, label):
         """`UX-329`'s split, held: `golden` never captured Plane 2 and
         `macro_micro` captured it and kept no raw log, and those are a
         broken machine and a fine measurement."""
-        expected = {"golden": "NOT_CAPTURED",
-                    "macro_micro": "CAPTURED_NO_RAW_LOG"}[label]
+        expected = {"golden": "NOT_CAPTURED", "macro_micro": "CAPTURED_NO_RAW_LOG"}[label]
         out = browser.measure(booted[label], _LOOK, 1440, 900)
         assert out["absence"] == expected, out
 
@@ -234,8 +226,8 @@ class TestTheAbsenceRendersWhereThereIsNone:
         """
         out = browser.measure(booted[label], _LOOK, 1440, 900)
         assert out["denials"], (
-            f"{label} renders no timeline and never says so; the "
-            f"with_timeline clause is then vacuous")
+            f"{label} renders no timeline and never says so; the with_timeline clause is then vacuous"
+        )
 
 
 @needs_browser
@@ -253,10 +245,10 @@ class TestBothStatesAreReachable:
         without = browser.measure(booted["macro_micro"], _LOOK, 1440, 900)
         assert with_trace != without, (
             "the page renders identically with and without a timeline; "
-            "the probe cannot see the capability it is guarding")
+            "the probe cannot see the capability it is guarding"
+        )
         for field in ("height", "actionsHidden", "traceScript", "absence"):
-            assert with_trace[field] != without[field], (field, with_trace,
-                                                         without)
+            assert with_trace[field] != without[field], (field, with_trace, without)
 
     def test_every_state_has_a_fixture(self):
         """Stated as the count rather than by name, so the clause is
@@ -264,11 +256,10 @@ class TestBothStatesAreReachable:
         import tools.bga_view as view
 
         captures = dict(pages.FIXTURES, with_timeline=pages.WITH_TIMELINE)
-        states = {label: view.trace_bytes(str(path)) is not None
-                  for label, path in captures.items()}
+        states = {label: view.trace_bytes(str(path)) is not None for label, path in captures.items()}
         assert set(states.values()) == {True, False}, (
-            f"the committed captures reach only one of the handoff's two "
-            f"states: {states}")
+            f"the committed captures reach only one of the handoff's two states: {states}"
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

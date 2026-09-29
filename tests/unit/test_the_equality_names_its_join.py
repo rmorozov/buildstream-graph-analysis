@@ -17,6 +17,7 @@ on the committed dual-mechanism fixture the unjoined stream peaks at 4
 and the joined one at 2. `test_one_process_is_one_slice.py` holds the
 joined half; this holds the counterfactual.
 """
+
 import ast
 import pathlib
 import re
@@ -55,8 +56,7 @@ RETIRED = "by construction"
 def _counter_section():
     """The dictionary's `## Counter tracks`, heading to next heading."""
     text = DICTIONARY.read_text(encoding="utf-8")
-    match = re.search(r"^## Counter tracks$(.*?)^## ", text,
-                      re.MULTILINE | re.DOTALL)
+    match = re.search(r"^## Counter tracks$(.*?)^## ", text, re.MULTILINE | re.DOTALL)
     assert match, "the dictionary has no `## Counter tracks` section"
     return match.group(1)
 
@@ -68,8 +68,7 @@ def _counter_comment():
     explains *this* constant and nothing adjacent to it.
     """
     lines = TIMELINE.read_text(encoding="utf-8").splitlines()
-    index = next(i for i, line in enumerate(lines)
-                 if line.startswith("CONCURRENCY_COUNTER = "))
+    index = next(i for i, line in enumerate(lines) if line.startswith("CONCURRENCY_COUNTER = "))
     start = index
     while start > 0 and lines[start - 1].lstrip().startswith("#"):
         start -= 1
@@ -79,8 +78,8 @@ def _counter_comment():
 
 def _joined(raw_text):
     records = sorted(
-        stream_records(iter(parse_trace_lines(raw_text.splitlines()))),
-        key=lambda record: record["start_ts"])
+        stream_records(iter(parse_trace_lines(raw_text.splitlines()))), key=lambda record: record["start_ts"]
+    )
     return records, merge_record_streams(list(records))
 
 
@@ -89,16 +88,17 @@ def test_the_dictionary_sentence_names_the_join_and_its_guard():
     section = _counter_section()
     assert "max_concurrency" in section
     assert JOIN in section, (
-        f"the counter-track section states the equality without naming "
-        f"`{JOIN}`, which is what makes it hold")
+        f"the counter-track section states the equality without naming `{JOIN}`, which is what makes it hold"
+    )
     assert JOIN_ITEM in section, section
     assert GUARD_FILE in section and GUARD_TEST in section, (
-        f"the section states a guarded consequence without naming the "
-        f"guard ({GUARD_FILE}::{GUARD_TEST})")
+        f"the section states a guarded consequence without naming the guard ({GUARD_FILE}::{GUARD_TEST})"
+    )
     assert RETIRED not in section, (
         f"the counter-track section still says {RETIRED!r}; round 64 "
         f"measured the peak at 44 against a published 24, so it is a "
-        f"consequence of the join and not a construction")
+        f"consequence of the join and not a construction"
+    )
 
 
 def test_the_timeline_comment_names_the_join_and_its_guard():
@@ -107,8 +107,7 @@ def test_the_timeline_comment_names_the_join_and_its_guard():
     assert "max_concurrency" in comment
     assert JOIN in comment, comment
     assert JOIN_ITEM in comment, comment
-    assert GUARD_TEST in comment, (
-        f"the comment states the equality without naming {GUARD_TEST}")
+    assert GUARD_TEST in comment, f"the comment states the equality without naming {GUARD_TEST}"
     assert RETIRED not in comment, comment
 
 
@@ -122,13 +121,9 @@ def test_the_named_guard_exists_and_reads_the_counter_peak():
     path = REPO / "tests/unit" / GUARD_FILE
     assert path.is_file(), path
     tree = ast.parse(path.read_text(encoding="utf-8"))
-    found = [node for node in ast.walk(tree)
-             if isinstance(node, ast.FunctionDef) and node.name == GUARD_TEST]
-    assert len(found) == 1, (
-        f"{GUARD_FILE} does not define {GUARD_TEST}, which both sentences "
-        f"now name as the guard")
-    assert "counter_peak" in ast.unparse(found[0]), (
-        f"{GUARD_TEST} no longer reads the counter's peak")
+    found = [node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef) and node.name == GUARD_TEST]
+    assert len(found) == 1, f"{GUARD_FILE} does not define {GUARD_TEST}, which both sentences now name as the guard"
+    assert "counter_peak" in ast.unparse(found[0]), f"{GUARD_TEST} no longer reads the counter's peak"
 
 
 def test_the_equality_is_false_without_the_join():
@@ -147,4 +142,5 @@ def test_the_equality_is_false_without_the_join():
     assert unjoined_peak != joined_peak, (
         f"the unjoined stream peaks at {unjoined_peak} and the joined one "
         f"at {joined_peak}; if these agreed the equality would be a "
-        f"construction after all and both sentences should say so")
+        f"construction after all and both sentences should say so"
+    )

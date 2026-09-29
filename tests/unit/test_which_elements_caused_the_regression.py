@@ -21,6 +21,7 @@ Payload item first, deliberately. A viewer differencing two element
 tables would be a second comparison, disagreeing with `bga compare` the
 moment either changed; UX-214 is the round's evidence for that cost.
 """
+
 import json
 import os
 import shutil
@@ -36,24 +37,31 @@ node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 
 _RUN_CONTEXT = {
-    "trace_epsilon_us": 1000, "wall_start_us": 0, "wall_end_us": 400000,
-    "max_jobs": 2, "resource_capacities": {"PROCESS": 2},
+    "trace_epsilon_us": 1000,
+    "wall_start_us": 0,
+    "wall_end_us": 400000,
+    "max_jobs": 2,
+    "resource_capacities": {"PROCESS": 2},
 }
 
 
 def _span(uid, ts, dur):
-    return {"task_key": f"{uid}|BUILD|BUILD|0", "ts_us": ts, "dur_us": dur,
-            "resources": ["PROCESS"], "primary_resource": "PROCESS"}
+    return {
+        "task_key": f"{uid}|BUILD|BUILD|0",
+        "ts_us": ts,
+        "dur_us": dur,
+        "resources": ["PROCESS"],
+        "primary_resource": "PROCESS",
+    }
 
 
 def _run(directory, elements, spans, dependencies):
     directory.mkdir(parents=True)
     (directory / "run-context.json").write_text(json.dumps(_RUN_CONTEXT))
-    (directory / "graph.json").write_text(json.dumps({
-        "elements": [{"uid": uid} for uid in elements],
-        "dependencies": dependencies}))
-    (directory / "trace.json").write_text(json.dumps(
-        {"spans": spans, "phases": []}))
+    (directory / "graph.json").write_text(
+        json.dumps({"elements": [{"uid": uid} for uid in elements], "dependencies": dependencies})
+    )
+    (directory / "trace.json").write_text(json.dumps({"spans": spans, "phases": []}))
     return directory
 
 
@@ -63,13 +71,17 @@ def four_cases(tmp_path):
     appeared and one disappeared - the four cases in one comparison."""
     edge = [{"predecessor": "slow.bst", "successor": "fast.bst"}]
     baseline = _run(
-        tmp_path / "baseline", ["slow.bst", "fast.bst", "gone.bst"],
-        [_span("slow.bst", 0, 10000), _span("fast.bst", 10000, 20000),
-         _span("gone.bst", 30000, 8000)], edge)
+        tmp_path / "baseline",
+        ["slow.bst", "fast.bst", "gone.bst"],
+        [_span("slow.bst", 0, 10000), _span("fast.bst", 10000, 20000), _span("gone.bst", 30000, 8000)],
+        edge,
+    )
     candidate = _run(
-        tmp_path / "candidate", ["slow.bst", "fast.bst", "added.bst"],
-        [_span("slow.bst", 0, 30000), _span("fast.bst", 30000, 5000),
-         _span("added.bst", 35000, 9000)], edge)
+        tmp_path / "candidate",
+        ["slow.bst", "fast.bst", "added.bst"],
+        [_span("slow.bst", 0, 30000), _span("fast.bst", 30000, 5000), _span("added.bst", 35000, 9000)],
+        edge,
+    )
     return compare_runs(baseline, candidate)
 
 
@@ -84,13 +96,13 @@ def three_regressions(tmp_path):
     """
     names = ["big.bst", "mid.bst", "small.bst", "saver.bst", "tiny.bst"]
     before = [10000, 10000, 10000, 40000, 20000]
-    after = [70000, 40000, 20000, 10000, 15000]   # +60k +30k +10k -30k -5k
-    baseline = _run(tmp_path / "baseline", names,
-                    [_span(n, i * 100000, d)
-                     for i, (n, d) in enumerate(zip(names, before))], [])
-    candidate = _run(tmp_path / "candidate", names,
-                     [_span(n, i * 100000, d)
-                      for i, (n, d) in enumerate(zip(names, after))], [])
+    after = [70000, 40000, 20000, 10000, 15000]  # +60k +30k +10k -30k -5k
+    baseline = _run(
+        tmp_path / "baseline", names, [_span(n, i * 100000, d) for i, (n, d) in enumerate(zip(names, before))], []
+    )
+    candidate = _run(
+        tmp_path / "candidate", names, [_span(n, i * 100000, d) for i, (n, d) in enumerate(zip(names, after))], []
+    )
     return compare_runs(baseline, candidate)
 
 
@@ -102,7 +114,6 @@ def _row(comparison, uid):
 
 
 class TestAllFourCasesAreInThePayload:
-
     def test_the_element_that_grew_carries_a_positive_delta(self, four_cases):
         row = _row(four_cases, "slow.bst")
         assert (row["baseline_us"], row["candidate_us"]) == (10000, 30000)
@@ -119,8 +130,8 @@ class TestAllFourCasesAreInThePayload:
         assert row["presence"] == "appeared"
         assert row["baseline_us"] is None
         assert row["delta_us"] is None, (
-            "a delta from zero would rank a new element against elements "
-            "that actually changed")
+            "a delta from zero would rank a new element against elements that actually changed"
+        )
 
     def test_a_disappeared_element_is_not_an_improvement(self, four_cases):
         """The failure the appeared/disappeared split exists to prevent."""
@@ -132,16 +143,17 @@ class TestAllFourCasesAreInThePayload:
 
     def test_the_counts_state_the_shape_of_the_change(self, four_cases):
         assert four_cases.element_deltas["counts"] == {
-            "grew": 1, "shrank": 1, "unchanged": 0,
-            "appeared": 1, "disappeared": 1}
+            "grew": 1,
+            "shrank": 1,
+            "unchanged": 0,
+            "appeared": 1,
+            "disappeared": 1,
+        }
 
 
 class TestTheRankingIsThePayloadsOwn:
-
     def test_ranked_by_absolute_delta(self, four_cases):
-        measurable = [row["element_uid"]
-                      for row in four_cases.element_deltas["rows"]
-                      if row["delta_us"] is not None]
+        measurable = [row["element_uid"] for row in four_cases.element_deltas["rows"] if row["delta_us"] is not None]
         assert measurable == ["slow.bst", "fast.bst"]
 
     def test_rows_without_a_delta_sort_after_the_ones_with_one(self, four_cases):
@@ -154,13 +166,11 @@ class TestTheRankingIsThePayloadsOwn:
 
 
 class TestTheVerdictVocabularyIsTheClosedOne:
-
     def test_every_row_uses_a_declared_kind(self, four_cases):
         for row in four_cases.element_deltas["rows"]:
             assert row["verdict_kind"] in schemas.VERDICT_KINDS, row
 
-    def test_a_row_is_never_coloured_as_a_regression_inside_the_runs_noise(
-            self, tmp_path):
+    def test_a_row_is_never_coloured_as_a_regression_inside_the_runs_noise(self, tmp_path):
         """Clause 3, on a run that really does come out `within_observed_range`.
 
         The first draft of this guard built a fixture that landed on
@@ -173,18 +183,17 @@ class TestTheVerdictVocabularyIsTheClosedOne:
         """
         edge = [{"predecessor": "a.bst", "successor": "b.bst"}]
         baselines = [
-            _run(tmp_path / f"base{i}", ["a.bst", "b.bst"],
-                 [_span("a.bst", 0, dur), _span("b.bst", dur, 10000)], edge)
+            _run(tmp_path / f"base{i}", ["a.bst", "b.bst"], [_span("a.bst", 0, dur), _span("b.bst", dur, 10000)], edge)
             for i, dur in enumerate((10000, 10000, 10000, 10000, 20000))
         ]
         candidate = _run(
-            tmp_path / "cand", ["a.bst", "b.bst"],
-            [_span("a.bst", 0, 15000), _span("b.bst", 15000, 10000)], edge)
-        comparison = compare_runs(baselines[0], candidate,
-                                  baseline_runs=baselines)
+            tmp_path / "cand", ["a.bst", "b.bst"], [_span("a.bst", 0, 15000), _span("b.bst", 15000, 10000)], edge
+        )
+        comparison = compare_runs(baselines[0], candidate, baseline_runs=baselines)
         assert comparison.verdict_kind == "within_observed_range", (
             "the fixture must reach the disputed region for this to test "
-            f"anything; it reached {comparison.verdict_kind}")
+            f"anything; it reached {comparison.verdict_kind}"
+        )
         rows = comparison.element_deltas["rows"]
         assert {row["verdict_kind"] for row in rows} == {"within_observed_range"}
         # a.bst genuinely grew by 5ms. The number is a measurement and
@@ -193,8 +202,7 @@ class TestTheVerdictVocabularyIsTheClosedOne:
         assert grew["delta_us"] == 5000
         assert grew["verdict_kind"] != "regressed"
 
-    def test_a_run_that_calls_no_significant_change_colours_nothing_either(
-            self, tmp_path):
+    def test_a_run_that_calls_no_significant_change_colours_nothing_either(self, tmp_path):
         """The same rule on the other verdict that declines to call it.
 
         A report that says "no significant change" and then paints five
@@ -208,8 +216,7 @@ class TestTheVerdictVocabularyIsTheClosedOne:
         baseline = _run(tmp_path / "b", ["a.bst"], [_span("a.bst", 0, 1000000)], [])
         candidate = _run(tmp_path / "c", ["a.bst"], [_span("a.bst", 0, 1005000)], [])
         comparison = compare_runs(baseline, candidate)
-        assert comparison.verdict_kind == "no_significant_change", (
-            comparison.verdict_kind)
+        assert comparison.verdict_kind == "no_significant_change", comparison.verdict_kind
         row = _row(comparison, "a.bst")
         assert row["delta_us"] == 5000
         assert row["verdict_kind"] == "no_significant_change"
@@ -219,7 +226,6 @@ class TestTheVerdictVocabularyIsTheClosedOne:
 
 
 class TestThePayloadIsDeclared:
-
     def test_compare_declares_element_deltas(self):
         assert "element_deltas" in schemas.schema(schemas.COMPARE)["properties"]
 
@@ -228,20 +234,19 @@ class TestThePayloadIsDeclared:
         assert "element_diff" in schemas.schema(schemas.COMPARE)["properties"]
 
     def test_the_rows_declare_an_element_column(self):
-        rows = (schemas.schema(schemas.COMPARE)["properties"]["element_deltas"]
-                ["properties"]["rows"])
+        rows = schemas.schema(schemas.COMPARE)["properties"]["element_deltas"]["properties"]["rows"]
         roles = [column.get("role") for column in rows[schemas.COLUMNS]]
         assert "element" in roles
 
     def test_the_verdict_column_carries_the_marker_vocabulary(self):
-        item = (schemas.schema(schemas.COMPARE)["properties"]["element_deltas"]
-                ["properties"]["rows"]["items"]["properties"]["verdict_kind"])
+        item = schemas.schema(schemas.COMPARE)["properties"]["element_deltas"]["properties"]["rows"]["items"][
+            "properties"
+        ]["verdict_kind"]
         assert item[schemas.MARKERS] == schemas.VERDICT_MARKERS
         assert item["enum"] == list(schemas.VERDICT_KINDS)
 
 
 class TestTheTextReportNamesWhatItLeftOut:
-
     def test_the_culprits_appear_under_the_verdict(self, four_cases):
         text = format_compare_text(four_cases)
         assert "Which Elements Changed:" in text
@@ -257,11 +262,10 @@ class TestTheTextReportNamesWhatItLeftOut:
         """UX-187: the text caps, the payload does not."""
         count = ELEMENT_DELTAS_SHOWN + 5
         names = [f"e{i:02d}.bst" for i in range(count)]
-        baseline = _run(tmp_path / "b", names,
-                        [_span(n, i * 1000, 1000) for i, n in enumerate(names)], [])
-        candidate = _run(tmp_path / "c", names,
-                         [_span(n, i * 1000, 1000 + (i + 1) * 500)
-                          for i, n in enumerate(names)], [])
+        baseline = _run(tmp_path / "b", names, [_span(n, i * 1000, 1000) for i, n in enumerate(names)], [])
+        candidate = _run(
+            tmp_path / "c", names, [_span(n, i * 1000, 1000 + (i + 1) * 500) for i, n in enumerate(names)], []
+        )
         comparison = compare_runs(baseline, candidate)
         assert len(comparison.element_deltas["rows"]) == count
         text = format_compare_text(comparison)
@@ -270,10 +274,8 @@ class TestTheTextReportNamesWhatItLeftOut:
     def test_the_json_is_never_truncated(self, tmp_path):
         count = ELEMENT_DELTAS_SHOWN + 5
         names = [f"e{i:02d}.bst" for i in range(count)]
-        baseline = _run(tmp_path / "b", names,
-                        [_span(n, i * 1000, 1000) for i, n in enumerate(names)], [])
-        candidate = _run(tmp_path / "c", names,
-                         [_span(n, i * 1000, 2000) for i, n in enumerate(names)], [])
+        baseline = _run(tmp_path / "b", names, [_span(n, i * 1000, 1000) for i, n in enumerate(names)], [])
+        candidate = _run(tmp_path / "c", names, [_span(n, i * 1000, 2000) for i, n in enumerate(names)], [])
         payload = compare_runs(baseline, candidate).to_dict()
         assert len(payload["element_deltas"]["rows"]) == count
 
@@ -300,10 +302,11 @@ const text = (n) => (n.children ?? []).reduce(
 
 @needs_node
 class TestTheStripReadsThePayload:
-
     @staticmethod
     def _render(comparison):
-        script = _SHIM + f'''
+        script = (
+            _SHIM
+            + f'''
           const {{ renderCulprits }} = await import("./tests/viewer.mjs");
           const section = renderCulprits({json.dumps(comparison.to_dict())});
           const items = all(section, (n) => n.tagName === "li").map((li) => {{
@@ -329,9 +332,10 @@ class TestTheStripReadsThePayload:
             section: section.attrs["data-section"],
           }}));
         '''
-        result = subprocess.run([node, "--input-type=module", "-e", script],
-                                capture_output=True, text=True,
-                                cwd=os.getcwd(), timeout=60)
+        )
+        result = subprocess.run(
+            [node, "--input-type=module", "-e", script], capture_output=True, text=True, cwd=os.getcwd(), timeout=60
+        )
         assert result.returncode == 0, result.stderr
         return json.loads(result.stdout)
 
@@ -352,9 +356,7 @@ class TestTheStripReadsThePayload:
         """Stated against the payload rather than a literal, so the two
         cannot be edited apart."""
         out = self._render(three_regressions)
-        ranked = [row["element_uid"]
-                  for row in three_regressions.element_deltas["rows"]
-                  if row["delta_us"] is not None]
+        ranked = [row["element_uid"] for row in three_regressions.element_deltas["rows"] if row["delta_us"] is not None]
         rendered = [item["element"] for item in out["items"]]
         # Each group keeps the payload's relative order.
         worse = [uid for uid in ranked if uid in dict(out["groups"])["worse"]]
@@ -385,15 +387,18 @@ class TestTheStripReadsThePayload:
         assert slow["delta"] == str(_row(four_cases, "slow.bst")["delta_us"])
 
     def test_a_comparison_with_no_deltas_renders_nothing(self):
-        script = _SHIM + '''
+        script = (
+            _SHIM
+            + '''
           const { renderCulprits } = await import("./tests/viewer.mjs");
           console.log(JSON.stringify({
             empty: renderCulprits({}) === null,
             noRows: renderCulprits({element_deltas: {rows: []}}) === null,
           }));
         '''
-        result = subprocess.run([node, "--input-type=module", "-e", script],
-                                capture_output=True, text=True,
-                                cwd=os.getcwd(), timeout=60)
+        )
+        result = subprocess.run(
+            [node, "--input-type=module", "-e", script], capture_output=True, text=True, cwd=os.getcwd(), timeout=60
+        )
         assert result.returncode == 0, result.stderr
         assert json.loads(result.stdout) == {"empty": True, "noRows": True}

@@ -23,6 +23,7 @@ The NAR format is the whole of `unpack_nar`: 8-byte little-endian
 length, bytes, padded to 8 - regular (optionally executable), symlink,
 directory.
 """
+
 import argparse
 import hashlib
 import lzma
@@ -39,33 +40,24 @@ from typing import Optional
 PINS = {
     "x86_64": {
         "loader": "ld-linux-x86-64.so.2",
-        "interpreter_dir": (
-            "/nix/store/7nbi22pcc92y2fqbkyp7h3srvvklmckb-glibc-2.40-224/lib"),
+        "interpreter_dir": ("/nix/store/7nbi22pcc92y2fqbkyp7h3srvvklmckb-glibc-2.40-224/lib"),
         "paths": {
             "make-4.4": {
                 "version": "GNU Make 4.4.1",
-                "store_path": (
-                    "/nix/store/fnvsac4yaw2146ig4p54xnnm6b6alkjw-gnumake-4.4.1"),
-                "url": ("https://cache.nixos.org/nar/07k5xiavdyhv9v0qp7r5zjca5"
-                        "1sfp0r7779ikhvcrwrafr5wm3qf.nar.xz"),
-                "file_sha256": ("0e8fca4b762af3cc369c319d7332b84e"
-                                "87a298fc259f8bc14e1bfab655ec651e"),
-                "nar_sha256": ("3e0be8bceefe0a442f07871971a061a4"
-                               "30affed174b37de273843a535e262f75"),
+                "store_path": ("/nix/store/fnvsac4yaw2146ig4p54xnnm6b6alkjw-gnumake-4.4.1"),
+                "url": ("https://cache.nixos.org/nar/07k5xiavdyhv9v0qp7r5zjca51sfp0r7779ikhvcrwrafr5wm3qf.nar.xz"),
+                "file_sha256": ("0e8fca4b762af3cc369c319d7332b84e87a298fc259f8bc14e1bfab655ec651e"),
+                "nar_sha256": ("3e0be8bceefe0a442f07871971a061a430affed174b37de273843a535e262f75"),
                 "nar_size": 1607448,
             },
             # UX-916: the other side of `style_for_make_version`. Same
             # channel, same glibc reference, so it costs one more nar.
             "make-4.2": {
                 "version": "GNU Make 4.2.1",
-                "store_path": (
-                    "/nix/store/4320g8b6bl4wpgbmk0mdjr3rr2jr4xh6-gnumake-4.2.1"),
-                "url": ("https://cache.nixos.org/nar/095yb6353v0ww7pjjyqwvaiqj"
-                        "8i36qabanbhvk3dwm64gxvym5x3.nar.xz"),
-                "file_sha256": ("a397ea777fc454dec6dc7059b5143623"
-                                "2289a3da1c7b29efe11cec518659be24"),
-                "nar_sha256": ("1ae2768251e17505f0cf13173bcb96b2"
-                               "05c9a37fcbb8e2e2702076f52e8d3457"),
+                "store_path": ("/nix/store/4320g8b6bl4wpgbmk0mdjr3rr2jr4xh6-gnumake-4.2.1"),
+                "url": ("https://cache.nixos.org/nar/095yb6353v0ww7pjjyqwvaiqj8i36qabanbhvk3dwm64gxvym5x3.nar.xz"),
+                "file_sha256": ("a397ea777fc454dec6dc7059b51436232289a3da1c7b29efe11cec518659be24"),
+                "nar_sha256": ("1ae2768251e17505f0cf13173bcb96b205c9a37fcbb8e2e2702076f52e8d3457"),
                 "nar_size": 1207592,
             },
         },
@@ -77,31 +69,22 @@ PINS = {
     # comment above `PINS`.
     "aarch64": {
         "loader": "ld-linux-aarch64.so.1",
-        "interpreter_dir": (
-            "/nix/store/jjjpj4p9bz505ac1c747f2j5z3xw170p-glibc-2.40-224/lib"),
+        "interpreter_dir": ("/nix/store/jjjpj4p9bz505ac1c747f2j5z3xw170p-glibc-2.40-224/lib"),
         "paths": {
             "make-4.4": {
                 "version": "GNU Make 4.4.1",
-                "store_path": (
-                    "/nix/store/1kxihdh72rdyl170dh19zka2nmd179cc-gnumake-4.4.1"),
-                "url": ("https://cache.nixos.org/nar/1jkn9z1fizida3gd8adycy"
-                        "8ps3rf7hj7xrp3m6d51v8pjlflk2sh.nar.xz"),
-                "file_sha256": ("508b491d9517ed509aa9e3e67e243c2e"
-                                "0f7d9167be29d4de502dfee8c24f76ca"),
-                "nar_sha256": ("4c798e089b5963facc34bdbeaf536703"
-                               "ef24157306b96dfbe512ed14c2805b09"),
+                "store_path": ("/nix/store/1kxihdh72rdyl170dh19zka2nmd179cc-gnumake-4.4.1"),
+                "url": ("https://cache.nixos.org/nar/1jkn9z1fizida3gd8adycy8ps3rf7hj7xrp3m6d51v8pjlflk2sh.nar.xz"),
+                "file_sha256": ("508b491d9517ed509aa9e3e67e243c2e0f7d9167be29d4de502dfee8c24f76ca"),
+                "nar_sha256": ("4c798e089b5963facc34bdbeaf536703ef24157306b96dfbe512ed14c2805b09"),
                 "nar_size": 1660160,
             },
             "make-4.2": {
                 "version": "GNU Make 4.2.1",
-                "store_path": (
-                    "/nix/store/rmk3m2f8ks0vrc1sjr9c7yzx7bf33wba-gnumake-4.2.1"),
-                "url": ("https://cache.nixos.org/nar/0fvv9ari1ghi9ynkvj0ag0c"
-                        "882ihr6sr16b2s764s0yl77affz4n.nar.xz"),
-                "file_sha256": ("967ce7d439d4034dccd1629990b5c930"
-                                "0a8418780ac83dad4f11be10b34a7b3b"),
-                "nar_sha256": ("425c6173c593dd0ca89bab8f04f20d71"
-                               "50bd90a18b44a5603fc15f1c53d0df76"),
+                "store_path": ("/nix/store/rmk3m2f8ks0vrc1sjr9c7yzx7bf33wba-gnumake-4.2.1"),
+                "url": ("https://cache.nixos.org/nar/0fvv9ari1ghi9ynkvj0ag0c882ihr6sr16b2s764s0yl77affz4n.nar.xz"),
+                "file_sha256": ("967ce7d439d4034dccd1629990b5c9300a8418780ac83dad4f11be10b34a7b3b"),
+                "nar_sha256": ("425c6173c593dd0ca89bab8f04f20d7150bd90a18b44a5603fc15f1c53d0df76"),
                 "nar_size": 1223272,
             },
         },
@@ -118,14 +101,14 @@ class _Reader:
     def word(self) -> str:
         length = struct.unpack_from("<Q", self.data, self.pos)[0]
         self.pos += 8
-        value = self.data[self.pos:self.pos + length]
+        value = self.data[self.pos : self.pos + length]
         self.pos += length + (-length % 8)
         return value.decode("utf-8")
 
     def blob(self) -> bytes:
         length = struct.unpack_from("<Q", self.data, self.pos)[0]
         self.pos += 8
-        value = self.data[self.pos:self.pos + length]
+        value = self.data[self.pos : self.pos + length]
         self.pos += length + (-length % 8)
         return value
 
@@ -212,17 +195,16 @@ def fetch_nar(pin: dict, cache_dir: str) -> bytes:
         data = response.read()
     digest = hashlib.sha256(data).hexdigest()
     if digest != pin["file_sha256"]:
-        print(f"nix_store_fetch: {url} sha256 {digest}, pinned "
-              f"{pin['file_sha256']} - recompressed; nar_sha256 decides",
-              file=sys.stderr)
+        print(
+            f"nix_store_fetch: {url} sha256 {digest}, pinned {pin['file_sha256']} - recompressed; nar_sha256 decides",
+            file=sys.stderr,
+        )
     raw = lzma.decompress(data)
     digest = hashlib.sha256(raw).hexdigest()
     if digest != pin["nar_sha256"]:
-        raise ValueError(
-            f"{pin['store_path']}: NAR sha256 {digest}, pinned {pin['nar_sha256']}")
+        raise ValueError(f"{pin['store_path']}: NAR sha256 {digest}, pinned {pin['nar_sha256']}")
     if len(raw) != pin["nar_size"]:
-        raise ValueError(
-            f"{pin['store_path']}: NAR is {len(raw)} bytes, pinned {pin['nar_size']}")
+        raise ValueError(f"{pin['store_path']}: NAR is {len(raw)} bytes, pinned {pin['nar_size']}")
     os.makedirs(cache_dir, exist_ok=True)
     with open(cached, "wb") as handle:
         handle.write(raw)
@@ -238,7 +220,8 @@ def host_arch(arch: Optional[str] = None) -> dict:
         raise SystemExit(
             f"nix_store_fetch: no pinned toolchain for {arch!r} "
             f"(pinned: {', '.join(sorted(PINS))}) - "
-            f"stage_cpp_toolchain.sh is x86_64-only today (UX-915)")
+            f"stage_cpp_toolchain.sh is x86_64-only today (UX-915)"
+        )
     return PINS[arch]
 
 
@@ -256,15 +239,17 @@ def sysroot_lib_dir(dest: str, group: dict) -> str:
     file lands under `/lib/...` while `/usr/lib/...` holds only the
     link-time files - a hardcoded guess picks the wrong one."""
     skip = os.path.abspath(dest) + _STORE
-    found = [os.path.join(root, group["loader"])
-             for root, _dirs, files in os.walk(dest)
-             if group["loader"] in files
-             and not os.path.abspath(root).startswith(skip)
-             and not os.path.islink(os.path.join(root, group["loader"]))]
+    found = [
+        os.path.join(root, group["loader"])
+        for root, _dirs, files in os.walk(dest)
+        if group["loader"] in files
+        and not os.path.abspath(root).startswith(skip)
+        and not os.path.islink(os.path.join(root, group["loader"]))
+    ]
     if len(found) != 1:
         raise SystemExit(
-            f"nix_store_fetch: expected exactly one real {group['loader']} "
-            f"under {dest}, found {len(found)}: {found}")
+            f"nix_store_fetch: expected exactly one real {group['loader']} under {dest}, found {len(found)}: {found}"
+        )
     return os.path.dirname(found[0])
 
 
@@ -285,8 +270,7 @@ def stage_interpreter_link(dest: str, group: dict) -> str:
     os.makedirs(os.path.dirname(link), exist_ok=True)
     if os.path.lexists(link):
         os.unlink(link)
-    os.symlink(os.path.relpath(sysroot_lib_dir(dest, group),
-                               os.path.dirname(link)), link)
+    os.symlink(os.path.relpath(sysroot_lib_dir(dest, group), os.path.dirname(link)), link)
     return link
 
 
@@ -307,20 +291,18 @@ def stage_alias(dest: str, pin: dict) -> str:
     os.makedirs(os.path.dirname(link), exist_ok=True)
     if os.path.lexists(link):
         os.unlink(link)
-    os.symlink(os.path.relpath(dest + pin["store_path"] + "/bin/make",
-                               os.path.dirname(link)), link)
+    os.symlink(os.path.relpath(dest + pin["store_path"] + "/bin/make", os.path.dirname(link)), link)
     return link
 
 
-def stage(dest: str, names=None, arch: Optional[str] = None,
-          cache_dir: Optional[str] = None) -> list:
+def stage(dest: str, names=None, arch: Optional[str] = None, cache_dir: Optional[str] = None) -> list:
     """Each named pin unpacked under `dest` at its own absolute store
     path, with its series alias, plus the interpreter link. Returns the
     pin records staged."""
     group = host_arch(arch)
     cache_dir = cache_dir or os.path.join(
-        os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache"),
-        "bga", "nix-store")
+        os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache"), "bga", "nix-store"
+    )
     staged = []
     for name in names or sorted(group["paths"]):
         pin = group["paths"][name]
@@ -337,14 +319,13 @@ def stage(dest: str, names=None, arch: Optional[str] = None,
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
     parser.add_argument("dest", help="the sysroot root to stage under")
-    parser.add_argument("--pin", action="append", dest="names",
-                        help="pin name (default: every pin for this arch)")
+    parser.add_argument("--pin", action="append", dest="names", help="pin name (default: every pin for this arch)")
     parser.add_argument("--arch", default=None)
     parser.add_argument("--cache-dir", default=None)
-    parser.add_argument("--interpreter-dir", action="store_true",
-                        help="print this arch's interpreter dir and stage nothing")
-    parser.add_argument("--loader", action="store_true",
-                        help="print this arch's loader name and stage nothing")
+    parser.add_argument(
+        "--interpreter-dir", action="store_true", help="print this arch's interpreter dir and stage nothing"
+    )
+    parser.add_argument("--loader", action="store_true", help="print this arch's loader name and stage nothing")
     args = parser.parse_args(argv)
     if args.interpreter_dir:
         print(host_arch(args.arch)["interpreter_dir"])

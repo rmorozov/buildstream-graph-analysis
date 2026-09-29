@@ -15,6 +15,7 @@ that an unmatched element's compiler invocation is untouched
 (`BST_TRACE_FLTO_ACTIVE` unset), and the `build_shim_argv` tests assert
 the flag is set only for a `flto:`-matched element.
 """
+
 import os
 import pathlib
 import subprocess
@@ -29,13 +30,11 @@ BIND_DST = "/tmp/.bst-native-trace"
 
 # --- class 1: the reference shim script, run under sh ----------------------
 
+
 def _fake_compiler(bin_dir, name, out):
     """Echoes its own `MAKEFLAGS` and argv, `|`-separated, to `out`."""
     tool = bin_dir / name
-    tool.write_text(
-        "#!/bin/sh\n"
-        f'printf \'%s|%s\\n\' "$MAKEFLAGS" "$*" > "{out}"\n'
-    )
+    tool.write_text(f"#!/bin/sh\nprintf '%s|%s\\n' \"$MAKEFLAGS\" \"$*\" > \"{out}\"\n")
     tool.chmod(0o755)
 
 
@@ -55,8 +54,9 @@ def _run_gcc(tmp_path, argv, makeflags, lto_cap=None, flto_active=True):
         env["BST_TRACE_FLTO_ACTIVE"] = "1"
     else:
         env.pop("BST_TRACE_FLTO_ACTIVE", None)
-    result = subprocess.run(["sh", str(WRAPPERS / "flto" / "gcc"), *argv], env=env,
-                            capture_output=True, text=True, timeout=5)
+    result = subprocess.run(
+        ["sh", str(WRAPPERS / "flto" / "gcc"), *argv], env=env, capture_output=True, text=True, timeout=5
+    )
     assert result.returncode == 0, (result.stdout, result.stderr)
     makeflags_out, argv_out = (tmp_path / "out").read_text().rstrip("\n").split("|", 1)
     return makeflags_out, argv_out
@@ -67,9 +67,7 @@ class TestTheShimRewritesFltoAndStripsTheAuth:
     transform itself, on the matched-element side of the gate."""
 
     def test_bare_flto_is_rewritten_to_the_cap_and_auth_is_stripped(self, tmp_path):
-        makeflags, argv = _run_gcc(
-            tmp_path, ["-flto", "-c", "x.c"],
-            "--jobserver-auth=3,4 -j8", lto_cap="4")
+        makeflags, argv = _run_gcc(tmp_path, ["-flto", "-c", "x.c"], "--jobserver-auth=3,4 -j8", lto_cap="4")
 
         assert "-flto=4" in argv.split()
         assert "-flto" not in argv.split()
@@ -78,17 +76,12 @@ class TestTheShimRewritesFltoAndStripsTheAuth:
 
     def test_flto_jobserver_and_flto_auto_are_also_rewritten(self, tmp_path):
         for spelling in ("-flto=jobserver", "-flto=auto"):
-            _, argv = _run_gcc(
-                tmp_path, [spelling, "-c", "x.c"],
-                "--jobserver-auth=3,4 -j8", lto_cap="6")
+            _, argv = _run_gcc(tmp_path, [spelling, "-c", "x.c"], "--jobserver-auth=3,4 -j8", lto_cap="6")
             assert "-flto=6" in argv.split()
             assert spelling not in argv.split()
 
-    def test_no_flto_passes_argv_through_unchanged_and_still_strips_auth(
-            self, tmp_path):
-        makeflags, argv = _run_gcc(
-            tmp_path, ["-c", "x.c", "-O2"],
-            "--jobserver-auth=3,4 -j8", lto_cap="4")
+    def test_no_flto_passes_argv_through_unchanged_and_still_strips_auth(self, tmp_path):
+        makeflags, argv = _run_gcc(tmp_path, ["-c", "x.c", "-O2"], "--jobserver-auth=3,4 -j8", lto_cap="4")
 
         assert argv == "-c x.c -O2"
         assert "--jobserver-auth" not in makeflags
@@ -102,21 +95,20 @@ class TestTheShimRewritesFltoAndStripsTheAuth:
 # shim script is on its `PATH` too (UX-846's directory is shared, not
 # per-element).
 
+
 class TestTheShimIsGatedOnFltoActive:
     def test_unset_is_a_pure_pass_through_even_with_flto_in_argv(self, tmp_path):
         makeflags, argv = _run_gcc(
-            tmp_path, ["-flto", "-c", "x.c"],
-            "--jobserver-auth=fifo:/tmp/x.fifo -j8",
-            lto_cap="4", flto_active=False)
+            tmp_path, ["-flto", "-c", "x.c"], "--jobserver-auth=fifo:/tmp/x.fifo -j8", lto_cap="4", flto_active=False
+        )
 
         assert argv == "-flto -c x.c"
         assert makeflags == "--jobserver-auth=fifo:/tmp/x.fifo -j8"
 
     def test_set_to_1_strips_the_auth_and_rewrites_flto(self, tmp_path):
         makeflags, argv = _run_gcc(
-            tmp_path, ["-flto", "-c", "x.c"],
-            "--jobserver-auth=fifo:/tmp/x.fifo -j8",
-            lto_cap="4", flto_active=True)
+            tmp_path, ["-flto", "-c", "x.c"], "--jobserver-auth=fifo:/tmp/x.fifo -j8", lto_cap="4", flto_active=True
+        )
 
         assert argv == "-flto=4 -c x.c"
         assert "--jobserver-auth" not in makeflags
@@ -130,10 +122,20 @@ class TestTheShimIsGatedOnFltoActive:
 # `_COMPILER_SAFE_POLICIES` kind - scrubbed under 4.3 make on the auto
 # path (UX-878's own anchor), which is exactly the contrast this guards.
 
+
 def _bst_args(element):
     return [
-        "--unshare-pid", "--dir", f"{element}.bst", "--chdir", f"{element}.bst",
-        "--setenv", "JOBS", "-j4", "sh", "-c", "cmake --build .",
+        "--unshare-pid",
+        "--dir",
+        f"{element}.bst",
+        "--chdir",
+        f"{element}.bst",
+        "--setenv",
+        "JOBS",
+        "-j4",
+        "sh",
+        "-c",
+        "cmake --build .",
     ]
 
 
@@ -148,10 +150,16 @@ def _build(real_bwrap, tmp_path, element, wrapper_dir, monkeypatch, element_kind
     read_fd, write_fd = os.pipe()
     try:
         argv = build_shim_argv(
-            real_bwrap=real_bwrap, bst_args=_bst_args(element),
-            bind_src=bind_src, bind_dst=BIND_DST,
-            preload_so=f"{BIND_DST}/hook.so", trace_log=f"{BIND_DST}/trace.log",
-            jobserver_fd=read_fd, element_kind=element_kind, wrapper_dir=wrapper_dir)
+            real_bwrap=real_bwrap,
+            bst_args=_bst_args(element),
+            bind_src=bind_src,
+            bind_dst=BIND_DST,
+            preload_so=f"{BIND_DST}/hook.so",
+            trace_log=f"{BIND_DST}/trace.log",
+            jobserver_fd=read_fd,
+            element_kind=element_kind,
+            wrapper_dir=wrapper_dir,
+        )
         return argv, read_fd
     finally:
         os.close(write_fd)
@@ -175,11 +183,9 @@ FLTO_SUBDIR = os.path.join(BIND_DST, "wrappers", "flto")
 
 
 class TestAFltoMatchedElementKeepsFdAndIsNotScrubbed:
-    def test_matched_element_emits_raw_fd_and_mounts_the_wrapper(
-            self, tmp_path, monkeypatch):
+    def test_matched_element_emits_raw_fd_and_mounts_the_wrapper(self, tmp_path, monkeypatch):
         monkeypatch.setenv("BST_TRACE_JOBSERVER_AUTH_MAP", "flto:llvm*")
-        fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker",
-                                     BIND_DST, "4.3")
+        fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker", BIND_DST, "4.3")
         wrapper_dir = str(tmp_path / "wrappers")
 
         argv, read_fd = _build(fake, tmp_path, "llvm", wrapper_dir, monkeypatch)
@@ -198,28 +204,24 @@ class TestAFltoMatchedElementKeepsFdAndIsNotScrubbed:
         finally:
             os.close(read_fd)
 
-    def test_unmatched_element_on_the_same_4_3_make_is_still_scrubbed(
-            self, tmp_path, monkeypatch):
+    def test_unmatched_element_on_the_same_4_3_make_is_still_scrubbed(self, tmp_path, monkeypatch):
         """The UX-878 anchor: `flto:llvm*` naming a different element must
         not widen the scrub for one it does not match. Read on `cargo`
         since UX-913 took `cmake_meson` out of the scrubbed set - cargo is
         where an unwrapped client still reads MAKEFLAGS with no shim
         between, so it is the policy this anchor still has to hold on."""
         monkeypatch.setenv("BST_TRACE_JOBSERVER_AUTH_MAP", "flto:llvm*")
-        fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker",
-                                     BIND_DST, "4.3")
+        fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker", BIND_DST, "4.3")
         wrapper_dir = str(tmp_path / "wrappers")
 
-        argv, read_fd = _build(fake, tmp_path, "other", wrapper_dir, monkeypatch,
-                               element_kind="cargo")
+        argv, read_fd = _build(fake, tmp_path, "other", wrapper_dir, monkeypatch, element_kind="cargo")
         try:
             assert "MAKEFLAGS" not in argv
             assert not any("--jobserver-auth" in tok for tok in argv)
         finally:
             os.close(read_fd)
 
-    def test_unmatched_cmake_element_keeps_the_auth_and_not_the_shims(
-            self, tmp_path, monkeypatch):
+    def test_unmatched_cmake_element_keeps_the_auth_and_not_the_shims(self, tmp_path, monkeypatch):
         """UX-913: the element the override does not match is exactly the
         case that cost `11-serial-giant` its width, so its auth now
         stands. The shims stay behind the override: `flto/` shadows the
@@ -228,8 +230,7 @@ class TestAFltoMatchedElementKeepsFdAndIsNotScrubbed:
         on every cmake element's `PATH` failed `examples/06` with exit
         255 (run 35610762079)."""
         monkeypatch.setenv("BST_TRACE_JOBSERVER_AUTH_MAP", "flto:llvm*")
-        fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker",
-                                     BIND_DST, "4.3")
+        fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker", BIND_DST, "4.3")
         wrapper_dir = str(tmp_path / "wrappers")
 
         argv, read_fd = _build(fake, tmp_path, "other", wrapper_dir, monkeypatch)
@@ -240,20 +241,17 @@ class TestAFltoMatchedElementKeepsFdAndIsNotScrubbed:
         finally:
             os.close(read_fd)
 
-    def test_unmatched_element_wrapper_mounted_for_other_reasons_gets_no_flag(
-            self, tmp_path, monkeypatch):
+    def test_unmatched_element_wrapper_mounted_for_other_reasons_gets_no_flag(self, tmp_path, monkeypatch):
         """The regression the verifier caught: a `make`-kind element is
         never scrubbed (`_compiler_safe_makeflags` excludes it) so its
         wrapper directory still mounts (held-tool coverage, UX-846) even
         though `flto:llvm*` does not match it - `BST_TRACE_FLTO_ACTIVE`
         must not ride along on that unrelated mount."""
         monkeypatch.setenv("BST_TRACE_JOBSERVER_AUTH_MAP", "flto:llvm*")
-        fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker",
-                                     BIND_DST, "4.3")
+        fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker", BIND_DST, "4.3")
         wrapper_dir = str(tmp_path / "wrappers")
 
-        argv, read_fd = _build(fake, tmp_path, "other", wrapper_dir, monkeypatch,
-                               element_kind="make")
+        argv, read_fd = _build(fake, tmp_path, "other", wrapper_dir, monkeypatch, element_kind="make")
         try:
             assert _makeflags_value(argv) == f"--jobserver-auth={read_fd},{read_fd}"
             assert "--ro-bind" in argv, "held-tool coverage still mounts the directory"

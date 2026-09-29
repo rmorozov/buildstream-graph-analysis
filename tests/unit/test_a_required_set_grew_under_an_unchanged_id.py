@@ -14,6 +14,7 @@ the rule that stops the first case recurring.
 
 holds: rules.md#a-key-entering-required-under-a-live-id-bumps-it-too
 """
+
 import json
 import os
 import pathlib
@@ -31,25 +32,32 @@ GOLDEN = REPO / "tests/fixtures/golden/mixed_task_kinds"
 # derived: deriving it from today's schema would move with the defect.
 A_DOCUMENT_WRITTEN_BEFORE_UX_610 = {
     "schema": "compare/v2",
-    "baseline_run_id": "a", "candidate_run_id": "b",
-    "baseline": {}, "candidate": {}, "deltas": {},
-    "verdict": "improved", "verdict_kind": "improved",
-    "low_confidence": False, "mismatches": [], "failed_runs": [],
-    "attribution_deltas": {}, "element_deltas": {},
+    "baseline_run_id": "a",
+    "candidate_run_id": "b",
+    "baseline": {},
+    "candidate": {},
+    "deltas": {},
+    "verdict": "improved",
+    "verdict_kind": "improved",
+    "low_confidence": False,
+    "mismatches": [],
+    "failed_runs": [],
+    "attribution_deltas": {},
+    "element_deltas": {},
     "candidate_diagnosis": {},
 }
 
 try:
     import jsonschema
-except ImportError:                      # pragma: no cover
+except ImportError:  # pragma: no cover
     jsonschema = None
 
 # Round 21's seam, held by `test_six_seams_round_21_found.py`: a
 # module-scope `importorskip` skips every guard in the file, and only
 # two of these need a validator.
 needs_jsonschema = pytest.mark.skipif(
-    jsonschema is None,
-    reason="jsonschema is not installed - `pip install -e '.[dev]'`")
+    jsonschema is None, reason="jsonschema is not installed - `pip install -e '.[dev]'`"
+)
 
 
 def _schema(name):
@@ -76,16 +84,18 @@ class TestTheChoiceIsDeclaredAndNotInferred:
     def test_the_key_is_declared_permitted_rather_than_required(self):
         schema = _schema("compare/v2")
         assert "verdict_provenance" in schema["properties"], (
-            "verdict_provenance is not declared at all - permitted means "
-            "declared-and-not-required, not absent")
+            "verdict_provenance is not declared at all - permitted means declared-and-not-required, not absent"
+        )
         assert "verdict_provenance" not in schema["required"], (
             "verdict_provenance is required again; a compare/v2 document "
             "written before UX-610 stops validating against compare/v2, "
-            "which is the break this item is about")
+            "which is the break this item is about"
+        )
         assert "verdict_provenance" in _always_written("compare/v2"), (
             "verdict_provenance is permitted but nothing says the emitter "
             "guarantees it - that is the certainty this choice cost a "
-            "reader, and the annotation is what pays it back")
+            "reader, and the annotation is what pays it back"
+        )
 
     def test_a_declaration_is_never_also_required(self):
         """The annotation's only content is *not required*. A key in
@@ -94,8 +104,8 @@ class TestTheChoiceIsDeclaredAndNotInferred:
         for name, keys in _every_declaration().items():
             required = set(_schema(name)["required"])
             assert not set(keys) & required, (
-                f"{name}: {sorted(set(keys) & required)} is required and "
-                f"declared always-written")
+                f"{name}: {sorted(set(keys) & required)} is required and declared always-written"
+            )
 
     def test_a_declaration_names_a_key_the_schema_declares(self):
         for name, keys in _every_declaration().items():
@@ -114,11 +124,11 @@ class TestTheChoiceIsDeclaredAndNotInferred:
         is the tree's shape, not a duplicated claim: the second
         declaration separates them.
         """
-        declared = {key for keys in _every_declaration().values()
-                    for key in keys}
+        declared = {key for keys in _every_declaration().values() for key in keys}
         assert declared, (
             "no contract declares an always-written key; UX-629's choice "
-            "is gone and the clauses above are quantifying over nothing")
+            "is gone and the clauses above are quantifying over nothing"
+        )
 
     def test_the_builder_refuses_a_declaration_that_says_nothing(self):
         """The annotation's whole content is *permitted, and yet always
@@ -128,11 +138,9 @@ class TestTheChoiceIsDeclaredAndNotInferred:
         from bga import schemas
 
         with pytest.raises(ValueError):
-            schemas._document("x/v1", "t", {"k": ""}, "d",
-                              always_written=("k",))
+            schemas._document("x/v1", "t", {"k": ""}, "d", always_written=("k",))
         with pytest.raises(KeyError):
-            schemas._document("x/v1", "t", {}, "d",
-                              always_written=("nope",))
+            schemas._document("x/v1", "t", {}, "d", always_written=("nope",))
 
 
 class TestTheOldDocumentValidatesAgain:
@@ -142,8 +150,7 @@ class TestTheOldDocumentValidatesAgain:
 
     @needs_jsonschema
     def test_a_document_written_before_ux_610_validates(self):
-        jsonschema.validate(A_DOCUMENT_WRITTEN_BEFORE_UX_610,
-                            _schema("compare/v2"))
+        jsonschema.validate(A_DOCUMENT_WRITTEN_BEFORE_UX_610, _schema("compare/v2"))
 
     def test_that_document_is_the_pre_ux_610_required_set(self):
         """Non-vacuity for the clause above, and only that: a fixture
@@ -180,7 +187,8 @@ class TestTheEmitterCarriesTheGuarantee:
                 f"compare/v2 declares {missing} always written and `bga "
                 f"compare` did not write {missing}. Permitted-and-always-"
                 f"written is only worth the guarantee, and the guarantee "
-                f"is here")
+                f"is here"
+            )
 
     def test_the_payload_is_a_real_comparison(self, comparison):
         """Non-vacuity: an empty or refused payload carries no keys, so
@@ -202,8 +210,7 @@ class TestTheRuleSaysWhichChoiceWasMade:
     }
 
     @pytest.mark.parametrize("relative,heading", sorted(DOCUMENTS.items()))
-    def test_the_versioning_rule_carries_the_third_clause(self, relative,
-                                                          heading):
+    def test_the_versioning_rule_carries_the_third_clause(self, relative, heading):
         """Read from the section that states the rule, not the file: a
         document arguing about `required` elsewhere would otherwise
         satisfy this without the rule having moved."""
@@ -214,23 +221,23 @@ class TestTheRuleSaysWhichChoiceWasMade:
         assert "`required`" in body, (
             f"{relative}'s versioning rule does not mention `required` - "
             f"it still names only rename and removal, and UX-610's growth "
-            f"reads as an addition")
-        assert "UX-629" in body, (
-            f"{relative} states the clause without saying what settled it")
+            f"reads as an addition"
+        )
+        assert "UX-629" in body, f"{relative} states the clause without saying what settled it"
 
     def test_the_rules_card_carries_its_own_row(self):
         """The card is one line per rule and cites no ids in its rows,
         so it is read for the row rather than for the argument - and
         the row must name *this* file, which is the link
         `test_the_agent_configuration_holds.py` walks the other way."""
-        text = (REPO / "docs/contributing/rules.md").read_text(
-            encoding="utf-8")
-        row = [line for line in text.splitlines()
-               if line.startswith("|") and "`required`" in line
-               and "under a live id" in line]
+        text = (REPO / "docs/contributing/rules.md").read_text(encoding="utf-8")
+        row = [
+            line
+            for line in text.splitlines()
+            if line.startswith("|") and "`required`" in line and "under a live id" in line
+        ]
         assert len(row) == 1, f"expected one row, found {row}"
-        assert pathlib.Path(__file__).name in row[0], (
-            f"the row does not name this guard: {row[0]}")
+        assert pathlib.Path(__file__).name in row[0], f"the row does not name this guard: {row[0]}"
 
 
 @pytest.fixture(scope="module")
@@ -249,9 +256,18 @@ def comparison(tmp_path_factory):
         os.remove(run / "expected_output.json")
         runs.append(str(run))
     done = subprocess.run(
-        [sys.executable, "-c",
-         "from bga.cli import main; raise SystemExit(main({!r}))".format(["compare", runs[0], runs[1], "--format", "json"])],
-        capture_output=True, text=True, cwd=REPO, timeout=300)
+        [
+            sys.executable,
+            "-c",
+            "from bga.cli import main; raise SystemExit(main({!r}))".format(
+                ["compare", runs[0], runs[1], "--format", "json"]
+            ),
+        ],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=300,
+    )
     assert done.returncode == 0, done.stderr[-2000:]
     return json.loads(done.stdout)
 

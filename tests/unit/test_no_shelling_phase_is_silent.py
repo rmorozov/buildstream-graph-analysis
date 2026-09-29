@@ -19,6 +19,7 @@ a subprocess", not a list of phase names somebody maintains.
 `progress.ticker(` call appears per module. That guard passes on a
 ticker created and never fed; these read what the phase draws.
 """
+
 import ast
 import io
 import pathlib
@@ -35,8 +36,7 @@ from tools import bst_native_build_tracer as tracer
 
 #: The capture-side modules that drive `bst`. `bga/run_store.py` walks a
 #: directory tree and spawns nothing, so it is not in this population.
-SHELLING_MODULES = ("tools/bst_native_build_tracer.py",
-                    "tools/bst_show_to_graph.py")
+SHELLING_MODULES = ("tools/bst_native_build_tracer.py", "tools/bst_show_to_graph.py")
 
 
 def _calls(node):
@@ -58,8 +58,7 @@ def _spawners(functions):
         for name, node in functions.items():
             if name in found:
                 continue
-            if any(c.startswith("subprocess.") or c in found
-                   for c in _calls(node)):
+            if any(c.startswith("subprocess.") or c in found for c in _calls(node)):
                 found.add(name)
                 growing = True
     return found
@@ -70,14 +69,12 @@ def loops_that_shell_out(path):
     spawns a subprocess - the shape that costs one `bst` startup per
     iteration."""
     tree = ast.parse((REPO / path).read_text(encoding="utf-8"))
-    functions = {n.name: n for n in ast.walk(tree)
-                 if isinstance(n, ast.FunctionDef)}
+    functions = {n.name: n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)}
     spawners = _spawners(functions)
     found = {}
     for name, node in functions.items():
         loops = [n for n in ast.walk(node) if isinstance(n, (ast.For, ast.While))]
-        if any(c.startswith("subprocess.") or c in spawners
-               for loop in loops for c in _calls(loop)):
+        if any(c.startswith("subprocess.") or c in spawners for loop in loops for c in _calls(loop)):
             found[name] = node.lineno
     return found
 
@@ -88,13 +85,11 @@ def _feeds_a_ticker(path, function):
     A ticker constructed and never stepped draws nothing, which is the
     state this item found the phase in."""
     tree = ast.parse((REPO / path).read_text(encoding="utf-8"))
-    node = next(n for n in ast.walk(tree)
-                if isinstance(n, ast.FunctionDef) and n.name == function)
+    node = next(n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name == function)
     if not any("progress.ticker" in c for c in _calls(node)):
         return False
     loops = [n for n in ast.walk(node) if isinstance(n, (ast.For, ast.While))]
-    return any(c.endswith(".step") or c.endswith(".note")
-               for loop in loops for c in _calls(loop))
+    return any(c.endswith(".step") or c.endswith(".note") for loop in loops for c in _calls(loop))
 
 
 class TestEveryLoopThatShellsOutIsNarrated:
@@ -103,13 +98,15 @@ class TestEveryLoopThatShellsOutIsNarrated:
 
     @pytest.mark.parametrize("module", SHELLING_MODULES)
     def test_it_feeds_a_ticker(self, module):
-        silent = [f"{module}:{line} {name}"
-                  for name, line in sorted(loops_that_shell_out(module).items())
-                  if not _feeds_a_ticker(module, name)]
+        silent = [
+            f"{module}:{line} {name}"
+            for name, line in sorted(loops_that_shell_out(module).items())
+            if not _feeds_a_ticker(module, name)
+        ]
         assert not silent, (
             "one `bst` invocation is 1.34s, so a loop over elements passes "
-            "10s at eight of them - and these draw nothing:\n  "
-            + "\n  ".join(silent))
+            "10s at eight of them - and these draw nothing:\n  " + "\n  ".join(silent)
+        )
 
     def test_the_detector_sees_a_phase_shaped_like_the_real_one(self, tmp_path):
         """The clause that keeps the one above from passing vacuously: an
@@ -133,7 +130,8 @@ class TestEveryLoopThatShellsOutIsNarrated:
             "    for index, name in enumerate(names, 1):\n"
             "        tick.step(index)\n"
             "        _one(name)\n",
-            encoding="utf-8")
+            encoding="utf-8",
+        )
         found = loops_that_shell_out(module)
         assert set(found) == {"silent", "narrated"}, found
         assert not _feeds_a_ticker(module, "silent")
@@ -156,8 +154,7 @@ class _Bst:
         out = []
         for name in asked:
             out += [f"  {name}:", "\tusr/lib/libx.a"]
-        return subprocess.CompletedProcess(argv, 0, stdout="\n".join(out) + "\n",
-                                           stderr="")
+        return subprocess.CompletedProcess(argv, 0, stdout="\n".join(out) + "\n", stderr="")
 
 
 class _FakeTTY(io.StringIO):
@@ -189,28 +186,27 @@ class TestTheLineCountsTheBatchesItMakes:
         """500 elements at a 200-element chunk is three `bst` calls, so
         the line goes 1/3, 2/3, 3/3 - not 1/500."""
         drawn = _draw(monkeypatch, [f"e{n}.bst" for n in range(500)])
-        assert _frames(drawn) == ["artifact contents: 1/3",
-                                  "artifact contents: 2/3",
-                                  "artifact contents: 3/3"], _frames(drawn)
+        assert _frames(drawn) == ["artifact contents: 1/3", "artifact contents: 2/3", "artifact contents: 3/3"], (
+            _frames(drawn)
+        )
 
     def test_the_retry_says_it_is_retrying(self, monkeypatch):
         """A failed group is one `bst` call per element (`UX-518`), which
         is the slowest this phase gets. The batch counter cannot move
         during it, so the line says what it is doing instead."""
-        drawn = _draw(monkeypatch, ["a.bst", "gone.bst", "c.bst"],
-                      unresolvable={"gone.bst"})
+        drawn = _draw(monkeypatch, ["a.bst", "gone.bst", "c.bst"], unresolvable={"gone.bst"})
         assert [f for f in _frames(drawn) if "retry" in f] == [
             "artifact contents: 1/1 retry 1/3",
             "artifact contents: 1/1 retry 2/3",
-            "artifact contents: 1/1 retry 3/3"], _frames(drawn)
+            "artifact contents: 1/1 retry 3/3",
+        ], _frames(drawn)
 
     def test_nothing_reaches_a_pipe(self, monkeypatch):
         """`UX-183`'s rule, for this line: a redirected stderr is a log
         file, and a carriage return in one is somebody's cleanup job."""
-        drawn = _draw(monkeypatch, [f"e{n}.bst" for n in range(500)],
-                      tty=False)
+        drawn = _draw(monkeypatch, [f"e{n}.bst" for n in range(500)], tty=False)
         assert drawn == "", repr(drawn)
 
 
-if __name__ == "__main__":                       # pragma: no cover
+if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(pytest.main([__file__, "-v"]))

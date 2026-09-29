@@ -3,6 +3,7 @@ size, each with the reading it came from - builders from the replay's
 ready-set width, the pool from UX-1004's recorded knee, never from
 `max_jobs`/`host_cpu_count` directly (the Decision's own two mutations).
 """
+
 from bga.correlate import compute_builder_pool_recommendation, compute_ready_set_width
 from bga.ingest.models import NormalizedTask, RunContext, TaskKey, TaskKind
 from bga.replay.scheduler import ReplayScheduler
@@ -11,7 +12,9 @@ from bga.replay.scheduler import ReplayScheduler
 def _task(uid, dur_us=1_000_000):
     return NormalizedTask(
         task_key=TaskKey(uid, TaskKind.BUILD, "BUILD", 0),
-        ready_us=0, start_us=0, finish_us=dur_us,
+        ready_us=0,
+        start_us=0,
+        finish_us=dur_us,
     )
 
 
@@ -24,8 +27,9 @@ def _wide_and_narrow_scheduler(configured_max_jobs=32):
     """
     tasks = [_task("giant.bst", 8_000_000)]
     tasks += [_task(f"narrow-{i:02d}.bst", 1_000_000) for i in range(1, 25)]
-    context = RunContext(resource_capacities={"PROCESS": configured_max_jobs},
-                          max_jobs=configured_max_jobs, host_cpu_count=16)
+    context = RunContext(
+        resource_capacities={"PROCESS": configured_max_jobs}, max_jobs=configured_max_jobs, host_cpu_count=16
+    )
     return ReplayScheduler(tasks, context)
 
 
@@ -46,22 +50,27 @@ class TestReadySetWidth:
         """A single dependency chain never has two ready tasks at once -
         the width the naive `max_jobs`-reading mutation could not produce
         by accident, since a wide `max_jobs` would still print more than 1."""
-        first = NormalizedTask(task_key=TaskKey("a.bst", TaskKind.BUILD, "BUILD", 0),
-                                ready_us=0, start_us=0, finish_us=1_000_000)
-        second = NormalizedTask(task_key=TaskKey("b.bst", TaskKind.BUILD, "BUILD", 0),
-                                 ready_us=0, start_us=1_000_000, finish_us=2_000_000,
-                                 dependencies=[first.task_key])
+        first = NormalizedTask(
+            task_key=TaskKey("a.bst", TaskKind.BUILD, "BUILD", 0), ready_us=0, start_us=0, finish_us=1_000_000
+        )
+        second = NormalizedTask(
+            task_key=TaskKey("b.bst", TaskKind.BUILD, "BUILD", 0),
+            ready_us=0,
+            start_us=1_000_000,
+            finish_us=2_000_000,
+            dependencies=[first.task_key],
+        )
         scheduler = ReplayScheduler(
-            [first, second],
-            RunContext(resource_capacities={"PROCESS": 8}, max_jobs=8, host_cpu_count=16))
+            [first, second], RunContext(resource_capacities={"PROCESS": 8}, max_jobs=8, host_cpu_count=16)
+        )
         assert compute_ready_set_width(scheduler) == 1
 
 
 class TestPoolFromTheCalibratedKnee:
     def test_pool_is_the_calibrated_knee_when_supplied(self):
         recommendation = compute_builder_pool_recommendation(
-            ready_set_width=25, host_cpu_count=16, critical_path_max_jobs=8,
-            calibrated_cores=2)
+            ready_set_width=25, host_cpu_count=16, critical_path_max_jobs=8, calibrated_cores=2
+        )
         assert recommendation["pool_size"] == 2
         assert "UX-1004" in recommendation["pool_reading"]
 
@@ -70,13 +79,14 @@ class TestPoolFromTheCalibratedKnee:
         this - the calibrated knee (2) differs from the host's raw 16
         cores, so reading `host_cpu_count` instead prints the wrong pool."""
         recommendation = compute_builder_pool_recommendation(
-            ready_set_width=25, host_cpu_count=16, critical_path_max_jobs=8,
-            calibrated_cores=2)
+            ready_set_width=25, host_cpu_count=16, critical_path_max_jobs=8, calibrated_cores=2
+        )
         assert recommendation["pool_size"] != 16
 
     def test_pool_falls_back_to_host_cpu_count_uncalibrated_when_no_knee(self):
         recommendation = compute_builder_pool_recommendation(
-            ready_set_width=25, host_cpu_count=16, critical_path_max_jobs=8)
+            ready_set_width=25, host_cpu_count=16, critical_path_max_jobs=8
+        )
         assert recommendation["pool_size"] == 16
         assert "uncalibrated" in recommendation["pool_reading"]
 
@@ -89,7 +99,8 @@ class TestTheSafeCapIsHonestAboutAdmission:
         (33 jobs on 16 cores: 4 builders wall ~143s beat 32 builders'
         ~208s, examples/13-mixed-graph, 3 repeats, cold cache)."""
         recommendation = compute_builder_pool_recommendation(
-            ready_set_width=25, host_cpu_count=16, critical_path_max_jobs=8)
+            ready_set_width=25, host_cpu_count=16, critical_path_max_jobs=8
+        )
         assert recommendation["ready_set_width"] == 25
         assert recommendation["safe_builder_cap"] == 8
         assert recommendation["safe_builder_cap"] < recommendation["ready_set_width"]
@@ -102,16 +113,23 @@ class TestTheSafeCapIsHonestAboutAdmission:
 class TestTheDefaultIsTheSafeCapUnderAuto:
     """Graviton run 36163582462: 8 builders + auto 118.3s against 143.6s."""
 
-    RECOMMENDATION = {"ready_set_width": 25, "ready_set_reading": "the replay",
-                      "safe_builder_cap": 8, "critical_path_max_jobs": 8,
-                      "pool_size": 16, "pool_reading": "host_cpu_count (16)"}
+    RECOMMENDATION = {
+        "ready_set_width": 25,
+        "ready_set_reading": "the replay",
+        "safe_builder_cap": 8,
+        "critical_path_max_jobs": 8,
+        "pool_size": 16,
+        "pool_reading": "host_cpu_count (16)",
+    }
 
     def test_the_first_line_recommends_the_safe_cap_with_auto(self):
         from bga.cli import _builder_pool_text_lines
+
         first = _builder_pool_text_lines(self.RECOMMENDATION)[0]
         assert first.startswith("Builders: 8 with --jobserver auto")
 
     def test_the_ready_set_width_is_named_as_admission_only(self):
         from bga.cli import _builder_pool_text_lines
+
         lines = _builder_pool_text_lines(self.RECOMMENDATION)
         assert any("25" in line and "BGA_ADMISSION=1" in line for line in lines)

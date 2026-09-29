@@ -15,6 +15,7 @@ that does, closed over calls across those modules. Over-selection is
 the safe direction; `test_a_docs_only_diff_runs_its_guards.py` holds
 the derivation to a textual witness and the workflow to both tools.
 """
+
 import argparse
 import ast
 import functools
@@ -33,9 +34,7 @@ SHELLS = {"run", "check_output", "check_call", "call", "Popen"}
 
 
 def _docsish(value) -> bool:
-    return isinstance(value, str) and (
-        value == "docs" or value.startswith(("docs/", ".claude"))
-        or ".md" in value)
+    return isinstance(value, str) and (value == "docs" or value.startswith(("docs/", ".claude")) or ".md" in value)
 
 
 def _nodes(scope):
@@ -60,7 +59,7 @@ def _bound_by(node):
     if isinstance(node, (ast.For, ast.AsyncFor, ast.comprehension)):
         return [(node.target, node.iter)]
     if isinstance(node, FUNCTIONS):
-        args = node.args.args[len(node.args.args) - len(node.args.defaults):]
+        args = node.args.args[len(node.args.args) - len(node.args.defaults) :]
         return list(zip(args, node.args.defaults))
     return []
 
@@ -86,8 +85,7 @@ def _scopes(tree):
     for fn in ast.walk(tree):
         if isinstance(fn, FUNCTIONS):
             own = _bindings(fn)
-            yield fn, {k: own.get(k, []) + module.get(k, [])
-                       for k in {*own, *module}}
+            yield fn, {k: own.get(k, []) + module.get(k, []) for k in {*own, *module}}
 
 
 def _reaches_docs(expr, bound, seen):
@@ -110,13 +108,16 @@ def _walks_docs(node, bound) -> bool:
             parts = [call.func.value, *call.args, *(k.value for k in call.keywords)]
             if any(_reaches_docs(part, bound, set()) for part in parts):
                 return True
-        elif (call.func.attr in SHELLS and call.args
-              and isinstance(call.args[0], (ast.List, ast.Tuple))):
-            argv = [e.value if isinstance(e, ast.Constant)
-                    and isinstance(e.value, str) else "" for e in call.args[0].elts]
+        elif call.func.attr in SHELLS and call.args and isinstance(call.args[0], (ast.List, ast.Tuple)):
+            argv = [
+                e.value if isinstance(e, ast.Constant) and isinstance(e.value, str) else "" for e in call.args[0].elts
+            ]
             spec = [a for a in argv[2:] if a and not a.startswith("-")]
-            if (argv[:2] == ["git", "ls-files"] and "--error-unmatch" not in argv
-                    and (not spec or any(map(_docsish, spec)))):
+            if (
+                argv[:2] == ["git", "ls-files"]
+                and "--error-unmatch" not in argv
+                and (not spec or any(map(_docsish, spec)))
+            ):
                 return True
     return False
 
@@ -154,9 +155,10 @@ def _reaches_a_walker(node, imports, found, local=frozenset()) -> bool:
             stem, name = functions.get(ref.id, (None, None))
             if ref.id in local or name in found.get(stem, ()):
                 return True
-        elif isinstance(ref, ast.Attribute) and (ref.attr in local or (
-                isinstance(ref.value, ast.Name)
-                and ref.attr in found.get(modules.get(ref.value.id), ()))):
+        elif isinstance(ref, ast.Attribute) and (
+            ref.attr in local
+            or (isinstance(ref.value, ast.Name) and ref.attr in found.get(modules.get(ref.value.id), ()))
+        ):
             return True
     return False
 
@@ -165,17 +167,18 @@ def _reaches_a_walker(node, imports, found, local=frozenset()) -> bool:
 def walkers():
     """`{module stem: {function}}` over `bga/`, `tools/` and the `tests/`
     helpers: a function that walks docs, or reaches one that does."""
-    helpers = [p for p in (REPO / "tests").glob("*.py")
-               if not p.name.startswith("test_")]
-    trees = {path: _parse(path) for path in [
-        *(REPO / "bga").rglob("*.py"), *(REPO / "tools").glob("*.py"), *helpers]
-        if "__pycache__" not in path.parts}
+    helpers = [p for p in (REPO / "tests").glob("*.py") if not p.name.startswith("test_")]
+    trees = {
+        path: _parse(path)
+        for path in [*(REPO / "bga").rglob("*.py"), *(REPO / "tools").glob("*.py"), *helpers]
+        if "__pycache__" not in path.parts
+    }
     trees = {path: tree for path, tree in trees.items() if tree}
     found = {}
     for path, tree in trees.items():
         found.setdefault(path.stem, set()).update(
-            scope.name for scope, bound in _scopes(tree)
-            if scope is not tree and _walks_docs(scope, bound))
+            scope.name for scope, bound in _scopes(tree) if scope is not tree and _walks_docs(scope, bound)
+        )
     imports = {path: _imports(tree) for path, tree in trees.items()}
     grew = True
     while grew:
@@ -183,9 +186,11 @@ def walkers():
         for path, tree in trees.items():
             hit = found[path.stem]
             for fn in ast.walk(tree):
-                if (isinstance(fn, FUNCTIONS)
-                        and fn.name not in hit
-                        and _reaches_a_walker(fn, imports[path], found, hit)):
+                if (
+                    isinstance(fn, FUNCTIONS)
+                    and fn.name not in hit
+                    and _reaches_a_walker(fn, imports[path], found, hit)
+                ):
                     hit.add(fn.name)
                     grew = True
     return {stem: names for stem, names in found.items() if names}
@@ -201,10 +206,11 @@ def doc_readers():
         if tree is None:
             continue
         text = path.read_text(encoding="utf-8")
-        if (any(_walks_docs(*scope) for scope in _scopes(tree))
-                or _reaches_a_walker(tree, _imports(tree), found)
-                or any(f"{stem}.py" in text or f"tools.{stem}" in text
-                       for stem in found)):
+        if (
+            any(_walks_docs(*scope) for scope in _scopes(tree))
+            or _reaches_a_walker(tree, _imports(tree), found)
+            or any(f"{stem}.py" in text or f"tools.{stem}" in text for stem in found)
+        ):
             chosen.append(name)
     return tuple(chosen)
 
@@ -227,11 +233,11 @@ def run_pytest(chosen, rest):
     if str(REPO) not in sys.path:
         sys.path.insert(0, str(REPO))
     os.environ["PYTHONPATH"] = os.pathsep.join(
-        [str(REPO), *filter(None, os.environ.get("PYTHONPATH", "").split(os.pathsep))])
+        [str(REPO), *filter(None, os.environ.get("PYTHONPATH", "").split(os.pathsep))]
+    )
     import pytest
 
-    return int(pytest.main([*(str(REPO / c) for c in chosen), "-q", "-n", "auto",
-                            *rest]))
+    return int(pytest.main([*(str(REPO / c) for c in chosen), "-q", "-n", "auto", *rest]))
 
 
 def main(argv=None, stdin=None) -> int:

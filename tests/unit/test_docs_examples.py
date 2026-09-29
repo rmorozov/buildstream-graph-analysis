@@ -6,6 +6,7 @@ against a live --format json run (see docs/backlog/tasks/P4-01):
 - docs/guides/cli.md's other jq example treated criticality_probability (a JSON
   object keyed by element UID) as an array.
 """
+
 import json
 import shutil
 import subprocess
@@ -24,7 +25,9 @@ JQ_AVAILABLE = shutil.which("jq") is not None
 def report_json():
     proc = subprocess.run(
         [sys.executable, "-m", "bga.cli", "analyze", str(FIXTURE), "--format", "json", "--diagnostics"],
-        capture_output=True, text=True, cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        cwd=REPO_ROOT,
     )
     assert proc.returncode == 0, proc.stderr
     return json.loads(proc.stdout)
@@ -34,7 +37,9 @@ def test_readme_quick_start_command_works():
     """README.md's Quick Start command, run verbatim."""
     proc = subprocess.run(
         [sys.executable, "-m", "bga.cli", "analyze", "tests/fixtures/golden/mixed_task_kinds", "--diagnostics"],
-        capture_output=True, text=True, cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        cwd=REPO_ROOT,
     )
     assert proc.returncode == 0, proc.stderr
     assert "Build Efficiency Report" in proc.stdout
@@ -65,7 +70,8 @@ def test_docs_cli_md_jq_example_1_certified_headroom(tmp_path, report_json):
     report_path.write_text(json.dumps(report_json))
     proc = subprocess.run(
         ["jq", ".floors.certified_headroom", str(report_path)],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     )
     assert proc.returncode == 0, proc.stderr
     assert proc.stdout.strip() != "null"
@@ -76,9 +82,13 @@ def test_docs_cli_md_jq_example_2_criticality_ranking(tmp_path, report_json):
     report_path = tmp_path / "report.json"
     report_path.write_text(json.dumps(report_json))
     proc = subprocess.run(
-        ["jq", ".elements.criticality_probability | to_entries | "
-                "sort_by(.value.probability) | reverse | .[0:10]", str(report_path)],
-        capture_output=True, text=True,
+        [
+            "jq",
+            ".elements.criticality_probability | to_entries | sort_by(.value.probability) | reverse | .[0:10]",
+            str(report_path),
+        ],
+        capture_output=True,
+        text=True,
     )
     assert proc.returncode == 0, proc.stderr
     ranked = json.loads(proc.stdout)

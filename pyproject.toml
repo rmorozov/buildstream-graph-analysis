@@ -195,6 +195,10 @@ packages = [
 line-length = 120
 target-version = "py39"
 
+[tool.ruff.format]
+# UX-1118: layout is the formatter's; quotes kept, so the rewrite is layout alone.
+quote-style = "preserve"
+
 [tool.ruff.lint]
 # UX-693: the auto-fixed shelf, enforced from the commit that fixed it;
 # S, C901 and PLR are the baseline's (UX-694), never zero-tolerance here.

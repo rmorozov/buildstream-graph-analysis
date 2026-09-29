@@ -25,6 +25,7 @@ Identical, both cases. Which is the point: they were not doing
 anything, and the five-line diff is a claim that can be checked rather
 than a tidy-up that has to be believed.
 """
+
 import pathlib
 import re
 
@@ -40,34 +41,34 @@ def _boot_body():
     they are transient rather than part of the document."""
     source = APP.read_text(encoding="utf-8")
     start = source.index("async function boot() {")
-    rest = source[start + 1:]
+    rest = source[start + 1 :]
     end = re.search(r"^(export )?(async )?function ", rest, re.M)
-    return rest[:end.start()] if end else rest
+    return rest[: end.start()] if end else rest
 
 
 class TestOneMechanismDecidesTheOrder:
-
     def test_boot_inserts_in_source_order_and_nothing_else(self):
         """The grep guard the item asks for. A `prepend` here is an
         ordering claim, and an ordering claim that `chapters.js` will
         silently overrule is worse than none - it reads as the
         mechanism to the next person to open the file."""
-        offenders = [line.strip() for line in _boot_body().splitlines()
-                     if re.search(r"root\.(prepend|insertBefore)\b", line)]
+        offenders = [
+            line.strip() for line in _boot_body().splitlines() if re.search(r"root\.(prepend|insertBefore)\b", line)
+        ]
         assert offenders == [], (
             "boot() is inserting by position again. `chapters.js` re-sorts "
             "the document afterwards, so this decides nothing and reads as "
-            f"though it does: {offenders}")
+            f"though it does: {offenders}"
+        )
 
     def test_boot_says_where_the_order_is_decided(self):
         """A comment, because the guard above can only say what must not
         be there. The next person needs to know where it *is*."""
         body = _boot_body()
         assert "chapters.js" in body, (
-            "boot() names no ordering authority, so the next reader has to "
-            "find it by experiment")
-        assert "CHAPTERS" in body, (
-            "the comment should name the table to edit, not only the file")
+            "boot() names no ordering authority, so the next reader has to find it by experiment"
+        )
+        assert "CHAPTERS" in body, "the comment should name the table to edit, not only the file"
 
     def test_the_authority_still_declares_an_order(self):
         """Non-vacuity: if `chapters.js` stopped ordering anything, the
@@ -82,13 +83,9 @@ class TestOneMechanismDecidesTheOrder:
         The property is that the first chapter leads with the decision
         (`UX-347`) and that its evidence follows in the order it argued.
         """
-        declared = re.findall(r'sections:\s*\[([^\]]*)\]',
-                              CHAPTERS.read_text(encoding="utf-8"), re.S)
+        declared = re.findall(r'sections:\s*\[([^\]]*)\]', CHAPTERS.read_text(encoding="utf-8"), re.S)
         assert len(declared) >= 6, declared
-        first = [name.strip().strip('"') for name in declared[0].split(",")
-                 if name.strip()]
+        first = [name.strip().strip('"') for name in declared[0].split(",") if name.strip()]
         assert first[0] == "decision", first
-        at = [first.index(name) for name in ("evidence", "overview",
-                                             "findings")
-              if name in first]
+        at = [first.index(name) for name in ("evidence", "overview", "findings") if name in first]
         assert len(at) == 3 and at == sorted(at), first

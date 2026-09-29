@@ -30,6 +30,7 @@ a run of `·`-separated numbers, so a standing document put there
 reads as a round. They get a table row instead, and a row is what is
 asserted, not a link anywhere on the page.
 """
+
 import functools
 import os
 import pathlib
@@ -76,25 +77,28 @@ NAMED_FLOOR = 4
 
 @functools.cache
 def _tracked():
-    out = subprocess.run(["git", "ls-files"], cwd=str(REPO), check=True,
-                         capture_output=True, text=True).stdout
+    out = subprocess.run(["git", "ls-files"], cwd=str(REPO), check=True, capture_output=True, text=True).stdout
     return frozenset(out.splitlines())
 
 
 def _round_documents():
     """Every audit document that records a round, directly under `docs/audits/`."""
-    return tuple(sorted(
-        p for p in _tracked()
-        if posixpath.dirname(p) == AUDITS
-        and re.search(r"round-\d+", posixpath.basename(p))))
+    return tuple(
+        sorted(
+            p for p in _tracked() if posixpath.dirname(p) == AUDITS and re.search(r"round-\d+", posixpath.basename(p))
+        )
+    )
 
 
 def _named_documents():
     """Every audit document that is not a round (`UX-591`)."""
-    return tuple(sorted(
-        p for p in _tracked()
-        if posixpath.dirname(p) == AUDITS
-        and not re.search(r"round-\d+", posixpath.basename(p))))
+    return tuple(
+        sorted(
+            p
+            for p in _tracked()
+            if posixpath.dirname(p) == AUDITS and not re.search(r"round-\d+", posixpath.basename(p))
+        )
+    )
 
 
 def _readme_table_links():
@@ -118,8 +122,7 @@ def _links(doc, prefix):
     for label, target in LINK.findall(text):
         if not target.startswith(prefix):
             continue
-        found.append((label, target,
-                      os.path.normpath(posixpath.join(here, target))))
+        found.append((label, target, os.path.normpath(posixpath.join(here, target))))
     return found
 
 
@@ -129,44 +132,45 @@ def _history_table():
     after = text.split("\n" + HISTORY_HEADING + "\n", 1)
     assert len(after) == 2, f"{DIRECTIONS} has no {HISTORY_HEADING!r} section"
     section = after[1].split("\n## ", 1)[0]
-    return tuple(ln for ln in section.splitlines()
-                 if ln.startswith("| ") and not ln.startswith("| round |"))
+    return tuple(ln for ln in section.splitlines() if ln.startswith("| ") and not ln.startswith("| round |"))
 
 
 def _table_links():
     rows = _history_table()
     here = posixpath.dirname(DIRECTIONS)
-    return tuple((label, target, os.path.normpath(posixpath.join(here, target)))
-                 for row in rows for label, target in LINK.findall(row))
+    return tuple(
+        (label, target, os.path.normpath(posixpath.join(here, target)))
+        for row in rows
+        for label, target in LINK.findall(row)
+    )
 
 
 def _audits_links():
     """Every link into `docs/audits/` from the two hand-typed documents."""
-    return ([(DIRECTIONS,) + link for link in _links(DIRECTIONS, "../audits/")]
-            + [(README,) + link for link in _links(README, "audits/")])
+    return [(DIRECTIONS,) + link for link in _links(DIRECTIONS, "../audits/")] + [
+        (README,) + link for link in _links(README, "audits/")
+    ]
 
 
 def test_the_scan_is_not_vacuous():
     """A walk that finds no audit files, or no links, passes anything."""
     documents = _round_documents()
     assert len(documents) >= FLOOR, (
-        f"only {len(documents)} round documents under {AUDITS}/ — the "
-        f"enumeration is broken, not the directory")
-    assert len(_table_links()) >= FLOOR, (
-        f"only {len(_table_links())} links in the round-history table")
+        f"only {len(documents)} round documents under {AUDITS}/ — the enumeration is broken, not the directory"
+    )
+    assert len(_table_links()) >= FLOOR, f"only {len(_table_links())} links in the round-history table"
     readme = [ln for ln in _audits_links() if ln[0] == README]
     assert len(readme) >= FLOOR, f"only {len(readme)} audits links in {README}"
     assert len(_named_documents()) >= NAMED_FLOOR, (
         f"only {len(_named_documents())} non-round documents under {AUDITS}/ — "
-        f"the enumeration is broken, not the directory")
+        f"the enumeration is broken, not the directory"
+    )
 
 
 def test_every_round_document_has_a_history_row():
     linked = {resolved for _, _, resolved in _table_links()}
     missing = [d for d in _round_documents() if d not in linked]
-    assert not missing, (
-        "no row in the round-history table of "
-        f"{DIRECTIONS} links to: {', '.join(missing)}")
+    assert not missing, f"no row in the round-history table of {DIRECTIONS} links to: {', '.join(missing)}"
 
 
 def test_every_round_document_is_linked_from_the_readme():
@@ -182,23 +186,22 @@ def test_every_named_audit_document_has_a_readme_table_row():
     missing = [d for d in _named_documents() if d not in rows]
     assert not missing, (
         f"{README} has no table row for: {', '.join(missing)} - a link in "
-        f"the round run is not a row, and these are not rounds")
+        f"the round run is not a row, and these are not rounds"
+    )
 
 
 def test_no_named_audit_document_is_listed_as_a_round():
     """The other direction: the run under `## Audits` is rounds only."""
-    run = {resolved for doc, _, _, resolved in _audits_links()
-           if doc == README} - set(_readme_table_links())
+    run = {resolved for doc, _, _, resolved in _audits_links() if doc == README} - set(_readme_table_links())
     stray = [d for d in _named_documents() if d in run]
-    assert not stray, (
-        f"{README} lists as a round: {', '.join(stray)}")
+    assert not stray, f"{README} lists as a round: {', '.join(stray)}"
 
 
 def test_every_audits_link_points_at_a_file_that_exists():
     tracked = _tracked()
-    dead = [f"{doc}: [{label}]({target})"
-            for doc, label, target, resolved in _audits_links()
-            if resolved not in tracked]
+    dead = [
+        f"{doc}: [{label}]({target})" for doc, label, target, resolved in _audits_links() if resolved not in tracked
+    ]
     assert not dead, "link to a file this repository does not track: " + "; ".join(dead)
 
 
@@ -225,7 +228,7 @@ def _closed_status():
         head = re.match(r"^\| (UX-\d+) \|", line)
         if not head:
             continue
-        marker = re.search(r"\| ?(🟢|🔴|🟡|⚪|🟠)", line[len(head.group(0)):])
+        marker = re.search(r"\| ?(🟢|🔴|🟡|⚪|🟠)", line[len(head.group(0)) :])
         status[head.group(1)] = marker.group(1) if marker else None
     return status
 
@@ -237,7 +240,8 @@ def _closed_status():
 #: this file, `UX-798`).
 _COUNT_TRAILER = re.compile(
     r"(?<=\s)(\d+|[A-Za-z]+(?:-[A-Za-z]+)?)\s+closed,\s+"
-    r"(\d+|[A-Za-z]+(?:-[A-Za-z]+)?)\s+filed \|$")
+    r"(\d+|[A-Za-z]+(?:-[A-Za-z]+)?)\s+filed \|$"
+)
 
 
 def _parse_count_trailer(row):
@@ -290,7 +294,9 @@ def test_what_closed_ids_reads_each_bullet_s_head_once(tmp_path, monkeypatch):
         "- `UX-1` — a row.\n"
         "- `UX-1`, `UX-2` — the same row named again, and another.\n"
         "- Direction 9 marked landed once `UX-3` closed.\n\n"
-        "## In progress\n\n- `UX-4` — not closed.\n", encoding="utf-8")
+        "## In progress\n\n- `UX-4` — not closed.\n",
+        encoding="utf-8",
+    )
     monkeypatch.setattr(sys.modules[__name__], "REPO", tmp_path)
     assert _what_closed_ids(999) == ["UX-1", "UX-2"]
 
@@ -320,17 +326,15 @@ def test_a_history_row_s_counts_are_derived():
         checked += 1
         closed_ids = _what_closed_ids(round_)
         not_green = [i for i in closed_ids if status.get(i) != "🟢"]
-        assert not not_green, (
-            f"round {round_}: What closed names {', '.join(not_green)}, "
-            "not 🟢 in the closed rows")
+        assert not not_green, f"round {round_}: What closed names {', '.join(not_green)}, not 🟢 in the closed rows"
         derived_closed = len(closed_ids)
         derived_filed = len(_found_by_round(round_))
         assert (said_closed, said_filed) == (derived_closed, derived_filed), (
             f"round {round_}: directions.md says "
             f"{said_closed} closed, {said_filed} filed; derived "
-            f"{derived_closed} closed, {derived_filed} filed")
-    assert checked >= 2, "no history row at or after round " \
-        f"{COUNTED_FROM_ROUND} was checked — the scan is vacuous"
+            f"{derived_closed} closed, {derived_filed} filed"
+        )
+    assert checked >= 2, f"no history row at or after round {COUNTED_FROM_ROUND} was checked — the scan is vacuous"
 
 
 def test_the_count_trailer_reads_a_compound_word_past_thirty():

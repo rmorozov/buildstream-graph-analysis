@@ -6,6 +6,7 @@ twenty findings closed by twenty annotations read exactly like twenty
 fixes. The census makes a suppression a finding of its own: still
 allowed, never free.
 """
+
 import pathlib
 import sys
 
@@ -52,8 +53,7 @@ class TestWhatDoesNot:
         """A comment-only line suppresses nothing - ruff reports an
         unused `noqa` there rather than honouring it. This file's own
         docstring quotes directives, and so did the census's."""
-        found = _census(tmp_path, {"src/a.py": "# see: noqa is a directive\n"
-                                               "# noqa: S607\n"})
+        found = _census(tmp_path, {"src/a.py": "# see: noqa is a directive\n# noqa: S607\n"})
         assert found == [], found
 
     def test_a_docstring_mentioning_one_is_not_one(self, tmp_path):
@@ -65,8 +65,8 @@ class TestPerFileIgnores:
     def test_a_per_file_ignore_counts(self, tmp_path):
         (tmp_path / "src").mkdir()
         (tmp_path / "pyproject.toml").write_text(
-            '[tool.ruff.lint.per-file-ignores]\n"tools/**" = ["T201"]\n',
-            encoding="utf-8")
+            '[tool.ruff.lint.per-file-ignores]\n"tools/**" = ["T201"]\n', encoding="utf-8"
+        )
         found = tool.suppression_findings(tmp_path, ["src"])
         assert len(found) == 1, found
 
@@ -74,8 +74,7 @@ class TestPerFileIgnores:
         """`"key" = [...]` is ordinary TOML. Only the ignores table
         silences anything, so only it is read."""
         (tmp_path / "src").mkdir()
-        (tmp_path / "pyproject.toml").write_text(
-            '[project]\n"name" = ["bga"]\n', encoding="utf-8")
+        (tmp_path / "pyproject.toml").write_text('[project]\n"name" = ["bga"]\n', encoding="utf-8")
         assert tool.suppression_findings(tmp_path, ["src"]) == []
 
 
@@ -84,12 +83,12 @@ class TestTheRepoIsRecorded:
         """Otherwise the guard runs and the ledger does not hold it, so
         `--check` has nothing to compare a new one against."""
         import json
-        recorded = json.loads(
-            (REPO / "tests/quality_baseline.json").read_text(encoding="utf-8"))
+
+        recorded = json.loads((REPO / "tests/quality_baseline.json").read_text(encoding="utf-8"))
         rules = {f["rule"] for f in recorded["findings"]}
         assert "SUPPRESSION" in rules, (
-            "the baseline records no suppression - run "
-            "dev_baseline.py --write --force --reason UX-705")
+            "the baseline records no suppression - run dev_baseline.py --write --force --reason UX-705"
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

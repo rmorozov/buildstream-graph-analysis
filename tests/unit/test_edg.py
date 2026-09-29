@@ -5,6 +5,7 @@ graphs with exact, hand-computed expected values - not just "key
 exists" checks (that class of check is exactly what missed the M6
 `max_depth: 0` / `num_elements: 6` bugs, per docs/backlog/tasks/P1-18-structural-max-depth-shortest-path-bug.md).
 """
+
 import pytest
 
 from bga.exceptions import AnalysisError
@@ -24,8 +25,10 @@ def _diamond():
     return Graph(
         elements=[Element("A"), Element("B"), Element("C"), Element("D")],
         dependencies=[
-            DependencyEdge("A", "B"), DependencyEdge("A", "C"),
-            DependencyEdge("B", "D"), DependencyEdge("C", "D"),
+            DependencyEdge("A", "B"),
+            DependencyEdge("A", "C"),
+            DependencyEdge("B", "D"),
+            DependencyEdge("C", "D"),
         ],
     )
 
@@ -42,12 +45,15 @@ def _cycle():
     return Graph(
         elements=[Element("A"), Element("B"), Element("C")],
         dependencies=[
-            DependencyEdge("A", "B"), DependencyEdge("B", "C"), DependencyEdge("C", "A"),
+            DependencyEdge("A", "B"),
+            DependencyEdge("B", "C"),
+            DependencyEdge("C", "A"),
         ],
     )
 
 
 # --- Depth ---
+
 
 def test_diamond_depth():
     depth = compute_unweighted_depth(_diamond())
@@ -66,6 +72,7 @@ def test_cycle_raises_analysis_error():
 
 # --- In/out degree ---
 
+
 def test_diamond_in_out_degree():
     in_deg, out_deg = compute_in_out_degree(_diamond())
     assert in_deg == {"A": 0, "B": 1, "C": 1, "D": 2}
@@ -73,6 +80,7 @@ def test_diamond_in_out_degree():
 
 
 # --- Reachability ---
+
 
 def test_diamond_reachability():
     downstream, upstream = compute_reachability(_diamond())
@@ -86,6 +94,7 @@ def test_diamond_reachability():
 
 
 # --- Dominators ---
+
 
 def test_diamond_dominators():
     """D has two disjoint paths from A (via B, via C), so only A and D
@@ -107,6 +116,7 @@ def test_linear_chain_dominators():
 
 # --- Critical path ---
 
+
 def test_diamond_critical_path_picks_longer_branch():
     """B (50us) is far longer than C (10us) - the critical path must
     route through B, not C, even though both connect A to D."""
@@ -124,6 +134,7 @@ def test_linear_chain_critical_path_is_the_full_chain():
 
 
 # --- Slack ---
+
 
 def test_diamond_slack_zero_on_critical_path_nonzero_off_it():
     """Hand-computed: A/B/D are on the (B-routed) critical path and

@@ -16,6 +16,7 @@ fact together (`UX-131`, and every round since).
 
 holds: rules.md#architecture-or-spec-made-wrong-same-commit
 """
+
 import pathlib
 import re
 
@@ -73,8 +74,7 @@ def _part_32_opening_block():
         if "(" not in line:
             continue
         names, annotation = line.split("(", 1)
-        rows.append((re.findall(r"[a-z][a-z0-9-]*/v\d+", names),
-                     annotation.strip().rstrip(")")))
+        rows.append((re.findall(r"[a-z][a-z0-9-]*/v\d+", names), annotation.strip().rstrip(")")))
     return rows
 
 
@@ -138,7 +138,8 @@ class TestPart32sOpeningBlockIsTheRegistry:
         assert missing == [], (
             f"id(s) Part 32's opening block does not name: {missing}. It is "
             f"the first thing a reader of the spec meets, and 32.5's table "
-            f"being right does not make it right (UX-651)")
+            f"being right does not make it right (UX-651)"
+        )
 
     def test_the_block_names_nothing_the_package_does_not_have(self):
         """The other direction, and the reason it is three sets rather
@@ -149,13 +150,12 @@ class TestPart32sOpeningBlockIsTheRegistry:
         a stale id has nowhere to hide behind them."""
         from bga import contracts
 
-        known = (set(contracts.ids()) | set(contracts.reads())
-                 | _part_32_subsections())
+        known = set(contracts.ids()) | set(contracts.reads()) | _part_32_subsections()
         named = {one for ids, _ in _part_32_opening_block() for one in ids}
         stale = sorted(named - known)
         assert stale == [], (
-            f"Part 32's opening block names id(s) nothing emits, reads or "
-            f"gives a subsection to: {stale}")
+            f"Part 32's opening block names id(s) nothing emits, reads or gives a subsection to: {stale}"
+        )
 
     def test_a_retired_line_holds_retired_ids_only(self):
         """`superseded()` is what a release still opens after retiring
@@ -164,12 +164,16 @@ class TestPart32sOpeningBlockIsTheRegistry:
         from bga import contracts
 
         superseded = set(contracts.superseded())
-        wrong = sorted(one for ids, annotation in _part_32_opening_block()
-                       if annotation.startswith("read")
-                       for one in ids if one not in superseded)
+        wrong = sorted(
+            one
+            for ids, annotation in _part_32_opening_block()
+            if annotation.startswith("read")
+            for one in ids
+            if one not in superseded
+        )
         assert wrong == [], (
-            f"Part 32's read-never-written lines name id(s) that are not in "
-            f"contracts.superseded(): {wrong}")
+            f"Part 32's read-never-written lines name id(s) that are not in contracts.superseded(): {wrong}"
+        )
 
     def test_every_superseded_id_sits_on_a_line_that_says_it_is_retired(self):
         """`UX-659`. The clause above is keyed on the lines that claim
@@ -192,7 +196,8 @@ class TestPart32sOpeningBlockIsTheRegistry:
             f"Part 32's opening block does not say that these id(s) of "
             f"contracts.superseded() are no longer written: {unclaimed}. A "
             f"reader asking which member of the family bga writes is given "
-            f"the names and no distinction (UX-659)")
+            f"the names and no distinction (UX-659)"
+        )
 
     def test_a_retired_line_cites_the_item_that_retired_it(self):
         """Its newest id first, and beside it the item that moved off
@@ -213,12 +218,10 @@ class TestPart32sOpeningBlockIsTheRegistry:
                 continue
             item = _cited_item(annotation)
             assert item is not None, (
-                f"the retired line `{ids[0]} ... ({annotation})` cites no "
-                f"item, so a reader cannot find what retired it")
+                f"the retired line `{ids[0]} ... ({annotation})` cites no item, so a reader cannot find what retired it"
+            )
             body = item.read_text(encoding="utf-8")
-            assert ids[0] in body, (
-                f"{item.name} does not name {ids[0]}, the newest id on the "
-                f"line it is cited from")
+            assert ids[0] in body, f"{item.name} does not name {ids[0]}, the newest id on the line it is cited from"
             family = ids[0].split("/")[0] + "/"
             replacements = sorted(one for one in live if one.startswith(family))
             if not replacements:
@@ -226,7 +229,8 @@ class TestPart32sOpeningBlockIsTheRegistry:
             assert [one for one in replacements if one in body], (
                 f"{item.name} names {ids[0]} but none of {replacements} - it "
                 f"is the item that *created* {ids[0]}, not the one that "
-                f"retired it, so the annotation is a bump behind (UX-651)")
+                f"retired it, so the annotation is a bump behind (UX-651)"
+            )
 
     def test_the_block_is_what_part_32_opens_with(self):
         """Non-vacuity for the two directions above, which are set
@@ -239,16 +243,13 @@ class TestPart32sOpeningBlockIsTheRegistry:
         assert len(named) >= len(contracts.ids()), (
             f"the block parse found {len(named)} id(s) against "
             f"{len(contracts.ids())} in the package - the fence or the "
-            f"heading moved and the clauses above are reading nothing")
-        assert all(annotation for _, annotation in rows), (
-            "a block line carries no annotation saying what its group is")
-        after = SPEC.read_text(encoding="utf-8")[
-            SPEC.read_text(encoding="utf-8").index(PART_32):]
+            f"heading moved and the clauses above are reading nothing"
+        )
+        assert all(annotation for _, annotation in rows), "a block line carries no annotation saying what its group is"
+        after = SPEC.read_text(encoding="utf-8")[SPEC.read_text(encoding="utf-8").index(PART_32) :]
         assert after.index("```text") < after.index("\n## 32.1 "), (
-            "Part 32's first fenced block is not above 32.1, so the parse "
-            "above is reading some other block")
-
-
+            "Part 32's first fenced block is not above 32.1, so the parse above is reading some other block"
+        )
 
 
 def _row_keys(node, found):
@@ -395,8 +396,7 @@ def _argues_rather_than_documents(relative, text):
     """
     if relative.startswith(("docs/backlog/", "docs/audits/")):
         return True
-    return (relative.startswith("docs/design/")
-            and bool(PROPOSED_HEADER.search(text.split("\n## ", 1)[0])))
+    return relative.startswith("docs/design/") and bool(PROPOSED_HEADER.search(text.split("\n## ", 1)[0]))
 
 
 def _named_in_the_documents():
@@ -420,18 +420,15 @@ def _coverage_section():
     names the three input contracts while describing what `bga analyze`
     reads.
     """
-    section = CLI_GUIDE.read_text(encoding="utf-8").split(
-        "### Which keys the prose names", 1)
-    assert len(section) == 2, (
-        "docs/guides/cli.md has no `### Which keys the prose names` section")
+    section = CLI_GUIDE.read_text(encoding="utf-8").split("### Which keys the prose names", 1)
+    assert len(section) == 2, "docs/guides/cli.md has no `### Which keys the prose names` section"
     return section[1].split("\n## ", 1)[0].split("\n### ", 1)[0]
 
 
 def _undocumented_keys():
     """The consumer surface less what the documents name."""
     named = _named_in_the_documents()
-    return {key: where for key, where in _consumer_surface().items()
-            if key not in named}
+    return {key: where for key, where in _consumer_surface().items() if key not in named}
 
 
 class TestThePopulationIsKeysAndNotIds:
@@ -471,15 +468,16 @@ class TestThePopulationIsKeysAndNotIds:
         """The item's Acceptance Test. A key not in the frozen register
         and named in no document fails here, by name."""
         undocumented = _undocumented_keys()
-        new = {key: where for key, where in undocumented.items()
-               if key not in UNDOCUMENTED_WHEN_THE_POPULATION_BECAME_KEYS}
-        named = sorted("{} ({})".format(key, ", ".join(where))
-                       for key, where in new.items())
+        new = {
+            key: where for key, where in undocumented.items() if key not in UNDOCUMENTED_WHEN_THE_POPULATION_BECAME_KEYS
+        }
+        named = sorted("{} ({})".format(key, ", ".join(where)) for key, where in new.items())
         assert new == {}, (
             f"published key(s) no document names: {named}. "
             f"Name it where a consumer looks - docs/guides/cli.md's "
             f"contract section, or the row in docs/design/architecture.md's "
-            f"inventory - or the payload ships undescribed (UX-628)")
+            f"inventory - or the payload ships undescribed (UX-628)"
+        )
 
     def test_the_population_is_large_enough_to_mean_something(self):
         """Non-vacuity for the clause above. The register is an
@@ -492,12 +490,14 @@ class TestThePopulationIsKeysAndNotIds:
             f"the consumer surface is {len(surface)} keys; it was 199 when "
             f"this was written and 236 once UX-655 gave it depth, so either "
             f"a contract stopped resolving or the walk above stopped "
-            f"descending")
+            f"descending"
+        )
         checked = set(surface) - UNDOCUMENTED_WHEN_THE_POPULATION_BECAME_KEYS
         assert len(checked) >= 100, (
             f"the register excuses all but {len(checked)} of "
             f"{len(surface)} keys - the clause above is checking almost "
-            f"nothing")
+            f"nothing"
+        )
 
     def test_the_register_is_all_live_keys(self):
         """It cannot rot and it cannot be padded. A name in it that no
@@ -509,7 +509,8 @@ class TestThePopulationIsKeysAndNotIds:
         assert stale == [], (
             f"the register names key(s) no contract carries: {stale}. Drop "
             f"them - a register entry for a key that does not exist excuses "
-            f"nothing and hides that the register may only shrink")
+            f"nothing and hides that the register may only shrink"
+        )
 
     def test_the_register_is_empty(self):
         """`UX-636`: the ratchet reached zero and is a statement now.
@@ -523,7 +524,8 @@ class TestThePopulationIsKeysAndNotIds:
             f"the register holds "
             f"{sorted(UNDOCUMENTED_WHEN_THE_POPULATION_BECAME_KEYS)}; it was "
             f"emptied by UX-636 and a key with no prose reddens the clause "
-            f"above by name rather than being excused here")
+            f"above by name rather than being excused here"
+        )
 
     def test_the_guide_states_the_coverage_it_actually_has(self):
         """The other half of the Required Fix: where key-level coverage
@@ -539,23 +541,25 @@ class TestThePopulationIsKeysAndNotIds:
         section said. That is the `falsify` skill's own failure mode -
         a guard reading the argument instead of the subject.
         """
-        section = CLI_GUIDE.read_text(encoding="utf-8").split(
-            "### Which keys the prose names", 1)
+        section = CLI_GUIDE.read_text(encoding="utf-8").split("### Which keys the prose names", 1)
         assert len(section) == 2, (
             "docs/guides/cli.md has no `### Which keys the prose names` "
             "section - a consumer has nowhere to read how far key-level "
-            "coverage goes")
+            "coverage goes"
+        )
         body = section[1].split("\n## ", 1)[0].split("\n### ", 1)[0]
         count = len(UNDOCUMENTED_WHEN_THE_POPULATION_BECAME_KEYS)
         assert f"**{count} undocumented keys**" in body, (
             f"that section does not state the {count} keys the register "
             f"holds; the figure is derived, so it moves when a key is "
-            f"documented")
+            f"documented"
+        )
         for stated in ("run-context/v9", "graph/v9", "trace/v9"):
             assert stated in body, (
                 f"the section does not tell a reader that {stated}'s keys "
                 f"are outside this coverage - an input contract has no JSON "
-                f"Schema here, so no guard can enumerate it")
+                f"Schema here, so no guard can enumerate it"
+            )
 
     def test_the_surface_reaches_a_row_below_a_top_level_object(self):
         """`UX-655`. `parallelism` is a top-level object and its
@@ -571,18 +575,17 @@ class TestThePopulationIsKeysAndNotIds:
         """
         from bga import schemas
 
-        row = schemas.schema("analyze/v6")["properties"]["parallelism"][
-            "properties"]["levels"]
+        row = schemas.schema("analyze/v6")["properties"]["parallelism"]["properties"]["levels"]
         declared = [column["key"] for column in row["bga:columns"]]
         assert declared, "parallelism.levels declares no columns to reach"
         surface = _consumer_surface()
-        missing = [key for key in declared
-                   if "analyze/v6" not in surface.get(key, ())]
+        missing = [key for key in declared if "analyze/v6" not in surface.get(key, ())]
         assert missing == [], (
             f"key(s) of an analyze/v6 row the consumer surface does not "
             f"reach: {missing}. A consumer indexing parallelism.levels reads "
             f"exactly these, so a key of one going undocumented is invisible "
-            f"to every clause above (UX-655)")
+            f"to every clause above (UX-655)"
+        )
 
     def test_a_row_can_be_declared_by_its_columns_alone(self):
         """Why the walk reads `bga:columns` and not `items` only, and
@@ -593,11 +596,12 @@ class TestThePopulationIsKeysAndNotIds:
         and reading columns is re-decided rather than inherited."""
         from bga import schemas
 
-        row = schemas.schema("analyze/v6")["properties"]["parallelism"][
-            "properties"]["levels"]
+        row = schemas.schema("analyze/v6")["properties"]["parallelism"]["properties"]["levels"]
         assert "items" not in row and "type" not in row, (
             "parallelism.levels declares items or a type now, so bga:columns "
-            "is no longer the only thing that reaches its row")
+            "is no longer the only thing that reaches its row"
+        )
+
         def items_only(node, found):
             """The walk without the columns half - `UX-655` measured it
             at 218 keys, holding neither of the two below."""
@@ -612,11 +616,11 @@ class TestThePopulationIsKeysAndNotIds:
                     items_only(value, found)
             return found
 
-        assert {"level", "width"}.isdisjoint(
-            items_only(schemas.schema("analyze/v6"), set())), (
+        assert {"level", "width"}.isdisjoint(items_only(schemas.schema("analyze/v6"), set())), (
             "an items-only walk reaches level or width, so reading "
             "bga:columns is not what carries this row and the clause above "
-            "would pass without it")
+            "would pass without it"
+        )
 
     def test_a_row_can_be_declared_by_additional_properties_alone(self):
         """`UX-838`'s regression fixture. `elements.fan_in` is keyed by
@@ -628,16 +632,15 @@ class TestThePopulationIsKeysAndNotIds:
         clause (`test_a_new_key_with_no_prose_reddens_naming_the_key`)
         has nothing to catch it on."""
         marker = "zz_ux838_regression_marker"
-        assert marker not in _named_in_the_documents(), (
-            f"{marker!r} collided with real prose; pick another fixture key")
-        schema = {"properties": {"widgets": {
-            "additionalProperties": {"properties": {marker: {}}}}}}
+        assert marker not in _named_in_the_documents(), f"{marker!r} collided with real prose; pick another fixture key"
+        schema = {"properties": {"widgets": {"additionalProperties": {"properties": {marker: {}}}}}}
         reached = _row_keys(schema, set())
         assert marker in reached, (
             "additionalProperties.properties is not reached by the walk, "
             "so a row keyed by something other than an array index - "
             "elements.fan_in among them - never enters the consumer "
-            "surface, and an undocumented key inside one never reddens")
+            "surface, and an undocumented key inside one never reddens"
+        )
 
     def test_a_key_under_a_bare_object_is_reached_via_its_hint(self):
         """`UX-866`'s regression fixture. `run_instance` is typed as a
@@ -647,15 +650,15 @@ class TestThePopulationIsKeysAndNotIds:
         added there (`seed`, `UX-858`) never enters the surface and the
         undocumented-key clause has nothing to catch it on."""
         marker = "zz_ux866_regression_marker"
-        assert marker not in _named_in_the_documents(), (
-            f"{marker!r} collided with real prose; pick another fixture key")
+        assert marker not in _named_in_the_documents(), f"{marker!r} collided with real prose; pick another fixture key"
         node = {"properties": {"nested": {"properties": {marker: {}}}}}
         reached = _hint_keys(node, set())
         assert marker in reached, (
             "a hint's own nested properties are not reached, so a key "
             "typed as a bare object with no items or additionalProperties "
             "- run_instance among them - never enters the consumer "
-            "surface, and an undocumented key inside one never reddens")
+            "surface, and an undocumented key inside one never reddens"
+        )
 
     def test_a_scalar_of_a_published_block_is_in_the_population(self):
         """`UX-909`'s regression fixture. A top-level object of
@@ -668,13 +671,13 @@ class TestThePopulationIsKeysAndNotIds:
         the key never enters the surface and the undocumented-key
         clause has nothing to catch it on."""
         marker = "zz_ux909_regression_marker"
-        assert marker not in _named_in_the_documents(), (
-            f"{marker!r} collided with real prose; pick another fixture key")
+        assert marker not in _named_in_the_documents(), f"{marker!r} collided with real prose; pick another fixture key"
         schema = {"properties": {"floors": {"properties": {marker: {}}}}}
         assert marker in _block_keys(schema["properties"], set()), (
             "a published block's own scalars are not reached by the walk, "
             "so floors, attribution and cache - the blocks a reader meets "
-            "first - publish their keys outside the population")
+            "first - publish their keys outside the population"
+        )
 
     def test_the_walk_stops_one_level_below_a_top_level_property(self):
         """The other side of that boundary, asserted because it is the
@@ -682,14 +685,14 @@ class TestThePopulationIsKeysAndNotIds:
         key two levels down is *not* in the population, so a reader
         trusting the guide's sentence is trusting something checked."""
         marker = "zz_ux909_depth_marker"
-        schema = {"properties": {"cache": {"properties": {
-            "transfer_bytes": {"properties": {marker: {}}}}}}}
+        schema = {"properties": {"cache": {"properties": {"transfer_bytes": {"properties": {marker: {}}}}}}}
         reached = _block_keys(schema["properties"], set())
         assert "transfer_bytes" in reached, "the one level is not walked"
         assert marker not in reached, (
             "the walk descends past one level below a top-level property, "
             "so it is the full nested key set UX-384 banned rather than the "
-            "boundary the guide states")
+            "boundary the guide states"
+        )
 
     def test_a_proposed_design_document_does_not_document_a_key(self):
         """`UX-909`'s second half. `docs/backlog/` and `docs/audits/`
@@ -707,24 +710,24 @@ class TestThePopulationIsKeysAndNotIds:
         inside it is.
         """
         proposed = "# D\n\n**Status:** proposed - an argument\n"
-        assert _argues_rather_than_documents(
-            "docs/design/whatever.md", proposed)
-        assert not _argues_rather_than_documents(
-            "docs/guides/cli.md", proposed), (
-            "the exclusion is not held to docs/design/, so a guide "
-            "quoting the marker stops documenting anything")
+        assert _argues_rather_than_documents("docs/design/whatever.md", proposed)
+        assert not _argues_rather_than_documents("docs/guides/cli.md", proposed), (
+            "the exclusion is not held to docs/design/, so a guide quoting the marker stops documenting anything"
+        )
         sectioned = "# D\n\n**Status:** landed\n\n## 2\n\n**Status:** proposed\n"
-        assert not _argues_rather_than_documents(
-            "docs/design/directions.md", sectioned), (
+        assert not _argues_rather_than_documents("docs/design/directions.md", sectioned), (
             "a section's own Status line is read as the document's, so "
-            "directions.md stops documenting every key it names")
-        live = [path for path in sorted(REPO.glob("docs/design/*.md"))
-                if _argues_rather_than_documents(
-                    path.relative_to(REPO).as_posix(),
-                    path.read_text(encoding="utf-8"))]
+            "directions.md stops documenting every key it names"
+        )
+        live = [
+            path
+            for path in sorted(REPO.glob("docs/design/*.md"))
+            if _argues_rather_than_documents(path.relative_to(REPO).as_posix(), path.read_text(encoding="utf-8"))
+        ]
         assert live, (
             "no docs/design/*.md declares itself proposed any more, so the "
-            "clause above is checking a shape the tree no longer has")
+            "clause above is checking a shape the tree no longer has"
+        )
 
     def test_the_guide_states_the_reach_it_actually_has(self):
         """The other half of the Required Fix. The statement was
@@ -737,12 +740,14 @@ class TestThePopulationIsKeysAndNotIds:
         assert f"**{len(surface)} keys**" in body, (
             f"the coverage section does not state the {len(surface)} keys "
             f"the walk reaches; a reader cannot tell how far it goes from a "
-            f"figure that is not there")
+            f"figure that is not there"
+        )
         for stated in ("bga:columns", "any depth"):
             assert stated in body, (
                 f"the coverage section does not say `{stated}` - the two "
                 f"things that decide what counts as a row, and the depth "
-                f"they are looked for at, are what the statement is about")
+                f"they are looked for at, are what the statement is about"
+            )
 
     def test_the_section_states_the_surface_once(self):
         """`UX-977`'s Decision: a phrase-presence check ("refers back")
@@ -755,9 +760,7 @@ class TestThePopulationIsKeysAndNotIds:
         marker = f"**{len(surface)} keys**"
         after = body.split(marker, 1)[1]
         figures = re.findall(r"(?<![\w-])\d{3,}(?![\w-])", after)
-        assert figures == [], (
-            f"the coverage section states a figure after the bold count "
-            f"a second time: {figures}")
+        assert figures == [], f"the coverage section states a figure after the bold count a second time: {figures}"
 
     def test_the_input_contracts_are_outside_the_population_on_purpose(self):
         """And it is asserted rather than assumed, because it is the
@@ -800,13 +803,13 @@ def test_every_printable_contract_has_a_home_in_the_guides():
     printable = set(contracts.ids()) - set(contracts.unprintable())
     assert printable, "no contract is printable; this guard checks nothing"
 
-    text = "\n".join(path.read_text(encoding="utf-8")
-                     for path in sorted(GUIDES.rglob("*.md")))
+    text = "\n".join(path.read_text(encoding="utf-8") for path in sorted(GUIDES.rglob("*.md")))
     missing = sorted(name for name in printable if name not in text)
     assert missing == [], (
         f"published contract(s) named in no guide: {missing}. A consumer "
         f"holding one greps docs/guides/ and finds the command that made "
-        f"it, not the document they are reading")
+        f"it, not the document they are reading"
+    )
 
 
 def test_the_unprintable_shapes_are_not_required_to_be_in_a_guide():
@@ -820,7 +823,8 @@ def test_the_unprintable_shapes_are_not_required_to_be_in_a_guide():
     assert unprintable <= set(contracts.ids())
     assert "whatif/v1" not in unprintable, (
         "whatif/v1 is printable - `bga whatif --format json` hands it to a "
-        "consumer - and exempting it would undo UX-295")
+        "consumer - and exempting it would undo UX-295"
+    )
 
 
 def test_every_published_schema_is_named_in_the_spec():
@@ -836,8 +840,7 @@ def test_every_published_schema_is_named_in_the_spec():
     assert len(section) == 2, "the spec has no Part 32.5"
     body = section[1].split("\n## ", 1)[0]
     missing = [name for name in _published_schemas() if name not in body]
-    assert missing == [], (
-        f"published schema(s) Part 32.5 does not list: {missing}")
+    assert missing == [], f"published schema(s) Part 32.5 does not list: {missing}"
 
 
 def test_every_published_schema_is_in_the_architecture_inventory():
@@ -847,13 +850,11 @@ def test_every_published_schema_is_in_the_architecture_inventory():
     text = ARCHITECTURE.read_text(encoding="utf-8")
     inventory = text.split("## The published contracts", 1)
     assert len(inventory) == 2, (
-        "architecture.md has no `## The published contracts` chapter - "
-        "the inventory this guard exists to keep current")
+        "architecture.md has no `## The published contracts` chapter - the inventory this guard exists to keep current"
+    )
     body = inventory[1].split("\n## ", 1)[0]
     missing = [name for name in _published_schemas() if name not in body]
-    assert missing == [], (
-        f"published schema(s) missing from the architecture inventory: "
-        f"{missing}")
+    assert missing == [], f"published schema(s) missing from the architecture inventory: {missing}"
 
 
 def test_the_inventory_names_no_schema_the_code_does_not_emit():
@@ -863,28 +864,24 @@ def test_the_inventory_names_no_schema_the_code_does_not_emit():
     body = text.split("## The published contracts", 1)[-1].split("\n## ", 1)[0]
     listed = set(re.findall(r"`([a-z-]+/v\d+)`", body))
     stale = sorted(listed - set(_published_schemas()))
-    assert stale == [], (
-        f"the inventory names schema(s) nothing emits: {stale}")
+    assert stale == [], f"the inventory names schema(s) nothing emits: {stale}"
 
 
 def test_the_architecture_document_covers_the_viewer_axis():
     """Rounds 21-26 built a server, a schema-driven page and an export,
     and the architecture document did not mention any of it."""
     text = ARCHITECTURE.read_text(encoding="utf-8")
-    assert "## The viewer axis" in text, (
-        "architecture.md has no viewer chapter - it still stops at "
-        "round 20")
+    assert "## The viewer axis" in text, "architecture.md has no viewer chapter - it still stops at round 20"
     chapter = text.split("## The viewer axis", 1)[1].split("\n## ", 1)[0]
     for landmark in ("bga view", "--export", "no-arithmetic"):
         assert landmark in chapter, f"the viewer chapter does not mention {landmark}"
 
 
 def test_the_fixing_guide_asks_whether_the_documents_moved():
-    guide = (REPO / "docs/contributing/fixing-guide.md").read_text(
-        encoding="utf-8")
+    guide = (REPO / "docs/contributing/fixing-guide.md").read_text(encoding="utf-8")
     assert "architecture.md" in guide and "same commit" in guide.lower(), (
-        "the Definition of Done does not ask whether this change makes "
-        "architecture.md or the spec wrong")
+        "the Definition of Done does not ask whether this change makes architecture.md or the spec wrong"
+    )
 
 
 def test_the_inventory_points_at_schema_rather_than_copying_it():
@@ -893,16 +890,15 @@ def test_the_inventory_points_at_schema_rather_than_copying_it():
     maintain, which is the defect this item is about, not the fix."""
     text = ARCHITECTURE.read_text(encoding="utf-8")
     body = text.split("## The published contracts", 1)[-1].split("\n## ", 1)[0]
-    assert "--schema" in body, (
-        "the inventory does not point a reader at the printed schema")
+    assert "--schema" in body, "the inventory does not point a reader at the printed schema"
     # The failure this is really about: somebody pastes the schemas in,
     # and the chapter becomes the second copy the item exists to avoid.
-    pasted = [marker for marker in ('"properties"', "$schema", '"type":')
-              if marker in body]
+    pasted = [marker for marker in ('"properties"', "$schema", '"type":') if marker in body]
     assert pasted == [], (
         f"the inventory reproduces schema internals ({pasted}) instead of "
         f"pointing at `--schema` - that is a second copy to maintain, "
-        f"which is the defect, not the fix")
+        f"which is the defect, not the fix"
+    )
     # The bound is derived rather than a constant: it moves with the
     # inventory, so adding a contract does not redden this and pasting
     # a schema in still does. `UX-384` found it as a literal 60 against
@@ -915,7 +911,8 @@ def test_the_inventory_points_at_schema_rather_than_copying_it():
     assert len(body.splitlines()) < budget, (
         f"{len(body.splitlines())} lines against a budget of {budget} "
         f"({len(contracts.ids())} contracts) - the inventory is meant to "
-        f"be one line per contract, not a copy of them")
+        f"be one line per contract, not a copy of them"
+    )
 
 
 if __name__ == "__main__":  # pragma: no cover

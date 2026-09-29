@@ -4,6 +4,7 @@ push to main is never queued, replaced or cancelled.
 The workflow's `concurrency:` is evaluated, not grepped, with
 `test_a_run_red_for_another_reason_adopts_nothing`'s expression engine.
 """
+
 import pathlib
 import sys
 

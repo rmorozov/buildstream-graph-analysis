@@ -16,6 +16,7 @@ to exist, so `ELEMENT_PLACEMENT_RULE` puts them on an `element_join`
 row (`dependency_read_share`) rather than in a map every capture
 carries and most captures could only fill with nulls.
 """
+
 from typing import Optional
 
 from .edg import compute_dominators, compute_reachability, element_order
@@ -64,8 +65,7 @@ def compute_fan_in(graph, kinds: dict, structural_kinds, foundation=frozenset())
             # `UX-829`: the names themselves, for the element card -
             # `direct_count` is the population, this is the capped list.
             # Which names by graph order, shown by name (UX-1063).
-            "direct": sorted(sorted(direct[uid], key=lambda u: (order.get(u, len(order)), u)
-                                    )[:DIRECT_NAMES_CAP]),
+            "direct": sorted(sorted(direct[uid], key=lambda u: (order.get(u, len(order)), u))[:DIRECT_NAMES_CAP]),
             # `compute_reachability` excludes the element itself, so
             # this is the closure and not the closure plus one - held
             # by a clause on that helper rather than by a subtraction
@@ -96,9 +96,11 @@ def top_fan_in(rows: dict, limit: int = TOP_FAN_IN) -> list:
     `UX-474`: and only elements that pull in something. An ordering over
     a constant is not a ranking, and a graph of leaves is all zeroes.
     """
-    reaching = [uid for uid, row in rows.items()
-                if not row["is_structural_kind"] and not row["is_foundation"]
-                and row["transitive_count"]]
+    reaching = [
+        uid
+        for uid, row in rows.items()
+        if not row["is_structural_kind"] and not row["is_foundation"] and row["transitive_count"]
+    ]
     position = {uid: index for index, uid in enumerate(rows)}
     reaching.sort(key=lambda uid: (-rows[uid]["transitive_count"], position[uid]))
     return reaching[:limit]

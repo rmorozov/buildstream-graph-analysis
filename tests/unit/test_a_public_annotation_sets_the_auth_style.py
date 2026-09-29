@@ -7,6 +7,7 @@ in `_jobserver_injection`. This guards `_public_auth_style` (pure, the
 through `build_shim_argv` (integration), reusing UX-878/879's own
 fake-bwrap-with-make harness.
 """
+
 import json
 import os
 
@@ -52,14 +53,11 @@ def _write_auth_map(tmp_path, mapping):
 
 
 def test_an_off_annotation_scrubs_where_auto_would_fifo(tmp_path, monkeypatch):
-    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker",
-                                 BIND_DST, "4.4")
-    monkeypatch.setenv("BST_TRACE_ELEMENT_AUTH_MAP",
-                       _write_auth_map(tmp_path, {"core.bst": "off"}))
+    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker", BIND_DST, "4.4")
+    monkeypatch.setenv("BST_TRACE_ELEMENT_AUTH_MAP", _write_auth_map(tmp_path, {"core.bst": "off"}))
     wrapper_dir = str(tmp_path / "wrappers")
 
-    argv, read_fd = _build_cmake_with_fd(
-        fake, tmp_path, monkeypatch, wrapper_dir=wrapper_dir)
+    argv, read_fd = _build_cmake_with_fd(fake, tmp_path, monkeypatch, wrapper_dir=wrapper_dir)
     try:
         assert "MAKEFLAGS" not in argv
         assert not any("--jobserver-auth" in tok for tok in argv)
@@ -68,10 +66,8 @@ def test_an_off_annotation_scrubs_where_auto_would_fifo(tmp_path, monkeypatch):
 
 
 def test_a_command_line_override_beats_the_annotation(tmp_path, monkeypatch):
-    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker",
-                                 BIND_DST, "4.4")
-    monkeypatch.setenv("BST_TRACE_ELEMENT_AUTH_MAP",
-                       _write_auth_map(tmp_path, {"core.bst": "off"}))
+    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker", BIND_DST, "4.4")
+    monkeypatch.setenv("BST_TRACE_ELEMENT_AUTH_MAP", _write_auth_map(tmp_path, {"core.bst": "off"}))
     monkeypatch.setenv("BST_TRACE_JOBSERVER_AUTH_MAP", "fd:core.bst")
 
     argv, read_fd = _build_cmake_with_fd(fake, tmp_path, monkeypatch)
@@ -84,10 +80,8 @@ def test_a_command_line_override_beats_the_annotation(tmp_path, monkeypatch):
 
 
 def test_an_element_in_neither_map_falls_to_auto(tmp_path, monkeypatch):
-    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker",
-                                 BIND_DST, "4.4")
-    monkeypatch.setenv("BST_TRACE_ELEMENT_AUTH_MAP",
-                       _write_auth_map(tmp_path, {"llvm.bst": "off"}))
+    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker", BIND_DST, "4.4")
+    monkeypatch.setenv("BST_TRACE_ELEMENT_AUTH_MAP", _write_auth_map(tmp_path, {"llvm.bst": "off"}))
 
     argv, read_fd = _build_cmake_with_fd(fake, tmp_path, monkeypatch)
     try:

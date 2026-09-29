@@ -17,6 +17,7 @@ in testing).
 
     python3 tools/dev_scenario.py --seed 1
 """
+
 import argparse
 import hashlib
 import pathlib
@@ -49,31 +50,34 @@ _ROLE_ROW = re.compile(r"^\|\s*(R\d)\s*\|\s*(.+?)\s*\|")
 #: — a cold build of anything rebuilds something — so it is the second
 #: build's rebuilt population.
 _RECIPE = {
-    "population": {"0": "`examples/08-process-storm`, built twice — the "
-                        "*rebuilt* population of the second `bst build` is "
-                        "zero, which is the only way to reach this class",
-                  "1": "`examples/08-process-storm`, `bst build "
-                       "toolchain.bst` — a leaf with no `depends`",
-                  "many": "`examples/06-macro-micro-optimization`, `bst "
-                          "build all.bst` (11 elements)"},
-    "contract version": {"legacy": "a committed legacy-contract fixture, read-only",
-                         "current": "a fresh capture on today's schema"},
-    "capture mode": {"cold": "a cold `bst build <target>` (`XDG_CACHE_HOME` "
-                             "isolated) — `<target>` is the population row's",
-                     "incremental": "a second `bst build <target>` in the "
-                                    "same store"},
-    "Plane 2": {"absent": "`bga wrap` then `bga extract` — **not** `bga "
-                          "snapshot`, which has no flag that omits Plane 2 "
-                          "(`UX-726`)",
-               "hook only": "`bga snapshot --trace-opens --trace-spine=off "
-                            "-- bst build <target>`",
-               "spine on": "`bga snapshot --trace-opens --trace-spine=on "
-                           "-- bst build <target>`"},
-    "reader": {"DOM shim": "the shim boot (`tests/dom_shim.mjs`), no browser",
-              "real Chrome": "`tests/browser.py`'s `Browser(find_chrome())`",
-              "the export": "the static export read as bytes, no boot"},
-    "host": {"this machine": "run here",
-             "CI only": "no local instrument — the `verify` skill's §7 pull"},
+    "population": {
+        "0": "`examples/08-process-storm`, built twice — the "
+        "*rebuilt* population of the second `bst build` is "
+        "zero, which is the only way to reach this class",
+        "1": "`examples/08-process-storm`, `bst build toolchain.bst` — a leaf with no `depends`",
+        "many": "`examples/06-macro-micro-optimization`, `bst build all.bst` (11 elements)",
+    },
+    "contract version": {
+        "legacy": "a committed legacy-contract fixture, read-only",
+        "current": "a fresh capture on today's schema",
+    },
+    "capture mode": {
+        "cold": "a cold `bst build <target>` (`XDG_CACHE_HOME` isolated) — `<target>` is the population row's",
+        "incremental": "a second `bst build <target>` in the same store",
+    },
+    "Plane 2": {
+        "absent": "`bga wrap` then `bga extract` — **not** `bga "
+        "snapshot`, which has no flag that omits Plane 2 "
+        "(`UX-726`)",
+        "hook only": "`bga snapshot --trace-opens --trace-spine=off -- bst build <target>`",
+        "spine on": "`bga snapshot --trace-opens --trace-spine=on -- bst build <target>`",
+    },
+    "reader": {
+        "DOM shim": "the shim boot (`tests/dom_shim.mjs`), no browser",
+        "real Chrome": "`tests/browser.py`'s `Browser(find_chrome())`",
+        "the export": "the static export read as bytes, no boot",
+    },
+    "host": {"this machine": "run here", "CI only": "no local instrument — the `verify` skill's §7 pull"},
 }
 
 
@@ -127,8 +131,14 @@ def draw(seed):
     role = _pick(seed, "role", sorted(role_map))
     classes = partition_classes()
     chosen = {dim: _pick(seed, dim, classes[dim]) for dim in sorted(classes)}
-    return {"seed": seed, "area": area, "area_size": len(areas[area]),
-            "role": role, "role_text": role_map[role], "classes": chosen}
+    return {
+        "seed": seed,
+        "area": area,
+        "area_size": len(areas[area]),
+        "role": role,
+        "role_text": role_map[role],
+        "classes": chosen,
+    }
 
 
 def describe(dim, label):
@@ -139,27 +149,30 @@ def scripted_walk(seed):
     """The driving half's script, printed — nothing here executes it."""
     scenario = draw(seed)
     classes = scenario["classes"]
-    lines = [f"scenario   seed={scenario['seed']}",
-             f"area       {scenario['area']} ({scenario['area_size']} tasks)",
-             f"role       {scenario['role']} — {scenario['role_text']}"]
+    lines = [
+        f"scenario   seed={scenario['seed']}",
+        f"area       {scenario['area']} ({scenario['area_size']} tasks)",
+        f"role       {scenario['role']} — {scenario['role_text']}",
+    ]
     for dim in sorted(classes):
         lines.append(f"{dim:<17} {classes[dim]}")
-    lines += ["", "capture recipe:",
-             f"  {describe('population', classes['population'])}",
-             f"  {describe('capture mode', classes['capture mode'])}",
-             f"  {describe('Plane 2', classes['Plane 2'])}",
-             f"  {describe('contract version', classes['contract version'])}",
-             "commands:",
-             "  bga analyze <run> --format json",
-             "  bga correlate <run> --format json",
-             "  bga view <run> --export export.html",
-             "controls to drive (the census, UX-665):",
-             "  python3 tools/dev_page_census.py export.html   "
-             "# one instance per class it names",
-             f"reader:    {describe('reader', classes['reader'])}",
-             f"host:      {describe('host', classes['host'])}",
-             "report shape: .claude/skills/walk/SKILL.md's ≤ 80-line "
-             "template, plus `seed` and the answer-key rows it added"]
+    lines += [
+        "",
+        "capture recipe:",
+        f"  {describe('population', classes['population'])}",
+        f"  {describe('capture mode', classes['capture mode'])}",
+        f"  {describe('Plane 2', classes['Plane 2'])}",
+        f"  {describe('contract version', classes['contract version'])}",
+        "commands:",
+        "  bga analyze <run> --format json",
+        "  bga correlate <run> --format json",
+        "  bga view <run> --export export.html",
+        "controls to drive (the census, UX-665):",
+        "  python3 tools/dev_page_census.py export.html   # one instance per class it names",
+        f"reader:    {describe('reader', classes['reader'])}",
+        f"host:      {describe('host', classes['host'])}",
+        "report shape: .claude/skills/walk/SKILL.md's ≤ 80-line template, plus `seed` and the answer-key rows it added",
+    ]
     return "\n".join(lines)
 
 
@@ -183,15 +196,16 @@ def audits_documents():
     one subprocess call site for "what this repository actually
     carries", not a second one to drift from it.
     """
-    return [(rel, (REPO / rel).read_text(encoding="utf-8"))
-            for rel in sorted(tracked_paths())
-            if rel.startswith("docs/audits/") and rel.endswith(".md")]
+    return [
+        (rel, (REPO / rel).read_text(encoding="utf-8"))
+        for rel in sorted(tracked_paths())
+        if rel.startswith("docs/audits/") and rel.endswith(".md")
+    ]
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--seed", type=int, required=True,
-                        help="The scenario's name — reruns identically.")
+    parser.add_argument("--seed", type=int, required=True, help="The scenario's name — reruns identically.")
     args = parser.parse_args(argv)
     print(scripted_walk(args.seed))
     return 0

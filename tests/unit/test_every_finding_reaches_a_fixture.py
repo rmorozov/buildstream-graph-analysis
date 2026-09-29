@@ -14,6 +14,7 @@ snake_case they are in 7, 12 and 7 files. A text scan cannot tell a name
 from a spelling of it - fixing guide s5, in the census written to find
 s5 gaps.
 """
+
 import functools
 import subprocess
 import sys
@@ -42,38 +43,36 @@ class TestEveryFindingIsReachedOrDeclared:
     def test_the_census_covers_the_whole_registry(self, got):
         """A finding missing from the census is invisible to every
         clause below, so the population is asserted before it is read."""
-        assert set(got) == set(FINDING_READERS), (
-            set(got) ^ set(FINDING_READERS))
+        assert set(got) == set(FINDING_READERS), set(got) ^ set(FINDING_READERS)
 
     def test_nothing_is_neither_produced_nor_declared(self, got):
         """The item's whole claim. A finding with no capture and no
         declaration is the failure - not a gap somebody will notice."""
-        orphans = sorted(name for name, where in got.items()
-                         if not where and name not in census.UNREACHABLE)
+        orphans = sorted(name for name, where in got.items() if not where and name not in census.UNREACHABLE)
         assert orphans == [], (
             f"finding(s) no committed capture produces and "
             f"tools/dev_finding_coverage.UNREACHABLE does not declare: "
             f"{orphans}. Add a capture that reaches them (see "
-            f"tests/fixtures/topologies.py) or declare why none can.")
+            f"tests/fixtures/topologies.py) or declare why none can."
+        )
 
     def test_a_declaration_carries_a_reason(self):
-        """"Declared unreachable" with no sentence is silence wearing a
+        """ "Declared unreachable" with no sentence is silence wearing a
         key. `tests/skip_reasons.py` is the same shape one axis over."""
         assert census.UNREACHABLE, "the declaration map is empty"
         for name, reason in census.UNREACHABLE.items():
-            assert name in FINDING_READERS, (
-                f"{name} is declared unreachable and is not a finding")
+            assert name in FINDING_READERS, f"{name} is declared unreachable and is not a finding"
             assert len(reason.split()) >= 8, (name, reason)
 
     def test_a_declared_finding_is_not_also_produced(self, got):
         """A declaration that has quietly become false is worse than no
         declaration: it says a capture cannot exist while one does."""
-        contradicted = sorted(name for name in census.UNREACHABLE
-                              if got.get(name))
+        contradicted = sorted(name for name in census.UNREACHABLE if got.get(name))
         assert contradicted == [], (
             f"declared unreachable and yet produced: {contradicted}. "
             f"Remove the declaration - the reason it gives is no longer "
-            f"true of this tree.")
+            f"true of this tree."
+        )
 
     def test_the_transfer_finding_has_a_capture_of_its_own(self, got):
         """`cache-transfer-cost` was the last orphan (`UX-459`), and it
@@ -81,8 +80,7 @@ class TestEveryFindingIsReachedOrDeclared:
         Pipeline Summary, and tasks whose primary resource is DOWNLOAD.
         Named rather than left to the count, so removing that fixture
         says which one went."""
-        assert "tests/fixtures/a_build_that_pulls" in got["cache-transfer-cost"], (
-            got["cache-transfer-cost"])
+        assert "tests/fixtures/a_build_that_pulls" in got["cache-transfer-cost"], got["cache-transfer-cost"]
 
 
 class TestTheCensusReadsTheTreeAndNotTheMachine:
@@ -96,15 +94,15 @@ class TestTheCensusReadsTheTreeAndNotTheMachine:
         local = set(census.captures(tracked_only=False))
         assert tracked <= local
         assert not [run for run in tracked if ".bga" in str(run)], (
-            "a .bga capture is being counted as tracked, which "
-            "git ls-files says is impossible")
+            "a .bga capture is being counted as tracked, which git ls-files says is impossible"
+        )
 
     def test_the_command_in_the_task_file_runs(self):
         """The Acceptance Test of `UX-459` and `UX-460` is this command,
         and a census whose CLI has drifted is a census a round cannot
         re-run."""
         done = subprocess.run(
-            [sys.executable, "tools/dev_finding_coverage.py"],
-            capture_output=True, text=True, cwd=census.REPO)
+            [sys.executable, "tools/dev_finding_coverage.py"], capture_output=True, text=True, cwd=census.REPO
+        )
         assert done.returncode == 0, done.stderr[-2000:]
         assert "0 neither" in done.stdout, done.stdout[-2000:]

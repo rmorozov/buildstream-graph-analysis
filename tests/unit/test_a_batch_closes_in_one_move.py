@@ -5,6 +5,7 @@ This holds the three-part claim: both markers flip, both rows land in
 `closed.md`, the counts sentence is derived once - and a missing note
 refuses the whole batch before anything is written.
 """
+
 import pathlib
 import shutil
 import subprocess
@@ -19,7 +20,11 @@ import dev_close_task as close_task
 def _run(*argv):
     return subprocess.run(
         [sys.executable, str(REPO / "tools/dev_close_task.py"), *argv],
-        capture_output=True, text=True, cwd=str(REPO), timeout=120)
+        capture_output=True,
+        text=True,
+        cwd=str(REPO),
+        timeout=120,
+    )
 
 
 def _two_open_rows(tmp_path):
@@ -28,34 +33,38 @@ def _two_open_rows(tmp_path):
     this guard's claim."""
     scenarios = tmp_path / "scenarios"
     shutil.copytree(REPO / "docs/backlog/scenarios", scenarios)
-    ids = (("UX-9801", "UX-9801-a-batch-row-one"),
-           ("UX-9802", "UX-9802-a-batch-row-two"))
+    ids = (("UX-9801", "UX-9801-a-batch-row-one"), ("UX-9802", "UX-9802-a-batch-row-two"))
     for uid, slug in ids:
         (scenarios / f"{slug}.md").write_text(
             f"# {uid}: a row this guard wrote\n\n"
             f"**Priority:** Low | **Status:** \U0001f534 Not Started | "
             f"**Serves:** nobody | **Topic:** guards\n\n"
-            f"## Outcome\n\nmeasured.\n", encoding="utf-8")
+            f"## Outcome\n\nmeasured.\n",
+            encoding="utf-8",
+        )
     readme = scenarios / "README.md"
     text = readme.read_text(encoding="utf-8")
     marker = "\n## UX-333"
     assert marker in text, "the open table's end moved"
-    rows = "".join(
-        f"| {uid} | [a batch row]({slug}.md) | guards | Low | — | "
-        f"\U0001f534 |\n" for uid, slug in ids)
-    readme.write_text(text.replace(marker, "\n" + rows + marker, 1),
-                      encoding="utf-8")
+    rows = "".join(f"| {uid} | [a batch row]({slug}.md) | guards | Low | — | \U0001f534 |\n" for uid, slug in ids)
+    readme.write_text(text.replace(marker, "\n" + rows + marker, 1), encoding="utf-8")
     return ids, scenarios
 
 
 class TestABatchClosesInOneMove:
-
-    def test_both_markers_flip_both_rows_move_counts_derive_once(
-            self, tmp_path, monkeypatch):
+    def test_both_markers_flip_both_rows_move_counts_derive_once(self, tmp_path, monkeypatch):
         ids, scenarios = _two_open_rows(tmp_path)
-        done = _run("--move", ids[0][0], "--note", "first found",
-                    ids[1][0], "--note", "second found",
-                    "--scenarios", str(scenarios))
+        done = _run(
+            "--move",
+            ids[0][0],
+            "--note",
+            "first found",
+            ids[1][0],
+            "--note",
+            "second found",
+            "--scenarios",
+            str(scenarios),
+        )
         assert done.returncode == 0, done.stdout + done.stderr
 
         readme = (scenarios / "README.md").read_text(encoding="utf-8")
@@ -75,31 +84,25 @@ class TestABatchClosesInOneMove:
         monkeypatch.setattr(close_task, "CLOSED", scenarios / "closed.md")
         sentence, table = close_task.index_header()
         assert sentence in done.stdout, done.stdout
-        assert sentence not in readme, (
-            "the batch committed the counts sentence to the index")
-        assert table not in readme, (
-            "the batch committed the topic table to the index")
+        assert sentence not in readme, "the batch committed the counts sentence to the index"
+        assert table not in readme, "the batch committed the topic table to the index"
 
     def test_a_missing_note_refuses_the_whole_batch(self, tmp_path):
         ids, scenarios = _two_open_rows(tmp_path)
         before = (scenarios / "README.md").read_bytes()
-        done = _run("--move", ids[0][0], "--note", "first found",
-                    ids[1][0], "--scenarios", str(scenarios))
+        done = _run("--move", ids[0][0], "--note", "first found", ids[1][0], "--scenarios", str(scenarios))
         assert done.returncode != 0
         assert ids[1][0] in done.stderr
-        assert (scenarios / "README.md").read_bytes() == before, (
-            "a refused batch still wrote to the index")
-        assert f"| {ids[0][0]} |" not in (
-            "\n".join(close_task.closed_rows(scenarios))), (
-            "the first id closed before the batch was refused")
+        assert (scenarios / "README.md").read_bytes() == before, "a refused batch still wrote to the index"
+        assert f"| {ids[0][0]} |" not in ("\n".join(close_task.closed_rows(scenarios))), (
+            "the first id closed before the batch was refused"
+        )
 
     def test_the_same_id_twice_is_refused_not_closed_twice(self, tmp_path):
         ids, scenarios = _two_open_rows(tmp_path)
         uid = ids[0][0]
-        done = _run("--move", uid, "--note", "first", uid, "--note", "second",
-                    "--scenarios", str(scenarios))
+        done = _run("--move", uid, "--note", "first", uid, "--note", "second", "--scenarios", str(scenarios))
         assert done.returncode != 0
         assert uid in done.stderr
         closed = "\n".join(close_task.closed_rows(scenarios))
-        assert closed.count(f"| {uid} |") == 0, (
-            "a repeated id wrote a closed row before being refused")
+        assert closed.count(f"| {uid} |") == 0, "a repeated id wrote a closed row before being refused"

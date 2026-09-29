@@ -17,6 +17,7 @@ The claim that can fail is not "some path is excluded" but "the list is
 git's": a walk that skipped this one directory would satisfy the first
 and lose the property on the next worktree the tooling invents.
 """
+
 import pathlib
 import re
 import subprocess
@@ -43,19 +44,21 @@ def _recipe():
 
 def test_git_ignores_the_worktree_directory():
     said = subprocess.run(
-        ["git", "check-ignore", "-q", f"{WORKTREES}/agent-probe/README.md"],
-        cwd=REPO, capture_output=True)
+        ["git", "check-ignore", "-q", f"{WORKTREES}/agent-probe/README.md"], cwd=REPO, capture_output=True
+    )
     assert said.returncode == 0, (
         f"`{WORKTREES}/` is not ignored, so every running track shows in "
         f"`git status` and a bulk add would commit another branch's "
-        f"working copy")
+        f"working copy"
+    )
 
 
 def test_the_doc_lint_takes_its_files_from_git():
     recipe = _recipe()
     assert "git ls-files" in recipe, (
         f"lint-docs runs `{recipe.strip()}` - it walks the tree, so it "
-        f"lints every track's copy of the repository as well as this one")
+        f"lints every track's copy of the repository as well as this one"
+    )
 
 
 def test_the_lint_does_not_depend_on_a_flag_the_39_lane_lacks():
@@ -71,23 +74,25 @@ def test_a_markdown_file_in_a_worktree_is_not_listed():
     removed again."""
     probe = REPO / WORKTREES / "agent-lint-probe" / "PROBE.md"
     probe.parent.mkdir(parents=True, exist_ok=True)
-    probe.write_text("# probe\n\n```\nno language, MD040\n```\n",
-                     encoding="utf-8")
+    probe.write_text("# probe\n\n```\nno language, MD040\n```\n", encoding="utf-8")
     try:
-        listed = subprocess.run(_recipe().replace("scan", "scan -l"),
-                                shell=True, cwd=REPO,
-                                capture_output=True, text=True).stdout
+        listed = subprocess.run(
+            _recipe().replace("scan", "scan -l"), shell=True, cwd=REPO, capture_output=True, text=True
+        ).stdout
     finally:
         probe.unlink()
         probe.parent.rmdir()
     assert str(probe.relative_to(REPO)) not in listed, (
         "the lint lists a file inside a track's worktree, which is the "
-        "state where one track's unfinished document reddens another's")
+        "state where one track's unfinished document reddens another's"
+    )
     assert ".claude/agents/implementer.md" in listed, (
         "and it has stopped reading `.claude/` at all, which is the other "
-        "way this clause can be satisfied and the wrong one")
+        "way this clause can be satisfied and the wrong one"
+    )
 
 
 if __name__ == "__main__":  # pragma: no cover
     import pytest
+
     raise SystemExit(pytest.main([__file__, "-v"]))

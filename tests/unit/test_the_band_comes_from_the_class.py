@@ -15,6 +15,7 @@ delta in seconds and fails, a store with too few runs of that class
 refuses with its own exit code rather than falling back to the rule the
 band replaces, and runs of another class are refused rather than pooled.
 """
+
 import contextlib
 import io
 import json
@@ -82,12 +83,9 @@ def _store(tmp_path, members, candidate_us, candidate_class=("review", REVIEW)):
     runs = project / ".bga" / "runs"
 
     for index, (build_type, variant, seconds) in enumerate(members):
-        _run_dir(runs / f"202609{index + 1:02d}T000000Z" / "run",
-                 int(seconds * SECOND), build_type, variant)
-    baseline = _run_dir(runs / "20260920T000000Z" / "run",
-                        100 * SECOND, *candidate_class)
-    candidate = _run_dir(runs / "20260921T000000Z" / "run",
-                         int(candidate_us), *candidate_class)
+        _run_dir(runs / f"202609{index + 1:02d}T000000Z" / "run", int(seconds * SECOND), build_type, variant)
+    baseline = _run_dir(runs / "20260920T000000Z" / "run", 100 * SECOND, *candidate_class)
+    candidate = _run_dir(runs / "20260921T000000Z" / "run", int(candidate_us), *candidate_class)
     return project, baseline, candidate
 
 
@@ -111,13 +109,12 @@ _FIVE_REVIEW_RUNS = [("review", REVIEW, seconds) for seconds in (98, 99, 100, 10
 
 
 class TestTheBandIsTheCandidatesOwnClass:
-
     def test_a_candidate_inside_the_band_passes_and_says_so(self, tmp_path):
-        project, baseline, candidate = _store(
-            tmp_path, _FIVE_REVIEW_RUNS, candidate_us=101 * SECOND)
+        project, baseline, candidate = _store(tmp_path, _FIVE_REVIEW_RUNS, candidate_us=101 * SECOND)
 
-        code, output = _compare(baseline, candidate, "--band-from-class",
-                                "--fail-on-regression", "--format", "ci-comment")
+        code, output = _compare(
+            baseline, candidate, "--band-from-class", "--fail-on-regression", "--format", "ci-comment"
+        )
 
         assert code == EXIT_OK, output
         assert "+1.0s" in output
@@ -128,33 +125,29 @@ class TestTheBandIsTheCandidatesOwnClass:
         3% regression under the fixed rule and well inside a band whose
         own members span 98..102s - so a pipeline asking for the band
         must be gated by the band, or the flag buys nothing."""
-        project, baseline, candidate = _store(
-            tmp_path, _FIVE_REVIEW_RUNS, candidate_us=103 * SECOND)
+        project, baseline, candidate = _store(tmp_path, _FIVE_REVIEW_RUNS, candidate_us=103 * SECOND)
 
-        with_band, output = _compare(baseline, candidate, "--band-from-class",
-                                     "--fail-on-regression")
+        with_band, output = _compare(baseline, candidate, "--band-from-class", "--fail-on-regression")
         without_band, _ = _compare(baseline, candidate, "--fail-on-regression")
 
         assert with_band == EXIT_OK, output
         assert without_band == EXIT_REGRESSION
 
     def test_a_candidate_outside_the_band_reports_the_seconds_and_fails(self, tmp_path):
-        project, baseline, candidate = _store(
-            tmp_path, _FIVE_REVIEW_RUNS, candidate_us=130 * SECOND)
+        project, baseline, candidate = _store(tmp_path, _FIVE_REVIEW_RUNS, candidate_us=130 * SECOND)
 
-        code, output = _compare(baseline, candidate, "--band-from-class",
-                                "--fail-on-regression", "--format", "ci-comment")
+        code, output = _compare(
+            baseline, candidate, "--band-from-class", "--fail-on-regression", "--format", "ci-comment"
+        )
 
         assert code == EXIT_REGRESSION, output
         assert "+30.0s" in output
         assert "— outside the band from baseline 5 runs" in output
 
     def test_the_comment_says_which_runs_formed_the_band(self, tmp_path):
-        project, baseline, candidate = _store(
-            tmp_path, _FIVE_REVIEW_RUNS, candidate_us=101 * SECOND)
+        project, baseline, candidate = _store(tmp_path, _FIVE_REVIEW_RUNS, candidate_us=101 * SECOND)
 
-        code, output = _compare(baseline, candidate, "--band-from-class",
-                                "--format", "ci-comment")
+        code, output = _compare(baseline, candidate, "--band-from-class", "--format", "ci-comment")
 
         assert code == EXIT_OK, output
         # The count, so a reviewer can weigh the claim at all.
@@ -168,11 +161,9 @@ class TestTheBandIsTheCandidatesOwnClass:
         assert "20260921T000000Z`" not in output
 
     def test_too_few_runs_of_the_class_refuse_rather_than_guess(self, tmp_path):
-        project, baseline, candidate = _store(
-            tmp_path, _FIVE_REVIEW_RUNS[:2], candidate_us=130 * SECOND)
+        project, baseline, candidate = _store(tmp_path, _FIVE_REVIEW_RUNS[:2], candidate_us=130 * SECOND)
 
-        code, output = _compare(baseline, candidate, "--band-from-class",
-                                "--fail-on-regression")
+        code, output = _compare(baseline, candidate, "--band-from-class", "--fail-on-regression")
 
         assert code == EXIT_BAND_UNAVAILABLE, output
         assert "Band gate REFUSED" in output
@@ -184,11 +175,9 @@ class TestTheBandIsTheCandidatesOwnClass:
     def test_runs_of_another_class_are_not_pooled(self, tmp_path):
         """The mutation the row names: pool by recency, not by class."""
         nightlies = [("night", REVIEW, seconds) for seconds in (98, 99, 100, 101, 102)]
-        project, baseline, candidate = _store(
-            tmp_path, nightlies, candidate_us=130 * SECOND)
+        project, baseline, candidate = _store(tmp_path, nightlies, candidate_us=130 * SECOND)
 
-        code, output = _compare(baseline, candidate, "--band-from-class",
-                                "--fail-on-regression")
+        code, output = _compare(baseline, candidate, "--band-from-class", "--fail-on-regression")
 
         assert code == EXIT_BAND_UNAVAILABLE, output
         assert "holds other 0 runs of that class" in output
@@ -196,35 +185,28 @@ class TestTheBandIsTheCandidatesOwnClass:
     def test_a_variant_alone_separates_two_populations(self, tmp_path):
         """A review build under a sanitizer is not a review build: the
         class is the pair (`UX-903`), so the type matching is not enough."""
-        coverage = [("review", {"arch": "x86_64", "coverage": "on"}, seconds)
-                    for seconds in (98, 99, 100, 101, 102)]
-        project, baseline, candidate = _store(
-            tmp_path, coverage, candidate_us=130 * SECOND)
+        coverage = [("review", {"arch": "x86_64", "coverage": "on"}, seconds) for seconds in (98, 99, 100, 101, 102)]
+        project, baseline, candidate = _store(tmp_path, coverage, candidate_us=130 * SECOND)
 
-        code, output = _compare(baseline, candidate, "--band-from-class",
-                                "--fail-on-regression")
+        code, output = _compare(baseline, candidate, "--band-from-class", "--fail-on-regression")
 
         assert code == EXIT_BAND_UNAVAILABLE, output
 
 
 class TestTheFlagSaysWhatItSelected:
-
     def test_the_window_is_the_flags_argument(self, tmp_path):
         """Ten runs in the store, a window of four, four in the band -
         the oldest runs are the ones describing a different tree."""
         members = [("review", REVIEW, 100) for _ in range(10)]
-        project, baseline, candidate = _store(
-            tmp_path, members, candidate_us=101 * SECOND)
+        project, baseline, candidate = _store(tmp_path, members, candidate_us=101 * SECOND)
 
-        code, output = _compare(baseline, candidate, "--band-from-class", "4",
-                                "--format", "ci-comment")
+        code, output = _compare(baseline, candidate, "--band-from-class", "4", "--format", "ci-comment")
 
         assert code == EXIT_OK, output
         assert "band from baseline 4 runs" in output
 
     def test_a_window_below_the_minimum_is_refused_as_an_argument(self, tmp_path):
-        project, baseline, candidate = _store(
-            tmp_path, _FIVE_REVIEW_RUNS, candidate_us=101 * SECOND)
+        project, baseline, candidate = _store(tmp_path, _FIVE_REVIEW_RUNS, candidate_us=101 * SECOND)
 
         code, output = _compare(baseline, candidate, "--band-from-class", "2")
 
@@ -232,12 +214,10 @@ class TestTheFlagSaysWhatItSelected:
         assert f"fewer than {MIN_BASELINE_RUNS} runs" in output
 
     def test_the_flag_and_an_explicit_baseline_set_are_not_both_the_band(self, tmp_path):
-        project, baseline, candidate = _store(
-            tmp_path, _FIVE_REVIEW_RUNS, candidate_us=101 * SECOND)
+        project, baseline, candidate = _store(tmp_path, _FIVE_REVIEW_RUNS, candidate_us=101 * SECOND)
         member = project / ".bga" / "runs" / "20260901T000000Z" / "run"
 
-        code, output = _compare(baseline, candidate, "--band-from-class",
-                                "--baseline-run", str(member))
+        code, output = _compare(baseline, candidate, "--band-from-class", "--baseline-run", str(member))
 
         assert code == 1, output
         assert "both name the band's members" in output
@@ -248,8 +228,7 @@ class TestTheFlagSaysWhatItSelected:
         baseline = _run_dir(tmp_path / "baseline", 100 * SECOND, "review", REVIEW)
         candidate = _run_dir(tmp_path / "candidate", 130 * SECOND, "review", REVIEW)
 
-        code, output = _compare(baseline, candidate, "--band-from-class",
-                                "--fail-on-regression")
+        code, output = _compare(baseline, candidate, "--band-from-class", "--fail-on-regression")
 
         assert code == EXIT_BAND_UNAVAILABLE, output
         assert "no BuildStream project" in output

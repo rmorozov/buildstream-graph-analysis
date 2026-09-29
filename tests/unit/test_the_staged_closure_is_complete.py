@@ -10,6 +10,7 @@ complete enough to link on a host that happens to have Nix. So the
 interesting clauses are the negative ones - a closure walk that stops
 early, a digest that disagrees, a reference nothing staged.
 """
+
 import hashlib
 import os
 import struct
@@ -20,15 +21,13 @@ from tools import nix_closure, nix_store_fetch
 
 try:
     import zstandard
-except ImportError:                      # pragma: no cover - the point
+except ImportError:  # pragma: no cover - the point
     zstandard = None
 
 #: UX-933: every other environment-dependent file here skips on a
 #: missing prerequisite (UX-213's rule); this one imported `zstandard`
 #: and failed, so a correct tree without the extra read as a broken one.
-needs_zstandard = pytest.mark.skipif(
-    zstandard is None,
-    reason="zstandard is not installed - `pip install -e '.[dev]'`")
+needs_zstandard = pytest.mark.skipif(zstandard is None, reason="zstandard is not installed - `pip install -e '.[dev]'`")
 
 ALPHABET = nix_closure.ALPHABET
 
@@ -62,10 +61,8 @@ def _regular(contents, executable=False):
 
 def _one_file_nar(name, contents):
     """A NAR whose root is a directory holding one regular file."""
-    entry = (_word("entry") + _word("(") + _word("name") + _word(name)
-             + _word("node") + _regular(contents) + _word(")"))
-    return (_word("nix-archive-1") + _word("(") + _word("type")
-            + _word("directory") + entry + _word(")"))
+    entry = _word("entry") + _word("(") + _word("name") + _word(name) + _word("node") + _regular(contents) + _word(")")
+    return _word("nix-archive-1") + _word("(") + _word("type") + _word("directory") + entry + _word(")")
 
 
 class _Cache:
@@ -80,17 +77,16 @@ class _Cache:
     def base(self):
         return "file://" + self.root + "/"
 
-    def add(self, digest, name, contents=b"x", references=(),
-            compression="none", file_hash=None):
+    def add(self, digest, name, contents=b"x", references=(), compression="none", file_hash=None):
         raw = _one_file_nar("payload", contents)
         body = raw
         if compression == "xz":
             import lzma
+
             body = lzma.compress(raw)
         elif compression == "zstd":
             body = _zstd_compress(raw)
-        url = f"nar/{digest}.nar.{compression}" if compression != "none" \
-            else f"nar/{digest}.nar"
+        url = f"nar/{digest}.nar.{compression}" if compression != "none" else f"nar/{digest}.nar"
         with open(os.path.join(self.root, url), "wb") as handle:
             handle.write(body)
         store_path = f"/nix/store/{digest}-{name}"
@@ -105,8 +101,7 @@ class _Cache:
             f"NarSize: {len(raw)}",
             f"References: {refs}",
         ]
-        with open(os.path.join(self.root, digest + ".narinfo"), "w",
-                  encoding="utf-8") as handle:
+        with open(os.path.join(self.root, digest + ".narinfo"), "w", encoding="utf-8") as handle:
             handle.write("\n".join(fields) + "\n")
         return store_path
 
@@ -121,8 +116,7 @@ def _zstd_compress(raw):
 
 #: 32 nix-base32 characters, the shape a store hash has.
 def _digest(seed):
-    return (hashlib.sha256(seed.encode()).hexdigest()
-            .translate(str.maketrans("etou", "kmpq"))[:32])
+    return hashlib.sha256(seed.encode()).hexdigest().translate(str.maketrans("etou", "kmpq"))[:32]
 
 
 class TestNixBase32:
@@ -174,8 +168,7 @@ class TestTheClosureWalkIsTransitive:
         x, y = _digest("x"), _digest("y")
         cache.add(x, "x", references=[f"{x}-x", f"{y}-y"])
         cache.add(y, "y", references=[f"{y}-y", f"{x}-x"])
-        assert sorted(nix_closure.closure([x], str(tmp_path / "dl"),
-                                          cache.base)) == sorted([x, y])
+        assert sorted(nix_closure.closure([x], str(tmp_path / "dl"), cache.base)) == sorted([x, y])
 
     def test_the_order_is_stable(self, tmp_path):
         cache = _Cache(str(tmp_path / "cache"))
@@ -183,8 +176,7 @@ class TestTheClosureWalkIsTransitive:
             cache.add(_digest(seed), seed)
         roots = [_digest(seed) for seed in "abcdef"]
         first = list(nix_closure.closure(roots, str(tmp_path / "dl"), cache.base))
-        second = list(nix_closure.closure(reversed(roots),
-                                          str(tmp_path / "dl2"), cache.base))
+        second = list(nix_closure.closure(reversed(roots), str(tmp_path / "dl2"), cache.base))
         assert first == second == sorted(roots)
 
 
@@ -196,8 +188,7 @@ class TestTheDigestGate:
         digest = _digest("bad")
         cache.add(digest, "bad")
         path = os.path.join(cache.root, digest + ".narinfo")
-        text = open(path, encoding="utf-8").read().replace(
-            "NarHash: sha256:", "NarHash: sha256:" + "0" * 0)
+        text = open(path, encoding="utf-8").read().replace("NarHash: sha256:", "NarHash: sha256:" + "0" * 0)
         fields = nix_closure.parse_narinfo(text)
         fields["NarHash"] = "sha256:" + "0" * 64
         with pytest.raises(SystemExit, match="NarHash"):
@@ -211,12 +202,10 @@ class TestTheDigestGate:
         wrapper would refuse a correct store path."""
         cache = _Cache(str(tmp_path / "cache"))
         digest = _digest("recompressed")
-        cache.add(digest, "recompressed", compression="xz",
-                  file_hash=_nix32(b"\x00" * 32))
+        cache.add(digest, "recompressed", compression="xz", file_hash=_nix32(b"\x00" * 32))
         fields = nix_closure.narinfo(digest, str(tmp_path / "dl"), cache.base)
         raw = nix_closure.fetch_nar(fields, str(tmp_path / "dl"), cache.base)
-        assert hashlib.sha256(raw).hexdigest() == \
-            nix_closure.digest_hex(fields["NarHash"])
+        assert hashlib.sha256(raw).hexdigest() == nix_closure.digest_hex(fields["NarHash"])
         assert "NarHash decides" in capsys.readouterr().err
 
     def test_a_narinfo_naming_another_path_is_refused(self, tmp_path):
@@ -226,8 +215,7 @@ class TestTheDigestGate:
         digest = _digest("real")
         cache.add(digest, "real")
         other = _digest("other")
-        os.rename(os.path.join(cache.root, digest + ".narinfo"),
-                  os.path.join(cache.root, other + ".narinfo"))
+        os.rename(os.path.join(cache.root, digest + ".narinfo"), os.path.join(cache.root, other + ".narinfo"))
         with pytest.raises(SystemExit, match=other):
             nix_closure.narinfo(other, str(tmp_path / "dl"), cache.base)
 
@@ -252,8 +240,7 @@ class TestTheDecompressorIsDeclared:
     def _round_trip(self, compression, tmp_path):
         cache = _Cache(str(tmp_path / "cache"))
         digest = _digest(compression)
-        cache.add(digest, compression, contents=b"UX-927" * 64,
-                  compression=compression)
+        cache.add(digest, compression, contents=b"UX-927" * 64, compression=compression)
         fields = nix_closure.narinfo(digest, str(tmp_path / "dl"), cache.base)
         raw = nix_closure.fetch_nar(fields, str(tmp_path / "dl"), cache.base)
         assert raw.startswith(struct.pack("<Q", len("nix-archive-1")))
@@ -262,8 +249,7 @@ class TestTheDecompressorIsDeclared:
     def test_the_zstd_backend_is_named(self):
         """`--check` prints it, so a staged tree says what read it -
         UX-914's rule, one layer down."""
-        assert nix_closure.zstd_backend() in \
-            [name for name, _ in nix_closure._zstd_backends()]
+        assert nix_closure.zstd_backend() in [name for name, _ in nix_closure._zstd_backends()]
 
     def test_the_dev_extras_are_actually_here(self):
         """UX-933: skipping is right on a tree that never claimed the
@@ -272,12 +258,12 @@ class TestTheDecompressorIsDeclared:
         carried since UX-190, which `conftest.py` notes knew about
         `jsonschema` only."""
         if not os.environ.get("BGA_EXPECT_DEV"):
-            pytest.skip("not a dev environment by its own account "
-                        "(BGA_EXPECT_DEV is unset)")
+            pytest.skip("not a dev environment by its own account (BGA_EXPECT_DEV is unset)")
         assert zstandard is not None, (
             "BGA_EXPECT_DEV is set, so this environment claims the dev "
             "extras, but `zstandard` is missing and the `zstd` clauses "
-            "here just skipped. `pip install -e '.[dev]'`.")
+            "here just skipped. `pip install -e '.[dev]'`."
+        )
 
 
 class TestTheStagedTreeIsCheckedAgainstItself:
@@ -286,8 +272,7 @@ class TestTheStagedTreeIsCheckedAgainstItself:
         leaf = _digest("leaf")
         root = _digest("root")
         cache.add(leaf, "leaf")
-        cache.add(root, "root", contents=contents,
-                  references=[f"{root}-root", f"{leaf}-leaf"])
+        cache.add(root, "root", contents=contents, references=[f"{root}-root", f"{leaf}-leaf"])
         dest = str(tmp_path / "sysroot")
         nix_closure.stage_closure(dest, [root], str(tmp_path / "dl"), cache.base)
         return dest, root, leaf
@@ -295,8 +280,7 @@ class TestTheStagedTreeIsCheckedAgainstItself:
     def test_every_closure_member_lands_at_its_own_store_path(self, tmp_path):
         dest, root, leaf = self._stage(tmp_path, b"x")
         for digest in (root, leaf):
-            assert os.path.isdir(f"{dest}/nix/store/{digest}-"
-                                 + ("root" if digest == root else "leaf"))
+            assert os.path.isdir(f"{dest}/nix/store/{digest}-" + ("root" if digest == root else "leaf"))
         assert nix_closure.missing_from(dest, [root, leaf]) == []
 
     def test_a_complete_tree_has_no_dangling_reference(self, tmp_path):
@@ -313,23 +297,19 @@ class TestTheStagedTreeIsCheckedAgainstItself:
         """The defect the row exists for: a tree that names a store path
         it does not carry resolved that path on the staging host."""
         absent = _digest("absent")
-        dest, _root, _leaf = self._stage(
-            tmp_path, b"needs /nix/store/" + f"{absent}-absent".encode())
+        dest, _root, _leaf = self._stage(tmp_path, b"needs /nix/store/" + f"{absent}-absent".encode())
         dangling = nix_closure.dangling_store_refs(dest)
-        assert [ref for _file, ref in dangling] == \
-            [f"/nix/store/{absent}-absent"]
+        assert [ref for _file, ref in dangling] == [f"/nix/store/{absent}-absent"]
 
     def test_dropping_a_closure_member_reddens_the_check(self, tmp_path):
         """The mutation, run as a clause: the staged tree is complete,
         then one member is removed and the same call names it."""
         import shutil
+
         leaf = _digest("leaf")
-        dest, root, staged_leaf = self._stage(
-            tmp_path, b"needs /nix/store/" + f"{leaf}-leaf".encode())
+        dest, root, staged_leaf = self._stage(tmp_path, b"needs /nix/store/" + f"{leaf}-leaf".encode())
         assert staged_leaf == leaf
         assert nix_closure.dangling_store_refs(dest) == []
-        shutil.rmtree(f"{dest}/nix/store/{leaf}-leaf",
-                      onerror=lambda f, path, _e: (os.chmod(path, 0o755), f(path)))
-        assert [ref for _file, ref in nix_closure.dangling_store_refs(dest)] == \
-            [f"/nix/store/{leaf}-leaf"]
+        shutil.rmtree(f"{dest}/nix/store/{leaf}-leaf", onerror=lambda f, path, _e: (os.chmod(path, 0o755), f(path)))
+        assert [ref for _file, ref in nix_closure.dangling_store_refs(dest)] == [f"/nix/store/{leaf}-leaf"]
         assert nix_closure.missing_from(dest, [root, leaf]) == [leaf]

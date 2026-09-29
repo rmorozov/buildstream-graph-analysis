@@ -32,6 +32,7 @@ there could no longer notice the optimisation being deleted. This file
 is the other half: the shipped stylesheet really carries it, applied
 where it pays, and the rail really marks where the reader is.
 """
+
 import pathlib
 import re
 import sys
@@ -67,8 +68,7 @@ def stylesheet():
     and the clause green. The browser clause below caught it; this one
     was decoration until it stopped reading prose.
     """
-    return re.sub(r"/\*.*?\*/", "", STYLE.read_text(encoding="utf-8"),
-                  flags=re.S)
+    return re.sub(r"/\*.*?\*/", "", STYLE.read_text(encoding="utf-8"), flags=re.S)
 
 
 class TestTheStylesheetCarriesIt:
@@ -80,15 +80,19 @@ class TestTheStylesheetCarriesIt:
             "styleguide §6c's measurement was taken against a stylesheet "
             "that declares content-visibility; the volume guards force it "
             "off before measuring, so nothing else would notice this "
-            "being deleted")
+            "being deleted"
+        )
         rule = re.search(
             r"section\.chapter > section\[data-section\](?::not\(\[hidden\]\))?"
-            r"\s*\{[^}]*\}", css)
+            r"\s*\{[^}]*\}",
+            css,
+        )
         assert rule and "content-visibility: auto" in rule.group(0), (
             "the optimisation belongs on the sections *inside* a chapter: "
             "a folded chapter is hidden by its own hidden=\"until-found\" "
             "attribute now (`UX-1015`), so the chapter level still has "
-            "nothing to skip")
+            "nothing to skip"
+        )
 
     def test_the_placeholder_size_is_declared_and_remembers(self):
         """`auto` is the load-bearing word.
@@ -99,11 +103,12 @@ class TestTheStylesheetCarriesIt:
         css = stylesheet()
         declared = re.search(r"contain-intrinsic-size:\s*([^;]+);", css)
         assert declared, (
-            "content-visibility with no contain-intrinsic-size collapses "
-            "every offscreen section to zero height")
+            "content-visibility with no contain-intrinsic-size collapses every offscreen section to zero height"
+        )
         assert declared.group(1).strip().startswith("auto "), (
             "contain-intrinsic-size must start with `auto` so a section "
-            f"keeps its real size once rendered; it declares {declared.group(1)!r}")
+            f"keeps its real size once rendered; it declares {declared.group(1)!r}"
+        )
 
     def test_the_inventory_is_in_the_styleguide(self):
         """§6c is the living copy, not this file."""
@@ -111,24 +116,25 @@ class TestTheStylesheetCarriesIt:
         section = text.split("## 6c.", 1)
         assert len(section) == 2, "styleguide §6c is gone"
         body = section[1].split("\n## ", 1)[0]
-        for primitive in ("content-visibility", "IntersectionObserver",
-                          "scroll-margin-top", "popover", "@container"):
+        for primitive in ("content-visibility", "IntersectionObserver", "scroll-margin-top", "popover", "@container"):
             assert primitive in body, (
-                f"§6c's inventory no longer lists {primitive}, so "
-                "'can the platform do it' has lost an answer")
+                f"§6c's inventory no longer lists {primitive}, so 'can the platform do it' has lost an answer"
+            )
 
 
 class TestTheRailKnowsWhereYouAre:
     def test_the_scrollspy_needs_no_library_and_degrades(self):
         source = NAV.read_text(encoding="utf-8")
         assert "IntersectionObserver" in source, (
-            "the scrollspy is the platform's observer or it is a scroll "
-            "handler reading layout every frame")
+            "the scrollspy is the platform's observer or it is a scroll handler reading layout every frame"
+        )
         assert 'typeof IntersectionObserver === "function"' in source, (
             "the shim has no IntersectionObserver, so scrollspy has to "
-            "return null rather than throw where there is none")
+            "return null rather than throw where there is none"
+        )
         assert "scrollspy(root, contents)" in APP.read_text(encoding="utf-8"), (
-            "an exported function nothing calls is not a feature")
+            "an exported function nothing calls is not a feature"
+        )
 
     def test_the_mark_is_weight_and_a_marker_not_a_tone(self):
         """§4's emphasis budget is spent on findings, not on orientation."""
@@ -136,10 +142,9 @@ class TestTheRailKnowsWhereYouAre:
         rule = re.search(r"\.toc a\[data-current\]\s*\{[^}]*\}", css)
         assert rule, "nothing styles the rail's current entry"
         assert "font-weight" in rule.group(0), (
-            "the current entry is marked by weight; a color-only mark "
-            "disappears in forced-colors and on paper")
-        assert re.search(r"\.toc a\[data-current\]::before", css), (
-            "and by a marker, for the same reason")
+            "the current entry is marked by weight; a color-only mark disappears in forced-colors and on paper"
+        )
+        assert re.search(r"\.toc a\[data-current\]::before", css), "and by a marker, for the same reason"
 
 
 @pytest.fixture(scope="module")
@@ -174,17 +179,15 @@ class TestInARealBrowser:
             seen = browser.measure(page, look, 1440, 900)
 
         assert seen["shown"] > 1, seen
-        assert len(seen["atTop"]) == 1, (
-            f"exactly one rail entry is 'here'; got {seen['atTop']}")
+        assert len(seen["atTop"]) == 1, f"exactly one rail entry is 'here'; got {seen['atTop']}"
         for where, marked in seen["jumps"]:
-            assert marked == [where], (
-                f"scrolled to {where}, rail says {marked}")
-        assert seen["aria"] == 1, (
-            "a screen reader learns the same fact through aria-current")
+            assert marked == [where], f"scrolled to {where}, rail says {marked}"
+        assert seen["aria"] == 1, "a screen reader learns the same fact through aria-current"
 
     def test_the_layout_cost_stops_tracking_the_document(self, page):
         """The claim is a layout claim, so the number is a layout number."""
-        look = r"""(() => {
+        look = (
+            r"""(() => {
           for (const b of document.querySelectorAll("[data-chapter-open]")) b.click();
           for (const b of document.querySelectorAll('[data-all="false"]')) b.click();
           for (const d of document.querySelectorAll("details")) d.open = true;
@@ -201,11 +204,14 @@ class TestInARealBrowser:
             return t[Math.floor(t.length / 2)];
           };
           const on = reflow();
-          """ + pages.FULL_LAYOUT_JS + r"""
+          """
+            + pages.FULL_LAYOUT_JS
+            + r"""
           void document.documentElement.offsetHeight;
           return { on, off: reflow(),
                    nodes: document.querySelectorAll("*").length };
         })()"""
+        )
         with Browser(find_chrome()) as browser:
             seen = browser.measure(page, look, 1440, 900)
 
@@ -244,4 +250,5 @@ class TestInARealBrowser:
             f"content-visibility bought {saving:.1f} ms, under the "
             f"{LAYOUT_SAVING_FLOOR_MS} ms floor: {seen['on']:.1f} ms with it "
             f"against {seen['off']:.1f} ms without, on a "
-            f"{seen['nodes']}-element page")
+            f"{seen['nodes']}-element page"
+        )

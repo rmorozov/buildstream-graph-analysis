@@ -6,6 +6,7 @@ combined effect of fixing every element in a group at once via
 hand-built fixtures, no run-dir/JSON needed (same pattern
 `tests/unit/test_replay.py` already uses).
 """
+
 from bga.ingest.models import DependencyEdge, Element, Graph, NormalizedTask, Resource, TaskKey, TaskKind
 from bga.replay.scheduler import ReplayScheduler
 from bga.structural.batching import compute_batch_opportunities
@@ -14,8 +15,11 @@ from bga.structural.batching import compute_batch_opportunities
 def _task(uid, dur_us, dependencies=()):
     return NormalizedTask(
         task_key=TaskKey(uid, TaskKind.BUILD, "BUILD", 0),
-        ready_us=0, start_us=0, finish_us=dur_us,
-        dependencies=list(dependencies), resources=[Resource.PROCESS],
+        ready_us=0,
+        start_us=0,
+        finish_us=dur_us,
+        dependencies=list(dependencies),
+        resources=[Resource.PROCESS],
     )
 
 
@@ -46,7 +50,9 @@ def test_two_independent_branches_are_grouped_and_batch_simulated():
     element_to_task_key = {"b.bst": str(b.task_key), "c.bst": str(c.task_key)}
 
     result = compute_batch_opportunities(
-        candidates=["b.bst", "c.bst"], graph=graph, replay_scheduler=scheduler,
+        candidates=["b.bst", "c.bst"],
+        graph=graph,
+        replay_scheduler=scheduler,
         element_to_task_key=element_to_task_key,
     )
 
@@ -79,7 +85,9 @@ def test_serialized_elements_are_not_grouped_together():
     element_to_task_key = {"a.bst": str(a.task_key), "b.bst": str(b.task_key)}
 
     result = compute_batch_opportunities(
-        candidates=["a.bst", "b.bst"], graph=graph, replay_scheduler=scheduler,
+        candidates=["a.bst", "b.bst"],
+        graph=graph,
+        replay_scheduler=scheduler,
         element_to_task_key=element_to_task_key,
     )
 
@@ -95,7 +103,9 @@ def test_single_candidate_produces_no_groups():
     scheduler = ReplayScheduler(tasks)
 
     result = compute_batch_opportunities(
-        candidates=["a.bst"], graph=graph, replay_scheduler=scheduler,
+        candidates=["a.bst"],
+        graph=graph,
+        replay_scheduler=scheduler,
         element_to_task_key={"a.bst": str(a.task_key)},
     )
 
@@ -110,7 +120,9 @@ def test_three_mutually_independent_elements_form_one_group():
     element_to_task_key = {t.task_key.element_uid: str(t.task_key) for t in tasks}
 
     result = compute_batch_opportunities(
-        candidates=[f"t{i}.bst" for i in range(3)], graph=graph, replay_scheduler=scheduler,
+        candidates=[f"t{i}.bst" for i in range(3)],
+        graph=graph,
+        replay_scheduler=scheduler,
         element_to_task_key=element_to_task_key,
     )
 

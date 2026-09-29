@@ -12,6 +12,7 @@ offline the command is shown. The guards below check that the asked
 answer is byte-identical to the CLI's, that the page never adds, and
 that a refused selection renders the refusal.
 """
+
 import json
 import os
 import shutil
@@ -28,9 +29,11 @@ needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 
 def _bga(args):
     result = subprocess.run(
-        [sys.executable, "-c",
-         f"from bga.cli import main; raise SystemExit(main({args!r}))"],
-        capture_output=True, text=True, cwd=os.getcwd())
+        [sys.executable, "-c", f"from bga.cli import main; raise SystemExit(main({args!r}))"],
+        capture_output=True,
+        text=True,
+        cwd=os.getcwd(),
+    )
     return result
 
 
@@ -45,8 +48,7 @@ class TestTheProjectionIsThePipelines:
         """The acceptance's own check. Not "close": the same document."""
         import tools.bga_view as view
 
-        cli = _bga(["whatif", GOLDEN, "--element", "base.bst",
-                    "--element", "lib.bst", "--format", "json"])
+        cli = _bga(["whatif", GOLDEN, "--element", "base.bst", "--element", "lib.bst", "--format", "json"])
         assert cli.returncode == 0, cli.stderr
         served = view.whatif_answer(GOLDEN, ["base.bst", "lib.bst"])
         assert json.dumps(served, indent=2, default=str) == cli.stdout.strip()
@@ -56,27 +58,26 @@ class TestTheProjectionIsThePipelines:
         in prose: two elements on one chain are worth *less* together
         than their individual savings add up to. A page that added
         would be wrong here by 1 ms out of 11."""
-        out = _bga(["whatif", GOLDEN, "--element", "base.bst",
-                    "--element", "lib.bst", "--format", "json"])
+        out = _bga(["whatif", GOLDEN, "--element", "base.bst", "--element", "lib.bst", "--format", "json"])
         projected = json.loads(out.stdout)["projected"]
         assert projected["sum_of_individual_us"] == 11_000
         assert projected["joint_saving_us"] == 10_000
-        assert projected["makespan_after_us"] == (
-            projected["baseline_makespan_us"] - projected["joint_saving_us"])
+        assert projected["makespan_after_us"] == (projected["baseline_makespan_us"] - projected["joint_saving_us"])
 
     def test_the_convention_travels_with_every_answer(self):
-        out = _bga(["whatif", GOLDEN, "--element", "base.bst",
-                    "--format", "json"])
+        out = _bga(["whatif", GOLDEN, "--element", "base.bst", "--format", "json"])
         document = json.loads(out.stdout)
         assert "instant" in document["convention"]
         assert "not a forecast" in document["convention"]
 
-    @pytest.mark.parametrize("elements,check", [
-        ([], "empty_selection"),
-        (["ghost.bst"], "unknown_element"),
-    ])
-    def test_a_selection_it_cannot_project_is_refused_by_name(
-            self, elements, check):
+    @pytest.mark.parametrize(
+        "elements,check",
+        [
+            ([], "empty_selection"),
+            (["ghost.bst"], "unknown_element"),
+        ],
+    )
+    def test_a_selection_it_cannot_project_is_refused_by_name(self, elements, check):
         argv = ["whatif", GOLDEN, "--format", "json"]
         for uid in elements:
             argv += ["--element", uid]
@@ -92,8 +93,7 @@ class TestTheProjectionIsThePipelines:
 
         from bga import schemas
 
-        document = json.loads(_bga(["whatif", GOLDEN, "--element", "base.bst",
-                                    "--format", "json"]).stdout)
+        document = json.loads(_bga(["whatif", GOLDEN, "--element", "base.bst", "--format", "json"]).stdout)
         jsonschema.validate(document, schemas.schema(schemas.WHATIF))
         assert document["schema"] == schemas.WHATIF
 
@@ -101,12 +101,14 @@ class TestTheProjectionIsThePipelines:
 @needs_node
 class TestThePageReadsAsksOrSaysTheCommand:
     def _render(self, payload, served=True, answer=None):
-        script = (_HARNESS.replace("__PAYLOAD__", json.dumps(payload))
-                          .replace("__SERVED__", "true" if served else "false")
-                          .replace("__ANSWER__", json.dumps(answer)))
-        result = subprocess.run([node, "--input-type=module", "-e", script],
-                                capture_output=True, text=True,
-                                cwd=os.getcwd(), timeout=60)
+        script = (
+            _HARNESS.replace("__PAYLOAD__", json.dumps(payload))
+            .replace("__SERVED__", "true" if served else "false")
+            .replace("__ANSWER__", json.dumps(answer))
+        )
+        result = subprocess.run(
+            [node, "--input-type=module", "-e", script], capture_output=True, text=True, cwd=os.getcwd(), timeout=60
+        )
         assert result.returncode == 0, result.stderr
         return json.loads(result.stdout)
 
@@ -116,13 +118,11 @@ class TestThePageReadsAsksOrSaysTheCommand:
         first = payload["optimization_horizon"][0]
         assert out["prefix"]["source"] == "published"
         assert out["prefix"]["makespan"] == str(first["makespan_after_us"])
-        assert out["prefix"]["field"] == \
-            "optimization_horizon[0].makespan_after_us"
+        assert out["prefix"]["field"] == "optimization_horizon[0].makespan_after_us"
 
     def test_any_other_subset_is_asked_rather_than_computed(self):
         payload = _report_with_horizon()
-        out = self._render(payload, answer={"projected": {
-            "makespan_after_us": 4_000, "joint_saving_us": 10_000}})
+        out = self._render(payload, answer={"projected": {"makespan_after_us": 4_000, "joint_saving_us": 10_000}})
         assert out["other"]["source"] == "server"
         assert out["other"]["makespan"] == "4000"
         assert out["asked"] == [["b.bst"]], out["asked"]
@@ -131,15 +131,17 @@ class TestThePageReadsAsksOrSaysTheCommand:
         payload = _report_with_horizon()
         out = self._render(payload, served=False)
         assert out["other"]["source"] == "command"
-        assert out["other"]["text"] == (
-            "bga whatif RUN --element b.bst")
+        assert out["other"]["text"] == ("bga whatif RUN --element b.bst")
 
     def test_a_refused_selection_renders_the_refusal(self):
         payload = _report_with_horizon()
-        out = self._render(payload, answer={
-            "projected": None,
-            "refusals": [{"check": "unknown_element",
-                          "sentence": "Not in this run's graph."}]})
+        out = self._render(
+            payload,
+            answer={
+                "projected": None,
+                "refusals": [{"check": "unknown_element", "sentence": "Not in this run's graph."}],
+            },
+        )
         assert out["other"]["source"] == "refused"
         assert "Not in this run's graph." in out["other"]["text"]
 
@@ -149,12 +151,10 @@ class TestThePageReadsAsksOrSaysTheCommand:
         a published field or one bga answered - there is no branch that
         produces a figure the page computed."""
         payload = _report_with_horizon()
-        for served, answer in ((True, {"projected": {
-                "makespan_after_us": 4_000}}), (False, None)):
+        for served, answer in ((True, {"projected": {"makespan_after_us": 4_000}}), (False, None)):
             out = self._render(payload, served=served, answer=answer)
             for state in (out["prefix"], out["other"]):
-                assert state["source"] in (
-                    "published", "server", "command", "refused", "none"), state
+                assert state["source"] in ("published", "server", "command", "refused", "none"), state
 
 
 def _report_with_horizon():
@@ -162,10 +162,8 @@ def _report_with_horizon():
         "schema": "analyze/v4",
         "total_duration_us": 10_000,
         "optimization_horizon": [
-            {"element_uid": "a.bst", "saving_us": 6_000,
-             "makespan_after_us": 8_000, "cumulative_saving_us": 6_000},
-            {"element_uid": "b.bst", "saving_us": 4_000,
-             "makespan_after_us": 4_000, "cumulative_saving_us": 10_000},
+            {"element_uid": "a.bst", "saving_us": 6_000, "makespan_after_us": 8_000, "cumulative_saving_us": 6_000},
+            {"element_uid": "b.bst", "saving_us": 4_000, "makespan_after_us": 4_000, "cumulative_saving_us": 10_000},
         ],
     }
 

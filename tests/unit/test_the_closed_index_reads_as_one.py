@@ -3,6 +3,7 @@
 `closed_rows()` in `tools/dev_close_task.py` is the only reader; the
 rows it yields are the ones `closed.md` held before the split, in order.
 """
+
 import ast
 import hashlib
 import pathlib
@@ -21,10 +22,12 @@ import dev_close_task as close_task
 PRE_SPLIT_ROWS = 1039
 PRE_SPLIT_SHA = "da6945848e500e8eee2738bf798d17fe77991eedf079036e0471b8b6ea6a0e5f"
 
-_TASK = ("# UX-9911: a row this guard wrote\n\n"
-         "**Priority:** Low | **Status:** \U0001f534 Not Started | "
-         "**Serves:** nobody | **Topic:** guards | **Shape:** judgement | "
-         "**Reading:** container\n\n## Outcome\n\nmeasured.\n")
+_TASK = (
+    "# UX-9911: a row this guard wrote\n\n"
+    "**Priority:** Low | **Status:** \U0001f534 Not Started | "
+    "**Serves:** nobody | **Topic:** guards | **Shape:** judgement | "
+    "**Reading:** container\n\n## Outcome\n\nmeasured.\n"
+)
 
 
 def _sandbox(tmp_path):
@@ -35,18 +38,28 @@ def _sandbox(tmp_path):
     text = readme.read_text(encoding="utf-8")
     marker = "\n## UX-333"
     assert marker in text, "the open table's end moved"
-    row = ("| UX-9911 | [a guard row](UX-9911-a-guard-row.md) | guards | Low "
-           "| — | \U0001f534 |\n")
-    readme.write_text(text.replace(marker, "\n" + row + marker, 1),
-                      encoding="utf-8")
+    row = "| UX-9911 | [a guard row](UX-9911-a-guard-row.md) | guards | Low | — | \U0001f534 |\n"
+    readme.write_text(text.replace(marker, "\n" + row + marker, 1), encoding="utf-8")
     return scenarios
 
 
 def _move(scenarios):
     return subprocess.run(
-        [sys.executable, str(REPO / "tools/dev_close_task.py"), "UX-9911",
-         "--move", "--note", "found", "--scenarios", str(scenarios)],
-        capture_output=True, text=True, cwd=str(REPO), timeout=120)
+        [
+            sys.executable,
+            str(REPO / "tools/dev_close_task.py"),
+            "UX-9911",
+            "--move",
+            "--note",
+            "found",
+            "--scenarios",
+            str(scenarios),
+        ],
+        capture_output=True,
+        text=True,
+        cwd=str(REPO),
+        timeout=120,
+    )
 
 
 def test_the_rows_read_back_as_the_pre_split_rows():
@@ -62,8 +75,7 @@ def test_the_chunks_are_the_backlog_after_the_index():
 
 def test_no_chunk_holds_more_than_its_size():
     for path in close_task.closed_files():
-        count = sum(1 for line in path.read_text(encoding="utf-8").splitlines()
-                    if line.startswith("| UX-"))
+        count = sum(1 for line in path.read_text(encoding="utf-8").splitlines() if line.startswith("| UX-"))
         assert count <= close_task.CHUNK_ROWS, (path.name, count)
 
 
@@ -81,10 +93,8 @@ def test_the_129th_row_opens_a_new_chunk(tmp_path):
     scenarios = _sandbox(tmp_path)
     last = close_task.closed_files(scenarios)[-1]
     text = last.read_text(encoding="utf-8")
-    room = close_task.CHUNK_ROWS - sum(
-        1 for line in text.splitlines() if line.startswith("| UX-"))
-    filler = "".join(f"| UX-9{n:03d} | filler | Low | — | \U0001f7e2 Done | x |\n"
-                     for n in range(room))
+    room = close_task.CHUNK_ROWS - sum(1 for line in text.splitlines() if line.startswith("| UX-"))
+    filler = "".join(f"| UX-9{n:03d} | filler | Low | — | \U0001f7e2 Done | x |\n" for n in range(room))
     last.write_text(text + filler, encoding="utf-8")
     done = _move(scenarios)
     assert done.returncode == 0, done.stdout + done.stderr
@@ -96,30 +106,35 @@ def test_the_129th_row_opens_a_new_chunk(tmp_path):
 
 def _opens_closed(tree):
     """A read call, or a module-level binding, that names a closed path."""
+
     def names(node):
-        return any(isinstance(c, ast.Constant) and isinstance(c.value, str)
-                   and ("closed.md" in c.value or c.value == "closed"
-                        or "scenarios/closed" in c.value)
-                   for c in ast.walk(node))
+        return any(
+            isinstance(c, ast.Constant)
+            and isinstance(c.value, str)
+            and ("closed.md" in c.value or c.value == "closed" or "scenarios/closed" in c.value)
+            for c in ast.walk(node)
+        )
+
     hits = []
     for node in ast.walk(tree):
         if isinstance(node, ast.Call):
             fn = node.func
-            name = fn.attr if isinstance(fn, ast.Attribute) else getattr(
-                fn, "id", "")
+            name = fn.attr if isinstance(fn, ast.Attribute) else getattr(fn, "id", "")
             if name in ("read_text", "read_bytes", "open") and names(node):
                 hits.append(node.lineno)
-    hits += [node.lineno for node in ast.walk(tree)
-             if isinstance(node, (ast.Assign, ast.AnnAssign, ast.NamedExpr))
-             and node.value is not None and names(node.value)]
+    hits += [
+        node.lineno
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.Assign, ast.AnnAssign, ast.NamedExpr)) and node.value is not None and names(node.value)
+    ]
     return sorted(set(hits))
 
 
 def test_no_reader_outside_the_tool_opens_a_closed_path():
-    tracked = subprocess.run(["git", "ls-files", "*.py"], cwd=REPO, check=True,
-                             capture_output=True, text=True).stdout.split()
-    skip = {"tools/dev_close_task.py",
-            "tests/unit/test_the_closed_index_reads_as_one.py"}
+    tracked = subprocess.run(
+        ["git", "ls-files", "*.py"], cwd=REPO, check=True, capture_output=True, text=True
+    ).stdout.split()
+    skip = {"tools/dev_close_task.py", "tests/unit/test_the_closed_index_reads_as_one.py"}
     bad = []
     for name in tracked:
         path = REPO / name
@@ -131,15 +146,12 @@ def test_no_reader_outside_the_tool_opens_a_closed_path():
 
 
 def test_the_guard_sees_a_direct_read():
-    tree = ast.parse('P = REPO / "docs/backlog/scenarios/closed.md"\n'
-                     'x = (d / "closed.md").read_text()\n')
+    tree = ast.parse('P = REPO / "docs/backlog/scenarios/closed.md"\nx = (d / "closed.md").read_text()\n')
     assert _opens_closed(tree) == [1, 2]
 
 
 def test_the_guard_sees_a_function_local_read():
-    tree = ast.parse('def rows():\n'
-                     '    p = SCENARIOS / "closed.md"\n'
-                     '    return p.read_text()\n')
+    tree = ast.parse('def rows():\n    p = SCENARIOS / "closed.md"\n    return p.read_text()\n')
     assert _opens_closed(tree) == [2]
 
 
@@ -148,8 +160,7 @@ def test_an_appended_row_links_from_the_chunks_directory(tmp_path):
     done = _move(scenarios)
     assert done.returncode == 0, done.stdout + done.stderr
     chunk = close_task.closed_files(scenarios)[-1]
-    row = next(line for line in chunk.read_text(encoding="utf-8").splitlines()
-               if line.startswith("| UX-9911 |"))
+    row = next(line for line in chunk.read_text(encoding="utf-8").splitlines() if line.startswith("| UX-9911 |"))
     targets = re.findall(r"\]\(([^)\s]+)\)", row)
     assert targets, row
     for target in targets:

@@ -18,8 +18,7 @@ from tools.native_trace.bwrap_shim import element_from_build_root, extract_eleme
 
 
 def _project(tmp_path, names, element_path=None):
-    (tmp_path / "project.conf").write_text(
-        "name: x\n" + (f"element-path: {element_path}\n" if element_path else ""))
+    (tmp_path / "project.conf").write_text("name: x\n" + (f"element-path: {element_path}\n" if element_path else ""))
     root = tmp_path / (element_path or "elements")
     for name in names:
         path = root / name
@@ -36,8 +35,7 @@ class TestDiscoveryWalksTheWholeTree:
     def test_nested_elements_are_found(self, tmp_path):
         """The layout `os.listdir` missed entirely."""
         project = _project(tmp_path, ["components/core.bst", "components/app.bst"])
-        assert discover_element_names(project) == [
-            "components/app.bst", "components/core.bst"]
+        assert discover_element_names(project) == ["components/app.bst", "components/core.bst"]
 
     def test_names_are_project_relative_not_basenames(self, tmp_path):
         """A basename would collide across directories and would not match
@@ -75,15 +73,13 @@ class TestTheShimRecoversTheSameName:
     """
 
     def test_a_nested_build_root_yields_the_nested_name(self):
-        assert element_from_build_root(
-            "buildstream/proj/components/core.bst") == "components/core.bst"
+        assert element_from_build_root("buildstream/proj/components/core.bst") == "components/core.bst"
 
     def test_a_flat_build_root_is_unchanged(self):
         assert element_from_build_root("buildstream/proj/core.bst") == "core.bst"
 
     def test_a_deeply_nested_name_survives_whole(self):
-        assert element_from_build_root(
-            "buildstream/proj/a/b/c.bst") == "a/b/c.bst"
+        assert element_from_build_root("buildstream/proj/a/b/c.bst") == "a/b/c.bst"
 
     def test_a_build_root_override_keeps_the_last_segment(self):
         """UX-56: an overridden build root collapses every element into one
@@ -92,8 +88,7 @@ class TestTheShimRecoversTheSameName:
         assert element_from_build_root("/buildstream-build") == "buildstream-build"
 
     def test_it_reads_the_real_option_form(self):
-        opts = ["--bind", "/x", "/y", "--dir",
-                "buildstream/proj/components/lib-a.bst", "--chdir", "/"]
+        opts = ["--bind", "/x", "/y", "--dir", "buildstream/proj/components/lib-a.bst", "--chdir", "/"]
         assert extract_element_name(opts) == "components/lib-a.bst"
 
     def test_no_dir_option_still_returns_none(self):
@@ -103,8 +98,7 @@ class TestTheShimRecoversTheSameName:
         """The property the whole item turns on, asserted directly."""
         project = _project(tmp_path, ["components/core.bst"])
         census_key = discover_element_names(project)[0]
-        shim_name = extract_element_name(
-            ["--dir", f"buildstream/proj/{census_key}"])
+        shim_name = extract_element_name(["--dir", f"buildstream/proj/{census_key}"])
         assert shim_name == census_key
 
 

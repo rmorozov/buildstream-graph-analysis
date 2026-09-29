@@ -30,6 +30,7 @@ no literal to read. Those are *counted* rather than ignored, and the
 count is asserted against a measured baseline, so a new unresolvable
 reason is a change that has to be argued rather than a silence.
 """
+
 import ast
 import pathlib
 
@@ -168,8 +169,7 @@ def _literal(node, names=None):
         return names[node.id]
     try:
         value = ast.literal_eval(node)
-    except (ValueError, TypeError, SyntaxError, MemoryError,
-            RecursionError):
+    except (ValueError, TypeError, SyntaxError, MemoryError, RecursionError):
         return None
     return value if isinstance(value, str) else None
 
@@ -211,10 +211,8 @@ def scan(root=TESTS):
             if dotted == IMPORT_OR_SKIP or dotted not in SKIP_FORMS:
                 continue
             keyword, index = SKIP_FORMS[dotted]
-            argument = next(
-                (kw.value for kw in node.keywords if kw.arg == keyword), None)
-            if argument is None and index is not None and (
-                    len(node.args) > index):
+            argument = next((kw.value for kw in node.keywords if kw.arg == keyword), None)
+            if argument is None and index is not None and (len(node.args) > index):
                 argument = node.args[index]
             if argument is None:
                 # A skip with no reason at all. Not "unresolvable" - the
@@ -224,9 +222,7 @@ def scan(root=TESTS):
                 continue
             text = _literal(argument, names)
             if text is None:
-                unresolved.append(
-                    (name, node.lineno, type(argument).__name__))
+                unresolved.append((name, node.lineno, type(argument).__name__))
                 continue
-            resolved.setdefault(text, []).append(
-                (name, node.lineno, ".".join(dotted)))
+            resolved.setdefault(text, []).append((name, node.lineno, ".".join(dotted)))
     return resolved, unresolved

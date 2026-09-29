@@ -17,6 +17,7 @@ have since been renamed. Rewriting those would make them false.
 UX-575's piped shape joins the sweep: a documented line that pipes is
 run into a reader that stops, and must still exit 0.
 """
+
 import contextlib
 import io
 import os
@@ -80,15 +81,12 @@ def _command_lines():
             if not re.match(r"^bga(\s|$)", text):
                 continue
             cut = _SHELL_TAIL.search(text)
-            command = (text[:cut.start()] if cut else text).rstrip("\\").strip()
+            command = (text[: cut.start()] if cut else text).rstrip("\\").strip()
             yield path, number, text, command
 
 
 def _tokens(command: str, run_dir: str) -> list[str]:
-    return [
-        run_dir if _PLACEHOLDER.match(token) else token
-        for token in shlex.split(command)
-    ][1:]
+    return [run_dir if _PLACEHOLDER.match(token) else token for token in shlex.split(command)][1:]
 
 
 def _refusal(tokens: list[str]) -> Optional[str]:
@@ -114,7 +112,7 @@ def _refusal(tokens: list[str]) -> Optional[str]:
         with contextlib.redirect_stderr(err), contextlib.redirect_stdout(io.StringIO()):
             _, extras = create_parser().parse_known_args(tokens)
     except SystemExit as exit_:
-        if not exit_.code:          # --help/--version print and leave
+        if not exit_.code:  # --help/--version print and leave
             return None
         said = err.getvalue().strip().splitlines()
         return said[-1] if said else "the parser exited non-zero"
@@ -134,10 +132,7 @@ def test_every_documented_bga_line_parses(tmp_path):
         if refusal:
             offenders.append(f"{path.relative_to(REPO)}:{number}: {text}\n    {refusal}")
 
-    assert offenders == [], (
-        "documented `bga` line(s) the real parser refuses:\n  "
-        + "\n  ".join(offenders)
-    )
+    assert offenders == [], "documented `bga` line(s) the real parser refuses:\n  " + "\n  ".join(offenders)
 
 
 def test_the_sweep_reads_the_lines_it_claims_to():
@@ -159,7 +154,7 @@ def _piped_documented_lines():
 def test_a_documented_pipe_survives_a_reader_that_stops():
     """UX-575's shape, on the guides' own piped lines."""
     env = dict(os.environ)
-    env.pop("PYTHONUNBUFFERED", None)   # or the deferred flush cannot happen
+    env.pop("PYTHONUNBUFFERED", None)  # or the deferred flush cannot happen
     env["PYTHONPATH"] = str(REPO)
 
     seen = 0
@@ -167,8 +162,11 @@ def test_a_documented_pipe_survives_a_reader_that_stops():
         argv = _tokens(command, str(FIXTURE_RUN))
         proc = subprocess.Popen(
             [sys.executable, "-m", "bga.cli", *argv],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            text=True, cwd=REPO, env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            cwd=REPO,
+            env=env,
         )
         proc.stdout.close()
         stderr = proc.stderr.read()
@@ -189,10 +187,12 @@ def test_the_guides_documented_analyze_pipe_runs():
     env.pop("PYTHONUNBUFFERED", None)
     env["PYTHONPATH"] = str(REPO)
     proc = subprocess.Popen(
-        [sys.executable, "-m", "bga.cli", "analyze", str(FIXTURE_RUN),
-         "--format", "json"],
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        text=True, cwd=REPO, env=env,
+        [sys.executable, "-m", "bga.cli", "analyze", str(FIXTURE_RUN), "--format", "json"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        cwd=REPO,
+        env=env,
     )
     first_two = [proc.stdout.readline() for _ in range(2)]
     proc.stdout.close()
@@ -217,7 +217,9 @@ def test_the_sweep_executes_only_operands_the_repository_ships():
     """
     listed = subprocess.run(
         ["git", "ls-files", "--error-unmatch", str(FIXTURE_RUN.relative_to(REPO))],
-        capture_output=True, text=True, cwd=REPO,
+        capture_output=True,
+        text=True,
+        cwd=REPO,
     )
     assert listed.returncode == 0, listed.stderr
 
@@ -227,7 +229,7 @@ def test_the_sweep_executes_only_operands_the_repository_ships():
         assert ".bga" not in " ".join(argv), argv
         for token in argv:
             if token.startswith(("-", "@")) or "/" not in token:
-                continue                      # a flag, an alias, a subcommand
+                continue  # a flag, an alias, a subcommand
             assert token.startswith(str(REPO / "tests" / "fixtures")), token
         assert "--schema" in argv or argv[1] == str(FIXTURE_RUN), argv
 

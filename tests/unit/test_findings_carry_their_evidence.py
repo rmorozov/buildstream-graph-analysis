@@ -23,6 +23,7 @@ the class of error `UX-201` exists to stop — so the vocabulary is
 declared in the schema and asserted against values that were *measured
 from a rendered payload*, not inferred from a suffix.
 """
+
 import contextlib
 import io
 import json
@@ -70,9 +71,12 @@ def _render(payload):
         with open(schema_path, "w", encoding="utf-8") as handle:
             json.dump(schemas.schema(payload["schema"]), handle)
         result = subprocess.run(
-            [node, "--input-type=module",
-             "-e", _HARNESS % json.dumps([payload_path, schema_path])],
-            capture_output=True, text=True, cwd=REPO, timeout=120)
+            [node, "--input-type=module", "-e", _HARNESS % json.dumps([payload_path, schema_path])],
+            capture_output=True,
+            text=True,
+            cwd=REPO,
+            timeout=120,
+        )
         assert result.returncode == 0, result.stderr
         return json.loads(result.stdout)
     finally:
@@ -81,8 +85,9 @@ def _render(payload):
 
 class TestTheVocabularyIsDeclared:
     def test_the_schema_says_what_unit_each_measurement_is_in(self):
-        declared = schemas.schema(schemas.ANALYZE)["properties"]["findings"][
-            "items"]["properties"]["evidence"]["properties"]
+        declared = schemas.schema(schemas.ANALYZE)["properties"]["findings"]["items"]["properties"]["evidence"][
+            "properties"
+        ]
         # Checked against rendered values, not guessed from suffixes.
         assert declared["primary"][schemas.QUANTITY] == "share"
         assert declared["category_us"][schemas.QUANTITY] == "duration_us"
@@ -101,8 +106,9 @@ class TestTheVocabularyIsDeclared:
         way down and counts what it found, because a walk that reached
         nothing would pass this silently.
         """
-        declared = schemas.schema(schemas.ANALYZE)["properties"]["findings"][
-            "items"]["properties"]["evidence"]["properties"]
+        declared = schemas.schema(schemas.ANALYZE)["properties"]["findings"]["items"]["properties"]["evidence"][
+            "properties"
+        ]
         seen = []
 
         def walk(node, where):
@@ -120,18 +126,19 @@ class TestTheVocabularyIsDeclared:
             walk(hint, key)
         assert len(seen) >= len(declared), (
             f"only {len(seen)} declared units under {len(declared)} evidence "
-            f"keys - the walk is not reaching the nested ones")
+            f"keys - the walk is not reaching the nested ones"
+        )
 
     def test_no_declaration_names_a_key_no_finding_emits(self):
         """A hint for a key nothing produces is dead weight in the
         contract, and the kind of thing that rots silently."""
         import re
 
-        source = open(os.path.join(REPO, "bga/findings.py"),
-                      encoding="utf-8").read()
+        source = open(os.path.join(REPO, "bga/findings.py"), encoding="utf-8").read()
         emitted = set(re.findall(r"'([a-z0-9_]+)':", source))
-        declared = set(schemas.schema(schemas.ANALYZE)["properties"]["findings"]
-                       ["items"]["properties"]["evidence"]["properties"])
+        declared = set(
+            schemas.schema(schemas.ANALYZE)["properties"]["findings"]["items"]["properties"]["evidence"]["properties"]
+        )
         assert declared <= emitted, sorted(declared - emitted)
 
 
@@ -142,13 +149,13 @@ class TestThePageShowsTheNumbers:
         with_evidence = [f for f in payload["findings"] if f.get("evidence")]
         assert with_evidence, "this fixture's findings carry no evidence"
         out = _render(payload)
-        assert out["evidence_fields"], (
-            "the page rendered no evidence at all - which was the defect")
+        assert out["evidence_fields"], "the page rendered no evidence at all - which was the defect"
 
     def test_each_value_is_the_published_one(self):
         """`data-raw` is the payload's value, so nothing here can pass
         by rendering a plausible number."""
         payload = _report()
+
         def spelling(value):
             """One spelling for both languages: `True`/`true` and
             `1.0`/`1` are the same published value, and comparing their
@@ -169,8 +176,7 @@ class TestThePageShowsTheNumbers:
         assert out["evidence_fields"], "nothing to compare"
         for key, raw in out["evidence_fields"].items():
             assert key in published, f"{key} is not in any finding's evidence"
-            assert spelling(_parse(raw)) == published[key], (
-                key, raw, published[key])
+            assert spelling(_parse(raw)) == published[key], (key, raw, published[key])
 
     def test_a_share_renders_as_a_percentage_not_a_bare_number(self):
         """The unit is the point. `primary: 0.875` reading as "0.875"
@@ -194,21 +200,27 @@ class TestThePageShowsTheNumbers:
         already draws them elsewhere. Flattening them into a definition
         list would be a worse rendering, not a more complete one."""
         payload = _report()
-        arrays = {key for finding in payload["findings"]
-                  for key, value in (finding.get("evidence") or {}).items()
-                  if isinstance(value, (dict, list))}
+        arrays = {
+            key
+            for finding in payload["findings"]
+            for key, value in (finding.get("evidence") or {}).items()
+            if isinstance(value, (dict, list))
+        }
         if not arrays:
             pytest.skip("this fixture's evidence carries no structured value")
         out = _render(payload)
-        assert not (arrays & set(out["evidence_fields"])), (
-            arrays & set(out["evidence_fields"]))
+        assert not (arrays & set(out["evidence_fields"])), arrays & set(out["evidence_fields"])
 
     def test_a_finding_with_no_evidence_renders_as_it_always_did(self):
-        out = _render({
-            "schema": schemas.ANALYZE, "run_id": "r", "section": None,
-            "total_duration_us": 1,
-            "findings": [{"id": "bare", "severity": "info", "title": "Bare"}],
-        })
+        out = _render(
+            {
+                "schema": schemas.ANALYZE,
+                "run_id": "r",
+                "section": None,
+                "total_duration_us": 1,
+                "findings": [{"id": "bare", "severity": "info", "title": "Bare"}],
+            }
+        )
         assert out["evidence_fields"] == {}
         assert out["findings"] == 1, "the finding itself must still render"
 
@@ -218,15 +230,17 @@ class TestThePageShowsTheNumbers:
         import importlib
 
         many = {f"k{i}": i for i in range(10)}
-        out = _render({
-            "schema": schemas.ANALYZE, "run_id": "r", "section": None,
-            "total_duration_us": 1,
-            "findings": [{"id": "many", "severity": "info", "title": "Many",
-                          "evidence": many}],
-        })
+        out = _render(
+            {
+                "schema": schemas.ANALYZE,
+                "run_id": "r",
+                "section": None,
+                "total_duration_us": 1,
+                "findings": [{"id": "many", "severity": "info", "title": "Many", "evidence": many}],
+            }
+        )
         assert out["folds"] == 1, "ten measurements did not fold"
-        assert len(out["evidence_fields"]) == 10, (
-            "the fold hid the values from Ctrl-F as well as from the eye")
+        assert len(out["evidence_fields"]) == 10, "the fold hid the values from Ctrl-F as well as from the eye"
         del importlib
 
 

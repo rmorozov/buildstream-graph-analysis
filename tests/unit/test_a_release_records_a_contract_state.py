@@ -17,6 +17,7 @@ ledger. With one release row there is no pair to check, and a rule that
 only runs once there are two would ship untested and stay untested
 until the day it mattered.
 """
+
 import hashlib
 import pathlib
 import re
@@ -37,17 +38,16 @@ KINDS = ("initial", "breaking", "extending", "patch")
 # cannot carry its own commit's hash, because the hash covers the row.
 _ROW = re.compile(
     r"^\|\s*\[?(\d+\.\d+\.\d+)\]?[^|]*\|\s*([\d-]+)\s*\|\s*(\d+)\s*\|"
-    r"\s*(\w+)\s*\|")
+    r"\s*(\w+)\s*\|"
+)
 #: `UX-1078`'s precondition: the one row above the releases that has no
 #: version, no date and no marker, and whose kind is what the next cut is.
 UNRELEASED = "Unreleased"
-_UNRELEASED_ROW = re.compile(
-    r"^\|\s*\[?Unreleased\]?[^|]*\|[^|]*\|[^|]*\|\s*(\w+)\s*\|", re.M)
+_UNRELEASED_ROW = re.compile(r"^\|\s*\[?Unreleased\]?[^|]*\|[^|]*\|[^|]*\|\s*(\w+)\s*\|", re.M)
 _STATE = re.compile(r"```text state\n(.*?)```", re.S)
 #: `UX-820`: the generated block's body, to check what its last line is -
 #: the marker pair itself, not the range or its content.
-_GENERATED = re.compile(
-    r"<!-- generated: UX-252 \d+→\d+ -->\n(.*?)<!-- /generated -->", re.S)
+_GENERATED = re.compile(r"<!-- generated: UX-252 \d+→\d+ -->\n(.*?)<!-- /generated -->", re.S)
 
 
 def _rows(text=None):
@@ -56,9 +56,14 @@ def _rows(text=None):
     for line in text.splitlines():
         match = _ROW.match(line)
         if match:
-            rows.append({"version": match.group(1), "date": match.group(2),
-                         "closed_rows": int(match.group(3)),
-                         "kind": match.group(4)})
+            rows.append(
+                {
+                    "version": match.group(1),
+                    "date": match.group(2),
+                    "closed_rows": int(match.group(3)),
+                    "kind": match.group(4),
+                }
+            )
     return rows
 
 
@@ -69,8 +74,7 @@ STATE_KEYS = ("contracts", "commands")
 
 def state_digest(recorded):
     """`UX-550`: twelve hex characters over one release's recorded state."""
-    payload = "\n".join(f"{key}: {' '.join(sorted(recorded[key]))}"
-                        for key in STATE_KEYS)
+    payload = "\n".join(f"{key}: {' '.join(sorted(recorded[key]))}" for key in STATE_KEYS)
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:12]
 
 
@@ -131,19 +135,19 @@ def derive(before, after):
     the rule has to be testable against cases the real ledger does not
     contain yet.
     """
+
     def versions(names):
-        return {name.rsplit("/v", 1)[0]: int(name.rsplit("/v", 1)[1])
-                for name in names if "/v" in name}
+        return {name.rsplit("/v", 1)[0]: int(name.rsplit("/v", 1)[1]) for name in names if "/v" in name}
 
     old_contracts, new_contracts = versions(before["contracts"]), versions(after["contracts"])
     removed = set(old_contracts) - set(new_contracts)
-    bumped = {name for name, version in old_contracts.items()
-              if name in new_contracts and new_contracts[name] > version}
+    bumped = {
+        name for name, version in old_contracts.items() if name in new_contracts and new_contracts[name] > version
+    }
     gone = set(before["commands"]) - set(after["commands"])
     if removed or bumped or gone:
         return "breaking"
-    if (set(new_contracts) - set(old_contracts)
-            or set(after["commands"]) - set(before["commands"])):
+    if set(new_contracts) - set(old_contracts) or set(after["commands"]) - set(before["commands"]):
         return "extending"
     return "patch"
 
@@ -152,16 +156,17 @@ class TestTheLedgerIsWellFormed:
     def test_there_is_at_least_one_release(self):
         assert _rows(), (
             "CHANGELOG.md has no release row this guard can read; the "
-            "table is `| version | date | closed rows | kind |`")
+            "table is `| version | date | closed rows | kind |`"
+        )
 
     def test_every_row_has_a_recorded_state(self):
         states = _states()
-        missing = [row["version"] for row in _rows()
-                   if row["version"] not in states]
+        missing = [row["version"] for row in _rows() if row["version"] not in states]
         assert missing == [], (
             f"release(s) with no ```text state``` block: {missing}. The "
             f"derivation reads that block; a row without one records no "
-            f"contract state and is a date with a number attached.")
+            f"contract state and is a date with a number attached."
+        )
 
     def test_every_generated_block_ends_on_a_blank_line(self):
         """`UX-820`: `<!-- /generated -->` on the next line after the
@@ -169,31 +174,27 @@ class TestTheLedgerIsWellFormed:
         text = CHANGELOG.read_text(encoding="utf-8")
         blocks = _GENERATED.findall(text)
         assert blocks, "CHANGELOG.md has no generated block this guard can read"
-        not_blank = [i for i, body in enumerate(blocks)
-                     if not body.endswith("\n\n")]
+        not_blank = [i for i, body in enumerate(blocks) if not body.endswith("\n\n")]
         assert not_blank == [], (
-            f"generated block(s) at index {not_blank} do not end on a "
-            f"blank line before `<!-- /generated -->`")
+            f"generated block(s) at index {not_blank} do not end on a blank line before `<!-- /generated -->`"
+        )
 
     def test_every_kind_is_one_of_the_four(self):
-        wrong = [(row["version"], row["kind"]) for row in _rows()
-                 if row["kind"] not in KINDS]
+        wrong = [(row["version"], row["kind"]) for row in _rows() if row["kind"] not in KINDS]
         assert wrong == [], f"unknown release kind(s): {wrong}"
 
     def test_only_the_oldest_release_may_be_initial(self):
         rows = _rows()
         later = [row["version"] for row in rows[:-1] if row["kind"] == "initial"]
-        assert later == [], (
-            f"release(s) claiming `initial` with an older release below "
-            f"them: {later}")
+        assert later == [], f"release(s) claiming `initial` with an older release below them: {later}"
         assert rows[-1]["kind"] == "initial", (
             "the oldest release row is not `initial`; it has no previous "
-            "state to derive from, so it cannot be anything else")
+            "state to derive from, so it cannot be anything else"
+        )
 
     def test_versions_increase_and_do_not_repeat(self):
         versions = [_version_tuple(row["version"]) for row in _rows()]
-        assert versions == sorted(versions, reverse=True), (
-            f"release rows are not newest-first: {versions}")
+        assert versions == sorted(versions, reverse=True), f"release rows are not newest-first: {versions}"
         assert len(set(versions)) == len(versions), "a version is reused"
 
     def test_the_recorded_state_is_the_real_one_for_the_newest_release(self):
@@ -205,7 +206,8 @@ class TestTheLedgerIsWellFormed:
         assert state["contracts"] == tree["contracts"], (
             f"{label} records a contract set that is "
             f"not this tree's:\n  recorded {state['contracts']}\n  real     "
-            f"{tree['contracts']}")
+            f"{tree['contracts']}"
+        )
         assert state["commands"] == tree["commands"]
 
     def test_a_superseded_release_is_frozen_by_a_digest(self):
@@ -218,12 +220,12 @@ class TestTheLedgerIsWellFormed:
         that reddens.
         """
         states = _states()
-        missing = [row["version"] for row in _rows()[1:]
-                   if "digest" not in states[row["version"]]]
+        missing = [row["version"] for row in _rows()[1:] if "digest" not in states[row["version"]]]
         assert missing == [], (
             f"superseded release(s) recording no digest: {missing}. A "
             f"released row is frozen when the next one is cut - see "
-            f"docs/contributing/release-guide.md")
+            f"docs/contributing/release-guide.md"
+        )
 
     def test_a_superseded_releases_state_matches_its_digest(self):
         """The mutation the clause above cannot see on its own: the
@@ -243,12 +245,9 @@ class TestTheLedgerIsWellFormed:
             real = state_digest(recorded)
             if recorded["digest"] != [real]:
                 wrong.append(
-                    f"{row['version']}: records digest "
-                    f"{' '.join(recorded['digest'])}, its state hashes to "
-                    f"{real}")
-        assert wrong == [], (
-            f"a shipped release's recorded state has been edited since it "
-            f"was written: {wrong}")
+                    f"{row['version']}: records digest {' '.join(recorded['digest'])}, its state hashes to {real}"
+                )
+        assert wrong == [], f"a shipped release's recorded state has been edited since it was written: {wrong}"
 
     def test_the_newest_release_carries_no_digest(self):
         """The decision, asserted rather than assumed. The newest row is
@@ -259,7 +258,8 @@ class TestTheLedgerIsWellFormed:
         newest = _rows()[0]["version"]
         assert "digest" not in _states()[newest], (
             f"release {newest} is the newest row and carries a digest; "
-            f"when the tree moves past it the answer is a new row")
+            f"when the tree moves past it the answer is a new row"
+        )
 
     def test_the_package_version_is_the_newest_release(self):
         """Three copies of one number - `bga/__init__.py`,
@@ -268,12 +268,9 @@ class TestTheLedgerIsWellFormed:
         from bga import __version__
 
         newest = _rows()[0]["version"]
-        assert __version__ == newest, (
-            f"bga.__version__ is {__version__}, the newest release row is "
-            f"{newest}")
+        assert __version__ == newest, f"bga.__version__ is {__version__}, the newest release row is {newest}"
         pyproject = (REPO / "pyproject.toml").read_text(encoding="utf-8")
-        assert f'version = "{newest}"' in pyproject, (
-            f"pyproject.toml does not declare {newest}")
+        assert f'version = "{newest}"' in pyproject, f"pyproject.toml does not declare {newest}"
 
 
 _SYNTHETIC = """| release | date | closed rows | kind |
@@ -312,12 +309,10 @@ class TestAnUnreleasedRowAnswersForTheTree:
     it shipped."""
 
     def test_the_unreleased_row_is_what_the_tree_answers_for(self):
-        assert answering(_SYNTHETIC) == (
-            UNRELEASED, {"contracts": ["a/v1", "b/v1"], "commands": ["analyze"]})
+        assert answering(_SYNTHETIC) == (UNRELEASED, {"contracts": ["a/v1", "b/v1"], "commands": ["analyze"]})
 
     def test_without_one_the_newest_versioned_row_answers(self):
-        text = re.sub(r"## Unreleased\n.*?(?=## 0\.2\.0)", "", _SYNTHETIC,
-                      flags=re.S)
+        text = re.sub(r"## Unreleased\n.*?(?=## 0\.2\.0)", "", _SYNTHETIC, flags=re.S)
         assert UNRELEASED not in _states(text)
         assert answering(text)[0] == "0.2.0"
 
@@ -333,14 +328,15 @@ class TestAnUnreleasedRowAnswersForTheTree:
         newest = _rows(text)[0]["version"]
         expected = derive(_states(text)[newest], _states(text)[UNRELEASED])
         assert _unreleased_kind(text) == expected, (
-            f"the Unreleased row records {_unreleased_kind(text)}; its state "
-            f"against {newest} derives {expected}")
+            f"the Unreleased row records {_unreleased_kind(text)}; its state against {newest} derives {expected}"
+        )
 
     def test_it_carries_no_digest(self):
         states = _states()
         assert "digest" not in states.get(UNRELEASED, {}), (
             "the Unreleased row is the one the tree answers for; a digest "
-            "would give that check a second way to be satisfied")
+            "would give that check a second way to be satisfied"
+        )
 
 
 class TestTheVersionIsDerived:
@@ -351,15 +347,13 @@ class TestTheVersionIsDerived:
     breaks is a derivation nobody has ever seen work.
     """
 
-    BASE = {"contracts": ["analyze/v2", "store/v1"],
-            "commands": ["analyze", "compare"]}
+    BASE = {"contracts": ["analyze/v2", "store/v1"], "commands": ["analyze", "compare"]}
 
     def test_an_unchanged_state_is_a_patch(self):
         assert derive(self.BASE, dict(self.BASE)) == "patch"
 
     def test_a_bumped_contract_is_breaking(self):
-        after = {"contracts": ["analyze/v3", "store/v1"],
-                 "commands": self.BASE["commands"]}
+        after = {"contracts": ["analyze/v3", "store/v1"], "commands": self.BASE["commands"]}
         assert derive(self.BASE, after) == "breaking"
 
     def test_a_removed_contract_is_breaking(self):
@@ -371,20 +365,17 @@ class TestTheVersionIsDerived:
         assert derive(self.BASE, after) == "breaking"
 
     def test_a_new_contract_is_extending(self):
-        after = {"contracts": ["analyze/v2", "store/v1", "whatif/v1"],
-                 "commands": self.BASE["commands"]}
+        after = {"contracts": ["analyze/v2", "store/v1", "whatif/v1"], "commands": self.BASE["commands"]}
         assert derive(self.BASE, after) == "extending"
 
     def test_a_new_command_is_extending(self):
-        after = {"contracts": self.BASE["contracts"],
-                 "commands": ["analyze", "compare", "whatif"]}
+        after = {"contracts": self.BASE["contracts"], "commands": ["analyze", "compare", "whatif"]}
         assert derive(self.BASE, after) == "extending"
 
     def test_breaking_wins_over_extending(self):
         """A release that both adds and breaks is breaking. The reader
         this protects is the one who upgrades for the new thing."""
-        after = {"contracts": ["analyze/v3", "store/v1", "whatif/v1"],
-                 "commands": ["analyze", "compare", "blast"]}
+        after = {"contracts": ["analyze/v3", "store/v1", "whatif/v1"], "commands": ["analyze", "compare", "blast"]}
         assert derive(self.BASE, after) == "breaking"
 
     def test_the_ledgers_own_kinds_agree_with_its_states(self):
@@ -393,8 +384,7 @@ class TestTheVersionIsDerived:
         for newer, older in zip(rows, rows[1:]):
             expected = derive(states[older["version"]], states[newer["version"]])
             if newer["kind"] != expected:
-                wrong.append(f"{newer['version']}: records {newer['kind']}, "
-                             f"its state delta says {expected}")
+                wrong.append(f"{newer['version']}: records {newer['kind']}, its state delta says {expected}")
         assert wrong == [], f"release kind(s) disagreeing with the states: {wrong}"
 
     def test_the_increment_matches_the_kind(self):
@@ -404,8 +394,7 @@ class TestTheVersionIsDerived:
             new_v, old_v = _version_tuple(newer["version"]), _version_tuple(older["version"])
             minor_moved = new_v[1] > old_v[1]
             if newer["kind"] in ("breaking", "extending") and not minor_moved:
-                wrong.append(f"{newer['version']} is {newer['kind']} and did "
-                             f"not move MINOR")
+                wrong.append(f"{newer['version']} is {newer['kind']} and did not move MINOR")
             if newer["kind"] == "patch" and minor_moved:
                 wrong.append(f"{newer['version']} is a patch and moved MINOR")
         assert wrong == [], wrong
@@ -424,17 +413,19 @@ class TestTheReleaseConsumesTheReview:
     def test_every_release_has_a_review_at_or_after_the_previous_one(self):
         """The documentation half of a release, entirely by reference."""
         review_markers = [
-            int(m.group(1)) for m in
-            re.finditer(r"^\|\s*\d+\s*\|\s*[\d-]+\s*\|\s*(\d+)\s*\|",
-                        REVIEWS.read_text(encoding="utf-8"), re.M)]
+            int(m.group(1))
+            for m in re.finditer(
+                r"^\|\s*\d+\s*\|\s*[\d-]+\s*\|\s*(\d+)\s*\|", REVIEWS.read_text(encoding="utf-8"), re.M
+            )
+        ]
         assert review_markers, "the review log has no parseable row"
         rows = _rows()
         unreviewed = []
         for newer, older in zip(rows, rows[1:]):
             if not any(marker >= older["closed_rows"] for marker in review_markers):
                 unreviewed.append(
-                    f"{newer['version']} was cut with no review at or after "
-                    f"closed-row marker {older['closed_rows']}")
+                    f"{newer['version']} was cut with no review at or after closed-row marker {older['closed_rows']}"
+                )
         assert unreviewed == [], unreviewed
 
     def test_the_first_release_names_the_findings_it_carries(self):
@@ -451,9 +442,16 @@ class TestTheReleaseConsumesTheReview:
 # touching `schemas.py` without moving a `/vN` still counts. Bisecting
 # `contracts.ids()` for the exact commit is cheaper to state and more
 # expensive to run, and is not worth it here.
-_CANDIDATE_FILES = ("bga/bundle.py", "bga/hostinfo.py", "bga/plane2.py",
-                    "bga/run_store.py", "bga/schemas.py", "bga/sources.py",
-                    "bga/cli.py", "bga/tools_dispatch.py")
+_CANDIDATE_FILES = (
+    "bga/bundle.py",
+    "bga/hostinfo.py",
+    "bga/plane2.py",
+    "bga/run_store.py",
+    "bga/schemas.py",
+    "bga/sources.py",
+    "bga/cli.py",
+    "bga/tools_dispatch.py",
+)
 from tools.dev_audit_reports import REPORT_DATE as _WALK_DATE
 from tools.dev_audit_reports import filed_findings
 
@@ -480,24 +478,19 @@ class TestTheWalkGateIsDerived:
     no release has been cut through this condition (`UX-686`)."""
 
     def test_a_walk_before_the_candidate_refuses(self):
-        assert walk_covers_candidate(
-            "2026-09-06", "2026-09-05", set(), set(), set()) is False
+        assert walk_covers_candidate("2026-09-06", "2026-09-05", set(), set(), set()) is False
 
     def test_a_walk_on_the_candidates_date_clears_it(self):
-        assert walk_covers_candidate(
-            "2026-09-06", "2026-09-06", set(), set(), set()) is True
+        assert walk_covers_candidate("2026-09-06", "2026-09-06", set(), set(), set()) is True
 
     def test_a_walk_after_with_its_finding_closed_passes(self):
-        assert walk_covers_candidate(
-            "2026-09-06", "2026-09-07", {"UX-1"}, {"UX-1"}, set()) is True
+        assert walk_covers_candidate("2026-09-06", "2026-09-07", {"UX-1"}, {"UX-1"}, set()) is True
 
     def test_an_open_unnamed_finding_refuses(self):
-        assert walk_covers_candidate(
-            "2026-09-06", "2026-09-07", {"UX-1"}, set(), set()) is False
+        assert walk_covers_candidate("2026-09-06", "2026-09-07", {"UX-1"}, set(), set()) is False
 
     def test_an_open_finding_named_in_the_changelog_passes(self):
-        assert walk_covers_candidate(
-            "2026-09-06", "2026-09-07", {"UX-1"}, set(), {"UX-1"}) is True
+        assert walk_covers_candidate("2026-09-06", "2026-09-07", {"UX-1"}, set(), {"UX-1"}) is True
 
 
 class TestTheReleaseConsumesTheWalk:
@@ -518,8 +511,7 @@ class TestTheReleaseConsumesTheWalk:
         filings on top of both real reports, not reimplemented."""
         from tools.dev_scenario import audits_documents, is_walk_report
 
-        reports = {path: text for path, text in audits_documents()
-                   if is_walk_report(text)}
+        reports = {path: text for path, text in audits_documents() if is_walk_report(text)}
         assert reports, "no walk report under docs/audits/"
         found = {}
         for path, text in reports.items():
@@ -527,8 +519,7 @@ class TestTheReleaseConsumesTheWalk:
             assert date, f"{path}: no `Base \\`<hash>\\`, <date>` line"
             found[path] = (date.group(1), filed_findings(text))
         assert found.get("docs/audits/walk-seed-1.md") == ("2026-09-06", {"UX-723"})
-        assert found.get("docs/audits/walk-seed-2.md") == (
-            "2026-09-06", {"UX-724", "UX-725"})
+        assert found.get("docs/audits/walk-seed-2.md") == ("2026-09-06", {"UX-724", "UX-725"})
 
     def test_every_filed_finding_resolves_to_exactly_one_backlog_row(self):
         """The status half `walk_covers_candidate` needs, derived. Which
@@ -539,17 +530,17 @@ class TestTheReleaseConsumesTheWalk:
         from tools.dev_close_task import closed_rows
         from tools.dev_scenario import audits_documents, is_walk_report
 
-        indexes = {"README.md": (REPO / "docs/backlog/scenarios/README.md")
-                   .read_text(encoding="utf-8"),
-                   "closed rows": "\n".join(closed_rows())}
+        indexes = {
+            "README.md": (REPO / "docs/backlog/scenarios/README.md").read_text(encoding="utf-8"),
+            "closed rows": "\n".join(closed_rows()),
+        }
         filed = set()
         for _, text in audits_documents():
             if is_walk_report(text):
                 filed |= filed_findings(text)
         assert filed, "no walk report filed a finding"
         for name in sorted(filed):
-            rows = [index for index, text in indexes.items()
-                    if re.search(rf"^\| {name} \|", text, re.M)]
+            rows = [index for index, text in indexes.items() if re.search(rf"^\| {name} \|", text, re.M)]
             assert len(rows) == 1, f"{name} has rows in {rows or 'neither index'}"
 
 
@@ -589,8 +580,7 @@ class TestADesignReviewReportHasAShapeAGuardCanRead:
         recognised as one, but `report_problems` names it."""
         from tools.dev_audit_reports import report_problems
 
-        mutated = _DESIGN_REVIEW_GOOD.replace(
-            "filed           UX-900, UX-901\n", "")
+        mutated = _DESIGN_REVIEW_GOOD.replace("filed           UX-900, UX-901\n", "")
         problems = report_problems([("r.md", mutated)])
         assert problems == ["r.md: no filed findings line"], problems
 
@@ -603,7 +593,8 @@ class TestADesignReviewReportHasAShapeAGuardCanRead:
 
         wrapped = _DESIGN_REVIEW_GOOD.replace(
             "design review   the served export, run r1, screenshots s1-s7\n",
-            "design review\nthe served export, run r1, screenshots s1-s7\n")
+            "design review\nthe served export, run r1, screenshots s1-s7\n",
+        )
         assert report_kind(wrapped) == "design-review"
 
 
@@ -626,8 +617,7 @@ def _reaches(commit):
 
 
 def _git(*argv):
-    done = subprocess.run(("git",) + argv, capture_output=True, text=True,
-                          cwd=REPO, timeout=60)
+    done = subprocess.run(("git",) + argv, capture_output=True, text=True, cwd=REPO, timeout=60)
     return done.returncode, done.stdout.strip()
 
 
@@ -645,7 +635,8 @@ class TestEveryVersionedReleaseIsTagged:
         if code != 0 or not out:
             pytest.skip(
                 "this checkout carries no release tag, so there is nothing "
-                "to read; CI fetches them (the clause below holds that)")
+                "to read; CI fetches them (the clause below holds that)"
+            )
         return out.splitlines()
 
     def test_ci_asks_for_the_tags_this_class_reads(self):
@@ -654,23 +645,20 @@ class TestEveryVersionedReleaseIsTagged:
         that cannot check it - `UX-213`'s shape."""
         workflow = (REPO / ".github/workflows/ci.yml").read_text(encoding="utf-8")
         assert "fetch-tags: true" in workflow, (
-            "ci.yml's checkout does not ask for tags, so the release-tag "
-            "clauses skip on CI and guard nothing there")
+            "ci.yml's checkout does not ask for tags, so the release-tag clauses skip on CI and guard nothing there"
+        )
 
     def test_there_is_more_than_one_row_to_check(self):
         """Non-vacuity: with one row the clauses below are one assertion
         about one string, and an empty list passes all of them."""
-        assert len(_rows()) >= 2, (
-            f"only {len(_rows())} release row(s); the clauses below are "
-            f"not exercised")
+        assert len(_rows()) >= 2, f"only {len(_rows())} release row(s); the clauses below are not exercised"
 
     def test_every_versioned_release_has_its_tag(self):
         tags = set(self._require_tags())
-        missing = [row["version"] for row in _rows()
-                   if f"v{row['version']}" not in tags]
+        missing = [row["version"] for row in _rows() if f"v{row['version']}" not in tags]
         assert missing == [], (
-            f"release row(s) with no tag: {missing}. Release guide step 8 "
-            f"cuts `v<version>` on the commit that sets it")
+            f"release row(s) with no tag: {missing}. Release guide step 8 cuts `v<version>` on the commit that sets it"
+        )
 
     def test_every_tag_names_the_commit_that_set_its_version(self):
         self._require_tags()
@@ -682,9 +670,7 @@ class TestEveryVersionedReleaseIsTagged:
             if code != 0 or not found:
                 wrong.append(f"{tag}: no pyproject.toml at that commit")
             elif found.group(1) != row["version"]:
-                wrong.append(
-                    f"{tag} names a commit whose pyproject.toml says "
-                    f"{found.group(1)}, not {row['version']}")
+                wrong.append(f"{tag} names a commit whose pyproject.toml says {found.group(1)}, not {row['version']}")
         assert wrong == [], wrong
 
     def test_every_release_tag_is_reachable_from_here(self):
@@ -694,7 +680,8 @@ class TestEveryVersionedReleaseIsTagged:
         if _shallow():
             pytest.skip(
                 "this checkout is shallow, so its history stops at a "
-                "boundary and reachability here is not the tree's answer")
+                "boundary and reachability here is not the tree's answer"
+            )
         unreachable = []
         for row in _rows():
             tag = f"v{row['version']}"
@@ -705,7 +692,8 @@ class TestEveryVersionedReleaseIsTagged:
         assert unreachable == [], (
             f"release tag(s) naming a commit no clone of this branch can "
             f"reach: {unreachable}. Either the tag moves, or it joins "
-            f"UNREACHABLE_BY_DECISION with its reason")
+            f"UNREACHABLE_BY_DECISION with its reason"
+        )
 
     def test_ci_asks_for_the_history_this_class_reads(self):
         """`UX-637`: the clause above skips on a shallow clone, so the
@@ -716,7 +704,8 @@ class TestEveryVersionedReleaseIsTagged:
         workflow = (REPO / ".github/workflows/ci.yml").read_text(encoding="utf-8")
         assert "fetch-depth: 0" in workflow, (
             "ci.yml's checkout does not ask for the whole history, so the "
-            "reachability clause skips on CI and guards nothing there")
+            "reachability clause skips on CI and guards nothing there"
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -25,6 +25,7 @@ context (33.2s -> 40.0s on a twelve-file subset), which is why it runs
 on 3.11 and never on 3.12 - the interpreter whose seconds `UX-503`'s
 tier reference is made of (`UX-995`).
 """
+
 import json
 import pathlib
 import sqlite3
@@ -51,7 +52,8 @@ def _database(path, rows):
     db.executescript(
         "CREATE TABLE file (id integer primary key, path text);"
         "CREATE TABLE context (id integer primary key, context text);"
-        "CREATE TABLE line_bits (file_id integer, context_id integer);")
+        "CREATE TABLE line_bits (file_id integer, context_id integer);"
+    )
     files, contexts = {}, {}
     for module, context in rows:
         files.setdefault(module, len(files) + 1)
@@ -61,8 +63,7 @@ def _database(path, rows):
     for context, ident in contexts.items():
         db.execute("INSERT INTO context VALUES (?, ?)", (ident, context))
     for module, context in rows:
-        db.execute("INSERT INTO line_bits VALUES (?, ?)",
-                   (files[module], contexts[context]))
+        db.execute("INSERT INTO line_bits VALUES (?, ?)", (files[module], contexts[context]))
     db.commit()
     db.close()
     return path
@@ -70,48 +71,57 @@ def _database(path, rows):
 
 class TestTheMapIsWhatTheRunExecuted:
     def test_a_context_becomes_an_edge(self, tmp_path):
-        found = dev_touch_map.read(_database(tmp_path / "c", [
-            ("bga/findings.py", "tests/unit/test_a.py::test_one|run")]))
+        found = dev_touch_map.read(
+            _database(tmp_path / "c", [("bga/findings.py", "tests/unit/test_a.py::test_one|run")])
+        )
         assert found == {"bga/findings.py": ["tests/unit/test_a.py"]}
 
     def test_one_file_is_one_edge_however_many_tests(self, tmp_path):
         """A row per *test* would be 5,900 rows nobody can read, and
         the selector runs files."""
-        found = dev_touch_map.read(_database(tmp_path / "c", [
-            ("bga/findings.py", "tests/unit/test_a.py::test_one|run"),
-            ("bga/findings.py", "tests/unit/test_a.py::test_two|run")]))
+        found = dev_touch_map.read(
+            _database(
+                tmp_path / "c",
+                [
+                    ("bga/findings.py", "tests/unit/test_a.py::test_one|run"),
+                    ("bga/findings.py", "tests/unit/test_a.py::test_two|run"),
+                ],
+            )
+        )
         assert found == {"bga/findings.py": ["tests/unit/test_a.py"]}
 
     def test_a_module_outside_the_source_roots_is_not_a_row(self, tmp_path):
         """A test's coverage of `tests/` is itself, which the selector
         already knows, and site-packages is nobody's diff."""
-        found = dev_touch_map.read(_database(tmp_path / "c", [
-            ("tests/support/x.py", "tests/unit/test_a.py::test_one|run"),
-            ("bga/findings.py", "tests/unit/test_a.py::test_one|run")]))
+        found = dev_touch_map.read(
+            _database(
+                tmp_path / "c",
+                [
+                    ("tests/support/x.py", "tests/unit/test_a.py::test_one|run"),
+                    ("bga/findings.py", "tests/unit/test_a.py::test_one|run"),
+                ],
+            )
+        )
         assert list(found) == ["bga/findings.py"]
 
     def test_a_row_with_no_context_is_dropped(self, tmp_path):
         """A run without `--cov-context` writes rows with a null
         context; a map built from those would be every module against
         nothing, and it must not be an empty *edge*."""
-        found = dev_touch_map.read(_database(tmp_path / "c", [
-            ("bga/findings.py", "")]))
+        found = dev_touch_map.read(_database(tmp_path / "c", [("bga/findings.py", "")]))
         assert found == {}
 
 
 class TestAdoptAddsAndNeverRemoves:
     def test_a_new_edge_is_added(self):
-        merged = dev_touch_map.adopt({"bga/a.py": ["tests/unit/test_a.py"]},
-                                     {"bga/a.py": ["tests/unit/test_b.py"]})
-        assert merged == {"bga/a.py": ["tests/unit/test_a.py",
-                                       "tests/unit/test_b.py"]}
+        merged = dev_touch_map.adopt({"bga/a.py": ["tests/unit/test_a.py"]}, {"bga/a.py": ["tests/unit/test_b.py"]})
+        assert merged == {"bga/a.py": ["tests/unit/test_a.py", "tests/unit/test_b.py"]}
 
     def test_an_edge_the_run_could_not_reach_survives(self):
         """The clause that makes this safe on every push. A runner with
         no browser executes no viewer guard, and a map that replaced
         would delete those edges and narrow the selector silently."""
-        merged = dev_touch_map.adopt({"bga/a.py": ["tests/unit/test_a.py"]},
-                                     {"bga/b.py": ["tests/unit/test_b.py"]})
+        merged = dev_touch_map.adopt({"bga/a.py": ["tests/unit/test_a.py"]}, {"bga/b.py": ["tests/unit/test_b.py"]})
         assert merged["bga/a.py"] == ["tests/unit/test_a.py"]
 
     def test_a_new_module_is_a_new_row(self):
@@ -123,8 +133,9 @@ class TestTheSelectorUnionsIt:
     def test_a_mapped_test_is_selected_and_why_says_map(self, monkeypatch):
         """The acceptance clause: a module no test names by string
         still selects the tests that executed it."""
-        monkeypatch.setattr(dev_touching, "touch_map", lambda: {
-            "bga/findings.py": ["tests/unit/test_the_touching_map_is_measured.py"]})
+        monkeypatch.setattr(
+            dev_touching, "touch_map", lambda: {"bga/findings.py": ["tests/unit/test_the_touching_map_is_measured.py"]}
+        )
         selected, why = dev_touching.select(["bga/findings.py"])
         assert "tests/unit/test_the_touching_map_is_measured.py" in selected
         assert "map" in why["tests/unit/test_the_touching_map_is_measured.py"]
@@ -133,8 +144,9 @@ class TestTheSelectorUnionsIt:
         """The map is adopted and never pruned, so it outlives the
         guards in it. A selection carrying a path pytest cannot open is
         an error message instead of a run."""
-        monkeypatch.setattr(dev_touching, "touch_map", lambda: {
-            "bga/findings.py": ["tests/unit/test_deleted_in_round_79.py"]})
+        monkeypatch.setattr(
+            dev_touching, "touch_map", lambda: {"bga/findings.py": ["tests/unit/test_deleted_in_round_79.py"]}
+        )
         selected, _ = dev_touching.select(["bga/findings.py"])
         assert "tests/unit/test_deleted_in_round_79.py" not in selected
 
@@ -149,8 +161,7 @@ class TestTheSelectorUnionsIt:
     def test_the_committed_map_parses(self):
         assert isinstance(json.loads(dev_records.load(MAP_PATH)), dict)
 
-    def test_a_map_that_will_not_parse_is_an_empty_map(self, monkeypatch,
-                                                       tmp_path):
+    def test_a_map_that_will_not_parse_is_an_empty_map(self, monkeypatch, tmp_path):
         """The input class a file adopted by a bot really has: a push
         that raced, a truncated download. `touch_map` reading it must
         fall back, not take the selector down with it - a broken
@@ -171,8 +182,7 @@ class TestItComesFromCIAndNotFromHere:
         # reading backwards found the previous step's condition, and
         # the clause passed with the coverage moved onto 3.11.
         after = held.split("--cov-context=test", 1)[1]
-        condition = [line for line in after.splitlines()
-                     if line.strip().startswith("if:")][0]
+        condition = [line for line in after.splitlines() if line.strip().startswith("if:")][0]
         assert "3.11" in condition, condition
         assert "3.12" not in condition, condition
 
@@ -206,8 +216,7 @@ class TestTheAdoptedMapPaysForItsReaders:
     def test_the_readers_are_the_map_s_own_row_not_a_typed_list(self):
         """The map names the guards that read it, so nothing is typed
         beside it to fall out of date the next time one is added."""
-        merged = {dev_touch_map.READER: ["tests/unit/test_a.py"],
-                  "bga/elsewhere.py": ["tests/unit/test_b.py"]}
+        merged = {dev_touch_map.READER: ["tests/unit/test_a.py"], "bga/elsewhere.py": ["tests/unit/test_b.py"]}
         assert dev_touch_map.readers(merged) == ["tests/unit/test_a.py"]
         assert dev_touch_map.readers({}) == []
 
@@ -221,8 +230,7 @@ class TestTheAdoptedMapPaysForItsReaders:
     def test_retire_drops_the_name_from_files_and_from_samples(self):
         """Both, not either: `against` reads `samples` for `UX-496`'s
         band, so an entry left there is still judged against."""
-        reference = {"files": {"a.py": 1.0, "b.py": 2.0},
-                     "samples": {"a.py": [1.0], "b.py": [2.0]}}
+        reference = {"files": {"a.py": 1.0, "b.py": 2.0}, "samples": {"a.py": [1.0], "b.py": [2.0]}}
         document, retired = dev_touch_map.retire(reference, ["a.py"])
         assert retired == ["a.py"]
         assert document["files"] == {"b.py": 2.0}
@@ -240,8 +248,8 @@ class TestTheAdoptedMapPaysForItsReaders:
         that prints the row - otherwise this trades a red gate for a
         red gate."""
         import dev_tier_drift
-        reference = {"files": {f"f{n}.py": 10.0 for n in range(5)},
-                     "samples": {f"f{n}.py": [10.0] for n in range(5)}}
+
+        reference = {"files": {f"f{n}.py": 10.0 for n in range(5)}, "samples": {f"f{n}.py": [10.0] for n in range(5)}}
         times = dict({f"f{n}.py": 10.0 for n in range(5)}, **{"f0.py": 90.0})
 
         verdict, _, rows = dev_tier_drift.against(times, reference)
@@ -262,8 +270,7 @@ class TestTheAdoptedMapPaysForItsReaders:
         must name both, or the retire could be a change nobody pushed."""
         held = WORKFLOW.read_text(encoding="utf-8")
         job = held.split("touch-map-adopt:")[1].split("\n  agent-config:")[0]
-        diffed = [line for line in job.splitlines()
-                 if "git diff --quiet" in line][0]
+        diffed = [line for line in job.splitlines() if "git diff --quiet" in line][0]
         assert "tests/ci_reference.json" in diffed, diffed
         assert "tests/touch_map.json" in diffed, diffed
         assert "dev_records.py publish" in job, job
@@ -274,6 +281,5 @@ class TestTheAdoptedMapPaysForItsReaders:
         put back exactly what the retire took out."""
         held = WORKFLOW.read_text(encoding="utf-8")
         job = held.split("touch-map-adopt:")[1].split("\n  agent-config:")[0]
-        needs = [line for line in job.splitlines()
-                 if line.strip().startswith("needs:")][0]
+        needs = [line for line in job.splitlines() if line.strip().startswith("needs:")][0]
         assert "tier-reference-adopt" in needs, needs

@@ -30,6 +30,7 @@ the build's process count or whether the spine ran will not open a file
 the documentation says holds per-element reductions - and those are
 three of the questions a Plane 2 report is most often opened for.
 """
+
 import json
 import pathlib
 import re
@@ -62,9 +63,11 @@ def _partition():
     for key, value in sorted(report.items()):
         if key in ("schema", "note"):
             continue
-        by_element = isinstance(value, dict) and value and all(
-            isinstance(name, str) and name.endswith(".bst")
-            for name in list(value)[:5])
+        by_element = (
+            isinstance(value, dict)
+            and value
+            and all(isinstance(name, str) and name.endswith(".bst") for name in list(value)[:5])
+        )
         (keyed if by_element else run).append(key)
     return keyed, run
 
@@ -100,15 +103,13 @@ class TestEveryDescriptionNamesBothClasses:
     def test_it_says_the_report_is_run_level(self, path):
         line = _describing_line(path).lower()
         assert "run-level" in line, (
-            f"{path} describes {plane2.SCHEMA} without naming the class "
-            f"that is 21 of its 24 blocks")
+            f"{path} describes {plane2.SCHEMA} without naming the class that is 21 of its 24 blocks"
+        )
 
     @pytest.mark.parametrize("path", DESCRIBING)
     def test_it_still_names_the_per_element_half(self, path):
         line = _describing_line(path).lower()
-        assert "per-element" in line, (
-            f"{path} dropped the element-keyed half, which is what "
-            f"`bga correlate` joins on")
+        assert "per-element" in line, f"{path} dropped the element-keyed half, which is what `bga correlate` joins on"
 
     @pytest.mark.parametrize("path", DESCRIBING)
     def test_it_no_longer_claims_that_is_all_there_is(self, path):
@@ -116,8 +117,8 @@ class TestEveryDescriptionNamesBothClasses:
         reductions a capture computed, **and nothing else**"."""
         line = _describing_line(path).lower()
         assert "and nothing else" not in line, (
-            f"{path} still claims the per-element reductions are the "
-            f"whole of the report")
+            f"{path} still claims the per-element reductions are the whole of the report"
+        )
 
     @pytest.mark.parametrize("path", DESCRIBING)
     def test_the_retirement_is_attached_to_what_it_retired(self, path):
@@ -127,8 +128,8 @@ class TestEveryDescriptionNamesBothClasses:
         line = _describing_line(path)
         assert "UX-297" in line
         assert "record" in line.lower(), (
-            f"{path} cites `UX-297` without saying it is the per-process "
-            f"record list that went")
+            f"{path} cites `UX-297` without saying it is the per-process record list that went"
+        )
 
 
 class TestTheSchemaSentenceAgrees:
@@ -140,8 +141,7 @@ class TestTheSchemaSentenceAgrees:
     @staticmethod
     def _source_description():
         document = schemas.schema(schemas.ANALYZE)
-        return (document["properties"]["plane2_coverage"]["properties"]
-                ["source"]["description"])
+        return document["properties"]["plane2_coverage"]["properties"]["source"]["description"]
 
     def test_it_names_both_classes(self):
         text = self._source_description().lower()
@@ -167,11 +167,9 @@ class TestTheProseTracksTheContractIdItDescribes:
     def test_the_retired_shapes_are_described_separately(self, path):
         text = (REPO / path).read_text(encoding="utf-8")
         for retired in plane2.SUPERSEDED:
-            rows = [line for line in text.splitlines()
-                    if f"`{retired}`" in line and line.lstrip().startswith("|")]
+            rows = [line for line in text.splitlines() if f"`{retired}`" in line and line.lstrip().startswith("|")]
             assert rows, (path, retired)
-            assert any(re.search(r"read,? never written", row, re.I)
-                       for row in rows), (path, retired)
+            assert any(re.search(r"read,? never written", row, re.I) for row in rows), (path, retired)
 
 
 if __name__ == "__main__":  # pragma: no cover

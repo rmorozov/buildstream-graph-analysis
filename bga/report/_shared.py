@@ -14,10 +14,15 @@ SECTIONS = (None, 'graph', 'floors', 'replay', 'utilisation', 'diagnostics')
 # signals keys populated by graph analysis (Part 5/14) vs. by advanced
 # diagnostics (Part 20-29, M5) - result.signals mixes both in one flat
 # dict, so section filtering needs to know which is which.
-GRAPH_SIGNAL_KEYS = frozenset({
-    'critical_path', 'critical_path_detail',
-    'downstream_count', 'slack', 'unweighted_depth',
-})
+GRAPH_SIGNAL_KEYS = frozenset(
+    {
+        'critical_path',
+        'critical_path_detail',
+        'downstream_count',
+        'slack',
+        'unweighted_depth',
+    }
+)
 
 # UX-14: a capacity sweep (Part 19) replays every task with its fixed,
 # already-observed duration_us regardless of the capacity value being
@@ -44,9 +49,7 @@ SWEEP_CAPACITY_MODEL_CAVEAT = (
 # report and `--format json`. Verbatim from `renderEmptySection` in
 # `bga/viewer/sections.js`, so the two formats agree on the words, not
 # just the fact (`cli.md:362`'s "cannot disagree").
-EMPTY_POPULATION_SENTENCE = (
-    "Nothing to report here for this run — the analysis ran and found none."
-)
+EMPTY_POPULATION_SENTENCE = "Nothing to report here for this run — the analysis ran and found none."
 
 # `ANALYZE_FULL_KEYS` (bga/schemas.py) declares these structural
 # sub-keys always present on a full report. A 0-rebuilt run has no
@@ -54,8 +57,13 @@ EMPTY_POPULATION_SENTENCE = (
 # analysis` returns `{}` - which used to drop all seven rather than
 # publish them empty (UX-724).
 STRUCTURAL_ALWAYS_PRESENT_KEYS = (
-    "metrics", "bottleneck", "parallelism", "sensitivity",
-    "deferrability", "batch_opportunities", "summary",
+    "metrics",
+    "bottleneck",
+    "parallelism",
+    "sensitivity",
+    "deferrability",
+    "batch_opportunities",
+    "summary",
 )
 
 
@@ -81,36 +89,31 @@ def _attribution_key(category: AttributionCategory) -> str:
 # lacking a hint.
 ATTRIBUTION_CATEGORY_HINTS = {
     AttributionCategory.EXECUTION_ON_CHAIN: (
-        "real work on the critical path - the only way to reduce this is to reduce "
-        "the work itself"
+        "real work on the critical path - the only way to reduce this is to reduce the work itself"
     ),
     AttributionCategory.DEPENDENCY_WAIT: (
-        "waiting on an upstream element to finish - shorten or parallelize that "
-        "dependency chain"
+        "waiting on an upstream element to finish - shorten or parallelize that dependency chain"
     ),
     AttributionCategory.RESOURCE_WAIT: (
         "a resource (PROCESS/DOWNLOAD/UPLOAD) was saturated - try --capacity N with a "
         "higher N, or `bga sweep` to find the real knee point"
     ),
     AttributionCategory.SCHEDULER_WAIT: (
-        "capacity was available but nothing was dispatched - try a different "
-        "--heuristic in `bga replay`"
+        "capacity was available but nothing was dispatched - try a different --heuristic in `bga replay`"
     ),
     AttributionCategory.IDLE: (
         "nothing was dependency-ready at all - likely a critical-path/graph-shape "
         "issue, not a capacity one; check Critical Path"
     ),
     AttributionCategory.RETRY_WAIT: (
-        "this element needed a retry - investigate why the first attempt "
-        "failed/was discarded"
+        "this element needed a retry - investigate why the first attempt failed/was discarded"
     ),
     AttributionCategory.UNTRACKED_HEAD: (
         "real time before the tracked-task window started (BuildStream startup, "
         "cache query, sandbox staging) - see Pipeline Overhead, not a scheduling issue"
     ),
     AttributionCategory.UNTRACKED_TAIL: (
-        "real time after the last tracked task finished - outside per-task tracking, "
-        "not a scheduling issue"
+        "real time after the last tracked task finished - outside per-task tracking, not a scheduling issue"
     ),
 }
 

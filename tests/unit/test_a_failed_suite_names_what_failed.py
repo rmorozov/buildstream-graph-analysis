@@ -14,6 +14,7 @@ truncated log still needs.
 four measurements disbelieving a true report because nothing in it
 could be matched against the suite's own summary.
 """
+
 import os
 import pathlib
 import subprocess
@@ -47,39 +48,35 @@ def _steps():
 
 
 def _tail(path):
-    result = subprocess.run([sys.executable, str(TAIL), str(path)],
-                            capture_output=True, text=True, cwd=REPO)
+    result = subprocess.run([sys.executable, str(TAIL), str(path)], capture_output=True, text=True, cwd=REPO)
     return result.returncode, result.stdout + result.stderr
 
 
 class TestTheRecordOutlivesTheRunner:
-
     def test_the_junit_is_uploaded_whatever_the_suite_did(self):
         """The whole item. An upload gated on success is an upload that
         never happens on the run you need it for."""
-        kept = [s for s in _steps()
-                if "upload-artifact" in str(s.get("uses", ""))
-                and "junit" in str(s.get("with", {}).get("path", ""))]
-        assert kept, (
-            "no step uploads the junit; a failed suite discards the only "
-            "record naming what failed")
+        kept = [
+            s
+            for s in _steps()
+            if "upload-artifact" in str(s.get("uses", "")) and "junit" in str(s.get("with", {}).get("path", ""))
+        ]
+        assert kept, "no step uploads the junit; a failed suite discards the only record naming what failed"
         for step in kept:
             assert "always()" in str(step.get("if", "")), (
                 f"the junit upload is conditional on {step.get('if')!r}, so "
-                f"it does not run on the failure it exists for")
+                f"it does not run on the failure it exists for"
+            )
 
     def test_a_step_names_the_failures_on_the_failure_path(self):
         """`UX-491`'s rule, on the path where the gate does not run: the
         log tail must carry the verdict even when truncated."""
-        named = [s for s in _steps()
-                 if "dev_junit_tail" in str(s.get("run", ""))]
+        named = [s for s in _steps() if "dev_junit_tail" in str(s.get("run", ""))]
         assert named, "nothing prints the failing ids on the failure path"
-        assert any("failure()" in str(s.get("if", "")) for s in named), (
-            "the naming step does not run on failure")
+        assert any("failure()" in str(s.get("if", "")) for s in named), "the naming step does not run on failure"
 
 
 class TestTheTailNamesThem:
-
     def test_it_names_every_failure_and_error(self, tmp_path):
         path = tmp_path / "junit.xml"
         path.write_text(JUNIT, encoding="utf-8")
@@ -89,8 +86,7 @@ class TestTheTailNamesThem:
         assert "tests.unit.test_b::test_red" in out
         assert "tests.unit.test_c::test_broken" in out
         assert "AssertionError: 0 == 1" in out
-        assert "tests.unit.test_a" not in out, (
-            "a passing test is named, so the list is not the failures")
+        assert "tests.unit.test_a" not in out, "a passing test is named, so the list is not the failures"
 
     def test_a_multi_line_message_is_cut_to_its_first_line(self, tmp_path):
         """The point is a legible tail, not a second copy of the log."""
@@ -103,9 +99,12 @@ class TestTheTailNamesThem:
         """Non-vacuity: the suite can fail at collection or in `make`,
         and a tool that printed nothing would read as 'nothing failed'."""
         path = tmp_path / "junit.xml"
-        path.write_text('<?xml version="1.0"?><testsuites><testsuite '
-                        'name="pytest"><testcase classname="a" name="b"/>'
-                        '</testsuite></testsuites>', encoding="utf-8")
+        path.write_text(
+            '<?xml version="1.0"?><testsuites><testsuite '
+            'name="pytest"><testcase classname="a" name="b"/>'
+            '</testsuite></testsuites>',
+            encoding="utf-8",
+        )
         code, out = _tail(path)
         assert code == 0
         assert "records no failure" in out, out
@@ -150,15 +149,17 @@ class TestTheTailSaysWhoseJunitItRead:
         _code, out = _tail(path)
         assert "written 0s before this read" in out, out
 
-    def test_the_line_is_printed_when_the_junit_records_no_failure(
-            self, tmp_path):
+    def test_the_line_is_printed_when_the_junit_records_no_failure(self, tmp_path):
         """The path a reader most needs it on: 'no failure' is either
         this run's collection error or somebody else's green suite."""
         path = tmp_path / "junit.xml"
-        path.write_text('<?xml version="1.0"?><testsuites><testsuite '
-                        'name="pytest" tests="9" failures="0" errors="0">'
-                        '<testcase classname="a" name="b"/>'
-                        '</testsuite></testsuites>', encoding="utf-8")
+        path.write_text(
+            '<?xml version="1.0"?><testsuites><testsuite '
+            'name="pytest" tests="9" failures="0" errors="0">'
+            '<testcase classname="a" name="b"/>'
+            '</testsuite></testsuites>',
+            encoding="utf-8",
+        )
         _code, out = _tail(path)
         assert "records no failure" in out, out
         assert "9 test(s) recorded" in out, out

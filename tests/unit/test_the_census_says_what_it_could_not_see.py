@@ -40,6 +40,7 @@ census cannot assess before the build - and `census_spine_verdicts` was
 unassessable elements to apply that rule to, because the census
 answered for every element whether or not it could.
 """
+
 import pathlib
 import sys
 import textwrap
@@ -59,8 +60,8 @@ from tools.bst_native_build_tracer import (
 def _project(tmp_path, elements):
     """A project on disk with the given `{name: yaml}` elements."""
     (tmp_path / "project.conf").write_text(
-        "name: fixture\nmin-version: 2.0\nelement-path: elements\n",
-        encoding="utf-8")
+        "name: fixture\nmin-version: 2.0\nelement-path: elements\n", encoding="utf-8"
+    )
     directory = tmp_path / "elements"
     directory.mkdir(exist_ok=True)
     (tmp_path / "files").mkdir(exist_ok=True)
@@ -110,7 +111,8 @@ class TestTheCensusSaysWhatItCouldNotAssess:
         assert entry["assessable"] is False
         assert entry["unassessable_because"] == ["hosttool.bst"], (
             "the census does not name which dependency it could not see "
-            "through, so a reader cannot tell why the spine turned on")
+            "through, so a reader cannot tell why the spine turned on"
+        )
 
     def test_the_census_publishes_the_set(self, tmp_path):
         project = _project(tmp_path, PRODUCES_A_TOOL)
@@ -134,7 +136,8 @@ class TestThePolicyActsOnWhatItCannotSee:
         verdicts = census_spine_verdicts(project)
         assert verdicts["consumer.bst"] is True, (
             "the element that will run a build-produced tool is skipped by "
-            "`auto` - which is the 21-of-221 capture this item is about")
+            "`auto` - which is the 21-of-221 capture this item is about"
+        )
 
     def test_an_assessable_clean_element_still_is_not_traced(self, tmp_path):
         """The other direction, so the fix is not "always on": a project
@@ -149,38 +152,34 @@ class TestTheSentenceMatchesTheVerdict:
     def test_it_does_not_claim_the_spine_is_unneeded(self, tmp_path):
         project = _project(tmp_path, PRODUCES_A_TOOL)
         verdicts = census_spine_verdicts(project)
-        line = format_census_coverage(
-            project, verdicts,
-            getattr(census_spine_verdicts, "last_unassessable", None))
+        line = format_census_coverage(project, verdicts, getattr(census_spine_verdicts, "last_unassessable", None))
         assert "the spine is not needed" not in line, (
-            f"an unqualified claim on a project the census cannot assess: "
-            f"{line}")
+            f"an unqualified claim on a project the census cannot assess: {line}"
+        )
         assert "cannot be assessed" in line, line
         assert "those get the spine" in line, line
 
     def test_it_counts_the_two_reasons_apart(self, tmp_path):
         project = _project(tmp_path, PRODUCES_A_TOOL)
         verdicts = census_spine_verdicts(project)
-        line = format_census_coverage(
-            project, verdicts,
-            getattr(census_spine_verdicts, "last_unassessable", None))
+        line = format_census_coverage(project, verdicts, getattr(census_spine_verdicts, "last_unassessable", None))
         # Two of the three declared elements are assessable; one is not.
         assert "2 of 3 element(s) assessed" in line, line
         assert "1 stage" in line or "1 stages" in line, line
 
     def test_a_fully_assessable_project_keeps_its_old_sentence(self, tmp_path):
         """`UX-160`'s line, unchanged where the census can answer."""
-        only_imports = {"a.bst": """
+        only_imports = {
+            "a.bst": """
             kind: import
             sources:
             - kind: local
               path: files
-            """}
+            """
+        }
         project = _project(tmp_path, only_imports)
         verdicts = census_spine_verdicts(project)
-        line = format_census_coverage(
-            project, verdicts,
-            getattr(census_spine_verdicts, "last_unassessable", None))
+        line = format_census_coverage(project, verdicts, getattr(census_spine_verdicts, "last_unassessable", None))
         assert "cannot be assessed" not in line, line
         assert "1 of 1 element(s) assessed" in line, line
         # `UX-160`'s all-clear too, and this is the direction the first
@@ -195,25 +194,24 @@ class TestTheSentenceMatchesTheVerdict:
         """And the other direction, on one project rather than two:
         add an element the census cannot assess and the parenthetical
         goes, while the elements it *could* read are unchanged."""
-        mixed = {"a.bst": """
+        mixed = {
+            "a.bst": """
             kind: import
             sources:
             - kind: local
               path: files
-            """}
+            """
+        }
         mixed.update(PRODUCES_A_TOOL)
         project = _project(tmp_path, mixed)
         verdicts = census_spine_verdicts(project)
-        line = format_census_coverage(
-            project, verdicts,
-            getattr(census_spine_verdicts, "last_unassessable", None))
+        line = format_census_coverage(project, verdicts, getattr(census_spine_verdicts, "last_unassessable", None))
         assert "the spine is not needed" not in line, (
-            f"the all-clear survives an element the census could not "
-            f"read: {line}")
+            f"the all-clear survives an element the census could not read: {line}"
+        )
         assert "cannot be assessed" in line, line
 
-    def test_the_all_clear_needs_a_verdict_for_every_declared_element(
-            self, tmp_path):
+    def test_the_all_clear_needs_a_verdict_for_every_declared_element(self, tmp_path):
         """The third way the census can fall short, and the one a
         mutation sweep found this clause did not cover: an element that
         is *declared* and got no verdict at all. That is neither a
@@ -221,17 +219,20 @@ class TestTheSentenceMatchesTheVerdict:
         element the walk never reached - and `auto` traces it, so the
         all-clear would be claiming the spine is unneeded for elements
         it is about to run on."""
-        only_imports = {"a.bst": """
+        only_imports = {
+            "a.bst": """
             kind: import
             sources:
             - kind: local
               path: files
-            """, "b.bst": """
+            """,
+            "b.bst": """
             kind: import
             sources:
             - kind: local
               path: files
-            """}
+            """,
+        }
         project = _project(tmp_path, only_imports)
         verdicts = census_spine_verdicts(project)
         assert len(verdicts) == 2, verdicts
@@ -242,8 +243,8 @@ class TestTheSentenceMatchesTheVerdict:
         line = format_census_coverage(project, partial, set())
         assert "unassessed" in line, line
         assert "the spine is not needed" not in line, (
-            f"the all-clear survives a declared element with no verdict: "
-            f"{line}")
+            f"the all-clear survives a declared element with no verdict: {line}"
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

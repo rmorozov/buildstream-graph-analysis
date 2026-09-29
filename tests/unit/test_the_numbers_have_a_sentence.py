@@ -18,6 +18,7 @@ So these guards are about the *schema*, not the viewer:
 3. The sentences have one home. `bga analyze`'s text report and
    `--help` read them from the schema rather than keeping their own.
 """
+
 import json
 import subprocess
 import sys
@@ -55,11 +56,11 @@ class TestEveryQuantityCarriesItsSentence:
 
     @pytest.mark.parametrize("document", schemas.names())
     def test_no_published_quantity_is_mute(self, document):
-        mute = [path for path, node in _quantity_leaves(document)
-                if not node.get("description")]
+        mute = [path for path, node in _quantity_leaves(document) if not node.get("description")]
         assert mute == [], (
             f"{document}: these declare a quantity but no description, so the "
-            f"page renders a number with nothing to say about it: {mute}")
+            f"page renders a number with nothing to say about it: {mute}"
+        )
 
     def test_the_guard_has_something_to_guard(self):
         """A completeness guard over an empty set passes vacuously.
@@ -93,8 +94,7 @@ class TestTheSchemaDescribesWhatIsPublished:
 
     @staticmethod
     def _analyze(run, plane2=None):
-        argv = [sys.executable, "-m", "bga.cli", "analyze", str(run),
-                "--format", "json", "--diagnostics"]
+        argv = [sys.executable, "-m", "bga.cli", "analyze", str(run), "--format", "json", "--diagnostics"]
         argv += ["--plane2", str(plane2)] if plane2 else ["--no-plane2"]
         proc = subprocess.run(argv, capture_output=True, text=True)
         assert proc.returncode == 0, proc.stderr
@@ -118,27 +118,21 @@ class TestTheSchemaDescribesWhatIsPublished:
             ]
         return cls._cache
 
-    @pytest.mark.parametrize("section", [
-        "floors", "capacity_verdict", "occupancy", "utilisation"])
+    @pytest.mark.parametrize("section", ["floors", "capacity_verdict", "occupancy", "utilisation"])
     def test_every_described_member_is_one_the_payload_carries(self, section):
-        published = set().union(
-            *(document[section] for document in self._documents()))
-        declared = set(
-            schemas.schema(schemas.ANALYZE)["properties"][section]
-             .get("properties") or {})
+        published = set().union(*(document[section] for document in self._documents()))
+        declared = set(schemas.schema(schemas.ANALYZE)["properties"][section].get("properties") or {})
         assert declared, f"{section} declares no members at all"
         phantom = sorted(declared - published)
         assert phantom == [], (
             f"analyze/v2.{section} describes {phantom}, which neither run "
-            f"publishes - a sentence about a field nobody emits")
+            f"publishes - a sentence about a field nobody emits"
+        )
 
-    @pytest.mark.parametrize("section", [
-        "floors", "capacity_verdict", "occupancy", "utilisation"])
+    @pytest.mark.parametrize("section", ["floors", "capacity_verdict", "occupancy", "utilisation"])
     def test_every_published_member_is_described(self, section):
-        properties = (schemas.schema(schemas.ANALYZE)["properties"][section]
-                      .get("properties") or {})
-        published = set().union(
-            *(document[section] for document in self._documents()))
+        properties = schemas.schema(schemas.ANALYZE)["properties"][section].get("properties") or {}
+        published = set().union(*(document[section] for document in self._documents()))
         mute = sorted(k for k in published if not properties.get(k, {}).get("description"))
         assert mute == [], f"analyze/v2.{section}: undescribed members {mute}"
 
@@ -147,17 +141,13 @@ class TestTheSentencesHaveOneHome:
     """Clause 3: the report and `--help` read the schema, not their own copy."""
 
     def test_the_text_report_prints_the_schema_sentence(self):
-        proc = subprocess.run(
-            [sys.executable, "-m", "bga.cli", "analyze", str(GOLDEN)],
-            capture_output=True, text=True)
+        proc = subprocess.run([sys.executable, "-m", "bga.cli", "analyze", str(GOLDEN)], capture_output=True, text=True)
         assert proc.returncode == 0, proc.stderr
         sentence = schemas.description(schemas.ANALYZE, "floors.occupancy_share")
         assert sentence in proc.stdout
 
     def test_help_states_what_a_floor_is_from_the_schema(self):
-        proc = subprocess.run(
-            [sys.executable, "-m", "bga.cli", "floors", "--help"],
-            capture_output=True, text=True)
+        proc = subprocess.run([sys.executable, "-m", "bga.cli", "floors", "--help"], capture_output=True, text=True)
         assert proc.returncode == 0, proc.stderr
         # argparse re-wraps, so compare on collapsed whitespace.
         rendered = " ".join(proc.stdout.split())
@@ -167,8 +157,7 @@ class TestTheSentencesHaveOneHome:
     def test_no_second_wording_of_the_occupancy_sentence(self):
         """The parenthetical this line used to carry, spelled out here so
         reintroducing it fails rather than quietly drifting."""
-        source = (Path(__file__).parent.parent.parent
-                  / "bga" / "report" / "text.py").read_text()
+        source = (Path(__file__).parent.parent.parent / "bga" / "report" / "text.py").read_text()
         assert "unlike Efficiency Score, this falls when independent" not in source
 
 
@@ -184,8 +173,7 @@ class TestTheAccessorRefusesToInvent:
 
     def test_a_described_path_returns_the_schema_string(self):
         node = schemas.schema(schemas.ANALYZE)["properties"]["floors"]
-        assert (schemas.description(schemas.ANALYZE, "floors.lb")
-                == node["properties"]["lb"]["description"])
+        assert schemas.description(schemas.ANALYZE, "floors.lb") == node["properties"]["lb"]["description"]
 
     def test_an_array_step_walks_into_items(self):
         assert schemas.description(schemas.STORE, "snapshots[].bytes")

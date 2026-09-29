@@ -4,6 +4,7 @@ formula): resources declared exclusive cannot overlap at all, regardless
 of declared capacity, so the bound is the full observed work for that
 resource - not work/capacity like a normal pooled resource.
 """
+
 from typing import Optional
 
 from ..ingest.models import NormalizedTask, RunContext

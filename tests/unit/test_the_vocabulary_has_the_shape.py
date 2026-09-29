@@ -42,6 +42,7 @@ headline.scheduling_gap_us   2,933,000
 total_duration_us           46,133,000
 ```
 """
+
 import pathlib
 import re
 import sys
@@ -95,6 +96,7 @@ _LOOK = """
   };
 })()
 """
+
 
 #: The two hints, read out of the module that emits them so a rename
 #: reddens here rather than making every clause below 0 of 0.
@@ -160,7 +162,8 @@ class TestTheDeclarationsExistAndResolve:
         hints = {hint for hint, _ in found.values()}
         assert hints == set(_hints()), (
             f"{label}: declared hints are {sorted(hints)}; the vocabulary "
-            f"has two new shapes and both should have a consumer")
+            f"has two new shapes and both should have a consumer"
+        )
 
     def test_every_named_path_resolves(self, label):
         document, found = _declared(label)
@@ -178,8 +181,7 @@ class TestTheDeclarationsExistAndResolve:
             for path in paths:
                 if _at(document, path) is None:
                     broken.append(f"{section}: {path}")
-        assert broken == [], (
-            f"{label}: declared path(s) that resolve to nothing: {broken}")
+        assert broken == [], f"{label}: declared path(s) that resolve to nothing: {broken}"
 
     def test_the_parts_sum_to_the_published_total(self, label):
         """The property that makes a decomposition drawable without the
@@ -192,11 +194,10 @@ class TestTheDeclarationsExistAndResolve:
             if hint != decomposition:
                 continue
             total = _at(document, declared["total"])
-            parts = sum(_at(document, part["path"])
-                        for part in declared["parts"])
+            parts = sum(_at(document, part["path"]) for part in declared["parts"])
             assert parts == total, (
-                f"{label}: {section}'s declared parts sum to {parts} and "
-                f"its declared total is {total}")
+                f"{label}: {section}'s declared parts sum to {parts} and its declared total is {total}"
+            )
 
 
 @needs_browser
@@ -213,25 +214,20 @@ class TestTheDeclaredDrawingsAreDrawn:
         }
         for section, (hint, _spec) in found.items():
             assert section in drawn[hint], (
-                f"{label}: {section} declares {hint} and draws nothing; "
-                f"the page drew {drawn}")
+                f"{label}: {section} declares {hint} and draws nothing; the page drew {drawn}"
+            )
 
-    def test_nothing_is_drawn_that_nobody_declared(
-            self, browser, booted, label):
+    def test_nothing_is_drawn_that_nobody_declared(self, browser, booted, label):
         """The other direction. A page that drew a bar per section would
         satisfy the clause above perfectly."""
         _, found = _declared(label)
         decomposition, interval = _hints()
         out = browser.measure(booted[label], _LOOK, 1440, 900)
-        for hint, key in ((decomposition, "decomposition"),
-                          (interval, "interval")):
-            expected = {section for section, (one, _spec) in found.items()
-                        if one == hint}
-            assert {one["section"] for one in out[key]} <= expected, (
-                f"{label}: {key} drawn where nothing declared it")
+        for hint, key in ((decomposition, "decomposition"), (interval, "interval")):
+            expected = {section for section, (one, _spec) in found.items() if one == hint}
+            assert {one["section"] for one in out[key]} <= expected, f"{label}: {key} drawn where nothing declared it"
 
-    def test_every_segment_is_its_published_share_of_the_total(
-            self, browser, booted, label):
+    def test_every_segment_is_its_published_share_of_the_total(self, browser, booted, label):
         """`UX-196`'s discipline: the geometry is asserted against
         `data-raw`, never against a screenshot. A segment's width in the
         100-unit viewBox is its published value over the published
@@ -244,12 +240,10 @@ class TestTheDeclaredDrawingsAreDrawn:
             total = float(one["total"])
             for part in one["parts"]:
                 want = (float(part["raw"]) / total) * 100
-                assert abs(part["width"] - want) < 1, (one["section"], part,
-                                                       want)
+                assert abs(part["width"] - want) < 1, (one["section"], part, want)
             assert abs(sum(part["width"] for part in one["parts"]) - 100) < 1, one
 
-    def test_the_bound_is_drawn_where_the_payload_puts_it(
-            self, browser, booted, label):
+    def test_the_bound_is_drawn_where_the_payload_puts_it(self, browser, booted, label):
         """A mark is drawn where - and only where - one is declared.
 
         This clause used to require an `lb` mark on *every*
@@ -263,9 +257,11 @@ class TestTheDeclaredDrawingsAreDrawn:
         """
         _document, found = _declared(label)
         decomposition, _interval = _hints()
-        want_mark = {section: declared["mark"]["key"]
-                     for section, (hint, declared) in found.items()
-                     if hint == decomposition and declared.get("mark")}
+        want_mark = {
+            section: declared["mark"]["key"]
+            for section, (hint, declared) in found.items()
+            if hint == decomposition and declared.get("mark")
+        }
         assert want_mark, f"{label}: no decomposition declares a mark"
         seen = set()
         for one in out_marks(browser, booted, label):
@@ -273,20 +269,17 @@ class TestTheDeclaredDrawingsAreDrawn:
             marks = [mark for mark in one["marks"] if mark["key"] == key]
             if key is None:
                 assert one["marks"] == [], (
-                    f"{label}: {one['section']} draws a mark its hint "
-                    f"does not declare: {one['marks']}")
+                    f"{label}: {one['section']} draws a mark its hint does not declare: {one['marks']}"
+                )
                 continue
             assert marks, one
             seen.add(one["section"])
             for mark in marks:
                 want = (float(mark["raw"]) / float(one["total"])) * 100
                 assert abs(mark["at"] - want) < 1, (one["section"], mark, want)
-        assert seen == set(want_mark), (
-            f"{label}: declared a mark on {sorted(want_mark)} and drew one "
-            f"on {sorted(seen)}")
+        assert seen == set(want_mark), f"{label}: declared a mark on {sorted(want_mark)} and drew one on {sorted(seen)}"
 
-    def test_every_interval_mark_sits_at_its_published_value(
-            self, browser, booted, label):
+    def test_every_interval_mark_sits_at_its_published_value(self, browser, booted, label):
         out = browser.measure(booted[label], _LOOK, 1440, 900)
         assert out["interval"], f"{label}: no interval drawn"
         for one in out["interval"]:
@@ -316,8 +309,7 @@ class TestTheDeclaredDrawingsAreDrawn:
 class TestEachDrawingOwesItsReaderTheSameThings:
     """§2a and §2: an exhibit says its numbers, and never hoards them."""
 
-    def test_the_sentence_names_every_published_value(
-            self, browser, booted, label):
+    def test_the_sentence_names_every_published_value(self, browser, booted, label):
         out = browser.measure(booted[label], _LOOK, 1440, 900)
         for one in out["decomposition"] + out["interval"]:
             assert one["sentence"], one
@@ -337,8 +329,7 @@ class TestEachDrawingOwesItsReaderTheSameThings:
         for the channel existing; this is the floor for it having
         range - the page draws at least three *kinds* of shape."""
         out = browser.measure(booted[label], _LOOK, 1440, 900)
-        kinds = sum(1 for group in (out["decomposition"], out["interval"])
-                    if group)
+        kinds = sum(1 for group in (out["decomposition"], out["interval"]) if group)
         assert kinds == 2, out
         assert out["strips"] >= 5, out["strips"]
         assert out["svg"] >= 8, out["svg"]
@@ -354,8 +345,7 @@ class TestTheVocabularyIsWrittenDown:
         text = (REPO / "docs/design/styleguide.md").read_text(encoding="utf-8")
         table = text.split("## 1a.", 1)[1].split("\n## ", 1)[0]
         for hint in _hints():
-            assert f"`{hint}`" in table, (
-                f"{hint} is emitted and §1a does not name it")
+            assert f"`{hint}`" in table, f"{hint} is emitted and §1a does not name it"
 
     def test_the_drawings_module_exports_both_shapes(self):
         source = (REPO / "bga/viewer/drawings.js").read_text(encoding="utf-8")

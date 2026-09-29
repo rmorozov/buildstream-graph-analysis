@@ -10,20 +10,19 @@ delete drops) intersected with the tracked list; the full list when
 `lint-docs`'s own list (UX-509: `git ls-files`, so a worktree clone
 under `.claude/` is never walked).
 """
+
 import argparse
 import shutil
 import subprocess
 import sys
 
-PATHSPECS = ("README.md", "CLAUDE.md", "REVIEW.md", "CHANGELOG.md",
-             "docs/*.md", ".claude/*.md")
+PATHSPECS = ("README.md", "CLAUDE.md", "REVIEW.md", "CHANGELOG.md", "docs/*.md", ".claude/*.md")
 CONFIG = ".pymarkdown.json"
 GIT = shutil.which("git") or "git"
 
 
 def _git(*args):
-    done = subprocess.run([GIT, *args], capture_output=True, text=True,
-                          check=False)
+    done = subprocess.run([GIT, *args], capture_output=True, text=True, check=False)
     return done.returncode, done.stdout
 
 
@@ -42,8 +41,7 @@ def changed(base):
         return everything
     if _names(_git("diff", "--name-only", "-z", base, "--", CONFIG)[1]):
         return everything
-    diff = _names(_git("diff", "--name-only", "-z", "--diff-filter=ACMR", base,
-                       "--", *PATHSPECS)[1])
+    diff = _names(_git("diff", "--name-only", "-z", "--diff-filter=ACMR", base, "--", *PATHSPECS)[1])
     return [n for n in everything if n in set(diff)]
 
 

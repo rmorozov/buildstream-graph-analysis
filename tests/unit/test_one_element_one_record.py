@@ -61,6 +61,7 @@ Both are kept - the join table sorts on them - and both are now
 declared, held equal to their source, and taken from the map in the
 resolved record.
 """
+
 import json
 import os
 import pathlib
@@ -88,7 +89,11 @@ SPANNING = ("unweighted_depth", "observed_critical", "peak_rss_bytes")
 def _analyze(run):
     done = subprocess.run(
         ["python", "-m", "bga.cli", "analyze", str(run), "--format", "json"],
-        capture_output=True, text=True, cwd=REPO, timeout=300)
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=300,
+    )
     assert done.returncode == 0, done.stderr[-2000:]
     return json.loads(done.stdout)
 
@@ -157,6 +162,7 @@ console.log(JSON.stringify({
 
 def _probe(payload):
     import tempfile
+
     scratch = tempfile.mkdtemp()
     try:
         doc = pathlib.Path(scratch, "payload.json")
@@ -164,12 +170,16 @@ def _probe(payload):
         script = _PROBE % {
             "views": (REPO / "tests/viewer.mjs").as_uri(),
             "payload": json.dumps(str(doc)),
-            "wanted": json.dumps(list(SPANNING))}
-        done = subprocess.run([node, "--input-type=module", "-e", script],
-                              capture_output=True, text=True, cwd=REPO,
-                              timeout=300,
-                              env={**os.environ, "BGA_DOM_SHIM":
-                                   (REPO / "tests/dom_shim.mjs").as_uri()})
+            "wanted": json.dumps(list(SPANNING)),
+        }
+        done = subprocess.run(
+            [node, "--input-type=module", "-e", script],
+            capture_output=True,
+            text=True,
+            cwd=REPO,
+            timeout=300,
+            env={**os.environ, "BGA_DOM_SHIM": (REPO / "tests/dom_shim.mjs").as_uri()},
+        )
         assert done.returncode == 0, done.stderr[-3000:]
         return json.loads(done.stdout)
     finally:
@@ -185,24 +195,31 @@ class TestTheSchemaDeclaresTheKey:
         assert schemas.ELEMENT_KEY == "element", (
             "the element entity's key is not declared, so `element_join`'s "
             "`element` and the `elements.*` map keys are the same "
-            "identifier only by convention")
+            "identifier only by convention"
+        )
 
     def test_the_join_requires_it(self):
         node = schemas._ANALYZE_HINTS["element_join"]
         assert schemas.ELEMENT_KEY in node["items"]["required"], (
-            "the join's rows do not require the key the entity is joined on")
+            "the join's rows do not require the key the entity is joined on"
+        )
 
     def test_the_column_maps_are_named_as_the_other_shape(self):
         """`ELEMENT_KEYED` is the list of maps carrying this entity. A
         map added to `elements` and not to it is a shape the page and
         every guard here would silently not know about."""
         assert set(schemas.ELEMENT_KEYED) == {
-            "element_durations", "slack", "downstream_count",
-            "unweighted_depth", "blast_radius", "criticality_probability",
+            "element_durations",
+            "slack",
+            "downstream_count",
+            "unweighted_depth",
+            "blast_radius",
+            "criticality_probability",
             # `UX-681`: the blast radius's mirror. Plane 1 only, which
             # is why it is a map here and not a join field - the rule
             # below is what decides that.
-            "fan_in"}
+            "fan_in",
+        }
 
     def test_the_placement_rule_is_written_where_it_is_met(self):
         """A rule in a task file is a rule nobody reads. It goes beside
@@ -212,25 +229,25 @@ class TestTheSchemaDeclaresTheKey:
         rule = schemas.ELEMENT_PLACEMENT_RULE
         assert "elements" in rule and "element_join" in rule, rule
         assert "Plane 2" in rule, (
-            "the rule does not say what decides the split - which is "
-            "whether the attribute needs Plane 2 to exist")
+            "the rule does not say what decides the split - which is whether the attribute needs Plane 2 to exist"
+        )
 
 
 class TestTheKeyIsOneIdentifier:
     def test_every_join_row_names_an_element_the_maps_know(self, small):
         population = set(small["elements"]["element_durations"])
-        unknown = [row[schemas.ELEMENT_KEY] for row in small["element_join"]
-                   if row[schemas.ELEMENT_KEY] not in population]
-        assert unknown == [], (
-            f"join rows keyed on elements no column map carries: {unknown}")
+        unknown = [
+            row[schemas.ELEMENT_KEY] for row in small["element_join"] if row[schemas.ELEMENT_KEY] not in population
+        ]
+        assert unknown == [], f"join rows keyed on elements no column map carries: {unknown}"
 
     def test_every_map_is_keyed_on_the_same_population(self, small):
         population = set(small["elements"]["element_durations"])
         for name in schemas.ELEMENT_KEYED:
             held = small["elements"].get(name) or {}
             assert set(held) <= population, (
-                f"`elements.{name}` is keyed on elements outside the "
-                f"population `element_durations` declares")
+                f"`elements.{name}` is keyed on elements outside the population `element_durations` declares"
+            )
 
 
 class TestTheDenormalisedColumns:
@@ -241,59 +258,56 @@ class TestTheDenormalisedColumns:
     def test_it_equals_the_map_it_was_copied_from(self, small):
         source = small["elements"]["blast_radius"]
         disagree = [
-            (row[schemas.ELEMENT_KEY], row.get("blast_radius"),
-             (source.get(row[schemas.ELEMENT_KEY]) or {}).get(
-                 "downstream_count"))
+            (
+                row[schemas.ELEMENT_KEY],
+                row.get("blast_radius"),
+                (source.get(row[schemas.ELEMENT_KEY]) or {}).get("downstream_count"),
+            )
             for row in small["element_join"]
-            if row.get("blast_radius")
-            != (source.get(row[schemas.ELEMENT_KEY]) or {}).get(
-                "downstream_count")]
-        assert disagree == [], (
-            f"the join's `blast_radius` is not the map's "
-            f"`downstream_count`: {disagree[:5]}")
+            if row.get("blast_radius") != (source.get(row[schemas.ELEMENT_KEY]) or {}).get("downstream_count")
+        ]
+        assert disagree == [], f"the join's `blast_radius` is not the map's `downstream_count`: {disagree[:5]}"
 
     def test_and_the_third_publication_agrees_too(self, small):
         source = small["elements"]["downstream_count"]
-        disagree = [row[schemas.ELEMENT_KEY] for row in small["element_join"]
-                    if row.get("blast_radius")
-                    != source.get(row[schemas.ELEMENT_KEY])]
-        assert disagree == [], (
-            f"`elements.downstream_count` publishes a third value for the "
-            f"same fact: {disagree[:5]}")
+        disagree = [
+            row[schemas.ELEMENT_KEY]
+            for row in small["element_join"]
+            if row.get("blast_radius") != source.get(row[schemas.ELEMENT_KEY])
+        ]
+        assert disagree == [], f"`elements.downstream_count` publishes a third value for the same fact: {disagree[:5]}"
 
     def test_the_second_one_is_the_same_boolean(self, small):
         """The one a count of shared *names* cannot see:
         `on_critical_path` and `observed_critical` are one fact."""
         source = small["elements"]["criticality_probability"]
         disagree = [
-            (row[schemas.ELEMENT_KEY], row.get("on_critical_path"),
-             (source.get(row[schemas.ELEMENT_KEY]) or {}).get(
-                 "observed_critical"))
+            (
+                row[schemas.ELEMENT_KEY],
+                row.get("on_critical_path"),
+                (source.get(row[schemas.ELEMENT_KEY]) or {}).get("observed_critical"),
+            )
             for row in small["element_join"]
-            if row.get("on_critical_path")
-            != (source.get(row[schemas.ELEMENT_KEY]) or {}).get(
-                "observed_critical")]
-        assert disagree == [], (
-            f"the join's `on_critical_path` is not the map's "
-            f"`observed_critical`: {disagree[:5]}")
+            if row.get("on_critical_path") != (source.get(row[schemas.ELEMENT_KEY]) or {}).get("observed_critical")
+        ]
+        assert disagree == [], f"the join's `on_critical_path` is not the map's `observed_critical`: {disagree[:5]}"
 
     def test_the_schema_says_which_value_each_one_is(self):
         node = schemas._ANALYZE_HINTS["element_join"]
         fields = node["items"]["properties"]
         assert "downstream_count" in fields["blast_radius"]["description"], (
-            "the join's `blast_radius` is an int where the map's is a "
-            "record, and nothing says the two are related")
-        assert "observed_critical" in (
-            fields["on_critical_path"].get("description") or ""), (
-            "the join's `on_critical_path` is the map's "
-            "`observed_critical` and nothing says so")
+            "the join's `blast_radius` is an int where the map's is a record, and nothing says the two are related"
+        )
+        assert "observed_critical" in (fields["on_critical_path"].get("description") or ""), (
+            "the join's `on_critical_path` is the map's `observed_critical` and nothing says so"
+        )
 
     def test_the_rule_names_both_of_them(self):
         rule = schemas.ELEMENT_PLACEMENT_RULE
         for field in ("blast_radius", "on_critical_path"):
             assert field in rule, (
-                f"the placement rule does not name `{field}` as one of the "
-                f"denormalisations it permits")
+                f"the placement rule does not name `{field}` as one of the denormalisations it permits"
+            )
 
 
 @needs_node
@@ -312,7 +326,8 @@ class TestOneResolvedRecord:
         assert probe["answerable"] == probe["measured"], (
             f"{probe['answerable']} of {probe['measured']} measured records "
             f"can answer a question spanning both shapes "
-            f"({', '.join(SPANNING)})")
+            f"({', '.join(SPANNING)})"
+        )
 
     def test_the_ranked_and_the_unranked_get_the_same_shape(self, probed):
         """The defect measured: a ranked element got the `SOURCES` rows
@@ -321,13 +336,12 @@ class TestOneResolvedRecord:
         probe = probed
         for field in ("unweighted_depth", "slack"):
             assert field in (probe["ranked_fields"] or []), (
-                f"a ranked element's record has no `{field}` - the column "
-                f"maps every capture carries")
+                f"a ranked element's record has no `{field}` - the column maps every capture carries"
+            )
 
     def test_no_attribute_lands_twice_in_one_record(self, probed):
         probe = probed
-        assert probe["duplicate_fields"] is False, (
-            "one field reaches the resolved record from both shapes")
+        assert probe["duplicate_fields"] is False, "one field reaches the resolved record from both shapes"
 
     def test_no_label_carries_two_quantities(self, probed):
         """`blast_radius` again, seen from the page: the map's is a
@@ -344,11 +358,11 @@ class TestTheBytesDoNotGrow:
     def test_the_payload_still_publishes_each_population_once(self, small):
         for name in schemas.ELEMENT_KEYED:
             assert name in small["elements"], (
-                f"`{name}` left the `elements` grouping - which would "
-                f"publish one population as several sections")
-        assert "elements" not in {
-            key for key in small if key in schemas.ELEMENT_KEYED}, (
-            "a column map was lifted to the top level")
+                f"`{name}` left the `elements` grouping - which would publish one population as several sections"
+            )
+        assert "elements" not in {key for key in small if key in schemas.ELEMENT_KEYED}, (
+            "a column map was lifted to the top level"
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

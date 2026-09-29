@@ -30,6 +30,7 @@ hold.
 
 holds: rules.md#a-history-figure-from-a-shallow-clone-is-worth-nothing-ask-is-shallow-repository-first
 """
+
 import ast
 import functools
 import pathlib
@@ -42,8 +43,7 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 #: An argv token whose answer moves with the clone's depth. Whole
 #: literals only - `"git log --oneline -1"` is a sentence a document
 #: quotes, `"log"` is an argument a subprocess is handed.
-DEPTH_DEPENDENT = frozenset({
-    "log", "rev-list", "merge-base", "describe", "blame", "shortlog"})
+DEPTH_DEPENDENT = frozenset({"log", "rev-list", "merge-base", "describe", "blame", "shortlog"})
 
 #: The same question written as an option rather than a subcommand.
 DEPTH_DEPENDENT_PREFIXES = ("--diff-filter",)
@@ -57,8 +57,7 @@ DECLARES_DEPTH = ("--is-shallow-repository", "shallow")
 
 
 def _strings(nodes):
-    return [n.value for n in nodes
-            if isinstance(n, ast.Constant) and isinstance(n.value, str)]
+    return [n.value for n in nodes if isinstance(n, ast.Constant) and isinstance(n.value, str)]
 
 
 def argv_literals(source):
@@ -81,8 +80,7 @@ def argv_literals(source):
             if tokens and tokens[0] == "git":
                 found.update(tokens[1:])
         elif isinstance(node, ast.Call):
-            name = getattr(node.func, "id", None) or getattr(
-                node.func, "attr", "")
+            name = getattr(node.func, "id", None) or getattr(node.func, "attr", "")
             if "git" in name.lower():
                 found.update(_strings(node.args))
     return found
@@ -105,17 +103,20 @@ def declares_depth(source):
     explained the hazard and still concludes from a truncated history,
     which is the defect wearing its own explanation.
     """
-    return any(node.value in DECLARES_DEPTH for node in ast.walk(
-        ast.parse(source)) if isinstance(node, ast.Constant)
-        and isinstance(node.value, str))
+    return any(
+        node.value in DECLARES_DEPTH
+        for node in ast.walk(ast.parse(source))
+        if isinstance(node, ast.Constant) and isinstance(node.value, str)
+    )
 
 
 @functools.lru_cache(maxsize=1)
 def _tracked_tests():
     """git's list, never a glob: the main checkout carries
     `.claude/worktrees/<agent>/`, a whole second tree (`UX-577`)."""
-    out = subprocess.run(["git", "ls-files", "tests/"], cwd=REPO, check=True,
-                         capture_output=True, text=True).stdout.split()
+    out = subprocess.run(
+        ["git", "ls-files", "tests/"], cwd=REPO, check=True, capture_output=True, text=True
+    ).stdout.split()
     return tuple(sorted(rel for rel in out if rel.endswith(".py")))
 
 
@@ -189,50 +190,49 @@ class TestThePopulationIsNotEmpty:
 
     def test_the_scan_reads_the_whole_test_tree(self):
         assert len(_tracked_tests()) >= 300, (
-            f"{len(_tracked_tests())} test modules - `git ls-files tests/` "
-            f"stopped resolving")
+            f"{len(_tracked_tests())} test modules - `git ls-files tests/` stopped resolving"
+        )
 
     def test_the_guards_this_item_was_filed_about_are_in_it(self):
         """Named, so a `DEPTH_DEPENDENT` narrowed to nothing reddens
         here rather than emptying the clause below in silence."""
         found = set(_population())
-        for rel in ("tests/unit/test_a_release_records_a_contract_state.py",
-                    "tests/unit/test_the_verification_log_is_true.py"):
-            assert rel in found, (
-                f"{rel} reads history and this scan does not see it; "
-                f"the population is {sorted(found)}")
+        for rel in (
+            "tests/unit/test_a_release_records_a_contract_state.py",
+            "tests/unit/test_the_verification_log_is_true.py",
+        ):
+            assert rel in found, f"{rel} reads history and this scan does not see it; the population is {sorted(found)}"
 
     def test_the_scan_selects_rather_than_sweeps(self):
         """A population of everything is the other way to be vacuous."""
         population = _population()
         assert len(population) <= len(_tracked_tests()) // 4, (
-            f"{len(population)} of {len(_tracked_tests())} modules read "
-            f"history; `reads_history` has stopped selecting")
+            f"{len(population)} of {len(_tracked_tests())} modules read history; `reads_history` has stopped selecting"
+        )
 
 
 class TestEveryHistoryReadingGuardDeclaresItsDepth:
-
     def test_a_guard_that_reads_history_says_what_a_shallow_clone_gets(self):
         """The item's sweep. A module added after this reads history and
         neither declines nor says why is named here, by path."""
-        silent = sorted(rel for rel, source in _population().items()
-                        if not declares_depth(source))
+        silent = sorted(rel for rel, source in _population().items() if not declares_depth(source))
         assert silent == [], (
             f"test module(s) reading git history with nothing said about "
             f"depth: {silent}. Ask `git rev-parse --is-shallow-repository` "
             f"and skip with a reason in `KNOWN_SKIP_REASONS`, or read the "
             f"graft boundary - a shallow clone answers and does not say so "
-            f"(UX-637)")
+            f"(UX-637)"
+        )
 
     def test_ci_asks_for_the_history_these_guards_read(self):
         """The declines above are a skip, and a skip on every machine is
         a guard that checks nothing. CI is the machine that must not
         have a shallow clone."""
-        workflow = (REPO / ".github/workflows/ci.yml").read_text(
-            encoding="utf-8")
+        workflow = (REPO / ".github/workflows/ci.yml").read_text(encoding="utf-8")
         assert "fetch-depth: 0" in workflow, (
             "ci.yml's checkout does not ask for the whole history, so every "
-            "clause above declines there and the sweep guards nothing")
+            "clause above declines there and the sweep guards nothing"
+        )
 
     def test_every_job_that_runs_the_suite_asks_for_it(self):
         """`UX-784`: the clause above reads the file, and a workflow has
@@ -242,23 +242,25 @@ class TestEveryHistoryReadingGuardDeclaresItsDepth:
         nowhere else. One `fetch-depth: 0` anywhere satisfied the
         sentence above while the job that needed it had none."""
         import yaml
-        spec = yaml.safe_load(
-            (REPO / ".github/workflows/ci.yml").read_text(encoding="utf-8"))
+
+        spec = yaml.safe_load((REPO / ".github/workflows/ci.yml").read_text(encoding="utf-8"))
         short = {}
         for name, job in (spec.get("jobs") or {}).items():
             steps = job.get("steps") or []
-            if not any("make test" in (step.get("run") or "")
-                       for step in steps):
+            if not any("make test" in (step.get("run") or "") for step in steps):
                 continue
-            depths = [str((step.get("with") or {}).get("fetch-depth", ""))
-                      for step in steps
-                      if "checkout" in str(step.get("uses", ""))]
+            depths = [
+                str((step.get("with") or {}).get("fetch-depth", ""))
+                for step in steps
+                if "checkout" in str(step.get("uses", ""))
+            ]
             if "0" not in depths:
                 short[name] = depths or ["no checkout step"]
         assert short == {}, (
             f"{short}: these jobs run the whole suite on a checkout that "
             "did not ask for the whole history. Every history-reading "
-            "guard declines or reds there (UX-784)")
+            "guard declines or reds there (UX-784)"
+        )
 
     def test_no_later_step_regrafts_a_boundary_onto_it(self):
         """`UX-781`: asking for the whole history at checkout is half
@@ -274,28 +276,27 @@ class TestEveryHistoryReadingGuardDeclaresItsDepth:
         same flag *deepens* it. Only a job that asked for everything
         can throw it away."""
         import yaml
-        spec = yaml.safe_load(
-            (REPO / ".github/workflows/ci.yml").read_text(encoding="utf-8"))
+
+        spec = yaml.safe_load((REPO / ".github/workflows/ci.yml").read_text(encoding="utf-8"))
         offenders = {}
         for name, job in (spec.get("jobs") or {}).items():
             steps = job.get("steps") or []
-            asked = any(
-                str((step.get("with") or {}).get("fetch-depth", "")) == "0"
-                for step in steps)
+            asked = any(str((step.get("with") or {}).get("fetch-depth", "")) == "0" for step in steps)
             if not asked:
                 continue
-            cutting = [step.get("name") or step.get("uses") or "?"
-                       for step in steps
-                       if any(flag in (step.get("run") or "")
-                              for flag in ("--depth", "--shallow-since",
-                                           "--shallow-exclude"))]
+            cutting = [
+                step.get("name") or step.get("uses") or "?"
+                for step in steps
+                if any(flag in (step.get("run") or "") for flag in ("--depth", "--shallow-since", "--shallow-exclude"))
+            ]
             if cutting:
                 offenders[name] = cutting
         assert offenders == {}, (
             f"{offenders}: a job that checked out at `fetch-depth: 0` then "
             "truncates it. A depth fetch grafts a boundary onto a complete "
             "clone and every later step in that job reads through it "
-            "(UX-781)")
+            "(UX-781)"
+        )
 
     def test_the_clause_above_reads_jobs_and_not_the_whole_file(self):
         """Its own falsification: `ci.yml` really does carry a depth
@@ -303,28 +304,30 @@ class TestEveryHistoryReadingGuardDeclaresItsDepth:
         deepens. A clause that grepped the file would red on that, so
         the population must be jobs that asked for full history."""
         import yaml
-        spec = yaml.safe_load(
-            (REPO / ".github/workflows/ci.yml").read_text(encoding="utf-8"))
+
+        spec = yaml.safe_load((REPO / ".github/workflows/ci.yml").read_text(encoding="utf-8"))
         deepening = [
-            name for name, job in (spec.get("jobs") or {}).items()
-            if any("--depth" in (step.get("run") or "")
-                   for step in (job.get("steps") or []))]
+            name
+            for name, job in (spec.get("jobs") or {}).items()
+            if any("--depth" in (step.get("run") or "") for step in (job.get("steps") or []))
+        ]
         assert deepening, (
             "no job deepens a shallow checkout any more - this clause "
             "guarded the distinction and now guards nothing; drop it or "
-            "re-point it (UX-781)")
+            "re-point it (UX-781)"
+        )
 
 
 def test_the_contributing_guide_tells_a_session_its_clone_may_be_shallow():
     """The developer-facing half. A guard cannot help a session that
     measures a history figure by hand and pastes it into a round
     document, which is what round 86 did four times."""
-    guide = (REPO / "docs/contributing/fixing-guide.md").read_text(
-        encoding="utf-8")
+    guide = (REPO / "docs/contributing/fixing-guide.md").read_text(encoding="utf-8")
     for stated in ("--is-shallow-repository", "git fetch --unshallow"):
         assert stated in guide, (
             f"the fixing guide does not name {stated!r} - a session has no "
-            f"way to learn its clone is truncated before it measures")
+            f"way to learn its clone is truncated before it measures"
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

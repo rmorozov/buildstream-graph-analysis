@@ -10,6 +10,7 @@ These tests compile the real `hook.c` and run a real child process
 under it, so the join - and its invalidation on `chdir` - runs for
 real rather than only being reasoned about.
 """
+
 import os
 import re
 import shutil
@@ -35,9 +36,10 @@ def _build_hook(tmp_path):
     cc = shutil.which("cc") or shutil.which("gcc")
     hook_so = tmp_path / "hook.so"
     subprocess.run(
-        [cc, "-shared", "-fPIC", "-O2", "-Wall", "-Wextra",
-         "-o", str(hook_so), _HOOK_C, "-ldl"],
-        check=True, capture_output=True, text=True,
+        [cc, "-shared", "-fPIC", "-O2", "-Wall", "-Wextra", "-o", str(hook_so), _HOOK_C, "-ldl"],
+        check=True,
+        capture_output=True,
+        text=True,
     )
     return hook_so
 
@@ -51,8 +53,7 @@ def _run_chdir_opener(tmp_path, hook_so, script):
     env["BST_TRACE_ELEMENT"] = "probe.bst"
     script_path = tmp_path / "opener.py"
     script_path.write_text(script)
-    subprocess.run(["python3", str(script_path)], env=env, check=True,
-                    capture_output=True, text=True)
+    subprocess.run(["python3", str(script_path)], env=env, check=True, capture_output=True, text=True)
     return trace_log.read_text(errors="replace")
 
 
@@ -64,18 +65,21 @@ def test_a_relative_open_is_recorded_absolute_with_relative_1(tmp_path):
     build_dir = tmp_path / "build"
     build_dir.mkdir()
 
-    text = _run_chdir_opener(tmp_path, _build_hook(tmp_path), textwrap.dedent(f"""
+    text = _run_chdir_opener(
+        tmp_path,
+        _build_hook(tmp_path),
+        textwrap.dedent(f"""
         import os
         os.chdir({str(build_dir)!r})
         open("../include/foo.h").close()
-    """))
+    """),
+    )
 
     parsed = parse_open_records(text)["probe.bst"]
     # `getcwd()` (what the hook joins against) is kernel-canonical, so
     # the expectation is built the same way - `realpath` the cwd, then
     # collapse `..` purely lexically, matching the hook's own join.
-    expected = os.path.normpath(
-        os.path.join(os.path.realpath(str(build_dir)), "../include/foo.h"))
+    expected = os.path.normpath(os.path.join(os.path.realpath(str(build_dir)), "../include/foo.h"))
     assert expected in parsed["paths"]
     assert parsed["relative"] == 1
 
@@ -94,19 +98,21 @@ def test_a_second_chdir_joins_against_the_new_cwd(tmp_path):
     (tmp_path / "b" / "build").mkdir()
     (tmp_path / "b" / "include" / "bar.h").write_text("// bar\n")
 
-    text = _run_chdir_opener(tmp_path, _build_hook(tmp_path), textwrap.dedent(f"""
+    text = _run_chdir_opener(
+        tmp_path,
+        _build_hook(tmp_path),
+        textwrap.dedent(f"""
         import os
         os.chdir({str(tmp_path / "a" / "build")!r})
         open("../include/foo.h").close()
         os.chdir({str(tmp_path / "b" / "build")!r})
         open("../include/bar.h").close()
-    """))
+    """),
+    )
 
     parsed = parse_open_records(text)["probe.bst"]
-    expected_foo = os.path.normpath(os.path.join(
-        os.path.realpath(str(tmp_path / "a" / "build")), "../include/foo.h"))
-    expected_bar = os.path.normpath(os.path.join(
-        os.path.realpath(str(tmp_path / "b" / "build")), "../include/bar.h"))
+    expected_foo = os.path.normpath(os.path.join(os.path.realpath(str(tmp_path / "a" / "build")), "../include/foo.h"))
+    expected_bar = os.path.normpath(os.path.join(os.path.realpath(str(tmp_path / "b" / "build")), "../include/bar.h"))
     assert expected_foo in parsed["paths"]
     assert expected_bar in parsed["paths"]
     assert parsed["relative"] == 2
@@ -121,7 +127,10 @@ def test_fchdir_also_joins_against_the_new_cwd(tmp_path):
     (tmp_path / "b" / "build").mkdir()
     (tmp_path / "b" / "include" / "bar.h").write_text("// bar\n")
 
-    text = _run_chdir_opener(tmp_path, _build_hook(tmp_path), textwrap.dedent(f"""
+    text = _run_chdir_opener(
+        tmp_path,
+        _build_hook(tmp_path),
+        textwrap.dedent(f"""
         import os
         os.chdir({str(tmp_path / "a" / "build")!r})
         open("../include/foo.h").close()
@@ -129,13 +138,12 @@ def test_fchdir_also_joins_against_the_new_cwd(tmp_path):
         os.fchdir(fd)
         os.close(fd)
         open("../include/bar.h").close()
-    """))
+    """),
+    )
 
     parsed = parse_open_records(text)["probe.bst"]
-    expected_foo = os.path.normpath(os.path.join(
-        os.path.realpath(str(tmp_path / "a" / "build")), "../include/foo.h"))
-    expected_bar = os.path.normpath(os.path.join(
-        os.path.realpath(str(tmp_path / "b" / "build")), "../include/bar.h"))
+    expected_foo = os.path.normpath(os.path.join(os.path.realpath(str(tmp_path / "a" / "build")), "../include/foo.h"))
+    expected_bar = os.path.normpath(os.path.join(os.path.realpath(str(tmp_path / "b" / "build")), "../include/bar.h"))
     assert expected_foo in parsed["paths"]
     assert expected_bar in parsed["paths"]
     assert parsed["relative"] == 2
@@ -153,13 +161,17 @@ def test_openat_on_a_real_dirfd_is_counted_not_joined(tmp_path):
     build_dir = tmp_path / "build"
     build_dir.mkdir()  # no foo.h here - a wrong join would still record it
 
-    text = _run_chdir_opener(tmp_path, _build_hook(tmp_path), textwrap.dedent(f"""
+    text = _run_chdir_opener(
+        tmp_path,
+        _build_hook(tmp_path),
+        textwrap.dedent(f"""
         import os
         os.chdir({str(build_dir)!r})
         fd = os.open({str(elsewhere)!r}, os.O_RDONLY)
         os.open("foo.h", os.O_RDONLY, dir_fd=fd)
         os.close(fd)
-    """))
+    """),
+    )
 
     parsed = parse_open_records(text)["probe.bst"]
     wrong_join = os.path.join(os.path.realpath(str(build_dir)), "foo.h")
@@ -179,7 +191,10 @@ def test_a_deleted_cwd_is_dropped_not_crashed(tmp_path):
     doomed = tmp_path / "doomed"
     doomed.mkdir()
 
-    text = _run_chdir_opener(tmp_path, _build_hook(tmp_path), textwrap.dedent(f"""
+    text = _run_chdir_opener(
+        tmp_path,
+        _build_hook(tmp_path),
+        textwrap.dedent(f"""
         import os
         os.chdir({str(doomed)!r})
         os.rmdir({str(doomed)!r})
@@ -187,7 +202,8 @@ def test_a_deleted_cwd_is_dropped_not_crashed(tmp_path):
             open("foo.h").close()
         except OSError:
             pass
-    """))
+    """),
+    )
 
     parsed = parse_open_records(text)["probe.bst"]
     assert parsed["dropped"] == 1

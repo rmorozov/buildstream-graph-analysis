@@ -8,6 +8,7 @@ inequality itself, on `tests/fixtures/host_cpu` - a real capture of
 `examples/06-macro-micro-optimization` - rather than the formula's
 shape.
 """
+
 import pathlib
 import sys
 
@@ -27,8 +28,10 @@ def _real_inputs():
     analyzer = BuildEfficiencyAnalyzer()
     analyzer.analyze(FIXTURE / "run")
     host_samples = analyzer.read_host_samples()
-    tasks = [{"element": t.task_key.element_uid, "start_us": t.start_us,
-              "finish_us": t.finish_us} for t in analyzer.normalized_tasks]
+    tasks = [
+        {"element": t.task_key.element_uid, "start_us": t.start_us, "finish_us": t.finish_us}
+        for t in analyzer.normalized_tasks
+    ]
     max_jobs = {e.uid: e.max_jobs for e in analyzer.graph.elements}
     return host_samples, tasks, max_jobs
 
@@ -76,13 +79,12 @@ class TestTheRealFixture:
         building then must not exceed the host's real core count."""
         host_samples, tasks, max_jobs = _real_inputs()
         advice = compute_max_jobs_advice(host_samples, tasks, max_jobs)
-        recommended = {r["element"]: r["recommended_max_jobs"]
-                       for r in advice["elements"]}
+        recommended = {r["element"]: r["recommended_max_jobs"] for r in advice["elements"]}
         windows = intervals(wall_samples(host_samples))
         for window in windows:
-            building = {t["element"] for t in tasks
-                        if t["start_us"] < window["end_us"]
-                        and t["finish_us"] > window["start_us"]}
+            building = {
+                t["element"] for t in tasks if t["start_us"] < window["end_us"] and t["finish_us"] > window["start_us"]
+            }
             total = sum(recommended.get(uid) or 0 for uid in building)
             assert total <= advice["host_cores"], (window, building, total)
 
@@ -96,8 +98,7 @@ class TestTheSplitThatFits:
             # `wall_at_start`/`monotonic_at_start` both 0, so `at_us`
             # below is `t` in microseconds - the same clock the tasks'
             # `start_us`/`finish_us` are stated in.
-            "header": {"schema": "host-samples/v1", "wall_at_start": 0.0,
-                       "monotonic_at_start": 0.0},
+            "header": {"schema": "host-samples/v1", "wall_at_start": 0.0, "monotonic_at_start": 0.0},
             "samples": [
                 {"t": 0.0, "cores": 4, "cpu_busy_cores": 3.9},
                 {"t": 2.0, "cores": 4, "cpu_busy_cores": 3.9},
@@ -113,8 +114,7 @@ class TestTheSplitThatFits:
         by_uid = {r["element"]: r for r in advice["elements"]}
         assert by_uid["a.bst"]["recommended_max_jobs"] == 2
         assert by_uid["b.bst"]["recommended_max_jobs"] == 2
-        assert (by_uid["a.bst"]["recommended_max_jobs"]
-                + by_uid["b.bst"]["recommended_max_jobs"]) <= 4
+        assert (by_uid["a.bst"]["recommended_max_jobs"] + by_uid["b.bst"]["recommended_max_jobs"]) <= 4
 
 
 class TestTheMemoryConstraint:
@@ -128,21 +128,16 @@ class TestTheMemoryConstraint:
     def test_an_overcommitting_overlap_is_a_refusal(self):
         host_samples, tasks, max_jobs = _real_inputs()
         peak_rss_bytes = {"core.bst": 3_000_000_000, "lib-a.bst": 2_000_000_000}
-        advice = compute_max_jobs_advice(
-            host_samples, tasks, max_jobs,
-            memory=(peak_rss_bytes, 4_000_000_000))
+        advice = compute_max_jobs_advice(host_samples, tasks, max_jobs, memory=(peak_rss_bytes, 4_000_000_000))
         by_uid = {r["element"]: r for r in advice["elements"]}
         for uid in ("core.bst", "lib-a.bst"):
             assert by_uid[uid]["recommended_max_jobs"] is None
-            assert by_uid[uid]["refusal"] and "memory" in by_uid[uid]["refusal"] \
-                or "bytes" in by_uid[uid]["refusal"]
+            assert by_uid[uid]["refusal"] and "memory" in by_uid[uid]["refusal"] or "bytes" in by_uid[uid]["refusal"]
 
     def test_room_in_memory_leaves_the_cpu_number_alone(self):
         host_samples, tasks, max_jobs = _real_inputs()
         peak_rss_bytes = {"core.bst": 1_000_000, "lib-a.bst": 1_000_000}
-        advice = compute_max_jobs_advice(
-            host_samples, tasks, max_jobs,
-            memory=(peak_rss_bytes, 4_000_000_000))
+        advice = compute_max_jobs_advice(host_samples, tasks, max_jobs, memory=(peak_rss_bytes, 4_000_000_000))
         row = next(r for r in advice["elements"] if r["element"] == "core.bst")
         assert row["recommended_max_jobs"] == 2
         assert row["refusal"] is None
@@ -169,8 +164,7 @@ class TestOneRowPerBuiltElement:
     task; the advice must judge it once, on the BUILD span, not twice."""
 
     _HOST_SAMPLES = {
-        "header": {"schema": "host-samples/v1", "wall_at_start": 0.0,
-                   "monotonic_at_start": 0.0},
+        "header": {"schema": "host-samples/v1", "wall_at_start": 0.0, "monotonic_at_start": 0.0},
         "samples": [
             {"t": 0.0, "cores": 4, "cpu_busy_cores": 3.9},
             {"t": 2.0, "cores": 4, "cpu_busy_cores": 3.9},
@@ -182,16 +176,22 @@ class TestOneRowPerBuiltElement:
         graph = Graph(elements=[Element(uid="a.bst", max_jobs=4)])
         tasks = [
             NormalizedTask(
-                task_key=TaskKey(element_uid="a.bst", task_kind=TaskKind.FETCH,
-                                  phase="fetch"),
-                ready_us=0, start_us=0, finish_us=1_000_000, dependencies=[],
-                resources=[], primary_resource=None,
+                task_key=TaskKey(element_uid="a.bst", task_kind=TaskKind.FETCH, phase="fetch"),
+                ready_us=0,
+                start_us=0,
+                finish_us=1_000_000,
+                dependencies=[],
+                resources=[],
+                primary_resource=None,
             ),
             NormalizedTask(
-                task_key=TaskKey(element_uid="a.bst", task_kind=TaskKind.BUILD,
-                                  phase="build"),
-                ready_us=0, start_us=1_000_000, finish_us=5_000_000,
-                dependencies=[], resources=[], primary_resource=None,
+                task_key=TaskKey(element_uid="a.bst", task_kind=TaskKind.BUILD, phase="build"),
+                ready_us=0,
+                start_us=1_000_000,
+                finish_us=5_000_000,
+                dependencies=[],
+                resources=[],
+                primary_resource=None,
             ),
         ]
         return _FakeAnalyzer(self._HOST_SAMPLES, graph, tasks)
@@ -208,7 +208,6 @@ class TestWhatItRefusesToSay:
     def test_a_series_with_no_core_count_means_no_block(self):
         host_samples = {
             "header": {"wall_at_start": 1000.0, "monotonic_at_start": 0.0},
-            "samples": [{"t": 0.0, "cpu_busy_cores": 1.0},
-                        {"t": 2.0, "cpu_busy_cores": 1.0}],
+            "samples": [{"t": 0.0, "cpu_busy_cores": 1.0}, {"t": 2.0, "cpu_busy_cores": 1.0}],
         }
         assert compute_max_jobs_advice(host_samples, [], {}) == {}

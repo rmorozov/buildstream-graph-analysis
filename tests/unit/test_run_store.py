@@ -9,6 +9,7 @@ and a name with no answer must fail as itself rather than as a missing
 path. "You have only ever taken one snapshot here" and "that directory
 is not there" are different sentences with different fixes.
 """
+
 import json
 import os
 
@@ -74,17 +75,25 @@ class TestTheAliasGrammar:
     def test_these_are_aliases(self, token):
         assert is_alias(token)
 
-    @pytest.mark.parametrize("token", [
-        "@", "@x", "/tmp/run", "run", "", "@last/run", "./@last",
-    ])
+    @pytest.mark.parametrize(
+        "token",
+        [
+            "@",
+            "@x",
+            "/tmp/run",
+            "run",
+            "",
+            "@last/run",
+            "./@last",
+        ],
+    )
     def test_these_are_not(self, token):
         """A bare `@`, and anything that is a path, stay paths. A
         directory genuinely named `@last/run` must still be reachable -
         the store is a convenience, not a namespace grab."""
         assert not is_alias(token)
 
-    def test_a_non_alias_is_returned_untouched_without_looking_for_a_project(
-            self, tmp_path, monkeypatch):
+    def test_a_non_alias_is_returned_untouched_without_looking_for_a_project(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
 
         assert resolve("/some/explicit/run") == "/some/explicit/run"
@@ -97,7 +106,7 @@ class TestWhatAnAliasResolvesTo:
         meaning - `cp -r` rewrites every mtime."""
         old = _snapshot(project, "20260101T000000Z")
         new = _snapshot(project, "20260819T120000Z")
-        os.utime(old, (10 ** 9, 10 ** 9))  # newest mtime, oldest stamp
+        os.utime(old, (10**9, 10**9))  # newest mtime, oldest stamp
 
         assert resolve("@last", str(project)) == os.path.join(new, "run")
         assert resolve("@prev", str(project)) == os.path.join(old, "run")
@@ -128,8 +137,7 @@ class TestWhatAnAliasResolvesTo:
 
 
 class TestTheFailuresAreDifferentSentences:
-    def test_outside_a_project_the_error_names_the_project_not_the_path(
-            self, tmp_path):
+    def test_outside_a_project_the_error_names_the_project_not_the_path(self, tmp_path):
         with pytest.raises(StoreError) as exc:
             resolve("@last", str(tmp_path))
 
@@ -179,6 +187,7 @@ class TestAnIncompleteCaptureIsNotPrev:
 class TestCreatingOne:
     def test_two_snapshots_in_one_second_do_not_collide(self, project):
         from datetime import datetime, timezone
+
         now = datetime(2026, 8, 19, 12, 0, 0, tzinfo=timezone.utc)
 
         first = new_snapshot_dir(str(project), now)
@@ -212,8 +221,7 @@ class TestStickyFlags:
     def test_a_project_with_no_config_reads_as_empty_not_as_an_error(self, project):
         assert read_config(str(project)) == {}
 
-    def test_a_corrupt_config_reads_as_empty_rather_than_killing_the_build(
-            self, project):
+    def test_a_corrupt_config_reads_as_empty_rather_than_killing_the_build(self, project):
         """The config is a convenience. Losing it must cost the defaults,
         not the capture the user is waiting on."""
         os.makedirs(project / STORE_DIRNAME, exist_ok=True)
@@ -248,16 +256,18 @@ class TestAliasesReachEveryCommandThatTakesARun:
     not half-work silently."""
 
     def _snapshot_pair(self, project, with_plane2=False):
-        return (_snapshot(project, "20260101T000000Z", with_plane2=with_plane2),
-                _snapshot(project, "20260102T000000Z", with_plane2=with_plane2))
+        return (
+            _snapshot(project, "20260101T000000Z", with_plane2=with_plane2),
+            _snapshot(project, "20260102T000000Z", with_plane2=with_plane2),
+        )
 
     def test_analyze_resolves_last(self, project, monkeypatch):
         _old, new = self._snapshot_pair(project)
         monkeypatch.chdir(project)
         seen = {}
         import bga.cli as cli
-        monkeypatch.setattr(cli, "cmd_analyze",
-                            lambda args: seen.setdefault("dir", args.directory) and 0)
+
+        monkeypatch.setattr(cli, "cmd_analyze", lambda args: seen.setdefault("dir", args.directory) and 0)
 
         cli.main(["analyze", "@last"])
 
@@ -268,8 +278,8 @@ class TestAliasesReachEveryCommandThatTakesARun:
         monkeypatch.chdir(project)
         seen = {}
         import bga.cli as cli
-        monkeypatch.setattr(cli, "cmd_compare",
-                            lambda args: seen.update(b=args.baseline, c=args.candidate))
+
+        monkeypatch.setattr(cli, "cmd_compare", lambda args: seen.update(b=args.baseline, c=args.candidate))
 
         cli.main(["compare", "@prev", "@last"])
 
@@ -280,8 +290,8 @@ class TestAliasesReachEveryCommandThatTakesARun:
         monkeypatch.chdir(project)
         seen = {}
         import bga.cli as cli
-        monkeypatch.setattr(cli, "cmd_cache_trend",
-                            lambda args: seen.setdefault("runs", args.run_dirs) and 0)
+
+        monkeypatch.setattr(cli, "cmd_cache_trend", lambda args: seen.setdefault("runs", args.run_dirs) and 0)
 
         cli.main(["cache-trend", "@prev", "@last"])
 
@@ -292,22 +302,21 @@ class TestAliasesReachEveryCommandThatTakesARun:
         monkeypatch.chdir(project)
         seen = {}
         import bga.cli as cli
-        monkeypatch.setattr(cli, "cmd_analyze",
-                            lambda args: seen.setdefault("dir", args.directory) and 0)
+
+        monkeypatch.setattr(cli, "cmd_analyze", lambda args: seen.setdefault("dir", args.directory) and 0)
 
         cli.main(["analyze", "/somewhere/else"])
 
         assert seen["dir"] == "/somewhere/else"
 
-    def test_a_name_with_no_answer_exits_2_before_any_analysis_runs(
-            self, tmp_path, monkeypatch, capsys):
+    def test_a_name_with_no_answer_exits_2_before_any_analysis_runs(self, tmp_path, monkeypatch, capsys):
         """Exit 2, the code the rest of the CLI uses for "the input to
         this invocation is wrong" - and the analyzer is never reached,
         so the message is the store's rather than a stack trace."""
         monkeypatch.chdir(tmp_path)
         import bga.cli as cli
-        monkeypatch.setattr(cli, "cmd_analyze",
-                            lambda args: pytest.fail("analysis ran anyway"))
+
+        monkeypatch.setattr(cli, "cmd_analyze", lambda args: pytest.fail("analysis ran anyway"))
 
         assert cli.main(["analyze", "@last"]) == 2
 
@@ -321,33 +330,30 @@ class TestAliasesReachEveryCommandThatTakesARun:
         monkeypatch.chdir(project)
         seen = {}
         import bga.cli as cli
-        monkeypatch.setattr(cli, "cmd_analyze",
-                            lambda args: seen.setdefault("plane2", args.plane2) and 0)
-        monkeypatch.setattr(cli, "cmd_compare",
-                            lambda args: seen.update(b=args.baseline_plane2,
-                                                     c=args.candidate_plane2))
-        monkeypatch.setattr(cli, "cmd_correlate",
-                            lambda args: seen.setdefault("report", args.native_report))
+
+        monkeypatch.setattr(cli, "cmd_analyze", lambda args: seen.setdefault("plane2", args.plane2) and 0)
+        monkeypatch.setattr(
+            cli, "cmd_compare", lambda args: seen.update(b=args.baseline_plane2, c=args.candidate_plane2)
+        )
+        monkeypatch.setattr(cli, "cmd_correlate", lambda args: seen.setdefault("report", args.native_report))
 
         cli.main(["analyze", "@last", "--plane2", "@last"])
-        cli.main(["compare", "@prev", "@last",
-                  "--baseline-plane2", "@prev", "--candidate-plane2", "@last"])
+        cli.main(["compare", "@prev", "@last", "--baseline-plane2", "@prev", "--candidate-plane2", "@last"])
         cli.main(["correlate", "@last", "@prev"])
 
         assert seen["plane2"] == os.path.join(new, PLANE2_NAME)
         assert seen["b"] == os.path.join(old, PLANE2_NAME)
         assert seen["c"] == os.path.join(new, PLANE2_NAME)
         assert seen["report"] == os.path.join(old, PLANE2_NAME), (
-            "a report named from one snapshot and a run from another is a "
-            "legitimate thing to ask for")
+            "a report named from one snapshot and a run from another is a legitimate thing to ask for"
+        )
 
-    def test_a_report_alias_with_no_report_stops_before_any_analysis(
-            self, project, monkeypatch, capsys):
+    def test_a_report_alias_with_no_report_stops_before_any_analysis(self, project, monkeypatch, capsys):
         self._snapshot_pair(project)
         monkeypatch.chdir(project)
         import bga.cli as cli
-        monkeypatch.setattr(cli, "cmd_analyze",
-                            lambda args: pytest.fail("analysis ran anyway"))
+
+        monkeypatch.setattr(cli, "cmd_analyze", lambda args: pytest.fail("analysis ran anyway"))
 
         assert cli.main(["analyze", "@last", "--plane2", "@last"]) == 2
 
@@ -361,11 +367,10 @@ class TestAliasesReachEveryCommandThatTakesARun:
         monkeypatch.chdir(project)
         seen = {}
         import bga.cli as cli
-        monkeypatch.setattr(cli, "cmd_compare",
-                            lambda args: seen.setdefault("set", args.baseline_run))
 
-        cli.main(["compare", "@prev", "@last", "--baseline-run", "@prev",
-                  "--baseline-run", "@last"])
+        monkeypatch.setattr(cli, "cmd_compare", lambda args: seen.setdefault("set", args.baseline_run))
+
+        cli.main(["compare", "@prev", "@last", "--baseline-run", "@prev", "--baseline-run", "@last"])
 
         assert seen["set"] == [os.path.join(old, "run"), os.path.join(new, "run")]
 
@@ -384,8 +389,7 @@ class TestTheSameAliasNamesBothHalvesOfACapture:
 
         assert resolve_snapshot("@last", str(project)) == newest
         assert resolve("@last", str(project)) == os.path.join(newest, "run")
-        assert resolve_plane2("@last", str(project)) == os.path.join(
-            newest, PLANE2_NAME)
+        assert resolve_plane2("@last", str(project)) == os.path.join(newest, PLANE2_NAME)
 
     def test_a_non_alias_is_returned_untouched(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
@@ -393,7 +397,7 @@ class TestTheSameAliasNamesBothHalvesOfACapture:
         assert resolve_plane2("/explicit/plane2.json") == "/explicit/plane2.json"
 
     def test_a_snapshot_without_a_report_fails_by_name(self, project):
-        """"That capture recorded Plane 1 and not Plane 2" and "no such
+        """ "That capture recorded Plane 1 and not Plane 2" and "no such
         file" are different problems. Only the first has a remedy the
         user can act on without going and looking."""
         _snapshot(project, "20260101T000000Z", with_plane2=True)
@@ -421,14 +425,12 @@ class TestTheReportBesideARunDirectory:
     def test_a_snapshot_run_finds_its_own_report(self, project):
         snapshot = _snapshot(project, "20260101T000000Z", with_plane2=True)
 
-        assert sibling_plane2(os.path.join(snapshot, "run")) == os.path.join(
-            snapshot, PLANE2_NAME)
+        assert sibling_plane2(os.path.join(snapshot, "run")) == os.path.join(snapshot, PLANE2_NAME)
 
     def test_a_trailing_slash_does_not_change_the_answer(self, project):
         snapshot = _snapshot(project, "20260101T000000Z", with_plane2=True)
 
-        assert sibling_plane2(os.path.join(snapshot, "run") + os.sep) == (
-            os.path.join(snapshot, PLANE2_NAME))
+        assert sibling_plane2(os.path.join(snapshot, "run") + os.sep) == (os.path.join(snapshot, PLANE2_NAME))
 
     def test_a_run_directory_with_no_report_beside_it_has_none(self, project):
         snapshot = _snapshot(project, "20260101T000000Z")

@@ -9,6 +9,7 @@ on this machine, in the same run - the 60% bound is the audit's own
 ratio (261 / 552 MB, `docs/audits/perf-snapshot-view-2026-09-28.md`),
 not a number carried over from a different container.
 """
+
 import random
 import subprocess
 import sys
@@ -46,18 +47,20 @@ def _write_scaled_log(path):
             element = f"e{e}.bst"
             for k in range(PROCESSES_PER_ELEMENT - 1):
                 pid += 1
-                paths = (rnd.sample(sysroot, PATHS_PER_PROCESS - 2)
-                         + [f"/buildstream/elem{e}/u{k}.c",
-                            f"/buildstream/elem{e}/u{k}.o"])
-                out.write(f"OPENS pid={pid} element={element} "
-                          f"unique={len(paths)} dropped=0\n")
+                paths = rnd.sample(sysroot, PATHS_PER_PROCESS - 2) + [
+                    f"/buildstream/elem{e}/u{k}.c",
+                    f"/buildstream/elem{e}/u{k}.o",
+                ]
+                out.write(f"OPENS pid={pid} element={element} unique={len(paths)} dropped=0\n")
                 out.write("\n".join(paths) + "\n")
 
 
 def _measure(log_path, repo_root, mode):
     out = subprocess.run(
         [sys.executable, "-c", _MEASURE, str(log_path), mode, str(repo_root)],
-        check=True, capture_output=True, text=True,
+        check=True,
+        capture_output=True,
+        text=True,
     ).stdout.strip()
     rss_kb, total, elements = out.split("|")
     return int(rss_kb), int(total), elements
@@ -68,15 +71,13 @@ def test_the_opens_pass_peaks_under_60_percent_of_the_uninterned_rss(tmp_path):
     _write_scaled_log(log_path)
     repo_root = str(__file__).rsplit("/tests/", 1)[0]
 
-    interned_rss, interned_total, interned_elements = _measure(
-        log_path, repo_root, "intern")
-    baseline_rss, baseline_total, baseline_elements = _measure(
-        log_path, repo_root, "no-intern")
+    interned_rss, interned_total, interned_elements = _measure(log_path, repo_root, "intern")
+    baseline_rss, baseline_total, baseline_elements = _measure(log_path, repo_root, "no-intern")
 
     # The report itself must be byte-identical either way.
     assert interned_total == baseline_total
     assert interned_elements == baseline_elements
 
     assert interned_rss < 0.6 * baseline_rss, (
-        f"interned peak {interned_rss} KB is not under 60% of "
-        f"uninterned peak {baseline_rss} KB")
+        f"interned peak {interned_rss} KB is not under 60% of uninterned peak {baseline_rss} KB"
+    )

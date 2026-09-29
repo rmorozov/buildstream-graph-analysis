@@ -30,6 +30,7 @@ library would be a dependency, a rendering mode to configure, and a
 second thing that writes to the terminal; one `\\r` line is the whole
 requirement.
 """
+
 import os
 import sys
 import time
@@ -227,8 +228,7 @@ def set_on_row(on_row) -> None:
 
 def ledger() -> dict:
     """A copy of the ledger: `build_wall_us` and one row per phase."""
-    return {"build_wall_us": _LEDGER["build_wall_us"],
-            "phases": [dict(row) for row in _LEDGER["phases"]]}
+    return {"build_wall_us": _LEDGER["build_wall_us"], "phases": [dict(row) for row in _LEDGER["phases"]]}
 
 
 def tail_us(phases) -> int:
@@ -236,8 +236,7 @@ def tail_us(phases) -> int:
     stored (UX-996). `stage: "before"` phases (the readiness check
     ahead of the build) are timed but excluded: they are not part of
     "bga's own time after the build" (review, pull request 300)."""
-    return sum(row.get("wall_us") or 0 for row in phases or ()
-               if row.get("stage") != "before")
+    return sum(row.get("wall_us") or 0 for row in phases or () if row.get("stage") != "before")
 
 
 def _reset_peak_rss() -> bool:
@@ -267,8 +266,7 @@ def _say(text: str, stream) -> None:
 
 
 @contextmanager
-def timed(name: str, say: Optional[str] = None, stream=None,
-          before_build: bool = False):
+def timed(name: str, say: Optional[str] = None, stream=None, before_build: bool = False):
     """One phase: announced, timed, and recorded - also when it raises.
 
     A TTY (or `BGA_FORCE_PROGRESS`) gets the announcement and an elapsed
@@ -294,11 +292,15 @@ def timed(name: str, say: Optional[str] = None, stream=None,
         # doctor's `bst --version` ahead of the first snapshot phase.
         calls = list(_CURRENT_CALLS)
         _CURRENT_CALLS.clear()
-        _LEDGER["phases"].append({
-            "name": name, "wall_us": wall,
-            "peak_rss_bytes": _peak_rss_bytes() if measured else None,
-            "calls": calls,
-            "stage": "before" if before_build else "after"})
+        _LEDGER["phases"].append(
+            {
+                "name": name,
+                "wall_us": wall,
+                "peak_rss_bytes": _peak_rss_bytes() if measured else None,
+                "calls": calls,
+                "stage": "before" if before_build else "after",
+            }
+        )
         if loud:
             _say(f"  {name}: {wall / 1e6:.1f}s", stream)
         if _ON_ROW is not None:

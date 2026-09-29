@@ -7,6 +7,7 @@ enrichment happens where the decisions file is copied out. These drive
 that function directly against a cache written the way a real sandbox
 writes one.
 """
+
 import json
 import os
 
@@ -15,8 +16,7 @@ from tools.native_trace.bwrap_shim import _make_probe_cache_path
 
 
 def _decision(element, policy="cmake_meson", kind="cmake"):
-    return {"element": element, "max_jobs": 4, "decision": "joined",
-            "kind": kind, "policy": policy}
+    return {"element": element, "max_jobs": 4, "decision": "joined", "kind": kind, "policy": policy}
 
 
 #: What `probe_make` really caches - `make --version`'s whole stdout,
@@ -27,7 +27,8 @@ REAL_PROBE = (
     "Copyright (C) 1988-2023 Free Software Foundation, Inc.\n"
     "License GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>\n"
     "This is free software: you are free to change and redistribute it.\n"
-    "There is NO WARRANTY, to the extent permitted by law.")
+    "There is NO WARRANTY, to the extent permitted by law."
+)
 
 
 def _capture(tmp_path, rows, probes):
@@ -70,11 +71,12 @@ class TestTheStyleIsReadableFromTheReport:
     def test_two_elements_on_two_makes_are_distinguishable(self, tmp_path):
         """The whole point of the row: one capture, both branches."""
         rows = _capture(
-            tmp_path, [_decision("new.bst"), _decision("old.bst")],
-            {"new.bst": "GNU Make 4.4.1", "old.bst": "GNU Make 4.2.1"})
+            tmp_path,
+            [_decision("new.bst"), _decision("old.bst")],
+            {"new.bst": "GNU Make 4.4.1", "old.bst": "GNU Make 4.2.1"},
+        )
 
-        assert {row["element"]: row["auth_style"] for row in rows} == {
-            "new.bst": "fifo", "old.bst": "fd"}
+        assert {row["element"]: row["auth_style"] for row in rows} == {"new.bst": "fifo", "old.bst": "fd"}
 
     def test_an_unprobed_element_is_written_through_unchanged(self, tmp_path):
         """`None` would say "probed, and the make was absent", which is
@@ -89,9 +91,7 @@ class TestTheStyleIsReadableFromTheReport:
         assert "sandbox_make" not in rows[0]
 
     def test_the_rows_keep_their_order_and_count(self, tmp_path):
-        rows = _capture(
-            tmp_path, [_decision(f"e{i}.bst") for i in range(4)],
-            {"e1.bst": "GNU Make 4.4.1"})
+        rows = _capture(tmp_path, [_decision(f"e{i}.bst") for i in range(4)], {"e1.bst": "GNU Make 4.4.1"})
 
         assert [row["element"] for row in rows] == [f"e{i}.bst" for i in range(4)]
 

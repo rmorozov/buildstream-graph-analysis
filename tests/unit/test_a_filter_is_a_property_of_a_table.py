@@ -35,6 +35,7 @@ filter had hidden. Measured on the same run before the fix - filter to
 12 rows, choose `Top 10`, and the table shows ten rows drawn from all
 1,202 while the filter box still says `mod023`.
 """
+
 import pathlib
 import sys
 
@@ -49,8 +50,12 @@ from tests.browser import NO_BROWSER, Browser, find_chrome
 #: `UX-349`'s gate, read off the source so the survey below asks the
 #: page about the rule the page actually has.
 GATE = int(
-    (REPO / "bga/viewer/structured.js").read_text(encoding="utf-8")
-    .split("TABLE_OPENS_BOUNDED_ABOVE = ", 1)[1].split(";", 1)[0].strip())
+    (REPO / "bga/viewer/structured.js")
+    .read_text(encoding="utf-8")
+    .split("TABLE_OPENS_BOUNDED_ABOVE = ", 1)[1]
+    .split(";", 1)[0]
+    .strip()
+)
 
 #: And the number `UX-349` measured, written down.
 #:
@@ -170,8 +175,7 @@ def at_scale(tmp_path_factory):
 @pytest.fixture(scope="module")
 def survey(at_scale):
     with Browser(find_chrome()) as browser:
-        return browser.measure(
-            at_scale, _SURVEY.replace("GATE", str(GATE)), 1440, 900)
+        return browser.measure(at_scale, _SURVEY.replace("GATE", str(GATE)), 1440, 900)
 
 
 @pytest.fixture(scope="module")
@@ -195,10 +199,12 @@ class TestTheFilterIsAPropertyOfEveryTable:
         assert without == [], (
             f"{len(without)} table(s) over {GATE} rows with no filter: "
             f"{without}. A filter belongs to the table renderer, so a "
-            f"section cannot have one and its neighbour not")
+            f"section cannot have one and its neighbour not"
+        )
         assert len(survey["big"]) >= 2, (
             f"the scale run stopped producing tables over {GATE} rows, so "
-            f"this file is asserting nothing: {survey['big']}")
+            f"this file is asserting nothing: {survey['big']}"
+        )
 
     def test_the_gate_is_where_it_was_measured(self):
         """`UX-349` set it by measuring, and it is a bound, not a knob.
@@ -213,7 +219,8 @@ class TestTheFilterIsAPropertyOfEveryTable:
         assert GATE == GATE_AS_MEASURED, (
             f"the filter gate moved to {GATE}; say what was measured "
             f"before changing it, because every table on every page "
-            f"gains or loses its tools with this number")
+            f"gains or loses its tools with this number"
+        )
 
     def test_no_table_under_the_gate_carries_one(self, survey):
         """The other direction, and it is `UX-349`'s measurement.
@@ -242,8 +249,7 @@ class TestTheTwoControlsCompose:
         assert composed["total"] == 1202, composed["total"]
         assert composed["opened"] == 25, composed["opened"]
         assert 0 < composed["filtered"] < composed["total"], composed
-        assert composed["badgeFiltered"] == (
-            f"{composed['filtered']} of 1,202"), composed
+        assert composed["badgeFiltered"] == (f"{composed['filtered']} of 1,202"), composed
 
     def test_a_preset_narrows_what_the_filter_left(self, composed):
         """The defect: a second pass over every row.
@@ -257,13 +263,12 @@ class TestTheTwoControlsCompose:
         assert composed["everyShownStillMatches"], (
             "the preset showed rows the filter had hidden - two controls "
             "and one hidden state, which is the pair `UX-392`'s Out of "
-            "Scope insists on keeping *both* of")
+            "Scope insists on keeping *both* of"
+        )
 
-    def test_the_badge_never_describes_a_state_the_table_is_not_in(
-            self, composed):
+    def test_the_badge_never_describes_a_state_the_table_is_not_in(self, composed):
         """One pass, so one place the shown-count comes from."""
-        assert composed["badgeAfterPreset"] == (
-            f"{composed['afterPreset']} of 1,202"), composed
+        assert composed["badgeAfterPreset"] == (f"{composed['afterPreset']} of 1,202"), composed
 
     def test_clearing_the_filter_returns_to_the_preset(self, composed):
         """Composition both ways.
@@ -283,23 +288,20 @@ class TestThePagerAgreesWithTheFilteredPopulation:
     paged left the position naming rows the filter had just hidden.
     """
 
-    def test_paging_replaces_the_preset_it_no_longer_describes(
-            self, paged_filter):
+    def test_paging_replaces_the_preset_it_no_longer_describes(self, paged_filter):
         assert paged_filter["presetSelectedBeforePaging"]
         assert not paged_filter["presetSelectedAfterPaging"], (
             "the preset still reads 'Top 10 by …' after paging took over "
-            "the window - the label no longer describes what is shown")
+            "the window - the label no longer describes what is shown"
+        )
 
-    def test_the_position_matches_what_is_actually_on_the_page(
-            self, paged_filter):
+    def test_the_position_matches_what_is_actually_on_the_page(self, paged_filter):
         assert paged_filter["positionAfterOnePage"].startswith("rows 41-80")
         shown = paged_filter["shownAfterFilter"]
         assert shown == 1, paged_filter
-        assert paged_filter["positionAfterFilter"] == f"rows 1-{shown} of {shown}", (
-            paged_filter)
+        assert paged_filter["positionAfterFilter"] == f"rows 1-{shown} of {shown}", paged_filter
 
-    def test_the_buttons_bound_themselves_to_the_filtered_population(
-            self, paged_filter):
+    def test_the_buttons_bound_themselves_to_the_filtered_population(self, paged_filter):
         assert paged_filter["nextDisabledAfterFilter"]
         assert paged_filter["prevDisabledAfterFilter"]
 

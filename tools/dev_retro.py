@@ -23,6 +23,7 @@ bookkeeping line edited in place (a status change) carries the same
 nothing and commits nothing - the `retro` skill reads this and writes
 the proposal.
 """
+
 import argparse
 import collections
 import datetime
@@ -39,7 +40,8 @@ SCENARIOS = "docs/backlog/scenarios"
 RETRO_DATE = re.compile(r"^retro-(\d{4}-\d{2}-\d{2})\.md$")
 BOOKKEEPING_LINE = re.compile(
     r"^- r\d+ · [^·]+ · (?P<class>[^·]+) · `(?P<path>[^`]+)` · "
-    r"(?P<what>[^·]+) · `[^`]+`\s*$")
+    r"(?P<what>[^·]+) · `[^`]+`\s*$"
+)
 TOKEN = re.compile(r"tools/dev_[\w]+\.py|tests/unit/test_[\w]+\.py|`make ([a-z][\w-]*)`")
 STATUS_GREEN = re.compile(r"\*\*Status:\*\*\s*\U0001f7e2")
 LABELS = ("Route", "Rejected", "Files", "Guard", "Mutation", "Class", "Split", "Question")
@@ -51,8 +53,9 @@ def default_since(repo, today=None):
     """The newest `retro-YYYY-MM-DD.md` date, else 7 days back."""
     today = today or datetime.date.today()
     audits = repo / "docs/audits"
-    dates = sorted(m.group(1) for p in (audits.glob("retro-*.md") if audits.is_dir() else [])
-                   if (m := RETRO_DATE.match(p.name)))
+    dates = sorted(
+        m.group(1) for p in (audits.glob("retro-*.md") if audits.is_dir() else []) if (m := RETRO_DATE.match(p.name))
+    )
     return dates[-1] if dates else (today - datetime.timedelta(days=7)).isoformat()
 
 
@@ -67,12 +70,22 @@ def added_lines(repo, relpath, since):
     if not (repo / relpath).exists():
         return None
     out = dev_records._git(
-        "-C", str(repo), "log", "-p", "--since", since, "--date=short",
-        "--pretty=format:@@retro@@%ad", "--", relpath, check=True).stdout
+        "-C",
+        str(repo),
+        "log",
+        "-p",
+        "--since",
+        since,
+        "--date=short",
+        "--pretty=format:@@retro@@%ad",
+        "--",
+        relpath,
+        check=True,
+    ).stdout
     date, found = None, []
     for line in out.splitlines():
         if line.startswith("@@retro@@"):
-            date = line[len("@@retro@@"):]
+            date = line[len("@@retro@@") :]
         elif line.startswith("+") and not line.startswith("+++"):
             found.append((date, line[1:]))
     return found
@@ -164,8 +177,7 @@ def closed_findings(repo, since):
 
 def report(repo, since):
     ledger_added = added_lines(repo, BOOKKEEPING, since)
-    bookkeeping, weeks = ((None, {}) if ledger_added is None
-                          else bookkeeping_findings(ledger_added))
+    bookkeeping, weeks = (None, {}) if ledger_added is None else bookkeeping_findings(ledger_added)
     ledger, no_command = ledger_findings(repo, since)
     findings = list(bookkeeping or []) + ledger + closed_findings(repo, since)
     counts = collections.Counter(k for k, _t in findings if k)
@@ -193,10 +205,10 @@ def report(repo, since):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
-    parser.add_argument("--since", help="YYYY-MM-DD; default the newest "
-                        "retro document's date, else 7 days back")
-    parser.add_argument("--repo", type=pathlib.Path, default=REPO,
-                        help="repository root (tests point this at a scratch repo)")
+    parser.add_argument("--since", help="YYYY-MM-DD; default the newest retro document's date, else 7 days back")
+    parser.add_argument(
+        "--repo", type=pathlib.Path, default=REPO, help="repository root (tests point this at a scratch repo)"
+    )
     args = parser.parse_args(argv)
     since = args.since or default_since(args.repo)
     print(report(args.repo, since))

@@ -6,6 +6,7 @@ only a name in its `__all__` (never a submodule reached directly), and
 `bga/**` and the package itself may never import it or reach back into
 the tracer/`bga`. The shim is the one exception, named below.
 """
+
 import ast
 import pathlib
 
@@ -23,6 +24,7 @@ SHIM_ALLOWED_NAMES = {"JOBSERVER_PINNED"}
 
 def _all_names() -> set:
     import tools.jobserver as jobserver
+
     return set(jobserver.__all__)
 
 
@@ -52,20 +54,18 @@ def _jobserver_import_sites(path: pathlib.Path):
             is_absolute_pkg = module == "tools.jobserver"
             is_absolute_submodule = module.startswith("tools.jobserver.")
             is_relative_submodule = (
-                node.level > 0 and module in ("pool", "ledger")
-                and path.is_relative_to(JOBSERVER_PKG))
+                node.level > 0 and module in ("pool", "ledger") and path.is_relative_to(JOBSERVER_PKG)
+            )
             if is_absolute_submodule:
                 found.append((node.lineno, "submodule", module))
             elif is_absolute_pkg and not is_relative_submodule:
                 for alias in node.names:
                     if alias.name not in all_names:
-                        found.append(
-                            (node.lineno, "undeclared", f"{module}.{alias.name}"))
+                        found.append((node.lineno, "undeclared", f"{module}.{alias.name}"))
     return found
 
 
 class TestOnlyTheTracerImportsTheJobserver:
-
     def test_no_module_but_the_tracer_imports_it(self):
         offenders = []
         for path in _module_paths():
@@ -75,26 +75,26 @@ class TestOnlyTheTracerImportsTheJobserver:
                 offenders.append(f"{path.relative_to(REPO)}:{lineno} {kind} {detail}")
         assert not offenders, (
             "only tools/bst_native_build_tracer.py may import "
-            "tools.jobserver (UX-901's import boundary):\n  "
-            + "\n  ".join(offenders))
+            "tools.jobserver (UX-901's import boundary):\n  " + "\n  ".join(offenders)
+        )
 
     def test_the_tracer_reaches_no_submodule_and_no_undeclared_name(self):
         offenders = [
             f"{TRACER.relative_to(REPO)}:{lineno} {kind} {detail}"
             for lineno, kind, detail in _jobserver_import_sites(TRACER)
-            if kind != "package"]
+            if kind != "package"
+        ]
         assert not offenders, (
             "the tracer must reach tools.jobserver only through its "
-            "declared __all__, never a submodule directly:\n  "
-            + "\n  ".join(offenders))
+            "declared __all__, never a submodule directly:\n  " + "\n  ".join(offenders)
+        )
 
     def test_bga_never_imports_the_jobserver(self):
         offenders = []
         for path in sorted((REPO / "bga").rglob("*.py")):
             for lineno, kind, detail in _jobserver_import_sites(path):
                 offenders.append(f"{path.relative_to(REPO)}:{lineno} {kind} {detail}")
-        assert not offenders, (
-            "bga/** must never import tools.jobserver:\n  " + "\n  ".join(offenders))
+        assert not offenders, "bga/** must never import tools.jobserver:\n  " + "\n  ".join(offenders)
 
 
 def _package_import_sites(path: pathlib.Path):
@@ -119,7 +119,6 @@ def _package_import_sites(path: pathlib.Path):
 
 
 class TestThePackageReachesNeitherTracerNorBga:
-
     def test_no_jobserver_module_imports_the_tracer_or_bga(self):
         offenders = []
         for path in sorted(JOBSERVER_PKG.glob("*.py")):
@@ -127,7 +126,8 @@ class TestThePackageReachesNeitherTracerNorBga:
                 offenders.append(f"{path.relative_to(REPO)}:{lineno} {detail}")
         assert not offenders, (
             "tools/jobserver/ imports stdlib and the shim only, never the "
-            "tracer or bga (UX-901's Decision):\n  " + "\n  ".join(offenders))
+            "tracer or bga (UX-901's Decision):\n  " + "\n  ".join(offenders)
+        )
 
     def test_the_shim_names_the_package_may_import_are_declared(self):
         """`bwrap_shim` is the one non-stdlib import the package may make
@@ -138,19 +138,19 @@ class TestThePackageReachesNeitherTracerNorBga:
         tree = _ast.parse(pool.read_text(encoding="utf-8"), filename=str(pool))
         shim_names = set()
         for node in _ast.walk(tree):
-            if isinstance(node, _ast.ImportFrom) and node.module and (
-                    node.module.endswith("bwrap_shim")):
+            if isinstance(node, _ast.ImportFrom) and node.module and (node.module.endswith("bwrap_shim")):
                 shim_names.update(alias.name for alias in node.names)
         assert shim_names == SHIM_ALLOWED_NAMES, (
-            f"pool.py imports {shim_names or 'nothing'} from the shim; the "
-            f"declared list is {SHIM_ALLOWED_NAMES}")
+            f"pool.py imports {shim_names or 'nothing'} from the shim; the declared list is {SHIM_ALLOWED_NAMES}"
+        )
 
     def test_the_scan_actually_reads_modules(self):
         """A walk that found no files would pass every clause above."""
         modules = list(JOBSERVER_PKG.glob("*.py"))
         assert len(modules) >= 3, (
             f"only {len(modules)} modules under tools/jobserver/ - the "
-            "package had 3 (__init__, pool, ledger) when this was written")
+            "package had 3 (__init__, pool, ledger) when this was written"
+        )
 
 
 def test_the_tracer_binds_both_readers():
@@ -158,5 +158,6 @@ def test_the_tracer_binds_both_readers():
     pid refresh), so importing the tracer must leave both bound to its own."""
     from tools import bst_native_build_tracer as tracer
     from tools.jobserver import pool
+
     assert pool.cpu_sampler is tracer.read_cpu_sample
     assert pool.pid_to_element_reader is tracer.read_pid_to_element

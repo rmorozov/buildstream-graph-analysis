@@ -97,6 +97,7 @@ def _durations_in_us(record: dict) -> dict:
             out[f"{name[:-2]}_us"] = s_to_us(record[name])
     return out
 
+
 def _other_element_count(redundancy: dict) -> int:
     """How many elements besides this one run the same operation.
 
@@ -394,16 +395,13 @@ def _plane2_view(native_report: dict) -> dict[str, dict]:
     pressure = native_report.get("resource_pressure") or {}
     for element, entry in (pressure.get("per_element") or {}).items():
         record = view.setdefault(element, {})
-        for name in ("read_bytes", "written_bytes", "major_faults",
-                     "involuntary_switches"):
+        for name in ("read_bytes", "written_bytes", "major_faults", "involuntary_switches"):
             if entry.get(name) is not None:
                 record[name] = entry[name]
 
     declared = native_report.get("declared_vs_used") or {}
     for entry in declared.get("unused_candidates") or []:
-        view.setdefault(entry["element"], {}).setdefault(
-            "unused_dependencies", []
-        ).append(entry["dependency"])
+        view.setdefault(entry["element"], {}).setdefault("unused_dependencies", []).append(entry["dependency"])
     # `UX-681`: the share, from the same two lists. An element Plane 2
     # reported as uncovered appears in neither, so it gets no share at
     # all rather than a 1.0 - "every edge was read" and "nobody looked"
@@ -411,23 +409,19 @@ def _plane2_view(native_report: dict) -> dict[str, dict]:
     for name in ("used", "unused_candidates"):
         for entry in declared.get(name) or []:
             record = view.setdefault(entry["element"], {})
-            record["assessed_dependencies"] = (
-                record.get("assessed_dependencies", 0) + 1)
+            record["assessed_dependencies"] = record.get("assessed_dependencies", 0) + 1
     for record in view.values():
         assessed = record.get("assessed_dependencies")
         if assessed:
             unread = len(record.get("unused_dependencies") or ())
-            record["dependency_read_share"] = round(
-                1 - unread / assessed, 3)
+            record["dependency_read_share"] = round(1 - unread / assessed, 3)
     # UX-72: `UX-68` filtered these out of the candidate list three
     # rounds ago and nothing has read them since - no renderer, no
     # consumer. Carried here so the join can say how much it set aside,
     # rather than leaving the filtered population visible only to someone
     # reading the raw JSON.
     for entry in declared.get("aggregating_dependencies") or []:
-        view.setdefault(entry["element"], {}).setdefault(
-            "aggregating_dependencies", []
-        ).append(entry["dependency"])
+        view.setdefault(entry["element"], {}).setdefault("aggregating_dependencies", []).append(entry["dependency"])
 
     # UX-69: where an element's CPU actually went, and whether any of it
     # sat in a single unparallelisable process.
@@ -440,19 +434,15 @@ def _plane2_view(native_report: dict) -> dict[str, dict]:
             record["dominant_binary"] = _durations_in_us(by_cpu[0])
         serial = [s for s in (entry.get("single_process_costs") or []) if s.get("wall_s")]
         if serial:
-            record["serial_binary"] = _durations_in_us(
-                max(serial, key=lambda s: s["wall_s"]))
+            record["serial_binary"] = _durations_in_us(max(serial, key=lambda s: s["wall_s"]))
 
     # UX-63: the largest single process's resident memory.
-    for element, entry in ((native_report.get("peak_memory") or {}).get(
-        "per_element"
-    ) or {}).items():
+    for element, entry in ((native_report.get("peak_memory") or {}).get("per_element") or {}).items():
         if entry.get("peak_rss_kb"):
             # UX-341: `ru_maxrss` is KiB, so this is exact and integral.
             # The record keeps its own spelling; the payload publishes
             # bytes, like every other memory figure the tool writes.
-            view.setdefault(element, {})["peak_rss_bytes"] = kb_to_bytes(
-                entry["peak_rss_kb"])
+            view.setdefault(element, {})["peak_rss_bytes"] = kb_to_bytes(entry["peak_rss_kb"])
 
     # UX-23/UX-73: cross-element repeats, attributed to the element that
     # paid the most for them. Only the worst one per element is carried:
@@ -530,7 +520,10 @@ def _connected_edge_groups(edges: list[tuple]) -> list[list[tuple]]:
 
 
 def project_without_edges(
-    tasks, run_context, edges: list[tuple], capacities: Optional[dict] = None,
+    tasks,
+    run_context,
+    edges: list[tuple],
+    capacities: Optional[dict] = None,
 ) -> Optional[dict]:
     """Replay the observed run with `edges` deleted from the graph.
 
@@ -560,9 +553,7 @@ def project_without_edges(
     rewired = [
         replace(
             task,
-            dependencies=[
-                dep for dep in task.dependencies if keep(str(task.task_key), dep)
-            ],
+            dependencies=[dep for dep in task.dependencies if keep(str(task.task_key), dep)],
         )
         for task in tasks
     ]
@@ -639,14 +630,17 @@ def _grouped_line(finding_id: str, entries: list[dict], text: str) -> Optional[s
 
     if finding_id == 'already-compute-bound':
         cores = _collapse_range([e.get('cores_busy') for e in entries], lambda v: f"{v:.1f}")
-        return (f"already compute-bound at {cores} cores busy - nothing to gain from "
-                f"their parallelism; shortening them means less work")
+        return (
+            f"already compute-bound at {cores} cores busy - nothing to gain from "
+            f"their parallelism; shortening them means less work"
+        )
 
-    if finding_id in ('waiting-not-computing', 'pinned-to-one-job',
-                      'underachieved-requested-jobs'):
+    if finding_id in ('waiting-not-computing', 'pinned-to-one-job', 'underachieved-requested-jobs'):
         cores = _collapse_range([e.get('cores_busy') for e in entries], lambda v: f"{v:.2f}")
-        return (f"running at only {cores} cores busy - waiting, not computing; "
-                f"look at how they are built before what they build")
+        return (
+            f"running at only {cores} cores busy - waiting, not computing; "
+            f"look at how they are built before what they build"
+        )
 
     if finding_id == 'cpu-concentration':
         binaries = {(e.get('dominant_binary') or {}).get('binary') for e in entries}
@@ -654,32 +648,39 @@ def _grouped_line(finding_id: str, entries: list[dict], text: str) -> Optional[s
             return None
         shares = _collapse_range(
             [(e.get('dominant_binary') or {}).get('cpu_share') for e in entries],
-            lambda v: f"{v * 100:.0f}", "%",
+            lambda v: f"{v * 100:.0f}",
+            "%",
         )
-        return (f"`{binaries.pop()}` is {shares} of each one's measured CPU - "
-                f"they are all the same problem, so look there before anywhere else")
+        return (
+            f"`{binaries.pop()}` is {shares} of each one's measured CPU - "
+            f"they are all the same problem, so look there before anywhere else"
+        )
 
     if finding_id == 'serialization-point':
         binaries = {(e.get('serial_binary') or {}).get('binary') for e in entries}
         if len(binaries) != 1 or None in binaries:
             return None
         walls = _collapse_range(
-            [((e.get('serial_binary') or {}).get('wall_us') or 0) / US_PER_S
-             for e in entries],
-            lambda v: f"{v:.1f}", "s",
+            [((e.get('serial_binary') or {}).get('wall_us') or 0) / US_PER_S for e in entries],
+            lambda v: f"{v:.1f}",
+            "s",
         )
-        return (f"`{binaries.pop()}` is a SINGLE process holding {walls} of wall time "
-                f"in each - a serialization point no job count can help")
+        return (
+            f"`{binaries.pop()}` is a SINGLE process holding {walls} of wall time "
+            f"in each - a serialization point no job count can help"
+        )
 
     if finding_id == 'declared-not-used':
         counts = [len(e.get('unused_dependencies') or []) for e in entries]
         total = sum(counts)
         spread = _collapse_range([float(c) for c in counts], lambda v: f"{v:.0f}")
-        return (f"opened no file staged by {spread} declared build dependencies each "
-                f"({total} edges across the {count}) - worth checking whether those "
-                f"edges are needed at build time; this is evidence, not a verdict (a "
-                f"runtime-only dependency looks identical here). Per-element lists are "
-                f"in --format json")
+        return (
+            f"opened no file staged by {spread} declared build dependencies each "
+            f"({total} edges across the {count}) - worth checking whether those "
+            f"edges are needed at build time; this is evidence, not a verdict (a "
+            f"runtime-only dependency looks identical here). Per-element lists are "
+            f"in --format json"
+        )
 
     # peak-memory and redundant-operation carry per-element figures whose
     # meaning does not survive being averaged (a shared operation's own
@@ -713,10 +714,7 @@ def _grouped_blocks(actionable: list[dict]) -> list[tuple]:
         else:
             index[signature] = len(groups)
             groups.append(([entry], signature))
-    return [
-        ([e['element'] for e in entries], entries, signature)
-        for entries, signature in groups
-    ]
+    return [([e['element'] for e in entries], entries, signature) for entries, signature in groups]
 
 
 def _group_header(elements: list[str], entries: list[dict]) -> str:
@@ -733,7 +731,9 @@ def _group_header(elements: list[str], entries: list[dict]) -> str:
     if len(entries) == 1:
         return f"{elements[0]}:"
     shares = _collapse_range(
-        [e.get('critical_path_share') for e in entries], lambda v: f"{v * 100:.0f}", "%",
+        [e.get('critical_path_share') for e in entries],
+        lambda v: f"{v * 100:.0f}",
+        "%",
     )
     savings_us = [e.get('potential_saving_us') or 0 for e in entries]
     each = _collapse_range([v / 1e6 for v in savings_us], lambda v: f"{v:.1f}", "s")
@@ -788,36 +788,52 @@ def _recommend(joined: ElementJoin, memory_envelope_available: bool = False) -> 
             parts.append(f"holds {share * 100:.0f}% of the critical path")
         if worth is not None and joined.potential_saving_us:
             parts.append(
-                f"fixing it is worth {joined.potential_saving_us / 1e6:.1f}s "
-                f"({worth * 100:.1f}% of the build)"
+                f"fixing it is worth {joined.potential_saving_us / 1e6:.1f}s ({worth * 100:.1f}% of the build)"
             )
         return " and ".join(parts) if parts else "on the critical path"
 
     if (matters or cheap_win) and joined.cores_busy is not None:
         if joined.cores_busy < _COMPUTE_BOUND_CORES:
-            detail = (
-                f"{_impact()}, but runs at only {joined.cores_busy:.2f} cores "
-                f"busy - it is waiting, not computing"
-            )
+            detail = f"{_impact()}, but runs at only {joined.cores_busy:.2f} cores busy - it is waiting, not computing"
             if "pinned_to_one_job" in joined.native_findings:
-                ranked.append((_EVIDENCE_PARALLELISM, 'pinned-to-one-job',
-                    f"{detail}, and its native build asked for -j1: remove "
-                    f"`notparallel` / raise its job count before touching its sources"))
+                ranked.append(
+                    (
+                        _EVIDENCE_PARALLELISM,
+                        'pinned-to-one-job',
+                        f"{detail}, and its native build asked for -j1: remove "
+                        f"`notparallel` / raise its job count before touching its sources",
+                    )
+                )
             elif joined.requested_jobs and joined.requested_jobs > 1:
-                ranked.append((_EVIDENCE_PARALLELISM, 'underachieved-requested-jobs',
-                    f"{detail}, despite asking for -j{joined.requested_jobs}: its "
-                    f"native build is not achieving the parallelism it requested"))
+                ranked.append(
+                    (
+                        _EVIDENCE_PARALLELISM,
+                        'underachieved-requested-jobs',
+                        f"{detail}, despite asking for -j{joined.requested_jobs}: its "
+                        f"native build is not achieving the parallelism it requested",
+                    )
+                )
             else:
-                ranked.append((_EVIDENCE_PARALLELISM, 'waiting-not-computing',
-                    f"{detail}: look at how it is built before what it builds"))
+                ranked.append(
+                    (
+                        _EVIDENCE_PARALLELISM,
+                        'waiting-not-computing',
+                        f"{detail}: look at how it is built before what it builds",
+                    )
+                )
         else:
             # Deliberately phrased as a *negative* result. Its value is
             # ruling the micro plane out, so the reader stops looking
             # there - not as a thing to go and do.
-            ranked.append((_EVIDENCE_PARALLELISM, 'already-compute-bound',
-                f"{_impact()} - already compute-bound at "
-                f"{joined.cores_busy:.2f} cores busy, so there is nothing to gain "
-                f"from its parallelism; shortening it means less work"))
+            ranked.append(
+                (
+                    _EVIDENCE_PARALLELISM,
+                    'already-compute-bound',
+                    f"{_impact()} - already compute-bound at "
+                    f"{joined.cores_busy:.2f} cores busy, so there is nothing to gain "
+                    f"from its parallelism; shortening it means less work",
+                )
+            )
 
     # UX-72: the measurements the join used to read past. Gated on the
     # same "is this what to do next" question as the block above - a
@@ -826,11 +842,16 @@ def _recommend(joined: ElementJoin, memory_envelope_available: bool = False) -> 
     if matters or cheap_win:
         dominant = joined.dominant_binary
         if dominant and (dominant.get("cpu_share") or 0) >= _DOMINANT_BINARY_SHARE:
-            ranked.append((_EVIDENCE_CPU_CONCENTRATION, 'cpu-concentration',
-                f"{dominant['cpu_share']:.0%} of its measured CPU is one binary, "
-                f"`{dominant['binary']}` ({dominant['count']} process(es), "
-                f"{dominant['cpu_us'] / 1e6:.0f} CPU s) - this element is a "
-                f"`{dominant['binary']}` problem, so look there before anywhere else"))
+            ranked.append(
+                (
+                    _EVIDENCE_CPU_CONCENTRATION,
+                    'cpu-concentration',
+                    f"{dominant['cpu_share']:.0%} of its measured CPU is one binary, "
+                    f"`{dominant['binary']}` ({dominant['count']} process(es), "
+                    f"{dominant['cpu_us'] / 1e6:.0f} CPU s) - this element is a "
+                    f"`{dominant['binary']}` problem, so look there before anywhere else",
+                )
+            )
 
         serial = joined.serial_binary
         serial_floor_s = max(
@@ -838,10 +859,15 @@ def _recommend(joined: ElementJoin, memory_envelope_available: bool = False) -> 
             joined.potential_saving_us / US_PER_S * _SERIALIZATION_NOTABLE_SHARE,
         )
         if serial and (serial.get('wall_us') or 0) / US_PER_S >= serial_floor_s:
-            ranked.append((_EVIDENCE_SERIALIZATION, 'serialization-point',
-                f"`{serial['binary']}` is a SINGLE process holding "
-                f"{serial['wall_us'] / US_PER_S:.1f}s of wall time - a serialization point no "
-                f"job count can help; it has to get faster or go away"))
+            ranked.append(
+                (
+                    _EVIDENCE_SERIALIZATION,
+                    'serialization-point',
+                    f"`{serial['binary']}` is a SINGLE process holding "
+                    f"{serial['wall_us'] / US_PER_S:.1f}s of wall time - a serialization point no "
+                    f"job count can help; it has to get faster or go away",
+                )
+            )
 
         if joined.peak_rss_bytes and joined.peak_rss_bytes >= _PEAK_RSS_NOTABLE_BYTES:
             # UX-104: the trailing instruction used to be "multiply by
@@ -851,32 +877,41 @@ def _recommend(joined: ElementJoin, memory_envelope_available: bool = False) -> 
             # envelope above - so this row states the element's own
             # measurement and points there rather than handing over
             # arithmetic it can do.
-            ranked.append((_EVIDENCE_MEMORY, 'peak-memory',
-                f"its largest single process peaked at "
-                f"{joined.peak_rss_bytes / MIB:.0f} MB resident"
-                + (
-                    " - see the memory envelope above for what that means for "
-                    "`builders`" if memory_envelope_available else
-                    " - multiply by however many elements build concurrently "
-                    "before raising `builders` (the capture recorded no host "
-                    "memory, so this cannot do it for you)"
-                )))
+            ranked.append(
+                (
+                    _EVIDENCE_MEMORY,
+                    'peak-memory',
+                    f"its largest single process peaked at "
+                    f"{joined.peak_rss_bytes / MIB:.0f} MB resident"
+                    + (
+                        " - see the memory envelope above for what that means for `builders`"
+                        if memory_envelope_available
+                        else " - multiply by however many elements build concurrently "
+                        "before raising `builders` (the capture recorded no host "
+                        "memory, so this cannot do it for you)"
+                    ),
+                )
+            )
 
         redundancy = joined.worst_redundancy
-        redundancy_s = ((redundancy or {}).get("max_element_duration_us")
-                        or 0) / US_PER_S
+        redundancy_s = ((redundancy or {}).get("max_element_duration_us") or 0) / US_PER_S
         floor_s = max(
             _REDUNDANCY_NOTABLE_S,
             joined.potential_saving_us / US_PER_S * _REDUNDANCY_NOTABLE_SHARE,
         )
         if redundancy and redundancy_s >= floor_s:
             others = _other_element_count(redundancy)
-            ranked.append((_EVIDENCE_REDUNDANCY, 'redundant-operation',
-                f"it pays {redundancy_s:.1f}s for an operation "
-                f"{_count(others, 'other element')} also run"
-                f"{'s' if others == 1 else ''} "
-                f"({redundancy['occurrence_count']}x in total): "
-                f"{redundancy.get('signature', '').strip()[:60]}"))
+            ranked.append(
+                (
+                    _EVIDENCE_REDUNDANCY,
+                    'redundant-operation',
+                    f"it pays {redundancy_s:.1f}s for an operation "
+                    f"{_count(others, 'other element')} also run"
+                    f"{'s' if others == 1 else ''} "
+                    f"({redundancy['occurrence_count']}x in total): "
+                    f"{redundancy.get('signature', '').strip()[:60]}",
+                )
+            )
 
     if joined.unused_dependencies:
         count = len(joined.unused_dependencies)
@@ -888,11 +923,16 @@ def _recommend(joined: ElementJoin, memory_envelope_available: bool = False) -> 
         # from here. Rendering that as "removing the edge is free" turned
         # a measurement into a claim the measurement does not support,
         # and on a real capture it did so for 8 of 10 findings.
-        ranked.append((_EVIDENCE_DECLARED_VS_USED, 'declared-not-used',
-            f"opened no file staged by {count} declared build {plural} "
-            f"({names}) - worth checking whether the edge is needed at "
-            f"build time, or only at runtime; this is evidence, not a "
-            f"verdict (a runtime-only dependency looks identical here)"))
+        ranked.append(
+            (
+                _EVIDENCE_DECLARED_VS_USED,
+                'declared-not-used',
+                f"opened no file staged by {count} declared build {plural} "
+                f"({names}) - worth checking whether the edge is needed at "
+                f"build time, or only at runtime; this is evidence, not a "
+                f"verdict (a runtime-only dependency looks identical here)",
+            )
+        )
 
     return [
         {'id': id, 'severity': _EVIDENCE_SEVERITY[rank], 'text': text}
@@ -909,7 +949,8 @@ _SATURATION_SHARE = 0.8
 
 
 def compute_memory_envelope(
-    native_report: dict, builders: Optional[int],
+    native_report: dict,
+    builders: Optional[int],
     host_memory_bytes: Optional[int],
 ) -> dict:
     """UX-104: how much memory this build's shape needs at N builders,
@@ -973,14 +1014,17 @@ def compute_memory_envelope(
     # ceiling three builders away.)
     for count in range(1, len(peaks) + 1):
         envelope = _envelope(count)
-        projections.append({
-            'builders': count,
-            'envelope_bytes': envelope,
-            'share_of_host': envelope / host_memory_bytes,
-            'fits': envelope <= host_memory_bytes,
-        })
+        projections.append(
+            {
+                'builders': count,
+                'envelope_bytes': envelope,
+                'share_of_host': envelope / host_memory_bytes,
+                'fits': envelope <= host_memory_bytes,
+            }
+        )
     at_observed = next(
-        (p for p in projections if p['builders'] == observed), None,
+        (p for p in projections if p['builders'] == observed),
+        None,
     )
     higher = [p for p in projections if observed and p['builders'] > observed]
     first_that_does_not_fit = next((p for p in higher if not p['fits']), None)
@@ -991,9 +1035,7 @@ def compute_memory_envelope(
         'largest_element_peak_bytes': peaks[0],
         'at_observed_builders': at_observed,
         'projections': projections,
-        'first_builders_that_does_not_fit': (
-            first_that_does_not_fit['builders'] if first_that_does_not_fit else None
-        ),
+        'first_builders_that_does_not_fit': (first_that_does_not_fit['builders'] if first_that_does_not_fit else None),
         'note': (
             "The envelope at N builders is the sum of the N largest measured "
             "per-element peak RSS values, as if those elements built at once and "
@@ -1006,7 +1048,8 @@ def compute_memory_envelope(
 
 
 def summarize_plane2_capacity(
-    native_report: dict, host_cpu_count: Optional[int] = None,
+    native_report: dict,
+    host_cpu_count: Optional[int] = None,
 ) -> dict:
     """What Plane 2 knows about whether more builders would help.
 
@@ -1026,22 +1069,14 @@ def summarize_plane2_capacity(
     cpu_time = native_report.get("cpu_time") or {}
     per_element = cpu_time.get("per_element") or {}
     wall_span = native_report.get("wall_span_s")
-    measured_cpu_us = sum(
-        (entry.get("cpu_us") or 0) for entry in per_element.values()
-    )
-    cores_busy = (
-        (measured_cpu_us / 1e6) / wall_span if wall_span and measured_cpu_us else None
-    )
+    measured_cpu_us = sum((entry.get("cpu_us") or 0) for entry in per_element.values())
+    cores_busy = (measured_cpu_us / 1e6) / wall_span if wall_span and measured_cpu_us else None
     pinned = sorted(
         entry["element"]
         for entry in native_report.get("per_element_parallelism") or []
-        if "pinned_to_one_job" in (entry.get("findings") or [])
-        and entry.get("element")
+        if "pinned_to_one_job" in (entry.get("findings") or []) and entry.get("element")
     )
-    saturated = (
-        cores_busy is not None and host_cpu_count
-        and cores_busy >= _SATURATION_SHARE * host_cpu_count
-    )
+    saturated = cores_busy is not None and host_cpu_count and cores_busy >= _SATURATION_SHARE * host_cpu_count
     return {
         "cores_busy": cores_busy,
         "host_cpu_count": host_cpu_count,
@@ -1077,10 +1112,8 @@ def resource_profile(native_report: dict) -> dict:
     profile = {}
     if summary.get("cores_busy") is not None:
         profile["cores_busy"] = summary["cores_busy"]
-    per_element = ((native_report.get("peak_memory") or {})
-                   .get("per_element")) or {}
-    peaks = [entry.get("peak_rss_kb") for entry in per_element.values()
-             if entry.get("peak_rss_kb")]
+    per_element = ((native_report.get("peak_memory") or {}).get("per_element")) or {}
+    peaks = [entry.get("peak_rss_kb") for entry in per_element.values() if entry.get("peak_rss_kb")]
     if peaks:
         profile["peak_rss_bytes"] = kb_to_bytes(max(peaks))
     return profile
@@ -1144,15 +1177,20 @@ def compute_capacity_recommendation(
 
     constraints = []
     if knee:
-        constraints.append({
-            'name': 'graph',
-            'allows': knee,
-            'reason': (
-                f"the sweep's knee is at {knee} builder{'' if knee == 1 else 's'}"
-                + (", the top of the range swept, so the graph may want more"
-                   if knee_range_top and knee >= knee_range_top else "")
-            ),
-        })
+        constraints.append(
+            {
+                'name': 'graph',
+                'allows': knee,
+                'reason': (
+                    f"the sweep's knee is at {knee} builder{'' if knee == 1 else 's'}"
+                    + (
+                        ", the top of the range swept, so the graph may want more"
+                        if knee_range_top and knee >= knee_range_top
+                        else ""
+                    )
+                ),
+            }
+        )
     cpu_allows = int(host_cores * builders / cores_busy) if cores_busy > 0 else None
     if cpu_allows:
         # UX-861: the ratio is derived from a whole-run average, so it can
@@ -1175,11 +1213,13 @@ def compute_capacity_recommendation(
         constraints.append(constraint)
     memory_allows = _memory_allows(memory_envelope)
     if memory_allows:
-        constraints.append({
-            'name': 'memory',
-            'allows': memory_allows['allows'],
-            'reason': memory_allows['reason'],
-        })
+        constraints.append(
+            {
+                'name': 'memory',
+                'allows': memory_allows['allows'],
+                'reason': memory_allows['reason'],
+            }
+        )
 
     if not constraints:
         return {}
@@ -1268,8 +1308,7 @@ def compute_builder_pool_recommendation(
     """
     if not ready_set_width or not host_cpu_count:
         return {}
-    safe_cap = (max(1, host_cpu_count - critical_path_max_jobs)
-                if critical_path_max_jobs else None)
+    safe_cap = max(1, host_cpu_count - critical_path_max_jobs) if critical_path_max_jobs else None
     if calibrated_cores:
         pool_size = min(calibrated_cores, host_cpu_count)
         pool_reading = f"UX-1004's calibrated knee ({_count(calibrated_cores, 'effective core')})"
@@ -1321,8 +1360,12 @@ def _memory_allows(memory_envelope: dict) -> Optional[dict]:
         'reason': (
             f"the {largest}-builder envelope fits in "
             f"{envelope['host_memory_bytes'] / GIB:.1f} GB"
-            + (f" (measured over {measured} element peak{'' if measured == 1 else 's'}, "
-               f"so it says nothing above {measured})" if measured and largest >= measured else "")
+            + (
+                f" (measured over {measured} element peak{'' if measured == 1 else 's'}, "
+                f"so it says nothing above {measured})"
+                if measured and largest >= measured
+                else ""
+            )
         ),
     }
 
@@ -1394,20 +1437,15 @@ def compute_max_jobs_advice(
         return {}
 
     def _building(window: dict) -> set:
-        return {t["element"] for t in tasks
-                if t["start_us"] < window["end_us"]
-                and t["finish_us"] > window["start_us"]}
+        return {t["element"] for t in tasks if t["start_us"] < window["end_us"] and t["finish_us"] > window["start_us"]}
 
     pinned_elements = pinned_elements or set()
     elements = []
     for task in tasks:
         uid = task["element"]
         current = max_jobs.get(uid)
-        span = [w for w in windows
-                if task["start_us"] < w["end_us"]
-                and task["finish_us"] > w["start_us"]]
-        row = {"element": uid, "current_max_jobs": current,
-               "samples_in_span": len(span)}
+        span = [w for w in windows if task["start_us"] < w["end_us"] and task["finish_us"] > w["start_us"]]
+        row = {"element": uid, "current_max_jobs": current, "samples_in_span": len(span)}
         if uid in pinned_elements:
             row["refusal"] = "pinned by the project"
             row["recommended_max_jobs"] = None
@@ -1417,7 +1455,8 @@ def compute_max_jobs_advice(
             row["refusal"] = (
                 f"only {_count(len(span), 'host CPU sample interval')} fall "
                 f"inside this element's BUILD span - "
-                f"{MIN_HOST_SAMPLES_IN_SPAN} needed")
+                f"{MIN_HOST_SAMPLES_IN_SPAN} needed"
+            )
             row["recommended_max_jobs"] = None
             elements.append(row)
             continue
@@ -1429,29 +1468,28 @@ def compute_max_jobs_advice(
                 building = _building(w)
                 if all(peak_rss_bytes.get(e) is not None for e in building):
                     total = sum(peak_rss_bytes[e] for e in building)
-                    overlap_rss = total if overlap_rss is None \
-                        else max(overlap_rss, total)
-        row.update({
-            "local_max_concurrency": local_max,
-            "recommended_max_jobs": recommended,
-            "max_jobs_change": (recommended - current
-                                 if current is not None else None),
-            "peak_rss_bytes": (peak_rss_bytes or {}).get(uid),
-            "overlap_peak_rss_bytes": overlap_rss,
-            "refusal": None,
-        })
-        if (host_memory_bytes and overlap_rss is not None
-                and overlap_rss > host_memory_bytes):
+                    overlap_rss = total if overlap_rss is None else max(overlap_rss, total)
+        row.update(
+            {
+                "local_max_concurrency": local_max,
+                "recommended_max_jobs": recommended,
+                "max_jobs_change": (recommended - current if current is not None else None),
+                "peak_rss_bytes": (peak_rss_bytes or {}).get(uid),
+                "overlap_peak_rss_bytes": overlap_rss,
+                "refusal": None,
+            }
+        )
+        if host_memory_bytes and overlap_rss is not None and overlap_rss > host_memory_bytes:
             row["refusal"] = (
                 f"elements building alongside it peaked at "
                 f"{overlap_rss} bytes together, over the "
                 f"{host_memory_bytes}-byte host - no max-jobs value "
-                f"un-spends memory already measured spent")
+                f"un-spends memory already measured spent"
+            )
             row["recommended_max_jobs"] = None
         elements.append(row)
 
-    return {"min_samples_in_span": MIN_HOST_SAMPLES_IN_SPAN,
-            "host_cores": cores, "elements": elements}
+    return {"min_samples_in_span": MIN_HOST_SAMPLES_IN_SPAN, "host_cores": cores, "elements": elements}
 
 
 #: UX-847: which `jobserver_decisions` decisions mean "this element
@@ -1473,8 +1511,7 @@ def compute_jobserver_shares(ledger_rows: list, capacity: Optional[int]) -> tupl
     - cores idle while the pool itself is empty. `(0.0, 0.0)` with no
     ticks or an unknown capacity.
     """
-    ticks = [row for row in ledger_rows or []
-             if isinstance(row, dict) and "action" in row]
+    ticks = [row for row in ledger_rows or [] if isinstance(row, dict) and "action" in row]
     if not ticks or not capacity:
         return 0.0, 0.0
     idle = starved = 0
@@ -1491,7 +1528,8 @@ def compute_jobserver_shares(ledger_rows: list, capacity: Optional[int]) -> tupl
 
 
 def compute_jobserver_per_element(
-    elements: list, decision_rows: list,
+    elements: list,
+    decision_rows: list,
     tokens_by_element: Optional[dict] = None,
 ) -> dict:
     """UX-847: per-element `joined` (yes/pinned/held/unknown_kind) and
@@ -1526,8 +1564,9 @@ def compute_jobserver_per_element(
             joined = "pinned"
         elif held:
             joined = "held"
-        elif decision_row is None or decision_row.get("kind") == "unknown" \
-                or decision not in _JOBSERVER_JOINED_DECISIONS:
+        elif (
+            decision_row is None or decision_row.get("kind") == "unknown" or decision not in _JOBSERVER_JOINED_DECISIONS
+        ):
             joined = "unknown_kind"
         else:
             joined = "yes"
@@ -1541,7 +1580,8 @@ def compute_jobserver_per_element(
 
 
 def compute_jobserver_block(
-    native_report: dict, elements: list,
+    native_report: dict,
+    elements: list,
     tokens_by_element: Optional[dict] = None,
 ) -> Optional[dict]:
     """UX-847: `analyze/v6`'s additive `jobserver` block, pure over
@@ -1553,10 +1593,11 @@ def compute_jobserver_block(
         return None
     pool = native_report.get("jobserver_pool") or {}
     idle_share, starved_share = compute_jobserver_shares(
-        native_report.get("jobserver_ledger") or [], pool.get("capacity"))
+        native_report.get("jobserver_ledger") or [], pool.get("capacity")
+    )
     per_element = compute_jobserver_per_element(
-        elements, native_report.get("jobserver_decisions") or [],
-        tokens_by_element)
+        elements, native_report.get("jobserver_decisions") or [], tokens_by_element
+    )
     return {
         "mode": pool.get("mode"),
         "pool_ceiling": pool.get("ceiling"),
@@ -1574,7 +1615,8 @@ _PRICE_DISPATCH_ASSUMPTION = (
     "Both the baseline and the projected replay re-derive dispatch order "
     "from the graph and the builder budget by Part 18's LPT rule rather "
     "than keeping bst's own observed order, so that rule's own distance "
-    "from real dispatch cancels to first order between the two figures.")
+    "from real dispatch cancels to first order between the two figures."
+)
 
 # UX-739: the floor sentence - two floors, and the direction they err.
 _PRICE_FLOOR_ASSUMPTION = (
@@ -1584,7 +1626,8 @@ _PRICE_FLOOR_ASSUMPTION = (
     "recommended job count at full speed, so the priced cost errs "
     "optimistic - the real build under these caps is this long or "
     "longer. The benefit of less overcommit for its neighbours is not "
-    "modelled.")
+    "modelled."
+)
 
 
 def _advice_row_rank(row: dict) -> tuple:
@@ -1599,8 +1642,7 @@ def _advice_row_rank(row: dict) -> tuple:
     current = row.get('current_max_jobs')
     recommended = row.get('recommended_max_jobs')
     priced = row.get('priced')
-    if (priced is not None and current is not None
-            and recommended is not None and recommended < current):
+    if priced is not None and current is not None and recommended is not None and recommended < current:
         return (0, priced['cost_us'])
     return (1, 0)
 
@@ -1636,11 +1678,9 @@ def price_max_jobs_advice(advice, tasks, run_context, binary_cost) -> dict:
         return advice
 
     binary_cost = binary_cost or {}
-    build_tasks = {t.task_key.element_uid: t for t in tasks
-                   if t.task_key.task_kind == TaskKind.BUILD}
+    build_tasks = {t.task_key.element_uid: t for t in tasks if t.task_key.task_kind == TaskKind.BUILD}
     capacities = compute_default_capacities(run_context)
-    baseline_us = ReplayScheduler(list(tasks), run_context).replay(
-        capacities).makespan_us
+    baseline_us = ReplayScheduler(list(tasks), run_context).replay(capacities).makespan_us
 
     joint_overrides: dict[str, int] = {}
     joint_elements: list[str] = []
@@ -1672,30 +1712,31 @@ def price_max_jobs_advice(advice, tasks, run_context, binary_cost) -> dict:
         if recommended > current:
             row['price_refusal'] = (
                 f"this run measured {uid} at {current} job{'' if current == 1 else 's'} "
-                f"and has no evidence of how it scales up")
+                f"and has no evidence of how it scales up"
+            )
             continue
         # recommended < current: needs the element's whole measured CPU
         # work to build the floor.
         if task is None:
-            row['price_refusal'] = (
-                f"no BUILD task for {uid} in this run - nothing to stretch")
+            row['price_refusal'] = f"no BUILD task for {uid} in this run - nothing to stretch"
             continue
         cost_entry = binary_cost.get(uid) or {}
         measured_cpu_us = cost_entry.get('measured_cpu_us')
         if not cost_entry.get('available') or measured_cpu_us is None:
             row['price_refusal'] = (
-                f"no Plane 2 binary_cost measurement for {uid} - the "
-                f"price needs the element's whole measured CPU work")
+                f"no Plane 2 binary_cost measurement for {uid} - the price needs the element's whole measured CPU work"
+            )
             continue
         # `task` is confirmed above; recomputed rather than reusing
         # `observed_us` so its type does not depend on a branch pyright
         # cannot see this far back.
-        floor_us = max(task.finish_us - task.start_us,
-                        math.ceil(measured_cpu_us / recommended))
+        floor_us = max(task.finish_us - task.start_us, math.ceil(measured_cpu_us / recommended))
         override_key = str(task.task_key)
-        projected_us = ReplayScheduler(list(tasks), run_context).replay(
-            capacities, duration_overrides={override_key: floor_us}
-        ).makespan_us
+        projected_us = (
+            ReplayScheduler(list(tasks), run_context)
+            .replay(capacities, duration_overrides={override_key: floor_us})
+            .makespan_us
+        )
         row['priced'] = {
             'replayed_baseline_us': baseline_us,
             'projected_us': projected_us,
@@ -1716,16 +1757,16 @@ def price_max_jobs_advice(advice, tasks, run_context, binary_cost) -> dict:
     elements.sort(key=_advice_row_rank)
 
     if joint_overrides:
-        joint_us = ReplayScheduler(list(tasks), run_context).replay(
-            capacities, duration_overrides=joint_overrides).makespan_us
+        joint_us = (
+            ReplayScheduler(list(tasks), run_context).replay(capacities, duration_overrides=joint_overrides).makespan_us
+        )
         advice['priced_jointly'] = {
             'replayed_baseline_us': baseline_us,
             'projected_us': joint_us,
             'cost_us': max(0, joint_us - baseline_us),
             'elements': joint_elements,
         }
-    advice['pricing_assumptions'] = [
-        _PRICE_DISPATCH_ASSUMPTION, _PRICE_FLOOR_ASSUMPTION]
+    advice['pricing_assumptions'] = [_PRICE_DISPATCH_ASSUMPTION, _PRICE_FLOOR_ASSUMPTION]
     return advice
 
 
@@ -1788,8 +1829,12 @@ CACHED_SHAPE_REBUILDS_EXPENSIVE = 'rebuilds_expensive_subgraphs'
 
 
 def find_granularity_findings(
-    analysis: dict, native_report: dict, cache_logs: Optional[dict] = None,
-    tasks=None, run_context=None, dependencies=None,
+    analysis: dict,
+    native_report: dict,
+    cache_logs: Optional[dict] = None,
+    tasks=None,
+    run_context=None,
+    dependencies=None,
 ) -> list[dict]:
     """UX-100: are the elements the right size?
 
@@ -1814,9 +1859,7 @@ def find_granularity_findings(
     it - a wide invalidation blast.
     """
     findings = []
-    findings.extend(
-        _merge_candidates(dependencies, cache_logs, tasks, run_context)
-    )
+    findings.extend(_merge_candidates(dependencies, cache_logs, tasks, run_context))
     findings.extend(_split_candidates(analysis, native_report))
     findings.extend(_consolidate_by_co_change_candidates(cache_logs, dependencies))
     findings.extend(_split_by_co_change_candidates(cache_logs, dependencies))
@@ -1854,7 +1897,8 @@ def _merge_candidates(dependencies, cache_logs, tasks, run_context) -> list[dict
     findings = []
     for parent_set, members in sorted(groups.items(), key=lambda kv: -len(kv[1])):
         over = sorted(
-            member for member in members
+            member
+            for member in members
             if toll_share.get(member, 0) >= MERGE_TOLL_AT_LEAST_WORK
             and toll_us.get(member, 0) / 1e6 >= MERGE_TOLL_FLOOR_S
         )
@@ -1864,32 +1908,36 @@ def _merge_candidates(dependencies, cache_logs, tasks, run_context) -> list[dict
         # staging still happens.
         deleted = sorted((toll_us[member] for member in over), reverse=True)[1:]
         projection = _project_with_reduced_durations(
-            tasks, run_context,
+            tasks,
+            run_context,
             {member: toll_us[member] for member in over[1:]},
         )
-        findings.append({
-            'id': 'merge-candidate',
-            'severity': 'medium',
-            'elements': over,
-            'parents': sorted(parent_set),
-            'deleted_toll_us': sum(deleted),
-            'projection': projection,
-            'projection_is_a_floor': bool(projection),
-            'title': (
-                f"{_count(len(over), 'sibling element')} spend at least half their time on "
-                f"sandbox tax rather than on building: {', '.join(over[:4])}. "
-                f"Merging them would delete {_count(len(deleted), 'staging')}, "
-                f"{sum(deleted) / 1e6:.1f}s of sandbox tax"
-                + (
-                    f" and at least a replayed {projection['saving_us'] / 1e6:.1f}s "
-                    f"of build - a floor, because the replay shortens the tasks "
-                    f"without collapsing them into one"
-                    if projection else ""
-                )
-                + ". It also merges their cache granularity: one source change then "
-                "rebuilds the group"
-            ),
-        })
+        findings.append(
+            {
+                'id': 'merge-candidate',
+                'severity': 'medium',
+                'elements': over,
+                'parents': sorted(parent_set),
+                'deleted_toll_us': sum(deleted),
+                'projection': projection,
+                'projection_is_a_floor': bool(projection),
+                'title': (
+                    f"{_count(len(over), 'sibling element')} spend at least half their time on "
+                    f"sandbox tax rather than on building: {', '.join(over[:4])}. "
+                    f"Merging them would delete {_count(len(deleted), 'staging')}, "
+                    f"{sum(deleted) / 1e6:.1f}s of sandbox tax"
+                    + (
+                        f" and at least a replayed {projection['saving_us'] / 1e6:.1f}s "
+                        f"of build - a floor, because the replay shortens the tasks "
+                        f"without collapsing them into one"
+                        if projection
+                        else ""
+                    )
+                    + ". It also merges their cache granularity: one source change then "
+                    "rebuilds the group"
+                ),
+            }
+        )
     if findings:
         return findings
 
@@ -1897,19 +1945,21 @@ def _merge_candidates(dependencies, cache_logs, tasks, run_context) -> list[dict
     # is the useful form of "no finding" here - and distinguishes it from
     # a check that could not run.
     worst = max(measured, key=lambda p: p['toll_share'])
-    return [{
-        'id': 'merge-not-indicated',
-        'severity': 'info',
-        'elements': [],
-        'title': (
-            f"No element pays more sandbox tax than it spends building. Across "
-            f"{_count(len(measured), 'measured element')} the largest tax share is "
-            f"{worst['toll_share'] * 100:.0f}% ({worst['element']}, "
-            f"{worst['toll_us'] / 1e6:.1f}s of {worst['total_us'] / 1e6:.1f}s), "
-            f"against the {MERGE_TOLL_AT_LEAST_WORK * 100:.0f}% that would make a "
-            f"merge worth its cache cost"
-        ),
-    }]
+    return [
+        {
+            'id': 'merge-not-indicated',
+            'severity': 'info',
+            'elements': [],
+            'title': (
+                f"No element pays more sandbox tax than it spends building. Across "
+                f"{_count(len(measured), 'measured element')} the largest tax share is "
+                f"{worst['toll_share'] * 100:.0f}% ({worst['element']}, "
+                f"{worst['toll_us'] / 1e6:.1f}s of {worst['total_us'] / 1e6:.1f}s), "
+                f"against the {MERGE_TOLL_AT_LEAST_WORK * 100:.0f}% that would make a "
+                f"merge worth its cache cost"
+            ),
+        }
+    ]
 
 
 def _project_with_reduced_durations(tasks, run_context, reductions) -> Optional[dict]:
@@ -1950,7 +2000,8 @@ def _project_with_reduced_durations(tasks, run_context, reductions) -> Optional[
     capacities = compute_default_capacities(run_context)
     before = ReplayScheduler(list(tasks), run_context).replay(capacities)
     after = ReplayScheduler(list(tasks), run_context).replay(
-        capacities, duration_overrides=overrides,
+        capacities,
+        duration_overrides=overrides,
     )
     return {
         'replayed_baseline_us': before.makespan_us,
@@ -1977,32 +2028,34 @@ def _split_candidates(analysis, native_report) -> list[dict]:
         mean = entry.get('mean_work_concurrency') or 0
         if share < SPLIT_PATH_SHARE or mean < SPLIT_MEAN_CONCURRENCY:
             continue
-        findings.append({
-            'id': 'split-candidate',
-            'severity': 'info',
-            'elements': [element],
-            'critical_path_share': share,
-            'mean_work_concurrency': mean,
-            'work_processes': entry.get('work_process_count'),
-            'invalidation_blast': None,
-            'title': (
-                f"{element} holds {share * 100:.0f}% of the critical path and runs "
-                f"{mean:.2f} concurrent work processes inside one element "
-                f"({entry.get('work_process_count')} of them)"
-            ),
-            # The caveat is identical for every candidate, so it is
-            # carried separately and the renderer prints it once. Four
-            # candidates used to mean four verbatim copies of the same
-            # three sentences - 1300 characters saying one thing.
-            'rationale': (
-                "That is work BuildStream could have scheduled as separate "
-                "cacheable elements. Evidence, not a recommendation: a split's "
-                "shape is a human decision, and this run's history carries no "
-                "invalidation blast for it (every capture is the same commit), "
-                "which is the third piece of evidence and the one that would "
-                "make the case"
-            ),
-        })
+        findings.append(
+            {
+                'id': 'split-candidate',
+                'severity': 'info',
+                'elements': [element],
+                'critical_path_share': share,
+                'mean_work_concurrency': mean,
+                'work_processes': entry.get('work_process_count'),
+                'invalidation_blast': None,
+                'title': (
+                    f"{element} holds {share * 100:.0f}% of the critical path and runs "
+                    f"{mean:.2f} concurrent work processes inside one element "
+                    f"({entry.get('work_process_count')} of them)"
+                ),
+                # The caveat is identical for every candidate, so it is
+                # carried separately and the renderer prints it once. Four
+                # candidates used to mean four verbatim copies of the same
+                # three sentences - 1300 characters saying one thing.
+                'rationale': (
+                    "That is work BuildStream could have scheduled as separate "
+                    "cacheable elements. Evidence, not a recommendation: a split's "
+                    "shape is a human decision, and this run's history carries no "
+                    "invalidation blast for it (every capture is the same commit), "
+                    "which is the third piece of evidence and the one that would "
+                    "make the case"
+                ),
+            }
+        )
     return findings
 
 
@@ -2045,20 +2098,22 @@ def _consolidate_by_co_change_candidates(cache_logs, dependencies) -> list[dict]
             continue
         rebuilds_a = rebuilds.get(a, 0)
         rebuilds_b = rebuilds.get(b, 0)
-        findings.append({
-            'id': 'consolidate-by-co-change',
-            'severity': SEVERITY_MEDIUM,
-            'elements': [a, b],
-            'co_rebuilds': co_rebuilds,
-            'share_of_a': share_of_a,
-            'share_of_b': share_of_b,
-            'title': (
-                f"{a} and {b} rebuilt together in {co_rebuilds} of {rebuilds_a} "
-                f"and {co_rebuilds} of {rebuilds_b} rebuilds; no element "
-                f"consumes one without the other (over at least "
-                f"{builds_lower_bound} builds)"
-            ),
-        })
+        findings.append(
+            {
+                'id': 'consolidate-by-co-change',
+                'severity': SEVERITY_MEDIUM,
+                'elements': [a, b],
+                'co_rebuilds': co_rebuilds,
+                'share_of_a': share_of_a,
+                'share_of_b': share_of_b,
+                'title': (
+                    f"{a} and {b} rebuilt together in {co_rebuilds} of {rebuilds_a} "
+                    f"and {co_rebuilds} of {rebuilds_b} rebuilds; no element "
+                    f"consumes one without the other (over at least "
+                    f"{builds_lower_bound} builds)"
+                ),
+            }
+        )
     return findings
 
 
@@ -2108,31 +2163,32 @@ def _split_by_co_change_candidates(cache_logs, dependencies) -> list[dict]:
         groups = _co_change_groups(sorted(own_consumers), co_change)
         if len(groups) < 2:
             continue
-        if not all(
-            all(rebuilds.get(member, 0) >= MIN_CO_REBUILDS for member in group)
-            for group in groups
-        ):
+        if not all(all(rebuilds.get(member, 0) >= MIN_CO_REBUILDS for member in group) for group in groups):
             continue
         described = [
-            f"{{{', '.join(group)}}} ({', '.join(str(rebuilds[m]) for m in group)} rebuilds)"
-            for group in groups
+            f"{{{', '.join(group)}}} ({', '.join(str(rebuilds[m]) for m in group)} rebuilds)" for group in groups
         ]
-        findings.append({
-            'id': 'split-by-co-change',
-            'severity': SEVERITY_INFO,
-            'elements': [element],
-            'groups': groups,
-            'title': (
-                f"{element}'s consumers split into {len(groups)} groups that "
-                f"never co-rebuild with each other: {'; '.join(described)} "
-                f"(over at least {builds_lower_bound} builds)"
-            ),
-        })
+        findings.append(
+            {
+                'id': 'split-by-co-change',
+                'severity': SEVERITY_INFO,
+                'elements': [element],
+                'groups': groups,
+                'title': (
+                    f"{element}'s consumers split into {len(groups)} groups that "
+                    f"never co-rebuild with each other: {'; '.join(described)} "
+                    f"(over at least {builds_lower_bound} builds)"
+                ),
+            }
+        )
     return findings
 
 
 def find_restructuring_findings(
-    analysis: dict, native_report: dict, tasks=None, run_context=None,
+    analysis: dict,
+    native_report: dict,
+    tasks=None,
+    run_context=None,
 ) -> list[dict]:
     """The structural conclusion five per-element rows jointly support.
 
@@ -2157,13 +2213,15 @@ def find_restructuring_findings(
     for group in _connected_edge_groups(edges):
         elements = sorted({uid for edge in group for uid in edge})
         projection = project_without_edges(tasks, run_context, group)
-        findings.append({
-            'id': 'unread-gating-chain',
-            'severity': SEVERITY_HIGH,
-            'elements': elements,
-            'edges': [list(edge) for edge in group],
-            'projection': projection,
-        })
+        findings.append(
+            {
+                'id': 'unread-gating-chain',
+                'severity': SEVERITY_HIGH,
+                'elements': elements,
+                'edges': [list(edge) for edge in group],
+                'projection': projection,
+            }
+        )
     # Biggest projected prize first; an unprojected group sorts last
     # rather than to the top, since "unknown" is not "large".
     return sorted(
@@ -2189,9 +2247,11 @@ def _scale_of(cache_logs: Optional[dict], native_report: dict) -> dict:
     if tax:
         shapes['sandbox_tax_distribution'] = tax
 
-    counts = [entry.get('work_process_count')
-              for entry in (native_report or {}).get('per_element_parallelism') or []
-              if entry.get('work_process_count') is not None]
+    counts = [
+        entry.get('work_process_count')
+        for entry in (native_report or {}).get('per_element_parallelism') or []
+        if entry.get('work_process_count') is not None
+    ]
     processes = distribution(counts)
     if processes:
         shapes['process_count_distribution'] = processes
@@ -2219,14 +2279,16 @@ def expected_rebuild_cost(analysis: dict, cache_logs: Optional[dict]) -> list[di
             continue
         rebuilds = entry.get('rebuilds') or 0
         weighted_blast_us = blast_entry.get('weighted_duration_us') or 0
-        rows.append({
-            'element': element,
-            'rebuilds': rebuilds,
-            'weighted_blast_us': weighted_blast_us,
-            'expected_cost_us': rebuilds * weighted_blast_us,
-            'blast_count': blast_entry.get('downstream_count') or 0,
-            'is_foundation': bool(blast_entry.get('is_foundation')),
-        })
+        rows.append(
+            {
+                'element': element,
+                'rebuilds': rebuilds,
+                'weighted_blast_us': weighted_blast_us,
+                'expected_cost_us': rebuilds * weighted_blast_us,
+                'blast_count': blast_entry.get('downstream_count') or 0,
+                'is_foundation': bool(blast_entry.get('is_foundation')),
+            }
+        )
     return sorted(rows, key=lambda r: (r['is_foundation'], -r['expected_cost_us']))
 
 
@@ -2292,8 +2354,7 @@ def _dominant_elements(rows: list[dict], blast: dict, dependencies) -> list[dict
     total_expected_cost = sum(r['expected_cost_us'] for r in ranked) or 1
     successors = _successors_of(dependencies)
     memo: dict = {}
-    heights = {r['element']: _height_below(r['element'], successors, memo, frozenset())
-               for r in ranked}
+    heights = {r['element']: _height_below(r['element'], successors, memo, frozenset()) for r in ranked}
     by_height = sorted(ranked, key=lambda r: -heights[r['element']])
     by_weight = sorted(ranked, key=lambda r: -r['weighted_blast_us'])
     height_rank = {r['element']: i for i, r in enumerate(by_height, start=1)}
@@ -2302,17 +2363,19 @@ def _dominant_elements(rows: list[dict], blast: dict, dependencies) -> list[dict
     for r in ranked:
         element = r['element']
         kind = (blast.get(element) or {}).get('element_kind')
-        out.append({
-            'element': element,
-            'expected_cost_us': r['expected_cost_us'],
-            'share_of_expected_cost': r['expected_cost_us'] / total_expected_cost,
-            'height': heights[element],
-            'weight_us': r['weighted_blast_us'],
-            'height_rank': height_rank[element],
-            'weight_rank': weight_rank[element],
-            'advice': _height_vs_weight_advice(height_rank[element], weight_rank[element]),
-            'assembling_kind': kind in ASSEMBLING_KINDS,
-        })
+        out.append(
+            {
+                'element': element,
+                'expected_cost_us': r['expected_cost_us'],
+                'share_of_expected_cost': r['expected_cost_us'] / total_expected_cost,
+                'height': heights[element],
+                'weight_us': r['weighted_blast_us'],
+                'height_rank': height_rank[element],
+                'weight_rank': weight_rank[element],
+                'advice': _height_vs_weight_advice(height_rank[element], weight_rank[element]),
+                'assembling_kind': kind in ASSEMBLING_KINDS,
+            }
+        )
     return out
 
 
@@ -2322,23 +2385,25 @@ def _cached_shape_sentence(cheap_share, cheap_changes, total_changes, dominant) 
     dominant element is also the tallest, rather than leaving a reader
     to notice the two ranks agree.
     """
-    lead = (f"{cheap_changes} of {total_changes} recorded changes "
-            f"({cheap_share:.0%}) rebuilt at or under the graph's own "
-            f"median weighted blast")
+    lead = (
+        f"{cheap_changes} of {total_changes} recorded changes "
+        f"({cheap_share:.0%}) rebuilt at or under the graph's own "
+        f"median weighted blast"
+    )
     if not dominant:
         return lead + "."
     top = dominant[0]
-    tag = (" (an assembling kind - it adds height for free)"
-           if top['assembling_kind'] else "")
+    tag = " (an assembling kind - it adds height for free)" if top['assembling_kind'] else ""
     tallest = ", also the tallest" if top['height_rank'] == 1 == top['weight_rank'] else ""
-    return (f"{lead}. {top['element']} dominates the expected cost at "
-            f"{top['share_of_expected_cost']:.0%}{tag}{tallest}: "
-            f"{_count(top['height'], 'element')} below it, "
-            f"{top['weight_us'] / 1e6:.1f}s of its own weight; {top['advice']}.")
+    return (
+        f"{lead}. {top['element']} dominates the expected cost at "
+        f"{top['share_of_expected_cost']:.0%}{tag}{tallest}: "
+        f"{_count(top['height'], 'element')} below it, "
+        f"{top['weight_us'] / 1e6:.1f}s of its own weight; {top['advice']}."
+    )
 
 
-def cached_shape(analysis: dict, cache_logs: Optional[dict],
-                  dependencies=None) -> Optional[dict]:
+def cached_shape(analysis: dict, cache_logs: Optional[dict], dependencies=None) -> Optional[dict]:
     """UX-684: the cached build's mirror of the cold verdict
     (`bga/findings.py:1610-1637`'s `chain_bound`/`scheduler_bound`/
     `inconclusive` rule), stated the same way - the rule and its
@@ -2369,7 +2434,8 @@ def cached_shape(analysis: dict, cache_logs: Optional[dict],
 
     blast = (analysis.get('elements') or {}).get('blast_radius') or {}
     p50 = percentile(
-        [be.get('weighted_duration_us') or 0 for be in blast.values()], 50,
+        [be.get('weighted_duration_us') or 0 for be in blast.values()],
+        50,
     )
     cheap_changes = sum(
         entry.get('rebuilds') or 0
@@ -2379,9 +2445,9 @@ def cached_shape(analysis: dict, cache_logs: Optional[dict],
         and (be.get('weighted_duration_us') or 0) <= p50
     )
     cheap_share = cheap_changes / total_changes
-    verdict = (CACHED_SHAPE_REBUILDS_CHEAP
-               if cheap_share >= CACHED_SHAPE_CHEAP_FLOOR
-               else CACHED_SHAPE_REBUILDS_EXPENSIVE)
+    verdict = (
+        CACHED_SHAPE_REBUILDS_CHEAP if cheap_share >= CACHED_SHAPE_CHEAP_FLOOR else CACHED_SHAPE_REBUILDS_EXPENSIVE
+    )
 
     rows = expected_rebuild_cost(analysis, cache_logs)
     dominant = _dominant_elements(rows, blast, dependencies)
@@ -2393,13 +2459,18 @@ def cached_shape(analysis: dict, cache_logs: Optional[dict],
         'total_changes': total_changes,
         'p50_weighted_blast_us': p50,
         'dominant': dominant,
-        'sentence': _cached_shape_sentence(cheap_share, cheap_changes,
-                                            total_changes, dominant),
+        'sentence': _cached_shape_sentence(cheap_share, cheap_changes, total_changes, dominant),
     }
 
 
-def correlate(analysis: dict, native_report: dict, tasks=None, run_context=None,
-              cache_logs: Optional[dict] = None, dependencies=None) -> dict:
+def correlate(
+    analysis: dict,
+    native_report: dict,
+    tasks=None,
+    run_context=None,
+    cache_logs: Optional[dict] = None,
+    dependencies=None,
+) -> dict:
     """Join a Plane 1 analysis with a Plane 2 native report.
 
     Both arguments are already-parsed artifacts - this function performs
@@ -2421,8 +2492,7 @@ def correlate(analysis: dict, native_report: dict, tasks=None, run_context=None,
         getattr(run_context, 'max_jobs', None),
         # UX-341: the capture records both in MB (`run-context.json` is
         # an input, with its own conventions); the payload is in bytes.
-        mb_to_bytes(getattr(run_context, 'memory_budget_mb', None)
-                     or getattr(run_context, 'host_memory_mb', None)),
+        mb_to_bytes(getattr(run_context, 'memory_budget_mb', None) or getattr(run_context, 'host_memory_mb', None)),
     )
     memory_envelope_available = bool(memory_envelope.get('at_observed_builders'))
 
@@ -2465,9 +2535,7 @@ def correlate(analysis: dict, native_report: dict, tasks=None, run_context=None,
         # ends in. Recommendations are what a reader acts on, so they are
         # what must not be produced; the row still exists in `elements`,
         # labelled, rather than vanishing.
-        entry.recommendations = (
-            _recommend(entry, memory_envelope_available) if entry.declared else []
-        )
+        entry.recommendations = _recommend(entry, memory_envelope_available) if entry.declared else []
         joined.append(entry)
 
     # Ranked by what Plane 1 says is worth fixing, since that is the
@@ -2483,14 +2551,10 @@ def correlate(analysis: dict, native_report: dict, tasks=None, run_context=None,
     # metric can saturate on some graph, and a reader must be told when
     # theirs did.
     ranked_savings = {e.potential_saving_us for e in joined if e.potential_saving_us > 0}
-    ranking_degenerate = len(ranked_savings) == 1 and sum(
-        1 for e in joined if e.potential_saving_us > 0
-    ) > 1
+    ranking_degenerate = len(ranked_savings) == 1 and sum(1 for e in joined if e.potential_saving_us > 0) > 1
 
     covered = [e for e in joined if e.cores_busy is not None]
-    plane1_only = [
-        e.element for e in joined if e.cores_busy is None and e.potential_saving_us > 0
-    ]
+    plane1_only = [e.element for e in joined if e.cores_busy is None and e.potential_saving_us > 0]
 
     # UX-56: Plane 2 tags processes with an element name derived from
     # bwrap's `--dir`, which is the element only under BuildStream's
@@ -2505,15 +2569,14 @@ def correlate(analysis: dict, native_report: dict, tasks=None, run_context=None,
     # 1, so it reports the hook's own note either way; the join is the
     # first place both planes are visible together.
     from .ingest.models import TaskKind
-    nothing_rebuilt = (
-        native_report.get("process_count") == 0
-        and not any(t.task_key.task_kind == TaskKind.BUILD for t in (tasks or []))
+
+    nothing_rebuilt = native_report.get("process_count") == 0 and not any(
+        t.task_key.task_kind == TaskKind.BUILD for t in (tasks or [])
     )
     attribution_unreliable = None
     if attribution.get("reliable") is False:
         attribution_unreliable = (
-            "nothing was rebuilt, so there is nothing to join"
-            if nothing_rebuilt else attribution.get("note")
+            "nothing was rebuilt, so there is nothing to join" if nothing_rebuilt else attribution.get("note")
         )
     # UX-66: a partial attribution is not an unreliable one. When the
     # names present are real but do not cover every process, the join is
@@ -2522,9 +2585,7 @@ def correlate(analysis: dict, native_report: dict, tasks=None, run_context=None,
     # measured CPU time and `UX-63` measured memory. Refusing here is
     # reserved for the case where the names themselves are fiction.
     attribution_partial = (
-        attribution.get("note")
-        if attribution.get("reliable") and attribution.get("unattributed_processes")
-        else None
+        attribution.get("note") if attribution.get("reliable") and attribution.get("unattributed_processes") else None
     )
 
     # UX-82: computed after the per-element rows, rendered before them -
@@ -2532,16 +2593,20 @@ def correlate(analysis: dict, native_report: dict, tasks=None, run_context=None,
     # drawn from, and those measurements are the ones the producer
     # itself hedges hardest.
     restructuring = (
-        [] if attribution_unreliable
-        else find_restructuring_findings(analysis, native_report, tasks, run_context)
+        [] if attribution_unreliable else find_restructuring_findings(analysis, native_report, tasks, run_context)
     )
     # UX-100: the same posture as `restructuring` - a conclusion about the
     # graph's *shape* rather than about any one element's numbers, drawn
     # after the per-element rows and rendered before them.
     granularity = (
-        [] if attribution_unreliable
+        []
+        if attribution_unreliable
         else find_granularity_findings(
-            analysis, native_report, cache_logs, tasks, run_context,
+            analysis,
+            native_report,
+            cache_logs,
+            tasks,
+            run_context,
             dependencies=dependencies,
         )
     )
@@ -2566,31 +2631,23 @@ def correlate(analysis: dict, native_report: dict, tasks=None, run_context=None,
         # log - `_scale_of`'s rule above, applied to the same payload.
         **(
             {"expected_rebuild_cost": expected_rebuild_cost(analysis, cache_logs)}
-            if (cache_logs or {}).get("change_frequency") else {}
+            if (cache_logs or {}).get("change_frequency")
+            else {}
         ),
         # UX-684: the cached-build mirror of the cold verdict, beside the
         # data it is drawn from - absent, not a hedged verdict, on the
         # same two conditions `cached_shape` itself gates on.
-        **(
-            {"cached_shape": shape}
-            if (shape := cached_shape(analysis, cache_logs, dependencies)) is not None
-            else {}
-        ),
+        **({"cached_shape": shape} if (shape := cached_shape(analysis, cache_logs, dependencies)) is not None else {}),
         "restructuring": restructuring,
         "granularity": granularity,
         "memory_envelope": memory_envelope,
-        "actionable": (
-            [] if attribution_unreliable
-            else [vars(e) for e in joined if e.recommendations]
-        ),
+        "actionable": ([] if attribution_unreliable else [vars(e) for e in joined if e.recommendations]),
         "attribution_unreliable": attribution_unreliable,
         "attribution_partial": attribution_partial,
         "ranking": {
             "metric": ranking_metric,
             "degenerate": ranking_degenerate,
-            "tied_saving_us": (
-                next(iter(ranked_savings)) if ranking_degenerate else None
-            ),
+            "tied_saving_us": (next(iter(ranked_savings)) if ranking_degenerate else None),
         },
         "coverage": {
             "joined_elements": len(covered),
@@ -2601,15 +2658,11 @@ def correlate(analysis: dict, native_report: dict, tasks=None, run_context=None,
             # not contain. Reported rather than silently dropped - a
             # non-empty list here means the sandbox-to-element mapping is
             # producing fiction and is worth investigating on its own.
-            "undeclared_plane2_elements": sorted(
-                e.element for e in joined if not e.declared
-            ),
+            "undeclared_plane2_elements": sorted(e.element for e in joined if not e.declared),
             # UX-72: `UX-68` set these aside as unprovable and nothing
             # has looked at them since. Counted here so the filtered
             # population is visible rather than merely absent.
-            "aggregating_dependency_pairs": sum(
-                len(e.aggregating_dependencies) for e in joined
-            ),
+            "aggregating_dependency_pairs": sum(len(e.aggregating_dependencies) for e in joined),
         },
         "note": (
             "Joined on element UID - the only contract between the two planes. "
@@ -2651,8 +2704,7 @@ def format_correlation(result: dict) -> str:
     instance = result.get("run_instance") or {}
     if instance.get("started_at"):
         lines.append(
-            f"Instance: {instance['started_at']}"
-            + (f"  {instance['run_dir']}" if instance.get("run_dir") else "")
+            f"Instance: {instance['started_at']}" + (f"  {instance['run_dir']}" if instance.get("run_dir") else "")
         )
     if len(lines) > 3:
         lines.append("")
@@ -2681,10 +2733,7 @@ def format_correlation(result: dict) -> str:
         f"{coverage['plane2_elements']} traced in Plane 2)"
     )
     if coverage["plane1_only_with_impact"]:
-        lines.append(
-            "  Not traced, but Plane 1 says they matter: "
-            + ", ".join(coverage["plane1_only_with_impact"])
-        )
+        lines.append("  Not traced, but Plane 1 says they matter: " + ", ".join(coverage["plane1_only_with_impact"]))
     # UX-72: `UX-68` filtered these out for good reason - a dependency
     # that stages almost nothing of its own cannot be shown unused by
     # nobody reading it - but a filtered population that is never
@@ -2721,15 +2770,9 @@ def format_correlation(result: dict) -> str:
         if ceiling:
             line += f"; {ceiling} would not fit"
         else:
-            higher = [
-                p for p in envelope["projections"]
-                if p["builders"] > at_observed["builders"]
-            ]
+            higher = [p for p in envelope["projections"] if p["builders"] > at_observed["builders"]]
             if higher:
-                line += (
-                    f"; {higher[-1]['builders']} would still fit, so memory is not "
-                    f"what binds first here"
-                )
+                line += f"; {higher[-1]['builders']} would still fit, so memory is not what binds first here"
         lines.append(line)
         lines.append(f"    ({envelope['note']})")
     lines.append("")
@@ -2775,8 +2818,7 @@ def format_correlation(result: dict) -> str:
             )
         elif projection:
             lines.append(
-                "    Replaying this run with those edges removed changes nothing - "
-                "the chain is not what binds here"
+                "    Replaying this run with those edges removed changes nothing - the chain is not what binds here"
             )
         lines.append(
             "    Worth checking whether those edges are needed at build time: each "
@@ -2825,17 +2867,14 @@ def format_correlation(result: dict) -> str:
                 # first member's own words rather than being summarized
                 # into something the measurement does not say.
                 lines.append(f"    - {grouped or step['text']}")
-            coverages = [
-                e["cpu_coverage"] for e in entries if e["cpu_coverage"] is not None
-            ]
+            coverages = [e["cpu_coverage"] for e in entries if e["cpu_coverage"] is not None]
             if coverages and min(coverages) < 1.0:
                 span = _collapse_range(coverages, lambda v: f"{v * 100:.0f}", "%")
                 scope = "this element's" if len(entries) == 1 else "each element's"
                 lines.append(f"    ({span} of {scope} processes were measured)")
         if elements_shown < len(actionable):
             lines.append(
-                f"  (+{_count(len(actionable) - elements_shown, 'more element')} with findings, "
-                f"see --format json)"
+                f"  (+{_count(len(actionable) - elements_shown, 'more element')} with findings, see --format json)"
             )
     lines.append("")
     lines.append(f"({result['note']})")

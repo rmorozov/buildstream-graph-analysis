@@ -33,6 +33,7 @@ ancestor, table or wrapper, is one to `scrollIntoView`. `revealAndLand`
 computes the document scroll itself, from the rect and
 `scroll-margin-top`, so no ancestor's scroll runs at all.
 """
+
 import pathlib
 import sys
 
@@ -113,17 +114,21 @@ _RAISE_HEAD = r"""
     `<style>body[data-has-toc]{--head:${basePx + 4 * remPx}px}</style>`);
 """
 
-_CLICK_TALL = _CLICK.replace(
-    "(async () => {",
-    "(async () => {" + _RAISE_HEAD,
-).replace(
-    "const max = document.documentElement.scrollHeight - window.innerHeight;",
-    """const margin = parseFloat(
+_CLICK_TALL = (
+    _CLICK.replace(
+        "(async () => {",
+        "(async () => {" + _RAISE_HEAD,
+    )
+    .replace(
+        "const max = document.documentElement.scrollHeight - window.innerHeight;",
+        """const margin = parseFloat(
     getComputedStyle(target).scrollMarginTop) || 0;
   const max = document.documentElement.scrollHeight - window.innerHeight;""",
-).replace(
-    "return {id: \"__ID__\", head,",
-    "return {id: \"__ID__\", head, margin,",
+    )
+    .replace(
+        "return {id: \"__ID__\", head,",
+        "return {id: \"__ID__\", head, margin,",
+    )
 )
 
 
@@ -142,8 +147,7 @@ def landings(browser, tmp_path_factory):
     into = tmp_path_factory.mktemp("u670")
     uri = pages.export_uri(pages.FIXTURES["macro_micro"], into)
     ids = browser.measure(uri, _FOLDED, 1440, 900)
-    return [browser.measure(uri, _CLICK.replace("__ID__", one), 1440, 900)
-            for one in ids]
+    return [browser.measure(uri, _CLICK.replace("__ID__", one), 1440, 900) for one in ids]
 
 
 #: `UX-722`: every rail link whose target is a fold rather than a
@@ -169,8 +173,7 @@ def fold_landings(browser, tmp_path_factory):
     into = tmp_path_factory.mktemp("u722")
     uri = pages.export_uri(pages.FIXTURES["macro_micro"], into)
     ids = browser.measure(uri, _FOLDS, 1440, 900)
-    return [browser.measure(uri, _CLICK.replace("__ID__", one), 1440, 900)
-            for one in ids]
+    return [browser.measure(uri, _CLICK.replace("__ID__", one), 1440, 900) for one in ids]
 
 
 @pytest.fixture(scope="module")
@@ -179,8 +182,7 @@ def tall_landings(browser, tmp_path_factory):
     into = tmp_path_factory.mktemp("u800")
     uri = pages.export_uri(pages.FIXTURES["macro_micro"], into)
     ids = browser.measure(uri, _FOLDED, 1440, 900)
-    return [browser.measure(uri, _CLICK_TALL.replace("__ID__", one), 1440, 900)
-            for one in ids]
+    return [browser.measure(uri, _CLICK_TALL.replace("__ID__", one), 1440, 900) for one in ids]
 
 
 @pytest.fixture(scope="module")
@@ -189,8 +191,7 @@ def tall_fold_landings(browser, tmp_path_factory):
     into = tmp_path_factory.mktemp("u800fold")
     uri = pages.export_uri(pages.FIXTURES["macro_micro"], into)
     ids = browser.measure(uri, _FOLDS, 1440, 900)
-    return [browser.measure(uri, _CLICK_TALL.replace("__ID__", one), 1440, 900)
-            for one in ids]
+    return [browser.measure(uri, _CLICK_TALL.replace("__ID__", one), 1440, 900) for one in ids]
 
 
 class TestTheEntryPointsLandRatherThanScroll:
@@ -214,17 +215,15 @@ class TestTheEntryPointsLandRatherThanScroll:
         consecutive equal reads of the target's rect, does not, and a
         bare frame count cannot reappear as its cap."""
         text = (REPO / "bga" / "viewer" / "chapters.js").read_text()
-        body = text[text.index("export function revealAndLand("):]
-        body = body[:body.index("\n}\n")]
+        body = text[text.index("export function revealAndLand(") :]
+        body = body[: body.index("\n}\n")]
         assert "\n  land();\n" in body
         assert "frame(() => frame(() => frame(land)))" not in body
         assert "getBoundingClientRect().top" in body
         assert "cur === prev" in body
         assert "LAND_SETTLE_FRAME_CAP" in body
         assert "seen >= LAND_SETTLE_FRAME_CAP" in body
-        const_line = next(
-            line for line in text.splitlines()
-            if "LAND_SETTLE_FRAME_CAP =" in line)
+        const_line = next(line for line in text.splitlines() if "LAND_SETTLE_FRAME_CAP =" in line)
         assert const_line.rstrip().split("=")[1].strip().rstrip(";").isdigit()
 
     def test_the_landing_is_computed_not_delegated(self):
@@ -234,8 +233,8 @@ class TestTheEntryPointsLandRatherThanScroll:
         and wrong regardless. The document scroll is computed from the
         rect and the node's own `scroll-margin-top` instead."""
         text = (REPO / "bga" / "viewer" / "chapters.js").read_text()
-        body = text[text.index("export function revealAndLand("):]
-        body = body[:body.index("\n}\n")]
+        body = text[text.index("export function revealAndLand(") :]
+        body = body[: body.index("\n}\n")]
         assert "scrollIntoView" not in body
         assert "getBoundingClientRect" in body
         assert "scrollMarginTop" in body
@@ -244,13 +243,12 @@ class TestTheEntryPointsLandRatherThanScroll:
 @needs_browser
 class TestARailClickLandsUnderTheHeader:
     def test_every_link_lands_or_runs_out_of_page(self, landings):
-        missed = [row for row in landings
-                  if not (0 <= row["top"] <= row["head"] + SLACK_PX)
-                  and row["fromEnd"] != 0]
+        missed = [row for row in landings if not (0 <= row["top"] <= row["head"] + SLACK_PX) and row["fromEnd"] != 0]
         assert missed == [], (
             f"{len(missed)} of {len(landings)} rail links land away from "
             f"the section they name, and the page had somewhere left to "
-            f"scroll: {missed}")
+            f"scroll: {missed}"
+        )
 
     def test_the_split_is_the_one_measured(self, landings):
         """Pasted, so the escape cannot quietly grow. 61 folded section
@@ -263,8 +261,12 @@ class TestARailClickLandsUnderTheHeader:
         at_end = [row for row in landings if row["fromEnd"] == 0]
         assert (len(landings), len(under), len(at_end)) == (61, 56, 5)
         assert sorted(row["id"] for row in at_end) == [
-            "cpu_time", "document_shape", "peak_memory", "producer",
-            "utilization_envelope"]
+            "cpu_time",
+            "document_shape",
+            "peak_memory",
+            "producer",
+            "utilization_envelope",
+        ]
 
     #: `scroll-margin-top` is `--head + .5rem`. `UX-828` shrank the
     #: header (the path and the version line left it) and `--head` with
@@ -278,8 +280,7 @@ class TestARailClickLandsUnderTheHeader:
         the -317 and +673 above would also satisfy against a loose
         bound. Four pixels wide against a 900 px viewport."""
         low, high = self.BAND
-        tops = sorted({row["top"] for row in landings
-                       if row["fromEnd"] != 0})
+        tops = sorted({row["top"] for row in landings if row["fromEnd"] != 0})
         assert tops and low <= min(tops) and max(tops) <= high, tops
 
 
@@ -301,22 +302,21 @@ class TestARailClickIntoAFoldLandsUnderTheHeader:
 
     def test_every_fold_link_lands_or_runs_out_of_page(self, fold_landings):
         assert fold_landings, "no rail link targets a fold on this fixture"
-        missed = [row for row in fold_landings
-                  if not (0 <= row["top"] <= row["head"] + SLACK_PX)
-                  and row["fromEnd"] != 0]
+        missed = [
+            row for row in fold_landings if not (0 <= row["top"] <= row["head"] + SLACK_PX) and row["fromEnd"] != 0
+        ]
         assert missed == [], (
             f"{len(missed)} of {len(fold_landings)} fold links land away "
             f"from the fold they name, and the page had somewhere left to "
-            f"scroll: {missed}")
+            f"scroll: {missed}"
+        )
 
     def test_the_two_known_folds_are_the_ones_measured(self, fold_landings):
         """Pasted, so a third fold target does not silently join the
         passing set unmeasured."""
-        assert sorted(row["id"] for row in fold_landings) == [
-            "restructuring--edges", "restructuring--projection"]
+        assert sorted(row["id"] for row in fold_landings) == ["restructuring--edges", "restructuring--projection"]
 
-    def test_the_landing_is_the_header_and_not_merely_close(
-            self, fold_landings):
+    def test_the_landing_is_the_header_and_not_merely_close(self, fold_landings):
         low, high = TestARailClickLandsUnderTheHeader.BAND
         tops = sorted({row["top"] for row in fold_landings})
         assert tops and low <= min(tops) and max(tops) <= high, tops
@@ -332,20 +332,26 @@ class TestARailClickLandsUnderATallerHeader:
     `scroll-margin-top`, within `SLACK_PX`."""
 
     def test_every_link_lands_at_its_own_margin(self, tall_landings):
-        missed = [row for row in tall_landings
-                  if not row.get("missing") and row["fromEnd"] != 0
-                  and abs(row["top"] - row["margin"]) > SLACK_PX]
+        missed = [
+            row
+            for row in tall_landings
+            if not row.get("missing") and row["fromEnd"] != 0 and abs(row["top"] - row["margin"]) > SLACK_PX
+        ]
         assert missed == [], (
             f"{len(missed)} of {len(tall_landings)} rail links miss their "
             f"own scroll-margin-top by more than {SLACK_PX}px under a "
-            f"header 4rem taller: {missed}")
+            f"header 4rem taller: {missed}"
+        )
 
     def test_every_fold_link_lands_at_its_own_margin(self, tall_fold_landings):
         assert tall_fold_landings, "no rail link targets a fold on this fixture"
-        missed = [row for row in tall_fold_landings
-                  if not row.get("missing") and row["fromEnd"] != 0
-                  and abs(row["top"] - row["margin"]) > SLACK_PX]
+        missed = [
+            row
+            for row in tall_fold_landings
+            if not row.get("missing") and row["fromEnd"] != 0 and abs(row["top"] - row["margin"]) > SLACK_PX
+        ]
         assert missed == [], (
             f"{len(missed)} of {len(tall_fold_landings)} fold links miss "
             f"their own scroll-margin-top by more than {SLACK_PX}px under "
-            f"a header 4rem taller: {missed}")
+            f"a header 4rem taller: {missed}"
+        )

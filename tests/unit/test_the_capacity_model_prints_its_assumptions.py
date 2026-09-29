@@ -10,6 +10,7 @@ The assumptions are recorded by `_Assumed.on` where they enter the
 arithmetic, so the guards below read the same list the computation
 built rather than a second one kept in step with it.
 """
+
 import json
 import math
 import os
@@ -28,8 +29,7 @@ GOLDEN = REPO / "tests/fixtures/golden/mixed_task_kinds"
 # Six finished runs on one machine, in microseconds. Mean 703.33 s,
 # sample sd 105.39 s, CV^2 0.0225 - a real store's shape, not an
 # exponential one, which is the whole reason M/M/c alone will not do.
-SAMPLES = [600_000_000, 720_000_000, 660_000_000,
-           900_000_000, 640_000_000, 700_000_000]
+SAMPLES = [600_000_000, 720_000_000, 660_000_000, 900_000_000, 640_000_000, 700_000_000]
 
 
 def _listing(rows):
@@ -37,13 +37,15 @@ def _listing(rows):
 
 
 def _row(stamp, duration_us, host_class="one machine", **extra):
-    return dict({"stamp": stamp, "total_duration_us": duration_us,
-                 "host_class": host_class, "incomplete_reason": None}, **extra)
+    return dict(
+        {"stamp": stamp, "total_duration_us": duration_us, "host_class": host_class, "incomplete_reason": None}, **extra
+    )
 
 
 def _one_class(samples=None, host_class="one machine"):
-    return _listing([_row(f"2026010{n}T000000Z", value, host_class)
-                     for n, value in enumerate(samples or SAMPLES, start=1)])
+    return _listing(
+        [_row(f"2026010{n}T000000Z", value, host_class) for n, value in enumerate(samples or SAMPLES, start=1)]
+    )
 
 
 def _unwrapped(lines):
@@ -53,22 +55,18 @@ def _unwrapped(lines):
 
 
 def _answers(document, label="one machine"):
-    entry = next(e for e in document["host_classes"]
-                 if e["host_class"] == label)
+    entry = next(e for e in document["host_classes"] if e["host_class"] == label)
     return {answer["name"]: answer for answer in entry["answers"]}
 
 
 class TestTheArithmetic:
-    @pytest.mark.parametrize("builders,load", [(1, 0.5), (2, 1.0), (4, 3.0),
-                                               (10, 8.0), (20, 15.0)])
+    @pytest.mark.parametrize("builders,load", [(1, 0.5), (2, 1.0), (4, 3.0), (10, 8.0), (20, 15.0)])
     def test_erlang_c_matches_the_factorial_form(self, builders, load):
         """The recurrence and the textbook formula, to 12 places. The
         recurrence exists because the factorial overflows first."""
-        below = sum(load ** k / math.factorial(k) for k in range(builders))
-        busy = load ** builders / math.factorial(builders) * (
-            builders / (builders - load))
-        assert capacity_model.erlang_c(builders, load) == pytest.approx(
-            busy / (below + busy), rel=1e-12)
+        below = sum(load**k / math.factorial(k) for k in range(builders))
+        busy = load**builders / math.factorial(builders) * (builders / (builders - load))
+        assert capacity_model.erlang_c(builders, load) == pytest.approx(busy / (below + busy), rel=1e-12)
 
     def test_a_saturated_system_makes_everyone_wait(self):
         assert capacity_model.erlang_c(4, 4.0) == 1.0
@@ -86,12 +84,11 @@ class TestTheArithmetic:
         rate = 40.0
         rate_us = rate / capacity_model.MICROSECONDS_PER_DAY
         document = capacity_model.model(
-            _listing([_row(f"2026010{n}T000000Z", int(v))
-                      for n, v in enumerate(samples, start=1)]), 1, rate)
+            _listing([_row(f"2026010{n}T000000Z", int(v)) for n, v in enumerate(samples, start=1)]), 1, rate
+        )
         rho = rate_us * service["mean_us"]
         closed_form = rho / (1 / service["mean_us"] - rate_us)
-        assert _answers(document)["wait_us"]["value"] == pytest.approx(
-            closed_form * (1 + service["cv2"]) / 2, rel=1e-9)
+        assert _answers(document)["wait_us"]["value"] == pytest.approx(closed_form * (1 + service["cv2"]) / 2, rel=1e-9)
 
     def test_the_measured_spread_is_what_bends_the_wait(self):
         """The store's CV^2 is 0.02, so the wait is about half what
@@ -114,8 +111,7 @@ class TestTheArithmetic:
         document = capacity_model.model(_one_class(), 4, 400)
         answers = _answers(document)
         rate_us = 400 / capacity_model.MICROSECONDS_PER_DAY
-        assert answers["queue_length"]["value"] == pytest.approx(
-            rate_us * answers["wait_us"]["value"])
+        assert answers["queue_length"]["value"] == pytest.approx(rate_us * answers["wait_us"]["value"])
 
 
 class TestEveryNumberNamesWhatItAssumed:
@@ -123,9 +119,7 @@ class TestEveryNumberNamesWhatItAssumed:
         document = capacity_model.model(_one_class(), 4, 400)
         for entry in document["host_classes"]:
             for answer in entry["answers"]:
-                assert answer["assumes"], (
-                    f"{answer['name']} is published with no assumptions "
-                    f"beside it")
+                assert answer["assumes"], f"{answer['name']} is published with no assumptions beside it"
 
     def test_every_assumption_a_number_used_is_printed_on_its_own_line(self):
         """The Acceptance Test's mutation: drop one id from the printout
@@ -134,35 +128,32 @@ class TestEveryNumberNamesWhatItAssumed:
         printed = capacity_model.render(document)
         for entry in document["host_classes"]:
             for answer in entry["answers"]:
-                start = next(n for n, line in enumerate(printed)
-                             if line.strip().startswith(
-                                 capacity_model._UNITS[answer["name"]][0]))
+                start = next(
+                    n
+                    for n, line in enumerate(printed)
+                    if line.strip().startswith(capacity_model._UNITS[answer["name"]][0])
+                )
                 block = ""
-                for line in printed[start + 1:]:
+                for line in printed[start + 1 :]:
                     if not line.startswith("      "):
                         break
                     block += line
                 for name in answer["assumes"]:
-                    assert name in block, (
-                        f"{answer['name']} used {name} and does not name "
-                        f"it: {block!r}")
+                    assert name in block, f"{answer['name']} used {name} and does not name it: {block!r}"
 
     def test_every_assumption_used_is_stated_once_below(self):
         document = capacity_model.model(_one_class(), 4, 400)
         printed = _unwrapped(capacity_model.render(document))
         for name in capacity_model._used(document):
-            assert capacity_model.ASSUMPTIONS[name] in printed, (
-                f"{name} is named beside a number and stated nowhere")
-            assert printed.count(capacity_model.ASSUMPTIONS[name]) == 1, (
-                f"{name} is stated more than once")
+            assert capacity_model.ASSUMPTIONS[name] in printed, f"{name} is named beside a number and stated nowhere"
+            assert printed.count(capacity_model.ASSUMPTIONS[name]) == 1, f"{name} is stated more than once"
 
     def test_an_assumption_no_number_used_is_not_printed(self):
         """The other half: a legend of everything bga could assume
         teaches nothing about the numbers on this page."""
         document = capacity_model.model(_one_class(), 4, 400)
         printed = _unwrapped(capacity_model.render(document))
-        unused = set(capacity_model.ASSUMPTIONS) - set(
-            capacity_model._used(document))
+        unused = set(capacity_model.ASSUMPTIONS) - set(capacity_model._used(document))
         assert unused, "this fixture was meant to leave one unused"
         for name in unused:
             assert capacity_model.ASSUMPTIONS[name] not in printed, name
@@ -193,13 +184,11 @@ class TestEveryNumberNamesWhatItAssumed:
 
 class TestWhatItRefuses:
     def test_a_class_below_the_sample_floor_is_not_modelled(self):
-        document = capacity_model.model(
-            _one_class(SAMPLES[:MIN_BASELINE_RUNS - 1]), 4, 400)
+        document = capacity_model.model(_one_class(SAMPLES[: MIN_BASELINE_RUNS - 1]), 4, 400)
         entry = document["host_classes"][0]
         assert entry["answers"] == []
         assert entry["shortfall"]["need"] == MIN_BASELINE_RUNS
-        assert str(MIN_BASELINE_RUNS) in "\n".join(
-            capacity_model.render(document))
+        assert str(MIN_BASELINE_RUNS) in "\n".join(capacity_model.render(document))
 
     def test_an_unstable_queue_publishes_no_wait(self):
         document = capacity_model.model(_one_class(), 4, 600)
@@ -209,18 +198,21 @@ class TestWhatItRefuses:
         assert entry["answers"][0]["value"] > 1
 
     def test_a_mix_of_machines_publishes_no_fleet_wide_number(self):
-        document = capacity_model.model(_listing(
-            [_row(f"2026010{n}T000000Z", 600_000_000, "ryzen")
-             for n in range(1, 4)]
-            + [_row(f"2026011{n}T000000Z", 1_200_000_000, "xeon")
-               for n in range(1, 4)]), 4, 200)
+        document = capacity_model.model(
+            _listing(
+                [_row(f"2026010{n}T000000Z", 600_000_000, "ryzen") for n in range(1, 4)]
+                + [_row(f"2026011{n}T000000Z", 1_200_000_000, "xeon") for n in range(1, 4)]
+            ),
+            4,
+            200,
+        )
         assert document["refusal"]["check"] == "cross_host_model"
         assert len(document["host_classes"]) == 2
         for entry in document["host_classes"]:
             for answer in entry["answers"]:
                 assert "whole_arrival_stream" in answer["assumes"], (
-                    "each class is modelled on the whole stream and does "
-                    "not say so")
+                    "each class is modelled on the whole stream and does not say so"
+                )
 
     def test_one_machine_makes_no_claim_about_a_split_stream(self):
         document = capacity_model.model(_one_class(), 4, 400)
@@ -229,20 +221,17 @@ class TestWhatItRefuses:
 
     def test_an_unfinished_capture_is_not_a_service_time(self):
         rows = list(_one_class()["snapshots"])
-        rows.append(_row("20260107T000000Z", 9_000_000_000,
-                         incomplete_reason="interrupted"))
+        rows.append(_row("20260107T000000Z", 9_000_000_000, incomplete_reason="interrupted"))
         document = capacity_model.model(_listing(rows), 4, 400)
         assert document["excluded_runs"] == 1
         assert document["host_classes"][0]["service"]["samples"] == len(SAMPLES)
 
-    @pytest.mark.parametrize("builders,rate", [(0, 40), (-1, 40), (4, 0),
-                                               (4, -1)])
+    @pytest.mark.parametrize("builders,rate", [(0, 40), (-1, 40), (4, 0), (4, -1)])
     def test_a_fleet_that_cannot_exist_is_refused(self, builders, rate):
         with pytest.raises(ValueError):
             capacity_model.model(_one_class(), builders, rate)
 
-    @pytest.mark.parametrize("spec", ["", "4", "4,", "four,40", "0,40",
-                                      "4,0", "4,40,7"])
+    @pytest.mark.parametrize("spec", ["", "4", "4,", "four,40", "0,40", "4,0", "4,40,7"])
     def test_the_flag_refuses_what_is_not_a_fleet(self, spec):
         assert capacity_model.parse_capacity(spec) is None
 
@@ -265,8 +254,7 @@ def _store(tmp_path, durations):
 
 
 class TestTheReader:
-    def test_the_command_prints_the_model_and_its_legend(self, tmp_path,
-                                                         capsys):
+    def test_the_command_prints_the_model_and_its_legend(self, tmp_path, capsys):
         from tools.bga_snapshot import _capacity
 
         assert _capacity(_store(tmp_path, SAMPLES), "4,400") == 0
@@ -276,16 +264,14 @@ class TestTheReader:
         assert "assumes " in out
         assert "arrivals_poisson" in out
 
-    def test_a_mixed_store_exits_on_the_cross_host_code(self, tmp_path,
-                                                        capsys):
+    def test_a_mixed_store_exits_on_the_cross_host_code(self, tmp_path, capsys):
         from bga.cli import EXIT_CODE_MISMATCHED_RUNS
         from tools.bga_snapshot import _capacity
 
         project = _store(tmp_path, SAMPLES)
         run = pathlib.Path(project) / ".bga/runs/20260101T000000Z/run"
         context = json.loads((run / "run-context.json").read_text())
-        context["host_manifest"] = dict(context.get("host_manifest") or {},
-                                        cpu_model="a different machine")
+        context["host_manifest"] = dict(context.get("host_manifest") or {}, cpu_model="a different machine")
         (run / "run-context.json").write_text(json.dumps(context))
         assert _capacity(project, "4,400") == EXIT_CODE_MISMATCHED_RUNS
         assert "host classes" in capsys.readouterr().out
@@ -300,14 +286,12 @@ class TestTheReader:
         out = capsys.readouterr().out
         document = json.loads(out)
         assert list(document)[0] == "schema", (
-            "the stamp is not the first key a truncated read would see: "
-            f"{list(document)[:3]}")
+            f"the stamp is not the first key a truncated read would see: {list(document)[:3]}"
+        )
         assert document["schema"] == schemas.CAPACITY_MODEL
-        assert document["host_classes"][0]["answers"], (
-            "a stamped document with no figures in it")
+        assert document["host_classes"][0]["answers"], "a stamped document with no figures in it"
         jsonschema = pytest.importorskip("jsonschema")
-        jsonschema.validate(document,
-                            schemas.schema(schemas.CAPACITY_MODEL))
+        jsonschema.validate(document, schemas.schema(schemas.CAPACITY_MODEL))
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -8,6 +8,7 @@ previous version's tests all passed `resource_capacity={}`, which never
 exercised the capacity check at all - every scenario below now passes
 real, non-empty capacity).
 """
+
 from bga.attribution.blame_chain import BlameChainAnalyzer
 from bga.ingest.models import NormalizedTask, Resource, TaskKey, TaskKind
 
@@ -15,7 +16,9 @@ from bga.ingest.models import NormalizedTask, Resource, TaskKey, TaskKind
 def _task(uid, ready_us, start_us, finish_us, resources=(Resource.PROCESS,)):
     return NormalizedTask(
         task_key=TaskKey(uid, TaskKind.BUILD, "BUILD", 0),
-        ready_us=ready_us, start_us=start_us, finish_us=finish_us,
+        ready_us=ready_us,
+        start_us=start_us,
+        finish_us=finish_us,
         resources=list(resources),
     )
 
@@ -134,12 +137,15 @@ def test_multi_resource_only_saturated_resource_counts_as_holder():
     where PROCESS specifically was the saturated resource."""
     full_span = _task("full_span.bst", ready_us=0, start_us=0, finish_us=20000, resources=(Resource.DOWNLOAD,))
     mid_change = _task("mid_change.bst", ready_us=0, start_us=5000, finish_us=15000)
-    waiting_needs = _task("waiting.bst", ready_us=0, start_us=20000, finish_us=30000,
-                           resources=(Resource.PROCESS, Resource.DOWNLOAD))
+    waiting_needs = _task(
+        "waiting.bst", ready_us=0, start_us=20000, finish_us=30000, resources=(Resource.PROCESS, Resource.DOWNLOAD)
+    )
     analyzer = BlameChainAnalyzer(normalized_tasks=[waiting_needs, full_span, mid_change])
 
     is_wait, info = analyzer.classify_resource_wait(
-        waiting_needs, {}, {Resource.PROCESS: 1, Resource.DOWNLOAD: 1},
+        waiting_needs,
+        {},
+        {Resource.PROCESS: 1, Resource.DOWNLOAD: 1},
     )
     assert is_wait is True
     assert info["explained_us"] == 20000

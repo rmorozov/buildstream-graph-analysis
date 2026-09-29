@@ -24,6 +24,7 @@ a deliberate change, then reads `git diff` to confirm the change it
 intended is the only one. Key order is compared as its own line
 (`UX-547`) and `--write` is its fix; order is not a contract (`UX-302`).
 """
+
 import argparse
 import json
 import pathlib
@@ -66,9 +67,12 @@ class Fixture:
         """A fresh run, with the machine taken out of it."""
         target = self.target()
         done = subprocess.run(
-            [sys.executable, "-m", "bga.cli", "analyze", str(target),
-             "--format", "json", "--diagnostics"],
-            capture_output=True, text=True, cwd=REPO, timeout=600)
+            [sys.executable, "-m", "bga.cli", "analyze", str(target), "--format", "json", "--diagnostics"],
+            capture_output=True,
+            text=True,
+            cwd=REPO,
+            timeout=600,
+        )
         if done.returncode != 0:
             raise SystemExit(f"{self.name}: analyze failed\n{done.stderr}")
         # The fixture directory, not the run directory: the committed
@@ -83,8 +87,7 @@ class Fixture:
         return json.loads(self.into.read_text(encoding="utf-8"))
 
     def write(self):
-        self.into.write_text(json.dumps(self.analysed(), indent=4) + "\n",
-                             encoding="utf-8")
+        self.into.write_text(json.dumps(self.analysed(), indent=4) + "\n", encoding="utf-8")
         return self.into
 
 
@@ -92,10 +95,8 @@ class Fixture:
 #: one nothing regenerates and nothing checks, which is the state
 #: `with_timeline` was in.
 FIXTURES = (
-    Fixture("tests/fixtures/golden/mixed_task_kinds",
-            into="expected_output.json", run=".", token="<run>"),
-    Fixture("tests/fixtures/with_timeline",
-            into="analyze.json", run="run", token="<fixture>"),
+    Fixture("tests/fixtures/golden/mixed_task_kinds", into="expected_output.json", run=".", token="<run>"),
+    Fixture("tests/fixtures/with_timeline", into="analyze.json", run="run", token="<fixture>"),
 )
 
 
@@ -149,8 +150,7 @@ def differences(fixture):
     for key in sorted(set(fresh) | set(held)):
         if key == "findings":
             continue
-        if json.dumps(fresh.get(key), sort_keys=True) != json.dumps(
-                held.get(key), sort_keys=True):
+        if json.dumps(fresh.get(key), sort_keys=True) != json.dumps(held.get(key), sort_keys=True):
             out.append((key, "differs"))
         else:
             agreed.append(key)
@@ -158,25 +158,26 @@ def differences(fixture):
     # differs explains its own reordering, and reporting both would say
     # one change twice.
     for where, emitted, committed in order_drift(
-            {k: fresh[k] for k in fresh if k in agreed},
-            {k: held[k] for k in held if k in agreed}):
-        out.append((where, f"{ORDER_DRIFT}\n  committed {committed}"
-                           f"\n  analyzer  {emitted}"))
+        {k: fresh[k] for k in fresh if k in agreed}, {k: held[k] for k in held if k in agreed}
+    ):
+        out.append((where, f"{ORDER_DRIFT}\n  committed {committed}\n  analyzer  {emitted}"))
     return out
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--write", metavar="FIXTURE", nargs="?", const="all",
-                        help="rewrite the committed document(s) from a fresh "
-                             "run, instead of checking")
+    parser.add_argument(
+        "--write",
+        metavar="FIXTURE",
+        nargs="?",
+        const="all",
+        help="rewrite the committed document(s) from a fresh run, instead of checking",
+    )
     args = parser.parse_args(argv)
     if args.write:
-        chosen = [f for f in FIXTURES
-                  if args.write == "all" or f.name == args.write.rstrip("/")]
+        chosen = [f for f in FIXTURES if args.write == "all" or f.name == args.write.rstrip("/")]
         if not chosen:
-            raise SystemExit(f"no fixture named {args.write}; this tool knows "
-                             f"{[f.name for f in FIXTURES]}")
+            raise SystemExit(f"no fixture named {args.write}; this tool knows {[f.name for f in FIXTURES]}")
         for fixture in chosen:
             print(f"wrote {fixture.write().relative_to(REPO)}")
         return 0
@@ -190,8 +191,7 @@ def main(argv=None):
         print(f"  DRIFT {fixture.name}")
         for where, what in found:
             print(f"          {where}: {what}")
-    print(f"{problems} of {len(FIXTURES)} committed analysis document(s) "
-          f"disagree with the analyzer")
+    print(f"{problems} of {len(FIXTURES)} committed analysis document(s) disagree with the analyzer")
     return 1 if problems else 0
 
 

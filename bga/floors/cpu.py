@@ -9,24 +9,22 @@ same report and was joined to nothing.
 Absent, never zero, without Plane 2 or without a governing core count -
 `lb` and every other Part 16 term is untouched either way.
 """
+
 from typing import Optional
 
 # What this floor leans on, printed with the number the way
 # bga/capacity_model.py's own ASSUMPTIONS are. A floor whose
 # assumptions reach only the task file is a floor a reader takes.
 ASSUMPTIONS = {
-    "cpu_work_conserved":
-        "The measured CPU work is assumed conserved under a different "
-        "schedule - the same build rescheduled is assumed to cost the "
-        "same CPU microseconds, not fewer.",
-    "coverage_as_published":
-        "The coverage share is published, not corrected for: the "
-        "unmeasured processes' CPU is missing from the total, so the "
-        "floor is a floor on the measured share.",
-    "cores_are_the_whole_machine":
-        "The governing cores are the whole machine (or the whole "
-        "declared budget). A co-tenant on the same box is not "
-        "modelled.",
+    "cpu_work_conserved": "The measured CPU work is assumed conserved under a different "
+    "schedule - the same build rescheduled is assumed to cost the "
+    "same CPU microseconds, not fewer.",
+    "coverage_as_published": "The coverage share is published, not corrected for: the "
+    "unmeasured processes' CPU is missing from the total, so the "
+    "floor is a floor on the measured share.",
+    "cores_are_the_whole_machine": "The governing cores are the whole machine (or the whole "
+    "declared budget). A co-tenant on the same box is not "
+    "modelled.",
 }
 
 
@@ -61,7 +59,9 @@ def governing_cores(run_context) -> tuple[Optional[int], str]:
 
 
 def compute_cpu_floor(
-    native_report: Optional[dict], run_context, lb: Optional[int] = None,
+    native_report: Optional[dict],
+    run_context,
+    lb: Optional[int] = None,
 ) -> dict:
     """`total_cpu_us // governing_cores`, with its coverage and its divisor.
 

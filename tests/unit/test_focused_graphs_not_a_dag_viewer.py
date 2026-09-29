@@ -12,6 +12,7 @@ arithmetic, geometry asserted from data attributes. The widths are
 is `depth`, a field that had to *enter* `blast/v2` first, because the
 filing's premise that the payload already carried it was wrong.
 """
+
 import io
 import json
 import os
@@ -38,8 +39,7 @@ REAL = "examples/06-macro-micro-optimization/.bga/runs/20260821T170127Z/run"
 # The golden fixture carries what both drawings need: a three-element
 # critical path with distinct shares (0.43 / 0.36 / 0.21) and, from
 # `base.bst`, a three-level blast tree (depths 0, 1, 2).
-_needs_real = pytest.mark.skipif(not os.path.isdir(REAL),
-                                 reason="no real capture here")
+_needs_real = pytest.mark.skipif(not os.path.isdir(REAL), reason="no real capture here")
 # `(run, blast target)` - the target differs because the fixtures do.
 RUNS = [
     pytest.param(GOLDEN, "base.bst", id="committed"),
@@ -48,9 +48,9 @@ RUNS = [
 
 
 def _node(script, timeout=120):
-    result = subprocess.run([node, "--input-type=module", "-e", script],
-                            capture_output=True, text=True, cwd=os.getcwd(),
-                            timeout=timeout)
+    result = subprocess.run(
+        [node, "--input-type=module", "-e", script], capture_output=True, text=True, cwd=os.getcwd(), timeout=timeout
+    )
     assert result.returncode == 0, result.stderr
     return json.loads(result.stdout)
 
@@ -125,8 +125,7 @@ class TestTheDepthThatHadToBePublished:
     @pytest.mark.parametrize("run,target", RUNS)
     def test_the_direct_consumers_are_depth_zero(self, run, target):
         answer = _blast(run, target)
-        zero = {row["element_uid"] for row in answer["blast_tree"]
-                if row["depth"] == 0}
+        zero = {row["element_uid"] for row in answer["blast_tree"] if row["depth"] == 0}
         assert zero == set(answer["direct_elements"])
 
     @pytest.mark.parametrize("run,target", RUNS)
@@ -146,8 +145,8 @@ class TestTheDepthThatHadToBePublished:
         answer = _blast(run, target)
         depths = {row["element_uid"]: row["depth"] for row in answer["blast_tree"]}
         assert max(depths.values()) >= 2, (
-            f"nothing is more than one hop away, so a flattened walk "
-            f"would look identical: {depths}")
+            f"nothing is more than one hop away, so a flattened walk would look identical: {depths}"
+        )
         # Someone is strictly further away than someone else - the
         # property a hardcoded depth destroys.
         assert len(set(depths.values())) >= 3, depths
@@ -157,10 +156,13 @@ class TestTheDepthThatHadToBePublished:
         answer = _blast(run, target)
         for row in answer["blast_tree"]:
             assert row["element_kind"], row
-        costed = [r for r in answer["blast_tree"]
-                  # `UX-341`: an integer count of microseconds, not a float
-                  # of seconds under a new name.
-                  if isinstance(r["measured_us"], int)]
+        costed = [
+            r
+            for r in answer["blast_tree"]
+            # `UX-341`: an integer count of microseconds, not a float
+            # of seconds under a new name.
+            if isinstance(r["measured_us"], int)
+        ]
         assert costed, "nothing carried a measured cost"
 
     def test_the_schema_declares_it(self):
@@ -169,8 +171,7 @@ class TestTheDepthThatHadToBePublished:
         declared = schemas.schema(schemas.BLAST)["properties"]
         assert "blast_tree" in declared
         columns = declared["blast_tree"]["bga:columns"]
-        assert any(c["key"] == "depth" and c["quantity"] == "count"
-                   for c in columns), columns
+        assert any(c["key"] == "depth" and c["quantity"] == "count" for c in columns), columns
 
 
 @needs_node
@@ -210,13 +211,16 @@ class TestTheChainDrawn:
         a drawing, and the middle is where a reader stops looking. This
         view's input *is* `critical_path_detail`, so the published field
         at that length is the 1,202-element case for it."""
-        detail = [{"element_uid": f"element-{i}.bst",
-                   "element_kind": "cmake",
-                   "duration_us": (i % 40 + 1) * 100000,
-                   "share_of_path": (i % 40 + 1) / 24040}
-                  for i in range(1202)]
-        out = _render("renderCriticalPath",
-                      {"critical_path_detail": detail})
+        detail = [
+            {
+                "element_uid": f"element-{i}.bst",
+                "element_kind": "cmake",
+                "duration_us": (i % 40 + 1) * 100000,
+                "share_of_path": (i % 40 + 1) / 24040,
+            }
+            for i in range(1202)
+        ]
+        out = _render("renderCriticalPath", {"critical_path_detail": detail})
         assert out["folded"] == 1202 - 6 - 3, out["folded"]
         assert out["hidden_before"] == out["folded"]
         # Clicked: the middle appears between the two ends rather than
@@ -225,10 +229,15 @@ class TestTheChainDrawn:
         assert out["boxes_after"] == 1202
 
     def test_a_short_chain_is_not_folded(self):
-        out = _render("renderCriticalPath", {"critical_path_detail": [
-            {"element_uid": "a.bst", "duration_us": 10, "share_of_path": 0.5},
-            {"element_uid": "b.bst", "duration_us": 10, "share_of_path": 0.5},
-        ]})
+        out = _render(
+            "renderCriticalPath",
+            {
+                "critical_path_detail": [
+                    {"element_uid": "a.bst", "duration_us": 10, "share_of_path": 0.5},
+                    {"element_uid": "b.bst", "duration_us": 10, "share_of_path": 0.5},
+                ]
+            },
+        )
         assert out["folded"] is None
         assert out["hidden_before"] == 0
 
@@ -264,16 +273,14 @@ class TestTheBlastTreeDrawn:
             assert int(row["depth"]) == published[row["element"]], row
             # Indentation follows depth, so a nested row is visibly
             # nested rather than merely labelled.
-            indent = float(_decl(row["indent"], "padding-left")
-                           .replace("rem", ""))
+            indent = float(_decl(row["indent"], "padding-left").replace("rem", ""))
             assert indent == pytest.approx(published[row["element"]] * 1.4), row
 
     @pytest.mark.parametrize("run,target", RUNS)
     def test_the_kind_badges_come_from_the_declared_item_shape(self, run, target):
         answer = _blast(run, target)
         out = _render("renderBlastTree", answer)
-        kinds = {row["element_uid"]: row["element_kind"]
-                 for row in answer["blast_tree"]}
+        kinds = {row["element_uid"]: row["element_kind"] for row in answer["blast_tree"]}
         for row in out["rows"]:
             assert row["kind"] == kinds[row["element"]], row
 
@@ -295,17 +302,14 @@ class TestTheGuardsGuardEverywhere:
         import subprocess
 
         unmarked = [param for param in RUNS if not param.marks]
-        assert unmarked, (
-            "every run in the matrix is conditional, so every guard using "
-            "it can vanish at once")
+        assert unmarked, "every run in the matrix is conditional, so every guard using it can vanish at once"
         for param in unmarked:
             run = param.values[0]
-            tracked = subprocess.run(
-                ["git", "ls-files", "--error-unmatch", run],
-                capture_output=True, text=True)
+            tracked = subprocess.run(["git", "ls-files", "--error-unmatch", run], capture_output=True, text=True)
             assert tracked.returncode == 0, (
                 f"{run} is not tracked by git, so a fresh clone would skip "
-                f"the guards pinned to it - which is exactly UX-213")
+                f"the guards pinned to it - which is exactly UX-213"
+            )
 
     def test_the_real_capture_is_extra_coverage_not_the_only_coverage(self):
         """The property, stated where the next person will read it: if
@@ -317,7 +321,7 @@ class TestTheGuardsGuardEverywhere:
 
 class TestTheRestraintHolds:
     def test_no_new_module_and_no_layout_library(self):
-        """"No new files beyond the views module growing" - the
+        """ "No new files beyond the views module growing" - the
         acceptance's own constraint, and the deferral of the general DAG
         that goes with it."""
         assert not os.path.exists("bga/viewer/graph.js")

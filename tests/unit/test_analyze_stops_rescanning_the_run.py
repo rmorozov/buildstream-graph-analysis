@@ -20,6 +20,7 @@ noise. What they read is the **count of whole-run walks**, which does
 not move with the machine, and the answers themselves against a naive
 transcription of the code the indexes replaced.
 """
+
 import pathlib
 import sys
 
@@ -33,11 +34,12 @@ from bga.ingest.models import NormalizedTask, Resource, TaskKey, TaskKind
 from bga.normalize.timestamps import clamp_task_starts
 
 
-def _task(uid, ready_us, start_us, finish_us, resources=(Resource.PROCESS,),
-          kind=TaskKind.BUILD):
+def _task(uid, ready_us, start_us, finish_us, resources=(Resource.PROCESS,), kind=TaskKind.BUILD):
     return NormalizedTask(
         task_key=TaskKey(element_uid=uid, task_kind=kind, phase="EXECUTION"),
-        ready_us=ready_us, start_us=start_us, finish_us=finish_us,
+        ready_us=ready_us,
+        start_us=start_us,
+        finish_us=finish_us,
         resources=list(resources),
     )
 
@@ -45,8 +47,7 @@ def _task(uid, ready_us, start_us, finish_us, resources=(Resource.PROCESS,),
 def _staircase(count, resources=(Resource.PROCESS,)):
     """`count` tasks, each ready at 0 and started later - so each one has
     a wait gap, which is what the removed scans ran once per."""
-    return [_task(f"e{n}.bst", 0, n * 10, n * 10 + 6, resources)
-            for n in range(count)]
+    return [_task(f"e{n}.bst", 0, n * 10, n * 10 + 6, resources) for n in range(count)]
 
 
 class _CountingList(list):
@@ -67,21 +68,21 @@ class TestTheRunIsWalkedAConstantNumberOfTimes:
 
     def _walks(self, count):
         tasks = _staircase(count)
-        analyzer = BlameChainAnalyzer(
-            tasks, resource_capacity={Resource.PROCESS: 2}, max_jobs=2)
+        analyzer = BlameChainAnalyzer(tasks, resource_capacity={Resource.PROCESS: 2}, max_jobs=2)
         counting = _CountingList(analyzer.tasks)
         analyzer.tasks = counting
         analyzer.compute_full_attribution(
             explicit_predecessors={str(t.task_key): [] for t in tasks},
             task_finish_times={str(t.task_key): t.finish_us for t in tasks},
-            task_depths={str(t.task_key): 0 for t in tasks})
+            task_depths={str(t.task_key): 0 for t in tasks},
+        )
         return counting.walks
 
     def test_doubling_the_gaps_does_not_double_the_walks(self):
         small, large = self._walks(40), self._walks(80)
         assert small == large, (
-            f"40 tasks walked the run {small} times and 80 walked it "
-            f"{large} - the count is following the gaps again")
+            f"40 tasks walked the run {small} times and 80 walked it {large} - the count is following the gaps again"
+        )
 
     def test_the_count_is_a_small_constant(self):
         """The clause that keeps the one above from passing on a pair of
@@ -99,10 +100,12 @@ def _reference_available_at(tasks, task, ts, capacity):
         if cap is None:
             continue
         occupied = sum(
-            1 for other in tasks
+            1
+            for other in tasks
             if other.task_key != task.task_key
             and resource in other.resources
-            and other.start_us <= ts < other.finish_us)
+            and other.start_us <= ts < other.finish_us
+        )
         if occupied >= cap:
             return False
     return True
@@ -121,8 +124,7 @@ def _reference_scheduler_wait(tasks, task, max_jobs, wait_start, wait_end):
             boundaries.add(other.finish_us)
     points = sorted(boundaries)
     for t1, t2 in zip(points, points[1:]):
-        if sum(1 for o in others
-               if o.start_us <= t1 and o.finish_us >= t2) < max_jobs:
+        if sum(1 for o in others if o.start_us <= t1 and o.finish_us >= t2) < max_jobs:
             return True
     return False
 
@@ -140,8 +142,7 @@ SHAPES = [
 
 def _analyzer(shape, capacity, max_jobs=None):
     tasks = [_task(uid, start, start, finish) for uid, start, finish in shape]
-    return tasks, BlameChainAnalyzer(
-        tasks, resource_capacity=capacity, max_jobs=max_jobs)
+    return tasks, BlameChainAnalyzer(tasks, resource_capacity=capacity, max_jobs=max_jobs)
 
 
 class TestTheIndexedAnswersMatchTheScan:
@@ -153,8 +154,7 @@ class TestTheIndexedAnswersMatchTheScan:
         stamps = sorted({0, 1, 5, 9, 10, 39, 40, 70, 99, 100, 250, 400})
         for task in tasks:
             got = [analyzer._resource_available_at(task, ts) for ts in stamps]
-            want = [_reference_available_at(tasks, task, ts, capacity)
-                    for ts in stamps]
+            want = [_reference_available_at(tasks, task, ts, capacity) for ts in stamps]
             assert got == want, (task.task_key, cap, stamps, got, want)
 
     @pytest.mark.parametrize("shape", SHAPES, ids=range(len(SHAPES)))
@@ -164,10 +164,8 @@ class TestTheIndexedAnswersMatchTheScan:
         tasks, analyzer = _analyzer(shape, capacity, max_jobs)
         windows = [(0, 100), (5, 40), (10, 11), (0, 400), (40, 40)]
         for task in tasks:
-            got = [analyzer.classify_scheduler_wait(task, True, max_jobs, s, e)
-                   for s, e in windows]
-            want = [_reference_scheduler_wait(tasks, task, max_jobs, s, e)
-                    for s, e in windows]
+            got = [analyzer.classify_scheduler_wait(task, True, max_jobs, s, e) for s, e in windows]
+            want = [_reference_scheduler_wait(tasks, task, max_jobs, s, e) for s, e in windows]
             assert got == want, (task.task_key, max_jobs, got, want)
 
 
@@ -198,30 +196,26 @@ class TestTheEdgeIndexKeepsTheScansAnswer:
     def _deps(self, edges):
         spans = []
         for uid in ("a.bst", "b.bst", "c.bst"):
-            key = TaskKey(element_uid=uid, task_kind=TaskKind.BUILD,
-                          phase="EXECUTION")
+            key = TaskKey(element_uid=uid, task_kind=TaskKind.BUILD, phase="EXECUTION")
             spans.append((_Span(key), 0, 10))
-        tasks, violations = clamp_task_starts(
-            spans, {}, _Graph([_Edge(*e) for e in edges]))
+        tasks, violations = clamp_task_starts(spans, {}, _Graph([_Edge(*e) for e in edges]))
         assert not violations, violations
         return {t.task_key.element_uid: t.dependencies for t in tasks}
 
     def test_a_runtime_edge_is_not_build_gating(self):
-        got = self._deps([("a.bst", "c.bst", "runtime"),
-                          ("b.bst", "c.bst", "build")])
+        got = self._deps([("a.bst", "c.bst", "runtime"), ("b.bst", "c.bst", "build")])
         assert got["c.bst"] == ["b.bst|BUILD|EXECUTION|0"], got
 
     def test_the_predecessors_keep_the_edge_lists_order(self):
         """A dict of successors preserves insertion order; a set would
         not, and the replay reads this list."""
         got = self._deps([("b.bst", "c.bst"), ("a.bst", "c.bst")])
-        assert got["c.bst"] == ["b.bst|BUILD|EXECUTION|0",
-                                "a.bst|BUILD|EXECUTION|0"], got
+        assert got["c.bst"] == ["b.bst|BUILD|EXECUTION|0", "a.bst|BUILD|EXECUTION|0"], got
 
     def test_an_element_with_no_incoming_edge_has_no_dependencies(self):
         got = self._deps([("a.bst", "c.bst")])
         assert got["b.bst"] == [], got
 
 
-if __name__ == "__main__":                       # pragma: no cover
+if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(pytest.main([__file__, "-v"]))

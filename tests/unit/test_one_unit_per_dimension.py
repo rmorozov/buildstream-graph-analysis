@@ -36,6 +36,7 @@ carries two different quantities - rather than naming the four
 spellings that were removed, which a later round could re-add without
 failing anything.
 """
+
 import collections
 import re
 
@@ -55,8 +56,7 @@ _STATISTIC = re.compile(r"^(n|samples|min|max|mean|median|mad|p\d{1,2})$")
 #: Suffixes that promise a unit, and the one they promise. A key whose
 #: name ends in `_us` and is declared `share` is a payload a consumer
 #: reads twice: once from the name, once from the contract.
-SUFFIXES = {"_us": "duration_us", "_bytes": "bytes",
-            "_share": "share", "_ratio": "ratio"}
+SUFFIXES = {"_us": "duration_us", "_bytes": "bytes", "_share": "share", "_ratio": "ratio"}
 
 
 def _declarations():
@@ -70,8 +70,7 @@ def _declarations():
                 found[leaf][node[QUANTITY]].append(f"{doc} {path}")
             for spec in node.get(COLUMNS, []) or []:
                 if isinstance(spec, dict) and spec.get("quantity"):
-                    found[spec["key"]][spec["quantity"]].append(
-                        f"{doc} {path}[].{spec['key']}")
+                    found[spec["key"]][spec["quantity"]].append(f"{doc} {path}[].{spec['key']}")
             for key, value in node.items():
                 if key == COLUMNS:
                     continue
@@ -96,16 +95,15 @@ class TestTheVocabularyHasOneMemberPerDimension:
         for quantity, dimension in schemas.DIMENSIONS.items():
             by_dimension[dimension].append(quantity)
         doubled = {d: sorted(q) for d, q in by_dimension.items() if len(q) > 1}
-        assert doubled == {}, (
-            f"these dimensions have more than one spelling: {doubled}")
+        assert doubled == {}, f"these dimensions have more than one spelling: {doubled}"
 
     def test_every_member_declares_its_dimension(self):
         """A vocabulary member with no dimension cannot be checked by
         the clause above, which is how a fifth spelling of time would
         get in."""
         assert set(schemas.DIMENSIONS) == set(schemas.QUANTITIES), (
-            f"QUANTITIES and DIMENSIONS disagree: "
-            f"{sorted(set(schemas.QUANTITIES) ^ set(schemas.DIMENSIONS))}")
+            f"QUANTITIES and DIMENSIONS disagree: {sorted(set(schemas.QUANTITIES) ^ set(schemas.DIMENSIONS))}"
+        )
 
 
 class TestEveryDeclarationIsInTheVocabulary:
@@ -145,8 +143,7 @@ class TestOneNameMeansOneThing:
         assert lying == {}, lying
 
 
-@pytest.mark.parametrize("fixture", ["golden/mixed_task_kinds",
-                                     "macro_micro/run"])
+@pytest.mark.parametrize("fixture", ["golden/mixed_task_kinds", "macro_micro/run"])
 class TestThePayloadIsInTheNewUnitsAndTheSameNumbers:
     """A rename that changed a value would be a silent regression in
     every figure the report prints. The conversions are exact - µs and
@@ -164,8 +161,8 @@ class TestThePayloadIsInTheNewUnitsAndTheSameNumbers:
         if agreement.get("resolution_us") is None:
             pytest.skip(f"{fixture} carries no timestamp agreement")
         assert isinstance(agreement["resolution_us"], int), (
-            "a µs figure converted from seconds is an integer count, "
-            "not a float of seconds under a new name")
+            "a µs figure converted from seconds is an integer count, not a float of seconds under a new name"
+        )
 
     def test_every_memory_figure_is_the_records_own_number(self, fixture):
         """The rename must not have changed a value. `ru_maxrss` is KiB
@@ -193,5 +190,5 @@ class TestThePayloadIsInTheNewUnitsAndTheSameNumbers:
             assert row["peak_rss_bytes"] == measured * 1024, row["element"]
             checked += 1
         assert checked, (
-            "no element carried a peak this could compare - the clause "
-            "would pass on a payload that published nothing")
+            "no element carried a peak this could compare - the clause would pass on a payload that published nothing"
+        )

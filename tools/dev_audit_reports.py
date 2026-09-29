@@ -13,6 +13,7 @@ that only reads a single space would pass that on a rewrap.
 `report_problems` here and keeps their names; `audits_documents` stays
 there, being about what the repository tracks, not what a document is.
 """
+
 import re
 
 #: kind -> the head labels that identify a report of that kind, text
@@ -27,8 +28,10 @@ _HEAD_LABELS = {
 #: already recognised as that kind - present in the shape, but not
 #: itself part of what names the shape.
 _REQUIRED_FIELDS = {
-    "walk": ((re.compile(r"(?m)^seed\s"), "no seed line"),
-             (re.compile(r"(?m)^rows added\s"), "no answer-key rows added line")),
+    "walk": (
+        (re.compile(r"(?m)^seed\s"), "no seed line"),
+        (re.compile(r"(?m)^rows added\s"), "no answer-key rows added line"),
+    ),
     "design-review": ((re.compile(r"(?m)^filed\s"), "no filed findings line"),),
 }
 
@@ -53,9 +56,10 @@ _EXTRACT = {
 #: so it lives beside the recogniser rather than under either kind.
 REPORT_DATE = re.compile(r"Base\s+`[0-9a-f]{7,40}`,\s*(\d{4}-\d{2}-\d{2})")
 
-_SHAPES = {kind: tuple(re.compile(rf"(?m)^{re.escape(label)}\s+\S")
-                      for label in labels)
-          for kind, labels in _HEAD_LABELS.items()}
+_SHAPES = {
+    kind: tuple(re.compile(rf"(?m)^{re.escape(label)}\s+\S") for label in labels)
+    for kind, labels in _HEAD_LABELS.items()
+}
 
 
 def report_kind(text):

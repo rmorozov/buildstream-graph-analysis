@@ -1,5 +1,6 @@
 """UX-1002: the capture context counts physical cores and sockets, not only
 `nproc` - a 4-vCPU runner on 2 hyperthreaded cores is a different host class."""
+
 import pytest
 
 from tools.bga_snapshot import _capture_context, cpu_topology
@@ -16,19 +17,24 @@ def _sysfs(tmp_path, layout):
     return str(tmp_path)
 
 
-@pytest.mark.parametrize(("layout", "line"), [
-    ([(0, 0), (0, 1), (0, 2), (0, 3)], "cpu: 4 logical, 4 cores, 1 socket"),
-    ([(0, 0), (0, 0), (0, 1), (0, 1)], "cpu: 4 logical, 2 cores, 1 socket"),
-    ([(0, 0), (1, 0)], "cpu: 2 logical, 2 cores, 2 sockets"),
-])
+@pytest.mark.parametrize(
+    ("layout", "line"),
+    [
+        ([(0, 0), (0, 1), (0, 2), (0, 3)], "cpu: 4 logical, 4 cores, 1 socket"),
+        ([(0, 0), (0, 0), (0, 1), (0, 1)], "cpu: 4 logical, 2 cores, 1 socket"),
+        ([(0, 0), (1, 0)], "cpu: 2 logical, 2 cores, 2 sockets"),
+    ],
+)
 def test_hyperthreads_and_sockets_are_told_apart(tmp_path, layout, line):
     assert cpu_topology(_sysfs(tmp_path, layout), str(tmp_path / "no-cpuinfo")) == line
 
 
 def test_the_cpu_model_is_named(tmp_path):
     info = tmp_path / "cpuinfo"
-    info.write_text("processor\t: 0\nmodel name\t: AMD EPYC 7763 64-Core Processor\n"
-                    "processor\t: 1\nmodel name\t: AMD EPYC 7763 64-Core Processor\n")
+    info.write_text(
+        "processor\t: 0\nmodel name\t: AMD EPYC 7763 64-Core Processor\n"
+        "processor\t: 1\nmodel name\t: AMD EPYC 7763 64-Core Processor\n"
+    )
     line = cpu_topology(_sysfs(tmp_path, [(0, 0), (0, 0)]), str(info))
     assert line == "cpu: 2 logical, 1 cores, 1 socket, AMD EPYC 7763 64-Core Processor"
 

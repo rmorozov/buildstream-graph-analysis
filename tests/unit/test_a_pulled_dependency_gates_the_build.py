@@ -26,6 +26,7 @@ ready times) and *which task* should a dependent wait on
 (`clamp_task_starts`, for replay). They were two maps built from one
 `if` each, which is why they were wrong together.
 """
+
 import contextlib
 import io
 import json
@@ -42,35 +43,36 @@ def _graph(*edges):
     names = sorted({name for edge in edges for name in edge})
     return Graph(
         elements=[Element(uid=name) for name in names],
-        dependencies=[DependencyEdge(predecessor=pred, successor=succ)
-                      for pred, succ in edges],
+        dependencies=[DependencyEdge(predecessor=pred, successor=succ) for pred, succ in edges],
     )
 
 
 def _span(element, kind, start, finish):
-    return (TaskSpan(
-        task_key=TaskKey(element_uid=element, task_kind=kind, phase=kind.value),
-        ts_us=start, dur_us=finish - start, resources=[],
-        primary_resource=None), start, finish)
+    return (
+        TaskSpan(
+            task_key=TaskKey(element_uid=element, task_kind=kind, phase=kind.value),
+            ts_us=start,
+            dur_us=finish - start,
+            resources=[],
+            primary_resource=None,
+        ),
+        start,
+        finish,
+    )
 
 
 def _deps_of(tasks, element, kind=TaskKind.BUILD):
-    task = next(t for t in tasks
-                if t.task_key.element_uid == element
-                and t.task_key.task_kind == kind)
+    task = next(t for t in tasks if t.task_key.element_uid == element and t.task_key.task_kind == kind)
     return [str(dep) for dep in task.dependencies]
 
 
 class TestTheReplayWaitsForAPulledDependency:
-
     def test_a_build_waits_on_its_dependency_s_pull(self):
         """The edge that was missing. `dep.bst` never builds - it came
         off the cache - so a map keyed on BUILD alone offered nothing to
         wait for."""
-        spans = [_span("dep.bst", TaskKind.PULL, 0, 1_000_000),
-                 _span("app.bst", TaskKind.BUILD, 0, 9_000_000)]
-        tasks, _violations = clamp_task_starts(
-            spans, {}, _graph(("dep.bst", "app.bst")))
+        spans = [_span("dep.bst", TaskKind.PULL, 0, 1_000_000), _span("app.bst", TaskKind.BUILD, 0, 9_000_000)]
+        tasks, _violations = clamp_task_starts(spans, {}, _graph(("dep.bst", "app.bst")))
 
         assert "dep.bst|PULL|PULL|0" in _deps_of(tasks, "app.bst")
 
@@ -86,11 +88,12 @@ class TestTheReplayWaitsForAPulledDependency:
         """The precedence, decided rather than left to iteration order:
         a pull followed by a build did not produce the artifact the
         dependent consumed, so the BUILD is the edge."""
-        spans = [_span("dep.bst", TaskKind.PULL, 0, 1_000_000),
-                 _span("dep.bst", TaskKind.BUILD, 1_000_000, 5_000_000),
-                 _span("app.bst", TaskKind.BUILD, 0, 9_000_000)]
-        tasks, _violations = clamp_task_starts(
-            spans, {}, _graph(("dep.bst", "app.bst")))
+        spans = [
+            _span("dep.bst", TaskKind.PULL, 0, 1_000_000),
+            _span("dep.bst", TaskKind.BUILD, 1_000_000, 5_000_000),
+            _span("app.bst", TaskKind.BUILD, 0, 9_000_000),
+        ]
+        tasks, _violations = clamp_task_starts(spans, {}, _graph(("dep.bst", "app.bst")))
 
         deps = _deps_of(tasks, "app.bst")
         assert "dep.bst|BUILD|BUILD|0" in deps, deps
@@ -104,11 +107,12 @@ class TestTheReplayWaitsForAPulledDependency:
         that produced the artifact" is a different claim from widening
         it to "any task", and this is the clause that keeps them
         apart."""
-        spans = [_span("dep.bst", TaskKind.BUILD, 0, 4_000_000),
-                 _span("dep.bst", TaskKind.PUSH, 4_000_000, 9_000_000),
-                 _span("app.bst", TaskKind.BUILD, 0, 2_000_000)]
-        tasks, _violations = clamp_task_starts(
-            spans, {}, _graph(("dep.bst", "app.bst")))
+        spans = [
+            _span("dep.bst", TaskKind.BUILD, 0, 4_000_000),
+            _span("dep.bst", TaskKind.PUSH, 4_000_000, 9_000_000),
+            _span("app.bst", TaskKind.BUILD, 0, 2_000_000),
+        ]
+        tasks, _violations = clamp_task_starts(spans, {}, _graph(("dep.bst", "app.bst")))
 
         assert _element_build_finish(spans)["dep.bst"] == 4_000_000
         assert _deps_of(tasks, "app.bst") == ["dep.bst|BUILD|BUILD|0"]
@@ -125,10 +129,8 @@ class TestTheReplayWaitsForAPulledDependency:
         at 9.0s" would hold a dependent five seconds past the moment it
         could really have started.
         """
-        spans = [_span("dep.bst", TaskKind.PUSH, 4_000_000, 9_000_000),
-                 _span("app.bst", TaskKind.BUILD, 0, 2_000_000)]
-        tasks, _violations = clamp_task_starts(
-            spans, {}, _graph(("dep.bst", "app.bst")))
+        spans = [_span("dep.bst", TaskKind.PUSH, 4_000_000, 9_000_000), _span("app.bst", TaskKind.BUILD, 0, 2_000_000)]
+        tasks, _violations = clamp_task_starts(spans, {}, _graph(("dep.bst", "app.bst")))
 
         assert "dep.bst" not in _element_build_finish(spans)
         assert _deps_of(tasks, "app.bst") == []
@@ -138,10 +140,8 @@ class TestTheReplayWaitsForAPulledDependency:
         comment - "an upstream element with no BUILD task contributes no
         edge, rather than a wrong one" - is the rule, and only the set
         of kinds that count has moved."""
-        spans = [_span("dep.bst", TaskKind.TRACK, 0, 1_000_000),
-                 _span("app.bst", TaskKind.BUILD, 0, 9_000_000)]
-        tasks, _violations = clamp_task_starts(
-            spans, {}, _graph(("dep.bst", "app.bst")))
+        spans = [_span("dep.bst", TaskKind.TRACK, 0, 1_000_000), _span("app.bst", TaskKind.BUILD, 0, 9_000_000)]
+        tasks, _violations = clamp_task_starts(spans, {}, _graph(("dep.bst", "app.bst")))
 
         assert "dep.bst" not in _element_build_finish(spans)
         assert _deps_of(tasks, "app.bst") == []

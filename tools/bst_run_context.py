@@ -54,6 +54,7 @@ log instead:
       --estimated-job-memory-mb, no auto-detection tier (no real
       per-task memory measurement source exists in this pipeline).
 """
+
 import argparse
 import json
 import sys
@@ -99,8 +100,8 @@ def build_run_context(
     """
     start_time_us = _resolve_start_time_us(start_time, log_path)
     converter = WrapperTraceConverter(
-        raw_start_time_us=start_time_us,
-        raw_start_time_source=_resolve_start_time_source(start_time))
+        raw_start_time_us=start_time_us, raw_start_time_source=_resolve_start_time_source(start_time)
+    )
 
     with open(log_path, encoding="utf-8", errors="ignore") as f:
         for line in f:
@@ -136,7 +137,9 @@ def build_run_context(
     # producer path up to parity with tools/bst_extract_run.py's own,
     # which had these fields already.
     add_cpu_capacity_fields(
-        run_context, native_max_jobs=native_max_jobs, cpu_budget=cpu_budget,
+        run_context,
+        native_max_jobs=native_max_jobs,
+        cpu_budget=cpu_budget,
         # UX-29: same auto-recovery as bst_extract_run.py - kept at
         # parity deliberately, since UX-18 exists precisely because these
         # two producers had silently diverged once already.
@@ -145,7 +148,9 @@ def build_run_context(
     # memory_budget_mb/estimated_job_memory_mb (UX-21) - same shared-
     # helper pattern.
     add_memory_capacity_fields(
-        run_context, memory_budget_mb=memory_budget_mb, estimated_job_memory_mb=estimated_job_memory_mb,
+        run_context,
+        memory_budget_mb=memory_budget_mb,
+        estimated_job_memory_mb=estimated_job_memory_mb,
     )
     # UX-186: which machine measured this. Every capture, so that two
     # runs can be told apart - or told to be the same - rather than
@@ -162,46 +167,55 @@ def build_run_context(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="Produce run-context.json from a real BuildStream invocation's log."
-    )
+    parser = argparse.ArgumentParser(description="Produce run-context.json from a real BuildStream invocation's log.")
     parser.add_argument("input_log", help="Path to the log file (wrapped or raw).")
     parser.add_argument("output_json", help="Path to write run-context.json to.")
     parser.add_argument(
-        "--format", choices=("auto", "wrapped", "raw"), default="auto",
+        "--format",
+        choices=("auto", "wrapped", "raw"),
+        default="auto",
         help="Input log format - same semantics as bst_log_to_chrome_trace.py.",
     )
     parser.add_argument(
-        "--start-time", default=None,
-        help="ISO-8601 anchor for a raw log's elapsed timestamps; defaults "
-        "to the input file's mtime.",
+        "--start-time",
+        default=None,
+        help="ISO-8601 anchor for a raw log's elapsed timestamps; defaults to the input file's mtime.",
     )
     parser.add_argument(
-        "--trace-epsilon-us", type=int, default=50000,
+        "--trace-epsilon-us",
+        type=int,
+        default=50000,
         help="Quantization epsilon in microseconds (Part 3.2 default: 50000).",
     )
-    parser.add_argument("--host", default=None,
-                        help="Optional host identifier to record.")
+    parser.add_argument("--host", default=None, help="Optional host identifier to record.")
     add_build_class_arguments(parser)
     parser.add_argument(
-        "--native-max-jobs", type=int, default=None,
+        "--native-max-jobs",
+        type=int,
+        default=None,
         help="Override the per-element `make -jN` parallelism (not --builders). "
         "A wrapped log records it; pass this for a raw log (UX-29).",
     )
     parser.add_argument(
-        "--cpu-budget", type=int, default=None,
+        "--cpu-budget",
+        type=int,
+        default=None,
         help="The cores this build is *intended* to use, when the detected count is "
         "not the real constraint - a cgroup CPU quota, or reserved headroom on a "
         "shared machine. Governs the oversubscription check (UX-15).",
     )
     parser.add_argument(
-        "--memory-budget-mb", type=int, default=None,
+        "--memory-budget-mb",
+        type=int,
+        default=None,
         help="The memory (MB) this build is *intended* to use. Operator-supplied; "
         "with --estimated-job-memory-mb it drives the memory oversubscription "
         "check (UX-21).",
     )
     parser.add_argument(
-        "--estimated-job-memory-mb", type=int, default=None,
+        "--estimated-job-memory-mb",
+        type=int,
+        default=None,
         help="A rough estimate of one concurrent build job's memory footprint (MB) - "
         "a constant, not a measurement. Only meaningful with --memory-budget-mb "
         "(UX-21).",

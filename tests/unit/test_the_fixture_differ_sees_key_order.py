@@ -20,6 +20,7 @@ is not a document with a different value in it, and a differ that
 called every change "order drift" would have discriminated nothing.
 Order is still not a contract; `UX-302` owns payload shape.
 """
+
 import functools
 import json
 import pathlib
@@ -69,24 +70,21 @@ def _revalued(real):
 
 
 def _values(found):
-    return [(where, what) for where, what in found
-            if refresh.ORDER_DRIFT not in what]
+    return [(where, what) for where, what in found if refresh.ORDER_DRIFT not in what]
 
 
 def _orders(found):
-    return [(where, what) for where, what in found
-            if refresh.ORDER_DRIFT in what]
+    return [(where, what) for where, what in found if refresh.ORDER_DRIFT in what]
 
 
 def test_a_reordered_block_is_named_and_is_not_a_value_difference():
     """The acceptance test: keys reordered, values identical."""
     found = refresh.differences(_stand_in(_reordered))
     assert _orders(found), (
-        f"one block reversed and the differ reported {found} - the "
-        f"committed order is invisible to it")
+        f"one block reversed and the differ reported {found} - the committed order is invisible to it"
+    )
     assert [where for where, _ in _orders(found)] == [f"$.{BLOCK}"], found
-    assert _values(found) == [], (
-        f"a reordering was reported as a difference in value: {found}")
+    assert _values(found) == [], f"a reordering was reported as a difference in value: {found}"
 
 
 def test_a_changed_value_is_still_a_value_difference():
@@ -94,12 +92,10 @@ def test_a_changed_value_is_still_a_value_difference():
     round nothing about which half of its diff is its own."""
     found = refresh.differences(_stand_in(_revalued))
     assert (BLOCK, "differs") in found, found
-    assert _orders(found) == [], (
-        f"one number moved and the differ called it order drift: {found}")
+    assert _orders(found) == [], f"one number moved and the differ called it order drift: {found}"
 
 
-@pytest.mark.parametrize(
-    "fixture", refresh.FIXTURES, ids=lambda f: f.name.split("/")[-1])
+@pytest.mark.parametrize("fixture", refresh.FIXTURES, ids=lambda f: f.name.split("/")[-1])
 def test_every_committed_fixture_is_in_the_emitted_order(fixture):
     """The decision `UX-547` had to make: the fixtures are held in the
     emitted order, not excused from it. Both were already there when
@@ -109,7 +105,8 @@ def test_every_committed_fixture_is_in_the_emitted_order(fixture):
     assert drift == [], (
         f"{fixture.name} is committed in a different key order from the "
         f"one the analyzer emits, at {[where for where, _, _ in drift]}\n"
-        f"    python3 tools/dev_refresh_analysis.py --write {fixture.name}")
+        f"    python3 tools/dev_refresh_analysis.py --write {fixture.name}"
+    )
 
 
 class TestTheOrderSurvivesTheLoader:

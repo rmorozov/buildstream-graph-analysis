@@ -20,6 +20,7 @@ Each row names its `bga/analyzer.py` key; the `percentile?` cell is
 derived from membership in `DISTRIBUTED_QUANTITIES`, and every `yes`
 must reach both a published key and a `bga:distribution` declaration.
 """
+
 import pathlib
 import re
 import sys
@@ -51,15 +52,13 @@ def _table_rows():
     """
     text = DIRECTIONS.read_text(encoding="utf-8")
     start = text.index(HEADER)
-    table = text[start:text.index("\n\n", start)]
+    table = text[start : text.index("\n\n", start)]
     rows = []
     for line in table.splitlines()[2:]:
         cells = [c.strip() for c in line.split("|")[1:-1]]
         verdict = re.match(r"\*\*(yes|no)\*\*", cells[2])
-        assert verdict, ("a `percentile?` cell is neither **yes** nor "
-                         "**no**", cells)
-        rows.append((re.findall(r"`([a-z_0-9]+)`", cells[1]),
-                     verdict.group(1)))
+        assert verdict, ("a `percentile?` cell is neither **yes** nor **no**", cells)
+        rows.append((re.findall(r"`([a-z_0-9]+)`", cells[1]), verdict.group(1)))
     return rows
 
 
@@ -67,8 +66,7 @@ def _the_decision():
     """`(distributed, undistributed)` - the split `UX-260` recorded."""
     from bga import analyzer
 
-    return (dict(analyzer.DISTRIBUTED_QUANTITIES),
-            dict(analyzer.UNDISTRIBUTED_QUANTITIES))
+    return (dict(analyzer.DISTRIBUTED_QUANTITIES), dict(analyzer.UNDISTRIBUTED_QUANTITIES))
 
 
 def _declared():
@@ -95,8 +93,9 @@ class TestTheTableIsTheRecordedDecision:
     def test_the_table_parses_to_rows_with_keys(self):
         rows = _table_rows()
         assert len(rows) >= 5 and all(keys for keys, _ in rows), (
-            "Direction 11's table did not parse into keyed rows; every "
-            "claim below would pass vacuously", rows)
+            "Direction 11's table did not parse into keyed rows; every claim below would pass vacuously",
+            rows,
+        )
 
     def test_every_cell_is_its_keys_membership(self):
         distributed, undistributed = _the_decision()
@@ -105,13 +104,12 @@ class TestTheTableIsTheRecordedDecision:
             for key in keys:
                 inside = key in distributed
                 assert inside or key in undistributed, (
-                    "Direction 11 names a quantity neither list in "
-                    "bga/analyzer.py records", key)
+                    "Direction 11 names a quantity neither list in bga/analyzer.py records",
+                    key,
+                )
                 if inside != (verdict == "yes"):
                     wrong.append((key, verdict))
-        assert not wrong, (
-            "a `percentile?` cell disagrees with the split UX-260 "
-            "recorded in bga/analyzer.py", wrong)
+        assert not wrong, ("a `percentile?` cell disagrees with the split UX-260 recorded in bga/analyzer.py", wrong)
 
     def test_every_distributed_quantity_has_a_row(self):
         """The direction a fifth `yes` would take: added to the code,
@@ -120,8 +118,9 @@ class TestTheTableIsTheRecordedDecision:
         named = {key for keys, _ in _table_rows() for key in keys}
         missing = sorted(set(distributed) - named)
         assert not missing, (
-            "a quantity got a distribution and Direction 11's table does "
-            "not have a row for it", missing)
+            "a quantity got a distribution and Direction 11's table does not have a row for it",
+            missing,
+        )
 
 
 class TestEveryYesReachesADistribution:
@@ -135,46 +134,46 @@ class TestEveryYesReachesADistribution:
         distributed, _ = _the_decision()
         assert set(PUBLISHED) == set(distributed), (
             "the published-key map has drifted from DISTRIBUTED_QUANTITIES",
-            sorted(PUBLISHED), sorted(distributed))
-        payers = {"sandbox_tax": {"top_payers": [{"toll_us": i} for i in
-                                                 range(1, 21)]}}
-        native = {"per_element_parallelism":
-                  [{"work_process_count": i} for i in range(1, 21)]}
+            sorted(PUBLISHED),
+            sorted(distributed),
+        )
+        payers = {"sandbox_tax": {"top_payers": [{"toll_us": i} for i in range(1, 21)]}}
+        native = {"per_element_parallelism": [{"work_process_count": i} for i in range(1, 21)]}
         emitted = {
             "correlate": set(correlate._scale_of(payers, native)),
             "analyze": set(analyze_run(RUN).signals),
         }
         for key, (contract, published) in PUBLISHED.items():
             assert published in emitted[contract], (
-                "a `yes` quantity's distribution is not in what "
-                f"{contract} publishes", key, published,
-                sorted(emitted[contract]))
+                f"a `yes` quantity's distribution is not in what {contract} publishes",
+                key,
+                published,
+                sorted(emitted[contract]),
+            )
 
     def test_each_yes_declares_bga_distribution(self):
         """The half that was missing: published and declared by nothing,
         so every percentile inside reached the reader as a bare number
         (`UX-343`)."""
         declared = _declared()
-        assert len(declared) >= 4, (
-            "almost nothing declares bga:distribution - the walk broke",
-            sorted(declared))
-        undeclared = sorted(
-            published for _, (_, published) in PUBLISHED.items()
-            if published not in declared)
+        assert len(declared) >= 4, ("almost nothing declares bga:distribution - the walk broke", sorted(declared))
+        undeclared = sorted(published for _, (_, published) in PUBLISHED.items() if published not in declared)
         assert not undeclared, (
-            "a quantity Direction 11 says yes to publishes a shape no "
-            "schema declares", undeclared, sorted(declared))
+            "a quantity Direction 11 says yes to publishes a shape no schema declares",
+            undeclared,
+            sorted(declared),
+        )
 
     def test_no_quantity_answering_no_grew_one(self):
         """The direction that rots: a distribution appearing for a
         quantity the table argues against."""
         _, undistributed = _the_decision()
         declared = _declared()
-        grew = sorted(key for key in undistributed
-                      if f"{key}_distribution" in declared)
+        grew = sorted(key for key in undistributed if f"{key}_distribution" in declared)
         assert not grew, (
-            "a quantity Direction 11 argues against has grown a declared "
-            "distribution; the row is now a lie", grew)
+            "a quantity Direction 11 argues against has grown a declared distribution; the row is now a lie",
+            grew,
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

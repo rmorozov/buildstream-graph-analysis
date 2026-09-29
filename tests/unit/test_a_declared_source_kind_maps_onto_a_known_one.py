@@ -8,6 +8,7 @@ it then inherits; a kind still unmapped is named in
 `resource_blast.unmapped_source_kinds`, never silently folded into an
 unestimated blast.
 """
+
 import json
 import os
 import pathlib
@@ -28,24 +29,24 @@ def _project(tmp_path, elements, declaration=None):
     project = tmp_path / "proj"
     (project / "elements").mkdir(parents=True)
     variables = f"variables:\n  bga-source-kinds: {declaration}\n" if declaration else ""
-    (project / "project.conf").write_text(
-        f"name: p\nmin-version: 2.0\nelement-path: elements\n{variables}")
+    (project / "project.conf").write_text(f"name: p\nmin-version: 2.0\nelement-path: elements\n{variables}")
     for name, body in elements.items():
         (project / "elements" / name).write_text(body)
     return project
 
 
 def _source_element(kind, url, directory):
-    return (f"kind: manual\nsources:\n- kind: {kind}\n"
-            f"  url: {url}\n  directory: {directory}\n")
+    return f"kind: manual\nsources:\n- kind: {kind}\n  url: {url}\n  directory: {directory}\n"
 
 
 class TestAMappedKindKeysLikeTheKindItInherits:
     URL = "https://example.com/org/repo.git"
 
     def _rows(self, tmp_path, name, kind, kind_map=None):
-        elements = {"a.bst": _source_element(kind, self.URL, "src/a"),
-                    "b.bst": _source_element(kind, self.URL, "src/b")}
+        elements = {
+            "a.bst": _source_element(kind, self.URL, "src/a"),
+            "b.bst": _source_element(kind, self.URL, "src/b"),
+        }
         project = _project(tmp_path / name, elements)
         inventory = build_source_inventory(project, sorted(elements), kind_map)
         downstream = {"a.bst": set(), "b.bst": set()}
@@ -78,16 +79,14 @@ class TestAMappedKindKeysLikeTheKindItInherits:
     def test_a_mapped_kind_never_appears_unmapped(self, tmp_path):
         elements = {"a.bst": _source_element("gerrit", self.URL, "src/a")}
         project = _project(tmp_path, elements)
-        inventory = build_source_inventory(
-            project, sorted(elements), {"gerrit": "git"})
+        inventory = build_source_inventory(project, sorted(elements), {"gerrit": "git"})
         assert sources.unmapped_kinds(inventory) == []
         assert inventory["source_kind_map"] == {"gerrit": "git"}
 
 
 class TestNoDeclarationIsTodaysBehaviour:
     def test_the_map_is_empty_and_nothing_is_unmapped(self, tmp_path):
-        elements = {"a.bst": _source_element("git",
-                                             "https://example.com/o/r.git", "src")}
+        elements = {"a.bst": _source_element("git", "https://example.com/o/r.git", "src")}
         project = _project(tmp_path, elements)
         inventory = build_source_inventory(project, sorted(elements))
         assert inventory["source_kind_map"] == {}
@@ -101,8 +100,8 @@ class TestExtractionRejectsAMalformedDeclaration:
     def _project_conf(self, tmp_path, declaration):
         (tmp_path / "elements").mkdir(parents=True)
         (tmp_path / "project.conf").write_text(
-            "name: p\nmin-version: 2.0\nelement-path: elements\n"
-            f"variables:\n  bga-source-kinds: {declaration}\n")
+            f"name: p\nmin-version: 2.0\nelement-path: elements\nvariables:\n  bga-source-kinds: {declaration}\n"
+        )
         return tmp_path
 
     def test_a_right_side_naming_no_known_kind_raises(self, tmp_path):
@@ -117,8 +116,7 @@ class TestExtractionRejectsAMalformedDeclaration:
 
     def test_a_well_formed_declaration_parses(self, tmp_path):
         project = self._project_conf(tmp_path, "gerrit=git,mirror=tar")
-        assert _read_bga_source_kind_map(str(project)) == {
-            "gerrit": "git", "mirror": "tar"}
+        assert _read_bga_source_kind_map(str(project)) == {"gerrit": "git", "mirror": "tar"}
 
 
 class TestTheCoverageReachesTheCliOutput:
@@ -137,19 +135,26 @@ class TestTheCoverageReachesTheCliOutput:
         inventory = json.loads(sources_path.read_text())
         # One element, one resource, no other element shares it - the
         # coverage naming does not depend on a blast row existing.
-        inventory["elements"]["gerrit-only.bst"] = [{
-            "kind": "gerrit",
-            "identity": "example.com/org/gerrit-only",
-            "declared": "example.com/org/gerrit-only",
-            "keying": "unknown",
-            "staged_at": None,
-        }]
+        inventory["elements"]["gerrit-only.bst"] = [
+            {
+                "kind": "gerrit",
+                "identity": "example.com/org/gerrit-only",
+                "declared": "example.com/org/gerrit-only",
+                "keying": "unknown",
+                "staged_at": None,
+            }
+        ]
         sources_path.write_text(json.dumps(inventory, indent=2))
 
         env = dict(os.environ, PYTHONPATH=str(REPO_ROOT))
         completed = subprocess.run(
             ["python3", "-m", "bga.cli", "analyze", str(run_dir), "--format", "json"],
-            cwd=REPO_ROOT, env=env, capture_output=True, text=True, timeout=60)
+            cwd=REPO_ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
         assert completed.returncode == 0, completed.stderr
         document = json.loads(completed.stdout)
         blast = document.get("resource_blast")

@@ -31,6 +31,7 @@ import re
 import shutil
 import subprocess
 import sys
+import urllib.parse
 
 import pytest
 
@@ -1204,9 +1205,8 @@ class TestItNeedsNothingButItself:
         text = exported[0].read_text()
         text += view.inflated_module(text)
         for url in re.findall(r'(?:src|href)="([^"]+)"', text):
-            assert url.startswith(("#", "data:", "mailto:")) or url.startswith("https://ui.perfetto.dev"), (
-                f"{url} would have to be fetched"
-            )
+            perfetto = urllib.parse.urlsplit(url)[:2] == ("https", "ui.perfetto.dev")
+            assert url.startswith(("#", "data:", "mailto:")) or perfetto, f"{url} would have to be fetched"
 
     def test_no_relative_module_import_survives(self, exported):
         """A browser refuses a relative `import` over `file://`, so the

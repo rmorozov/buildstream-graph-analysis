@@ -95,7 +95,7 @@
     "tools/bga_release_notes.py": {"duplicate_blocks": 0, "file_lines": 132, "longest_function": 25},
     "tools/bga_snapshot.py": {"duplicate_blocks": 1, "file_lines": 1905, "longest_function": 249},
     "tools/bga_timeline.py": {"duplicate_blocks": 2, "file_lines": 2206, "longest_function": 333},
-    "tools/bga_view.py": {"duplicate_blocks": 0, "file_lines": 2196, "longest_function": 187},
+    "tools/bga_view.py": {"duplicate_blocks": 0, "file_lines": 2200, "longest_function": 187},
     "tools/bst_baseline_set.py": {"duplicate_blocks": 1, "file_lines": 684, "longest_function": 155},
     "tools/bst_cache_logs.py": {"duplicate_blocks": 0, "file_lines": 1597, "longest_function": 209},
     "tools/bst_checkout_cost.py": {"duplicate_blocks": 1, "file_lines": 246, "longest_function": 44},

@@ -151,6 +151,8 @@ ASSETS = (
     # without the cycle its own note forbids.
     "controls.js",
 )
+# `UX-1127`: the path comes from this table, never from the request's text.
+_ASSET_PATHS = {name: os.path.join(ASSET_DIR, name) for name in ASSETS}
 
 # The trace, served gzipped. Perfetto sniffs gzip itself, so the
 # compressed bytes cross the postMessage boundary unchanged - measured
@@ -166,6 +168,8 @@ TRACE_STATUS_NAME = "trace-status.json"
 # cross-origin, and the target of the `?url=` deep link. Kept in step
 # with `bga/viewer/perfetto.js`'s own constant by a guard.
 PERFETTO_ORIGIN = "https://ui.perfetto.dev"
+# `UX-1127`: a pre-flight's header list is echoed only when it is RFC 9110 tokens and commas.
+_HEADER_LIST = re.compile(r"[!#$%&'*+.^_`|~0-9A-Za-z-]+(?:[ \t]*,[ \t]*[!#$%&'*+.^_`|~0-9A-Za-z-]+)*")
 
 
 def _capture(argv: list[str]) -> dict:
@@ -1686,7 +1690,7 @@ class _Handler(http.server.BaseHTTPRequestHandler):
         # would make the hand-off break again the next time the other
         # side adds one, which is exactly how this broke.
         asked = self.headers.get("Access-Control-Request-Headers")
-        if asked:
+        if asked and _HEADER_LIST.fullmatch(asked):
             self.send_header("Access-Control-Allow-Headers", asked)
         # The header Private Network Access asks for by name. Without
         # it the pre-flight is refused even when the origin matches.
@@ -1808,7 +1812,7 @@ class _Handler(http.server.BaseHTTPRequestHandler):
         # `name` is already known to be in `ASSETS`, so this cannot be
         # traversed; the realpath check is belt and braces against a
         # symlink planted inside the asset directory.
-        full = os.path.realpath(os.path.join(ASSET_DIR, name))
+        full = os.path.realpath(_ASSET_PATHS[name])
         if os.path.dirname(full) != os.path.realpath(ASSET_DIR):
             return self._refuse(403, "outside the asset directory")
         try:

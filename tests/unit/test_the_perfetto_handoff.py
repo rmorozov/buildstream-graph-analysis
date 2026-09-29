@@ -1221,3 +1221,28 @@ class TestTheExportsTraceIsABareUri:
 
     def test_no_node_means_the_served_default(self):
         assert self._url(None) == "timeline.json.gz"
+
+
+class TestThePreFlightEchoesOnlyAHeaderList:
+    """`UX-1127`: the requested header list is echoed only when it is tokens and commas."""
+
+    @pytest.mark.parametrize("asked", ["range", "range, cache-control", "x-a,x-b"])
+    def test_a_token_list_is_echoed(self, asked):
+        from tools.bga_view import _HEADER_LIST
+
+        assert _HEADER_LIST.fullmatch(asked)
+
+    @pytest.mark.parametrize("asked", ["range\r\nSet-Cookie: a=b", "range\r\n cache", "range\n", "a b", ""])
+    def test_anything_else_is_not(self, asked):
+        from tools.bga_view import _HEADER_LIST
+
+        assert not _HEADER_LIST.fullmatch(asked)
+
+    def test_the_handler_asks_the_pattern_before_it_echoes(self):
+        import inspect
+
+        import tools.bga_view as view
+
+        source = inspect.getsource(view)
+        echo = source.index('self.send_header("Access-Control-Allow-Headers", asked)')
+        assert "_HEADER_LIST.fullmatch(asked)" in source[source.rindex("asked = ", 0, echo) : echo]

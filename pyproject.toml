@@ -209,6 +209,9 @@ ignore = ["SIM115"]
 "tools/**" = ["T201"]
 "tests/**" = ["C408"]
 
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
 [tool.pyright]
 # UX-697: basic mode over the two packages the baseline reads; the gate
 # is `dev_baseline.py --check`, never a bare pyright run. `strict` lists

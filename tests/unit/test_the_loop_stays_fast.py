@@ -169,7 +169,8 @@ class TestTheSelectorStillSelects:
     # `UX-1103`: #298's UX-1064 and #300's UX-1073 each name `bga.cli`; merged: median 38, p90 61, max 174 over 677.
     # `UX-1083`'s review test names the tracer and `bst_extract_run`: median 38, p90 62, max 174 over 679.
     # `UX-1120`'s census member adds one file to every selection: median 39, p90 63, max 175 over 697.
-    CEILING = {"median": 39, "p90": 63, "max": 175}
+    # Round 151's merged tree (UX-1112/1113/1119's guards name the lint tools): median 40 over 700.
+    CEILING = {"median": 40, "p90": 63, "max": 175}
     POPULATION_FLOOR = 60
     #: `UX-645`: **13 census + 14 of your own**. The census floor is
     #: inside this bound because those files run - the figure is what

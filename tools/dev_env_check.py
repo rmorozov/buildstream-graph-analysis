@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-"""UX-889: the orchestrator's cheap pre-gate env check - four footguns.
+"""UX-889: the orchestrator's cheap pre-gate env check - two footguns.
 (1) `pip install -e .` from a worktree repoints the shared editable
 `bga`, so every checkout's `import bga` resolves to that one worktree.
-(2)/(3) a stale `~/.local/bin/ruff` or `~/.local/bin/pyright` shadows
-the pinned one on PATH, so `dev_baseline.py` reads a wrong version and
-can rewrite `quality_baseline.json` from it. (4) `node` is absent or
-off the declared major, and every `shutil.which("node")` guard skips
-or runs the viewer on an engine no reading was taken on.
+(2) `node` is absent or off the declared major, and every
+`shutil.which("node")` guard skips or runs the viewer on an engine no
+reading was taken on. ruff and pyright are `dev_baseline.py`'s (UX-1113):
+it runs the interpreter's own and refuses a version off the lock.
 Decisions are pure so the guard tests them without a broken env; `main`
 does the I/O.
 """
@@ -78,16 +77,6 @@ def version_ok(reported, pinned):
     return bool(reported) and bool(pinned) and reported == pinned
 
 
-#: Do not say "put `/usr/local/bin` first on PATH" here. Measured
-#: (UX-889): that entry also sits ahead of the `/opt/nodeNN/bin` prefix
-#: that selects node, so it fixes one binary and silently changes
-#: another. Name the binary instead.
-_SHADOW = (
-    "A stale `~/.local/bin/{tool}` shadows the pinned one - call the pinned "
-    "binary by its own path, or refresh the shadowing copy in place "
-    "(`uv tool install --force {tool}=={pinned}` where it is a uv shim). "
-    "Installing the pin somewhere else leaves the shadow in front of it, and "
-    "do not prepend a directory to PATH to get past it.")
 _NODE = (
     "node is missing, or is not the major `.node-version` declares - every "
     "`shutil.which(\"node\")` guard under tests/unit skips silently when it "
@@ -102,10 +91,6 @@ Check = collections.namedtuple("Check", "source pin report hint")
 #: against this module's row in fixing guide §6, so a fourth binary
 #: cannot land here and leave the map naming three.
 TOOLS = {
-    "ruff": Check(LOCK, lambda t: pinned_version(t, "ruff"),
-                  lambda out: reported_version(out, "ruff"), _SHADOW),
-    "pyright": Check(LOCK, lambda t: pinned_version(t, "pyright"),
-                     lambda out: reported_version(out, "pyright"), _SHADOW),
     "node": Check(NODE_PIN, node_major, node_major, _NODE),
 }
 

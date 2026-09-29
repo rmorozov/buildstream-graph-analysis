@@ -7,7 +7,7 @@
                                                 # matches now
 
 Two producers feed one list: ruff (json) for S, C901, PLR0912, PLR0913,
-PLR0915, SIM115 - not in the gate's own `--select` (`pyproject.toml`) -
+PLR0915, SIM115, D2-D4 (Google convention, `pyproject.toml`) - not in the gate's own `--select` (`pyproject.toml`) -
 and pyright (`--outputjson`, its own errors) over bga, tools,
 .claude/hooks (never tests - `tests/**` is a different ledger). A
 finding's identity is `(tool, rule, file, the source line's text with
@@ -33,8 +33,12 @@ import subprocess
 import sys
 import tokenize
 
+import dev_env_check
+
 REPO = pathlib.Path(__file__).resolve().parents[1]
-FAMILIES = ("S", "C901", "PLR0912", "PLR0913", "PLR0915", "SIM115")
+FAMILIES = ("S", "C901", "PLR0912", "PLR0913", "PLR0915", "SIM115", "D2", "D3", "D4")
+#: pydocstyle layout rules that conflict with the house register (UX-1119).
+IGNORED = ("D205", "D209", "D212")
 DEFAULT_PATHS = ("bga", "tools", ".claude/hooks")
 DEFAULT_BASELINE = REPO / "tests" / "quality_baseline.json"
 
@@ -47,15 +51,45 @@ class PyrightFailure(Exception):
     """pyright's answer cannot be trusted: a bad exit, or unparseable JSON."""
 
 
-def ruff_version():
-    out = subprocess.run(["ruff", "--version"], stdout=subprocess.PIPE,
-                          text=True, check=True).stdout
-    return out.strip().split()[-1]
+def reported_versions(tools=("ruff", "pyright")):
+    """`{tool: version}` of the interpreter's own `tools`, never PATH's."""
+    out = {}
+    for tool in tools:
+        run = subprocess.run([sys.executable, "-m", tool, "--version"],
+                             capture_output=True, text=True, check=False)
+        out[tool] = dev_env_check.reported_version(run.stdout, tool)
+    return out
+
+
+def version_verdict(reported, lock_text):
+    """`(line, mismatches)`: what ran, and each tool whose version is not the lock's."""
+    line = ", ".join(f"{t} {reported[t]}" for t in sorted(reported))
+    bad = [f"{t} is {reported[t]!r}, requirements.lock pins "
+           f"{dev_env_check.pinned_version(lock_text, t)!r}" for t in sorted(reported)
+           if not dev_env_check.version_ok(
+               reported[t], dev_env_check.pinned_version(lock_text, t))]
+    return line, bad
+
+
+def refuse_off_lock(pyright_from):
+    """Print the versions run; 2 when one is off the lock, else 0.
+
+    Pyright is not spawned under `--pyright-from` (UX-802), so not read.
+    """
+    spawned = ("ruff",) if pyright_from else ("ruff", "pyright")
+    line, mismatches = version_verdict(
+        reported_versions(spawned), dev_env_check.LOCK.read_text(encoding="utf-8"))
+    print(f"tools: {line}", file=sys.stderr)
+    if not mismatches:
+        return 0
+    print("error: not the locked tools - refusing to judge: " + "; ".join(mismatches))
+    return 2
 
 
 def ruff_findings(root, paths, families):
-    cmd = ["ruff", "check", *[str(p) for p in paths],
+    cmd = [sys.executable, "-m", "ruff", "check", *[str(p) for p in paths],
            "--select", ",".join(sorted(families)),
+           "--ignore", ",".join(IGNORED),
            "--output-format", "json"]
     run = subprocess.run(cmd, cwd=root, capture_output=True,
                           text=True, check=False)
@@ -73,7 +107,7 @@ def ruff_findings(root, paths, families):
 
 
 def pyright_findings(root, paths):
-    cmd = ["pyright", *[str(p) for p in paths], "--outputjson"]
+    cmd = [sys.executable, "-m", "pyright", *[str(p) for p in paths], "--outputjson"]
     run = subprocess.run(cmd, cwd=root, capture_output=True,
                           text=True, check=False)
     if run.returncode not in (0, 1):
@@ -270,7 +304,7 @@ def load_baseline(path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def write_baseline(path, findings, families, version, forced_batches=()):
+def write_baseline(path, findings, families, forced_batches=()):
     """`forced_batches` is every `(reason, identities)` a `--force` has
     signed, oldest first. `UX-745` gave it one slot that a later
     `--force` overwrote outright, so an older reason's lines dropped out
@@ -284,7 +318,6 @@ def write_baseline(path, findings, families, version, forced_batches=()):
                    for reason, ids in forced_batches]
         header = f'  "forced": {json.dumps(batches)},\n'
     text = ("{\n"
-            f'  "ruff_version": {json.dumps(version)},\n'
             f'  "families": {json.dumps(sorted(set(families)))},\n'
             + header
             + '  "findings": [\n' + (body + "\n" if body else "") + "  ]\n"
@@ -302,7 +335,7 @@ def load_forced(document):
 #: `write_baseline`'s own vocabulary - the only way a batch is
 #: authorised. Anything else on the document or a finding was written
 #: by hand, not by `--force` (`UX-789`: `"forced_by"` was one).
-DOCUMENT_KEYS = frozenset({"ruff_version", "families", "forced", "findings"})
+DOCUMENT_KEYS = frozenset({"families", "forced", "findings"})
 ENTRY_KEYS = frozenset({"tool", "rule", "file", "line", "nth"})
 
 
@@ -400,7 +433,7 @@ def do_write(args, current, existing):
         signed = {identity(f) for f in current if identity(f) not in carried}
         if signed:
             batches = [*batches, (args.reason, signed)]
-    write_baseline(args.baseline, current, FAMILIES, ruff_version(),
+    write_baseline(args.baseline, current, FAMILIES,
                    forced_batches=batches)
     print(f"wrote {len(current)} finding(s) to {args.baseline}"
           + (f"; {len(signed)} authorised by {args.reason}" if signed else ""))
@@ -480,7 +513,6 @@ def do_shrink(args, current, existing):
         kept_ids = {identity(f) for f in kept}
         batches = _prune_forced(load_forced(existing), kept_ids)
         write_baseline(args.baseline, kept, existing.get("families", FAMILIES),
-                       existing.get("ruff_version", ruff_version()),
                        forced_batches=batches)
         plural = "y" if len(stale) == 1 else "ies"
         print(f"removed {len(stale)} stale entr{plural}")
@@ -506,9 +538,7 @@ def main(argv=None):
     parser.add_argument("--baseline", type=pathlib.Path, default=DEFAULT_BASELINE)
     parser.add_argument("--root", type=pathlib.Path, default=REPO)
     parser.add_argument("--paths", nargs="+", default=None)
-    # UX-802: a ruff/bandit-only caller (a test clause, mostly) pays a
-    # whole pyright pass it never reads a diagnostic from - read its
-    # `pyright_findings` shape from a fixture instead of spawning it.
+    # UX-802: a ruff-only caller reads pyright's shape from a fixture.
     parser.add_argument("--pyright-from", type=pathlib.Path, default=None,
                          help="read pyright_findings' shape from PATH instead "
                               "of spawning pyright")
@@ -516,6 +546,8 @@ def main(argv=None):
     if sum((args.write, args.check, args.shrink)) != 1:
         parser.error("exactly one of --write, --check, --shrink")
 
+    if refused := refuse_off_lock(args.pyright_from is not None):
+        return refused
     paths = args.paths or list(DEFAULT_PATHS)
     producers = dict(TOOLS)
     if args.pyright_from is not None:

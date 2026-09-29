@@ -155,8 +155,9 @@ class TestEveryCheckedBinaryHasAPinToCheckAgainst:
     typo'd path would then be red for the wrong reason, and a reader
     would chase the binary instead of the path."""
 
-    def test_the_population_is_the_three_binaries(self):
-        assert sorted(TOOLS) == ["node", "pyright", "ruff"]
+    def test_the_population_is_node_alone(self):
+        """ruff and pyright are `dev_baseline.py`'s since UX-1113."""
+        assert sorted(TOOLS) == ["node"]
 
     def test_each_row_reads_a_file_that_is_here(self):
         missing = [t for t, c in TOOLS.items() if not c.source.is_file()]

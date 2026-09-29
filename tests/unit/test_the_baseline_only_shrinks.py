@@ -7,6 +7,7 @@ real `tests/quality_baseline.json`.
 import json
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -346,12 +347,17 @@ class TestPyrightEntersTheSameList:
         _write(module, CLEAN)
         assert _run(tmp_path, baseline, "--write", spawn_pyright=True).returncode == 0
         before = baseline.read_text(encoding="utf-8")
-        fake_bin = tmp_path / "fakebin"
-        fake_pyright = fake_bin / "pyright"
-        _write(fake_pyright, "#!/bin/sh\nexit 3\n")
-        fake_pyright.chmod(0o755)
+        fake_pkg = tmp_path / "fakepkg" / "pyright"
+        lock = (pathlib.Path(__file__).resolve().parents[2]
+                / "requirements.lock").read_text(encoding="utf-8")
+        pin = re.search(r"^pyright==(\S+)", lock, re.MULTILINE).group(1)
+        _write(fake_pkg / "__init__.py", "")
+        _write(fake_pkg / "__main__.py",
+               "import sys\n"
+               f"if '--version' in sys.argv: print('pyright {pin}'); sys.exit(0)\n"
+               "sys.exit(3)\n")
         env = dict(os.environ)
-        env["PATH"] = str(fake_bin) + os.pathsep + env.get("PATH", "")
+        env["PYTHONPATH"] = str(tmp_path / "fakepkg")
         done = _run(tmp_path, baseline, "--write", env=env, spawn_pyright=True)
         assert done.returncode == 2, done.stdout + done.stderr
         assert baseline.read_text(encoding="utf-8") == before

@@ -1,6 +1,6 @@
 # UX-1132: three new example shapes and their arm legs test the "safe cap plus auto" default
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-1010 | **Found by:** round 152's architect, splitting UX-1014 into what a session can build and what needs the owner's hosts | **Serves:** R4, R5 | **Topic:** capture | **Area:** tools | **Shape:** mechanical | **Reading:** runner:bst-examples
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-1010 | **Found by:** round 152's architect, splitting UX-1014 into what a session can build and what needs the owner's hosts | **Serves:** R4, R5 | **Topic:** capture | **Area:** tools | **Shape:** mechanical | **Reading:** runner:bst-examples
 
 **Guard:** `tests/unit/test_the_new_jobserver_shapes_hold_their_property.py`
 
@@ -55,6 +55,14 @@ $ check_shape_property.py two-giants ... (giant-b width 1) -> rc=1: FAIL two-gia
 ```
 
 cc1 peak RSS vs `LINES` (`generate.sh` unit, `gcc -c`, `getrusage` children, dev host): 9800 -O0 83 MB; 40000 -O0 284 MB (1.47 s); 80000 -O0 549 MB (3.63 s), -O2 289 MB. Hence CI's `mem_lines 80000` and floor 200 MB.
+
+CI reading, `bst-examples` on `dbdc366a` (PR #303, check run 109479167757 annotations, four-core runner):
+
+```text
+UX-1132 14-two-giants | OK two-giants: giant-a.bst:width=4 giant-b.bst:width=4 overlap=53.064s
+UX-1132 15-wide-chain | OK wide-chain: wide-1.bst:width=4 wide-2.bst:width=4 wide-3.bst:width=4 wide-4.bst:width=4
+UX-1132 16-memory-bound-giant | OK memory-giant: giant.bst:peak_rss_per_job=556MB floor=200MB width=4 psi_memory_withdraws=0 psi_memory=True
+```
 
 | Mutation | Reddened | Count |
 |---|---|---|

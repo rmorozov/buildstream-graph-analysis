@@ -42,4 +42,18 @@ cell a pasted wall with its run id.
 
 ## Outcome
 
-Not started.
+Partial, round 152: the CodSpeed Graviton cells (16 Cortex-A72, 31 GB),
+`off` at 8 builders against the default (8 builders + `--jobserver auto`),
+bga-bench runs 36597448095 and 36602046680:
+
+| shape | off wall | auto wall | change | runs |
+|---|---|---|---|---|
+| `15-wide-chain` | 260.6-262.8 s | 196.8-197.7 s | -24% | 3+3, run 36597448095 |
+| `13-mixed-graph` (mixed8) | 146.7, 144.3 s | 116.8, 116.5 s | -20% | 1+1 in each run |
+| `14-two-giants` | 144.2-147.5 s | 147.0-148.5 s | +1% | 3+3, run 36597448095 |
+| `16-memory-bound-giant` | 558.9, 560.8 s | failed, 15 OOM kills | loses | both runs; UX-1134 |
+
+Two giants gain nothing because 2 x 8 jobs already fill 16 cores; the
+memory-bound giant is the shape where the default loses. Still to read:
+an x86 16-core host and a real project.
+

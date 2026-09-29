@@ -1,6 +1,6 @@
 # UX-904: nothing prices N separate CI builds against one junctioned invocation
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-903 (the variants that make N), P4-15 / `bst_checkout_cost.py` (the precedent) | **Found by:** the 2026-09-20 rollout thread — the owner names this as one of the questions bga should answer: do the variants need separate CI builds, or are they worth embedding in one BuildStream invocation through junctions | **Serves:** R5 (the fleet that runs N of them), R3 (whose graph the junction changes), R4 and R6 (the latency of a verdict) | **Topic:** analysis | **Area:** bga | **Shape:** mechanical
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-903 (the variants that make N), P4-15 / `bst_checkout_cost.py` (the precedent) | **Found by:** the 2026-09-20 rollout thread — the owner names this as one of the questions bga should answer: do the variants need separate CI builds, or are they worth embedding in one BuildStream invocation through junctions | **Serves:** R5 (the fleet that runs N of them), R3 (whose graph the junction changes), R4 and R6 (the latency of a verdict) | **Topic:** analysis | **Area:** bga | **Shape:** mechanical
 
 **Guard:** `tests/unit/test_one_invocation_is_priced_against_n.py`
 
@@ -127,3 +127,5 @@ this host, so `examples/12-junctioned` was not captured.
 | union node takes the min duration | known_overlap | 1 failed, 7 passed |
 
 Restored: 8 passed.
+
+**Deviation.** Junction staging is carried as an unmeasured assumption: no bst on the host, so `examples/12-junctioned` was not captured.

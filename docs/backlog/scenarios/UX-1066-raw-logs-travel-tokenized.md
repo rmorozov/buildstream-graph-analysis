@@ -1,6 +1,6 @@
 # UX-1066: raw logs travel tokenized
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-1062 | **Found by:** the 2026-09-27 brainstorm with the owner ([`anonymized-bundle.md`](../../design/anonymized-bundle.md)), section 7 | **Serves:** anyone sharing a private capture with an outside reader | **Topic:** store | **Area:** bga | **Shape:** mechanical | **Reading:** container
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-1062 | **Found by:** the 2026-09-27 brainstorm with the owner ([`anonymized-bundle.md`](../../design/anonymized-bundle.md)), section 7 | **Serves:** anyone sharing a private capture with an outside reader | **Topic:** store | **Area:** bga | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_a_raw_log_travels_tokenized.py`
 

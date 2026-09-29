@@ -1,6 +1,6 @@
 # UX-1057: the decomposition bar's aria-details twin table drops the certified lower-bound mark
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** round 143's walk (`10cde1d2`) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** round 143's walk (`10cde1d2`) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_every_drawing_has_a_name_and_a_data_route.py::TestEveryPlottedValueReachesTheRoute::test_every_drawn_mark_is_in_the_route`
 

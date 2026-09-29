@@ -1,6 +1,6 @@
 # UX-1131: `docs/README.md` counts ten printable contracts and `bga --schema` prints nine
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-1078 | **Found by:** round 149's bookkeeping ledger, promoted at round 152's sweep | **Serves:** R8 | **Topic:** contracts | **Area:** bga | **Shape:** mechanical | **Reading:** container
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-1078 | **Found by:** round 149's bookkeeping ledger, promoted at round 152's sweep | **Serves:** R8 | **Topic:** contracts | **Area:** bga | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_printable_is_what_bga_schema_prints.py`
 

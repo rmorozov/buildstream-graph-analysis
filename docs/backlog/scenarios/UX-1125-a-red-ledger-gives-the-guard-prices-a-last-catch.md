@@ -1,6 +1,6 @@
 # UX-1125: a red ledger gives `dev_guard_prices` a last-catch source
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-1122 | **Found by:** UX-1122 T2 (round 151, 2026-09-29) | **Serves:** Ruslan, who decides what the per-PR path costs | **Topic:** guards | **Area:** tools | **Shape:** mechanical | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-1122 | **Found by:** UX-1122 T2 (round 151, 2026-09-29) | **Serves:** Ruslan, who decides what the per-PR path costs | **Topic:** guards | **Area:** tools | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_the_red_ledger_is_appended_on_push.py`
 

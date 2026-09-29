@@ -1,6 +1,6 @@
 # UX-1007: a width promised through MAXJOBS or MAX_JOBS reads unknown_kind
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-859, UX-1003 | **Found by:** the census of four BuildStream projects (fdsdk, gnome-build-meta, carbonOS, libreml; ~2,450 elements, 2026-09-24) | **Serves:** R2, R5 (an auto arm on a real project changes the sandboxes it names) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** mechanical | **Reading:** container
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-859, UX-1003 | **Found by:** the census of four BuildStream projects (fdsdk, gnome-build-meta, carbonOS, libreml; ~2,450 elements, 2026-09-24) | **Serves:** R2, R5 (an auto arm on a real project changes the sandboxes it names) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_a_maxjobs_promise_joins_the_pool.py`
 

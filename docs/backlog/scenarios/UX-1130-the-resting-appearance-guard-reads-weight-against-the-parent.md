@@ -1,6 +1,6 @@
 # UX-1130: the resting-appearance guard reads a weight equal to the parent's as inherited
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-1051 | **Found by:** round 149's bookkeeping ledger, promoted at round 152's sweep | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-1051 | **Found by:** round 149's bookkeeping ledger, promoted at round 152's sweep | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_every_control_has_a_resting_appearance.py::test_an_explicit_weight_equal_to_the_ancestors_is_declared`
 

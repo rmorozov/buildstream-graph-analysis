@@ -1,6 +1,6 @@
 # UX-1129: a union merge reopens swept bookkeeping lines
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-998 | **Found by:** round 149's bookkeeping ledger, promoted at round 152's sweep | **Serves:** every round's sweep | **Topic:** guards | **Area:** tools | **Shape:** mechanical | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-998 | **Found by:** round 149's bookkeeping ledger, promoted at round 152's sweep | **Serves:** every round's sweep | **Topic:** guards | **Area:** tools | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_a_union_merge_does_not_reopen_a_swept_line.py`
 

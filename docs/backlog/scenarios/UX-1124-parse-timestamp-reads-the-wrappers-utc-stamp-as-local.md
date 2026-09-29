@@ -1,6 +1,6 @@
 # UX-1124: `parse_timestamp` reads the wrapper's UTC stamp as local time
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** UX-1117's architect (round 151, 2026-09-29) | **Serves:** anyone reading a wrapped capture outside UTC | **Topic:** capture | **Area:** tools | **Shape:** mechanical | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** UX-1117's architect (round 151, 2026-09-29) | **Serves:** anyone reading a wrapped capture outside UTC | **Topic:** capture | **Area:** tools | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_the_wrapper_stamp_is_read_as_utc.py`
 

@@ -1,6 +1,6 @@
 # UX-1133: round 152's architecture.md edits get their verification-log entry
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-904, UX-1131 | **Found by:** round 152 | **Serves:** whoever reads `architecture.md`'s Verification Log next | **Topic:** contracts | **Area:** bga | **Shape:** bounded | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-904, UX-1131 | **Found by:** round 152 | **Serves:** whoever reads `architecture.md`'s Verification Log next | **Topic:** contracts | **Area:** bga | **Shape:** bounded | **Reading:** container
 
 **Guard:** test_the_verification_log_is_true.py
 

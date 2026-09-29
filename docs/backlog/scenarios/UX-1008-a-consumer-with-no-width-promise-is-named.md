@@ -1,6 +1,6 @@
 # UX-1008: a consumer with no width promise is named, not silently oversubscribing
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-1007 | **Found by:** the census of four BuildStream projects (2026-09-24) - gnome-build-meta's `nvidia-container-toolkit.bst` runs `go build` with no `-p` and no `GOMAXPROCS` of its own | **Serves:** R5 (the report says which sandboxes the pool cannot size) | **Topic:** analysis | **Area:** bga | **Shape:** mechanical | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-1007 | **Found by:** the census of four BuildStream projects (2026-09-24) - gnome-build-meta's `nvidia-container-toolkit.bst` runs `go build` with no `-p` and no `GOMAXPROCS` of its own | **Serves:** R5 (the report says which sandboxes the pool cannot size) | **Topic:** analysis | **Area:** bga | **Shape:** mechanical | **Reading:** container
 
 **Guard:** tests/unit/test_a_consumer_outside_the_pool_is_named.py
 

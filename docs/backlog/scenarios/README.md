@@ -26,34 +26,13 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-900 | [a store is a directory, but CI will keep bundles in versioned directories](UX-0900-a-store-is-a-directory-but-ci-keeps-bundles.md) | store | Medium | R5, R7, R8 | 🔴 Not Started |
 | UX-902 | [a showcase case is two captures, and there is nowhere to put one](UX-0902-the-showcase-case-file-and-its-two-capture-rule.md) | docs | High | R1, R2, R8 | 🔴 Not Started |
-| UX-904 | [nothing prices N separate CI builds against one junctioned invocation](UX-0904-separate-invocations-or-one-junctioned-build.md) | analysis | High | R5, R3, R4, R6 | 🔴 Not Started |
-| UX-975 | [the examples still install a host toolchain the stager no longer reads, and two CI comments say it copies from one](UX-0975-the-examples-install-a-host-toolchain-the-stager-no-longer-reads.md) | docs | Medium | whoever stands the C++ examples up from `examples/README.md`, and the next reader of `ci.yml`'s staging steps | 🔴 Not Started |
-| UX-976 | [the toolchain closure is 35 store paths, and the examples README counts the two make pins into it](UX-0976-the-toolchain-closure-is-35-paths-and-the-readme-counts-the-make-pins-into-it.md) | docs | Low | whoever sizes the examples' download from the README | 🔴 Not Started |
 | UX-1005 | [bga recommends a builder count and a pool size from a capture, and the critical path gets the next token](UX-1005-bga-recommends-builders-and-pool-size-from-a-capture.md) | analysis | High | R5, R4 | 🟡 In Progress |
-| UX-1007 | [a width promised through MAXJOBS or MAX_JOBS reads unknown_kind](UX-1007-a-width-promised-through-maxjobs-reads-unknown-kind.md) | capture | High | R2, R5 | 🔴 Not Started |
-| UX-1008 | [a consumer with no width promise is named, not silently oversubscribing](UX-1008-a-consumer-with-no-width-promise-is-named.md) | analysis | Medium | R5 | 🔴 Not Started |
-| UX-1010 | [a second fixture for the jobserver's breadth win - one giant, many single-core elements](UX-1010-a-second-fixture-for-the-jobservers-breadth-win.md) | capture | Medium | R4, R5 | 🟡 In Progress |
-| UX-1012 | [the report says which elements drew from the jobserver, not only which were offered it](UX-1012-the-report-says-which-elements-drew-from-the-jobserver.md) | analysis | High | R4, R5 | 🔴 Not Started |
 | UX-1013 | [admission ranks from BuildStream's own cached build logs when bga never captured the project](UX-1013-admission-ranks-from-buildstreams-own-cached-build-logs.md) | capture | Medium | R4, R5 | 🔴 Not Started |
 | UX-1014 | [the "safe cap plus auto" default is measured on more shapes and hosts before it is anyone's default](UX-1014-the-builders-and-auto-default-is-measured-on-more-shapes-and-hosts.md) | capture | High | R4, R5 | 🔴 Not Started |
 | UX-1040 | [a paired reading decides whether implementers move to opus at low effort](UX-1040-a-paired-reading-decides-the-implementers-model.md) | guards | Medium | every round's implementer spend | 🔴 Not Started |
-| UX-1045 | [§3's tool row names the column thresholds §3d attaches to their headers](UX-1045-a-tables-tools-are-one-row.md) | viewer | Low | R1 | 🔴 Not Started |
-| UX-1056 | [navigating back after an in-page reveal does not re-fold the chapter](UX-1056-back-after-a-reveal-does-not-re-fold.md) | viewer | Medium | R1 | 🔴 Not Started |
-| UX-1057 | [the decomposition bar's aria-details twin table drops the certified lower-bound mark](UX-1057-the-drawing-routes-twin-table-drops-the-lower-bound-mark.md) | viewer | Medium | R1 | 🔴 Not Started |
-| UX-1058 | [the narrow-rail fold toggle is a click-only `<p>`, unreachable by keyboard](UX-1058-the-narrow-rail-toggle-is-unreachable-by-keyboard.md) | viewer | Medium | R1 | 🔴 Not Started |
-| UX-1066 | [raw logs travel tokenized](UX-1066-raw-logs-travel-tokenized.md) | store | Low | anyone sharing a private capture with an outside reader | 🔴 Not Started |
 | UX-1100 | [cut release 0.5.0 once the next features are in](UX-1100-cut-release-0-5-0.md) | contracts | Medium | R8 | 🔴 Not Started |
-| UX-1106 | [blast radius decodes every element's downstream set to sum durations over it](UX-1106-blast-radius-sums-durations-off-the-bitset.md) | analysis | High | anyone opening a run of a few thousand elements | 🔴 Not Started |
-| UX-1107 | [the export's anchor breaks a tie by set order](UX-1107-the-exports-anchor-breaks-a-tie-by-set-order.md) | viewer | Medium | R1 | 🔴 Not Started |
-| UX-1124 | [`parse_timestamp` reads the wrapper's UTC stamp as local time](UX-1124-parse-timestamp-reads-the-wrappers-utc-stamp-as-local.md) | capture | Medium | anyone reading a wrapped capture outside UTC | 🔴 Not Started |
-| UX-1125 | [a red ledger gives `dev_guard_prices` a last-catch source](UX-1125-a-red-ledger-gives-the-guard-prices-a-last-catch.md) | guards | Medium | Ruslan, who decides what the per-PR path costs | 🔴 Not Started |
-| UX-1129 | [a union merge reopens swept bookkeeping lines](UX-1129-a-union-merge-reopens-swept-bookkeeping-lines.md) | guards | Medium | every round's sweep | 🔴 Not Started |
-| UX-1130 | [the resting-appearance guard reads a weight equal to the parent's as inherited](UX-1130-the-resting-appearance-guard-reads-weight-against-the-parent.md) | viewer | Low | R1 | 🔴 Not Started |
-| UX-1131 | [`docs/README.md` counts ten printable contracts and `bga --schema` prints nine](UX-1131-the-schema-count-says-ten-and-bga-schema-prints-nine.md) | contracts | Low | R8 | 🔴 Not Started |
 | UX-1132 | [three new example shapes and their arm legs test the "safe cap plus auto" default](UX-1132-new-jobserver-shapes-for-the-default.md) | capture | High | R4, R5 | 🔴 Not Started |
-| UX-1133 | [round 152's architecture.md edits get their verification-log entry](UX-1133-the-verification-log-re-grounds-at-round-152.md) | contracts | Medium | whoever reads architecture.md's Verification Log next | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

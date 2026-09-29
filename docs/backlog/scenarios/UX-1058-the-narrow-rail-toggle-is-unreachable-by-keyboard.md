@@ -1,6 +1,6 @@
 # UX-1058: the narrow-rail fold toggle is a click-only `<p>`, unreachable by keyboard
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** round 143's walk (`10cde1d2`) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** round 143's walk (`10cde1d2`) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_a_keyboard_journey_reaches_every_chapter.py` (`TestTheNarrowRailToggleIsReachableByKeyboard`)
 

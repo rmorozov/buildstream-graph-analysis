@@ -1,6 +1,6 @@
 # UX-1012: the report says which elements drew from the jobserver, not only which were offered it
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-1005 | **Found by:** Ruslan on the Graviton thread (2026-09-25): "does bga show in report which elements actually used jobserver and which are not?" | **Serves:** R4, R5 | **Topic:** analysis | **Area:** bga | **Shape:** mechanical | **Reading:** container
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-1005 | **Found by:** Ruslan on the Graviton thread (2026-09-25): "does bga show in report which elements actually used jobserver and which are not?" | **Serves:** R4, R5 | **Topic:** analysis | **Area:** bga | **Shape:** mechanical | **Reading:** container
 
 **Guard:** test_the_report_says_which_elements_drew.py
 
@@ -96,3 +96,5 @@ before). No golden fixture carries a `jobserver` block; none moved.
 | `return "drew"` for every joined element (verdict from `joined` alone) | `offered_not_drawn`, `admission_token_alone`, `terminal_prints_the_row` | 3 failed, 2 passed |
 | `if joined not in ("yes", "pinned")` (pinned falls through to the peak test) | `pinned_never_drew_whatever_its_peak` | 1 failed, 4 passed |
 | reverted from copy | - | 5 passed |
+
+**Deviation.** The real-capture reading is taken on CI's bst-examples `11-serial-giant` auto run through the `UX-1005` notice step, not the Graviton capture, which is not kept. `UX-1008` later amended "pinned unchanged": a pin whose peak exceeds `max_jobs`+1 reads outside the pool.

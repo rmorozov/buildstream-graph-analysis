@@ -1,6 +1,6 @@
 # UX-1010: a second fixture for the jobserver's breadth win - one giant, many single-core elements
 
-**Priority:** Medium | **Status:** 🟡 In Progress | **Depends on:** UX-1009 | **Found by:** Ruslan on the jobserver batch thread (2026-09-24): "a single giant element and several elements that consume only one make job ... with 2x buildstream builders we potentially can spawn enough non-parallel elements and have a win" | **Serves:** R4, R5 (the fixture UX-1005 needs and does not have) | **Topic:** capture | **Area:** tools | **Shape:** judgement | **Reading:** owner:CodSpeed Graviton
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-1009 | **Found by:** Ruslan on the jobserver batch thread (2026-09-24): "a single giant element and several elements that consume only one make job ... with 2x buildstream builders we potentially can spawn enough non-parallel elements and have a win" | **Serves:** R4, R5 (the fixture UX-1005 needs and does not have) | **Topic:** capture | **Area:** tools | **Shape:** judgement | **Reading:** owner:CodSpeed Graviton
 
 **Guard:** none — open, no guard named yet
 
@@ -82,9 +82,22 @@ reading below.
 
 ## Outcome
 
-Not yet run (🟡) - the session runs the Acceptance Test above on the
-Graviton and pastes the three measured parts (gap, close, mutation
-table) once it has that reading.
+Reading taken: bga-bench run 36120799978, CodSpeed Graviton 16x Cortex-A72,
+`examples/13-mixed-graph`, three arms, cold caches.
+
+| arm | wall | traced span |
+|---|---|---|
+| off4 | 144 s | 130 s |
+| off32 | 208 s | 137 s |
+| auto32 | 182 s | 105 s |
+
+Cause, read on run 36125691222 (bst task lines): the host CPU is the same
+(off4 1160 s, off32 1180 s); 32 builders start all 25 narrow elements at once
+and starve the giant on the critical path (giant "Running commands" 198 s
+off32, 161 s auto32). Follow-up door-rule reading, run 36163582462: 8 builders
+off 143.6 s against 8 builders + auto 118.3 s (-18%).
+
+Mutation table: none - a fixture row; its guards are `sh -n` and the example's own build.
 
 **`BGA_SKIP_SELECTOR=1` on this commit**: `make test-touching` reddens
 on `test_every_task_file_has_a_row_in_the_table` - this task file's own

@@ -1,6 +1,6 @@
 # UX-1107: the export's anchor breaks a tie by set order
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** round 150, the export's anchor read under `PYTHONHASHSEED` 1-4 (2026-09-28) | **Serves:** R1 | **Topic:** viewer | **Area:** tools | **Shape:** mechanical | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** round 150, the export's anchor read under `PYTHONHASHSEED` 1-4 (2026-09-28) | **Serves:** R1 | **Topic:** viewer | **Area:** tools | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_the_export_anchor_is_seed_free.py`
 

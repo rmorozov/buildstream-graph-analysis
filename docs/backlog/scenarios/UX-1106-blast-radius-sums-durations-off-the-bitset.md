@@ -1,6 +1,6 @@
 # UX-1106: blast radius decodes every element's downstream set to sum durations over it
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** round 150, Ruslan's review of PR #300 and the post-fix `bga analyze` profile (2026-09-28) | **Serves:** anyone opening a run of a few thousand elements | **Topic:** analysis | **Area:** bga | **Shape:** mechanical | **Reading:** container
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** round 150, Ruslan's review of PR #300 and the post-fix `bga analyze` profile (2026-09-28) | **Serves:** anyone opening a run of a few thousand elements | **Topic:** analysis | **Area:** bga | **Shape:** mechanical | **Reading:** container
 
 **Guard:** tests/unit/test_blast_radius_reads_the_bitset.py
 

@@ -1,6 +1,6 @@
 # UX-900: a store is a directory, but CI will keep bundles in versioned directories
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-520 (the bundle), UX-234 (the aggregate) | **Found by:** the 2026-09-20 rollout brief ([`continuous-build-improvement.md`](../../design/continuous-build-improvement.md), section 1) — CI will preserve `bga` bundles in directories named by build number | **Serves:** R5 and R7 (an aggregate over what CI actually kept), R8 (the health view that reads the same store) | **Topic:** store | **Area:** bga | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-520 (the bundle), UX-234 (the aggregate) | **Found by:** the 2026-09-20 rollout brief ([`continuous-build-improvement.md`](../../design/continuous-build-improvement.md), section 1) — CI will preserve `bga` bundles in directories named by build number | **Serves:** R5 and R7 (an aggregate over what CI actually kept), R8 (the health view that reads the same store) | **Topic:** store | **Area:** bga | **Shape:** mechanical
 
 **Guard:** `tests/unit/test_a_tree_of_bundles_is_a_store.py`
 

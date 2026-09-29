@@ -4,8 +4,8 @@ Printed by `dev_area_pages.py --areas` (`UX-688`, `UX-1000`) from each task's `*
 
 | Task | Topic | Guard |
 |---|---|---|
-| [UX-439](https://github.com/rmorozov/buildstream-graph-analysis/blob/f97f65bb3b0dbd0b3571d469beddeaf1d0b8460d/docs/backlog/scenarios/UX-0439-the-blast-radius-ranking-ties-and-the-tie-break-is-unstable.md) | analysis | `test_the_journey_has_an_answer_key.py` (inferred) |
-| [UX-542](https://github.com/rmorozov/buildstream-graph-analysis/blob/f97f65bb3b0dbd0b3571d469beddeaf1d0b8460d/docs/backlog/scenarios/UX-0542-diagnostics-is-now-the-largest-phase.md) | analysis | no guard named |
-| [UX-724](https://github.com/rmorozov/buildstream-graph-analysis/blob/f97f65bb3b0dbd0b3571d469beddeaf1d0b8460d/docs/backlog/scenarios/UX-0724-the-diagnostics-blocks-vanish-on-a-fully-cached-run.md) | analysis | `test_the_journey_has_an_answer_key.py` (inferred) |
+| [UX-439](https://github.com/rmorozov/buildstream-graph-analysis/blob/e88c2773e74cb7a04e3e513323f66b8e9f262a77/docs/backlog/scenarios/UX-0439-the-blast-radius-ranking-ties-and-the-tie-break-is-unstable.md) | analysis | `test_the_journey_has_an_answer_key.py` · inferred r149 |
+| [UX-542](https://github.com/rmorozov/buildstream-graph-analysis/blob/e88c2773e74cb7a04e3e513323f66b8e9f262a77/docs/backlog/scenarios/UX-0542-diagnostics-is-now-the-largest-phase.md) | analysis | none — no guard named at close |
+| [UX-724](https://github.com/rmorozov/buildstream-graph-analysis/blob/e88c2773e74cb7a04e3e513323f66b8e9f262a77/docs/backlog/scenarios/UX-0724-the-diagnostics-blocks-vanish-on-a-fully-cached-run.md) | analysis | `test_the_journey_has_an_answer_key.py` · inferred r149 |
 
-covered 2 / 3 (declared 0, inferred 2)
+covered 2 / 3 (none 1, inferred r149 2, no line 0)

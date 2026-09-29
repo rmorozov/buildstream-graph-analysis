@@ -6,6 +6,6 @@ Mechanism: [docs/design/areas/bga-replay.md](../../design/areas/bga-replay.md)
 
 | Task | Topic | Guard |
 |---|---|---|
-| [UX-30](https://github.com/rmorozov/buildstream-graph-analysis/blob/f97f65bb3b0dbd0b3571d469beddeaf1d0b8460d/docs/backlog/scenarios/UX-0030-sweep-knee-point-stops-at-the-first-flat-step.md) | analysis | `test_sweep_knee_point.py` (inferred) |
+| [UX-30](https://github.com/rmorozov/buildstream-graph-analysis/blob/e88c2773e74cb7a04e3e513323f66b8e9f262a77/docs/backlog/scenarios/UX-0030-sweep-knee-point-stops-at-the-first-flat-step.md) | analysis | `test_sweep_knee_point.py` · inferred r149 |
 
-covered 1 / 1 (declared 0, inferred 1)
+covered 1 / 1 (none 0, inferred r149 1, no line 0)

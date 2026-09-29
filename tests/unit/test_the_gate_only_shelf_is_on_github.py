@@ -89,6 +89,25 @@ class TestTheLockfileIsTheDevExtra:
         assert loose == [], loose
 
 
+class TestTheShelfReadsTheLock:
+    """UX-1128: a weekly run reds on an upstream release unless the compile starts from the lock."""
+
+    def _run(self, job):
+        workflow = yaml.safe_load(QUALITY.read_text(encoding="utf-8"))
+        return "\n".join(str(step.get("run", "")) for step in workflow["jobs"][job]["steps"])
+
+    def test_the_lock_check_is_seeded_from_the_committed_lock(self):
+        blob = self._run("pip-audit")
+        compile_at = blob.index("uv pip compile")
+        seed = re.search(r"^\s*cp requirements\.lock (\S+)$", blob[:compile_at], re.M)
+        assert seed, blob
+        assert f"-o {seed.group(1)}" in blob[compile_at:], blob
+
+    def test_the_sizes_job_installs_the_lock(self):
+        installs = [line.strip() for line in self._run("sizes").splitlines() if "pip install" in line]
+        assert installs == ["pip install -r requirements.lock", "pip install -e . --no-deps"], installs
+
+
 class TestAnArchiveStaysInsideItsDirectory:
     def _archive(self, tmp_path, names):
         buffer = io.BytesIO()

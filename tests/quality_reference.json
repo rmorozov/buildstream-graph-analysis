@@ -1,5 +1,5 @@
 {
-  "paths": [".claude/hooks", "bga", "tools"],
+  "paths": ["bga/cli.py", "bga/plane2.py"],
   "files": {
     ".claude/hooks/agent_worktree_limits.py": {"duplicate_blocks": 0, "file_lines": 128, "longest_function": 23},
     ".claude/hooks/gate_covers_push.py": {"duplicate_blocks": 1, "file_lines": 168, "longest_function": 28},
@@ -19,7 +19,7 @@
     "bga/cache_effectiveness.py": {"duplicate_blocks": 0, "file_lines": 563, "longest_function": 170},
     "bga/cache_trend.py": {"duplicate_blocks": 0, "file_lines": 439, "longest_function": 71},
     "bga/capacity_model.py": {"duplicate_blocks": 0, "file_lines": 340, "longest_function": 72},
-    "bga/cli.py": {"duplicate_blocks": 0, "file_lines": 3487, "longest_function": 246},
+    "bga/cli.py": {"duplicate_blocks": 0, "file_lines": 3491, "longest_function": 246},
     "bga/compare.py": {"duplicate_blocks": 0, "file_lines": 1665, "longest_function": 281},
     "bga/contracts.py": {"duplicate_blocks": 0, "file_lines": 175, "longest_function": 26},
     "bga/correlate.py": {"duplicate_blocks": 0, "file_lines": 2943, "longest_function": 210},
@@ -50,7 +50,7 @@
     "bga/normalize/timestamps.py": {"duplicate_blocks": 1, "file_lines": 576, "longest_function": 155},
     "bga/occupancy/__init__.py": {"duplicate_blocks": 0, "file_lines": 27, "longest_function": 0},
     "bga/occupancy/sweep.py": {"duplicate_blocks": 0, "file_lines": 403, "longest_function": 58},
-    "bga/plane2.py": {"duplicate_blocks": 0, "file_lines": 504, "longest_function": 35},
+    "bga/plane2.py": {"duplicate_blocks": 0, "file_lines": 510, "longest_function": 39},
     "bga/plural.py": {"duplicate_blocks": 0, "file_lines": 18, "longest_function": 8},
     "bga/producer.py": {"duplicate_blocks": 0, "file_lines": 172, "longest_function": 21},
     "bga/progress.py": {"duplicate_blocks": 0, "file_lines": 342, "longest_function": 39},

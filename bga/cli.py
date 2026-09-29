@@ -221,6 +221,17 @@ def _attach_plane2_capacity(args: argparse.Namespace, analyzer, result) -> None:
         return
     context = getattr(analyzer, 'run_context', None)
     host_cpu_count = getattr(context, 'host_cpu_count', None) or getattr(context, 'cpu_budget', None)
+    # `UX-894`: score each element against the width BuildStream
+    # resolved for it, from the `graph.json` sitting in the same
+    # snapshot, rather than against the `-jN` its recipe wrote. Applied
+    # at read time as well as at capture time, so a report written
+    # before this item stops publishing a ratio over the wrong
+    # denominator the moment a graph is in hand.
+    run_dir = getattr(analyzer, 'run_dir', None) or directory
+    if run_dir:
+        plane2_shape.apply_resolved_widths(
+            native_report, plane2_shape.resolved_widths(os.path.join(str(run_dir), 'graph.json'))
+        )
     result.plane2_capacity = summarize_plane2_capacity(native_report, host_cpu_count)
     # UX-202: how much of the build Plane 2 actually saw, published
     # rather than left in the native report. The evidence header states
@@ -253,17 +264,6 @@ def _attach_plane2_capacity(args: argparse.Namespace, analyzer, result) -> None:
     # `bga correlate` calls. Held rather than joined here because the
     # join reads the finished analysis document, which does not exist
     # yet at this point in the pipeline.
-    # `UX-894`: score each element against the width BuildStream
-    # resolved for it, from the `graph.json` sitting in the same
-    # snapshot, rather than against the `-jN` its recipe wrote. Applied
-    # at read time as well as at capture time, so a report written
-    # before this item stops publishing a ratio over the wrong
-    # denominator the moment a graph is in hand.
-    run_dir = getattr(analyzer, 'run_dir', None) or directory
-    if run_dir:
-        plane2_shape.apply_resolved_widths(
-            native_report, plane2_shape.resolved_widths(os.path.join(str(run_dir), 'graph.json'))
-        )
     result.plane2_report = native_report
     # UX-891: the one floor in this report divided by the machine's
     # cores rather than by the scheduler's builder slots. Published
@@ -1811,6 +1811,10 @@ def cmd_correlate(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
         return 2
+    # UX-1138: the same read-time rescoring `analyze` does, so both publish one pinned set.
+    plane2_shape.apply_resolved_widths(
+        native_report, plane2_shape.resolved_widths(os.path.join(str(args.directory), 'graph.json'))
+    )
 
     def produce() -> str:
         analyzer = _make_analyzer(args)

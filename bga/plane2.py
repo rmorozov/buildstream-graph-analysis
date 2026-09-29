@@ -438,6 +438,7 @@ GRAPH_DENOMINATOR = "graph"
 #: the sandbox, not a parallelism score, so it is a finding and the
 #: ratio is held at 1.0.
 OVERLAP_FINDING = "overlap_exceeds_granted_width"
+PINNED_FINDING = "pinned_to_one_job"
 
 
 def resolved_widths(graph_path: str) -> dict[str, int]:
@@ -482,7 +483,9 @@ def apply_resolved_widths(native_report: dict, widths: dict[str, int]) -> int:
     report was written is corrected the first time one is in hand.
     """
     filled = 0
-    for entry in native_report.get("per_element_parallelism") or []:
+    entries = native_report.get("per_element_parallelism") or []
+    widest = max((widths.get(entry.get("element")) or 0 for entry in entries), default=0)
+    for entry in entries:
         width = widths.get(entry.get("element"))
         entry["resolved_jobs"] = width
         if width is None:
@@ -492,7 +495,10 @@ def apply_resolved_widths(native_report: dict, widths: dict[str, int]) -> int:
         filled += 1
         entry["jobs_denominator"] = GRAPH_DENOMINATOR
         peak = entry.get("peak_work_concurrency") or 0
-        findings = [f for f in (entry.get("findings") or []) if f != OVERLAP_FINDING]
+        findings = [f for f in (entry.get("findings") or []) if f not in (OVERLAP_FINDING, PINNED_FINDING)]
+        # UX-1138: pinned is the resolved width, not an argv `-j1` - autotools' install step writes one.
+        if width == 1 and widest > 1:
+            findings.append(PINNED_FINDING)
         if width > 0 and peak > width:
             findings.append(OVERLAP_FINDING)
         entry["findings"] = findings

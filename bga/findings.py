@@ -1554,6 +1554,10 @@ def _opportunity_findings(result: AnalysisResult, chain_bound: bool) -> list[dic
     ]
 
 
+def _and(names: list[str]) -> str:
+    return names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1]
+
+
 def _outlook_findings(result: AnalysisResult) -> list[dict]:
     """UX-74: what to do after the first fix, what the set is worth
     together, and what is waiting off the path."""
@@ -1565,15 +1569,23 @@ def _outlook_findings(result: AnalysisResult) -> list[dict]:
     if joint and joint.get('joint_saving_us') and total:
         joint_us = joint['joint_saving_us']
         sum_us = joint.get('sum_of_individual_us') or 0
-        if joint.get('savings_add'):
+        kind = joint.get('relation') or ('add' if joint.get('savings_add') else 'overlap')
+        if kind == 'add':
             relation = (
-                "exactly the sum of their individual savings, so they are three "
-                "separate pieces of work that do not overlap"
+                "exactly the sum of their individual savings, so they are separate pieces of work that do not overlap"
             )
-        else:
+        elif kind == 'overlap':
             relation = (
                 f"less than the {sum_us / 1e6:.1f}s their individual savings add up "
                 f"to - fixing one makes the others worth less"
+            )
+        else:
+            elements = list(joint['elements'])
+            later = [uid for uid in joint.get('worth_more_after') or [] if uid in elements] or elements[1:]
+            earlier = elements[: elements.index(later[0])] or elements[:1]
+            relation = (
+                f"more than the {sum_us / 1e6:.1f}s alone: {_and(later)} "
+                f"{'pays' if len(later) == 1 else 'pay'} off after {_and(earlier)}"
             )
         findings.append(
             _finding(
@@ -1587,6 +1599,7 @@ def _outlook_findings(result: AnalysisResult) -> list[dict]:
                     'joint_saving_us': joint_us,
                     'sum_of_individual_us': sum_us,
                     'savings_add': joint.get('savings_add'),
+                    'relation': kind,
                 },
             )
         )

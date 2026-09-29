@@ -1,0 +1,16 @@
+# Walk, seed 4 - 0.5.0 release gate, 2026-09-29, commit 74aa14f2
+
+seed 4 (tests/unit, R5 CI owner, spine on, legacy read-only fixture, many, DOM shim) - driven in real Chrome instead; no `bst` on the box, so the committed `tests/fixtures/macro_micro` stood in for the cold/incremental capture (no incremental run; no timeline, so no canned Perfetto queries drawn). `PYTHONPATH=.` needed: `bga` on PATH imports the main checkout (UX-728 warning printed).
+answer key 06 vs optimized/: score 2 match, 1 partial of 3. (1) chain->fan-out: match, correlate "18 edges ... never-read ... 19.1s against 43.2s". (2) codegen over-declared: partial, text says only "opened no file staged by 2-7 declared build dependencies each (24 edges across the 7)"; `codegen.bst` is named only in `correlate --format json`. (3) core `notparallel`: match, "asked for -j1: remove `notparallel` / raise its job count", "cc1plus" 85%.
+page headline right (chain_bound, core.bst 12.1 s); macro findable (What to fix first). 639 controls; one per class driven, none differ from label. Print: 67/67 sections and 0 hidden rows/tables vs screen 6 sections/7 hidden tables - folded chapters print. UX-1056: click #graph_summary, #confidence, back, back -> chapters decide+elements, then decide only, y 0, hash empty; back holds. UX-1058: Tab reaches the "Sections" button at 500 px, Enter sets aria-expanded true. Console and CSP empty; 23 svgs all named, all aria-details targets resolve.
+BLOCKING 1: headline arithmetic contradicts itself. Text: "Together, the top 3 are worth 23.1s (50%) - exactly the sum of their individual savings" for core/codegen/lib-b, but `bga whatif --element codegen.bst` gives "43.200s -> 43.200s (saves 0.000s)", the headline table lists core/lib-b/lib-d (12.1+4.0+4.0=20.1 s), and analyze says codegen is "worth nothing to fix today" one line before ranking it second. Site: analyze text "Work them in this order" block; guard passed over: none reads prose totals against whatif/table.
+Non-blocking:
+
+- Copy rows: after Calls>=20 filter the table shows "10 of 71" (correct, 10 of 71 hold) but the button still reads "Copy 25 rows" and its title "the 25 rows shown"; the copy holds 10 (`button.copy-rows`, binary_cost).
+- Density strips (aria-label "1 -> 32 across 71 rows.", aria-details -> a span with the same text) name range only; the plotted p50/p95 ticks (data-value 9, 27) are absent from assistive text.
+- Restructuring counts "18 edges among 8 elements" (correlate) vs "24 edges across the 7" (per-element line) with no reconciling sentence.
+- Perfetto section text says "carries no build log" while `bga view` says the raw trace log "was not kept"; the Questions section keeps an "Ask about element" box and a `ui.perfetto.dev` link with href="#" when there is no timeline.
+- `bga junction-cost RUN RUN` with the same run twice prices N=2 ("saves 51.641s") without noting identical run ids.
+- Forward after two back steps lands y 8218 vs 7952 first time (266 px drift).
+- `bga --version` and pyproject read 0.4.1 (release bump pending); Escape does not shut the open Sections toggle.
+rows added 0 (report only; findings for the judge to file). friction: the worktree shell refused heredocs/`PYTHONPATH=` compounds without saying which token, costing ~10 retries.

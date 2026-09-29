@@ -1,11 +1,6 @@
-"""UX-1117: properties of the Plane 1 reader over generated log lines.
+"""UX-1117: properties of the Plane 1 reader over generated log lines."""
 
-Under TZ=UTC: `parse_timestamp` reads the wrapper's UTC stamp as local time.
-"""
-
-import os
 import re
-import time
 from datetime import datetime, timedelta
 
 import pytest
@@ -18,19 +13,6 @@ from tools.bst_log_to_chrome_trace import (
 )
 
 PROFILE = settings(derandomize=True, database=None, max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-
-
-@pytest.fixture(autouse=True, scope="module")
-def _utc():
-    old = os.environ.get("TZ")
-    os.environ["TZ"] = "UTC"
-    time.tzset()
-    yield
-    if old is None:
-        os.environ.pop("TZ", None)
-    else:
-        os.environ["TZ"] = old
-    time.tzset()
 
 
 PADS = st.sampled_from(["", " ", "  "])

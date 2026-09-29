@@ -376,3 +376,42 @@ class TestEscapeLeavesTableFocusAndReturnsFocus:
         assert after["expand"] == opener_path, (
             f"Escape did not return focus to the control that opened table focus: {after}"
         )
+
+
+# --------------------------------------------------------------------------
+# 5. `UX-1058`: at 390x844 the rail's fold toggle is a real button - a
+#    forward `Tab` walk reaches it and `Enter` flips the fold.
+# --------------------------------------------------------------------------
+
+_READ_TITLE = r"""
+(() => {
+  const a = document.activeElement;
+  const nav = document.querySelector("nav.toc");
+  return { cls: a && a.className, tag: a && a.tagName,
+           folded: nav && nav.getAttribute("data-folded"),
+           expanded: a && a.getAttribute && a.getAttribute("aria-expanded") };
+})()
+"""
+
+
+@needs_browser
+class TestTheNarrowRailToggleIsReachableByKeyboard:
+    def test_tab_reaches_the_title_and_enter_flips_the_fold(self, tmp_path_factory):
+        uri = pages.export_uri(MACRO, tmp_path_factory.mktemp("u1058"))
+        steps = list(_START_AT_THE_TOP)
+        for _ in range(TAB_CAP):
+            steps.append({"key": "Tab"})
+            steps.append({"read": _READ_TITLE})
+        with Browser(chrome) as browser:
+            trace = browser.journey(uri, steps, 390, 844)[1:]
+        at = next((i for i, row in enumerate(trace) if row and row["cls"] == "toc-title"), None)
+        assert at is not None, f"Tab never reached .toc-title in {TAB_CAP} stops at 390x844"
+        assert trace[at]["tag"] == "BUTTON", trace[at]
+        assert (trace[at]["folded"], trace[at]["expanded"]) == ("true", "false"), trace[at]
+
+        steps = list(_START_AT_THE_TOP)
+        steps += [{"key": "Tab"}] * (at + 1)
+        steps += [{"key": "Enter"}, {"read": _READ_TITLE}]
+        with Browser(chrome) as browser:
+            after = browser.journey(uri, steps, 390, 844)[-1]
+        assert (after["folded"], after["expanded"]) == ("false", "true"), after

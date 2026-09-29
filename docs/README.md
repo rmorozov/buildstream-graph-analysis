@@ -30,9 +30,10 @@ Both are in [`guides/cli.md`](guides/cli.md#bga-snapshot--the-local-loop-ux-126)
 carries a whole capture to another machine in one file — `run/` is
 only half of it (`UX-520`); `bga bundle --resolve` rewrites a pseudonym
 in a reply back to its real name, entirely on this machine (`UX-1064`).
-Three more
+Four more
 answer questions the analysis alone does not: `bga whatif` prices a
-chosen set of fixes (`UX-230`), `bga analyze --explain` shows the
+chosen set of fixes (`UX-230`), `bga junction-cost` prices N variant
+builds against one junctioned invocation (`UX-904`), `bga analyze --explain` shows the
 evidence behind every claim (`UX-229`), and `bga snapshot --aggregate`
 speaks for the whole store rather than one run (`UX-234`). The
 section-only commands — `graph`, `floors`, `replay`, `sweep`,
@@ -57,7 +58,7 @@ Every JSON document `bga` writes carries its schema id, and
 and the view-hints the browser report renders from (`UX-201`). Where a
 command emits two documents, the flag selects: `bga snapshot --list
 --schema` and `bga snapshot --aggregate --schema` print different
-contracts. Twenty-six ids, and what writes each:
+contracts. Twenty-seven ids, and what writes each:
 
 | document | written by |
 |---|---|
@@ -66,6 +67,7 @@ contracts. Twenty-six ids, and what writes each:
 | `blast/v2` | `bga blast --format json` — what a change to one resource rebuilds |
 | `correlate/v2` | `bga correlate --format json` — Plane 1 and Plane 2 joined on element uid |
 | `whatif/v1` | `bga whatif --format json` — what the build drops to if a chosen set is fixed, and whether the savings add (`UX-230`) |
+| `junction-cost/v1` | `bga junction-cost RUN RUN --format json` — N builds of one type under different variants priced against one junctioned invocation: the elements shared by cache key, the pipeline paid N times, the union floor, each figure citing its assumption (`UX-904`) |
 | `store/v1` | `bga snapshot --list --format json` — the runs in this project's `.bga/runs` |
 | `store-aggregate/v1` | `bga snapshot --aggregate --format json` — the store as a distribution, per host class (`UX-234`) |
 | `capacity-model/v1` | `bga snapshot --capacity N,RATE --format json` — a builder count and an arrival rate as a queue: utilization, the wait before a build starts and the number waiting, per host class, each figure carrying the assumptions its own arithmetic used (`UX-613`) |
@@ -225,6 +227,7 @@ appended to instead of superseded:
 | [`audits/walk-seed-1.md`](audits/walk-seed-1.md) | `UX-685`'s first seeded walk — 1 element, Plane 2 absent, real Chrome; the seed names it and reruns it |
 | [`audits/walk-seed-2.md`](audits/walk-seed-2.md) | `UX-685`'s second seeded walk — the empty-population class, hook-only Plane 2, the static export |
 | [`audits/walk-seed-3.md`](audits/walk-seed-3.md) | `UX-685`'s third seeded walk — the process storm, spine on, cold then incremental, real Chrome |
+| [`audits/walk-seed-4.md`](audits/walk-seed-4.md) | the 0.5.0 release walk at `74aa14f2` — `macro_micro` standing in for a capture, real Chrome; `UX-1135` filed from it |
 | [`audits/agent-runs.md`](audits/agent-runs.md) | what each subagent run cost — tokens, tool calls, wall clock — and its own friction line, one row per run, so a model and a report shape are chosen from numbers (`UX-666`) |
 | [audits/mutation.md](https://github.com/rmorozov/buildstream-graph-analysis/blob/records/docs/audits/mutation.md) | the weekly mutation run's survivors — a mutant the touched modules' own guards did not kill, one dated section per run. A survivor is a filing, not a failure (`UX-703`); gitignored since `UX-997` T2 — `tools/dev_records.py fetch` writes it locally, `refs/heads/records` carries it |
 | [`audits/round-register.md`](audits/round-register.md) | which rounds happened and when, derived from the committed union — every round document, the ledger's round column and every round a task file names, never `git log` — dated by the document's own dateline; only the one next round, still without its document, is held out of it (`UX-744`, `UX-782`, `UX-926`) |
@@ -337,6 +340,7 @@ The rounds themselves:
 [149](audits/round-149.md) ·
 [150](audits/round-150.md) ·
 [151](audits/round-151.md) ·
+[152](audits/round-152.md) ·
 [the guard census of round 64](audits/guard-census-round-64.md)
 
 ## Backlog

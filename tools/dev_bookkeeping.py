@@ -3,13 +3,16 @@
     python3 tools/dev_bookkeeping.py --add PATH WHAT COMMAND \
         --class CLASS --round N [--new-class]
     python3 tools/dev_bookkeeping.py --sweep
+    python3 tools/dev_bookkeeping.py --collapse
     python3 tools/dev_bookkeeping.py --mark KEY --status swept|promoted|dropped|open \
         --round N [--ux UX-NNN] [--reason TEXT]
 
 One line in `docs/backlog/bookkeeping.md` per drift: filed round,
 status, class, where, what, and the command that shows it. `--add`
 writes a line; `--sweep` lists the open ones, oldest first, with the
-sweeps each has survived; `--mark` resolves one. A key is never
+sweeps each has survived; `--mark` resolves one. A key present both
+open and resolved (a union merge's leftover) reads as resolved;
+`--collapse` drops the open copy. A key is never
 written - `sha1("<path> · <what>")[:7]` derives it, so two lines
 naming the same drift collide by construction. Every write is
 transactional: the candidate text is validated first, and a write
@@ -146,12 +149,34 @@ def add(finding, cls, round_no, paths=DEFAULT_PATHS, new_class=False):
     return line
 
 
+def _resolved_keys(entries):
+    return {derive_key(e.path, e.what) for e in entries if e.status != "open"}
+
+
+def collapse(paths=DEFAULT_PATHS):
+    """Drop every open line whose key also has a resolved line; returns them."""
+    text = paths.ledger.read_text(encoding="utf-8")
+    entries, problems = parse_entries(text)
+    if problems:
+        raise ValueError("\n".join(problems))
+    resolved = _resolved_keys(entries)
+    stale = [e for e in entries if e.status == "open" and derive_key(e.path, e.what) in resolved]
+    drop = {e.lineno for e in stale}
+    lines = [ln for n, ln in enumerate(text.splitlines(), start=1) if n not in drop]
+    paths.ledger.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return stale
+
+
 def sweep(paths=DEFAULT_PATHS):
     entries, problems = parse_entries(paths.ledger.read_text(encoding="utf-8"))
     if problems:
         raise ValueError("\n".join(problems))
     rounds = sweep_rounds(entries)
-    open_entries = sorted((e for e in entries if e.status == "open"), key=lambda e: e.filed)
+    resolved = _resolved_keys(entries)
+    open_entries = sorted(
+        (e for e in entries if e.status == "open" and derive_key(e.path, e.what) not in resolved),
+        key=lambda e: e.filed,
+    )
     return [(e, sweeps_survived(e, rounds)) for e in open_entries]
 
 
@@ -195,6 +220,7 @@ def main(argv=None):
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--add", nargs=3, metavar=("PATH", "WHAT", "COMMAND"))
     group.add_argument("--sweep", action="store_true")
+    group.add_argument("--collapse", action="store_true")
     group.add_argument("--mark", metavar="KEY")
     parser.add_argument("--class", dest="cls")
     parser.add_argument("--new-class", action="store_true")
@@ -213,6 +239,9 @@ def main(argv=None):
         elif args.sweep:
             for entry, n in sweep():
                 print(f"r{entry.filed} · {n} sweep(s) · {entry.cls} · {entry.path} · {entry.what}")
+        elif args.collapse:
+            for entry in collapse():
+                print(f"dropped open copy: {derive_key(entry.path, entry.what)} · {entry.what}")
         else:
             if args.round is None or not args.status:
                 parser.error("--mark needs --status and --round")

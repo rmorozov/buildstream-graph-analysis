@@ -463,8 +463,11 @@ def recorded():
 # measured on one machine is not a measurement of another.
 # `UX-1111` retired the parallel step, and its two figures with it
 # (89.0 slowest, 66.0 fastest); pytest-timeout catches its hang now.
-SMALL_TIER_CI_SLOW_1P_S = 154.0  # single process, slowest seen (3.12)
-SMALL_TIER_CI_FAST_1P_S = 125.0  # single process, fastest seen (3.11)
+# Round 152 re-read both off run 36527886347 (head `e88c2773`, 473 small
+# files), step `Test (small tier, single process)`: 3.9 333s, 3.10 202s,
+# 3.11 262s, 3.12 317s; run 36555941231 (`b8072cd7`, 488) sat inside them.
+SMALL_TIER_CI_SLOW_1P_S = 333.0  # single process, slowest seen (3.9)
+SMALL_TIER_CI_FAST_1P_S = 202.0  # single process, fastest seen (3.10)
 
 # `UX-743`: the population the four figures above were measured on,
 # counted in files rather than tests. Files are free to count from the
@@ -477,7 +480,7 @@ SMALL_TIER_CI_FAST_1P_S = 125.0  # single process, fastest seen (3.11)
 # grown past 1.5x this. It is a staleness tripwire, not a budget: what
 # it asks for is two numbers re-read off a CI run, which is the work
 # nothing did for thirty-five rounds while the suite doubled.
-SMALL_TIER_POPULATION_FILES = 326  # small-tier files at `b1b664b`
+SMALL_TIER_POPULATION_FILES = 473  # small-tier files at `e88c2773`
 
 # `UX-421`. **These are backstops, not budgets.** The distinction is
 # the whole item: a budget claims to bound the tier, and a wall-clock
@@ -504,7 +507,8 @@ SMALL_TIER_POPULATION_FILES = 326  # small-tier files at `b1b664b`
 # compares each file to CI's own recorded seconds with the run's median
 # shift divided out, so a slow runner is not read as a slow file - and
 # it names the file, which a timeout never could.
-SMALL_TIER_BACKSTOP_1P_S = 900.0  # the single-process step's timeout
+# Round 152: 900 -> 1200, 3.6x the 333s slowest seen.
+SMALL_TIER_BACKSTOP_1P_S = 1200.0  # the single-process step's timeout
 
 # The sizing this replaced, kept because it is the argument `UX-421`
 # had to answer rather than a number to restore. The old budget was
@@ -1061,4 +1065,8 @@ MEDIUM = (
     "tests/unit/test_the_tail_says_what_it_is_doing.py",  #  1.0s
     # `UX-1083` review (PR #300): 7.58 / 7.40 / 7.39s, its bst arm included.
     "tests/unit/test_the_graph_reads_the_builds_options.py",  #  7.5s
+    # Round 152, single process: UX-1056's Chromium walk 3.66 / 3.61 / 3.76s;
+    # UX-1107's two exports 1.07 / 1.06 / 1.03s. UX-1131's 0.90 / 0.98 / 1.12s stays small.
+    "tests/unit/test_back_after_a_reveal_re_folds.py",  #  3.7s
+    "tests/unit/test_the_export_anchor_is_seed_free.py",  #  1.1s
 )

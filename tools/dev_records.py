@@ -4,9 +4,9 @@
     python tools/dev_records.py fetch [--at SHA]
     python tools/dev_records.py publish [--pages DIR]
 
-`fetch` writes the four record paths (`tests/ci_reference.json`,
+`fetch` writes the five record paths (`tests/ci_reference.json`,
 `tests/touch_map.json`, `tests/flake_ledger.json`,
-`docs/audits/mutation.md`) from that branch's tip, or `--at` a named
+`docs/audits/mutation.md`, `tests/red_ledger.json`) from that branch's tip, or `--at` a named
 sha - the branch is append-only, so every past sha stays reachable.
 Offline, a previous fetch's copy on disk is reused, printed
 `<sha> (cached)`. `fetch` also records, in `git config --local`, the tip
@@ -18,11 +18,11 @@ onto a tip it never actually read, dropping rows published since
 tree carries dirty against the baseline `fetch` last hashed, builds one
 commit on the records tip (or seeds an orphan root from the tree's own
 copies, the first time), and pushes it there - never to main, and never
-force. T2 (`UX-997`): the four paths are `git rm --cached` and
+force. T2 (`UX-997`): the five paths are `git rm --cached` and
 gitignored, so `_dirty` hashes rather than trusting `git diff`, which
 reads nothing for a path outside the index at all. `--pages DIR`
 (`UX-1000` T2) overlays `docs/backlog/areas/` from that directory's
-`.md` files onto the same commit, beside whichever of the four paths
+`.md` files onto the same commit, beside whichever of the five paths
 this run also changed.
 """
 
@@ -44,7 +44,13 @@ REPO = pathlib.Path(__file__).resolve().parents[1]
 GIT = shutil.which("git") or "git"
 RECORDS_REF = "refs/heads/records"
 SHA_MARKER = REPO / "tests" / ".records-sha"
-RECORD_PATHS = ("tests/ci_reference.json", "tests/touch_map.json", "tests/flake_ledger.json", "docs/audits/mutation.md")
+RECORD_PATHS = (
+    "tests/ci_reference.json",
+    "tests/touch_map.json",
+    "tests/flake_ledger.json",
+    "docs/audits/mutation.md",
+    "tests/red_ledger.json",
+)
 #: `fetch`'s own baseline for `_dirty`, once a path carries no tracked
 #: blob for `git diff` to compare against (`git rm --cached`, T2).
 BASELINE = REPO / "tests" / ".records-baseline.json"
@@ -94,7 +100,7 @@ def fetch(argv=None):
                     (REPO / path).parent.mkdir(parents=True, exist_ok=True)
                     (REPO / path).write_text(shown.stdout, encoding="utf-8")
                     written.append(path)
-            # Hashed, not staged: the four paths carry no tracked blob
+            # Hashed, not staged: the five paths carry no tracked blob
             # post-T2 for `git add` to stage - `_dirty` reads this
             # baseline instead, so a run that adopts nothing new sees
             # nothing dirty.
@@ -177,7 +183,7 @@ def _pages_dirty(pages_dir, tip):
     """Whether `pages_dir`'s `.md` files differ from `docs/backlog/areas/`
     at `tip` - name set or content, either counts (`UX-1000` T2).
     `tip is None` (nothing ever published) counts any local page as new,
-    same as `_dirty` reading `None` for the four record paths."""
+    same as `_dirty` reading `None` for the five record paths."""
     local = sorted(pathlib.Path(pages_dir).glob("*.md"))
     if tip is None:
         return bool(local)

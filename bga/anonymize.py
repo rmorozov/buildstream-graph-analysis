@@ -722,3 +722,78 @@ def resolve_text(text, pmap):
 
     resolved = _TOKEN_RE.sub(_replace, text)
     return resolved, unknown
+
+
+_LOG_KEYS = frozenset({"pid", "ppid", "inv", "ts", "exit", "utime", "stime", "maxrss_kb", "src", "wall", "monotonic"})
+_LOG_WORDS = frozenset(
+    {
+        "START", "END", "SUCCESS", "FAILURE", "SKIPPED", "STATUS", "INFO", "WARNING", "ERROR", "DEBUG",
+        "wrapper", "bst", "bga", "bga-clocks", "hook", "spine", "none", "unknown",
+        "Build", "Loading", "Resolving", "Initializing", "Query", "Staging", "Caching", "Session", "Version",
+        "Maximum", "Tasks", "Executing", "command", "elements", "remote", "caches", "cache", "sources",
+        "artifact", "Fetch", "Push", "Pipeline", "Total", "Queue", "Cached", "Buildable",
+    }
+)  # fmt: skip
+_LOG_SPLIT = re.compile(r"(\s+)")
+_LOG_CMD = re.compile(r"(?:^|\s)cmd=")
+_LOG_BRACKETS = re.compile(r"([\[\]()<>,;'\"]+)")
+_LOG_TRAIL = re.compile(r"(.*?)([.:]*)")
+_LOG_HEX = re.compile(r"[0-9a-f]{8,}")
+_LOG_PLAIN = re.compile(r"[\d:.,+-]*")
+
+
+def _log_core(core, key, pmap, plain, public):
+    if not core or _LOG_PLAIN.fullmatch(core) or core in public or core.lower() in public:
+        return core
+    if _LOG_HEX.fullmatch(core):
+        return rekey_hash(core, key, plain)
+    if "://" in core or _PATH_SEP in core:
+        return pseudonymize_identifier(core, key, pmap)
+    head, sep, rest = core.partition(_JUNCTION_SEP)
+    if _BST_SUFFIX in core:
+        if sep and head in public:
+            return head + sep + pseudonymize_element_path(rest, key, pmap)
+        return pseudonymize_element_path(core, key, pmap)
+    if sep:
+        return _log_core(head, key, pmap, plain, public) + sep + _log_core(rest, key, pmap, plain, public)
+    return pseudonymize_identifier(core, key, plain)
+
+
+def _log_piece(piece, key, pmap, plain, public):
+    name, eq, value = piece.partition("=")
+    if eq and name.isidentifier():
+        kept = name if name in _LOG_KEYS or name in public else pseudonymize(name, "macro", key, plain)
+        if name == "element":
+            return f"{kept}={pseudonymize_identifier(value, key, pmap)}"
+        return f"{kept}={_log_core(value, key, pmap, plain, public)}"
+    match = _LOG_TRAIL.fullmatch(piece)
+    core, trail = match.groups() if match else (piece, "")
+    return _log_core(core, key, pmap, plain, public) + trail
+
+
+def _log_word(word, key, pmap, plain, public):
+    pieces = _LOG_BRACKETS.split(word)
+    return "".join(p if i % 2 or not p else _log_piece(p, key, pmap, plain, public) for i, p in enumerate(pieces))
+
+
+def tokenize_line(line, key, pmap, public_binaries, public_words=frozenset(), plain=None, counts=None):
+    """One raw-log line with every name in it pseudonymized (`anonymized-bundle.md` 7).
+
+    A `cmd=` tail is rebuilt by `rebuild_command`; a `key=value` word keeps
+    its key when known and pseudonymizes the value; a path, URL or `.bst`
+    name goes through `pseudonymize_identifier`; a hex run is re-keyed like a hash; a word
+    survives only when it is a number, a timestamp, a log level or on `public_words`, else it
+    is a pseudonym. `pmap` joins the dictionary, `plain` (default `pmap`)
+    the words that are not names. Whitespace and the final newline are kept.
+    """
+    plain = pmap if plain is None else plain
+    public = frozenset(public_words) | public_binaries | _LOG_WORDS
+    body, newline = (line[:-1], "\n") if line.endswith("\n") else (line, "")
+    tail = ""
+    found = _LOG_CMD.search(body)
+    if found:
+        tail = " cmd=" + rebuild_command(body[found.end() :], key, plain, public_binaries, counts)
+        body = body[: found.start()]
+    parts = _LOG_SPLIT.split(body)
+    out = [w if not w or w.isspace() else _log_word(w, key, pmap, plain, public) for w in parts]
+    return "".join(out) + tail + newline

@@ -37,8 +37,8 @@ import { renderCulprits, renderElementHistory, renderHorizon,
 import { renderDecision, renderProvenanceRecords, renderInvestigation } from "./decision.js";
 import { anchor, collapsible, toc, scrollspy, stepper, runSelector,
          jumpTargets, matches, paletteResults } from "./nav.js";
-import { applyRole, chapters, fileInChapter, revealAndLand,
-         setAllOpen } from "./chapters.js";
+import { applyFolds, applyRole, chapters, fileInChapter, foldSnapshot,
+         revealAndLand, setAllOpen } from "./chapters.js";
 // UX-302: the second of §1's two deliberate raw-JSON sites - the one
 // the reader asks for, per section, because pasting a section into an
 // issue is what people do with a report.
@@ -184,17 +184,23 @@ export function foldOnNarrow(nav, doc) {
   const title = nav.querySelector?.(".toc-title");
   if (!title) return;
   const narrow = doc.defaultView?.matchMedia?.("(max-width: 60rem)");
-  const apply = (isNarrow) => {
-    nav.setAttribute("data-folded", isNarrow ? "true" : "false");
+  const apply = (folded) => {
+    nav.setAttribute("data-folded", folded ? "true" : "false");
+    title.setAttribute?.("aria-expanded", folded ? "false" : "true");
   };
-  apply(Boolean(narrow?.matches));
+  // Wide, the rail never folds: a disabled button is no dead tab stop.
+  const settle = (isNarrow) => {
+    apply(isNarrow);
+    title.disabled = !isNarrow;
+  };
+  settle(Boolean(narrow?.matches));
   title.addEventListener?.("click", () => {
     apply(nav.getAttribute("data-folded") !== "true");
   });
   // `addEventListener` on a MediaQueryList is the modern spelling and
   // the only one worth carrying; a browser without it keeps whatever
   // the first `apply` decided, which is correct for its width.
-  narrow?.addEventListener?.("change", (event) => apply(event.matches));
+  narrow?.addEventListener?.("change", (event) => settle(event.matches));
 }
 
 export function wireJumpBox(nav, root, payload, context = {}) {
@@ -232,7 +238,7 @@ export function wireJumpBox(nav, root, payload, context = {}) {
     if (key) {
       const next = joinHash(key, splitHash(location.hash).query);
       if (window.history?.replaceState) {
-        window.history.replaceState(null, "", next || " ");
+        window.history.replaceState(window.history.state, "", next || " ");
       } else {
         location.hash = next;
       }
@@ -1114,12 +1120,30 @@ async function boot() {
       // `content-visibility`'s estimate by the time this fires.
       return node ? revealAndLand(node) : null;
     };
+    const fragment = (event) => event?.target?.closest?.("a[href^=\"#\"]")
+      ?.getAttribute?.("href");
+    // UX-1056: capture phase, so the snapshot precedes nav.js's own reveal.
     document.addEventListener?.("click", (event) => {
-      const href = event?.target?.closest?.("a[href^=\"#\"]")
-        ?.getAttribute?.("href");
+      if (fragment(event)?.length > 1 && window.history?.replaceState) {
+        // Chrome's own restore lands after popstate and overrides it.
+        window.history.scrollRestoration = "manual";
+        window.history.replaceState({ ...window.history.state,
+          folds: foldSnapshot(root),
+          scrollY: window.scrollY }, "");
+      }
+    }, true);
+    document.addEventListener?.("click", (event) => {
+      const href = fragment(event);
       if (href && href.length > 1) revealAnchor(href.slice(1));
     });
+    window.addEventListener?.("popstate", (event) => {
+      const saved = event.state;
+      if (!Array.isArray(saved?.folds)) return;
+      applyFolds(root, saved.folds);
+      window.scrollTo?.(0, saved.scrollY ?? 0);
+    });
     window.addEventListener?.("hashchange", () => {
+      if (window.history?.state?.folds) return; // popstate restored this entry.
       const built = openElement(splitHash(location.hash).anchor);
       revealAnchor(splitHash(location.hash).anchor);
       // The browser has already decided there was nothing to scroll to,

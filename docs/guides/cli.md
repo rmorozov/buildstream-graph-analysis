@@ -331,6 +331,49 @@ small.tar.gz` line the command prints after the `left out` line, and the
 `plane2.json, plane2.log.gz, plane2-resource.json` on a capture holding
 all three.
 
+**A directory tree of bundles is a store** (`UX-900`) — the shape CI
+keeps them in, one directory per build number. Every file under it
+named `*bga-bundle.tar.gz` is a bundle, at any depth; anything else is
+ignored. Two ways in, one loader, one refusal:
+
+```console
+$ bga snapshot --list --bundles ci
+2 snapshots in ci:
+  20260901T100000Z       2.0K  @prev
+  20260902T100000Z       1.4K  @last
+  total                  3.4K
+$ bga bundle --load ci
+Loaded 2 bundles from ci into /home/me/myproject/.bga/runs
+  20260901T100000Z
+  20260902T100000Z
+  read them with: bga snapshot --list, or in place: bga snapshot --list --bundles ci
+```
+
+*Kept, not current* — 2026-09-29, the two `same_build_twice_*` fixture
+runs exported into `ci/100/` and `ci/101/` beside a stray `console.log`;
+the tree is built by hand, so nothing here re-runs it. Cuts: the
+`--load` store path is shortened to a project's. The guard is
+`tests/unit/test_a_tree_of_bundles_is_a_store.py`.
+
+`--bundles DIR` goes with `--list`, `--aggregate` or `--capacity`, reads
+the tree into a temporary copy and deletes it on exit — nothing is
+added to the project's store. `--load DIR` materialises the runs into
+the store, and is idempotent: a nightly can run it over a growing tree,
+because a stamp already held with the same bytes is a re-send. The
+trade is disk against repetition: on `tests/fixtures/same_build_twice_*`
+the tree is 1,824 bytes and the store it becomes 3,466, which `--load`
+keeps and `--bundles` holds only while it runs. Every bundle is checked
+before any is written, so one bad bundle refuses the whole tree, by name:
+
+```console
+$ bga snapshot --aggregate --bundles ci
+Error: 1 bundle refused, so nothing was written:
+  ci/102/20260903T100000Z.bga-bundle.tar.gz is not a readable archive: Compressed file ended before the end-of-stream marker was reached
+```
+
+*Kept, not current* — 2026-09-29, the same tree with a 300-byte cut of
+one bundle added as `ci/102/`. Cuts: none.
+
 **`--resolve` rewrites pseudonyms back to real names, on this machine
 only** (`UX-1064`) — a fourth mode of the same mutually-exclusive group,
 for reading a reply that quotes an anonymized bundle's element names:
@@ -1104,7 +1147,7 @@ the blocks a reader meets first, and `certified_headroom`, the number
 Key Findings leads with, had never been in the population at all. It was
 302 such keys when that was filed and 305 when it landed. One level and
 no further: `blast_radius_distribution.deciles` is in the population and
-its own nine buckets are not. The surface is **584 keys** today, and
+its own nine buckets are not. The surface is **604 keys** today, and
 that figure is derived from the walk rather than typed here.
 
 So the statement of coverage, which is now a statement and not a
@@ -1164,12 +1207,12 @@ can look one up.
 | `latent_heavies` | Heavy elements not on the path today. They cost nothing now and become the constraint once what is above them is fixed. |
 | `consolidation_candidates` | Elements always consumed together that could be one element. Structural: from the graph's edges, never a timing estimate. |
 | `batch_opportunities` | What could be built together, with `serialized_pairs` naming the pairs that share a chain and therefore cannot. |
-| `joint_saving` | What fixing the top candidates *together* is worth, simulated, beside `sum_of_individual_us` — they differ when savings overlap. |
+| `joint_saving` | What fixing the top candidates *together* is worth, simulated, beside `sum_of_individual_us` — they differ when savings overlap or compound. `relation` says which (`add`, `overlap`, `compound`); `worth_more_after` names the candidates worth more once the ones above them are fixed. |
 | `serialization_point_risks` | Where the run is forced to serialize. Each entry carries `pinned_elements` (what was pinned, and to what), `governing_cores` (the cores they competed for) and `typical_max_jobs` (the `-j` their own builds used). |
 | `resource_blast` | What one shared resource rebuilds. `null` where no source inventory was captured. |
 | `fingerprint` | `UX-1073`: what this analysis was computed from - the producer stamp, a sha256 of each run-directory input and of the Plane 2 report attached, and every result-affecting option. `bga compare` reads a published `analyze.json` instead of analyzing again only when this equals its own; `--reanalyse` never reads it. |
 | `run_instance.jobserver` | `UX-851`: the jobserver `bga capture` ran with, inside `run_instance` (`UX-404`'s capture identity, which also carries `started_at_us` - when the capture began - and `host_manifest.cpu_count`/`.memory_bytes` - what the host reported, the ceilings are computed against). `mode` (`off`/`auto`/`n`), `ceiling` (the token count given or derived, `null` when off), `seed` (tokens the FIFO opened holding, `UX-858`: `max(0, ceiling - builders)` under `auto`, `ceiling - 1` otherwise, `null` when off), `auth` (`fd`/`fifo`, `null` when off), `project_max_jobs` (the target element's own declared `max-jobs`, `null` when `bst` was unavailable). Absent, not defaulted, on a capture older than the field - `bga compare`'s header reads that absence as `jobserver off`. |
-| `jobserver` | `UX-847`: the pool's own record - `mode` (`fixed`/`dynamic`), `pool_ceiling`, `tokens_idle_share` (controller ticks with cores idle and tokens still in the pool) and `tokens_starved_share` (cores idle with the pool empty) - and `per_element`, keyed by uid: `joined` (`yes`/`pinned`/`held`/`unknown_kind`), `tokens_held_p50`/`tokens_held_max` (UX-846's own acquire rows joined to this element by the pid that acquired them, `null` when the element ran no wrapped tool), and `UX-892`'s width over time: `tokens_held_series` (`[t_us, tokens]` steps, an acquire opening an interval and a release closing one - absent, not empty, when the element ran no wrapped tool), `tokens_series_coverage` (the share of the element's token-holding tools that wrote those rows - a real `make` reads the pipe itself and logs nothing), `tokens_series_open` (intervals no release closed, UX-852's leak) and `tokens_series_truncated` (whether the series hit its per-element cap). Present only when `--plane2`'s report carries a mode. |
+| `jobserver` | `UX-847`: the pool's own record - `mode` (`fixed`/`dynamic`), `pool_ceiling`, `tokens_idle_share` (controller ticks with cores idle and tokens still in the pool) and `tokens_starved_share` (cores idle with the pool empty) - and `per_element`, keyed by uid: `joined` (`yes`/`pinned`/`held`/`unknown_kind`), `UX-1012`'s `peak_work_concurrency` against the element's own `max_jobs` and the `verdict` read from the two (`drew` when joined and the peak exceeded `max_jobs`; `offered, not drawn` when joined at a peak no wider; `outside the pool` when `pinned`/`unknown_kind` and the peak exceeded `max_jobs` + 1, `UX-1008`; else `pinned`/`held`/`unknown_kind` repeat `joined`), `admission_wait_us` (time the shim blocked the element on its admission token, `UX-1005` - its slot, not a draw), `tokens_held_p50`/`tokens_held_max` (UX-846's own acquire rows joined to this element by the pid that acquired them, `null` when the element ran no wrapped tool), and `UX-892`'s width over time: `tokens_held_series` (`[t_us, tokens]` steps, an acquire opening an interval and a release closing one - absent, not empty, when the element ran no wrapped tool), `tokens_series_coverage` (the share of the element's token-holding tools that wrote those rows - a real `make` reads the pipe itself and logs nothing), `tokens_series_open` (intervals no release closed, UX-852's leak) and `tokens_series_truncated` (whether the series hit its per-element cap). Present only when `--plane2`'s report carries a mode. |
 | `trace_queries` | Every timeline query that shows a finding or deepens a claim, best first; `trace_query` is its first entry. Absent where there is a single grain. |
 | `unused_dependencies`, `redundancy_count`, `worst_redundancy`, `native_findings` | The Plane 2 half of an `element_join` row: declared-and-never-read dependencies, how often this element repeated work it had already done, the repetition it paid most for, and the producer's own per-element tags. |
 | `edges`, `projection` | Inside a `restructuring` finding: the declared build edges Plane 2 measured never-read, and the replay with those edges removed (`replayed_baseline_us`, `projected_us`, `saving_us`). Evidence, not a verdict. |
@@ -1471,6 +1514,7 @@ reads it as one:
 ```bash
 bga snapshot --aggregate                 # text
 bga snapshot --aggregate --format json   # a `store-aggregate/v1` document
+bga snapshot --aggregate --bundles ci    # the same, over a tree of bundles (UX-900)
 ```
 
 ```text
@@ -1624,6 +1668,47 @@ still exits 0 — which is why a consumer reads `refusals` before
 statement rather than a missing field.
 
 `bga whatif --schema` prints the whole shape without needing a run.
+
+### N variant builds, or one junctioned invocation (`UX-904`)
+
+`bga junction-cost` prices N separate builds of one type under
+different variants against one BuildStream invocation that junctions
+them together:
+
+```bash
+bga junction-cost RUN-x86/ RUN-arm/ --format json
+```
+
+Two elements in different variants are one element only when their
+cache key is identical; a name is not an identity, because an asan and
+a release compile of one source share a name and not a key. The runs
+must declare one build type (`UX-898`); variants differ by design.
+A single run, mixed build types, or a run with no cache keys is
+**refused by name**, and a refusal still exits 0.
+
+**The payload: `junction-cost/v1`.** `runs` lists each run's
+`run_id`, `build_class`, `elements`, `keyed_elements` and
+`pipeline_overhead_us`; `assumptions` is a list of `{id, text}` every
+figure cites; `refusals` is a list of `{check, runs, sentence}`; and
+`projected`, `null` on a refusal, carries:
+
+| key | what it is |
+|---|---|
+| `shared` | `{cache_key, elements, duration_us}` per key two or more runs share; built once, at its longest measured duration |
+| `shared_closed_downward` | whether every dependency of a shared key is shared too |
+| `shared_work_saving_us` | build work the N runs repeated on shared keys |
+| `pipeline` | per phase: `phase`, `sum_us` paid N times, `max_us` paid once, `saving_us` |
+| `pipeline_saving_us` | the phases' savings summed — an upper bound |
+| `saving_us` | the two savings together — an upper bound |
+| `separate_floors_us` | each run's own T∞, in run order |
+| `union_floor_us` | T∞ over the N graphs merged at shared keys |
+| `one_invocation_lower_bound_us` | the pipeline paid once plus `union_floor_us` |
+| `junction_staging_us` | `null`: staging the subprojects is not measured, and the bound excludes it |
+| `overlap` | the shared set in one sentence, including when it is empty |
+
+With no shared key the build-work saving is zero and `overlap` says so;
+the pipeline term is then all that remains, and it is an assumption.
+A re-capture of the junctioned invocation is still the ground truth.
 
 ### Why this one is ranked first (`UX-227`)
 

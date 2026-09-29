@@ -278,7 +278,7 @@ if (journeying) {
     if (step.wait) await new Promise((resolve) => setTimeout(resolve, step.wait));
     if (step.read) {
       const got = await send("Runtime.evaluate", {
-        expression: step.read, returnByValue: true,
+        expression: step.read, returnByValue: true, awaitPromise: true,
       });
       if (got.exceptionDetails) {
         process.stderr.write(JSON.stringify(got.exceptionDetails, null, 1));

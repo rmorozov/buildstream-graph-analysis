@@ -243,7 +243,7 @@ button[aria-pressed="true"] {
    beside something it annotates - a fold, a chapter, a JSON door - and
    a surface on it would read as the page's next action. */
 button.collapse, button.fold-more, button.json-toggle, button.twin-toggle,
-button.focus-back, button.expand-table, button.chapter-open,
+button.focus-back, button.expand-table, button.chapter-open, button.toc-title,
 .control-quiet {
   background: transparent; color: var(--muted);
 }
@@ -496,7 +496,8 @@ body[data-has-toc] > .toc {
   padding: var(--space-1) var(--space-4) var(--space-3) 0; margin: 0;
   max-height: 100vh; overflow-y: auto; overscroll-behavior: contain;
 }
-.toc-title { margin: 0 0 var(--space-1); font-weight: 600; font-size: var(--font-small); }
+.toc-title { display: block; width: 100%; text-align: left; margin: 0 0 var(--space-1); }
+.toc-title:disabled { cursor: default; }
 .toc ul {
   list-style: none; margin: 0; padding: 0;
   display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4);
@@ -724,7 +725,6 @@ input.table-filter { max-width: 100%; }
       > :not(.toc-title):not(.actions-group) {
     display: none;
   }
-  .toc-title { cursor: pointer; }
   .toc-title::after { content: " \25be"; color: var(--muted); }
   .toc[data-folded="true"] .toc-title::after { content: " \25b8"; }
 }

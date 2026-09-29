@@ -170,7 +170,9 @@ class TestTheSelectorStillSelects:
     # `UX-1083`'s review test names the tracer and `bst_extract_run`: median 38, p90 62, max 174 over 679.
     # `UX-1120`'s census member adds one file to every selection: median 39, p90 63, max 175 over 697.
     # Round 151's merged tree (UX-1112/1113/1119's guards name the lint tools): median 40 over 700.
-    CEILING = {"median": 40, "p90": 63, "max": 175}
+    # `UX-900`'s tree-of-bundles guard runs `bundle --load DIR` through `bga.cli`: median 40, p90 63, max 176 over 702.
+    # Round 152's merged tree (UX-1106's, UX-1131's and UX-1134's guards name `bga.cli`): median 40, p90 63, max 179 over 718.
+    CEILING = {"median": 40, "p90": 63, "max": 179}
     POPULATION_FLOOR = 60
     #: `UX-645`: **13 census + 14 of your own**. The census floor is
     #: inside this bound because those files run - the figure is what
@@ -296,6 +298,11 @@ class TestTheSelectorStillSelects:
         # **name**: the export's `omitted` sentence is `plane2.py`'s, and
         # `test_the_export_message_is_punctuated.py` is the fifteenth.
         "bga/plane2.py",
+        # `UX-900`: 49 = 34 census + 15 named, one over 48. Wide by
+        # **name**: every bundle guard imports `bga.bundle`, and
+        # `test_a_tree_of_bundles_is_a_store.py` and `UX-1066`'s
+        # `test_a_raw_log_travels_tokenized.py` tip it.
+        "bga/bundle.py",
     }
 
     def test_a_one_module_change_selects_a_handful_not_the_suite(self):

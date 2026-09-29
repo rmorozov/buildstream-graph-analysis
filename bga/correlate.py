@@ -1282,6 +1282,7 @@ def compute_builder_pool_recommendation(
     host_cpu_count: Optional[int],
     critical_path_max_jobs: Optional[int],
     calibrated_cores: Optional[int] = None,
+    memory: Optional[tuple] = None,
 ) -> dict:
     """UX-1005 track A: a builder count and a pool size, each with the
     reading it came from.
@@ -1303,6 +1304,11 @@ def compute_builder_pool_recommendation(
     otherwise `host_cpu_count`, labelled uncalibrated rather than
     presented as the same reading.
 
+    **Memory (UX-1134).** `memory` is `(peak_rss_bytes per element, host
+    MemTotal bytes)`; when the largest per-job peak x `pool_size` exceeds
+    host memory a `memory_bound` entry names the element and the job count
+    that fits.
+
     `{}` with no ready-set width or host core count - a recommendation
     needs both.
     """
@@ -1318,8 +1324,21 @@ def compute_builder_pool_recommendation(
             f"host_cpu_count ({host_cpu_count}) - no calibrated knee supplied "
             "via $BGA_CALIBRATED_CORES, so this is uncalibrated"
         )
+    memory_bound = None
+    peaks, host_memory = memory or (None, None)
+    if peaks and host_memory:
+        element, peak = max(peaks.items(), key=lambda item: item[1])
+        if peak > 0 and peak * pool_size > host_memory:
+            memory_bound = {
+                'element': element,
+                'peak_bytes': peak,
+                'pool_size': pool_size,
+                'host_memory_bytes': host_memory,
+                'fit_jobs': max(1, host_memory // peak),
+            }
     return {
         'ready_set_width': ready_set_width,
+        'memory_bound': memory_bound,
         'ready_set_reading': "the replay's ready-set width",
         'safe_builder_cap': safe_cap,
         'critical_path_max_jobs': critical_path_max_jobs,
@@ -1527,10 +1546,30 @@ def compute_jobserver_shares(ledger_rows: list, capacity: Optional[int]) -> tupl
     return idle / total, starved / total
 
 
+def jobserver_verdict(joined: str, peak: Optional[int], max_jobs: Optional[int]) -> Optional[str]:
+    """UX-1012: `drew` only when joined and the peak width exceeded the
+    element's own `max-jobs`; `yes` alone is the offer. `held` reads as
+    itself; `None` when a joined element has no peak or no `max-jobs`.
+    UX-1008: `pinned`/`unknown_kind` with a peak over `max-jobs + 1`
+    read `outside the pool`; the rest read as themselves."""
+    if joined in ("pinned", "unknown_kind"):
+        if peak is not None and max_jobs is not None and peak > max_jobs + 1:
+            return "outside the pool"
+        return joined
+    if joined != "yes":
+        return joined
+    if peak is None or max_jobs is None:
+        return None
+    return "drew" if peak > max_jobs else "offered, not drawn"
+
+
 def compute_jobserver_per_element(
     elements: list,
     decision_rows: list,
     tokens_by_element: Optional[dict] = None,
+    peak_by_element: Optional[dict] = None,
+    admission_wait_by_element: Optional[dict] = None,
+    project_max_jobs: Optional[int] = None,
 ) -> dict:
     """UX-847: per-element `joined` (yes/pinned/held/unknown_kind) and
     the wrapper's own held-token stats, keyed by every element Plane 1
@@ -1555,6 +1594,8 @@ def compute_jobserver_per_element(
         if uid:
             by_element[uid] = row
     tokens_by_element = tokens_by_element or {}
+    peak_by_element = peak_by_element or {}
+    admission_wait_by_element = admission_wait_by_element or {}
     per_element = {}
     for uid in elements:
         decision_row = by_element.get(uid)
@@ -1571,10 +1612,18 @@ def compute_jobserver_per_element(
         else:
             joined = "yes"
         held_stats = tokens_by_element.get(uid) or {}
+        peak = peak_by_element.get(uid)
+        max_jobs = (decision_row or {}).get("max_jobs")
+        if max_jobs is None:
+            max_jobs = project_max_jobs
         per_element[uid] = {
             "joined": joined,
+            "peak_work_concurrency": peak,
+            "max_jobs": max_jobs,
+            "verdict": jobserver_verdict(joined, peak, max_jobs),
             "tokens_held_p50": held_stats.get("tokens_held_p50"),
             "tokens_held_max": held_stats.get("tokens_held_max"),
+            "admission_wait_us": admission_wait_by_element.get(uid),
         }
     return per_element
 
@@ -1595,8 +1644,20 @@ def compute_jobserver_block(
     idle_share, starved_share = compute_jobserver_shares(
         native_report.get("jobserver_ledger") or [], pool.get("capacity")
     )
+    from .normalize.timestamps import admission_wait_by_element_from_ledger
+
+    peak_by_element = {
+        entry["element"]: entry.get("peak_work_concurrency")
+        for entry in native_report.get("per_element_parallelism") or []
+        if isinstance(entry, dict) and entry.get("element")
+    }
     per_element = compute_jobserver_per_element(
-        elements, native_report.get("jobserver_decisions") or [], tokens_by_element
+        elements,
+        native_report.get("jobserver_decisions") or [],
+        tokens_by_element,
+        peak_by_element=peak_by_element,
+        admission_wait_by_element=admission_wait_by_element_from_ledger(native_report.get("jobserver_ledger") or []),
+        project_max_jobs=native_report.get("project_max_jobs"),
     )
     return {
         "mode": pool.get("mode"),

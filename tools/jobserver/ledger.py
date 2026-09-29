@@ -240,6 +240,13 @@ def summarize_jobserver_leaks(path: str) -> tuple[int, int]:
     return leaks, tokens_refilled
 
 
+def count_rss_withheld(path: str) -> int:
+    """UX-1134: `hold` rows the no-plan `MemoryGate` caused (`rss ...` reason)."""
+    return sum(
+        1 for row in jsonl_rows(path) if row.get("action") == "hold" and str(row.get("reason", "")).startswith("rss ")
+    )
+
+
 def _admission_pool_block(admission_status_path: Optional[str]) -> Optional[dict]:
     """UX-1005 track C: the admission pool's own size and the total wait
     it produced - `None` when the pool was never created (`--jobserver
@@ -266,11 +273,12 @@ def _jobserver_pool_block(capture: dict) -> Optional[dict]:
     psi_withdraw_counter = capture.get("psi_withdraw_counter")
     controller_stopped = True
     leaks, tokens_refilled = 0, 0
-    psi_memory_withdraws, memory_withheld = 0, 0
+    psi_memory_withdraws, memory_withheld, rss_withheld = 0, 0, 0
     if capture["jobserver_pool_mode"] == "dynamic" and jobserver_ledger_path:
         moves, pool_min, pool_max = summarize_jobserver_ledger(jobserver_ledger_path, jobserver)
         if os.path.exists(jobserver_ledger_path):
             leaks, tokens_refilled = summarize_jobserver_leaks(jobserver_ledger_path)
+            rss_withheld = count_rss_withheld(jobserver_ledger_path)
         if psi_withdraw_counter:
             psi_memory_withdraws = psi_withdraw_counter(jobserver_ledger_path)
         if jobserver_status_path and os.path.exists(jobserver_status_path):
@@ -302,6 +310,7 @@ def _jobserver_pool_block(capture: dict) -> Optional[dict]:
         "withheld": memory_withheld,
         "psi_memory_present": os.path.exists(_PSI_MEMORY_PATH),
         "psi_memory_withdraws": psi_memory_withdraws,
+        "rss_withheld": rss_withheld,
     }
     return pool
 

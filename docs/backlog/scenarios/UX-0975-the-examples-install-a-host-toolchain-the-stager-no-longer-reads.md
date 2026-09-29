@@ -1,8 +1,8 @@
 # UX-975: the examples still install a host toolchain the stager no longer reads, and two CI comments say it copies from one
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-925 | **Blocks:** — | **Found by:** architecture review 26 (2026-09-23) — `UX-925` emptied the stager's toolchain array and the four sentences that told a reader to install one stayed | **Serves:** whoever stands the C++ examples up from `examples/README.md`, and the next reader of `ci.yml`'s staging steps | **Topic:** docs | **Area:** unassigned | **Shape:** judgement | **Reading:** runner:bst-examples
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-925 | **Blocks:** — | **Found by:** architecture review 26 (2026-09-23) — `UX-925` emptied the stager's toolchain array and the four sentences that told a reader to install one stayed | **Serves:** whoever stands the C++ examples up from `examples/README.md`, and the next reader of `ci.yml`'s staging steps | **Topic:** docs | **Area:** unassigned | **Shape:** judgement | **Reading:** runner:bst-examples
 
-**Guard:** none — open, no guard named yet
+**Guard:** none — wording row, acceptance is the greps
 
 ## Motivation
 
@@ -52,6 +52,10 @@ Whether the three `apt-get` lines (`ci.yml:954`, `:1105`, `:1221`) drop
 `cmake` is a CI reading, not a reading this container can take: drop it
 on a branch and let `bst-examples` say.
 
+## Decision
+
+Route: rewrite examples/README.md's two `apt-get install -y build-essential cmake` blocks to say build-essential is for the hook and spine, and that the toolchain comes from the pin; for the 37-path sentence name the population without a number: fetched as one closure (`python3 -m tools.nix_closure --plan` prints its size), plus the two make pins (tools/nix_store_fetch.py) as single NARs. UX-975 also corrects the two ci.yml comments (the ones matching `copy from` and `THIS runner's own`) - comments only; dropping cmake from apt-get lines is a separate bst-examples reading and is not done here. Rejected: writing 35 (repeats the drift at the next pin bump, UX-996); a narinfo-fetching guard (Out of Scope). Guard: none new - wording rows; acceptance is the greps. Class: product.
+
 ## Out of Scope
 
 The stager's own header, which `UX-925` already rewrote.
@@ -68,3 +72,18 @@ and, if `cmake` is dropped from an `apt-get` line, `bst-examples` green
 on that branch.
 
 ## Outcome
+
+Gap: `grep -n "build-essential cmake" examples/README.md` printed 191, 243; `grep -n "copy from\|THIS runner's own" .github/workflows/ci.yml` printed 1242, 1388.
+
+Close:
+
+```text
+$ grep -n "copy from\|THIS runner's own" .github/workflows/ci.yml
+$                                   # nothing
+$ grep -n "build-essential cmake" examples/README.md
+$                                   # nothing; both blocks now read
+# build-essential is for the hook and spine; gcc, binutils and cmake come from the pin
+sudo apt-get install -y build-essential
+```
+
+Mutation table: none, no new guard (wording rows). The `apt-get` lines in ci.yml keep `cmake` (a bst-examples reading, not taken here).

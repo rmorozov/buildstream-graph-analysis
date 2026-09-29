@@ -20,6 +20,7 @@ from typing import Optional
 
 from ..native_trace.bwrap_shim import JOBSERVER_PINNED
 from ._jsonl import jsonl_rows
+from .memory import MemoryGate
 
 #: Bound by `bst_native_build_tracer` right after it defines its own
 #: `/proc/stat` reader - `None` until then, which only matters to a
@@ -257,6 +258,8 @@ class PoolController:
         one class up): `{"cpu": path, "memory": path}`, both optional -
         `None`/absent resolves to the real `/proc/pressure/*` file, so a
         guard scripts either or both away from the host's own.
+        `trace_log`/`decisions` (UX-1134, with `meminfo`/`proc_root`
+        optional) arm the no-plan `MemoryGate`.
         `psi_paths["broker_owns_audit"]` (UX-854's verifier, same cap):
         `True` when a `Broker` exists for this same ledger/FIFO - one
         auditor per capture, so `audit_leaks` is a no-op and `start`
@@ -287,6 +290,18 @@ class PoolController:
         # --jobserver-seed above the ceiling must not start the pool
         # past the invariant every other guard holds (pool < ceiling).
         self.pool = ceiling - 1 if seed is None else min(seed, ceiling - 1)
+        # UX-1134: with no plan, measured RSS gates each `+` (`trace_log`/`decisions` given only then).
+        meminfo = psi_paths.get("meminfo") or _MEMINFO_PATH
+        self.memory_gate = (
+            MemoryGate(
+                psi_paths["trace_log"],
+                psi_paths["decisions"],
+                lambda: read_mem_available_bytes(meminfo),
+                psi_paths.get("proc_root") or "/proc",
+            )
+            if psi_paths.get("trace_log") and psi_paths.get("decisions")
+            else None
+        )
         self.moves = 0
         self._below_streak = 0
         self._cpu = None  # (busy, total, t) - own delta state
@@ -358,6 +373,9 @@ class PoolController:
         `+` lands, gated by the ceiling."""
         self._below_streak += 1
         if self._below_streak >= 2 and self.pool < self.ceiling - 1:
+            withheld = self.memory_gate.withhold(self.pool) if self.memory_gate else None
+            if withheld:
+                return "hold", withheld
             os.write(self.fd, b"+")
             self.pool += 1
             return "add", f"busy {busy_cores}<capacity-1, streak 2"

@@ -527,9 +527,10 @@ jobs:
       #
       # `UX-743`: 120 -> 900. All four jobs of run 34054287865 were
       # killed at 120 with no test failure recorded.
+      # Round 152: 900 -> 1200, 3.6x the 333s run 36527886347 took on 3.9.
       # `UX-1111`: push only; the timeout stays for a hang in collection.
       - name: Test (small tier, single process)
-        run: PYTEST_XDIST= timeout 900 make test-small
+        run: PYTEST_XDIST= timeout 1200 make test-small
         if: github.event_name == 'push'
 
       # `UX-943`: what the adopt jobs read - every step of this cell
@@ -838,6 +839,72 @@ jobs:
             --link-base "https://github.com/${{ github.repository }}/blob/${{ github.sha }}/docs/backlog/scenarios"
       - name: Publish the pages this run wrote
         run: python tools/dev_records.py publish --pages "$RUNNER_TEMP/areas"
+
+  # `UX-1125`: appends `{file, sha, round}` to `tests/red_ledger.json` for
+  # each test file the merged PR's red runs failed, read from their
+  # `junit-*` artifacts. After `area-pages-publish`, so the writers
+  # stay one chain; every refusal exits 0.
+  red-ledger-adopt:
+    needs: [test, area-pages-publish]
+    if: >-
+      !cancelled() && needs.test.result == 'success'
+      && needs.area-pages-publish.result == 'success'
+      && github.event_name == 'push'
+      && github.ref == format('refs/heads/{0}',
+                              github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: write
+    concurrency: records
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      - name: Install what the tool imports (UX-821)
+        run: pip install -e ".[dev]"
+      - name: Read the records branch this run adopts onto
+        run: python tools/dev_records.py fetch || true
+      - name: Append the merged PR's failing files
+        run: python tools/dev_red_ledger.py --from-pr ${{ github.sha }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Publish the ledger when it grew
+        run: python tools/dev_records.py publish
+
+  fdsdk-reading:
+    # UX-1005: re-reads a kept fdsdk capture on GitHub's side, because a
+    # session cannot download an artifact; runs only under the `jobserver` label.
+    if: github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'jobserver')
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    env:
+      FDSDK_RUN: "36306876024"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      - name: Install bga
+        run: pip install -e .
+      - name: Fetch the kept fdsdk capture
+        uses: actions/download-artifact@v8
+        with:
+          name: fdsdk-capture
+          run-id: ${{ env.FDSDK_RUN }}
+          github-token: ${{ github.token }}
+          path: fdsdk
+      - name: The builder and pool recommendation, read from the fdsdk capture (UX-1005)
+        if: always()
+        run: |
+          run_dir=$(find fdsdk -name graph.json -printf '%h\n' | head -1)
+          test -n "$run_dir" || { echo "::warning title=UX-1005 fdsdk::no graph.json under fdsdk/"; exit 0; }
+          bga analyze "$run_dir" --format text > fdsdk-analyze.txt 2>&1 || true
+          grep -E '^(Builders|  Ready-set width|Pool size|Critical Path Length)' fdsdk-analyze.txt || tail -20 fdsdk-analyze.txt
+          echo "::notice title=UX-1005 fdsdk::run $FDSDK_RUN | $(grep -E '^(Builders|  Ready-set width|Pool size)' fdsdk-analyze.txt | cut -c1-160 | paste -sd'|' -)"
 
   agent-config:
     # Watches: .claude/** , CLAUDE.md , REVIEW.md - the three that steer
@@ -1238,8 +1305,7 @@ jobs:
       - name: Install bubblewrap and a C toolchain
         # bwrap for the sandbox; gcc for the two tests that compile the
         # Plane 2 LD_PRELOAD hook (`bst/bwrap/cc not all found on PATH`);
-        # cmake because staging the example toolchain below needs it on
-        # the host to copy from.
+        # cmake is not read by the stager (the toolchain comes from the pin).
         run: sudo apt-get update && sudo apt-get install -y bubblewrap busybox-static build-essential cmake
 
       - name: Allow bwrap to configure loopback in its network namespace
@@ -1385,8 +1451,8 @@ jobs:
         run: examples/stage_runtimes.sh
 
       - name: Stage real gcc/cmake/make toolchain for 05-cmake-cpp-toolchain
-        # A full real sysroot staged from THIS runner's own installed
-        # build-essential/cmake packages - see examples/stage_cpp_toolchain.sh
+        # A full real sysroot: runtime binaries copied off the runner, the
+        # toolchain (gcc/binutils/cmake) from the nix pin - see examples/stage_cpp_toolchain.sh
         # for why (BuildStream's sandbox binds in nothing from the host
         # except staged dependencies) and the real trial-and-error it took.
         run: examples/stage_cpp_toolchain.sh
@@ -1809,6 +1875,35 @@ jobs:
             "$OUT/plane2-off.json" "$OUT/plane2-auto.json" \
             giant.bst "$OUT/capture-auto.txt"
 
+      - name: 11's artifact log, read back (UX-1013)
+        # Before the calibration, which deletes giant.bst's artifact; reads, never gates.
+        if: always()
+        run: |
+          PROJ=examples/11-serial-giant
+          OUT=artifacts/11-serial-giant
+          export XDG_CONFIG_HOME="$GITHUB_WORKSPACE/$PROJ/xdg_config_home"
+          mkdir -p "$OUT"
+          for element in giant.bst leaf-a.bst; do
+            f="$OUT/artifact-log-$element.txt"
+            rc=0; (cd "$PROJ" && bst artifact log "$element") > "$f" 2>&1 || rc=$?
+            stamps=$(grep -cE '\[[0-9]{2}:[0-9]{2}:[0-9]{2}\]' "$f" || true)
+            echo "::notice title=UX-1013 $element::rc=$rc lines=$(wc -l < "$f") elapsed-stamps=$stamps | first: $(head -3 "$f" | cut -c1-120 | paste -sd'|' -) | last: $(tail -3 "$f" | cut -c1-120 | paste -sd'|' -)"
+          done
+          f="$OUT/artifact-log-deps-none.txt"
+          rc=0; (cd "$PROJ" && bst artifact log --deps none giant.bst) > "$f" 2>&1 || rc=$?
+          echo "::notice title=UX-1013 --deps none::rc=$rc lines=$(wc -l < "$f") | $(head -2 "$f" | cut -c1-160 | paste -sd'|' -)"
+
+      - name: 11's second capture ranks admission from the cached logs (UX-1013)
+        # The cache the auto run left is still warm; reads, never gates.
+        if: always()
+        run: |
+          PROJ=examples/11-serial-giant
+          OUT=artifacts/11-serial-giant
+          export XDG_CONFIG_HOME="$GITHUB_WORKSPACE/$PROJ/xdg_config_home"
+          BGA_ADMISSION=1 bga capture run --run-dir "$OUT/run-cached" --jobserver auto \
+            "$PROJ" "$OUT/plane2-cached.json" -- bst build all.bst > "$OUT/capture-cached.txt" 2>&1 || true
+          echo "::notice title=UX-1013 ranking::$(grep -F 'admission ranking:' "$OUT/capture-cached.txt" | head -1 | cut -c1-200)"
+
       - name: Calibrate the runner's width and run the pinned 2x2 arm (UX-1004)
         # `UX-1110`: gates nothing, so a PR pays for it only under the `jobserver` label.
         if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'jobserver')
@@ -1825,6 +1920,17 @@ jobs:
           bga compare "$OUT/run-pinned" "$OUT/run-auto" | tee "$OUT/compare-pinned-vs-auto.txt"
           python3 "$PROJ/calibrate_width.py" "$PROJ" 1 2 4 6 8 | tee "$OUT/calibration.txt"
           while read -r line; do echo "::notice::calibration: $line"; done < "$OUT/calibration.txt"
+
+      - name: The builder and pool recommendation, read from 11's auto run (UX-1005)
+        # The knee, when the calibration above ran (`jobserver` label or a push), sizes the pool.
+        if: always()
+        run: |
+          OUT=artifacts/11-serial-giant
+          test -d "$OUT/run-auto" || { echo "::warning title=UX-1005::no $OUT/run-auto to analyze"; exit 0; }
+          KNEE=$(sed -n 's/^knee: width \([0-9]*\).*/\1/p' "$OUT/calibration.txt" 2>/dev/null | head -1)
+          BGA_CALIBRATED_CORES="$KNEE" bga analyze "$OUT/run-auto" --format text > "$OUT/analyze-auto.txt" 2>&1 || true
+          echo "::notice title=UX-1005::knee=${KNEE:-none} | $(grep -E '^(Builders|  Ready-set width|Pool size)' "$OUT/analyze-auto.txt" | cut -c1-140 | paste -sd'|' -)"
+          echo "::notice title=UX-1012::$(grep -F giant.bst "$OUT/analyze-auto.txt" | head -6 | cut -c1-160 | paste -sd'|' -)"
 
       - name: Build + capture 12-junctioned (UX-872)
         # UX-869/UX-871 were real first-day defects on the user's own
@@ -1856,6 +1962,58 @@ jobs:
           cp "$PLANE2" "$OUT/plane2.json"
 
           python3 "$PROJ/check_jobserver_decision.py" "$OUT/plane2.json" "$JUNCTIONED_ELEMENT"
+
+      - name: Build + capture 14-two-giants (UX-1132)
+        # Two independent giants, each on its own chain: both must build
+        # wider than one job at once. `giant_lines 1800` keeps the job's budget.
+        run: |
+          set -euo pipefail
+          PROJ=examples/14-two-giants
+          OUT=artifacts/14-two-giants
+          mkdir -p "$OUT"
+          rm -rf ~/.cache/buildstream ~/.local/share/buildstream
+          bga capture run --run-dir "$OUT/run-off" --jobserver off \
+            "$PROJ" "$OUT/plane2-off.json" -- bst --option giant_lines 1800 build all.bst
+          python3 examples/check_shape_property.py two-giants "$OUT/plane2-off.json" \
+            "$OUT/run-off/trace.json" giant-a.bst giant-b.bst | tee "$OUT/property.txt"
+
+      - name: Build + capture 15-wide-chain (UX-1132)
+        # A chain of wide elements: each link must build wider than one job.
+        run: |
+          set -euo pipefail
+          PROJ=examples/15-wide-chain
+          OUT=artifacts/15-wide-chain
+          mkdir -p "$OUT"
+          rm -rf ~/.cache/buildstream ~/.local/share/buildstream
+          bga capture run --run-dir "$OUT/run-off" --jobserver off \
+            "$PROJ" "$OUT/plane2-off.json" -- bst --option unit_lines 1800 build all.bst
+          python3 examples/check_shape_property.py wide-chain "$OUT/plane2-off.json" \
+            wide-1.bst wide-2.bst wide-3.bst wide-4.bst | tee "$OUT/property.txt"
+
+      - name: Build + capture 16-memory-bound-giant (UX-1132)
+        # Under `auto`, so the pool's PSI memory counter is live; the
+        # property is the giant's peak RSS per job (80000 lines: ~549 MB
+        # measured standalone, floored at 200).
+        run: |
+          set -euo pipefail
+          PROJ=examples/16-memory-bound-giant
+          OUT=artifacts/16-memory-bound-giant
+          mkdir -p "$OUT"
+          rm -rf ~/.cache/buildstream ~/.local/share/buildstream
+          bga capture run --run-dir "$OUT/run-auto" --jobserver auto \
+            "$PROJ" "$OUT/plane2-auto.json" -- bst --option mem_lines 80000 build all.bst
+          python3 examples/check_shape_property.py memory-giant "$OUT/plane2-auto.json" \
+            giant.bst 200 | tee "$OUT/property.txt"
+
+      - name: UX-1132 shape properties as notices
+        # Below the noisy builds, whatever they did: annotations are what a session reads.
+        if: always()
+        run: |
+          for shape in 14-two-giants 15-wide-chain 16-memory-bound-giant; do
+            f="artifacts/$shape/property.txt"
+            if [ -s "$f" ]; then echo "::notice title=UX-1132 $shape::$(head -c 400 "$f")"
+            else echo "::warning title=UX-1132 $shape::no property line - the build or its check did not run"; fi
+          done
 
       - name: Upload real-build artifacts
         if: always()

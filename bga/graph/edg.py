@@ -244,6 +244,7 @@ class ReachabilitySets(Mapping):
         self._index = index
         self._bits = bits
         self._cache: dict[str, frozenset] = {}
+        self._tables: Optional[tuple[Mapping, list[list[int]]]] = None
 
     def __getitem__(self, uid):
         cached = self._cache.get(uid)
@@ -268,6 +269,32 @@ class ReachabilitySets(Mapping):
         """The size of `self[uid]` without decoding it (UX-1074)."""
         i = self._index.get(uid)
         return 0 if i is None else _popcount(self._bits[i])
+
+    def weighted_sum(self, uid: str, weights: Mapping) -> int:
+        """`sum(weights.get(u, 0) for u in self[uid])` off the mask, no
+        decode (UX-1106): per-byte lookup tables, built once per weight map.
+        """
+        i = self._index.get(uid)
+        if i is None:
+            return 0
+        if self._tables is None or self._tables[0] is not weights:
+            self._tables = (weights, self._byte_tables(weights))
+        tables = self._tables[1]
+        mask = self._bits[i]
+        data = mask.to_bytes((mask.bit_length() + 7) // 8, 'little')
+        return sum(tables[k][b] for k, b in enumerate(data) if b)
+
+    def _byte_tables(self, weights: Mapping) -> list[list[int]]:
+        w = [weights.get(u, 0) for u in self._order]
+        w.extend([0] * (-len(w) % 8))
+        tables = []
+        for base in range(0, len(w), 8):
+            t = [0] * 256
+            for b in range(1, 256):
+                low = (b & -b).bit_length() - 1
+                t[b] = t[b & (b - 1)] + w[base + low]
+            tables.append(t)
+        return tables
 
 
 def _reachability_closure(graph: Graph) -> tuple[ReachabilitySets, ReachabilitySets]:
@@ -908,6 +935,40 @@ LATENT_HEAVIES_SHOWN = 5
 # ranks; the question "do these compose" is only interesting for a set
 # small enough to actually plan around.
 JOINT_SAVING_SET_SIZE = 3
+# Joint vs the individual sum within this reads as "they add" (UX-1135).
+JOINT_SAVING_TOLERANCE_US = 1_000
+
+
+def price_joint_saving(graph: Graph, durations: dict[str, int], steps: Sequence[dict]) -> dict:
+    """The horizon's first `steps` fixed together, against each priced alone.
+
+    `relation` is `add` (joint equals the sum), `overlap` (below it) or
+    `compound` (above it); `worth_more_after` names the steps worth more
+    after the ones above them than alone.
+    """
+    elements = [step['element_uid'] for step in steps]
+    joint_us = compute_joint_saving(graph, durations, elements)
+    # Each alone, as `bga whatif --element` prices it; the horizon's steps telescope.
+    individual = [compute_joint_saving(graph, durations, [uid]) for uid in elements]
+    sum_us = sum(individual)
+    if abs(joint_us - sum_us) <= JOINT_SAVING_TOLERANCE_US:
+        relation = 'add'
+    elif joint_us < sum_us:
+        relation = 'overlap'
+    else:
+        relation = 'compound'
+    return {
+        'elements': elements,
+        'joint_saving_us': joint_us,
+        'sum_of_individual_us': sum_us,
+        'worth_more_after': [
+            uid
+            for uid, alone, step in zip(elements, individual, steps)
+            if step['saving_us'] - alone > JOINT_SAVING_TOLERANCE_US
+        ],
+        'relation': relation,
+        'savings_add': relation == 'add',
+    }
 
 
 def compute_latent_heavies(

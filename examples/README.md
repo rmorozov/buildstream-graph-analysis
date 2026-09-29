@@ -114,8 +114,9 @@ declares, per package, which axis it is on, whether it is pinned or
 host-staged, and what version this repository says it is.
 
 The **toolchain axis is entirely pinned** (`UX-925`): gcc, binutils and
-cmake are fetched from `cache.nixos.org` as one 37-path closure and
-staged at their own `/nix/store/<hash>` prefixes, content-addresses
+cmake are fetched from `cache.nixos.org` as one closure (`python3 -m tools.nix_closure --plan`
+prints its size), plus the two make pins (`tools/nix_store_fetch.py`) as
+single NARs, and staged at their own `/nix/store/<hash>` prefixes, content-addresses
 intact. Nothing is relocated, because a nix gcc is no more relocatable
 than Ubuntu's - the *invocation* moves instead, through five `-B`
 prefixes and a `--sysroot` baked into a PATH shim at `/usr/bin/gcc`
@@ -188,7 +189,8 @@ did for the whole toolchain axis at once, since a compiler's closure
 arrives as one unit.
 
 ```
-sudo apt-get install -y build-essential cmake
+# build-essential is for the hook and spine; gcc, binutils and cmake come from the pin
+sudo apt-get install -y build-essential
 ../examples/stage_cpp_toolchain.sh   # (or ./stage_cpp_toolchain.sh from examples/)
 bst --builders 4 --max-jobs 4 build all.bst   # BuildStream's own defaults - real fastest config found
 ```
@@ -240,7 +242,8 @@ script stages it (it hardlink-clones the one staged sysroot into this
 project and its `optimized/` variant, so this costs no extra disk):
 
 ```
-sudo apt-get install -y build-essential cmake
+# build-essential is for the hook and spine; gcc, binutils and cmake come from the pin
+sudo apt-get install -y build-essential
 ../examples/stage_cpp_toolchain.sh   # (or ./stage_cpp_toolchain.sh from examples/)
 bst --builders 4 --max-jobs 4 build all.bst              # the mis-optimized baseline
 (cd optimized && bst --builders 4 --max-jobs 4 build all.bst)
@@ -373,6 +376,42 @@ the shape `11`'s build-order leaves cannot show. Related, open: `UX-1005`
 it lacks a fixture for; not implemented here. Same staged sysroot as
 `05`-`12`; the generator is `10`'s own script, hardlink-cloned in. Full
 detail in that project's own [`README.md`](13-mixed-graph/README.md).
+
+## 14-two-giants
+
+Two independent giants (`giant-a.bst`, `giant-b.bst` - `11`'s own
+element, 256 generated C units each) ready at once, each on its own
+critical chain behind a small tail (`UX-1132`): the shape where two long
+elements share the cores rather than one owning them. CI's
+`bst-examples` builds it once at `giant_lines 1800` and
+`../check_shape_property.py two-giants` checks both giants built wider
+than one job with overlapping BUILD spans.
+
+## 15-wide-chain
+
+Four wide `cmake` elements in a chain (`wide-1` -> `wide-4`, 128 units
+each, `unit_lines` lines per unit): at every moment exactly one element
+is ready, so its own width is the whole host's (`UX-1132`). CI checks
+every link built wider than one job (`wide-chain`).
+
+## 16-memory-bound-giant
+
+One giant whose units are memory-heavy: 32 units of `mem_lines` lines,
+and `cc1`'s peak RSS grows ~6.6 MB per 1000 lines (40000 -> 284 MB,
+80000 -> 549 MB standalone, this repository's dev host), so a pool as
+wide as the cores oversubscribes RAM and PSI's memory bound withdraws
+tokens (`UX-1132`). CI builds it under `--jobserver auto` at `mem_lines
+80000` and prints its peak RSS per job and the pool's PSI withdraws
+(`memory-giant`).
+
+`14`-`16` use the same staged sysroot and `10`'s generator as `11`/`13`
+(`../stage_cpp_toolchain.sh` hardlink-clones both), and each has a
+Graviton leg, `../11-serial-giant/graviton_arms.sh
+twogiants|widechain|memgiant`: `off` at `bst`'s defaults against
+`autocap`, `--jobserver auto` at the safe cap (cores less one element's
+`max-jobs`) - the default under test. `memgiant` sizes `mem_lines` from
+the host's `MemTotal`/`nproc`. `codspeed-probe.yml` runs the three legs
+and keeps each leg's captures as an artifact.
 
 ## Shared setup
 

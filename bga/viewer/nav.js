@@ -301,7 +301,9 @@ export function toc(root, { document: doc, controls } = {}) {
   nav.className = "toc";
   nav.setAttribute("aria-label", "Sections");
 
-  const heading = doc.createElement("p");
+  // UX-1058: a native button - Tab, Enter and Space come with it.
+  const heading = doc.createElement("button");
+  heading.setAttribute("type", "button");
   heading.className = "toc-title";
   heading.textContent = "Sections";
   nav.append(heading);

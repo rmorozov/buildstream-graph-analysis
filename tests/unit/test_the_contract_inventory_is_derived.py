@@ -95,6 +95,7 @@ class TestTheInventoryIsComplete:
             "plane2/v2",
             "plane2/v3",
             "sources/v1",
+            "tail/v1",
         ]
 
     def test_a_retired_shape_is_inventoried_as_one(self):

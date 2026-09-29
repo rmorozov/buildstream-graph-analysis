@@ -1,8 +1,8 @@
 # UX-1107: the export's anchor breaks a tie by set order
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** round 150, the export's anchor read under `PYTHONHASHSEED` 1-4 (2026-09-28) | **Serves:** R1 | **Topic:** viewer | **Area:** tools | **Shape:** mechanical | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** round 150, the export's anchor read under `PYTHONHASHSEED` 1-4 (2026-09-28) | **Serves:** R1 | **Topic:** viewer | **Area:** tools | **Shape:** mechanical | **Reading:** container
 
-**Guard:** none — named test_the_export_anchor_is_seed_free.py, absent from tests/
+**Guard:** `tests/unit/test_the_export_anchor_is_seed_free.py`
 
 ## Motivation
 
@@ -58,3 +58,26 @@ snapshot above, rendered in subprocesses under `PYTHONHASHSEED` 1-4,
 names one anchor and decodes to one export. Mutation: restore `max`
 over the unordered set, and seed 1's `base.bst` against 2-4's `app.bst`
 reddens.
+
+## Outcome
+
+Gap measured (`pytest tests/unit/test_the_export_anchor_is_seed_free.py`, skewed four-element snapshot, seeds 1-4, before the fix):
+
+```text
+FAILED ... assert {'app.bst', 'base.bst', 'tools.bst'} == {'app.bst'}   (anchors differ by seed)
+```
+
+Close measured (after `max(sorted(candidates), ...)`):
+
+```text
+1 passed
+```
+
+| Mutation | Reddens | Run |
+| --- | --- | --- |
+| `max(candidates, ...)` over the unordered set (fix reverted) | the guard: anchors and decoded sha256 differ by seed | 1 failed |
+| the fix restored | the guard | 1 passed |
+
+Neighbours (`test_the_timeline_speaks_perfetto`, `_register_is_terse`): 1301 passed; 24 failed in three files that spawn `bga view` (`No module named 'networkx'` in the pytest tool env, not this change).
+
+Deviation: (orchestrator).

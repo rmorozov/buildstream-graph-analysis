@@ -102,10 +102,14 @@ from .jobserver import (
     admission_wait_by_element,
     bind_cpu_sampler,
     bind_pid_to_element_reader,
+    cached_log_ranking,
     close_jobserver,
     create_jobserver_proxies,
     jobserver_auth_style,
     open_jobserver,
+    parse_cached_build_seconds,
+    rank_admission,
+    read_cached_build_log,
     read_jobserver_decisions,
     read_jobserver_ledger,
     read_plan_peak_rss,
@@ -124,6 +128,8 @@ from .jobserver import (
 #: this module, the re-export the import boundary's guard names.
 __all__ = [
     "JOBSERVER_SERIES_CAP",
+    "cached_log_ranking",
+    "parse_cached_build_seconds",
     "summarize_jobserver_ledger",
     "summarize_jobserver_tokens_by_element",
     "tokens_by_element",
@@ -2439,6 +2445,12 @@ def run_traced_build(
                     psi_paths={
                         "broker_owns_audit": bool(element_kinds and (plan_path or element_deps)),
                         "seed": jobserver_seed,
+                        # UX-1134: no plan, so measured RSS gates the pool's adds.
+                        **(
+                            {}
+                            if plan_path
+                            else {"trace_log": os.path.join(bind_dir, "trace.log"), "decisions": captured_decisions}
+                        ),
                     },
                 )
                 pool_controller.start()
@@ -2476,21 +2488,16 @@ def run_traced_build(
                 kinds_warning = _write_kinds_read(bind_dir, jobserver, element_kinds, kinds_read_diagnostic)
                 if kinds_warning:
                     print(kinds_warning, file=sys.stderr)
-            # UX-849/UX-1005 track C (Ruslan): a proxy per element named
-            # in the kinds map, and a `Broker` thread to move tokens
-            # into them by slack. A real `--plan` wins when given; with
-            # none, `structural_ranking` derives one from the same
-            # `bst show` deps read above, so ranking still runs rather
-            # than falling all the way back to unordered FIFO wakeups.
-            # `ranking_source` (`"plan"`/`"structural"`/`None`) is the
-            # report's own record of which one ran.
-            if plan_path:
-                slack_plan, ranking_source = read_plan_slack(plan_path), "plan"
-            elif admission_enabled() and element_kinds and element_deps:
-                slack_plan = structural_ranking(element_kinds, element_deps, element_notparallel or {})
-                ranking_source = "structural"
-            else:
-                slack_plan, ranking_source = None, None
+            # UX-1005/UX-1013: a `--plan`, else the cached build logs, else graph structure.
+            slack_plan, ranking_source = rank_admission(
+                read_plan_slack(plan_path) if plan_path else None,
+                structural_ranking(element_kinds, element_deps, element_notparallel or {})
+                if admission_enabled() and element_kinds and element_deps
+                else None,
+                lambda chunk: read_cached_build_log(
+                    [cmd[0], *_bst_global_options(cmd)[0], "artifact", "log", *chunk], project_dir
+                ),
+            )
             proxies_dir = os.path.join(bind_dir, "proxies")
             if element_kinds and slack_plan is not None:
                 proxy_fds = create_jobserver_proxies(proxies_dir, element_kinds)

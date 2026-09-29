@@ -91,9 +91,36 @@ UA_BEVEL = "outset"
 
 #: Read at rest: `aria-current`, `aria-pressed="true"` and
 #: `aria-expanded="true"` are states over a grade (§6d), so each is
-#: lifted for the read and put back after it. Weight is read against
-#: the parent's: a grade draws no weight, it wears its context's.
-LOOKS = """
+#: lifted for the read and put back after it. Weight is the
+#: declared one (matched rule or inline style), not a comparison with the
+#: parent's: an explicit weight equal to the ancestor's is still declared.
+DECLARED_WEIGHT = """
+const declaredWeight = (b) => {
+  let found = b.style.fontWeight;
+  const walk = (rules) => {
+    for (const r of rules) {
+      if (r.cssRules && (!r.media || matchMedia(r.media.mediaText).matches)) walk(r.cssRules);
+      else if (r.selectorText && r.style.fontWeight) {
+        try { if (b.matches(r.selectorText)) found = r.style.fontWeight; } catch (e) {}
+      }
+    }
+  };
+  for (const sheet of document.styleSheets) walk(sheet.cssRules);
+  return found;
+};
+"""
+
+#: Plants the case the old read passed: an explicit weight equal to the
+#: ancestor's, on every control.
+PLANT_EQUAL_WEIGHT = """
+document.querySelectorAll("button").forEach((b) => {
+  b.style.fontWeight = getComputedStyle(b.parentElement).fontWeight;
+});
+"""
+
+LOOKS = (
+    DECLARED_WEIGHT
+    + """
 (() => JSON.stringify([...document.querySelectorAll("button")].map((b) => {
   const held = {};
   for (const name of ["aria-current", "aria-pressed", "aria-expanded"]) {
@@ -106,16 +133,16 @@ LOOKS = """
   const s = getComputedStyle(b);
   const look = [s.backgroundColor, s.borderTopStyle, s.borderRadius, s.padding,
                 s.fontSize, s.color, s.transitionDuration, s.boxShadow,
-                s.fontWeight === getComputedStyle(b.parentElement).fontWeight
-                  ? "inherited" : s.fontWeight];
+                declaredWeight(b) || "inherited"];
   for (const [name, value] of Object.entries(held)) b.setAttribute(name, value);
   return look;
 })))()
 """
+)
 
 
-def _looks(uri, opened):
-    return [tuple(one) for one in json.loads(opened.observe(uri, LOOKS)["value"])]
+def _looks(uri, opened, plant=""):
+    return [tuple(one) for one in json.loads(opened.observe(uri, plant + LOOKS)["value"])]
 
 
 #: UX-1027: every chapter a `button.primary` lands in, forced open
@@ -184,6 +211,14 @@ class TestNoControlIsTheBrowsers:
         for name, looks in drawn.items():
             weighted = sorted({one[8] for one in looks} - {"inherited"})
             assert weighted == [], (name, weighted)
+
+    def test_an_explicit_weight_equal_to_the_ancestors_is_declared(self, tmp_path_factory):
+        """UX-1130: computed-vs-parent read this as inherited."""
+        with Browser(chrome) as opened:
+            uri = export_uri(MACRO, tmp_path_factory.mktemp("plant"))
+            looks = _looks(uri, opened, PLANT_EQUAL_WEIGHT)
+        assert len(looks) > 100
+        assert "inherited" not in {one[8] for one in looks}
 
     def test_the_grades_stay_four(self, drawn):
         """Twelve is what drift looks like. The bound is over the whole

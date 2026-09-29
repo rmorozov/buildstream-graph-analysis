@@ -763,6 +763,7 @@ _CLAIMS = {
             "joint_saving.joint_saving_us",
             "joint_saving.sum_of_individual_us",
             "joint_saving.savings_add",
+            "joint_saving.relation",
             "total_duration_us",
         ),
         _unconditional(

@@ -46,6 +46,7 @@ Confirmed against `bga/cli.py` directly, not the original spec's Part 37 proposa
 | `bga correlate RUN NATIVE_REPORT` | Joins this run with a Plane 2 native trace of the same build on element UID, and says what to fix. **Not spec-mandated**, `UX-51` | — |
 | `bga blast TARGET [RUN]` | What rebuilds if one thing changes, from whichever end the reader has it — a git url (every element sourcing that repository: the monorepo case, where one ref decides them all), a path (the elements whose `local` sources stage it), or an element name (its downstream closure). The answer says which reading it used, splits the closure into kinds that build and kinds that assemble, and prices it against the named run. A question, not a gate — always exits 0. **Not spec-mandated**, `UX-172`/`UX-173`/`UX-182` | — |
 | `bga whatif [RUN] --element UID …` | What the build drops to if those elements were fixed *together*: one longest-path recompute with each of them zeroed, never a sum of their individual savings — which is wrong the moment two of them share a chain. "Fixed" means instant over this run's measured durations, so the figure is an upper bound and not a forecast. **Not spec-mandated**, `UX-230` | — |
+| `bga junction-cost RUN RUN [RUN...]` | N separate builds of one type under different variants, priced against one junctioned invocation: the elements they share by cache key, the pipeline cost paid N times, the union graph's T∞ and a lower bound on the one invocation, each figure citing its assumption. Refused for one run, mixed build types, or runs with no cache keys. **Not spec-mandated**, `UX-904` | — |
 | `bga cache-trend RUN...` | Is the cache getting worse? A chronological *series*, not a pair — hit ratio, transfer seconds, churn per step, and a finding when the newest run leaves the band its trailing window describes. **Not spec-mandated**, `UX-103` | — |
 | `bga compare BASELINE CANDIDATE` | Run-to-run deltas + improved/regressed verdict, and **two independent CI gates** — duration (`--fail-on-regression`, exit 4) and efficiency (`--fail-on-efficiency-regression`/`--min-efficiency`, exit 5); `--baseline-run`/`--band-k` compare against a baseline *set* instead of a fixed threshold. **Not spec-mandated**, `UX-01`/`UX-03`/`UX-39`/`UX-59` | — |
 | `bga cache-logs [PROJECT_DIR\|LOG_ROOT]` | **Plane 3** — BuildStream's own persisted element logs: per-element phase breakdown, sandbox tax, configure tax, developer tax. Needs no capture, and takes the project directory a user has rather than the log root they would have to derive (`UX-127`). **Not spec-mandated**, `UX-91`/`UX-99`/`UX-101`/`UX-102` | — |
@@ -399,6 +400,7 @@ renderers are built against, so nothing here is a second copy to drift.
 | `store-aggregate/v1` | that store as a distribution: min/median/p95/max/MAD per host class, and the refusal when a mix cannot be blended | `bga snapshot --aggregate --format json` |
 | `capacity-model/v1` | that same store as a queue (`UX-613`): what a builder count and a declared arrival rate would do to utilization, the wait before a build starts and the number waiting, per host class. A model over the fact base rather than a block inside it - the arrival rate is the operator's, not measured, and every figure carries the assumption ids its own arithmetic used | `bga snapshot --capacity N,RATE --format json` |
 | `whatif/v1` | what the build would drop to for a chosen set of fixes - one projection, never a sum | `bga whatif --format json` |
+| `junction-cost/v1` | N variant builds against one junctioned invocation (`UX-904`): the elements shared by cache key, the pipeline paid N times against once, the union floor and a lower bound on one invocation - a projection whose figures cite their assumptions, junction staging among them, unmeasured | `bga junction-cost --format json` |
 | `sweep/v1` | what more capacity would buy: one makespan per capacity tried, the knee past which it buys little, and where the replay model contradicted itself (`UX-339`) | `bga sweep --format json` |
 | `tail/v1` | what bga itself cost after the build (`UX-1078`): one row per post-build phase with its wall and peak RSS, and the build's own wall; rewritten after every phase, `complete: false` when interrupted. No total is stored - `store/v1` rows carry the sum as `bga_tail_us` beside `build_wall_us` | at `tail.json` beside a snapshot |
 | `host/v2` | the machine a capture was taken on; written into every run context and read by the cross-host refusal | inside `run-context.json` |
@@ -435,7 +437,7 @@ addition does not and `additionalProperties` is true everywhere, so a
 key the emitter always writes lands permitted, named in the schema's
 `bga:always_written` and guaranteed against the real payload.
 
-Six rows are written but not printable — on-disk shapes a run
+Seven rows are written but not printable — on-disk shapes a run
 directory carries rather than documents a subcommand emits. `--schema`
 does not know them, and `bga.contracts.unprintable()` says so.
 The last ten go one further: they are read and never written, which
@@ -501,6 +503,15 @@ and is superseded now is what the record says, and sweeping it forward
 with the tables above destroys the one thing the entry is for
 (`UX-653`). The newest entry is the exception: every round that
 re-grounds the document rewrites it.
+
+Updated 2026-09-29 (after `UX-1133`), covering two changes to this
+document in round 152. The command table and the contract registry gain
+`bga junction-cost` and `junction-cost/v1` (`UX-904`); the unprintable
+count reads seven, what `bga --schema` prints (`UX-1131`). The figures
+are re-grounded in `bga analyze --schema`
+(`analyze/v6`: **63 top-level properties**) and in `python3 -m pytest
+$(grep -ln "architecture.md" tests/unit/*.py) -q`, run at this commit:
+**27 emitted ids**.
 
 Updated 2026-09-29 (after `UX-1123`), covering one change to this
 document in round 151. The closed index moves from one `closed.md` to

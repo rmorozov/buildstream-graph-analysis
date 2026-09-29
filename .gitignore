@@ -217,6 +217,13 @@ examples/11-serial-giant/files/gen/
 # sources resolve inside sub/, not the parent. Same reasoning as 05-11.
 examples/12-junctioned/sub/files/toolchain/
 
+# examples/13-16 (UX-1010, UX-1132): the same sysroot and generator
+# clones as 11, staged by stage_cpp_toolchain.sh, never committed.
+examples/13-mixed-graph/files/
+examples/14-two-giants/files/
+examples/15-wide-chain/files/
+examples/16-memory-bound-giant/files/
+
 # Agent worktrees: whole clones the Agent tool makes under the repo (UX-509).
 .claude/worktrees/
 
@@ -224,12 +231,13 @@ examples/12-junctioned/sub/files/toolchain/
 # read by .claude/hooks/gate-covers-push.sh on `git push`.
 .gate-covered
 
-# UX-997 T2: these four live on `refs/heads/records`, not main -
+# UX-997 T2: these five live on `refs/heads/records`, not main -
 # `tools/dev_records.py fetch` writes them (a `make` prerequisite of
 # every target that reads them); the two marker files are its own.
 tests/ci_reference.json
 tests/touch_map.json
 tests/flake_ledger.json
 docs/audits/mutation.md
+tests/red_ledger.json
 tests/.records-sha
 tests/.records-baseline.json

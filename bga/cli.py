@@ -507,6 +507,7 @@ def _builder_pool_recommendation(analyzer, result) -> dict:
         host_cpu_count,
         critical_path_max_jobs,
         calibrated_cores=int(calibrated_cores) if calibrated_cores else None,
+        memory=_peak_rss_and_host_memory(analyzer.read_host_samples(), getattr(result, 'plane2_report', None)),
     )
 
 
@@ -774,6 +775,15 @@ def _builder_pool_text_lines(recommendation: dict) -> list[str]:
             f"  Ready-set width: {wide} - wider than the safe cap only with "
             "admission (BGA_ADMISSION=1), not yet measured faster",
         ]
+    bound = recommendation.get('memory_bound')
+    if bound:
+        gb = 1e9
+        fit = bound['fit_jobs']
+        lines[0] += (
+            f" - memory-bound: {bound['element']} peaks {bound['peak_bytes'] / gb:.1f} GB per job x "
+            f"{bound['pool_size']} = {bound['peak_bytes'] * bound['pool_size'] / gb:.1f} GB > "
+            f"{bound['host_memory_bytes'] / gb:.0f} GB; auto withholds past {fit} jobs, --jobserver {fit} pins it"
+        )
     lines.append(f"Pool size: {recommendation['pool_size']}, from {recommendation['pool_reading']}")
     lines.append("")
     return lines
@@ -1644,6 +1654,36 @@ def cmd_whatif(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_junction_cost(args: argparse.Namespace) -> int:
+    """Execute `bga junction-cost RUN RUN [RUN...]` (UX-904): N variant builds against one junctioned invocation.
+
+    A question, not a gate: a refusal is the answer, so it exits 0.
+    """
+    from bga.junction_cost import project, render, run_view
+
+    views = []
+    for run in args.run_dirs:
+        try:
+            run_dir = resolve_run_alias(run)
+        except StoreError as error:
+            print(f"Error: {error}", file=sys.stderr)
+            return 2
+        if not Path(run_dir).is_dir():
+            print(f"Error: not a run directory: {run_dir}", file=sys.stderr)
+            return 2
+        analyzer = BuildEfficiencyAnalyzer(verbose=getattr(args, 'verbose', False))
+        analyzer.load(Path(run_dir))
+        views.append(run_view(analyzer.analyze(Path(run_dir)), analyzer.graph))
+    document = project(views)
+    output = json.dumps(document, indent=2, default=str) if args.format == 'json' else "\n".join(render(document))
+    if getattr(args, 'output', None):
+        with open(args.output, 'w', encoding='utf-8') as handle:
+            handle.write(output + "\n")
+    else:
+        print(output)
+    return 0
+
+
 def cmd_blast(args: argparse.Namespace) -> int:
     """Execute `bga blast TARGET` (UX-172) - what rebuilds if I touch this.
 
@@ -1929,6 +1969,14 @@ def _bundle_load(args: argparse.Namespace, bundle_mod) -> int:
             file=sys.stderr,
         )
         return 2
+    if os.path.isdir(args.load):
+        # UX-900: a tree of bundles, as CI keeps them; all checked before any is written.
+        loaded = bundle_mod.load_tree(args.load, project)
+        print(f"Loaded {plural(len(loaded), 'bundle')} from {args.load} into {run_store.runs_dir(project)}")
+        for _target, manifest in loaded:
+            print(f"  {manifest['stamp']}")
+        print(f"  read them with: bga snapshot --list, or in place: bga snapshot --list --bundles {args.load}")
+        return 0
     target, manifest = bundle_mod.load(args.load, project)
     counts = bundle_mod.describe(manifest)
     print(f"Loaded snapshot {manifest['stamp']} into {target}")
@@ -2483,6 +2531,33 @@ def _add_whatif_subcommand(subparsers) -> None:
     whatif_parser.set_defaults(func=cmd_whatif)
 
 
+def _add_junction_cost_subcommand(subparsers) -> None:
+    junction_parser = subparsers.add_parser(
+        'junction-cost',
+        help="N variant builds, or one junctioned invocation?",
+        description='Price N separate builds of one type under different '
+        'variants against one junctioned invocation: elements shared by '
+        'cache key, the pipeline paid N times, the union floor and a '
+        'lower bound on one invocation. A projection with its assumptions '
+        'stated; refusals are answers, so it always exits 0.',
+    )
+    junction_parser.add_argument('run_dirs', nargs='+', metavar='RUN', help='A run of one variant. Two or more.')
+    junction_parser.add_argument(
+        '-f',
+        '--format',
+        choices=['text', 'json'],
+        default='text',
+        help='Output format: text (human-readable), json (machine-readable).',
+    )
+    junction_parser.add_argument(
+        '-o',
+        '--output',
+        default=None,
+        help='Write output to PATH instead of stdout.',
+    )
+    junction_parser.set_defaults(func=cmd_junction_cost)
+
+
 def _add_cache_trend_subcommand(subparsers) -> None:
     cache_trend_parser = subparsers.add_parser(
         'cache-trend',
@@ -2661,7 +2736,7 @@ def _add_bundle_subcommand(subparsers) -> None:
     # switches that already read and write a project's own store.
     bundle_parser = subparsers.add_parser(
         'bundle',
-        usage='bga bundle --export STAMP [-o FILE] | --load FILE | --resolve --key-fingerprint FP',
+        usage='bga bundle --export STAMP [-o FILE] | --load FILE|DIR | --resolve --key-fingerprint FP',
         help='Pack a capture into one file, load one, or resolve pseudonyms.',
         description='Pack one snapshot\'s whole capture - the run directory and the '
         'Plane 2 report, raw trace, host samples and analysis beside it - '
@@ -2673,7 +2748,11 @@ def _add_bundle_subcommand(subparsers) -> None:
     )
     bundle_group = bundle_parser.add_mutually_exclusive_group(required=True)
     bundle_group.add_argument('--export', metavar='STAMP', help='Snapshot to pack: a stamp, @last/@prev, or a path.')
-    bundle_group.add_argument('--load', metavar='FILE', help='Bundle to unpack into this project\'s store.')
+    bundle_group.add_argument(
+        '--load',
+        metavar='FILE|DIR',
+        help='Bundle to unpack into this project\'s store, or a directory\ntree of them: all or none.',
+    )
     bundle_group.add_argument(
         '--resolve', action='store_true', help='Rewrite pseudonyms read from stdin back to real names.'
     )
@@ -2711,6 +2790,7 @@ _SUBCOMMAND_BUILDERS = [
     _add_correlate_subcommand,
     _add_blast_subcommand,
     _add_whatif_subcommand,
+    _add_junction_cost_subcommand,
     _add_cache_trend_subcommand,
     _add_compare_subcommand,
     _add_bundle_subcommand,
@@ -2823,6 +2903,7 @@ _SCHEMA_BY_COMMAND = {
     # which is why the guard over this table is structural now rather
     # than a second list somebody has to remember.
     "whatif": schemas.WHATIF,
+    "junction-cost": schemas.JUNCTION_COST,
     # UX-339: and the capacity sweep, which is `R5`'s command and was
     # the one printed document a consumer could not version-check.
     "sweep": schemas.SWEEP,

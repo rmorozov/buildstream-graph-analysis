@@ -830,8 +830,11 @@ export function decomposition(parts, {
   // §2a: the exhibit never hoards data a reader wants as rows.
   let twin = null;
   if (grade === GRADE_EXHIBIT) {
-    twin = exhibitTwin(doc, ["Part", "Value"],
-                       named.map((part) => [part.label, format(part.value)]));
+    const rows = named.map((part) => [part.label, format(part.value)]);
+    if (mark && Number.isFinite(Number(mark.value))) {
+      rows.push([mark.label, format(mark.value)]);
+    }
+    twin = exhibitTwin(doc, ["Part", "Value"], rows);
     wrap.append(twin);
   }
   // `UX-1017`: name and route, from the same sentence and the same twin.

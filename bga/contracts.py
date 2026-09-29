@@ -136,16 +136,13 @@ def ids() -> list[str]:
 
 
 def printable() -> list[str]:
-    """The subset `bga --schema` can print.
+    """Exactly what `bga --schema` prints, read off the CLI's schema maps (`tail/v1` is file-only)."""
+    from . import cli
 
-    Named rather than assumed: a reader who meets `sources/v1` in a run
-    directory and asks `bga --schema sources/v1` gets a refusal, and
-    that refusal should be a documented difference rather than a
-    surprise.
-    """
-    from . import schemas
-
-    return sorted(schemas.names())
+    named = set(cli._SCHEMA_BY_COMMAND.values())
+    for pairs in cli._SCHEMA_BY_FLAG.values():
+        named.update(name for _, name in pairs)
+    return sorted(named)
 
 
 def superseded() -> list[str]:

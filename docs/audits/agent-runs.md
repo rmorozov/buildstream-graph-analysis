@@ -559,6 +559,32 @@ pairing for every merged row from round 103 on.
 | 151 | verifier | sonnet | verifier: UX-1114 1122  | 29k | 21 | 2.5 m | PASS | skill wording over-promised |
 | 151 | verifier | sonnet | verifier: UX-1120  | 51k | 26 | 4.1 m | PASS | two surviving mutations |
 | 151 | verifier | sonnet | verifier: UX-1113 1112 1119  | 41k | 31 | 11.3 m | PASS | push-check pipe had no pipefail |
+| 152 | architect | opus | architect: round 152 rows (1 of 3) | 66k | — | — | shaped | — |
+| 152 | architect | opus | architect: round 152 rows (2 of 3) | 74k | — | — | shaped | — |
+| 152 | architect | opus | architect: round 152 rows (3 of 3) | 73k | — | — | shaped | — |
+| 152 | implementer | sonnet | implementer: UX-1107 | 44k | — | — | merged | — |
+| 152 | implementer | sonnet | implementer: UX-1124 | 56k | — | — | merged | — |
+| 152 | implementer | sonnet | implementer: UX-1106 | 68k | — | — | merged | — |
+| 152 | implementer | sonnet | implementer: UX-1007 | 51k | — | — | merged | — |
+| 152 | implementer | sonnet | implementer: UX-1057 | 44k | — | — | merged | — |
+| 152 | implementer | sonnet | implementer: UX-1066 | 103k | — | — | merged | — |
+| 152 | implementer | sonnet | implementer: docs and sweep | 56k | — | — | landed | — |
+| 152 | implementer | sonnet | implementer: UX-1008 | 54k | — | — | merged | — |
+| 152 | implementer | sonnet | implementer: UX-1125 | 70k | — | — | merged | — |
+| 152 | implementer | sonnet | implementer: UX-1130 | 41k | — | — | merged | — |
+| 152 | implementer | sonnet | implementer: UX-1129 1131 | 85k | — | — | merged | — |
+| 152 | implementer | sonnet | implementer: UX-1058 | 63k | — | — | merged | — |
+| 152 | implementer | sonnet | implementer: lint-baseline fixer | 47k | — | — | landed | — |
+| 152 | implementer | opus | implementer: UX-1012 | 95k | — | — | merged | — |
+| 152 | implementer | opus | implementer: UX-900 | 140k | — | — | merged | — |
+| 152 | implementer | opus | implementer: UX-904 | 150k | — | — | merged | — |
+| 152 | implementer | opus | implementer: UX-1056 | 154k | — | — | merged | — |
+| 152 | implementer | opus | implementer: UX-1132 1005 | 194k | — | — | landed, rows open | — |
+| 152 | implementer | opus | implementer: UX-1056 rail fix | pending | — | — | pending | — |
+| 152 | integrator | opus | integrator: round 152 merge | — | — | — | **lost to a container restart** after its commits landed | tokens unknown |
+| 152 | verifier | sonnet | verifier: UX-1106 UX-1107 UX-1124 UX-1007 UX-1057 UX-1066 UX-1012 UX-900 UX-1008 UX-975 UX-976 UX-904 UX-1130 UX-1125 UX-1129 UX-1131 UX-1056 UX-1058 UX-1045 UX-1133 UX-1010 | 55k | — | — | PASS | — |
+| 152 | verifier | sonnet | verifier: UX-1106 UX-1107 UX-1124 UX-1007 UX-1057 UX-1066 UX-1012 UX-900 UX-1008 UX-975 UX-976 UX-904 UX-1130 UX-1125 UX-1129 UX-1131 UX-1056 UX-1058 UX-1045 UX-1133 UX-1010 | 62k | — | — | PASS | — |
+| 152 | verifier | sonnet | verifier: UX-1106 UX-1107 UX-1124 UX-1007 UX-1057 UX-1066 UX-1012 UX-900 UX-1008 UX-975 UX-976 UX-904 UX-1130 UX-1125 UX-1129 UX-1131 UX-1056 UX-1058 UX-1045 UX-1133 UX-1010 | 62k | — | — | PASS | — |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -571,7 +597,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the five hundred and forty-two rows already say: a researcher that reads a document
+What the five hundred and sixty-eight rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

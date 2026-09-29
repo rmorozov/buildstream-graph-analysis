@@ -22,7 +22,7 @@ after UX-1011; `11-serial-giant` at max-jobs 3 reads -57%.
 surfaces: new `examples/` shapes, `graviton_arms.sh` legs, the probe workflow
 guards: each shape's reading is pasted with its run id; the default holds or is filed against
 gap: which shapes break it - two critical chains; a giant that is memory-bound; many medium elements; a host whose knee sits below its cores
-track: a sequence of measured legs, one row each as they land
+track: a sequence of measured legs, one row each as they land; the shapes and legs a session can build are `UX-1132` (round 152), the Graviton spend runs at that round's end by the owner's word (2026-09-29)
 
 ## Required Fix
 
@@ -42,4 +42,18 @@ cell a pasted wall with its run id.
 
 ## Outcome
 
-Not started.
+Partial, round 152: the CodSpeed Graviton cells (16 Cortex-A72, 31 GB),
+`off` at 8 builders against the default (8 builders + `--jobserver auto`),
+bga-bench runs 36597448095 and 36602046680:
+
+| shape | off wall | auto wall | change | runs |
+|---|---|---|---|---|
+| `15-wide-chain` | 260.6-262.8 s | 196.8-197.7 s | -24% | 3+3, run 36597448095 |
+| `13-mixed-graph` (mixed8) | 146.7, 144.3 s | 116.8, 116.5 s | -20% | 1+1 in each run |
+| `14-two-giants` | 144.2-147.5 s | 147.0-148.5 s | +1% | 3+3, run 36597448095 |
+| `16-memory-bound-giant` | 558.9, 560.8 s | failed, 15 OOM kills | loses | both runs; UX-1134 |
+
+Two giants gain nothing because 2 x 8 jobs already fill 16 cores; the
+memory-bound giant is the shape where the default loses. Still to read:
+an x86 16-core host and a real project.
+

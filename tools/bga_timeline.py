@@ -1414,7 +1414,7 @@ def choose_anchor(spans, plane1_events) -> Optional[str]:
         return None
     shared = spans.keys() & plane1_elements(plane1_events)
     candidates = shared or spans.keys()
-    return max(candidates, key=lambda name: spans[name]["longest"])
+    return max(sorted(candidates), key=lambda name: spans[name]["longest"])
 
 
 def _plane1_start_us(plane1_events) -> float:

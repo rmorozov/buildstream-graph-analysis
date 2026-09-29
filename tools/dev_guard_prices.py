@@ -10,8 +10,9 @@ prints a table by seconds of every file that is a candidate:
 catch older than N rounds), "confirm inferred" (an `inferred r149`
 owner, confirmed before it justifies a move). A file caught within N
 rounds, or owned with no catch recorded, is not listed. `--catches` is a JSON map of test path
-to the round number of its last true catch; no such record exists yet,
-so by default only "needs owner" and "confirm inferred" appear. It
+to the round number of its last true catch; by default it is read from
+`tests/red_ledger.json` (`UX-1125`), and an absent ledger reads
+"unrecorded", so only "needs owner" and "confirm inferred" appear. It
 proposes; nothing moves without a row, and nothing is deleted.
 """
 
@@ -25,6 +26,7 @@ REPO = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "tools"))
 import dev_area_pages
 import dev_records
+import dev_red_ledger
 
 REFERENCE = "tests/ci_reference.json"
 SCENARIOS = REPO / "docs/backlog/scenarios"
@@ -71,6 +73,14 @@ def current_round(audits=REPO / "docs/audits"):
     return max(rounds, default=0)
 
 
+def recorded_catches():
+    """`{file: round}` from the fetched red ledger; `{}` when it is absent."""
+    try:
+        return dev_red_ledger.last_catch(json.loads(dev_records.load(dev_red_ledger.LEDGER_PATH)))
+    except FileNotFoundError:
+        return {}
+
+
 def table(rows, n):
     lines = [f"| file | seconds | owner task(s) | last catch (N={n}) | proposal |", "|---|---|---|---|---|"]
     for path, seconds, owners, last, proposal in rows:
@@ -88,7 +98,7 @@ def main(argv=None):
     parser.add_argument("--catches", type=pathlib.Path, help="JSON {test path: round of its last catch}")
     args = parser.parse_args(argv)
     prices = json.loads(dev_records.load(REFERENCE))["files"]
-    catches = json.loads(args.catches.read_text()) if args.catches else {}
+    catches = json.loads(args.catches.read_text()) if args.catches else recorded_catches()
     rows = proposals(prices, guard_map(), catches, current_round(), args.n)
     print(table(rows, args.n))
     print(

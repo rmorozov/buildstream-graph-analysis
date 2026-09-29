@@ -33,6 +33,8 @@ import subprocess
 import sys
 import tokenize
 
+import dev_env_check
+
 REPO = pathlib.Path(__file__).resolve().parents[1]
 FAMILIES = ("S", "C901", "PLR0912", "PLR0913", "PLR0915", "SIM115")
 DEFAULT_PATHS = ("bga", "tools", ".claude/hooks")
@@ -47,14 +49,28 @@ class PyrightFailure(Exception):
     """pyright's answer cannot be trusted: a bad exit, or unparseable JSON."""
 
 
-def ruff_version():
-    out = subprocess.run(["ruff", "--version"], stdout=subprocess.PIPE,
-                          text=True, check=True).stdout
-    return out.strip().split()[-1]
+def reported_versions(tools=("ruff", "pyright")):
+    """`{tool: version}` of the interpreter's own `tools`, never PATH's."""
+    out = {}
+    for tool in tools:
+        run = subprocess.run([sys.executable, "-m", tool, "--version"],
+                             capture_output=True, text=True, check=False)
+        out[tool] = dev_env_check.reported_version(run.stdout, tool)
+    return out
+
+
+def version_verdict(reported, lock_text):
+    """`(line, mismatches)`: what ran, and each tool whose version is not the lock's."""
+    line = ", ".join(f"{t} {reported[t]}" for t in sorted(reported))
+    bad = [f"{t} is {reported[t]!r}, requirements.lock pins "
+           f"{dev_env_check.pinned_version(lock_text, t)!r}" for t in sorted(reported)
+           if not dev_env_check.version_ok(
+               reported[t], dev_env_check.pinned_version(lock_text, t))]
+    return line, bad
 
 
 def ruff_findings(root, paths, families):
-    cmd = ["ruff", "check", *[str(p) for p in paths],
+    cmd = [sys.executable, "-m", "ruff", "check", *[str(p) for p in paths],
            "--select", ",".join(sorted(families)),
            "--output-format", "json"]
     run = subprocess.run(cmd, cwd=root, capture_output=True,
@@ -73,7 +89,7 @@ def ruff_findings(root, paths, families):
 
 
 def pyright_findings(root, paths):
-    cmd = ["pyright", *[str(p) for p in paths], "--outputjson"]
+    cmd = [sys.executable, "-m", "pyright", *[str(p) for p in paths], "--outputjson"]
     run = subprocess.run(cmd, cwd=root, capture_output=True,
                           text=True, check=False)
     if run.returncode not in (0, 1):
@@ -270,7 +286,7 @@ def load_baseline(path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def write_baseline(path, findings, families, version, forced_batches=()):
+def write_baseline(path, findings, families, forced_batches=()):
     """`forced_batches` is every `(reason, identities)` a `--force` has
     signed, oldest first. `UX-745` gave it one slot that a later
     `--force` overwrote outright, so an older reason's lines dropped out
@@ -284,7 +300,6 @@ def write_baseline(path, findings, families, version, forced_batches=()):
                    for reason, ids in forced_batches]
         header = f'  "forced": {json.dumps(batches)},\n'
     text = ("{\n"
-            f'  "ruff_version": {json.dumps(version)},\n'
             f'  "families": {json.dumps(sorted(set(families)))},\n'
             + header
             + '  "findings": [\n' + (body + "\n" if body else "") + "  ]\n"
@@ -302,7 +317,7 @@ def load_forced(document):
 #: `write_baseline`'s own vocabulary - the only way a batch is
 #: authorised. Anything else on the document or a finding was written
 #: by hand, not by `--force` (`UX-789`: `"forced_by"` was one).
-DOCUMENT_KEYS = frozenset({"ruff_version", "families", "forced", "findings"})
+DOCUMENT_KEYS = frozenset({"families", "forced", "findings"})
 ENTRY_KEYS = frozenset({"tool", "rule", "file", "line", "nth"})
 
 
@@ -400,7 +415,7 @@ def do_write(args, current, existing):
         signed = {identity(f) for f in current if identity(f) not in carried}
         if signed:
             batches = [*batches, (args.reason, signed)]
-    write_baseline(args.baseline, current, FAMILIES, ruff_version(),
+    write_baseline(args.baseline, current, FAMILIES,
                    forced_batches=batches)
     print(f"wrote {len(current)} finding(s) to {args.baseline}"
           + (f"; {len(signed)} authorised by {args.reason}" if signed else ""))
@@ -480,7 +495,6 @@ def do_shrink(args, current, existing):
         kept_ids = {identity(f) for f in kept}
         batches = _prune_forced(load_forced(existing), kept_ids)
         write_baseline(args.baseline, kept, existing.get("families", FAMILIES),
-                       existing.get("ruff_version", ruff_version()),
                        forced_batches=batches)
         plural = "y" if len(stale) == 1 else "ies"
         print(f"removed {len(stale)} stale entr{plural}")
@@ -516,6 +530,14 @@ def main(argv=None):
     if sum((args.write, args.check, args.shrink)) != 1:
         parser.error("exactly one of --write, --check, --shrink")
 
+    spawned = ("ruff",) if args.pyright_from is not None else ("ruff", "pyright")
+    line, mismatches = version_verdict(
+        reported_versions(spawned), dev_env_check.LOCK.read_text(encoding="utf-8"))
+    print(f"tools: {line}", file=sys.stderr)
+    if mismatches:
+        print("error: not the locked tools - refusing to judge: "
+              + "; ".join(mismatches))
+        return 2
     paths = args.paths or list(DEFAULT_PATHS)
     producers = dict(TOOLS)
     if args.pyright_from is not None:

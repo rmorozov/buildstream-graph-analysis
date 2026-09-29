@@ -46,3 +46,27 @@ Pinning tools outside the dev extra.
 earlier on PATH printing another version, `dev_baseline.py --check` names
 the mismatch and exits non-zero, and the Makefile's lint recipe contains no
 bare `ruff`. Mutation: restore the bare call; it reddens.
+
+## Outcome
+
+**Gap measured.** PATH `ruff --version` 0.15.8, `pyright --version` 1.1.408;
+lock 0.16.8 / 1.1.414. `make lint` on `d3ef4bf6` ran the PATH pair.
+
+**Close measured.** `python3 tools/dev_baseline.py --check` prints
+`tools: pyright 1.1.414, ruff 0.16.8` (stderr) with the shadowing binaries
+still first on PATH; `make lint` needs no `PYRIGHT_PYTHON_FORCE_VERSION`.
+Done as decided: `python3 -m ruff|pyright` (`sys.executable`) in
+`dev_baseline.py`, Makefile, hook; `ruff_version` dropped from the baseline and
+`DOCUMENT_KEYS`; ruff/pyright rows retired from `dev_env_check.TOOLS` (node
+stays); the one new S603 is `--force --reason UX-1113`. pyright's version is
+not read under `--pyright-from` (UX-802: no pyright spawn). Two guards edited:
+`test_the_env_check_catches_a_repoint.py` (population is node),
+`test_the_baseline_only_shrinks.py` (broken pyright is a fake `-m` package).
+`test_the_selection_is_a_fraction_of_the_suite` reds (median 39 > 38) with or
+without this diff.
+
+| Mutation | Reddened | Count |
+|---|---|---|
+| `[tool, "--version"]` for the `-m` call | (a) version line | 1 failed, 4 passed |
+| `if mismatches:` -> `if False:` | (b) main exits 2 | 1 failed, 4 passed |
+| bare `ruff check` in the hook | (c) no bare tool | 1 failed, 4 passed |

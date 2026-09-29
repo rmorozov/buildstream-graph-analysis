@@ -766,7 +766,8 @@ def _log_piece(piece, key, pmap, plain, public):
         if name == "element":
             return f"{kept}={pseudonymize_identifier(value, key, pmap)}"
         return f"{kept}={_log_core(value, key, pmap, plain, public)}"
-    core, trail = _LOG_TRAIL.fullmatch(piece).groups()
+    match = _LOG_TRAIL.fullmatch(piece)
+    core, trail = match.groups() if match else (piece, "")
     return _log_core(core, key, pmap, plain, public) + trail
 
 

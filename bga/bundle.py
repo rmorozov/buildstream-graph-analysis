@@ -737,6 +737,17 @@ def _untreated() -> list[str]:
     return [relative for relative, _presence, _contract in _layout_relative() if relative not in disclosure.TREATMENTS]
 
 
+def _refuse(refused: list, errors: list) -> None:
+    """Raises on the first gap list, then the first read error."""
+    if refused:
+        raise BundleError(
+            f"{plural(len(refused), 'value path')} the disclosure policy does not "
+            f"clear, so nothing was written:\n  " + "\n  ".join(refused)
+        )
+    if errors:
+        raise errors[0]
+
+
 def _anonymized_members(snapshot: str, packed: list, walk: _Anonymizer, scratch: str) -> tuple[list, dict, list]:
     """Every packed member by its treatment: `(shipped, sources, dropped)`,
     each transformed one rewritten into `scratch`. Every gap and instant
@@ -764,13 +775,7 @@ def _anonymized_members(snapshot: str, packed: list, walk: _Anonymizer, scratch:
         gaps, failed = _scan(source, policy, tries[relative][1], walk)
         refused.extend(f"{relative}: {gap}" for gap in gaps)
         errors.extend(failed)
-    if refused:
-        raise BundleError(
-            f"{plural(len(refused), 'value path')} the disclosure policy does not "
-            f"clear, so nothing was written:\n  " + "\n  ".join(refused)
-        )
-    if errors:
-        raise errors[0]
+    _refuse(refused, errors)
     for index, (relative, (policy, trie)) in enumerate(tries.items()):
         sources[relative] = os.path.join(scratch, f"member-{index}")
         _stream(os.path.join(snapshot, relative), policy, trie, walk, sources[relative])

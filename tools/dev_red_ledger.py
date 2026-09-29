@@ -34,7 +34,7 @@ API = "https://api.github.com"
 def failing_files(junit, file_of=dev_tier_drift.file_of):
     """The sorted test files with a failed or errored testcase in `junit` (a path or file object)."""
     files = set()
-    for case in ET.parse(junit).getroot().iter("testcase"):
+    for case in ET.parse(junit).iter("testcase"):
         if case.find("failure") is not None or case.find("error") is not None:
             name = file_of(case.get("classname") or "")
             if name:

@@ -1,6 +1,6 @@
 # UX-1135: the joint saving compares against each element's own saving, not the horizon's steps
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-74 | **Found by:** the 0.5.0 release walk, seed 4 (round 152, commit `74aa14f2`) | **Serves:** R1, R2 | **Topic:** analysis | **Area:** bga | **Shape:** judgement | **Reading:** container
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-74 | **Found by:** the 0.5.0 release walk, seed 4 (round 152, commit `74aa14f2`) | **Serves:** R1, R2 | **Topic:** analysis | **Area:** bga | **Shape:** judgement | **Reading:** container
 
 **Guard:** `tests/unit/test_the_joint_saving_is_priced_one_element_at_a_time.py`
 

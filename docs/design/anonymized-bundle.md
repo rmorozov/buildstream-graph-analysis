@@ -57,7 +57,7 @@ unit is the **value class**:
 | C. measurements | `cpu_us`, `dur_us`, counts, `max_concurrency`, `peak_memory`, `max_jobs` | kept |
 | D. host facts | `run-context.json` `host`; the `host/v2` manifest's `cpu_model`, `cpu_count`, `memory_bytes`, `kernel_release`, `distro_id`, toolchain | hostname pseudonymized; the rest kept |
 | E. content hashes | `cache_key`, `manifest_hash`, `run_identity_hash`, source refs | re-keyed by HMAC: equal stays equal, unlinkable to the owner's artifact server |
-| F. free text | `plane2.log.gz` `cmd=` lines, `redundant_operations[].example_cmd` and `signature`, `build.log`, `capture-context.txt`, finding prose naming elements | tokenized; raw logs dropped |
+| F. free text | `plane2.log.gz` `cmd=` lines, `redundant_operations[].example_cmd` and `signature`, `build.log`, `capture-context.txt`, finding prose naming elements | tokenized line by line, raw logs included (`UX-1066`) |
 | G. secrets | userinfo in remote-cache URLs, tokens in env or `-D` values | dropped, never pseudonymized: a pseudonym would copy the secret into the local map |
 | H. time | absolute `ts_us`, wall-clock stamps, the snapshot stamp | shifted to epoch 0, every delta exact |
 
@@ -224,7 +224,7 @@ other kept string whose contents vary by project.
    | `element-slice.json` | transform: its target names are class A |
    | `tail.json` | transform: a call's argv is rebuilt by 6.2's grammar (`UX-1103`) |
    | `analyze.json` | drop: its prose is free text, and the far side re-derives it |
-   | `plane2.log.gz`, `build.log`, `capture-context.txt` | drop |
+   | `plane2.log.gz`, `build.log`, `capture-context.txt` | transform: a line tokenizer (`cmd=` by 6.2's grammar, names and paths by the same key and map, a `.gz` inflated and deflated again; `UX-1066`) |
    | `.size` | drop (derived) |
 
 5. The commutation guard.

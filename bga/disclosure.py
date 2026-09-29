@@ -698,11 +698,15 @@ TREATMENTS = {
     "element-slice.json": TRANSFORM,
     "tail.json": TRANSFORM,
     "analyze.json": DROP,
-    "plane2.log.gz": DROP,
-    "build.log": DROP,
-    "capture-context.txt": DROP,
+    "plane2.log.gz": TRANSFORM,
+    "build.log": TRANSFORM,
+    "capture-context.txt": TRANSFORM,
     ".size": DROP,
 }
+
+#: The transformed members that are text, not JSON: rewritten line by line
+#: (`anonymize.tokenize_line`), a `.gz` one inflated and deflated again.
+LINE_MEMBERS = frozenset({"plane2.log.gz", "build.log", "capture-context.txt"})
 
 
 class Gap(NamedTuple):

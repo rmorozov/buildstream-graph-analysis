@@ -30,7 +30,12 @@ def _fixture_members() -> list:
     found = []
     for path in sorted(FIXTURES.rglob("*")):
         member = _BY_NAME.get(path.name)
-        if path.is_file() and member and disclosure.TREATMENTS.get(member) == disclosure.TRANSFORM:
+        if (
+            path.is_file()
+            and member
+            and member not in disclosure.LINE_MEMBERS
+            and disclosure.TREATMENTS.get(member) == disclosure.TRANSFORM
+        ):
             found.append((path.relative_to(REPO).as_posix(), member))
     return found
 
@@ -61,7 +66,9 @@ def test_every_layout_member_states_its_treatment():
     unpoliced = [
         m
         for m, t in disclosure.TREATMENTS.items()
-        if t == disclosure.TRANSFORM and disclosure.policy_key(m, MEMBERS[m]) not in disclosure.POLICIES
+        if t == disclosure.TRANSFORM
+        and m not in disclosure.LINE_MEMBERS
+        and disclosure.policy_key(m, MEMBERS[m]) not in disclosure.POLICIES
     ]
     assert not unpoliced
 

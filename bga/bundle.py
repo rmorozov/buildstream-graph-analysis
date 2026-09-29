@@ -442,6 +442,19 @@ class _Anonymizer:
             self.kept.update(w.split("=")[0] for w in rebuilt.split() if w.split("=")[0] in words)
         return rebuilt
 
+    def line(self, text: str) -> str:
+        """One raw-log line tokenized: names through the recording map, the rest through the bare one."""
+        self.counts["F tokenized"] += 1
+        return anonymize.tokenize_line(
+            text,
+            self.key,
+            self.pmap,
+            disclosure.VOCABULARIES["binary"].allowed,
+            _public_words(),
+            self.pmap.pmap,
+            self.counts,
+        )
+
     def _public(self, vocabulary: str, value):
         vocab = disclosure.VOCABULARIES[vocabulary]
         if vocab.admits(value):
@@ -522,6 +535,22 @@ def _stream(source: str, policy: str, trie: dict, walk: "_Anonymizer", target: s
                 raise BundleError(f"{policy} {event[1]}: a gap after the first pass")
         if not documents:
             out.write("\n")
+
+
+def _stream_lines(source: str, walk: "_Anonymizer", target: str) -> None:
+    """A raw text member tokenized line by line into a new 0600 `target`, a `.gz` one inflated and deflated again."""
+    opener = gzip.open if source.endswith(".gz") else open
+    with (
+        opener(source, "rt", encoding="utf-8", errors="replace", newline="") as handle,
+        open(os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "wb") as raw,
+    ):
+        out = gzip.GzipFile(filename="", fileobj=raw, mode="wb", mtime=0) if source.endswith(".gz") else raw
+        try:
+            for line in handle:
+                out.write(walk.line(line).encode("utf-8"))
+        finally:
+            if out is not raw:
+                out.close()
 
 
 @functools.cache
@@ -644,6 +673,8 @@ def residue(archive: str, dictionary) -> list[str]:
         for info in tar:
             fields = [info.name, info.uname, info.gname, info.linkname, *map(str, info.pax_headers.values())]
             handle = tar.extractfile(info)
+            if handle is not None and info.name.endswith(".gz"):
+                handle = gzip.GzipFile(fileobj=handle, mode="rb")
             decoder = codecs.getincrementaldecoder("utf-8")("replace")
             text, found = _fold("\n" + "\n".join(fields) + "\n"), set()
             while True:
@@ -707,7 +738,7 @@ def _anonymized_members(snapshot: str, packed: list, walk: _Anonymizer, scratch:
     each transformed one rewritten into `scratch`. Every gap and instant
     first, so one gap refuses the whole export and one origin per clock
     shifts every instant."""
-    shipped, sources, dropped, refused, errors, tries = [], {}, [], [], [], {}
+    shipped, sources, dropped, refused, errors, tries, lines = [], {}, [], [], [], {}, []
     for member in packed:
         relative, source = member["path"], os.path.join(snapshot, member["path"])
         treatment = disclosure.TREATMENTS[relative]
@@ -717,6 +748,9 @@ def _anonymized_members(snapshot: str, packed: list, walk: _Anonymizer, scratch:
         shipped.append(dict(member))
         sources[relative] = source
         if treatment == disclosure.KEEP:
+            continue
+        if relative in disclosure.LINE_MEMBERS:
+            lines.append(relative)
             continue
         policy = disclosure.policy_key(relative, member["contract"])
         if policy not in disclosure.POLICIES:
@@ -736,6 +770,9 @@ def _anonymized_members(snapshot: str, packed: list, walk: _Anonymizer, scratch:
     for index, (relative, (policy, trie)) in enumerate(tries.items()):
         sources[relative] = os.path.join(scratch, f"member-{index}")
         _stream(os.path.join(snapshot, relative), policy, trie, walk, sources[relative])
+    for index, relative in enumerate(lines, len(tries)):
+        sources[relative] = os.path.join(scratch, f"member-{index}")
+        _stream_lines(os.path.join(snapshot, relative), walk, sources[relative])
     for member in shipped:
         member["bytes"] = os.path.getsize(sources[member["path"]])
     return shipped, sources, dropped

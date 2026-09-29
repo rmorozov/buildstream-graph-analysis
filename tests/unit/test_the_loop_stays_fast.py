@@ -241,6 +241,8 @@ class TestTheSelectorStillSelects:
         "bga/correlate.py",
         "bga/report/json.py",
         "bga/schemas.py",
+        # `UX-1066`: 49 = 34 census + 15 named, one over the bound. Wide by **name**: `from bga import bundle` is how an export guard runs one.
+        "bga/bundle.py",
         # `UX-740`, round 102: 46 = 31 census + 16 named, one over the
         # bound. Wide by **name**: loading a fixture run is what a guard
         # does to get one, so `from bga.ingest.loader import load_all`

@@ -53,6 +53,7 @@ task file, which is the only place it ever lived twice.
 | UX-1130 | [the resting-appearance guard reads a weight equal to the parent's as inherited](UX-1130-the-resting-appearance-guard-reads-weight-against-the-parent.md) | viewer | Low | R1 | 🔴 Not Started |
 | UX-1131 | [`docs/README.md` counts ten printable contracts and `bga --schema` prints nine](UX-1131-the-schema-count-says-ten-and-bga-schema-prints-nine.md) | contracts | Low | R8 | 🔴 Not Started |
 | UX-1132 | [three new example shapes and their arm legs test the "safe cap plus auto" default](UX-1132-new-jobserver-shapes-for-the-default.md) | capture | High | R4, R5 | 🔴 Not Started |
+| UX-1133 | [round 152's architecture.md edits get their verification-log entry](UX-1133-the-verification-log-re-grounds-at-round-152.md) | contracts | Medium | whoever reads architecture.md's Verification Log next | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

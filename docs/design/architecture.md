@@ -504,6 +504,15 @@ with the tables above destroys the one thing the entry is for
 (`UX-653`). The newest entry is the exception: every round that
 re-grounds the document rewrites it.
 
+Updated 2026-09-29 (after `UX-1133`), covering two changes to this
+document in round 152. The command table and the contract registry gain
+`bga junction-cost` and `junction-cost/v1` (`UX-904`); the unprintable
+count reads seven, what `bga --schema` prints (`UX-1131`). The figures
+are re-grounded in `bga analyze --schema`
+(`analyze/v6`: **63 top-level properties**) and in `python3 -m pytest
+$(grep -ln "architecture.md" tests/unit/*.py) -q`, run at this commit:
+**27 emitted ids**.
+
 Updated 2026-09-29 (after `UX-1123`), covering one change to this
 document in round 151. The closed index moves from one `closed.md` to
 128-row chunks under `closed/`, read through `closed_rows()`

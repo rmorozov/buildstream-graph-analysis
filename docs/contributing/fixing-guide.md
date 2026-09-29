@@ -459,6 +459,8 @@ tools/dev_env_check.py       the pre-gate env check: `import bga` resolves
                              and node are the pinned ones (UX-887/889)
 tools/dev_trace_coverage.py  which captured field reaches the emitted
                              trace, and which Perfetto carriers it uses (UX-466)
+tools/dev_guard_prices.py    each guard's CI seconds, owner and last catch;
+                             proposes a scheduled lane or an owner
 tools/dev_retro.py           a window's bookkeeping, grouped by the command
                              that shows it, for the weekly `retro` skill (UX-999)
 tools/dev_page_census.py     the page's structure and control classes, one

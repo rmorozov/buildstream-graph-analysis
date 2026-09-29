@@ -47,3 +47,23 @@ fixture of three files (named and recently red; named and quiet past N;
 unnamed) and asserts the proposal lists the second and third only.
 Mutation: drop the last-red filter; the first file appears and it
 reddens.
+
+## Outcome
+
+**The gap measured:** `python3 tools/dev_guard_prices.py` before: no such
+tool; 686 files in `tests/ci_reference.json`, 1852 CPU-s.
+
+**The close measured:** `python3 tools/dev_guard_prices.py` on this tree:
+"543 of 686 files proposed; 1193 of 1852 CPU-s" = 215 needs owner, 328
+confirm inferred, 0 scheduled lane (no catch record, so unrecorded is no
+evidence and never a move). `pytest tests/unit/test_the_retro_prices_its_guards.py`:
+4 passed.
+
+| Mutation | Reddened | Printed |
+|---|---|---|
+| drop the last-catch filter (`elif old:` -> `elif True:`) | the three-file test and the unrecorded test | 2 failed, 2 passed |
+| unrecorded counts as old (`old = last is None or ...`) | `test_a_named_unrecorded_file_is_never_a_scheduled_lane` | 1 failed, 3 passed |
+
+Deviation: also edited `docs/contributing/fixing-guide.md` (a §6 tool
+row, no id cited while open); the last-catch source is a `--catches` JSON
+`{test path: round}`, since no record holds one yet (T2's ledger).

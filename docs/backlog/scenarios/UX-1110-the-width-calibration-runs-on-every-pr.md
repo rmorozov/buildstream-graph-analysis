@@ -1,6 +1,6 @@
 # UX-1110: the width calibration runs on every pull request and gates nothing
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** quality gates audit (`docs/audits/quality-gates-2026-09-29.md`, 2026-09-29) | **Serves:** the jobserver line, whose reading keeps its schedule while PRs stop paying for it | **Topic:** capture | **Area:** tools-native_trace | **Shape:** mechanical | **Reading:** runner:bst-examples
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** quality gates audit (`docs/audits/quality-gates-2026-09-29.md`, 2026-09-29) | **Serves:** the jobserver line, whose reading keeps its schedule while PRs stop paying for it | **Topic:** capture | **Area:** tools-native_trace | **Shape:** mechanical | **Reading:** runner:bst-examples
 
 **Guard:** test_the_calibration_runs_off_the_pr_path.py
 

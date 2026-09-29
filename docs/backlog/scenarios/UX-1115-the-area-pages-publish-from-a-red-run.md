@@ -1,6 +1,6 @@
 # UX-1115: the area pages publish from a run whose suite failed
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** quality gates audit (`docs/audits/quality-gates-2026-09-29.md`, 2026-09-29) | **Serves:** anyone reading the area pages on the records branch | **Topic:** guards | **Area:** tools | **Shape:** mechanical | **Reading:** runner:area-pages-publish
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** quality gates audit (`docs/audits/quality-gates-2026-09-29.md`, 2026-09-29) | **Serves:** anyone reading the area pages on the records branch | **Topic:** guards | **Area:** tools | **Shape:** mechanical | **Reading:** runner:area-pages-publish
 
 **Guard:** test_no_records_writer_runs_on_a_red_suite.py
 

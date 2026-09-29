@@ -1,6 +1,6 @@
 # UX-1109: the bst jobs wait for the suite and use nothing it produced
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** quality gates audit (`docs/audits/quality-gates-2026-09-29.md`, 2026-09-29) | **Serves:** anyone waiting on a PR to go green | **Topic:** guards | **Area:** tools | **Shape:** mechanical | **Reading:** runner:bst-examples
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** quality gates audit (`docs/audits/quality-gates-2026-09-29.md`, 2026-09-29) | **Serves:** anyone waiting on a PR to go green | **Topic:** guards | **Area:** tools | **Shape:** mechanical | **Reading:** runner:bst-examples
 
 **Guard:** test_the_bst_jobs_start_beside_the_suite.py
 

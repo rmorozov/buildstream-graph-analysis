@@ -1,6 +1,6 @@
 # UX-1116: the LD_PRELOAD hook is built with no warnings and never runs under a sanitizer
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** quality gates audit (`docs/audits/quality-gates-2026-09-29.md`, 2026-09-29) | **Serves:** anyone whose build runs with the hook loaded into every process | **Topic:** capture | **Area:** tools-native_trace | **Shape:** mechanical | **Reading:** container
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** quality gates audit (`docs/audits/quality-gates-2026-09-29.md`, 2026-09-29) | **Serves:** anyone whose build runs with the hook loaded into every process | **Topic:** capture | **Area:** tools-native_trace | **Shape:** mechanical | **Reading:** container
 
 **Guard:** none — named test_the_hook_builds_clean_and_sanitized.py, absent from tests/
 

@@ -1,6 +1,6 @@
 # UX-1108: a superseded pull request run keeps burning its runner minutes
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** quality gates audit (`docs/audits/quality-gates-2026-09-29.md`, 2026-09-29) | **Serves:** the implementing session, whose next push waits behind its last one | **Topic:** guards | **Area:** tools | **Shape:** mechanical | **Reading:** runner:test
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** quality gates audit (`docs/audits/quality-gates-2026-09-29.md`, 2026-09-29) | **Serves:** the implementing session, whose next push waits behind its last one | **Topic:** guards | **Area:** tools | **Shape:** mechanical | **Reading:** runner:test
 
 **Guard:** test_a_superseded_pr_run_is_cancelled.py
 

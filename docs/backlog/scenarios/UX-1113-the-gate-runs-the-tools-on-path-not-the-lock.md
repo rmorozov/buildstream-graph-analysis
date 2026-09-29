@@ -1,6 +1,6 @@
 # UX-1113: the gate runs whichever ruff and pyright are first on PATH, not the locked ones
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** quality gates audit (`docs/audits/quality-gates-2026-09-29.md`, 2026-09-29) | **Serves:** anyone whose push gate reds on a clean tree | **Topic:** guards | **Area:** tools | **Shape:** mechanical | **Reading:** container
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** quality gates audit (`docs/audits/quality-gates-2026-09-29.md`, 2026-09-29) | **Serves:** anyone whose push gate reds on a clean tree | **Topic:** guards | **Area:** tools | **Shape:** mechanical | **Reading:** container
 
 **Guard:** none — named test_the_gate_runs_the_locked_tools.py, absent from tests/
 

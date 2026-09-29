@@ -1,6 +1,6 @@
 # UX-1117: the scheduler-log parser is tested only on the logs someone thought to write
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** quality gates audit (`docs/audits/quality-gates-2026-09-29.md`, 2026-09-29) | **Serves:** anyone whose BuildStream version prints a line the fixtures never held | **Topic:** capture | **Area:** tools | **Shape:** mechanical | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** quality gates audit (`docs/audits/quality-gates-2026-09-29.md`, 2026-09-29) | **Serves:** anyone whose BuildStream version prints a line the fixtures never held | **Topic:** capture | **Area:** tools | **Shape:** mechanical | **Reading:** container
 
 **Guard:** none — named test_the_log_reader_holds_its_properties.py, absent from tests/
 

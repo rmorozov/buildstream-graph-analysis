@@ -1,6 +1,6 @@
 # UX-1123: the verification log re-grounds at round 151's merge
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-1120 | **Found by:** round 151 | **Serves:** whoever reads `architecture.md`'s Verification Log next | **Topic:** contracts | **Area:** bga | **Shape:** bounded | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-1120 | **Found by:** round 151 | **Serves:** whoever reads `architecture.md`'s Verification Log next | **Topic:** contracts | **Area:** bga | **Shape:** bounded | **Reading:** container
 
 **Guard:** test_the_verification_log_is_true.py
 

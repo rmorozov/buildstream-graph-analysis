@@ -1,6 +1,6 @@
 # UX-1121: timing gates red pull requests for the runner's speed
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** quality gates audit (`docs/audits/quality-gates-2026-09-29.md`, 2026-09-29); Ruslan took it on the audit thread (2026-09-29 06:09) | **Serves:** the implementing session, whose PR reds for a file it never touched | **Topic:** guards | **Area:** tools | **Shape:** mechanical | **Reading:** runner:test
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** quality gates audit (`docs/audits/quality-gates-2026-09-29.md`, 2026-09-29); Ruslan took it on the audit thread (2026-09-29 06:09) | **Serves:** the implementing session, whose PR reds for a file it never touched | **Topic:** guards | **Area:** tools | **Shape:** mechanical | **Reading:** runner:test
 
 **Guard:** test_a_timing_gate_reports_on_a_pr.py
 

@@ -1527,10 +1527,24 @@ def compute_jobserver_shares(ledger_rows: list, capacity: Optional[int]) -> tupl
     return idle / total, starved / total
 
 
+def jobserver_verdict(joined: str, peak: Optional[int], max_jobs: Optional[int]) -> Optional[str]:
+    """UX-1012: `drew` only when joined and the peak width exceeded the
+    element's own `max-jobs`; `yes` alone is the offer. `pinned`, `held`
+    and `unknown_kind` read as themselves and never `drew`; `None` when
+    a joined element has no peak or no `max-jobs` to set it against."""
+    if joined != "yes":
+        return joined
+    if peak is None or max_jobs is None:
+        return None
+    return "drew" if peak > max_jobs else "offered, not drawn"
+
+
 def compute_jobserver_per_element(
     elements: list,
     decision_rows: list,
     tokens_by_element: Optional[dict] = None,
+    peak_by_element: Optional[dict] = None,
+    admission_wait_by_element: Optional[dict] = None,
 ) -> dict:
     """UX-847: per-element `joined` (yes/pinned/held/unknown_kind) and
     the wrapper's own held-token stats, keyed by every element Plane 1
@@ -1555,6 +1569,8 @@ def compute_jobserver_per_element(
         if uid:
             by_element[uid] = row
     tokens_by_element = tokens_by_element or {}
+    peak_by_element = peak_by_element or {}
+    admission_wait_by_element = admission_wait_by_element or {}
     per_element = {}
     for uid in elements:
         decision_row = by_element.get(uid)
@@ -1571,10 +1587,16 @@ def compute_jobserver_per_element(
         else:
             joined = "yes"
         held_stats = tokens_by_element.get(uid) or {}
+        peak = peak_by_element.get(uid)
+        max_jobs = (decision_row or {}).get("max_jobs")
         per_element[uid] = {
             "joined": joined,
+            "peak_work_concurrency": peak,
+            "max_jobs": max_jobs,
+            "verdict": jobserver_verdict(joined, peak, max_jobs),
             "tokens_held_p50": held_stats.get("tokens_held_p50"),
             "tokens_held_max": held_stats.get("tokens_held_max"),
+            "admission_wait_us": admission_wait_by_element.get(uid),
         }
     return per_element
 
@@ -1595,8 +1617,19 @@ def compute_jobserver_block(
     idle_share, starved_share = compute_jobserver_shares(
         native_report.get("jobserver_ledger") or [], pool.get("capacity")
     )
+    from .normalize.timestamps import admission_wait_by_element_from_ledger
+
+    peak_by_element = {
+        entry["element"]: entry.get("peak_work_concurrency")
+        for entry in native_report.get("per_element_parallelism") or []
+        if isinstance(entry, dict) and entry.get("element")
+    }
     per_element = compute_jobserver_per_element(
-        elements, native_report.get("jobserver_decisions") or [], tokens_by_element
+        elements,
+        native_report.get("jobserver_decisions") or [],
+        tokens_by_element,
+        peak_by_element=peak_by_element,
+        admission_wait_by_element=admission_wait_by_element_from_ledger(native_report.get("jobserver_ledger") or []),
     )
     return {
         "mode": pool.get("mode"),

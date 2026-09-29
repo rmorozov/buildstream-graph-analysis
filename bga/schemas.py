@@ -5245,6 +5245,41 @@ _ANALYZE_HINTS["jobserver"] = {
                         "neither the shim nor a wrapper "
                         "named this element."
                     },
+                    "peak_work_concurrency": {
+                        QUANTITY: "count",
+                        "description": "The most work processes this "
+                        "element ran at once, from Plane 2's "
+                        "`per_element_parallelism`; null when "
+                        "the tracer saw none.",
+                    },
+                    "max_jobs": {
+                        QUANTITY: "count",
+                        "description": "The element's own `max-jobs`, "
+                        "from the shim's decision row; null "
+                        "when the shim wrote none.",
+                    },
+                    "verdict": {
+                        "description": "drew when joined and the peak "
+                        "width exceeded `max-jobs` - the "
+                        "pool's tokens were used; offered, "
+                        "not drawn when joined at a peak "
+                        "no wider than `max-jobs`; pinned, "
+                        "held and unknown_kind repeat "
+                        "`joined` and never read drew; null "
+                        "when joined with no peak or no "
+                        "`max-jobs` to compare."
+                    },
+                    "admission_wait_us": {
+                        QUANTITY: "duration_us",
+                        DIRECTION: "lower_is_better",
+                        "description": "Time the shim blocked this "
+                        "element on an admission token "
+                        "before its sandbox started "
+                        "(UX-1005); the admission token "
+                        "is the element's own slot, not a "
+                        "draw. Null when no wait was "
+                        "recorded.",
+                    },
                     "tokens_held_p50": {
                         QUANTITY: "count",
                         "description": "Median tokens a wrapper tool "

@@ -1251,6 +1251,59 @@ def _render_pipeline_overhead_section(result: AnalysisResult, section, by_kind, 
     return lines
 
 
+# UX-1012: the draws first, then the offers; the rest read as their `joined`.
+_JOBSERVER_VERDICT_RANK = ("drew", "offered, not drawn", None, "held", "pinned", "unknown_kind")
+_JOBSERVER_ROWS = 20
+
+
+def _jobserver_rank(item) -> tuple:
+    uid, row = item
+    verdict = row.get("verdict")
+    rank = (
+        _JOBSERVER_VERDICT_RANK.index(verdict) if verdict in _JOBSERVER_VERDICT_RANK else len(_JOBSERVER_VERDICT_RANK)
+    )
+    return rank, uid
+
+
+def _format_jobserver_table(block: dict) -> list[str]:
+    rows = sorted((block.get("per_element") or {}).items(), key=_jobserver_rank)
+    if not rows:
+        return []
+
+    def cell(value) -> str:
+        return "-" if value is None else str(value)
+
+    lines = [
+        "Jobserver:",
+        f"  {'element':<32} {'joined':<12} {'peak/max-jobs':>13}  {'verdict':<18} {'tokens held':>11} {'admission wait':>14}",
+    ]
+    for uid, row in rows[:_JOBSERVER_ROWS]:
+        width = f"{cell(row.get('peak_work_concurrency'))}/{cell(row.get('max_jobs'))}"
+        wait = row.get("admission_wait_us")
+        lines.append(
+            f"  {uid:<32} {cell(row.get('joined')):<12} {width:>13}  {cell(row.get('verdict')):<18} "
+            f"{cell(row.get('tokens_held_max')):>11} {(_fmt_us(wait) if wait is not None else '-'):>14}"
+        )
+    if len(rows) > _JOBSERVER_ROWS:
+        lines.append(_elision(len(rows) - _JOBSERVER_ROWS, "--format json"))
+    lines.append("")
+    return lines
+
+
+def _render_jobserver_section(result: AnalysisResult, section, by_kind, full_sections, explain) -> list[str]:
+    """UX-1012: which elements drew from the jobserver, not only which were offered it."""
+    native_report = getattr(result, "plane2_report", None)
+    if section is not None or not native_report:
+        return []
+    from ..correlate import compute_jobserver_block
+
+    elements = sorted({task.task_key.element_uid for task in getattr(result, "normalized_tasks", None) or []})
+    block = compute_jobserver_block(
+        native_report, elements, tokens_by_element=native_report.get("jobserver_tokens_by_element")
+    )
+    return _format_jobserver_table(block) if block else []
+
+
 def _render_plane2_absence_section(result: AnalysisResult, section, by_kind, full_sections, explain) -> list[str]:
     """UX-329: why Plane 2 is not in this report, when it is not."""
     lines = []
@@ -1292,6 +1345,7 @@ _render_diagnostics_section.heading = "Advanced Diagnostics:"
 _render_structural_section.heading = "Structural Analysis:"
 _render_by_kind_section.heading = "By Element Kind:"
 _render_pipeline_overhead_section.heading = "Pipeline Overhead (not attributable to individual elements):"
+_render_jobserver_section.heading = "Jobserver:"
 _render_plane2_absence_section.heading = "Plane 2:"
 _render_next_steps_section.heading = "Next:"
 _render_footer_section.heading = None
@@ -1311,6 +1365,7 @@ _TEXT_REPORT_SECTIONS = [
     _render_structural_section,
     _render_by_kind_section,
     _render_pipeline_overhead_section,
+    _render_jobserver_section,
     _render_plane2_absence_section,
     _render_next_steps_section,
     _render_footer_section,

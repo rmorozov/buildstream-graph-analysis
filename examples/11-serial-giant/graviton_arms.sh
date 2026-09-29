@@ -69,7 +69,7 @@ i, s = compute_jobserver_shares(r.get("jobserver_ledger") or [], pool.get("capac
 adm = r.get("jobserver_admission_pool") or {}
 print("pool %s idle %.2f starved %.2f admit %s wait %.1fs rank %s psiw %s" % (pool.get("mode"), i, s,
       adm.get("pool_size"), (adm.get("wait_total_us") or 0) / 1e6, adm.get("ranking_source"),
-      (pool.get("memory") or {}).get("psi_memory_withdraws")))' "$1"
+      (pool.get("memory") or {}).get("psi_memory_withdraws")) + " rssw %s" % (pool.get("memory") or {}).get("rss_withheld"))' "$1"
 }
 
 binaries() {  # the heaviest element's top binaries by kernel-measured CPU (UX-69)

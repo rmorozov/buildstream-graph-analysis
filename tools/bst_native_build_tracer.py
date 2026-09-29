@@ -2445,6 +2445,12 @@ def run_traced_build(
                     psi_paths={
                         "broker_owns_audit": bool(element_kinds and (plan_path or element_deps)),
                         "seed": jobserver_seed,
+                        # UX-1134: no plan, so measured RSS gates the pool's adds.
+                        **(
+                            {}
+                            if plan_path
+                            else {"trace_log": os.path.join(bind_dir, "trace.log"), "decisions": captured_decisions}
+                        ),
                     },
                 )
                 pool_controller.start()

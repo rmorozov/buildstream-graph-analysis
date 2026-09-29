@@ -1241,6 +1241,8 @@ def record_jobserver_decision(
             "decision": decision,
             "kind": element_kind,
             "policy": policy,
+            # UX-1134: the host pid the pool's memory gate walks from (execv keeps it for bwrap).
+            "pid": os.getpid(),
         }
         if unresolved:
             record["element_unresolved"] = True

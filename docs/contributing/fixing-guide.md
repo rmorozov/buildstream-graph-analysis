@@ -375,6 +375,8 @@ tools/jobserver/ledger.py    the ledger's rows, and `report_block()`
 tools/jobserver/_jsonl.py    the one tolerant JSON-lines read they share
 tools/jobserver/cached_logs.py  admission's `cached-logs` ranking, read from
                          `bst artifact log`
+tools/jobserver/memory.py    the gate that withholds a token for measured RSS
+                         when no plan names a peak
 tools/nix_store_fetch.py     the examples' pinned make, fetched and
                          unpacked without Nix (UX-915)
 tools/nix_closure.py         a pin's whole closure, walked through the

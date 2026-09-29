@@ -1,6 +1,6 @@
 # UX-1126: the size ledger's duplicate count depends on the filesystem's walk order
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-712 | **Found by:** round 151, PR #301's `sizes` check | **Serves:** anyone whose push-check reads green and whose CI `sizes` reads red | **Topic:** guards | **Area:** tools | **Shape:** judgement | **Reading:** container
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-712 | **Found by:** round 151, PR #301's `sizes` check | **Serves:** anyone whose push-check reads green and whose CI `sizes` reads red | **Topic:** guards | **Area:** tools | **Shape:** judgement | **Reading:** container
 
 **Guard:** test_the_size_ledger_only_shrinks.py
 

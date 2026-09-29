@@ -3,16 +3,18 @@
 Run on 2026-09-29 off the quality-gates audit
 (`docs/audits/quality-gates-2026-09-29.md`), which filed `UX-1108`-`UX-1123`.
 Ruslan lifted the process cap for the round (2026-09-29 06:19, "let's batch
-tasks you filed and implement them in parallel"). Fifteen close; `UX-1118`
-(the formatter) stays open and lands after this close as its own track;
-`UX-1123` is filed and closed; `UX-1124` and `UX-1125` are filed open.
+tasks you filed and implement them in parallel"). Seventeen close: `UX-1118`
+(the formatter) landed after the first close as its own track, and
+`UX-1123` and `UX-1126` were filed and closed at the merge and on CI;
+`UX-1124` and `UX-1125` are filed open.
 
 ```text
 closed   UX-1108 UX-1109 UX-1110 UX-1111 UX-1112 UX-1113 UX-1114 UX-1115
-         UX-1116 UX-1117 UX-1119 UX-1120 UX-1121 UX-1122 UX-1123
-filed    UX-1123 UX-1124 UX-1125
-open     UX-1118 (formatter) UX-1124 UX-1125
-index    dev_close_task.py --counts: 1078 scenarios, 24 open, 1054 closed
+         UX-1116 UX-1117 UX-1118 UX-1119 UX-1120 UX-1121 UX-1122 UX-1123
+         UX-1126
+filed    UX-1123 UX-1124 UX-1125 UX-1126
+open     UX-1124 UX-1125
+index    dev_close_task.py --counts: 1079 scenarios, 23 open, 1056 closed
 spread   dev_touching.py --spread: 34-175 of 700 test files
 census   34 files, 1887 tests, 68.9 s
 ```
@@ -34,6 +36,8 @@ census   34 files, 1887 tests, 68.9 s
 - `UX-1121` — the tier-drift and analyzer-clock verdicts report on a PR; timing.yml judges them daily on main.
 - `UX-1122` — dev_guard_prices.py joins CI seconds to the Guard map; the retro prices its guards (215 need an owner, 328 inferred owners to confirm).
 - `UX-1123` — the Verification Log gains the round-151 entry (63 properties, 26 emitted ids).
+- `UX-1118` — the tree is `ruff format`-ed, quote-style preserve (859 files), held by lint and the edit hook.
+- `UX-1126` — the size ledger hands pylint its files sorted; CI's walk order had moved an R0801 cell.
 
 ## Filed
 

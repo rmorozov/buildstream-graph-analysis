@@ -27,7 +27,6 @@ task file, which is the only place it ever lived twice.
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
 | UX-902 | [a showcase case is two captures, and there is nowhere to put one](UX-0902-the-showcase-case-file-and-its-two-capture-rule.md) | docs | High | R1, R2, R8 | 🔴 Not Started |
-| UX-1013 | [admission ranks from BuildStream's own cached build logs when bga never captured the project](UX-1013-admission-ranks-from-buildstreams-own-cached-build-logs.md) | capture | Medium | R4, R5 | 🔴 Not Started |
 | UX-1014 | [the "safe cap plus auto" default is measured on more shapes and hosts before it is anyone's default](UX-1014-the-builders-and-auto-default-is-measured-on-more-shapes-and-hosts.md) | capture | High | R4, R5 | 🔴 Not Started |
 | UX-1134 | [`--jobserver auto` with no plan widens a memory-bound giant into the OOM killer](UX-1134-auto-oom-kills-a-memory-bound-giant-with-no-plan.md) | capture | High | R4, R5 | 🔴 Not Started |
 | UX-1040 | [a paired reading decides whether implementers move to opus at low effort](UX-1040-a-paired-reading-decides-the-implementers-model.md) | guards | Medium | every round's implementer spend | 🔴 Not Started |

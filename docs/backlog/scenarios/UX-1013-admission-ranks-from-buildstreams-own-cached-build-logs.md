@@ -1,6 +1,6 @@
 # UX-1013: admission ranks from BuildStream's own cached build logs when bga never captured the project
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-1005 | **Found by:** Ruslan on the Graviton thread (2026-09-25), on ranking admission with no previous capture | **Serves:** R4, R5 | **Topic:** capture | **Area:** tools | **Shape:** judgement | **Reading:** runner:bst-examples
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-1005 | **Found by:** Ruslan on the Graviton thread (2026-09-25), on ranking admission with no previous capture | **Serves:** R4, R5 | **Topic:** capture | **Area:** tools | **Shape:** judgement | **Reading:** runner:bst-examples
 
 **Guard:** `tests/unit/test_admission_ranks_from_cached_logs.py`
 
@@ -77,7 +77,11 @@ capture prints `admission ranking: cached-logs (P of N parsed) | first:
 parsed)`, and `jobserver_admission_pool.ranking_source` carries the
 source. CI step `11's second capture ranks admission from the cached
 logs (UX-1013)` prints that line as a notice on a warm-cache second
-capture of `11-serial-giant` - the Acceptance Test's reading, pending CI.
+capture of `11-serial-giant` - the Acceptance Test's reading, taken on `bst-examples` at `13731ab9` (PR #303, check run 109521626077):
+
+```text
+UX-1013 ranking | admission ranking: cached-logs (6 of 8 parsed) | first: giant.bst, leaf-a.bst, leaf-b.bst
+```
 
 ```text
 $ python3 -m pytest -v tests/unit/test_admission_ranks_from_cached_logs.py

@@ -171,7 +171,8 @@ class TestTheSelectorStillSelects:
     # `UX-1120`'s census member adds one file to every selection: median 39, p90 63, max 175 over 697.
     # Round 151's merged tree (UX-1112/1113/1119's guards name the lint tools): median 40 over 700.
     # `UX-900`'s tree-of-bundles guard runs `bundle --load DIR` through `bga.cli`: median 40, p90 63, max 176 over 702.
-    CEILING = {"median": 40, "p90": 63, "max": 176}
+    # Round 152's merged tree (UX-1106's and UX-1131's guards name `bga.cli`): median 40, p90 63, max 178 over 715.
+    CEILING = {"median": 40, "p90": 63, "max": 178}
     POPULATION_FLOOR = 60
     #: `UX-645`: **13 census + 14 of your own**. The census floor is
     #: inside this bound because those files run - the figure is what

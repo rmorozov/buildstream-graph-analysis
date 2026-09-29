@@ -39,7 +39,7 @@ derivation actually reads.
 
 | release | date | closed rows | kind |
 |---|---|---|---|
-| [Unreleased](#unreleased) | — | — | extending |
+| [0.5.0](#050--the-tool-prices-its-own-cost-and-the-jobserver-2026-09-29) | 2026-09-29 | 1083 | extending |
 | [0.4.1](#041--the-tool-says-what-it-assumes-2026-09-12) | 2026-09-12 | 813 | patch |
 | [0.4.0](#040--a-capture-you-can-carry-2026-09-03) | 2026-09-03 | 537 | breaking |
 | [0.3.0](#030--every-document-says-what-shape-it-is-2026-08-27) | 2026-08-27 | 332 | breaking |
@@ -61,22 +61,343 @@ Both are wrong: `pyproject.toml` enters this history at `4ace856`
 (2026-08-13) and `0.2.0` is an ordinary release. The wrong correction
 was read off a shallow clone — `UX-633`, and `UX-637` for the cause.
 
-## Unreleased
+## 0.5.0 — the tool prices its own cost and the jobserver (2026-09-29)
 
-What has landed since `0.4.1` and not been cut. The state below is
-this tree's, and the kind in the table is what the next cut would be
-(`UX-1078`).
+Named for what the tree now says about itself. The snapshot records what
+`bga` itself cost after the build (`tail/v1`, `UX-1078`); `bga compare`
+and `bga view` read each side's published analysis instead of analysing
+both runs again, and `--reanalyse` forces the old path (`UX-1073`).
+Round 152's jobserver work is what a user meets first: `bga analyze`
+now recommends a builder count and a pool size from a capture, with the
+next token going to the critical path (`UX-1005`), and qualifies its
+`--jobserver auto` advice by the capture's memory, because widening a
+memory-bound giant on the default kills it in the OOM killer
+(`UX-1134`). `bga junction-cost` prices N separate CI builds against one
+junctioned invocation (`UX-904`), and `bga bundle --load` takes a
+directory tree of bundles, all or none, so a store can be rebuilt from
+what CI kept (`UX-900`).
 
 **Contract delta:** two new contracts, `tail/v1` - what bga itself
 costs after the build, written beside each snapshot (`UX-1078`) - and
 `junction-cost/v1` - N variant builds priced against one junctioned
 invocation, printed by the new `bga junction-cost` (`UX-904`) - which
-makes the next cut `extending`.
+makes this cut `extending`.
+
+**Upgrade note:** none. `tail/v1` and `junction-cost/v1` are new files
+beside the old ones; `--reanalyse` and `bundle --load DIR` are new
+spellings, nothing was removed or renamed.
+
+**Carried findings.** Review 28 (closed-row marker 982) filed two
+bookkeeping lines and no task file, so it leaves no open row. Walk
+seed 4 ([`walk-seed-4.md`](docs/audits/walk-seed-4.md), on `74aa14f2`)
+filed `UX-1135`, closed before this cut, and six bookkeeping lines.
+`UX-1134`'s memory gate ships with its Graviton reading still open.
 
 ```text state
 contracts: analyze/v2 analyze/v3 analyze/v4 analyze/v5 analyze/v6 blast/v1 blast/v2 bundle-manifest/v1 capacity-model/v1 capture-layout/v1 compare/v1 compare/v2 correlate/v1 correlate/v2 host-samples/v1 host/v1 host/v2 junction-cost/v1 plane2/v1 plane2/v2 plane2/v3 sources/v1 store-aggregate/v1 store/v1 sweep/v1 tail/v1 whatif/v1
 commands: analyze baseline blast bundle cache-logs cache-trend capture checkout-cost chrome-to-trace compare correlate cross-check diagnostics doctor extract floors gen-synthetic graph graph-from-show junction-cost log-to-chrome native-to-chrome rebuild-set release-notes replay run-context snapshot sweep timeline utilisation view whatif wrap
 ```
+
+### What landed
+
+<!-- generated: UX-252 813→1083 -->
+270 scenarios closed (closed-row markers 813 → 1083).
+
+**contracts**
+
+- [UX-838](UX-0838-fan-in-direct-ships-with-no-prose-and-no-guard-can-see-it.md) — [`fan_in[].direct` ships with no prose, and no guard can see it](UX-0838-fan-in-direct-ships-with-no-prose-and-no-guard-can-see-it.md)
+- [UX-851](UX-0851-the-jobserver-is-a-capture-option-and-a-snapshot-fact.md) — [the jobserver is a capture option and a snapshot fact](UX-0851-the-jobserver-is-a-capture-option-and-a-snapshot-fact.md)
+- [UX-898](UX-0898-a-comparison-class-is-the-host-and-the-build-type.md) — [a comparison class is the host class and the build type together](UX-0898-a-comparison-class-is-the-host-and-the-build-type.md)
+- [UX-903](UX-0903-a-variant-is-a-second-axis-under-the-build-type.md) — [a variant is a second axis under the build type, and nothing records it](UX-0903-a-variant-is-a-second-axis-under-the-build-type.md)
+- [UX-1031](UX-1031-every-growing-sequence-is-declared-in-the-schema.md) — [every list and data-keyed map in the payload is declared, with whether it grows](UX-1031-every-growing-sequence-is-declared-in-the-schema.md)
+- [UX-1101](UX-1101-the-verification-log-is-re-grounded-at-a-shared-merge.md) — [the verification log is re-grounded at a shared merge](UX-1101-the-verification-log-is-re-grounded-at-a-shared-merge.md)
+- [UX-1060](UX-1060-every-exported-value-path-declares-what-it-discloses.md) — [every exported value path declares what it discloses](UX-1060-every-exported-value-path-declares-what-it-discloses.md)
+- [UX-1070](UX-1070-the-disclosure-policy-names-what-the-producer-writes.md) — [the disclosure policy names what the producer writes](UX-1070-the-disclosure-policy-names-what-the-producer-writes.md)
+- [UX-1103](UX-1103-the-verification-log-and-the-loop-ceiling-re-ground-at-the-298-300-merge.md) — [the verification log and the loop ceiling re-ground at the #298/#300 merge](UX-1103-the-verification-log-and-the-loop-ceiling-re-ground-at-the-298-300-merge.md)
+- [UX-1123](UX-1123-the-verification-log-re-grounds-at-round-151.md) — [the verification log re-grounds at round 151's merge](UX-1123-the-verification-log-re-grounds-at-round-151.md)
+- [UX-1131](UX-1131-the-schema-count-says-ten-and-bga-schema-prints-nine.md) — [`docs/README.md` counts ten printable contracts and `bga --schema` prints nine](UX-1131-the-schema-count-says-ten-and-bga-schema-prints-nine.md)
+- [UX-1133](UX-1133-the-verification-log-re-grounds-at-round-152.md) — [round 152's architecture.md edits get their verification-log entry](UX-1133-the-verification-log-re-grounds-at-round-152.md)
+
+**cli**
+
+- [UX-1036](UX-1036-the-export-message-prints-a-double-period.md) — [`bga view --export` prints a double period before its timeline hint](UX-1036-the-export-message-prints-a-double-period.md)
+- [UX-1038](UX-1038-cli-output-prints-parenthesised-plurals.md) — [CLI output prints `(s)` plurals where the count is known](UX-1038-cli-output-prints-parenthesised-plurals.md)
+- [UX-1077](UX-1077-the-tail-and-the-view-say-what-they-are-doing.md) — [the snapshot tail and bga view run minutes of work with no progress and no timing](UX-1077-the-tail-and-the-view-say-what-they-are-doing.md)
+- [UX-1064](UX-1064-a-pseudonym-in-any-text-resolves-back-to-the-real-name.md) — [a pseudonym in any text resolves back to the real name](UX-1064-a-pseudonym-in-any-text-resolves-back-to-the-real-name.md)
+
+**analysis**
+
+- [UX-827](UX-0827-the-distribution-twin-draws-five-of-sixteen-published-marks-and-no-mean.md) — [the distribution twin draws five of sixteen published marks, and no mean](UX-0827-the-distribution-twin-draws-five-of-sixteen-published-marks-and-no-mean.md)
+- [UX-826](UX-0826-five-bare-task-ids-and-a-pipe-delimited-task-key-reach-the-reader.md) — [five bare task ids and a pipe-delimited task key reach the reader](UX-0826-five-bare-task-ids-and-a-pipe-delimited-task-key-reach-the-reader.md)
+- [UX-823](UX-0823-the-intervals-from-column-renders-a-monotonic-epoch-as-a-duration.md) — [the intervals' From column renders a monotonic epoch as a duration](UX-0823-the-intervals-from-column-renders-a-monotonic-epoch-as-a-duration.md)
+- [UX-817](UX-0817-the-join-calls-a-zero-rebuilt-run-an-attribution-failure.md) — [the join calls a zero-rebuilt run an attribution failure](UX-0817-the-join-calls-a-zero-rebuilt-run-an-attribution-failure.md)
+- [UX-833](UX-0833-a-declared-source-kind-map-for-custom-source-plugins.md) — [a declared source-kind map for custom source plugins](UX-0833-a-declared-source-kind-map-for-custom-source-plugins.md)
+- [UX-830](UX-0830-the-serial-chains-ranked-not-the-longest-one.md) — [the serial chains, ranked, not the longest one](UX-0830-the-serial-chains-ranked-not-the-longest-one.md)
+- [UX-847](UX-0847-the-token-ledger-lands-in-plane-2-and-the-page.md) — [the token ledger lands in Plane 2 and the page](UX-0847-the-token-ledger-lands-in-plane-2-and-the-page.md)
+- [UX-861](UX-0861-a-builder-count-above-the-hosts-cores-is-never-recommended-verbatim.md) — [a builder count above the host's cores is never recommended verbatim](UX-0861-a-builder-count-above-the-hosts-cores-is-never-recommended-verbatim.md)
+- [UX-860](UX-0860-swap-is-a-finding-not-a-word-in-a-cpu-sentence.md) — [swap is a finding, not a word in a CPU sentence](UX-0860-swap-is-a-finding-not-a-word-in-a-cpu-sentence.md)
+- [UX-891](UX-0891-the-certified-floors-never-divide-by-the-machines-cores.md) — [the certified floors never divide by the machine's cores](UX-0891-the-certified-floors-never-divide-by-the-machines-cores.md)
+- [UX-899](UX-0899-the-seconds-slower-gate-needs-a-band-not-a-pair.md) — ["this PR made the build N seconds slower" needs a band, not a pair](UX-0899-the-seconds-slower-gate-needs-a-band-not-a-pair.md)
+- [UX-1073](UX-1073-compare-reads-the-published-analyses.md) — [compare reads each side's published analysis instead of analyzing both runs again](UX-1073-compare-reads-the-published-analyses.md)
+- [UX-1074](UX-1074-reachability-is-one-bitset-closure-per-graph.md) — [graph reachability is materialised as sets, five times per analysis](UX-1074-reachability-is-one-bitset-closure-per-graph.md)
+- [UX-1106](UX-1106-blast-radius-sums-durations-off-the-bitset.md) — [blast radius decodes every element's downstream set to sum durations over it](UX-1106-blast-radius-sums-durations-off-the-bitset.md)
+- [UX-1012](UX-1012-the-report-says-which-elements-drew-from-the-jobserver.md) — [the report says which elements drew from the jobserver, not only which were offered it](UX-1012-the-report-says-which-elements-drew-from-the-jobserver.md)
+- [UX-1008](UX-1008-a-consumer-with-no-width-promise-is-named.md) — [a consumer with no width promise is named, not silently oversubscribing](UX-1008-a-consumer-with-no-width-promise-is-named.md)
+- [UX-904](UX-0904-separate-invocations-or-one-junctioned-build.md) — [nothing prices N separate CI builds against one junctioned invocation](UX-0904-separate-invocations-or-one-junctioned-build.md)
+- [UX-1005](UX-1005-bga-recommends-builders-and-pool-size-from-a-capture.md) — [bga recommends a builder count and a pool size from a capture, and the critical path gets the next token](UX-1005-bga-recommends-builders-and-pool-size-from-a-capture.md)
+- [UX-1135](UX-1135-the-joint-saving-compares-against-each-elements-own-saving.md) — [the joint saving compares against each element's own saving, not the horizon's steps](UX-1135-the-joint-saving-compares-against-each-elements-own-saving.md)
+
+**capture**
+
+- [UX-841](UX-0841-the-tracers-fifo-lifecycle-is-guarded-and-the-auth-style-follows-make.md) — [the tracer's FIFO lifecycle is guarded, and the auth style follows `make`](UX-0841-the-tracers-fifo-lifecycle-is-guarded-and-the-auth-style-follows-make.md)
+- [UX-845](UX-0845-the-pool-follows-the-machine-not-the-load-average.md) — [the pool follows the machine, not the load average](UX-0845-the-pool-follows-the-machine-not-the-load-average.md)
+- [UX-842](UX-0842-a-pinned-element-never-joins-the-jobserver.md) — [a pinned element never joins the jobserver](UX-0842-a-pinned-element-never-joins-the-jobserver.md)
+- [UX-843](UX-0843-the-per-kind-environment-table-and-the-ninja-that-cannot-join.md) — [the per-kind environment table, and the ninja that cannot join](UX-0843-the-per-kind-environment-table-and-the-ninja-that-cannot-join.md)
+- [UX-848](UX-0848-a-compile-bound-example-is-the-jobservers-evaluation.md) — [a compile-bound example is the jobserver's evaluation](UX-0848-a-compile-bound-example-is-the-jobservers-evaluation.md)
+- [UX-846](UX-0846-a-tool-that-will-not-read-the-pipe-holds-tokens-instead.md) — [a tool that will not read the pipe holds tokens instead](UX-0846-a-tool-that-will-not-read-the-pipe-holds-tokens-instead.md)
+- [UX-852](UX-0852-outstanding-tokens-are-audited-against-live-processes.md) — [outstanding tokens are audited against live processes](UX-0852-outstanding-tokens-are-audited-against-live-processes.md)
+- [UX-849](UX-0849-per-element-proxies-grant-tokens-by-slack.md) — [per-element proxies grant tokens by slack](UX-0849-per-element-proxies-grant-tokens-by-slack.md)
+- [UX-850](UX-0850-memory-is-a-second-resource-the-pool-reads.md) — [memory is a second resource the pool reads](UX-0850-memory-is-a-second-resource-the-pool-reads.md)
+- [UX-853](UX-0853-the-memory-gate-sums-the-elements-that-run-together.md) — [the memory gate sums the elements that run together](UX-0853-the-memory-gate-sums-the-elements-that-run-together.md)
+- [UX-856](UX-0856-the-jobserver-is-a-snapshot-switch.md) — [the jobserver is a snapshot switch](UX-0856-the-jobserver-is-a-snapshot-switch.md)
+- [UX-854](UX-0854-a-proxy-token-held-by-a-killed-job-is-audited-too.md) — [a proxy token held by a killed job is audited too](UX-0854-a-proxy-token-held-by-a-killed-job-is-audited-too.md)
+- [UX-857](UX-0857-one-long-element-under-a-cap-is-the-servers-shape.md) — [one long element under a cap is the server's shape](UX-0857-one-long-element-under-a-cap-is-the-servers-shape.md)
+- [UX-859](UX-0859-a-recipe-that-spends-jobs-joins-the-jobserver-whatever-its-kind.md) — [a recipe that spends `JOBS` joins the jobserver, whatever its kind](UX-0859-a-recipe-that-spends-jobs-joins-the-jobserver-whatever-its-kind.md)
+- [UX-865](UX-0865-a-relative-open-is-recorded-against-its-cwd.md) — [a relative open is recorded against its cwd](UX-0865-a-relative-open-is-recorded-against-its-cwd.md)
+- [UX-858](UX-0858-the-pool-grows-toward-the-machine-not-its-opening-seed.md) — [the pool grows toward the machine, not its opening seed](UX-0858-the-pool-grows-toward-the-machine-not-its-opening-seed.md)
+- [UX-870](UX-0870-the-kinds-read-carries-the-users-own-bst-options-and-says-why-it-failed.md) — [the kinds read carries the user's own bst options and says why it failed](UX-0870-the-kinds-read-carries-the-users-own-bst-options-and-says-why-it-failed.md)
+- [UX-871](UX-0871-a-junctioned-element-finds-its-kind.md) — [a junctioned element finds its kind](UX-0871-a-junctioned-element-finds-its-kind.md)
+- [UX-869](UX-0869-the-jobserver-fifo-mounts-under-the-bind-destination.md) — [the jobserver FIFO mounts under the bind destination](UX-0869-the-jobserver-fifo-mounts-under-the-bind-destination.md)
+- [UX-873](UX-0873-the-target-read-knows-the-subcommands-own-option-arity.md) — [the target read knows the subcommand's own option arity](UX-0873-the-target-read-knows-the-subcommands-own-option-arity.md)
+- [UX-872](UX-0872-a-junctioned-example-builds-under-the-mode-in-ci.md) — [a junctioned example builds under the mode in CI](UX-0872-a-junctioned-example-builds-under-the-mode-in-ci.md)
+- [UX-875](UX-0875-bga-snapshot-forwards-the-auth-style.md) — [bga snapshot forwards the jobserver auth style](UX-0875-bga-snapshot-forwards-the-auth-style.md)
+- [UX-874](UX-0874-the-auth-style-follows-the-make-that-consumes-it.md) — [the jobserver auth style follows the make that consumes it](UX-0874-the-auth-style-follows-the-make-that-consumes-it.md)
+- [UX-876](UX-0876-auto-picks-fd-the-style-every-make-accepts.md) — [jobserver auto picks fd, the style every make accepts](UX-0876-auto-picks-fd-the-style-every-make-accepts.md)
+- [UX-877](UX-0877-the-downgrade-covers-every-kind-that-injects-makeflags.md) — [the sandbox-make downgrade covers every kind that injects MAKEFLAGS](UX-0877-the-downgrade-covers-every-kind-that-injects-makeflags.md)
+- [UX-878](UX-0878-the-lto-link-survives-the-jobserver.md) — the injected jobserver never reaches gcc's lto-wrapper as an fd it can't use
+- [UX-879](UX-0879-a-per-element-switch-forces-the-jobserver-auth-style.md) — a per-element switch forces the jobserver auth style, overriding auto
+- [UX-880](UX-0880-a-compiler-lto-shim-fills-the-box-without-the-ice.md) — [a compiler-LTO shim fills the box without the gcc-13 ICE](UX-0880-a-compiler-lto-shim-fills-the-box-without-the-ice.md)
+- [UX-883](UX-0883-a-preflight-warns-when-lto-meets-a-sub-4-4-make.md) — [a preflight warns when an LTO element meets a sub-4.4 make](UX-0883-a-preflight-warns-when-lto-meets-a-sub-4-4-make.md)
+- [UX-881](UX-0881-an-operator-ships-their-own-wrapper-directory.md) — [an operator ships their own wrapper directory for a custom-prefix toolchain](UX-0881-an-operator-ships-their-own-wrapper-directory.md)
+- [UX-882](UX-0882-a-public-annotation-sets-the-jobserver-auth-style.md) — [a `public:` annotation sets the jobserver auth style, version-controlled](UX-0882-a-public-annotation-sets-the-jobserver-auth-style.md)
+- [UX-888](UX-0888-the-ninja-wrapper-owns-ninjas-j-flag.md) — [the ninja wrapper owns ninja's -j, stripping the recipe's own](UX-0888-the-ninja-wrapper-owns-ninjas-j-flag.md)
+- [UX-896](UX-0896-the-caches-capacity-is-invisible-until-it-rebuilds.md) — [the cache's capacity is invisible until it rebuilds](UX-0896-the-caches-capacity-is-invisible-until-it-rebuilds.md)
+- [UX-897](UX-0897-transfer-is-seconds-and-never-bytes.md) — [transfer is measured in seconds and never in bytes](UX-0897-transfer-is-seconds-and-never-bytes.md)
+- [UX-892](UX-0892-the-per-element-token-record-drops-the-timestamp-it-was-given.md) — [the per-element token record drops the timestamp it was given](UX-0892-the-per-element-token-record-drops-the-timestamp-it-was-given.md)
+- [UX-893](UX-0893-cores-busy-is-an-average-over-the-span-not-a-curve.md) — [cores busy is an average over the span, not a curve](UX-0893-cores-busy-is-an-average-over-the-span-not-a-curve.md)
+- [UX-894](UX-0894-the-requested-j-is-an-argv-regex-over-three-binaries.md) — [the requested -j is an argv regex over three binaries, not the element's resolved width](UX-0894-the-requested-j-is-an-argv-regex-over-three-binaries.md)
+- [UX-907](UX-0907-an-artifacts-weight-has-no-cheap-source.md) — [an artifact's weight has no cheap source](UX-0907-an-artifacts-weight-has-no-cheap-source.md)
+- [UX-906](UX-0906-the-jobservers-corner-cases-are-a-register-not-a-memory.md) — [the jobserver's corner cases live in twelve task files and no register](UX-0906-the-jobservers-corner-cases-are-a-register-not-a-memory.md)
+- [UX-901](UX-0901-the-jobserver-is-a-subtool-behind-a-boundary.md) — [the jobserver is a subtool behind a boundary](UX-0901-the-jobserver-is-a-subtool-behind-a-boundary.md)
+- [UX-1001](UX-1001-ninja-1-13s-client-is-read-by-its-version-not-its-help.md) — [ninja 1.13's jobserver client is read by its version, not its help text](UX-1001-ninja-1-13s-client-is-read-by-its-version-not-its-help.md)
+- [UX-1002](UX-1002-a-capture-names-its-physical-cores.md) — [a capture names its physical cores, not only its logical CPUs](UX-1002-a-capture-names-its-physical-cores.md)
+- [UX-1003](UX-1003-a-shared-build-root-hides-the-kind-so-make-elements-never-join.md) — [a shared build root hides the element's kind, so fdsdk's make elements never join](UX-1003-a-shared-build-root-hides-the-kind-so-make-elements-never-join.md)
+- [UX-1004](UX-1004-the-runner-s-effective-core-count-is-calibrated.md) — [the runner's effective core count is calibrated, not read from nproc](UX-1004-the-runner-s-effective-core-count-is-calibrated.md)
+- [UX-1006](UX-1006-a-wrapped-ninja-hands-gcc-a-fifo-not-a-blocking-fd-pair.md) — [a wrapped ninja hands gcc a fifo path, not a blocking fd pair](UX-1006-a-wrapped-ninja-hands-gcc-a-fifo-not-a-blocking-fd-pair.md)
+- [UX-884](UX-0884-the-lto-scrub-covers-make-and-autotools-kinds.md) — [the LTO scrub covers make/autotools kinds, not only cmake/meson/cargo](UX-0884-the-lto-scrub-covers-make-and-autotools-kinds.md)
+- [UX-1009](UX-1009-the-examples-cannot-stage-their-toolchain-on-aarch64.md) — [the examples cannot stage their toolchain on aarch64](UX-1009-the-examples-cannot-stage-their-toolchain-on-aarch64.md)
+- [UX-895](UX-0895-the-captures-own-overhead-is-unmeasured.md) — [the capture's own overhead is unmeasured, so Plane 2 on every build is a guess](UX-0895-the-captures-own-overhead-is-unmeasured.md)
+- [UX-905](UX-0905-the-jobserver-has-no-compile-bound-project-at-scale.md) — [the jobserver has no compile-bound project at the scale it is meant for](UX-0905-the-jobserver-has-no-compile-bound-project-at-scale.md)
+- [UX-1011](UX-1011-jobserver-auto-pays-three-bst-show-calls-before-the-build.md) — [`--jobserver auto` pays three `bst show` calls before the build](UX-1011-jobserver-auto-pays-three-bst-show-calls-before-the-build.md)
+- [UX-1072](UX-1072-the-snapshot-tail-analyzes-the-run-once.md) — [the snapshot tail analyzes the run once, not twice](UX-1072-the-snapshot-tail-analyzes-the-run-once.md)
+- [UX-1075](UX-1075-the-raw-log-is-compressed-at-level-six.md) — [the raw Plane 2 log is compressed at gzip level 9, 5x slower than level 6 for 3% size](UX-1075-the-raw-log-is-compressed-at-level-six.md)
+- [UX-1076](UX-1076-the-open-paths-are-interned.md) — [the Plane 2 report holds each element's opened paths as separate strings](UX-1076-the-open-paths-are-interned.md)
+- [UX-1078](UX-1078-the-snapshot-records-bgas-own-cost.md) — [a snapshot does not record what bga itself cost the build](UX-1078-the-snapshot-records-bgas-own-cost.md)
+- [UX-1079](UX-1079-capture-report-reads-opens-from-a-gzipped-log.md) — [`bga capture report` on a gzipped raw log drops every opened path, silently](UX-1079-capture-report-reads-opens-from-a-gzipped-log.md)
+- [UX-1080](UX-1080-the-tails-buildstream-calls-are-measured.md) — [the BuildStream calls bga makes around the build have never been timed](UX-1080-the-tails-buildstream-calls-are-measured.md)
+- [UX-1082](UX-1082-the-cache-key-set-reads-the-builds-options.md) — [the cache key set is read without the build's own options, and silently](UX-1082-the-cache-key-set-reads-the-builds-options.md)
+- [UX-1083](UX-1083-an-equal-key-set-reuses-the-graph.md) — [a build whose key set equals the baseline's reads its graph again](UX-1083-an-equal-key-set-reuses-the-graph.md)
+- [UX-1110](UX-1110-the-width-calibration-runs-on-every-pr.md) — [the width calibration runs on every pull request and gates nothing](UX-1110-the-width-calibration-runs-on-every-pr.md)
+- [UX-1116](UX-1116-the-hook-is-built-without-warnings.md) — [the LD_PRELOAD hook is built with no warnings and never runs under a sanitizer](UX-1116-the-hook-is-built-without-warnings.md)
+- [UX-1117](UX-1117-the-log-parser-has-no-property-tests.md) — [the scheduler-log parser is tested only on the logs someone thought to write](UX-1117-the-log-parser-has-no-property-tests.md)
+- [UX-1124](UX-1124-parse-timestamp-reads-the-wrappers-utc-stamp-as-local.md) — [`parse_timestamp` reads the wrapper's UTC stamp as local time](UX-1124-parse-timestamp-reads-the-wrappers-utc-stamp-as-local.md)
+- [UX-1007](UX-1007-a-width-promised-through-maxjobs-reads-unknown-kind.md) — [a width promised through MAXJOBS or MAX_JOBS reads unknown_kind](UX-1007-a-width-promised-through-maxjobs-reads-unknown-kind.md)
+- [UX-1010](UX-1010-a-second-fixture-for-the-jobservers-breadth-win.md) — [a second fixture for the jobserver's breadth win - one giant, many single-core elements](UX-1010-a-second-fixture-for-the-jobservers-breadth-win.md)
+- [UX-1132](UX-1132-new-jobserver-shapes-for-the-default.md) — [three new example shapes and their arm legs test the "safe cap plus auto" default](UX-1132-new-jobserver-shapes-for-the-default.md)
+- [UX-1013](UX-1013-admission-ranks-from-buildstreams-own-cached-build-logs.md) — [admission ranks from BuildStream's own cached build logs when bga never captured the project](UX-1013-admission-ranks-from-buildstreams-own-cached-build-logs.md)
+
+**viewer**
+
+- [UX-834](UX-0834-a-disclosure-without-aria-expanded-and-a-link-whose-name-glues-three-values.md) — [a disclosure without aria-expanded, and a link whose name glues three values](UX-0834-a-disclosure-without-aria-expanded-and-a-link-whose-name-glues-three-values.md)
+- [UX-825](UX-0825-thirty-seven-raw-section-keys-are-visible-beside-their-headings.md) — [thirty-seven raw section keys are visible beside their headings](UX-0825-thirty-seven-raw-section-keys-are-visible-beside-their-headings.md)
+- [UX-822](UX-0822-the-readers-table-repeats-the-header-picker-s-five-labels.md) — [the readers table repeats the header picker's five labels](UX-0822-the-readers-table-repeats-the-header-picker-s-five-labels.md)
+- [UX-819](UX-0819-the-export-s-perfetto-handoff-fetches-a-quoted-data-uri.md) — [the export's Perfetto handoff fetches a quoted data: URI](UX-0819-the-export-s-perfetto-handoff-fetches-a-quoted-data-uri.md)
+- [UX-828](UX-0828-the-header-spends-14-of-the-viewport-on-a-filesystem-path.md) — [the header spends 14% of the viewport on a filesystem path](UX-0828-the-header-spends-14-of-the-viewport-on-a-filesystem-path.md)
+- [UX-831](UX-0831-a-max-jobs-advice-row-is-four-levels-deep.md) — [a max-jobs advice row is four levels deep](UX-0831-a-max-jobs-advice-row-is-four-levels-deep.md)
+- [UX-829](UX-0829-five-of-seven-joined-fields-on-the-elements-table-draw-no-column.md) — [five of seven joined fields on the elements table draw no column](UX-0829-five-of-seven-joined-fields-on-the-elements-table-draw-no-column.md)
+- [UX-837](UX-0837-structured-js-sits-at-the-ceiling-the-copy-format-preference-moves-out.md) — [structured.js sits at the ceiling;
+- [UX-840](UX-0840-the-3e-summary-table-is-one-item-behind-the-bound-it-summarises.md) — [the §3e summary table is one item behind the bound it summarises](UX-0840-the-3e-summary-table-is-one-item-behind-the-bound-it-summarises.md)
+- [UX-864](UX-0864-a-one-key-per-item-map-is-a-table-with-filters.md) — [a one-key-per-item map is a table with filters](UX-0864-a-one-key-per-item-map-is-a-table-with-filters.md)
+- [UX-862](UX-0862-the-twin-table-hides-on-screen.md) — [the twin table hides on screen](UX-0862-the-twin-table-hides-on-screen.md)
+- [UX-863](UX-0863-the-density-strip-ticks-every-mark-its-twin-lists.md) — [the density strip ticks every mark its twin lists](UX-0863-the-density-strip-ticks-every-mark-its-twin-lists.md)
+- [UX-868](UX-0868-a-merged-edge-tick-sits-flush-with-its-edge.md) — [a merged edge tick sits flush with its edge](UX-0868-a-merged-edge-tick-sits-flush-with-its-edge.md)
+- [UX-921](UX-0921-hidden-findings-keep-live-controls.md) — [hidden findings keep live controls](UX-0921-hidden-findings-keep-live-controls.md)
+- [UX-1015](UX-1015-find-in-page-reaches-folded-chapters.md) — [find-in-page reaches text inside a folded chapter](UX-1015-find-in-page-reaches-folded-chapters.md)
+- [UX-1016](UX-1016-one-focus-ring-and-a-keyboard-journey.md) — [every focusable control wears one focus ring, and a keyboard journey reaches every chapter](UX-1016-one-focus-ring-and-a-keyboard-journey.md)
+- [UX-1017](UX-1017-every-drawing-has-a-name-and-a-data-route.md) — [every drawing has an accessible name and a route to its numbers](UX-1017-every-drawing-has-a-name-and-a-data-route.md)
+- [UX-1018](UX-1018-a-chapter-title-outranks-its-section-titles.md) — [a chapter title outranks its section titles in the heading outline](UX-1018-a-chapter-title-outranks-its-section-titles.md)
+- [UX-1019](UX-1019-one-concept-one-word-one-control.md) — [one concept is one word and one control on every bga surface](UX-1019-one-concept-one-word-one-control.md)
+- [UX-1020](UX-1020-sentence-case-from-a-rendered-string-inventory.md) — [every rendered label is sentence case, and a plural follows its count](UX-1020-sentence-case-from-a-rendered-string-inventory.md)
+- [UX-1021](UX-1021-one-door-per-block.md) — [one `?` door per block opens every description in it](UX-1021-one-door-per-block.md)
+- [UX-1022](UX-1022-controls-meet-the-target-size.md) — [every control is at least 24x24 CSS px, 44 under a coarse pointer](UX-1022-controls-meet-the-target-size.md)
+- [UX-1023](UX-1023-a-compact-size-class.md) — [the page has a compact size class, and compact draws no empty chrome](UX-1023-a-compact-size-class.md)
+- [UX-1024](UX-1024-an-absence-is-one-sentence.md) — [an absence is one sentence, and no separator stands beside an empty value](UX-1024-an-absence-is-one-sentence.md)
+- [UX-1025](UX-1025-one-disclosure-glyph-pair.md) — [one disclosure glyph pair, and a fold's label names its content](UX-1025-one-disclosure-glyph-pair.md)
+- [UX-1026](UX-1026-spacing-comes-from-a-scale.md) — [spacing comes from a 4px scale of tokens](UX-1026-spacing-comes-from-a-scale.md)
+- [UX-1027](UX-1027-a-primary-control-grade.md) — [one control per view wears a primary grade](UX-1027-a-primary-control-grade.md)
+- [UX-1028](UX-1028-all-rows-draws-past-a-ceiling.md) — ["All rows" draws the whole table past any ceiling](UX-1028-all-rows-draws-past-a-ceiling.md)
+- [UX-1029](UX-1029-the-more-reveal-draws-every-name.md) — [the "+N more" reveal draws every name in one run of text](UX-1029-the-more-reveal-draws-every-name.md)
+- [UX-1030](UX-1030-a-json-door-draws-a-whole-section.md) — [a "view as JSON" door draws a whole section as one node](UX-1030-a-json-door-draws-a-whole-section.md)
+- [UX-1032](UX-1032-the-bound-census-presses-every-step.md) — [the §3k census presses every step control at the largest size class](UX-1032-the-bound-census-presses-every-step.md)
+- [UX-1033](UX-1033-form-controls-take-the-type-scale.md) — [form controls take the type scale, not the browser's 13.333px](UX-1033-form-controls-take-the-type-scale.md)
+- [UX-1034](UX-1034-reader-chips-print-internal-keys.md) — [reader chips print R1 to R5 inside section headings](UX-1034-reader-chips-print-internal-keys.md)
+- [UX-1035](UX-1035-fonts-compute-to-the-two-stacks.md) — [fonts compute to the two declared stacks, not Arial or bare monospace](UX-1035-fonts-compute-to-the-two-stacks.md)
+- [UX-1037](UX-1037-a-growing-container-with-no-bounding-control.md) — [26 payload containers grow with the run and no §1 control bounds them](UX-1037-a-growing-container-with-no-bounding-control.md)
+- [UX-1042](UX-1042-pointer-travel-is-a-budget.md) — [pointer travel is a budget, measured per journey](UX-1042-pointer-travel-is-a-budget.md)
+- [UX-1043](UX-1043-a-sections-controls-sit-together.md) — [a section's fold, door and JSON toggle sit together, at one place](UX-1043-a-sections-controls-sit-together.md)
+- [UX-1044](UX-1044-a-chapter-fold-has-one-place-and-one-label.md) — [a chapter's fold sits at one place and says the same thing in the rail and the document](UX-1044-a-chapter-fold-has-one-place-and-one-label.md)
+- [UX-1046](UX-1046-the-rail-shows-the-current-chapter-or-every-open-one.md) — [the rail shows the current chapter's sections, or every open chapter's — one rule](UX-1046-the-rail-shows-the-current-chapter-or-every-open-one.md)
+- [UX-1047](UX-1047-the-page-h1-names-the-run.md) — [the page's one `h1` is the run, or §6e.1 says it is the wordmark](UX-1047-the-page-h1-names-the-run.md)
+- [UX-1048](UX-1048-the-accent-lists-every-job-it-does.md) — [§4 lists every job the accent does, and the fills it takes](UX-1048-the-accent-lists-every-job-it-does.md)
+- [UX-1049](UX-1049-one-landed-height-bound-per-size-class.md) — [the landed page has one bound per size class, written once](UX-1049-one-landed-height-bound-per-size-class.md)
+- [UX-1050](UX-1050-the-budgets-are-measured-with-both-planes-at-scale.md) — [the volume budgets are measured on a two-plane page at scale](UX-1050-the-budgets-are-measured-with-both-planes-at-scale.md)
+- [UX-1051](UX-1051-every-select-wears-a-resting-grade.md) — [every `select` and `input` wears a declared resting appearance](UX-1051-every-select-wears-a-resting-grade.md)
+- [UX-1052](UX-1052-the-viewer-js-ships-compressed.md) — [the export carries its viewer JS gzipped, and a guard bounds its bytes](UX-1052-the-viewer-js-ships-compressed.md)
+- [UX-1053](UX-1053-a-two-plane-pages-growth-is-bounded-by-section.md) — [a two-plane page's growth with the run is bounded by the section that grows](UX-1053-a-two-plane-pages-growth-is-bounded-by-section.md)
+- [UX-1054](UX-1054-the-first-tab-starts-at-the-top.md) — [the first Tab from a fresh load starts at the top of the page](UX-1054-the-first-tab-starts-at-the-top.md)
+- [UX-1055](UX-1055-a-tables-copy-and-top-n-sit-in-one-place.md) — [a table's Copy rows and top-N controls sit in one place in its tool row](UX-1055-a-tables-copy-and-top-n-sit-in-one-place.md)
+- [UX-1081](UX-1081-the-export-predicts-the-timeline-it-can-carry.md) — [`bga view --export` renders a whole timeline before refusing it and rendering a narrower one](UX-1081-the-export-predicts-the-timeline-it-can-carry.md)
+- [UX-1127](UX-1127-codeql-findings-on-the-viewer-server.md) — [the viewer's pre-flight echoes any header list, and CodeQL reads the asset path as the request's](UX-1127-codeql-findings-on-the-viewer-server.md)
+- [UX-1107](UX-1107-the-exports-anchor-breaks-a-tie-by-set-order.md) — [the export's anchor breaks a tie by set order](UX-1107-the-exports-anchor-breaks-a-tie-by-set-order.md)
+- [UX-1057](UX-1057-the-drawing-routes-twin-table-drops-the-lower-bound-mark.md) — [the decomposition bar's aria-details twin table drops the certified lower-bound mark](UX-1057-the-drawing-routes-twin-table-drops-the-lower-bound-mark.md)
+- [UX-1130](UX-1130-the-resting-appearance-guard-reads-weight-against-the-parent.md) — [the resting-appearance guard reads a weight equal to the parent's as inherited](UX-1130-the-resting-appearance-guard-reads-weight-against-the-parent.md)
+- [UX-1056](UX-1056-back-after-a-reveal-does-not-re-fold.md) — [navigating back after an in-page reveal does not re-fold the chapter](UX-1056-back-after-a-reveal-does-not-re-fold.md)
+- [UX-1058](UX-1058-the-narrow-rail-toggle-is-unreachable-by-keyboard.md) — [the narrow-rail fold toggle is a click-only `<p>`, unreachable by keyboard](UX-1058-the-narrow-rail-toggle-is-unreachable-by-keyboard.md)
+- [UX-1045](UX-1045-a-tables-tools-are-one-row.md) — [§3's tool row names the column thresholds §3d attaches to their headers](UX-1045-a-tables-tools-are-one-row.md)
+
+**store**
+
+- [UX-1061](UX-1061-a-pseudonym-is-keyed-stable-and-keeps-the-names-shape.md) — [a pseudonym is keyed, stable, and keeps the name's shape](UX-1061-a-pseudonym-is-keyed-stable-and-keeps-the-names-shape.md)
+- [UX-1067](UX-1067-the-archive-and-its-manifest-carry-no-original-metadata.md) — [the archive and its manifest carry no original metadata](UX-1067-the-archive-and-its-manifest-carry-no-original-metadata.md)
+- [UX-1062](UX-1062-a-bundle-exports-anonymized-and-refuses-a-leftover-name.md) — [a bundle exports anonymized, and refuses a leftover name](UX-1062-a-bundle-exports-anonymized-and-refuses-a-leftover-name.md)
+- [UX-1065](UX-1065-a-declared-public-junction-keeps-its-public-names.md) — [a declared public junction keeps its public names](UX-1065-a-declared-public-junction-keeps-its-public-names.md)
+- [UX-1068](UX-1068-a-credential-in-a-command-line-is-dropped-not-kept.md) — [a credential in a command line is dropped, not kept](UX-1068-a-credential-in-a-command-line-is-dropped-not-kept.md)
+- [UX-1069](UX-1069-the-anonymized-export-runs-in-bounded-memory.md) — [the anonymized export runs in bounded memory](UX-1069-the-anonymized-export-runs-in-bounded-memory.md)
+- [UX-1071](UX-1071-the-residue-scan-reads-a-large-member-in-linear-time.md) — [the residue scan reads a large member in linear time](UX-1071-the-residue-scan-reads-a-large-member-in-linear-time.md)
+- [UX-1084](UX-1084-a-short-numeric-credential-still-exports-verbatim.md) — [a short numeric credential still exports verbatim](UX-1084-a-short-numeric-credential-still-exports-verbatim.md)
+- [UX-1085](UX-1085-the-residue-scan-misses-non-ascii-identifiers.md) — [the residue scan misses non-ASCII identifiers](UX-1085-the-residue-scan-misses-non-ascii-identifiers.md)
+- [UX-1086](UX-1086-the-archive-publishes-before-the-map-is-saved.md) — [the archive publishes before the map is saved](UX-1086-the-archive-publishes-before-the-map-is-saved.md)
+- [UX-1087](UX-1087-the-bounded-memory-measurement-holds-identifiers-constant.md) — [the bounded-memory measurement holds identifiers constant](UX-1087-the-bounded-memory-measurement-holds-identifiers-constant.md)
+- [UX-1088](UX-1088-an-unrecognized-numeric-value-is-dropped-not-mapped.md) — [an unrecognized numeric value is dropped, not mapped](UX-1088-an-unrecognized-numeric-value-is-dropped-not-mapped.md)
+- [UX-1089](UX-1089-a-glued-j-keeps-its-digits-only-on-a-make-like-tool.md) — [a glued -j keeps its digits only on a make-like tool](UX-1089-a-glued-j-keeps-its-digits-only-on-a-make-like-tool.md)
+- [UX-1066](UX-1066-raw-logs-travel-tokenized.md) — [raw logs travel tokenized](UX-1066-raw-logs-travel-tokenized.md)
+- [UX-900](UX-0900-a-store-is-a-directory-but-ci-keeps-bundles.md) — [a store is a directory, but CI will keep bundles in versioned directories](UX-0900-a-store-is-a-directory-but-ci-keeps-bundles.md)
+
+**guards**
+
+- [UX-821](UX-0821-the-adopt-jobs-run-a-tool-on-a-bare-interpreter.md) — [the adopt jobs run a tool on a bare interpreter](UX-0821-the-adopt-jobs-run-a-tool-on-a-bare-interpreter.md)
+- [UX-836](UX-0836-the-page-census-lists-no-tables.md) — [the page census lists no tables](UX-0836-the-page-census-lists-no-tables.md)
+- [UX-835](UX-0835-a-capped-table-filters-every-column-it-sorts.md) — [a capped table filters every column it sorts](UX-0835-a-capped-table-filters-every-column-it-sorts.md)
+- [UX-818](UX-0818-two-canned-queries-error-when-an-element-is-given.md) — [two canned queries error when an element is given](UX-0818-two-canned-queries-error-when-an-element-is-given.md)
+- [UX-824](UX-0824-reader-facing-strings-the-rule-and-a-guard-that-reads-the-page.md) — [reader-facing strings: the rule, and a guard that reads the page](UX-0824-reader-facing-strings-the-rule-and-a-guard-that-reads-the-page.md)
+- [UX-844](UX-0844-the-cache-key-is-equal-with-and-without-the-jobserver.md) — [the cache key is equal with and without the jobserver](UX-0844-the-cache-key-is-equal-with-and-without-the-jobserver.md)
+- [UX-855](UX-0855-the-ninja-probe-has-its-own-guard.md) — [the ninja probe has its own guard](UX-0855-the-ninja-probe-has-its-own-guard.md)
+- [UX-886](UX-0886-the-token-refill-guard-has-a-2s-timing-flake.md) — [the token-refill guard has a 2s SIGKILL-timing flake](UX-0886-the-token-refill-guard-has-a-2s-timing-flake.md)
+- [UX-885](UX-0885-the-push-gate-runs-make-lint-not-only-make-test.md) — [the push gate runs `make lint`, not only `make test`](UX-0885-the-push-gate-runs-make-lint-not-only-make-test.md)
+- [UX-887](UX-0887-the-implementer-brief-repoints-the-editable-install.md) — [the implementer brief's dev-deps reinstall repoints the shared editable install](UX-0887-the-implementer-brief-repoints-the-editable-install.md)
+- [UX-889](UX-0889-the-env-check-pin-checks-ruff-and-nothing-else.md) — [the pre-gate env check pin-checks ruff and nothing else](UX-0889-the-env-check-pin-checks-ruff-and-nothing-else.md)
+- [UX-911](UX-0911-the-styleguide-scan-rereads-every-document-once-per-candidate.md) — [the styleguide scan re-reads every tracked document once per candidate](UX-0911-the-styleguide-scan-rereads-every-document-once-per-candidate.md)
+- [UX-910](UX-0910-the-serial-giant-gate-asserts-an-unbanded-inequality.md) — [the serial-giant gate asserts an unbanded inequality the jobserver cannot satisfy](UX-0910-the-serial-giant-gate-asserts-an-unbanded-inequality.md)
+- [UX-909](UX-0909-the-documentation-guard-cannot-see-a-blocks-own-keys.md) — [the documentation guard cannot see a published block's own keys](UX-0909-the-documentation-guard-cannot-see-a-blocks-own-keys.md)
+- [UX-918](UX-0918-the-wrapper-shims-need-coreutils-a-staged-sandbox-has-not-got.md) — [the wrapper shims open on `dirname`, which a staged-toolchain sandbox has not got](UX-0918-the-wrapper-shims-need-coreutils-a-staged-sandbox-has-not-got.md)
+- [UX-913](UX-0913-the-jobserver-scrubs-itself-off-every-cmake-element-under-make-43.md) — [the jobserver scrubs itself off every cmake element under a make-4.3 sandbox](UX-0913-the-jobserver-scrubs-itself-off-every-cmake-element-under-make-43.md)
+- [UX-915](UX-0915-the-examples-stage-the-hosts-make-so-auto-never-meets-a-4-4.md) — [the examples stage the host's own make, so `--jobserver auto` has never met a make 4.4](UX-0915-the-examples-stage-the-hosts-make-so-auto-never-meets-a-4-4.md)
+- [UX-916](UX-0916-only-one-make-is-staged-so-the-version-switch-has-one-live-branch.md) — [only one make is ever staged, so the version switch has one live branch](UX-0916-only-one-make-is-staged-so-the-version-switch-has-one-live-branch.md)
+- [UX-914](UX-0914-the-examples-sysroot-is-the-hosts-so-the-examples-measure-the-host.md) — [the examples' sysroot is the host's own /usr/bin](UX-0914-the-examples-sysroot-is-the-hosts-so-the-examples-measure-the-host.md)
+- [UX-922](UX-0922-a-squash-merge-redates-a-round-document.md) — [a squash merge redates a round document](UX-0922-a-squash-merge-redates-a-round-document.md)
+- [UX-908](UX-0908-the-drawing-grade-guard-excurses-three-times-and-rising.md) — [the drawing-grade guard's excursions are a stale record, not a rising cost](UX-0908-the-drawing-grade-guard-excurses-three-times-and-rising.md)
+- [UX-923](UX-0923-the-base-carry-restore-asks-for-a-version-no-save-wrote.md) — [the base-carry restore names a path no save wrote, so its cache version never matches](UX-0923-the-base-carry-restore-asks-for-a-version-no-save-wrote.md)
+- [UX-924](UX-0924-the-adopt-route-feeds-the-committed-median-back-to-itself.md) — [the adopt route feeds the committed median back to itself, so a reference entry is write-once](UX-0924-the-adopt-route-feeds-the-committed-median-back-to-itself.md)
+- [UX-927](UX-0927-a-pin-is-one-nar-so-a-staged-compiler-reaches-outside-itself.md) — [a pin is one NAR, so a compiler staged that way reaches outside itself, and nothing in the tree says so](UX-0927-a-pin-is-one-nar-so-a-staged-compiler-reaches-outside-itself.md)
+- [UX-930](UX-0930-the-toolchain-parameters-are-assumed-not-read-back.md) — [the toolchain's two parameters are assumed rather than read back, and the one that decides which `cc1` runs fails silently](UX-0930-the-toolchain-parameters-are-assumed-not-read-back.md)
+- [UX-931](UX-0931-the-pin-verifies-the-wrapper-not-the-store-path.md) — [the pin verifies the compressed wrapper, not the store path, so a cache that re-compresses reds as a broken pin](UX-0931-the-pin-verifies-the-wrapper-not-the-store-path.md)
+- [UX-933](UX-0933-a-dev-extra-absent-reds-a-correct-tree.md) — [the `zstd` clauses fail where every other optional prerequisite skips, so a tree without the extra reads as a broken one](UX-0933-a-dev-extra-absent-reds-a-correct-tree.md)
+- [UX-939](UX-0939-the-exercised-line-names-an-environment-nothing-can-read.md) — [the exercised line names an environment nothing can read, so a version bump in CI reds every branch](UX-0939-the-exercised-line-names-an-environment-nothing-can-read.md)
+- [UX-925](UX-0925-the-toolchain-axis-is-host-gcc-because-gcc-is-not-relocatable.md) — [the toolchain axis is this host's gcc, because gcc's search paths are not relocatable](UX-0925-the-toolchain-axis-is-host-gcc-because-gcc-is-not-relocatable.md)
+- [UX-934](UX-0934-the-adopt-jobs-push-with-a-token-that-triggers-no-workflow.md) — [the three adopt jobs push with a token that triggers no workflow, so a commit that reds `main` carries no CI](UX-0934-the-adopt-jobs-push-with-a-token-that-triggers-no-workflow.md)
+- [UX-943](UX-0943-the-adopt-jobs-run-on-a-run-whose-suite-failed.md) — [the adopt jobs write to the default branch from a run whose whole suite failed](UX-0943-the-adopt-jobs-run-on-a-run-whose-suite-failed.md)
+- [UX-936](UX-0936-a-heavy-fixture-guard-excurses-on-a-record-that-is-not-too-low.md) — [a heavy-fixture guard excurses three times on a record that is not too low, so the ledger is reading the runner](UX-0936-a-heavy-fixture-guard-excurses-on-a-record-that-is-not-too-low.md)
+- [UX-890](UX-0890-the-trace-census-guard-has-three-unconfirmed-excursions.md) — [the trace-census guard has three unconfirmed CI excursions and no filing](UX-0890-the-trace-census-guard-has-three-unconfirmed-excursions.md)
+- [UX-917](UX-0917-the-fold-depth-guard-has-three-unconfirmed-excursions.md) — [the fold-depth guard has three unconfirmed CI excursions, spread over three weeks](UX-0917-the-fold-depth-guard-has-three-unconfirmed-excursions.md)
+- [UX-944](UX-0944-the-sysroot-fixture-clones-910mb-to-read-nine-files.md) — [the sysroot fixture clones 910 MB to read nine files, so its cost has two modes 30x apart and the reference entry is the median of…
+- [UX-929](UX-0929-two-population-sized-guards-reach-three-excursions-in-one-run.md) — [population-sized guards reach three excursions in one run, and their records were frozen](UX-0929-two-population-sized-guards-reach-three-excursions-in-one-run.md)
+- [UX-912](UX-0912-the-timing-reference-is-unrepresentative-and-branches-pay-for-it.md) — [the timing reference is unrepresentative on four files, and branches pay for it](UX-0912-the-timing-reference-is-unrepresentative-and-branches-pay-for-it.md)
+- [UX-935](UX-0935-a-conflicted-path-is-counted-once-per-stage.md) — [a conflicted path is counted once per stage, so `--check --write` bakes a wrong number and calls the tree clean](UX-0935-a-conflicted-path-is-counted-once-per-stage.md)
+- [UX-932](UX-0932-a-sandboxed-check-write-escapes-into-the-tree-it-guards.md) — [a sandboxed `--check --write` escapes into the tree it guards, so `make test` is not read-only](UX-0932-a-sandboxed-check-write-escapes-into-the-tree-it-guards.md)
+- [UX-920](UX-0920-two-task-files-can-share-one-id-and-nothing-reads-it.md) — [two task files can share one backlog id, and no guard reads ids for uniqueness](UX-0920-two-task-files-can-share-one-id-and-nothing-reads-it.md)
+- [UX-937](UX-0937-the-area-vocabulary-cannot-spell-tests.md) — [the area vocabulary is derived by a regex that admits two of the tree's three top-level directories, so no row can declare `tests`](UX-0937-the-area-vocabulary-cannot-spell-tests.md)
+- [UX-942](UX-0942-the-selector-misses-a-guard-that-reads-a-record-through-a-tool.md) — [the touching selector misses a guard that reads a record through a tool's constant](UX-0942-the-selector-misses-a-guard-that-reads-a-record-through-a-tool.md)
+- [UX-928](UX-0928-the-routing-rule-sends-a-prose-diff-to-a-protocol-that-opens-on-a-page.md) — [the routing rule sends a prose diff to a protocol that opens on a served page](UX-0928-the-routing-rule-sends-a-prose-diff-to-a-protocol-that-opens-on-a-page.md)
+- [UX-940](UX-0940-the-versions-the-behaviour-claims-were-confirmed-on-are-three.md) — [the BuildStream behaviour claims are pinned to three versions and nothing says which were re-confirmed](UX-0940-the-versions-the-behaviour-claims-were-confirmed-on-are-three.md)
+- [UX-941](UX-0941-the-only-job-that-builds-anything-is-a-population-of-one.md) — [the one job that builds anything real produces a single number per run and records none of them, so no instrument in this repository can read its…
+- [UX-926](UX-0926-a-round-that-leaves-no-trace-is-invisible-to-the-register.md) — [a round that leaves neither a document nor a ledger row is invisible to the register, and so to the guard whose job is to demand its…
+- [UX-948](UX-0948-the-push-gate-is-the-whole-suite-and-ci-runs-it-again.md) — [the push gate is the whole suite, and CI runs the same suite again before anything merges](UX-0948-the-push-gate-is-the-whole-suite-and-ci-runs-it-again.md)
+- [UX-956](UX-0956-a-docs-only-pull-request-runs-the-whole-matrix.md) — [a docs-only pull request runs the whole matrix, and the selector that could narrow it misses the guards that read documents by glob](UX-0956-a-docs-only-pull-request-runs-the-whole-matrix.md)
+- [UX-993](UX-0993-an-architect-shapes-a-row-before-a-round-schedules-it.md) — [an architect shapes a row before a round schedules it](UX-0993-an-architect-shapes-a-row-before-a-round-schedules-it.md)
+- [UX-994](UX-0994-a-round-spends-at-most-forty-percent-of-its-rows-on-process.md) — [a round spends at most forty percent of its rows on process](UX-0994-a-round-spends-at-most-forty-percent-of-its-rows-on-process.md)
+- [UX-991](UX-0991-the-docs-lanes-first-live-pr-never-ran-green.md) — [UX-956's docs lane never ran green on its first live PR](UX-0991-the-docs-lanes-first-live-pr-never-ran-green.md)
+- [UX-996](UX-0996-a-derived-figure-is-computed-where-it-is-read-never-committed.md) — [a derived figure is computed where it is read, never committed](UX-0996-a-derived-figure-is-computed-where-it-is-read-never-committed.md)
+- [UX-995](UX-0995-a-pull-request-runs-the-suite-on-the-newest-python-only.md) — [a pull request runs the suite on the newest Python only;
+- [UX-992](UX-0992-the-push-gate-reads-the-main-checkouts-head-from-a-worktree.md) — [the push gate reads the main checkout's `HEAD` from a worktree](UX-0992-the-push-gate-reads-the-main-checkouts-head-from-a-worktree.md)
+- [UX-990](UX-0990-the-tools-behaviour-claims-are-outside-the-register.md) — [the BuildStream behaviour claims in `tools/` are outside the register `UX-940` built for `bga/`](UX-0990-the-tools-behaviour-claims-are-outside-the-register.md)
+- [UX-998](UX-0998-a-bookkeeping-finding-is-one-line-swept-once-a-round.md) — [a bookkeeping finding is one line in a ledger, swept once a round](UX-0998-a-bookkeeping-finding-is-one-line-swept-once-a-round.md)
+- [UX-999](UX-0999-a-weekly-retro-turns-repeated-bookkeeping-into-automation.md) — [a weekly retro turns repeated bookkeeping into automation](UX-0999-a-weekly-retro-turns-repeated-bookkeeping-into-automation.md)
+- [UX-979](UX-0979-a-guard-citation-names-a-class-a-rename-retired.md) — [§7a cites a guard class a rename retired, and no guard resolves the part after `::`](UX-0979-a-guard-citation-names-a-class-a-rename-retired.md)
+- [UX-977](UX-0977-the-coverage-section-states-the-surface-twice-and-the-guard-reads-one.md) — [the coverage section states the surface twice, and the guard reads one of them](UX-0977-the-coverage-section-states-the-surface-twice-and-the-guard-reads-one.md)
+- [UX-945](UX-0945-the-context-map-existence-check-reads-five-typed-top-level-names.md) — [the context map's existence check reads five typed top-level names, so a §6 line under any other directory is never checked against the…
+- [UX-997](UX-0997-a-record-ci-measures-lives-outside-main.md) — [a record CI measures lives outside main, and main carries only reviewed commits](UX-0997-a-record-ci-measures-lives-outside-main.md)
+- [UX-1000](UX-1000-an-area-page-names-each-scenarios-guard-and-ci-publishes-it.md) — [an area page names each scenario's guard, and CI publishes it where it can be read](UX-1000-an-area-page-names-each-scenarios-guard-and-ci-publishes-it.md)
+- [UX-1039](UX-1039-every-agent-names-its-model-and-effort.md) — [every agent names its model and effort, and the seams between tracks have owners](UX-1039-every-agent-names-its-model-and-effort.md)
+- [UX-938](UX-0938-an-acceptance-clause-can-name-a-reading-no-environment-takes.md) — [an acceptance clause can name a reading that no environment in this project ever takes, and nothing says so until the round that owes…
+- [UX-950](UX-0950-the-flake-ledger-counts-a-runner-event-once-per-file.md) — [the flake ledger's excursions cluster by run, and the census counts a runner event once per file](UX-0950-the-flake-ledger-counts-a-runner-event-once-per-file.md)
+- [UX-955](UX-0955-a-population-entry-keeps-the-size-its-seconds-no-longer-describe.md) — [a population entry keeps the tree size its seconds no longer describe, so the gate scales the growth twice](UX-0955-a-population-entry-keeps-the-size-its-seconds-no-longer-describe.md)
+- [UX-1041](UX-1041-an-agent-cannot-repoint-the-shared-install-or-run-the-sweep.md) — [an agent cannot repoint the shared install or start the touching sweep](UX-1041-an-agent-cannot-repoint-the-shared-install-or-run-the-sweep.md)
+- [UX-1090](UX-1090-the-retro-keys-a-ledger-line-by-its-own-class.md) — [the retro keys a ledger line by its own class, and "none reported" is no finding](UX-1090-the-retro-keys-a-ledger-line-by-its-own-class.md)
+- [UX-1091](UX-1091-the-records-writers-queue-instead-of-cancelling.md) — [the records writers queue instead of cancelling each other](UX-1091-the-records-writers-queue-instead-of-cancelling.md)
+- [UX-1092](UX-1092-a-scenario-declares-its-guard-in-one-field.md) — [a scenario declares its guard in one field, backfilled from the inferred column](UX-1092-a-scenario-declares-its-guard-in-one-field.md)
+- [UX-1093](UX-1093-the-enter-on-a-reached-fold-journey-is-intermittent.md) — [the Enter-on-a-reached-fold journey fails intermittently on the older Pythons](UX-1093-the-enter-on-a-reached-fold-journey-is-intermittent.md)
+- [UX-1063](UX-1063-analysis-commutes-with-anonymization.md) — [analysis commutes with anonymization](UX-1063-analysis-commutes-with-anonymization.md)
+- [UX-1105](UX-1105-a-page-fixture-split-across-workers-is-built-once.md) — [a page fixture split across workers is built once](UX-1105-a-page-fixture-split-across-workers-is-built-once.md)
+- [UX-1102](UX-1102-review-the-architecture-after-298-and-300.md) — [the architecture review is due once #298 and #300 have both landed](UX-1102-review-the-architecture-after-298-and-300.md)
+- [UX-1108](UX-1108-ci-cancels-a-superseded-pr-run.md) — [a superseded pull request run keeps burning its runner minutes](UX-1108-ci-cancels-a-superseded-pr-run.md)
+- [UX-1109](UX-1109-the-bst-jobs-wait-for-the-suite.md) — [the bst jobs wait for the suite and use nothing it produced](UX-1109-the-bst-jobs-wait-for-the-suite.md)
+- [UX-1111](UX-1111-the-small-tier-runs-three-times-per-pr.md) — [the small tier runs three times on every pull request](UX-1111-the-small-tier-runs-three-times-per-pr.md)
+- [UX-1112](UX-1112-the-push-gate-relints-all-markdown.md) — [the push gate re-lints ten megabytes of markdown the diff never touched](UX-1112-the-push-gate-relints-all-markdown.md)
+- [UX-1113](UX-1113-the-gate-runs-the-tools-on-path-not-the-lock.md) — [the gate runs whichever ruff and pyright are first on PATH, not the locked ones](UX-1113-the-gate-runs-the-tools-on-path-not-the-lock.md)
+- [UX-1114](UX-1114-a-fresh-session-starts-shallow-and-unlocked.md) — [a fresh session starts shallow and without the locked dependencies](UX-1114-a-fresh-session-starts-shallow-and-unlocked.md)
+- [UX-1115](UX-1115-the-area-pages-publish-from-a-red-run.md) — [the area pages publish from a run whose suite failed](UX-1115-the-area-pages-publish-from-a-red-run.md)
+- [UX-1119](UX-1119-docstrings-follow-no-convention.md) — [docstrings follow no convention a tool can read](UX-1119-docstrings-follow-no-convention.md)
+- [UX-1120](UX-1120-the-closed-index-is-one-large-file.md) — [the closed index is one 729 KB file the markdown lint reads superlinearly](UX-1120-the-closed-index-is-one-large-file.md)
+- [UX-1121](UX-1121-timing-gates-red-prs-for-the-runner.md) — [timing gates red pull requests for the runner's speed](UX-1121-timing-gates-red-prs-for-the-runner.md)
+- [UX-1122](UX-1122-a-guard-never-retires.md) — [a guard never retires, so every gate is paid on every pull request forever](UX-1122-a-guard-never-retires.md)
+- [UX-1118](UX-1118-nothing-formats-the-code.md) — [nothing formats the code, so layout is argued in review](UX-1118-nothing-formats-the-code.md)
+- [UX-1126](UX-1126-the-size-ledger-depends-on-the-walk-order.md) — [the size ledger's duplicate count depends on the filesystem's walk order](UX-1126-the-size-ledger-depends-on-the-walk-order.md)
+- [UX-1128](UX-1128-the-weekly-lock-check-reds-on-an-upstream-release.md) — [the weekly lock check reds on any upstream release, so the audit never runs](UX-1128-the-weekly-lock-check-reds-on-an-upstream-release.md)
+- [UX-1125](UX-1125-a-red-ledger-gives-the-guard-prices-a-last-catch.md) — [a red ledger gives `dev_guard_prices` a last-catch source](UX-1125-a-red-ledger-gives-the-guard-prices-a-last-catch.md)
+- [UX-1129](UX-1129-a-union-merge-reopens-swept-bookkeeping-lines.md) — [a union merge reopens swept bookkeeping lines](UX-1129-a-union-merge-reopens-swept-bookkeeping-lines.md)
+
+**docs**
+
+- [UX-832](UX-0832-the-foundation-declaration-is-in-no-guide.md) — [the foundation declaration is in no guide](UX-0832-the-foundation-declaration-is-in-no-guide.md)
+- [UX-820](UX-0820-the-generated-release-body-ends-its-list-on-the-closing-marker.md) — [the generated release body ends its list on the closing marker](UX-0820-the-generated-release-body-ends-its-list-on-the-closing-marker.md)
+- [UX-839](UX-0839-the-clone-size-claim-is-half-what-a-clone-now-costs.md) — [the clone-size claim is half what a clone now costs](UX-0839-the-clone-size-claim-is-half-what-a-clone-now-costs.md)
+- [UX-867](UX-0867-the-context-maps-open-labels-read-the-status-they-name.md) — [the context map's open labels read the status they name](UX-0867-the-context-maps-open-labels-read-the-status-they-name.md)
+- [UX-866](UX-0866-a-key-under-a-bare-object-is-still-a-documented-key.md) — [a key under a bare object is still a documented key](UX-0866-a-key-under-a-bare-object-is-still-a-documented-key.md)
+- [UX-978](UX-0978-the-serial-giant-readme-describes-an-assertion-ci-no-longer-makes.md) — [the serial-giant README describes an `auto < off` assertion CI no longer makes](UX-0978-the-serial-giant-readme-describes-an-assertion-ci-no-longer-makes.md)
+- [UX-975](UX-0975-the-examples-install-a-host-toolchain-the-stager-no-longer-reads.md) — [the examples still install a host toolchain the stager no longer reads, and two CI comments say it copies from one](UX-0975-the-examples-install-a-host-toolchain-the-stager-no-longer-reads.md)
+- [UX-976](UX-0976-the-toolchain-closure-is-35-paths-and-the-readme-counts-the-make-pins-into-it.md) — [the toolchain closure is 35 store paths, and the examples README counts the two make pins into it](UX-0976-the-toolchain-closure-is-35-paths-and-the-readme-counts-the-make-pins-into-it.md)
+
+<!-- /generated -->
 
 ## 0.4.1 — the tool says what it assumes (2026-09-12)
 
@@ -121,6 +442,7 @@ handoff fetches a quoted `data:` URI. They are the three rows open at
 the cut.
 
 ```text state
+digest: 32a915ff3719
 contracts: analyze/v2 analyze/v3 analyze/v4 analyze/v5 analyze/v6 blast/v1 blast/v2 bundle-manifest/v1 capacity-model/v1 capture-layout/v1 compare/v1 compare/v2 correlate/v1 correlate/v2 host-samples/v1 host/v1 host/v2 plane2/v1 plane2/v2 plane2/v3 sources/v1 store-aggregate/v1 store/v1 sweep/v1 whatif/v1
 commands: analyze baseline blast bundle cache-logs cache-trend capture checkout-cost chrome-to-trace compare correlate cross-check diagnostics doctor extract floors gen-synthetic graph graph-from-show log-to-chrome native-to-chrome rebuild-set release-notes replay run-context snapshot sweep timeline utilisation view whatif wrap
 ```

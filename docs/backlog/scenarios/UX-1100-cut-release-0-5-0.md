@@ -46,3 +46,31 @@ The features that go into 0.5.0 are their own rows.
 `tests/unit/test_a_release_records_a_contract_state.py` passes with
 0.5.0 as the newest row, and derives `extending` from the 0.4.1 to
 0.5.0 pair. The walk report is linked from the Outcome.
+
+## Outcome
+
+**Gap measured.** `PYTHONPATH=. python3 -m bga.cli release-notes --from 813`
+on the release commit, after `UX-1135` closed: `270 scenarios closed (closed-row markers 813 → 1083)`
+(round 150's 185 rows to 998 grew with the tree). Newest row before the
+cut: `0.4.1`, 813, `patch`, with `Unreleased` above it.
+
+**Close measured.** `CHANGELOG.md`: `Unreleased` renamed `0.5.0`,
+`extending`, 2026-09-29, closed rows 1083; `0.4.1` frozen with
+`digest: 32a915ff3719` (`state_digest(_states()['0.4.1'])`); body
+regenerated for `813→1083`; `bga/__init__.py` and `pyproject.toml` at
+`0.5.0`; `test_a_shadowed_checkout_warns_at_startup.py` pins the
+version string, moved with it. `requirements.lock` does not move (its
+`0.4.1` is `dill`).
+
+Version-derived kind, `derive(_states()['0.4.1'], _states()['0.5.0'])`:
+`extending` (adds `junction-cost/v1`, `tail/v1`, command `junction-cost`).
+
+Guard run, `python3 -m pytest -n 2 -q`, the two release guards plus
+seven others that read `CHANGELOG.md`, the version or the guide: 3
+failed, 54 passed on the two release guards; the three failures are the
+`TestEveryVersionedReleaseIsTagged` clauses that need `v0.5.0`, red
+until Ruslan's tag, not written here. Every other clause is green,
+including `test_the_increment_matches_the_kind`. The selector names 718
+files on this diff (the version moves the tree), so it was not run whole.
+
+walk: [`walk-seed-4.md`](../../audits/walk-seed-4.md) on `74aa14f2`, 2 match and 1 partial of 3; its one blocking finding filed and closed as `UX-1135` before the cut. The three `TestEveryVersionedReleaseIsTagged` clauses red until `v0.5.0` is tagged on this commit (Ruslan's, release guide step 8).

@@ -20,6 +20,12 @@ env:
   BST_VERSION: "2.8.1"
   BST_PLUGINS_VERSION: "2.8.0"
 
+# `UX-1108`: a newer push to a PR cancels its older run; a push to main
+# groups on its own run id, so its adopt jobs are never cancelled.
+concurrency:
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   # `UX-956`: `docs_only` is true only for a pull request whose every
   # path is docs (`tools/dev_docs_only.py`, stdlib only, so no install);

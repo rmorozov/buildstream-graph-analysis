@@ -577,6 +577,12 @@ def _add_provenance(data, result, section, by_kind):
         provenance.attach(data)
 
 
+def _add_fingerprint(data, result, section, by_kind):
+    # UX-1073: what this analysis was computed from, so `compare` can reuse it.
+    if section is None and getattr(result, 'fingerprint', None):
+        data['fingerprint'] = result.fingerprint
+
+
 def _add_producer_stamp(data, result, section, by_kind):
     # UX-249: which build wrote this. A published payload archived by a
     # CI job is re-read like any stored run, and until this landed
@@ -621,6 +627,7 @@ _SECTIONS = (
     _add_plane2_join,
     _add_jobserver_block,
     _add_provenance,
+    _add_fingerprint,
     _add_producer_stamp,
 )
 

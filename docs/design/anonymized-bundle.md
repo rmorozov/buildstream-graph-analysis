@@ -222,6 +222,7 @@ other kept string whose contents vary by project.
    | `run/chrome_trace.json` | drop (derived) |
    | `plane2.json`, `plane2-resource.json`, `host-samples.jsonl` | transform |
    | `element-slice.json` | transform: its target names are class A |
+   | `tail.json` | transform: a call's argv is rebuilt by 6.2's grammar (`UX-1103`) |
    | `analyze.json` | drop: its prose is free text, and the far side re-derives it |
    | `plane2.log.gz`, `build.log`, `capture-context.txt` | drop |
    | `.size` | drop (derived) |

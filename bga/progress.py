@@ -33,6 +33,7 @@ requirement.
 import os
 import sys
 import time
+from contextlib import contextmanager, suppress
 from typing import Optional
 
 # How often the line may be redrawn. A build phase can iterate hundreds
@@ -185,3 +186,155 @@ def phase(message: str, stream=None) -> None:
 
 def ticker(label: str, total: Optional[int] = None, stream=None) -> Ticker:
     return Ticker(label, total=total, stream=stream)
+
+
+# -- UX-1077/UX-1078: one recorder for the tail's phases -----------------
+#
+# `timed` announces a phase, prints its elapsed seconds and appends a row
+# to this ledger; `bga snapshot` writes the ledger as `tail.json`, so the
+# printed timings and the stored ones are one list, not two that drift.
+
+_LEDGER: dict = {"build_wall_us": None, "phases": []}
+_ON_ROW = None
+
+# UX-1080: subprocess calls (`bst --version`, `bst show`, `bst artifact
+# list-contents`) landed by `timed_call`, before the phase they belong to
+# has a row of its own - `timed`'s `finally` only appends that row once
+# the `with` block exits, so a call made inside it cannot index into
+# `_LEDGER["phases"]` yet. Buffered here instead and sliced off by the
+# enclosing `timed()` when it closes; a call made outside any phase (the
+# doctor's `bst --version`, before `bga snapshot` has one) rides along
+# with whichever phase closes first.
+_CURRENT_CALLS: list = []
+
+
+def reset_ledger(on_row=None) -> None:
+    """Empty the ledger; `on_row()` is called after every row lands."""
+    global _ON_ROW
+    _LEDGER["build_wall_us"] = None
+    _LEDGER["phases"] = []
+    _CURRENT_CALLS.clear()
+    _ON_ROW = on_row
+
+
+def set_on_row(on_row) -> None:
+    """Attach (or replace) the write-back callback without discarding
+    rows already recorded - UX-1080's doctor call can land before the
+    snapshot directory `on_row` writes into even exists."""
+    global _ON_ROW
+    _ON_ROW = on_row
+
+
+def ledger() -> dict:
+    """A copy of the ledger: `build_wall_us` and one row per phase."""
+    return {"build_wall_us": _LEDGER["build_wall_us"],
+            "phases": [dict(row) for row in _LEDGER["phases"]]}
+
+
+def tail_us(phases) -> int:
+    """What the *post-build* phases cost together - derived, never
+    stored (UX-996). `stage: "before"` phases (the readiness check
+    ahead of the build) are timed but excluded: they are not part of
+    "bga's own time after the build" (review, pull request 300)."""
+    return sum(row.get("wall_us") or 0 for row in phases or ()
+               if row.get("stage") != "before")
+
+
+def _reset_peak_rss() -> bool:
+    # VmHWM per phase; `ru_maxrss` is the whole process's high-water mark.
+    try:
+        with open("/proc/self/clear_refs", "w") as handle:
+            handle.write("5")
+        return True
+    except OSError:
+        return False
+
+
+def _peak_rss_bytes() -> Optional[int]:
+    try:
+        with open("/proc/self/status", encoding="ascii") as handle:
+            for line in handle:
+                if line.startswith("VmHWM:"):
+                    return int(line.split()[1]) * 1024  # VmHWM is in kB
+    except (OSError, ValueError, IndexError):
+        return None
+    return None
+
+
+def _say(text: str, stream) -> None:
+    with suppress(OSError, ValueError):
+        print(text, file=sys.stderr if stream is None else stream, flush=True)
+
+
+@contextmanager
+def timed(name: str, say: Optional[str] = None, stream=None,
+          before_build: bool = False):
+    """One phase: announced, timed, and recorded - also when it raises.
+
+    A TTY (or `BGA_FORCE_PROGRESS`) gets the announcement and an elapsed
+    line; a pipe keeps the one announcement line; `BGA_NO_PROGRESS`
+    prints neither. The row lands whichever was chosen.
+
+    `before_build=True` marks the row `stage: "before"` - recorded like
+    any other phase, but excluded from `tail_us` and everything built
+    on it: the readiness check ahead of the build is not part of "bga's
+    own time after the build" (review, pull request 300).
+    """
+    loud = enabled(stream)
+    if not os.environ.get("BGA_NO_PROGRESS"):
+        _say(say or f"{name}...", stream)
+    measured = _reset_peak_rss()
+    start = time.monotonic()
+    try:
+        yield
+    finally:
+        wall = round((time.monotonic() - start) * 1e6)
+        # UX-1080: every call buffered since the previous phase closed -
+        # including one made before any phase existed at all, like the
+        # doctor's `bst --version` ahead of the first snapshot phase.
+        calls = list(_CURRENT_CALLS)
+        _CURRENT_CALLS.clear()
+        _LEDGER["phases"].append({
+            "name": name, "wall_us": wall,
+            "peak_rss_bytes": _peak_rss_bytes() if measured else None,
+            "calls": calls,
+            "stage": "before" if before_build else "after"})
+        if loud:
+            _say(f"  {name}: {wall / 1e6:.1f}s", stream)
+        if _ON_ROW is not None:
+            _ON_ROW()
+
+
+@contextmanager
+def timed_call(argv):
+    """One BuildStream subprocess call, recorded as a `calls` row under
+    the phase it ran inside of (UX-1080). Yields a mutable row the
+    caller sets `exit` on before the block ends; a call that raised (or
+    timed out) keeps `exit: null`, which is the honest reading of "never
+    returned" rather than a made-up code.
+    """
+    start = time.monotonic()
+    row = {"verb": " ".join(argv), "wall_us": None, "exit": None}
+    try:
+        yield row
+    finally:
+        row["wall_us"] = round((time.monotonic() - start) * 1e6)
+        _CURRENT_CALLS.append(row)
+
+
+@contextmanager
+def timed_build():
+    """The build's own wall, around its subprocess - no line printed."""
+    start = time.monotonic()
+    try:
+        yield
+    finally:
+        _LEDGER["build_wall_us"] = round((time.monotonic() - start) * 1e6)
+
+
+def total_line(stream=None) -> None:
+    """The tail's last line, printed whatever the progress setting."""
+    line = f"bga's own time after the build: {tail_us(_LEDGER['phases']) / 1e6:.1f}s"
+    if _LEDGER["build_wall_us"] is not None:
+        line += f" (the build: {_LEDGER['build_wall_us'] / 1e6:.1f}s)"
+    _say(line, stream)

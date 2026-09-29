@@ -79,6 +79,13 @@ _FORMAT = FIELD_SEP.join(
     ["%{name}", "%{key}", "%{kind}", "%{build-deps}", "%{runtime-deps}", "%{public}", "%{vars}"]
 ) + RECORD_SEP
 
+# UX-1080: the same bound the pre-build key-set `bst show` already uses
+# (`UX-842`/`UX-1011`). Measured here at 11.21s/1,201 elements and
+# 42.28s/5,001 (`genproj.py`, bst 2.8.1, this container) - 300s is 7x
+# the largest reading, and this call, unlike that one, had no timeout
+# at all before.
+BST_SHOW_TIMEOUT_S = 300
+
 
 def _parse_dep_list(raw: str) -> list[str]:
     """Parse a %{build-deps}/%{runtime-deps} value: empty renders as the
@@ -226,11 +233,16 @@ def run_bst_show(
     targets: Sequence[str],
     bst_bin: str = "bst",
     bst_options: Optional[Sequence[str]] = None,
+    timeout: float = BST_SHOW_TIMEOUT_S,
 ) -> str:
     """Run `bst show --deps all` against project_dir for the given
     targets and return raw stdout. Progress/log output goes to bst's
     own stderr, never mixed into stdout - confirmed empirically, so
-    stdout only ever contains --format output."""
+    stdout only ever contains --format output.
+
+    `timeout` (UX-1080): this call had none - a hang here silently
+    became the post-build tail's whole remaining wait. `None` runs
+    forever, same as before."""
     # `UX-377`: the build's own scheduler options, replayed. `max-jobs`
     # is a *top-level* `bst` option and it reaches `%{vars}`, so a
     # `bst show` run without it resolves whatever the config says and
@@ -249,10 +261,12 @@ def run_bst_show(
     # makes the wait pollable at all, and it removes the pipe-buffer
     # deadlock that a project with thousands of elements could otherwise
     # reach while nothing is draining stdout.
-    with tempfile.TemporaryFile() as out, tempfile.TemporaryFile() as err:
+    with tempfile.TemporaryFile() as out, tempfile.TemporaryFile() as err, \
+            progress.timed_call(cmd) as call:
         proc = subprocess.Popen(cmd, cwd=project_dir, stdout=out, stderr=err)
         tick = progress.ticker("bst show")
         started = time.monotonic()
+        timed_out = False
         # `UX-197`: `subprocess.run` kills the child if the caller leaves
         # the call by exception; the hand-rolled poll loop `UX-183` put
         # here to draw a ticker dropped that, so a Ctrl-C during a long
@@ -264,7 +278,16 @@ def run_bst_show(
         # over.
         try:
             while proc.poll() is None:
-                tick.note(f"{time.monotonic() - started:.0f}s elapsed")
+                elapsed = time.monotonic() - started
+                # UX-1080: a hang here used to run forever - the tail's
+                # last phase with no end. Killed rather than left to the
+                # caller, same as the Ctrl-C case just below.
+                if timeout is not None and elapsed > timeout:
+                    timed_out = True
+                    proc.kill()
+                    proc.wait()
+                    break
+                tick.note(f"{elapsed:.0f}s elapsed")
                 time.sleep(0.1)
         except BaseException:
             proc.kill()
@@ -272,10 +295,16 @@ def run_bst_show(
             raise
         finally:
             tick.done()
+            call["exit"] = proc.returncode
         out.seek(0)
         err.seek(0)
         stdout = out.read().decode("utf-8", errors="replace")
         stderr = err.read().decode("utf-8", errors="replace")
+    if timed_out:
+        raise RuntimeError(
+            f"bst show timed out after {timeout:.0f}s for targets {list(targets)} - "
+            f"nothing was extracted"
+        )
     if proc.returncode != 0:
         raise RuntimeError(
             f"bst show failed (exit {proc.returncode}) for targets {list(targets)}: "

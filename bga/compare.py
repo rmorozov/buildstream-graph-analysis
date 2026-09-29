@@ -14,7 +14,7 @@ import logging
 import statistics
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from . import buildclass, hostinfo, producer, schemas
 from .analyzer import BuildEfficiencyAnalyzer
@@ -795,7 +795,9 @@ def _candidate_diagnosis(candidate_result: AnalysisResult) -> Optional[dict]:
     from .report.json import build_document
 
     try:
-        document = build_document(candidate_result)
+        # UX-1073: a published analysis is already this document.
+        document = (getattr(candidate_result, 'published_document', None)
+                    or build_document(candidate_result))
     except Exception:                                # pragma: no cover
         # The verdict must not cost a reader the comparison, which is
         # this file's standing rule for every optional enrichment.
@@ -1317,24 +1319,96 @@ def _band_sample(run_dir: Path, analyzer_kwargs: dict):
     return (result.confidence or {}).get('run_mode'), result.total_duration_us
 
 
+def _side_argv(run_dir: Path, plane2: Optional[str], capacity, verbose) -> list[str]:
+    """The `bga analyze` one side is analyzed as - the analysis a
+    snapshot publishes, so the two fingerprints can agree."""
+    argv = ['analyze', str(run_dir)]
+    if capacity is not None:
+        argv += ['--capacity', str(capacity)]
+    # UX-1073: each side with its own Plane 2 report, as `bga analyze`
+    # attaches it - passed, or else the sibling `bga analyze` finds.
+    if plane2:
+        argv += ['--plane2', str(plane2)]
+    if verbose:
+        argv.append('--verbose')
+    return argv
+
+
+def _published(run_dir: Path) -> Optional[dict]:
+    """The `analyze.json` published beside `run_dir`, or None."""
+    from .run_store import ANALYSIS_NAME
+
+    path = Path(run_dir).absolute().parent / ANALYSIS_NAME
+    try:
+        document = json.loads(path.read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        return None
+    return document if isinstance(document, dict) else None
+
+
+def _from_document(document: dict):
+    """The fields `_compare_results` reads, off a published analysis."""
+    from types import SimpleNamespace
+
+    signals = dict(document.get('elements') or {})
+    if 'critical_path_detail' in document:
+        signals['critical_path_detail'] = document['critical_path_detail']
+    return SimpleNamespace(
+        run_id=document.get('run_id'),
+        total_duration_us=document.get('total_duration_us'),
+        floors=document.get('floors'), confidence=document.get('confidence'),
+        attribution=document.get('attribution'),
+        violations=document.get('violations'),
+        run_instance=document.get('run_instance'),
+        signals=signals, published_document=document)
+
+
+def _analyze_side(run_dir: Path, plane2: Optional[str], reanalyse: bool,
+                  capacity=None, verbose=False) -> tuple[Any, list, Any]:
+    """`(result, elements, dependencies)` for one side of a comparison:
+    the published analysis when its fingerprint is this one's, else a
+    fresh `cli.analyzed` (UX-1073)."""
+    from . import fingerprint
+    from .cli import analyzed_with_analyzer, create_parser
+    from .ingest.loader import load_graph
+
+    args = create_parser().parse_args(_side_argv(run_dir, plane2, capacity, verbose))
+    if not reanalyse:
+        document = _published(run_dir)
+        wanted = fingerprint.of(args) if document is not None else None
+        if document is not None and wanted is not None \
+                and document.get(fingerprint.KEY) == wanted:
+            graph = load_graph(Path(run_dir) / 'graph.json')
+            return _from_document(document), graph.elements, graph.dependencies
+    analyzer, result = analyzed_with_analyzer(args)
+    graph = analyzer.graph
+    if graph is None:
+        raise ValueError(f"{run_dir}: the analysis loaded no graph")
+    return result, graph.elements, graph.dependencies
+
+
 def compare_runs(baseline_dir: Path, candidate_dir: Path,
                  baseline_runs: Optional[list[Path]] = None,
                  band_k: float = DEFAULT_BAND_K,
-                 **analyzer_kwargs) -> ComparisonResult:
-    """Load, analyze, and compare two run directories independently -
-    each gets its own BuildEfficiencyAnalyzer instance (no shared state),
-    matching how any two separate `bga analyze` invocations would behave.
-    analyzer_kwargs are passed through to both (e.g. capacity override) -
-    a caller comparing under a hypothetical capacity wants that applied
-    symmetrically to both runs, not just one.
+                 **options) -> ComparisonResult:
+    """Load, analyze, and compare two run directories independently,
+    each as `bga analyze` would with its own Plane 2 report
+    (`baseline_plane2`/`candidate_plane2`), reading a side's published
+    `analyze.json` instead when its fingerprint matches (`UX-1073`;
+    `reanalyse=True` never reads it). `capacity` and `verbose` apply to
+    both sides symmetrically.
     """
-    baseline_analyzer = BuildEfficiencyAnalyzer(**analyzer_kwargs)
-    baseline_analyzer.load(baseline_dir)
-    baseline_result = baseline_analyzer.analyze()
-
-    candidate_analyzer = BuildEfficiencyAnalyzer(**analyzer_kwargs)
-    candidate_analyzer.load(candidate_dir)
-    candidate_result = candidate_analyzer.analyze()
+    unknown = set(options) - {'capacity', 'verbose', 'baseline_plane2',
+                              'candidate_plane2', 'reanalyse'}
+    if unknown:
+        raise TypeError(f"compare_runs: unsupported options {sorted(unknown)}")
+    reanalyse = bool(options.get('reanalyse'))
+    analyzer_kwargs = {key: options[key] for key in ('capacity', 'verbose')
+                       if key in options}
+    baseline_result, baseline_elements, _ = _analyze_side(
+        baseline_dir, options.get('baseline_plane2'), reanalyse, **analyzer_kwargs)
+    candidate_result, candidate_elements, candidate_dependencies = _analyze_side(
+        candidate_dir, options.get('candidate_plane2'), reanalyse, **analyzer_kwargs)
 
     # UX-59: a baseline is a *set* when one is supplied. Each run is
     # analyzed the same way the two principals are, and one that does not
@@ -1386,11 +1460,11 @@ def compare_runs(baseline_dir: Path, candidate_dir: Path,
 
     return _compare_results(
         baseline_result, candidate_result,
-        baseline_analyzer.graph.elements, candidate_analyzer.graph.elements,
+        baseline_elements, candidate_elements,
         baseline_band=band,
         baseline_band_shortfall=band_shortfall,
         baseline_band_sources=band_sources,
-        candidate_dependencies=candidate_analyzer.graph.dependencies,
+        candidate_dependencies=candidate_dependencies,
     )
 
 

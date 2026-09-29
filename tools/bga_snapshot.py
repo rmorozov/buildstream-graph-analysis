@@ -34,6 +34,7 @@ foundation tier with project.conf's variables: {bga-foundation:
 Full background: docs/guides/real-project.md
 """
 import argparse
+import functools
 import gzip
 import json
 import os
@@ -43,7 +44,7 @@ import sys
 import time
 from typing import Optional
 
-from bga import run_store
+from bga import progress, run_store
 from bga.plural import plural
 
 # What a snapshot is made of. Deliberately the layout the published
@@ -288,6 +289,18 @@ def build_ever_started(snapshot: str):
     return "bga-clocks start" not in lines[-1]
 
 
+def _set_baseline_run_dir_env(project: str) -> None:
+    """UX-1083: `BGA_BASELINE_RUN_DIR` - the most recent *healthy*
+    snapshot's own `run/`, the same one `_healthy_baseline` picks for
+    the compare - or unset, so `extract_run`'s graph reuse never fires
+    on a first capture."""
+    baseline_snapshot, _skipped = _healthy_baseline(run_store.list_runs(project))
+    if baseline_snapshot:
+        os.environ["BGA_BASELINE_RUN_DIR"] = os.path.join(baseline_snapshot, RUN_SUBDIR)
+    else:
+        os.environ.pop("BGA_BASELINE_RUN_DIR", None)
+
+
 def take_snapshot(project: str, command: list[str], config: dict,
                   snapshot: Optional[str] = None, diagnose: bool = False,
                   no_inject: bool = False, inhibit: bool = False,
@@ -309,14 +322,22 @@ def take_snapshot(project: str, command: list[str], config: dict,
     `jobserver_auth` (UX-875): forwarded to the tracer's own
     `--jobserver-auth` unchanged - the tracer resolves it
     (`jobserver_auth_style`), this only carries it through.
+
+    `BGA_BASELINE_RUN_DIR` (UX-1083): set by `_set_baseline_run_dir_env`,
+    the same `BGA_JOBSERVER_MODE` shape (UX-856) - the tracer's `run`
+    reads it straight from the environment, no CLI flag, so `--help`
+    never grows.
     """
     from bga.cli import resolve_jobserver_ceiling, set_jobserver_mode_env
 
     from .bst_native_build_tracer import main as capture_main
 
     snapshot = snapshot or run_store.new_snapshot_dir(project)
+    stamp = _producer_stamp()
+    progress.set_on_row(lambda: _write_tail(snapshot, stamp))
     mode, ceiling, seed = resolve_jobserver_ceiling(jobserver, command, cpu_count=cpu_count)
     set_jobserver_mode_env(mode)
+    _set_baseline_run_dir_env(project)
     with open(os.path.join(snapshot, CONTEXT_NAME), "w", encoding="utf-8") as handle:
         handle.write(_capture_context(project, command, config,
                                       jobserver=(mode or "off", ceiling, seed),
@@ -359,9 +380,50 @@ def take_snapshot(project: str, command: list[str], config: dict,
 
     print(f"Capturing into {snapshot}", file=sys.stderr)
     exit_code = capture_main(argv)
-    if keep_raw:
-        _compress_raw_log(snapshot)
+    if keep_raw and os.path.exists(os.path.join(snapshot, RAW_LOG_NAME[:-3])):
+        with progress.timed("raw log gzip", say="Compressing the raw Plane 2 log..."):
+            _compress_raw_log(snapshot)
     return snapshot, exit_code
+
+
+@functools.lru_cache(maxsize=1)
+def _producer_stamp() -> Optional[dict]:
+    from bga import producer
+
+    try:
+        return producer.stamp()
+    except Exception:  # provenance never fails a capture (`producer.add`)
+        return None
+
+
+def _write_tail(snapshot: str, stamp: Optional[dict], complete: bool = False) -> None:
+    """UX-1078: the progress ledger as `tail/v1`, replaced whole after
+    every phase so an interrupted tail keeps the rows it finished."""
+    from bga import schemas
+
+    recorded = progress.ledger()
+    document = schemas.stamp({"producer": stamp,
+                              "build_wall_us": recorded["build_wall_us"],
+                              "phases": recorded["phases"],
+                              "complete": complete}, schemas.TAIL)
+    path = os.path.join(snapshot, run_store.TAIL_NAME)
+    try:
+        with open(path + ".tmp", "w", encoding="utf-8") as handle:
+            json.dump(document, handle, indent=2)
+        os.replace(path + ".tmp", path)
+    except OSError as error:
+        print(f"Warning: could not write {path} ({error}).", file=sys.stderr)
+
+
+def _close_tail(snapshot: str) -> None:
+    """The tail finished: `complete: true`, its total line, and the
+    ledger detached so a later phase in this process writes nowhere."""
+    _write_tail(snapshot, _producer_stamp(), complete=True)
+    progress.total_line()
+    progress.reset_ledger()
+
+
+RAW_LOG_COMPRESSLEVEL = 6  # UX-1075: 3.1s vs 16.0s at level 9, 31MB vs 30MB
 
 
 def _compress_raw_log(snapshot: str) -> None:
@@ -376,7 +438,8 @@ def _compress_raw_log(snapshot: str) -> None:
         return
     try:
         with open(plain, "rb") as source, gzip.open(
-                os.path.join(snapshot, RAW_LOG_NAME), "wb") as target:
+                os.path.join(snapshot, RAW_LOG_NAME), "wb",
+                compresslevel=RAW_LOG_COMPRESSLEVEL) as target:
             shutil.copyfileobj(source, target, length=1024 * 1024)
         os.remove(plain)
     except OSError as error:
@@ -624,10 +687,27 @@ def main(argv: Optional[list[str]] = None) -> int:
               file=sys.stderr)
         return 2
 
+    # UX-1080: the ledger starts here, not in `take_snapshot` below - the
+    # doctor's `bst --version` inside `why_the_build_cannot_start` runs
+    # before any snapshot directory exists to write `tail.json` into, so
+    # its `timed_call` row would otherwise land in a ledger nothing reads.
+    # `set_on_row` in `take_snapshot` attaches the writer without
+    # discarding it.
+    progress.reset_ledger()
+
     # UX-324: before the sticky config, before the snapshot directory,
     # before the store's .gitignore - all three are writes, and this
     # path is the one that must leave nothing.
-    refusal = why_the_build_cannot_start(command)
+    #
+    # UX-1080: its own named phase, timed like every other one - not
+    # left to `timed_call`'s drain-on-close fallback, which would credit
+    # the doctor's `bst --version` to whichever real phase happened to
+    # close next (`Plane 2 report`, on a real capture). That fallback
+    # still exists for a call genuinely made with no phase open at all;
+    # this one now always has one.
+    with progress.timed("before the build", say="Checking bst is ready...",
+                        before_build=True):
+        refusal = why_the_build_cannot_start(command)
     if refusal is not None:
         print(refusal, file=sys.stderr)
         return 2
@@ -671,6 +751,7 @@ def main(argv: Optional[list[str]] = None) -> int:
               f"build exited {build_exit}.\n"
               f"Diagnostics: {os.path.join(snapshot, PLANE2_NAME)}"
               f".diagnostics.jsonl", file=sys.stderr)
+        _close_tail(snapshot)
         return build_exit
 
     run_dir = os.path.join(snapshot, RUN_SUBDIR)
@@ -695,15 +776,21 @@ def main(argv: Optional[list[str]] = None) -> int:
             print("Re-run with --diagnose to record what the bwrap shim "
                   "received and exec'd; --no-inject then says whether the "
                   "rewrite is what breaks it.", file=sys.stderr)
+        _close_tail(snapshot)
         return build_exit or 1
 
     print()
-    _analyze(run_dir, os.path.join(snapshot, PLANE2_NAME),
-             publish_to=os.path.join(snapshot, run_store.ANALYSIS_NAME),
-             build_exit=build_exit)
+    with progress.timed("analyze", say="Analyzing the run..."):
+        _, analyzed_result = _analyze(
+            run_dir, os.path.join(snapshot, PLANE2_NAME),
+            publish_to=os.path.join(snapshot, run_store.ANALYSIS_NAME),
+            build_exit=build_exit)
     # UX-226: the small slice this snapshot contributes to the store's
     # per-element history. Never fatal - see `write_element_slice`.
-    write_element_slice(snapshot, run_dir)
+    # UX-1072: reuse the analysis `_analyze` already ran instead of a
+    # second pass over the same run.
+    with progress.timed("element slice", say="Writing the element slice..."):
+        write_element_slice(snapshot, run_dir, analysis_result=analyzed_result)
 
     if not args.no_compare and previous:
         print()
@@ -711,14 +798,17 @@ def main(argv: Optional[list[str]] = None) -> int:
         if skipped:
             print(_walkback_notice(baseline, skipped))
         if baseline is not None:
-            _compare(baseline, snapshot)
+            with progress.timed("compare", say="Comparing against the baseline..."):
+                _compare(baseline, snapshot)
     elif not args.no_compare:
         print("\nThis is the first snapshot of this project - make your change "
               "and run the same command again, and the comparison against it "
               "is automatic.")
 
-    _say_what_it_weighs(snapshot, project)
-    _warn_if_large(project)
+    with progress.timed("store size", say="Weighing the store..."):
+        _say_what_it_weighs(snapshot, project)
+        _warn_if_large(project)
+    _close_tail(snapshot)
     # UX-738: round 100's gate read a complete-looking report next to
     # `assert 255 == 0` with nothing in either stream saying why. This is
     # the last thing printed, so a reader who only sees the tail still
@@ -813,8 +903,8 @@ def _exit_summary_line(build_exit: int, wrapped_log_path: str) -> str:
 
 
 def _analyze(run_dir: str, plane2: str, publish_to: Optional[str] = None,
-            build_exit: int = 0) -> int:
-    """Print the report, and publish the same analysis as JSON.
+            build_exit: int = 0) -> tuple[int, Optional[object]]:
+    """Print the report, publish the same analysis as JSON, and return it.
 
     `UX-296`: **capture computes, view serves.** `bga view` used to
     re-run this analysis on every page load, which re-parsed the Plane 2
@@ -835,6 +925,10 @@ def _analyze(run_dir: str, plane2: str, publish_to: Optional[str] = None,
     refuses to verdict for a failed element. A legitimate fully-cached
     build also has zero chain execution, which is why the exit code is
     the other half of the conjunction: `build_exit == 0` always prints.
+
+    `UX-1072`: the returned analysis (or `None`, on the plain CLI
+    fallback) is what `write_element_slice` reuses instead of a second
+    full pass over the same run.
     """
     argv = ["analyze", run_dir]
     if os.path.isfile(plane2):
@@ -842,7 +936,7 @@ def _analyze(run_dir: str, plane2: str, publish_to: Optional[str] = None,
 
     if publish_to is None:
         from bga.cli import main as cli_main
-        return cli_main(argv)
+        return cli_main(argv), None
 
     from bga.cli import analyzed, create_parser
     from bga.report.json import format_json
@@ -855,7 +949,7 @@ def _analyze(run_dir: str, plane2: str, publish_to: Optional[str] = None,
         raise
     except Exception:
         from bga.cli import main as cli_main
-        return cli_main(argv)
+        return cli_main(argv), None
 
     executed_us = (result.attribution or {}).get('execution_on_chain_us') or 0
     if build_exit and not executed_us:
@@ -874,7 +968,7 @@ def _analyze(run_dir: str, plane2: str, publish_to: Optional[str] = None,
         # A published payload is a convenience on top of a capture that
         # already succeeded, the rule `write_element_slice` follows.
         pass
-    return 0
+    return 0, result
 
 
 # UX-226: how many elements one snapshot may remember. This is a
@@ -886,7 +980,9 @@ SLICE_ELEMENTS_MAX = 24
 SLICE_NAME = "element-slice.json"
 
 
-def write_element_slice(snapshot: str, run_dir: str) -> Optional[dict]:
+def write_element_slice(snapshot: str, run_dir: str,
+                         analysis_result: Optional[object] = None
+                         ) -> Optional[dict]:
     """Persist a bounded per-element slice beside the snapshot.
 
     Written at capture time rather than derived at read time, and the
@@ -894,6 +990,12 @@ def write_element_slice(snapshot: str, run_dir: str) -> Optional[dict]:
     every snapshot, so a row that needed an analysis would put N full
     analyses in front of a page load. The analysis has already happened
     here - `_analyze` ran a line above - so this costs one small file.
+
+    `UX-1072`: `analysis_result`, when given, is the analysis `_analyze`
+    already ran (section=None is a superset of `section='graph'`'s
+    signals) - measured 18.62s at 5,002 elements as a second full pass.
+    `None` falls back to running the analyzer here, for any caller (or
+    test) that has not published one.
 
     Returns the slice, or `None` when the run could not be analyzed. A
     snapshot with no slice is the ordinary case for anything captured
@@ -904,16 +1006,18 @@ def write_element_slice(snapshot: str, run_dir: str) -> Optional[dict]:
 
     from bga.analyzer import BuildEfficiencyAnalyzer
 
-    try:
-        # `graph` is the narrowest section that still produces the
-        # signals this slice reads, so the second analysis is the
-        # cheapest one that can answer the question.
-        result = BuildEfficiencyAnalyzer().analyze(Path(run_dir),
-                                                   section='graph')
-    except Exception:
-        # A slice is a convenience on top of a capture that already
-        # succeeded. It must never be the thing that fails a snapshot.
-        return None
+    result = analysis_result
+    if result is None:
+        try:
+            # `graph` is the narrowest section that still produces the
+            # signals this slice reads, so the second analysis is the
+            # cheapest one that can answer the question.
+            result = BuildEfficiencyAnalyzer().analyze(Path(run_dir),
+                                                       section='graph')
+        except Exception:
+            # A slice is a convenience on top of a capture that already
+            # succeeded. It must never be the thing that fails a snapshot.
+            return None
     if result is None:
         return None
 
@@ -1229,6 +1333,8 @@ def store_listing(project: str, window: Optional[int] = None) -> dict:
         # declared nothing, so the listing is byte-identical to today's.
         if measured.get("build_class"):
             rows[-1]["build_class"] = measured["build_class"]
+        # UX-1078: bga's own tail beside the build; absent before tail.json.
+        rows[-1].update(_tail_measurements(path))
     # Before the window, not after: a verdict compares a run with the
     # one before it, and the first row of a window has a predecessor.
     _mark_verdicts(rows)
@@ -1243,6 +1349,19 @@ def store_listing(project: str, window: Optional[int] = None) -> dict:
         "total_bytes": sum(row["bytes"] for row in rows),
     }, schemas.STORE)
 
+
+
+def _tail_measurements(snapshot: str) -> dict:
+    """`bga_tail_us` (the phases' sum) and `build_wall_us`, each absent
+    where `tail/v1` does not carry it."""
+    tail = run_store.read_tail(snapshot) or {}
+    phases, build = tail.get("phases"), tail.get("build_wall_us")
+    out = {}
+    if isinstance(phases, list):
+        out["bga_tail_us"] = progress.tail_us(phases)
+    if isinstance(build, int):
+        out["build_wall_us"] = build
+    return out
 
 
 def _run_measurements(snapshot: str) -> dict:
@@ -1415,6 +1534,16 @@ def _capacity(project: str, spec: str, fmt: str = "text") -> int:
     return EXIT_CODE_MISMATCHED_RUNS if document.get("refusal") else 0
 
 
+def _tail_cell(row: dict) -> str:
+    """UX-1078: `  build 34.7s + bga 5.6s`, or empty before tail.json."""
+    tail = row.get("bga_tail_us")
+    if tail is None:
+        return ""
+    build = row.get("build_wall_us")
+    lead = f"build {build / 1e6:.1f}s + " if build is not None else ""
+    return f"  {lead}bga {tail / 1e6:.1f}s"
+
+
 def _list(project: str, as_json: bool = False) -> int:
     """Everything on disk, with the aliases resolution would give it."""
     listing = store_listing(project)
@@ -1445,7 +1574,7 @@ def _list(project: str, as_json: bool = False) -> int:
         # is told the store is large and left to guess which snapshot is
         # the heavy one.
         print(f"  {row['stamp']:<18}"
-              f"{run_store.human_bytes(row['bytes']):>9}{suffix}")
+              f"{run_store.human_bytes(row['bytes']):>9}{_tail_cell(row)}{suffix}")
     print(f"  {'total':<18}"
           f"{run_store.human_bytes(listing['total_bytes']):>9}")
     return 0

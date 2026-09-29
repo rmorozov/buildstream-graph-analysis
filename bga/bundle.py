@@ -238,6 +238,7 @@ _COMMAND_PATHS = frozenset({
     ("plane2/v3", "redundant_operations[].example_cmd"),
     ("plane2/v3", "redundant_operations[].signature"),
     ("plane2/v3", "stream_coverage.cpu_disagreements[].cmd"),
+    ("tail/v1", "phases[].calls[].verb"),
 })
 
 #: The class D paths holding a hostname; every other host fact is kept (section 8).

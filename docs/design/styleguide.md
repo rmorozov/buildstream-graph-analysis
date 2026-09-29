@@ -1284,6 +1284,8 @@ out of a real browser rather than out of this file.
 | **primary** | `--accent-mark`, solid, 3px | at most one per chapter: the first runnable next step's copy (§6e.5, `UX-1027`) |
 | **form-control** | `--panel`, solid, 3px | every `select` and text `input` at rest — the query builder, the view picker, the run picker (`UX-1051`) |
 
+The **quiet** grade declares no weight: it inherits its context's, 400 in body text and 700 in an `h2`/`h3`, and the guard reads the declared weight, not a comparison with the parent's.
+
 A grade is the look **at rest**. Hover, `aria-pressed="true"`,
 `aria-expanded="true"` and `aria-current` are states drawn over a grade,
 not grades: the rail's "you are here" (`aria-current="location"`, weight

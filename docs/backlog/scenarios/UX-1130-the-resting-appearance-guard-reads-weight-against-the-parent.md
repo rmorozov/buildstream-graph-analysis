@@ -2,7 +2,7 @@
 
 **Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-1051 | **Found by:** round 149's bookkeeping ledger, promoted at round 152's sweep | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_every_control_has_a_resting_appearance.py::test_an_explicit_weight_equal_to_the_ancestors_is_declared`
 
 ## Motivation
 
@@ -25,6 +25,15 @@ the control) rather than the computed-against-parent comparison. The
 styleguide says the quiet grade inherits its context's weight, which is
 what the page draws today: no control changes its look.
 
+## Decision
+
+- **Route:** default. No control changes its look; the guard's weight read becomes the declared weight (inline style or any matched stylesheet rule, media-aware); styleguide §6d states the quiet grade inherits its context's weight.
+- **Rejected:** giving the quiet grade an explicit weight (changes looks); reading computed-vs-parent (blind to an explicit equal weight).
+- **Files:** `tests/unit/test_every_control_has_a_resting_appearance.py`, `docs/design/styleguide.md`. Not `style.css`.
+- **Guard:** planted inline `font-weight` equal to each button's parent's; no control may read `inherited`.
+- **Mutation:** restore the computed-vs-parent expression in `LOOKS`.
+- **Class:** guard-blind-spot (a proxy read).
+
 ## Out of Scope
 
 Changing any control's weight.
@@ -37,3 +46,10 @@ parent's computed weight again; the planted case passes and the test
 reddens.
 
 ## Outcome
+
+Gap measured: before, the planted case (explicit weight equal to parent's on every button, macro_micro) read `inherited` for all controls.
+Close measured: `python3 -m pytest -n 2 -q tests/unit/test_every_control_has_a_resting_appearance.py` -> 17 passed; no existing control declares a weight.
+
+| mutation | red | count |
+|---|---|---|
+| `LOOKS` weight back to computed-vs-parent | `test_an_explicit_weight_equal_to_the_ancestors_is_declared` | 1 failed, 16 passed |

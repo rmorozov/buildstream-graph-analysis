@@ -225,7 +225,11 @@ and `rules.md` that a tool can check should be a tool; what remains prose should
 5. **Agent-side gate latency.** `push-check` = lint (~170 s) + selector + sizes + close
    check. For an agent that pushes several times per round, lint-docs alone is the
    dominant term, and it is spent re-reading history files the diff never touched.
-6. **Fail-open `docs_only`:** `CLAUDE.md`, `REVIEW.md` and `.claude/**/*.md` steer the
+6. **A check that is red on every PR.** `github-advanced-security` concluded `failure`
+   with no output on #299's and #300's heads, both merged, and on this audit's own PR. A red
+   that every merge overrides teaches the reader to override red; it should be fixed or
+   removed from the PR's checks.
+7. **Fail-open `docs_only`:** `CLAUDE.md`, `REVIEW.md` and `.claude/**/*.md` steer the
    agents and take the docs lane; `agent-config` covers them, which is fine, but a skill
    change that alters what a verifier runs gets no suite run. Acceptable; worth knowing.
 

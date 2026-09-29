@@ -46,3 +46,27 @@ The Plane 2 readers (a second row once this one's harness exists).
 `tests/unit/test_the_log_reader_holds_its_properties.py`. Mutation: make
 the reader drop a SUCCESS whose element has a trailing space; the
 generated-input property finds it within the default example budget.
+
+## Outcome
+
+Gap measured: `grep -rn hypothesis tests/ pyproject.toml` at `0c421d6b`
+-> no match; no test generated log lines.
+
+Close measured: `hypothesis==6.168.3` in the dev extra; `requirements.lock`
+gains `hypothesis` and `sortedcontainers==2.4.0` only.
+`python3 -m pytest tests/unit/test_the_log_reader_holds_its_properties.py -q -n0`
+-> 5 passed in 1.17s (profile `derandomize=True, database=None,
+max_examples=100`, TZ pinned to UTC by a module fixture).
+
+| mutation | red | printed |
+|---|---|---|
+| `if status != "START" and element.endswith(" "): return` before the strip in `handle_bst_event` | raw-mode and wrapped-mode span properties | 2 failed, 3 passed |
+| `BST_LOG_RE` hash group `[^\]]+` -> `[^\]]*` (empty hash matches) | the unmatched-line property, via near-miss lines | 1 failed, 4 passed |
+
+Property 2 draws random text and near-misses of a valid line (bracket dropped or doubled, unknown status, empty hash, truncated elapsed), filtered by a frozen copy of the grammar: with the reader's own regex as the filter the mutation stayed green (5 passed).
+
+Deviation: the row's "counted" clause is not built (no counter exists;
+the Decision rejects it). Found, not fixed: `parse_timestamp` reads the
+UTC wrapper stamp as local time (`datetime.timestamp()` on a naive
+value), so spans are off by the TZ offset outside UTC - hence the pin.
+Needs its own row.

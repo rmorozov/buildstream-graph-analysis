@@ -36,6 +36,7 @@ EITHER = {
     "touch-map-adopt",
     "flake-ledger-adopt",
     "red-ledger-adopt",
+    "fdsdk-reading",
     "area-pages-publish",
     "agent-config",
     "packaging",

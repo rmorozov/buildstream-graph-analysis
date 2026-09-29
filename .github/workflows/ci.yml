@@ -873,6 +873,39 @@ jobs:
       - name: Publish the ledger when it grew
         run: python tools/dev_records.py publish
 
+  fdsdk-reading:
+    # UX-1005: re-reads a kept fdsdk capture on GitHub's side, because a
+    # session cannot download an artifact; runs only under the `jobserver` label.
+    if: github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'jobserver')
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    env:
+      FDSDK_RUN: "36306876024"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      - name: Install bga
+        run: pip install -e .
+      - name: Fetch the kept fdsdk capture
+        uses: actions/download-artifact@v8
+        with:
+          name: fdsdk-capture
+          run-id: ${{ env.FDSDK_RUN }}
+          github-token: ${{ github.token }}
+          path: fdsdk
+      - name: The builder and pool recommendation, read from the fdsdk capture (UX-1005)
+        if: always()
+        run: |
+          run_dir=$(find fdsdk -name graph.json -printf '%h\n' | head -1)
+          test -n "$run_dir" || { echo "::warning title=UX-1005 fdsdk::no graph.json under fdsdk/"; exit 0; }
+          bga analyze "$run_dir" --format text > fdsdk-analyze.txt 2>&1 || true
+          grep -E '^(Builders|  Ready-set width|Pool size|Critical Path Length)' fdsdk-analyze.txt || tail -20 fdsdk-analyze.txt
+          echo "::notice title=UX-1005 fdsdk::run $FDSDK_RUN | $(grep -E '^(Builders|  Ready-set width|Pool size)' fdsdk-analyze.txt | cut -c1-160 | paste -sd'|' -)"
+
   agent-config:
     # Watches: .claude/** , CLAUDE.md , REVIEW.md - the three that steer
     # a session. The workflow triggers on every push and pull request, so

@@ -1,7 +1,7 @@
 """UX-1158: a filter says when it matched nothing, and Back walks the rail.
 
 A no-match filter's badge reads `none of M match`; the table's strip
-redraws over the kept rows and says `across K of M rows`; three rail
+redraws over the kept rows and its sentence counts K; three rail
 chapter presses take three Backs to unwind, each restoring the open
 chapters and the rail's mark; the hash's state is one opaque token, an
 untouched page writes none, and a readable hash from before still loads.
@@ -10,6 +10,7 @@ two-plane review page.
 """
 
 import json
+import re
 import sys
 from pathlib import Path
 from urllib.parse import quote
@@ -36,6 +37,7 @@ _FILTER = r"""
   const read = () => ({
     badge: tools.querySelector(".badge")?.textContent ?? null,
     label: tools.querySelector(".density-label")?.textContent ?? null,
+    sentence: tools.querySelector(".density-sentence")?.textContent ?? null,
     hash: location.hash,
   });
   const type = async (value) => {
@@ -156,9 +158,11 @@ class TestAFilterSaysWhatItKept:
                 out = seen[label][width]
                 total = out["before"]["badge"].split()[-1]
                 shown = out["some"]["badge"].split()[0]
-                assert out["before"]["label"].endswith(f"across all {total} rows"), (label, out)
+                # `UX-1156`: the label names the column; the badge and the strip's sentence count.
+                assert out["before"]["sentence"].endswith(f"across {total} rows."), (label, out)
                 assert shown != total and shown != "none", (label, out)
-                assert out["some"]["label"].endswith(f"across {shown} of {total} rows"), (label, out)
+                assert out["some"]["label"] == out["before"]["label"], (label, out)
+                assert re.search(rf"(?<![\d,]){shown} rows?\b", out["some"]["sentence"]), (label, out)
                 assert out["none"]["label"] is None, (label, out)
                 assert out["cleared"]["label"] == out["before"]["label"], (label, out)
 

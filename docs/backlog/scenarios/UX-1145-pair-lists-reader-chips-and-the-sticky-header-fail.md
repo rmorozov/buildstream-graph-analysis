@@ -1,6 +1,6 @@
 # UX-1145: pair lists, reader chips and the sticky header fail the compact class
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the view UI review on a two-plane page (2026-09-29), findings H6 | **Serves:** R1, R6 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement | **Reading:** container
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the view UI review on a two-plane page (2026-09-29), findings H6 | **Serves:** R1, R6 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement | **Reading:** container
 
 **Guard:** `tests/unit/test_the_compact_class_stacks_pairs.py`
 

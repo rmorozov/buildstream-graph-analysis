@@ -587,6 +587,27 @@ pairing for every merged row from round 103 on.
 | 152 | verifier | sonnet | verifier: UX-1106 UX-1107 UX-1124 UX-1007 UX-1057 UX-1066 UX-1012 UX-900 UX-1008 UX-975 UX-976 UX-904 UX-1130 UX-1125 UX-1129 UX-1131 UX-1056 UX-1058 UX-1045 UX-1133 UX-1010 | 62k | — | — | PASS | — |
 | 153 | design-review | opus | design review: two-plane page | 163k | 53 | 13m27s | 25 findings, filed | a `pkill` matched its own shell; `details.open` does not unfold chapters |
 | 153 | verifier | sonnet | verifier: UX-1136 UX-1137 UX-1138 UX-1139 | 45k | 35 | 3m47s | 4 pass; dev_sizes red and an unguarded text-report sentence, both fixed | the sandbox refused compound commands setting `PYTHONPATH` |
+| 154 | implementer | opus | implementer: ~240k? (Track A UX-1140, UX-1149 see report: formatter + typesetter | — | — | — | see round-154 | — |
+| 154 | implementer | opus | implementer: Track B UX-1141, UX-1142 | — | — | — | see round-154 | — |
+| 154 | implementer | opus | implementer: Track D UX-1144 | — | — | — | see round-154 | — |
+| 154 | implementer | opus | implementer: Track C UX-1143, UX-1150 | ~240k | — | ~2h | see round-154 | cost: finding which commit moved J3 budget; classifier refused compound bash; node shim has no :scope |
+| 154 | implementer | opus | implementer: Track G UX-1151, UX-1153 | ~270k | — | ~75m | see round-154 | cost: guards encoding the old shape; sandbox refused $VAR/compound commands |
+| 154 | implementer | opus | implementer: Track E UX-1145, UX-1152 | ~270k | — | ~3.5h | see round-154 | cost: guards outside the touching selector; amend after reds, sandbox compound refusals |
+| 154 | implementer | opus | implementer: Track F UX-1146..1148 | ~330k | — | ~3h | see round-154 | cost: re-basing 17 guards; two rows shipped red, amended |
+| 154 | integrator | opus | integrator: merge 7 tracks | ~155k | — | ~75m | see round-154 | cost: push-check + attributing 30 reds; seven track holds reached the merge; brief's --check --write invalid |
+| 154 | implementer | sonnet | fixer: UX-1140/1149 merged reds | ~90k | — | ~10m | see round-154 | nothing |
+| 154 | implementer | sonnet | fixer: UX-1143/1150 merged reds | ~60k | — | ~6m | see round-154 | — |
+| 154 | implementer | sonnet | fixer: UX-1144/1151 merged reds | ~110k | — | ~12m | see round-154 | — |
+| 154 | implementer | opus | fixer: UX-1145/1152 merged reds | ~95k | — | ~40m | see round-154 | cost: node-shim lowercase tagName vs Chromium |
+| 154 | implementer | sonnet | fixer: UX-1146..1148 merged reds | ~90k | — | ~12m | see round-154 | — |
+| 154 | verifier | sonnet | verifier: 9 PASS 5 HOLD (1140 1141 1144 1145 1151 | ~600k | — | ~35m | see round-154 | worktree hook refused compound shell |
+| 154 | walker | sonnet | walker: 14 defect classes, 6 screenshots | ~190k | — | ~45m | see round-154 | emulateMedia not page.pdf |
+| 154 | implementer | opus | fixer: UX-1147 heads at 390 + both_scale budget re-base | ~125k | — | ~85m | see round-154 | cost: showing travel budget reads 600 px placeholder |
+| 154 | implementer | sonnet | fixer: UX-1141/1144 residue | ~200k | — | ~75m | see round-154 | path relabel reverted, guards pin paths |
+| 154 | implementer | sonnet | fixer: UX-1149/1151 residue | ~230k | — | ~40m | see round-154 | `said` redeclaration broke module load |
+| 154 | implementer | sonnet | fixer: UX-1140 producer prose (bga/shown.py | ~1.2M | — | ~2h | see round-154 | cost: repeated full-suite runs; guard vacuous until dd description handled |
+| 154 | integrator | opus | integrator: 7 merged-tree reds (page bytes, xl_both, map, shim, rail split | ~110k | — | ~45m | see round-154 | viewer dedup yielded 264 B, exporter indent strip carried the fix |
+| 154 | closer | opus | closer: UX-1140..UX-1153, UX-1154..UX-1160 filed | — | — | — | 14 rows moved, round document | — |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -599,7 +620,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the five hundred and seventy rows already say: a researcher that reads a document
+What the five hundred and ninety-one rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

@@ -29,21 +29,14 @@ task file, which is the only place it ever lived twice.
 | UX-902 | [a showcase case is two captures, and there is nowhere to put one](UX-0902-the-showcase-case-file-and-its-two-capture-rule.md) | docs | High | R1, R2, R8 | 🔴 Not Started |
 | UX-1014 | [the "safe cap plus auto" default is measured on more shapes and hosts before it is anyone's default](UX-1014-the-builders-and-auto-default-is-measured-on-more-shapes-and-hosts.md) | capture | High | R4, R5 | 🔴 Not Started |
 | UX-1134 | [`--jobserver auto` with no plan widens a memory-bound giant into the OOM killer](UX-1134-auto-oom-kills-a-memory-bound-giant-with-no-plan.md) | capture | High | R4, R5 | 🔴 Not Started |
-| UX-1140 | [a quantity in the decision panel and provenance prints as a raw float or byte count](UX-1140-a-quantity-in-the-decision-panel-and-provenance-prints.md) | viewer | High | R1, R2 | 🔴 Not Started |
-| UX-1141 | [payload keys and enum values are shown to readers as the label](UX-1141-payload-keys-and-enum-values-are-shown-to-readers.md) | viewer | High | R1, R2, R5 | 🔴 Not Started |
-| UX-1142 | [task ids and repository paths reach reader text through descriptions and notes](UX-1142-task-ids-and-repository-paths-reach-reader-text-through.md) | viewer | High | R1, R8 | 🔴 Not Started |
-| UX-1143 | [the capacity recommendation lists its inputs and never says what to set](UX-1143-the-capacity-recommendation-lists-its-inputs-and-never-says.md) | viewer | High | R5 | 🔴 Not Started |
-| UX-1144 | [one concept carries several names across the page](UX-1144-one-concept-carries-several-names-across-the-page.md) | viewer | High | R1, R3, R8 | 🔴 Not Started |
-| UX-1145 | [pair lists, reader chips and the sticky header fail the compact class](UX-1145-pair-lists-reader-chips-and-the-sticky-header-fail.md) | viewer | High | R1, R6 | 🔴 Not Started |
-| UX-1146 | [the decision, the headline and next steps say the same thing three times](UX-1146-the-decision-the-headline-and-next-steps-say-the.md) | viewer | Medium | R1, R8 | 🔴 Not Started |
-| UX-1147 | [headings repeat their chapter's question and finding titles break sentence case](UX-1147-headings-repeat-their-chapters-question-and-finding-titles-break.md) | viewer | Medium | R1 | 🔴 Not Started |
-| UX-1148 | [findings are not listed in severity order](UX-1148-findings-are-not-listed-in-severity-order.md) | viewer | Medium | R1 | 🔴 Not Started |
-| UX-1149 | [backticks and ASCII arrows show as raw characters](UX-1149-backticks-and-ascii-arrows-show-as-raw-characters.md) | viewer | Medium | R1 | 🔴 Not Started |
-| UX-1150 | [booleans and dashes stand in for a verdict](UX-1150-booleans-and-dashes-stand-in-for-a-verdict.md) | viewer | Medium | R5 | 🔴 Not Started |
-| UX-1151 | [the Plane 2 sections do not lead with their answer](UX-1151-the-plane-2-sections-do-not-lead-with-their.md) | viewer | Medium | R2, R5 | 🔴 Not Started |
-| UX-1152 | [folds, table tools and element-card links repeat what is already on screen](UX-1152-folds-table-tools-and-element-card-links-repeat-what.md) | viewer | Medium | R1 | 🔴 Not Started |
-| UX-1153 | [six low-impact layout and glyph defects from the view UI review](UX-1153-six-low-impact-layout-and-glyph-defects-from-the.md) | viewer | Low | R1 | 🔴 Not Started |
 | UX-1040 | [a paired reading decides whether implementers move to opus at low effort](UX-1040-a-paired-reading-decides-the-implementers-model.md) | guards | Medium | every round's implementer spend | 🔴 Not Started |
+| UX-1154 | [a print blanks inner folds and prints its controls](UX-1154-print-blanks-inner-folds-and-prints-its-controls.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1155 | [accessible names repeat or omit the thing they name](UX-1155-accessible-names-repeat-or-omit-the-thing-they-name.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1156 | [text still repeats across the page](UX-1156-text-still-repeats-across-the-page.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1157 | [compact layout leaves four defects at 390](UX-1157-compact-layout-leaves-four-defects-at-390.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1158 | [filter and back-navigation state is not kept or told](UX-1158-filter-and-back-navigation-state-is-not-kept-or-told.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1159 | [key paths and schema descriptions reach reader text](UX-1159-key-paths-and-schema-descriptions-reach-reader-text.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1160 | [the pointer-travel instrument reads a content-visibility placeholder, not page geometry](UX-1160-the-pointer-travel-instrument-reads-a-content-visibility-placeholder.md) | viewer | Medium | R1 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

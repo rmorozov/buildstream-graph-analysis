@@ -1,6 +1,6 @@
 # UX-1140: a quantity in the decision panel and provenance prints as a raw float or byte count
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the view UI review on a two-plane page (2026-09-29), findings H1, M5 | **Serves:** R1, R2 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement | **Reading:** container
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the view UI review on a two-plane page (2026-09-29), findings H1, M5 | **Serves:** R1, R2 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement | **Reading:** container
 
 **Guard:** `tests/unit/test_a_quantity_is_formatted_where_it_is_shown.py`
 

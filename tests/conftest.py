@@ -416,6 +416,18 @@ KNOWN_SKIP_REASONS = {
         "the commit-body population reads `origin/main..HEAD`; a checkout without that ref cannot answer",
         0,
     ),
+    # `UX-1151`, `UX-1144`: one parametrised page each; a page without the
+    # section or concept is not the page the guard reads.
+    "this page carries no Plane 2 report": ("the UX-1151 guard on a page with no Plane 2 report", 1),
+    "this page draws fewer than two concurrencies": (
+        "the UX-1151 concurrency-name guard on a one-concurrency page",
+        1,
+    ),
+    "this page has no binary_cost section": ("the UX-1151 binary_cost guards on a page without the section", 2),
+    "only the two-plane page carries every concept": (
+        "the UX-1144 concept census, read on the two-plane page only",
+        2,
+    ),
 }
 
 # One file going quiet is what this exists to catch, and it is also the

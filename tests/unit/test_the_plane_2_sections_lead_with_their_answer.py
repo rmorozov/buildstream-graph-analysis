@@ -22,6 +22,9 @@ from tests.browser import NO_BROWSER, Browser, find_chrome
 
 chrome = find_chrome()
 needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
+NO_PLANE_2 = "this page carries no Plane 2 report"
+ONE_CONCURRENCY = "this page draws fewer than two concurrencies"
+NO_BINARY_COST = "this page has no binary_cost section"
 
 PLANE2 = ("plane2_coverage", "binary_cost", "peak_memory", "element_join_coverage")
 
@@ -106,7 +109,7 @@ def measured(request, tmp_path_factory):
 class TestThePlane2SectionsLeadWithTheirAnswer:
     def test_the_two_plane_pages_carry_every_plane_2_section(self, measured):
         if measured["label"] == "golden":
-            pytest.skip("golden has no Plane 2 report")
+            pytest.skip(NO_PLANE_2)
         assert sorted(measured["sections"]) == sorted(PLANE2), measured["sections"]
 
     def test_each_plane_2_section_opens_with_a_sentence(self, measured):
@@ -123,14 +126,14 @@ class TestThePlane2SectionsLeadWithTheirAnswer:
     def test_the_two_concurrencies_carry_two_names(self, measured):
         seen = measured["concurrency"]
         if len(seen) < 2:
-            pytest.skip(f"{measured['label']} draws {sorted(seen)}")
+            pytest.skip(ONE_CONCURRENCY)
         words = [set(label.lower().split()) for label in seen.values()]
         assert not (words[0] <= words[1] or words[1] <= words[0]), seen
 
     def test_binary_cost_ranks_by_a_column_it_draws(self, measured):
         cost = measured.get("cost")
         if not cost:
-            pytest.skip(f"{measured['label']} has no binary_cost")
+            pytest.skip(NO_BINARY_COST)
         assert set(cost["offered"]) <= set(cost["columns"]), cost["offered"]
         if cost["ranked"]:
             assert cost["ranked"] in cost["columns"], cost
@@ -138,7 +141,7 @@ class TestThePlane2SectionsLeadWithTheirAnswer:
     def test_binary_cost_names_its_share_column(self, measured):
         cost = measured.get("cost")
         if not cost:
-            pytest.skip(f"{measured['label']} has no binary_cost")
+            pytest.skip(NO_BINARY_COST)
         assert len(set(cost["heads"])) == len(cost["heads"]), cost["heads"]
         assert "Share of CPU" in cost["text"], cost["heads"]
 

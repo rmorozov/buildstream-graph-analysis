@@ -847,11 +847,14 @@ export function interrogable(table, specs, total, depth = 0) {
   // measures its position and bounds against, not `total`, which
   // disagrees with the page the moment a filter narrows it.
   let pagerRefresh = null;
+  let shape = null;
+  const few = total <= FEW_ROWS;
   const refresh = () => {
-    // `applyFilters` also writes `state.filtered` - the pre-`top`
-    // population - back onto `state` itself.
+    // `applyFilters` also writes `state.filtered` and `state.kept` - the pre-`top` population.
     badge.textContent = badgeText(applyFilters(table, state), total);
     pagerRefresh?.();
+    // UX-1158: the strip draws, and counts, the rows the filter kept.
+    shape?.replaceWith?.(shape = distributionStrip(table, specs, total, few, state.kept) ?? el("span"));
   };
 
   // `UX-349`: **filters appear when the table is long enough to need
@@ -1053,7 +1056,8 @@ export function interrogable(table, specs, total, depth = 0) {
     // defect. The badge still says `25 of 132`, per `UX-208`, so this
     // bounds the page without hiding the size of what it bounded.
     if (opening) {
-      preset.value = opening.value;
+      // UX-1158: the opening value, which the link leaves unsaid.
+      preset.value = preset.opening = opening.value;
       state.top = opening.top;
       refresh();
     }
@@ -1160,8 +1164,7 @@ export function interrogable(table, specs, total, depth = 0) {
   // count of rows; the p50 and p95 ticks are positions and nothing
   // else. A percentile worth printing enters the payload first.
   // `UX-1152` (styleguide §3d): at two rows or fewer `Copy N rows` is the one count; the strip only states the floor (`UX-226`).
-  const few = total <= FEW_ROWS;
-  const shape = distributionStrip(table, specs, total, state, refresh, few);
+  shape = distributionStrip(table, specs, total, few);
 
   // `UX-318` (§3a.3): **every capped or nested table offers focus.** A
   // table that opened bounded is hiding rows behind a Top-N; a nested

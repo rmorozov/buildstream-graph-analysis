@@ -229,7 +229,7 @@ export function depthSentence(value) {
  * one. The strip itself renders in both, because the *shape* is the
  * point and the click is a convenience.
  */
-export function distributionStrip(table, specs, total, state, refresh, few = false) {
+export function distributionStrip(table, specs, total, few = false, rows) {
   // `UX-350`: **at any length.** The row cap decides whether a table is
   // *paged*, not whether its shape is worth showing - and gating the
   // strip on it meant the report's central table, eleven rows on one
@@ -242,9 +242,8 @@ export function distributionStrip(table, specs, total, state, refresh, few = fal
   if (!spec) return null;
   // The column key, not `cssId`: that normalises an *element uid* into
   // an anchor, and a column key is already a schema identifier.
-  // Over every row, not the shown ones: the label below says "across
-  // all N rows" and `UX-526` took the hidden ones out of the document.
-  const raw = columnCells(table, spec.key)
+  // Over every row the filter keeps, not the shown ones: `UX-526`, `UX-1158`.
+  const raw = columnCells(table, spec.key, rows)
     .map((td) => Number(td.getAttribute("data-raw")))
     .filter((n) => Number.isFinite(n));
   if (!raw.length) return null;
@@ -253,7 +252,8 @@ export function distributionStrip(table, specs, total, state, refresh, few = fal
   const drawn = columnStrip(raw, {
     grade: GRADE_ANNOTATION, name,
     format: (n) => quantity(n, spec.quantity),
-    label: few ? null : `${name} across all ${total.toLocaleString("en-US")} rows`,
+    label: few ? null : `${name} across ${
+      rows?.length < total ? `${rows.length} of` : "all"} ${total.toLocaleString("en-US")} rows`,
     counted: !few,
   });
   drawn.setAttribute("data-column", spec.key);
@@ -285,12 +285,6 @@ export function distributionStrip(table, specs, total, state, refresh, few = fal
     // through a formatted string.
     input.value = `>= ${chosen}`;
     input.dispatchEvent?.(new Event("input", { bubbles: true }));
-    if (!input.listeners?.input?.length) {
-      // A shim with no bubbling: set the state directly so the guard
-      // measures the filter rather than the event system.
-      state.thresholds[spec.key] = { op: ">=", value: chosen };
-      refresh();
-    }
   });
   return drawn;
 }

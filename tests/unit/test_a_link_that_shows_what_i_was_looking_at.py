@@ -18,6 +18,7 @@ import subprocess
 import pytest
 
 from bga import schemas
+from tests import pages
 
 node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
@@ -156,13 +157,15 @@ class TestTheFragmentCarriesTheView:
         )
         assert out["plain"] == {"anchor": "floors", "query": ""}
         assert out["both"] == {"anchor": "floors", "query": "c=a&f.b=x"}
-        assert out["joined"] == "#floors~c=a"
+        # `UX-1158`: written as one opaque token, read back as the query.
+        assert out["joined"].partition("~")[0] == "#floors" and "=" not in out["joined"]
+        assert pages.view_query(out["joined"]) == "c=a"
         assert out["nostate"] == "#floors", "a stateless link must stay the link that was already pasted into an issue"
 
     def test_the_link_is_this_document_at_this_view(self):
         out = _node(_SHIM + _LINK)
         assert out["link"].startswith("file:///tmp/r.html#"), out["link"]
-        assert "f.elements=openssl" in out["link"], out["link"]
+        assert "f.elements=openssl" in pages.view_query(out["link"]), out["link"]
 
     def test_the_module_reaches_the_export(self):
         import tools.bga_view as view

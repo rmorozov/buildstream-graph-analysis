@@ -49,12 +49,16 @@ export function splitHash(hash = "") {
   const text = String(hash).replace(/^#/, "");
   const at = text.indexOf(SEPARATOR);
   if (at === -1) return { anchor: text, query: "" };
-  return { anchor: text.slice(0, at), query: text.slice(at + 1) };
+  let query = text.slice(at + 1);
+  // UX-1158: a query holding `=` is a readable one from before the token, and loads as it did.
+  try { query = query.includes("=") ? query : atob(query); } catch { query = ""; }
+  return { anchor: text.slice(0, at), query };
 }
 
+// UX-1158: opaque on purpose - one base64 token, unpadded so no `=` reads it as old.
 export function joinHash(anchor, query) {
   if (!query) return anchor ? `#${anchor}` : "";
-  return `#${anchor ?? ""}${SEPARATOR}${query}`;
+  return `#${anchor ?? ""}${SEPARATOR}${btoa(query).replace(/=+$/, "")}`;
 }
 
 /**
@@ -80,7 +84,8 @@ export function captureView(root) {
   // it has to survive being pasted.
   for (const select of root.querySelectorAll?.("select.preset-view") ?? []) {
     const key = select.getAttribute("data-table");
-    if (key && select.value) params.set(`v.${key}`, select.value);
+    // UX-1158: a control at its opening value says nothing.
+    if (key && select.value !== select.children?.[0]?.value) params.set(`v.${key}`, select.value);
   }
 
   // `UX-372`: who the reader said they are. View state by the same
@@ -105,7 +110,7 @@ export function captureView(root) {
       }
     }
     const preset = tools?.querySelector?.("select.top-n");
-    if (preset?.value) params.set(`n.${key}`, preset.value);
+    if (preset?.value && preset.value !== preset.opening) params.set(`n.${key}`, preset.value);
     for (const th of table.querySelectorAll?.("th") ?? []) {
       const sorted = th.getAttribute("aria-sort");
       if (sorted) params.set(`s.${key}`, `${th.getAttribute("data-column")}:${sorted}`);

@@ -380,8 +380,10 @@ export function title(key, kind = null, published = false) {
   // `UX-1020`: a claim id (`wait-category`) is kebab-case, not a
   // published name - the same word-join `_` already gets.
   // The CPU floor's fields (`lb_cpu_*`) spell the floor's own name.
+  // `UX-1151`: one spelling of the planes and of the acronym on every label.
   return named.replace(/[_-]/g, " ").replace(/^./, (c) => c.toUpperCase())
-    .replace(/^Lb /, "LB ");
+    .replace(/^Lb /, "LB ")
+    .replace(/\bplane ?([12])\b/gi, "Plane $1").replace(/\bcpu(s?)\b/gi, "CPU$1");
 }
 
 /**

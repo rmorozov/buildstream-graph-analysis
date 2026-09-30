@@ -277,6 +277,8 @@ export function exhibitAxis(doc, ticks) {
     if (label.style) {
       if (flow && !isEdgeMark(tick)) label.style.marginLeft = `${at}%`;
       else if (!flow) label.style.left = `${at}%`;
+      // `UX-1153`: read by `.decomposition .draw-tick`, which shifts a label by its position.
+      label.style.setProperty?.("--at", at);
     }
     row.append(label);
   }
@@ -745,6 +747,8 @@ function stripTicks(marks, format) {
  */
 export const AXIS_TICK_MIN_SHARE = 0.02;
 
+const capital = (text) => String(text).replace(/^./, (c) => c.toUpperCase());
+
 export function decomposition(parts, {
   total = null, format = String, doc = document, label = null,
   grade = undefined, mark = null,
@@ -822,7 +826,7 @@ export function decomposition(parts, {
   wrap.append(exhibitAxis(doc, ticks));
   const sentenceText = `${format(whole)} in total: `
     + named.map((part) => `${format(part.value)} ${part.label}`).join(", ")
-    + (mark ? `. ${mark.label} ${format(mark.value)}.` : ".");
+    + (mark ? `. ${capital(mark.label)} ${format(mark.value)}.` : ".");
   const sentence = box(doc, "span", { class: "density-sentence",
                                       "data-role": "density-sentence" },
                        sentenceText);
@@ -871,7 +875,9 @@ export function interval(marks, {
   const named = (marks ?? []).filter(
     (one) => one && Number.isFinite(Number(one.value)));
   const span = Number(high) - Number(low);
-  if (named.length < 2 || !Number.isFinite(span) || span <= 0) {
+  // `UX-1153`: marks that all read alike are one value, whatever their count.
+  const alike = new Set(named.map((one) => format(one.value))).size;
+  if (named.length < 2 || alike < 2 || !Number.isFinite(span) || span <= 0) {
     // One value on an axis is a value, not a comparison. `UX-226`'s
     // floor again: below two marks the sentence says what the numbers
     // are and the drawing goes.
@@ -880,21 +886,27 @@ export function interval(marks, {
                                    "data-role": "density-sentence" },
                     named.length
                       ? named.map((one) => `${one.label} ${format(one.value)}`)
-                        .join(", ") + " — one value is not a comparison."
+                        .join(", ") + (named.length > 1
+                          ? " — all one value, so there is nothing to compare."
+                          : " — one value is not a comparison.")
                       : "No comparable values published here."));
     return wrap;
   }
   wrap.setAttribute("data-drawn", "true");
   wrap.setAttribute("data-n", String(named.length));
 
-  const place = (value) => ((Number(value) - Number(low)) / span) * size.width;
+  const radius = Math.max(size.strip / 6, 1);
+  // `UX-1153`: the axis is inset by a mark's radius, so a mark at either end stays whole.
+  const pad = radius;
+  const place = (value) => pad
+    + ((Number(value) - Number(low)) / span) * (size.width - 2 * pad);
   const drawing = make(doc, "svg", {
     viewBox: `0 0 ${size.width} ${size.strip}`,
     preserveAspectRatio: "none", class: "draw interval-axis",
     role: "img",
   });
   drawing.append(make(doc, "line", {
-    x1: "0", x2: String(size.width),
+    x1: String(pad), x2: String(size.width - pad),
     y1: String(size.strip / 2), y2: String(size.strip / 2),
     class: "interval-rule",
   }));
@@ -909,7 +921,7 @@ export function interval(marks, {
   for (const one of named) {
     const mark = make(doc, "circle", {
       cx: place(one.value).toFixed(3), cy: String(size.strip / 2),
-      r: String(Math.max(size.strip / 6, 1)),
+      r: String(radius),
       class: `interval-mark mark-${one.key}`,
       "data-mark": one.key, "data-raw": String(one.value),
     });

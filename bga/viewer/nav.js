@@ -692,7 +692,13 @@ export function stepper(root, nav, { document: doc, window: win } = {}) {
   const keys = owner.createElement("span");
   keys.className = "toc-keys";
   keys.setAttribute("data-step-keys", "[]");
-  keys.textContent = "[ ] step";
+  // `UX-1153`: key caps, not "[ ]" - that read as an empty checkbox.
+  const cap = (key) => {
+    const node = owner.createElement("kbd");
+    node.textContent = key;
+    return node;
+  };
+  keys.append(cap("["), " and ", cap("]"), " step");
   bar.append(keys);
 
   // `UX-393`: back to the top appears once there *is* a top to go

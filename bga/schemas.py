@@ -4761,7 +4761,13 @@ _ANALYZE_HINTS = {
         GROWS: "elements (one row per element Plane 2 measured, no cap "
         "in the payload; structured.js's table bound applies on "
         "the page)",
-        COLUMNS: ["element", "binary", "calls", "cpu_us", "cpu_share"],
+        COLUMNS: [
+            "element",
+            "binary",
+            "calls",
+            {"key": "cpu_us", "title": "CPU"},
+            {"key": "cpu_share", "title": "Share of CPU"},
+        ],
         "description": "One row per element and binary Plane 2 saw it "
         "run: how many calls, and what they cost. Two "
         "questions in one table because they disagree - "
@@ -4962,6 +4968,7 @@ _ANALYZE_HINTS = {
             },
             "max_concurrency": {
                 QUANTITY: "count",
+                "title": "Peak processes at once",
                 "description": "The peak number of traced processes "
                 "alive at once. A process with no "
                 "observed exit is excluded rather than "
@@ -5155,6 +5162,7 @@ _ANALYZE_HINTS = {
             },
             "max_observed_concurrency": {
                 QUANTITY: "count",
+                "title": "Peak tasks at once",
                 "description": "The most tasks seen running together in this accounting's own view of the run.",
             },
             "useful_share": {

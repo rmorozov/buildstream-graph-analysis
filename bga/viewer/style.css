@@ -325,7 +325,8 @@ body[data-has-toc] > header {
    independent of it). One line, truncated, rather than a second. */
 #run-name {
   display: inline-block; margin: 0 var(--space-3) 0 0; vertical-align: middle;
-  max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  /* `UX-1153`: of the viewport - 55% of a shrink-to-fit parent cut a name with room beside it. */
+  max-width: 55vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 /* The height the sticky heading occupies, named once so the rail's
    offset and every anchor's landing clear it by the same amount. A
@@ -350,6 +351,13 @@ h3 { font-size: var(--font-h2); margin: var(--space-8) 0 var(--space-2); }
 h4 { font-size: var(--font-body); font-weight: 600; margin: var(--space-4) 0 var(--space-1); }
 .muted { color: var(--muted); }
 code, pre, .num { font-family: var(--font-mono); }
+/* `UX-1153`: a header or a sentence beside a number is words, not digits. */
+th.num, .num .description, .num .run-advice { font-family: var(--font-sans); }
+/* `UX-1153` (§1d): a command is one line; it scrolls inside its own box. */
+code.next-command {
+  display: inline-block; max-width: 100%; vertical-align: bottom;
+  white-space: pre; overflow-x: auto;
+}
 a { color: var(--accent); }
 
 /* UX-1022 (styleguide §6e.7): a hit area, not a bigger glyph - min-*
@@ -498,6 +506,8 @@ body[data-has-toc] > .toc {
 }
 .toc-title { display: block; width: 100%; text-align: left; margin: 0 0 var(--space-1); }
 .toc-title:disabled { cursor: default; }
+/* `UX-1153`: where the rail cannot fold its title is a heading, not a control. */
+.toc-title:disabled, .toc-title:disabled:hover { border-color: transparent; }
 .toc ul {
   list-style: none; margin: 0; padding: 0;
   display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4);
@@ -669,7 +679,8 @@ section[data-jumped="true"], [data-jumped="true"] {
 
 /* UX-202: the overview waterfall. Bars are a reading of published
    numbers - the printed value beside each is the field itself. */
-.wf-row { display: grid; grid-template-columns: 13rem 1fr 6rem;
+/* `UX-1153`: the bar is capped so a value stays within reach of its label. */
+.wf-row { display: grid; grid-template-columns: 13rem minmax(0, 30rem) 6rem;
           align-items: center; gap: var(--space-2); margin: var(--space-1) 0; }
 .wf-label { font-size: var(--font-small); }
 .wf-track { background: var(--panel); border: 1px solid var(--line);
@@ -1368,6 +1379,8 @@ button.json-toggle:hover { color: var(--fg); }
 .draw-tick[data-mark~="max"], .draw-tick[data-mark~="last"] {
   transform: translateX(-100%);
 }
+/* `UX-1153`: a part's label shifts by its own position, so it never leaves the bar. */
+.decomposition .draw-tick { transform: translateX(calc(var(--at, 50) * -1%)); }
 /* `UX-674`: a single middle tick between two edge ticks lays out in
    normal flow instead of by absolute percentage - flow never overlaps
    a sibling, a percentage `left` can once either label's own text
@@ -1432,6 +1445,11 @@ p.run-advice {
 .toc-keys {
   flex: 0 0 auto; align-self: center;
   color: var(--muted); font-size: var(--font-small); white-space: nowrap;
+}
+/* `UX-1153`: a key cap, so "[ ]" does not read as an empty checkbox. */
+.toc-keys kbd {
+  font-family: var(--font-mono); border: 1px solid var(--line);
+  border-radius: 3px; padding: 0 var(--space-1);
 }
 
 /* `UX-397`: the Perfetto handoff, in the rail rather than in a header

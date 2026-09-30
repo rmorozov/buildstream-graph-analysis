@@ -700,8 +700,10 @@ export function buildTable(key, rows, hint = {}, node = undefined,
   // chain's middle and `UX-196` taught the drawing to; this is the
   // third surface, folded by the same two numbers.
   if (options.fold) foldTheMiddle(table, rows.length, options.fold);
-  const uniform = statedOnce(table, specs, rows.length);
-  const tools = interrogable(table, specs, rows.length, depth);
+  const { note: uniform, gone } = statedOnce(table, specs, rows.length);
+  // `UX-1151`: a column said once above the table ranks nothing - no preset over it.
+  const tools = interrogable(table, specs.filter((spec) => !gone.has(spec.key)),
+                             rows.length, depth);
   // `UX-1055`: after `copy-rows`, not before it - a plain `prepend`
   // put this note ahead of `copy-rows`, undoing its guaranteed first
   // place in the row (styleguide §3l).
@@ -731,7 +733,8 @@ export function buildTable(key, rows, hint = {}, node = undefined,
  * goes, so `Copy 12 rows` and Ctrl-F still see what the payload had.
  */
 function statedOnce(table, specs, total) {
-  if (total <= SERIES_MIN_POINTS) return null;
+  const gone = new Set();
+  if (total <= SERIES_MIN_POINTS) return { note: null, gone };
   const said = [];
   for (const spec of specs) {
     if (!spec || spec.role === "element" || spec.key === elementColumn(specs)) {
@@ -750,18 +753,19 @@ function statedOnce(table, specs, total) {
     if (new Set(raw).size !== 1) continue;
     said.push([spec.title ?? title(spec.key, spec.quantity),
                cells[0].textContent]);
+    gone.add(spec.key);
     for (const cell of cells) cell.remove?.();
     const head = [...table.querySelectorAll("th")].find(
       (th) => th.getAttribute("data-column") === spec.key);
     head?.remove?.();
   }
-  if (!said.length) return null;
+  if (!said.length) return { note: null, gone };
   const note = el("p", { class: "muted uniform-columns",
                          "data-role": "uniform-columns",
                          "data-columns": String(said.length) });
   note.textContent = `All ${total.toLocaleString("en-US")} rows: `
     + said.map(([name, value]) => `${name} ${value}`).join(", ") + ".";
-  return note;
+  return { note, gone };
 }
 
 /**

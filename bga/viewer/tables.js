@@ -433,7 +433,9 @@ export function rowJson(tr, columns) {
     // because attributes are, and a number that went in comes back out
     // as one.
     const number = Number(raw);
-    out[column] = raw !== "" && !Number.isNaN(number) ? number : raw;
+    // `UX-1189`: and a boolean as one.
+    out[column] = raw === "true" || raw === "false" ? raw === "true"
+      : raw !== "" && !Number.isNaN(number) ? number : raw;
   }
   return JSON.stringify(out);
 }

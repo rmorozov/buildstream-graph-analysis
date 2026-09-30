@@ -968,6 +968,12 @@ and the bound.
   `UX-194` forbade dead controls and was satisfied by a listener being
   attached. A listener that runs and changes nothing is the same defect
   with a passing guard.
+- **Copy states and copies the population it names** (`UX-1189`).
+  Under a filter a table's copy takes every matched row, up to
+  `ALL_ROWS_CEILING`, and says so ("Copy 60 matched rows", "Copy first
+  200 of 600 matched rows"); unfiltered it takes the rows shown. A
+  boolean copies as a JSON boolean, and the format is one page-wide
+  "Copy tables as Markdown" box, not one per table.
 
 ## 6a. What this borrows from Apple, and what each borrowing costs (round 55)
 
@@ -2387,7 +2393,7 @@ headings, so a renumber there moves it.
 | §4 | `test_emphasis_is_a_budget.py`, `test_the_palette_is_validated.py`, `test_a_drawing_is_graded.py`, `test_apparatus_in_its_place.py`, `test_the_browser_is_the_library.py` | named |
 | §4a | | named; `UX-346`'s `test_a_sentence_lives_on_its_door.py` holds it and cites no section |
 | §4b | `test_a_runbook_is_not_a_table.py` | `UX-351`'s `test_the_label_is_for_the_reader.py` holds it and cites no section; `UX-669`'s clause holds the half that says a citation is a question, never a key |
-| §4c | `test_a_new_control_class_lands_declared.py`, `test_a_command_renders_as_a_command.py`, `test_a_control_acts_on_what_it_names.py` | |
+| §4c | `test_a_new_control_class_lands_declared.py`, `test_a_command_renders_as_a_command.py`, `test_a_control_acts_on_what_it_names.py`, `test_copy_takes_the_matched_population.py` | |
 | §4d | `test_a_new_control_class_lands_declared.py` | `UX-665`'s registry names the § each class belongs to, which is how this one first acquired a guard; `UX-368` and `UX-369` are still the filed items |
 | §4e | `test_the_ceilings_reach_a_reader.py`, `test_the_served_handoff_counts_its_edges.py` | |
 | §4f | `test_the_type_scale_is_four_steps.py` | |

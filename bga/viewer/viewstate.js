@@ -359,11 +359,14 @@ export function viewLink(root, where) {
 // the page did before.
 const COPY_FORMAT_KEY = "bga.copy-format";
 
-// `UX-536`: what one box tells the other 28. Its own event rather than
-// `change`, so mirroring cannot re-enter the handler that started it.
+// `UX-536`, `UX-1189`: what the one page-wide box tells every table's copy control.
 export const COPY_FORMAT_MIRROR = "bga:copy-format";
 
+// The box's own state, so a page with no storage still copies what it promises.
+let chosen = null;
+
 export function readCopyFormat() {
+  if (chosen) return chosen;
   try {
     return safeStorage()?.getItem(COPY_FORMAT_KEY) === "markdown"
       ? "markdown" : "json";
@@ -373,9 +376,21 @@ export function readCopyFormat() {
 }
 
 export function writeCopyFormat(format) {
+  chosen = format;
   try {
     safeStorage()?.setItem(COPY_FORMAT_KEY, format);
   } catch (error) {
     /* a private window, blocked site data, an export from a folder */
   }
+}
+
+/** `UX-1189`: one Markdown box for every table's copy, where there was one per table. */
+export function copyFormatBox(el) {
+  const box = el("input", { type: "checkbox", class: "copy-markdown", id: "bga-copy-markdown" });
+  box.checked = readCopyFormat() === "markdown";
+  box.addEventListener("change", () => {
+    writeCopyFormat(box.checked ? "markdown" : "json");
+    document.dispatchEvent(new Event(COPY_FORMAT_MIRROR));
+  });
+  return el("label", { class: "copy-as" }, box, " Copy tables as Markdown");
 }

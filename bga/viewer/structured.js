@@ -14,7 +14,7 @@
  * comments and strings stripped and then read, rather than trusted.
  */
 import { plainValue, served } from "./primitives.js";
-import { COPY_FORMAT_MIRROR, readCopyFormat, writeCopyFormat } from "./viewstate.js";
+import { COPY_FORMAT_MIRROR, readCopyFormat } from "./viewstate.js";
 import { BARE_KEY, COMMAND, QUANTITY, COLUMNS, SERIES, DISTRIBUTION, bytes,
          childNode, cssId, dataKeyed, el, elementColumn, guessQuantity, heading,
          hintsOf, itemsAsShown, keyAsShown, quantity, quantityFor, readerLabel,
@@ -1128,51 +1128,36 @@ export function interrogable(table, specs, total, depth = 0) {
   // already remembers per-reader preferences, and which failing is not
   // allowed to take the report down with it.
   const shownRows = () => ownRows(table).filter((tr) => !tr.hidden);
-  const asMarkdown = el("label", { class: "copy-as" },
-    el("input", { type: "checkbox", class: "copy-markdown",
-                  "aria-label": `as Markdown: ${named}` }),
-    " as Markdown");
-  const markdownBox = asMarkdown.querySelector("input");
-  if (markdownBox) identify(markdownBox, `copy-markdown-${key}`);
-  const remembered = readCopyFormat();
-  if (markdownBox && remembered === "markdown") markdownBox.checked = true;
-  // `UX-536`: **one preference, one state.** 29 boxes shared one
-  // `localStorage` key that only a reload read back, so a click changed
-  // 1 of 29 and the other 28 went on promising the format the reader
-  // had just turned off.
-  markdownBox?.addEventListener?.(COPY_FORMAT_MIRROR, () => label());
-  markdownBox?.addEventListener?.("change", () => {
-    writeCopyFormat(markdownBox.checked ? "markdown" : "json");
-    label();
-    for (const other of document.querySelectorAll?.("input.copy-markdown")
-                        ?? []) {
-      if (other === markdownBox) continue;
-      other.checked = markdownBox.checked;
-      other.dispatchEvent?.(new Event(COPY_FORMAT_MIRROR));
-    }
-  });
+  // `UX-1189` (§4c): a filter names a population, and copy takes it - up to `ALL_ROWS_CEILING` - not the page.
+  const filtered = () => Boolean(state.text.trim() || Object.keys(state.thresholds).length);
+  const copied = () => (filtered() ? (state.kept ?? []).slice(0, ALL_ROWS_CEILING) : shownRows());
+  const markdown = () => readCopyFormat() === "markdown";
+  // `UX-1189`: the format is one page-wide box now (`app.js`); it tells every table.
+  document.addEventListener?.(COPY_FORMAT_MIRROR, () => label());
 
   const copyRows = el("button", { type: "button", class: "copy-rows" });
   const label = () => {
-    const n = shownRows().length;
-    const form = markdownBox?.checked ? "Markdown" : "JSON";
+    const n = copied().length;
+    const form = markdown() ? "Markdown" : "JSON";
     // `UX-412`: through the shared helper, so this label and the badge
     // beside it agree with the count in one place rather than two.
-    const rows = plural(n, "row");
+    const matched = state.filtered ?? 0;
+    const rows = !filtered() ? plural(n, "row")
+      : n < matched ? `first ${n} of ${plural(matched, "matched row")}` : plural(n, "matched row");
     // `UX-1165`: nothing shown, nothing to copy or to say of the rows.
-    for (const node of [copyRows, asMarkdown, copyRows.parentNode?.querySelector?.(".uniform-columns")]) {
+    for (const node of [copyRows, copyRows.parentNode?.querySelector?.(".uniform-columns")]) {
       if (node) node.hidden = !n;
     }
     say(copyRows, `Copy ${rows}`, named);
-    copyRows.title = `Copy the ${rows} shown in this table as ${form}, `
+    copyRows.title = `Copy the ${rows} ${filtered() ? "the filter keeps" : "shown in this table"} as ${form}, `
       + `with their published values`;
   };
   // `UX-1185`: every `refresh` - a page step is a click, which no `input` listener hears.
   relabel = label;
   label();
   copyRows.addEventListener("click", () => {
-    const rows = shownRows();
-    copy(markdownBox?.checked
+    const rows = copied();
+    copy(markdown()
       ? rowsMarkdown(rows, specs)
       : `[${rows.map((tr) => rowJson(tr, specs.map((s) => s.key))).join(",")}]`);
     // `UX-355` (styleguide §4c): and it says so. A clipboard write is
@@ -1243,7 +1228,7 @@ export function interrogable(table, specs, total, depth = 0) {
   // (WCAG 2.4.3/1.3.2); `style.css`'s `margin-left: auto` on `top-n`
   // still carries the "nothing shares its trailing space" guarantee.
   const tools = el("div", { class: "table-tools" }, copyRows, box, few ? null : badge,
-                            pager, asMarkdown, expand, shape,
+                            pager, expand, shape,
                             state.preset ?? null);
   // The badge and the count are the same claim; refresh both together.
   tools.addEventListener?.("input", label);

@@ -377,7 +377,8 @@ class TestAFilterSaysWhatItKept:
         for label in (k for k in seen if seen[k][1440]):
             for width in (1440, 390):
                 out = seen[label][width]
-                assert {"copy-rows", "copy-as"} <= set(out["before"]["offered"]), (label, width, out)
+                # `UX-1189`: the Markdown box is page-wide now, not in the table's tools.
+                assert "copy-rows" in out["before"]["offered"], (label, width, out)
                 # `UX-1170`: the header's threshold too, not only the text box.
                 for empty, back in (("none", "cleared"), ("unmet", "unset")):
                     assert out[empty]["offered"] == [], (label, width, empty, out)

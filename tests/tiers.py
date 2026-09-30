@@ -1109,6 +1109,8 @@ MEDIUM = (
     "tests/unit/test_a_pager_continues_the_view.py",  #  9.6s
     # `UX-1190`: 8.31s.
     "tests/unit/test_a_sortable_header_is_a_button.py",  #  8.3s
+    # `UX-1189`: 8.48s.
+    "tests/unit/test_copy_takes_the_matched_population.py",  #  8.5s
     # Round 147, tiered on the merged tree: three single-process runs
     # alone each (setup+call+teardown).
     # `UX-1083`: 4.17 / 4.08 / 4.23s.

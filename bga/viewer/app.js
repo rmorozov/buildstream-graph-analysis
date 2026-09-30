@@ -47,7 +47,7 @@ import { jsonToggles } from "./rawjson.js";
 // measured counts in the module.
 import { contained } from "./controls.js";
 import { applyView, joinHash, splitHash, viewLink,
-         wireViewState } from "./viewstate.js";
+         wireViewState, copyFormatBox } from "./viewstate.js";
 import { applyFocus, applyMarks, clearFocus, focusedElement, readMarks,
          renderFocusBar, renderMarkSummary } from "./focus.js";
 import { renderQuestions } from "./questions.js";
@@ -998,7 +998,7 @@ async function boot() {
         share.textContent = "\u2713 copied";
         setTimeout(() => { share.textContent = "Copy link to this view"; }, 1200);
       });
-      contents.append(el("p", { class: "toc-controls" }, share));
+      contents.append(el("p", { class: "toc-controls" }, share, copyFormatBox(el)));
       // UX-254/UX-255: after the heading, not before it. This used to
       // be `insertBefore(contents, document.body.firstChild)`, which
       // put 573px of navigation above the run's own name - so the page

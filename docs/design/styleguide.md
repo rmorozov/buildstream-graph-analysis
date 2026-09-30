@@ -1447,12 +1447,16 @@ row's `data-field` suffix, or a drawing tick's `data-mark`. Measured
 on the two-plane synthetic page before: 3 names for the floors, 3 for
 the gap, 1 name for 2 coverages.
 
+A floor keeps its symbol and every label names it beside the symbol
+("Chain floor T∞"), so the first use teaches it; a sentence after it
+may say the symbol alone (`UX-1159`, a default open to the owner).
+
 | concept | data keys | word | rejected spelling |
 |---|---|---|---|
-| the critical-path floor | `t_infinity_observed`, `t_infinity_us`, `chain` | T∞ | T∞ (observed), T infinity observed, T infinity, critical path |
-| the cold critical-path floor | `t_infinity_cold` | T∞ (cold) | T infinity cold |
-| the resource floor | `lb`, `lb_us` | LB | Lb, certified lower bound |
-| the replay makespan | `t_c` | T_C | T c |
+| the critical-path floor | `t_infinity_observed`, `t_infinity_us`, `chain` | Chain floor T∞ | T∞ (observed), T infinity observed, T infinity, critical path |
+| the cold critical-path floor | `t_infinity_cold` | Chain floor T∞ (cold) | T infinity cold |
+| the resource floor | `lb`, `lb_us` | Resource floor LB | Lb, certified lower bound |
+| the replay makespan | `t_c` | Replay makespan T_C | T c |
 | wall clock beyond the critical path | `scheduling_gap_us`, `gap` | Scheduling gap | Beyond the chain, off the path |
 | the processes Plane 2 saw | `plane2_coverage.processes` | Plane 2 processes | Plane 2 coverage |
 | an element's CPU share Plane 2 attributed | `cpu_coverage` | Plane 2 coverage | — |
@@ -2028,7 +2032,11 @@ underutilized_intervals From      "497003.7 h" — a monotonic base rendered as 
    a cell is a value, the key is the toggle's `title`. An enum value
    or gate id reads through one map, `READER_LABELS` in `format.js`,
    as a sentence-case phrase; a rule's constant and source file stay
-   in the JSON door (`UX-1141`).
+   in the JSON door (`UX-1141`). A key path is text only where a
+   reader copies it — a command, a query, the JSON door, the schema
+   drawing; a provenance row says the field's title and keeps the path
+   on `data-path`, and a schema `description` names a field by its
+   words (`UX-1159`).
 3. No internal key — a task is an element and a kind, never
    `element|KIND|KIND|n`.
 4. No "payload", "contract", "schema", "Part N" — those are the

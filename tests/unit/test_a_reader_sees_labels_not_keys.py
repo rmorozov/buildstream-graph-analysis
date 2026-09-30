@@ -3,8 +3,8 @@
 Every door open on golden, macro_micro and the review's two-plane page:
 no visible text node is a bare `snake_case`/`UPPER_CASE` token, no
 Top-N option names a column by its key, no `dl` repeats a term.
-`<code>` (a path or a command) and the run's own name are exempt, and
-`T_C` is `UX-1144`'s floor row.
+`<code>` (a path or a command) and the run's own name are exempt;
+`UX-1159` names `T_C` beside its words, so no floor row is.
 """
 
 import pathlib
@@ -47,8 +47,6 @@ _KEY_PATH = re.compile(
 )
 #: Buckets the payload keys by a single lowercase word, which the bare-token regex cannot see.
 _ONE_WORD_KEYS = {"useful", "untracked"}
-#: `UX-1144` renames the floors; `T_C` is its row, not this one's.
-_OWNED_ELSEWHERE = {"T_C"}
 
 
 def _is_path_text(node):
@@ -78,10 +76,7 @@ class TestAReaderSeesLabelsNotKeys:
             bare = [
                 (n["section"], n["text"])
                 for n in out["visible"]
-                if _BARE_KEY.match(n["text"])
-                and not n["code"]
-                and not n["header"]
-                and n["text"] not in _OWNED_ELSEWHERE
+                if _BARE_KEY.match(n["text"]) and not n["code"] and not n["header"]
             ]
             assert bare == [], (width, bare)
 

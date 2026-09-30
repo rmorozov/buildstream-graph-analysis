@@ -15,7 +15,7 @@
  */
 import { identify, labelFor } from "./controls.js";
 import { plural } from "./tables.js";
-import { TERMS, el, title } from "./format.js";
+import { READER_LABELS, TERMS, el, title } from "./format.js";
 import {
   SVG, svg, seconds, mib, bar, OVERVIEW_SHOWN, elementAnchor,
 } from "./primitives.js";
@@ -693,7 +693,9 @@ function elementSection(record, places, investigate, format, bounded = null) {
     const folded = bounded?.(named.key, named.items);
     section.append(line);
     if (folded) section.append(folded);
-    else line.append(...named.items.flatMap((item) => [", ", el("code", {}, item)]).slice(1));
+    // `UX-1159`: a Plane 2 flag reads as its phrase; a name stays copyable.
+    else line.append(...named.items.flatMap((item) => [", ",
+      el(READER_LABELS[item] ? "span" : "code", { "data-raw": item }, READER_LABELS[item] ?? item)]).slice(1));
   }
 
   if (record.entering.length) {

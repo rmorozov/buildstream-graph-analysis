@@ -532,7 +532,7 @@ _PROVENANCE = {
                 "threshold_quantity": {
                     "enum": list(QUANTITIES),
                     "description": "The unit of `threshold`, resolved from "
-                    "the `observed_path` it is compared "
+                    "the observed field it is compared "
                     "against. Absent where the rule "
                     "compares against a quantity the "
                     "finding computes rather than "
@@ -583,7 +583,7 @@ _PROVENANCE = {
             "items": {"type": "string"},
             "description": "Every query that deepens this claim, best "
             "first, when there is more than one. "
-            "`trace_query` is its first entry. Absent "
+            "The first is the one query the claim names. Absent "
             "where the claim offers a single grain.",
         },
         "unpublished_inputs": {
@@ -630,8 +630,8 @@ _CAPACITY_MODEL_HINTS = {
         "description": "Builds arriving per day. **Declared, not "
         "measured**: a store records when builds ran, "
         "not when they were asked for, so this is the "
-        "operator's own number and `arrival_rate_declared` "
-        "is on every figure that rests on it.",
+        "operator's own number, and every figure "
+        "that rests on it says it was declared.",
     },
     "excluded_runs": {
         QUANTITY: "count",
@@ -698,9 +698,7 @@ _CAPACITY_MODEL_HINTS = {
                     "items": {
                         "type": "object",
                         "properties": {
-                            "name": {
-                                "description": "Which figure this is: `utilization`, `wait_us` or `queue_length`."
-                            },
+                            "name": {"description": "Which figure this is: utilization, wait or queue length."},
                             "quantity": {
                                 "enum": list(QUANTITIES),
                                 "description": "The unit of `value`. "
@@ -804,7 +802,7 @@ _SWEEP_HINTS = {
         "description": "One row per capacity tried: the full capacity "
         "vector at that point, the makespan the replay "
         "produced, and what that capacity bought over the "
-        "one before it. `normalized_improvement` is a "
+        "one before it. The normalized improvement is a "
         "*step* gain, not a total - reading it as a total "
         "is the mistake the column exists to prevent.",
     },
@@ -851,14 +849,14 @@ _SWEEP_HINTS = {
         "unless `--plane2` supplied both a measured peak "
         "RSS per element and a host memory total. `0` is a "
         "real answer (no capacity fits); it is present "
-        "then, unlike `knee_points`.",
+        "then, unlike the graph's knee.",
     },
     "binding_constraints": {
         "description": "Per resource, which of the sweep's own "
-        "two capacities - `knee_points` or "
-        "`memory_knee_points` - is the tighter one, as "
+        "two capacities - the graph's knee or "
+        "the memory knee - is the tighter one, as "
         "`{name, builders}`. `{}` under the same condition "
-        "as `memory_knee_points`."
+        "as the memory knee."
     },
 }
 
@@ -924,7 +922,7 @@ _JUNCTION_COST_HINTS = {
                         "elements": {"description": "The element names that key carried, across the runs."},
                         "duration_us": {
                             **_JUNCTION_US,
-                            "description": "The longest of its measured durations [shared_by_key].",
+                            "description": "The longest of its measured durations.",
                         },
                     }
                 },
@@ -934,10 +932,10 @@ _JUNCTION_COST_HINTS = {
             },
             "shared_work_saving_us": {
                 **_JUNCTION_US,
-                "description": "Build work the N runs repeated on shared keys: per key, the sum of its measured durations less the longest [shared_by_key].",
+                "description": "Build work the N runs repeated on shared keys: per key, the sum of its measured durations less the longest.",
             },
             "pipeline": {
-                "description": "Per pipeline phase: the N runs' sum, the largest, and the difference [pipeline_once].",
+                "description": "Per pipeline phase: the N runs' sum, the largest, and the difference.",
                 "items": {
                     "properties": {
                         "phase": {"description": "The phase as BuildStream logged it."},
@@ -949,19 +947,19 @@ _JUNCTION_COST_HINTS = {
             },
             "pipeline_saving_us": {
                 **_JUNCTION_US,
-                "description": "The pipeline phases' savings summed - an upper bound [pipeline_once].",
+                "description": "The pipeline phases' savings summed - an upper bound.",
             },
             "saving_us": {
                 **_JUNCTION_US,
                 "description": "The pipeline saving plus the shared-work saving - an upper bound.",
             },
             "separate_floors_us": {
-                "description": "Each run's own T-infinity, in run order [unlimited_capacity].",
+                "description": "Each run's own chain floor T∞, in run order.",
                 "items": {**_JUNCTION_US, "description": "One run's own T-infinity, unlimited builders."},
             },
             "union_floor_us": {
                 **_JUNCTION_US,
-                "description": "T-infinity over the N graphs merged at shared keys - the one invocation's critical path [unlimited_capacity].",
+                "description": "The chain floor T∞ over the N graphs merged at shared keys - the one invocation's critical path.",
             },
             "one_invocation_lower_bound_us": {
                 **_JUNCTION_US,
@@ -969,7 +967,7 @@ _JUNCTION_COST_HINTS = {
             },
             "junction_staging_us": {
                 **_JUNCTION_US,
-                "description": "Staging the junctioned subprojects: `null`, not measured on this host [junction_staging].",
+                "description": "Staging the junctioned subprojects: `null`, not measured on this host.",
             },
             "overlap": {"description": "The shared set in one sentence, including when it is empty."},
         },
@@ -1016,7 +1014,7 @@ _WHATIF_HINTS = {
     "projected": {
         QUESTION: 'What would the build drop to?',
         "description": "The projection, computed by the same "
-        "`compute_joint_saving` the report's own horizon "
+        "joint-saving recompute the report's own horizon "
         "uses. `null` when anything was refused.",
         "properties": {
             "baseline_makespan_us": {
@@ -1033,7 +1031,7 @@ _WHATIF_HINTS = {
                 QUANTITY: "duration_us",
                 "description": "What the chain drops to. Published rather "
                 "than left as a subtraction, for the "
-                "reason `headline.scheduling_gap_us` is.",
+                "reason the headline's scheduling gap is.",
             },
             "sum_of_individual_us": {
                 QUANTITY: "duration_us",
@@ -1324,7 +1322,7 @@ _JOIN_ITEM_PROPERTIES = {
             },
             "wall_us": {
                 QUANTITY: "duration_us",
-                "description": "Wall-clock it spanned doing so - close to `cpu_us` is the tell.",
+                "description": "Wall-clock it spanned doing so - close to its CPU time is the tell.",
             },
         },
     },
@@ -1374,8 +1372,8 @@ _JOIN_ITEM_PROPERTIES = {
         "run's finish time. The second of the "
         "join's two denormalised Plane 1 facts, and the one "
         "that hides - it is "
-        "`elements.criticality_probability[<uid>]"
-        ".observed_critical` under a different name, so a "
+        "the element's observed-critical flag "
+        "under a different name, so a "
         "count of attributes appearing in both shapes does "
         "not see it. The map is the authority; the resolved "
         "element record takes it from there.",
@@ -1402,9 +1400,9 @@ _JOIN_ITEM_PROPERTIES = {
         QUANTITY: "count",
         "description": "How many elements a change here rebuilds. "
         "the one attribute in both of the entity's shapes, "
-        "and an int here where `elements.blast_radius[<uid>]` "
+        "and a count here where the element's blast radius "
         "is a record - this is that record's own "
-        "`downstream_count`, denormalised so the join table "
+        "downstream count, denormalised so the join table "
         "can sort on it. The map is the authority; the "
         "resolved element record takes it from there.",
     },
@@ -1419,7 +1417,7 @@ _JOIN_ITEM_PROPERTIES = {
         QUANTITY: "share",
         "description": "How much of this element's wall-clock Plane 2 "
         "actually observed. A low coverage makes "
-        "`cores_busy` a sample rather than a "
+        "its cores busy a sample rather than a "
         "measurement.",
     },
     "requested_jobs": {
@@ -1461,7 +1459,7 @@ _JOIN_ITEM_PROPERTIES = {
     "cpu_us": {
         QUANTITY: "duration_us",
         "description": "CPU this element's own processes burned. "
-        "`cores_busy` is the rate and this is the "
+        "Cores busy is the rate and this is the "
         "quantity: an element can be CPU-bound and "
         "cheap, or idle and enormous, and a reader "
         "chasing one is not chasing the other.",
@@ -1519,7 +1517,7 @@ _JOIN_ITEM_PROPERTIES = {
     "dependency_read_share": {
         QUANTITY: "share",
         "description": "How many of those were read, as a share, and "
-        "so what `unused_dependencies` is a list *of*. "
+        "so what the unused dependencies are a list *of*. "
         "Absent where Plane 2 assessed nothing - "
         "\"every edge was read\" and \"nobody looked\" "
         "are different claims.",
@@ -1576,7 +1574,7 @@ _MAX_JOBS_ADVICE_COLUMNS = [
         "title": "Why not priced",
         "description": "Why a changed recommendation was not priced: a "
         "raise this run has no evidence for, or no Plane 2 "
-        "`binary_cost` measurement. Absent when `priced` is "
+        "binary cost measurement. Absent when `priced` is "
         "set or `refusal` already explains the row.",
     },
 ]
@@ -1629,7 +1627,7 @@ _EVIDENCE_FIELDS = {
         "duration_us",
         "Each element's saving priced alone, added up - above the joint "
         "saving when they overlap, below it when they compound. Published "
-        "beside `joint_saving_us` to show the gap.",
+        "beside the joint saving to show the gap.",
     ),
     "swap_start_offset_us": ("duration_us", "Offset from the run's start where the earliest swapping window opens."),
     "swap_end_offset_us": ("duration_us", "Offset from the run's start where the latest swapping window closes."),
@@ -1832,7 +1830,7 @@ EVIDENCE_QUANTITIES.update(
                     "clamped_from": {
                         QUANTITY: "count",
                         "description": "The CPU figure before it was capped "
-                        "to `host_cpu_count` - present only when it was.",
+                        "to the host's cores - present only when it was.",
                     },
                 }
             },
@@ -2064,14 +2062,14 @@ _STRUCTURAL_TABLES = {
             "avg_fanin": {
                 QUANTITY: "ratio",
                 "description": "Direct dependencies per element, "
-                "averaged - equal to avg_fanout by "
+                "averaged - equal to the average fan-out by "
                 "construction (|E|/|V|; every edge is "
                 "one in-edge and one out-edge).",
             },
             "avg_fanout": {
                 QUANTITY: "ratio",
                 "description": "Direct dependents per element, "
-                "averaged - equal to avg_fanin by "
+                "averaged - equal to the average fan-in by "
                 "construction (|E|/|V|; every edge is "
                 "one in-edge and one out-edge).",
             },
@@ -2233,7 +2231,7 @@ _STRUCTURAL_TABLES = {
             "longest_serial_chain": {
                 GROWS: "elements on the longest chain (subset of elements, no cap)",
                 "items": {"type": "string", "description": "element uid"},
-                "description": "The chain itself, in walk order - the one exhibit `serial_chain_length` counts.",
+                "description": "The chain itself, in walk order - the one exhibit the serial chain length counts.",
             },
             # UX-830: `longest_serial_chain` keeps one exhibit; a
             # second chain a second shorter than the first moves the
@@ -2245,8 +2243,7 @@ _STRUCTURAL_TABLES = {
                 "description": "Every maximal non-branching run of "
                 "elements, ranked by how much of the "
                 "build's duration it accounts for - "
-                "capped the same as any other table "
-                "(`SERIAL_CHAINS_MAX`).",
+                "capped the same as any other table.",
                 QUESTION: "Which chain should I split first?",
                 COLUMNS: [
                     {"key": "rank", "title": "Rank", "quantity": "count", "sortable": True},
@@ -2425,7 +2422,7 @@ _STRUCTURAL_TABLES = {
                     },
                 },
                 "description": "Structural-kind candidates filtered "
-                "out of `top_opportunities` - a "
+                "out of the top opportunities - a "
                 "toolchain sitting on the critical path "
                 "scores sensitivity 1.00 by the metric's "
                 "own definition, and is not a fix. Drawn "
@@ -2607,7 +2604,7 @@ _SIGNALS_TABLES = {
         "rather than today's second-best. Ranked by "
         "realizable saving at each step, which is a "
         "different question from "
-        "`elements.top_blast_radius` and gives a "
+        "the widest blast radius and gives a "
         "different order.",
         COLUMNS: [
             {"key": "element_uid", "title": "Element", "role": "element", "sortable": True},
@@ -2803,7 +2800,7 @@ _SIGNALS_TABLES = {
                     QUANTITY: "count",
                     "description": "Dependencies this element names "
                     "itself. The same number "
-                    "`bottleneck.high_fanin_elements` "
+                    "the bottleneck's high fan-in list "
                     "ranks the top five of, over every "
                     "element rather than five.",
                 },
@@ -2818,7 +2815,7 @@ _SIGNALS_TABLES = {
                     "items": {"type": "string", "description": "element uid"},
                     "description": "This element's direct dependencies "
                     "by name, sorted, capped at 40. "
-                    "`direct_count` is the count "
+                    "The direct count is the count "
                     "whether or not it hit the cap.",
                 },
                 "transitive_count": {
@@ -2846,13 +2843,13 @@ _SIGNALS_TABLES = {
         },
         "description": "What one element pulls in and the rebuild it "
         "waits on. Plane 1 only - whether those edges "
-        "were read is `element_join`'s "
-        "`dependency_read_share`.",
+        "were read is the element join's "
+        "dependency read share.",
     },
     "top_fan_in": {
         "description": "The widest fan-in, ranked by closure. "
         "Structural kinds are excluded from the ranking "
-        "and never from `fan_in` - a stack depends on "
+        "and never from the fan-in map - a stack depends on "
         "everything on purpose."
     },
     "fan_in_distribution": _distribution(
@@ -2911,7 +2908,7 @@ _SIGNALS_TABLES = {
             },
             "transfer_share": {
                 QUANTITY: "share",
-                "description": "The sum of `transfer_us` over the "
+                "description": "The sum of transfer time over the "
                 "run's wall-clock - how much of this "
                 "build was moving artifacts.",
             },
@@ -2922,7 +2919,7 @@ _SIGNALS_TABLES = {
                 "description": "The wall-clock the transfers occupied, "
                 "as a union of their spans rather than a "
                 "sum - the denominator a throughput "
-                "needs, where `transfer_us` counts two "
+                "needs, where transfer time counts two "
                 "concurrent pulls twice.",
             },
             "transfer_bytes": {
@@ -2938,13 +2935,15 @@ _SIGNALS_TABLES = {
                     "rx": {QUANTITY: "bytes", "description": "Bytes the host received."},
                     "tx": {QUANTITY: "bytes", "description": "Bytes the host sent."},
                     "total": {QUANTITY: "bytes", "description": "`rx` and `tx` together."},
-                    "source": {"description": "Where the counts came from; `host_counters` is the only source today."},
+                    "source": {
+                        "description": "Where the counts came from; the host's own counters are the only source today."
+                    },
                 },
             },
             "transfer_rate_bytes_per_s": {
                 QUANTITY: "bytes",
-                "description": "`transfer_bytes.total` over "
-                "`transfer_window_us` - the rate the "
+                "description": "The bytes transferred over the "
+                "transfer window - the rate the "
                 "link achieved while this build was "
                 "transferring, which says whether more "
                 "bandwidth would help or the object "
@@ -2989,10 +2988,9 @@ _SIGNALS_TABLES = {
                         "null when nobody walked it.",
                     },
                     "cache_used_source": {
-                        "description": "How `cache_used_bytes` was "
-                        "obtained: `cas_walk`, "
-                        "`not_walked`, `absent`, or "
-                        "`budget_exceeded`."
+                        "description": "How the used bytes were "
+                        "obtained: a CAS walk, not walked, "
+                        "absent, or over the walk's budget."
                     },
                     "low_watermark_share": {
                         QUANTITY: "share",
@@ -3272,7 +3270,7 @@ _RESTRUCTURING_HINT = {
         "properties": _RESTRUCTURING_ITEM_PROPERTIES,
         "required": ["id", "severity", "elements", "edges"],
     },
-    "description": "The conclusion the per-element `unused_dependencies` "
+    "description": "The conclusion the per-element unused dependencies "
     "rows jointly support: these elements form a chain "
     "whose every internal declared edge went unread, so "
     "fanning them out is one change rather than seven. "
@@ -3421,7 +3419,7 @@ _ANALYZE_HINTS = {
             "shorter_than_bst": {
                 GROWS: "tasks Plane 2 measured shorter than BuildStream's own span (subset of tasks, no cap)",
                 "items": {"type": "object"},
-                "description": "Those tasks themselves, worst first - what `tasks_shorter_than_bst` counts.",
+                "description": "Those tasks themselves, worst first.",
             },
             "tasks_where_material": {
                 QUANTITY: "count",
@@ -3525,7 +3523,7 @@ _ANALYZE_HINTS = {
             },
             "samples": {
                 QUANTITY: "count",
-                "description": "Host samples carrying a `cpu_busy_cores` "
+                "description": "Host samples carrying a cores-busy "
                 "reading. The first sample of a capture "
                 "carries none - a rate needs a gap.",
             },
@@ -3569,7 +3567,7 @@ _ANALYZE_HINTS = {
                 "description": "Share of it with load above the core count or a page written to swap.",
             },
             "verdict": {
-                "description": "`not_binding`, `binding` or `overcommitted`. "
+                "description": "Not binding, binding or overcommitted. "
                 "Overcommit wins over under-use: a build that "
                 "is swapping is past capacity, not short of "
                 "it, and the remedy points the other way."
@@ -3644,8 +3642,7 @@ _ANALYZE_HINTS = {
                 "element draws more, so the CPU ceiling "
                 "below is optimistic - and, when the raw "
                 "figure exceeds the host's own cores, "
-                "clamped to them (see "
-                "`clamped_from`).",
+                "clamped to them.",
             },
             "constraints": {
                 GROWS: False,
@@ -3674,7 +3671,7 @@ _ANALYZE_HINTS = {
                         "sortable": True,
                         "description": "Present only on the CPU row, "
                         "and only when the derived figure "
-                        "exceeded `host_cpu_count` - the "
+                        "exceeded the host's cores - the "
                         "unclamped value `allows` was capped "
                         "from.",
                     },
@@ -3716,7 +3713,7 @@ _ANALYZE_HINTS = {
                 "description": "Per element, `--max-jobs` under a "
                 "no-overcommit constraint - the sum of "
                 "recommended values for elements building at "
-                "once must not exceed `host_cpu_count`, and "
+                "once must not exceed the host's cores, and "
                 "the sum of their measured peak RSS must not "
                 "exceed the host's memory. Evidence is "
                 "the host CPU series joined directly "
@@ -3725,9 +3722,9 @@ _ANALYZE_HINTS = {
                 "An element with too few overlapping samples, "
                 "or whose overlap already overcommits "
                 "memory, carries `refusal` instead of a "
-                "number. `priced_jointly` and "
-                "`pricing_assumptions` price it by replay - "
-                "see `elements[].price_cost_us` below.",
+                "number. The joint pricing and its "
+                "assumptions price it by replay - "
+                "see each row's price below.",
                 "properties": {
                     # `UX-831`: the COLUMNS hint moved here, onto the
                     # array the rows live in - it sat on this object
@@ -3738,26 +3735,18 @@ _ANALYZE_HINTS = {
                         COLUMNS: _MAX_JOBS_ADVICE_COLUMNS,
                         "description": "One row per element. Ranked "
                         "priced lowerings first (cheapest "
-                        "`price_cost_us` first), refusals "
-                        "last. `priced` stays on each row: "
-                        "`{replayed_baseline_us, "
-                        "projected_us, cost_us, "
-                        "duration_before_us, "
-                        "duration_floor_us, kind}` - "
-                        "`kind` is always `\"floor\"`, and "
-                        "`price_cost_us`/`price_kind` "
-                        "below are its `cost_us`/`kind` "
-                        "read out flat. Absent for a row "
-                        "`refusal` or `price_refusal` "
-                        "already explains.",
+                        "price first), refusals last. "
+                        "The price columns read each row's "
+                        "`priced` cost and kind out flat, "
+                        "absent where a refusal explains.",
                     },
                     "priced_jointly": {
                         "description": "Every priced, lowered "
                         "recommendation applied together in "
                         "one replay - a recompute, not a "
-                        "sum, because prices do not add. "
-                        "`{replayed_baseline_us, "
-                        "projected_us, cost_us, elements}`. "
+                        "sum, because prices do not add: "
+                        "the replayed baseline, the "
+                        "projection, the cost and the elements. "
                         "Absent when nothing was priced."
                     },
                     "pricing_assumptions": {
@@ -3791,9 +3780,9 @@ _ANALYZE_HINTS = {
             "sweep_binding": {
                 "description": "Which of the sweep's own two "
                 "capacities - the graph's knee or "
-                "`sweep_memory_builders` - is the tighter "
+                "the sweep's memory ceiling - is the tighter "
                 "one, as `{name, builders}`. Present only "
-                "alongside `sweep_memory_builders`."
+                "alongside that memory ceiling."
             },
         },
     },
@@ -3815,8 +3804,8 @@ _ANALYZE_HINTS = {
                 INLINE: "caveat",
                 "description": "Whether the run asked for more parallelism "
                 "than the host could serve. False also when "
-                "the checks did not run - read `checks_ran` "
-                "before reading this.",
+                "the checks did not run - read whether "
+                "they ran before reading this.",
             },
             "undersubscribed": {
                 INLINE: "caveat",
@@ -3901,8 +3890,8 @@ _ANALYZE_HINTS = {
         RAIL: 'raw',
         "description": "How deeply this document nests, measured on the "
         "document as published. A container step counts a "
-        "level, so `findings[].evidence.rows[].duration_us` "
-        "is six.",
+        "level, so a duration in a finding's evidence "
+        "rows is six deep.",
         "properties": {
             "leaves": {QUANTITY: "count", "description": "Every value that is not a container."},
             "deepest_depth": {
@@ -4067,10 +4056,10 @@ _ANALYZE_HINTS = {
             "total": "total_duration_us",
             "quantity": "duration_us",
             "parts": [
-                {"path": "floors.t_infinity_observed", "key": "chain", "label": "T∞"},
+                {"path": "floors.t_infinity_observed", "key": "chain", "label": "chain floor T∞"},
                 {"path": "headline.scheduling_gap_us", "key": "gap", "label": "scheduling gap"},
             ],
-            "mark": {"path": "floors.lb", "key": "lb", "label": "LB"},
+            "mark": {"path": "floors.lb", "key": "lb", "label": "resource floor LB"},
         },
         "description": "Lower bounds this run certifies: what no schedule "
         "of the same recorded work could have beaten. "
@@ -4164,7 +4153,7 @@ _ANALYZE_HINTS = {
                 "machine finishes sooner. Absent without "
                 "Plane 2 or without a governing core count, "
                 "and a floor on the measured share only - "
-                "see `lb_cpu_coverage`.",
+                "see its coverage.",
             },
             "lb_cpu_coverage": {
                 QUANTITY: "share",
@@ -4179,7 +4168,7 @@ _ANALYZE_HINTS = {
                 "budget, with no co-tenant modelled.",
             },
             "lb_cpu_cores_source": {
-                "description": "Where that count came from: `cpu_budget` if one was declared, else `host_cpu_count`."
+                "description": "Where that count came from: a declared CPU budget, else the host's cores."
             },
             "lb_cpu_binds": {
                 "description": "Whether the CPU floor sits above `lb`. "
@@ -4296,8 +4285,8 @@ _ANALYZE_HINTS = {
                     "items": {"type": "string"},
                     "description": "Every finding id serving "
                     "this reader, in published "
-                    "order. `leads_with` is one "
-                    "of these.",
+                    "order. The one it leads with is "
+                    "one of these.",
                 },
             },
             "required": ["id", "role", "label", "question", "leads_with"],
@@ -4397,7 +4386,7 @@ _ANALYZE_HINTS = {
                     "shows this finding in the "
                     "timeline, or null where none "
                     "does. The same mapping "
-                    "`provenance[].trace_query` "
+                    "the claim's provenance "
                     "carries, on the object a reader "
                     "is looking at.",
                 },
@@ -4417,8 +4406,8 @@ _ANALYZE_HINTS = {
                     "description": "Every query that shows this "
                     "finding in the timeline, best "
                     "first, when there is more than "
-                    "one. `trace_query` is its first "
-                    "entry. Absent where this finding "
+                    "one. The single query is its "
+                    "first entry. Absent where this finding "
                     "offers a single grain.",
                 },
                 # `UX-372`: which of `docs/design/roles.md`'s readers
@@ -4497,8 +4486,8 @@ _ANALYZE_HINTS = {
                 "items": {"type": "string", "description": "element uid"},
                 "description": "Which critical-path elements this "
                 "incremental run restored rather than "
-                "built - what `critical_path_coverage` "
-                "excludes.",
+                "built - what the critical path's "
+                "coverage excludes.",
             },
             "dominator_coverage": {
                 QUANTITY: "share",
@@ -4677,11 +4666,14 @@ _ANALYZE_HINTS = {
                 "the time the graph is responsible for. The "
                 "number the diagnosis is decided by.",
             },
-            "chain_bound_share": {QUANTITY: "share", "description": "The threshold `chain_share` is compared against."},
+            "chain_bound_share": {
+                QUANTITY: "share",
+                "description": "The threshold the chain share is compared against.",
+            },
             "chain_share_of": {
                 "enum": ["task_horizon", "wall_clock", None],
-                "description": "Which span `chain_share` is a share of. "
-                "`task_horizon` always, except on a capture "
+                "description": "Which span the chain share is a share of. "
+                "The time tasks ran, except on a capture "
                 "whose attribution is missing, where the two "
                 "are equal anyway - published rather than "
                 "assumed, because a share whose denominator "
@@ -4752,7 +4744,7 @@ _ANALYZE_HINTS = {
         "applies on the page)",
         "description": "Every binary Plane 2 saw exec, and how many "
         "times the whole run ran it. The frequency half "
-        "of the question; `binary_cost` is the time "
+        "of the question; binary cost is the time "
         "half, per element.",
         "additionalProperties": {QUANTITY: "count"},
     },
@@ -4776,7 +4768,7 @@ _ANALYZE_HINTS = {
         "compiler is few expensive ones, and a reader "
         "chasing one is not chasing the other. An "
         "element Plane 2 saw no process for contributes "
-        "no rows; `plane2_coverage` is where that is "
+        "no rows; Plane 2 coverage is where that is "
         "stated.",
         "items": {
             "properties": {
@@ -4807,7 +4799,7 @@ _ANALYZE_HINTS = {
     "cpu_time": {
         QUESTION: 'What did the whole build cost in CPU?',
         RAIL: 'prove',
-        "description": "The run-level totals beside `element_cpu_time`, "
+        "description": "The run-level totals beside each element's CPU time, "
         "and the sentence that says what a CPU figure "
         "here is and is not.",
         "properties": {
@@ -4830,7 +4822,7 @@ _ANALYZE_HINTS = {
             # half-busy throughout.
             "per_element_series": {
                 "description": "Each element's CPU rate over time, as "
-                "`[t_us, cores]` points sampled on the "
+                "time and cores points sampled on the "
                 "host sampler's tick. The totals beside "
                 "it are unchanged: this says what shape "
                 "a total had. A process shorter than one "
@@ -4845,7 +4837,7 @@ _ANALYZE_HINTS = {
     "peak_memory": {
         QUESTION: 'What does a peak-memory figure here mean?',
         RAIL: 'prove',
-        "description": "The sentence beside `element_peak_memory`. It "
+        "description": "The sentence beside each element's peak memory. It "
         "carries no totals on purpose: there is no "
         "run-level peak to publish, because summing "
         "per-process maxima would state something the "
@@ -4858,7 +4850,7 @@ _ANALYZE_HINTS = {
         QUESTION: 'How much of the build did the pressure counters cover?',
         RAIL: 'prove',
         "description": "The run-level coverage beside "
-        "`element_resource_pressure`, and the sentence "
+        "each element's resource pressure, and the sentence "
         "that says what each counter is.",
         "properties": {
             "measured": {QUANTITY: "count", "description": "Processes across the build whose counters were read."},
@@ -4889,7 +4881,7 @@ _ANALYZE_HINTS = {
                 QUANTITY: "duration_us",
                 "description": "All CPU Plane 2 saw, configure and "
                 "build together - the denominator "
-                "`configure_share` is a share of.",
+                "the configure share is a share of.",
             },
             # `UX-346`: the caveat is the door's sentence, not a
             # paragraph in the middle of the numbers. It is what makes
@@ -5021,7 +5013,7 @@ _ANALYZE_HINTS = {
             },
             "open_records_note": {
                 "description": "Why a process may be missing from "
-                "`max_concurrency` - the caveat that "
+                "the peak - the caveat that "
                 "belongs beside the number rather than "
                 "at a terminal."
             },
@@ -5046,8 +5038,11 @@ _ANALYZE_HINTS = {
                 "every per-process record, which no "
                 "published number reads.",
                 "properties": {
-                    "schema": {"description": "The report's contract id."},
-                    "records_embedded": {"description": "Whether the file still carries the per-process record list."},
+                    "schema": {"title": "Report shape", "description": "The report's contract id."},
+                    "records_embedded": {
+                        "title": "Per-process records kept",
+                        "description": "Whether the file still carries the per-process record list.",
+                    },
                     "records": {
                         QUANTITY: "count",
                         "description": "How many records it carries; zero for `plane2/v2` and `plane2/v3`.",
@@ -5325,9 +5320,9 @@ _ELEMENTS = {
             "description": "The elements whose change rebuilds the most, "
             "in that order. A ranking over the population "
             "below, so the order is the information - the "
-            "records themselves are in `blast_radius`. "
+            "records themselves are in the blast radius map. "
             "Not the order to fix things in: that is "
-            "`optimization_horizon`, which ranks by what "
+            "the optimization horizon, which ranks by what "
             "a fix saves rather than by what a change "
             "costs downstream. The two legitimately "
             "disagree - an element with many dependents "
@@ -5346,7 +5341,7 @@ _ELEMENTS = {
             "items": {"type": "string", "description": "element uid"},
             "description": "The widest fan-in, ranked by closure. "
             "Structural kinds are excluded from the "
-            "ranking and never from `fan_in` - a stack "
+            "ranking and never from the fan-in map - a stack "
             "depends on everything on purpose.",
         },
     },
@@ -5397,10 +5392,10 @@ _ANALYZE_HINTS["jobserver"] = {
                 "properties": {
                     "joined": {
                         "description": "yes, pinned, held or "
-                        "unknown_kind - pinned is "
+                        "unknown kind - pinned is "
                         "BuildStream's own `-j1`, held is a wrapper "
                         "tool that kept its tokens "
-                        "instead of reading the pipe, unknown_kind is "
+                        "instead of reading the pipe, unknown kind is "
                         "neither the shim nor a wrapper "
                         "named this element."
                     },
@@ -5408,7 +5403,7 @@ _ANALYZE_HINTS["jobserver"] = {
                         QUANTITY: "count",
                         "description": "The most work processes this "
                         "element ran at once, from Plane 2's "
-                        "`per_element_parallelism`; null when "
+                        "per-element parallelism; null when "
                         "the tracer saw none.",
                     },
                     "max_jobs": {
@@ -5423,10 +5418,10 @@ _ANALYZE_HINTS["jobserver"] = {
                         "pool's tokens were used; offered, "
                         "not drawn when joined at a peak "
                         "no wider than `max-jobs`; pinned, "
-                        "held and unknown_kind repeat "
+                        "held and unknown kind repeat "
                         "`joined` and never read drew; "
                         "outside the pool when pinned or "
-                        "unknown_kind and the peak "
+                        "unknown kind and the peak "
                         "exceeded `max-jobs` + 1; "
                         "null when joined with no peak or "
                         "no `max-jobs` to compare."
@@ -5456,7 +5451,7 @@ _ANALYZE_HINTS["jobserver"] = {
                         "description": "The most tokens a wrapper "
                         "tool held at once, for this "
                         "element - the same join as "
-                        "`tokens_held_p50`; null when "
+                        "the median tokens held; null when "
                         "the element ran no wrapped "
                         "tool.",
                     },
@@ -5467,7 +5462,7 @@ _ANALYZE_HINTS["jobserver"] = {
                     # the stamp away.
                     "tokens_held_series": {
                         "description": "This element's held width over "
-                        "time, as `[t_us, tokens]` "
+                        "time, as time and tokens "
                         "steps: an acquire opens an "
                         "interval and a release closes "
                         "one, so a point is the total "
@@ -5602,7 +5597,7 @@ _COMPARE_HINTS = {
         "walks this document, so a gatekeeper defending a "
         "red gate follows them into the payload already in "
         "front of them. `null` on a refusal - "
-        "`not_comparable` states its own reason and no "
+        "not comparable states its own reason and no "
         "band arithmetic ran behind it.",
     ),
     # UX-221: which elements the run's verdict is actually about.
@@ -5685,7 +5680,7 @@ _COMPARE_HINTS = {
                             MARKERS: VERDICT_MARKERS,
                             "description": "The same closed vocabulary the "
                             "run verdict uses. "
-                            "`not_comparable` where there "
+                            "Not comparable where there "
                             "is no delta; the run's own "
                             "kind where the run came out "
                             "inside its observed range, so "
@@ -5752,7 +5747,7 @@ _COMPARE_HINTS = {
         RAIL: 'investigate',
         "description": "The elements this change introduced, removed, or "
         "moved onto the critical path. Complements "
-        "`element_deltas`, which covers the elements both "
+        "the element deltas, which cover the elements both "
         "runs share.",
     },
     # Every delta in this object is a *change*, and for every metric bga
@@ -6002,7 +5997,7 @@ _DISTRIBUTION = {
     "description": "A distribution over finished runs: `samples` (the "
     "count it was computed from), `min`, `median`, "
     "`p95`, `max` and `mad` (median absolute deviation, "
-    "unscaled - the robust spread `compute_band` is "
+    "unscaled - the robust spread the band is "
     "built on, without its 1.4826 scaling or its k). "
     "Percentiles are nearest-rank - the value at index "
     "ceil(p*n)-1 of the sorted samples - so every figure "
@@ -6107,8 +6102,7 @@ _STORE_AGGREGATE_HINTS = {
                     "description": "Which snapshots these are, so "
                     "a figure can be traced to the "
                     "runs behind it. The most recent "
-                    "`store_aggregate.STAMPS_MAX` of "
-                    "them."
+                    "few of them."
                 },
                 "stamps_total": {
                     QUANTITY: "count",
@@ -6117,7 +6111,7 @@ _STORE_AGGREGATE_HINTS = {
                 "shortfall": {
                     "description": "Present instead of a distribution "
                     "when the class has fewer than "
-                    "`compare.MIN_BASELINE_RUNS` finished "
+                    "the baseline's minimum of finished "
                     "runs. Names what is missing rather "
                     "than publishing a p95 of two "
                     "samples."
@@ -6136,8 +6130,8 @@ _STORE_AGGREGATE_HINTS = {
                             "description": "Runs in the class, so `have` reads as a fraction of something.",
                         },
                     },
-                    "description": "Present instead of `cores_busy` and "
-                    "`peak_rss_bytes` when no run in this "
+                    "description": "Present instead of cores busy and "
+                    "peak RSS when no run in this "
                     "class carries them. The "
                     "scalars are written beside the "
                     "Plane 2 report at capture time, so a "
@@ -6290,7 +6284,7 @@ _STORE_HINTS = {
                     "`null` - never zero - "
                     "where that is not a "
                     "measurement; "
-                    "`queue_wait_absent_reason` "
+                    "the absence reason "
                     "says which of the four "
                     "reasons applies.",
                 },
@@ -6334,7 +6328,7 @@ _STORE_HINTS = {
                     "description": "The build subprocess's own "
                     "wall, from the same "
                     "`tail.json`: the figure "
-                    "`bga_tail_us` is a share "
+                    "bga's tail is a share "
                     "of.",
                 },
                 # UX-226: a *history*, not an archive. Bounded
@@ -6604,12 +6598,12 @@ _TAIL_HINTS = {
             {"key": "peak_rss_bytes", "title": "Peak RSS", "quantity": "bytes"},
         ],
         "description": "One row per phase bga ran around the build, in "
-        "order: its `name`, its `wall_us`, its "
-        "`peak_rss_bytes` - the process's VmHWM reset at "
+        "order: its name, its wall, its "
+        "peak RSS - the process's VmHWM reset at "
         "the phase's start, `null` off Linux - the "
         "`calls` it made to other programs, and its "
         "`stage` (`\"before\"` or `\"after\"` the build). "
-        "Every aggregate (`bga_tail_us`, the total line) "
+        "Every aggregate (bga's tail, the total line) "
         "sums `\"after\"` rows only; `\"before\"` is "
         "measured and kept but excluded (review, "
         "pull request 300).",

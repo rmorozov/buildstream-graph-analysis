@@ -79,6 +79,17 @@ EXEMPT = {"trace_query", "trace_queries"}
 #: door, never in the text.
 BEHIND_THE_DOOR = {"rule.name", "rule.module"}
 
+#: `UX-1159` (§4g.2): a path is text only where a reader copies it. The
+#: block says each path's label and carries the path on the label's hover
+#: (`title`) - `ON_THE_HOVER` - and the document every path walks on
+#: `data-document`, a machine's channel like `data-query`.
+ON_THE_HOVER = {"evidence[].path", "rule.observed_path", "unpublished_inputs[]"}
+BEHIND_THE_DOOR |= {"document"}
+#: An evidence row's `quantity` (`duration_us`) is the unit its value is
+#: formatted in (`UX-1140`); it read as "reached" only as a substring of
+#: the paths the rows used to print.
+BEHIND_THE_DOOR |= {"evidence[].quantity"}
+
 
 def _typeset(text):
     """`UX-1149`: the page sets a backtick span as `<code>` and `->` as `→`;
@@ -113,10 +124,17 @@ _LOOK = """
         why: (block.querySelector("p.why")?.textContent || "").trim(),
         unpublished: (block.querySelector("p.unpublished")?.textContent
                       || "").trim(),
+        hover: block.querySelector("p.rule")?.getAttribute("title") ?? null,
+        unpublishedHover: block.querySelector("p.unpublished")?.getAttribute("title") ?? "",
+        labels: Object.fromEntries([...block.querySelectorAll("dl.evidence-refs dt")]
+          .map((dt) => [dt.getAttribute("data-path"), dt.textContent.trim()])),
+        document: block.getAttribute("data-document"),
       })),
     text: main.textContent || "",
     raws: [...main.querySelectorAll("[data-raw]")]
       .map((n) => n.getAttribute("data-raw")),
+    hovers: [...(section?.querySelectorAll("details.provenance [title]") ?? [])]
+      .flatMap((n) => n.getAttribute("title").split(", ")),
   };
 })()
 """
@@ -172,6 +190,7 @@ class TestEveryPublishedFieldReachesAReader:
         without an edit here."""
         out = browser.measure(booted[label], _LOOK, 1440, 900)
         reachable = set(out["raws"])
+        hovers = set(out["hovers"])
         shown = _typeset(out["text"])
         withheld = {}
         for record in _records(label):
@@ -184,7 +203,11 @@ class TestEveryPublishedFieldReachesAReader:
                     continue
                 if len(spelled) < 2:
                     continue
-                if spelled in reachable or _typeset(spelled) in shown:
+                if field in ON_THE_HOVER:
+                    reached = spelled in hovers
+                else:
+                    reached = spelled in reachable or _typeset(spelled) in shown
+                if reached:
                     continue
                 withheld.setdefault(field, 0)
                 withheld[field] += 1
@@ -259,9 +282,12 @@ class TestTheSectionIsAnIndexAndItsRecords:
                 # draft of this clause - and the value is reachable
                 # elsewhere on the page as an `evidence[].path`, so the
                 # coverage clause could not see it either. The claim is
-                # that the block says which number the rule compared.
-                assert rule["observed_path"] in block["rule"], (block, rule)
-                assert block["observed"] == rule["observed_path"], block
+                # that the block says which number the rule compared -
+                # `UX-1159`: by the label its evidence row carries, with
+                # the path on the hover rather than in the text.
+                assert block["labels"][rule["observed_path"]] in block["rule"], (block, rule)
+                assert rule["observed_path"] not in block["rule"], (block, rule)
+                assert block["observed"] == rule["observed_path"] == block["hover"], block
         assert named, f"{label}: no record publishes a named rule"
 
     def test_each_evidence_row_carries_its_path(self, browser, booted, label):
@@ -282,8 +308,10 @@ class TestTheSectionIsAnIndexAndItsRecords:
                 assert block["unpublished"] == "", block
                 continue
             seen += 1
+            # `UX-1159`: stated by its label, the name itself on the hover.
+            assert block["unpublishedHover"].split(", ") == missing, (block, missing)
             for name in missing:
-                assert name in block["unpublished"], (block, name)
+                assert name not in block["unpublished"], (block, name)
         if label == "macro_micro":
             assert seen, "no record on this page names an unpublished input"
 

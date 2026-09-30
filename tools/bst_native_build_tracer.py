@@ -5767,7 +5767,7 @@ class _PeakMemory:
             "available": True,
             "per_element": {k: per_element[k] for k in sorted(per_element)},
             "note": "Peak resident set size of the single largest process in each "
-            "element (getrusage ru_maxrss at exit, KiB). A per-process "
+            "element (the kernel's peak RSS at exit, KiB). A per-process "
             "peak, deliberately NOT summed across processes: two "
             "processes peaking at different moments never held the sum "
             "between them. Use it as 'no single process here exceeded "
@@ -6649,7 +6649,7 @@ def _summarize_folded(
         "matched_count": fold.matched,
         "open_count": open_records,
         "open_records_note": (
-            "Processes with no observed exit are excluded from max_concurrency, not "
+            "Processes with no observed exit are excluded from the peak, not "
             "assumed to run indefinitely. Real cause, confirmed against this tool's own "
             "prototype run: a `sh -c '<command>'` wrapper that forks a child for the "
             "real command and then exits via `_exit()` once it completes - `_exit()` "

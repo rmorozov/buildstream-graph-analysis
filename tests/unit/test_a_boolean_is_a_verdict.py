@@ -106,5 +106,5 @@ def test_each_state_has_its_own_sentence():
     under = _verdict(["resource_undersubscription"])
     assert under.startswith("Undersubscribed"), under
     skipped = _verdict(skipped=["native_max_jobs"])
-    assert "did not run" in skipped and "native_max_jobs" in skipped, skipped
+    assert "did not run" in skipped and "--max-jobs value" in skipped, skipped
     assert len({matched, over, under, skipped}) == 4

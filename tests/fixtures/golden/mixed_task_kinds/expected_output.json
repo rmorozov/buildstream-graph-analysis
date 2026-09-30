@@ -385,10 +385,10 @@
         "cold_confidence": null,
         "cold_duration_sources": {},
         "cold_critical_path_duration_sources": {},
-        "capacity_model_note": "LB/Efficiency Score certify against this run's recorded resource capacities (builders/fetchers/pushers), not real host CPU cores or any declared CPU budget - native build-system parallelism (--max-jobs) is a separate, currently unmodeled axis. Capacity checks (over/under-subscription, memory) did not run for this run - missing: native_max_jobs, governing core count (host_cpu_count/cpu_budget). They are inert here, not passing; a wrapped log records --max-jobs on its own first line, or declare the missing value explicitly at extraction time."
+        "capacity_model_note": "LB/Efficiency Score certify against this run's recorded resource capacities (builders/fetchers/pushers), not real host CPU cores or any declared CPU budget - native build-system parallelism (--max-jobs) is a separate, currently unmodeled axis. Capacity checks (over/under-subscription, memory) did not run for this run - missing: the --max-jobs value, a core count (the host or a CPU budget). They are inert here, not passing; a wrapped log records --max-jobs on its own first line, or declare the missing value explicitly at extraction time."
     },
     "capacity_verdict": {
-        "verdict": "The capacity checks did not run - native_max_jobs, governing core count (host_cpu_count/cpu_budget) missing - so neither over- nor undersubscription was tested.",
+        "verdict": "The capacity checks did not run - the --max-jobs value, a core count (the host or a CPU budget) missing - so neither over- nor undersubscription was tested.",
         "oversubscribed": false,
         "undersubscribed": false,
         "checks_ran": false,
@@ -969,7 +969,7 @@
                 "threshold": null,
                 "comparison": "present",
                 "observed_path": null,
-                "sentence": "Published whenever the critical path has measured elements on it; which elements, and their share, are the finding's own `evidence.rows`.",
+                "sentence": "Published whenever the critical path has measured elements on it; which elements, and their share, are the finding's own evidence rows.",
                 "module": "bga/findings.py"
             },
             "trace_query": "cost-by-executable",
@@ -1229,7 +1229,7 @@
                 "threshold": null,
                 "comparison": "present",
                 "observed_path": null,
-                "sentence": "Published whenever `bga sweep`'s own unbounded-capacity row priced the builder cap; the compiler-offload half needs a Plane 2 `binary_cost` too, and is absent without one - both numbers are the finding's own `evidence`.",
+                "sentence": "Published whenever `bga sweep`'s own unbounded-capacity row priced the builder cap; the compiler-offload half needs a Plane 2 binary cost too, and is absent without one - both numbers are the finding's own evidence.",
                 "module": "bga/findings.py"
             },
             "trace_query": null,

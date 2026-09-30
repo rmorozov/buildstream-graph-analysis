@@ -65,12 +65,12 @@ DX_ONLY = ("button.copy-rows", "select.top-n")
 #: `UX-1145` re-bases both 390 rows (stacked pairs, chips on their own row);
 #: `UX-1152` re-bases all four (a one-row record drawn as pairs, Why below its row).
 #: Round 154's merged tree re-measured, 3 runs, spread 0.
-#: `UX-1147`'s heading row lowers macro_micro 390, 3 runs, spread 0.
+#: `UX-1147`'s heading row lowers macro_micro 390 and re-bases both_scale 390 J3/J4 (one hop), 3 runs, spread 0.
 MEASURED = {
     ("macro_micro", 1440): {"J1": (4.57, 0), "J2": (18.53, 0), "J3": (14.35, 38521), "J4": (14.76, 11198)},
     ("macro_micro", 390): {"J1": (2.34, 495), "J2": (17.62, 0), "J3": (22.87, 51499), "J4": (9.9, 17659)},
     ("both_scale", 1440): {"J1": (4.51, 0), "J2": (19.7, 0), "J3": (10.6, 45277), "J4": (14.64, 11773)},
-    ("both_scale", 390): {"J1": (2.07, 798), "J2": (19.33, 0), "J3": (25.15, 58267), "J4": (12.66, 19232)},
+    ("both_scale", 390): {"J1": (2.07, 798), "J2": (19.33, 0), "J3": (28.16, 58129), "J4": (10.66, 21745)},
 }
 HEADROOM_BITS = 0.5
 HEADROOM_WHEEL = 1.10

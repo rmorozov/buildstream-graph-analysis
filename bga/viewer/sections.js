@@ -719,6 +719,24 @@ export const SECTION_ANSWERS = {
       + (typeof traced === "number" && traced !== seen
         ? ` The capture traced ${many(traced, "process", "processes")} in all.` : "");
   },
+  duration_resolution(value) {
+    const count = value?.element_count;
+    if (typeof count !== "number") return null;
+    const grid = typeof value.epsilon_us === "number"
+      ? ` the ${quantity(value.epsilon_us, "duration_us")} grid` : " the grid";
+    return `${many(count, "element")} ran for less than half${grid}, `
+      + "so their durations publish as zero: unmeasurable, not instantaneous.";
+  },
+  cpu_time(value) {
+    const total = value?.total_cpu_us;
+    const measured = value?.measured_processes;
+    if (typeof total !== "number" || typeof measured !== "number") return null;
+    const lost = value.unmeasured_processes;
+    return `The build cost ${quantity(total, "duration_us")} of CPU, read from `
+      + `${many(measured, "process", "processes")}`
+      + (typeof lost === "number"
+        ? (lost === 0 ? "; none went unmeasured." : `; ${lost} could not be read.`) : ".");
+  },
   binary_cost(rows) {
     if (!Array.isArray(rows) || !rows.length) return null;
     const by = new Map();
@@ -764,8 +782,7 @@ export const SECTION_ANSWERS = {
   },
 };
 
-/** The answer as the section's first block; `processes` is dropped where
- * `process_count` says the same number (§1b's guard holds the latter). */
+/** The answer as the section's first block; the pairs it restates are dropped. */
 function leadWith(section, key, value, payload) {
   const said = SECTION_ANSWERS[key]?.(value, payload);
   const own = (node, tag) => [...(node?.children ?? [])].filter(
@@ -777,14 +794,21 @@ function leadWith(section, key, value, payload) {
   if (!said || !head) return;
   const lead = el("p", { class: "section-answer", "data-role": "section-answer" }, said);
   section.insertBefore(lead, head.nextSibling ?? null);
-  if (key !== "plane2_coverage" || value.process_count !== value.processes) return;
+  if (key !== "plane2_coverage") return;
+  // A pair the lead or a sibling count already says; the census guard needs the rest drawn.
+  const dropped = [];
+  if (value.process_count === value.processes) dropped.push("processes");
+  if (Array.isArray(value.cpu_disagreements) && !value.cpu_disagreements.length) {
+    dropped.push("cpu_disagreements");
+  }
   for (const list of own(section, "dl")) {
-    const term = own(list, "dt").find(
-      (dt) => dt.getAttribute?.("data-key") === "processes");
-    if (!term) continue;
-    const kids = [...list.children];
-    kids[kids.indexOf(term) + 1]?.remove?.();
-    term.remove?.();
+    for (const name of dropped) {
+      const term = own(list, "dt").find((dt) => dt.getAttribute?.("data-key") === name);
+      if (!term) continue;
+      const kids = [...list.children];
+      kids[kids.indexOf(term) + 1]?.remove?.();
+      term.remove?.();
+    }
   }
 }
 

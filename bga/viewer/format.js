@@ -601,6 +601,12 @@ const UNIT_AT = String.raw`(?<![\w.])(\d+(?:\.\d+)?)(ms|s)(?=$|[\s,;:)\]]|\.(?:\
 const GLUED_UNIT = new RegExp(UNIT_AT, "g");
 const TYPESET_MARK = new RegExp(String.raw`\x60[^\x60\n]+\x60|->|` + UNIT_AT);
 
+// A `td` is data, except a long-text fold: its preview and full text are prose.
+function skipped(node) {
+  const hit = node?.closest?.(TYPESET_SKIP);
+  return Boolean(hit) && !(hit.matches("td") && node.closest("details.long-text"));
+}
+
 function typesetNode(node) {
   const parts = node.data.split(/`([^`\n]+)`/);
   const fragment = document.createDocumentFragment();
@@ -614,11 +620,11 @@ function typesetNode(node) {
 export function typeset(root) {
   if (!root || typeof document.createTreeWalker !== "function") return;
   if (root.nodeType === 3) root = root.parentNode;
-  if (!root || root.nodeType !== 1 || root.closest?.(TYPESET_SKIP)) return;
+  if (!root || root.nodeType !== 1 || skipped(root)) return;
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   const found = [];
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-    if (TYPESET_MARK.test(node.data) && !node.parentElement?.closest(TYPESET_SKIP)) {
+    if (TYPESET_MARK.test(node.data) && !skipped(node.parentElement)) {
       found.push(node);
     }
   }

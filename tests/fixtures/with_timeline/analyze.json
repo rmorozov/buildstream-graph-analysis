@@ -7,7 +7,7 @@
         {
             "id": "wait-category",
             "severity": "high",
-            "title": "Biggest wait category: 5.9% of wall-clock time is UNTRACKED HEAD (2.72s)",
+            "title": "Biggest wait category: 5.9% of wall-clock time is untracked head (2.72s)",
             "detail": [
                 "    -> real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) - see Pipeline Overhead, not a scheduling issue"
             ],
@@ -19,7 +19,7 @@
                 "hint": "real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) - see Pipeline Overhead, not a scheduling issue"
             },
             "reader": "local-optimizer",
-            "copy_text": "BGA finding: Biggest wait category: 5.9% of wall-clock time is UNTRACKED HEAD (2.72s)\n      -> real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) - see Pipeline Overhead, not a scheduling issue\n  category untracked_head_us\n  category_us 2.7s\n  share 6%\n  hint real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) - see Pipeline Overhead, not a scheduling issue\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "copy_text": "BGA finding: Biggest wait category: 5.9% of wall-clock time is untracked head (2.72s)\n      -> real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) - see Pipeline Overhead, not a scheduling issue\n  category untracked_head_us\n  category_us 2.7s\n  share 6%\n  hint real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) - see Pipeline Overhead, not a scheduling issue\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
             "trace_query": "resource-queues",
             "trace_queries": [
                 "resource-queues",
@@ -93,103 +93,6 @@
             "trace_query": "graph-levels"
         },
         {
-            "id": "blast-radius-reach",
-            "severity": "medium",
-            "title": "What a change to these rebuilds: core.bst (8 downstream), codegen.bst (8 downstream), lib-a.bst (7 downstream) - the cost of touching them is not their own duration but everything downstream that has to be built again",
-            "detail": [],
-            "elements": [
-                "core.bst",
-                "codegen.bst",
-                "lib-a.bst"
-            ],
-            "evidence": {},
-            "reader": "recipe-author",
-            "copy_text": "BGA finding: What a change to these rebuilds: core.bst (8 downstream), codegen.bst (8 downstream), lib-a.bst (7 downstream) - the cost of touching them is not their own duration but everything downstream that has to be built again\n  Elements: core.bst, codegen.bst, lib-a.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
-            "trace_query": "dependency-wait"
-        },
-        {
-            "id": "blast-radius-structural",
-            "severity": "info",
-            "title": "Reaching most of the graph by design: toolchain.bst (10 downstream) - structural elements (import) whose dependents are the graph's shape, not a task",
-            "detail": [],
-            "elements": [
-                "toolchain.bst"
-            ],
-            "evidence": {},
-            "reader": "recipe-author",
-            "copy_text": "BGA finding: Reaching most of the graph by design: toolchain.bst (10 downstream) - structural elements (import) whose dependents are the graph's shape, not a task\n  Elements: toolchain.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
-            "trace_query": "dependency-wait"
-        },
-        {
-            "id": "fan-in-ranking",
-            "severity": "info",
-            "title": "Elements that pull in the most (by upstream closure):",
-            "detail": [
-                "    1. app.bst (9 upstream, 8 named directly, at or above p90 of this run)",
-                "    2. lib-f.bst (8 upstream, 4 named directly, at or above p80 of this run)",
-                "    3. lib-e.bst (7 upstream, 4 named directly, at or above p70 of this run)",
-                "    Shape: half of this run's 11 elements pull in 5 or fewer, the top tenth pull in 9 or more (max 10)"
-            ],
-            "elements": [
-                "app.bst",
-                "lib-f.bst",
-                "lib-e.bst"
-            ],
-            "evidence": {
-                "fan_in_distribution": {
-                    "n": 11,
-                    "min": 0,
-                    "max": 10,
-                    "deciles": {
-                        "p10": 1,
-                        "p20": 1,
-                        "p30": 3,
-                        "p40": 4,
-                        "p50": 5,
-                        "p60": 6,
-                        "p70": 7,
-                        "p80": 8,
-                        "p90": 9
-                    },
-                    "p95": 10,
-                    "p99": 10,
-                    "mean": 5,
-                    "is_flat": false
-                }
-            },
-            "reader": "graph-owner",
-            "copy_text": "BGA finding: Elements that pull in the most (by upstream closure):\n      1. app.bst (9 upstream, 8 named directly, at or above p90 of this run)\n      2. lib-f.bst (8 upstream, 4 named directly, at or above p80 of this run)\n      3. lib-e.bst (7 upstream, 4 named directly, at or above p70 of this run)\n      Shape: half of this run's 11 elements pull in 5 or fewer, the top tenth pull in 9 or more (max 10)\n  Elements: app.bst, lib-f.bst, lib-e.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
-            "trace_query": "dependency-wait"
-        },
-        {
-            "id": "fan-in-structural",
-            "severity": "info",
-            "title": "Pulling in most of the graph by design: all.bst (10 upstream) - structural elements (stack) whose dependencies are the graph's shape, not a task",
-            "detail": [],
-            "elements": [
-                "all.bst"
-            ],
-            "evidence": {},
-            "reader": "recipe-author",
-            "copy_text": "BGA finding: Pulling in most of the graph by design: all.bst (10 upstream) - structural elements (stack) whose dependencies are the graph's shape, not a task\n  Elements: all.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
-            "trace_query": "dependency-wait"
-        },
-        {
-            "id": "graph-width",
-            "severity": "info",
-            "title": "The graph is 11 elements in 10 dependency stages, and its widest stage holds 2 - so no more than 2 can ever be building at once, whatever the capacity",
-            "detail": [],
-            "elements": [],
-            "evidence": {
-                "element_count": 11,
-                "dependency_stages": 10,
-                "widest_stage": 2
-            },
-            "reader": "graph-owner",
-            "copy_text": "BGA finding: The graph is 11 elements in 10 dependency stages, and its widest stage holds 2 - so no more than 2 can ever be building at once, whatever the capacity\n  element_count 11\n  dependency_stages 10\n  widest_stage 2\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
-            "trace_query": "graph-levels"
-        },
-        {
             "id": "joint-saving",
             "severity": "high",
             "title": "Together, the top 3 are worth 23.1s (50% of the build) - more than the 16.1s alone: codegen.bst pays off after core.bst",
@@ -253,6 +156,21 @@
             "trace_query": "time-by-kind"
         },
         {
+            "id": "blast-radius-reach",
+            "severity": "medium",
+            "title": "What a change to these rebuilds: core.bst (8 downstream), codegen.bst (8 downstream), lib-a.bst (7 downstream) - the cost of touching them is not their own duration but everything downstream that has to be built again",
+            "detail": [],
+            "elements": [
+                "core.bst",
+                "codegen.bst",
+                "lib-a.bst"
+            ],
+            "evidence": {},
+            "reader": "recipe-author",
+            "copy_text": "BGA finding: What a change to these rebuilds: core.bst (8 downstream), codegen.bst (8 downstream), lib-a.bst (7 downstream) - the cost of touching them is not their own duration but everything downstream that has to be built again\n  Elements: core.bst, codegen.bst, lib-a.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "trace_query": "dependency-wait"
+        },
+        {
             "id": "latent-heavies",
             "severity": "medium",
             "title": "Waiting off the critical path, worth nothing to fix today: codegen.bst (7s) - they bound how far shortening the chain can go",
@@ -277,6 +195,88 @@
                 "element-commands",
                 "executables-in-element"
             ]
+        },
+        {
+            "id": "blast-radius-structural",
+            "severity": "info",
+            "title": "Reaching most of the graph by design: toolchain.bst (10 downstream) - structural elements (import) whose dependents are the graph's shape, not a task",
+            "detail": [],
+            "elements": [
+                "toolchain.bst"
+            ],
+            "evidence": {},
+            "reader": "recipe-author",
+            "copy_text": "BGA finding: Reaching most of the graph by design: toolchain.bst (10 downstream) - structural elements (import) whose dependents are the graph's shape, not a task\n  Elements: toolchain.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "trace_query": "dependency-wait"
+        },
+        {
+            "id": "fan-in-ranking",
+            "severity": "info",
+            "title": "Elements that pull in the most, by upstream closure",
+            "detail": [
+                "    1. app.bst (9 upstream, 8 named directly, at or above p90 of this run)",
+                "    2. lib-f.bst (8 upstream, 4 named directly, at or above p80 of this run)",
+                "    3. lib-e.bst (7 upstream, 4 named directly, at or above p70 of this run)",
+                "    Shape: half of this run's 11 elements pull in 5 or fewer, the top tenth pull in 9 or more (max 10)"
+            ],
+            "elements": [
+                "app.bst",
+                "lib-f.bst",
+                "lib-e.bst"
+            ],
+            "evidence": {
+                "fan_in_distribution": {
+                    "n": 11,
+                    "min": 0,
+                    "max": 10,
+                    "deciles": {
+                        "p10": 1,
+                        "p20": 1,
+                        "p30": 3,
+                        "p40": 4,
+                        "p50": 5,
+                        "p60": 6,
+                        "p70": 7,
+                        "p80": 8,
+                        "p90": 9
+                    },
+                    "p95": 10,
+                    "p99": 10,
+                    "mean": 5,
+                    "is_flat": false
+                }
+            },
+            "reader": "graph-owner",
+            "copy_text": "BGA finding: Elements that pull in the most, by upstream closure\n      1. app.bst (9 upstream, 8 named directly, at or above p90 of this run)\n      2. lib-f.bst (8 upstream, 4 named directly, at or above p80 of this run)\n      3. lib-e.bst (7 upstream, 4 named directly, at or above p70 of this run)\n      Shape: half of this run's 11 elements pull in 5 or fewer, the top tenth pull in 9 or more (max 10)\n  Elements: app.bst, lib-f.bst, lib-e.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "trace_query": "dependency-wait"
+        },
+        {
+            "id": "fan-in-structural",
+            "severity": "info",
+            "title": "Pulling in most of the graph by design: all.bst (10 upstream) - structural elements (stack) whose dependencies are the graph's shape, not a task",
+            "detail": [],
+            "elements": [
+                "all.bst"
+            ],
+            "evidence": {},
+            "reader": "recipe-author",
+            "copy_text": "BGA finding: Pulling in most of the graph by design: all.bst (10 upstream) - structural elements (stack) whose dependencies are the graph's shape, not a task\n  Elements: all.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "trace_query": "dependency-wait"
+        },
+        {
+            "id": "graph-width",
+            "severity": "info",
+            "title": "The graph is 11 elements in 10 dependency stages, and its widest stage holds 2 - so no more than 2 can ever be building at once, whatever the capacity",
+            "detail": [],
+            "elements": [],
+            "evidence": {
+                "element_count": 11,
+                "dependency_stages": 10,
+                "widest_stage": 2
+            },
+            "reader": "graph-owner",
+            "copy_text": "BGA finding: The graph is 11 elements in 10 dependency stages, and its widest stage holds 2 - so no more than 2 can ever be building at once, whatever the capacity\n  element_count 11\n  dependency_stages 10\n  widest_stage 2\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "trace_query": "graph-levels"
         },
         {
             "id": "cache-hit-ratio",
@@ -337,7 +337,7 @@
         {
             "id": "efficiency-score",
             "severity": "info",
-            "title": "Efficiency Score: 1.00 (scheduling is near the certified floor for this graph - further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))",
+            "title": "Efficiency score: 1.00 (scheduling is near the certified floor for this graph - further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))",
             "detail": [],
             "elements": [],
             "evidence": {
@@ -345,7 +345,7 @@
                 "low_confidence": false
             },
             "reader": "ci-gatekeeper",
-            "copy_text": "BGA finding: Efficiency Score: 1.00 (scheduling is near the certified floor for this graph - further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))\n  efficiency_score 100%\n  low_confidence False\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "copy_text": "BGA finding: Efficiency score: 1.00 (scheduling is near the certified floor for this graph - further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))\n  efficiency_score 100%\n  low_confidence False\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
             "trace_query": "cpu-versus-wall"
         }
     ],
@@ -398,9 +398,9 @@
             "leads_with": "blast-radius-reach",
             "findings": [
                 "blast-radius-reach",
+                "latent-heavies",
                 "blast-radius-structural",
-                "fan-in-structural",
-                "latent-heavies"
+                "fan-in-structural"
             ]
         },
         {
@@ -1897,6 +1897,86 @@
             "unpublished_inputs": []
         },
         {
+            "claim": "joint-saving",
+            "kind": "finding",
+            "document": "analyze/v6",
+            "evidence": [
+                {
+                    "path": "joint_saving.joint_saving_us",
+                    "resolved": true,
+                    "value": 23050000,
+                    "quantity": "duration_us"
+                },
+                {
+                    "path": "joint_saving.sum_of_individual_us",
+                    "resolved": true,
+                    "value": 16050000,
+                    "quantity": "duration_us"
+                },
+                {
+                    "path": "joint_saving.savings_add",
+                    "resolved": true,
+                    "value": false
+                },
+                {
+                    "path": "joint_saving.relation",
+                    "resolved": true,
+                    "value": "compound"
+                },
+                {
+                    "path": "total_duration_us",
+                    "resolved": true,
+                    "value": 46133000,
+                    "quantity": "duration_us"
+                }
+            ],
+            "rule": {
+                "name": null,
+                "threshold": null,
+                "comparison": "present",
+                "observed_path": null,
+                "sentence": "Published whenever the top elements have a joint projection; whether the savings add is the finding, not its gate.",
+                "module": "bga/findings.py"
+            },
+            "trace_query": "waited-on-flow",
+            "unpublished_inputs": []
+        },
+        {
+            "claim": "optimization-horizon",
+            "kind": "finding",
+            "document": "analyze/v6",
+            "evidence": [
+                {
+                    "path": "optimization_horizon[0].makespan_after_us",
+                    "resolved": true,
+                    "value": 31150000,
+                    "quantity": "duration_us"
+                },
+                {
+                    "path": "optimization_horizon[0].cumulative_saving_us",
+                    "resolved": true,
+                    "value": 12050000,
+                    "quantity": "duration_us"
+                },
+                {
+                    "path": "total_duration_us",
+                    "resolved": true,
+                    "value": 46133000,
+                    "quantity": "duration_us"
+                }
+            ],
+            "rule": {
+                "name": null,
+                "threshold": null,
+                "comparison": "present",
+                "observed_path": null,
+                "sentence": "Published when the horizon has more than one step - a single-step horizon is the first fix, which is already named.",
+                "module": "bga/findings.py"
+            },
+            "trace_query": "time-by-kind",
+            "unpublished_inputs": []
+        },
+        {
             "claim": "blast-radius-reach",
             "kind": "finding",
             "document": "analyze/v6",
@@ -1929,6 +2009,33 @@
                 "module": "bga/findings.py"
             },
             "trace_query": "dependency-wait",
+            "unpublished_inputs": []
+        },
+        {
+            "claim": "latent-heavies",
+            "kind": "finding",
+            "document": "analyze/v6",
+            "evidence": [
+                {
+                    "path": "latent_heavies[0].duration_us",
+                    "resolved": true,
+                    "value": 7000000,
+                    "quantity": "duration_us"
+                }
+            ],
+            "rule": {
+                "name": null,
+                "threshold": null,
+                "comparison": "present",
+                "observed_path": null,
+                "sentence": "Published whenever elements off the critical path are heavy enough to bound how far shortening the chain can go.",
+                "module": "bga/findings.py"
+            },
+            "trace_query": "element-commands",
+            "trace_queries": [
+                "element-commands",
+                "executables-in-element"
+            ],
             "unpublished_inputs": []
         },
         {
@@ -2026,113 +2133,6 @@
                 "module": "bga/findings.py"
             },
             "trace_query": "graph-levels",
-            "unpublished_inputs": []
-        },
-        {
-            "claim": "joint-saving",
-            "kind": "finding",
-            "document": "analyze/v6",
-            "evidence": [
-                {
-                    "path": "joint_saving.joint_saving_us",
-                    "resolved": true,
-                    "value": 23050000,
-                    "quantity": "duration_us"
-                },
-                {
-                    "path": "joint_saving.sum_of_individual_us",
-                    "resolved": true,
-                    "value": 16050000,
-                    "quantity": "duration_us"
-                },
-                {
-                    "path": "joint_saving.savings_add",
-                    "resolved": true,
-                    "value": false
-                },
-                {
-                    "path": "joint_saving.relation",
-                    "resolved": true,
-                    "value": "compound"
-                },
-                {
-                    "path": "total_duration_us",
-                    "resolved": true,
-                    "value": 46133000,
-                    "quantity": "duration_us"
-                }
-            ],
-            "rule": {
-                "name": null,
-                "threshold": null,
-                "comparison": "present",
-                "observed_path": null,
-                "sentence": "Published whenever the top elements have a joint projection; whether the savings add is the finding, not its gate.",
-                "module": "bga/findings.py"
-            },
-            "trace_query": "waited-on-flow",
-            "unpublished_inputs": []
-        },
-        {
-            "claim": "optimization-horizon",
-            "kind": "finding",
-            "document": "analyze/v6",
-            "evidence": [
-                {
-                    "path": "optimization_horizon[0].makespan_after_us",
-                    "resolved": true,
-                    "value": 31150000,
-                    "quantity": "duration_us"
-                },
-                {
-                    "path": "optimization_horizon[0].cumulative_saving_us",
-                    "resolved": true,
-                    "value": 12050000,
-                    "quantity": "duration_us"
-                },
-                {
-                    "path": "total_duration_us",
-                    "resolved": true,
-                    "value": 46133000,
-                    "quantity": "duration_us"
-                }
-            ],
-            "rule": {
-                "name": null,
-                "threshold": null,
-                "comparison": "present",
-                "observed_path": null,
-                "sentence": "Published when the horizon has more than one step - a single-step horizon is the first fix, which is already named.",
-                "module": "bga/findings.py"
-            },
-            "trace_query": "time-by-kind",
-            "unpublished_inputs": []
-        },
-        {
-            "claim": "latent-heavies",
-            "kind": "finding",
-            "document": "analyze/v6",
-            "evidence": [
-                {
-                    "path": "latent_heavies[0].duration_us",
-                    "resolved": true,
-                    "value": 7000000,
-                    "quantity": "duration_us"
-                }
-            ],
-            "rule": {
-                "name": null,
-                "threshold": null,
-                "comparison": "present",
-                "observed_path": null,
-                "sentence": "Published whenever elements off the critical path are heavy enough to bound how far shortening the chain can go.",
-                "module": "bga/findings.py"
-            },
-            "trace_query": "element-commands",
-            "trace_queries": [
-                "element-commands",
-                "executables-in-element"
-            ],
             "unpublished_inputs": []
         },
         {

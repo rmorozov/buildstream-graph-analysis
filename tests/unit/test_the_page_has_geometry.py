@@ -479,9 +479,8 @@ class TestTheDocumentEndsWithItsIdentity:
         widens this gap beyond what those two occupy, at any width."""
         out = browser.measure(report, self._WHERE, width, height)
         gap = out["blast"]["top"] - out["findings"]["bottom"]
-        narrative = (
-            out["headline"]["bottom"] - out["headline"]["top"] + out["next_steps"]["bottom"] - out["next_steps"]["top"]
-        )
+        # `UX-1146`: `next_steps` is the rail's link into the decision now.
+        narrative = out["headline"]["bottom"] - out["headline"]["top"]
         # A quarter-screen of slack for the margins between four blocks;
         # measured at 0.05-0.12 screens across the three viewports.
         assert gap <= narrative + 0.25 * out["vh"], (

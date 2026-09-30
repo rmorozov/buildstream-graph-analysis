@@ -82,6 +82,21 @@ export function findingAnchor(id) {
   return `finding-${String(id).replace(/[^\w-]+/g, "-")}`;
 }
 
+/** `UX-1147` (§6e.1): the row a heading's controls sit in - beside the
+ *  heading, never inside it, so its accessible name is its question.
+ *  Wraps the heading in place on first use; a detached heading is
+ *  wrapped and the caller places the row. */
+export function headRow(heading, doc = document, kind = "section-head") {
+  const parent = heading.parentElement ?? heading.parentNode;
+  if (String(parent?.className ?? "").split(" ").includes(kind)) return parent;
+  const row = doc.createElement("div");
+  row.className = kind;
+  parent?.insertBefore?.(row, heading);
+  heading.remove?.();
+  row.append(heading);
+  return row;
+}
+
 export function bar(label, value, total, extra = {}) {
   const row = document.createElement("div");
   row.className = "wf-row";

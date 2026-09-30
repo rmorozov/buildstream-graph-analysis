@@ -39,6 +39,7 @@ export function sections(root) {
 // invisible to the export's `_module_order`, which walks `import`
 // lines, so the module would never be inlined.
 import { elementAnchor } from "./primitives.js";
+import { headRow } from "./primitives.js";
 
 /**
  * The named things inside one section, as a nested list - or `null`.
@@ -98,6 +99,22 @@ function viewEntries(section, doc) {
 export function subsections(section, doc) {
   const views = viewEntries(section, doc);
   if (views) return views;
+  // `UX-1146`: a published section drawn inside this one is its sub-entry.
+  const drawn = [...(section?.querySelectorAll?.("[data-rail-sub][id]") ?? [])];
+  if (drawn.length) {
+    const list = doc.createElement("ul");
+    list.className = "toc-sub";
+    for (const head of drawn) {
+      const item = doc.createElement("li");
+      const link = doc.createElement("a");
+      link.href = `#${head.getAttribute("id")}`;
+      link.setAttribute("data-toc-sub", head.getAttribute("data-rail-sub"));
+      link.textContent = String(head.textContent ?? "").trim();
+      item.append(link);
+      list.append(item);
+    }
+    return list;
+  }
   const folds = [...(section?.querySelectorAll?.("details.map > summary") ?? [])];
   if (folds.length < 2) return null;
   const list = doc.createElement("ul");
@@ -151,7 +168,9 @@ export function headingLabel(section) {
   // promotes it - a selector list reads either, so this runs the same before
   // or after that pass.
   const head = section?.querySelector?.("h2, h3");
-  if (!head || (head.parentElement ?? head.parentNode) !== section) return null;
+  const parent = head?.parentElement ?? head?.parentNode;
+  if (!head || (parent !== section
+                && (parent?.parentElement ?? parent?.parentNode) !== section)) return null;
   const own = [...(head.childNodes ?? [])]
     .filter((node) => node.nodeType === 3)
     .map((node) => node.textContent ?? "").join("").trim();
@@ -262,8 +281,9 @@ export function collapsible(root, { document: doc, storage,
     // Not `heading.prepend?.(button) ?? heading.append(button)`: prepend
     // returns undefined, so `??` falls through and the button is added
     // *twice*. Caught by the collapse guard.
-    if (typeof heading.prepend === "function") heading.prepend(button);
-    else heading.append(button);
+    const row = headRow(heading, doc);
+    if (typeof row.prepend === "function") row.prepend(button);
+    else row.append(button);
     toggles.set(key, apply);
   }
 

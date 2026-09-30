@@ -45,7 +45,8 @@ REGISTRY = {
     "a.from.muted": (r"^from: ", "§1e"),  # a runbook step's citation
     "a.inspect": (r"^⌕$", "§1a"),  # bga:role's generic Inspect link
     "a.path-box": (r".+", "§3c"),  # the critical chain, folded
-    "a.runbook-link": (r"^\d+ steps?, in the decision panel$", "§1e"),
+    # `a.runbook-link` (UX-669) retired by `UX-1146`: `next_steps` is the
+    # decision's rail sub-entry, not a section holding one link.
     # `a.why` (UX-207) retired by `UX-1019`: one "why" control per top
     # action, and `renderWhyRanked`'s disclosure is the one both
     # fixtures' actions always have something to say in.

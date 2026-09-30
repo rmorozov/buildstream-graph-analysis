@@ -836,7 +836,8 @@ export function renderQuestions(make, options = {}) {
   const worked = byId(WORKED_EXAMPLE);
   if (worked) section.append(workedExample(worked, make, chosen));
   for (const category of CATEGORIES) {
-    const entries = inCategory(category);
+    // UX-1147: the worked question is already open above; a fold repeating it is a second heading.
+    const entries = inCategory(category).filter((q) => !worked || q.id !== worked.id);
     if (!entries.length) continue;
     // UX-209 item 4: one `<details>` per category, collapsed - with the
     // full SQL still in the DOM, because Ctrl-F must keep finding it

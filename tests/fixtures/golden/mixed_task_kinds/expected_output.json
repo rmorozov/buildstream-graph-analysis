@@ -7,7 +7,7 @@
         {
             "id": "wait-category",
             "severity": "high",
-            "title": "Biggest wait category: 12.5% of wall-clock time is UNTRACKED TAIL (0.00s)",
+            "title": "Biggest wait category: 12.5% of wall-clock time is untracked tail (0.00s)",
             "detail": [
                 "    -> real time after the last tracked task finished - outside per-task tracking, not a scheduling issue"
             ],
@@ -19,7 +19,7 @@
                 "hint": "real time after the last tracked task finished - outside per-task tracking, not a scheduling issue"
             },
             "reader": "local-optimizer",
-            "copy_text": "BGA finding: Biggest wait category: 12.5% of wall-clock time is UNTRACKED TAIL (0.00s)\n      -> real time after the last tracked task finished - outside per-task tracking, not a scheduling issue\n  category untracked_tail_us\n  category_us 0.0s\n  share 12%\n  hint real time after the last tracked task finished - outside per-task tracking, not a scheduling issue\n  Run: golden-fixture-manifest-hash-v1",
+            "copy_text": "BGA finding: Biggest wait category: 12.5% of wall-clock time is untracked tail (0.00s)\n      -> real time after the last tracked task finished - outside per-task tracking, not a scheduling issue\n  category untracked_tail_us\n  category_us 0.0s\n  share 12%\n  hint real time after the last tracked task finished - outside per-task tracking, not a scheduling issue\n  Run: golden-fixture-manifest-hash-v1",
             "trace_query": "resource-queues",
             "trace_queries": [
                 "resource-queues",
@@ -82,52 +82,6 @@
             "indent": "    ",
             "reader": "graph-owner",
             "copy_text": "BGA finding: Note: 75% of elements have zero slack, all on the critical path - no second chain of equal length, so a saving on any of them is worth its own duration\n  zero_slack_share 75%\n  zero_slack_off_path 0\n  Run: golden-fixture-manifest-hash-v1",
-            "trace_query": "graph-levels"
-        },
-        {
-            "id": "blast-radius-reach",
-            "severity": "medium",
-            "title": "What a change to these rebuilds: base.bst (2 downstream), lib.bst (1 downstream) - the cost of touching them is not their own duration but everything downstream that has to be built again",
-            "detail": [],
-            "elements": [
-                "base.bst",
-                "lib.bst"
-            ],
-            "evidence": {},
-            "reader": "recipe-author",
-            "copy_text": "BGA finding: What a change to these rebuilds: base.bst (2 downstream), lib.bst (1 downstream) - the cost of touching them is not their own duration but everything downstream that has to be built again\n  Elements: base.bst, lib.bst\n  Run: golden-fixture-manifest-hash-v1",
-            "trace_query": "dependency-wait"
-        },
-        {
-            "id": "fan-in-ranking",
-            "severity": "info",
-            "title": "Elements that pull in the most (by upstream closure):",
-            "detail": [
-                "    1. app.bst (2 upstream, 1 named directly)",
-                "    2. lib.bst (1 upstream, 1 named directly)"
-            ],
-            "elements": [
-                "app.bst",
-                "lib.bst"
-            ],
-            "evidence": {},
-            "reader": "graph-owner",
-            "copy_text": "BGA finding: Elements that pull in the most (by upstream closure):\n      1. app.bst (2 upstream, 1 named directly)\n      2. lib.bst (1 upstream, 1 named directly)\n  Elements: app.bst, lib.bst\n  Run: golden-fixture-manifest-hash-v1",
-            "trace_query": "dependency-wait"
-        },
-        {
-            "id": "graph-width",
-            "severity": "info",
-            "title": "The graph is 4 elements in 3 dependency stages, and its widest stage holds 2 - so no more than 2 can ever be building at once, whatever the capacity",
-            "detail": [],
-            "elements": [],
-            "evidence": {
-                "element_count": 4,
-                "dependency_stages": 3,
-                "widest_stage": 2
-            },
-            "reader": "graph-owner",
-            "copy_text": "BGA finding: The graph is 4 elements in 3 dependency stages, and its widest stage holds 2 - so no more than 2 can ever be building at once, whatever the capacity\n  element_count 4\n  dependency_stages 3\n  widest_stage 2\n  Run: golden-fixture-manifest-hash-v1",
             "trace_query": "graph-levels"
         },
         {
@@ -194,6 +148,20 @@
             "trace_query": "time-by-kind"
         },
         {
+            "id": "blast-radius-reach",
+            "severity": "medium",
+            "title": "What a change to these rebuilds: base.bst (2 downstream), lib.bst (1 downstream) - the cost of touching them is not their own duration but everything downstream that has to be built again",
+            "detail": [],
+            "elements": [
+                "base.bst",
+                "lib.bst"
+            ],
+            "evidence": {},
+            "reader": "recipe-author",
+            "copy_text": "BGA finding: What a change to these rebuilds: base.bst (2 downstream), lib.bst (1 downstream) - the cost of touching them is not their own duration but everything downstream that has to be built again\n  Elements: base.bst, lib.bst\n  Run: golden-fixture-manifest-hash-v1",
+            "trace_query": "dependency-wait"
+        },
+        {
             "id": "latent-heavies",
             "severity": "medium",
             "title": "Waiting off the critical path, worth nothing to fix today: extra.bst (0s) - they bound how far shortening the chain can go",
@@ -218,6 +186,38 @@
                 "element-commands",
                 "executables-in-element"
             ]
+        },
+        {
+            "id": "fan-in-ranking",
+            "severity": "info",
+            "title": "Elements that pull in the most, by upstream closure",
+            "detail": [
+                "    1. app.bst (2 upstream, 1 named directly)",
+                "    2. lib.bst (1 upstream, 1 named directly)"
+            ],
+            "elements": [
+                "app.bst",
+                "lib.bst"
+            ],
+            "evidence": {},
+            "reader": "graph-owner",
+            "copy_text": "BGA finding: Elements that pull in the most, by upstream closure\n      1. app.bst (2 upstream, 1 named directly)\n      2. lib.bst (1 upstream, 1 named directly)\n  Elements: app.bst, lib.bst\n  Run: golden-fixture-manifest-hash-v1",
+            "trace_query": "dependency-wait"
+        },
+        {
+            "id": "graph-width",
+            "severity": "info",
+            "title": "The graph is 4 elements in 3 dependency stages, and its widest stage holds 2 - so no more than 2 can ever be building at once, whatever the capacity",
+            "detail": [],
+            "elements": [],
+            "evidence": {
+                "element_count": 4,
+                "dependency_stages": 3,
+                "widest_stage": 2
+            },
+            "reader": "graph-owner",
+            "copy_text": "BGA finding: The graph is 4 elements in 3 dependency stages, and its widest stage holds 2 - so no more than 2 can ever be building at once, whatever the capacity\n  element_count 4\n  dependency_stages 3\n  widest_stage 2\n  Run: golden-fixture-manifest-hash-v1",
+            "trace_query": "graph-levels"
         },
         {
             "id": "confidence",
@@ -260,7 +260,7 @@
         {
             "id": "efficiency-score",
             "severity": "info",
-            "title": "Efficiency Score: 1.00 (scheduling is near the certified floor for this graph - further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))",
+            "title": "Efficiency score: 1.00 (scheduling is near the certified floor for this graph - further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))",
             "detail": [],
             "elements": [],
             "evidence": {
@@ -268,7 +268,7 @@
                 "low_confidence": false
             },
             "reader": "ci-gatekeeper",
-            "copy_text": "BGA finding: Efficiency Score: 1.00 (scheduling is near the certified floor for this graph - further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))\n  efficiency_score 100%\n  low_confidence False\n  Run: golden-fixture-manifest-hash-v1",
+            "copy_text": "BGA finding: Efficiency score: 1.00 (scheduling is near the certified floor for this graph - further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))\n  efficiency_score 100%\n  low_confidence False\n  Run: golden-fixture-manifest-hash-v1",
             "trace_query": "cpu-versus-wall"
         }
     ],
@@ -1000,80 +1000,6 @@
             "unpublished_inputs": []
         },
         {
-            "claim": "blast-radius-reach",
-            "kind": "finding",
-            "document": "analyze/v6",
-            "evidence": [
-                {
-                    "path": "elements.blast_radius[base.bst].downstream_count",
-                    "resolved": true,
-                    "value": 2,
-                    "quantity": "count"
-                },
-                {
-                    "path": "elements.blast_radius[lib.bst].downstream_count",
-                    "resolved": true,
-                    "value": 1,
-                    "quantity": "count"
-                }
-            ],
-            "rule": {
-                "name": null,
-                "threshold": null,
-                "comparison": "present",
-                "observed_path": null,
-                "sentence": "Published for every non-structural element something actually depends on. Not a ranking - the who-depends-on-me ordering is a different claim and stays on the scheduler-bound arm - but the answer to the recipe-author's own question, which is true whichever way the build is bound. Elements with no dependents are left out rather than listed at zero: a row reading \"0 downstream\" answers the question with a number meaning nobody.",
-                "module": "bga/findings.py"
-            },
-            "trace_query": "dependency-wait",
-            "unpublished_inputs": []
-        },
-        {
-            "claim": "fan-in-ranking",
-            "kind": "finding",
-            "document": "analyze/v6",
-            "evidence": [
-                {
-                    "path": "elements.fan_in[app.bst].transitive_count",
-                    "resolved": true,
-                    "value": 2,
-                    "quantity": "count"
-                },
-                {
-                    "path": "elements.fan_in[lib.bst].transitive_count",
-                    "resolved": true,
-                    "value": 1,
-                    "quantity": "count"
-                }
-            ],
-            "rule": {
-                "name": null,
-                "threshold": null,
-                "comparison": "present",
-                "observed_path": null,
-                "sentence": "Published for every graph with something to rank - an element that pulls in nothing is left out rather than listed at zero, and a structural kind is reported by the claim below rather than ranked here. Unlike its mirror it is not gated on the diagnosis: what an element is built on is true whichever way the build is bound, and the claim is a description of the graph rather than an ordering of work.",
-                "module": "bga/findings.py"
-            },
-            "trace_query": "dependency-wait",
-            "unpublished_inputs": []
-        },
-        {
-            "claim": "graph-width",
-            "kind": "finding",
-            "document": "analyze/v6",
-            "evidence": [],
-            "rule": {
-                "name": null,
-                "threshold": null,
-                "comparison": "present",
-                "observed_path": null,
-                "sentence": "4 elements group into 3 dependency stages by their dependencies alone; the widest holds 2, and nothing in a stage can start before the stage above it finishes. Published whenever there is more than one stage - with one, the widest stage is the whole graph and the shape forbids nothing.",
-                "module": "bga/findings.py"
-            },
-            "trace_query": "graph-levels",
-            "unpublished_inputs": []
-        },
-        {
             "claim": "joint-saving",
             "kind": "finding",
             "document": "analyze/v6",
@@ -1154,6 +1080,35 @@
             "unpublished_inputs": []
         },
         {
+            "claim": "blast-radius-reach",
+            "kind": "finding",
+            "document": "analyze/v6",
+            "evidence": [
+                {
+                    "path": "elements.blast_radius[base.bst].downstream_count",
+                    "resolved": true,
+                    "value": 2,
+                    "quantity": "count"
+                },
+                {
+                    "path": "elements.blast_radius[lib.bst].downstream_count",
+                    "resolved": true,
+                    "value": 1,
+                    "quantity": "count"
+                }
+            ],
+            "rule": {
+                "name": null,
+                "threshold": null,
+                "comparison": "present",
+                "observed_path": null,
+                "sentence": "Published for every non-structural element something actually depends on. Not a ranking - the who-depends-on-me ordering is a different claim and stays on the scheduler-bound arm - but the answer to the recipe-author's own question, which is true whichever way the build is bound. Elements with no dependents are left out rather than listed at zero: a row reading \"0 downstream\" answers the question with a number meaning nobody.",
+                "module": "bga/findings.py"
+            },
+            "trace_query": "dependency-wait",
+            "unpublished_inputs": []
+        },
+        {
             "claim": "latent-heavies",
             "kind": "finding",
             "document": "analyze/v6",
@@ -1178,6 +1133,51 @@
                 "element-commands",
                 "executables-in-element"
             ],
+            "unpublished_inputs": []
+        },
+        {
+            "claim": "fan-in-ranking",
+            "kind": "finding",
+            "document": "analyze/v6",
+            "evidence": [
+                {
+                    "path": "elements.fan_in[app.bst].transitive_count",
+                    "resolved": true,
+                    "value": 2,
+                    "quantity": "count"
+                },
+                {
+                    "path": "elements.fan_in[lib.bst].transitive_count",
+                    "resolved": true,
+                    "value": 1,
+                    "quantity": "count"
+                }
+            ],
+            "rule": {
+                "name": null,
+                "threshold": null,
+                "comparison": "present",
+                "observed_path": null,
+                "sentence": "Published for every graph with something to rank - an element that pulls in nothing is left out rather than listed at zero, and a structural kind is reported by the claim below rather than ranked here. Unlike its mirror it is not gated on the diagnosis: what an element is built on is true whichever way the build is bound, and the claim is a description of the graph rather than an ordering of work.",
+                "module": "bga/findings.py"
+            },
+            "trace_query": "dependency-wait",
+            "unpublished_inputs": []
+        },
+        {
+            "claim": "graph-width",
+            "kind": "finding",
+            "document": "analyze/v6",
+            "evidence": [],
+            "rule": {
+                "name": null,
+                "threshold": null,
+                "comparison": "present",
+                "observed_path": null,
+                "sentence": "4 elements group into 3 dependency stages by their dependencies alone; the widest holds 2, and nothing in a stage can start before the stage above it finishes. Published whenever there is more than one stage - with one, the widest stage is the whole graph and the shape forbids nothing.",
+                "module": "bga/findings.py"
+            },
+            "trace_query": "graph-levels",
             "unpublished_inputs": []
         },
         {

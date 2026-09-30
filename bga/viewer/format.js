@@ -20,7 +20,7 @@
  * in exactly that order (`UX-199`, where a cycle shipped a report that
  * threw `ReferenceError` in `boot()` and rendered empty).
  */
-import { elementAnchor } from "./primitives.js";
+import { elementAnchor, headRow } from "./primitives.js";
 
 export const QUANTITY = "bga:quantity";
 
@@ -453,11 +453,12 @@ export function sectionHead(key, hint = {}) {
   // owns, not on all of them. `applyRole` fills it and the stylesheet
   // shows it only while the section is promoted. The declared roles
   // ride on it so nothing has to re-read the schema at click time.
+  const row = headRow(node, document);
   if (info.readers.length) {
-    node.append(el("span", { class: "reader-tag", "data-reader-tag": "",
-                             "data-readers": info.readers.join(" ") }));
+    row.append(el("span", { class: "reader-tag", "data-reader-tag": "",
+                            "data-readers": info.readers.join(" ") }));
   }
-  return node;
+  return row;
 }
 
 // `UX-391` moved this here from `structured.js`. It is a *label* -

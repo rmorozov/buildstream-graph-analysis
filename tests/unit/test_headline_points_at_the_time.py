@@ -246,7 +246,7 @@ SCHEDULER_BOUND = dict(
 def test_a_real_wait_category_is_still_the_headline():
     text = _key_findings(_result(**SCHEDULER_BOUND))
 
-    assert "RESOURCE WAIT" in text
+    assert "is resource wait" in text
     assert "execution-bound" not in text
 
 

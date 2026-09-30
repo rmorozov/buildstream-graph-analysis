@@ -15,8 +15,9 @@ objects" to a table, which is right for a population and wrong for
 three commands a reader runs in order.
 
 `bga:runbook` on `next_steps` is the declaration; §1e is the rule. The
-panel keeps the steps, the section becomes one link to it, and
-`follows_from` renders as the target section's own question.
+panel keeps the steps and `follows_from` renders as the target section's
+own question. `UX-1146`: the section that was one link to the panel is
+the rail's sub-entry into it now.
 """
 
 import pathlib
@@ -67,6 +68,10 @@ _READ = r"""
     panel: panel && {
       steps: [...panel.querySelectorAll("li[data-step]")].map(step),
     },
+    rail: [...document.querySelectorAll('nav.toc [data-toc-sub="next_steps"]')].map((a) => ({
+      href: a.getAttribute("href"),
+      exists: !!document.getElementById(a.getAttribute("href").slice(1)),
+    })),
     // The control. `provenance` is an array of objects on both
     // fixtures, it is **not** a runbook, and it reaches the runbook
     // branch's own `if` - which most of this page's tables, drawn by
@@ -135,29 +140,20 @@ class TestTheRunbookIsDeclaredAndNotSniffed:
 
 
 @needs_browser
-class TestTheSectionIsALinkAndNotASecondCopy:
-    def test_the_section_holds_no_table(self, read):
-        assert {label: page["section"]["tables"] for label, page in read.items()} == {"golden": 0, "macro_micro": 0}
+class TestTheRunbookIsDrawnOnce:
+    def test_there_is_no_second_site(self, read):
+        """`UX-1146`: no `next_steps` section at all - no table, no link."""
+        assert {label: page["section"] for label, page in read.items()} == {"golden": None, "macro_micro": None}
 
-    def test_the_section_lists_no_step(self, read):
-        """Panel and section never both list `[data-step]`."""
+    def test_the_panel_lists_every_step(self, read, declared):
         for label, page in read.items():
-            assert page["section"]["steps"] == 0, label
-            assert page["panel"]["steps"], label
+            assert len(page["panel"]["steps"]) == len(declared[label]), label
 
-    def test_the_section_is_one_link_to_the_panel(self, read, declared):
-        """The label is pasted, not recomputed: a clause that built the
-        sentence the way the renderer builds it would pass on two
-        matching mistakes."""
-        assert {label: [one["text"] for one in page["section"]["links"]] for label, page in read.items()} == {
-            "golden": ["2 steps, in the decision panel"],
-            "macro_micro": ["3 steps, in the decision panel"],
+    def test_the_rail_links_the_panels_list(self, read):
+        assert {label: page["rail"] for label, page in read.items()} == {
+            "golden": [{"href": "#decision-next", "exists": True}],
+            "macro_micro": [{"href": "#decision-next", "exists": True}],
         }
-        for label, page in read.items():
-            links = page["section"]["links"]
-            assert [one["href"] for one in links] == ["#decision"], label
-            assert links[0]["exists"], label
-            assert links[0]["text"].startswith(f"{len(declared[label])} "), label
 
     def test_the_other_reason_array_still_draws_a_table(self, read):
         """The branch is the hint's, not `renderSection`'s. Counting

@@ -306,8 +306,8 @@ def efficiency_band(score: float) -> str:
             "scheduler (see Dispatch Occupancy and Critical Path)"
         )
     if score >= _EFFICIENCY_MEDIUM:
-        return "worth checking Certified Headroom for real scheduling gains"
-    return "significant scheduling headroom - see Certified Headroom below"
+        return "worth checking certified headroom for real scheduling gains"
+    return "significant scheduling headroom - see certified headroom below"
 
 
 def structural_kind_tag(entry: dict) -> str:
@@ -1063,7 +1063,7 @@ def _shared_source_findings(result: AnalysisResult) -> list[dict]:
         _finding(
             'shared-source-blast',
             SEVERITY_MEDIUM,
-            f"Shared source: {headline}",
+            f"Shared source: {headline[:1].lower()}{headline[1:]}",
             evidence={
                 'resource': top.get('identity'),
                 'kind': top.get('kind'),
@@ -1523,7 +1523,7 @@ def _opportunity_findings(result: AnalysisResult, chain_bound: bool) -> list[dic
         ] + concentration
     if top_duration_us <= 0:
         return []
-    label = top_category.replace('_us', '').replace('_', ' ').upper()
+    label = top_category.replace('_us', '').replace('_', ' ').lower()
     # UX-04/UX-35: what the category means and what to do about it,
     # conditioned on this run's own capacity verdict. Imported here
     # rather than at module scope: `bga.report` imports this module, so a
@@ -1767,7 +1767,7 @@ def _ranking_findings(result: AnalysisResult, chain_bound: bool) -> list[dict]:
             _finding(
                 'blast-radius-ranking',
                 SEVERITY_MEDIUM,
-                "Elements Most Worth Optimizing First (by blast radius):",
+                "Elements most worth optimizing first, by blast radius",
                 detail=detail,
                 elements=list(shown),
                 # The distribution key is *absent* when there is none, not
@@ -1927,7 +1927,7 @@ def _fan_in_findings(result: AnalysisResult) -> list[dict]:
             _finding(
                 'fan-in-ranking',
                 SEVERITY_INFO,
-                "Elements that pull in the most (by upstream closure):",
+                "Elements that pull in the most, by upstream closure",
                 detail=detail,
                 elements=list(shown),
                 evidence=({'fan_in_distribution': distribution} if distribution else {}),
@@ -2069,7 +2069,7 @@ def _criticality_findings(result: AnalysisResult) -> list[dict]:
         _finding(
             'criticality',
             SEVERITY_INFO,
-            "Highest Criticality Elements:",
+            "Highest-criticality elements",
             detail=detail,
             elements=[uid for uid, _d in nonzero],
             evidence={'criticality_probability': dict(nonzero)},
@@ -2088,7 +2088,7 @@ def _floor_findings(result: AnalysisResult) -> list[dict]:
             _finding(
                 'certified-headroom',
                 SEVERITY_MEDIUM,
-                f"Certified Headroom: up to {headroom / 1e6:.2f}s available "
+                f"Certified headroom: up to {headroom / 1e6:.2f}s available "
                 f"(T∞={t_inf / 1e6:.2f}s, LB={lb_val / 1e6:.2f}s)",
                 evidence={'certified_headroom_us': headroom, 't_infinity_us': t_inf, 'lb_us': lb_val},
             )
@@ -2107,11 +2107,27 @@ def _floor_findings(result: AnalysisResult) -> list[dict]:
             _finding(
                 'efficiency-score',
                 SEVERITY_INFO,
-                f"Efficiency Score: {efficiency_score:.2f} ({band}){caveat}",
+                f"Efficiency score: {efficiency_score:.2f} ({band}){caveat}",
                 evidence={'efficiency_score': efficiency_score, 'low_confidence': bool(caveat)},
             )
         )
     return findings
+
+
+def _by_severity(findings: list[dict]) -> list[dict]:
+    """`UX-1148`: severity, then the argued order below; an indented note stays under its table."""
+    groups: list[list[dict]] = []
+    for finding in findings:
+        if finding.get('indent') and groups:
+            groups[-1].append(finding)
+        else:
+            groups.append([finding])
+
+    def rank(group):
+        severity = group[0].get('severity')
+        return _LEAD_ORDER.index(severity) if severity in _LEAD_ORDER else len(_LEAD_ORDER)
+
+    return [finding for group in sorted(groups, key=rank) for finding in group]
 
 
 def compute_findings(result: AnalysisResult) -> list[dict]:
@@ -2186,6 +2202,7 @@ def compute_findings(result: AnalysisResult) -> list[dict]:
     # rather than about this run - the reader has met the run's own
     # numbers by the time they reach "and one repo rebuilds all of it".
     findings.extend(_shared_source_findings(result))
+    findings = _by_severity(findings)
     # `UX-372`: and who each is for. Stamped here rather than at the
     # nineteen construction sites, for the reason `FINDING_READERS`
     # gives - and after the whole list exists, so the map is applied to

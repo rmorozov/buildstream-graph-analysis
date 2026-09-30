@@ -40,6 +40,7 @@
  */
 
 import { duration, quantity, title } from "./format.js";
+import { headRow } from "./primitives.js";
 
 /**
  * `UX-347`: **the distance budget, and what a folded chapter says.**
@@ -464,6 +465,7 @@ function makeBox(chapter, doc, payload, first) {
   title.className = "chapter-title";
   title.textContent = chapter.title;
   box.append(title);
+  const head = headRow(title, doc, "chapter-head");
 
   // UX-347: the first chapter is the decision and stays open - a
   // reader who has to open the verdict has been handed nothing. Every
@@ -486,7 +488,7 @@ function makeBox(chapter, doc, payload, first) {
     toggle.setAttribute("aria-expanded", "false");
     toggle.setAttribute("aria-controls", `chapter-${chapter.id}`);
     toggle.addEventListener?.("click", () => setOpen(box, !isOpen(box)));
-    title.append(toggle);
+    head.append(toggle);
     labelFold(box);
   }
   return box;

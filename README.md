@@ -39,7 +39,7 @@ not:
 ```text
 Key Findings:
   This build is chain-bound, not scheduler-bound: the critical path is 100% of the time tasks were running, at or above the 90% chain-bound line, so the way to a shorter build is a shorter chain.
-  Biggest wait category: 12.5% of wall-clock time is UNTRACKED TAIL (0.00s)
+  Biggest wait category: 12.5% of wall-clock time is untracked tail (0.00s)
     -> real time after the last tracked task finished - outside per-task tracking, not a scheduling issue
   Where the time is: 3 elements are 100.0% of the 0.0s critical path - this build is chain-bound, not scheduler-bound
 
@@ -49,7 +49,7 @@ Key Findings:
 
 [... elided: the remote-execution what-if ...]
 
-  Efficiency Score: 1.00 (scheduling is near the certified floor for this graph - further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))
+  Efficiency score: 1.00 (scheduling is near the certified floor for this graph - further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))
 
 [... elided: Certified Floors, Attribution Breakdown ...]
 

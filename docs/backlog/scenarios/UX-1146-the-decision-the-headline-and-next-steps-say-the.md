@@ -60,3 +60,5 @@ sentences >= 8 words 58, said twice 0, next_steps section: no
 Reverted: 10 passed.
 
 **Deviation.** Re-based for the removed `next_steps` section: `test_a_runbook_is_not_a_table.py` (the section-is-a-link class becomes drawn-once and rail-links-the-list), `test_the_order_the_page_has.py`, `test_the_rail_takes_a_step.py`, `test_back_after_a_reveal_re_folds.py` (5 landed sections, not 6), `test_the_page_has_geometry.py` (the narrative is `headline` alone), `test_every_population_at_zero_one_and_many.py` (not swept - drawn elsewhere), `test_a_new_control_class_lands_declared.py` (`a.runbook-link` retired). `docs/design/rendered-strings.json` regenerated; styleguide §1e and §5a rows and their ledger rows amended. `chapters.js` still names `next_steps` as a member of the decision chapter; it renders nothing there now.
+
+Round-154 fixer: the why-shared fold now counts (1 level, N rows, data-levels/data-rows, §3a.1) so the depth walk passes; next_steps dropped from the decision chapter members in chapters.js; rendered-strings inventory re-written.

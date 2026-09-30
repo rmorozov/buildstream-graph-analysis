@@ -86,7 +86,7 @@ export const CHAPTERS = [
     // the diagnosis between the findings and the blast control -
     // is a claim about what sits *after* them.
     sections: ["decision", "evidence", "overview",
-               "findings", "headline", "next_steps"],
+               "findings", "headline"],
   },
   {
     id: "change",

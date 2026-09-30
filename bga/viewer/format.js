@@ -275,6 +275,10 @@ export const TERMS = {
   scheduling_gap_us: "Scheduling gap",
   plane2_processes: "Plane 2 processes", cpu_coverage: "Plane 2 coverage",
   primary: "Confidence",
+  // `UX-1141`: a key whose trimmed title collides with a sibling's.
+  category_us: "Time waiting",
+  deeper_than_three_share: "Share deeper than three",
+  started_at_us: "Started at, since the epoch",
 };
 
 /**
@@ -318,13 +322,6 @@ export const READER_LABELS = {
   "Resource.PROCESS": "Builders",
   "Resource.DOWNLOAD": "Fetchers",
   "Resource.UPLOAD": "Pushers",
-};
-
-/** `UX-1141`: a key whose trimmed title collides with a sibling's. */
-const TERM_LABELS = {
-  category_us: "Time waiting",
-  deeper_than_three_share: "Share deeper than three",
-  started_at_us: "Started at, since the epoch",
 };
 
 /** A published value as the reader's phrase; unmapped values pass. */
@@ -378,7 +375,6 @@ export function title(key, kind = null, published = false) {
   // one.
   if (published) return key;
   if (Object.hasOwn(TERMS, key)) return TERMS[key];
-  if (Object.prototype.hasOwnProperty.call(TERM_LABELS, key)) return TERM_LABELS[key];
   const suffix = UNIT_SUFFIX[kind];
   // Never trim a key down to nothing: `_us` alone is not a label.
   const trimmed = suffix ? key.replace(suffix, "") : key;

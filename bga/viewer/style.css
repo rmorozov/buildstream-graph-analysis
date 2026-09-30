@@ -350,8 +350,7 @@ h3 { font-size: var(--font-h2); margin: var(--space-8) 0 var(--space-2); }
    above every h3 on the page (16.8px) it was supposed to nest under. */
 h4 { font-size: var(--font-body); font-weight: 600; margin: var(--space-4) 0 var(--space-1); }
 /* UX-1147 (§6e.1): a heading's controls sit in its row, not in it - the
-   row takes the heading's margins, the heading keeps its name. */
-.section-head { margin: var(--space-8) 0 var(--space-2); }
+   row takes the heading's margins (below), the heading keeps its name. */
 .section-head > h2, .section-head > h3, .chapter-head > h2 { margin: 0; min-width: 0; }
 .muted { color: var(--muted); }
 code, pre, .num { font-family: var(--font-mono); }
@@ -671,7 +670,7 @@ button.chapter-open:hover, button.chapter-open[aria-expanded="true"] {
 /* Collapsed sections keep their heading; everything below it goes.
    Scoped to a section that names itself, so a chapter - which is also a
    `section` - never hides the sections inside it. */
-section[data-section][data-collapsed="true"] > *:not(h3):not(.section-head) { display: none; }
+section[data-section]:is([data-collapsed="true"], [data-unfocused="true"]) > *:not(h3):not(.section-head) { display: none; }
 section[data-jumped="true"], [data-jumped="true"] {
   outline: 2px solid var(--accent); outline-offset: 3px;
 }
@@ -885,7 +884,6 @@ section[data-promoted] { border-left: 3px solid var(--accent); }
                            color: var(--muted); margin-top: var(--space-1); }
 
 /* UX-208 / UX-209: investigation affordances, and the rail. */
-.section-key { margin-left: var(--space-2); font-size: var(--font-small); font-weight: normal; }
 .inspect { margin-left: var(--space-1); text-decoration: none; opacity: .55; }
 .inspect:hover { opacity: 1; }
 .copy-sql { margin-top: var(--space-1); }
@@ -963,9 +961,7 @@ ol.horizon { list-style: none; margin: 0; padding: 0; }
    what they are not looking at, and the document underneath stays
    byte-identical so Ctrl-F and the export remain honest. */
 [data-dimmed="true"] { opacity: 0.32; }
-section[data-section][data-unfocused="true"] > *:not(h3):not(.section-head) { display: none; }
-section[data-section][data-unfocused="true"] > h3,
-section[data-section][data-unfocused="true"] > .section-head { opacity: 0.32; }
+section[data-section][data-unfocused="true"] > :is(h3, .section-head) { opacity: 0.32; }
 .focus-bar, .mark-summary {
   margin: 0 0 var(--space-2);
   padding: var(--space-1) var(--space-2);
@@ -1266,6 +1262,7 @@ section > .table-tools { top: var(--head, 5.5rem); }
    (`el("h2", {}, info.label)` gives the head a bare text child) and
    shrinks to wrap around the fixed-width sibling on its own. */
 .section-head {
+  margin: var(--space-8) 0 var(--space-2);
   display: flex;
   align-items: baseline;
   gap: var(--space-2);

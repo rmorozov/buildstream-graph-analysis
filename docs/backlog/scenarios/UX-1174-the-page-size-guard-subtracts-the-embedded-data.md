@@ -1,6 +1,6 @@
 # UX-1174: the page-size guard subtracts the embedded data's characters, not its bytes
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-156 walk (2026-09-30) | **Serves:** R1 | **Topic:** guards | **Area:** tests | **Shape:** judgement | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the round-156 walk (2026-09-30) | **Serves:** R1 | **Topic:** guards | **Area:** tests | **Shape:** judgement | **Reading:** container
 
 **Guard:** `tests/unit/test_the_report_you_can_attach.py::TestTheSizeDiscipline::test_a_non_ascii_datum_leaves_the_page_half_where_it_was`
 

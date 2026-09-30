@@ -1,6 +1,6 @@
 # UX-1172: text residue after UX-1166
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-156 walk (2026-09-30) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer, bga/structural, bga/cli.py | **Shape:** judgement | **Reading:** container
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the round-156 walk (2026-09-30) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer, bga/structural, bga/cli.py | **Shape:** judgement | **Reading:** container
 
 **Guard:** `tests/unit/test_a_key_path_stays_where_it_is_copied.py`
 
@@ -62,3 +62,5 @@ The UX-1166 guard missed the serialization hint: it trims each text node, so a s
 | `cli.py` back to "{x:.2f}s" | `test_the_cli_spaces_its_unit` | 1 failed |
 
 The chain-name test asserts that two_plane at 390 wraps at least one name, so a page with no wraps cannot pass it vacuously.
+
+**Deviation:** the Acceptance named `test_a_reader_sees_labels_not_keys.py`; the guard extended `test_a_key_path_stays_where_it_is_copied.py` instead. Its CLI-unit test moved to `test_the_cpu_floor_divides_by_cores.py`, which holds the touching selector at its 180 ceiling.

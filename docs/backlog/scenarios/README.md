@@ -30,13 +30,12 @@ task file, which is the only place it ever lived twice.
 | UX-1014 | [the "safe cap plus auto" default is measured on more shapes and hosts before it is anyone's default](UX-1014-the-builders-and-auto-default-is-measured-on-more-shapes-and-hosts.md) | capture | High | R4, R5 | 🔴 Not Started |
 | UX-1134 | [`--jobserver auto` with no plan widens a memory-bound giant into the OOM killer](UX-1134-auto-oom-kills-a-memory-bound-giant-with-no-plan.md) | capture | High | R4, R5 | 🔴 Not Started |
 | UX-1040 | [a paired reading decides whether implementers move to opus at low effort](UX-1040-a-paired-reading-decides-the-implementers-model.md) | guards | Medium | every round's implementer spend | 🔴 Not Started |
-| UX-1169 | [accessible names after UX-1162 still miss the drawings' values and three labels](UX-1169-accessible-names-after-ux-1162-still-miss-the.md) | viewer | Low | R1 | 🔴 Not Started |
-| UX-1170 | [filter residue after UX-1165 and UX-1163](UX-1170-filter-residue-after-ux-1165-and-ux-1163.md) | viewer | Low | R1 | 🔴 Not Started |
-| UX-1171 | [layout residue at 390 and Forward](UX-1171-layout-residue-at-390-and-forward.md) | viewer | Low | R1 | 🔴 Not Started |
-| UX-1172 | [text residue after UX-1166](UX-1172-text-residue-after-ux-1166.md) | viewer | Low | R1 | 🔴 Not Started |
-| UX-1173 | [the #parallelism structure repeats ids, labels and numbers](UX-1173-the-parallelism-structure-repeats-ids-labels-and-numbers.md) | viewer | Low | R1 | 🔴 Not Started |
-| UX-1174 | [the page-size guard subtracts the embedded data's characters, not its bytes](UX-1174-the-page-size-guard-subtracts-the-embedded-data.md) | guards | Medium | R1 | 🔴 Not Started |
-| UX-1175 | [the exported page ships indentation](UX-1175-the-exported-page-ships-indentation.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1176 | [announcements after UX-1169 and UX-1170 do not reach a screen reader](UX-1176-announcements-after-ux-1169-and-ux-1170-do.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1177 | [Jump and the rail disagree about what a level fold and a preset are, after UX-1173](UX-1177-jump-and-the-rail-disagree-about-what-a.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1178 | [layout and history residue at 390 and after Expand all](UX-1178-layout-and-history-residue-at-390-and-after.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1179 | [print and find-in-page lose content the page has](UX-1179-print-and-find-in-page-lose-content-the.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1180 | [values and console: a zero-length ratio, an epoch as hours, a tooltip-only explanation, a spaced hyphen, seven warnings](UX-1180-values-and-console-a-zero-length-ratio-an.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1181 | [two page-half instruments disagree by 169 B, and two tests still count characters](UX-1181-two-page-half-instruments-disagree-by-169-b.md) | guards | Medium | R1 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

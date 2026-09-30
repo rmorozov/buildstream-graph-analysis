@@ -1,6 +1,6 @@
 # UX-1169: accessible names after UX-1162 still miss the drawings' values and three labels
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-156 walk (2026-09-30) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement | **Reading:** container
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the round-156 walk (2026-09-30) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement | **Reading:** container
 
 **Guard:** `tests/unit/test_every_control_and_drawing_names_what_it_shows.py`, `tests/unit/test_the_store_section_takes_a_window.py`
 
@@ -68,3 +68,5 @@ The walk's 17th drawing reads 17 on one probe run and 16 on the next under the s
 | Show-all's `nameDrawing` re-route dropped | `test_after_show_all_..._keeps_its_name` | 1 failed, 11 passed |
 
 A `hidden` route in `element.js`'s history sparkline stayed green (28 passed): no page in the fixture draws it; `test_every_drawing_has_a_name_and_a_data_route.py` holds that site.
+
+**Deviation:** the Acceptance named a new test file; the guard extended `test_every_control_and_drawing_names_what_it_shows.py` instead.

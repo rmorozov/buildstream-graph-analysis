@@ -1,6 +1,6 @@
 # UX-1171: layout residue at 390 and Forward
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-156 walk (2026-09-30) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement | **Reading:** container
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the round-156 walk (2026-09-30) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement | **Reading:** container
 
 **Guard:** `tests/unit/test_the_compact_page_fits_its_width.py` (caption, document, stacked-label clauses) and `tests/unit/test_filter_and_back_state_is_kept_and_told.py` (`test_forward_lands_where_the_press_did`, `TestTheRailFoldsAfterAPress`)
 

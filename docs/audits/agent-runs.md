@@ -631,6 +631,21 @@ pairing for every merged row from round 103 on.
 | 156 | implementer | opus | implementer: UX-1168 rail mark follows the reading line | ~75k | — | ~25m | see round-156 | cost: scripts via scratch; second IO observer on a zero-height line strip, 11 of 11 stale crossings to 0, +72 B, task file hand-written |
 | 156 | walker | sonnet | walker: 6 new defects, 9 pre-existing | ~350k | — | ~37m | see round-156 | cost: sandbox refused object literals, drivers rewritten 4-6x |
 | 156 | closer | opus | closer: UX-1161..UX-1168, UX-1169..UX-1175 filed | — | — | — | see round-156 | — |
+| 157 | implementer | opus | implementer: UX-1174 page-size guard reads bytes | ~60k | — | ~15m | see round-157 | cost: data is ASCII (json.dumps escapes), the real defect is the page half counted in characters (14 non-ASCII in the page, 18 B low); guard in test_the_report_you_can_attach.py, not the Acceptance's file; 0 B page; two page-half instruments differ by 169 B, two tests still count characters |
+| 157 | implementer | opus | implementer: UX-1172 text residue | ~100k | — | ~40m | see round-157 | cost: 36-file related run; +29 B golden, guard extended in test_a_key_path_stays_where_it_is_copied.py (Acceptance named test_a_reader_sees_labels_not_keys.py), 8 mutations red, analyses and rendered strings regenerated; the What these mean door name from nav.js left |
+| 157 | implementer | opus | implementer: UX-1175 export drops indentation | ~100k | — | ~35m | see round-157 | cost: cdp.mjs blank-page wait; -8,400 B page half (151,228 to 142,828: JS -4,992, CSS -3,408), 29-test guard with 4 mutations red, the CSS-in-string mutation caught only by the built case, tiers.py MEDIUM row added |
+| 157 | implementer | opus | implementer: UX-1170 filter residue | ~130k | — | ~45m | see round-157 | cost: 6-mutation matrix; +252 B, all 6 red including M3b, badge "25 of 112 matched, of 114" (styleguide §2b amended), test_a_filter_is_a_property_of_a_table rebased; Ask box partial uid matching several changes nothing, count still said twice |
+| 157 | implementer | opus | implementer: UX-1169 accessible names | ~105k | — | ~50m | see round-157 | cost: 27-file related run; +171 B, values span visually clipped (role=note) not hidden, two guards rebased, cdp.mjs --ax gains a details count, guard extended in test_every_control_and_drawing_names_what_it_shows.py (Acceptance named a new file), history sparkline mutation non-discriminating (no fixture) |
+| 157 | implementer | opus | implementer: UX-1171 layout at 390 and Forward | ~140k | — | ~70m | see round-157 | cost: reproducing Forward; +359 B, 7 mutations red, data-label on every td, test_a_rail_click_lands_on_its_section rebased (revealAndLand 3 to 4), first cut reopened a shut chapter (caught by test_back_after_a_reveal_re_folds) |
+| 157 | implementer | opus | implementer: UX-1173 parallelism structure | ~165k | — | ~75m | see round-157 | cost: neighbour runs x3; +376 B, levels from 0 per the schema, level folds get rail labels and ids, tiers.py MEDIUM row added, 3 guards rebased, the -2 suffix loop non-discriminating; fold name inside a labelled cell conflicts with UX-1025 |
+| 157 | integrator | opus | integrator: 7 picks merged clean at f939c94c | ~60k | — | ~45m | see round-157 | cost: push-check 8m46s and alone runs; page 144,173 B; push-check 8 red, all single-track (1172 x2, 1170, 1171, 1173), a fixer launched |
+| 157 | integrator | opus | integrator: fixer for the 4 holds, 1bb57426 | ~95k | — | ~40m | see round-157 | cost: 2 push-checks; fixed 4 (schema description 55a17f69, selector 181 to 180 by moving a CLI test 25ae279c, badge literal rebase 0016e861, one-column header 1bb57426); J2 against UX-1171's rail fold conflicted |
+| 157 | integrator | opus | integrator: fixer resumed at 73af3af3 | — | — | — | see round-157 | cost: the session's decision that a chapter-row press keeps the rail open (J2 needs its section links); J2 green, push-check rc=0 |
+| 157 | session | opus | session: mutation check on 73af3af3 | — | — | — | see round-157 | cost: each track's bga and tools diff undone, its guard run: 1175 28 of 29 red, 1172 5 of 16 (partial), 1169 11 of 28, 1170 5 of 19, 1171 4 of 48 (partial), 1173 4 of 6, 1174 guard-only (the agent's 2 mutations) |
+| 157 | verifier | sonnet | verifier: pass 1, full suite 11,327 passed, 0 failed | — | — | ~40m | see round-157 | cost: the brief named the wrong rows (1161..1167, a session error); UX-1175 literals byte-identical (5,127 via acorn), UX-1169 values span empty and clipped with the clip rule unguarded (about 110 B dead), 7 console warnings on the two-plane boot (pre-existing, the console guard reads golden only) |
+| 157 | verifier | sonnet | verifier: pass 2, 7 of 7 PASS on UX-1169..UX-1175 | — | — | ~15m | see round-157 | cost: resumed for 1169..1175; residue cli.py:1416 spaced hyphen and "1.5s" in the marginal gate message, the drawing-values clip rule unguarded (129 tests green without it) |
+| 157 | walker | sonnet | walker: 5 new defects, 9 pre-existing | ~190k | — | ~35m | see round-157 | cost: sandbox refused # and brace blocks; UX-1175 layout diff zero style differences (walk157-findings.md) |
+| 157 | closer | sonnet | closer: UX-1169..UX-1175, UX-1176..UX-1181 filed | — | — | — | see round-157 | — |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -643,7 +658,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the six hundred and fourteen rows already say: a researcher that reads a document
+What the six hundred and twenty-nine rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

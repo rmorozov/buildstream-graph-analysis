@@ -19,7 +19,7 @@ import { BARE_KEY, COMMAND, QUANTITY, COLUMNS, SERIES, DISTRIBUTION, bytes,
          childNode, cssId, dataKeyed, el, elementColumn, guessQuantity, heading,
          hintsOf, itemsAsShown, keyAsShown, quantity, quantityFor, readerLabel,
          sectionHead, title } from "./format.js";
-import { commandLine, identify } from "./controls.js";
+import { commandLine, identify, say } from "./controls.js";
 // UX-303: §2's two drawings. They import nothing and take their
 // formatter, so the quantity table stays here and the geometry stays
 // there.
@@ -437,6 +437,7 @@ export function renderStructured(key, value, hint = {}, node = undefined,
   if (control === CONTROLS.DENSITY_STRIP) {
     return strip(value, {
       countKey: String(declared[DISTRIBUTION]), grade: GRADE_EXHIBIT,
+      name: title(key, quantityFor(node, key)),
       format: (n) => quantity(n, quantityFor(node, key)),
     });
   }
@@ -694,7 +695,8 @@ export function buildTable(key, rows, hint = {}, node = undefined,
       const uid = cell.getAttribute("data-raw") || cell.textContent;
       tr.setAttribute("data-element", uid);
       cell.append(el("a", { class: "inspect", href: `#${cssId(uid)}`,
-                            title: `Find ${uid} elsewhere in this report` },
+                            title: `Find ${uid} elsewhere in this report`,
+                            "aria-label": `Find ${uid}` },
                      "\u2315"));
     }
   }
@@ -841,6 +843,8 @@ export function interrogable(table, specs, total, depth = 0) {
   // `viewstate.js` already keys this table's url state by, so the
   // control's `name` and its bookmarked parameter say the same word.
   const key = table.getAttribute?.("data-table") ?? "table";
+  // `UX-1162`: each tool's accessible name ends with its table's.
+  const named = key.split(".").map((part) => title(part, guessQuantity(part))).join(" ");
   const badge = el("span", { class: "badge" }, badgeText(total, total));
   // Review (#295), `UX-1028`: `filtered` - the text/threshold
   // population, before `top`'s slice - is what the paging step below
@@ -871,7 +875,7 @@ export function interrogable(table, specs, total, depth = 0) {
   const box = worthFiltering ? el("input", {
     type: "search", class: "table-filter",
     placeholder: "filter rows…",
-    "aria-label": "filter rows",
+    "aria-label": `Filter rows: ${named}`,
   }) : null;
   if (box) {
     identify(box, `filter-${key}`);
@@ -947,7 +951,7 @@ export function interrogable(table, specs, total, depth = 0) {
   // here, appended into `tools` below.
   let pager = null;
   if ((presets.length && total > 10) || opening) {
-    const preset = el("select", { class: "top-n", "aria-label": "Rows shown" });
+    const preset = el("select", { class: "top-n", "aria-label": `Rows shown: ${named}` });
     identify(preset, `top-${key}`);
     // `UX-1028` (styleguide §3k): "All rows" mounts the whole table in
     // one step, so it is offered only under a ceiling the table
@@ -1087,7 +1091,8 @@ export function interrogable(table, specs, total, depth = 0) {
   // allowed to take the report down with it.
   const shownRows = () => ownRows(table).filter((tr) => !tr.hidden);
   const asMarkdown = el("label", { class: "copy-as" },
-    el("input", { type: "checkbox", class: "copy-markdown" }),
+    el("input", { type: "checkbox", class: "copy-markdown",
+                  "aria-label": `as Markdown: ${named}` }),
     " as Markdown");
   const markdownBox = asMarkdown.querySelector("input");
   if (markdownBox) identify(markdownBox, `copy-markdown-${key}`);
@@ -1116,7 +1121,7 @@ export function interrogable(table, specs, total, depth = 0) {
     // `UX-412`: through the shared helper, so this label and the badge
     // beside it agree with the count in one place rather than two.
     const rows = plural(n, "row");
-    copyRows.textContent = `Copy ${rows}`;
+    say(copyRows, `Copy ${rows}`, named);
     copyRows.title = `Copy the ${rows} shown in this table as ${form}, `
       + `with their published values`;
   };
@@ -1132,7 +1137,7 @@ export function interrogable(table, specs, total, depth = 0) {
     // already use. This was the most numerous copy control on the page
     // (13 on `golden`, 23 on `macro_micro`) and the only one of the
     // four that reported nothing.
-    copyRows.textContent = "\u2713 copied";
+    say(copyRows, "\u2713 copied", named);
     // Back through `label`, not to a captured string: the count follows
     // the filter and the bound, so what it should say on the way back
     // is whatever it would say now.

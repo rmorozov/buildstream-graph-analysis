@@ -181,7 +181,7 @@ export function renderFindings(findings, investigate = null, node = undefined,
         // comment and a JavaScript page. Absent, not empty, on a
         // payload that does not carry it.
         finding.copy_text
-          ? copyButton(el, finding.copy_text, {}, "finding")
+          ? copyButton(el, finding.copy_text, {}, "finding", finding.title)
           : null,
       ].filter((child) => child !== null && child !== undefined));
       article.querySelector?.(".describe")?.setAttribute("aria-label",
@@ -592,7 +592,7 @@ export function renderSection(key, value, hint = {}, node = undefined,
                 strip(value, {
                   countKey: String(hintsOf(node)[DISTRIBUTION]
                                    ?? hint[DISTRIBUTION]),
-                  grade: GRADE_EXHIBIT,
+                  grade: GRADE_EXHIBIT, name: title(key, quantityFor(node, key)),
                   format: (n) => quantity(n, quantityFor(node, key)),
                 }));
     }

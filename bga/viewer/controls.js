@@ -55,6 +55,12 @@ export function identify(node, stem) {
   return id;
 }
 
+/** `UX-1162`: a control's text, and its name with what it acts on after it. */
+export function say(control, text, of) {
+  control.textContent = text;
+  if (of) control.setAttribute?.("aria-label", `${text}: ${of}`);
+}
+
 /** Point `label` at `node`, identifying `node` if it is not already. */
 export function labelFor(label, node, stem) {
   const id = node.getAttribute?.("id") || identify(node, stem);

@@ -942,8 +942,12 @@ and the bound.
 - **A repeated control's accessible name says what it acts on**
   (`UX-1155`): its visible label first, then the thing - "What these
   mean: <heading>", "Fold <heading>", "Focus: <uid>", "Copy command:
-  <argv>". Two controls of one kind share a name only when they act on
-  the same thing; a name is never the heading it sits under.
+  <argv>". A table's tools end with the table ("Copy 5 rows: <table>",
+  "Rows shown: <table>"), a copy control with what it copies ("Copy
+  query: <question>"), and a twin's toggle is labelled by its own text
+  and its drawing (`UX-1162`). Two controls of one kind share a name
+  only when they act on the same thing; a name is never the heading it
+  sits under.
 - **Every action is acknowledged where the finger is.** A clipboard
   write is invisible by construction, so the control says so itself.
   `UX-279` made every copy control say *what* it copies; this makes it
@@ -1513,7 +1517,9 @@ fine pointer and once under touch emulation (`hasTouch`,
 **Rule 9, the name and the route.** A sentence names the image; it does
 not make its marks, values or threshold readable. A sentence that is only
 a range and a count ("0 ms → 8.1 min across 6 rows") names no image, so
-a column strip's name leads with its column ("Buckets: 0 ms → …", `UX-1155`). Each drawing shape
+a column strip's name leads with its column ("Buckets: 0 ms → …", `UX-1155`),
+a published strip's with its key, and a column strip's route is every row
+value it plots, never a range (`UX-1162`). Each drawing shape
 names its route: the density strip, decomposition and interval draw
 their table twin (§2a, §2f) behind a control in the same figure, and an
 annotation-grade drawing points at the table or values it sits beside

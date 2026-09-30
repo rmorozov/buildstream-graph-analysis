@@ -150,7 +150,15 @@ export function nameDrawing(drawing, sentence, routeNode, name) {
     if (!routeNode.getAttribute?.("id")) {
       routeNode.setAttribute("id", `drawing-route-${ROUTE_SEQ++}`);
     }
-    drawing.setAttribute("aria-details", routeNode.getAttribute("id"));
+    const id = routeNode.getAttribute("id");
+    drawing.setAttribute("aria-details", id);
+    // UX-1162: a twin's toggle is named by its own text, then the drawing it turns.
+    const toggle = routeNode.querySelector?.(".twin-toggle");
+    if (toggle) {
+      drawing.setAttribute("id", `${id}-of`);
+      toggle.setAttribute("id", `${id}-as`);
+      toggle.setAttribute("aria-labelledby", `${id}-as ${id}-of`);
+    }
   }
   return drawing;
 }
@@ -589,7 +597,7 @@ function stripSvg(doc, marks, { printed, size }) {
  */
 export function strip(distribution, {
   countKey = "n", format = String, doc = document, label = null,
-  grade = undefined,
+  grade = undefined, name,
 } = {}) {
   const size = scaleFor(grade);
   const marks = marksOf(distribution, countKey);
@@ -656,7 +664,7 @@ export function strip(distribution, {
     route = valueRoute(doc, rows.map(([k, v]) => `${k} ${v}`).join(", ") + ".");
     wrap.append(route);
   }
-  nameDrawing(drawn, sentenceText, route);
+  nameDrawing(drawn, sentenceText, route, name);
   return wrap;
 }
 
@@ -999,12 +1007,10 @@ export function columnStrip(values, { format = String, doc = document,
   const sentence = box(doc, "span", { class: "density-sentence",
                                       "data-role": "density-sentence" },
                        sentenceText);
+  // UX-1162: the route is every row value it plots - rows, never its p50/p95.
+  const route = valueRoute(doc, numbers.map((v) => format(v)).join(", "));
   wrap.append(sentence);
-  // `UX-1017`: never exhibit grade, so its route is always the sentence.
-  // Review #295 left this one alone on purpose: its p50/p95 ticks are
-  // the "geometry only, no derived number" boundary above, so widening
-  // the route to name them would print the derived number this
-  // function's whole reason for existing refuses to print.
-  nameDrawing(drawn, sentenceText, sentence, name);
+  wrap.append(route);
+  nameDrawing(drawn, sentenceText, route, name);
   return wrap;
 }

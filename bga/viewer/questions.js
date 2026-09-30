@@ -20,7 +20,7 @@
 // The default is `headline.top_actions[0]` now, which is `core.bst`
 // on that one fixture by coincidence rather than by compilation.
 
-import { identify, labelFor } from "./controls.js";
+import { identify, labelFor, say } from "./controls.js";
 import { title } from "./format.js";
 
 // `UX-210`: **every query says which plane it is asking.**
@@ -610,7 +610,7 @@ export function inCategory(category) {
  * this renders in the served page, in `sql.html` and in the export, and
  * none of the three should own the element factory.
  */
-export function copyButton(make, text, deps = {}, noun = "query") {
+export function copyButton(make, text, deps = {}, noun = "query", of) {
   // UX-279: what it copies, not that it copies. One function draws two
   // different controls - the SQL a question renders, and a finding's
   // pasteable text - and both read `Copy`, which is the ambiguity the
@@ -618,7 +618,7 @@ export function copyButton(make, text, deps = {}, noun = "query") {
   // caller knows what it handed over.
   const button = make("button", { type: "button", class: "copy-sql" });
   const label = `Copy ${noun}`;
-  button.textContent = label;
+  say(button, label, of);
   button.setAttribute("data-copy", text);
   button.setAttribute("data-copies", noun);
   button.title = `Copy this ${noun} to the clipboard`;
@@ -636,10 +636,10 @@ export function copyButton(make, text, deps = {}, noun = "query") {
     } catch (error) {
       wrote = false;
     }
-    button.textContent = wrote ? "\u2713 copied" : "select and copy";
-    deps.setTimeout?.(() => { button.textContent = label; }, 1500)
-      ?? (typeof setTimeout !== "undefined"
-          && setTimeout(() => { button.textContent = label; }, 1500));
+    say(button, wrote ? "\u2713 copied" : "select and copy", of);
+    const back = () => say(button, label, of);
+    deps.setTimeout?.(back, 1500)
+      ?? (typeof setTimeout !== "undefined" && setTimeout(back, 1500));
   });
   return button;
 }
@@ -982,7 +982,7 @@ function sqlBlock(question, make, element) {
   const code = make("code", { "data-sql-for": question.id });
   code.textContent = renderedSql(question, element);
   block.append(code);
-  const copy = copyButton(make, code.textContent);
+  const copy = copyButton(make, code.textContent, {}, "query", question.title);
   copy.setAttribute("data-sql-for", question.id);
   return [block, copy];
 }

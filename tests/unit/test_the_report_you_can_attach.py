@@ -549,6 +549,9 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 # `UX-1052`: the viewer module ships gzipped, and the page measured
 # 342,017 -> 138,531 B on golden and macro_micro alike. The bound is
 # `CEILINGS`' now, at 150,000, so cli.md's table is checked against it.
+#
+# `UX-1167`: 150,000 -> 160,000, the owner's call (2026-09-30): the page
+# measured 149,745 B at `3e6feb45`, 255 B under, with six page rows due.
 from tools.bga_view import PAGE_BUDGET_B
 
 #: `UX-444`: the claim, stated once. **The run's data is at least twice

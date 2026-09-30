@@ -779,7 +779,7 @@ EXPORT_BUDGET_B = 8 * 1024 * 1024
 #: so the stylesheet, `index.html`, the gzipped viewer module and its
 #: loader. The procedure and every earlier value are
 #: `test_the_report_you_can_attach.py`'s note on this name.
-PAGE_BUDGET_B = 150_000
+PAGE_BUDGET_B = 160_000
 # The trace is the one part that can be dropped without losing the
 # report, so it is the one part with its own ceiling.
 #

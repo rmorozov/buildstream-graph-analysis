@@ -213,14 +213,14 @@ _AHEAD = [
     *[{"read": "__j.forward()"}] * 3,
 ]
 _AHEAD_NAMES = ["initial", "chapter", "far", "near", "b1", "b2", "b3", "f1", "f2", "f3"]
-# UX-1171: at 390 the rail folds after a chapter press, a section link or either "all" button.
+# UX-1171: at 390 the rail folds after a section link, a step or either "all" button; a chapter row keeps it open.
 _RAIL = r"""
 (async () => {
   const turn = () => new Promise((done) => setTimeout(done, 120));
   const nav = document.querySelector("nav.toc");
   const out = { initial: nav.dataset.folded };
-  const presses = [["chapter", "[data-toc-chapter]:not([aria-current])"], ["link", "a[data-toc]"],
-                   ["expand", '[data-all="false"]'], ["collapse", '[data-all="true"]'], ["step", "[data-step]"]];
+  const presses = [["link", "a[data-toc]"], ["step", "[data-step]"], ["expand", '[data-all="false"]'],
+                   ["collapse", '[data-all="true"]'], ["chapter", "[data-toc-chapter]:not([aria-current])"]];
   for (const [name, what] of presses) {
     const title = nav.querySelector(".toc-title");
     if (nav.dataset.folded === "true") title.click();
@@ -437,8 +437,14 @@ class TestTheRailFoldsAfterAPress:
         for label, out in seen.items():
             rail = out["rail"][390]
             assert rail["initial"] == "true", (label, rail)
-            for name in ("chapter", "link", "expand", "collapse", "step"):
+            for name in ("link", "step", "expand", "collapse"):
                 assert rail[name] == ["false", "true"], (label, name, rail)
+
+    def test_a_chapter_row_press_at_390_keeps_the_rail_open(self, seen):
+        """The reader is still choosing a section; J2 presses one of its links next."""
+        for label, out in seen.items():
+            rail = out["rail"][390]
+            assert rail["chapter"] == ["false", "false"], (label, rail)
 
     def test_at_1440_the_rail_never_folds(self, seen):
         for label, out in seen.items():

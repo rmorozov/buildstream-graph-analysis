@@ -197,9 +197,9 @@ export function foldOnNarrow(nav, doc) {
   title.addEventListener?.("click", () => {
     apply(nav.getAttribute("data-folded") !== "true");
   });
-  // UX-1171: a press that moves the page folds the rail first, so it lands on the section, not under the rail.
+  // UX-1171: a press that lands on a section folds the rail first; a chapter row keeps it open to choose one.
   nav.addEventListener?.("click", (event) => {
-    if (narrow?.matches && event.target?.closest?.("a[href^='#'],[data-toc-chapter],[data-all],[data-step]")) apply(true);
+    if (narrow?.matches && event.target?.closest?.("a[href^='#'],[data-all],[data-step]")) apply(true);
   }, true);
   // `addEventListener` on a MediaQueryList is the modern spelling and
   // the only one worth carrying; a browser without it keeps whatever

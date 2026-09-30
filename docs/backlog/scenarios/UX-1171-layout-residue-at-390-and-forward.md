@@ -72,3 +72,5 @@ The first Forward and every Back landed exact, as the walk found; a journey of t
 M3 first survived: a missing attribute computes `content: ""`, which the clause's `^"\S` read as a label; tightened to `^"[^"\s]`, then red.
 
 **Deviation:** `test_a_rail_click_lands_on_its_section.py` counts `revealAndLand` in `app.js` 3 -> 4: popstate's re-land is a fourth caller of the same settle. A rail step folds the rail too (it clicks a rail link, and lands under the same rail).
+
+**Deviation (round 157):** a chapter-row press keeps the rail open (J2 needs its section links); a section link, step or Expand/Collapse all folds it. Mutation "chapter press folds again": J2 at 390 (macro_micro, both_scale) and `test_a_chapter_row_press_at_390_keeps_the_rail_open` red, 3 failed.

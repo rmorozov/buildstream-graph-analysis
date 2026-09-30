@@ -145,12 +145,13 @@ class TestEachSentenceSendsTheReaderToTheOther:
         said = schemas.schema(schemas.ANALYZE)["properties"]["elements"]["properties"]["top_blast_radius"][
             "description"
         ]
-        assert "optimization_horizon" in said, said
+        # `UX-1159`: the other ranking by its reader name, not its key.
+        assert "optimization horizon" in said, said
         assert "disagree" in said, said
 
     def test_the_horizon_names_the_blast_ranking(self):
         from bga import schemas
 
         said = schemas.schema(schemas.ANALYZE)["properties"]["optimization_horizon"]["description"]
-        assert "top_blast_radius" in said, said
+        assert "blast radius" in said, said
         assert "different order" in said, said

@@ -80,7 +80,8 @@ def test_every_row_carries_its_wall_time_and_the_table_draws_it(heavy):
 _PAGE = """(() => {
   const answer = document.querySelector('#binary_cost .section-answer')?.textContent ?? '';
   const fold = document.querySelector('section[data-element="%s"] details[data-fold="binaries"]');
-  const names = [...(fold?.querySelectorAll(':scope > table td > code') ?? [])].map((n) => n.textContent);
+  const names = [...(fold?.querySelectorAll(':scope > table td[data-column="binary"]') ?? [])]
+    .map((n) => n.getAttribute('data-raw'));
   return { answer, shown: names.length, more: fold?.querySelector(':scope > p[data-more]')?.dataset.more ?? null,
            first: names[0] ?? null };
 })()"""

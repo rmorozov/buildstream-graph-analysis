@@ -15,7 +15,7 @@
  */
 import { identify, labelFor } from "./controls.js";
 import { plural } from "./tables.js";
-import { READER_LABELS, TERMS, childNode, el, findingLink, hintsOf, title } from "./format.js";
+import { COLUMNS, READER_LABELS, TERMS, childNode, el, findingLink, hintsOf, title } from "./format.js";
 import { buildTable } from "./structured.js";
 import {
   SVG, svg, seconds, mib, bar, OVERVIEW_SHOWN, elementAnchor,
@@ -702,13 +702,12 @@ function elementSection(record, places, investigate, format, bounded = null) {
 
   // UX-1183: its five costliest binaries; `binary_cost` holds the rest, counted here.
   const ran = record.binaries ?? [], top = ran.slice(0, 5), more = ran.length - 5;
-  const cell = (value, kind) => el("td", { class: "num" }, typeof value === "number" ? format(value, kind) : "");
   if (ran.length > 1) {
+    const { table, tools } = buildTable("binaries", top, { [COLUMNS]: ["binary",
+      { key: "calls", title: "Calls", quantity: "count" }, { key: "cpu_us", title: "CPU", quantity: "duration_us" },
+      { key: "wall_us", title: "Wall", quantity: "duration_us" }] });
     section.append(el("details", { "data-fold": "binaries", "data-levels": "1", "data-rows": top.length },
-      el("summary", {}, `Binaries · 1 level, ${plural(top.length, "row")}`),
-      el("table", {}, el("tr", {}, ["Binary", "Calls", "CPU", "Wall"].map((head) => el("th", {}, head))),
-        top.map((row) => el("tr", {}, el("td", {}, el("code", {}, row.binary)), cell(row.calls, "count"),
-          cell(row.cpu_us, "duration_us"), cell(row.wall_us, "duration_us")))),
+      el("summary", {}, `Binaries · 1 level, ${plural(top.length, "row")}`), tools, table,
       more > 0 ? el("p", { class: "muted", "data-more": more },
         el("a", { href: "#binary_cost" }, `+${more} more`)) : null));
   }

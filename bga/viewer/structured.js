@@ -861,11 +861,12 @@ export function interrogable(table, specs, total, depth = 0) {
   const few = total <= FEW_ROWS;
   const refresh = () => {
     // `applyFilters` also writes `state.filtered` and `state.kept` - the pre-`top` population.
-    badge.textContent = badgeText(applyFilters(table, state), total);
+    badge.textContent = badgeText(applyFilters(table, state), total, state.filtered);
     badge.hidden = badge.textContent === rest;
     pagerRefresh?.();
-    // UX-1158: the strip draws, and counts, the rows the filter kept.
-    shape?.replaceWith?.(shape = distributionStrip(table, specs, total, few, state.kept) ?? el("span"));
+    // UX-1158: the strip draws, and counts, the rows the filter kept; `UX-1170`: none at two or fewer.
+    shape?.replaceWith?.(shape = distributionStrip(table, specs, total, few || state.filtered <= FEW_ROWS,
+                                                   state.kept) ?? el("span"));
   };
 
   // `UX-349`: **filters appear when the table is long enough to need
@@ -1012,7 +1013,7 @@ export function interrogable(table, specs, total, depth = 0) {
         if (offset > lastStart) {
           offset = lastStart;
           state.top = { n: TABLE_OPENS_BOUNDED_ABOVE, column: null, offset };
-          badge.textContent = badgeText(applyFilters(table, state), total);
+          badge.textContent = badgeText(applyFilters(table, state), total, state.filtered);
         }
         const end = Math.min(offset + TABLE_OPENS_BOUNDED_ABOVE, denom);
         position.textContent = denom === 0 ? "no rows match"
@@ -1157,7 +1158,8 @@ export function interrogable(table, specs, total, depth = 0) {
   // The count follows the filter, the threshold, the sort and the
   // bound - all of which go through `refresh` or the preset - so it is
   // recomputed on any input rather than only when the table is built.
-  table.parentNode?.addEventListener?.("input", label);
+  // `UX-1170`: a threshold box sits in the table's header, outside `tools`.
+  table.addEventListener?.("input", label);
 
   // Copy one cell's published value. Delegated, so 1,202 rows do not
   // mean 1,202 listeners.

@@ -320,6 +320,13 @@ export function wireJumpBox(nav, root, payload, context = {}) {
         list.append(item);
       }
     }
+    // `UX-1170`: typed and nothing found is said, not an empty list over the rail.
+    if (!rows.length && box.value.trim()) {
+      const none = document.createElement("li");
+      none.className = "muted";
+      none.textContent = `Nothing matches "${box.value.trim()}".`;
+      list.append(none);
+    }
   };
 
   box.addEventListener("input", render);

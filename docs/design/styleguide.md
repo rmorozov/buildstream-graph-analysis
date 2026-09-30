@@ -604,7 +604,10 @@ the placeholder `> 10`.
 - **A table's tools say its count once** (`UX-1163`): `Copy N rows` at
   rest, the badge only as `N of M`, the one-value sentence as "Every
   row:", and a short table left one column draws no header. At two rows
-  or fewer no self-built strip is drawn: the rows are the values.
+  or fewer no self-built strip is drawn: the rows are the values —
+  filtered to them too (`UX-1170`). A bound over a filter reads
+  `25 of 112 matched, of 114`; a threshold that empties the table hides
+  the copy tools as the text box does.
 
 Sorting is exempt from all of this: it costs no ink and helps at every
 length.

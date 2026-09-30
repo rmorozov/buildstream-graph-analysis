@@ -949,6 +949,7 @@ function elementPicker(section, make, options) {
     for (const uid of hits.slice(0, PICKER_SHOWN)) {
       list.append(make("option", { value: uid }, uid));
     }
+    return hits.length;
   };
   fill("");
   note.textContent = `${lead}Type any part of a uid to search this run's `
@@ -957,11 +958,17 @@ function elementPicker(section, make, options) {
                    + "one the report's first action names.";
   box.append(label, search, list, note);
   section.append(box);
+  const told = note.textContent;
+  let current = chosen;
   const applyTyped = () => {
-    fill(search.value);
+    const hits = fill(search.value);
     // Only a uid this run has reaches the query: a half-typed name is a
     // reader still typing, not a request to substitute nothing.
-    if (population.includes(search.value)) applyElement(section, search.value);
+    if (population.includes(search.value)) applyElement(section, current = search.value);
+    // `UX-1170`: a box that matches nothing says so, and what the queries still ask about.
+    note.textContent = hits ? told
+      : `Nothing in this run's ${population.length} elements matches "${search.value.trim()}"; `
+        + `the queries still ask about ${current}.`;
   };
   search.addEventListener?.("input", applyTyped);
   search.addEventListener?.("change", applyTyped);

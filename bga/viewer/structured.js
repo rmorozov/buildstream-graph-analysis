@@ -861,7 +861,7 @@ export function interrogable(table, specs, total, depth = 0) {
   const refresh = () => {
     // `applyFilters` also writes `state.filtered` and `state.kept` - the pre-`top` population.
     badge.textContent = badgeText(applyFilters(table, state), total);
-    badge.hidden = badge.textContent == rest;
+    badge.hidden = badge.textContent === rest;
     pagerRefresh?.();
     // UX-1158: the strip draws, and counts, the rows the filter kept.
     shape?.replaceWith?.(shape = distributionStrip(table, specs, total, few, state.kept) ?? el("span"));

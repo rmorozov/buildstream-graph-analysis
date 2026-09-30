@@ -835,7 +835,7 @@ export function decomposition(parts, {
   wrap.append(exhibitAxis(doc, ticks));
   // `UX-1163`: beside its twin, the sentence says what no tick does.
   const twinned = grade === GRADE_EXHIBIT;
-  const rest = named.filter((part) => !twinned || !ticks.some((tick) => tick.name == part.key));
+  const rest = named.filter((part) => !twinned || !ticks.some((tick) => tick.name === part.key));
   const sentenceText = `${format(whole)} in total${rest.length ? ": " : ""}`
     + rest.map((part) => `${format(part.value)} ${part.label}`).join(", ")
     + (mark ? `. ${capital(mark.label)} ${format(mark.value)}.` : ".");

@@ -608,6 +608,17 @@ pairing for every merged row from round 103 on.
 | 154 | implementer | sonnet | fixer: UX-1140 producer prose (bga/shown.py | ~1.2M | — | ~2h | see round-154 | cost: repeated full-suite runs; guard vacuous until dd description handled |
 | 154 | integrator | opus | integrator: 7 merged-tree reds (page bytes, xl_both, map, shim, rail split | ~110k | — | ~45m | see round-154 | viewer dedup yielded 264 B, exporter indent strip carried the fix |
 | 154 | closer | opus | closer: UX-1140..UX-1153, UX-1154..UX-1160 filed | — | — | — | 14 rows moved, round document | — |
+| 155 | implementer | opus | implementer: UX-1154 print | ~100k | — | ~25m | see round-155 | cost: .next-command specificity; overflow-wrap added then dropped |
+| 155 | implementer | opus | implementer: UX-1160 travel instrument | ~95k | — | ~45m | see round-155 | cost: why old J2 read 0 wheel; sandbox compound refusals |
+| 155 | implementer | opus | implementer: UX-1155 accessible names | ~330k | — | ~2h | see round-155 | cost: byte budget under gzip; :not(article *) throws in DOM shim; map vs flatMap |
+| 155 | implementer | opus | implementer: UX-1158 filter/Back/hash | ~225k | — | ~95m | see round-155 | cost: byte budget; first old-hash check reloaded by hash only, vacuous |
+| 155 | implementer | opus | implementer: UX-1157 compact layout | ~190k | — | ~2h15m | see round-155 | cost: byte budget; own evidence crash (array to native append) caught only by related tests |
+| 155 | implementer | opus | implementer: UX-1159 key paths | ~330k | — | ~2h | see round-155 | cost: rewording 110 descriptions to fit two budgets; sandbox refusals |
+| 155 | implementer | opus | implementer: UX-1156 said once | ~330k | — | ~2h | see round-155 | cost: page bytes; guard skipped link text until M1 stayed green |
+| 155 | integrator | opus | integrator: merged 7, page 34 B over -> 255 B under, 6 push-check reds fixed | ~190k | — | ~1h05m | see round-155 | gate script truncated --check output |
+| 155 | verifier | sonnet | verifier: 6 PASS, UX-1160 HOLD (clause selector) | ~110k | — | ~25m | see round-155 | classifier denied mutation sed, no mutations run |
+| 155 | walker | sonnet | walker: 12 defects, 6 shots | ~450k | — | ~55m | see round-155 | no PDF text extractor; two-plane baseline not rebuilt |
+| 155 | closer | opus | closer: UX-1154..UX-1160, UX-1161..UX-1167 filed | — | — | — | see round-155 | 7 rows moved, round document |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -620,7 +631,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the five hundred and ninety-one rows already say: a researcher that reads a document
+What the six hundred and two rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

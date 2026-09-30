@@ -1,6 +1,6 @@
 # UX-1160: the pointer-travel instrument reads a content-visibility placeholder, not page geometry
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-154 walk, item 14, with the J3 rise of item 8 (2026-09-30) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the round-154 walk, item 14, with the J3 rise of item 8 (2026-09-30) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_pointer_travel_is_a_budget.py::test_no_journey_reads_a_placeholder`
 
@@ -70,3 +70,5 @@ The rise does not survive the true reading on any row. At most it is +0.35 bits,
 | M2: every open section 200 px longer (`padding-bottom`) | `test_a_journey_stays_under_its_budget` J3 and J4, all four page/viewports | 8 failed, 44 passed |
 
 Reverted from the copy: 52 passed. M2 does not tell the two instruments apart, because the old walk reddens under it too (10 of 48, since passed sections get drawn). M1's clause is the one that separates them.
+
+Deviation: the placeholder clause counts the same selector the prelude forces, so it reds only when the prelude is dropped (verified: dropping it reds 11 of 52), and it sees only `section.chapter > section[data-section]` placeholders.

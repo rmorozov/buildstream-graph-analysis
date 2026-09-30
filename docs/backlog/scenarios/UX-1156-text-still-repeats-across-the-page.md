@@ -1,6 +1,6 @@
 # UX-1156: text still repeats across the page
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-154 walk, items 4 and 11, and the verifier's `#capacity_verdict` read (2026-09-30) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the round-154 walk, items 4 and 11, and the verifier's `#capacity_verdict` read (2026-09-30) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement | **Reading:** container
 
 **Guard:** `tests/unit/test_each_sentence_is_drawn_once.py`
 

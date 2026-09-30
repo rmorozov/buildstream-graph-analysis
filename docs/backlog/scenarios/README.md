@@ -30,13 +30,13 @@ task file, which is the only place it ever lived twice.
 | UX-1014 | [the "safe cap plus auto" default is measured on more shapes and hosts before it is anyone's default](UX-1014-the-builders-and-auto-default-is-measured-on-more-shapes-and-hosts.md) | capture | High | R4, R5 | 🔴 Not Started |
 | UX-1134 | [`--jobserver auto` with no plan widens a memory-bound giant into the OOM killer](UX-1134-auto-oom-kills-a-memory-bound-giant-with-no-plan.md) | capture | High | R4, R5 | 🔴 Not Started |
 | UX-1040 | [a paired reading decides whether implementers move to opus at low effort](UX-1040-a-paired-reading-decides-the-implementers-model.md) | guards | Medium | every round's implementer spend | 🔴 Not Started |
-| UX-1154 | [a print blanks inner folds and prints its controls](UX-1154-print-blanks-inner-folds-and-prints-its-controls.md) | viewer | Medium | R1 | 🔴 Not Started |
-| UX-1155 | [accessible names repeat or omit the thing they name](UX-1155-accessible-names-repeat-or-omit-the-thing-they-name.md) | viewer | Medium | R1 | 🔴 Not Started |
-| UX-1156 | [text still repeats across the page](UX-1156-text-still-repeats-across-the-page.md) | viewer | Medium | R1 | 🔴 Not Started |
-| UX-1157 | [compact layout leaves four defects at 390](UX-1157-compact-layout-leaves-four-defects-at-390.md) | viewer | Low | R1 | 🔴 Not Started |
-| UX-1158 | [filter and back-navigation state is not kept or told](UX-1158-filter-and-back-navigation-state-is-not-kept-or-told.md) | viewer | Medium | R1 | 🔴 Not Started |
-| UX-1159 | [key paths and schema descriptions reach reader text](UX-1159-key-paths-and-schema-descriptions-reach-reader-text.md) | viewer | Medium | R1 | 🔴 Not Started |
-| UX-1160 | [the pointer-travel instrument reads a content-visibility placeholder, not page geometry](UX-1160-the-pointer-travel-instrument-reads-a-content-visibility-placeholder.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1167 | [the page has 255 B of its 150,000 B budget left, and every viewer row now pays with cuts](UX-1167-the-page-has-255-b-of-its-150.md) | guards | Medium | R1 | 🔴 Not Started |
+| UX-1166 | [key paths and dashes still reach reader text](UX-1166-key-paths-and-dashes-still-reach-reader-text.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1165 | [filter and link state residue after UX-1158](UX-1165-filter-and-link-state-residue-after-ux-1158.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1164 | [layout residue at 1440 and 390 after UX-1157](UX-1164-layout-residue-at-1440-and-390-after-ux.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1163 | [text the page says more than once, round 155's residue](UX-1163-text-the-page-says-more-than-once-round.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1162 | [accessible names still repeat or omit what they name](UX-1162-accessible-names-still-repeat-or-omit-what-they.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1161 | [print keeps residue the round-155 print pass left](UX-1161-print-keeps-residue-the-round-155-print-pass.md) | viewer | Low | R1 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

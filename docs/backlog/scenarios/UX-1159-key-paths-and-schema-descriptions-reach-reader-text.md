@@ -1,6 +1,6 @@
 # UX-1159: key paths and schema descriptions reach reader text
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-154 walk, items 8, 9 and 10; the UX-1141 and UX-1144 residue (2026-09-30) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the round-154 walk, items 8, 9 and 10; the UX-1141 and UX-1144 residue (2026-09-30) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement | **Reading:** container
 
 **Guard:** `tests/unit/test_a_key_path_stays_where_it_is_copied.py`
 

@@ -2106,6 +2106,7 @@ lives in `agent-runs.md`'s rows, counted per round from there.
 | [152](../audits/round-152.md) | the open rows closed - blast radius off the bitset (`UX-1106`), the export, stamp and env fixes (`UX-1107`, `UX-1124`, `UX-1007`, `UX-1057`), raw logs travel tokenized (`UX-1066`), the jobserver verdict table (`UX-1012`, `UX-1008`), a tree of bundles as a store (`UX-900`), `bga junction-cost` (`UX-904`), the guard and doc rows (`UX-975`, `UX-976`, `UX-1125`, `UX-1129`-`UX-1131`, `UX-1133`), the rail toggle and back re-fold (`UX-1058`, `UX-1056`), the Graviton reading (`UX-1010`) - twenty-one closed |
 | [153](../audits/round-153.md) | the view page on a two-plane capture, reviewed - no "null" in a finding card (`UX-1136`), the `?` door off the first term's cell (`UX-1137`), pinned from the resolved width rather than `make -j1 install` (`UX-1138`), the costliest pins named first (`UX-1139`); the review's 25 findings filed as `UX-1140`-`UX-1153` - four closed |
 | [154](../audits/round-154.md) | the review's fourteen rows fixed - `UX-1140`-`UX-1153`, seven tracks merged (30 then 7 merged-tree reds to 0), five verifier holds closed by a residue pass; the walk's 14 defect classes filed as `UX-1154`-`UX-1160` |
+| [155](../audits/round-155.md) | the round-154 walk's seven rows fixed - `UX-1154`-`UX-1160`, seven tracks merged (34 B over the page budget recovered to 255 B under, 6 reds fixed), one verifier hold recorded; the walk's residue filed as `UX-1161`-`UX-1167`, the last asking the owner about the 150,000 B budget |
 
 ## Verification Log
 

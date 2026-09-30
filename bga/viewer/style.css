@@ -666,10 +666,13 @@ button.chapter-open:hover, button.chapter-open[aria-expanded="true"] {
     display: block !important;
     content-visibility: visible !important;
   }
-  /* `UX-1154`: every `details` prints open, no control prints, and a command wraps; `.fold-more` stays, it counts what is not printed. */
+  /* `UX-1154`/`UX-1161`: paper has no click - every fold prints open with no marker, no control or its label prints, code wraps, every description prints; a fold count stays, it says what is not printed. */
   ::details-content { content-visibility: visible; }
-  button:not(.fold-more), input, select { display: none !important; }
-  code.next-command { white-space: pre-wrap; }
+  summary::before { content: none !important; }
+  button:not(.fold-more), input, select, label { display: none !important; }
+  pre, code { white-space: pre-wrap !important; }
+  body, td, th { overflow-wrap: anywhere; }
+  .description { display: block !important; }
   /* An exhibit's twin prints open, so its values reach paper (§2b: hover is never the only door). */
   table.twin-table { display: table !important; }
 }
@@ -1095,11 +1098,8 @@ button.describe:hover, button.describe[aria-expanded="true"] { color: var(--fg);
    were the schema's glossary printed in full.
 
    `.description[hidden]` is (0,2,0) against those (0,1,0), so it wins
-   in both blocks wherever it sits in the file. Paper gets the same
-   answer as the screen deliberately: a printed report carrying every
-   field's definition is the glossary nobody asked for, and the two
-   declared inline classes (`bga:inline`) print because they are not
-   behind the door at all. */
+   in both blocks wherever it sits in the file. Paper has no door, so
+   print shows every sentence (`UX-1161`). */
 .description[hidden] { display: none; }
 
 /* UX-318 (styleguide §3a.2/§3a.3): **table focus.** One table takes the

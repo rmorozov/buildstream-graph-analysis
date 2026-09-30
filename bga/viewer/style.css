@@ -411,7 +411,8 @@ a:not(p a) { display: inline-flex; align-items: center; justify-content: center;
 .advice[data-severity="info"], .advice[data-severity="low"] {
   border-left-color: var(--accent);
 }
-.join-evidence { margin: var(--space-2) 0; }
+/* A card's two Plane 2 folds share one line while closed. */
+.join-evidence, details[data-fold="binaries"] { display: inline-block; vertical-align: top; margin: 0 var(--space-4) 0 0; }
 .join-evidence > p { margin: var(--space-2) 0 var(--space-1); }
 
 .finding .title { font-weight: 600; }

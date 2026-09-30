@@ -1078,6 +1078,19 @@ MEDIUM = (
     "tests/unit/test_the_plane_2_sections_lead_with_their_answer.py",  #  2.7s
     # `UX-1153`: 3.74 / 3.88s.
     "tests/unit/test_the_six_low_defects_stay_fixed.py",  #  3.8s
+    # Round 155, tiered on the merged tree: two single-process runs alone each.
+    # `UX-1159`: 1.85 / 1.83s.
+    "tests/unit/test_a_key_path_stays_where_it_is_copied.py",  #  1.8s
+    # `UX-1155`: 6.31 / 6.33s.
+    "tests/unit/test_an_accessible_name_says_what_it_acts_on.py",  #  6.3s
+    # `UX-1156`: 3.28 / 3.30s.
+    "tests/unit/test_each_sentence_is_drawn_once.py",  #  3.3s
+    # `UX-1158`: 10.11 / 10.59s.
+    "tests/unit/test_filter_and_back_state_is_kept_and_told.py",  # 10.4s
+    # `UX-1154`: 4.32 / 4.23s.
+    "tests/unit/test_print_opens_every_fold_and_drops_its_controls.py",  #  4.3s
+    # `UX-1157`: 4.46 / 4.48s.
+    "tests/unit/test_the_compact_page_fits_its_width.py",  #  4.5s
     # 8.60 / 8.75s.
     "tests/unit/test_the_rail_and_the_jump_box_write_the_anchor.py",  #  8.7s
     # Round 147, tiered on the merged tree: three single-process runs

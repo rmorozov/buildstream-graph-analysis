@@ -64,12 +64,12 @@ DX_ONLY = ("button.copy-rows", "select.top-n")
 #: `UX-1153`'s one-line command puts macro_micro 390's Copy on the first screen;
 #: `UX-1145` re-bases both 390 rows (stacked pairs, chips on their own row);
 #: `UX-1152` re-bases all four (a one-row record drawn as pairs, Why below its row).
-#: Round 154's merged tree re-measured, 3 runs.
+#: Round 154's merged tree re-measured, 3 runs, spread 0.
 MEASURED = {
-    ("macro_micro", 1440): {"J1": (4.53, 0), "J2": (18.5, 0), "J3": (16.49, 38172), "J4": (14.8, 11761)},
-    ("macro_micro", 390): {"J1": (4.37, 478), "J2": (17.58, 0), "J3": (24.39, 53273), "J4": (9.99, 18791)},
-    ("both_scale", 1440): {"J1": (4.48, 0), "J2": (19.67, 0), "J3": (12.49, 45945), "J4": (14.78, 12568)},
-    ("both_scale", 390): {"J1": (1.73, 825), "J2": (18.94, 0), "J3": (30.88, 60426), "J4": (10.63, 22737)},
+    ("macro_micro", 1440): {"J1": (4.57, 0), "J2": (18.53, 0), "J3": (14.35, 38521), "J4": (14.76, 11198)},
+    ("macro_micro", 390): {"J1": (2.34, 495), "J2": (18.06, 0), "J3": (24.53, 53138), "J4": (9.9, 18951)},
+    ("both_scale", 1440): {"J1": (4.51, 0), "J2": (19.7, 0), "J3": (10.6, 45277), "J4": (14.64, 11773)},
+    ("both_scale", 390): {"J1": (2.07, 798), "J2": (19.33, 0), "J3": (25.15, 58267), "J4": (12.66, 19232)},
 }
 HEADROOM_BITS = 0.5
 HEADROOM_WHEEL = 1.10

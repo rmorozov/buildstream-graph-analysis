@@ -494,7 +494,7 @@ screens, per size class (§6e.10; `UX-1049`):
 - the document a reader lands on: see §3e's landed-height budget - one
   bound, in px, and not restated here;
 - every chapter's question sits within **9 screens at 1440x900** and
-  **13.5 screens at 390x844** of the top;
+  **13 screens at 390x844** of the top;
 - and a chapter's first section begins within **half a screen** of its
   own heading.
 
@@ -725,7 +725,7 @@ column re-read in round 73:
                  elements   landed   opened    words   controls    nodes
 golden                  4    3,800   15,618    7,144        427    2,498
 macro_micro            11    5,965   31,804   12,002        750    5,686
-budget, to 50 elts             7,600   38,600   13,600        800    7,900
+budget, to 50 elts             7,600   38,200   13,200        800    7,900
 
 scale               1,202    4,763   26,242   36,542      1,941   24,294
 budget, to 4,000 elts          7,000   32,000   41,000      2,300   27,500
@@ -868,10 +868,10 @@ Re-measured on the round's merged tree: macro_micro 37,743 px and
 12,769 words, xl 35,669 px, 9,456 words and 5,785 nodes - 457, 31 and
 831, 144, 215 of headroom.
 
-`UX-1152` moved the small class's height bound 38,200 -> 38,600 and
-words 13,200 -> 13,600: an element card's links read section titles,
-not ids - `macro_micro` 37,805 -> 38,201 px and 13,098 -> 13,441 words -
-and one-row records, folds and Whys the other 73 px and 33 words.
+`UX-1152`'s card links read section titles, not ids; alone they took
+`macro_micro` to 38,201 px and 13,441 words. Round 154's merged tree,
+with `UX-1146`/`UX-1147`'s cuts, reads 37,847 px and 13,113 words -
+353 and 87 of headroom under the unmoved bounds.
 
 `UX-1050` moved the 4,100 class's height 36,500 -> 43,500, words 9,600
 -> 13,200 and nodes 6,000 -> 7,500: `xl_both`, the 4,002-element run
@@ -889,8 +889,8 @@ Spacing, not new blocks; 129 of headroom.
 (`macro_micro`), bounded at 8,500 and 11,400 - the same
 fifth-of-headroom convention, per class rather than shared, because a
 narrow viewport does not fold the same content into the same pixels.
-`UX-1145` stacked a pair's term above its value in compact: 8,688 and
-11,604 measured, bounded at 8,800 and 11,800.
+`UX-1145` stacks a pair's term above its value in compact; round 154's
+merged tree reads 8,433 and 10,704 - 67 and 696 under the unmoved bounds.
 
 `tests/unit/test_the_page_has_a_volume_budget.py` asserts both budgets
 in **one** guard, so a change trading one for the other has to say so.

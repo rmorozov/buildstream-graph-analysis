@@ -382,8 +382,8 @@ CHAPTER_HEADING_SCREENS = 9.0
 #: currency (screens at 1440x900). Measured 9.7 (golden) and 12.9
 #: (macro_micro) on the merged round-143 tree; the bound is the next
 #: half screen strictly above the worst, the regular bound's convention.
-#: `UX-1145`: 13.0 -> 13.5. Stacked pairs put `macro_micro`'s `run` at 13.4.
-COMPACT_CHAPTER_HEADING_SCREENS = 13.5
+#: Round 154's merged tree: `macro_micro`'s `run` at 11.6 (3 runs), under 13.0.
+COMPACT_CHAPTER_HEADING_SCREENS = 13.0
 
 #: And inside a chapter, its first section under its own heading.
 #: Measured 0.1 on every chapter of both fixtures: the heading, the

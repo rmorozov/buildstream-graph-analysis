@@ -79,3 +79,5 @@ The 71 test files naming the touched modules, single process: 1 failed, 1086 pas
 | A7 | no CPU spelling rule | spelling clause, 3 failed |
 
 Deviation: `test_no_key_is_terminal_only_in_silence.py` requires `process_count` drawn, so the repeat drops `processes` rather than `process_count`. `docs/design/rendered-strings.json` re-written (`dev_rendered_strings.py --write`): `th` "CPU" and "Share of CPU" in, "Cpu" and the option "Top # by length" (a uniform column's preset) out. Size ledger: `bga/schemas.py` 6922 -> 6930 lines (`dev_sizes.py --adopt --force`). Not done, outside the Required Fix: "Schema plane2/v3 · Records embedded false" producer words (§4g.4).
+
+Merged-tree fix: the guard's f-string skip reasons became module constants, declared in tests/conftest.py.

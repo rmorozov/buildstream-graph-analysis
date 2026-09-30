@@ -20,6 +20,7 @@ from tests.browser import NO_BROWSER, Browser, find_chrome
 
 chrome = find_chrome()
 needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
+NOT_TWO_PLANE = "only the two-plane page carries every concept"
 
 _STYLEGUIDE = (REPO / "docs" / "design" / "styleguide.md").read_text(encoding="utf-8")
 
@@ -113,5 +114,5 @@ def test_each_concept_carries_its_one_word(collected):
 def test_the_two_plane_page_shows_every_concept(collected):
     label, found = collected
     if label != "two_plane":
-        pytest.skip("only the two-plane page carries every concept")
+        pytest.skip(NOT_TWO_PLANE)
     assert set(found) == set(CONCEPTS), sorted(set(CONCEPTS) - set(found))

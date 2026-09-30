@@ -1,6 +1,6 @@
 # UX-1144: one concept carries several names across the page
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the view UI review on a two-plane page (2026-09-29), findings H5 | **Serves:** R1, R3, R8 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement | **Reading:** container
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the view UI review on a two-plane page (2026-09-29), findings H5 | **Serves:** R1, R3, R8 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_one_concept_has_one_label.py`
 
@@ -52,3 +52,5 @@ The close measured: same command, this commit - `5 passed, 2 skipped in 2.73s`; 
 |---|---|---|
 | `decision.js` split label back to `"Beyond the chain"` | `test_each_concept_carries_its_one_word`, all 3 pages: gap reads `['beyond the chain', 'scheduling gap']` | 3 failed, 2 passed, 2 skipped |
 | `TERMS.lb` = `"Lb"` (differs from `LB` in case only) | same test, 3 pages: `the resource floor` | 3 failed, 2 passed, 2 skipped |
+
+Merged-tree fix: Shape set to mechanical (what `dev_close_task.py --shape` derives); guard named in styleguide §6e; skip reason declared in tests/conftest.py.

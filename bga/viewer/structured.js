@@ -35,7 +35,7 @@ import { enterTableFocus, focusedTable, leaveTableFocus, registerFocusTarget }
   from "./tablefocus.js";
 import { parseThreshold, applyFilters, badgeText, rowJson, cellText,
          copy, presetColumns, openingBound, plural, sortable, ownRows,
-         ownBody, showAlso, columnCells, rowsMarkdown, ALL_ROWS_CEILING }
+         ownBody, showAlso, columnCells, rowsMarkdown, showSort, ALL_ROWS_CEILING }
   from "./tables.js";
 import { PATH_HEAD, PATH_TAIL } from "./views.js";
 
@@ -844,7 +844,7 @@ export function renderTable(key, rows, hint = {}, node = undefined,
  * is a `duration_us`, so the suffix has a meaning.
  */
 export function interrogable(table, specs, total, depth = 0) {
-  const state = { text: "", thresholds: {}, top: null };
+  const state = { text: "", thresholds: {}, top: null, sort: null };
   // UX-334: what these controls are called. The table key is the name
   // `viewstate.js` already keys this table's url state by, so the
   // control's `name` and its bookmarked parameter say the same word.
@@ -861,6 +861,7 @@ export function interrogable(table, specs, total, depth = 0) {
   // disagrees with the page the moment a filter narrows it.
   let pagerRefresh = null;
   let relabel = null;
+  let restart = null;
   let shape = null;
   const few = total <= FEW_ROWS;
   const refresh = () => {
@@ -1069,6 +1070,8 @@ export function interrogable(table, specs, total, depth = 0) {
       // "unbounded" the way `state.top = null` would.
       state.top = preset.value ? { n: Number(n), column: column || null }
         : preset.selectedIndex === -1 ? (opening?.top ?? null) : null;
+      // `UX-1190`: a ranked preset is a sort, shown on its header.
+      if (state.top?.column) showSort(table, state.sort = { column: state.top.column, direction: "descending" });
       offset = 0;
       ranking = state.top?.column ?? opening?.top.column ?? null;
       paging = false;
@@ -1084,6 +1087,7 @@ export function interrogable(table, specs, total, depth = 0) {
       // UX-1158: the opening value, which the link leaves unsaid.
       preset.value = preset.opening = opening.value;
       state.top = opening.top;
+      if (opening.top.column) showSort(table, state.sort = { column: opening.top.column, direction: "descending" });
       refresh();
     }
     state.preset = preset;
@@ -1091,7 +1095,24 @@ export function interrogable(table, specs, total, depth = 0) {
     // Not paged at build time: at rest the table opens on `opening`'s
     // own bound, and the paging step only takes over once pressed.
     if (prev) prev.disabled = true;
+    // `UX-1190`: a header's sort starts the bound at the front, and a preset it contradicts steps aside.
+    restart = (sort) => {
+      offset = 0;
+      ranking = sort.column;
+      if (state.top) state.top = { ...state.top, offset: 0 };
+      if (preset.value && (preset.value.split(":")[1] !== sort.column || sort.direction !== "descending")) {
+        preset.selectedIndex = -1;
+      }
+    };
   }
+  table.addEventListener?.("bga:sort", (event) => {
+    state.sort = event.detail;
+    restart?.(state.sort);
+    // Unbounded and unfiltered, `sortable` reorders every row itself.
+    if (!state.top && !state.text.trim() && !Object.keys(state.thresholds).length) return;
+    event.preventDefault?.();
+    refresh();
+  });
 
   // UX-279: the noun, not the verb, and the count rather than a
   // promise. Measured on the served report when this was filed: 43 copy

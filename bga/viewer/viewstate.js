@@ -113,9 +113,11 @@ export function captureView(root) {
     const preset = tools?.querySelector?.("select.top-n");
     // UX-1165: `All rows` too, where the table opened bounded.
     if (preset?.selectedIndex > -1 && preset.value !== (preset.opening ?? "")) params.set(`n.${key}`, preset.value);
+    // `UX-1190`: the ranking the preset already names says nothing.
+    const ranked = `${(preset?.value || preset?.opening || "").split(":")[1]}:descending`;
     for (const th of table.querySelectorAll?.("th") ?? []) {
-      const sorted = th.getAttribute("aria-sort");
-      if (sorted) params.set(`s.${key}`, `${th.getAttribute("data-column")}:${sorted}`);
+      const sorted = `${th.getAttribute("data-column")}:${th.getAttribute("aria-sort")}`;
+      if (th.hasAttribute("aria-sort") && sorted !== ranked) params.set(`s.${key}`, sorted);
     }
     // `UX-1185`: where the pager stands, after the filter it is measured against.
     const at = tools?.querySelector?.(".table-pager")?.getAttribute?.("data-offset");
@@ -246,10 +248,10 @@ export function applyView(root, query, { dispatch } = {}) {
       const [column, direction] = sort.split(":");
       for (const th of table.querySelectorAll?.("th") ?? []) {
         if (th.getAttribute("data-column") !== column) continue;
-        // One click sorts ascending; a second reverses it. Driving the
+        // At most two presses reach either direction (`UX-1190`). Driving the
         // control rather than setting `aria-sort` directly is what keeps
         // the rows in the order the attribute claims.
-        fire(th, "click");
+        if (th.getAttribute("aria-sort") !== direction) fire(th, "click");
         if (th.getAttribute("aria-sort") !== direction) fire(th, "click");
         applied.push(`s:${key}`);
       }

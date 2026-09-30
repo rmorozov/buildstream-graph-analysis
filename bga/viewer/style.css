@@ -242,7 +242,7 @@ button[aria-pressed="true"] {
    beside something it annotates - a fold, a chapter, a JSON door - and
    a surface on it would read as the page's next action. */
 button.collapse, button.fold-more, button.json-toggle, button.twin-toggle,
-button.focus-back, button.expand-table, button.chapter-open, button.toc-title {
+button.focus-back, button.expand-table, button.chapter-open, button.toc-title, button.th-sort {
   background: transparent; color: var(--muted);
 }
 

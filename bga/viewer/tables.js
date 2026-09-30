@@ -189,7 +189,7 @@ export function columnCells(table, key, rows = everyRow(ownBody(table))) {
  * return shape every caller has to unpack.
  */
 export function applyFilters(table, options = {}) {
-  const { text = "", thresholds = {}, top = null } = options;
+  const { text = "", thresholds = {}, top = null, sort = null } = options;
   const needle = String(text).trim().toLowerCase();
   const body = ownBody(table);
   const rows = everyRow(body);
@@ -233,8 +233,10 @@ export function applyFilters(table, options = {}) {
   // else about it is the same pass, so the badge, the filter and the
   // copy control cannot tell the two apart.
   let shown = kept;
+  // `UX-1190`: a header's sort ranks the population, before any bound slices it.
+  if (sort?.column) kept.sort(byColumn(sort.column, sort.direction));
   if (top && Number.isFinite(Number(top.n))) {
-    if (top.column) {
+    if (top.column && !sort?.column) {
       const value = (tr) => {
         const cell = [...tr.children].find(
           (td) => td.getAttribute("data-column") === top.column);
@@ -581,30 +583,72 @@ export function rowsMarkdown(rows, specs) {
 // table's *behaviour* - filters, bounds, presets, copy - and sorting
 // is behaviour. It was in the DOM builder only because that is where
 // it was first written.
+// `UX-1190`: a table this short is read whole, so its header stays text.
+export const SORTABLE_ABOVE = 10;
+
+/** Rows in `column`'s order: numbers as numbers, anything else as text. */
+export function byColumn(column, direction) {
+  const sign = direction === "ascending" ? 1 : -1;
+  const raws = new Map();
+  const raw = (tr) => {
+    if (!raws.has(tr)) {
+      raws.set(tr, [...(tr.children ?? [])].find(
+        (td) => td.getAttribute?.("data-column") === column)?.getAttribute?.("data-raw") ?? "");
+    }
+    return raws.get(tr);
+  };
+  return (a, b) => {
+    const x = raw(a), y = raw(b);
+    const nx = Number(x), ny = Number(y);
+    const numeric = x !== "" && y !== "" && !Number.isNaN(nx) && !Number.isNaN(ny);
+    return sign * (numeric ? nx - ny : String(x).localeCompare(String(y)));
+  };
+}
+
+/** The table's own header cells - not a nested table's. */
+export function ownHeads(table) {
+  return childrenNamed(childrenNamed(childrenNamed(table, "thead")[0], "tr")[0], "th");
+}
+
+/** Mark `sort` on the table's own header, and only there. */
+export function showSort(table, sort) {
+  for (const th of ownHeads(table)) {
+    if (sort && th.getAttribute("data-column") === sort.column) th.setAttribute("aria-sort", sort.direction);
+    else th.removeAttribute("aria-sort");
+  }
+}
+
+// `UX-450`: moved here from `structured.js`. This file is the
+// table's *behaviour* - filters, bounds, presets, copy - and sorting
+// is behaviour. It was in the DOM builder only because that is where
+// it was first written.
 export function sortable(table, specs = []) {
   const body = ownBody(table);
-  table.querySelectorAll("th").forEach((th, index) => {
+  if (everyRow(body).length <= SORTABLE_ABOVE) return;
+  ownHeads(table).forEach((th, index) => {
     // UX-201: a column the schema declares unsortable stays unsortable,
     // whatever its values happen to look like.
     if (specs[index] && specs[index].sortable === false) return;
+    // `UX-1190` (styleguide §6e.8): a button, so the sort is in the tab order.
+    const label = th.textContent;
+    th.textContent = "";
+    th.append(el("button", { type: "button", class: "th-sort" }, label));
     th.addEventListener("click", () => {
-      const ascending = th.getAttribute("aria-sort") !== "ascending";
-      table.querySelectorAll("th").forEach((other) =>
-        other.removeAttribute("aria-sort"));
-      th.setAttribute("aria-sort", ascending ? "ascending" : "descending");
-      // `UX-526`: over every row, held or shown - a sort that saw only
-      // the shown ones would rank the top 25 among themselves.
-      const rows = [...everyRow(body)];
-      rows.sort((a, b) => {
-        const x = a.children[index]?.dataset.raw ?? "";
-        const y = b.children[index]?.dataset.raw ?? "";
-        const nx = Number(x), ny = Number(y);
-        const numeric = x !== "" && y !== "" && !Number.isNaN(nx) && !Number.isNaN(ny);
-        const order = numeric ? nx - ny : String(x).localeCompare(String(y));
-        return ascending ? order : -order;
-      });
-      reorder(body, rows);
+      const was = th.getAttribute("aria-sort");
+      // The first press on a quantity puts its largest first.
+      const direction = was ? (was === "ascending" ? "descending" : "ascending")
+        : specs[index]?.quantity ? "descending" : "ascending";
+      const sort = { column: th.getAttribute("data-column"), direction };
+      showSort(table, sort);
+      // A head-and-tail fold is about the listing's order, which a sort replaces: open it first.
+      childrenNamed(body, "tr").find((tr) => tr.className === "fold-row" && !tr.hidden)
+        ?.querySelector?.("button")?.click?.();
+      // The table's own tools re-rank past a bound; with none, every row is shown and reordered here.
+      const event = new CustomEvent("bga:sort", { cancelable: true, detail: sort });
+      table.dispatchEvent?.(event);
+      if (event.defaultPrevented) return;
+      // `UX-526`: over every row, held or shown.
+      reorder(body, [...everyRow(body)].sort(byColumn(sort.column, direction)));
     });
   });
 }
-

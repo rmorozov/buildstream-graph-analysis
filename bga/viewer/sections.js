@@ -476,6 +476,9 @@ function renderEmptySection(key, hint, node, sentence = null) {
 // the DOM and in the shim both, so no listener or id is lost.
 function relabelHead(th, label) {
   if (!th) return;
+  // `UX-1190`: a sortable header's label is its button's.
+  const sort = th.querySelector?.("button.th-sort");
+  if (sort) { sort.textContent = label; return; }
   const filter = th.querySelector?.("input.th-filter");
   th.textContent = label;
   if (filter) th.append(filter);

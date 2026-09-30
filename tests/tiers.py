@@ -1138,4 +1138,6 @@ MEDIUM = (
     # UX-1107's two exports 1.07 / 1.06 / 1.03s. UX-1131's 0.90 / 0.98 / 1.12s stays small.
     "tests/unit/test_back_after_a_reveal_re_folds.py",  #  3.7s
     "tests/unit/test_the_export_anchor_is_seed_free.py",  #  1.1s
+    # Round 158, single process: UX-1193's three exports and Chromium reads 5.56s.
+    "tests/unit/test_one_name_one_population.py",  #  5.6s
 )

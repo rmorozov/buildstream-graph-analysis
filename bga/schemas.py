@@ -1994,9 +1994,9 @@ _ELEMENT_PRESETS = [
     {
         "name": "Latent heavies",
         "question": "What is big and off the chain?",
-        "where": {"column": "observed_critical", "equals": False},
+        # UX-1193: the section's population, so one name counts one set.
+        "from": "latent_heavies",
         "columns": ["element", "element_durations", "slack", "downstream_count", "risk_score"],
-        "sort": {"column": "element_durations", "direction": "desc"},
     },
     # `UX-829`: the joined fields with no view of their own - measured
     # on the scale export, `unweighted_depth`, `criticality_probability`

@@ -768,7 +768,7 @@ export const SECTION_ANSWERS = {
       + (typeof lost === "number"
         ? (lost === 0 ? "; none went unmeasured." : `; ${lost} could not be read.`) : ".");
   },
-  binary_cost(rows) {
+  binary_cost(rows, payload) {
     if (!Array.isArray(rows) || !rows.length) return null;
     const by = new Map();
     const elements = new Set();
@@ -784,9 +784,11 @@ export const SECTION_ANSWERS = {
       (a, b) => b[1].cpu - a[1].cpu || b[1].calls - a[1].calls)[0];
     const cost = `${many(top.calls, "call")}, `
       + `${quantity(top.cpu, "duration_us")} of CPU`;
-    return by.size === 1
+    // UX-1183: the capture's count, not the rows kept.
+    const ran = Object.keys(payload?.by_binary ?? {}).length || by.size;
+    return ran === 1
       ? `One binary, ${name}, ran in ${many(top.elements, "element")}: ${cost}.`
-      : `${many(by.size, "binary", "binaries")} ran in `
+      : `${many(ran, "binary", "binaries")} ran in `
         + `${many(elements.size, "element")}; ${name} cost the most, `
         + `${cost} in ${many(top.elements, "element")}.`;
   },

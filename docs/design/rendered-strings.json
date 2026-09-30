@@ -962,6 +962,16 @@
   {
     "exception": null,
     "role": "th",
+    "text": "Task"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Wall-clock share"
+  },
+  {
+    "exception": null,
+    "role": "th",
     "text": "Name"
   },
   {
@@ -1337,6 +1347,11 @@
   {
     "exception": null,
     "role": "button",
+    "text": "Wall"
+  },
+  {
+    "exception": null,
+    "role": "button",
     "text": "Count"
   },
   {
@@ -1433,6 +1448,11 @@
     "exception": null,
     "role": "summary",
     "text": "What Plane # saw \u00b7 # level, # rows"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Binaries \u00b7 # level, # rows"
   },
   {
     "exception": null,
@@ -1717,6 +1737,26 @@
   {
     "exception": null,
     "role": "th",
+    "text": "Binary"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Calls"
+  },
+  {
+    "exception": "acronym",
+    "role": "th",
+    "text": "CPU"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Wall"
+  },
+  {
+    "exception": null,
+    "role": "th",
     "text": "Static census"
   },
   {
@@ -1783,6 +1823,11 @@
     "exception": "acronym",
     "role": "option",
     "text": "Top # by Share of CPU"
+  },
+  {
+    "exception": null,
+    "role": "option",
+    "text": "Top # by Wall"
   },
   {
     "exception": null,

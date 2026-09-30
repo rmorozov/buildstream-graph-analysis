@@ -5702,6 +5702,11 @@ class _BinaryCost:
                 # UX-69: one process holding real wall time cannot be
                 # parallelised away - a different fix from N processes.
                 "single_process_costs": serial,
+                # UX-1183: the membership whole; `top_n` bounds the two rankings only.
+                "binaries": [
+                    {"binary": b, "count": v["count"], "cpu_us": v["cpu_us"], "wall_s": round(v["wall_s"], 3)}
+                    for b, v in by_cpu
+                ],
             }
         return result
 

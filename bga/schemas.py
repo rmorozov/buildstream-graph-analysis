@@ -4792,15 +4792,16 @@ _ANALYZE_HINTS = {
         QUESTION: 'Which binaries cost this build its time?',
         RAIL: 'act',
         KEYED_BY: [KEYED_BY_ELEMENT, KEYED_BY_BINARY],
-        GROWS: "elements (one row per element Plane 2 measured, no cap "
-        "in the payload; structured.js's table bound applies on "
-        "the page)",
+        GROWS: "(element, binary) pairs (one row per binary each element "
+        "Plane 2 measured ran, no cap in the payload; structured.js's "
+        "table bound applies on the page)",
         COLUMNS: [
             "element",
             "binary",
             "calls",
             {"key": "cpu_us", "title": "CPU"},
             {"key": "cpu_share", "title": "Share of CPU"},
+            {"key": "wall_us", "title": "Wall"},
         ],
         "description": "One row per element and binary Plane 2 saw it "
         "run: how many calls, and what they cost. Two "
@@ -4819,9 +4820,9 @@ _ANALYZE_HINTS = {
                 "cpu_us": {
                     QUANTITY: "duration_us",
                     "description": "CPU across those calls. Null "
-                    "for a binary ranked by count "
-                    "alone — it was too cheap to "
-                    "reach the CPU ranking.",
+                    "only from a Plane 2 report that "
+                    "published two top-5 rankings: a "
+                    "binary ranked by count alone.",
                 },
                 "cpu_share": {QUANTITY: "share", "description": "That CPU as a share of this element's measured CPU."},
                 "wall_us": {

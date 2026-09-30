@@ -219,7 +219,7 @@ export function elementFacts(payload) {
     if (!uid) return null;
     if (!facts.has(uid)) {
       facts.set(uid, { element: uid, rows: [], findings: [], entering: [],
-                       advice: [], evidence: [], lists: [] });
+                       advice: [], evidence: [], lists: [], binaries: [] });
     }
     return facts.get(uid);
   };
@@ -259,6 +259,7 @@ export function elementFacts(payload) {
       if (record) record.findings.push(finding);
     }
   }
+  for (const row of payload?.binary_cost ?? []) facts.get(row.element)?.binaries.push(row);
   return facts;
 }
 
@@ -369,7 +370,8 @@ export function elementFactsFor(payload, uid) {
   const known = elementFacts(payload).get(uid);
   const record = known ?? { element: uid, rows: [], findings: [],
                             entering: [], advice: [], evidence: [],
-                            lists: [], onDemand: true };
+                            lists: [], onDemand: true,
+                            binaries: (payload?.binary_cost ?? []).filter((row) => row.element === uid) };
   const held = new Set(record.rows.map((row) => row.field));
   for (const [path, field, label, kind] of ELEMENT_MAPS) {
     const map = path.split(".").reduce((node, key) => node?.[key], payload);
@@ -696,6 +698,18 @@ function elementSection(record, places, investigate, format, bounded = null) {
       fold.append(pairList(block.rows, format));
     }
     section.append(fold);
+  }
+
+  // UX-1183: its five costliest binaries; `binary_cost` holds the rest, counted here.
+  const ran = record.binaries ?? [], top = ran.slice(0, 5), more = ran.length - 5;
+  const cell = (value, kind) => el("td", { class: "num" }, typeof value === "number" ? format(value, kind) : "");
+  if (ran.length > 1) {
+    section.append(el("details", { "data-fold": "binaries", "data-levels": "1", "data-rows": top.length },
+      el("summary", {}, `Binaries · 1 level, ${plural(top.length, "row")}`),
+      el("table", {}, el("tr", {}, ["Binary", "Calls", "CPU", "Wall"].map((head) => el("th", {}, head))),
+        top.map((row) => el("tr", {}, el("td", {}, el("code", {}, row.binary)), cell(row.calls, "count"),
+          cell(row.cpu_us, "duration_us"), cell(row.wall_us, "duration_us")))),
+      more > 0 ? el("p", { class: "muted", "data-more": more }, `+${more} more`) : null));
   }
 
   // `UX-302`'s mapping: a short scalar array is an inline list, not a

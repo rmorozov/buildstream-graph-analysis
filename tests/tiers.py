@@ -1140,4 +1140,6 @@ MEDIUM = (
     "tests/unit/test_the_export_anchor_is_seed_free.py",  #  1.1s
     # Round 158, single process: UX-1193's three exports and Chromium reads 5.56s.
     "tests/unit/test_one_name_one_population.py",  #  5.6s
+    # UX-1183's heavy page, its export and two Chromium reads 4.14s.
+    "tests/unit/test_a_traced_elements_binaries_reach_the_page.py",  #  4.1s
 )
